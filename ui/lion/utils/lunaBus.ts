@@ -1,8 +1,8 @@
 import type { Emitter } from 'mitt';
 
-import mitt from 'mitt';
-
 import type { LunaMessage, LunaMessageEvents } from '@/lion/types/postmessage.type';
+
+import mitt from 'mitt';
 
 import { LUNA_MESSAGE_TYPE } from '@/lion/types/postmessage.type';
 
@@ -39,7 +39,7 @@ class LunaCommunicator<T extends EventPayloadMap = EventPayloadMap> {
           this.protocol = message.protocol;
           this.sendLuna(LUNA_MESSAGE_TYPE.PONG, '');
           console.log(
-            `LunaCommunicator initialized with ID: ${this.lunaId}, Origin: ${this.targetOrigin}, Protocol: ${this.protocol}`,
+            `LunaCommunicator initialized with ID: ${this.lunaId}, Origin: ${this.targetOrigin}, Protocol: ${this.protocol}`
           );
           break;
         default:

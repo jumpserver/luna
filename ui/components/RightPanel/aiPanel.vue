@@ -1,9 +1,9 @@
 <script setup lang="ts">
-type ChatMessage = {
+interface ChatMessage {
   id: string
   role: "user" | "assistant"
   content: string
-};
+}
 
 const { t } = useI18n();
 const messages = ref<ChatMessage[]>([]);

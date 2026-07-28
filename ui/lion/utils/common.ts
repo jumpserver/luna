@@ -4,23 +4,23 @@ import {
   ORIGIN,
   withBasePath,
   withBaseUrl,
-  withLionWsUrl,
+  withLionWsUrl
 } from './base';
 
 export function sanitizeFilename(filename: string): string {
-  return filename.replace(/[\\\/]+/g, '_');
+  return filename.replace(/[\\/]+/g, '_');
 }
 
 export const FileType = {
   NORMAL: 'NORMAL',
-  DIRECTORY: 'DIRECTORY',
+  DIRECTORY: 'DIRECTORY'
 };
 
 export function isDirectory(guacFile: { type: string }): boolean {
   return guacFile.type === FileType.DIRECTORY;
 }
 
-export { BASE_WS_URL, BASE_URL };
+export { BASE_URL, BASE_WS_URL };
 
 export const OriginSite = ORIGIN;
 
@@ -33,25 +33,25 @@ const monitorWsURL = withLionWsUrl('/ws/monitor/');
 export function getCurrentConnectParams() {
   const urlParams = getURLParams();
   const data: any = {};
-  urlParams.forEach(function (value, key, parent) {
+  urlParams.forEach((value, key, _parent) => {
     data[key] = value;
   });
   const result: any = {};
-  result['data'] = data;
-  result['ws'] = wsURL;
-  result['api'] = sessionBaseAPI;
+  result.data = data;
+  result.ws = wsURL;
+  result.api = sessionBaseAPI;
   return result;
 }
 
 export function getMonitorConnectParams() {
   const urlParams = getURLParams();
   const data: any = {};
-  urlParams.forEach(function (value, key, parent) {
+  urlParams.forEach((value, key, _parent) => {
     data[key] = value;
   });
   const result: any = {};
-  result['data'] = data;
-  result['ws'] = monitorWsURL;
+  result.data = data;
+  result.ws = monitorWsURL;
   return result;
 }
 
@@ -77,14 +77,14 @@ export function localStorageGet(key: string): string | object | null {
   try {
     data = JSON.parse(data);
     return data;
-  } catch (e) {
+  } catch {
     //
   }
   return data;
 }
 
 export function getCookie(name: string): string | undefined {
-  const match = document.cookie.match(new RegExp(name + '=([^;]+)'));
+  const match = document.cookie.match(new RegExp(`${name}=([^;]+)`));
   return match ? match[1] : undefined;
 }
 

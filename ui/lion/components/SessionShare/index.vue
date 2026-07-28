@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { useI18n } from 'vue-i18n';
 import type { Composer } from 'vue-i18n';
+import { useI18n } from 'vue-i18n';
 import { removeShareUser } from '@/lion/api';
 import CardContainer from '@/lion/components/CardContainer/index.vue';
 import CreateLink from '@/lion/components/SessionShare/widget/CreateLink.vue';
@@ -9,14 +9,14 @@ import UserItem from '@/lion/components/SessionShare/widget/UserItem.vue';
 export type TranslateFunction = Composer['t'];
 
 const props = defineProps<{
-  session: string;
+  session: string
   users?: Array<{
-    user_id: string;
-    user: string;
-    primary: boolean;
-    writable: boolean;
-  }>;
-  disableCreate?: boolean;
+    user_id: string
+    user: string
+    primary: boolean
+    writable: boolean
+  }>
+  disableCreate?: boolean
 }>();
 
 const { t } = useI18n();

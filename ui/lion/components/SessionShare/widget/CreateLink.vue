@@ -1,18 +1,17 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
-import { computed, reactive, ref, watch } from 'vue';
 import type { Composer } from 'vue-i18n';
-import { useDebounceFn } from '@vueuse/core';
-import { useClipboard } from '@vueuse/core';
-import { useColor } from '@/lion/hooks/useColor';
+import { useClipboard, useDebounceFn } from '@vueuse/core';
+import { computed, reactive, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { createShareURL } from '@/lion/api';
+import { useColor } from '@/lion/hooks/useColor';
 import { withBaseUrl } from '@/lion/utils/base';
 
 export type TranslateFunction = Composer['t'];
 
 const props = defineProps<{
-  session: string;
-  disabledCreateLink: boolean;
+  session: string
+  disabledCreateLink: boolean
 }>();
 
 const { copy } = useClipboard({ legacy: true });
@@ -22,27 +21,27 @@ const getMinuteLabel = (item: number, t: TranslateFunction): string => {
 };
 
 export interface ShareUserOptions {
-  id: string;
-  name: string;
-  username: string;
+  id: string
+  name: string
+  username: string
 }
 
 export interface UserInfo {
-  id: string;
-  name: string;
-  username: string;
+  id: string
+  name: string
+  username: string
 }
 
 interface ExpiredOption {
-  label: string;
-  value: number;
-  checked: boolean;
+  label: string
+  value: number
+  checked: boolean
 }
 
 interface ActionPermOption {
-  label: string;
-  value: string;
-  checked: boolean;
+  label: string
+  value: string
+  checked: boolean
 }
 
 const { t } = useI18n();
@@ -53,7 +52,7 @@ const shareInfo = ref({
   shareCode: '',
   sessionId: props.session,
   shareId: '',
-  shareURL: '',
+  shareURL: ''
 });
 const userOptions = ref<UserInfo[]>([]);
 const selectedUserIds = ref<string[]>([]);
@@ -82,11 +81,11 @@ const searchUsers = useDebounceFn(async (value: string, isLoadMore: boolean = fa
     const params = new URLSearchParams({
       search: currentQuery.value,
       page: currentPage.value.toString(),
-      limit: '10',
+      limit: '10'
     });
 
     const response = await fetch(withBaseUrl(`/api/v1/users/users/suggestions/?${params}`)).then(
-      (res: any) => res.json(),
+      (res: any) => res.json()
     );
 
     const newUsers = response.results || response;
@@ -112,21 +111,21 @@ watch(
   () => shareInfo.value.shareCode,
   (nv) => {
     showLinkResult.value = Boolean(nv);
-  },
+  }
 );
 
 const mappedUserOptions = computed(() =>
   userOptions.value.map((item) => ({
     label: item.username,
-    value: item.id,
-  })),
+    value: item.id
+  }))
 );
 
 const createSingleSelectHandler = <T, K extends keyof T>(
   options: T[],
   valueKey: K,
   checkedKey: keyof T,
-  onSelect?: (value: T[K]) => void,
+  onSelect?: (value: T[K]) => void
 ) => {
   return (selectedValue: T[K]) => {
     options.forEach((item) => {
@@ -138,7 +137,7 @@ const createSingleSelectHandler = <T, K extends keyof T>(
 
 const shareLinkRequest = reactive({
   expiredTime: 10,
-  actionPerm: 'writable',
+  actionPerm: 'writable'
 });
 
 const expiredOptions = reactive<ExpiredOption[]>([
@@ -146,12 +145,12 @@ const expiredOptions = reactive<ExpiredOption[]>([
   { label: getMinuteLabel(5, t), value: 5, checked: false },
   { label: getMinuteLabel(10, t), value: 10, checked: true },
   { label: getMinuteLabel(20, t), value: 20, checked: false },
-  { label: getMinuteLabel(60, t), value: 60, checked: false },
+  { label: getMinuteLabel(60, t), value: 60, checked: false }
 ]);
 
 const actionsPermOptions = reactive<ActionPermOption[]>([
   { label: t('Writable'), value: 'writable', checked: true },
-  { label: t('ReadOnly'), value: 'readonly', checked: false },
+  { label: t('ReadOnly'), value: 'readonly', checked: false }
 ]);
 
 const debounceSearch = useDebounceFn((query: string) => searchUsers(query, false), 300);
@@ -161,6 +160,11 @@ const handleChangeExpired = createSingleSelectHandler(expiredOptions, 'value', '
 const handleChangeActionPerm = createSingleSelectHandler(actionsPermOptions, 'value', 'checked', (value) => {
   shareLinkRequest.actionPerm = value;
 });
+
+const generateShareURL = (shareId: string, shareCode: string) => {
+  const encodedShareCode = encodeURIComponent(shareCode);
+  return withBaseUrl(`/lion/share/${shareId}?code=${encodedShareCode}`);
+};
 
 const handleCreateLink = () => {
   if (!shareInfo.value.sessionId) {
@@ -177,7 +181,7 @@ const handleCreateLink = () => {
     session_id: props.session,
     expired_time: shareLinkRequest.expiredTime,
     users,
-    action_perm: shareLinkRequest.actionPerm,
+    action_perm: shareLinkRequest.actionPerm
   })
     .then((response: any) => response.json())
     .then((res: any) => {
@@ -192,11 +196,6 @@ const handleCreateLink = () => {
     .catch(() => {
       addErrorToast({ title: t('CreateLinkFailed') });
     });
-};
-
-const generateShareURL = (shareId: string, shareCode: string) => {
-  const encodedShareCode = encodeURIComponent(shareCode);
-  return withBaseUrl(`/lion/share/${shareId}?code=${encodedShareCode}`);
 };
 
 const handleCopyShareURL = () => {
@@ -223,7 +222,9 @@ const handleBack = () => {
 <template>
   <div v-if="!showLinkResult" class="space-y-4">
     <div>
-      <div class="mb-2 text-xs-plus">{{ t('ExpiredTime') }}</div>
+      <div class="mb-2 text-xs-plus">
+        {{ t('ExpiredTime') }}
+      </div>
       <div class="flex flex-wrap gap-2">
         <button
           v-for="item in expiredOptions"
@@ -241,7 +242,9 @@ const handleBack = () => {
     <UDivider />
 
     <div>
-      <div class="mb-2 text-xs-plus">{{ t('ActionPerm') }}</div>
+      <div class="mb-2 text-xs-plus">
+        {{ t('ActionPerm') }}
+      </div>
       <div class="grid grid-cols-2 gap-2">
         <button
           v-for="item in actionsPermOptions"
@@ -259,7 +262,9 @@ const handleBack = () => {
     <UDivider />
 
     <div>
-      <div class="mb-2 text-xs-plus">{{ t('ShareUser') }}</div>
+      <div class="mb-2 text-xs-plus">
+        {{ t('ShareUser') }}
+      </div>
       <UInput
         :placeholder="t('GetShareUser')"
         class="mb-2"

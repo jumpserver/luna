@@ -378,11 +378,11 @@ Suggested connector adapter interface:
 ```ts
 export interface WorkspaceConnectorAdapter {
   kind: "koko-web" | "native-app" | "builtin-terminal"
-  supports(protocol: string, connectMethod: string): boolean
-  open(session: WorkspaceSession): Promise<WorkspaceViewHandle>
-  focus(viewId: string): void
-  resize(viewId: string, rect: { width: number, height: number }): void
-  close(viewId: string): Promise<void>
+  supports: (protocol: string, connectMethod: string) => boolean
+  open: (session: WorkspaceSession) => Promise<WorkspaceViewHandle>
+  focus: (viewId: string) => void
+  resize: (viewId: string, rect: { width: number, height: number }) => void
+  close: (viewId: string) => Promise<void>
 }
 ```
 

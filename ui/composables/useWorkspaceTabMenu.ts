@@ -76,7 +76,7 @@ export function useWorkspaceTabMenu() {
     } catch (error) {
       addErrorToast({
         title: t("TabMenu.CloneConnect"),
-        description: String(error),
+        description: String(error)
       });
     }
   };
@@ -135,7 +135,7 @@ export function useWorkspaceTabMenu() {
       });
       addErrorToast({
         title: t("WorkspacePane.ConnectCurrent"),
-        description: String(error),
+        description: String(error)
       });
     }
   };

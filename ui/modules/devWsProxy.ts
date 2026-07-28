@@ -1,3 +1,4 @@
+import type { Buffer } from "node:buffer";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import net from "node:net";
@@ -11,9 +12,9 @@ import { defineNuxtModule } from "nuxt/kit";
 // straight to the backend; everything else falls through to nuxi/Vite HMR.
 
 export interface WsRoute {
-  prefix: string;
-  target: URL;
-  rewrite?: (path: string) => string;
+  prefix: string
+  target: URL
+  rewrite?: (path: string) => string
 }
 
 export function collectWsRoutes(proxy: Record<string, unknown> | undefined): WsRoute[] {

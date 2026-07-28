@@ -28,9 +28,9 @@ const head = buildUpgradeHead(
     method: "GET",
     url: "/luna/koko/ws/terminal/?token=x",
     headers: {
-      "host": "localhost:3000",
-      "origin": "http://localhost:3000",
-      "upgrade": "websocket",
+      host: "localhost:3000",
+      origin: "http://localhost:3000",
+      upgrade: "websocket",
       "sec-websocket-key": "abc"
     }
   },

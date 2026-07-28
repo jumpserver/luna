@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { message as lionMessages } from "@/lion/locales/modules";
-import { LanguageCode } from "@/lion/utils/config";
 import { withBasePath } from "@/lion/utils/base";
+import { LanguageCode } from "@/lion/utils/config";
 
 import "@/lion/styles/base.css";
 

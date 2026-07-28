@@ -1,13 +1,13 @@
 <script lang="ts" setup>
+import { useDebounceFn, useWindowSize } from '@vueuse/core';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getShareSession } from '@/lion/api/index';
-import { nextTick, onMounted, ref, computed, watch } from 'vue';
-import Osk from '@/lion/components/Osk.vue';
-import { useGuacamoleClient } from '@/lion/hooks/useGuacamoleClient';
-import SessionShare from '@/lion/components/SessionShare/index.vue';
-import { withLionWsUrl } from '@/lion/utils/base';
-import { useWindowSize, useDebounceFn } from '@vueuse/core';
 import { useRoute } from 'vue-router';
+import { getShareSession } from '@/lion/api/index';
+import Osk from '@/lion/components/Osk.vue';
+import SessionShare from '@/lion/components/SessionShare/index.vue';
+import { useGuacamoleClient } from '@/lion/hooks/useGuacamoleClient';
+import { withLionWsUrl } from '@/lion/utils/base';
 
 const { width, height } = useWindowSize();
 const { addErrorToast } = useErrorToast();
@@ -32,7 +32,7 @@ const {
   loading,
   onlineUsersMap,
   registerMouseAndKeyboardHanlder,
-  resizeGuaScale,
+  resizeGuaScale
 } = useGuacamoleClient(t);
 
 const debouncedResize = useDebounceFn(() => {
@@ -55,7 +55,7 @@ const handleKeyUp = (event: KeyboardEvent) => {
   if (event.key === 'Enter') onFinish();
 };
 
-const connectShareSession = (code: string) => {
+function connectShareSession(code: string) {
   getShareSession(shareId, { code })
     .then((response: any) => response.json())
     .then((res) => {
@@ -72,7 +72,7 @@ const connectShareSession = (code: string) => {
         SESSION_ID: res.session.id,
         SHARE_ID: shareId,
         RECORD_ID: res.id,
-        Writable: readonly.value ? 'false' : 'true',
+        Writable: readonly.value ? 'false' : 'true'
       };
 
       connectToGuacamole(wsUrl, shareParams, window.innerWidth, window.innerHeight);
@@ -83,7 +83,7 @@ const connectShareSession = (code: string) => {
     .catch((error) => {
       addErrorToast({ title: error.message || t('ShareSessionError') });
     });
-};
+}
 
 const handleScreenKeyboard = (layout: string) => {
   keyboardLayout.value = layout;
@@ -114,7 +114,9 @@ onMounted(() => {
           @keyup="handleKeyUp"
         />
         <template #footer>
-          <UButton block @click="onFinish">{{ t('Confirm') }}</UButton>
+          <UButton block @click="onFinish">
+            {{ t('Confirm') }}
+          </UButton>
         </template>
       </UCard>
     </template>
@@ -129,13 +131,15 @@ onMounted(() => {
     </div>
 
     <div
-      id="display"
       v-show="!loading && !errMessage"
+      id="display"
       class="relative flex h-screen w-screen justify-center"
     />
 
     <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
-    <p v-if="errMessage" class="text-center text-error">{{ errMessage }}</p>
+    <p v-if="errMessage" class="text-center text-error">
+      {{ errMessage }}
+    </p>
   </div>
 
   <USlideover v-model:open="drawShow" :ui="{ content: 'w-full max-w-[502px]' }">

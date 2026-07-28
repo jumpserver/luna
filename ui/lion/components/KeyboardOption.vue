@@ -1,14 +1,15 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CardContainer from '@/lion/components/CardContainer/index.vue';
 
-const { t } = useI18n();
-
 const props = defineProps<{
-  keyboard?: string;
-  opened: boolean;
+  keyboard?: string
+  opened: boolean
 }>();
+
+const emit = defineEmits(['update:keyboard', 'update:opened']);
+
+const { t } = useI18n();
 
 const generalOptions = [
   { label: 'German (Qwertz)', value: 'de-de-qwertz' },
@@ -17,10 +18,8 @@ const generalOptions = [
   { label: 'French (Azerty)', value: 'fr-fr-azerty' },
   { label: 'Italian (Qwerty)', value: 'it-it-qwerty' },
   { label: 'Dutch (QWERTY)', value: 'nl-nl-qwerty' },
-  { label: 'Russian (QWERTY)', value: 'ru-ru-qwerty' },
+  { label: 'Russian (QWERTY)', value: 'ru-ru-qwerty' }
 ];
-
-const emit = defineEmits(['update:keyboard', 'update:opened']);
 </script>
 
 <template>

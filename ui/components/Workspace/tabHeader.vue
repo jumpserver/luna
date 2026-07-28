@@ -456,7 +456,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
               class="size-3.5 object-contain"
               :class="tab.status === 'failed' ? 'opacity-40' : ''"
               @error="markTabIconBroken(tab.id)"
-            />
+            >
             <UIcon
               v-else
               :name="tabIcon(tab).fallback"

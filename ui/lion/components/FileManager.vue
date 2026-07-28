@@ -1,28 +1,25 @@
 <script lang="ts" setup>
-import { ref, computed } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { useDebounceFn } from '@vueuse/core';
 import type { LionUploadCustomRequestOptions, LionUploadFileInfo } from '@/lion/types/upload';
-
-const { t } = useI18n();
-const toast = useToast();
-
-const emit = defineEmits(['open-folder', 'download-file', 'upload-file', 'remove-upload-file']);
-
-interface RowData {
-  name: string;
-  is_dir: boolean;
-  size?: number;
-  [key: string]: any;
-}
+import { useDebounceFn } from '@vueuse/core';
+import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 const props = defineProps<{
-  files: RowData[];
-  name: string;
-  folder: any;
-  loading: boolean;
-  displayUploadingFiles: LionUploadFileInfo[];
+  files: RowData[]
+  name: string
+  folder: any
+  loading: boolean
+  displayUploadingFiles: LionUploadFileInfo[]
 }>();
+const emit = defineEmits(['openFolder', 'downloadFile', 'uploadFile', 'removeUploadFile']);
+const { t } = useI18n();
+
+interface RowData {
+  name: string
+  is_dir: boolean
+  size?: number
+  [key: string]: any
+}
 
 const storeBackFolders = ref<any>([]);
 const searchValue = ref('');
@@ -34,17 +31,17 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
 const handlePathBack = () => {
   if (!props.folder?.parent) return;
   storeBackFolders.value.push(props.folder);
-  emit('open-folder', props.folder.parent);
+  emit('openFolder', props.folder.parent);
 };
 
 const handlePathForward = () => {
   const nextFolder = storeBackFolders.value.pop();
-  if (nextFolder) emit('open-folder', nextFolder);
+  if (nextFolder) emit('openFolder', nextFolder);
 };
 
 const handlePathClick = (item: any) => {
   storeBackFolders.value.length = 0;
-  emit('open-folder', item.row);
+  emit('openFolder', item.row);
 };
 
 const filePathList = computed(() => {
@@ -64,7 +61,7 @@ const filePathList = computed(() => {
 });
 
 const dataList = computed(() =>
-  props.files.filter((file) => file.name.toLowerCase().includes(searchValue.value.toLowerCase())),
+  props.files.filter((file) => file.name.toLowerCase().includes(searchValue.value.toLowerCase()))
 );
 
 const disabledBack = computed(() => !props.folder?.parent);
@@ -82,14 +79,14 @@ const openContextMenu = (event: MouseEvent, row: RowData) => {
 
 const handleDownload = () => {
   showContextMenu.value = false;
-  if (currentRowData.value) emit('download-file', currentRowData.value);
+  if (currentRowData.value) emit('downloadFile', currentRowData.value);
 };
 
 const handleRowClick = (row: RowData) => {
-  if (row.is_dir) emit('open-folder', row);
+  if (row.is_dir) emit('openFolder', row);
 };
 
-const handleRefresh = () => emit('open-folder', props.folder);
+const handleRefresh = () => emit('openFolder', props.folder);
 
 const handleFileInput = (event: Event) => {
   const input = event.target as HTMLInputElement;
@@ -105,17 +102,17 @@ const handleFileInput = (event: Event) => {
         percentage: 0,
         type: fileObj.type,
         status: 'pending',
-        file: fileObj,
-      },
+        file: fileObj
+      }
     };
-    emit('upload-file', uploadOptions, props.folder);
+    emit('uploadFile', uploadOptions, props.folder);
   });
 
   input.value = '';
 };
 
 const removeUploadList = (file: LionUploadFileInfo) => {
-  emit('remove-upload-file', file);
+  emit('removeUploadFile', file);
 };
 </script>
 

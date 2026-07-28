@@ -5,13 +5,13 @@ declare module "js-untar" {
   }
 
   interface UntarResult extends Promise<UntarEntry[]> {
-    progress(callback: (percent: number) => void): UntarResult
+    progress: (callback: (percent: number) => void) => UntarResult
   }
 
-  export default function untar(buffer: ArrayBuffer): UntarResult
+  export default function untar(buffer: ArrayBuffer): UntarResult;
 }
 
 declare module "guacamole-common-js-jumpserver/dist/guacamole-common" {
-  const Guacamole: any
-  export = Guacamole
+  const Guacamole: any;
+  export = Guacamole;
 }

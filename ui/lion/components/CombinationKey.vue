@@ -3,13 +3,13 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CardContainer from '@/lion/components/CardContainer/index.vue';
 
-const { t } = useI18n();
-
 const props = defineProps<{
-  isRemoteApp: boolean;
+  isRemoteApp: boolean
 }>();
 
-const emit = defineEmits(['combine-keys']);
+const emit = defineEmits(['combineKeys']);
+
+const { t } = useI18n();
 
 const combinationKeys = [
   { keys: ['65307'], name: 'Esc' },
@@ -21,18 +21,18 @@ const combinationKeys = [
   { keys: ['65515', '114'], name: 'Windows+R' },
   { keys: ['65515', '120'], name: 'Windows+X' },
   { keys: ['65515'], name: 'Windows' },
-  { keys: ['65513', '65289'], name: 'Alt+Tab' },
+  { keys: ['65513', '65289'], name: 'Alt+Tab' }
 ];
 
 const remoteAppCombinationKeys = [
-  { keys: ['65513', '65289'], name: 'Alt+Tab' },
+  { keys: ['65513', '65289'], name: 'Alt+Tab' }
 ];
 
 const keyboardList = computed(() => {
   const keys = props.isRemoteApp ? remoteAppCombinationKeys : combinationKeys;
   return keys.map((item) => ({
     label: item.name,
-    click: () => emit('combine-keys', item.keys),
+    click: () => emit('combineKeys', item.keys)
   }));
 });
 </script>
