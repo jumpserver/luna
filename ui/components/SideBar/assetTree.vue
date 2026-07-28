@@ -2,6 +2,7 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { writeClipboardText } from "~/utils/clipboard";
 
 const props = defineProps<{
   search: string
@@ -19,7 +20,7 @@ type PanelKind = Exclude<AssetTreeKind, "search">;
 
 const RECENT_NODE_ID = "__recent_connections__";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const toast = useToast();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, orgId } = storeToRefs(userInfoStore);
@@ -38,6 +39,8 @@ const checkedNodeIds = ref<string[]>([]);
 const nodeMenuVisible = ref(false);
 const nodeMenuPosition = ref({ x: 0, y: 0 });
 const nodeMenuTarget = ref<{ node: AssetTreeNode, kind: PanelKind } | null>(null);
+let lastErrorSignature = "";
+let lastErrorAt = 0;
 
 const activeTree = computed(() => {
   if (activeTreeKind.value === "authorization") {
@@ -75,17 +78,19 @@ const assetItemToTreeNode = (asset: AssetItem, level: number): AssetTreeNode => 
   }
 });
 
-const buildRecentConnectionsNode = (): AssetTreeNode => ({
-  id: RECENT_NODE_ID,
-  key: RECENT_NODE_ID,
-  name: t("Menu.RecentConnections"),
-  isParent: true,
-  open: recentNodeOpen.value,
-  loaded: true,
-  level: 0,
-  children: recentConnections.value.map((asset) => assetItemToTreeNode(asset, 1)),
-  meta: { type: "recent-connections" }
-});
+function buildRecentConnectionsNode(): AssetTreeNode {
+  return {
+    id: RECENT_NODE_ID,
+    key: RECENT_NODE_ID,
+    name: t("Menu.RecentConnections"),
+    isParent: true,
+    open: recentNodeOpen.value,
+    loaded: true,
+    level: 0,
+    children: recentConnections.value.map((asset) => assetItemToTreeNode(asset, 1)),
+    meta: { type: "recent-connections" }
+  };
+}
 
 const treeSwitchLabel = computed(() => activeTreeKind.value === "authorization"
   ? t("Tree.SwitchToType")
@@ -123,11 +128,39 @@ const removeFavoriteNodes = (nodes: AssetTreeNode[]): AssetTreeNode[] => nodes
   }));
 
 const reportError = (error: unknown) => {
+  const title = t("Asset.GetAssetFailed");
+  const description = error instanceof Error ? error.message : String(error);
+  const signature = `${title}::${description}`;
+  const now = Date.now();
+
+  if (signature === lastErrorSignature && now - lastErrorAt < 1500) {
+    return;
+  }
+
+  lastErrorSignature = signature;
+  lastErrorAt = now;
+
   toast.add({
-    title: t("Asset.GetAssetFailed"),
-    description: error instanceof Error ? error.message : String(error),
+    title,
+    description,
     color: "error",
-    icon: "i-lucide-circle-alert"
+    icon: "i-lucide-circle-alert",
+    actions: [
+      {
+        label: t("Common.Copy"),
+        icon: "i-lucide-copy",
+        color: "neutral",
+        variant: "soft",
+        onClick: async () => {
+          await writeClipboardText([title, description].filter(Boolean).join("\n"));
+          toast.add({
+            title: locale.value === "zh" ? "已复制" : "Copied",
+            color: "success",
+            duration: 1200
+          });
+        }
+      }
+    ]
   });
 };
 

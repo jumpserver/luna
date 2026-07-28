@@ -157,7 +157,9 @@ export const useAuthSession = () => {
       }
 
       userInfoStore.$patch({
-        loggedIn: parsed.loggedIn ?? true,
+        // Only restore the remembered account context here. Real login state
+        // must be revalidated against the backend session/token on startup.
+        loggedIn: false,
         currentSite: snapshotSite,
         currentUser: (parsed.currentUser as any) || null,
         currentOrganizations: parsed.currentOrganizations || [],
@@ -168,7 +170,7 @@ export const useAuthSession = () => {
       });
 
       userInfoStore.setCurrentSite(snapshotSite);
-      userInfoStore.setUserLoggedIn(true);
+      userInfoStore.setUserLoggedIn(false);
       console.info("restore persisted userInfo success", {
         snapshotSite,
         loggedIn: parsed.loggedIn,
@@ -272,6 +274,11 @@ export const useAuthSession = () => {
   const bootstrapPersistedSession = async () => {
     const restored = restorePersistedSnapshot();
 
+    const promptLogin = () => {
+      if (!import.meta.client || !isTauriRuntime()) return;
+      useEventBus().emit("login");
+    };
+
     if (!isTauriRuntime()) {
       return await bootstrapWebCookieSession() || restored;
     }
@@ -287,9 +294,15 @@ export const useAuthSession = () => {
       const payload = await useTauriCoreInvoke<LoginPayload>("bootstrap_auth_session", { site });
       const applied = await applyLoginPayload(payload, { showToast: false, navigateHome: false });
       console.info("bootstrap auth session applied", { site, applied });
+      if (!applied) {
+        userInfoStore.setUserLoggedIn(false);
+        if (restored) promptLogin();
+      }
       return applied;
     } catch (error) {
       console.error("bootstrap auth session failed", { site, restored, error });
+      userInfoStore.setUserLoggedIn(false);
+      if (restored) promptLogin();
       return false;
     }
   };

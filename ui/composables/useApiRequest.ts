@@ -33,6 +33,38 @@ export interface SqlSnippetPayload {
   module: string
 }
 
+let lastAuthFailureAt = 0;
+
+const isAuthFailure = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return [
+    "HTTP 401",
+    "HTTP 403",
+    "missing current api session",
+    "status=401",
+    "status=403"
+  ].some((needle) => message.includes(needle));
+};
+
+const handleApiAuthFailure = () => {
+  if (!import.meta.client) return;
+
+  const now = Date.now();
+  if (now - lastAuthFailureAt < 1500) return;
+  lastAuthFailureAt = now;
+
+  const userInfoStore = useUserInfoStore();
+  if (!userInfoStore.loggedIn) return;
+
+  userInfoStore.setUserLoggedIn(false);
+  useEventBus().emit("clearAssets", undefined);
+  if (isTauriRuntime()) {
+    useEventBus().emit("login");
+  } else {
+    redirectToWebLogin();
+  }
+};
+
 const buildWebQuery = (request: ApiRequest) => {
   const query = new URLSearchParams();
 
@@ -79,11 +111,18 @@ async function tauriApiRequest<T>(request: ApiRequest): Promise<T> {
 }
 
 export async function apiRequest<T>(request: ApiRequest): Promise<T> {
-  if (isTauriRuntime()) {
-    return tauriApiRequest<T>(request);
-  }
+  try {
+    if (isTauriRuntime()) {
+      return await tauriApiRequest<T>(request);
+    }
 
-  return webApiRequest<T>(request);
+    return await webApiRequest<T>(request);
+  } catch (error) {
+    if (isAuthFailure(error)) {
+      handleApiAuthFailure();
+    }
+    throw error;
+  }
 }
 
 export function getAssetTree(

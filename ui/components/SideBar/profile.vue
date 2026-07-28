@@ -550,25 +550,13 @@ const handleConfirm = async () => {
   const existingUser = users.find((user) => normalizeSite(user.site) === normalizedSite);
 
   if (existingUser) {
-    if (!loggedIn.value) {
-      userInfoStore.setCurrentSite(existingUser.site);
-      userInfoStore.setUserLoggedIn(true);
-      openModal.value = false;
-
-      nextTick(() => {
-        useEventBus().emit("refresh", undefined);
-        navigateTo({
-          path: localePath({ path: "/" })
-        });
-      });
-
+    if (loggedIn.value) {
+      hasValidationError.value = true;
+      errorMessage.value = t("Login.AlreadyLoggedInError");
       return;
     }
 
-    hasValidationError.value = true;
-    errorMessage.value = t("Login.AlreadyLoggedInError");
-
-    return;
+    userInfoStore.setCurrentSite(existingUser.site);
   }
 
   if (!urlRegExp.test(normalizedSite)) {

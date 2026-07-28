@@ -104,17 +104,6 @@ const showExecutableNotFoundToast = () => {
     description,
     color: "error",
     icon: "line-md:close-circle",
-    actions: [
-      {
-        label: t("Common.Copy"),
-        icon: "i-lucide-copy",
-        color: "neutral",
-        variant: "soft",
-        onClick: () => {
-          void useTauriClipboardManagerWriteText(`${t("Setting.EnableFailed")}\n${description}`);
-        }
-      }
-    ],
     progress: true,
     duration: 4000
   });
