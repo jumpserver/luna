@@ -194,7 +194,7 @@ watch(
           class="group relative flex min-h-0 min-w-0 flex-col bg-[var(--workspace-surface-sub-panel)] transition-shadow"
           :class="[
             isActivePane(pane.id)
-              ? 'z-[1] ring-2 ring-inset ring-primary/45 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.14)]'
+              ? 'z-[1] ring-1 ring-inset ring-primary/28 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ui-color-primary-500)_10%,transparent)]'
               : 'ring-1 ring-inset ring-transparent',
             showPaneSwapHint(pane.id) ? 'ring-2 ring-inset ring-primary/50 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]' : ''
           ]"
@@ -203,7 +203,7 @@ watch(
             v-if="showPaneHeaders"
             draggable="true"
             class="flex h-8 shrink-0 items-center justify-between gap-3 border-b border-[var(--workspace-surface-sub-border)] px-2.5 transition-colors"
-            :class="isActivePane(pane.id) ? 'bg-primary/8' : 'bg-[var(--workspace-surface-sub-header)]'"
+            :class="isActivePane(pane.id) ? 'bg-[var(--workspace-surface-sub-tab-active)]' : 'bg-[var(--workspace-surface-sub-header)]'"
             @dragstart="handlePaneDragStart($event, pane.id)"
             @dragend="handlePaneDragEnd"
             @dragenter.prevent="dragOverPaneId = pane.id"
