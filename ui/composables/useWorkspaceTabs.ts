@@ -1,16 +1,14 @@
 import type { AssetItem, PermedProtocol } from "~/types";
+
 import { useRecentConnections } from "~/composables/useRecentConnections";
 import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 
 export type WorkspaceSessionStatus = "selecting" | "connecting" | "ready" | "connected" | "failed";
+export type WorkspaceSplitDirection = "horizontal" | "vertical";
+export type WorkspacePaneMode = "empty" | "setup" | "session";
+export type WorkspacePaneLayoutMode = "single" | "columns-2" | "rows-2" | "grid-2x2";
 
-export interface WorkspaceSplitSession {
-  id: string
-  payload?: Record<string, any>
-  status: WorkspaceSessionStatus
-}
-
-export interface WorkspaceSessionTab {
+export interface WorkspaceSurfaceSession {
   id: string
   assetId: string
   assetName: string
@@ -25,13 +23,41 @@ export interface WorkspaceSessionTab {
   connectedAt?: number
   payload?: Record<string, any>
   setupAsset?: AssetItem
-  splitSessions?: WorkspaceSplitSession[]
+}
+
+export interface WorkspacePane extends WorkspaceSurfaceSession {
+  mode: WorkspacePaneMode
+}
+
+export interface WorkspaceSessionTab extends WorkspaceSurfaceSession {
+  title?: string
+  layoutMode: WorkspacePaneLayoutMode
+  panes: WorkspacePane[]
 }
 
 const tabs = ref<WorkspaceSessionTab[]>([]);
 const activeTabId = ref("");
+const activePaneId = ref("");
+const pendingPaneTarget = ref<{ tabId: string, paneId: string } | null>(null);
 let tabSequence = 0;
+let paneSequence = 0;
 let sessionDisposer: ((id: string) => void | Promise<void>) | null = null;
+
+const blankSurface = (): Omit<WorkspaceSurfaceSession, "id"> => ({
+  assetId: "",
+  assetName: "",
+  assetType: "",
+  assetPlatform: "",
+  assetCategory: "",
+  address: "",
+  permedProtocols: undefined,
+  protocol: "",
+  account: "",
+  status: "selecting",
+  connectedAt: undefined,
+  payload: undefined,
+  setupAsset: undefined
+});
 
 const createTabId = (assetId: string, protocol: string, account: string) => {
   tabSequence += 1;
@@ -39,28 +65,143 @@ const createTabId = (assetId: string, protocol: string, account: string) => {
   return `${assetId}:${protocol}:${account || "-"}:${random}`;
 };
 
-const findSession = (match: { tabId?: string, assetId: string, protocol: string, account: string }) => {
-  if (match.tabId) return tabs.value.find((item) => item.id === match.tabId);
+const createPaneId = (tabId: string) => {
+  paneSequence += 1;
+  const random = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${paneSequence}`;
+  return `pane:${tabId}:${random}`;
+};
 
-  return tabs.value.find(
-    (item) =>
-      item.assetId === match.assetId
-      && item.protocol === match.protocol
-      && item.account === match.account
-  );
+const createPane = (id: string, session: Partial<WorkspaceSurfaceSession>, mode: WorkspacePaneMode): WorkspacePane => ({
+  id,
+  ...blankSurface(),
+  ...session,
+  mode
+});
+
+const createEmptyPane = (tabId: string) => createPane(createPaneId(tabId), {}, "empty");
+
+const syncTabFromPrimaryPane = (tab: WorkspaceSessionTab) => {
+  const primaryPane = tab.panes[0];
+  if (!primaryPane) return;
+
+  tab.assetId = primaryPane.assetId;
+  tab.assetName = primaryPane.assetName;
+  tab.assetType = primaryPane.assetType;
+  tab.assetPlatform = primaryPane.assetPlatform;
+  tab.assetCategory = primaryPane.assetCategory;
+  tab.address = primaryPane.address;
+  tab.permedProtocols = primaryPane.permedProtocols;
+  tab.protocol = primaryPane.protocol;
+  tab.account = primaryPane.account;
+  tab.status = primaryPane.status;
+  tab.connectedAt = primaryPane.connectedAt;
+  tab.payload = primaryPane.payload;
+  tab.setupAsset = primaryPane.setupAsset;
+};
+
+const setLayoutForPaneCount = (
+  tab: WorkspaceSessionTab,
+  count = tab.panes.length,
+  preferredDirection?: WorkspaceSplitDirection
+) => {
+  if (count <= 1) {
+    tab.layoutMode = "single";
+    return;
+  }
+
+  if (count === 2) {
+    if (preferredDirection) {
+      tab.layoutMode = preferredDirection === "vertical" ? "columns-2" : "rows-2";
+      return;
+    }
+
+    tab.layoutMode = tab.layoutMode === "rows-2" ? "rows-2" : "columns-2";
+    return;
+  }
+
+  tab.layoutMode = "grid-2x2";
+};
+
+const createTabFromPane = (pane: WorkspacePane): WorkspaceSessionTab => {
+  const tab: WorkspaceSessionTab = {
+    ...blankSurface(),
+    ...pane,
+    title: undefined,
+    layoutMode: "single",
+    panes: [pane]
+  };
+
+  syncTabFromPrimaryPane(tab);
+  return tab;
 };
 
 const closeNativeSession = (id: string) => {
   Promise.resolve(sessionDisposer?.(id)).catch(() => {});
 };
 
-const findSplitSession = (tabId: string) => {
+const findPane = (paneId: string) => {
   for (const tab of tabs.value) {
-    const split = tab.splitSessions?.find((item) => item.id === tabId);
-    if (split) return { tab, split };
+    const paneIndex = tab.panes.findIndex((pane) => pane.id === paneId);
+    if (paneIndex !== -1) return { tab, pane: tab.panes[paneIndex]!, paneIndex };
   }
 
   return null;
+};
+
+const getFirstPaneId = (tab: WorkspaceSessionTab | null | undefined) => tab?.panes[0]?.id || "";
+
+const activatePane = (paneId: string) => {
+  const match = findPane(paneId);
+  if (!match) {
+    activePaneId.value = "";
+    return false;
+  }
+
+  activeTabId.value = match.tab.id;
+  activePaneId.value = paneId;
+  return true;
+};
+
+const ensureActivePaneForTab = (tabId: string) => {
+  const tab = tabs.value.find((item) => item.id === tabId);
+  if (!tab) {
+    if (activeTabId.value === tabId) activePaneId.value = "";
+    return;
+  }
+
+  const hasActivePane = tab.panes.some((pane) => pane.id === activePaneId.value);
+  if (!hasActivePane) activePaneId.value = getFirstPaneId(tab);
+};
+
+const findSession = (match: { tabId?: string, assetId: string, protocol: string, account: string }) => {
+  if (match.tabId) return findPane(match.tabId);
+
+  for (const tab of tabs.value) {
+    const paneIndex = tab.panes.findIndex((pane) =>
+      pane.assetId === match.assetId
+      && pane.protocol === match.protocol
+      && pane.account === match.account
+    );
+    if (paneIndex !== -1) return { tab, pane: tab.panes[paneIndex]!, paneIndex };
+  }
+
+  return null;
+};
+
+const replacePane = (tab: WorkspaceSessionTab, paneIndex: number, pane: WorkspacePane) => {
+  tab.panes.splice(paneIndex, 1, pane);
+  if (paneIndex === 0) syncTabFromPrimaryPane(tab);
+};
+
+const resolvePendingTarget = (explicitPaneId?: string) => {
+  if (explicitPaneId) {
+    if (pendingPaneTarget.value?.paneId === explicitPaneId) pendingPaneTarget.value = null;
+    return findPane(explicitPaneId);
+  }
+  const pending = pendingPaneTarget.value;
+  pendingPaneTarget.value = null;
+  if (!pending) return null;
+  return findPane(pending.paneId);
 };
 
 export const useWorkspaceTabs = () => {
@@ -68,13 +209,16 @@ export const useWorkspaceTabs = () => {
     sessionDisposer = disposer;
   };
 
-  const openSession = (asset: AssetItem, connection: { protocol: string, account: string, payload?: Record<string, any> }) => {
+  const openSession = (
+    asset: AssetItem,
+    connection: { protocol: string, account: string, payload?: Record<string, any>, paneId?: string }
+  ) => {
     useRecentConnections().recordRecentConnection(asset);
     const protocol = connection.protocol || asset.savedConnection?.protocol || "ssh";
     const account = connection.account || asset.savedConnection?.username || "";
+    const target = resolvePendingTarget(connection.paneId);
 
-    const tab: WorkspaceSessionTab = {
-      id: createTabId(asset.id, protocol, account),
+    const pane = createPane(target?.pane.id || createTabId(asset.id, protocol, account), {
       assetId: asset.id,
       assetName: asset.name,
       assetType: asset.type || "",
@@ -85,22 +229,31 @@ export const useWorkspaceTabs = () => {
       protocol,
       account,
       status: connection.payload ? "ready" : "connecting",
-      payload: connection.payload
-    };
+      payload: connection.payload,
+      setupAsset: undefined
+    }, "session");
 
+    if (target) {
+      replacePane(target.tab, target.paneIndex, pane);
+      activeTabId.value = target.tab.id;
+      activePaneId.value = pane.id;
+      return pane;
+    }
+
+    const tab = createTabFromPane(pane);
     tabs.value.push(tab);
     activeTabId.value = tab.id;
-
-    return tab;
+    activePaneId.value = pane.id;
+    return pane;
   };
 
-  const openSetupSession = (asset: AssetItem, options: { protocol?: string } = {}) => {
+  const openSetupSession = (asset: AssetItem, options: { protocol?: string, paneId?: string } = {}) => {
     useRecentConnections().recordRecentConnection(asset);
     const protocol = options.protocol || asset.savedConnection?.protocol || "";
     const account = asset.savedConnection?.username || "";
+    const target = resolvePendingTarget(options.paneId);
 
-    const tab: WorkspaceSessionTab = {
-      id: createTabId(asset.id, protocol || "setup", account),
+    const pane = createPane(target?.pane.id || createTabId(asset.id, protocol || "setup", account), {
       assetId: asset.id,
       assetName: asset.name,
       assetType: asset.type || "",
@@ -111,18 +264,27 @@ export const useWorkspaceTabs = () => {
       protocol,
       account,
       status: "selecting",
-      setupAsset: asset
-    };
+      setupAsset: asset,
+      payload: undefined,
+      connectedAt: undefined
+    }, "setup");
 
+    if (target) {
+      replacePane(target.tab, target.paneIndex, pane);
+      activeTabId.value = target.tab.id;
+      activePaneId.value = pane.id;
+      return pane;
+    }
+
+    const tab = createTabFromPane(pane);
     tabs.value.push(tab);
     activeTabId.value = tab.id;
-
-    return tab;
+    activePaneId.value = pane.id;
+    return pane;
   };
 
   const openLocalShell = () => {
-    const tab: WorkspaceSessionTab = {
-      id: createTabId("local", "local-shell", ""),
+    const pane = createPane(createTabId("local", "local-shell", ""), {
       assetId: "local",
       assetName: "Local Shell",
       assetType: "local",
@@ -132,52 +294,70 @@ export const useWorkspaceTabs = () => {
       protocol: "local-shell",
       account: "",
       status: "ready"
-    };
+    }, "session");
 
+    const tab = createTabFromPane(pane);
     tabs.value.push(tab);
     activeTabId.value = tab.id;
+    activePaneId.value = pane.id;
+    return pane;
+  };
 
-    return tab;
+  const closePane = (paneId: string) => {
+    const match = findPane(paneId);
+    if (!match) return;
+
+    const { tab, pane, paneIndex } = match;
+    if (tab.panes.length === 1) {
+      const tabIndex = tabs.value.findIndex((item) => item.id === tab.id);
+      if (tabIndex !== -1) closeSession(tab.id);
+      return;
+    }
+
+    pendingPaneTarget.value = pendingPaneTarget.value?.paneId === paneId ? null : pendingPaneTarget.value;
+
+    clearWorkspaceSessionDetails(pane.id);
+    closeNativeSession(pane.id);
+    tab.panes.splice(paneIndex, 1);
+    setLayoutForPaneCount(tab);
+    syncTabFromPrimaryPane(tab);
+    if (activePaneId.value === paneId) activePaneId.value = getFirstPaneId(tab);
   };
 
   const closeSession = (id: string) => {
     const index = tabs.value.findIndex((tab) => tab.id === id);
     if (index === -1) {
-      const splitMatch = findSplitSession(id);
-      if (!splitMatch?.tab.splitSessions) return;
-
-      const splitIndex = splitMatch.tab.splitSessions.findIndex((item) => item.id === id);
-      if (splitIndex === -1) return;
-
-      clearWorkspaceSessionDetails(id);
-      closeNativeSession(id);
-      splitMatch.tab.splitSessions.splice(splitIndex, 1);
+      closePane(id);
       return;
     }
 
     const tab = tabs.value[index]!;
-    for (const split of tab.splitSessions || []) {
-      clearWorkspaceSessionDetails(split.id);
-      closeNativeSession(split.id);
+    for (const pane of tab.panes) {
+      pendingPaneTarget.value = pendingPaneTarget.value?.paneId === pane.id ? null : pendingPaneTarget.value;
+      clearWorkspaceSessionDetails(pane.id);
+      closeNativeSession(pane.id);
     }
-
-    clearWorkspaceSessionDetails(id);
-    closeNativeSession(id);
 
     tabs.value.splice(index, 1);
 
     if (activeTabId.value === id) {
       activeTabId.value = tabs.value[Math.max(index - 1, 0)]?.id || tabs.value[0]?.id || "";
     }
+    ensureActivePaneForTab(activeTabId.value);
   };
 
   const closeAllSessions = () => {
     for (const tab of tabs.value) {
-      closeNativeSession(tab.id);
+      for (const pane of tab.panes) {
+        clearWorkspaceSessionDetails(pane.id);
+        closeNativeSession(pane.id);
+      }
     }
 
+    pendingPaneTarget.value = null;
     tabs.value = [];
     activeTabId.value = "";
+    activePaneId.value = "";
   };
 
   const closeOtherSessions = (id: string) => {
@@ -185,16 +365,17 @@ export const useWorkspaceTabs = () => {
 
     for (const tab of tabs.value) {
       if (tab.id !== id) {
-        for (const split of tab.splitSessions || []) {
-          clearWorkspaceSessionDetails(split.id);
-          closeNativeSession(split.id);
+        for (const pane of tab.panes) {
+          clearWorkspaceSessionDetails(pane.id);
+          closeNativeSession(pane.id);
         }
-        closeNativeSession(tab.id);
       }
     }
 
+    pendingPaneTarget.value = pendingPaneTarget.value?.tabId === id ? pendingPaneTarget.value : null;
     tabs.value = tabs.value.filter((tab) => tab.id === id);
     activeTabId.value = id;
+    ensureActivePaneForTab(id);
   };
 
   const closeLeftSessions = (id: string) => {
@@ -212,100 +393,198 @@ export const useWorkspaceTabs = () => {
     }
   };
 
-  const addSplitSession = (tabId: string, payload: Record<string, any>) => {
-    const tab = tabs.value.find((item) => item.id === tabId);
-    if (!tab || tab.splitSessions?.length) return;
+  const reorderTabs = (sourceTabId: string, targetTabId: string, placement: "before" | "after" = "before") => {
+    if (sourceTabId === targetTabId) return false;
+    const sourceIndex = tabs.value.findIndex((tab) => tab.id === sourceTabId);
+    const targetIndex = tabs.value.findIndex((tab) => tab.id === targetTabId);
+    if (sourceIndex === -1 || targetIndex === -1) return false;
 
-    tab.splitSessions = [{
-      id: `split:${tabId}:${Date.now()}`,
-      payload,
-      status: "connecting"
-    }];
+    const [sourceTab] = tabs.value.splice(sourceIndex, 1);
+    const normalizedTargetIndex = tabs.value.findIndex((tab) => tab.id === targetTabId);
+    if (normalizedTargetIndex === -1) return false;
+    const insertIndex = placement === "after" ? normalizedTargetIndex + 1 : normalizedTargetIndex;
+    tabs.value.splice(insertIndex, 0, sourceTab!);
+    return true;
   };
 
-  const toSurfaceTab = (tab: WorkspaceSessionTab, surfaceId: string, payload?: Record<string, any>, status?: WorkspaceSessionStatus): WorkspaceSessionTab => ({
-    ...tab,
-    id: surfaceId,
-    payload: payload ?? tab.payload,
-    status: status ?? tab.status,
-    splitSessions: undefined
+  const canSplitWorkspace = (tabId: string, direction: WorkspaceSplitDirection) => {
+    const tab = tabs.value.find((item) => item.id === tabId);
+    if (!tab) return false;
+
+    if (tab.panes.length === 1) return true;
+    if (tab.panes.length === 2) {
+      return (tab.layoutMode === "columns-2" && direction === "horizontal")
+        || (tab.layoutMode === "rows-2" && direction === "vertical");
+    }
+    return tab.layoutMode === "grid-2x2" && tab.panes.length < 4;
+  };
+
+  const splitWorkspace = (tabId: string, direction: WorkspaceSplitDirection) => {
+    const tab = tabs.value.find((item) => item.id === tabId);
+    if (!tab || !canSplitWorkspace(tabId, direction)) return [];
+
+    if (tab.panes.length === 1) {
+      tab.panes.push(createEmptyPane(tab.id));
+      setLayoutForPaneCount(tab, 2, direction);
+      activePaneId.value = tab.panes[1]!.id;
+      return [tab.panes[1]!];
+    }
+
+    if (tab.panes.length === 2) {
+      const newPanes = [createEmptyPane(tab.id), createEmptyPane(tab.id)];
+      tab.panes.push(...newPanes);
+      tab.layoutMode = "grid-2x2";
+      activePaneId.value = newPanes[0]!.id;
+      return newPanes;
+    }
+
+    const pane = createEmptyPane(tab.id);
+    tab.panes.push(pane);
+    tab.layoutMode = "grid-2x2";
+    activePaneId.value = pane.id;
+    return [pane];
+  };
+
+  const swapPanes = (tabId: string, sourcePaneId: string, targetPaneId: string) => {
+    if (sourcePaneId === targetPaneId) return false;
+    const tab = tabs.value.find((item) => item.id === tabId);
+    if (!tab) return false;
+
+    const sourceIndex = tab.panes.findIndex((pane) => pane.id === sourcePaneId);
+    const targetIndex = tab.panes.findIndex((pane) => pane.id === targetPaneId);
+    if (sourceIndex === -1 || targetIndex === -1) return false;
+
+    const sourcePane = tab.panes[sourceIndex]!;
+    tab.panes[sourceIndex] = tab.panes[targetIndex]!;
+    tab.panes[targetIndex] = sourcePane;
+    syncTabFromPrimaryPane(tab);
+    return true;
+  };
+
+  const canMergeTabs = (sourceTabId: string, targetTabId: string) => {
+    if (sourceTabId === targetTabId) return false;
+    const source = tabs.value.find((tab) => tab.id === sourceTabId);
+    const target = tabs.value.find((tab) => tab.id === targetTabId);
+    if (!source || !target) return false;
+
+    return source.panes.length + target.panes.length <= 4;
+  };
+
+  const mergeTabIntoWorkspace = (sourceTabId: string, targetTabId: string) => {
+    if (!canMergeTabs(sourceTabId, targetTabId)) return false;
+
+    const sourceIndex = tabs.value.findIndex((tab) => tab.id === sourceTabId);
+    const target = tabs.value.find((tab) => tab.id === targetTabId);
+    if (sourceIndex === -1 || !target) return false;
+
+    const [source] = tabs.value.splice(sourceIndex, 1);
+    if (!source) return false;
+
+    target.panes.push(...source.panes);
+    setLayoutForPaneCount(target, target.panes.length, target.panes.length === 2 ? "vertical" : undefined);
+    activeTabId.value = target.id;
+    activePaneId.value = source.panes[0]?.id || getFirstPaneId(target);
+    return true;
+  };
+
+  const getTabById = (tabId: string) => tabs.value.find((tab) => tab.id === tabId) || null;
+
+  const beginPaneAssetSelection = (tabId: string, paneId: string) => {
+    const match = findPane(paneId);
+    if (!match || match.tab.id !== tabId) return;
+    pendingPaneTarget.value = { tabId, paneId };
+    activeTabId.value = tabId;
+    activePaneId.value = paneId;
+  };
+
+  const cancelPaneAssetSelection = (paneId?: string) => {
+    if (!paneId || pendingPaneTarget.value?.paneId === paneId) pendingPaneTarget.value = null;
+  };
+
+  const isPaneAwaitingAssetSelection = (paneId: string) => pendingPaneTarget.value?.paneId === paneId;
+
+  const toSurfaceTab = (pane: WorkspacePane): WorkspaceSessionTab => ({
+    ...blankSurface(),
+    ...pane,
+    title: undefined,
+    layoutMode: "single",
+    panes: [pane]
   });
+
+  const renameTabTitle = (tabId: string, title: string) => {
+    const tab = tabs.value.find((item) => item.id === tabId);
+    if (!tab) return false;
+
+    tab.title = title.trim() || undefined;
+    return true;
+  };
 
   const updateSessionPayload = (
     match: { tabId?: string, assetId: string, protocol: string, account: string },
     payload: Record<string, any>
   ) => {
-    if (match.tabId) {
-      const splitMatch = findSplitSession(match.tabId);
-      if (splitMatch) {
-        splitMatch.split.payload = payload;
-        splitMatch.split.status = "ready";
-        return;
-      }
-    }
+    const found = findSession(match);
+    if (!found) return;
 
-    const tab = findSession(match);
-    if (!tab) return;
-
-    tab.payload = payload;
-    tab.status = "ready";
+    found.pane.payload = payload;
+    found.pane.status = "ready";
+    found.pane.mode = "session";
+    if (found.paneIndex === 0) syncTabFromPrimaryPane(found.tab);
   };
 
-  const markSessionConnecting = (tabId: string) => {
-    const tab = tabs.value.find((item) => item.id === tabId);
-    if (tab) {
-      tab.status = "connecting";
-      return;
-    }
+  const markSessionConnecting = (paneId: string) => {
+    const match = findPane(paneId);
+    if (!match) return;
 
-    const splitMatch = findSplitSession(tabId);
-    if (splitMatch) splitMatch.split.status = "connecting";
+    match.pane.status = "connecting";
+    match.pane.mode = "session";
+    activePaneId.value = paneId;
+    if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
 
   const startSessionConnection = (
-    tabId: string,
+    paneId: string,
     connection: { protocol: string, account: string }
   ) => {
-    const tab = tabs.value.find((item) => item.id === tabId);
-    if (!tab) return;
+    const match = findPane(paneId);
+    if (!match) return;
 
-    tab.protocol = connection.protocol;
-    tab.account = connection.account;
-    tab.payload = undefined;
-    tab.status = "connecting";
+    match.pane.protocol = connection.protocol;
+    match.pane.account = connection.account;
+    match.pane.payload = undefined;
+    match.pane.status = "connecting";
+    match.pane.mode = "session";
+    activePaneId.value = paneId;
+    if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
 
   const markSessionFailed = (match: { tabId?: string, assetId: string, protocol: string, account: string }) => {
-    if (match.tabId) {
-      const splitMatch = findSplitSession(match.tabId);
-      if (splitMatch) {
-        splitMatch.split.status = "failed";
-        return;
-      }
-    }
+    const found = findSession(match);
+    if (!found) return;
 
-    const tab = findSession(match);
-    if (!tab) return;
-
-    tab.status = "failed";
+    found.pane.status = "failed";
+    found.pane.mode = "session";
+    if (found.paneIndex === 0) syncTabFromPrimaryPane(found.tab);
   };
 
-  const markSessionConnected = (tabId: string) => {
-    const tab = tabs.value.find((item) => item.id === tabId);
-    if (tab) {
-      tab.status = "connected";
-      tab.connectedAt = Date.now();
-      return;
-    }
+  const markSessionConnected = (paneId: string) => {
+    const match = findPane(paneId);
+    if (!match) return;
 
-    const splitMatch = findSplitSession(tabId);
-    if (!splitMatch) return;
-
-    splitMatch.split.status = "connected";
+    match.pane.status = "connected";
+    match.pane.connectedAt = Date.now();
+    match.pane.mode = "session";
+    activePaneId.value = paneId;
+    if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
 
   const setActiveSession = (id: string) => {
     activeTabId.value = id;
+    ensureActivePaneForTab(id);
+  };
+
+  const setActivePane = (paneId: string) => {
+    activatePane(paneId);
   };
 
   const activateAdjacentSession = (direction: "previous" | "next") => {
@@ -318,6 +597,7 @@ export const useWorkspaceTabs = () => {
       : (normalizedIndex - 1 + tabs.value.length) % tabs.value.length;
 
     activeTabId.value = tabs.value[nextIndex]!.id;
+    ensureActivePaneForTab(activeTabId.value);
   };
 
   const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) || null);
@@ -326,23 +606,36 @@ export const useWorkspaceTabs = () => {
     tabs,
     activeTab,
     activeTabId,
+    activePaneId,
     activateAdjacentSession,
-    addSplitSession,
+    beginPaneAssetSelection,
+    canSplitWorkspace,
+    canMergeTabs,
+    cancelPaneAssetSelection,
     closeAllSessions,
     closeLeftSessions,
     closeOtherSessions,
+    closePane,
     closeRightSessions,
-    registerSessionDisposer,
-    openSession,
-    openLocalShell,
-    openSetupSession,
     closeSession,
-    markSessionFailed,
-    markSessionConnecting,
+    getTabById,
+    isPaneAwaitingAssetSelection,
     markSessionConnected,
-    toSurfaceTab,
+    markSessionConnecting,
+    markSessionFailed,
+    openLocalShell,
+    openSession,
+    openSetupSession,
+    reorderTabs,
+    registerSessionDisposer,
+    renameTabTitle,
+    setActivePane,
+    setActiveSession,
+    splitWorkspace,
     startSessionConnection,
+    swapPanes,
+    toSurfaceTab,
     updateSessionPayload,
-    setActiveSession
+    mergeTabIntoWorkspace
   };
 };

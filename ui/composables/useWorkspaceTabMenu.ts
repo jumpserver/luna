@@ -1,4 +1,4 @@
-import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
+import type { WorkspacePane, WorkspaceSessionTab, WorkspaceSplitDirection } from "~/composables/useWorkspaceTabs";
 import type { AssetItem } from "~/types";
 
 import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
@@ -35,9 +35,14 @@ export function useWorkspaceTabMenu() {
   const { addErrorToast } = useErrorToast();
   const { handleAssetConnection } = useAssetAction();
   const {
+    getTabById,
     openSession,
+    openSetupSession,
     setActiveSession,
-    addSplitSession,
+    mergeTabIntoWorkspace,
+    splitWorkspace,
+    canSplitWorkspace,
+    beginPaneAssetSelection,
     markSessionConnecting,
     updateSessionPayload
   } = useWorkspaceTabs();
@@ -62,12 +67,12 @@ export function useWorkspaceTabMenu() {
   const cloneSession = async (tab: WorkspaceSessionTab) => {
     try {
       const token = await exchangeToken(tab);
-      const newTab = openSession(tabToAsset(tab), {
+      const newPane = openSession(tabToAsset(tab), {
         protocol: tab.protocol,
         account: tab.account,
         payload: buildPayload(tab, token)
       });
-      setActiveSession(newTab.id);
+      setActiveSession(newPane.id);
     } catch (error) {
       addErrorToast({
         title: t("TabMenu.CloneConnect"),
@@ -92,23 +97,89 @@ export function useWorkspaceTabMenu() {
     }
   };
 
-  const splitSession = async (tab: WorkspaceSessionTab) => {
-    if (tab.splitSessions?.length) return;
+  const splitSession = (tab: WorkspaceSessionTab, direction: WorkspaceSplitDirection) => {
+    if (!canSplitWorkspace(tab.id, direction)) return;
+    splitWorkspace(tab.id, direction);
+    setActiveSession(tab.id);
+  };
+
+  const connectCurrentPane = async (workspaceTab: WorkspaceSessionTab, pane: WorkspacePane) => {
+    if (workspaceTab.status === "selecting" && workspaceTab.setupAsset) {
+      openSetupSession(workspaceTab.setupAsset, {
+        protocol: workspaceTab.protocol || undefined,
+        paneId: pane.id
+      });
+      return;
+    }
 
     try {
-      const token = await exchangeToken(tab);
-      addSplitSession(tab.id, buildPayload(tab, token));
-      setActiveSession(tab.id);
+      markSessionConnecting(pane.id);
+      openSession(tabToAsset(workspaceTab), {
+        protocol: workspaceTab.protocol,
+        account: workspaceTab.account,
+        paneId: pane.id
+      });
+      const token = await exchangeToken(workspaceTab);
+      updateSessionPayload({
+        tabId: pane.id,
+        assetId: workspaceTab.assetId,
+        protocol: workspaceTab.protocol,
+        account: workspaceTab.account
+      }, buildPayload(workspaceTab, token));
     } catch (error) {
+      const connectMethod = workspaceTab.payload?.connectMethod?.value;
+      handleAssetConnection(workspaceTab.account, workspaceTab.assetId, workspaceTab.protocol, undefined, undefined, {
+        tabId: pane.id,
+        asset: tabToAsset(workspaceTab),
+        connectMethod
+      });
       addErrorToast({
-        title: t("TabMenu.SplitVertically"),
+        title: t("WorkspacePane.ConnectCurrent"),
         description: String(error),
       });
     }
   };
 
+  const connectOtherPane = (workspaceTab: WorkspaceSessionTab, pane: WorkspacePane) => {
+    beginPaneAssetSelection(workspaceTab.id, pane.id);
+  };
+
+  const refreshPanePayload = async (tab: WorkspaceSessionTab) => {
+    const token = await exchangeToken(tab);
+    updateSessionPayload({
+      tabId: tab.id,
+      assetId: tab.assetId,
+      protocol: tab.protocol,
+      account: tab.account
+    }, buildPayload(tab, token));
+  };
+
+  const mergeWorkspaceTabIntoCurrent = async (sourceTabId: string, targetTabId: string) => {
+    const sourceTab = getTabById(sourceTabId);
+    if (!sourceTab) return false;
+
+    const refreshablePanes = sourceTab.panes.filter((pane) => pane.mode === "session" && getTokenId(pane as WorkspaceSessionTab));
+
+    try {
+      for (const pane of refreshablePanes) {
+        await refreshPanePayload(pane as WorkspaceSessionTab);
+      }
+    } catch (error) {
+      addErrorToast({
+        title: t("WorkspacePane.RefreshTokenFailed"),
+        description: String(error),
+      });
+      return false;
+    }
+
+    return mergeTabIntoWorkspace(sourceTabId, targetTabId);
+  };
+
   return {
     cloneSession,
+    connectCurrentPane,
+    connectOtherPane,
+    mergeWorkspaceTabIntoCurrent,
     reconnectSession,
     splitSession
   };

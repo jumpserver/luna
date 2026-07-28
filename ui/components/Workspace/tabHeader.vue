@@ -14,6 +14,9 @@ const {
   activeTabId,
   tabs,
   activateAdjacentSession,
+  canSplitWorkspace,
+  reorderTabs,
+  renameTabTitle,
   closeAllSessions,
   closeLeftSessions,
   closeOtherSessions,
@@ -31,11 +34,23 @@ const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextMenuTab = ref<WorkspaceSessionTab | null>(null);
 const contextMenuTabIndex = ref(-1);
+const draggedTabId = ref("");
+const dragOverTabId = ref("");
+const dragOverTabPlacement = ref<"before" | "after">("before");
+const renameModalOpen = ref(false);
+const renameTabId = ref("");
+const renameValue = ref("");
 
-const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) || null);
+const { activeTab } = useWorkspaceTabs();
 const canSwitchTabs = computed(() => tabs.value.length > 1);
 const isDarkTabTheme = computed(() => colorMode.value === "dark");
 const brokenTabIcons = ref(new Set<string>());
+const renameDisabled = computed(() => {
+  const target = tabs.value.find((tab) => tab.id === renameTabId.value);
+  const current = (target?.title || target?.assetName || "").trim();
+  const next = renameValue.value.trim();
+  return !target || !next || next === current;
+});
 
 function tabIcon(tab: WorkspaceSessionTab) {
   return resolveAssetIconFromFields({
@@ -51,6 +66,10 @@ function showTabIconImage(tab: WorkspaceSessionTab) {
 
 function markTabIconBroken(tabId: string) {
   brokenTabIcons.value.add(tabId);
+}
+
+function tabDisplayTitle(tab: WorkspaceSessionTab) {
+  return tab.title || tab.assetName || "Untitled";
 }
 
 const tabDropdownUi = {
@@ -89,6 +108,60 @@ function hideContextMenu() {
   contextMenuTabIndex.value = -1;
 }
 
+function openRenameModal(tab: WorkspaceSessionTab) {
+  hideContextMenu();
+  renameTabId.value = tab.id;
+  renameValue.value = tab.title || tab.assetName || "";
+  renameModalOpen.value = true;
+}
+
+function submitRename() {
+  if (renameDisabled.value) return;
+  renameTabTitle(renameTabId.value, renameValue.value);
+  renameModalOpen.value = false;
+}
+
+function updateRenameModal(open: boolean) {
+  renameModalOpen.value = open;
+  if (!open) {
+    renameTabId.value = "";
+    renameValue.value = "";
+  }
+}
+
+function handleTabDragStart(event: DragEvent, tabId: string) {
+  draggedTabId.value = tabId;
+  event.dataTransfer?.setData("application/x-workspace-tab", tabId);
+  event.dataTransfer?.setData("text/plain", tabId);
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+}
+
+function handleTabDragEnd() {
+  draggedTabId.value = "";
+  dragOverTabId.value = "";
+  dragOverTabPlacement.value = "before";
+}
+
+function handleTabDragOver(event: DragEvent, targetTabId: string) {
+  const currentTarget = event.currentTarget as HTMLElement | null;
+  if (!currentTarget) return;
+
+  const rect = currentTarget.getBoundingClientRect();
+  const midpoint = rect.left + rect.width / 2;
+  dragOverTabId.value = targetTabId;
+  dragOverTabPlacement.value = event.clientX >= midpoint ? "after" : "before";
+}
+
+function handleTabDrop(targetTabId: string) {
+  if (!draggedTabId.value || draggedTabId.value === targetTabId) {
+    dragOverTabId.value = "";
+    return;
+  }
+  reorderTabs(draggedTabId.value, targetTabId, dragOverTabPlacement.value);
+  dragOverTabId.value = "";
+  dragOverTabPlacement.value = "before";
+}
+
 function openContextMenu(tab: WorkspaceSessionTab, index: number, event: MouseEvent) {
   event.preventDefault();
   event.stopPropagation();
@@ -97,7 +170,6 @@ function openContextMenu(tab: WorkspaceSessionTab, index: number, event: MouseEv
   contextMenuTabIndex.value = index;
   contextMenuPosition.value = { x: event.clientX, y: event.clientY };
   contextMenuVisible.value = true;
-  setActiveSession(tab.id);
 }
 
 const contextMenuItems = computed<DropdownMenuItem[]>(() => {
@@ -106,6 +178,8 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
   if (!tab || index < 0) return [];
 
   const hasToken = Boolean(tab.payload?.id || tab.payload?.token?.id);
+  const canSplitVertically = canSplitWorkspace(tab.id, "vertical");
+  const canSplitHorizontally = canSplitWorkspace(tab.id, "horizontal");
 
   return [
     tabMenuItem(
@@ -132,14 +206,34 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
     ),
     tabMenuItem(
       {
+        label: t("TabMenu.RenameTitle"),
+        onSelect: () => {
+          openRenameModal(tab);
+        }
+      },
+      "i-lucide-pencil"
+    ),
+    tabMenuItem(
+      {
         label: t("TabMenu.SplitVertically"),
-        disabled: !hasToken || Boolean(tab.splitSessions?.length),
+        disabled: !canSplitVertically,
         onSelect: () => {
           hideContextMenu();
-          void splitSession(tab);
+          splitSession(tab, "vertical");
         }
       },
       "i-lucide-columns-2"
+    ),
+    tabMenuItem(
+      {
+        label: t("TabMenu.SplitHorizontally"),
+        disabled: !canSplitHorizontally,
+        onSelect: () => {
+          hideContextMenu();
+          splitSession(tab, "horizontal");
+        }
+      },
+      "i-lucide-rows-2"
     ),
     { type: "separator" as const },
     tabMenuItem(
@@ -189,7 +283,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
 
 const tabMenuItems = computed<DropdownMenuItem[]>(() => [
   ...tabs.value.map((tab) => ({
-    label: tab.assetName,
+    label: tabDisplayTitle(tab),
     type: "checkbox" as const,
     checked: activeTabId.value === tab.id,
     onSelect: () => selectTab(tab.id)
@@ -331,16 +425,29 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           :key="tab.id"
           :data-tab-id="tab.id"
           type="button"
+          draggable="true"
           class="workspace-session-tab group relative flex h-7 min-w-0 shrink-0 items-center gap-1.5 rounded-md px-2 text-left transition-all duration-150"
           :class="[
             activeTabId === tab.id ? 'max-w-84 pr-2' : 'max-w-44',
             activeTabId === tab.id
               ? 'workspace-session-tab-active text-[var(--app-fg)]'
-              : 'workspace-session-tab-idle text-[var(--app-muted)]'
+              : 'workspace-session-tab-idle text-[var(--app-muted)]',
+            draggedTabId === tab.id ? 'opacity-60' : ''
           ]"
           @click.stop="selectTab(tab.id)"
           @contextmenu.prevent="openContextMenu(tab, index, $event)"
+          @dragstart="handleTabDragStart($event, tab.id)"
+          @dragend="handleTabDragEnd"
+          @dragenter.prevent="handleTabDragOver($event, tab.id)"
+          @dragover.prevent="handleTabDragOver($event, tab.id)"
+          @dragleave.prevent="dragOverTabId = dragOverTabId === tab.id ? '' : dragOverTabId"
+          @drop.prevent="handleTabDrop(tab.id)"
         >
+          <span
+            v-if="dragOverTabId === tab.id"
+            class="pointer-events-none absolute inset-y-1 z-10 w-0.5 rounded-full bg-primary"
+            :class="dragOverTabPlacement === 'after' ? '-right-[3px]' : '-left-[3px]'"
+          />
           <span class="relative grid size-3.5 shrink-0 place-items-center">
             <img
               v-if="showTabIconImage(tab)"
@@ -373,7 +480,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
             v-if="activeTabId === tab.id"
             class="flex min-w-0 items-center gap-1.5 truncate font-ui-mono text-[11px] tracking-[0.01em]"
           >
-            <span class="shrink-0 truncate font-medium">{{ tab.assetName }}</span>
+            <span class="shrink-0 truncate font-medium">{{ tabDisplayTitle(tab) }}</span>
             <span
               v-if="tab.address && tab.address !== '-'"
               class="workspace-session-tab-address min-w-0 truncate text-[10px]"
@@ -381,7 +488,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
               {{ tab.address }}
             </span>
           </span>
-          <span v-else class="min-w-0 truncate font-ui-mono text-[11px] tracking-[0.01em]">{{ tab.assetName }}</span>
+          <span v-else class="min-w-0 truncate font-ui-mono text-[11px] tracking-[0.01em]">{{ tabDisplayTitle(tab) }}</span>
           <span
             class="workspace-session-tab-close flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-0 transition-opacity group-hover:opacity-100"
             :class="activeTabId === tab.id ? 'opacity-70' : ''"
@@ -454,6 +561,24 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
         }"
       />
     </UDropdownMenu>
+
+    <UModal :open="renameModalOpen" :title="t('TabMenu.RenameTitle')" @update:open="updateRenameModal">
+      <template #body>
+        <div class="space-y-3">
+          <UInput v-model="renameValue" :placeholder="t('TabMenu.RenamePlaceholder')" autofocus />
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" @click="updateRenameModal(false)">
+            {{ t("Transcode.Cancel") }}
+          </UButton>
+          <UButton :disabled="renameDisabled" @click="submitRename">
+            {{ t("Transcode.Confirm") }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 

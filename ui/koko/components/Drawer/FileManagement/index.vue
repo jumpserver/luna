@@ -409,7 +409,7 @@ watch(currentOrgId, () => {
       </div>
     </div>
 
-    <div v-if="global" class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_36px_minmax(0,1fr)]">
+    <div v-if="global" class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_44px_minmax(0,1fr)]">
       <div
         v-for="side in (['left', 'right'] as const)"
         :key="side"
@@ -538,7 +538,7 @@ watch(currentOrgId, () => {
         @select="primarySelection = $event"
       />
 
-      <div v-show="dualMode" class="flex w-8 shrink-0 flex-col items-center justify-center gap-2 border-x border-default px-0.5">
+      <div v-show="dualMode" class="flex w-11 shrink-0 flex-col items-center justify-center gap-2 border-x border-default px-1">
         <UTooltip :text="t('FileManagement.TransferToRemote')">
           <UButton
             size="xs"

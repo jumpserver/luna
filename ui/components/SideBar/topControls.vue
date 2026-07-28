@@ -3,7 +3,7 @@ const { isMacOS } = usePlatform();
 const localePath = useLocalePath();
 const route = useRoute();
 const { collapse, setCollapse } = useSettingManager();
-const { activeWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
+const { uiWorkspaceMode, setPendingWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
 const isMacClient = computed(() => isTauriRuntime() && isMacOS.value);
 const headerIconButtonClass = "grid size-6 shrink-0 place-items-center rounded-lg p-0 text-gray-500 transition-colors hover:bg-black/6 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white";
 
@@ -21,19 +21,23 @@ const workspaceModes = computed(() => {
 
 const setMode = async (mode: "assets" | "files") => {
   const filePath = localePath({ path: "/files" });
+  setPendingWorkspaceMode(mode);
 
   if (mode === "assets") {
     if (route.path === filePath) {
       await navigateTo(localePath({ path: "/" }));
+    } else {
+      setWorkspaceMode(mode);
     }
-
-    setWorkspaceMode(mode);
     return;
   }
 
   if (mode === "files") {
-    if (route.path !== filePath) await navigateTo(filePath);
-    setWorkspaceMode(mode);
+    if (route.path !== filePath) {
+      await navigateTo(filePath);
+    } else {
+      setWorkspaceMode(mode);
+    }
   }
 };
 
@@ -64,7 +68,7 @@ const toggleSidebar = () => {
           :aria-label="mode.label"
           :class="[
             headerIconButtonClass,
-            activeWorkspaceMode === mode.key
+            uiWorkspaceMode === mode.key
               ? 'bg-black/6 text-gray-800 dark:bg-white/10 dark:text-white'
               : ''
           ]"

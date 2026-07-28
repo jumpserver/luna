@@ -7,7 +7,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { isWindows } = usePlatform();
 const route = useRoute();
-const { activeWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
+const { activeWorkspaceMode, setPendingWorkspaceMode, uiWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
 const { registerSessionDisposer } = useWorkspaceTabs();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const userInfoStore = useUserInfoStore();
@@ -15,9 +15,9 @@ const { loggedIn } = storeToRefs(userInfoStore);
 const { batchPanelOpen } = useBatchCommandPanel();
 
 const showWorkspaceSidebar = computed(() =>
-  activeWorkspaceMode.value !== "files"
-  && activeWorkspaceMode.value !== "tools"
-  && (activeWorkspaceMode.value !== "assets" || loggedIn.value)
+  uiWorkspaceMode.value !== "files"
+  && uiWorkspaceMode.value !== "tools"
+  && (uiWorkspaceMode.value !== "assets" || loggedIn.value)
 );
 
 const cardUi = computed(() => {
@@ -78,6 +78,7 @@ watch(
     const isFileRoute = normalizedPath.includes("/files");
     const isToolRoute = normalizedPath.includes("/tools") || normalizedPath.includes("/videoplayer") || normalizedPath.includes("/transcode");
 
+    setPendingWorkspaceMode(null);
     setWorkspaceMode(isFileRoute ? "files" : isTauriRuntime() && isToolRoute ? "tools" : "assets");
   },
   { immediate: true }

@@ -14,7 +14,13 @@ const { collapse, sidebarSections, setSidebarSections } = useSettingManager();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const showTools = computed(() => isTauriRuntime());
 const { confirmConnection, saveConnectionInfo } = useAssetConnection();
-const { openSession, openSetupSession } = useWorkspaceTabs();
+const {
+  activeTab,
+  canSplitWorkspace,
+  openSession,
+  openSetupSession,
+  splitWorkspace
+} = useWorkspaceTabs();
 const { openAssetInWindow } = useAssetWindowLauncher();
 const { handleAssetFavorite, handleAssetRename, handleAssetUnfavorite }
   = useAssetAction();
@@ -270,6 +276,37 @@ const handleAssetConnect = (asset: AssetItem) => {
   openSetupSession(asset);
 };
 
+const openAssetInCurrentWorkspace = (asset: AssetItem) => {
+  contextMenuVisible.value = false;
+
+  const currentTab = activeTab.value;
+  if (!currentTab) {
+    openSetupSession(asset);
+    return;
+  }
+
+  const direction = canSplitWorkspace(currentTab.id, "vertical")
+    ? "vertical"
+    : canSplitWorkspace(currentTab.id, "horizontal")
+      ? "horizontal"
+      : null;
+
+  if (!direction) {
+    toast.add({
+      title: t("WorkspacePane.SplitLimitTitle"),
+      description: t("WorkspacePane.SplitLimitDescription"),
+      color: "warning",
+      icon: "i-lucide-circle-alert"
+    });
+    return;
+  }
+
+  const [pane] = splitWorkspace(currentTab.id, direction);
+  if (!pane) return;
+
+  openSetupSession(asset, { paneId: pane.id });
+};
+
 const handleAssetQuickConnect = (asset: AssetItem) => {
   connectWithSavedConnection(asset);
 };
@@ -412,6 +449,13 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
       onSelect: () => {
         contextMenuVisible.value = false;
         handleAssetConnectWithSelection(asset);
+      }
+    },
+    {
+      label: t("ContextMenu.OpenInCurrentTab"),
+      icon: "i-lucide-panels-top-left",
+      onSelect: () => {
+        openAssetInCurrentWorkspace(asset);
       }
     },
     {
