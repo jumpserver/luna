@@ -1,6 +1,6 @@
 import type { ITheme } from "@xterm/xterm";
 
-import { isDarkColor } from "~/koko/utils/color";
+import { isDarkColor } from "~/shared/theme/color";
 import { readResolvedTerminalTokens } from "~/shared/theme/resolvedTokens";
 
 const DARK_ANSI = {

@@ -15,6 +15,17 @@ import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composa
 
 export type ThemeType = "light" | "dark" | "withSystem" | "";
 export type LayoutsType = "grid" | "table";
+export const MIN_SIDEBAR_WIDTH = 180;
+export const MAX_SIDEBAR_WIDTH = 420;
+export const DEFAULT_SIDEBAR_WIDTH = 220;
+
+export const normalizeSidebarWidth = (width: unknown) => {
+  const value = typeof width === "number" && Number.isFinite(width)
+    ? Math.round(width)
+    : DEFAULT_SIDEBAR_WIDTH;
+
+  return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, value));
+};
 
 export interface UserSettingPersistedState {
   language: LanguagePreference
@@ -39,6 +50,7 @@ export interface UserSettingPersistedState {
   rdpColorQuality: string
   rdpSmartSize: string
   recentSites: string[]
+  sidebarWidth: number
   sidebarSections: SidebarSectionVisibility
 }
 
@@ -69,6 +81,7 @@ const DEFAULT_STATE: UserSettingPersistedState = {
   rdpColorQuality: "32",
   rdpSmartSize: "0",
   recentSites: [],
+  sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   sidebarSections: DEFAULT_SIDEBAR_SECTIONS
 };
 
@@ -84,6 +97,7 @@ const loadWebState = () => {
     const parsed = { ...DEFAULT_STATE, ...(JSON.parse(raw) as Partial<UserSettingPersistedState>) };
     return {
       ...parsed,
+      sidebarWidth: normalizeSidebarWidth(parsed.sidebarWidth),
       sidebarSections: normalizeSidebarSections(parsed.sidebarSections)
     };
   } catch {
@@ -123,6 +137,7 @@ export const useSettingStorage = () => {
     return {
       ...DEFAULT_STATE,
       ...saved,
+      sidebarWidth: normalizeSidebarWidth(saved.sidebarWidth),
       sidebarSections: normalizeSidebarSections(saved.sidebarSections)
     };
   };
@@ -158,7 +173,12 @@ export const useSettingStorage = () => {
   const subscribe = async (cb: (state: UserSettingPersistedState) => void): Promise<UnlistenFn> => {
     if (!isTauriRuntime()) {
       const handler = (event: Event) => {
-        cb({ ...DEFAULT_STATE, ...((event as CustomEvent<UserSettingPersistedState>).detail || {}) });
+        const next = { ...DEFAULT_STATE, ...((event as CustomEvent<UserSettingPersistedState>).detail || {}) };
+        cb({
+          ...next,
+          sidebarWidth: normalizeSidebarWidth(next.sidebarWidth),
+          sidebarSections: normalizeSidebarSections(next.sidebarSections)
+        });
       };
 
       globalThis.addEventListener(WEB_STORE_KEY, handler);
@@ -171,6 +191,7 @@ export const useSettingStorage = () => {
         const next = { ...DEFAULT_STATE, ...(value as UserSettingPersistedState) };
         cb({
           ...next,
+          sidebarWidth: normalizeSidebarWidth(next.sidebarWidth),
           sidebarSections: normalizeSidebarSections(next.sidebarSections)
         });
       }

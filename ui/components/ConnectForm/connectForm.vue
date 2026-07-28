@@ -332,7 +332,7 @@ function categoryOfConnectMethod(method: any) {
 }
 
 function isBuiltinConnectMethod(method: any) {
-  return ["builtin_client", "web_cli_native"].includes(String(method?.value || "").toLowerCase());
+  return String(method?.value || "").toLowerCase() === "web_cli_native";
 }
 
 function selectConnectMethodType(type: string) {

@@ -1,9 +1,8 @@
 shellEmulator: true
 
-trustPolicy: no-downgrade
-
 packages:
   - .
+  - packages/*
 
 allowBuilds:
   "@parcel/watcher": true

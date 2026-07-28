@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { AssetItem, AssetTreeNode } from "~/types";
+import { KokoFileManagerSessionSurface } from "@jumpserver/koko";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
-import KokoFileManagerSessionSurface from "~/koko/workspaces/FileManagerSessionSurface.vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { t } = useI18n();

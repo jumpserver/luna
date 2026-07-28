@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import type { ConnectorSessionContext } from "~/shared/connectors/types/session";
-
-import { connectorSessionKey } from "~/koko/composables/wsUrl";
-import KokoConnectView from "~/koko/pages/ConnectView.vue";
+import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
+import { connectorSessionKey } from "@jumpserver/connectors-core";
+import { KokoConnectView } from "@jumpserver/koko";
 
 definePageMeta({ layout: "connect" });
 

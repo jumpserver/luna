@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { LionUploadCustomRequestOptions, LionUploadFileInfo } from '@/lion/types/upload';
 import type { ConnectorSessionContext } from '~/shared/connectors/types/session';
+import { connectorSessionKey } from '@jumpserver/connectors-core';
 import { useDebounceFn } from '@vueuse/core';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -18,7 +19,6 @@ import { readClipboardText } from '@/lion/utils/clipboard';
 import { getCurrentConnectParams } from '@/lion/utils/common';
 import { lunaCommunicator } from '@/lion/utils/lunaBus';
 import { ErrorStatusCodes } from '@/lion/utils/status';
-import { connectorSessionKey } from '~/koko/composables/wsUrl';
 
 const toast = useToast();
 const { addErrorToast } = useErrorToast();

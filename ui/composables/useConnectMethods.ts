@@ -46,9 +46,41 @@ const connectMethodsCache = new Map<string, ConnectMethodsResponse>();
 const fetchPromise = new Map<string, Promise<ConnectMethodsResponse>>();
 
 const WEB_IFRAME_COMPONENTS = new Set(["koko", "lion", "chen", "tinker", "default"]);
+const KOKO_WEB_CONNECT_METHODS = new Set(
+  COMPONENT_WORKSPACE_CAPABILITIES
+    .filter((capability) => capability.component === "koko" && capability.backendConnectMethod)
+    .map((capability) => capability.backendConnectMethod!)
+);
 
-// Only strip the original backend web iframe entries. Native/client methods can
-// share the same component name and must stay visible in the connect-method picker.
+export const withKokoWebFallback = (protocol: string, methods: ConnectMethod[]) => {
+  const normalizedProtocol = protocol.toLowerCase();
+  const existingValues = new Set(methods.map((method) => method.value));
+  const fallbackMethods = COMPONENT_WORKSPACE_CAPABILITIES
+    .filter(
+      (capability) =>
+        capability.component === "koko"
+        && capability.protocols.includes(normalizedProtocol)
+        && capability.backendConnectMethod
+    )
+    .flatMap((capability) =>
+      capability.connectMethods
+        .filter((value) => !existingValues.has(value))
+        .map((value) => ({
+          value,
+          label: capability.label,
+          type: "web",
+          icon: "",
+          disabled: false,
+          listen: "",
+          component: "koko",
+          endpoint_protocol: "http",
+          origin_value: capability.backendConnectMethod
+        }))
+    );
+
+  return [...fallbackMethods, ...methods] as ConnectMethod[];
+};
+
 const isWebIframeMethod = (method: ConnectMethod) => {
   if (method.origin_value) return false;
   return method.type === "web" && WEB_IFRAME_COMPONENTS.has(method.component);
@@ -91,26 +123,23 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
 
     const normalizedMethods = [...value];
 
-    const kokoWebIndex = normalizedMethods.findIndex(
-      (method) => method.type === "web" && ["koko", "default"].includes(method.component)
-    );
+    for (const capability of COMPONENT_WORKSPACE_CAPABILITIES) {
+      if (capability.component !== "koko" || !capability.protocols.includes(key) || !capability.backendConnectMethod) continue;
 
-    if (kokoWebIndex !== -1) {
-      const origin = normalizedMethods[kokoWebIndex]!;
-      const declaredMethods = COMPONENT_WORKSPACE_CAPABILITIES
-        .filter((item) => item.component === "koko" && item.protocols.includes(key))
-        .flatMap((item) =>
-          item.connectMethods.map((methodValue) => ({
-            ...origin,
-            value: methodValue,
-            label: item.label,
-            origin_value: origin.value
-          }) as ConnectMethod)
-        );
+      const originIndex = normalizedMethods.findIndex(
+        (method) =>
+          method.value === capability.backendConnectMethod
+          && method.type === "web"
+      );
+      if (originIndex === -1) continue;
 
-      if (declaredMethods.length) {
-        normalizedMethods.splice(kokoWebIndex, 0, ...declaredMethods);
-      }
+      const origin = normalizedMethods[originIndex]!;
+      normalizedMethods.splice(originIndex, 0, ...capability.connectMethods.map((methodValue) => ({
+        ...origin,
+        value: methodValue,
+        label: capability.label,
+        origin_value: origin.value
+      }) as ConnectMethod));
     }
 
     const lionWebIndex = normalizedMethods.findIndex(
@@ -157,7 +186,14 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
       }
     }
 
-    normalized[key] = normalizedMethods.filter((method) => method.origin_value || !isWebIframeMethod(method));
+    normalized[key] = normalizedMethods.filter(
+      (method) =>
+        method.origin_value
+        || !(
+          (method.type === "web" && KOKO_WEB_CONNECT_METHODS.has(method.value))
+          || isWebIframeMethod(method)
+        )
+    );
   });
 
   return normalized;
@@ -200,8 +236,7 @@ export const useConnectMethods = () => {
   const getMethodsForProtocol = async (protocol: string): Promise<ConnectMethod[]> => {
     const allMethods = await fetchConnectMethods();
     const protocolMethods = allMethods[protocol] || [];
-    // Web iframe is used only as the backend method source for injected workspace methods.
-    return protocolMethods.filter((method) => !method.disabled);
+    return withKokoWebFallback(protocol, protocolMethods).filter((method) => !method.disabled);
   };
 
   const getDefaultMethodForProtocol = async (protocol: string): Promise<string> => {

@@ -6,7 +6,7 @@ import type {
   ThemeWorkspaceTokens
 } from "./schema";
 
-import { normalizeResolvedCssColor } from "~/koko/utils/color";
+import { normalizeResolvedCssColor } from "~/shared/theme/color";
 
 function resolveCssColor(varName: string, fallback: string): string {
   if (!import.meta.client) return fallback;

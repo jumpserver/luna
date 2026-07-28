@@ -22,7 +22,6 @@ let unlistenBuiltinSessionSuccess: UnlistenFn | null = null;
 let unlistenBuiltinSessionFailure: UnlistenFn | null = null;
 
 const BUILTIN_CLIENT_METHOD = "builtin_client";
-// 内置 Koko 界面，见 useConnectMethods 注入
 const WEB_CLI_NATIVE_METHOD = "web_cli_native";
 const NATIVE_WORKSPACE_METHODS = new Set([
   BUILTIN_CLIENT_METHOD,
@@ -33,6 +32,12 @@ const NATIVE_WORKSPACE_METHODS = new Set([
   SFTP_FILE_EDITOR_VALUE,
   K8S_NATIVE_VALUE
 ]);
+const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
+  [WEB_CLI_NATIVE_METHOD]: "web_cli",
+  [SFTP_FILE_MANAGER_VALUE]: "web_sftp",
+  [SFTP_FILE_EDITOR_VALUE]: "web_sftp",
+  [K8S_NATIVE_VALUE]: "web_cli"
+};
 const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
 const isLocalClientMethod = (method: { type?: string } | undefined) =>
   ["native", "client", "local", "desktop"].includes(String(method?.type || "").toLowerCase());
@@ -72,7 +77,7 @@ export const useAssetAction = () => {
   const { addErrorToast } = useErrorToast();
   const userInfoStore = useUserInfoStore();
   const { markSessionFailed, openSession, updateSessionPayload } = useWorkspaceTabs();
-  const { fetchConnectMethods } = useConnectMethods();
+  const { fetchConnectMethods, getMethodsForProtocol } = useConnectMethods();
   const settingManager = useSettingManager();
   // prettier-ignore
   const { currentSite, currentConnectionInfoMap, currentRdpClientOption, orgId } = storeToRefs(userInfoStore);
@@ -408,7 +413,7 @@ export const useAssetAction = () => {
       if (kokoWeb) return kokoWeb.value;
     } catch {}
 
-    return body.connect_method;
+    return NATIVE_WORKSPACE_METHOD_ORIGINS[body.connect_method] || body.connect_method;
   };
 
   const resolveBuiltinComponent = (body: ConnectionBody) => {
@@ -494,10 +499,8 @@ export const useAssetAction = () => {
   };
 
   const resolveConnectMethod = async (protocol: string) => {
-    const methods = await fetchConnectMethods();
-    const protocolMethods = methods[protocol] || [];
-
-    return protocolMethods.find((method) => !method.disabled)?.value || "";
+    const methods = await getMethodsForProtocol(protocol);
+    return methods[0]?.value || "";
   };
 
   const generateConnectOptions = (protocol: string) => {

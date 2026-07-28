@@ -35,6 +35,7 @@ export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] 
       "sqlserver"
     ],
     connectMethods: [WEB_CLI_NATIVE_VALUE],
+    backendConnectMethod: "web_cli",
     description: "字符型连接统一走 koko 终端 workspace，覆盖主机协议和数据库协议。"
   },
   {
@@ -80,6 +81,7 @@ export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] 
     label: "Kubernetes",
     protocols: ["k8s", "kubernetes"],
     connectMethods: [K8S_NATIVE_VALUE],
+    backendConnectMethod: "web_cli",
     description: "K8s 连接使用 koko Kubernetes UI workspace。"
   },
   {

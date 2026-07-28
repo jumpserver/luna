@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { useKokoConnectionStore } from "@jumpserver/koko";
 import { useNow } from "@vueuse/core";
 import RightPanelSessionShareSection from "~/components/RightPanel/sessionShareSection.vue";
-import { useKokoConnectionStore } from "~/koko/stores/connection";
 
 const { t } = useI18n();
 const { activeTab } = useWorkspaceTabs();

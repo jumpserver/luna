@@ -1,3 +1,1 @@
-export type JmsComponent = "koko" | "koko-iframe" | "chen" | "lion" | "tinker" | "default";
-
-export type KokoSurfaceMode = "native" | "iframe";
+export type { JmsComponent, KokoSurfaceMode } from "@jumpserver/connectors-core";

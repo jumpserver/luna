@@ -1,19 +1,20 @@
-import type { Component } from "vue";
+import type { JmsComponent } from "@jumpserver/connectors-core";
 
+import type { Component } from "vue";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
-import type { JmsComponent, KokoSurfaceMode } from "~/shared/connectors/types/component";
+import {
+  KokoFileEditorSessionSurface,
+  KokoFileManagerSessionSurface,
+  KokoKubernetesWorkspace,
+  KokoTerminalSessionSurface
+} from "@jumpserver/koko";
 
 import ChenDatabaseSessionSurface from "~/chen/workspaces/DatabaseSessionSurface.vue";
-import KokoIframeSession from "~/koko-iframe/workspace/IframeSession.vue";
-import KokoFileEditorSessionSurface from "~/koko/workspaces/FileEditorSessionSurface.vue";
-import KokoFileManagerSessionSurface from "~/koko/workspaces/FileManagerSessionSurface.vue";
-import KokoKubernetesWorkspace from "~/koko/workspaces/KubernetesWorkspace.vue";
-import LocalShellSessionSurface from "~/koko/workspaces/LocalShellSessionSurface.vue";
-import KokoTerminalSessionSurface from "~/koko/workspaces/TerminalSessionSurface.vue";
 import LionRemoteSessionSurface from "~/lion/workspaces/RemoteSessionSurface.vue";
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 import GuideSessionSurface from "~/shared/connectors/GuideSessionSurface.vue";
 import LegacyIframeSession from "~/shared/connectors/LegacyIframeSession.vue";
+import LocalShellSessionSurface from "~/workspaces/LocalShellSessionSurface.vue";
 
 export interface ConnectorRegistryEntry {
   component: Component
@@ -21,42 +22,25 @@ export interface ConnectorRegistryEntry {
   native?: boolean
 }
 
-export const CONNECTOR_REGISTRY: Record<Extract<JmsComponent, "koko" | "koko-iframe">, ConnectorRegistryEntry> = {
+export const CONNECTOR_REGISTRY: Record<Extract<JmsComponent, "koko">, ConnectorRegistryEntry> = {
   koko: {
     component: KokoTerminalSessionSurface,
     mode: "native",
     native: true
-  },
-  "koko-iframe": {
-    component: KokoIframeSession,
-    mode: "iframe",
-    native: false
   }
 };
-
-const kokoSurfaceEnv = () => {
-  const env = import.meta.env.VITE_KOKO_SURFACE as KokoSurfaceMode | undefined;
-  if (env === "iframe" || env === "native") return env;
-  if (import.meta.client) {
-    const stored = localStorage.getItem("koko_surface") as KokoSurfaceMode | null;
-    if (stored === "iframe" || stored === "native") return stored;
-  }
-  return "native";
-};
-
-export function resolveKokoComponent(): "koko" | "koko-iframe" {
-  return kokoSurfaceEnv() === "iframe" ? "koko-iframe" : "koko";
-}
 
 export function resolveSessionComponent(tab: WorkspaceSessionTab): JmsComponent {
-  if (tab.payload?.webUrl) return "default";
-
   const method = tab.payload?.connectMethod as { component?: string } | undefined;
   let component = method?.component || (tab.protocol === "ssh" ? "koko" : "default");
 
   if (component === "tinker") component = "lion";
   if (component === "default" && tab.protocol === "ssh") component = "koko";
-  if (component === "koko") return resolveKokoComponent();
+  if (component === "koko") return "koko";
+
+  // Koko's legacy webUrl is kept in the tab for a fallback, but native SSH
+  // surfaces must be selected before generic external-Web handling.
+  if (tab.payload?.webUrl) return "default";
 
   return component as JmsComponent;
 }
@@ -96,15 +80,11 @@ export function resolveSessionSurface(tab: WorkspaceSessionTab): Component {
     return LionRemoteSessionSurface;
   }
 
-  if (tab.payload?.webUrl) return LegacyIframeSession;
-
   const component = resolveSessionComponent(tab);
 
   switch (component) {
     case "koko":
       return CONNECTOR_REGISTRY.koko.component;
-    case "koko-iframe":
-      return CONNECTOR_REGISTRY["koko-iframe"].component;
     case "lion":
     case "tinker":
       return LionRemoteSessionSurface;
