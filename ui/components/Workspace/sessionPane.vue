@@ -6,6 +6,7 @@ import { resolveSessionSurface } from "~/shared/connectors/registry";
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 
 const { t } = useI18n();
+const colorMode = useColorMode();
 const toast = useToast();
 const surfaceRefs = ref<Record<string, { focus?: () => void } | null>>({});
 const {
@@ -36,6 +37,7 @@ const paneGridClass = computed(() => {
   }
 });
 const showPaneHeaders = computed(() => props.tab.panes.length > 1);
+const inactivePaneOverlayClass = computed(() => (colorMode.value === "dark" ? "bg-white/4" : "bg-black/3"));
 
 function setSurfaceRef(paneId: string, el: { focus?: () => void } | null) {
   surfaceRefs.value[paneId] = el;
@@ -191,7 +193,7 @@ watch(
         <section
           v-for="pane in tab.panes"
           :key="pane.id"
-          class="group relative flex min-h-0 min-w-0 flex-col bg-[var(--workspace-surface-sub-panel)] transition-shadow"
+          class="group relative flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--workspace-surface-sub-panel)] transition-[box-shadow]"
           :class="[
             isActivePane(pane.id)
               ? 'z-[1] ring-1 ring-inset ring-primary/28 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ui-color-primary-500)_10%,transparent)]'
@@ -202,8 +204,7 @@ watch(
           <header
             v-if="showPaneHeaders"
             draggable="true"
-            class="flex h-8 shrink-0 items-center justify-between gap-3 border-b border-[var(--workspace-surface-sub-border)] px-2.5 transition-colors"
-            :class="isActivePane(pane.id) ? 'bg-[var(--workspace-surface-sub-tab-active)]' : 'bg-[var(--workspace-surface-sub-header)]'"
+            class="relative z-[2] flex h-8 shrink-0 items-center justify-between gap-3 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-header)] px-2.5 transition-colors"
             @dragstart="handlePaneDragStart($event, pane.id)"
             @dragend="handlePaneDragEnd"
             @dragenter.prevent="dragOverPaneId = pane.id"
@@ -250,7 +251,7 @@ watch(
             </div>
           </header>
 
-        <div class="min-h-0 flex-1" @mousedown="focusPane(pane.id)">
+        <div class="relative z-[1] min-h-0 flex-1" @mousedown="focusPane(pane.id)">
           <div
             v-if="showPaneSwapHint(pane.id)"
             class="pointer-events-none absolute inset-3 z-10 flex items-center justify-center rounded-xl border border-dashed border-primary/50 bg-primary/6 backdrop-blur-[1px]"
@@ -262,7 +263,6 @@ watch(
           <div
             v-if="pane.mode === 'empty'"
             class="grid h-full place-items-center p-6 text-center"
-            :class="isActivePane(pane.id) ? 'bg-primary/[0.03]' : ''"
           >
             <div class="max-w-xs space-y-4">
               <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[var(--workspace-surface-sub-header)] text-[var(--app-muted)]">
@@ -313,6 +313,10 @@ watch(
             @reconnect="void reconnectSession(surfaceTabFor(pane))"
           />
         </div>
+          <div
+            class="pointer-events-none absolute inset-0 z-[3] transition-colors"
+            :class="isActivePane(pane.id) ? 'bg-transparent' : inactivePaneOverlayClass"
+          />
         </section>
       </div>
     </div>
