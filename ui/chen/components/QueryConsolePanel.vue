@@ -39,6 +39,7 @@ const selectSnippetDialogOpen = ref(false);
 const DEFAULT_MESSAGE_CLOSE_DELAY_SECONDS = 5;
 let messageCloseTimer: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const sqlSnippets = useChenSqlSnippets(() => props.dbType);
 const queryBusy = computed(() => Boolean(props.tab.state.loading || props.tab.state.inQuery));
 const contextBusy = computed(() => Boolean(queryBusy.value || props.tab.state.editorLoading));
@@ -72,10 +73,9 @@ function formatStatement() {
     if (formatted === original) return;
     sqlEditor.value?.replaceDocument(formatted);
   } catch (cause) {
-    toast.add({
+    addErrorToast({
       title: "SQL format failed",
-      description: requestErrorMessage(cause),
-      color: "error"
+      description: requestErrorMessage(cause)
     });
   }
 }
@@ -91,18 +91,16 @@ function handleSqlFileChange(event: Event) {
   if (!file) return;
 
   if (!file.name.toLowerCase().endsWith(".sql")) {
-    toast.add({
+    addErrorToast({
       title: "SQL upload failed",
-      description: "Choose a .sql file.",
-      color: "error"
+      description: "Choose a .sql file."
     });
     return;
   }
   if (file.size === 0) {
-    toast.add({
+    addErrorToast({
       title: "SQL upload failed",
-      description: "SQL file is empty.",
-      color: "error"
+      description: "SQL file is empty."
     });
     return;
   }
@@ -115,10 +113,9 @@ async function openSnippetDialog() {
   try {
     await sqlSnippets.load();
   } catch (cause) {
-    toast.add({
+    addErrorToast({
       title: "Failed to load SQL",
-      description: requestErrorMessage(cause),
-      color: "error"
+      description: requestErrorMessage(cause)
     });
   }
 }
@@ -132,10 +129,9 @@ async function saveSqlSnippet(name: string) {
     await sqlSnippets.save(name, props.tab.statement);
     toast.add({ title: "Save succeeded", color: "success" });
   } catch (cause) {
-    toast.add({
+    addErrorToast({
       title: "Failed to save SQL",
-      description: requestErrorMessage(cause),
-      color: "error"
+      description: requestErrorMessage(cause)
     });
   } finally {
     saveSnippetDialogOpen.value = false;
@@ -154,10 +150,9 @@ async function deleteSqlSnippet(snippet: ChenSqlSnippet) {
     await sqlSnippets.remove(snippet.id);
     toast.add({ title: "Delete succeeded", color: "success" });
   } catch (cause) {
-    toast.add({
+    addErrorToast({
       title: "Failed to delete SQL",
-      description: requestErrorMessage(cause),
-      color: "error"
+      description: requestErrorMessage(cause)
     });
   }
 }

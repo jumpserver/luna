@@ -20,18 +20,18 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
-const toast = useToast();
+const { addErrorToast } = useErrorToast();
 
 const handleRemoveShareUser = (user: any) => {
   removeShareUser(user)
     .then((res: any) => res.json())
     .then((response) => {
       if (response.message && !response.success) {
-        toast.add({ title: response.message, color: 'error' });
+        addErrorToast({ title: response.message });
       }
     })
     .catch(() => {
-      toast.add({ title: t('ShareUserRemoveError'), color: 'error' });
+      addErrorToast({ title: t('ShareUserRemoveError') });
     });
 };
 </script>

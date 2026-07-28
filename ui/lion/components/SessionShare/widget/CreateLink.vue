@@ -48,6 +48,7 @@ interface ActionPermOption {
 const { t } = useI18n();
 const { lighten } = useColor();
 const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const shareInfo = ref({
   shareCode: '',
   sessionId: props.session,
@@ -101,7 +102,7 @@ const searchUsers = useDebounceFn(async (value: string, isLoadMore: boolean = fa
     hasMore.value = response.next !== null && response.next !== undefined;
   } catch (error) {
     console.error('Search users error:', error);
-    toast.add({ title: t('NoUserFound'), color: 'error' });
+    addErrorToast({ title: t('NoUserFound') });
   } finally {
     searchLoading.value = false;
   }
@@ -163,7 +164,7 @@ const handleChangeActionPerm = createSingleSelectHandler(actionsPermOptions, 'va
 
 const handleCreateLink = () => {
   if (!shareInfo.value.sessionId) {
-    toast.add({ title: t('FailedCreateConnection'), color: 'error' });
+    addErrorToast({ title: t('FailedCreateConnection') });
     return;
   }
 
@@ -181,7 +182,7 @@ const handleCreateLink = () => {
     .then((response: any) => response.json())
     .then((res: any) => {
       if (res.success && !res.success) {
-        toast.add({ title: `${t('CreateLinkFailed')}: ${res?.message || ''}`, color: 'error' });
+        addErrorToast({ title: `${t('CreateLinkFailed')}: ${res?.message || ''}` });
         return;
       }
       shareInfo.value.shareId = res.id;
@@ -189,7 +190,7 @@ const handleCreateLink = () => {
       shareInfo.value.shareURL = generateShareURL(res.id, res.verify_code);
     })
     .catch(() => {
-      toast.add({ title: t('CreateLinkFailed'), color: 'error' });
+      addErrorToast({ title: t('CreateLinkFailed') });
     });
 };
 
@@ -202,7 +203,7 @@ const handleCopyShareURL = () => {
   const url = shareInfo.value.shareURL;
   const shareCode = shareInfo.value.shareCode;
   if (!url || !shareCode) {
-    toast.add({ title: t('NoLink'), color: 'error' });
+    addErrorToast({ title: t('NoLink') });
     return;
   }
   const text = `${t('LinkAddr')}: ${url}\n${t('VerifyCode')}: ${shareCode}`;

@@ -14,6 +14,7 @@ const imageModules = import.meta.glob<{ default: string }>("@/assets/images/*.pn
 
 const { t, locale } = useI18n();
 const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const { isWindows } = usePlatform();
 const { language } = useSettingManager();
 const { setAppConfig } = useSettingManager();
@@ -99,10 +100,9 @@ const showExecutableNotFoundToast = () => {
   const description = path
     ? `${t("Setting.ExecutableNotFound")}\n${path}`
     : t("Setting.ExecutableNotFound");
-  toast.add({
+  addErrorToast({
     title: t("Setting.EnableFailed"),
     description,
-    color: "error",
     icon: "line-md:close-circle",
     progress: true,
     duration: 4000

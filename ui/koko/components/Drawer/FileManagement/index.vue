@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { SftpFileEntry } from "~/koko/composables/useSftpFileManager";
 import type { ConnectorSessionContext } from "~/shared/connectors/types/session";
-import type { AssetTreeNode } from "~/types";
+import type { AssetItem } from "~/types";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
+import OrganizationSelector from "~/components/Header/OrganizationSelector.vue";
+import SideBarAssetTree from "~/components/SideBar/assetTree.vue";
 import KokoLocalFileManagementPane from "~/koko/components/Drawer/FileManagement/localPane.vue";
 import KokoFileManagementPane from "~/koko/components/Drawer/FileManagement/pane.vue";
 import KokoWebUploadPane from "~/koko/components/Drawer/FileManagement/webUploadPane.vue";
@@ -36,11 +38,11 @@ const emit = defineEmits<{ reconnect: [] }>();
 
 const { t } = useI18n();
 const toast = useToast();
+const { addErrorToast: showErrorToast } = useErrorToast();
 const { createKokoTicket } = useWorkspaceConnectors();
-const { fetchTree, treeNodeToAsset } = useAssetTree();
 const { displayUser, handleAssetConnection } = useAssetAction();
 const userInfoStore = useUserInfoStore();
-const { loggedIn } = storeToRefs(userInfoStore);
+const { loggedIn, currentUser } = storeToRefs(userInfoStore);
 
 const providedContext = inject(connectorSessionKey, ref(null));
 const primaryContext = computed<ConnectorSessionContext | null>(() => {
@@ -57,9 +59,7 @@ const remotePanes = ref<RemotePane[]>([]);
 const activeRemoteId = ref<string | null>(null);
 const connectModalOpen = ref(false);
 const connectSide = ref<"left" | "right">("left");
-const remoteSearch = ref("");
-const remoteSearchLoading = ref(false);
-const remoteSearchNodes = ref<AssetTreeNode[]>([]);
+const remoteAssetSearch = ref("");
 const remoteConnecting = ref(false);
 const transferring = ref(false);
 
@@ -75,6 +75,12 @@ const globalActiveIds = reactive<{ left: string | null, right: string | null }>(
 const panesForSide = (side: "left" | "right") => remotePanes.value.filter((pane) => pane.side === side);
 const activePaneForSide = (side: "left" | "right") =>
   remotePanes.value.find((pane) => pane.id === globalActiveIds[side]) || null;
+const currentOrgId = computed(() => currentUser.value?.org?.id || "");
+const currentOrgLabel = computed(() => currentUser.value?.org?.name || "选择组织");
+
+function addErrorToast(title: string, error: unknown) {
+  showErrorToast({ title, error });
+}
 
 function setRemotePaneRef(id: string, el: unknown) {
   remotePaneRefs.value[id] = (el as InstanceType<typeof KokoFileManagementPane> | null) || null;
@@ -83,7 +89,7 @@ function setRemotePaneRef(id: string, el: unknown) {
 async function buildSftpContext(assetId: string, tokenId: string, tabId: string): Promise<ConnectorSessionContext> {
   let endpointUrl = resolveDevHost("koko") || window.location.origin;
   if (!import.meta.dev) {
-    const endpoint = await getSmartEndpoint({ protocol: "sftp", assetId, token: tokenId });
+    const endpoint = await getSmartEndpoint({ protocol: "sftp", assetId, token: tokenId }, currentOrgId.value);
     const port = endpoint.https_port || endpoint.port;
     const scheme = endpoint.https_port ? "https" : "http";
     const resolved = endpoint.value
@@ -110,30 +116,10 @@ async function buildSftpContext(assetId: string, tokenId: string, tabId: string)
   return { component: "koko", tokenId, ticket, endpointUrl, tabId };
 }
 
-const searchRemoteAssets = useDebounceFn(async (keyword: string) => {
-  if (!keyword.trim() || !loggedIn.value) {
-    remoteSearchNodes.value = [];
-    return;
-  }
-  remoteSearchLoading.value = true;
-  try {
-    remoteSearchNodes.value = await fetchTree("search", undefined, keyword.trim());
-  } catch (error) {
-    toast.add({
-      title: "SFTP 资产加载失败",
-      description: error instanceof Error ? error.message : String(error),
-      color: "error"
-    });
-  } finally {
-    remoteSearchLoading.value = false;
-  }
-}, 250);
-
-watch(remoteSearch, (value) => searchRemoteAssets(value));
-
 function openRemoteConnect(side: "left" | "right" = "right") {
   dualMode.value = true;
   connectSide.value = side;
+  remoteAssetSearch.value = "";
   connectModalOpen.value = true;
 }
 
@@ -169,22 +155,33 @@ function focusRemotePane(id: string) {
   activeRemoteId.value = id;
 }
 
-async function connectRemoteAsset(node: AssetTreeNode) {
-  if (node.isParent || node.chkDisabled || remoteConnecting.value) return;
-  const asset = treeNodeToAsset(node);
+async function connectRemoteAsset(asset: AssetItem) {
   remoteConnecting.value = true;
   try {
-    const preference = userInfoStore.getConnectionPreferenceForAsset(asset.id);
-    const remembered = userInfoStore.getConnectionInfoForAsset(asset.id);
+    let connectAsset = asset;
+    if (!connectAsset.permedAccounts?.length || !connectAsset.permedProtocols?.length) {
+      const detail = await getAssetDetailRequest(asset.id, currentOrgId.value);
+      connectAsset = {
+        ...connectAsset,
+        permedAccounts: detail.permed_accounts ?? connectAsset.permedAccounts ?? [],
+        permedProtocols: (detail.permed_protocols ?? connectAsset.permedProtocols ?? []).filter(
+          (protocol: { name?: string }) => protocol?.name !== "winrm"
+        )
+      };
+    }
+
+    const preference = userInfoStore.getConnectionPreferenceForAsset(connectAsset.id);
+    const remembered = userInfoStore.getConnectionInfoForAsset(connectAsset.id);
     const accountId = preference?.accountId || remembered?.accountId;
-    const account = displayUser(asset.id, asset.permedAccounts);
+    const account = displayUser(connectAsset.id, connectAsset.permedAccounts);
 
     await new Promise<void>((resolve, reject) => {
-      void handleAssetConnection(account, asset.id, "ssh", asset.permedAccounts, "sftp", {
+      void handleAssetConnection(account, connectAsset.id, "ssh", connectAsset.permedAccounts, "sftp", {
         accountMode: preference?.accountMode || remembered?.accountMode || "hosted",
         accountId,
         connectMethod: SFTP_FILE_MANAGER_VALUE,
-        asset,
+        orgId: currentOrgId.value,
+        asset: connectAsset,
         onSessionReady: async (payload) => {
           try {
             const tokenId = String(payload.id || payload.token?.id || "");
@@ -193,8 +190,8 @@ async function connectRemoteAsset(node: AssetTreeNode) {
             remotePanes.value.push({
               id,
               side: props.global ? connectSide.value : "right",
-              context: await buildSftpContext(asset.id, tokenId, `remote-sftp:${asset.id}:${id}`),
-              assetName: asset.name,
+              context: await buildSftpContext(connectAsset.id, tokenId, `remote-sftp:${connectAsset.id}:${id}`),
+              assetName: connectAsset.name,
               selection: null,
               checked: true
             });
@@ -212,11 +209,7 @@ async function connectRemoteAsset(node: AssetTreeNode) {
 
     toast.add({ title: t("FileManagement.RemoteConnected"), color: "success" });
   } catch (error) {
-    toast.add({
-      title: t("FileManagement.RemoteConnectFailed"),
-      description: error instanceof Error ? error.message : String(error),
-      color: "error"
-    });
+    addErrorToast(t("FileManagement.RemoteConnectFailed"), error);
   } finally {
     remoteConnecting.value = false;
   }
@@ -239,11 +232,7 @@ async function transferEntry(
     await toPane.manager.uploadBlob(entry.name, blob);
     toast.add({ title: t("FileManagement.TransferSuccess"), color: "success" });
   } catch (error) {
-    toast.add({
-      title: t("FileManagement.TransferFailed"),
-      description: String(error),
-      color: "error"
-    });
+    addErrorToast(t("FileManagement.TransferFailed"), error);
   } finally {
     transferring.value = false;
   }
@@ -273,11 +262,10 @@ async function transferToRemotes() {
     if (success === targets.length) {
       toast.add({ title: t("FileManagement.TransferSuccess"), color: "success" });
     } else if (success === 0) {
-      toast.add({
-        title: t("FileManagement.TransferFailed"),
-        description: String((results.find((result) => result.status === "rejected") as PromiseRejectedResult | undefined)?.reason || ""),
-        color: "error"
-      });
+      addErrorToast(
+        t("FileManagement.TransferFailed"),
+        (results.find((result) => result.status === "rejected") as PromiseRejectedResult | undefined)?.reason || ""
+      );
     } else {
       toast.add({
         title: t("FileManagement.TransferPartialSuccess", { success, total: targets.length }),
@@ -285,11 +273,7 @@ async function transferToRemotes() {
       });
     }
   } catch (error) {
-    toast.add({
-      title: t("FileManagement.TransferFailed"),
-      description: String(error),
-      color: "error"
-    });
+    addErrorToast(t("FileManagement.TransferFailed"), error);
   } finally {
     transferring.value = false;
   }
@@ -350,6 +334,10 @@ onMounted(() => {
   if (!props.global) return;
   globalActiveIds.left = isTauriRuntime() ? "local" : "web-upload";
 });
+
+watch(currentOrgId, () => {
+  remoteAssetSearch.value = "";
+});
 </script>
 
 <template>
@@ -363,44 +351,48 @@ onMounted(() => {
     </div>
   </div>
   <div v-else class="flex h-full min-h-0 flex-col">
-    <div v-if="!global" class="flex shrink-0 items-center justify-end gap-1 border-b border-default px-2 py-1">
-      <UButton
-        size="xs"
-        :color="global || dualMode || remotePanes.length ? 'primary' : 'neutral'"
-        :variant="dualMode ? 'soft' : 'ghost'"
-        icon="i-lucide-server"
-        :label="remotePanes.length || dualMode ? t('FileManagement.RemoteSftp') : t('FileManagement.ConnectRemoteSftp')"
-        @click="global ? openRemoteConnect() : toggleDualMode()"
-      />
-      <UButton
-        v-if="dualMode"
-        size="xs"
-        color="primary"
-        variant="soft"
-        icon="i-lucide-plus"
-        :label="t('FileManagement.AddRemoteSftp')"
-        @click="openRemoteConnect"
-      />
-      <UButton
-        v-if="global && remotePanes.length > 1"
-        size="xs"
-        color="primary"
-        variant="soft"
-        icon="i-lucide-copy"
-        :label="t('FileManagement.TransferToRemote')"
-        :disabled="!activeRemotePane?.selection || !globalTargets.length || transferring"
-        :loading="transferring"
-        @click="transferFromActiveRemote"
-      />
-      <UButton
-        v-if="remotePanes.length"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        icon="i-lucide-unplug"
-        :label="t('FileManagement.DisconnectAllRemote')"
-        @click="disconnectAllRemotes"
-      />
+    <div v-if="global" class="flex shrink-0 items-center justify-between gap-2 border-b border-default px-2 py-1">
+      <div class="max-w-[240px]">
+        <OrganizationSelector />
+      </div>
+      <div class="text-[11px] text-muted">
+        <span class="truncate">当前组织：{{ currentOrgLabel }}</span>
+      </div>
+    </div>
+
+    <div v-if="!global" class="flex shrink-0 items-center justify-between gap-2 border-b border-default px-2 py-1">
+      <div class="max-w-[240px]">
+        <OrganizationSelector />
+      </div>
+
+      <div class="flex items-center justify-end gap-1">
+        <UButton
+          size="xs"
+          :color="global || dualMode || remotePanes.length ? 'primary' : 'neutral'"
+          :variant="dualMode ? 'soft' : 'ghost'"
+          icon="i-lucide-server"
+          :label="remotePanes.length || dualMode ? t('FileManagement.RemoteSftp') : t('FileManagement.ConnectRemoteSftp')"
+          @click="global ? openRemoteConnect() : toggleDualMode()"
+        />
+        <UButton
+          v-if="dualMode"
+          size="xs"
+          color="primary"
+          variant="soft"
+          icon="i-lucide-plus"
+          :label="t('FileManagement.AddRemoteSftp')"
+          @click="() => openRemoteConnect()"
+        />
+        <UButton
+          v-if="remotePanes.length"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          icon="i-lucide-unplug"
+          :label="t('FileManagement.DisconnectAllRemote')"
+          @click="disconnectAllRemotes"
+        />
+      </div>
     </div>
 
     <div v-if="global" class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_36px_minmax(0,1fr)]">
@@ -420,7 +412,7 @@ onMounted(() => {
               @click="globalActiveIds.left = 'local'"
             >
               <UIcon name="i-lucide-laptop" class="size-3.5 shrink-0" />
-              <span>Downloads</span>
+              <span>本地文件</span>
             </button>
             <button
               v-if="side === 'left' && !isTauriRuntime()"
@@ -489,7 +481,7 @@ onMounted(() => {
         >
           <div class="space-y-3">
             <UIcon name="i-lucide-server" class="mx-auto size-7 opacity-60" />
-            <p>{{ side === "left" && isTauriRuntime() ? "正在准备本地 Downloads" : "连接一个 SFTP Server" }}</p>
+            <p>{{ side === "left" && isTauriRuntime() ? "正在准备本地文件夹" : "连接一个 SFTP Server" }}</p>
             <UButton size="sm" color="primary" variant="soft" icon="i-lucide-plus" @click="openRemoteConnect(side)">
               {{ t("FileManagement.ConnectRemoteSftp") }}
             </UButton>
@@ -597,7 +589,7 @@ onMounted(() => {
           <div class="space-y-2">
             <UIcon name="i-lucide-server" class="mx-auto size-6 opacity-60" />
             <p>{{ t("FileManagement.RemoteSftpHint") }}</p>
-            <UButton size="xs" color="primary" variant="soft" @click="openRemoteConnect">
+            <UButton size="xs" color="primary" variant="soft" @click="() => openRemoteConnect()">
               {{ t("FileManagement.ConnectRemoteSftp") }}
             </UButton>
           </div>
@@ -608,27 +600,21 @@ onMounted(() => {
     <UModal v-model:open="connectModalOpen" :title="t('FileManagement.ConnectRemoteSftp')" :ui="{ content: 'max-w-md' }">
       <template #body>
         <div class="space-y-3">
+          <div class="flex items-center justify-between gap-2 rounded-lg bg-elevated/70 px-2.5 py-2 text-[11px] text-muted">
+            <span>当前组织</span>
+            <span class="max-w-[220px] truncate font-medium text-default">{{ currentOrgLabel }}</span>
+          </div>
           <UInput
-            v-model="remoteSearch"
+            v-model="remoteAssetSearch"
             icon="i-lucide-search"
             :placeholder="t('RightPanel.SFTPSearchPlaceholder')"
-            :loading="remoteSearchLoading"
           />
-          <div class="max-h-64 space-y-1 overflow-y-auto">
-            <button
-              v-for="node in remoteSearchNodes"
-              :key="`remote-sftp-${node.id}`"
-              type="button"
-              class="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-elevated"
-              :disabled="remoteConnecting"
-              @click="connectRemoteAsset(node)"
-            >
-              <UIcon name="i-lucide-server" class="size-4 shrink-0 text-muted" />
-              <span class="truncate">{{ node.name }}</span>
-            </button>
-            <p v-if="remoteSearch.trim() && !remoteSearchLoading && remoteSearchNodes.length === 0" class="py-4 text-center text-xs text-muted">
-              {{ t("Common.NoData") }}
-            </p>
+          <div class="max-h-72 overflow-y-auto rounded-lg border border-default">
+            <SideBarAssetTree
+              :search="remoteAssetSearch"
+              open
+              @select="connectRemoteAsset"
+            />
           </div>
         </div>
       </template>

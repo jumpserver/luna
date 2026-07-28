@@ -21,6 +21,7 @@ import { ErrorStatusCodes } from '@/lion/utils/status';
 import CombinationKey from '@/lion/components/CombinationKey.vue';
 
 const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const { t } = useI18n();
 const containerRef = ref<HTMLElement | null>(null);
 const sessionContext = inject(connectorSessionKey, ref<ConnectorSessionContext | null>(null));
@@ -131,7 +132,7 @@ const processUploadQueue = async () => {
       } else {
         msg = `${t('FileUploadError')}: ${uploadOptions.file.name}`;
       }
-      toast.add({ title: msg, color: 'error' });
+      addErrorToast({ title: msg });
     } finally {
       setTimeout(() => handleRemoveFile(uploadOptions.file), 5000);
     }

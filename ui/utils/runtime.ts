@@ -23,8 +23,8 @@ export const getWebOrgId = () => {
   return decodeURIComponent(getCookieValue("X-JMS-LUNA-ORG") || getCookieValue("X-JMS-ORG") || "");
 };
 
-export const getWebApiHeaders = () => {
-  const orgId = getWebOrgId();
+export const getWebApiHeaders = (orgIdOverride?: string) => {
+  const orgId = orgIdOverride || getWebOrgId();
   const headers: HeadersInit = {};
 
   if (orgId) {
@@ -34,8 +34,8 @@ export const getWebApiHeaders = () => {
   return headers;
 };
 
-export const getWebApiMutationHeaders = () => {
-  const headers = getWebApiHeaders();
+export const getWebApiMutationHeaders = (orgIdOverride?: string) => {
+  const headers = getWebApiHeaders(orgIdOverride);
   const rawPrefix = decodeURIComponent(getCookieValue("SESSION_COOKIE_NAME_PREFIX") || "")
     .replace(/^['"]|['"]$/g, "")
     .trim();

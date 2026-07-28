@@ -64,6 +64,7 @@ export const useTranscodeStore = defineStore(
   () => {
     const { t } = useI18n();
     const toast = useToast();
+    const { addErrorToast } = useErrorToast();
 
     const archivePaths = ref<string[]>([]);
     const outputDir = ref("");
@@ -419,9 +420,8 @@ export const useTranscodeStore = defineStore(
       }
 
       if (!outputDir.value) {
-        toast.add({
+        addErrorToast({
           title: t("Transcode.SelectOutputDirFirst"),
-          color: "error",
           icon: "line-md:close-circle",
           progress: true,
           duration: 3000
@@ -461,10 +461,9 @@ export const useTranscodeStore = defineStore(
 
           markAllPendingAsError(message);
 
-          toast.add({
+          addErrorToast({
             title: t("Transcode.StartFailed"),
             description: message,
-            color: "error",
             icon: "line-md:close-circle",
             progress: true,
             duration: 4000

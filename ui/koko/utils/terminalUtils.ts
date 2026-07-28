@@ -12,9 +12,9 @@ export function writeBufferToTerminal(
   terminal: Terminal | null,
   data: ArrayBuffer | Uint8Array
 ) {
-  const toast = useToast();
+  const { addErrorToast } = useErrorToast();
   if (!enableZmodem && zmodemStatus) {
-    toast.add({ title: "Zmodem blocked: transfer in progress", color: "error" });
+    addErrorToast({ title: "Zmodem blocked: transfer in progress" });
     return;
   }
   if (!terminal) return;

@@ -47,6 +47,7 @@ const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const emit = defineEmits<{ reconnect: [] }>();
 
 const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
 const tabRef = toRef(props, "tab");
 
@@ -69,10 +70,9 @@ const tree = useChenResourceTree(auth.chenToken, {
     // Root failures propagate to the session fatal state; only per-node
     // load failures surface as a toast here.
     if (!node) return;
-    toast.add({
+    addErrorToast({
       title: "Failed to load node",
-      description: node.label || node.name || node.key,
-      color: "error"
+      description: node.label || node.name || node.key
     });
   }
 });
@@ -252,10 +252,9 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
   if (packet.type === "save_changes_preview_result") {
     const result = target.editState.previewResult || packet.data?.result || packet.data;
     if (result?.success) return;
-    toast.add({
+    addErrorToast({
       title: "Preview failed",
-      description: resultFailureDescription(result, "Preview failed"),
-      color: "error"
+      description: resultFailureDescription(result, "Preview failed")
     });
     target.editState.previewResult = null;
     target.editState.pendingSavePayload = null;
@@ -266,10 +265,9 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
   target.editState.saveResult = null;
   target.editState.pendingSavePayload = null;
   if (!result?.success) {
-    toast.add({
+    addErrorToast({
       title: "Save failed",
-      description: resultFailureDescription(result, "Save failed"),
-      color: "error"
+      description: resultFailureDescription(result, "Save failed")
     });
     return;
   }
@@ -396,10 +394,9 @@ const actionMenu = useChenActionMenu<DropdownMenuItem>({
   fetchActions: (node) => fetchChenActions(auth.chenToken.value, node),
   mapItems: mapActionItems,
   onError: (node, cause) => {
-    toast.add({
+    addErrorToast({
       title: "Failed to load actions",
-      description: `${node.label || node.name || node.key}: ${cause instanceof Error ? cause.message : String(cause)}`,
-      color: "error"
+      description: `${node.label || node.name || node.key}: ${cause instanceof Error ? cause.message : String(cause)}`
     });
   }
 });
@@ -454,10 +451,9 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
         break;
     }
   } catch (cause) {
-    toast.add({
+    addErrorToast({
       title: "Action failed",
-      description: cause instanceof Error ? cause.message : String(cause),
-      color: "error"
+      description: cause instanceof Error ? cause.message : String(cause)
     });
   }
 }
@@ -502,10 +498,9 @@ async function performUploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
     queryConsole.runQueryFile(tab, result.path);
     toast.add({ title: "SQL file uploaded", description: file.name, color: "success" });
   } catch (cause) {
-    toast.add({
+    addErrorToast({
       title: "SQL upload failed",
-      description: cause instanceof Error ? cause.message : String(cause),
-      color: "error"
+      description: cause instanceof Error ? cause.message : String(cause)
     });
   } finally {
     tab.uploadingSql = false;

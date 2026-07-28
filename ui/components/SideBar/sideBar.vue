@@ -8,6 +8,7 @@ import { sortProtocolNames } from "~/utils";
 
 const { t } = useI18n();
 const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const localePath = useLocalePath();
 const { collapse, sidebarSections, setSidebarSections } = useSettingManager();
 const { activeWorkspaceMode } = useWorkspaceMode();
@@ -360,10 +361,9 @@ const addAssetToFavoriteFolder = async (asset: AssetItem, folderId: string) => {
     await favoriteToFolder(asset.id, folderId);
     toast.add({ title: t("Favorite.AddSuccess"), color: "success", icon: "i-lucide-star" });
   } catch (error) {
-    toast.add({
+    addErrorToast({
       title: t("Favorite.AddFailed"),
-      description: error instanceof Error ? error.message : String(error),
-      color: "error",
+      error,
       icon: "i-lucide-circle-alert"
     });
   }

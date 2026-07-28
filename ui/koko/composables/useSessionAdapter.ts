@@ -10,6 +10,7 @@ import { FORMATTER_MESSAGE_TYPE } from "~/shared/connectors/types/message";
 export function useKokoSessionAdapter() {
   const { t } = useI18n();
   const toast = useToast();
+  const { addErrorToast } = useErrorToast();
   const connectionStore = useKokoConnectionStore();
 
   const onlineUsers = computed(() => connectionStore.onlineUsers || []);
@@ -37,7 +38,7 @@ export function useKokoSessionAdapter() {
     const sessionId = connectionStore.sessionId;
 
     if (!socket?.value || !terminalId?.value || !sessionId) {
-      toast.add({ title: t("FailedCreateConnection") || "Failed to create connection", color: "error" });
+      addErrorToast({ title: t("FailedCreateConnection") || "Failed to create connection" });
       return;
     }
 
@@ -85,7 +86,7 @@ export function useKokoSessionAdapter() {
 
     writeText(text)
       .then(() => toast.add({ title: t("CopyShareURLSuccess") || "Copied", color: "success" }))
-      .catch((error) => toast.add({ title: String(error), color: "error" }));
+      .catch((error) => addErrorToast({ title: String(error) }));
   };
 
   const resetShareState = () => {

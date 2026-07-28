@@ -30,8 +30,8 @@ function buildPayload(tab: WorkspaceSessionTab, token: Record<string, any>) {
 }
 
 export function useWorkspaceTabMenu() {
-  const toast = useToast();
   const { t } = useI18n();
+  const { addErrorToast } = useErrorToast();
   const { handleAssetConnection } = useAssetAction();
   const {
     openSession,
@@ -68,10 +68,9 @@ export function useWorkspaceTabMenu() {
       });
       setActiveSession(newTab.id);
     } catch (error) {
-      toast.add({
+      addErrorToast({
         title: t("TabMenu.CloneConnect"),
         description: String(error),
-        color: "error"
       });
     }
   };
@@ -100,10 +99,9 @@ export function useWorkspaceTabMenu() {
       addSplitSession(tab.id, buildPayload(tab, token));
       setActiveSession(tab.id);
     } catch (error) {
-      toast.add({
+      addErrorToast({
         title: t("TabMenu.SplitVertically"),
         description: String(error),
-        color: "error"
       });
     }
   };

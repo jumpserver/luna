@@ -78,9 +78,14 @@ export const useAssetTree = () => {
     };
   };
 
-  const fetchTree = async (kind: AssetTreeKind, parent?: AssetTreeNode, search?: string) => {
+  const fetchTree = async (
+    kind: AssetTreeKind,
+    parent?: AssetTreeNode,
+    search?: string,
+    options?: { orgId?: string }
+  ) => {
     const query = buildQuery(kind, parent, search);
-    const data = await getAssetTree(kind, query);
+    const data = await getAssetTree(kind, query, options?.orgId);
 
     return normalizeTreeNodes(data, parent ? (parent.level || 0) + 1 : 0);
   };

@@ -37,6 +37,7 @@ export const useKokoTerminalSocket = () => {
 
   const { t } = useI18n();
   const toast = useToast();
+  const { addErrorToast } = useErrorToast();
   const { createSentry } = useKokoZmodem();
   const { width, height } = useWindowSize();
   const { sendHostEvent, emitTerminalConnect, emitTerminalSession, hostBridge, sendMittEvent, sendToHost } = useKokoTerminalEvents();
@@ -284,7 +285,7 @@ export const useKokoTerminalSocket = () => {
       } catch {
         if (sentry.get_confirmed_session()) {
           sentry.get_confirmed_session()?.abort();
-          toast.add({ title: "File transfer interrupted", color: "error" });
+          addErrorToast({ title: "File transfer interrupted" });
         }
       }
     } else {
@@ -345,7 +346,7 @@ export const useKokoTerminalSocket = () => {
       }
       if (!text || isSocketClosing(socketRef.value!)) {
         if (isSocketClosing(socketRef.value!)) {
-          toast.add({ title: t("WebSocket connection is closed, please refresh the page") || "Connection closed", color: "error" });
+          addErrorToast({ title: t("WebSocket connection is closed, please refresh the page") || "Connection closed" });
         }
         return;
       }
@@ -448,7 +449,7 @@ export const useKokoTerminalSocket = () => {
       autoReconnect: { retries: 5, delay: 3000 }
     });
     if (!ws.value) {
-      toast.add({ title: t("FailedCreateConnection") || "Failed to create connection", color: "error" });
+      addErrorToast({ title: t("FailedCreateConnection") || "Failed to create connection" });
       return;
     }
     ws.value.binaryType = "arraybuffer";

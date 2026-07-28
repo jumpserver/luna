@@ -9,6 +9,7 @@ definePageMeta({
 
 const { t } = useI18n();
 const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const { isWindows } = usePlatform();
 
 const store = useTranscodeStore();
@@ -45,10 +46,9 @@ const openOutputFile = async (output: string) => {
   try {
     await useTauriOpenerOpenPath(output);
   } catch (error) {
-    toast.add({
+    addErrorToast({
       title: t("Transcode.OpenFailed"),
       description: getErrorMessage(error),
-      color: "error",
       icon: "line-md:close-circle",
       progress: true,
       duration: 3000
@@ -104,10 +104,9 @@ const pickArchives = async (append = false) => {
       store.setArchives(nextPaths);
     }
   } catch (error) {
-    toast.add({
+    addErrorToast({
       title: t("Transcode.SelectArchivesFailed"),
       description: getErrorMessage(error),
-      color: "error",
       icon: "line-md:close-circle",
       progress: true,
       duration: 4000
@@ -131,10 +130,9 @@ const pickOutputDir = async () => {
       store.setOutputDir(selected);
     }
   } catch (error) {
-    toast.add({
+    addErrorToast({
       title: t("Transcode.SelectOutputDirFailed"),
       description: getErrorMessage(error),
-      color: "error",
       icon: "line-md:close-circle",
       progress: true,
       duration: 4000

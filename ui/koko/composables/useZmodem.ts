@@ -19,6 +19,7 @@ let messageShown = false;
 export const useKokoZmodem = () => {
   const { t } = useI18n();
   const toast = useToast();
+  const { addErrorToast } = useErrorToast();
 
   const cleanupSession = () => {
     if (activeSession.value) {
@@ -53,7 +54,7 @@ export const useKokoZmodem = () => {
 
     const { size } = fileInfo.value;
     if (size >= MAX_TRANSFER_SIZE) {
-      toast.add({ title: `${t("ExceedTransferSize") || "Exceeds limit"}: ${prettyBytes(MAX_TRANSFER_SIZE)}`, color: "error" });
+      addErrorToast({ title: `${t("ExceedTransferSize") || "Exceeds limit"}: ${prettyBytes(MAX_TRANSFER_SIZE)}` });
       cleanupSession();
       return;
     }
@@ -86,7 +87,7 @@ export const useKokoZmodem = () => {
     })
       .then(() => cleanupSession())
       .catch((error: Error) => {
-        toast.add({ title: error.message, color: "error" });
+        addErrorToast({ title: error.message });
         cleanupSession();
         activeSession.value?.abort();
       });
@@ -106,7 +107,7 @@ export const useKokoZmodem = () => {
 
   const confirmUpload = () => {
     if (!fileInfo.value || !pendingSession || !pendingTerminal) {
-      toast.add({ title: t("MustSelectOneFile") || "Select a file", color: "error" });
+      addErrorToast({ title: t("MustSelectOneFile") || "Select a file" });
       return;
     }
     uploadOpen.value = false;
@@ -142,7 +143,7 @@ export const useKokoZmodem = () => {
           toast.add({ title: `${t("DownloadSuccess") || "Downloaded"}: ${detail.name}`, color: "success" });
           terminal.write("\r\n");
         })
-        .catch((error: Error) => toast.add({ title: String(error), color: "error" }));
+        .catch((error: Error) => addErrorToast({ title: String(error) }));
     });
 
     session.on("session_end", () => {
@@ -159,7 +160,7 @@ export const useKokoZmodem = () => {
         try {
           if (sentryRef.value && !sentryRef.value.get_confirmed_session()) terminal.write(octets);
         } catch {
-          toast.add({ title: t("Failed to write to terminal") || "Write failed", color: "error" });
+          addErrorToast({ title: t("Failed to write to terminal") || "Write failed" });
         }
       },
       sender: (octets: Uint8Array) => {

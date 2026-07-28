@@ -6,7 +6,7 @@ import KokoFileManagerSessionSurface from "~/koko/workspaces/FileManagerSessionS
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { t } = useI18n();
-const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const { activeTab } = useWorkspaceTabs();
 const { getSessionDetails } = useWorkspaceSessionDetails();
 const { fetchTree, treeNodeToAsset } = useAssetTree();
@@ -55,10 +55,9 @@ const activeFileTokenRequester = computed(() =>
 const isActiveAssetPreparing = computed(() => Boolean(activeWorkspaceAsset.value && !inlineTab.value && !inlineError.value));
 
 const reportError = (error: unknown) => {
-  toast.add({
+  addErrorToast({
     title: t("Asset.GetAssetFailed"),
-    description: error instanceof Error ? error.message : String(error),
-    color: "error",
+    error,
     icon: "i-lucide-circle-alert"
   });
 };

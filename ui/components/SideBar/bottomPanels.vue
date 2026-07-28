@@ -19,7 +19,7 @@ const emit = defineEmits<{
 type PanelKind = "favorites" | "snippets";
 
 const { t } = useI18n();
-const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const openPanels = ref<Set<PanelKind>>(new Set());
 const { folders: favoriteFolders, rootAssets: favoriteRootAssets, loading: favoriteLoading, load: loadFavorites, createFolder, renameFolder, removeFolder } = useFavoriteFolders();
 const { snippets, loading: snippetLoading, load: loadSnippets, applySnippet } = useSnippets();
@@ -80,10 +80,9 @@ const submitCreateFolder = async () => {
     await createFolder(name, createParentId.value);
     createModalOpen.value = false;
   } catch (error) {
-    toast.add({
+    addErrorToast({
       title: t("Favorite.CreateFailed"),
-      description: error instanceof Error ? error.message : String(error),
-      color: "error",
+      error,
       icon: "i-lucide-circle-alert"
     });
   } finally {
@@ -121,10 +120,9 @@ const submitRenameFolder = async () => {
     renameModalOpen.value = false;
     renameTarget.value = null;
   } catch (error) {
-    toast.add({
+    addErrorToast({
       title: t("Favorite.RenameFailed"),
-      description: error instanceof Error ? error.message : String(error),
-      color: "error",
+      error,
       icon: "i-lucide-circle-alert"
     });
   }
@@ -151,10 +149,9 @@ const submitDeleteFolder = async () => {
     deleteModalOpen.value = false;
     deleteTarget.value = null;
   } catch (error) {
-    toast.add({
+    addErrorToast({
       title: t("Favorite.DeleteFailed"),
-      description: error instanceof Error ? error.message : String(error),
-      color: "error",
+      error,
       icon: "i-lucide-circle-alert"
     });
   } finally {

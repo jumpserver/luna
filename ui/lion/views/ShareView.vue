@@ -10,7 +10,7 @@ import { useWindowSize, useDebounceFn } from '@vueuse/core';
 import { useRoute } from 'vue-router';
 
 const { width, height } = useWindowSize();
-const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const { t } = useI18n();
 const route = useRoute();
 const wsUrl = withLionWsUrl('/ws/share/');
@@ -60,7 +60,7 @@ const connectShareSession = (code: string) => {
     .then((response: any) => response.json())
     .then((res) => {
       if (res.message && !res.success) {
-        toast.add({ title: res.message || t('ShareSessionError'), color: 'error' });
+        addErrorToast({ title: res.message || t('ShareSessionError') });
         loading.value = false;
         errMessage.value = res.message || t('ShareSessionError');
         return;
@@ -81,7 +81,7 @@ const connectShareSession = (code: string) => {
       if (!readonly.value) registerMouseAndKeyboardHanlder();
     })
     .catch((error) => {
-      toast.add({ title: error.message || t('ShareSessionError'), color: 'error' });
+      addErrorToast({ title: error.message || t('ShareSessionError') });
     });
 };
 

@@ -47,6 +47,7 @@ const props = withDefaults(defineProps<{
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const gridApi = shallowRef<GridReadyEvent["api"] | null>(null);
 const container = ref<HTMLElement | null>(null);
 const selection = ref(emptyChenGridSelection());
@@ -158,7 +159,7 @@ async function copyText(text: string, successTitle: string) {
     await writeChenClipboardText(text);
     toast.add({ title: successTitle, color: "success" });
   } catch (cause) {
-    toast.add({ title: "Copy failed", description: copyError(cause), color: "error" });
+    addErrorToast({ title: "Copy failed", description: copyError(cause) });
   }
 }
 
@@ -174,7 +175,7 @@ function copyInsertSql() {
     const sql = createChenInsertSql(props.dbType, props.meta, props.dataset?.fields || [], currentRow.value);
     void copyText(sql, "INSERT SQL copied");
   } catch (cause) {
-    toast.add({ title: "Copy failed", description: copyError(cause), color: "error" });
+    addErrorToast({ title: "Copy failed", description: copyError(cause) });
   }
 }
 
@@ -184,7 +185,7 @@ function copyUpdateSql() {
     const sql = createChenUpdateSql(props.dbType, props.meta, props.dataset?.fields || [], currentRow.value);
     void copyText(sql, "UPDATE SQL copied");
   } catch (cause) {
-    toast.add({ title: "Copy failed", description: copyError(cause), color: "error" });
+    addErrorToast({ title: "Copy failed", description: copyError(cause) });
   }
 }
 

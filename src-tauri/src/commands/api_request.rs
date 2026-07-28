@@ -12,6 +12,7 @@ pub struct ApiRequest {
     pub path: String,
     pub query: Option<Value>,
     pub body: Option<Value>,
+    pub org_id: Option<String>,
 }
 
 #[tauri::command]
@@ -20,7 +21,10 @@ pub async fn api_request(
     session: State<'_, ApiSessionStore>,
     request: ApiRequest,
 ) -> Result<Value, String> {
-    let context = fresh_api_context(&app, &session).await?;
+    let mut context = fresh_api_context(&app, &session).await?;
+    if let Some(org_id) = request.org_id.clone() {
+        context.org_id = org_id;
+    }
     let api = ApiRequestClient::from_session(&context).map_err(|error| error.to_string())?;
     let method = Method::from_bytes(request.method.as_bytes())
         .map_err(|error| format!("invalid api method: {}", error))?;

@@ -69,6 +69,7 @@ export const useAssetAction = () => {
 
   const { t } = useI18n();
   const toast = useToast();
+  const { addErrorToast } = useErrorToast();
   const userInfoStore = useUserInfoStore();
   const { markSessionFailed, openSession, updateSessionPayload } = useWorkspaceTabs();
   const { fetchConnectMethods } = useConnectMethods();
@@ -250,14 +251,15 @@ export const useAssetAction = () => {
   const fetchSmartEndpointUrl = async (
     token: TokenResponse,
     method: { component?: string, type?: string, endpoint_protocol?: string } | undefined,
-    body: ConnectionBody
+    body: ConnectionBody,
+    orgId?: string
   ) => {
     const endpointProtocol = resolveWebEndpointProtocol(method);
     const endpoint = await getSmartEndpoint({
       protocol: endpointProtocol,
       assetId: body.asset,
       token: token.id
-    });
+    }, orgId);
 
     return getEndpointUrl(endpoint, endpointProtocol);
   };
@@ -297,7 +299,7 @@ export const useAssetAction = () => {
 
   const getConnectToken = async (
     body: ConnectionBody,
-    meta?: { tabId?: string, asset?: AssetItem, assetId: string, protocol: string, account: string }
+    meta?: { tabId?: string, asset?: AssetItem, assetId: string, protocol: string, account: string, orgId?: string }
   ) => {
     const nativeApp = parseLocalApplicationConnectMethod(body.connect_method);
     const serverBody = { ...body, connect_method: nativeApp.connectMethod };
@@ -311,7 +313,7 @@ export const useAssetAction = () => {
       const tabId = meta?.tabId || session?.id;
 
       try {
-        const token = await createConnectionToken(serverBody);
+        const token = await createConnectionToken(serverBody, meta?.orgId);
         const allMethods = await fetchConnectMethods();
         const method = (allMethods[body.protocol] || []).find((item) => item.value === serverBody.connect_method);
 
@@ -328,7 +330,7 @@ export const useAssetAction = () => {
         }
 
         const component = method?.component || (body.protocol === "ssh" ? "koko" : "default");
-        const endpointUrl = getWebConnectorDevOrigin(component) || await fetchSmartEndpointUrl(token, method, body);
+        const endpointUrl = getWebConnectorDevOrigin(component) || await fetchSmartEndpointUrl(token, method, body, meta?.orgId);
         const webUrl = getWebConnectorPath(token, method, body, endpointUrl);
 
         if (tabId) {
@@ -349,10 +351,9 @@ export const useAssetAction = () => {
           markSessionFailed({ tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account });
         }
 
-        toast.add({
+        addErrorToast({
           title: t("ConnectError.ConnectFailed"),
           description: String(error),
-          color: "error",
           icon: "line-md:close-circle",
           progress: true,
           duration: 4000
@@ -423,6 +424,7 @@ export const useAssetAction = () => {
       assetId: string
       protocol: string
       account: string
+      orgId?: string
       onSessionReady?: (payload: Record<string, any>) => void
       onSessionError?: (error: unknown) => void
     }
@@ -431,7 +433,7 @@ export const useAssetAction = () => {
       void (async () => {
         try {
           const serverBody = { ...body, connect_method: await resolveServerConnectMethod(body) };
-          const token = await createConnectionToken(serverBody);
+          const token = await createConnectionToken(serverBody, meta.orgId);
           const payload = {
             token,
             ...token,
@@ -442,10 +444,9 @@ export const useAssetAction = () => {
         } catch (error) {
           if (meta.onSessionError) meta.onSessionError(error);
           else markSessionFailed(meta);
-          toast.add({
+          addErrorToast({
             title: t("ConnectError.ConnectFailed"),
             description: String(error),
-            color: "error",
             icon: "line-md:close-circle",
             progress: true,
             duration: 4000
@@ -482,10 +483,9 @@ export const useAssetAction = () => {
       if (meta.onSessionError) meta.onSessionError(error);
       else markSessionFailed(meta);
 
-      toast.add({
+      addErrorToast({
         title: t("ConnectError.ConnectFailed"),
         description: String(error || t("ConnectError.ConnectFailed")),
-        color: "error",
         icon: "line-md:close-circle",
         progress: true,
         duration: 4000
@@ -554,6 +554,7 @@ export const useAssetAction = () => {
       asset?: AssetItem
       onSessionReady?: (payload: Record<string, any>) => void
       onSessionError?: (error: unknown) => void
+      orgId?: string
     }
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
@@ -661,6 +662,7 @@ export const useAssetAction = () => {
           assetId,
           protocol,
           account,
+          orgId: ephemeral?.orgId,
           onSessionReady: ephemeral?.onSessionReady,
           onSessionError: ephemeral?.onSessionError
         });
@@ -672,7 +674,8 @@ export const useAssetAction = () => {
         asset: ephemeral?.asset,
         assetId,
         protocol,
-        account
+        account,
+        orgId: ephemeral?.orgId
       });
     });
   };
@@ -694,10 +697,9 @@ export const useAssetAction = () => {
         });
       })
       .catch((error) => {
-        toast.add({
+        addErrorToast({
           title: t("AssetCard.RenameFail"),
           description: error?.message || t("Common.OperationFailed"),
-          color: "error",
           icon: "line-md:close-circle",
           progress: true,
           duration: 4000
@@ -721,9 +723,8 @@ export const useAssetAction = () => {
         });
       })
       .catch(() => {
-        toast.add({
+        addErrorToast({
           title: t("ContextMenu.FavoriteFailed"),
-          color: "error",
           icon: "line-md:close-circle",
           progress: true,
           duration: 4000
@@ -747,9 +748,8 @@ export const useAssetAction = () => {
         });
       })
       .catch(() => {
-        toast.add({
+        addErrorToast({
           title: t("ContextMenu.UnfavoriteFailed"),
-          color: "error",
           icon: "line-md:close-circle",
           progress: true,
           duration: 4000
@@ -820,20 +820,18 @@ export const useAssetAction = () => {
         const errorCode = errorData?.code as string;
 
         if (errorCode && errorCode.includes("acl")) {
-          return toast.add({
+          return addErrorToast({
             title: t("ConnectError.ConnectFailed"),
             description: t("ConnectError.AclFailed"),
-            color: "error",
             icon: "line-md:close-circle",
             progress: true,
             duration: 4000
           });
         }
 
-        toast.add({
+        addErrorToast({
           title: t("ConnectError.ConnectFailed"),
           description: errorData.detail,
-          color: "error",
           icon: "line-md:close-circle",
           progress: true,
           duration: 4000
@@ -877,10 +875,9 @@ export const useAssetAction = () => {
           description = withDetail(t("ConnectError.DbAppFailed"));
         }
 
-        toast.add({
+        addErrorToast({
           title: t("ConnectError.ConnectFailed"),
           description,
-          color: "error",
           icon: "line-md:close-circle",
           progress: true,
           duration: 4000
@@ -916,10 +913,9 @@ export const useAssetAction = () => {
         else if (meta) markSessionFailed(meta);
 
         const payload = event.payload as eventPayload;
-        toast.add({
+        addErrorToast({
           title: t("ConnectError.ConnectFailed"),
           description: payload.data || t("ConnectError.ConnectFailed"),
-          color: "error",
           icon: "line-md:close-circle",
           progress: true,
           duration: 4000

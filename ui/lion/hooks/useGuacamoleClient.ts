@@ -156,11 +156,12 @@ interface GuacamoleFile {
 
 export function useGuacamoleClient(t: any) {
   const toast = useToast();
+  const { addErrorToast } = useErrorToast();
   const message = {
     info: (text: string) => toast.add({ title: text, color: 'info' }),
     success: (text: string) => toast.add({ title: text, color: 'success' }),
     warning: (text: string) => toast.add({ title: text, color: 'warning' }),
-    error: (text: string, _opts?: { duration?: number }) => toast.add({ title: text, color: 'error' }),
+    error: (text: string, _opts?: { duration?: number }) => addErrorToast({ title: text }),
   };
   const guaClient = ref<any>(null);
   const guaTunnel = ref<any>(null);

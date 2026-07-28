@@ -6,6 +6,7 @@ definePageMeta({
 });
 
 const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const isImporting = ref(false);
 const items = ref<VideoPlayerItem[]>([]);
@@ -99,10 +100,9 @@ async function importFiles(files: File[]) {
     }
   } catch (error: any) {
     importMessage.value = "";
-    toast.add({
+    addErrorToast({
       title: "导入失败",
-      description: error?.message || String(error),
-      color: "error"
+      description: error?.message || String(error)
     });
   } finally {
     isImporting.value = false;

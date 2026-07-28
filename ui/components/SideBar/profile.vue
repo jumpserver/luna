@@ -34,6 +34,7 @@ const isTopbar = computed(() => props.placement === "topbar");
 const recentSiteLimit = 5;
 
 const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const appConfig = useAppConfig();
 const localePath = useLocalePath();
 const userInfoStore = useUserInfoStore();
@@ -606,10 +607,9 @@ const handleConfirm = async () => {
     errorMessage.value = looksLikeSiteIssue ? t("Login.InvalidSiteError") : raw || t("Login.LoginFailed");
 
     if (!looksLikeSiteIssue) {
-      toast.add({
+      addErrorToast({
         title: t("Login.LoginFailed"),
         description: raw || t("Login.LoginFailed"),
-        color: "error",
         icon: "line-md:close-circle",
         progress: true,
         duration: 4000
@@ -655,10 +655,9 @@ onMounted(async () => {
       description = t(" ");
     }
 
-    toast.add({
+    addErrorToast({
       title: t("Login.LoginFailed"),
       description,
-      color: "error",
       icon: "line-md:close-circle",
       progress: true,
       duration: 4000
@@ -692,10 +691,9 @@ onMounted(async () => {
       description = t("Login.InvalidSiteError");
     }
 
-    toast.add({
+    addErrorToast({
       title: t("Login.LoginFailed"),
       description,
-      color: "error",
       icon: "line-md:close-circle",
       progress: true,
       duration: 4000

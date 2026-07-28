@@ -2,7 +2,6 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { writeClipboardText } from "~/utils/clipboard";
 
 const props = defineProps<{
   search: string
@@ -20,8 +19,8 @@ type PanelKind = Exclude<AssetTreeKind, "search">;
 
 const RECENT_NODE_ID = "__recent_connections__";
 
-const { t, locale } = useI18n();
-const toast = useToast();
+const { t } = useI18n();
+const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, orgId } = storeToRefs(userInfoStore);
 const { fetchTree, treeNodeToAsset } = useAssetTree();
@@ -140,27 +139,10 @@ const reportError = (error: unknown) => {
   lastErrorSignature = signature;
   lastErrorAt = now;
 
-  toast.add({
+  addErrorToast({
     title,
     description,
-    color: "error",
-    icon: "i-lucide-circle-alert",
-    actions: [
-      {
-        label: t("Common.Copy"),
-        icon: "i-lucide-copy",
-        color: "neutral",
-        variant: "soft",
-        onClick: async () => {
-          await writeClipboardText([title, description].filter(Boolean).join("\n"));
-          toast.add({
-            title: locale.value === "zh" ? "已复制" : "Copied",
-            color: "success",
-            duration: 1200
-          });
-        }
-      }
-    ]
+    icon: "i-lucide-circle-alert"
   });
 };
 

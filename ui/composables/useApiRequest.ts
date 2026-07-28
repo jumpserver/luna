@@ -1,10 +1,12 @@
 import type { AssetTreeKind, TokenResponse } from "~/types";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export interface ApiRequest {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
   path: string
   query?: Record<string, unknown>
   body?: unknown
+  orgId?: string
 }
 
 export interface AssetTreeParams {
@@ -59,7 +61,7 @@ const handleApiAuthFailure = () => {
   userInfoStore.setUserLoggedIn(false);
   useEventBus().emit("clearAssets", undefined);
   if (isTauriRuntime()) {
-    useEventBus().emit("login");
+    useEventBus().emit("login", undefined);
   } else {
     redirectToWebLogin();
   }
@@ -88,8 +90,8 @@ async function webApiRequest<T>(request: ApiRequest): Promise<T> {
     method: request.method,
     credentials: "include",
     headers: hasBody
-      ? { ...getWebApiMutationHeaders(), "Content-Type": "application/json" }
-      : getWebApiHeaders(),
+      ? { ...getWebApiMutationHeaders(request.orgId), "Content-Type": "application/json" }
+      : getWebApiHeaders(request.orgId),
     body: hasBody ? JSON.stringify(request.body) : undefined
   });
 
@@ -127,7 +129,8 @@ export async function apiRequest<T>(request: ApiRequest): Promise<T> {
 
 export function getAssetTree(
   kind: AssetTreeKind,
-  params: AssetTreeParams
+  params: AssetTreeParams,
+  orgId?: string
 ): Promise<unknown> {
   const paths: Record<AssetTreeKind, string> = {
     authorization: "/api/v1/perms/users/self/nodes/children-with-assets/tree/",
@@ -138,7 +141,8 @@ export function getAssetTree(
   return apiRequest<unknown>({
     method: "GET",
     path: paths[kind],
-    query: params
+    query: params as Record<string, unknown>,
+    orgId
   });
 }
 
@@ -197,7 +201,10 @@ export function getConnectMethods(): Promise<Record<string, unknown>> {
   });
 }
 
-export function getSmartEndpoint(params: SmartEndpointParams): Promise<{ value?: string, host?: string, port?: number, https_port?: number }> {
+export function getSmartEndpoint(
+  params: SmartEndpointParams,
+  orgId?: string
+): Promise<{ value?: string, host?: string, port?: number, https_port?: number }> {
   return apiRequest({
     method: "GET",
     path: "/api/v1/terminal/endpoints/smart/",
@@ -205,15 +212,17 @@ export function getSmartEndpoint(params: SmartEndpointParams): Promise<{ value?:
       protocol: params.protocol,
       asset_id: params.assetId,
       token: params.token
-    }
+    },
+    orgId
   });
 }
 
-export function createConnectionToken(body: unknown): Promise<TokenResponse> {
+export function createConnectionToken(body: unknown, orgId?: string): Promise<TokenResponse> {
   return apiRequest<TokenResponse>({
     method: "POST",
     path: "/api/v1/authentication/connection-token/",
-    body
+    body,
+    orgId
   });
 }
 
@@ -266,10 +275,11 @@ export function deleteSqlSnippet(id: string): Promise<unknown> {
   });
 }
 
-export function getAssetDetailRequest(assetId: string): Promise<Record<string, any>> {
+export function getAssetDetailRequest(assetId: string, orgId?: string): Promise<Record<string, any>> {
   return apiRequest<Record<string, any>>({
     method: "GET",
-    path: `/api/v1/perms/users/self/assets/${encodeURIComponent(assetId)}/`
+    path: `/api/v1/perms/users/self/assets/${encodeURIComponent(assetId)}/`,
+    orgId
   });
 }
 

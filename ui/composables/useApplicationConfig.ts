@@ -2,7 +2,7 @@ import type { AppConfigType } from "~/types";
 
 export const useApplicationConfig = () => {
   const { t } = useI18n();
-  const toast = useToast();
+  const { addErrorToast } = useErrorToast();
   const { setAppConfig, appConfig, hydrationPromise } = useSettingManager();
 
   const withErrorDetail = (base: string, raw: string) => {
@@ -72,10 +72,9 @@ export const useApplicationConfig = () => {
         ? withErrorDetail(t("Setting.ExecutableNotFound"), message)
         : message || t("Common.OperationFailed");
 
-      toast.add({
+      addErrorToast({
         title: t("Setting.EnableFailed"),
         description,
-        color: "error",
         icon: "line-md:close-circle",
         progress: true,
         duration: 4000
