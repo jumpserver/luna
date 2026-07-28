@@ -42,6 +42,7 @@ const userInfoStore = useUserInfoStore();
 const { t, locales, locale } = useI18n();
 const { loggedIn, currentSite, userMap, currentUser } = storeToRefs(userInfoStore);
 const { applyLoginPayload } = useAuthSession();
+const { openToolWindow } = useToolWindow();
 
 const { setLang, primaryColorLight, primaryColorDark, recentSites, setRecentSites, hydrationPromise }
   = useSettingManager();
@@ -139,6 +140,21 @@ const languageChildren = computed<DropdownMenuItem[][]>(() => [
   }))
 ]);
 
+const toolChildren = computed<DropdownMenuItem[][]>(() => [
+  [
+    {
+      label: t("Menu.Player"),
+      icon: "lucide:clapperboard",
+      onClick: () => openToolWindow(localePath("videoplayer"), "JumpServer Video Player")
+    },
+    {
+      label: t("Menu.Transcode"),
+      icon: "lucide:repeat-2",
+      onClick: () => openToolWindow(localePath({ path: "/transcode" }), t("Transcode.Title"))
+    }
+  ]
+]);
+
 const profileMenuItems = computed<DropdownMenuItem[][]>(() => {
   const accountItems: DropdownMenuItem[] = [
     {
@@ -169,6 +185,13 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => {
         icon: "solar:global-outline",
         children: languageChildren.value
       },
+      ...(isTauriRuntime()
+        ? [{
+            label: t("Menu.Tool"),
+            icon: "i-lucide-wrench",
+            children: toolChildren.value
+          } satisfies DropdownMenuItem]
+        : []),
       {
         label: t("Common.Settings"),
         icon: "i-lucide-settings",
@@ -205,7 +228,7 @@ watch(
 );
 
 function applyCurrentThemeColor(broadcast = false) {
-  const modeNow = (userTheme.value as string) || (selectedAppearance.value as string);
+  const modeNow = (userTheme.value as string) || "light";
   const hexNow = modeNow === "dark" ? primaryColorDark.value : primaryColorLight.value;
 
   if (hexNow) {

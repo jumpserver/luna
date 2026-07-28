@@ -139,10 +139,9 @@ async function importPaths(filePaths: string[]) {
     await appendParsedItems(await parsePaths(filePaths));
   } catch (error: any) {
     importMessage.value = "";
-    toast.add({
+    addErrorToast({
       title: "导入失败",
-      description: error?.message || String(error),
-      color: "error"
+      description: error?.message || String(error)
     });
   } finally {
     isImporting.value = false;
@@ -166,10 +165,9 @@ async function handleFileInputClick(event: MouseEvent) {
 
     await importPaths(paths);
   } catch (error: any) {
-    toast.add({
+    addErrorToast({
       title: "选择文件失败",
-      description: error?.message || String(error),
-      color: "error"
+      description: error?.message || String(error)
     });
   }
 }

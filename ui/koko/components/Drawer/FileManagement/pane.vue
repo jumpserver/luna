@@ -58,9 +58,11 @@ const downloadSelected = () => {
 };
 
 const uploadFromEvent = async (event: Event) => {
-  const file = (event.target as HTMLInputElement).files?.[0];
-  if (file) await manager.uploadFile(file);
-  (event.target as HTMLInputElement).value = "";
+  const input = event.target as HTMLInputElement;
+  const files = [...(input.files || [])];
+  input.value = "";
+  if (!files.length) return;
+  await Promise.allSettled(files.map((file) => manager.uploadFile(file)));
 };
 
 defineExpose({ manager, selectedEntry });
@@ -105,10 +107,19 @@ defineExpose({ manager, selectedEntry });
       />
       <UButton icon="i-lucide-folder-plus" color="neutral" variant="ghost" size="xs" @click="createFolder" />
       <UButton icon="i-lucide-upload" color="primary" variant="soft" size="xs" @click="uploadInput?.click()" />
-      <input ref="uploadInput" type="file" class="hidden" @change="uploadFromEvent">
+      <input ref="uploadInput" type="file" multiple class="hidden" @change="uploadFromEvent">
     </div>
-    <div v-if="manager.uploadProgress.value > 0 && manager.uploadProgress.value < 100" class="border-b border-[var(--app-border)] px-2 py-1 text-[11px] text-[var(--app-muted)]">
-      {{ t("UploadProgress") }}: {{ manager.uploadProgress.value }}%
+    <div v-if="manager.currentUploadName.value" class="border-b border-[var(--app-border)] px-2 py-2">
+      <div class="mb-1 flex items-center justify-between gap-2 text-[11px] text-[var(--app-muted)]">
+        <span class="truncate">{{ manager.currentUploadName.value }}</span>
+        <span>{{ manager.uploadProgress.value }}%</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <UProgress :value="manager.uploadProgress.value" size="xs" class="flex-1" />
+        <span v-if="manager.queuedUploadCount.value" class="shrink-0 text-[11px] text-[var(--app-muted)]">
+          +{{ manager.queuedUploadCount.value }}
+        </span>
+      </div>
     </div>
     <div v-if="manager.loading.value" class="grid flex-1 place-items-center">
       <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />

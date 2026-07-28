@@ -10,6 +10,13 @@ export interface SftpFileEntry {
   is_dir: boolean
 }
 
+interface UploadTask {
+  id: string
+  name: string
+  progress: number
+  status: "queued" | "uploading"
+}
+
 const id = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
 
 export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
@@ -23,9 +30,14 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
   let socket: WebSocket | null = null;
   let downloadParts: Uint8Array[] = [];
   let readQueue: Promise<void> = Promise.resolve();
+  let uploadQueue: Promise<void> = Promise.resolve();
   const pendingReads = new Map<string, { parts: Uint8Array[], resolve: (blob: Blob) => void, reject: (error: Error) => void }>();
   const pendingLists = new Map<string, { resolve: (entries: SftpFileEntry[]) => void, reject: (error: Error) => void }>();
   const pendingMutations = new Map<string, { resolve: () => void, reject: (error: Error) => void }>();
+  const pendingUploadAcks = new Map<string, Array<{ resolve: () => void, reject: (error: Error) => void }>>();
+  const uploadTasks = ref<UploadTask[]>([]);
+  const currentUploadName = ref("");
+  const queuedUploadCount = ref(0);
 
   // Koko's WebSFTP handler keeps the active message on the connection object.
   // Serializing reads prevents a tree listing from overwriting a file download
@@ -36,6 +48,28 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
     return result;
   };
 
+  const enqueueUpload = <T>(operation: () => Promise<T>) => {
+    const result = uploadQueue.then(operation, operation);
+    uploadQueue = result.then(() => undefined, () => undefined);
+    return result;
+  };
+
+  const syncUploadState = () => {
+    const active = uploadTasks.value.find((task) => task.status === "uploading") || uploadTasks.value[0] || null;
+    currentUploadName.value = active?.name || "";
+    uploadProgress.value = active?.progress || 0;
+    queuedUploadCount.value = uploadTasks.value.filter((task) => task.status === "queued").length;
+  };
+
+  const rejectPendingUploads = (message: string) => {
+    for (const waiters of pendingUploadAcks.values()) {
+      for (const waiter of waiters) waiter.reject(new Error(message));
+    }
+    pendingUploadAcks.clear();
+    uploadTasks.value = [];
+    syncUploadState();
+  };
+
   const rejectPendingRead = (message: string) => {
     for (const pending of pendingReads.values()) pending.reject(new Error(message));
     pendingReads.clear();
@@ -44,6 +78,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
     pendingLists.clear();
     for (const pending of pendingMutations.values()) pending.reject(new Error(message));
     pendingMutations.clear();
+    rejectPendingUploads(message);
   };
 
   const decodeRaw = (raw: unknown) => {
@@ -59,6 +94,27 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
   const send = (cmd: string, data: Record<string, unknown>, raw = "", messageId = id()) => {
     if (!socket || socket.readyState !== WebSocket.OPEN) throw new Error("SFTP connection is not ready");
     socket.send(JSON.stringify({ id: messageId, type: "SFTP_DATA", cmd, data: JSON.stringify(data), raw }));
+  };
+
+  const waitForUploadAck = (messageId: string) =>
+    new Promise<void>((resolve, reject) => {
+      const waiters = pendingUploadAcks.get(messageId) || [];
+      waiters.push({ resolve, reject });
+      pendingUploadAcks.set(messageId, waiters);
+    });
+
+  const sendUpload = async (messageId: string, data: Record<string, unknown>, raw = "") => {
+    const ack = waitForUploadAck(messageId);
+    try {
+      send("upload", data, raw, messageId);
+      await ack;
+    } catch (cause) {
+      const waiters = pendingUploadAcks.get(messageId) || [];
+      const remaining = waiters.slice(1);
+      if (remaining.length) pendingUploadAcks.set(messageId, remaining);
+      else pendingUploadAcks.delete(messageId);
+      throw cause;
+    }
   };
 
   const list = (path = currentPath.value) => {
@@ -110,11 +166,23 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
           else downloadParts.push(decodeRaw(message.raw));
         } else if (message.type === "SFTP_DATA") {
           const mutation = pendingMutations.get(message.id);
-          if (mutation && ["mkdir", "upload", "rename", "rm"].includes(message.cmd)) {
+          if (message.cmd === "upload") {
+            const waiters = pendingUploadAcks.get(message.id) || [];
+            if (message.err) {
+              for (const waiter of waiters) waiter.reject(new Error(message.err));
+              pendingUploadAcks.delete(message.id);
+            } else if (message.data === "ok") {
+              const waiter = waiters.shift();
+              waiter?.resolve();
+              if (waiters.length) pendingUploadAcks.set(message.id, waiters);
+              else pendingUploadAcks.delete(message.id);
+            }
+          }
+          if (mutation && ["mkdir", "rename", "rm"].includes(message.cmd)) {
             if (message.err) {
               mutation.reject(new Error(message.err));
               pendingMutations.delete(message.id);
-            } else if (message.cmd !== "upload" || message.data === "ok") {
+            } else {
               mutation.resolve();
               pendingMutations.delete(message.id);
             }
@@ -154,7 +222,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
                 downloadParts = [];
               }
             }
-          } else if (!mutation && ["mkdir", "rm", "rename", "upload"].includes(message.cmd) && message.data === "ok") {
+          } else if (!mutation && ["mkdir", "rm", "rename"].includes(message.cmd) && message.data === "ok") {
             list();
           } else if (message.err) {
             error.value = message.err;
@@ -200,14 +268,10 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
     }
   }));
   const createFileAt = (path: string) => enqueueRead(() => new Promise<void>((resolve, reject) => {
-    const messageId = String(Date.now());
-    pendingMutations.set(messageId, { resolve, reject });
-    try {
-      send("upload", { offSet: 0, size: 0, path, chunk: false }, "", messageId);
-    } catch (cause) {
-      pendingMutations.delete(messageId);
-      reject(cause instanceof Error ? cause : new Error(String(cause)));
-    }
+    const messageId = id();
+    sendUpload(messageId, { offSet: 0, size: 0, path, chunk: false })
+      .then(resolve)
+      .catch((cause) => reject(cause instanceof Error ? cause : new Error(String(cause))));
   }));
   const mutatePath = (cmd: "rename" | "rm", path: string, extra: Record<string, unknown> = {}) => enqueueRead(() => new Promise<void>((resolve, reject) => {
     const messageId = id();
@@ -241,29 +305,38 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
       reject(cause instanceof Error ? cause : new Error(String(cause)));
     }
   }));
-  const uploadFile = async (file: File, targetPath?: string) => {
+  const uploadFile = (file: File, targetPath?: string) => enqueueUpload(async () => {
     const chunkSize = 5 * 1024 * 1024;
     const chunks = Math.max(1, Math.ceil(file.size / chunkSize));
+    const path = targetPath || `${currentPath.value.replace(/\/$/, "")}/${file.name}`;
     // koko uses this id as the numeric key for chunked uploads.
     const messageId = String(Date.now());
-    const completed = new Promise<void>((resolve, reject) => pendingMutations.set(messageId, { resolve, reject }));
-    uploadProgress.value = 0;
-    for (let index = 0; index < chunks; index++) {
-      const bytes = new Uint8Array(await file.slice(index * chunkSize, (index + 1) * chunkSize).arrayBuffer());
-      let binary = "";
-      for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
-      send("upload", {
-        offSet: index * chunkSize,
-        size: file.size,
-        path: targetPath || `${currentPath.value.replace(/\/$/, "")}/${file.name}`,
-        chunk: chunks > 1
-      }, btoa(binary), messageId);
-      uploadProgress.value = Math.round(((index + 1) / chunks) * 100);
+    const task: UploadTask = { id: messageId, name: file.name, progress: 0, status: "queued" };
+    uploadTasks.value = [...uploadTasks.value, task];
+    syncUploadState();
+    try {
+      task.status = "uploading";
+      syncUploadState();
+      for (let index = 0; index < chunks; index++) {
+        const bytes = new Uint8Array(await file.slice(index * chunkSize, (index + 1) * chunkSize).arrayBuffer());
+        let binary = "";
+        for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+        await sendUpload(messageId, {
+          offSet: index * chunkSize,
+          size: file.size,
+          path,
+          chunk: chunks > 1
+        }, btoa(binary));
+        task.progress = Math.round(((index + 1) / chunks) * 100);
+        syncUploadState();
+      }
+      if (chunks > 1) await sendUpload(messageId, { offSet: 0, merge: true, size: 0, path }, "");
+      list();
+    } finally {
+      uploadTasks.value = uploadTasks.value.filter((item) => item.id !== task.id);
+      syncUploadState();
     }
-    if (chunks > 1) send("upload", { offSet: 0, merge: true, size: 0, path: targetPath || `${currentPath.value.replace(/\/$/, "")}/${file.name}` }, "", messageId);
-    await completed;
-    uploadProgress.value = 0;
-  };
+  });
   const uploadBlob = async (fileName: string, blob: Blob) => {
     const file = blob instanceof File ? blob : new File([blob], fileName, { type: blob.type || "application/octet-stream" });
     await uploadFile(file);
@@ -271,5 +344,30 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
 
   watch(ctx, connect, { immediate: true });
   onUnmounted(() => socket?.close());
-  return { entries, currentPath, loading, error, connected, uploadProgress, list, listDirectory, changeDirectory, createDirectory, createDirectoryAt, createFileAt, renameEntry, renamePath, removeEntry, removePath, downloadEntry, downloadPath, readFile, uploadFile, uploadBlob, reconnect: connect };
+  return {
+    entries,
+    currentPath,
+    loading,
+    error,
+    connected,
+    uploadProgress,
+    currentUploadName,
+    queuedUploadCount,
+    list,
+    listDirectory,
+    changeDirectory,
+    createDirectory,
+    createDirectoryAt,
+    createFileAt,
+    renameEntry,
+    renamePath,
+    removeEntry,
+    removePath,
+    downloadEntry,
+    downloadPath,
+    readFile,
+    uploadFile,
+    uploadBlob,
+    reconnect: connect
+  };
 }

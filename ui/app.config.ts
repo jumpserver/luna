@@ -44,7 +44,9 @@ export default defineAppConfig({
     },
     toast: {
       slots: {
-        description: "text-sm text-muted whitespace-pre-wrap break-all"
+        wrapper: "w-0 min-w-0 flex-1 flex flex-col",
+        description: "text-sm text-muted whitespace-pre-wrap break-all",
+        actions: "flex gap-1.5 shrink-0 flex-wrap"
       }
     },
     formField: {

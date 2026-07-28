@@ -313,7 +313,7 @@ async function uploadFiles(event: Event) {
   uploadDirectory.value = "";
   input.value = "";
   if (!directory || files.length === 0) return;
-  for (const file of files) await manager.uploadFile(file, joinPath(directory, file.name));
+  await Promise.allSettled(files.map((file) => manager.uploadFile(file, joinPath(directory, file.name))));
   await loadDirectory(directory, true);
 }
 
@@ -438,6 +438,18 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
       </div>
       <div v-if="searchVisible" class="shrink-0 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-tree)] p-2">
         <UInput v-model="search" icon="i-lucide-search" size="xs" placeholder="筛选文件" class="w-full" />
+      </div>
+      <div v-if="manager.currentUploadName.value" class="shrink-0 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-tree)] px-2 py-2">
+        <div class="mb-1 flex items-center justify-between gap-2 text-[11px] text-[var(--app-muted)]">
+          <span class="truncate">{{ manager.currentUploadName.value }}</span>
+          <span>{{ manager.uploadProgress.value }}%</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <UProgress :value="manager.uploadProgress.value" size="xs" class="flex-1" />
+          <span v-if="manager.queuedUploadCount.value" class="shrink-0 text-[11px] text-[var(--app-muted)]">
+            +{{ manager.queuedUploadCount.value }}
+          </span>
+        </div>
       </div>
       <div class="min-h-0 flex-1 overflow-auto bg-[var(--workspace-surface-sub-tree)] py-1">
         <template v-for="row in treeRows" :key="row.path">

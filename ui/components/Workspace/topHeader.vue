@@ -2,6 +2,8 @@
 const { collapse } = useSettingManager();
 const { isMacOS } = usePlatform();
 const { sidebarWidth } = useSidebarLayout();
+const route = useRoute();
+const isToolWindow = computed(() => route.query.tool_window === "1");
 const leadingAreaStyle = computed(() => ({
   width: collapse.value
     ? (isMacOS.value ? "128px" : "44px")
@@ -58,7 +60,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
       <slot />
     </div>
 
-    <div class="h-full shrink-0 flex items-center pl-1">
+    <div v-if="!isToolWindow" class="h-full shrink-0 flex items-center pl-1">
       <HeaderActionButtons />
     </div>
   </div>

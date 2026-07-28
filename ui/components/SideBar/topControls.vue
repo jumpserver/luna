@@ -5,11 +5,10 @@ const route = useRoute();
 const { collapse, setCollapse } = useSettingManager();
 const { activeWorkspaceMode, setWorkspaceMode } = useWorkspaceMode();
 const isMacClient = computed(() => isTauriRuntime() && isMacOS.value);
-const showTools = computed(() => isTauriRuntime());
 const headerIconButtonClass = "grid size-6 shrink-0 place-items-center rounded-lg p-0 text-gray-500 transition-colors hover:bg-black/6 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white";
 
 const workspaceModes = computed(() => {
-  const modes = [{
+  return [{
     key: "assets",
     icon: "i-lucide-house",
     label: "我的资产"
@@ -17,27 +16,14 @@ const workspaceModes = computed(() => {
     key: "files",
     icon: "i-lucide-folder-kanban",
     label: "文件管理"
-  }] as Array<{ key: "assets" | "files" | "tools", icon: string, label: string }>;
-
-  if (showTools.value) {
-    modes.push({
-      key: "tools",
-      icon: "i-lucide-layout-grid",
-      label: "我的工具"
-    });
-  }
-
-  return modes;
+  }] as Array<{ key: "assets" | "files", icon: string, label: string }>;
 });
 
-const setMode = async (mode: "assets" | "files" | "tools") => {
-  if (mode === "tools" && !showTools.value) return;
-
-  const toolPaths = [localePath({ path: "/tools" }), localePath("videoplayer"), localePath({ path: "/transcode" })];
+const setMode = async (mode: "assets" | "files") => {
   const filePath = localePath({ path: "/files" });
 
   if (mode === "assets") {
-    if (toolPaths.includes(route.path) || route.path === filePath) {
+    if (route.path === filePath) {
       await navigateTo(localePath({ path: "/" }));
     }
 
@@ -48,14 +34,7 @@ const setMode = async (mode: "assets" | "files" | "tools") => {
   if (mode === "files") {
     if (route.path !== filePath) await navigateTo(filePath);
     setWorkspaceMode(mode);
-    return;
   }
-
-  if (!toolPaths.includes(route.path)) {
-    await navigateTo(localePath({ path: "/tools" }));
-  }
-
-  setWorkspaceMode(mode);
 };
 
 const toggleSidebar = () => {

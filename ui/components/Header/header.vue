@@ -3,13 +3,25 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const route = useRoute();
 const { t } = useI18n();
+const { isMacOS } = usePlatform();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
+const isToolRoute = computed(() => {
+  const path = route.path.toLowerCase();
+  return path.includes("/tools") || path.includes("/videoplayer") || path.includes("/transcode");
+});
 
 const showSidebarChrome = computed(
-  () => activeWorkspaceMode.value !== "assets" || loggedIn.value || isTauriRuntime()
+  () => !isToolRoute.value && (activeWorkspaceMode.value !== "assets" || loggedIn.value || isTauriRuntime())
 );
+const toolWindowTitleClass = computed(() => {
+  if (!(isMacOS.value && route.query.tool_window === "1")) {
+    return "px-4";
+  }
+
+  return "pl-[84px] pr-4";
+});
 
 const pageHeader = computed(() => {
   const path = route.path.toLowerCase();
@@ -54,7 +66,7 @@ const pageHeader = computed(() => {
 
     <WorkspaceTabHeader v-if="activeWorkspaceMode === 'assets'" />
 
-    <div v-else-if="pageHeader" class="h-full min-w-0 flex items-center gap-2 px-4">
+    <div v-else-if="pageHeader" class="h-full min-w-0 flex items-center gap-2" :class="toolWindowTitleClass">
       <UIcon :name="pageHeader.icon" class="text-primary h-4 w-4 shrink-0" />
       <span class="min-w-0 truncate text-sm font-medium">
         {{ pageHeader.title }}
