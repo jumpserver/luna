@@ -11,6 +11,8 @@ import type {
   ChenQueryConsoleTab,
   ChenQueryLikeWorkspaceTab,
   ChenQueryResultTab,
+  ChenSaveChangesPreviewResult,
+  ChenSaveChangesResult,
   ChenTreeNode,
   ChenWorkspaceTab
 } from "~/chen/types";
@@ -36,6 +38,8 @@ import { useChenWorkspaceTabs } from "~/chen/composables/useChenWorkspaceTabs";
 import { saveChenExport } from "~/chen/runtime/download";
 import { formatChenDialogValue, normalizeChenDialogMessage } from "~/chen/utils/chenDialog";
 import {
+  acceptChenSaveChangesPreviewResult,
+  acceptChenSaveChangesResult,
   chenDataViewHasDirty,
   chenDataViewTargets,
   clearChenDataViewEdits,
@@ -203,13 +207,22 @@ function initConsoleSocket(tab: ChenWorkspaceTab) {
 function sendConsoleAction(tab: ChenWorkspaceTab, type: string, data?: any) {
   const action = { type, data };
   const connection = consoleConnections.get(tab.id) || initConsoleSocket(tab);
-  if (connection?.sendWhenReady(action)) return;
+  if (connection?.sendWhenReady(action)) return true;
 
   tab.connectionError ||= "Console websocket is not connected";
   queryConsole.appendLog(tab, tab.connectionError);
+  return false;
 }
 
 function guardDataViewChanges(targets: ChenDataViewActionTarget[], action: () => void) {
+  if (targets.some((target) => target.editState.activeRequest !== null)) {
+    toast.add({
+      title: "Data view request in progress",
+      description: "Wait for the current request to finish before continuing.",
+      color: "warning"
+    });
+    return;
+  }
   const dirtyTargets = targets.filter((target) => chenDataViewHasDirty(target.editState));
   if (!dirtyTargets.length) {
     action();
@@ -246,34 +259,83 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
     return;
   }
 
-  const target = findChenDataViewTarget(tab, packet.data?.dataView);
+  const packetResult = packet.data?.result || packet.data;
+  const target = findChenDataViewTarget(tab, packetResult?.dataView || packet.data?.dataView);
   if (!target) return;
 
   if (packet.type === "save_changes_preview_result") {
-    const result = target.editState.previewResult || packet.data?.result || packet.data;
-    if (result?.success) return;
-    addErrorToast({
-      title: "Preview failed",
-      description: resultFailureDescription(result, "Preview failed")
-    });
-    target.editState.previewResult = null;
-    target.editState.pendingSavePayload = null;
+    const result = packetResult as ChenSaveChangesPreviewResult;
+    const outcome = acceptChenSaveChangesPreviewResult(target.editState, result);
+    if (outcome === "failed") {
+      addErrorToast({
+        title: "Preview failed",
+        description: resultFailureDescription(result, "Preview failed")
+      });
+    } else if (outcome === "stale") {
+      toast.add({
+        title: "Preview is out of date",
+        description: "The data changed after preview started. Preview the changes again.",
+        color: "warning"
+      });
+    }
     return;
   }
 
-  const result = target.editState.saveResult || packet.data?.result || packet.data;
-  target.editState.saveResult = null;
-  target.editState.pendingSavePayload = null;
-  if (!result?.success) {
+  const result = packetResult as ChenSaveChangesResult;
+  const outcome = acceptChenSaveChangesResult(target.editState, result);
+  if (outcome === "ignored") return;
+  if (outcome === "commit-unknown") {
+    toast.add({
+      title: "Save outcome is unknown",
+      description: "The connection was reset. Refresh to verify the database state before retrying; transaction and session state were lost.",
+      color: "warning"
+    });
+    return;
+  }
+  if (outcome === "failed") {
     addErrorToast({
       title: "Save failed",
       description: resultFailureDescription(result, "Save failed")
     });
     return;
   }
+  if (outcome === "stale-applied") {
+    const connectionDetail = result.connectionInvalidated
+      ? "The connection was reset. Refresh before saving again; transaction and session state were lost."
+      : "Refresh was skipped so the newer local edits are not discarded.";
+    const auditDetail = result.auditSucceeded === false
+      ? result.databaseCommitted
+        ? " Audit recording failed after the database commit; do not retry the save."
+        : " Audit recording failed after applying the current transaction; do not retry the save."
+      : "";
+    toast.add({
+      title: "Save applied; newer edits were kept",
+      description: `${connectionDetail}${auditDetail}`,
+      color: "warning"
+    });
+    return;
+  }
 
   clearChenDataViewEdits(target.editState);
-  toast.add({ title: "Save succeeded", color: "success" });
+  if (result.connectionInvalidated) {
+    toast.add({
+      title: result.success ? "Save succeeded; connection reset" : "Database changes applied; connection reset",
+      description: result.auditSucceeded === false
+        ? "Transaction and session state were lost. Audit recording also failed; do not retry the save. Refreshing with a new connection."
+        : "Transaction and session state were lost. Refreshing with a new connection.",
+      color: "warning"
+    });
+  } else if (result.auditSucceeded === false) {
+    toast.add({
+      title: "Save applied; audit failed",
+      description: result.databaseCommitted
+        ? "The database commit succeeded. Do not retry the save."
+        : "The changes were applied to the current transaction. Do not retry the save.",
+      color: "warning"
+    });
+  } else {
+    toast.add({ title: result.success ? "Save succeeded" : "Database changes applied", color: "success" });
+  }
   dataView.sendDataViewAction(tab, target, "refresh");
 }
 
@@ -547,6 +609,14 @@ function runQueryDataViewAction(
   action: ChenDataViewAction,
   data?: ChenDataViewActionData
 ) {
+  if ((action === "save_changes_preview" || action === "save_changes") && result.editState.refreshRequiredBeforeSave) {
+    toast.add({
+      title: "Refresh required",
+      description: "Refresh the data before saving again because the previous connection was reset.",
+      color: "warning"
+    });
+    return;
+  }
   const send = () => dataView.sendDataViewAction(tab, result, action, data);
   if (GUARDED_DATA_VIEW_ACTIONS.has(action)) {
     guardDataViewChanges([result], send);
@@ -560,6 +630,14 @@ function runStandaloneDataViewAction(
   action: ChenDataViewAction,
   data?: ChenDataViewActionData
 ) {
+  if ((action === "save_changes_preview" || action === "save_changes") && tab.editState.refreshRequiredBeforeSave) {
+    toast.add({
+      title: "Refresh required",
+      description: "Refresh the data before saving again because the previous connection was reset.",
+      color: "warning"
+    });
+    return;
+  }
   const send = () => dataView.sendDataViewAction(tab, tab, action, data);
   if (GUARDED_DATA_VIEW_ACTIONS.has(action)) {
     guardDataViewChanges([tab], send);

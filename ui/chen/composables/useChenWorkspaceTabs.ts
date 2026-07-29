@@ -6,7 +6,7 @@ import type {
   ChenWorkspaceTab
 } from "~/chen/types";
 
-import { emptyChenDataViewEditState } from "~/chen/utils/dataViewEditing";
+import { createChenDataViewEditState } from "~/chen/utils/dataViewEditing";
 
 export function newChenWorkspaceId(prefix: string) {
   return `${prefix}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
@@ -110,10 +110,10 @@ export function useChenWorkspaceTabs() {
       meta: null,
       data: null,
       state: {},
-      editState: emptyChenDataViewEditState(),
       logs: [],
       activePanel: "data",
       activePropertyTab: "basic",
+      editState: createChenDataViewEditState(),
       socket: null
     };
 
