@@ -54,9 +54,11 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
     error.value = "";
     try {
       await operationClient.operations.listDirectory(path, { messageId });
+      return true;
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : String(cause);
       loading.value = false;
+      return false;
     }
   }
 

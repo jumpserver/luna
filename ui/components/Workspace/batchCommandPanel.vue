@@ -149,7 +149,7 @@ const sendCommand = () => {
               class="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm border transition-colors"
               :class="
                 selectedTabIds.includes(tab.id)
-                  ? 'border-primary-500 bg-primary-500 text-white'
+                  ? 'border-primary-500 bg-primary-500 text-(--app-accent-foreground)'
                   : 'border-gray-300 dark:border-white/20'
               "
             >

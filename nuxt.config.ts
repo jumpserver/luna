@@ -84,7 +84,7 @@ export default defineNuxtConfig({
     ],
     clientBundle: {
       scan: {
-        globInclude: ["ui/**/*.{vue,ts,js}"]
+        globInclude: ["ui/**/*.{vue,ts,js}", "packages/koko/**/*.{vue,ts,js}"]
       }
     }
   },

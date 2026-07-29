@@ -13,9 +13,9 @@ interface RemotePane {
   id: string;
   side: "left" | "right";
   context: ConnectorSessionContext;
+  organizationName: string;
   assetName: string;
   selection: SftpFileEntry | null;
-  checked: boolean;
 }
 
 interface TransferPane {
@@ -63,7 +63,6 @@ const primarySelection = ref<SftpFileEntry | null>(null);
 const localSelection = ref<SftpFileEntry | null>(null);
 const localPaneRef = ref<InstanceType<typeof KokoLocalFileManagementPane> | null>(null);
 
-const checkedRemotePanes = computed(() => remotePanes.value.filter((pane) => pane.checked));
 const activeRemotePane = computed(() => remotePanes.value.find((pane) => pane.id === activeRemoteId.value) || null);
 const globalActiveIds = reactive<{ left: string | null; right: string | null }>({ left: null, right: null });
 const panesForSide = (side: "left" | "right") => remotePanes.value.filter((pane) => pane.side === side);
@@ -183,9 +182,9 @@ async function connectRemoteAsset(asset: KokoSftpAsset) {
       id,
       side: props.global ? connectSide.value : "right",
       context: await buildSftpContext(connectAsset.id, tokenId, `remote-sftp:${connectAsset.id}:${id}`),
+      organizationName: currentOrgLabel.value,
       assetName: connectAsset.name,
-      selection: null,
-      checked: true
+      selection: null
     });
     activeRemoteId.value = id;
     if (props.global) globalActiveIds[connectSide.value] = id;
@@ -218,46 +217,11 @@ async function transferEntry(fromPane: TransferPane | null, toPane: TransferPane
   }
 }
 
-async function transferToRemotes() {
-  const entry = primarySelection.value;
-  const fromPane = primaryPaneRef.value;
-  const targets = checkedRemotePanes.value;
-  if (!fromPane || !entry || !targets.length || transferring.value) return;
-  if (entry.is_dir) {
-    toast.add({ title: t("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
-    return;
-  }
-
-  transferring.value = true;
-  try {
-    const blob = await fromPane.manager.operations.readFile(entry);
-    const results = await Promise.allSettled(
-      targets.map((pane) => {
-        const target = remotePaneRefs.value[pane.id];
-        if (!target) throw new Error(t("koko.fileManagement.paneNotReady"));
-        return target.manager.operations.uploadBlob(entry.name, blob);
-      })
-    );
-    const success = results.filter((result) => result.status === "fulfilled").length;
-    if (success === targets.length) {
-      toast.add({ title: t("koko.fileManagement.transferSuccess"), color: "success" });
-    } else if (success === 0) {
-      addErrorToast(
-        t("koko.fileManagement.transferFailed"),
-        (results.find((result) => result.status === "rejected") as PromiseRejectedResult | undefined)?.reason || ""
-      );
-    } else {
-      toast.add({
-        title: t("koko.fileManagement.transferPartialSuccess", { success, total: targets.length }),
-        color: "warning"
-      });
-    }
-  } catch (error) {
-    addErrorToast(t("koko.fileManagement.transferFailed"), error);
-  } finally {
-    transferring.value = false;
-  }
-}
+const transferToActiveRemote = () => {
+  const pane = activeRemotePane.value;
+  if (!pane) return;
+  transferEntry(primaryPaneRef.value, remotePaneRefs.value[pane.id] || null, primarySelection.value);
+};
 
 const transferToPrimary = () => {
   const pane = activeRemotePane.value;
@@ -332,21 +296,8 @@ watch(currentOrgId, () => {
     </div>
   </div>
   <div v-else class="flex h-full min-h-0 flex-col">
-    <div v-if="global" class="flex shrink-0 items-center justify-between gap-2 border-b border-default px-2 py-1">
-      <div class="max-w-60">
-        <component :is="hostAdapter.sftp.organizationSelector" />
-      </div>
-      <div class="text-[11px] text-muted">
-        <span class="truncate">{{ t("koko.fileManagement.currentOrganization") }}：{{ currentOrgLabel }}</span>
-      </div>
-    </div>
-
-    <div v-if="!global" class="flex shrink-0 items-center justify-between gap-2 border-b border-default px-2 py-1">
-      <div class="max-w-60">
-        <component :is="hostAdapter.sftp.organizationSelector" />
-      </div>
-
-      <div class="flex items-center justify-end gap-1">
+    <div v-if="!global" class="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-default px-2">
+      <div class="ml-auto flex items-center justify-end gap-1">
         <UButton
           size="xs"
           :color="global || dualMode || remotePanes.length ? 'primary' : 'neutral'"
@@ -530,9 +481,9 @@ watch(currentOrgId, () => {
             color="primary"
             variant="soft"
             icon="i-lucide-arrow-right"
-            :disabled="!primarySelection || !checkedRemotePanes.length || transferring"
+            :disabled="!primarySelection || !activeRemotePane || transferring"
             :loading="transferring"
-            @click="transferToRemotes"
+            @click="transferToActiveRemote"
           />
         </UTooltip>
         <UTooltip :text="t('koko.fileManagement.transferToLocal')">
@@ -554,19 +505,14 @@ watch(currentOrgId, () => {
             v-for="pane in remotePanes"
             :key="pane.id"
             class="flex min-h-0 flex-1 flex-col"
-            :class="activeRemoteId === pane.id ? 'ring-1 ring-inset ring-primary/40' : ''"
           >
-            <div class="flex shrink-0 items-center gap-1 border-b border-default px-2 py-0.5">
-              <UTooltip :text="t('koko.fileManagement.transferTarget')">
-                <UCheckbox v-model="pane.checked" icon="i-lucide-check" />
-              </UTooltip>
+            <div class="flex h-8 shrink-0 items-center gap-1 border-b border-default px-2">
               <button
                 type="button"
                 class="min-w-0 flex-1 truncate text-left text-[11px] font-medium"
-                :class="activeRemoteId === pane.id ? 'text-primary' : 'text-muted'"
                 @click="focusRemotePane(pane.id)"
               >
-                {{ pane.assetName }}
+                {{ pane.organizationName }} - {{ pane.assetName }}
               </button>
               <UButton size="xs" color="neutral" variant="ghost" icon="i-lucide-x" @click="removeRemotePane(pane.id)" />
             </div>
@@ -601,10 +547,12 @@ watch(currentOrgId, () => {
       <template #body>
         <div class="space-y-3">
           <div
-            class="flex items-center justify-between gap-2 rounded-lg bg-elevated/70 px-2.5 py-2 text-[11px] text-muted"
+            class="flex items-center justify-between gap-3 px-2.5 py-1 text-[11px] text-muted"
           >
             <span>{{ t("koko.fileManagement.currentOrganization") }}</span>
-            <span class="max-w-55 truncate font-medium text-default">{{ currentOrgLabel }}</span>
+            <div class="min-w-0 max-w-55 flex-1">
+              <component :is="hostAdapter.sftp.organizationSelector" class="!justify-end" />
+            </div>
           </div>
           <UInput
             v-model="remoteAssetSearch"
