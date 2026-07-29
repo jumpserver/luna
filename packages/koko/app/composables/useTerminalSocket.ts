@@ -169,7 +169,7 @@ export const useKokoTerminalSocket = () => {
       case MESSAGE_TYPE.MESSAGE_NOTIFY: {
         const eventName = JSON.parse(parsedMessageData.data).event_name;
         if (eventName === "sync_user_preference") {
-          toast.add({ title: t("ThemeSyncSuccessful") || "Theme synced", color: "success" });
+          toast.add({ title: t("koko.terminal.themeSynced"), color: "success" });
         }
         break;
       }
@@ -205,12 +205,12 @@ export const useKokoTerminalSocket = () => {
             requestFileToken: () =>
               new Promise<string>((resolve, reject) => {
                 const timeout = window.setTimeout(() => {
-                  reject(new Error("SFTP token request timed out"));
+                  reject(new Error(t("koko.fileManagement.tokenRequestTimedOut")));
                 }, 15_000);
                 hostBridge.once(HOST_MESSAGE_TYPE.GET_FILE_CONNECT_TOKEN, (message) => {
                   window.clearTimeout(timeout);
                   if (message.token) resolve(message.token);
-                  else reject(new Error("SFTP is unavailable for this session"));
+                  else reject(new Error(t("koko.fileManagement.unavailableInSession")));
                 });
                 hostBridge.sendHost(HOST_MESSAGE_TYPE.CREATE_FILE_CONNECT_TOKEN, "");
               })
@@ -248,12 +248,12 @@ export const useKokoTerminalSocket = () => {
         onlineUsers.value.push(data);
         connectionStore.updateConnectionState({ onlineUsers: onlineUsers.value });
         sendHostEvent(HOST_MESSAGE_TYPE.SHARE_USER_ADD, JSON.stringify({ ...data, sessionId: sessionId.value }));
-        if (!data.primary) toast.add({ title: `${data.user} ${t("JoinShare") || "joined share"}`, color: "info" });
+        if (!data.primary) toast.add({ title: `${data.user} ${t("koko.terminal.joinedShare")}`, color: "info" });
         break;
       }
       case MESSAGE_TYPE.TERMINAL_PERM_VALID:
         clearInterval(warningInterval.value!);
-        toast.add({ title: t("PermissionValid") || "Permission valid", color: "info" });
+        toast.add({ title: t("koko.terminal.permissionValid"), color: "info" });
         break;
       case MESSAGE_TYPE.TERMINAL_SHARE_LEAVE: {
         const data: OnlineUser = JSON.parse(parsedMessageData.data);
@@ -262,13 +262,13 @@ export const useKokoTerminalSocket = () => {
         if (index !== -1) {
           onlineUsers.value.splice(index, 1);
           connectionStore.updateConnectionState({ onlineUsers: onlineUsers.value });
-          toast.add({ title: `${data.user} ${t("LeaveShare") || "left share"}`, color: "info" });
+          toast.add({ title: `${data.user} ${t("koko.terminal.leftShare")}`, color: "info" });
         }
         break;
       }
       case MESSAGE_TYPE.TERMINAL_PERM_EXPIRED: {
         const data = JSON.parse(parsedMessageData.data);
-        const warningMsg = `${t("PermissionExpired") || "Permission expired"}: ${data.detail}`;
+        const warningMsg = `${t("koko.terminal.permissionExpired")}: ${data.detail}`;
         toast.add({ title: warningMsg, color: "warning" });
         if (warningInterval.value) clearInterval(warningInterval.value);
         warningInterval.value = setInterval(() => toast.add({ title: warningMsg, color: "warning" }), 60_000);
@@ -276,12 +276,12 @@ export const useKokoTerminalSocket = () => {
       }
       case MESSAGE_TYPE.TERMINAL_SESSION_PAUSE: {
         const data = JSON.parse(parsedMessageData.data);
-        showInfoOnce(`${data.user} ${t("PauseSession") || "paused session"}`);
+        showInfoOnce(`${data.user} ${t("koko.terminal.pausedSession")}`);
         break;
       }
       case MESSAGE_TYPE.TERMINAL_SESSION_RESUME: {
         const data = JSON.parse(parsedMessageData.data);
-        showInfoOnce(`${data.user} ${t("ResumeSession") || "resumed session"}`);
+        showInfoOnce(`${data.user} ${t("koko.terminal.resumedSession")}`);
         break;
       }
       case MESSAGE_TYPE.TERMINAL_GET_SHARE_USER:
@@ -289,7 +289,7 @@ export const useKokoTerminalSocket = () => {
         connectionStore.updateConnectionState({ userOptions: userOptions.value });
         break;
       case MESSAGE_TYPE.TERMINAL_SHARE_USER_REMOVE:
-        toast.add({ title: t("RemoveShareUser") || "Removed from share", color: "info" });
+        toast.add({ title: t("koko.terminal.removedFromShare"), color: "info" });
         socketRef.value.close();
         break;
     }
@@ -304,11 +304,18 @@ export const useKokoTerminalSocket = () => {
       } catch {
         if (sentry.get_confirmed_session()) {
           sentry.get_confirmed_session()?.abort();
-          addErrorToast({ title: "File transfer interrupted" });
+          addErrorToast({ title: t("koko.terminal.fileTransferInterrupted") });
         }
       }
     } else {
-      writeBufferToTerminal(true, false, terminalRef.value, socketMessage.data, addErrorToast);
+      writeBufferToTerminal(
+        true,
+        false,
+        terminalRef.value,
+        socketMessage.data,
+        addErrorToast,
+        t("koko.errors.zmodemBlocked")
+      );
     }
   };
 
@@ -334,7 +341,7 @@ export const useKokoTerminalSocket = () => {
     socketRef.value.onclose = () => {
       if (!terminalRef.value) return;
       terminalRef.value.write("\r\n");
-      terminalRef.value.write(`\x1B[31m${t("WebSocketClosed") || "WebSocket closed"}\x1B[0m`);
+      terminalRef.value.write(`\x1B[31m${t("koko.terminal.websocketClosed")}\x1B[0m`);
     };
 
     socketRef.value.onmessage = async (message: MessageEvent) => {
@@ -365,7 +372,7 @@ export const useKokoTerminalSocket = () => {
       }
       if (!text || isSocketClosing(socketRef.value!)) {
         if (isSocketClosing(socketRef.value!)) {
-          addErrorToast({ title: t("WebSocket connection is closed, please refresh the page") || "Connection closed" });
+          addErrorToast({ title: t("koko.terminal.websocketConnectionClosed") });
         }
         return;
       }
@@ -468,7 +475,7 @@ export const useKokoTerminalSocket = () => {
       autoReconnect: { retries: 5, delay: 3000 }
     });
     if (!ws.value) {
-      addErrorToast({ title: t("FailedCreateConnection") || "Failed to create connection" });
+      addErrorToast({ title: t("koko.terminal.failedCreateConnection") });
       return;
     }
     ws.value.binaryType = "arraybuffer";

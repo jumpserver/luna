@@ -22,6 +22,7 @@ const id = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.rand
 
 export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
   const hostAdapter = useKokoHostAdapter();
+  const { t } = useI18n();
   const entries = ref<SftpFileEntry[]>([]);
   const currentPath = ref("");
   const initialPath = ref("");
@@ -107,7 +108,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
   };
 
   const send = (cmd: string, data: Record<string, unknown>, raw = "", messageId = id()) => {
-    if (!socket || socket.readyState !== WebSocket.OPEN) throw new Error("SFTP connection is not ready");
+    if (!socket || socket.readyState !== WebSocket.OPEN) throw new Error(t("koko.fileManagement.connectionNotReady"));
     socket.send(JSON.stringify({ id: messageId, type: "SFTP_DATA", cmd, data: JSON.stringify(data), raw }));
   };
 
@@ -148,7 +149,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
   const connect = () => {
     const context = activeContext.value;
     if (!context) return;
-    rejectPendingRead("SFTP connection reset");
+    rejectPendingRead(t("koko.fileManagement.connectionReset"));
     socket?.close();
     loading.value = true;
     error.value = "";
@@ -157,13 +158,13 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
       connected.value = true;
     };
     socket.onerror = () => {
-      error.value = "SFTP WebSocket connection failed";
+      error.value = t("koko.fileManagement.connectionFailed");
       loading.value = false;
       rejectPendingRead(error.value);
     };
     socket.onclose = () => {
       connected.value = false;
-      rejectPendingRead("SFTP connection closed");
+      rejectPendingRead(t("koko.fileManagement.connectionClosed"));
     };
     socket.onmessage = (event) => {
       try {
@@ -245,7 +246,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
             error.value = message.err;
           }
         } else if (message.type === "ERROR" || message.type === "CLOSE" || message.type === "closed") {
-          error.value = message.err || "SFTP session expired";
+          error.value = message.err || t("koko.fileManagement.sessionExpired");
           rejectPendingRead(error.value);
           loading.value = false;
         }
@@ -263,7 +264,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
 
   const refreshContextToken = async () => {
     const context = activeContext.value;
-    if (!context?.tokenId) throw new Error("Missing connection token");
+    if (!context?.tokenId) throw new Error(t("koko.fileManagement.missingConnectionToken"));
 
     const token = await hostAdapter.sftp.exchangeConnectToken(context.tokenId);
     let ticket = context.ticket || "";

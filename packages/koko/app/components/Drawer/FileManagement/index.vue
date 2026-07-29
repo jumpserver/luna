@@ -70,7 +70,7 @@ const panesForSide = (side: "left" | "right") => remotePanes.value.filter((pane)
 const activePaneForSide = (side: "left" | "right") =>
   remotePanes.value.find((pane) => pane.id === globalActiveIds[side]) || null;
 const currentOrgId = computed(() => hostAdapter.sftp.currentOrganization.value?.id || "");
-const currentOrgLabel = computed(() => hostAdapter.sftp.currentOrganization.value?.name || "选择组织");
+const currentOrgLabel = computed(() => hostAdapter.sftp.currentOrganization.value?.name || t("koko.fileManagement.selectOrganization"));
 
 function addErrorToast(title: string, error: unknown) {
   showErrorToast({ title, error });
@@ -92,7 +92,7 @@ async function buildSftpContext(assetId: string, tokenId: string, tabId: string)
     const resolved =
       endpoint.value ||
       (endpoint.host ? (port ? `${scheme}://${endpoint.host}:${port}` : `${scheme}://${endpoint.host}`) : "");
-    if (!resolved) throw new Error("服务端未返回可用的 SFTP 端点");
+    if (!resolved) throw new Error(t("koko.fileManagement.endpointUnavailable"));
 
     if (hostAdapter.isTauriRuntime()) {
       endpointUrl = resolved;
@@ -169,8 +169,8 @@ async function connectRemoteAsset(asset: KokoSftpAsset) {
 
     if (declaredProtocols.length > 0 && !declaredProtocols.includes("sftp")) {
       toast.add({
-        title: "该资产不支持 SFTP",
-        description: "请改选支持 SFTP 协议的资产。",
+        title: t("koko.fileManagement.unsupportedAsset"),
+        description: t("koko.fileManagement.unsupportedAssetDescription"),
         color: "warning",
         icon: "i-lucide-circle-alert"
       });
@@ -191,9 +191,9 @@ async function connectRemoteAsset(asset: KokoSftpAsset) {
     if (props.global) globalActiveIds[connectSide.value] = id;
     connectModalOpen.value = false;
 
-    toast.add({ title: t("FileManagement.RemoteConnected"), color: "success" });
+    toast.add({ title: t("koko.fileManagement.remoteConnected"), color: "success" });
   } catch (error) {
-    addErrorToast(t("FileManagement.RemoteConnectFailed"), error);
+    addErrorToast(t("koko.fileManagement.remoteConnectFailed"), error);
   } finally {
     remoteConnecting.value = false;
   }
@@ -202,7 +202,7 @@ async function connectRemoteAsset(asset: KokoSftpAsset) {
 async function transferEntry(fromPane: TransferPane | null, toPane: TransferPane | null, entry: SftpFileEntry | null) {
   if (!fromPane || !toPane || !entry || transferring.value) return;
   if (entry.is_dir) {
-    toast.add({ title: t("FileManagement.FolderTransferUnsupported"), color: "warning" });
+    toast.add({ title: t("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
     return;
   }
 
@@ -210,9 +210,9 @@ async function transferEntry(fromPane: TransferPane | null, toPane: TransferPane
   try {
     const blob = await fromPane.manager.readFile(entry);
     await toPane.manager.uploadBlob(entry.name, blob);
-    toast.add({ title: t("FileManagement.TransferSuccess"), color: "success" });
+    toast.add({ title: t("koko.fileManagement.transferSuccess"), color: "success" });
   } catch (error) {
-    addErrorToast(t("FileManagement.TransferFailed"), error);
+    addErrorToast(t("koko.fileManagement.transferFailed"), error);
   } finally {
     transferring.value = false;
   }
@@ -224,7 +224,7 @@ async function transferToRemotes() {
   const targets = checkedRemotePanes.value;
   if (!fromPane || !entry || !targets.length || transferring.value) return;
   if (entry.is_dir) {
-    toast.add({ title: t("FileManagement.FolderTransferUnsupported"), color: "warning" });
+    toast.add({ title: t("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
     return;
   }
 
@@ -234,26 +234,26 @@ async function transferToRemotes() {
     const results = await Promise.allSettled(
       targets.map((pane) => {
         const target = remotePaneRefs.value[pane.id];
-        if (!target) throw new Error("SFTP pane is not ready");
+        if (!target) throw new Error(t("koko.fileManagement.paneNotReady"));
         return target.manager.uploadBlob(entry.name, blob);
       })
     );
     const success = results.filter((result) => result.status === "fulfilled").length;
     if (success === targets.length) {
-      toast.add({ title: t("FileManagement.TransferSuccess"), color: "success" });
+      toast.add({ title: t("koko.fileManagement.transferSuccess"), color: "success" });
     } else if (success === 0) {
       addErrorToast(
-        t("FileManagement.TransferFailed"),
+        t("koko.fileManagement.transferFailed"),
         (results.find((result) => result.status === "rejected") as PromiseRejectedResult | undefined)?.reason || ""
       );
     } else {
       toast.add({
-        title: t("FileManagement.TransferPartialSuccess", { success, total: targets.length }),
+        title: t("koko.fileManagement.transferPartialSuccess", { success, total: targets.length }),
         color: "warning"
       });
     }
   } catch (error) {
-    addErrorToast(t("FileManagement.TransferFailed"), error);
+    addErrorToast(t("koko.fileManagement.transferFailed"), error);
   } finally {
     transferring.value = false;
   }
@@ -283,7 +283,7 @@ async function uploadWebFiles(files: File[]) {
   const target = activePaneForSide("right");
   const targetPane = target ? remotePaneRefs.value[target.id] : null;
   if (!targetPane) {
-    toast.add({ title: "请先在右侧连接目标 SFTP Server", color: "warning" });
+    toast.add({ title: t("koko.fileManagement.selectRemoteTarget"), color: "warning" });
     return;
   }
   if (transferring.value) return;
@@ -300,7 +300,10 @@ async function uploadWebFiles(files: File[]) {
       }
     }
     toast.add({
-      title: success === files.length ? `已上传 ${success} 个文件` : `已上传 ${success}/${files.length} 个文件`,
+      title:
+        success === files.length
+          ? t("koko.fileManagement.uploadedFiles", { count: success })
+          : t("koko.fileManagement.uploadedFilesPartial", { success, total: files.length }),
       color: success === files.length ? "success" : "warning"
     });
   } finally {
@@ -322,24 +325,24 @@ watch(currentOrgId, () => {
   <div v-if="showEmpty" class="grid h-full place-items-center p-6 text-sm text-muted">
     <div class="flex flex-col items-center gap-3">
       <UIcon name="i-lucide-circle-alert" class="size-7" />
-      <p>{{ t("FileManagerExpired") }}</p>
+      <p>{{ t("koko.fileManagement.expired") }}</p>
       <UButton size="sm" @click="emit('reconnect')">
-        {{ t("Reconnect") }}
+        {{ t("koko.fileManagement.reconnect") }}
       </UButton>
     </div>
   </div>
   <div v-else class="flex h-full min-h-0 flex-col">
     <div v-if="global" class="flex shrink-0 items-center justify-between gap-2 border-b border-default px-2 py-1">
-      <div class="max-w-[240px]">
+      <div class="max-w-60">
         <component :is="hostAdapter.sftp.organizationSelector" />
       </div>
       <div class="text-[11px] text-muted">
-        <span class="truncate">当前组织：{{ currentOrgLabel }}</span>
+        <span class="truncate">{{ t("koko.fileManagement.currentOrganization") }}：{{ currentOrgLabel }}</span>
       </div>
     </div>
 
     <div v-if="!global" class="flex shrink-0 items-center justify-between gap-2 border-b border-default px-2 py-1">
-      <div class="max-w-[240px]">
+      <div class="max-w-60">
         <component :is="hostAdapter.sftp.organizationSelector" />
       </div>
 
@@ -350,7 +353,7 @@ watch(currentOrgId, () => {
           :variant="dualMode ? 'soft' : 'ghost'"
           icon="i-lucide-server"
           :label="
-            remotePanes.length || dualMode ? t('FileManagement.RemoteSftp') : t('FileManagement.ConnectRemoteSftp')
+            remotePanes.length || dualMode ? t('koko.fileManagement.remoteSftp') : t('koko.fileManagement.connectRemoteSftp')
           "
           @click="global ? openRemoteConnect() : toggleDualMode()"
         />
@@ -360,7 +363,7 @@ watch(currentOrgId, () => {
           color="primary"
           variant="soft"
           icon="i-lucide-plus"
-          :label="t('FileManagement.AddRemoteSftp')"
+          :label="t('koko.fileManagement.addRemoteSftp')"
           @click="() => openRemoteConnect()"
         />
         <UButton
@@ -369,7 +372,7 @@ watch(currentOrgId, () => {
           color="neutral"
           variant="ghost"
           icon="i-lucide-unplug"
-          :label="t('FileManagement.DisconnectAllRemote')"
+          :label="t('koko.fileManagement.disconnectAllRemote')"
           @click="disconnectAllRemotes"
         />
       </div>
@@ -392,7 +395,7 @@ watch(currentOrgId, () => {
               @click="globalActiveIds.left = 'local'"
             >
               <UIcon name="i-lucide-laptop" class="size-3.5 shrink-0" />
-              <span>本地文件</span>
+              <span>{{ t("koko.fileManagement.localFiles") }}</span>
             </button>
             <button
               v-if="side === 'left' && !hostAdapter.isTauriRuntime()"
@@ -404,7 +407,7 @@ watch(currentOrgId, () => {
               @click="globalActiveIds.left = 'web-upload'"
             >
               <UIcon name="i-lucide-upload" class="size-3.5 shrink-0" />
-              <span>本地上传</span>
+              <span>{{ t("koko.fileManagement.localUpload") }}</span>
             </button>
             <button
               v-for="pane in panesForSide(side)"
@@ -424,7 +427,7 @@ watch(currentOrgId, () => {
             color="neutral"
             variant="ghost"
             icon="i-lucide-plus"
-            :title="t('FileManagement.AddRemoteSftp')"
+            :title="t('koko.fileManagement.addRemoteSftp')"
             @click="openRemoteConnect(side)"
           />
         </div>
@@ -464,9 +467,9 @@ watch(currentOrgId, () => {
         >
           <div class="space-y-3">
             <UIcon name="i-lucide-server" class="mx-auto size-7 opacity-60" />
-            <p>{{ side === "left" && hostAdapter.isTauriRuntime() ? "正在准备本地文件夹" : "连接一个 SFTP Server" }}</p>
+            <p>{{ side === "left" && hostAdapter.isTauriRuntime() ? t("koko.fileManagement.preparingLocalFolder") : t("koko.fileManagement.connectSftpServer") }}</p>
             <UButton size="sm" color="primary" variant="soft" icon="i-lucide-plus" @click="openRemoteConnect(side)">
-              {{ t("FileManagement.ConnectRemoteSftp") }}
+              {{ t("koko.fileManagement.connectRemoteSftp") }}
             </UButton>
           </div>
         </div>
@@ -475,7 +478,7 @@ watch(currentOrgId, () => {
       <div
         class="col-start-2 row-start-1 flex min-h-0 flex-col items-center justify-center gap-2 border-x border-default"
       >
-        <UTooltip :text="t('FileManagement.TransferToRemote')">
+        <UTooltip :text="t('koko.fileManagement.transferToRemote')">
           <UButton
             size="xs"
             color="primary"
@@ -490,7 +493,7 @@ watch(currentOrgId, () => {
             @click="transferGlobal('left-to-right')"
           />
         </UTooltip>
-        <UTooltip :text="t('FileManagement.TransferToLocal')">
+        <UTooltip :text="t('koko.fileManagement.transferToLocal')">
           <UButton
             size="xs"
             color="primary"
@@ -513,7 +516,7 @@ watch(currentOrgId, () => {
         ref="primaryPaneRef"
         class="min-h-0 min-w-0 flex-1"
         :context="primaryContext"
-        :title="dualMode ? t('FileManagement.LocalSftp') : undefined"
+        :title="dualMode ? t('koko.fileManagement.localSftp') : undefined"
         @select="primarySelection = $event"
       />
 
@@ -521,7 +524,7 @@ watch(currentOrgId, () => {
         v-show="dualMode"
         class="flex w-8 shrink-0 flex-col items-center justify-center gap-2 border-x border-default px-0.5"
       >
-        <UTooltip :text="t('FileManagement.TransferToRemote')">
+        <UTooltip :text="t('koko.fileManagement.transferToRemote')">
           <UButton
             size="xs"
             color="primary"
@@ -532,7 +535,7 @@ watch(currentOrgId, () => {
             @click="transferToRemotes"
           />
         </UTooltip>
-        <UTooltip :text="t('FileManagement.TransferToLocal')">
+        <UTooltip :text="t('koko.fileManagement.transferToLocal')">
           <UButton
             size="xs"
             color="primary"
@@ -554,7 +557,7 @@ watch(currentOrgId, () => {
             :class="activeRemoteId === pane.id ? 'ring-1 ring-inset ring-primary/40' : ''"
           >
             <div class="flex shrink-0 items-center gap-1 border-b border-default px-2 py-0.5">
-              <UTooltip :text="t('FileManagement.TransferTarget')">
+              <UTooltip :text="t('koko.fileManagement.transferTarget')">
                 <UCheckbox v-model="pane.checked" icon="i-lucide-check" />
               </UTooltip>
               <button
@@ -581,9 +584,9 @@ watch(currentOrgId, () => {
         <div v-else class="grid h-full place-items-center p-4 text-center text-xs text-muted">
           <div class="space-y-2">
             <UIcon name="i-lucide-server" class="mx-auto size-6 opacity-60" />
-            <p>{{ t("FileManagement.RemoteSftpHint") }}</p>
+            <p>{{ t("koko.fileManagement.remoteSftpHint") }}</p>
             <UButton size="xs" color="primary" variant="soft" @click="() => openRemoteConnect()">
-              {{ t("FileManagement.ConnectRemoteSftp") }}
+              {{ t("koko.fileManagement.connectRemoteSftp") }}
             </UButton>
           </div>
         </div>
@@ -592,7 +595,7 @@ watch(currentOrgId, () => {
 
     <UModal
       v-model:open="connectModalOpen"
-      :title="t('FileManagement.ConnectRemoteSftp')"
+      :title="t('koko.fileManagement.connectRemoteSftp')"
       :ui="{ content: 'max-w-md' }"
     >
       <template #body>
@@ -600,13 +603,13 @@ watch(currentOrgId, () => {
           <div
             class="flex items-center justify-between gap-2 rounded-lg bg-elevated/70 px-2.5 py-2 text-[11px] text-muted"
           >
-            <span>当前组织</span>
-            <span class="max-w-[220px] truncate font-medium text-default">{{ currentOrgLabel }}</span>
+            <span>{{ t("koko.fileManagement.currentOrganization") }}</span>
+            <span class="max-w-55 truncate font-medium text-default">{{ currentOrgLabel }}</span>
           </div>
           <UInput
             v-model="remoteAssetSearch"
             icon="i-lucide-search"
-            :placeholder="t('RightPanel.SFTPSearchPlaceholder')"
+            :placeholder="t('koko.fileManagement.searchAssets')"
           />
           <div class="max-h-72 overflow-y-auto rounded-lg border border-default">
             <component :is="hostAdapter.sftp.assetTree" :search="remoteAssetSearch" open @select="connectRemoteAsset" />
@@ -617,7 +620,7 @@ watch(currentOrgId, () => {
         <UButton
           color="neutral"
           variant="ghost"
-          :label="t('Common.Cancel')"
+          :label="t('koko.actions.cancel')"
           @click="
             () => {
               connectModalOpen = false;

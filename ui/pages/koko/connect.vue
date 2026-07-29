@@ -7,6 +7,7 @@ definePageMeta({ layout: "connect" });
 
 const route = useRoute();
 const colorMode = useColorMode();
+const { t } = useI18n();
 const sessionContext = ref<ConnectorSessionContext | null>(null);
 
 provide(connectorSessionKey, sessionContext);
@@ -32,6 +33,6 @@ onMounted(() => {
 <template>
   <KokoConnectView v-if="sessionContext" />
   <div v-else class="grid h-full place-items-center text-sm text-muted">
-    Missing token query parameter
+    {{ t("koko.workspace.missingToken") }}
   </div>
 </template>

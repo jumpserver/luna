@@ -39,6 +39,7 @@ interface TreeRow {
 }
 
 const props = defineProps<{ tab: KokoWorkspaceTab }>();
+const { t } = useI18n();
 const tab = toRef(props, "tab");
 const { context, error: sessionError, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab);
 const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
@@ -58,7 +59,7 @@ let socket: WebSocket | null = null;
 let themeObserver: MutationObserver | null = null;
 
 const activeTab = computed(() => terminalTabs.value.find((item) => item.id === activeTabId.value) || null);
-const assetName = computed(() => tab.value.assetName || "Kubernetes");
+const assetName = computed(() => tab.value.assetName || t("koko.kubernetes.name"));
 
 function tabIcon(item: TerminalTab) {
   return item.container ? "i-lucide-container" : "i-lucide-boxes";
@@ -307,7 +308,7 @@ function handleSocketMessage(event: MessageEvent) {
   } else if (message.type === "PING") {
     socket?.send(JSON.stringify({ id: message.id, type: "PONG", data: "pong" }));
   } else if (message.type === "ERROR" || message.type === "TERMINAL_ERROR") {
-    connectionError.value = message.err || "Kubernetes connection failed";
+    connectionError.value = message.err || t("koko.kubernetes.connectionFailed");
   }
 }
 
@@ -321,7 +322,7 @@ async function startSocket(ctx: ConnectorSessionContext) {
     socket = new WebSocket(`${toWsOrigin(ctx.endpointUrl)}/koko/ws/terminal/?${params}`, ["JMS-KOKO"]);
     socket.onmessage = handleSocketMessage;
     socket.onerror = () => {
-      connectionError.value = "Kubernetes WebSocket connection failed";
+      connectionError.value = t("koko.kubernetes.websocketConnectionFailed");
     };
   } catch (cause) {
     connectionError.value = String(cause);
@@ -363,7 +364,7 @@ onUnmounted(() => {
     :ready="Boolean(context)"
     :loading="loading"
     :error="sessionError"
-    loading-text="正在准备 Kubernetes 连接..."
+    :loading-text="t('koko.kubernetes.preparingConnection')"
   >
     <div class="grid h-full min-h-0 grid-cols-[260px_minmax(0,1fr)] bg-[var(--app-main-bg)] text-[var(--app-fg)]">
       <aside
@@ -380,7 +381,7 @@ onUnmounted(() => {
             size="xs"
             color="neutral"
             variant="ghost"
-            title="连接集群"
+            :title="t('koko.kubernetes.connectCluster')"
             @click="connectCluster"
           />
           <UButton
@@ -388,7 +389,7 @@ onUnmounted(() => {
             size="xs"
             color="neutral"
             :variant="searchVisible ? 'soft' : 'ghost'"
-            title="搜索"
+            :title="t('koko.actions.search')"
             @click="toggleSearch"
           />
           <UButton
@@ -396,7 +397,7 @@ onUnmounted(() => {
             size="xs"
             color="neutral"
             variant="ghost"
-            title="刷新目录树"
+            :title="t('koko.kubernetes.refreshTree')"
             @click="refreshTree"
           />
         </div>
@@ -404,7 +405,7 @@ onUnmounted(() => {
           v-if="searchVisible"
           class="shrink-0 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-tree)] p-2"
         >
-          <UInput v-model="search" icon="i-lucide-search" size="xs" placeholder="筛选 container" class="w-full" />
+          <UInput v-model="search" icon="i-lucide-search" size="xs" :placeholder="t('koko.kubernetes.filterContainers')" class="w-full" />
         </div>
         <div class="min-h-0 flex-1 overflow-auto bg-[var(--workspace-surface-sub-tree)] py-1">
           <div v-if="connectionError" class="px-3 py-2 text-xs text-error">
@@ -431,7 +432,7 @@ onUnmounted(() => {
             </button>
           </template>
           <div v-if="!treeRows.length && !connectionError" class="px-3 py-2 text-xs text-[var(--app-muted)]">
-            {{ tree.length ? "没有匹配的 container" : "加载 pod 列表中..." }}
+            {{ tree.length ? t("koko.kubernetes.noMatchingContainers") : t("koko.kubernetes.loadingPods") }}
           </div>
         </div>
       </aside>
@@ -459,7 +460,7 @@ onUnmounted(() => {
           <div v-if="!terminalTabs.length" class="grid h-full place-items-center p-6 text-sm text-[var(--app-muted)]">
             <div class="flex flex-col items-center gap-3">
               <UIcon name="i-lucide-square-terminal" class="size-10" />
-              <span>从左侧选择 container 或连接集群</span>
+              <span>{{ t("koko.kubernetes.empty") }}</span>
             </div>
           </div>
         </div>

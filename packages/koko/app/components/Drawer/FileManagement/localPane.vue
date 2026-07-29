@@ -3,6 +3,7 @@ import type { SftpFileEntry } from "#koko/composables/useSftpFileManager";
 
 const emit = defineEmits<{ select: [entry: SftpFileEntry | null] }>();
 const LOCAL_ROOT_STORAGE_KEY = "jumpserver-client:file-manager-local-root";
+const { t } = useI18n();
 
 const entries = ref<SftpFileEntry[]>([]);
 const currentPath = ref("");
@@ -160,7 +161,7 @@ async function chooseFolder() {
     const selected = (await useTauriDialogOpen({
       directory: true,
       multiple: false,
-      title: "选择本地文件夹"
+      title: t("koko.localFile.chooseFolder")
     })) as string | null;
 
     if (!selected) return;
@@ -210,7 +211,7 @@ defineExpose({ manager, selectedEntry });
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 flex-col bg-[var(--app-main-bg)]">
+  <div class="flex h-full min-h-0 flex-col bg-(--app-main-bg)">
     <div class="flex shrink-0 items-center gap-1 border-b border-default p-2">
       <UButton
         icon="i-lucide-arrow-left"
@@ -221,8 +222,8 @@ defineExpose({ manager, selectedEntry });
         @click="changeDirectory({ name: '..', is_dir: true } as SftpFileEntry)"
       />
       <UButton icon="i-lucide-refresh-cw" color="neutral" variant="ghost" size="xs" @click="list()" />
-      <div class="min-w-0 flex-1 truncate rounded bg-[var(--app-hover-soft)] px-2 py-1 font-ui-mono text-[11px]">
-        {{ currentPath || "本地文件夹" }}
+      <div class="min-w-0 flex-1 truncate rounded bg-(--app-hover-soft) px-2 py-1 font-ui-mono text-[11px]">
+        {{ currentPath || t("koko.localFile.folder") }}
       </div>
       <UButton icon="i-lucide-folder-cog" color="neutral" variant="ghost" size="xs" @click="openSetup" />
       <UButton icon="i-lucide-upload" color="primary" variant="soft" size="xs" @click="uploadInput?.click()" />
@@ -236,12 +237,12 @@ defineExpose({ manager, selectedEntry });
           </div>
           <div class="min-w-0 space-y-1">
             <p class="text-sm font-medium text-highlighted">
-              {{ isPermissionError ? "本地文件夹还没有准备好" : "打开本地文件夹失败" }}
+              {{ isPermissionError ? t("koko.localFile.notReady") : t("koko.localFile.openFailed") }}
             </p>
             <p class="text-xs leading-5 text-muted">
               {{
                 isPermissionError
-                  ? "可以像其他桌面程序一样先做一次本地目录设置，之后文件管理会直接进入你选定的位置。"
+                  ? t("koko.localFile.permissionHint")
                   : error
               }}
             </p>
@@ -254,11 +255,11 @@ defineExpose({ manager, selectedEntry });
           </div>
         </div>
         <div class="flex flex-wrap gap-2">
-          <UButton size="sm" color="primary" icon="i-lucide-folder-open" @click="chooseFolder">选择本地文件夹</UButton>
+          <UButton size="sm" color="primary" icon="i-lucide-folder-open" @click="chooseFolder">{{ t("koko.localFile.chooseFolder") }}</UButton>
           <UButton size="sm" color="neutral" variant="soft" icon="i-lucide-house" @click="resetToDefaultRoot">
-            恢复默认目录
+            {{ t("koko.localFile.resetDefault") }}
           </UButton>
-          <UButton size="sm" color="neutral" variant="ghost" icon="i-lucide-refresh-cw" @click="list()">重试</UButton>
+          <UButton size="sm" color="neutral" variant="ghost" icon="i-lucide-refresh-cw" @click="list()">{{ t("koko.actions.retry") }}</UButton>
         </div>
       </div>
     </div>
@@ -270,8 +271,8 @@ defineExpose({ manager, selectedEntry });
         v-for="entry in entries"
         :key="entry.name"
         type="button"
-        class="grid w-full grid-cols-[minmax(0,1fr)_80px] items-center border-b border-default/60 px-2 py-1.5 text-left text-xs hover:bg-[var(--app-hover-soft)]"
-        :class="selectedEntry?.name === entry.name && entry.name !== '..' ? 'bg-[var(--app-selected-soft)]' : ''"
+        class="grid w-full grid-cols-[minmax(0,1fr)_80px] items-center border-b border-default/60 px-2 py-1.5 text-left text-xs hover:bg-(--app-hover-soft)"
+        :class="selectedEntry?.name === entry.name && entry.name !== '..' ? 'bg-(--app-selected-soft)' : ''"
         @click="selectEntry(entry)"
         @dblclick="entry.is_dir && changeDirectory(entry)"
       >
@@ -283,32 +284,32 @@ defineExpose({ manager, selectedEntry });
       </button>
     </div>
 
-    <UModal v-model:open="setupOpen" title="设置本地文件夹" :ui="{ content: 'max-w-lg' }">
+    <UModal v-model:open="setupOpen" :title="t('koko.localFile.title')" :ui="{ content: 'max-w-lg' }">
       <template #body>
         <div class="space-y-4 text-sm">
           <div class="rounded-xl border border-default bg-elevated/60 p-4">
-            <p class="font-medium text-highlighted">第一次打开本地文件管理时，需要先确定一个可访问的本地目录。</p>
+            <p class="font-medium text-highlighted">{{ t("koko.localFile.setupDescription") }}</p>
             <p class="mt-2 leading-6 text-muted">
-              默认会先使用家目录。你也可以改成下载目录、桌面目录，或者专门放上传文件的工作目录。设置完成后，这里会记住你的选择。
+              {{ t("koko.localFile.setupHint") }}
             </p>
           </div>
           <div class="space-y-2 rounded-xl border border-default/80 p-4">
-            <p class="font-medium text-highlighted">建议步骤</p>
+            <p class="font-medium text-highlighted">{{ t("koko.localFile.recommendedSteps") }}</p>
             <ol class="list-decimal space-y-1 pl-5 text-muted">
-              <li>点击“选择本地文件夹”。</li>
-              <li>在系统目录选择器里挑一个你要用于上传/下载的目录。</li>
-              <li>如果想回到默认设置，可以点“恢复默认目录”。</li>
+              <li>{{ t("koko.localFile.stepChooseFolder") }}</li>
+              <li>{{ t("koko.localFile.stepSelectDirectory") }}</li>
+              <li>{{ t("koko.localFile.stepResetDefault") }}</li>
             </ol>
           </div>
         </div>
       </template>
       <template #footer>
         <div class="flex w-full flex-wrap justify-end gap-2">
-          <UButton color="neutral" variant="outline" @click="closeSetup">关闭</UButton>
+          <UButton color="neutral" variant="outline" @click="closeSetup">{{ t("koko.actions.close") }}</UButton>
           <UButton color="neutral" variant="soft" icon="i-lucide-house" @click="resetToDefaultRoot">
-            恢复默认目录
+            {{ t("koko.localFile.resetDefault") }}
           </UButton>
-          <UButton color="primary" icon="i-lucide-folder-open" @click="chooseFolder">选择本地文件夹</UButton>
+          <UButton color="primary" icon="i-lucide-folder-open" @click="chooseFolder">{{ t("koko.localFile.chooseFolder") }}</UButton>
         </div>
       </template>
     </UModal>

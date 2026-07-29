@@ -38,7 +38,7 @@ export function useKokoSessionAdapter() {
     const sessionId = connectionStore.sessionId;
 
     if (!socket?.value || !terminalId?.value || !sessionId) {
-      addErrorToast({ title: t("FailedCreateConnection") || "Failed to create connection" });
+      addErrorToast({ title: t("koko.terminal.failedCreateConnection") });
       return;
     }
 
@@ -82,10 +82,10 @@ export function useKokoSessionAdapter() {
 
     const origin = window.location.origin;
     const url = `${origin}/luna/share/${shareId}`;
-    const text = `${t("LinkAddr") || "Link"}: ${url}\n${t("VerifyCode") || "Code"}: ${shareCode}`;
+    const text = `${t("koko.terminal.shareLink")}: ${url}\n${t("koko.terminal.verificationCode")}: ${shareCode}`;
 
     writeText(text)
-      .then(() => toast.add({ title: t("CopyShareURLSuccess") || "Copied", color: "success" }))
+      .then(() => toast.add({ title: t("koko.terminal.shareLinkCopied"), color: "success" }))
       .catch((error) => addErrorToast({ title: String(error) }));
   };
 

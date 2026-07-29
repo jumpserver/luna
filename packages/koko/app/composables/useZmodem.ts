@@ -43,7 +43,7 @@ export const useKokoZmodem = () => {
     const offset = transfer.get_offset();
     const total = detail.size;
     const percent = total === 0 || total === offset ? 100 : Math.round((offset / total) * 100);
-    terminal.write(`\r${t("Download") || "Download"} ${detail.name}: ${prettyBytes(total)} ${percent}% `);
+    terminal.write(`\r${t("koko.terminal.downloadProgress", { name: detail.name, size: prettyBytes(total), percent })} `);
   };
 
   const handleUpload = (session: ZmodemSession, terminal: Terminal) => {
@@ -54,7 +54,7 @@ export const useKokoZmodem = () => {
 
     const { size } = fileInfo.value;
     if (size >= MAX_TRANSFER_SIZE) {
-      addErrorToast({ title: `${t("ExceedTransferSize") || "Exceeds limit"}: ${prettyBytes(MAX_TRANSFER_SIZE)}` });
+      addErrorToast({ title: `${t("koko.terminal.transferSizeExceeded")}: ${prettyBytes(MAX_TRANSFER_SIZE)}` });
       cleanupSession();
       return;
     }
@@ -72,9 +72,14 @@ export const useKokoZmodem = () => {
           for (let i = 0; i < progressLength; i++) progressBar += "=";
           for (let i = progressLength; i < 50; i++) progressBar += " ";
 
-          const msg = `${t("Upload") || "Upload"} ${detail.name}: ${prettyBytes(detail.size)} ${rounded}% [${progressBar}]`;
+          const msg = t("koko.terminal.uploadProgress", {
+            name: detail.name,
+            size: prettyBytes(detail.size),
+            percent: rounded,
+            progress: progressBar
+          });
           if (rounded === 100 && !messageShown) {
-            toast.add({ title: t("UploadEnd") || "Upload complete", color: "info" });
+            toast.add({ title: t("koko.terminal.uploadComplete"), color: "info" });
             messageShown = true;
           }
           terminal.write(`\r${msg}`);
@@ -82,7 +87,7 @@ export const useKokoZmodem = () => {
         });
       },
       on_file_complete: (obj: { name: string }) => {
-        toast.add({ title: `${t("EndFileTransfer") || "Transfer complete"}: ${obj.name}`, color: "success" });
+        toast.add({ title: `${t("koko.terminal.transferComplete")}: ${obj.name}`, color: "success" });
       }
     })
       .then(() => cleanupSession())
@@ -107,7 +112,7 @@ export const useKokoZmodem = () => {
 
   const confirmUpload = () => {
     if (!fileInfo.value || !pendingSession || !pendingTerminal) {
-      addErrorToast({ title: t("MustSelectOneFile") || "Select a file" });
+      addErrorToast({ title: t("koko.terminal.selectFile") });
       return;
     }
     uploadOpen.value = false;
@@ -128,7 +133,7 @@ export const useKokoZmodem = () => {
 
       if (detail.size >= MAX_TRANSFER_SIZE) {
         toast.add({
-          title: `${t("ExceedTransferSize") || "Exceeds limit"}: ${prettyBytes(MAX_TRANSFER_SIZE)}`,
+          title: `${t("koko.terminal.transferSizeExceeded")}: ${prettyBytes(MAX_TRANSFER_SIZE)}`,
           color: "info"
         });
         transfer.skip();
@@ -144,7 +149,7 @@ export const useKokoZmodem = () => {
         .accept()
         .then(() => {
           ZmodemBrowser.Browser.save_to_disk(buffer, detail.name);
-          toast.add({ title: `${t("DownloadSuccess") || "Downloaded"}: ${detail.name}`, color: "success" });
+          toast.add({ title: `${t("koko.terminal.downloaded")}: ${detail.name}`, color: "success" });
           terminal.write("\r\n");
         })
         .catch((error: Error) => addErrorToast({ title: String(error) }));
@@ -164,7 +169,7 @@ export const useKokoZmodem = () => {
         try {
           if (sentryRef.value && !sentryRef.value.get_confirmed_session()) terminal.write(octets);
         } catch {
-          addErrorToast({ title: t("Failed to write to terminal") || "Write failed" });
+          addErrorToast({ title: t("koko.terminal.writeFailed") });
         }
       },
       sender: (octets: Uint8Array) => {
