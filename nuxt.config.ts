@@ -23,6 +23,11 @@ const bindProxyErrorHandler = (name: string) => (proxy: any) => {
 
 export default defineNuxtConfig({
   extends: ["@jumpserver/koko/nuxt"],
+  typescript: {
+    tsConfig: {
+      include: ["../packages/koko/app/**/*"]
+    }
+  },
   srcDir: "ui/",
   modules: [
     "@nuxt/ui",

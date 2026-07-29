@@ -13,6 +13,7 @@ interface UseBaseWorkspaceSessionOptions {
 
 export function useBaseWorkspaceSession(tab: Ref<KokoWorkspaceTab>, options: UseBaseWorkspaceSessionOptions = {}) {
   const colorMode = useColorMode();
+  const { t } = useI18n();
   const host = useKokoHostAdapter();
 
   const loading = ref(false);
@@ -75,7 +76,7 @@ export function useBaseWorkspaceSession(tab: Ref<KokoWorkspaceTab>, options: Use
 
   async function prepareSession() {
     if (!tokenId.value) {
-      error.value = "Missing connection token";
+      error.value = t("koko.fileManagement.missingConnectionToken");
       loading.value = false;
       return null;
     }

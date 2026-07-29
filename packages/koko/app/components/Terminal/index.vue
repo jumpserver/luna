@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import KokoSearchInput from "#koko/components/SearchInput/index.vue";
-import { useKokoTerminalEvents } from "#koko/composables/useTerminalEvents";
-import { useKokoTerminalSocket } from "#koko/composables/useTerminalSocket";
-import { useKokoZmodem } from "#koko/composables/useZmodem";
+import { TerminalMittEvent } from "#koko/composables/terminal/protocol";
+import { useKokoTerminalEvents } from "#koko/composables/terminal/useTerminalEvents";
+import { useKokoTerminalSocket } from "#koko/composables/terminal/useTerminalSocket";
 
 const showSearchInput = ref(false);
 const { onMittEvent } = useKokoTerminalEvents();
-const { containerRef, searchAddon } = useKokoTerminalSocket();
-const { uploadOpen, fileInfo, confirmUpload, cancelUpload } = useKokoZmodem();
+const { containerRef, searchAddon, zmodem } = useKokoTerminalSocket();
+const { uploadOpen, fileInfo, confirmUpload, cancelUpload } = zmodem;
 
-onMittEvent("open-search", () => {
+onMittEvent(TerminalMittEvent.OpenSearch, () => {
   showSearchInput.value = true;
 });
 
@@ -22,11 +22,11 @@ const onUploadChange = (event: Event) => {
 <template>
   <KokoSearchInput v-if="showSearchInput && searchAddon" :search-addon="searchAddon" @close="showSearchInput = false" />
 
-  <UModal v-model:open="uploadOpen" :title="$t('UploadTitle') || 'Upload file'" :ui="{ footer: 'justify-end gap-2' }">
+  <UModal v-model:open="uploadOpen" :title="$t('koko.terminal.uploadTitle')" :ui="{ footer: 'justify-end gap-2' }">
     <template #body>
       <label class="flex cursor-pointer flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-sm">
         <UIcon name="i-lucide-upload" class="size-8" />
-        <span>{{ $t("UploadTips") || "Select a file to upload" }}</span>
+        <span>{{ $t("koko.terminal.uploadTips") }}</span>
         <input type="file" class="hidden" @change="onUploadChange" />
       </label>
       <div v-if="fileInfo" class="mt-2 text-xs text-muted">
@@ -35,10 +35,10 @@ const onUploadChange = (event: Event) => {
     </template>
     <template #footer>
       <UButton color="neutral" variant="ghost" @click="cancelUpload">
-        {{ $t("Cancel") || "Cancel" }}
+        {{ $t("koko.actions.cancel") }}
       </UButton>
       <UButton color="primary" @click="confirmUpload">
-        {{ $t("Upload") || "Upload" }}
+        {{ $t("koko.actions.upload") }}
       </UButton>
     </template>
   </UModal>

@@ -11,10 +11,11 @@ export function writeBufferToTerminal(
   zmodemStatus: boolean,
   terminal: Terminal | null,
   data: ArrayBuffer | Uint8Array,
-  reportError: (options: { title: string }) => void
+  reportError: (options: { title: string }) => void,
+  zmodemBlockedTitle: string
 ) {
   if (!enableZmodem && zmodemStatus) {
-    reportError({ title: "Zmodem blocked: transfer in progress" });
+    reportError({ title: zmodemBlockedTitle });
     return;
   }
   if (!terminal) return;

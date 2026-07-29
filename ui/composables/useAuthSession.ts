@@ -25,6 +25,7 @@ interface PersistedUserSnapshot {
 const BOOTSTRAP_RETRY_DELAYS_MS = [0, 500, 1000, 2000, 3000];
 let bootstrapRetryTimer: ReturnType<typeof setTimeout> | null = null;
 let lastBootstrapFailure: "network" | "server" | null = null;
+let bootstrapPromise: Promise<boolean> | null = null;
 
 const wait = (delay: number) => new Promise((resolve) => setTimeout(resolve, delay));
 
@@ -304,7 +305,7 @@ export const useAuthSession = () => {
     return true;
   };
 
-  const bootstrapPersistedSession = async () => {
+  const bootstrapSession = async () => {
     if (bootstrapRetryTimer) {
       clearTimeout(bootstrapRetryTimer);
       bootstrapRetryTimer = null;
@@ -374,7 +375,10 @@ export const useAuthSession = () => {
       // unreachable. A transient network failure is not an authentication failure.
       console.warn("bootstrap auth session deferred: site remains unavailable", { site });
       userInfoStore.setUserLoggedIn(false);
-      bootstrapRetryTimer = setTimeout(() => void bootstrapPersistedSession(), 5000);
+      bootstrapRetryTimer = setTimeout(() => {
+        bootstrapRetryTimer = null;
+        bootstrapPromise = bootstrapSession();
+      }, 5000);
       return false;
     } catch (error) {
       console.error("bootstrap auth session failed", { site, restored, error });
@@ -382,6 +386,14 @@ export const useAuthSession = () => {
       if (restored) promptLogin();
       return false;
     }
+  };
+
+  const bootstrapPersistedSession = () => {
+    if (!bootstrapPromise) {
+      bootstrapPromise = bootstrapSession();
+    }
+
+    return bootstrapPromise;
   };
 
   return {

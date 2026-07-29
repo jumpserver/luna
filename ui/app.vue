@@ -15,7 +15,6 @@ const route = useRoute();
 const { isMacOS } = usePlatform();
 const { locale, setLocale } = useI18n();
 const { userTheme, applyThemePreference, applySystemThemePreference } = useThemeAdapter();
-const { bootstrapPersistedSession } = useAuthSession();
 
 const { applyPrimaryColor } = useColor();
 const settingManager = useSettingManager();
@@ -179,10 +178,7 @@ async function applyAfterHydration() {
 }
 
 onMounted(async () => {
-  if (!isTauriRuntime()) {
-    await bootstrapPersistedSession();
-    return;
-  }
+  if (!isTauriRuntime()) return;
 
   // 初始化 HTTP 回调服务器 (开发环境)
   try {
@@ -191,8 +187,6 @@ onMounted(async () => {
     // 忽略错误，生产环境不需要此服务
     console.debug("HTTP callback server initialization:", error);
   }
-
-  await bootstrapPersistedSession();
 
   try {
     unlistenPrimaryColor.value = await useTauriEventListen("primary-color-changed", (event: any) => {

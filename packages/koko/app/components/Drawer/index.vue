@@ -2,7 +2,7 @@
 import { HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import KokoDrawerFileManagement from "#koko/components/Drawer/FileManagement/index.vue";
 import KokoDrawerGeneral from "#koko/components/Drawer/General/index.vue";
-import { useKokoTerminalEvents } from "#koko/composables/useTerminalEvents";
+import { useKokoTerminalEvents } from "#koko/composables/terminal/useTerminalEvents";
 import { useKokoConnectionStore } from "#koko/stores/connection";
 import mittBus from "#koko/utils/mittBus";
 
@@ -24,8 +24,8 @@ const isDisableFileManager = ref(false);
 
 const drawerTabs = computed(() => {
   const tabs = [
-    { value: "general", label: t("General") || "General", icon: "i-lucide-keyboard" },
-    { value: "file-manager", label: t("FileManagement") || "Files", icon: "i-lucide-folder-kanban" }
+    { value: "general", label: t("koko.drawer.general"), icon: "i-lucide-keyboard" },
+    { value: "file-manager", label: t("koko.drawer.fileManagement"), icon: "i-lucide-folder-kanban" }
   ];
   if (props.hiddenFileManager || isDisableFileManager.value) {
     return tabs.filter((tab) => tab.value !== "file-manager");
@@ -121,7 +121,7 @@ onUnmounted(() => {
   >
     <template #header>
       <div class="flex w-full items-center justify-between gap-3">
-        <span class="font-medium">{{ connectionStore.assetName || t("Terminal") || "Terminal" }}</span>
+        <span class="font-medium">{{ connectionStore.assetName || t("koko.terminal.title") }}</span>
         <UButton color="neutral" variant="ghost" icon="i-lucide-x" @click="closeDrawer" />
       </div>
     </template>

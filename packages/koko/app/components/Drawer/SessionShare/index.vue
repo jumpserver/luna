@@ -9,7 +9,7 @@ const { onlineUsers, shareInfo, copyShareURL } = useKokoSessionAdapter();
   <div class="flex flex-col gap-6">
     <div>
       <div class="mb-2 flex items-center gap-2 text-sm font-medium">
-        <span>{{ t("OnlineUser") || "Online users" }}</span>
+        <span>{{ t("koko.drawer.onlineUsers") }}</span>
         <UBadge color="success" variant="subtle">
           {{ onlineUsers.length }}
         </UBadge>
@@ -22,18 +22,18 @@ const { onlineUsers, shareInfo, copyShareURL } = useKokoSessionAdapter();
         >
           {{ user.user }}
           <UBadge v-if="user.primary" size="xs" class="ml-2">
-            {{ t("Primary") || "Primary" }}
+            {{ t("koko.drawer.primary") }}
           </UBadge>
         </div>
       </div>
       <p v-else class="text-sm text-muted">
-        {{ t("NoOnlineUsers") || "No online users" }}
+        {{ t("koko.drawer.noOnlineUsers") }}
       </p>
     </div>
 
     <div>
       <div class="mb-2 text-sm font-medium">
-        {{ t("ShareLink") || "Share link" }}
+        {{ t("koko.terminal.shareLink") }}
       </div>
       <UButton
         color="primary"
@@ -41,10 +41,10 @@ const { onlineUsers, shareInfo, copyShareURL } = useKokoSessionAdapter();
         :disabled="!shareInfo.enableShare || !shareInfo.shareId"
         @click="copyShareURL"
       >
-        {{ t("CopyShareURL") || "Copy share URL" }}
+        {{ t("koko.drawer.copyShareUrl") }}
       </UButton>
       <p v-if="!shareInfo.enableShare" class="mt-2 text-xs text-muted">
-        {{ t("ShareDisabled") || "Sharing is not enabled for this session" }}
+        {{ t("koko.drawer.shareDisabled") }}
       </p>
     </div>
   </div>

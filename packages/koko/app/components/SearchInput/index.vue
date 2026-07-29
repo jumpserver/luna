@@ -35,9 +35,9 @@ const toggleSearchOption = (option: "caseSensitive" | "wholeWord" | "regex") => 
 };
 
 const searchOptionButtons = [
-  { key: "caseSensitive" as const, icon: "i-lucide-case-sensitive", label: t("CaseSensitive") || "Case sensitive" },
-  { key: "wholeWord" as const, icon: "i-lucide-case-lower", label: t("MatchWholeWords") || "Whole words" },
-  { key: "regex" as const, icon: "i-lucide-regex", label: t("UsingRegularExpressions") || "Regex" }
+  { key: "caseSensitive" as const, icon: "i-lucide-case-sensitive", label: t("koko.search.caseSensitive") },
+  { key: "wholeWord" as const, icon: "i-lucide-case-lower", label: t("koko.search.wholeWords") },
+  { key: "regex" as const, icon: "i-lucide-regex", label: t("koko.search.regex") }
 ];
 
 const positionRight = computed(() => {
@@ -77,7 +77,7 @@ useMutationObserver(
       v-model="searchKey"
       size="sm"
       class="min-w-48"
-      :placeholder="t('Search') || 'Search'"
+      :placeholder="t('koko.actions.search')"
       @update:model-value="keyWordsSearch"
     />
 

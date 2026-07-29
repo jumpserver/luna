@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
-import type { SftpFileEntry } from "#koko/composables/useSftpFileManager";
+import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
 import { connectorSessionKey } from "@jumpserver/connectors-core";
-import { useSftpFileManager } from "#koko/composables/useSftpFileManager";
+import { useSftpFileManager } from "#koko/composables/sftp/useSftpFileManager";
 import CodeMirrorEditor from "./CodeMirrorEditor.client.vue";
 
 type PreviewKind = "text" | "image" | "unsupported" | "empty";
@@ -36,8 +36,15 @@ interface PendingTreeRow {
   createKind: "file" | "directory";
 }
 type TreeRow = EntryTreeRow | PendingTreeRow;
+interface ContextTarget {
+  entry: SftpFileEntry;
+  path: string;
+}
+type AlertTarget = { kind: "delete"; target: ContextTarget } | { kind: "unsaved-close"; tab: EditorTab };
 
 const props = defineProps<{ sftpToken: string }>();
+const { t } = useI18n();
+const toast = useToast();
 const providedContext = inject(connectorSessionKey, ref(null));
 const context = computed<ConnectorSessionContext | null>(() => {
   const value = unref(providedContext);
@@ -61,10 +68,29 @@ const uploadInput = ref<HTMLInputElement | null>(null);
 const uploadDirectory = ref("");
 const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
-const contextTarget = ref<{ entry: SftpFileEntry; path: string } | null>(null);
+const contextTarget = ref<ContextTarget | null>(null);
+const renameDialogOpen = ref(false);
+const renameTarget = ref<ContextTarget | null>(null);
+const renameValue = ref("");
+const renameError = ref("");
+const renameSubmitting = ref(false);
+const alertDialogOpen = ref(false);
+const alertTarget = ref<AlertTarget | null>(null);
+const alertSubmitting = ref(false);
 const tree = ref<Record<string, TreeNode>>({});
 const expanded = ref(new Set<string>());
 const activeTab = computed(() => tabs.value.find((tab) => tab.path === activePath.value) || null);
+const renameDisabled = computed(() => !renameValue.value.trim() || renameValue.value.trim() === renameTarget.value?.entry.name);
+const alertTitle = computed(() =>
+  alertTarget.value?.kind === "delete" ? t("koko.actions.delete") : t("koko.actions.close")
+);
+const alertDescription = computed(() => {
+  const target = alertTarget.value;
+  if (!target) return "";
+  return target.kind === "delete"
+    ? t("koko.sftpEditor.deleteConfirm", { name: target.target.entry.name })
+    : t("koko.sftpEditor.unsavedCloseConfirm", { name: target.tab.entry.name });
+});
 const imageExtensions = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"]);
 const textExtensions = new Set([
   "txt",
@@ -206,7 +232,7 @@ async function loadDirectory(path: string, force = false) {
   if (existing?.loading || (existing && !force)) return;
   tree.value = { ...tree.value, [path]: { entries: existing?.entries || [], loading: true, error: "" } };
   try {
-    const entries = await manager.listDirectory(path);
+    const entries = await manager.operations.listDirectory(path);
     tree.value = { ...tree.value, [path]: { entries, loading: false, error: "" } };
   } catch (cause) {
     tree.value = {
@@ -271,22 +297,22 @@ async function commitCreate() {
   const name = pendingName.value.trim();
   pendingError.value = "";
   if (!name) {
-    pendingError.value = "请输入名称";
+    pendingError.value = t("koko.sftpEditor.nameRequired");
     return;
   }
   if (name === "." || name === ".." || name.includes("/") || name.includes("\\")) {
-    pendingError.value = "名称不能包含路径分隔符";
+    pendingError.value = t("koko.sftpEditor.nameCannotContainPathSeparator");
     return;
   }
   if (nameExists(parent, name)) {
-    pendingError.value = "同名文件或目录已经存在";
+    pendingError.value = t("koko.sftpEditor.nameAlreadyExists");
     return;
   }
   const path = joinPath(parent, name);
   pendingSubmitting.value = true;
   try {
-    if (kind === "file") await manager.createFileAt(path);
-    else await manager.createDirectoryAt(path);
+    if (kind === "file") await manager.operations.createFileAt(path);
+    else await manager.operations.createDirectoryAt(path);
     await loadDirectory(parent, true);
     if (kind === "file") {
       const entry: SftpFileEntry = { name, size: "0", perm: "", mod_time: "", type: "", is_dir: false };
@@ -341,51 +367,116 @@ function createFromContext(kind: "file" | "directory") {
   beginCreate(kind);
 }
 
-async function renameContextTarget() {
+function openRenameDialog() {
   const target = contextTarget.value;
   if (!target || target.path === rootPath.value) return;
-  // eslint-disable-next-line no-alert -- rename requires the replacement name
-  const name = window.prompt("重命名", target.entry.name)?.trim() || "";
-  if (!name || name === target.entry.name) return;
-  if (name === "." || name === ".." || name.includes("/") || name.includes("\\")) return;
-  const parent = parentPath(target.path);
-  if (nameExists(parent, name)) return;
-  const nextPath = joinPath(parent, name);
+  renameTarget.value = target;
+  renameValue.value = target.entry.name;
+  renameError.value = "";
   hideContextMenu();
-  await manager.renamePath(target.path, name);
-  tabs.value.forEach((tab) => {
-    if (tab.path === target.path || tab.path.startsWith(`${target.path}/`)) {
-      tab.path = `${nextPath}${tab.path.slice(target.path.length)}`;
-      if (tab.path === nextPath) tab.entry.name = name;
-    }
-  });
-  if (activePath.value === target.path || activePath.value.startsWith(`${target.path}/`))
-    activePath.value = `${nextPath}${activePath.value.slice(target.path.length)}`;
-  if (selectedDirectory.value === target.path || selectedDirectory.value.startsWith(`${target.path}/`))
-    selectedDirectory.value = `${nextPath}${selectedDirectory.value.slice(target.path.length)}`;
-  expanded.value = new Set(
-    [...expanded.value].map((path) =>
-      path === target.path || path.startsWith(`${target.path}/`) ? `${nextPath}${path.slice(target.path.length)}` : path
-    )
-  );
-  await loadDirectory(parent, true);
+  renameDialogOpen.value = true;
 }
 
-async function deleteContextTarget() {
+async function submitRename() {
+  const target = renameTarget.value;
+  if (!target || renameSubmitting.value) return;
+  const name = renameValue.value.trim();
+  renameError.value = "";
+  if (!name) {
+    renameError.value = t("koko.sftpEditor.nameRequired");
+    return;
+  }
+  if (name === "." || name === ".." || name.includes("/") || name.includes("\\")) {
+    renameError.value = t("koko.sftpEditor.nameCannotContainPathSeparator");
+    return;
+  }
+
+  const parent = parentPath(target.path);
+  if (nameExists(parent, name)) {
+    renameError.value = t("koko.sftpEditor.nameAlreadyExists");
+    return;
+  }
+
+  const nextPath = joinPath(parent, name);
+  renameSubmitting.value = true;
+  try {
+    await manager.operations.renamePath(target.path, name);
+
+    tabs.value.forEach((tab) => {
+      if (tab.path === target.path || tab.path.startsWith(`${target.path}/`)) {
+        tab.path = `${nextPath}${tab.path.slice(target.path.length)}`;
+        if (tab.path === nextPath) tab.entry.name = name;
+      }
+    });
+
+    if (activePath.value === target.path || activePath.value.startsWith(`${target.path}/`))
+      activePath.value = `${nextPath}${activePath.value.slice(target.path.length)}`;
+    if (selectedDirectory.value === target.path || selectedDirectory.value.startsWith(`${target.path}/`))
+      selectedDirectory.value = `${nextPath}${selectedDirectory.value.slice(target.path.length)}`;
+    expanded.value = new Set(
+      [...expanded.value].map((path) =>
+        path === target.path || path.startsWith(`${target.path}/`) ? `${nextPath}${path.slice(target.path.length)}` : path
+      )
+    );
+    await loadDirectory(parent, true);
+    renameDialogOpen.value = false;
+  } catch (cause) {
+    renameError.value = cause instanceof Error ? cause.message : String(cause);
+  } finally {
+    renameSubmitting.value = false;
+  }
+}
+
+function openDeleteDialog() {
   const target = contextTarget.value;
   if (!target || target.path === rootPath.value) return;
-  // eslint-disable-next-line no-alert -- remote deletion must be confirmed
-  if (!window.confirm(`确定删除 ${target.entry.name}？`)) return;
   hideContextMenu();
-  await manager.removePath(target.path);
-  for (const tab of tabs.value.filter((tab) => tab.path === target.path || tab.path.startsWith(`${target.path}/`)))
+  alertTarget.value = { kind: "delete", target };
+  alertDialogOpen.value = true;
+}
+
+function closeTabNow(tab: EditorTab) {
+  const index = tabs.value.findIndex((item) => item.path === tab.path);
+  revokePreview(tab);
+  tabs.value.splice(index, 1);
+  if (activePath.value === tab.path) activePath.value = tabs.value[Math.min(index, tabs.value.length - 1)]?.path || "";
+}
+
+async function confirmAlert() {
+  const target = alertTarget.value;
+  if (!target || alertSubmitting.value) return;
+  if (target.kind === "unsaved-close") {
+    closeTabNow(target.tab);
+    alertDialogOpen.value = false;
+    return;
+  }
+  alertSubmitting.value = true;
+  try {
+    await manager.operations.removePath(target.target.path);
+    for (const tab of tabs.value.filter(
+      (tab) => tab.path === target.target.path || tab.path.startsWith(`${target.target.path}/`)
+    ))
     revokePreview(tab);
-  tabs.value = tabs.value.filter((tab) => tab.path !== target.path && !tab.path.startsWith(`${target.path}/`));
-  if (activePath.value === target.path || activePath.value.startsWith(`${target.path}/`))
-    activePath.value = tabs.value.at(-1)?.path || "";
-  if (selectedDirectory.value === target.path || selectedDirectory.value.startsWith(`${target.path}/`))
-    selectedDirectory.value = rootPath.value;
-  await loadDirectory(parentPath(target.path), true);
+    tabs.value = tabs.value.filter(
+      (tab) => tab.path !== target.target.path && !tab.path.startsWith(`${target.target.path}/`)
+    );
+    if (activePath.value === target.target.path || activePath.value.startsWith(`${target.target.path}/`))
+      activePath.value = tabs.value.at(-1)?.path || "";
+    if (selectedDirectory.value === target.target.path || selectedDirectory.value.startsWith(`${target.target.path}/`))
+      selectedDirectory.value = rootPath.value;
+    await loadDirectory(parentPath(target.target.path), true);
+    alertDialogOpen.value = false;
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause);
+    toast.add({
+      title: t("koko.actions.delete"),
+      description: message,
+      color: "error",
+      actions: [{ label: t("koko.actions.retry"), color: "error", variant: "soft", onClick: () => void confirmAlert() }]
+    });
+  } finally {
+    alertSubmitting.value = false;
+  }
 }
 
 function downloadContextTarget() {
@@ -409,7 +500,7 @@ async function uploadFiles(event: Event) {
   uploadDirectory.value = "";
   input.value = "";
   if (!directory || files.length === 0) return;
-  await Promise.allSettled(files.map((file) => manager.uploadFile(file, joinPath(directory, file.name))));
+  await Promise.allSettled(files.map((file) => manager.operations.uploadFile(file, joinPath(directory, file.name))));
   await loadDirectory(directory, true);
 }
 
@@ -418,28 +509,28 @@ const contextMenuItems = computed(() => {
   if (!target) return [];
   const directoryActions = target.entry.is_dir
     ? [
-        { label: "新建文件", icon: "i-lucide-file-plus-2", onSelect: () => createFromContext("file") },
-        { label: "新建目录", icon: "i-lucide-folder-plus", onSelect: () => createFromContext("directory") },
-        { label: "上传文件", icon: "i-lucide-upload", onSelect: chooseUpload },
+        { label: t("koko.sftpEditor.newFile"), icon: "i-lucide-file-plus-2", onSelect: () => createFromContext("file") },
+        { label: t("koko.sftpEditor.newDirectory"), icon: "i-lucide-folder-plus", onSelect: () => createFromContext("directory") },
+        { label: t("koko.actions.upload"), icon: "i-lucide-upload", onSelect: chooseUpload },
         { type: "separator" as const }
       ]
     : [];
   return [
     ...directoryActions,
-    { label: "下载", icon: "i-lucide-download", onSelect: downloadContextTarget },
+    { label: t("koko.actions.download"), icon: "i-lucide-download", onSelect: downloadContextTarget },
     {
-      label: "重命名",
+      label: t("koko.actions.rename"),
       icon: "i-lucide-pencil",
       disabled: target.path === rootPath.value,
-      onSelect: () => void renameContextTarget()
+      onSelect: openRenameDialog
     },
     { type: "separator" as const },
     {
-      label: "删除",
+      label: t("koko.actions.delete"),
       icon: "i-lucide-trash-2",
       color: "error" as const,
       disabled: target.path === rootPath.value,
-      onSelect: () => void deleteContextTarget()
+      onSelect: openDeleteDialog
     }
   ];
 });
@@ -474,7 +565,7 @@ async function openEntry(entry: SftpFileEntry, path: string) {
   tabs.value.push(tab);
   activePath.value = path;
   try {
-    const blob = await manager.readFile(entry, path);
+    const blob = await manager.operations.readFile(entry, path);
     const extension = entry.name.split(".").pop()?.toLowerCase() || "";
     if (imageExtensions.has(extension)) {
       tab.kind = "image";
@@ -499,12 +590,12 @@ async function openEntry(entry: SftpFileEntry, path: string) {
 }
 
 function closeTab(tab: EditorTab) {
-  // eslint-disable-next-line no-alert -- closing a dirty remote file must require confirmation
-  if (dirty(tab) && !window.confirm(`${tab.entry.name} 尚未保存，确定关闭吗？`)) return;
-  const index = tabs.value.findIndex((item) => item.path === tab.path);
-  revokePreview(tab);
-  tabs.value.splice(index, 1);
-  if (activePath.value === tab.path) activePath.value = tabs.value[Math.min(index, tabs.value.length - 1)]?.path || "";
+  if (!dirty(tab)) {
+    closeTabNow(tab);
+    return;
+  }
+  alertTarget.value = { kind: "unsaved-close", tab };
+  alertDialogOpen.value = true;
 }
 
 async function save(tab = activeTab.value) {
@@ -512,7 +603,7 @@ async function save(tab = activeTab.value) {
   tab.saving = true;
   tab.error = "";
   try {
-    await manager.uploadFile(new File([tab.content], tab.entry.name, { type: "text/plain;charset=utf-8" }), tab.path);
+    await manager.operations.uploadFile(new File([tab.content], tab.entry.name, { type: "text/plain;charset=utf-8" }), tab.path);
     tab.savedContent = tab.content;
   } catch (cause) {
     tab.error = cause instanceof Error ? cause.message : String(cause);
@@ -548,12 +639,12 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
 </script>
 
 <template>
-  <div class="grid h-full min-h-0 grid-cols-[260px_minmax(0,1fr)] bg-[var(--app-main-bg)] text-[var(--app-fg)]">
+  <div class="grid h-full min-h-0 grid-cols-[260px_minmax(0,1fr)] bg-(--app-main-bg) text-(--app-fg)">
     <aside
-      class="flex min-h-0 flex-col border-r border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-sidebar)]"
+      class="flex min-h-0 flex-col border-r border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-sidebar)"
     >
       <div
-        class="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-header)] px-2"
+        class="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-header) px-2"
       >
         <button
           class="min-w-0 flex-1 truncate px-1 text-left font-ui-mono text-[10px]"
@@ -575,7 +666,7 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
           size="xs"
           color="neutral"
           variant="ghost"
-          title="全部折叠"
+          :title="t('koko.sftpEditor.collapseAll')"
           @click="collapseAll"
         />
         <UButton
@@ -583,7 +674,7 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
           size="xs"
           color="neutral"
           variant="ghost"
-          title="新建文件"
+          :title="t('koko.sftpEditor.newFile')"
           @click="beginCreate('file')"
         />
         <UButton
@@ -591,7 +682,7 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
           size="xs"
           color="neutral"
           variant="ghost"
-          title="新建目录"
+          :title="t('koko.sftpEditor.newDirectory')"
           @click="beginCreate('directory')"
         />
         <UButton
@@ -599,7 +690,7 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
           size="xs"
           color="neutral"
           :variant="searchVisible ? 'soft' : 'ghost'"
-          title="搜索"
+          :title="t('koko.actions.search')"
           @click="toggleSearch"
         />
         <UButton
@@ -607,43 +698,43 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
           size="xs"
           color="neutral"
           variant="ghost"
-          title="刷新目录树"
+          :title="t('koko.sftpEditor.refreshTree')"
           @click="refreshTree"
         />
       </div>
       <div
         v-if="searchVisible"
-        class="shrink-0 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-tree)] p-2"
+        class="shrink-0 border-b border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-tree) p-2"
       >
-        <UInput v-model="search" icon="i-lucide-search" size="xs" placeholder="筛选文件" class="w-full" />
+        <UInput v-model="search" icon="i-lucide-search" size="xs" :placeholder="t('koko.sftpEditor.filterFiles')" class="w-full" />
       </div>
       <div
         v-if="manager.currentUploadName.value"
-        class="shrink-0 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-tree)] px-2 py-2"
+        class="shrink-0 border-b border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-tree) px-2 py-2"
       >
-        <div class="mb-1 flex items-center justify-between gap-2 text-[11px] text-[var(--app-muted)]">
+        <div class="mb-1 flex items-center justify-between gap-2 text-[11px] text-(--app-muted)">
           <span class="truncate">{{ manager.currentUploadName.value }}</span>
           <span>{{ manager.uploadProgress.value }}%</span>
         </div>
         <div class="flex items-center gap-2">
           <UProgress :value="manager.uploadProgress.value" size="xs" class="flex-1" />
-          <span v-if="manager.queuedUploadCount.value" class="shrink-0 text-[11px] text-[var(--app-muted)]">
+          <span v-if="manager.queuedUploadCount.value" class="shrink-0 text-[11px] text-(--app-muted)">
             +{{ manager.queuedUploadCount.value }}
           </span>
         </div>
       </div>
-      <div class="min-h-0 flex-1 overflow-auto bg-[var(--workspace-surface-sub-tree)] py-1">
+      <div class="min-h-0 flex-1 overflow-auto bg-(--workspace-surface-sub-tree) py-1">
         <template v-for="row in treeRows" :key="row.path">
           <button
             v-if="row.kind === 'entry'"
-            class="flex h-7 w-full items-center gap-1 pr-2 text-left text-xs text-[var(--app-fg)] hover:bg-[var(--app-hover-soft)]"
+            class="flex h-7 w-full items-center gap-1 pr-2 text-left text-xs text-(--app-fg) hover:bg-(--app-hover-soft)"
             :class="
               row.entry.is_dir
                 ? selectedDirectory === row.path
-                  ? 'bg-[var(--app-selected-soft)] text-primary'
+                  ? 'bg-(--app-selected-soft) text-primary'
                   : ''
                 : activePath === row.path
-                  ? 'bg-[var(--app-selected-soft)] text-primary'
+                  ? 'bg-(--app-selected-soft) text-primary'
                   : ''
             "
             :style="{ paddingLeft: `${8 + row.depth * 14}px` }"
@@ -654,7 +745,7 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
             <UIcon
               v-if="row.entry.is_dir"
               :name="row.expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
-              class="size-3 shrink-0 text-[var(--app-muted)]"
+              class="size-3 shrink-0 text-(--app-muted)"
             />
             <span v-else class="w-3 shrink-0" />
             <UIcon
@@ -664,19 +755,19 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
               class="size-3.5 shrink-0"
             />
             <span class="min-w-0 flex-1 truncate">{{ row.entry.name }}</span>
-            <span v-if="!row.entry.is_dir" class="text-[9px] text-[var(--app-muted)]">{{ row.entry.size }}</span>
+            <span v-if="!row.entry.is_dir" class="text-[9px] text-(--app-muted)">{{ row.entry.size }}</span>
           </button>
           <div v-else class="py-1 pr-2" :style="{ paddingLeft: `${8 + row.depth * 14}px` }">
             <div class="flex items-center gap-1">
               <UIcon
                 :name="row.createKind === 'directory' ? 'i-lucide-folder' : 'i-lucide-file-code-2'"
-                class="size-3.5 shrink-0 text-[var(--app-muted)]"
+                class="size-3.5 shrink-0 text-(--app-muted)"
               />
               <input
                 ref="pendingInput"
                 v-model="pendingName"
-                class="h-6 min-w-0 flex-1 rounded border border-primary bg-[var(--workspace-surface-sub-panel)] px-1.5 text-xs text-[var(--app-fg)] outline-none"
-                :placeholder="row.createKind === 'directory' ? '目录名称' : '文件名称'"
+                class="h-6 min-w-0 flex-1 rounded border border-primary bg-(--workspace-surface-sub-panel) px-1.5 text-xs text-(--app-fg) outline-none"
+                :placeholder="row.createKind === 'directory' ? t('koko.sftpEditor.directoryName') : t('koko.sftpEditor.fileName')"
                 :disabled="pendingSubmitting"
                 @keydown.enter.prevent="commitCreate"
                 @keydown.esc.prevent="cancelCreate"
@@ -687,7 +778,7 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
                 color="primary"
                 variant="ghost"
                 :loading="pendingSubmitting"
-                title="确认"
+                :title="t('koko.actions.confirm')"
                 @click="commitCreate"
               />
               <UButton
@@ -696,7 +787,7 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
                 color="neutral"
                 variant="ghost"
                 :disabled="pendingSubmitting"
-                title="取消"
+                :title="t('koko.actions.cancel')"
                 @click="cancelCreate"
               />
             </div>
@@ -705,9 +796,9 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
             </div>
           </div>
         </template>
-        <div v-if="tree[rootPath]?.loading" class="flex h-8 items-center gap-2 px-3 text-xs text-[var(--app-muted)]">
+        <div v-if="tree[rootPath]?.loading" class="flex h-8 items-center gap-2 px-3 text-xs text-(--app-muted)">
           <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
-          加载中
+          {{ t("koko.sftpEditor.loading") }}
         </div>
         <div v-else-if="tree[rootPath]?.error" class="px-3 py-2 text-xs text-error">
           {{ tree[rootPath]?.error }}
@@ -747,9 +838,9 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
       />
       <template v-if="activeTab">
         <header
-          class="flex h-9 shrink-0 items-center justify-between border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-header)] px-3"
+          class="flex h-9 shrink-0 items-center justify-between border-b border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-header) px-3"
         >
-          <span class="truncate font-ui-mono text-[10px] text-[var(--app-muted)]">{{ activeTab.path }}</span>
+          <span class="truncate font-ui-mono text-[10px] text-(--app-muted)">{{ activeTab.path }}</span>
           <UButton
             v-if="activeTab.kind === 'text'"
             icon="i-lucide-save"
@@ -760,13 +851,13 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
             :loading="activeTab.saving"
             @click="save()"
           >
-            保存
+            {{ t("koko.actions.save") }}
           </UButton>
         </header>
         <div v-if="activeTab.loading" class="grid min-h-0 flex-1 place-items-center">
           <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
         </div>
-        <div v-else-if="activeTab.kind === 'text'" class="min-h-0 flex-1 bg-[var(--app-main-bg)]">
+        <div v-else-if="activeTab.kind === 'text'" class="min-h-0 flex-1 bg-(--app-main-bg)">
           <CodeMirrorEditor
             v-model="activeTab.content"
             :language="editorLanguage"
@@ -782,29 +873,48 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
         </div>
         <div
           v-else
-          class="grid min-h-0 flex-1 place-items-center bg-[var(--app-main-bg)] p-6 text-center text-sm text-[var(--app-muted)]"
+          class="grid min-h-0 flex-1 place-items-center bg-(--app-main-bg) p-6 text-center text-sm text-(--app-muted)"
         >
           <div class="flex flex-col items-center gap-3">
             <UIcon :name="activeTab.error ? 'i-lucide-circle-alert' : 'i-lucide-file-warning'" class="size-10" />
-            <span>{{ activeTab.error || "该文件暂不支持在线预览或编辑" }}</span>
+            <span>{{ activeTab.error || t("koko.sftpEditor.unsupportedPreview") }}</span>
           </div>
         </div>
         <footer
-          class="flex h-6 shrink-0 items-center justify-between border-t border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-header)] px-3 text-[10px] text-[var(--app-muted)]"
+          class="flex h-6 shrink-0 items-center justify-between border-t border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-header) px-3 text-[10px] text-(--app-muted)"
         >
           <span>{{ activeTab.path }}</span>
-          <span>{{ activeTab.kind === "text" ? `${activeTab.content.length} chars · Ctrl/Cmd+S 保存` : "SFTP" }}</span>
+          <span>{{ activeTab.kind === "text" ? t("koko.sftpEditor.fileStatus", { count: activeTab.content.length }) : "SFTP" }}</span>
         </footer>
       </template>
       <div
         v-else
-        class="grid min-h-0 flex-1 place-items-center bg-[var(--app-main-bg)] p-6 text-sm text-[var(--app-muted)]"
+        class="grid min-h-0 flex-1 place-items-center bg-(--app-main-bg) p-6 text-sm text-(--app-muted)"
       >
         <div class="flex flex-col items-center gap-3">
           <UIcon name="i-lucide-file-code-2" class="size-10" />
-          <span>{{ manager.error.value || "从左侧选择文件开始编辑" }}</span>
+          <span>{{ manager.error.value || t("koko.sftpEditor.editorEmpty") }}</span>
         </div>
       </div>
     </section>
   </div>
+  <ModalPromptDialog
+    v-model:open="renameDialogOpen"
+    v-model="renameValue"
+    :title="t('koko.sftpEditor.renamePrompt')"
+    :confirm-label="t('koko.actions.rename')"
+    :error="renameError"
+    :loading="renameSubmitting"
+    :disabled="renameDisabled"
+    @confirm="submitRename"
+  />
+  <ModalAlertDialog
+    v-model:open="alertDialogOpen"
+    :title="alertTitle"
+    :description="alertDescription"
+    :confirm-label="alertTitle"
+    :confirm-color="alertTarget?.kind === 'delete' ? 'error' : 'primary'"
+    :loading="alertSubmitting"
+    @confirm="confirmAlert"
+  />
 </template>
