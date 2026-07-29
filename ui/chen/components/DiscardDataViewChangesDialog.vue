@@ -36,7 +36,7 @@ function confirmDiscard() {
         <UButton color="neutral" variant="soft" @click="close">
           Cancel
         </UButton>
-        <UButton color="error" @click="confirmDiscard">
+        <UButton color="error" icon="i-lucide-trash-2" @click="confirmDiscard">
           Discard
         </UButton>
       </div>

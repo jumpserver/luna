@@ -55,10 +55,16 @@ export interface ChenDataViewField {
   columnName?: string
   schema?: string
   table?: string
+  sourceSchema?: string
+  sourceTable?: string
+  sourceColumn?: string
   type?: string
   nullable?: boolean
   isPrimaryKey?: boolean
   primaryKey?: boolean
+  editable?: boolean
+  insertable?: boolean
+  editReason?: string
 }
 
 export type ChenDataViewExportScope = "current" | "all";
@@ -72,7 +78,95 @@ export interface ChenDataViewExportOptions {
 export interface ChenDataViewDataset {
   fields: ChenDataViewField[]
   data: Array<Record<string, any>>
+  editable?: boolean
+  editReason?: string
 }
+
+export interface ChenCellWriteValue {
+  value: any
+  valueIsNull: boolean
+}
+
+export interface ChenCellChange {
+  pkColumn: string
+  pkValue: any
+  pkValueIsNull: boolean
+  sourceColumn: string
+  oldValue: any
+  oldValueIsNull: boolean
+  newValue: any
+  newValueIsNull: boolean
+}
+
+export interface ChenInsertRowDraft {
+  id: number
+  data: Record<string, any>
+  values: Record<string, ChenCellWriteValue>
+}
+
+export interface ChenDeleteRow {
+  pkColumn: string
+  pkValue: any
+  pkValueIsNull: boolean
+}
+
+export interface ChenSaveChangesPayload {
+  schema?: string
+  table?: string
+  changes: ChenCellChange[]
+  insertRows: Array<{ values: Record<string, ChenCellWriteValue> }>
+  deleteRows: ChenDeleteRow[]
+}
+
+export interface ChenSaveChangesResultBase {
+  success: boolean
+  allowed?: boolean
+  reason?: string
+  failedChangeIndex?: number | null
+  dataView?: string
+  schema?: string
+  table?: string
+  changeCount?: number
+  updateCount?: number
+  insertCount?: number
+  deleteCount?: number
+}
+
+export interface ChenSaveChangesPreviewResult extends ChenSaveChangesResultBase {
+  auditSql?: string
+}
+
+export interface ChenSaveChangesResult extends ChenSaveChangesResultBase {
+  databaseChangesApplied?: boolean
+  databaseCommitted?: boolean
+  auditSucceeded?: boolean
+  connectionInvalidated?: boolean
+}
+
+export type ChenDataViewRequestKind = "data" | "preview" | "confirm" | "save";
+
+export interface ChenDataViewActiveRequest {
+  sequence: number
+  kind: ChenDataViewRequestKind
+  dirtyVersion: number
+  payload: ChenSaveChangesPayload | null
+}
+
+export interface ChenDataViewEditState {
+  dirtyCells: Record<string, ChenCellChange>
+  insertRows: ChenInsertRowDraft[]
+  deletedRows: Record<string, ChenDeleteRow>
+  nextInsertRowId: number
+  pendingSavePayload: ChenSaveChangesPayload | null
+  previewResult: ChenSaveChangesPreviewResult | null
+  saveResult: ChenSaveChangesResult | null
+  dirtyVersion: number
+  requestSequence: number
+  activeRequest: ChenDataViewActiveRequest | null
+  refreshRequiredBeforeSave: boolean
+}
+
+export type ChenDataViewEditMode = "none" | "update" | "full";
 
 export type ChenSqlHints = Record<string, string[]>;
 
@@ -172,27 +266,13 @@ export type ChenDataViewAction
     | "refresh"
     | "change_limit"
     | "toggle_pinned"
-    | "export";
+    | "export"
+    | "save_changes_preview"
+    | "save_changes";
 
-export type ChenDataViewActionData = number | ChenDataViewExportOptions;
+export type ChenDataViewActionData = number | ChenDataViewExportOptions | ChenSaveChangesPayload;
 
 export type ChenDataViewActionTarget = ChenQueryResultTab | ChenDataViewConsoleTab;
-
-export interface ChenDataViewSaveResult {
-  success?: boolean
-  reason?: string
-  failedChangeIndex?: number | null
-  [key: string]: any
-}
-
-export interface ChenDataViewEditState {
-  insertedRows: Array<Record<string, any>>
-  updatedRows: Array<Record<string, any>>
-  deletedRows: Array<Record<string, any>>
-  previewResult: ChenDataViewSaveResult | null
-  saveResult: ChenDataViewSaveResult | null
-  pendingSavePayload: any | null
-}
 
 export type ChenWorkspaceTab = ChenQueryLikeWorkspaceTab | ChenDataViewConsoleTab;
 

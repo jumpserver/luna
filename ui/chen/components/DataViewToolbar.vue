@@ -6,8 +6,10 @@ import { getChenDataViewToolbarState } from "~/chen/composables/useChenDataView"
 const props = withDefaults(defineProps<{
   state: ChenConsoleState
   pinnable?: boolean
+  busy?: boolean
 }>(), {
-  pinnable: false
+  pinnable: false,
+  busy: false
 });
 
 const emit = defineEmits<{
@@ -39,7 +41,7 @@ function requestExport() {
         variant="ghost"
         aria-label="First page"
         title="First page"
-        :disabled="controls.disableFirst"
+        :disabled="busy || controls.disableFirst"
         @click="emit('action', 'first_page')"
       />
       <UButton
@@ -49,7 +51,7 @@ function requestExport() {
         variant="ghost"
         aria-label="Previous page"
         title="Previous page"
-        :disabled="controls.disablePrevious"
+        :disabled="busy || controls.disablePrevious"
         @click="emit('action', 'prev_page')"
       />
       <USelect
@@ -57,7 +59,7 @@ function requestExport() {
         size="xs"
         :model-value="controls.limit"
         :items="limitOptions"
-        :disabled="controls.loading"
+        :disabled="busy || controls.loading"
         aria-label="Rows per page"
         @update:model-value="changeLimit"
       />
@@ -71,7 +73,7 @@ function requestExport() {
         variant="ghost"
         aria-label="Next page"
         title="Next page"
-        :disabled="controls.disableNext"
+        :disabled="busy || controls.disableNext"
         @click="emit('action', 'next_page')"
       />
       <UButton
@@ -81,7 +83,7 @@ function requestExport() {
         variant="ghost"
         aria-label="Last page"
         title="Last page"
-        :disabled="controls.disableLast"
+        :disabled="busy || controls.disableLast"
         @click="emit('action', 'last_page')"
       />
     </template>
@@ -96,8 +98,8 @@ function requestExport() {
       variant="ghost"
       aria-label="Refresh data"
       title="Refresh data"
-      :loading="controls.loading"
-      :disabled="controls.loading"
+      :loading="controls.loading || busy"
+      :disabled="controls.loading || busy"
       @click="emit('action', 'refresh')"
     />
     <UButton
@@ -107,7 +109,7 @@ function requestExport() {
       variant="ghost"
       aria-label="Export data"
       title="Export data"
-      :disabled="controls.loading"
+      :disabled="controls.loading || busy"
       @click="requestExport"
     />
     <UButton
@@ -119,7 +121,7 @@ function requestExport() {
       :aria-pressed="controls.pinned"
       :aria-label="controls.pinned ? 'Unpin result' : 'Pin result'"
       :title="controls.pinned ? 'Unpin result' : 'Pin result'"
-      :disabled="controls.loading"
+      :disabled="controls.loading || busy"
       @click="emit('action', 'toggle_pinned')"
     />
   </div>

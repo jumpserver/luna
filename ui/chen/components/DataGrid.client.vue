@@ -2,14 +2,22 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type {
   CellClassParams,
+  CellClickedEvent,
   CellContextMenuEvent,
   CellMouseDownEvent,
   CellMouseOverEvent,
+  CellValueChangedEvent,
   ColDef,
   GridReadyEvent,
   ValueFormatterParams
 } from "ag-grid-community";
-import type { ChenDataViewDataset, ChenDataViewField, ChenDataViewMeta } from "~/chen/types";
+import type {
+  ChenDataViewDataset,
+  ChenDataViewEditMode,
+  ChenDataViewEditState,
+  ChenDataViewField,
+  ChenDataViewMeta
+} from "~/chen/types";
 
 import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 import { AgGridVue } from "ag-grid-vue3";
@@ -29,6 +37,15 @@ import {
   isChenGridCellSelected,
   startChenGridSelection
 } from "~/chen/utils/dataGridSelection";
+import {
+  applyChenDataViewCellChange,
+  canEditChenDataViewCell,
+  chenDataViewRows,
+  isChenDeletedRow,
+  isChenDirtyCell,
+  isChenInsertRow,
+  normalizeChenDataViewValue
+} from "~/chen/utils/dataViewEditing";
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-balham.css";
@@ -38,11 +55,19 @@ const props = withDefaults(defineProps<{
   meta?: ChenDataViewMeta | null
   dbType?: string
   canCopy?: boolean
+  editMode?: ChenDataViewEditMode
+  editState?: ChenDataViewEditState | null
 }>(), {
   meta: null,
   dbType: "",
-  canCopy: false
+  canCopy: false,
+  editMode: "none",
+  editState: null
 });
+
+const emit = defineEmits<{
+  selectionChange: [rows: Array<Record<string, any>>]
+}>();
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -81,13 +106,44 @@ const columnDefs = computed<ColDef[]>(() => {
     resizable: true,
     sortable: true,
     filter: true,
+    editable: (params) => {
+      return Boolean(
+        props.dataset
+        && props.editState
+        && params.data
+        && canEditChenDataViewCell(props.dataset, props.editState, props.editMode, params.data, field)
+      );
+    },
+    valueParser: (params) => normalizeChenDataViewValue(params.newValue, field),
+    cellClassRules: {
+      "chen-range-cell": isSelectedCell,
+      "chen-dirty-cell": (params) => Boolean(
+        props.dataset
+        && props.editState
+        && params.data
+        && isChenDirtyCell(props.editState, props.dataset, params.data, field)
+      ),
+      "chen-insert-row": (params) => isChenInsertRow(params.data),
+      "chen-delete-row": (params) => Boolean(
+        props.dataset
+        && props.editState
+        && params.data
+        && isChenDeletedRow(props.editState, props.dataset, params.data)
+      )
+    },
     valueFormatter: (params: ValueFormatterParams) => {
       return params.value == null ? "NULL" : String(params.value);
     }
   }));
 });
 
-const rowData = computed(() => props.dataset?.data || []);
+const rowData = computed(() => {
+  const dirtyVersion = props.editState?.dirtyVersion;
+  void dirtyVersion;
+  if (!props.dataset) return [];
+  if (props.editMode === "none" || !props.editState) return props.dataset.data;
+  return chenDataViewRows(props.dataset, props.editState);
+});
 
 const defaultColDef: ColDef = {
   flex: 1,
@@ -107,31 +163,36 @@ function eventCell(event: CellMouseDownEvent | CellMouseOverEvent | CellContextM
 }
 
 function handleCellMouseDown(event: CellMouseDownEvent) {
-  if (!canUseChenCopy(props.canCopy)) return;
+  if (!canUseChenCopy(props.canCopy) && props.editMode !== "full") return;
   const mouseEvent = event.event as MouseEvent | undefined;
   if (mouseEvent && mouseEvent.button !== 0) return;
   const cell = eventCell(event);
   if (!cell) return;
+  currentRow.value = event.data || null;
   selection.value = startChenGridSelection(cell);
   refreshSelectionCells();
+  emit("selectionChange", event.data ? [event.data] : []);
 }
 
 function handleCellMouseOver(event: CellMouseOverEvent) {
-  if (!canUseChenCopy(props.canCopy) || !selection.value.dragging) return;
+  if ((!canUseChenCopy(props.canCopy) && props.editMode !== "full") || !selection.value.dragging) return;
   const cell = eventCell(event);
   if (!cell) return;
   selection.value = extendChenGridSelection(selection.value, cell);
   refreshSelectionCells();
+  emit("selectionChange", selectedRows());
 }
 
 function finishSelection() {
   if (!selection.value.dragging) return;
   selection.value = finishChenGridSelection(selection.value);
+  emit("selectionChange", selectedRows());
 }
 
 function resetSelection() {
   selection.value = emptyChenGridSelection();
   refreshSelectionCells();
+  emit("selectionChange", []);
 }
 
 function selectedData() {
@@ -221,14 +282,28 @@ function captureContextMenu(event: MouseEvent) {
 }
 
 function handleCellContextMenu(event: CellContextMenuEvent) {
-  if (!canUseChenCopy(props.canCopy) || !event.data) return;
+  if (!event.data) return;
   const cell = eventCell(event);
-  if (cell && !isChenGridCellSelected(selection.value, displayedColIds(), cell)) {
+  if ((canUseChenCopy(props.canCopy) || props.editMode === "full") && cell && !isChenGridCellSelected(selection.value, displayedColIds(), cell)) {
     selection.value = finishChenGridSelection(startChenGridSelection(cell));
     refreshSelectionCells();
   }
   currentRow.value = event.data;
-  contextMenuOpen.value = true;
+  emit("selectionChange", selectedRows());
+  if (canUseChenCopy(props.canCopy)) contextMenuOpen.value = true;
+}
+
+function handleCellClicked(event: CellClickedEvent) {
+  currentRow.value = event.data || null;
+  emit("selectionChange", selectedRows());
+}
+
+function handleCellValueChanged(event: CellValueChangedEvent) {
+  if (!props.dataset || !props.editState || !event.data) return;
+  const fieldName = typeof event.colDef.field === "string" ? event.colDef.field : event.column.getColId();
+  const field = props.dataset.fields.find((item) => item.name === fieldName);
+  if (!field || !canEditChenDataViewCell(props.dataset, props.editState, props.editMode, event.data, field)) return;
+  applyChenDataViewCellChange(props.editState, props.dataset, event.data, field, event.oldValue, event.newValue);
 }
 
 function handleKeyDown(event: KeyboardEvent) {
@@ -265,6 +340,16 @@ function handleGridReady(event: GridReadyEvent) {
   syncGridData();
   queueGridRefresh();
 }
+
+function selectedRows() {
+  return selectedData()?.rows || (currentRow.value ? [currentRow.value] : []);
+}
+
+function stopEditing() {
+  gridApi.value?.stopEditing();
+}
+
+defineExpose({ selectedRows, stopEditing });
 
 watch([columnDefs, rowData], async () => {
   resetSelection();
@@ -307,9 +392,11 @@ onBeforeUnmount(() => {
       :ensure-dom-order="true"
       :row-selection="{ mode: 'multiRow', checkboxes: false, headerCheckbox: false }"
       @grid-ready="handleGridReady"
+      @cell-clicked="handleCellClicked"
       @cell-mouse-down="handleCellMouseDown"
       @cell-mouse-over="handleCellMouseOver"
       @cell-context-menu="handleCellContextMenu"
+      @cell-value-changed="handleCellValueChanged"
     />
 
     <UDropdownMenu
@@ -448,6 +535,19 @@ onBeforeUnmount(() => {
 .chen-grid :deep(.chen-range-cell) {
   background: color-mix(in srgb, var(--theme-accent) 18%, transparent) !important;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 42%, transparent);
+}
+
+.chen-grid :deep(.chen-dirty-cell) {
+  background: color-mix(in srgb, var(--theme-accent) 16%, var(--data-grid-row-background)) !important;
+}
+
+.chen-grid :deep(.chen-insert-row) {
+  background: color-mix(in srgb, var(--ui-success) 12%, var(--data-grid-row-background)) !important;
+}
+
+.chen-grid :deep(.chen-delete-row) {
+  color: var(--app-text-muted) !important;
+  text-decoration: line-through;
 }
 
 .chen-grid :deep(.ag-cell-value),
