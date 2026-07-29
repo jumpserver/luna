@@ -15,6 +15,7 @@ const {
   tabs,
   activateAdjacentSession,
   canSplitWorkspace,
+  draggedTabId,
   reorderTabs,
   renameTabTitle,
   closeAllSessions,
@@ -34,7 +35,6 @@ const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextMenuTab = ref<WorkspaceSessionTab | null>(null);
 const contextMenuTabIndex = ref(-1);
-const draggedTabId = ref("");
 const dragOverTabId = ref("");
 const dragOverTabPlacement = ref<"before" | "after">("before");
 const renameModalOpen = ref(false);

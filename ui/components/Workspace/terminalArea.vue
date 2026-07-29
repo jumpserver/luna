@@ -7,6 +7,7 @@ const { loggedIn } = storeToRefs(userInfoStore);
 const { isMacOS } = usePlatform();
 const { t } = useI18n();
 const tabSwitchModifier = computed(() => isMacOS.value ? "Option" : "Alt");
+const panes = computed(() => tabs.value.flatMap((tab) => tab.panes));
 
 const openLogin = () => {
   useEventBus().emit("login");
@@ -44,6 +45,7 @@ const openLogin = () => {
         <template v-for="tab in tabs" :key="tab.id">
           <WorkspaceSessionPane v-show="activeTabId === tab.id" :tab="tab" class="h-full min-h-0" />
         </template>
+        <WorkspacePaneSurfaceHost v-for="pane in panes" :key="pane.id" :pane="pane" />
       </template>
 
       <div v-else class="h-full min-h-0 grid place-items-center text-sm" :style="{ color: 'var(--app-muted)' }">

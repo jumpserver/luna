@@ -18,6 +18,10 @@ If we continue embedding protocol libraries directly into the client for SSH, My
 
 This document defines a unification plan: protocol handling converges into `koko`, while desktop and web converge into one shared Vue workspace.
 
+> Current implementation note: iframe-based session surfaces have been removed
+> from the shared workspace. Later references to embedding describe historical
+> migration options, not requirements for pane layout or session lifecycle.
+
 ## Goals
 
 - stop expanding desktop-native protocol implementations beyond narrow platform-specific needs
@@ -210,30 +214,28 @@ This shared workspace should replace:
 - the new duplicated workspace logic in `clients`
 - the Angular workspace shell in `luna`
 
-### 4. iframe/webview reuse is acceptable as a transition step
+### 4. Workspace session surfaces do not rely on iframe
 
-Embedding `koko/connect` inside desktop or web is acceptable in the short term.
+The shared workspace session path uses native Vue connector surfaces. Split-pane
+drag and drop, layout changes, and session lifecycle preservation assume that
+surfaces live in the same Vue document.
 
-This is not the final ideal state, but it is the fastest safe path to:
-
-- support more protocols immediately
-- stop writing new built-in protocol bridges
-- align desktop behavior with web behavior
+Iframe-specific drag overlays, hit testing, and lifecycle workarounds are outside
+the workspace design. If external web content is introduced again, its connector
+adapter must own that boundary without adding iframe branches to shared pane
+layout code.
 
 ## Performance Position
 
-Embedding a `koko` terminal page inside a WebView or iframe is expected to be acceptable for near-term use.
-
-The dominant latency is usually:
+Native Vue connector surfaces avoid an extra document boundary. Their dominant
+latency is usually:
 
 - user input event handling
 - websocket round-trip
 - remote target response
 - terminal rendering
 
-The extra frame boundary is usually not the main bottleneck.
-
-The bigger practical issues are:
+The practical workspace integration issues are:
 
 - focus handoff
 - keyboard shortcut routing
@@ -243,7 +245,8 @@ The bigger practical issues are:
 - tab title/status synchronization
 - session close and reconnect signaling
 
-These should be treated as integration problems, not blockers to the architecture.
+Pane moves and layout changes must preserve the mounted connector instance so
+they do not close sockets, clear terminal state, or reconnect a session.
 
 ## Authentication And Session Bootstrap
 

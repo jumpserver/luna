@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import type { WorkspacePane, WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
+import type {
+  WorkspacePane,
+  WorkspacePaneDropPlacement,
+  WorkspaceSessionTab
+} from "~/composables/useWorkspaceTabs";
 import type { AssetItem } from "~/types";
 
-import { resolveSessionSurface } from "~/shared/connectors/registry";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
@@ -12,23 +15,32 @@ const colorMode = useColorMode();
 const toast = useToast();
 const userInfoStore = useUserInfoStore();
 const { currentUser } = storeToRefs(userInfoStore);
-const surfaceRefs = ref<Record<string, { focus?: () => void } | null>>({});
+const paneTargetRefs = new Map<string, HTMLElement>();
 const {
   activePaneId,
   activeTabId,
   canMergeTabs,
   closePane,
+  draggedTabId: draggedWorkspaceTabId,
+  getTabById,
+  placePane,
   setActivePane,
-  swapPanes,
   toSurfaceTab
 } = useWorkspaceTabs();
+const {
+  focusPaneSurface,
+  registerPaneTarget,
+  unregisterPaneTarget
+} = useWorkspacePaneSurfaceRegistry();
 const { connectCurrentPane, connectOtherPane, mergeWorkspaceTabIntoCurrent, reconnectSession } = useWorkspaceTabMenu();
 const draggedPaneId = ref("");
 const dragOverPaneId = ref("");
+const dragOverPanePlacement = ref<WorkspacePaneDropPlacement>("center");
 const dragOverWorkspace = ref(false);
 const connectOtherModalOpen = ref(false);
 const connectOtherSearch = ref("");
 const connectOtherPaneId = ref("");
+const PANE_EDGE_DROP_THRESHOLD = 0.3;
 
 const paneGridClass = computed(() => {
   switch (props.tab.layoutMode) {
@@ -52,35 +64,38 @@ const setupPane = computed(() => {
 const showPaneHeaders = computed(() => props.tab.panes.length > 1);
 const inactivePaneOverlayClass = computed(() => (colorMode.value === "dark" ? "bg-white/4" : "bg-black/3"));
 const currentOrgLabel = computed(() => currentUser.value?.org?.name || "");
+const isDraggingExternalTab = computed(() =>
+  Boolean(draggedWorkspaceTabId.value && draggedWorkspaceTabId.value !== props.tab.id)
+);
+const workspaceTabDropError = computed<"" | "source-split" | "limit">(() => {
+  if (!isDraggingExternalTab.value) return "";
 
-function setSurfaceRef(paneId: string, el: { focus?: () => void } | null) {
-  surfaceRefs.value[paneId] = el;
-}
+  const sourceTab = getTabById(draggedWorkspaceTabId.value);
+  if (!sourceTab || sourceTab.panes.length !== 1) return "source-split";
+  return props.tab.panes.length >= 4 ? "limit" : "";
+});
 
-function setSurfaceComponentRef(paneId: string, el: unknown) {
-  setSurfaceRef(paneId, el as { focus?: () => void } | null);
+function setPaneSurfaceTarget(paneId: string, element: unknown) {
+  const previousTarget = paneTargetRefs.get(paneId);
+  const target = element as HTMLElement | null;
+  if (target) {
+    paneTargetRefs.set(paneId, target);
+    registerPaneTarget(paneId, target);
+    return;
+  }
+
+  if (!previousTarget) return;
+  unregisterPaneTarget(paneId, previousTarget);
+  paneTargetRefs.delete(paneId);
 }
 
 function focusPane(paneId: string) {
   setActivePane(paneId);
-  surfaceRefs.value[paneId]?.focus?.();
+  focusPaneSurface(paneId);
 }
 
 function surfaceTabFor(pane: WorkspacePane) {
   return toSurfaceTab(pane);
-}
-
-function surfaceComponentFor(pane: WorkspacePane) {
-  return resolveSessionSurface(surfaceTabFor(pane));
-}
-
-function surfaceInstanceKey(pane: WorkspacePane) {
-  const payload = pane.payload || {};
-  const tokenId = String(payload.id || payload.token?.id || "");
-  const webUrl = String(payload.webUrl || "");
-  const connectMethod = String(payload.connectMethod?.value || "");
-
-  return [pane.id, tokenId, webUrl, connectMethod].join(":");
 }
 
 function paneTitle(pane: WorkspacePane) {
@@ -120,8 +135,50 @@ function showReconnect(pane: WorkspacePane) {
   return pane.mode === "session" && Boolean(pane.payload?.id || pane.payload?.token?.id);
 }
 
-function showPaneSwapHint(paneId: string) {
-  return Boolean(draggedPaneId.value && draggedPaneId.value !== paneId && dragOverPaneId.value === paneId);
+function showPaneDropHint(paneId: string) {
+  const paneCanMoveHere = draggedPaneId.value && draggedPaneId.value !== paneId;
+  return Boolean(dragOverPaneId.value === paneId && (paneCanMoveHere || isDraggingExternalTab.value));
+}
+
+function paneDropHint() {
+  if (workspaceTabDropError.value === "source-split") {
+    return t("WorkspacePane.MergeSourceSplitDescription");
+  }
+  if (workspaceTabDropError.value === "limit") {
+    return t("WorkspacePane.MergeLimitDescription");
+  }
+
+  switch (dragOverPanePlacement.value) {
+    case "left":
+      return t("WorkspacePane.PlaceLeftHint");
+    case "right":
+      return t("WorkspacePane.PlaceRightHint");
+    case "top":
+      return t("WorkspacePane.PlaceTopHint");
+    case "bottom":
+      return t("WorkspacePane.PlaceBottomHint");
+    default:
+      return isDraggingExternalTab.value
+        ? t("WorkspacePane.MergeDropHint")
+        : t("WorkspacePane.SwapPositionHint");
+  }
+}
+
+function paneDropOverlayClass() {
+  if (workspaceTabDropError.value) return "inset-3";
+
+  switch (dragOverPanePlacement.value) {
+    case "left":
+      return "inset-y-3 left-3 w-[calc(50%_-_0.875rem)]";
+    case "right":
+      return "inset-y-3 right-3 w-[calc(50%_-_0.875rem)]";
+    case "top":
+      return "inset-x-3 top-3 h-[calc(50%_-_0.875rem)]";
+    case "bottom":
+      return "inset-x-3 bottom-3 h-[calc(50%_-_0.875rem)]";
+    default:
+      return "inset-3";
+  }
 }
 
 function isActivePane(paneId: string) {
@@ -149,36 +206,75 @@ function handlePaneDragStart(event: DragEvent, paneId: string) {
   if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
 }
 
-function handlePaneDragEnd() {
-  draggedPaneId.value = "";
+function resetDropTarget() {
   dragOverPaneId.value = "";
+  dragOverPanePlacement.value = "center";
 }
 
-function handlePaneDrop(targetPaneId: string) {
-  if (!draggedPaneId.value || draggedPaneId.value === targetPaneId) {
-    dragOverPaneId.value = "";
+function resetWorkspaceTabDrag() {
+  draggedWorkspaceTabId.value = "";
+  dragOverWorkspace.value = false;
+  resetDropTarget();
+}
+
+function handlePaneDragEnd() {
+  draggedPaneId.value = "";
+  resetDropTarget();
+}
+
+function resolvePaneDropPlacement(event: DragEvent): WorkspacePaneDropPlacement {
+  if (draggedPaneId.value && props.tab.panes.length !== 2) return "center";
+
+  const target = event.currentTarget as HTMLElement | null;
+  if (!target) return "center";
+
+  const rect = target.getBoundingClientRect();
+  const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+  const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+  const edges: Array<{ placement: WorkspacePaneDropPlacement, distance: number }> = [
+    { placement: "left", distance: x },
+    { placement: "right", distance: 1 - x },
+    { placement: "top", distance: y },
+    { placement: "bottom", distance: 1 - y }
+  ];
+  const nearestEdge = edges.reduce((nearest, edge) => edge.distance < nearest.distance ? edge : nearest);
+
+  return nearestEdge.distance <= PANE_EDGE_DROP_THRESHOLD ? nearestEdge.placement : "center";
+}
+
+function handlePaneDragOver(event: DragEvent, targetPaneId: string) {
+  const movingPane = draggedPaneId.value && draggedPaneId.value !== targetPaneId;
+  if (!movingPane && !isDraggingExternalTab.value) {
+    resetDropTarget();
     return;
   }
 
-  swapPanes(props.tab.id, draggedPaneId.value, targetPaneId);
-  dragOverPaneId.value = "";
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  if (isDraggingExternalTab.value) dragOverWorkspace.value = true;
+  dragOverPaneId.value = targetPaneId;
+  dragOverPanePlacement.value = resolvePaneDropPlacement(event);
 }
 
-function handleWorkspaceDragOver(event: DragEvent) {
-  const paneId = event.dataTransfer?.getData("application/x-workspace-pane");
-  const tabId = event.dataTransfer?.getData("application/x-workspace-tab");
-  dragOverWorkspace.value = Boolean(tabId && !paneId && tabId !== props.tab.id);
+function handlePaneDragLeave(event: DragEvent, targetPaneId: string) {
+  const target = event.currentTarget as HTMLElement | null;
+  const relatedTarget = event.relatedTarget as Node | null;
+  if (target && relatedTarget && target.contains(relatedTarget)) return;
+  if (dragOverPaneId.value !== targetPaneId) return;
+
+  resetDropTarget();
 }
 
-function handleWorkspaceDragLeave() {
-  dragOverWorkspace.value = false;
-}
-
-function handleWorkspaceDrop(event: DragEvent) {
-  const paneId = event.dataTransfer?.getData("application/x-workspace-pane");
-  const sourceTabId = event.dataTransfer?.getData("application/x-workspace-tab");
-  dragOverWorkspace.value = false;
-  if (paneId || !sourceTabId || sourceTabId === props.tab.id) return;
+function mergeWorkspaceTab(sourceTabId: string, targetPaneId: string, placement: WorkspacePaneDropPlacement) {
+  const sourceTab = getTabById(sourceTabId);
+  if (!sourceTab || sourceTab.panes.length !== 1) {
+    toast.add({
+      title: t("WorkspacePane.MergeSourceSplitTitle"),
+      description: t("WorkspacePane.MergeSourceSplitDescription"),
+      color: "warning",
+      icon: "i-lucide-circle-alert"
+    });
+    return;
+  }
 
   if (!canMergeTabs(sourceTabId, props.tab.id)) {
     toast.add({
@@ -190,7 +286,41 @@ function handleWorkspaceDrop(event: DragEvent) {
     return;
   }
 
-  void mergeWorkspaceTabIntoCurrent(sourceTabId, props.tab.id);
+  void mergeWorkspaceTabIntoCurrent(sourceTabId, props.tab.id, targetPaneId, placement);
+}
+
+function handlePaneDrop(event: DragEvent, targetPaneId: string) {
+  const placement = resolvePaneDropPlacement(event);
+  if (draggedPaneId.value && draggedPaneId.value !== targetPaneId) {
+    placePane(props.tab.id, draggedPaneId.value, targetPaneId, placement);
+    resetDropTarget();
+    return;
+  }
+
+  const sourceTabId = draggedWorkspaceTabId.value;
+  resetWorkspaceTabDrag();
+  if (sourceTabId) mergeWorkspaceTab(sourceTabId, targetPaneId, placement);
+}
+
+function handleWorkspaceDragOver(event: DragEvent) {
+  const paneId = event.dataTransfer?.getData("application/x-workspace-pane");
+  const tabId = event.dataTransfer?.getData("application/x-workspace-tab");
+  if (paneId || !tabId || tabId === props.tab.id) return;
+
+  draggedWorkspaceTabId.value = tabId;
+  dragOverWorkspace.value = true;
+}
+
+function handleWorkspaceDrop(event: DragEvent) {
+  const paneId = event.dataTransfer?.getData("application/x-workspace-pane");
+  const sourceTabId = event.dataTransfer?.getData("application/x-workspace-tab");
+  const targetPaneId = props.tab.panes.some((pane) => pane.id === activePaneId.value)
+    ? activePaneId.value
+    : props.tab.panes[0]?.id || "";
+  resetWorkspaceTabDrag();
+  if (paneId || !sourceTabId || sourceTabId === props.tab.id) return;
+
+  mergeWorkspaceTab(sourceTabId, targetPaneId, "center");
 }
 
 watch(
@@ -206,26 +336,31 @@ watch(connectOtherModalOpen, (open) => {
   connectOtherSearch.value = "";
   connectOtherPaneId.value = "";
 });
+
+onMounted(() => {
+  window.addEventListener("dragend", resetWorkspaceTabDrag);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("dragend", resetWorkspaceTabDrag);
+  for (const [paneId, target] of paneTargetRefs) {
+    unregisterPaneTarget(paneId, target);
+  }
+  paneTargetRefs.clear();
+});
 </script>
 
 <template>
   <div class="h-full min-h-0 w-full overflow-hidden">
     <div class="relative h-full min-h-0">
       <div
-        v-if="dragOverWorkspace"
-        class="pointer-events-none absolute inset-3 z-20 flex items-center justify-center rounded-2xl border border-dashed border-primary/50 bg-primary/8 backdrop-blur-[2px]"
-      >
-        <div class="flex items-center gap-2 rounded-full bg-[var(--workspace-surface-sub-header)] px-4 py-2 text-sm font-medium text-[var(--app-fg)] shadow-sm">
-          <UIcon name="i-lucide-panels-top-left" class="size-4" />
-          <span>{{ t("WorkspacePane.MergeDropHint") }}</span>
-        </div>
-      </div>
-
-      <div
         class="grid h-full min-h-0 gap-px bg-[var(--workspace-surface-sub-border)]"
-        :class="[paneGridClass, dragOverWorkspace ? 'ring-2 ring-inset ring-primary/40' : '']"
+        :class="[
+          paneGridClass,
+          isDraggingExternalTab ? 'relative z-20' : '',
+          dragOverWorkspace ? 'ring-2 ring-inset ring-primary/40' : ''
+        ]"
         @dragover.prevent="handleWorkspaceDragOver"
-        @dragleave.prevent="handleWorkspaceDragLeave"
         @drop.prevent="handleWorkspaceDrop"
       >
         <section
@@ -236,7 +371,7 @@ watch(connectOtherModalOpen, (open) => {
             isActivePane(pane.id)
               ? 'z-[1] ring-1 ring-inset ring-primary/28 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ui-color-primary-500)_10%,transparent)]'
               : 'ring-1 ring-inset ring-transparent',
-            showPaneSwapHint(pane.id) ? 'ring-2 ring-inset ring-primary/50 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]' : ''
+            showPaneDropHint(pane.id) ? 'ring-2 ring-inset ring-primary/50 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]' : ''
           ]"
         >
           <header
@@ -245,10 +380,6 @@ watch(connectOtherModalOpen, (open) => {
             class="relative z-[2] flex h-8 shrink-0 items-center justify-between gap-3 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-header)] px-2.5 transition-colors"
             @dragstart="handlePaneDragStart($event, pane.id)"
             @dragend="handlePaneDragEnd"
-            @dragenter.prevent="dragOverPaneId = pane.id"
-            @dragover.prevent="dragOverPaneId = pane.id"
-            @dragleave.prevent="dragOverPaneId = dragOverPaneId === pane.id ? '' : dragOverPaneId"
-            @drop.prevent="handlePaneDrop(pane.id)"
           >
             <div class="flex min-w-0 items-center gap-2">
               <div class="truncate text-[13px] font-medium text-[var(--app-fg)]">
@@ -291,14 +422,6 @@ watch(connectOtherModalOpen, (open) => {
 
           <div class="relative z-[1] min-h-0 flex-1" @mousedown="focusPane(pane.id)">
             <div
-              v-if="showPaneSwapHint(pane.id)"
-              class="pointer-events-none absolute inset-3 z-10 flex items-center justify-center rounded-xl border border-dashed border-primary/50 bg-primary/6 backdrop-blur-[1px]"
-            >
-              <div class="rounded-full bg-[var(--workspace-surface-sub-header)] px-3 py-1 text-xs font-medium text-[var(--app-fg)] shadow-sm">
-                {{ t("WorkspacePane.SwapPositionHint") }}
-              </div>
-            </div>
-            <div
               v-if="pane.mode === 'empty'"
               class="grid h-full place-items-center p-6 text-center"
             >
@@ -340,20 +463,33 @@ watch(connectOtherModalOpen, (open) => {
               class="h-full bg-[var(--workspace-surface-background)]"
             />
 
-            <component
-              :is="surfaceComponentFor(pane)"
+            <div
               v-else
-              :key="surfaceInstanceKey(pane)"
-              :ref="(el: unknown) => setSurfaceComponentRef(pane.id, el)"
-              :tab="surfaceTabFor(pane)"
+              :ref="(el: unknown) => setPaneSurfaceTarget(pane.id, el)"
               class="h-full"
-              @reconnect="void reconnectSession(surfaceTabFor(pane))"
             />
           </div>
           <div
             class="pointer-events-none absolute inset-0 z-[3] transition-colors"
             :class="isActivePane(pane.id) ? 'bg-transparent' : inactivePaneOverlayClass"
           />
+          <div
+            v-if="(draggedPaneId && draggedPaneId !== pane.id) || isDraggingExternalTab"
+            class="absolute inset-0 z-[4]"
+            @dragover.prevent="handlePaneDragOver($event, pane.id)"
+            @dragleave="handlePaneDragLeave($event, pane.id)"
+            @drop.stop.prevent="handlePaneDrop($event, pane.id)"
+          >
+            <div
+              v-if="showPaneDropHint(pane.id)"
+              class="pointer-events-none absolute flex items-center justify-center rounded-xl border border-dashed border-primary/50 bg-primary/10 backdrop-blur-[1px] transition-[inset,width,height]"
+              :class="paneDropOverlayClass()"
+            >
+              <div class="rounded-full bg-[var(--workspace-surface-sub-header)] px-3 py-1 text-xs font-medium text-[var(--app-fg)] shadow-sm">
+                {{ paneDropHint() }}
+              </div>
+            </div>
+          </div>
         </section>
       </div>
 

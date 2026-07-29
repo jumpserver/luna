@@ -39,6 +39,7 @@ export function useWorkspaceTabMenu() {
     openSession,
     openSetupSession,
     setActiveSession,
+    canMergeTabs,
     mergeTabIntoWorkspace,
     splitWorkspace,
     canSplitWorkspace,
@@ -145,35 +146,16 @@ export function useWorkspaceTabMenu() {
     useEventBus().emit("workspaceConnectAsset", asset);
   };
 
-  const refreshPanePayload = async (tab: WorkspacePane) => {
-    const token = await exchangeToken(tab);
-    updateSessionPayload({
-      tabId: tab.id,
-      assetId: tab.assetId,
-      protocol: tab.protocol,
-      account: tab.account
-    }, buildPayload(tab, token));
-  };
-
-  const mergeWorkspaceTabIntoCurrent = async (sourceTabId: string, targetTabId: string) => {
+  const mergeWorkspaceTabIntoCurrent = (
+    sourceTabId: string,
+    targetTabId: string,
+    targetPaneId: string,
+    placement: WorkspacePaneDropPlacement
+  ) => {
     const sourceTab = getTabById(sourceTabId);
-    if (!sourceTab) return false;
+    if (!sourceTab || !canMergeTabs(sourceTabId, targetTabId)) return false;
 
-    const refreshablePanes = sourceTab.panes.filter((pane) => pane.mode === "session" && getTokenId(pane));
-
-    try {
-      for (const pane of refreshablePanes) {
-        await refreshPanePayload(pane);
-      }
-    } catch (error) {
-      addErrorToast({
-        title: t("WorkspacePane.RefreshTokenFailed"),
-        description: String(error)
-      });
-      return false;
-    }
-
-    return mergeTabIntoWorkspace(sourceTabId, targetTabId);
+    return mergeTabIntoWorkspace(sourceTabId, targetTabId, targetPaneId, placement);
   };
 
   return {

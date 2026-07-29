@@ -5,6 +5,7 @@ import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionD
 
 export type WorkspaceSessionStatus = "selecting" | "connecting" | "ready" | "connected" | "failed";
 export type WorkspaceSplitDirection = "horizontal" | "vertical";
+export type WorkspacePaneDropPlacement = "center" | "left" | "right" | "top" | "bottom";
 export type WorkspacePaneMode = "empty" | "setup" | "session";
 export type WorkspacePaneLayoutMode = "single" | "columns-2" | "rows-2" | "grid-2x2";
 
@@ -38,6 +39,7 @@ export interface WorkspaceSessionTab extends WorkspaceSurfaceSession {
 const tabs = ref<WorkspaceSessionTab[]>([]);
 const activeTabId = ref("");
 const activePaneId = ref("");
+const draggedTabId = ref("");
 const pendingPaneTarget = ref<{ tabId: string, paneId: string } | null>(null);
 let tabSequence = 0;
 let paneSequence = 0;
@@ -120,6 +122,72 @@ const setLayoutForPaneCount = (
   }
 
   tab.layoutMode = "grid-2x2";
+};
+
+const orderPanesForMerge = (
+  panes: WorkspacePane[],
+  sourcePane: WorkspacePane,
+  targetPaneId: string,
+  placement: WorkspacePaneDropPlacement
+) => {
+  if (placement === "center") return [...panes, sourcePane];
+
+  const targetIndex = panes.findIndex((pane) => pane.id === targetPaneId);
+  if (targetIndex === -1) return [...panes, sourcePane];
+
+  const targetPane = panes[targetIndex]!;
+  const otherPanes = panes.filter((pane) => pane !== targetPane);
+  if (panes.length === 1) {
+    return placement === "left" || placement === "top"
+      ? [sourcePane, targetPane]
+      : [targetPane, sourcePane];
+  }
+
+  if (panes.length === 2) {
+    switch (placement) {
+      case "left":
+        return [sourcePane, targetPane, ...otherPanes];
+      case "right":
+        return [targetPane, sourcePane, ...otherPanes];
+      case "top":
+        return [sourcePane, ...otherPanes, targetPane];
+      case "bottom":
+        return [targetPane, ...otherPanes, sourcePane];
+    }
+  }
+
+  const orderedPanes: Array<WorkspacePane | undefined> = Array.from({ length: 4 });
+  const targetColumn = targetIndex % 2;
+  const targetRow = targetIndex < 2 ? 0 : 1;
+  let targetPosition = 0;
+  let sourcePosition = 0;
+  switch (placement) {
+    case "left":
+      targetPosition = targetRow * 2 + 1;
+      sourcePosition = targetPosition - 1;
+      break;
+    case "right":
+      targetPosition = targetRow * 2;
+      sourcePosition = targetPosition + 1;
+      break;
+    case "top":
+      targetPosition = targetColumn + 2;
+      sourcePosition = targetPosition - 2;
+      break;
+    case "bottom":
+      targetPosition = targetColumn;
+      sourcePosition = targetPosition + 2;
+      break;
+  }
+
+  orderedPanes[targetPosition] = targetPane;
+  orderedPanes[sourcePosition] = sourcePane;
+  for (const pane of otherPanes) {
+    const emptyIndex = orderedPanes.findIndex((item) => !item);
+    orderedPanes[emptyIndex] = pane;
+  }
+
+  return orderedPanes.filter((pane): pane is WorkspacePane => Boolean(pane));
 };
 
 const createTabFromPane = (pane: WorkspacePane): WorkspaceSessionTab => {
@@ -461,16 +529,43 @@ export const useWorkspaceTabs = () => {
     return true;
   };
 
+  const placePane = (
+    tabId: string,
+    sourcePaneId: string,
+    targetPaneId: string,
+    placement: WorkspacePaneDropPlacement
+  ) => {
+    const tab = tabs.value.find((item) => item.id === tabId);
+    if (!tab || tab.panes.length !== 2 || placement === "center") {
+      return swapPanes(tabId, sourcePaneId, targetPaneId);
+    }
+
+    const sourcePane = tab.panes.find((pane) => pane.id === sourcePaneId);
+    const targetPane = tab.panes.find((pane) => pane.id === targetPaneId);
+    if (!sourcePane || !targetPane || sourcePane === targetPane) return false;
+
+    const sourceFirst = placement === "left" || placement === "top";
+    tab.panes.splice(0, 2, ...(sourceFirst ? [sourcePane, targetPane] : [targetPane, sourcePane]));
+    tab.layoutMode = placement === "left" || placement === "right" ? "columns-2" : "rows-2";
+    syncTabFromPrimaryPane(tab);
+    return true;
+  };
+
   const canMergeTabs = (sourceTabId: string, targetTabId: string) => {
     if (sourceTabId === targetTabId) return false;
     const source = tabs.value.find((tab) => tab.id === sourceTabId);
     const target = tabs.value.find((tab) => tab.id === targetTabId);
     if (!source || !target) return false;
 
-    return source.panes.length + target.panes.length <= 4;
+    return source.panes.length === 1 && target.panes.length < 4;
   };
 
-  const mergeTabIntoWorkspace = (sourceTabId: string, targetTabId: string) => {
+  const mergeTabIntoWorkspace = (
+    sourceTabId: string,
+    targetTabId: string,
+    targetPaneId = "",
+    placement: WorkspacePaneDropPlacement = "center"
+  ) => {
     if (!canMergeTabs(sourceTabId, targetTabId)) return false;
 
     const sourceIndex = tabs.value.findIndex((tab) => tab.id === sourceTabId);
@@ -480,10 +575,18 @@ export const useWorkspaceTabs = () => {
     const [source] = tabs.value.splice(sourceIndex, 1);
     if (!source) return false;
 
-    target.panes.push(...source.panes);
-    setLayoutForPaneCount(target, target.panes.length, target.panes.length === 2 ? "vertical" : undefined);
+    const sourcePane = source.panes[0]!;
+    const targetPane = target.panes.find((pane) => pane.id === targetPaneId) || target.panes[0]!;
+    const orderedPanes = orderPanesForMerge(target.panes, sourcePane, targetPane.id, placement);
+    target.panes.splice(0, target.panes.length, ...orderedPanes);
+    const preferredDirection = placement === "top" || placement === "bottom" ? "horizontal" : "vertical";
+    setLayoutForPaneCount(target, target.panes.length, preferredDirection);
+    syncTabFromPrimaryPane(target);
+    if (pendingPaneTarget.value?.tabId === source.id) {
+      pendingPaneTarget.value = { tabId: target.id, paneId: pendingPaneTarget.value.paneId };
+    }
     activeTabId.value = target.id;
-    activePaneId.value = source.panes[0]?.id || getFirstPaneId(target);
+    activePaneId.value = sourcePane.id;
     return true;
   };
 
@@ -618,6 +721,7 @@ export const useWorkspaceTabs = () => {
     closePane,
     closeRightSessions,
     closeSession,
+    draggedTabId,
     getTabById,
     isPaneAwaitingAssetSelection,
     markSessionConnected,
@@ -626,6 +730,7 @@ export const useWorkspaceTabs = () => {
     openLocalShell,
     openSession,
     openSetupSession,
+    placePane,
     reorderTabs,
     registerSessionDisposer,
     renameTabTitle,
