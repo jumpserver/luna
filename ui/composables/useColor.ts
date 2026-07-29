@@ -1,5 +1,7 @@
 import { ref } from "vue";
 
+import { contrastingTextColor } from "~/shared/theme/color";
+
 interface HSL {
   h: number
   s: number
@@ -268,6 +270,7 @@ export const useColor = () => {
 
     const hex = toHex(color, fallback);
     root.style.setProperty("--theme-accent", hex);
+    root.style.setProperty("--app-accent-foreground", contrastingTextColor(hex));
     root.style.setProperty("--ui-color-primary-500", hex);
     root.style.setProperty("--el-color-primary", hex);
 

@@ -60,3 +60,19 @@ export function isDarkColor(color: string): boolean {
   const [r, g, b] = rgb;
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 < 0.5;
 }
+
+/** 为任意主色选择对比度更高的浅色或深色前景。 */
+export function contrastingTextColor(color: string, fallback = "#ffffff"): string {
+  const rgb = parseColorToRgb(color);
+  if (!rgb) return fallback;
+
+  const relativeLuminance = (channel: number) => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  };
+  const [r, g, b] = rgb.map(relativeLuminance);
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const contrast = (first: number, second: number) => (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+
+  return contrast(luminance, 0.0056) >= contrast(luminance, 1) ? "#111111" : "#ffffff";
+}

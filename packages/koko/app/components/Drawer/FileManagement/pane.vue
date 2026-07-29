@@ -16,6 +16,8 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const contextRef = computed(() => props.context);
 const manager = useSftpFileManager(contextRef);
 const search = ref("");
@@ -39,6 +41,13 @@ const visibleEntries = computed(() => {
   });
 });
 const pathSegments = computed(() => manager.currentPath.value.split("/").filter(Boolean));
+
+function navigateToPath(segmentIndex: number) {
+  const path = segmentIndex < 0 ? "/" : `/${pathSegments.value.slice(0, segmentIndex + 1).join("/")}`;
+  if (path === manager.currentPath.value) return;
+  void manager.loadCurrentDirectory(path);
+}
+
 const columns: TableColumn<SftpFileEntry>[] = [
   {
     id: "select",
@@ -123,6 +132,24 @@ const hoverTableRow = (_event: Event, row: TableRow<SftpFileEntry> | null) => {
   hoveredEntryName.value = row?.original.name ?? null;
 };
 
+async function refreshCurrentDirectory() {
+  const refreshed = await manager.loadCurrentDirectory();
+  if (refreshed) return;
+  addErrorToast({ title: t("koko.fileManagement.refreshFailed"), error: manager.error.value });
+}
+
+async function runFileOperation(operation: () => Promise<void>, successTitle: string, refresh = false) {
+  try {
+    await operation();
+    toast.add({ title: successTitle, color: "success" });
+    if (refresh) await refreshCurrentDirectory();
+    return true;
+  } catch (error) {
+    addErrorToast({ title: t("koko.fileManagement.operationFailed"), error });
+    return false;
+  }
+}
+
 const createFolder = () => {
   promptTarget.value = null;
   promptName.value = "";
@@ -140,6 +167,13 @@ const remove = (entry: SftpFileEntry) => {
   alertOpen.value = true;
 };
 
+const downloadEntry = (entry: SftpFileEntry) => {
+  void runFileOperation(
+    () => manager.operations.downloadEntry(entry),
+    t("koko.fileManagement.entryDownloaded", { name: entry.name })
+  );
+};
+
 const downloadSelected = () => {
   const entry = selectedEntry.value;
   if (!entry) return;
@@ -148,24 +182,43 @@ const downloadSelected = () => {
     alertOpen.value = true;
     return;
   }
-  void manager.operations.downloadEntry(entry);
+  downloadEntry(entry);
 };
 
-const submitPrompt = () => {
+const submitPrompt = async () => {
   const name = promptName.value.trim();
   const target = promptTarget.value;
   if (!name || (target && name === target.name)) return;
-  if (target) void manager.operations.renameEntry(target, name);
-  else void manager.operations.createDirectory(name);
-  promptOpen.value = false;
+  const success = await runFileOperation(
+    () => target ? manager.operations.renameEntry(target, name) : manager.operations.createDirectory(name),
+    target
+      ? t("koko.fileManagement.entryRenamed", { name })
+      : t("koko.fileManagement.folderCreated", { name }),
+    true
+  );
+  if (success) {
+    selectedEntry.value = null;
+    promptOpen.value = false;
+  }
 };
 
-const confirmAlert = () => {
+const confirmAlert = async () => {
   const target = alertTarget.value;
   if (!target) return;
-  if (target.kind === "delete") void manager.operations.removeEntry(target.entry);
-  else void manager.operations.downloadEntry(target.entry);
-  alertOpen.value = false;
+  const success = target.kind === "delete"
+    ? await runFileOperation(
+        () => manager.operations.removeEntry(target.entry),
+        t("koko.fileManagement.entryDeleted", { name: target.entry.name }),
+        true
+      )
+    : await runFileOperation(
+        () => manager.operations.downloadEntry(target.entry),
+        t("koko.fileManagement.entryDownloaded", { name: target.entry.name })
+      );
+  if (success) {
+    if (target.kind === "delete") selectedEntry.value = null;
+    alertOpen.value = false;
+  }
 };
 
 const uploadFromEvent = async (event: Event) => {
@@ -173,7 +226,25 @@ const uploadFromEvent = async (event: Event) => {
   const files = [...(input.files || [])];
   input.value = "";
   if (!files.length) return;
-  await Promise.allSettled(files.map((file) => manager.operations.uploadFile(file)));
+  const results = await Promise.allSettled(files.map((file) => manager.operations.uploadFile(file)));
+  const success = results.filter((result) => result.status === "fulfilled").length;
+  if (success) {
+    toast.add({
+      title:
+        success === files.length
+          ? t("koko.fileManagement.uploadedFiles", { count: success })
+          : t("koko.fileManagement.uploadedFilesPartial", { success, total: files.length }),
+      color: success === files.length ? "success" : "warning"
+    });
+    await refreshCurrentDirectory();
+  }
+  if (success !== files.length) {
+    const failure = results.find((result) => result.status === "rejected");
+    addErrorToast({
+      title: t("koko.fileManagement.operationFailed"),
+      error: failure && failure.status === "rejected" ? failure.reason : ""
+    });
+  }
 };
 
 defineExpose({ manager, selectedEntry });
@@ -195,7 +266,7 @@ defineExpose({ manager, selectedEntry });
   <div v-else class="flex h-full min-h-0 flex-col bg-(--app-main-bg) text-(--app-fg)">
     <div
       v-if="title"
-      class="border-b border-(--app-border) bg-(--app-header-bg) px-3 py-1.5 text-[11px] font-medium text-(--app-muted)"
+      class="flex h-8 shrink-0 items-center border-b border-(--app-border) bg-(--app-header-bg) px-3 text-[11px] font-medium text-(--app-muted)"
     >
       {{ title }}
     </div>
@@ -230,12 +301,27 @@ defineExpose({ manager, selectedEntry });
       <div
         class="flex h-8 min-w-0 flex-1 items-center overflow-x-auto rounded-[3px] border border-(--app-border) bg-(--app-input-bg) px-1 font-ui-mono text-[12px] text-(--app-fg)"
       >
-        <span class="shrink-0 px-1.5 font-semibold">/</span>
+        <button
+          type="button"
+          class="shrink-0 rounded-[3px] px-1.5 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
+          aria-label="/"
+          :aria-current="pathSegments.length === 0 ? 'page' : undefined"
+          @click="navigateToPath(-1)"
+        >
+          /
+        </button>
         <template v-for="(segment, index) in pathSegments" :key="`${segment}:${index}`">
           <UIcon name="i-lucide-chevron-right" class="size-3 shrink-0 text-(--app-muted)" />
-          <span class="shrink-0 rounded px-1.5" :class="index === pathSegments.length - 1 ? 'font-semibold' : 'text-(--app-muted)'">
+          <button
+            type="button"
+            class="shrink-0 rounded px-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
+            :class="index === pathSegments.length - 1 ? 'font-semibold' : 'text-(--app-muted)'"
+            :aria-label="`/${pathSegments.slice(0, index + 1).join('/')}`"
+            :aria-current="index === pathSegments.length - 1 ? 'page' : undefined"
+            @click="navigateToPath(index)"
+          >
             {{ segment }}
-          </span>
+          </button>
         </template>
       </div>
       <UInput
@@ -243,7 +329,8 @@ defineExpose({ manager, selectedEntry });
         icon="i-lucide-search"
         size="sm"
         :placeholder="t('koko.actions.search')"
-        class="w-32 min-w-24 max-w-[38%] sm:w-47.5"
+        class="w-47.5 shrink-0 max-w-[38%]"
+        :ui="{ base: 'h-8 text-[12px]' }"
       />
     </div>
     <div class="flex h-10.5 shrink-0 items-center justify-between gap-2 border-b border-(--app-border) bg-(--app-panel-bg) px-3">
@@ -306,7 +393,7 @@ defineExpose({ manager, selectedEntry });
             v-if="row.original.name !== '..'"
             type="button"
             class="grid size-3.75 place-items-center rounded-[4px] border border-(--app-border-strong) bg-(--app-input-bg)"
-            :class="selectedEntry?.name === row.original.name ? 'border-primary bg-primary text-white' : 'text-transparent'"
+            :class="selectedEntry?.name === row.original.name ? 'border-primary bg-primary text-(--app-accent-foreground)' : 'text-transparent'"
             :aria-label="row.original.name"
             @click.stop="toggleSelection(row.original)"
           >
@@ -337,7 +424,7 @@ defineExpose({ manager, selectedEntry });
                 size="xs"
                 color="neutral"
                 variant="ghost"
-                @click.stop="manager.operations.downloadEntry(row.original)"
+                @click.stop="downloadEntry(row.original)"
               />
               <UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" @click.stop="rename(row.original)" />
               <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" @click.stop="remove(row.original)" />

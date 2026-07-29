@@ -572,7 +572,7 @@ watch(loggedIn, (value) => {
     <div class="flex flex-col w-full">
       <div
         v-show="!collapse && activeWorkspaceMode === 'assets' && loggedIn"
-        class="flex items-center gap-2 border-b border-[color:var(--sidebar-divider-light)] px-2.5 py-1 dark:border-[color:var(--sidebar-divider-dark)]"
+        class="flex h-9 items-center gap-2 border-b border-[color:var(--sidebar-divider-light)] px-2.5 dark:border-[color:var(--sidebar-divider-dark)]"
       >
         <div class="min-w-0 flex-1">
           <HeaderOrganizationSelector :selectable="shouldShowOrganizationSelector" />

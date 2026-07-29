@@ -66,6 +66,7 @@
   --app-text-secondary: color-mix(in srgb, var(--theme-fg) 72%, var(--theme-bg));
   --app-text-muted: var(--theme-muted);
   --app-text-inverse: var(--theme-bg);
+  --app-accent-foreground: #111111;
   --app-border-subtle: color-mix(in srgb, var(--theme-border) 68%, transparent);
   --app-border-strong: color-mix(in srgb, var(--theme-border) 82%, var(--theme-fg) 18%);
   --app-focus-ring: color-mix(in srgb, var(--theme-accent) 32%, transparent);
