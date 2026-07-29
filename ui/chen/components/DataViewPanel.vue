@@ -9,8 +9,10 @@ import type {
 
 import ChenDataGrid from "~/chen/components/DataGrid.client.vue";
 import DataViewExportDialog from "~/chen/components/DataViewExportDialog.vue";
+import DataViewSavePreviewDialog from "~/chen/components/DataViewSavePreviewDialog.vue";
 import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
 import { useChenDataViewDerivedMeta } from "~/chen/composables/useChenDataViewDerivedMeta";
+import { useChenDataViewEditing } from "~/chen/composables/useChenDataViewEditing";
 
 const props = withDefaults(defineProps<{
   tab: ChenDataViewConsoleTab
@@ -31,6 +33,11 @@ const emit = defineEmits<{
 
 const exportDialogOpen = ref(false);
 const exportTarget = ref<ChenDataViewConsoleTab | null>(null);
+const dataGrid = ref<{ stopEditing: () => void } | null>(null);
+const selectedRows = ref<Array<Record<string, any>>>([]);
+const editing = useChenDataViewEditing(() => props.tab);
+const editState = computed(() => props.tab.editState);
+const previewDialogOpen = computed(() => editState.value.previewResult?.success === true);
 
 const dbTypeRef = computed(() => props.dbType);
 const protocolRef = computed(() => props.protocol);
@@ -53,6 +60,45 @@ function submitExport(options: ChenDataViewExportOptions) {
   if (!exportTarget.value) return;
   emit("dataViewAction", exportTarget.value, "export", options);
   exportTarget.value = null;
+}
+
+function addRow() {
+  if (editing.busy.value) return;
+  editing.addRow();
+  selectedRows.value = [];
+}
+
+function deleteRows() {
+  if (editing.busy.value) return;
+  editing.deleteRows(selectedRows.value);
+  selectedRows.value = [];
+}
+
+function saveChangesPreview() {
+  dataGrid.value?.stopEditing();
+  const payload = editing.buildPayload();
+  if (!payload || !editing.dirty.value || editing.busy.value || editing.refreshRequiredBeforeSave.value) return;
+  editState.value.previewResult = null;
+  emit("dataViewAction", props.tab, "save_changes_preview", payload);
+}
+
+function confirmSaveChanges() {
+  if (editState.value.activeRequest?.kind !== "confirm") return;
+  editState.value.previewResult = null;
+  emit("dataViewAction", props.tab, "save_changes");
+}
+
+function handlePreviewDialogOpen(open: boolean) {
+  if (open) return;
+  if (editState.value.activeRequest?.kind === "confirm") editing.cancelSaveConfirmation();
+  editState.value.previewResult = null;
+}
+
+function cancelChanges() {
+  if (editing.busy.value) return;
+  editing.clear();
+  selectedRows.value = [];
+  emit("dataViewAction", props.tab, "refresh");
 }
 </script>
 
@@ -89,9 +135,37 @@ function submitExport(options: ChenDataViewExportOptions) {
       </div>
 
       <div class="flex items-center gap-1">
+        <template v-if="tab.activePanel === 'data' && editing.editable.value">
+          <UButton v-if="editing.insertable.value" icon="i-lucide-plus" size="xs" color="neutral" variant="soft" :disabled="editing.busy.value" @click="addRow">
+            Add row
+          </UButton>
+          <UButton
+            icon="i-lucide-trash-2"
+            size="xs"
+            color="neutral"
+            variant="soft"
+            :disabled="editing.busy.value || selectedRows.length === 0"
+            @click="deleteRows"
+          >
+            Delete row
+          </UButton>
+          <UButton
+            icon="i-lucide-save"
+            size="xs"
+            :disabled="editing.busy.value || editing.refreshRequiredBeforeSave.value || !editing.dirty.value"
+            :title="editing.refreshRequiredBeforeSave.value ? 'Refresh before saving again' : undefined"
+            @click="saveChangesPreview"
+          >
+            Save
+          </UButton>
+          <UButton icon="i-lucide-rotate-ccw" size="xs" color="neutral" variant="soft" :disabled="editing.busy.value || !editing.dirty.value" @click="cancelChanges">
+            Cancel
+          </UButton>
+        </template>
         <DataViewToolbar
           v-if="tab.activePanel === 'data'"
           :state="tab.state"
+          :busy="editing.busy.value"
           @action="(action, data) => emit('dataViewAction', tab, action, data)"
           @export="openExportDialog"
         />
@@ -100,11 +174,15 @@ function submitExport(options: ChenDataViewExportOptions) {
 
     <div v-if="tab.activePanel === 'data'" class="min-h-0 flex-1 overflow-auto">
       <ChenDataGrid
+        ref="dataGrid"
         :key="`${tab.id}:${tab.data?.fields?.map(field => field.name).join(',') || ''}:${tab.data?.data?.length || 0}`"
         :dataset="tab.data"
         :meta="tab.meta"
         :db-type="dbType"
         :can-copy="canCopy"
+        :edit-mode="editing.busy.value ? 'none' : 'full'"
+        :edit-state="tab.editState"
+        @selection-change="selectedRows = $event"
       />
     </div>
 
@@ -280,6 +358,14 @@ function submitExport(options: ChenDataViewExportOptions) {
       v-if="exportDialogOpen"
       v-model:open="exportDialogOpen"
       @confirm="submitExport"
+    />
+
+    <DataViewSavePreviewDialog
+      v-if="previewDialogOpen"
+      :open="previewDialogOpen"
+      :result="tab.editState.previewResult"
+      @update:open="handlePreviewDialogOpen"
+      @confirm="confirmSaveChanges"
     />
   </div>
 </template>

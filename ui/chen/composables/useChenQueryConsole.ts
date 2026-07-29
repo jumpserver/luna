@@ -6,7 +6,11 @@ import type {
 } from "~/chen/types";
 
 import { newChenWorkspaceId } from "~/chen/composables/useChenWorkspaceTabs";
-import { emptyChenDataViewEditState } from "~/chen/utils/dataViewEditing";
+import {
+  acceptChenDataViewResponse,
+  createChenDataViewEditState,
+  finishChenDataViewRequestWithoutData
+} from "~/chen/utils/dataViewEditing";
 
 const SQL_CHUNK_SIZE = 4096;
 
@@ -45,14 +49,14 @@ export function useChenQueryConsole(
         meta,
         data: data ?? null,
         state: {},
-        editState: emptyChenDataViewEditState()
+        editState: createChenDataViewEditState()
       };
       tab.resultTabs.push(resultTab);
     } else {
       resultTab.meta = { ...resultTab.meta, ...meta };
     }
 
-    if (data !== undefined) {
+    if (data !== undefined && acceptChenDataViewResponse(resultTab.editState)) {
       resultTab.data = data;
     }
     tab.activeResultTabId = resultTab.id;
@@ -107,7 +111,10 @@ export function useChenQueryConsole(
       case "update_state":
         if (packet.data?.title && packet.data.title !== tab.title) {
           const resultTab = tab.resultTabs.find((item) => item.title === packet.data.title);
-          if (resultTab) resultTab.state = packet.data;
+          if (resultTab) {
+            resultTab.state = packet.data;
+            if (packet.data?.loading === false) finishChenDataViewRequestWithoutData(resultTab.editState);
+          }
         } else {
           tab.state = packet.data || {};
         }
