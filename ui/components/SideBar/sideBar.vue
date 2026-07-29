@@ -145,19 +145,78 @@ const hasQuickConnect = (asset: AssetItem) => {
   return hasReusableSavedConnection(asset);
 };
 
-const connectWithSavedConnection = (asset: AssetItem) => {
+const loadAssetConnectionDetails = async (asset: AssetItem) => {
+  const detail = await getAssetDetailRequest(asset.id, currentUser.value?.org?.id || "");
+
+  return {
+    ...asset,
+    permedAccounts: detail.permed_accounts ?? asset.permedAccounts ?? [],
+    permedProtocols: (detail.permed_protocols ?? asset.permedProtocols ?? []).filter(
+      (protocol: { name?: string }) => protocol?.name !== "winrm"
+    )
+  };
+};
+
+const savedConnectionIsAvailable = (asset: AssetItem) => {
   const saved = asset.savedConnection;
-  if (!saved || !hasReusableSavedConnection(asset)) {
-    openSetupSession(asset);
+  if (!saved || !(asset.permedProtocols || []).some((protocol) => protocol.name === saved.protocol)) {
+    return false;
+  }
+
+  const accounts = asset.permedAccounts || [];
+  const mode = saved.accountMode || "hosted";
+
+  if (mode === "manual") return accounts.some((account) => account.alias === "@INPUT");
+  if (mode === "dynamic") return accounts.some((account) => account.alias === "@USER");
+  if (mode === "anonymous") return accounts.some((account) => account.alias === "@ANON");
+
+  return accounts.some(
+    (account) =>
+      !(account.alias || "").startsWith("@")
+      && (
+        (saved.accountId && account.id === saved.accountId)
+        || account.name === saved.username
+        || account.username === saved.username
+        || account.alias === saved.username
+      )
+  );
+};
+
+const connectWithSavedConnection = async (asset: AssetItem) => {
+  const remembered = userInfoStore.getConnectionInfoForAsset(asset.id) || asset.savedConnection;
+  const rememberedAsset = { ...asset, savedConnection: remembered || undefined };
+
+  if (!remembered || !hasReusableSavedConnection(rememberedAsset)) {
+    openSetupSession(rememberedAsset);
     return;
   }
 
-  const session = openSession(asset, {
+  let connectAsset: AssetItem;
+  try {
+    connectAsset = await loadAssetConnectionDetails(rememberedAsset);
+  } catch (error) {
+    addErrorToast({
+      title: t("ConnectError.ConnectFailed"),
+      description: String(error),
+      icon: "line-md:close-circle",
+      progress: true,
+      duration: 4000
+    });
+    return;
+  }
+
+  if (!savedConnectionIsAvailable(connectAsset)) {
+    openSetupSession(connectAsset);
+    return;
+  }
+
+  const saved = connectAsset.savedConnection!;
+  const session = openSession(connectAsset, {
     protocol: saved.protocol,
     account: saved.username
   });
 
-  confirmConnection(asset, {
+  await confirmConnection(connectAsset, {
     protocol: saved.protocol,
     account: saved.username,
     accountId: saved.accountId,
@@ -273,7 +332,7 @@ const handleOpenMultipleAssets = (assets: AssetItem[]) => {
 };
 
 const handleAssetConnect = (asset: AssetItem) => {
-  openSetupSession(asset);
+  connectWithSavedConnection(asset);
 };
 
 const openAssetInCurrentWorkspace = (asset: AssetItem) => {
@@ -515,8 +574,8 @@ watch(loggedIn, (value) => {
         v-show="!collapse && activeWorkspaceMode === 'assets' && loggedIn"
         class="flex items-center gap-2 border-b border-[color:var(--sidebar-divider-light)] px-2.5 py-1 dark:border-[color:var(--sidebar-divider-dark)]"
       >
-        <div v-if="shouldShowOrganizationSelector" class="min-w-0 flex-1">
-          <HeaderOrganizationSelector />
+        <div class="min-w-0 flex-1">
+          <HeaderOrganizationSelector :selectable="shouldShowOrganizationSelector" />
         </div>
 
         <UTooltip v-if="showSidebarSearchButton" :text="t('Operation.Search')" :delay-duration="150">

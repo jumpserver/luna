@@ -1,7 +1,16 @@
 import type { PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
-type LoginPayload = UserIntiInfo & { bearer: string };
+interface BootstrapResponse {
+  data: string
+  status?: number
+}
+type LoginPayload = UserIntiInfo & {
+  bearer: string
+  profile: BootstrapResponse
+  current_org: BootstrapResponse
+  permission_orgs: BootstrapResponse
+};
 interface PersistedUserSnapshot {
   loggedIn?: boolean
   currentSite?: string
@@ -12,6 +21,30 @@ interface PersistedUserSnapshot {
   currentConnectionInfoMap?: Record<string, any>
   currentConnectionPreferenceMap?: Record<string, any>
 }
+
+const BOOTSTRAP_RETRY_DELAYS_MS = [0, 500, 1000, 2000, 3000];
+let bootstrapRetryTimer: ReturnType<typeof setTimeout> | null = null;
+let lastBootstrapFailure: "network" | "server" | null = null;
+
+const wait = (delay: number) => new Promise((resolve) => setTimeout(resolve, delay));
+
+const classifyBootstrapFailure = (
+  payload: LoginPayload | null | undefined
+): "auth" | "network" | "server" | null => {
+  if (!payload || payload.status !== "success") return "auth";
+
+  const profileStatus = Number(payload.profile?.status ?? 0);
+  if (profileStatus >= 400 && profileStatus < 500) return "auth";
+
+  const statuses = [payload.profile, payload.permission_orgs, payload.current_org]
+    .map((response) => Number(response?.status ?? 0));
+
+  if (statuses.includes(0)) return "network";
+  if (statuses.some((status) => status >= 500)) return "server";
+  if (statuses.some((status) => status < 200 || status >= 300)) return "server";
+
+  return null;
+};
 
 const normalizeOrgList = (value: unknown): PermOrgItem[] => {
   if (Array.isArray(value)) {
@@ -272,11 +305,27 @@ export const useAuthSession = () => {
   };
 
   const bootstrapPersistedSession = async () => {
+    if (bootstrapRetryTimer) {
+      clearTimeout(bootstrapRetryTimer);
+      bootstrapRetryTimer = null;
+    }
+
     const restored = restorePersistedSnapshot();
 
     const promptLogin = () => {
       if (!import.meta.client || !isTauriRuntime()) return;
-      useEventBus().emit("login");
+      useEventBus().emit("login", undefined);
+    };
+
+    const notifyBootstrapFailure = (failure: "network" | "server") => {
+      if (lastBootstrapFailure === failure) return;
+      lastBootstrapFailure = failure;
+      toast.add({
+        title: t(failure === "network" ? "Login.NetworkError" : "Login.ServerError"),
+        color: "error",
+        icon: failure === "network" ? "i-lucide-wifi-off" : "i-lucide-server-off",
+        duration: 5000
+      });
     };
 
     if (!isTauriRuntime()) {
@@ -291,14 +340,42 @@ export const useAuthSession = () => {
 
     try {
       console.info("bootstrap auth session start", { site, restored });
-      const payload = await useTauriCoreInvoke<LoginPayload>("bootstrap_auth_session", { site });
-      const applied = await applyLoginPayload(payload, { showToast: false, navigateHome: false });
-      console.info("bootstrap auth session applied", { site, applied });
-      if (!applied) {
+      for (const delay of BOOTSTRAP_RETRY_DELAYS_MS) {
+        if (delay > 0) await wait(delay);
+
+        const payload = await useTauriCoreInvoke<LoginPayload>("bootstrap_auth_session", { site });
+        const failure = classifyBootstrapFailure(payload);
+
+        if (failure === "auth") {
+          lastBootstrapFailure = null;
+          userInfoStore.setUserLoggedIn(false);
+          if (restored) promptLogin();
+          return false;
+        }
+        if (failure) {
+          notifyBootstrapFailure(failure);
+          continue;
+        }
+
+        const applied = await applyLoginPayload(payload, { showToast: false, navigateHome: false });
+        console.info("bootstrap auth session applied", { site, applied });
+
+        if (applied) {
+          lastBootstrapFailure = null;
+          return true;
+        }
+
         userInfoStore.setUserLoggedIn(false);
         if (restored) promptLogin();
+        return false;
       }
-      return applied;
+
+      // Keep the remembered account context when the site is temporarily
+      // unreachable. A transient network failure is not an authentication failure.
+      console.warn("bootstrap auth session deferred: site remains unavailable", { site });
+      userInfoStore.setUserLoggedIn(false);
+      bootstrapRetryTimer = setTimeout(() => void bootstrapPersistedSession(), 5000);
+      return false;
     } catch (error) {
       console.error("bootstrap auth session failed", { site, restored, error });
       userInfoStore.setUserLoggedIn(false);

@@ -30,9 +30,16 @@ const unlisteners: UnlistenFn[] = [];
 let resizeObserver: ResizeObserver | null = null;
 let started = false;
 
-async function resize() {
-  if (!started || !terminal.value) return;
+function fitTerminal() {
+  if (!terminal.value || !containerRef.value) return false;
+  const { width, height } = containerRef.value.getBoundingClientRect();
+  if (width <= 0 || height <= 0) return false;
   fitAddon.fit();
+  return true;
+}
+
+async function resize() {
+  if (!started || !terminal.value || !fitTerminal()) return;
   await useTauriCoreInvoke("resize_local_shell", {
     sessionId: props.tab.id,
     cols: terminal.value.cols,
@@ -60,7 +67,7 @@ async function start() {
   instance.loadAddon(fitAddon);
   instance.open(containerRef.value);
   terminal.value = instance;
-  fitAddon.fit();
+  fitTerminal();
 
   unlisteners.push(
     await useTauriEventListen<LocalShellOutput>("local-shell-output", ({ payload }) => {
@@ -108,6 +115,7 @@ async function start() {
       rows: instance.rows
     });
     started = true;
+    await resize();
     registerLocalShellTerminalSession(props.tab.id, (data) => {
       void useTauriCoreInvoke("write_local_shell", {
         sessionId: props.tab.id,

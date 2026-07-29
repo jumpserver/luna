@@ -26,7 +26,7 @@ const props = withDefaults(
 const { t, locale } = useI18n();
 const { getAssetDetail } = useAssetAction();
 const { confirmConnection } = useAssetConnection();
-const { closeSession, startSessionConnection } = useWorkspaceTabs();
+const { closePane, startSessionConnection } = useWorkspaceTabs();
 const userInfoStore = useUserInfoStore();
 
 const currentAsset = ref<AssetItem | null>(props.tab.setupAsset || null);
@@ -322,7 +322,7 @@ onMounted(loadAsset);
               icon="i-lucide-x"
               size="sm"
               :aria-label="t('Common.Cancel')"
-              @click="closeSession(props.tab.id)"
+              @click="closePane(props.tab.id)"
             />
           </div>
 

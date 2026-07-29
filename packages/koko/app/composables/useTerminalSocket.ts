@@ -9,7 +9,7 @@ import {
   ZMODEM_ACTION_TYPE
 } from "@jumpserver/connectors-core";
 import { useKokoHostAdapter } from "@jumpserver/koko/host";
-import { useDebounceFn, useWebSocket, useWindowSize } from "@vueuse/core";
+import { useDebounceFn, useWebSocket } from "@vueuse/core";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { WebglAddon } from "@xterm/addon-webgl";
@@ -49,7 +49,6 @@ export const useKokoTerminalSocket = () => {
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
   const { createSentry } = useKokoZmodem();
-  const { width, height } = useWindowSize();
   const { sendHostEvent, emitTerminalConnect, emitTerminalSession, hostBridge, sendMittEvent, sendToHost } =
     useKokoTerminalEvents();
 
@@ -80,17 +79,19 @@ export const useKokoTerminalSocket = () => {
   // 未显式指定主题名（workspace 内嵌场景）时跟随应用主题；独立 /koko/connect 路由带主题名则维持原逻辑
   const followAppTheme = computed(() => !!unref(sessionCtxRef) && !queryTerminalThemeName.value);
   let themeObserver: MutationObserver | null = null;
+  let resizeObserver: ResizeObserver | null = null;
   let fitAddon: FitAddon | null = null;
   const stopContainerListeners: Array<() => void> = [];
 
-  const autoTerminalFit = watch([width, height], () => {
-    if (!terminalRef.value) return;
-    nextTick(() => fitAddon?.fit());
-  });
+  const fitTerminal = () => {
+    if (!terminalRef.value || !fitAddon || !containerRef.value) return;
+    const { width, height } = containerRef.value.getBoundingClientRect();
+    if (width <= 0 || height <= 0) return;
+    fitAddon.fit();
+  };
 
   const debouncedResize = useDebounceFn(({ cols, rows }: { cols: number; rows: number }) => {
-    if (!socketRef.value) return;
-    fitAddon?.fit();
+    if (socketRef.value?.readyState !== WebSocket.OPEN) return;
     socketRef.value.send(
       formatMessage(terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_RESIZE, JSON.stringify({ cols, rows }))
     );
@@ -350,7 +351,7 @@ export const useKokoTerminalSocket = () => {
 
     const onClick = () => sendHostEvent(HOST_MESSAGE_TYPE.CLICK, "");
     const onMouseEnter = () => {
-      fitAddon?.fit();
+      fitTerminal();
       terminalRef.value!.focus();
     };
     const onContextMenu = async (e: MouseEvent) => {
@@ -498,13 +499,15 @@ export const useKokoTerminalSocket = () => {
       listenTerminalRefEvent();
       listenElEvent();
       terminalRef.value?.open(containerRef.value!);
-      fitAddon?.fit();
+      resizeObserver = new ResizeObserver(fitTerminal);
+      resizeObserver.observe(containerRef.value!);
+      fitTerminal();
     });
   });
 
   onUnmounted(() => {
-    autoTerminalFit();
     themeObserver?.disconnect();
+    resizeObserver?.disconnect();
     for (const stop of stopContainerListeners.splice(0)) stop();
     if (pingInterval.value) clearInterval(pingInterval.value);
     if (warningInterval.value) clearInterval(warningInterval.value);

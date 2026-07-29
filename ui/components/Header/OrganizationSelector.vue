@@ -4,6 +4,12 @@ import type { PermOrgItem } from "~/types/index";
 
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
+withDefaults(defineProps<{
+  selectable?: boolean
+}>(), {
+  selectable: true
+});
+
 const userInfoStore = useUserInfoStore();
 const { setCurrentOrg } = userInfoStore;
 const { loggedIn, currentOrganizations, currentUser } = storeToRefs(userInfoStore);
@@ -59,11 +65,12 @@ watch(
       :ui="{ root: 'rounded-md' }"
     />
     <UDropdownMenu
+      v-if="selectable"
       :items="organizationDropdownItems"
       :content="{ align: 'start', side: 'bottom' }"
       :ui="{
         content: 'w-44 max-h-64 overflow-y-auto p-1',
-        item: 'mx-0 px-2 py-1 rounded-md text-[11px] leading-4 transition-colors duration-150',
+        item: 'mx-0 px-2 py-1 rounded-md text-xs leading-4 transition-colors duration-150',
         itemLeadingIcon: 'size-3 shrink-0'
       }"
     >
@@ -82,5 +89,8 @@ watch(
         <UIcon name="i-lucide-chevron-down" class="size-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
       </UButton>
     </UDropdownMenu>
+    <span v-else class="min-w-0 truncate px-1 text-left text-xs font-medium text-gray-700 dark:text-gray-300">
+      {{ currentOrg }}
+    </span>
   </div>
 </template>

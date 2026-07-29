@@ -42,7 +42,6 @@ const renameTabId = ref("");
 const renameValue = ref("");
 
 const { activeTab } = useWorkspaceTabs();
-const canSwitchTabs = computed(() => tabs.value.length > 1);
 const isDarkTabTheme = computed(() => colorMode.value === "dark");
 const brokenTabIcons = ref(new Set<string>());
 const renameDisabled = computed(() => {
@@ -332,12 +331,31 @@ function updateOverflow() {
   hasRightHidden.value = hasOverflow.value && el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
 }
 
-function scrollActiveTabIntoView() {
+function scrollActiveTabIntoView(behavior: ScrollBehavior = "smooth") {
   const el = tabStripRef.value;
   if (!el || !activeTabId.value) return;
 
   const activeButton = el.querySelector<HTMLElement>(`[data-tab-id="${activeTabId.value}"]`);
-  activeButton?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  if (!activeButton) return;
+
+  const viewportRect = el.getBoundingClientRect();
+  const activeRect = activeButton.getBoundingClientRect();
+  const edgeZone = el.clientWidth * 0.3;
+  const activeCenter = activeRect.left + activeRect.width / 2;
+  const viewportCenter = viewportRect.left + viewportRect.width / 2;
+  const isOutsideViewport = activeRect.left < viewportRect.left || activeRect.right > viewportRect.right;
+  const isNearHiddenLeft = el.scrollLeft > 1 && activeCenter < viewportRect.left + edgeZone;
+  const isNearHiddenRight = (
+    el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+    && activeCenter > viewportRect.right - edgeZone
+  );
+
+  if (!isOutsideViewport && !isNearHiddenLeft && !isNearHiddenRight) return;
+
+  el.scrollTo({
+    left: el.scrollLeft + activeCenter - viewportCenter,
+    behavior
+  });
 }
 
 function selectTab(id: string) {
@@ -350,11 +368,22 @@ function switchTab(direction: "previous" | "next") {
   nextTick(scrollActiveTabIntoView);
 }
 
+function scrollTabStrip(direction: "left" | "right") {
+  const el = tabStripRef.value;
+  if (!el) return;
+
+  const distance = Math.max(120, Math.round(el.clientWidth * 0.6));
+  el.scrollBy({
+    left: direction === "left" ? -distance : distance,
+    behavior: "smooth"
+  });
+}
+
 let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
   updateOverflow();
-  scrollActiveTabIntoView();
+  scrollActiveTabIntoView("auto");
 
   if (!tabStripRef.value) return;
 
@@ -403,13 +432,13 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
     class="workspace-tab-header flex h-full min-w-0 items-center gap-2 px-3"
     :class="{ 'workspace-tab-header-dark': isDarkTabTheme }"
   >
-    <UTooltip v-if="hasLeftHidden" text="上一个标签" :delay-duration="150">
+    <UTooltip v-if="hasLeftHidden" text="向左滚动标签" :delay-duration="150">
       <button
         type="button"
         class="workspace-tab-overflow flex size-5 shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-default disabled:opacity-40"
-        :disabled="!canSwitchTabs || !hasLeftHidden"
-        aria-label="上一个标签"
-        @click="switchTab('previous')"
+        :disabled="!hasLeftHidden"
+        aria-label="向左滚动标签"
+        @click="scrollTabStrip('left')"
       >
         <UIcon name="i-lucide-chevron-left" class="size-3.5 text-[var(--app-muted)]" />
       </button>
@@ -506,13 +535,13 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
     <WorkspaceAddSessionPopover v-if="showAddSession" />
 
-    <UTooltip v-if="hasRightHidden" text="下一个标签" :delay-duration="150">
+    <UTooltip v-if="hasRightHidden" text="向右滚动标签" :delay-duration="150">
       <button
         type="button"
         class="workspace-tab-overflow flex size-5 shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-default disabled:opacity-40"
-        :disabled="!canSwitchTabs || !hasRightHidden"
-        aria-label="下一个标签"
-        @click="switchTab('next')"
+        :disabled="!hasRightHidden"
+        aria-label="向右滚动标签"
+        @click="scrollTabStrip('right')"
       >
         <UIcon name="i-lucide-chevron-right" class="size-3.5 text-[var(--app-muted)]" />
       </button>

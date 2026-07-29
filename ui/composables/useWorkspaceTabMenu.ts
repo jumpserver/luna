@@ -17,11 +17,11 @@ function tabToAsset(tab: WorkspaceSessionTab): AssetItem {
   };
 }
 
-function getTokenId(tab: WorkspaceSessionTab) {
+function getTokenId(tab: Pick<WorkspaceSessionTab, "payload">) {
   return String(tab.payload?.id || tab.payload?.token?.id || "");
 }
 
-function buildPayload(tab: WorkspaceSessionTab, token: Record<string, any>) {
+function buildPayload(tab: Pick<WorkspaceSessionTab, "payload">, token: Record<string, any>) {
   return {
     ...tab.payload,
     token,
@@ -57,7 +57,7 @@ export function useWorkspaceTabMenu() {
     });
   };
 
-  const exchangeToken = async (tab: WorkspaceSessionTab) => {
+  const exchangeToken = async (tab: Pick<WorkspaceSessionTab, "payload">) => {
     const tokenId = getTokenId(tab);
     if (!tokenId) throw new Error("missing token");
 
@@ -140,11 +140,12 @@ export function useWorkspaceTabMenu() {
     }
   };
 
-  const connectOtherPane = (workspaceTab: WorkspaceSessionTab, pane: WorkspacePane) => {
+  const connectOtherPane = (workspaceTab: WorkspaceSessionTab, pane: WorkspacePane, asset: AssetItem) => {
     beginPaneAssetSelection(workspaceTab.id, pane.id);
+    useEventBus().emit("workspaceConnectAsset", asset);
   };
 
-  const refreshPanePayload = async (tab: WorkspaceSessionTab) => {
+  const refreshPanePayload = async (tab: WorkspacePane) => {
     const token = await exchangeToken(tab);
     updateSessionPayload({
       tabId: tab.id,
@@ -158,16 +159,16 @@ export function useWorkspaceTabMenu() {
     const sourceTab = getTabById(sourceTabId);
     if (!sourceTab) return false;
 
-    const refreshablePanes = sourceTab.panes.filter((pane) => pane.mode === "session" && getTokenId(pane as WorkspaceSessionTab));
+    const refreshablePanes = sourceTab.panes.filter((pane) => pane.mode === "session" && getTokenId(pane));
 
     try {
       for (const pane of refreshablePanes) {
-        await refreshPanePayload(pane as WorkspaceSessionTab);
+        await refreshPanePayload(pane);
       }
     } catch (error) {
       addErrorToast({
         title: t("WorkspacePane.RefreshTokenFailed"),
-        description: String(error),
+        description: String(error)
       });
       return false;
     }

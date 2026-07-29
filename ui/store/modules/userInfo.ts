@@ -78,7 +78,14 @@ export const useUserInfoStore = defineStore(
      * @param userData
      */
     const setUserData = (site: string, userData: UserData) => {
-      const next = userData as SiteUserData;
+      const previous = userMap.value[site];
+      const next: SiteUserData = {
+        ...previous,
+        ...userData,
+        connectionInfoMap: previous?.connectionInfoMap || {},
+        connectionPreferenceMap: previous?.connectionPreferenceMap || {},
+        rdpClientOption: previous?.rdpClientOption || {}
+      };
 
       userMap.value[site] = next;
       currentUser.value = next;

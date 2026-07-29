@@ -1,20 +1,23 @@
 <script setup lang="ts">
 import type { WorkspacePane, WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
+import type { AssetItem } from "~/types";
 
 import { resolveSessionSurface } from "~/shared/connectors/registry";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 
 const { t } = useI18n();
 const colorMode = useColorMode();
 const toast = useToast();
+const userInfoStore = useUserInfoStore();
+const { currentUser } = storeToRefs(userInfoStore);
 const surfaceRefs = ref<Record<string, { focus?: () => void } | null>>({});
 const {
   activePaneId,
   activeTabId,
   canMergeTabs,
   closePane,
-  isPaneAwaitingAssetSelection,
   setActivePane,
   swapPanes,
   toSurfaceTab
@@ -23,6 +26,9 @@ const { connectCurrentPane, connectOtherPane, mergeWorkspaceTabIntoCurrent, reco
 const draggedPaneId = ref("");
 const dragOverPaneId = ref("");
 const dragOverWorkspace = ref(false);
+const connectOtherModalOpen = ref(false);
+const connectOtherSearch = ref("");
+const connectOtherPaneId = ref("");
 
 const paneGridClass = computed(() => {
   switch (props.tab.layoutMode) {
@@ -36,11 +42,23 @@ const paneGridClass = computed(() => {
       return "";
   }
 });
+const setupPane = computed(() => {
+  const activeSetupPane = props.tab.panes.find(
+    (pane) => pane.id === activePaneId.value && pane.mode === "setup"
+  );
+
+  return activeSetupPane || props.tab.panes.find((pane) => pane.mode === "setup");
+});
 const showPaneHeaders = computed(() => props.tab.panes.length > 1);
 const inactivePaneOverlayClass = computed(() => (colorMode.value === "dark" ? "bg-white/4" : "bg-black/3"));
+const currentOrgLabel = computed(() => currentUser.value?.org?.name || "");
 
 function setSurfaceRef(paneId: string, el: { focus?: () => void } | null) {
   surfaceRefs.value[paneId] = el;
+}
+
+function setSurfaceComponentRef(paneId: string, el: unknown) {
+  setSurfaceRef(paneId, el as { focus?: () => void } | null);
 }
 
 function focusPane(paneId: string) {
@@ -110,6 +128,20 @@ function isActivePane(paneId: string) {
   return activeTabId.value === props.tab.id && activePaneId.value === paneId;
 }
 
+function openConnectOtherModal(pane: WorkspacePane) {
+  connectOtherPaneId.value = pane.id;
+  connectOtherSearch.value = "";
+  connectOtherModalOpen.value = true;
+}
+
+function handleConnectOtherAsset(asset: AssetItem) {
+  const pane = props.tab.panes.find((item) => item.id === connectOtherPaneId.value);
+  if (!pane) return;
+
+  connectOtherPane(props.tab, pane, asset);
+  connectOtherModalOpen.value = false;
+}
+
 function handlePaneDragStart(event: DragEvent, paneId: string) {
   draggedPaneId.value = paneId;
   event.dataTransfer?.setData("application/x-workspace-pane", paneId);
@@ -168,6 +200,12 @@ watch(
     nextTick(() => focusPane(props.tab.panes[0]?.id || ""));
   }
 );
+
+watch(connectOtherModalOpen, (open) => {
+  if (open) return;
+  connectOtherSearch.value = "";
+  connectOtherPaneId.value = "";
+});
 </script>
 
 <template>
@@ -251,74 +289,118 @@ watch(
             </div>
           </header>
 
-        <div class="relative z-[1] min-h-0 flex-1" @mousedown="focusPane(pane.id)">
-          <div
-            v-if="showPaneSwapHint(pane.id)"
-            class="pointer-events-none absolute inset-3 z-10 flex items-center justify-center rounded-xl border border-dashed border-primary/50 bg-primary/6 backdrop-blur-[1px]"
-          >
-            <div class="rounded-full bg-[var(--workspace-surface-sub-header)] px-3 py-1 text-xs font-medium text-[var(--app-fg)] shadow-sm">
-              {{ t("WorkspacePane.SwapPositionHint") }}
-            </div>
-          </div>
-          <div
-            v-if="pane.mode === 'empty'"
-            class="grid h-full place-items-center p-6 text-center"
-          >
-            <div class="max-w-xs space-y-4">
-              <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[var(--workspace-surface-sub-header)] text-[var(--app-muted)]">
-                <UIcon name="i-lucide-panels-top-left" class="size-6" />
-              </div>
-              <div class="space-y-1">
-                <div class="text-sm font-medium text-[var(--app-fg)]">
-                  {{ t("WorkspacePane.EmptyTitle") }}
-                </div>
-                <div class="text-xs text-[var(--app-muted)]">
-                  {{ paneSubtitle(pane) }}
-                </div>
-              </div>
-              <div v-if="showEmptyActions(pane)" class="flex items-center justify-center gap-2">
-                <UButton
-                  size="sm"
-                  color="primary"
-                  variant="soft"
-                  @click="void connectCurrentPane(tab, pane)"
-                >
-                  {{ t("WorkspacePane.ConnectCurrent") }}
-                </UButton>
-                <UButton
-                  size="sm"
-                  color="neutral"
-                  variant="soft"
-                  @click="connectOtherPane(tab, pane)"
-                >
-                  {{ t("WorkspacePane.ConnectOther") }}
-                </UButton>
+          <div class="relative z-[1] min-h-0 flex-1" @mousedown="focusPane(pane.id)">
+            <div
+              v-if="showPaneSwapHint(pane.id)"
+              class="pointer-events-none absolute inset-3 z-10 flex items-center justify-center rounded-xl border border-dashed border-primary/50 bg-primary/6 backdrop-blur-[1px]"
+            >
+              <div class="rounded-full bg-[var(--workspace-surface-sub-header)] px-3 py-1 text-xs font-medium text-[var(--app-fg)] shadow-sm">
+                {{ t("WorkspacePane.SwapPositionHint") }}
               </div>
             </div>
+            <div
+              v-if="pane.mode === 'empty'"
+              class="grid h-full place-items-center p-6 text-center"
+            >
+              <div class="max-w-xs space-y-4">
+                <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[var(--workspace-surface-sub-header)] text-[var(--app-muted)]">
+                  <UIcon name="i-lucide-panels-top-left" class="size-6" />
+                </div>
+                <div class="space-y-1">
+                  <div class="text-sm font-medium text-[var(--app-fg)]">
+                    {{ t("WorkspacePane.EmptyTitle") }}
+                  </div>
+                  <div class="text-xs text-[var(--app-muted)]">
+                    {{ paneSubtitle(pane) }}
+                  </div>
+                </div>
+                <div v-if="showEmptyActions(pane)" class="flex items-center justify-center gap-2">
+                  <UButton
+                    size="sm"
+                    color="primary"
+                    variant="soft"
+                    @click="void connectCurrentPane(tab, pane)"
+                  >
+                    {{ t("WorkspacePane.ConnectCurrent") }}
+                  </UButton>
+                  <UButton
+                    size="sm"
+                    color="neutral"
+                    variant="soft"
+                    @click="openConnectOtherModal(pane)"
+                  >
+                    {{ t("WorkspacePane.ConnectOther") }}
+                  </UButton>
+                </div>
+              </div>
+            </div>
+
+            <div
+              v-else-if="pane.mode === 'setup'"
+              class="h-full bg-[var(--workspace-surface-background)]"
+            />
+
+            <component
+              :is="surfaceComponentFor(pane)"
+              v-else
+              :key="surfaceInstanceKey(pane)"
+              :ref="(el: unknown) => setSurfaceComponentRef(pane.id, el)"
+              :tab="surfaceTabFor(pane)"
+              class="h-full"
+              @reconnect="void reconnectSession(surfaceTabFor(pane))"
+            />
           </div>
-
-          <WorkspaceConnectionSetupPane
-            v-else-if="pane.mode === 'setup'"
-            :tab="surfaceTabFor(pane)"
-            class="h-full min-h-0"
-          />
-
-          <component
-            :is="surfaceComponentFor(pane)"
-            v-else
-            :key="surfaceInstanceKey(pane)"
-            :ref="(el) => setSurfaceRef(pane.id, el as { focus?: () => void } | null)"
-            :tab="surfaceTabFor(pane)"
-            class="h-full"
-            @reconnect="void reconnectSession(surfaceTabFor(pane))"
-          />
-        </div>
           <div
             class="pointer-events-none absolute inset-0 z-[3] transition-colors"
             :class="isActivePane(pane.id) ? 'bg-transparent' : inactivePaneOverlayClass"
           />
         </section>
       </div>
+
+      <WorkspaceConnectionSetupPane
+        v-if="setupPane"
+        :tab="surfaceTabFor(setupPane)"
+        class="absolute inset-0 z-10"
+      />
     </div>
+
+    <UModal
+      v-model:open="connectOtherModalOpen"
+      :title="t('WorkspacePane.ConnectOther')"
+      :ui="{ content: 'max-w-md' }"
+    >
+      <template #body>
+        <div class="space-y-3">
+          <div
+            v-if="currentOrgLabel"
+            class="flex items-center justify-between gap-2 rounded-lg bg-elevated/70 px-2.5 py-2 text-[11px] text-muted"
+          >
+            <span>{{ t("WorkspacePane.CurrentOrganization") }}</span>
+            <span class="max-w-[220px] truncate font-medium text-default">{{ currentOrgLabel }}</span>
+          </div>
+          <UInput
+            v-model="connectOtherSearch"
+            autofocus
+            icon="i-lucide-search"
+            :placeholder="t('Operation.Search')"
+          />
+          <div class="max-h-72 overflow-y-auto rounded-lg border border-default">
+            <SideBarAssetTree
+              :search="connectOtherSearch"
+              open
+              @select="handleConnectOtherAsset"
+            />
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <UButton
+          color="neutral"
+          variant="ghost"
+          :label="t('Common.Cancel')"
+          @click="connectOtherModalOpen = false"
+        />
+      </template>
+    </UModal>
   </div>
 </template>

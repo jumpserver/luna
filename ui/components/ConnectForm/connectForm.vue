@@ -552,7 +552,7 @@ function handleSpecialAccount(v: string) {
             orientation="horizontal"
             :ui="{
               fieldset: 'flex flex-wrap gap-2',
-              item: 'rounded-[3px] px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-white/5'
+              item: 'rounded-[3px] px-2 py-1.5 hover:bg-[var(--app-hover-soft)]'
             }"
           />
           <div
