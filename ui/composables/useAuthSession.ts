@@ -13,6 +13,8 @@ interface PersistedUserSnapshot {
   currentConnectionPreferenceMap?: Record<string, any>
 }
 
+let bootstrapPromise: Promise<boolean> | null = null;
+
 const normalizeOrgList = (value: unknown): PermOrgItem[] => {
   if (Array.isArray(value)) {
     return value.filter((item): item is PermOrgItem => {
@@ -271,7 +273,7 @@ export const useAuthSession = () => {
     return true;
   };
 
-  const bootstrapPersistedSession = async () => {
+  const bootstrapSession = async () => {
     const restored = restorePersistedSnapshot();
 
     const promptLogin = () => {
@@ -305,6 +307,14 @@ export const useAuthSession = () => {
       if (restored) promptLogin();
       return false;
     }
+  };
+
+  const bootstrapPersistedSession = () => {
+    if (!bootstrapPromise) {
+      bootstrapPromise = bootstrapSession();
+    }
+
+    return bootstrapPromise;
   };
 
   return {
