@@ -147,7 +147,7 @@ function cancelChanges() {
             :disabled="editing.busy.value || selectedRows.length === 0"
             @click="deleteRows"
           >
-            Delete
+            Delete row
           </UButton>
           <UButton
             icon="i-lucide-save"
