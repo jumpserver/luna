@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
-import type { SftpFileEntry } from "#koko/composables/useSftpFileManager";
+import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
 import { connectorSessionKey } from "@jumpserver/connectors-core";
-import { useSftpFileManager } from "#koko/composables/useSftpFileManager";
+import { useSftpFileManager } from "#koko/composables/sftp/useSftpFileManager";
 import CodeMirrorEditor from "./CodeMirrorEditor.client.vue";
 
 type PreviewKind = "text" | "image" | "unsupported" | "empty";
@@ -232,7 +232,7 @@ async function loadDirectory(path: string, force = false) {
   if (existing?.loading || (existing && !force)) return;
   tree.value = { ...tree.value, [path]: { entries: existing?.entries || [], loading: true, error: "" } };
   try {
-    const entries = await manager.listDirectory(path);
+    const entries = await manager.operations.listDirectory(path);
     tree.value = { ...tree.value, [path]: { entries, loading: false, error: "" } };
   } catch (cause) {
     tree.value = {
@@ -311,8 +311,8 @@ async function commitCreate() {
   const path = joinPath(parent, name);
   pendingSubmitting.value = true;
   try {
-    if (kind === "file") await manager.createFileAt(path);
-    else await manager.createDirectoryAt(path);
+    if (kind === "file") await manager.operations.createFileAt(path);
+    else await manager.operations.createDirectoryAt(path);
     await loadDirectory(parent, true);
     if (kind === "file") {
       const entry: SftpFileEntry = { name, size: "0", perm: "", mod_time: "", type: "", is_dir: false };
@@ -400,7 +400,7 @@ async function submitRename() {
   const nextPath = joinPath(parent, name);
   renameSubmitting.value = true;
   try {
-    await manager.renamePath(target.path, name);
+    await manager.operations.renamePath(target.path, name);
 
     tabs.value.forEach((tab) => {
       if (tab.path === target.path || tab.path.startsWith(`${target.path}/`)) {
@@ -452,7 +452,7 @@ async function confirmAlert() {
   }
   alertSubmitting.value = true;
   try {
-    await manager.removePath(target.target.path);
+    await manager.operations.removePath(target.target.path);
     for (const tab of tabs.value.filter(
       (tab) => tab.path === target.target.path || tab.path.startsWith(`${target.target.path}/`)
     ))
@@ -500,7 +500,7 @@ async function uploadFiles(event: Event) {
   uploadDirectory.value = "";
   input.value = "";
   if (!directory || files.length === 0) return;
-  await Promise.allSettled(files.map((file) => manager.uploadFile(file, joinPath(directory, file.name))));
+  await Promise.allSettled(files.map((file) => manager.operations.uploadFile(file, joinPath(directory, file.name))));
   await loadDirectory(directory, true);
 }
 
@@ -565,7 +565,7 @@ async function openEntry(entry: SftpFileEntry, path: string) {
   tabs.value.push(tab);
   activePath.value = path;
   try {
-    const blob = await manager.readFile(entry, path);
+    const blob = await manager.operations.readFile(entry, path);
     const extension = entry.name.split(".").pop()?.toLowerCase() || "";
     if (imageExtensions.has(extension)) {
       tab.kind = "image";
@@ -603,7 +603,7 @@ async function save(tab = activeTab.value) {
   tab.saving = true;
   tab.error = "";
   try {
-    await manager.uploadFile(new File([tab.content], tab.entry.name, { type: "text/plain;charset=utf-8" }), tab.path);
+    await manager.operations.uploadFile(new File([tab.content], tab.entry.name, { type: "text/plain;charset=utf-8" }), tab.path);
     tab.savedContent = tab.content;
   } catch (cause) {
     tab.error = cause instanceof Error ? cause.message : String(cause);

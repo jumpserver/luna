@@ -2,7 +2,7 @@
 import { HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import KokoDrawerFileManagement from "#koko/components/Drawer/FileManagement/index.vue";
 import KokoDrawerGeneral from "#koko/components/Drawer/General/index.vue";
-import { useKokoTerminalEvents } from "#koko/composables/useTerminalEvents";
+import { useKokoTerminalEvents } from "#koko/composables/terminal/useTerminalEvents";
 import { useKokoConnectionStore } from "#koko/stores/connection";
 import mittBus from "#koko/utils/mittBus";
 

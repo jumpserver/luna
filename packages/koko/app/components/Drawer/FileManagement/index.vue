@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 import type { KokoSftpAsset } from "@jumpserver/koko/host";
-import type { SftpFileEntry } from "#koko/composables/useSftpFileManager";
+import type { SftpFileOperations } from "#koko/composables/sftp/protocol";
+import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
 import { connectorSessionKey, resolveDevHost } from "@jumpserver/connectors-core";
 import { useKokoHostAdapter } from "@jumpserver/koko/host";
 import KokoLocalFileManagementPane from "#koko/components/Drawer/FileManagement/localPane.vue";
@@ -19,8 +20,7 @@ interface RemotePane {
 
 interface TransferPane {
   manager: {
-    readFile: (entry: SftpFileEntry) => Promise<Blob>;
-    uploadBlob: (fileName: string, blob: Blob) => Promise<void>;
+    operations: Pick<SftpFileOperations, "readFile" | "uploadBlob">;
   };
 }
 
@@ -208,8 +208,8 @@ async function transferEntry(fromPane: TransferPane | null, toPane: TransferPane
 
   transferring.value = true;
   try {
-    const blob = await fromPane.manager.readFile(entry);
-    await toPane.manager.uploadBlob(entry.name, blob);
+    const blob = await fromPane.manager.operations.readFile(entry);
+    await toPane.manager.operations.uploadBlob(entry.name, blob);
     toast.add({ title: t("koko.fileManagement.transferSuccess"), color: "success" });
   } catch (error) {
     addErrorToast(t("koko.fileManagement.transferFailed"), error);
@@ -230,12 +230,12 @@ async function transferToRemotes() {
 
   transferring.value = true;
   try {
-    const blob = await fromPane.manager.readFile(entry);
+    const blob = await fromPane.manager.operations.readFile(entry);
     const results = await Promise.allSettled(
       targets.map((pane) => {
         const target = remotePaneRefs.value[pane.id];
         if (!target) throw new Error(t("koko.fileManagement.paneNotReady"));
-        return target.manager.uploadBlob(entry.name, blob);
+        return target.manager.operations.uploadBlob(entry.name, blob);
       })
     );
     const success = results.filter((result) => result.status === "fulfilled").length;
@@ -293,7 +293,7 @@ async function uploadWebFiles(files: File[]) {
   try {
     for (const file of files) {
       try {
-        await targetPane.manager.uploadBlob(file.name, file);
+        await targetPane.manager.operations.uploadBlob(file.name, file);
         success += 1;
       } catch {
         // Continue with the remaining files and report the aggregate result.

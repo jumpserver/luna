@@ -29,6 +29,6 @@
     "@jumpserver/connectors-core": "workspace:*",
     "clipboard-polyfill": "^4.1.1",
     "mitt": "^3.0.1",
-    "nora-zmodemjs": "^1.1.1"
+    "zmodem-ts": "^1.0.8"
   }
 }

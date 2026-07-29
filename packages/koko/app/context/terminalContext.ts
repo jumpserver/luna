@@ -1,20 +1,22 @@
 import type { HostBridge } from "@jumpserver/connectors-core";
 
 import type { InjectionKey } from "vue";
-import type { TerminalSessionInfo } from "#koko/types";
+import type { TerminalMittEvent } from "#koko/composables/terminal/protocol";
 
+import type { TerminalSessionInfo } from "#koko/types";
 import { createHostBridge, FORMATTER_MESSAGE_TYPE, HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import mitt from "mitt";
 import { inject, nextTick } from "vue";
+import { TerminalEventType } from "#koko/composables/terminal/protocol";
 import { useKokoConnectionStore } from "#koko/stores/connection";
 import mittBus from "#koko/utils/mittBus";
 import { terminalTheme } from "#koko/utils/terminalTheme";
 import { formatMessage, getXTerminalLineContent } from "#koko/utils/terminalUtils";
 
 type TerminalEvents = Record<string, unknown> & {
-  "host-event": { event: string; data: unknown };
-  "terminal-session": TerminalSessionInfo;
-  "terminal-connect": { id: string };
+  [TerminalEventType.Host]: { event: string; data: unknown };
+  [TerminalEventType.Session]: TerminalSessionInfo;
+  [TerminalEventType.Connect]: { id: string };
 };
 
 interface TerminalContext {
@@ -22,8 +24,8 @@ interface TerminalContext {
   eventBus: ReturnType<typeof mitt<TerminalEvents>>;
   cleanup: () => void;
   initialize: () => void;
-  sendMittEvent: (event: string, data: unknown) => void;
-  onMittEvent: (event: string, callback: (data: unknown) => void) => () => void;
+  sendMittEvent: (event: TerminalMittEvent, data: unknown) => void;
+  onMittEvent: (event: TerminalMittEvent, callback: (data: unknown) => void) => () => void;
   sendHostEvent: (event: string, data: unknown) => void;
 }
 
@@ -36,11 +38,11 @@ export const createKokoTerminalContext = (): TerminalContext => {
   let unbindPostMessage: (() => void) | undefined;
 
   const sendHostEvent = (event: string, data: unknown) => {
-    eventBus.emit("host-event", { event, data });
+    eventBus.emit(TerminalEventType.Host, { event, data });
   };
 
   const initializeHostListeners = () => {
-    eventBus.on("host-event", ({ event, data }) => {
+    eventBus.on(TerminalEventType.Host, ({ event, data }) => {
       switch (event) {
         case HOST_MESSAGE_TYPE.CLOSE:
         case HOST_MESSAGE_TYPE.TERMINAL_ERROR:
@@ -119,11 +121,11 @@ export const createKokoTerminalContext = (): TerminalContext => {
     hostBridge.onHost(HOST_MESSAGE_TYPE.INPUT_ACTIVE, () => handleHostCommand(""));
   };
 
-  const sendMittEvent = (event: string, data: unknown) => {
+  const sendMittEvent = (event: TerminalMittEvent, data: unknown) => {
     mittBus.emit(event as keyof typeof mittBus.all, data as never);
   };
 
-  const onMittEvent = (event: string, callback: (data: unknown) => void) => {
+  const onMittEvent = (event: TerminalMittEvent, callback: (data: unknown) => void) => {
     mittBus.on(event as keyof typeof mittBus.all, callback as never);
     return () => mittBus.off(event as keyof typeof mittBus.all, callback as never);
   };

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
-import type { SftpFileEntry } from "#koko/composables/useSftpFileManager";
-import { useSftpFileManager } from "#koko/composables/useSftpFileManager";
+import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
+import { useSftpFileManager } from "#koko/composables/sftp/useSftpFileManager";
 
 const props = defineProps<{
   context: ConnectorSessionContext | null;
@@ -76,23 +76,23 @@ const downloadSelected = () => {
     alertOpen.value = true;
     return;
   }
-  manager.downloadEntry(entry);
+  void manager.operations.downloadEntry(entry);
 };
 
 const submitPrompt = () => {
   const name = promptName.value.trim();
   const target = promptTarget.value;
   if (!name || (target && name === target.name)) return;
-  if (target) manager.renameEntry(target, name);
-  else manager.createDirectory(name);
+  if (target) void manager.operations.renameEntry(target, name);
+  else void manager.operations.createDirectory(name);
   promptOpen.value = false;
 };
 
 const confirmAlert = () => {
   const target = alertTarget.value;
   if (!target) return;
-  if (target.kind === "delete") manager.removeEntry(target.entry);
-  else manager.downloadEntry(target.entry);
+  if (target.kind === "delete") void manager.operations.removeEntry(target.entry);
+  else void manager.operations.downloadEntry(target.entry);
   alertOpen.value = false;
 };
 
@@ -101,7 +101,7 @@ const uploadFromEvent = async (event: Event) => {
   const files = [...(input.files || [])];
   input.value = "";
   if (!files.length) return;
-  await Promise.allSettled(files.map((file) => manager.uploadFile(file)));
+  await Promise.allSettled(files.map((file) => manager.operations.uploadFile(file)));
 };
 
 defineExpose({ manager, selectedEntry });
@@ -115,20 +115,20 @@ defineExpose({ manager, selectedEntry });
     <div class="flex flex-col items-center gap-2 text-center">
       <UIcon name="i-lucide-circle-alert" class="size-6" />
       <p>{{ manager.error.value }}</p>
-      <UButton size="xs" @click="manager.reconnect()">
+      <UButton size="xs" @click="manager.retry.reconnect()">
         {{ t("koko.fileManagement.reconnect") }}
       </UButton>
     </div>
   </div>
-  <div v-else class="flex h-full min-h-0 flex-col bg-[var(--app-main-bg)] text-[var(--app-fg)]">
+  <div v-else class="flex h-full min-h-0 flex-col bg-(--app-main-bg) text-(--app-fg)">
     <div
       v-if="title"
-      class="border-b border-[var(--app-border)] bg-[var(--app-panel-bg)] px-2 py-1 text-[11px] font-medium text-[var(--app-muted)]"
+      class="border-b border-(--app-border) bg-(--app-panel-bg) px-2 py-1 text-[11px] font-medium text-(--app-muted)"
     >
       {{ title }}
     </div>
     <div
-      class="flex shrink-0 flex-wrap items-center gap-1 border-b border-[var(--app-border)] bg-[var(--app-panel-bg)] p-2"
+      class="flex shrink-0 flex-wrap items-center gap-1 border-b border-(--app-border) bg-(--app-panel-bg) p-2"
     >
       <UButton
         icon="i-lucide-arrow-left"
@@ -138,9 +138,9 @@ defineExpose({ manager, selectedEntry });
         :disabled="manager.currentPath.value === '/'"
         @click="manager.changeDirectory({ name: '..', is_dir: true } as SftpFileEntry)"
       />
-      <UButton icon="i-lucide-refresh-cw" color="neutral" variant="ghost" size="xs" @click="manager.list()" />
+      <UButton icon="i-lucide-refresh-cw" color="neutral" variant="ghost" size="xs" @click="manager.loadCurrentDirectory()" />
       <div
-        class="min-w-0 flex-1 truncate rounded bg-[var(--app-hover-soft)] px-2 py-1 font-ui-mono text-[11px] text-[var(--app-fg)]"
+        class="min-w-0 flex-1 truncate rounded bg-(--app-hover-soft) px-2 py-1 font-ui-mono text-[11px] text-(--app-fg)"
       >
         {{ manager.currentPath.value || "/" }}
       </div>
@@ -158,14 +158,14 @@ defineExpose({ manager, selectedEntry });
       <UButton icon="i-lucide-upload" color="primary" variant="soft" size="xs" @click="uploadInput?.click()" />
       <input ref="uploadInput" type="file" multiple class="hidden" @change="uploadFromEvent" />
     </div>
-    <div v-if="manager.currentUploadName.value" class="border-b border-[var(--app-border)] px-2 py-2">
-      <div class="mb-1 flex items-center justify-between gap-2 text-[11px] text-[var(--app-muted)]">
+    <div v-if="manager.currentUploadName.value" class="border-b border-(--app-border) px-2 py-2">
+      <div class="mb-1 flex items-center justify-between gap-2 text-[11px] text-(--app-muted)">
         <span class="truncate">{{ manager.currentUploadName.value }}</span>
         <span>{{ manager.uploadProgress.value }}%</span>
       </div>
       <div class="flex items-center gap-2">
         <UProgress :value="manager.uploadProgress.value" size="xs" class="flex-1" />
-        <span v-if="manager.queuedUploadCount.value" class="shrink-0 text-[11px] text-[var(--app-muted)]">
+        <span v-if="manager.queuedUploadCount.value" class="shrink-0 text-[11px] text-(--app-muted)">
           +{{ manager.queuedUploadCount.value }}
         </span>
       </div>
@@ -173,9 +173,9 @@ defineExpose({ manager, selectedEntry });
     <div v-if="manager.loading.value" class="grid flex-1 place-items-center">
       <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
     </div>
-    <div v-else class="min-h-0 flex-1 overflow-auto bg-[var(--app-main-bg)]">
+    <div v-else class="min-h-0 flex-1 overflow-auto bg-(--app-main-bg)">
       <div
-        class="grid grid-cols-[minmax(0,1fr)_64px_88px] border-b border-[var(--app-border)] bg-[var(--app-panel-bg)] px-2 py-1.5 text-[10px] text-[var(--app-muted)]"
+        class="grid grid-cols-[minmax(0,1fr)_64px_88px] border-b border-(--app-border) bg-(--app-panel-bg) px-2 py-1.5 text-[10px] text-(--app-muted)"
       >
         <span>{{ t("koko.fileManagement.name") }}</span>
         <span>{{ t("koko.fileManagement.size") }}</span>
@@ -184,8 +184,8 @@ defineExpose({ manager, selectedEntry });
       <div
         v-for="entry in visibleEntries"
         :key="entry.name"
-        class="group grid grid-cols-[minmax(0,1fr)_64px_88px] items-center border-b border-[color:var(--app-border)]/60 px-2 py-1 text-xs text-[var(--app-fg)] hover:bg-[var(--app-hover-soft)]"
-        :class="selectedEntry?.name === entry.name && entry.name !== '..' ? 'bg-[var(--app-selected-soft)]' : ''"
+        class="group grid grid-cols-[minmax(0,1fr)_64px_88px] items-center border-b border-(--app-border)/60 px-2 py-1 text-xs text-(--app-fg) hover:bg-(--app-hover-soft)"
+        :class="selectedEntry?.name === entry.name && entry.name !== '..' ? 'bg-(--app-selected-soft)' : ''"
         @click="selectEntry(entry)"
       >
         <button
@@ -195,14 +195,14 @@ defineExpose({ manager, selectedEntry });
           <UIcon :name="entry.is_dir ? 'i-lucide-folder' : 'i-lucide-file'" class="size-4 shrink-0" />
           <span class="truncate">{{ entry.name }}</span>
         </button>
-        <span class="text-[var(--app-muted)]">{{ entry.is_dir ? "—" : entry.size }}</span>
+        <span class="text-(--app-muted)">{{ entry.is_dir ? "—" : entry.size }}</span>
         <div v-if="entry.name !== '..'" class="flex justify-end opacity-0 group-hover:opacity-100">
           <UButton
             icon="i-lucide-download"
             size="xs"
             color="neutral"
             variant="ghost"
-            @click.stop="manager.downloadEntry(entry)"
+            @click.stop="manager.operations.downloadEntry(entry)"
           />
           <UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" @click.stop="rename(entry)" />
           <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" @click.stop="remove(entry)" />

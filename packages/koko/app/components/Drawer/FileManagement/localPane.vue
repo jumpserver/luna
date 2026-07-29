@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SftpFileEntry } from "#koko/composables/useSftpFileManager";
+import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
 
 const emit = defineEmits<{ select: [entry: SftpFileEntry | null] }>();
 const LOCAL_ROOT_STORAGE_KEY = "jumpserver-client:file-manager-local-root";
@@ -206,7 +206,9 @@ onBeforeUnmount(() => {
   void releaseSecurityScope();
 });
 
-const manager = { readFile, uploadBlob };
+const manager = {
+  operations: { readFile, uploadBlob }
+};
 defineExpose({ manager, selectedEntry });
 </script>
 

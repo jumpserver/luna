@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 import type { KokoWorkspaceTab } from "@jumpserver/koko/host";
-import { toWsOrigin } from "@jumpserver/connectors-core";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
+import {
+  KubernetesTerminalMessageType,
+  KubernetesTerminalSocketFailureCode
+} from "#koko/composables/kubernetes/protocol";
+import {
+  useKubernetesTerminalSocket
+} from "#koko/composables/kubernetes/useKubernetesTerminalSocket";
 import { appTerminalTheme } from "#koko/utils/terminalTheme";
 import BaseWorkspaceShell from "#koko/workspaces/BaseWorkspaceShell.vue";
 import { useBaseWorkspaceSession } from "#koko/workspaces/useBaseWorkspaceSession";
@@ -55,8 +60,8 @@ const activeTabId = ref("");
 const globalTerminalId = ref("");
 
 const terminals = new Map<string, { terminal: Terminal; fit: FitAddon }>();
-let socket: WebSocket | null = null;
 let themeObserver: MutationObserver | null = null;
+const terminalSocket = useKubernetesTerminalSocket();
 
 const activeTab = computed(() => terminalTabs.value.find((item) => item.id === activeTabId.value) || null);
 const assetName = computed(() => tab.value.assetName || t("koko.kubernetes.name"));
@@ -171,23 +176,13 @@ function isRowActive(row: TreeRow) {
 }
 
 function sendResize(tabId: string, terminal: Terminal) {
-  if (!socket || !globalTerminalId.value) return;
-  socket.send(
-    JSON.stringify({
-      id: globalTerminalId.value,
-      k8s_id: tabId,
-      type: "TERMINAL_K8S_RESIZE",
-      namespace: "",
-      pod: "",
-      container: "",
-      resizeData: JSON.stringify({ cols: terminal.cols, rows: terminal.rows })
-    })
-  );
+  if (!terminalSocket.connected.value || !globalTerminalId.value) return;
+  terminalSocket.resizeTerminal(globalTerminalId.value, tabId, terminal.cols, terminal.rows);
 }
 
 function mountTerminal(tabItem: TerminalTab, target: ConnectTarget) {
   const el = document.getElementById(tabItem.id);
-  if (!el || !socket || !globalTerminalId.value) return;
+  if (!el || !terminalSocket.connected.value || !globalTerminalId.value) return;
 
   const terminal = new Terminal({ cursorBlink: true, fontSize: 13, theme: appTerminalTheme() });
   const fit = new FitAddon();
@@ -197,37 +192,23 @@ function mountTerminal(tabItem: TerminalTab, target: ConnectTarget) {
   terminals.set(tabItem.id, { terminal, fit });
 
   terminal.onData((data) => {
-    socket?.send(
-      JSON.stringify({
-        id: globalTerminalId.value,
-        k8s_id: tabItem.id,
-        type: "TERMINAL_K8S_DATA",
-        namespace: target.namespace,
-        pod: target.pod,
-        container: target.container,
-        data
-      })
-    );
+    if (!globalTerminalId.value) return;
+    terminalSocket.sendTerminalData(globalTerminalId.value, tabItem.id, target, data);
   });
   terminal.onResize(() => sendResize(tabItem.id, terminal));
 
-  socket.send(
-    JSON.stringify({
-      id: globalTerminalId.value,
-      k8s_id: tabItem.id,
-      namespace: target.namespace,
-      pod: target.pod,
-      container: target.container,
-      type: "TERMINAL_K8S_INIT",
-      data: JSON.stringify({ cols: terminal.cols, rows: terminal.rows, code: "" })
-    })
+  terminalSocket.initializeTerminal(
+    globalTerminalId.value,
+    tabItem.id,
+    target,
+    JSON.stringify({ cols: terminal.cols, rows: terminal.rows, code: "" })
   );
 
   if (activeTabId.value === tabItem.id) terminal.focus();
 }
 
 function openTerminal(target: ConnectTarget) {
-  if (!socket || !globalTerminalId.value) return;
+  if (!terminalSocket.connected.value || !globalTerminalId.value) return;
 
   const tabItem: TerminalTab = {
     id: globalThis.crypto?.randomUUID?.() || String(Date.now()),
@@ -246,8 +227,8 @@ function connectCluster() {
 }
 
 function closeTab(tabItem: TerminalTab) {
-  if (socket && globalTerminalId.value) {
-    socket.send(JSON.stringify({ id: globalTerminalId.value, k8s_id: tabItem.id, type: "K8S_CLOSE" }));
+  if (terminalSocket.connected.value && globalTerminalId.value) {
+    terminalSocket.closeTerminal(globalTerminalId.value, tabItem.id);
   }
   terminals.get(tabItem.id)?.terminal.dispose();
   terminals.delete(tabItem.id);
@@ -272,7 +253,7 @@ function focusActiveTerminal() {
 }
 
 function refreshTree() {
-  socket?.send(JSON.stringify({ type: "TERMINAL_K8S_TREE" }));
+  if (terminalSocket.connected.value) terminalSocket.requestTree();
 }
 
 function syncTerminalTheme() {
@@ -290,50 +271,41 @@ function observeAppTheme() {
   });
 }
 
-function handleSocketMessage(event: MessageEvent) {
-  const message = JSON.parse(String(event.data));
-  if (message.type === "CONNECT") {
+const stopMessageListener = terminalSocket.onMessage((message) => {
+  if (message.type === KubernetesTerminalMessageType.Connect) {
     globalTerminalId.value = message.id;
-    socket?.send(JSON.stringify({ type: "TERMINAL_K8S_TREE" }));
+    terminalSocket.requestTree();
     markSessionConnected(props.tab.id);
     connectionError.value = "";
-  } else if (message.type === "TERMINAL_K8S_TREE") {
+  } else if (message.type === KubernetesTerminalMessageType.Tree) {
     tree.value = normalizeTree(JSON.parse(message.data || "{}"));
-  } else if (message.type === "TERMINAL_K8S_DATA" && terminals.has(message.k8s_id)) {
+  } else if (message.type === KubernetesTerminalMessageType.Data && terminals.has(message.k8s_id)) {
     terminals.get(message.k8s_id)?.terminal.write(message.data || "");
-  } else if (message.type === "TERMINAL_K8S_BINARY" && terminals.has(message.k8s_id)) {
+  } else if (message.type === KubernetesTerminalMessageType.Binary && terminals.has(message.k8s_id)) {
     terminals
       .get(message.k8s_id)
       ?.terminal.write(Uint8Array.from(atob(message.raw || ""), (char) => char.charCodeAt(0)));
-  } else if (message.type === "PING") {
-    socket?.send(JSON.stringify({ id: message.id, type: "PONG", data: "pong" }));
-  } else if (message.type === "ERROR" || message.type === "TERMINAL_ERROR") {
+  } else if (
+    message.type === KubernetesTerminalMessageType.Error ||
+    message.type === KubernetesTerminalMessageType.TerminalError
+  ) {
     connectionError.value = message.err || t("koko.kubernetes.connectionFailed");
   }
-}
+});
 
-async function startSocket(ctx: ConnectorSessionContext) {
-  if (socket) return;
-  connectionError.value = "";
-
-  try {
-    const params = new URLSearchParams({ token: ctx.tokenId, type: "k8s" });
-    if (ctx.ticket) params.set("ticket", ctx.ticket);
-    socket = new WebSocket(`${toWsOrigin(ctx.endpointUrl)}/koko/ws/terminal/?${params}`, ["JMS-KOKO"]);
-    socket.onmessage = handleSocketMessage;
-    socket.onerror = () => {
-      connectionError.value = t("koko.kubernetes.websocketConnectionFailed");
-    };
-  } catch (cause) {
-    connectionError.value = String(cause);
-    markSessionFailed({
-      tabId: props.tab.id,
-      assetId: props.tab.assetId,
-      protocol: props.tab.protocol,
-      account: props.tab.account
-    });
-  }
-}
+const stopFailureListener = terminalSocket.onFailure((failure) => {
+  connectionError.value =
+    failure.code === KubernetesTerminalSocketFailureCode.ConnectionClosed ||
+    failure.code === KubernetesTerminalSocketFailureCode.ConnectionFailed
+      ? t("koko.kubernetes.websocketConnectionFailed")
+      : t("koko.kubernetes.connectionFailed");
+  markSessionFailed({
+    tabId: props.tab.id,
+    assetId: props.tab.assetId,
+    protocol: props.tab.protocol,
+    account: props.tab.account
+  });
+});
 
 const resize = useDebounceFn(() => {
   if (activeTabId.value) terminals.get(activeTabId.value)?.fit.fit();
@@ -343,7 +315,9 @@ watch(tokenId, () => void prepareSession(), { immediate: true });
 watch(
   context,
   (ctx) => {
-    if (ctx) void startSocket(ctx);
+    if (!ctx) return;
+    connectionError.value = "";
+    terminalSocket.connect(ctx);
   },
   { immediate: true }
 );
@@ -353,9 +327,11 @@ useEventListener(window, "resize", resize);
 onMounted(observeAppTheme);
 onUnmounted(() => {
   themeObserver?.disconnect();
+  stopFailureListener();
+  stopMessageListener();
   for (const { terminal } of terminals.values()) terminal.dispose();
   terminals.clear();
-  socket?.close();
+  terminalSocket.close();
 });
 </script>
 
@@ -366,12 +342,12 @@ onUnmounted(() => {
     :error="sessionError"
     :loading-text="t('koko.kubernetes.preparingConnection')"
   >
-    <div class="grid h-full min-h-0 grid-cols-[260px_minmax(0,1fr)] bg-[var(--app-main-bg)] text-[var(--app-fg)]">
+    <div class="grid h-full min-h-0 grid-cols-[260px_minmax(0,1fr)] bg-(--app-main-bg) text-(--app-fg)">
       <aside
-        class="flex min-h-0 flex-col border-r border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-sidebar)]"
+        class="flex min-h-0 flex-col border-r border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-sidebar)"
       >
         <div
-          class="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-header)] px-2"
+          class="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-header) px-2"
         >
           <span class="min-w-0 flex-1 truncate px-1 text-left font-ui-mono text-[10px]" :title="assetName">
             {{ assetName }}
@@ -403,18 +379,18 @@ onUnmounted(() => {
         </div>
         <div
           v-if="searchVisible"
-          class="shrink-0 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-tree)] p-2"
+          class="shrink-0 border-b border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-tree) p-2"
         >
           <UInput v-model="search" icon="i-lucide-search" size="xs" :placeholder="t('koko.kubernetes.filterContainers')" class="w-full" />
         </div>
-        <div class="min-h-0 flex-1 overflow-auto bg-[var(--workspace-surface-sub-tree)] py-1">
+        <div class="min-h-0 flex-1 overflow-auto bg-(--workspace-surface-sub-tree) py-1">
           <div v-if="connectionError" class="px-3 py-2 text-xs text-error">
             {{ connectionError }}
           </div>
           <template v-for="row in treeRows" :key="`${row.kind}:${keyOf(row.node)}`">
             <button
-              class="flex h-7 w-full items-center gap-1 pr-2 text-left text-xs text-[var(--app-fg)] hover:bg-[var(--app-hover-soft)]"
-              :class="isRowActive(row) ? 'bg-[var(--app-selected-soft)] text-primary' : ''"
+              class="flex h-7 w-full items-center gap-1 pr-2 text-left text-xs text-(--app-fg) hover:bg-(--app-hover-soft)"
+              :class="isRowActive(row) ? 'bg-(--app-selected-soft) text-primary' : ''"
               :style="{ paddingLeft: `${8 + row.depth * 14}px` }"
               :title="row.kind === 'container' ? containerLabel(row.node) : row.node.label"
               @click="handleRowClick(row)"
@@ -422,7 +398,7 @@ onUnmounted(() => {
               <UIcon
                 v-if="row.kind !== 'container'"
                 :name="row.expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
-                class="size-3 shrink-0 text-[var(--app-muted)]"
+                class="size-3 shrink-0 text-(--app-muted)"
               />
               <span v-else class="w-3 shrink-0" />
               <UIcon :name="rowIcon(row)" class="size-3.5 shrink-0" />
@@ -431,7 +407,7 @@ onUnmounted(() => {
               </span>
             </button>
           </template>
-          <div v-if="!treeRows.length && !connectionError" class="px-3 py-2 text-xs text-[var(--app-muted)]">
+          <div v-if="!treeRows.length && !connectionError" class="px-3 py-2 text-xs text-(--app-muted)">
             {{ tree.length ? t("koko.kubernetes.noMatchingContainers") : t("koko.kubernetes.loadingPods") }}
           </div>
         </div>
@@ -449,7 +425,7 @@ onUnmounted(() => {
             }
           "
         />
-        <div class="relative min-h-0 flex-1 bg-[var(--workspace-surface-sub-panel)]">
+        <div class="relative min-h-0 flex-1 bg-(--workspace-surface-sub-panel)">
           <div
             v-for="item in terminalTabs"
             :id="item.id"
@@ -457,7 +433,7 @@ onUnmounted(() => {
             class="absolute inset-0 p-1"
             :class="activeTabId === item.id ? '' : 'pointer-events-none invisible'"
           />
-          <div v-if="!terminalTabs.length" class="grid h-full place-items-center p-6 text-sm text-[var(--app-muted)]">
+          <div v-if="!terminalTabs.length" class="grid h-full place-items-center p-6 text-sm text-(--app-muted)">
             <div class="flex flex-col items-center gap-3">
               <UIcon name="i-lucide-square-terminal" class="size-10" />
               <span>{{ t("koko.kubernetes.empty") }}</span>

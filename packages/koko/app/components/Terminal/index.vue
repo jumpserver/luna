@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import KokoSearchInput from "#koko/components/SearchInput/index.vue";
-import { useKokoTerminalEvents } from "#koko/composables/useTerminalEvents";
-import { useKokoTerminalSocket } from "#koko/composables/useTerminalSocket";
-import { useKokoZmodem } from "#koko/composables/useZmodem";
+import { TerminalMittEvent } from "#koko/composables/terminal/protocol";
+import { useKokoTerminalEvents } from "#koko/composables/terminal/useTerminalEvents";
+import { useKokoTerminalSocket } from "#koko/composables/terminal/useTerminalSocket";
 
 const showSearchInput = ref(false);
 const { onMittEvent } = useKokoTerminalEvents();
-const { containerRef, searchAddon } = useKokoTerminalSocket();
-const { uploadOpen, fileInfo, confirmUpload, cancelUpload } = useKokoZmodem();
+const { containerRef, searchAddon, zmodem } = useKokoTerminalSocket();
+const { uploadOpen, fileInfo, confirmUpload, cancelUpload } = zmodem;
 
-onMittEvent("open-search", () => {
+onMittEvent(TerminalMittEvent.OpenSearch, () => {
   showSearchInput.value = true;
 });
 
