@@ -28,11 +28,11 @@ const emit = defineEmits<{
     class="flex min-h-0 shrink-0 flex-col border-r border-default bg-[var(--workspace-surface-sidebar)]"
     :style="{ width: `${width}px` }"
   >
-    <div class="flex items-center justify-between border-b border-default px-3 py-2">
+    <div class="flex items-center justify-between border-b border-default px-2.5 py-1">
       <p class="text-xs font-medium text-muted">
         Database Explorer
       </p>
-      <div class="flex items-center gap-1">
+      <div class="flex h-7 items-center gap-1">
         <WorkspaceAddSessionPopover />
         <UButton icon="i-lucide-refresh-cw" size="xs" color="neutral" variant="ghost" @click="emit('refresh')" />
       </div>
