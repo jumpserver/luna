@@ -18,9 +18,13 @@
   width: 40px;
   padding: 4px;
   border-radius: 20px;
-  color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: none;
+  color: var(--el-text-color-light);
+  background: var(--el-nav-bg-color);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(0, 0, 0, 0.22),
+    0 1px 0 rgba(255, 255, 255, 0.16) inset;
   pointer-events: auto;
   user-select: none;
   z-index: 1;
@@ -36,7 +40,7 @@
   padding: 0;
   border: 0;
   border-radius: 12.5px;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.72);
   background: transparent;
   cursor: pointer;
   transition:
@@ -46,7 +50,7 @@
   &:hover,
   &:focus-visible {
     color: #fff;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.12);
   }
 }
 
@@ -75,13 +79,23 @@
   .chat-img {
     width: 16px;
     height: 16px;
-    opacity: 0.5;
+    opacity: 1;
     transition: opacity 0.16s ease;
   }
 
   &:hover .chat-img,
   &:focus-visible .chat-img {
     opacity: 1;
+  }
+}
+
+.chat-ai-button {
+  background: var(--el-dropdown-selected-bg-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);
+
+  &:hover,
+  &:focus-visible {
+    background: var(--el-dropdown-active-bg-color);
   }
 }
 
