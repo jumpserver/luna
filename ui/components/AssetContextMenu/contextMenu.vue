@@ -37,10 +37,8 @@ interface MenuItem {
 
 const isFavorited = computed(() => !!props.asset.isFavorite);
 const flatFavoriteFolders = computed(() => {
-  const flatten = (folders = favoriteFolders.value): Array<{ id: string, name: string }> => folders.flatMap((folder) => [
-    { id: folder.id, name: folder.name },
-    ...flatten(folder.children)
-  ]);
+  const flatten = (folders = favoriteFolders.value): Array<{ id: string, name: string }> =>
+    folders.flatMap((folder) => [{ id: folder.id, name: folder.name }, ...flatten(folder.children)]);
   return flatten();
 });
 const hasReusableSavedConnection = computed(() => {
@@ -77,20 +75,23 @@ const menuItems = computed((): MenuItem[] => {
       label: t("Favorite.AddToFolder"),
       icon: "lucide:star",
       onClick: () => void 0,
-      children: flatFavoriteFolders.value.length > 0
-        ? flatFavoriteFolders.value.map((folder) => ({
-            label: folder.name,
-            icon: "i-lucide-folder",
-            onClick: () => addToFolder(folder.id)
-          }))
-        : [{ label: t("Favorite.CreateFolderFirst"), icon: "i-lucide-folder-plus", onClick: () => void 0 }]
+      children:
+        flatFavoriteFolders.value.length > 0
+          ? flatFavoriteFolders.value.map((folder) => ({
+              label: folder.name,
+              icon: "i-lucide-folder",
+              onClick: () => addToFolder(folder.id)
+            }))
+          : [{ label: t("Favorite.CreateFolderFirst"), icon: "i-lucide-folder-plus", onClick: () => void 0 }]
     },
     ...(isFavorited.value
-      ? [{
-          label: t("ContextMenu.Unfavorite"),
-          icon: "lucide:star-off",
-          onClick: () => handleUnfavorite()
-        }]
+      ? [
+          {
+            label: t("ContextMenu.Unfavorite"),
+            icon: "lucide:star-off",
+            onClick: () => handleUnfavorite()
+          }
+        ]
       : [])
   ];
 
@@ -178,9 +179,12 @@ async function addToFolder(folderId: string) {
   emits("update:visible", false);
 }
 
-watch(() => props.visible, (visible) => {
-  if (visible) loadFavoriteFolders();
-});
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible) loadFavoriteFolders();
+  }
+);
 
 /**
  * @description 取消搜藏
@@ -213,7 +217,7 @@ function resolveProtocols(asset: AssetItem) {
   return sortProtocolNames(
     Array.from(new Set(candidateProtocols.filter((name) => typeof name === "string" && name.length > 0)))
   );
-};
+}
 </script>
 
 <template>
@@ -222,7 +226,8 @@ function resolveProtocols(asset: AssetItem) {
     :items="menuItems"
     size="sm"
     :ui="{
-      content: 'w-52 rounded-xl border border-black/6 bg-white/92 p-1.5 shadow-xl shadow-black/5 backdrop-blur dark:border-white/10 dark:bg-zinc-950/92 dark:shadow-none',
+      content:
+        'w-52 rounded-xl border border-black/6 bg-white/92 p-1.5 shadow-xl shadow-black/5 backdrop-blur dark:border-white/10 dark:bg-zinc-950/92 dark:shadow-none',
       item: 'min-h-8 rounded-lg px-2 py-1.5 text-[12px] font-medium',
       itemLeadingIcon: 'size-3.5 text-gray-500 dark:text-gray-400',
       label: 'truncate',

@@ -18,16 +18,7 @@ interface ChecksumWorkerScope {
 
 const workerScope = globalThis as unknown as ChecksumWorkerScope;
 
-const initialHash = [
-  0x6A09E667,
-  0xBB67AE85,
-  0x3C6EF372,
-  0xA54FF53A,
-  0x510E527F,
-  0x9B05688C,
-  0x1F83D9AB,
-  0x5BE0CD19
-];
+const initialHash = [0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19];
 
 const constants = [
   0x428A2F98,
@@ -116,10 +107,11 @@ function processBlock(state: Sha256State, block: Uint8Array) {
 
   for (let index = 0; index < 16; index++) {
     const offset = index * 4;
-    words[index] = ((block[offset] ?? 0) << 24)
-      | ((block[offset + 1] ?? 0) << 16)
-      | ((block[offset + 2] ?? 0) << 8)
-      | (block[offset + 3] ?? 0);
+    words[index]
+      = ((block[offset] ?? 0) << 24)
+        | ((block[offset + 1] ?? 0) << 16)
+        | ((block[offset + 2] ?? 0) << 8)
+        | (block[offset + 3] ?? 0);
   }
 
   for (let index = 16; index < 64; index++) {

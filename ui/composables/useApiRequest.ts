@@ -39,11 +39,7 @@ let lastAuthFailureAt = 0;
 
 const isAuthFailure = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error || "");
-  return [
-    "HTTP 401",
-    "missing current api session",
-    "status=401"
-  ].some((needle) => message.includes(needle));
+  return ["HTTP 401", "missing current api session", "status=401"].some((needle) => message.includes(needle));
 };
 
 const handleApiAuthFailure = () => {
@@ -79,10 +75,7 @@ const buildWebQuery = (request: ApiRequest) => {
 
 async function webApiRequest<T>(request: ApiRequest): Promise<T> {
   const query = buildWebQuery(request);
-  const url = [
-    withWebSitePrefix(request.path),
-    query
-  ].filter(Boolean).join("?");
+  const url = [withWebSitePrefix(request.path), query].filter(Boolean).join("?");
   const hasBody = request.body !== undefined;
   const response = await fetch(url, {
     method: request.method,
@@ -125,11 +118,7 @@ export async function apiRequest<T>(request: ApiRequest): Promise<T> {
   }
 }
 
-export function getAssetTree(
-  kind: AssetTreeKind,
-  params: AssetTreeParams,
-  orgId?: string
-): Promise<unknown> {
+export function getAssetTree(kind: AssetTreeKind, params: AssetTreeParams, orgId?: string): Promise<unknown> {
   const paths: Record<AssetTreeKind, string> = {
     authorization: "/api/v1/perms/users/self/nodes/children-with-assets/tree/",
     type: "/api/v1/perms/users/self/nodes/children-with-assets/category/tree/",
@@ -224,10 +213,7 @@ export function createConnectionToken(body: unknown, orgId?: string): Promise<To
   });
 }
 
-export function getLocalClientUrl(
-  tokenId: string,
-  query?: Record<string, unknown>
-): Promise<{ url: string }> {
+export function getLocalClientUrl(tokenId: string, query?: Record<string, unknown>): Promise<{ url: string }> {
   return apiRequest<{ url: string }>({
     method: "GET",
     path: `/api/v1/authentication/connection-token/${encodeURIComponent(tokenId)}/client-url/`,

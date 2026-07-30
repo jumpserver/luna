@@ -39,17 +39,13 @@ export function useChenDataViewDerivedMeta(profileDbType: Ref<string | undefined
 
   function dataViewIndexes(tab: ChenDataViewConsoleTab) {
     const first = tab.data?.fields?.[0]?.name || "id";
-    return [
-      { name: `${tableLabelForProperties(tab)}_pkey`, columns: first, unique: "YES", method: "btree" }
-    ];
+    return [{ name: `${tableLabelForProperties(tab)}_pkey`, columns: first, unique: "YES", method: "btree" }];
   }
 
   function dataViewForeignKeys(tab: ChenDataViewConsoleTab) {
     const candidate = tab.data?.fields?.find((field) => /_id$/i.test(field.name));
     if (!candidate) return [];
-    return [
-      { name: `fk_${candidate.name}`, column: candidate.name, references: "other_table(id)" }
-    ];
+    return [{ name: `fk_${candidate.name}`, column: candidate.name, references: "other_table(id)" }];
   }
 
   function dataViewConstraints(tab: ChenDataViewConsoleTab) {

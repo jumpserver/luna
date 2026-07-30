@@ -19,11 +19,7 @@ const normalizeChoice = (value: unknown) => {
 };
 
 const normalizeTreeNodes = (value: unknown, baseLevel = 0): AssetTreeNode[] => {
-  const rawNodes = Array.isArray(value)
-    ? value
-    : Array.isArray((value as any)?.results)
-      ? (value as any).results
-      : [];
+  const rawNodes = Array.isArray(value) ? value : Array.isArray((value as any)?.results) ? (value as any).results : [];
   const nodes = rawNodes.map((raw: any) => ({
     ...raw,
     id: String(raw.id ?? raw.key ?? ""),
@@ -33,9 +29,7 @@ const normalizeTreeNodes = (value: unknown, baseLevel = 0): AssetTreeNode[] => {
     open: Boolean(raw.open && Array.isArray(raw.children)),
     level: Number.isFinite(raw.level) ? raw.level : baseLevel,
     loaded: Array.isArray(raw.children),
-    children: Array.isArray(raw.children)
-      ? normalizeTreeNodes(raw.children, baseLevel + 1)
-      : []
+    children: Array.isArray(raw.children) ? normalizeTreeNodes(raw.children, baseLevel + 1) : []
   })) as AssetTreeNode[];
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const roots: AssetTreeNode[] = [];

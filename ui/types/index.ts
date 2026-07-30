@@ -9,6 +9,7 @@ export type ThemePresetId
     | "claude"
     | "gemini"
     | "mono"
+    | "min"
     | "luna-default"
     | "luna-darkgray"
     | "luna-deepblue"
@@ -20,7 +21,8 @@ export type ThemePresetId
     | "rose-pine"
     | "codex"
     | "cursor"
-    | "mono-dark";
+    | "mono-dark"
+    | "min-dark";
 export type LayoutsType = "grid" | "table";
 export type LangType = "zh" | "en";
 export type LanguagePreference = LangType | "system";

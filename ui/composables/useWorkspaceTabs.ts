@@ -138,9 +138,7 @@ const orderPanesForMerge = (
   const targetPane = panes[targetIndex]!;
   const otherPanes = panes.filter((pane) => pane !== targetPane);
   if (panes.length === 1) {
-    return placement === "left" || placement === "top"
-      ? [sourcePane, targetPane]
-      : [targetPane, sourcePane];
+    return placement === "left" || placement === "top" ? [sourcePane, targetPane] : [targetPane, sourcePane];
   }
 
   if (panes.length === 2) {
@@ -245,10 +243,8 @@ const findSession = (match: { tabId?: string, assetId: string, protocol: string,
   if (match.tabId) return findPane(match.tabId);
 
   for (const tab of tabs.value) {
-    const paneIndex = tab.panes.findIndex((pane) =>
-      pane.assetId === match.assetId
-      && pane.protocol === match.protocol
-      && pane.account === match.account
+    const paneIndex = tab.panes.findIndex(
+      (pane) => pane.assetId === match.assetId && pane.protocol === match.protocol && pane.account === match.account
     );
     if (paneIndex !== -1) return { tab, pane: tab.panes[paneIndex]!, paneIndex };
   }
@@ -286,20 +282,24 @@ export const useWorkspaceTabs = () => {
     const account = connection.account || asset.savedConnection?.username || "";
     const target = resolvePendingTarget(connection.paneId);
 
-    const pane = createPane(target?.pane.id || createTabId(asset.id, protocol, account), {
-      assetId: asset.id,
-      assetName: asset.name,
-      assetType: asset.type || "",
-      assetPlatform: asset.platform || "",
-      assetCategory: asset.category || "",
-      address: asset.address,
-      permedProtocols: asset.permedProtocols,
-      protocol,
-      account,
-      status: connection.payload ? "ready" : "connecting",
-      payload: connection.payload,
-      setupAsset: undefined
-    }, "session");
+    const pane = createPane(
+      target?.pane.id || createTabId(asset.id, protocol, account),
+      {
+        assetId: asset.id,
+        assetName: asset.name,
+        assetType: asset.type || "",
+        assetPlatform: asset.platform || "",
+        assetCategory: asset.category || "",
+        address: asset.address,
+        permedProtocols: asset.permedProtocols,
+        protocol,
+        account,
+        status: connection.payload ? "ready" : "connecting",
+        payload: connection.payload,
+        setupAsset: undefined
+      },
+      "session"
+    );
 
     if (target) {
       replacePane(target.tab, target.paneIndex, pane);
@@ -321,21 +321,25 @@ export const useWorkspaceTabs = () => {
     const account = asset.savedConnection?.username || "";
     const target = resolvePendingTarget(options.paneId);
 
-    const pane = createPane(target?.pane.id || createTabId(asset.id, protocol || "setup", account), {
-      assetId: asset.id,
-      assetName: asset.name,
-      assetType: asset.type || "",
-      assetPlatform: asset.platform || "",
-      assetCategory: asset.category || "",
-      address: asset.address,
-      permedProtocols: asset.permedProtocols,
-      protocol,
-      account,
-      status: "selecting",
-      setupAsset: asset,
-      payload: undefined,
-      connectedAt: undefined
-    }, "setup");
+    const pane = createPane(
+      target?.pane.id || createTabId(asset.id, protocol || "setup", account),
+      {
+        assetId: asset.id,
+        assetName: asset.name,
+        assetType: asset.type || "",
+        assetPlatform: asset.platform || "",
+        assetCategory: asset.category || "",
+        address: asset.address,
+        permedProtocols: asset.permedProtocols,
+        protocol,
+        account,
+        status: "selecting",
+        setupAsset: asset,
+        payload: undefined,
+        connectedAt: undefined
+      },
+      "setup"
+    );
 
     if (target) {
       replacePane(target.tab, target.paneIndex, pane);
@@ -352,17 +356,21 @@ export const useWorkspaceTabs = () => {
   };
 
   const openLocalShell = () => {
-    const pane = createPane(createTabId("local", "local-shell", ""), {
-      assetId: "local",
-      assetName: "Local Shell",
-      assetType: "local",
-      assetPlatform: "",
-      assetCategory: "terminal",
-      address: "",
-      protocol: "local-shell",
-      account: "",
-      status: "ready"
-    }, "session");
+    const pane = createPane(
+      createTabId("local", "local-shell", ""),
+      {
+        assetId: "local",
+        assetName: "Local Shell",
+        assetType: "local",
+        assetPlatform: "",
+        assetCategory: "terminal",
+        address: "",
+        protocol: "local-shell",
+        account: "",
+        status: "ready"
+      },
+      "session"
+    );
 
     const tab = createTabFromPane(pane);
     tabs.value.push(tab);
@@ -375,24 +383,7 @@ export const useWorkspaceTabs = () => {
     const match = findPane(paneId);
     if (!match) return;
 
-    const { tab, pane, paneIndex } = match;
-    if (tab.panes.length === 1) {
-      const tabIndex = tabs.value.findIndex((item) => item.id === tab.id);
-      if (tabIndex !== -1) closeSession(tab.id);
-      return;
-    }
-
-    pendingPaneTarget.value = pendingPaneTarget.value?.paneId === paneId ? null : pendingPaneTarget.value;
-
-    clearWorkspaceSessionDetails(pane.id);
-    closeNativeSession(pane.id);
-    tab.panes.splice(paneIndex, 1);
-    setLayoutForPaneCount(tab);
-    syncTabFromPrimaryPane(tab);
-    if (activePaneId.value === paneId) activePaneId.value = getFirstPaneId(tab);
-  };
-
-  const closeSession = (id: string) => {
+    const closeSession = (id: string) => {
     const index = tabs.value.findIndex((tab) => tab.id === id);
     if (index === -1) {
       closePane(id);
@@ -413,6 +404,25 @@ export const useWorkspaceTabs = () => {
     }
     ensureActivePaneForTab(activeTabId.value);
   };
+
+    const { tab, pane, paneIndex } = match;
+    if (tab.panes.length === 1) {
+      const tabIndex = tabs.value.findIndex((item) => item.id === tab.id);
+      if (tabIndex !== -1) closeSession(tab.id);
+      return;
+    }
+
+    pendingPaneTarget.value = pendingPaneTarget.value?.paneId === paneId ? null : pendingPaneTarget.value;
+
+    clearWorkspaceSessionDetails(pane.id);
+    closeNativeSession(pane.id);
+    tab.panes.splice(paneIndex, 1);
+    setLayoutForPaneCount(tab);
+    syncTabFromPrimaryPane(tab);
+    if (activePaneId.value === paneId) activePaneId.value = getFirstPaneId(tab);
+  };
+
+
 
   const closeAllSessions = () => {
     for (const tab of tabs.value) {
@@ -481,8 +491,10 @@ export const useWorkspaceTabs = () => {
 
     if (tab.panes.length === 1) return true;
     if (tab.panes.length === 2) {
-      return (tab.layoutMode === "columns-2" && direction === "horizontal")
-        || (tab.layoutMode === "rows-2" && direction === "vertical");
+      return (
+        (tab.layoutMode === "columns-2" && direction === "horizontal")
+        || (tab.layoutMode === "rows-2" && direction === "vertical")
+      );
     }
     return tab.layoutMode === "grid-2x2" && tab.panes.length < 4;
   };
@@ -645,10 +657,7 @@ export const useWorkspaceTabs = () => {
     if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
 
-  const startSessionConnection = (
-    paneId: string,
-    connection: { protocol: string, account: string }
-  ) => {
+  const startSessionConnection = (paneId: string, connection: { protocol: string, account: string }) => {
     const match = findPane(paneId);
     if (!match) return;
 
@@ -695,9 +704,10 @@ export const useWorkspaceTabs = () => {
 
     const currentIndex = tabs.value.findIndex((tab) => tab.id === activeTabId.value);
     const normalizedIndex = currentIndex === -1 ? 0 : currentIndex;
-    const nextIndex = direction === "next"
-      ? (normalizedIndex + 1) % tabs.value.length
-      : (normalizedIndex - 1 + tabs.value.length) % tabs.value.length;
+    const nextIndex
+      = direction === "next"
+        ? (normalizedIndex + 1) % tabs.value.length
+        : (normalizedIndex - 1 + tabs.value.length) % tabs.value.length;
 
     activeTabId.value = tabs.value[nextIndex]!.id;
     ensureActivePaneForTab(activeTabId.value);

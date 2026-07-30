@@ -35,9 +35,9 @@ export function createChenDataViewEditState(): ChenDataViewEditState {
 }
 
 export function chenDataViewHasDirty(state: ChenDataViewEditState) {
-  return Object.keys(state.dirtyCells).length > 0
-    || state.insertRows.length > 0
-    || Object.keys(state.deletedRows).length > 0;
+  return (
+    Object.keys(state.dirtyCells).length > 0 || state.insertRows.length > 0 || Object.keys(state.deletedRows).length > 0
+  );
 }
 
 export function clearChenDataViewEdits(state: ChenDataViewEditState) {
@@ -54,9 +54,7 @@ function cloneChenValue<T>(value: T): T {
   if (value instanceof Date) return new Date(value.getTime()) as T;
   if (Array.isArray(value)) return value.map((item) => cloneChenValue(item)) as T;
   if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [key, cloneChenValue(item)])
-    ) as T;
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, cloneChenValue(item)])) as T;
   }
   return value;
 }
@@ -90,13 +88,11 @@ export function isCurrentChenDataViewRequest(
   sequence: number,
   kind?: ChenDataViewRequestKind
 ) {
-  return state.activeRequest?.sequence === sequence
-    && (!kind || state.activeRequest.kind === kind);
+  return state.activeRequest?.sequence === sequence && (!kind || state.activeRequest.kind === kind);
 }
 
 export function hasCurrentChenDirtyVersion(state: ChenDataViewEditState, sequence: number) {
-  return isCurrentChenDataViewRequest(state, sequence)
-    && state.activeRequest?.dirtyVersion === state.dirtyVersion;
+  return isCurrentChenDataViewRequest(state, sequence) && state.activeRequest?.dirtyVersion === state.dirtyVersion;
 }
 
 export function setChenDataViewRequestKind(
@@ -116,9 +112,11 @@ export function transitionChenDataViewRequest(
   expectedKind: ChenDataViewRequestKind,
   nextKind: ChenDataViewRequestKind
 ) {
-  if (!isCurrentChenDataViewRequest(state, sequence, expectedKind)
+  if (
+    !isCurrentChenDataViewRequest(state, sequence, expectedKind)
     || !hasCurrentChenDirtyVersion(state, sequence)
-    || !state.activeRequest) {
+    || !state.activeRequest
+  ) {
     return null;
   }
   state.requestSequence += 1;
@@ -153,10 +151,7 @@ export function finishChenDataViewRequestWithoutData(state: ChenDataViewEditStat
   return Boolean(request && finishChenDataViewRequest(state, request.sequence, "data"));
 }
 
-export function acceptChenSaveChangesPreviewResult(
-  state: ChenDataViewEditState,
-  result: ChenSaveChangesPreviewResult
-) {
+export function acceptChenSaveChangesPreviewResult(state: ChenDataViewEditState, result: ChenSaveChangesPreviewResult) {
   const request = state.activeRequest;
   if (!request || !isCurrentChenDataViewRequest(state, request.sequence, "preview")) return "ignored" as const;
   if (!result?.success) {
@@ -184,18 +179,15 @@ export function cancelChenSaveChangesConfirmation(state: ChenDataViewEditState) 
   return true;
 }
 
-export function acceptChenSaveChangesResult(
-  state: ChenDataViewEditState,
-  result: ChenSaveChangesResult
-) {
+export function acceptChenSaveChangesResult(state: ChenDataViewEditState, result: ChenSaveChangesResult) {
   const request = state.activeRequest;
   if (!request || !isCurrentChenDataViewRequest(state, request.sequence, "save")) return "ignored" as const;
 
   state.saveResult = result;
-  const commitOutcomeUnknown = !result?.success
-    && result?.reason === "SAVE_CHANGES_COMMIT_OUTCOME_UNKNOWN";
-  const databaseChangesApplied = result?.databaseChangesApplied === true
-    || (result?.databaseChangesApplied === undefined && result?.success === true);
+  const commitOutcomeUnknown = !result?.success && result?.reason === "SAVE_CHANGES_COMMIT_OUTCOME_UNKNOWN";
+  const databaseChangesApplied
+    = result?.databaseChangesApplied === true
+      || (result?.databaseChangesApplied === undefined && result?.success === true);
 
   if (commitOutcomeUnknown || (!databaseChangesApplied && result?.connectionInvalidated === true)) {
     finishChenDataViewRequest(state, request.sequence, "save");
@@ -275,7 +267,9 @@ function normalizeDate(value: any) {
   if (value instanceof Date) {
     return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`;
   }
-  const match = String(value).trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  const match = String(value)
+    .trim()
+    .match(/^(\d{4}-\d{2}-\d{2})/);
   return match?.[1] ?? value;
 }
 
@@ -484,7 +478,9 @@ export function chenDataViewRows(dataset: ChenDataViewDataset, state: ChenDataVi
     }
     return row;
   });
-  return rows.concat(state.insertRows.map((item) => ({ ...item.data, [INSERT_VALUES]: { ...item.data[INSERT_VALUES] } })));
+  return rows.concat(
+    state.insertRows.map((item) => ({ ...item.data, [INSERT_VALUES]: { ...item.data[INSERT_VALUES] } }))
+  );
 }
 
 function editableSourceField(dataset: ChenDataViewDataset) {
@@ -514,15 +510,13 @@ export function chenDataViewTargets(tab: ChenWorkspaceTab): ChenDataViewActionTa
   return [];
 }
 
-export function findChenDataViewTarget(
-  tab: ChenWorkspaceTab,
-  dataView: unknown
-): ChenDataViewActionTarget | null {
-  const title = typeof dataView === "string"
-    ? dataView
-    : dataView && typeof dataView === "object" && "title" in dataView && typeof dataView.title === "string"
-      ? dataView.title
-      : "";
+export function findChenDataViewTarget(tab: ChenWorkspaceTab, dataView: unknown): ChenDataViewActionTarget | null {
+  const title
+    = typeof dataView === "string"
+      ? dataView
+      : dataView && typeof dataView === "object" && "title" in dataView && typeof dataView.title === "string"
+        ? dataView.title
+        : "";
 
   if (tab.kind === "data-view") {
     if (!title || tab.meta?.title === title || tab.title === title) return tab;

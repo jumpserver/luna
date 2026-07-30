@@ -238,13 +238,7 @@ export interface ChenPromptConsoleTab extends ChenTabDefinition {
 
 export type ChenQueryLikeWorkspaceTab = ChenQueryConsoleTab | ChenPromptConsoleTab;
 
-export type ChenDataViewPropertyTab
-  = | "basic"
-    | "columns"
-    | "indexes"
-    | "foreignKeys"
-    | "constraints"
-    | "ddl";
+export type ChenDataViewPropertyTab = "basic" | "columns" | "indexes" | "foreignKeys" | "constraints" | "ddl";
 
 export interface ChenDataViewConsoleTab extends ChenTabDefinition {
   kind: "data-view"

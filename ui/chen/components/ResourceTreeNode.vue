@@ -82,10 +82,18 @@ const iconName = computed(() => {
     </div>
 
     <ul v-if="isExpanded" class="space-y-0.5">
-      <li v-if="loadingChildren[node.key]" class="px-1.5 py-0.5 text-[11px] text-muted" :style="{ paddingLeft: `${((depth || 0) + 1) * 12 + 20}px` }">
+      <li
+        v-if="loadingChildren[node.key]"
+        class="px-1.5 py-0.5 text-[11px] text-muted"
+        :style="{ paddingLeft: `${((depth || 0) + 1) * 12 + 20}px` }"
+      >
         Loading...
       </li>
-      <li v-else-if="!children.length" class="px-1.5 py-0.5 text-[11px] text-muted" :style="{ paddingLeft: `${((depth || 0) + 1) * 12 + 20}px` }">
+      <li
+        v-else-if="!children.length"
+        class="px-1.5 py-0.5 text-[11px] text-muted"
+        :style="{ paddingLeft: `${((depth || 0) + 1) * 12 + 20}px` }"
+      >
         No items
       </li>
       <ChenResourceTreeNode

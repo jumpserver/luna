@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import type {
-  ChenDataViewExportFormat,
-  ChenDataViewExportOptions,
-  ChenDataViewExportScope
-} from "~/chen/types";
+import type { ChenDataViewExportFormat, ChenDataViewExportOptions, ChenDataViewExportScope } from "~/chen/types";
 
 const props = defineProps<{
   open: boolean

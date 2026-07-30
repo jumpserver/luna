@@ -32,8 +32,8 @@ export function useAssetConnection() {
     const assetProtocols = sortPermedProtocols(asset.permedProtocols || [])
       .filter((protocol) => isTauriRuntime() || protocol?.public !== false)
       .map((protocol) => protocol.name);
-    const protocols = assetProtocols.length > 0 ? assetProtocols : (connectionInfo.availableProtocols || []);
-    const protocol = protocols.includes(connectionInfo.protocol) ? connectionInfo.protocol : (protocols[0] || "");
+    const protocols = assetProtocols.length > 0 ? assetProtocols : connectionInfo.availableProtocols || [];
+    const protocol = protocols.includes(connectionInfo.protocol) ? connectionInfo.protocol : protocols[0] || "";
     const accounts = asset.permedAccounts || [];
 
     let accountMode = connectionInfo.accountMode;
@@ -46,11 +46,12 @@ export function useAssetConnection() {
     } as const;
 
     if (accountMode === "hosted") {
-      const matched = accounts.find((item) =>
-        (accountId && item.id === accountId)
-        || item.name === account
-        || item.username === account
-        || item.alias === account
+      const matched = accounts.find(
+        (item) =>
+          (accountId && item.id === accountId)
+          || item.name === account
+          || item.username === account
+          || item.alias === account
       );
 
       if (matched && !matched.alias.startsWith("@")) {
@@ -79,14 +80,9 @@ export function useAssetConnection() {
     if (protocol) {
       try {
         const methods = await getMethodsForProtocol(protocol);
-        connectMethod = isConnectMethodAvailable(
-          connectionInfo.connectMethod,
-          methods,
-          protocol,
-          appConfig.value
-        )
+        connectMethod = isConnectMethodAvailable(connectionInfo.connectMethod, methods, protocol, appConfig.value)
           ? connectionInfo.connectMethod
-          : (methods[0]?.value || "");
+          : methods[0]?.value || "";
       } catch {
         // The connection layer still has a local protocol default when the
         // method list is temporarily unavailable.

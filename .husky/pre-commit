@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+
+pnpm fmt
+pnpm lint
+pnpm cargo:fmt

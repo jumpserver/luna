@@ -1,11 +1,7 @@
 import type { SqlSnippetPayload } from "~/composables/useApiRequest";
 
 import { ref } from "vue";
-import {
-  createSqlSnippet,
-  deleteSqlSnippet,
-  getSqlSnippets
-} from "~/composables/useApiRequest";
+import { createSqlSnippet, deleteSqlSnippet, getSqlSnippets } from "~/composables/useApiRequest";
 
 export interface ChenSqlSnippet {
   id: string
@@ -45,19 +41,18 @@ export function normalizeChenSqlSnippets(value: unknown, dbType: string): ChenSq
     const module = snippetModuleValue(raw?.module);
     if (!id || module !== dbType) return [];
 
-    return [{
-      id,
-      name: String(raw?.name || id),
-      args: String(raw?.args || ""),
-      module
-    }];
+    return [
+      {
+        id,
+        name: String(raw?.name || id),
+        args: String(raw?.args || ""),
+        module
+      }
+    ];
   });
 }
 
-export function useChenSqlSnippets(
-  getDbType: () => string,
-  requests: ChenSqlSnippetRequests = defaultRequests
-) {
+export function useChenSqlSnippets(getDbType: () => string, requests: ChenSqlSnippetRequests = defaultRequests) {
   const snippets = ref<ChenSqlSnippet[]>([]);
   const loading = ref(false);
   const saving = ref(false);

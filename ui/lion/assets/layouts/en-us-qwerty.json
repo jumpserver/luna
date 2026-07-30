@@ -361,24 +361,7 @@
   },
 
   "layout": [
-    [
-      "Esc",
-      0.7,
-      "F1",
-      "F2",
-      "F3",
-      "F4",
-      0.7,
-      "F5",
-      "F6",
-      "F7",
-      "F8",
-      0.7,
-      "F9",
-      "F10",
-      "F11",
-      "F12"
-    ],
+    ["Esc", 0.7, "F1", "F2", "F3", "F4", 0.7, "F5", "F6", "F7", "F8", 0.7, "F9", "F10", "F11", "F12"],
 
     [0.1],
 
@@ -392,13 +375,7 @@
           ["LCtrl", "Meta", "LAlt", "Space", "RAlt", "Menu", "RCtrl"]
         ],
 
-        "movement": [
-          ["Ins", "Home", "PgUp"],
-          ["Del", "End", "PgDn"],
-          [1],
-          ["Up"],
-          ["Left", "Down", "Right"]
-        ]
+        "movement": [["Ins", "Home", "PgUp"], ["Del", "End", "PgDn"], [1], ["Up"], ["Left", "Down", "Right"]]
       }
     }
   ],

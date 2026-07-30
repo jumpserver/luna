@@ -16,9 +16,7 @@ const activeCount = computed(() => store.activeTasks.length);
 const tasks = computed(() => store.tasks.slice().sort((left, right) => right.updatedAt - left.updatedAt));
 const conflictTask = computed(() => store.conflictTask);
 const panelStyle = computed(() =>
-  position.value
-    ? { left: `${position.value.x}px`, top: `${position.value.y}px` }
-    : { bottom: "16px", right: "16px" }
+  position.value ? { left: `${position.value.x}px`, top: `${position.value.y}px` } : { bottom: "16px", right: "16px" }
 );
 
 let dragOffset = { x: 0, y: 0 };
@@ -34,8 +32,14 @@ function clampPosition() {
 
   const margin = 8;
   position.value = {
-    x: Math.min(Math.max(margin, position.value.x), Math.max(margin, window.innerWidth - panel.value.offsetWidth - margin)),
-    y: Math.min(Math.max(margin, position.value.y), Math.max(margin, window.innerHeight - panel.value.offsetHeight - margin))
+    x: Math.min(
+      Math.max(margin, position.value.x),
+      Math.max(margin, window.innerWidth - panel.value.offsetWidth - margin)
+    ),
+    y: Math.min(
+      Math.max(margin, position.value.y),
+      Math.max(margin, window.innerHeight - panel.value.offsetHeight - margin)
+    )
   };
 }
 
@@ -130,7 +134,7 @@ onBeforeUnmount(() => {
       <UIcon name="i-lucide-cloud-upload" class="size-4 shrink-0 text-primary" />
       <div class="min-w-0 flex-1">
         <p class="truncate text-sm font-medium">
-          {{ activeCount ? t('FileTransfer.ActiveCount', { count: activeCount }) : t('FileTransfer.Title') }}
+          {{ activeCount ? t("FileTransfer.ActiveCount", { count: activeCount }) : t("FileTransfer.Title") }}
         </p>
       </div>
       <UButton
@@ -173,13 +177,7 @@ onBeforeUnmount(() => {
                 {{ task.sourceEndpoint.label }} → {{ task.destinationEndpoint.label }}
               </p>
             </div>
-            <UBadge
-              v-if="task.status === 'completed'"
-              color="success"
-              variant="subtle"
-              size="xs"
-              icon="i-lucide-check"
-            >
+            <UBadge v-if="task.status === 'completed'" color="success" variant="subtle" size="xs" icon="i-lucide-check">
               {{ t(`FileTransfer.Status.${task.status}`) }}
             </UBadge>
             <span v-else class="shrink-0 text-[10px] text-(--app-muted)">
@@ -195,16 +193,12 @@ onBeforeUnmount(() => {
               @click="store.cancelTask(task.id)"
             />
           </div>
-          <div v-if="!['completed', 'failed', 'skipped', 'canceled'].includes(task.status)" class="mt-2 flex items-center gap-2">
-            <UProgress
-              class="min-w-0 flex-1"
-              size="xs"
-              :value="progress(task)"
-              color="primary"
-            />
-            <span class="w-8 text-right font-ui-mono text-[10px] text-(--app-muted)">
-              {{ progress(task) }}%
-            </span>
+          <div
+            v-if="!['completed', 'failed', 'skipped', 'canceled'].includes(task.status)"
+            class="mt-2 flex items-center gap-2"
+          >
+            <UProgress class="min-w-0 flex-1" size="xs" :value="progress(task)" color="primary" />
+            <span class="w-8 text-right font-ui-mono text-[10px] text-(--app-muted)">{{ progress(task) }}%</span>
           </div>
           <p v-if="task.error && task.error !== 'target_exists'" class="mt-1 truncate text-[11px] text-error">
             {{ task.error }}
@@ -228,12 +222,30 @@ onBeforeUnmount(() => {
     :title="t('FileTransfer.ConflictTitle')"
     :description="t('FileTransfer.ConflictDescription')"
     :ui="{ content: 'max-w-md' }"
-    @update:open="(open) => { if (!open && conflictTask) store.cancelBatch(conflictTask.batchId); }"
+    @update:open="
+      (open) => {
+        if (!open && conflictTask) store.cancelBatch(conflictTask.batchId);
+      }
+    "
   >
     <template #footer>
-      <UButton color="neutral" variant="ghost" :label="t('FileTransfer.Cancel')" @click="conflictTask && store.cancelBatch(conflictTask.batchId)" />
-      <UButton color="neutral" variant="soft" :label="t('FileTransfer.Skip')" @click="conflictTask && store.resolveBatchConflict(conflictTask.batchId, 'skip')" />
-      <UButton color="primary" :label="t('FileTransfer.Overwrite')" @click="conflictTask && store.resolveBatchConflict(conflictTask.batchId, 'overwrite')" />
+      <UButton
+        color="neutral"
+        variant="ghost"
+        :label="t('FileTransfer.Cancel')"
+        @click="conflictTask && store.cancelBatch(conflictTask.batchId)"
+      />
+      <UButton
+        color="neutral"
+        variant="soft"
+        :label="t('FileTransfer.Skip')"
+        @click="conflictTask && store.resolveBatchConflict(conflictTask.batchId, 'skip')"
+      />
+      <UButton
+        color="primary"
+        :label="t('FileTransfer.Overwrite')"
+        @click="conflictTask && store.resolveBatchConflict(conflictTask.batchId, 'overwrite')"
+      />
     </template>
   </UModal>
 </template>

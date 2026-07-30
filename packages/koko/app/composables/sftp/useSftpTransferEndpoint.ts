@@ -104,7 +104,11 @@ export function useSftpTransferEndpoint(
   const removeMessageListener = socket.onMessage((message) => {
     const request = pending.get(message.id);
     if (!request) return;
-    if (message.type === SftpMessageType.Error || message.type === SftpMessageType.Close || message.type === SftpMessageType.Closed) {
+    if (
+      message.type === SftpMessageType.Error ||
+      message.type === SftpMessageType.Close ||
+      message.type === SftpMessageType.Closed
+    ) {
       pending.delete(message.id);
       request.reject(new FileTransferUnavailableError(message.err || message.type));
       return;
@@ -159,13 +163,14 @@ export function useSftpTransferEndpoint(
     ref,
     isAvailable: () => socket.connected.value,
     onTransferCommitted,
-    prepareTransfer: (input: FileTransferPrepareInput) => requestState(SftpCommand.TransferPrepare, {
-      transfer_id: input.transferId,
-      path: input.targetPath,
-      file_name: input.fileName,
-      size: input.size,
-      conflict_policy: input.conflictPolicy
-    }),
+    prepareTransfer: (input: FileTransferPrepareInput) =>
+      requestState(SftpCommand.TransferPrepare, {
+        transfer_id: input.transferId,
+        path: input.targetPath,
+        file_name: input.fileName,
+        size: input.size,
+        conflict_policy: input.conflictPolicy
+      }),
     readChunk: async (input) => {
       const message = await request(SftpCommand.TransferRead, {
         transfer_id: input.transferId,
@@ -175,7 +180,8 @@ export function useSftpTransferEndpoint(
       });
       if (message.type !== SftpMessageType.Binary) throw new Error("Invalid SFTP transfer chunk response");
       const metadata = JSON.parse(message.data || "{}") as Omit<FileTransferChunk, "data">;
-      if (!metadata.sha256 || !Number.isSafeInteger(metadata.offset)) throw new Error("Invalid SFTP transfer chunk metadata");
+      if (!metadata.sha256 || !Number.isSafeInteger(metadata.offset))
+        throw new Error("Invalid SFTP transfer chunk metadata");
       return { ...metadata, data: decodeRaw(message.raw) };
     },
     writeChunk: async (input: FileTransferWriteInput) => {

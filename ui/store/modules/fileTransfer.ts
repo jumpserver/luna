@@ -34,7 +34,9 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
   const activeTasks = computed(() => tasks.value.filter((task) => !terminalStatuses.has(task.status)));
   const completedTasks = computed(() => tasks.value.filter((task) => task.status === "completed"));
   const failedTasks = computed(() => tasks.value.filter((task) => task.status === "failed"));
-  const conflictTask = computed(() => tasks.value.find((task) => task.status === "paused" && task.error === conflictError) || null);
+  const conflictTask = computed(
+    () => tasks.value.find((task) => task.status === "paused" && task.error === conflictError) || null
+  );
   const destinationQueues = computed(() => {
     const queues = new Map<string, FileTransferTask[]>();
     for (const task of activeTasks.value) {
@@ -182,9 +184,7 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
     if (!persisted) return;
     batches.value = persisted.batches;
     tasks.value = persisted.tasks.map((task) =>
-      resumableStatuses.has(task.status)
-        ? { ...task, status: "paused" as const, updatedAt: Date.now() }
-        : task
+      resumableStatuses.has(task.status) ? { ...task, status: "paused" as const, updatedAt: Date.now() } : task
     );
     schedulePersist();
   }
@@ -255,8 +255,9 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
         throw new Error("Invalid file transfer preparation response");
       }
 
-      const checksumAligned = prepared.committedBytes === task.confirmedBytes
-        && (prepared.committedBytes === 0 || Boolean(task.checksumState));
+      const checksumAligned
+        = prepared.committedBytes === task.confirmedBytes
+          && (prepared.committedBytes === 0 || Boolean(task.checksumState));
       if (!checksumAligned) {
         await destination.cancelTransfer({
           transferId: task.id,
@@ -336,10 +337,11 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
 
   function kick() {
     for (const queue of destinationQueues.value.values()) {
-      const next = queue.find((task) =>
-        task.status === "queued"
-        && !runningEndpoints.has(task.sourceEndpoint.id)
-        && !runningEndpoints.has(task.destinationEndpoint.id)
+      const next = queue.find(
+        (task) =>
+          task.status === "queued"
+          && !runningEndpoints.has(task.sourceEndpoint.id)
+          && !runningEndpoints.has(task.destinationEndpoint.id)
       );
       if (!next) continue;
 

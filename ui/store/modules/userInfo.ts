@@ -378,10 +378,7 @@ export const useUserInfoStore = defineStore(
      * @param protocol 协议名称
      * @param preference 连接偏好
      */
-    const setConnectionPreferenceForProtocol = (
-      protocol: string,
-      preference: ProtocolConnectionPreferenceInfo
-    ) => {
+    const setConnectionPreferenceForProtocol = (protocol: string, preference: ProtocolConnectionPreferenceInfo) => {
       if (!currentSite.value || !protocol || !preference.connectMethod) return;
       const siteData = userMap.value[currentSite.value];
 

@@ -29,9 +29,7 @@ let bootstrapPromise: Promise<boolean> | null = null;
 
 const wait = (delay: number) => new Promise((resolve) => setTimeout(resolve, delay));
 
-const classifyBootstrapFailure = (
-  payload: LoginPayload | null | undefined
-): "auth" | "network" | "server" | null => {
+const classifyBootstrapFailure = (payload: LoginPayload | null | undefined): "auth" | "network" | "server" | null => {
   if (!payload || payload.status !== "success") return "auth";
 
   const profileStatus = Number(payload.profile?.status ?? 0);
@@ -45,7 +43,12 @@ const classifyBootstrapFailure = (
 const normalizeOrgList = (value: unknown): PermOrgItem[] => {
   if (Array.isArray(value)) {
     return value.filter((item): item is PermOrgItem => {
-      return !!item && typeof item === "object" && typeof (item as PermOrgItem).id === "string" && typeof (item as PermOrgItem).name === "string";
+      return (
+        !!item
+        && typeof item === "object"
+        && typeof (item as PermOrgItem).id === "string"
+        && typeof (item as PermOrgItem).name === "string"
+      );
     });
   }
 
@@ -100,16 +103,17 @@ export const useAuthSession = () => {
     if (!profileData || !resolvedSite) return false;
 
     const availableOrgs = initSelectOrganization(permissionOrgData);
-    const currentOrg = currentOrgData && typeof currentOrgData === "object"
-      ? currentOrgData
-      : {
-        id: "",
-        name: "",
-        is_root: false,
-        is_default: false,
-        is_system: false,
-        comment: ""
-      };
+    const currentOrg
+      = currentOrgData && typeof currentOrgData === "object"
+        ? currentOrgData
+        : {
+          id: "",
+          name: "",
+          is_root: false,
+          is_default: false,
+          is_system: false,
+          comment: ""
+        };
 
     userInfoStore.setUserData(resolvedSite, {
       name: profileData.name,
@@ -231,7 +235,7 @@ export const useAuthSession = () => {
 
         if (response.status === 401 || response.status === 403) return null;
         if (!response.ok) continue;
-        return await response.json() as T;
+        return (await response.json()) as T;
       } catch (error) {
         console.debug("web auth request failed", { path, error });
       }
@@ -299,29 +303,28 @@ export const useAuthSession = () => {
         "/api/v1/users/profile/permissions/",
         "/api/v1/profile/permissions/"
       ]),
-      fetchWebJson<Record<string, any>>([
-        "/api/v1/orgs/orgs/current/"
-      ])
-    ]).then(([permissionOrgData, currentOrgData]) => {
-      const availableOrgs = initSelectOrganization(permissionOrgData || {});
-      const resolvedCurrentOrg = currentOrgData && typeof currentOrgData === "object"
-        ? currentOrgData
-        : null;
-      const currentOrg = availableOrgs.find((org) => org.id === cookieOrgId)
-        || availableOrgs.find((org) => org.id === resolvedCurrentOrg?.id)
-        || availableOrgs[0]
-        || profileOrg;
+      fetchWebJson<Record<string, any>>(["/api/v1/orgs/orgs/current/"])
+    ])
+      .then(([permissionOrgData, currentOrgData]) => {
+        const availableOrgs = initSelectOrganization(permissionOrgData || {});
+        const resolvedCurrentOrg = currentOrgData && typeof currentOrgData === "object" ? currentOrgData : null;
+        const currentOrg
+          = availableOrgs.find((org) => org.id === cookieOrgId)
+            || availableOrgs.find((org) => org.id === resolvedCurrentOrg?.id)
+            || availableOrgs[0]
+            || profileOrg;
 
-      userInfoStore.setOrganizations(availableOrgs);
-      if (currentOrg.id) {
-        userInfoStore.setCurrentOrg({
-          comment: resolvedCurrentOrg?.comment || "",
-          ...currentOrg
-        });
-      }
-    }).catch((error) => {
-      console.debug("hydrate web organization failed", error);
-    });
+        userInfoStore.setOrganizations(availableOrgs);
+        if (currentOrg.id) {
+          userInfoStore.setCurrentOrg({
+            comment: resolvedCurrentOrg?.comment || "",
+            ...currentOrg
+          });
+        }
+      })
+      .catch((error) => {
+        console.debug("hydrate web organization failed", error);
+      });
 
     return true;
   };
@@ -351,7 +354,7 @@ export const useAuthSession = () => {
     };
 
     if (!isTauriRuntime()) {
-      return await bootstrapWebCookieSession() || restored;
+      return (await bootstrapWebCookieSession()) || restored;
     }
 
     const site = getPersistedSite();

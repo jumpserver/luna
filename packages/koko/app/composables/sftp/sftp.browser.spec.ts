@@ -57,7 +57,12 @@ class FakeWebSocket {
 }
 
 function lastSent(socket: FakeWebSocket) {
-  return JSON.parse(socket.sent.at(-1) || "{}") as { id: string; type: SftpMessageType; cmd?: SftpCommand; data?: string };
+  return JSON.parse(socket.sent.at(-1) || "{}") as {
+    id: string;
+    type: SftpMessageType;
+    cmd?: SftpCommand;
+    data?: string;
+  };
 }
 
 async function nextMessage() {
@@ -160,7 +165,12 @@ describe("sFTP browser protocol", () => {
     await vi.waitFor(() => expect(fake.sent).toHaveLength(2));
 
     const secondRequest = lastSent(fake);
-    fake.receive({ id: secondRequest.id, type: SftpMessageType.Data, cmd: SftpCommand.Upload, data: SftpDataStatus.Ok });
+    fake.receive({
+      id: secondRequest.id,
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.Upload,
+      data: SftpDataStatus.Ok
+    });
     await expect(secondUpload).resolves.toBeUndefined();
   });
 
@@ -171,7 +181,12 @@ describe("sFTP browser protocol", () => {
     const remove = operations.removePath("/workspace/readme.txt");
     await nextMessage();
     const removeRequest = lastSent(fake);
-    fake.receive({ id: removeRequest.id, type: SftpMessageType.Data, cmd: SftpCommand.Remove, err: "permission denied" });
+    fake.receive({
+      id: removeRequest.id,
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.Remove,
+      err: "permission denied"
+    });
     await expect(remove).rejects.toThrow("permission denied");
   });
 

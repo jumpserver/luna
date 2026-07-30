@@ -8,16 +8,19 @@ import { basicSetup } from "codemirror";
 import { chenSqlConfig, replaceChenSqlDocument } from "~/chen/utils/sqlEditor";
 import { createCodeMirrorSyntaxTheme, createCodeMirrorTheme } from "~/shared/theme/adapters/codemirror";
 
-const props = withDefaults(defineProps<{
-  modelValue: string
-  dbType?: string
-  hints?: ChenSqlHints
-  readOnly?: boolean
-}>(), {
-  dbType: "",
-  hints: () => ({}),
-  readOnly: false
-});
+const props = withDefaults(
+  defineProps<{
+    modelValue: string
+    dbType?: string
+    hints?: ChenSqlHints
+    readOnly?: boolean
+  }>(),
+  {
+    dbType: "",
+    hints: () => ({}),
+    readOnly: false
+  }
+);
 
 const emit = defineEmits<{
   "update:modelValue": [value: string]
@@ -43,43 +46,45 @@ const editorExtensions: Extension[] = [
   createCodeMirrorSyntaxTheme(),
   EditorView.lineWrapping,
   EditorState.tabSize.of(2),
-  Prec.highest(keymap.of([
-    {
-      key: "Mod-l",
-      run: () => {
-        emit("format");
-        return true;
+  Prec.highest(
+    keymap.of([
+      {
+        key: "Mod-l",
+        run: () => {
+          emit("format");
+          return true;
+        }
+      },
+      {
+        key: "Ctrl-r",
+        run: () => {
+          emit("openSnippets");
+          return true;
+        }
+      },
+      {
+        key: "Ctrl-s",
+        run: () => {
+          emit("saveSnippet");
+          return true;
+        }
+      },
+      {
+        key: "Mod-Enter",
+        run: () => {
+          emit("run");
+          return true;
+        }
+      },
+      {
+        key: "Mod-d",
+        run: () => {
+          emit("stop");
+          return true;
+        }
       }
-    },
-    {
-      key: "Ctrl-r",
-      run: () => {
-        emit("openSnippets");
-        return true;
-      }
-    },
-    {
-      key: "Ctrl-s",
-      run: () => {
-        emit("saveSnippet");
-        return true;
-      }
-    },
-    {
-      key: "Mod-Enter",
-      run: () => {
-        emit("run");
-        return true;
-      }
-    },
-    {
-      key: "Mod-d",
-      run: () => {
-        emit("stop");
-        return true;
-      }
-    }
-  ])),
+    ])
+  ),
   EditorView.updateListener.of((update) => {
     if (update.docChanged && !applyingExternalValue) {
       emit("update:modelValue", update.state.doc.toString());
@@ -121,24 +126,36 @@ onMounted(() => {
   });
 });
 
-watch(() => props.modelValue, (value) => {
-  if (!editor || editor.state.doc.toString() === value) return;
-  applyingExternalValue = true;
-  editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: value } });
-  applyingExternalValue = false;
-});
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (!editor || editor.state.doc.toString() === value) return;
+    applyingExternalValue = true;
+    editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: value } });
+    applyingExternalValue = false;
+  }
+);
 
-watch(() => props.readOnly, (value) => {
-  editor?.dispatch({ effects: editableSlot.reconfigure(EditorView.editable.of(!value)) });
-});
+watch(
+  () => props.readOnly,
+  (value) => {
+    editor?.dispatch({ effects: editableSlot.reconfigure(EditorView.editable.of(!value)) });
+  }
+);
 
-watch(() => [props.dbType, props.hints] as const, ([dbType, hints]) => {
-  editor?.dispatch({ effects: sqlLanguageSlot.reconfigure(sql(chenSqlConfig(dbType, hints))) });
-});
+watch(
+  () => [props.dbType, props.hints] as const,
+  ([dbType, hints]) => {
+    editor?.dispatch({ effects: sqlLanguageSlot.reconfigure(sql(chenSqlConfig(dbType, hints))) });
+  }
+);
 
-watch(() => colorMode.value, () => {
-  editor?.dispatch({ effects: themeSlot.reconfigure(createCodeMirrorTheme()) });
-});
+watch(
+  () => colorMode.value,
+  () => {
+    editor?.dispatch({ effects: themeSlot.reconfigure(createCodeMirrorTheme()) });
+  }
+);
 
 onBeforeUnmount(() => editor?.destroy());
 

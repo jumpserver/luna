@@ -194,8 +194,9 @@ clients/
 pnpm dev              # Start Nuxt dev server
 pnpm tauri:dev        # Start Tauri dev mode
 pnpm tauri:build      # Build production app
-pnpm lint             # Run ESLint
-pnpm prettier         # Format code with Prettier
+pnpm fmt              # Format code with Oxfmt
+pnpm lint             # Run ESLint with automatic fixes
+pnpm cargo:fmt        # Format Rust code
 pnpm reset            # Clean build artifacts
 ```
 

@@ -181,7 +181,7 @@ const initDraft = (asset: AssetItem) => {
   draftRememberSecret.value = saved?.rememberSecret || false;
   draftRememberSelection.value = !!saved;
   const sourceMatchesProtocol = source?.protocol?.toLowerCase() === draftProtocol.value.toLowerCase();
-  draftConnectMethod.value = sourceMatchesProtocol ? (source?.connectMethod || "") : "";
+  draftConnectMethod.value = sourceMatchesProtocol ? source?.connectMethod || "" : "";
   draftConnectOptions.value = sourceMatchesProtocol ? { ...(source?.connectOptions || {}) } : {};
 };
 
@@ -450,7 +450,9 @@ onMounted(loadAsset);
                     </div>
                   </div>
 
-                  <div class="mt-5 rounded-lg border border-[var(--app-border)] bg-[var(--workspace-surface-header)] px-4 py-3">
+                  <div
+                    class="mt-5 rounded-lg border border-[var(--app-border)] bg-[var(--workspace-surface-header)] px-4 py-3"
+                  >
                     <div class="text-xs text-[var(--app-muted)]">
                       {{ locale === "zh" ? "连接目标" : "Connection target" }}
                     </div>
@@ -539,9 +541,9 @@ onMounted(loadAsset);
               </div>
               <UButton
                 v-else
-                :label="externalClientLaunch
-                  ? (locale === 'zh' ? '客户端打开' : 'Open in client')
-                  : t('Common.Connect')"
+                :label="
+                  externalClientLaunch ? (locale === 'zh' ? '客户端打开' : 'Open in client') : t('Common.Connect')
+                "
                 color="primary"
                 :loading="connecting"
                 block

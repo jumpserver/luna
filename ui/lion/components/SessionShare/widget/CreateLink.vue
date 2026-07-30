@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import type { Composer } from 'vue-i18n';
-import { useClipboard, useDebounceFn } from '@vueuse/core';
-import { computed, reactive, ref, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { createShareURL } from '@/lion/api';
-import { useColor } from '@/lion/hooks/useColor';
-import { withBaseUrl } from '@/lion/utils/base';
+import type { Composer } from "vue-i18n";
+import { useClipboard, useDebounceFn } from "@vueuse/core";
+import { computed, reactive, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import { createShareURL } from "@/lion/api";
+import { useColor } from "@/lion/hooks/useColor";
+import { withBaseUrl } from "@/lion/utils/base";
 
-export type TranslateFunction = Composer['t'];
+export type TranslateFunction = Composer["t"];
 
 const props = defineProps<{
   session: string
@@ -16,7 +16,7 @@ const props = defineProps<{
 
 const { copy } = useClipboard({ legacy: true });
 const getMinuteLabel = (item: number, t: TranslateFunction): string => {
-  const minuteLabel = item > 1 ? t('Minutes') : t('Minute');
+  const minuteLabel = item > 1 ? t("Minutes") : t("Minute");
   return `${item} ${minuteLabel}`;
 };
 
@@ -49,21 +49,21 @@ const { lighten } = useColor();
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const shareInfo = ref({
-  shareCode: '',
+  shareCode: "",
   sessionId: props.session,
-  shareId: '',
-  shareURL: ''
+  shareId: "",
+  shareURL: ""
 });
 const userOptions = ref<UserInfo[]>([]);
 const selectedUserIds = ref<string[]>([]);
-const currentQuery = ref<string>('');
+const currentQuery = ref<string>("");
 const currentPage = ref<number>(1);
 const hasMore = ref<boolean>(true);
 const searchLoading = ref<boolean>(false);
 const showLinkResult = ref<boolean>(false);
 
 const searchUsers = useDebounceFn(async (value: string, isLoadMore: boolean = false) => {
-  if (value === '' && !isLoadMore) {
+  if (value === "" && !isLoadMore) {
     searchLoading.value = false;
     return;
   }
@@ -81,27 +81,27 @@ const searchUsers = useDebounceFn(async (value: string, isLoadMore: boolean = fa
     const params = new URLSearchParams({
       search: currentQuery.value,
       page: currentPage.value.toString(),
-      limit: '10'
+      limit: "10"
     });
 
-    const response = await fetch(withBaseUrl(`/api/v1/users/users/suggestions/?${params}`)).then(
-      (res: any) => res.json()
+    const response = await fetch(withBaseUrl(`/api/v1/users/users/suggestions/?${params}`)).then((res: any) =>
+      res.json()
     );
 
     const newUsers = response.results || response;
-    const filterUsers = (users: UserInfo[]) => users.filter((user) => {
-      const query = currentQuery.value.toLowerCase();
-      return user.name.toLowerCase().includes(query) || user.username.toLowerCase().includes(query);
-    });
+    const filterUsers = (users: UserInfo[]) =>
+      users.filter((user) => {
+        const query = currentQuery.value.toLowerCase();
+        return user.name.toLowerCase().includes(query) || user.username.toLowerCase().includes(query);
+      });
 
-    userOptions.value = isLoadMore && currentPage.value > 1
-      ? [...userOptions.value, ...filterUsers(newUsers)]
-      : filterUsers(newUsers);
+    userOptions.value
+      = isLoadMore && currentPage.value > 1 ? [...userOptions.value, ...filterUsers(newUsers)] : filterUsers(newUsers);
 
     hasMore.value = response.next !== null && response.next !== undefined;
   } catch (error) {
-    console.error('Search users error:', error);
-    addErrorToast({ title: t('NoUserFound') });
+    console.error("Search users error:", error);
+    addErrorToast({ title: t("NoUserFound") });
   } finally {
     searchLoading.value = false;
   }
@@ -137,7 +137,7 @@ const createSingleSelectHandler = <T, K extends keyof T>(
 
 const shareLinkRequest = reactive({
   expiredTime: 10,
-  actionPerm: 'writable'
+  actionPerm: "writable"
 });
 
 const expiredOptions = reactive<ExpiredOption[]>([
@@ -149,15 +149,15 @@ const expiredOptions = reactive<ExpiredOption[]>([
 ]);
 
 const actionsPermOptions = reactive<ActionPermOption[]>([
-  { label: t('Writable'), value: 'writable', checked: true },
-  { label: t('ReadOnly'), value: 'readonly', checked: false }
+  { label: t("Writable"), value: "writable", checked: true },
+  { label: t("ReadOnly"), value: "readonly", checked: false }
 ]);
 
 const debounceSearch = useDebounceFn((query: string) => searchUsers(query, false), 300);
-const handleChangeExpired = createSingleSelectHandler(expiredOptions, 'value', 'checked', (value) => {
+const handleChangeExpired = createSingleSelectHandler(expiredOptions, "value", "checked", (value) => {
   shareLinkRequest.expiredTime = value;
 });
-const handleChangeActionPerm = createSingleSelectHandler(actionsPermOptions, 'value', 'checked', (value) => {
+const handleChangeActionPerm = createSingleSelectHandler(actionsPermOptions, "value", "checked", (value) => {
   shareLinkRequest.actionPerm = value;
 });
 
@@ -168,7 +168,7 @@ const generateShareURL = (shareId: string, shareCode: string) => {
 
 const handleCreateLink = () => {
   if (!shareInfo.value.sessionId) {
-    addErrorToast({ title: t('FailedCreateConnection') });
+    addErrorToast({ title: t("FailedCreateConnection") });
     return;
   }
 
@@ -186,7 +186,7 @@ const handleCreateLink = () => {
     .then((response: any) => response.json())
     .then((res: any) => {
       if (res.success && !res.success) {
-        addErrorToast({ title: `${t('CreateLinkFailed')}: ${res?.message || ''}` });
+        addErrorToast({ title: `${t("CreateLinkFailed")}: ${res?.message || ""}` });
         return;
       }
       shareInfo.value.shareId = res.id;
@@ -194,7 +194,7 @@ const handleCreateLink = () => {
       shareInfo.value.shareURL = generateShareURL(res.id, res.verify_code);
     })
     .catch(() => {
-      addErrorToast({ title: t('CreateLinkFailed') });
+      addErrorToast({ title: t("CreateLinkFailed") });
     });
 };
 
@@ -202,19 +202,19 @@ const handleCopyShareURL = () => {
   const url = shareInfo.value.shareURL;
   const shareCode = shareInfo.value.shareCode;
   if (!url || !shareCode) {
-    addErrorToast({ title: t('NoLink') });
+    addErrorToast({ title: t("NoLink") });
     return;
   }
-  const text = `${t('LinkAddr')}: ${url}\n${t('VerifyCode')}: ${shareCode}`;
+  const text = `${t("LinkAddr")}: ${url}\n${t("VerifyCode")}: ${shareCode}`;
   copy(text)
-    .then(() => toast.add({ title: t('CopyShareURLSuccess'), color: 'info' }))
-    .catch((err) => console.log('copy share url err: ', err));
+    .then(() => toast.add({ title: t("CopyShareURLSuccess"), color: "info" }))
+    .catch((err) => console.log("copy share url err: ", err));
 };
 
 const handleBack = () => {
   showLinkResult.value = false;
   shareLinkRequest.expiredTime = 10;
-  shareLinkRequest.actionPerm = 'writable';
+  shareLinkRequest.actionPerm = "writable";
   selectedUserIds.value = [];
 };
 </script>
@@ -223,7 +223,7 @@ const handleBack = () => {
   <div v-if="!showLinkResult" class="space-y-4">
     <div>
       <div class="mb-2 text-xs-plus">
-        {{ t('ExpiredTime') }}
+        {{ t("ExpiredTime") }}
       </div>
       <div class="flex flex-wrap gap-2">
         <button
@@ -243,7 +243,7 @@ const handleBack = () => {
 
     <div>
       <div class="mb-2 text-xs-plus">
-        {{ t('ActionPerm') }}
+        {{ t("ActionPerm") }}
       </div>
       <div class="grid grid-cols-2 gap-2">
         <button
@@ -263,7 +263,7 @@ const handleBack = () => {
 
     <div>
       <div class="mb-2 text-xs-plus">
-        {{ t('ShareUser') }}
+        {{ t("ShareUser") }}
       </div>
       <UInput
         :placeholder="t('GetShareUser')"
@@ -287,7 +287,7 @@ const handleBack = () => {
     <UDivider />
 
     <UButton block :disabled="disabledCreateLink" @click="handleCreateLink">
-      {{ t('CreateLink') }}
+      {{ t("CreateLink") }}
     </UButton>
   </div>
 
@@ -300,17 +300,17 @@ const handleBack = () => {
 
     <UCard>
       <div class="flex flex-col items-center gap-2 py-4 text-center">
-        <span>{{ t('VerifyCode') }}</span>
+        <span>{{ t("VerifyCode") }}</span>
         <span class="text-2xl tracking-widest">{{ shareInfo.shareCode }}</span>
       </div>
     </UCard>
 
     <div class="grid grid-cols-2 gap-2">
       <UButton icon="i-lucide-copy" color="success" variant="soft" block @click="handleCopyShareURL">
-        {{ t('CopyLink') }}
+        {{ t("CopyLink") }}
       </UButton>
       <UButton icon="i-lucide-arrow-left" color="neutral" variant="soft" block @click="handleBack">
-        {{ t('Back') }}
+        {{ t("Back") }}
       </UButton>
     </div>
   </div>

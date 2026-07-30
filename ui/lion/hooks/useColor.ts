@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref } from "vue";
 
 interface HSL {
   h: number
@@ -8,13 +8,13 @@ interface HSL {
 
 const mainThemeColorMap = new Map(
   Object.entries({
-    default: '#483D3D',
-    deepBlue: '#1A212C',
-    darkGary: '#303237'
+    default: "#483D3D",
+    deepBlue: "#1A212C",
+    darkGary: "#303237"
   })
 );
 
-const currentMainColoc = ref('#303237');
+const currentMainColoc = ref("#303237");
 
 export const useColor = () => {
   const setCurrentMainColor = (color: string) => {
@@ -23,7 +23,7 @@ export const useColor = () => {
     if (themeColor) {
       currentMainColoc.value = themeColor;
     } else {
-      currentMainColoc.value = '#483D3D';
+      currentMainColoc.value = "#483D3D";
     }
   };
 
@@ -33,13 +33,13 @@ export const useColor = () => {
    * @returns HSL颜色
    */
   const hexToHSL = (hex: string): HSL => {
-    let hexValue = hex.replace(/^#/, '');
+    let hexValue = hex.replace(/^#/, "");
 
     if (hexValue.length === 3) {
       hexValue = hexValue
-        .split('')
+        .split("")
         .map((char) => char + char)
-        .join('');
+        .join("");
     }
 
     // 解析RGB值
@@ -138,13 +138,13 @@ export const useColor = () => {
     const alpha = Math.max(0, Math.min(1, alphaValue));
 
     // 移除#号并处理缩写形式
-    let hex = actualColor.replace(/^#/, '');
+    let hex = actualColor.replace(/^#/, "");
 
     if (hex.length === 3) {
       hex = hex
-        .split('')
+        .split("")
         .map((char) => char + char)
-        .join('');
+        .join("");
     }
 
     // 解析RGB值

@@ -114,14 +114,6 @@ export interface AppThemeDefinition {
   }
 }
 
-export const THEME_DOMAINS = [
-  "seed",
-  "ui",
-  "editor",
-  "syntax",
-  "terminal",
-  "dataGrid",
-  "workspace"
-] as const;
+export const THEME_DOMAINS = ["seed", "ui", "editor", "syntax", "terminal", "dataGrid", "workspace"] as const;
 
 export type ThemeDomain = (typeof THEME_DOMAINS)[number];

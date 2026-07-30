@@ -3,9 +3,7 @@ const route = useRoute();
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
 const windowTitle = computed(() =>
-  String(route.name || "").startsWith("setting-application")
-    ? t("Common.OpenWith")
-    : t("Common.ConnectionSettings")
+  String(route.name || "").startsWith("setting-application") ? t("Common.OpenWith") : t("Common.ConnectionSettings")
 );
 
 const isEmbedded = computed(() => {

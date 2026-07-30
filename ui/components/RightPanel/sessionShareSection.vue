@@ -87,10 +87,11 @@ const debouncedSearch = useDebounceFn((query: string) => {
   searchUsers(query);
 }, 300);
 
-const selectedShareUsers = computed<ShareUserOptions[]>(() =>
-  selectedUserIds.value
-    .map((id) => userOptions.value.find((item) => item.id === id))
-    .filter(Boolean) as ShareUserOptions[]
+const selectedShareUsers = computed<ShareUserOptions[]>(
+  () =>
+    selectedUserIds.value
+      .map((id) => userOptions.value.find((item) => item.id === id))
+      .filter(Boolean) as ShareUserOptions[]
 );
 
 function openShareModal() {
@@ -290,21 +291,11 @@ function handleBack() {
       <template #footer>
         <template v-if="!showLinkResult">
           <UButton color="neutral" variant="ghost" :label="t('Common.Cancel')" @click="shareModalOpen = false" />
-          <UButton
-            color="primary"
-            icon="i-lucide-link"
-            :label="t('RightPanel.CreateLink')"
-            @click="handleCreateLink"
-          />
+          <UButton color="primary" icon="i-lucide-link" :label="t('RightPanel.CreateLink')" @click="handleCreateLink" />
         </template>
         <template v-else>
           <UButton color="neutral" variant="ghost" :label="t('RightPanel.Back')" @click="handleBack" />
-          <UButton
-            color="success"
-            icon="i-lucide-copy"
-            :label="t('RightPanel.CopyLink')"
-            @click="copyShareURL"
-          />
+          <UButton color="success" icon="i-lucide-copy" :label="t('RightPanel.CopyLink')" @click="copyShareURL" />
         </template>
       </template>
     </UModal>

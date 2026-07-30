@@ -24,7 +24,11 @@ const toggle = () => {
       @contextmenu.prevent="emit('folderContextmenu', folder, $event)"
     >
       <button type="button" class="flex min-w-0 flex-1 items-center gap-1 text-left" @click="toggle">
-        <UIcon name="i-lucide-chevron-right" class="sidebar-icon-sm transition-transform" :class="folder.open ? 'rotate-90' : ''" />
+        <UIcon
+          name="i-lucide-chevron-right"
+          class="sidebar-icon-sm transition-transform"
+          :class="folder.open ? 'rotate-90' : ''"
+        />
         <UIcon :name="folder.open ? 'i-tabler-folder-open' : 'i-tabler-folder'" class="sidebar-icon" />
         <span class="truncate font-medium">{{ folder.name }}</span>
       </button>

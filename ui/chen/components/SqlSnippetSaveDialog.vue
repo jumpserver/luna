@@ -28,12 +28,7 @@ function close() {
   <UModal v-model:open="visible" title="Save SQL">
     <template #body>
       <UFormField label="Name">
-        <UInput
-          v-model="name"
-          autofocus
-          class="w-full"
-          @keydown.enter.prevent="submit"
-        />
+        <UInput v-model="name" autofocus class="w-full" @keydown.enter.prevent="submit" />
       </UFormField>
     </template>
 

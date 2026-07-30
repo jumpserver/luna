@@ -4,11 +4,14 @@ import type { PermOrgItem } from "~/types/index";
 
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
-withDefaults(defineProps<{
-  selectable?: boolean
-}>(), {
-  selectable: true
-});
+withDefaults(
+  defineProps<{
+    selectable?: boolean
+  }>(),
+  {
+    selectable: true
+  }
+);
 
 const userInfoStore = useUserInfoStore();
 const { setCurrentOrg } = userInfoStore;
@@ -57,13 +60,7 @@ watch(
 
 <template>
   <div v-show="loggedIn" class="flex min-w-0 items-center gap-1">
-    <UAvatar
-      :alt="currentOrg"
-      color="primary"
-      size="xs"
-      class="shrink-0"
-      :ui="{ root: 'rounded-md' }"
-    />
+    <UAvatar :alt="currentOrg" color="primary" size="xs" class="shrink-0" :ui="{ root: 'rounded-md' }" />
     <UDropdownMenu
       v-if="selectable"
       :items="organizationDropdownItems"

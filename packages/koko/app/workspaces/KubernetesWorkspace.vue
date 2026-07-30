@@ -6,9 +6,7 @@ import {
   KubernetesTerminalMessageType,
   KubernetesTerminalSocketFailureCode
 } from "#koko/composables/kubernetes/protocol";
-import {
-  useKubernetesTerminalSocket
-} from "#koko/composables/kubernetes/useKubernetesTerminalSocket";
+import { useKubernetesTerminalSocket } from "#koko/composables/kubernetes/useKubernetesTerminalSocket";
 import { appTerminalTheme } from "#koko/utils/terminalTheme";
 import BaseWorkspaceShell from "#koko/workspaces/BaseWorkspaceShell.vue";
 import { useBaseWorkspaceSession } from "#koko/workspaces/useBaseWorkspaceSession";
@@ -381,7 +379,13 @@ onUnmounted(() => {
           v-if="searchVisible"
           class="shrink-0 border-b border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-tree) p-2"
         >
-          <UInput v-model="search" icon="i-lucide-search" size="xs" :placeholder="t('koko.kubernetes.filterContainers')" class="w-full" />
+          <UInput
+            v-model="search"
+            icon="i-lucide-search"
+            size="xs"
+            :placeholder="t('koko.kubernetes.filterContainers')"
+            class="w-full"
+          />
         </div>
         <div class="min-h-0 flex-1 overflow-auto bg-(--workspace-surface-sub-tree) py-1">
           <div v-if="connectionError" class="px-3 py-2 text-xs text-error">

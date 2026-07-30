@@ -234,7 +234,7 @@ export default defineNuxtConfig({
     }
   },
   devServer: {
-    host: "0.0.0.0"
+    host: "localhost"
   },
   router: {
     options: {

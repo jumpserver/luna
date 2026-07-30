@@ -345,10 +345,8 @@ function scrollActiveTabIntoView(behavior: ScrollBehavior = "smooth") {
   const viewportCenter = viewportRect.left + viewportRect.width / 2;
   const isOutsideViewport = activeRect.left < viewportRect.left || activeRect.right > viewportRect.right;
   const isNearHiddenLeft = el.scrollLeft > 1 && activeCenter < viewportRect.left + edgeZone;
-  const isNearHiddenRight = (
-    el.scrollLeft + el.clientWidth < el.scrollWidth - 1
-    && activeCenter > viewportRect.right - edgeZone
-  );
+  const isNearHiddenRight
+    = el.scrollLeft + el.clientWidth < el.scrollWidth - 1 && activeCenter > viewportRect.right - edgeZone;
 
   if (!isOutsideViewport && !isNearHiddenLeft && !isNearHiddenRight) return;
 
@@ -517,7 +515,9 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
               {{ tab.address }}
             </span>
           </span>
-          <span v-else class="min-w-0 truncate font-ui-mono text-[11px] tracking-[0.01em]">{{ tabDisplayTitle(tab) }}</span>
+          <span v-else class="min-w-0 truncate font-ui-mono text-[11px] tracking-[0.01em]">
+            {{ tabDisplayTitle(tab) }}
+          </span>
           <span
             class="workspace-session-tab-close flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-0 transition-opacity group-hover:opacity-100"
             :class="activeTabId === tab.id ? 'opacity-70' : ''"

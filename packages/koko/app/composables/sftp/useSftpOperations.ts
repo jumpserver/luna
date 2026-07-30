@@ -1,5 +1,11 @@
 import type { Ref } from "vue";
-import type { SftpDataMessage, SftpFileEntry, SftpFileOperations, SftpIncomingMessage, SftpSocketFailure } from "./protocol";
+import type {
+  SftpDataMessage,
+  SftpFileEntry,
+  SftpFileOperations,
+  SftpIncomingMessage,
+  SftpSocketFailure
+} from "./protocol";
 import type { SftpSocketClient } from "./useSftpSocket";
 
 import { computed, ref } from "vue";
@@ -74,7 +80,9 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
   const pendingDownloads = new Map<string, PendingDownload>();
   const pendingMutations = new Map<string, { resolve: () => void; reject: (error: Error) => void }>();
   const pendingUploadAcks = new Map<string, Array<{ resolve: () => void; reject: (error: Error) => void }>>();
-  const listListeners = new Set<(result: { entries: SftpFileEntry[]; currentPath?: string; background: boolean }) => void>();
+  const listListeners = new Set<
+    (result: { entries: SftpFileEntry[]; currentPath?: string; background: boolean }) => void
+  >();
   const errorListeners = new Set<(error: Error) => void>();
 
   let readQueue: Promise<void> = Promise.resolve();
@@ -214,7 +222,11 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
       pendingDownloads.get(message.id)?.parts.push(decodeRaw(message.raw));
       return;
     }
-    if (message.type === SftpMessageType.Error || message.type === SftpMessageType.Close || message.type === SftpMessageType.Closed) {
+    if (
+      message.type === SftpMessageType.Error ||
+      message.type === SftpMessageType.Close ||
+      message.type === SftpMessageType.Closed
+    ) {
       const error = new Error(message.err || message.type);
       emitError(error);
       rejectPending(error.message);
@@ -334,20 +346,20 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     listDirectory,
     createDirectory: (name) => mutatePath(SftpCommand.MakeDirectory, pathFor(currentPath.value, name)),
     createDirectoryAt: (path) => mutatePath(SftpCommand.MakeDirectory, path),
-    createFileAt: (path) =>
-      enqueueRead(() => sendUpload(messageId(), { offSet: 0, size: 0, path, chunk: false })),
-    renameEntry: (entry, name) => mutatePath(SftpCommand.Rename, pathFor(currentPath.value, entry.name), { new_name: name }),
+    createFileAt: (path) => enqueueRead(() => sendUpload(messageId(), { offSet: 0, size: 0, path, chunk: false })),
+    renameEntry: (entry, name) =>
+      mutatePath(SftpCommand.Rename, pathFor(currentPath.value, entry.name), { new_name: name }),
     renamePath: (path, name) => mutatePath(SftpCommand.Rename, path, { new_name: name }),
     removeEntry: (entry) => mutatePath(SftpCommand.Remove, pathFor(currentPath.value, entry.name)),
     removePath: (path) => mutatePath(SftpCommand.Remove, path),
-    downloadEntry: (entry) => readPath(pathFor(currentPath.value, entry.name), true, entry.is_dir).then(() => undefined),
+    downloadEntry: (entry) =>
+      readPath(pathFor(currentPath.value, entry.name), true, entry.is_dir).then(() => undefined),
     downloadPath: (path, isDir) => readPath(path, true, isDir).then(() => undefined),
     readFile: (entry, targetPath) => readPath(targetPath || pathFor(currentPath.value, entry.name), false),
     uploadFile,
     uploadBlob: async (fileName, blob, targetPath) => {
-      const file = blob instanceof File
-        ? blob
-        : new File([blob], fileName, { type: blob.type || "application/octet-stream" });
+      const file =
+        blob instanceof File ? blob : new File([blob], fileName, { type: blob.type || "application/octet-stream" });
 
       await uploadFile(file, targetPath || pathFor(currentPath.value, fileName));
     }

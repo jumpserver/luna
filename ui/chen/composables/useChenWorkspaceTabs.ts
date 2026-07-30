@@ -22,7 +22,9 @@ export function useChenWorkspaceTabs() {
   });
 
   function nextTabTitle(prefix: string) {
-    const count = workspaceTabs.value.filter((item) => item.title === prefix || item.title.startsWith(`${prefix} `)).length;
+    const count = workspaceTabs.value.filter(
+      (item) => item.title === prefix || item.title.startsWith(`${prefix} `)
+    ).length;
     return count === 0 ? prefix : `${prefix} ${count + 1}`;
   }
 

@@ -1,9 +1,4 @@
-import type {
-  ChenPacket,
-  ChenPromptConsoleTab,
-  ChenQueryConsoleTab,
-  ChenQueryLikeWorkspaceTab
-} from "~/chen/types";
+import type { ChenPacket, ChenPromptConsoleTab, ChenQueryConsoleTab, ChenQueryLikeWorkspaceTab } from "~/chen/types";
 
 import { newChenWorkspaceId } from "~/chen/composables/useChenWorkspaceTabs";
 import {
@@ -103,9 +98,7 @@ export function useChenQueryConsole(
         appendLog(tab, packet.data);
         break;
       case "message":
-        tab.message = typeof packet.data === "string"
-          ? { type: "info", message: packet.data }
-          : packet.data || null;
+        tab.message = typeof packet.data === "string" ? { type: "info", message: packet.data } : packet.data || null;
         if (tab.kind === "console") appendLog(tab, packet.data);
         break;
       case "update_state":

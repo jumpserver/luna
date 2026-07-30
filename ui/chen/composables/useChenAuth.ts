@@ -10,8 +10,10 @@ export function useChenAuth(tab: Ref<WorkspaceSessionTab>) {
   const error = ref("");
 
   const disableAutoHash = computed(() => {
-    return Boolean((tab.value.payload?.token as Record<string, any> | undefined)?.disableautohash)
-      || Boolean(tab.value.payload?.disableautohash);
+    return (
+      Boolean((tab.value.payload?.token as Record<string, any> | undefined)?.disableautohash)
+      || Boolean(tab.value.payload?.disableautohash)
+    );
   });
 
   function ensureTokenId() {

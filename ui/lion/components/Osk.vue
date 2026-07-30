@@ -1,29 +1,29 @@
 <script lang="ts" setup>
-import { useWindowSize } from '@vueuse/core';
+import { useWindowSize } from "@vueuse/core";
 
-import * as Guacamole from 'guacamole-common-js-jumpserver/dist/guacamole-common';
-import { onMounted, ref, watch } from 'vue';
-import dedeqwertz from '@/lion/assets/layouts/de-de-qwertz.json';
-import enusqwerty from '@/lion/assets/layouts/en-us-qwerty.json';
-import esesqwerty from '@/lion/assets/layouts/es-es-qwerty.json';
-import frfrazerty from '@/lion/assets/layouts/fr-fr-azerty.json';
-import ititqwertz from '@/lion/assets/layouts/it-it-qwerty.json';
-import nlnlqwertz from '@/lion/assets/layouts/nl-nl-qwerty.json';
+import * as Guacamole from "guacamole-common-js-jumpserver/dist/guacamole-common";
+import { onMounted, ref, watch } from "vue";
+import dedeqwertz from "@/lion/assets/layouts/de-de-qwertz.json";
+import enusqwerty from "@/lion/assets/layouts/en-us-qwerty.json";
+import esesqwerty from "@/lion/assets/layouts/es-es-qwerty.json";
+import frfrazerty from "@/lion/assets/layouts/fr-fr-azerty.json";
+import ititqwertz from "@/lion/assets/layouts/it-it-qwerty.json";
+import nlnlqwertz from "@/lion/assets/layouts/nl-nl-qwerty.json";
 
-import ruruqwertz from '@/lion/assets/layouts/ru-ru-qwerty.json';
+import ruruqwertz from "@/lion/assets/layouts/ru-ru-qwerty.json";
 
 const props = defineProps<{
   keyboard?: string
 }>();
-const emit = defineEmits(['keyboardChange']);
+const emit = defineEmits(["keyboardChange"]);
 const keyboardLayouts: any = {
-  'de-de-qwertz': dedeqwertz,
-  'en-us-qwerty': enusqwerty,
-  'es-es-qwerty': esesqwerty,
-  'fr-fr-azerty': frfrazerty,
-  'it-it-qwerty': ititqwertz,
-  'nl-nl-qwerty': nlnlqwertz,
-  'ru-ru-qwerty': ruruqwertz
+  "de-de-qwertz": dedeqwertz,
+  "en-us-qwerty": enusqwerty,
+  "es-es-qwerty": esesqwerty,
+  "fr-fr-azerty": frfrazerty,
+  "it-it-qwerty": ititqwertz,
+  "nl-nl-qwerty": nlnlqwertz,
+  "ru-ru-qwerty": ruruqwertz
 };
 // 拖动相关的状态
 const isDragging = ref(false);
@@ -38,20 +38,14 @@ function handleMouseMove(e: MouseEvent) {
   keyboardPosition.value.y = e.clientY - dragStartY.value;
 
   // 限制拖动范围，确保不会拖到屏幕外
-  keyboardPosition.value.x = Math.max(
-    0,
-    Math.min(window.innerWidth - 400, keyboardPosition.value.x)
-  );
-  keyboardPosition.value.y = Math.max(
-    0,
-    Math.min(window.innerHeight - 200, keyboardPosition.value.y)
-  );
+  keyboardPosition.value.x = Math.max(0, Math.min(window.innerWidth - 400, keyboardPosition.value.x));
+  keyboardPosition.value.y = Math.max(0, Math.min(window.innerHeight - 200, keyboardPosition.value.y));
 }
 
 function handleMouseUp() {
   isDragging.value = false;
-  document.removeEventListener('mousemove', handleMouseMove);
-  document.removeEventListener('mouseup', handleMouseUp);
+  document.removeEventListener("mousemove", handleMouseMove);
+  document.removeEventListener("mouseup", handleMouseUp);
 }
 
 // 拖动事件处理
@@ -60,11 +54,11 @@ function handleMouseDown(e: MouseEvent) {
   dragStartX.value = e.clientX - keyboardPosition.value.x;
   dragStartY.value = e.clientY - keyboardPosition.value.y;
 
-  document.addEventListener('mousemove', handleMouseMove);
-  document.addEventListener('mouseup', handleMouseUp);
+  document.addEventListener("mousemove", handleMouseMove);
+  document.addEventListener("mouseup", handleMouseUp);
 }
 
-const keyboardLayout = props.keyboard || 'en-us-qwerty';
+const keyboardLayout = props.keyboard || "en-us-qwerty";
 
 const { width } = useWindowSize();
 const screenKeyboard = ref<any>(null);
@@ -77,7 +71,7 @@ watch(width, (newWidth) => {
 watch(
   () => props.keyboard,
   (newLayout: string | undefined) => {
-    console.log('Keyboard layout changed:', newLayout);
+    console.log("Keyboard layout changed:", newLayout);
     setLayout(newLayout);
   }
 );
@@ -91,7 +85,7 @@ onMounted(() => {
 });
 
 function setLayout(layoutName?: string) {
-  const keyboardRef: any = document.getElementById('keyboardref');
+  const keyboardRef: any = document.getElementById("keyboardref");
   if (screenKeyboard.value) {
     keyboardRef.removeChild(screenKeyboard.value.getElement());
   }
@@ -102,10 +96,10 @@ function setLayout(layoutName?: string) {
   keyboard.resize(window.innerWidth / 2); // 设置键盘大小
   screenKeyboard.value = keyboard;
   keyboard.onkeydown = (key: string) => {
-    emit('keyboardChange', 'keydown', key);
+    emit("keyboardChange", "keydown", key);
   };
   keyboard.onkeyup = (key: string) => {
-    emit('keyboardChange', 'keyup', key);
+    emit("keyboardChange", "keyup", key);
   };
 }
 
@@ -127,14 +121,8 @@ const handleTouchMove = (e: TouchEvent) => {
   keyboardPosition.value.y = touch.clientY - dragStartY.value;
 
   // 限制拖动范围，确保不会拖到屏幕外
-  keyboardPosition.value.x = Math.max(
-    0,
-    Math.min(window.innerWidth - 400, keyboardPosition.value.x)
-  );
-  keyboardPosition.value.y = Math.max(
-    0,
-    Math.min(window.innerHeight - 200, keyboardPosition.value.y)
-  );
+  keyboardPosition.value.x = Math.max(0, Math.min(window.innerWidth - 400, keyboardPosition.value.x));
+  keyboardPosition.value.y = Math.max(0, Math.min(window.innerHeight - 200, keyboardPosition.value.y));
 };
 
 const handleTouchEnd = () => {

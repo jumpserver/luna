@@ -242,11 +242,7 @@ defineExpose({ manager, selectedEntry });
               {{ isPermissionError ? t("koko.localFile.notReady") : t("koko.localFile.openFailed") }}
             </p>
             <p class="text-xs leading-5 text-muted">
-              {{
-                isPermissionError
-                  ? t("koko.localFile.permissionHint")
-                  : error
-              }}
+              {{ isPermissionError ? t("koko.localFile.permissionHint") : error }}
             </p>
             <p
               v-if="isPermissionError"
@@ -257,11 +253,15 @@ defineExpose({ manager, selectedEntry });
           </div>
         </div>
         <div class="flex flex-wrap gap-2">
-          <UButton size="sm" color="primary" icon="i-lucide-folder-open" @click="chooseFolder">{{ t("koko.localFile.chooseFolder") }}</UButton>
+          <UButton size="sm" color="primary" icon="i-lucide-folder-open" @click="chooseFolder">
+            {{ t("koko.localFile.chooseFolder") }}
+          </UButton>
           <UButton size="sm" color="neutral" variant="soft" icon="i-lucide-house" @click="resetToDefaultRoot">
             {{ t("koko.localFile.resetDefault") }}
           </UButton>
-          <UButton size="sm" color="neutral" variant="ghost" icon="i-lucide-refresh-cw" @click="list()">{{ t("koko.actions.retry") }}</UButton>
+          <UButton size="sm" color="neutral" variant="ghost" icon="i-lucide-refresh-cw" @click="list()">
+            {{ t("koko.actions.retry") }}
+          </UButton>
         </div>
       </div>
     </div>
@@ -311,7 +311,9 @@ defineExpose({ manager, selectedEntry });
           <UButton color="neutral" variant="soft" icon="i-lucide-house" @click="resetToDefaultRoot">
             {{ t("koko.localFile.resetDefault") }}
           </UButton>
-          <UButton color="primary" icon="i-lucide-folder-open" @click="chooseFolder">{{ t("koko.localFile.chooseFolder") }}</UButton>
+          <UButton color="primary" icon="i-lucide-folder-open" @click="chooseFolder">
+            {{ t("koko.localFile.chooseFolder") }}
+          </UButton>
         </div>
       </template>
     </UModal>

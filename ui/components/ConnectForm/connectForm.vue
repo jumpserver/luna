@@ -105,9 +105,7 @@ watch(
 
     // A method belongs to a protocol. Clear it before the async lookup so a
     // quick protocol-switch-and-connect cannot submit the previous protocol's method.
-    const previousMethod = previousProtocol && previousProtocol !== newProtocol
-      ? ""
-      : (props.connectMethod || "");
+    const previousMethod = previousProtocol && previousProtocol !== newProtocol ? "" : props.connectMethod || "";
     emits("update:connectMethod", "");
 
     try {
@@ -130,17 +128,15 @@ watch(
         const protocol = newProtocol.toLowerCase();
         const preferredClient = Object.values(appConfig.value || {})
           .flat()
-          .find((item) =>
-            isApplicationConfigItemAvailable(item, protocol)
-            && item.match_first?.some((value) => value.toLowerCase() === protocol)
+          .find(
+            (item) =>
+              isApplicationConfigItemAvailable(item, protocol)
+              && item.match_first?.some((value) => value.toLowerCase() === protocol)
           );
         const nativeMethod = methods.find((method) => categoryOfConnectMethod(method) === "native");
 
         if (preferredClient && nativeMethod) {
-          emits(
-            "update:connectMethod",
-            createLocalApplicationConnectMethod(nativeMethod.value, preferredClient.name)
-          );
+          emits("update:connectMethod", createLocalApplicationConnectMethod(nativeMethod.value, preferredClient.name));
           return;
         }
       }
@@ -192,9 +188,7 @@ const configuredClients = computed(() => {
   return Object.values(appConfig.value)
     .flat()
     .filter((item) => isApplicationConfigItemAvailable(item, protocol))
-    .sort((a, b) =>
-      Number(b.match_first?.includes(protocol)) - Number(a.match_first?.includes(protocol))
-    );
+    .sort((a, b) => Number(b.match_first?.includes(protocol)) - Number(a.match_first?.includes(protocol)));
 });
 const connectMethodTabItems = computed(() => {
   const methods = availableConnectMethods.value.filter((method) => {

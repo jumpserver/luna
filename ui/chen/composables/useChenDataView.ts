@@ -59,9 +59,7 @@ export function useChenDataView(
     action: ChenDataViewAction,
     data?: ChenDataViewActionData
   ) {
-    const dataView = "kind" in target && target.kind === "data-view"
-      ? target.meta?.title
-      : target.title;
+    const dataView = "kind" in target && target.kind === "data-view" ? target.meta?.title : target.title;
     if (!dataView) return false;
 
     const state = target.editState;
@@ -79,7 +77,10 @@ export function useChenDataView(
       request = transitionChenDataViewRequest(state, active.sequence, "confirm", "save");
       requestData = request?.payload || undefined;
     }
-    if ((DATA_REQUEST_ACTIONS.has(action) || action === "save_changes_preview" || action === "save_changes") && !request) {
+    if (
+      (DATA_REQUEST_ACTIONS.has(action) || action === "save_changes_preview" || action === "save_changes")
+      && !request
+    ) {
       return false;
     }
 

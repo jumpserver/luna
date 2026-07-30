@@ -186,11 +186,13 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => {
         children: languageChildren.value
       },
       ...(isTauriRuntime()
-        ? [{
-            label: t("Menu.Tool"),
-            icon: "i-lucide-wrench",
-            children: toolChildren.value
-          } satisfies DropdownMenuItem]
+        ? [
+            {
+              label: t("Menu.Tool"),
+              icon: "i-lucide-wrench",
+              children: toolChildren.value
+            } satisfies DropdownMenuItem
+          ]
         : []),
       {
         label: t("Common.Settings"),
@@ -208,9 +210,9 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => {
         color: "error",
         ui: {
           itemLabel:
-          "!text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error group-data-[state=checked]:!text-error",
+            "!text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error group-data-[state=checked]:!text-error",
           itemLeadingIcon:
-          "group-data-[state=checked]:text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error"
+            "group-data-[state=checked]:text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error"
         },
         onClick: clearAuthInfo
       }

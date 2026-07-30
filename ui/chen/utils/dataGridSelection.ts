@@ -33,9 +33,7 @@ export function extendChenGridSelection(selection: ChenGridSelection, cell: Chen
   return {
     ...selection,
     current: cell,
-    moved: selection.moved
-      || selection.anchor.rowIndex !== cell.rowIndex
-      || selection.anchor.colId !== cell.colId
+    moved: selection.moved || selection.anchor.rowIndex !== cell.rowIndex || selection.anchor.colId !== cell.colId
   };
 }
 
@@ -59,16 +57,14 @@ export function getChenGridSelectionBounds(selection: ChenGridSelection, display
   };
 }
 
-export function isChenGridCellSelected(
-  selection: ChenGridSelection,
-  displayedColIds: string[],
-  cell: ChenGridCell
-) {
+export function isChenGridCellSelected(selection: ChenGridSelection, displayedColIds: string[], cell: ChenGridCell) {
   const bounds = getChenGridSelectionBounds(selection, displayedColIds);
   if (!bounds) return false;
   const colIndex = displayedColIds.indexOf(cell.colId);
-  return cell.rowIndex >= bounds.minRow
+  return (
+    cell.rowIndex >= bounds.minRow
     && cell.rowIndex <= bounds.maxRow
     && colIndex >= bounds.minCol
-    && colIndex <= bounds.maxCol;
+    && colIndex <= bounds.maxCol
+  );
 }

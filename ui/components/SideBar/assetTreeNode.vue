@@ -99,10 +99,7 @@ const activate = () => {
           :class="isOpen ? 'rotate-90' : ''"
         />
       </span>
-      <span
-        v-if="batchMode && !isParent"
-        class="grid size-3.5 shrink-0 place-items-center sidebar-icon-muted"
-      >
+      <span v-if="batchMode && !isParent" class="grid size-3.5 shrink-0 place-items-center sidebar-icon-muted">
         <UIcon :name="isChecked ? 'i-lucide-square-check-big' : 'i-lucide-square'" class="sidebar-icon" />
       </span>
       <UIcon
@@ -111,13 +108,13 @@ const activate = () => {
         class="sidebar-icon"
         :class="node.loading ? 'animate-spin' : ''"
       />
-      <img
-        v-else-if="iconSrc"
-        :src="iconSrc"
-        alt=""
-        class="sidebar-icon-img"
+      <img v-else-if="iconSrc" :src="iconSrc" alt="" class="sidebar-icon-img">
+      <span
+        class="min-w-0 flex-1 truncate font-medium"
+        :class="!isParent ? 'font-ui-mono text-[11px] tracking-[0.01em]' : ''"
       >
-      <span class="min-w-0 flex-1 truncate font-medium" :class="!isParent ? 'font-ui-mono text-[11px] tracking-[0.01em]' : ''">{{ node.name }}</span>
+        {{ node.name }}
+      </span>
     </button>
 
     <div v-if="isParent && isOpen" role="group">

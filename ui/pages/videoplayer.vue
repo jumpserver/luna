@@ -52,9 +52,7 @@ async function removeItem(item: VideoPlayerItem) {
     activeId.value = items.value[0]?.id || null;
   }
 
-  const recordingStillUsed = items.value.some(
-    (entry) => entry.recordingId === item.recordingId
-  );
+  const recordingStillUsed = items.value.some((entry) => entry.recordingId === item.recordingId);
 
   if (isTauriRuntime() && !recordingStillUsed) {
     try {
@@ -83,14 +81,10 @@ async function appendParsedItems(parsed: VideoPlayerItem[]) {
   if (isTauriRuntime()) {
     const retainedRecordingIds = new Set(incoming.map((item) => item.recordingId));
     const unusedRecordingIds = new Set(
-      parsed
-        .filter((item) => !retainedRecordingIds.has(item.recordingId))
-        .map((item) => item.recordingId)
+      parsed.filter((item) => !retainedRecordingIds.has(item.recordingId)).map((item) => item.recordingId)
     );
 
-    await Promise.allSettled(
-      [...unusedRecordingIds].map((recordingId) => removeRecording(recordingId))
-    );
+    await Promise.allSettled([...unusedRecordingIds].map((recordingId) => removeRecording(recordingId)));
   }
 
   items.value.push(...incoming);
@@ -156,10 +150,12 @@ async function handleFileInputClick(event: MouseEvent) {
   try {
     const selected = await useTauriDialogOpen({
       multiple: true,
-      filters: [{
-        name: "录像文件",
-        extensions: ["mp4", "cast", "gz", "tar"]
-      }]
+      filters: [
+        {
+          name: "录像文件",
+          extensions: ["mp4", "cast", "gz", "tar"]
+        }
+      ]
     });
     const paths = Array.isArray(selected) ? selected : selected ? [selected] : [];
 
@@ -179,11 +175,14 @@ function handleInputChange(event: Event) {
   void importFiles(files);
 }
 
-watch(() => items.value.length, (len, prevLen) => {
-  if (prevLen === 0 && len > 0) {
-    playlistCollapsed.value = false;
+watch(
+  () => items.value.length,
+  (len, prevLen) => {
+    if (prevLen === 0 && len > 0) {
+      playlistCollapsed.value = false;
+    }
   }
-});
+);
 
 onMounted(async () => {
   document.title = "JumpServer Video Player";
@@ -208,9 +207,7 @@ onBeforeUnmount(() => {
 
   if (isTauriRuntime()) {
     const recordingIds = new Set(items.value.map((item) => item.recordingId));
-    void Promise.allSettled(
-      [...recordingIds].map((recordingId) => removeRecording(recordingId))
-    );
+    void Promise.allSettled([...recordingIds].map((recordingId) => removeRecording(recordingId)));
   }
 });
 </script>
@@ -240,10 +237,7 @@ onBeforeUnmount(() => {
         class="flex min-h-0 min-w-0 flex-1 flex-col"
         :class="items.length > 0 && !playlistCollapsed ? 'pr-3' : ''"
       >
-        <div
-          v-if="playerComponent && currentItem"
-          class="flex min-h-0 flex-1 flex-col overflow-hidden bg-black"
-        >
+        <div v-if="playerComponent && currentItem" class="flex min-h-0 flex-1 flex-col overflow-hidden bg-black">
           <component
             :is="playerComponent"
             :key="currentItem.id"

@@ -49,7 +49,9 @@ export function useKokoZmodemTransfer(options: {
     const total = detail.size;
     const percent = total === 0 || total === offset ? 100 : Math.round((offset / total) * 100);
 
-    terminal.write(`\r${options.t("koko.terminal.downloadProgress", { name: detail.name, size: prettyBytes(total), percent })} `);
+    terminal.write(
+      `\r${options.t("koko.terminal.downloadProgress", { name: detail.name, size: prettyBytes(total), percent })} `
+    );
   };
 
   const uploadFile = async (session: KokoZmodemSendSession, terminal: Terminal, file: File) => {

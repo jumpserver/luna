@@ -108,7 +108,9 @@ function isMetadataEntry(fileName: string) {
 function metadataKey(fileName: string, meta: VideoPlayerMeta) {
   if (meta.id) return meta.id;
 
-  return basename(fileName).replace(/\.replay\.json$/i, "").replace(/\.json$/i, "");
+  return basename(fileName)
+    .replace(/\.replay\.json$/i, "")
+    .replace(/\.json$/i, "");
 }
 
 function safeParseJson(buffer: ArrayBuffer): VideoPlayerMeta | null {
@@ -188,11 +190,7 @@ function withMeta(item: Omit<VideoPlayerItem, "id" | "meta">, meta: VideoPlayerM
 }
 
 export function useVideoPlayerParser() {
-  const {
-    getEntryUrl,
-    importRecording,
-    removeRecording
-  } = useVideoPlayerTauri();
+  const { getEntryUrl, importRecording, removeRecording } = useVideoPlayerTauri();
 
   function buildCastItem(
     fileName: string,
@@ -331,24 +329,23 @@ export function useVideoPlayerParser() {
     const items: VideoPlayerItem[] = [];
 
     if (fileName.endsWith(".mp4")) {
-      items.push(withMeta({
-        name: fileName,
-        source: toMp4Url(await file.arrayBuffer()),
-        type: "mp4",
-        recordingId,
-        recordingLabel
-      }, effectiveMeta));
+      items.push(
+        withMeta(
+          {
+            name: fileName,
+            source: toMp4Url(await file.arrayBuffer()),
+            type: "mp4",
+            recordingId,
+            recordingLabel
+          },
+          effectiveMeta
+        )
+      );
       return { items };
     }
 
     if (isCastMediaEntry(fileName)) {
-      const castItem = buildCastItem(
-        fileName,
-        await file.arrayBuffer(),
-        meta,
-        recordingId,
-        recordingLabel
-      );
+      const castItem = buildCastItem(fileName, await file.arrayBuffer(), meta, recordingId, recordingLabel);
 
       if (castItem) {
         items.push({
@@ -362,24 +359,34 @@ export function useVideoPlayerParser() {
     }
 
     if (fileName.endsWith(".replay.gz")) {
-      items.push(withMeta({
-        name: fileName,
-        source: URL.createObjectURL(file),
-        type: "gua",
-        recordingId,
-        recordingLabel
-      }, effectiveMeta));
+      items.push(
+        withMeta(
+          {
+            name: fileName,
+            source: URL.createObjectURL(file),
+            type: "gua",
+            recordingId,
+            recordingLabel
+          },
+          effectiveMeta
+        )
+      );
       return { items };
     }
 
     if (fileName.endsWith(".part.gz")) {
-      items.push(withMeta({
-        name: fileName,
-        source: URL.createObjectURL(file),
-        type: "part",
-        recordingId,
-        recordingLabel
-      }, effectiveMeta));
+      items.push(
+        withMeta(
+          {
+            name: fileName,
+            source: URL.createObjectURL(file),
+            type: "part",
+            recordingId,
+            recordingLabel
+          },
+          effectiveMeta
+        )
+      );
       return { items };
     }
 
@@ -466,9 +473,7 @@ export function useVideoPlayerParser() {
     } catch (error) {
       // 多文件导入应当表现为一次事务。后面的文件失败时，
       // 清理本次已经成功提交的录像，避免留下用户看不到的缓存。
-      await Promise.allSettled(
-        importedRecordingIds.map((recordingId) => removeRecording(recordingId))
-      );
+      await Promise.allSettled(importedRecordingIds.map((recordingId) => removeRecording(recordingId)));
       throw error;
     }
   }

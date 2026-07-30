@@ -51,11 +51,13 @@ export const isApplicationConfigItemAvailable = (item: ConfigItem, protocol: str
   const normalizedProtocol = protocol.toLowerCase();
   const enabledProtocols = item.enabled_protocols || item.match_first;
 
-  return item.name !== "builtin_client"
+  return (
+    item.name !== "builtin_client"
     && item.is_set
     && item.path_exists !== false
     && item.protocol.some((value) => value.toLowerCase() === normalizedProtocol)
-    && enabledProtocols?.some((value) => value.toLowerCase() === normalizedProtocol) === true;
+    && enabledProtocols?.some((value) => value.toLowerCase() === normalizedProtocol) === true
+  );
 };
 
 export const isConnectMethodAvailable = (
@@ -73,10 +75,7 @@ export const isConnectMethodAvailable = (
 
   return Object.values(appConfig)
     .flat()
-    .some((item) =>
-      item.name === selected.clientName
-      && isApplicationConfigItemAvailable(item, protocol)
-    );
+    .some((item) => item.name === selected.clientName && isApplicationConfigItemAvailable(item, protocol));
 };
 
 export const isExternalClientConnectMethod = (value: string, methods: ConnectMethod[]) => {
@@ -93,36 +92,34 @@ const fetchPromise = new Map<string, Promise<ConnectMethodsResponse>>();
 
 const WEB_IFRAME_COMPONENTS = new Set(["koko", "lion", "chen", "tinker", "default"]);
 const KOKO_WEB_CONNECT_METHODS = new Set(
-  COMPONENT_WORKSPACE_CAPABILITIES
-    .filter((capability) => capability.component === "koko" && capability.backendConnectMethod)
-    .map((capability) => capability.backendConnectMethod!)
+  COMPONENT_WORKSPACE_CAPABILITIES.filter(
+    (capability) => capability.component === "koko" && capability.backendConnectMethod
+  ).map((capability) => capability.backendConnectMethod!)
 );
 
 export const withKokoWebFallback = (protocol: string, methods: ConnectMethod[]) => {
   const normalizedProtocol = protocol.toLowerCase();
   const existingValues = new Set(methods.map((method) => method.value));
-  const fallbackMethods = COMPONENT_WORKSPACE_CAPABILITIES
-    .filter(
-      (capability) =>
-        capability.component === "koko"
-        && capability.protocols.includes(normalizedProtocol)
-        && capability.backendConnectMethod
-    )
-    .flatMap((capability) =>
-      capability.connectMethods
-        .filter((value) => !existingValues.has(value))
-        .map((value) => ({
-          value,
-          label: capability.label,
-          type: "web",
-          icon: "",
-          disabled: false,
-          listen: "",
-          component: "koko",
-          endpoint_protocol: "http",
-          origin_value: capability.backendConnectMethod
-        }))
-    );
+  const fallbackMethods = COMPONENT_WORKSPACE_CAPABILITIES.filter(
+    (capability) =>
+      capability.component === "koko"
+      && capability.protocols.includes(normalizedProtocol)
+      && capability.backendConnectMethod
+  ).flatMap((capability) =>
+    capability.connectMethods
+      .filter((value) => !existingValues.has(value))
+      .map((value) => ({
+        value,
+        label: capability.label,
+        type: "web",
+        icon: "",
+        disabled: false,
+        listen: "",
+        component: "koko",
+        endpoint_protocol: "http",
+        origin_value: capability.backendConnectMethod
+      }))
+  );
 
   return [...fallbackMethods, ...methods] as ConnectMethod[];
 };
@@ -170,22 +167,28 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
     const normalizedMethods = [...value];
 
     for (const capability of COMPONENT_WORKSPACE_CAPABILITIES) {
-      if (capability.component !== "koko" || !capability.protocols.includes(key) || !capability.backendConnectMethod) continue;
+      if (capability.component !== "koko" || !capability.protocols.includes(key) || !capability.backendConnectMethod)
+        continue;
 
       const originIndex = normalizedMethods.findIndex(
-        (method) =>
-          method.value === capability.backendConnectMethod
-          && method.type === "web"
+        (method) => method.value === capability.backendConnectMethod && method.type === "web"
       );
       if (originIndex === -1) continue;
 
       const origin = normalizedMethods[originIndex]!;
-      normalizedMethods.splice(originIndex, 0, ...capability.connectMethods.map((methodValue) => ({
-        ...origin,
-        value: methodValue,
-        label: capability.label,
-        origin_value: origin.value
-      }) as ConnectMethod));
+      normalizedMethods.splice(
+        originIndex,
+        0,
+        ...capability.connectMethods.map(
+          (methodValue) =>
+            ({
+              ...origin,
+              value: methodValue,
+              label: capability.label,
+              origin_value: origin.value
+            }) as ConnectMethod
+        )
+      );
     }
 
     const lionWebIndex = normalizedMethods.findIndex(
@@ -194,38 +197,42 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
 
     if (lionWebIndex !== -1) {
       const origin = normalizedMethods[lionWebIndex]!;
-      const declaredMethods = COMPONENT_WORKSPACE_CAPABILITIES
-        .filter((item) => item.component === "lion" && item.protocols.includes(key))
-        .flatMap((item) =>
-          item.connectMethods.map((methodValue) => ({
-            ...origin,
-            value: methodValue,
-            label: item.label,
-            origin_value: origin.value
-          }) as ConnectMethod)
-        );
+      const declaredMethods = COMPONENT_WORKSPACE_CAPABILITIES.filter(
+        (item) => item.component === "lion" && item.protocols.includes(key)
+      ).flatMap((item) =>
+        item.connectMethods.map(
+          (methodValue) =>
+            ({
+              ...origin,
+              value: methodValue,
+              label: item.label,
+              origin_value: origin.value
+            }) as ConnectMethod
+        )
+      );
 
       if (declaredMethods.length) {
         normalizedMethods.splice(lionWebIndex, 0, ...declaredMethods);
       }
     }
 
-    const chenWebIndex = normalizedMethods.findIndex(
-      (method) => method.type === "web" && method.component === "chen"
-    );
+    const chenWebIndex = normalizedMethods.findIndex((method) => method.type === "web" && method.component === "chen");
 
     if (chenWebIndex !== -1) {
       const origin = normalizedMethods[chenWebIndex]!;
-      const declaredMethods = COMPONENT_WORKSPACE_CAPABILITIES
-        .filter((item) => item.component === "chen" && item.protocols.includes(key))
-        .flatMap((item) =>
-          item.connectMethods.map((methodValue) => ({
-            ...origin,
-            value: methodValue,
-            label: item.label,
-            origin_value: origin.value
-          }) as ConnectMethod)
-        );
+      const declaredMethods = COMPONENT_WORKSPACE_CAPABILITIES.filter(
+        (item) => item.component === "chen" && item.protocols.includes(key)
+      ).flatMap((item) =>
+        item.connectMethods.map(
+          (methodValue) =>
+            ({
+              ...origin,
+              value: methodValue,
+              label: item.label,
+              origin_value: origin.value
+            }) as ConnectMethod
+        )
+      );
 
       if (declaredMethods.length) {
         normalizedMethods.splice(chenWebIndex, 0, ...declaredMethods);
@@ -235,10 +242,7 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
     normalized[key] = normalizedMethods.filter(
       (method) =>
         method.origin_value
-        || !(
-          (method.type === "web" && KOKO_WEB_CONNECT_METHODS.has(method.value))
-          || isWebIframeMethod(method)
-        )
+        || !((method.type === "web" && KOKO_WEB_CONNECT_METHODS.has(method.value)) || isWebIframeMethod(method))
     );
   });
 
@@ -262,12 +266,11 @@ export const useConnectMethods = () => {
       return running;
     }
 
-    const promise = getConnectMethods()
-      .then((data) => {
-        const methods = normalizeWebConnectMethods(data as ConnectMethodsResponse);
-        connectMethodsCache.set(key, methods);
-        return methods;
-      });
+    const promise = getConnectMethods().then((data) => {
+      const methods = normalizeWebConnectMethods(data as ConnectMethodsResponse);
+      connectMethodsCache.set(key, methods);
+      return methods;
+    });
 
     fetchPromise.set(key, promise);
 

@@ -50,20 +50,23 @@ import {
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-balham.css";
 
-const props = withDefaults(defineProps<{
-  dataset: ChenDataViewDataset | null
-  meta?: ChenDataViewMeta | null
-  dbType?: string
-  canCopy?: boolean
-  editMode?: ChenDataViewEditMode
-  editState?: ChenDataViewEditState | null
-}>(), {
-  meta: null,
-  dbType: "",
-  canCopy: false,
-  editMode: "none",
-  editState: null
-});
+const props = withDefaults(
+  defineProps<{
+    dataset: ChenDataViewDataset | null
+    meta?: ChenDataViewMeta | null
+    dbType?: string
+    canCopy?: boolean
+    editMode?: ChenDataViewEditMode
+    editState?: ChenDataViewEditState | null
+  }>(),
+  {
+    meta: null,
+    dbType: "",
+    canCopy: false,
+    editMode: "none",
+    editState: null
+  }
+);
 
 const emit = defineEmits<{
   selectionChange: [rows: Array<Record<string, any>>]
@@ -117,19 +120,21 @@ const columnDefs = computed<ColDef[]>(() => {
     valueParser: (params) => normalizeChenDataViewValue(params.newValue, field),
     cellClassRules: {
       "chen-range-cell": isSelectedCell,
-      "chen-dirty-cell": (params) => Boolean(
-        props.dataset
-        && props.editState
-        && params.data
-        && isChenDirtyCell(props.editState, props.dataset, params.data, field)
-      ),
+      "chen-dirty-cell": (params) =>
+        Boolean(
+          props.dataset
+          && props.editState
+          && params.data
+          && isChenDirtyCell(props.editState, props.dataset, params.data, field)
+        ),
       "chen-insert-row": (params) => isChenInsertRow(params.data),
-      "chen-delete-row": (params) => Boolean(
-        props.dataset
-        && props.editState
-        && params.data
-        && isChenDeletedRow(props.editState, props.dataset, params.data)
-      )
+      "chen-delete-row": (params) =>
+        Boolean(
+          props.dataset
+          && props.editState
+          && params.data
+          && isChenDeletedRow(props.editState, props.dataset, params.data)
+        )
     },
     valueFormatter: (params: ValueFormatterParams) => {
       return params.value == null ? "NULL" : String(params.value);
@@ -250,9 +255,9 @@ function copyUpdateSql() {
   }
 }
 
-const canCopyInsert = computed(() => Boolean(
-  props.dbType && props.meta?.schema && props.meta.table && props.dataset?.fields.length && currentRow.value
-));
+const canCopyInsert = computed(() =>
+  Boolean(props.dbType && props.meta?.schema && props.meta.table && props.dataset?.fields.length && currentRow.value)
+);
 const canCopyUpdate = computed(() => canCopyInsert.value && hasChenPrimaryKey(props.dataset?.fields || []));
 const contextMenuItems = computed<DropdownMenuItem[]>(() => {
   if (!canUseChenCopy(props.canCopy)) return [];
@@ -284,7 +289,11 @@ function captureContextMenu(event: MouseEvent) {
 function handleCellContextMenu(event: CellContextMenuEvent) {
   if (!event.data) return;
   const cell = eventCell(event);
-  if ((canUseChenCopy(props.canCopy) || props.editMode === "full") && cell && !isChenGridCellSelected(selection.value, displayedColIds(), cell)) {
+  if (
+    (canUseChenCopy(props.canCopy) || props.editMode === "full")
+    && cell
+    && !isChenGridCellSelected(selection.value, displayedColIds(), cell)
+  ) {
     selection.value = finishChenGridSelection(startChenGridSelection(cell));
     refreshSelectionCells();
   }
@@ -427,7 +436,11 @@ onBeforeUnmount(() => {
   --ag-foreground-color: var(--data-grid-text);
   --ag-header-background-color: var(--data-grid-header-background);
   --ag-header-foreground-color: var(--data-grid-text);
-  --ag-odd-row-background-color: color-mix(in srgb, var(--data-grid-row-background) 92%, var(--data-grid-header-background) 8%);
+  --ag-odd-row-background-color: color-mix(
+    in srgb,
+    var(--data-grid-row-background) 92%,
+    var(--data-grid-header-background) 8%
+  );
   --ag-row-hover-color: var(--data-grid-row-hover);
   --ag-selected-row-background-color: var(--data-grid-row-selected);
   --ag-range-selection-background-color: color-mix(in srgb, var(--theme-accent) 14%, transparent);

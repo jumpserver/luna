@@ -44,11 +44,7 @@ export function resolveAssetIconFallback(type?: string) {
   return "i-lucide-terminal";
 }
 
-export function resolveAssetIconFromFields(fields: {
-  type?: string
-  platform?: string
-  category?: string
-}) {
+export function resolveAssetIconFromFields(fields: { type?: string, platform?: string, category?: string }) {
   const candidates = [fields.platform, fields.type, fields.category]
     .map((value) => String(value || "").toLowerCase())
     .filter(Boolean);

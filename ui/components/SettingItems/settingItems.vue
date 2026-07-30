@@ -97,9 +97,7 @@ function getImageByName(filename: string): string | undefined {
 
 const showExecutableNotFoundToast = () => {
   const path = props.item?.path?.trim?.() || "";
-  const description = path
-    ? `${t("Setting.ExecutableNotFound")}\n${path}`
-    : t("Setting.ExecutableNotFound");
+  const description = path ? `${t("Setting.ExecutableNotFound")}\n${path}` : t("Setting.ExecutableNotFound");
   addErrorToast({
     title: t("Setting.EnableFailed"),
     description,

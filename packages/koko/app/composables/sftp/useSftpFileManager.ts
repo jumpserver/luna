@@ -38,7 +38,9 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
   const navigationHistory = ref<string[]>([]);
   const navigationIndex = ref(-1);
   const canGoBack = computed(() => navigationIndex.value > 0);
-  const canGoForward = computed(() => navigationIndex.value >= 0 && navigationIndex.value < navigationHistory.value.length - 1);
+  const canGoForward = computed(
+    () => navigationIndex.value >= 0 && navigationIndex.value < navigationHistory.value.length - 1
+  );
   const canGoHome = computed(() => Boolean(initialPath.value) && currentPath.value !== initialPath.value);
 
   const socket = useSftpSocket();

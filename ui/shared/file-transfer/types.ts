@@ -75,9 +75,18 @@ export interface FileTransferEndpoint {
   ref: FileTransferEndpointRef
   isAvailable: () => boolean
   prepareTransfer: (input: FileTransferPrepareInput) => Promise<FileTransferResumeState>
-  readChunk: (input: { transferId: string, path: string, offset: number, length: number }) => Promise<FileTransferChunk>
+  readChunk: (input: {
+    transferId: string
+    path: string
+    offset: number
+    length: number
+  }) => Promise<FileTransferChunk>
   writeChunk: (input: FileTransferWriteInput) => Promise<FileTransferWriteAck>
-  getTransferStatus: (input: { transferId: string, targetPath: string, totalBytes: number }) => Promise<FileTransferResumeState>
+  getTransferStatus: (input: {
+    transferId: string
+    targetPath: string
+    totalBytes: number
+  }) => Promise<FileTransferResumeState>
   commitTransfer: (input: FileTransferCommitInput) => Promise<void>
   cancelTransfer: (input: { transferId: string, targetPath: string, discard: boolean }) => Promise<void>
   onTransferCommitted?: (input: { targetPath: string }) => Promise<void> | void

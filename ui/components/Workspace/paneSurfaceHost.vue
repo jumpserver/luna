@@ -5,11 +5,7 @@ import { resolveSessionSurface } from "~/shared/connectors/registry";
 
 const props = defineProps<{ pane: WorkspacePane }>();
 const { toSurfaceTab } = useWorkspaceTabs();
-const {
-  getPaneTarget,
-  registerPaneSurface,
-  unregisterPaneSurface
-} = useWorkspacePaneSurfaceRegistry();
+const { getPaneTarget, registerPaneSurface, unregisterPaneSurface } = useWorkspacePaneSurfaceRegistry();
 const surfaceTab = computed(() => toSurfaceTab(props.pane));
 const surfaceTarget = computed(() => getPaneTarget(props.pane.id));
 const surfaceComponent = computed(() => resolveSessionSurface(surfaceTab.value));

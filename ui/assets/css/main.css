@@ -130,7 +130,11 @@
   --workspace-surface-sub-panel: color-mix(in srgb, var(--app-surface-panel-strong) 78%, var(--app-surface-canvas) 22%);
   --workspace-surface-sub-header: color-mix(in srgb, var(--app-surface-panel) 80%, var(--app-surface-header) 20%);
   --workspace-surface-sub-tab: color-mix(in srgb, var(--app-surface-panel) 72%, var(--app-surface-canvas) 28%);
-  --workspace-surface-sub-tab-active: color-mix(in srgb, var(--app-surface-canvas) 86%, var(--app-surface-panel-strong) 14%);
+  --workspace-surface-sub-tab-active: color-mix(
+    in srgb,
+    var(--app-surface-canvas) 86%,
+    var(--app-surface-panel-strong) 14%
+  );
   --workspace-surface-sub-tree: color-mix(in srgb, var(--app-surface-panel-strong) 68%, var(--app-surface-canvas) 32%);
   --workspace-surface-sub-border: color-mix(in srgb, var(--app-border-subtle) 86%, var(--app-surface-panel) 14%);
   --ui-bg: var(--app-surface-canvas);
@@ -173,7 +177,6 @@
   --sidebar-icon-muted: color-mix(in srgb, var(--app-text-muted) 82%, transparent);
   --sidebar-icon-active: var(--app-text-primary);
 }
-
 
 * {
   scrollbar-width: thin;
@@ -319,7 +322,9 @@ option {
 }
 
 .sidebar-row {
-  transition: background-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 .sidebar-row:hover {
@@ -337,7 +342,9 @@ option {
 .sidebar-icon-button {
   border-radius: 0.5rem;
   color: var(--app-muted);
-  transition: background-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 .sidebar-icon-button:hover,

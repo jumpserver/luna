@@ -15,10 +15,7 @@ const defaultRuntime: ChenClipboardRuntime = {
   writeTauri: writeTauriText
 };
 
-export async function writeChenClipboardText(
-  text: string,
-  runtime: ChenClipboardRuntime = defaultRuntime
-) {
+export async function writeChenClipboardText(text: string, runtime: ChenClipboardRuntime = defaultRuntime) {
   if (runtime.isTauri()) {
     await runtime.writeTauri(text);
     return;

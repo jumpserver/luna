@@ -183,11 +183,15 @@ const selectedTranscodePower = computed<TranscodePower>({
   set: (val: TranscodePower) => store.setTranscodePower(val)
 });
 
-watch(isWindows, (win) => {
-  if (win) {
-    store.setTranscodePower("auto");
-  }
-}, { immediate: true });
+watch(
+  isWindows,
+  (win) => {
+    if (win) {
+      store.setTranscodePower("auto");
+    }
+  },
+  { immediate: true }
+);
 
 const openSettings = () => {
   settingsOpen.value = true;
@@ -278,13 +282,7 @@ watch(outputDir, () => {
         </div>
 
         <div class="flex shrink-0 items-center gap-2">
-          <UButton
-            icon="i-lucide-settings"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            @click="openSettings"
-          >
+          <UButton icon="i-lucide-settings" color="neutral" variant="ghost" size="xs" @click="openSettings">
             {{ t("Transcode.Settings") }}
           </UButton>
 
@@ -428,7 +426,13 @@ watch(outputDir, () => {
           <div>
             <label class="text-sm font-medium">{{ t("Transcode.OutputDirectory") }}</label>
             <div class="mt-2">
-              <UInput v-model="outputDir" :placeholder="t('Transcode.OutputDirPlaceholder')" size="md" class="w-full" :disabled="isTranscoding">
+              <UInput
+                v-model="outputDir"
+                :placeholder="t('Transcode.OutputDirPlaceholder')"
+                size="md"
+                class="w-full"
+                :disabled="isTranscoding"
+              >
                 <template #trailing>
                   <UButton
                     color="neutral"

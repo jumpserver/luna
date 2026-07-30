@@ -87,7 +87,9 @@ const panesForSide = (side: "left" | "right") => remotePanes.value.filter((pane)
 const activePaneForSide = (side: "left" | "right") =>
   remotePanes.value.find((pane) => pane.id === globalActiveIds[side]) || null;
 const currentOrgId = computed(() => hostAdapter.sftp.currentOrganization.value?.id || "");
-const currentOrgLabel = computed(() => hostAdapter.sftp.currentOrganization.value?.name || t("koko.fileManagement.selectOrganization"));
+const currentOrgLabel = computed(
+  () => hostAdapter.sftp.currentOrganization.value?.name || t("koko.fileManagement.selectOrganization")
+);
 
 function addErrorToast(title: string, error: unknown) {
   showErrorToast({ title, error });
@@ -356,7 +358,9 @@ watch(currentOrgId, () => {
           :variant="dualMode ? 'soft' : 'ghost'"
           icon="i-lucide-server"
           :label="
-            remotePanes.length || dualMode ? t('koko.fileManagement.remoteSftp') : t('koko.fileManagement.connectRemoteSftp')
+            remotePanes.length || dualMode
+              ? t('koko.fileManagement.remoteSftp')
+              : t('koko.fileManagement.connectRemoteSftp')
           "
           @click="global ? openRemoteConnect() : toggleDualMode()"
         />
@@ -472,7 +476,13 @@ watch(currentOrgId, () => {
         >
           <div class="space-y-3">
             <UIcon name="i-lucide-server" class="mx-auto size-7 opacity-60" />
-            <p>{{ side === "left" && hostAdapter.isTauriRuntime() ? t("koko.fileManagement.preparingLocalFolder") : t("koko.fileManagement.connectSftpServer") }}</p>
+            <p>
+              {{
+                side === "left" && hostAdapter.isTauriRuntime()
+                  ? t("koko.fileManagement.preparingLocalFolder")
+                  : t("koko.fileManagement.connectSftpServer")
+              }}
+            </p>
             <UButton size="sm" color="primary" variant="soft" icon="i-lucide-plus" @click="openRemoteConnect(side)">
               {{ t("koko.fileManagement.connectRemoteSftp") }}
             </UButton>
@@ -558,11 +568,7 @@ watch(currentOrgId, () => {
 
       <div v-show="dualMode" class="flex min-h-0 min-w-0 flex-1 flex-col">
         <div v-if="remotePanes.length" class="flex min-h-0 flex-1 flex-col divide-y divide-default">
-          <div
-            v-for="pane in remotePanes"
-            :key="pane.id"
-            class="flex min-h-0 flex-1 flex-col"
-          >
+          <div v-for="pane in remotePanes" :key="pane.id" class="flex min-h-0 flex-1 flex-col">
             <div class="flex h-8 shrink-0 items-center gap-1 border-b border-default px-2">
               <button
                 type="button"
@@ -605,9 +611,7 @@ watch(currentOrgId, () => {
     >
       <template #body>
         <div class="space-y-3">
-          <div
-            class="flex items-center justify-between gap-3 px-2.5 py-1 text-[11px] text-muted"
-          >
+          <div class="flex items-center justify-between gap-3 px-2.5 py-1 text-[11px] text-muted">
             <span>{{ t("koko.fileManagement.currentOrganization") }}</span>
             <div class="min-w-0 max-w-55 flex-1">
               <component :is="hostAdapter.sftp.organizationSelector" class="justify-end" />
@@ -636,5 +640,5 @@ watch(currentOrgId, () => {
         />
       </template>
     </UModal>
-</div>
+  </div>
 </template>

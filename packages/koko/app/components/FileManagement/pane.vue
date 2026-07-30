@@ -100,7 +100,8 @@ const alertTitle = computed(() =>
 );
 const alertDescription = computed(() => {
   if (!alertTarget.value) return "";
-  if (alertTarget.value.kind === "delete") return t("koko.fileManagement.deleteConfirm", { name: alertTarget.value.entry.name });
+  if (alertTarget.value.kind === "delete")
+    return t("koko.fileManagement.deleteConfirm", { name: alertTarget.value.entry.name });
   return t("koko.fileManagement.downloadFolderConfirm");
 });
 
@@ -154,7 +155,14 @@ function onTransferDrop(event: DragEvent) {
 
   try {
     const payload = JSON.parse(encoded) as Omit<SftpTransferDropPayload, "destinationPath">;
-    if (!payload.sourceEndpoint?.id || !payload.sourcePath || !Array.isArray(payload.entries) || !props.transferEndpoint) return;
+    if (
+      !payload.sourceEndpoint?.id ||
+      !payload.sourcePath ||
+      !Array.isArray(payload.entries) ||
+      !props.transferEndpoint
+    ) {
+      return;
+}
 
     emit("transferDrop", { ...payload, destinationPath: manager.currentPath.value });
   } catch {
@@ -253,16 +261,17 @@ const submitPrompt = async () => {
 const confirmAlert = async () => {
   const target = alertTarget.value;
   if (!target) return;
-  const success = target.kind === "delete"
-    ? await runFileOperation(
-        () => manager.operations.removeEntry(target.entry),
-        t("koko.fileManagement.entryDeleted", { name: target.entry.name }),
-        true
-      )
-    : await runFileOperation(
-        () => manager.operations.downloadEntry(target.entry),
-        t("koko.fileManagement.entryDownloaded", { name: target.entry.name })
-      );
+  const success =
+    target.kind === "delete"
+      ? await runFileOperation(
+          () => manager.operations.removeEntry(target.entry),
+          t("koko.fileManagement.entryDeleted", { name: target.entry.name }),
+          true
+        )
+      : await runFileOperation(
+          () => manager.operations.downloadEntry(target.entry),
+          t("koko.fileManagement.entryDownloaded", { name: target.entry.name })
+        );
   if (success) {
     if (target.kind === "delete") selectedEntry.value = null;
     alertOpen.value = false;
@@ -402,7 +411,9 @@ defineExpose({ manager, selectedEntry });
         :ui="{ base: 'h-8 text-[12px]' }"
       />
     </div>
-    <div class="flex h-10.5 shrink-0 items-center justify-between gap-2 border-b border-(--app-border) bg-(--app-panel-bg) px-3">
+    <div
+      class="flex h-10.5 shrink-0 items-center justify-between gap-2 border-b border-(--app-border) bg-(--app-panel-bg) px-3"
+    >
       <div class="flex min-w-0 items-center gap-1.5">
         <UButton icon="i-lucide-folder-plus" color="neutral" variant="soft" size="xs" @click="createFolder">
           {{ t("koko.fileManagement.newFolder") }}
@@ -447,10 +458,26 @@ defineExpose({ manager, selectedEntry });
         <table class="w-full table-fixed border-separate border-spacing-0">
           <thead>
             <tr>
-              <th class="h-8.75 min-w-0 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)">{{ t("koko.fileManagement.name") }}</th>
-              <th class="h-8.75 w-27.5 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)">{{ t("koko.fileManagement.size") }}</th>
-              <th class="hidden h-8.75 w-42 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted) md:table-cell">{{ t("koko.fileManagement.modifiedTime") }}</th>
-              <th class="hidden h-8.75 w-32 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted) md:table-cell">{{ t("koko.fileManagement.permissions") }}</th>
+              <th
+                class="h-8.75 min-w-0 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)"
+              >
+                {{ t("koko.fileManagement.name") }}
+              </th>
+              <th
+                class="h-8.75 w-27.5 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)"
+              >
+                {{ t("koko.fileManagement.size") }}
+              </th>
+              <th
+                class="hidden h-8.75 w-42 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted) md:table-cell"
+              >
+                {{ t("koko.fileManagement.modifiedTime") }}
+              </th>
+              <th
+                class="hidden h-8.75 w-32 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted) md:table-cell"
+              >
+                {{ t("koko.fileManagement.permissions") }}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -470,29 +497,79 @@ defineExpose({ manager, selectedEntry });
                     class="flex min-w-0 flex-1 items-center gap-2 rounded-[3px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
                     :class="!entry.is_dir && entry.name !== '..' ? 'cursor-grab active:cursor-grabbing' : ''"
                     :draggable="!entry.is_dir && entry.name !== '..'"
-                    :title="!entry.is_dir && entry.name !== '..' ? t('koko.fileManagement.transferToRemote') : undefined"
+                    :title="
+                      !entry.is_dir && entry.name !== '..' ? t('koko.fileManagement.transferToRemote') : undefined
+                    "
                     @dblclick.stop="entry.is_dir && manager.changeDirectory(entry)"
                     @dragstart="onDragStart($event, entry)"
                   >
-                    <UIcon :name="entry.is_dir ? 'i-lucide-folder' : 'i-lucide-file'" class="size-4 shrink-0 text-(--app-muted)" :class="entry.is_dir ? 'text-primary' : ''" />
+                    <UIcon
+                      :name="entry.is_dir ? 'i-lucide-folder' : 'i-lucide-file'"
+                      class="size-4 shrink-0 text-(--app-muted)"
+                      :class="entry.is_dir ? 'text-primary' : ''"
+                    />
                     <span class="truncate" :class="entry.is_dir ? 'font-medium' : ''">{{ entry.name }}</span>
                   </button>
-                  <span v-if="entry.name !== '..'" data-file-action class="flex shrink-0 items-center gap-px text-(--app-muted) transition-opacity focus-within:opacity-100" :class="hoveredEntryName === entry.name ? 'opacity-100' : 'opacity-0'">
-                    <UButton icon="i-lucide-download" size="xs" color="neutral" variant="ghost" @click.stop="downloadEntry(entry)" />
-                    <UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" @click.stop="rename(entry)" />
-                    <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" @click.stop="remove(entry)" />
+                  <span
+                    v-if="entry.name !== '..'"
+                    data-file-action
+                    class="flex shrink-0 items-center gap-px text-(--app-muted) transition-opacity focus-within:opacity-100"
+                    :class="hoveredEntryName === entry.name ? 'opacity-100' : 'opacity-0'"
+                  >
+                    <UButton
+                      icon="i-lucide-download"
+                      size="xs"
+                      color="neutral"
+                      variant="ghost"
+                      @click.stop="downloadEntry(entry)"
+                    />
+                    <UButton
+                      icon="i-lucide-pencil"
+                      size="xs"
+                      color="neutral"
+                      variant="ghost"
+                      @click.stop="rename(entry)"
+                    />
+                    <UButton
+                      icon="i-lucide-trash-2"
+                      size="xs"
+                      color="error"
+                      variant="ghost"
+                      @click.stop="remove(entry)"
+                    />
                   </span>
                 </div>
               </td>
-              <td class="h-9.5 w-27.5 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right"><span class="block truncate font-ui-mono text-[11px] text-(--app-muted)">{{ entry.is_dir ? "—" : formatFileSize(entry.size) }}</span></td>
-              <td class="hidden h-9.5 w-42 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right md:table-cell"><span class="block truncate font-ui-mono text-[11px] text-(--app-muted)">{{ formatModifiedTime(entry.mod_time) }}</span></td>
-              <td class="hidden h-9.5 w-32 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right md:table-cell"><span class="block truncate font-ui-mono text-[10.5px] text-(--app-muted)">{{ entry.perm || "—" }}</span></td>
+              <td class="h-9.5 w-27.5 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right">
+                <span class="block truncate font-ui-mono text-[11px] text-(--app-muted)">
+                  {{ entry.is_dir ? "—" : formatFileSize(entry.size) }}
+                </span>
+              </td>
+              <td class="hidden h-9.5 w-42 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right md:table-cell">
+                <span class="block truncate font-ui-mono text-[11px] text-(--app-muted)">
+                  {{ formatModifiedTime(entry.mod_time) }}
+                </span>
+              </td>
+              <td class="hidden h-9.5 w-32 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right md:table-cell">
+                <span class="block truncate font-ui-mono text-[10.5px] text-(--app-muted)">
+                  {{ entry.perm || "—" }}
+                </span>
+              </td>
             </tr>
-            <tr v-if="visibleEntries.length === 0"><td colspan="4" class="h-24 border-b border-(--app-border)/60 px-3.5 text-center text-sm text-(--app-muted)">{{ t("Common.NoData") }}</td></tr>
+            <tr v-if="visibleEntries.length === 0">
+              <td
+                colspan="4"
+                class="h-24 border-b border-(--app-border)/60 px-3.5 text-center text-sm text-(--app-muted)"
+              >
+                {{ t("Common.NoData") }}
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
-      <div class="flex h-7 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3.5 font-ui-mono text-[10.5px] text-(--app-muted)">
+      <div
+        class="flex h-7 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3.5 font-ui-mono text-[10.5px] text-(--app-muted)"
+      >
         {{ t("koko.fileManagement.items", { count: visibleEntries.length }) }}
       </div>
     </div>

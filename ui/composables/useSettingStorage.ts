@@ -20,9 +20,7 @@ export const MAX_SIDEBAR_WIDTH = 420;
 export const DEFAULT_SIDEBAR_WIDTH = 220;
 
 export const normalizeSidebarWidth = (width: unknown) => {
-  const value = typeof width === "number" && Number.isFinite(width)
-    ? Math.round(width)
-    : DEFAULT_SIDEBAR_WIDTH;
+  const value = typeof width === "number" && Number.isFinite(width) ? Math.round(width) : DEFAULT_SIDEBAR_WIDTH;
 
   return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, value));
 };

@@ -62,7 +62,7 @@ export interface KubernetesTerminalPingMessage {
 
 export interface KubernetesTerminalControlMessage {
   type:
-    KubernetesTerminalMessageType.Pong |
+    | KubernetesTerminalMessageType.Pong |
     KubernetesTerminalMessageType.Error |
     KubernetesTerminalMessageType.TerminalError |
     KubernetesTerminalMessageType.Close;
@@ -73,7 +73,7 @@ export interface KubernetesTerminalControlMessage {
 }
 
 export type KubernetesTerminalIncomingMessage =
-  KubernetesTerminalConnectMessage |
+  | KubernetesTerminalConnectMessage |
   KubernetesTerminalTreeMessage |
   KubernetesTerminalDataMessage |
   KubernetesTerminalBinaryMessage |
@@ -121,7 +121,7 @@ export interface KubernetesTerminalCloseRequest {
 }
 
 export type KubernetesTerminalOutgoingMessage =
-  KubernetesTerminalTreeRequest |
+  | KubernetesTerminalTreeRequest |
   KubernetesTerminalPongRequest |
   KubernetesTerminalInitializeRequest |
   KubernetesTerminalDataRequest |

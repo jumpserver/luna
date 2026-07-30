@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { useColor } from '@/lion/hooks/useColor';
+import { computed, ref } from "vue";
+import { useI18n } from "vue-i18n";
+import { useColor } from "@/lion/hooks/useColor";
 
 const props = defineProps<{
   username: string
@@ -12,7 +12,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'removeUser', meta: object): void
+  (e: "removeUser", meta: object): void
 }>();
 
 const { t } = useI18n();
@@ -21,20 +21,20 @@ const isHovered = ref(false);
 const confirmOpen = ref(false);
 
 const options = [
-  { label: t('Writable'), value: 'editor' },
-  { label: t('ReadOnly'), value: 'readonly' },
-  { label: t('Admin'), value: 'admin' }
+  { label: t("Writable"), value: "editor" },
+  { label: t("ReadOnly"), value: "readonly" },
+  { label: t("Admin"), value: "admin" }
 ];
 
 const selectionValue = computed(() => {
-  if (props.primary) return 'admin';
-  if (props.writable) return 'editor';
-  return 'readonly';
+  if (props.primary) return "admin";
+  if (props.writable) return "editor";
+  return "readonly";
 });
 
 const handleRemoveUser = () => {
   confirmOpen.value = false;
-  emit('removeUser', props.meta);
+  emit("removeUser", props.meta);
 };
 </script>
 
@@ -51,30 +51,34 @@ const handleRemoveUser = () => {
         <div class="flex items-center gap-2">
           <span class="text-xs-plus font-medium">{{ username }}</span>
           <UBadge :color="primary ? 'success' : 'info'" variant="subtle" size="sm">
-            {{ primary ? t('PrimaryUser') : t('ShareUser') }}
+            {{ primary ? t("PrimaryUser") : t("ShareUser") }}
           </UBadge>
         </div>
       </div>
     </div>
 
     <div class="flex items-center gap-2">
-      <USelect
-        :model-value="selectionValue"
-        :items="options"
-        disabled
-        class="w-28"
-      />
+      <USelect :model-value="selectionValue" :items="options" disabled class="w-28" />
       <UPopover v-model:open="confirmOpen">
         <UButton icon="i-lucide-trash-2" color="error" variant="soft" size="sm" :disabled="primary" />
         <template #content>
           <div class="flex flex-col gap-3 p-3">
-            <span class="text-sm">{{ t('RemoveUser') }}</span>
+            <span class="text-sm">{{ t("RemoveUser") }}</span>
             <div class="flex justify-end gap-2">
-              <UButton color="neutral" variant="ghost" size="sm" @click="() => { confirmOpen = false }">
-                {{ t('Cancel') }}
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                @click="
+                  () => {
+                    confirmOpen = false;
+                  }
+                "
+              >
+                {{ t("Cancel") }}
               </UButton>
               <UButton color="error" size="sm" @click="() => handleRemoveUser()">
-                {{ t('Confirm') }}
+                {{ t("Confirm") }}
               </UButton>
             </div>
           </div>

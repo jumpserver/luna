@@ -5,7 +5,13 @@ export function parseColorToRgb(color: string): [number, number, number] | null 
 
   const hex = value.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)?.[1];
   if (hex) {
-    const full = hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex;
+    const full
+      = hex.length === 3
+        ? hex
+          .split("")
+          .map((c) => c + c)
+          .join("")
+        : hex;
     return [
       Number.parseInt(full.slice(0, 2), 16),
       Number.parseInt(full.slice(2, 4), 16),
@@ -40,9 +46,7 @@ export function normalizeResolvedCssColor(color: string): string | null {
 
   const value = color.trim();
   const rgbaAlpha = value.match(/^rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+%?)\s*\)$/i)?.[1];
-  const srgbAlpha = value.startsWith("color(srgb ")
-    ? value.match(/\/\s*([\d.]+%?)\s*\)$/)?.[1]
-    : undefined;
+  const srgbAlpha = value.startsWith("color(srgb ") ? value.match(/\/\s*([\d.]+%?)\s*\)$/)?.[1] : undefined;
   const alphaValue = rgbaAlpha || srgbAlpha;
 
   if (!alphaValue) return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
@@ -72,7 +76,8 @@ export function contrastingTextColor(color: string, fallback = "#ffffff"): strin
   };
   const [r, g, b] = rgb.map(relativeLuminance);
   const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  const contrast = (first: number, second: number) => (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+  const contrast = (first: number, second: number) =>
+    (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
 
   return contrast(luminance, 0.0056) >= contrast(luminance, 1) ? "#111111" : "#ffffff";
 }

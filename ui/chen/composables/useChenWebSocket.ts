@@ -206,10 +206,13 @@ export function useChenWebSocket(options: UseChenWebSocketOptions) {
 
   function handleMessage(event: MessageEvent) {
     if (typeof event.data !== "string") {
-      reportError({
-        code: "malformed_packet",
-        message: `Chen ${options.path} websocket sent a non-text packet`
-      }, 1002);
+      reportError(
+        {
+          code: "malformed_packet",
+          message: `Chen ${options.path} websocket sent a non-text packet`
+        },
+        1002
+      );
       return;
     }
 
@@ -217,18 +220,24 @@ export function useChenWebSocket(options: UseChenWebSocketOptions) {
     try {
       packet = JSON.parse(event.data) as ChenPacket;
     } catch {
-      reportError({
-        code: "malformed_packet",
-        message: `Chen ${options.path} websocket sent malformed JSON`
-      }, 1002);
+      reportError(
+        {
+          code: "malformed_packet",
+          message: `Chen ${options.path} websocket sent malformed JSON`
+        },
+        1002
+      );
       return;
     }
 
     if (!packet || typeof packet !== "object" || typeof packet.type !== "string") {
-      reportError({
-        code: "malformed_packet",
-        message: `Chen ${options.path} websocket sent an invalid packet`
-      }, 1002);
+      reportError(
+        {
+          code: "malformed_packet",
+          message: `Chen ${options.path} websocket sent an invalid packet`
+        },
+        1002
+      );
       return;
     }
 

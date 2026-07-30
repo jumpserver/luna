@@ -19,10 +19,7 @@ defineEmits<{
 </script>
 
 <template>
-  <div
-    v-if="tabs.length"
-    class="workspace-sub-tab-bar shrink-0 bg-transparent px-2 py-1.5"
-  >
+  <div v-if="tabs.length" class="workspace-sub-tab-bar shrink-0 bg-transparent px-2 py-1.5">
     <div class="workspace-sub-tab-capsule flex w-fit min-w-0 max-w-full items-center rounded-lg p-px">
       <div class="workspace-sub-tab-strip flex w-fit min-w-0 max-w-full items-center gap-0.5 overflow-x-auto">
         <button

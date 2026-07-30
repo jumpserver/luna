@@ -1,12 +1,12 @@
 <script lang="ts" setup>
-import type { Composer } from 'vue-i18n';
-import { useI18n } from 'vue-i18n';
-import { removeShareUser } from '@/lion/api';
-import CardContainer from '@/lion/components/CardContainer/index.vue';
-import CreateLink from '@/lion/components/SessionShare/widget/CreateLink.vue';
-import UserItem from '@/lion/components/SessionShare/widget/UserItem.vue';
+import type { Composer } from "vue-i18n";
+import { useI18n } from "vue-i18n";
+import { removeShareUser } from "@/lion/api";
+import CardContainer from "@/lion/components/CardContainer/index.vue";
+import CreateLink from "@/lion/components/SessionShare/widget/CreateLink.vue";
+import UserItem from "@/lion/components/SessionShare/widget/UserItem.vue";
 
-export type TranslateFunction = Composer['t'];
+export type TranslateFunction = Composer["t"];
 
 const props = defineProps<{
   session: string
@@ -31,7 +31,7 @@ const handleRemoveShareUser = (user: any) => {
       }
     })
     .catch(() => {
-      addErrorToast({ title: t('ShareUserRemoveError') });
+      addErrorToast({ title: t("ShareUserRemoveError") });
     });
 };
 </script>
@@ -40,7 +40,7 @@ const handleRemoveShareUser = (user: any) => {
   <div class="flex w-full flex-col gap-4">
     <CardContainer>
       <template #custom-header>
-        <span class="text-xs-plus">{{ t('OnlineUser') }}</span>
+        <span class="text-xs-plus">{{ t("OnlineUser") }}</span>
         <UBadge color="success" variant="subtle" class="ml-2">
           {{ props.users?.length || 0 }}
         </UBadge>

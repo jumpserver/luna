@@ -80,7 +80,9 @@ const alertSubmitting = ref(false);
 const tree = ref<Record<string, TreeNode>>({});
 const expanded = ref(new Set<string>());
 const activeTab = computed(() => tabs.value.find((tab) => tab.path === activePath.value) || null);
-const renameDisabled = computed(() => !renameValue.value.trim() || renameValue.value.trim() === renameTarget.value?.entry.name);
+const renameDisabled = computed(
+  () => !renameValue.value.trim() || renameValue.value.trim() === renameTarget.value?.entry.name
+);
 const alertTitle = computed(() =>
   alertTarget.value?.kind === "delete" ? t("koko.actions.delete") : t("koko.actions.close")
 );
@@ -415,7 +417,9 @@ async function submitRename() {
       selectedDirectory.value = `${nextPath}${selectedDirectory.value.slice(target.path.length)}`;
     expanded.value = new Set(
       [...expanded.value].map((path) =>
-        path === target.path || path.startsWith(`${target.path}/`) ? `${nextPath}${path.slice(target.path.length)}` : path
+        path === target.path || path.startsWith(`${target.path}/`)
+          ? `${nextPath}${path.slice(target.path.length)}`
+          : path
       )
     );
     await loadDirectory(parent, true);
@@ -456,7 +460,7 @@ async function confirmAlert() {
     for (const tab of tabs.value.filter(
       (tab) => tab.path === target.target.path || tab.path.startsWith(`${target.target.path}/`)
     ))
-    revokePreview(tab);
+      revokePreview(tab);
     tabs.value = tabs.value.filter(
       (tab) => tab.path !== target.target.path && !tab.path.startsWith(`${target.target.path}/`)
     );
@@ -509,8 +513,16 @@ const contextMenuItems = computed(() => {
   if (!target) return [];
   const directoryActions = target.entry.is_dir
     ? [
-        { label: t("koko.sftpEditor.newFile"), icon: "i-lucide-file-plus-2", onSelect: () => createFromContext("file") },
-        { label: t("koko.sftpEditor.newDirectory"), icon: "i-lucide-folder-plus", onSelect: () => createFromContext("directory") },
+        {
+          label: t("koko.sftpEditor.newFile"),
+          icon: "i-lucide-file-plus-2",
+          onSelect: () => createFromContext("file")
+        },
+        {
+          label: t("koko.sftpEditor.newDirectory"),
+          icon: "i-lucide-folder-plus",
+          onSelect: () => createFromContext("directory")
+        },
         { label: t("koko.actions.upload"), icon: "i-lucide-upload", onSelect: chooseUpload },
         { type: "separator" as const }
       ]
@@ -603,7 +615,10 @@ async function save(tab = activeTab.value) {
   tab.saving = true;
   tab.error = "";
   try {
-    await manager.operations.uploadFile(new File([tab.content], tab.entry.name, { type: "text/plain;charset=utf-8" }), tab.path);
+    await manager.operations.uploadFile(
+      new File([tab.content], tab.entry.name, { type: "text/plain;charset=utf-8" }),
+      tab.path
+    );
     tab.savedContent = tab.content;
   } catch (cause) {
     tab.error = cause instanceof Error ? cause.message : String(cause);
@@ -706,7 +721,13 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
         v-if="searchVisible"
         class="shrink-0 border-b border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-tree) p-2"
       >
-        <UInput v-model="search" icon="i-lucide-search" size="xs" :placeholder="t('koko.sftpEditor.filterFiles')" class="w-full" />
+        <UInput
+          v-model="search"
+          icon="i-lucide-search"
+          size="xs"
+          :placeholder="t('koko.sftpEditor.filterFiles')"
+          class="w-full"
+        />
       </div>
       <div
         v-if="manager.currentUploadName.value"
@@ -767,7 +788,9 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
                 ref="pendingInput"
                 v-model="pendingName"
                 class="h-6 min-w-0 flex-1 rounded border border-primary bg-(--workspace-surface-sub-panel) px-1.5 text-xs text-(--app-fg) outline-none"
-                :placeholder="row.createKind === 'directory' ? t('koko.sftpEditor.directoryName') : t('koko.sftpEditor.fileName')"
+                :placeholder="
+                  row.createKind === 'directory' ? t('koko.sftpEditor.directoryName') : t('koko.sftpEditor.fileName')
+                "
                 :disabled="pendingSubmitting"
                 @keydown.enter.prevent="commitCreate"
                 @keydown.esc.prevent="cancelCreate"
@@ -884,13 +907,14 @@ onUnmounted(() => tabs.value.forEach(revokePreview));
           class="flex h-6 shrink-0 items-center justify-between border-t border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-header) px-3 text-[10px] text-(--app-muted)"
         >
           <span>{{ activeTab.path }}</span>
-          <span>{{ activeTab.kind === "text" ? t("koko.sftpEditor.fileStatus", { count: activeTab.content.length }) : "SFTP" }}</span>
+          <span>
+            {{
+              activeTab.kind === "text" ? t("koko.sftpEditor.fileStatus", { count: activeTab.content.length }) : "SFTP"
+            }}
+          </span>
         </footer>
       </template>
-      <div
-        v-else
-        class="grid min-h-0 flex-1 place-items-center bg-(--app-main-bg) p-6 text-sm text-(--app-muted)"
-      >
+      <div v-else class="grid min-h-0 flex-1 place-items-center bg-(--app-main-bg) p-6 text-sm text-(--app-muted)">
         <div class="flex flex-col items-center gap-3">
           <UIcon name="i-lucide-file-code-2" class="size-10" />
           <span>{{ manager.error.value || t("koko.sftpEditor.editorEmpty") }}</span>

@@ -33,7 +33,7 @@ export const LIGHT_THEME_PRESETS: ThemePresetOption[] = [
   { id: "claude", label: "Claude Parchment", accent: "#c96442" },
   { id: "gemini", label: "Gemini Air", accent: "#1a73e8" },
   { id: "mono", label: "Mono Paper", accent: "#111111" },
-  { id: "min", label: "Min", accent: "#2563eb" }
+  { id: "min", label: "Min Light", accent: "#757575" }
 ];
 
 export const DARK_THEME_PRESETS: ThemePresetOption[] = [
@@ -49,7 +49,7 @@ export const DARK_THEME_PRESETS: ThemePresetOption[] = [
   { id: "codex", label: "Codex Graphite", accent: "#10a37f" },
   { id: "cursor", label: "Cursor Noir", accent: "#f7f7f4" },
   { id: "mono-dark", label: "Mono Dark", accent: "#ffffff" },
-  { id: "min-dark", label: "Min Dark", accent: "#60a5fa" }
+  { id: "min-dark", label: "Min Dark", accent: "#333333" }
 ];
 
 const presetMap = new Map(

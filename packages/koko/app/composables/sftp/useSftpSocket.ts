@@ -8,12 +8,9 @@ import { getCurrentInstance, onUnmounted, ref, shallowRef } from "vue";
 import {
   parseSftpIncomingMessage,
   SftpControlData,
-
   SftpMessageType,
-
   SftpSocketFailureCode,
   SftpWebSocketProtocol
-
 } from "./protocol";
 
 const SOCKET_OPEN = 1;
@@ -66,7 +63,8 @@ export function useSftpSocket(): SftpSocketClient {
     const target = socket.value;
     socket.value = null;
     if (target && target.readyState !== SOCKET_CLOSING && target.readyState !== SOCKET_CLOSED) target.close();
-    if (notify) emitFailure({ code: SftpSocketFailureCode.ConnectionReset, message: SftpSocketFailureCode.ConnectionReset });
+    if (notify)
+      emitFailure({ code: SftpSocketFailureCode.ConnectionReset, message: SftpSocketFailureCode.ConnectionReset });
   }
 
   function connect(context: ConnectorSessionContext) {

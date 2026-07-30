@@ -18,24 +18,27 @@ import {
   isChenDataViewEditable
 } from "~/chen/utils/dataViewEditing";
 
-const props = withDefaults(defineProps<{
-  resultTabs: ChenQueryResultTab[]
-  activeResultTabId: string
-  emptyMessage: string
-  closable?: boolean
-  dataViewActions?: boolean
-  logs?: string[]
-  showLogs?: boolean
-  dbType?: string
-  canCopy?: boolean
-}>(), {
-  closable: false,
-  dataViewActions: false,
-  logs: () => [],
-  showLogs: false,
-  dbType: "",
-  canCopy: false
-});
+const props = withDefaults(
+  defineProps<{
+    resultTabs: ChenQueryResultTab[]
+    activeResultTabId: string
+    emptyMessage: string
+    closable?: boolean
+    dataViewActions?: boolean
+    logs?: string[]
+    showLogs?: boolean
+    dbType?: string
+    canCopy?: boolean
+  }>(),
+  {
+    closable: false,
+    dataViewActions: false,
+    logs: () => [],
+    showLogs: false,
+    dbType: "",
+    canCopy: false
+  }
+);
 
 const emit = defineEmits<{
   "update:activeResultTabId": [id: string]
@@ -51,9 +54,9 @@ const activeResult = computed(() => {
   return props.resultTabs.find((item) => item.id === props.activeResultTabId) || null;
 });
 const activeResultEditable = computed(() => isChenDataViewEditable(activeResult.value?.data));
-const activeResultDirty = computed(() => Boolean(
-  activeResult.value && chenDataViewHasDirty(activeResult.value.editState)
-));
+const activeResultDirty = computed(() =>
+  Boolean(activeResult.value && chenDataViewHasDirty(activeResult.value.editState))
+);
 const activeResultBusy = computed(() => Boolean(activeResult.value?.editState.activeRequest));
 const activeResultRefreshRequired = computed(() => activeResult.value?.editState.refreshRequiredBeforeSave === true);
 const previewDialogOpen = computed(() => activeResult.value?.editState.previewResult?.success === true);
@@ -148,7 +151,7 @@ function cancelActiveResultChanges() {
       v-if="showLogs && !activeResult && logs.length"
       class="min-h-0 flex-1 overflow-auto bg-[var(--workspace-surface-sub-panel)] p-3 text-xs text-muted"
     >
-      <pre class="whitespace-pre-wrap">{{ logs.join('\n') }}</pre>
+      <pre class="whitespace-pre-wrap">{{ logs.join("\n") }}</pre>
     </div>
 
     <div v-else-if="!activeResult" class="grid min-h-0 flex-1 place-items-center px-6 text-sm text-muted">
@@ -158,11 +161,7 @@ function cancelActiveResultChanges() {
       </div>
     </div>
 
-    <div
-      v-else-if="activeResult"
-      :key="activeResult.id"
-      class="flex min-h-0 flex-1 flex-col"
-    >
+    <div v-else-if="activeResult" :key="activeResult.id" class="flex min-h-0 flex-1 flex-col">
       <div class="flex shrink-0 items-center justify-between border-b border-default px-3 py-2 text-sm">
         <div class="min-w-0 truncate">
           {{ activeResult.title }}
@@ -178,7 +177,14 @@ function cancelActiveResultChanges() {
             >
               Save
             </UButton>
-            <UButton icon="i-lucide-rotate-ccw" size="xs" color="neutral" variant="soft" :disabled="activeResultBusy || !activeResultDirty" @click="cancelActiveResultChanges">
+            <UButton
+              icon="i-lucide-rotate-ccw"
+              size="xs"
+              color="neutral"
+              variant="soft"
+              :disabled="activeResultBusy || !activeResultDirty"
+              @click="cancelActiveResultChanges"
+            >
               Cancel
             </UButton>
           </template>
@@ -195,7 +201,7 @@ function cancelActiveResultChanges() {
       <div class="min-h-0 flex-1 overflow-auto">
         <ChenDataGrid
           ref="dataGrid"
-          :key="`${activeResult.id}:${activeResult.data?.fields?.map(field => field.name).join(',') || ''}:${activeResult.data?.data?.length || 0}`"
+          :key="`${activeResult.id}:${activeResult.data?.fields?.map((field) => field.name).join(',') || ''}:${activeResult.data?.data?.length || 0}`"
           :dataset="activeResult.data"
           :meta="activeResult.meta"
           :db-type="dbType"
@@ -206,11 +212,7 @@ function cancelActiveResultChanges() {
       </div>
     </div>
 
-    <DataViewExportDialog
-      v-if="exportDialogOpen"
-      v-model:open="exportDialogOpen"
-      @confirm="submitExport"
-    />
+    <DataViewExportDialog v-if="exportDialogOpen" v-model:open="exportDialogOpen" @confirm="submitExport" />
 
     <DataViewSavePreviewDialog
       v-if="previewDialogOpen && activeResult"

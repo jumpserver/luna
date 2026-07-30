@@ -14,16 +14,9 @@ const { collapse, sidebarSections, setSidebarSections } = useSettingManager();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const showTools = computed(() => isTauriRuntime());
 const { confirmConnection, saveConnectionInfo } = useAssetConnection();
-const {
-  activeTab,
-  canSplitWorkspace,
-  openSession,
-  openSetupSession,
-  splitWorkspace
-} = useWorkspaceTabs();
+const { activeTab, canSplitWorkspace, openSession, openSetupSession, splitWorkspace } = useWorkspaceTabs();
 const { openAssetInWindow } = useAssetWindowLauncher();
-const { handleAssetFavorite, handleAssetRename, handleAssetUnfavorite }
-  = useAssetAction();
+const { handleAssetFavorite, handleAssetRename, handleAssetUnfavorite } = useAssetAction();
 const { folders: favoriteFolders, load: loadFavoriteFolders, favoriteToFolder } = useFavoriteFolders();
 
 const isLoading = ref(false);
@@ -173,12 +166,10 @@ const savedConnectionIsAvailable = (asset: AssetItem) => {
   return accounts.some(
     (account) =>
       !(account.alias || "").startsWith("@")
-      && (
-        (saved.accountId && account.id === saved.accountId)
+      && ((saved.accountId && account.id === saved.accountId)
         || account.name === saved.username
         || account.username === saved.username
-        || account.alias === saved.username
-      )
+        || account.alias === saved.username)
   );
 };
 
@@ -446,10 +437,8 @@ const toggleAssetFavorite = (asset: AssetItem, favorite: boolean) => {
   useEventBus().emit("favoriteChanged", { assetId: asset.id, favorite });
 };
 
-const flattenFavoriteFolders = (folders = favoriteFolders.value): Array<{ id: string, name: string }> => folders.flatMap((folder) => [
-  { id: folder.id, name: folder.name },
-  ...flattenFavoriteFolders(folder.children)
-]);
+const flattenFavoriteFolders = (folders = favoriteFolders.value): Array<{ id: string, name: string }> =>
+  folders.flatMap((folder) => [{ id: folder.id, name: folder.name }, ...flattenFavoriteFolders(folder.children)]);
 
 const addAssetToFavoriteFolder = async (asset: AssetItem, folderId: string) => {
   contextMenuVisible.value = false;
@@ -493,14 +482,16 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
 
   return [
     ...(hasQuickConnect(asset)
-      ? [{
-          label: t("ContextMenu.QuickConnect"),
-          icon: "i-lucide-zap",
-          onSelect: () => {
-            contextMenuVisible.value = false;
-            handleAssetQuickConnect(asset);
-          }
-        } satisfies DropdownMenuItem]
+      ? [
+          {
+            label: t("ContextMenu.QuickConnect"),
+            icon: "i-lucide-zap",
+            onSelect: () => {
+              contextMenuVisible.value = false;
+              handleAssetQuickConnect(asset);
+            }
+          } satisfies DropdownMenuItem
+        ]
       : []),
     {
       label: t("ContextMenu.Connect"),
@@ -535,26 +526,30 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
     {
       label: t("Favorite.AddToFolder"),
       icon: "lucide:star",
-      children: folderItems.length > 0
-        ? folderItems
-        : [{ label: t("Favorite.CreateFolderFirst"), disabled: true }]
+      children: folderItems.length > 0 ? folderItems : [{ label: t("Favorite.CreateFolderFirst"), disabled: true }]
     },
     ...(isFavorited
-      ? [{
-          label: t("ContextMenu.Unfavorite"),
-          icon: "lucide:star-off",
-          onSelect: () => {
-            contextMenuVisible.value = false;
-            toggleAssetFavorite(asset, false);
-          }
-        } satisfies DropdownMenuItem]
+      ? [
+          {
+            label: t("ContextMenu.Unfavorite"),
+            icon: "lucide:star-off",
+            onSelect: () => {
+              contextMenuVisible.value = false;
+              toggleAssetFavorite(asset, false);
+            }
+          } satisfies DropdownMenuItem
+        ]
       : [])
   ];
 });
 
-watch(loggedIn, (value) => {
-  if (value) loadFavoriteFolders();
-}, { immediate: true });
+watch(
+  loggedIn,
+  (value) => {
+    if (value) loadFavoriteFolders();
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
@@ -588,7 +583,11 @@ watch(loggedIn, (value) => {
             class="sidebar-icon-button size-6 shrink-0 justify-center p-0"
             :class="showAssetSearch ? 'sidebar-icon-button-active' : ''"
             :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-            @click="() => { showAssetSearch = !showAssetSearch; }"
+            @click="
+              () => {
+                showAssetSearch = !showAssetSearch;
+              }
+            "
           />
         </UTooltip>
 
@@ -687,7 +686,11 @@ watch(loggedIn, (value) => {
                 icon="i-lucide-circle-x"
                 aria-label="Clear input"
                 :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-                @click="() => { sidebarSearch = ''; }"
+                @click="
+                  () => {
+                    sidebarSearch = '';
+                  }
+                "
               />
             </template>
           </UInput>

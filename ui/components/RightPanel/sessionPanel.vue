@@ -32,13 +32,9 @@ const sessionDetails = computed(() => {
   return getSessionDetails(tab.id) || null;
 });
 
-const isConnectedSession = computed(() =>
-  activeTab.value?.status === "connected"
-);
+const isConnectedSession = computed(() => activeTab.value?.status === "connected");
 
-const showShareSection = computed(() =>
-  Boolean(sessionDetails.value?.shareAllowed && isConnectedSession.value)
-);
+const showShareSection = computed(() => Boolean(sessionDetails.value?.shareAllowed && isConnectedSession.value));
 
 const sessionRows = computed(() => {
   const tab = activeTab.value;
@@ -68,8 +64,8 @@ const statusLabel = computed(() => {
   return t("RightPanel.SessionStatusIdle");
 });
 
-const canShare = computed(() =>
-  showShareSection.value && Boolean(connectionStore.enableShare && connectionStore.sessionId)
+const canShare = computed(
+  () => showShareSection.value && Boolean(connectionStore.enableShare && connectionStore.sessionId)
 );
 </script>
 

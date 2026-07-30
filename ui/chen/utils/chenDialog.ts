@@ -39,11 +39,8 @@ export function normalizeChenDialogMessage(payload: unknown): ChenDialogMessage 
     if (!isRecord(item)) return { label: `Item ${index + 1}`, value: item };
 
     return {
-      label: typeof item.label === "string"
-        ? item.label
-        : typeof item.name === "string"
-          ? item.name
-          : `Item ${index + 1}`,
+      label:
+        typeof item.label === "string" ? item.label : typeof item.name === "string" ? item.name : `Item ${index + 1}`,
       value: item.value
     };
   });

@@ -1,16 +1,16 @@
-import type { LionUploadCustomRequestOptions } from '@/lion/types/upload';
-import { useDebounceFn } from '@vueuse/core';
+import type { LionUploadCustomRequestOptions } from "@/lion/types/upload";
+import { useDebounceFn } from "@vueuse/core";
 
 import * as Guacamole from "guacamole-common-js-jumpserver/dist/guacamole-common";
 import { nextTick, ref } from "vue";
-import { LanguageCode } from '@/lion/locales';
-import { LUNA_MESSAGE_TYPE } from '@/lion/types/postmessage.type';
-import { readClipboardText } from '@/lion/utils/clipboard';
+import { LanguageCode } from "@/lion/locales";
+import { LUNA_MESSAGE_TYPE } from "@/lion/types/postmessage.type";
+import { readClipboardText } from "@/lion/utils/clipboard";
 
-import { BaseAPIURL } from '@/lion/utils/common';
+import { BaseAPIURL } from "@/lion/utils/common";
 
-import { lunaCommunicator } from '@/lion/utils/lunaBus';
-import { ConvertGuacamoleError, ErrorStatusCodes } from '@/lion/utils/status';
+import { lunaCommunicator } from "@/lion/utils/lunaBus";
+import { ConvertGuacamoleError, ErrorStatusCodes } from "@/lion/utils/status";
 
 const supportImages: any[] = [];
 const pendingTests: any[] = [];
@@ -18,25 +18,25 @@ const testImages: any = {
   /**
    * Test JPEG image, encoded as base64.
    */
-  'image/jpeg':
-    '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoH'
-    + 'BwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQME'
-    + 'BAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU'
-    + 'FBQUFBQUFBQUFBQUFBT/wAARCAABAAEDAREAAhEBAxEB/8QAFAABAAAAAAAAAAA'
-    + 'AAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAA'
-    + 'AAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AVMH/2Q==',
+  "image/jpeg":
+    "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoH"
+    + "BwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQME"
+    + "BAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU"
+    + "FBQUFBQUFBQUFBQUFBT/wAARCAABAAEDAREAAhEBAxEB/8QAFAABAAAAAAAAAAA"
+    + "AAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAA"
+    + "AAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AVMH/2Q==",
 
   /**
    * Test PNG image, encoded as base64.
    */
-  'image/png':
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX///+nxBvI'
-    + 'AAAACklEQVQI12NgAAAAAgAB4iG8MwAAAABJRU5ErkJggg==',
+  "image/png":
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX///+nxBvI"
+    + "AAAACklEQVQI12NgAAAAAgAB4iG8MwAAAABJRU5ErkJggg==",
 
   /**
    * Test WebP image, encoded as base64.
    */
-  'image/webp': 'UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=='
+  "image/webp": "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=="
 }; // 测试单个图片格式
 async function testImageFormat(mimeType: string, base64Data: any): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
@@ -85,8 +85,8 @@ Object.entries(testImages).forEach(([mimeType, base64Data]) => {
   pendingTests.push(imageTest);
 });
 const FileType = {
-  NORMAL: 'NORMAL',
-  DIRECTORY: 'DIRECTORY'
+  NORMAL: "NORMAL",
+  DIRECTORY: "DIRECTORY"
 };
 
 export async function getSupportedImages(): Promise<string[]> {
@@ -119,7 +119,7 @@ export async function getSupportedGuacMimeTypes(): Promise<string> {
   const supportImages = await getSupportedImages();
   const supportVideos = await getSupportedGuacVideos();
   const supportAudios = await getSupportedGuacAudios();
-  let connectString = '';
+  let connectString = "";
   supportImages.forEach((mimeType) => {
     connectString += `&GUAC_IMAGE=${encodeURIComponent(mimeType)}`;
   });
@@ -144,7 +144,7 @@ export async function getSupportedMimeTypes(): Promise<Record<string, string[]>>
 }
 
 const sanitizeFilename = (filename: string) => {
-  return filename.replace(/[\\/]+/g, '_');
+  return filename.replace(/[\\/]+/g, "_");
 };
 
 const withErrorDetails = (message: string, details: Record<string, any> = {}) => {
@@ -154,7 +154,7 @@ const withErrorDetails = (message: string, details: Record<string, any> = {}) =>
 interface GuacamoleFile {
   mimetype?: any
   streamName?: any
-  type: 'DIRECTORY' | 'FILE'
+  type: "DIRECTORY" | "FILE"
   name: string
   parent?: GuacamoleFile | null
   is_dir?: boolean
@@ -164,17 +164,17 @@ export function useGuacamoleClient(t: any) {
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
   const message = {
-    info: (text: string) => toast.add({ title: text, color: 'info' }),
-    success: (text: string) => toast.add({ title: text, color: 'success' }),
-    warning: (text: string) => toast.add({ title: text, color: 'warning' }),
+    info: (text: string) => toast.add({ title: text, color: "info" }),
+    success: (text: string) => toast.add({ title: text, color: "success" }),
+    warning: (text: string) => toast.add({ title: text, color: "warning" }),
     error: (text: string, _opts?: { duration?: number }) => addErrorToast({ title: text })
   };
   const guaClient = ref<any>(null);
   const guaTunnel = ref<any>(null);
   const guaDisplay = ref<any>(null);
   const fsObject = ref<any>(null);
-  const driverName = ref<string>('');
-  const connectStatus = ref('Connecting');
+  const driverName = ref<string>("");
+  const connectStatus = ref("Connecting");
   const sessionObject = ref<any>({});
   const action_permission = ref<any>({});
   const enableShare = ref(false);
@@ -193,7 +193,7 @@ export function useGuacamoleClient(t: any) {
   const keyboard = new Guacamole.Keyboard();
   const isRemoteApp = ref<boolean>(false);
   const isHttpProtocol = ref<boolean>(false);
-  const remoteClipboardText = ref<string>('');
+  const remoteClipboardText = ref<string>("");
   let connectGeneration = 0;
   const currentFolderFiles = ref<any>([]);
   const current_files = ref<any>({});
@@ -232,11 +232,11 @@ export function useGuacamoleClient(t: any) {
     const client = new Guacamole.Client(tunnel);
 
     tunnel.onerror = () => {
-      message.error(t('WebSocketError'));
+      message.error(t("WebSocketError"));
     };
     tunnel.onuuid = (uuid: string) => {
       tunnel.uuid = uuid;
-      console.log('WebSocket UUID:', uuid);
+      console.log("WebSocket UUID:", uuid);
     };
 
     const oninstruction = tunnel.oninstruction;
@@ -244,7 +244,7 @@ export function useGuacamoleClient(t: any) {
       if (oninstruction) {
         oninstruction(opcode, argv);
       }
-      if (opcode === 'jms_event') {
+      if (opcode === "jms_event") {
         onJmsEvent(argv[0], argv[1]);
       }
     };
@@ -258,7 +258,7 @@ export function useGuacamoleClient(t: any) {
     client.onclipboard = onclipboard;
     const display = client.getDisplay();
     display.onresize = (resizeEvent: any) => {
-      console.log('Guacamole display resized:', resizeEvent);
+      console.log("Guacamole display resized:", resizeEvent);
       updateScale();
     };
     display.showCursor(false);
@@ -267,13 +267,13 @@ export function useGuacamoleClient(t: any) {
     guaTunnel.value = tunnel;
     const queryParams = new URLSearchParams(connectParams);
     if (width) {
-      queryParams.append('GUAC_WIDTH', width.toString());
+      queryParams.append("GUAC_WIDTH", width.toString());
     }
     if (height) {
-      queryParams.append('GUAC_HEIGHT', height.toString());
+      queryParams.append("GUAC_HEIGHT", height.toString());
     }
     const optimalDpi = pixelDensity * 96;
-    queryParams.append('GUAC_DPI', optimalDpi.toString());
+    queryParams.append("GUAC_DPI", optimalDpi.toString());
     getSupportedMimeTypes()
       .then((mimeTypes: Record<string, string[]>) => {
         // add supported mime types to query params
@@ -285,24 +285,24 @@ export function useGuacamoleClient(t: any) {
       })
       .finally(() => {
         if (generation !== connectGeneration) return;
-        console.log('Connecting to Guacamole with params:', queryParams.toString());
+        console.log("Connecting to Guacamole with params:", queryParams.toString());
         client.connect(queryParams.toString());
       });
   }
 
   function sendTextToRemote(text: string) {
     const data = {
-      type: 'text/plain',
+      type: "text/plain",
       data: text
     };
     if (!guaClient.value) {
-      console.warn('Guacamole client is not initialized yet.');
+      console.warn("Guacamole client is not initialized yet.");
       return;
     }
     let writer: any = null;
     const stream = guaClient.value.createClipboardStream(data.type);
     // Send data as a string if it is stored as a string
-    if (typeof data.data === 'string') {
+    if (typeof data.data === "string") {
       writer = new Guacamole.StringWriter(stream);
       writer.sendText(data.data);
       writer.sendEnd();
@@ -328,11 +328,9 @@ export function useGuacamoleClient(t: any) {
   const registerMouseAndKeyboardHanlder = () => {
     const client = guaClient.value as any;
     if (!client || !client.getDisplay) {
-      return console.warn(
-        'Guacamole client is not initialized or does not support mouse and keyboard events'
-      );
+      return console.warn("Guacamole client is not initialized or does not support mouse and keyboard events");
     }
-    window.addEventListener('focus', debouncedSendClipboardToRemote, false);
+    window.addEventListener("focus", debouncedSendClipboardToRemote, false);
     registerMouse(client);
 
     registerTouchScreen(client);
@@ -352,8 +350,8 @@ export function useGuacamoleClient(t: any) {
         keyboard.reset();
       });
     };
-    displayEl.addEventListener('mouseenter', handleMouseEnter);
-    displayEl.addEventListener('mouseleave', handleMouseLeave);
+    displayEl.addEventListener("mouseenter", handleMouseEnter);
+    displayEl.addEventListener("mouseleave", handleMouseLeave);
   };
 
   const resizeGuaScale = useDebounceFn((width: number, height: number) => {
@@ -364,13 +362,13 @@ export function useGuacamoleClient(t: any) {
 
   const sendGuaSize = (width: number, height: number) => {
     if (guaClient.value && guaDisplay.value) {
-      console.log('Sending resize to Guacamole client:', width, height);
+      console.log("Sending resize to Guacamole client:", width, height);
       guaClient.value.sendSize(width, height);
     }
   };
   function updateScale() {
     if (!guaDisplay.value || !guaClient.value) {
-      console.warn('Guacamole display is not initialized yet.');
+      console.warn("Guacamole display is not initialized yet.");
       return;
     }
     const w = guaDisplay.value.getWidth();
@@ -388,23 +386,23 @@ export function useGuacamoleClient(t: any) {
   }
 
   function onJmsEvent(event: any, data: any) {
-    console.log('Received JMS event:', event);
+    console.log("Received JMS event:", event);
     const dataObj = JSON.parse(data);
     switch (event) {
-      case 'session_pause': {
-        const msg = `${dataObj.user} ${t('PauseSession')}`;
+      case "session_pause": {
+        const msg = `${dataObj.user} ${t("PauseSession")}`;
         message.info(msg);
         break;
       }
-      case 'session_resume': {
-        const msg = `${dataObj.user} ${t('ResumeSession')}`;
+      case "session_resume": {
+        const msg = `${dataObj.user} ${t("ResumeSession")}`;
         message.info(msg);
         break;
       }
-      case 'session': {
+      case "session": {
         sessionObject.value = dataObj;
         const protocol = dataObj.protocol;
-        isHttpProtocol.value = protocol.toLowerCase().includes('http');
+        isHttpProtocol.value = protocol.toLowerCase().includes("http");
         const action = dataObj.action_permission || {};
         action_permission.value = dataObj.action_permission || {};
         enableShare.value = action_permission.value.enable_share || false;
@@ -412,43 +410,43 @@ export function useGuacamoleClient(t: any) {
         isRemoteApp.value = dataObj.remote_app;
         break;
       }
-      case 'current_user': {
+      case "current_user": {
         currentUser.value = dataObj;
         shareId.value = dataObj.share_id || null;
         break;
       }
-      case 'share_join': {
+      case "share_join": {
         if (dataObj.primary) {
           break;
         }
-        const joinMsg = `${dataObj.user} ${t('JoinShare')}`;
+        const joinMsg = `${dataObj.user} ${t("JoinShare")}`;
         message.info(joinMsg);
         break;
       }
-      case 'share_exit': {
-        const leaveMsg = `${dataObj.user} ${t('LeaveShare')}`;
+      case "share_exit": {
+        const leaveMsg = `${dataObj.user} ${t("LeaveShare")}`;
         message.info(leaveMsg);
         break;
       }
-      case 'share_users': {
+      case "share_users": {
         onlineUsersMap.value = dataObj;
-        console.log('Online users updated:', onlineUsersMap.value);
+        console.log("Online users updated:", onlineUsersMap.value);
         break;
       }
-      case 'perm_expired': {
-        const warningMsg = `${t('PermissionExpired')}: ${dataObj.detail}`;
+      case "perm_expired": {
+        const warningMsg = `${t("PermissionExpired")}: ${dataObj.detail}`;
         message.warning(warningMsg);
         warningIntervalId.value = window.setInterval(() => {
           message.warning(warningMsg);
         }, 1000 * 31);
         break;
       }
-      case 'perm_valid': {
+      case "perm_valid": {
         if (warningIntervalId.value) {
           window.clearInterval(warningIntervalId.value);
           warningIntervalId.value = null;
         }
-        message.success(t('PermissionValid'));
+        message.success(t("PermissionValid"));
         break;
       }
       default:
@@ -510,28 +508,28 @@ export function useGuacamoleClient(t: any) {
   };
   function registerKeyboard(client: any) {
     if (!client || !client.getDisplay) {
-      console.warn('Guacamole client is not initialized or does not support keyboard events');
+      console.warn("Guacamole client is not initialized or does not support keyboard events");
       return;
     }
     const display = client.getDisplay();
     if (!display) {
-      console.warn('Guacamole display is not available');
+      console.warn("Guacamole display is not available");
       return;
     }
     keyboard.listenTo(sink.getElement());
 
     keyboard.onkeydown = (keysym: any) => {
       if (isBlockedCombination(keysym)) {
-        console.warn('Keydown Blocked key combination detected:', keysym);
+        console.warn("Keydown Blocked key combination detected:", keysym);
         return;
       }
       pressedKeys.value.add(keysym);
       client.sendKeyEvent(1, keysym);
-      lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.KEYBOARDEVENT, '');
+      lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.KEYBOARDEVENT, "");
     };
     keyboard.onkeyup = (keysym: any) => {
       if (keysym !== commandKeySym && isBlockedCombination(keysym)) {
-        console.warn('Keyup Blocked key combination detected:', keysym);
+        console.warn("Keyup Blocked key combination detected:", keysym);
         return;
       }
       pressedKeys.value.delete(keysym);
@@ -542,12 +540,12 @@ export function useGuacamoleClient(t: any) {
 
   function registerTouchScreen(client: any) {
     if (!client || !client.getDisplay) {
-      console.warn('Guacamole client is not initialized or does not support screen events');
+      console.warn("Guacamole client is not initialized or does not support screen events");
       return;
     }
     const display = client.getDisplay();
     if (!display) {
-      console.warn('Guacamole display is not available');
+      console.warn("Guacamole display is not available");
       return;
     }
     const touchScreen = new Guacamole.Mouse.Touchscreen(display.getElement());
@@ -556,7 +554,7 @@ export function useGuacamoleClient(t: any) {
       if (!client || !display) {
         return;
       }
-      lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.MOUSE_EVENT, '');
+      lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.MOUSE_EVENT, "");
       // Send mouse state, show cursor if necessary
       display.showCursor(true);
       sendScaledMouseState(client, mouseState);
@@ -567,7 +565,7 @@ export function useGuacamoleClient(t: any) {
       if (!client || !display) {
         return;
       }
-      lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.MOUSE_EVENT, '');
+      lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.MOUSE_EVENT, "");
       // Send mouse state, hide cursor if necessary
       display.showCursor(true);
       sendScaledMouseState(client, mouseState);
@@ -592,7 +590,7 @@ export function useGuacamoleClient(t: any) {
 
   const sendKeyEvent = (released: number, keysym: number) => {
     if (!guaClient.value) {
-      console.warn('Guacamole client is not initialized yet.');
+      console.warn("Guacamole client is not initialized yet.");
       return;
     }
 
@@ -601,12 +599,12 @@ export function useGuacamoleClient(t: any) {
 
   function registerMouse(client: any) {
     if (!client || !client.getDisplay) {
-      console.warn('Guacamole client is not initialized or does not support mouse events');
+      console.warn("Guacamole client is not initialized or does not support mouse events");
       return;
     }
     const display = client.getDisplay();
     if (!display) {
-      console.warn('Guacamole display is not available');
+      console.warn("Guacamole display is not available");
       return;
     }
     const sendMouseState = (mouseState: any) => {
@@ -627,19 +625,19 @@ export function useGuacamoleClient(t: any) {
   }
 
   function onClientError(status: any) {
-    console.error('Guacamole client error:', status);
+    console.error("Guacamole client error:", status);
     loading.value = false;
     const code = status.code;
-    let msg = status.message || t('UnknownError');
+    let msg = status.message || t("UnknownError");
     const currentLang = LanguageCode;
     msg = ErrorStatusCodes[code]
       ? t(ErrorStatusCodes[code], { PLACEHOLDER: status.message })
       : t(new ConvertGuacamoleError(status.message), { PLACEHOLDER: status.message });
-    console.log('Guacamole error message:', msg);
+    console.log("Guacamole error message:", msg);
     switch (code) {
       case 1005:
         // 管理员终断会话，特殊处理
-        if (currentLang === 'cn') {
+        if (currentLang === "cn") {
           msg = `${status.message} ${msg}`;
         } else {
           msg = `${msg} ${status.message}`;
@@ -647,7 +645,7 @@ export function useGuacamoleClient(t: any) {
         break;
       case 1003:
       case 1010:
-        msg = msg.replace('{PLACEHOLDER}', status.message);
+        msg = msg.replace("{PLACEHOLDER}", status.message);
         break;
       case 1006:
         msg = `${msg}: ${status.message}`;
@@ -657,30 +655,30 @@ export function useGuacamoleClient(t: any) {
   }
 
   function clientStateChanged(state: any) {
-    console.log('Guacamole client state changed:', state);
+    console.log("Guacamole client state changed:", state);
 
     switch (state) {
       case 0:
-        connectStatus.value = 'IDLE';
+        connectStatus.value = "IDLE";
         break;
       case 1:
-        connectStatus.value = 'Connecting';
+        connectStatus.value = "Connecting";
         break;
       case 2:
-        connectStatus.value = 'Connected + waiting';
+        connectStatus.value = "Connected + waiting";
         break;
       case 3:
-        connectStatus.value = 'Connected';
+        connectStatus.value = "Connected";
         loading.value = false;
         requestAudioStream(guaClient.value);
         break;
       case 4:
-        connectStatus.value = 'Disconnecting';
+        connectStatus.value = "Disconnecting";
         loading.value = false;
         break;
       case 5:
-        connectStatus.value = 'Disconnected';
-        lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.CLOSE, '');
+        connectStatus.value = "Disconnected";
+        lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.CLOSE, "");
         guaDisplay.value?.getElement()?.remove();
         break;
     }
@@ -688,10 +686,10 @@ export function useGuacamoleClient(t: any) {
 
   function onFileSystem(obj: any, name: any) {
     if (!obj || !Guacamole.Object) {
-      console.warn('Guacamole file system object or name is not provided.');
+      console.warn("Guacamole file system object or name is not provided.");
       return;
     }
-    console.log('Guacamole file system object received:', obj, name);
+    console.log("Guacamole file system object received:", obj, name);
 
     enableFilesystem.value = true;
     fsObject.value = obj;
@@ -701,7 +699,7 @@ export function useGuacamoleClient(t: any) {
     const defaultFolder: GuacamoleFile = {
       mimetype: Guacamole.Object.STREAM_INDEX_MIMETYPE,
       streamName: Guacamole.Object.ROOT_STREAM,
-      type: 'DIRECTORY',
+      type: "DIRECTORY",
       is_dir: true,
       name: t(name),
       parent: null
@@ -712,10 +710,10 @@ export function useGuacamoleClient(t: any) {
 
   function requestAudioStream(client: any) {
     if (!client || !client.createAudioStream) {
-      console.warn('Guacamole client is not initialized or does not support audio stream');
+      console.warn("Guacamole client is not initialized or does not support audio stream");
       return;
     }
-    const AUDIO_INPUT_MIMETYPE = 'audio/L16;rate=44100,channels=2';
+    const AUDIO_INPUT_MIMETYPE = "audio/L16;rate=44100,channels=2";
     const audioStream = client.createAudioStream(AUDIO_INPUT_MIMETYPE);
     const recorder = Guacamole.AudioRecorder.getInstance(audioStream, AUDIO_INPUT_MIMETYPE);
     if (!recorder) {
@@ -723,14 +721,14 @@ export function useGuacamoleClient(t: any) {
       return;
     }
     recorder.onclose = () => {
-      console.log('Audio stream closed');
+      console.log("Audio stream closed");
       requestAudioStream(client); // 重新请求音频流
     }; // 重新请求音频流
   }
 
   function handleFolderOpen(row: any) {
     if (!row || !row.is_dir) {
-      console.warn('Cannot open folder, row is not a directory:', row);
+      console.warn("Cannot open folder, row is not a directory:", row);
       return;
     }
     currentFolder.value = row;
@@ -743,7 +741,7 @@ export function useGuacamoleClient(t: any) {
         for (const fileName in files) {
           currentFolderFiles.value.push({
             name: fileName,
-            is_dir: files[fileName].type === 'DIRECTORY',
+            is_dir: files[fileName].type === "DIRECTORY",
             mimetype: files[fileName].mimetype,
             streamName: files[fileName].streamName,
             parent: row
@@ -759,8 +757,8 @@ export function useGuacamoleClient(t: any) {
         });
       })
       .catch((error: any) => {
-        console.error('Error refreshing folder:', error);
-        message.error(`${t('FileSystemError')}: ${error.message}`);
+        console.error("Error refreshing folder:", error);
+        message.error(`${t("FileSystemError")}: ${error.message}`);
       })
       .finally(() => {
         fileFsLoading.value = false;
@@ -769,24 +767,19 @@ export function useGuacamoleClient(t: any) {
 
   function clientFileReceived(stream: any, _mimetype: any, filename: any) {
     // Build download URL
-    const uuid = guaTunnel.value?.uuid || '';
-    const url
-      = `${BaseAPIURL
-      }/tunnels/${
-        encodeURIComponent(uuid)
-      }/streams/${
-        encodeURIComponent(stream.index)
-      }/${
-        encodeURIComponent(sanitizeFilename(filename))}`;
+    const uuid = guaTunnel.value?.uuid || "";
+    const url = `${BaseAPIURL}/tunnels/${encodeURIComponent(uuid)}/streams/${encodeURIComponent(
+      stream.index
+    )}/${encodeURIComponent(sanitizeFilename(filename))}`;
 
     // Create temporary hidden iframe to facilitate download
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.border = 'none';
-    iframe.style.width = '1px';
-    iframe.style.height = '1px';
-    iframe.style.left = '-1px';
-    iframe.style.top = '-1px';
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.border = "none";
+    iframe.style.width = "1px";
+    iframe.style.height = "1px";
+    iframe.style.left = "-1px";
+    iframe.style.top = "-1px";
 
     // The iframe MUST be part of the DOM for the download to occur
     document.body.appendChild(iframe);
@@ -799,7 +792,7 @@ export function useGuacamoleClient(t: any) {
 
     // Acknowledge (and ignore) any received blobs
     stream.onblob = function acknowledgeData() {
-      stream.sendAck('OK', Guacamole.Status.Code.SUCCESS);
+      stream.sendAck("OK", Guacamole.Status.Code.SUCCESS);
     };
 
     // Automatically remove iframe from DOM a few seconds after the stream
@@ -824,7 +817,7 @@ export function useGuacamoleClient(t: any) {
     const client = guaClient.value;
     const tunnel = guaTunnel.value;
     if (!client || !tunnel) {
-      return Promise.reject(new Error('Guacamole client or tunnel is not initialized'));
+      return Promise.reject(new Error("Guacamole client or tunnel is not initialized"));
     }
     const uuid = tunnel.uuid;
     const stream = object.createOutputStream(file.type, streamName);
@@ -832,7 +825,7 @@ export function useGuacamoleClient(t: any) {
       stream.onack = function beginUpload(status: any) {
         // Notify of any errors from the Guacamole server
         if (status.isError()) {
-          reject(withErrorDetails(status.message || 'Guacamole server rejected upload', { status }));
+          reject(withErrorDetails(status.message || "Guacamole server rejected upload", { status }));
           return;
         }
         const uploadToStream = function uploadStream(
@@ -842,19 +835,14 @@ export function useGuacamoleClient(t: any) {
           progressCallback: CallableFunction
         ) {
           // Build upload URL
-          const url
-            = `${BaseAPIURL
-            }/tunnels/${
-              encodeURIComponent(tunnelId)
-            }/streams/${
-              encodeURIComponent(stream.index)
-            }/${
-              encodeURIComponent(sanitizeFilename(file.name))}`;
+          const url = `${BaseAPIURL}/tunnels/${encodeURIComponent(tunnelId)}/streams/${encodeURIComponent(
+            stream.index
+          )}/${encodeURIComponent(sanitizeFilename(file.name))}`;
           const xhr = new XMLHttpRequest();
           xhr.withCredentials = true;
           // Invoke provided callback if upload tracking is supported
           if (progressCallback && xhr.upload) {
-            xhr.upload.addEventListener('progress', (e) => {
+            xhr.upload.addEventListener("progress", (e) => {
               progressCallback(e);
             });
           }
@@ -867,23 +855,23 @@ export function useGuacamoleClient(t: any) {
             // Resolve if HTTP status code indicates success
             if (xhr.status >= 200 && xhr.status < 300) {
               resolve();
-            } else if (xhr.getResponseHeader('Content-Type') === 'application/json') {
+            } else if (xhr.getResponseHeader("Content-Type") === "application/json") {
               try {
                 const error = JSON.parse(xhr.responseText);
-                reject(withErrorDetails(error.message || 'Upload failed', { status: xhr.status }));
+                reject(withErrorDetails(error.message || "Upload failed", { status: xhr.status }));
               } catch {
-                reject(withErrorDetails('Failed to parse error response', { status: xhr.status }));
+                reject(withErrorDetails("Failed to parse error response", { status: xhr.status }));
               }
             } else if (xhr.status >= 400 && xhr.status < 500) {
-              reject(withErrorDetails(xhr.responseText || 'Upload failed', { status: xhr.status }));
+              reject(withErrorDetails(xhr.responseText || "Upload failed", { status: xhr.status }));
             } else {
               reject(withErrorDetails(`Upload failed with status ${xhr.status}`, { status: xhr.status }));
             }
           };
           // Perform upload
-          xhr.open('POST', url, true);
+          xhr.open("POST", url, true);
           const fd = new FormData();
-          fd.append('file', file);
+          fd.append("file", file);
           xhr.send(fd);
         };
         // Begin upload
@@ -897,32 +885,32 @@ export function useGuacamoleClient(t: any) {
   const uploadFile = async (options: LionUploadCustomRequestOptions, folder: GuacamoleFile) => {
     // 参数验证
     if (!options || !options.file) {
-      const error = new Error('Upload options or file is missing');
-      console.error('Upload failed:', error.message);
-      message.error(`${t('FileUploadError')}: ${error.message}`);
+      const error = new Error("Upload options or file is missing");
+      console.error("Upload failed:", error.message);
+      message.error(`${t("FileUploadError")}: ${error.message}`);
       throw error;
     }
 
     if (!folder || !folder.streamName) {
-      const error = new Error('Target folder is invalid or missing stream name');
-      console.error('Upload failed:', error.message);
-      message.error(`${t('FileUploadError')}: ${error.message}`);
+      const error = new Error("Target folder is invalid or missing stream name");
+      console.error("Upload failed:", error.message);
+      message.error(`${t("FileUploadError")}: ${error.message}`);
       throw error;
     }
 
     // Guacamole 客户端验证
     if (!guaClient.value) {
-      const error = new Error('Guacamole client is not initialized');
-      console.error('Upload failed:', error.message);
-      message.error(t('GuacamoleClientNotInitialized'));
+      const error = new Error("Guacamole client is not initialized");
+      console.error("Upload failed:", error.message);
+      message.error(t("GuacamoleClientNotInitialized"));
       throw error;
     }
 
     // 文件系统对象验证
     if (!currentGuacFsObject.value) {
-      const error = new Error('Guacamole file system object is not available');
-      console.error('Upload failed:', error.message);
-      message.error(`${t('FileSystemError')}: ${error.message}`);
+      const error = new Error("Guacamole file system object is not available");
+      console.error("Upload failed:", error.message);
+      message.error(`${t("FileSystemError")}: ${error.message}`);
       throw error;
     }
 
@@ -930,15 +918,15 @@ export function useGuacamoleClient(t: any) {
     const { onFinish, onError } = options;
 
     // 文件名验证
-    if (!file.name || file.name.trim() === '') {
-      const error = new Error('File name is empty or invalid');
-      console.error('Upload failed:', error.message);
-      message.error(`${t('FileUploadError')}: ${error.message}`);
+    if (!file.name || file.name.trim() === "") {
+      const error = new Error("File name is empty or invalid");
+      console.error("Upload failed:", error.message);
+      message.error(`${t("FileUploadError")}: ${error.message}`);
       throw error;
     }
 
-    const streamName = `${folder.streamName}/${sanitizeFilename(file.name).replace(/:+/g, '_')}`;
-    console.log('Uploading file:', file.name, 'to stream:', streamName);
+    const streamName = `${folder.streamName}/${sanitizeFilename(file.name).replace(/:+/g, "_")}`;
+    console.log("Uploading file:", file.name, "to stream:", streamName);
 
     if (fakeProcessInterval.value) {
       clearInterval(fakeProcessInterval.value);
@@ -957,7 +945,7 @@ export function useGuacamoleClient(t: any) {
     }, 1000 * 2);
 
     const progressCallback = (e: any) => {
-      console.log('Upload progress:', e.loaded, '/', e.total, 'for file:', file.name);
+      console.log("Upload progress:", e.loaded, "/", e.total, "for file:", file.name);
       options.file.percentage = (e.loaded / e.total) * 100 - 40;
     };
 
@@ -966,7 +954,7 @@ export function useGuacamoleClient(t: any) {
       onFinish?.();
       file.percentage = 100;
     } catch (error) {
-      console.error('Error uploading file:', error);
+      console.error("Error uploading file:", error);
       onError?.();
       throw error; // 重新抛出异常，让调用者知道上传失败
     } finally {
@@ -984,14 +972,14 @@ export function useGuacamoleClient(t: any) {
       reader = new Guacamole.StringReader(stream);
 
       // Assemble received data into a single string
-      let data = '';
+      let data = "";
       reader.ontext = (text: any) => {
         data += text;
       };
 
       // Set clipboard contents once stream is finished
       reader.onend = async () => {
-        console.log('clipboard received from remote: ', data);
+        console.log("clipboard received from remote: ", data);
         remoteClipboardText.value = data;
         if (navigator.clipboard) {
           await navigator.clipboard.writeText(data);
@@ -1001,22 +989,19 @@ export function useGuacamoleClient(t: any) {
       // Otherwise read the clipboard data as a Blob
       reader = new Guacamole.BlobReader(stream, mimetype);
       reader.onprogress = (text: any) => {
-        console.log('clipboard blob text received from remote: ', text);
+        console.log("clipboard blob text received from remote: ", text);
       };
       reader.onend = () => {
         const blob = reader.getBlob();
-        console.log('clipboard blob received from remote: ', blob);
+        console.log("clipboard blob received from remote: ", blob);
         navigator.clipboard.write(blob);
       };
     }
   }
 
-  function RefreshFileSystem(
-    guacFsObject: any,
-    file: GuacamoleFile
-  ): Promise<Record<string, GuacamoleFile>> {
+  function RefreshFileSystem(guacFsObject: any, file: GuacamoleFile): Promise<Record<string, GuacamoleFile>> {
     if (!guacFsObject || !guacFsObject.requestInputStream || !file) {
-      return Promise.reject(new Error('Guacamole guacFsObject is not initialized'));
+      return Promise.reject(new Error("Guacamole guacFsObject is not initialized"));
     }
     return new Promise<Record<string, GuacamoleFile>>((resolve, reject) => {
       // Do not attempt to refresh the contents of directories
@@ -1025,70 +1010,67 @@ export function useGuacamoleClient(t: any) {
         return;
       }
       // Request contents of given file
-      guacFsObject.requestInputStream(
-        file.streamName,
-        (stream: any, mimetype: any) => {
-          // Ignore stream if mimetype is wrong
-          if (mimetype !== Guacamole.Object.STREAM_INDEX_MIMETYPE) {
-            stream.sendAck('Unexpected mimetype', Guacamole.Status.Code.UNSUPPORTED);
-            reject(new Error(`Unexpected mimetype: ${mimetype} for file: ${file.name}`));
-            return;
+      guacFsObject.requestInputStream(file.streamName, (stream: any, mimetype: any) => {
+        // Ignore stream if mimetype is wrong
+        if (mimetype !== Guacamole.Object.STREAM_INDEX_MIMETYPE) {
+          stream.sendAck("Unexpected mimetype", Guacamole.Status.Code.UNSUPPORTED);
+          reject(new Error(`Unexpected mimetype: ${mimetype} for file: ${file.name}`));
+          return;
+        }
+
+        // Signal server that data is ready to be received
+        stream.sendAck("Ready", Guacamole.Status.Code.SUCCESS);
+
+        // Read stream as JSON
+        const reader = new Guacamole.JSONReader(stream);
+
+        // Acknowledge received JSON blobs
+        reader.onprogress = function onprogress() {
+          stream.sendAck("Received", Guacamole.Status.Code.SUCCESS);
+        };
+
+        // Reset contents of directory
+        reader.onend = function jsonReady() {
+          // Empty contents
+          const files: any = {};
+
+          // Determine the expected filename prefix of each stream
+          let expectedPrefix = file.streamName;
+          if (expectedPrefix.charAt(expectedPrefix.length - 1) !== "/") {
+            expectedPrefix += "/";
           }
 
-          // Signal server that data is ready to be received
-          stream.sendAck('Ready', Guacamole.Status.Code.SUCCESS);
-
-          // Read stream as JSON
-          const reader = new Guacamole.JSONReader(stream);
-
-          // Acknowledge received JSON blobs
-          reader.onprogress = function onprogress() {
-            stream.sendAck('Received', Guacamole.Status.Code.SUCCESS);
-          };
-
-          // Reset contents of directory
-          reader.onend = function jsonReady() {
-            // Empty contents
-            const files: any = {};
-
-            // Determine the expected filename prefix of each stream
-            let expectedPrefix = file.streamName;
-            if (expectedPrefix.charAt(expectedPrefix.length - 1) !== '/') {
-              expectedPrefix += '/';
+          // For each received stream name
+          const mimetypes = reader.getJSON();
+          for (const name in mimetypes) {
+            // Assert prefix is correct
+            if (name.substring(0, expectedPrefix.length) !== expectedPrefix) {
+              continue;
             }
 
-            // For each received stream name
-            const mimetypes = reader.getJSON();
-            for (const name in mimetypes) {
-              // Assert prefix is correct
-              if (name.substring(0, expectedPrefix.length) !== expectedPrefix) {
-                continue;
-              }
-
-              // Extract filename from stream name
-              const filename = name.substring(expectedPrefix.length);
-              // Deduce type from mimetype
-              let type = FileType.NORMAL;
-              if (mimetypes[name] === Guacamole.Object.STREAM_INDEX_MIMETYPE) {
-                type = FileType.DIRECTORY;
-              }
-
-              // Add file entry
-              files[filename] = {
-                mimetype: mimetypes[name],
-                streamName: name,
-                type,
-                parent: file,
-                name: filename
-              };
+            // Extract filename from stream name
+            const filename = name.substring(expectedPrefix.length);
+            // Deduce type from mimetype
+            let type = FileType.NORMAL;
+            if (mimetypes[name] === Guacamole.Object.STREAM_INDEX_MIMETYPE) {
+              type = FileType.DIRECTORY;
             }
-            resolve(files);
-          };
-          reader.onerror = function jsonError(error: any) {
-            reject(withErrorDetails('Error reading JSON from Guacamole stream', { cause: error }));
-          };
-        }
-      );
+
+            // Add file entry
+            files[filename] = {
+              mimetype: mimetypes[name],
+              streamName: name,
+              type,
+              parent: file,
+              name: filename
+            };
+          }
+          resolve(files);
+        };
+        reader.onerror = function jsonError(error: any) {
+          reject(withErrorDetails("Error reading JSON from Guacamole stream", { cause: error }));
+        };
+      });
     });
   }
 
@@ -1096,7 +1078,7 @@ export function useGuacamoleClient(t: any) {
     if (!guaTunnel.value) {
       return;
     }
-    guaTunnel.value.sendMessage('INPUT_ACTIVE');
+    guaTunnel.value.sendMessage("INPUT_ACTIVE");
   };
 
   return {

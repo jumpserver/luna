@@ -22,10 +22,7 @@ const pick = (record: Record<string, string> | undefined, ...keys: string[]) => 
   return undefined;
 };
 
-export function mapZedThemeToAppTheme(
-  zedTheme: ZedThemeFile,
-  appearance: "light" | "dark"
-): AppThemeDefinition | null {
+export function mapZedThemeToAppTheme(zedTheme: ZedThemeFile, appearance: "light" | "dark"): AppThemeDefinition | null {
   const source = zedTheme.themes?.find((item) => item.appearance === appearance) || zedTheme.themes?.[0];
   if (!source) return null;
 
@@ -38,13 +35,16 @@ export function mapZedThemeToAppTheme(
     muted: pick(theme, "text.muted", "text.disabled") || (appearance === "dark" ? "#8a8a8a" : "#777777"),
     border: pick(theme, "border", "border.variant") || (appearance === "dark" ? "#333333" : "#d9d9d9"),
     accent: pick(theme, "element.active", "status_bar.background", "link_text.hover") || "#1ab394",
-    surface: pick(theme, "surface.background", "panel.background", "tab.inactive_background")
+    surface:
+      pick(theme, "surface.background", "panel.background", "tab.inactive_background")
       || (appearance === "dark" ? "#252525" : "#f5f5f5"),
-    surfaceHover: pick(theme, "element.hover", "tab.active_background", "panel.focused_border")
+    surfaceHover:
+      pick(theme, "element.hover", "tab.active_background", "panel.focused_border")
       || (appearance === "dark" ? "#313131" : "#ececec"),
-    shadowSoft: appearance === "dark"
-      ? "0 1px 2px rgba(0, 0, 0, 0.42), 0 2px 8px rgba(0, 0, 0, 0.3)"
-      : "0 1px 2px rgba(17, 17, 17, 0.05), 0 2px 8px rgba(17, 17, 17, 0.04)"
+    shadowSoft:
+      appearance === "dark"
+        ? "0 1px 2px rgba(0, 0, 0, 0.42), 0 2px 8px rgba(0, 0, 0, 0.3)"
+        : "0 1px 2px rgba(17, 17, 17, 0.05), 0 2px 8px rgba(17, 17, 17, 0.04)"
   };
 
   return {

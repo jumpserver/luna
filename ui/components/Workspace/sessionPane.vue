@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import type {
-  WorkspacePane,
-  WorkspacePaneDropPlacement,
-  WorkspaceSessionTab
-} from "~/composables/useWorkspaceTabs";
+import type { WorkspacePane, WorkspacePaneDropPlacement, WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { AssetItem } from "~/types";
 
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -27,11 +23,7 @@ const {
   setActivePane,
   toSurfaceTab
 } = useWorkspaceTabs();
-const {
-  focusPaneSurface,
-  registerPaneTarget,
-  unregisterPaneTarget
-} = useWorkspacePaneSurfaceRegistry();
+const { focusPaneSurface, registerPaneTarget, unregisterPaneTarget } = useWorkspacePaneSurfaceRegistry();
 const { connectCurrentPane, connectOtherPane, mergeWorkspaceTabIntoCurrent, reconnectSession } = useWorkspaceTabMenu();
 const draggedPaneId = ref("");
 const dragOverPaneId = ref("");
@@ -55,9 +47,7 @@ const paneGridClass = computed(() => {
   }
 });
 const setupPane = computed(() => {
-  const activeSetupPane = props.tab.panes.find(
-    (pane) => pane.id === activePaneId.value && pane.mode === "setup"
-  );
+  const activeSetupPane = props.tab.panes.find((pane) => pane.id === activePaneId.value && pane.mode === "setup");
 
   return activeSetupPane || props.tab.panes.find((pane) => pane.mode === "setup");
 });
@@ -158,9 +148,7 @@ function paneDropHint() {
     case "bottom":
       return t("WorkspacePane.PlaceBottomHint");
     default:
-      return isDraggingExternalTab.value
-        ? t("WorkspacePane.MergeDropHint")
-        : t("WorkspacePane.SwapPositionHint");
+      return isDraggingExternalTab.value ? t("WorkspacePane.MergeDropHint") : t("WorkspacePane.SwapPositionHint");
   }
 }
 
@@ -237,7 +225,7 @@ function resolvePaneDropPlacement(event: DragEvent): WorkspacePaneDropPlacement 
     { placement: "top", distance: y },
     { placement: "bottom", distance: 1 - y }
   ];
-  const nearestEdge = edges.reduce((nearest, edge) => edge.distance < nearest.distance ? edge : nearest);
+  const nearestEdge = edges.reduce((nearest, edge) => (edge.distance < nearest.distance ? edge : nearest));
 
   return nearestEdge.distance <= PANE_EDGE_DROP_THRESHOLD ? nearestEdge.placement : "center";
 }
@@ -371,7 +359,9 @@ onBeforeUnmount(() => {
             isActivePane(pane.id)
               ? 'z-[1] ring-1 ring-inset ring-primary/28 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ui-color-primary-500)_10%,transparent)]'
               : 'ring-1 ring-inset ring-transparent',
-            showPaneDropHint(pane.id) ? 'ring-2 ring-inset ring-primary/50 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]' : ''
+            showPaneDropHint(pane.id)
+              ? 'ring-2 ring-inset ring-primary/50 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]'
+              : ''
           ]"
         >
           <header
@@ -385,19 +375,18 @@ onBeforeUnmount(() => {
               <div class="truncate text-[13px] font-medium text-[var(--app-fg)]">
                 {{ paneTitle(pane) }}
               </div>
-              <UBadge
-                size="xs"
-                variant="subtle"
-                :color="paneStatusColor(pane)"
-                class="shrink-0"
-              >
+              <UBadge size="xs" variant="subtle" :color="paneStatusColor(pane)" class="shrink-0">
                 {{ paneSubtitle(pane) }}
               </UBadge>
             </div>
 
             <div
               class="flex shrink-0 items-center gap-1.5 transition-opacity"
-              :class="isActivePane(pane.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'"
+              :class="
+                isActivePane(pane.id)
+                  ? 'opacity-100'
+                  : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+              "
             >
               <UButton
                 v-if="showReconnect(pane)"
@@ -421,12 +410,11 @@ onBeforeUnmount(() => {
           </header>
 
           <div class="relative z-[1] min-h-0 flex-1" @mousedown="focusPane(pane.id)">
-            <div
-              v-if="pane.mode === 'empty'"
-              class="grid h-full place-items-center p-6 text-center"
-            >
+            <div v-if="pane.mode === 'empty'" class="grid h-full place-items-center p-6 text-center">
               <div class="max-w-xs space-y-4">
-                <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[var(--workspace-surface-sub-header)] text-[var(--app-muted)]">
+                <div
+                  class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[var(--workspace-surface-sub-header)] text-[var(--app-muted)]"
+                >
                   <UIcon name="i-lucide-panels-top-left" class="size-6" />
                 </div>
                 <div class="space-y-1">
@@ -438,36 +426,19 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
                 <div v-if="showEmptyActions(pane)" class="flex items-center justify-center gap-2">
-                  <UButton
-                    size="sm"
-                    color="primary"
-                    variant="soft"
-                    @click="void connectCurrentPane(tab, pane)"
-                  >
+                  <UButton size="sm" color="primary" variant="soft" @click="void connectCurrentPane(tab, pane)">
                     {{ t("WorkspacePane.ConnectCurrent") }}
                   </UButton>
-                  <UButton
-                    size="sm"
-                    color="neutral"
-                    variant="soft"
-                    @click="openConnectOtherModal(pane)"
-                  >
+                  <UButton size="sm" color="neutral" variant="soft" @click="openConnectOtherModal(pane)">
                     {{ t("WorkspacePane.ConnectOther") }}
                   </UButton>
                 </div>
               </div>
             </div>
 
-            <div
-              v-else-if="pane.mode === 'setup'"
-              class="h-full bg-[var(--workspace-surface-background)]"
-            />
+            <div v-else-if="pane.mode === 'setup'" class="h-full bg-[var(--workspace-surface-background)]" />
 
-            <div
-              v-else
-              :ref="(el: unknown) => setPaneSurfaceTarget(pane.id, el)"
-              class="h-full"
-            />
+            <div v-else :ref="(el: unknown) => setPaneSurfaceTarget(pane.id, el)" class="h-full" />
           </div>
           <div
             class="pointer-events-none absolute inset-0 z-[3] transition-colors"
@@ -485,7 +456,9 @@ onBeforeUnmount(() => {
               class="pointer-events-none absolute flex items-center justify-center rounded-xl border border-dashed border-primary/50 bg-primary/10 backdrop-blur-[1px] transition-[inset,width,height]"
               :class="paneDropOverlayClass()"
             >
-              <div class="rounded-full bg-[var(--workspace-surface-sub-header)] px-3 py-1 text-xs font-medium text-[var(--app-fg)] shadow-sm">
+              <div
+                class="rounded-full bg-[var(--workspace-surface-sub-header)] px-3 py-1 text-xs font-medium text-[var(--app-fg)] shadow-sm"
+              >
                 {{ paneDropHint() }}
               </div>
             </div>
@@ -493,18 +466,10 @@ onBeforeUnmount(() => {
         </section>
       </div>
 
-      <WorkspaceConnectionSetupPane
-        v-if="setupPane"
-        :tab="surfaceTabFor(setupPane)"
-        class="absolute inset-0 z-10"
-      />
+      <WorkspaceConnectionSetupPane v-if="setupPane" :tab="surfaceTabFor(setupPane)" class="absolute inset-0 z-10" />
     </div>
 
-    <UModal
-      v-model:open="connectOtherModalOpen"
-      :title="t('WorkspacePane.ConnectOther')"
-      :ui="{ content: 'max-w-md' }"
-    >
+    <UModal v-model:open="connectOtherModalOpen" :title="t('WorkspacePane.ConnectOther')" :ui="{ content: 'max-w-md' }">
       <template #body>
         <div class="space-y-3">
           <div
@@ -514,28 +479,14 @@ onBeforeUnmount(() => {
             <span>{{ t("WorkspacePane.CurrentOrganization") }}</span>
             <span class="max-w-[220px] truncate font-medium text-default">{{ currentOrgLabel }}</span>
           </div>
-          <UInput
-            v-model="connectOtherSearch"
-            autofocus
-            icon="i-lucide-search"
-            :placeholder="t('Operation.Search')"
-          />
+          <UInput v-model="connectOtherSearch" autofocus icon="i-lucide-search" :placeholder="t('Operation.Search')" />
           <div class="max-h-72 overflow-y-auto rounded-lg border border-default">
-            <SideBarAssetTree
-              :search="connectOtherSearch"
-              open
-              @select="handleConnectOtherAsset"
-            />
+            <SideBarAssetTree :search="connectOtherSearch" open @select="handleConnectOtherAsset" />
           </div>
         </div>
       </template>
       <template #footer>
-        <UButton
-          color="neutral"
-          variant="ghost"
-          :label="t('Common.Cancel')"
-          @click="connectOtherModalOpen = false"
-        />
+        <UButton color="neutral" variant="ghost" :label="t('Common.Cancel')" @click="connectOtherModalOpen = false" />
       </template>
     </UModal>
   </div>

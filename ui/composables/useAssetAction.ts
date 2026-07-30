@@ -241,7 +241,9 @@ export const useAssetAction = () => {
     return devOrigins[component]?.replace(/\/+$/, "") || "";
   };
 
-  const resolveWebEndpointProtocol = (method: { component?: string, type?: string, endpoint_protocol?: string } | undefined) => {
+  const resolveWebEndpointProtocol = (
+    method: { component?: string, type?: string, endpoint_protocol?: string } | undefined
+  ) => {
     const pageProtocol = window.location.protocol.replace(":", "") || "http";
     const component = method?.component || "";
     const isWebSurface = method?.type === "web" || ["koko", "lion", "chen", "tinker", "default"].includes(component);
@@ -261,11 +263,14 @@ export const useAssetAction = () => {
     orgId?: string
   ) => {
     const endpointProtocol = resolveWebEndpointProtocol(method);
-    const endpoint = await getSmartEndpoint({
-      protocol: endpointProtocol,
-      assetId: body.asset,
-      token: token.id
-    }, orgId);
+    const endpoint = await getSmartEndpoint(
+      {
+        protocol: endpointProtocol,
+        assetId: body.asset,
+        token: token.id
+      },
+      orgId
+    );
 
     return getEndpointUrl(endpoint, endpointProtocol);
   };
@@ -332,10 +337,7 @@ export const useAssetAction = () => {
         const method = (allMethods[body.protocol] || []).find((item) => item.value === serverBody.connect_method);
 
         if (isLocalClientMethod(method)) {
-          const { url } = await getLocalClientUrl(
-            token.id,
-            buildLocalRdpParams()
-          );
+          const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams());
           if (!url?.startsWith("jms://")) {
             throw new Error("Invalid local client URL");
           }
@@ -349,7 +351,8 @@ export const useAssetAction = () => {
         }
 
         const component = method?.component || (body.protocol === "ssh" ? "koko" : "default");
-        const endpointUrl = getWebConnectorDevOrigin(component) || await fetchSmartEndpointUrl(token, method, body, meta?.orgId);
+        const endpointUrl
+          = getWebConnectorDevOrigin(component) || (await fetchSmartEndpointUrl(token, method, body, meta?.orgId));
         const webUrl = getWebConnectorPath(token, method, body, endpointUrl);
 
         if (tabId) {
@@ -415,9 +418,7 @@ export const useAssetAction = () => {
       }
 
       if (body.connect_method === WEB_DB_NATIVE_VALUE) {
-        const chenWeb = methods.find(
-          (item) => item.type === "web" && item.component === "chen" && !item.origin_value
-        );
+        const chenWeb = methods.find((item) => item.type === "web" && item.component === "chen" && !item.origin_value);
         if (chenWeb) return chenWeb.value;
       }
 
@@ -478,18 +479,19 @@ export const useAssetAction = () => {
     const rdpParams = buildLocalRdpParams();
     pendingBuiltinSessions.push({ ...meta, connectMethod: body.connect_method });
 
-    void (async () => useTauriCoreInvoke("get_builtin_connect_session", {
-      body: {
-        asset: body.asset,
-        account: body.account,
-        protocol: body.protocol,
-        input_username: body.input_username,
-        input_secret: body.input_secret,
-        connect_method: await resolveServerConnectMethod(body),
-        connect_options: body.connect_options
-      },
-      rdpParams
-    }))().catch((error) => {
+    void (async () =>
+      useTauriCoreInvoke("get_builtin_connect_session", {
+        body: {
+          asset: body.asset,
+          account: body.account,
+          protocol: body.protocol,
+          input_username: body.input_username,
+          input_secret: body.input_secret,
+          connect_method: await resolveServerConnectMethod(body),
+          connect_options: body.connect_options
+        },
+        rdpParams
+      }))().catch((error) => {
       const idx = pendingBuiltinSessions.findIndex(
         (item) =>
           item.assetId === meta.assetId
@@ -634,9 +636,10 @@ export const useAssetAction = () => {
     })();
 
     // 当前连接显式选择优先；仅在协议一致时复用已保存连接方法，避免跨协议复用错误的客户端
-    const preferredConnectMethod = ephemeral?.connectMethod?.trim()
-      || (saved?.protocol === protocol ? saved?.connectMethod?.trim() : "")
-      || await resolveConnectMethod(protocol);
+    const preferredConnectMethod
+      = ephemeral?.connectMethod?.trim()
+        || (saved?.protocol === protocol ? saved?.connectMethod?.trim() : "")
+        || (await resolveConnectMethod(protocol));
     const connectMethod = preferredConnectMethod;
 
     // Every successful attempt updates the lightweight last-used preference.
@@ -645,7 +648,8 @@ export const useAssetAction = () => {
     userInfoStore.setConnectionPreferenceForAsset(assetId, {
       protocol,
       username: selected || user,
-      accountId: effectiveMode === "hosted" ? (ephemeral?.accountId || matchedAccount?.id || saved?.accountId) : undefined,
+      accountId:
+        effectiveMode === "hosted" ? ephemeral?.accountId || matchedAccount?.id || saved?.accountId : undefined,
       accountMode: effectiveMode,
       connectMethod
     });

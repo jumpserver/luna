@@ -15,11 +15,8 @@ export interface Snippet {
   createdBy: string
 }
 
-const rawList = (value: unknown): any[] => Array.isArray(value)
-  ? value
-  : Array.isArray((value as any)?.results)
-    ? (value as any).results
-    : [];
+const rawList = (value: unknown): any[] =>
+  Array.isArray(value) ? value : Array.isArray((value as any)?.results) ? (value as any).results : [];
 
 const normalizeSnippet = (raw: any): Snippet | null => {
   const id = String(raw?.id || "");

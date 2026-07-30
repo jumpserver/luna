@@ -18,13 +18,14 @@ export interface FavoriteFolder {
   open: boolean
 }
 
-const rawList = (value: any): any[] => Array.isArray(value)
-  ? value
-  : Array.isArray(value?.results)
-    ? value.results
-    : Array.isArray(value?.children)
-      ? value.children
-      : [];
+const rawList = (value: any): any[] =>
+  Array.isArray(value)
+    ? value
+    : Array.isArray(value?.results)
+      ? value.results
+      : Array.isArray(value?.children)
+        ? value.children
+        : [];
 
 const assetFromRaw = (raw: any): AssetItem | null => {
   const source = raw?.asset_info || raw?.asset || raw;
@@ -50,16 +51,18 @@ const assetFromRaw = (raw: any): AssetItem | null => {
 
 const normalizeFolders = (value: unknown): FavoriteFolder[] => {
   const rawFolders = rawList(value);
-  const folders = rawFolders.map((raw: any) => {
-    return {
-      id: String(raw.id || raw.key || ""),
-      name: String(raw.name || raw.title || ""),
-      parent: raw.parent == null ? null : String(raw.parent?.id || raw.parent),
-      children: normalizeFolders(raw.children || raw.folders || []),
-      assets: [],
-      open: Boolean(raw.open)
-    } satisfies FavoriteFolder;
-  }).filter((folder) => folder.id);
+  const folders = rawFolders
+    .map((raw: any) => {
+      return {
+        id: String(raw.id || raw.key || ""),
+        name: String(raw.name || raw.title || ""),
+        parent: raw.parent == null ? null : String(raw.parent?.id || raw.parent),
+        children: normalizeFolders(raw.children || raw.folders || []),
+        assets: [],
+        open: Boolean(raw.open)
+      } satisfies FavoriteFolder;
+    })
+    .filter((folder) => folder.id);
 
   // The endpoint may return either nested folders or a flat parent-linked list.
   const nestedIds = new Set(folders.flatMap((folder) => folder.children.map((child) => child.id)));
@@ -74,10 +77,8 @@ const normalizeFolders = (value: unknown): FavoriteFolder[] => {
   return roots;
 };
 
-const flattenFolders = (folders: FavoriteFolder[]): FavoriteFolder[] => folders.flatMap((folder) => [
-  folder,
-  ...flattenFolders(folder.children)
-]);
+const flattenFolders = (folders: FavoriteFolder[]): FavoriteFolder[] =>
+  folders.flatMap((folder) => [folder, ...flattenFolders(folder.children)]);
 
 const folderIdFromRaw = (raw: any): string | null => {
   const value = raw?.folder;
@@ -96,10 +97,7 @@ export const useFavoriteFolders = () => {
     if (!loggedIn.value || loading.value) return;
     loading.value = true;
     try {
-      const [folderData, assetData] = await Promise.all([
-        getFavoriteFolders(),
-        getFavoriteAssets().catch(() => [])
-      ]);
+      const [folderData, assetData] = await Promise.all([getFavoriteFolders(), getFavoriteAssets().catch(() => [])]);
       const normalizedFolders = normalizeFolders(folderData);
       const folderMap = new Map(flattenFolders(normalizedFolders).map((folder) => [folder.id, folder]));
       const nextRootAssets: AssetItem[] = [];

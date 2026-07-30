@@ -7,7 +7,10 @@ interface ChecksumWorkerResponse {
 }
 
 let worker: Worker | null = null;
-const pending = new Map<string, { resolve: (value: ChecksumWorkerResponse) => void, reject: (reason: Error) => void }>();
+const pending = new Map<
+  string,
+  { resolve: (value: ChecksumWorkerResponse) => void, reject: (reason: Error) => void }
+>();
 
 function requestId() {
   return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
@@ -45,7 +48,8 @@ function send(request: { kind: "update" | "finalize", state: string, data?: Arra
 export async function updateFileTransferChecksum(state: string, bytes: Uint8Array) {
   const copy = bytes.slice();
   const response = await send({ kind: "update", state, data: copy.buffer }, [copy.buffer]);
-  if (!response.chunkChecksum || response.state === undefined) throw new Error("Invalid file transfer checksum response");
+  if (!response.chunkChecksum || response.state === undefined)
+    throw new Error("Invalid file transfer checksum response");
   return { chunkChecksum: response.chunkChecksum, state: response.state };
 }
 

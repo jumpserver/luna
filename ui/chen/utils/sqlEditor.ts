@@ -25,10 +25,7 @@ export function chenSqlConfig(dbType: string, hints: ChenSqlHints) {
   return { dialect: chenSqlDialect(dbType), schema: hints };
 }
 
-export function replaceChenSqlDocument(
-  editor: Pick<EditorView, "dispatch" | "state">,
-  value: string
-) {
+export function replaceChenSqlDocument(editor: Pick<EditorView, "dispatch" | "state">, value: string) {
   if (editor.state.doc.toString() === value) return;
   editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: value } });
 }

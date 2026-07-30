@@ -13,10 +13,11 @@ const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const { batchPanelOpen } = useBatchCommandPanel();
 
-const showWorkspaceSidebar = computed(() =>
-  uiWorkspaceMode.value !== "files"
-  && uiWorkspaceMode.value !== "tools"
-  && (uiWorkspaceMode.value !== "assets" || loggedIn.value)
+const showWorkspaceSidebar = computed(
+  () =>
+    uiWorkspaceMode.value !== "files"
+    && uiWorkspaceMode.value !== "tools"
+    && (uiWorkspaceMode.value !== "assets" || loggedIn.value)
 );
 
 const cardUi = computed(() => {
@@ -69,15 +70,10 @@ onBeforeUnmount(() => {
   registerSessionDisposer(null);
   registerKokoTicketProvider(null);
 });
-
 </script>
 
 <template>
-  <UCard
-    variant="outline"
-    :ui="cardUi"
-    style="background-color: transparent"
-  >
+  <UCard variant="outline" :ui="cardUi" style="background-color: transparent">
     <SettingsModal v-if="!isTauriRuntime()" />
 
     <WorkspaceShell :sidebar-visible="showWorkspaceSidebar">

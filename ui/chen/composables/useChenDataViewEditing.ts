@@ -1,8 +1,5 @@
 import type { MaybeRefOrGetter } from "vue";
-import type {
-  ChenDataViewActionTarget,
-  ChenDataViewField
-} from "~/chen/types";
+import type { ChenDataViewActionTarget, ChenDataViewField } from "~/chen/types";
 
 import { computed, toValue } from "vue";
 import {

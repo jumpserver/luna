@@ -1,10 +1,6 @@
 import type { OnlineUser, SettingConfig, ShareUserOptions } from "#koko/types";
 import type { KokoZmodemSentry } from "./zmodemTypes";
-import {
-  connectorSessionKey,
-  FORMATTER_MESSAGE_TYPE,
-  HOST_MESSAGE_TYPE
-} from "@jumpserver/connectors-core";
+import { connectorSessionKey, FORMATTER_MESSAGE_TYPE, HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { useKokoHostAdapter } from "@jumpserver/koko/host";
 import { useDebounceFn, useWindowSize } from "@vueuse/core";
 import { FitAddon } from "@xterm/addon-fit";
@@ -31,9 +27,7 @@ import { useKokoConnectionStore } from "#koko/stores/connection";
 import { useKokoTerminalSettingsStore } from "#koko/stores/terminalSettings";
 import { getDefaultTerminalConfig } from "#koko/utils/guard";
 import { appTerminalTheme, terminalTheme } from "#koko/utils/terminalTheme";
-import {
-  formatMessage
-} from "#koko/utils/terminalUtils";
+import { formatMessage } from "#koko/utils/terminalUtils";
 
 const isSocketClosing = (socket: WebSocket) =>
   socket.readyState === WebSocket.CLOSING || socket.readyState === WebSocket.CLOSED;
