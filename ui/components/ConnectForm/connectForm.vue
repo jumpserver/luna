@@ -168,8 +168,8 @@ const protocolTabItems = computed(() =>
 );
 const connectMethodTypeItems = computed(() => {
   const metaMap: Record<string, { label: string, icon: string }> = {
-    builtin: { label: t("ConnectMethodType.BuiltIn"), icon: "i-lucide-globe" },
-    native: { label: t("ConnectMethodType.Application"), icon: "i-lucide-monitor" },
+    builtin: { label: t("ConnectMethodType.BuiltIn"), icon: "i-lucide-box" },
+    native: { label: t("ConnectMethodType.Application"), icon: "i-lucide-layout-grid" },
     remote_app: { label: t("ConnectMethodType.RemoteApplication"), icon: "i-lucide-app-window" }
   };
   const order = ["builtin", "native", "remote_app"];
@@ -525,7 +525,8 @@ function handleSpecialAccount(v: string) {
           :content="false"
           :ui="{
             root: 'p-0',
-            list: 'p-0 justify-start'
+            list: 'p-0 justify-start',
+            trigger: 'py-2'
           }"
           class="w-full mb-2 connect-method-type-tabs"
           @update:model-value="selectConnectMethodType"

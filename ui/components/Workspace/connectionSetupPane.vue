@@ -480,14 +480,20 @@ onMounted(loadAsset);
                   :asset-type="props.assetType"
                   @keydown.enter="submit"
                 />
-                <UTooltip :text="t('EditModal.Description')" :delay-duration="150">
+                <div class="mt-4 flex items-center gap-1.5">
                   <UCheckbox
                     v-model="draftRememberSelection"
                     icon="i-lucide-check"
                     :label="t('EditModal.RememberSelection')"
-                    class="mt-4"
                   />
-                </UTooltip>
+                  <UTooltip :text="t('EditModal.Description')" :delay-duration="150">
+                    <UIcon
+                      name="i-lucide-circle-help"
+                      class="size-4 cursor-help text-[var(--app-muted)]"
+                      :aria-label="t('EditModal.Description')"
+                    />
+                  </UTooltip>
+                </div>
               </template>
             </div>
 
