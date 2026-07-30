@@ -419,6 +419,11 @@ const checkVersionBeforeOAuth = async (site: string) => {
  * @description 打开登录页面
  */
 function openLoginPage() {
+  if (!isTauriRuntime()) {
+    redirectToWebLogin();
+    return;
+  }
+
   openModal.value = true;
   recentSitesDismissed.value = false;
   hasValidationError.value = false;

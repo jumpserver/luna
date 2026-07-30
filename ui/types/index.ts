@@ -302,6 +302,10 @@ export interface ConnectionPreferenceInfo {
   connectOptions?: RdpGraphics
 }
 
+export interface ProtocolConnectionPreferenceInfo {
+  connectMethod: string
+}
+
 export interface ConnectMethod {
   name: string
   display_name: string
@@ -312,6 +316,9 @@ export interface ConnectMethod {
 }
 
 export interface RdpGraphics {
+  charset?: CharsetType
+  backspaceAsCtrlH?: boolean
+  disableautohash?: boolean
   rdp_resolution?: string
   resolution?: string
   keyboard_layout?: string

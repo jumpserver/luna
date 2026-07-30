@@ -1,4 +1,11 @@
-import type { ConnectionInfo, ConnectionPreferenceInfo, PermOrgItem, RdpGraphics, UserData } from "~/types/index";
+import type {
+  ConnectionInfo,
+  ConnectionPreferenceInfo,
+  PermOrgItem,
+  ProtocolConnectionPreferenceInfo,
+  RdpGraphics,
+  UserData
+} from "~/types/index";
 import { useConnectMethods } from "~/composables/useConnectMethods";
 
 export type SiteUserData = UserData & {
@@ -6,6 +13,7 @@ export type SiteUserData = UserData & {
   rdpClientOption?: RdpGraphics
   connectionInfoMap?: Record<string, ConnectionInfo>
   connectionPreferenceMap?: Record<string, ConnectionPreferenceInfo>
+  protocolConnectionPreferenceMap?: Record<string, ProtocolConnectionPreferenceInfo>
 };
 
 // 其实应该叫做 accountInfoStore 比较好
@@ -84,6 +92,7 @@ export const useUserInfoStore = defineStore(
         ...userData,
         connectionInfoMap: previous?.connectionInfoMap || {},
         connectionPreferenceMap: previous?.connectionPreferenceMap || {},
+        protocolConnectionPreferenceMap: previous?.protocolConnectionPreferenceMap || {},
         rdpClientOption: previous?.rdpClientOption || {}
       };
 
@@ -274,6 +283,17 @@ export const useUserInfoStore = defineStore(
     };
 
     /**
+     * @description 获取协议连接偏好
+     * @param protocol 协议名称
+     */
+    const getConnectionPreferenceForProtocol = (protocol: string) => {
+      if (!currentSite.value || !protocol) return null;
+
+      const siteData = userMap.value[currentSite.value];
+      return siteData?.protocolConnectionPreferenceMap?.[protocol.toLowerCase()] || null;
+    };
+
+    /**
      * @description 设置资产连接信息
      * @param assetId
      * @param connectionInfo
@@ -354,6 +374,27 @@ export const useUserInfoStore = defineStore(
     };
 
     /**
+     * @description 设置协议连接偏好
+     * @param protocol 协议名称
+     * @param preference 连接偏好
+     */
+    const setConnectionPreferenceForProtocol = (
+      protocol: string,
+      preference: ProtocolConnectionPreferenceInfo
+    ) => {
+      if (!currentSite.value || !protocol || !preference.connectMethod) return;
+      const siteData = userMap.value[currentSite.value];
+
+      if (!siteData) return;
+
+      if (!siteData.protocolConnectionPreferenceMap) {
+        siteData.protocolConnectionPreferenceMap = {};
+      }
+
+      siteData.protocolConnectionPreferenceMap[protocol.toLowerCase()] = preference;
+    };
+
+    /**
      * @description 设置 RDP 客户端选项
      * @param rdpClientOption
      */
@@ -396,7 +437,9 @@ export const useUserInfoStore = defineStore(
       setConnectionInfoForAsset,
       deleteConnectionInfoForAsset,
       getConnectionPreferenceForAsset,
-      setConnectionPreferenceForAsset
+      setConnectionPreferenceForAsset,
+      getConnectionPreferenceForProtocol,
+      setConnectionPreferenceForProtocol
     };
   },
   {

@@ -41,10 +41,8 @@ const isAuthFailure = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error || "");
   return [
     "HTTP 401",
-    "HTTP 403",
     "missing current api session",
-    "status=401",
-    "status=403"
+    "status=401"
   ].some((needle) => message.includes(needle));
 };
 

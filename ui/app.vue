@@ -11,6 +11,7 @@ let applyLanguageSeq = 0;
 const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
 
 const route = useRoute();
+const authSession = useAuthSession();
 
 const { isMacOS } = usePlatform();
 const { locale, setLocale } = useI18n();
@@ -178,6 +179,10 @@ async function applyAfterHydration() {
 }
 
 onMounted(async () => {
+  if (route.query.tool_window !== "1") {
+    void authSession.bootstrapPersistedSession();
+  }
+
   if (!isTauriRuntime()) return;
 
   // 初始化 HTTP 回调服务器 (开发环境)

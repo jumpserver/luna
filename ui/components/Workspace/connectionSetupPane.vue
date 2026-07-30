@@ -10,6 +10,11 @@ import type {
 } from "~/types/index";
 
 import ConnectForm from "~/components/ConnectForm/connectForm.vue";
+import {
+  isExternalClientConnectMethod,
+  parseLocalApplicationConnectMethod,
+  useConnectMethods
+} from "~/composables/useConnectMethods";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols, sortProtocolNames } from "~/utils";
 
@@ -26,6 +31,7 @@ const props = withDefaults(
 const { t, locale } = useI18n();
 const { getAssetDetail } = useAssetAction();
 const { confirmConnection } = useAssetConnection();
+const { getMethodsForProtocol } = useConnectMethods();
 const { closePane, startSessionConnection } = useWorkspaceTabs();
 const userInfoStore = useUserInfoStore();
 
@@ -33,6 +39,10 @@ const currentAsset = ref<AssetItem | null>(props.tab.setupAsset || null);
 const loading = ref(false);
 const connecting = ref(false);
 const connectionError = ref("");
+const launchedClientName = ref("");
+const launchedProtocol = ref("");
+const launchSuccessVisible = ref(false);
+const externalClientLaunch = ref(false);
 
 const draftProtocol = ref<string>("");
 const draftAccount = ref<string>("");
@@ -48,6 +58,27 @@ const assetName = computed(() => props.tab.assetName || currentAsset.value?.name
 const assetAddress = computed(
   () => currentAsset.value?.address || props.tab.address || assetName.value || t("ContextMenu.Connect")
 );
+const preferredConnectMethod = computed(
+  () => userInfoStore.getConnectionPreferenceForProtocol(draftProtocol.value)?.connectMethod || ""
+);
+const launchSummary = computed(() => {
+  if (locale.value === "zh") {
+    return launchedClientName.value
+      ? `已尝试使用 ${launchedClientName.value} 打开该连接。`
+      : "已尝试使用本地客户端打开该连接。";
+  }
+
+  return launchedClientName.value
+    ? `We tried opening this connection in ${launchedClientName.value}.`
+    : "We tried opening this connection in a local client.";
+});
+const launchHint = computed(() => {
+  if (locale.value === "zh") {
+    return "如果客户端没有弹出，可以再次发起打开，或者返回修改连接方式。";
+  }
+
+  return "If the client did not appear, try launching again or go back to change the connection method.";
+});
 
 const getVisibleProtocols = (protocols: PermedProtocol[]) => {
   if (isTauriRuntime()) return protocols;
@@ -71,9 +102,17 @@ const resolvePreferredProtocol = (
   const available = sortPermedProtocols(protocols).map((item) => item.name);
   const explicit = (props.tab.protocol || "").trim();
   const preferred = (source?.protocol || "").trim();
+  const resolveAvailable = (candidate: string) =>
+    available.find((protocol) => protocol.toLowerCase() === candidate.toLowerCase());
 
-  if (explicit && available.includes(explicit)) return explicit;
-  if (preferred && available.includes(preferred)) return preferred;
+  if (explicit) {
+    const resolved = resolveAvailable(explicit);
+    if (resolved) return resolved;
+  }
+  if (preferred) {
+    const resolved = resolveAvailable(preferred);
+    if (resolved) return resolved;
+  }
   return available[0] || "";
 };
 
@@ -140,9 +179,10 @@ const initDraft = (asset: AssetItem) => {
   draftManualPassword.value = saved?.manualPassword || "";
   draftDynamicPassword.value = saved?.dynamicPassword || "";
   draftRememberSecret.value = saved?.rememberSecret || false;
-  draftRememberSelection.value = false;
-  draftConnectMethod.value = source?.connectMethod || "";
-  draftConnectOptions.value = { ...(source?.connectOptions || {}) };
+  draftRememberSelection.value = !!saved;
+  const sourceMatchesProtocol = source?.protocol?.toLowerCase() === draftProtocol.value.toLowerCase();
+  draftConnectMethod.value = sourceMatchesProtocol ? (source?.connectMethod || "") : "";
+  draftConnectOptions.value = sourceMatchesProtocol ? { ...(source?.connectOptions || {}) } : {};
 };
 
 const normalizeProtocols = () => {
@@ -151,6 +191,38 @@ const normalizeProtocols = () => {
     .filter((name) => name.length > 0);
 
   return sortProtocolNames(protocols);
+};
+
+const updateExternalLaunchState = async () => {
+  const protocol = draftProtocol.value.trim();
+  const connectMethod = draftConnectMethod.value.trim();
+
+  if (!protocol || !connectMethod) {
+    externalClientLaunch.value = false;
+    return;
+  }
+
+  try {
+    const methods = await getMethodsForProtocol(protocol);
+    if (protocol !== draftProtocol.value.trim() || connectMethod !== draftConnectMethod.value.trim()) return;
+    externalClientLaunch.value = isExternalClientConnectMethod(connectMethod, methods);
+  } catch {
+    externalClientLaunch.value = Boolean(parseLocalApplicationConnectMethod(connectMethod).clientName);
+  }
+};
+
+watch(
+  () => [draftProtocol.value, draftConnectMethod.value] as const,
+  () => {
+    void updateExternalLaunchState();
+  },
+  { immediate: true }
+);
+
+const resetLaunchSuccessState = () => {
+  launchSuccessVisible.value = false;
+  launchedClientName.value = "";
+  launchedProtocol.value = "";
 };
 
 const buildConnectionInfo = () => {
@@ -250,22 +322,42 @@ async function submit() {
   if (!currentAsset.value || connecting.value) return;
 
   const info = buildConnectionInfo();
+  const localApplication = parseLocalApplicationConnectMethod(info.connectMethod);
+  const showLaunchSuccessState = externalClientLaunch.value;
   connecting.value = true;
   connectionError.value = "";
-  startSessionConnection(props.tab.id, {
-    protocol: info.protocol,
-    account: info.account
-  });
+  if (!showLaunchSuccessState) {
+    startSessionConnection(props.tab.id, {
+      protocol: info.protocol,
+      account: info.account
+    });
+  } else {
+    resetLaunchSuccessState();
+  }
   try {
     await confirmConnection(currentAsset.value, {
       ...info,
       tabId: props.tab.id,
+      onSessionReady: showLaunchSuccessState
+        ? () => {
+            connecting.value = false;
+            launchSuccessVisible.value = true;
+            launchedClientName.value = localApplication.clientName || "";
+            launchedProtocol.value = info.protocol;
+          }
+        : undefined,
       onSessionError: (error) => {
         connecting.value = false;
         connectionError.value
           = error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
       }
     });
+    if (showLaunchSuccessState) {
+      connecting.value = false;
+      launchSuccessVisible.value = true;
+      launchedClientName.value = localApplication.clientName || "";
+      launchedProtocol.value = info.protocol;
+    }
   } catch (error) {
     connecting.value = false;
     connectionError.value = error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
@@ -328,26 +420,75 @@ onMounted(loadAsset);
 
           <div class="flex min-h-[300px] flex-col bg-[var(--app-surface-panel-strong)]">
             <div class="min-h-0 flex-1 overflow-auto px-6 py-4">
-              <ConnectForm
-                v-model:protocol="draftProtocol"
-                v-model:account="draftAccount"
-                v-model:manual-username="draftManualUsername"
-                v-model:manual-password="draftManualPassword"
-                v-model:dynamic-password="draftDynamicPassword"
-                v-model:remember-secret="draftRememberSecret"
-                v-model:connect-method="draftConnectMethod"
-                v-model:connect-options="draftConnectOptions"
-                :accounts="currentAsset.permedAccounts || []"
-                :protocols="currentAsset.permedProtocols || []"
-                :asset-type="props.assetType"
-                @keydown.enter="submit"
-              />
-              <UCheckbox
-                v-model="draftRememberSelection"
-                icon="i-lucide-check"
-                :label="t('EditModal.RememberSelection')"
-                class="mt-4"
-              />
+              <div v-if="launchSuccessVisible" class="flex min-h-full items-center justify-center py-6">
+                <section
+                  class="launch-success-card w-full rounded-xl border border-[var(--app-border)] bg-[var(--workspace-surface-panel)] px-5 py-6 sm:px-6"
+                >
+                  <div class="flex items-start gap-3">
+                    <div class="grid size-11 shrink-0 place-items-center rounded-full bg-primary/12 text-primary">
+                      <UIcon name="i-lucide-app-window" class="size-5" />
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center gap-2">
+                        <h3 class="text-sm font-semibold text-[var(--app-fg)]">
+                          {{ locale === "zh" ? "已发起客户端打开" : "Client launch started" }}
+                        </h3>
+                        <UBadge
+                          v-if="launchedProtocol"
+                          :label="launchedProtocol.toUpperCase()"
+                          color="primary"
+                          variant="soft"
+                          size="sm"
+                        />
+                      </div>
+                      <p class="mt-2 text-sm leading-6 text-[var(--app-fg)]">
+                        {{ launchSummary }}
+                      </p>
+                      <p class="mt-1 text-xs leading-5 text-[var(--app-muted)]">
+                        {{ launchHint }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="mt-5 rounded-lg border border-[var(--app-border)] bg-[var(--workspace-surface-header)] px-4 py-3">
+                    <div class="text-xs text-[var(--app-muted)]">
+                      {{ locale === "zh" ? "连接目标" : "Connection target" }}
+                    </div>
+                    <div class="mt-1 break-all font-ui-mono text-sm text-[var(--app-fg)]">
+                      {{ assetAddress }}
+                    </div>
+                    <div v-if="launchedClientName" class="mt-2 text-xs text-[var(--app-muted)]">
+                      {{ locale === "zh" ? "客户端" : "Client" }}: {{ launchedClientName }}
+                    </div>
+                  </div>
+                </section>
+              </div>
+
+              <template v-else>
+                <ConnectForm
+                  v-model:protocol="draftProtocol"
+                  v-model:account="draftAccount"
+                  v-model:manual-username="draftManualUsername"
+                  v-model:manual-password="draftManualPassword"
+                  v-model:dynamic-password="draftDynamicPassword"
+                  v-model:remember-secret="draftRememberSecret"
+                  v-model:connect-method="draftConnectMethod"
+                  v-model:connect-options="draftConnectOptions"
+                  :preferred-connect-method="preferredConnectMethod"
+                  :accounts="currentAsset.permedAccounts || []"
+                  :protocols="currentAsset.permedProtocols || []"
+                  :asset-type="props.assetType"
+                  @keydown.enter="submit"
+                />
+                <UTooltip :text="t('EditModal.Description')" :delay-duration="150">
+                  <UCheckbox
+                    v-model="draftRememberSelection"
+                    icon="i-lucide-check"
+                    :label="t('EditModal.RememberSelection')"
+                    class="mt-4"
+                  />
+                </UTooltip>
+              </template>
             </div>
 
             <div
@@ -374,7 +515,32 @@ onMounted(loadAsset);
             </div>
 
             <div class="border-t border-[var(--app-border)] bg-[var(--workspace-surface-footer)] px-5 pt-3 pb-5">
-              <UButton :label="t('Common.Connect')" color="primary" :loading="connecting" block @click="submit" />
+              <div v-if="launchSuccessVisible" class="flex flex-col gap-3 sm:flex-row">
+                <UButton
+                  :label="locale === 'zh' ? '再次打开' : 'Open again'"
+                  color="primary"
+                  :loading="connecting"
+                  block
+                  @click="submit"
+                />
+                <UButton
+                  :label="locale === 'zh' ? '返回修改' : 'Back to form'"
+                  color="neutral"
+                  variant="outline"
+                  block
+                  @click="resetLaunchSuccessState"
+                />
+              </div>
+              <UButton
+                v-else
+                :label="externalClientLaunch
+                  ? (locale === 'zh' ? '客户端打开' : 'Open in client')
+                  : t('Common.Connect')"
+                color="primary"
+                :loading="connecting"
+                block
+                @click="submit"
+              />
             </div>
           </div>
         </section>
@@ -388,6 +554,12 @@ onMounted(loadAsset);
   box-shadow:
     0 1px 0 color-mix(in srgb, var(--app-surface-panel-strong) 82%, transparent) inset,
     var(--theme-shadow-soft);
+}
+
+.launch-success-card {
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--app-surface-panel-strong) 78%, transparent) inset,
+    0 16px 36px color-mix(in srgb, var(--app-fg) 5%, transparent);
 }
 
 .connection-activity-track {

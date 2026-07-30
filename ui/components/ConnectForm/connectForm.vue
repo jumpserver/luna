@@ -3,7 +3,8 @@ import type { SelectMenuItem } from "@nuxt/ui";
 import type { AssetPageType, CharsetType, PermedAccount, PermedProtocol, ResolutionType } from "~/types/index";
 import {
   createLocalApplicationConnectMethod,
-  parseLocalApplicationConnectMethod,
+  isApplicationConfigItemAvailable,
+  isConnectMethodAvailable,
   useConnectMethods
 } from "~/composables/useConnectMethods";
 import { sortProtocolNames } from "~/utils";
@@ -18,6 +19,7 @@ const props = defineProps<{
   dynamicPassword?: string
   rememberSecret?: boolean
   connectMethod?: string
+  preferredConnectMethod?: string
   connectOptions?: Record<string, any>
   assetType?: AssetPageType
 }>();
@@ -92,7 +94,7 @@ watch(
 
 watch(
   () => props.protocol,
-  async (newProtocol) => {
+  async (newProtocol, previousProtocol) => {
     const requestId = ++connectMethodRequestId;
     availableConnectMethods.value = [];
 
@@ -103,7 +105,9 @@ watch(
 
     // A method belongs to a protocol. Clear it before the async lookup so a
     // quick protocol-switch-and-connect cannot submit the previous protocol's method.
-    const previousMethod = props.connectMethod || "";
+    const previousMethod = previousProtocol && previousProtocol !== newProtocol
+      ? ""
+      : (props.connectMethod || "");
     emits("update:connectMethod", "");
 
     try {
@@ -111,16 +115,14 @@ watch(
       if (requestId !== connectMethodRequestId || newProtocol !== props.protocol) return;
       availableConnectMethods.value = methods;
 
-      const previousNativeApp = parseLocalApplicationConnectMethod(previousMethod);
-      if (
-        isTauriRuntime()
-        && previousNativeApp.clientName
-        && methods.some((method) => method.value === previousNativeApp.connectMethod)
-        && Object.values(appConfig.value || {})
-          .flat()
-          .some((item) => item.name === previousNativeApp.clientName)
-      ) {
+      if (isConnectMethodAvailable(previousMethod, methods, newProtocol, appConfig.value)) {
         emits("update:connectMethod", previousMethod);
+        return;
+      }
+
+      const protocolPreferredMethod = props.preferredConnectMethod || "";
+      if (isConnectMethodAvailable(protocolPreferredMethod, methods, newProtocol, appConfig.value)) {
+        emits("update:connectMethod", protocolPreferredMethod);
         return;
       }
 
@@ -129,9 +131,7 @@ watch(
         const preferredClient = Object.values(appConfig.value || {})
           .flat()
           .find((item) =>
-            item.name !== "builtin_client"
-            && item.is_set
-            && item.path_exists !== false
+            isApplicationConfigItemAvailable(item, protocol)
             && item.match_first?.some((value) => value.toLowerCase() === protocol)
           );
         const nativeMethod = methods.find((method) => categoryOfConnectMethod(method) === "native");
@@ -143,11 +143,6 @@ watch(
           );
           return;
         }
-      }
-
-      if (previousMethod && methods.some((m) => m.value === previousMethod)) {
-        emits("update:connectMethod", previousMethod);
-        return;
       }
 
       const defaultMethod = await getDefaultMethodForProtocol(newProtocol);
@@ -196,14 +191,7 @@ const configuredClients = computed(() => {
 
   return Object.values(appConfig.value)
     .flat()
-    .filter((item) =>
-      item.name !== "builtin_client"
-      && item.is_set
-      && item.path_exists !== false
-      && item.protocol?.some((value) => value.toLowerCase() === protocol)
-      && (item.enabled_protocols || item.match_first)
-        ?.some((value) => value.toLowerCase() === protocol)
-    )
+    .filter((item) => isApplicationConfigItemAvailable(item, protocol))
     .sort((a, b) =>
       Number(b.match_first?.includes(protocol)) - Number(a.match_first?.includes(protocol))
     );
@@ -335,8 +323,8 @@ function isBuiltinConnectMethod(method: any) {
   return String(method?.value || "").toLowerCase() === "web_cli_native";
 }
 
-function selectConnectMethodType(type: string) {
-  selectedConnectMethodType.value = type;
+function selectConnectMethodType(type: string | number) {
+  selectedConnectMethodType.value = String(type);
 
   localConnectMethod.value = connectMethodTabItems.value[0]?.value || "";
 }

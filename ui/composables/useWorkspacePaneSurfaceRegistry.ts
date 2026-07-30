@@ -3,7 +3,7 @@ interface WorkspacePaneSurfaceHandle {
 }
 
 const paneTargets = shallowReactive(new Map<string, HTMLElement>());
-const paneSurfaces = shallowReactive(new Map<string, WorkspacePaneSurfaceHandle>());
+const paneSurfaces = new Map<string, WorkspacePaneSurfaceHandle>();
 
 export function useWorkspacePaneSurfaceRegistry() {
   const getPaneTarget = (paneId: string) => paneTargets.get(paneId) || null;

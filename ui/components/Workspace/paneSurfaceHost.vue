@@ -26,8 +26,11 @@ const surfaceInstanceKey = computed(() => {
 });
 
 function setSurfaceInstance(instance: unknown) {
+  const nextInstance = instance as { focus?: () => void } | null;
+  if (surfaceInstance === nextInstance) return;
+
   if (surfaceInstance) unregisterPaneSurface(props.pane.id, surfaceInstance);
-  surfaceInstance = instance as { focus?: () => void } | null;
+  surfaceInstance = nextInstance;
   if (surfaceInstance) registerPaneSurface(props.pane.id, surfaceInstance);
 }
 

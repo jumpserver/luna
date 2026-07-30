@@ -36,13 +36,8 @@ const classifyBootstrapFailure = (
 
   const profileStatus = Number(payload.profile?.status ?? 0);
   if (profileStatus >= 400 && profileStatus < 500) return "auth";
-
-  const statuses = [payload.profile, payload.permission_orgs, payload.current_org]
-    .map((response) => Number(response?.status ?? 0));
-
-  if (statuses.includes(0)) return "network";
-  if (statuses.some((status) => status >= 500)) return "server";
-  if (statuses.some((status) => status < 200 || status >= 300)) return "server";
+  if (profileStatus === 0) return "network";
+  if (profileStatus >= 500 || profileStatus < 200 || profileStatus >= 300) return "server";
 
   return null;
 };
@@ -102,18 +97,25 @@ export const useAuthSession = () => {
     const permissionOrgData = parseApiData<PermissionOrgs>(permission_orgs, {} as PermissionOrgs);
     const resolvedSite = resolved_site || "";
 
-    if (!profileData || !currentOrgData || !resolvedSite) return false;
+    if (!profileData || !resolvedSite) return false;
 
     const availableOrgs = initSelectOrganization(permissionOrgData);
-    console.info("login permission_orgs payload", permissionOrgData);
-    console.info("login current org", currentOrgData);
-    console.info("login available orgs", availableOrgs);
+    const currentOrg = currentOrgData && typeof currentOrgData === "object"
+      ? currentOrgData
+      : {
+        id: "",
+        name: "",
+        is_root: false,
+        is_default: false,
+        is_system: false,
+        comment: ""
+      };
 
     userInfoStore.setUserData(resolvedSite, {
       name: profileData.name,
       bearerToken: bearer,
       site: resolvedSite,
-      org: currentOrgData,
+      org: currentOrg,
       system_roles: profileData.system_roles,
       availableOrgs,
       xpackLicenseValid: xpack_license_valid ?? true,
@@ -124,7 +126,9 @@ export const useAuthSession = () => {
     });
 
     userInfoStore.setOrganizations(availableOrgs);
-    userInfoStore.setCurrentOrg(currentOrgData);
+    if (currentOrg.id) {
+      userInfoStore.setCurrentOrg(currentOrg);
+    }
     userInfoStore.setUserLoggedIn(true);
 
     if (options.showToast !== false) {
@@ -243,18 +247,12 @@ export const useAuthSession = () => {
     }
 
     const connectionToken = new URLSearchParams(window.location.search).get("token");
-    const [profileData, permissionOrgData] = await Promise.all([
-      fetchWebJson<Record<string, any>>([
-        connectionToken
-          ? `/api/v1/users/profile/?fields_size=mini&token=${encodeURIComponent(connectionToken)}`
-          : "/api/v1/users/profile/?fields_size=mini",
-        "/api/v1/users/profile/",
-        "/api/v1/profile/"
-      ]),
-      fetchWebJson<PermissionOrgs | Record<string, unknown>>([
-        "/api/v1/users/profile/permissions/",
-        "/api/v1/profile/permissions/"
-      ])
+    const profileData = await fetchWebJson<Record<string, any>>([
+      connectionToken
+        ? `/api/v1/users/profile/?fields_size=mini&token=${encodeURIComponent(connectionToken)}`
+        : "/api/v1/users/profile/?fields_size=mini",
+      "/api/v1/users/profile/",
+      "/api/v1/profile/"
     ]);
 
     if (!profileData) {
@@ -265,33 +263,24 @@ export const useAuthSession = () => {
       return false;
     }
 
-    const availableOrgs = initSelectOrganization(permissionOrgData || {});
     const cookieOrgId = getWebOrgId();
-    const currentOrg = (availableOrgs.find((org) => org.id === cookieOrgId) || availableOrgs[0] || {
+    const site = window.location.origin;
+    const profileOrg = {
       id: cookieOrgId || profileData.org_id || profileData.org?.id || "",
       name: profileData.org_name || profileData.org?.name || "",
       is_root: false,
       is_default: false,
-      is_system: false
-    }) as any;
-
-    if (!currentOrg.id) {
-      userInfoStore.setUserLoggedIn(false);
-      return false;
-    }
-
-    const site = window.location.origin;
+      is_system: false,
+      comment: ""
+    };
 
     userInfoStore.setUserData(site, {
       name: profileData.name || profileData.username || profileData.display_name || "",
       bearerToken: "",
       site,
-      org: {
-        comment: "",
-        ...currentOrg
-      },
+      org: profileOrg,
       system_roles: profileData.system_roles || [],
-      availableOrgs,
+      availableOrgs: [],
       xpackLicenseValid: profileData.xpack_license_valid ?? profileData.xpackLicenseValid ?? true,
       connectionInfo: {
         protocol: "",
@@ -299,9 +288,41 @@ export const useAuthSession = () => {
       }
     });
 
-    userInfoStore.setOrganizations(availableOrgs);
-    userInfoStore.setCurrentOrg({ comment: "", ...currentOrg });
+    userInfoStore.setOrganizations([]);
+    if (profileOrg.id) {
+      userInfoStore.setCurrentOrg(profileOrg);
+    }
     userInfoStore.setUserLoggedIn(true);
+
+    void Promise.all([
+      fetchWebJson<PermissionOrgs | Record<string, unknown>>([
+        "/api/v1/users/profile/permissions/",
+        "/api/v1/profile/permissions/"
+      ]),
+      fetchWebJson<Record<string, any>>([
+        "/api/v1/orgs/orgs/current/"
+      ])
+    ]).then(([permissionOrgData, currentOrgData]) => {
+      const availableOrgs = initSelectOrganization(permissionOrgData || {});
+      const resolvedCurrentOrg = currentOrgData && typeof currentOrgData === "object"
+        ? currentOrgData
+        : null;
+      const currentOrg = availableOrgs.find((org) => org.id === cookieOrgId)
+        || availableOrgs.find((org) => org.id === resolvedCurrentOrg?.id)
+        || availableOrgs[0]
+        || profileOrg;
+
+      userInfoStore.setOrganizations(availableOrgs);
+      if (currentOrg.id) {
+        userInfoStore.setCurrentOrg({
+          comment: resolvedCurrentOrg?.comment || "",
+          ...currentOrg
+        });
+      }
+    }).catch((error) => {
+      console.debug("hydrate web organization failed", error);
+    });
+
     return true;
   };
 

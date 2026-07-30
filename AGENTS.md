@@ -18,6 +18,9 @@ These instructions apply to the whole repository. Follow them for all changes un
 - Use existing runtime helpers and abstractions before adding new environment checks.
 - Keep desktop-specific behavior behind Tauri modules/adapters, and keep web behavior functional when those APIs are unavailable.
 - When changing routing, API calls, storage, downloads, websocket/session handling, or connector launch behavior, consider both the web build and the desktop client build.
+- Login flows are intentionally split by runtime: web must redirect unauthenticated users to the server auth page, while the Tauri client keeps the in-app "enter site, then login" flow. Do not replace one runtime's login UX with the other's.
+- Authentication state is determined by validating the user session/profile, not by organization availability. Missing organization data or an organization-scoped `403` must not mark an authenticated user as logged out.
+- Keep authentication bootstrap connected to the application startup path. Do not use a `*.global.client.ts` route-middleware filename: Nuxt treats it as named middleware rather than global middleware.
 
 ## Engineering Style
 

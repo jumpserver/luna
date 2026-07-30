@@ -1,3 +1,4 @@
+import type { AppConfigType, ConfigItem } from "~/types/index";
 import { COMPONENT_WORKSPACE_CAPABILITIES } from "~/shared/connectors/capabilities";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -10,7 +11,7 @@ export {
   WEB_RDP_NATIVE_VALUE
 } from "~/shared/connectors/capabilities";
 
-interface ConnectMethod {
+export interface ConnectMethod {
   value: string
   label: string
   type: string
@@ -36,10 +37,55 @@ export const parseLocalApplicationConnectMethod = (value: string) => {
   const match = /^native_app:([^:]+):(.+)$/.exec(value || "");
   if (!match) return { connectMethod: value, clientName: undefined };
 
-  return {
-    connectMethod: match[1] || value,
-    clientName: decodeURIComponent(match[2] || "")
-  };
+  try {
+    return {
+      connectMethod: match[1] || value,
+      clientName: decodeURIComponent(match[2] || "")
+    };
+  } catch {
+    return { connectMethod: value, clientName: undefined };
+  }
+};
+
+export const isApplicationConfigItemAvailable = (item: ConfigItem, protocol: string): boolean => {
+  const normalizedProtocol = protocol.toLowerCase();
+  const enabledProtocols = item.enabled_protocols || item.match_first;
+
+  return item.name !== "builtin_client"
+    && item.is_set
+    && item.path_exists !== false
+    && item.protocol.some((value) => value.toLowerCase() === normalizedProtocol)
+    && enabledProtocols?.some((value) => value.toLowerCase() === normalizedProtocol) === true;
+};
+
+export const isConnectMethodAvailable = (
+  value: string,
+  methods: ConnectMethod[],
+  protocol: string,
+  appConfig?: AppConfigType | null
+) => {
+  if (!value) return false;
+
+  const selected = parseLocalApplicationConnectMethod(value);
+  if (!methods.some((method) => method.value === selected.connectMethod)) return false;
+  if (!selected.clientName) return true;
+  if (!isTauriRuntime() || !appConfig) return false;
+
+  return Object.values(appConfig)
+    .flat()
+    .some((item) =>
+      item.name === selected.clientName
+      && isApplicationConfigItemAvailable(item, protocol)
+    );
+};
+
+export const isExternalClientConnectMethod = (value: string, methods: ConnectMethod[]) => {
+  const selected = parseLocalApplicationConnectMethod(value);
+  if (selected.clientName) return true;
+
+  const method = methods.find((item) => item.value === selected.connectMethod);
+  const type = String(method?.type || "").toLowerCase();
+  return ["native", "client", "local", "desktop"].includes(type);
 };
 
 const connectMethodsCache = new Map<string, ConnectMethodsResponse>();

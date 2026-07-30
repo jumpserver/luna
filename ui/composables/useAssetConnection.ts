@@ -1,5 +1,5 @@
 import type { AssetItem, ConnectionPreferenceInfo, ConnectionInfo as StoredConnectionInfo } from "~/types/index";
-import { parseLocalApplicationConnectMethod } from "~/composables/useConnectMethods";
+import { isConnectMethodAvailable } from "~/composables/useConnectMethods";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols } from "~/utils";
 
@@ -17,6 +17,7 @@ interface ConnectionFormInfo {
   accountId?: string
   availableProtocols?: string[]
   tabId?: string
+  onSessionReady?: (payload: Record<string, any>) => void
   onSessionError?: (error: unknown) => void
   accountMode: "hosted" | "dynamic" | "manual" | "anonymous"
 }
@@ -24,6 +25,7 @@ interface ConnectionFormInfo {
 export function useAssetConnection() {
   const { handleAssetConnection, displayUser } = useAssetAction();
   const { getMethodsForProtocol } = useConnectMethods();
+  const { appConfig } = useSettingManager();
   const userInfoStore = useUserInfoStore();
 
   const normalizeConnectionInfo = async (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
@@ -77,8 +79,12 @@ export function useAssetConnection() {
     if (protocol) {
       try {
         const methods = await getMethodsForProtocol(protocol);
-        const selectedMethod = parseLocalApplicationConnectMethod(connectionInfo.connectMethod);
-        connectMethod = methods.some((method) => method.value === selectedMethod.connectMethod)
+        connectMethod = isConnectMethodAvailable(
+          connectionInfo.connectMethod,
+          methods,
+          protocol,
+          appConfig.value
+        )
           ? connectionInfo.connectMethod
           : (methods[0]?.value || "");
       } catch {
@@ -151,6 +157,9 @@ export function useAssetConnection() {
     };
 
     userInfoStore.setConnectionPreferenceForAsset(asset.id, payload);
+    userInfoStore.setConnectionPreferenceForProtocol(connectionInfo.protocol, {
+      connectMethod: connectionInfo.connectMethod
+    });
   };
 
   /**
@@ -220,6 +229,7 @@ export function useAssetConnection() {
       connectMethod: normalized.connectMethod,
       connectOptions: normalized.connectOptions,
       tabId: normalized.tabId,
+      onSessionReady: normalized.onSessionReady,
       onSessionError: normalized.onSessionError,
       asset
     });

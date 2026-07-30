@@ -2,6 +2,7 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
 
 import {
+  isConnectMethodAvailable,
   K8S_NATIVE_VALUE,
   parseLocalApplicationConnectMethod,
   SFTP_FILE_EDITOR_VALUE,
@@ -304,7 +305,15 @@ export const useAssetAction = () => {
 
   const getConnectToken = async (
     body: ConnectionBody,
-    meta?: { tabId?: string, asset?: AssetItem, assetId: string, protocol: string, account: string, orgId?: string }
+    meta?: {
+      tabId?: string
+      asset?: AssetItem
+      assetId: string
+      protocol: string
+      account: string
+      orgId?: string
+      onSessionReady?: (payload: Record<string, any>) => void
+    }
   ) => {
     const nativeApp = parseLocalApplicationConnectMethod(body.connect_method);
     const serverBody = { ...body, connect_method: nativeApp.connectMethod };
@@ -330,6 +339,11 @@ export const useAssetAction = () => {
           if (!url?.startsWith("jms://")) {
             throw new Error("Invalid local client URL");
           }
+          meta?.onSessionReady?.({
+            token,
+            ...token,
+            connectMethod: method || { value: body.connect_method }
+          });
           window.location.assign(url);
           return;
         }
@@ -500,6 +514,12 @@ export const useAssetAction = () => {
 
   const resolveConnectMethod = async (protocol: string) => {
     const methods = await getMethodsForProtocol(protocol);
+    const preferred = userInfoStore.getConnectionPreferenceForProtocol(protocol)?.connectMethod || "";
+
+    if (isConnectMethodAvailable(preferred, methods, protocol, settingManager.appConfig.value)) {
+      return preferred;
+    }
+
     return methods[0]?.value || "";
   };
 
@@ -558,6 +578,7 @@ export const useAssetAction = () => {
       onSessionReady?: (payload: Record<string, any>) => void
       onSessionError?: (error: unknown) => void
       orgId?: string
+      onSessionReady?: (payload: Record<string, any>) => void
     }
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
@@ -678,7 +699,8 @@ export const useAssetAction = () => {
         assetId,
         protocol,
         account,
-        orgId: ephemeral?.orgId
+        orgId: ephemeral?.orgId,
+        onSessionReady: ephemeral?.onSessionReady
       });
     });
   };
