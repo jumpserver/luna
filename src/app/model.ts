@@ -485,11 +485,7 @@ export class Endpoint {
   https_port: number;
   http_port: number;
   ssh_port: number;
-  mysql_port: number;
-  mariadb_port: number;
-  postgresql_port: number;
-  redis_port: number;
-  oracle_port: number;
+  magnus_port: number;
 
   getHost(): string {
     return this.host || window.location.host;
@@ -500,7 +496,16 @@ export class Endpoint {
 
     _protocol = _protocol.replace(':', '');
 
-    let port = this[_protocol + '_port'];
+    const magnusProtocols = [
+      'mysql',
+      'mariadb',
+      'postgresql',
+      'redis',
+      'sqlserver',
+      'oracle',
+      'mongodb'
+    ];
+    let port = magnusProtocols.includes(_protocol) ? this.magnus_port : this[_protocol + '_port'];
 
     // 处理 http(s) 协议的后台端口为0的时候, 使用当前地址中的端口
     if (['http', 'https'].indexOf(_protocol) !== -1 && port === 0) {
