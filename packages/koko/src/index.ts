@@ -1,4 +1,4 @@
-export { default as KokoFileManagement } from "../app/components/Drawer/FileManagement/index.vue";
+export { default as KokoFileManagement } from "../app/components/FileManagement/index.vue";
 export { useKokoSessionAdapter } from "../app/composables/useSessionAdapter";
 export { sendKokoTerminalData, sendKokoTerminalDataToMany } from "../app/composables/useTerminalSessionRegistry";
 export {

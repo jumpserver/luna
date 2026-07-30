@@ -6,9 +6,9 @@ import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
 import type { FileTransferEndpointRef } from "~/shared/file-transfer/types";
 import { connectorSessionKey, resolveDevHost } from "@jumpserver/connectors-core";
 import { useKokoHostAdapter } from "@jumpserver/koko/host";
-import KokoLocalFileManagementPane from "#koko/components/Drawer/FileManagement/localPane.vue";
-import KokoFileManagementPane from "#koko/components/Drawer/FileManagement/pane.vue";
-import KokoWebUploadPane from "#koko/components/Drawer/FileManagement/webUploadPane.vue";
+import KokoLocalFileManagementPane from "#koko/components/FileManagement/localPane.vue";
+import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
+import KokoWebUploadPane from "#koko/components/FileManagement/webUploadPane.vue";
 import { useFileTransferStore } from "~/store/modules/fileTransfer";
 
 interface RemotePane {

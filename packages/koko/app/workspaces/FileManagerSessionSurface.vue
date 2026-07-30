@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { KokoWorkspaceTab } from "@jumpserver/koko/host";
 
-import KokoFileManagement from "#koko/components/Drawer/FileManagement/index.vue";
+import KokoFileManagement from "#koko/components/FileManagement/index.vue";
 import BaseWorkspaceShell from "#koko/workspaces/BaseWorkspaceShell.vue";
 import { useBaseWorkspaceSession } from "#koko/workspaces/useBaseWorkspaceSession";
 
