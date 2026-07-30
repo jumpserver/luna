@@ -447,23 +447,23 @@ defineExpose({ manager, selectedEntry });
         <table class="w-full table-fixed border-separate border-spacing-0">
           <thead>
             <tr>
-              <th class="h-[35px] min-w-0 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)">{{ t("koko.fileManagement.name") }}</th>
-              <th class="h-[35px] w-[110px] border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)">{{ t("koko.fileManagement.size") }}</th>
-              <th class="hidden h-[35px] w-[168px] border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted) md:table-cell">{{ t("koko.fileManagement.modifiedTime") }}</th>
-              <th class="hidden h-[35px] w-[128px] border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted) md:table-cell">{{ t("koko.fileManagement.permissions") }}</th>
+              <th class="h-8.75 min-w-0 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)">{{ t("koko.fileManagement.name") }}</th>
+              <th class="h-8.75 w-27.5 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)">{{ t("koko.fileManagement.size") }}</th>
+              <th class="hidden h-8.75 w-42 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted) md:table-cell">{{ t("koko.fileManagement.modifiedTime") }}</th>
+              <th class="hidden h-8.75 w-32 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted) md:table-cell">{{ t("koko.fileManagement.permissions") }}</th>
             </tr>
           </thead>
           <tbody>
             <tr
               v-for="entry in visibleEntries"
               :key="entry.name"
-              class="group h-[38px] transition-colors hover:bg-(--app-hover-soft)"
+              class="group h-9.5 transition-colors hover:bg-(--app-hover-soft)"
               :class="isSelected(entry) ? 'bg-(--app-selected-soft)' : ''"
               @mouseenter="hoveredEntryName = entry.name"
               @mouseleave="hoveredEntryName = null"
               @click="selectEntry(entry)"
             >
-              <td class="h-[38px] min-w-0 border-b border-(--app-border)/60 px-3.5 py-1.5 text-[12.5px] text-(--app-fg)">
+              <td class="h-9.5 min-w-0 border-b border-(--app-border)/60 px-3.5 py-1.5 text-[12.5px] text-(--app-fg)">
                 <div class="flex min-w-0 items-center gap-2">
                   <button
                     type="button"
@@ -484,9 +484,9 @@ defineExpose({ manager, selectedEntry });
                   </span>
                 </div>
               </td>
-              <td class="h-[38px] w-[110px] border-b border-(--app-border)/60 px-3.5 py-1.5 text-right"><span class="block truncate font-ui-mono text-[11px] text-(--app-muted)">{{ entry.is_dir ? "—" : formatFileSize(entry.size) }}</span></td>
-              <td class="hidden h-[38px] w-[168px] border-b border-(--app-border)/60 px-3.5 py-1.5 text-right md:table-cell"><span class="block truncate font-ui-mono text-[11px] text-(--app-muted)">{{ formatModifiedTime(entry.mod_time) }}</span></td>
-              <td class="hidden h-[38px] w-[128px] border-b border-(--app-border)/60 px-3.5 py-1.5 text-right md:table-cell"><span class="block truncate font-ui-mono text-[10.5px] text-(--app-muted)">{{ entry.perm || "—" }}</span></td>
+              <td class="h-9.5 w-27.5 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right"><span class="block truncate font-ui-mono text-[11px] text-(--app-muted)">{{ entry.is_dir ? "—" : formatFileSize(entry.size) }}</span></td>
+              <td class="hidden h-9.5 w-42 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right md:table-cell"><span class="block truncate font-ui-mono text-[11px] text-(--app-muted)">{{ formatModifiedTime(entry.mod_time) }}</span></td>
+              <td class="hidden h-9.5 w-32 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right md:table-cell"><span class="block truncate font-ui-mono text-[10.5px] text-(--app-muted)">{{ entry.perm || "—" }}</span></td>
             </tr>
             <tr v-if="visibleEntries.length === 0"><td colspan="4" class="h-24 border-b border-(--app-border)/60 px-3.5 text-center text-sm text-(--app-muted)">{{ t("Common.NoData") }}</td></tr>
           </tbody>

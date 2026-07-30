@@ -610,7 +610,7 @@ watch(currentOrgId, () => {
           >
             <span>{{ t("koko.fileManagement.currentOrganization") }}</span>
             <div class="min-w-0 max-w-55 flex-1">
-              <component :is="hostAdapter.sftp.organizationSelector" class="!justify-end" />
+              <component :is="hostAdapter.sftp.organizationSelector" class="justify-end" />
             </div>
           </div>
           <UInput
