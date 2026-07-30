@@ -162,7 +162,7 @@ function onTransferDrop(event: DragEvent) {
       !props.transferEndpoint
     ) {
       return;
-}
+    }
 
     emit("transferDrop", { ...payload, destinationPath: manager.currentPath.value });
   } catch {

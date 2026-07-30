@@ -379,11 +379,7 @@ export const useWorkspaceTabs = () => {
     return pane;
   };
 
-  const closePane = (paneId: string) => {
-    const match = findPane(paneId);
-    if (!match) return;
-
-    const closeSession = (id: string) => {
+  function closeSession(id: string) {
     const index = tabs.value.findIndex((tab) => tab.id === id);
     if (index === -1) {
       closePane(id);
@@ -403,7 +399,11 @@ export const useWorkspaceTabs = () => {
       activeTabId.value = tabs.value[Math.max(index - 1, 0)]?.id || tabs.value[0]?.id || "";
     }
     ensureActivePaneForTab(activeTabId.value);
-  };
+  }
+
+  function closePane(paneId: string) {
+    const match = findPane(paneId);
+    if (!match) return;
 
     const { tab, pane, paneIndex } = match;
     if (tab.panes.length === 1) {
@@ -420,9 +420,7 @@ export const useWorkspaceTabs = () => {
     setLayoutForPaneCount(tab);
     syncTabFromPrimaryPane(tab);
     if (activePaneId.value === paneId) activePaneId.value = getFirstPaneId(tab);
-  };
-
-
+  }
 
   const closeAllSessions = () => {
     for (const tab of tabs.value) {
