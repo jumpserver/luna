@@ -6,7 +6,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 
 withDefaults(
   defineProps<{
-    selectable?: boolean
+    selectable?: boolean;
   }>(),
   {
     selectable: true

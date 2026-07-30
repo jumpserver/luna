@@ -188,5 +188,5 @@ export async function runChenAction(chenToken: string, node: ChenTreeNode, actio
     body: JSON.stringify({ node, action })
   });
 
-  return readJson<{ event: string, data: any }>(response);
+  return readJson<{ event: string; data: any }>(response);
 }

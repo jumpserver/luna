@@ -8,22 +8,22 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortProtocolNames } from "~/utils";
 
 interface MenuItem {
-  icon: string
-  label: string
-  value?: string
-  onClick: () => void
-  children?: MenuItem[]
+  icon: string;
+  label: string;
+  value?: string;
+  onClick: () => void;
+  children?: MenuItem[];
 }
 
 const props = defineProps<{
-  items: AssetItem[]
+  items: AssetItem[];
 }>();
 
 const emits = defineEmits<{
-  (e: "editTrigger", asset: AssetItem): void
-  (e: "connectAsset", asset: AssetItem): void
-  (e: "contextTrigger", asset: AssetItem): void
-  (e: "connectTrigger", asset: AssetItem): void
+  (e: "editTrigger", asset: AssetItem): void;
+  (e: "connectAsset", asset: AssetItem): void;
+  (e: "contextTrigger", asset: AssetItem): void;
+  (e: "connectTrigger", asset: AssetItem): void;
 }>();
 
 const ASSET_NAME_TOOLTIP_THRESHOLD = 20;
@@ -35,8 +35,8 @@ const UFieldGroup = resolveComponent("UFieldGroup");
 const UDropdownMenu = resolveComponent("UDropdownMenu");
 
 const { t } = useI18n();
-const { displayUser, displayProtocol, handleAssetRename, handleAssetUnfavorite, handleAssetConnection }
-  = useAssetAction();
+const { displayUser, displayProtocol, handleAssetRename, handleAssetUnfavorite, handleAssetConnection } =
+  useAssetAction();
 const { folders: favoriteFolders, load: loadFavoriteFolders, favoriteToFolder } = useFavoriteFolders();
 const userInfoStore = useUserInfoStore();
 const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
@@ -49,7 +49,7 @@ const contextMenuAsset = ref<AssetItem | null>(null);
 const renameInputEl = ref<HTMLInputElement | null>(null);
 const actionMenuOpen = reactive<Record<string, boolean>>({});
 const flatFavoriteFolders = computed(() => {
-  const flatten = (folders = favoriteFolders.value): Array<{ id: string, name: string }> =>
+  const flatten = (folders = favoriteFolders.value): Array<{ id: string; name: string }> =>
     folders.flatMap((folder) => [{ id: folder.id, name: folder.name }, ...flatten(folder.children)]);
   return flatten();
 });

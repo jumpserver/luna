@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const props = withDefaults(
   defineProps<{
-    sidebarVisible?: boolean
+    sidebarVisible?: boolean;
   }>(),
   {
     sidebarVisible: true

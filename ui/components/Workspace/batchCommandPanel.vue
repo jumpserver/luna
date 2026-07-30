@@ -157,9 +157,7 @@ const sendCommand = () => {
               <div class="truncate text-[11px] font-medium text-gray-800 dark:text-gray-100">
                 {{ tab.assetName }}
               </div>
-              <div class="truncate font-ui-mono text-[10px] text-gray-400">
-                {{ tab.account }}@{{ tab.address }}
-              </div>
+              <div class="truncate font-ui-mono text-[10px] text-gray-400">{{ tab.account }}@{{ tab.address }}</div>
             </div>
           </button>
         </div>

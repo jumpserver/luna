@@ -10,31 +10,31 @@ import { useChenSqlSnippets } from "~/chen/composables/useChenSqlSnippets";
 import { formatChenSql } from "~/chen/utils/sqlFormat";
 
 const props = defineProps<{
-  tab: ChenQueryConsoleTab
-  dbType: string
-  canCopy: boolean
+  tab: ChenQueryConsoleTab;
+  dbType: string;
+  canCopy: boolean;
 }>();
 
 const emit = defineEmits<{
-  run: [tab: ChenQueryConsoleTab, selectedSql: string]
-  cancel: [tab: ChenQueryConsoleTab]
-  changeContext: [tab: ChenQueryConsoleTab, context: string]
-  uploadSql: [tab: ChenQueryConsoleTab, file: File]
+  run: [tab: ChenQueryConsoleTab, selectedSql: string];
+  cancel: [tab: ChenQueryConsoleTab];
+  changeContext: [tab: ChenQueryConsoleTab, context: string];
+  uploadSql: [tab: ChenQueryConsoleTab, file: File];
   dataViewAction: [
     tab: ChenQueryConsoleTab,
     result: ChenQueryResultTab,
     action: ChenDataViewAction,
     data?: ChenDataViewActionData
-  ]
-  dismissMessage: [tab: ChenQueryConsoleTab]
-  updateStatement: [tab: ChenQueryConsoleTab, value: string]
-  activateResult: [tab: ChenQueryConsoleTab, id: string]
-  closeResult: [tab: ChenQueryConsoleTab, title: string]
+  ];
+  dismissMessage: [tab: ChenQueryConsoleTab];
+  updateStatement: [tab: ChenQueryConsoleTab, value: string];
+  activateResult: [tab: ChenQueryConsoleTab, id: string];
+  closeResult: [tab: ChenQueryConsoleTab, title: string];
 }>();
 
 const sqlEditor = ref<{
-  replaceDocument: (value: string) => void
-  selectedText: () => string
+  replaceDocument: (value: string) => void;
+  selectedText: () => string;
 } | null>(null);
 const sqlUploadInput = ref<HTMLInputElement | null>(null);
 const hasSelection = ref(false);
@@ -185,8 +185,8 @@ watch(
     messageOpen.value = Boolean(message);
     if (!message) return;
 
-    const closeDelay
-      = typeof message.closeDelay === "number" && message.closeDelay > 0
+    const closeDelay =
+      typeof message.closeDelay === "number" && message.closeDelay > 0
         ? message.closeDelay
         : DEFAULT_MESSAGE_CLOSE_DELAY_SECONDS;
     messageCloseTimer = setTimeout(dismissMessage, closeDelay * 1000);
@@ -241,7 +241,7 @@ onBeforeUnmount(clearMessageTimer);
         >
           Save
         </UButton>
-        <input ref="sqlUploadInput" type="file" accept=".sql" class="hidden" @change="handleSqlFileChange">
+        <input ref="sqlUploadInput" type="file" accept=".sql" class="hidden" @change="handleSqlFileChange" />
         <UButton
           icon="i-lucide-upload"
           size="sm"

@@ -1,9 +1,9 @@
 import xtermTheme from "xterm-theme";
 
 export interface TerminalThemePresetOption {
-  id: string
-  label: string
-  source: "follow-app" | "xterm-theme"
+  id: string;
+  label: string;
+  source: "follow-app" | "xterm-theme";
 }
 
 const xtermPresetIds = Object.keys(xtermTheme).sort((a, b) => a.localeCompare(b));

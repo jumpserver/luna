@@ -13,10 +13,10 @@ const handleWindowDrag = async (event: MouseEvent) => {
 
   const target = event.target as HTMLElement;
   if (
-    target.closest("button")
-    || target.closest('[role="button"]')
-    || target.closest("input")
-    || target.closest("select")
+    target.closest("button") ||
+    target.closest('[role="button"]') ||
+    target.closest("input") ||
+    target.closest("select")
   ) {
     return;
   }

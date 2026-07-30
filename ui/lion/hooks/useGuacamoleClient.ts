@@ -19,19 +19,19 @@ const testImages: any = {
    * Test JPEG image, encoded as base64.
    */
   "image/jpeg":
-    "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoH"
-    + "BwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQME"
-    + "BAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU"
-    + "FBQUFBQUFBQUFBQUFBT/wAARCAABAAEDAREAAhEBAxEB/8QAFAABAAAAAAAAAAA"
-    + "AAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAA"
-    + "AAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AVMH/2Q==",
+    "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoH" +
+    "BwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQME" +
+    "BAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU" +
+    "FBQUFBQUFBQUFBQUFBT/wAARCAABAAEDAREAAhEBAxEB/8QAFAABAAAAAAAAAAA" +
+    "AAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAA" +
+    "AAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AVMH/2Q==",
 
   /**
    * Test PNG image, encoded as base64.
    */
   "image/png":
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX///+nxBvI"
-    + "AAAACklEQVQI12NgAAAAAgAB4iG8MwAAAABJRU5ErkJggg==",
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX///+nxBvI" +
+    "AAAACklEQVQI12NgAAAAAgAB4iG8MwAAAABJRU5ErkJggg==",
 
   /**
    * Test WebP image, encoded as base64.
@@ -152,12 +152,12 @@ const withErrorDetails = (message: string, details: Record<string, any> = {}) =>
 };
 
 interface GuacamoleFile {
-  mimetype?: any
-  streamName?: any
-  type: "DIRECTORY" | "FILE"
-  name: string
-  parent?: GuacamoleFile | null
-  is_dir?: boolean
+  mimetype?: any;
+  streamName?: any;
+  type: "DIRECTORY" | "FILE";
+  name: string;
+  parent?: GuacamoleFile | null;
+  is_dir?: boolean;
 }
 
 export function useGuacamoleClient(t: any) {
@@ -611,13 +611,13 @@ export function useGuacamoleClient(t: any) {
       sendScaledMouseState(client, mouseState);
     };
     const mouse = new Guacamole.Mouse(display.getElement());
-    mouse.onmousedown
-      = mouse.onmouseup
-        = mouse.onmousemove
-          = (mouseState: any) => {
+    mouse.onmousedown =
+      mouse.onmouseup =
+      mouse.onmousemove =
+        (mouseState: any) => {
           // Send mouse state, hide cursor if necessary
-            sendMouseState(mouseState);
-          };
+          sendMouseState(mouseState);
+        };
     mouse.onmouseout = (_mouseState: any) => {
       // Send mouse state, hide cursor if necessary
       display.showCursor(false);

@@ -80,15 +80,15 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
 
   const transferEndpoint = transferRef
     ? useSftpTransferEndpoint(socket, transferRef, async ({ targetPath }) => {
-      const normalizedTarget = targetPath.replace(/\/+$/, "");
-      const separator = normalizedTarget.lastIndexOf("/");
-      const destinationDirectory = normalizedTarget.slice(0, separator) || "/";
-      const displayedDirectory = currentPath.value.replace(/\/+$/, "") || "/";
+        const normalizedTarget = targetPath.replace(/\/+$/, "");
+        const separator = normalizedTarget.lastIndexOf("/");
+        const destinationDirectory = normalizedTarget.slice(0, separator) || "/";
+        const displayedDirectory = currentPath.value.replace(/\/+$/, "") || "/";
 
-      if (destinationDirectory !== displayedDirectory) return;
+        if (destinationDirectory !== displayedDirectory) return;
 
-      await loadCurrentDirectory(currentPath.value, undefined, false);
-    })
+        await loadCurrentDirectory(currentPath.value, undefined, false);
+      })
     : null;
 
   function changeDirectory(entry: SftpFileEntry) {

@@ -5,20 +5,20 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortProtocolNames } from "~/utils";
 
 interface Props {
-  asset: AssetItem
-  visible: boolean
-  x?: number
-  y?: number
+  asset: AssetItem;
+  visible: boolean;
+  x?: number;
+  y?: number;
 }
 
 const props = defineProps<Props>();
 
 const emits = defineEmits<{
-  (e: "update:visible", visible: boolean): void
-  (e: "contextTrigger", asset: AssetItem): void
-  (e: "editTrigger", asset: AssetItem): void
-  (e: "connectTrigger", asset: AssetItem): void
-  (e: "renameTrigger", asset: AssetItem): void
+  (e: "update:visible", visible: boolean): void;
+  (e: "contextTrigger", asset: AssetItem): void;
+  (e: "editTrigger", asset: AssetItem): void;
+  (e: "connectTrigger", asset: AssetItem): void;
+  (e: "renameTrigger", asset: AssetItem): void;
 }>();
 
 const { t } = useI18n();
@@ -28,16 +28,16 @@ const userInfoStore = useUserInfoStore();
 const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
 
 interface MenuItem {
-  value?: string
-  label: string
-  icon: string
-  onClick: () => void
-  children?: MenuItem[]
+  value?: string;
+  label: string;
+  icon: string;
+  onClick: () => void;
+  children?: MenuItem[];
 }
 
 const isFavorited = computed(() => !!props.asset.isFavorite);
 const flatFavoriteFolders = computed(() => {
-  const flatten = (folders = favoriteFolders.value): Array<{ id: string, name: string }> =>
+  const flatten = (folders = favoriteFolders.value): Array<{ id: string; name: string }> =>
     folders.flatMap((folder) => [{ id: folder.id, name: folder.name }, ...flatten(folder.children)]);
   return flatten();
 });

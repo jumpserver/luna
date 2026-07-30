@@ -3,16 +3,16 @@ import type { AssetItem } from "~/types";
 import Card from "./cardItem.vue";
 
 const props = defineProps<{
-  visibleAssets: AssetItem[]
-  isAppending: boolean
-  appendSkeletonCount: number
+  visibleAssets: AssetItem[];
+  isAppending: boolean;
+  appendSkeletonCount: number;
 }>();
 
 const emits = defineEmits<{
-  (e: "connectAsset", asset: AssetItem): void
-  (e: "contextTrigger", asset: AssetItem): void
-  (e: "editTrigger", asset: AssetItem): void
-  (e: "connectTrigger", asset: AssetItem): void
+  (e: "connectAsset", asset: AssetItem): void;
+  (e: "contextTrigger", asset: AssetItem): void;
+  (e: "editTrigger", asset: AssetItem): void;
+  (e: "connectTrigger", asset: AssetItem): void;
 }>();
 </script>
 

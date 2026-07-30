@@ -52,12 +52,12 @@ import "ag-grid-community/styles/ag-theme-balham.css";
 
 const props = withDefaults(
   defineProps<{
-    dataset: ChenDataViewDataset | null
-    meta?: ChenDataViewMeta | null
-    dbType?: string
-    canCopy?: boolean
-    editMode?: ChenDataViewEditMode
-    editState?: ChenDataViewEditState | null
+    dataset: ChenDataViewDataset | null;
+    meta?: ChenDataViewMeta | null;
+    dbType?: string;
+    canCopy?: boolean;
+    editMode?: ChenDataViewEditMode;
+    editState?: ChenDataViewEditState | null;
   }>(),
   {
     meta: null,
@@ -69,7 +69,7 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  selectionChange: [rows: Array<Record<string, any>>]
+  selectionChange: [rows: Array<Record<string, any>>];
 }>();
 
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -111,10 +111,10 @@ const columnDefs = computed<ColDef[]>(() => {
     filter: true,
     editable: (params) => {
       return Boolean(
-        props.dataset
-        && props.editState
-        && params.data
-        && canEditChenDataViewCell(props.dataset, props.editState, props.editMode, params.data, field)
+        props.dataset &&
+        props.editState &&
+        params.data &&
+        canEditChenDataViewCell(props.dataset, props.editState, props.editMode, params.data, field)
       );
     },
     valueParser: (params) => normalizeChenDataViewValue(params.newValue, field),
@@ -122,18 +122,18 @@ const columnDefs = computed<ColDef[]>(() => {
       "chen-range-cell": isSelectedCell,
       "chen-dirty-cell": (params) =>
         Boolean(
-          props.dataset
-          && props.editState
-          && params.data
-          && isChenDirtyCell(props.editState, props.dataset, params.data, field)
+          props.dataset &&
+          props.editState &&
+          params.data &&
+          isChenDirtyCell(props.editState, props.dataset, params.data, field)
         ),
       "chen-insert-row": (params) => isChenInsertRow(params.data),
       "chen-delete-row": (params) =>
         Boolean(
-          props.dataset
-          && props.editState
-          && params.data
-          && isChenDeletedRow(props.editState, props.dataset, params.data)
+          props.dataset &&
+          props.editState &&
+          params.data &&
+          isChenDeletedRow(props.editState, props.dataset, params.data)
         )
     },
     valueFormatter: (params: ValueFormatterParams) => {
@@ -290,9 +290,9 @@ function handleCellContextMenu(event: CellContextMenuEvent) {
   if (!event.data) return;
   const cell = eventCell(event);
   if (
-    (canUseChenCopy(props.canCopy) || props.editMode === "full")
-    && cell
-    && !isChenGridCellSelected(selection.value, displayedColIds(), cell)
+    (canUseChenCopy(props.canCopy) || props.editMode === "full") &&
+    cell &&
+    !isChenGridCellSelected(selection.value, displayedColIds(), cell)
   ) {
     selection.value = finishChenGridSelection(startChenGridSelection(cell));
     refreshSelectionCells();

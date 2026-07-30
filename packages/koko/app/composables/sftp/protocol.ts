@@ -72,12 +72,12 @@ export interface SftpBinaryMessage extends SftpMessageBase {
 
 export interface SftpControlMessage extends SftpMessageBase {
   type:
-    | SftpMessageType.Connect |
-    SftpMessageType.Ping |
-    SftpMessageType.Pong |
-    SftpMessageType.Error |
-    SftpMessageType.Close |
-    SftpMessageType.Closed;
+    | SftpMessageType.Connect
+    | SftpMessageType.Ping
+    | SftpMessageType.Pong
+    | SftpMessageType.Error
+    | SftpMessageType.Close
+    | SftpMessageType.Closed;
 }
 
 export type SftpWireMessage = SftpDataMessage | SftpBinaryMessage | SftpControlMessage;

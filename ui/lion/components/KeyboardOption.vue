@@ -3,8 +3,8 @@ import { useI18n } from "vue-i18n";
 import CardContainer from "@/lion/components/CardContainer/index.vue";
 
 const props = defineProps<{
-  keyboard?: string
-  opened: boolean
+  keyboard?: string;
+  opened: boolean;
 }>();
 
 const emit = defineEmits(["update:keyboard", "update:opened"]);

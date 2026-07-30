@@ -31,9 +31,7 @@ const openLogin = () => {
             }"
           >
             <UIcon name="i-lucide-log-in" class="size-10" :style="{ color: 'var(--app-muted)' }" />
-            <div class="font-medium" :style="{ color: 'var(--app-fg)' }">
-              登录后查看资产并发起连接
-            </div>
+            <div class="font-medium" :style="{ color: 'var(--app-fg)' }">登录后查看资产并发起连接</div>
             <UButton color="primary" variant="soft" class="rounded-xl px-4" @click="openLogin">
               {{ t("Common.Login") }}
             </UButton>

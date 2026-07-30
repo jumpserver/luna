@@ -1,13 +1,13 @@
 <script setup lang="ts">
 const props = withDefaults(
   defineProps<{
-    open: boolean
-    title: string
-    icon?: string
-    exclusiveGroup?: string
-    preferredHeight?: number
-    minHeight?: number
-    maxHeight?: string
+    open: boolean;
+    title: string;
+    icon?: string;
+    exclusiveGroup?: string;
+    preferredHeight?: number;
+    minHeight?: number;
+    maxHeight?: string;
   }>(),
   {
     preferredHeight: 200,
@@ -17,7 +17,7 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  toggle: []
+  toggle: [];
 }>();
 
 const panelStyle = computed(() =>

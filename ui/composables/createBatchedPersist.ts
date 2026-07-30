@@ -1,7 +1,7 @@
 export interface BatchedPersistOptions {
-  onEnd?: () => void
-  onStart?: () => void
-  onError?: (err: unknown) => void
+  onEnd?: () => void;
+  onStart?: () => void;
+  onError?: (err: unknown) => void;
 }
 
 export const createBatchedPersist = <T extends object>(

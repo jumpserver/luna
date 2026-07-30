@@ -2,7 +2,7 @@
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
 const props = defineProps<{
-  tab: WorkspaceSessionTab
+  tab: WorkspaceSessionTab;
 }>();
 
 const iframeRef = ref<HTMLIFrameElement | null>(null);

@@ -1,17 +1,17 @@
 import type { AppThemeDefinition, ThemeSeedTokens } from "./schema";
 
 interface ZedThemeStyleContent {
-  appearance?: "light" | "dark"
-  theme?: Record<string, string>
-  style?: Record<string, string>
-  name?: string
+  appearance?: "light" | "dark";
+  theme?: Record<string, string>;
+  style?: Record<string, string>;
+  name?: string;
 }
 
 interface ZedThemeFile {
-  $schema?: string
-  name?: string
-  author?: string
-  themes?: ZedThemeStyleContent[]
+  $schema?: string;
+  name?: string;
+  author?: string;
+  themes?: ZedThemeStyleContent[];
 }
 
 const pick = (record: Record<string, string> | undefined, ...keys: string[]) => {
@@ -36,11 +36,11 @@ export function mapZedThemeToAppTheme(zedTheme: ZedThemeFile, appearance: "light
     border: pick(theme, "border", "border.variant") || (appearance === "dark" ? "#333333" : "#d9d9d9"),
     accent: pick(theme, "element.active", "status_bar.background", "link_text.hover") || "#1ab394",
     surface:
-      pick(theme, "surface.background", "panel.background", "tab.inactive_background")
-      || (appearance === "dark" ? "#252525" : "#f5f5f5"),
+      pick(theme, "surface.background", "panel.background", "tab.inactive_background") ||
+      (appearance === "dark" ? "#252525" : "#f5f5f5"),
     surfaceHover:
-      pick(theme, "element.hover", "tab.active_background", "panel.focused_border")
-      || (appearance === "dark" ? "#313131" : "#ececec"),
+      pick(theme, "element.hover", "tab.active_background", "panel.focused_border") ||
+      (appearance === "dark" ? "#313131" : "#ececec"),
     shadowSoft:
       appearance === "dark"
         ? "0 1px 2px rgba(0, 0, 0, 0.42), 0 2px 8px rgba(0, 0, 0, 0.3)"

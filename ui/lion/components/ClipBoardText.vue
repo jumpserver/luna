@@ -6,8 +6,8 @@ import CardContainer from "@/lion/components/CardContainer/index.vue";
 import { readClipboardText } from "@/lion/utils/clipboard";
 
 const props = defineProps<{
-  remoteText?: string
-  disabled?: boolean
+  remoteText?: string;
+  disabled?: boolean;
 }>();
 const emit = defineEmits(["update:text"]);
 const { t } = useI18n();

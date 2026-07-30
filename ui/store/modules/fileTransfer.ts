@@ -109,8 +109,8 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
   function pauseEndpoint(endpoint: FileTransferEndpointRef) {
     for (const task of tasks.value) {
       if (
-        !terminalStatuses.has(task.status)
-        && (task.sourceEndpoint.id === endpoint.id || task.destinationEndpoint.id === endpoint.id)
+        !terminalStatuses.has(task.status) &&
+        (task.sourceEndpoint.id === endpoint.id || task.destinationEndpoint.id === endpoint.id)
       ) {
         patchTask(task.id, { status: "paused" });
       }
@@ -255,9 +255,9 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
         throw new Error("Invalid file transfer preparation response");
       }
 
-      const checksumAligned
-        = prepared.committedBytes === task.confirmedBytes
-          && (prepared.committedBytes === 0 || Boolean(task.checksumState));
+      const checksumAligned =
+        prepared.committedBytes === task.confirmedBytes &&
+        (prepared.committedBytes === 0 || Boolean(task.checksumState));
       if (!checksumAligned) {
         await destination.cancelTransfer({
           transferId: task.id,
@@ -339,9 +339,9 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
     for (const queue of destinationQueues.value.values()) {
       const next = queue.find(
         (task) =>
-          task.status === "queued"
-          && !runningEndpoints.has(task.sourceEndpoint.id)
-          && !runningEndpoints.has(task.destinationEndpoint.id)
+          task.status === "queued" &&
+          !runningEndpoints.has(task.sourceEndpoint.id) &&
+          !runningEndpoints.has(task.destinationEndpoint.id)
       );
       if (!next) continue;
 

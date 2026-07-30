@@ -1,5 +1,5 @@
 interface WorkspacePaneSurfaceHandle {
-  focus?: () => void
+  focus?: () => void;
 }
 
 const paneTargets = shallowReactive(new Map<string, HTMLElement>());

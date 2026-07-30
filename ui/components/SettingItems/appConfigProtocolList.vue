@@ -2,8 +2,8 @@
 import type { AppConfigType, ConfigItem } from "~/types";
 
 const props = defineProps<{
-  category: keyof AppConfigType
-  protocol: string
+  category: keyof AppConfigType;
+  protocol: string;
 }>();
 
 const { t } = useI18n();

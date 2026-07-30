@@ -35,7 +35,7 @@ export function useChenQueryConsole(
     }
   }
 
-  function updateQueryResult(tab: ChenQueryLikeWorkspaceTab, meta: { title: string, [key: string]: any }, data?: any) {
+  function updateQueryResult(tab: ChenQueryLikeWorkspaceTab, meta: { title: string; [key: string]: any }, data?: any) {
     let resultTab = tab.resultTabs.find((item) => item.title === meta.title);
     if (!resultTab) {
       resultTab = {
@@ -163,12 +163,12 @@ export function useChenQueryConsole(
 
   function changeQueryContext(tab: ChenQueryConsoleTab, context: string) {
     if (
-      tab.state.loading
-      || tab.state.inQuery
-      || tab.state.editorLoading
-      || !context.trim()
-      || context === tab.state.currentContext
-      || !tab.state.contexts?.includes(context)
+      tab.state.loading ||
+      tab.state.inQuery ||
+      tab.state.editorLoading ||
+      !context.trim() ||
+      context === tab.state.currentContext ||
+      !tab.state.contexts?.includes(context)
     ) {
       return;
     }

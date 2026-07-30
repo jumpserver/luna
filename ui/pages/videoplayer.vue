@@ -226,7 +226,7 @@ onBeforeUnmount(() => {
       accept=".mp4,.gz,.tar,.json,.cast"
       @click="handleFileInputClick"
       @change="handleInputChange"
-    >
+    />
 
     <p v-if="importMessage && items.length === 0" class="shrink-0 text-sm text-(--ui-text-muted)">
       {{ importMessage }}

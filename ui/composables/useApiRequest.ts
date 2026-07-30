@@ -2,37 +2,37 @@ import type { AssetTreeKind, TokenResponse } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export interface ApiRequest {
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
-  path: string
-  query?: Record<string, unknown>
-  body?: unknown
-  orgId?: string
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  path: string;
+  query?: Record<string, unknown>;
+  body?: unknown;
+  orgId?: string;
 }
 
 export interface AssetTreeParams {
-  key?: string
-  n?: string
-  lv?: number
-  type?: string
-  category?: string
-  search?: string
+  key?: string;
+  n?: string;
+  lv?: number;
+  type?: string;
+  category?: string;
+  search?: string;
 }
 
 export interface FavoriteFolderPayload {
-  name: string
-  parent?: string | null
+  name: string;
+  parent?: string | null;
 }
 
 export interface SmartEndpointParams {
-  protocol: string
-  assetId?: string
-  token?: string
+  protocol: string;
+  assetId?: string;
+  token?: string;
 }
 
 export interface SqlSnippetPayload {
-  name: string
-  args: string
-  module: string
+  name: string;
+  args: string;
+  module: string;
 }
 
 let lastAuthFailureAt = 0;
@@ -191,7 +191,7 @@ export function getConnectMethods(): Promise<Record<string, unknown>> {
 export function getSmartEndpoint(
   params: SmartEndpointParams,
   orgId?: string
-): Promise<{ value?: string, host?: string, port?: number, https_port?: number }> {
+): Promise<{ value?: string; host?: string; port?: number; https_port?: number }> {
   return apiRequest({
     method: "GET",
     path: "/api/v1/terminal/endpoints/smart/",

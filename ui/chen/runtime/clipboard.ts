@@ -4,9 +4,9 @@ import { writeText as writeWebText } from "clipboard-polyfill";
 import { isTauriRuntime } from "~/utils/runtime";
 
 export interface ChenClipboardRuntime {
-  isTauri: () => boolean
-  writeWeb: (text: string) => Promise<unknown>
-  writeTauri: (text: string) => Promise<unknown>
+  isTauri: () => boolean;
+  writeWeb: (text: string) => Promise<unknown>;
+  writeTauri: (text: string) => Promise<unknown>;
 }
 
 const defaultRuntime: ChenClipboardRuntime = {

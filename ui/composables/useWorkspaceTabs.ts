@@ -10,37 +10,37 @@ export type WorkspacePaneMode = "empty" | "setup" | "session";
 export type WorkspacePaneLayoutMode = "single" | "columns-2" | "rows-2" | "grid-2x2";
 
 export interface WorkspaceSurfaceSession {
-  id: string
-  assetId: string
-  assetName: string
-  assetType: string
-  assetPlatform: string
-  assetCategory: string
-  address: string
-  permedProtocols?: PermedProtocol[]
-  protocol: string
-  account: string
-  status: WorkspaceSessionStatus
-  connectedAt?: number
-  payload?: Record<string, any>
-  setupAsset?: AssetItem
+  id: string;
+  assetId: string;
+  assetName: string;
+  assetType: string;
+  assetPlatform: string;
+  assetCategory: string;
+  address: string;
+  permedProtocols?: PermedProtocol[];
+  protocol: string;
+  account: string;
+  status: WorkspaceSessionStatus;
+  connectedAt?: number;
+  payload?: Record<string, any>;
+  setupAsset?: AssetItem;
 }
 
 export interface WorkspacePane extends WorkspaceSurfaceSession {
-  mode: WorkspacePaneMode
+  mode: WorkspacePaneMode;
 }
 
 export interface WorkspaceSessionTab extends WorkspaceSurfaceSession {
-  title?: string
-  layoutMode: WorkspacePaneLayoutMode
-  panes: WorkspacePane[]
+  title?: string;
+  layoutMode: WorkspacePaneLayoutMode;
+  panes: WorkspacePane[];
 }
 
 const tabs = ref<WorkspaceSessionTab[]>([]);
 const activeTabId = ref("");
 const activePaneId = ref("");
 const draggedTabId = ref("");
-const pendingPaneTarget = ref<{ tabId: string, paneId: string } | null>(null);
+const pendingPaneTarget = ref<{ tabId: string; paneId: string } | null>(null);
 let tabSequence = 0;
 let paneSequence = 0;
 let sessionDisposer: ((id: string) => void | Promise<void>) | null = null;
@@ -239,7 +239,7 @@ const ensureActivePaneForTab = (tabId: string) => {
   if (!hasActivePane) activePaneId.value = getFirstPaneId(tab);
 };
 
-const findSession = (match: { tabId?: string, assetId: string, protocol: string, account: string }) => {
+const findSession = (match: { tabId?: string; assetId: string; protocol: string; account: string }) => {
   if (match.tabId) return findPane(match.tabId);
 
   for (const tab of tabs.value) {
@@ -275,7 +275,7 @@ export const useWorkspaceTabs = () => {
 
   const openSession = (
     asset: AssetItem,
-    connection: { protocol: string, account: string, payload?: Record<string, any>, paneId?: string }
+    connection: { protocol: string; account: string; payload?: Record<string, any>; paneId?: string }
   ) => {
     useRecentConnections().recordRecentConnection(asset);
     const protocol = connection.protocol || asset.savedConnection?.protocol || "ssh";
@@ -315,7 +315,7 @@ export const useWorkspaceTabs = () => {
     return pane;
   };
 
-  const openSetupSession = (asset: AssetItem, options: { protocol?: string, paneId?: string } = {}) => {
+  const openSetupSession = (asset: AssetItem, options: { protocol?: string; paneId?: string } = {}) => {
     useRecentConnections().recordRecentConnection(asset);
     const protocol = options.protocol || asset.savedConnection?.protocol || "";
     const account = asset.savedConnection?.username || "";
@@ -490,8 +490,8 @@ export const useWorkspaceTabs = () => {
     if (tab.panes.length === 1) return true;
     if (tab.panes.length === 2) {
       return (
-        (tab.layoutMode === "columns-2" && direction === "horizontal")
-        || (tab.layoutMode === "rows-2" && direction === "vertical")
+        (tab.layoutMode === "columns-2" && direction === "horizontal") ||
+        (tab.layoutMode === "rows-2" && direction === "vertical")
       );
     }
     return tab.layoutMode === "grid-2x2" && tab.panes.length < 4;
@@ -633,7 +633,7 @@ export const useWorkspaceTabs = () => {
   };
 
   const updateSessionPayload = (
-    match: { tabId?: string, assetId: string, protocol: string, account: string },
+    match: { tabId?: string; assetId: string; protocol: string; account: string },
     payload: Record<string, any>
   ) => {
     const found = findSession(match);
@@ -655,7 +655,7 @@ export const useWorkspaceTabs = () => {
     if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
 
-  const startSessionConnection = (paneId: string, connection: { protocol: string, account: string }) => {
+  const startSessionConnection = (paneId: string, connection: { protocol: string; account: string }) => {
     const match = findPane(paneId);
     if (!match) return;
 
@@ -668,7 +668,7 @@ export const useWorkspaceTabs = () => {
     if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
 
-  const markSessionFailed = (match: { tabId?: string, assetId: string, protocol: string, account: string }) => {
+  const markSessionFailed = (match: { tabId?: string; assetId: string; protocol: string; account: string }) => {
     const found = findSession(match);
     if (!found) return;
 
@@ -702,8 +702,8 @@ export const useWorkspaceTabs = () => {
 
     const currentIndex = tabs.value.findIndex((tab) => tab.id === activeTabId.value);
     const normalizedIndex = currentIndex === -1 ? 0 : currentIndex;
-    const nextIndex
-      = direction === "next"
+    const nextIndex =
+      direction === "next"
         ? (normalizedIndex + 1) % tabs.value.length
         : (normalizedIndex - 1 + tabs.value.length) % tabs.value.length;
 

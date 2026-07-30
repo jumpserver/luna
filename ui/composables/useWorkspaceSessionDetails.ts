@@ -1,10 +1,10 @@
 export interface WorkspaceSessionDetails {
-  sessionId?: string
-  asset?: string
-  address?: string
-  account?: string
-  shareAllowed?: boolean
-  requestFileToken?: () => Promise<string>
+  sessionId?: string;
+  asset?: string;
+  address?: string;
+  account?: string;
+  shareAllowed?: boolean;
+  requestFileToken?: () => Promise<string>;
 }
 
 // Workspace surfaces publish a normalized summary here. The right panel only

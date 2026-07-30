@@ -219,7 +219,7 @@ function resolvePaneDropPlacement(event: DragEvent): WorkspacePaneDropPlacement 
   const rect = target.getBoundingClientRect();
   const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
   const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
-  const edges: Array<{ placement: WorkspacePaneDropPlacement, distance: number }> = [
+  const edges: Array<{ placement: WorkspacePaneDropPlacement; distance: number }> = [
     { placement: "left", distance: x },
     { placement: "right", distance: 1 - x },
     { placement: "top", distance: y },

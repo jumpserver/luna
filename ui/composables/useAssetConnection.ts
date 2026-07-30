@@ -4,22 +4,22 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols } from "~/utils";
 
 interface ConnectionFormInfo {
-  protocol: string
-  account: string
-  manualUsername: string
-  manualPassword: string
-  dynamicPassword: string
-  rememberSecret: boolean
-  rememberSelection?: boolean
-  connectMethod: string
-  connectOptions?: Record<string, any>
+  protocol: string;
+  account: string;
+  manualUsername: string;
+  manualPassword: string;
+  dynamicPassword: string;
+  rememberSecret: boolean;
+  rememberSelection?: boolean;
+  connectMethod: string;
+  connectOptions?: Record<string, any>;
 
-  accountId?: string
-  availableProtocols?: string[]
-  tabId?: string
-  onSessionReady?: (payload: Record<string, any>) => void
-  onSessionError?: (error: unknown) => void
-  accountMode: "hosted" | "dynamic" | "manual" | "anonymous"
+  accountId?: string;
+  availableProtocols?: string[];
+  tabId?: string;
+  onSessionReady?: (payload: Record<string, any>) => void;
+  onSessionError?: (error: unknown) => void;
+  accountMode: "hosted" | "dynamic" | "manual" | "anonymous";
 }
 
 export function useAssetConnection() {
@@ -48,10 +48,10 @@ export function useAssetConnection() {
     if (accountMode === "hosted") {
       const matched = accounts.find(
         (item) =>
-          (accountId && item.id === accountId)
-          || item.name === account
-          || item.username === account
-          || item.alias === account
+          (accountId && item.id === accountId) ||
+          item.name === account ||
+          item.username === account ||
+          item.alias === account
       );
 
       if (matched && !matched.alias.startsWith("@")) {
@@ -133,9 +133,9 @@ export function useAssetConnection() {
       const accs = asset.permedAccounts || [];
       const matched = accs.find(
         (a) =>
-          a.name === connectionInfo.account
-          || a.username === connectionInfo.account
-          || a.alias === connectionInfo.account
+          a.name === connectionInfo.account ||
+          a.username === connectionInfo.account ||
+          a.alias === connectionInfo.account
       );
 
       resolvedAccountId = matched?.id;
@@ -178,9 +178,9 @@ export function useAssetConnection() {
       const accs = asset.permedAccounts || [];
       const matched = accs.find(
         (a) =>
-          a.name === connectionInfo.account
-          || a.username === connectionInfo.account
-          || a.alias === connectionInfo.account
+          a.name === connectionInfo.account ||
+          a.username === connectionInfo.account ||
+          a.alias === connectionInfo.account
       );
 
       resolvedAccountId = matched?.id;

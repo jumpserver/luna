@@ -20,15 +20,15 @@ import {
 
 const props = withDefaults(
   defineProps<{
-    resultTabs: ChenQueryResultTab[]
-    activeResultTabId: string
-    emptyMessage: string
-    closable?: boolean
-    dataViewActions?: boolean
-    logs?: string[]
-    showLogs?: boolean
-    dbType?: string
-    canCopy?: boolean
+    resultTabs: ChenQueryResultTab[];
+    activeResultTabId: string;
+    emptyMessage: string;
+    closable?: boolean;
+    dataViewActions?: boolean;
+    logs?: string[];
+    showLogs?: boolean;
+    dbType?: string;
+    canCopy?: boolean;
   }>(),
   {
     closable: false,
@@ -41,9 +41,9 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  "update:activeResultTabId": [id: string]
-  close: [title: string]
-  dataViewAction: [result: ChenQueryResultTab, action: ChenDataViewAction, data?: ChenDataViewActionData]
+  "update:activeResultTabId": [id: string];
+  close: [title: string];
+  dataViewAction: [result: ChenQueryResultTab, action: ChenDataViewAction, data?: ChenDataViewActionData];
 }>();
 
 const exportDialogOpen = ref(false);

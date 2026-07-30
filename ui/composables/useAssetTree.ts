@@ -2,12 +2,12 @@ import type { AssetItem, AssetTreeKind, AssetTreeNode, PermedAccount, PermedProt
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface TreeQuery {
-  key?: string
-  n?: string
-  lv?: number
-  type?: string
-  category?: string
-  search?: string
+  key?: string;
+  n?: string;
+  lv?: number;
+  type?: string;
+  category?: string;
+  search?: string;
 }
 
 const normalizeChoice = (value: unknown) => {

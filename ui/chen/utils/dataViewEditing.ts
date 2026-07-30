@@ -113,9 +113,9 @@ export function transitionChenDataViewRequest(
   nextKind: ChenDataViewRequestKind
 ) {
   if (
-    !isCurrentChenDataViewRequest(state, sequence, expectedKind)
-    || !hasCurrentChenDirtyVersion(state, sequence)
-    || !state.activeRequest
+    !isCurrentChenDataViewRequest(state, sequence, expectedKind) ||
+    !hasCurrentChenDirtyVersion(state, sequence) ||
+    !state.activeRequest
   ) {
     return null;
   }
@@ -185,9 +185,9 @@ export function acceptChenSaveChangesResult(state: ChenDataViewEditState, result
 
   state.saveResult = result;
   const commitOutcomeUnknown = !result?.success && result?.reason === "SAVE_CHANGES_COMMIT_OUTCOME_UNKNOWN";
-  const databaseChangesApplied
-    = result?.databaseChangesApplied === true
-      || (result?.databaseChangesApplied === undefined && result?.success === true);
+  const databaseChangesApplied =
+    result?.databaseChangesApplied === true ||
+    (result?.databaseChangesApplied === undefined && result?.success === true);
 
   if (commitOutcomeUnknown || (!databaseChangesApplied && result?.connectionInvalidated === true)) {
     finishChenDataViewRequest(state, request.sequence, "save");
@@ -511,8 +511,8 @@ export function chenDataViewTargets(tab: ChenWorkspaceTab): ChenDataViewActionTa
 }
 
 export function findChenDataViewTarget(tab: ChenWorkspaceTab, dataView: unknown): ChenDataViewActionTarget | null {
-  const title
-    = typeof dataView === "string"
+  const title =
+    typeof dataView === "string"
       ? dataView
       : dataView && typeof dataView === "object" && "title" in dataView && typeof dataView.title === "string"
         ? dataView.title

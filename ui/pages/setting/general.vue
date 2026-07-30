@@ -4,8 +4,8 @@ import type { CharsetType, LangType, ResolutionType } from "~/types";
 import { useSettingManager } from "~/composables/useSettingManager";
 
 interface LangItem {
-  id: LangType
-  label: string
+  id: LangType;
+  label: string;
 }
 
 definePageMeta({

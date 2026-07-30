@@ -13,11 +13,11 @@ export const useApplicationConfig = () => {
 
   const isValidAppConfig = (cfg: any): cfg is AppConfigType => {
     return (
-      !!cfg
-      && Array.isArray(cfg.terminal)
-      && Array.isArray(cfg.remotedesktop)
-      && Array.isArray(cfg.filetransfer)
-      && Array.isArray(cfg.databases)
+      !!cfg &&
+      Array.isArray(cfg.terminal) &&
+      Array.isArray(cfg.remotedesktop) &&
+      Array.isArray(cfg.filetransfer) &&
+      Array.isArray(cfg.databases)
     );
   };
 

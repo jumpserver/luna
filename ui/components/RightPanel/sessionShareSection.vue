@@ -3,7 +3,7 @@ import type { ShareUserOptions } from "@jumpserver/koko";
 import { useKokoSessionAdapter } from "@jumpserver/koko";
 
 const props = defineProps<{
-  disabled?: boolean
+  disabled?: boolean;
 }>();
 
 const { t } = useI18n();

@@ -6,22 +6,22 @@ export const SFTP_FILE_EDITOR_VALUE = "sftp_file_editor";
 export const K8S_NATIVE_VALUE = "k8s_native";
 
 export type WorkspaceComponentId = "koko" | "chen" | "lion";
-export type WorkspaceSurfaceKind
-  = | "terminal"
-    | "database"
-    | "file-manager"
-    | "file-editor"
-    | "k8s-ui"
-    | "remote-desktop";
+export type WorkspaceSurfaceKind =
+  | "terminal"
+  | "database"
+  | "file-manager"
+  | "file-editor"
+  | "k8s-ui"
+  | "remote-desktop";
 
 export interface WorkspaceCapabilityDeclaration {
-  component: WorkspaceComponentId
-  surface: WorkspaceSurfaceKind
-  label: string
-  protocols: string[]
-  connectMethods: string[]
-  backendConnectMethod?: string
-  description: string
+  component: WorkspaceComponentId;
+  surface: WorkspaceSurfaceKind;
+  label: string;
+  protocols: string[];
+  connectMethods: string[];
+  backendConnectMethod?: string;
+  description: string;
 }
 
 export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] = [

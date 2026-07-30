@@ -4,9 +4,9 @@ import type { ChenActionItem, ChenTreeNode } from "~/chen/types";
 import { ref } from "vue";
 
 interface ChenActionMenuOptions<T> {
-  fetchActions: (node: ChenTreeNode) => Promise<ChenActionItem[]>
-  mapItems: (node: ChenTreeNode, actions: ChenActionItem[]) => T[]
-  onError: (node: ChenTreeNode, cause: unknown) => void
+  fetchActions: (node: ChenTreeNode) => Promise<ChenActionItem[]>;
+  mapItems: (node: ChenTreeNode, actions: ChenActionItem[]) => T[];
+  onError: (node: ChenTreeNode, cause: unknown) => void;
 }
 
 export function useChenActionMenu<T>(options: ChenActionMenuOptions<T>) {

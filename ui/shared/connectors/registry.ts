@@ -17,9 +17,9 @@ import LegacyIframeSession from "~/shared/connectors/LegacyIframeSession.vue";
 import LocalShellSessionSurface from "~/workspaces/LocalShellSessionSurface.vue";
 
 export interface ConnectorRegistryEntry {
-  component: Component
-  mode: KokoSurfaceMode | "legacy-iframe"
-  native?: boolean
+  component: Component;
+  mode: KokoSurfaceMode | "legacy-iframe";
+  native?: boolean;
 }
 
 export const CONNECTOR_REGISTRY: Record<Extract<JmsComponent, "koko">, ConnectorRegistryEntry> = {

@@ -253,7 +253,7 @@ function confirmDiscardChanges() {
 }
 
 function resultFailureDescription(
-  result: { reason?: string, failedChangeIndex?: number | null } | null,
+  result: { reason?: string; failedChangeIndex?: number | null } | null,
   fallback: string
 ) {
   const reason = result?.reason || fallback;
@@ -262,8 +262,8 @@ function resultFailureDescription(
 
 function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
   if (
-    tab.kind === "console"
-    || (packet.type !== "save_changes_preview_result" && packet.type !== "save_changes_result")
+    tab.kind === "console" ||
+    (packet.type !== "save_changes_preview_result" && packet.type !== "save_changes_result")
   ) {
     return;
   }
@@ -313,8 +313,8 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
     const connectionDetail = result.connectionInvalidated
       ? "The connection was reset. Refresh before saving again; transaction and session state were lost."
       : "Refresh was skipped so the newer local edits are not discarded.";
-    const auditDetail
-      = result.auditSucceeded === false
+    const auditDetail =
+      result.auditSucceeded === false
         ? result.databaseCommitted
           ? " Audit recording failed after the database commit; do not retry the save."
           : " Audit recording failed after applying the current transaction; do not retry the save."

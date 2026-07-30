@@ -26,8 +26,8 @@ const sessionObject = ref<Record<string, any>>({});
 const connectStatus = ref<string>("Connecting...");
 const shareId = (route.params as Record<string, string>).id || "";
 
-const { connectToGuacamole, guaDisplay, loading, onlineUsersMap, registerMouseAndKeyboardHanlder, resizeGuaScale }
-  = useGuacamoleClient(t);
+const { connectToGuacamole, guaDisplay, loading, onlineUsersMap, registerMouseAndKeyboardHanlder, resizeGuaScale } =
+  useGuacamoleClient(t);
 
 const debouncedResize = useDebounceFn(() => {
   resizeGuaScale(width.value, height.value);

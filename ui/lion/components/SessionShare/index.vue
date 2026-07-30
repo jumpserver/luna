@@ -9,14 +9,14 @@ import UserItem from "@/lion/components/SessionShare/widget/UserItem.vue";
 export type TranslateFunction = Composer["t"];
 
 const props = defineProps<{
-  session: string
+  session: string;
   users?: Array<{
-    user_id: string
-    user: string
-    primary: boolean
-    writable: boolean
-  }>
-  disableCreate?: boolean
+    user_id: string;
+    user: string;
+    primary: boolean;
+    writable: boolean;
+  }>;
+  disableCreate?: boolean;
 }>();
 
 const { t } = useI18n();

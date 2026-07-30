@@ -4,15 +4,15 @@ import { useI18n } from "vue-i18n";
 import { useColor } from "@/lion/hooks/useColor";
 
 const props = defineProps<{
-  username: string
-  userId: string
-  writable: boolean
-  primary: boolean
-  meta: object
+  username: string;
+  userId: string;
+  writable: boolean;
+  primary: boolean;
+  meta: object;
 }>();
 
 const emit = defineEmits<{
-  (e: "removeUser", meta: object): void
+  (e: "removeUser", meta: object): void;
 }>();
 
 const { t } = useI18n();

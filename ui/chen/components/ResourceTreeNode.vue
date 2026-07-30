@@ -6,20 +6,20 @@ defineOptions({
 });
 
 const props = defineProps<{
-  node: ChenTreeNode
-  depth?: number
-  selectedKey: string
-  expandedKeys: string[]
-  childrenMap: Record<string, ChenTreeNode[]>
-  loadingChildren: Record<string, boolean>
-  dbType?: string
+  node: ChenTreeNode;
+  depth?: number;
+  selectedKey: string;
+  expandedKeys: string[];
+  childrenMap: Record<string, ChenTreeNode[]>;
+  loadingChildren: Record<string, boolean>;
+  dbType?: string;
 }>();
 
 const emit = defineEmits<{
-  select: [node: ChenTreeNode]
-  toggle: [node: ChenTreeNode]
-  activate: [node: ChenTreeNode]
-  menu: [payload: { node: ChenTreeNode, event: MouseEvent }]
+  select: [node: ChenTreeNode];
+  toggle: [node: ChenTreeNode];
+  activate: [node: ChenTreeNode];
+  menu: [payload: { node: ChenTreeNode; event: MouseEvent }];
 }>();
 
 const isExpanded = computed(() => props.expandedKeys.includes(props.node.key));

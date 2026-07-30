@@ -12,20 +12,20 @@ export {
 } from "~/shared/connectors/capabilities";
 
 export interface ConnectMethod {
-  value: string
-  label: string
-  type: string
-  icon: string
-  disabled: boolean
-  listen: string
-  component: string
-  endpoint_protocol?: string
-  origin_value?: string
+  value: string;
+  label: string;
+  type: string;
+  icon: string;
+  disabled: boolean;
+  listen: string;
+  component: string;
+  endpoint_protocol?: string;
+  origin_value?: string;
 }
 
 interface ConnectMethodsResponse {
-  [protocol: string]: ConnectMethod[]
-  originals: ConnectMethod[]
+  [protocol: string]: ConnectMethod[];
+  originals: ConnectMethod[];
 }
 
 const LOCAL_APPLICATION_METHOD_PREFIX = "native_app:";
@@ -52,11 +52,11 @@ export const isApplicationConfigItemAvailable = (item: ConfigItem, protocol: str
   const enabledProtocols = item.enabled_protocols || item.match_first;
 
   return (
-    item.name !== "builtin_client"
-    && item.is_set
-    && item.path_exists !== false
-    && item.protocol.some((value) => value.toLowerCase() === normalizedProtocol)
-    && enabledProtocols?.some((value) => value.toLowerCase() === normalizedProtocol) === true
+    item.name !== "builtin_client" &&
+    item.is_set &&
+    item.path_exists !== false &&
+    item.protocol.some((value) => value.toLowerCase() === normalizedProtocol) &&
+    enabledProtocols?.some((value) => value.toLowerCase() === normalizedProtocol) === true
   );
 };
 
@@ -102,9 +102,9 @@ export const withKokoWebFallback = (protocol: string, methods: ConnectMethod[]) 
   const existingValues = new Set(methods.map((method) => method.value));
   const fallbackMethods = COMPONENT_WORKSPACE_CAPABILITIES.filter(
     (capability) =>
-      capability.component === "koko"
-      && capability.protocols.includes(normalizedProtocol)
-      && capability.backendConnectMethod
+      capability.component === "koko" &&
+      capability.protocols.includes(normalizedProtocol) &&
+      capability.backendConnectMethod
   ).flatMap((capability) =>
     capability.connectMethods
       .filter((value) => !existingValues.has(value))
@@ -241,8 +241,8 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
 
     normalized[key] = normalizedMethods.filter(
       (method) =>
-        method.origin_value
-        || !((method.type === "web" && KOKO_WEB_CONNECT_METHODS.has(method.value)) || isWebIframeMethod(method))
+        method.origin_value ||
+        !((method.type === "web" && KOKO_WEB_CONNECT_METHODS.has(method.value)) || isWebIframeMethod(method))
     );
   });
 

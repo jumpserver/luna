@@ -10,10 +10,10 @@ import { createCodeMirrorSyntaxTheme, createCodeMirrorTheme } from "~/shared/the
 
 const props = withDefaults(
   defineProps<{
-    modelValue: string
-    dbType?: string
-    hints?: ChenSqlHints
-    readOnly?: boolean
+    modelValue: string;
+    dbType?: string;
+    hints?: ChenSqlHints;
+    readOnly?: boolean;
   }>(),
   {
     dbType: "",
@@ -23,13 +23,13 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  "update:modelValue": [value: string]
-  selectionChange: [hasSelection: boolean]
-  format: []
-  openSnippets: []
-  run: []
-  saveSnippet: []
-  stop: []
+  "update:modelValue": [value: string];
+  selectionChange: [hasSelection: boolean];
+  format: [];
+  openSnippets: [];
+  run: [];
+  saveSnippet: [];
+  stop: [];
 }>();
 
 const colorMode = useColorMode();

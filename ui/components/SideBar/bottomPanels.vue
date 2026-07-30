@@ -4,16 +4,16 @@ import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
 import type { AssetItem } from "~/types";
 
 const props = defineProps<{
-  mainPanelOpen: boolean
+  mainPanelOpen: boolean;
   visiblePanels: {
-    favorites: boolean
-    snippets: boolean
-  }
+    favorites: boolean;
+    snippets: boolean;
+  };
 }>();
 
 const emit = defineEmits<{
-  select: [asset: AssetItem]
-  contextmenu: [asset: AssetItem, event: MouseEvent]
+  select: [asset: AssetItem];
+  contextmenu: [asset: AssetItem, event: MouseEvent];
 }>();
 
 type PanelKind = "favorites" | "snippets";

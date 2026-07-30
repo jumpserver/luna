@@ -9,7 +9,7 @@ const positionStorageKey = "jumpserver:file-transfer:position";
 
 const panel = ref<HTMLElement | null>(null);
 const collapsed = ref(true);
-const position = ref<{ x: number, y: number } | null>(null);
+const position = ref<{ x: number; y: number } | null>(null);
 const dragging = ref(false);
 
 const activeCount = computed(() => store.activeTasks.length);
@@ -84,12 +84,12 @@ function restorePosition() {
   if (!saved) return;
 
   try {
-    const parsed = JSON.parse(saved) as { x?: unknown, y?: unknown };
+    const parsed = JSON.parse(saved) as { x?: unknown; y?: unknown };
     if (
-      typeof parsed.x === "number"
-      && Number.isFinite(parsed.x)
-      && typeof parsed.y === "number"
-      && Number.isFinite(parsed.y)
+      typeof parsed.x === "number" &&
+      Number.isFinite(parsed.x) &&
+      typeof parsed.y === "number" &&
+      Number.isFinite(parsed.y)
     ) {
       position.value = { x: parsed.x, y: parsed.y };
     }

@@ -5,9 +5,9 @@ import { getChenDataViewToolbarState } from "~/chen/composables/useChenDataView"
 
 const props = withDefaults(
   defineProps<{
-    state: ChenConsoleState
-    pinnable?: boolean
-    busy?: boolean
+    state: ChenConsoleState;
+    pinnable?: boolean;
+    busy?: boolean;
   }>(),
   {
     pinnable: false,
@@ -16,8 +16,8 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  action: [action: ChenDataViewAction, data?: number]
-  export: []
+  action: [action: ChenDataViewAction, data?: number];
+  export: [];
 }>();
 
 const limitOptions = [50, 100, 200, 500];

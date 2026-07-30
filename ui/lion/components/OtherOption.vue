@@ -4,9 +4,9 @@ import { useI18n } from "vue-i18n";
 import CardContainer from "@/lion/components/CardContainer/index.vue";
 
 const props = defineProps<{
-  isRemoteApp: boolean
-  autoFit: boolean
-  fitPercentage: number
+  isRemoteApp: boolean;
+  autoFit: boolean;
+  fitPercentage: number;
 }>();
 
 const emit = defineEmits(["combine-keys", "update:autoFit", "updateScale"]);

@@ -4,33 +4,33 @@ import { computed, reactive, ref, shallowRef } from "vue";
 
 export type ChenSocketPath = "session" | "console";
 export type ChenSocketState = "idle" | "connecting" | "open" | "ready" | "closing" | "closed" | "error" | "timeout";
-export type ChenSocketErrorCode
-  = | "connect_timeout"
-    | "ready_timeout"
-    | "pong_timeout"
-    | "socket_error"
-    | "abnormal_close"
-    | "malformed_packet"
-    | "packet_handler_error";
+export type ChenSocketErrorCode =
+  | "connect_timeout"
+  | "ready_timeout"
+  | "pong_timeout"
+  | "socket_error"
+  | "abnormal_close"
+  | "malformed_packet"
+  | "packet_handler_error";
 
 export interface ChenSocketError {
-  code: ChenSocketErrorCode
-  message: string
-  closeCode?: number
-  closeReason?: string
+  code: ChenSocketErrorCode;
+  message: string;
+  closeCode?: number;
+  closeReason?: string;
 }
 
 export interface UseChenWebSocketOptions {
-  path: ChenSocketPath
-  connectTimeoutMs?: number
-  readyTimeoutMs?: number
-  heartbeatIntervalMs?: number
-  pongTimeoutMs?: number
-  createSocket?: (url: string, token: string) => WebSocket
-  resolveUrl?: (path: ChenSocketPath) => string
-  onOpen?: () => void
-  onPacket?: (packet: ChenPacket) => void | Promise<void>
-  onError?: (error: ChenSocketError) => void
+  path: ChenSocketPath;
+  connectTimeoutMs?: number;
+  readyTimeoutMs?: number;
+  heartbeatIntervalMs?: number;
+  pongTimeoutMs?: number;
+  createSocket?: (url: string, token: string) => WebSocket;
+  resolveUrl?: (path: ChenSocketPath) => string;
+  onOpen?: () => void;
+  onPacket?: (packet: ChenPacket) => void | Promise<void>;
+  onError?: (error: ChenSocketError) => void;
 }
 
 const SOCKET_OPEN = 1;

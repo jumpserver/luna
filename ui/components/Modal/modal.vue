@@ -1,17 +1,17 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    open: boolean
-    title?: string
-    description?: string
-    overlay?: boolean
-    disabled?: boolean
-    confirmLabel?: string
-    confirmColor?: "primary" | "neutral" | "error" | "warning" | "success" | "info"
-    confirmFullWidth?: boolean
-    hideCancel?: boolean
-    hideFooter?: boolean
-    compact?: boolean
+    open: boolean;
+    title?: string;
+    description?: string;
+    overlay?: boolean;
+    disabled?: boolean;
+    confirmLabel?: string;
+    confirmColor?: "primary" | "neutral" | "error" | "warning" | "success" | "info";
+    confirmFullWidth?: boolean;
+    hideCancel?: boolean;
+    hideFooter?: boolean;
+    compact?: boolean;
   }>(),
   {
     title: "",
@@ -28,9 +28,9 @@ withDefaults(
 );
 
 const emits = defineEmits<{
-  (e: "update:open", value: boolean): void
-  (e: "clipboard", value: string): void
-  (e: "confirm"): void
+  (e: "update:open", value: boolean): void;
+  (e: "clipboard", value: string): void;
+  (e: "confirm"): void;
 }>();
 
 const { t } = useI18n();

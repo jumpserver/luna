@@ -15,9 +15,9 @@ const { batchPanelOpen } = useBatchCommandPanel();
 
 const showWorkspaceSidebar = computed(
   () =>
-    uiWorkspaceMode.value !== "files"
-    && uiWorkspaceMode.value !== "tools"
-    && (uiWorkspaceMode.value !== "assets" || loggedIn.value)
+    uiWorkspaceMode.value !== "files" &&
+    uiWorkspaceMode.value !== "tools" &&
+    (uiWorkspaceMode.value !== "assets" || loggedIn.value)
 );
 
 const cardUi = computed(() => {

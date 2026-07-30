@@ -1,15 +1,15 @@
 interface ChecksumWorkerResponse {
-  id: string
-  chunkChecksum?: string
-  checksum?: string
-  state?: string
-  error?: string
+  id: string;
+  chunkChecksum?: string;
+  checksum?: string;
+  state?: string;
+  error?: string;
 }
 
 let worker: Worker | null = null;
 const pending = new Map<
   string,
-  { resolve: (value: ChecksumWorkerResponse) => void, reject: (reason: Error) => void }
+  { resolve: (value: ChecksumWorkerResponse) => void; reject: (reason: Error) => void }
 >();
 
 function requestId() {
@@ -37,7 +37,7 @@ function checksumWorker() {
   return worker;
 }
 
-function send(request: { kind: "update" | "finalize", state: string, data?: ArrayBuffer }, transfer?: Transferable[]) {
+function send(request: { kind: "update" | "finalize"; state: string; data?: ArrayBuffer }, transfer?: Transferable[]) {
   const id = requestId();
   return new Promise<ChecksumWorkerResponse>((resolve, reject) => {
     pending.set(id, { resolve, reject });

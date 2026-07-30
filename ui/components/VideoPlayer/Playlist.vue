@@ -2,21 +2,21 @@
 import type { VideoPlayerItem } from "~/composables/useVideoPlayerParser";
 
 const props = defineProps<{
-  activeId: string | null
-  items: VideoPlayerItem[]
+  activeId: string | null;
+  items: VideoPlayerItem[];
 }>();
 
 const emit = defineEmits<{
-  play: [VideoPlayerItem]
-  remove: [VideoPlayerItem]
-  collapse: []
+  play: [VideoPlayerItem];
+  remove: [VideoPlayerItem];
+  collapse: [];
 }>();
 
 interface PlaylistGroup {
-  key: string
-  isPartGroup: boolean
-  representative: VideoPlayerItem
-  items: VideoPlayerItem[]
+  key: string;
+  isPartGroup: boolean;
+  representative: VideoPlayerItem;
+  items: VideoPlayerItem[];
 }
 
 function formatLocalStartTime(value?: string) {
@@ -167,9 +167,7 @@ function groupHasActivePart(group: PlaylistGroup) {
 <template>
   <div class="flex min-h-0 flex-1 flex-col">
     <div class="mb-2 flex items-center justify-between gap-2">
-      <h3 class="min-w-0 truncate text-sm font-semibold tracking-wide text-(--ui-text-highlighted)">
-        播放列表
-      </h3>
+      <h3 class="min-w-0 truncate text-sm font-semibold tracking-wide text-(--ui-text-highlighted)">播放列表</h3>
       <div class="flex shrink-0 items-center gap-1.5">
         <UTooltip text="添加录像">
           <label

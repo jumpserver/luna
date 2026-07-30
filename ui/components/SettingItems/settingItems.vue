@@ -2,9 +2,9 @@
 import type { ConfigItem } from "~/types/index";
 
 const props = defineProps<{
-  item: ConfigItem
-  protocol?: string
-  selected?: boolean
+  item: ConfigItem;
+  protocol?: string;
+  selected?: boolean;
 }>();
 
 const emit = defineEmits<{ (e: "toggle", value: boolean): void }>();
@@ -192,7 +192,7 @@ const onPathClick = () => {
           :alt="props.item.display_name"
           loading="lazy"
           class="h-10 w-10 shrink-0 rounded-md border border-black/5 bg-gray-50 p-1 object-contain dark:border-white/10 dark:bg-gray-800/60"
-        >
+        />
 
         <div class="flex min-w-0 flex-1 flex-col gap-0.5">
           <div class="flex items-center justify-between gap-3">

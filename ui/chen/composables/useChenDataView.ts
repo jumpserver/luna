@@ -78,8 +78,8 @@ export function useChenDataView(
       requestData = request?.payload || undefined;
     }
     if (
-      (DATA_REQUEST_ACTIONS.has(action) || action === "save_changes_preview" || action === "save_changes")
-      && !request
+      (DATA_REQUEST_ACTIONS.has(action) || action === "save_changes_preview" || action === "save_changes") &&
+      !request
     ) {
       return false;
     }

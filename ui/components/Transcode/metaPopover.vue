@@ -2,7 +2,7 @@
 import type { ReplayMetadata } from "~/store/modules/transcode";
 
 defineProps<{
-  metadata: ReplayMetadata
+  metadata: ReplayMetadata;
 }>();
 
 const { t } = useI18n();

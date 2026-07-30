@@ -1,20 +1,20 @@
 <script setup lang="ts">
 export interface WorkspaceSubTab {
-  id: string
-  label: string
-  icon: string
-  title?: string
-  dirty?: boolean
+  id: string;
+  label: string;
+  icon: string;
+  title?: string;
+  dirty?: boolean;
 }
 
 defineProps<{
-  tabs: WorkspaceSubTab[]
-  activeId: string
+  tabs: WorkspaceSubTab[];
+  activeId: string;
 }>();
 
 defineEmits<{
-  select: [id: string]
-  close: [id: string]
+  select: [id: string];
+  close: [id: string];
 }>();
 </script>
 

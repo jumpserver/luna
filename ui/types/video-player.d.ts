@@ -1,11 +1,11 @@
 declare module "js-untar" {
   interface UntarEntry {
-    name: string
-    buffer: ArrayBuffer
+    name: string;
+    buffer: ArrayBuffer;
   }
 
   interface UntarResult extends Promise<UntarEntry[]> {
-    progress: (callback: (percent: number) => void) => UntarResult
+    progress: (callback: (percent: number) => void) => UntarResult;
   }
 
   export default function untar(buffer: ArrayBuffer): UntarResult;

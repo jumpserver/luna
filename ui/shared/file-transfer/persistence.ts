@@ -5,8 +5,8 @@ const storeName = "tasks";
 const recordKey = "state";
 
 export interface PersistedFileTransferState {
-  batches: FileTransferBatch[]
-  tasks: FileTransferTask[]
+  batches: FileTransferBatch[];
+  tasks: FileTransferTask[];
 }
 
 function createPersistedSnapshot(state: PersistedFileTransferState): PersistedFileTransferState {

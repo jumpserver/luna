@@ -1,13 +1,13 @@
 export interface ChenDialogItem {
-  label: string
-  value: unknown
+  label: string;
+  value: unknown;
 }
 
 export interface ChenDialogMessage {
-  title: string
-  payload: unknown
-  items: ChenDialogItem[]
-  text: string
+  title: string;
+  payload: unknown;
+  items: ChenDialogItem[];
+  text: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

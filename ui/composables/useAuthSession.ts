@@ -2,24 +2,24 @@ import type { PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface BootstrapResponse {
-  data: string
-  status?: number
+  data: string;
+  status?: number;
 }
 type LoginPayload = UserIntiInfo & {
-  bearer: string
-  profile: BootstrapResponse
-  current_org: BootstrapResponse
-  permission_orgs: BootstrapResponse
+  bearer: string;
+  profile: BootstrapResponse;
+  current_org: BootstrapResponse;
+  permission_orgs: BootstrapResponse;
 };
 interface PersistedUserSnapshot {
-  loggedIn?: boolean
-  currentSite?: string
-  currentUser?: Record<string, any> | null
-  currentOrganizations?: PermOrgItem[]
-  userMap?: Record<string, Record<string, any>>
-  currentRdpClientOption?: Record<string, any>
-  currentConnectionInfoMap?: Record<string, any>
-  currentConnectionPreferenceMap?: Record<string, any>
+  loggedIn?: boolean;
+  currentSite?: string;
+  currentUser?: Record<string, any> | null;
+  currentOrganizations?: PermOrgItem[];
+  userMap?: Record<string, Record<string, any>>;
+  currentRdpClientOption?: Record<string, any>;
+  currentConnectionInfoMap?: Record<string, any>;
+  currentConnectionPreferenceMap?: Record<string, any>;
 }
 
 const BOOTSTRAP_RETRY_DELAYS_MS = [0, 500, 1000, 2000, 3000];
@@ -44,10 +44,10 @@ const normalizeOrgList = (value: unknown): PermOrgItem[] => {
   if (Array.isArray(value)) {
     return value.filter((item): item is PermOrgItem => {
       return (
-        !!item
-        && typeof item === "object"
-        && typeof (item as PermOrgItem).id === "string"
-        && typeof (item as PermOrgItem).name === "string"
+        !!item &&
+        typeof item === "object" &&
+        typeof (item as PermOrgItem).id === "string" &&
+        typeof (item as PermOrgItem).name === "string"
       );
     });
   }
@@ -90,7 +90,7 @@ export const useAuthSession = () => {
 
   const applyLoginPayload = async (
     payload: LoginPayload | null | undefined,
-    options: { showToast?: boolean, navigateHome?: boolean } = {}
+    options: { showToast?: boolean; navigateHome?: boolean } = {}
   ) => {
     if (!payload || payload.status !== "success") return false;
 
@@ -103,17 +103,17 @@ export const useAuthSession = () => {
     if (!profileData || !resolvedSite) return false;
 
     const availableOrgs = initSelectOrganization(permissionOrgData);
-    const currentOrg
-      = currentOrgData && typeof currentOrgData === "object"
+    const currentOrg =
+      currentOrgData && typeof currentOrgData === "object"
         ? currentOrgData
         : {
-          id: "",
-          name: "",
-          is_root: false,
-          is_default: false,
-          is_system: false,
-          comment: ""
-        };
+            id: "",
+            name: "",
+            is_root: false,
+            is_default: false,
+            is_system: false,
+            comment: ""
+          };
 
     userInfoStore.setUserData(resolvedSite, {
       name: profileData.name,
@@ -164,8 +164,8 @@ export const useAuthSession = () => {
       if (!raw) return "";
 
       const parsed = JSON.parse(raw) as {
-        currentSite?: string
-        userMap?: Record<string, { site?: string }>
+        currentSite?: string;
+        userMap?: Record<string, { site?: string }>;
       };
 
       if (parsed.currentSite) return parsed.currentSite;
@@ -308,11 +308,11 @@ export const useAuthSession = () => {
       .then(([permissionOrgData, currentOrgData]) => {
         const availableOrgs = initSelectOrganization(permissionOrgData || {});
         const resolvedCurrentOrg = currentOrgData && typeof currentOrgData === "object" ? currentOrgData : null;
-        const currentOrg
-          = availableOrgs.find((org) => org.id === cookieOrgId)
-            || availableOrgs.find((org) => org.id === resolvedCurrentOrg?.id)
-            || availableOrgs[0]
-            || profileOrg;
+        const currentOrg =
+          availableOrgs.find((org) => org.id === cookieOrgId) ||
+          availableOrgs.find((org) => org.id === resolvedCurrentOrg?.id) ||
+          availableOrgs[0] ||
+          profileOrg;
 
         userInfoStore.setOrganizations(availableOrgs);
         if (currentOrg.id) {

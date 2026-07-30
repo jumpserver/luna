@@ -1,13 +1,13 @@
 <script setup lang="ts">
 defineProps<{
-  sites: string[]
-  visible: boolean
+  sites: string[];
+  visible: boolean;
 }>();
 
 const emit = defineEmits<{
-  (e: "select", site: string): void
-  (e: "remove", site: string): void
-  (e: "clear"): void
+  (e: "select", site: string): void;
+  (e: "remove", site: string): void;
+  (e: "clear"): void;
 }>();
 
 const { t } = useI18n();

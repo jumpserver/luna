@@ -1,10 +1,10 @@
 export interface KokoTicketRequest {
-  baseUrl: string
-  tokenId: string
+  baseUrl: string;
+  tokenId: string;
 }
 
 export interface KokoTicketResult {
-  ticket?: string
+  ticket?: string;
 }
 
 type KokoTicketProvider = (request: KokoTicketRequest) => Promise<KokoTicketResult>;

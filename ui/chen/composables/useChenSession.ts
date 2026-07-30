@@ -6,16 +6,16 @@ import { useChenWebSocket } from "~/chen/composables/useChenWebSocket";
 import { normalizeChenDialogMessage } from "~/chen/utils/chenDialog";
 
 interface UseChenSessionOptions {
-  authenticate: () => Promise<string>
-  markConnected: () => void
-  markFailed: () => void
-  onBeforeReady: () => Promise<void>
-  onAfterReady: () => Promise<void>
-  onDisconnected: () => void
-  showMessage: (data: any) => void
-  downloadFile?: (fileKey: string) => Promise<void>
-  createSocket?: (url: string, token: string) => WebSocket
-  resolveUrl?: (path: ChenSocketPath) => string
+  authenticate: () => Promise<string>;
+  markConnected: () => void;
+  markFailed: () => void;
+  onBeforeReady: () => Promise<void>;
+  onAfterReady: () => Promise<void>;
+  onDisconnected: () => void;
+  showMessage: (data: any) => void;
+  downloadFile?: (fileKey: string) => Promise<void>;
+  createSocket?: (url: string, token: string) => WebSocket;
+  resolveUrl?: (path: ChenSocketPath) => string;
 }
 
 export function useChenSession(options: UseChenSessionOptions) {

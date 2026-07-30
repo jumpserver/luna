@@ -3,7 +3,7 @@ import { gunzipSync } from "fflate";
 import * as Guacamole from "guacamole-common-js-jumpserver/dist/guacamole-common";
 
 const props = defineProps<{
-  source: string
+  source: string;
 }>();
 
 const playerAreaRef = ref<HTMLElement | null>(null);
@@ -21,7 +21,7 @@ const errorMessage = ref("");
 let tunnel: any = null;
 let recording: any = null;
 let display: any = null;
-let visibleBounds: { left: number, top: number, width: number, height: number } | null = null;
+let visibleBounds: { left: number; top: number; width: number; height: number } | null = null;
 let loadController: AbortController | null = null;
 
 function zeroPad(num: number) {
@@ -137,7 +137,7 @@ function resetVisibleBounds() {
   visibleBounds = null;
 }
 
-function mergeVisibleBounds(nextBounds: { left: number, top: number, width: number, height: number }) {
+function mergeVisibleBounds(nextBounds: { left: number; top: number; width: number; height: number }) {
   const layer = display?.getDefaultLayer?.();
   const fullWidth = layer?.width || 1024;
   const fullHeight = layer?.height || 768;
@@ -434,9 +434,7 @@ onBeforeUnmount(() => {
       <button class="gua-play-button" :disabled="loading || !!errorMessage" type="button" @click="togglePlayback">
         <UIcon :name="isPlaying ? 'line-md:pause' : 'line-md:play-filled'" class="text-xl" />
       </button>
-      <div class="w-22 text-xs tabular-nums text-(--ui-text-muted)">
-        {{ currentLabel }} / {{ durationLabel }}
-      </div>
+      <div class="w-22 text-xs tabular-nums text-(--ui-text-muted)">{{ currentLabel }} / {{ durationLabel }}</div>
       <input
         class="gua-range h-2 flex-1 cursor-pointer"
         type="range"
@@ -445,7 +443,7 @@ onBeforeUnmount(() => {
         :value="currentPosition"
         :disabled="loading || isSeeking || !duration"
         @input="seek"
-      >
+      />
       <div class="w-16 text-right text-[11px] uppercase tracking-[0.16em] text-(--ui-text-dimmed)">
         {{ Math.round(scale * 100) }}%
       </div>

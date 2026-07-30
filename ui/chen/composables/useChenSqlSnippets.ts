@@ -4,16 +4,16 @@ import { ref } from "vue";
 import { createSqlSnippet, deleteSqlSnippet, getSqlSnippets } from "~/composables/useApiRequest";
 
 export interface ChenSqlSnippet {
-  id: string
-  name: string
-  args: string
-  module: string
+  id: string;
+  name: string;
+  args: string;
+  module: string;
 }
 
 interface ChenSqlSnippetRequests {
-  list: () => Promise<unknown>
-  create: (payload: SqlSnippetPayload) => Promise<unknown>
-  remove: (id: string) => Promise<unknown>
+  list: () => Promise<unknown>;
+  create: (payload: SqlSnippetPayload) => Promise<unknown>;
+  remove: (id: string) => Promise<unknown>;
 }
 
 const defaultRequests: ChenSqlSnippetRequests = {

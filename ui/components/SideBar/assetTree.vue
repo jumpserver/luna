@@ -4,15 +4,15 @@ import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = defineProps<{
-  search: string
-  open?: boolean
+  search: string;
+  open?: boolean;
 }>();
 
 const emit = defineEmits<{
-  select: [asset: AssetItem]
-  contextmenu: [asset: AssetItem, event: MouseEvent]
-  toggle: []
-  openMultiple: [assets: AssetItem[]]
+  select: [asset: AssetItem];
+  contextmenu: [asset: AssetItem, event: MouseEvent];
+  toggle: [];
+  openMultiple: [assets: AssetItem[]];
 }>();
 
 type PanelKind = Exclude<AssetTreeKind, "search">;
@@ -37,7 +37,7 @@ const checkedAssets = ref<Record<string, AssetItem>>({});
 const checkedNodeIds = ref<string[]>([]);
 const nodeMenuVisible = ref(false);
 const nodeMenuPosition = ref({ x: 0, y: 0 });
-const nodeMenuTarget = ref<{ node: AssetTreeNode, kind: PanelKind } | null>(null);
+const nodeMenuTarget = ref<{ node: AssetTreeNode; kind: PanelKind } | null>(null);
 let lastErrorSignature = "";
 let lastErrorAt = 0;
 

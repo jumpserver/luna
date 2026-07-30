@@ -40,139 +40,139 @@ export enum LUNA_MESSAGE_TYPE {
 
 export interface LunaMessageEvents {
   [LUNA_MESSAGE_TYPE.PING]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.PONG]: {
-    data: string
-  }
+    data: string;
+  };
   [LUNA_MESSAGE_TYPE.CMD]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.FOCUS]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.OPEN]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.FILE]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.CREATE_FILE_CONNECT_TOKEN]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.SESSION_INFO]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.SHARE_USER]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.SHARE_USER_REMOVE]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.SHARE_USER_ADD]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.TERMINAL_THEME_CHANGE]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
 
   [LUNA_MESSAGE_TYPE.SHARE_CODE_REQUEST]: {
-    data: ShareUserRequest
-  }
+    data: ShareUserRequest;
+  };
   [LUNA_MESSAGE_TYPE.SHARE_CODE_RESPONSE]: {
-    data: string
-  }
+    data: string;
+  };
   [LUNA_MESSAGE_TYPE.CLOSE]: {
-    data: string
-  }
+    data: string;
+  };
   [LUNA_MESSAGE_TYPE.CONNECT]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.TERMINAL_ERROR]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.MESSAGE_NOTIFY]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.KEYEVENT]: {
-    data: string
-  }
+    data: string;
+  };
   [LUNA_MESSAGE_TYPE.TERMINAL_CONTENT]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.TERMINAL_CONTENT_RESPONSE]: {
-    data: TerminalContentRepsonse
-  }
+    data: TerminalContentRepsonse;
+  };
   [LUNA_MESSAGE_TYPE.CLICK]: {
-    data: string
-  }
+    data: string;
+  };
   [LUNA_MESSAGE_TYPE.FILE_MANAGE_EXPIRED]: {
-    data: string
-  }
+    data: string;
+  };
   [LUNA_MESSAGE_TYPE.CHANGE_MAIN_THEME]: {
-    data: LunaMessage
-  }
+    data: LunaMessage;
+  };
   [LUNA_MESSAGE_TYPE.MOUSE_EVENT]: {
-    data: string
-  }
+    data: string;
+  };
   [LUNA_MESSAGE_TYPE.KEYBOARDEVENT]: {
-    data: string
-  }
+    data: string;
+  };
   [LUNA_MESSAGE_TYPE.INPUT_ACTIVE]: {
-    data: string
-  }
+    data: string;
+  };
 }
 
 export interface LunaMessage {
-  id: string
-  name: string
-  origin: string
-  protocol: string
-  data: string | object | null
-  theme?: string
-  user_meta?: string
+  id: string;
+  name: string;
+  origin: string;
+  protocol: string;
+  data: string | object | null;
+  theme?: string;
+  user_meta?: string;
 }
 
 export interface ShareUserRequest {
-  name: string
+  name: string;
   data: {
-    sessionId: string
+    sessionId: string;
     requestData: {
-      expired_time: number
-      action_permission: string
-      action_perm: string
-      users: string[]
-    }
-  }
+      expired_time: number;
+      action_permission: string;
+      action_perm: string;
+      users: string[];
+    };
+  };
 }
 
 export interface ShareUserResponse {
-  shareId: string
-  code: string
-  terminalId: string
+  shareId: string;
+  code: string;
+  terminalId: string;
 }
 
 export interface TerminalSessionInfo {
-  session: TerminalSession
-  permission: TerminalPermission
-  backspaceAsCtrlH: boolean
-  ctrlCAsCtrlZ: boolean
-  themeName: string
+  session: TerminalSession;
+  permission: TerminalPermission;
+  backspaceAsCtrlH: boolean;
+  ctrlCAsCtrlZ: boolean;
+  themeName: string;
 }
 
 export interface TerminalSession {
-  id: string
-  user: string
+  id: string;
+  user: string;
 
-  userId: string
+  userId: string;
 }
 
 export interface TerminalPermission {
-  actions: string[]
+  actions: string[];
 }
 
 export interface TerminalContentRepsonse {
-  terminalId: string
-  content: string
-  sessionId: string
+  terminalId: string;
+  content: string;
+  sessionId: string;
 }

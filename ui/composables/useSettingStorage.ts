@@ -26,30 +26,30 @@ export const normalizeSidebarWidth = (width: unknown) => {
 };
 
 export interface UserSettingPersistedState {
-  language: LanguagePreference
-  collapse: boolean
-  sort: SortType
-  theme: ThemeType
-  themeMode: ThemeType
-  followSystem: boolean
-  layouts: LayoutsType
-  fontFamily: string
-  primaryColor: string
-  primaryColorLight: string
-  primaryColorDark: string
-  lightThemePreset: ThemePresetId
-  darkThemePreset: ThemePresetId
-  appConfig: AppConfigType | null
-  charset: CharsetType
-  rdpResolution: ResolutionType
-  backspaceAsCtrlH: boolean
-  keyboardLayout: string
-  rdpClientOption: string[]
-  rdpColorQuality: string
-  rdpSmartSize: string
-  recentSites: string[]
-  sidebarWidth: number
-  sidebarSections: SidebarSectionVisibility
+  language: LanguagePreference;
+  collapse: boolean;
+  sort: SortType;
+  theme: ThemeType;
+  themeMode: ThemeType;
+  followSystem: boolean;
+  layouts: LayoutsType;
+  fontFamily: string;
+  primaryColor: string;
+  primaryColorLight: string;
+  primaryColorDark: string;
+  lightThemePreset: ThemePresetId;
+  darkThemePreset: ThemePresetId;
+  appConfig: AppConfigType | null;
+  charset: CharsetType;
+  rdpResolution: ResolutionType;
+  backspaceAsCtrlH: boolean;
+  keyboardLayout: string;
+  rdpClientOption: string[];
+  rdpColorQuality: string;
+  rdpSmartSize: string;
+  recentSites: string[];
+  sidebarWidth: number;
+  sidebarSections: SidebarSectionVisibility;
 }
 
 const STORE_PATH = "user-setting.json";

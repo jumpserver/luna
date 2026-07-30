@@ -3,13 +3,13 @@ import type { Toast } from "@nuxt/ui/dist/runtime/composables/useToast";
 import { writeClipboardText } from "~/utils/clipboard";
 
 interface ErrorToastOptions {
-  title: string
-  description?: string
-  error?: unknown
-  icon?: string
-  duration?: number
-  progress?: boolean
-  actions?: Partial<Toast["actions"][number]>[]
+  title: string;
+  description?: string;
+  error?: unknown;
+  icon?: string;
+  duration?: number;
+  progress?: boolean;
+  actions?: Partial<Toast["actions"][number]>[];
 }
 
 const COPY_ACTION_ICONS = new Set(["i-lucide-copy", "lucide:copy"]);

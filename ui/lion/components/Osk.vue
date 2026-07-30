@@ -13,7 +13,7 @@ import nlnlqwertz from "@/lion/assets/layouts/nl-nl-qwerty.json";
 import ruruqwertz from "@/lion/assets/layouts/ru-ru-qwerty.json";
 
 const props = defineProps<{
-  keyboard?: string
+  keyboard?: string;
 }>();
 const emit = defineEmits(["keyboardChange"]);
 const keyboardLayouts: any = {

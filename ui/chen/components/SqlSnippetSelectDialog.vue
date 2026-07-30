@@ -2,16 +2,16 @@
 import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
 
 const props = defineProps<{
-  open: boolean
-  snippets: ChenSqlSnippet[]
-  loading: boolean
-  deletingId: string
+  open: boolean;
+  snippets: ChenSqlSnippet[];
+  loading: boolean;
+  deletingId: string;
 }>();
 
 const emit = defineEmits<{
-  "update:open": [open: boolean]
-  insert: [snippet: ChenSqlSnippet]
-  delete: [snippet: ChenSqlSnippet]
+  "update:open": [open: boolean];
+  insert: [snippet: ChenSqlSnippet];
+  delete: [snippet: ChenSqlSnippet];
 }>();
 
 const deleteDialogOpen = ref(false);
@@ -45,20 +45,14 @@ function confirmDelete() {
         <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
       </div>
 
-      <div v-else-if="!snippets.length" class="grid min-h-32 place-items-center text-sm text-muted">
-        No saved SQL.
-      </div>
+      <div v-else-if="!snippets.length" class="grid min-h-32 place-items-center text-sm text-muted">No saved SQL.</div>
 
       <div v-else class="max-h-[60vh] overflow-auto rounded-md border border-default">
         <table class="w-full table-fixed text-left text-sm">
           <thead class="sticky top-0 bg-elevated text-muted">
             <tr>
-              <th class="w-36 px-3 py-2 font-medium">
-                Name
-              </th>
-              <th class="px-3 py-2 font-medium">
-                Content
-              </th>
+              <th class="w-36 px-3 py-2 font-medium">Name</th>
+              <th class="px-3 py-2 font-medium">Content</th>
               <th class="w-36 px-3 py-2" />
             </tr>
           </thead>
@@ -72,9 +66,7 @@ function confirmDelete() {
               </td>
               <td class="px-3 py-2">
                 <div class="flex justify-end gap-1">
-                  <UButton size="xs" variant="ghost" @click="emit('insert', snippet)">
-                    Insert
-                  </UButton>
+                  <UButton size="xs" variant="ghost" @click="emit('insert', snippet)">Insert</UButton>
                   <UButton
                     size="xs"
                     color="error"
@@ -96,19 +88,13 @@ function confirmDelete() {
 
   <UModal v-model:open="deleteDialogOpen" title="Delete SQL">
     <template #body>
-      <p class="text-sm text-muted">
-        Delete “{{ deleteCandidate?.name }}”?
-      </p>
+      <p class="text-sm text-muted">Delete “{{ deleteCandidate?.name }}”?</p>
     </template>
 
     <template #footer>
       <div class="flex w-full justify-end gap-2">
-        <UButton color="neutral" variant="soft" @click="cancelDelete">
-          Cancel
-        </UButton>
-        <UButton color="error" @click="confirmDelete">
-          Confirm
-        </UButton>
+        <UButton color="neutral" variant="soft" @click="cancelDelete">Cancel</UButton>
+        <UButton color="error" @click="confirmDelete">Confirm</UButton>
       </div>
     </template>
   </UModal>

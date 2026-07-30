@@ -4,16 +4,16 @@ import type { ChenPromptConsoleTab, ChenQueryLikeWorkspaceTab } from "~/chen/typ
 import QueryResultTabs from "~/chen/components/QueryResultTabs.vue";
 
 const props = defineProps<{
-  tab: ChenPromptConsoleTab
-  contextLabel: string
-  promptLabel: string
+  tab: ChenPromptConsoleTab;
+  contextLabel: string;
+  promptLabel: string;
 }>();
 
 const emit = defineEmits<{
-  run: [tab: ChenPromptConsoleTab]
-  cancel: [tab: ChenQueryLikeWorkspaceTab]
-  updatePendingSql: [tab: ChenPromptConsoleTab, value: string]
-  activateResult: [tab: ChenPromptConsoleTab, id: string]
+  run: [tab: ChenPromptConsoleTab];
+  cancel: [tab: ChenQueryLikeWorkspaceTab];
+  updatePendingSql: [tab: ChenPromptConsoleTab, value: string];
+  activateResult: [tab: ChenPromptConsoleTab, id: string];
 }>();
 
 // TODO(chen-native): Confirm whether this console-like prompt should remain

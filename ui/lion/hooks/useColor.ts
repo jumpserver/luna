@@ -1,9 +1,9 @@
 import { ref } from "vue";
 
 interface HSL {
-  h: number
-  s: number
-  l: number
+  h: number;
+  s: number;
+  l: number;
 }
 
 const mainThemeColorMap = new Map(

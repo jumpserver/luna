@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 import CardContainer from "@/lion/components/CardContainer/index.vue";
 
 const props = defineProps<{
-  isRemoteApp: boolean
+  isRemoteApp: boolean;
 }>();
 
 const emit = defineEmits(["combineKeys"]);

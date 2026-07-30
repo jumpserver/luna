@@ -1,18 +1,18 @@
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export interface SnippetModule {
-  value: string
-  label: string
+  value: string;
+  label: string;
 }
 
 export interface Snippet {
-  id: string
-  name: string
-  args: string
-  module: SnippetModule
-  variable: unknown[]
-  comment: string
-  createdBy: string
+  id: string;
+  name: string;
+  args: string;
+  module: SnippetModule;
+  variable: unknown[];
+  comment: string;
+  createdBy: string;
 }
 
 const rawList = (value: unknown): any[] =>

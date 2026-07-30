@@ -10,12 +10,12 @@ import {
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export interface FavoriteFolder {
-  id: string
-  name: string
-  parent: string | null
-  children: FavoriteFolder[]
-  assets: AssetItem[]
-  open: boolean
+  id: string;
+  name: string;
+  parent: string | null;
+  children: FavoriteFolder[];
+  assets: AssetItem[];
+  open: boolean;
 }
 
 const rawList = (value: any): any[] =>

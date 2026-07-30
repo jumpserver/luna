@@ -126,8 +126,8 @@ const openSftp = async () => {
     const account = activeAccount || displayUser(asset.id, asset.permedAccounts);
     const preference = userInfoStore.getConnectionPreferenceForAsset(asset.id);
     const remembered = userInfoStore.getConnectionInfoForAsset(asset.id);
-    const activeToken
-      = activeTab.value?.assetId === asset.id ? activeTab.value.payload?.token || activeTab.value.payload : undefined;
+    const activeToken =
+      activeTab.value?.assetId === asset.id ? activeTab.value.payload?.token || activeTab.value.payload : undefined;
     const accountId = preference?.accountId || remembered?.accountId || activeToken?.account;
 
     await new Promise<void>((resolve, reject) => {

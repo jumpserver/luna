@@ -10,8 +10,8 @@ import { withBaseUrl } from "@/lion/utils/base";
 export type TranslateFunction = Composer["t"];
 
 const props = defineProps<{
-  session: string
-  disabledCreateLink: boolean
+  session: string;
+  disabledCreateLink: boolean;
 }>();
 
 const { copy } = useClipboard({ legacy: true });
@@ -21,27 +21,27 @@ const getMinuteLabel = (item: number, t: TranslateFunction): string => {
 };
 
 export interface ShareUserOptions {
-  id: string
-  name: string
-  username: string
+  id: string;
+  name: string;
+  username: string;
 }
 
 export interface UserInfo {
-  id: string
-  name: string
-  username: string
+  id: string;
+  name: string;
+  username: string;
 }
 
 interface ExpiredOption {
-  label: string
-  value: number
-  checked: boolean
+  label: string;
+  value: number;
+  checked: boolean;
 }
 
 interface ActionPermOption {
-  label: string
-  value: string
-  checked: boolean
+  label: string;
+  value: string;
+  checked: boolean;
 }
 
 const { t } = useI18n();
@@ -95,8 +95,8 @@ const searchUsers = useDebounceFn(async (value: string, isLoadMore: boolean = fa
         return user.name.toLowerCase().includes(query) || user.username.toLowerCase().includes(query);
       });
 
-    userOptions.value
-      = isLoadMore && currentPage.value > 1 ? [...userOptions.value, ...filterUsers(newUsers)] : filterUsers(newUsers);
+    userOptions.value =
+      isLoadMore && currentPage.value > 1 ? [...userOptions.value, ...filterUsers(newUsers)] : filterUsers(newUsers);
 
     hasMore.value = response.next !== null && response.next !== undefined;
   } catch (error) {

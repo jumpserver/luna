@@ -42,8 +42,8 @@ const resolveRuntimeBase = () => {
 
 const runtimeBase = resolveRuntimeBase();
 const runtimeWindow = window as Window & {
-  __BASE_PATH__?: string
-  __LION_BASE__?: string
+  __BASE_PATH__?: string;
+  __LION_BASE__?: string;
 };
 
 export const BASE_PATH = trimTrailingSlash(runtimeWindow.__BASE_PATH__ ?? runtimeBase.prefix);

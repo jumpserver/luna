@@ -4,17 +4,17 @@ import { useSettingManager } from "~/composables/useSettingManager";
 import { useThemeOptions } from "~/composables/useThemeOptions";
 
 interface FontItem {
-  id: string
-  value: string
-  label: string
+  id: string;
+  value: string;
+  label: string;
 }
 
 definePageMeta({
   layout: "setting"
 });
 
-const FALLBACK_FONTS
-  = '"Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+const FALLBACK_FONTS =
+  '"Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
 const { t } = useI18n();
 const {

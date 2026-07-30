@@ -3,12 +3,12 @@ import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
 import type { AssetItem } from "~/types";
 
 defineOptions({ name: "FavoriteTreeNode" });
-const props = defineProps<{ folder: FavoriteFolder, level?: number }>();
+const props = defineProps<{ folder: FavoriteFolder; level?: number }>();
 const emit = defineEmits<{
-  select: [asset: AssetItem]
-  contextmenu: [asset: AssetItem, event: MouseEvent]
-  folderContextmenu: [folder: FavoriteFolder, event: MouseEvent]
-  toggleFolder: [folder: FavoriteFolder]
+  select: [asset: AssetItem];
+  contextmenu: [asset: AssetItem, event: MouseEvent];
+  folderContextmenu: [folder: FavoriteFolder, event: MouseEvent];
+  toggleFolder: [folder: FavoriteFolder];
 }>();
 
 const toggle = () => {

@@ -11,8 +11,8 @@ export function useChenAuth(tab: Ref<WorkspaceSessionTab>) {
 
   const disableAutoHash = computed(() => {
     return (
-      Boolean((tab.value.payload?.token as Record<string, any> | undefined)?.disableautohash)
-      || Boolean(tab.value.payload?.disableautohash)
+      Boolean((tab.value.payload?.token as Record<string, any> | undefined)?.disableautohash) ||
+      Boolean(tab.value.payload?.disableautohash)
     );
   });
 

@@ -4,53 +4,53 @@ import untar from "js-untar";
 export type VideoPlayerItemType = "mp4" | "cast" | "gua" | "part";
 
 export interface VideoPlayerMeta {
-  id?: string
-  account?: string
-  user?: string
-  asset?: string
-  protocol?: string
-  login_from?: string
-  remote_addr?: string
-  command_amount?: number
-  date_end?: string
-  date_start?: string
-  duration?: string
-  files?: VideoPlayerFileMeta[]
+  id?: string;
+  account?: string;
+  user?: string;
+  asset?: string;
+  protocol?: string;
+  login_from?: string;
+  remote_addr?: string;
+  command_amount?: number;
+  date_end?: string;
+  date_start?: string;
+  duration?: string;
+  files?: VideoPlayerFileMeta[];
 }
 
 export interface VideoPlayerFileMeta {
-  name?: string
-  start?: number
-  end?: number
-  duration?: number
+  name?: string;
+  start?: number;
+  end?: number;
+  duration?: number;
 }
 
 interface EffectiveItemMeta extends VideoPlayerMeta {
-  fileStart?: number
-  fileEnd?: number
-  fileDuration?: number
+  fileStart?: number;
+  fileEnd?: number;
+  fileDuration?: number;
 }
 
 export interface VideoPlayerItem {
-  id: string
-  name: string
-  source: string
-  type: VideoPlayerItemType
-  meta: VideoPlayerMeta
-  recordingId: string
-  recordingLabel: string
-  partIndex?: number
-  partTotal?: number
-  castData?: string
+  id: string;
+  name: string;
+  source: string;
+  type: VideoPlayerItemType;
+  meta: VideoPlayerMeta;
+  recordingId: string;
+  recordingLabel: string;
+  partIndex?: number;
+  partTotal?: number;
+  castData?: string;
 }
 
 interface ParseResult {
-  items: VideoPlayerItem[]
+  items: VideoPlayerItem[];
 }
 
 interface UntarEntry {
-  name: string
-  buffer: ArrayBuffer
+  name: string;
+  buffer: ArrayBuffer;
 }
 
 const REGEXP = /\.(json|replay|cast|part)(\.mp4|\.json|\.gz)?$/;
@@ -76,7 +76,7 @@ function stripArchiveExtension(fileName: string) {
 
 function isGzipBuffer(buffer: ArrayBuffer) {
   const bytes = new Uint8Array(buffer);
-  return bytes.length >= 2 && bytes[0] === 0x1F && bytes[1] === 0x8B;
+  return bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
 }
 
 function decodeCastBuffer(buffer: ArrayBuffer) {

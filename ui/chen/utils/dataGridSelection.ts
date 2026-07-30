@@ -1,13 +1,13 @@
 export interface ChenGridCell {
-  rowIndex: number
-  colId: string
+  rowIndex: number;
+  colId: string;
 }
 
 export interface ChenGridSelection {
-  dragging: boolean
-  moved: boolean
-  anchor: ChenGridCell | null
-  current: ChenGridCell | null
+  dragging: boolean;
+  moved: boolean;
+  anchor: ChenGridCell | null;
+  current: ChenGridCell | null;
 }
 
 export function emptyChenGridSelection(): ChenGridSelection {
@@ -62,9 +62,9 @@ export function isChenGridCellSelected(selection: ChenGridSelection, displayedCo
   if (!bounds) return false;
   const colIndex = displayedColIds.indexOf(cell.colId);
   return (
-    cell.rowIndex >= bounds.minRow
-    && cell.rowIndex <= bounds.maxRow
-    && colIndex >= bounds.minCol
-    && colIndex <= bounds.maxCol
+    cell.rowIndex >= bounds.minRow &&
+    cell.rowIndex <= bounds.maxRow &&
+    colIndex >= bounds.minCol &&
+    colIndex <= bounds.maxCol
   );
 }

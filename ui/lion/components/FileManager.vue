@@ -5,20 +5,20 @@ import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 const props = defineProps<{
-  files: RowData[]
-  name: string
-  folder: any
-  loading: boolean
-  displayUploadingFiles: LionUploadFileInfo[]
+  files: RowData[];
+  name: string;
+  folder: any;
+  loading: boolean;
+  displayUploadingFiles: LionUploadFileInfo[];
 }>();
 const emit = defineEmits(["openFolder", "downloadFile", "uploadFile", "removeUploadFile"]);
 const { t } = useI18n();
 
 interface RowData {
-  name: string
-  is_dir: boolean
-  size?: number
-  [key: string]: any
+  name: string;
+  is_dir: boolean;
+  size?: number;
+  [key: string]: any;
 }
 
 const storeBackFolders = ref<any>([]);
@@ -158,7 +158,7 @@ const removeUploadList = (file: LionUploadFileInfo) => {
         </template>
       </UInput>
 
-      <input ref="fileInputRef" type="file" multiple class="hidden" @change="handleFileInput">
+      <input ref="fileInputRef" type="file" multiple class="hidden" @change="handleFileInput" />
       <UButton icon="i-lucide-upload" color="neutral" variant="soft" size="sm" @click="fileInputRef?.click()">
         {{ t("UploadFile") }}
       </UButton>

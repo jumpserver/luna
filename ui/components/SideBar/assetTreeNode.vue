@@ -4,18 +4,18 @@ import type { AssetTreeKind, AssetTreeNode } from "~/types";
 defineOptions({ name: "AssetTreeNode" });
 
 const props = defineProps<{
-  node: AssetTreeNode
-  treeKind: Exclude<AssetTreeKind, "search">
-  searchMode?: boolean
-  batchMode?: boolean
-  checkedAssetIds?: string[]
+  node: AssetTreeNode;
+  treeKind: Exclude<AssetTreeKind, "search">;
+  searchMode?: boolean;
+  batchMode?: boolean;
+  checkedAssetIds?: string[];
 }>();
 
 const emit = defineEmits<{
-  select: [node: AssetTreeNode]
-  toggle: [node: AssetTreeNode, kind: Exclude<AssetTreeKind, "search">]
-  contextmenu: [node: AssetTreeNode, event: MouseEvent]
-  check: [node: AssetTreeNode]
+  select: [node: AssetTreeNode];
+  toggle: [node: AssetTreeNode, kind: Exclude<AssetTreeKind, "search">];
+  contextmenu: [node: AssetTreeNode, event: MouseEvent];
+  check: [node: AssetTreeNode];
 }>();
 
 const isParent = computed(() => Boolean(props.node.isParent || props.node.children?.length));
@@ -108,7 +108,7 @@ const activate = () => {
         class="sidebar-icon"
         :class="node.loading ? 'animate-spin' : ''"
       />
-      <img v-else-if="iconSrc" :src="iconSrc" alt="" class="sidebar-icon-img">
+      <img v-else-if="iconSrc" :src="iconSrc" alt="" class="sidebar-icon-img" />
       <span
         class="min-w-0 flex-1 truncate font-medium"
         :class="!isParent ? 'font-ui-mono text-[11px] tracking-[0.01em]' : ''"

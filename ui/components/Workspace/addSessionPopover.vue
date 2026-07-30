@@ -77,9 +77,7 @@ watch(open, (value) => {
         </div>
         <div class="max-h-80 min-h-32 overflow-y-auto p-1.5">
           <template v-if="localShellAvailable && !search.trim()">
-            <div class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
-              本地
-            </div>
+            <div class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">本地</div>
             <button
               type="button"
               class="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-elevated"

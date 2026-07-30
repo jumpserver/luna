@@ -39,8 +39,8 @@ export const getWebApiMutationHeaders = (orgIdOverride?: string) => {
     .trim();
   const prefixCandidates = Array.from(new Set([rawPrefix, "jms_", ""]));
   const csrfCookieNames = prefixCandidates.flatMap((prefix) => [`${prefix}csrftoken`, `${prefix}csrf_token`]);
-  const csrfToken
-    = csrfCookieNames
+  const csrfToken =
+    csrfCookieNames
       .map((name) =>
         decodeURIComponent(getCookieValue(name) || "")
           .replace(/^['"]|['"]$/g, "")
@@ -89,8 +89,8 @@ const joinPrefixedPath = (basePath: string, targetPath: string) => {
   const normalizedBaseWithoutSlash = normalizedBasePath.replace(/\/$/, "");
 
   if (
-    normalizedBasePath !== "/"
-    && (normalizedPath === normalizedBaseWithoutSlash || normalizedPath.startsWith(`${normalizedBaseWithoutSlash}/`))
+    normalizedBasePath !== "/" &&
+    (normalizedPath === normalizedBaseWithoutSlash || normalizedPath.startsWith(`${normalizedBaseWithoutSlash}/`))
   ) {
     return `${normalizedPath}${suffix}`;
   }
@@ -129,11 +129,11 @@ export const isWebAuthPath = (pathname = window.location.pathname) => {
   const authBase = sitePrefix ? `${sitePrefix}/core/auth/` : "/core/auth/";
 
   return (
-    /(?:^|\/)core\/auth(?:\/|$)/.test(normalizedPath)
-    || normalizedPath === authBase.replace(/\/$/, "")
-    || normalizedPath.startsWith(authBase)
-    || normalizedPath === withWebSitePrefix("/login/", pathname).replace(/\/$/, "")
-    || normalizedPath.startsWith(withWebSitePrefix("/login/", pathname))
+    /(?:^|\/)core\/auth(?:\/|$)/.test(normalizedPath) ||
+    normalizedPath === authBase.replace(/\/$/, "") ||
+    normalizedPath.startsWith(authBase) ||
+    normalizedPath === withWebSitePrefix("/login/", pathname).replace(/\/$/, "") ||
+    normalizedPath.startsWith(withWebSitePrefix("/login/", pathname))
   );
 };
 

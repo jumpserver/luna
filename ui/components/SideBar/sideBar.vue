@@ -165,11 +165,11 @@ const savedConnectionIsAvailable = (asset: AssetItem) => {
 
   return accounts.some(
     (account) =>
-      !(account.alias || "").startsWith("@")
-      && ((saved.accountId && account.id === saved.accountId)
-        || account.name === saved.username
-        || account.username === saved.username
-        || account.alias === saved.username)
+      !(account.alias || "").startsWith("@") &&
+      ((saved.accountId && account.id === saved.accountId) ||
+        account.name === saved.username ||
+        account.username === saved.username ||
+        account.alias === saved.username)
   );
 };
 
@@ -437,7 +437,7 @@ const toggleAssetFavorite = (asset: AssetItem, favorite: boolean) => {
   useEventBus().emit("favoriteChanged", { assetId: asset.id, favorite });
 };
 
-const flattenFavoriteFolders = (folders = favoriteFolders.value): Array<{ id: string, name: string }> =>
+const flattenFavoriteFolders = (folders = favoriteFolders.value): Array<{ id: string; name: string }> =>
   folders.flatMap((folder) => [{ id: folder.id, name: folder.name }, ...flattenFavoriteFolders(folder.children)]);
 
 const addAssetToFavoriteFolder = async (asset: AssetItem, folderId: string) => {

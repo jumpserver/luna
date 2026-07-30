@@ -5,7 +5,7 @@ import { fetchChenTreeChildren, runChenAction } from "~/chen/api";
 import { initialChenExpandedKeys } from "~/chen/utils/resourceTree";
 
 interface UseChenResourceTreeOptions {
-  onLoadError?: (node: ChenTreeNode | null, cause: unknown) => void
+  onLoadError?: (node: ChenTreeNode | null, cause: unknown) => void;
 }
 
 export function useChenResourceTree(chenToken: Ref<string>, options: UseChenResourceTreeOptions = {}) {

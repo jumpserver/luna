@@ -1,30 +1,30 @@
-export type ThemePresetId
-  = | "latte"
-    | "matcha"
-    | "claude"
-    | "gemini"
-    | "mono"
-    | "min"
-    | "luna-default"
-    | "luna-darkgray"
-    | "luna-deepblue"
-    | "mocha"
-    | "macchiato"
-    | "frappe"
-    | "kanagawa"
-    | "ayu"
-    | "rose-pine"
-    | "codex"
-    | "cursor"
-    | "mono-dark"
-    | "min-dark";
+export type ThemePresetId =
+  | "latte"
+  | "matcha"
+  | "claude"
+  | "gemini"
+  | "mono"
+  | "min"
+  | "luna-default"
+  | "luna-darkgray"
+  | "luna-deepblue"
+  | "mocha"
+  | "macchiato"
+  | "frappe"
+  | "kanagawa"
+  | "ayu"
+  | "rose-pine"
+  | "codex"
+  | "cursor"
+  | "mono-dark"
+  | "min-dark";
 
 export interface ThemePresetOption {
-  id: ThemePresetId
-  label: string
-  accent: string
-  family?: "markamd" | "luna"
-  baseColor?: string
+  id: ThemePresetId;
+  label: string;
+  accent: string;
+  family?: "markamd" | "luna";
+  baseColor?: string;
 }
 
 export const LIGHT_THEME_PRESETS: ThemePresetOption[] = [

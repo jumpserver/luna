@@ -1,11 +1,11 @@
 <script setup lang="ts">
 const props = defineProps<{
-  modelValue: string
-  colors?: string[]
+  modelValue: string;
+  colors?: string[];
 }>();
 
 const emit = defineEmits<{
-  (e: "update:modelValue", value: string): void
+  (e: "update:modelValue", value: string): void;
 }>();
 
 const { t } = useI18n();

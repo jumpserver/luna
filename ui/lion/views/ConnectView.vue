@@ -76,17 +76,17 @@ const debouncedResize = useDebounceFn(() => {
 let resizeObserver: ResizeObserver | null = null;
 
 interface GuacamoleFile {
-  mimetype?: any
-  streamName?: any
-  type: "DIRECTORY" | "FILE"
-  name: string
-  parent?: GuacamoleFile | null
-  is_dir?: boolean
+  mimetype?: any;
+  streamName?: any;
+  type: "DIRECTORY" | "FILE";
+  name: string;
+  parent?: GuacamoleFile | null;
+  is_dir?: boolean;
 }
 
 interface UploadItem {
-  uploadOptions: LionUploadCustomRequestOptions
-  folder: GuacamoleFile
+  uploadOptions: LionUploadCustomRequestOptions;
+  folder: GuacamoleFile;
 }
 
 const uploadingFiles = ref<Array<UploadItem>>([]);
