@@ -3,11 +3,13 @@ import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 import type { KokoSftpAsset } from "@jumpserver/koko/host";
 import type { SftpFileOperations } from "#koko/composables/sftp/protocol";
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
+import type { FileTransferEndpointRef } from "~/shared/file-transfer/types";
 import { connectorSessionKey, resolveDevHost } from "@jumpserver/connectors-core";
 import { useKokoHostAdapter } from "@jumpserver/koko/host";
 import KokoLocalFileManagementPane from "#koko/components/Drawer/FileManagement/localPane.vue";
 import KokoFileManagementPane from "#koko/components/Drawer/FileManagement/pane.vue";
 import KokoWebUploadPane from "#koko/components/Drawer/FileManagement/webUploadPane.vue";
+import { useFileTransferStore } from "~/store/modules/fileTransfer";
 
 interface RemotePane {
   id: string;
@@ -15,7 +17,15 @@ interface RemotePane {
   context: ConnectorSessionContext;
   organizationName: string;
   assetName: string;
+  transferEndpoint: FileTransferEndpointRef;
   selection: SftpFileEntry | null;
+}
+
+interface SftpTransferDropPayload {
+  sourceEndpoint: FileTransferEndpointRef;
+  sourcePath: string;
+  entries: Array<Pick<SftpFileEntry, "name" | "size">>;
+  destinationPath: string;
 }
 
 interface TransferPane {
@@ -35,6 +45,7 @@ const emit = defineEmits<{ reconnect: [] }>();
 const { t } = useI18n();
 const toast = useToast();
 const { addErrorToast: showErrorToast } = useErrorToast();
+const fileTransferStore = useFileTransferStore();
 const hostAdapter = useKokoHostAdapter();
 const createSftpSession = hostAdapter.sftp.useSessionCreator();
 
@@ -44,6 +55,13 @@ const primaryContext = computed<ConnectorSessionContext | null>(() => {
   if (!value || !props.sftpToken) return null;
   if (value.tokenId === props.sftpToken) return value;
   return { ...value, tokenId: props.sftpToken };
+});
+const primaryTransferEndpoint = computed<FileTransferEndpointRef | undefined>(() => {
+  if (!primaryContext.value) return undefined;
+  return {
+    id: `sftp:${primaryContext.value.tokenId}`,
+    label: t("koko.fileManagement.localSftp")
+  };
 });
 
 const paneId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
@@ -184,6 +202,10 @@ async function connectRemoteAsset(asset: KokoSftpAsset) {
       context: await buildSftpContext(connectAsset.id, tokenId, `remote-sftp:${connectAsset.id}:${id}`),
       organizationName: currentOrgLabel.value,
       assetName: connectAsset.name,
+      transferEndpoint: {
+        id: `sftp:${tokenId}`,
+        label: `${currentOrgLabel.value} - ${connectAsset.name}`
+      },
       selection: null
     });
     activeRemoteId.value = id;
@@ -196,6 +218,32 @@ async function connectRemoteAsset(asset: KokoSftpAsset) {
   } finally {
     remoteConnecting.value = false;
   }
+}
+
+function queueSftpTransfer(payload: SftpTransferDropPayload, destination: FileTransferEndpointRef | undefined) {
+  if (!destination || payload.sourceEndpoint.id === destination.id) return;
+  if (!payload.entries.length) return;
+
+  const sourceBasePath = payload.sourcePath.replace(/\/$/, "") || "/";
+  const inputs = payload.entries
+    .map((entry) => ({ ...entry, size: Number(entry.size) }))
+    .filter((entry) => entry.name && Number.isFinite(entry.size) && entry.size >= 0)
+    .map((entry) => ({
+      batchId: "",
+      sourceEndpoint: payload.sourceEndpoint,
+      destinationEndpoint: destination,
+      source: {
+        name: entry.name,
+        size: entry.size,
+        path: `${sourceBasePath}/${entry.name}`.replace(/\/+/g, "/")
+      },
+      destinationPath: payload.destinationPath,
+      conflictPolicy: "ask" as const
+    }));
+
+  if (!inputs.length) return;
+
+  fileTransferStore.enqueueBatch(inputs);
 }
 
 async function transferEntry(fromPane: TransferPane | null, toPane: TransferPane | null, entry: SftpFileEntry | null) {
@@ -246,14 +294,17 @@ async function transferGlobal(direction: "left-to-right" | "right-to-left") {
 async function uploadWebFiles(files: File[]) {
   const target = activePaneForSide("right");
   const targetPane = target ? remotePaneRefs.value[target.id] : null;
+
   if (!targetPane) {
     toast.add({ title: t("koko.fileManagement.selectRemoteTarget"), color: "warning" });
     return;
   }
+
   if (transferring.value) return;
 
   transferring.value = true;
   let success = 0;
+
   try {
     for (const file of files) {
       try {
@@ -263,6 +314,7 @@ async function uploadWebFiles(files: File[]) {
         // Continue with the remaining files and report the aggregate result.
       }
     }
+
     toast.add({
       title:
         success === files.length
@@ -404,7 +456,9 @@ watch(currentOrgId, () => {
             :ref="(el) => setRemotePaneRef(pane.id, el)"
             class="min-h-0 flex-1"
             :context="pane.context"
+            :transfer-endpoint="pane.transferEndpoint"
             @select="pane.selection = $event"
+            @transfer-drop="queueSftpTransfer($event, pane.transferEndpoint)"
           />
         </template>
         <div
@@ -464,11 +518,14 @@ watch(currentOrgId, () => {
 
     <div v-else class="flex min-h-0 flex-1" :class="dualMode ? 'gap-1' : ''">
       <KokoFileManagementPane
+        :key="primaryTransferEndpoint?.id || 'primary-sftp'"
         ref="primaryPaneRef"
         class="min-h-0 min-w-0 flex-1"
         :context="primaryContext"
+        :transfer-endpoint="primaryTransferEndpoint"
         :title="dualMode ? t('koko.fileManagement.localSftp') : undefined"
         @select="primarySelection = $event"
+        @transfer-drop="queueSftpTransfer($event, primaryTransferEndpoint)"
       />
 
       <div
@@ -520,10 +577,12 @@ watch(currentOrgId, () => {
               :ref="(el) => setRemotePaneRef(pane.id, el)"
               class="min-h-0 flex-1"
               :context="pane.context"
+              :transfer-endpoint="pane.transferEndpoint"
               @select="
                 pane.selection = $event;
                 focusRemotePane(pane.id);
               "
+              @transfer-drop="queueSftpTransfer($event, pane.transferEndpoint)"
             />
           </div>
         </div>
@@ -577,5 +636,5 @@ watch(currentOrgId, () => {
         />
       </template>
     </UModal>
-  </div>
+</div>
 </template>

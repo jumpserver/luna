@@ -1,17 +1,9 @@
 import type { Ref } from "vue";
-
 import type { SftpDataMessage, SftpFileEntry, SftpFileOperations, SftpIncomingMessage, SftpSocketFailure } from "./protocol";
-
 import type { SftpSocketClient } from "./useSftpSocket";
+
 import { computed, ref } from "vue";
-import {
-  SftpCommand,
-
-  SftpDataStatus,
-
-  SftpMessageType
-
-} from "./protocol";
+import { SftpCommand, SftpDataStatus, SftpMessageType } from "./protocol";
 
 interface PendingList {
   background: boolean;
@@ -35,6 +27,14 @@ interface UploadTask {
 
 const messageId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
 const uploadChunkSize = 5 * 1024 * 1024;
+const transferCommands = new Set<SftpCommand>([
+  SftpCommand.TransferPrepare,
+  SftpCommand.TransferRead,
+  SftpCommand.TransferWrite,
+  SftpCommand.TransferStatus,
+  SftpCommand.TransferCommit,
+  SftpCommand.TransferCancel
+]);
 
 function pathFor(currentPath: string, name: string) {
   return `${currentPath.replace(/\/$/, "")}/${name}`;
@@ -69,12 +69,14 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     return active?.name || "";
   });
   const queuedUploadCount = computed(() => uploadTasks.value.filter((task) => task.status === "queued").length);
+
   const pendingLists = new Map<string, PendingList>();
   const pendingDownloads = new Map<string, PendingDownload>();
   const pendingMutations = new Map<string, { resolve: () => void; reject: (error: Error) => void }>();
   const pendingUploadAcks = new Map<string, Array<{ resolve: () => void; reject: (error: Error) => void }>>();
   const listListeners = new Set<(result: { entries: SftpFileEntry[]; currentPath?: string; background: boolean }) => void>();
   const errorListeners = new Set<(error: Error) => void>();
+
   let readQueue: Promise<void> = Promise.resolve();
   let uploadQueue: Promise<void> = Promise.resolve();
 
@@ -115,7 +117,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     uploadTasks.value = [];
   }
 
-  function send(command: SftpCommand, data: Record<string, unknown>, raw = "", id = messageId()) {
+  function send(command: SftpCommand, data: Record<string, unknown>, raw = "", id: string = messageId()) {
     socket.send({ id, type: SftpMessageType.Data, cmd: command, data: JSON.stringify(data), raw });
     return id;
   }
@@ -169,7 +171,12 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
       pending.reject(new Error(message.err));
       return;
     }
-    const blob = new Blob(pending.parts, { type: "application/octet-stream" });
+    const parts = pending.parts.map((part) => {
+      const copy = new Uint8Array(part.byteLength);
+      copy.set(part);
+      return copy.buffer as ArrayBuffer;
+    });
+    const blob = new Blob(parts, { type: "application/octet-stream" });
     if (pending.saveAs && message.data) {
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -214,7 +221,13 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
       return;
     }
     if (message.type !== SftpMessageType.Data) return;
-    if (message.err && !pendingLists.has(message.id) && !pendingDownloads.has(message.id) && !pendingMutations.has(message.id)) {
+    if (
+      message.err &&
+      !transferCommands.has(message.cmd) &&
+      !pendingLists.has(message.id) &&
+      !pendingDownloads.has(message.id) &&
+      !pendingMutations.has(message.id)
+    ) {
       emitError(new Error(message.err));
     }
 
@@ -256,7 +269,11 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
         })
     );
 
-  const mutatePath = (command: SftpCommand.MakeDirectory | SftpCommand.Rename | SftpCommand.Remove, path: string, extra = {}) =>
+  const mutatePath = (
+    command: SftpCommand.MakeDirectory | SftpCommand.Rename | SftpCommand.Remove,
+    path: string,
+    extra = {}
+  ) =>
     enqueueRead(
       () =>
         new Promise<void>((resolve, reject) => {
@@ -295,7 +312,10 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
       try {
         task.status = "uploading";
         for (let index = 0; index < chunks; index++) {
-          const bytes = new Uint8Array(await file.slice(index * uploadChunkSize, (index + 1) * uploadChunkSize).arrayBuffer());
+          const bytes = new Uint8Array(
+            await file.slice(index * uploadChunkSize, (index + 1) * uploadChunkSize).arrayBuffer()
+          );
+
           await sendUpload(
             id,
             { offSet: index * uploadChunkSize, size: file.size, path: targetPath, chunk: chunks > 1 },
@@ -325,7 +345,10 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     readFile: (entry, targetPath) => readPath(targetPath || pathFor(currentPath.value, entry.name), false),
     uploadFile,
     uploadBlob: async (fileName, blob, targetPath) => {
-      const file = blob instanceof File ? blob : new File([blob], fileName, { type: blob.type || "application/octet-stream" });
+      const file = blob instanceof File
+        ? blob
+        : new File([blob], fileName, { type: blob.type || "application/octet-stream" });
+
       await uploadFile(file, targetPath || pathFor(currentPath.value, fileName));
     }
   };

@@ -13,6 +13,12 @@ export enum SftpCommand {
   List = "list",
   Download = "download",
   Upload = "upload",
+  TransferPrepare = "transfer_prepare",
+  TransferRead = "transfer_read",
+  TransferWrite = "transfer_write",
+  TransferStatus = "transfer_status",
+  TransferCommit = "transfer_commit",
+  TransferCancel = "transfer_cancel",
   MakeDirectory = "mkdir",
   Rename = "rename",
   Remove = "rm"

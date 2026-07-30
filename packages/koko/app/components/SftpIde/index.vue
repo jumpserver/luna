@@ -483,7 +483,7 @@ function downloadContextTarget() {
   const target = contextTarget.value;
   if (!target) return;
   hideContextMenu();
-  manager.downloadPath(target.path, target.entry.is_dir);
+  manager.operations.downloadPath(target.path, target.entry.is_dir);
 }
 
 function chooseUpload() {

@@ -1,13 +1,14 @@
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 import type { Ref } from "vue";
-
 import type { SftpFileEntry } from "./protocol";
+import type { FileTransferEndpointRef } from "~/shared/file-transfer/types";
 
-import { onUnmounted, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 import { SftpMessageType, SftpSocketFailureCode } from "./protocol";
 import { useSftpOperations } from "./useSftpOperations";
 import { useSftpRetry } from "./useSftpRetry";
 import { useSftpSocket } from "./useSftpSocket";
+import { useSftpTransferEndpoint } from "./useSftpTransferEndpoint";
 
 export type { SftpFileEntry } from "./protocol";
 
@@ -24,7 +25,7 @@ function errorMessage(code: SftpSocketFailureCode, t: (key: string) => string) {
   }
 }
 
-export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
+export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, transferRef?: FileTransferEndpointRef) {
   const { t } = useI18n();
 
   const error = ref("");
@@ -34,6 +35,11 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
 
   const entries = ref<SftpFileEntry[]>([]);
   const activeContext = ref<ConnectorSessionContext | null>(null);
+  const navigationHistory = ref<string[]>([]);
+  const navigationIndex = ref(-1);
+  const canGoBack = computed(() => navigationIndex.value > 0);
+  const canGoForward = computed(() => navigationIndex.value >= 0 && navigationIndex.value < navigationHistory.value.length - 1);
+  const canGoHome = computed(() => Boolean(initialPath.value) && currentPath.value !== initialPath.value);
 
   const socket = useSftpSocket();
   const operationClient = useSftpOperations(currentPath, socket);
@@ -49,11 +55,19 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
     loading.value = false;
   }
 
-  async function loadCurrentDirectory(path = currentPath.value, messageId?: string) {
+  function recordNavigation(path: string) {
+    if (!path) return;
+    if (navigationHistory.value[navigationIndex.value] === path) return;
+    navigationHistory.value = [...navigationHistory.value.slice(0, navigationIndex.value + 1), path];
+    navigationIndex.value = navigationHistory.value.length - 1;
+  }
+
+  async function loadCurrentDirectory(path = currentPath.value, messageId?: string, record = true) {
     loading.value = true;
     error.value = "";
     try {
       await operationClient.operations.listDirectory(path, { messageId });
+      if (record) recordNavigation(currentPath.value || path);
       return true;
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : String(cause);
@@ -62,12 +76,49 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
     }
   }
 
+  const transferEndpoint = transferRef
+    ? useSftpTransferEndpoint(socket, transferRef, async ({ targetPath }) => {
+      const normalizedTarget = targetPath.replace(/\/+$/, "");
+      const separator = normalizedTarget.lastIndexOf("/");
+      const destinationDirectory = normalizedTarget.slice(0, separator) || "/";
+      const displayedDirectory = currentPath.value.replace(/\/+$/, "") || "/";
+
+      if (destinationDirectory !== displayedDirectory) return;
+
+      await loadCurrentDirectory(currentPath.value, undefined, false);
+    })
+    : null;
+
   function changeDirectory(entry: SftpFileEntry) {
     const path =
       entry.name === ".."
         ? currentPath.value.replace(/\/?[^/]+\/?$/, "") || "/"
         : `${currentPath.value.replace(/\/$/, "")}/${entry.name}`;
     void loadCurrentDirectory(path);
+  }
+
+  async function goBack() {
+    if (!canGoBack.value) return false;
+    const index = navigationIndex.value - 1;
+    const path = navigationHistory.value[index];
+    if (!path || !(await loadCurrentDirectory(path, undefined, false))) return false;
+    navigationIndex.value = index;
+    return true;
+  }
+
+  async function goForward() {
+    if (!canGoForward.value) return false;
+    const index = navigationIndex.value + 1;
+    const path = navigationHistory.value[index];
+    if (!path || !(await loadCurrentDirectory(path, undefined, false))) return false;
+    navigationIndex.value = index;
+    return true;
+  }
+
+  function goHome() {
+    if (!canGoHome.value) return false;
+
+    return loadCurrentDirectory(initialPath.value);
   }
 
   const stopListListener = operationClient.onList(({ entries: nextEntries, currentPath: nextPath, background }) => {
@@ -102,8 +153,11 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
       entries.value = [];
       currentPath.value = "";
       initialPath.value = "";
+      navigationHistory.value = [];
+      navigationIndex.value = -1;
       error.value = "";
       loading.value = Boolean(context);
+
       if (activeContext.value) socket.connect(activeContext.value);
       else socket.close();
     },
@@ -126,9 +180,16 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>) {
     uploadProgress: operationClient.uploadProgress,
     currentUploadName: operationClient.currentUploadName,
     queuedUploadCount: operationClient.queuedUploadCount,
+    canGoBack,
+    canGoForward,
+    canGoHome,
     operations: operationClient.operations,
+    transferEndpoint,
     retry,
     loadCurrentDirectory,
-    changeDirectory
+    changeDirectory,
+    goBack,
+    goForward,
+    goHome
   };
 }
