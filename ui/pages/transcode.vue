@@ -414,7 +414,7 @@ watch(outputDir, () => {
 
       <div
         v-else
-        class="flex flex-1 items-center justify-center border border-dashed border-(--ui-border) text-sm text-(--ui-text-muted)"
+        class="flex flex-1 items-center justify-center border border-dashed border-default text-sm text-muted"
       >
         {{ t("Transcode.EmptyArchives") }}
       </div>

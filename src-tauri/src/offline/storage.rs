@@ -177,15 +177,32 @@ impl OfflineStorage {
         Ok(())
     }
 
+    /// 将不可信的 `recording_id` / `entry_id` 解析成一个可以安全读取的绝对路径。
+    ///
+    /// 输入来自前端，属于不可信数据，因此采用纵深防御，三道 Guard 层层收紧：
+    ///
+    /// - Guard 1 `validate_identifier`：只做字符串层面的校验，只放行
+    ///   `[A-Za-z0-9_-]`。挡住 `..`、`/` 以及绝对路径，使后续 `join`
+    ///   永远拿不到能跳出 root 的片段。
+    /// - Guard 2 `canonicalize` + `starts_with`：解析符号链接与 `..`，得到磁盘上
+    ///   的物理真身，再确认它仍在 root 之内。挡住"名字合法、真身却指向 root
+    ///   之外"的符号链接。下面对 entries 目录和最终文件各执行一次。
+    /// - Guard 3 `symlink_metadata` 拒软链：即使符号链接指向 root 内部（能通过
+    ///   Guard 2），也一律拒绝。entries/ 里的文件都是导入流程写入的普通文件，
+    ///   正常情况下不会出现符号链接，出现即视为异常。
     pub fn resolve_entry(
         &self,
         recording_id: &str,
         entry_id: &str,
     ) -> Result<PathBuf, StorageError> {
+        // Guard 1：字符校验，挡住 `..`、`/` 和绝对路径。
         validate_identifier("recording", recording_id)?;
         validate_identifier("entry", entry_id)?;
 
         let entries_dir = self.root.join(recording_id).join(ENTRIES_DIR_NAME);
+
+        // Guard 2（针对 entries 目录）：canonicalize 解析出物理真身。
+        // 若 entries/ 是符号链接，这里会跟随它解析到真正的目标目录。
         let canonical_entries_dir = fs::canonicalize(&entries_dir).map_err(|error| {
             if error.kind() == io::ErrorKind::NotFound {
                 StorageError::RecordingNotFound(recording_id.to_owned())
@@ -194,13 +211,17 @@ impl OfflineStorage {
             }
         })?;
 
-        // canonicalize 会解析符号链接
-        // 如果 entries/ 被替换成指向缓存目录之外的链接，必须拒绝读取
+        // Guard 2 续：真身必须仍在 root 之内。
+        // 若 entries/ 被换成指向存储目录之外的链接，真身会逃出 root，拒绝读取。
         if !canonical_entries_dir.starts_with(&self.root) {
             return Err(StorageError::PathEscapesStorage(canonical_entries_dir));
         }
 
         let candidate = entries_dir.join(entry_id);
+
+        // Guard 3：用 symlink_metadata（不跟随符号链接）检查候选文件本身。
+        // metadata 会跟随链接、看到目标文件，从而让软链隐身；
+        // symlink_metadata 看到的是链接自身，才能识别并拒绝它。
         let metadata = fs::symlink_metadata(&candidate).map_err(|error| {
             if error.kind() == io::ErrorKind::NotFound {
                 StorageError::EntryNotFound {
@@ -211,10 +232,13 @@ impl OfflineStorage {
                 StorageError::io("inspect recording entry", &candidate, error)
             }
         })?;
+        // 只接受普通文件：是符号链接、或不是文件（目录等），一律拒绝。
         if metadata.file_type().is_symlink() || !metadata.is_file() {
             return Err(StorageError::UnexpectedFileType(candidate));
         }
 
+        // Guard 2（针对最终文件）：再次解析真身，并确认它落在已解析的
+        // entries 目录之内，防止路径在校验与打开之间被替换。
         let canonical_candidate = fs::canonicalize(&candidate)
             .map_err(|error| StorageError::io("resolve recording entry", &candidate, error))?;
 
