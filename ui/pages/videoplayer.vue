@@ -280,9 +280,7 @@ onBeforeUnmount(() => {
                 将录像拖入播放区，或点击这里选择 `.mp4`、`.gz`、`.tar` 文件。
               </span>
             </span>
-            <span
-              class="rounded-full bg-muted px-4 py-2 text-sm text-toned transition group-hover:bg-accented"
-            >
+            <span class="rounded-full bg-muted px-4 py-2 text-sm text-toned transition group-hover:bg-accented">
               选择文件
             </span>
           </button>
