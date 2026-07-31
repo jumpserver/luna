@@ -9,12 +9,20 @@ import type {
 import type { SftpSocketClient } from "./useSftpSocket";
 
 import { computed, ref } from "vue";
-import { SftpCommand, SftpDataStatus, SftpMessageType } from "./protocol";
+import {
+  SFTP_FILE_CONFLICT_ERROR,
+  SFTP_REQUEST_TIMEOUT_ERROR,
+  SftpCommand,
+  SftpDataStatus,
+  SftpMessageType
+} from "./protocol";
 
 interface PendingList {
   background: boolean;
+  requestedPath: string;
   resolve: (entries: SftpFileEntry[]) => void;
   reject: (error: Error) => void;
+  timeout?: ReturnType<typeof setTimeout>;
 }
 
 interface PendingDownload {
@@ -22,6 +30,32 @@ interface PendingDownload {
   saveAs: boolean;
   resolve: (blob: Blob) => void;
   reject: (error: Error) => void;
+  timeout?: ReturnType<typeof setTimeout>;
+}
+
+interface PendingMutation {
+  resolve: () => void;
+  reject: (error: Error) => void;
+  timeout?: ReturnType<typeof setTimeout>;
+}
+
+interface PendingUploadAck {
+  resolve: () => void;
+  reject: (error: Error) => void;
+  timeout?: ReturnType<typeof setTimeout>;
+}
+
+interface PendingSave {
+  resolve: (entry: SftpFileEntry) => void;
+  reject: (error: Error) => void;
+  timeout?: ReturnType<typeof setTimeout>;
+}
+
+export class SftpFileConflictError extends Error {
+  constructor() {
+    super(SFTP_FILE_CONFLICT_ERROR);
+    this.name = "SftpFileConflictError";
+  }
 }
 
 interface UploadTask {
@@ -33,6 +67,8 @@ interface UploadTask {
 
 const messageId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
 const uploadChunkSize = 5 * 1024 * 1024;
+const requestTimeoutMs = 30_000;
+const saveRequestTimeoutMs = 120_000;
 const transferCommands = new Set<SftpCommand>([
   SftpCommand.TransferPrepare,
   SftpCommand.TransferRead,
@@ -78,23 +114,43 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
 
   const pendingLists = new Map<string, PendingList>();
   const pendingDownloads = new Map<string, PendingDownload>();
-  const pendingMutations = new Map<string, { resolve: () => void; reject: (error: Error) => void }>();
-  const pendingUploadAcks = new Map<string, Array<{ resolve: () => void; reject: (error: Error) => void }>>();
+  const pendingMutations = new Map<string, PendingMutation>();
+  const pendingUploadAcks = new Map<string, PendingUploadAck[]>();
+  const pendingSaves = new Map<string, PendingSave>();
   const listListeners = new Set<
     (result: { entries: SftpFileEntry[]; currentPath?: string; background: boolean }) => void
   >();
   const errorListeners = new Set<(error: Error) => void>();
 
-  let readQueue: Promise<void> = Promise.resolve();
+  let navigationQueue: Promise<void> = Promise.resolve();
+  let mutationQueue: Promise<void> = Promise.resolve();
   let uploadQueue: Promise<void> = Promise.resolve();
 
   const emitError = (error: Error) => {
     for (const listener of errorListeners) listener(error);
   };
 
-  const enqueueRead = <T>(operation: () => Promise<T>) => {
-    const result = readQueue.then(operation, operation);
-    readQueue = result.then(
+  function armDownloadTimeout(id: string, pending: PendingDownload) {
+    clearTimeout(pending.timeout);
+    pending.timeout = setTimeout(() => {
+      if (pendingDownloads.get(id) !== pending) return;
+      pendingDownloads.delete(id);
+      pending.reject(new Error(SFTP_REQUEST_TIMEOUT_ERROR));
+    }, requestTimeoutMs);
+  }
+
+  const enqueueNavigation = <T>(operation: () => Promise<T>) => {
+    const result = navigationQueue.then(operation, operation);
+    navigationQueue = result.then(
+      () => undefined,
+      () => undefined
+    );
+    return result;
+  };
+
+  const enqueueMutation = <T>(operation: () => Promise<T>) => {
+    const result = mutationQueue.then(operation, operation);
+    mutationQueue = result.then(
       () => undefined,
       () => undefined
     );
@@ -112,16 +168,33 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
 
   function rejectPending(message: string) {
     const error = new Error(message);
-    for (const pending of pendingLists.values()) pending.reject(error);
-    for (const pending of pendingDownloads.values()) pending.reject(error);
-    for (const pending of pendingMutations.values()) pending.reject(error);
+    for (const pending of pendingLists.values()) {
+      clearTimeout(pending.timeout);
+      pending.reject(error);
+    }
+    for (const pending of pendingDownloads.values()) {
+      clearTimeout(pending.timeout);
+      pending.reject(error);
+    }
+    for (const pending of pendingMutations.values()) {
+      clearTimeout(pending.timeout);
+      pending.reject(error);
+    }
     for (const waiters of pendingUploadAcks.values()) {
-      for (const waiter of waiters) waiter.reject(error);
+      for (const waiter of waiters) {
+        clearTimeout(waiter.timeout);
+        waiter.reject(error);
+      }
+    }
+    for (const pending of pendingSaves.values()) {
+      clearTimeout(pending.timeout);
+      pending.reject(error);
     }
     pendingLists.clear();
     pendingDownloads.clear();
     pendingMutations.clear();
     pendingUploadAcks.clear();
+    pendingSaves.clear();
     uploadTasks.value = [];
   }
 
@@ -132,8 +205,16 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
 
   function waitForUploadAck(id: string) {
     return new Promise<void>((resolve, reject) => {
+      const waiter: PendingUploadAck = { resolve, reject };
       const waiters = pendingUploadAcks.get(id) || [];
-      waiters.push({ resolve, reject });
+      waiter.timeout = setTimeout(() => {
+        const active = pendingUploadAcks.get(id) || [];
+        const remaining = active.filter((item) => item !== waiter);
+        if (remaining.length) pendingUploadAcks.set(id, remaining);
+        else pendingUploadAcks.delete(id);
+        reject(new Error(SFTP_REQUEST_TIMEOUT_ERROR));
+      }, requestTimeoutMs);
+      waiters.push(waiter);
       pendingUploadAcks.set(id, waiters);
     });
   }
@@ -145,6 +226,8 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
       await ack;
     } catch (cause) {
       const waiters = pendingUploadAcks.get(id) || [];
+      const waiter = waiters[0];
+      clearTimeout(waiter?.timeout);
       const remaining = waiters.slice(1);
       if (remaining.length) pendingUploadAcks.set(id, remaining);
       else pendingUploadAcks.delete(id);
@@ -156,6 +239,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     const pending = pendingLists.get(message.id);
     if (!pending) return;
     pendingLists.delete(message.id);
+    clearTimeout(pending.timeout);
     if (message.err) {
       pending.reject(new Error(message.err));
       return;
@@ -164,7 +248,11 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
       const entries = JSON.parse(message.data || "[]") as SftpFileEntry[];
       pending.resolve(entries);
       for (const listener of listListeners) {
-        listener({ entries, currentPath: message.current_path, background: pending.background });
+        listener({
+          entries,
+          currentPath: pending.requestedPath || message.current_path,
+          background: pending.background
+        });
       }
     } catch (cause) {
       pending.reject(cause instanceof Error ? cause : new Error(String(cause)));
@@ -175,6 +263,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     const pending = pendingDownloads.get(message.id);
     if (!pending) return;
     pendingDownloads.delete(message.id);
+    clearTimeout(pending.timeout);
     if (message.err) {
       pending.reject(new Error(message.err));
       return;
@@ -198,28 +287,57 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
   function handleUpload(message: SftpDataMessage) {
     const waiters = pendingUploadAcks.get(message.id) || [];
     if (message.err) {
-      for (const waiter of waiters) waiter.reject(new Error(message.err));
+      for (const waiter of waiters) {
+        clearTimeout(waiter.timeout);
+        waiter.reject(new Error(message.err));
+      }
       pendingUploadAcks.delete(message.id);
       return;
     }
     if (message.data !== SftpDataStatus.Ok) return;
     const waiter = waiters.shift();
+    clearTimeout(waiter?.timeout);
     waiter?.resolve();
     if (waiters.length) pendingUploadAcks.set(message.id, waiters);
     else pendingUploadAcks.delete(message.id);
+  }
+
+  function handleSave(message: SftpDataMessage) {
+    const pending = pendingSaves.get(message.id);
+    if (!pending) return;
+    pendingSaves.delete(message.id);
+    clearTimeout(pending.timeout);
+    if (message.error_code === SFTP_FILE_CONFLICT_ERROR) {
+      pending.reject(new SftpFileConflictError());
+      return;
+    }
+    if (message.err) {
+      pending.reject(new Error(message.err));
+      return;
+    }
+    try {
+      pending.resolve(JSON.parse(message.data || "{}") as SftpFileEntry);
+    } catch (cause) {
+      pending.reject(cause instanceof Error ? cause : new Error(String(cause)));
+    }
   }
 
   function handleMutation(message: SftpDataMessage) {
     const pending = pendingMutations.get(message.id);
     if (!pending) return;
     pendingMutations.delete(message.id);
+    clearTimeout(pending.timeout);
     if (message.err) pending.reject(new Error(message.err));
     else pending.resolve();
   }
 
   function handleMessage(message: SftpIncomingMessage) {
     if (message.type === SftpMessageType.Binary) {
-      pendingDownloads.get(message.id)?.parts.push(decodeRaw(message.raw));
+      const pending = pendingDownloads.get(message.id);
+      if (pending) {
+        pending.parts.push(decodeRaw(message.raw));
+        armDownloadTimeout(message.id, pending);
+      }
       return;
     }
     if (
@@ -238,7 +356,8 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
       !transferCommands.has(message.cmd) &&
       !pendingLists.has(message.id) &&
       !pendingDownloads.has(message.id) &&
-      !pendingMutations.has(message.id)
+      !pendingMutations.has(message.id) &&
+      !pendingSaves.has(message.id)
     ) {
       emitError(new Error(message.err));
     }
@@ -253,6 +372,9 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
       case SftpCommand.Upload:
         handleUpload(message);
         break;
+      case SftpCommand.Save:
+        handleSave(message);
+        break;
       case SftpCommand.MakeDirectory:
       case SftpCommand.Rename:
       case SftpCommand.Remove:
@@ -266,54 +388,74 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     rejectPending(failure.message);
   });
 
-  const listDirectory = (path: string, options: { background?: boolean; messageId?: string } = {}) =>
-    enqueueRead(
-      () =>
-        new Promise<SftpFileEntry[]>((resolve, reject) => {
-          const id = options.messageId || messageId();
-          pendingLists.set(id, { background: Boolean(options.background), resolve, reject });
-          try {
-            send(SftpCommand.List, { path }, "", id);
-          } catch (cause) {
-            pendingLists.delete(id);
-            reject(cause instanceof Error ? cause : new Error(String(cause)));
-          }
-        })
-    );
+  const listDirectory = (path: string, options: { background?: boolean; messageId?: string } = {}) => {
+    const request = () =>
+      new Promise<SftpFileEntry[]>((resolve, reject) => {
+        const id = options.messageId || messageId();
+        const pending: PendingList = {
+          background: Boolean(options.background),
+          requestedPath: path,
+          resolve,
+          reject
+        };
+        pending.timeout = setTimeout(() => {
+          if (pendingLists.get(id) !== pending) return;
+          pendingLists.delete(id);
+          reject(new Error(SFTP_REQUEST_TIMEOUT_ERROR));
+        }, requestTimeoutMs);
+        pendingLists.set(id, pending);
+        try {
+          send(SftpCommand.List, { path }, "", id);
+        } catch (cause) {
+          pendingLists.delete(id);
+          clearTimeout(pending.timeout);
+          reject(cause instanceof Error ? cause : new Error(String(cause)));
+        }
+      });
+
+    return options.background ? Promise.resolve().then(request) : enqueueNavigation(request);
+  };
 
   const mutatePath = (
     command: SftpCommand.MakeDirectory | SftpCommand.Rename | SftpCommand.Remove,
     path: string,
     extra = {}
   ) =>
-    enqueueRead(
+    enqueueMutation(
       () =>
         new Promise<void>((resolve, reject) => {
           const id = messageId();
-          pendingMutations.set(id, { resolve, reject });
+          const pending: PendingMutation = { resolve, reject };
+          pending.timeout = setTimeout(() => {
+            if (pendingMutations.get(id) !== pending) return;
+            pendingMutations.delete(id);
+            reject(new Error(SFTP_REQUEST_TIMEOUT_ERROR));
+          }, requestTimeoutMs);
+          pendingMutations.set(id, pending);
           try {
             send(command, { path, ...extra }, "", id);
           } catch (cause) {
             pendingMutations.delete(id);
+            clearTimeout(pending.timeout);
             reject(cause instanceof Error ? cause : new Error(String(cause)));
           }
         })
     );
 
   const readPath = (path: string, saveAs: boolean, isDir = false) =>
-    enqueueRead(
-      () =>
-        new Promise<Blob>((resolve, reject) => {
-          const id = messageId();
-          pendingDownloads.set(id, { parts: [], saveAs, resolve, reject });
-          try {
-            send(SftpCommand.Download, { path, is_dir: isDir }, "", id);
-          } catch (cause) {
-            pendingDownloads.delete(id);
-            reject(cause instanceof Error ? cause : new Error(String(cause)));
-          }
-        })
-    );
+    new Promise<Blob>((resolve, reject) => {
+      const id = messageId();
+      const pending: PendingDownload = { parts: [], saveAs, resolve, reject };
+      pendingDownloads.set(id, pending);
+      armDownloadTimeout(id, pending);
+      try {
+        send(SftpCommand.Download, { path, is_dir: isDir }, "", id);
+      } catch (cause) {
+        pendingDownloads.delete(id);
+        clearTimeout(pending.timeout);
+        reject(cause instanceof Error ? cause : new Error(String(cause)));
+      }
+    });
 
   const uploadFile = (file: File, targetPath = pathFor(currentPath.value, file.name)) =>
     enqueueUpload(async () => {
@@ -342,11 +484,43 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
       }
     });
 
+  const saveFile = (path: string, bytes: Uint8Array, options: { expectedVersion?: string; force?: boolean } = {}) =>
+    enqueueUpload(
+      () =>
+        new Promise<SftpFileEntry>((resolve, reject) => {
+          const id = messageId();
+          const pending: PendingSave = { resolve, reject };
+          pending.timeout = setTimeout(() => {
+            if (pendingSaves.get(id) !== pending) return;
+            pendingSaves.delete(id);
+            reject(new Error(SFTP_REQUEST_TIMEOUT_ERROR));
+          }, saveRequestTimeoutMs);
+          pendingSaves.set(id, pending);
+          try {
+            send(
+              SftpCommand.Save,
+              {
+                path,
+                size: bytes.byteLength,
+                expected_version: options.expectedVersion,
+                force: Boolean(options.force)
+              },
+              bytesToBase64(bytes),
+              id
+            );
+          } catch (cause) {
+            pendingSaves.delete(id);
+            clearTimeout(pending.timeout);
+            reject(cause instanceof Error ? cause : new Error(String(cause)));
+          }
+        })
+    );
+
   const operations: SftpFileOperations = {
     listDirectory,
     createDirectory: (name) => mutatePath(SftpCommand.MakeDirectory, pathFor(currentPath.value, name)),
     createDirectoryAt: (path) => mutatePath(SftpCommand.MakeDirectory, path),
-    createFileAt: (path) => enqueueRead(() => sendUpload(messageId(), { offSet: 0, size: 0, path, chunk: false })),
+    createFileAt: (path) => enqueueUpload(() => sendUpload(messageId(), { offSet: 0, size: 0, path, chunk: false })),
     renameEntry: (entry, name) =>
       mutatePath(SftpCommand.Rename, pathFor(currentPath.value, entry.name), { new_name: name }),
     renamePath: (path, name) => mutatePath(SftpCommand.Rename, path, { new_name: name }),
@@ -362,7 +536,8 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
         blob instanceof File ? blob : new File([blob], fileName, { type: blob.type || "application/octet-stream" });
 
       await uploadFile(file, targetPath || pathFor(currentPath.value, fileName));
-    }
+    },
+    saveFile
   };
 
   function onList(listener: (result: { entries: SftpFileEntry[]; currentPath?: string; background: boolean }) => void) {

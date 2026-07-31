@@ -8,7 +8,7 @@ import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
 import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
 import { useWorkspaceConnectors } from "~/composables/useWorkspaceConnectors";
 import { clearWorkspaceSessionDetails, setWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
-import { useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
+import { registerWorkspaceSessionCloseGuard, useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
 import { createCodeMirrorSyntaxTheme, createCodeMirrorTheme } from "~/shared/theme/adapters/codemirror";
 import { toXtermTheme } from "~/shared/theme/adapters/xterm";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -76,6 +76,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         account: tab.account
       });
     },
+    registerSessionCloseGuard: registerWorkspaceSessionCloseGuard,
     setSessionDetails: (tabId, details) => {
       setWorkspaceSessionDetails(tabId, details as Parameters<typeof setWorkspaceSessionDetails>[1]);
     },

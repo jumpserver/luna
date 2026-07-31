@@ -109,26 +109,25 @@ describe("sFTP browser protocol", () => {
     expect(failures).toEqual([SftpSocketFailureCode.MalformedMessage, SftpSocketFailureCode.ConnectionClosed]);
   });
 
-  it("correlates list requests and serializes background reads", async () => {
+  it("correlates concurrent background list requests", async () => {
     const { fake, socket } = openSocket();
     const operations = useSftpOperations(ref("/"), socket).operations;
     const first = operations.listDirectory("/first");
     const second = operations.listDirectory("/second", { background: true });
-    await nextMessage();
+    await vi.waitFor(() => expect(fake.sent).toHaveLength(2));
 
-    const firstRequest = lastSent(fake);
+    const requests = fake.sent.map(
+      (message) =>
+        JSON.parse(message) as {
+          id: string;
+          type: SftpMessageType;
+          cmd?: SftpCommand;
+          data?: string;
+        }
+    );
+    const firstRequest = requests.find((request) => JSON.parse(request.data || "{}").path === "/first")!;
+    const secondRequest = requests.find((request) => JSON.parse(request.data || "{}").path === "/second")!;
     expect(firstRequest).toMatchObject({ type: SftpMessageType.Data, cmd: SftpCommand.List });
-    fake.receive({
-      id: firstRequest.id,
-      type: SftpMessageType.Data,
-      cmd: SftpCommand.List,
-      data: JSON.stringify([]),
-      current_path: "/first"
-    });
-    await expect(first).resolves.toEqual([]);
-    await nextMessage();
-
-    const secondRequest = lastSent(fake);
     expect(secondRequest.id).not.toBe(firstRequest.id);
     fake.receive({
       id: secondRequest.id,
@@ -138,6 +137,14 @@ describe("sFTP browser protocol", () => {
       current_path: "/second"
     });
     await expect(second).resolves.toEqual([]);
+    fake.receive({
+      id: firstRequest.id,
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.List,
+      data: JSON.stringify([]),
+      current_path: "/first"
+    });
+    await expect(first).resolves.toEqual([]);
   });
 
   it("assembles binary download fragments", async () => {

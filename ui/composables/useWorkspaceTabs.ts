@@ -44,6 +44,14 @@ const pendingPaneTarget = ref<{ tabId: string; paneId: string } | null>(null);
 let tabSequence = 0;
 let paneSequence = 0;
 let sessionDisposer: ((id: string) => void | Promise<void>) | null = null;
+const sessionCloseGuards = new Map<string, () => boolean | Promise<boolean>>();
+
+export const registerWorkspaceSessionCloseGuard = (sessionId: string, guard: () => boolean | Promise<boolean>) => {
+  sessionCloseGuards.set(sessionId, guard);
+  return () => {
+    if (sessionCloseGuards.get(sessionId) === guard) sessionCloseGuards.delete(sessionId);
+  };
+};
 
 const blankSurface = (): Omit<WorkspaceSurfaceSession, "id"> => ({
   assetId: "",
@@ -203,6 +211,17 @@ const createTabFromPane = (pane: WorkspacePane): WorkspaceSessionTab => {
 
 const closeNativeSession = (id: string) => {
   Promise.resolve(sessionDisposer?.(id)).catch(() => {});
+};
+
+const canCloseWorkspaceSession = async (id: string) => {
+  const guard = sessionCloseGuards.get(id);
+  if (!guard) return true;
+
+  try {
+    return (await guard()) !== false;
+  } catch {
+    return false;
+  }
 };
 
 const findPane = (paneId: string) => {
@@ -379,94 +398,99 @@ export const useWorkspaceTabs = () => {
     return pane;
   };
 
-  function closeSession(id: string) {
-    const index = tabs.value.findIndex((tab) => tab.id === id);
-    if (index === -1) {
-      closePane(id);
-      return;
-    }
+  function removeSession(tab: WorkspaceSessionTab) {
+    const index = tabs.value.findIndex((item) => item.id === tab.id);
+    if (index === -1) return false;
 
-    const tab = tabs.value[index]!;
     for (const pane of tab.panes) {
       pendingPaneTarget.value = pendingPaneTarget.value?.paneId === pane.id ? null : pendingPaneTarget.value;
+      sessionCloseGuards.delete(pane.id);
       clearWorkspaceSessionDetails(pane.id);
       closeNativeSession(pane.id);
     }
 
     tabs.value.splice(index, 1);
 
-    if (activeTabId.value === id) {
+    if (activeTabId.value === tab.id) {
       activeTabId.value = tabs.value[Math.max(index - 1, 0)]?.id || tabs.value[0]?.id || "";
     }
     ensureActivePaneForTab(activeTabId.value);
+    return true;
   }
 
-  function closePane(paneId: string) {
+  async function canCloseTab(tab: WorkspaceSessionTab) {
+    for (const pane of tab.panes) {
+      if (!(await canCloseWorkspaceSession(pane.id))) return false;
+    }
+    return true;
+  }
+
+  async function closeSession(id: string) {
+    const index = tabs.value.findIndex((tab) => tab.id === id);
+    if (index === -1) {
+      return closePane(id);
+    }
+
+    const tab = tabs.value[index]!;
+    if (!(await canCloseTab(tab))) return false;
+    return removeSession(tab);
+  }
+
+  async function closePane(paneId: string) {
     const match = findPane(paneId);
-    if (!match) return;
+    if (!match) return false;
 
     const { tab, pane, paneIndex } = match;
+    if (!(await canCloseWorkspaceSession(pane.id))) return false;
     if (tab.panes.length === 1) {
-      const tabIndex = tabs.value.findIndex((item) => item.id === tab.id);
-      if (tabIndex !== -1) closeSession(tab.id);
-      return;
+      return removeSession(tab);
     }
 
     pendingPaneTarget.value = pendingPaneTarget.value?.paneId === paneId ? null : pendingPaneTarget.value;
 
+    sessionCloseGuards.delete(pane.id);
     clearWorkspaceSessionDetails(pane.id);
     closeNativeSession(pane.id);
     tab.panes.splice(paneIndex, 1);
     setLayoutForPaneCount(tab);
     syncTabFromPrimaryPane(tab);
     if (activePaneId.value === paneId) activePaneId.value = getFirstPaneId(tab);
+    return true;
   }
 
-  const closeAllSessions = () => {
-    for (const tab of tabs.value) {
-      for (const pane of tab.panes) {
-        clearWorkspaceSessionDetails(pane.id);
-        closeNativeSession(pane.id);
-      }
+  const closeTabs = async (targets: WorkspaceSessionTab[]) => {
+    for (const tab of targets) {
+      if (!(await canCloseTab(tab))) return false;
     }
-
-    pendingPaneTarget.value = null;
-    tabs.value = [];
-    activeTabId.value = "";
-    activePaneId.value = "";
+    for (const tab of targets) removeSession(tab);
+    return true;
   };
 
-  const closeOtherSessions = (id: string) => {
-    if (!tabs.value.some((tab) => tab.id === id)) return;
+  const closeAllSessions = async () => {
+    const closed = await closeTabs([...tabs.value]);
+    if (closed) pendingPaneTarget.value = null;
+    return closed;
+  };
 
-    for (const tab of tabs.value) {
-      if (tab.id !== id) {
-        for (const pane of tab.panes) {
-          clearWorkspaceSessionDetails(pane.id);
-          closeNativeSession(pane.id);
-        }
-      }
-    }
-
+  const closeOtherSessions = async (id: string) => {
+    if (!tabs.value.some((tab) => tab.id === id)) return false;
+    if (!(await closeTabs(tabs.value.filter((tab) => tab.id !== id)))) return false;
     pendingPaneTarget.value = pendingPaneTarget.value?.tabId === id ? pendingPaneTarget.value : null;
-    tabs.value = tabs.value.filter((tab) => tab.id === id);
     activeTabId.value = id;
     ensureActivePaneForTab(id);
+    return true;
   };
 
-  const closeLeftSessions = (id: string) => {
-    while (tabs.value[0]?.id && tabs.value[0].id !== id) {
-      closeSession(tabs.value[0].id);
-    }
-  };
-
-  const closeRightSessions = (id: string) => {
+  const closeLeftSessions = async (id: string) => {
     const index = tabs.value.findIndex((tab) => tab.id === id);
-    if (index === -1) return;
+    if (index === -1) return false;
+    return closeTabs(tabs.value.slice(0, index));
+  };
 
-    while (tabs.value.length > index + 1) {
-      closeSession(tabs.value[tabs.value.length - 1]!.id);
-    }
+  const closeRightSessions = async (id: string) => {
+    const index = tabs.value.findIndex((tab) => tab.id === id);
+    if (index === -1) return false;
+    return closeTabs(tabs.value.slice(index + 1));
   };
 
   const reorderTabs = (sourceTabId: string, targetTabId: string, placement: "before" | "after" = "before") => {

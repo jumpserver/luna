@@ -52,6 +52,7 @@ export interface KokoHostAdapter {
   isTauriRuntime: () => boolean;
   markSessionConnected: (tabId: string) => void;
   markSessionFailed: (tab: Pick<KokoWorkspaceTab, "id" | "assetId" | "protocol" | "account">) => void;
+  registerSessionCloseGuard?: (tabId: string, guard: () => boolean | Promise<boolean>) => () => void;
   setSessionDetails: (tabId: string, details: Record<string, unknown>) => void;
   clearSessionDetails: (tabId: string) => void;
   sftp: KokoSftpHostAdapter;

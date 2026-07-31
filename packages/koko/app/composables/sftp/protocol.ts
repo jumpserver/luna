@@ -13,6 +13,7 @@ export enum SftpCommand {
   List = "list",
   Download = "download",
   Upload = "upload",
+  Save = "save",
   TransferPrepare = "transfer_prepare",
   TransferRead = "transfer_read",
   TransferWrite = "transfer_write",
@@ -44,6 +45,9 @@ export enum SftpSocketFailureCode {
   SendFailed = "send_failed"
 }
 
+export const SFTP_REQUEST_TIMEOUT_ERROR = "sftp_request_timeout";
+export const SFTP_FILE_CONFLICT_ERROR = "sftp_file_conflict";
+
 export interface SftpFileEntry {
   name: string;
   size: string;
@@ -51,6 +55,7 @@ export interface SftpFileEntry {
   mod_time: string;
   type: string;
   is_dir: boolean;
+  version?: string;
 }
 
 interface SftpMessageBase {
@@ -58,6 +63,7 @@ interface SftpMessageBase {
   data?: string;
   raw?: string | number[];
   err?: string;
+  error_code?: string;
   current_path?: string;
 }
 
@@ -102,6 +108,11 @@ export interface SftpFileOperations {
   readFile: (entry: SftpFileEntry, targetPath?: string) => Promise<Blob>;
   uploadFile: (file: File, targetPath?: string) => Promise<void>;
   uploadBlob: (fileName: string, blob: Blob, targetPath?: string) => Promise<void>;
+  saveFile: (
+    path: string,
+    bytes: Uint8Array,
+    options?: { expectedVersion?: string; force?: boolean }
+  ) => Promise<SftpFileEntry>;
 }
 
 const messageTypes = new Set<string>(Object.values(SftpMessageType));
@@ -135,6 +146,7 @@ export function parseSftpIncomingMessage(raw: unknown): SftpIncomingMessage | nu
     data: optionalString(message.data),
     raw: optionalRaw(message.raw),
     err: optionalString(message.err),
+    error_code: optionalString(message.error_code),
     current_path: optionalString(message.current_path)
   };
 

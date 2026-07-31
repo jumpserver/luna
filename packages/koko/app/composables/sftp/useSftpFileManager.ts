@@ -4,13 +4,27 @@ import type { SftpFileEntry } from "./protocol";
 import type { FileTransferEndpointRef } from "~/shared/file-transfer/types";
 
 import { computed, onUnmounted, ref, watch } from "vue";
-import { SftpMessageType, SftpSocketFailureCode } from "./protocol";
+import { SFTP_REQUEST_TIMEOUT_ERROR, SftpMessageType, SftpSocketFailureCode } from "./protocol";
 import { useSftpOperations } from "./useSftpOperations";
 import { useSftpRetry } from "./useSftpRetry";
 import { useSftpSocket } from "./useSftpSocket";
 import { useSftpTransferEndpoint } from "./useSftpTransferEndpoint";
 
 export type { SftpFileEntry } from "./protocol";
+
+const entryNameCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: "base"
+});
+
+export function sortSftpEntries(items: SftpFileEntry[]) {
+  return [...items]
+    .filter((entry) => entry.name !== "..")
+    .sort((left, right) => {
+      if (left.is_dir !== right.is_dir) return left.is_dir ? -1 : 1;
+      return entryNameCollator.compare(left.name, right.name);
+    });
+}
 
 function errorMessage(code: SftpSocketFailureCode, t: (key: string) => string) {
   switch (code) {
@@ -23,6 +37,11 @@ function errorMessage(code: SftpSocketFailureCode, t: (key: string) => string) {
     default:
       return t("koko.fileManagement.sessionExpired");
   }
+}
+
+function operationErrorMessage(cause: unknown, t: (key: string) => string) {
+  const message = cause instanceof Error ? cause.message : String(cause);
+  return message === SFTP_REQUEST_TIMEOUT_ERROR ? t("koko.fileManagement.requestTimeout") : message;
 }
 
 export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, transferRef?: FileTransferEndpointRef) {
@@ -45,15 +64,27 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
 
   const socket = useSftpSocket();
   const operationClient = useSftpOperations(currentPath, socket);
-  const retry = useSftpRetry(activeContext, socket, {
+  const retryClient = useSftpRetry(activeContext, socket, {
     beforeReconnect: () => operationClient.rejectPending(SftpSocketFailureCode.ConnectionReset)
   });
 
+  async function reconnect() {
+    error.value = "";
+    loading.value = true;
+    try {
+      await retryClient.reconnect();
+    } catch (cause) {
+      error.value = operationErrorMessage(cause, t);
+      loading.value = false;
+    }
+  }
+
   function setList(items: SftpFileEntry[]) {
+    const sortedItems = sortSftpEntries(items);
     const atRoot = currentPath.value === "/" || currentPath.value === initialPath.value;
     entries.value = atRoot
-      ? items
-      : [{ name: "..", size: "", perm: "", mod_time: "", type: "", is_dir: true }, ...items];
+      ? sortedItems
+      : [{ name: "..", size: "", perm: "", mod_time: "", type: "", is_dir: true }, ...sortedItems];
     loading.value = false;
   }
 
@@ -72,7 +103,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
       if (record) recordNavigation(currentPath.value || path);
       return true;
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : String(cause);
+      error.value = operationErrorMessage(cause, t);
       loading.value = false;
       return false;
     }
@@ -134,7 +165,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
   });
 
   const stopErrorListener = operationClient.onError((cause) => {
-    error.value = cause.message;
+    error.value = operationErrorMessage(cause, t);
     loading.value = false;
   });
 
@@ -187,7 +218,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
     canGoHome,
     operations: operationClient.operations,
     transferEndpoint,
-    retry,
+    retry: { reconnect },
     loadCurrentDirectory,
     changeDirectory,
     goBack,
