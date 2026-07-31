@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
-import type { SftpEditorDraft } from "#koko/composables/sftp/useSftpEditorDrafts";
+import type { SftpEditorDraft, SftpEditorWorkspaceState } from "#koko/composables/sftp/useSftpEditorDrafts";
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
 import { connectorSessionKey } from "@jumpserver/connectors-core";
 import { useDebounceFn, useIntervalFn } from "@vueuse/core";
@@ -23,6 +23,7 @@ interface EditorTab {
   kind: PreviewKind;
   previewUrl: string;
   loading: boolean;
+  loadStarted: boolean;
   saving: boolean;
   error: string;
   encoding: TextEncoding;
@@ -40,11 +41,13 @@ interface EditorTab {
   contentLanguageMismatch: boolean;
   cursorLine: number;
   cursorColumn: number;
+  preview: boolean;
 }
 interface TreeNode {
   entries: SftpFileEntry[];
   loading: boolean;
   error: string;
+  updatedAt?: number;
 }
 interface EntryTreeRow {
   kind: "entry";
@@ -89,8 +92,13 @@ interface DraggedEditorItem {
   path: string;
   source: "tab" | "tree";
 }
+interface EditorNavigationLocation {
+  entry: SftpFileEntry;
+  pane: EditorPane;
+  path: string;
+}
 
-const props = defineProps<{ sftpToken: string }>();
+const props = defineProps<{ sftpToken: string; workspaceKey?: string }>();
 const { t } = useI18n();
 const toast = useToast();
 const providedContext = inject(connectorSessionKey, ref(null));
@@ -101,7 +109,8 @@ const context = computed<ConnectorSessionContext | null>(() => {
   return { ...value, tokenId: props.sftpToken };
 });
 const manager = useSftpFileManager(context);
-const drafts = useSftpEditorDrafts(toRef(props, "sftpToken"));
+const draftScope = computed(() => props.workspaceKey || props.sftpToken);
+const drafts = useSftpEditorDrafts(draftScope);
 const tabs = ref<EditorTab[]>([]);
 const activePane = ref<EditorPane>("left");
 const paneActivePaths = reactive<Record<EditorPane, string>>({ left: "", right: "" });
@@ -154,18 +163,30 @@ const localChangesOpen = ref(false);
 const localChangeTab = ref<EditorTab | null>(null);
 const workspaceCloseDialogOpen = ref(false);
 const editorLayout = ref<HTMLElement | null>(null);
+const treeScroller = ref<HTMLElement | null>(null);
 const explorerWidth = ref(280);
 const resizingExplorer = ref(false);
+const treeFocusedPath = ref("");
 const draggedEditorItem = ref<DraggedEditorItem | null>(null);
 const editorDropPane = ref<EditorPane | null>(null);
 const quickOpenVisible = ref(false);
 const quickOpenQuery = ref("");
 const quickOpenIndex = ref(0);
 const quickOpenList = ref<HTMLElement | null>(null);
+const recentlyClosed = ref<SftpEditorWorkspaceState["recentlyClosed"]>([]);
+const navigationHistory = ref<EditorNavigationLocation[]>([]);
+const navigationIndex = ref(-1);
+const navigatingHistory = ref(false);
+const restoringWorkspace = ref(false);
+let workspaceRestored = false;
 let workspaceCloseResolver: ((confirmed: boolean) => void) | null = null;
 const tree = ref<Record<string, TreeNode>>({});
 const expanded = ref(new Set<string>());
 const activeTab = computed(() => tabs.value.find((tab) => tab.path === activePath.value) || null);
+const canNavigateBack = computed(() => navigationIndex.value > 0);
+const canNavigateForward = computed(
+  () => navigationIndex.value >= 0 && navigationIndex.value < navigationHistory.value.length - 1
+);
 const editorDragMime = "application/x-jumpserver-editor-item";
 const renameDisabled = computed(
   () => !renameValue.value.trim() || renameValue.value.trim() === renameTarget.value?.entry.name
@@ -181,6 +202,7 @@ const alertDescription = computed(() => {
     : t("koko.sftpEditor.unsavedCloseConfirm", { name: target.tab.entry.name });
 });
 const maxEditorBytes = 10 * 1024 * 1024;
+const directoryCacheTtlMs = 30_000;
 const encodingItems = [
   { label: "UTF-8", value: "utf-8" },
   { label: "UTF-8 with BOM", value: "utf-8-bom" },
@@ -413,8 +435,9 @@ function subTabsForPane(pane: EditorPane) {
     id: tab.path,
     label: tab.entry.name,
     icon: tabIcon(tab),
-    title: tab.path,
-    dirty: dirty(tab)
+    title: tab.preview ? `${tab.path}\n${t("koko.sftpEditor.previewTabHint")}` : tab.path,
+    dirty: dirty(tab),
+    preview: tab.preview
   }));
 }
 
@@ -670,6 +693,7 @@ function createEditorTab(entry: SftpFileEntry, path: string, pane: EditorPane = 
     kind: "empty",
     previewUrl: "",
     loading: true,
+    loadStarted: false,
     saving: false,
     error: "",
     encoding: "utf-8",
@@ -686,7 +710,8 @@ function createEditorTab(entry: SftpFileEntry, path: string, pane: EditorPane = 
     expectedLanguage: expectedLanguage(entry.name),
     contentLanguageMismatch: false,
     cursorLine: 1,
-    cursorColumn: 1
+    cursorColumn: 1,
+    preview: false
   });
 }
 
@@ -793,20 +818,116 @@ const quickOpenItems = computed<QuickOpenItem[]>(() => {
 
 async function loadDirectory(path: string, force = false) {
   const existing = tree.value[path];
-  if (existing?.loading || (existing && !force)) return;
-  tree.value = { ...tree.value, [path]: { entries: existing?.entries || [], loading: true, error: "" } };
+  if (existing?.loading) return;
+  if (existing && !force && Date.now() - (existing.updatedAt || 0) < directoryCacheTtlMs) return;
+  tree.value = {
+    ...tree.value,
+    [path]: { entries: existing?.entries || [], loading: true, error: "", updatedAt: existing?.updatedAt }
+  };
   try {
     const entries = await manager.operations.listDirectory(path, { background: true });
-    tree.value = { ...tree.value, [path]: { entries: sortSftpEntries(entries), loading: false, error: "" } };
+    tree.value = {
+      ...tree.value,
+      [path]: { entries: sortSftpEntries(entries), loading: false, error: "", updatedAt: Date.now() }
+    };
   } catch (cause) {
     tree.value = {
       ...tree.value,
       [path]: {
         entries: existing?.entries || [],
         loading: false,
-        error: formatError(cause)
+        error: formatError(cause),
+        updatedAt: existing?.updatedAt
       }
     };
+  }
+}
+
+async function revealActiveFile(path: string) {
+  const root = rootPath.value;
+  if (!root || (path !== root && !path.startsWith(`${root.replace(/\/$/, "")}/`))) return;
+  const directories: string[] = [];
+  let current = parentPath(path);
+  while (current !== root && current !== "/" && current.startsWith(root)) {
+    directories.unshift(current);
+    const parent = parentPath(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  if (current !== root && parentPath(path) !== root) return;
+
+  if (directories.length) {
+    const next = new Set(expanded.value);
+    directories.forEach((directory) => next.add(directory));
+    expanded.value = next;
+  }
+  for (const directory of directories) {
+    if (tree.value[directory]) void loadDirectory(directory);
+    else await loadDirectory(directory);
+  }
+  await nextTick();
+  treeScroller.value?.querySelector<HTMLElement>('[data-tree-active="true"]')?.scrollIntoView({ block: "nearest" });
+}
+
+const entryTreeRows = computed(() => treeRows.value.filter((row): row is EntryTreeRow => row.kind === "entry"));
+
+function focusTreePath(path: string) {
+  treeFocusedPath.value = path;
+  void nextTick(() => {
+    treeScroller.value?.querySelector<HTMLElement>('[data-tree-focused="true"]')?.focus({ preventScroll: true });
+    treeScroller.value?.querySelector<HTMLElement>('[data-tree-focused="true"]')?.scrollIntoView({ block: "nearest" });
+  });
+}
+
+function handleTreeKeydown(row: EntryTreeRow, event: KeyboardEvent) {
+  const rows = entryTreeRows.value;
+  const index = rows.findIndex((item) => item.path === row.path);
+  if (index < 0) return;
+  const focusAt = (nextIndex: number) => {
+    const next = rows[Math.min(rows.length - 1, Math.max(0, nextIndex))];
+    if (next) focusTreePath(next.path);
+  };
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    focusAt(index + 1);
+  } else if (event.key === "ArrowUp") {
+    event.preventDefault();
+    focusAt(index - 1);
+  } else if (event.key === "Home") {
+    event.preventDefault();
+    focusAt(0);
+  } else if (event.key === "End") {
+    event.preventDefault();
+    focusAt(rows.length - 1);
+  } else if (event.key === "ArrowRight" && row.entry.is_dir) {
+    event.preventDefault();
+    if (!row.expanded) toggleDirectory(row.path);
+    else if (rows[index + 1]?.depth === row.depth + 1) focusAt(index + 1);
+  } else if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    if (row.entry.is_dir && row.expanded) {
+      toggleDirectory(row.path);
+      return;
+    }
+    let parentIndex = -1;
+    for (let candidateIndex = index - 1; candidateIndex >= 0; candidateIndex--) {
+      const candidate = rows[candidateIndex];
+      if (candidate?.depth === row.depth - 1 && candidate.entry.is_dir) {
+        parentIndex = candidateIndex;
+        break;
+      }
+    }
+    if (parentIndex >= 0) focusAt(parentIndex);
+  } else if (event.key === "Enter") {
+    event.preventDefault();
+    void openEntry(row.entry, row.path);
+  } else if (event.key === "F2") {
+    event.preventDefault();
+    beginRenameTarget({ entry: row.entry, path: row.path });
+  } else if (event.key === "Delete") {
+    event.preventDefault();
+    contextTarget.value = { entry: row.entry, path: row.path };
+    openDeleteDialog();
   }
 }
 
@@ -885,8 +1006,9 @@ async function commitCreate() {
       const tab = createEditorTab(entry, path);
       tab.kind = "text";
       tab.loading = false;
+      tab.loadStarted = true;
       tabs.value.push(tab);
-      activePath.value = path;
+      focusPane(tab.pane, path);
     }
     pendingCreate.value = null;
     pendingName.value = "";
@@ -925,14 +1047,18 @@ function createFromContext(kind: "file" | "directory") {
   beginCreate(kind);
 }
 
-function openRenameDialog() {
-  const target = contextTarget.value;
+function beginRenameTarget(target: ContextTarget | null) {
   if (!target || target.path === rootPath.value) return;
   renameTarget.value = target;
   renameValue.value = target.entry.name;
   renameError.value = "";
-  hideContextMenu();
   renameDialogOpen.value = true;
+}
+
+function openRenameDialog() {
+  const target = contextTarget.value;
+  hideContextMenu();
+  beginRenameTarget(target);
 }
 
 async function submitRename() {
@@ -996,6 +1122,21 @@ async function submitRename() {
         node
       ])
     );
+    const rewritePath = (path: string) =>
+      path === target.path || path.startsWith(`${target.path}/`)
+        ? `${nextPath}${path.slice(target.path.length)}`
+        : path;
+    navigationHistory.value = navigationHistory.value.map((location) => ({
+      ...location,
+      path: rewritePath(location.path),
+      entry: location.path === target.path ? { ...location.entry, name } : location.entry
+    }));
+    recentlyClosed.value = recentlyClosed.value.map((item) => ({
+      ...item,
+      path: rewritePath(item.path),
+      entry: item.path === target.path ? { ...item.entry, name } : item.entry
+    }));
+    treeFocusedPath.value = rewritePath(treeFocusedPath.value);
     await Promise.all(renamedDraftPaths.map((path) => drafts.remove(path)));
     void persistDirtyDrafts();
     await loadDirectory(parent, true);
@@ -1015,10 +1156,23 @@ function openDeleteDialog() {
   alertDialogOpen.value = true;
 }
 
-function closeTabsNow(targets: EditorTab[]) {
+function closeTabsNow(targets: EditorTab[], remember = true) {
   const paths = new Set(targets.map((tab) => tab.path));
   if (!paths.size) return;
   const previousTabs = tabs.value;
+  if (remember) {
+    const closed = targets.map((tab) => ({
+      path: tab.path,
+      entry: { ...tab.entry },
+      pane: tab.pane,
+      lineWrapping: tab.lineWrapping,
+      language: tab.language
+    }));
+    const closedPaths = new Set(closed.map((item) => item.path));
+    recentlyClosed.value = [...recentlyClosed.value.filter((item) => !closedPaths.has(item.path)), ...closed].slice(
+      -20
+    );
+  }
   for (const tab of previousTabs) {
     if (!paths.has(tab.path)) continue;
     void drafts.remove(tab.path);
@@ -1048,6 +1202,23 @@ function closeTabsNow(targets: EditorTab[]) {
 
 function closeTabNow(tab: EditorTab) {
   closeTabsNow([tab]);
+}
+
+async function reopenLastClosed() {
+  const closed = recentlyClosed.value.at(-1);
+  if (!closed) return;
+  recentlyClosed.value = recentlyClosed.value.slice(0, -1);
+  const existing = tabs.value.find((tab) => tab.path === closed.path);
+  if (existing) {
+    existing.preview = false;
+    focusPane(existing.pane, existing.path);
+    return;
+  }
+  await openFileInPane(closed.entry, closed.path, closed.pane, false, false);
+  const tab = tabs.value.find((item) => item.path === closed.path);
+  if (!tab) return;
+  tab.lineWrapping = closed.lineWrapping;
+  tab.language = closed.language;
 }
 
 function reorderTabs(sourceId: string, targetId: string, placement: "before" | "after") {
@@ -1088,9 +1259,44 @@ function moveTabToPane(tab: EditorTab, pane: EditorPane) {
   activePane.value = pane;
 }
 
+function recordNavigation(pane: EditorPane, path: string) {
+  if (navigatingHistory.value || !path) return;
+  const tab = tabs.value.find((item) => item.path === path);
+  if (!tab) return;
+  const current = navigationHistory.value[navigationIndex.value];
+  if (current?.path === path && current.pane === pane) return;
+  const next = navigationHistory.value.slice(0, navigationIndex.value + 1);
+  next.push({ entry: { ...tab.entry }, pane, path });
+  navigationHistory.value = next.slice(-100);
+  navigationIndex.value = navigationHistory.value.length - 1;
+}
+
 function focusPane(pane: EditorPane, path = paneActivePaths[pane]) {
   activePane.value = pane;
   paneActivePaths[pane] = path;
+  const tab = tabs.value.find((item) => item.path === path);
+  if (!tab) return;
+  if (!tab.loadStarted) void loadTab(tab);
+  recordNavigation(pane, path);
+  void revealActiveFile(path);
+}
+
+function navigateEditorHistory(offset: -1 | 1) {
+  const nextIndex = navigationIndex.value + offset;
+  const location = navigationHistory.value[nextIndex];
+  if (!location) return;
+  navigationIndex.value = nextIndex;
+  navigatingHistory.value = true;
+  try {
+    const existing = tabs.value.find((tab) => tab.path === location.path);
+    if (existing) {
+      focusPane(existing.pane, existing.path);
+    } else {
+      void openFileInPane(location.entry, location.path, location.pane, false, false);
+    }
+  } finally {
+    navigatingHistory.value = false;
+  }
 }
 
 function beginTabDrag(path: string) {
@@ -1195,7 +1401,12 @@ function moveQuickOpenSelection(offset: number) {
 function openQuickOpenItem(item: QuickOpenItem | undefined) {
   if (!item) return;
   quickOpenVisible.value = false;
-  void openFileInPane(item.entry, item.path, activePane.value);
+  void openFileInPane(item.entry, item.path, activePane.value, false, true);
+}
+
+function pinTab(path: string) {
+  const tab = tabs.value.find((item) => item.path === path);
+  if (tab) tab.preview = false;
 }
 
 function splitEditor(tab: EditorTab) {
@@ -1286,6 +1497,13 @@ async function confirmAlert() {
     tabs.value = tabs.value.filter(
       (tab) => tab.path !== target.target.path && !tab.path.startsWith(`${target.target.path}/`)
     );
+    const pathWasDeleted = (path: string) => path === target.target.path || path.startsWith(`${target.target.path}/`);
+    navigationHistory.value = navigationHistory.value.filter((location) => !pathWasDeleted(location.path));
+    navigationIndex.value = navigationHistory.value.length - 1;
+    recentlyClosed.value = recentlyClosed.value.filter((item) => !pathWasDeleted(item.path));
+    expanded.value = new Set([...expanded.value].filter((path) => !pathWasDeleted(path)));
+    tree.value = Object.fromEntries(Object.entries(tree.value).filter(([path]) => !pathWasDeleted(path)));
+    if (pathWasDeleted(treeFocusedPath.value)) treeFocusedPath.value = "";
     for (const pane of ["left", "right"] satisfies EditorPane[]) {
       const panePath = paneActivePaths[pane];
       if (panePath !== target.target.path && !panePath.startsWith(`${target.target.path}/`)) continue;
@@ -1425,6 +1643,19 @@ const tabContextMenuItems = computed(() => {
     requestCloseTabs(targets);
   };
   return [
+    ...(tab.preview
+      ? [
+          {
+            label: t("koko.sftpEditor.pinTab"),
+            icon: "i-lucide-pin",
+            onSelect: () => {
+              hideTabContextMenu();
+              pinTab(tab.path);
+            }
+          },
+          { type: "separator" as const }
+        ]
+      : []),
     {
       label: t("koko.sftpEditor.moveTabFirst"),
       icon: "i-lucide-chevrons-left",
@@ -1482,9 +1713,41 @@ const tabContextMenuItems = computed(() => {
       label: t("koko.sftpEditor.closeAllTabs"),
       icon: "i-lucide-copy-x",
       onSelect: () => closeTargets(currentPaneTabs)
+    },
+    { type: "separator" as const },
+    {
+      label: t("koko.sftpEditor.reopenClosedEditor"),
+      icon: "i-lucide-rotate-ccw",
+      disabled: recentlyClosed.value.length === 0,
+      onSelect: () => {
+        hideTabContextMenu();
+        void reopenLastClosed();
+      }
     }
   ];
 });
+
+const editorHistoryMenuItems = computed(() => [
+  {
+    label: t("koko.sftpEditor.navigateBack"),
+    icon: "i-lucide-arrow-left",
+    disabled: !canNavigateBack.value,
+    onSelect: () => void navigateEditorHistory(-1)
+  },
+  {
+    label: t("koko.sftpEditor.navigateForward"),
+    icon: "i-lucide-arrow-right",
+    disabled: !canNavigateForward.value,
+    onSelect: () => void navigateEditorHistory(1)
+  },
+  { type: "separator" as const },
+  {
+    label: t("koko.sftpEditor.reopenClosedEditor"),
+    icon: "i-lucide-rotate-ccw",
+    disabled: recentlyClosed.value.length === 0,
+    onSelect: () => void reopenLastClosed()
+  }
+]);
 
 function revokePreview(tab: EditorTab) {
   if (tab.previewUrl) URL.revokeObjectURL(tab.previewUrl);
@@ -1498,6 +1761,8 @@ function blockLargeFile(tab: EditorTab) {
 }
 
 async function loadTab(tab: EditorTab, forceLarge = false, draft?: SftpEditorDraft) {
+  if (tab.loadStarted && tab.loading) return;
+  tab.loadStarted = true;
   revokePreview(tab);
   tab.loading = true;
   tab.error = "";
@@ -1588,19 +1853,34 @@ async function loadTab(tab: EditorTab, forceLarge = false, draft?: SftpEditorDra
   }
 }
 
-async function openFileInPane(entry: SftpFileEntry, path: string, pane: EditorPane, moveExisting = false) {
+async function openFileInPane(
+  entry: SftpFileEntry,
+  path: string,
+  pane: EditorPane,
+  moveExisting = false,
+  preview = false
+) {
   const existing = tabs.value.find((tab) => tab.path === path);
   if (existing) {
+    if (!preview) existing.preview = false;
     if (existing.pane !== pane && moveExisting) moveTabToPane(existing, pane);
     else if (existing.pane !== pane) focusPane(existing.pane, path);
     else focusPane(pane, path);
     return;
   }
+  if (preview) {
+    const replaceable = tabs.value.find(
+      (tab) => tab.pane === pane && tab.preview && !dirty(tab) && !tab.saving && !tab.loading
+    );
+    if (replaceable) closeTabsNow([replaceable], false);
+  }
   if (pane === "right") splitOpen.value = true;
   const tab = createEditorTab(entry, path, pane);
+  tab.preview = preview;
   tabs.value.push(tab);
+  const loading = loadTab(tab);
   focusPane(pane, path);
-  await loadTab(tab);
+  await loading;
 }
 
 async function openEntry(entry: SftpFileEntry, path: string) {
@@ -1609,12 +1889,14 @@ async function openEntry(entry: SftpFileEntry, path: string) {
     toggleDirectory(path);
     return;
   }
-  await openFileInPane(entry, path, activePane.value);
+  await openFileInPane(entry, path, activePane.value, false, true);
 }
 
 function applyStoredDraft(tab: EditorTab, draft: SftpEditorDraft) {
   tab.kind = "text";
   tab.loading = false;
+  tab.loadStarted = true;
+  tab.preview = false;
   tab.content = draft.content;
   tab.savedContent = draft.savedContent;
   tab.encoding = draft.encoding as TextEncoding;
@@ -1637,7 +1919,10 @@ async function verifyRestoredDrafts(restored: Array<{ tab: EditorTab; draft: Sft
   await Promise.allSettled(
     [...directories].map(async ([directory, items]) => {
       const entries = sortSftpEntries(await manager.operations.listDirectory(directory, { background: true }));
-      tree.value = { ...tree.value, [directory]: { entries, loading: false, error: "" } };
+      tree.value = {
+        ...tree.value,
+        [directory]: { entries, loading: false, error: "", updatedAt: Date.now() }
+      };
       for (const { tab, draft } of items) {
         if (!tabs.value.includes(tab)) continue;
         const remoteEntry = entries.find((entry) => entry.name === tab.entry.name) || null;
@@ -1681,6 +1966,134 @@ async function restoreStoredDrafts() {
   }
 }
 
+function workspaceState(): SftpEditorWorkspaceState {
+  const cachedDirectories = Object.entries(tree.value)
+    .filter(([, node]) => Boolean(node.updatedAt))
+    .sort(([leftPath, left], [rightPath, right]) => {
+      const leftPriority = Number(leftPath === rootPath.value || expanded.value.has(leftPath));
+      const rightPriority = Number(rightPath === rootPath.value || expanded.value.has(rightPath));
+      return rightPriority - leftPriority || (right.updatedAt || 0) - (left.updatedAt || 0);
+    })
+    .slice(0, 60)
+    .map(([path, node]) => ({
+      path,
+      entries: node.entries.map((entry) => ({ ...entry })),
+      updatedAt: node.updatedAt || Date.now()
+    }));
+  return {
+    rootPath: rootPath.value,
+    tabs: tabs.value
+      .filter((tab) => !tab.preview || dirty(tab))
+      .slice(0, 30)
+      .map((tab) => ({
+        path: tab.path,
+        entry: { ...tab.entry },
+        pane: tab.pane,
+        lineWrapping: tab.lineWrapping,
+        language: tab.language
+      })),
+    activePane: activePane.value,
+    paneActivePaths: { ...paneActivePaths },
+    splitOpen: splitOpen.value,
+    splitRatio: splitRatio.value,
+    explorerWidth: explorerWidth.value,
+    expanded: [...expanded.value],
+    selectedDirectory: selectedDirectory.value,
+    directories: cachedDirectories,
+    recentlyClosed: recentlyClosed.value.map((item) => ({
+      ...item,
+      entry: { ...item.entry }
+    })),
+    updatedAt: Date.now()
+  };
+}
+
+async function persistWorkspaceNow() {
+  if (!workspaceRestored || restoringWorkspace.value || !rootPath.value) return;
+  await drafts.saveWorkspace(workspaceState()).catch(() => undefined);
+}
+
+const persistWorkspace = useDebounceFn(persistWorkspaceNow, 600);
+
+async function restoreWorkspace() {
+  if (workspaceRestored || restoringWorkspace.value || !rootPath.value) return;
+  workspaceRestored = true;
+  restoringWorkspace.value = true;
+  try {
+    const state = await drafts.loadWorkspace();
+    if (!state || state.rootPath !== rootPath.value) return;
+
+    explorerWidth.value = Math.min(480, Math.max(220, state.explorerWidth || 280));
+    splitRatio.value = Math.min(80, Math.max(20, state.splitRatio || 50));
+    const rootPrefix = `${rootPath.value.replace(/\/$/, "")}/`;
+    selectedDirectory.value =
+      state.selectedDirectory === rootPath.value || state.selectedDirectory.startsWith(rootPrefix)
+        ? state.selectedDirectory
+        : rootPath.value;
+    expanded.value = new Set(
+      state.expanded.filter(
+        (path) => path === rootPath.value || path.startsWith(`${rootPath.value.replace(/\/$/, "")}/`)
+      )
+    );
+    recentlyClosed.value = state.recentlyClosed.slice(-20);
+
+    const cachedTree = { ...tree.value };
+    for (const directory of state.directories) {
+      const existing = cachedTree[directory.path];
+      if (existing?.updatedAt && existing.updatedAt >= directory.updatedAt) continue;
+      cachedTree[directory.path] = {
+        entries: sortSftpEntries(directory.entries),
+        loading: false,
+        error: "",
+        updatedAt: directory.updatedAt
+      };
+    }
+    tree.value = cachedTree;
+
+    const restoredTabs: EditorTab[] = [];
+    for (const stored of state.tabs) {
+      let tab = tabs.value.find((item) => item.path === stored.path);
+      if (!tab) {
+        tab = createEditorTab(stored.entry, stored.path, stored.pane);
+        tabs.value.push(tab);
+      }
+      tab.pane = stored.pane;
+      tab.preview = false;
+      tab.lineWrapping = stored.lineWrapping;
+      tab.language = stored.language;
+      restoredTabs.push(tab);
+    }
+    const restoredPaths = new Set(restoredTabs.map((tab) => tab.path));
+    tabs.value = [...restoredTabs, ...tabs.value.filter((tab) => !restoredPaths.has(tab.path))];
+
+    const panePath = (pane: EditorPane) => {
+      const requested = state.paneActivePaths[pane];
+      return (
+        tabs.value.find((tab) => tab.pane === pane && tab.path === requested)?.path || paneTabs(pane)[0]?.path || ""
+      );
+    };
+    paneActivePaths.left = panePath("left");
+    paneActivePaths.right = panePath("right");
+    splitOpen.value = Boolean(state.splitOpen && paneTabs("right").length);
+    activePane.value = state.activePane === "right" && splitOpen.value ? "right" : "left";
+    const selectedPath = paneActivePaths[activePane.value];
+    if (selectedPath) focusPane(activePane.value, selectedPath);
+
+    const refreshPaths = [rootPath.value, ...expanded.value].filter((path) => tree.value[path]).slice(0, 20);
+    refreshPaths.forEach((path) => void loadDirectory(path));
+  } catch {
+    // Workspace recovery remains optional when browser storage is unavailable.
+  } finally {
+    restoringWorkspace.value = false;
+  }
+}
+
+async function restoreEditorState() {
+  await restoreStoredDrafts();
+  await restoreWorkspace();
+  if (activePath.value) focusPane(activePane.value, activePath.value);
+}
+
 function closeTab(tab: EditorTab) {
   if (tab.saving) {
     toast.add({
@@ -1708,7 +2121,7 @@ async function fetchRemoteEntry(tab: EditorTab) {
   const entries = await manager.operations.listDirectory(directory, { background: true });
   tree.value = {
     ...tree.value,
-    [directory]: { entries: sortSftpEntries(entries), loading: false, error: "" }
+    [directory]: { entries: sortSftpEntries(entries), loading: false, error: "", updatedAt: Date.now() }
   };
   return entries.find((entry) => entry.name === tab.entry.name) || null;
 }
@@ -1972,6 +2385,16 @@ defineExpose({ requestClose });
 
 useEventListener(window, "keydown", (event: KeyboardEvent) => {
   const modifier = event.metaKey || event.ctrlKey;
+  if (event.altKey && !modifier && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+    event.preventDefault();
+    void navigateEditorHistory(event.key === "ArrowLeft" ? -1 : 1);
+    return;
+  }
+  if (modifier && event.shiftKey && event.key.toLowerCase() === "t") {
+    event.preventDefault();
+    void reopenLastClosed();
+    return;
+  }
   if (modifier && !event.shiftKey && event.key.toLowerCase() === "p") {
     event.preventDefault();
     openQuickOpen();
@@ -2005,8 +2428,10 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
     event.preventDefault();
     const index = activePaneTabs.findIndex((tab) => tab.path === activePath.value);
     const offset = event.shiftKey ? -1 : 1;
-    paneActivePaths[activePane.value] =
-      activePaneTabs[(index + offset + activePaneTabs.length) % activePaneTabs.length]?.path || activePath.value;
+    focusPane(
+      activePane.value,
+      activePaneTabs[(index + offset + activePaneTabs.length) % activePaneTabs.length]?.path || activePath.value
+    );
   }
 });
 useEventListener(window, "focus", () => void checkActiveRemote());
@@ -2015,7 +2440,10 @@ useEventListener(window, "pointerup", endExplorerResize);
 useEventListener(window, "pointermove", resizeSplit);
 useEventListener(window, "pointerup", endSplitResize);
 useEventListener(document, "visibilitychange", () => {
-  if (document.visibilityState === "hidden") void persistDirtyDraftsNow();
+  if (document.visibilityState === "hidden") {
+    void persistDirtyDraftsNow();
+    void persistWorkspaceNow();
+  }
 });
 useEventListener(window, "beforeunload", (event: BeforeUnloadEvent) => {
   if (dirtyTabs.value.length === 0) return;
@@ -2034,7 +2462,26 @@ watch(
       tab.lineEnding,
       tab.savedLineEnding
     ]),
-  () => void persistDirtyDrafts(),
+  () => {
+    tabs.value.forEach((tab) => {
+      if (tab.preview && dirty(tab)) tab.preview = false;
+    });
+    void persistDirtyDrafts();
+  },
+  { deep: true }
+);
+watch(
+  () => ({
+    tabs: tabs.value.map((tab) => [tab.path, tab.pane, tab.preview, tab.lineWrapping, tab.language, tab.entry.name]),
+    activePane: activePane.value,
+    activePaths: [paneActivePaths.left, paneActivePaths.right],
+    split: [splitOpen.value, splitRatio.value, explorerWidth.value],
+    expanded: [...expanded.value],
+    selectedDirectory: selectedDirectory.value,
+    recentlyClosed: recentlyClosed.value.map((item) => item.path),
+    directories: Object.entries(tree.value).map(([path, node]) => [path, node.updatedAt])
+  }),
+  () => void persistWorkspace(),
   { deep: true }
 );
 watch(quickOpenQuery, () => {
@@ -2044,24 +2491,39 @@ watch(quickOpenItems, (items) => {
   quickOpenIndex.value = Math.min(quickOpenIndex.value, Math.max(0, items.length - 1));
 });
 watch(
+  entryTreeRows,
+  (rows) => {
+    if (rows.some((row) => row.path === treeFocusedPath.value)) return;
+    treeFocusedPath.value = rows.find((row) => row.path === activePath.value)?.path || rows[0]?.path || "";
+  },
+  { immediate: true }
+);
+watch(
   [manager.currentPath, manager.entries],
   ([path, entries]) => {
     if (!path) return;
     if (!rootPath.value) {
       rootPath.value = path as string;
       selectedDirectory.value = path as string;
-      void restoreStoredDrafts();
+      void restoreEditorState();
     }
     if (path === rootPath.value) {
       tree.value = {
         ...tree.value,
-        [path as string]: { entries: entries as SftpFileEntry[], loading: false, error: "" }
+        [path as string]: {
+          entries: sortSftpEntries(entries as SftpFileEntry[]),
+          loading: false,
+          error: "",
+          updatedAt: Date.now()
+        }
       };
     }
   },
   { immediate: true, deep: true }
 );
 onUnmounted(() => {
+  void persistDirtyDraftsNow();
+  void persistWorkspaceNow();
   tabs.value.forEach(revokePreview);
   workspaceCloseResolver?.(false);
 });
@@ -2171,7 +2633,12 @@ onUnmounted(() => {
           </span>
         </div>
       </div>
-      <div class="min-h-0 flex-1 overflow-auto bg-(--workspace-surface-sub-tree) py-1">
+      <div
+        ref="treeScroller"
+        class="min-h-0 flex-1 overflow-auto bg-(--workspace-surface-sub-tree) py-1"
+        role="tree"
+        :aria-label="t('koko.sftpEditor.fileTree')"
+      >
         <div v-if="manager.loading.value && !rootPath" class="space-y-2 px-3 py-2">
           <div class="flex h-6 items-center gap-2 text-xs text-(--app-muted)">
             <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
@@ -2196,7 +2663,17 @@ onUnmounted(() => {
             :style="{ paddingLeft: `${8 + row.depth * 14}px` }"
             :title="entryTitle(row.entry, row.path)"
             :draggable="!row.entry.is_dir"
+            role="treeitem"
+            :aria-level="row.depth + 1"
+            :aria-expanded="row.entry.is_dir ? row.expanded : undefined"
+            :aria-selected="row.entry.is_dir ? selectedDirectory === row.path : activePath === row.path"
+            :tabindex="treeFocusedPath === row.path ? 0 : -1"
+            :data-tree-active="activePath === row.path"
+            :data-tree-focused="treeFocusedPath === row.path"
             @click="openEntry(row.entry, row.path)"
+            @dblclick="!row.entry.is_dir && pinTab(row.path)"
+            @focus="treeFocusedPath = row.path"
+            @keydown="handleTreeKeydown(row, $event)"
             @contextmenu="openContextMenu(row.entry, row.path, $event)"
             @dragstart="beginTreeDrag(row.entry, row.path, $event)"
             @dragend="endEditorDrag"
@@ -2375,9 +2852,11 @@ onUnmounted(() => {
               :tabs="subTabsForPane(tab.pane)"
               :active-id="paneActivePaths[tab.pane]"
               :dragged-id="draggedEditorItem?.source === 'tab' ? draggedEditorItem.path : ''"
+              :close-label="t('koko.actions.close')"
               reorderable
               context-menu
               @select="focusPane(tab.pane, $event)"
+              @pin="pinTab"
               @reorder="reorderTabs"
               @contextmenu="openTabContextMenu"
               @dragstart="beginTabDrag"
@@ -2390,6 +2869,15 @@ onUnmounted(() => {
               "
             >
               <template #trailing>
+                <UDropdownMenu :items="editorHistoryMenuItems" size="sm">
+                  <UButton
+                    icon="i-lucide-history"
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    :title="t('koko.sftpEditor.editorHistory')"
+                  />
+                </UDropdownMenu>
                 <template v-if="tab.kind === 'text'">
                   <UTooltip v-if="dirty(tab)" :text="t('koko.sftpEditor.viewChanges')" :delay-duration="150">
                     <UButton
@@ -2651,6 +3139,16 @@ onUnmounted(() => {
             <span class="text-center text-[10px] text-(--app-muted)">
               {{ t("koko.sftpEditor.editorEmptyHint") }}
             </span>
+            <UButton
+              v-if="!tabs.length && recentlyClosed.length"
+              size="xs"
+              color="neutral"
+              variant="soft"
+              icon="i-lucide-rotate-ccw"
+              @click.stop="reopenLastClosed"
+            >
+              {{ t("koko.sftpEditor.reopenClosedEditor") }}
+            </UButton>
           </span>
         </div>
         <div

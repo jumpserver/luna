@@ -7,6 +7,7 @@ export interface WorkspaceSubTab {
   icon: string;
   title?: string;
   dirty?: boolean;
+  preview?: boolean;
 }
 
 const props = withDefaults(
@@ -16,11 +17,13 @@ const props = withDefaults(
     reorderable?: boolean;
     contextMenu?: boolean;
     draggedId?: string;
+    closeLabel?: string;
   }>(),
   {
     reorderable: false,
     contextMenu: false,
-    draggedId: ""
+    draggedId: "",
+    closeLabel: "Close"
   }
 );
 
@@ -31,6 +34,7 @@ const emit = defineEmits<{
   contextmenu: [id: string, event: MouseEvent];
   dragstart: [id: string];
   dragend: [];
+  pin: [id: string];
 }>();
 
 const strip = ref<HTMLElement | null>(null);
@@ -143,10 +147,9 @@ watch(
           class="workspace-sub-tab-strip flex w-fit min-w-0 max-w-full items-center gap-0.5 overflow-x-auto"
           @wheel="scrollTabs"
         >
-          <button
+          <div
             v-for="tab in tabs"
             :key="tab.id"
-            type="button"
             class="workspace-sub-tab-button group relative flex h-7 min-w-0 shrink-0 items-center gap-1.5 rounded-lg px-2 text-left transition-all duration-150"
             :class="[
               activeId === tab.id ? 'max-w-72 px-2.5' : 'max-w-44',
@@ -154,13 +157,19 @@ watch(
                 ? 'workspace-sub-tab-button-active text-[var(--app-fg)]'
                 : 'text-[var(--app-muted)] hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]',
               reorderable ? 'cursor-grab active:cursor-grabbing' : '',
-              localDraggedId === tab.id || draggedId === tab.id ? 'opacity-45' : ''
+              localDraggedId === tab.id || draggedId === tab.id ? 'opacity-45' : '',
+              tab.preview ? 'italic' : ''
             ]"
             role="tab"
+            :aria-label="tab.label"
             :aria-selected="activeId === tab.id"
+            :tabindex="activeId === tab.id ? 0 : -1"
             :draggable="reorderable"
             :title="tab.title || tab.label"
             @click="$emit('select', tab.id)"
+            @dblclick="$emit('pin', tab.id)"
+            @keydown.enter.prevent="$emit('select', tab.id)"
+            @keydown.space.prevent="$emit('select', tab.id)"
             @auxclick="closeWithMiddleClick(tab.id, $event)"
             @contextmenu="openContextMenu(tab.id, $event)"
             @dragstart="beginDrag(tab.id, $event)"
@@ -179,18 +188,21 @@ watch(
             />
             <span class="min-w-0 truncate font-ui-mono text-[11px] tracking-[0.01em]">{{ tab.label }}</span>
             <span v-if="tab.dirty" class="size-1.5 shrink-0 rounded-full bg-primary" title="未保存" />
-            <span
+            <button
+              type="button"
               class="flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-0 transition-opacity hover:bg-[var(--app-hover-strong)] group-hover:opacity-100"
               :class="activeId === tab.id ? 'opacity-60' : ''"
+              :aria-label="`${closeLabel} ${tab.label}`"
+              :title="`${closeLabel} ${tab.label}`"
               @click.stop="$emit('close', tab.id)"
             >
               <UIcon name="i-lucide-x" class="size-2.5" />
-            </span>
+            </button>
             <span
               v-if="dropTargetId === tab.id && dropPlacement === 'after'"
               class="absolute -right-0.5 inset-y-1 w-0.5 rounded-full bg-primary"
             />
-          </button>
+          </div>
         </div>
       </div>
     </div>

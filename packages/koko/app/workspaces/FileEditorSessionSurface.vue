@@ -14,6 +14,9 @@ const host = useKokoHostAdapter();
 const { context, error, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab, {
   protocol: "sftp"
 });
+const editorScopeKey = computed(
+  () => `${host.getWindowOrigin()}\u0000${props.tab.assetId}\u0000${props.tab.account || ""}`
+);
 let unregisterCloseGuard: (() => void) | undefined;
 
 watch(tokenId, () => void prepareSession(), { immediate: true });
@@ -38,6 +41,6 @@ onBeforeUnmount(() => unregisterCloseGuard?.());
     :error="error"
     :loading-text="t('koko.workspace.preparingFileEditor')"
   >
-    <KokoSftpIde ref="editor" :sftp-token="tokenId" class="h-full" />
+    <KokoSftpIde ref="editor" :sftp-token="tokenId" :workspace-key="editorScopeKey" />
   </BaseWorkspaceShell>
 </template>
