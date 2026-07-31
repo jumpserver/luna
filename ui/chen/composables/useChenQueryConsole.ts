@@ -1,6 +1,19 @@
-import type { ChenPacket, ChenPromptConsoleTab, ChenQueryConsoleTab, ChenQueryLikeWorkspaceTab } from "~/chen/types";
+import type {
+  ChenPacket,
+  ChenPromptConsoleTab,
+  ChenQueryConsoleTab,
+  ChenQueryLikeWorkspaceTab,
+  ChenWorkspaceTab
+} from "~/chen/types";
 
 import { newChenWorkspaceId } from "~/chen/composables/useChenWorkspaceTabs";
+import {
+  appendChenConsoleTranscript,
+  clearChenConsoleTranscript,
+  escapeChenConsoleText,
+  formatChenConsoleCommand,
+  formatChenConsoleResult
+} from "~/chen/utils/consoleTerminal";
 import {
   acceptChenDataViewResponse,
   createChenDataViewEditState,
@@ -26,20 +39,25 @@ export function useChenQueryConsole(
     }
   }
 
-  function appendLog(tab: { logs: string[] }, line: unknown) {
+  function appendLog(tab: ChenWorkspaceTab, line: unknown) {
     const content = formatLogEntry(line);
     if (!content) return;
     tab.logs.push(content);
     if (tab.logs.length > 400) {
       tab.logs.splice(0, tab.logs.length - 400);
     }
+    if (tab.kind === "console") {
+      appendChenConsoleTranscript(tab, `${escapeChenConsoleText(content)}\n`);
+    }
   }
 
-  function updateQueryResult(tab: ChenQueryLikeWorkspaceTab, meta: { title: string; [key: string]: any }, data?: any) {
-    let resultTab = tab.resultTabs.find((item) => item.title === meta.title);
+  function updateQueryResult(tab: ChenQueryConsoleTab, meta: { title: string; [key: string]: any }, data?: any) {
+    let resultTab = meta.id
+      ? tab.resultTabs.find((item) => item.id === meta.id)
+      : tab.resultTabs.find((item) => item.title === meta.title);
     if (!resultTab) {
       resultTab = {
-        id: newChenWorkspaceId("result"),
+        id: meta.id || newChenWorkspaceId("result"),
         title: meta.title,
         meta,
         data: data ?? null,
@@ -57,21 +75,21 @@ export function useChenQueryConsole(
     tab.activeResultTabId = resultTab.id;
   }
 
-  function removeQueryResult(tab: ChenQueryLikeWorkspaceTab, title: string) {
-    tab.resultTabs = tab.resultTabs.filter((item) => item.title !== title);
+  function removeQueryResult(tab: ChenQueryConsoleTab, reference: string) {
+    tab.resultTabs = tab.resultTabs.filter((item) => item.id !== reference && item.title !== reference);
     if (!tab.resultTabs.some((item) => item.id === tab.activeResultTabId)) {
       tab.activeResultTabId = tab.resultTabs.at(-1)?.id || "";
     }
   }
 
-  function removeQueryResults(tab: ChenQueryLikeWorkspaceTab, data: unknown) {
+  function removeQueryResults(tab: ChenQueryConsoleTab, data: unknown) {
     if (typeof data === "string") {
       removeQueryResult(tab, data);
       return;
     }
     if (Array.isArray(data)) {
-      data.forEach((title) => {
-        if (typeof title === "string") removeQueryResult(tab, title);
+      data.forEach((reference) => {
+        if (typeof reference === "string") removeQueryResult(tab, reference);
       });
       return;
     }
@@ -80,9 +98,9 @@ export function useChenQueryConsole(
     }
   }
 
-  function closeQueryResult(tab: ChenQueryLikeWorkspaceTab, title: string) {
-    removeQueryResult(tab, title);
-    sendConsoleAction(tab, "close_data_view", title);
+  function closeQueryResult(tab: ChenQueryConsoleTab, reference: string) {
+    removeQueryResult(tab, reference);
+    sendConsoleAction(tab, "close_data_view", reference);
   }
 
   function dismissQueryMessage(tab: ChenQueryLikeWorkspaceTab) {
@@ -101,25 +119,38 @@ export function useChenQueryConsole(
         tab.message = typeof packet.data === "string" ? { type: "info", message: packet.data } : packet.data || null;
         if (tab.kind === "console") appendLog(tab, packet.data);
         break;
-      case "update_state":
-        if (packet.data?.title && packet.data.title !== tab.title) {
-          const resultTab = tab.resultTabs.find((item) => item.title === packet.data.title);
-          if (resultTab) {
-            resultTab.state = packet.data;
-            if (packet.data?.loading === false) finishChenDataViewRequestWithoutData(resultTab.editState);
-          }
+      case "update_state": {
+        const resultTab =
+          tab.kind === "query"
+            ? packet.data?.id
+              ? tab.resultTabs.find((item) => item.id === packet.data.id)
+              : packet.data?.title && packet.data.title !== tab.title
+                ? tab.resultTabs.find((item) => item.title === packet.data.title)
+                : null
+            : null;
+        if (resultTab) {
+          resultTab.state = packet.data;
+          if (packet.data?.loading === false) finishChenDataViewRequestWithoutData(resultTab.editState);
         } else {
           tab.state = packet.data || {};
         }
         break;
+      }
       case "new_data_view":
-        if (packet.data?.title) updateQueryResult(tab, packet.data);
+        if (tab.kind === "query" && packet.data?.title) updateQueryResult(tab, packet.data);
         break;
       case "update_data_view":
-        if (packet.data?.title) updateQueryResult(tab, { title: packet.data.title }, packet.data.data);
+        if (tab.kind === "query" && packet.data?.title) {
+          updateQueryResult(tab, { id: packet.data.id, title: packet.data.title }, packet.data.data);
+        }
         break;
       case "close_data_view":
-        removeQueryResults(tab, packet.data);
+        if (tab.kind === "query") removeQueryResults(tab, packet.data);
+        break;
+      case "console_result":
+        if (tab.kind === "console" && packet.data?.data) {
+          appendChenConsoleTranscript(tab, formatChenConsoleResult(packet.data.data, packet.data.state));
+        }
         break;
     }
   }
@@ -179,7 +210,7 @@ export function useChenQueryConsole(
     });
   }
 
-  function runConsoleTab(tab: ChenPromptConsoleTab) {
+  function runConsoleTab(tab: ChenPromptConsoleTab, prompt: string) {
     const sql = tab.pendingSql.trim();
     if (!sql) return;
     tab.historyEntries.push({
@@ -189,8 +220,13 @@ export function useChenQueryConsole(
     if (tab.historyEntries.length > 200) {
       tab.historyEntries.splice(0, tab.historyEntries.length - 200);
     }
+    appendChenConsoleTranscript(tab, formatChenConsoleCommand(prompt, sql));
     sendConsoleAction(tab, "query_console_action", { action: "run_sql", data: sql });
     tab.pendingSql = "";
+  }
+
+  function clearConsoleTranscript(tab: ChenPromptConsoleTab) {
+    clearChenConsoleTranscript(tab);
   }
 
   function cancelQueryLikeTab(tab: ChenQueryLikeWorkspaceTab) {
@@ -202,6 +238,7 @@ export function useChenQueryConsole(
     appendLog,
     cancelQueryLikeTab,
     changeQueryContext,
+    clearConsoleTranscript,
     closeQueryResult,
     dismissQueryMessage,
     handleQueryConsolePacket,

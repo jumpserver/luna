@@ -43,6 +43,7 @@ export interface ChenTabDefinition {
 }
 
 export interface ChenDataViewMeta {
+  id?: string;
   title: string;
   schema?: string;
   table?: string;
@@ -227,12 +228,11 @@ export interface ChenQueryConsoleTab extends ChenTabDefinition {
 export interface ChenPromptConsoleTab extends ChenTabDefinition {
   kind: "console";
   pendingSql: string;
+  terminalOutput: string;
   state: ChenConsoleState;
   logs: string[];
   message: ChenConsoleMessage | null;
   historyEntries: ChenConsoleHistoryEntry[];
-  resultTabs: ChenQueryResultTab[];
-  activeResultTabId: string;
   socket: WebSocket | null;
 }
 

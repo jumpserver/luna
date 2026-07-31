@@ -511,18 +511,26 @@ export function chenDataViewTargets(tab: ChenWorkspaceTab): ChenDataViewActionTa
 }
 
 export function findChenDataViewTarget(tab: ChenWorkspaceTab, dataView: unknown): ChenDataViewActionTarget | null {
-  const title =
-    typeof dataView === "string"
-      ? dataView
-      : dataView && typeof dataView === "object" && "title" in dataView && typeof dataView.title === "string"
-        ? dataView.title
-        : "";
+  let reference = "";
+  if (typeof dataView === "string") {
+    reference = dataView;
+  } else if (dataView && typeof dataView === "object" && "id" in dataView && typeof dataView.id === "string") {
+    reference = dataView.id;
+  } else if (dataView && typeof dataView === "object" && "title" in dataView && typeof dataView.title === "string") {
+    reference = dataView.title;
+  }
 
   if (tab.kind === "data-view") {
-    if (!title || tab.meta?.title === title || tab.title === title) return tab;
+    if (!reference || tab.meta?.id === reference || tab.meta?.title === reference || tab.title === reference)
+      return tab;
     return null;
   }
 
-  if (tab.kind === "console" || !title) return null;
-  return tab.resultTabs.find((item) => item.title === title || item.meta.title === title) || null;
+  if (tab.kind === "console" || !reference) return null;
+  return (
+    tab.resultTabs.find(
+      (item) =>
+        item.id === reference || item.meta.id === reference || item.title === reference || item.meta.title === reference
+    ) || null
+  );
 }

@@ -305,6 +305,7 @@ onBeforeUnmount(clearMessageTimer);
         :active-result-tab-id="tab.activeResultTabId"
         closable
         data-view-actions
+        data-view-editing
         :db-type="dbType"
         :can-copy="canCopy"
         :logs="tab.logs"

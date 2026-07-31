@@ -83,12 +83,11 @@ export function useChenWorkspaceTabs() {
       kind: "console",
       nodeKey,
       pendingSql: "",
+      terminalOutput: "",
       state: {},
       logs: [],
       message: null,
       historyEntries: [],
-      resultTabs: [],
-      activeResultTabId: "",
       socket: null
     };
 
