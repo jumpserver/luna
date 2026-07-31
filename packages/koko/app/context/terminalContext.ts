@@ -4,10 +4,16 @@ import type { InjectionKey } from "vue";
 import type { TerminalMittEvent } from "#koko/composables/terminal/protocol";
 
 import type { TerminalSessionInfo } from "#koko/types";
-import { createHostBridge, FORMATTER_MESSAGE_TYPE, HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
+import {
+  connectorSessionKey,
+  createHostBridge,
+  FORMATTER_MESSAGE_TYPE,
+  HOST_MESSAGE_TYPE
+} from "@jumpserver/connectors-core";
 import mitt from "mitt";
 import { inject, nextTick } from "vue";
 import { TerminalEventType } from "#koko/composables/terminal/protocol";
+import { isKokoTerminalAiInputLocked } from "#koko/composables/terminal/useTerminalAiSessions";
 import { useKokoConnectionStore } from "#koko/stores/connection";
 import mittBus from "#koko/utils/mittBus";
 import { terminalTheme } from "#koko/utils/terminalTheme";
@@ -35,6 +41,7 @@ export const createKokoTerminalContext = (): TerminalContext => {
   const eventBus = mitt<TerminalEvents>();
   const hostBridge = createHostBridge();
   const connectionStore = useKokoConnectionStore();
+  const sessionCtxRef = inject(connectorSessionKey, null);
   let unbindPostMessage: (() => void) | undefined;
 
   const sendHostEvent = (event: string, data: unknown) => {
@@ -73,7 +80,15 @@ export const createKokoTerminalContext = (): TerminalContext => {
     const handleHostCommand = (data: unknown) => {
       const socket = connectionStore.socket;
       const terminalId = connectionStore.terminalId;
-      if (!socket || !terminalId || socket.readyState !== WebSocket.OPEN) return;
+      const paneId = unref(sessionCtxRef)?.tabId || "";
+      if (
+        !socket ||
+        !terminalId ||
+        socket.readyState !== WebSocket.OPEN ||
+        (paneId && isKokoTerminalAiInputLocked(paneId))
+      ) {
+        return;
+      }
       socket.send(formatMessage(terminalId, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, String(data ?? "")));
     };
 

@@ -1,4 +1,5 @@
 import { FORMATTER_MESSAGE_TYPE } from "@jumpserver/connectors-core";
+import { isKokoTerminalAiInputLocked } from "#koko/composables/terminal/useTerminalAiSessions";
 import { formatMessage } from "#koko/utils/terminalUtils";
 
 interface TerminalSession {
@@ -30,6 +31,8 @@ export function unregisterLocalShellTerminalSession(tabId: string) {
 }
 
 export function sendKokoTerminalData(tabId: string, data: string) {
+  if (isKokoTerminalAiInputLocked(tabId)) return false;
+
   const session = sessions.get(tabId);
   if (session?.socket.readyState === WebSocket.OPEN) {
     session.socket.send(formatMessage(session.terminalId, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, data));

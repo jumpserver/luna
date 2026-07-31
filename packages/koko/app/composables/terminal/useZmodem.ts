@@ -57,11 +57,19 @@ export const useKokoZmodem = () => {
     });
   };
 
-  const createSentry = (terminal: Terminal, socket: WebSocket, lastSendTime: Ref<Date>) => {
+  const createSentry = (
+    terminal: Terminal,
+    socket: WebSocket,
+    terminalId: Ref<string>,
+    lastSendTime: Ref<Date>,
+    canSend: () => boolean
+  ) => {
     const sentry = createKokoZmodemSentry({
       terminal,
       socket,
+      terminalId,
       lastSendTime,
+      canSend,
       onWriteFailure: () => addErrorToast({ title: t("koko.terminal.writeFailed") }),
       shouldWriteToTerminal: () => !sentryRef.value?.get_confirmed_session(),
       onDetect: (detection) => {

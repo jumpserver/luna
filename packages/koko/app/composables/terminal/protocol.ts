@@ -16,10 +16,12 @@ export enum TerminalWebSocketProtocol {
 
 export interface TerminalIncomingMessage {
   id: string;
-  type: MESSAGE_TYPE;
+  type: string;
   data?: string;
   err?: string;
   raw?: string | number[];
+  terminalId?: number;
+  requestId?: string;
 }
 
 const messageTypes = new Set<string>(Object.values(MESSAGE_TYPE));
@@ -32,13 +34,15 @@ export function parseTerminalIncomingMessage(raw: unknown): TerminalIncomingMess
   if (!raw || typeof raw !== "object") return null;
   const message = raw as Record<string, unknown>;
 
-  if (typeof message.id !== "string" || !isTerminalMessageType(message.type)) return null;
+  if (typeof message.type !== "string" || !message.type) return null;
 
   return {
-    id: message.id,
+    id: typeof message.id === "string" ? message.id : "",
     type: message.type,
     data: typeof message.data === "string" ? message.data : undefined,
     err: typeof message.err === "string" ? message.err : undefined,
-    raw: typeof message.raw === "string" || Array.isArray(message.raw) ? message.raw : undefined
+    raw: typeof message.raw === "string" || Array.isArray(message.raw) ? message.raw : undefined,
+    terminalId: typeof message.terminalId === "number" ? message.terminalId : undefined,
+    requestId: typeof message.requestId === "string" ? message.requestId : undefined
   };
 }

@@ -1,5 +1,6 @@
 import type { Terminal } from "@xterm/xterm";
 import type { Ref } from "vue";
+import type { ILunaConfig } from "#koko/types";
 
 import { FORMATTER_MESSAGE_TYPE, HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 
@@ -18,9 +19,10 @@ export function useKokoTerminalInput(options: {
   fit: () => void;
   isSocketClosing: (socket: WebSocket) => boolean;
   quickPaste: () => string;
-  getTerminalConfig: () => Record<string, unknown>;
+  getTerminalConfig: () => Partial<ILunaConfig>;
   onResize: (size: { cols: number; rows: number }) => void;
   onHostKey: (key: string) => void;
+  inputLocked: () => boolean;
   addErrorToast: (options: { title: string }) => void;
   translate: (key: string) => string;
   sendHostEvent: (event: string, data: unknown) => void;
@@ -49,7 +51,7 @@ export function useKokoTerminalInput(options: {
         text = options.selectionText.value;
       }
       const socket = options.socket.value;
-      if (!text || !socket || options.isSocketClosing(socket)) {
+      if (!text || !socket || options.inputLocked() || options.isSocketClosing(socket)) {
         if (socket && options.isSocketClosing(socket)) {
           options.addErrorToast({ title: options.translate("koko.terminal.websocketConnectionClosed") });
         }
@@ -87,10 +89,14 @@ export function useKokoTerminalInput(options: {
 
     terminal.onData((data) => {
       const socket = options.socket.value;
-      if (!socket || options.isSocketClosing(socket)) return;
+      if (!socket || options.inputLocked() || options.isSocketClosing(socket)) return;
       options.lastSendTime.value = new Date();
       socket.send(
-        formatMessage("", FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, preprocessInput(data, options.getTerminalConfig))
+        formatMessage(
+          options.terminalId.value,
+          FORMATTER_MESSAGE_TYPE.TERMINAL_DATA,
+          preprocessInput(data, options.getTerminalConfig())
+        )
       );
       options.sendToHost(HOST_MESSAGE_TYPE.INPUT_ACTIVE, "");
     });

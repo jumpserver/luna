@@ -8,7 +8,7 @@
   "author": "JumpServer",
   "license": "MIT",
   "engines": {
-    "node": ">=20.19"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "nuxt dev",
@@ -40,6 +40,7 @@
     "reset": "rm -rf node_modules .nuxt dist && cd src-tauri && cargo clean"
   },
   "dependencies": {
+    "@ai-sdk/vue": "4.0.44",
     "@codemirror/commands": "^6.10.4",
     "@codemirror/lang-cpp": "^6.0.3",
     "@codemirror/lang-css": "^6.3.1",
@@ -85,11 +86,14 @@
     "@xterm/xterm": "^6.0.0",
     "ag-grid-community": "^36.0.0",
     "ag-grid-vue3": "^36.0.0",
+    "ai": "7.0.44",
     "clipboard-polyfill": "^4.1.1",
     "codemirror": "^6.0.2",
+    "dompurify": "3.4.12",
     "fflate": "^0.8.2",
     "guacamole-common-js-jumpserver": "1.1.0-c",
     "js-untar": "^2.0.0",
+    "marked": "17.0.6",
     "mitt": "^3.0.1",
     "nuxt": "^4.4.6",
     "pinia": "^3.0.4",

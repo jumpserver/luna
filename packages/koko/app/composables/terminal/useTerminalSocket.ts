@@ -8,6 +8,12 @@ import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { Terminal } from "@xterm/xterm";
+import {
+  handleKokoTerminalAiMessage,
+  isKokoTerminalAiInputLocked,
+  registerKokoTerminalAiSession,
+  unregisterKokoTerminalAiSession
+} from "#koko/composables/terminal/useTerminalAiSessions";
 import { useKokoTerminalBinaryHandler } from "#koko/composables/terminal/useTerminalBinaryHandler";
 import { useKokoTerminalEvents } from "#koko/composables/terminal/useTerminalEvents";
 import { useKokoTerminalHeartbeat } from "#koko/composables/terminal/useTerminalHeartbeat";
@@ -126,10 +132,14 @@ export const useKokoTerminalSocket = () => {
     lastSendTime,
     fit: () => fitAddon?.fit(),
     isSocketClosing,
-    quickPaste: () => terminalSettingsStore.quickPaste,
-    getTerminalConfig: terminalSettingsStore.getConfig,
+    quickPaste: () => terminalSettingsStore.quickPaste || "0",
+    getTerminalConfig: () => terminalSettingsStore.getConfig,
     onResize: debouncedResize,
     onHostKey: debouncedSendHostKey,
+    inputLocked: () => {
+      const paneId = unref(sessionCtxRef)?.tabId || "";
+      return Boolean(paneId && isKokoTerminalAiInputLocked(paneId));
+    },
     addErrorToast,
     translate: t,
     sendHostEvent,
@@ -172,15 +182,34 @@ export const useKokoTerminalSocket = () => {
     showInfoOnce,
     onConnected: (id, socket) => {
       const tabId = unref(sessionCtxRef)?.tabId;
-      if (tabId) registerKokoTerminalSession(tabId, { socket, terminalId: id });
+      if (tabId) {
+        registerKokoTerminalSession(tabId, { socket, terminalId: id });
+        registerKokoTerminalAiSession(tabId, socket, id);
+      }
     }
   });
-  const messageHandler = useKokoTerminalMessageHandler(terminalMessageHandlers);
+  const messageHandler = useKokoTerminalMessageHandler(terminalMessageHandlers, {
+    onTerminalOutput: (messageTerminalId, data) => {
+      if (messageTerminalId === Number(terminalId.value)) {
+        binaryHandler.handleBinaryMessage(data);
+      }
+    },
+    onChat: (message) => {
+      const tabId = unref(sessionCtxRef)?.tabId;
+      if (tabId) handleKokoTerminalAiMessage(tabId, message);
+    }
+  });
 
   const listenSocketEvent = () => {
     if (!socketRef.value) return;
 
-    sentryRef.value = createSentry(terminalRef.value!, socketRef.value!, lastSendTime);
+    const paneId = unref(sessionCtxRef)?.tabId;
+    if (paneId) registerKokoTerminalAiSession(paneId, socketRef.value, "");
+
+    sentryRef.value = createSentry(terminalRef.value!, socketRef.value!, terminalId, lastSendTime, () => {
+      const paneId = unref(sessionCtxRef)?.tabId || "";
+      return !paneId || !isKokoTerminalAiInputLocked(paneId);
+    });
 
     socketRef.value.onopen = heartbeat.start;
 
@@ -194,8 +223,14 @@ export const useKokoTerminalSocket = () => {
     socketRef.value.onmessage = async (message: MessageEvent) => {
       await new Promise<void>((resolve) => setTimeout(resolve, 1));
       lastReceiveTime.value = new Date();
-      if (typeof message.data === "object") binaryHandler.handleBinaryMessage(message.data as ArrayBufferLike);
-      else messageHandler.handleRawMessage(message.data);
+      try {
+        if (message.data instanceof ArrayBuffer) messageHandler.handleEnvelopeMessage(message.data);
+        else if (typeof message.data === "string") messageHandler.handleRawMessage(message.data);
+      } catch (error) {
+        addErrorToast({
+          title: error instanceof Error ? error.message : t("koko.terminal.invalidMessage")
+        });
+      }
     };
   };
 
@@ -279,6 +314,7 @@ export const useKokoTerminalSocket = () => {
     const tabId = unref(sessionCtxRef)?.tabId;
     if (tabId) {
       unregisterKokoTerminalSession(tabId);
+      unregisterKokoTerminalAiSession(tabId, socketRef.value);
       hostAdapter.clearSessionDetails(tabId);
     }
     transport.close();

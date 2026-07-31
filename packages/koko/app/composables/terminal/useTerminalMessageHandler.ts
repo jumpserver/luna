@@ -1,23 +1,40 @@
+import type { HostBridge } from "@jumpserver/connectors-core";
 import type { useKokoHostAdapter } from "@jumpserver/koko/host";
 import type { Terminal } from "@xterm/xterm";
 import type { ComputedRef, Ref } from "vue";
 import type { useKokoConnectionStore } from "#koko/stores/connection";
 import type { useKokoTerminalSettingsStore } from "#koko/stores/terminalSettings";
-import type { OnlineUser, SettingConfig, ShareUserOptions } from "#koko/types";
+import type { OnlineUser, SettingConfig, ShareUserOptions, TerminalSessionInfo } from "#koko/types";
+import type { TerminalCommandEnvelope } from "./envelope";
 import type { TerminalIncomingMessage } from "./protocol";
-import {
-  FORMATTER_MESSAGE_TYPE,
-  HOST_MESSAGE_TYPE,
-  MESSAGE_TYPE,
-  ZMODEM_ACTION_TYPE
-} from "@jumpserver/connectors-core";
+import type { TerminalAiChatMessage } from "./useTerminalAiSessions";
+import { HOST_MESSAGE_TYPE, MESSAGE_TYPE, ZMODEM_ACTION_TYPE } from "@jumpserver/connectors-core";
 import { terminalTheme } from "../../utils/terminalTheme";
-import { formatMessage, updateIcon } from "../../utils/terminalUtils";
+import { updateIcon } from "../../utils/terminalUtils";
+import {
+  buildJSONEnvelope,
+  createRequestId,
+  ENVELOPE_CHAT,
+  ENVELOPE_ERROR,
+  ENVELOPE_TERMINAL_CLOSE,
+  ENVELOPE_TERMINAL_COMMAND,
+  ENVELOPE_TERMINAL_CREATE,
+  ENVELOPE_TERMINAL_OUTPUT,
+  parseEnvelope,
+  parseJSONPayload,
+  parseTerminalPayload
+} from "./envelope";
 import { parseTerminalIncomingMessage } from "./protocol";
 
-export type TerminalMessageHandlers = Partial<Record<MESSAGE_TYPE, (message: TerminalIncomingMessage) => void>>;
+export type TerminalMessageHandlers = Partial<Record<string, (message: TerminalIncomingMessage) => void>>;
 
-export function useKokoTerminalMessageHandler(handlers: TerminalMessageHandlers) {
+export function useKokoTerminalMessageHandler(
+  handlers: TerminalMessageHandlers,
+  options?: {
+    onTerminalOutput: (terminalId: number, data: Uint8Array) => void;
+    onChat: (message: TerminalAiChatMessage) => void;
+  }
+) {
   function handleRawMessage(raw: string) {
     let parsed: unknown;
 
@@ -32,7 +49,61 @@ export function useKokoTerminalMessageHandler(handlers: TerminalMessageHandlers)
     handlers[message.type]?.(message);
   }
 
-  return { handleRawMessage };
+  function dispatch(raw: unknown) {
+    const message = parseTerminalIncomingMessage(raw);
+    if (message) handlers[message.type]?.(message);
+  }
+
+  function handleEnvelopeMessage(raw: ArrayBuffer | Uint8Array) {
+    const frame = parseEnvelope(raw);
+    switch (frame.type) {
+      case ENVELOPE_TERMINAL_OUTPUT: {
+        const payload = parseTerminalPayload(frame.payload);
+        options?.onTerminalOutput(payload.terminalId, payload.data);
+        break;
+      }
+      case ENVELOPE_TERMINAL_COMMAND: {
+        const command = parseJSONPayload<TerminalCommandEnvelope>(frame.payload);
+        const params = command.params || {};
+        dispatch({
+          ...params,
+          type: command.command,
+          terminalId: command.terminalId || Number(params.terminalId) || 0,
+          requestId: command.requestId || ""
+        });
+        break;
+      }
+      case ENVELOPE_ERROR: {
+        const error = parseJSONPayload<Record<string, unknown>>(frame.payload);
+        dispatch({
+          id: "",
+          type: MESSAGE_TYPE.ERROR,
+          err: String(error.message || "Terminal error"),
+          terminalId: Number(error.terminalId) || 0,
+          requestId: String(error.requestId || "")
+        });
+        break;
+      }
+      case ENVELOPE_TERMINAL_CLOSE: {
+        const closed = parseJSONPayload<Record<string, unknown>>(frame.payload);
+        dispatch({
+          id: "",
+          type: MESSAGE_TYPE.CLOSE,
+          data: String(closed.reason || ""),
+          terminalId: Number(closed.terminalId) || 0,
+          requestId: String(closed.requestId || "")
+        });
+        break;
+      }
+      case ENVELOPE_CHAT:
+        options?.onChat(parseJSONPayload<TerminalAiChatMessage>(frame.payload));
+        break;
+      default:
+        throw new Error(`Unsupported terminal envelope type: ${frame.type}`);
+    }
+  }
+
+  return { handleRawMessage, handleEnvelopeMessage };
 }
 
 export function createKokoTerminalMessageHandlers(options: {
@@ -58,13 +129,10 @@ export function createKokoTerminalMessageHandlers(options: {
   connectionStore: ReturnType<typeof useKokoConnectionStore>;
   terminalSettingsStore: ReturnType<typeof useKokoTerminalSettingsStore>;
   hostAdapter: ReturnType<typeof useKokoHostAdapter>;
-  hostBridge: {
-    once: (event: HOST_MESSAGE_TYPE, handler: (message: Record<string, unknown>) => void) => void;
-    sendHost: (event: HOST_MESSAGE_TYPE, data: unknown) => void;
-  };
+  hostBridge: HostBridge;
   sendHostEvent: (event: HOST_MESSAGE_TYPE, data: unknown) => void;
   emitTerminalConnect: (id: string) => void;
-  emitTerminalSession: (payload: unknown) => void;
+  emitTerminalSession: (payload: TerminalSessionInfo) => void;
   showInfoOnce: (content: string) => void;
   onConnected: (terminalId: string, socket: WebSocket, terminal: Terminal) => void;
 }) {
@@ -108,15 +176,6 @@ export function createKokoTerminalMessageHandlers(options: {
       const terminal = options.terminalRef.value;
       if (!socket || !terminal) return;
 
-      options.terminalId.value = message.id;
-      options.emitTerminalConnect(options.terminalId.value);
-      options.connectionStore.setConnectionState({
-        socket,
-        terminal,
-        terminalId: message.id
-      });
-      options.onConnected(message.id, socket, terminal);
-
       const info = parseJson<{ setting: Partial<SettingConfig>; asset?: { name?: string } }>(message.data, {
         setting: {}
       });
@@ -125,16 +184,27 @@ export function createKokoTerminalMessageHandlers(options: {
       updateIcon(info.setting);
 
       socket.send(
-        formatMessage(
-          options.terminalId.value,
-          FORMATTER_MESSAGE_TYPE.TERMINAL_INIT,
-          JSON.stringify({
+        buildJSONEnvelope(ENVELOPE_TERMINAL_CREATE, {
+          requestId: createRequestId("primary"),
+          params: {
+            type: "primary",
             cols: terminal.cols,
             rows: terminal.rows,
             code: options.connectionStore.shareCode
-          })
-        )
+          }
+        })
       );
+    },
+    created: (message) => {
+      const socket = options.socketRef.value;
+      const terminal = options.terminalRef.value;
+      const terminalId = String(message.terminalId || "");
+      if (!socket || !terminal || !terminalId) return;
+
+      options.terminalId.value = terminalId;
+      options.emitTerminalConnect(terminalId);
+      options.connectionStore.setConnectionState({ socket, terminal, terminalId });
+      options.onConnected(terminalId, socket, terminal);
     },
     [MESSAGE_TYPE.TERMINAL_ERROR]: (message) => {
       options.terminalRef.value?.write(message.err || "");
@@ -168,7 +238,7 @@ export function createKokoTerminalMessageHandlers(options: {
         ctrlCAsCtrlZ?: boolean;
         themeName?: string;
       }>(message.data, { session: { id: "" } });
-      options.emitTerminalSession(sessionInfo);
+      options.emitTerminalSession(sessionInfo as TerminalSessionInfo);
 
       const tabId = options.sessionCtxRef.value?.tabId;
       if (tabId) {
@@ -205,8 +275,14 @@ export function createKokoTerminalMessageHandlers(options: {
 
       options.sessionId.value = sessionInfo.session.id;
       options.connectionStore.updateConnectionState({ sessionId: sessionInfo.session.id });
-      options.terminalSettingsStore.setDefaultTerminalConfig("theme", effectiveThemeName || sessionInfo.themeName);
-      options.terminalSettingsStore.setDefaultTerminalConfig("themeName", effectiveThemeName || sessionInfo.themeName);
+      options.terminalSettingsStore.setDefaultTerminalConfig(
+        "theme",
+        effectiveThemeName || sessionInfo.themeName || ""
+      );
+      options.terminalSettingsStore.setDefaultTerminalConfig(
+        "themeName",
+        effectiveThemeName || sessionInfo.themeName || ""
+      );
     },
     [MESSAGE_TYPE.TERMINAL_SHARE_JOIN]: (message) => {
       const payload = parseJson<OnlineUser>(message.data, {} as OnlineUser);

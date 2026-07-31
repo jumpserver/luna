@@ -33,7 +33,6 @@ const isTopbar = computed(() => props.placement === "topbar");
 
 const recentSiteLimit = 5;
 
-const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const appConfig = useAppConfig();
 const localePath = useLocalePath();
@@ -602,14 +601,7 @@ const handleConfirm = async () => {
   }
 
   if (!isTauriRuntime()) {
-    toast.add({
-      title: t("Login.LoginFailed"),
-      description: "Web 模式暂未接入登录流程。",
-      color: "warning",
-      icon: "i-lucide-circle-alert",
-      progress: true,
-      duration: 3000
-    });
+    redirectToWebLogin();
     return;
   }
 
@@ -785,6 +777,7 @@ onBeforeUnmount(() => {
   </UDropdownMenu>
 
   <Modal
+    v-if="isTauriRuntime()"
     v-model:open="openModal"
     :title="t('Login.Title')"
     :disabled="loginBtn"

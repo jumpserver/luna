@@ -1,10 +1,27 @@
 import type { Terminal } from "@xterm/xterm";
 
 import type { ILunaConfig } from "#koko/types";
-import { formatMessage } from "@jumpserver/connectors-core";
+import { buildJSONEnvelope, buildTerminalInput, ENVELOPE_TERMINAL_COMMAND } from "#koko/composables/terminal/envelope";
 import { AsciiBackspace, AsciiCtrlC, AsciiCtrlZ, AsciiDel } from "#koko/utils/config";
 
-export { formatMessage };
+export function formatMessage(id: string | number, type: string, data: unknown) {
+  const terminalId = Number(id) || 0;
+  if (type === "TERMINAL_DATA") {
+    return buildTerminalInput(terminalId, typeof data === "string" ? data : new Uint8Array(data as ArrayBuffer));
+  }
+
+  return buildJSONEnvelope(ENVELOPE_TERMINAL_COMMAND, {
+    terminalId,
+    command: type,
+    params: {
+      id: String(id || ""),
+      type,
+      data,
+      terminalId
+    },
+    timestamp: Date.now()
+  });
+}
 
 export function writeBufferToTerminal(
   enableZmodem: boolean,

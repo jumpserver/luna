@@ -2,11 +2,14 @@ import type { Terminal } from "@xterm/xterm";
 import type { Ref } from "vue";
 import type { KokoZmodemDetection } from "./zmodemTypes";
 import Zmodem from "zmodem-ts";
+import { buildTerminalInput } from "./envelope";
 
 export function createKokoZmodemSentry(options: {
   terminal: Terminal;
   socket: WebSocket;
+  terminalId: Ref<string>;
   lastSendTime: Ref<Date>;
+  canSend: () => boolean;
   onDetect: (detection: KokoZmodemDetection) => void;
   onWriteFailure: () => void;
   shouldWriteToTerminal: () => boolean;
@@ -21,14 +24,15 @@ export function createKokoZmodemSentry(options: {
       }
     },
     sender: (octets: Uint8Array) => {
+      if (!options.canSend() || !options.terminalId.value) return;
       options.lastSendTime.value = new Date();
       try {
-        options.socket.send(new Uint8Array(octets));
+        options.socket.send(buildTerminalInput(options.terminalId.value, new Uint8Array(octets)));
       } catch {
         options.onWriteFailure();
       }
     },
     on_retract: () => {},
-    on_detect: (detection) => options.onDetect(detection as KokoZmodemDetection)
+    on_detect: (detection: KokoZmodemDetection) => options.onDetect(detection)
   });
 }

@@ -111,14 +111,6 @@ export default defineNuxtConfig({
           rewrite: (path) => path.replace(/^\/luna/, ""),
           configure: bindProxyErrorHandler("luna-koko-ws")
         },
-        "/luna/koko/": {
-          target: kokoTarget,
-          secure: false,
-          ws: true,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/luna/, ""),
-          configure: bindProxyErrorHandler("luna-koko-http")
-        },
         "/koko/ws/": {
           target: kokoTarget.replace(/^http/i, "ws"),
           secure: false,
