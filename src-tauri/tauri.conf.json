@@ -59,6 +59,7 @@
     "windows": [
       {
         "label": "main",
+        "dragDropEnabled": false,
         "title": "",
         "width": 1300,
         "height": 780,

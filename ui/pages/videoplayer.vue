@@ -16,7 +16,6 @@ const playlistCollapsed = ref(false);
 
 const { parseFiles, parsePaths } = useVideoPlayerParser();
 const { removeRecording } = useVideoPlayerTauri();
-let unlistenFileDrop: (() => void) | null = null;
 
 const currentItem = computed(() => items.value.find((item) => item.id === activeId.value) || null);
 
@@ -191,19 +190,12 @@ onMounted(async () => {
   try {
     const currentWindow = useTauriWindowGetCurrentWindow();
     await currentWindow.setTitle("JumpServer Video Player");
-
-    unlistenFileDrop = await currentWindow.onDragDropEvent(({ payload }) => {
-      if (payload.type === "drop") {
-        void importPaths(payload.paths);
-      }
-    });
   } catch {
     // ignore when running in browser
   }
 });
 
 onBeforeUnmount(() => {
-  unlistenFileDrop?.();
   items.value.forEach(cleanupItem);
 
   if (isTauriRuntime()) {
@@ -268,7 +260,7 @@ onBeforeUnmount(() => {
             <span class="max-w-xl">
               <span class="block text-xl font-semibold tracking-tight text-(--ui-text-highlighted)">导入录像文件</span>
               <span class="mt-2 block text-sm leading-6 text-(--ui-text-muted)">
-                将录像拖入播放区，或点击这里选择 `.mp4`、`.gz`、`.tar` 文件。
+                点击这里选择 `.mp4`、`.gz`、`.tar` 文件。
               </span>
             </span>
             <span
