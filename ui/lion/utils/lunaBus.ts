@@ -1,28 +1,26 @@
-import type { Emitter } from 'mitt';
+import type { Emitter } from "mitt";
 
-import type { LunaMessage, LunaMessageEvents } from '@/lion/types/postmessage.type';
+import type { LunaMessage, LunaMessageEvents } from "@/lion/types/postmessage.type";
 
-import mitt from 'mitt';
+import mitt from "mitt";
 
-import { LUNA_MESSAGE_TYPE } from '@/lion/types/postmessage.type';
+import { LUNA_MESSAGE_TYPE } from "@/lion/types/postmessage.type";
 
 // 获取所有事件类型
 export type LunaEventType = keyof LunaMessageEvents;
 
 // 创建事件-数据映射类型
 type EventPayloadMap = {
-  [K in LunaEventType]: LunaMessageEvents[K]['data'] extends undefined
-    ? void
-    : LunaMessageEvents[K]['data'];
+  [K in LunaEventType]: LunaMessageEvents[K]["data"] extends undefined ? void : LunaMessageEvents[K]["data"];
 };
 
 const allEventTypes = Object.keys(LUNA_MESSAGE_TYPE) as LunaEventType[];
 
 class LunaCommunicator<T extends EventPayloadMap = EventPayloadMap> {
   private mitt: Emitter<T>;
-  private lunaId: string = '';
-  private targetOrigin: string = '*';
-  private protocol: string = '';
+  private lunaId: string = "";
+  private targetOrigin: string = "*";
+  private protocol: string = "";
 
   constructor() {
     this.mitt = mitt<T>();
@@ -30,14 +28,14 @@ class LunaCommunicator<T extends EventPayloadMap = EventPayloadMap> {
   }
 
   private setupMessageListener() {
-    window.addEventListener('message', (event: MessageEvent) => {
+    window.addEventListener("message", (event: MessageEvent) => {
       const message: LunaMessage = event.data;
       switch (message.name) {
         case LUNA_MESSAGE_TYPE.PING:
           this.lunaId = message.id;
           this.targetOrigin = event.origin;
           this.protocol = message.protocol;
-          this.sendLuna(LUNA_MESSAGE_TYPE.PONG, '');
+          this.sendLuna(LUNA_MESSAGE_TYPE.PONG, "");
           console.log(
             `LunaCommunicator initialized with ID: ${this.lunaId}, Origin: ${this.targetOrigin}, Protocol: ${this.protocol}`
           );
@@ -58,7 +56,7 @@ class LunaCommunicator<T extends EventPayloadMap = EventPayloadMap> {
   // 发送消息到目标窗口
   public sendLuna<K extends keyof T>(name: K, data: T[K]) {
     if (!this.lunaId || !this.targetOrigin) {
-      console.warn('Target window not set');
+      console.warn("Target window not set");
     }
 
     window.parent.postMessage({ name, id: this.lunaId, data }, this.targetOrigin);

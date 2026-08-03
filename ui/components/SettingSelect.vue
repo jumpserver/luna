@@ -1,17 +1,17 @@
 <script setup lang="ts" generic="T extends string | number | boolean">
 interface SettingSelectItem {
-  id: T
-  label: string
+  id: T;
+  label: string;
 }
 
 const props = defineProps<{
-  modelValue: T
-  items: SettingSelectItem[]
-  ariaLabel?: string
+  modelValue: T;
+  items: SettingSelectItem[];
+  ariaLabel?: string;
 }>();
 
 const emit = defineEmits<{
-  (event: "update:modelValue", value: T): void
+  (event: "update:modelValue", value: T): void;
 }>();
 
 const selectedIndex = computed(() => {

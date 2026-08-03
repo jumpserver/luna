@@ -190,8 +190,9 @@ clients/
 pnpm dev              # 启动 Nuxt 开发服务器
 pnpm tauri:dev        # 启动 Tauri 开发模式
 pnpm tauri:build      # 构建生产应用
-pnpm lint             # 运行 ESLint
-pnpm prettier         # 使用 Prettier 格式化代码
+pnpm fmt              # 使用 Oxfmt 格式化代码
+pnpm lint             # 运行 ESLint 并自动修复
+pnpm cargo:fmt        # 格式化 Rust 代码
 pnpm reset            # 清理构建产物
 ```
 

@@ -8,20 +8,20 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import RecentSites from "./recentSites.vue";
 
 interface VersionAlertPayload {
-  type: string
-  version?: string
+  type: string;
+  version?: string;
 }
 
 interface VersionMessageResponse {
-  status: number
-  data: string
-  success: boolean
+  status: number;
+  data: string;
+  success: boolean;
 }
 
 const props = withDefaults(
   defineProps<{
-    collapse?: boolean
-    placement?: "sidebar" | "topbar"
+    collapse?: boolean;
+    placement?: "sidebar" | "topbar";
   }>(),
   {
     collapse: false,
@@ -44,8 +44,8 @@ const { loggedIn, currentSite, userMap, currentUser } = storeToRefs(userInfoStor
 const { applyLoginPayload } = useAuthSession();
 const { openToolWindow } = useToolWindow();
 
-const { setLang, primaryColorLight, primaryColorDark, recentSites, setRecentSites, hydrationPromise }
-  = useSettingManager();
+const { setLang, primaryColorLight, primaryColorDark, recentSites, setRecentSites, hydrationPromise } =
+  useSettingManager();
 const { userTheme } = useThemeAdapter();
 const { themeDropdownItems } = useThemeOptions();
 const { applyPrimaryColor } = useColor();
@@ -186,11 +186,13 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => {
         children: languageChildren.value
       },
       ...(isTauriRuntime()
-        ? [{
-            label: t("Menu.Tool"),
-            icon: "i-lucide-wrench",
-            children: toolChildren.value
-          } satisfies DropdownMenuItem]
+        ? [
+            {
+              label: t("Menu.Tool"),
+              icon: "i-lucide-wrench",
+              children: toolChildren.value
+            } satisfies DropdownMenuItem
+          ]
         : []),
       {
         label: t("Common.Settings"),
@@ -208,9 +210,9 @@ const profileMenuItems = computed<DropdownMenuItem[][]>(() => {
         color: "error",
         ui: {
           itemLabel:
-          "!text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error group-data-[state=checked]:!text-error",
+            "!text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error group-data-[state=checked]:!text-error",
           itemLeadingIcon:
-          "group-data-[state=checked]:text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error"
+            "group-data-[state=checked]:text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error"
         },
         onClick: clearAuthInfo
       }

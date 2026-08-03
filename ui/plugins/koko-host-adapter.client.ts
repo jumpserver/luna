@@ -8,7 +8,7 @@ import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
 import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
 import { useWorkspaceConnectors } from "~/composables/useWorkspaceConnectors";
 import { clearWorkspaceSessionDetails, setWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
-import { useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
+import { registerWorkspaceSessionCloseGuard, useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
 import { createCodeMirrorSyntaxTheme, createCodeMirrorTheme } from "~/shared/theme/adapters/codemirror";
 import { toXtermTheme } from "~/shared/theme/adapters/xterm";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -38,27 +38,28 @@ export default defineNuxtPlugin((nuxtApp) => {
   const useSftpSessionCreator = () => {
     const { displayUser, handleAssetConnection } = useAssetAction();
 
-    return (asset: Awaited<ReturnType<typeof prepareSftpAsset>>) => new Promise<{ tokenId: string }>((resolve, reject) => {
-      const preference = userInfoStore.getConnectionPreferenceForAsset(asset.id);
-      const remembered = userInfoStore.getConnectionInfoForAsset(asset.id);
-      const account = displayUser(asset.id, asset.permedAccounts);
-      void handleAssetConnection(account, asset.id, "ssh", asset.permedAccounts, "sftp", {
-        accountMode: preference?.accountMode || remembered?.accountMode || "hosted",
-        accountId: preference?.accountId || remembered?.accountId,
-        connectMethod: SFTP_FILE_MANAGER_VALUE,
-        orgId: currentUser.value?.org?.id || "",
-        asset,
-        onSessionReady: (payload) => {
-          const tokenId = String(payload.id || payload.token?.id || "");
-          if (!tokenId) {
-            reject(new Error("服务端未返回 SFTP 连接令牌"));
-            return;
-          }
-          resolve({ tokenId });
-        },
-        onSessionError: reject
-      }).catch(reject);
-    });
+    return (asset: Awaited<ReturnType<typeof prepareSftpAsset>>) =>
+      new Promise<{ tokenId: string }>((resolve, reject) => {
+        const preference = userInfoStore.getConnectionPreferenceForAsset(asset.id);
+        const remembered = userInfoStore.getConnectionInfoForAsset(asset.id);
+        const account = displayUser(asset.id, asset.permedAccounts);
+        void handleAssetConnection(account, asset.id, "ssh", asset.permedAccounts, "sftp", {
+          accountMode: preference?.accountMode || remembered?.accountMode || "hosted",
+          accountId: preference?.accountId || remembered?.accountId,
+          connectMethod: SFTP_FILE_MANAGER_VALUE,
+          orgId: currentUser.value?.org?.id || "",
+          asset,
+          onSessionReady: (payload) => {
+            const tokenId = String(payload.id || payload.token?.id || "");
+            if (!tokenId) {
+              reject(new Error("服务端未返回 SFTP 连接令牌"));
+              return;
+            }
+            resolve({ tokenId });
+          },
+          onSessionError: reject
+        }).catch(reject);
+      });
   };
 
   const adapter: KokoHostAdapter = {
@@ -75,6 +76,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         account: tab.account
       });
     },
+    registerSessionCloseGuard: registerWorkspaceSessionCloseGuard,
     setSessionDetails: (tabId, details) => {
       setWorkspaceSessionDetails(tabId, details as Parameters<typeof setWorkspaceSessionDetails>[1]);
     },

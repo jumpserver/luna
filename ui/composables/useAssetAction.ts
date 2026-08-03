@@ -43,13 +43,13 @@ const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
 const isLocalClientMethod = (method: { type?: string } | undefined) =>
   ["native", "client", "local", "desktop"].includes(String(method?.type || "").toLowerCase());
 const pendingBuiltinSessions: Array<{
-  tabId?: string
-  assetId: string
-  protocol: string
-  account: string
-  connectMethod?: string
-  onSessionReady?: (payload: Record<string, any>) => void
-  onSessionError?: (error: unknown) => void
+  tabId?: string;
+  assetId: string;
+  protocol: string;
+  account: string;
+  connectMethod?: string;
+  onSessionReady?: (payload: Record<string, any>) => void;
+  onSessionError?: (error: unknown) => void;
 }> = [];
 
 function releaseTauriEventListeners() {
@@ -82,8 +82,8 @@ export const useAssetAction = () => {
   const settingManager = useSettingManager();
   // prettier-ignore
   const { currentSite, currentConnectionInfoMap, currentRdpClientOption, orgId } = storeToRefs(userInfoStore);
-  const { charset, rdpResolution, backspaceAsCtrlH, keyboardLayout, rdpClientOption, rdpColorQuality, rdpSmartSize }
-    = settingManager;
+  const { charset, rdpResolution, backspaceAsCtrlH, keyboardLayout, rdpClientOption, rdpColorQuality, rdpSmartSize } =
+    settingManager;
 
   function buildLocalRdpParams() {
     const prefs = resolveGraphicsPreferences();
@@ -116,10 +116,10 @@ export const useAssetAction = () => {
    * @description 生成连接选项
    */
   function resolveGraphicsPreferences() {
-    const resolvedKeyboardLayout
-      = keyboardLayout.value || currentRdpClientOption.value.keyboard_layout || "en-us-qwerty";
-    const resolvedClientOptions
-      = Array.isArray(rdpClientOption.value) && rdpClientOption.value.length > 0
+    const resolvedKeyboardLayout =
+      keyboardLayout.value || currentRdpClientOption.value.keyboard_layout || "en-us-qwerty";
+    const resolvedClientOptions =
+      Array.isArray(rdpClientOption.value) && rdpClientOption.value.length > 0
         ? [...rdpClientOption.value]
         : [...(currentRdpClientOption.value.rdp_client_option || [])];
     const resolvedColorQuality = rdpColorQuality.value || currentRdpClientOption.value.rdp_color_quality || "32";
@@ -176,8 +176,8 @@ export const useAssetAction = () => {
     // prettier-ignore
     const isManual = saved?.accountMode === "manual" || username === "手动输入" || username === "Manual input";
 
-    const isDynamic
-      = saved?.accountMode === "dynamic" || username.includes("同名账号") || username.includes("Dynamic user");
+    const isDynamic =
+      saved?.accountMode === "dynamic" || username.includes("同名账号") || username.includes("Dynamic user");
 
     const isAnonymous = saved?.accountMode === "anonymous" || username.includes("@ANON");
 
@@ -241,7 +241,9 @@ export const useAssetAction = () => {
     return devOrigins[component]?.replace(/\/+$/, "") || "";
   };
 
-  const resolveWebEndpointProtocol = (method: { component?: string, type?: string, endpoint_protocol?: string } | undefined) => {
+  const resolveWebEndpointProtocol = (
+    method: { component?: string; type?: string; endpoint_protocol?: string } | undefined
+  ) => {
     const pageProtocol = window.location.protocol.replace(":", "") || "http";
     const component = method?.component || "";
     const isWebSurface = method?.type === "web" || ["koko", "lion", "chen", "tinker", "default"].includes(component);
@@ -256,23 +258,26 @@ export const useAssetAction = () => {
 
   const fetchSmartEndpointUrl = async (
     token: TokenResponse,
-    method: { component?: string, type?: string, endpoint_protocol?: string } | undefined,
+    method: { component?: string; type?: string; endpoint_protocol?: string } | undefined,
     body: ConnectionBody,
     orgId?: string
   ) => {
     const endpointProtocol = resolveWebEndpointProtocol(method);
-    const endpoint = await getSmartEndpoint({
-      protocol: endpointProtocol,
-      assetId: body.asset,
-      token: token.id
-    }, orgId);
+    const endpoint = await getSmartEndpoint(
+      {
+        protocol: endpointProtocol,
+        assetId: body.asset,
+        token: token.id
+      },
+      orgId
+    );
 
     return getEndpointUrl(endpoint, endpointProtocol);
   };
 
   const getWebConnectorPath = (
     token: TokenResponse,
-    method: { component?: string, value?: string, type?: string, endpoint_protocol?: string } | undefined,
+    method: { component?: string; value?: string; type?: string; endpoint_protocol?: string } | undefined,
     body: ConnectionBody,
     endpointUrl = window.location.origin
   ) => {
@@ -306,13 +311,13 @@ export const useAssetAction = () => {
   const getConnectToken = async (
     body: ConnectionBody,
     meta?: {
-      tabId?: string
-      asset?: AssetItem
-      assetId: string
-      protocol: string
-      account: string
-      orgId?: string
-      onSessionReady?: (payload: Record<string, any>) => void
+      tabId?: string;
+      asset?: AssetItem;
+      assetId: string;
+      protocol: string;
+      account: string;
+      orgId?: string;
+      onSessionReady?: (payload: Record<string, any>) => void;
     }
   ) => {
     const nativeApp = parseLocalApplicationConnectMethod(body.connect_method);
@@ -332,10 +337,7 @@ export const useAssetAction = () => {
         const method = (allMethods[body.protocol] || []).find((item) => item.value === serverBody.connect_method);
 
         if (isLocalClientMethod(method)) {
-          const { url } = await getLocalClientUrl(
-            token.id,
-            buildLocalRdpParams()
-          );
+          const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams());
           if (!url?.startsWith("jms://")) {
             throw new Error("Invalid local client URL");
           }
@@ -349,7 +351,8 @@ export const useAssetAction = () => {
         }
 
         const component = method?.component || (body.protocol === "ssh" ? "koko" : "default");
-        const endpointUrl = getWebConnectorDevOrigin(component) || await fetchSmartEndpointUrl(token, method, body, meta?.orgId);
+        const endpointUrl =
+          getWebConnectorDevOrigin(component) || (await fetchSmartEndpointUrl(token, method, body, meta?.orgId));
         const webUrl = getWebConnectorPath(token, method, body, endpointUrl);
 
         if (tabId) {
@@ -415,9 +418,7 @@ export const useAssetAction = () => {
       }
 
       if (body.connect_method === WEB_DB_NATIVE_VALUE) {
-        const chenWeb = methods.find(
-          (item) => item.type === "web" && item.component === "chen" && !item.origin_value
-        );
+        const chenWeb = methods.find((item) => item.type === "web" && item.component === "chen" && !item.origin_value);
         if (chenWeb) return chenWeb.value;
       }
 
@@ -439,13 +440,13 @@ export const useAssetAction = () => {
   const getBuiltinConnectSession = (
     body: ConnectionBody,
     meta: {
-      tabId?: string
-      assetId: string
-      protocol: string
-      account: string
-      orgId?: string
-      onSessionReady?: (payload: Record<string, any>) => void
-      onSessionError?: (error: unknown) => void
+      tabId?: string;
+      assetId: string;
+      protocol: string;
+      account: string;
+      orgId?: string;
+      onSessionReady?: (payload: Record<string, any>) => void;
+      onSessionError?: (error: unknown) => void;
     }
   ) => {
     if (!isTauriRuntime()) {
@@ -478,24 +479,25 @@ export const useAssetAction = () => {
     const rdpParams = buildLocalRdpParams();
     pendingBuiltinSessions.push({ ...meta, connectMethod: body.connect_method });
 
-    void (async () => useTauriCoreInvoke("get_builtin_connect_session", {
-      body: {
-        asset: body.asset,
-        account: body.account,
-        protocol: body.protocol,
-        input_username: body.input_username,
-        input_secret: body.input_secret,
-        connect_method: await resolveServerConnectMethod(body),
-        connect_options: body.connect_options
-      },
-      rdpParams
-    }))().catch((error) => {
+    void (async () =>
+      useTauriCoreInvoke("get_builtin_connect_session", {
+        body: {
+          asset: body.asset,
+          account: body.account,
+          protocol: body.protocol,
+          input_username: body.input_username,
+          input_secret: body.input_secret,
+          connect_method: await resolveServerConnectMethod(body),
+          connect_options: body.connect_options
+        },
+        rdpParams
+      }))().catch((error) => {
       const idx = pendingBuiltinSessions.findIndex(
         (item) =>
-          item.assetId === meta.assetId
-          && item.protocol === meta.protocol
-          && item.account === meta.account
-          && item.tabId === meta.tabId
+          item.assetId === meta.assetId &&
+          item.protocol === meta.protocol &&
+          item.account === meta.account &&
+          item.tabId === meta.tabId
       );
 
       if (idx !== -1) pendingBuiltinSessions.splice(idx, 1);
@@ -538,12 +540,12 @@ export const useAssetAction = () => {
       token_reusable: false,
       disableautohash: false
     };
-    const specificOptions
-      = protocol === "http"
+    const specificOptions =
+      protocol === "http"
         ? {
-          appletConnectMethod: "client",
-          reusable: false
-        }
+            appletConnectMethod: "client",
+            reusable: false
+          }
         : {};
     return {
       ...options,
@@ -566,19 +568,19 @@ export const useAssetAction = () => {
     accounts?: PermedAccount[],
     protocolOverride?: string,
     ephemeral?: {
-      accountMode?: "hosted" | "dynamic" | "manual" | "anonymous"
-      accountId?: string
-      manualUsername?: string
-      manualPassword?: string
-      dynamicPassword?: string
-      connectMethod?: string
-      connectOptions?: Record<string, any>
-      tabId?: string
-      asset?: AssetItem
-      onSessionReady?: (payload: Record<string, any>) => void
-      onSessionError?: (error: unknown) => void
-      orgId?: string
-      onSessionReady?: (payload: Record<string, any>) => void
+      accountMode?: "hosted" | "dynamic" | "manual" | "anonymous";
+      accountId?: string;
+      manualUsername?: string;
+      manualPassword?: string;
+      dynamicPassword?: string;
+      connectMethod?: string;
+      connectOptions?: Record<string, any>;
+      tabId?: string;
+      asset?: AssetItem;
+      onSessionReady?: (payload: Record<string, any>) => void;
+      onSessionError?: (error: unknown) => void;
+      orgId?: string;
+      onSessionReady?: (payload: Record<string, any>) => void;
     }
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
@@ -634,9 +636,10 @@ export const useAssetAction = () => {
     })();
 
     // 当前连接显式选择优先；仅在协议一致时复用已保存连接方法，避免跨协议复用错误的客户端
-    const preferredConnectMethod = ephemeral?.connectMethod?.trim()
-      || (saved?.protocol === protocol ? saved?.connectMethod?.trim() : "")
-      || await resolveConnectMethod(protocol);
+    const preferredConnectMethod =
+      ephemeral?.connectMethod?.trim() ||
+      (saved?.protocol === protocol ? saved?.connectMethod?.trim() : "") ||
+      (await resolveConnectMethod(protocol));
     const connectMethod = preferredConnectMethod;
 
     // Every successful attempt updates the lightweight last-used preference.
@@ -645,7 +648,8 @@ export const useAssetAction = () => {
     userInfoStore.setConnectionPreferenceForAsset(assetId, {
       protocol,
       username: selected || user,
-      accountId: effectiveMode === "hosted" ? (ephemeral?.accountId || matchedAccount?.id || saved?.accountId) : undefined,
+      accountId:
+        effectiveMode === "hosted" ? ephemeral?.accountId || matchedAccount?.id || saved?.accountId : undefined,
       accountMode: effectiveMode,
       connectMethod
     });
@@ -672,10 +676,10 @@ export const useAssetAction = () => {
 
       // ponytail: 有 onSessionReady 时由调用方内嵌展示（如右侧 SFTP），不新开 workspace tab
       if (
-        !tabId
-        && ephemeral?.asset
-        && (NATIVE_WORKSPACE_METHODS.has(connectMethod) || isGuideConnectMethod(connectMethod))
-        && !ephemeral?.onSessionReady
+        !tabId &&
+        ephemeral?.asset &&
+        (NATIVE_WORKSPACE_METHODS.has(connectMethod) || isGuideConnectMethod(connectMethod)) &&
+        !ephemeral?.onSessionReady
       ) {
         tabId = openSession(ephemeral.asset, { protocol, account }).id;
       }
@@ -823,8 +827,8 @@ export const useAssetAction = () => {
     try {
       unlistenGetTokenSuccess = await useTauriEventListen("get-token-success", (event) => {
         interface eventPayload {
-          status: number
-          data: TokenResponse
+          status: number;
+          data: TokenResponse;
         }
 
         const payload = event.payload as eventPayload;
@@ -836,8 +840,8 @@ export const useAssetAction = () => {
 
       unlistenGetTokenFailure = await useTauriEventListen("get-token-failure", (event) => {
         interface eventPayload {
-          status: number
-          data: string
+          status: number;
+          data: string;
         }
 
         const payload = event.payload as eventPayload;
@@ -865,7 +869,7 @@ export const useAssetAction = () => {
 
       unlistenPullUpFailure = await useTauriEventListen("pull-up-failure", (event) => {
         interface eventPayload {
-          error: string
+          error: string;
         }
 
         const payload = event.payload as eventPayload;
@@ -911,8 +915,8 @@ export const useAssetAction = () => {
 
       unlistenBuiltinSessionSuccess = await useTauriEventListen("get-builtin-session-success", (event) => {
         interface eventPayload {
-          status: number
-          data: Record<string, any>
+          status: number;
+          data: Record<string, any>;
         }
 
         const payload = event.payload as eventPayload;
@@ -929,8 +933,8 @@ export const useAssetAction = () => {
 
       unlistenBuiltinSessionFailure = await useTauriEventListen("get-builtin-session-failure", (event) => {
         interface eventPayload {
-          status: number
-          data: string
+          status: number;
+          data: string;
         }
 
         const meta = pendingBuiltinSessions.shift();

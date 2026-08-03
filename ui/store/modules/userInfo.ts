@@ -9,11 +9,11 @@ import type {
 import { useConnectMethods } from "~/composables/useConnectMethods";
 
 export type SiteUserData = UserData & {
-  language?: string
-  rdpClientOption?: RdpGraphics
-  connectionInfoMap?: Record<string, ConnectionInfo>
-  connectionPreferenceMap?: Record<string, ConnectionPreferenceInfo>
-  protocolConnectionPreferenceMap?: Record<string, ProtocolConnectionPreferenceInfo>
+  language?: string;
+  rdpClientOption?: RdpGraphics;
+  connectionInfoMap?: Record<string, ConnectionInfo>;
+  connectionPreferenceMap?: Record<string, ConnectionPreferenceInfo>;
+  protocolConnectionPreferenceMap?: Record<string, ProtocolConnectionPreferenceInfo>;
 };
 
 // 其实应该叫做 accountInfoStore 比较好
@@ -314,8 +314,8 @@ export const useUserInfoStore = defineStore(
         .map((p) => (typeof p === "string" ? p.trim() : ""))
         .filter((p) => p.length > 0);
 
-      const mergedProtocols
-        = incomingProtocols.length > 0 ? Array.from(new Set(incomingProtocols)) : existing?.availableProtocols;
+      const mergedProtocols =
+        incomingProtocols.length > 0 ? Array.from(new Set(incomingProtocols)) : existing?.availableProtocols;
 
       siteData.connectionInfoMap[assetId] = {
         ...(existing || {}),
@@ -361,8 +361,8 @@ export const useUserInfoStore = defineStore(
         .map((p) => (typeof p === "string" ? p.trim() : ""))
         .filter((p) => p.length > 0);
 
-      const mergedProtocols
-        = incomingProtocols.length > 0 ? Array.from(new Set(incomingProtocols)) : existing?.availableProtocols;
+      const mergedProtocols =
+        incomingProtocols.length > 0 ? Array.from(new Set(incomingProtocols)) : existing?.availableProtocols;
 
       siteData.connectionPreferenceMap[assetId] = {
         ...(existing || {}),
@@ -378,10 +378,7 @@ export const useUserInfoStore = defineStore(
      * @param protocol 协议名称
      * @param preference 连接偏好
      */
-    const setConnectionPreferenceForProtocol = (
-      protocol: string,
-      preference: ProtocolConnectionPreferenceInfo
-    ) => {
+    const setConnectionPreferenceForProtocol = (protocol: string, preference: ProtocolConnectionPreferenceInfo) => {
       if (!currentSite.value || !protocol || !preference.connectMethod) return;
       const siteData = userMap.value[currentSite.value];
 

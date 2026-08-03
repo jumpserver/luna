@@ -79,8 +79,8 @@ const ensureHydration = () => {
         patch.themeMode = normalizedMode;
       }
 
-      const desiredFollowSystem
-        = normalizedMode === "withSystem"
+      const desiredFollowSystem =
+        normalizedMode === "withSystem"
           ? true
           : normalizedMode === "dark" || normalizedMode === "light"
             ? false

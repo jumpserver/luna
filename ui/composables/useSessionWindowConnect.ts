@@ -2,23 +2,23 @@ import type { AssetItem } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export interface SessionWindowConnectionInfo {
-  protocol: string
-  account: string
-  manualUsername: string
-  manualPassword: string
-  dynamicPassword: string
-  rememberSecret: boolean
-  rememberSelection?: boolean
-  connectMethod: string
-  connectOptions?: Record<string, any>
-  accountId?: string
-  availableProtocols?: string[]
-  accountMode: "hosted" | "dynamic" | "manual" | "anonymous"
+  protocol: string;
+  account: string;
+  manualUsername: string;
+  manualPassword: string;
+  dynamicPassword: string;
+  rememberSecret: boolean;
+  rememberSelection?: boolean;
+  connectMethod: string;
+  connectOptions?: Record<string, any>;
+  accountId?: string;
+  availableProtocols?: string[];
+  accountMode: "hosted" | "dynamic" | "manual" | "anonymous";
 }
 
 interface LegacyWindowAssetPayload {
-  asset: AssetItem
-  connectionInfo: SessionWindowConnectionInfo
+  asset: AssetItem;
+  connectionInfo: SessionWindowConnectionInfo;
 }
 
 export const decodeLegacyWindowPayload = (payload: string) => {

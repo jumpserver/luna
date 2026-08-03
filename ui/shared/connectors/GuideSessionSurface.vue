@@ -26,15 +26,12 @@ const endpoint = ref<Record<string, any>>({});
 const loading = ref(true);
 const passwordVisible = ref(false);
 
-const label = (zh: string, en: string) => locale.value === "zh" ? zh : en;
+const label = (zh: string, en: string) => (locale.value === "zh" ? zh : en);
 const protocol = computed(() => (token.value?.protocol || props.tab.protocol || "").toLowerCase());
 const host = computed(() => String(endpoint.value.host || ""));
-const port = computed(() => String(
-  endpoint.value[`${protocol.value}_port`]
-  || endpoint.value.port
-  || defaultPorts[protocol.value]
-  || ""
-));
+const port = computed(() =>
+  String(endpoint.value[`${protocol.value}_port`] || endpoint.value.port || defaultPorts[protocol.value] || "")
+);
 const asset = computed(() => token.value?.asset as any);
 const assetName = computed(() => {
   const name = asset.value?.name || props.tab.assetName;
@@ -120,7 +117,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="guide-page h-full min-h-0 overflow-auto bg-[var(--workspace-surface-background)] px-4 py-6 sm:px-8 sm:py-10">
+  <div
+    class="guide-page h-full min-h-0 overflow-auto bg-[var(--workspace-surface-background)] px-4 py-6 sm:px-8 sm:py-10"
+  >
     <div class="mx-auto w-full max-w-4xl">
       <div v-if="loading" class="grid min-h-64 place-items-center text-[var(--app-muted)]">
         <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
@@ -230,8 +229,11 @@ onMounted(async () => {
 
 <style scoped>
 .guide-page {
-  background-image:
-    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--app-selected-soft) 70%, transparent), transparent 36rem);
+  background-image: radial-gradient(
+    circle at 50% 0%,
+    color-mix(in srgb, var(--app-selected-soft) 70%, transparent),
+    transparent 36rem
+  );
 }
 
 .guide-card {

@@ -4,30 +4,30 @@ import type { AssetItem, PermedAccount, PermedProtocol, SortType } from "~/types
 import mitt from "mitt";
 
 type BusEvents = {
-  setSort: SortType
-  search: string
-  login: undefined
-  loaded: undefined
-  loading: undefined
-  refresh: undefined
+  setSort: SortType;
+  search: string;
+  login: undefined;
+  loaded: undefined;
+  loading: undefined;
+  refresh: undefined;
   versionAlert: {
-    type: string
-    version?: string
-  }
+    type: string;
+    version?: string;
+  };
   assetRenamed: {
-    assetId: string
-    name: string
-  }
+    assetId: string;
+    name: string;
+  };
   favoriteChanged: {
-    assetId: string
-    favorite: boolean
-  }
+    assetId: string;
+    favorite: boolean;
+  };
   assetDetailUpdated: {
-    assetId: string
-    permedAccounts: PermedAccount[]
-    permedProtocols: PermedProtocol[]
-  }
-  workspaceConnectAsset: AssetItem
+    assetId: string;
+    permedAccounts: PermedAccount[];
+    permedProtocols: PermedProtocol[];
+  };
+  workspaceConnectAsset: AssetItem;
 } & Record<EventType, unknown>;
 
 const emitter: Emitter<BusEvents> = mitt<BusEvents>();

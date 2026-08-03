@@ -49,10 +49,10 @@ const activeWorkspaceAsset = computed(() => {
     address: activeTab.value.address
   };
 });
-const activeFileTokenRequester = computed(() =>
-  getSessionDetails(activeTab.value?.id || "")?.requestFileToken
+const activeFileTokenRequester = computed(() => getSessionDetails(activeTab.value?.id || "")?.requestFileToken);
+const isActiveAssetPreparing = computed(() =>
+  Boolean(activeWorkspaceAsset.value && !inlineTab.value && !inlineError.value)
 );
-const isActiveAssetPreparing = computed(() => Boolean(activeWorkspaceAsset.value && !inlineTab.value && !inlineError.value));
 
 const reportError = (error: unknown) => {
   addErrorToast({
@@ -126,30 +126,22 @@ const openSftp = async () => {
     const account = activeAccount || displayUser(asset.id, asset.permedAccounts);
     const preference = userInfoStore.getConnectionPreferenceForAsset(asset.id);
     const remembered = userInfoStore.getConnectionInfoForAsset(asset.id);
-    const activeToken = activeTab.value?.assetId === asset.id
-      ? (activeTab.value.payload?.token || activeTab.value.payload)
-      : undefined;
+    const activeToken =
+      activeTab.value?.assetId === asset.id ? activeTab.value.payload?.token || activeTab.value.payload : undefined;
     const accountId = preference?.accountId || remembered?.accountId || activeToken?.account;
 
     await new Promise<void>((resolve, reject) => {
-      handleAssetConnection(
-        account,
-        asset.id,
-        "ssh",
-        asset.permedAccounts,
-        "sftp",
-        {
-          accountMode: preference?.accountMode || remembered?.accountMode || "hosted",
-          accountId,
-          connectMethod: SFTP_FILE_MANAGER_VALUE,
-          asset,
-          onSessionReady: (payload) => {
-            if (attempt === connectionAttempt) inlinePayload.value = payload;
-            resolve();
-          },
-          onSessionError: reject
-        }
-      ).catch(reject);
+      handleAssetConnection(account, asset.id, "ssh", asset.permedAccounts, "sftp", {
+        accountMode: preference?.accountMode || remembered?.accountMode || "hosted",
+        accountId,
+        connectMethod: SFTP_FILE_MANAGER_VALUE,
+        asset,
+        onSessionReady: (payload) => {
+          if (attempt === connectionAttempt) inlinePayload.value = payload;
+          resolve();
+        },
+        onSessionError: reject
+      }).catch(reject);
     });
   } catch (error) {
     if (attempt === connectionAttempt) inlineError.value = String(error);
@@ -235,10 +227,7 @@ watch(
           />
         </div>
 
-        <div
-          v-if="selectedAsset"
-          class="rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2"
-        >
+        <div v-if="selectedAsset" class="rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2">
           <div class="truncate text-[12px] font-medium text-gray-800 dark:text-gray-100">
             {{ selectedAsset.name }}
           </div>

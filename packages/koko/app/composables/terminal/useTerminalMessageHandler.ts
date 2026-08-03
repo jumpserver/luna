@@ -117,9 +117,9 @@ export function createKokoTerminalMessageHandlers(options: {
       });
       options.onConnected(message.id, socket, terminal);
 
-      const info = parseJson<
-        { setting: Partial<SettingConfig>; asset?: { name?: string } }
-      >(message.data, { setting: {} });
+      const info = parseJson<{ setting: Partial<SettingConfig>; asset?: { name?: string } }>(message.data, {
+        setting: {}
+      });
       options.featureSetting.value = info.setting;
       if (info.asset?.name) options.connectionStore.setConnectionState({ assetName: info.asset.name });
       updateIcon(info.setting);
@@ -183,7 +183,10 @@ export function createKokoTerminalMessageHandlers(options: {
       }
 
       if (sessionInfo.backspaceAsCtrlH) {
-        options.terminalSettingsStore.setDefaultTerminalConfig("backspaceAsCtrlH", sessionInfo.backspaceAsCtrlH ? "1" : "0");
+        options.terminalSettingsStore.setDefaultTerminalConfig(
+          "backspaceAsCtrlH",
+          sessionInfo.backspaceAsCtrlH ? "1" : "0"
+        );
       }
       if (sessionInfo.ctrlCAsCtrlZ) {
         options.terminalSettingsStore.setDefaultTerminalConfig("ctrlCAsCtrlZ", sessionInfo.ctrlCAsCtrlZ ? "1" : "0");
@@ -209,7 +212,10 @@ export function createKokoTerminalMessageHandlers(options: {
       const payload = parseJson<OnlineUser>(message.data, {} as OnlineUser);
       options.onlineUsers.value.push(payload);
       options.connectionStore.updateConnectionState({ onlineUsers: options.onlineUsers.value });
-      options.sendHostEvent(HOST_MESSAGE_TYPE.SHARE_USER_ADD, JSON.stringify({ ...payload, sessionId: options.sessionId.value }));
+      options.sendHostEvent(
+        HOST_MESSAGE_TYPE.SHARE_USER_ADD,
+        JSON.stringify({ ...payload, sessionId: options.sessionId.value })
+      );
       if (!payload.primary) {
         options.toast.add({ title: `${payload.user} ${options.t("koko.terminal.joinedShare")}`, color: "info" });
       }

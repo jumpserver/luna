@@ -1,7 +1,7 @@
-import en from './en.json';
-import ja from './ja.json';
-import zh from './zh.json';
-import zh_Hant from './zh_Hant.json';
+import en from "./en.json";
+import ja from "./ja.json";
+import zh from "./zh.json";
+import zh_Hant from "./zh_Hant.json";
 
 export const message = {
   zh: {

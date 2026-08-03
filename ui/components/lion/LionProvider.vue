@@ -16,9 +16,12 @@ onMounted(async () => {
   }
 
   try {
-    const response = await fetch(`${withBasePath("/api/v1/settings/i18n/lion/")}?lang=${encodeURIComponent(normalizedLangCode)}&flat=0`, {
-      credentials: "include"
-    });
+    const response = await fetch(
+      `${withBasePath("/api/v1/settings/i18n/lion/")}?lang=${encodeURIComponent(normalizedLangCode)}&flat=0`,
+      {
+        credentials: "include"
+      }
+    );
 
     if (response.ok) {
       const translations = await response.json();

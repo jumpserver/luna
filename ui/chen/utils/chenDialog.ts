@@ -1,13 +1,13 @@
 export interface ChenDialogItem {
-  label: string
-  value: unknown
+  label: string;
+  value: unknown;
 }
 
 export interface ChenDialogMessage {
-  title: string
-  payload: unknown
-  items: ChenDialogItem[]
-  text: string
+  title: string;
+  payload: unknown;
+  items: ChenDialogItem[];
+  text: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -39,11 +39,8 @@ export function normalizeChenDialogMessage(payload: unknown): ChenDialogMessage 
     if (!isRecord(item)) return { label: `Item ${index + 1}`, value: item };
 
     return {
-      label: typeof item.label === "string"
-        ? item.label
-        : typeof item.name === "string"
-          ? item.name
-          : `Item ${index + 1}`,
+      label:
+        typeof item.label === "string" ? item.label : typeof item.name === "string" ? item.name : `Item ${index + 1}`,
       value: item.value
     };
   });

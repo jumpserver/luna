@@ -4,20 +4,20 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { isTauriRuntime } from "~/utils/runtime";
 
 interface ChenDownloadAnchor {
-  href: string
-  download: string
-  click: () => void
+  href: string;
+  download: string;
+  click: () => void;
 }
 
 export interface ChenDownloadRuntime {
-  isTauri: () => boolean
-  createAnchor?: () => ChenDownloadAnchor
-  appendAnchor?: (anchor: ChenDownloadAnchor) => void
-  removeAnchor?: (anchor: ChenDownloadAnchor) => void
-  createObjectURL?: (blob: Blob) => string
-  revokeObjectURL?: (url: string) => void
-  savePath: (fileName: string) => Promise<string | null>
-  writeFile: (path: string, bytes: Uint8Array) => Promise<void>
+  isTauri: () => boolean;
+  createAnchor?: () => ChenDownloadAnchor;
+  appendAnchor?: (anchor: ChenDownloadAnchor) => void;
+  removeAnchor?: (anchor: ChenDownloadAnchor) => void;
+  createObjectURL?: (blob: Blob) => string;
+  revokeObjectURL?: (url: string) => void;
+  savePath: (fileName: string) => Promise<string | null>;
+  writeFile: (path: string, bytes: Uint8Array) => Promise<void>;
 }
 
 const defaultRuntime: ChenDownloadRuntime = {
@@ -49,11 +49,11 @@ export async function saveChenExport(
   }
 
   if (
-    !runtime.createAnchor
-    || !runtime.appendAnchor
-    || !runtime.removeAnchor
-    || !runtime.createObjectURL
-    || !runtime.revokeObjectURL
+    !runtime.createAnchor ||
+    !runtime.appendAnchor ||
+    !runtime.removeAnchor ||
+    !runtime.createObjectURL ||
+    !runtime.revokeObjectURL
   ) {
     throw new Error("Web download runtime is unavailable");
   }

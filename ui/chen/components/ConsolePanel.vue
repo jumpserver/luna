@@ -4,16 +4,16 @@ import type { ChenPromptConsoleTab, ChenQueryLikeWorkspaceTab } from "~/chen/typ
 import QueryResultTabs from "~/chen/components/QueryResultTabs.vue";
 
 const props = defineProps<{
-  tab: ChenPromptConsoleTab
-  contextLabel: string
-  promptLabel: string
+  tab: ChenPromptConsoleTab;
+  contextLabel: string;
+  promptLabel: string;
 }>();
 
 const emit = defineEmits<{
-  run: [tab: ChenPromptConsoleTab]
-  cancel: [tab: ChenQueryLikeWorkspaceTab]
-  updatePendingSql: [tab: ChenPromptConsoleTab, value: string]
-  activateResult: [tab: ChenPromptConsoleTab, id: string]
+  run: [tab: ChenPromptConsoleTab];
+  cancel: [tab: ChenQueryLikeWorkspaceTab];
+  updatePendingSql: [tab: ChenPromptConsoleTab, value: string];
+  activateResult: [tab: ChenPromptConsoleTab, id: string];
 }>();
 
 // TODO(chen-native): Confirm whether this console-like prompt should remain
@@ -31,12 +31,15 @@ const pendingSqlValue = computed({
         <UButton icon="i-lucide-play" size="sm" @click="emit('run', tab)" />
         <UButton icon="i-lucide-square" size="sm" color="neutral" variant="soft" @click="emit('cancel', tab)" />
         <UBadge color="neutral" variant="subtle">
-          {{ tab.state.currentContext || contextLabel || 'Console' }}
+          {{ tab.state.currentContext || contextLabel || "Console" }}
         </UBadge>
       </div>
 
       <div class="min-h-0 flex-1 overflow-auto px-3 py-3 font-ui-mono text-sm">
-        <div v-if="!tab.historyEntries.length && !tab.logs.length" class="grid h-full place-items-center text-center text-muted">
+        <div
+          v-if="!tab.historyEntries.length && !tab.logs.length"
+          class="grid h-full place-items-center text-center text-muted"
+        >
           <div>
             <UIcon name="i-lucide-square-terminal" class="mx-auto mb-2 size-5" />
             <p>Run SQL here like a `mysql` or `psql` console.</p>
@@ -50,13 +53,18 @@ const pendingSqlValue = computed({
           </div>
         </div>
 
-        <div v-if="tab.logs.length" class="rounded-md border border-default bg-[var(--workspace-surface-sub-panel)] px-3 py-2 text-xs text-muted">
-          <pre class="whitespace-pre-wrap">{{ tab.logs.join('\n') }}</pre>
+        <div
+          v-if="tab.logs.length"
+          class="rounded-md border border-default bg-[var(--workspace-surface-sub-panel)] px-3 py-2 text-xs text-muted"
+        >
+          <pre class="whitespace-pre-wrap">{{ tab.logs.join("\n") }}</pre>
         </div>
       </div>
 
       <div class="border-t border-default px-3 py-3">
-        <div class="flex items-start gap-2 rounded-md border border-default bg-[var(--workspace-surface-sub-panel)] px-3 py-2">
+        <div
+          class="flex items-start gap-2 rounded-md border border-default bg-[var(--workspace-surface-sub-panel)] px-3 py-2"
+        >
           <span class="pt-2 font-ui-mono text-sm text-primary">{{ promptLabel }}</span>
           <textarea
             v-model="pendingSqlValue"

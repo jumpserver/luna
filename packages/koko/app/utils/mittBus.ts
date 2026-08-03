@@ -41,7 +41,6 @@ interface Event {
   writeDataToTerminal: { type: string };
   "write-command": { type: string };
   [TerminalMittEvent.OpenSearch]: void;
-  "file-manager-expired": void;
   "connect-error": void;
   "close-drawer": void;
 }

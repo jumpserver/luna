@@ -1,17 +1,17 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    open: boolean
-    title?: string
-    description?: string
-    overlay?: boolean
-    disabled?: boolean
-    confirmLabel?: string
-    confirmColor?: "primary" | "neutral" | "error" | "warning" | "success" | "info"
-    confirmFullWidth?: boolean
-    hideCancel?: boolean
-    hideFooter?: boolean
-    compact?: boolean
+    open: boolean;
+    title?: string;
+    description?: string;
+    overlay?: boolean;
+    disabled?: boolean;
+    confirmLabel?: string;
+    confirmColor?: "primary" | "neutral" | "error" | "warning" | "success" | "info";
+    confirmFullWidth?: boolean;
+    hideCancel?: boolean;
+    hideFooter?: boolean;
+    compact?: boolean;
   }>(),
   {
     title: "",
@@ -28,9 +28,9 @@ withDefaults(
 );
 
 const emits = defineEmits<{
-  (e: "update:open", value: boolean): void
-  (e: "clipboard", value: string): void
-  (e: "confirm"): void
+  (e: "update:open", value: boolean): void;
+  (e: "clipboard", value: string): void;
+  (e: "confirm"): void;
 }>();
 
 const { t } = useI18n();
@@ -71,10 +71,7 @@ const handleContextMenu = async (e: Event) => {
       title: compact ? 'text-sm leading-4 font-medium' : undefined,
       close: compact ? 'size-7 p-1' : undefined,
       body: compact ? 'pt-3 pb-6 sm:pt-3 sm:pb-6' : undefined,
-      footer: [
-        confirmFullWidth ? 'block' : 'justify-end',
-        compact ? 'pt-2 sm:pt-2' : ''
-      ].filter(Boolean).join(' '),
+      footer: [confirmFullWidth ? 'block' : 'justify-end', compact ? 'pt-2 sm:pt-2' : ''].filter(Boolean).join(' '),
       description: 'text-sm leading-5'
     }"
     :description="description"

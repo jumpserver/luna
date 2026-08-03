@@ -1,8 +1,8 @@
 <script setup lang="ts">
 interface ChatMessage {
-  id: string
-  role: "user" | "assistant"
-  content: string
+  id: string;
+  role: "user" | "assistant";
+  content: string;
 }
 
 const { t } = useI18n();
@@ -33,7 +33,7 @@ const sendMessage = async () => {
 
   sending.value = true;
   try {
-  // ponytail: placeholder reply until AI backend is wired
+    // ponytail: placeholder reply until AI backend is wired
     await new Promise((resolve) => setTimeout(resolve, 400));
     messages.value.push({
       id: `${Date.now()}-assistant`,
@@ -68,9 +68,11 @@ const sendMessage = async () => {
         >
           <div
             class="max-w-[92%] rounded-2xl px-3 py-2 text-[12px] leading-5"
-            :class="message.role === 'user'
-              ? 'bg-primary/12 text-gray-800 dark:text-gray-100'
-              : 'bg-black/5 text-gray-700 dark:bg-white/8 dark:text-gray-200'"
+            :class="
+              message.role === 'user'
+                ? 'bg-primary/12 text-gray-800 dark:text-gray-100'
+                : 'bg-black/5 text-gray-700 dark:bg-white/8 dark:text-gray-200'
+            "
           >
             {{ message.content }}
           </div>

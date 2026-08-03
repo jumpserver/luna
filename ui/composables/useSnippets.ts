@@ -1,25 +1,22 @@
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export interface SnippetModule {
-  value: string
-  label: string
+  value: string;
+  label: string;
 }
 
 export interface Snippet {
-  id: string
-  name: string
-  args: string
-  module: SnippetModule
-  variable: unknown[]
-  comment: string
-  createdBy: string
+  id: string;
+  name: string;
+  args: string;
+  module: SnippetModule;
+  variable: unknown[];
+  comment: string;
+  createdBy: string;
 }
 
-const rawList = (value: unknown): any[] => Array.isArray(value)
-  ? value
-  : Array.isArray((value as any)?.results)
-    ? (value as any).results
-    : [];
+const rawList = (value: unknown): any[] =>
+  Array.isArray(value) ? value : Array.isArray((value as any)?.results) ? (value as any).results : [];
 
 const normalizeSnippet = (raw: any): Snippet | null => {
   const id = String(raw?.id || "");

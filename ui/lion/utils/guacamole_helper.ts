@@ -1,4 +1,4 @@
-import * as Guacamole from 'guacamole-common-js-jumpserver/dist/guacamole-common';
+import * as Guacamole from "guacamole-common-js-jumpserver/dist/guacamole-common";
 
 const supportImages: any[] = [];
 const pendingTests: any[] = [];
@@ -6,25 +6,25 @@ const testImages: any = {
   /**
    * Test JPEG image, encoded as base64.
    */
-  'image/jpeg':
-    '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoH'
-    + 'BwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQME'
-    + 'BAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU'
-    + 'FBQUFBQUFBQUFBQUFBT/wAARCAABAAEDAREAAhEBAxEB/8QAFAABAAAAAAAAAAA'
-    + 'AAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAA'
-    + 'AAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AVMH/2Q==',
+  "image/jpeg":
+    "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoH" +
+    "BwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQME" +
+    "BAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU" +
+    "FBQUFBQUFBQUFBQUFBT/wAARCAABAAEDAREAAhEBAxEB/8QAFAABAAAAAAAAAAA" +
+    "AAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAA" +
+    "AAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AVMH/2Q==",
 
   /**
    * Test PNG image, encoded as base64.
    */
-  'image/png':
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX///+nxBvI'
-    + 'AAAACklEQVQI12NgAAAAAgAB4iG8MwAAAABJRU5ErkJggg==',
+  "image/png":
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX///+nxBvI" +
+    "AAAACklEQVQI12NgAAAAAgAB4iG8MwAAAABJRU5ErkJggg==",
 
   /**
    * Test WebP image, encoded as base64.
    */
-  'image/webp': 'UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=='
+  "image/webp": "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=="
 }; // 测试单个图片格式
 async function testImageFormat(mimeType: string, base64Data: any): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
@@ -103,7 +103,7 @@ export async function getSupportedGuacMimeTypes(): Promise<string> {
   const supportImages = await getSupportedImages();
   const supportVideos = await getSupportedGuacVideos();
   const supportAudios = await getSupportedGuacAudios();
-  let connectString = '';
+  let connectString = "";
   supportImages.forEach((mimeType) => {
     connectString += `&GUAC_IMAGE=${encodeURIComponent(mimeType)}`;
   });

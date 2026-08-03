@@ -8,7 +8,7 @@
   "author": "JumpServer",
   "license": "MIT",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19"
   },
   "scripts": {
     "dev": "nuxt dev",
@@ -17,8 +17,12 @@
     "generate:client": "node scripts/generate-client.js",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "nuxt prepare",
+    "prepare": "husky",
+    "fmt": "oxfmt \"{ui,packages}/**/*.{js,ts,tsx,jsx,vue,css,scss,less,html,md,json,yml,yaml}\"",
+    "fmt:check": "oxfmt --check \"{ui,packages}/**/*.{js,ts,tsx,jsx,vue,css,scss,less,html,md,json,yml,yaml}\"",
     "lint": "eslint . --fix",
     "lint:check": "eslint . --ignore-pattern .omx",
+    "cargo:fmt": "cargo fmt --manifest-path src-tauri/Cargo.toml",
     "test:sftp": "vitest run --config vitest.config.ts packages/koko/app/composables/sftp",
     "test:terminal": "vitest run --config vitest.config.ts packages/koko/app/composables/terminal packages/koko/app/composables/kubernetes",
     "typecheck": "nuxt typecheck",
@@ -33,7 +37,6 @@
     "tauri:build": "tauri build",
     "tauri:build:debug": "tauri build --debug",
     "update:dependencies": "npx npm-check-updates -u && pnpm install && cd src-tauri && cargo update",
-    "prettier": "prettier --write \"{ui,packages}/**/*.{js,ts,tsx,jsx,vue,css,scss,less,html,md,json,yml,yaml}\"",
     "reset": "rm -rf node_modules .nuxt dist && cd src-tauri && cargo clean"
   },
   "dependencies": {
@@ -119,8 +122,9 @@
     "@vueuse/nuxt": "^14.3.0",
     "bumpp": "^11.1.0",
     "eslint": "^10.4.0",
+    "husky": "^9.1.7",
+    "oxfmt": "^0.61.0",
     "playwright": "^1.62.0",
-    "prettier": "^3.8.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10",
     "vue-tsc": "3.2.4"

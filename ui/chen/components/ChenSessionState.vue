@@ -1,13 +1,13 @@
 <script setup lang="ts">
 defineProps<{
-  icon?: string
-  loading?: boolean
-  message: string
-  actionLabel?: string
+  icon?: string;
+  loading?: boolean;
+  message: string;
+  actionLabel?: string;
 }>();
 
 defineEmits<{
-  action: []
+  action: [];
 }>();
 </script>
 

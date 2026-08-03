@@ -6,20 +6,13 @@ export default eslintConfig(
   {
     typescript: true,
     vue: true,
-    stylistic: {
-      indent: 2,
-      quotes: "double"
-    },
+    stylistic: false,
     rules: {
       curly: "off",
       "eol-last": "off",
       "jsonc/indent": "off",
       "no-console": "off",
       "no-new-func": "off",
-      "style/semi": ["error", "always"],
-      "style/indent": ["error", 2],
-      "style/quotes": "off",
-      "style/member-delimiter-style": "error",
       "unused-imports/no-unused-vars": [
         "error",
         {
@@ -30,10 +23,9 @@ export default eslintConfig(
           ignoreRestSiblings: true
         }
       ],
-      "style/quote-props": ["warn", "as-needed"],
-      "style/comma-dangle": ["warn", "never"],
-      "style/brace-style": ["warn", "1tbs"],
-      "style/arrow-parens": ["error", "always"],
+      "antfu/consistent-chaining": "off",
+      "antfu/consistent-list-newline": "off",
+      "unicorn/number-literal-case": "off",
       "vue/attributes-order": [
         "error",
         {
@@ -59,23 +51,12 @@ export default eslintConfig(
           order: ["script", "template", "style"]
         }
       ],
-      "vue/script-indent": [
-        "error",
-        2,
-        {
-          baseIndent: 0
-        }
-      ],
-      "vue/html-indent": [
-        "error",
-        2,
-        {
-          attribute: 1,
-          baseIndent: 1,
-          closeBracket: 0
-        }
-      ],
-      "vue/comma-dangle": ["warn", "never"],
+      "vue/comma-dangle": "off",
+      "vue/html-indent": "off",
+      "vue/html-self-closing": "off",
+      "vue/operator-linebreak": "off",
+      "vue/script-indent": "off",
+      "vue/singleline-html-element-content-newline": "off",
       "antfu/top-level-function": "off",
       "antfu/if-newline": "off",
       "new-cap": "off",
@@ -92,36 +73,5 @@ export default eslintConfig(
     }
   },
 
-  // Vue
-  {
-    files: ["**/*.vue"],
-    rules: {
-      "style/indent": "off",
-      "vue/script-indent": "off"
-    }
-  },
-
-  nuxtConfig(),
-
-  // These packages are formatted with Prettier. Keep their lint rules aligned
-  // with Prettier's TypeScript and Vue output so both checks are repeatable.
-  {
-    files: ["packages/koko/**/*.{ts,vue}", "packages/connectors-core/**/*.{ts,vue}"],
-    rules: {
-      "antfu/consistent-chaining": "off",
-      "antfu/consistent-list-newline": "off",
-      "style/member-delimiter-style": [
-        "error",
-        {
-          multiline: { delimiter: "semi", requireLast: true },
-          singleline: { delimiter: "semi", requireLast: false }
-        }
-      ],
-      "style/operator-linebreak": ["error", "after", { overrides: { "?": "before", ":": "before" } }],
-      "vue/html-indent": "off",
-      "vue/html-self-closing": "off",
-      "vue/operator-linebreak": ["error", "after", { overrides: { "?": "before", ":": "before" } }],
-      "vue/singleline-html-element-content-newline": "off"
-    }
-  }
+  nuxtConfig()
 );

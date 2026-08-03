@@ -1,12 +1,12 @@
 <script setup lang="ts">
 const props = withDefaults(
   defineProps<{
-    title: string
-    placeholder?: string
-    error?: string
-    loading?: boolean
-    confirmLabel?: string
-    disabled?: boolean
+    title: string;
+    placeholder?: string;
+    error?: string;
+    loading?: boolean;
+    confirmLabel?: string;
+    disabled?: boolean;
   }>(),
   {
     placeholder: "",
@@ -18,7 +18,7 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  confirm: [value: string]
+  confirm: [value: string];
 }>();
 
 const open = defineModel<boolean>("open", { required: true });

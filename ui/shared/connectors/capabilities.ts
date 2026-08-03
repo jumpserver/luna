@@ -6,16 +6,22 @@ export const SFTP_FILE_EDITOR_VALUE = "sftp_file_editor";
 export const K8S_NATIVE_VALUE = "k8s_native";
 
 export type WorkspaceComponentId = "koko" | "chen" | "lion";
-export type WorkspaceSurfaceKind = "terminal" | "database" | "file-manager" | "file-editor" | "k8s-ui" | "remote-desktop";
+export type WorkspaceSurfaceKind =
+  | "terminal"
+  | "database"
+  | "file-manager"
+  | "file-editor"
+  | "k8s-ui"
+  | "remote-desktop";
 
 export interface WorkspaceCapabilityDeclaration {
-  component: WorkspaceComponentId
-  surface: WorkspaceSurfaceKind
-  label: string
-  protocols: string[]
-  connectMethods: string[]
-  backendConnectMethod?: string
-  description: string
+  component: WorkspaceComponentId;
+  surface: WorkspaceSurfaceKind;
+  label: string;
+  protocols: string[];
+  connectMethods: string[];
+  backendConnectMethod?: string;
+  description: string;
 }
 
 export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] = [
@@ -23,17 +29,7 @@ export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] 
     component: "koko",
     surface: "terminal",
     label: "内置终端",
-    protocols: [
-      "ssh",
-      "telnet",
-      "mariadb",
-      "mongodb",
-      "mysql",
-      "oracle",
-      "postgresql",
-      "redis",
-      "sqlserver"
-    ],
+    protocols: ["ssh", "telnet", "mariadb", "mongodb", "mysql", "oracle", "postgresql", "redis", "sqlserver"],
     connectMethods: [WEB_CLI_NATIVE_VALUE],
     backendConnectMethod: "web_cli",
     description: "字符型连接统一走 koko 终端 workspace，覆盖主机协议和数据库协议。"
@@ -95,9 +91,7 @@ export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] 
 ];
 
 export const K8S_PROTOCOLS = new Set(
-  COMPONENT_WORKSPACE_CAPABILITIES
-    .filter((item) => item.surface === "k8s-ui")
-    .flatMap((item) => item.protocols)
+  COMPONENT_WORKSPACE_CAPABILITIES.filter((item) => item.surface === "k8s-ui").flatMap((item) => item.protocols)
 );
 
 export function findDeclaredCapability(

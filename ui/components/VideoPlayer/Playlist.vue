@@ -2,21 +2,21 @@
 import type { VideoPlayerItem } from "~/composables/useVideoPlayerParser";
 
 const props = defineProps<{
-  activeId: string | null
-  items: VideoPlayerItem[]
+  activeId: string | null;
+  items: VideoPlayerItem[];
 }>();
 
 const emit = defineEmits<{
-  play: [VideoPlayerItem]
-  remove: [VideoPlayerItem]
-  collapse: []
+  play: [VideoPlayerItem];
+  remove: [VideoPlayerItem];
+  collapse: [];
 }>();
 
 interface PlaylistGroup {
-  key: string
-  isPartGroup: boolean
-  representative: VideoPlayerItem
-  items: VideoPlayerItem[]
+  key: string;
+  isPartGroup: boolean;
+  representative: VideoPlayerItem;
+  items: VideoPlayerItem[];
 }
 
 function formatLocalStartTime(value?: string) {
@@ -167,9 +167,7 @@ function groupHasActivePart(group: PlaylistGroup) {
 <template>
   <div class="flex min-h-0 flex-1 flex-col">
     <div class="mb-2 flex items-center justify-between gap-2">
-      <h3 class="min-w-0 truncate text-sm font-semibold tracking-wide text-(--ui-text-highlighted)">
-        播放列表
-      </h3>
+      <h3 class="min-w-0 truncate text-sm font-semibold tracking-wide text-(--ui-text-highlighted)">播放列表</h3>
       <div class="flex shrink-0 items-center gap-1.5">
         <UTooltip text="添加录像">
           <label
@@ -215,11 +213,7 @@ function groupHasActivePart(group: PlaylistGroup) {
             >
               <span class="shrink-0">{{ field.label }}&nbsp;</span>
               <span class="min-w-0 flex-1 overflow-hidden">
-                <UTooltip
-                  arrow
-                  :text="field.value"
-                  :disabled="displayValue(field.value) === field.value"
-                >
+                <UTooltip arrow :text="field.value" :disabled="displayValue(field.value) === field.value">
                   <span class="block truncate">{{ displayValue(field.value) }}</span>
                 </UTooltip>
               </span>
@@ -231,9 +225,7 @@ function groupHasActivePart(group: PlaylistGroup) {
               v-for="part in group.items"
               :key="part.id"
               class="group flex items-start justify-between rounded-md px-2 py-2 text-left transition-colors duration-150"
-              :class="part.id === activeId
-                ? 'bg-(--ui-primary)/8'
-                : 'hover:bg-(--ui-bg-accented)/60'"
+              :class="part.id === activeId ? 'bg-(--ui-primary)/8' : 'hover:bg-(--ui-bg-accented)/60'"
               @click="emit('play', part)"
             >
               <div class="min-w-0 flex-1 overflow-hidden pr-1">
@@ -247,11 +239,7 @@ function groupHasActivePart(group: PlaylistGroup) {
                 >
                   <span class="shrink-0">{{ field.label }}&nbsp;</span>
                   <span class="min-w-0 flex-1 overflow-hidden">
-                    <UTooltip
-                      arrow
-                      :text="field.value"
-                      :disabled="displayValue(field.value) === field.value"
-                    >
+                    <UTooltip arrow :text="field.value" :disabled="displayValue(field.value) === field.value">
                       <span class="block truncate">{{ displayValue(field.value) }}</span>
                     </UTooltip>
                   </span>
@@ -273,9 +261,7 @@ function groupHasActivePart(group: PlaylistGroup) {
             v-for="item in group.items"
             :key="item.id"
             class="group flex items-start justify-between rounded-lg px-2 py-2.5 text-left transition-colors duration-150"
-            :class="item.id === activeId
-              ? 'bg-(--ui-primary)/8'
-              : 'hover:bg-(--ui-bg-accented)/60'"
+            :class="item.id === activeId ? 'bg-(--ui-primary)/8' : 'hover:bg-(--ui-bg-accented)/60'"
             @click="emit('play', item)"
           >
             <div class="min-w-0 flex-1 overflow-hidden pr-1">
@@ -295,11 +281,7 @@ function groupHasActivePart(group: PlaylistGroup) {
               >
                 <span class="shrink-0">{{ field.label }}&nbsp;</span>
                 <span class="min-w-0 flex-1 overflow-hidden">
-                  <UTooltip
-                    arrow
-                    :text="field.value"
-                    :disabled="displayValue(field.value) === field.value"
-                  >
+                  <UTooltip arrow :text="field.value" :disabled="displayValue(field.value) === field.value">
                     <span class="block truncate">{{ displayValue(field.value) }}</span>
                   </UTooltip>
                 </span>

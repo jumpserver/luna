@@ -4,8 +4,8 @@ import type { CharsetType, LangType, ResolutionType } from "~/types";
 import { useSettingManager } from "~/composables/useSettingManager";
 
 interface LangItem {
-  id: LangType
-  label: string
+  id: LangType;
+  label: string;
 }
 
 definePageMeta({
@@ -124,12 +124,7 @@ const selectedEnabled = computed<boolean>({
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">{{ t("Setting.Charset") }}</span>
 
-      <SettingSelect
-        v-model="selectedCharset"
-        :items="charsetItems"
-        :aria-label="t('Setting.Charset')"
-        class="w-48"
-      />
+      <SettingSelect v-model="selectedCharset" :items="charsetItems" :aria-label="t('Setting.Charset')" class="w-48" />
     </div>
 
     <USeparator />

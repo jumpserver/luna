@@ -4,16 +4,16 @@ import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
 import type { AssetItem } from "~/types";
 
 const props = defineProps<{
-  mainPanelOpen: boolean
+  mainPanelOpen: boolean;
   visiblePanels: {
-    favorites: boolean
-    snippets: boolean
-  }
+    favorites: boolean;
+    snippets: boolean;
+  };
 }>();
 
 const emit = defineEmits<{
-  select: [asset: AssetItem]
-  contextmenu: [asset: AssetItem, event: MouseEvent]
+  select: [asset: AssetItem];
+  contextmenu: [asset: AssetItem, event: MouseEvent];
 }>();
 
 type PanelKind = "favorites" | "snippets";
@@ -21,7 +21,15 @@ type PanelKind = "favorites" | "snippets";
 const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
 const openPanels = ref<Set<PanelKind>>(new Set());
-const { folders: favoriteFolders, rootAssets: favoriteRootAssets, loading: favoriteLoading, load: loadFavorites, createFolder, renameFolder, removeFolder } = useFavoriteFolders();
+const {
+  folders: favoriteFolders,
+  rootAssets: favoriteRootAssets,
+  loading: favoriteLoading,
+  load: loadFavorites,
+  createFolder,
+  renameFolder,
+  removeFolder
+} = useFavoriteFolders();
 const { snippets, loading: snippetLoading, load: loadSnippets, applySnippet } = useSnippets();
 const createModalOpen = ref(false);
 const createParentId = ref<string | null>(null);
@@ -169,9 +177,7 @@ const panelConfig = {
   snippets: { exclusiveGroup: "asset-shelves", preferredHeight: 180, minHeight: 96, maxHeight: "30%" }
 } as const;
 
-const panelMaxHeight = (kind: PanelKind) => props.mainPanelOpen
-  ? panelConfig[kind].maxHeight
-  : "100%";
+const panelMaxHeight = (kind: PanelKind) => (props.mainPanelOpen ? panelConfig[kind].maxHeight : "100%");
 
 const isOpen = (kind: PanelKind) => openPanels.value.has(kind);
 
@@ -210,44 +216,52 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
 
   return [
     ...(canExpand
-      ? [{
-          label: t("Tree.Expand"),
-          icon: "i-lucide-chevron-right",
-          onSelect: () => {
-            folderMenuVisible.value = false;
-            if (folder) folder.open = true;
-          }
-        } satisfies DropdownMenuItem]
+      ? [
+          {
+            label: t("Tree.Expand"),
+            icon: "i-lucide-chevron-right",
+            onSelect: () => {
+              folderMenuVisible.value = false;
+              if (folder) folder.open = true;
+            }
+          } satisfies DropdownMenuItem
+        ]
       : []),
     ...(canCollapse
-      ? [{
-          label: t("Tree.Collapse"),
-          icon: "i-lucide-chevron-down",
-          onSelect: () => {
-            folderMenuVisible.value = false;
-            if (folder) folder.open = false;
-          }
-        } satisfies DropdownMenuItem]
+      ? [
+          {
+            label: t("Tree.Collapse"),
+            icon: "i-lucide-chevron-down",
+            onSelect: () => {
+              folderMenuVisible.value = false;
+              if (folder) folder.open = false;
+            }
+          } satisfies DropdownMenuItem
+        ]
       : []),
     ...(canExpandAll
-      ? [{
-          label: t("Tree.ExpandAll"),
-          icon: "i-lucide-chevrons-down",
-          onSelect: () => {
-            folderMenuVisible.value = false;
-            if (folder) expandFolderRecursive(folder);
-          }
-        } satisfies DropdownMenuItem]
+      ? [
+          {
+            label: t("Tree.ExpandAll"),
+            icon: "i-lucide-chevrons-down",
+            onSelect: () => {
+              folderMenuVisible.value = false;
+              if (folder) expandFolderRecursive(folder);
+            }
+          } satisfies DropdownMenuItem
+        ]
       : []),
     ...(canCollapseAll
-      ? [{
-          label: t("Tree.CollapseAll"),
-          icon: "i-lucide-chevrons-up",
-          onSelect: () => {
-            folderMenuVisible.value = false;
-            if (folder) collapseFolderRecursive(folder);
-          }
-        } satisfies DropdownMenuItem]
+      ? [
+          {
+            label: t("Tree.CollapseAll"),
+            icon: "i-lucide-chevrons-up",
+            onSelect: () => {
+              folderMenuVisible.value = false;
+              if (folder) collapseFolderRecursive(folder);
+            }
+          } satisfies DropdownMenuItem
+        ]
       : []),
     {
       label: folder ? t("Favorite.CreateSubfolder") : t("Favorite.CreateFolder"),
@@ -370,7 +384,13 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
       <div v-if="snippetLoading && snippets.length === 0" class="grid h-20 place-items-center">
         <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
       </div>
-      <UEmpty v-else-if="snippets.length === 0" icon="i-lucide-braces" size="sm" variant="naked" :title="t('Snippets.Empty')" />
+      <UEmpty
+        v-else-if="snippets.length === 0"
+        icon="i-lucide-braces"
+        size="sm"
+        variant="naked"
+        :title="t('Snippets.Empty')"
+      />
       <button
         v-for="snippet in snippets"
         v-else
@@ -399,7 +419,13 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
     @confirm="submitCreateFolder"
     @update:open="createModalOpen = $event"
   >
-    <UInput v-model="folderName" autofocus class="w-full" :placeholder="t('Favorite.FolderName')" @keydown.enter="submitCreateFolder" />
+    <UInput
+      v-model="folderName"
+      autofocus
+      class="w-full"
+      :placeholder="t('Favorite.FolderName')"
+      @keydown.enter="submitCreateFolder"
+    />
   </Modal>
 
   <Modal
@@ -410,7 +436,13 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
     @confirm="submitRenameFolder"
     @update:open="updateRenameModal"
   >
-    <UInput v-model="renameValue" autofocus class="w-full" :placeholder="t('Favorite.FolderName')" @keydown.enter="submitRenameFolder" />
+    <UInput
+      v-model="renameValue"
+      autofocus
+      class="w-full"
+      :placeholder="t('Favorite.FolderName')"
+      @keydown.enter="submitRenameFolder"
+    />
   </Modal>
 
   <Modal

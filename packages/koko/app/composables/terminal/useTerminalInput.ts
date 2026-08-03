@@ -89,7 +89,9 @@ export function useKokoTerminalInput(options: {
       const socket = options.socket.value;
       if (!socket || options.isSocketClosing(socket)) return;
       options.lastSendTime.value = new Date();
-      socket.send(formatMessage("", FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, preprocessInput(data, options.getTerminalConfig)));
+      socket.send(
+        formatMessage("", FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, preprocessInput(data, options.getTerminalConfig))
+      );
       options.sendToHost(HOST_MESSAGE_TYPE.INPUT_ACTIVE, "");
     });
     terminal.onResize(options.onResize);

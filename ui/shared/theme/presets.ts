@@ -1,28 +1,30 @@
-export type ThemePresetId
-  = | "latte"
-    | "matcha"
-    | "claude"
-    | "gemini"
-    | "mono"
-    | "luna-default"
-    | "luna-darkgray"
-    | "luna-deepblue"
-    | "mocha"
-    | "macchiato"
-    | "frappe"
-    | "kanagawa"
-    | "ayu"
-    | "rose-pine"
-    | "codex"
-    | "cursor"
-    | "mono-dark";
+export type ThemePresetId =
+  | "latte"
+  | "matcha"
+  | "claude"
+  | "gemini"
+  | "mono"
+  | "min"
+  | "luna-default"
+  | "luna-darkgray"
+  | "luna-deepblue"
+  | "mocha"
+  | "macchiato"
+  | "frappe"
+  | "kanagawa"
+  | "ayu"
+  | "rose-pine"
+  | "codex"
+  | "cursor"
+  | "mono-dark"
+  | "min-dark";
 
 export interface ThemePresetOption {
-  id: ThemePresetId
-  label: string
-  accent: string
-  family?: "markamd" | "luna"
-  baseColor?: string
+  id: ThemePresetId;
+  label: string;
+  accent: string;
+  family?: "markamd" | "luna";
+  baseColor?: string;
 }
 
 export const LIGHT_THEME_PRESETS: ThemePresetOption[] = [
@@ -30,7 +32,8 @@ export const LIGHT_THEME_PRESETS: ThemePresetOption[] = [
   { id: "matcha", label: "Matcha Washi", accent: "#7b9a4e" },
   { id: "claude", label: "Claude Parchment", accent: "#c96442" },
   { id: "gemini", label: "Gemini Air", accent: "#1a73e8" },
-  { id: "mono", label: "Mono Paper", accent: "#111111" }
+  { id: "mono", label: "Mono Paper", accent: "#111111" },
+  { id: "min", label: "Min Light", accent: "#757575" }
 ];
 
 export const DARK_THEME_PRESETS: ThemePresetOption[] = [
@@ -45,7 +48,8 @@ export const DARK_THEME_PRESETS: ThemePresetOption[] = [
   { id: "rose-pine", label: "Rosé Pine", accent: "#ebbcba" },
   { id: "codex", label: "Codex Graphite", accent: "#10a37f" },
   { id: "cursor", label: "Cursor Noir", accent: "#f7f7f4" },
-  { id: "mono-dark", label: "Mono Dark", accent: "#ffffff" }
+  { id: "mono-dark", label: "Mono Dark", accent: "#ffffff" },
+  { id: "min-dark", label: "Min Dark", accent: "#333333" }
 ];
 
 const presetMap = new Map(

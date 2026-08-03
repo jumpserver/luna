@@ -3,11 +3,11 @@ type ConfirmColor = "primary" | "neutral" | "error" | "warning" | "success" | "i
 
 const props = withDefaults(
   defineProps<{
-    title: string
-    description?: string
-    confirmLabel?: string
-    confirmColor?: ConfirmColor
-    loading?: boolean
+    title: string;
+    description?: string;
+    confirmLabel?: string;
+    confirmColor?: ConfirmColor;
+    loading?: boolean;
   }>(),
   {
     description: "",
@@ -18,7 +18,7 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  confirm: []
+  confirm: [];
 }>();
 
 const open = defineModel<boolean>("open", { required: true });

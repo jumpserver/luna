@@ -1,12 +1,7 @@
 export const useToolWindow = () => {
   const { isMacOS } = usePlatform();
   const { userTheme } = useThemeAdapter();
-  const {
-    lightThemePreset,
-    darkThemePreset,
-    primaryColorLight,
-    primaryColorDark
-  } = useSettingManager();
+  const { lightThemePreset, darkThemePreset, primaryColorLight, primaryColorDark } = useSettingManager();
 
   const withEmbeddedQuery = (path: string) => {
     const mode = userTheme.value === "dark" ? "dark" : "light";

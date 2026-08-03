@@ -1,17 +1,13 @@
 <script setup lang="ts">
-import type {
-  ChenDataViewExportFormat,
-  ChenDataViewExportOptions,
-  ChenDataViewExportScope
-} from "~/chen/types";
+import type { ChenDataViewExportFormat, ChenDataViewExportOptions, ChenDataViewExportScope } from "~/chen/types";
 
 const props = defineProps<{
-  open: boolean
+  open: boolean;
 }>();
 
 const emit = defineEmits<{
-  "update:open": [open: boolean]
-  confirm: [options: ChenDataViewExportOptions]
+  "update:open": [open: boolean];
+  confirm: [options: ChenDataViewExportOptions];
 }>();
 
 const scope = ref<ChenDataViewExportScope>("current");
@@ -66,12 +62,8 @@ function submit() {
 
     <template #footer>
       <div class="flex w-full justify-end gap-2">
-        <UButton color="neutral" variant="soft" @click="close">
-          Cancel
-        </UButton>
-        <UButton @click="submit">
-          Export
-        </UButton>
+        <UButton color="neutral" variant="soft" @click="close">Cancel</UButton>
+        <UButton @click="submit">Export</UButton>
       </div>
     </template>
   </UModal>

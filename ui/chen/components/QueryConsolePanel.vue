@@ -10,26 +10,31 @@ import { useChenSqlSnippets } from "~/chen/composables/useChenSqlSnippets";
 import { formatChenSql } from "~/chen/utils/sqlFormat";
 
 const props = defineProps<{
-  tab: ChenQueryConsoleTab
-  dbType: string
-  canCopy: boolean
+  tab: ChenQueryConsoleTab;
+  dbType: string;
+  canCopy: boolean;
 }>();
 
 const emit = defineEmits<{
-  run: [tab: ChenQueryConsoleTab, selectedSql: string]
-  cancel: [tab: ChenQueryConsoleTab]
-  changeContext: [tab: ChenQueryConsoleTab, context: string]
-  uploadSql: [tab: ChenQueryConsoleTab, file: File]
-  dataViewAction: [tab: ChenQueryConsoleTab, result: ChenQueryResultTab, action: ChenDataViewAction, data?: ChenDataViewActionData]
-  dismissMessage: [tab: ChenQueryConsoleTab]
-  updateStatement: [tab: ChenQueryConsoleTab, value: string]
-  activateResult: [tab: ChenQueryConsoleTab, id: string]
-  closeResult: [tab: ChenQueryConsoleTab, title: string]
+  run: [tab: ChenQueryConsoleTab, selectedSql: string];
+  cancel: [tab: ChenQueryConsoleTab];
+  changeContext: [tab: ChenQueryConsoleTab, context: string];
+  uploadSql: [tab: ChenQueryConsoleTab, file: File];
+  dataViewAction: [
+    tab: ChenQueryConsoleTab,
+    result: ChenQueryResultTab,
+    action: ChenDataViewAction,
+    data?: ChenDataViewActionData
+  ];
+  dismissMessage: [tab: ChenQueryConsoleTab];
+  updateStatement: [tab: ChenQueryConsoleTab, value: string];
+  activateResult: [tab: ChenQueryConsoleTab, id: string];
+  closeResult: [tab: ChenQueryConsoleTab, title: string];
 }>();
 
 const sqlEditor = ref<{
-  replaceDocument: (value: string) => void
-  selectedText: () => string
+  replaceDocument: (value: string) => void;
+  selectedText: () => string;
 } | null>(null);
 const sqlUploadInput = ref<HTMLInputElement | null>(null);
 const hasSelection = ref(false);
@@ -43,12 +48,14 @@ const { addErrorToast } = useErrorToast();
 const sqlSnippets = useChenSqlSnippets(() => props.dbType);
 const queryBusy = computed(() => Boolean(props.tab.state.loading || props.tab.state.inQuery));
 const contextBusy = computed(() => Boolean(queryBusy.value || props.tab.state.editorLoading));
-const contextItems = computed(() => (props.tab.state.contexts || []).map((context) => ({
-  label: context,
-  icon: context === props.tab.state.currentContext ? "i-lucide-check" : undefined,
-  disabled: contextBusy.value || context === props.tab.state.currentContext,
-  onSelect: () => emit("changeContext", props.tab, context)
-})));
+const contextItems = computed(() =>
+  (props.tab.state.contexts || []).map((context) => ({
+    label: context,
+    icon: context === props.tab.state.currentContext ? "i-lucide-check" : undefined,
+    disabled: contextBusy.value || context === props.tab.state.currentContext,
+    onSelect: () => emit("changeContext", props.tab, context)
+  }))
+);
 
 const messageColor = computed(() => {
   if (props.tab.message?.type === "error") return "error";
@@ -139,9 +146,7 @@ async function saveSqlSnippet(name: string) {
 }
 
 function insertSqlSnippet(snippet: ChenSqlSnippet) {
-  statementValue.value = statementValue.value
-    ? `${statementValue.value}\n${snippet.args}`
-    : snippet.args;
+  statementValue.value = statementValue.value ? `${statementValue.value}\n${snippet.args}` : snippet.args;
   selectSnippetDialogOpen.value = false;
 }
 
@@ -173,16 +178,21 @@ function handleMessageOpen(open: boolean) {
   if (!open) dismissMessage();
 }
 
-watch(() => props.tab.message, (message) => {
-  clearMessageTimer();
-  messageOpen.value = Boolean(message);
-  if (!message) return;
+watch(
+  () => props.tab.message,
+  (message) => {
+    clearMessageTimer();
+    messageOpen.value = Boolean(message);
+    if (!message) return;
 
-  const closeDelay = typeof message.closeDelay === "number" && message.closeDelay > 0
-    ? message.closeDelay
-    : DEFAULT_MESSAGE_CLOSE_DELAY_SECONDS;
-  messageCloseTimer = setTimeout(dismissMessage, closeDelay * 1000);
-}, { immediate: true });
+    const closeDelay =
+      typeof message.closeDelay === "number" && message.closeDelay > 0
+        ? message.closeDelay
+        : DEFAULT_MESSAGE_CLOSE_DELAY_SECONDS;
+    messageCloseTimer = setTimeout(dismissMessage, closeDelay * 1000);
+  },
+  { immediate: true }
+);
 
 onBeforeUnmount(clearMessageTimer);
 </script>
@@ -208,13 +218,7 @@ onBeforeUnmount(clearMessageTimer);
           :disabled="!tab.state.canCancel"
           @click="emit('cancel', tab)"
         />
-        <UButton
-          size="sm"
-          color="neutral"
-          variant="soft"
-          :disabled="contextBusy"
-          @click="formatStatement"
-        >
+        <UButton size="sm" color="neutral" variant="soft" :disabled="contextBusy" @click="formatStatement">
           Format
         </UButton>
         <UButton
@@ -237,13 +241,7 @@ onBeforeUnmount(clearMessageTimer);
         >
           Save
         </UButton>
-        <input
-          ref="sqlUploadInput"
-          type="file"
-          accept=".sql"
-          class="hidden"
-          @change="handleSqlFileChange"
-        >
+        <input ref="sqlUploadInput" type="file" accept=".sql" class="hidden" @change="handleSqlFileChange" />
         <UButton
           icon="i-lucide-upload"
           size="sm"
@@ -284,10 +282,7 @@ onBeforeUnmount(clearMessageTimer);
           @save-snippet="openSaveSnippetDialog"
           @stop="emit('cancel', tab)"
         />
-        <div
-          v-if="tab.state.loading"
-          class="absolute inset-0 z-10 grid place-items-center rounded-md bg-default/65"
-        >
+        <div v-if="tab.state.loading" class="absolute inset-0 z-10 grid place-items-center rounded-md bg-default/65">
           <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin text-muted" />
         </div>
         <UAlert

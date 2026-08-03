@@ -14,21 +14,24 @@ import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
 import { useChenDataViewDerivedMeta } from "~/chen/composables/useChenDataViewDerivedMeta";
 import { useChenDataViewEditing } from "~/chen/composables/useChenDataViewEditing";
 
-const props = withDefaults(defineProps<{
-  tab: ChenDataViewConsoleTab
-  dbType?: string
-  protocol?: string
-  canCopy?: boolean
-}>(), {
-  dbType: "",
-  protocol: "",
-  canCopy: false
-});
+const props = withDefaults(
+  defineProps<{
+    tab: ChenDataViewConsoleTab;
+    dbType?: string;
+    protocol?: string;
+    canCopy?: boolean;
+  }>(),
+  {
+    dbType: "",
+    protocol: "",
+    canCopy: false
+  }
+);
 
 const emit = defineEmits<{
-  dataViewAction: [tab: ChenDataViewConsoleTab, action: ChenDataViewAction, data?: ChenDataViewActionData]
-  updatePanel: [tab: ChenDataViewConsoleTab, panel: "data" | "properties"]
-  updatePropertyTab: [tab: ChenDataViewConsoleTab, propertyTab: ChenDataViewPropertyTab]
+  dataViewAction: [tab: ChenDataViewConsoleTab, action: ChenDataViewAction, data?: ChenDataViewActionData];
+  updatePanel: [tab: ChenDataViewConsoleTab, panel: "data" | "properties"];
+  updatePropertyTab: [tab: ChenDataViewConsoleTab, propertyTab: ChenDataViewPropertyTab];
 }>();
 
 const exportDialogOpen = ref(false);
@@ -136,7 +139,15 @@ function cancelChanges() {
 
       <div class="flex items-center gap-1">
         <template v-if="tab.activePanel === 'data' && editing.editable.value">
-          <UButton v-if="editing.insertable.value" icon="i-lucide-plus" size="xs" color="neutral" variant="soft" :disabled="editing.busy.value" @click="addRow">
+          <UButton
+            v-if="editing.insertable.value"
+            icon="i-lucide-plus"
+            size="xs"
+            color="neutral"
+            variant="soft"
+            :disabled="editing.busy.value"
+            @click="addRow"
+          >
             Add row
           </UButton>
           <UButton
@@ -158,7 +169,14 @@ function cancelChanges() {
           >
             Save
           </UButton>
-          <UButton icon="i-lucide-rotate-ccw" size="xs" color="neutral" variant="soft" :disabled="editing.busy.value || !editing.dirty.value" @click="cancelChanges">
+          <UButton
+            icon="i-lucide-rotate-ccw"
+            size="xs"
+            color="neutral"
+            variant="soft"
+            :disabled="editing.busy.value || !editing.dirty.value"
+            @click="cancelChanges"
+          >
             Cancel
           </UButton>
         </template>
@@ -175,7 +193,7 @@ function cancelChanges() {
     <div v-if="tab.activePanel === 'data'" class="min-h-0 flex-1 overflow-auto">
       <ChenDataGrid
         ref="dataGrid"
-        :key="`${tab.id}:${tab.data?.fields?.map(field => field.name).join(',') || ''}:${tab.data?.data?.length || 0}`"
+        :key="`${tab.id}:${tab.data?.fields?.map((field) => field.name).join(',') || ''}:${tab.data?.data?.length || 0}`"
         :dataset="tab.data"
         :meta="tab.meta"
         :db-type="dbType"
@@ -207,18 +225,10 @@ function cancelChanges() {
           <table class="w-full text-left text-sm">
             <thead class="bg-[var(--workspace-surface-sub-panel)] text-muted">
               <tr>
-                <th class="px-3 py-2 font-medium">
-                  Name
-                </th>
-                <th class="px-3 py-2 font-medium">
-                  Type
-                </th>
-                <th class="px-3 py-2 font-medium">
-                  Nullable
-                </th>
-                <th class="px-3 py-2 font-medium">
-                  Key
-                </th>
+                <th class="px-3 py-2 font-medium">Name</th>
+                <th class="px-3 py-2 font-medium">Type</th>
+                <th class="px-3 py-2 font-medium">Nullable</th>
+                <th class="px-3 py-2 font-medium">Key</th>
               </tr>
             </thead>
             <tbody>
@@ -246,18 +256,10 @@ function cancelChanges() {
           <table class="w-full text-left text-sm">
             <thead class="bg-[var(--workspace-surface-sub-panel)] text-muted">
               <tr>
-                <th class="px-3 py-2 font-medium">
-                  Name
-                </th>
-                <th class="px-3 py-2 font-medium">
-                  Columns
-                </th>
-                <th class="px-3 py-2 font-medium">
-                  Unique
-                </th>
-                <th class="px-3 py-2 font-medium">
-                  Method
-                </th>
+                <th class="px-3 py-2 font-medium">Name</th>
+                <th class="px-3 py-2 font-medium">Columns</th>
+                <th class="px-3 py-2 font-medium">Unique</th>
+                <th class="px-3 py-2 font-medium">Method</th>
               </tr>
             </thead>
             <tbody>
@@ -285,15 +287,9 @@ function cancelChanges() {
           <table class="w-full text-left text-sm">
             <thead class="bg-[var(--workspace-surface-sub-panel)] text-muted">
               <tr>
-                <th class="px-3 py-2 font-medium">
-                  Name
-                </th>
-                <th class="px-3 py-2 font-medium">
-                  Column
-                </th>
-                <th class="px-3 py-2 font-medium">
-                  References
-                </th>
+                <th class="px-3 py-2 font-medium">Name</th>
+                <th class="px-3 py-2 font-medium">Column</th>
+                <th class="px-3 py-2 font-medium">References</th>
               </tr>
             </thead>
             <tbody>
@@ -311,9 +307,7 @@ function cancelChanges() {
             </tbody>
           </table>
         </div>
-        <div v-else class="grid h-full place-items-center text-sm text-muted">
-          No foreign keys in preview.
-        </div>
+        <div v-else class="grid h-full place-items-center text-sm text-muted">No foreign keys in preview.</div>
       </div>
 
       <div v-else-if="tab.activePropertyTab === 'constraints'" class="min-h-0 flex-1 overflow-auto p-3">
@@ -321,15 +315,9 @@ function cancelChanges() {
           <table class="w-full text-left text-sm">
             <thead class="bg-[var(--workspace-surface-sub-panel)] text-muted">
               <tr>
-                <th class="px-3 py-2 font-medium">
-                  Name
-                </th>
-                <th class="px-3 py-2 font-medium">
-                  Type
-                </th>
-                <th class="px-3 py-2 font-medium">
-                  Definition
-                </th>
+                <th class="px-3 py-2 font-medium">Name</th>
+                <th class="px-3 py-2 font-medium">Type</th>
+                <th class="px-3 py-2 font-medium">Definition</th>
               </tr>
             </thead>
             <tbody>
@@ -350,15 +338,13 @@ function cancelChanges() {
       </div>
 
       <div v-else class="min-h-0 flex-1 overflow-auto p-3">
-        <pre class="rounded-lg border border-default bg-[var(--workspace-surface-sub-panel)] p-3 font-ui-mono text-xs text-[var(--app-fg)]">{{ dataViewDDL(tab) }}</pre>
+        <pre
+          class="rounded-lg border border-default bg-[var(--workspace-surface-sub-panel)] p-3 font-ui-mono text-xs text-[var(--app-fg)]"
+          >{{ dataViewDDL(tab) }}</pre>
       </div>
     </div>
 
-    <DataViewExportDialog
-      v-if="exportDialogOpen"
-      v-model:open="exportDialogOpen"
-      @confirm="submitExport"
-    />
+    <DataViewExportDialog v-if="exportDialogOpen" v-model:open="exportDialogOpen" @confirm="submitExport" />
 
     <DataViewSavePreviewDialog
       v-if="previewDialogOpen"

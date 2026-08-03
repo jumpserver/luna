@@ -12,12 +12,12 @@ import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 
 interface LocalShellOutput {
-  sessionId: string
-  data: number[]
+  sessionId: string;
+  data: number[];
 }
 
 interface LocalShellExit {
-  sessionId: string
+  sessionId: string;
 }
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();

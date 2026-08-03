@@ -5,9 +5,7 @@ const { sidebarWidth } = useSidebarLayout();
 const router = useRouter();
 const isToolWindow = computed(() => router.currentRoute.value.query.tool_window === "1");
 const leadingAreaStyle = computed(() => ({
-  width: collapse.value
-    ? (isMacOS.value ? "128px" : "44px")
-    : `${sidebarWidth.value}px`
+  width: collapse.value ? (isMacOS.value ? "128px" : "44px") : `${sidebarWidth.value}px`
 }));
 
 const handleWindowDrag = async (event: MouseEvent) => {
@@ -15,10 +13,10 @@ const handleWindowDrag = async (event: MouseEvent) => {
 
   const target = event.target as HTMLElement;
   if (
-    target.closest("button")
-    || target.closest('[role="button"]')
-    || target.closest("input")
-    || target.closest("select")
+    target.closest("button") ||
+    target.closest('[role="button"]') ||
+    target.closest("input") ||
+    target.closest("select")
   ) {
     return;
   }
@@ -48,11 +46,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
     }"
     @mousedown="handleWindowDrag"
   >
-    <div
-      v-if="$slots.leading"
-      class="h-full shrink-0 transition-[width] duration-200"
-      :style="leadingAreaStyle"
-    >
+    <div v-if="$slots.leading" class="h-full shrink-0 transition-[width] duration-200" :style="leadingAreaStyle">
       <slot name="leading" />
     </div>
 

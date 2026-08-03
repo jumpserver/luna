@@ -4,9 +4,9 @@ export async function readClipboardText(): Promise<string> {
       return await navigator.clipboard.readText();
     }
     console.log("navigator.clipboard api not found");
-    return '';
+    return "";
   } catch (err) {
-    console.error('Failed to read clipboard:', err);
-    return '';
+    console.error("Failed to read clipboard:", err);
+    return "";
   }
 }

@@ -1,9 +1,4 @@
-import type {
-  ChenPacket,
-  ChenPromptConsoleTab,
-  ChenQueryConsoleTab,
-  ChenQueryLikeWorkspaceTab
-} from "~/chen/types";
+import type { ChenPacket, ChenPromptConsoleTab, ChenQueryConsoleTab, ChenQueryLikeWorkspaceTab } from "~/chen/types";
 
 import { newChenWorkspaceId } from "~/chen/composables/useChenWorkspaceTabs";
 import {
@@ -40,7 +35,7 @@ export function useChenQueryConsole(
     }
   }
 
-  function updateQueryResult(tab: ChenQueryLikeWorkspaceTab, meta: { title: string, [key: string]: any }, data?: any) {
+  function updateQueryResult(tab: ChenQueryLikeWorkspaceTab, meta: { title: string; [key: string]: any }, data?: any) {
     let resultTab = tab.resultTabs.find((item) => item.title === meta.title);
     if (!resultTab) {
       resultTab = {
@@ -103,9 +98,7 @@ export function useChenQueryConsole(
         appendLog(tab, packet.data);
         break;
       case "message":
-        tab.message = typeof packet.data === "string"
-          ? { type: "info", message: packet.data }
-          : packet.data || null;
+        tab.message = typeof packet.data === "string" ? { type: "info", message: packet.data } : packet.data || null;
         if (tab.kind === "console") appendLog(tab, packet.data);
         break;
       case "update_state":
@@ -170,12 +163,12 @@ export function useChenQueryConsole(
 
   function changeQueryContext(tab: ChenQueryConsoleTab, context: string) {
     if (
-      tab.state.loading
-      || tab.state.inQuery
-      || tab.state.editorLoading
-      || !context.trim()
-      || context === tab.state.currentContext
-      || !tab.state.contexts?.includes(context)
+      tab.state.loading ||
+      tab.state.inQuery ||
+      tab.state.editorLoading ||
+      !context.trim() ||
+      context === tab.state.currentContext ||
+      !tab.state.contexts?.includes(context)
     ) {
       return;
     }

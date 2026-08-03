@@ -1,12 +1,12 @@
 <script setup lang="ts">
 const props = defineProps<{
-  open: boolean
-  saving: boolean
+  open: boolean;
+  saving: boolean;
 }>();
 
 const emit = defineEmits<{
-  "update:open": [open: boolean]
-  confirm: [name: string]
+  "update:open": [open: boolean];
+  confirm: [name: string];
 }>();
 
 const name = ref("");
@@ -28,23 +28,14 @@ function close() {
   <UModal v-model:open="visible" title="Save SQL">
     <template #body>
       <UFormField label="Name">
-        <UInput
-          v-model="name"
-          autofocus
-          class="w-full"
-          @keydown.enter.prevent="submit"
-        />
+        <UInput v-model="name" autofocus class="w-full" @keydown.enter.prevent="submit" />
       </UFormField>
     </template>
 
     <template #footer>
       <div class="flex w-full justify-end gap-2">
-        <UButton color="neutral" variant="soft" @click="close">
-          Cancel
-        </UButton>
-        <UButton :loading="saving" @click="submit">
-          Confirm
-        </UButton>
+        <UButton color="neutral" variant="soft" @click="close">Cancel</UButton>
+        <UButton :loading="saving" @click="submit">Confirm</UButton>
       </div>
     </template>
   </UModal>

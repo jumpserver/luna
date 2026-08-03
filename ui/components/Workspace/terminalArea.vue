@@ -6,7 +6,7 @@ const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const { isMacOS } = usePlatform();
 const { t } = useI18n();
-const tabSwitchModifier = computed(() => isMacOS.value ? "Option" : "Alt");
+const tabSwitchModifier = computed(() => (isMacOS.value ? "Option" : "Alt"));
 const panes = computed(() => tabs.value.flatMap((tab) => tab.panes));
 
 const openLogin = () => {
@@ -31,9 +31,7 @@ const openLogin = () => {
             }"
           >
             <UIcon name="i-lucide-log-in" class="size-10" :style="{ color: 'var(--app-muted)' }" />
-            <div class="font-medium" :style="{ color: 'var(--app-fg)' }">
-              登录后查看资产并发起连接
-            </div>
+            <div class="font-medium" :style="{ color: 'var(--app-fg)' }">登录后查看资产并发起连接</div>
             <UButton color="primary" variant="soft" class="rounded-xl px-4" @click="openLogin">
               {{ t("Common.Login") }}
             </UButton>
@@ -49,23 +47,28 @@ const openLogin = () => {
       </template>
 
       <div v-else class="h-full min-h-0 grid place-items-center text-sm" :style="{ color: 'var(--app-muted)' }">
-        <div
-          class="flex max-w-md flex-col items-center px-6 py-5 text-center"
-        >
-          <div
-            class="grid w-full gap-3 text-left text-sm"
-          >
+        <div class="flex max-w-md flex-col items-center px-6 py-5 text-center">
+          <div class="grid w-full gap-3 text-left text-sm">
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-mouse-pointer-click" class="size-4.5 shrink-0" />
-              <span><strong :style="{ color: 'var(--app-fg)' }">右击资产 → 连接</strong>，可重新选择连接方式</span>
+              <span>
+                <strong :style="{ color: 'var(--app-fg)' }">右击资产 → 连接</strong>
+                ，可重新选择连接方式
+              </span>
             </div>
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-folder-tree" class="size-4.5 shrink-0" />
-              <span><strong :style="{ color: 'var(--app-fg)' }">右击节点 → 展开全部</strong>，展开节点下的所有资产</span>
+              <span>
+                <strong :style="{ color: 'var(--app-fg)' }">右击节点 → 展开全部</strong>
+                ，展开节点下的所有资产
+              </span>
             </div>
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-download" class="size-4.5 shrink-0" />
-              <span><strong :style="{ color: 'var(--app-fg)' }">帮助 → 下载</strong>，下载最新客户端</span>
+              <span>
+                <strong :style="{ color: 'var(--app-fg)' }">帮助 → 下载</strong>
+                ，下载最新客户端
+              </span>
             </div>
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-panels-top-left" class="size-4.5 shrink-0" />
@@ -74,7 +77,9 @@ const openLogin = () => {
                 <kbd
                   class="ml-1 rounded px-1.5 py-0.5 font-ui-mono text-xs"
                   :style="{ border: '1px solid var(--app-border)', backgroundColor: 'var(--app-card-bg-soft)' }"
-                >{{ tabSwitchModifier }} + Shift + ← / →</kbd>
+                >
+                  {{ tabSwitchModifier }} + Shift + ← / →
+                </kbd>
               </span>
             </div>
           </div>

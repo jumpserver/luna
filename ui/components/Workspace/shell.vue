@@ -1,9 +1,12 @@
 <script setup lang="ts">
-const props = withDefaults(defineProps<{
-  sidebarVisible?: boolean
-}>(), {
-  sidebarVisible: true
-});
+const props = withDefaults(
+  defineProps<{
+    sidebarVisible?: boolean;
+  }>(),
+  {
+    sidebarVisible: true
+  }
+);
 
 const { collapse } = useSettingManager();
 const { sidebarWidth, setSidebarWidth, persistSidebarWidth } = useSidebarLayout();
@@ -81,10 +84,7 @@ onBeforeUnmount(() => {
     class="workspace-shell flex h-screen w-full min-w-0 flex-col overflow-hidden border-none"
     :style="{ backgroundColor: 'var(--app-surface-frame)', color: 'var(--app-fg)' }"
   >
-    <div
-      class="workspace-shell__header shrink-0"
-      :style="{ backgroundColor: 'var(--app-header-bg)' }"
-    >
+    <div class="workspace-shell__header shrink-0" :style="{ backgroundColor: 'var(--app-header-bg)' }">
       <slot name="header" />
     </div>
 

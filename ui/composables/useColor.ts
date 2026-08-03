@@ -3,15 +3,15 @@ import { ref } from "vue";
 import { contrastingTextColor } from "~/shared/theme/color";
 
 interface HSL {
-  h: number
-  s: number
-  l: number
+  h: number;
+  s: number;
+  l: number;
 }
 
 interface RGB {
-  r: number
-  g: number
-  b: number
+  r: number;
+  g: number;
+  b: number;
 }
 
 const mainThemeColorMap = new Map(

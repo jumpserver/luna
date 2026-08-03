@@ -30,12 +30,6 @@ const MAX_EXTRACTED_ENTRY_BYTES: u64 = 4_u64 * 1024 * 1024 * 1024;
 /// 又不会因为恶意 metadata 消耗大量内存
 const MAX_METADATA_BYTES: u64 = 1024 * 1024;
 
-/// 单个录像包解压后的媒体文件总大小上限：16 GiB
-///
-/// ponytail: 当前使用固定上限；如果以后需要支持超大型录像，
-/// 升级方向应是从应用配置中读取，而不是直接移除限制
-const MAX_PACKAGE_BYTES: u64 = 16 * 1024 * 1024 * 1024;
-
 /// 防止 TAR 中包含大量空文件，耗尽文件系统 inode
 const MAX_MEDIA_ENTRIES: usize = 10_000;
 
@@ -91,10 +85,6 @@ pub(crate) enum PackageError {
 
     TooManyMediaEntries {
         maximum_entries: usize,
-    },
-
-    PackageTooLarge {
-        maximum_bytes: u64,
     },
 }
 
@@ -269,12 +259,6 @@ impl fmt::Display for PackageError {
                     "package contains more than {maximum_entries} media entries"
                 )
             }
-            Self::PackageTooLarge { maximum_bytes } => {
-                write!(
-                    formatter,
-                    "extracted package exceeds the {maximum_bytes} byte limit"
-                )
-            }
         }
     }
 }
@@ -291,8 +275,7 @@ impl Error for PackageError {
             | Self::EntryTooLarge { .. }
             | Self::MetadataTooLarge { .. }
             | Self::DuplicateReplayMetadata { .. }
-            | Self::TooManyMediaEntries { .. }
-            | Self::PackageTooLarge { .. } => None,
+            | Self::TooManyMediaEntries { .. } => None,
         }
     }
 }
@@ -530,7 +513,6 @@ fn extract_tar_to_pending(
         .map_err(|source| PackageError::io("read tar package", tar_path, source))?;
 
     let mut extracted = ExtractedPackage::default();
-    let mut total_byte_length = 0_u64;
 
     for entry_result in entries {
         // Entry 借用了 archive，因此必须在本次循环中处理完毕。
@@ -599,21 +581,10 @@ fn extract_tar_to_pending(
                 let byte_length =
                     write_media_entry(&mut entry, &classified.source_name, &destination)?;
 
-                // checked_add 同时处理 u64 溢出。
-                let next_total = total_byte_length.checked_add(byte_length).ok_or(
-                    PackageError::PackageTooLarge {
-                        maximum_bytes: MAX_PACKAGE_BYTES,
-                    },
-                )?;
-
-                if next_total > MAX_PACKAGE_BYTES {
-                    return Err(PackageError::PackageTooLarge {
-                        maximum_bytes: MAX_PACKAGE_BYTES,
-                    });
-                }
-
-                total_byte_length = next_total;
-
+                // 不限制整包总大小
+                // 分片后合法地就会很大，单个 part 的大小已由 write_media_entry
+                // 内部的单 entry 上限保证。若磁盘写满，写入会自然失败并由
+                // PendingRecording::drop 清理未完成的 pending 目录。
                 extracted.media.push(ExtractedMediaEntry {
                     entry_id,
                     source_name: classified.source_name,

@@ -3,7 +3,7 @@ import { gunzipSync } from "fflate";
 import * as Guacamole from "guacamole-common-js-jumpserver/dist/guacamole-common";
 
 const props = defineProps<{
-  source: string
+  source: string;
 }>();
 
 const playerAreaRef = ref<HTMLElement | null>(null);
@@ -21,7 +21,7 @@ const errorMessage = ref("");
 let tunnel: any = null;
 let recording: any = null;
 let display: any = null;
-let visibleBounds: { left: number, top: number, width: number, height: number } | null = null;
+let visibleBounds: { left: number; top: number; width: number; height: number } | null = null;
 let loadController: AbortController | null = null;
 
 function zeroPad(num: number) {
@@ -137,7 +137,7 @@ function resetVisibleBounds() {
   visibleBounds = null;
 }
 
-function mergeVisibleBounds(nextBounds: { left: number, top: number, width: number, height: number }) {
+function mergeVisibleBounds(nextBounds: { left: number; top: number; width: number; height: number }) {
   const layer = display?.getDefaultLayer?.();
   const fullWidth = layer?.width || 1024;
   const fullHeight = layer?.height || 768;
@@ -391,11 +391,14 @@ onMounted(async () => {
   await loadRecording();
 });
 
-watch(() => props.source, async () => {
-  cleanup();
-  await nextTick();
-  await loadRecording();
-});
+watch(
+  () => props.source,
+  async () => {
+    cleanup();
+    await nextTick();
+    await loadRecording();
+  }
+);
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", handleResize);
@@ -421,27 +424,17 @@ onBeforeUnmount(() => {
       </div>
 
       <div ref="canvasRef" class="relative flex h-full w-full items-center justify-center overflow-hidden">
-        <div
-          ref="displayViewportRef"
-          class="relative shrink-0 overflow-hidden"
-        >
+        <div ref="displayViewportRef" class="relative shrink-0 overflow-hidden">
           <div ref="displayHostRef" class="relative h-full w-full overflow-hidden" />
         </div>
       </div>
     </div>
 
     <div class="gua-controls flex items-center gap-3 rounded-none px-3 py-2">
-      <button
-        class="gua-play-button"
-        :disabled="loading || !!errorMessage"
-        type="button"
-        @click="togglePlayback"
-      >
+      <button class="gua-play-button" :disabled="loading || !!errorMessage" type="button" @click="togglePlayback">
         <UIcon :name="isPlaying ? 'line-md:pause' : 'line-md:play-filled'" class="text-xl" />
       </button>
-      <div class="w-22 text-xs tabular-nums text-(--ui-text-muted)">
-        {{ currentLabel }} / {{ durationLabel }}
-      </div>
+      <div class="w-22 text-xs tabular-nums text-(--ui-text-muted)">{{ currentLabel }} / {{ durationLabel }}</div>
       <input
         class="gua-range h-2 flex-1 cursor-pointer"
         type="range"
@@ -450,7 +443,7 @@ onBeforeUnmount(() => {
         :value="currentPosition"
         :disabled="loading || isSeeking || !duration"
         @input="seek"
-      >
+      />
       <div class="w-16 text-right text-[11px] uppercase tracking-[0.16em] text-(--ui-text-dimmed)">
         {{ Math.round(scale * 100) }}%
       </div>
@@ -460,8 +453,11 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .gua-controls {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--ui-bg-elevated) 90%, transparent), color-mix(in srgb, var(--ui-bg) 82%, transparent));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ui-bg-elevated) 90%, transparent),
+    color-mix(in srgb, var(--ui-bg) 82%, transparent)
+  );
   border: 1px solid color-mix(in srgb, var(--ui-border) 72%, transparent);
   box-shadow: inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
 }
@@ -500,7 +496,11 @@ onBeforeUnmount(() => {
 .gua-range::-webkit-slider-runnable-track {
   height: 0.28rem;
   border-radius: 9999px;
-  background: linear-gradient(90deg, var(--ui-color-primary-500), color-mix(in srgb, var(--ui-color-primary-500) 35%, var(--ui-border)));
+  background: linear-gradient(
+    90deg,
+    var(--ui-color-primary-500),
+    color-mix(in srgb, var(--ui-color-primary-500) 35%, var(--ui-border))
+  );
 }
 
 .gua-range::-webkit-slider-thumb {
@@ -518,7 +518,11 @@ onBeforeUnmount(() => {
   height: 0.28rem;
   border: 0;
   border-radius: 9999px;
-  background: linear-gradient(90deg, var(--ui-color-primary-500), color-mix(in srgb, var(--ui-color-primary-500) 35%, var(--ui-border)));
+  background: linear-gradient(
+    90deg,
+    var(--ui-color-primary-500),
+    color-mix(in srgb, var(--ui-color-primary-500) 35%, var(--ui-border))
+  );
 }
 
 .gua-range::-moz-range-thumb {

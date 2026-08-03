@@ -5,9 +5,9 @@ export type SettingsSection = "general" | "appearance" | "application" | "about"
 
 withDefaults(
   defineProps<{
-    mode?: "route" | "inline"
-    activeSection?: SettingsSection
-    embedded?: boolean
+    mode?: "route" | "inline";
+    activeSection?: SettingsSection;
+    embedded?: boolean;
   }>(),
   {
     mode: "route",
@@ -17,7 +17,7 @@ withDefaults(
 );
 
 const emit = defineEmits<{
-  (e: "update:activeSection", value: SettingsSection): void
+  (e: "update:activeSection", value: SettingsSection): void;
 }>();
 
 const localePath = useLocalePath();
@@ -26,11 +26,11 @@ const panelBackground = "var(--app-sidebar-bg)";
 
 const sectionDefs = computed(() => {
   const defs: Array<{
-    key: SettingsSection
-    label: string
-    icon: string
-    routeName: string
-    tauriOnly: boolean
+    key: SettingsSection;
+    label: string;
+    icon: string;
+    routeName: string;
+    tauriOnly: boolean;
   }> = [
     {
       key: "general",

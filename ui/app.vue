@@ -85,7 +85,9 @@ useHead({
 
 function applyCurrentThemeColor() {
   const mode = toolWindowTheme.value?.mode || (userTheme.value === "dark" ? "dark" : "light");
-  const hex = toolWindowTheme.value?.accent || (mode === "dark" ? (primaryColorDark.value as string) : (primaryColorLight.value as string));
+  const hex =
+    toolWindowTheme.value?.accent ||
+    (mode === "dark" ? (primaryColorDark.value as string) : (primaryColorLight.value as string));
 
   if (hex) {
     applyPrimaryColor(hex);
@@ -96,8 +98,9 @@ function applyThemePreset() {
   if (!import.meta.client) return;
 
   const mode = toolWindowTheme.value?.mode || (userTheme.value === "dark" ? "dark" : "light");
-  const preset = toolWindowTheme.value?.preset
-    || (mode === "dark"
+  const preset =
+    toolWindowTheme.value?.preset ||
+    (mode === "dark"
       ? darkThemePreset.value || DEFAULT_DARK_THEME_PRESET
       : lightThemePreset.value || DEFAULT_LIGHT_THEME_PRESET);
 
@@ -109,10 +112,14 @@ watch(() => [userTheme.value, primaryColorLight.value, primaryColorDark.value], 
 });
 
 watch(() => [userTheme.value, lightThemePreset.value, darkThemePreset.value], applyThemePreset, { immediate: true });
-watch(() => route.fullPath, () => {
-  applyCurrentThemeColor();
-  applyThemePreset();
-}, { immediate: true });
+watch(
+  () => route.fullPath,
+  () => {
+    applyCurrentThemeColor();
+    applyThemePreset();
+  },
+  { immediate: true }
+);
 
 watch(
   () => fontFamily.value,
@@ -252,6 +259,7 @@ onBeforeUnmount(() => {
         <NuxtLayout>
           <NuxtPage :page-key="pageKey" />
         </NuxtLayout>
+        <FileTransferCenter />
       </UApp>
     </Body>
   </Html>

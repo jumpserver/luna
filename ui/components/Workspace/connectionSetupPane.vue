@@ -20,8 +20,8 @@ import { sortPermedProtocols, sortProtocolNames } from "~/utils";
 
 const props = withDefaults(
   defineProps<{
-    tab: WorkspaceSessionTab
-    assetType?: AssetPageType
+    tab: WorkspaceSessionTab;
+    assetType?: AssetPageType;
   }>(),
   {
     assetType: "assets"
@@ -181,7 +181,7 @@ const initDraft = (asset: AssetItem) => {
   draftRememberSecret.value = saved?.rememberSecret || false;
   draftRememberSelection.value = !!saved;
   const sourceMatchesProtocol = source?.protocol?.toLowerCase() === draftProtocol.value.toLowerCase();
-  draftConnectMethod.value = sourceMatchesProtocol ? (source?.connectMethod || "") : "";
+  draftConnectMethod.value = sourceMatchesProtocol ? source?.connectMethod || "" : "";
   draftConnectOptions.value = sourceMatchesProtocol ? { ...(source?.connectOptions || {}) } : {};
 };
 
@@ -281,7 +281,7 @@ async function ensureDetails(asset: AssetItem) {
   const detailsReady = new Promise<AssetItem>((resolve) => {
     unsubscribe = useEventBus().on(
       "assetDetailUpdated",
-      (payload: { assetId: string, permedAccounts: PermedAccount[], permedProtocols: PermedProtocol[] }) => {
+      (payload: { assetId: string; permedAccounts: PermedAccount[]; permedProtocols: PermedProtocol[] }) => {
         if (payload.assetId !== asset.id) return;
 
         currentAsset.value = {
@@ -348,8 +348,8 @@ async function submit() {
         : undefined,
       onSessionError: (error) => {
         connecting.value = false;
-        connectionError.value
-          = error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
+        connectionError.value =
+          error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
       }
     });
     if (showLaunchSuccessState) {
@@ -450,7 +450,9 @@ onMounted(loadAsset);
                     </div>
                   </div>
 
-                  <div class="mt-5 rounded-lg border border-[var(--app-border)] bg-[var(--workspace-surface-header)] px-4 py-3">
+                  <div
+                    class="mt-5 rounded-lg border border-[var(--app-border)] bg-[var(--workspace-surface-header)] px-4 py-3"
+                  >
                     <div class="text-xs text-[var(--app-muted)]">
                       {{ locale === "zh" ? "连接目标" : "Connection target" }}
                     </div>
@@ -539,9 +541,9 @@ onMounted(loadAsset);
               </div>
               <UButton
                 v-else
-                :label="externalClientLaunch
-                  ? (locale === 'zh' ? '客户端打开' : 'Open in client')
-                  : t('Common.Connect')"
+                :label="
+                  externalClientLaunch ? (locale === 'zh' ? '客户端打开' : 'Open in client') : t('Common.Connect')
+                "
                 color="primary"
                 :loading="connecting"
                 block

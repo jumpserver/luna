@@ -24,7 +24,10 @@ export function useRecentConnections() {
 
   const recordRecentConnection = (asset: AssetItem) => {
     const snapshot = JSON.parse(JSON.stringify(asset)) as AssetItem;
-    recentConnections.value = [snapshot, ...recentConnections.value.filter((item) => item.id !== asset.id)].slice(0, MAX_RECENT);
+    recentConnections.value = [snapshot, ...recentConnections.value.filter((item) => item.id !== asset.id)].slice(
+      0,
+      MAX_RECENT
+    );
     if (import.meta.client) {
       const persisted = recentConnections.value.map(({ savedConnection: _savedConnection, ...item }) => item);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));

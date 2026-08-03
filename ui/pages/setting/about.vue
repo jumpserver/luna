@@ -50,15 +50,13 @@ const openLink = async (url: string) => {
 <template>
   <UContainer class="h-full">
     <div class="h-full flex flex-col gap-2 items-center justify-center">
-      <img :src="logoSrc" :alt="appName" class="w-16 h-16 rounded-xl">
+      <img :src="logoSrc" :alt="appName" class="w-16 h-16 rounded-xl" />
 
       <div class="space-y-2">
         <p class="text-base font-semibold">
           {{ appName }}
 
-          <UBadge icon="i-lucide-rocket" size="sm" color="primary" variant="soft">
-            v{{ version }}
-          </UBadge>
+          <UBadge icon="i-lucide-rocket" size="sm" color="primary" variant="soft">v{{ version }}</UBadge>
         </p>
 
         <div v-if="isDefaultProduct" class="flex items-center justify-center gap-3 text-sm text-gray-400">

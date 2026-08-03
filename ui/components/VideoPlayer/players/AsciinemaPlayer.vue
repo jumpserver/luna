@@ -2,8 +2,8 @@
 import { create as createAsciinemaPlayer } from "@cyolosecurity/asciinema-player";
 
 const props = defineProps<{
-  source: string
-  castData?: string
+  source: string;
+  castData?: string;
 }>();
 
 const terminalRef = ref<HTMLElement | null>(null);

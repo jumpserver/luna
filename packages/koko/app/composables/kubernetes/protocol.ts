@@ -62,10 +62,10 @@ export interface KubernetesTerminalPingMessage {
 
 export interface KubernetesTerminalControlMessage {
   type:
-    KubernetesTerminalMessageType.Pong |
-    KubernetesTerminalMessageType.Error |
-    KubernetesTerminalMessageType.TerminalError |
-    KubernetesTerminalMessageType.Close;
+    | KubernetesTerminalMessageType.Pong
+    | KubernetesTerminalMessageType.Error
+    | KubernetesTerminalMessageType.TerminalError
+    | KubernetesTerminalMessageType.Close;
   id?: string;
   data?: string;
   err?: string;
@@ -73,12 +73,12 @@ export interface KubernetesTerminalControlMessage {
 }
 
 export type KubernetesTerminalIncomingMessage =
-  KubernetesTerminalConnectMessage |
-  KubernetesTerminalTreeMessage |
-  KubernetesTerminalDataMessage |
-  KubernetesTerminalBinaryMessage |
-  KubernetesTerminalPingMessage |
-  KubernetesTerminalControlMessage;
+  | KubernetesTerminalConnectMessage
+  | KubernetesTerminalTreeMessage
+  | KubernetesTerminalDataMessage
+  | KubernetesTerminalBinaryMessage
+  | KubernetesTerminalPingMessage
+  | KubernetesTerminalControlMessage;
 
 export interface KubernetesTerminalTreeRequest {
   type: KubernetesTerminalMessageType.Tree;
@@ -121,12 +121,12 @@ export interface KubernetesTerminalCloseRequest {
 }
 
 export type KubernetesTerminalOutgoingMessage =
-  KubernetesTerminalTreeRequest |
-  KubernetesTerminalPongRequest |
-  KubernetesTerminalInitializeRequest |
-  KubernetesTerminalDataRequest |
-  KubernetesTerminalResizeRequest |
-  KubernetesTerminalCloseRequest;
+  | KubernetesTerminalTreeRequest
+  | KubernetesTerminalPongRequest
+  | KubernetesTerminalInitializeRequest
+  | KubernetesTerminalDataRequest
+  | KubernetesTerminalResizeRequest
+  | KubernetesTerminalCloseRequest;
 
 export interface KubernetesTerminalFailure {
   code: KubernetesTerminalSocketFailureCode;

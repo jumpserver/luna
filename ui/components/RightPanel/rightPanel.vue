@@ -48,10 +48,7 @@ watch(showSftpTab, (visible) => {
       color: 'var(--app-fg)'
     }"
   >
-    <div
-      class="shrink-0 px-3"
-      :style="{ borderBottom: '1px solid var(--app-border)' }"
-    >
+    <div class="shrink-0 px-3" :style="{ borderBottom: '1px solid var(--app-border)' }">
       <div class="right-panel-tab-strip">
         <button
           v-for="tab in tabs"

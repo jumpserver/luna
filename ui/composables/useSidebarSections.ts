@@ -8,8 +8,7 @@ export const DEFAULT_SIDEBAR_SECTIONS: SidebarSectionVisibility = {
   snippets: true
 };
 
-const hasVisibleSections = (sections: SidebarSectionVisibility) =>
-  Object.values(sections).some(Boolean);
+const hasVisibleSections = (sections: SidebarSectionVisibility) => Object.values(sections).some(Boolean);
 
 export const normalizeSidebarSections = (
   value?: Partial<SidebarSectionVisibility & { recent?: boolean }> | null
@@ -20,7 +19,5 @@ export const normalizeSidebarSections = (
     ...rest
   };
 
-  return hasVisibleSections(normalized)
-    ? normalized
-    : { ...DEFAULT_SIDEBAR_SECTIONS };
+  return hasVisibleSections(normalized) ? normalized : { ...DEFAULT_SIDEBAR_SECTIONS };
 };

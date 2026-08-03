@@ -87,12 +87,15 @@ export function useWorkspaceTabMenu() {
 
     try {
       const token = await exchangeToken(tab);
-      updateSessionPayload({
-        tabId: tab.id,
-        assetId: tab.assetId,
-        protocol: tab.protocol,
-        account: tab.account
-      }, buildPayload(tab, token));
+      updateSessionPayload(
+        {
+          tabId: tab.id,
+          assetId: tab.assetId,
+          protocol: tab.protocol,
+          account: tab.account
+        },
+        buildPayload(tab, token)
+      );
     } catch {
       reconnectViaConnection(tab);
     }
@@ -121,12 +124,15 @@ export function useWorkspaceTabMenu() {
         paneId: pane.id
       });
       const token = await exchangeToken(workspaceTab);
-      updateSessionPayload({
-        tabId: pane.id,
-        assetId: workspaceTab.assetId,
-        protocol: workspaceTab.protocol,
-        account: workspaceTab.account
-      }, buildPayload(workspaceTab, token));
+      updateSessionPayload(
+        {
+          tabId: pane.id,
+          assetId: workspaceTab.assetId,
+          protocol: workspaceTab.protocol,
+          account: workspaceTab.account
+        },
+        buildPayload(workspaceTab, token)
+      );
     } catch (error) {
       const connectMethod = workspaceTab.payload?.connectMethod?.value;
       handleAssetConnection(workspaceTab.account, workspaceTab.assetId, workspaceTab.protocol, undefined, undefined, {

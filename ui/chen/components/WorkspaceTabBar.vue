@@ -3,14 +3,14 @@ import type { DropdownMenuItem } from "@nuxt/ui";
 import type { ChenTabDefinition } from "~/chen/types";
 
 const props = defineProps<{
-  tabs: ChenTabDefinition[]
-  activeTabId: string
+  tabs: ChenTabDefinition[];
+  activeTabId: string;
 }>();
 
 const emit = defineEmits<{
-  activate: [id: string]
-  close: [id: string]
-  create: [kind: "query" | "console"]
+  activate: [id: string];
+  close: [id: string];
+  create: [kind: "query" | "console"];
 }>();
 
 const colorMode = useColorMode();

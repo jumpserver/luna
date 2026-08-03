@@ -6,20 +6,20 @@ defineOptions({
 });
 
 const props = defineProps<{
-  node: ChenTreeNode
-  depth?: number
-  selectedKey: string
-  expandedKeys: string[]
-  childrenMap: Record<string, ChenTreeNode[]>
-  loadingChildren: Record<string, boolean>
-  dbType?: string
+  node: ChenTreeNode;
+  depth?: number;
+  selectedKey: string;
+  expandedKeys: string[];
+  childrenMap: Record<string, ChenTreeNode[]>;
+  loadingChildren: Record<string, boolean>;
+  dbType?: string;
 }>();
 
 const emit = defineEmits<{
-  select: [node: ChenTreeNode]
-  toggle: [node: ChenTreeNode]
-  activate: [node: ChenTreeNode]
-  menu: [payload: { node: ChenTreeNode, event: MouseEvent }]
+  select: [node: ChenTreeNode];
+  toggle: [node: ChenTreeNode];
+  activate: [node: ChenTreeNode];
+  menu: [payload: { node: ChenTreeNode; event: MouseEvent }];
 }>();
 
 const isExpanded = computed(() => props.expandedKeys.includes(props.node.key));
@@ -82,10 +82,18 @@ const iconName = computed(() => {
     </div>
 
     <ul v-if="isExpanded" class="space-y-0.5">
-      <li v-if="loadingChildren[node.key]" class="px-1.5 py-0.5 text-[11px] text-muted" :style="{ paddingLeft: `${((depth || 0) + 1) * 12 + 20}px` }">
+      <li
+        v-if="loadingChildren[node.key]"
+        class="px-1.5 py-0.5 text-[11px] text-muted"
+        :style="{ paddingLeft: `${((depth || 0) + 1) * 12 + 20}px` }"
+      >
         Loading...
       </li>
-      <li v-else-if="!children.length" class="px-1.5 py-0.5 text-[11px] text-muted" :style="{ paddingLeft: `${((depth || 0) + 1) * 12 + 20}px` }">
+      <li
+        v-else-if="!children.length"
+        class="px-1.5 py-0.5 text-[11px] text-muted"
+        :style="{ paddingLeft: `${((depth || 0) + 1) * 12 + 20}px` }"
+      >
         No items
       </li>
       <ChenResourceTreeNode

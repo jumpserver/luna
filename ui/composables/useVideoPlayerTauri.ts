@@ -1,23 +1,23 @@
 import type { VideoPlayerItemType, VideoPlayerMeta } from "~/composables/useVideoPlayerParser";
 
 export interface OfflineRecordingEntry {
-  entry_id: string
-  source_name: string
-  media_type: VideoPlayerItemType
-  byte_length: number
-  part_index?: number
-  part_total?: number
-  start_ms?: number
-  end_ms?: number
-  duration_ms?: number
+  entry_id: string;
+  source_name: string;
+  media_type: VideoPlayerItemType;
+  byte_length: number;
+  part_index?: number;
+  part_total?: number;
+  start_ms?: number;
+  end_ms?: number;
+  duration_ms?: number;
 }
 
 export interface OfflineRecordingManifest {
-  version: number
-  recording_id: string
-  label: string
-  metadata: VideoPlayerMeta
-  entries: OfflineRecordingEntry[]
+  version: number;
+  recording_id: string;
+  label: string;
+  metadata: VideoPlayerMeta;
+  entries: OfflineRecordingEntry[];
 }
 
 export function useVideoPlayerTauri() {

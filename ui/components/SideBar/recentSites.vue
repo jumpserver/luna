@@ -1,13 +1,13 @@
 <script setup lang="ts">
 defineProps<{
-  sites: string[]
-  visible: boolean
+  sites: string[];
+  visible: boolean;
 }>();
 
 const emit = defineEmits<{
-  (e: "select", site: string): void
-  (e: "remove", site: string): void
-  (e: "clear"): void
+  (e: "select", site: string): void;
+  (e: "remove", site: string): void;
+  (e: "clear"): void;
 }>();
 
 const { t } = useI18n();
@@ -20,13 +20,7 @@ const { t } = useI18n();
         <span class="text-[11px] text-gray-500 dark:text-gray-400">
           {{ t("Login.RecentSites") }}
         </span>
-        <UButton
-          color="neutral"
-          variant="link"
-          size="xs"
-          :label="t('Login.ClearRecentSites')"
-          @click="emit('clear')"
-        />
+        <UButton color="neutral" variant="link" size="xs" :label="t('Login.ClearRecentSites')" @click="emit('clear')" />
       </div>
       <div class="mt-1 max-h-28 space-y-1 overflow-y-auto">
         <div v-for="site in sites" :key="site" class="flex items-center gap-1">
@@ -57,7 +51,9 @@ const { t } = useI18n();
 <style scoped>
 .recent-sites-enter-active,
 .recent-sites-leave-active {
-  transition: opacity 150ms ease, transform 150ms ease;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
 }
 
 .recent-sites-enter-from,

@@ -50,11 +50,7 @@ export async function fetchChenProfile(chenToken: string) {
   return readJson<ChenProfile>(response);
 }
 
-export async function uploadChenSqlFile(
-  chenToken: string,
-  file: File,
-  fetchImpl: typeof fetch = fetch
-) {
+export async function uploadChenSqlFile(chenToken: string, file: File, fetchImpl: typeof fetch = fetch) {
   const body = new FormData();
   body.append("file", file);
   const response = await fetchImpl(chenPath("/api/console/upload"), {
@@ -90,9 +86,10 @@ export async function fetchChenSqlHints(
 
   return Object.fromEntries(
     Object.entries(result)
-      .filter((entry): entry is [string, string[]] => (
-        Array.isArray(entry[1]) && entry[1].every((column) => typeof column === "string")
-      ))
+      .filter(
+        (entry): entry is [string, string[]] =>
+          Array.isArray(entry[1]) && entry[1].every((column) => typeof column === "string")
+      )
       .map(([table, columns]) => [table, [...columns]])
   );
 }
@@ -121,14 +118,16 @@ function contentDispositionFileName(value: string | null) {
     }
   }
 
-  return value.match(/filename\s*=\s*(?:"([^"]+)"|([^;]+))/i)?.slice(1).find(Boolean)?.trim() || "";
+  return (
+    value
+      .match(/filename\s*=\s*(?:"([^"]+)"|([^;]+))/i)
+      ?.slice(1)
+      .find(Boolean)
+      ?.trim() || ""
+  );
 }
 
-export async function fetchChenExport(
-  chenToken: string,
-  fileKey: string,
-  fetchImpl: typeof fetch = fetch
-) {
+export async function fetchChenExport(chenToken: string, fileKey: string, fetchImpl: typeof fetch = fetch) {
   const response = await fetchImpl(chenPath(`/api/console/export/${encodeURIComponent(fileKey)}`), {
     credentials: "include",
     headers: buildHeaders(chenToken)
@@ -189,5 +188,5 @@ export async function runChenAction(chenToken: string, node: ChenTreeNode, actio
     body: JSON.stringify({ node, action })
   });
 
-  return readJson<{ event: string, data: any }>(response);
+  return readJson<{ event: string; data: any }>(response);
 }

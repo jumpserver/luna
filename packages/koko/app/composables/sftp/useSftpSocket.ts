@@ -8,17 +8,15 @@ import { getCurrentInstance, onUnmounted, ref, shallowRef } from "vue";
 import {
   parseSftpIncomingMessage,
   SftpControlData,
-
   SftpMessageType,
-
   SftpSocketFailureCode,
   SftpWebSocketProtocol
-
 } from "./protocol";
 
 const SOCKET_OPEN = 1;
 const SOCKET_CLOSING = 2;
 const SOCKET_CLOSED = 3;
+const connectionTimeoutMs = 15_000;
 
 const messageId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
 
@@ -41,6 +39,12 @@ export function useSftpSocket(): SftpSocketClient {
   const failureListeners = new Set<(failure: SftpSocketFailure) => void>();
   let generation = 0;
   let intentionalClose = false;
+  let connectionTimeout: ReturnType<typeof setTimeout> | undefined;
+
+  function clearConnectionTimeout() {
+    clearTimeout(connectionTimeout);
+    connectionTimeout = undefined;
+  }
 
   function emitFailure(nextFailure: SftpSocketFailure) {
     failure.value = nextFailure;
@@ -60,13 +64,15 @@ export function useSftpSocket(): SftpSocketClient {
   }
 
   function close(notify = false) {
+    clearConnectionTimeout();
     generation += 1;
     intentionalClose = true;
     connected.value = false;
     const target = socket.value;
     socket.value = null;
     if (target && target.readyState !== SOCKET_CLOSING && target.readyState !== SOCKET_CLOSED) target.close();
-    if (notify) emitFailure({ code: SftpSocketFailureCode.ConnectionReset, message: SftpSocketFailureCode.ConnectionReset });
+    if (notify)
+      emitFailure({ code: SftpSocketFailureCode.ConnectionReset, message: SftpSocketFailureCode.ConnectionReset });
   }
 
   function connect(context: ConnectorSessionContext) {
@@ -78,8 +84,14 @@ export function useSftpSocket(): SftpSocketClient {
     socket.value = target;
 
     const isCurrent = () => generation === currentGeneration && socket.value === target;
+    connectionTimeout = setTimeout(() => {
+      if (!isCurrent()) return;
+      close();
+      emitFailure({ code: SftpSocketFailureCode.ConnectionFailed, message: SftpSocketFailureCode.ConnectionFailed });
+    }, connectionTimeoutMs);
     target.onopen = () => {
       if (!isCurrent()) return;
+      clearConnectionTimeout();
       connected.value = true;
     };
     target.onmessage = (event) => {
@@ -109,11 +121,13 @@ export function useSftpSocket(): SftpSocketClient {
     };
     target.onerror = () => {
       if (!isCurrent()) return;
+      clearConnectionTimeout();
       connected.value = false;
       emitFailure({ code: SftpSocketFailureCode.ConnectionFailed, message: SftpSocketFailureCode.ConnectionFailed });
     };
     target.onclose = () => {
       if (!isCurrent()) return;
+      clearConnectionTimeout();
       connected.value = false;
       socket.value = null;
       if (!intentionalClose) {

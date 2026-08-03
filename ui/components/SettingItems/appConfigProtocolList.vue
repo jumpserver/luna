@@ -2,8 +2,8 @@
 import type { AppConfigType, ConfigItem } from "~/types";
 
 const props = defineProps<{
-  category: keyof AppConfigType
-  protocol: string
+  category: keyof AppConfigType;
+  protocol: string;
 }>();
 
 const { t } = useI18n();
@@ -12,14 +12,10 @@ const { selectClient } = useApplicationConfig();
 
 const items = computed<ConfigItem[]>(() => {
   const list = appConfig.value?.[props.category] ?? [];
-  return list.filter((item) =>
-    item.name !== "builtin_client"
-    && item.protocol?.includes(props.protocol)
-  );
+  return list.filter((item) => item.name !== "builtin_client" && item.protocol?.includes(props.protocol));
 });
 
-const isSelected = (item: ConfigItem) =>
-  (item.enabled_protocols || item.match_first)?.includes(props.protocol);
+const isSelected = (item: ConfigItem) => (item.enabled_protocols || item.match_first)?.includes(props.protocol);
 const handleToggle = async (item: ConfigItem, enabled: boolean) => {
   await selectClient(props.category, props.protocol, item.name, enabled);
 };

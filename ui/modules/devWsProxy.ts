@@ -12,15 +12,15 @@ import { defineNuxtModule } from "nuxt/kit";
 // straight to the backend; everything else falls through to nuxi/Vite HMR.
 
 export interface WsRoute {
-  prefix: string
-  target: URL
-  rewrite?: (path: string) => string
+  prefix: string;
+  target: URL;
+  rewrite?: (path: string) => string;
 }
 
 export function collectWsRoutes(proxy: Record<string, unknown> | undefined): WsRoute[] {
   const routes: WsRoute[] = [];
   for (const [prefix, value] of Object.entries(proxy || {})) {
-    const opts = value as { ws?: boolean, target?: unknown, rewrite?: (path: string) => string };
+    const opts = value as { ws?: boolean; target?: unknown; rewrite?: (path: string) => string };
     if (!opts || typeof opts !== "object" || !opts.ws || typeof opts.target !== "string") continue;
     routes.push({ prefix, target: new URL(opts.target), rewrite: opts.rewrite });
   }
@@ -31,7 +31,7 @@ export function collectWsRoutes(proxy: Record<string, unknown> | undefined): WsR
 const isSecure = (target: URL) => target.protocol === "wss:" || target.protocol === "https:";
 
 export function buildUpgradeHead(
-  req: { method?: string, url?: string, headers: IncomingMessage["headers"] },
+  req: { method?: string; url?: string; headers: IncomingMessage["headers"] },
   route: WsRoute
 ): string {
   const path = route.rewrite ? route.rewrite(req.url || "/") : req.url || "/";

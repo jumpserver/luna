@@ -9,9 +9,7 @@ const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 
 const connectedTabs = computed(() =>
-  tabs.value.filter(
-    (tab) => !["sftp", "k8s", "kubernetes"].includes(tab.protocol) && tab.status === "connected"
-  )
+  tabs.value.filter((tab) => !["sftp", "k8s", "kubernetes"].includes(tab.protocol) && tab.status === "connected")
 );
 const canUseBatchCommand = computed(
   () => loggedIn.value || connectedTabs.value.some((tab) => tab.protocol === "local-shell")
@@ -72,16 +70,16 @@ const sendCommand = () => {
 
 <template>
   <div class="flex h-full min-h-0">
-    <div v-if="!canUseBatchCommand" class="grid min-h-0 flex-1 place-items-center px-4 text-xs text-gray-500 dark:text-gray-400">
+    <div
+      v-if="!canUseBatchCommand"
+      class="grid min-h-0 flex-1 place-items-center px-4 text-xs text-gray-500 dark:text-gray-400"
+    >
       {{ t("Common.LoginFirst") }}
     </div>
 
     <template v-else>
       <!-- Left: command input -->
-      <div
-        class="min-h-0 min-w-0 flex-1"
-        :style="{ borderRight: '1px solid var(--app-border)' }"
-      >
+      <div class="min-h-0 min-w-0 flex-1" :style="{ borderRight: '1px solid var(--app-border)' }">
         <div class="relative h-full min-h-0 p-3">
           <textarea
             v-model="batchCommand"
@@ -159,9 +157,7 @@ const sendCommand = () => {
               <div class="truncate text-[11px] font-medium text-gray-800 dark:text-gray-100">
                 {{ tab.assetName }}
               </div>
-              <div class="truncate font-ui-mono text-[10px] text-gray-400">
-                {{ tab.account }}@{{ tab.address }}
-              </div>
+              <div class="truncate font-ui-mono text-[10px] text-gray-400">{{ tab.account }}@{{ tab.address }}</div>
             </div>
           </button>
         </div>

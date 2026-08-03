@@ -1,5 +1,5 @@
 interface WorkspacePaneSurfaceHandle {
-  focus?: () => void
+  focus?: () => void;
 }
 
 const paneTargets = shallowReactive(new Map<string, HTMLElement>());
@@ -9,6 +9,7 @@ export function useWorkspacePaneSurfaceRegistry() {
   const getPaneTarget = (paneId: string) => paneTargets.get(paneId) || null;
 
   const registerPaneTarget = (paneId: string, target: HTMLElement) => {
+    if (paneTargets.get(paneId) === target) return;
     paneTargets.set(paneId, target);
   };
 
@@ -17,6 +18,7 @@ export function useWorkspacePaneSurfaceRegistry() {
   };
 
   const registerPaneSurface = (paneId: string, surface: WorkspacePaneSurfaceHandle) => {
+    if (paneSurfaces.get(paneId) === surface) return;
     paneSurfaces.set(paneId, surface);
   };
 

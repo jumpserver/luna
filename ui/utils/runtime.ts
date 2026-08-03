@@ -2,21 +2,19 @@ export const isTauriRuntime = () => {
   if (!import.meta.client) return false;
   const runtime = globalThis as any;
 
-  return Boolean(
-    runtime.__TAURI_INTERNALS__
-    || runtime.__TAURI__
-    || runtime.__TAURI_IPC__
-  );
+  return Boolean(runtime.__TAURI_INTERNALS__ || runtime.__TAURI__ || runtime.__TAURI_IPC__);
 };
 
 export const getCookieValue = (name: string) => {
   if (!import.meta.client) return "";
 
-  return document.cookie
-    .split(";")
-    .map((item) => item.trim())
-    .find((item) => item.startsWith(`${name}=`))
-    ?.slice(name.length + 1) || "";
+  return (
+    document.cookie
+      .split(";")
+      .map((item) => item.trim())
+      .find((item) => item.startsWith(`${name}=`))
+      ?.slice(name.length + 1) || ""
+  );
 };
 
 export const getWebOrgId = () => {
@@ -39,18 +37,16 @@ export const getWebApiMutationHeaders = (orgIdOverride?: string) => {
   const rawPrefix = decodeURIComponent(getCookieValue("SESSION_COOKIE_NAME_PREFIX") || "")
     .replace(/^['"]|['"]$/g, "")
     .trim();
-  const prefixCandidates = Array.from(new Set([
-    rawPrefix,
-    "jms_",
-    ""
-  ]));
-  const csrfCookieNames = prefixCandidates.flatMap((prefix) => [
-    `${prefix}csrftoken`,
-    `${prefix}csrf_token`
-  ]);
-  const csrfToken = csrfCookieNames
-    .map((name) => decodeURIComponent(getCookieValue(name) || "").replace(/^['"]|['"]$/g, "").trim())
-    .find((value) => value.length > 0) || "";
+  const prefixCandidates = Array.from(new Set([rawPrefix, "jms_", ""]));
+  const csrfCookieNames = prefixCandidates.flatMap((prefix) => [`${prefix}csrftoken`, `${prefix}csrf_token`]);
+  const csrfToken =
+    csrfCookieNames
+      .map((name) =>
+        decodeURIComponent(getCookieValue(name) || "")
+          .replace(/^['"]|['"]$/g, "")
+          .trim()
+      )
+      .find((value) => value.length > 0) || "";
 
   if (csrfToken) {
     headers["X-CSRFToken"] = csrfToken;
@@ -93,15 +89,13 @@ const joinPrefixedPath = (basePath: string, targetPath: string) => {
   const normalizedBaseWithoutSlash = normalizedBasePath.replace(/\/$/, "");
 
   if (
-    normalizedBasePath !== "/"
-    && (normalizedPath === normalizedBaseWithoutSlash || normalizedPath.startsWith(`${normalizedBaseWithoutSlash}/`))
+    normalizedBasePath !== "/" &&
+    (normalizedPath === normalizedBaseWithoutSlash || normalizedPath.startsWith(`${normalizedBaseWithoutSlash}/`))
   ) {
     return `${normalizedPath}${suffix}`;
   }
 
-  const joinedPath = normalizedBasePath === "/"
-    ? normalizedPath
-    : `${normalizedBaseWithoutSlash}${normalizedPath}`;
+  const joinedPath = normalizedBasePath === "/" ? normalizedPath : `${normalizedBaseWithoutSlash}${normalizedPath}`;
 
   return `${joinedPath.replace(/\/{2,}/g, "/")}${suffix}`;
 };
@@ -134,11 +128,13 @@ export const isWebAuthPath = (pathname = window.location.pathname) => {
   const sitePrefix = getWebSitePrefix(pathname);
   const authBase = sitePrefix ? `${sitePrefix}/core/auth/` : "/core/auth/";
 
-  return /(?:^|\/)core\/auth(?:\/|$)/.test(normalizedPath)
-    || normalizedPath === authBase.replace(/\/$/, "")
-    || normalizedPath.startsWith(authBase)
-    || normalizedPath === withWebSitePrefix("/login/", pathname).replace(/\/$/, "")
-    || normalizedPath.startsWith(withWebSitePrefix("/login/", pathname));
+  return (
+    /(?:^|\/)core\/auth(?:\/|$)/.test(normalizedPath) ||
+    normalizedPath === authBase.replace(/\/$/, "") ||
+    normalizedPath.startsWith(authBase) ||
+    normalizedPath === withWebSitePrefix("/login/", pathname).replace(/\/$/, "") ||
+    normalizedPath.startsWith(withWebSitePrefix("/login/", pathname))
+  );
 };
 
 export const redirectToWebLogin = () => {

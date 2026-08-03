@@ -85,7 +85,9 @@ const dataView = useChenDataView(sendConsoleAction);
 const consoleConnections = new Map<string, ReturnType<typeof useChenWebSocket>>();
 
 const currentWorkspaceNodeKey = computed(() => {
-  return tree.selectedNodeKey.value || workspace.activeWorkspaceTab.value?.nodeKey || tree.rootNodes.value[0]?.key || "";
+  return (
+    tree.selectedNodeKey.value || workspace.activeWorkspaceTab.value?.nodeKey || tree.rootNodes.value[0]?.key || ""
+  );
 });
 const currentWorkspaceNode = computed(() => tree.findNodeByKey(currentWorkspaceNodeKey.value));
 const currentContextLabel = computed(() => currentWorkspaceNode.value?.label || currentWorkspaceNode.value?.name || "");
@@ -122,12 +124,13 @@ const queryHints = useChenSqlHints(
 const session = useChenSession({
   authenticate: auth.authenticate,
   markConnected: () => markSessionConnected(props.tab.id),
-  markFailed: () => markSessionFailed({
-    tabId: props.tab.id,
-    assetId: props.tab.assetId,
-    protocol: props.tab.protocol,
-    account: props.tab.account
-  }),
+  markFailed: () =>
+    markSessionFailed({
+      tabId: props.tab.id,
+      assetId: props.tab.assetId,
+      protocol: props.tab.protocol,
+      account: props.tab.account
+    }),
   onBeforeReady: async () => {
     await auth.loadProfile();
     await tree.loadNodeChildren(null);
@@ -149,9 +152,11 @@ const session = useChenSession({
 async function downloadExportFile(fileKey: string) {
   const file = await fetchChenExport(auth.chenToken.value, fileKey);
   const result = await saveChenExport(file.blob, file.fileName);
-  toast.add(result === "saved"
-    ? { title: "Export downloaded", description: file.fileName, color: "success" }
-    : { title: "Export canceled", description: file.fileName, color: "neutral" });
+  toast.add(
+    result === "saved"
+      ? { title: "Export downloaded", description: file.fileName, color: "success" }
+      : { title: "Export canceled", description: file.fileName, color: "neutral" }
+  );
 }
 
 function initConsoleSocket(tab: ChenWorkspaceTab) {
@@ -247,15 +252,19 @@ function confirmDiscardChanges() {
   action?.();
 }
 
-function resultFailureDescription(result: { reason?: string, failedChangeIndex?: number | null } | null, fallback: string) {
+function resultFailureDescription(
+  result: { reason?: string; failedChangeIndex?: number | null } | null,
+  fallback: string
+) {
   const reason = result?.reason || fallback;
-  return result?.failedChangeIndex == null
-    ? reason
-    : `${reason}, failedChangeIndex=${result.failedChangeIndex}`;
+  return result?.failedChangeIndex == null ? reason : `${reason}, failedChangeIndex=${result.failedChangeIndex}`;
 }
 
 function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
-  if (tab.kind === "console" || (packet.type !== "save_changes_preview_result" && packet.type !== "save_changes_result")) {
+  if (
+    tab.kind === "console" ||
+    (packet.type !== "save_changes_preview_result" && packet.type !== "save_changes_result")
+  ) {
     return;
   }
 
@@ -287,7 +296,8 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
   if (outcome === "commit-unknown") {
     toast.add({
       title: "Save outcome is unknown",
-      description: "The connection was reset. Refresh to verify the database state before retrying; transaction and session state were lost.",
+      description:
+        "The connection was reset. Refresh to verify the database state before retrying; transaction and session state were lost.",
       color: "warning"
     });
     return;
@@ -303,11 +313,12 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
     const connectionDetail = result.connectionInvalidated
       ? "The connection was reset. Refresh before saving again; transaction and session state were lost."
       : "Refresh was skipped so the newer local edits are not discarded.";
-    const auditDetail = result.auditSucceeded === false
-      ? result.databaseCommitted
-        ? " Audit recording failed after the database commit; do not retry the save."
-        : " Audit recording failed after applying the current transaction; do not retry the save."
-      : "";
+    const auditDetail =
+      result.auditSucceeded === false
+        ? result.databaseCommitted
+          ? " Audit recording failed after the database commit; do not retry the save."
+          : " Audit recording failed after applying the current transaction; do not retry the save."
+        : "";
     toast.add({
       title: "Save applied; newer edits were kept",
       description: `${connectionDetail}${auditDetail}`,
@@ -320,9 +331,10 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
   if (result.connectionInvalidated) {
     toast.add({
       title: result.success ? "Save succeeded; connection reset" : "Database changes applied; connection reset",
-      description: result.auditSucceeded === false
-        ? "Transaction and session state were lost. Audit recording also failed; do not retry the save. Refreshing with a new connection."
-        : "Transaction and session state were lost. Refreshing with a new connection.",
+      description:
+        result.auditSucceeded === false
+          ? "Transaction and session state were lost. Audit recording also failed; do not retry the save. Refreshing with a new connection."
+          : "Transaction and session state were lost. Refreshing with a new connection.",
       color: "warning"
     });
   } else if (result.auditSucceeded === false) {
@@ -707,7 +719,10 @@ defineExpose({ focus });
         @menu="({ node, event }) => openNodeMenu(node, event)"
       />
 
-      <div class="w-1 shrink-0 cursor-col-resize bg-default/60 hover:bg-primary/40" @pointerdown.prevent="startResize" />
+      <div
+        class="w-1 shrink-0 cursor-col-resize bg-default/60 hover:bg-primary/40"
+        @pointerdown.prevent="startResize"
+      />
 
       <section class="flex min-h-0 min-w-0 flex-1 flex-col">
         <WorkspaceTabBar
@@ -766,11 +781,7 @@ defineExpose({ focus });
           />
         </div>
 
-        <ChenSessionState
-          v-else
-          icon="i-lucide-database-zap"
-          message="Select a database action to begin."
-        />
+        <ChenSessionState v-else icon="i-lucide-database-zap" message="Select a database action to begin." />
       </section>
     </div>
 
@@ -788,7 +799,11 @@ defineExpose({ focus });
       :items="contextMenuItems"
       :content="{ align: 'start', side: 'bottom' }"
       :ui="{ content: 'w-48 p-1' }"
-      @update:open="(open) => { if (!open) closeActionMenu() }"
+      @update:open="
+        (open) => {
+          if (!open) closeActionMenu();
+        }
+      "
     >
       <div
         class="pointer-events-none fixed"
@@ -813,7 +828,9 @@ defineExpose({ focus });
             </dd>
           </template>
         </dl>
-        <pre v-else class="whitespace-pre-wrap break-words p-4 text-sm text-muted">{{ session.dialogMessage.value?.text }}</pre>
+        <pre v-else class="whitespace-pre-wrap break-words p-4 text-sm text-muted">{{
+          session.dialogMessage.value?.text
+        }}</pre>
       </template>
     </UModal>
 

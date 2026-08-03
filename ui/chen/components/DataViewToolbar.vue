@@ -3,18 +3,21 @@ import type { ChenConsoleState, ChenDataViewAction } from "~/chen/types";
 
 import { getChenDataViewToolbarState } from "~/chen/composables/useChenDataView";
 
-const props = withDefaults(defineProps<{
-  state: ChenConsoleState
-  pinnable?: boolean
-  busy?: boolean
-}>(), {
-  pinnable: false,
-  busy: false
-});
+const props = withDefaults(
+  defineProps<{
+    state: ChenConsoleState;
+    pinnable?: boolean;
+    busy?: boolean;
+  }>(),
+  {
+    pinnable: false,
+    busy: false
+  }
+);
 
 const emit = defineEmits<{
-  action: [action: ChenDataViewAction, data?: number]
-  export: []
+  action: [action: ChenDataViewAction, data?: number];
+  export: [];
 }>();
 
 const limitOptions = [50, 100, 200, 500];
@@ -87,9 +90,7 @@ function requestExport() {
         @click="emit('action', 'last_page')"
       />
     </template>
-    <span v-else class="whitespace-nowrap px-1 text-xs text-muted">
-      {{ controls.total }} rows
-    </span>
+    <span v-else class="whitespace-nowrap px-1 text-xs text-muted">{{ controls.total }} rows</span>
 
     <UButton
       size="xs"

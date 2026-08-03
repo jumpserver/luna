@@ -4,15 +4,15 @@ import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = defineProps<{
-  search: string
-  open?: boolean
+  search: string;
+  open?: boolean;
 }>();
 
 const emit = defineEmits<{
-  select: [asset: AssetItem]
-  contextmenu: [asset: AssetItem, event: MouseEvent]
-  toggle: []
-  openMultiple: [assets: AssetItem[]]
+  select: [asset: AssetItem];
+  contextmenu: [asset: AssetItem, event: MouseEvent];
+  toggle: [];
+  openMultiple: [assets: AssetItem[]];
 }>();
 
 type PanelKind = Exclude<AssetTreeKind, "search">;
@@ -37,7 +37,7 @@ const checkedAssets = ref<Record<string, AssetItem>>({});
 const checkedNodeIds = ref<string[]>([]);
 const nodeMenuVisible = ref(false);
 const nodeMenuPosition = ref({ x: 0, y: 0 });
-const nodeMenuTarget = ref<{ node: AssetTreeNode, kind: PanelKind } | null>(null);
+const nodeMenuTarget = ref<{ node: AssetTreeNode; kind: PanelKind } | null>(null);
 let lastErrorSignature = "";
 let lastErrorAt = 0;
 
@@ -91,19 +91,23 @@ function buildRecentConnectionsNode(): AssetTreeNode {
   };
 }
 
-const treeSwitchLabel = computed(() => activeTreeKind.value === "authorization"
-  ? t("Tree.SwitchToType")
-  : t("Tree.SwitchToAuthorization"));
+const treeSwitchLabel = computed(() =>
+  activeTreeKind.value === "authorization" ? t("Tree.SwitchToType") : t("Tree.SwitchToAuthorization")
+);
 const checkedCount = computed(() => Object.keys(checkedAssets.value).length);
-const batchMenuItems = computed(() => [[{
-  label: t("Tree.OpenMultiple"),
-  icon: "i-lucide-list-checks",
-  onSelect: () => {
-    batchMode.value = true;
-    checkedAssets.value = {};
-    checkedNodeIds.value = [];
-  }
-}]]);
+const batchMenuItems = computed(() => [
+  [
+    {
+      label: t("Tree.OpenMultiple"),
+      icon: "i-lucide-list-checks",
+      onSelect: () => {
+        batchMode.value = true;
+        checkedAssets.value = {};
+        checkedNodeIds.value = [];
+      }
+    }
+  ]
+]);
 
 const resetTreeLevels = (nodes: AssetTreeNode[], level = 0) => {
   for (const node of nodes) {
@@ -119,12 +123,13 @@ const unwrapAllTypesRoot = (nodes: AssetTreeNode[]) => {
   return resetTreeLevels(root.children);
 };
 
-const removeFavoriteNodes = (nodes: AssetTreeNode[]): AssetTreeNode[] => nodes
-  .filter((node) => node.id.toLowerCase() !== "favorite" && node.key?.toLowerCase() !== "favorite")
-  .map((node) => ({
-    ...node,
-    children: node.children?.length ? removeFavoriteNodes(node.children) : node.children
-  }));
+const removeFavoriteNodes = (nodes: AssetTreeNode[]): AssetTreeNode[] =>
+  nodes
+    .filter((node) => node.id.toLowerCase() !== "favorite" && node.key?.toLowerCase() !== "favorite")
+    .map((node) => ({
+      ...node,
+      children: node.children?.length ? removeFavoriteNodes(node.children) : node.children
+    }));
 
 const reportError = (error: unknown) => {
   const title = t("Asset.GetAssetFailed");
@@ -340,44 +345,52 @@ const nodeMenuItems = computed<DropdownMenuItem[]>(() => {
 
   return [
     ...(canExpand
-      ? [{
-          label: t("Tree.Expand"),
-          icon: "i-lucide-chevron-right",
-          onSelect: async () => {
-            closeNodeMenu();
-            await toggleNode(node, kind);
-          }
-        } satisfies DropdownMenuItem]
+      ? [
+          {
+            label: t("Tree.Expand"),
+            icon: "i-lucide-chevron-right",
+            onSelect: async () => {
+              closeNodeMenu();
+              await toggleNode(node, kind);
+            }
+          } satisfies DropdownMenuItem
+        ]
       : []),
     ...(canCollapse
-      ? [{
-          label: t("Tree.Collapse"),
-          icon: "i-lucide-chevron-down",
-          onSelect: () => {
-            closeNodeMenu();
-            collapseNode(node);
-          }
-        } satisfies DropdownMenuItem]
+      ? [
+          {
+            label: t("Tree.Collapse"),
+            icon: "i-lucide-chevron-down",
+            onSelect: () => {
+              closeNodeMenu();
+              collapseNode(node);
+            }
+          } satisfies DropdownMenuItem
+        ]
       : []),
     ...(canExpandAll
-      ? [{
-          label: t("Tree.ExpandAll"),
-          icon: "i-lucide-chevrons-down",
-          onSelect: async () => {
-            closeNodeMenu();
-            await expandNodeRecursive(node, kind);
-          }
-        } satisfies DropdownMenuItem]
+      ? [
+          {
+            label: t("Tree.ExpandAll"),
+            icon: "i-lucide-chevrons-down",
+            onSelect: async () => {
+              closeNodeMenu();
+              await expandNodeRecursive(node, kind);
+            }
+          } satisfies DropdownMenuItem
+        ]
       : []),
     ...(canCollapseAll
-      ? [{
-          label: t("Tree.CollapseAll"),
-          icon: "i-lucide-chevrons-up",
-          onSelect: () => {
-            closeNodeMenu();
-            collapseNodeRecursive(node);
-          }
-        } satisfies DropdownMenuItem]
+      ? [
+          {
+            label: t("Tree.CollapseAll"),
+            icon: "i-lucide-chevrons-up",
+            onSelect: () => {
+              closeNodeMenu();
+              collapseNodeRecursive(node);
+            }
+          } satisfies DropdownMenuItem
+        ]
       : [])
   ];
 });
@@ -397,24 +410,34 @@ const searchTree = useDebounceFn(async (keyword: string) => {
   }
 }, 250);
 
-watch(() => props.search, (value) => searchTree(value));
-watch(() => props.search, (value) => {
-  if (value.trim()) {
-    closeBatchMode();
-    closeNodeMenu();
+watch(
+  () => props.search,
+  (value) => searchTree(value)
+);
+watch(
+  () => props.search,
+  (value) => {
+    if (value.trim()) {
+      closeBatchMode();
+      closeNodeMenu();
+    }
   }
-});
-watch([loggedIn, orgId], ([isLoggedIn]) => {
-  if (isLoggedIn) {
-    refresh();
-  } else {
-    authorizationNodes.value = [];
-    typeNodes.value = [];
-    searchNodes.value = [];
-    closeBatchMode();
-    closeNodeMenu();
-  }
-}, { immediate: true });
+);
+watch(
+  [loggedIn, orgId],
+  ([isLoggedIn]) => {
+    if (isLoggedIn) {
+      refresh();
+    } else {
+      authorizationNodes.value = [];
+      typeNodes.value = [];
+      searchNodes.value = [];
+      closeBatchMode();
+      closeNodeMenu();
+    }
+  },
+  { immediate: true }
+);
 
 defineExpose({ refresh, loading });
 </script>
@@ -426,12 +449,17 @@ defineExpose({ refresh, loading });
     role="tree"
     :aria-label="t('Menu.Resource')"
   >
-    <div v-if="!loggedIn" class="grid min-h-0 flex-1 place-items-center px-2.5 text-xs text-gray-500 dark:text-gray-400">
+    <div
+      v-if="!loggedIn"
+      class="grid min-h-0 flex-1 place-items-center px-2.5 text-xs text-gray-500 dark:text-gray-400"
+    >
       请先登录
     </div>
 
     <template v-else-if="search.trim()">
-      <div class="flex h-8 shrink-0 items-center border-b border-gray-200 px-2.5 text-xs font-medium dark:border-white/10">
+      <div
+        class="flex h-8 shrink-0 items-center border-b border-gray-200 px-2.5 text-xs font-medium dark:border-white/10"
+      >
         <UIcon name="i-lucide-search" class="mr-1.5 sidebar-icon" />
         <span class="truncate">{{ t("Operation.Search") }}</span>
       </div>
@@ -439,7 +467,13 @@ defineExpose({ refresh, loading });
         <div v-if="searchLoading" class="grid h-20 place-items-center">
           <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
         </div>
-        <UEmpty v-else-if="searchNodes.length === 0" icon="mingcute:inbox-line" size="sm" variant="naked" :title="t('Common.NoData')" />
+        <UEmpty
+          v-else-if="searchNodes.length === 0"
+          icon="mingcute:inbox-line"
+          size="sm"
+          variant="naked"
+          :title="t('Common.NoData')"
+        />
         <SideBarAssetTreeNode
           v-for="node in searchNodes"
           v-else
@@ -455,7 +489,9 @@ defineExpose({ refresh, loading });
 
     <template v-else>
       <section class="group flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div class="flex h-8 w-full shrink-0 items-center gap-1 px-2.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+        <div
+          class="flex h-8 w-full shrink-0 items-center gap-1 px-2.5 text-xs font-medium text-gray-700 dark:text-gray-300"
+        >
           <button
             type="button"
             class="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-left"
@@ -469,10 +505,7 @@ defineExpose({ refresh, loading });
             />
             <span class="min-w-0 flex-1 truncate">{{ activeTree.label }}</span>
           </button>
-          <div
-            v-if="batchMode"
-            class="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400"
-          >
+          <div v-if="batchMode" class="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
             <span class="hidden sm:inline">{{ t("Tree.SelectedCount", { count: checkedCount }) }}</span>
             <UButton
               color="primary"
@@ -496,7 +529,10 @@ defineExpose({ refresh, loading });
               @click="closeBatchMode"
             />
           </div>
-          <div v-else class="flex items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+          <div
+            v-else
+            class="flex items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+          >
             <UTooltip :text="treeSwitchLabel" :delay-duration="150">
               <UButton
                 color="neutral"
@@ -542,7 +578,13 @@ defineExpose({ refresh, loading });
           <div v-if="loading && activeTree.nodes.length === 0" class="grid h-20 place-items-center">
             <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
           </div>
-          <UEmpty v-else-if="activeTree.nodes.length === 0" icon="mingcute:inbox-line" size="sm" variant="naked" :title="t('Common.NoData')" />
+          <UEmpty
+            v-else-if="activeTree.nodes.length === 0"
+            icon="mingcute:inbox-line"
+            size="sm"
+            variant="naked"
+            :title="t('Common.NoData')"
+          />
           <SideBarAssetTreeNode
             v-for="node in activeTree.nodes"
             v-else

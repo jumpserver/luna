@@ -20,38 +20,36 @@ export const MAX_SIDEBAR_WIDTH = 420;
 export const DEFAULT_SIDEBAR_WIDTH = 220;
 
 export const normalizeSidebarWidth = (width: unknown) => {
-  const value = typeof width === "number" && Number.isFinite(width)
-    ? Math.round(width)
-    : DEFAULT_SIDEBAR_WIDTH;
+  const value = typeof width === "number" && Number.isFinite(width) ? Math.round(width) : DEFAULT_SIDEBAR_WIDTH;
 
   return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, value));
 };
 
 export interface UserSettingPersistedState {
-  language: LanguagePreference
-  collapse: boolean
-  sort: SortType
-  theme: ThemeType
-  themeMode: ThemeType
-  followSystem: boolean
-  layouts: LayoutsType
-  fontFamily: string
-  primaryColor: string
-  primaryColorLight: string
-  primaryColorDark: string
-  lightThemePreset: ThemePresetId
-  darkThemePreset: ThemePresetId
-  appConfig: AppConfigType | null
-  charset: CharsetType
-  rdpResolution: ResolutionType
-  backspaceAsCtrlH: boolean
-  keyboardLayout: string
-  rdpClientOption: string[]
-  rdpColorQuality: string
-  rdpSmartSize: string
-  recentSites: string[]
-  sidebarWidth: number
-  sidebarSections: SidebarSectionVisibility
+  language: LanguagePreference;
+  collapse: boolean;
+  sort: SortType;
+  theme: ThemeType;
+  themeMode: ThemeType;
+  followSystem: boolean;
+  layouts: LayoutsType;
+  fontFamily: string;
+  primaryColor: string;
+  primaryColorLight: string;
+  primaryColorDark: string;
+  lightThemePreset: ThemePresetId;
+  darkThemePreset: ThemePresetId;
+  appConfig: AppConfigType | null;
+  charset: CharsetType;
+  rdpResolution: ResolutionType;
+  backspaceAsCtrlH: boolean;
+  keyboardLayout: string;
+  rdpClientOption: string[];
+  rdpColorQuality: string;
+  rdpSmartSize: string;
+  recentSites: string[];
+  sidebarWidth: number;
+  sidebarSections: SidebarSectionVisibility;
 }
 
 const STORE_PATH = "user-setting.json";

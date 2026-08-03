@@ -1,169 +1,169 @@
 export interface ChenAuthResponse {
-  token: string
-  lang: string
+  token: string;
+  lang: string;
 }
 
 export interface ChenProfile {
-  dbType: string
-  canCopy: boolean
-  canPaste: boolean
+  dbType: string;
+  canCopy: boolean;
+  canPaste: boolean;
 }
 
 export interface ChenTreeNode {
-  key: string
-  name?: string
-  label?: string
-  type: string
-  leaf?: boolean
-  children?: ChenTreeNode[]
-  [key: string]: any
+  key: string;
+  name?: string;
+  label?: string;
+  type: string;
+  leaf?: boolean;
+  children?: ChenTreeNode[];
+  [key: string]: any;
 }
 
 export interface ChenActionItem {
-  key: string
-  label: string
-  icon?: string
-  disabled?: boolean
-  divided?: boolean
-  children?: ChenActionItem[]
+  key: string;
+  label: string;
+  icon?: string;
+  disabled?: boolean;
+  divided?: boolean;
+  children?: ChenActionItem[];
 }
 
 export interface ChenPacket<T = any> {
-  type: string
-  data: T
+  type: string;
+  data: T;
 }
 
 export interface ChenTabDefinition {
-  id: string
-  title: string
-  icon?: string
-  kind: "query" | "data-view" | "console"
-  nodeKey: string
-  connectionError?: string
+  id: string;
+  title: string;
+  icon?: string;
+  kind: "query" | "data-view" | "console";
+  nodeKey: string;
+  connectionError?: string;
 }
 
 export interface ChenDataViewMeta {
-  title: string
-  schema?: string
-  table?: string
-  [key: string]: any
+  title: string;
+  schema?: string;
+  table?: string;
+  [key: string]: any;
 }
 
 export interface ChenDataViewField {
-  name: string
-  label?: string
-  columnName?: string
-  schema?: string
-  table?: string
-  sourceSchema?: string
-  sourceTable?: string
-  sourceColumn?: string
-  type?: string
-  nullable?: boolean
-  isPrimaryKey?: boolean
-  primaryKey?: boolean
-  editable?: boolean
-  insertable?: boolean
-  editReason?: string
+  name: string;
+  label?: string;
+  columnName?: string;
+  schema?: string;
+  table?: string;
+  sourceSchema?: string;
+  sourceTable?: string;
+  sourceColumn?: string;
+  type?: string;
+  nullable?: boolean;
+  isPrimaryKey?: boolean;
+  primaryKey?: boolean;
+  editable?: boolean;
+  insertable?: boolean;
+  editReason?: string;
 }
 
 export type ChenDataViewExportScope = "current" | "all";
 export type ChenDataViewExportFormat = "csv" | "excel";
 
 export interface ChenDataViewExportOptions {
-  scope: ChenDataViewExportScope
-  format: ChenDataViewExportFormat
+  scope: ChenDataViewExportScope;
+  format: ChenDataViewExportFormat;
 }
 
 export interface ChenDataViewDataset {
-  fields: ChenDataViewField[]
-  data: Array<Record<string, any>>
-  editable?: boolean
-  editReason?: string
+  fields: ChenDataViewField[];
+  data: Array<Record<string, any>>;
+  editable?: boolean;
+  editReason?: string;
 }
 
 export interface ChenCellWriteValue {
-  value: any
-  valueIsNull: boolean
+  value: any;
+  valueIsNull: boolean;
 }
 
 export interface ChenCellChange {
-  pkColumn: string
-  pkValue: any
-  pkValueIsNull: boolean
-  sourceColumn: string
-  oldValue: any
-  oldValueIsNull: boolean
-  newValue: any
-  newValueIsNull: boolean
+  pkColumn: string;
+  pkValue: any;
+  pkValueIsNull: boolean;
+  sourceColumn: string;
+  oldValue: any;
+  oldValueIsNull: boolean;
+  newValue: any;
+  newValueIsNull: boolean;
 }
 
 export interface ChenInsertRowDraft {
-  id: number
-  data: Record<string, any>
-  values: Record<string, ChenCellWriteValue>
+  id: number;
+  data: Record<string, any>;
+  values: Record<string, ChenCellWriteValue>;
 }
 
 export interface ChenDeleteRow {
-  pkColumn: string
-  pkValue: any
-  pkValueIsNull: boolean
+  pkColumn: string;
+  pkValue: any;
+  pkValueIsNull: boolean;
 }
 
 export interface ChenSaveChangesPayload {
-  schema?: string
-  table?: string
-  changes: ChenCellChange[]
-  insertRows: Array<{ values: Record<string, ChenCellWriteValue> }>
-  deleteRows: ChenDeleteRow[]
+  schema?: string;
+  table?: string;
+  changes: ChenCellChange[];
+  insertRows: Array<{ values: Record<string, ChenCellWriteValue> }>;
+  deleteRows: ChenDeleteRow[];
 }
 
 export interface ChenSaveChangesResultBase {
-  success: boolean
-  allowed?: boolean
-  reason?: string
-  failedChangeIndex?: number | null
-  dataView?: string
-  schema?: string
-  table?: string
-  changeCount?: number
-  updateCount?: number
-  insertCount?: number
-  deleteCount?: number
+  success: boolean;
+  allowed?: boolean;
+  reason?: string;
+  failedChangeIndex?: number | null;
+  dataView?: string;
+  schema?: string;
+  table?: string;
+  changeCount?: number;
+  updateCount?: number;
+  insertCount?: number;
+  deleteCount?: number;
 }
 
 export interface ChenSaveChangesPreviewResult extends ChenSaveChangesResultBase {
-  auditSql?: string
+  auditSql?: string;
 }
 
 export interface ChenSaveChangesResult extends ChenSaveChangesResultBase {
-  databaseChangesApplied?: boolean
-  databaseCommitted?: boolean
-  auditSucceeded?: boolean
-  connectionInvalidated?: boolean
+  databaseChangesApplied?: boolean;
+  databaseCommitted?: boolean;
+  auditSucceeded?: boolean;
+  connectionInvalidated?: boolean;
 }
 
 export type ChenDataViewRequestKind = "data" | "preview" | "confirm" | "save";
 
 export interface ChenDataViewActiveRequest {
-  sequence: number
-  kind: ChenDataViewRequestKind
-  dirtyVersion: number
-  payload: ChenSaveChangesPayload | null
+  sequence: number;
+  kind: ChenDataViewRequestKind;
+  dirtyVersion: number;
+  payload: ChenSaveChangesPayload | null;
 }
 
 export interface ChenDataViewEditState {
-  dirtyCells: Record<string, ChenCellChange>
-  insertRows: ChenInsertRowDraft[]
-  deletedRows: Record<string, ChenDeleteRow>
-  nextInsertRowId: number
-  pendingSavePayload: ChenSaveChangesPayload | null
-  previewResult: ChenSaveChangesPreviewResult | null
-  saveResult: ChenSaveChangesResult | null
-  dirtyVersion: number
-  requestSequence: number
-  activeRequest: ChenDataViewActiveRequest | null
-  refreshRequiredBeforeSave: boolean
+  dirtyCells: Record<string, ChenCellChange>;
+  insertRows: ChenInsertRowDraft[];
+  deletedRows: Record<string, ChenDeleteRow>;
+  nextInsertRowId: number;
+  pendingSavePayload: ChenSaveChangesPayload | null;
+  previewResult: ChenSaveChangesPreviewResult | null;
+  saveResult: ChenSaveChangesResult | null;
+  dirtyVersion: number;
+  requestSequence: number;
+  activeRequest: ChenDataViewActiveRequest | null;
+  refreshRequiredBeforeSave: boolean;
 }
 
 export type ChenDataViewEditMode = "none" | "update" | "full";
@@ -171,104 +171,98 @@ export type ChenDataViewEditMode = "none" | "update" | "full";
 export type ChenSqlHints = Record<string, string[]>;
 
 export interface ChenConsoleState {
-  loading?: boolean
-  inQuery?: boolean
-  editorLoading?: boolean
-  canCancel?: boolean
-  currentContext?: string
-  contexts?: string[]
-  title?: string
-  page?: number
-  limit?: number
-  total?: number
-  paged?: boolean
-  pinned?: boolean
-  [key: string]: any
+  loading?: boolean;
+  inQuery?: boolean;
+  editorLoading?: boolean;
+  canCancel?: boolean;
+  currentContext?: string;
+  contexts?: string[];
+  title?: string;
+  page?: number;
+  limit?: number;
+  total?: number;
+  paged?: boolean;
+  pinned?: boolean;
+  [key: string]: any;
 }
 
 export interface ChenConsoleMessage {
-  type?: "error" | "success" | "info" | string
-  title?: string
-  message: string
-  sql?: string
-  [key: string]: any
+  type?: "error" | "success" | "info" | string;
+  title?: string;
+  message: string;
+  sql?: string;
+  [key: string]: any;
 }
 
 export interface ChenQueryResultTab {
-  id: string
-  title: string
-  meta: ChenDataViewMeta
-  data: ChenDataViewDataset | null
-  state: ChenConsoleState
-  editState: ChenDataViewEditState
+  id: string;
+  title: string;
+  meta: ChenDataViewMeta;
+  data: ChenDataViewDataset | null;
+  state: ChenConsoleState;
+  editState: ChenDataViewEditState;
 }
 
 export interface ChenConsoleHistoryEntry {
-  id: string
-  sql: string
+  id: string;
+  sql: string;
 }
 
 export interface ChenQueryConsoleTab extends ChenTabDefinition {
-  kind: "query"
-  statement: string
-  uploadingSql: boolean
-  sqlHints: ChenSqlHints
-  hintsContext: string
-  hintsLoading: boolean
-  hintsRequestGeneration: number
-  state: ChenConsoleState
-  logs: string[]
-  message: ChenConsoleMessage | null
-  resultTabs: ChenQueryResultTab[]
-  activeResultTabId: string
-  socket: WebSocket | null
+  kind: "query";
+  statement: string;
+  uploadingSql: boolean;
+  sqlHints: ChenSqlHints;
+  hintsContext: string;
+  hintsLoading: boolean;
+  hintsRequestGeneration: number;
+  state: ChenConsoleState;
+  logs: string[];
+  message: ChenConsoleMessage | null;
+  resultTabs: ChenQueryResultTab[];
+  activeResultTabId: string;
+  socket: WebSocket | null;
 }
 
 export interface ChenPromptConsoleTab extends ChenTabDefinition {
-  kind: "console"
-  pendingSql: string
-  state: ChenConsoleState
-  logs: string[]
-  message: ChenConsoleMessage | null
-  historyEntries: ChenConsoleHistoryEntry[]
-  resultTabs: ChenQueryResultTab[]
-  activeResultTabId: string
-  socket: WebSocket | null
+  kind: "console";
+  pendingSql: string;
+  state: ChenConsoleState;
+  logs: string[];
+  message: ChenConsoleMessage | null;
+  historyEntries: ChenConsoleHistoryEntry[];
+  resultTabs: ChenQueryResultTab[];
+  activeResultTabId: string;
+  socket: WebSocket | null;
 }
 
 export type ChenQueryLikeWorkspaceTab = ChenQueryConsoleTab | ChenPromptConsoleTab;
 
-export type ChenDataViewPropertyTab
-  = | "basic"
-    | "columns"
-    | "indexes"
-    | "foreignKeys"
-    | "constraints"
-    | "ddl";
+export type ChenDataViewPropertyTab = "basic" | "columns" | "indexes" | "foreignKeys" | "constraints" | "ddl";
 
 export interface ChenDataViewConsoleTab extends ChenTabDefinition {
-  kind: "data-view"
-  meta: ChenDataViewMeta | null
-  data: ChenDataViewDataset | null
-  state: ChenConsoleState
-  editState: ChenDataViewEditState
-  logs: string[]
-  activePanel: "data" | "properties"
-  activePropertyTab: ChenDataViewPropertyTab
-  socket: WebSocket | null
+  kind: "data-view";
+  meta: ChenDataViewMeta | null;
+  data: ChenDataViewDataset | null;
+  state: ChenConsoleState;
+  editState: ChenDataViewEditState;
+  logs: string[];
+  activePanel: "data" | "properties";
+  activePropertyTab: ChenDataViewPropertyTab;
+  socket: WebSocket | null;
 }
 
-export type ChenDataViewAction
-  = | "first_page"
-    | "prev_page"
-    | "next_page"
-    | "last_page"
-    | "refresh"
-    | "change_limit"
-    | "toggle_pinned"
-    | "export"
-    | "save_changes_preview"
-    | "save_changes";
+export type ChenDataViewAction =
+  | "first_page"
+  | "prev_page"
+  | "next_page"
+  | "last_page"
+  | "refresh"
+  | "change_limit"
+  | "toggle_pinned"
+  | "export"
+  | "save_changes_preview"
+  | "save_changes";
 
 export type ChenDataViewActionData = number | ChenDataViewExportOptions | ChenSaveChangesPayload;
 
@@ -277,6 +271,6 @@ export type ChenDataViewActionTarget = ChenQueryResultTab | ChenDataViewConsoleT
 export type ChenWorkspaceTab = ChenQueryLikeWorkspaceTab | ChenDataViewConsoleTab;
 
 export interface ChenSocketAction {
-  type: string
-  data?: any
+  type: string;
+  data?: any;
 }

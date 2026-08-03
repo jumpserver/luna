@@ -2,7 +2,7 @@
 import type { ReplayMetadata } from "~/store/modules/transcode";
 
 defineProps<{
-  metadata: ReplayMetadata
+  metadata: ReplayMetadata;
 }>();
 
 const { t } = useI18n();
@@ -12,22 +12,12 @@ const formatMetaDate = (raw: string | undefined | null): string => {
   const str = raw.trim();
   if (!str) return "-";
 
-  const m = str.match(
-    /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?\s*(Z|[+-]\d{2}:?\d{2})?$/
-  );
+  const m = str.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?\s*(Z|[+-]\d{2}:?\d{2})?$/);
   if (!m) return str;
 
   const [, Y, M, D, h, mi, s, _ms, tzRaw] = m;
   const ms = (_ms ?? "").slice(0, 3).padEnd(3, "0");
-  const utcMs = Date.UTC(
-    Number(Y),
-    Number(M) - 1,
-    Number(D),
-    Number(h),
-    Number(mi),
-    Number(s),
-    Number(ms)
-  );
+  const utcMs = Date.UTC(Number(Y), Number(M) - 1, Number(D), Number(h), Number(mi), Number(s), Number(ms));
 
   let localMs = utcMs;
   if (tzRaw && tzRaw !== "Z") {

@@ -1,7 +1,7 @@
 export interface EditorThemePresetOption {
-  id: string
-  label: string
-  source: "follow-app" | "built-in"
+  id: string;
+  label: string;
+  source: "follow-app" | "built-in";
 }
 
 export const EDITOR_THEME_PRESETS: EditorThemePresetOption[] = [

@@ -33,7 +33,7 @@ export function quoteChenIdentifier(dbType: string, identifier: string) {
     case "db2":
     case "dm":
     case "dameng":
-      return `"${identifier.replaceAll("\"", "\"\"")}"`;
+      return `"${identifier.replaceAll('"', '""')}"`;
     default:
       throw new Error(`Unsupported database type: ${dbType}`);
   }
@@ -57,13 +57,11 @@ export function formatChenSqlLiteral(dbType: string, value: unknown) {
 function formatChenTsvValue(value: unknown) {
   const text = value == null ? "NULL" : String(value);
   if (!/[\t\r\n"]/.test(text)) return text;
-  return `"${text.replaceAll("\"", "\"\"")}"`;
+  return `"${text.replaceAll('"', '""')}"`;
 }
 
 export function formatChenTsv(rows: ChenDataRow[], fields: Pick<ChenDataViewField, "name">[]) {
-  return rows
-    .map((row) => fields.map((field) => formatChenTsvValue(row[field.name])).join("\t"))
-    .join("\n");
+  return rows.map((row) => fields.map((field) => formatChenTsvValue(row[field.name])).join("\t")).join("\n");
 }
 
 function quoteTable(dbType: string, meta: ChenDataViewMeta) {
@@ -115,14 +113,18 @@ export function createChenUpdateSql(
   }
 
   const table = quoteTable(dbType, meta);
-  const assignments = writableFields.map((field) => {
-    return `${quoteChenIdentifier(dbType, fieldColumn(field))} = ${formatChenSqlLiteral(dbType, row[field.name])}`;
-  }).join(", ");
-  const conditions = primaryFields.map((field) => {
-    const identifier = quoteChenIdentifier(dbType, fieldColumn(field));
-    const value = formatChenSqlLiteral(dbType, row[field.name]);
-    return value === "NULL" ? `${identifier} IS NULL` : `${identifier} = ${value}`;
-  }).join(" AND ");
+  const assignments = writableFields
+    .map((field) => {
+      return `${quoteChenIdentifier(dbType, fieldColumn(field))} = ${formatChenSqlLiteral(dbType, row[field.name])}`;
+    })
+    .join(", ");
+  const conditions = primaryFields
+    .map((field) => {
+      const identifier = quoteChenIdentifier(dbType, fieldColumn(field));
+      const value = formatChenSqlLiteral(dbType, row[field.name]);
+      return value === "NULL" ? `${identifier} IS NULL` : `${identifier} = ${value}`;
+    })
+    .join(" AND ");
 
   return `UPDATE ${table} SET ${assignments} WHERE ${conditions};`;
 }

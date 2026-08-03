@@ -1,0 +1,10 @@
+:root[data-theme-preset="min"] {
+  --theme-bg: #ffffff;
+  --theme-fg: #212121;
+  --theme-muted: #757575;
+  --theme-border: #e9e9e9;
+  --theme-accent: #757575;
+  --theme-surface: #f6f6f6;
+  --theme-surface-hover: #dddddd;
+  --theme-shadow-soft: 0 1px 2px rgba(33, 33, 33, 0.04), 0 2px 8px rgba(33, 33, 33, 0.03);
+}

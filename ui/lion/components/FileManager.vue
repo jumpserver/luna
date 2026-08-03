@@ -1,28 +1,28 @@
 <script lang="ts" setup>
-import type { LionUploadCustomRequestOptions, LionUploadFileInfo } from '@/lion/types/upload';
-import { useDebounceFn } from '@vueuse/core';
-import { computed, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import type { LionUploadCustomRequestOptions, LionUploadFileInfo } from "@/lion/types/upload";
+import { useDebounceFn } from "@vueuse/core";
+import { computed, ref } from "vue";
+import { useI18n } from "vue-i18n";
 
 const props = defineProps<{
-  files: RowData[]
-  name: string
-  folder: any
-  loading: boolean
-  displayUploadingFiles: LionUploadFileInfo[]
+  files: RowData[];
+  name: string;
+  folder: any;
+  loading: boolean;
+  displayUploadingFiles: LionUploadFileInfo[];
 }>();
-const emit = defineEmits(['openFolder', 'downloadFile', 'uploadFile', 'removeUploadFile']);
+const emit = defineEmits(["openFolder", "downloadFile", "uploadFile", "removeUploadFile"]);
 const { t } = useI18n();
 
 interface RowData {
-  name: string
-  is_dir: boolean
-  size?: number
-  [key: string]: any
+  name: string;
+  is_dir: boolean;
+  size?: number;
+  [key: string]: any;
 }
 
 const storeBackFolders = ref<any>([]);
-const searchValue = ref('');
+const searchValue = ref("");
 const showContextMenu = ref(false);
 const contextPos = ref({ x: 0, y: 0 });
 const currentRowData = ref<RowData | null>(null);
@@ -31,17 +31,17 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
 const handlePathBack = () => {
   if (!props.folder?.parent) return;
   storeBackFolders.value.push(props.folder);
-  emit('openFolder', props.folder.parent);
+  emit("openFolder", props.folder.parent);
 };
 
 const handlePathForward = () => {
   const nextFolder = storeBackFolders.value.pop();
-  if (nextFolder) emit('openFolder', nextFolder);
+  if (nextFolder) emit("openFolder", nextFolder);
 };
 
 const handlePathClick = (item: any) => {
   storeBackFolders.value.length = 0;
-  emit('openFolder', item.row);
+  emit("openFolder", item.row);
 };
 
 const filePathList = computed(() => {
@@ -79,14 +79,14 @@ const openContextMenu = (event: MouseEvent, row: RowData) => {
 
 const handleDownload = () => {
   showContextMenu.value = false;
-  if (currentRowData.value) emit('downloadFile', currentRowData.value);
+  if (currentRowData.value) emit("downloadFile", currentRowData.value);
 };
 
 const handleRowClick = (row: RowData) => {
-  if (row.is_dir) emit('openFolder', row);
+  if (row.is_dir) emit("openFolder", row);
 };
 
-const handleRefresh = () => emit('openFolder', props.folder);
+const handleRefresh = () => emit("openFolder", props.folder);
 
 const handleFileInput = (event: Event) => {
   const input = event.target as HTMLInputElement;
@@ -101,30 +101,48 @@ const handleFileInput = (event: Event) => {
         batchId: `batch-id-${fileObj.name}`,
         percentage: 0,
         type: fileObj.type,
-        status: 'pending',
+        status: "pending",
         file: fileObj
       }
     };
-    emit('uploadFile', uploadOptions, props.folder);
+    emit("uploadFile", uploadOptions, props.folder);
   });
 
-  input.value = '';
+  input.value = "";
 };
 
 const removeUploadList = (file: LionUploadFileInfo) => {
-  emit('removeUploadFile', file);
+  emit("removeUploadFile", file);
 };
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex items-center gap-2 overflow-x-auto">
-      <UButton icon="i-lucide-chevron-left" color="neutral" variant="ghost" size="xs" :disabled="disabledBack" @click="handlePathBack" />
-      <UButton icon="i-lucide-chevron-right" color="neutral" variant="ghost" size="xs" :disabled="disabledForward" @click="handlePathForward" />
+      <UButton
+        icon="i-lucide-chevron-left"
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        :disabled="disabledBack"
+        @click="handlePathBack"
+      />
+      <UButton
+        icon="i-lucide-chevron-right"
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        :disabled="disabledForward"
+        @click="handlePathForward"
+      />
 
       <div class="flex min-w-0 items-center gap-1 overflow-x-auto">
         <template v-for="item of filePathList" :key="item.id">
-          <button type="button" class="inline-flex items-center gap-1 whitespace-nowrap text-sm" @click="handlePathClick(item)">
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 whitespace-nowrap text-sm"
+            @click="handlePathClick(item)"
+          >
             <UIcon name="i-lucide-folder" class="size-4" />
             <span :class="item.active ? 'font-semibold' : ''">{{ item.name }}</span>
           </button>
@@ -134,20 +152,15 @@ const removeUploadList = (file: LionUploadFileInfo) => {
     </div>
 
     <div class="flex items-center gap-2">
-      <UInput
-        v-model="searchValue"
-        :placeholder="t('PleaseInput')"
-        class="flex-1"
-        @change="handleSearch"
-      >
+      <UInput v-model="searchValue" :placeholder="t('PleaseInput')" class="flex-1" @change="handleSearch">
         <template #leading>
           <UIcon name="i-lucide-search" class="size-4" />
         </template>
       </UInput>
 
-      <input ref="fileInputRef" type="file" multiple class="hidden" @change="handleFileInput">
+      <input ref="fileInputRef" type="file" multiple class="hidden" @change="handleFileInput" />
       <UButton icon="i-lucide-upload" color="neutral" variant="soft" size="sm" @click="fileInputRef?.click()">
-        {{ t('UploadFile') }}
+        {{ t("UploadFile") }}
       </UButton>
       <UButton icon="i-lucide-refresh-ccw" color="neutral" variant="ghost" size="sm" @click="handleRefresh" />
     </div>
@@ -157,7 +170,7 @@ const removeUploadList = (file: LionUploadFileInfo) => {
         <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
       </div>
       <div v-else-if="!dataList.length" class="p-8 text-center text-sm text-muted">
-        {{ t('NoData') }}
+        {{ t("NoData") }}
       </div>
       <div v-else class="max-h-[calc(100vh-420px)] overflow-auto">
         <button
@@ -183,7 +196,7 @@ const removeUploadList = (file: LionUploadFileInfo) => {
           <div class="flex items-center gap-2">
             <span class="text-muted">{{ file.status }}</span>
             <UButton color="neutral" variant="ghost" size="xs" @click="removeUploadList(file)">
-              {{ t('Remove') }}
+              {{ t("Remove") }}
             </UButton>
           </div>
         </div>
@@ -196,7 +209,7 @@ const removeUploadList = (file: LionUploadFileInfo) => {
       :style="{ left: `${contextPos.x}px`, top: `${contextPos.y}px` }"
     >
       <UButton icon="i-lucide-download" color="neutral" variant="ghost" block @click="handleDownload">
-        {{ t('Download') }}
+        {{ t("Download") }}
       </UButton>
     </div>
   </div>

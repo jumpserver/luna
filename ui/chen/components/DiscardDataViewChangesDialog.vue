@@ -1,11 +1,11 @@
 <script setup lang="ts">
 const props = defineProps<{
-  open: boolean
+  open: boolean;
 }>();
 
 const emit = defineEmits<{
-  "update:open": [open: boolean]
-  confirm: []
+  "update:open": [open: boolean];
+  confirm: [];
 }>();
 
 const visible = computed({
@@ -26,19 +26,13 @@ function confirmDiscard() {
 <template>
   <UModal v-model:open="visible" title="Discard unsaved changes?">
     <template #body>
-      <p class="text-sm text-muted">
-        This data view has unsaved edits. Discard them and continue?
-      </p>
+      <p class="text-sm text-muted">This data view has unsaved edits. Discard them and continue?</p>
     </template>
 
     <template #footer>
       <div class="flex w-full justify-end gap-2">
-        <UButton color="neutral" variant="soft" @click="close">
-          Cancel
-        </UButton>
-        <UButton color="error" icon="i-lucide-trash-2" @click="confirmDiscard">
-          Discard
-        </UButton>
+        <UButton color="neutral" variant="soft" @click="close">Cancel</UButton>
+        <UButton color="error" icon="i-lucide-trash-2" @click="confirmDiscard">Discard</UButton>
       </div>
     </template>
   </UModal>

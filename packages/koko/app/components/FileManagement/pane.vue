@@ -1,32 +1,50 @@
 <script setup lang="ts">
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
-import type { TableColumn, TableRow } from "@nuxt/ui";
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
+import type { FileTransferEndpointRef } from "~/shared/file-transfer/types";
 import prettyBytes from "pretty-bytes";
 
 import { useSftpFileManager } from "#koko/composables/sftp/useSftpFileManager";
+import { registerFileTransferEndpoint } from "~/shared/file-transfer/registry";
+import { useFileTransferStore } from "~/store/modules/fileTransfer";
 
 const props = defineProps<{
   context: ConnectorSessionContext | null;
   title?: string;
+  transferEndpoint?: FileTransferEndpointRef;
 }>();
 
 const emit = defineEmits<{
   select: [entry: SftpFileEntry | null];
+  transferDrop: [payload: SftpTransferDropPayload];
 }>();
+
+interface SftpTransferDropPayload {
+  sourceEndpoint: FileTransferEndpointRef;
+  sourcePath: string;
+  entries: Array<Pick<SftpFileEntry, "name" | "size">>;
+  destinationPath: string;
+}
 
 const { t } = useI18n();
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const contextRef = computed(() => props.context);
-const manager = useSftpFileManager(contextRef);
+const manager = useSftpFileManager(contextRef, props.transferEndpoint);
+const transferStore = useFileTransferStore();
+
+let unregisterTransferEndpoint: (() => void) | undefined;
+
 const search = ref("");
 const uploadInput = ref<HTMLInputElement | null>(null);
 const selectedEntry = ref<SftpFileEntry | null>(null);
 const hoveredEntryName = ref<string | null>(null);
+
 const promptOpen = ref(false);
 const promptName = ref("");
 const promptTarget = ref<SftpFileEntry | null>(null);
+const promptKind = ref<"folder" | "file">("folder");
+
 const alertOpen = ref(false);
 const alertTarget = ref<{ kind: "delete" | "download"; entry: SftpFileEntry } | null>(null);
 
@@ -48,40 +66,6 @@ function navigateToPath(segmentIndex: number) {
   void manager.loadCurrentDirectory(path);
 }
 
-const columns: TableColumn<SftpFileEntry>[] = [
-  {
-    id: "select",
-    header: "",
-    meta: { class: { th: "w-[38px] px-3.5", td: "w-[38px] px-3.5" } }
-  },
-  {
-    accessorKey: "name",
-    header: t("koko.fileManagement.name"),
-    meta: { class: { th: "min-w-0", td: "min-w-0" } }
-  },
-  {
-    accessorKey: "size",
-    header: t("koko.fileManagement.size"),
-    meta: { class: { th: "w-[110px] text-right", td: "w-[110px] text-right" } }
-  },
-  {
-    accessorKey: "mod_time",
-    header: t("koko.fileManagement.modifiedTime"),
-    meta: { class: { th: "hidden w-[168px] text-right md:table-cell", td: "hidden w-[168px] text-right md:table-cell" } }
-  },
-  {
-    accessorKey: "perm",
-    header: t("koko.fileManagement.permissions"),
-    meta: { class: { th: "hidden w-[128px] text-right md:table-cell", td: "hidden w-[128px] text-right md:table-cell" } }
-  }
-];
-const tableMeta = {
-  class: {
-    tr: (row: TableRow<SftpFileEntry>) =>
-      selectedEntry.value?.name === row.original.name && row.original.name !== ".." ? "bg-(--app-selected-soft)" : ""
-  }
-};
-
 function formatFileSize(value: string) {
   const bytes = Number(value);
   return Number.isFinite(bytes) && bytes >= 0 ? prettyBytes(bytes) : value || "—";
@@ -98,8 +82,13 @@ function formatModifiedTime(value: string) {
   const twoDigits = (part: number) => String(part).padStart(2, "0");
   return `${date.getFullYear()}-${twoDigits(date.getMonth() + 1)}-${twoDigits(date.getDate())} ${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`;
 }
+
 const promptTitle = computed(() =>
-  promptTarget.value ? t("koko.actions.rename") : t("koko.fileManagement.newFolder")
+  promptTarget.value
+    ? t("koko.actions.rename")
+    : promptKind.value === "file"
+      ? t("koko.fileManagement.newFile")
+      : t("koko.fileManagement.newFolder")
 );
 const promptConfirmLabel = computed(() => (promptTarget.value ? t("koko.actions.rename") : t("koko.actions.confirm")));
 const promptDisabled = computed(() => {
@@ -111,26 +100,75 @@ const alertTitle = computed(() =>
 );
 const alertDescription = computed(() => {
   if (!alertTarget.value) return "";
-  if (alertTarget.value.kind === "delete") return t("koko.fileManagement.deleteConfirm", { name: alertTarget.value.entry.name });
+  if (alertTarget.value.kind === "delete")
+    return t("koko.fileManagement.deleteConfirm", { name: alertTarget.value.entry.name });
   return t("koko.fileManagement.downloadFolderConfirm");
 });
 
 watch(selectedEntry, (entry) => emit("select", entry));
+
+watch(manager.connected, (connected) => {
+  if (connected) transferStore.kick();
+});
+
+onMounted(() => {
+  if (manager.transferEndpoint) unregisterTransferEndpoint = registerFileTransferEndpoint(manager.transferEndpoint);
+});
+
+onUnmounted(() => {
+  unregisterTransferEndpoint?.();
+  if (props.transferEndpoint) transferStore.pauseEndpoint(props.transferEndpoint);
+});
 
 const selectEntry = (entry: SftpFileEntry) => {
   if (entry.name === "..") return;
   selectedEntry.value = entry;
 };
 
-const toggleSelection = (entry: SftpFileEntry) => {
-  if (entry.name === "..") return;
-  selectedEntry.value = selectedEntry.value?.name === entry.name ? null : entry;
-};
+function isSelected(entry: SftpFileEntry) {
+  return selectedEntry.value?.name === entry.name;
+}
 
-const selectTableRow = (_event: Event, row: TableRow<SftpFileEntry>) => selectEntry(row.original);
-const hoverTableRow = (_event: Event, row: TableRow<SftpFileEntry> | null) => {
-  hoveredEntryName.value = row?.original.name ?? null;
-};
+function onDragStart(event: DragEvent, entry: SftpFileEntry) {
+  if (entry.is_dir || entry.name === ".." || !props.transferEndpoint) {
+    event.preventDefault();
+    return;
+  }
+
+  selectEntry(entry);
+
+  const payload = {
+    sourceEndpoint: props.transferEndpoint,
+    sourcePath: manager.currentPath.value,
+    entries: [{ name: entry.name, size: entry.size }]
+  };
+
+  event.dataTransfer?.setData("application/x-jumpserver-sftp-files", JSON.stringify(payload));
+  event.dataTransfer?.setData("text/plain", payload.entries.map((item) => item.name).join("\n"));
+
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = "copy";
+}
+
+function onTransferDrop(event: DragEvent) {
+  const encoded = event.dataTransfer?.getData("application/x-jumpserver-sftp-files");
+  if (!encoded) return;
+
+  try {
+    const payload = JSON.parse(encoded) as Omit<SftpTransferDropPayload, "destinationPath">;
+    if (
+      !payload.sourceEndpoint?.id ||
+      !payload.sourcePath ||
+      !Array.isArray(payload.entries) ||
+      !props.transferEndpoint
+    ) {
+      return;
+    }
+
+    emit("transferDrop", { ...payload, destinationPath: manager.currentPath.value });
+  } catch {
+    // Ignore drops from an unrelated or malformed drag source.
+  }
+}
 
 async function refreshCurrentDirectory() {
   const refreshed = await manager.loadCurrentDirectory();
@@ -152,6 +190,14 @@ async function runFileOperation(operation: () => Promise<void>, successTitle: st
 
 const createFolder = () => {
   promptTarget.value = null;
+  promptKind.value = "folder";
+  promptName.value = "";
+  promptOpen.value = true;
+};
+
+const createFile = () => {
+  promptTarget.value = null;
+  promptKind.value = "file";
   promptName.value = "";
   promptOpen.value = true;
 };
@@ -188,12 +234,22 @@ const downloadSelected = () => {
 const submitPrompt = async () => {
   const name = promptName.value.trim();
   const target = promptTarget.value;
+  const isNewFile = promptKind.value === "file";
   if (!name || (target && name === target.name)) return;
   const success = await runFileOperation(
-    () => target ? manager.operations.renameEntry(target, name) : manager.operations.createDirectory(name),
+    () => {
+      if (target) return manager.operations.renameEntry(target, name);
+      if (isNewFile) {
+        const directory = manager.currentPath.value.replace(/\/$/, "") || "/";
+        return manager.operations.createFileAt(`${directory}/${name}`.replace(/\/+/g, "/"));
+      }
+      return manager.operations.createDirectory(name);
+    },
     target
       ? t("koko.fileManagement.entryRenamed", { name })
-      : t("koko.fileManagement.folderCreated", { name }),
+      : isNewFile
+        ? t("koko.fileManagement.fileCreated", { name })
+        : t("koko.fileManagement.folderCreated", { name }),
     true
   );
   if (success) {
@@ -205,16 +261,17 @@ const submitPrompt = async () => {
 const confirmAlert = async () => {
   const target = alertTarget.value;
   if (!target) return;
-  const success = target.kind === "delete"
-    ? await runFileOperation(
-        () => manager.operations.removeEntry(target.entry),
-        t("koko.fileManagement.entryDeleted", { name: target.entry.name }),
-        true
-      )
-    : await runFileOperation(
-        () => manager.operations.downloadEntry(target.entry),
-        t("koko.fileManagement.entryDownloaded", { name: target.entry.name })
-      );
+  const success =
+    target.kind === "delete"
+      ? await runFileOperation(
+          () => manager.operations.removeEntry(target.entry),
+          t("koko.fileManagement.entryDeleted", { name: target.entry.name }),
+          true
+        )
+      : await runFileOperation(
+          () => manager.operations.downloadEntry(target.entry),
+          t("koko.fileManagement.entryDownloaded", { name: target.entry.name })
+        );
   if (success) {
     if (target.kind === "delete") selectedEntry.value = null;
     alertOpen.value = false;
@@ -225,9 +282,12 @@ const uploadFromEvent = async (event: Event) => {
   const input = event.target as HTMLInputElement;
   const files = [...(input.files || [])];
   input.value = "";
+
   if (!files.length) return;
+
   const results = await Promise.allSettled(files.map((file) => manager.operations.uploadFile(file)));
   const success = results.filter((result) => result.status === "fulfilled").length;
+
   if (success) {
     toast.add({
       title:
@@ -238,6 +298,7 @@ const uploadFromEvent = async (event: Event) => {
     });
     await refreshCurrentDirectory();
   }
+
   if (success !== files.length) {
     const failure = results.find((result) => result.status === "rejected");
     addErrorToast({
@@ -276,10 +337,19 @@ defineExpose({ manager, selectedEntry });
         color="neutral"
         variant="ghost"
         size="sm"
-        disabled
+        :disabled="!manager.canGoBack.value"
         :title="t('koko.fileManagement.back')"
+        @click="manager.goBack()"
       />
-      <UButton icon="i-lucide-chevron-right" color="neutral" variant="ghost" size="sm" disabled :title="t('koko.drawer.right')" />
+      <UButton
+        icon="i-lucide-chevron-right"
+        color="neutral"
+        variant="ghost"
+        size="sm"
+        :disabled="!manager.canGoForward.value"
+        :title="t('koko.fileManagement.forward')"
+        @click="manager.goForward()"
+      />
       <UButton
         icon="i-lucide-arrow-up"
         color="neutral"
@@ -289,7 +359,15 @@ defineExpose({ manager, selectedEntry });
         :title="t('koko.drawer.up')"
         @click="manager.changeDirectory({ name: '..', is_dir: true } as SftpFileEntry)"
       />
-      <UButton icon="i-lucide-house" color="neutral" variant="ghost" size="sm" disabled :title="t('koko.fileManagement.home')" />
+      <UButton
+        icon="i-lucide-house"
+        color="neutral"
+        variant="ghost"
+        size="sm"
+        :disabled="!manager.canGoHome.value"
+        :title="t('koko.fileManagement.home')"
+        @click="manager.goHome()"
+      />
       <UButton
         icon="i-lucide-refresh-cw"
         color="neutral"
@@ -333,24 +411,31 @@ defineExpose({ manager, selectedEntry });
         :ui="{ base: 'h-8 text-[12px]' }"
       />
     </div>
-    <div class="flex h-10.5 shrink-0 items-center justify-between gap-2 border-b border-(--app-border) bg-(--app-panel-bg) px-3">
+    <div
+      class="flex h-10.5 shrink-0 items-center justify-between gap-2 border-b border-(--app-border) bg-(--app-panel-bg) px-3"
+    >
       <div class="flex min-w-0 items-center gap-1.5">
-        <UButton icon="i-lucide-upload" color="primary" variant="solid" size="xs" @click="uploadInput?.click()">
-          {{ t("koko.actions.upload") }}
-        </UButton>
         <UButton icon="i-lucide-folder-plus" color="neutral" variant="soft" size="xs" @click="createFolder">
           {{ t("koko.fileManagement.newFolder") }}
         </UButton>
+        <UButton icon="i-lucide-file-plus-2" color="neutral" variant="soft" size="xs" @click="createFile">
+          {{ t("koko.fileManagement.newFile") }}
+        </UButton>
       </div>
-      <UButton
-        v-if="selectedEntry"
-        icon="i-lucide-download"
-        color="neutral"
-        variant="soft"
-        size="xs"
-        :title="t('koko.actions.download')"
-        @click="downloadSelected"
-      />
+      <div class="flex shrink-0 items-center gap-1.5">
+        <UButton
+          v-if="selectedEntry"
+          icon="i-lucide-download"
+          color="neutral"
+          variant="soft"
+          size="xs"
+          :title="t('koko.actions.download')"
+          @click="downloadSelected"
+        />
+        <UButton icon="i-lucide-upload" color="primary" variant="solid" size="xs" @click="uploadInput?.click()">
+          {{ t("koko.actions.upload") }}
+        </UButton>
+      </div>
       <input ref="uploadInput" type="file" multiple class="hidden" @change="uploadFromEvent" />
     </div>
     <div v-if="manager.currentUploadName.value" class="border-b border-(--app-border) bg-(--app-panel-bg) px-3 py-1.5">
@@ -369,81 +454,122 @@ defineExpose({ manager, selectedEntry });
       <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
     </div>
     <div v-else class="min-h-0 flex-1 overflow-auto bg-(--app-main-bg)">
-      <UTable
-        sticky
-        :data="visibleEntries"
-        :columns="columns"
-        :meta="tableMeta"
-        :empty="t('Common.NoData')"
-        class="w-full table-fixed"
-        :ui="{
-          base: 'w-full table-fixed border-separate border-spacing-0',
-          th: 'h-[35px] border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)',
-          td: 'h-[38px] border-b border-(--app-border)/60 px-3.5 py-1.5 text-[12.5px] text-(--app-fg)',
-          tr: 'group transition-colors hover:bg-(--app-hover-soft)'
-        }"
-        @select="selectTableRow"
-        @hover="hoverTableRow"
+      <div class="relative min-h-full select-none" @dragover.prevent @drop.prevent="onTransferDrop">
+        <table class="w-full table-fixed border-separate border-spacing-0">
+          <thead>
+            <tr>
+              <th
+                class="h-8.75 min-w-0 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)"
+              >
+                {{ t("koko.fileManagement.name") }}
+              </th>
+              <th
+                class="h-8.75 w-27.5 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)"
+              >
+                {{ t("koko.fileManagement.size") }}
+              </th>
+              <th
+                class="hidden h-8.75 w-42 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted) md:table-cell"
+              >
+                {{ t("koko.fileManagement.modifiedTime") }}
+              </th>
+              <th
+                class="hidden h-8.75 w-32 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted) md:table-cell"
+              >
+                {{ t("koko.fileManagement.permissions") }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="entry in visibleEntries"
+              :key="entry.name"
+              class="group h-9.5 transition-colors hover:bg-(--app-hover-soft)"
+              :class="isSelected(entry) ? 'bg-(--app-selected-soft)' : ''"
+              @mouseenter="hoveredEntryName = entry.name"
+              @mouseleave="hoveredEntryName = null"
+              @click="selectEntry(entry)"
+            >
+              <td class="h-9.5 min-w-0 border-b border-(--app-border)/60 px-3.5 py-1.5 text-[12.5px] text-(--app-fg)">
+                <div class="flex min-w-0 items-center gap-2">
+                  <button
+                    type="button"
+                    class="flex min-w-0 flex-1 items-center gap-2 rounded-[3px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
+                    :class="!entry.is_dir && entry.name !== '..' ? 'cursor-grab active:cursor-grabbing' : ''"
+                    :draggable="!entry.is_dir && entry.name !== '..'"
+                    :title="
+                      !entry.is_dir && entry.name !== '..' ? t('koko.fileManagement.transferToRemote') : undefined
+                    "
+                    @dblclick.stop="entry.is_dir && manager.changeDirectory(entry)"
+                    @dragstart="onDragStart($event, entry)"
+                  >
+                    <UIcon
+                      :name="entry.is_dir ? 'i-lucide-folder' : 'i-lucide-file'"
+                      class="size-4 shrink-0 text-(--app-muted)"
+                      :class="entry.is_dir ? 'text-primary' : ''"
+                    />
+                    <span class="truncate" :class="entry.is_dir ? 'font-medium' : ''">{{ entry.name }}</span>
+                  </button>
+                  <span
+                    v-if="entry.name !== '..'"
+                    data-file-action
+                    class="flex shrink-0 items-center gap-px text-(--app-muted) transition-opacity focus-within:opacity-100"
+                    :class="hoveredEntryName === entry.name ? 'opacity-100' : 'opacity-0'"
+                  >
+                    <UButton
+                      icon="i-lucide-download"
+                      size="xs"
+                      color="neutral"
+                      variant="ghost"
+                      @click.stop="downloadEntry(entry)"
+                    />
+                    <UButton
+                      icon="i-lucide-pencil"
+                      size="xs"
+                      color="neutral"
+                      variant="ghost"
+                      @click.stop="rename(entry)"
+                    />
+                    <UButton
+                      icon="i-lucide-trash-2"
+                      size="xs"
+                      color="error"
+                      variant="ghost"
+                      @click.stop="remove(entry)"
+                    />
+                  </span>
+                </div>
+              </td>
+              <td class="h-9.5 w-27.5 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right">
+                <span class="block truncate font-ui-mono text-[11px] text-(--app-muted)">
+                  {{ entry.is_dir ? "—" : formatFileSize(entry.size) }}
+                </span>
+              </td>
+              <td class="hidden h-9.5 w-42 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right md:table-cell">
+                <span class="block truncate font-ui-mono text-[11px] text-(--app-muted)">
+                  {{ formatModifiedTime(entry.mod_time) }}
+                </span>
+              </td>
+              <td class="hidden h-9.5 w-32 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right md:table-cell">
+                <span class="block truncate font-ui-mono text-[10.5px] text-(--app-muted)">
+                  {{ entry.perm || "—" }}
+                </span>
+              </td>
+            </tr>
+            <tr v-if="visibleEntries.length === 0">
+              <td
+                colspan="4"
+                class="h-24 border-b border-(--app-border)/60 px-3.5 text-center text-sm text-(--app-muted)"
+              >
+                {{ t("Common.NoData") }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div
+        class="flex h-7 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3.5 font-ui-mono text-[10.5px] text-(--app-muted)"
       >
-        <template #select-header>
-          <span class="block size-3.75 rounded-[4px] border border-(--app-border-strong) bg-(--app-input-bg)" aria-hidden="true" />
-        </template>
-        <template #select-cell="{ row }">
-          <button
-            v-if="row.original.name !== '..'"
-            type="button"
-            class="grid size-3.75 place-items-center rounded-[4px] border border-(--app-border-strong) bg-(--app-input-bg)"
-            :class="selectedEntry?.name === row.original.name ? 'border-primary bg-primary text-(--app-accent-foreground)' : 'text-transparent'"
-            :aria-label="row.original.name"
-            @click.stop="toggleSelection(row.original)"
-          >
-            <UIcon name="i-lucide-check" class="size-3" />
-          </button>
-        </template>
-        <template #name-cell="{ row }">
-          <div class="flex min-w-0 items-center gap-2">
-            <button
-              type="button"
-              class="flex min-w-0 flex-1 items-center gap-2 rounded-[3px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
-              @dblclick.stop="row.original.is_dir && manager.changeDirectory(row.original)"
-            >
-              <UIcon
-                :name="row.original.is_dir ? 'i-lucide-folder' : 'i-lucide-file'"
-                class="size-4 shrink-0 text-(--app-muted)"
-                :class="row.original.is_dir ? 'text-primary' : ''"
-              />
-              <span class="truncate" :class="row.original.is_dir ? 'font-medium' : ''">{{ row.original.name }}</span>
-            </button>
-            <span
-              v-if="row.original.name !== '..'"
-              class="flex shrink-0 items-center gap-px text-(--app-muted) transition-opacity focus-within:opacity-100"
-              :class="hoveredEntryName === row.original.name ? 'opacity-100' : 'opacity-0'"
-            >
-              <UButton
-                icon="i-lucide-download"
-                size="xs"
-                color="neutral"
-                variant="ghost"
-                @click.stop="downloadEntry(row.original)"
-              />
-              <UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" @click.stop="rename(row.original)" />
-              <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" @click.stop="remove(row.original)" />
-            </span>
-          </div>
-        </template>
-        <template #size-cell="{ row }">
-          <span class="block truncate font-ui-mono text-[11px] text-(--app-muted)">
-            {{ row.original.is_dir ? "—" : formatFileSize(row.original.size) }}
-          </span>
-        </template>
-        <template #mod_time-cell="{ row }">
-          <span class="block truncate font-ui-mono text-[11px] text-(--app-muted)">{{ formatModifiedTime(row.original.mod_time) }}</span>
-        </template>
-        <template #perm-cell="{ row }">
-          <span class="block truncate font-ui-mono text-[10.5px] text-(--app-muted)">{{ row.original.perm || "—" }}</span>
-        </template>
-      </UTable>
-      <div class="flex h-7 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3.5 font-ui-mono text-[10.5px] text-(--app-muted)">
         {{ t("koko.fileManagement.items", { count: visibleEntries.length }) }}
       </div>
     </div>

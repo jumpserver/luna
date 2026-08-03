@@ -29,7 +29,7 @@ const cardUi = computed(() => ({
   root: "rounded-none h-full flex flex-col min-h-0"
 }));
 
-useEventBus().on("versionAlert", ({ type, version }: { type: string, version?: string }) => {
+useEventBus().on("versionAlert", ({ type, version }: { type: string; version?: string }) => {
   alertType.value = type as alertTypes;
   isAlertOpen.value = true;
 
