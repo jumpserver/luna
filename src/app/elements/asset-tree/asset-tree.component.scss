@@ -35,7 +35,9 @@
     .tree-type-banner {
       position: relative;
       display: flex;
+      flex: 0 0 30px;
       height: 30px;
+      min-height: 30px;
       line-height: 30px;
       padding-right: 11px;
       padding-left: 15px;
@@ -153,7 +155,7 @@
 
     .tree-type-content {
       position: relative;
-      flex: 1 1 auto;
+      flex: 1 1 0;
       padding: 1px;
       min-height: 0;
       height: auto;
