@@ -548,13 +548,13 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
             class="pointer-events-none absolute inset-y-1 z-10 w-0.5 rounded-full bg-primary"
             :class="dragOverTabPlacement === 'after' ? '-right-[3px]' : '-left-[3px]'"
           />
-          <span
-            v-if="shouldShowShortcutHint(index)"
-            class="workspace-session-tab-shortcut shrink-0 rounded px-1 py-0.5 font-ui-mono text-[9px] font-medium leading-none"
-          >
-            {{ shortcutHintLabel(index) }}
-          </span>
           <span class="relative grid size-3.5 shrink-0 place-items-center">
+            <span
+              v-if="shouldShowShortcutHint(index)"
+              class="workspace-session-tab-shortcut pointer-events-none absolute -top-2 left-1/2 z-10 -translate-x-1/2 rounded px-1 py-0.5 font-ui-mono text-[9px] font-medium leading-none"
+            >
+              {{ shortcutHintLabel(index) }}
+            </span>
             <img
               v-if="showTabIconImage(tab)"
               :src="tabIcon(tab).src"
@@ -724,6 +724,8 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
   color: color-mix(in srgb, var(--app-fg) 82%, transparent);
   background: color-mix(in srgb, var(--color-bg-kbd) 82%, transparent);
   border: 1px solid color-mix(in srgb, var(--app-border) 78%, transparent);
+  box-shadow: 0 6px 18px color-mix(in srgb, black 10%, transparent);
+  white-space: nowrap;
 }
 
 .workspace-session-tab-idle {

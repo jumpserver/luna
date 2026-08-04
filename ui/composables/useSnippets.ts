@@ -38,7 +38,7 @@ const normalizeSnippet = (raw: any): Snippet | null => {
 
 export const useSnippets = () => {
   const userInfoStore = useUserInfoStore();
-  const { loggedIn, orgId } = storeToRefs(userInfoStore);
+  const { loggedIn, currentSite } = storeToRefs(userInfoStore);
   const { batchCommand, setOpen } = useBatchCommandPanel();
   const snippets = useState<Snippet[]>("sidebar-snippets", () => []);
   const loading = useState<boolean>("sidebar-snippets-loading", () => false);
@@ -59,7 +59,7 @@ export const useSnippets = () => {
     setOpen(true);
   };
 
-  watch([loggedIn, orgId], () => {
+  watch([loggedIn, currentSite], () => {
     snippets.value = [];
   });
 

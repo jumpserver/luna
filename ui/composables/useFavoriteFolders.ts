@@ -88,16 +88,26 @@ const folderIdFromRaw = (raw: any): string | null => {
 
 export const useFavoriteFolders = () => {
   const userInfoStore = useUserInfoStore();
-  const { loggedIn, orgId } = storeToRefs(userInfoStore);
+  const { loggedIn, currentSite } = storeToRefs(userInfoStore);
   const folders = useState<FavoriteFolder[]>("favorite-folders", () => []);
   const rootAssets = useState<AssetItem[]>("favorite-root-assets", () => []);
   const loading = useState<boolean>("favorite-folders-loading", () => false);
+  const stateVersion = useState<number>("favorite-folders-state-version", () => 0);
+  const activeRequestId = useState<number>("favorite-folders-active-request-id", () => 0);
+  const nextRequestId = useState<number>("favorite-folders-next-request-id", () => 0);
+  const pendingReload = useState<boolean>("favorite-folders-pending-reload", () => false);
 
   const load = async () => {
     if (!loggedIn.value || loading.value) return;
     loading.value = true;
+    const requestId = nextRequestId.value + 1;
+    const requestVersion = stateVersion.value;
+    const requestSite = currentSite.value;
+    nextRequestId.value = requestId;
+    activeRequestId.value = requestId;
     try {
       const [folderData, assetData] = await Promise.all([getFavoriteFolders(), getFavoriteAssets().catch(() => [])]);
+      if (requestVersion !== stateVersion.value || requestSite !== currentSite.value || !loggedIn.value) return;
       const normalizedFolders = normalizeFolders(folderData);
       const folderMap = new Map(flattenFolders(normalizedFolders).map((folder) => [folder.id, folder]));
       const nextRootAssets: AssetItem[] = [];
@@ -115,7 +125,14 @@ export const useFavoriteFolders = () => {
       folders.value = normalizedFolders;
       rootAssets.value = nextRootAssets;
     } finally {
-      loading.value = false;
+      if (activeRequestId.value === requestId) {
+        activeRequestId.value = 0;
+        loading.value = false;
+      }
+      if (pendingReload.value && !loading.value) {
+        pendingReload.value = false;
+        void load();
+      }
     }
   };
 
@@ -140,9 +157,19 @@ export const useFavoriteFolders = () => {
     useEventBus().emit("favoriteChanged", { assetId, favorite: true });
   };
 
-  watch([loggedIn, orgId], () => {
+  watch([loggedIn, currentSite], ([isLoggedIn]) => {
+    stateVersion.value += 1;
     folders.value = [];
     rootAssets.value = [];
+    if (!isLoggedIn) {
+      pendingReload.value = false;
+      return;
+    }
+    if (loading.value) {
+      pendingReload.value = true;
+      return;
+    }
+    void load();
   });
   return { folders, rootAssets, loading, load, createFolder, renameFolder, removeFolder, favoriteToFolder };
 };
