@@ -73,11 +73,11 @@
     "Transcode": "录像转码",
     "OfflinePlayer": "离线播放器",
     "Player": "播放器",
-    "Snippets": "代码片段",
+    "Snippets": "脚本库",
     "RecentConnections": "最近连接"
   },
   "Snippets": {
-    "Empty": "暂无代码片段"
+    "Empty": "暂无脚本"
   },
   "RecentConnections": {
     "Empty": "暂无最近连接"

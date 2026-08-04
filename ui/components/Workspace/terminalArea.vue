@@ -6,7 +6,8 @@ const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const { isMacOS } = usePlatform();
 const { t } = useI18n();
-const tabSwitchModifier = computed(() => (isMacOS.value ? "Option" : "Alt"));
+const tabArrowSwitchModifier = computed(() => (isMacOS.value ? "Option" : "Alt"));
+const tabNumberSwitchShortcut = computed(() => (isMacOS.value ? "⌘ + 1-9" : "Ctrl + 1-9"));
 const panes = computed(() => tabs.value.flatMap((tab) => tab.panes));
 
 const openLogin = () => {
@@ -78,7 +79,14 @@ const openLogin = () => {
                   class="ml-1 rounded px-1.5 py-0.5 font-ui-mono text-xs"
                   :style="{ border: '1px solid var(--app-border)', backgroundColor: 'var(--app-card-bg-soft)' }"
                 >
-                  {{ tabSwitchModifier }} + Shift + ← / →
+                  {{ tabArrowSwitchModifier }} + Shift + ← / →
+                </kbd>
+                <span class="mx-1">或</span>
+                <kbd
+                  class="rounded px-1.5 py-0.5 font-ui-mono text-xs"
+                  :style="{ border: '1px solid var(--app-border)', backgroundColor: 'var(--app-card-bg-soft)' }"
+                >
+                  {{ tabNumberSwitchShortcut }}
                 </kbd>
               </span>
             </div>

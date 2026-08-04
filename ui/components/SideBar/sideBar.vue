@@ -4,7 +4,6 @@ import type { AssetItem, SidebarSectionKey } from "~/types";
 
 import { SIDEBAR_SECTION_KEYS } from "~/composables/useSidebarSections";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { sortProtocolNames } from "~/utils";
 
 const { t } = useI18n();
 const toast = useToast();
@@ -372,39 +371,6 @@ const handleAssetOpenInNewWindow = async (asset: AssetItem) => {
   await openAssetInWindow(asset);
 };
 
-const resolveAssetProtocols = (asset: AssetItem) => {
-  const protocols = [
-    ...(asset.permedProtocols || []).map((protocol) => protocol?.name),
-    ...(asset.savedConnection?.availableProtocols || []),
-    asset.savedConnection?.protocol
-  ];
-
-  const uniqueProtocols = Array.from(new Set(protocols.filter((protocol): protocol is string => !!protocol)));
-
-  return uniqueProtocols.length > 0 ? sortProtocolNames(uniqueProtocols) : ["ssh"];
-};
-
-const handleProtocolConnect = async (asset: AssetItem, protocol: string) => {
-  contextMenuVisible.value = false;
-
-  if (protocol === "ssh") {
-    const saved = asset.savedConnection;
-    if (saved?.username) {
-      connectWithBuiltinSsh(asset, {
-        ...saved,
-        protocol: "ssh",
-        account: saved.username
-      });
-      return;
-    }
-
-    openSetupSession(asset, { protocol: "ssh" });
-    return;
-  }
-
-  openSetupSession(asset, { protocol });
-};
-
 const openRenameModal = (asset: AssetItem) => {
   contextMenuVisible.value = false;
   renameAsset.value = asset;
@@ -474,12 +440,6 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
     onSelect: () => addAssetToFavoriteFolder(asset, folder.id)
   }));
 
-  const protocolItems: DropdownMenuItem[] = resolveAssetProtocols(asset).map((protocol) => ({
-    label: `${t("ContextMenu.Use")} ${protocol.toUpperCase()}`,
-    icon: "i-lucide-plug",
-    onSelect: () => handleProtocolConnect(asset, protocol)
-  }));
-
   return [
     ...(hasQuickConnect(asset)
       ? [
@@ -507,11 +467,6 @@ const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
       onSelect: () => {
         openAssetInCurrentWorkspace(asset);
       }
-    },
-    {
-      label: t("ContextMenu.MoreConnect"),
-      icon: "i-lucide-ellipsis",
-      children: protocolItems
     },
     {
       label: t("ContextMenu.OpenInNewWindow"),

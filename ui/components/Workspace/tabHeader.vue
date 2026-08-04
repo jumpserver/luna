@@ -7,6 +7,7 @@ import { resolveAssetIconFromFields } from "~/utils/assetIcon";
 
 const { t } = useI18n();
 const colorMode = useColorMode();
+const { isMacOS } = usePlatform();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const showAddSession = computed(() => loggedIn.value || isTauriRuntime());
@@ -40,6 +41,7 @@ const dragOverTabPlacement = ref<"before" | "after">("before");
 const renameModalOpen = ref(false);
 const renameTabId = ref("");
 const renameValue = ref("");
+const showShortcutHints = ref(false);
 
 const { activeTab } = useWorkspaceTabs();
 const isDarkTabTheme = computed(() => colorMode.value === "dark");
@@ -69,6 +71,24 @@ function markTabIconBroken(tabId: string) {
 
 function tabDisplayTitle(tab: WorkspaceSessionTab) {
   return tab.title || tab.assetName || "Untitled";
+}
+
+function usesPrimaryTabModifier(event: KeyboardEvent) {
+  return isMacOS.value
+    ? event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey
+    : event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey;
+}
+
+function shouldShowShortcutHint(index: number) {
+  if (!showShortcutHints.value) return false;
+  if (tabs.value.length <= 9) return index < tabs.value.length;
+  return index < 8 || index === tabs.value.length - 1;
+}
+
+function shortcutHintLabel(index: number) {
+  const modifier = isMacOS.value ? "⌘" : "Ctrl";
+  const digit = tabs.value.length > 9 && index === tabs.value.length - 1 ? 9 : index + 1;
+  return `${modifier}${digit}`;
 }
 
 const tabDropdownUi = {
@@ -366,6 +386,36 @@ function switchTab(direction: "previous" | "next") {
   nextTick(scrollActiveTabIntoView);
 }
 
+function isTypingIntoEditable(event: KeyboardEvent) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.closest(".xterm")) return false;
+  if (target.isContentEditable) return true;
+
+  const tagName = target.tagName;
+  return tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT" || target.getAttribute("role") === "textbox";
+}
+
+function getTabIndexFromDigitShortcut(event: KeyboardEvent) {
+  const match = event.code.match(/^(?:Digit|Numpad)([1-9])$/);
+  if (!match) return -1;
+
+  if (!usesPrimaryTabModifier(event)) return -1;
+
+  const digit = Number(match[1]);
+  if (!digit) return -1;
+
+  return digit === 9 ? tabs.value.length - 1 : digit - 1;
+}
+
+function syncShortcutHintsVisibility(event: KeyboardEvent) {
+  showShortcutHints.value = tabs.value.length >= 2 && !isTypingIntoEditable(event) && usesPrimaryTabModifier(event);
+}
+
+function clearShortcutHints() {
+  showShortcutHints.value = false;
+}
+
 function scrollTabStrip(direction: "left" | "right") {
   const el = tabStripRef.value;
   if (!el) return;
@@ -393,7 +443,19 @@ onMounted(() => {
 });
 
 useEventListener(window, "keydown", (event: KeyboardEvent) => {
-  if (!event.altKey || !event.shiftKey || tabs.value.length < 2) return;
+  syncShortcutHintsVisibility(event);
+  if (event.defaultPrevented || tabs.value.length < 2 || isTypingIntoEditable(event)) return;
+
+  const targetIndex = getTabIndexFromDigitShortcut(event);
+  if (targetIndex >= 0) {
+    const targetTab = tabs.value[Math.min(targetIndex, tabs.value.length - 1)];
+    if (!targetTab) return;
+    event.preventDefault();
+    selectTab(targetTab.id);
+    return;
+  }
+
+  if (!event.altKey || !event.shiftKey) return;
 
   if (event.key === "ArrowLeft") {
     event.preventDefault();
@@ -406,16 +468,27 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
   }
 });
 
+useEventListener(window, "keyup", (event: KeyboardEvent) => {
+  syncShortcutHintsVisibility(event);
+});
+
+useEventListener(window, "blur", clearShortcutHints);
+useEventListener(document, "visibilitychange", () => {
+  if (document.visibilityState !== "visible") clearShortcutHints();
+});
+
 onBeforeUnmount(() => {
   tabStripRef.value?.removeEventListener("scroll", updateOverflow);
   resizeObserver?.disconnect();
   resizeObserver = null;
+  clearShortcutHints();
 });
 
 watch(
   tabs,
   () =>
     nextTick(() => {
+      if (!tabs.value.length || tabs.value.length < 2) clearShortcutHints();
       updateOverflow();
       scrollActiveTabIntoView();
     }),
@@ -475,6 +548,12 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
             class="pointer-events-none absolute inset-y-1 z-10 w-0.5 rounded-full bg-primary"
             :class="dragOverTabPlacement === 'after' ? '-right-[3px]' : '-left-[3px]'"
           />
+          <span
+            v-if="shouldShowShortcutHint(index)"
+            class="workspace-session-tab-shortcut shrink-0 rounded px-1 py-0.5 font-ui-mono text-[9px] font-medium leading-none"
+          >
+            {{ shortcutHintLabel(index) }}
+          </span>
           <span class="relative grid size-3.5 shrink-0 place-items-center">
             <img
               v-if="showTabIconImage(tab)"
@@ -639,6 +718,12 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
   position: relative;
   border: 1px solid transparent;
   border-bottom-color: transparent;
+}
+
+.workspace-session-tab-shortcut {
+  color: color-mix(in srgb, var(--app-fg) 82%, transparent);
+  background: color-mix(in srgb, var(--color-bg-kbd) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--app-border) 78%, transparent);
 }
 
 .workspace-session-tab-idle {

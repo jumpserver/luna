@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
+import type { Snippet } from "~/composables/useSnippets";
 import type { AssetItem } from "~/types";
+import { writeClipboardText } from "~/utils/clipboard";
 
 const props = defineProps<{
   mainPanelOpen: boolean;
@@ -18,7 +20,8 @@ const emit = defineEmits<{
 
 type PanelKind = "favorites" | "snippets";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const openPanels = ref<Set<PanelKind>>(new Set());
 const {
@@ -44,6 +47,7 @@ const renameValue = ref("");
 const deleteModalOpen = ref(false);
 const deleteTarget = ref<FavoriteFolder | null>(null);
 const deleting = ref(false);
+const snippetSearch = ref("");
 
 const folderHasClosedBranch = (folder: FavoriteFolder): boolean => {
   if (!folder.open) return true;
@@ -203,6 +207,79 @@ const refreshPanel = (kind: PanelKind) => {
   return loadSnippets();
 };
 
+const normalizedSnippetSearch = computed(() => snippetSearch.value.trim().toLocaleLowerCase());
+
+const filteredSnippets = computed(() => {
+  const query = normalizedSnippetSearch.value;
+  if (!query) return snippets.value;
+
+  return snippets.value.filter((snippet) =>
+    [
+      snippet.name,
+      snippet.args,
+      snippet.comment,
+      snippet.module.label,
+      snippet.module.value,
+      snippet.createdBy
+    ].some((value) => String(value || "").toLocaleLowerCase().includes(query))
+  );
+});
+
+function isShellSnippet(snippet: Snippet) {
+  return snippet.module.value === "shell";
+}
+
+function getSnippetIcon(snippet: Snippet) {
+  switch (snippet.module.value) {
+    case "shell":
+      return "i-lucide-terminal";
+    case "win_shell":
+      return "i-lucide-monitor";
+    case "python":
+      return "i-lucide-file-code-2";
+    case "mysql":
+    case "mariadb":
+    case "postgresql":
+    case "sqlserver":
+    case "oracle":
+      return "i-lucide-database";
+    case "raw":
+      return "i-lucide-file-text";
+    default:
+      if (snippet.variable.length > 0) {
+        return "i-lucide-braces";
+      }
+
+      return "i-lucide-file-code-2";
+  }
+}
+
+function getSnippetTitle(snippet: Snippet) {
+  return [snippet.name, snippet.module.label || snippet.module.value, snippet.comment, snippet.args].filter(Boolean).join("\n");
+}
+
+function handleSnippetClick(snippet: Snippet) {
+  if (!isShellSnippet(snippet)) return;
+  applySnippet(snippet);
+}
+
+async function copySnippet(snippet: Snippet) {
+  try {
+    await writeClipboardText(snippet.args);
+    toast.add({
+      title: locale.value === "zh" ? "已复制" : "Copied",
+      color: "success",
+      duration: 1200
+    });
+  } catch (error) {
+    addErrorToast({
+      title: locale.value === "zh" ? "复制失败" : "Copy failed",
+      error,
+      icon: "i-lucide-circle-alert"
+    });
+  }
+}
+
 useEventBus().on("favoriteChanged", () => {
   void loadFavorites();
 });
@@ -297,6 +374,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
       :open="isOpen('favorites')"
       :title="t('Menu.Favorite')"
       v-bind="panelConfig.favorites"
+      :fill-available="!mainPanelOpen"
       :max-height="panelMaxHeight('favorites')"
       @toggle="togglePanel('favorites')"
     >
@@ -365,6 +443,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
       :open="isOpen('snippets')"
       :title="t('Menu.Snippets')"
       v-bind="panelConfig.snippets"
+      :fill-available="!mainPanelOpen"
       :max-height="panelMaxHeight('snippets')"
       @toggle="togglePanel('snippets')"
     >
@@ -381,34 +460,85 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
           @click.stop="refreshPanel('snippets')"
         />
       </template>
-      <div v-if="snippetLoading && snippets.length === 0" class="grid h-20 place-items-center">
-        <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
-      </div>
-      <UEmpty
-        v-else-if="snippets.length === 0"
-        icon="i-lucide-braces"
-        size="sm"
-        variant="naked"
-        :title="t('Snippets.Empty')"
-      />
-      <button
-        v-for="snippet in snippets"
-        v-else
-        :key="snippet.id"
-        type="button"
-        class="sidebar-row flex w-full items-start gap-1.5 px-2.5 py-1.5 text-left"
-        :title="snippet.args"
-        @click="applySnippet(snippet)"
-      >
-        <UIcon
-          :name="snippet.variable.length > 0 ? 'i-lucide-braces' : 'i-lucide-terminal'"
-          class="mt-0.5 sidebar-icon"
+      <div class="flex min-h-0 flex-1 flex-col">
+        <div class="px-2 py-1.5">
+          <UInput
+            v-model="snippetSearch"
+            size="sm"
+            clearable
+            autocapitalize="none"
+            autocorrect="off"
+            icon="i-lucide-search"
+            variant="none"
+            :placeholder="t('Operation.Search')"
+            class="search-input w-full rounded-xl"
+            :ui="{
+              base: 'h-7 rounded-xl bg-[var(--app-surface-panel-strong)] px-1 text-[12px] text-[var(--app-fg)] ring-1 ring-inset ring-[var(--app-border)] focus-visible:ring-[var(--app-focus-ring)] placeholder:text-[var(--app-muted)]',
+              leadingIcon: 'sidebar-icon',
+              trailingIcon: 'sidebar-icon'
+            }"
+          >
+            <template v-if="snippetSearch?.length" #trailing>
+              <UButton
+                color="neutral"
+                variant="link"
+                size="xs"
+                icon="i-lucide-circle-x"
+                aria-label="Clear input"
+                :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+                @click="
+                  () => {
+                    snippetSearch = '';
+                  }
+                "
+              />
+            </template>
+          </UInput>
+        </div>
+
+        <div v-if="snippetLoading && snippets.length === 0" class="grid h-20 place-items-center">
+          <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
+        </div>
+        <UEmpty
+          v-else-if="filteredSnippets.length === 0"
+          icon="i-lucide-braces"
+          size="sm"
+          variant="naked"
+          :title="normalizedSnippetSearch ? t('Common.NoData') : t('Snippets.Empty')"
         />
-        <span class="min-w-0 flex-1">
-          <span class="block truncate text-[11px] font-medium">{{ snippet.name }}</span>
-          <span class="block truncate font-ui-mono text-[10px] text-gray-400">{{ snippet.args }}</span>
-        </span>
-      </button>
+        <div
+          v-for="snippet in filteredSnippets"
+          v-else
+          :key="snippet.id"
+          class="sidebar-row group flex w-full items-start gap-1.5 px-2.5 py-1.5"
+        >
+          <button
+            type="button"
+            class="flex min-w-0 flex-1 items-start gap-1.5 text-left"
+            :class="isShellSnippet(snippet) ? 'cursor-pointer' : 'cursor-default'"
+            :title="getSnippetTitle(snippet)"
+            @click="handleSnippetClick(snippet)"
+          >
+            <UIcon :name="getSnippetIcon(snippet)" class="mt-0.5 sidebar-icon shrink-0" />
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-[11px] font-medium">{{ snippet.name }}</span>
+              <span class="block truncate font-ui-mono text-[10px] text-gray-400">{{ snippet.args }}</span>
+            </span>
+          </button>
+          <UTooltip :text="locale === 'zh' ? '仅复制' : 'Copy only'" :delay-duration="120">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              icon="i-lucide-copy"
+              class="mt-0.5 size-6 shrink-0 justify-center p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+              :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+              :aria-label="locale === 'zh' ? '仅复制' : 'Copy only'"
+              @click.stop="copySnippet(snippet)"
+            />
+          </UTooltip>
+        </div>
+      </div>
     </SideBarCollapsiblePanel>
   </div>
 

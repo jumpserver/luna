@@ -73,11 +73,11 @@
     "Transcode": "Replay Transcode",
     "OfflinePlayer": "Offline Player",
     "Favorite": "My favorites",
-    "Snippets": "Snippets",
+    "Snippets": "scripts",
     "RecentConnections": "Recent connections"
   },
   "Snippets": {
-    "Empty": "No snippets"
+    "Empty": "No scripts"
   },
   "RecentConnections": {
     "Empty": "No recent connections"

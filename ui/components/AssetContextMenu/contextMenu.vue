@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import type { AssetItem, PermedProtocol } from "~/types/index";
-import { storeToRefs } from "pinia";
-import { useUserInfoStore } from "~/store/modules/userInfo";
-import { sortProtocolNames } from "~/utils";
+import type { AssetItem } from "~/types/index";
 
 interface Props {
   asset: AssetItem;
@@ -24,9 +21,6 @@ const emits = defineEmits<{
 const { t } = useI18n();
 const { handleAssetConnection, displayUser, handleAssetUnfavorite } = useAssetAction();
 const { folders: favoriteFolders, load: loadFavoriteFolders, favoriteToFolder } = useFavoriteFolders();
-const userInfoStore = useUserInfoStore();
-const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
-
 interface MenuItem {
   value?: string;
   label: string;
@@ -57,8 +51,6 @@ const hasReusableSavedConnection = computed(() => {
 });
 
 const menuItems = computed((): MenuItem[] => {
-  const uniqueProtocols = resolveProtocols(props.asset);
-
   const baseItems: MenuItem[] = [
     {
       value: "connect",
@@ -102,24 +94,6 @@ const menuItems = computed((): MenuItem[] => {
       icon: "i-lucide-zap",
       onClick: () => handleConnect()
     });
-  }
-
-  // 如果有多个协议，为连接项添加子菜单
-  if (uniqueProtocols.length > 1) {
-    const protocolItems: MenuItem[] = uniqueProtocols.map((name: string) => ({
-      label: `${t("ContextMenu.Use")} ${name.toUpperCase()}`,
-      icon: "i-lucide-plug",
-      onClick: () => handleConnect(name)
-    }));
-
-    const item = {
-      value: "moreConnect",
-      label: t("ContextMenu.MoreConnect"),
-      icon: "i-lucide-ellipsis",
-      onClick: () => void 0,
-      children: protocolItems
-    };
-    baseItems.splice(1, 0, item);
   }
 
   return baseItems;
@@ -197,27 +171,6 @@ function handleUnfavorite() {
   emits("update:visible", false);
 }
 
-function resolveProtocols(asset: AssetItem) {
-  const candidateProtocols: string[] = [];
-
-  (asset.permedProtocols || []).forEach((p: PermedProtocol | undefined) => {
-    if (p?.name) candidateProtocols.push(p.name);
-  });
-
-  const saved = currentConnectionInfoMap.value[asset.id];
-
-  (saved?.availableProtocols || []).forEach((name) => {
-    if (name) candidateProtocols.push(name);
-  });
-
-  if (saved?.protocol) {
-    candidateProtocols.push(saved.protocol);
-  }
-
-  return sortProtocolNames(
-    Array.from(new Set(candidateProtocols.filter((name) => typeof name === "string" && name.length > 0)))
-  );
-}
 </script>
 
 <template>
