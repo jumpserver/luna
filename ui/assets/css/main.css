@@ -209,6 +209,8 @@
 
 .xterm .xterm-scrollable-element > .scrollbar.vertical {
   background: transparent !important;
+  top: var(--xterm-scrollbar-top, 0) !important;
+  bottom: var(--xterm-scrollbar-bottom, 0) !important;
 }
 
 .xterm .xterm-scrollable-element > .scrollbar.vertical > .slider {

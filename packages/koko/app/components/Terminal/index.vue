@@ -47,14 +47,16 @@ const onUploadChange = (event: Event) => {
 </template>
 
 <style scoped>
-/* 背景与 xterm 主题背景同源（--app-main-bg），padding 区域无色差 */
+/* 背景与 xterm 主题背景同源；保留轻微上下留白，避免内容贴边 */
 #terminal-container {
   background: var(--app-main-bg);
+  --xterm-scrollbar-top: 4px;
+  --xterm-scrollbar-bottom: 4px;
 }
 
 #terminal-container :deep(.terminal) {
   height: 100%;
-  padding: 12px 4px 8px 12px;
+  padding: 4px 4px 4px 12px;
 }
 
 /* 主题切换瞬间由容器背景兜底，避免闪色块；滚动条不覆盖，走 main.css 全局窄样式 */

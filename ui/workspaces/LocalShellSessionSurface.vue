@@ -162,11 +162,13 @@ defineExpose({ focus });
 <style scoped>
 .local-shell-terminal {
   background: var(--app-main-bg);
+  --xterm-scrollbar-top: 4px;
+  --xterm-scrollbar-bottom: 4px;
 }
 
 .local-shell-terminal :deep(.terminal) {
   height: 100%;
-  padding: 12px 4px 8px 12px;
+  padding: 4px 4px 4px 12px;
 }
 
 .local-shell-terminal :deep(.xterm-viewport) {

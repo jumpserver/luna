@@ -374,7 +374,6 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
       :open="isOpen('favorites')"
       :title="t('Menu.Favorite')"
       v-bind="panelConfig.favorites"
-      :fill-available="!mainPanelOpen"
       :max-height="panelMaxHeight('favorites')"
       @toggle="togglePanel('favorites')"
     >
@@ -443,7 +442,6 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
       :open="isOpen('snippets')"
       :title="t('Menu.Snippets')"
       v-bind="panelConfig.snippets"
-      :fill-available="!mainPanelOpen"
       :max-height="panelMaxHeight('snippets')"
       @toggle="togglePanel('snippets')"
     >
