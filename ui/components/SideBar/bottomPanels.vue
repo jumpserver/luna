@@ -214,14 +214,12 @@ const filteredSnippets = computed(() => {
   if (!query) return snippets.value;
 
   return snippets.value.filter((snippet) =>
-    [
-      snippet.name,
-      snippet.args,
-      snippet.comment,
-      snippet.module.label,
-      snippet.module.value,
-      snippet.createdBy
-    ].some((value) => String(value || "").toLocaleLowerCase().includes(query))
+    [snippet.name, snippet.args, snippet.comment, snippet.module.label, snippet.module.value, snippet.createdBy].some(
+      (value) =>
+        String(value || "")
+          .toLocaleLowerCase()
+          .includes(query)
+    )
   );
 });
 
@@ -255,7 +253,9 @@ function getSnippetIcon(snippet: Snippet) {
 }
 
 function getSnippetTitle(snippet: Snippet) {
-  return [snippet.name, snippet.module.label || snippet.module.value, snippet.comment, snippet.args].filter(Boolean).join("\n");
+  return [snippet.name, snippet.module.label || snippet.module.value, snippet.comment, snippet.args]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function handleSnippetClick(snippet: Snippet) {

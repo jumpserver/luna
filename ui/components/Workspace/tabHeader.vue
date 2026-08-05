@@ -393,7 +393,9 @@ function isTypingIntoEditable(event: KeyboardEvent) {
   if (target.isContentEditable) return true;
 
   const tagName = target.tagName;
-  return tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT" || target.getAttribute("role") === "textbox";
+  return (
+    tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT" || target.getAttribute("role") === "textbox"
+  );
 }
 
 function getTabIndexFromDigitShortcut(event: KeyboardEvent) {
