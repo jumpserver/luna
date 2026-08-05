@@ -763,6 +763,7 @@ defineExpose({ focus });
             :tab="activeConsoleTab"
             :context-label="currentContextLabel"
             :prompt-label="consolePromptLabel"
+            :can-copy="auth.profile.value?.canCopy === true"
             @run="runQueryTab"
             @cancel="cancelQueryLikeTab"
             @clear="clearConsoleTranscript"

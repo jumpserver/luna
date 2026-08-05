@@ -13,6 +13,7 @@ const props = defineProps<{
   tab: ChenPromptConsoleTab;
   contextLabel: string;
   promptLabel: string;
+  canCopy: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -74,11 +75,6 @@ function moveHistory(direction: -1 | 1) {
 
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-    event.preventDefault();
-    run();
-    return;
-  }
-  if (event.key === "Enter" && pendingSqlValue.value.trimEnd().endsWith(";")) {
     event.preventDefault();
     run();
     return;
@@ -213,7 +209,7 @@ defineExpose({ focus: () => inputRef.value?.focus() });
               <span class="font-medium text-highlighted">Result {{ resultIndex + 1 }}</span>
               <span class="text-muted">{{ resultSummary(result) }}</span>
             </div>
-            <ConsoleResultGrid :dataset="result.data" :style="{ height: gridHeight(result) }" />
+            <ConsoleResultGrid :dataset="result.data" :can-copy="canCopy" :style="{ height: gridHeight(result) }" />
           </div>
 
           <div
@@ -241,7 +237,7 @@ defineExpose({ focus: () => inputRef.value?.focus() });
         class="max-h-32 min-h-7 flex-1 resize-none bg-transparent py-1 text-[var(--app-fg)] outline-none placeholder:text-[var(--app-muted)]"
         :disabled="busy"
         rows="1"
-        placeholder="Enter SQL; finish with ; or press Cmd/Ctrl+Enter"
+        placeholder="Enter SQL; press Cmd/Ctrl+Enter to run"
         spellcheck="false"
         @keydown="handleKeydown"
       />

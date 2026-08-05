@@ -8,9 +8,15 @@ import { AgGridVue } from "ag-grid-vue3";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-balham.css";
 
-const props = defineProps<{
-  dataset: ChenDataViewDataset;
-}>();
+const props = withDefaults(
+  defineProps<{
+    dataset: ChenDataViewDataset;
+    canCopy?: boolean;
+  }>(),
+  {
+    canCopy: false
+  }
+);
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -42,6 +48,10 @@ function handleGridReady(event: GridReadyEvent) {
   fitColumns(event.api);
 }
 
+function handleCopy(event: ClipboardEvent) {
+  if (!props.canCopy) event.preventDefault();
+}
+
 watch([columnDefs, () => props.dataset.data], async () => {
   const api = gridApi.value;
   if (!api) return;
@@ -53,7 +63,7 @@ watch([columnDefs, () => props.dataset.data], async () => {
 </script>
 
 <template>
-  <div class="ag-theme-balham chen-console-grid min-h-0 w-full">
+  <div class="ag-theme-balham chen-console-grid min-h-0 w-full" @copy="handleCopy">
     <AgGridVue
       class="h-full w-full"
       theme="legacy"
@@ -63,6 +73,7 @@ watch([columnDefs, () => props.dataset.data], async () => {
       :row-height="28"
       :header-height="32"
       :animate-rows="false"
+      :enable-cell-text-selection="canCopy"
       :suppress-cell-focus="false"
       :ensure-dom-order="true"
       @grid-ready="handleGridReady"

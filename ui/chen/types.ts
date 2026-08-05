@@ -174,6 +174,7 @@ export type ChenSqlHints = Record<string, string[]>;
 export interface ChenConsoleState {
   loading?: boolean;
   inQuery?: boolean;
+  executionStatus?: ChenConsoleExecutionStatus;
   editorLoading?: boolean;
   canCancel?: boolean;
   currentContext?: string;
