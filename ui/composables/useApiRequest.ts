@@ -9,6 +9,16 @@ export interface ApiRequest {
   orgId?: string;
 }
 
+export class ApiRequestError extends Error {
+  constructor(
+    public status: number,
+    public data: any
+  ) {
+    super(typeof data === "string" ? data : data?.detail || data?.code || `HTTP ${status}`);
+    this.name = "ApiRequestError";
+  }
+}
+
 export interface AssetTreeParams {
   key?: string;
   n?: string;
@@ -38,6 +48,7 @@ export interface SqlSnippetPayload {
 let lastAuthFailureAt = 0;
 
 const isAuthFailure = (error: unknown) => {
+  if (error instanceof ApiRequestError) return error.status === 401;
   const message = error instanceof Error ? error.message : String(error || "");
   return ["HTTP 401", "missing current api session", "status=401"].some((needle) => message.includes(needle));
 };
@@ -86,21 +97,73 @@ async function webApiRequest<T>(request: ApiRequest): Promise<T> {
     body: hasBody ? JSON.stringify(request.body) : undefined
   });
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+  const text = await response.text();
+  let data: any = null;
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
   }
 
-  const text = await response.text();
+  if (!response.ok) {
+    throw new ApiRequestError(response.status, data);
+  }
 
   if (!text) {
     return null as T;
   }
 
-  return JSON.parse(text) as T;
+  return data as T;
 }
 
 async function tauriApiRequest<T>(request: ApiRequest): Promise<T> {
-  return useTauriCoreInvoke<T>("api_request", { request });
+  try {
+    return await useTauriCoreInvoke<T>("api_request", { request });
+  } catch (error) {
+    if (error && typeof error === "object" && !(error instanceof Error)) {
+      const payload = error as { status?: unknown; data?: unknown; body?: unknown; message?: unknown };
+      const status = Number(payload.status);
+      if (Number.isFinite(status)) {
+        throw new ApiRequestError(status, parseErrorData(payload.data ?? payload.body));
+      }
+    }
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : error && typeof error === "object" && "message" in error
+          ? String(error.message || "")
+          : String(error || "");
+    const match = message.match(/api request failed: status=(\d+), body=([\s\S]*)/);
+    if (!match) {
+      const payload = parseErrorData(message);
+      if (payload && typeof payload === "object") {
+        const status = Number((payload as { status?: unknown }).status);
+        const data =
+          (payload as { data?: unknown; body?: unknown; error?: unknown }).data ??
+          (payload as { body?: unknown }).body ??
+          (payload as { error?: unknown }).error;
+        if (Number.isFinite(status)) throw new ApiRequestError(status, parseErrorData(data));
+      }
+      throw error;
+    }
+    throw new ApiRequestError(Number(match[1]), parseErrorData(match[2]));
+  }
+}
+
+function parseErrorData(data: unknown) {
+  let parsed = data;
+  for (let depth = 0; depth < 2 && typeof parsed === "string"; depth++) {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      break;
+    }
+  }
+  return parsed;
 }
 
 export async function apiRequest<T>(request: ApiRequest): Promise<T> {
@@ -204,12 +267,32 @@ export function getSmartEndpoint(
   });
 }
 
-export function createConnectionToken(body: unknown, orgId?: string): Promise<TokenResponse> {
+export function createConnectionToken(
+  body: unknown,
+  orgId?: string,
+  options: { createTicket?: boolean; faceVerify?: boolean; faceMonitorToken?: string } = {}
+): Promise<TokenResponse> {
+  const query: Record<string, unknown> = {};
+  if (options.createTicket) query.create_ticket = 1;
+  if (options.faceVerify) query.face_verify = 1;
+  if (options.faceMonitorToken) query.face_monitor_token = options.faceMonitorToken;
+
   return apiRequest<TokenResponse>({
     method: "POST",
     path: "/api/v1/authentication/connection-token/",
+    ...(Object.keys(query).length > 0 ? { query } : {}),
     body,
     orgId
+  });
+}
+
+export function getFaceVerifyState(
+  token: string
+): Promise<{ is_finished: boolean; success: boolean; error_message?: string }> {
+  return apiRequest({
+    method: "GET",
+    path: "/api/v1/authentication/face/context/",
+    query: { token }
   });
 }
 

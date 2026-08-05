@@ -113,7 +113,7 @@ pub fn run() {
 
     // macOS delivers custom URL schemes through RunEvent::Opened. Registering
     // the single-instance plugin there consumes the second launch before that
-    // event reaches the deep-link plugin, dropping the jms:// URL. AppKit
+    // event reaches the deep-link plugin, dropping the jms2:// URL. AppKit
     // already routes opens to the running application, so only Windows/Linux
     // need the explicit single-instance bridge.
     #[cfg(not(target_os = "macos"))]
@@ -121,7 +121,7 @@ pub fn run() {
         info!("single_instance event, argv={:?}", argv);
 
         for arg in argv {
-            if arg.starts_with("jms://") {
+            if arg.starts_with("jms2://") {
                 let did_pull_up = process_deep_link(app, &arg);
                 info!(
                     "single_instance processed deep link, did_pull_up={}",

@@ -25,7 +25,7 @@
 - 🖥️ **Device Management** - Manage Linux and Windows servers seamlessly
 - 🎨 **Modern UI** - Beautiful, responsive interface built with Vue 3 and Nuxt UI
 - ⚡ **High Performance** - Lightweight and fast, powered by Tauri (Rust backend)
-- 🔗 **Deep Link Support** - Launch connections directly from web browsers via custom protocol (`jms://`)
+- 🔗 **Deep Link Support** - Launch connections directly from web browsers via custom protocol (`jms2://`)
 - 🌓 **Theme Support** - Light and dark mode
 - 🌍 **Internationalization** - Multi-language support (English, Chinese)
 - 📋 **Clipboard Integration** - Easy copy-paste functionality
@@ -107,7 +107,7 @@ sudo dnf install ./jumpserver-client_*.rpm
 
 1. **From JumpServer Web Interface**: Click on any asset connection link - the client will automatically launch
 2. **From the Client**: Browse your assets, select a connection, and click connect
-3. **Custom Protocol**: Use `jms://` links to launch connections programmatically
+3. **Custom Protocol**: Use `jms2://` links to launch connections programmatically
 
 ### Supported Connection Types
 

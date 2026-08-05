@@ -9,6 +9,10 @@ const { getPaneTarget, registerPaneSurface, unregisterPaneSurface } = useWorkspa
 const surfaceTab = computed(() => toSurfaceTab(props.pane));
 const surfaceTarget = computed(() => getPaneTarget(props.pane.id));
 const surfaceComponent = computed(() => resolveSessionSurface(surfaceTab.value));
+const surfaceReady = computed(() => {
+  const payload = props.pane.payload || {};
+  return Boolean(payload.id || payload.token?.id || payload.webUrl);
+});
 const { reconnectSession } = useWorkspaceTabMenu();
 let surfaceInstance: { focus?: () => void } | null = null;
 
@@ -35,7 +39,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Teleport v-if="pane.mode === 'session' && surfaceTarget" :to="surfaceTarget">
+  <Teleport v-if="pane.mode === 'session' && surfaceReady && surfaceTarget" :to="surfaceTarget">
     <component
       :is="surfaceComponent"
       :key="surfaceInstanceKey"

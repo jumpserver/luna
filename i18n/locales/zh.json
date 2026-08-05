@@ -106,8 +106,8 @@
     "OpenMultiple": "打开多个",
     "OpenSelected": "打开已选",
     "SelectedCount": "已选 {count} 个",
-    "MultiOpenNoConnectable": "没有可直接打开的资产，请先为资产保存 SSH 连接配置",
-    "MultiOpenSkipped": "已跳过 {count} 个未保存 SSH 连接配置的资产"
+    "MultiOpenNoConnectable": "所选资产不支持 SSH 连接",
+    "MultiOpenSkipped": "已跳过 {count} 个不支持 SSH 或加载失败的资产"
   },
   "Operation": {
     "Search": "搜索"
@@ -479,6 +479,39 @@
     "RdpAppFailed": "启动 RDP 客户端失败",
     "VncAppFailed": "启动 VNC 客户端失败",
     "DbAppFailed": "启动数据库客户端失败"
+  },
+  "AclDialog": {
+    "LoginReview": "登录审批",
+    "FaceVerify": "人脸验证",
+    "LoginReminder": "登录提醒",
+    "NeedReview": "本次登录需要审批，是否继续？",
+    "ReviewPending": "登录审批申请正在等待处理。",
+    "ReviewRejected": "登录审批申请已被拒绝。",
+    "ReviewClosed": "登录审批申请已关闭。",
+    "NeedFaceVerify": "连接该资产需要完成人脸验证。",
+    "CompleteFaceVerify": "请完成人脸验证。",
+    "ReviewGroupDescription": "以下资产需要审批，确认后将一次性提交全部申请。",
+    "FaceGroupDescription": "以下资产需要人脸验证，将在当前窗口中逐项完成。",
+    "ErrorGroupDescription": "以下资产遇到了相同类型的登录限制。",
+    "Assignees": "受理人：{value}",
+    "SubmitAll": "全部提交审批",
+    "Restore": "恢复审批窗口",
+    "MinimizedReady": "{count} 项审批等待提交",
+    "MinimizedPending": "{count} 项审批正在等待处理",
+    "MinimizedFinished": "{count} 项审批已处理，可点击查看结果",
+    "RequestFailed": "审批请求处理失败，请展开查看错误详情。",
+    "ExpandError": "展开错误详情",
+    "CollapseError": "收起错误详情",
+    "Status": {
+      "ready": "待提交",
+      "submitting": "提交中",
+      "pending": "审批中",
+      "verifying": "验证中",
+      "approved": "已通过",
+      "rejected": "已拒绝",
+      "closed": "已关闭",
+      "failed": "处理失败"
+    }
   },
   "Update": {
     "FoundNewVersion": "发现新版本",

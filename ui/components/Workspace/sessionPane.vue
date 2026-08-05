@@ -25,6 +25,7 @@ const {
 } = useWorkspaceTabs();
 const { focusPaneSurface, registerPaneTarget, unregisterPaneTarget } = useWorkspacePaneSurfaceRegistry();
 const { connectCurrentPane, connectOtherPane, mergeWorkspaceTabIntoCurrent, reconnectSession } = useWorkspaceTabMenu();
+const { hasScopeGroup } = useAclDialog();
 const draggedPaneId = ref("");
 const dragOverPaneId = ref("");
 const dragOverPanePlacement = ref<WorkspacePaneDropPlacement>("center");
@@ -45,11 +46,6 @@ const paneGridClass = computed(() => {
     default:
       return "";
   }
-});
-const setupPane = computed(() => {
-  const activeSetupPane = props.tab.panes.find((pane) => pane.id === activePaneId.value && pane.mode === "setup");
-
-  return activeSetupPane || props.tab.panes.find((pane) => pane.mode === "setup");
 });
 const showPaneHeaders = computed(() => props.tab.panes.length > 1);
 const inactivePaneOverlayClass = computed(() => (colorMode.value === "dark" ? "bg-white/4" : "bg-black/3"));
@@ -219,7 +215,10 @@ function resolvePaneDropPlacement(event: DragEvent): WorkspacePaneDropPlacement 
   const rect = target.getBoundingClientRect();
   const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
   const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
-  const edges: Array<{ placement: WorkspacePaneDropPlacement; distance: number }> = [
+  const edges: Array<{
+    placement: WorkspacePaneDropPlacement;
+    distance: number;
+  }> = [
     { placement: "left", distance: x },
     { placement: "right", distance: 1 - x },
     { placement: "top", distance: y },
@@ -356,7 +355,7 @@ onBeforeUnmount(() => {
           :key="pane.id"
           class="group relative flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--workspace-surface-sub-panel)] transition-[box-shadow]"
           :class="[
-            isActivePane(pane.id)
+            isActivePane(pane.id) && pane.status !== 'failed' && !hasScopeGroup(pane.id)
               ? 'z-[1] ring-1 ring-inset ring-primary/28 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ui-color-primary-500)_10%,transparent)]'
               : 'ring-1 ring-inset ring-transparent',
             showPaneDropHint(pane.id)
@@ -438,7 +437,14 @@ onBeforeUnmount(() => {
 
             <div v-else-if="pane.mode === 'setup'" class="h-full bg-[var(--workspace-surface-background)]" />
 
-            <div v-else :ref="(el: unknown) => setPaneSurfaceTarget(pane.id, el)" class="h-full" />
+            <div v-else :ref="(el: unknown) => setPaneSurfaceTarget(pane.id, el)" class="h-full">
+              <div
+                v-if="!pane.payload?.id && !pane.payload?.token?.id && !pane.payload?.webUrl"
+                class="grid h-full place-items-center"
+              >
+                <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-[var(--app-muted)]" />
+              </div>
+            </div>
           </div>
           <div
             class="pointer-events-none absolute inset-0 z-[3] transition-colors"
@@ -463,10 +469,9 @@ onBeforeUnmount(() => {
               </div>
             </div>
           </div>
+          <WorkspaceAclPaneHost :scope-id="pane.id" />
         </section>
       </div>
-
-      <WorkspaceConnectionSetupPane v-if="setupPane" :tab="surfaceTabFor(setupPane)" class="absolute inset-0 z-10" />
     </div>
 
     <UModal v-model:open="connectOtherModalOpen" :title="t('WorkspacePane.ConnectOther')" :ui="{ content: 'max-w-md' }">

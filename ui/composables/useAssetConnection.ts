@@ -3,7 +3,7 @@ import { isConnectMethodAvailable } from "~/composables/useConnectMethods";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols } from "~/utils";
 
-interface ConnectionFormInfo {
+export interface ConnectionFormInfo {
   protocol: string;
   account: string;
   manualUsername: string;
@@ -17,6 +17,7 @@ interface ConnectionFormInfo {
   accountId?: string;
   availableProtocols?: string[];
   tabId?: string;
+  aclBatchId?: string;
   onSessionReady?: (payload: Record<string, any>) => void;
   onSessionError?: (error: unknown) => void;
   accountMode: "hosted" | "dynamic" | "manual" | "anonymous";
@@ -225,6 +226,7 @@ export function useAssetConnection() {
       connectMethod: normalized.connectMethod,
       connectOptions: normalized.connectOptions,
       tabId: normalized.tabId,
+      aclBatchId: normalized.aclBatchId,
       onSessionReady: normalized.onSessionReady,
       onSessionError: normalized.onSessionError,
       asset

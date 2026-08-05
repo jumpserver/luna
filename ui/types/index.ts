@@ -357,6 +357,8 @@ export interface ConnectionBody {
 }
 
 export interface TokenResponse {
+  code?: string;
+  detail?: string;
   account: string;
   actions: [];
   asset: AssetNode;
@@ -368,6 +370,7 @@ export interface TokenResponse {
   date_expired: string;
   date_updated: string;
   expire_time: number;
+  face_token?: string;
   face_monitor_token: string;
   from_ticket: any;
   from_ticket_info: any;

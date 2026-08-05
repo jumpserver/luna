@@ -2,6 +2,8 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { LangType, LanguagePreference } from "~/types";
 
+import AclDialog from "~/components/Modal/aclDialog.vue";
+import ConnectionFormModal from "~/components/Modal/connectionFormModal.vue";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composables/useThemePresets";
 import { resolveLanguageFromSystem } from "~/utils";
 
@@ -260,6 +262,8 @@ onBeforeUnmount(() => {
           <NuxtPage :page-key="pageKey" />
         </NuxtLayout>
         <FileTransferCenter />
+        <ConnectionFormModal />
+        <AclDialog />
       </UApp>
     </Body>
   </Html>

@@ -63,7 +63,8 @@ async function fetchSessionAsset(assetId: string): Promise<AssetItem> {
 
 export function useSessionWindowConnect() {
   const route = useRoute();
-  const { activeTab, openSetupSession } = useWorkspaceTabs();
+  const { activeTab } = useWorkspaceTabs();
+  const { configureAndLaunch } = useConnectionLauncher();
   const userInfoStore = useUserInfoStore();
   const loading = ref(false);
   const error = ref("");
@@ -81,7 +82,7 @@ export function useSessionWindowConnect() {
     try {
       const asset = await fetchSessionAsset(assetId);
       asset.savedConnection = saved || undefined;
-      openSetupSession(asset, {
+      await configureAndLaunch(asset, {
         protocol: String(route.query.protocol || preference?.protocol || saved?.protocol || "")
       });
     } catch (cause) {

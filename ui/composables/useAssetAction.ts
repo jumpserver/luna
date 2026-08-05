@@ -42,6 +42,14 @@ const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
 const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
 const isLocalClientMethod = (method: { type?: string } | undefined) =>
   ["native", "client", "local", "desktop"].includes(String(method?.type || "").toLowerCase());
+const withLocalClientName = (url: string, clientName?: string) => {
+  if (!clientName || !url.startsWith("jms2://")) return url;
+  const decoded = Uint8Array.from(atob(url.slice("jms2://".length)), (character) => character.charCodeAt(0));
+  const payload = JSON.parse(new TextDecoder().decode(decoded));
+  payload.client_name = clientName;
+  const encoded = new TextEncoder().encode(JSON.stringify(payload));
+  return `jms2://${btoa(String.fromCharCode(...encoded))}`;
+};
 const pendingBuiltinSessions: Array<{
   tabId?: string;
   assetId: string;
@@ -316,88 +324,94 @@ export const useAssetAction = () => {
       assetId: string;
       protocol: string;
       account: string;
+      assetName?: string;
       orgId?: string;
+      aclBatchId?: string;
       onSessionReady?: (payload: Record<string, any>) => void;
+      onSessionError?: (error: unknown) => void;
     }
   ) => {
     const nativeApp = parseLocalApplicationConnectMethod(body.connect_method);
     const serverBody = { ...body, connect_method: nativeApp.connectMethod };
 
-    if (!isTauriRuntime()) {
-      const session = meta?.tabId
+    const session =
+      meta?.tabId || meta?.onSessionReady
         ? undefined
         : meta?.asset
           ? openSession(meta.asset, { protocol: meta.protocol, account: meta.account })
           : undefined;
-      const tabId = meta?.tabId || session?.id;
+    const tabId = meta?.tabId || session?.id;
 
-      try {
-        const token = await createConnectionToken(serverBody, meta?.orgId);
-        const allMethods = await fetchConnectMethods();
-        const method = (allMethods[body.protocol] || []).find((item) => item.value === serverBody.connect_method);
-
-        if (isLocalClientMethod(method)) {
-          const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams());
-          if (!url?.startsWith("jms://")) {
-            throw new Error("Invalid local client URL");
-          }
-          meta?.onSessionReady?.({
-            token,
-            ...token,
-            connectMethod: method || { value: body.connect_method }
-          });
-          window.location.assign(url);
-          return;
-        }
-
-        const component = method?.component || (body.protocol === "ssh" ? "koko" : "default");
-        const endpointUrl =
-          getWebConnectorDevOrigin(component) || (await fetchSmartEndpointUrl(token, method, body, meta?.orgId));
-        const webUrl = getWebConnectorPath(token, method, body, endpointUrl);
-
-        if (tabId) {
-          updateSessionPayload(
-            { tabId, assetId: meta!.assetId, protocol: meta!.protocol, account: meta!.account },
-            {
-              token,
-              ...token,
-              webUrl,
-              connectMethod: method || { value: body.connect_method }
-            }
-          );
-        } else {
-          window.open(webUrl, "_blank");
-        }
-      } catch (error) {
-        if (meta) {
+    try {
+      const token = await createConnectionTokenWithAcl(serverBody, {
+        orgId: meta?.orgId,
+        assetName: meta?.asset?.name || meta?.assetId || body.asset,
+        scopeId: tabId,
+        batchId: meta?.aclBatchId
+      });
+      if (!token) {
+        if (meta?.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
+        else if (meta)
           markSessionFailed({ tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account });
-        }
-
-        addErrorToast({
-          title: t("ConnectError.ConnectFailed"),
-          description: String(error),
-          icon: "line-md:close-circle",
-          progress: true,
-          duration: 4000
-        });
+        return;
       }
-      return;
-    }
+      const allMethods = await fetchConnectMethods();
+      const method = (allMethods[body.protocol] || []).find((item) => item.value === serverBody.connect_method);
 
-    const rdpParams = buildLocalRdpParams();
-    await useTauriCoreInvoke("get_connect_token", {
-      body: {
-        asset: body.asset,
-        account: body.account,
-        protocol: body.protocol,
-        input_username: body.input_username,
-        input_secret: body.input_secret,
-        connect_method: nativeApp.connectMethod,
-        connect_options: body.connect_options
-      },
-      rdpParams,
-      clientName: nativeApp.clientName
-    });
+      if (isTauriRuntime() || isLocalClientMethod(method)) {
+        const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams());
+        if (!url?.startsWith("jms2://")) {
+          throw new Error("Invalid local client URL");
+        }
+        meta?.onSessionReady?.({
+          token,
+          ...token,
+          connectMethod: method || { value: body.connect_method }
+        });
+        if (isTauriRuntime()) {
+          await useTauriCoreInvoke("pull_up", { url: withLocalClientName(url, nativeApp.clientName) });
+        } else {
+          window.location.assign(url);
+        }
+        return;
+      }
+
+      const component = method?.component || (body.protocol === "ssh" ? "koko" : "default");
+      const endpointUrl =
+        getWebConnectorDevOrigin(component) || (await fetchSmartEndpointUrl(token, method, body, meta?.orgId));
+      const webUrl = getWebConnectorPath(token, method, body, endpointUrl);
+
+      const payload = {
+        token,
+        ...token,
+        webUrl,
+        connectMethod: method || { value: body.connect_method }
+      };
+      if (meta?.onSessionReady) {
+        meta.onSessionReady(payload);
+      } else if (tabId) {
+        updateSessionPayload(
+          { tabId, assetId: meta!.assetId, protocol: meta!.protocol, account: meta!.account },
+          payload
+        );
+      } else {
+        window.open(webUrl, "_blank");
+      }
+    } catch (error) {
+      if (meta?.onSessionError) {
+        meta.onSessionError(error);
+      } else if (meta) {
+        markSessionFailed({ tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account });
+      }
+
+      addErrorToast({
+        title: t("ConnectError.ConnectFailed"),
+        description: String(error),
+        icon: "line-md:close-circle",
+        progress: true,
+        duration: 4000
+      });
+    }
   };
 
   const resolveServerConnectMethod = async (body: ConnectionBody) => {
@@ -444,74 +458,46 @@ export const useAssetAction = () => {
       assetId: string;
       protocol: string;
       account: string;
+      assetName?: string;
       orgId?: string;
+      aclBatchId?: string;
       onSessionReady?: (payload: Record<string, any>) => void;
       onSessionError?: (error: unknown) => void;
     }
   ) => {
-    if (!isTauriRuntime()) {
-      void (async () => {
-        try {
-          const serverBody = { ...body, connect_method: await resolveServerConnectMethod(body) };
-          const token = await createConnectionToken(serverBody, meta.orgId);
-          const payload = {
-            token,
-            ...token,
-            connectMethod: { value: body.connect_method, component: resolveBuiltinComponent(body) }
-          };
-          if (meta.onSessionReady) meta.onSessionReady(payload);
-          else updateSessionPayload(meta, payload);
-        } catch (error) {
-          if (meta.onSessionError) meta.onSessionError(error);
+    void (async () => {
+      try {
+        const serverBody = { ...body, connect_method: await resolveServerConnectMethod(body) };
+        const token = await createConnectionTokenWithAcl(serverBody, {
+          orgId: meta.orgId,
+          assetName: meta.assetName || meta.assetId,
+          scopeId: meta.tabId,
+          batchId: meta.aclBatchId
+        });
+        if (!token) {
+          if (meta.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
           else markSessionFailed(meta);
-          addErrorToast({
-            title: t("ConnectError.ConnectFailed"),
-            description: String(error),
-            icon: "line-md:close-circle",
-            progress: true,
-            duration: 4000
-          });
+          return;
         }
-      })();
-      return;
-    }
-
-    const rdpParams = buildLocalRdpParams();
-    pendingBuiltinSessions.push({ ...meta, connectMethod: body.connect_method });
-
-    void (async () =>
-      useTauriCoreInvoke("get_builtin_connect_session", {
-        body: {
-          asset: body.asset,
-          account: body.account,
-          protocol: body.protocol,
-          input_username: body.input_username,
-          input_secret: body.input_secret,
-          connect_method: await resolveServerConnectMethod(body),
-          connect_options: body.connect_options
-        },
-        rdpParams
-      }))().catch((error) => {
-      const idx = pendingBuiltinSessions.findIndex(
-        (item) =>
-          item.assetId === meta.assetId &&
-          item.protocol === meta.protocol &&
-          item.account === meta.account &&
-          item.tabId === meta.tabId
-      );
-
-      if (idx !== -1) pendingBuiltinSessions.splice(idx, 1);
-      if (meta.onSessionError) meta.onSessionError(error);
-      else markSessionFailed(meta);
-
-      addErrorToast({
-        title: t("ConnectError.ConnectFailed"),
-        description: String(error || t("ConnectError.ConnectFailed")),
-        icon: "line-md:close-circle",
-        progress: true,
-        duration: 4000
-      });
-    });
+        const payload = {
+          token,
+          ...token,
+          connectMethod: { value: body.connect_method, component: resolveBuiltinComponent(body) }
+        };
+        if (meta.onSessionReady) meta.onSessionReady(payload);
+        else updateSessionPayload(meta, payload);
+      } catch (error) {
+        if (meta.onSessionError) meta.onSessionError(error);
+        else markSessionFailed(meta);
+        addErrorToast({
+          title: t("ConnectError.ConnectFailed"),
+          description: String(error),
+          icon: "line-md:close-circle",
+          progress: true,
+          duration: 4000
+        });
+      }
+    })();
   };
 
   const resolveConnectMethod = async (protocol: string) => {
@@ -576,11 +562,11 @@ export const useAssetAction = () => {
       connectMethod?: string;
       connectOptions?: Record<string, any>;
       tabId?: string;
+      aclBatchId?: string;
       asset?: AssetItem;
       onSessionReady?: (payload: Record<string, any>) => void;
       onSessionError?: (error: unknown) => void;
       orgId?: string;
-      onSessionReady?: (payload: Record<string, any>) => void;
     }
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
@@ -690,7 +676,9 @@ export const useAssetAction = () => {
           assetId,
           protocol,
           account,
+          assetName: ephemeral?.asset?.name,
           orgId: ephemeral?.orgId,
+          aclBatchId: ephemeral?.aclBatchId,
           onSessionReady: ephemeral?.onSessionReady,
           onSessionError: ephemeral?.onSessionError
         });
@@ -704,7 +692,9 @@ export const useAssetAction = () => {
         protocol,
         account,
         orgId: ephemeral?.orgId,
-        onSessionReady: ephemeral?.onSessionReady
+        aclBatchId: ephemeral?.aclBatchId,
+        onSessionReady: ephemeral?.onSessionReady,
+        onSessionError: ephemeral?.onSessionError
       });
     });
   };

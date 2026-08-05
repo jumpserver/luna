@@ -79,7 +79,7 @@ struct Application {
 
 fn decode_payload(raw: &str) -> Result<LaunchPayload, String> {
     let encoded = raw
-        .strip_prefix("jms://")
+        .strip_prefix("jms2://")
         .ok_or_else(|| "invalid local client URL scheme".to_string())?;
     let decoded = BASE64_STANDARD
         .decode(encoded)
@@ -588,7 +588,7 @@ mod tests {
         let encoded = BASE64_STANDARD.encode(
             br#"{"protocol":"ssh","client":"iterm","name":"root","endpoint":{"host":"localhost","port":2222},"token":{"id":"id","value":"secret"},"asset":{},"file":{}}"#,
         );
-        let payload = decode_payload(&format!("jms://{encoded}")).unwrap();
+        let payload = decode_payload(&format!("jms2://{encoded}")).unwrap();
         assert_eq!(payload.client, "iterm");
         assert_eq!(username(&payload), "JMS-id");
     }

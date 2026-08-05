@@ -17,7 +17,7 @@ const WINDOW_SIZE_UNIT_LOGICAL: &str = "logical";
 /// 判断是否为 OAuth 回调 deeplink
 pub fn is_auth_callback(raw_url: &str) -> bool {
     if let Ok(url) = Url::parse(raw_url) {
-        return url.scheme() == "jms"
+        return url.scheme() == "jms2"
             && url
                 .host_str()
                 .map(|h| h.eq_ignore_ascii_case("auth"))

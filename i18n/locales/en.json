@@ -106,8 +106,8 @@
     "OpenMultiple": "Open multiple",
     "OpenSelected": "Open selected",
     "SelectedCount": "{count} selected",
-    "MultiOpenNoConnectable": "No assets can be opened directly yet. Save SSH connection settings first.",
-    "MultiOpenSkipped": "Skipped {count} assets without saved SSH connection settings"
+    "MultiOpenNoConnectable": "The selected assets do not support SSH connections",
+    "MultiOpenSkipped": "Skipped {count} assets that do not support SSH or failed to load"
   },
   "Operation": {
     "Search": "Search"
@@ -476,6 +476,39 @@
     "RdpAppFailed": "Failed to start the RDP application.",
     "VncAppFailed": "Failed to start the VNC application.",
     "DbAppFailed": "Failed to start the database application."
+  },
+  "AclDialog": {
+    "LoginReview": "Login review",
+    "FaceVerify": "Face verification",
+    "LoginReminder": "Login reminder",
+    "NeedReview": "This login requires approval. Do you want to continue?",
+    "ReviewPending": "The login approval request is pending.",
+    "ReviewRejected": "The login approval request was rejected.",
+    "ReviewClosed": "The login approval request was closed.",
+    "NeedFaceVerify": "Face verification is required to connect to this asset.",
+    "CompleteFaceVerify": "Please complete face verification.",
+    "ReviewGroupDescription": "The following assets require approval. Confirm to submit all requests.",
+    "FaceGroupDescription": "The following assets require face verification. Complete them one by one in this dialog.",
+    "ErrorGroupDescription": "The following assets have the same type of login restriction.",
+    "Assignees": "Assignees: {value}",
+    "SubmitAll": "Submit all reviews",
+    "Restore": "Restore approval window",
+    "MinimizedReady": "{count} approval requests are ready to submit",
+    "MinimizedPending": "{count} approval requests are awaiting review",
+    "MinimizedFinished": "{count} approval requests finished; click to view results",
+    "RequestFailed": "The approval request failed. Expand to view the error details.",
+    "ExpandError": "Expand error details",
+    "CollapseError": "Collapse error details",
+    "Status": {
+      "ready": "Ready",
+      "submitting": "Submitting",
+      "pending": "Pending",
+      "verifying": "Verifying",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "closed": "Closed",
+      "failed": "Failed"
+    }
   },
   "Update": {
     "FoundNewVersion": "New version available",

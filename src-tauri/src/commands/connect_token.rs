@@ -105,7 +105,7 @@ pub async fn get_connect_token(
 
 fn with_client_name(client_url: &str, client_name: &str) -> Result<String, String> {
     let encoded = client_url
-        .strip_prefix("jms://")
+        .strip_prefix("jms2://")
         .ok_or_else(|| "invalid local client url scheme".to_string())?;
     let decoded = BASE64_STANDARD
         .decode(encoded)
@@ -120,7 +120,7 @@ fn with_client_name(client_url: &str, client_name: &str) -> Result<String, Strin
         serde_json::to_vec(&payload)
             .map_err(|error| format!("serialize local client url failed: {error}"))?,
     );
-    Ok(format!("jms://{encoded}"))
+    Ok(format!("jms2://{encoded}"))
 }
 
 #[tauri::command]

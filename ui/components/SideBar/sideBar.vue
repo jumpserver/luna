@@ -12,8 +12,9 @@ const localePath = useLocalePath();
 const { collapse, sidebarSections, setSidebarSections } = useSettingManager();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const showTools = computed(() => isTauriRuntime());
-const { confirmConnection, saveConnectionInfo } = useAssetConnection();
-const { activeTab, canSplitWorkspace, openSession, openSetupSession, splitWorkspace } = useWorkspaceTabs();
+const { confirmConnection } = useAssetConnection();
+const { configure, configureAndLaunch, launchWithInfo } = useConnectionLauncher();
+const { activeTab, canSplitWorkspace, openSession, splitWorkspace } = useWorkspaceTabs();
 const { openAssetInWindow } = useAssetWindowLauncher();
 const { handleAssetFavorite, handleAssetRename, handleAssetUnfavorite } = useAssetAction();
 const { folders: favoriteFolders, load: loadFavoriteFolders, favoriteToFolder } = useFavoriteFolders();
@@ -177,7 +178,7 @@ const connectWithSavedConnection = async (asset: AssetItem) => {
   const rememberedAsset = { ...asset, savedConnection: remembered || undefined };
 
   if (!remembered || !hasReusableSavedConnection(rememberedAsset)) {
-    openSetupSession(rememberedAsset);
+    await configureAndLaunch(rememberedAsset);
     return;
   }
 
@@ -196,7 +197,7 @@ const connectWithSavedConnection = async (asset: AssetItem) => {
   }
 
   if (!savedConnectionIsAvailable(connectAsset)) {
-    openSetupSession(connectAsset);
+    await configureAndLaunch(connectAsset);
     return;
   }
 
@@ -223,68 +224,31 @@ const connectWithSavedConnection = async (asset: AssetItem) => {
   });
 };
 
-const connectWithBuiltinSsh = (asset: AssetItem, info: any) => {
-  const protocol = info.protocol || asset.savedConnection?.protocol || "ssh";
-  const availableProtocols = info.availableProtocols || asset.savedConnection?.availableProtocols || [];
+const handleOpenMultipleAssets = async (assets: AssetItem[]) => {
+  const selected = assets.map((asset) => ({
+    ...asset,
+    savedConnection: userInfoStore.getConnectionInfoForAsset(asset.id) || asset.savedConnection
+  }));
+  const details = await Promise.allSettled(selected.map((asset) => loadAssetConnectionDetails(asset)));
+  const sshAssets = details.flatMap((result) => {
+    if (result.status !== "fulfilled") return [];
 
-  if (protocol !== "ssh") {
-    useToast().add({
-      title: "暂不支持该协议",
-      description: "内置连接目前只支持 SSH。",
-      color: "warning",
-      icon: "i-lucide-circle-alert",
-      duration: 3000
-    });
-    return;
-  }
-
-  if (availableProtocols.length > 0 && !availableProtocols.includes("ssh")) {
-    useToast().add({
-      title: "暂不支持该资产",
-      description: "内置连接目前只支持 SSH 资产。",
-      color: "warning",
-      icon: "i-lucide-circle-alert",
-      duration: 3000
-    });
-    return;
-  }
-
-  const builtinInfo = {
-    ...info,
-    protocol: "ssh",
-    connectMethod: "builtin_client"
-  };
-  saveConnectionInfo(asset, builtinInfo);
-
-  const session = openSession(
-    {
-      ...asset,
-      savedConnection: {
-        ...(asset.savedConnection || {}),
-        protocol: "ssh",
-        username: builtinInfo.account,
-        connectMethod: "builtin_client"
-      }
-    },
-    {
-      protocol: "ssh",
-      account: builtinInfo.account
-    }
-  );
-
-  confirmConnection(asset, {
-    ...builtinInfo,
-    connectMethod: "builtin_client",
-    tabId: session.id
+    const asset = result.value;
+    return hasSshProtocol(asset) ? [asset] : [];
   });
-};
 
-const handleOpenMultipleAssets = (assets: AssetItem[]) => {
-  const connectable = assets.filter(
-    (asset) => hasSshProtocol(asset) && asset.savedConnection?.protocol === "ssh" && hasReusableSavedConnection(asset)
-  );
+  if (sshAssets.length === 0) {
+    const failed = details.find((result) => result.status === "rejected");
+    if (failed?.status === "rejected") {
+      addErrorToast({
+        title: t("ConnectError.ConnectFailed"),
+        description: String(failed.reason),
+        icon: "i-lucide-circle-alert",
+        duration: 4000
+      });
+      return;
+    }
 
-  if (connectable.length === 0) {
     toast.add({
       title: t("Tree.MultiOpenNoConnectable"),
       color: "warning",
@@ -294,23 +258,22 @@ const handleOpenMultipleAssets = (assets: AssetItem[]) => {
     return;
   }
 
-  for (const asset of connectable) {
-    const saved = asset.savedConnection!;
-    connectWithBuiltinSsh(asset, {
+  const configured = [];
+  for (const [index, asset] of sshAssets.entries()) {
+    const info = await configure(asset, {
       protocol: "ssh",
-      account: saved.username,
-      accountId: saved.accountId,
-      accountMode: (saved.accountMode as any) || "hosted",
-      manualUsername: saved.manualUsername || "",
-      manualPassword: saved.manualPassword || "",
-      dynamicPassword: saved.dynamicPassword || "",
-      rememberSecret: !!saved.rememberSecret,
-      connectMethod: "builtin_client",
-      availableProtocols: saved.availableProtocols || []
+      position: index + 1,
+      total: sshAssets.length
     });
+    if (!info) return;
+    configured.push({ asset, info });
   }
 
-  const skipped = assets.length - connectable.length;
+  const aclBatchId =
+    configured.length > 1 ? globalThis.crypto?.randomUUID?.() || `batch-${Date.now()}-${Math.random()}` : undefined;
+  void Promise.all(configured.map(({ asset, info }) => launchWithInfo(asset, info, { aclBatchId })));
+
+  const skipped = assets.length - sshAssets.length;
   if (skipped > 0) {
     toast.add({
       title: t("Tree.MultiOpenSkipped", { count: skipped }),
@@ -325,12 +288,12 @@ const handleAssetConnect = (asset: AssetItem) => {
   connectWithSavedConnection(asset);
 };
 
-const openAssetInCurrentWorkspace = (asset: AssetItem) => {
+const openAssetInCurrentWorkspace = async (asset: AssetItem) => {
   contextMenuVisible.value = false;
 
   const currentTab = activeTab.value;
   if (!currentTab) {
-    openSetupSession(asset);
+    await configureAndLaunch(asset);
     return;
   }
 
@@ -353,18 +316,18 @@ const openAssetInCurrentWorkspace = (asset: AssetItem) => {
   const [pane] = splitWorkspace(currentTab.id, direction);
   if (!pane) return;
 
-  openSetupSession(asset, { paneId: pane.id });
+  await configureAndLaunch(asset, { paneId: pane.id });
 };
 
 const handleAssetQuickConnect = (asset: AssetItem) => {
   connectWithSavedConnection(asset);
 };
 
-useEventBus().on("workspaceConnectAsset", handleAssetConnect);
-
 const handleAssetConnectWithSelection = (asset: AssetItem) => {
-  openSetupSession(asset);
+  void configureAndLaunch(asset);
 };
+
+useEventBus().on("workspaceConnectAsset", handleAssetConnectWithSelection);
 
 const handleAssetOpenInNewWindow = async (asset: AssetItem) => {
   contextMenuVisible.value = false;

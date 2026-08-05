@@ -2,7 +2,7 @@ import type { OnlineUser, SettingConfig, ShareUserOptions } from "#koko/types";
 import type { KokoZmodemSentry } from "./zmodemTypes";
 import { connectorSessionKey, FORMATTER_MESSAGE_TYPE, HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { useKokoHostAdapter } from "@jumpserver/koko/host";
-import { useDebounceFn, useWindowSize } from "@vueuse/core";
+import { useDebounceFn, useResizeObserver, useWindowSize } from "@vueuse/core";
 import { FitAddon } from "@xterm/addon-fit";
 
 import { SearchAddon } from "@xterm/addon-search";
@@ -88,9 +88,19 @@ export const useKokoTerminalSocket = () => {
   let themeObserver: MutationObserver | null = null;
   let fitAddon: FitAddon | null = null;
 
+  const fitToContainer = () => {
+    const container = containerRef.value;
+    if (!container || container.clientWidth === 0 || container.clientHeight === 0) return;
+    fitAddon?.fit();
+  };
+
+  const { stop: stopContainerResizeObserver } = useResizeObserver(containerRef, () => {
+    nextTick(fitToContainer);
+  });
+
   const autoTerminalFit = watch([width, height], () => {
     if (!terminalRef.value) return;
-    nextTick(() => fitAddon?.fit());
+    nextTick(fitToContainer);
   });
 
   const debouncedResize = useDebounceFn(({ cols, rows }: { cols: number; rows: number }) => {
@@ -255,12 +265,13 @@ export const useKokoTerminalSocket = () => {
       listenSocketEvent();
       input.start();
       terminalRef.value?.open(containerRef.value!);
-      fitAddon?.fit();
+      fitToContainer();
     });
   });
 
   onUnmounted(() => {
     autoTerminalFit();
+    stopContainerResizeObserver();
     themeObserver?.disconnect();
     input.stop();
     heartbeat.stop();
