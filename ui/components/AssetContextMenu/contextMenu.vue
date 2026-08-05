@@ -170,7 +170,6 @@ function handleUnfavorite() {
   } catch {}
   emits("update:visible", false);
 }
-
 </script>
 
 <template>

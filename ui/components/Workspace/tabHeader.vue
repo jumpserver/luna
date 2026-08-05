@@ -24,7 +24,7 @@ const {
   closeOtherSessions,
   closeRightSessions,
   closeSession,
-  setActiveSession,
+  setActiveSession
 } = useWorkspaceTabs();
 const { cloneSession, reconnectSession, splitSession } = useWorkspaceTabMenu();
 
@@ -57,7 +57,7 @@ function tabIcon(tab: WorkspaceSessionTab) {
   return resolveAssetIconFromFields({
     type: tab.assetType,
     platform: tab.assetPlatform,
-    category: tab.assetCategory,
+    category: tab.assetCategory
   });
 }
 
@@ -87,8 +87,7 @@ function shouldShowShortcutHint(index: number) {
 
 function shortcutHintLabel(index: number) {
   const modifier = isMacOS.value ? "⌘" : "Ctrl";
-  const digit =
-    tabs.value.length > 9 && index === tabs.value.length - 1 ? 9 : index + 1;
+  const digit = tabs.value.length > 9 && index === tabs.value.length - 1 ? 9 : index + 1;
   return `${modifier}${digit}`;
 }
 
@@ -97,7 +96,7 @@ const tabDropdownUi = {
   item: "gap-2 items-center",
   itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]",
   itemWrapper: "min-w-0 flex-1",
-  itemLabel: "min-w-0",
+  itemLabel: "min-w-0"
 };
 
 const TAB_MENU_ICON_PLACEHOLDER = "i-lucide-circle";
@@ -108,8 +107,8 @@ function tabMenuItem(item: DropdownMenuItem, icon?: string): DropdownMenuItem {
       ...item,
       icon: TAB_MENU_ICON_PLACEHOLDER,
       ui: {
-        itemLeadingIcon: "size-4 w-4 shrink-0 opacity-0 pointer-events-none",
-      },
+        itemLeadingIcon: "size-4 w-4 shrink-0 opacity-0 pointer-events-none"
+      }
     };
   }
 
@@ -117,8 +116,8 @@ function tabMenuItem(item: DropdownMenuItem, icon?: string): DropdownMenuItem {
     ...item,
     icon,
     ui: {
-      itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]",
-    },
+      itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]"
+    }
   };
 }
 
@@ -182,11 +181,7 @@ function handleTabDrop(targetTabId: string) {
   dragOverTabPlacement.value = "before";
 }
 
-function openContextMenu(
-  tab: WorkspaceSessionTab,
-  index: number,
-  event: MouseEvent,
-) {
+function openContextMenu(tab: WorkspaceSessionTab, index: number, event: MouseEvent) {
   event.preventDefault();
   event.stopPropagation();
 
@@ -213,9 +208,9 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
         onSelect: () => {
           hideContextMenu();
           void cloneSession(tab);
-        },
+        }
       },
-      "i-lucide-copy",
+      "i-lucide-copy"
     ),
     tabMenuItem(
       {
@@ -224,18 +219,18 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
         onSelect: () => {
           hideContextMenu();
           void reconnectSession(tab);
-        },
+        }
       },
-      "i-lucide-refresh-cw",
+      "i-lucide-refresh-cw"
     ),
     tabMenuItem(
       {
         label: t("TabMenu.RenameTitle"),
         onSelect: () => {
           openRenameModal(tab);
-        },
+        }
       },
-      "i-lucide-pencil",
+      "i-lucide-pencil"
     ),
     tabMenuItem(
       {
@@ -244,9 +239,9 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
         onSelect: () => {
           hideContextMenu();
           splitSession(tab, "vertical");
-        },
+        }
       },
-      "i-lucide-columns-2",
+      "i-lucide-columns-2"
     ),
     tabMenuItem(
       {
@@ -255,9 +250,9 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
         onSelect: () => {
           hideContextMenu();
           splitSession(tab, "horizontal");
-        },
+        }
       },
-      "i-lucide-rows-2",
+      "i-lucide-rows-2"
     ),
     { type: "separator" as const },
     tabMenuItem(
@@ -266,9 +261,9 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
         onSelect: () => {
           hideContextMenu();
           closeSession(tab.id);
-        },
+        }
       },
-      "i-lucide-x",
+      "i-lucide-x"
     ),
     tabMenuItem({
       label: t("TabMenu.CloseAll"),
@@ -276,7 +271,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
       onSelect: () => {
         hideContextMenu();
         closeAllSessions();
-      },
+      }
     }),
     tabMenuItem({
       label: t("TabMenu.CloseOther"),
@@ -284,7 +279,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
       onSelect: () => {
         hideContextMenu();
         closeOtherSessions(tab.id);
-      },
+      }
     }),
     tabMenuItem({
       label: t("TabMenu.CloseLeft"),
@@ -292,7 +287,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
       onSelect: () => {
         hideContextMenu();
         closeLeftSessions(tab.id);
-      },
+      }
     }),
     tabMenuItem({
       label: t("TabMenu.CloseRight"),
@@ -300,8 +295,8 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
       onSelect: () => {
         hideContextMenu();
         closeRightSessions(tab.id);
-      },
-    }),
+      }
+    })
   ];
 });
 
@@ -310,10 +305,10 @@ const tabMenuItems = computed<DropdownMenuItem[]>(() => [
     label: tabDisplayTitle(tab),
     type: "checkbox" as const,
     checked: activeTabId.value === tab.id,
-    onSelect: () => selectTab(tab.id),
+    onSelect: () => selectTab(tab.id)
   })),
   {
-    type: "separator" as const,
+    type: "separator" as const
   },
   {
     label: t("TabMenu.CloseCurrent"),
@@ -322,7 +317,7 @@ const tabMenuItems = computed<DropdownMenuItem[]>(() => [
     disabled: !activeTab.value,
     onSelect: () => {
       if (activeTab.value) closeSession(activeTab.value.id);
-    },
+    }
   },
   {
     label: t("TabMenu.CloseOther"),
@@ -331,15 +326,15 @@ const tabMenuItems = computed<DropdownMenuItem[]>(() => [
     disabled: !activeTab.value || tabs.value.length < 2,
     onSelect: () => {
       if (activeTab.value) closeOtherSessions(activeTab.value.id);
-    },
+    }
   },
   {
     label: t("TabMenu.CloseAll"),
     icon: "i-lucide-trash-2",
     ui: { itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]" },
     disabled: tabs.value.length === 0,
-    onSelect: closeAllSessions,
-  },
+    onSelect: closeAllSessions
+  }
 ]);
 
 function updateOverflow() {
@@ -353,17 +348,14 @@ function updateOverflow() {
 
   hasOverflow.value = el.scrollWidth > el.clientWidth + 1;
   hasLeftHidden.value = hasOverflow.value && el.scrollLeft > 1;
-  hasRightHidden.value =
-    hasOverflow.value && el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+  hasRightHidden.value = hasOverflow.value && el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
 }
 
 function scrollActiveTabIntoView(behavior: ScrollBehavior = "smooth") {
   const el = tabStripRef.value;
   if (!el || !activeTabId.value) return;
 
-  const activeButton = el.querySelector<HTMLElement>(
-    `[data-tab-id="${activeTabId.value}"]`,
-  );
+  const activeButton = el.querySelector<HTMLElement>(`[data-tab-id="${activeTabId.value}"]`);
   if (!activeButton) return;
 
   const viewportRect = el.getBoundingClientRect();
@@ -371,20 +363,16 @@ function scrollActiveTabIntoView(behavior: ScrollBehavior = "smooth") {
   const edgeZone = el.clientWidth * 0.3;
   const activeCenter = activeRect.left + activeRect.width / 2;
   const viewportCenter = viewportRect.left + viewportRect.width / 2;
-  const isOutsideViewport =
-    activeRect.left < viewportRect.left ||
-    activeRect.right > viewportRect.right;
-  const isNearHiddenLeft =
-    el.scrollLeft > 1 && activeCenter < viewportRect.left + edgeZone;
+  const isOutsideViewport = activeRect.left < viewportRect.left || activeRect.right > viewportRect.right;
+  const isNearHiddenLeft = el.scrollLeft > 1 && activeCenter < viewportRect.left + edgeZone;
   const isNearHiddenRight =
-    el.scrollLeft + el.clientWidth < el.scrollWidth - 1 &&
-    activeCenter > viewportRect.right - edgeZone;
+    el.scrollLeft + el.clientWidth < el.scrollWidth - 1 && activeCenter > viewportRect.right - edgeZone;
 
   if (!isOutsideViewport && !isNearHiddenLeft && !isNearHiddenRight) return;
 
   el.scrollTo({
     left: el.scrollLeft + activeCenter - viewportCenter,
-    behavior,
+    behavior
   });
 }
 
@@ -406,10 +394,7 @@ function isTypingIntoEditable(event: KeyboardEvent) {
 
   const tagName = target.tagName;
   return (
-    tagName === "INPUT" ||
-    tagName === "TEXTAREA" ||
-    tagName === "SELECT" ||
-    target.getAttribute("role") === "textbox"
+    tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT" || target.getAttribute("role") === "textbox"
   );
 }
 
@@ -426,10 +411,7 @@ function getTabIndexFromDigitShortcut(event: KeyboardEvent) {
 }
 
 function syncShortcutHintsVisibility(event: KeyboardEvent) {
-  showShortcutHints.value =
-    tabs.value.length >= 2 &&
-    !isTypingIntoEditable(event) &&
-    usesPrimaryTabModifier(event);
+  showShortcutHints.value = tabs.value.length >= 2 && !isTypingIntoEditable(event) && usesPrimaryTabModifier(event);
 }
 
 function clearShortcutHints() {
@@ -443,7 +425,7 @@ function scrollTabStrip(direction: "left" | "right") {
   const distance = Math.max(120, Math.round(el.clientWidth * 0.6));
   el.scrollBy({
     left: direction === "left" ? -distance : distance,
-    behavior: "smooth",
+    behavior: "smooth"
   });
 }
 
@@ -460,18 +442,13 @@ onMounted(() => {
   });
   resizeObserver.observe(tabStripRef.value);
   tabStripRef.value.addEventListener("scroll", updateOverflow, {
-    passive: true,
+    passive: true
   });
 });
 
 useEventListener(window, "keydown", (event: KeyboardEvent) => {
   syncShortcutHintsVisibility(event);
-  if (
-    event.defaultPrevented ||
-    tabs.value.length < 2 ||
-    isTypingIntoEditable(event)
-  )
-    return;
+  if (event.defaultPrevented || tabs.value.length < 2 || isTypingIntoEditable(event)) return;
 
   const targetIndex = getTabIndexFromDigitShortcut(event);
   if (targetIndex >= 0) {
@@ -519,7 +496,7 @@ watch(
       updateOverflow();
       scrollActiveTabIntoView();
     }),
-  { deep: true },
+  { deep: true }
 );
 
 watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
@@ -538,17 +515,11 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
         aria-label="向左滚动标签"
         @click="scrollTabStrip('left')"
       >
-        <UIcon
-          name="i-lucide-chevron-left"
-          class="size-3.5 text-[var(--app-muted)]"
-        />
+        <UIcon name="i-lucide-chevron-left" class="size-3.5 text-[var(--app-muted)]" />
       </button>
     </UTooltip>
 
-    <div
-      v-if="tabs.length"
-      class="workspace-tab-capsule flex w-fit min-w-0 max-w-full items-center rounded-lg"
-    >
+    <div v-if="tabs.length" class="workspace-tab-capsule flex w-fit min-w-0 max-w-full items-center rounded-lg">
       <div
         ref="tabStripRef"
         class="workspace-tab-strip flex w-fit min-w-0 max-w-full items-center gap-1 overflow-x-auto"
@@ -565,7 +536,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
             activeTabId === tab.id
               ? 'workspace-session-tab-active text-[var(--app-fg)]'
               : 'workspace-session-tab-idle text-[var(--app-muted)]',
-            draggedTabId === tab.id ? 'opacity-60' : '',
+            draggedTabId === tab.id ? 'opacity-60' : ''
           ]"
           @click.stop="selectTab(tab.id)"
           @contextmenu.prevent="openContextMenu(tab, index, $event)"
@@ -573,17 +544,13 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           @dragend="handleTabDragEnd"
           @dragenter.prevent="handleTabDragOver($event, tab.id)"
           @dragover.prevent="handleTabDragOver($event, tab.id)"
-          @dragleave.prevent="
-            dragOverTabId = dragOverTabId === tab.id ? '' : dragOverTabId
-          "
+          @dragleave.prevent="dragOverTabId = dragOverTabId === tab.id ? '' : dragOverTabId"
           @drop.prevent="handleTabDrop(tab.id)"
         >
           <span
             v-if="dragOverTabId === tab.id"
             class="pointer-events-none absolute inset-y-1 z-10 w-0.5 rounded-full bg-primary"
-            :class="
-              dragOverTabPlacement === 'after' ? '-right-[3px]' : '-left-[3px]'
-            "
+            :class="dragOverTabPlacement === 'after' ? '-right-[3px]' : '-left-[3px]'"
           />
           <span class="relative grid size-3.5 shrink-0 place-items-center">
             <span
@@ -623,9 +590,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
             v-if="activeTabId === tab.id"
             class="flex min-w-0 items-center gap-1.5 truncate font-ui-mono text-[11px] tracking-[0.01em]"
           >
-            <span class="shrink-0 truncate font-medium">{{
-              tabDisplayTitle(tab)
-            }}</span>
+            <span class="shrink-0 truncate font-medium">{{ tabDisplayTitle(tab) }}</span>
             <span
               v-if="tab.address && tab.address !== '-'"
               class="workspace-session-tab-address min-w-0 truncate text-[10px]"
@@ -633,10 +598,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
               {{ tab.address }}
             </span>
           </span>
-          <span
-            v-else
-            class="min-w-0 truncate font-ui-mono text-[11px] tracking-[0.01em]"
-          >
+          <span v-else class="min-w-0 truncate font-ui-mono text-[11px] tracking-[0.01em]">
             {{ tabDisplayTitle(tab) }}
           </span>
           <span
@@ -664,10 +626,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
         aria-label="向右滚动标签"
         @click="scrollTabStrip('right')"
       >
-        <UIcon
-          name="i-lucide-chevron-right"
-          class="size-3.5 text-[var(--app-muted)]"
-        />
+        <UIcon name="i-lucide-chevron-right" class="size-3.5 text-[var(--app-muted)]" />
       </button>
     </UTooltip>
 
@@ -679,7 +638,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
         ...tabDropdownUi,
         content: 'w-44 max-h-64 overflow-y-auto p-1',
         item: 'py-1.5 text-sm min-w-0 gap-2 items-center',
-        label: 'truncate',
+        label: 'truncate'
       }"
     >
       <button
@@ -687,10 +646,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
         class="workspace-tab-overflow flex size-5 shrink-0 items-center justify-center rounded-lg transition-colors"
         aria-label="切换终端标签"
       >
-        <UIcon
-          name="i-lucide-ellipsis"
-          class="size-3.5 text-[var(--app-muted)]"
-        />
+        <UIcon name="i-lucide-ellipsis" class="size-3.5 text-[var(--app-muted)]" />
       </button>
     </UDropdownMenu>
 
@@ -713,32 +669,20 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           left: `${contextMenuPosition.x}px`,
           top: `${contextMenuPosition.y}px`,
           width: '1px',
-          height: '1px',
+          height: '1px'
         }"
       />
     </UDropdownMenu>
 
-    <UModal
-      :open="renameModalOpen"
-      :title="t('TabMenu.RenameTitle')"
-      @update:open="updateRenameModal"
-    >
+    <UModal :open="renameModalOpen" :title="t('TabMenu.RenameTitle')" @update:open="updateRenameModal">
       <template #body>
         <div class="space-y-3">
-          <UInput
-            v-model="renameValue"
-            :placeholder="t('TabMenu.RenamePlaceholder')"
-            autofocus
-          />
+          <UInput v-model="renameValue" :placeholder="t('TabMenu.RenamePlaceholder')" autofocus />
         </div>
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            @click="updateRenameModal(false)"
-          >
+          <UButton color="neutral" variant="ghost" @click="updateRenameModal(false)">
             {{ t("Transcode.Cancel") }}
           </UButton>
           <UButton :disabled="renameDisabled" @click="submitRename">
@@ -752,26 +696,10 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
 <style scoped>
 .workspace-tab-header {
-  --workspace-tab-idle-bg: color-mix(
-    in srgb,
-    var(--app-surface-panel) 90%,
-    black 1%
-  );
-  --workspace-tab-idle-hover-bg: color-mix(
-    in srgb,
-    var(--app-surface-panel) 76%,
-    black 14%
-  );
-  --workspace-tab-active-bg: color-mix(
-    in srgb,
-    var(--workspace-surface-background) 82%,
-    black 8%
-  );
-  --workspace-tab-active-border: color-mix(
-    in srgb,
-    var(--workspace-surface-background) 82%,
-    black 8%
-  );
+  --workspace-tab-idle-bg: color-mix(in srgb, var(--app-surface-panel) 90%, black 1%);
+  --workspace-tab-idle-hover-bg: color-mix(in srgb, var(--app-surface-panel) 76%, black 14%);
+  --workspace-tab-active-bg: color-mix(in srgb, var(--workspace-surface-background) 82%, black 8%);
+  --workspace-tab-active-border: color-mix(in srgb, var(--workspace-surface-background) 82%, black 8%);
   background: var(--app-surface-header);
 }
 
@@ -780,11 +708,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 }
 
 .workspace-tab-overflow {
-  background: color-mix(
-    in srgb,
-    var(--app-surface-panel) 86%,
-    var(--app-surface-header) 14%
-  );
+  background: color-mix(in srgb, var(--app-surface-panel) 86%, var(--app-surface-header) 14%);
   border: 1px solid color-mix(in srgb, var(--app-border) 86%, transparent);
   color: var(--app-muted);
 }
@@ -829,8 +753,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 }
 
 .workspace-session-tab-status {
-  box-shadow: 0 0 0 1px
-    color-mix(in srgb, var(--app-surface-panel-strong) 88%, white 12%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-surface-panel-strong) 88%, white 12%);
 }
 
 .workspace-session-tab-close:hover {
@@ -852,16 +775,8 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
 .workspace-tab-header-dark {
   --workspace-tab-idle-bg: color-mix(in srgb, var(--theme-bg) 90%, white 1%);
-  --workspace-tab-idle-hover-bg: color-mix(
-    in srgb,
-    var(--theme-bg) 90%,
-    white 12%
-  );
+  --workspace-tab-idle-hover-bg: color-mix(in srgb, var(--theme-bg) 90%, white 12%);
   --workspace-tab-active-bg: color-mix(in srgb, var(--theme-bg) 87%, white 12%);
-  --workspace-tab-active-border: color-mix(
-    in srgb,
-    var(--theme-bg) 87%,
-    white 12%
-  );
+  --workspace-tab-active-border: color-mix(in srgb, var(--theme-bg) 87%, white 12%);
 }
 </style>

@@ -48,7 +48,9 @@ export const useSnippets = () => {
     loading.value = true;
     try {
       const data = await getCommandSnippets();
-      snippets.value = rawList(data).map(normalizeSnippet).filter((snippet): snippet is Snippet => !!snippet);
+      snippets.value = rawList(data)
+        .map(normalizeSnippet)
+        .filter((snippet): snippet is Snippet => !!snippet);
     } finally {
       loading.value = false;
     }

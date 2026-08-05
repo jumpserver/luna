@@ -268,9 +268,7 @@ onBeforeUnmount(() => {
             </span>
             <span class="max-w-xl">
               <span class="block text-xl font-semibold tracking-tight text-highlighted">导入录像文件</span>
-              <span class="mt-2 block text-sm leading-6 text-muted">
-                点击这里选择 `.mp4`、`.gz`、`.tar` 文件。
-              </span>
+              <span class="mt-2 block text-sm leading-6 text-muted">点击这里选择 `.mp4`、`.gz`、`.tar` 文件。</span>
             </span>
             <span class="rounded-full bg-muted px-4 py-2 text-sm text-toned transition group-hover:bg-accented">
               选择文件
