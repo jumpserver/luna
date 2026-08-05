@@ -43,6 +43,7 @@ export interface ChenTabDefinition {
 }
 
 export interface ChenDataViewMeta {
+  id?: string;
   title: string;
   schema?: string;
   table?: string;
@@ -208,6 +209,24 @@ export interface ChenConsoleHistoryEntry {
   sql: string;
 }
 
+export type ChenConsoleExecutionStatus = "running" | "cancelling" | "success" | "error" | "cancelled";
+
+export interface ChenConsoleTimelineResult {
+  id: string;
+  data: ChenDataViewDataset;
+  state: ChenConsoleState;
+}
+
+export interface ChenConsoleTimelineEntry {
+  id: string;
+  sql: string;
+  status: ChenConsoleExecutionStatus;
+  startedAt: number;
+  completedAt?: number;
+  logs: string[];
+  results: ChenConsoleTimelineResult[];
+}
+
 export interface ChenQueryConsoleTab extends ChenTabDefinition {
   kind: "query";
   statement: string;
@@ -227,12 +246,12 @@ export interface ChenQueryConsoleTab extends ChenTabDefinition {
 export interface ChenPromptConsoleTab extends ChenTabDefinition {
   kind: "console";
   pendingSql: string;
+  timelineEntries: ChenConsoleTimelineEntry[];
+  activeTimelineEntryId: string;
   state: ChenConsoleState;
   logs: string[];
   message: ChenConsoleMessage | null;
   historyEntries: ChenConsoleHistoryEntry[];
-  resultTabs: ChenQueryResultTab[];
-  activeResultTabId: string;
   socket: WebSocket | null;
 }
 

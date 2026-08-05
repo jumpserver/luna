@@ -59,7 +59,7 @@ export function useChenDataView(
     action: ChenDataViewAction,
     data?: ChenDataViewActionData
   ) {
-    const dataView = "kind" in target && target.kind === "data-view" ? target.meta?.title : target.title;
+    const dataView = "kind" in target ? target.meta?.title : target.meta.id || target.title;
     if (!dataView) return false;
 
     const state = target.editState;
