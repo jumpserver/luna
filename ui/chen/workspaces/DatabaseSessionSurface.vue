@@ -199,7 +199,7 @@ function initConsoleSocket(tab: ChenWorkspaceTab) {
       if (!reactiveTab) return;
       reactiveTab.socket = null;
       reactiveTab.connectionError = socketError.message;
-      queryConsole.appendLog(reactiveTab, socketError.message);
+      queryConsole.failConsoleExecution(reactiveTab, socketError.message);
     }
   });
 
@@ -214,7 +214,7 @@ function sendConsoleAction(tab: ChenWorkspaceTab, type: string, data?: any) {
   if (connection?.sendWhenReady(action)) return true;
 
   tab.connectionError ||= "Console websocket is not connected";
-  queryConsole.appendLog(tab, tab.connectionError);
+  queryConsole.failConsoleExecution(tab, tab.connectionError);
   return false;
 }
 
@@ -550,7 +550,7 @@ async function openNodeMenu(node: ChenTreeNode, event: MouseEvent) {
 
 function runQueryTab(tab: ChenQueryLikeWorkspaceTab, selectedSql = "") {
   if (tab.kind === "console") {
-    queryConsole.runConsoleTab(tab, consolePromptLabel.value);
+    queryConsole.runConsoleTab(tab);
     return;
   }
   if (tab.state.loading || tab.state.inQuery || !(selectedSql || tab.statement).trim()) {

@@ -1,4 +1,5 @@
 import type {
+  ChenConsoleTimelineEntry,
   ChenPacket,
   ChenPromptConsoleTab,
   ChenQueryConsoleTab,
@@ -8,23 +9,35 @@ import type {
 
 import { newChenWorkspaceId } from "~/chen/composables/useChenWorkspaceTabs";
 import {
-  appendChenConsoleTranscript,
-  clearChenConsoleTranscript,
-  escapeChenConsoleText,
-  formatChenConsoleCommand,
-  formatChenConsoleResult
-} from "~/chen/utils/consoleTerminal";
-import {
   acceptChenDataViewResponse,
   createChenDataViewEditState,
   finishChenDataViewRequestWithoutData
 } from "~/chen/utils/dataViewEditing";
 
 const SQL_CHUNK_SIZE = 4096;
+const MAX_CONSOLE_TIMELINE_ENTRIES = 200;
 
 export function useChenQueryConsole(
-  sendConsoleAction: (tab: ChenQueryLikeWorkspaceTab, type: string, data?: any) => void
+  sendConsoleAction: (tab: ChenQueryLikeWorkspaceTab, type: string, data?: any) => boolean | void
 ) {
+  function activeConsoleEntry(tab: ChenPromptConsoleTab) {
+    return tab.timelineEntries.find((entry) => entry.id === tab.activeTimelineEntryId) || null;
+  }
+
+  function appendConsoleStatus(tab: ChenPromptConsoleTab, content: string, level?: number) {
+    const entry = activeConsoleEntry(tab);
+    if (!entry) return;
+
+    if (/^execute sql\s*:/i.test(content)) return;
+    if (/^cancel query\s*:/i.test(content)) {
+      if (!entry.logs.includes("Query cancelled.")) entry.logs.push("Query cancelled.");
+      entry.status = "cancelled";
+      return;
+    }
+    if (!entry.logs.includes(content)) entry.logs.push(content);
+    if (level === 0) entry.status = "error";
+  }
+
   function formatLogEntry(value: unknown) {
     if (typeof value === "string") return value;
     if (value == null) return "";
@@ -47,8 +60,19 @@ export function useChenQueryConsole(
       tab.logs.splice(0, tab.logs.length - 400);
     }
     if (tab.kind === "console") {
-      appendChenConsoleTranscript(tab, `${escapeChenConsoleText(content)}\n`);
+      const level = line && typeof line === "object" && "level" in line ? Number(line.level) : undefined;
+      appendConsoleStatus(tab, content, level);
     }
+  }
+
+  function failConsoleExecution(tab: ChenWorkspaceTab, message: string) {
+    appendLog(tab, { level: 0, message });
+    if (tab.kind !== "console") return;
+    const entry = activeConsoleEntry(tab);
+    if (!entry) return;
+    entry.status = "error";
+    entry.completedAt = Date.now();
+    tab.activeTimelineEntryId = "";
   }
 
   function updateQueryResult(tab: ChenQueryConsoleTab, meta: { title: string; [key: string]: any }, data?: any) {
@@ -117,7 +141,10 @@ export function useChenQueryConsole(
         break;
       case "message":
         tab.message = typeof packet.data === "string" ? { type: "info", message: packet.data } : packet.data || null;
-        if (tab.kind === "console") appendLog(tab, packet.data);
+        if (tab.kind === "console") {
+          const message = formatLogEntry(packet.data);
+          if (message) appendConsoleStatus(tab, message, packet.data?.type === "error" ? 0 : undefined);
+        }
         break;
       case "update_state": {
         const resultTab =
@@ -133,6 +160,15 @@ export function useChenQueryConsole(
           if (packet.data?.loading === false) finishChenDataViewRequestWithoutData(resultTab.editState);
         } else {
           tab.state = packet.data || {};
+          if (tab.kind === "console" && packet.data?.inQuery === false) {
+            const entry = activeConsoleEntry(tab);
+            if (entry) {
+              if (entry.status === "cancelling") entry.status = "cancelled";
+              else if (entry.status === "running") entry.status = "success";
+              entry.completedAt = Date.now();
+              tab.activeTimelineEntryId = "";
+            }
+          }
         }
         break;
       }
@@ -149,7 +185,31 @@ export function useChenQueryConsole(
         break;
       case "console_result":
         if (tab.kind === "console" && packet.data?.data) {
-          appendChenConsoleTranscript(tab, formatChenConsoleResult(packet.data.data, packet.data.state));
+          let entry = activeConsoleEntry(tab);
+          if (!entry) {
+            entry = {
+              id: newChenWorkspaceId("execution"),
+              sql: packet.data.title || "Query",
+              status: "running",
+              startedAt: Date.now(),
+              logs: [],
+              results: []
+            };
+            tab.timelineEntries.push(entry);
+            tab.activeTimelineEntryId = entry.id;
+          }
+          const resultId = packet.data.id || newChenWorkspaceId("result");
+          const existingResult = entry.results.find((result) => result.id === resultId);
+          if (existingResult) {
+            existingResult.data = packet.data.data;
+            existingResult.state = { ...existingResult.state, ...packet.data.state };
+          } else {
+            entry.results.push({
+              id: resultId,
+              data: packet.data.data,
+              state: packet.data.state || {}
+            });
+          }
         }
         break;
     }
@@ -210,7 +270,8 @@ export function useChenQueryConsole(
     });
   }
 
-  function runConsoleTab(tab: ChenPromptConsoleTab, prompt: string) {
+  function runConsoleTab(tab: ChenPromptConsoleTab) {
+    if (activeConsoleEntry(tab)) return;
     const sql = tab.pendingSql.trim();
     if (!sql) return;
     tab.historyEntries.push({
@@ -220,17 +281,42 @@ export function useChenQueryConsole(
     if (tab.historyEntries.length > 200) {
       tab.historyEntries.splice(0, tab.historyEntries.length - 200);
     }
-    appendChenConsoleTranscript(tab, formatChenConsoleCommand(prompt, sql));
-    sendConsoleAction(tab, "query_console_action", { action: "run_sql", data: sql });
+    const entry: ChenConsoleTimelineEntry = {
+      id: newChenWorkspaceId("execution"),
+      sql,
+      status: "running",
+      startedAt: Date.now(),
+      logs: [],
+      results: []
+    };
+    tab.timelineEntries.push(entry);
+    if (tab.timelineEntries.length > MAX_CONSOLE_TIMELINE_ENTRIES) {
+      tab.timelineEntries.splice(0, tab.timelineEntries.length - MAX_CONSOLE_TIMELINE_ENTRIES);
+    }
+    tab.activeTimelineEntryId = entry.id;
+    const sent = sendConsoleAction(tab, "query_console_action", { action: "run_sql", data: sql });
+    if (sent === false) {
+      entry.status = "error";
+      entry.completedAt = Date.now();
+      const message = tab.connectionError || "Console websocket is not connected";
+      if (!entry.logs.includes(message)) entry.logs.push(message);
+      tab.activeTimelineEntryId = "";
+    }
     tab.pendingSql = "";
   }
 
   function clearConsoleTranscript(tab: ChenPromptConsoleTab) {
-    clearChenConsoleTranscript(tab);
+    if (activeConsoleEntry(tab)) return;
+    tab.timelineEntries = [];
   }
 
   function cancelQueryLikeTab(tab: ChenQueryLikeWorkspaceTab) {
     if (tab.kind === "query" && !tab.state.canCancel) return;
+    if (tab.kind === "console") {
+      const entry = activeConsoleEntry(tab);
+      if (!entry) return;
+      entry.status = "cancelling";
+    }
     sendConsoleAction(tab, "query_console_action", { action: "cancel" });
   }
 
@@ -241,6 +327,7 @@ export function useChenQueryConsole(
     clearConsoleTranscript,
     closeQueryResult,
     dismissQueryMessage,
+    failConsoleExecution,
     handleQueryConsolePacket,
     removeQueryResult,
     runConsoleTab,

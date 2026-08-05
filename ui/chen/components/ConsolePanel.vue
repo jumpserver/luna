@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import type { ChenPromptConsoleTab, ChenQueryLikeWorkspaceTab } from "~/chen/types";
+import type {
+  ChenConsoleExecutionStatus,
+  ChenConsoleTimelineEntry,
+  ChenConsoleTimelineResult,
+  ChenPromptConsoleTab,
+  ChenQueryLikeWorkspaceTab
+} from "~/chen/types";
 
-import { appTerminalTheme, getDefaultTerminalConfig } from "@jumpserver/koko";
-import { FitAddon } from "@xterm/addon-fit";
-import { Terminal } from "@xterm/xterm";
-
-import "@xterm/xterm/css/xterm.css";
+import ConsoleResultGrid from "~/chen/components/ConsoleResultGrid.client.vue";
 
 const props = defineProps<{
   tab: ChenPromptConsoleTab;
@@ -20,50 +22,33 @@ const emit = defineEmits<{
   updatePendingSql: [tab: ChenPromptConsoleTab, value: string];
 }>();
 
-const terminalConfig = getDefaultTerminalConfig();
-const containerRef = shallowRef<HTMLElement | null>(null);
+const timelineRef = ref<HTMLElement | null>(null);
 const inputRef = ref<HTMLTextAreaElement | null>(null);
-const terminal = shallowRef<Terminal | null>(null);
-const fitAddon = new FitAddon();
-let resizeObserver: ResizeObserver | null = null;
-let themeObserver: MutationObserver | null = null;
-let renderedOutput = "";
 let historyIndex: number | null = null;
 let historyDraft = "";
+let followLatest = true;
 
 const pendingSqlValue = computed({
   get: () => props.tab.pendingSql,
   set: (value: string) => emit("updatePendingSql", props.tab, value)
 });
-const busy = computed(() => Boolean(props.tab.state.loading || props.tab.state.inQuery));
+const busy = computed(() =>
+  Boolean(props.tab.state.loading || props.tab.state.inQuery || props.tab.activeTimelineEntryId)
+);
 
-function fitTerminal() {
-  if (!terminal.value || !containerRef.value) return;
-  const { width, height } = containerRef.value.getBoundingClientRect();
-  if (width > 0 && height > 0) fitAddon.fit();
-}
-
-function syncTerminalTheme() {
-  if (terminal.value) terminal.value.options.theme = appTerminalTheme();
-}
-
-function syncTerminalOutput(output: string) {
-  const instance = terminal.value;
-  if (!instance || output === renderedOutput) return;
-  if (output.startsWith(renderedOutput)) {
-    instance.write(output.slice(renderedOutput.length).replaceAll("\n", "\r\n"));
-  } else {
-    instance.reset();
-    instance.write(output.replaceAll("\n", "\r\n"));
-  }
-  renderedOutput = output;
-  instance.scrollToBottom();
-}
+const statusDetails: Record<ChenConsoleExecutionStatus, { icon: string; label: string; class: string }> = {
+  running: { icon: "i-lucide-loader-circle", label: "Running", class: "animate-spin text-primary" },
+  cancelling: { icon: "i-lucide-loader-circle", label: "Cancelling", class: "animate-spin text-warning" },
+  success: { icon: "i-lucide-circle-check", label: "Completed", class: "text-success" },
+  error: { icon: "i-lucide-circle-x", label: "Failed", class: "text-error" },
+  cancelled: { icon: "i-lucide-ban", label: "Cancelled", class: "text-warning" }
+};
 
 function run() {
   if (busy.value || !pendingSqlValue.value.trim()) return;
   historyIndex = null;
   historyDraft = "";
+  followLatest = true;
   emit("run", props.tab);
 }
 
@@ -110,55 +95,53 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 function clear() {
-  renderedOutput = "";
-  terminal.value?.reset();
+  if (busy.value) return;
   emit("clear", props.tab);
   inputRef.value?.focus();
 }
 
-function focus() {
-  inputRef.value?.focus();
+function handleTimelineScroll() {
+  const element = timelineRef.value;
+  if (!element) return;
+  followLatest = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
 }
 
-watch(() => props.tab.terminalOutput, syncTerminalOutput);
+function scrollToLatest() {
+  if (!followLatest) return;
+  nextTick(() => timelineRef.value?.scrollTo({ top: timelineRef.value.scrollHeight }));
+}
+
+function resultSummary(result: ChenConsoleTimelineResult) {
+  const shown = result.data.data.length;
+  const total = typeof result.state.total === "number" && result.state.total >= 0 ? result.state.total : shown;
+  return total > shown ? `${shown} shown · ${total} total` : `${shown} ${shown === 1 ? "row" : "rows"}`;
+}
+
+function elapsed(entry: ChenConsoleTimelineEntry) {
+  if (!entry.completedAt) return "";
+  const milliseconds = Math.max(0, entry.completedAt - entry.startedAt);
+  return milliseconds < 1000 ? `${milliseconds} ms` : `${(milliseconds / 1000).toFixed(2)} s`;
+}
+
+function gridHeight(result: ChenConsoleTimelineResult) {
+  return `${Math.min(Math.max(result.data.data.length, 1), 8) * 28 + 33}px`;
+}
+
+watch(() => {
+  const entry = props.tab.timelineEntries.at(-1);
+  return [props.tab.timelineEntries.length, entry?.logs.length, entry?.results.length, entry?.status];
+}, scrollToLatest);
+
+watch(busy, (isBusy, wasBusy) => {
+  if (!isBusy && wasBusy) nextTick(() => inputRef.value?.focus());
+});
 
 onMounted(() => {
-  if (!containerRef.value) return;
-  const instance = new Terminal({
-    fontFamily: terminalConfig.fontFamily,
-    fontSize: terminalConfig.fontSize,
-    lineHeight: terminalConfig.lineHeight,
-    cursorBlink: false,
-    scrollback: 5000,
-    scrollOnUserInput: true,
-    theme: appTerminalTheme(),
-    minimumContrastRatio: 4.5,
-    allowProposedApi: true,
-    customGlyphs: true
-  });
-  instance.loadAddon(fitAddon);
-  instance.open(containerRef.value);
-  terminal.value = instance;
-  resizeObserver = new ResizeObserver(fitTerminal);
-  resizeObserver.observe(containerRef.value);
-  themeObserver = new MutationObserver(syncTerminalTheme);
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["class", "data-theme-preset", "style"]
-  });
-  fitTerminal();
-  syncTerminalOutput(props.tab.terminalOutput);
+  scrollToLatest();
   inputRef.value?.focus();
 });
 
-onBeforeUnmount(() => {
-  resizeObserver?.disconnect();
-  themeObserver?.disconnect();
-  terminal.value?.dispose();
-  terminal.value = null;
-});
-
-defineExpose({ focus });
+defineExpose({ focus: () => inputRef.value?.focus() });
 </script>
 
 <template>
@@ -184,14 +167,73 @@ defineExpose({ focus });
           color="neutral"
           variant="ghost"
           title="Clear console"
+          :disabled="busy"
           @click="clear"
         />
       </div>
     </div>
 
-    <div ref="containerRef" class="chen-console-terminal min-h-0 flex-1" />
+    <div ref="timelineRef" class="min-h-0 flex-1 overflow-auto px-3 py-3" @scroll="handleTimelineScroll">
+      <div
+        v-if="!tab.timelineEntries.length"
+        class="flex h-full min-h-40 items-center justify-center text-xs text-muted"
+      >
+        Run a SQL statement to start the timeline.
+      </div>
 
-    <div class="flex shrink-0 items-start gap-2 px-3 pb-3 pt-1 font-ui-mono text-sm">
+      <div v-else class="mx-auto flex w-full max-w-[1200px] flex-col gap-3">
+        <article
+          v-for="(entry, entryIndex) in tab.timelineEntries"
+          :key="entry.id"
+          class="overflow-hidden rounded-md border border-default bg-[var(--app-surface-card-soft)]"
+        >
+          <header class="flex items-center justify-between gap-3 border-b border-default px-3 py-2 text-xs">
+            <div class="flex min-w-0 items-center gap-2 font-medium text-highlighted">
+              <span class="text-muted">#{{ entryIndex + 1 }}</span>
+              <UIcon
+                :name="statusDetails[entry.status].icon"
+                class="size-3.5 shrink-0"
+                :class="statusDetails[entry.status].class"
+              />
+              <span>{{ statusDetails[entry.status].label }}</span>
+            </div>
+            <span v-if="elapsed(entry)" class="shrink-0 tabular-nums text-muted">{{ elapsed(entry) }}</span>
+          </header>
+
+          <pre
+            class="overflow-x-auto whitespace-pre-wrap break-words px-3 py-2 font-ui-mono text-[13px] leading-5 text-highlighted"
+            >{{ entry.sql }}</pre>
+
+          <div v-if="entry.logs.length" class="border-t border-default px-3 py-2 font-ui-mono text-xs text-muted">
+            <div v-for="(log, logIndex) in entry.logs" :key="`${entry.id}:log:${logIndex}`">{{ log }}</div>
+          </div>
+
+          <div v-for="(result, resultIndex) in entry.results" :key="result.id" class="border-t border-default">
+            <div class="flex items-center justify-between gap-3 bg-[var(--app-surface-panel)] px-3 py-1.5 text-[11px]">
+              <span class="font-medium text-highlighted">Result {{ resultIndex + 1 }}</span>
+              <span class="text-muted">{{ resultSummary(result) }}</span>
+            </div>
+            <ConsoleResultGrid :dataset="result.data" :style="{ height: gridHeight(result) }" />
+          </div>
+
+          <div
+            v-if="
+              (entry.status === 'running' || entry.status === 'cancelling') &&
+              !entry.results.length &&
+              !entry.logs.length
+            "
+            class="flex items-center gap-2 border-t border-default px-3 py-2 text-xs text-muted"
+          >
+            <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
+            Waiting for results…
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <div
+      class="flex shrink-0 items-start gap-2 border-t border-default bg-[var(--app-surface-panel)] px-3 py-2 font-ui-mono text-sm"
+    >
       <span class="shrink-0 pt-1 text-primary">{{ promptLabel }}</span>
       <textarea
         ref="inputRef"
@@ -206,14 +248,3 @@ defineExpose({ focus });
     </div>
   </div>
 </template>
-
-<style scoped>
-.chen-console-terminal :deep(.xterm) {
-  height: 100%;
-  padding: 10px 12px 4px;
-}
-
-.chen-console-terminal :deep(.xterm-viewport) {
-  background-color: transparent !important;
-}
-</style>
