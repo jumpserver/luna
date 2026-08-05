@@ -1,0 +1,50 @@
+<div class="batch-acl-dialog">
+  <div *nzModalTitle>{{ titleKey | translate }}</div>
+
+  <nz-alert
+    [nzType]="isActionable ? 'info' : 'error'"
+    [nzDescription]="messageKey | translate"
+  ></nz-alert>
+
+  <div class="review-list" *ngIf="isBatch">
+    <div class="review-item" *ngFor="let item of items">
+      <div class="review-header">
+        <strong>{{ item.asset.name }}</strong>
+        <nz-tag [nzColor]="statusType[item.status]">{{
+          'Batch review status ' + item.status | translate
+        }}</nz-tag>
+      </div>
+      <div class="review-detail" *ngIf="isReview && item.status === 'pending'">
+        {{ 'Assignees' | translate }}: {{ item.assignees }}
+        <button nz-button nzType="link" nzSize="small" (click)="onCopyLink(item)">
+          {{ 'Copy link' | translate }}
+        </button>
+      </div>
+      <div class="review-detail error" *ngIf="item.detail">{{ item.detail }}</div>
+    </div>
+  </div>
+
+  <div class="single-detail" *ngIf="!isBatch && isReview && singleItem?.status === 'pending'">
+    {{ 'Assignees' | translate }}: {{ singleItem.assignees }}
+    <button nz-button nzType="link" nzSize="small" (click)="onCopyLink(singleItem)">
+      {{ 'Copy link' | translate }}
+    </button>
+  </div>
+
+  <iframe
+    *ngIf="faceVerifyUrl"
+    class="face-verify-frame"
+    [src]="faceVerifyUrl"
+    allow="camera"
+    sandbox="allow-scripts allow-same-origin"
+  ></iframe>
+
+  <div *nzModalFooter>
+    <button nz-button [disabled]="isSubmitting" (click)="onClose()">
+      {{ closeTextKey | translate }}
+    </button>
+    <button nz-button nzType="primary" *ngIf="isActionable && !submitted" (click)="onConfirm()">
+      {{ actionTextKey | translate }}
+    </button>
+  </div>
+</div>

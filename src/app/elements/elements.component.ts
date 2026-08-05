@@ -25,6 +25,7 @@ import { ElementReplayAsciicastComponent } from '@app/elements/replay/asciicast/
 import { ElementConnectorNecComponent } from '@app/elements/content/content-window/nec/nec.component';
 import { ElementFaceMonitorComponent } from '@app/elements/connect/face-monitor/face-monitor.component';
 import { ElementACLDialogComponent } from '@app/services/connect-token/acl-dialog/acl-dialog.component';
+import { ElementBatchACLDialogComponent } from '@app/services/connect-token/batch-acl-dialog/batch-acl-dialog.component';
 import { ElementTreeFilterComponent } from '@app/elements/asset-tree/tree-filter/tree-filter.component';
 import { ElementOrganizationComponent } from '@app/elements/left-bar/organization/organization.component';
 import { ElementConnectorGuideComponent } from '@app/elements/content/content-window/guide/guide.component';
@@ -76,6 +77,7 @@ export const ElementComponents = [
   DynamicFormComponent,
   ElementsPartsComponent,
   ElementACLDialogComponent,
+  ElementBatchACLDialogComponent,
   ElementDialogAlertComponent,
   ElementLoginExpiredDialogComponent,
   ElementTermComponent
