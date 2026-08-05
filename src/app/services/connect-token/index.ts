@@ -1,17 +1,50 @@
 import {Injectable} from '@angular/core';
 import {Asset, ConnectData, ConnectionToken} from '@app/model';
 import {HttpService} from '@app/services/http';
-import {NzModalService} from 'ng-zorro-antd/modal';
+import {NzModalRef, NzModalService} from 'ng-zorro-antd/modal';
 import {ElementACLDialogComponent} from './acl-dialog/acl-dialog.component';
+import {ElementBatchACLDialogComponent} from './batch-acl-dialog/batch-acl-dialog.component';
 
 @Injectable()
 export class ConnectTokenService {
+  private activeDialogs = new Map<string, NzModalRef<ElementBatchACLDialogComponent>>();
+
   constructor(private _http: HttpService,
               private _dialog: NzModalService
   ) {
   }
 
   handleError(data, resolve) {
+    if (data.tokenAction === 'create' && data.asset) {
+      const code = data.code || 'unknown';
+      const activeDialog = this.activeDialogs.get(code);
+      if (activeDialog) {
+        const component = activeDialog.getContentComponent();
+        if (component) {
+          component.addItem({...data, resolve});
+          return;
+        }
+        this.activeDialogs.delete(code);
+      }
+      const dialogRef = this._dialog.create({
+        nzContent: ElementBatchACLDialogComponent,
+        nzWidth: '680px',
+        nzCentered: true,
+        nzClosable: false,
+        nzMaskClosable: false,
+        nzData: {
+          code,
+          items: [{...data, resolve}]
+        }
+      });
+      this.activeDialogs.set(code, dialogRef);
+      dialogRef.afterClose.subscribe(() => {
+        if (this.activeDialogs.get(code) === dialogRef) {
+          this.activeDialogs.delete(code);
+        }
+      });
+      return;
+    }
     const dialogRef = this._dialog.create({
       nzContent: ElementACLDialogComponent,
       nzWidth: '450px',
