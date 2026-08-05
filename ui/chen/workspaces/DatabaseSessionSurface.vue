@@ -45,7 +45,7 @@ import {
   clearChenDataViewEdits,
   findChenDataViewTarget
 } from "~/chen/utils/dataViewEditing";
-import { chenNodeActivationAction } from "~/chen/utils/resourceTree";
+import { canOpenChenQueryConsole, chenNodeActivationAction } from "~/chen/utils/resourceTree";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const emit = defineEmits<{ reconnect: [] }>();
@@ -67,7 +67,6 @@ const GUARDED_DATA_VIEW_ACTIONS = new Set<ChenDataViewAction>([
   "refresh",
   "change_limit"
 ]);
-
 const auth = useChenAuth(tabRef);
 const tree = useChenResourceTree(auth.chenToken, {
   onLoadError: (node) => {
@@ -181,7 +180,7 @@ function initConsoleSocket(tab: ChenWorkspaceTab) {
         type: "connect",
         data: {
           nodeKey: reactiveTab.nodeKey,
-          type: reactiveTab.kind === "data-view" ? "data_view" : "query"
+          type: reactiveTab.kind === "data-view" ? "data_view" : reactiveTab.kind
         }
       });
     },
@@ -200,7 +199,7 @@ function initConsoleSocket(tab: ChenWorkspaceTab) {
       if (!reactiveTab) return;
       reactiveTab.socket = null;
       reactiveTab.connectionError = socketError.message;
-      queryConsole.appendLog(reactiveTab, socketError.message);
+      queryConsole.failConsoleExecution(reactiveTab, socketError.message);
     }
   });
 
@@ -215,7 +214,7 @@ function sendConsoleAction(tab: ChenWorkspaceTab, type: string, data?: any) {
   if (connection?.sendWhenReady(action)) return true;
 
   tab.connectionError ||= "Console websocket is not connected";
-  queryConsole.appendLog(tab, tab.connectionError);
+  queryConsole.failConsoleExecution(tab, tab.connectionError);
   return false;
 }
 
@@ -439,15 +438,16 @@ function closeWorkspaceTab(id: string) {
 }
 
 function createWorkspaceTab(kind: "query" | "console") {
-  const nodeKey = currentWorkspaceNodeKey.value;
-  if (!nodeKey) {
+  const node = currentWorkspaceNode.value;
+  if (!canOpenChenQueryConsole(node)) {
     toast.add({
       title: "No database context",
-      description: "Select a database or schema node first, then create a tab.",
+      description: "Select a datasource, database, schema, or table node first, then create a tab.",
       color: "warning"
     });
     return;
   }
+  const nodeKey = node.key;
 
   if (kind === "query") {
     openQueryWorkspace(nodeKey, workspace.nextTabTitle("Query"), false);
@@ -460,7 +460,7 @@ function createWorkspaceTab(kind: "query" | "console") {
 const dialogVisible = computed({
   get: () => Boolean(session.dialogMessage.value),
   set: (open: boolean) => {
-    if (!open) session.dialogMessage.value = null;
+    if (!open) session.dismissDialog();
   }
 });
 
@@ -597,18 +597,18 @@ function updateConsolePendingSql(tab: ChenPromptConsoleTab, value: string) {
   tab.pendingSql = value;
 }
 
-function activateQueryResult(tab: ChenQueryLikeWorkspaceTab, id: string) {
+function clearConsoleTranscript(tab: ChenPromptConsoleTab) {
+  queryConsole.clearConsoleTranscript(tab);
+}
+
+function activateQueryResult(tab: ChenQueryConsoleTab, id: string) {
   tab.activeResultTabId = id;
 }
 
-function closeQueryResult(tab: ChenQueryLikeWorkspaceTab, title: string) {
-  if (tab.kind === "console") {
-    queryConsole.closeQueryResult(tab, title);
-    return;
-  }
-  const target = findChenDataViewTarget(tab, title);
+function closeQueryResult(tab: ChenQueryConsoleTab, resultId: string) {
+  const target = findChenDataViewTarget(tab, resultId);
   if (!target) return;
-  guardDataViewChanges([target], () => queryConsole.closeQueryResult(tab, title));
+  guardDataViewChanges([target], () => queryConsole.closeQueryResult(tab, resultId));
 }
 
 function dismissQueryMessage(tab: ChenQueryConsoleTab) {
@@ -765,8 +765,8 @@ defineExpose({ focus });
             :prompt-label="consolePromptLabel"
             @run="runQueryTab"
             @cancel="cancelQueryLikeTab"
+            @clear="clearConsoleTranscript"
             @update-pending-sql="updateConsolePendingSql"
-            @activate-result="activateQueryResult"
           />
 
           <DataViewPanel
@@ -816,7 +816,12 @@ defineExpose({ focus });
       />
     </UDropdownMenu>
 
-    <UModal v-model:open="dialogVisible" :title="session.dialogMessage.value?.title || 'Message'">
+    <UModal
+      v-model:open="dialogVisible"
+      :title="session.dialogMessage.value?.title || 'Message'"
+      :close="session.dialogMessage.value?.showClose"
+      :dismissible="session.dialogMessage.value?.showClose"
+    >
       <template #body>
         <dl v-if="session.dialogMessage.value?.items.length" class="space-y-3 p-4 text-sm">
           <template v-for="item in session.dialogMessage.value.items" :key="item.label">
@@ -831,6 +836,18 @@ defineExpose({ focus });
         <pre v-else class="whitespace-pre-wrap break-words p-4 text-sm text-muted">{{
           session.dialogMessage.value?.text
         }}</pre>
+      </template>
+
+      <template v-if="session.dialogMessage.value?.buttons.length" #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton
+            v-for="(button, index) in session.dialogMessage.value.buttons"
+            :key="`${button.event}-${index}`"
+            @click="session.sendDialogEvent(session.dialogMessage.value?.id || null, button.event)"
+          >
+            {{ button.label }}
+          </UButton>
+        </div>
       </template>
     </UModal>
 

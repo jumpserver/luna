@@ -1,4 +1,11 @@
-import type { ChenPacket, ChenPromptConsoleTab, ChenQueryConsoleTab, ChenQueryLikeWorkspaceTab } from "~/chen/types";
+import type {
+  ChenConsoleTimelineEntry,
+  ChenPacket,
+  ChenPromptConsoleTab,
+  ChenQueryConsoleTab,
+  ChenQueryLikeWorkspaceTab,
+  ChenWorkspaceTab
+} from "~/chen/types";
 
 import { newChenWorkspaceId } from "~/chen/composables/useChenWorkspaceTabs";
 import {
@@ -8,10 +15,29 @@ import {
 } from "~/chen/utils/dataViewEditing";
 
 const SQL_CHUNK_SIZE = 4096;
+const MAX_CONSOLE_TIMELINE_ENTRIES = 200;
 
 export function useChenQueryConsole(
-  sendConsoleAction: (tab: ChenQueryLikeWorkspaceTab, type: string, data?: any) => void
+  sendConsoleAction: (tab: ChenQueryLikeWorkspaceTab, type: string, data?: any) => boolean | void
 ) {
+  function activeConsoleEntry(tab: ChenPromptConsoleTab) {
+    return tab.timelineEntries.find((entry) => entry.id === tab.activeTimelineEntryId) || null;
+  }
+
+  function appendConsoleStatus(tab: ChenPromptConsoleTab, content: string, level?: number) {
+    const entry = activeConsoleEntry(tab);
+    if (!entry) return;
+
+    if (/^execute sql\s*:/i.test(content)) return;
+    if (/^cancel query\s*:/i.test(content)) {
+      if (!entry.logs.includes("Query cancelled.")) entry.logs.push("Query cancelled.");
+      entry.status = "cancelled";
+      return;
+    }
+    if (!entry.logs.includes(content)) entry.logs.push(content);
+    if (level === 0) entry.status = "error";
+  }
+
   function formatLogEntry(value: unknown) {
     if (typeof value === "string") return value;
     if (value == null) return "";
@@ -26,20 +52,36 @@ export function useChenQueryConsole(
     }
   }
 
-  function appendLog(tab: { logs: string[] }, line: unknown) {
+  function appendLog(tab: ChenWorkspaceTab, line: unknown) {
     const content = formatLogEntry(line);
     if (!content) return;
     tab.logs.push(content);
     if (tab.logs.length > 400) {
       tab.logs.splice(0, tab.logs.length - 400);
     }
+    if (tab.kind === "console") {
+      const level = line && typeof line === "object" && "level" in line ? Number(line.level) : undefined;
+      appendConsoleStatus(tab, content, level);
+    }
   }
 
-  function updateQueryResult(tab: ChenQueryLikeWorkspaceTab, meta: { title: string; [key: string]: any }, data?: any) {
-    let resultTab = tab.resultTabs.find((item) => item.title === meta.title);
+  function failConsoleExecution(tab: ChenWorkspaceTab, message: string) {
+    appendLog(tab, { level: 0, message });
+    if (tab.kind !== "console") return;
+    const entry = activeConsoleEntry(tab);
+    if (!entry) return;
+    entry.status = "error";
+    entry.completedAt = Date.now();
+    tab.activeTimelineEntryId = "";
+  }
+
+  function updateQueryResult(tab: ChenQueryConsoleTab, meta: { title: string; [key: string]: any }, data?: any) {
+    let resultTab = meta.id
+      ? tab.resultTabs.find((item) => item.id === meta.id)
+      : tab.resultTabs.find((item) => item.title === meta.title);
     if (!resultTab) {
       resultTab = {
-        id: newChenWorkspaceId("result"),
+        id: meta.id || newChenWorkspaceId("result"),
         title: meta.title,
         meta,
         data: data ?? null,
@@ -57,21 +99,21 @@ export function useChenQueryConsole(
     tab.activeResultTabId = resultTab.id;
   }
 
-  function removeQueryResult(tab: ChenQueryLikeWorkspaceTab, title: string) {
-    tab.resultTabs = tab.resultTabs.filter((item) => item.title !== title);
+  function removeQueryResult(tab: ChenQueryConsoleTab, reference: string) {
+    tab.resultTabs = tab.resultTabs.filter((item) => item.id !== reference && item.title !== reference);
     if (!tab.resultTabs.some((item) => item.id === tab.activeResultTabId)) {
       tab.activeResultTabId = tab.resultTabs.at(-1)?.id || "";
     }
   }
 
-  function removeQueryResults(tab: ChenQueryLikeWorkspaceTab, data: unknown) {
+  function removeQueryResults(tab: ChenQueryConsoleTab, data: unknown) {
     if (typeof data === "string") {
       removeQueryResult(tab, data);
       return;
     }
     if (Array.isArray(data)) {
-      data.forEach((title) => {
-        if (typeof title === "string") removeQueryResult(tab, title);
+      data.forEach((reference) => {
+        if (typeof reference === "string") removeQueryResult(tab, reference);
       });
       return;
     }
@@ -80,9 +122,9 @@ export function useChenQueryConsole(
     }
   }
 
-  function closeQueryResult(tab: ChenQueryLikeWorkspaceTab, title: string) {
-    removeQueryResult(tab, title);
-    sendConsoleAction(tab, "close_data_view", title);
+  function closeQueryResult(tab: ChenQueryConsoleTab, reference: string) {
+    removeQueryResult(tab, reference);
+    sendConsoleAction(tab, "close_data_view", reference);
   }
 
   function dismissQueryMessage(tab: ChenQueryLikeWorkspaceTab) {
@@ -99,27 +141,76 @@ export function useChenQueryConsole(
         break;
       case "message":
         tab.message = typeof packet.data === "string" ? { type: "info", message: packet.data } : packet.data || null;
-        if (tab.kind === "console") appendLog(tab, packet.data);
-        break;
-      case "update_state":
-        if (packet.data?.title && packet.data.title !== tab.title) {
-          const resultTab = tab.resultTabs.find((item) => item.title === packet.data.title);
-          if (resultTab) {
-            resultTab.state = packet.data;
-            if (packet.data?.loading === false) finishChenDataViewRequestWithoutData(resultTab.editState);
-          }
-        } else {
-          tab.state = packet.data || {};
+        if (tab.kind === "console") {
+          const message = formatLogEntry(packet.data);
+          if (message) appendConsoleStatus(tab, message, packet.data?.type === "error" ? 0 : undefined);
         }
         break;
+      case "update_state": {
+        const resultTab =
+          tab.kind === "query"
+            ? packet.data?.id
+              ? tab.resultTabs.find((item) => item.id === packet.data.id)
+              : packet.data?.title && packet.data.title !== tab.title
+                ? tab.resultTabs.find((item) => item.title === packet.data.title)
+                : null
+            : null;
+        if (resultTab) {
+          resultTab.state = packet.data;
+          if (packet.data?.loading === false) finishChenDataViewRequestWithoutData(resultTab.editState);
+        } else {
+          tab.state = packet.data || {};
+          if (tab.kind === "console" && packet.data?.inQuery === false) {
+            const entry = activeConsoleEntry(tab);
+            if (entry) {
+              if (entry.status === "cancelling") entry.status = "cancelled";
+              else if (entry.status === "running") entry.status = "success";
+              entry.completedAt = Date.now();
+              tab.activeTimelineEntryId = "";
+            }
+          }
+        }
+        break;
+      }
       case "new_data_view":
-        if (packet.data?.title) updateQueryResult(tab, packet.data);
+        if (tab.kind === "query" && packet.data?.title) updateQueryResult(tab, packet.data);
         break;
       case "update_data_view":
-        if (packet.data?.title) updateQueryResult(tab, { title: packet.data.title }, packet.data.data);
+        if (tab.kind === "query" && packet.data?.title) {
+          updateQueryResult(tab, { id: packet.data.id, title: packet.data.title }, packet.data.data);
+        }
         break;
       case "close_data_view":
-        removeQueryResults(tab, packet.data);
+        if (tab.kind === "query") removeQueryResults(tab, packet.data);
+        break;
+      case "console_result":
+        if (tab.kind === "console" && packet.data?.data) {
+          let entry = activeConsoleEntry(tab);
+          if (!entry) {
+            entry = {
+              id: newChenWorkspaceId("execution"),
+              sql: packet.data.title || "Query",
+              status: "running",
+              startedAt: Date.now(),
+              logs: [],
+              results: []
+            };
+            tab.timelineEntries.push(entry);
+            tab.activeTimelineEntryId = entry.id;
+          }
+          const resultId = packet.data.id || newChenWorkspaceId("result");
+          const existingResult = entry.results.find((result) => result.id === resultId);
+          if (existingResult) {
+            existingResult.data = packet.data.data;
+            existingResult.state = { ...existingResult.state, ...packet.data.state };
+          } else {
+            entry.results.push({
+              id: resultId,
+              data: packet.data.data,
+              state: packet.data.state || {}
+            });
+          }
+        }
         break;
     }
   }
@@ -180,6 +271,7 @@ export function useChenQueryConsole(
   }
 
   function runConsoleTab(tab: ChenPromptConsoleTab) {
+    if (activeConsoleEntry(tab)) return;
     const sql = tab.pendingSql.trim();
     if (!sql) return;
     tab.historyEntries.push({
@@ -189,12 +281,42 @@ export function useChenQueryConsole(
     if (tab.historyEntries.length > 200) {
       tab.historyEntries.splice(0, tab.historyEntries.length - 200);
     }
-    sendConsoleAction(tab, "query_console_action", { action: "run_sql", data: sql });
+    const entry: ChenConsoleTimelineEntry = {
+      id: newChenWorkspaceId("execution"),
+      sql,
+      status: "running",
+      startedAt: Date.now(),
+      logs: [],
+      results: []
+    };
+    tab.timelineEntries.push(entry);
+    if (tab.timelineEntries.length > MAX_CONSOLE_TIMELINE_ENTRIES) {
+      tab.timelineEntries.splice(0, tab.timelineEntries.length - MAX_CONSOLE_TIMELINE_ENTRIES);
+    }
+    tab.activeTimelineEntryId = entry.id;
+    const sent = sendConsoleAction(tab, "query_console_action", { action: "run_sql", data: sql });
+    if (sent === false) {
+      entry.status = "error";
+      entry.completedAt = Date.now();
+      const message = tab.connectionError || "Console websocket is not connected";
+      if (!entry.logs.includes(message)) entry.logs.push(message);
+      tab.activeTimelineEntryId = "";
+    }
     tab.pendingSql = "";
+  }
+
+  function clearConsoleTranscript(tab: ChenPromptConsoleTab) {
+    if (activeConsoleEntry(tab)) return;
+    tab.timelineEntries = [];
   }
 
   function cancelQueryLikeTab(tab: ChenQueryLikeWorkspaceTab) {
     if (tab.kind === "query" && !tab.state.canCancel) return;
+    if (tab.kind === "console") {
+      const entry = activeConsoleEntry(tab);
+      if (!entry) return;
+      entry.status = "cancelling";
+    }
     sendConsoleAction(tab, "query_console_action", { action: "cancel" });
   }
 
@@ -202,8 +324,10 @@ export function useChenQueryConsole(
     appendLog,
     cancelQueryLikeTab,
     changeQueryContext,
+    clearConsoleTranscript,
     closeQueryResult,
     dismissQueryMessage,
+    failConsoleExecution,
     handleQueryConsolePacket,
     removeQueryResult,
     runConsoleTab,

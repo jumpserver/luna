@@ -114,6 +114,21 @@ export function useChenSession(options: UseChenSessionOptions) {
     }
   }
 
+  function sendDialogEvent(dialogId: string | null, event: string) {
+    if (!dialogId || !event) return false;
+
+    return sessionConnection.sendWhenReady({
+      type: "dialog_event",
+      data: { dialogId, event }
+    });
+  }
+
+  function dismissDialog() {
+    if (!dialogMessage.value?.showClose) return false;
+    dialogMessage.value = null;
+    return true;
+  }
+
   async function bootstrapSession() {
     const currentGeneration = ++bootstrapGeneration;
     fatalNotified = false;
@@ -144,6 +159,8 @@ export function useChenSession(options: UseChenSessionOptions) {
     sessionConnection,
     sessionSocket: sessionConnection.socket,
     bootstrapSession,
-    cleanupSession
+    cleanupSession,
+    dismissDialog,
+    sendDialogEvent
   };
 }

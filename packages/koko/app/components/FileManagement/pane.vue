@@ -22,6 +22,7 @@ const emit = defineEmits<{
 interface SftpTransferDropPayload {
   sourceEndpoint: FileTransferEndpointRef;
   sourcePath: string;
+  sourceSelectionRevision: number;
   entries: Array<Pick<SftpFileEntry, "name" | "size">>;
   destinationPath: string;
 }
@@ -37,7 +38,8 @@ let unregisterTransferEndpoint: (() => void) | undefined;
 
 const search = ref("");
 const uploadInput = ref<HTMLInputElement | null>(null);
-const selectedEntry = ref<SftpFileEntry | null>(null);
+const selectedEntries = ref<SftpFileEntry[]>([]);
+const selectionRevision = ref(0);
 const hoveredEntryName = ref<string | null>(null);
 
 const promptOpen = ref(false);
@@ -59,6 +61,7 @@ const visibleEntries = computed(() => {
   });
 });
 const pathSegments = computed(() => manager.currentPath.value.split("/").filter(Boolean));
+const selectedEntry = computed(() => selectedEntries.value.at(-1) || null);
 
 function navigateToPath(segmentIndex: number) {
   const path = segmentIndex < 0 ? "/" : `/${pathSegments.value.slice(0, segmentIndex + 1).join("/")}`;
@@ -107,6 +110,10 @@ const alertDescription = computed(() => {
 
 watch(selectedEntry, (entry) => emit("select", entry));
 
+watch(manager.currentPath, () => {
+  clearSelection();
+});
+
 watch(manager.connected, (connected) => {
   if (connected) transferStore.kick();
 });
@@ -120,13 +127,39 @@ onUnmounted(() => {
   if (props.transferEndpoint) transferStore.pauseEndpoint(props.transferEndpoint);
 });
 
-const selectEntry = (entry: SftpFileEntry) => {
+function clearSelection() {
+  selectedEntries.value = [];
+  selectionRevision.value += 1;
+}
+
+function clearTransferredSelection(names: string[], sourcePath: string, revision: number) {
+  if (manager.currentPath.value !== sourcePath || selectionRevision.value !== revision) return;
+
+  const transferredNames = new Set(names);
+  const remaining = selectedEntries.value.filter((entry) => !transferredNames.has(entry.name));
+  if (remaining.length === selectedEntries.value.length) return;
+
+  selectedEntries.value = remaining;
+}
+
+function selectEntry(entry: SftpFileEntry, event?: MouseEvent) {
   if (entry.name === "..") return;
-  selectedEntry.value = entry;
-};
+
+  if (!event?.ctrlKey && !event?.metaKey) {
+    selectedEntries.value = [entry];
+    selectionRevision.value += 1;
+    return;
+  }
+
+  const selected = selectedEntries.value.some((item) => item.name === entry.name);
+  selectedEntries.value = selected
+    ? selectedEntries.value.filter((item) => item.name !== entry.name)
+    : [...selectedEntries.value, entry];
+  selectionRevision.value += 1;
+}
 
 function isSelected(entry: SftpFileEntry) {
-  return selectedEntry.value?.name === entry.name;
+  return selectedEntries.value.some((item) => item.name === entry.name);
 }
 
 function onDragStart(event: DragEvent, entry: SftpFileEntry) {
@@ -135,12 +168,22 @@ function onDragStart(event: DragEvent, entry: SftpFileEntry) {
     return;
   }
 
-  selectEntry(entry);
+  if (!isSelected(entry)) selectEntry(entry);
+
+  const entries = selectedEntries.value
+    .filter((item) => !item.is_dir && item.name !== "..")
+    .map((item) => ({ name: item.name, size: item.size }));
+
+  if (!entries.length) {
+    event.preventDefault();
+    return;
+  }
 
   const payload = {
     sourceEndpoint: props.transferEndpoint,
     sourcePath: manager.currentPath.value,
-    entries: [{ name: entry.name, size: entry.size }]
+    sourceSelectionRevision: selectionRevision.value,
+    entries
   };
 
   event.dataTransfer?.setData("application/x-jumpserver-sftp-files", JSON.stringify(payload));
@@ -158,6 +201,7 @@ function onTransferDrop(event: DragEvent) {
     if (
       !payload.sourceEndpoint?.id ||
       !payload.sourcePath ||
+      !Number.isInteger(payload.sourceSelectionRevision) ||
       !Array.isArray(payload.entries) ||
       !props.transferEndpoint
     ) {
@@ -253,7 +297,7 @@ const submitPrompt = async () => {
     true
   );
   if (success) {
-    selectedEntry.value = null;
+    clearSelection();
     promptOpen.value = false;
   }
 };
@@ -273,7 +317,7 @@ const confirmAlert = async () => {
           t("koko.fileManagement.entryDownloaded", { name: target.entry.name })
         );
   if (success) {
-    if (target.kind === "delete") selectedEntry.value = null;
+    if (target.kind === "delete") clearSelection();
     alertOpen.value = false;
   }
 };
@@ -308,7 +352,7 @@ const uploadFromEvent = async (event: Event) => {
   }
 };
 
-defineExpose({ manager, selectedEntry });
+defineExpose({ manager, selectedEntry, selectedEntries, clearTransferredSelection });
 </script>
 
 <template>
@@ -486,9 +530,10 @@ defineExpose({ manager, selectedEntry });
               :key="entry.name"
               class="group h-9.5 transition-colors hover:bg-(--app-hover-soft)"
               :class="isSelected(entry) ? 'bg-(--app-selected-soft)' : ''"
+              :aria-selected="isSelected(entry)"
               @mouseenter="hoveredEntryName = entry.name"
               @mouseleave="hoveredEntryName = null"
-              @click="selectEntry(entry)"
+              @click="selectEntry(entry, $event)"
             >
               <td class="h-9.5 min-w-0 border-b border-(--app-border)/60 px-3.5 py-1.5 text-[12.5px] text-(--app-fg)">
                 <div class="flex min-w-0 items-center gap-2">
@@ -508,7 +553,11 @@ defineExpose({ manager, selectedEntry });
                       class="size-4 shrink-0 text-(--app-muted)"
                       :class="entry.is_dir ? 'text-primary' : ''"
                     />
-                    <span class="truncate" :class="entry.is_dir ? 'font-medium' : ''">{{ entry.name }}</span>
+                    <UTooltip :text="entry.name" :delay-duration="150">
+                      <span class="min-w-0 flex-1 truncate" :class="entry.is_dir ? 'font-medium' : ''">
+                        {{ entry.name }}
+                      </span>
+                    </UTooltip>
                   </button>
                   <span
                     v-if="entry.name !== '..'"

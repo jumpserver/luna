@@ -24,6 +24,7 @@ interface RemotePane {
 interface SftpTransferDropPayload {
   sourceEndpoint: FileTransferEndpointRef;
   sourcePath: string;
+  sourceSelectionRevision: number;
   entries: Array<Pick<SftpFileEntry, "name" | "size">>;
   destinationPath: string;
 }
@@ -75,6 +76,12 @@ const remoteAssetSearch = ref("");
 const remoteConnecting = ref(false);
 const transferring = ref(false);
 
+const terminalTransferStatuses = new Set(["completed", "skipped", "failed", "canceled"]);
+const pendingSelectionClears = new Map<
+  string,
+  Pick<SftpTransferDropPayload, "sourceEndpoint" | "sourcePath" | "sourceSelectionRevision">
+>();
+
 const primaryPaneRef = ref<InstanceType<typeof KokoFileManagementPane> | null>(null);
 const remotePaneRefs = ref<Record<string, InstanceType<typeof KokoFileManagementPane> | null>>({});
 const primarySelection = ref<SftpFileEntry | null>(null);
@@ -89,6 +96,27 @@ const activePaneForSide = (side: "left" | "right") =>
 const currentOrgId = computed(() => hostAdapter.sftp.currentOrganization.value?.id || "");
 const currentOrgLabel = computed(
   () => hostAdapter.sftp.currentOrganization.value?.name || t("koko.fileManagement.selectOrganization")
+);
+
+watch(
+  () => fileTransferStore.tasks.map((task) => `${task.id}:${task.status}`),
+  () => {
+    for (const [batchId, pending] of pendingSelectionClears) {
+      const tasks = fileTransferStore.tasks.filter((task) => task.batchId === batchId);
+      if (!tasks.length || tasks.some((task) => !terminalTransferStatuses.has(task.status))) continue;
+
+      const completedNames = tasks.filter((task) => task.status === "completed").map((task) => task.source.name);
+      const sourcePane =
+        primaryTransferEndpoint.value?.id === pending.sourceEndpoint.id
+          ? primaryPaneRef.value
+          : remotePaneRefs.value[
+              remotePanes.value.find((pane) => pane.transferEndpoint.id === pending.sourceEndpoint.id)?.id || ""
+            ];
+
+      sourcePane?.clearTransferredSelection(completedNames, pending.sourcePath, pending.sourceSelectionRevision);
+      pendingSelectionClears.delete(batchId);
+    }
+  }
 );
 
 function addErrorToast(title: string, error: unknown) {
@@ -245,7 +273,14 @@ function queueSftpTransfer(payload: SftpTransferDropPayload, destination: FileTr
 
   if (!inputs.length) return;
 
-  fileTransferStore.enqueueBatch(inputs);
+  const batchId = fileTransferStore.enqueueBatch(inputs);
+  if (!batchId) return;
+
+  pendingSelectionClears.set(batchId, {
+    sourceEndpoint: payload.sourceEndpoint,
+    sourcePath: payload.sourcePath,
+    sourceSelectionRevision: payload.sourceSelectionRevision
+  });
 }
 
 async function transferEntry(fromPane: TransferPane | null, toPane: TransferPane | null, entry: SftpFileEntry | null) {

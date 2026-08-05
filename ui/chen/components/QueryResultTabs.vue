@@ -25,6 +25,7 @@ const props = withDefaults(
     emptyMessage: string;
     closable?: boolean;
     dataViewActions?: boolean;
+    dataViewEditing?: boolean;
     logs?: string[];
     showLogs?: boolean;
     dbType?: string;
@@ -33,6 +34,7 @@ const props = withDefaults(
   {
     closable: false,
     dataViewActions: false,
+    dataViewEditing: false,
     logs: () => [],
     showLogs: false,
     dbType: "",
@@ -42,7 +44,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   "update:activeResultTabId": [id: string];
-  close: [title: string];
+  close: [id: string];
   dataViewAction: [result: ChenQueryResultTab, action: ChenDataViewAction, data?: ChenDataViewActionData];
 }>();
 
@@ -139,7 +141,7 @@ function cancelActiveResultChanges() {
             class="mr-1 rounded p-0.5 hover:bg-elevated"
             :aria-label="`Close ${result.title}`"
             :disabled="activeResultBusy"
-            @click="emit('close', result.title)"
+            @click="emit('close', result.id)"
           >
             <UIcon name="i-lucide-x" class="size-3" />
           </button>
@@ -167,7 +169,7 @@ function cancelActiveResultChanges() {
           {{ activeResult.title }}
         </div>
         <div class="flex items-center gap-1">
-          <template v-if="dataViewActions && activeResultEditable">
+          <template v-if="dataViewEditing && activeResultEditable">
             <UButton
               icon="i-lucide-save"
               size="xs"
@@ -206,8 +208,8 @@ function cancelActiveResultChanges() {
           :meta="activeResult.meta"
           :db-type="dbType"
           :can-copy="canCopy"
-          :edit-mode="dataViewActions && !activeResultBusy ? 'update' : 'none'"
-          :edit-state="dataViewActions ? activeResult.editState : null"
+          :edit-mode="dataViewEditing && !activeResultBusy ? 'update' : 'none'"
+          :edit-state="dataViewEditing ? activeResult.editState : null"
         />
       </div>
     </div>
@@ -215,7 +217,7 @@ function cancelActiveResultChanges() {
     <DataViewExportDialog v-if="exportDialogOpen" v-model:open="exportDialogOpen" @confirm="submitExport" />
 
     <DataViewSavePreviewDialog
-      v-if="previewDialogOpen && activeResult"
+      v-if="dataViewEditing && previewDialogOpen && activeResult"
       :open="previewDialogOpen"
       :result="activeResult.editState.previewResult"
       @update:open="handlePreviewDialogOpen"
