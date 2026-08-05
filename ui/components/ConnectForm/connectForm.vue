@@ -628,7 +628,7 @@ function handleSpecialAccount(v: string) {
   padding: 0.25rem 1.25rem 0.375rem;
   font-size: 0.875rem;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   line-height: 1.25rem;
   color: var(--app-text-muted);
   transition: color 0.15s ease;

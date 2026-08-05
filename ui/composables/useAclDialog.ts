@@ -1,3 +1,4 @@
+import type { MaybeRefOrGetter } from "vue";
 import type { ConnectionBody, TokenResponse } from "~/types";
 import { ApiRequestError } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -34,6 +35,51 @@ export interface AclDialogGroup {
   submitted: boolean;
   batchId?: string;
   faceUrl?: string;
+}
+
+export function useAclDialogPresentation(groupSource: MaybeRefOrGetter<AclDialogGroup | undefined>) {
+  const { t } = useI18n();
+  const group = computed(() => toValue(groupSource));
+  const isReview = computed(() => group.value?.code === "acl_review");
+  const isFace = computed(() => group.value?.code.startsWith("acl_face_") || false);
+  const isActionable = computed(() => ["acl_review", "acl_face_verify"].includes(group.value?.code || ""));
+  const isBatch = computed(() => (group.value?.items.length || 0) > 1);
+  const isBusy = computed(
+    () => group.value?.items.some((item) => ["submitting", "verifying"].includes(item.status)) || false
+  );
+  const hasPending = computed(
+    () => group.value?.items.some((item) => ["submitting", "pending", "verifying"].includes(item.status)) || false
+  );
+  const title = computed(() =>
+    isReview.value
+      ? t("AclDialog.LoginReview")
+      : isFace.value
+        ? t("AclDialog.FaceVerify")
+        : t("AclDialog.LoginReminder")
+  );
+  const description = computed(() => {
+    const current = group.value;
+    if (!current) return "";
+    if (current.items.length === 1) {
+      const item = current.items[0];
+      if (item?.detail) return t("AclDialog.RequestFailed");
+      if (isReview.value) {
+        if (item?.status === "pending") return t("AclDialog.ReviewPending");
+        if (item?.status === "rejected") return t("AclDialog.ReviewRejected");
+        if (item?.status === "closed") return t("AclDialog.ReviewClosed");
+        return t("AclDialog.NeedReview");
+      }
+      if (current.code === "acl_face_verify") {
+        return item?.status === "verifying" ? t("AclDialog.CompleteFaceVerify") : t("AclDialog.NeedFaceVerify");
+      }
+      return t("ConnectError.AclFailed");
+    }
+    if (isReview.value) return t("AclDialog.ReviewGroupDescription");
+    if (current.code === "acl_face_verify") return t("AclDialog.FaceGroupDescription");
+    return t("AclDialog.ErrorGroupDescription");
+  });
+
+  return { description, hasPending, isActionable, isBatch, isBusy, isReview, title };
 }
 
 const groups = ref<AclDialogGroup[]>([]);

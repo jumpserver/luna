@@ -7,6 +7,7 @@ const props = defineProps<{
   group: AclDialogGroup;
   embedded?: boolean;
   minimizable?: boolean;
+  chrome?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -17,36 +18,9 @@ const { t } = useI18n();
 const { submit, close, copyTicketLink } = useAclDialog();
 const { closePane } = useWorkspaceTabs();
 
-const isReview = computed(() => props.group.code === "acl_review");
-const isFace = computed(() => props.group.code.startsWith("acl_face_"));
-const isActionable = computed(() => ["acl_review", "acl_face_verify"].includes(props.group.code));
-const isBatch = computed(() => props.group.items.length > 1);
-const isBusy = computed(() => props.group.items.some((item) => ["submitting", "verifying"].includes(item.status)));
-const hasPending = computed(() =>
-  props.group.items.some((item) => ["submitting", "pending", "verifying"].includes(item.status))
+const { description, hasPending, isActionable, isBatch, isBusy, isReview, title } = useAclDialogPresentation(
+  () => props.group
 );
-const title = computed(() =>
-  isReview.value ? t("AclDialog.LoginReview") : isFace.value ? t("AclDialog.FaceVerify") : t("AclDialog.LoginReminder")
-);
-const description = computed(() => {
-  if (!isBatch.value) {
-    const item = props.group.items[0];
-    if (item?.detail) return t("AclDialog.RequestFailed");
-    if (isReview.value) {
-      if (item?.status === "pending") return t("AclDialog.ReviewPending");
-      if (item?.status === "rejected") return t("AclDialog.ReviewRejected");
-      if (item?.status === "closed") return t("AclDialog.ReviewClosed");
-      return t("AclDialog.NeedReview");
-    }
-    if (props.group.code === "acl_face_verify") {
-      return item?.status === "verifying" ? t("AclDialog.CompleteFaceVerify") : t("AclDialog.NeedFaceVerify");
-    }
-    return t("ConnectError.AclFailed");
-  }
-  if (isReview.value) return t("AclDialog.ReviewGroupDescription");
-  if (props.group.code === "acl_face_verify") return t("AclDialog.FaceGroupDescription");
-  return t("AclDialog.ErrorGroupDescription");
-});
 
 const statusColor = (status: string) => {
   if (status === "approved") return "success";
@@ -64,7 +38,7 @@ const handleClose = async () => {
 
 <template>
   <section :class="embedded ? 'w-full' : 'p-1'">
-    <header class="mb-4 flex items-start gap-3">
+    <header v-if="chrome !== false" class="mb-4 flex items-start gap-3">
       <div class="min-w-0 flex-1">
         <h2 class="text-base font-semibold text-[var(--app-fg)]">{{ title }}</h2>
         <p class="mt-1 text-sm text-[var(--app-muted)]">{{ description }}</p>
@@ -114,7 +88,7 @@ const handleClose = async () => {
       sandbox="allow-scripts allow-same-origin"
     />
 
-    <footer class="mt-5 flex justify-end gap-2">
+    <footer v-if="chrome !== false" class="mt-5 flex justify-end gap-2">
       <UButton color="neutral" variant="outline" :disabled="isBusy" @click="handleClose">
         {{ isActionable && (!group.submitted || hasPending) ? t("Common.Cancel") : t("ToolTips.Close") }}
       </UButton>

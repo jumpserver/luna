@@ -1,15 +1,26 @@
 <script setup lang="ts">
 import AclDialogContent from "~/components/Modal/aclDialogContent.vue";
 
-const { globalGroup, isOpen } = useAclDialog();
+const { globalGroup, isOpen, submit, close } = useAclDialog();
 const { t } = useI18n();
 const minimized = ref(false);
 const canMinimize = computed(() => globalGroup.value?.code === "acl_review");
+const { description, hasPending, isActionable, isBatch, isBusy, isReview, title } =
+  useAclDialogPresentation(globalGroup);
 const activeCount = computed(
   () =>
     globalGroup.value?.items.filter((item) => ["ready", "submitting", "pending", "verifying"].includes(item.status))
       .length || 0
 );
+
+const handleClose = () => {
+  if (globalGroup.value) void close(globalGroup.value);
+};
+
+const handleSubmit = () => {
+  if (globalGroup.value) void submit(globalGroup.value);
+};
+
 const minimizedDescription = computed(() => {
   const group = globalGroup.value;
   if (!group) return "";
@@ -30,14 +41,35 @@ watch(
 </script>
 
 <template>
-  <UModal :open="isOpen && !minimized" :dismissible="false" :close="false" :ui="{ content: 'max-w-2xl' }">
-    <template #body>
-      <AclDialogContent
-        v-if="globalGroup"
-        :group="globalGroup"
-        :minimizable="canMinimize"
-        @minimize="minimized = true"
+  <UModal
+    :open="isOpen && !minimized"
+    :title="title"
+    :description="description"
+    :dismissible="false"
+    :close="false"
+    :ui="{ content: 'max-w-2xl', footer: 'justify-end gap-2' }"
+  >
+    <template #actions>
+      <UButton
+        v-if="canMinimize"
+        color="neutral"
+        variant="ghost"
+        icon="i-lucide-minus"
+        :title="t('ToolTips.Minimize')"
+        :aria-label="t('ToolTips.Minimize')"
+        @click="minimized = true"
       />
+    </template>
+    <template #body>
+      <AclDialogContent v-if="globalGroup" :group="globalGroup" :chrome="false" />
+    </template>
+    <template #footer>
+      <UButton color="neutral" variant="outline" :disabled="isBusy" @click="handleClose">
+        {{ isActionable && (!globalGroup?.submitted || hasPending) ? t("Common.Cancel") : t("ToolTips.Close") }}
+      </UButton>
+      <UButton v-if="isActionable && !globalGroup?.submitted" :loading="isBusy" @click="handleSubmit">
+        {{ isBatch && isReview ? t("AclDialog.SubmitAll") : t("Common.Confirm") }}
+      </UButton>
     </template>
   </UModal>
 

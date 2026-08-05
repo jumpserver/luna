@@ -34,10 +34,10 @@ export function useWorkspaceTabMenu() {
   const { t } = useI18n();
   const { addErrorToast } = useErrorToast();
   const { handleAssetConnection } = useAssetAction();
-  const { configureAndLaunch } = useConnectionLauncher();
   const {
     getTabById,
     openSession,
+    openSetupSession,
     setActiveSession,
     canMergeTabs,
     mergeTabIntoWorkspace,
@@ -108,7 +108,7 @@ export function useWorkspaceTabMenu() {
 
   const connectCurrentPane = async (workspaceTab: WorkspaceSessionTab, pane: WorkspacePane) => {
     if (workspaceTab.status === "selecting" && workspaceTab.setupAsset) {
-      await configureAndLaunch(workspaceTab.setupAsset, {
+      openSetupSession(workspaceTab.setupAsset, {
         protocol: workspaceTab.protocol || undefined,
         paneId: pane.id
       });
@@ -147,7 +147,7 @@ export function useWorkspaceTabMenu() {
   };
 
   const connectOtherPane = (_workspaceTab: WorkspaceSessionTab, pane: WorkspacePane, asset: AssetItem) => {
-    void configureAndLaunch(asset, { paneId: pane.id });
+    openSetupSession(asset, { paneId: pane.id });
   };
 
   const mergeWorkspaceTabIntoCurrent = (

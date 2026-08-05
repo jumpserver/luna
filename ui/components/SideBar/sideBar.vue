@@ -13,8 +13,8 @@ const { collapse, sidebarSections, setSidebarSections } = useSettingManager();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const showTools = computed(() => isTauriRuntime());
 const { confirmConnection } = useAssetConnection();
-const { configure, configureAndLaunch, launchWithInfo } = useConnectionLauncher();
-const { activeTab, canSplitWorkspace, openSession, splitWorkspace } = useWorkspaceTabs();
+const { configure, launchWithInfo } = useConnectionLauncher();
+const { activeTab, canSplitWorkspace, openSession, openSetupSession, splitWorkspace } = useWorkspaceTabs();
 const { openAssetInWindow } = useAssetWindowLauncher();
 const { handleAssetFavorite, handleAssetRename, handleAssetUnfavorite } = useAssetAction();
 const { folders: favoriteFolders, load: loadFavoriteFolders, favoriteToFolder } = useFavoriteFolders();
@@ -178,7 +178,7 @@ const connectWithSavedConnection = async (asset: AssetItem) => {
   const rememberedAsset = { ...asset, savedConnection: remembered || undefined };
 
   if (!remembered || !hasReusableSavedConnection(rememberedAsset)) {
-    await configureAndLaunch(rememberedAsset);
+    openSetupSession(rememberedAsset);
     return;
   }
 
@@ -197,7 +197,7 @@ const connectWithSavedConnection = async (asset: AssetItem) => {
   }
 
   if (!savedConnectionIsAvailable(connectAsset)) {
-    await configureAndLaunch(connectAsset);
+    openSetupSession(connectAsset);
     return;
   }
 
@@ -288,12 +288,12 @@ const handleAssetConnect = (asset: AssetItem) => {
   connectWithSavedConnection(asset);
 };
 
-const openAssetInCurrentWorkspace = async (asset: AssetItem) => {
+const openAssetInCurrentWorkspace = (asset: AssetItem) => {
   contextMenuVisible.value = false;
 
   const currentTab = activeTab.value;
   if (!currentTab) {
-    await configureAndLaunch(asset);
+    openSetupSession(asset);
     return;
   }
 
@@ -316,7 +316,7 @@ const openAssetInCurrentWorkspace = async (asset: AssetItem) => {
   const [pane] = splitWorkspace(currentTab.id, direction);
   if (!pane) return;
 
-  await configureAndLaunch(asset, { paneId: pane.id });
+  openSetupSession(asset, { paneId: pane.id });
 };
 
 const handleAssetQuickConnect = (asset: AssetItem) => {
@@ -324,7 +324,7 @@ const handleAssetQuickConnect = (asset: AssetItem) => {
 };
 
 const handleAssetConnectWithSelection = (asset: AssetItem) => {
-  void configureAndLaunch(asset);
+  openSetupSession(asset);
 };
 
 useEventBus().on("workspaceConnectAsset", handleAssetConnectWithSelection);

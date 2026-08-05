@@ -25,7 +25,6 @@ const {
 } = useWorkspaceTabs();
 const { focusPaneSurface, registerPaneTarget, unregisterPaneTarget } = useWorkspacePaneSurfaceRegistry();
 const { connectCurrentPane, connectOtherPane, mergeWorkspaceTabIntoCurrent, reconnectSession } = useWorkspaceTabMenu();
-const { hasScopeGroup } = useAclDialog();
 const draggedPaneId = ref("");
 const dragOverPaneId = ref("");
 const dragOverPanePlacement = ref<WorkspacePaneDropPlacement>("center");
@@ -46,6 +45,11 @@ const paneGridClass = computed(() => {
     default:
       return "";
   }
+});
+const setupPane = computed(() => {
+  const activeSetupPane = props.tab.panes.find((pane) => pane.id === activePaneId.value && pane.mode === "setup");
+
+  return activeSetupPane || props.tab.panes.find((pane) => pane.mode === "setup");
 });
 const showPaneHeaders = computed(() => props.tab.panes.length > 1);
 const inactivePaneOverlayClass = computed(() => (colorMode.value === "dark" ? "bg-white/4" : "bg-black/3"));
@@ -355,9 +359,6 @@ onBeforeUnmount(() => {
           :key="pane.id"
           class="group relative flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--workspace-surface-sub-panel)] transition-[box-shadow]"
           :class="[
-            isActivePane(pane.id) && pane.status !== 'failed' && !hasScopeGroup(pane.id)
-              ? 'z-[1] ring-1 ring-inset ring-primary/28 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ui-color-primary-500)_10%,transparent)]'
-              : 'ring-1 ring-inset ring-transparent',
             showPaneDropHint(pane.id)
               ? 'ring-2 ring-inset ring-primary/50 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]'
               : ''
@@ -472,6 +473,8 @@ onBeforeUnmount(() => {
           <WorkspaceAclPaneHost :scope-id="pane.id" />
         </section>
       </div>
+
+      <WorkspaceConnectionSetupPane v-if="setupPane" :tab="surfaceTabFor(setupPane)" class="absolute inset-0 z-10" />
     </div>
 
     <UModal v-model:open="connectOtherModalOpen" :title="t('WorkspacePane.ConnectOther')" :ui="{ content: 'max-w-md' }">

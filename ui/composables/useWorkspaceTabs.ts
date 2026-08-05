@@ -334,6 +334,46 @@ export const useWorkspaceTabs = () => {
     return pane;
   };
 
+  const openSetupSession = (asset: AssetItem, options: { protocol?: string; paneId?: string } = {}) => {
+    useRecentConnections().recordRecentConnection(asset);
+    const protocol = options.protocol || asset.savedConnection?.protocol || "";
+    const account = asset.savedConnection?.username || "";
+    const target = resolvePendingTarget(options.paneId);
+
+    const pane = createPane(
+      target?.pane.id || createTabId(asset.id, protocol || "setup", account),
+      {
+        assetId: asset.id,
+        assetName: asset.name,
+        assetType: asset.type || "",
+        assetPlatform: asset.platform || "",
+        assetCategory: asset.category || "",
+        address: asset.address,
+        permedProtocols: asset.permedProtocols,
+        protocol,
+        account,
+        status: "selecting",
+        setupAsset: asset,
+        payload: undefined,
+        connectedAt: undefined
+      },
+      "setup"
+    );
+
+    if (target) {
+      replacePane(target.tab, target.paneIndex, pane);
+      activeTabId.value = target.tab.id;
+      activePaneId.value = pane.id;
+      return pane;
+    }
+
+    const tab = createTabFromPane(pane);
+    tabs.value.push(tab);
+    activeTabId.value = tab.id;
+    activePaneId.value = pane.id;
+    return pane;
+  };
+
   const openLocalShell = () => {
     const pane = createPane(
       createTabId("local", "local-shell", ""),
@@ -721,6 +761,7 @@ export const useWorkspaceTabs = () => {
     markSessionFailed,
     openLocalShell,
     openSession,
+    openSetupSession,
     placePane,
     reorderTabs,
     registerSessionDisposer,
