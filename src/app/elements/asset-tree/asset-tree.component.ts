@@ -365,8 +365,13 @@ export class ElementAssetTreeComponent implements OnInit {
           name: options.name,
           fa: options.fa,
           hide: false,
-          disabled: true,
-          click: () => {}
+          children: [
+            {
+              id: 'create-folder-and-favorite',
+              name: this._i18n.instant('Create folder and favorite'),
+              click: this.onCreateFolderAndFavorite.bind(this)
+            }
+          ]
         }
       ];
     }
@@ -467,6 +472,24 @@ export class ElementAssetTreeComponent implements OnInit {
       return String(folderOrId.id ?? folderOrId.pk ?? folderOrId.folder_id ?? '');
     }
     return String(folderOrId);
+  }
+
+  private resolveCreatedFavoriteFolderId(folder: any, name: string, parentId: string = null): Promise<string> {
+    const createdFolderId = this.resolveFolderId(folder);
+    if (createdFolderId) {
+      return Promise.resolve(createdFolderId);
+    }
+    const normalizedParentId = this.resolveFolderId(parentId);
+    return this._http
+      .getFavoriteFolders()
+      .toPromise()
+      .then(folders => {
+        this.favoriteFolders = folders || [];
+        const createdFolder = this.favoriteFolders.find(
+          f => f.name === name && this.resolveFolderId(f.parent) === normalizedParentId
+        );
+        return this.resolveFolderId(createdFolder);
+      });
   }
 
   /**
@@ -1064,11 +1087,15 @@ export class ElementAssetTreeComponent implements OnInit {
     connectOnNewPage(node, 'auto');
   }
 
+  onCreateFolderAndFavorite() {
+    this.onCreateFolder(null, this.rightClickSelectNode);
+  }
+
   /**
    * Create folder: pop an input, validate empty/duplicate name, then call backend
    * @param parentId parent folder id, null means top-level
    */
-  onCreateFolder(parentId: string = null) {
+  onCreateFolder(parentId: string = null, favoriteNode: any = null) {
     this.folderNameInput = '';
     this._modal.create({
       nzTitle: this._i18n.instant(parentId ? 'Create subfolder' : 'Create folder'),
@@ -1089,13 +1116,34 @@ export class ElementAssetTreeComponent implements OnInit {
         return this._http
           .createFavoriteFolder(name, parentId)
           .toPromise()
-          .then(() => {
+          .then(folder => {
             const msg = this._i18n.instant('Create folder') + ' ' + this._i18n.instant('success');
+            if (favoriteNode) {
+              return this.resolveCreatedFavoriteFolderId(folder, name, parentId)
+                .then(createdFolderId => {
+                  if (!createdFolderId) {
+                    this.refreshFavoriteTree();
+                    return;
+                  }
+                  return this.favoriteAssetToFolder(createdFolderId, favoriteNode, 'Favorite', {
+                    refreshTreeOnSuccess: true
+                  }).catch(() => {
+                    this.refreshFavoriteTree();
+                  });
+                })
+                .then(() => {
+                  this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
+                });
+            }
             this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
             this.refreshFavoriteTree();
+          }, error => {
+            if (error && error.status === 400) {
+              this._message.error(this._i18n.instant('Folder already exists'));
+            }
+            return false;
           })
           .catch(() => {
-            this._message.error(this._i18n.instant('Folder already exists'));
             return false;
           });
       }
@@ -1197,54 +1245,57 @@ export class ElementAssetTreeComponent implements OnInit {
    * @param folderId target folder id
    */
   onFavoriteTo(folderId: string) {
-    this.assignFavoriteToFolder(folderId, 'Favorite');
+    this.favoriteAssetToFolder(folderId, this.rightClickSelectNode, 'Favorite').catch(() => {});
   }
 
-  /**
-   * Move a favorite-tree asset leaf into another folder.
-   * Same backend as favorite-to; only the success toast wording differs.
-   */
+  /** Move a favorite-tree asset leaf into another folder. */
   onMoveTo(folderId: string) {
-    this.assignFavoriteToFolder(folderId, 'Move');
+    this.favoriteAssetToFolder(folderId, this.rightClickSelectNode, 'Move').catch(() => {});
   }
 
-  /**
-   * Assign the right-clicked asset to a favorite folder (create or relocate).
-   * @param folderId target folder id
-   * @param actionKey i18n key for success toast ("Favorite" / "Move")
-   */
-  private assignFavoriteToFolder(folderId: string, actionKey: string) {
-    const srcNode = this.rightClickSelectNode;
+  private favoriteAssetToFolder(
+    folderId: string,
+    srcNode: any,
+    actionKey: string = 'Favorite',
+    options: { refreshTreeOnSuccess?: boolean } = {}
+  ): Promise<void> {
     const normalizedFolderId = this.resolveFolderId(folderId);
     const assetId = this.resolveAssetId(srcNode);
     if (!normalizedFolderId || !assetId) {
-      return;
+      return Promise.resolve();
     }
     const currentFolderId = this.resolveFolderId(srcNode.favoriteFolderId);
     if (currentFolderId && currentFolderId === normalizedFolderId) {
       this._message.warning(this._i18n.instant('Already in this folder'));
-      return;
+      return Promise.resolve();
     }
     const favoritingKey = `${assetId}-${normalizedFolderId}`;
     if (this.favoritingInFlight.has(favoritingKey)) {
-      return;
+      return Promise.resolve();
     }
     this.favoritingInFlight.add(favoritingKey);
-    this._http.favoriteAssetToFolder(assetId, normalizedFolderId).subscribe(
-      () => {
+    return this._http
+      .favoriteAssetToFolder(assetId, normalizedFolderId)
+      .toPromise()
+      .then(() => {
         const msg = this._i18n.instant(actionKey) + ' ' + this._i18n.instant('success');
         this._toastr.success(msg, '', { nzClass: 'custom-success-notification' });
         this.setFavoriteAssetRecord(normalizedFolderId, assetId, srcNode);
-        this.moveFavoriteLeaf(normalizedFolderId, srcNode, assetId);
-        this.favoritingInFlight.delete(favoritingKey);
-      },
-      error => {
-        this.favoritingInFlight.delete(favoritingKey);
+        if (options.refreshTreeOnSuccess) {
+          this.refreshFavoriteTree();
+        } else {
+          this.moveFavoriteLeaf(normalizedFolderId, srcNode, assetId);
+        }
+      })
+      .catch(error => {
         if (error && error.status === 400) {
           this._message.warning(this._i18n.instant('Already in this folder'));
         }
-      }
-    );
+        return Promise.reject(error);
+      })
+      .finally(() => {
+        this.favoritingInFlight.delete(favoritingKey);
+      });
   }
 
   /**
