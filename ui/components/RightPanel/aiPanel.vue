@@ -15,9 +15,16 @@ interface ViewStep {
   title: string;
   objective: string;
   status: string;
-  command?: TerminalAiEventData;
-  execution?: TerminalAiEventData;
+  executions: ViewExecution[];
   acl?: TerminalAiEventData;
+}
+
+interface ViewExecution {
+  id: string;
+  key: string;
+  index: number;
+  command?: TerminalAiEventData;
+  result?: TerminalAiEventData;
 }
 
 interface TextItem {
@@ -83,6 +90,7 @@ const viewItems = computed<ViewItem[]>(() => {
   const items: ViewItem[] = [];
   const plans = new Map<string, PlanItem>();
   const steps = new Map<string, ViewStep>();
+  const executions = new Map<string, ViewExecution>();
 
   const ensurePlan = (id: string, key: string) => {
     let plan = plans.get(id);
@@ -111,12 +119,26 @@ const viewItems = computed<ViewItem[]>(() => {
         index: Number(data.step) || plan.steps.length + 1,
         title: String(data.title || t("RightPanel.AIStep", { count: plan.steps.length + 1 })),
         objective: String(data.objective || ""),
-        status: String(data.status || "pending")
+        status: String(data.status || "pending"),
+        executions: []
       };
       steps.set(key, step);
       plan.steps.push(step);
     }
     return step;
+  };
+
+  const ensureExecution = (step: ViewStep, data: TerminalAiEventData) => {
+    const legacyId = data.command ? `legacy:${String(data.command)}` : `legacy:${step.executions.length + 1}`;
+    const id = String(data.executionId || legacyId);
+    const key = `${step.key}:${id}`;
+    let execution = executions.get(key);
+    if (!execution) {
+      execution = { id, key, index: step.executions.length + 1 };
+      executions.set(key, execution);
+      step.executions.push(execution);
+    }
+    return execution;
   };
 
   for (const message of messages.value) {
@@ -137,16 +159,14 @@ const viewItems = computed<ViewItem[]>(() => {
         const plan = ensurePlan(planId, `${message.id}-plan-${partIndex}`);
         plan.summary = String(data.summary || plan.summary);
         const rawSteps = Array.isArray(data.steps) ? data.steps : [];
-        const nextSteps: ViewStep[] = [];
         rawSteps.forEach((rawStep: TerminalAiEventData, index: number) => {
           const step = ensureStep(plan, rawStep);
           step.index = index + 1;
           step.title = String(rawStep.title || step.title);
           step.objective = String(rawStep.objective || step.objective);
           step.status = String(rawStep.status || step.status);
-          nextSteps.push(step);
         });
-        plan.steps = nextSteps;
+        plan.steps.sort((left, right) => left.index - right.index);
         return;
       }
 
@@ -154,7 +174,8 @@ const viewItems = computed<ViewItem[]>(() => {
         const planId = String(data.planId || `plan-${message.id}`);
         const plan = ensurePlan(planId, `${message.id}-plan-${partIndex}`);
         const step = ensureStep(plan, data);
-        step.command = { ...step.command, ...data, partType: part.type };
+        const execution = ensureExecution(step, data);
+        execution.command = { ...execution.command, ...data, partType: part.type };
         return;
       }
 
@@ -162,7 +183,8 @@ const viewItems = computed<ViewItem[]>(() => {
         const planId = String(data.planId || `plan-${message.id}`);
         const plan = ensurePlan(planId, `${message.id}-plan-${partIndex}`);
         const step = ensureStep(plan, data);
-        step.execution = { ...step.execution, ...data };
+        const execution = ensureExecution(step, data);
+        execution.result = { ...execution.result, ...data };
         return;
       }
 
@@ -316,7 +338,12 @@ function renderMarkdown(source: string) {
 
 function stepStatus(step: ViewStep) {
   if (["completed", "failed", "rejected", "skipped"].includes(step.status)) return step.status;
-  return String(step.execution?.outcome || step.command?.state || step.status || "pending");
+  const execution = step.executions.at(-1);
+  if (execution?.command && !execution.result) return String(execution.command.state || step.status);
+  if (["running", "reviewing"].includes(String(execution?.result?.outcome))) {
+    return String(execution?.result?.outcome);
+  }
+  return step.status || String(execution?.result?.outcome || "pending");
 }
 
 function statusLabel(step: ViewStep) {
@@ -517,111 +544,120 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
                     v-html="renderMarkdown(step.objective)"
                   />
 
-                  <div v-if="step.command" class="overflow-hidden rounded-lg border border-default">
-                    <div
-                      class="flex items-center justify-between gap-2 border-b border-default px-2 py-1.5 text-[11px] text-muted"
-                    >
-                      <span>{{ t("RightPanel.AICommand") }}</span>
-                      <div class="flex flex-wrap justify-end gap-1">
-                        <UBadge :color="riskColor(Number(step.command.riskLevel))" variant="subtle" size="xs">
-                          {{ t("RightPanel.AIRisk", { level: step.command.riskLevel }) }}
-                        </UBadge>
-                        <UBadge color="neutral" variant="subtle" size="xs">
-                          {{ step.command.execution }}
-                        </UBadge>
+                  <div v-for="execution in step.executions" :key="execution.key" class="space-y-2">
+                    <div v-if="execution.command" class="overflow-hidden rounded-lg border border-default">
+                      <div
+                        class="flex items-center justify-between gap-2 border-b border-default px-2 py-1.5 text-[11px] text-muted"
+                      >
+                        <span>
+                          {{ t("RightPanel.AICommand") }}
+                          <span v-if="step.executions.length > 1">{{ execution.index }}</span>
+                        </span>
+                        <div class="flex flex-wrap justify-end gap-1">
+                          <UBadge :color="riskColor(Number(execution.command.riskLevel))" variant="subtle" size="xs">
+                            {{ t("RightPanel.AIRisk", { level: execution.command.riskLevel }) }}
+                          </UBadge>
+                          <UBadge color="neutral" variant="subtle" size="xs">
+                            {{ execution.command.execution }}
+                          </UBadge>
+                          <UBadge
+                            v-if="execution.command.state === 'auto_approved'"
+                            color="success"
+                            variant="subtle"
+                            size="xs"
+                          >
+                            {{ t("RightPanel.AIAutoApproved") }}
+                          </UBadge>
+                        </div>
+                      </div>
+                      <pre
+                        class="max-h-72 overflow-auto whitespace-pre-wrap break-words bg-muted/40 p-2 font-mono text-[11px]"
+                      ><code>{{ execution.command.command }}</code></pre>
+                      <div
+                        v-if="execution.command.rationale"
+                        class="markdown-body px-2 pt-2 text-xs text-muted"
+                        v-html="renderMarkdown(String(execution.command.rationale))"
+                      />
+                      <p
+                        v-if="execution.command.riskReason"
+                        class="flex items-start gap-1.5 px-2 py-2 text-[11px] text-warning"
+                      >
+                        <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
+                        {{ execution.command.riskReason }}
+                      </p>
+
+                      <div
+                        v-if="
+                          execution.command.partType === 'data-approval' &&
+                          !session.decisions.has(String(execution.command.id))
+                        "
+                        class="space-y-2 border-t border-default p-2"
+                      >
+                        <div v-if="session.executionMode === 'auto'" class="flex gap-1.5">
+                          <UButton
+                            size="xs"
+                            color="neutral"
+                            :variant="selectedExecution(execution.command) === 'pty' ? 'solid' : 'soft'"
+                            :label="t('RightPanel.AICurrentPty')"
+                            @click="setExecutionOverride(String(execution.command?.id), 'pty')"
+                          />
+                          <UButton
+                            size="xs"
+                            color="neutral"
+                            :variant="selectedExecution(execution.command) === 'background_exec' ? 'solid' : 'soft'"
+                            :label="t('RightPanel.AIBackgroundExecution')"
+                            :disabled="!session.backgroundExec || execution.command.backgroundEligible === false"
+                            @click="setExecutionOverride(String(execution.command?.id), 'background_exec')"
+                          />
+                        </div>
+                        <div class="flex justify-end gap-1.5">
+                          <UButton
+                            size="xs"
+                            color="neutral"
+                            variant="soft"
+                            :label="t('RightPanel.AIReject')"
+                            @click="decide(execution.command || {}, false)"
+                          />
+                          <UButton
+                            size="xs"
+                            color="primary"
+                            :label="t('RightPanel.AIApprove')"
+                            @click="decide(execution.command || {}, true)"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div v-if="execution.result" class="overflow-hidden rounded-lg border border-default">
+                      <div
+                        class="flex items-center justify-between border-b border-default px-2 py-1.5 text-[11px] text-muted"
+                      >
+                        <span>{{ t("RightPanel.AIExecutionResult") }}</span>
                         <UBadge
-                          v-if="step.command.state === 'auto_approved'"
-                          color="success"
+                          v-if="execution.result.exitCode !== undefined && execution.result.exitCode !== null"
+                          color="neutral"
                           variant="subtle"
                           size="xs"
                         >
-                          {{ t("RightPanel.AIAutoApproved") }}
+                          exit {{ execution.result.exitCode }}
                         </UBadge>
                       </div>
-                    </div>
-                    <pre
-                      class="max-h-72 overflow-auto whitespace-pre-wrap break-words bg-muted/40 p-2 font-mono text-[11px]"
-                    ><code>{{ step.command.command }}</code></pre>
-                    <div
-                      v-if="step.command.rationale"
-                      class="markdown-body px-2 pt-2 text-xs text-muted"
-                      v-html="renderMarkdown(String(step.command.rationale))"
-                    />
-                    <p
-                      v-if="step.command.riskReason"
-                      class="flex items-start gap-1.5 px-2 py-2 text-[11px] text-warning"
-                    >
-                      <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
-                      {{ step.command.riskReason }}
-                    </p>
-
-                    <div
-                      v-if="
-                        step.command.partType === 'data-approval' && !session.decisions.has(String(step.command.id))
-                      "
-                      class="space-y-2 border-t border-default p-2"
-                    >
-                      <div v-if="session.executionMode === 'auto'" class="flex gap-1.5">
-                        <UButton
-                          size="xs"
-                          color="neutral"
-                          :variant="selectedExecution(step.command) === 'pty' ? 'solid' : 'soft'"
-                          :label="t('RightPanel.AICurrentPty')"
-                          @click="setExecutionOverride(String(step.command?.id), 'pty')"
-                        />
-                        <UButton
-                          size="xs"
-                          color="neutral"
-                          :variant="selectedExecution(step.command) === 'background_exec' ? 'solid' : 'soft'"
-                          :label="t('RightPanel.AIBackgroundExecution')"
-                          :disabled="!session.backgroundExec || step.command.backgroundEligible === false"
-                          @click="setExecutionOverride(String(step.command?.id), 'background_exec')"
-                        />
-                      </div>
-                      <div class="flex justify-end gap-1.5">
-                        <UButton
-                          size="xs"
-                          color="neutral"
-                          variant="soft"
-                          :label="t('RightPanel.AIReject')"
-                          @click="decide(step.command || {}, false)"
-                        />
-                        <UButton
-                          size="xs"
-                          color="primary"
-                          :label="t('RightPanel.AIApprove')"
-                          @click="decide(step.command || {}, true)"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div v-if="step.execution" class="overflow-hidden rounded-lg border border-default">
-                    <div
-                      class="flex items-center justify-between border-b border-default px-2 py-1.5 text-[11px] text-muted"
-                    >
-                      <span>{{ t("RightPanel.AIExecutionResult") }}</span>
-                      <UBadge
-                        v-if="step.execution.exitCode !== undefined && step.execution.exitCode !== null"
-                        color="neutral"
-                        variant="subtle"
-                        size="xs"
+                      <div
+                        v-if="execution.result.summary"
+                        class="markdown-body p-2 text-xs text-muted"
+                        v-html="renderMarkdown(String(execution.result.summary))"
+                      />
+                      <pre
+                        v-if="execution.result.output"
+                        class="max-h-72 overflow-auto whitespace-pre-wrap break-words bg-muted/40 p-2 font-mono text-[11px]"
+                      ><code>{{ execution.result.output }}</code></pre>
+                      <p
+                        v-if="!execution.result.summary && !execution.result.output"
+                        class="p-2 text-[11px] text-muted"
                       >
-                        exit {{ step.execution.exitCode }}
-                      </UBadge>
+                        {{ statusLabel(step) }}
+                      </p>
                     </div>
-                    <div
-                      v-if="step.execution.summary"
-                      class="markdown-body p-2 text-xs text-muted"
-                      v-html="renderMarkdown(String(step.execution.summary))"
-                    />
-                    <pre
-                      v-if="step.execution.output"
-                      class="max-h-72 overflow-auto whitespace-pre-wrap break-words bg-muted/40 p-2 font-mono text-[11px]"
-                    ><code>{{ step.execution.output }}</code></pre>
-                    <p v-if="!step.execution.summary && !step.execution.output" class="p-2 text-[11px] text-muted">
-                      {{ statusLabel(step) }}
-                    </p>
                   </div>
 
                   <div
