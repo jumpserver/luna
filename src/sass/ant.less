@@ -8,11 +8,22 @@
 
 .ant-menu-submenu.ant-menu-submenu-placement-bottom,
 .ant-menu-submenu.ant-menu-submenu-popup.ant-menu-submenu-placement-bottomLeft {
-  top: 1px !important;
+  // Slightly overlap the trigger so slow pointer movement cannot cross a hover gap.
+  top: -1px !important;
 }
 
 .ant-select {
   font-size: 13px;
+}
+
+// NG-ZORRO's global select patch positions dropdowns at `top: 100%`. In a CDK
+// overlay Safari resolves that percentage against the pane's content height,
+// which leaves an equally tall blank area above the options.
+.cdk-overlay-pane > .ant-select-dropdown {
+  position: static;
+  top: auto;
+  left: auto;
+  margin: 0;
 }
 
 .dark-dropdown {

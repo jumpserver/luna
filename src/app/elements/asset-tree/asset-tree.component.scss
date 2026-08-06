@@ -11,19 +11,33 @@
   @content;
 }
 
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .tree-container {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
   background-color: var(--el-asset-tree-bg-color);
 
   .tree-type {
+    flex: 0 0 30px;
+    min-height: 30px;
+    overflow: hidden;
     transition: all 0.3s;
 
     .tree-type-banner {
       position: relative;
       display: flex;
+      flex: 0 0 30px;
       height: 30px;
+      min-height: 30px;
       line-height: 30px;
       padding-right: 11px;
       padding-left: 15px;
@@ -141,9 +155,10 @@
 
     .tree-type-content {
       position: relative;
-      padding: 5px 10px;
-      min-height: 40px;
-      height: calc(100% - 31px);
+      flex: 1 1 0;
+      padding: 1px;
+      min-height: 0;
+      height: auto;
       background-color: var(--el-asset-tree-bg-color);
       overflow: hidden;
       scrollbar-gutter: stable both-edges;
@@ -170,7 +185,11 @@
     }
 
     &.expand-tree {
-      height: calc(100% - 31px);
+      display: flex;
+      flex: 1 1 0;
+      flex-direction: column;
+      min-height: 0;
+      height: auto;
     }
   }
 }

@@ -1,21 +1,23 @@
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { View } from '@app/model';
 import {
-  SettingService,
-  ViewService,
+  DrawerStateService,
   IframeCommunicationService,
-  DrawerStateService
+  SettingService,
+  ViewService
 } from '@app/services';
-import { Subscription } from 'rxjs';
-import {
-  Component,
-  ElementRef,
-  OnDestroy,
-  OnInit,
-  ViewChild,
-  HostListener,
-  AfterViewInit
-} from '@angular/core';
 import { withUIBase } from '@app/utils/path';
+import { Subscription } from 'rxjs';
+
+interface LauncherPosition {
+  x: number;
+  y: number;
+}
+
+interface PersistedLauncherPosition extends LauncherPosition {
+  height: number;
+  width: number;
+}
 
 @Component({
   standalone: false,
@@ -23,121 +25,253 @@ import { withUIBase } from '@app/utils/path';
   templateUrl: 'chat.component.html',
   styleUrls: ['chat.component.scss']
 })
-export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
-  @ViewChild('contentWindow', { static: false }) iframeRef: ElementRef;
-  showBtn = true;
-  element: any;
-  iframeURL: string;
-  currentView: View;
+export class ElementChatComponent implements OnInit, OnDestroy {
+  @ViewChild('contentWindow') iframeRef?: ElementRef<HTMLIFrameElement>;
+  @ViewChild('launcher') launcherRef?: ElementRef<HTMLElement>;
+
+  iframeURL = '';
+  currentView: View | null = null;
   chatAIShown = false;
+  chatPanelExpanded = false;
   isDragging = false;
-  showSettingDrawer = false;
-  private startY = 0;
-  private startTop = 0;
-  private containerElement: HTMLElement;
-  private iframeMessageSubscription: Subscription;
+
+  private readonly subscriptions = new Subscription();
+  private readonly dragThreshold = 3;
+  private readonly launcherPositionStorageKey = 'luna.chat-launcher-position.v1';
+  private activePointerId: number | null = null;
+  private dragStartPointer = { x: 0, y: 0 };
+  private dragStartPosition: LauncherPosition | null = null;
+  private launcherPosition: LauncherPosition | null = null;
+  private chatMessageListenerRegistered = false;
 
   constructor(
     public viewSrv: ViewService,
     public _settingSvc: SettingService,
-    private el: ElementRef,
     private _drawerStateService: DrawerStateService,
     private _iframeSvc: IframeCommunicationService
-  ) {
-    this.iframeMessageSubscription = this._iframeSvc.message$.subscribe(message => {
-      this.handleIframeMessage(message);
-    });
-  }
+  ) {}
 
-  ngAfterViewInit() {
-    this.containerElement = this.el.nativeElement.querySelector('.chat-container');
-  }
-
-  get isShowSetting() {
+  get isShowSetting(): boolean {
     const connectMethods = ['koko', 'lion', 'tinker', 'panda'];
+    const currentView = this.currentView;
 
-    // sftp 或 k8s 不展示设置按钮
-    if (this.currentView.protocol === 'sftp' || this.currentView.protocol === 'k8s') {
+    if (!currentView || currentView.protocol === 'sftp' || currentView.protocol === 'k8s') {
       return false;
     }
 
     return (
-      this.currentView.hasOwnProperty('connectMethod') &&
-      this.currentView.connected &&
-      connectMethods.includes(this.currentView.connectMethod.component)
+      Object.prototype.hasOwnProperty.call(currentView, 'connectMethod') &&
+      currentView.connected &&
+      connectMethods.includes(currentView.connectMethod.component)
     );
   }
 
-  get hasChatContainer() {
-    return;
+  get subViews(): View[] {
+    return this.currentView?.subViews ?? [];
   }
 
-  get subViews() {
-    return this.currentView.hasOwnProperty('subViews') ? this.currentView.subViews : [];
+  get chatAiApiEnabled(): boolean {
+    const setting = this._settingSvc.globalSetting;
+    return Boolean(setting.CHAT_AI_ENABLED && setting.CHAT_AI_METHOD === 'api');
   }
 
-  get chatAiApiEnabled() {
-    const setting = this._settingSvc.globalSetting
-    return setting.CHAT_AI_ENABLED && setting.CHAT_AI_METHOD === 'api';
+  get launcherStyle(): Record<string, string> {
+    if (!this.launcherPosition) {
+      return {
+        top: 'auto',
+        right: '9px',
+        bottom: '200px',
+        left: 'auto'
+      };
+    }
+
+    return {
+      top: `${this.launcherPosition.y}px`,
+      right: 'auto',
+      bottom: 'auto',
+      left: `${this.launcherPosition.x}px`
+    };
   }
 
-  @HostListener('mousedown', ['$event'])
-  onMouseDown(event: MouseEvent) {
-    if (!this.containerElement) return;
+  ngOnInit(): void {
+    this.loadLauncherPosition();
 
-    // 如果点击的是按钮，不启动拖动
+    this.subscriptions.add(
+      this.viewSrv.currentView$.subscribe((state: View) => {
+        this.currentView = state;
+      })
+    );
+
+    this.subscriptions.add(
+      this._settingSvc.globalSetting$.subscribe(setting => {
+        if (!setting.CHAT_AI_ENABLED) {
+          this.closeChatAI(false);
+          return;
+        }
+
+        if (setting.CHAT_AI_METHOD === 'embed') {
+          this.closeChatAI(false);
+          this.insertEmbedScript();
+        } else if (setting.CHAT_AI_METHOD === 'api') {
+          this.listenChatAI();
+        }
+      })
+    );
+
+    this.subscriptions.add(
+      this._iframeSvc.message$.subscribe(message => {
+        this.handleIframeMessage(message);
+        if (message.name === 'SEND_CHAT_IFRAME') {
+          this._drawerStateService.sendComponentMessage({
+            name: 'OPEN_CHAT',
+            data: this.iframeURL
+          });
+        }
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+    if (this.chatMessageListenerRegistered) {
+      window.removeEventListener('message', this.onChatWindowMessage);
+    }
+  }
+
+  showChatAI(): void {
+    const chatWindow = this.iframeRef?.nativeElement.contentWindow;
+    if (!chatWindow) {
+      return;
+    }
+
+    this.currentView?.iframeElement?.postMessage({ name: 'CLOSE' }, '*');
+    this.postCurrentTerminalContextToChatAI();
+    this.postChatCommand('open');
+    this.chatPanelExpanded = false;
+    this.chatAIShown = true;
+  }
+
+  handleShowDrawer(): void {
+    this.closeChatAI();
+    this.currentView?.iframeElement?.postMessage({ name: 'OPEN' }, '*');
+  }
+
+  postCurrentTerminalContextToChatAI(): void {
+    const chatWindow = this.iframeRef?.nativeElement.contentWindow;
+    const currentView = this.currentView;
+    const data = currentView?.terminalContentData;
+    if (!chatWindow || !currentView || !data?.content) {
+      return;
+    }
+
+    chatWindow.postMessage(
+      {
+        name: 'current_terminal_content',
+        data: {
+          viewId: currentView.id,
+          viewName: currentView.name,
+          ...data
+        }
+      },
+      window.location.origin
+    );
+  }
+
+  onLauncherPointerDown(event: PointerEvent): void {
     if (
-      event.target instanceof HTMLElement &&
-      (event.target.closest('nz-float-button') || event.target.closest('.ant-float-btn'))
+      !event.isPrimary ||
+      (event.pointerType === 'mouse' && event.button !== 0) ||
+      !this.launcherRef
     ) {
       return;
     }
 
-    this.isDragging = true;
-    this.startY = event.clientY;
-    const rect = this.containerElement.getBoundingClientRect();
-    this.startTop = rect.top;
-
+    this.finishLauncherDrag();
+    const rect = this.launcherRef.nativeElement.getBoundingClientRect();
+    this.activePointerId = event.pointerId;
+    this.dragStartPointer = { x: event.clientX, y: event.clientY };
+    this.dragStartPosition = { x: rect.left, y: rect.top };
+    this.launcherRef.nativeElement.setPointerCapture(event.pointerId);
     event.preventDefault();
   }
 
-  @HostListener('document:mousemove', ['$event'])
-  onMouseMove(event: MouseEvent) {
-    if (!this.isDragging || !this.containerElement) return;
+  @HostListener('document:pointermove', ['$event'])
+  onDocumentPointerMove(event: PointerEvent): void {
+    if (event.pointerId !== this.activePointerId || !this.dragStartPosition) {
+      return;
+    }
 
-    const deltaY = event.clientY - this.startY;
-    const newTop = this.startTop + deltaY;
+    if (event.pointerType === 'mouse' && (event.buttons & 1) === 0) {
+      this.finishLauncherDrag(event.pointerId);
+      return;
+    }
 
-    // 限制拖动范围
-    const minTop = 40; // 距离顶部最小距离
-    const containerHeight = 100; // 组件实际高度
-    const maxTop = window.innerHeight - containerHeight - 20; // 距离底部最小距离
-    const boundedTop = Math.max(minTop, Math.min(newTop, maxTop));
+    const deltaX = event.clientX - this.dragStartPointer.x;
+    const deltaY = event.clientY - this.dragStartPointer.y;
+    if (!this.isDragging && Math.hypot(deltaX, deltaY) < this.dragThreshold) {
+      return;
+    }
 
-    this.containerElement.style.top = `${boundedTop}px`;
-  }
-
-  @HostListener('document:mouseup')
-  onMouseUp() {
-    this.isDragging = false;
-  }
-
-  ngOnInit() {
-    this.viewSrv.currentView$.subscribe((state: View) => {
-      this.currentView = state;
+    this.isDragging = true;
+    this.launcherPosition = this.clampLauncherPosition({
+      x: this.dragStartPosition.x + deltaX,
+      y: this.dragStartPosition.y + deltaY
     });
+    event.preventDefault();
+  }
 
-    this._settingSvc.globalSetting$.subscribe(setting => {
-      if (!setting.CHAT_AI_ENABLED) {
-        return
-      }
+  @HostListener('document:pointerup', ['$event'])
+  @HostListener('document:pointercancel', ['$event'])
+  onDocumentPointerUp(event: PointerEvent): void {
+    if (event.pointerId !== this.activePointerId) {
+      return;
+    }
 
-      if (setting.CHAT_AI_METHOD === 'embed') {
-        this.insertEmbedScript()
-      } else if (setting.CHAT_AI_METHOD === 'api') {
-        this.listenChatAI()
-      }
-    })
+    this.finishLauncherDrag(event.pointerId);
+  }
+
+  onLauncherLostPointerCapture(event: PointerEvent): void {
+    if (event.pointerId === this.activePointerId) {
+      this.finishLauncherDrag(event.pointerId, false);
+    }
+  }
+
+  onLauncherKeydown(event: KeyboardEvent): void {
+    const directions: Partial<Record<string, LauncherPosition>> = {
+      ArrowUp: { x: 0, y: -10 },
+      ArrowRight: { x: 10, y: 0 },
+      ArrowDown: { x: 0, y: 10 },
+      ArrowLeft: { x: -10, y: 0 }
+    };
+    const direction = directions[event.key];
+    const launcher = this.launcherRef?.nativeElement;
+    if (!direction || !launcher) {
+      return;
+    }
+
+    const rect = launcher.getBoundingClientRect();
+    const currentPosition = this.launcherPosition ?? { x: rect.left, y: rect.top };
+    this.launcherPosition = this.clampLauncherPosition({
+      x: currentPosition.x + direction.x,
+      y: currentPosition.y + direction.y
+    });
+    this.persistLauncherPosition();
+    event.preventDefault();
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    if (!this.launcherPosition) {
+      return;
+    }
+
+    this.launcherPosition = this.clampLauncherPosition(this.launcherPosition);
+    this.persistLauncherPosition();
+  }
+
+  @HostListener('window:blur')
+  onWindowBlur(): void {
+    this.finishLauncherDrag();
   }
 
   private insertEmbedScript(): void {
@@ -147,7 +281,7 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     const script = document.createElement('script');
-    script.id = embedScriptId
+    script.id = embedScriptId;
     script.src = this._settingSvc.globalSetting.CHAT_AI_EMBED_URL;
     script.async = true;
     script.onload = () => {
@@ -159,112 +293,141 @@ export class ElementChatComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private listenChatAI(): void {
     this.iframeURL = withUIBase('#/chat/chat-ai?from=luna');
+    if (!this.chatMessageListenerRegistered) {
+      window.addEventListener('message', this.onChatWindowMessage);
+      this.chatMessageListenerRegistered = true;
+    }
+  }
 
-    window.addEventListener('message', event => {
-      // 确认消息的来源是你信任的域
-      if (event.data === 'close-chat-panel') {
-        this.chatAIShown = false;
-        this.showBtn = !this.showBtn;
-      }
-      const data = event.data;
-      switch (data.name) {
-        case 'INSERT_TERMINAL_CODE':
-          this.currentView.iframeElement.postMessage({
-            name: 'CMD',
-            data: data.data
-          });
-          break;
-      }
-    });
+  private readonly onChatWindowMessage = (event: MessageEvent): void => {
+    if (
+      event.source !== this.iframeRef?.nativeElement.contentWindow ||
+      event.origin !== window.location.origin
+    ) {
+      return;
+    }
 
-    this._iframeSvc.message$.subscribe(message => {
-      if (message.name === 'SEND_CHAT_IFRAME') {
-        this._drawerStateService.sendComponentMessage({ name: 'OPEN_CHAT', data: this.iframeURL });
-      }
-    });
+    const message = event.data;
+    if (message === 'close-chat-panel') {
+      this.closeChatAI(false);
+      return;
+    }
+    if (message === 'show-chat-panel') {
+      this.chatAIShown = true;
+      return;
+    }
+    if (!message || typeof message !== 'object') {
+      return;
+    }
+
+    if (message.name === 'CHAT_PANEL_STATE') {
+      this.chatAIShown = Boolean(message.data?.open);
+      this.chatPanelExpanded = message.data?.mode === 'expanded';
+      return;
+    }
+
+    if (message.name === 'INSERT_TERMINAL_CODE') {
+      this.currentView?.iframeElement?.postMessage({
+        name: 'CMD',
+        data: message.data
+      });
+    }
+  };
+
+  private closeChatAI(notifyChat = true): void {
+    if (notifyChat) {
+      this.postChatCommand('close');
+    }
+    this.chatAIShown = false;
+    this.chatPanelExpanded = false;
+  }
+
+  private postChatCommand(action: 'open' | 'close'): void {
+    const chatWindow = this.iframeRef?.nativeElement.contentWindow;
+    if (!chatWindow) {
+      return;
+    }
+
+    chatWindow.postMessage(
+      {
+        name: 'CHAT_PANEL_COMMAND',
+        data: { action }
+      },
+      window.location.origin
+    );
   }
 
   private handleIframeMessage(message: any): void {
-    const messageHandlers = {
-      TERMINAL_CONTENT_RESPONSE: this.handleTerminalContentResponse.bind(this)
-    };
-
-    const handler = messageHandlers[message.name];
-    if (handler) {
-      handler(message.data);
-    }
-  }
-
-  private handleTerminalContentResponse(data: any) {
-    this.postCurrentTerminalContextToChatAI();
-  }
-
-  ngOnDestroy() {
-    // this.element.remove();
-    this.viewSrv.currentView$.unsubscribe();
-    this.iframeMessageSubscription.unsubscribe();
-  }
-
-  showChatAI() {
-    // if (this.isDragging) {
-    //   return;
-    // }
-    const data = this.currentView.terminalContentData;
-    if (data && data.content) {
+    if (message.name === 'TERMINAL_CONTENT_RESPONSE') {
       this.postCurrentTerminalContextToChatAI();
     }
-    if (!this.iframeRef?.nativeElement?.contentWindow) {
-      return;
-    }
-    this.iframeRef.nativeElement.contentWindow.postMessage('show-chat-panel');
-    this.chatAIShown = true;
-    this.showBtn = false;
   }
 
-  postCurrentTerminalContextToChatAI() {
-    if (!this.iframeRef?.nativeElement?.contentWindow) {
-      return;
-    }
-    const data = this.currentView.terminalContentData;
-    const content = {
-      viewId: this.currentView.id,
-      viewName: this.currentView.name,
-      ...data
+  private clampLauncherPosition(position: LauncherPosition): LauncherPosition {
+    const rect = this.launcherRef?.nativeElement.getBoundingClientRect();
+    const width = rect?.width ?? 40;
+    const height = rect?.height ?? 165;
+    return {
+      x: Math.max(0, Math.min(position.x, window.innerWidth - width)),
+      y: Math.max(0, Math.min(position.y, window.innerHeight - height))
     };
-    this.iframeRef.nativeElement.contentWindow.postMessage({
-      name: 'current_terminal_content',
-      data: content
-    });
   }
 
-  isDescendant(element: Element, ancestor: Element) {
-    while (element) {
-      if (element === ancestor) {
-        return true;
+  private finishLauncherDrag(pointerId = this.activePointerId, releaseCapture = true): void {
+    if (pointerId === null || pointerId !== this.activePointerId) {
+      return;
+    }
+
+    const launcher = this.launcherRef?.nativeElement;
+    const shouldPersist = this.isDragging && Boolean(this.launcherPosition);
+    this.activePointerId = null;
+    this.dragStartPosition = null;
+    this.isDragging = false;
+
+    if (releaseCapture && launcher?.hasPointerCapture(pointerId)) {
+      launcher.releasePointerCapture(pointerId);
+    }
+    if (shouldPersist) {
+      this.persistLauncherPosition();
+    }
+  }
+
+  private persistLauncherPosition(): void {
+    if (!this.launcherPosition) {
+      return;
+    }
+
+    const rect = this.launcherRef?.nativeElement.getBoundingClientRect();
+    const value: PersistedLauncherPosition = {
+      ...this.launcherPosition,
+      width: rect?.width ?? 40,
+      height: rect?.height ?? 165
+    };
+    localStorage.setItem(this.launcherPositionStorageKey, JSON.stringify(value));
+  }
+
+  private loadLauncherPosition(): void {
+    try {
+      const stored = localStorage.getItem(this.launcherPositionStorageKey);
+      if (!stored) {
+        return;
       }
-      element = element.parentElement;
+
+      const position = JSON.parse(stored) as Partial<PersistedLauncherPosition>;
+      if (Number.isFinite(position.x) && Number.isFinite(position.y)) {
+        this.launcherPosition = {
+          x: Math.max(
+            0,
+            Math.min(Number(position.x), window.innerWidth - Number(position.width ?? 40))
+          ),
+          y: Math.max(
+            0,
+            Math.min(Number(position.y), window.innerHeight - Number(position.height ?? 165))
+          )
+        };
+      }
+    } catch {
+      localStorage.removeItem(this.launcherPositionStorageKey);
     }
-    return false;
-  }
-
-  insertToBody() {
-    this.element = document.getElementById('chatContainer');
-    const body = document.querySelector('body');
-    body.insertBefore(this.element, body.firstChild);
-  }
-
-  handleShowDrawer() {
-    if (this.currentView.iframeElement) {
-      this.currentView.iframeElement.postMessage({ name: 'OPEN' }, '*');
-    }
-  }
-
-  isDifferenceWithinThreshold(num1, num2, threshold = 5) {
-    const difference = Math.abs(num1 - num2);
-    return difference <= threshold;
-  }
-
-  toggle() {
-    this.showBtn = !this.showBtn;
   }
 }
