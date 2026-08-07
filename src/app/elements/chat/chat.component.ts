@@ -34,6 +34,7 @@ export class ElementChatComponent implements OnInit, OnDestroy {
   chatAIShown = false;
   chatPanelExpanded = false;
   isDragging = false;
+  chatIframeReady = false;
 
   private readonly subscriptions = new Subscription();
   private readonly dragThreshold = 3;
@@ -105,11 +106,15 @@ export class ElementChatComponent implements OnInit, OnDestroy {
     this.subscriptions.add(
       this._settingSvc.globalSetting$.subscribe(setting => {
         if (!setting.CHAT_AI_ENABLED) {
+          this.chatIframeReady = false;
+          this.iframeURL = '';
           this.closeChatAI(false);
           return;
         }
 
         if (setting.CHAT_AI_METHOD === 'embed') {
+          this.chatIframeReady = false;
+          this.iframeURL = '';
           this.closeChatAI(false);
           this.insertEmbedScript();
         } else if (setting.CHAT_AI_METHOD === 'api') {
@@ -139,16 +144,10 @@ export class ElementChatComponent implements OnInit, OnDestroy {
   }
 
   showChatAI(): void {
-    const chatWindow = this.iframeRef?.nativeElement.contentWindow;
-    if (!chatWindow) {
-      return;
-    }
-
     this.currentView?.iframeElement?.postMessage({ name: 'CLOSE' }, '*');
-    this.postCurrentTerminalContextToChatAI();
-    this.postChatCommand('open');
     this.chatPanelExpanded = false;
     this.chatAIShown = true;
+    this.syncChatPanelStateToIframe();
   }
 
   handleShowDrawer(): void {
@@ -292,7 +291,12 @@ export class ElementChatComponent implements OnInit, OnDestroy {
   }
 
   private listenChatAI(): void {
-    this.iframeURL = withUIBase('#/chat/chat-ai?from=luna');
+    const iframeURL = withUIBase('#/chat/chat-ai?from=luna');
+    if (this.iframeURL !== iframeURL) {
+      this.chatIframeReady = false;
+      this.iframeURL = iframeURL;
+    }
+
     if (!this.chatMessageListenerRegistered) {
       window.addEventListener('message', this.onChatWindowMessage);
       this.chatMessageListenerRegistered = true;
@@ -320,6 +324,16 @@ export class ElementChatComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (message.name === 'CHAT_IFRAME_READY') {
+      if (this.chatIframeReady) {
+        return;
+      }
+
+      this.chatIframeReady = true;
+      this.syncChatPanelStateToIframe();
+      return;
+    }
+
     if (message.name === 'CHAT_PANEL_STATE') {
       this.chatAIShown = Boolean(message.data?.open);
       this.chatPanelExpanded = message.data?.mode === 'expanded';
@@ -335,11 +349,12 @@ export class ElementChatComponent implements OnInit, OnDestroy {
   };
 
   private closeChatAI(notifyChat = true): void {
-    if (notifyChat) {
-      this.postChatCommand('close');
-    }
     this.chatAIShown = false;
     this.chatPanelExpanded = false;
+
+    if (notifyChat) {
+      this.syncChatPanelStateToIframe();
+    }
   }
 
   private postChatCommand(action: 'open' | 'close'): void {
@@ -361,6 +376,20 @@ export class ElementChatComponent implements OnInit, OnDestroy {
     if (message.name === 'TERMINAL_CONTENT_RESPONSE') {
       this.postCurrentTerminalContextToChatAI();
     }
+  }
+
+  private syncChatPanelStateToIframe(): void {
+    if (!this.chatIframeReady) {
+      return;
+    }
+
+    if (this.chatAIShown) {
+      this.postCurrentTerminalContextToChatAI();
+      this.postChatCommand('open');
+      return;
+    }
+
+    this.postChatCommand('close');
   }
 
   private clampLauncherPosition(position: LauncherPosition): LauncherPosition {
