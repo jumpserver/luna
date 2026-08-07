@@ -24,6 +24,7 @@ const {
   toSurfaceTab
 } = useWorkspaceTabs();
 const { focusPaneSurface, registerPaneTarget, unregisterPaneTarget } = useWorkspacePaneSurfaceRegistry();
+const { hasScopeGroup } = useAclDialog();
 const { connectCurrentPane, connectOtherPane, mergeWorkspaceTabIntoCurrent, reconnectSession } = useWorkspaceTabMenu();
 const draggedPaneId = ref("");
 const dragOverPaneId = ref("");
@@ -51,6 +52,9 @@ const setupPane = computed(() => {
 
   return activeSetupPane || props.tab.panes.find((pane) => pane.mode === "setup");
 });
+const activeAclPaneId = computed(() =>
+  activePaneId.value && hasScopeGroup(activePaneId.value) ? activePaneId.value : ""
+);
 const showPaneHeaders = computed(() => props.tab.panes.length > 1);
 const inactivePaneOverlayClass = computed(() => (colorMode.value === "dark" ? "bg-white/4" : "bg-black/3"));
 const currentOrgLabel = computed(() => currentUser.value?.org?.name || "");
@@ -470,9 +474,10 @@ onBeforeUnmount(() => {
               </div>
             </div>
           </div>
-          <WorkspaceAclPaneHost :scope-id="pane.id" />
         </section>
       </div>
+
+      <WorkspaceAclPaneHost v-if="activeAclPaneId" :scope-id="activeAclPaneId" />
 
       <WorkspaceConnectionSetupPane v-if="setupPane" :tab="surfaceTabFor(setupPane)" class="absolute inset-0 z-10" />
     </div>

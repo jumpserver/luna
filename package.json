@@ -11,8 +11,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "nuxt dev",
-    "web:dev": "nuxt dev",
+    "dev": "nuxt dev --dotenv .env.development",
+    "web:dev": "nuxt dev --dotenv .env.development",
     "generate": "nuxt generate",
     "generate:client": "node scripts/generate-client.js",
     "preinstall": "npx only-allow pnpm",

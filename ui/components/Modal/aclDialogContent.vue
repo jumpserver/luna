@@ -3,12 +3,17 @@ import type { AclDialogGroup } from "~/composables/useAclDialog";
 
 import AclErrorDetail from "~/components/Modal/aclErrorDetail.vue";
 
-const props = defineProps<{
-  group: AclDialogGroup;
-  embedded?: boolean;
-  minimizable?: boolean;
-  chrome?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    group: AclDialogGroup;
+    embedded?: boolean;
+    minimizable?: boolean;
+    chrome?: boolean;
+  }>(),
+  {
+    chrome: true
+  }
+);
 
 const emit = defineEmits<{
   minimize: [];

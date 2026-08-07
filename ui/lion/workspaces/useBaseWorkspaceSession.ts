@@ -18,6 +18,22 @@ export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
   const tokenId = computed(() => String(tab.value.payload?.id || token.value?.id || ""));
   const themeType = computed(() => (colorMode.value === "dark" ? "darkGary" : "default"));
 
+  function resolveEndpointUrl() {
+    const endpointUrl = String(tab.value.payload?.endpointUrl || "").trim();
+    if (endpointUrl) return endpointUrl;
+
+    const webUrl = String(tab.value.payload?.webUrl || "").trim();
+    if (webUrl) {
+      try {
+        return new URL(webUrl, window.location.origin).origin;
+      } catch {
+        // Fall back to the current origin for legacy or malformed payloads.
+      }
+    }
+
+    return window.location.origin;
+  }
+
   function syncContextTheme() {
     if (!context.value) return;
     context.value.colorMode = colorMode.value;
@@ -35,11 +51,10 @@ export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
     error.value = "";
 
     try {
-      // ponytail: dev 走 nuxt proxy（/lion/、/lion/ws/ → localhost:8081），暂不拉 smart endpoint
       context.value = {
         component: "lion",
         tokenId: tokenId.value,
-        endpointUrl: window.location.origin,
+        endpointUrl: resolveEndpointUrl(),
         tabId: tab.value.id,
         colorMode: colorMode.value,
         themeType: themeType.value

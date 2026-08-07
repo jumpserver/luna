@@ -7,6 +7,8 @@ const trimLeadingSlash = (value: string) => value.replace(/^\/+/, "");
 const ensureLeadingSlash = (value: string) => (value.startsWith("/") ? value : `/${value}`);
 const ensureTrailingSlash = (value: string) => (value.endsWith("/") ? value : `${value}/`);
 const isAbsoluteUrl = (value: string) => ABSOLUTE_URL_PATTERN.test(value);
+const normalizeOrigin = (value: string) => new URL(value, window.location.origin).origin;
+const toWsOrigin = (value: string) => normalizeOrigin(value).replace(/^http/i, "ws");
 
 const resolveOrigin = () => {
   if (window.location.origin) {
@@ -70,12 +72,12 @@ export function withBasePath(path: string): string {
   return BASE_PATH ? `${BASE_PATH}${normalizedPath}` : normalizedPath;
 }
 
-export function withBaseUrl(path: string): string {
+export function withBaseUrl(path: string, baseUrl = BASE_URL): string {
   if (isAbsoluteUrl(path)) {
     return path;
   }
 
-  return `${BASE_URL}${withBasePath(path)}`;
+  return `${normalizeOrigin(baseUrl)}${withBasePath(path)}`;
 }
 
 export function withLionPath(path: string): string {
@@ -110,26 +112,26 @@ export function withLionPath(path: string): string {
   return `${LION_BASE}${relativePath}`;
 }
 
-export function withLionUrl(path: string): string {
+export function withLionUrl(path: string, baseUrl = BASE_URL): string {
   if (isAbsoluteUrl(path)) {
     return path;
   }
 
-  return `${BASE_URL}${withLionPath(path)}`;
+  return `${normalizeOrigin(baseUrl)}${withLionPath(path)}`;
 }
 
-export function withBaseWsUrl(path: string): string {
+export function withBaseWsUrl(path: string, baseUrl = BASE_URL): string {
   if (isAbsoluteUrl(path)) {
     return path;
   }
 
-  return `${BASE_WS_URL}${withBasePath(path)}`;
+  return `${toWsOrigin(baseUrl)}${withBasePath(path)}`;
 }
 
-export function withLionWsUrl(path: string): string {
+export function withLionWsUrl(path: string, baseUrl = BASE_URL): string {
   if (isAbsoluteUrl(path)) {
     return path;
   }
 
-  return `${BASE_WS_URL}${withLionPath(path)}`;
+  return `${toWsOrigin(baseUrl)}${withLionPath(path)}`;
 }

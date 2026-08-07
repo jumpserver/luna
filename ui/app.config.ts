@@ -68,7 +68,9 @@ export default defineAppConfig({
     },
     select: {
       slots: {
-        base: "rounded-[3px]"
+        base: "rounded-[3px]",
+        content:
+          "bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md"
       }
     },
     accordion: {
@@ -80,7 +82,7 @@ export default defineAppConfig({
     dropdownMenu: {
       slots: {
         content:
-          "w-(--reka-dropdown-menu-trigger-width) p-1 bg-[var(--app-panel-bg)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
+          "w-(--reka-dropdown-menu-trigger-width) p-1 bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
         viewport: "relative overflow-y-auto flex-1",
         group: "p-1 isolate",
         label:
@@ -91,12 +93,12 @@ export default defineAppConfig({
     },
     modal: {
       slots: {
-        overlay: "fixed inset-0 bg-black/22 backdrop-blur-[2px]",
+        overlay: "fixed inset-0 bg-black/35 backdrop-blur-[2px]",
         content:
-          "bg-[var(--app-surface-panel-strong)] text-[var(--app-fg)] divide-y divide-[var(--app-border)] flex flex-col focus:outline-none ring-1 ring-[var(--app-border-strong)] shadow-[0_18px_60px_rgba(15,23,42,0.22),var(--theme-shadow-soft)] backdrop-blur-md",
-        header: "flex items-center gap-1.5 px-4 py-2 sm:px-6 min-h-(--ui-header-height) bg-[var(--app-header-bg)]",
-        body: "flex-1 p-4 sm:p-6 bg-[var(--app-surface-panel-strong)]",
-        footer: "flex items-center gap-1.5 p-4 sm:px-6 bg-[var(--app-header-bg)]",
+          "bg-[var(--app-surface-modal)] text-[var(--app-fg)] divide-y divide-[var(--app-modal-border)] flex flex-col focus:outline-none ring-1 ring-[var(--app-modal-border)] shadow-[var(--app-modal-shadow)]",
+        header: "flex items-center gap-1.5 px-4 py-2 sm:px-6 min-h-(--ui-header-height) bg-[var(--app-surface-modal)]",
+        body: "flex-1 p-4 sm:p-6 bg-[var(--app-surface-modal)]",
+        footer: "flex items-center gap-1.5 p-4 sm:px-6 bg-[var(--app-surface-modal)]",
         title: "text-sm leading-5 text-[var(--app-fg)] font-semibold",
         description: "text-sm leading-5 text-[var(--app-muted)]",
         close: "absolute top-4 end-4 text-[var(--app-muted)] hover:text-[var(--app-fg)]"
@@ -113,7 +115,7 @@ export default defineAppConfig({
       slots: {
         base: "rounded-[3px]",
         content:
-          "bg-[var(--app-panel-bg)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
+          "bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
         input: "border-b border-[var(--app-border)]",
         viewport: "relative scroll-py-1 overflow-y-auto flex-1",
         group: "p-1 isolate",

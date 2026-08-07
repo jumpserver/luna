@@ -58,7 +58,7 @@
     "Close": "Close"
   },
   "Menu": {
-    "AuthorizedTree": "My assets",
+    "AuthorizedTree": "Assets",
     "TypeTree": "Type tree",
     "Linux": "Linux",
     "Other": "Other",
@@ -72,8 +72,8 @@
     "Web": "Web",
     "Transcode": "Replay Transcode",
     "OfflinePlayer": "Offline Player",
-    "Favorite": "My favorites",
-    "Snippets": "scripts",
+    "Favorite": "Favorites",
+    "Snippets": "Scripts",
     "RecentConnections": "Recent connections"
   },
   "Snippets": {
@@ -595,6 +595,7 @@
       "pausedSession": "paused the session",
       "resumedSession": "resumed the session",
       "removedFromShare": "Removed from shared session",
+      "websocketConnectionFailed": "Unable to connect to Koko. Make sure the Koko service is running and reachable.",
       "websocketClosed": "WebSocket closed",
       "websocketConnectionClosed": "WebSocket connection is closed. Refresh the page.",
       "invalidMessage": "Received an invalid terminal message",

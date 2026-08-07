@@ -6,8 +6,15 @@ const buildHeaders = (token?: string, init?: HeadersInit) => ({
   ...(init || {})
 });
 
-function chenPath(path: string) {
-  return withWebSitePrefix(`/chen${path.startsWith("/") ? path : `/${path}`}`);
+export function chenPath(path: string, endpointUrl = window.location.origin) {
+  const connectorPath = `/chen${path.startsWith("/") ? path : `/${path}`}`;
+  const endpoint = new URL(endpointUrl || window.location.origin, window.location.origin);
+
+  if (endpoint.origin === window.location.origin) {
+    return withWebSitePrefix(connectorPath);
+  }
+
+  return new URL(connectorPath, endpoint.origin).toString();
 }
 
 async function readJson<T>(response: Response): Promise<T> {
@@ -24,8 +31,8 @@ async function readJson<T>(response: Response): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-export async function authChen(token: string, disableAutoHash = false) {
-  const response = await fetch(chenPath("/api/auth"), {
+export async function authChen(token: string, disableAutoHash = false, endpointUrl?: string) {
+  const response = await fetch(chenPath("/api/auth", endpointUrl), {
     method: "POST",
     credentials: "include",
     headers: {
@@ -41,8 +48,8 @@ export async function authChen(token: string, disableAutoHash = false) {
   return readJson<ChenAuthResponse>(response);
 }
 
-export async function fetchChenProfile(chenToken: string) {
-  const response = await fetch(chenPath("/api/profile"), {
+export async function fetchChenProfile(chenToken: string, endpointUrl?: string) {
+  const response = await fetch(chenPath("/api/profile", endpointUrl), {
     credentials: "include",
     headers: buildHeaders(chenToken)
   });
@@ -50,10 +57,15 @@ export async function fetchChenProfile(chenToken: string) {
   return readJson<ChenProfile>(response);
 }
 
-export async function uploadChenSqlFile(chenToken: string, file: File, fetchImpl: typeof fetch = fetch) {
+export async function uploadChenSqlFile(
+  chenToken: string,
+  file: File,
+  fetchImpl: typeof fetch = fetch,
+  endpointUrl?: string
+) {
   const body = new FormData();
   body.append("file", file);
-  const response = await fetchImpl(chenPath("/api/console/upload"), {
+  const response = await fetchImpl(chenPath("/api/console/upload", endpointUrl), {
     method: "POST",
     credentials: "include",
     headers: buildHeaders(chenToken, getWebApiMutationHeaders()),
@@ -68,9 +80,10 @@ export async function fetchChenSqlHints(
   chenToken: string,
   nodeKey: string,
   context: string,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  endpointUrl?: string
 ): Promise<ChenSqlHints> {
-  const response = await fetchImpl(chenPath("/api/resources/hints"), {
+  const response = await fetchImpl(chenPath("/api/resources/hints", endpointUrl), {
     method: "POST",
     credentials: "include",
     headers: {
@@ -127,8 +140,13 @@ function contentDispositionFileName(value: string | null) {
   );
 }
 
-export async function fetchChenExport(chenToken: string, fileKey: string, fetchImpl: typeof fetch = fetch) {
-  const response = await fetchImpl(chenPath(`/api/console/export/${encodeURIComponent(fileKey)}`), {
+export async function fetchChenExport(
+  chenToken: string,
+  fileKey: string,
+  fetchImpl: typeof fetch = fetch,
+  endpointUrl?: string
+) {
+  const response = await fetchImpl(chenPath(`/api/console/export/${encodeURIComponent(fileKey)}`, endpointUrl), {
     credentials: "include",
     headers: buildHeaders(chenToken)
   });
@@ -145,8 +163,13 @@ export async function fetchChenExport(chenToken: string, fileKey: string, fetchI
   };
 }
 
-export async function fetchChenTreeChildren(chenToken: string, parent?: ChenTreeNode | null, force = false) {
-  const url = new URL(chenPath("/api/resources/children"), window.location.origin);
+export async function fetchChenTreeChildren(
+  chenToken: string,
+  parent?: ChenTreeNode | null,
+  force = false,
+  endpointUrl?: string
+) {
+  const url = new URL(chenPath("/api/resources/children", endpointUrl), window.location.origin);
   if (force) url.searchParams.set("force", "true");
 
   const hasParent = !!parent;
@@ -163,8 +186,8 @@ export async function fetchChenTreeChildren(chenToken: string, parent?: ChenTree
   return readJson<ChenTreeNode[]>(response);
 }
 
-export async function fetchChenActions(chenToken: string, node: ChenTreeNode) {
-  const response = await fetch(chenPath("/api/resources/actions"), {
+export async function fetchChenActions(chenToken: string, node: ChenTreeNode, endpointUrl?: string) {
+  const response = await fetch(chenPath("/api/resources/actions", endpointUrl), {
     method: "POST",
     credentials: "include",
     headers: {
@@ -177,8 +200,8 @@ export async function fetchChenActions(chenToken: string, node: ChenTreeNode) {
   return readJson<ChenActionItem[]>(response);
 }
 
-export async function runChenAction(chenToken: string, node: ChenTreeNode, action: string) {
-  const response = await fetch(chenPath("/api/resources/actions/do"), {
+export async function runChenAction(chenToken: string, node: ChenTreeNode, action: string, endpointUrl?: string) {
+  const response = await fetch(chenPath("/api/resources/actions/do", endpointUrl), {
     method: "POST",
     credentials: "include",
     headers: {

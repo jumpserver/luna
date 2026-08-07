@@ -1,13 +1,13 @@
+import type { MaybeRefOrGetter } from "vue";
 import type { LionUploadCustomRequestOptions } from "@/lion/types/upload";
 import { useDebounceFn } from "@vueuse/core";
 
 import * as Guacamole from "guacamole-common-js-jumpserver/dist/guacamole-common";
-import { nextTick, ref } from "vue";
+import { nextTick, ref, toValue } from "vue";
 import { LanguageCode } from "@/lion/locales";
 import { LUNA_MESSAGE_TYPE } from "@/lion/types/postmessage.type";
+import { withLionUrl } from "@/lion/utils/base";
 import { readClipboardText } from "@/lion/utils/clipboard";
-
-import { BaseAPIURL } from "@/lion/utils/common";
 
 import { lunaCommunicator } from "@/lion/utils/lunaBus";
 import { ConvertGuacamoleError, ErrorStatusCodes } from "@/lion/utils/status";
@@ -160,7 +160,7 @@ interface GuacamoleFile {
   is_dir?: boolean;
 }
 
-export function useGuacamoleClient(t: any) {
+export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string>) {
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
   const message = {
@@ -202,6 +202,7 @@ export function useGuacamoleClient(t: any) {
   const fileFsLoading = ref(false);
   const enableFilesystem = ref(false);
   const currentGuacFsObject = ref<any>(null);
+  const getBaseApiUrl = () => withLionUrl("/api", toValue(endpointUrl) || window.location.origin);
 
   function disconnectGuaclient() {
     connectGeneration += 1;
@@ -768,7 +769,7 @@ export function useGuacamoleClient(t: any) {
   function clientFileReceived(stream: any, _mimetype: any, filename: any) {
     // Build download URL
     const uuid = guaTunnel.value?.uuid || "";
-    const url = `${BaseAPIURL}/tunnels/${encodeURIComponent(uuid)}/streams/${encodeURIComponent(
+    const url = `${getBaseApiUrl()}/tunnels/${encodeURIComponent(uuid)}/streams/${encodeURIComponent(
       stream.index
     )}/${encodeURIComponent(sanitizeFilename(filename))}`;
 
@@ -835,7 +836,7 @@ export function useGuacamoleClient(t: any) {
           progressCallback: CallableFunction
         ) {
           // Build upload URL
-          const url = `${BaseAPIURL}/tunnels/${encodeURIComponent(tunnelId)}/streams/${encodeURIComponent(
+          const url = `${getBaseApiUrl()}/tunnels/${encodeURIComponent(tunnelId)}/streams/${encodeURIComponent(
             stream.index
           )}/${encodeURIComponent(sanitizeFilename(file.name))}`;
           const xhr = new XMLHttpRequest();

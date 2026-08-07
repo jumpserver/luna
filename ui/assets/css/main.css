@@ -80,7 +80,10 @@
   --app-surface-input: color-mix(in srgb, var(--theme-surface) 88%, var(--theme-bg) 12%);
   --app-surface-card: color-mix(in srgb, var(--theme-surface) 92%, var(--theme-bg) 8%);
   --app-surface-card-soft: color-mix(in srgb, var(--theme-surface) 80%, var(--theme-bg) 20%);
-  --app-surface-overlay: color-mix(in srgb, var(--theme-surface) 92%, var(--theme-bg) 8%);
+  --app-surface-overlay: color-mix(in srgb, var(--theme-surface) 96%, var(--theme-fg) 4%);
+  --app-surface-modal: color-mix(in srgb, var(--theme-surface) 96%, var(--theme-fg) 4%);
+  --app-modal-border: color-mix(in srgb, var(--theme-fg) 16%, transparent);
+  --app-modal-shadow: 0 24px 72px rgb(0 0 0 / 50%), 0 6px 20px rgb(0 0 0 / 28%);
   --app-state-hover: color-mix(in srgb, var(--theme-fg) 8%, transparent);
   --app-state-hover-strong: color-mix(in srgb, var(--theme-fg) 14%, transparent);
   --app-state-selected: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-surface));

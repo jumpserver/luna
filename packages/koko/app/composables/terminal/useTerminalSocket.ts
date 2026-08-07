@@ -65,6 +65,7 @@ export const useKokoTerminalSocket = () => {
   const onlineUsers = ref<OnlineUser[]>([]);
   const userOptions = ref<ShareUserOptions[]>([]);
   const terminalRef = ref<Terminal | null>(null);
+  const connectionError = ref("");
   const sentryRef = ref<KokoZmodemSentry | null>(null);
   const socketRef = transport.socket;
   const featureSetting = ref<Partial<SettingConfig>>({});
@@ -93,6 +94,22 @@ export const useKokoTerminalSocket = () => {
   const followAppTheme = computed(() => !!unref(sessionCtxRef) && !queryTerminalThemeName.value);
   let themeObserver: MutationObserver | null = null;
   let fitAddon: FitAddon | null = null;
+  let socketOpened = false;
+
+  const reportInitialConnectionFailure = () => {
+    if (socketOpened || connectionError.value) return;
+
+    connectionError.value = t("koko.terminal.websocketConnectionFailed");
+    const tabId = unref(sessionCtxRef)?.tabId;
+    if (!tabId) return;
+
+    hostAdapter.markSessionFailed({
+      id: tabId,
+      assetId: "",
+      protocol: "",
+      account: ""
+    });
+  };
 
   const fitToContainer = () => {
     const container = containerRef.value;
@@ -211,10 +228,20 @@ export const useKokoTerminalSocket = () => {
       return !paneId || !isKokoTerminalAiInputLocked(paneId);
     });
 
-    socketRef.value.onopen = heartbeat.start;
+    socketRef.value.onopen = () => {
+      socketOpened = true;
+      connectionError.value = "";
+      heartbeat.start();
+    };
+
+    socketRef.value.onerror = reportInitialConnectionFailure;
 
     socketRef.value.onclose = () => {
       heartbeat.stop();
+      if (!socketOpened) {
+        reportInitialConnectionFailure();
+        return;
+      }
       if (!terminalRef.value) return;
       terminalRef.value.write("\r\n");
       terminalRef.value.write(`\x1B[31m${t("koko.terminal.websocketClosed")}\x1B[0m`);
@@ -274,6 +301,7 @@ export const useKokoTerminalSocket = () => {
     const url = useKokoWsUrl("terminal");
     const socket = transport.connect(url);
     if (!socket) {
+      reportInitialConnectionFailure();
       addErrorToast({ title: t("koko.terminal.failedCreateConnection") });
     }
   };
@@ -331,5 +359,5 @@ export const useKokoTerminalSocket = () => {
     connectionStore.resetConnectionState();
   });
 
-  return { searchAddon, containerRef, zmodem };
+  return { searchAddon, connectionError, containerRef, zmodem };
 };

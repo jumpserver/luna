@@ -598,6 +598,7 @@
       "pausedSession": "暂停了会话",
       "resumedSession": "恢复了会话",
       "removedFromShare": "已从共享会话中移除",
+      "websocketConnectionFailed": "无法连接 Koko，请确认 Koko 服务已启动并且可以访问",
       "websocketClosed": "WebSocket 已关闭",
       "websocketConnectionClosed": "WebSocket 连接已关闭，请刷新页面",
       "invalidMessage": "收到无效的终端消息",

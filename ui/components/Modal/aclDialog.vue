@@ -44,10 +44,16 @@ watch(
   <UModal
     :open="isOpen && !minimized"
     :title="title"
-    :description="description"
     :dismissible="false"
     :close="false"
-    :ui="{ content: 'max-w-2xl', footer: 'justify-end gap-2' }"
+    :ui="{
+      content:
+        'w-[calc(100vw-3rem)] max-w-[640px] bg-[var(--workspace-surface-panel)] divide-[var(--app-border)] ring-[var(--app-border)]',
+      header: 'h-11 min-h-11 bg-[var(--workspace-surface-header)] px-4 py-0 sm:px-4 sm:py-0',
+      title: 'text-sm leading-5',
+      body: 'bg-[var(--app-surface-panel-strong)] px-6 py-4 sm:px-6 sm:py-4',
+      footer: 'justify-end gap-2 bg-[var(--workspace-surface-footer)] px-5 py-3 sm:px-5 sm:py-3'
+    }"
   >
     <template #actions>
       <UButton
@@ -61,6 +67,15 @@ watch(
       />
     </template>
     <template #body>
+      <UAlert
+        v-if="isReview && !globalGroup?.submitted"
+        color="warning"
+        variant="soft"
+        icon="i-lucide-triangle-alert"
+        :description="description"
+        class="mb-4"
+      />
+      <p v-else class="mb-4 text-sm text-[var(--app-text-secondary)]">{{ description }}</p>
       <AclDialogContent v-if="globalGroup" :group="globalGroup" :chrome="false" />
     </template>
     <template #footer>

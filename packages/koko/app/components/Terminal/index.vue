@@ -6,7 +6,7 @@ import { useKokoTerminalSocket } from "#koko/composables/terminal/useTerminalSoc
 
 const showSearchInput = ref(false);
 const { onMittEvent } = useKokoTerminalEvents();
-const { containerRef, searchAddon, zmodem } = useKokoTerminalSocket();
+const { connectionError, containerRef, searchAddon, zmodem } = useKokoTerminalSocket();
 const { uploadOpen, fileInfo, confirmUpload, cancelUpload } = zmodem;
 
 onMittEvent(TerminalMittEvent.OpenSearch, () => {
@@ -43,7 +43,18 @@ const onUploadChange = (event: Event) => {
     </template>
   </UModal>
 
-  <div id="terminal-container" ref="containerRef" class="h-full w-full min-h-0" />
+  <div class="relative h-full w-full min-h-0">
+    <div id="terminal-container" ref="containerRef" class="h-full w-full min-h-0" />
+    <div
+      v-if="connectionError"
+      class="absolute inset-0 grid place-items-center bg-default px-6 text-center text-sm text-muted"
+    >
+      <div class="flex max-w-md flex-col items-center gap-2">
+        <UIcon name="i-lucide-circle-alert" class="size-5 text-error" />
+        <div>{{ connectionError }}</div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>

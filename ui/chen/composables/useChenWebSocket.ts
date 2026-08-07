@@ -37,13 +37,21 @@ const SOCKET_OPEN = 1;
 const SOCKET_CLOSING = 2;
 const SOCKET_CLOSED = 3;
 
-export function chenHttpPath(path: string) {
-  return withWebSitePrefix(`/chen${path.startsWith("/") ? path : `/${path}`}`);
+export function chenHttpPath(path: string, endpointUrl = window.location.origin) {
+  const connectorPath = `/chen${path.startsWith("/") ? path : `/${path}`}`;
+  const endpoint = new URL(endpointUrl || window.location.origin, window.location.origin);
+
+  if (endpoint.origin === window.location.origin) {
+    return withWebSitePrefix(connectorPath);
+  }
+
+  return new URL(connectorPath, endpoint.origin).toString();
 }
 
-export function chenWsUrl(path: ChenSocketPath) {
-  const origin = window.location.origin.replace(/^http/, "ws");
-  return `${origin}${chenHttpPath(`/ws/${path}`)}`;
+export function chenWsUrl(path: ChenSocketPath, endpointUrl = window.location.origin) {
+  const target = new URL(chenHttpPath(`/ws/${path}`, endpointUrl), window.location.origin);
+  target.protocol = target.protocol === "https:" ? "wss:" : "ws:";
+  return target.toString();
 }
 
 export function useChenWebSocket(options: UseChenWebSocketOptions) {

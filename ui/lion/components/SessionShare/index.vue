@@ -17,13 +17,14 @@ const props = defineProps<{
     writable: boolean;
   }>;
   disableCreate?: boolean;
+  endpointUrl?: string;
 }>();
 
 const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
 
 const handleRemoveShareUser = (user: any) => {
-  removeShareUser(user)
+  removeShareUser(user, props.endpointUrl)
     .then((res: any) => res.json())
     .then((response) => {
       if (response.message && !response.success) {
@@ -61,7 +62,7 @@ const handleRemoveShareUser = (user: any) => {
     </CardContainer>
 
     <CardContainer :title="t('ShareLink')">
-      <CreateLink :session="session" :disabled-create-link="props.disableCreate" />
+      <CreateLink :session="session" :disabled-create-link="props.disableCreate" :endpoint-url="props.endpointUrl" />
     </CardContainer>
   </div>
 </template>

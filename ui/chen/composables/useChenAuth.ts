@@ -4,7 +4,7 @@ import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
 import { authChen, fetchChenProfile } from "~/chen/api";
 
-export function useChenAuth(tab: Ref<WorkspaceSessionTab>) {
+export function useChenAuth(tab: Ref<WorkspaceSessionTab>, endpointUrl: Ref<string>) {
   const profile = ref<ChenProfile | null>(null);
   const chenToken = ref("");
   const error = ref("");
@@ -31,7 +31,7 @@ export function useChenAuth(tab: Ref<WorkspaceSessionTab>) {
 
     let auth: Awaited<ReturnType<typeof authChen>>;
     try {
-      auth = await authChen(tokenId, disableAutoHash.value);
+      auth = await authChen(tokenId, disableAutoHash.value, endpointUrl.value);
     } catch (cause) {
       error.value = `Chen authentication failed: ${cause instanceof Error ? cause.message : String(cause)}`;
       throw new Error(error.value);
@@ -45,7 +45,7 @@ export function useChenAuth(tab: Ref<WorkspaceSessionTab>) {
     if (!chenToken.value) throw new Error("Missing chen session token");
 
     try {
-      profile.value = await fetchChenProfile(chenToken.value);
+      profile.value = await fetchChenProfile(chenToken.value, endpointUrl.value);
     } catch (cause) {
       error.value = `Chen profile failed: ${cause instanceof Error ? cause.message : String(cause)}`;
       throw new Error(error.value);

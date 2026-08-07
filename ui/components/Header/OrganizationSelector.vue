@@ -59,23 +59,23 @@ watch(
 </script>
 
 <template>
-  <div v-show="loggedIn" class="flex min-w-0 items-center gap-1">
+  <div v-show="loggedIn" class="flex w-full min-w-0 max-w-full items-center gap-1">
     <UAvatar :alt="currentOrg" color="primary" size="xs" class="shrink-0" :ui="{ root: 'rounded-md' }" />
     <UDropdownMenu
       v-if="selectable"
+      size="sm"
       :items="organizationDropdownItems"
       :content="{ align: 'start', side: 'bottom' }"
       :ui="{
         content: 'w-44 max-h-64 overflow-y-auto p-1',
-        item: 'mx-0 px-2 py-1 rounded-md text-xs leading-4 transition-colors duration-150',
-        itemLeadingIcon: 'size-3 shrink-0'
+        item: 'mx-0 px-2 py-1.5 rounded-md text-xs leading-4 transition-colors duration-150'
       }"
     >
       <UButton
         variant="ghost"
         size="sm"
         color="neutral"
-        class="h-7 max-w-full py-0 pr-1.5 pl-1"
+        class="h-7 min-w-0 max-w-full py-0 pr-1.5 pl-1"
         :ui="{
           base: 'flex items-center justify-start gap-1.5 rounded-md bg-transparent transition-colors hover:bg-black/5 focus:bg-transparent active:bg-transparent data-[state=open]:bg-black/[0.06] dark:hover:bg-white/8 dark:data-[state=open]:bg-white/10'
         }"

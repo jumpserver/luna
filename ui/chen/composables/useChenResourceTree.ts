@@ -5,6 +5,7 @@ import { fetchChenTreeChildren, runChenAction } from "~/chen/api";
 import { initialChenExpandedKeys } from "~/chen/utils/resourceTree";
 
 interface UseChenResourceTreeOptions {
+  endpointUrl?: Ref<string>;
   onLoadError?: (node: ChenTreeNode | null, cause: unknown) => void;
 }
 
@@ -31,7 +32,7 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
     return null;
   }
 
-  function normalizeTreeNodes(items: ChenTreeNode[]) {
+  function normalizeTreeNodes(items: ChenTreeNode[]): ChenTreeNode[] {
     return items.map((item) => {
       if (item.type === "table") {
         return { ...item, leaf: true, children: undefined };
@@ -52,7 +53,9 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
     loadErrors[key] = "";
 
     try {
-      const items = normalizeTreeNodes(await fetchChenTreeChildren(chenToken.value, node, force));
+      const items = normalizeTreeNodes(
+        await fetchChenTreeChildren(chenToken.value, node, force, options.endpointUrl?.value)
+      );
       if (!node) {
         rootNodes.value = items;
         return;
@@ -96,7 +99,7 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
   }
 
   async function runTreeAction(node: ChenTreeNode, action: string) {
-    return runChenAction(chenToken.value, node, action);
+    return runChenAction(chenToken.value, node, action, options.endpointUrl?.value);
   }
 
   return {

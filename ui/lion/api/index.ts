@@ -1,4 +1,4 @@
-import { withBasePath, withLionPath } from "@/lion/utils/base";
+import { withBasePath, withLionUrl } from "@/lion/utils/base";
 
 const postJson = (url: string, data: any) => {
   return fetch(url, {
@@ -17,8 +17,10 @@ const getSuggestionUsers = (query: string) => {
   return fetch(url.toString(), { credentials: "include" });
 };
 
-const createShareURL = (data: any) => postJson(withLionPath("/api/share/"), data);
-const getShareSession = (id: string, data: any) => postJson(withLionPath(`/api/share/${id}/`), data);
-const removeShareUser = (data: any) => postJson(withLionPath("/api/share/remove/"), data);
+const createShareURL = (data: any, endpointUrl?: string) => postJson(withLionUrl("/api/share/", endpointUrl), data);
+const getShareSession = (id: string, data: any, endpointUrl?: string) =>
+  postJson(withLionUrl(`/api/share/${id}/`, endpointUrl), data);
+const removeShareUser = (data: any, endpointUrl?: string) =>
+  postJson(withLionUrl("/api/share/remove/", endpointUrl), data);
 
 export { createShareURL, getShareSession, getSuggestionUsers, removeShareUser };

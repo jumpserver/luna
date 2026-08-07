@@ -687,7 +687,7 @@ export const useWorkspaceTabs = () => {
     match.pane.account = connection.account;
     match.pane.payload = undefined;
     match.pane.status = "connecting";
-    match.pane.mode = "session";
+    // Keep the setup surface mounted until a session payload is ready so ACL prompts do not flash the session loader.
     activePaneId.value = paneId;
     if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };

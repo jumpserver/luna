@@ -33,7 +33,7 @@ import { useChenQueryConsole } from "~/chen/composables/useChenQueryConsole";
 import { useChenResourceTree } from "~/chen/composables/useChenResourceTree";
 import { useChenSession } from "~/chen/composables/useChenSession";
 import { useChenSqlHints } from "~/chen/composables/useChenSqlHints";
-import { useChenWebSocket } from "~/chen/composables/useChenWebSocket";
+import { chenWsUrl, useChenWebSocket } from "~/chen/composables/useChenWebSocket";
 import { useChenWorkspaceTabs } from "~/chen/composables/useChenWorkspaceTabs";
 import { saveChenExport } from "~/chen/runtime/download";
 import { formatChenDialogValue, normalizeChenDialogMessage } from "~/chen/utils/chenDialog";
@@ -54,6 +54,22 @@ const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
 const tabRef = toRef(props, "tab");
+const endpointUrl = computed(() => {
+  const explicit = String(props.tab.payload?.endpointUrl || "").trim();
+  if (explicit) return explicit;
+
+  const webUrl = String(props.tab.payload?.webUrl || "").trim();
+  if (webUrl) {
+    try {
+      return new URL(webUrl, window.location.origin).origin;
+    } catch {
+      // Fall back to the current origin for legacy or malformed payloads.
+    }
+  }
+
+  return window.location.origin;
+});
+const resolveChenWsUrl = (path: "session" | "console") => chenWsUrl(path, endpointUrl.value);
 
 const sidebarWidth = ref(280);
 const resizing = ref(false);
@@ -67,8 +83,9 @@ const GUARDED_DATA_VIEW_ACTIONS = new Set<ChenDataViewAction>([
   "refresh",
   "change_limit"
 ]);
-const auth = useChenAuth(tabRef);
+const auth = useChenAuth(tabRef, endpointUrl);
 const tree = useChenResourceTree(auth.chenToken, {
+  endpointUrl,
   onLoadError: (node) => {
     // Root failures propagate to the session fatal state; only per-node
     // load failures surface as a toast here.
@@ -111,7 +128,7 @@ const activeConnectionError = computed(() => workspace.activeWorkspaceTab.value?
 
 const queryConsole = useChenQueryConsole(sendConsoleAction);
 const queryHints = useChenSqlHints(
-  (tab, context) => fetchChenSqlHints(auth.chenToken.value, tab.nodeKey, context),
+  (tab, context) => fetchChenSqlHints(auth.chenToken.value, tab.nodeKey, context, undefined, endpointUrl.value),
   (cause) => {
     toast.add({
       title: "Failed to load SQL hints",
@@ -145,11 +162,12 @@ const session = useChenSession({
       color: data?.level?.toLowerCase() === "error" ? "error" : "primary"
     });
   },
-  downloadFile: downloadExportFile
+  downloadFile: downloadExportFile,
+  resolveUrl: resolveChenWsUrl
 });
 
 async function downloadExportFile(fileKey: string) {
-  const file = await fetchChenExport(auth.chenToken.value, fileKey);
+  const file = await fetchChenExport(auth.chenToken.value, fileKey, undefined, endpointUrl.value);
   const result = await saveChenExport(file.blob, file.fileName);
   toast.add(
     result === "saved"
@@ -169,6 +187,7 @@ function initConsoleSocket(tab: ChenWorkspaceTab) {
   tab.connectionError = "";
   const connection = useChenWebSocket({
     path: "console",
+    resolveUrl: resolveChenWsUrl,
     onOpen: () => {
       const reactiveTab = workspace.workspaceTabState[tab.id];
       if (!reactiveTab) {
@@ -465,7 +484,7 @@ const dialogVisible = computed({
 });
 
 const actionMenu = useChenActionMenu<DropdownMenuItem>({
-  fetchActions: (node) => fetchChenActions(auth.chenToken.value, node),
+  fetchActions: (node) => fetchChenActions(auth.chenToken.value, node, endpointUrl.value),
   mapItems: mapActionItems,
   onError: (node, cause) => {
     addErrorToast({
@@ -568,7 +587,7 @@ function uploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
 async function performUploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
   tab.uploadingSql = true;
   try {
-    const result = await uploadChenSqlFile(auth.chenToken.value, file);
+    const result = await uploadChenSqlFile(auth.chenToken.value, file, undefined, endpointUrl.value);
     queryConsole.runQueryFile(tab, result.path);
     toast.add({ title: "SQL file uploaded", description: file.name, color: "success" });
   } catch (cause) {

@@ -217,7 +217,7 @@ export const useAssetAction = () => {
   const getEndpointUrl = (endpoint: Record<string, any>, protocol?: string) => {
     const endpointProtocol = (protocol || window.location.protocol.replace(":", "") || "http").replace(":", "");
     const host = endpoint.host || window.location.hostname;
-    let port = endpoint[`${endpointProtocol}_port`];
+    let port = endpoint[`${endpointProtocol}_port`] ?? endpoint.port;
 
     if ((endpointProtocol === "http" || endpointProtocol === "https") && port === 0) {
       port = window.location.port;
@@ -231,7 +231,7 @@ export const useAssetAction = () => {
       return window.location.origin;
     }
 
-    return `${window.location.protocol}//${port ? `${host}:${port}` : host}`;
+    return `${endpointProtocol}://${port ? `${host}:${port}` : host}`;
   };
 
   const getWebConnectorDevOrigin = (component: string) => {
@@ -377,13 +377,14 @@ export const useAssetAction = () => {
       }
 
       const component = method?.component || (body.protocol === "ssh" ? "koko" : "default");
-      const endpointUrl =
-        getWebConnectorDevOrigin(component) || (await fetchSmartEndpointUrl(token, method, body, meta?.orgId));
+      const devOrigin = getWebConnectorDevOrigin(component);
+      const endpointUrl = devOrigin || (await fetchSmartEndpointUrl(token, method, body, meta?.orgId));
       const webUrl = getWebConnectorPath(token, method, body, endpointUrl);
 
       const payload = {
         token,
         ...token,
+        endpointUrl: import.meta.dev ? devOrigin || window.location.origin : endpointUrl,
         webUrl,
         connectMethod: method || { value: body.connect_method }
       };
@@ -479,10 +480,15 @@ export const useAssetAction = () => {
           else markSessionFailed(meta);
           return;
         }
+        const component = resolveBuiltinComponent(body);
+        const endpointUrl = import.meta.dev
+          ? window.location.origin
+          : await fetchSmartEndpointUrl(token, { component, type: "web" }, body, meta.orgId);
         const payload = {
           token,
           ...token,
-          connectMethod: { value: body.connect_method, component: resolveBuiltinComponent(body) }
+          endpointUrl,
+          connectMethod: { value: body.connect_method, component }
         };
         if (meta.onSessionReady) meta.onSessionReady(payload);
         else updateSessionPayload(meta, payload);

@@ -5,13 +5,14 @@ import { computed, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { createShareURL } from "@/lion/api";
 import { useColor } from "@/lion/hooks/useColor";
-import { withBaseUrl } from "@/lion/utils/base";
+import { withBaseUrl, withLionUrl } from "@/lion/utils/base";
 
 export type TranslateFunction = Composer["t"];
 
 const props = defineProps<{
   session: string;
   disabledCreateLink: boolean;
+  endpointUrl?: string;
 }>();
 
 const { copy } = useClipboard({ legacy: true });
@@ -163,7 +164,7 @@ const handleChangeActionPerm = createSingleSelectHandler(actionsPermOptions, "va
 
 const generateShareURL = (shareId: string, shareCode: string) => {
   const encodedShareCode = encodeURIComponent(shareCode);
-  return withBaseUrl(`/lion/share/${shareId}?code=${encodedShareCode}`);
+  return withLionUrl(`/share/${shareId}?code=${encodedShareCode}`, props.endpointUrl);
 };
 
 const handleCreateLink = () => {
@@ -177,12 +178,15 @@ const handleCreateLink = () => {
     return user || { id, name: id, username: id };
   });
 
-  createShareURL({
-    session_id: props.session,
-    expired_time: shareLinkRequest.expiredTime,
-    users,
-    action_perm: shareLinkRequest.actionPerm
-  })
+  createShareURL(
+    {
+      session_id: props.session,
+      expired_time: shareLinkRequest.expiredTime,
+      users,
+      action_perm: shareLinkRequest.actionPerm
+    },
+    props.endpointUrl
+  )
     .then((response: any) => response.json())
     .then((res: any) => {
       if (res.success && !res.success) {

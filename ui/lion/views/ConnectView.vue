@@ -25,6 +25,7 @@ const { addErrorToast } = useErrorToast();
 const { t } = useI18n();
 const containerRef = ref<HTMLElement | null>(null);
 const sessionContext = inject(connectorSessionKey, ref<ConnectorSessionContext | null>(null));
+const endpointUrl = computed(() => unref(sessionContext)?.endpointUrl || window.location.origin);
 
 const {
   guaDisplay,
@@ -52,7 +53,7 @@ const {
   action_permission,
   remoteClipboardText,
   sendInputActive
-} = useGuacamoleClient(t);
+} = useGuacamoleClient(t, endpointUrl);
 
 const drawShow = ref(false);
 const connectStatus = ref("Connecting");
@@ -191,7 +192,7 @@ const resolveConnectConfig = () => {
   if (ctx?.tokenId) {
     return {
       // ponytail: lion 走 Guacamole connect 参数 TOKEN_ID，不用 koko 的 ?token= WS 查询串
-      ws: withLionWsUrl("/ws/connect/"),
+      ws: withLionWsUrl("/ws/connect/", ctx.endpointUrl),
       token: ctx.tokenId
     };
   }
@@ -416,6 +417,7 @@ const drawerTabs = computed(() => {
           :session="sessionObject.id"
           :users="onlineUsers"
           :disable-create="!enableShare"
+          :endpoint-url="endpointUrl"
         />
       </div>
     </template>
