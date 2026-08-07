@@ -1,4 +1,4 @@
-import type { AssetItem, PermedProtocol } from "~/types";
+import type { AssetItem, PermedAccount, PermedProtocol } from "~/types";
 
 import { useRecentConnections } from "~/composables/useRecentConnections";
 import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
@@ -18,6 +18,7 @@ export interface WorkspaceSurfaceSession {
   assetCategory: string;
   address: string;
   permedProtocols?: PermedProtocol[];
+  permedAccounts?: PermedAccount[];
   protocol: string;
   account: string;
   status: WorkspaceSessionStatus;
@@ -61,6 +62,7 @@ const blankSurface = (): Omit<WorkspaceSurfaceSession, "id"> => ({
   assetCategory: "",
   address: "",
   permedProtocols: undefined,
+  permedAccounts: undefined,
   protocol: "",
   account: "",
   status: "selecting",
@@ -101,6 +103,7 @@ const syncTabFromPrimaryPane = (tab: WorkspaceSessionTab) => {
   tab.assetCategory = primaryPane.assetCategory;
   tab.address = primaryPane.address;
   tab.permedProtocols = primaryPane.permedProtocols;
+  tab.permedAccounts = primaryPane.permedAccounts;
   tab.protocol = primaryPane.protocol;
   tab.account = primaryPane.account;
   tab.status = primaryPane.status;
@@ -311,6 +314,7 @@ export const useWorkspaceTabs = () => {
         assetCategory: asset.category || "",
         address: asset.address,
         permedProtocols: asset.permedProtocols,
+        permedAccounts: asset.permedAccounts,
         protocol,
         account,
         status: connection.payload ? "ready" : "connecting",
@@ -350,6 +354,7 @@ export const useWorkspaceTabs = () => {
         assetCategory: asset.category || "",
         address: asset.address,
         permedProtocols: asset.permedProtocols,
+        permedAccounts: asset.permedAccounts,
         protocol,
         account,
         status: "selecting",

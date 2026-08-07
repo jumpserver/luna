@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { RightPanelTab } from "~/composables/useRightPanel";
 import RightPanelAiPanel from "~/components/RightPanel/aiPanel.vue";
 import RightPanelSessionPanel from "~/components/RightPanel/sessionPanel.vue";
 import RightPanelSftpPanel from "~/components/RightPanel/sftpPanel.vue";
@@ -8,13 +9,29 @@ const { activeTab: workspaceTab } = useWorkspaceTabs();
 const { activeTab, setActiveTab } = useRightPanel();
 
 const showSftpTab = computed(() => {
-  if (workspaceTab.value?.protocol !== "ssh") return false;
+  const tab = workspaceTab.value;
+  if (!tab || tab.protocol !== "ssh") return false;
 
-  return (workspaceTab.value.permedProtocols || []).some((protocol) => protocol?.name === "sftp");
+  const assetKind = `${tab.assetType} ${tab.assetPlatform}`.toLowerCase();
+  const isLinuxAsset = assetKind.includes("linux") || assetKind.includes("unix");
+  const hasSftpProtocol = (tab.permedProtocols || []).some(
+    (protocol) => protocol?.name?.trim().toLowerCase() === "sftp"
+  );
+
+  const matchingAccount = (tab.permedAccounts || []).find(
+    (account) => account.id === tab.account || [account.name, account.username, account.alias].includes(tab.account)
+  );
+  const accounts = matchingAccount ? [matchingAccount] : tab.permedAccounts || [];
+  const hasFileTransferPermission = accounts.some((account) => {
+    const actions = new Set((account.actions || []).map((action) => action.value?.trim().toLowerCase()));
+    return actions.has("upload") && actions.has("download");
+  });
+
+  return isLinuxAsset && hasSftpProtocol && hasFileTransferPermission;
 });
 
 const tabs = computed(() => {
-  const items = [
+  const items: Array<{ value: RightPanelTab; label: string; icon: string }> = [
     { value: "session" as const, label: t("RightPanel.Session"), icon: "i-lucide-terminal" },
     { value: "ai" as const, label: t("RightPanel.AI"), icon: "i-lucide-sparkles" }
   ];
