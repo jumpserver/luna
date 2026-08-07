@@ -99,9 +99,24 @@ function displayWorkspaceTabTitle(tab: ChenTabDefinition) {
   background-color: var(--workspace-surface-main);
 }
 
+.chen-workspace-tab {
+  position: relative;
+}
+
 .chen-workspace-tab-active {
   background-color: var(--chen-workspace-tab-active-bg);
   box-shadow: 0 6px 16px color-mix(in srgb, var(--app-fg) 9%, transparent);
+}
+
+.chen-workspace-tab-active::after {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0;
+  left: 0.5rem;
+  height: 2px;
+  border-radius: 9999px;
+  background: var(--theme-accent);
+  content: "";
 }
 
 .chen-workspace-tab-bar-dark {

@@ -150,7 +150,7 @@ watch(
           <div
             v-for="tab in tabs"
             :key="tab.id"
-            class="workspace-sub-tab-button group relative flex h-7 min-w-0 shrink-0 items-center gap-1.5 rounded-lg px-2 text-left transition-all duration-150"
+            class="workspace-sub-tab-button group relative flex h-7 min-w-0 shrink-0 items-center gap-1.5 px-2 text-left transition-all duration-150"
             :class="[
               activeId === tab.id ? 'max-w-72 px-2.5' : 'max-w-44',
               activeId === tab.id
@@ -221,6 +221,17 @@ watch(
 .workspace-sub-tab-button-active {
   background-color: color-mix(in srgb, var(--workspace-surface-sub-tab-active) 72%, transparent);
   box-shadow: 0 8px 18px color-mix(in srgb, var(--app-fg) 8%, transparent);
+}
+
+.workspace-sub-tab-button-active::after {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0;
+  left: 0.5rem;
+  height: 2px;
+  border-radius: 9999px;
+  background: var(--theme-accent);
+  content: "";
 }
 
 .workspace-sub-tab-strip {

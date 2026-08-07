@@ -173,6 +173,7 @@ function disconnectAllRemotes() {
   remotePanes.value = [];
   remotePaneRefs.value = {};
   activeRemoteId.value = null;
+  dualMode.value = false;
 }
 
 function removeRemotePane(id: string) {
@@ -388,19 +389,7 @@ watch(currentOrgId, () => {
     <div v-if="!global" class="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-default px-2">
       <div class="ml-auto flex items-center justify-end gap-1">
         <UButton
-          size="xs"
-          :color="global || dualMode || remotePanes.length ? 'primary' : 'neutral'"
-          :variant="dualMode ? 'soft' : 'ghost'"
-          icon="i-lucide-server"
-          :label="
-            remotePanes.length || dualMode
-              ? t('koko.fileManagement.remoteSftp')
-              : t('koko.fileManagement.connectRemoteSftp')
-          "
-          @click="global ? openRemoteConnect() : toggleDualMode()"
-        />
-        <UButton
-          v-if="dualMode"
+          v-if="dualMode || !remotePanes.length"
           size="xs"
           color="primary"
           variant="soft"
@@ -409,13 +398,23 @@ watch(currentOrgId, () => {
           @click="() => openRemoteConnect()"
         />
         <UButton
-          v-if="remotePanes.length"
+          v-if="dualMode && remotePanes.length"
           size="xs"
           color="neutral"
           variant="ghost"
           icon="i-lucide-unplug"
           :label="t('koko.fileManagement.disconnectAllRemote')"
           @click="disconnectAllRemotes"
+        />
+        <UButton
+          v-if="dualMode || remotePanes.length"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          :icon="dualMode ? 'i-lucide-panel-right-close' : 'i-lucide-panel-right-open'"
+          :title="t(dualMode ? 'Tree.Collapse' : 'Tree.Expand')"
+          :aria-label="t(dualMode ? 'Tree.Collapse' : 'Tree.Expand')"
+          @click="toggleDualMode"
         />
       </div>
     </div>
