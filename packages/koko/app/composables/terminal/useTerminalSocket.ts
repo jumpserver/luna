@@ -35,8 +35,7 @@ import { getDefaultTerminalConfig } from "#koko/utils/guard";
 import { appTerminalTheme, terminalTheme } from "#koko/utils/terminalTheme";
 import { formatMessage } from "#koko/utils/terminalUtils";
 
-const isSocketClosing = (socket: WebSocket) =>
-  socket.readyState === WebSocket.CLOSING || socket.readyState === WebSocket.CLOSED;
+const isSocketOpen = (socket: WebSocket) => socket.readyState === WebSocket.OPEN;
 
 const isXtermAddonDisposeError = (error: unknown) =>
   error instanceof Error && error.message.includes("Could not dispose an addon that has not been loaded");
@@ -59,7 +58,6 @@ export const useKokoTerminalSocket = () => {
   const sessionId = ref("");
   const terminalId = ref("");
   const selectionText = ref("");
-  const zmodemTransferStatus = ref(true);
   const lastSendTime = ref(new Date());
   const lastReceiveTime = ref(new Date());
   const onlineUsers = ref<OnlineUser[]>([]);
@@ -79,7 +77,7 @@ export const useKokoTerminalSocket = () => {
   const binaryHandler = useKokoTerminalBinaryHandler({
     terminalRef,
     sentryRef,
-    zmodemTransferStatus,
+    abortActiveSession: zmodem.abortActiveSession,
     addErrorToast,
     t
   });
@@ -127,7 +125,7 @@ export const useKokoTerminalSocket = () => {
   });
 
   const debouncedResize = useDebounceFn(({ cols, rows }: { cols: number; rows: number }) => {
-    if (!socketRef.value) return;
+    if (!socketRef.value || !isSocketOpen(socketRef.value)) return;
     fitAddon?.fit();
     socketRef.value.send(
       formatMessage(terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_RESIZE, JSON.stringify({ cols, rows }))
@@ -148,7 +146,9 @@ export const useKokoTerminalSocket = () => {
     selectionText,
     lastSendTime,
     fit: () => fitAddon?.fit(),
-    isSocketClosing,
+    isSocketOpen,
+    isZmodemActive: zmodem.isActiveSession,
+    abortZmodem: zmodem.abortActiveSession,
     quickPaste: () => terminalSettingsStore.quickPaste || "0",
     getTerminalConfig: () => terminalSettingsStore.getConfig,
     onResize: debouncedResize,
@@ -182,7 +182,6 @@ export const useKokoTerminalSocket = () => {
     shareCode,
     sessionId,
     terminalId,
-    zmodemTransferStatus,
     warningInterval,
     queryTerminalThemeName,
     followAppTheme,
@@ -197,6 +196,11 @@ export const useKokoTerminalSocket = () => {
     emitTerminalConnect,
     emitTerminalSession,
     showInfoOnce,
+    onZmodemEnd: zmodem.finishDraining,
+    onZmodemAbort: () => {
+      zmodem.abortActiveSession();
+      zmodem.finishDraining();
+    },
     onConnected: (id, socket) => {
       const tabId = unref(sessionCtxRef)?.tabId;
       if (tabId) {
@@ -238,6 +242,7 @@ export const useKokoTerminalSocket = () => {
 
     socketRef.value.onclose = () => {
       heartbeat.stop();
+      zmodem.abortActiveSession();
       if (!socketOpened) {
         reportInitialConnectionFailure();
         return;

@@ -54,9 +54,9 @@ export function getXTerminalLineContent(index: number, terminal: Terminal) {
   if (!buffer) return "";
 
   const result: string[] = [];
-  let startLine = buffer.length;
+  let startLine = buffer.length - 1;
 
-  while (result.length <= index && startLine > 0) {
+  while (result.length < index && startLine >= 0) {
     const line = buffer.getLine(startLine);
     const stripLine = line?.translateToString(true);
     startLine--;

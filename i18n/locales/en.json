@@ -576,6 +576,8 @@
     "terminal": {
       "title": "Terminal",
       "fileTransferInterrupted": "File transfer interrupted",
+      "downloadFailed": "Download failed: the remote file does not exist or the transfer was cancelled",
+      "uploadSkipped": "Upload skipped: the remote file was not accepted",
       "downloadProgress": "Download {name}: {size} {percent}%",
       "uploadProgress": "Upload {name}: {size} {percent}% [{progress}]",
       "uploadTitle": "Upload file",

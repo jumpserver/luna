@@ -12,19 +12,19 @@ export function createKokoZmodemSentry(options: {
   canSend: () => boolean;
   onDetect: (detection: KokoZmodemDetection) => void;
   onWriteFailure: () => void;
-  shouldWriteToTerminal: () => boolean;
+  shouldWriteToTerminal: (octets: number[] | Uint8Array) => boolean;
 }) {
   return new Zmodem.Sentry({
-    to_terminal: (octets: string) => {
-      if (!options.shouldWriteToTerminal()) return;
+    to_terminal: (octets: number[] | Uint8Array) => {
+      if (!options.shouldWriteToTerminal(octets)) return;
       try {
-        options.terminal.write(octets);
+        options.terminal.write(octets instanceof Uint8Array ? octets : new Uint8Array(octets));
       } catch {
         options.onWriteFailure();
       }
     },
     sender: (octets: Uint8Array) => {
-      if (!options.canSend() || !options.terminalId.value) return;
+      if (options.socket.readyState !== WebSocket.OPEN || !options.canSend() || !options.terminalId.value) return;
       options.lastSendTime.value = new Date();
       try {
         options.socket.send(buildTerminalInput(options.terminalId.value, new Uint8Array(octets)));

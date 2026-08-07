@@ -579,6 +579,8 @@
     "terminal": {
       "title": "终端",
       "fileTransferInterrupted": "文件传输已中断",
+      "downloadFailed": "下载失败：远端文件不存在或传输已取消",
+      "uploadSkipped": "上传已跳过：远端未接受该文件",
       "downloadProgress": "下载 {name}: {size} {percent}%",
       "uploadProgress": "上传 {name}: {size} {percent}% [{progress}]",
       "uploadTitle": "上传文件",

@@ -116,7 +116,6 @@ export function createKokoTerminalMessageHandlers(options: {
   shareCode: Ref<string>;
   sessionId: Ref<string>;
   terminalId: Ref<string>;
-  zmodemTransferStatus: Ref<boolean>;
   warningInterval: Ref<ReturnType<typeof setInterval> | null>;
   queryTerminalThemeName: ComputedRef<string>;
   followAppTheme: ComputedRef<boolean>;
@@ -135,6 +134,8 @@ export function createKokoTerminalMessageHandlers(options: {
   emitTerminalSession: (payload: TerminalSessionInfo) => void;
   showInfoOnce: (content: string) => void;
   onConnected: (terminalId: string, socket: WebSocket, terminal: Terminal) => void;
+  onZmodemEnd: () => void;
+  onZmodemAbort: () => void;
 }) {
   const parseJson = <T>(value: string | undefined, fallback: T) => {
     if (!value) return fallback;
@@ -222,12 +223,10 @@ export function createKokoTerminalMessageHandlers(options: {
       options.connectionStore.updateConnectionState({ shareId: payload.share_id, shareCode: payload.code });
     },
     [MESSAGE_TYPE.TERMINAL_ACTION]: (message) => {
-      if (message.data === ZMODEM_ACTION_TYPE.ZMODEM_START) {
-        options.zmodemTransferStatus.value = true;
-      } else if (message.data === ZMODEM_ACTION_TYPE.ZMODEM_END) {
-        options.terminalRef.value?.write("\r\n");
-      } else {
-        options.zmodemTransferStatus.value = false;
+      if (message.data === ZMODEM_ACTION_TYPE.ZMODEM_END) {
+        options.onZmodemEnd();
+      } else if (message.data === ZMODEM_ACTION_TYPE.ZMODEM_ABORT) {
+        options.onZmodemAbort();
       }
     },
     [MESSAGE_TYPE.TERMINAL_SESSION]: (message) => {

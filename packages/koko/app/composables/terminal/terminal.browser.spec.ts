@@ -263,6 +263,13 @@ afterEach(() => {
 
 it("sends zmodem files through the local browser adapter", async () => {
   const sent: Uint8Array[] = [];
+  const close = vi.fn(async () => undefined);
+  const header = {
+    _bytes4: [0, 0, 0, 0],
+    to_binary16: vi.fn(function (this: { _bytes4: number[] }) {
+      return this._bytes4.slice();
+    })
+  };
   const offered = vi.fn(async () => ({
     get_details: () => ({ name: "hello.txt", size: 5 }),
     get_offset: () => sent.reduce((total, chunk) => total + chunk.length, 0),
@@ -274,21 +281,31 @@ it("sends zmodem files through the local browser adapter", async () => {
     accept: async () => [],
     skip: () => undefined
   }));
-
-  await sendZmodemFiles(
-    {
-      type: "send",
-      abort: () => undefined,
-      aborted: () => false,
-      has_ended: () => false,
-      on: () => undefined as never,
-      send_offer: offered
+  const session = {
+    type: "send",
+    abort: () => undefined,
+    aborted: () => false,
+    close,
+    has_ended: () => false,
+    on: () => undefined as never,
+    send_offer: async (offer) => {
+      const internal = session as typeof session & {
+        _create_header_bytes: (name: string) => [number[], typeof header];
+      };
+      expect(internal._create_header_bytes("ZFILE")[0][2]).toBe(4);
+      void offer;
+      return offered();
     },
-    [new File(["hello"], "hello.txt")]
-  );
+    _create_header_bytes: () => [[], header],
+    _get_header_formatter: () => "to_binary16",
+    _zencoder: {}
+  } as Parameters<typeof sendZmodemFiles>[0];
+
+  await sendZmodemFiles(session, [new File(["hello"], "hello.txt")]);
 
   expect(offered).toHaveBeenCalledTimes(1);
   expect(new TextDecoder().decode(sent[0])).toBe("hello");
+  expect(close).toHaveBeenCalledTimes(1);
 });
 
 it("saves downloaded packets through a temporary anchor element", () => {

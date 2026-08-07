@@ -23,6 +23,7 @@ export interface KokoZmodemTransfer {
 interface BaseKokoZmodemSession {
   abort: () => void;
   aborted: () => boolean;
+  close?: () => Promise<unknown>;
   has_ended: () => boolean;
   on: (event: "session_end", handler: () => void) => KokoZmodemSession;
 }

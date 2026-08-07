@@ -17,7 +17,9 @@ export function useKokoTerminalInput(options: {
   selectionText: Ref<string>;
   lastSendTime: Ref<Date>;
   fit: () => void;
-  isSocketClosing: (socket: WebSocket) => boolean;
+  isSocketOpen: (socket: WebSocket) => boolean;
+  isZmodemActive: () => boolean;
+  abortZmodem: () => void;
   quickPaste: () => string;
   getTerminalConfig: () => Partial<ILunaConfig>;
   onResize: (size: { cols: number; rows: number }) => void;
@@ -51,8 +53,8 @@ export function useKokoTerminalInput(options: {
         text = options.selectionText.value;
       }
       const socket = options.socket.value;
-      if (!text || !socket || options.inputLocked() || options.isSocketClosing(socket)) {
-        if (socket && options.isSocketClosing(socket)) {
+      if (!text || !socket || options.inputLocked() || !options.isSocketOpen(socket)) {
+        if (socket && !options.isSocketOpen(socket)) {
           options.addErrorToast({ title: options.translate("koko.terminal.websocketConnectionClosed") });
         }
         return;
@@ -89,15 +91,17 @@ export function useKokoTerminalInput(options: {
 
     terminal.onData((data) => {
       const socket = options.socket.value;
-      if (!socket || options.inputLocked() || options.isSocketClosing(socket)) return;
+      if (!socket || options.inputLocked() || !options.isSocketOpen(socket)) return;
       options.lastSendTime.value = new Date();
+      const isZmodemInterrupt = options.isZmodemActive() && data.length === 1 && data.charCodeAt(0) === 3;
       socket.send(
         formatMessage(
           options.terminalId.value,
           FORMATTER_MESSAGE_TYPE.TERMINAL_DATA,
-          preprocessInput(data, options.getTerminalConfig())
+          isZmodemInterrupt ? data : preprocessInput(data, options.getTerminalConfig())
         )
       );
+      if (isZmodemInterrupt) options.abortZmodem();
       options.sendToHost(HOST_MESSAGE_TYPE.INPUT_ACTIVE, "");
     });
     terminal.onResize(options.onResize);

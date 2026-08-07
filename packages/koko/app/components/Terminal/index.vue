@@ -22,7 +22,12 @@ const onUploadChange = (event: Event) => {
 <template>
   <KokoSearchInput v-if="showSearchInput && searchAddon" :search-addon="searchAddon" @close="showSearchInput = false" />
 
-  <UModal v-model:open="uploadOpen" :title="$t('koko.terminal.uploadTitle')" :ui="{ footer: 'justify-end gap-2' }">
+  <UModal
+    v-model:open="uploadOpen"
+    :title="$t('koko.terminal.uploadTitle')"
+    :dismissible="false"
+    :ui="{ footer: 'justify-end gap-2' }"
+  >
     <template #body>
       <label class="flex cursor-pointer flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-sm">
         <UIcon name="i-lucide-upload" class="size-8" />
