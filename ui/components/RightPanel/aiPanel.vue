@@ -258,6 +258,12 @@ function submit() {
     });
 }
 
+function handleSubmitKeydown(event: KeyboardEvent) {
+  if (event.isComposing) return;
+  event.preventDefault();
+  submit();
+}
+
 function updatePolicy() {
   const current = session.value;
   if (!current) return;
@@ -722,7 +728,7 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
             class="block w-full"
             :disabled="busy"
             :ui="{ base: 'min-h-24 rounded-lg pb-11 text-xs' }"
-            @keydown.enter.exact.prevent="submit"
+            @keydown.enter.exact="handleSubmitKeydown"
           />
           <div class="absolute inset-x-2 bottom-2 flex items-center gap-1.5">
             <div class="flex min-w-0 flex-1 items-center gap-1">
