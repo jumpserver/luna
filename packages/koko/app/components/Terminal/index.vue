@@ -65,7 +65,7 @@ const onUploadChange = (event: Event) => {
 <style scoped>
 /* 背景与 xterm 主题背景同源；保留轻微上下留白，避免内容贴边 */
 #terminal-container {
-  background: var(--app-main-bg);
+  background: var(--terminal-background);
   --xterm-scrollbar-top: 4px;
   --xterm-scrollbar-bottom: 4px;
 }

@@ -38,12 +38,14 @@ function fitTerminal() {
   return true;
 }
 
-async function resize() {
-  if (!started || !terminal.value || !fitTerminal()) return;
+const debouncedFitTerminal = useDebounceFn(fitTerminal, 80);
+
+async function resize(cols: number, rows: number) {
+  if (!started) return;
   await useTauriCoreInvoke("resize_local_shell", {
     sessionId: props.tab.id,
-    cols: terminal.value.cols,
-    rows: terminal.value.rows
+    cols,
+    rows
   }).catch(() => {});
 }
 
@@ -97,15 +99,10 @@ async function start() {
     });
   });
   instance.onResize(({ cols, rows }) => {
-    if (!started) return;
-    void useTauriCoreInvoke("resize_local_shell", {
-      sessionId: props.tab.id,
-      cols,
-      rows
-    });
+    void resize(cols, rows);
   });
 
-  resizeObserver = new ResizeObserver(() => void resize());
+  resizeObserver = new ResizeObserver(() => void debouncedFitTerminal());
   resizeObserver.observe(containerRef.value);
 
   try {
@@ -115,7 +112,8 @@ async function start() {
       rows: instance.rows
     });
     started = true;
-    await resize();
+    fitTerminal();
+    await resize(instance.cols, instance.rows);
     registerLocalShellTerminalSession(props.tab.id, (data) => {
       void useTauriCoreInvoke("write_local_shell", {
         sessionId: props.tab.id,
@@ -161,7 +159,7 @@ defineExpose({ focus });
 
 <style scoped>
 .local-shell-terminal {
-  background: var(--app-main-bg);
+  background: var(--terminal-background);
   --xterm-scrollbar-top: 4px;
   --xterm-scrollbar-bottom: 4px;
 }
