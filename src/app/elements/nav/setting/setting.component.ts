@@ -35,7 +35,8 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
   rdpClientConfig = {
     full_screen: false,
     multi_screen: false,
-    drives_redirect: false
+    drives_redirect: false,
+    remote_microphone: false
   };
 
   currentTheme = '';
