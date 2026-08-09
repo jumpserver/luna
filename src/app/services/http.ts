@@ -467,6 +467,9 @@ export class HttpService {
     if (connectOption && connectOption.reusable) {
       url.searchParams.append('reusable', '1');
     }
+    if (connectOption && connectOption.remote_microphone !== undefined) {
+      url.searchParams.append('remote_microphone', connectOption.remote_microphone ? '1' : '0');
+    }
     return window.open(url.href);
   }
 

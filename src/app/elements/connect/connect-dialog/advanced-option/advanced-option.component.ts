@@ -109,6 +109,16 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
       },
       {
         type: 'select',
+        field: 'remote_microphone',
+        label: 'Remote microphone',
+        hidden: () => {
+          return !hasX || !this.protocol || this.protocol.name !== 'rdp';
+        },
+        value: (this.setting.graphics.rdp_client_option || []).includes('remote_microphone'),
+        options: this.boolChoices
+      },
+      {
+        type: 'select',
         field: 'backspaceAsCtrlH',
         hidden: () => {
           return this.connectMethod && this.connectMethod.component !== 'koko';

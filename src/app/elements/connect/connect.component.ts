@@ -146,7 +146,13 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     this._logger.debug('Connect info: ', connectInfo);
 
     const connectMethod = connectInfo.connectMethod;
-    const connectOption = connectInfo.connectOption;
+    const connectOption = connectInfo.connectOption || {};
+    connectInfo.connectOption = connectOption;
+    if (connectInfo.protocol.name === 'rdp' && connectOption['remote_microphone'] === undefined) {
+      connectOption['remote_microphone'] = (
+        this._settingSvc.setting.graphics.rdp_client_option || []
+      ).includes('remote_microphone');
+    }
     const connToken = await this._connectTokenSvc.create(asset, connectInfo);
 
     if (!connToken) {
