@@ -1,7 +1,8 @@
 import { MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { afterEach, expect, it, vi } from "vitest";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 
+import { resolveClipboardAccess, validateClipboardText } from "#koko/utils/clipboardAcl";
 import {
   buildJSONEnvelope,
   buildTerminalInput,
@@ -20,8 +21,105 @@ import {
   sendKokoTerminalAiControl,
   unregisterKokoTerminalAiSession
 } from "./useTerminalAiSessions";
+import { useKokoTerminalInput } from "./useTerminalInput";
 import { useKokoTerminalMessageHandler } from "./useTerminalMessageHandler";
 import { saveZmodemPacketsToDisk, sendZmodemFiles } from "./zmodemBrowser";
+
+it("combines token actions with clipboard policy and text limits", () => {
+  const access = resolveClipboardAccess(
+    { actions: ["copy"] },
+    {
+      copy: { enabled: true, acl_action: "allow", text_limit: 2 },
+      paste: { enabled: true, acl_action: "allow" }
+    }
+  );
+
+  expect(validateClipboardText(access, "copy", "中🙂")).toEqual({ allowed: true });
+  expect(validateClipboardText(access, "copy", "中🙂A")).toEqual({
+    allowed: false,
+    reason: "text_limit",
+    limit: 2
+  });
+  expect(validateClipboardText(access, "paste", "x")).toEqual({ allowed: false, reason: "permission" });
+
+  const policyDenied = resolveClipboardAccess({ actions: ["all"] }, { copy: { enabled: false } });
+  expect(validateClipboardText(policyDenied, "copy", "x")).toEqual({ allowed: false, reason: "permission" });
+});
+
+it("ignores stale limits when no clipboard ACL selected the operation", () => {
+  const access = resolveClipboardAccess(
+    { actions: ["all"] },
+    { copy: { enabled: true, acl_action: null, text_limit: 1 } }
+  );
+
+  expect(validateClipboardText(access, "copy", "long text")).toEqual({ allowed: true });
+});
+
+it("allows clipboard use for shared sessions without token permissions", () => {
+  const access = resolveClipboardAccess(undefined, undefined);
+
+  expect(validateClipboardText(access, "copy", "copy")).toEqual({ allowed: true });
+  expect(validateClipboardText(access, "paste", "paste")).toEqual({ allowed: true });
+});
+
+it("blocks denied copy and paste events before xterm handles them", () => {
+  const container = document.createElement("div");
+  let keyHandler: ((event: KeyboardEvent) => boolean) | undefined;
+  const terminal = {
+    attachCustomKeyEventHandler: vi.fn((handler: (event: KeyboardEvent) => boolean) => {
+      keyHandler = handler;
+    }),
+    blur: vi.fn(),
+    focus: vi.fn(),
+    getSelection: vi.fn(() => "selected text"),
+    hasSelection: vi.fn(() => true),
+    onData: vi.fn(),
+    onResize: vi.fn(),
+    onSelectionChange: vi.fn()
+  };
+  const validate = vi.fn(() => false);
+  const input = useKokoTerminalInput({
+    container: ref(container),
+    terminal: ref(terminal as never),
+    socket: ref(null),
+    terminalId: ref("terminal-1"),
+    sessionId: ref("session-1"),
+    selectionText: ref(""),
+    lastSendTime: ref(new Date()),
+    fit: vi.fn(),
+    isSocketOpen: vi.fn(() => true),
+    isZmodemActive: vi.fn(() => false),
+    abortZmodem: vi.fn(),
+    quickPaste: vi.fn(() => "0"),
+    getTerminalConfig: vi.fn(() => ({ fontFamily: "monospace" })),
+    onResize: vi.fn(),
+    onHostKey: vi.fn(),
+    inputLocked: vi.fn(() => false),
+    addErrorToast: vi.fn(),
+    translate: vi.fn((key) => key),
+    sendHostEvent: vi.fn(),
+    sendToHost: vi.fn(),
+    sendMittEvent: vi.fn(),
+    validateClipboardText: validate
+  });
+  input.start();
+
+  const pasteEvent = new Event("paste", { bubbles: true, cancelable: true }) as ClipboardEvent;
+  Object.defineProperty(pasteEvent, "clipboardData", { value: { getData: () => "pasted text" } });
+  const copyEvent = new Event("copy", { bubbles: true, cancelable: true }) as ClipboardEvent;
+  container.dispatchEvent(pasteEvent);
+  container.dispatchEvent(copyEvent);
+
+  expect(pasteEvent.defaultPrevented).toBe(true);
+  expect(copyEvent.defaultPrevented).toBe(true);
+  expect(validate.mock.calls).toEqual([
+    ["paste", "pasted text"],
+    ["copy", "selected text"]
+  ]);
+  expect(keyHandler?.(new KeyboardEvent("keydown", { key: "Enter", isComposing: true }))).toBe(false);
+
+  input.stop();
+});
 
 it("parses terminal wire messages only when they match the protocol", () => {
   expect(parseTerminalIncomingMessage({ id: "terminal-1", type: MESSAGE_TYPE.CONNECT, data: "{}" })).toMatchObject({

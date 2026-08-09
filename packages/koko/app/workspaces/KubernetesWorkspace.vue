@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { KokoWorkspaceTab } from "@jumpserver/koko/host";
+import type { ClipboardAccess, ClipboardDirection, ClipboardPermission, ClipboardPolicy } from "#koko/types";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import {
@@ -7,6 +8,11 @@ import {
   KubernetesTerminalSocketFailureCode
 } from "#koko/composables/kubernetes/protocol";
 import { useKubernetesTerminalSocket } from "#koko/composables/kubernetes/useKubernetesTerminalSocket";
+import {
+  createUnrestrictedClipboardAccess,
+  resolveClipboardAccess,
+  validateClipboardText as validateClipboardAccess
+} from "#koko/utils/clipboardAcl";
 import { appTerminalTheme } from "#koko/utils/terminalTheme";
 import BaseWorkspaceShell from "#koko/workspaces/BaseWorkspaceShell.vue";
 import { useBaseWorkspaceSession } from "#koko/workspaces/useBaseWorkspaceSession";
@@ -43,6 +49,7 @@ interface TreeRow {
 
 const props = defineProps<{ tab: KokoWorkspaceTab }>();
 const { t } = useI18n();
+const toast = useToast();
 const tab = toRef(props, "tab");
 const { context, error: sessionError, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab);
 const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
@@ -57,7 +64,9 @@ const terminalTabs = ref<TerminalTab[]>([]);
 const activeTabId = ref("");
 const globalTerminalId = ref("");
 
-const terminals = new Map<string, { terminal: Terminal; fit: FitAddon }>();
+const terminals = new Map<string, { terminal: Terminal; fit: FitAddon; cleanupClipboard: () => void }>();
+const defaultClipboardAccess = shallowRef(createUnrestrictedClipboardAccess());
+const sessionClipboardAccess = new Map<string, ClipboardAccess>();
 let themeObserver: MutationObserver | null = null;
 const terminalSocket = useKubernetesTerminalSocket();
 
@@ -79,6 +88,61 @@ const subTabs = computed(() =>
 
 const keyOf = (node: K8sNode) => [node.namespace, node.pod, node.container, node.label].filter(Boolean).join("/");
 const containerLabel = (node: K8sNode) => `${node.namespace}/${node.pod}/${node.container}`;
+
+function parseJson<T>(value: string | undefined): T | null {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+}
+
+function canUseClipboardText(direction: ClipboardDirection, text: string, terminalTabId: string) {
+  const access = sessionClipboardAccess.get(terminalTabId) || defaultClipboardAccess.value;
+  const result = validateClipboardAccess(access, direction, text);
+  if (result.allowed) return true;
+
+  toast.add({
+    title:
+      result.reason === "text_limit"
+        ? t("koko.terminal.clipboardTextLimitExceeded", {
+            action: t(direction === "copy" ? "koko.actions.copy" : "koko.actions.paste"),
+            limit: result.limit
+          })
+        : t(direction === "copy" ? "koko.terminal.clipboardCopyDenied" : "koko.terminal.clipboardPasteDenied"),
+    color: "warning"
+  });
+  return false;
+}
+
+function installClipboardControls(el: HTMLElement, terminal: Terminal, terminalTabId: string) {
+  const onPaste = (event: ClipboardEvent) => {
+    const text = event.clipboardData?.getData("text/plain") ?? "";
+    if (canUseClipboardText("paste", text, terminalTabId)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  };
+  const onCopy = (event: ClipboardEvent) => {
+    const text = terminal.getSelection();
+    if (!text || canUseClipboardText("copy", text, terminalTabId)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  };
+
+  el.addEventListener("paste", onPaste, true);
+  el.addEventListener("copy", onCopy, true);
+  terminal.attachCustomKeyEventHandler((event) => {
+    if (event.key === "Enter" && event.isComposing) return false;
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c" && terminal.hasSelection()) return false;
+    return !((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "v");
+  });
+
+  return () => {
+    el.removeEventListener("paste", onPaste, true);
+    el.removeEventListener("copy", onCopy, true);
+  };
+}
 
 function toggleSearch() {
   searchVisible.value = !searchVisible.value;
@@ -187,7 +251,8 @@ function mountTerminal(tabItem: TerminalTab, target: ConnectTarget) {
   terminal.loadAddon(fit);
   terminal.open(el);
   fit.fit();
-  terminals.set(tabItem.id, { terminal, fit });
+  const cleanupClipboard = installClipboardControls(el, terminal, tabItem.id);
+  terminals.set(tabItem.id, { terminal, fit, cleanupClipboard });
 
   terminal.onData((data) => {
     if (!globalTerminalId.value) return;
@@ -228,8 +293,10 @@ function closeTab(tabItem: TerminalTab) {
   if (terminalSocket.connected.value && globalTerminalId.value) {
     terminalSocket.closeTerminal(globalTerminalId.value, tabItem.id);
   }
+  terminals.get(tabItem.id)?.cleanupClipboard();
   terminals.get(tabItem.id)?.terminal.dispose();
   terminals.delete(tabItem.id);
+  sessionClipboardAccess.delete(tabItem.id);
 
   const index = terminalTabs.value.findIndex((item) => item.id === tabItem.id);
   if (index === -1) return;
@@ -271,6 +338,11 @@ function observeAppTheme() {
 
 const stopMessageListener = terminalSocket.onMessage((message) => {
   if (message.type === KubernetesTerminalMessageType.Connect) {
+    const info = parseJson<{
+      permission?: ClipboardPermission | null;
+      clipboard_policy?: ClipboardPolicy | null;
+    }>(message.data);
+    defaultClipboardAccess.value = resolveClipboardAccess(info?.permission, info?.clipboard_policy);
     globalTerminalId.value = message.id;
     terminalSocket.requestTree();
     markSessionConnected(props.tab.id);
@@ -283,6 +355,15 @@ const stopMessageListener = terminalSocket.onMessage((message) => {
     terminals
       .get(message.k8s_id)
       ?.terminal.write(Uint8Array.from(atob(message.raw || ""), (char) => char.charCodeAt(0)));
+  } else if (message.type === KubernetesTerminalMessageType.TerminalSession) {
+    const sessionInfo = parseJson<{
+      permission?: ClipboardPermission | null;
+      clipboard_policy?: ClipboardPolicy | null;
+    }>(message.data);
+    sessionClipboardAccess.set(
+      message.k8s_id,
+      resolveClipboardAccess(sessionInfo?.permission, sessionInfo?.clipboard_policy)
+    );
   } else if (
     message.type === KubernetesTerminalMessageType.Error ||
     message.type === KubernetesTerminalMessageType.TerminalError
@@ -300,8 +381,8 @@ const stopFailureListener = terminalSocket.onFailure((failure) => {
   markSessionFailed({
     tabId: props.tab.id,
     assetId: props.tab.assetId,
-    protocol: props.tab.protocol,
-    account: props.tab.account
+    protocol: props.tab.protocol || "",
+    account: props.tab.account || ""
   });
 });
 
@@ -327,8 +408,12 @@ onUnmounted(() => {
   themeObserver?.disconnect();
   stopFailureListener();
   stopMessageListener();
-  for (const { terminal } of terminals.values()) terminal.dispose();
+  for (const { terminal, cleanupClipboard } of terminals.values()) {
+    cleanupClipboard();
+    terminal.dispose();
+  }
   terminals.clear();
+  sessionClipboardAccess.clear();
   terminalSocket.close();
 });
 </script>

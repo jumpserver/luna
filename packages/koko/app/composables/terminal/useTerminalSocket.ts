@@ -48,8 +48,16 @@ export const useKokoTerminalSocket = () => {
   const { t } = useI18n();
   const { addErrorToast } = useErrorToast();
   const { createSentry } = zmodem;
-  const { sendHostEvent, emitTerminalConnect, emitTerminalSession, hostBridge, sendMittEvent, sendToHost } =
-    useKokoTerminalEvents();
+  const {
+    sendHostEvent,
+    emitTerminalConnect,
+    emitTerminalSession,
+    hostBridge,
+    sendMittEvent,
+    sendToHost,
+    setClipboardAccess,
+    validateClipboardText
+  } = useKokoTerminalEvents();
 
   const containerRef = shallowRef<HTMLElement>();
   const shareId = ref("");
@@ -155,7 +163,8 @@ export const useKokoTerminalSocket = () => {
     translate: t,
     sendHostEvent,
     sendToHost,
-    sendMittEvent
+    sendMittEvent,
+    validateClipboardText
   });
 
   let lastMessage = "";
@@ -189,6 +198,7 @@ export const useKokoTerminalSocket = () => {
     sendHostEvent,
     emitTerminalConnect,
     emitTerminalSession,
+    setClipboardAccess,
     showInfoOnce,
     onZmodemEnd: zmodem.finishDraining,
     onZmodemAbort: () => {

@@ -1,6 +1,6 @@
 import type { Terminal } from "@xterm/xterm";
 import type { Ref } from "vue";
-import type { ILunaConfig } from "#koko/types";
+import type { ClipboardDirection, ILunaConfig } from "#koko/types";
 
 import { FORMATTER_MESSAGE_TYPE, HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 
@@ -30,6 +30,7 @@ export function useKokoTerminalInput(options: {
   sendHostEvent: (event: string, data: unknown) => void;
   sendToHost: (event: HOST_MESSAGE_TYPE, data: unknown) => void;
   sendMittEvent: (event: TerminalMittEvent) => void;
+  validateClipboardText: (direction: ClipboardDirection, text: string) => boolean;
 }) {
   const cleanup: Array<() => void> = [];
 
@@ -59,7 +60,20 @@ export function useKokoTerminalInput(options: {
         }
         return;
       }
+      if (!options.validateClipboardText("paste", text)) return;
       socket.send(formatMessage(options.terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, text));
+    };
+    const onPaste = (event: ClipboardEvent) => {
+      const text = event.clipboardData?.getData("text/plain") ?? "";
+      if (options.validateClipboardText("paste", text)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+    const onCopy = (event: ClipboardEvent) => {
+      const text = terminal.getSelection();
+      if (!text || options.validateClipboardText("copy", text)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
     };
     const onMouseLeave = () => {
       terminal.blur();
@@ -79,12 +93,16 @@ export function useKokoTerminalInput(options: {
     container.addEventListener("click", onClick);
     container.addEventListener("mouseenter", onMouseEnter);
     container.addEventListener("contextmenu", onContextMenu);
+    container.addEventListener("paste", onPaste, true);
+    container.addEventListener("copy", onCopy, true);
     container.addEventListener("mouseleave", onMouseLeave);
     container.addEventListener("keydown", onKeyDown);
     cleanup.push(
       () => container.removeEventListener("click", onClick),
       () => container.removeEventListener("mouseenter", onMouseEnter),
       () => container.removeEventListener("contextmenu", onContextMenu),
+      () => container.removeEventListener("paste", onPaste, true),
+      () => container.removeEventListener("copy", onCopy, true),
       () => container.removeEventListener("mouseleave", onMouseLeave),
       () => container.removeEventListener("keydown", onKeyDown)
     );
@@ -107,15 +125,21 @@ export function useKokoTerminalInput(options: {
     terminal.onResize(options.onResize);
     terminal.onSelectionChange(async () => {
       options.selectionText.value = terminal.getSelection() || "";
-      if (options.selectionText.value) await writeText(options.selectionText.value);
+      if (!options.selectionText.value || !options.validateClipboardText("copy", options.selectionText.value)) return;
+      try {
+        await writeText(options.selectionText.value);
+      } catch (error) {
+        console.error("Failed to write terminal selection to clipboard:", error);
+      }
     });
     terminal.attachCustomKeyEventHandler((event) => {
+      if (event.key === "Enter" && event.isComposing) return false;
       if (event.altKey && event.shiftKey && (event.key === "ArrowRight" || event.key === "ArrowLeft")) {
         options.onHostKey(event.key);
         return false;
       }
-      if (event.ctrlKey && event.key === "c" && terminal.hasSelection()) return false;
-      return !(event.ctrlKey && event.key === "v");
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c" && terminal.hasSelection()) return false;
+      return !((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "v");
     });
   }
 

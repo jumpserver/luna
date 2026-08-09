@@ -4,7 +4,8 @@ import {
   KubernetesTerminalControlData,
   KubernetesTerminalMessageType,
   KubernetesTerminalSocketFailureCode,
-  KubernetesTerminalWebSocketProtocol
+  KubernetesTerminalWebSocketProtocol,
+  parseKubernetesTerminalMessage
 } from "./protocol";
 import { useKubernetesTerminalSocket } from "./useKubernetesTerminalSocket";
 
@@ -56,6 +57,26 @@ beforeEach(() => {
 });
 
 afterEach(() => vi.unstubAllGlobals());
+
+it("preserves clipboard policy payloads from connection and terminal session messages", () => {
+  const connectData = JSON.stringify({ permission: { actions: ["copy"] } });
+  const sessionData = JSON.stringify({ clipboard_policy: { paste: { enabled: false } } });
+
+  expect(
+    parseKubernetesTerminalMessage({
+      type: KubernetesTerminalMessageType.Connect,
+      id: "terminal-1",
+      data: connectData
+    })
+  ).toEqual({ type: KubernetesTerminalMessageType.Connect, id: "terminal-1", data: connectData });
+  expect(
+    parseKubernetesTerminalMessage({
+      type: KubernetesTerminalMessageType.TerminalSession,
+      k8s_id: "tab-1",
+      data: sessionData
+    })
+  ).toEqual({ type: KubernetesTerminalMessageType.TerminalSession, k8s_id: "tab-1", data: sessionData });
+});
 
 it("initializes the Kubernetes socket, replies to PING, and sends typed commands", () => {
   const client = useKubernetesTerminalSocket();

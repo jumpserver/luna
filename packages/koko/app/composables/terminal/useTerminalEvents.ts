@@ -36,11 +36,11 @@ export const useKokoTerminalEvents = () => {
     context.eventBus.emit(TerminalEventType.Session, info);
   };
 
-  const sendMittEvent = (event: TerminalMittEvent, data?: unknown) => {
-    context.sendMittEvent(event, data || {});
+  const sendMittEvent = (event: TerminalMittEvent) => {
+    context.sendMittEvent(event);
   };
 
-  const onMittEvent = (event: TerminalMittEvent, callback: (data: unknown) => void) => {
+  const onMittEvent = (event: TerminalMittEvent, callback: () => void) => {
     const unsubscribe = context.onMittEvent(event, callback);
     onUnmounted(() => unsubscribe());
 
@@ -81,6 +81,8 @@ export const useKokoTerminalEvents = () => {
     emitTerminalSession,
     emitTerminalConnect,
 
-    hostBridge: context.hostBridge
+    hostBridge: context.hostBridge,
+    setClipboardAccess: context.setClipboardAccess,
+    validateClipboardText: context.validateClipboardText
   };
 };
