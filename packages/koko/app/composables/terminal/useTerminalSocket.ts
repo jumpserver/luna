@@ -1,13 +1,24 @@
+import type { TerminalMessageHandlers } from "#koko/composables/terminal/useTerminalMessageHandler";
 import type { OnlineUser, SettingConfig, ShareUserOptions } from "#koko/types";
 import type { KokoZmodemSentry } from "./zmodemTypes";
 import { connectorSessionKey, FORMATTER_MESSAGE_TYPE, HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { useKokoHostAdapter } from "@jumpserver/koko/host";
 import { useDebounceFn, useResizeObserver } from "@vueuse/core";
-import { FitAddon } from "@xterm/addon-fit";
 
+import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { Terminal } from "@xterm/xterm";
+import {
+  handleKokoLatencyPong,
+  handleKokoLinuxMetricsStatus,
+  handleKokoLinuxMetricsUpdate,
+  LATENCY_PONG,
+  METRICS_STATUS,
+  METRICS_UPDATE,
+  registerKokoLinuxMetricsSession,
+  unregisterKokoLinuxMetricsSession
+} from "#koko/composables/terminal/useLinuxMetrics";
 import {
   handleKokoTerminalAiMessage,
   isKokoTerminalAiInputLocked,
@@ -175,7 +186,7 @@ export const useKokoTerminalSocket = () => {
     lastMessage = content;
   };
 
-  const terminalMessageHandlers = createKokoTerminalMessageHandlers({
+  const terminalMessageHandlers: TerminalMessageHandlers = createKokoTerminalMessageHandlers({
     socketRef,
     terminalRef,
     featureSetting,
@@ -210,9 +221,28 @@ export const useKokoTerminalSocket = () => {
       if (tabId) {
         registerKokoTerminalSession(tabId, { socket, terminalId: id });
         registerKokoTerminalAiSession(tabId, socket, id);
+        registerKokoLinuxMetricsSession(tabId, { socket, terminalId: id });
       }
     }
   });
+  terminalMessageHandlers[METRICS_UPDATE] = (message) => {
+    const tabId = unref(sessionCtxRef)?.tabId;
+    if (tabId && (!message.terminalId || message.terminalId === Number(terminalId.value))) {
+      handleKokoLinuxMetricsUpdate(tabId, message.data);
+    }
+  };
+  terminalMessageHandlers[METRICS_STATUS] = (message) => {
+    const tabId = unref(sessionCtxRef)?.tabId;
+    if (tabId && (!message.terminalId || message.terminalId === Number(terminalId.value))) {
+      handleKokoLinuxMetricsStatus(tabId, message.data);
+    }
+  };
+  terminalMessageHandlers[LATENCY_PONG] = (message) => {
+    const tabId = unref(sessionCtxRef)?.tabId;
+    if (tabId && (!message.terminalId || message.terminalId === Number(terminalId.value))) {
+      handleKokoLatencyPong(tabId, message.data);
+    }
+  };
   const messageHandler = useKokoTerminalMessageHandler(terminalMessageHandlers, {
     onTerminalOutput: (messageTerminalId, data) => {
       if (messageTerminalId === Number(terminalId.value)) {
@@ -351,6 +381,7 @@ export const useKokoTerminalSocket = () => {
     if (tabId) {
       unregisterKokoTerminalSession(tabId);
       unregisterKokoTerminalAiSession(tabId, socketRef.value);
+      unregisterKokoLinuxMetricsSession(tabId, socketRef.value);
       hostAdapter.clearSessionDetails(tabId);
     }
     transport.close();

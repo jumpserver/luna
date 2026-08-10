@@ -1,4 +1,10 @@
 export { default as KokoFileManagement } from "../app/components/FileManagement/index.vue";
+export {
+  getKokoLinuxMetrics,
+  subscribeKokoLinuxMetrics,
+  unsubscribeKokoLinuxMetrics
+} from "../app/composables/terminal/useLinuxMetrics";
+export type { KokoLinuxMetricsSample, KokoLinuxMetricsState } from "../app/composables/terminal/useLinuxMetrics";
 export { useKokoSessionAdapter } from "../app/composables/useSessionAdapter";
 export { sendKokoTerminalData, sendKokoTerminalDataToMany } from "../app/composables/useTerminalSessionRegistry";
 export {

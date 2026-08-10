@@ -528,9 +528,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           class="group relative flex h-7 min-w-0 shrink-0 items-center gap-1.5 rounded-md px-2 text-left transition-colors"
           :class="[
             activeTabId === tab.id ? 'max-w-84 pr-2' : 'max-w-44',
-            activeTabId === tab.id
-              ? 'workspace-session-tab-active'
-              : 'text-[var(--app-muted)]',
+            activeTabId === tab.id ? 'workspace-session-tab-active' : 'text-[var(--app-muted)]',
             draggedTabId === tab.id ? 'opacity-60' : ''
           ]"
           @click.stop="selectTab(tab.id)"
@@ -744,5 +742,4 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 .workspace-tab-strip::-webkit-scrollbar {
   display: none;
 }
-
 </style>
