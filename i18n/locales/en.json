@@ -741,6 +741,7 @@
       "stepResetDefault": "Click “Restore default folder” to return to the default setting."
     },
     "sftpEditor": {
+      "explorerTitle": "Editor",
       "nameRequired": "Enter a name",
       "nameCannotContainPathSeparator": "The name cannot contain path separators",
       "nameAlreadyExists": "A file or directory with this name already exists",
@@ -749,9 +750,7 @@
       "unsavedCloseConfirm": "{name} has unsaved changes. Close it?",
       "newFile": "New file",
       "newDirectory": "New directory",
-      "collapseAll": "Collapse all",
       "refreshTree": "Refresh file tree",
-      "filterFiles": "Filter files",
       "directoryName": "Directory name",
       "fileName": "File name",
       "loading": "Loading",
@@ -822,7 +821,6 @@
       "dropToRightEditor": "Open in the right editor group",
       "dropToSplitRight": "Open in a new editor group on the right",
       "editorEmptyHint": "Drop a file here, or press Ctrl/Cmd+P to open one",
-      "quickOpen": "Quick Open",
       "quickOpenShortcut": "Quick Open (Ctrl/Cmd+P)",
       "quickOpenPlaceholder": "Type a file name or path",
       "quickOpenNoResults": "No matching files",

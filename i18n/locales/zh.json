@@ -744,6 +744,7 @@
       "stepResetDefault": "如果想回到默认设置，可以点“恢复默认目录”。"
     },
     "sftpEditor": {
+      "explorerTitle": "Editor",
       "nameRequired": "请输入名称",
       "nameCannotContainPathSeparator": "名称不能包含路径分隔符",
       "nameAlreadyExists": "同名文件或目录已经存在",
@@ -752,9 +753,7 @@
       "unsavedCloseConfirm": "{name} 尚未保存，确定关闭吗？",
       "newFile": "新建文件",
       "newDirectory": "新建目录",
-      "collapseAll": "全部折叠",
       "refreshTree": "刷新目录树",
-      "filterFiles": "筛选文件",
       "directoryName": "目录名称",
       "fileName": "文件名称",
       "loading": "加载中",
@@ -825,7 +824,6 @@
       "dropToRightEditor": "在右侧编辑器组打开",
       "dropToSplitRight": "在右侧新编辑器组打开",
       "editorEmptyHint": "拖入文件，或按 Ctrl/Cmd+P 快速打开",
-      "quickOpen": "快速打开",
       "quickOpenShortcut": "快速打开（Ctrl/Cmd+P）",
       "quickOpenPlaceholder": "输入文件名或路径",
       "quickOpenNoResults": "没有匹配的文件",

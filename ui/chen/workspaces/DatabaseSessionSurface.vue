@@ -523,7 +523,7 @@ function resolveActionMenuIcon(item: ChenActionItem) {
   if (label === "view data" || label === "查看数据") return "i-lucide-table-properties";
   if (label === "properties" || label === "属性") return "i-lucide-info";
 
-  return item.icon?.startsWith("i-") ? item.icon : undefined;
+  return undefined;
 }
 
 function mapActionItems(node: ChenTreeNode, items: ChenActionItem[]): DropdownMenuItem[] {
