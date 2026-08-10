@@ -71,10 +71,12 @@ watch([columnDefs, () => props.dataset.data], async () => {
 </template>
 
 <style scoped>
-.chen-console-grid {
+.chen-console-grid,
+.chen-console-grid :deep(.ag-theme-balham) {
   --ag-font-family: var(--font-mono);
   --ag-font-size: 12px;
   --ag-background-color: var(--data-grid-row-background);
+  --ag-data-background-color: var(--data-grid-row-background);
   --ag-foreground-color: var(--data-grid-text);
   --ag-header-background-color: var(--data-grid-header-background);
   --ag-header-foreground-color: var(--data-grid-text);
@@ -100,6 +102,12 @@ watch([columnDefs, () => props.dataset.data], async () => {
 .chen-console-grid :deep(.ag-cell) {
   display: flex;
   align-items: center;
+}
+
+.chen-console-grid :deep(.ag-row-hover:not(.ag-full-width-row)::after),
+.chen-console-grid :deep(.ag-row-selected:not(.ag-full-width-row)::after) {
+  background-color: var(--ag-internal-row-overlay-color);
+  background-image: var(--ag-internal-row-overlay-image);
 }
 
 .chen-console-grid :deep(.ag-cell-value),

@@ -112,8 +112,8 @@ function selectPropertyTab(propertyTab: ChenDataViewPropertyTab) {
 
 <template>
   <div class="flex h-full min-h-0 flex-col">
-    <div class="flex items-center justify-between gap-2 border-b border-default px-2 py-1">
-      <div class="flex min-w-0 items-center gap-1 overflow-x-auto">
+    <div class="flex items-center gap-1 overflow-x-auto border-b border-default px-2 py-1">
+      <div class="flex shrink-0 items-center gap-1">
         <button
           class="rounded-md px-2 py-1 text-xs"
           :class="tab.activePanel === 'data' ? 'bg-accented' : 'text-muted'"
@@ -126,18 +126,18 @@ function selectPropertyTab(propertyTab: ChenDataViewPropertyTab) {
           :key="propertyTab.id"
           class="rounded-md px-2 py-1 text-xs"
           :class="
-            tab.activePanel === 'properties' && tab.activePropertyTab === propertyTab.id
-              ? 'bg-accented'
-              : 'text-muted'
+            tab.activePanel === 'properties' && tab.activePropertyTab === propertyTab.id ? 'bg-accented' : 'text-muted'
           "
           @click="selectPropertyTab(propertyTab.id)"
         >
           {{ propertyTab.label }}
         </button>
       </div>
+    </div>
 
-      <div class="flex items-center gap-1">
-        <template v-if="tab.activePanel === 'data' && editing.editable.value">
+    <div v-if="tab.activePanel === 'data'" class="flex min-h-0 flex-1 flex-col">
+      <div class="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-default px-2 py-1">
+        <div v-if="editing.editable.value" class="flex shrink-0 items-center gap-1">
           <UButton
             v-if="editing.insertable.value"
             icon="i-lucide-plus"
@@ -178,29 +178,29 @@ function selectPropertyTab(propertyTab: ChenDataViewPropertyTab) {
           >
             Cancel
           </UButton>
-        </template>
+        </div>
         <DataViewToolbar
-          v-if="tab.activePanel === 'data'"
+          class="ml-auto shrink-0"
           :state="tab.state"
           :busy="editing.busy.value"
           @action="(action, data) => emit('dataViewAction', tab, action, data)"
           @export="openExportDialog"
         />
       </div>
-    </div>
 
-    <div v-if="tab.activePanel === 'data'" class="min-h-0 flex-1 overflow-auto">
-      <ChenDataGrid
-        ref="dataGrid"
-        :key="`${tab.id}:${tab.data?.fields?.map((field) => field.name).join(',') || ''}:${tab.data?.data?.length || 0}`"
-        :dataset="tab.data"
-        :meta="tab.meta"
-        :db-type="dbType"
-        :can-copy="canCopy"
-        :edit-mode="editing.busy.value ? 'none' : 'full'"
-        :edit-state="tab.editState"
-        @selection-change="selectedRows = $event"
-      />
+      <div class="min-h-0 flex-1 overflow-auto">
+        <ChenDataGrid
+          ref="dataGrid"
+          :key="`${tab.id}:${tab.data?.fields?.map((field) => field.name).join(',') || ''}:${tab.data?.data?.length || 0}`"
+          :dataset="tab.data"
+          :meta="tab.meta"
+          :db-type="dbType"
+          :can-copy="canCopy"
+          :edit-mode="editing.busy.value ? 'none' : 'full'"
+          :edit-state="tab.editState"
+          @selection-change="selectedRows = $event"
+        />
+      </div>
     </div>
 
     <div v-else class="flex min-h-0 flex-1 flex-col overflow-hidden">

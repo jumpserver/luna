@@ -73,6 +73,10 @@ const resolveChenWsUrl = (path: "session" | "console") => chenWsUrl(path, endpoi
 
 const sidebarWidth = ref(280);
 const resizing = ref(false);
+let resizeStartX = 0;
+let resizeStartWidth = 0;
+let resizeHandle: HTMLElement | null = null;
+let resizePointerId: number | null = null;
 const discardDialogOpen = ref(false);
 const pendingDiscard = shallowRef<(() => void) | null>(null);
 const GUARDED_DATA_VIEW_ACTIONS = new Set<ChenDataViewAction>([
@@ -501,6 +505,27 @@ const {
   visible: contextMenuVisible
 } = actionMenu;
 
+const ACTION_MENU_ICONS: Record<string, string> = {
+  query: "i-lucide-file-code-2",
+  new_query: "i-lucide-file-code-2",
+  view_data: "i-lucide-table-properties",
+  show: "i-lucide-info",
+  property: "i-lucide-info",
+  properties: "i-lucide-info"
+};
+
+function resolveActionMenuIcon(item: ChenActionItem) {
+  const key = item.key.trim().toLowerCase().replaceAll("-", "_");
+  if (ACTION_MENU_ICONS[key]) return ACTION_MENU_ICONS[key];
+
+  const label = item.label.trim().toLowerCase();
+  if (label === "new query" || label === "新建查询") return "i-lucide-file-code-2";
+  if (label === "view data" || label === "查看数据") return "i-lucide-table-properties";
+  if (label === "properties" || label === "属性") return "i-lucide-info";
+
+  return item.icon?.startsWith("i-") ? item.icon : undefined;
+}
+
 function mapActionItems(node: ChenTreeNode, items: ChenActionItem[]): DropdownMenuItem[] {
   return items.flatMap((item): DropdownMenuItem[] => {
     const onSelect = () => {
@@ -508,9 +533,10 @@ function mapActionItems(node: ChenTreeNode, items: ChenActionItem[]): DropdownMe
       closeActionMenu();
       void applyTreeAction(node, item.key);
     };
+    const icon = resolveActionMenuIcon(item);
     const mappedItem: DropdownMenuItem = {
       label: item.label,
-      ...(item.icon ? { icon: item.icon } : {}),
+      ...(icon ? { icon } : {}),
       ...(item.disabled ? { disabled: true } : {}),
       ...(item.children?.length ? { children: mapActionItems(node, item.children) } : { onSelect })
     };
@@ -688,17 +714,36 @@ function updateDataViewPropertyTab(
   tab.activePropertyTab = propertyTab;
 }
 
-function startResize() {
+function startResize(event: PointerEvent) {
+  if (event.button !== 0) return;
+
+  event.preventDefault();
   resizing.value = true;
+  resizeStartX = event.clientX;
+  resizeStartWidth = sidebarWidth.value;
+  resizeHandle = event.currentTarget as HTMLElement;
+  resizePointerId = event.pointerId;
+  resizeHandle.setPointerCapture(event.pointerId);
+  document.body.style.cursor = "col-resize";
+  document.body.style.userSelect = "none";
 }
 
 function handlePointerMove(event: PointerEvent) {
   if (!resizing.value) return;
-  sidebarWidth.value = Math.min(420, Math.max(220, event.clientX));
+  sidebarWidth.value = Math.min(420, Math.max(220, resizeStartWidth + event.clientX - resizeStartX));
 }
 
 function stopResize() {
+  if (!resizing.value) return;
+
   resizing.value = false;
+  if (resizeHandle && resizePointerId !== null && resizeHandle.hasPointerCapture(resizePointerId)) {
+    resizeHandle.releasePointerCapture(resizePointerId);
+  }
+  resizeHandle = null;
+  resizePointerId = null;
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
 }
 
 function focus() {}
@@ -707,14 +752,17 @@ onMounted(() => {
   void session.bootstrapSession();
   window.addEventListener("pointermove", handlePointerMove);
   window.addEventListener("pointerup", stopResize);
+  window.addEventListener("pointercancel", stopResize);
 });
 
 onBeforeUnmount(() => {
+  stopResize();
   closeAllConsoleSockets();
   workspace.closeAllTabs();
   session.cleanupSession();
   window.removeEventListener("pointermove", handlePointerMove);
   window.removeEventListener("pointerup", stopResize);
+  window.removeEventListener("pointercancel", stopResize);
 });
 
 defineExpose({ focus });
@@ -739,9 +787,17 @@ defineExpose({ focus });
       />
 
       <div
-        class="w-1 shrink-0 cursor-col-resize bg-default/60 hover:bg-primary/40"
-        @pointerdown.prevent="startResize"
-      />
+        role="separator"
+        aria-label="Resize database sidebar"
+        aria-orientation="vertical"
+        :aria-valuenow="sidebarWidth"
+        aria-valuemin="220"
+        aria-valuemax="420"
+        class="group relative z-20 w-px shrink-0 cursor-col-resize touch-none bg-default/60 hover:bg-primary/40 active:bg-primary/60"
+        @pointerdown="startResize"
+      >
+        <div class="absolute inset-y-0 -left-1.5 -right-1.5" />
+      </div>
 
       <section class="flex min-h-0 min-w-0 flex-1 flex-col">
         <WorkspaceTabBar

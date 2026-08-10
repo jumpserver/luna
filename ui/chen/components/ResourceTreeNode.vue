@@ -67,6 +67,15 @@ const iconName = computed(() => {
       return isExpanded.value ? "i-lucide-folder-open" : "i-lucide-folder";
   }
 });
+
+function handleRowClick() {
+  emit("select", props.node);
+  if (!props.node.leaf) emit("toggle", props.node);
+}
+
+function handleRowDoubleClick() {
+  if (props.node.type === "table" || props.node.type === "view") emit("activate", props.node);
+}
 </script>
 
 <template>
@@ -76,8 +85,8 @@ const iconName = computed(() => {
       :class="selectedKey === node.key ? 'bg-[var(--app-selected-soft)] text-[var(--app-fg)]' : ''"
       :data-active="selectedKey === node.key ? '' : undefined"
       :style="{ paddingLeft: `${(depth || 0) * 12 + 6}px` }"
-      @click="emit('select', node)"
-      @dblclick="emit('activate', node)"
+      @click="handleRowClick"
+      @dblclick="handleRowDoubleClick"
       @contextmenu.prevent="emit('menu', { node, event: $event })"
     >
       <button

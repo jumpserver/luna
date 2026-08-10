@@ -428,10 +428,12 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.chen-grid {
+.chen-grid,
+.chen-grid :deep(.ag-theme-balham) {
   --ag-font-family: var(--font-sans);
   --ag-font-size: 12px;
   --ag-background-color: var(--data-grid-row-background);
+  --ag-data-background-color: var(--data-grid-row-background);
   background: var(--data-grid-row-background);
   --ag-foreground-color: var(--data-grid-text);
   --ag-header-background-color: var(--data-grid-header-background);
@@ -530,6 +532,12 @@ onBeforeUnmount(() => {
 .chen-grid :deep(.ag-row-hover) {
   background: var(--data-grid-row-hover);
   color: var(--data-grid-text);
+}
+
+.chen-grid :deep(.ag-row-hover:not(.ag-full-width-row)::after),
+.chen-grid :deep(.ag-row-selected:not(.ag-full-width-row)::after) {
+  background-color: var(--ag-internal-row-overlay-color);
+  background-image: var(--ag-internal-row-overlay-image);
 }
 
 .chen-grid :deep(.ag-row-selected) {
