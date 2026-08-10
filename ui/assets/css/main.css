@@ -118,7 +118,8 @@
   --terminal-selection: color-mix(in srgb, var(--theme-fg) 22%, transparent);
   --data-grid-header-background: var(--app-surface-panel);
   --data-grid-row-background: var(--app-surface-canvas);
-  --data-grid-row-hover: color-mix(in srgb, var(--theme-fg) 8%, var(--app-surface-canvas));
+  --data-grid-row-striped: color-mix(in srgb, var(--theme-fg) 10%, var(--app-surface-canvas));
+  --data-grid-row-hover: color-mix(in srgb, var(--theme-fg) 16%, var(--app-surface-canvas));
   --data-grid-row-selected: color-mix(in srgb, var(--theme-accent) 12%, var(--app-surface-canvas));
   --data-grid-border: var(--app-border-subtle);
   --data-grid-text: var(--app-text-primary);
@@ -179,6 +180,17 @@
   --sidebar-icon-color: color-mix(in srgb, var(--app-text-primary) 64%, transparent);
   --sidebar-icon-muted: color-mix(in srgb, var(--app-text-muted) 82%, transparent);
   --sidebar-icon-active: var(--app-text-primary);
+}
+
+.dark {
+  --syntax-keyword: #89b4fa;
+  --syntax-string: #a6e3a1;
+  --syntax-number: #fab387;
+  --syntax-comment: color-mix(in srgb, var(--theme-fg) 58%, var(--theme-bg));
+  --syntax-type: #94e2d5;
+  --syntax-function: #cba6f7;
+  --syntax-constant: #f5c2e7;
+  --syntax-property: #f9e2af;
 }
 
 * {

@@ -22,6 +22,7 @@ const emit = defineEmits<{
   toggle: [node: ChenTreeNode];
   activate: [node: ChenTreeNode];
   menu: [payload: { node: ChenTreeNode; event: MouseEvent }];
+  clearRecent: [];
 }>();
 
 const isExpanded = computed(() => props.expandedKeys.includes(props.node.key));
@@ -60,6 +61,10 @@ const iconName = computed(() => {
       return "i-lucide-table-properties";
     case "view":
       return "i-lucide-eye";
+    case "recent-group":
+      return "i-lucide-history";
+    case "recent-table":
+      return "i-lucide-table-2";
     case "field":
     case "column":
       return "i-lucide-columns-3";
@@ -74,25 +79,32 @@ function handleRowClick() {
 }
 
 function handleRowDoubleClick() {
-  if (props.node.type === "table" || props.node.type === "view") emit("activate", props.node);
+  if (props.node.type === "table" || props.node.type === "view" || props.node.type === "recent-table") {
+    emit("activate", props.node);
+  }
+}
+
+function handleContextMenu(event: MouseEvent) {
+  if (props.node.type === "recent-group" || props.node.type === "recent-table") return;
+  emit("menu", { node: props.node, event });
 }
 </script>
 
 <template>
   <li>
     <div
-      class="sidebar-row flex h-7 w-full cursor-default items-center gap-1 rounded-lg pr-1 text-left text-xs"
+      class="sidebar-row group flex h-7 w-full cursor-default items-center gap-1 rounded-lg pr-1 text-left text-xs"
       :class="selectedKey === node.key ? 'bg-[var(--app-selected-soft)] text-[var(--app-fg)]' : ''"
       :data-active="selectedKey === node.key ? '' : undefined"
       :style="{ paddingLeft: `${(depth || 0) * 12 + 6}px` }"
       @click="handleRowClick"
       @dblclick="handleRowDoubleClick"
-      @contextmenu.prevent="emit('menu', { node, event: $event })"
+      @contextmenu.prevent="handleContextMenu"
     >
       <button
         v-if="!node.leaf"
         type="button"
-        class="grid size-4 shrink-0 place-items-center rounded-sm text-muted hover:bg-[var(--app-hover-strong)]"
+        class="grid size-4 shrink-0 place-items-center rounded-sm text-muted"
         :aria-label="isExpanded ? 'Collapse' : 'Expand'"
         @click.stop="emit('toggle', node)"
       >
@@ -105,10 +117,25 @@ function handleRowDoubleClick() {
       <span v-else class="size-4" />
       <img v-if="datasourceIconSrc" :src="datasourceIconSrc" alt="" class="sidebar-icon-img" />
       <UIcon v-else :name="iconName" class="sidebar-icon" />
-      <span class="min-w-0 flex-1 truncate">{{ node.label || node.name || node.key }}</span>
+      <span
+        class="min-w-0 flex-1 truncate"
+        :title="node.type === 'recent-table' ? node.fullLabel : undefined"
+      >
+        {{ node.label || node.name || node.key }}
+      </span>
+      <button
+        v-if="node.type === 'recent-group' && node.clearable"
+        type="button"
+        class="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-[color,background-color,opacity] group-hover:opacity-100 hover:bg-[var(--app-hover-strong)] hover:text-highlighted focus-visible:opacity-100"
+        aria-label="Clear recent tables"
+        title="Clear recent tables"
+        @click.stop="emit('clearRecent')"
+      >
+        <UIcon name="i-lucide-trash-2" class="size-3.5" />
+      </button>
     </div>
 
-    <ul v-if="isExpanded" class="space-y-0.5">
+    <ul v-if="isExpanded">
       <li
         v-if="loadingChildren[node.key]"
         class="px-1.5 py-0.5 text-[11px] text-muted"
@@ -137,6 +164,7 @@ function handleRowDoubleClick() {
         @toggle="emit('toggle', $event)"
         @activate="emit('activate', $event)"
         @menu="emit('menu', $event)"
+        @clear-recent="emit('clearRecent')"
       />
     </ul>
   </li>

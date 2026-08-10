@@ -202,23 +202,32 @@ onBeforeUnmount(clearMessageTimer);
     <div class="relative flex min-h-0 flex-col overflow-hidden border-b border-default p-3">
       <div class="mb-2 flex shrink-0 items-center gap-2">
         <UButton
+          v-if="tab.state.inQuery || tab.state.canCancel"
+          icon="i-lucide-square"
+          size="sm"
+          color="error"
+          :disabled="!tab.state.canCancel"
+          @click="emit('cancel', tab)"
+        >
+          Stop
+        </UButton>
+        <UButton
+          v-else
           icon="i-lucide-play"
           size="sm"
-          :loading="Boolean(tab.state.inQuery)"
-          :disabled="Boolean(tab.state.loading || tab.state.inQuery)"
+          :disabled="Boolean(tab.state.loading)"
           @click="runSelectedQuery"
         >
           {{ hasSelection ? "Run selected" : "Run" }}
         </UButton>
         <UButton
-          icon="i-lucide-square"
+          icon="i-lucide-align-left"
           size="sm"
           color="neutral"
           variant="soft"
-          :disabled="!tab.state.canCancel"
-          @click="emit('cancel', tab)"
-        />
-        <UButton size="sm" color="neutral" variant="soft" :disabled="contextBusy" @click="formatStatement">
+          :disabled="contextBusy"
+          @click="formatStatement"
+        >
           Format
         </UButton>
         <UButton

@@ -152,7 +152,8 @@ watch(
 
 watch(
   () => colorMode.value,
-  () => {
+  async () => {
+    await nextTick();
     editor?.dispatch({ effects: themeSlot.reconfigure(createCodeMirrorTheme()) });
   }
 );

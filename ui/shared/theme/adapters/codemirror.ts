@@ -3,11 +3,7 @@ import type { Extension } from "@codemirror/state";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
-import {
-  readResolvedEditorTokens,
-  readResolvedSyntaxTokens,
-  readResolvedWorkspaceTokens
-} from "~/shared/theme/resolvedTokens";
+import { readResolvedEditorTokens, readResolvedWorkspaceTokens } from "~/shared/theme/resolvedTokens";
 
 export function createCodeMirrorTheme(): Extension {
   const editor = readResolvedEditorTokens();
@@ -45,6 +41,20 @@ export function createCodeMirrorTheme(): Extension {
       backgroundColor: editor.bracketMatch,
       outline: "1px solid transparent"
     },
+    ".cm-tooltip": {
+      backgroundColor: workspace.panel,
+      color: editor.foreground,
+      border: `1px solid ${workspace.border}`,
+      boxShadow: "var(--theme-shadow-soft)"
+    },
+    ".cm-tooltip-autocomplete > ul > li": { color: editor.foreground },
+    ".cm-tooltip-autocomplete > ul > li[aria-selected]": {
+      backgroundColor: editor.selection,
+      color: editor.foreground
+    },
+    ".cm-completionDetail": { color: editor.gutterForeground },
+    ".cm-completionIcon": { color: editor.gutterForeground },
+    ".cm-completionMatchedText": { color: editor.foreground },
     ".cm-indent-markers .cm-indent-mark": { borderColor: editor.indentGuide },
     ".cm-indent-markers .cm-indent-mark.cm-indent-mark-active": { borderColor: editor.indentGuideActive },
     "&.cm-focused": { outline: "none" }
@@ -52,7 +62,18 @@ export function createCodeMirrorTheme(): Extension {
 }
 
 export function createCodeMirrorSyntaxTheme(): Extension {
-  const syntax = readResolvedSyntaxTokens();
+  const syntax = {
+    keyword: "var(--syntax-keyword)",
+    string: "var(--syntax-string)",
+    number: "var(--syntax-number)",
+    comment: "var(--syntax-comment)",
+    variable: "var(--syntax-variable)",
+    type: "var(--syntax-type)",
+    function: "var(--syntax-function)",
+    operator: "var(--syntax-operator)",
+    constant: "var(--syntax-constant)",
+    property: "var(--syntax-property)"
+  };
 
   return syntaxHighlighting(
     HighlightStyle.define([

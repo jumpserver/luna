@@ -442,9 +442,7 @@ watch(currentOrgId, () => {
               v-if="side === 'left' && !hostAdapter.isTauriRuntime()"
               type="button"
               class="flex h-7 min-w-0 items-center gap-1 rounded-md px-2 text-xs"
-              :class="
-                globalActiveIds.left === 'web-upload' ? 'bg-accented text-highlighted' : 'text-muted'
-              "
+              :class="globalActiveIds.left === 'web-upload' ? 'bg-accented text-highlighted' : 'text-muted'"
               @click="globalActiveIds.left = 'web-upload'"
             >
               <UIcon name="i-lucide-upload" class="size-3.5 shrink-0" />

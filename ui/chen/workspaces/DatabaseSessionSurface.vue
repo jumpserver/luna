@@ -30,6 +30,7 @@ import { useChenActionMenu } from "~/chen/composables/useChenActionMenu";
 import { useChenAuth } from "~/chen/composables/useChenAuth";
 import { useChenDataView } from "~/chen/composables/useChenDataView";
 import { useChenQueryConsole } from "~/chen/composables/useChenQueryConsole";
+import { useChenRecentTables } from "~/chen/composables/useChenRecentTables";
 import { useChenResourceTree } from "~/chen/composables/useChenResourceTree";
 import { useChenSession } from "~/chen/composables/useChenSession";
 import { useChenSqlHints } from "~/chen/composables/useChenSqlHints";
@@ -101,6 +102,7 @@ const tree = useChenResourceTree(auth.chenToken, {
   }
 });
 const workspace = useChenWorkspaceTabs();
+const recentTables = useChenRecentTables(`${props.tab.assetId}:${props.tab.protocol}`);
 const dataView = useChenDataView(sendConsoleAction);
 const consoleConnections = new Map<string, ReturnType<typeof useChenWebSocket>>();
 
@@ -109,7 +111,34 @@ const currentWorkspaceNodeKey = computed(() => {
     tree.selectedNodeKey.value || workspace.activeWorkspaceTab.value?.nodeKey || tree.rootNodes.value[0]?.key || ""
   );
 });
-const currentWorkspaceNode = computed(() => tree.findNodeByKey(currentWorkspaceNodeKey.value));
+const RECENT_TABLES_ROOT_KEY = "__chen_recent_tables__";
+const recentTableNodes = computed<ChenTreeNode[]>(() =>
+  recentTables.entries.value.map((entry) => ({
+    key: `${RECENT_TABLES_ROOT_KEY}:${entry.node.key}`,
+    label: entry.node.label || entry.node.name || entry.node.key,
+    fullLabel: entry.label || entry.node.label || entry.node.name || entry.node.key,
+    type: "recent-table",
+    leaf: true,
+    recentEntry: entry
+  }))
+);
+const explorerRootNodes = computed<ChenTreeNode[]>(() => [
+  {
+    key: RECENT_TABLES_ROOT_KEY,
+    label: "Recently tables",
+    type: "recent-group",
+    leaf: recentTableNodes.value.length === 0,
+    hasChildren: recentTableNodes.value.length > 0,
+    clearable: recentTableNodes.value.length > 0,
+    children: recentTableNodes.value
+  },
+  ...tree.rootNodes.value
+]);
+const currentWorkspaceNode = computed(() => {
+  const node = tree.findNodeByKey(currentWorkspaceNodeKey.value);
+  if (node) return node;
+  return recentTableNodes.value.find((item) => item.key === currentWorkspaceNodeKey.value)?.recentEntry?.node || null;
+});
 const currentContextLabel = computed(() => currentWorkspaceNode.value?.label || currentWorkspaceNode.value?.name || "");
 const consolePromptLabel = computed(() => {
   const dbType = `${auth.profile.value?.dbType || props.tab.protocol || ""}`.toLowerCase();
@@ -557,6 +586,14 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
         break;
       case "view_data":
         openDataViewWorkspace(response.data, "Data View");
+        recentTables.add(
+          node,
+          tree.findNodePathByKey(node.key),
+          auth.profile.value?.dbType || props.tab.protocol
+        );
+        if (!tree.expandedKeys.value.includes(RECENT_TABLES_ROOT_KEY)) {
+          tree.expandedKeys.value = [RECENT_TABLES_ROOT_KEY, ...tree.expandedKeys.value];
+        }
         break;
       case "new_dialog":
         session.dialogMessage.value = normalizeChenDialogMessage(response.data);
@@ -579,6 +616,21 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
 
 async function handleNodeClick(node: ChenTreeNode) {
   tree.selectedNodeKey.value = node.key;
+  if (node.type === "recent-table" && node.recentEntry) {
+    const recentEntry = node.recentEntry;
+    const liveNode =
+      (await tree.resolveNodePath(recentEntry.path || [])) || tree.findNodeByKey(recentEntry.node?.key || "");
+    if (!liveNode) {
+      toast.add({
+        title: "Table is no longer available",
+        description: "Refresh the database tree and open the table again.",
+        color: "warning"
+      });
+      return;
+    }
+    await applyTreeAction(liveNode, "view_data");
+    return;
+  }
   const action = chenNodeActivationAction(node);
   if (action) {
     await applyTreeAction(node, action);
@@ -591,6 +643,14 @@ async function openNodeMenu(node: ChenTreeNode, event: MouseEvent) {
   event.preventDefault();
   event.stopPropagation();
   await openActionMenu(node, event);
+}
+
+function clearRecentTables() {
+  recentTables.clear();
+  tree.expandedKeys.value = tree.expandedKeys.value.filter((key) => key !== RECENT_TABLES_ROOT_KEY);
+  if (tree.selectedNodeKey.value.startsWith(RECENT_TABLES_ROOT_KEY)) {
+    tree.selectedNodeKey.value = tree.rootNodes.value[0]?.key || "";
+  }
 }
 
 function runQueryTab(tab: ChenQueryLikeWorkspaceTab, selectedSql = "") {
@@ -772,7 +832,7 @@ defineExpose({ focus });
   <div class="h-full min-h-0 bg-[var(--workspace-surface-main)] text-[var(--app-fg)]">
     <div v-if="session.ready.value" class="flex h-full min-h-0">
       <ResourceTreePanel
-        :root-nodes="tree.rootNodes.value"
+        :root-nodes="explorerRootNodes"
         :selected-key="tree.selectedNodeKey.value"
         :expanded-keys="tree.expandedKeys.value"
         :children-map="tree.childrenMap"
@@ -784,6 +844,7 @@ defineExpose({ focus });
         @activate="handleNodeClick"
         @toggle="tree.toggleTreeNode"
         @menu="({ node, event }) => openNodeMenu(node, event)"
+        @clear-recent="clearRecentTables"
       />
 
       <div
@@ -806,6 +867,7 @@ defineExpose({ focus });
           @activate="workspace.setActiveTab"
           @close="closeWorkspaceTab"
           @create="createWorkspaceTab"
+          @rename="workspace.renameTab"
         />
 
         <div

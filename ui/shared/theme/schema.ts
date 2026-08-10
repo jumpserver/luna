@@ -73,6 +73,7 @@ export interface ThemeTerminalTokens {
 export interface ThemeDataGridTokens {
   headerBackground: string;
   rowBackground: string;
+  rowStriped: string;
   rowHover: string;
   rowSelected: string;
   border: string;
