@@ -715,9 +715,7 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
         <p v-if="!session.backgroundExec && session.backgroundReason" class="text-[11px] text-muted">
           {{ session.backgroundReason }}
         </p>
-        <div
-          class="relative overflow-hidden rounded-lg bg-[var(--app-input-bg)] ring ring-inset ring-[var(--app-border)] transition-shadow focus-within:ring-2 focus-within:ring-primary"
-        >
+        <div class="relative overflow-hidden rounded-lg bg-[var(--app-input-bg)]">
           <UTextarea
             v-model="draft"
             :rows="2"
