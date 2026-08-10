@@ -163,7 +163,9 @@ export function useChenQueryConsole(
           if (tab.kind === "console" && packet.data?.inQuery === false) {
             const entry = activeConsoleEntry(tab);
             if (entry) {
-              if (entry.status === "cancelling") entry.status = "cancelled";
+              const executionStatus = packet.data.executionStatus;
+              if (entry.status === "cancelling" || executionStatus === "cancelled") entry.status = "cancelled";
+              else if (executionStatus === "error") entry.status = "error";
               else if (entry.status === "running") entry.status = "success";
               entry.completedAt = Date.now();
               tab.activeTimelineEntryId = "";
