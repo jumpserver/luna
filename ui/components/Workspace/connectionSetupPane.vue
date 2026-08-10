@@ -6,7 +6,7 @@ import ConnectFormFields from "~/components/ConnectForm/fields.vue";
 import {
   isExternalClientConnectMethod,
   parseLocalApplicationConnectMethod,
-  useConnectMethods
+  useConnectMethods,
 } from "~/composables/useConnectMethods";
 
 const props = withDefaults(
@@ -15,15 +15,21 @@ const props = withDefaults(
     assetType?: AssetPageType;
   }>(),
   {
-    assetType: "assets"
-  }
+    assetType: "assets",
+  },
 );
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const { confirmConnection } = useAssetConnection();
 const { getMethodsForProtocol } = useConnectMethods();
 const { closePane, startSessionConnection } = useWorkspaceTabs();
-const { buildConnectionInfo, draft, initDraft, loadAssetDetails, preferredConnectMethod } = useConnectionFormState();
+const {
+  buildConnectionInfo,
+  draft,
+  initDraft,
+  loadAssetDetails,
+  preferredConnectMethod,
+} = useConnectionFormState();
 
 const currentAsset = ref<AssetItem | null>(props.tab.setupAsset || null);
 const loading = ref(false);
@@ -34,28 +40,24 @@ const launchedProtocol = ref("");
 const launchSuccessVisible = ref(false);
 const externalClientLaunch = ref(false);
 
-const assetName = computed(() => props.tab.assetName || currentAsset.value?.name || "");
+const assetName = computed(
+  () => props.tab.assetName || currentAsset.value?.name || "",
+);
 const assetAddress = computed(
-  () => currentAsset.value?.address || props.tab.address || assetName.value || t("ContextMenu.Connect")
+  () =>
+    currentAsset.value?.address ||
+    props.tab.address ||
+    assetName.value ||
+    t("ContextMenu.Connect"),
 );
 const launchSummary = computed(() => {
-  if (locale.value === "zh") {
-    return launchedClientName.value
-      ? `已尝试使用 ${launchedClientName.value} 打开该连接。`
-      : "已尝试使用本地客户端打开该连接。";
-  }
-
   return launchedClientName.value
-    ? `We tried opening this connection in ${launchedClientName.value}.`
-    : "We tried opening this connection in a local client.";
+    ? t("ConnectionSetup.LaunchWithClient", {
+        client: launchedClientName.value,
+      })
+    : t("ConnectionSetup.LaunchWithLocalClient");
 });
-const launchHint = computed(() => {
-  if (locale.value === "zh") {
-    return "如果客户端没有弹出，可以再次发起打开，或者返回修改连接方式。";
-  }
-
-  return "If the client did not appear, try launching again or go back to change the connection method.";
-});
+const launchHint = computed(() => t("ConnectionSetup.LaunchHint"));
 
 const updateExternalLaunchState = async () => {
   const protocol = draft.value.protocol.trim();
@@ -68,10 +70,19 @@ const updateExternalLaunchState = async () => {
 
   try {
     const methods = await getMethodsForProtocol(protocol);
-    if (protocol !== draft.value.protocol.trim() || connectMethod !== draft.value.connectMethod.trim()) return;
-    externalClientLaunch.value = isExternalClientConnectMethod(connectMethod, methods);
+    if (
+      protocol !== draft.value.protocol.trim() ||
+      connectMethod !== draft.value.connectMethod.trim()
+    )
+      return;
+    externalClientLaunch.value = isExternalClientConnectMethod(
+      connectMethod,
+      methods,
+    );
   } catch {
-    externalClientLaunch.value = Boolean(parseLocalApplicationConnectMethod(connectMethod).clientName);
+    externalClientLaunch.value = Boolean(
+      parseLocalApplicationConnectMethod(connectMethod).clientName,
+    );
   }
 };
 
@@ -80,7 +91,7 @@ watch(
   () => {
     void updateExternalLaunchState();
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const resetLaunchSuccessState = () => {
@@ -106,14 +117,16 @@ async function submit() {
   if (!currentAsset.value || connecting.value) return;
 
   const info = buildConnectionInfo(currentAsset.value);
-  const localApplication = parseLocalApplicationConnectMethod(info.connectMethod);
+  const localApplication = parseLocalApplicationConnectMethod(
+    info.connectMethod,
+  );
   const showLaunchSuccessState = externalClientLaunch.value;
   connecting.value = true;
   connectionError.value = "";
   if (!showLaunchSuccessState) {
     startSessionConnection(props.tab.id, {
       protocol: info.protocol,
-      account: info.account
+      account: info.account,
     });
   } else {
     resetLaunchSuccessState();
@@ -133,8 +146,10 @@ async function submit() {
       onSessionError: (error) => {
         connecting.value = false;
         connectionError.value =
-          error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
-      }
+          error instanceof Error
+            ? error.message
+            : String(error || t("ConnectError.ConnectFailed"));
+      },
     });
     if (showLaunchSuccessState) {
       connecting.value = false;
@@ -144,7 +159,10 @@ async function submit() {
     }
   } catch (error) {
     connecting.value = false;
-    connectionError.value = error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
+    connectionError.value =
+      error instanceof Error
+        ? error.message
+        : String(error || t("ConnectError.ConnectFailed"));
   }
 }
 
@@ -153,18 +171,24 @@ watch(
   (status) => {
     if (status === "failed") {
       connecting.value = false;
-      if (!connectionError.value) connectionError.value = t("ConnectError.ConnectFailed");
+      if (!connectionError.value)
+        connectionError.value = t("ConnectError.ConnectFailed");
     }
-  }
+  },
 );
 
 onMounted(loadAsset);
 </script>
 
 <template>
-  <div class="h-full min-h-0 w-full overflow-auto bg-[var(--workspace-surface-background)] px-4 py-4 sm:px-10">
+  <div
+    class="h-full min-h-0 w-full overflow-auto bg-[var(--workspace-surface-background)] px-4 py-4 sm:px-10"
+  >
     <div class="mx-auto flex min-h-full w-full items-center justify-center">
-      <div v-if="loading" class="grid h-full min-h-64 w-full place-items-center text-sm text-[var(--app-muted)]">
+      <div
+        v-if="loading"
+        class="grid h-full min-h-64 w-full place-items-center text-sm text-[var(--app-muted)]"
+      >
         <div class="flex items-center gap-2">
           <UIcon name="i-lucide-loader-2" class="size-4 animate-spin" />
           <span>{{ t("Loading.Loading") }}</span>
@@ -176,7 +200,7 @@ onMounted(loadAsset);
           class="connection-setup-shell w-[min(640px,100%)] overflow-hidden rounded-lg border border-[var(--app-border)] bg-[var(--workspace-surface-panel)] shadow-[var(--theme-shadow-soft)]"
         >
           <div
-            class="flex h-11 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--workspace-surface-header)] px-4"
+            class="flex h-13 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--workspace-surface-header)] px-4"
           >
             <div class="flex min-w-0 items-center gap-2">
               <span class="truncate text-sm font-semibold text-[var(--app-fg)]">
@@ -202,20 +226,27 @@ onMounted(loadAsset);
             />
           </div>
 
-          <div class="flex min-h-[300px] flex-col bg-[var(--app-surface-panel-strong)]">
+          <div
+            class="flex min-h-[300px] flex-col bg-[var(--app-surface-panel-strong)]"
+          >
             <div class="min-h-0 flex-1 overflow-auto px-6 py-4">
-              <div v-if="launchSuccessVisible" class="flex min-h-full items-center justify-center py-6">
+              <div
+                v-if="launchSuccessVisible"
+                class="flex min-h-full items-center justify-center py-6"
+              >
                 <section
                   class="launch-success-card w-full rounded-xl border border-[var(--app-border)] bg-[var(--workspace-surface-panel)] px-5 py-6 sm:px-6"
                 >
                   <div class="flex items-start gap-3">
-                    <div class="grid size-11 shrink-0 place-items-center rounded-full bg-primary/12 text-primary">
+                    <div
+                      class="grid size-11 shrink-0 place-items-center rounded-full bg-primary/12 text-primary"
+                    >
                       <UIcon name="i-lucide-app-window" class="size-5" />
                     </div>
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-2">
                         <h3 class="text-sm font-semibold text-[var(--app-fg)]">
-                          {{ locale === "zh" ? "已发起客户端打开" : "Client launch started" }}
+                          {{ t("ConnectionSetup.ClientLaunchStarted") }}
                         </h3>
                         <UBadge
                           v-if="launchedProtocol"
@@ -238,13 +269,19 @@ onMounted(loadAsset);
                     class="mt-5 rounded-lg border border-[var(--app-border)] bg-[var(--workspace-surface-header)] px-4 py-3"
                   >
                     <div class="text-xs text-[var(--app-muted)]">
-                      {{ locale === "zh" ? "连接目标" : "Connection target" }}
+                      {{ t("ConnectionSetup.ConnectionTarget") }}
                     </div>
-                    <div class="mt-1 break-all font-ui-mono text-sm text-[var(--app-fg)]">
+                    <div
+                      class="mt-1 break-all font-ui-mono text-sm text-[var(--app-fg)]"
+                    >
                       {{ assetAddress }}
                     </div>
-                    <div v-if="launchedClientName" class="mt-2 text-xs text-[var(--app-muted)]">
-                      {{ locale === "zh" ? "客户端" : "Client" }}: {{ launchedClientName }}
+                    <div
+                      v-if="launchedClientName"
+                      class="mt-2 text-xs text-[var(--app-muted)]"
+                    >
+                      {{ t("ConnectionSetup.Client") }}:
+                      {{ launchedClientName }}
                     </div>
                   </div>
                 </section>
@@ -257,7 +294,9 @@ onMounted(loadAsset);
                   :asset-type="props.assetType"
                   :preferred-connect-method="preferredConnectMethod"
                   :submit-label="
-                    externalClientLaunch ? (locale === 'zh' ? '客户端打开' : 'Open in client') : t('Common.Connect')
+                    externalClientLaunch
+                      ? t('ConnectionSetup.OpenInClient')
+                      : t('Common.Connect')
                   "
                   :submitting="connecting"
                   @submit="submit"
@@ -270,9 +309,14 @@ onMounted(loadAsset);
               class="border-t border-[var(--app-border)] bg-[var(--workspace-surface-footer)] px-5 py-3"
             >
               <div v-if="connecting" class="space-y-2">
-                <div class="flex items-center gap-2 text-xs text-[var(--app-muted)]">
-                  <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
-                  <span>{{ locale === "zh" ? "正在建立连接..." : "Establishing connection..." }}</span>
+                <div
+                  class="flex items-center gap-2 text-xs text-[var(--app-muted)]"
+                >
+                  <UIcon
+                    name="i-lucide-loader-circle"
+                    class="size-3.5 animate-spin"
+                  />
+                  <span>{{ t("ConnectionSetup.Establishing") }}</span>
                 </div>
                 <div class="connection-activity-track">
                   <span class="connection-activity-bar" />
@@ -283,7 +327,10 @@ onMounted(loadAsset);
                 v-if="connectionError"
                 class="mt-2 flex items-start gap-2 rounded-md border border-error/25 bg-error/10 px-3 py-2 text-xs text-error"
               >
-                <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3.5 shrink-0" />
+                <UIcon
+                  name="i-lucide-circle-alert"
+                  class="mt-0.5 size-3.5 shrink-0"
+                />
                 <span class="min-w-0 break-words">{{ connectionError }}</span>
               </div>
             </div>
@@ -294,14 +341,14 @@ onMounted(loadAsset);
             >
               <div class="flex flex-col gap-3 sm:flex-row">
                 <UButton
-                  :label="locale === 'zh' ? '再次打开' : 'Open again'"
+                  :label="t('ConnectionSetup.OpenAgain')"
                   color="primary"
                   :loading="connecting"
                   block
                   @click="submit"
                 />
                 <UButton
-                  :label="locale === 'zh' ? '返回修改' : 'Back to form'"
+                  :label="t('ConnectionSetup.BackToForm')"
                   color="neutral"
                   variant="outline"
                   block
@@ -319,13 +366,15 @@ onMounted(loadAsset);
 <style scoped>
 .connection-setup-shell {
   box-shadow:
-    0 1px 0 color-mix(in srgb, var(--app-surface-panel-strong) 82%, transparent) inset,
+    0 1px 0 color-mix(in srgb, var(--app-surface-panel-strong) 82%, transparent)
+      inset,
     var(--theme-shadow-soft);
 }
 
 .launch-success-card {
   box-shadow:
-    0 1px 0 color-mix(in srgb, var(--app-surface-panel-strong) 78%, transparent) inset,
+    0 1px 0 color-mix(in srgb, var(--app-surface-panel-strong) 78%, transparent)
+      inset,
     0 16px 36px color-mix(in srgb, var(--app-fg) 5%, transparent);
 }
 

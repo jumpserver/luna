@@ -17,7 +17,7 @@ export interface ConnectionFormDraft {
 }
 
 export function useConnectionFormState() {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const userInfoStore = useUserInfoStore();
   const draft = ref<ConnectionFormDraft>({
     protocol: "",
@@ -37,8 +37,8 @@ export function useConnectionFormState() {
 
   const getVisibleProtocols = (protocols: PermedProtocol[]) =>
     isTauriRuntime() ? protocols : protocols.filter((protocol) => protocol?.public !== false);
-  const getManualInputLabel = () => (locale.value === "zh" ? "手动输入" : "Manual input");
-  const getAnonymousLabel = () => (locale.value === "zh" ? "匿名账号" : "Anonymous");
+  const getManualInputLabel = () => t("Account.ManualInput");
+  const getAnonymousLabel = () => t("Account.Anonymous");
   const getDynamicAccountLabel = (account?: PermedAccount) => {
     if (!account) return "";
     const base = t("Account.DynamicUser");

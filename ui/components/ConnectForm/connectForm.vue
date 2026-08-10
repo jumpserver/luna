@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import type { SelectMenuItem } from "@nuxt/ui";
-import type { AssetPageType, CharsetType, PermedAccount, PermedProtocol, ResolutionType } from "~/types/index";
+import type {
+  AssetPageType,
+  CharsetType,
+  PermedAccount,
+  PermedProtocol,
+  ResolutionType,
+} from "~/types/index";
 import {
   createLocalApplicationConnectMethod,
   isApplicationConfigItemAvailable,
   isConnectMethodAvailable,
-  useConnectMethods
+  useConnectMethods,
 } from "~/composables/useConnectMethods";
 import { sortProtocolNames } from "~/utils";
 
@@ -36,9 +42,18 @@ const emits = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { getMethodsForProtocol, getDefaultMethodForProtocol } = useConnectMethods();
+const { getMethodsForProtocol, getDefaultMethodForProtocol } =
+  useConnectMethods();
 const { appConfig } = useSettingManager();
-const trailingIcon = "group-data-[state=open]:rotate-180 transition-transform duration-200";
+const trailingIcon =
+  "group-data-[state=open]:rotate-180 transition-transform duration-200";
+const formFieldUi = {
+  label:
+    "text-xs font-semibold tracking-[0.025em] text-[var(--app-text-muted)]",
+  container: "mt-2",
+};
+const controlBaseUi =
+  "min-h-9 rounded-[4px] bg-[var(--app-input-bg)] ring-1 ring-inset ring-[var(--app-border)] shadow-sm transition-[box-shadow,background-color] hover:ring-[var(--app-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]";
 
 const showManualInputArea = ref(false);
 const showDynamicUserArea = ref(false);
@@ -49,38 +64,38 @@ let connectMethodRequestId = 0;
 
 const localManualUsername = computed<string>({
   get: () => props.manualUsername || "",
-  set: (v: string) => emits("update:manualUsername", v ?? "")
+  set: (v: string) => emits("update:manualUsername", v ?? ""),
 });
 
 const localManualPassword = computed<string>({
   get: () => props.manualPassword || "",
-  set: (v: string) => emits("update:manualPassword", v ?? "")
+  set: (v: string) => emits("update:manualPassword", v ?? ""),
 });
 
 const localDynamicPassword = computed<string>({
   get: () => props.dynamicPassword || "",
-  set: (v: string) => emits("update:dynamicPassword", v ?? "")
+  set: (v: string) => emits("update:dynamicPassword", v ?? ""),
 });
 
 const localRememberSecret = computed<boolean>({
   get: () => props.rememberSecret || false,
-  set: (v: boolean) => emits("update:rememberSecret", !!v)
+  set: (v: boolean) => emits("update:rememberSecret", !!v),
 });
 
 const localConnectMethod = computed<string>({
   get: () => props.connectMethod || "",
-  set: (v: string) => emits("update:connectMethod", v ?? "")
+  set: (v: string) => emits("update:connectMethod", v ?? ""),
 });
 
 const localConnectOptions = computed<Record<string, any>>({
   get: () => props.connectOptions || {},
-  set: (v: Record<string, any>) => emits("update:connectOptions", v || {})
+  set: (v: Record<string, any>) => emits("update:connectOptions", v || {}),
 });
 
 const updateConnectOption = (field: string, value: any) => {
   localConnectOptions.value = {
     ...localConnectOptions.value,
-    [field]: value
+    [field]: value,
   };
 };
 
@@ -89,7 +104,7 @@ watch(
   (newVal) => {
     handleSpecialAccount(newVal || "");
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 watch(
@@ -105,21 +120,42 @@ watch(
 
     // A method belongs to a protocol. Clear it before the async lookup so a
     // quick protocol-switch-and-connect cannot submit the previous protocol's method.
-    const previousMethod = previousProtocol && previousProtocol !== newProtocol ? "" : props.connectMethod || "";
+    const previousMethod =
+      previousProtocol && previousProtocol !== newProtocol
+        ? ""
+        : props.connectMethod || "";
     emits("update:connectMethod", "");
 
     try {
       const methods = await getMethodsForProtocol(newProtocol);
-      if (requestId !== connectMethodRequestId || newProtocol !== props.protocol) return;
+      if (
+        requestId !== connectMethodRequestId ||
+        newProtocol !== props.protocol
+      )
+        return;
       availableConnectMethods.value = methods;
 
-      if (isConnectMethodAvailable(previousMethod, methods, newProtocol, appConfig.value)) {
+      if (
+        isConnectMethodAvailable(
+          previousMethod,
+          methods,
+          newProtocol,
+          appConfig.value,
+        )
+      ) {
         emits("update:connectMethod", previousMethod);
         return;
       }
 
       const protocolPreferredMethod = props.preferredConnectMethod || "";
-      if (isConnectMethodAvailable(protocolPreferredMethod, methods, newProtocol, appConfig.value)) {
+      if (
+        isConnectMethodAvailable(
+          protocolPreferredMethod,
+          methods,
+          newProtocol,
+          appConfig.value,
+        )
+      ) {
         emits("update:connectMethod", protocolPreferredMethod);
         return;
       }
@@ -131,18 +167,32 @@ watch(
           .find(
             (item) =>
               isApplicationConfigItemAvailable(item, protocol) &&
-              item.match_first?.some((value) => value.toLowerCase() === protocol)
+              item.match_first?.some(
+                (value) => value.toLowerCase() === protocol,
+              ),
           );
-        const nativeMethod = methods.find((method) => categoryOfConnectMethod(method) === "native");
+        const nativeMethod = methods.find(
+          (method) => categoryOfConnectMethod(method) === "native",
+        );
 
         if (preferredClient && nativeMethod) {
-          emits("update:connectMethod", createLocalApplicationConnectMethod(nativeMethod.value, preferredClient.name));
+          emits(
+            "update:connectMethod",
+            createLocalApplicationConnectMethod(
+              nativeMethod.value,
+              preferredClient.name,
+            ),
+          );
           return;
         }
       }
 
       const defaultMethod = await getDefaultMethodForProtocol(newProtocol);
-      if (requestId === connectMethodRequestId && newProtocol === props.protocol && defaultMethod) {
+      if (
+        requestId === connectMethodRequestId &&
+        newProtocol === props.protocol &&
+        defaultMethod
+      ) {
         emits("update:connectMethod", defaultMethod);
       }
     } catch {
@@ -151,34 +201,46 @@ watch(
       emits("update:connectMethod", "");
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const protocolTabItems = computed(() =>
   sortProtocolNames(
     (isTauriRuntime()
       ? props.protocols
-      : props.protocols.filter((protocol: PermedProtocol) => protocol?.public !== false)
-    ).map((p: PermedProtocol) => p.name)
-  ).map((name) => ({ label: name.toUpperCase(), value: name }))
+      : props.protocols.filter(
+          (protocol: PermedProtocol) => protocol?.public !== false,
+        )
+    ).map((p: PermedProtocol) => p.name),
+  ).map((name) => ({ label: name.toUpperCase(), value: name })),
 );
 const connectMethodTypeItems = computed(() => {
   const metaMap: Record<string, { label: string; icon: string }> = {
     builtin: { label: t("ConnectMethodType.BuiltIn"), icon: "i-lucide-box" },
-    native: { label: t("ConnectMethodType.Application"), icon: "i-lucide-layout-grid" },
-    remote_app: { label: t("ConnectMethodType.RemoteApplication"), icon: "i-lucide-app-window" }
+    native: {
+      label: t("ConnectMethodType.Application"),
+      icon: "i-lucide-layout-grid",
+    },
+    remote_app: {
+      label: t("ConnectMethodType.RemoteApplication"),
+      icon: "i-lucide-app-window",
+    },
   };
   const order = ["builtin", "native", "remote_app"];
-  const grouped = new Set(availableConnectMethods.value.map((method) => categoryOfConnectMethod(method)));
+  const grouped = new Set(
+    availableConnectMethods.value.map((method) =>
+      categoryOfConnectMethod(method),
+    ),
+  );
   const sorted = [
     ...order.filter((type) => grouped.has(type)),
-    ...Array.from(grouped).filter((type) => !order.includes(type))
+    ...Array.from(grouped).filter((type) => !order.includes(type)),
   ].filter(Boolean);
 
   return sorted.map((type) => ({
     value: type,
     label: metaMap[type]?.label || type,
-    icon: metaMap[type]?.icon || "i-lucide-circle"
+    icon: metaMap[type]?.icon || "i-lucide-circle",
   }));
 });
 const configuredClients = computed(() => {
@@ -188,7 +250,11 @@ const configuredClients = computed(() => {
   return Object.values(appConfig.value)
     .flat()
     .filter((item) => isApplicationConfigItemAvailable(item, protocol))
-    .sort((a, b) => Number(b.match_first?.includes(protocol)) - Number(a.match_first?.includes(protocol)));
+    .sort(
+      (a, b) =>
+        Number(b.match_first?.includes(protocol)) -
+        Number(a.match_first?.includes(protocol)),
+    );
 });
 const connectMethodTabItems = computed(() => {
   const methods = availableConnectMethods.value.filter((method) => {
@@ -205,27 +271,36 @@ const connectMethodTabItems = computed(() => {
     return nativeMethod
       ? configuredClients.value.map((client) => ({
           label: client.display_name || client.name,
-          value: createLocalApplicationConnectMethod(nativeMethod.value, client.name)
+          value: createLocalApplicationConnectMethod(
+            nativeMethod.value,
+            client.name,
+          ),
         }))
       : [];
   }
 
   return methods.map((method) => ({
     label: method.label || method.value,
-    value: method.value
+    value: method.value,
   }));
 });
 
-const showCharsetOption = computed(() => ["ssh", "telnet"].includes((props.protocol || "").toLowerCase()));
+const showCharsetOption = computed(() =>
+  ["ssh", "telnet"].includes((props.protocol || "").toLowerCase()),
+);
 const showBackspaceOption = computed(() => showCharsetOption.value);
-const showDisableAutoHashOption = computed(() => ["mysql", "mariadb"].includes((props.protocol || "").toLowerCase()));
-const showResolutionOption = computed(() => (props.protocol || "").toLowerCase() === "rdp");
+const showDisableAutoHashOption = computed(() =>
+  ["mysql", "mariadb"].includes((props.protocol || "").toLowerCase()),
+);
+const showResolutionOption = computed(
+  () => (props.protocol || "").toLowerCase() === "rdp",
+);
 const showAdvancedOptions = computed(
   () =>
     showCharsetOption.value ||
     showBackspaceOption.value ||
     showDisableAutoHashOption.value ||
-    showResolutionOption.value
+    showResolutionOption.value,
 );
 
 const charsetItems = computed(() => [
@@ -233,27 +308,27 @@ const charsetItems = computed(() => [
   { label: "UTF-8", value: "utf8" },
   { label: "GBK", value: "gbk" },
   { label: "GB2312", value: "gb2312" },
-  { label: "IOS-8859-1", value: "ios-8859-1" }
+  { label: "IOS-8859-1", value: "ios-8859-1" },
 ]);
 const resolutionItems = computed(() => [
   { label: t("Setting.Auto"), value: "auto" },
   { label: "1024x768", value: "1024x768" },
   { label: "1366x768", value: "1366x768" },
   { label: "1600x900", value: "1600x900" },
-  { label: "1920x1080", value: "1920x1080" }
+  { label: "1920x1080", value: "1920x1080" },
 ]);
 
 const selectedCharset = computed<CharsetType>({
   get: () => (localConnectOptions.value.charset || "default") as CharsetType,
-  set: (value) => updateConnectOption("charset", value || "default")
+  set: (value) => updateConnectOption("charset", value || "default"),
 });
 const selectedBackspaceAsCtrlH = computed<boolean>({
   get: () => !!localConnectOptions.value.backspaceAsCtrlH,
-  set: (value) => updateConnectOption("backspaceAsCtrlH", !!value)
+  set: (value) => updateConnectOption("backspaceAsCtrlH", !!value),
 });
 const selectedDisableAutoHash = computed<boolean>({
   get: () => !!localConnectOptions.value.disableautohash,
-  set: (value) => updateConnectOption("disableautohash", !!value)
+  set: (value) => updateConnectOption("disableautohash", !!value),
 });
 const selectedResolution = computed<ResolutionType>({
   get: () => (localConnectOptions.value.resolution || "auto") as ResolutionType,
@@ -261,7 +336,7 @@ const selectedResolution = computed<ResolutionType>({
     const resolved = (value || "auto") as ResolutionType;
     updateConnectOption("resolution", resolved);
     updateConnectOption("rdp_resolution", resolved);
-  }
+  },
 });
 
 watch(
@@ -269,7 +344,7 @@ watch(
   () => {
     advancedOptionOpen.value = false;
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 watch(
@@ -282,23 +357,34 @@ watch(
 
     if (props.connectMethod?.startsWith("native_app:")) {
       selectedConnectMethodType.value = "native";
-      if (!connectMethodTabItems.value.some((item) => item.value === props.connectMethod)) {
-        emits("update:connectMethod", connectMethodTabItems.value[0]?.value || "");
+      if (
+        !connectMethodTabItems.value.some(
+          (item) => item.value === props.connectMethod,
+        )
+      ) {
+        emits(
+          "update:connectMethod",
+          connectMethodTabItems.value[0]?.value || "",
+        );
       }
       return;
     }
 
-    const current = availableConnectMethods.value.find((method) => method.value === props.connectMethod);
+    const current = availableConnectMethods.value.find(
+      (method) => method.value === props.connectMethod,
+    );
     if (current) {
       selectedConnectMethodType.value = categoryOfConnectMethod(current);
       return;
     }
 
     if (!selectedConnectMethodType.value) {
-      selectedConnectMethodType.value = categoryOfConnectMethod(availableConnectMethods.value[0]);
+      selectedConnectMethodType.value = categoryOfConnectMethod(
+        availableConnectMethods.value[0],
+      );
     }
   },
-  { deep: true, immediate: true }
+  { deep: true, immediate: true },
 );
 
 function categoryOfConnectMethod(method: any) {
@@ -308,7 +394,8 @@ function categoryOfConnectMethod(method: any) {
   const type = String(method?.type || "").toLowerCase();
 
   if (type === "web" || type === "builtin") return "builtin";
-  if (["applet", "virtual_app", "remote_app", "remoteapp"].includes(type)) return "remote_app";
+  if (["applet", "virtual_app", "remote_app", "remoteapp"].includes(type))
+    return "remote_app";
   if (["native", "client", "local", "desktop"].includes(type)) return "native";
   return type || "builtin";
 }
@@ -347,7 +434,7 @@ const accountItems = computed(() => {
     .filter((acc: PermedAccount) => !acc.alias.includes("@"))
     .map((acc: PermedAccount) => ({
       label: acc.name,
-      value: acc.name
+      value: acc.name,
     }));
 
   const manual = filteredAnonymous
@@ -391,12 +478,12 @@ const accountItems = computed(() => {
 
 const selectedProtocol = computed<string>({
   get: () => props.protocol,
-  set: (v: string) => emits("update:protocol", v ?? "")
+  set: (v: string) => emits("update:protocol", v ?? ""),
 });
 
 const selectedAccount = computed<string>({
   get: () => props.account,
-  set: (v: string) => emits("update:account", v ?? "")
+  set: (v: string) => emits("update:account", v ?? ""),
 });
 
 function handleSpecialAccount(v: string) {
@@ -414,7 +501,7 @@ function handleSpecialAccount(v: string) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
+  <div class="flex flex-col gap-4">
     <div class="protocol-tabs-track">
       <div class="protocol-tabs">
         <button
@@ -422,7 +509,11 @@ function handleSpecialAccount(v: string) {
           :key="item.value"
           type="button"
           class="protocol-tab-button"
-          :class="item.value === selectedProtocol ? 'protocol-tab-button-active' : 'protocol-tab-button-idle'"
+          :class="
+            item.value === selectedProtocol
+              ? 'protocol-tab-button-active'
+              : 'protocol-tab-button-idle'
+          "
           @click="selectedProtocol = item.value"
         >
           {{ item.label }}
@@ -430,33 +521,42 @@ function handleSpecialAccount(v: string) {
       </div>
     </div>
 
-    <UFormField :label="t('EditModal.OptionalAccount')" size="md">
+    <UFormField
+      :label="t('EditModal.OptionalAccount')"
+      :ui="formFieldUi"
+      size="md"
+    >
       <USelectMenu
         v-model="selectedAccount"
         :items="accountItems"
         value-key="value"
         label-key="label"
         :ui="{
-          trailingIcon
+          base: controlBaseUi,
+          trailingIcon,
         }"
-        icon="lucide:user-round"
+        icon="i-lucide-user-round"
+        size="md"
         class="w-full"
       />
     </UFormField>
 
     <template v-if="showManualInputArea">
       <div class="credentials-fields">
-        <UFormField :label="t('Account.Username')" size="md">
+        <UFormField :label="t('Account.Username')" :ui="formFieldUi" size="md">
           <UInput
             v-model="localManualUsername"
             autocapitalize="none"
             autocorrect="off"
             :placeholder="t('Account.Username')"
+            :ui="{ base: controlBaseUi }"
+            icon="i-lucide-user-round"
+            size="md"
             class="w-full"
           />
         </UFormField>
 
-        <UFormField :label="t('Account.Password')" size="md">
+        <UFormField :label="t('Account.Password')" :ui="formFieldUi" size="md">
           <UFieldGroup class="w-full">
             <UInput
               v-model="localManualPassword"
@@ -464,6 +564,9 @@ function handleSpecialAccount(v: string) {
               autocapitalize="none"
               autocorrect="off"
               :placeholder="t('Account.Password')"
+              :ui="{ base: controlBaseUi }"
+              icon="i-lucide-lock-keyhole"
+              size="md"
               class="min-w-0 flex-1"
             />
             <UButton
@@ -473,6 +576,7 @@ function handleSpecialAccount(v: string) {
               :title="t('Account.RememberPassword')"
               :color="localRememberSecret ? 'primary' : 'neutral'"
               :variant="localRememberSecret ? 'solid' : 'outline'"
+              size="md"
               @click="localRememberSecret = !localRememberSecret"
             />
           </UFieldGroup>
@@ -482,7 +586,7 @@ function handleSpecialAccount(v: string) {
 
     <template v-if="showDynamicUserArea">
       <div class="credentials-fields">
-        <UFormField :label="t('Account.Password')" size="md">
+        <UFormField :label="t('Account.Password')" :ui="formFieldUi" size="md">
           <UFieldGroup class="w-full">
             <UInput
               v-model="localDynamicPassword"
@@ -490,6 +594,9 @@ function handleSpecialAccount(v: string) {
               autocapitalize="none"
               autocorrect="off"
               :placeholder="t('Account.Password')"
+              :ui="{ base: controlBaseUi }"
+              icon="i-lucide-lock-keyhole"
+              size="md"
               class="min-w-0 flex-1"
             />
             <UButton
@@ -499,6 +606,7 @@ function handleSpecialAccount(v: string) {
               :title="t('Account.RememberPassword')"
               :color="localRememberSecret ? 'primary' : 'neutral'"
               :variant="localRememberSecret ? 'solid' : 'outline'"
+              size="md"
               @click="localRememberSecret = !localRememberSecret"
             />
           </UFieldGroup>
@@ -506,8 +614,14 @@ function handleSpecialAccount(v: string) {
       </div>
     </template>
 
-    <UFormField :label="t('EditModal.ConnectMethod')" size="md">
-      <div class="rounded-[3px] border border-[var(--app-border)]">
+    <UFormField
+      :label="t('EditModal.ConnectMethod')"
+      :ui="formFieldUi"
+      size="md"
+    >
+      <div
+        class="rounded-[4px] border border-[var(--app-border)] bg-[var(--app-input-bg)] shadow-sm"
+      >
         <UTabs
           v-if="connectMethodTypeItems.length > 1"
           :model-value="selectedConnectMethodType"
@@ -520,7 +634,7 @@ function handleSpecialAccount(v: string) {
           :ui="{
             root: 'p-0',
             list: 'p-0 justify-start',
-            trigger: 'py-2'
+            trigger: 'py-2',
           }"
           class="w-full mb-2 connect-method-type-tabs"
           @update:model-value="selectConnectMethodType"
@@ -535,11 +649,13 @@ function handleSpecialAccount(v: string) {
             orientation="horizontal"
             :ui="{
               fieldset: 'flex flex-wrap gap-2',
-              item: 'rounded-[3px] px-2 py-1.5 hover:bg-[var(--app-hover-soft)]'
+              item: 'rounded-[3px] px-2 py-1.5 hover:bg-[var(--app-hover-soft)]',
             }"
           />
           <div
-            v-else-if="isTauriRuntime() && selectedConnectMethodType === 'native'"
+            v-else-if="
+              isTauriRuntime() && selectedConnectMethodType === 'native'
+            "
             class="flex flex-col items-center gap-2 py-3 text-center"
           >
             <p class="text-sm text-[var(--app-text-muted)]">
@@ -574,22 +690,50 @@ function handleSpecialAccount(v: string) {
       </button>
 
       <div v-if="advancedOptionOpen" class="space-y-3 px-3 py-3">
-        <UFormField v-if="showCharsetOption" :label="t('Setting.Charset')" size="sm">
-          <USelect v-model="selectedCharset" :items="charsetItems" class="w-full" />
+        <UFormField
+          v-if="showCharsetOption"
+          :label="t('Setting.Charset')"
+          :ui="formFieldUi"
+          size="sm"
+        >
+          <USelect
+            v-model="selectedCharset"
+            :items="charsetItems"
+            :ui="{ base: controlBaseUi }"
+            size="md"
+            class="w-full"
+          />
         </UFormField>
 
-        <div v-if="showBackspaceOption" class="flex items-center justify-between">
+        <div
+          v-if="showBackspaceOption"
+          class="flex items-center justify-between"
+        >
           <span class="text-sm">{{ t("Setting.TerminalBackspace") }}</span>
           <USwitch v-model="selectedBackspaceAsCtrlH" />
         </div>
 
-        <div v-if="showDisableAutoHashOption" class="flex items-center justify-between">
+        <div
+          v-if="showDisableAutoHashOption"
+          class="flex items-center justify-between"
+        >
           <span class="text-sm">Disable auto completion</span>
           <USwitch v-model="selectedDisableAutoHash" />
         </div>
 
-        <UFormField v-if="showResolutionOption" :label="t('Setting.Resolution')" size="sm">
-          <USelect v-model="selectedResolution" :items="resolutionItems" class="w-full" />
+        <UFormField
+          v-if="showResolutionOption"
+          :label="t('Setting.Resolution')"
+          :ui="formFieldUi"
+          size="sm"
+        >
+          <USelect
+            v-model="selectedResolution"
+            :items="resolutionItems"
+            :ui="{ base: controlBaseUi }"
+            size="md"
+            class="w-full"
+          />
         </UFormField>
       </div>
     </div>

@@ -4,6 +4,9 @@
     "About": "About",
     "Confirm": "Confirm",
     "Copy": "Copy",
+    "CopySuccess": "Copied",
+    "CopyFailed": "Copy failed",
+    "CopyOnly": "Copy only",
     "UnSigned": "UnSigned",
     "Version": "Version",
     "NoData": "No Data",
@@ -473,6 +476,32 @@
     "ManualInput": "Manual input",
     "Anonymous": "Anonymous",
     "RememberPassword": "Remember password"
+  },
+  "ConnectionSetup": {
+    "ClientLaunchStarted": "Client launch started",
+    "LaunchWithClient": "We tried opening this connection in {client}.",
+    "LaunchWithLocalClient": "We tried opening this connection in a local client.",
+    "LaunchHint": "If the client did not appear, try launching again or go back to change the connection method.",
+    "ConnectionTarget": "Connection target",
+    "Client": "Client",
+    "OpenInClient": "Open in client",
+    "Establishing": "Establishing connection...",
+    "OpenAgain": "Open again",
+    "BackToForm": "Back to form"
+  },
+  "ConnectionGuide": {
+    "Title": "Connection guide",
+    "Name": "Name",
+    "Host": "Host",
+    "Port": "Port",
+    "Username": "Username",
+    "Password": "Password",
+    "Database": "Database",
+    "Protocol": "Protocol",
+    "ExpireTime": "Expire time",
+    "ShowPassword": "Show password",
+    "ConnectCommand": "Connect command line",
+    "CopyCommand": "Copy command"
   },
   "Setting": {
     "CommandTerminal": "Command Terminal",

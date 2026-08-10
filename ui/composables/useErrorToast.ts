@@ -60,7 +60,7 @@ function hasCopyAction(actions: Partial<Toast["actions"][number]>[] = []) {
 }
 
 export function useErrorToast() {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const toast = useToast();
 
   const addErrorToast = (options: ErrorToastOptions) => {
@@ -77,7 +77,7 @@ export function useErrorToast() {
         onClick: async () => {
           await writeClipboardText(copyText);
           toast.add({
-            title: locale.value === "zh" ? "已复制" : "Copied",
+            title: t("Common.CopySuccess"),
             color: "success",
             duration: 1200
           });

@@ -19,14 +19,13 @@ const defaultPorts: Record<string, number> = {
 };
 const databaseProtocols = new Set(["mysql", "mariadb", "postgresql", "redis", "oracle", "sqlserver", "mongodb"]);
 
-const { locale } = useI18n();
+const { t } = useI18n();
 const toast = useToast();
 const token = computed(() => (props.tab.payload?.token || props.tab.payload) as TokenResponse);
 const endpoint = ref<Record<string, any>>({});
 const loading = ref(true);
 const passwordVisible = ref(false);
 
-const label = (zh: string, en: string) => (locale.value === "zh" ? zh : en);
 const protocol = computed(() => (token.value?.protocol || props.tab.protocol || "").toLowerCase());
 const host = computed(() => String(endpoint.value.host || ""));
 const port = computed(() =>
@@ -53,16 +52,16 @@ const password = computed(() =>
 
 const rows = computed(() => {
   const values = [
-    { name: "name", label: label("名称", "Name"), value: assetName.value },
-    { name: "host", label: label("主机", "Host"), value: host.value },
-    { name: "port", label: label("端口", "Port"), value: port.value },
-    { name: "username", label: label("用户名", "Username"), value: username.value },
-    { name: "password", label: label("密码", "Password"), value: password.value },
+    { name: "name", label: t("ConnectionGuide.Name"), value: assetName.value },
+    { name: "host", label: t("ConnectionGuide.Host"), value: host.value },
+    { name: "port", label: t("ConnectionGuide.Port"), value: port.value },
+    { name: "username", label: t("ConnectionGuide.Username"), value: username.value },
+    { name: "password", label: t("ConnectionGuide.Password"), value: password.value },
     ...(databaseProtocols.has(protocol.value)
-      ? [{ name: "database", label: label("数据库", "Database"), value: database.value }]
+      ? [{ name: "database", label: t("ConnectionGuide.Database"), value: database.value }]
       : []),
-    { name: "protocol", label: label("协议", "Protocol"), value: protocol.value },
-    { name: "date_expired", label: label("过期时间", "Expire time"), value: token.value.date_expired }
+    { name: "protocol", label: t("ConnectionGuide.Protocol"), value: protocol.value },
+    { name: "date_expired", label: t("ConnectionGuide.ExpireTime"), value: token.value.date_expired }
   ];
 
   return values.filter((item) => item.value !== undefined && item.value !== null);
@@ -100,7 +99,7 @@ const commands = computed(() => {
 
 async function copy(value: unknown) {
   await writeText(String(value ?? ""));
-  toast.add({ title: label("已复制", "Copied"), color: "success", duration: 1200 });
+  toast.add({ title: t("Common.CopySuccess"), color: "success", duration: 1200 });
 }
 
 onMounted(async () => {
@@ -136,7 +135,7 @@ onMounted(async () => {
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2">
                 <h2 class="truncate text-base font-semibold text-[var(--app-fg)]">
-                  {{ label("连接向导", "Connection guide") }}
+                  {{ t("ConnectionGuide.Title") }}
                 </h2>
                 <UBadge :label="protocol.toUpperCase()" color="primary" variant="soft" size="sm" />
               </div>
@@ -171,7 +170,7 @@ onMounted(async () => {
                           variant="ghost"
                           size="xs"
                           :icon="passwordVisible ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                          :aria-label="label('显示密码', 'Show password')"
+                          :aria-label="t('ConnectionGuide.ShowPassword')"
                           class="shrink-0 text-[var(--app-muted)]"
                           @click="passwordVisible = !passwordVisible"
                         />
@@ -180,7 +179,7 @@ onMounted(async () => {
                           variant="ghost"
                           size="xs"
                           icon="i-lucide-copy"
-                          :aria-label="label('复制', 'Copy')"
+                          :aria-label="t('Common.Copy')"
                           class="guide-copy-button shrink-0 text-[var(--app-muted)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                           @click="copy(row.value)"
                         />
@@ -195,7 +194,7 @@ onMounted(async () => {
               <div class="mb-2 flex items-center gap-2 px-1">
                 <UIcon name="i-lucide-terminal" class="size-4 text-[var(--app-muted)]" />
                 <h3 class="text-xs font-medium tracking-wide text-[var(--app-muted)]">
-                  {{ label("连接命令", "Connect command line") }}
+                  {{ t("ConnectionGuide.ConnectCommand") }}
                 </h3>
               </div>
 
@@ -214,7 +213,7 @@ onMounted(async () => {
                   variant="ghost"
                   size="xs"
                   icon="i-lucide-copy"
-                  :aria-label="label('复制命令', 'Copy command')"
+                  :aria-label="t('ConnectionGuide.CopyCommand')"
                   class="guide-copy-button shrink-0 text-[var(--app-muted)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                   @click="copy(command)"
                 />

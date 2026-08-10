@@ -103,6 +103,11 @@ function cancelChanges() {
   selectedRows.value = [];
   emit("dataViewAction", props.tab, "refresh");
 }
+
+function selectPropertyTab(propertyTab: ChenDataViewPropertyTab) {
+  emit("updatePanel", props.tab, "properties");
+  emit("updatePropertyTab", props.tab, propertyTab);
+}
 </script>
 
 <template>
@@ -117,24 +122,18 @@ function cancelChanges() {
           Data
         </button>
         <button
+          v-for="propertyTab in dataViewPropertyTabs"
+          :key="propertyTab.id"
           class="rounded-md px-2 py-1 text-xs"
-          :class="tab.activePanel === 'properties' ? 'bg-accented' : 'text-muted'"
-          @click="emit('updatePanel', tab, 'properties')"
+          :class="
+            tab.activePanel === 'properties' && tab.activePropertyTab === propertyTab.id
+              ? 'bg-accented'
+              : 'text-muted'
+          "
+          @click="selectPropertyTab(propertyTab.id)"
         >
-          Properties
+          {{ propertyTab.label }}
         </button>
-
-        <template v-if="tab.activePanel === 'properties'">
-          <button
-            v-for="propertyTab in dataViewPropertyTabs"
-            :key="propertyTab.id"
-            class="rounded-md px-2 py-1 text-xs"
-            :class="tab.activePropertyTab === propertyTab.id ? 'bg-accented' : 'text-muted'"
-            @click="emit('updatePropertyTab', tab, propertyTab.id)"
-          >
-            {{ propertyTab.label }}
-          </button>
-        </template>
       </div>
 
       <div class="flex items-center gap-1">

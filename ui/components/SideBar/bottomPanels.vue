@@ -20,7 +20,7 @@ const emit = defineEmits<{
 
 type PanelKind = "favorites" | "snippets";
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const openPanels = ref<Set<PanelKind>>(new Set());
@@ -267,13 +267,13 @@ async function copySnippet(snippet: Snippet) {
   try {
     await writeClipboardText(snippet.args);
     toast.add({
-      title: locale.value === "zh" ? "已复制" : "Copied",
+      title: t("Common.CopySuccess"),
       color: "success",
       duration: 1200
     });
   } catch (error) {
     addErrorToast({
-      title: locale.value === "zh" ? "复制失败" : "Copy failed",
+      title: t("Common.CopyFailed"),
       error,
       icon: "i-lucide-circle-alert"
     });
@@ -523,7 +523,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
               <span class="block truncate font-ui-mono text-[10px] text-gray-400">{{ snippet.args }}</span>
             </span>
           </button>
-          <UTooltip :text="locale === 'zh' ? '仅复制' : 'Copy only'" :delay-duration="120">
+          <UTooltip :text="t('Common.CopyOnly')" :delay-duration="120">
             <UButton
               color="neutral"
               variant="ghost"
@@ -531,7 +531,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
               icon="i-lucide-copy"
               class="mt-0.5 size-6 shrink-0 justify-center p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
               :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-              :aria-label="locale === 'zh' ? '仅复制' : 'Copy only'"
+              :aria-label="t('Common.CopyOnly')"
               @click.stop="copySnippet(snippet)"
             />
           </UTooltip>

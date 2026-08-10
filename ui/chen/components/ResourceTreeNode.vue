@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ChenTreeNode } from "~/chen/types";
 
+import { resolveAssetIconFromFields } from "~/utils/assetIcon";
+
 defineOptions({
   name: "ChenResourceTreeNode"
 });
@@ -25,22 +27,31 @@ const emit = defineEmits<{
 const isExpanded = computed(() => props.expandedKeys.includes(props.node.key));
 const children = computed(() => props.node.children || []);
 
-function dbVendorIcon(dbType?: string) {
-  const normalized = `${dbType || ""}`.toLowerCase();
-  if (normalized.includes("postgres")) return "i-si-postgresql-fill";
-  if (normalized.includes("mysql") || normalized.includes("mariadb")) return "i-si-mysql-fill";
-  if (normalized.includes("mongo")) return "i-si-mongodb-fill";
-  if (normalized.includes("redis")) return "i-si-redis-fill";
-  if (normalized.includes("oracle")) return "i-si-oracle-fill";
-  if (normalized.includes("sqlserver")) return "i-lucide-database-zap";
-  if (normalized.includes("clickhouse")) return "i-lucide-cylinder";
-  return "i-lucide-database-backup";
-}
+const datasourceIconSrc = computed(() => {
+  if (props.node.type !== "datasource") return "";
+
+  const dbType = `${props.dbType || ""}`.toLowerCase();
+  const supportedVendors = [
+    "mysql",
+    "mariadb",
+    "oracle",
+    "postgres",
+    "sqlserver",
+    "redis",
+    "mongodb",
+    "dameng",
+    "clickhouse"
+  ];
+
+  return supportedVendors.some((vendor) => dbType.includes(vendor))
+    ? resolveAssetIconFromFields({ platform: dbType }).src
+    : "";
+});
 
 const iconName = computed(() => {
   switch (props.node.type) {
     case "datasource":
-      return dbVendorIcon(props.dbType);
+      return "i-lucide-database-zap";
     case "database":
       return "i-lucide-database";
     case "schema":
@@ -61,8 +72,9 @@ const iconName = computed(() => {
 <template>
   <li>
     <div
-      class="flex w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-left text-[13px] transition hover:bg-accented"
-      :class="selectedKey === node.key ? 'bg-accented' : ''"
+      class="sidebar-row flex h-7 w-full cursor-default items-center gap-1 rounded-lg pr-1 text-left text-xs"
+      :class="selectedKey === node.key ? 'bg-[var(--app-selected-soft)] text-[var(--app-fg)]' : ''"
+      :data-active="selectedKey === node.key ? '' : undefined"
       :style="{ paddingLeft: `${(depth || 0) * 12 + 6}px` }"
       @click="emit('select', node)"
       @dblclick="emit('activate', node)"
@@ -71,14 +83,20 @@ const iconName = computed(() => {
       <button
         v-if="!node.leaf"
         type="button"
-        class="flex size-4 items-center justify-center rounded-sm text-muted hover:bg-accented"
+        class="grid size-4 shrink-0 place-items-center rounded-sm text-muted hover:bg-[var(--app-hover-strong)]"
+        :aria-label="isExpanded ? 'Collapse' : 'Expand'"
         @click.stop="emit('toggle', node)"
       >
-        <UIcon :name="isExpanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-3.5" />
+        <UIcon
+          name="i-lucide-chevron-right"
+          class="sidebar-icon-sm transition-transform"
+          :class="isExpanded ? 'rotate-90' : ''"
+        />
       </button>
       <span v-else class="size-4" />
-      <UIcon :name="iconName" class="size-4 shrink-0 text-primary" />
-      <span class="min-w-0 truncate">{{ node.label || node.name || node.key }}</span>
+      <img v-if="datasourceIconSrc" :src="datasourceIconSrc" alt="" class="sidebar-icon-img" />
+      <UIcon v-else :name="iconName" class="sidebar-icon" />
+      <span class="min-w-0 flex-1 truncate">{{ node.label || node.name || node.key }}</span>
     </div>
 
     <ul v-if="isExpanded" class="space-y-0.5">
