@@ -3,7 +3,7 @@ import type { HostBridge } from "@jumpserver/connectors-core";
 import type { InjectionKey } from "vue";
 import type { TerminalMittEvent } from "#koko/composables/terminal/protocol";
 
-import type { TerminalSessionInfo } from "#koko/types";
+import type { ClipboardDirection, ClipboardPermission, ClipboardPolicy, TerminalSessionInfo } from "#koko/types";
 import {
   connectorSessionKey,
   createHostBridge,
@@ -11,10 +11,15 @@ import {
   HOST_MESSAGE_TYPE
 } from "@jumpserver/connectors-core";
 import mitt from "mitt";
-import { inject, nextTick } from "vue";
+import { inject, nextTick, shallowRef } from "vue";
 import { TerminalEventType } from "#koko/composables/terminal/protocol";
 import { isKokoTerminalAiInputLocked } from "#koko/composables/terminal/useTerminalAiSessions";
 import { useKokoConnectionStore } from "#koko/stores/connection";
+import {
+  createUnrestrictedClipboardAccess,
+  resolveClipboardAccess,
+  validateClipboardText as validateClipboardAccess
+} from "#koko/utils/clipboardAcl";
 import mittBus from "#koko/utils/mittBus";
 import { terminalTheme } from "#koko/utils/terminalTheme";
 import { formatMessage, getXTerminalLineContent } from "#koko/utils/terminalUtils";
@@ -30,9 +35,11 @@ interface TerminalContext {
   eventBus: ReturnType<typeof mitt<TerminalEvents>>;
   cleanup: () => void;
   initialize: () => void;
-  sendMittEvent: (event: TerminalMittEvent, data: unknown) => void;
-  onMittEvent: (event: TerminalMittEvent, callback: (data: unknown) => void) => () => void;
+  sendMittEvent: (event: TerminalMittEvent) => void;
+  onMittEvent: (event: TerminalMittEvent, callback: () => void) => () => void;
   sendHostEvent: (event: string, data: unknown) => void;
+  setClipboardAccess: (permission?: ClipboardPermission | null, policy?: ClipboardPolicy | null) => void;
+  validateClipboardText: (direction: ClipboardDirection, text: string) => boolean;
 }
 
 export const kokoTerminalContextKey: InjectionKey<TerminalContext> = Symbol("koko-terminal-context");
@@ -42,7 +49,31 @@ export const createKokoTerminalContext = (): TerminalContext => {
   const hostBridge = createHostBridge();
   const connectionStore = useKokoConnectionStore();
   const sessionCtxRef = inject(connectorSessionKey, null);
+  const clipboardAccess = shallowRef(createUnrestrictedClipboardAccess());
+  const toast = useToast();
+  const { t } = useI18n();
   let unbindPostMessage: (() => void) | undefined;
+
+  const setClipboardAccess = (permission?: ClipboardPermission | null, policy?: ClipboardPolicy | null) => {
+    clipboardAccess.value = resolveClipboardAccess(permission, policy);
+  };
+
+  const validateClipboardText = (direction: ClipboardDirection, text: string) => {
+    const result = validateClipboardAccess(clipboardAccess.value, direction, text);
+    if (result.allowed) return true;
+
+    toast.add({
+      title:
+        result.reason === "text_limit"
+          ? t("koko.terminal.clipboardTextLimitExceeded", {
+              action: t(direction === "copy" ? "koko.actions.copy" : "koko.actions.paste"),
+              limit: result.limit
+            })
+          : t(direction === "copy" ? "koko.terminal.clipboardCopyDenied" : "koko.terminal.clipboardPasteDenied"),
+      color: "warning"
+    });
+    return false;
+  };
 
   const sendHostEvent = (event: string, data: unknown) => {
     eventBus.emit(TerminalEventType.Host, { event, data });
@@ -77,10 +108,11 @@ export const createKokoTerminalContext = (): TerminalContext => {
       );
     });
 
-    const handleHostCommand = (data: unknown) => {
+    const handleHostCommand = (data: unknown, enforceClipboardPolicy = true) => {
       const socket = connectionStore.socket;
       const terminalId = connectionStore.terminalId;
       const paneId = unref(sessionCtxRef)?.tabId || "";
+      const command = String(data ?? "");
       if (
         !socket ||
         !terminalId ||
@@ -89,11 +121,12 @@ export const createKokoTerminalContext = (): TerminalContext => {
       ) {
         return;
       }
-      socket.send(formatMessage(terminalId, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, String(data ?? "")));
+      if (enforceClipboardPolicy && command && !validateClipboardText("paste", command)) return;
+      socket.send(formatMessage(terminalId, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, command));
     };
 
     mittBus.on("write-command", ({ type }) => {
-      handleHostCommand(type);
+      handleHostCommand(type, false);
     });
 
     const handleHostFocus = () => {
@@ -133,16 +166,16 @@ export const createKokoTerminalContext = (): TerminalContext => {
       handleHostThemeChange({ theme: message.theme })
     );
     hostBridge.onHost(HOST_MESSAGE_TYPE.TERMINAL_CONTENT, handleTerminalContent);
-    hostBridge.onHost(HOST_MESSAGE_TYPE.INPUT_ACTIVE, () => handleHostCommand(""));
+    hostBridge.onHost(HOST_MESSAGE_TYPE.INPUT_ACTIVE, () => handleHostCommand("", false));
   };
 
-  const sendMittEvent = (event: TerminalMittEvent, data: unknown) => {
-    mittBus.emit(event as keyof typeof mittBus.all, data as never);
+  const sendMittEvent = (event: TerminalMittEvent) => {
+    mittBus.emit(event);
   };
 
-  const onMittEvent = (event: TerminalMittEvent, callback: (data: unknown) => void) => {
-    mittBus.on(event as keyof typeof mittBus.all, callback as never);
-    return () => mittBus.off(event as keyof typeof mittBus.all, callback as never);
+  const onMittEvent = (event: TerminalMittEvent, callback: () => void) => {
+    mittBus.on(event, callback);
+    return () => mittBus.off(event, callback);
   };
 
   const initialize = () => {
@@ -164,7 +197,9 @@ export const createKokoTerminalContext = (): TerminalContext => {
     initialize,
     sendHostEvent,
     sendMittEvent,
-    onMittEvent
+    onMittEvent,
+    setClipboardAccess,
+    validateClipboardText
   };
 };
 

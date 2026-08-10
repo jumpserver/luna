@@ -4,7 +4,14 @@ import type { Terminal } from "@xterm/xterm";
 import type { ComputedRef, Ref } from "vue";
 import type { useKokoConnectionStore } from "#koko/stores/connection";
 import type { useKokoTerminalSettingsStore } from "#koko/stores/terminalSettings";
-import type { OnlineUser, SettingConfig, ShareUserOptions, TerminalSessionInfo } from "#koko/types";
+import type {
+  ClipboardPermission,
+  ClipboardPolicy,
+  OnlineUser,
+  SettingConfig,
+  ShareUserOptions,
+  TerminalSessionInfo
+} from "#koko/types";
 import type { TerminalCommandEnvelope } from "./envelope";
 import type { TerminalIncomingMessage } from "./protocol";
 import type { TerminalAiChatMessage } from "./useTerminalAiSessions";
@@ -116,7 +123,6 @@ export function createKokoTerminalMessageHandlers(options: {
   shareCode: Ref<string>;
   sessionId: Ref<string>;
   terminalId: Ref<string>;
-  zmodemTransferStatus: Ref<boolean>;
   warningInterval: Ref<ReturnType<typeof setInterval> | null>;
   queryTerminalThemeName: ComputedRef<string>;
   followAppTheme: ComputedRef<boolean>;
@@ -133,8 +139,11 @@ export function createKokoTerminalMessageHandlers(options: {
   sendHostEvent: (event: HOST_MESSAGE_TYPE, data: unknown) => void;
   emitTerminalConnect: (id: string) => void;
   emitTerminalSession: (payload: TerminalSessionInfo) => void;
+  setClipboardAccess: (permission?: ClipboardPermission | null, policy?: ClipboardPolicy | null) => void;
   showInfoOnce: (content: string) => void;
   onConnected: (terminalId: string, socket: WebSocket, terminal: Terminal) => void;
+  onZmodemEnd: () => void;
+  onZmodemAbort: () => void;
 }) {
   const parseJson = <T>(value: string | undefined, fallback: T) => {
     if (!value) return fallback;
@@ -176,10 +185,14 @@ export function createKokoTerminalMessageHandlers(options: {
       const terminal = options.terminalRef.value;
       if (!socket || !terminal) return;
 
-      const info = parseJson<{ setting: Partial<SettingConfig>; asset?: { name?: string } }>(message.data, {
-        setting: {}
-      });
+      const info = parseJson<{
+        setting: Partial<SettingConfig>;
+        asset?: { name?: string };
+        permission?: ClipboardPermission | null;
+        clipboard_policy?: ClipboardPolicy | null;
+      }>(message.data, { setting: {} });
       options.featureSetting.value = info.setting;
+      options.setClipboardAccess(info.permission, info.clipboard_policy);
       if (info.asset?.name) options.connectionStore.setConnectionState({ assetName: info.asset.name });
       updateIcon(info.setting);
 
@@ -222,23 +235,23 @@ export function createKokoTerminalMessageHandlers(options: {
       options.connectionStore.updateConnectionState({ shareId: payload.share_id, shareCode: payload.code });
     },
     [MESSAGE_TYPE.TERMINAL_ACTION]: (message) => {
-      if (message.data === ZMODEM_ACTION_TYPE.ZMODEM_START) {
-        options.zmodemTransferStatus.value = true;
-      } else if (message.data === ZMODEM_ACTION_TYPE.ZMODEM_END) {
-        options.terminalRef.value?.write("\r\n");
-      } else {
-        options.zmodemTransferStatus.value = false;
+      if (message.data === ZMODEM_ACTION_TYPE.ZMODEM_END) {
+        options.onZmodemEnd();
+      } else if (message.data === ZMODEM_ACTION_TYPE.ZMODEM_ABORT) {
+        options.onZmodemAbort();
       }
     },
     [MESSAGE_TYPE.TERMINAL_SESSION]: (message) => {
       const sessionInfo = parseJson<{
         session: { id: string; asset?: string; ip?: string; user?: string };
         permission?: { actions?: string[] };
+        clipboard_policy?: ClipboardPolicy | null;
         backspaceAsCtrlH?: boolean;
         ctrlCAsCtrlZ?: boolean;
         themeName?: string;
       }>(message.data, { session: { id: "" } });
       options.emitTerminalSession(sessionInfo as TerminalSessionInfo);
+      options.setClipboardAccess(sessionInfo.permission, sessionInfo.clipboard_policy);
 
       const tabId = options.sessionCtxRef.value?.tabId;
       if (tabId) {

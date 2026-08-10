@@ -7,6 +7,7 @@ import { inject } from "vue";
 export interface KokoWorkspaceTab {
   id: string;
   assetId: string;
+  assetName?: string;
   protocol?: string;
   account?: string;
   payload?: Record<string, any>;

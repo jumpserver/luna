@@ -70,17 +70,42 @@ const draft = computed({
 });
 
 const thresholdOptions = computed(() => [
-  { label: t("RightPanel.AIApprovalAll"), value: 1 },
-  { label: t("RightPanel.AIApprovalRisk2"), value: 2 },
-  { label: t("RightPanel.AIApprovalRisk3"), value: 3 },
-  { label: t("RightPanel.AIApprovalRisk4"), value: 4 }
+  {
+    label: t("RightPanel.AIApprovalAllShort"),
+    description: t("RightPanel.AIApprovalAll"),
+    value: 1
+  },
+  {
+    label: t("RightPanel.AIApprovalRisk2Short"),
+    description: t("RightPanel.AIApprovalRisk2"),
+    value: 2
+  },
+  {
+    label: t("RightPanel.AIApprovalRisk3Short"),
+    description: t("RightPanel.AIApprovalRisk3"),
+    value: 3
+  },
+  {
+    label: t("RightPanel.AIApprovalRisk4Short"),
+    description: t("RightPanel.AIApprovalRisk4"),
+    value: 4
+  }
 ]);
 
 const modeOptions = computed(() => [
-  { label: t("RightPanel.AIModeAuto"), value: "auto" },
-  { label: t("RightPanel.AIModePty"), value: "pty_only" },
   {
-    label: t("RightPanel.AIModeBackground"),
+    label: t("RightPanel.AIModeAutoShort"),
+    description: t("RightPanel.AIModeAuto"),
+    value: "auto"
+  },
+  {
+    label: t("RightPanel.AIModePtyShort"),
+    description: t("RightPanel.AIModePty"),
+    value: "pty_only"
+  },
+  {
+    label: t("RightPanel.AIModeBackgroundShort"),
+    description: t("RightPanel.AIModeBackground"),
     value: "background_only",
     disabled: !session.value?.backgroundExec
   }
@@ -231,6 +256,12 @@ function submit() {
     .catch(() => {
       if (!current.errorText) current.errorText = t("RightPanel.AISendFailed");
     });
+}
+
+function handleSubmitKeydown(event: KeyboardEvent) {
+  if (event.isComposing) return;
+  event.preventDefault();
+  submit();
 }
 
 function updatePolicy() {
@@ -434,29 +465,6 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
             </div>
           </div>
         </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <USelect
-            size="xs"
-            :model-value="session.approvalThreshold"
-            :items="thresholdOptions"
-            value-key="value"
-            label-key="label"
-            @update:model-value="changeApprovalThreshold"
-          />
-          <USelect
-            size="xs"
-            :model-value="session.executionMode"
-            :items="modeOptions"
-            value-key="value"
-            label-key="label"
-            @update:model-value="changeExecutionMode"
-          />
-        </div>
-
-        <p v-if="!session.backgroundExec && session.backgroundReason" class="text-[11px] text-muted">
-          {{ session.backgroundReason }}
-        </p>
       </header>
 
       <main ref="messagesElement" class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
@@ -704,35 +712,71 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
           />
           {{ session.runtimeStatus }}
         </div>
-        <UTextarea
-          v-model="draft"
-          :rows="2"
-          autoresize
-          :maxrows="5"
-          :placeholder="t('RightPanel.AIInputPlaceholder')"
-          class="w-full"
-          :disabled="busy"
-          :ui="{ base: 'text-xs' }"
-          @keydown.enter.exact.prevent="submit"
-        />
-        <div class="flex justify-end gap-1.5">
-          <UButton
-            v-if="busy"
-            size="xs"
-            color="neutral"
-            variant="soft"
-            icon="i-lucide-square"
-            :label="t('RightPanel.AIInterrupt')"
-            @click="interrupt"
+        <p v-if="!session.backgroundExec && session.backgroundReason" class="text-[11px] text-muted">
+          {{ session.backgroundReason }}
+        </p>
+        <div
+          class="relative overflow-hidden rounded-lg bg-[var(--app-input-bg)] ring ring-inset ring-[var(--app-border)] transition-shadow focus-within:ring-2 focus-within:ring-primary"
+        >
+          <UTextarea
+            v-model="draft"
+            :rows="2"
+            autoresize
+            :maxrows="5"
+            :placeholder="t('RightPanel.AIInputPlaceholder')"
+            variant="none"
+            class="block w-full"
+            :disabled="busy"
+            :ui="{ base: 'min-h-24 rounded-lg pb-11 text-xs' }"
+            @keydown.enter.exact="handleSubmitKeydown"
           />
-          <UButton
-            size="xs"
-            color="primary"
-            icon="i-lucide-send"
-            :label="t('RightPanel.AISend')"
-            :disabled="busy || !draft.trim()"
-            @click="submit"
-          />
+          <div class="absolute inset-x-2 bottom-2 flex items-center gap-1.5">
+            <div class="flex min-w-0 flex-1 items-center gap-1">
+              <USelect
+                size="xs"
+                variant="soft"
+                icon="i-lucide-shield-check"
+                class="min-w-0 max-w-36"
+                :model-value="session.approvalThreshold"
+                :items="thresholdOptions"
+                value-key="value"
+                label-key="label"
+                :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
+                @update:model-value="changeApprovalThreshold"
+              />
+              <USelect
+                size="xs"
+                variant="soft"
+                icon="i-lucide-sparkles"
+                class="min-w-0 max-w-32"
+                :model-value="session.executionMode"
+                :items="modeOptions"
+                value-key="value"
+                label-key="label"
+                :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
+                @update:model-value="changeExecutionMode"
+              />
+            </div>
+            <UButton
+              v-if="busy"
+              size="xs"
+              color="neutral"
+              variant="soft"
+              icon="i-lucide-square"
+              :label="t('RightPanel.AIInterrupt')"
+              @click="interrupt"
+            />
+            <UTooltip :text="t('RightPanel.AISend')">
+              <UButton
+                size="xs"
+                color="primary"
+                icon="i-lucide-send"
+                :aria-label="t('RightPanel.AISend')"
+                :disabled="busy || !draft.trim()"
+                @click="submit"
+              />
+            </UTooltip>
+          </div>
         </div>
       </footer>
     </template>

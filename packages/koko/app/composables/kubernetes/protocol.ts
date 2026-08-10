@@ -8,6 +8,7 @@ export enum KubernetesTerminalMessageType {
   Initialize = "TERMINAL_K8S_INIT",
   Data = "TERMINAL_K8S_DATA",
   Binary = "TERMINAL_K8S_BINARY",
+  TerminalSession = "TERMINAL_SESSION",
   Resize = "TERMINAL_K8S_RESIZE",
   Close = "K8S_CLOSE"
 }
@@ -36,6 +37,7 @@ export interface KubernetesTerminalTarget {
 export interface KubernetesTerminalConnectMessage {
   type: KubernetesTerminalMessageType.Connect;
   id: string;
+  data?: string;
 }
 
 export interface KubernetesTerminalTreeMessage {
@@ -53,6 +55,12 @@ export interface KubernetesTerminalBinaryMessage {
   type: KubernetesTerminalMessageType.Binary;
   k8s_id: string;
   raw?: string;
+}
+
+export interface KubernetesTerminalSessionMessage {
+  type: KubernetesTerminalMessageType.TerminalSession;
+  k8s_id: string;
+  data?: string;
 }
 
 export interface KubernetesTerminalPingMessage {
@@ -77,6 +85,7 @@ export type KubernetesTerminalIncomingMessage =
   | KubernetesTerminalTreeMessage
   | KubernetesTerminalDataMessage
   | KubernetesTerminalBinaryMessage
+  | KubernetesTerminalSessionMessage
   | KubernetesTerminalPingMessage
   | KubernetesTerminalControlMessage;
 
@@ -148,7 +157,7 @@ export function parseKubernetesTerminalMessage(raw: unknown): KubernetesTerminal
 
   if (message.type === KubernetesTerminalMessageType.Connect) {
     if (typeof message.id !== "string") return null;
-    return { id: message.id, type: message.type };
+    return { data: optionalString(message.data), id: message.id, type: message.type };
   }
 
   if (message.type === KubernetesTerminalMessageType.Ping) {
@@ -168,6 +177,18 @@ export function parseKubernetesTerminalMessage(raw: unknown): KubernetesTerminal
   if (message.type === KubernetesTerminalMessageType.Binary) {
     if (typeof message.k8s_id !== "string") return null;
     return { k8s_id: message.k8s_id, raw: optionalString(message.raw), type: message.type };
+  }
+
+  if (message.type === KubernetesTerminalMessageType.TerminalSession) {
+    if (typeof message.k8s_id !== "string") return null;
+    return { data: optionalString(message.data), k8s_id: message.k8s_id, type: message.type };
+  }
+
+  if (
+    message.type === KubernetesTerminalMessageType.Initialize ||
+    message.type === KubernetesTerminalMessageType.Resize
+  ) {
+    return null;
   }
 
   return {

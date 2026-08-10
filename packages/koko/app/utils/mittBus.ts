@@ -4,7 +4,7 @@ import type { OnlineUser, ShareUserOptions } from "#koko/types";
 
 import mitt from "mitt";
 
-interface Event {
+interface Event extends Record<string | symbol, unknown> {
   "remove-event": void;
   "alt-shift-right": void;
   "alt-shift-left": void;

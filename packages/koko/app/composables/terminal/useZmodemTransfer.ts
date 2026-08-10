@@ -14,15 +14,18 @@ export function useKokoZmodemTransfer(options: {
 }) {
   let lastPercent = -1;
   let messageShown = false;
+  let uploadController: AbortController | null = null;
 
   const resetTransferState = () => {
+    uploadController?.abort();
+    uploadController = null;
     lastPercent = -1;
     messageShown = false;
   };
 
   const writeUploadProgress = (file: File, transfer: KokoZmodemTransfer, terminal: Terminal) => {
     const detail = transfer.get_details();
-    const percent = detail.size === 0 ? 100 : Math.min(100, Math.round((transfer.get_offset() / detail.size) * 100));
+    const percent = detail.size === 0 ? 100 : Math.min(100, Math.floor((transfer.get_offset() / detail.size) * 100));
     if (percent === lastPercent) return;
 
     const progressLength = Math.floor(percent / 2);
@@ -54,21 +57,28 @@ export function useKokoZmodemTransfer(options: {
     );
   };
 
-  const uploadFile = async (session: KokoZmodemSendSession, terminal: Terminal, file: File) => {
+  const uploadFile = async (session: KokoZmodemSendSession, terminal: Terminal, file: File, socket: WebSocket) => {
     resetTransferState();
 
     if (file.size >= MAX_TRANSFER_SIZE) {
       options.addErrorToast({
         title: `${options.t("koko.terminal.transferSizeExceeded")}: ${prettyBytes(MAX_TRANSFER_SIZE)}`
       });
-      options.onCleanup();
+      options.onAbortSession();
       return;
     }
 
     options.onActivateSession(session);
+    uploadController = new AbortController();
+    let skipped = false;
 
     try {
       await sendZmodemFiles(session, [file], {
+        signal: uploadController.signal,
+        socket,
+        onOfferResponse: (_currentFile, transfer) => {
+          skipped = !transfer;
+        },
         onProgress: (currentFile, transfer) => writeUploadProgress(currentFile, transfer, terminal),
         onFileComplete: (currentFile) => {
           options.toast.add({
@@ -78,10 +88,17 @@ export function useKokoZmodemTransfer(options: {
         }
       });
 
+      if (skipped) {
+        terminal.write(`\r\n${options.t("koko.terminal.uploadSkipped")}\r\n`);
+        options.toast.add({ title: options.t("koko.terminal.uploadSkipped"), color: "warning" });
+      } else {
+        terminal.write("\r\n");
+      }
       options.onCleanup();
     } catch (error) {
-      options.addErrorToast({ title: error instanceof Error ? error.message : String(error) });
-      options.onCleanup();
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        options.addErrorToast({ title: error instanceof Error ? error.message : String(error) });
+      }
       options.onAbortSession();
     }
   };
@@ -109,14 +126,23 @@ export function useKokoZmodemTransfer(options: {
       transfer
         .accept()
         .then((packets) => {
-          saveZmodemPacketsToDisk(packets, detail.name);
+          saveZmodemPacketsToDisk(
+            packets.map((packet) => new Uint8Array(packet).buffer),
+            detail.name
+          );
           options.toast.add({ title: `${options.t("koko.terminal.downloaded")}: ${detail.name}`, color: "success" });
           terminal.write("\r\n");
         })
-        .catch((error: Error) => options.addErrorToast({ title: String(error) }));
+        .catch((error: Error) => {
+          options.addErrorToast({ title: String(error) });
+          options.onAbortSession();
+        });
     });
 
     session.on("session_end", () => {
+      if (session.aborted()) {
+        terminal.write(`\r\n${options.t("koko.terminal.downloadFailed")}\r\n`);
+      }
       terminal.write("\r\n");
       options.onCleanup();
     });
