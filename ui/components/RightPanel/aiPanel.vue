@@ -437,6 +437,13 @@ function riskColor(level: number) {
   return "success";
 }
 
+function formatExecutionDuration(value: unknown) {
+  const durationMs = Number(value);
+  if (!Number.isFinite(durationMs) || durationMs < 0) return "";
+  if (durationMs < 1000) return `${Math.round(durationMs)} ms`;
+  return `${(durationMs / 1000).toFixed(durationMs < 10000 ? 2 : 1)} s`;
+}
+
 watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.parts.length], scrollToBottom);
 </script>
 
@@ -569,6 +576,15 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
                             {{ execution.command.execution }}
                           </UBadge>
                           <UBadge
+                            v-if="execution.command.decisionDurationMs !== undefined"
+                            color="neutral"
+                            variant="subtle"
+                            size="xs"
+                          >
+                            {{ t("RightPanel.AIDecisionDuration") }}
+                            {{ formatExecutionDuration(execution.command.decisionDurationMs) }}
+                          </UBadge>
+                          <UBadge
                             v-if="execution.command.state === 'auto_approved'"
                             color="success"
                             variant="subtle"
@@ -641,14 +657,25 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
                         class="flex items-center justify-between border-b border-default px-2 py-1.5 text-[11px] text-muted"
                       >
                         <span>{{ t("RightPanel.AIExecutionResult") }}</span>
-                        <UBadge
-                          v-if="execution.result.exitCode !== undefined && execution.result.exitCode !== null"
-                          color="neutral"
-                          variant="subtle"
-                          size="xs"
-                        >
-                          exit {{ execution.result.exitCode }}
-                        </UBadge>
+                        <div class="flex flex-wrap justify-end gap-1">
+                          <UBadge
+                            v-if="execution.result.durationMs !== undefined"
+                            color="neutral"
+                            variant="subtle"
+                            size="xs"
+                          >
+                            {{ t("RightPanel.AIExecutionDuration") }}
+                            {{ formatExecutionDuration(execution.result.durationMs) }}
+                          </UBadge>
+                          <UBadge
+                            v-if="execution.result.exitCode !== undefined && execution.result.exitCode !== null"
+                            color="neutral"
+                            variant="subtle"
+                            size="xs"
+                          >
+                            exit {{ execution.result.exitCode }}
+                          </UBadge>
+                        </div>
                       </div>
                       <div
                         v-if="execution.result.summary"
