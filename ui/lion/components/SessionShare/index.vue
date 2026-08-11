@@ -5,6 +5,7 @@ import { removeShareUser } from "@/lion/api";
 import CardContainer from "@/lion/components/CardContainer/index.vue";
 import CreateLink from "@/lion/components/SessionShare/widget/CreateLink.vue";
 import UserItem from "@/lion/components/SessionShare/widget/UserItem.vue";
+import { createLionConnectTicket } from "@/lion/hooks/useLionConnectTicket";
 
 export type TranslateFunction = Composer["t"];
 
@@ -18,22 +19,32 @@ const props = defineProps<{
   }>;
   disableCreate?: boolean;
   endpointUrl?: string;
+  tokenId?: string;
+  ticket?: string;
 }>();
 
 const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
 
-const handleRemoveShareUser = (user: any) => {
-  removeShareUser(user, props.endpointUrl)
-    .then((res: any) => res.json())
-    .then((response) => {
-      if (response.message && !response.success) {
-        addErrorToast({ title: response.message });
-      }
-    })
-    .catch(() => {
-      addErrorToast({ title: t("ShareUserRemoveError") });
+const handleRemoveShareUser = async (user: any) => {
+  try {
+    let ticket = props.ticket || "";
+    try {
+      ticket =
+        (await createLionConnectTicket(props.endpointUrl || window.location.origin, props.tokenId || "")) || ticket;
+    } catch (error) {
+      if (!ticket) throw error;
+    }
+    const response = await removeShareUser(user, props.endpointUrl, {
+      ticket,
+      token: props.tokenId
     });
+    if (response.message && !response.success) {
+      addErrorToast({ title: response.message });
+    }
+  } catch {
+    addErrorToast({ title: t("ShareUserRemoveError") });
+  }
 };
 </script>
 
@@ -62,7 +73,13 @@ const handleRemoveShareUser = (user: any) => {
     </CardContainer>
 
     <CardContainer :title="t('ShareLink')">
-      <CreateLink :session="session" :disabled-create-link="props.disableCreate" :endpoint-url="props.endpointUrl" />
+      <CreateLink
+        :session="session"
+        :disabled-create-link="props.disableCreate"
+        :endpoint-url="props.endpointUrl"
+        :token-id="props.tokenId"
+        :ticket="props.ticket"
+      />
     </CardContainer>
   </div>
 </template>

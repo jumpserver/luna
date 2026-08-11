@@ -1,6 +1,7 @@
 const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080";
 const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
-const lionTarget = process.env.JMS_LION_DEV_URL || "http://localhost:8081";
+// JMS_LION_DEV_URL remains a compatibility override; Lion is served by Koko by default.
+const lionTarget = process.env.JMS_LION_DEV_URL || kokoTarget;
 const chenTarget = process.env.JMS_CHEN_DEV_URL || "http://localhost:8082";
 const faceliveTarget = process.env.JMS_FACELIVE_DEV_URL || "http://localhost:5173";
 const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:5172";
@@ -163,13 +164,26 @@ export default defineNuxtConfig({
           rewrite: (path) => path.replace(/^\/luna/, ""),
           configure: bindProxyErrorHandler("luna-lion-ws")
         },
-        "/luna/lion/": {
+        "/luna/lion/api/": {
           target: lionTarget,
           secure: false,
-          ws: true,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/luna/, ""),
-          configure: bindProxyErrorHandler("luna-lion-http")
+          configure: bindProxyErrorHandler("luna-lion-api")
+        },
+        "/luna/lion/token/": {
+          target: lionTarget,
+          secure: false,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/luna/, ""),
+          configure: bindProxyErrorHandler("luna-lion-token")
+        },
+        "/luna/lion/health/": {
+          target: lionTarget,
+          secure: false,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/luna/, ""),
+          configure: bindProxyErrorHandler("luna-lion-health")
         },
         "/lion/ws/": {
           target: lionTarget.replace(/^http/i, "ws"),
@@ -178,12 +192,23 @@ export default defineNuxtConfig({
           changeOrigin: true,
           configure: bindProxyErrorHandler("lion-ws")
         },
-        "/lion/": {
+        "/lion/api/": {
           target: lionTarget,
           secure: false,
-          ws: true,
           changeOrigin: true,
-          configure: bindProxyErrorHandler("lion-http")
+          configure: bindProxyErrorHandler("lion-api")
+        },
+        "/lion/token/": {
+          target: lionTarget,
+          secure: false,
+          changeOrigin: true,
+          configure: bindProxyErrorHandler("lion-token")
+        },
+        "/lion/health/": {
+          target: lionTarget,
+          secure: false,
+          changeOrigin: true,
+          configure: bindProxyErrorHandler("lion-health")
         },
         "/chen/ws/": {
           target: chenTarget.replace(/^http/i, "ws"),

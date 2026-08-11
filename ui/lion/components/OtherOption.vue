@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import CardContainer from "@/lion/components/CardContainer/index.vue";
 
@@ -9,27 +8,20 @@ const props = defineProps<{
   fitPercentage: number;
 }>();
 
-const emit = defineEmits(["combine-keys", "update:autoFit", "updateScale"]);
+const emit = defineEmits(["update:autoFit", "updateScale"]);
 
 const { t } = useI18n();
-
-const percentage = ref<number>(props.fitPercentage);
-
-onMounted(() => {
-  percentage.value = props.fitPercentage;
-});
 
 const handleAutoFitUpdate = (value: boolean) => {
   emit("update:autoFit", value);
 };
 
 const handleCircleClick = (value: number) => {
-  const newPercentage = percentage.value + value;
+  const newPercentage = props.fitPercentage + value;
   if (newPercentage < 10) {
     console.warn("Fit percentage cannot be less than 10%");
     return;
   }
-  percentage.value = newPercentage;
   emit("update:autoFit", false);
   emit("updateScale", newPercentage);
 };
@@ -41,13 +33,23 @@ const handleCircleClick = (value: number) => {
       <span class="text-sm">{{ t("AutoFit") }}</span>
       <div class="flex items-center gap-2">
         <USwitch :model-value="props.autoFit" @update:model-value="handleAutoFitUpdate" />
-        <button type="button" class="inline-flex items-center" @click="handleCircleClick(-5)">
-          <UIcon name="i-lucide-circle-minus" class="size-4" />
-        </button>
+        <UButton
+          icon="i-lucide-circle-minus"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          :aria-label="t('ZoomOut')"
+          @click="handleCircleClick(-5)"
+        />
         <span class="text-xs">{{ props.fitPercentage }}%</span>
-        <button type="button" class="inline-flex items-center" @click="handleCircleClick(5)">
-          <UIcon name="i-lucide-circle-plus" class="size-4" />
-        </button>
+        <UButton
+          icon="i-lucide-circle-plus"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          :aria-label="t('ZoomIn')"
+          @click="handleCircleClick(5)"
+        />
       </div>
     </div>
   </CardContainer>

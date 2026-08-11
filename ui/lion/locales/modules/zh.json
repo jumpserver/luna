@@ -1,1 +1,15 @@
-{}
+{
+  "ClipboardTextLimitExceeded": "剪贴板文本超过限制",
+  "ClipboardFileSizeLimitExceeded": "剪贴板文件超过限制",
+  "ClipboardCopyDeniedByPolicy": "触发剪贴板控制规则，无法复制",
+  "ClipboardPasteDeniedByPolicy": "触发剪贴板控制规则，无法粘贴",
+  "Copy": "复制",
+  "Paste": "粘贴",
+  "NoPermission": "无权限",
+  "LoadMore": "加载更多",
+  "Uploading": "上传中",
+  "Waiting": "等待中",
+  "Forward": "前进",
+  "ZoomIn": "放大",
+  "ZoomOut": "缩小"
+}
