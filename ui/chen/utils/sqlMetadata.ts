@@ -7,11 +7,7 @@ import type {
 } from "~/chen/types/sqlMetadata";
 
 export interface ChenSqlMetadataClient {
-  listRelations: (
-    scope: ChenSqlMetadataScope,
-    prefix: string,
-    limit: number
-  ) => Promise<ChenRelationMetadataPage>;
+  listRelations: (scope: ChenSqlMetadataScope, prefix: string, limit: number) => Promise<ChenRelationMetadataPage>;
   listColumns: (
     scope: ChenSqlMetadataScope,
     relations: ChenQualifiedRelation[]

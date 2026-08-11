@@ -44,9 +44,13 @@ export function createChenCompletionSource(options: ChenCompletionSourceOptions)
     if (!scope?.nodeKey || !scope.context) return null;
 
     let cancelled = false;
-    context.addEventListener("abort", () => {
-      cancelled = true;
-    }, { onDocChange: true });
+    context.addEventListener(
+      "abort",
+      () => {
+        cancelled = true;
+      },
+      { onDocChange: true }
+    );
 
     try {
       const analysis = analyzeChenSqlCompletion(context.state.doc.toString(), context.pos);
@@ -70,14 +74,15 @@ export function createChenCompletionSource(options: ChenCompletionSourceOptions)
         if (relation) {
           const columns = await options.store.getColumns(scope, [relation]);
           if (cancelled) return null;
-          return qualifiedColumnCompletion(relation, columnsFor(columns, relation), scope.context, options.dialect())(
-            context
-          );
+          return qualifiedColumnCompletion(
+            relation,
+            columnsFor(columns, relation),
+            scope.context,
+            options.dialect()
+          )(context);
         }
 
-        const schemaRelations = lookup.page.items.filter((item) =>
-          identifiersEqual(item.schema, analysis.qualifier)
-        );
+        const schemaRelations = lookup.page.items.filter((item) => identifiersEqual(item.schema, analysis.qualifier));
         if (schemaRelations.length) {
           return relationCompletion(schemaRelations, scope.context, options.dialect())(context);
         }
@@ -109,12 +114,11 @@ export function analyzeChenSqlCompletion(sql: string, position = sql.length): Ch
   const statementEnd = nextSeparator === -1 ? sql.length : nextSeparator;
   const statement = sql.slice(statementStart, statementEnd);
   const beforeCursor = sql.slice(statementStart, position);
-  const relationMatch = beforeCursor.match(
-    /\b(?:from|join|update|into)\s+((?:[a-z_][\w$]*\.)?[a-z_][\w$]*)?$/i
-  );
+  const relationMatch = beforeCursor.match(/\b(?:from|join|update|into)\s+((?:[a-z_][\w$]*\.)?[a-z_][\w$]*)?$/i);
   const qualifierMatch = beforeCursor.match(/(?:^|[^\w$])([a-z_][\w$]*)\.\s*[\w$]*$/i);
   const references: ChenSqlCompletionAnalysis["references"] = [];
-  const relationPattern = /\b(?:from|join|update|into)\s+([a-z_][\w$]*(?:\s*\.\s*[a-z_][\w$]*)?)(?:\s+(?:as\s+)?([a-z_][\w$]*))?/gi;
+  const relationPattern =
+    /\b(?:from|join|update|into)\s+([a-z_][\w$]*(?:\s*\.\s*[a-z_][\w$]*)?)(?:\s+(?:as\s+)?([a-z_][\w$]*))?/gi;
 
   // ponytail: This intentionally handles simple relation references only. Replace
   // it with syntax-tree scope walking when CTEs, quoted identifiers, or comma joins
@@ -139,7 +143,9 @@ async function resolveReferencedRelations(
   scope: ChenSqlMetadataScope,
   references: ChenSqlCompletionAnalysis["references"]
 ) {
-  const relations = await Promise.all(references.map((reference) => resolveRelation(store, scope, reference.identifier)));
+  const relations = await Promise.all(
+    references.map((reference) => resolveRelation(store, scope, reference.identifier))
+  );
   return [...new Map(relations.filter(Boolean).map((relation) => [relationIdentity(relation!), relation!])).values()];
 }
 
@@ -160,11 +166,9 @@ async function lookupRelation(store: ChenSqlMetadataStore, scope: ChenSqlMetadat
   );
   if (candidates.length <= 1) return { relation: candidates[0] || null, page };
   const defaultSchema = defaultSchemaFor(candidates, scope.context);
-  const relation = (
-    (defaultSchema
-      ? candidates.find((candidate) => identifiersEqual(candidate.schema, defaultSchema))
-      : undefined) || candidates[0]
-  );
+  const relation =
+    (defaultSchema ? candidates.find((candidate) => identifiersEqual(candidate.schema, defaultSchema)) : undefined) ||
+    candidates[0];
   return { relation, page };
 }
 

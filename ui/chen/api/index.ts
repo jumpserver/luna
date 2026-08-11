@@ -1,9 +1,4 @@
-import type {
-  ChenActionItem,
-  ChenAuthResponse,
-  ChenProfile,
-  ChenTreeNode
-} from "~/chen/types";
+import type { ChenActionItem, ChenAuthResponse, ChenProfile, ChenTreeNode } from "~/chen/types";
 import type {
   ChenQualifiedRelation,
   ChenRelationColumnsMetadata,

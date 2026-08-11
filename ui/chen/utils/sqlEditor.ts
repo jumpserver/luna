@@ -24,10 +24,7 @@ export function chenSqlDialect(dbType: string) {
 
 export function chenSqlExtensions(dbType: string, completionSource?: ChenSqlCompletionSource): Extension {
   const dialect = chenSqlDialect(dbType);
-  return [
-    sql({ dialect }),
-    completionSource ? dialect.language.data.of({ autocomplete: completionSource }) : []
-  ];
+  return [sql({ dialect }), completionSource ? dialect.language.data.of({ autocomplete: completionSource }) : []];
 }
 
 export function replaceChenSqlDocument(editor: Pick<EditorView, "dispatch" | "state">, value: string) {
