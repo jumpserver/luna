@@ -11,8 +11,8 @@ import {
   parseEnvelope,
   parseJSONPayload,
   parseTerminalPayload
-} from "./envelope";
-import { parseTerminalIncomingMessage } from "./protocol";
+} from "#koko/composables/terminal/envelope";
+import { parseTerminalIncomingMessage } from "#koko/composables/terminal/protocol";
 import {
   getKokoLinuxMetrics,
   handleKokoLatencyPong,
@@ -21,7 +21,7 @@ import {
   subscribeKokoLinuxMetrics,
   unregisterKokoLinuxMetricsSession,
   unsubscribeKokoLinuxMetrics
-} from "./useLinuxMetrics";
+} from "#koko/composables/terminal/useLinuxMetrics";
 import {
   getKokoTerminalAiSession,
   handleKokoTerminalAiMessage,
@@ -29,10 +29,10 @@ import {
   registerKokoTerminalAiSession,
   sendKokoTerminalAiControl,
   unregisterKokoTerminalAiSession
-} from "./useTerminalAiSessions";
-import { useKokoTerminalInput } from "./useTerminalInput";
-import { useKokoTerminalMessageHandler } from "./useTerminalMessageHandler";
-import { saveZmodemPacketsToDisk, sendZmodemFiles } from "./zmodemBrowser";
+} from "#koko/composables/terminal/useTerminalAiSessions";
+import { useKokoTerminalInput } from "#koko/composables/terminal/useTerminalInput";
+import { useKokoTerminalMessageHandler } from "#koko/composables/terminal/useTerminalMessageHandler";
+import { saveZmodemPacketsToDisk, sendZmodemFiles } from "#koko/composables/terminal/zmodemBrowser";
 
 it("combines token actions with clipboard policy and text limits", () => {
   const access = resolveClipboardAccess(

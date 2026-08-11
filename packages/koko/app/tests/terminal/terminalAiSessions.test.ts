@@ -5,7 +5,7 @@ import {
   handleKokoTerminalAiMessage,
   registerKokoTerminalAiSession,
   unregisterKokoTerminalAiSession
-} from "./useTerminalAiSessions";
+} from "#koko/composables/terminal/useTerminalAiSessions";
 
 const paneIds: string[] = [];
 

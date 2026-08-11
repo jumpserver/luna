@@ -8,7 +8,7 @@ import {
   terminalAiErrorKey,
   terminalAiExecutionKey,
   terminalAiProgressKey
-} from "./terminalAiPresentation";
+} from "#koko/composables/terminal/terminalAiPresentation";
 
 it("maps Terminal AI protocol values to localized presentation keys", () => {
   expect(terminalAiExecutionKey("pty")).toBe("RightPanel.AICurrentPty");

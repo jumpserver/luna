@@ -8,10 +8,10 @@ import {
   SftpMessageType,
   SftpSocketFailureCode,
   SftpWebSocketProtocol
-} from "./protocol";
-import { useSftpOperations } from "./useSftpOperations";
-import { useSftpRetry } from "./useSftpRetry";
-import { useSftpSocket } from "./useSftpSocket";
+} from "#koko/composables/sftp/protocol";
+import { useSftpOperations } from "#koko/composables/sftp/useSftpOperations";
+import { useSftpRetry } from "#koko/composables/sftp/useSftpRetry";
+import { useSftpSocket } from "#koko/composables/sftp/useSftpSocket";
 
 const context = {
   component: "koko" as const,

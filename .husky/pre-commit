@@ -3,3 +3,4 @@
 pnpm fmt
 pnpm lint
 pnpm cargo:fmt
+pnpm test
