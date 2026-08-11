@@ -217,32 +217,41 @@ export function useChenQueryConsole(
     }
   }
 
+  function sendSql(tab: ChenQueryLikeWorkspaceTab, sql: string) {
+    if (sql.length <= SQL_CHUNK_SIZE) {
+      return sendConsoleAction(tab, "query_console_action", { action: "run_sql", data: sql }) !== false;
+    }
+
+    const total = Math.ceil(sql.length / SQL_CHUNK_SIZE);
+    for (let index = 0; index < total; index += 1) {
+      if (
+        sendConsoleAction(tab, "query_console_action", {
+          action: "run_sql_chunk",
+          data: {
+            chunk: sql.slice(index * SQL_CHUNK_SIZE, (index + 1) * SQL_CHUNK_SIZE),
+            index,
+            total
+          }
+        }) === false
+      ) {
+        return false;
+      }
+    }
+    return (
+      sendConsoleAction(tab, "query_console_action", {
+        action: "run_sql_complete",
+        data: { total }
+      }) !== false
+    );
+  }
+
   function runQueryTab(tab: ChenQueryConsoleTab, selectedSql = "") {
     if (tab.state.loading || tab.state.inQuery) return;
     const sql = selectedSql || tab.statement;
     if (!sql.trim()) return;
     dismissQueryMessage(tab);
 
-    if (sql.length <= SQL_CHUNK_SIZE) {
-      sendConsoleAction(tab, "query_console_action", { action: "run_sql", data: sql });
-      return;
-    }
-
-    const total = Math.ceil(sql.length / SQL_CHUNK_SIZE);
-    for (let index = 0; index < total; index += 1) {
-      sendConsoleAction(tab, "query_console_action", {
-        action: "run_sql_chunk",
-        data: {
-          chunk: sql.slice(index * SQL_CHUNK_SIZE, (index + 1) * SQL_CHUNK_SIZE),
-          index,
-          total
-        }
-      });
-    }
-    sendConsoleAction(tab, "query_console_action", {
-      action: "run_sql_complete",
-      data: { total }
-    });
+    sendSql(tab, sql);
   }
 
   function runQueryFile(tab: ChenQueryConsoleTab, path: string) {
@@ -296,8 +305,7 @@ export function useChenQueryConsole(
       tab.timelineEntries.splice(0, tab.timelineEntries.length - MAX_CONSOLE_TIMELINE_ENTRIES);
     }
     tab.activeTimelineEntryId = entry.id;
-    const sent = sendConsoleAction(tab, "query_console_action", { action: "run_sql", data: sql });
-    if (sent === false) {
+    if (!sendSql(tab, sql)) {
       entry.status = "error";
       entry.completedAt = Date.now();
       const message = tab.connectionError || "Console websocket is not connected";
