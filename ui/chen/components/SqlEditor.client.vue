@@ -1,23 +1,21 @@
 <script setup lang="ts">
 import type { Extension } from "@codemirror/state";
-import type { ChenSqlHints } from "~/chen/types";
-import { sql } from "@codemirror/lang-sql";
+import type { ChenSqlCompletionSource } from "~/chen/utils/sqlCompletion";
 import { Compartment, EditorState, Prec } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
-import { chenSqlConfig, replaceChenSqlDocument } from "~/chen/utils/sqlEditor";
+import { chenSqlExtensions, replaceChenSqlDocument } from "~/chen/utils/sqlEditor";
 import { createCodeMirrorSyntaxTheme, createCodeMirrorTheme } from "~/shared/theme/adapters/codemirror";
 
 const props = withDefaults(
   defineProps<{
     modelValue: string;
     dbType?: string;
-    hints?: ChenSqlHints;
+    completionSource?: ChenSqlCompletionSource;
     readOnly?: boolean;
   }>(),
   {
     dbType: "",
-    hints: () => ({}),
     readOnly: false
   }
 );
@@ -42,7 +40,7 @@ let applyingExternalValue = false;
 
 const editorExtensions: Extension[] = [
   basicSetup,
-  sqlLanguageSlot.of(sql(chenSqlConfig(props.dbType, props.hints))),
+  sqlLanguageSlot.of(chenSqlExtensions(props.dbType, props.completionSource)),
   createCodeMirrorSyntaxTheme(),
   EditorView.lineWrapping,
   EditorState.tabSize.of(2),
@@ -144,9 +142,9 @@ watch(
 );
 
 watch(
-  () => [props.dbType, props.hints] as const,
-  ([dbType, hints]) => {
-    editor?.dispatch({ effects: sqlLanguageSlot.reconfigure(sql(chenSqlConfig(dbType, hints))) });
+  () => [props.dbType, props.completionSource] as const,
+  ([dbType, completionSource]) => {
+    editor?.dispatch({ effects: sqlLanguageSlot.reconfigure(chenSqlExtensions(dbType, completionSource)) });
   }
 );
 

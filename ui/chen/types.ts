@@ -169,8 +169,6 @@ export interface ChenDataViewEditState {
 
 export type ChenDataViewEditMode = "none" | "update" | "full";
 
-export type ChenSqlHints = Record<string, string[]>;
-
 export interface ChenConsoleState {
   loading?: boolean;
   inQuery?: boolean;
@@ -232,10 +230,6 @@ export interface ChenQueryConsoleTab extends ChenTabDefinition {
   kind: "query";
   statement: string;
   uploadingSql: boolean;
-  sqlHints: ChenSqlHints;
-  hintsContext: string;
-  hintsLoading: boolean;
-  hintsRequestGeneration: number;
   state: ChenConsoleState;
   logs: string[];
   message: ChenConsoleMessage | null;

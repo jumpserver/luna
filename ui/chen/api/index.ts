@@ -1,4 +1,15 @@
-import type { ChenActionItem, ChenAuthResponse, ChenProfile, ChenSqlHints, ChenTreeNode } from "~/chen/types";
+import type {
+  ChenActionItem,
+  ChenAuthResponse,
+  ChenProfile,
+  ChenTreeNode
+} from "~/chen/types";
+import type {
+  ChenQualifiedRelation,
+  ChenRelationColumnsMetadata,
+  ChenRelationMetadataPage,
+  ChenSqlMetadataScope
+} from "~/chen/types/sqlMetadata";
 
 const buildHeaders = (token?: string, init?: HeadersInit) => ({
   ...getWebApiHeaders(),
@@ -6,11 +17,12 @@ const buildHeaders = (token?: string, init?: HeadersInit) => ({
   ...(init || {})
 });
 
-export function chenPath(path: string, endpointUrl = window.location.origin) {
+export function chenPath(path: string, endpointUrl?: string) {
   const connectorPath = `/chen${path.startsWith("/") ? path : `/${path}`}`;
-  const endpoint = new URL(endpointUrl || window.location.origin, window.location.origin);
+  const currentOrigin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
+  const endpoint = new URL(endpointUrl || currentOrigin, currentOrigin);
 
-  if (endpoint.origin === window.location.origin) {
+  if (endpoint.origin === currentOrigin) {
     return withWebSitePrefix(connectorPath);
   }
 
@@ -76,35 +88,100 @@ export async function uploadChenSqlFile(
   return { path: result.path };
 }
 
-export async function fetchChenSqlHints(
+export async function fetchChenSqlRelations(
   chenToken: string,
-  nodeKey: string,
-  context: string,
+  scope: ChenSqlMetadataScope,
+  prefix = "",
+  limit = 100,
   fetchImpl: typeof fetch = fetch,
   endpointUrl?: string
-): Promise<ChenSqlHints> {
-  const response = await fetchImpl(chenPath("/api/resources/hints", endpointUrl), {
+): Promise<ChenRelationMetadataPage> {
+  const response = await fetchImpl(chenPath("/api/resources/metadata/relations", endpointUrl), {
     method: "POST",
     credentials: "include",
     headers: {
       ...buildHeaders(chenToken, getWebApiMutationHeaders()),
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ nodeKey, context })
+    body: JSON.stringify({ ...scope, prefix, limit })
   });
   const result = await readJson<unknown>(response);
-  if (!result || typeof result !== "object" || Array.isArray(result)) {
-    throw new Error("Chen returned malformed SQL hints");
+  if (!isRecord(result) || !Array.isArray(result.items) || typeof result.truncated !== "boolean") {
+    throw new Error("Chen returned malformed SQL relation metadata");
   }
 
-  return Object.fromEntries(
-    Object.entries(result)
-      .filter(
-        (entry): entry is [string, string[]] =>
-          Array.isArray(entry[1]) && entry[1].every((column) => typeof column === "string")
-      )
-      .map(([table, columns]) => [table, [...columns]])
-  );
+  return {
+    items: result.items.map(parseQualifiedRelation),
+    truncated: result.truncated
+  };
+}
+
+export async function fetchChenSqlColumns(
+  chenToken: string,
+  scope: ChenSqlMetadataScope,
+  relations: ChenQualifiedRelation[],
+  fetchImpl: typeof fetch = fetch,
+  endpointUrl?: string
+): Promise<ChenRelationColumnsMetadata[]> {
+  const response = await fetchImpl(chenPath("/api/resources/metadata/columns", endpointUrl), {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      ...buildHeaders(chenToken, getWebApiMutationHeaders()),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ ...scope, relations })
+  });
+  const result = await readJson<unknown>(response);
+  if (!isRecord(result) || !Array.isArray(result.items)) {
+    throw new Error("Chen returned malformed SQL column metadata");
+  }
+
+  return result.items.map((item) => {
+    if (!isRecord(item) || !Array.isArray(item.columns)) {
+      throw new Error("Chen returned malformed SQL column metadata");
+    }
+    return {
+      relation: parseQualifiedRelation(item.relation),
+      columns: item.columns.map((column) => {
+        if (
+          !isRecord(column) ||
+          typeof column.name !== "string" ||
+          !(typeof column.dataType === "string" || column.dataType === null) ||
+          typeof column.nullable !== "boolean"
+        ) {
+          throw new Error("Chen returned malformed SQL column metadata");
+        }
+        return {
+          name: column.name,
+          dataType: column.dataType,
+          nullable: column.nullable
+        };
+      })
+    };
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseQualifiedRelation(value: unknown): ChenQualifiedRelation {
+  if (
+    !isRecord(value) ||
+    !(typeof value.catalog === "string" || value.catalog === null) ||
+    typeof value.schema !== "string" ||
+    typeof value.name !== "string" ||
+    !(value.kind === "table" || value.kind === "view")
+  ) {
+    throw new Error("Chen returned malformed SQL relation metadata");
+  }
+  return {
+    catalog: value.catalog,
+    schema: value.schema,
+    name: value.name,
+    kind: value.kind
+  };
 }
 
 export function sanitizeChenExportFileName(value: string, fallback = "chen-export") {
