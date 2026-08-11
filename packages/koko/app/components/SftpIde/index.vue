@@ -126,8 +126,6 @@ const activePath = computed({
     paneActivePaths[activePane.value] = path;
   }
 });
-const search = ref("");
-const searchVisible = ref(false);
 const rootPath = ref("");
 const selectedDirectory = ref("");
 const pendingCreate = ref<{ parent: string; kind: "file" | "directory" } | null>(null);
@@ -742,7 +740,6 @@ const persistDirtyDrafts = useDebounceFn(persistDirtyDraftsNow, 800);
 
 const treeRows = computed<TreeRow[]>(() => {
   const rows: TreeRow[] = [];
-  const query = search.value.trim().toLowerCase();
   const walk = (parent: string, depth: number) => {
     const node = tree.value[parent];
     if (pendingCreate.value?.parent === parent) {
@@ -751,9 +748,7 @@ const treeRows = computed<TreeRow[]>(() => {
     for (const entry of node?.entries || []) {
       if (entry.name === "..") continue;
       const path = joinPath(parent, entry.name);
-      if (!query || entry.name.toLowerCase().includes(query) || entry.is_dir) {
-        rows.push({ kind: "entry", entry, path, depth, expanded: expanded.value.has(path) });
-      }
+      rows.push({ kind: "entry", entry, path, depth, expanded: expanded.value.has(path) });
       if (entry.is_dir && expanded.value.has(path)) walk(path, depth + 1);
     }
     if (parent !== rootPath.value && node?.loading) {
@@ -762,7 +757,16 @@ const treeRows = computed<TreeRow[]>(() => {
       rows.push({ kind: "error", path: `error:${parent}`, parent, depth, error: node.error });
     }
   };
-  if (rootPath.value) walk(rootPath.value, 0);
+  if (rootPath.value) {
+    rows.push({
+      kind: "entry",
+      entry: { name: rootPath.value, size: "", perm: "", mod_time: "", type: "", is_dir: true },
+      path: rootPath.value,
+      depth: 0,
+      expanded: expanded.value.has(rootPath.value)
+    });
+    if (expanded.value.has(rootPath.value)) walk(rootPath.value, 1);
+  }
   return rows;
 });
 
@@ -942,15 +946,6 @@ function toggleDirectory(path: string) {
   expanded.value = next;
 }
 
-function collapseAll() {
-  expanded.value = new Set();
-}
-
-function toggleSearch() {
-  searchVisible.value = !searchVisible.value;
-  if (!searchVisible.value) search.value = "";
-}
-
 function nameExists(parent: string, name: string) {
   return tree.value[parent]?.entries.some((entry) => entry.name === name) || false;
 }
@@ -960,12 +955,11 @@ function beginCreate(kind: "file" | "directory") {
   pendingCreate.value = { parent, kind };
   pendingName.value = "";
   pendingError.value = "";
-  if (parent !== rootPath.value) {
-    const next = new Set(expanded.value);
-    next.add(parent);
-    expanded.value = next;
-    void loadDirectory(parent);
-  }
+  const next = new Set(expanded.value);
+  next.add(rootPath.value);
+  next.add(parent);
+  expanded.value = next;
+  if (parent !== rootPath.value) void loadDirectory(parent);
   nextTick(() => pendingInput.value?.focus());
 }
 
@@ -1998,6 +1992,7 @@ function workspaceState(): SftpEditorWorkspaceState {
     splitRatio: splitRatio.value,
     explorerWidth: explorerWidth.value,
     expanded: [...expanded.value],
+    treeIncludesRoot: true,
     selectedDirectory: selectedDirectory.value,
     directories: cachedDirectories,
     recentlyClosed: recentlyClosed.value.map((item) => ({
@@ -2030,11 +2025,13 @@ async function restoreWorkspace() {
       state.selectedDirectory === rootPath.value || state.selectedDirectory.startsWith(rootPrefix)
         ? state.selectedDirectory
         : rootPath.value;
-    expanded.value = new Set(
+    const restoredExpanded = new Set(
       state.expanded.filter(
         (path) => path === rootPath.value || path.startsWith(`${rootPath.value.replace(/\/$/, "")}/`)
       )
     );
+    if (!state.treeIncludesRoot) restoredExpanded.add(rootPath.value);
+    expanded.value = restoredExpanded;
     recentlyClosed.value = state.recentlyClosed.slice(-20);
 
     const cachedTree = { ...tree.value };
@@ -2487,6 +2484,11 @@ watch(
 watch(quickOpenQuery, () => {
   quickOpenIndex.value = 0;
 });
+watch(quickOpenVisible, (visible) => {
+  if (!visible) return;
+  quickOpenQuery.value = "";
+  quickOpenIndex.value = 0;
+});
 watch(quickOpenItems, (items) => {
   quickOpenIndex.value = Math.min(quickOpenIndex.value, Math.max(0, items.length - 1));
 });
@@ -2505,6 +2507,7 @@ watch(
     if (!rootPath.value) {
       rootPath.value = path as string;
       selectedDirectory.value = path as string;
+      expanded.value = new Set([path as string]);
       void restoreEditorState();
     }
     if (path === rootPath.value) {
@@ -2540,63 +2543,91 @@ onUnmounted(() => {
       class="relative flex min-h-0 flex-col border-r border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-sidebar)"
     >
       <div
-        class="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-header) px-2"
+        class="flex h-9 min-w-0 shrink-0 items-center gap-1 border-b border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-header) px-2"
       >
-        <button
-          class="min-w-0 flex-1 truncate px-1 text-left font-ui-mono text-[10px]"
-          :class="selectedDirectory === rootPath ? 'text-primary' : 'text-muted'"
-          :title="rootPath"
-          @click="selectedDirectory = rootPath"
-          @contextmenu="
-            openContextMenu(
-              { name: rootPath, size: '', perm: '', mod_time: '', type: '', is_dir: true },
-              rootPath,
-              $event
-            )
-          "
+        <p class="min-w-0 flex-1 truncate px-1 text-left text-xs font-medium text-(--app-muted)">
+          {{ t("koko.sftpEditor.explorerTitle") }}
+        </p>
+        <UPopover
+          v-model:open="quickOpenVisible"
+          :content="{ align: 'start', side: 'bottom', sideOffset: 8 }"
+          :ui="{ content: 'p-0' }"
         >
-          {{ rootPath || "/" }}
-        </button>
-        <UButton
-          icon="i-lucide-chevrons-up"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :title="t('koko.sftpEditor.collapseAll')"
-          @click="collapseAll"
-        />
-        <UButton
-          icon="i-lucide-file-plus-2"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :title="t('koko.sftpEditor.newFile')"
-          @click="beginCreate('file')"
-        />
-        <UButton
-          icon="i-lucide-folder-plus"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :title="t('koko.sftpEditor.newDirectory')"
-          @click="beginCreate('directory')"
-        />
-        <UButton
-          icon="i-lucide-search"
-          size="xs"
-          color="neutral"
-          :variant="searchVisible ? 'soft' : 'ghost'"
-          :title="t('koko.actions.search')"
-          @click="toggleSearch"
-        />
-        <UButton
-          icon="i-lucide-file-search-2"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :title="t('koko.sftpEditor.quickOpenShortcut')"
-          @click="openQuickOpen"
-        />
+          <UButton
+            icon="i-lucide-search"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :title="t('koko.sftpEditor.quickOpenShortcut')"
+          />
+
+          <template #content>
+            <div
+              class="w-[360px] overflow-hidden rounded-xl bg-default shadow-xl ring-1 ring-black/10 dark:ring-white/12"
+            >
+              <div class="border-b border-default p-2">
+                <UInput
+                  v-model="quickOpenQuery"
+                  autofocus
+                  icon="i-lucide-search"
+                  size="sm"
+                  variant="none"
+                  :placeholder="t('koko.sftpEditor.quickOpenPlaceholder')"
+                  class="w-full"
+                  :ui="{ base: 'h-8 rounded-lg bg-elevated/70 ring-1 ring-inset ring-default' }"
+                  @keydown.down.prevent="moveQuickOpenSelection(1)"
+                  @keydown.up.prevent="moveQuickOpenSelection(-1)"
+                  @keydown.enter.prevent="openQuickOpenItem(quickOpenItems[quickOpenIndex])"
+                />
+              </div>
+              <div ref="quickOpenList" role="listbox" class="max-h-80 min-h-32 overflow-y-auto p-1.5">
+                <button
+                  v-for="(item, index) in quickOpenItems"
+                  :key="item.path"
+                  type="button"
+                  tabindex="-1"
+                  class="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-elevated"
+                  :class="quickOpenIndex === index ? 'bg-elevated' : ''"
+                  :title="item.path"
+                  role="option"
+                  :aria-selected="quickOpenIndex === index"
+                  :data-quick-open-active="quickOpenIndex === index"
+                  @mouseenter="quickOpenIndex = index"
+                  @click="openQuickOpenItem(item)"
+                >
+                  <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-elevated">
+                    <UIcon :name="entryIcon(item.entry)" class="size-4" :class="entryIconClass(item.entry)" />
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate text-sm text-highlighted">{{ item.entry.name }}</span>
+                    <span class="block truncate font-ui-mono text-[11px] text-muted">
+                      {{ parentPath(item.path) }}
+                    </span>
+                  </span>
+                  <UBadge
+                    v-if="item.open"
+                    color="neutral"
+                    variant="subtle"
+                    size="sm"
+                    :label="t('koko.sftpEditor.opened')"
+                  />
+                </button>
+                <div
+                  v-if="!quickOpenItems.length"
+                  class="grid h-24 place-items-center px-4 text-center text-xs text-muted"
+                >
+                  {{ t("koko.sftpEditor.quickOpenNoResults") }}
+                </div>
+              </div>
+              <div
+                class="flex items-center justify-between gap-3 border-t border-default px-3 py-2 text-[10px] text-muted"
+              >
+                <span>{{ t("koko.sftpEditor.quickOpenLoadedHint") }}</span>
+                <span class="shrink-0 font-ui-mono">↑↓ · Enter</span>
+              </div>
+            </div>
+          </template>
+        </UPopover>
         <UButton
           icon="i-lucide-refresh-cw"
           size="xs"
@@ -2604,18 +2635,6 @@ onUnmounted(() => {
           variant="ghost"
           :title="t('koko.sftpEditor.refreshTree')"
           @click="refreshTree"
-        />
-      </div>
-      <div
-        v-if="searchVisible"
-        class="shrink-0 border-b border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-tree) p-2"
-      >
-        <UInput
-          v-model="search"
-          icon="i-lucide-search"
-          size="xs"
-          :placeholder="t('koko.sftpEditor.filterFiles')"
-          class="w-full"
         />
       </div>
       <div
@@ -2759,11 +2778,14 @@ onUnmounted(() => {
             />
           </div>
         </template>
-        <div v-if="tree[rootPath]?.loading" class="flex h-8 items-center gap-2 px-3 text-xs text-(--app-muted)">
+        <div
+          v-if="expanded.has(rootPath) && tree[rootPath]?.loading"
+          class="flex h-8 items-center gap-2 px-3 text-xs text-(--app-muted)"
+        >
           <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
           {{ t("koko.sftpEditor.loading") }}
         </div>
-        <div v-else-if="tree[rootPath]?.error" class="px-3 py-2 text-xs text-error">
+        <div v-else-if="expanded.has(rootPath) && tree[rootPath]?.error" class="px-3 py-2 text-xs text-error">
           {{ tree[rootPath]?.error }}
         </div>
       </div>
@@ -2848,7 +2870,6 @@ onUnmounted(() => {
             @pointerdown.capture="focusPane(tab.pane, tab.path)"
           >
             <WorkspaceSubTabStrip
-              class="border-b border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-header)"
               :tabs="subTabsForPane(tab.pane)"
               :active-id="paneActivePaths[tab.pane]"
               :dragged-id="draggedEditorItem?.source === 'tab' ? draggedEditorItem.path : ''"
@@ -3219,74 +3240,6 @@ onUnmounted(() => {
       </div>
     </section>
   </div>
-  <UModal
-    v-model:open="quickOpenVisible"
-    :title="t('koko.sftpEditor.quickOpen')"
-    :ui="{ content: 'max-w-2xl', body: 'p-2 sm:p-2' }"
-  >
-    <template #body>
-      <div class="space-y-2">
-        <UInput
-          v-model="quickOpenQuery"
-          autofocus
-          icon="i-lucide-search"
-          size="lg"
-          :placeholder="t('koko.sftpEditor.quickOpenPlaceholder')"
-          class="w-full"
-          @keydown.down.prevent="moveQuickOpenSelection(1)"
-          @keydown.up.prevent="moveQuickOpenSelection(-1)"
-          @keydown.enter.prevent="openQuickOpenItem(quickOpenItems[quickOpenIndex])"
-        >
-          <template #trailing>
-            <kbd
-              class="rounded border border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-panel) px-1.5 py-0.5 font-ui-mono text-[10px] text-(--app-muted)"
-            >
-              ESC
-            </kbd>
-          </template>
-        </UInput>
-        <div ref="quickOpenList" role="listbox" class="max-h-[min(55vh,28rem)] overflow-auto rounded-md py-1">
-          <button
-            v-for="(item, index) in quickOpenItems"
-            :key="item.path"
-            type="button"
-            tabindex="-1"
-            class="flex h-10 w-full items-center gap-2 rounded-md px-2 text-left text-xs transition-colors"
-            :class="
-              quickOpenIndex === index
-                ? 'bg-(--app-selected-soft) text-primary'
-                : 'text-(--app-fg) hover:bg-(--app-hover-soft)'
-            "
-            :title="item.path"
-            role="option"
-            :aria-selected="quickOpenIndex === index"
-            :data-quick-open-active="quickOpenIndex === index"
-            @mouseenter="quickOpenIndex = index"
-            @click="openQuickOpenItem(item)"
-          >
-            <UIcon :name="entryIcon(item.entry)" class="size-4 shrink-0" :class="entryIconClass(item.entry)" />
-            <span class="min-w-0 flex-1">
-              <span class="block truncate font-medium">{{ item.entry.name }}</span>
-              <span class="block truncate font-ui-mono text-[10px] text-(--app-muted)">
-                {{ parentPath(item.path) }}
-              </span>
-            </span>
-            <UBadge v-if="item.open" color="neutral" variant="subtle" size="sm" :label="t('koko.sftpEditor.opened')" />
-          </button>
-          <div
-            v-if="!quickOpenItems.length"
-            class="grid min-h-24 place-items-center px-4 text-center text-xs text-(--app-muted)"
-          >
-            {{ t("koko.sftpEditor.quickOpenNoResults") }}
-          </div>
-        </div>
-        <div class="flex items-center justify-between gap-3 px-1 text-[10px] text-(--app-muted)">
-          <span>{{ t("koko.sftpEditor.quickOpenLoadedHint") }}</span>
-          <span class="shrink-0 font-ui-mono">↑↓ · Enter</span>
-        </div>
-      </div>
-    </template>
-  </UModal>
   <ModalPromptDialog
     v-model:open="renameDialogOpen"
     v-model="renameValue"

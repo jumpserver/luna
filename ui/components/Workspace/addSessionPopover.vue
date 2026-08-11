@@ -55,7 +55,7 @@ watch(open, (value) => {
     <UTooltip text="新建连接" :delay-duration="150">
       <button
         type="button"
-        class="grid size-6 shrink-0 place-items-center rounded-lg text-gray-500 transition-colors hover:bg-black/6 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
+        class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
         aria-label="新建连接"
       >
         <UIcon name="i-lucide-plus" class="size-4" />

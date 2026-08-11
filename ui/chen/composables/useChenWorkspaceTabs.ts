@@ -143,6 +143,13 @@ export function useChenWorkspaceTabs() {
     activeWorkspaceTabId.value = id;
   }
 
+  function renameTab(id: string, title: string) {
+    const tab = workspaceTabState[id];
+    const normalized = title.trim();
+    if (!tab || tab.kind !== "query" || !normalized) return;
+    tab.title = normalized;
+  }
+
   return {
     activeWorkspaceTab,
     activeWorkspaceTabId,
@@ -155,6 +162,7 @@ export function useChenWorkspaceTabs() {
     openConsoleTab,
     openDataViewTab,
     openQueryTab,
+    renameTab,
     setActiveTab
   };
 }

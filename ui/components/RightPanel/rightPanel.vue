@@ -92,7 +92,7 @@ watch(showSftpTab, (visible) => {
 <style scoped>
 .right-panel-tab-strip {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .right-panel-tab-button {
@@ -102,7 +102,7 @@ watch(showSftpTab, (visible) => {
   align-items: center;
   justify-content: flex-start;
   gap: 0.375rem;
-  padding: 0.625rem 0;
+  padding: 0.625rem 0.5rem;
   font-size: 0.75rem;
   line-height: 1;
   font-weight: 600;

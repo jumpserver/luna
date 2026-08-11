@@ -432,7 +432,7 @@ watch(currentOrgId, () => {
               v-if="side === 'left' && hostAdapter.isTauriRuntime()"
               type="button"
               class="flex h-7 min-w-0 items-center gap-1 rounded-md px-2 text-xs"
-              :class="globalActiveIds.left === 'local' ? 'bg-default text-primary' : 'text-muted hover:bg-default/70'"
+              :class="globalActiveIds.left === 'local' ? 'bg-accented text-highlighted' : 'text-muted'"
               @click="globalActiveIds.left = 'local'"
             >
               <UIcon name="i-lucide-laptop" class="size-3.5 shrink-0" />
@@ -442,9 +442,7 @@ watch(currentOrgId, () => {
               v-if="side === 'left' && !hostAdapter.isTauriRuntime()"
               type="button"
               class="flex h-7 min-w-0 items-center gap-1 rounded-md px-2 text-xs"
-              :class="
-                globalActiveIds.left === 'web-upload' ? 'bg-default text-primary' : 'text-muted hover:bg-default/70'
-              "
+              :class="globalActiveIds.left === 'web-upload' ? 'bg-accented text-highlighted' : 'text-muted'"
               @click="globalActiveIds.left = 'web-upload'"
             >
               <UIcon name="i-lucide-upload" class="size-3.5 shrink-0" />
@@ -455,7 +453,7 @@ watch(currentOrgId, () => {
               :key="pane.id"
               type="button"
               class="flex h-7 min-w-0 max-w-48 items-center gap-1 rounded-md px-2 text-xs"
-              :class="globalActiveIds[side] === pane.id ? 'bg-default text-primary' : 'text-muted hover:bg-default/70'"
+              :class="globalActiveIds[side] === pane.id ? 'bg-accented text-highlighted' : 'text-muted'"
               @click="globalActiveIds[side] = pane.id"
             >
               <UIcon name="i-lucide-server" class="size-3.5 shrink-0" />

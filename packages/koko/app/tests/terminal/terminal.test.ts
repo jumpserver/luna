@@ -2,7 +2,6 @@ import { MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { afterEach, expect, it, vi } from "vitest";
 import { computed, ref } from "vue";
 
-import { resolveClipboardAccess, validateClipboardText } from "#koko/utils/clipboardAcl";
 import {
   buildJSONEnvelope,
   buildTerminalInput,
@@ -11,8 +10,17 @@ import {
   parseEnvelope,
   parseJSONPayload,
   parseTerminalPayload
-} from "./envelope";
-import { parseTerminalIncomingMessage } from "./protocol";
+} from "#koko/composables/terminal/envelope";
+import { parseTerminalIncomingMessage } from "#koko/composables/terminal/protocol";
+import {
+  getKokoLinuxMetrics,
+  handleKokoLatencyPong,
+  handleKokoLinuxMetricsUpdate,
+  registerKokoLinuxMetricsSession,
+  subscribeKokoLinuxMetrics,
+  unregisterKokoLinuxMetricsSession,
+  unsubscribeKokoLinuxMetrics
+} from "#koko/composables/terminal/useLinuxMetrics";
 import {
   getKokoTerminalAiSession,
   handleKokoTerminalAiMessage,
@@ -20,10 +28,11 @@ import {
   registerKokoTerminalAiSession,
   sendKokoTerminalAiControl,
   unregisterKokoTerminalAiSession
-} from "./useTerminalAiSessions";
-import { useKokoTerminalInput } from "./useTerminalInput";
-import { useKokoTerminalMessageHandler } from "./useTerminalMessageHandler";
-import { saveZmodemPacketsToDisk, sendZmodemFiles } from "./zmodemBrowser";
+} from "#koko/composables/terminal/useTerminalAiSessions";
+import { useKokoTerminalInput } from "#koko/composables/terminal/useTerminalInput";
+import { useKokoTerminalMessageHandler } from "#koko/composables/terminal/useTerminalMessageHandler";
+import { saveZmodemPacketsToDisk, sendZmodemFiles } from "#koko/composables/terminal/zmodemBrowser";
+import { resolveClipboardAccess, validateClipboardText } from "#koko/utils/clipboardAcl";
 
 it("combines token actions with clipboard policy and text limits", () => {
   const access = resolveClipboardAccess(
@@ -163,6 +172,46 @@ it("encodes and decodes terminal envelopes", () => {
   const inputEnvelope = parseEnvelope(buildTerminalInput(7, "whoami"));
   expect(parseTerminalPayload(inputEnvelope.payload)).toMatchObject({ terminalId: 7 });
   expect(new TextDecoder().decode(parseTerminalPayload(inputEnvelope.payload).data)).toBe("whoami");
+});
+
+it("subscribes to Linux metrics and keeps bounded per-pane history", () => {
+  const send = vi.fn();
+  const socket = { readyState: WebSocket.OPEN, send } as unknown as WebSocket;
+  subscribeKokoLinuxMetrics("metrics-pane", "asset-1");
+  registerKokoLinuxMetricsSession("metrics-pane", { socket, terminalId: "7" });
+
+  const envelope = parseEnvelope(send.mock.calls[0]![0]);
+  expect(parseJSONPayload(envelope.payload)).toMatchObject({
+    terminalId: 7,
+    command: "TERMINAL_METRICS_SUBSCRIBE"
+  });
+
+  for (let timestamp = 1; timestamp <= 65; timestamp += 1) {
+    handleKokoLinuxMetricsUpdate(
+      "metrics-pane",
+      JSON.stringify({ timestamp, cpuPercent: timestamp, memoryPercent: 50 })
+    );
+  }
+  expect(getKokoLinuxMetrics("metrics-pane")).toMatchObject({
+    status: "collecting",
+    latest: { timestamp: 65 }
+  });
+  expect(getKokoLinuxMetrics("metrics-pane")?.history).toHaveLength(60);
+  expect(getKokoLinuxMetrics("metrics-pane")?.history[0]?.timestamp).toBe(6);
+  handleKokoLatencyPong("metrics-pane", JSON.stringify({ sentAt: Date.now() - 20 }));
+  expect(getKokoLinuxMetrics("metrics-pane")?.latencyMs).toBeGreaterThanOrEqual(20);
+
+  unsubscribeKokoLinuxMetrics("metrics-pane");
+  unregisterKokoLinuxMetricsSession("metrics-pane", socket);
+
+  subscribeKokoLinuxMetrics("metrics-pane-2", "asset-1");
+  expect(getKokoLinuxMetrics("metrics-pane-2")).toMatchObject({
+    cached: true,
+    latest: { timestamp: 65 }
+  });
+  registerKokoLinuxMetricsSession("metrics-pane-2", { socket, terminalId: "8" });
+  unsubscribeKokoLinuxMetrics("metrics-pane-2");
+  unregisterKokoLinuxMetricsSession("metrics-pane-2", socket);
 });
 
 it("keeps terminal AI state isolated by active pane", async () => {

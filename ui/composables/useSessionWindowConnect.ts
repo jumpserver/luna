@@ -57,8 +57,8 @@ function mapAssetDetail(assetId: string, detail: Record<string, any>): AssetItem
   };
 }
 
-async function fetchSessionAsset(assetId: string): Promise<AssetItem> {
-  return mapAssetDetail(assetId, await getAssetDetailRequest(assetId));
+async function fetchSessionAsset(assetId: string, orgId: string): Promise<AssetItem> {
+  return mapAssetDetail(assetId, await getAssetDetailRequest(assetId, orgId));
 }
 
 export function useSessionWindowConnect() {
@@ -79,7 +79,7 @@ export function useSessionWindowConnect() {
     error.value = "";
 
     try {
-      const asset = await fetchSessionAsset(assetId);
+      const asset = await fetchSessionAsset(assetId, userInfoStore.currentUser?.org?.id || "");
       asset.savedConnection = saved || undefined;
       openSetupSession(asset, {
         protocol: String(route.query.protocol || preference?.protocol || saved?.protocol || "")

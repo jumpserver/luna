@@ -4,6 +4,7 @@ import type { ChenDataViewDataset } from "~/chen/types";
 
 import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 import { AgGridVue } from "ag-grid-vue3";
+import { formatChenGridValue, useChenGridPreferences } from "~/chen/composables/useChenGridPreferences";
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-balham.css";
@@ -21,17 +22,22 @@ const props = withDefaults(
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 const gridApi = shallowRef<GridApi | null>(null);
-const columnDefs = computed<ColDef[]>(() =>
-  props.dataset.fields.map((field) => ({
+const gridPreferences = useChenGridPreferences();
+const columnDefs = computed<ColDef[]>(() => {
+  const preferences = {
+    nullDisplay: gridPreferences.value.nullDisplay,
+    showEmptyStrings: gridPreferences.value.showEmptyStrings
+  };
+  return props.dataset.fields.map((field) => ({
     field: field.name,
     headerName: field.label || field.name,
     minWidth: 120,
     maxWidth: 420,
     resizable: true,
     sortable: true,
-    valueFormatter: (params: ValueFormatterParams) => (params.value == null ? "NULL" : String(params.value))
-  }))
-);
+    valueFormatter: (params: ValueFormatterParams) => formatChenGridValue(params.value, preferences)
+  }));
+});
 
 const defaultColDef: ColDef = {
   minWidth: 120,
@@ -63,14 +69,21 @@ watch([columnDefs, () => props.dataset.data], async () => {
 </script>
 
 <template>
-  <div class="ag-theme-balham chen-console-grid min-h-0 w-full" @copy="handleCopy">
+  <div
+    class="ag-theme-balham chen-console-grid min-h-0 w-full"
+    :class="{
+      'chen-console-grid-striped': gridPreferences.stripedRows,
+      'chen-console-grid-cell-borders': gridPreferences.showCellBorders
+    }"
+    @copy="handleCopy"
+  >
     <AgGridVue
       class="h-full w-full"
       theme="legacy"
       :column-defs="columnDefs"
       :row-data="dataset.data"
       :default-col-def="defaultColDef"
-      :row-height="28"
+      :row-height="gridPreferences.compactRows ? 24 : 28"
       :header-height="32"
       :animate-rows="false"
       :enable-cell-text-selection="canCopy"
@@ -91,23 +104,33 @@ watch([columnDefs, () => props.dataset.data], async () => {
   --ag-foreground-color: var(--data-grid-text);
   --ag-header-background-color: var(--data-grid-header-background);
   --ag-header-foreground-color: var(--data-grid-text);
-  --ag-odd-row-background-color: color-mix(
-    in srgb,
-    var(--data-grid-row-background) 92%,
-    var(--data-grid-header-background) 8%
-  );
+  --ag-odd-row-background-color: var(--data-grid-row-striped);
   --ag-row-hover-color: var(--data-grid-row-hover);
   --ag-border-color: var(--data-grid-border);
   --ag-row-border-color: color-mix(in srgb, var(--data-grid-border) 72%, transparent);
-  --ag-cell-horizontal-border: solid color-mix(in srgb, var(--data-grid-border) 42%, transparent);
+  --ag-cell-horizontal-border: none;
   --ag-wrapper-border-radius: 0;
   --ag-border-radius: 0;
   background: var(--data-grid-row-background);
 }
 
+.chen-console-grid-cell-borders {
+  --ag-cell-horizontal-border: solid color-mix(in srgb, var(--data-grid-border) 42%, transparent);
+}
+
+.chen-console-grid-striped :deep(.ag-row-odd) {
+  background: var(--data-grid-row-striped);
+}
+
 .chen-console-grid :deep(.ag-root-wrapper) {
   border: none;
   border-radius: 0;
+}
+
+.chen-console-grid :deep(.ag-body-vertical-scroll-start-spacer) {
+  opacity: 1;
+  background: var(--data-grid-header-background);
+  border-bottom-color: var(--data-grid-border);
 }
 
 .chen-console-grid :deep(.ag-cell) {

@@ -30,6 +30,7 @@ export interface SftpEditorWorkspaceState {
   splitRatio: number;
   explorerWidth: number;
   expanded: string[];
+  treeIncludesRoot?: boolean;
   selectedDirectory: string;
   directories: Array<{
     path: string;

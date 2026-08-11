@@ -32,6 +32,32 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
     return null;
   }
 
+  function findNodePathByKey(key: string, nodes = rootNodes.value, ancestors: ChenTreeNode[] = []): ChenTreeNode[] {
+    for (const node of nodes) {
+      const path = [...ancestors, node];
+      if (node.key === key) return path;
+      const match = findNodePathByKey(key, node.children || [], path);
+      if (match.length) return match;
+    }
+    return [];
+  }
+
+  async function resolveNodePath(keys: string[]) {
+    if (!keys.length) return null;
+    let nodes = rootNodes.value;
+    let current: ChenTreeNode | null = null;
+
+    for (let index = 0; index < keys.length; index += 1) {
+      current = nodes.find((node) => node.key === keys[index]) || null;
+      if (!current) return null;
+      if (index === keys.length - 1) return current;
+      if (!current.children?.length && current.hasChildren !== false) await loadNodeChildren(current);
+      nodes = current.children || [];
+    }
+
+    return current;
+  }
+
   function normalizeTreeNodes(items: ChenTreeNode[]): ChenTreeNode[] {
     return items.map((item) => {
       if (item.type === "table") {
@@ -111,8 +137,10 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
     selectedNodeKey,
     expandInitialTree,
     findNodeByKey,
+    findNodePathByKey,
     loadNodeChildren,
     refreshRoot,
+    resolveNodePath,
     runTreeAction,
     toggleTreeNode
   };

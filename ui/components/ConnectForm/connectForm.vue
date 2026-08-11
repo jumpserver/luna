@@ -488,12 +488,14 @@ function handleSpecialAccount(v: string) {
             />
             <UButton
               type="button"
-              icon="i-lucide-save"
+              :icon="localRememberSecret ? 'i-lucide-bookmark-check' : 'i-lucide-bookmark'"
               :aria-label="t('Account.RememberPassword')"
               :title="t('Account.RememberPassword')"
-              :color="localRememberSecret ? 'primary' : 'neutral'"
-              :variant="localRememberSecret ? 'solid' : 'outline'"
+              color="neutral"
+              variant="ghost"
               size="md"
+              class="remember-secret-button"
+              :class="{ 'remember-secret-button-active': localRememberSecret }"
               @click="localRememberSecret = !localRememberSecret"
             />
           </UFieldGroup>
@@ -518,12 +520,14 @@ function handleSpecialAccount(v: string) {
             />
             <UButton
               type="button"
-              icon="i-lucide-save"
+              :icon="localRememberSecret ? 'i-lucide-bookmark-check' : 'i-lucide-bookmark'"
               :aria-label="t('Account.RememberPassword')"
               :title="t('Account.RememberPassword')"
-              :color="localRememberSecret ? 'primary' : 'neutral'"
-              :variant="localRememberSecret ? 'solid' : 'outline'"
+              color="neutral"
+              variant="ghost"
               size="md"
+              class="remember-secret-button"
+              :class="{ 'remember-secret-button-active': localRememberSecret }"
               @click="localRememberSecret = !localRememberSecret"
             />
           </UFieldGroup>
@@ -638,6 +642,28 @@ function handleSpecialAccount(v: string) {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.remember-secret-button {
+  min-height: 2.25rem;
+  background: var(--app-input-bg);
+  color: var(--app-text-muted);
+  box-shadow: inset 0 0 0 1px var(--app-border);
+}
+
+.remember-secret-button:hover {
+  background: var(--app-hover-soft);
+  color: var(--app-fg);
+}
+
+.remember-secret-button-active {
+  background: var(--app-selected-soft);
+  color: var(--theme-accent);
+}
+
+.remember-secret-button-active:hover {
+  background: var(--app-selected-soft);
+  color: var(--theme-accent);
 }
 
 .protocol-tabs-track {

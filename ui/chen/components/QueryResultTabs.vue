@@ -10,6 +10,7 @@ import ChenDataGrid from "~/chen/components/DataGrid.client.vue";
 import DataViewExportDialog from "~/chen/components/DataViewExportDialog.vue";
 import DataViewSavePreviewDialog from "~/chen/components/DataViewSavePreviewDialog.vue";
 import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
+import { chenGridPreferenceKey } from "~/chen/composables/useChenGridPreferences";
 import {
   buildChenSaveChangesPayload,
   cancelChenSaveChangesConfirmation,
@@ -62,6 +63,9 @@ const activeResultDirty = computed(() =>
 const activeResultBusy = computed(() => Boolean(activeResult.value?.editState.activeRequest));
 const activeResultRefreshRequired = computed(() => activeResult.value?.editState.refreshRequiredBeforeSave === true);
 const previewDialogOpen = computed(() => activeResult.value?.editState.previewResult?.success === true);
+const gridPreferenceKey = computed(() =>
+  chenGridPreferenceKey(activeResult.value?.meta, activeResult.value?.id || "empty", props.dbType)
+);
 
 function emitActiveDataViewAction(action: ChenDataViewAction, data?: number) {
   if (!activeResult.value) return;
@@ -171,20 +175,23 @@ function cancelActiveResultChanges() {
         <div class="flex items-center gap-1">
           <template v-if="dataViewEditing && activeResultEditable">
             <UButton
+              v-if="activeResultDirty"
               icon="i-lucide-save"
               size="xs"
-              :disabled="activeResultBusy || activeResultRefreshRequired || !activeResultDirty"
+              color="primary"
+              :disabled="activeResultBusy || activeResultRefreshRequired"
               :title="activeResultRefreshRequired ? 'Refresh before saving again' : undefined"
               @click="saveActiveResultChanges"
             >
               Save
             </UButton>
             <UButton
+              v-if="activeResultDirty"
               icon="i-lucide-rotate-ccw"
               size="xs"
               color="neutral"
               variant="soft"
-              :disabled="activeResultBusy || !activeResultDirty"
+              :disabled="activeResultBusy"
               @click="cancelActiveResultChanges"
             >
               Cancel
@@ -193,6 +200,8 @@ function cancelActiveResultChanges() {
           <DataViewToolbar
             v-if="dataViewActions"
             :state="activeResult.state"
+            :fields="activeResult.data?.fields || []"
+            :grid-preference-key="gridPreferenceKey"
             :busy="activeResultBusy"
             pinnable
             @action="emitActiveDataViewAction"
@@ -210,6 +219,7 @@ function cancelActiveResultChanges() {
           :can-copy="canCopy"
           :edit-mode="dataViewEditing && !activeResultBusy ? 'update' : 'none'"
           :edit-state="dataViewEditing ? activeResult.editState : null"
+          :grid-preference-key="gridPreferenceKey"
         />
       </div>
     </div>

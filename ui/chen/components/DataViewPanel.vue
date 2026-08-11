@@ -13,6 +13,7 @@ import DataViewSavePreviewDialog from "~/chen/components/DataViewSavePreviewDial
 import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
 import { useChenDataViewDerivedMeta } from "~/chen/composables/useChenDataViewDerivedMeta";
 import { useChenDataViewEditing } from "~/chen/composables/useChenDataViewEditing";
+import { chenGridPreferenceKey } from "~/chen/composables/useChenGridPreferences";
 
 const props = withDefaults(
   defineProps<{
@@ -41,6 +42,7 @@ const selectedRows = ref<Array<Record<string, any>>>([]);
 const editing = useChenDataViewEditing(() => props.tab);
 const editState = computed(() => props.tab.editState);
 const previewDialogOpen = computed(() => editState.value.previewResult?.success === true);
+const gridPreferenceKey = computed(() => chenGridPreferenceKey(props.tab.meta, props.tab.id, props.dbType));
 
 const dbTypeRef = computed(() => props.dbType);
 const protocolRef = computed(() => props.protocol);
@@ -160,20 +162,23 @@ function selectPropertyTab(propertyTab: ChenDataViewPropertyTab) {
             Delete row
           </UButton>
           <UButton
+            v-if="editing.dirty.value"
             icon="i-lucide-save"
             size="xs"
-            :disabled="editing.busy.value || editing.refreshRequiredBeforeSave.value || !editing.dirty.value"
+            color="primary"
+            :disabled="editing.busy.value || editing.refreshRequiredBeforeSave.value"
             :title="editing.refreshRequiredBeforeSave.value ? 'Refresh before saving again' : undefined"
             @click="saveChangesPreview"
           >
             Save
           </UButton>
           <UButton
+            v-if="editing.dirty.value"
             icon="i-lucide-rotate-ccw"
             size="xs"
             color="neutral"
             variant="soft"
-            :disabled="editing.busy.value || !editing.dirty.value"
+            :disabled="editing.busy.value"
             @click="cancelChanges"
           >
             Cancel
@@ -182,6 +187,8 @@ function selectPropertyTab(propertyTab: ChenDataViewPropertyTab) {
         <DataViewToolbar
           class="ml-auto shrink-0"
           :state="tab.state"
+          :fields="tab.data?.fields || []"
+          :grid-preference-key="gridPreferenceKey"
           :busy="editing.busy.value"
           @action="(action, data) => emit('dataViewAction', tab, action, data)"
           @export="openExportDialog"
@@ -198,6 +205,7 @@ function selectPropertyTab(propertyTab: ChenDataViewPropertyTab) {
           :can-copy="canCopy"
           :edit-mode="editing.busy.value ? 'none' : 'full'"
           :edit-state="tab.editState"
+          :grid-preference-key="gridPreferenceKey"
           @selection-change="selectedRows = $event"
         />
       </div>

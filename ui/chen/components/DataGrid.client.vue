@@ -21,6 +21,7 @@ import type {
 
 import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 import { AgGridVue } from "ag-grid-vue3";
+import { formatChenGridValue, useChenGridPreferences } from "~/chen/composables/useChenGridPreferences";
 import { writeChenClipboardText } from "~/chen/runtime/clipboard";
 import {
   canUseChenCopy,
@@ -58,13 +59,15 @@ const props = withDefaults(
     canCopy?: boolean;
     editMode?: ChenDataViewEditMode;
     editState?: ChenDataViewEditState | null;
+    gridPreferenceKey?: string;
   }>(),
   {
     meta: null,
     dbType: "",
     canCopy: false,
     editMode: "none",
-    editState: null
+    editState: null,
+    gridPreferenceKey: "default"
   }
 );
 
@@ -77,6 +80,7 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const gridApi = shallowRef<GridReadyEvent["api"] | null>(null);
+const gridPreferences = useChenGridPreferences();
 const container = ref<HTMLElement | null>(null);
 const selection = ref(emptyChenGridSelection());
 const contextMenuOpen = ref(false);
@@ -102,9 +106,15 @@ function isSelectedCell(params: CellClassParams) {
 }
 
 const columnDefs = computed<ColDef[]>(() => {
+  const preferences = {
+    nullDisplay: gridPreferences.value.nullDisplay,
+    showEmptyStrings: gridPreferences.value.showEmptyStrings
+  };
+  const hiddenFields = new Set(gridPreferences.value.hiddenFieldsByGrid[props.gridPreferenceKey] || []);
   return (props.dataset?.fields || []).map((field) => ({
     field: field.name,
     headerName: field.name,
+    hide: hiddenFields.has(field.name),
     minWidth: 140,
     resizable: true,
     sortable: true,
@@ -137,7 +147,7 @@ const columnDefs = computed<ColDef[]>(() => {
         )
     },
     valueFormatter: (params: ValueFormatterParams) => {
-      return params.value == null ? "NULL" : String(params.value);
+      return formatChenGridValue(params.value, preferences);
     }
   }));
 });
@@ -387,6 +397,10 @@ onBeforeUnmount(() => {
   <div
     ref="container"
     class="ag-theme-balham chen-grid h-full w-full"
+    :class="{
+      'chen-grid-striped': gridPreferences.stripedRows,
+      'chen-grid-cell-borders': gridPreferences.showCellBorders
+    }"
     @contextmenu.capture="captureContextMenu"
     @keydown.capture="handleKeyDown"
   >
@@ -396,6 +410,7 @@ onBeforeUnmount(() => {
       :column-defs="columnDefs"
       :row-data="rowData"
       :default-col-def="defaultColDef"
+      :row-height="gridPreferences.compactRows ? 24 : 28"
       :animate-rows="false"
       :suppress-cell-focus="false"
       :ensure-dom-order="true"
@@ -438,11 +453,7 @@ onBeforeUnmount(() => {
   --ag-foreground-color: var(--data-grid-text);
   --ag-header-background-color: var(--data-grid-header-background);
   --ag-header-foreground-color: var(--data-grid-text);
-  --ag-odd-row-background-color: color-mix(
-    in srgb,
-    var(--data-grid-row-background) 92%,
-    var(--data-grid-header-background) 8%
-  );
+  --ag-odd-row-background-color: var(--data-grid-row-striped);
   --ag-row-hover-color: var(--data-grid-row-hover);
   --ag-selected-row-background-color: var(--data-grid-row-selected);
   --ag-range-selection-background-color: color-mix(in srgb, var(--theme-accent) 14%, transparent);
@@ -460,10 +471,14 @@ onBeforeUnmount(() => {
   --ag-tooltip-background-color: var(--app-surface-overlay);
   --ag-tooltip-text-color: var(--app-text-primary);
   --ag-modal-overlay-background-color: color-mix(in srgb, var(--app-surface-overlay) 72%, transparent);
-  --ag-cell-horizontal-border: solid color-mix(in srgb, var(--data-grid-border) 42%, transparent);
+  --ag-cell-horizontal-border: none;
   --ag-header-column-border: solid color-mix(in srgb, var(--data-grid-border) 54%, transparent);
   --ag-wrapper-border-radius: 0;
   --ag-border-radius: 0;
+}
+
+.chen-grid-cell-borders {
+  --ag-cell-horizontal-border: solid color-mix(in srgb, var(--data-grid-border) 42%, transparent);
 }
 
 .chen-grid :deep(.ag-root-wrapper) {
@@ -519,6 +534,12 @@ onBeforeUnmount(() => {
   color: var(--data-grid-text);
 }
 
+.chen-grid :deep(.ag-body-vertical-scroll-start-spacer) {
+  opacity: 1;
+  background: var(--data-grid-header-background);
+  border-bottom-color: color-mix(in srgb, var(--ui-border) 86%, transparent);
+}
+
 .chen-grid :deep(.ag-row) {
   background: var(--data-grid-row-background);
   color: var(--data-grid-text);
@@ -527,6 +548,10 @@ onBeforeUnmount(() => {
 
 .chen-grid :deep(.ag-row) {
   border-bottom-color: color-mix(in srgb, var(--ui-border) 70%, transparent);
+}
+
+.chen-grid-striped :deep(.ag-row-odd) {
+  background: var(--data-grid-row-striped);
 }
 
 .chen-grid :deep(.ag-row-hover) {
