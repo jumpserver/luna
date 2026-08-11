@@ -1,7 +1,5 @@
 import { expect, it } from "vitest";
 
-import en from "../../../../../i18n/locales/en.json";
-import zh from "../../../../../i18n/locales/zh.json";
 import {
   terminalAiAclKey,
   terminalAiBackgroundReasonKey,
@@ -9,6 +7,8 @@ import {
   terminalAiExecutionKey,
   terminalAiProgressKey
 } from "#koko/composables/terminal/terminalAiPresentation";
+import en from "../../../../../i18n/locales/en.json";
+import zh from "../../../../../i18n/locales/zh.json";
 
 it("maps Terminal AI protocol values to localized presentation keys", () => {
   expect(terminalAiExecutionKey("pty")).toBe("RightPanel.AICurrentPty");

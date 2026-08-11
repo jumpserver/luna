@@ -2,7 +2,6 @@ import { MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { afterEach, expect, it, vi } from "vitest";
 import { computed, ref } from "vue";
 
-import { resolveClipboardAccess, validateClipboardText } from "#koko/utils/clipboardAcl";
 import {
   buildJSONEnvelope,
   buildTerminalInput,
@@ -33,6 +32,7 @@ import {
 import { useKokoTerminalInput } from "#koko/composables/terminal/useTerminalInput";
 import { useKokoTerminalMessageHandler } from "#koko/composables/terminal/useTerminalMessageHandler";
 import { saveZmodemPacketsToDisk, sendZmodemFiles } from "#koko/composables/terminal/zmodemBrowser";
+import { resolveClipboardAccess, validateClipboardText } from "#koko/utils/clipboardAcl";
 
 it("combines token actions with clipboard policy and text limits", () => {
   const access = resolveClipboardAccess(

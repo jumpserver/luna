@@ -117,10 +117,7 @@ function handleContextMenu(event: MouseEvent) {
       <span v-else class="size-4" />
       <img v-if="datasourceIconSrc" :src="datasourceIconSrc" alt="" class="sidebar-icon-img" />
       <UIcon v-else :name="iconName" class="sidebar-icon" />
-      <span
-        class="min-w-0 flex-1 truncate"
-        :title="node.type === 'recent-table' ? node.fullLabel : undefined"
-      >
+      <span class="min-w-0 flex-1 truncate" :title="node.type === 'recent-table' ? node.fullLabel : undefined">
         {{ node.label || node.name || node.key }}
       </span>
       <button

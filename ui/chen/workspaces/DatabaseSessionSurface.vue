@@ -586,11 +586,7 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
         break;
       case "view_data":
         openDataViewWorkspace(response.data, "Data View");
-        recentTables.add(
-          node,
-          tree.findNodePathByKey(node.key),
-          auth.profile.value?.dbType || props.tab.protocol
-        );
+        recentTables.add(node, tree.findNodePathByKey(node.key), auth.profile.value?.dbType || props.tab.protocol);
         if (!tree.expandedKeys.value.includes(RECENT_TABLES_ROOT_KEY)) {
           tree.expandedKeys.value = [RECENT_TABLES_ROOT_KEY, ...tree.expandedKeys.value];
         }

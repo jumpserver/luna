@@ -211,13 +211,7 @@ onBeforeUnmount(clearMessageTimer);
         >
           Stop
         </UButton>
-        <UButton
-          v-else
-          icon="i-lucide-play"
-          size="sm"
-          :disabled="Boolean(tab.state.loading)"
-          @click="runSelectedQuery"
-        >
+        <UButton v-else icon="i-lucide-play" size="sm" :disabled="Boolean(tab.state.loading)" @click="runSelectedQuery">
           {{ hasSelection ? "Run selected" : "Run" }}
         </UButton>
         <UButton

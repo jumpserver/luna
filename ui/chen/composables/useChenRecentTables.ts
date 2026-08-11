@@ -36,7 +36,9 @@ function recentTableLabel(node: ChenTreeNode, path: ChenTreeNode[], dbType: stri
   }
 
   return path
-    .filter((item) => item.type === "database" || item.type === "schema" || item.type === "table" || item.type === "view")
+    .filter(
+      (item) => item.type === "database" || item.type === "schema" || item.type === "table" || item.type === "view"
+    )
     .map((item) => item.label || item.name || item.key)
     .join(".");
 }
