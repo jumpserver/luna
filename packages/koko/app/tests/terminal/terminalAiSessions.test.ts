@@ -13,7 +13,7 @@ afterEach(() => {
   for (const paneId of paneIds.splice(0)) unregisterKokoTerminalAiSession(paneId);
 });
 
-function createSession(paneId: string, readyState = WebSocket.OPEN) {
+function createSession(paneId: string, readyState: number = WebSocket.OPEN) {
   const socket = { readyState, send: vi.fn() } as unknown as WebSocket;
   paneIds.push(paneId);
   return registerKokoTerminalAiSession(paneId, socket, "9")!;

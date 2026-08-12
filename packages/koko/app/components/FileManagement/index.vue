@@ -3,12 +3,16 @@ import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 import type { KokoSftpAsset } from "@jumpserver/koko/host";
 import type { SftpFileOperations } from "#koko/composables/sftp/protocol";
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
-import type { FileTransferEndpointRef } from "~/shared/file-transfer/types";
+import type { FileTransferConflictPolicy, FileTransferEndpointRef } from "~/shared/file-transfer/types";
 import { connectorSessionKey, resolveDevHost } from "@jumpserver/connectors-core";
 import { useKokoHostAdapter } from "@jumpserver/koko/host";
+import prettyBytes from "pretty-bytes";
 import KokoLocalFileManagementPane from "#koko/components/FileManagement/localPane.vue";
 import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
+import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
 import KokoWebUploadPane from "#koko/components/FileManagement/webUploadPane.vue";
+import { useSftpTour } from "#koko/composables/sftp/useSftpTour";
+import { buildSftpDistributionGroups } from "#koko/utils/sftpDistribution";
 import { useFileTransferStore } from "~/store/modules/fileTransfer";
 
 interface RemotePane {
@@ -29,6 +33,17 @@ interface SftpTransferDropPayload {
   destinationPath: string;
 }
 
+type SftpTransferSourcePayload = Omit<SftpTransferDropPayload, "destinationPath">;
+
+interface DistributionTargetOption {
+  id: string;
+  endpoint: FileTransferEndpointRef;
+  organizationName: string;
+  assetName: string;
+  destinationPath: string;
+  connected: boolean;
+}
+
 interface TransferPane {
   manager: {
     operations: Pick<SftpFileOperations, "readFile" | "uploadBlob">;
@@ -44,6 +59,7 @@ const props = defineProps<{
 const emit = defineEmits<{ reconnect: [] }>();
 
 const { t } = useI18n();
+const sftpTour = useSftpTour();
 const toast = useToast();
 const { addErrorToast: showErrorToast } = useErrorToast();
 const fileTransferStore = useFileTransferStore();
@@ -75,20 +91,38 @@ const connectSide = ref<"left" | "right">("left");
 const remoteAssetSearch = ref("");
 const remoteConnecting = ref(false);
 const transferring = ref(false);
+const sendModalOpen = ref(false);
+const sendSource = ref<SftpTransferSourcePayload | null>(null);
+const sendTargetSearch = ref("");
+const selectedSendTargetIds = ref<string[]>([]);
+const sendTargetPaths = ref<Record<string, string>>({});
+const sendConflictPolicy = ref<FileTransferConflictPolicy>("ask");
+const sendFilesOpen = ref(false);
+let tourTimer: ReturnType<typeof setTimeout> | undefined;
 
 const terminalTransferStatuses = new Set(["completed", "skipped", "failed", "canceled"]);
-const pendingSelectionClears = new Map<
-  string,
-  Pick<SftpTransferDropPayload, "sourceEndpoint" | "sourcePath" | "sourceSelectionRevision">
->();
+
+// 操作跟踪接口：记录传输操作的元数据
+interface TransferOperationTracking {
+  sourceEndpoint: FileTransferEndpointRef;
+  sourcePath: string;
+  sourceSelectionRevision: number;
+  batchIds: string[];
+  expectedTaskCount: number; // 期望的任务总数
+  createdAt: number; // 创建时间戳，用于超时清理
+}
+
+const pendingSelectionClears = new Map<string, TransferOperationTracking>();
+
+// 分发历史记录：用于智能目标推荐
+const distributionHistory = useLocalStorage<Record<string, string[]>>("sftp-distribution-history", {});
 
 const primaryPaneRef = ref<InstanceType<typeof KokoFileManagementPane> | null>(null);
+const transferCenterRef = ref<InstanceType<typeof KokoSftpTransferCenter> | null>(null);
 const remotePaneRefs = ref<Record<string, InstanceType<typeof KokoFileManagementPane> | null>>({});
-const primarySelection = ref<SftpFileEntry | null>(null);
 const localSelection = ref<SftpFileEntry | null>(null);
 const localPaneRef = ref<InstanceType<typeof KokoLocalFileManagementPane> | null>(null);
 
-const activeRemotePane = computed(() => remotePanes.value.find((pane) => pane.id === activeRemoteId.value) || null);
 const globalActiveIds = reactive<{ left: string | null; right: string | null }>({ left: null, right: null });
 const panesForSide = (side: "left" | "right") => remotePanes.value.filter((pane) => pane.side === side);
 const activePaneForSide = (side: "left" | "right") =>
@@ -97,15 +131,90 @@ const currentOrgId = computed(() => hostAdapter.sftp.currentOrganization.value?.
 const currentOrgLabel = computed(
   () => hostAdapter.sftp.currentOrganization.value?.name || t("koko.fileManagement.selectOrganization")
 );
+const sendTargetOptions = computed<DistributionTargetOption[]>(() => {
+  const sourceId = sendSource.value?.sourceEndpoint.id;
+  const options: DistributionTargetOption[] = [];
+
+  if (primaryTransferEndpoint.value && primaryTransferEndpoint.value.id !== sourceId) {
+    options.push({
+      id: "primary",
+      endpoint: primaryTransferEndpoint.value,
+      organizationName: currentOrgLabel.value,
+      assetName: t("koko.fileManagement.localSftp"),
+      destinationPath: primaryPaneRef.value?.manager.currentPath.value || "/",
+      connected: Boolean(primaryPaneRef.value?.manager.connected.value)
+    });
+  }
+
+  for (const pane of remotePanes.value) {
+    if (pane.transferEndpoint.id === sourceId) continue;
+    const paneRef = remotePaneRefs.value[pane.id];
+    options.push({
+      id: pane.id,
+      endpoint: pane.transferEndpoint,
+      organizationName: pane.organizationName,
+      assetName: pane.assetName,
+      destinationPath: paneRef?.manager.currentPath.value || "/",
+      connected: Boolean(paneRef?.manager.connected.value)
+    });
+  }
+
+  return options;
+});
+const filteredSendTargetOptions = computed(() => {
+  const query = sendTargetSearch.value.trim().toLowerCase();
+  if (!query) return sendTargetOptions.value;
+  return sendTargetOptions.value.filter((target) =>
+    `${target.organizationName} ${target.assetName} ${target.endpoint.label}`.toLowerCase().includes(query)
+  );
+});
+const sendFileCount = computed(() => sendSource.value?.entries.length || 0);
+const sendTotalBytes = computed(() =>
+  (sendSource.value?.entries || []).reduce((total, entry) => {
+    const size = Number(entry.size);
+    return total + (Number.isFinite(size) && size >= 0 ? size : 0);
+  }, 0)
+);
+const selectedSendTargets = computed(() =>
+  sendTargetOptions.value.filter((target) => selectedSendTargetIds.value.includes(target.id) && target.connected)
+);
+const selectedSendTotalBytes = computed(() => sendTotalBytes.value * selectedSendTargets.value.length);
 
 watch(
   () => fileTransferStore.tasks.map((task) => `${task.id}:${task.status}`),
   () => {
-    for (const [batchId, pending] of pendingSelectionClears) {
-      const tasks = fileTransferStore.tasks.filter((task) => task.batchId === batchId);
-      if (!tasks.length || tasks.some((task) => !terminalTransferStatuses.has(task.status))) continue;
+    const now = Date.now();
+    const staleThreshold = 5 * 60 * 1000; // 5分钟超时
 
-      const completedNames = tasks.filter((task) => task.status === "completed").map((task) => task.source.name);
+    for (const [operationId, pending] of pendingSelectionClears) {
+      const batchIds = new Set(pending.batchIds);
+      const tasks = fileTransferStore.tasks.filter((task) => batchIds.has(task.batchId));
+
+      // 统计终态任务数
+      const terminalTasks = tasks.filter((task) => terminalTransferStatuses.has(task.status));
+      const terminalCount = terminalTasks.length;
+
+      // 判断是否所有任务都已完成（达到终态）
+      // 情况1: 任务数匹配期望值且全部终态
+      // 情况2: 操作已超时（防止任务丢失导致永久等待）
+      const allTasksTerminated = terminalCount >= pending.expectedTaskCount;
+      const isStale = now - pending.createdAt > staleThreshold;
+
+      if (!allTasksTerminated && !isStale) continue;
+
+      // 开发模式下输出诊断信息
+      if (import.meta.dev && isStale) {
+        console.warn(
+          `[SFTP Transfer] Operation ${operationId} is stale (${terminalCount}/${pending.expectedTaskCount} tasks terminated)`
+        );
+      }
+
+      // 计算哪些文件在所有目标上都成功了
+      const sourceNames = [...new Set(tasks.map((task) => task.source.name))];
+      const completedNames = sourceNames.filter((name) =>
+        tasks.filter((task) => task.source.name === name).every((task) => task.status === "completed")
+      );
+
       const sourcePane =
         primaryTransferEndpoint.value?.id === pending.sourceEndpoint.id
           ? primaryPaneRef.value
@@ -113,11 +222,27 @@ watch(
               remotePanes.value.find((pane) => pane.transferEndpoint.id === pending.sourceEndpoint.id)?.id || ""
             ];
 
+      // 清除选择状态
       sourcePane?.clearTransferredSelection(completedNames, pending.sourcePath, pending.sourceSelectionRevision);
-      pendingSelectionClears.delete(batchId);
+      pendingSelectionClears.delete(operationId);
     }
   }
 );
+
+// 性能监控（开发模式）
+if (import.meta.dev) {
+  watch(
+    () => fileTransferStore.tasks.length,
+    (count) => {
+      if (count > 0 && count % 100 === 0) {
+        console.log(`[SFTP Transfer] Active tasks: ${count}`);
+      }
+      if (count > 500) {
+        console.warn(`[SFTP Transfer] High task count (${count}) may impact performance`);
+      }
+    }
+  );
+}
 
 function addErrorToast(title: string, error: unknown) {
   showErrorToast({ title, error });
@@ -202,6 +327,110 @@ function focusRemotePane(id: string) {
   activeRemoteId.value = id;
 }
 
+function activeTransferCount(endpointId: string) {
+  return fileTransferStore.tasks.filter(
+    (task) => task.destinationEndpoint.id === endpointId && !terminalTransferStatuses.has(task.status)
+  ).length;
+}
+
+function targetPath(target: DistributionTargetOption) {
+  return sendTargetPaths.value[target.id] ?? target.destinationPath;
+}
+
+function openSendModal(payload: SftpTransferSourcePayload) {
+  sendSource.value = payload;
+  sendTargetSearch.value = "";
+  sendConflictPolicy.value = "ask";
+  sendFilesOpen.value = false;
+  sendTargetPaths.value = Object.fromEntries(
+    sendTargetOptions.value.map((target) => [target.id, target.destinationPath])
+  );
+
+  // 智能目标推荐：基于历史记录
+  const sourceId = payload.sourceEndpoint.id;
+  const frequentTargets = distributionHistory.value[sourceId] || [];
+  const recommendedTargets = sendTargetOptions.value.filter(
+    (target) => frequentTargets.includes(target.id) && target.connected
+  );
+
+  // 如果有历史推荐，使用推荐目标；否则使用当前激活的目标
+  if (recommendedTargets.length > 0) {
+    selectedSendTargetIds.value = recommendedTargets.map((t) => t.id);
+  } else {
+    const activeTarget = sendTargetOptions.value.find(
+      (target) => target.id === activeRemoteId.value && target.connected
+    );
+    selectedSendTargetIds.value = activeTarget ? [activeTarget.id] : [];
+  }
+
+  sendModalOpen.value = true;
+}
+
+function selectAllOnlineTargets() {
+  selectedSendTargetIds.value = sendTargetOptions.value.filter((target) => target.connected).map((target) => target.id);
+}
+
+function toggleSendTarget(id: string, selected: boolean) {
+  selectedSendTargetIds.value = selected
+    ? [...new Set([...selectedSendTargetIds.value, id])]
+    : selectedSendTargetIds.value.filter((targetId) => targetId !== id);
+}
+
+function reconnectTarget(target: DistributionTargetOption) {
+  const pane = target.id === "primary" ? primaryPaneRef.value : remotePaneRefs.value[target.id];
+  void pane?.manager.retry.reconnect();
+}
+
+function startDistribution(event?: MouseEvent) {
+  const source = sendSource.value;
+  if (!source || !selectedSendTargets.value.length) return;
+
+  const animationOrigin =
+    event?.currentTarget instanceof HTMLElement ? event.currentTarget.getBoundingClientRect() : undefined;
+
+  const distributionId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+  const groups = buildSftpDistributionGroups({
+    ...source,
+    distributionId,
+    conflictPolicy: sendConflictPolicy.value,
+    targets: selectedSendTargets.value.map((target) => ({
+      endpoint: target.endpoint,
+      destinationPath: targetPath(target)
+    }))
+  });
+  const batchIds = groups.map((group) => fileTransferStore.enqueueBatch(group.inputs)).filter(Boolean) as string[];
+  if (!batchIds.length) return;
+
+  // 计算期望的任务总数
+  const expectedTaskCount = source.entries.length * selectedSendTargets.value.length;
+
+  // 使用 "dist:" 前缀标识分发操作
+  const operationId = `dist:${distributionId}`;
+  pendingSelectionClears.set(operationId, {
+    sourceEndpoint: source.sourceEndpoint,
+    sourcePath: source.sourcePath,
+    sourceSelectionRevision: source.sourceSelectionRevision,
+    batchIds,
+    expectedTaskCount,
+    createdAt: Date.now()
+  });
+
+  // 记录分发历史（用于智能推荐）
+  const sourceId = source.sourceEndpoint.id;
+  const targetIds = selectedSendTargets.value.map((t) => t.id);
+  distributionHistory.value[sourceId] = targetIds;
+
+  const sourcePane =
+    primaryTransferEndpoint.value?.id === source.sourceEndpoint.id
+      ? primaryPaneRef.value
+      : remotePaneRefs.value[
+          remotePanes.value.find((pane) => pane.transferEndpoint.id === source.sourceEndpoint.id)?.id || ""
+        ];
+  sourcePane?.clearSelection();
+  sendModalOpen.value = false;
+  transferCenterRef.value?.signalQueued(animationOrigin);
+}
+
 async function connectRemoteAsset(asset: KokoSftpAsset) {
   remoteConnecting.value = true;
   try {
@@ -277,10 +506,15 @@ function queueSftpTransfer(payload: SftpTransferDropPayload, destination: FileTr
   const batchId = fileTransferStore.enqueueBatch(inputs);
   if (!batchId) return;
 
-  pendingSelectionClears.set(batchId, {
+  // 使用 "single:" 前缀标识单个传输操作
+  const operationId = `single:${batchId}`;
+  pendingSelectionClears.set(operationId, {
     sourceEndpoint: payload.sourceEndpoint,
     sourcePath: payload.sourcePath,
-    sourceSelectionRevision: payload.sourceSelectionRevision
+    sourceSelectionRevision: payload.sourceSelectionRevision,
+    batchIds: [batchId],
+    expectedTaskCount: inputs.length,
+    createdAt: Date.now()
   });
 }
 
@@ -303,18 +537,6 @@ async function transferEntry(fromPane: TransferPane | null, toPane: TransferPane
   }
 }
 
-const transferToActiveRemote = () => {
-  const pane = activeRemotePane.value;
-  if (!pane) return;
-  transferEntry(primaryPaneRef.value, remotePaneRefs.value[pane.id] || null, primarySelection.value);
-};
-
-const transferToPrimary = () => {
-  const pane = activeRemotePane.value;
-  if (!pane) return;
-  transferEntry(remotePaneRefs.value[pane.id] || null, primaryPaneRef.value, pane.selection);
-};
-
 async function transferGlobal(direction: "left-to-right" | "right-to-left") {
   const sourceSide = direction === "left-to-right" ? "left" : "right";
   const targetSide = sourceSide === "left" ? "right" : "left";
@@ -322,11 +544,22 @@ async function transferGlobal(direction: "left-to-right" | "right-to-left") {
   const target = activePaneForSide(targetSide);
   const sourceIsLocal = sourceSide === "left" && globalActiveIds.left === "local";
   const targetIsLocal = targetSide === "left" && globalActiveIds.left === "local";
-  await transferEntry(
-    sourceIsLocal ? localPaneRef.value : source ? remotePaneRefs.value[source.id] || null : null,
-    targetIsLocal ? localPaneRef.value : target ? remotePaneRefs.value[target.id] || null : null,
-    sourceIsLocal ? localSelection.value : source?.selection || null
-  );
+  const sourcePane = sourceIsLocal ? localPaneRef.value : source ? remotePaneRefs.value[source.id] || null : null;
+  const destinationPane = targetIsLocal ? localPaneRef.value : target ? remotePaneRefs.value[target.id] || null : null;
+  const sourceEntry = sourceIsLocal ? localSelection.value : source?.selection || null;
+
+  if (!sourceIsLocal && !targetIsLocal && source && target && sourceEntry && !sourceEntry.is_dir) {
+    const payload = remotePaneRefs.value[source.id]?.transferSourcePayload?.();
+    if (payload) {
+      queueSftpTransfer(
+        { ...payload, destinationPath: remotePaneRefs.value[target.id]?.manager.currentPath.value || "/" },
+        target.transferEndpoint
+      );
+    }
+    return;
+  }
+
+  await transferEntry(sourcePane, destinationPane, sourceEntry);
 }
 
 async function uploadWebFiles(files: File[]) {
@@ -366,8 +599,15 @@ async function uploadWebFiles(files: File[]) {
 }
 
 onMounted(() => {
-  if (!props.global) return;
-  globalActiveIds.left = hostAdapter.isTauriRuntime() ? "local" : "web-upload";
+  if (props.global) globalActiveIds.left = hostAdapter.isTauriRuntime() ? "local" : "web-upload";
+  if (!props.global && !props.showEmpty) {
+    tourTimer = setTimeout(() => void sftpTour.startOnce(), 650);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (tourTimer) clearTimeout(tourTimer);
+  sftpTour.destroy();
 });
 
 watch(currentOrgId, () => {
@@ -385,11 +625,25 @@ watch(currentOrgId, () => {
       </UButton>
     </div>
   </div>
-  <div v-else class="flex h-full min-h-0 flex-col">
-    <div v-if="!global" class="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-default px-2">
+  <div v-else class="sftp-file-management flex h-full min-h-0 flex-col" data-sftp-tour="workspace">
+    <div
+      v-if="!global"
+      class="sftp-file-management__topbar flex shrink-0 items-center justify-between gap-2 border-b border-default"
+    >
       <div class="ml-auto flex items-center justify-end gap-1">
         <UButton
-          v-if="dualMode || !remotePanes.length"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          icon="i-lucide-circle-help"
+          :title="t('koko.fileManagement.featureTour')"
+          :aria-label="t('koko.fileManagement.featureTour')"
+          @click="sftpTour.start"
+        />
+        <KokoSftpTransferCenter ref="transferCenterRef" />
+        <UButton
+          v-if="!dualMode && !remotePanes.length"
+          data-sftp-tour="remote-connect"
           size="xs"
           color="primary"
           variant="soft"
@@ -469,6 +723,7 @@ watch(currentOrgId, () => {
             :title="t('koko.fileManagement.addRemoteSftp')"
             @click="openRemoteConnect(side)"
           />
+          <KokoSftpTransferCenter v-if="side === 'left'" ref="transferCenterRef" />
         </div>
 
         <KokoLocalFileManagementPane
@@ -494,6 +749,7 @@ watch(currentOrgId, () => {
             :context="pane.context"
             :transfer-endpoint="pane.transferEndpoint"
             @select="pane.selection = $event"
+            @send="openSendModal"
             @transfer-drop="queueSftpTransfer($event, pane.transferEndpoint)"
           />
         </template>
@@ -566,60 +822,64 @@ watch(currentOrgId, () => {
         :context="primaryContext"
         :transfer-endpoint="primaryTransferEndpoint"
         :title="dualMode ? t('koko.fileManagement.localSftp') : undefined"
-        @select="primarySelection = $event"
+        @send="openSendModal"
         @transfer-drop="queueSftpTransfer($event, primaryTransferEndpoint)"
       />
 
-      <div
-        v-show="dualMode"
-        class="flex w-8 shrink-0 flex-col items-center justify-center gap-2 border-x border-default px-0.5"
-      >
-        <UTooltip :text="t('koko.fileManagement.transferToRemote')">
-          <UButton
-            size="xs"
-            color="primary"
-            variant="soft"
-            icon="i-lucide-arrow-right"
-            :disabled="!primarySelection || !activeRemotePane || transferring"
-            :loading="transferring"
-            @click="transferToActiveRemote"
-          />
-        </UTooltip>
-        <UTooltip :text="t('koko.fileManagement.transferToLocal')">
-          <UButton
-            size="xs"
-            color="primary"
-            variant="soft"
-            icon="i-lucide-arrow-left"
-            :disabled="!activeRemotePane?.selection || transferring"
-            :loading="transferring"
-            @click="transferToPrimary"
-          />
-        </UTooltip>
-      </div>
+      <div v-show="dualMode" class="w-px shrink-0 bg-(--app-border)" />
 
       <div v-show="dualMode" class="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div v-if="remotePanes.length" class="flex min-h-0 flex-1 flex-col divide-y divide-default">
-          <div v-for="pane in remotePanes" :key="pane.id" class="flex min-h-0 flex-1 flex-col">
-            <div class="flex h-8 shrink-0 items-center gap-1 border-b border-default px-2">
+        <div v-if="remotePanes.length" class="flex min-h-0 flex-1 flex-col">
+          <div
+            class="sftp-file-management__machine-tabs flex shrink-0 items-center gap-1.5 border-b border-default bg-elevated/50"
+          >
+            <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
               <button
+                v-for="pane in remotePanes"
+                :key="pane.id"
                 type="button"
-                class="min-w-0 flex-1 truncate text-left text-[11px] font-medium"
+                class="sftp-file-management__machine-tab flex max-w-45 shrink-0 items-center gap-1.5 rounded-md border px-2"
+                :class="
+                  activeRemoteId === pane.id
+                    ? 'border-primary/50 bg-accented text-highlighted'
+                    : 'border-default bg-default text-muted hover:text-highlighted'
+                "
                 @click="focusRemotePane(pane.id)"
               >
-                {{ pane.organizationName }} - {{ pane.assetName }}
+                <span
+                  class="size-1.5 shrink-0 rounded-full"
+                  :class="remotePaneRefs[pane.id]?.manager.connected.value ? 'bg-success' : 'bg-warning'"
+                />
+                <span class="min-w-0 flex-1 truncate">{{ pane.assetName }}</span>
+                <UBadge v-if="activeTransferCount(pane.transferEndpoint.id)" color="primary" variant="subtle" size="xs">
+                  {{ activeTransferCount(pane.transferEndpoint.id) }}
+                </UBadge>
+                <UIcon name="i-lucide-x" class="size-3 shrink-0" @click.stop="removeRemotePane(pane.id)" />
               </button>
-              <UButton size="xs" color="neutral" variant="ghost" icon="i-lucide-x" @click="removeRemotePane(pane.id)" />
             </div>
+            <UButton
+              class="sftp-file-management__connect-button"
+              data-sftp-tour="remote-connect"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-plus"
+              :label="t('koko.fileManagement.connect')"
+              :title="t('koko.fileManagement.addRemoteSftp')"
+              @click="openRemoteConnect()"
+            />
+          </div>
+          <div v-for="pane in remotePanes" v-show="activeRemoteId === pane.id" :key="pane.id" class="min-h-0 flex-1">
             <KokoFileManagementPane
               :ref="(el) => setRemotePaneRef(pane.id, el)"
-              class="min-h-0 flex-1"
+              class="h-full min-h-0"
               :context="pane.context"
               :transfer-endpoint="pane.transferEndpoint"
               @select="
                 pane.selection = $event;
                 focusRemotePane(pane.id);
               "
+              @send="openSendModal"
               @transfer-drop="queueSftpTransfer($event, pane.transferEndpoint)"
             />
           </div>
@@ -669,6 +929,194 @@ watch(currentOrgId, () => {
               connectModalOpen = false;
             }
           "
+        />
+      </template>
+    </UModal>
+
+    <UModal
+      v-model:open="sendModalOpen"
+      :title="t('koko.fileManagement.sendToMultipleTargets')"
+      :description="t('koko.fileManagement.sendToMultipleTargetsDescription')"
+      :ui="{ content: 'max-w-2xl' }"
+    >
+      <template #body>
+        <div class="space-y-4">
+          <UCollapsible
+            v-model:open="sendFilesOpen"
+            class="sftp-send-summary rounded-lg border border-default bg-elevated/50"
+          >
+            <UButton
+              color="neutral"
+              variant="ghost"
+              block
+              class="min-h-14 justify-between rounded-lg px-3 text-left"
+              :title="sendFilesOpen ? t('koko.fileManagement.collapseFileList') : t('koko.fileManagement.viewFileList')"
+            >
+              <span class="flex min-w-0 items-center gap-3">
+                <span class="grid size-8 shrink-0 place-items-center rounded-md bg-accented text-primary">
+                  <UIcon name="i-lucide-files" class="size-4" />
+                </span>
+                <span class="min-w-0">
+                  <span class="block text-[13px] font-semibold text-highlighted">
+                    {{ t("koko.fileManagement.selectedFiles", sendFileCount) }}
+                    <span class="ml-1 font-ui-mono text-[11.5px] font-normal text-muted">
+                      {{ prettyBytes(sendTotalBytes) }}
+                    </span>
+                  </span>
+                  <span class="mt-0.5 block truncate font-ui-mono text-[11px] text-muted">
+                    {{ sendSource?.sourceEndpoint.label }} · {{ sendSource?.sourcePath }}
+                  </span>
+                </span>
+              </span>
+              <span class="flex shrink-0 items-center gap-1.5 text-[11.5px] text-muted">
+                {{ sendFilesOpen ? t("koko.fileManagement.collapse") : t("koko.fileManagement.viewFiles") }}
+                <UIcon
+                  name="i-lucide-chevron-down"
+                  class="size-3.5 transition-transform"
+                  :class="sendFilesOpen ? 'rotate-180' : ''"
+                />
+              </span>
+            </UButton>
+            <template #content>
+              <div class="max-h-36 overflow-y-auto border-t border-default px-3 py-2">
+                <div
+                  v-for="entry in sendSource?.entries"
+                  :key="entry.name"
+                  class="flex min-h-7 items-center gap-2 rounded px-1.5 text-[12px] text-toned hover:bg-elevated"
+                >
+                  <UIcon name="i-lucide-file" class="size-3.5 shrink-0 text-muted" />
+                  <span class="min-w-0 flex-1 truncate">{{ entry.name }}</span>
+                  <span class="font-ui-mono text-[11px] text-muted">{{ prettyBytes(Number(entry.size) || 0) }}</span>
+                </div>
+              </div>
+            </template>
+          </UCollapsible>
+
+          <div>
+            <div class="mb-2 flex items-center gap-2">
+              <p class="text-xs font-semibold uppercase tracking-wide text-muted">
+                {{ t("koko.fileManagement.targetMachines") }}
+              </p>
+              <span class="font-ui-mono text-[11px] text-muted">{{ selectedSendTargets.length }}</span>
+              <div class="flex-1" />
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                :label="t('koko.fileManagement.selectOnline')"
+                @click="selectAllOnlineTargets"
+              />
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                :label="t('koko.fileManagement.clearSelection')"
+                @click="selectedSendTargetIds = []"
+              />
+            </div>
+            <UInput
+              v-model="sendTargetSearch"
+              icon="i-lucide-search"
+              size="sm"
+              :placeholder="t('koko.fileManagement.searchTargets')"
+              class="mb-2"
+            />
+            <div class="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-default p-1.5">
+              <label
+                v-for="target in filteredSendTargetOptions"
+                :key="target.id"
+                class="flex items-start gap-3 rounded-md border px-2.5 py-2 transition-colors"
+                :class="[
+                  selectedSendTargetIds.includes(target.id)
+                    ? 'border-primary/50 bg-accented'
+                    : 'border-transparent hover:bg-elevated',
+                  !target.connected ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                ]"
+              >
+                <UCheckbox
+                  :model-value="selectedSendTargetIds.includes(target.id)"
+                  :disabled="!target.connected"
+                  class="mt-0.5"
+                  @update:model-value="toggleSendTarget(target.id, $event === true)"
+                />
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <span :class="target.connected ? 'bg-success' : 'bg-muted'" class="size-1.5 rounded-full" />
+                    <span class="truncate text-xs font-medium">{{ target.assetName }}</span>
+                    <UBadge color="neutral" variant="soft" size="xs">{{ target.organizationName }}</UBadge>
+                    <span class="ml-auto text-[10px] text-muted">
+                      {{
+                        target.connected ? t("koko.fileManagement.connected") : t("koko.fileManagement.disconnected")
+                      }}
+                    </span>
+                    <UButton
+                      v-if="!target.connected"
+                      size="xs"
+                      color="neutral"
+                      variant="ghost"
+                      icon="i-lucide-refresh-cw"
+                      :title="t('koko.fileManagement.reconnect')"
+                      @click.prevent.stop="reconnectTarget(target)"
+                    />
+                  </div>
+                  <UInput
+                    :model-value="targetPath(target)"
+                    icon="i-lucide-folder"
+                    size="xs"
+                    class="mt-1.5"
+                    :disabled="!target.connected || !selectedSendTargetIds.includes(target.id)"
+                    @update:model-value="sendTargetPaths[target.id] = String($event)"
+                    @click.stop
+                  />
+                </div>
+              </label>
+              <div v-if="!filteredSendTargetOptions.length" class="grid h-20 place-items-center text-xs text-muted">
+                {{ t("koko.fileManagement.noMatchingTargets") }}
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-default bg-elevated/50 p-3">
+            <p class="mb-2 text-xs font-medium">{{ t("koko.fileManagement.nameConflictPolicy") }}</p>
+            <div class="flex flex-wrap gap-2">
+              <UButton
+                v-for="policy in ['ask', 'overwrite', 'skip'] as const"
+                :key="policy"
+                size="xs"
+                :color="sendConflictPolicy === policy ? 'primary' : 'neutral'"
+                :variant="sendConflictPolicy === policy ? 'soft' : 'ghost'"
+                :label="
+                  policy === 'ask'
+                    ? t('koko.fileManagement.askWhenNeeded')
+                    : policy === 'overwrite'
+                      ? t('FileTransfer.Overwrite')
+                      : t('FileTransfer.Skip')
+                "
+                @click="sendConflictPolicy = policy"
+              />
+            </div>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <div class="mr-auto min-w-0 text-xs text-muted">
+          <p class="font-ui-mono">
+            {{ sendFileCount }} × {{ selectedSendTargets.length }} =
+            <span class="font-semibold text-highlighted">{{ sendFileCount * selectedSendTargets.length }}</span>
+            {{ t("koko.fileManagement.transferTaskUnit") }}
+            <span v-if="selectedSendTotalBytes" class="ml-1">· {{ prettyBytes(selectedSendTotalBytes) }}</span>
+          </p>
+          <p class="mt-1">
+            {{ t("koko.fileManagement.distributionQueueHint") }}
+          </p>
+        </div>
+        <UButton color="neutral" variant="ghost" :label="t('koko.actions.cancel')" @click="sendModalOpen = false" />
+        <UButton
+          color="primary"
+          icon="i-lucide-send"
+          :disabled="!selectedSendTargets.length"
+          :label="t('koko.fileManagement.distributeToTargets', selectedSendTargets.length)"
+          @click="startDistribution"
         />
       </template>
     </UModal>

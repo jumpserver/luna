@@ -144,7 +144,7 @@ onBeforeUnmount(() => {
         variant="ghost"
         icon="i-lucide-list-x"
         :title="t('FileTransfer.ClearFinished')"
-        @click="store.clearFinished"
+        @click="store.clearFinished()"
       />
       <UButton
         size="xs"

@@ -9,7 +9,7 @@ export type FileTransferStatus =
   | "failed"
   | "canceled";
 
-export type FileTransferConflictPolicy = "ask" | "overwrite" | "skip";
+export type FileTransferConflictPolicy = "ask" | "overwrite" | "skip" | "keep_both";
 
 export interface FileTransferEndpointRef {
   /** Stable for the lifetime of one authorized connector session. */
