@@ -3,6 +3,13 @@ import type { TerminalAiChatMessage, TerminalAiEventData } from "#koko/composabl
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import {
+  terminalAiAclKey,
+  terminalAiBackgroundReasonKey,
+  terminalAiErrorKey,
+  terminalAiExecutionKey,
+  terminalAiProgressKey
+} from "#koko/composables/terminal/terminalAiPresentation";
+import {
   createTerminalAiMessageId,
   getKokoTerminalAiSession,
   sendKokoTerminalAiControl
@@ -110,6 +117,41 @@ const modeOptions = computed(() => [
     disabled: !session.value?.backgroundExec
   }
 ]);
+
+function translatedProtocolValue(key: string | undefined, fallback = "") {
+  return key ? t(key) : fallback;
+}
+
+const errorLabel = computed(() => {
+  const current = session.value;
+  if (!current) return "";
+  const key = terminalAiErrorKey(current.errorCode, current.errorText);
+  return translatedProtocolValue(key, current.errorText ? t("RightPanel.AIFailed") : "");
+});
+
+const errorDetail = computed(() => {
+  const current = session.value;
+  if (!current?.errorText || terminalAiErrorKey(current.errorCode, current.errorText)) return "";
+  return current.errorText;
+});
+
+const runtimeStatusLabel = computed(() => {
+  const current = session.value;
+  if (!current) return "";
+  const key = terminalAiProgressKey({
+    code: current.runtimeStatusCode,
+    execution: current.runtimeExecution,
+    state: current.runtimeState,
+    text: current.runtimeStatus
+  });
+  return translatedProtocolValue(key, current.runtimeStatus);
+});
+
+const backgroundReasonLabel = computed(() => {
+  const current = session.value;
+  if (!current) return "";
+  return translatedProtocolValue(terminalAiBackgroundReasonKey(current.backgroundReasonCode, current.backgroundReason));
+});
 
 const viewItems = computed<ViewItem[]>(() => {
   const items: ViewItem[] = [];
@@ -244,6 +286,7 @@ function submit() {
   if (!current || !text || busy.value || !current.enabled) return;
 
   current.draft = "";
+  current.errorCode = "";
   current.errorText = "";
   current.chat.clearError();
   scrollToBottom();
@@ -254,7 +297,7 @@ function submit() {
       metadata: { terminalId: Number(current.terminalId) }
     })
     .catch(() => {
-      if (!current.errorText) current.errorText = t("RightPanel.AISendFailed");
+      if (!current.errorCode && !current.errorText) current.errorCode = "send_failed";
     });
 }
 
@@ -284,7 +327,8 @@ function updatePolicy() {
       ]
     });
   } catch {
-    current.errorText = t("RightPanel.AIPolicyFailed");
+    current.errorCode = "policy_failed";
+    current.errorText = "";
   }
 }
 
@@ -327,7 +371,8 @@ function decide(data: TerminalAiEventData, approved: boolean) {
     });
   } catch {
     current.decisions.delete(decisionId);
-    current.errorText = t("RightPanel.AIApprovalFailed");
+    current.errorCode = "approval_failed";
+    current.errorText = "";
   }
 }
 
@@ -343,13 +388,15 @@ function interrupt() {
       parts: [{ type: "data-interrupt", data: { reason: "user" } }]
     });
   } catch {
-    current.errorText = t("RightPanel.AIInterruptFailed");
+    current.errorCode = "interrupt_failed";
+    current.errorText = "";
   }
 }
 
 function clearError() {
   const current = session.value;
   if (!current) return;
+  current.errorCode = "";
   current.errorText = "";
   current.chat.clearError();
 }
@@ -360,6 +407,15 @@ function setExecutionOverride(id: string, value: string) {
 
 function selectedExecution(data: TerminalAiEventData) {
   return session.value?.executionOverrides.get(String(data.id)) || String(data.execution || "pty");
+}
+
+function executionLabel(value: unknown) {
+  return translatedProtocolValue(terminalAiExecutionKey(value), String(value || ""));
+}
+
+function aclLabel(data: TerminalAiEventData) {
+  const value = data.state || data.action;
+  return translatedProtocolValue(terminalAiAclKey(value), String(value || ""));
 }
 
 function renderMarkdown(source: string) {
@@ -435,6 +491,13 @@ function riskColor(level: number) {
   if (level >= 3) return "warning";
   if (level >= 2) return "info";
   return "success";
+}
+
+function formatExecutionDuration(value: unknown) {
+  const durationMs = Number(value);
+  if (!Number.isFinite(durationMs) || durationMs < 0) return "";
+  if (durationMs < 1000) return `${Math.round(durationMs)} ms`;
+  return `${(durationMs / 1000).toFixed(durationMs < 10000 ? 2 : 1)} s`;
 }
 
 watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.parts.length], scrollToBottom);
@@ -566,7 +629,16 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
                             {{ t("RightPanel.AIRisk", { level: execution.command.riskLevel }) }}
                           </UBadge>
                           <UBadge color="neutral" variant="subtle" size="xs">
-                            {{ execution.command.execution }}
+                            {{ executionLabel(execution.command.execution) }}
+                          </UBadge>
+                          <UBadge
+                            v-if="execution.command.decisionDurationMs !== undefined"
+                            color="neutral"
+                            variant="subtle"
+                            size="xs"
+                          >
+                            {{ t("RightPanel.AIDecisionDuration") }}
+                            {{ formatExecutionDuration(execution.command.decisionDurationMs) }}
                           </UBadge>
                           <UBadge
                             v-if="execution.command.state === 'auto_approved'"
@@ -641,14 +713,25 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
                         class="flex items-center justify-between border-b border-default px-2 py-1.5 text-[11px] text-muted"
                       >
                         <span>{{ t("RightPanel.AIExecutionResult") }}</span>
-                        <UBadge
-                          v-if="execution.result.exitCode !== undefined && execution.result.exitCode !== null"
-                          color="neutral"
-                          variant="subtle"
-                          size="xs"
-                        >
-                          exit {{ execution.result.exitCode }}
-                        </UBadge>
+                        <div class="flex flex-wrap justify-end gap-1">
+                          <UBadge
+                            v-if="execution.result.durationMs !== undefined"
+                            color="neutral"
+                            variant="subtle"
+                            size="xs"
+                          >
+                            {{ t("RightPanel.AIExecutionDuration") }}
+                            {{ formatExecutionDuration(execution.result.durationMs) }}
+                          </UBadge>
+                          <UBadge
+                            v-if="execution.result.exitCode !== undefined && execution.result.exitCode !== null"
+                            color="neutral"
+                            variant="subtle"
+                            size="xs"
+                          >
+                            {{ t("RightPanel.AIExitCode", { code: execution.result.exitCode }) }}
+                          </UBadge>
+                        </div>
                       </div>
                       <div
                         v-if="execution.result.summary"
@@ -674,7 +757,7 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
                   >
                     <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
                     {{ t("RightPanel.AICommandAcl") }}:
-                    {{ step.acl.state || step.acl.action }}
+                    {{ aclLabel(step.acl) }}
                     {{ step.acl.decision?.name || step.acl.name || "" }}
                   </div>
                 </div>
@@ -685,16 +768,19 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
           <div v-else class="flex items-start gap-1.5 rounded-lg bg-warning/10 p-2 text-[11px] text-warning">
             <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
             {{ t("RightPanel.AICommandAcl") }}:
-            {{ item.data.state || item.data.action }}
+            {{ aclLabel(item.data) }}
             {{ item.data.decision?.name || item.data.name || "" }}
           </div>
         </template>
       </main>
 
       <footer class="shrink-0 space-y-2 border-t border-default p-3">
-        <div v-if="session.errorText" class="flex items-start gap-2 rounded-lg bg-error/10 p-2 text-[11px] text-error">
+        <div v-if="errorLabel" class="flex items-start gap-2 rounded-lg bg-error/10 p-2 text-[11px] text-error">
           <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
-          <span class="min-w-0 flex-1">{{ session.errorText }}</span>
+          <span class="min-w-0 flex-1">
+            <span class="block">{{ errorLabel }}</span>
+            <span v-if="errorDetail" class="mt-0.5 block break-words text-[10px] opacity-80">{{ errorDetail }}</span>
+          </span>
           <UButton
             size="xs"
             color="neutral"
@@ -704,16 +790,16 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
             @click="clearError"
           />
         </div>
-        <div v-if="session.runtimeStatus" class="flex items-center gap-1.5 text-[11px] text-muted">
+        <div v-if="runtimeStatusLabel" class="flex items-center gap-1.5 text-[11px] text-muted">
           <UIcon
             :name="busy ? 'i-lucide-loader-circle' : 'i-lucide-circle-dot'"
             class="size-3"
             :class="{ 'animate-spin': busy }"
           />
-          {{ session.runtimeStatus }}
+          {{ runtimeStatusLabel }}
         </div>
-        <p v-if="!session.backgroundExec && session.backgroundReason" class="text-[11px] text-muted">
-          {{ session.backgroundReason }}
+        <p v-if="!session.backgroundExec && backgroundReasonLabel" class="text-[11px] text-muted">
+          {{ backgroundReasonLabel }}
         </p>
         <div class="relative overflow-hidden rounded-lg bg-[var(--app-input-bg)]">
           <UTextarea

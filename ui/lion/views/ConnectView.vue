@@ -13,9 +13,10 @@ import Osk from "@/lion/components/Osk.vue";
 import OtherOption from "@/lion/components/OtherOption.vue";
 import SessionShare from "@/lion/components/SessionShare/index.vue";
 import { useGuacamoleClient } from "@/lion/hooks/useGuacamoleClient";
+import { createLionConnectTicket } from "@/lion/hooks/useLionConnectTicket";
+import { useLionEndpoint } from "@/lion/hooks/useLionEndpoint";
 import { LUNA_MESSAGE_TYPE } from "@/lion/types/postmessage.type";
 import { withLionWsUrl } from "@/lion/utils/base";
-import { readClipboardText } from "@/lion/utils/clipboard";
 import { getCurrentConnectParams } from "@/lion/utils/common";
 import { lunaCommunicator } from "@/lion/utils/lunaBus";
 import { ErrorStatusCodes } from "@/lion/utils/status";
@@ -24,12 +25,18 @@ const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const { t } = useI18n();
 const containerRef = ref<HTMLElement | null>(null);
+const displayRef = ref<HTMLElement | null>(null);
 const sessionContext = inject(connectorSessionKey, ref<ConnectorSessionContext | null>(null));
-const endpointUrl = computed(() => unref(sessionContext)?.endpointUrl || window.location.origin);
+const endpointUrl = useLionEndpoint(() => unref(sessionContext)?.endpointUrl);
+const activeToken = ref("");
+const activeTicket = ref("");
+let ticketCreatedAt = 0;
+let ticketRefreshPromise: Promise<string> | null = null;
 
 const {
   guaDisplay,
   connectToGuacamole,
+  connectStatus,
   onlineUsersMap,
   disconnectGuaclient,
   sendTextToRemote,
@@ -47,16 +54,17 @@ const {
   currentFolder,
   currentFolderFiles,
   hasClipboardPermission,
+  debouncedSendClipboardToRemote,
   fileFsLoading,
   currentGuacFsObject,
   enableShare,
   action_permission,
   remoteClipboardText,
+  clipboardPasteTextLimit,
   sendInputActive
-} = useGuacamoleClient(t, endpointUrl);
+} = useGuacamoleClient(t, endpointUrl, () => ({ ticket: activeTicket.value, token: activeToken.value }));
 
 const drawShow = ref(false);
-const connectStatus = ref("Connecting");
 const autoFit = ref<boolean>(true);
 
 const resolveContainerSize = () => {
@@ -94,8 +102,15 @@ const uploadingFiles = ref<Array<UploadItem>>([]);
 const isUploading = ref(false);
 const displayUploadingFiles = ref<Array<LionUploadFileInfo>>([]);
 const showOsk = ref<boolean>(false);
+let uploadSequence = 0;
+
+const createUploadId = () => {
+  uploadSequence += 1;
+  return globalThis.crypto?.randomUUID?.() || `lion-drop-${Date.now()}-${uploadSequence}`;
+};
 
 function getKeyboardLayout() {
+  if (!import.meta.client) return "en-us-qwerty";
   const lunaSetting = localStorage.getItem("LunaSetting");
   if (lunaSetting) {
     const setting = JSON.parse(lunaSetting);
@@ -110,7 +125,37 @@ const keyboardLayout = ref<string>(getKeyboardLayout());
 const currentTab = ref("general");
 const shouldEnableScroll = ref(false);
 
-const handleUploadFile = (options: LionUploadCustomRequestOptions, folder: any) => {
+const refreshConnectTicket = async () => {
+  if (!activeToken.value) return activeTicket.value;
+  if (activeTicket.value && Date.now() - ticketCreatedAt < 25 * 60 * 1000) return activeTicket.value;
+  const previousTicket = activeTicket.value;
+  const previousTicketAge = Date.now() - ticketCreatedAt;
+  if (!ticketRefreshPromise) {
+    ticketRefreshPromise = createLionConnectTicket(endpointUrl.value, activeToken.value).finally(() => {
+      ticketRefreshPromise = null;
+    });
+  }
+  try {
+    activeTicket.value = await ticketRefreshPromise;
+    ticketCreatedAt = Date.now();
+    return activeTicket.value;
+  } catch (error) {
+    if (previousTicket && previousTicketAge < 30 * 60 * 1000) return previousTicket;
+    throw error;
+  }
+};
+
+const handleUploadFile = async (options: LionUploadCustomRequestOptions, folder: any) => {
+  if (action_permission.value && !action_permission.value.enable_upload) {
+    toast.add({ title: `${t("UploadFile")} ${t("NoPermission")}`, color: "warning" });
+    return;
+  }
+  try {
+    await refreshConnectTicket();
+  } catch (error) {
+    addErrorToast({ title: error instanceof Error ? error.message : String(error) });
+    return;
+  }
   const item = { uploadOptions: options, folder: folder || currentFolder.value };
   displayUploadingFiles.value.push(options.file);
   uploadingFiles.value.push(item);
@@ -128,7 +173,10 @@ const handleRemoveFile = (file: LionUploadFileInfo) => {
     toast.add({ title: t("FileUploadingWarning"), color: "warning" });
     return;
   }
-  displayUploadingFiles.value = displayUploadingFiles.value.filter((f) => f.name !== file.name);
+  if (file.status === "pending") {
+    uploadingFiles.value = uploadingFiles.value.filter((item) => item.uploadOptions.file.id !== file.id);
+  }
+  displayUploadingFiles.value = displayUploadingFiles.value.filter((item) => item.id !== file.id);
 };
 
 async function processUploadQueue() {
@@ -138,6 +186,7 @@ async function processUploadQueue() {
     const { uploadOptions, folder } = uploadItem;
 
     try {
+      await refreshConnectTicket();
       uploadOptions.file.status = "uploading";
       await uploadFile(uploadOptions, folder);
       uploadOptions.file.status = "finished";
@@ -150,8 +199,6 @@ async function processUploadQueue() {
         msg = `${t("FileUploadError")}: ${uploadOptions.file.name}`;
       }
       addErrorToast({ title: msg });
-    } finally {
-      setTimeout(handleRemoveFile, 5000, uploadOptions.file);
     }
   }
   isUploading.value = false;
@@ -164,12 +211,13 @@ const fileDrop = (event: DragEvent) => {
   if (!files?.length) return;
 
   Array.from(files).forEach((fileObj) => {
+    const id = createUploadId();
     handleUploadFile(
       {
         file: {
-          id: `batch-id-${fileObj.name}`,
+          id,
           name: fileObj.name,
-          batchId: `batch-id-${fileObj.name}`,
+          batchId: id,
           percentage: 0,
           type: fileObj.type,
           status: "pending",
@@ -181,60 +229,97 @@ const fileDrop = (event: DragEvent) => {
   });
 };
 
-const debouncedSendClipboardToRemote = useDebounceFn(async () => {
-  const text = await readClipboardText();
-  if (!text?.trim()) return;
-  sendTextToRemote(text);
-}, 300);
+const getBrowserTimezone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  } catch (error) {
+    console.debug("Unable to detect browser timezone", error);
+    return "";
+  }
+};
 
-const resolveConnectConfig = () => {
+const preventDefault = (event: Event) => {
+  event.stopPropagation();
+  event.preventDefault();
+};
+
+let displayElement: HTMLElement | null = null;
+let disposed = false;
+
+const handleLunaOpen = () => {
+  nextTick(() => {
+    drawShow.value = !drawShow.value;
+  });
+};
+
+const handleLunaInputActive = () => {
+  nextTick(() => sendInputActive());
+};
+
+const resolveConnectConfig = async () => {
   const ctx = unref(sessionContext);
   if (ctx?.tokenId) {
     return {
-      // ponytail: lion 走 Guacamole connect 参数 TOKEN_ID，不用 koko 的 ?token= WS 查询串
+      // Lion 同时保留 TOKEN_ID 协议参数和 Koko 票据绑定所需的 token 参数。
       ws: withLionWsUrl("/ws/connect/", ctx.endpointUrl),
-      token: ctx.tokenId
+      token: ctx.tokenId,
+      ticket: ctx.ticket || (await createLionConnectTicket(ctx.endpointUrl, ctx.tokenId))
     };
   }
 
   const params = getCurrentConnectParams();
+  const token = params.data.token || params.data.TOKEN_ID || "";
   return {
-    ws: params.ws || "",
-    token: params.data.token || ""
+    ws: withLionWsUrl("/ws/connect/", endpointUrl.value),
+    token,
+    ticket: await createLionConnectTicket(endpointUrl.value, token)
   };
 };
 
 onMounted(async () => {
   loading.value = true;
   await nextTick();
+  if (disposed) return;
 
-  lunaCommunicator.onLuna(LUNA_MESSAGE_TYPE.OPEN, () => {
-    nextTick(() => {
-      drawShow.value = !drawShow.value;
-    });
-  });
-  lunaCommunicator.onLuna(LUNA_MESSAGE_TYPE.INPUT_ACTIVE, () => {
-    nextTick(() => sendInputActive());
-  });
+  lunaCommunicator.onLuna(LUNA_MESSAGE_TYPE.OPEN, handleLunaOpen);
+  lunaCommunicator.onLuna(LUNA_MESSAGE_TYPE.INPUT_ACTIVE, handleLunaInputActive);
 
-  const { ws, token } = resolveConnectConfig();
+  let connectConfig: Awaited<ReturnType<typeof resolveConnectConfig>>;
+  try {
+    connectConfig = await resolveConnectConfig();
+  } catch (error) {
+    if (disposed) return;
+    loading.value = false;
+    addErrorToast({ title: error instanceof Error ? error.message : String(error) });
+    return;
+  }
+  if (disposed) return;
+  const { ws, token, ticket } = connectConfig;
+  activeToken.value = token;
+  activeTicket.value = ticket;
+  ticketCreatedAt = ticket ? Date.now() : 0;
   const { width, height } = resolveContainerSize();
   connectToGuacamole(
     ws,
     {
-      TOKEN_ID: encodeURIComponent(token),
-      GUAC_KEYBOARD: keyboardLayout.value
+      TOKEN_ID: token,
+      token,
+      ...(ticket ? { ticket } : {}),
+      GUAC_KEYBOARD: keyboardLayout.value,
+      GUAC_TIMEZONE: getBrowserTimezone()
     },
     width,
     height,
     true
   );
 
-  const displayEl = document.getElementById("display");
+  const displayEl = displayRef.value;
   if (!displayEl) {
-    console.error("Display element not found");
+    loading.value = false;
+    disconnectGuaclient();
     return;
   }
+  displayElement = displayEl;
   displayEl.appendChild(guaDisplay.value.getElement());
 
   if (containerRef.value) {
@@ -243,33 +328,27 @@ onMounted(async () => {
     debouncedResize();
   }
 
-  displayEl.addEventListener(
-    "dragenter",
-    (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-    },
-    false
-  );
-  displayEl.addEventListener(
-    "dragover",
-    (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-    },
-    false
-  );
+  displayEl.addEventListener("dragenter", preventDefault, false);
+  displayEl.addEventListener("dragover", preventDefault, false);
   displayEl.addEventListener("drop", fileDrop, false);
+  displayEl.addEventListener("contextmenu", preventDefault, false);
 
   registerMouseAndKeyboardHanlder();
   window.addEventListener("focus", debouncedSendClipboardToRemote);
 });
 
 onUnmounted(() => {
+  disposed = true;
   resizeObserver?.disconnect();
   resizeObserver = null;
+  displayElement?.removeEventListener("dragenter", preventDefault, false);
+  displayElement?.removeEventListener("dragover", preventDefault, false);
+  displayElement?.removeEventListener("drop", fileDrop, false);
+  displayElement?.removeEventListener("contextmenu", preventDefault, false);
+  displayElement = null;
   disconnectGuaclient();
-  lunaCommunicator.offLuna(LUNA_MESSAGE_TYPE.OPEN);
+  lunaCommunicator.offLuna(LUNA_MESSAGE_TYPE.OPEN, handleLunaOpen);
+  lunaCommunicator.offLuna(LUNA_MESSAGE_TYPE.INPUT_ACTIVE, handleLunaInputActive);
   lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.CLOSE, "");
   window.removeEventListener("focus", debouncedSendClipboardToRemote);
 });
@@ -279,24 +358,21 @@ const ClipBoardTextChange = (text: string) => {
   sendTextToRemote(text);
 };
 
-document.addEventListener(
-  "contextmenu",
-  (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  },
-  false
-);
-
 const handleScreenKeyboard = (name: string, keysym: any) => {
   if (name === "keydown") sendKeyEvent(1, keysym);
   else if (name === "keyup") sendKeyEvent(0, keysym);
 };
 
-const handleDownloadFile = (file: GuacamoleFile) => {
+const handleDownloadFile = async (file: { name: string; streamName?: GuacamoleFile["streamName"] }) => {
   if (!file?.streamName) return;
   if (action_permission.value && !action_permission.value.enable_download) {
     toast.add({ title: t("FileDownloadDenied"), color: "warning" });
+    return;
+  }
+  try {
+    await refreshConnectTicket();
+  } catch (error) {
+    addErrorToast({ title: error instanceof Error ? error.message : String(error) });
     return;
   }
   currentGuacFsObject.value.requestInputStream(file.streamName, (stream: any, mimetype: any) => {
@@ -354,7 +430,7 @@ const drawerTabs = computed(() => {
     </div>
 
     <div
-      id="display"
+      ref="displayRef"
       class="relative flex h-full w-full min-h-0 justify-center"
       :class="[shouldEnableScroll ? 'overflow-auto' : 'overflow-hidden']"
     />
@@ -386,7 +462,11 @@ const drawerTabs = computed(() => {
         <template v-if="currentTab === 'general'">
           <ClipBoardText
             :disabled="!hasClipboardPermission"
+            :copy-disabled="!action_permission.enable_copy"
+            :paste-disabled="!action_permission.enable_paste"
+            :paste-policy-disabled="action_permission.clipboard_policy?.paste?.enabled === false"
             :remote-text="remoteClipboardText"
+            :text-limit="clipboardPasteTextLimit"
             @update:text="ClipBoardTextChange"
           />
           <KeyboardOption v-if="!isRemoteApp" v-model:opened="showOsk" v-model:keyboard="keyboardLayout" />
@@ -406,6 +486,8 @@ const drawerTabs = computed(() => {
           :name="driverName"
           :folder="currentFolder"
           :display-uploading-files="displayUploadingFiles"
+          :download-disabled="action_permission?.enable_download === false"
+          :upload-disabled="action_permission?.enable_upload === false"
           @open-folder="handleFolderOpen"
           @download-file="handleDownloadFile"
           @upload-file="handleUploadFile"
@@ -418,6 +500,8 @@ const drawerTabs = computed(() => {
           :users="onlineUsers"
           :disable-create="!enableShare"
           :endpoint-url="endpointUrl"
+          :token-id="activeToken"
+          :ticket="activeTicket"
         />
       </div>
     </template>

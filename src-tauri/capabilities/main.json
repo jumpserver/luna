@@ -84,6 +84,7 @@
     "window-state:default",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
+    "clipboard-manager:allow-write-image",
     "updater:allow-check",
     "updater:allow-download",
     "updater:allow-install",

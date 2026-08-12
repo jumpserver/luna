@@ -3,18 +3,16 @@ import type { LionUploadCustomRequestOptions } from "@/lion/types/upload";
 import { useDebounceFn } from "@vueuse/core";
 
 import * as Guacamole from "guacamole-common-js-jumpserver/dist/guacamole-common";
-import { nextTick, ref, toValue } from "vue";
-import { LanguageCode } from "@/lion/locales";
+import { computed, nextTick, ref, toValue } from "vue";
 import { LUNA_MESSAGE_TYPE } from "@/lion/types/postmessage.type";
 import { withLionUrl } from "@/lion/utils/base";
-import { readClipboardText } from "@/lion/utils/clipboard";
+import { readClipboardText, writeClipboardBlob, writeClipboardText } from "@/lion/utils/clipboard";
+import { LanguageCode } from "@/lion/utils/config";
 
 import { lunaCommunicator } from "@/lion/utils/lunaBus";
-import { ConvertGuacamoleError, ErrorStatusCodes } from "@/lion/utils/status";
+import { ConvertGuacamoleError as convertGuacamoleError, ErrorStatusCodes } from "@/lion/utils/status";
 
-const supportImages: any[] = [];
-const pendingTests: any[] = [];
-const testImages: any = {
+const testImages: Record<string, string> = {
   /**
    * Test JPEG image, encoded as base64.
    */
@@ -37,8 +35,9 @@ const testImages: any = {
    * Test WebP image, encoded as base64.
    */
   "image/webp": "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=="
-}; // 测试单个图片格式
-async function testImageFormat(mimeType: string, base64Data: any): Promise<boolean> {
+};
+
+async function testImageFormat(mimeType: string, base64Data: string): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     const image = new Image();
 
@@ -58,54 +57,19 @@ async function testImageFormat(mimeType: string, base64Data: any): Promise<boole
   });
 }
 
-// Use Object.entries for better iteration over key-value pairs
-Object.entries(testImages).forEach(([mimeType, base64Data]) => {
-  const imageTest = new Promise<void>((resolve) => {
-    const image = new Image();
-
-    // Set up handlers before setting src to avoid race conditions
-    image.onload = () => {
-      // Image format is supported if successfully decoded with correct dimensions
-      if (image.width === 1 && image.height === 1) {
-        supportImages.push(mimeType);
-      }
-      resolve();
-    };
-
-    // Handle errors separately for better debugging
-    image.onerror = () => {
-      console.debug(`Format ${mimeType} not supported`);
-      resolve(); // Still resolve to continue testing other formats
-    };
-
-    // Set source to trigger loading
-    image.src = `data:${mimeType};base64,${base64Data}`;
-  });
-
-  pendingTests.push(imageTest);
-});
 const FileType = {
   NORMAL: "NORMAL",
   DIRECTORY: "DIRECTORY"
 };
 
 export async function getSupportedImages(): Promise<string[]> {
-  // 清空之前的结果
-  supportImages.length = 0;
-
-  // 并行测试所有图片格式
-  const testPromises = Object.entries(testImages).map(async ([mimeType, base64Data]) => {
-    const isSupported = await testImageFormat(mimeType, base64Data);
-    if (isSupported) {
-      supportImages.push(mimeType);
-    }
-    return { mimeType, isSupported };
-  });
-
-  // 等待所有测试完成
-  await Promise.all(testPromises);
-
-  return [...supportImages]; // 返回副本
+  const results = await Promise.all(
+    Object.entries(testImages).map(async ([mimeType, base64Data]) => ({
+      mimeType,
+      isSupported: await testImageFormat(mimeType, base64Data)
+    }))
+  );
+  return results.filter((result) => result.isSupported).map((result) => result.mimeType);
 }
 export async function getSupportedGuacVideos(): Promise<string[]> {
   return Guacamole.VideoPlayer.getSupportedTypes();
@@ -132,15 +96,22 @@ export async function getSupportedGuacMimeTypes(): Promise<string> {
   return connectString;
 }
 
+let supportedMimeTypesPromise: Promise<Record<string, string[]>> | null = null;
+
 export async function getSupportedMimeTypes(): Promise<Record<string, string[]>> {
-  const supportImages = await getSupportedImages();
-  const supportVideos = await getSupportedGuacVideos();
-  const supportAudios = await getSupportedGuacAudios();
-  return {
-    GUAC_IMAGE: supportImages,
-    GUAC_VIDEO: supportVideos,
-    GUAC_AUDIO: supportAudios
-  };
+  if (!supportedMimeTypesPromise) {
+    supportedMimeTypesPromise = Promise.all([getSupportedImages(), getSupportedGuacVideos(), getSupportedGuacAudios()])
+      .then(([supportImages, supportVideos, supportAudios]) => ({
+        GUAC_IMAGE: supportImages,
+        GUAC_VIDEO: supportVideos,
+        GUAC_AUDIO: supportAudios
+      }))
+      .catch((error) => {
+        supportedMimeTypesPromise = null;
+        throw error;
+      });
+  }
+  return await supportedMimeTypesPromise;
 }
 
 const sanitizeFilename = (filename: string) => {
@@ -160,7 +131,25 @@ interface GuacamoleFile {
   is_dir?: boolean;
 }
 
-export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string>) {
+interface ClipboardPolicyItem {
+  enabled?: boolean;
+  text_limit?: number;
+  file_size_limit?: number;
+}
+
+interface ClipboardPolicy {
+  copy?: ClipboardPolicyItem;
+  paste?: ClipboardPolicyItem;
+}
+
+const BYTES_PER_MEGABYTE = 1024 * 1024;
+const getTextLength = (text: string) => Array.from(text).length;
+
+export function useGuacamoleClient(
+  t: any,
+  endpointUrl?: MaybeRefOrGetter<string>,
+  requestAuth?: MaybeRefOrGetter<{ ticket?: string; token?: string }>
+) {
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
   const message = {
@@ -187,14 +176,17 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
   const scale = ref(1);
   const currentWidth = ref(window.innerWidth);
   const currentHeight = ref(window.innerHeight);
-  const fakeProcessInterval = ref<number | null>(null);
   const pixelDensity = 1;
   const sink = new Guacamole.InputSink();
   const keyboard = new Guacamole.Keyboard();
+  const pressedKeys = ref<Set<number>>(new Set());
   const isRemoteApp = ref<boolean>(false);
   const isHttpProtocol = ref<boolean>(false);
   const remoteClipboardText = ref<string>("");
+  const clipboardPasteTextLimit = computed(() => getClipboardTextLimit("paste"));
   let connectGeneration = 0;
+  let inputCleanup: (() => void) | null = null;
+  let keyboardListening = false;
   const currentFolderFiles = ref<any>([]);
   const current_files = ref<any>({});
   const currentFolder = ref<GuacamoleFile | null>(null);
@@ -202,17 +194,45 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
   const fileFsLoading = ref(false);
   const enableFilesystem = ref(false);
   const currentGuacFsObject = ref<any>(null);
-  const getBaseApiUrl = () => withLionUrl("/api", toValue(endpointUrl) || window.location.origin);
+  const getApiUrl = (path: string) => {
+    const url = new URL(withLionUrl(`/api${path}`, toValue(endpointUrl) || window.location.origin));
+    const auth = requestAuth ? toValue(requestAuth) : undefined;
+    if (auth?.ticket) url.searchParams.set("ticket", auth.ticket);
+    if (auth?.token) url.searchParams.set("token", auth.token);
+    return url.toString();
+  };
 
   function disconnectGuaclient() {
     connectGeneration += 1;
-    if (guaClient.value) {
-      guaClient.value.disconnect();
+    if (warningIntervalId.value !== null) {
+      window.clearInterval(warningIntervalId.value);
+      warningIntervalId.value = null;
     }
-    guaDisplay.value?.getElement()?.remove();
+    inputCleanup?.();
+    inputCleanup = null;
+    keyboard.reset();
+    pressedKeys.value.clear();
+    const client = guaClient.value;
+    const tunnel = guaTunnel.value;
+    const display = guaDisplay.value;
     guaClient.value = null;
     guaTunnel.value = null;
     guaDisplay.value = null;
+    if (client) {
+      client.onstatechange = null;
+      client.onerror = null;
+      client.onclipboard = null;
+      client.onfile = null;
+      client.onfilesystem = null;
+      client.disconnect();
+    }
+    if (tunnel) {
+      tunnel.onerror = null;
+      tunnel.oninstruction = null;
+    }
+    if (display) display.onresize = null;
+    display?.getElement()?.remove();
+    loading.value = false;
   }
 
   function connectToGuacamole(
@@ -233,11 +253,11 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
     const client = new Guacamole.Client(tunnel);
 
     tunnel.onerror = () => {
+      loading.value = false;
       message.error(t("WebSocketError"));
     };
     tunnel.onuuid = (uuid: string) => {
       tunnel.uuid = uuid;
-      console.log("WebSocket UUID:", uuid);
     };
 
     const oninstruction = tunnel.oninstruction;
@@ -258,10 +278,7 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
     client.onerror = onClientError;
     client.onclipboard = onclipboard;
     const display = client.getDisplay();
-    display.onresize = (resizeEvent: any) => {
-      console.log("Guacamole display resized:", resizeEvent);
-      updateScale();
-    };
+    display.onresize = updateScale;
     display.showCursor(false);
     guaDisplay.value = display;
     guaClient.value = client;
@@ -286,12 +303,69 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
       })
       .finally(() => {
         if (generation !== connectGeneration) return;
-        console.log("Connecting to Guacamole with params:", queryParams.toString());
         client.connect(queryParams.toString());
       });
   }
 
+  function getClipboardPolicyItem(direction: "copy" | "paste"): ClipboardPolicyItem | null {
+    const policy = action_permission.value?.clipboard_policy as ClipboardPolicy | undefined;
+    return policy?.[direction] || null;
+  }
+
+  function getClipboardTextLimit(direction: "copy" | "paste") {
+    const limit = Number(getClipboardPolicyItem(direction)?.text_limit || 0);
+    return Number.isFinite(limit) && limit > 0 ? limit : 0;
+  }
+
+  function getClipboardFileSizeLimit(direction: "copy" | "paste") {
+    const limit = Number(getClipboardPolicyItem(direction)?.file_size_limit || 0);
+    return Number.isFinite(limit) && limit > 0 ? limit : 0;
+  }
+
+  function canUseClipboardDirection(direction: "copy" | "paste") {
+    return Boolean(direction === "copy" ? action_permission.value?.enable_copy : action_permission.value?.enable_paste);
+  }
+
+  function isClipboardDirectionDeniedByPolicy(direction: "copy" | "paste") {
+    return getClipboardPolicyItem(direction)?.enabled === false;
+  }
+
+  function showClipboardPermissionWarning(direction: "copy" | "paste") {
+    if (isClipboardDirectionDeniedByPolicy(direction)) {
+      message.warning(t(direction === "copy" ? "ClipboardCopyDeniedByPolicy" : "ClipboardPasteDeniedByPolicy"));
+      return;
+    }
+    message.warning(`${t(direction === "copy" ? "Copy" : "Paste")} ${t("NoPermission")}`);
+  }
+
+  function validateClipboardText(direction: "copy" | "paste", text: string) {
+    if (!canUseClipboardDirection(direction)) {
+      showClipboardPermissionWarning(direction);
+      return false;
+    }
+    const limit = getClipboardTextLimit(direction);
+    if (limit > 0 && getTextLength(text) > limit) {
+      message.warning(`${t(direction === "copy" ? "Copy" : "Paste")} ${t("ClipboardTextLimitExceeded")}: ${limit}`);
+      return false;
+    }
+    return true;
+  }
+
+  function validateClipboardBlob(direction: "copy" | "paste", size: number) {
+    if (!canUseClipboardDirection(direction)) {
+      showClipboardPermissionWarning(direction);
+      return false;
+    }
+    const limit = getClipboardFileSizeLimit(direction);
+    if (limit > 0 && size > limit * BYTES_PER_MEGABYTE) {
+      message.warning(`${t(direction === "copy" ? "Copy" : "Paste")} ${t("ClipboardFileSizeLimitExceeded")}: ${limit}`);
+      return false;
+    }
+    return true;
+  }
+
   function sendTextToRemote(text: string) {
+    if (!validateClipboardText("paste", text)) return;
     const data = {
       type: "text/plain",
       data: text
@@ -319,11 +393,12 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
   }
 
   const debouncedSendClipboardToRemote = useDebounceFn(async () => {
-    const text = await readClipboardText();
-    if (!text || !text.trim()) {
-      return;
+    try {
+      const text = await readClipboardText();
+      if (text?.trim()) sendTextToRemote(text);
+    } catch (error) {
+      console.debug("Unable to read local clipboard", error);
     }
-    sendTextToRemote(text);
   }, 300);
 
   const registerMouseAndKeyboardHanlder = () => {
@@ -331,10 +406,10 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
     if (!client || !client.getDisplay) {
       return console.warn("Guacamole client is not initialized or does not support mouse and keyboard events");
     }
-    window.addEventListener("focus", debouncedSendClipboardToRemote, false);
-    registerMouse(client);
-
-    registerTouchScreen(client);
+    inputCleanup?.();
+    inputCleanup = null;
+    const mouse = registerMouse(client);
+    const touchScreen = registerTouchScreen(client);
 
     registerKeyboard(client);
     const display = client.getDisplay();
@@ -342,6 +417,7 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
 
     const handleMouseEnter = () => {
       document.body.focus();
+      display.showCursor(false);
       nextTick(() => {
         sink.focus();
       });
@@ -353,6 +429,24 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
     };
     displayEl.addEventListener("mouseenter", handleMouseEnter);
     displayEl.addEventListener("mouseleave", handleMouseLeave);
+    inputCleanup = () => {
+      displayEl.removeEventListener("mouseenter", handleMouseEnter);
+      displayEl.removeEventListener("mouseleave", handleMouseLeave);
+      keyboard.reset();
+      keyboard.onkeydown = null;
+      keyboard.onkeyup = null;
+      if (mouse) {
+        mouse.onmousedown = null;
+        mouse.onmouseup = null;
+        mouse.onmousemove = null;
+        mouse.onmouseout = null;
+      }
+      if (touchScreen) {
+        touchScreen.onmousedown = null;
+        touchScreen.onmousemove = null;
+        touchScreen.onmouseup = null;
+      }
+    };
   };
 
   const resizeGuaScale = useDebounceFn((width: number, height: number) => {
@@ -363,7 +457,6 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
 
   const sendGuaSize = (width: number, height: number) => {
     if (guaClient.value && guaDisplay.value) {
-      console.log("Sending resize to Guacamole client:", width, height);
       guaClient.value.sendSize(width, height);
     }
   };
@@ -380,15 +473,20 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
     }
     const newScale = Math.min(currentWidth.value / w, currentHeight.value / h);
     if (newScale !== scale.value) {
-      console.log(`Guacamole display scaled from ${scale.value} to ${newScale}`);
       scale.value = newScale;
       guaDisplay.value.scale(newScale);
     }
   }
 
   function onJmsEvent(event: any, data: any) {
-    console.log("Received JMS event:", event);
-    const dataObj = JSON.parse(data);
+    let dataObj: any;
+    try {
+      dataObj = typeof data === "string" ? JSON.parse(data) : data;
+    } catch (error) {
+      console.warn("Ignored malformed JMS event payload", event, error);
+      return;
+    }
+    if (!dataObj || typeof dataObj !== "object") return;
     switch (event) {
       case "session_pause": {
         const msg = `${dataObj.user} ${t("PauseSession")}`;
@@ -402,7 +500,7 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
       }
       case "session": {
         sessionObject.value = dataObj;
-        const protocol = dataObj.protocol;
+        const protocol = String(dataObj.protocol || "");
         isHttpProtocol.value = protocol.toLowerCase().includes("http");
         const action = dataObj.action_permission || {};
         action_permission.value = dataObj.action_permission || {};
@@ -431,12 +529,12 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
       }
       case "share_users": {
         onlineUsersMap.value = dataObj;
-        console.log("Online users updated:", onlineUsersMap.value);
         break;
       }
       case "perm_expired": {
         const warningMsg = `${t("PermissionExpired")}: ${dataObj.detail}`;
         message.warning(warningMsg);
+        if (warningIntervalId.value !== null) window.clearInterval(warningIntervalId.value);
         warningIntervalId.value = window.setInterval(() => {
           message.warning(warningMsg);
         }, 1000 * 31);
@@ -481,7 +579,6 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
     [65507, 65505, 79], // control+shift + o
     [65507, 65505, 78] // control+shift + n
   ];
-  const pressedKeys = ref<Set<number>>(new Set());
   const isBlockedCombination = (keysym: number): boolean => {
     if (!isRemoteApp.value) {
       return false;
@@ -517,7 +614,10 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
       console.warn("Guacamole display is not available");
       return;
     }
-    keyboard.listenTo(sink.getElement());
+    if (!keyboardListening) {
+      keyboard.listenTo(sink.getElement());
+      keyboardListening = true;
+    }
 
     keyboard.onkeydown = (keysym: any) => {
       if (isBlockedCombination(keysym)) {
@@ -542,12 +642,12 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
   function registerTouchScreen(client: any) {
     if (!client || !client.getDisplay) {
       console.warn("Guacamole client is not initialized or does not support screen events");
-      return;
+      return null;
     }
     const display = client.getDisplay();
     if (!display) {
       console.warn("Guacamole display is not available");
-      return;
+      return null;
     }
     const touchScreen = new Guacamole.Mouse.Touchscreen(display.getElement());
     const handleEmulatedMouseDown = (mouseState: any) => {
@@ -573,6 +673,7 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
     };
     touchScreen.onmousedown = handleEmulatedMouseDown;
     touchScreen.onmousemove = touchScreen.onmouseup = handleEmulatedMouseState;
+    return touchScreen;
   }
 
   function sendScaledMouseState(client: any, mouseState: any) {
@@ -601,12 +702,12 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
   function registerMouse(client: any) {
     if (!client || !client.getDisplay) {
       console.warn("Guacamole client is not initialized or does not support mouse events");
-      return;
+      return null;
     }
     const display = client.getDisplay();
     if (!display) {
       console.warn("Guacamole display is not available");
-      return;
+      return null;
     }
     const sendMouseState = (mouseState: any) => {
       sendScaledMouseState(client, mouseState);
@@ -623,6 +724,7 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
       // Send mouse state, hide cursor if necessary
       display.showCursor(false);
     };
+    return mouse;
   }
 
   function onClientError(status: any) {
@@ -633,8 +735,7 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
     const currentLang = LanguageCode;
     msg = ErrorStatusCodes[code]
       ? t(ErrorStatusCodes[code], { PLACEHOLDER: status.message })
-      : t(new ConvertGuacamoleError(status.message), { PLACEHOLDER: status.message });
-    console.log("Guacamole error message:", msg);
+      : t(convertGuacamoleError(status.message), { PLACEHOLDER: status.message });
     switch (code) {
       case 1005:
         // 管理员终断会话，特殊处理
@@ -656,8 +757,6 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
   }
 
   function clientStateChanged(state: any) {
-    console.log("Guacamole client state changed:", state);
-
     switch (state) {
       case 0:
         connectStatus.value = "IDLE";
@@ -679,6 +778,7 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
         break;
       case 5:
         connectStatus.value = "Disconnected";
+        loading.value = false;
         lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.CLOSE, "");
         guaDisplay.value?.getElement()?.remove();
         break;
@@ -690,7 +790,6 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
       console.warn("Guacamole file system object or name is not provided.");
       return;
     }
-    console.log("Guacamole file system object received:", obj, name);
 
     enableFilesystem.value = true;
     fsObject.value = obj;
@@ -722,8 +821,7 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
       return;
     }
     recorder.onclose = () => {
-      console.log("Audio stream closed");
-      requestAudioStream(client); // 重新请求音频流
+      if (guaClient.value === client) requestAudioStream(client);
     }; // 重新请求音频流
   }
 
@@ -769,9 +867,11 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
   function clientFileReceived(stream: any, _mimetype: any, filename: any) {
     // Build download URL
     const uuid = guaTunnel.value?.uuid || "";
-    const url = `${getBaseApiUrl()}/tunnels/${encodeURIComponent(uuid)}/streams/${encodeURIComponent(
-      stream.index
-    )}/${encodeURIComponent(sanitizeFilename(filename))}`;
+    const url = getApiUrl(
+      `/tunnels/${encodeURIComponent(uuid)}/streams/${encodeURIComponent(stream.index)}/${encodeURIComponent(
+        sanitizeFilename(filename)
+      )}`
+    );
 
     // Create temporary hidden iframe to facilitate download
     const iframe = document.createElement("iframe");
@@ -836,9 +936,11 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
           progressCallback: CallableFunction
         ) {
           // Build upload URL
-          const url = `${getBaseApiUrl()}/tunnels/${encodeURIComponent(tunnelId)}/streams/${encodeURIComponent(
-            stream.index
-          )}/${encodeURIComponent(sanitizeFilename(file.name))}`;
+          const url = getApiUrl(
+            `/tunnels/${encodeURIComponent(tunnelId)}/streams/${encodeURIComponent(stream.index)}/${encodeURIComponent(
+              sanitizeFilename(file.name)
+            )}`
+          );
           const xhr = new XMLHttpRequest();
           xhr.withCredentials = true;
           // Invoke provided callback if upload tracking is supported
@@ -927,27 +1029,11 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
     }
 
     const streamName = `${folder.streamName}/${sanitizeFilename(file.name).replace(/:+/g, "_")}`;
-    console.log("Uploading file:", file.name, "to stream:", streamName);
-
-    if (fakeProcessInterval.value) {
-      clearInterval(fakeProcessInterval.value);
-      fakeProcessInterval.value = null;
-    }
-
-    fakeProcessInterval.value = setInterval(() => {
-      if (file.percentage && file.percentage < 97) {
-        file.percentage += 1;
-      } else {
-        if (fakeProcessInterval.value) {
-          clearInterval(fakeProcessInterval.value);
-          fakeProcessInterval.value = null;
-        }
-      }
-    }, 1000 * 2);
 
     const progressCallback = (e: any) => {
-      console.log("Upload progress:", e.loaded, "/", e.total, "for file:", file.name);
-      options.file.percentage = (e.loaded / e.total) * 100 - 40;
+      if (e.lengthComputable && e.total > 0) {
+        options.file.percentage = Math.min(99, (e.loaded / e.total) * 100);
+      }
     };
 
     try {
@@ -958,12 +1044,6 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
       console.error("Error uploading file:", error);
       onError?.();
       throw error; // 重新抛出异常，让调用者知道上传失败
-    } finally {
-      // 确保无论成功还是失败都清理 interval
-      if (fakeProcessInterval.value) {
-        clearInterval(fakeProcessInterval.value);
-        fakeProcessInterval.value = null;
-      }
     }
   };
   function onclipboard(stream: object, mimetype: string) {
@@ -980,22 +1060,25 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
 
       // Set clipboard contents once stream is finished
       reader.onend = async () => {
-        console.log("clipboard received from remote: ", data);
+        if (!validateClipboardText("copy", data)) return;
         remoteClipboardText.value = data;
-        if (navigator.clipboard) {
-          await navigator.clipboard.writeText(data);
+        try {
+          await writeClipboardText(data);
+        } catch (error) {
+          console.debug("Unable to write local clipboard", error);
         }
       };
     } else {
       // Otherwise read the clipboard data as a Blob
       reader = new Guacamole.BlobReader(stream, mimetype);
-      reader.onprogress = (text: any) => {
-        console.log("clipboard blob text received from remote: ", text);
-      };
-      reader.onend = () => {
+      reader.onend = async () => {
         const blob = reader.getBlob();
-        console.log("clipboard blob received from remote: ", blob);
-        navigator.clipboard.write(blob);
+        if (!validateClipboardBlob("copy", blob.size)) return;
+        try {
+          await writeClipboardBlob(blob);
+        } catch (error) {
+          console.debug("Unable to write binary clipboard data", error);
+        }
       };
     }
   }
@@ -1126,6 +1209,7 @@ export function useGuacamoleClient(t: any, endpointUrl?: MaybeRefOrGetter<string
     fileFsLoading,
     currentGuacFsObject,
     remoteClipboardText,
+    clipboardPasteTextLimit,
     sendInputActive
   };
 }

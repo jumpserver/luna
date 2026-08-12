@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { useColor } from "@/lion/hooks/useColor";
 
 const props = defineProps<{
   username: string;
@@ -16,8 +15,6 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { lighten } = useColor();
-const isHovered = ref(false);
 const confirmOpen = ref(false);
 
 const options = [
@@ -39,12 +36,7 @@ const handleRemoveUser = () => {
 </script>
 
 <template>
-  <div
-    class="flex w-full items-center justify-between rounded-md p-2 transition-colors"
-    :style="{ backgroundColor: isHovered ? lighten(1) : 'transparent' }"
-    @mouseenter="isHovered = true"
-    @mouseleave="isHovered = false"
-  >
+  <div class="flex w-full items-center justify-between rounded-md p-2 transition-colors hover:bg-elevated">
     <div class="flex items-center gap-2">
       <UIcon name="i-lucide-user-round" class="size-[18px]" />
       <div>

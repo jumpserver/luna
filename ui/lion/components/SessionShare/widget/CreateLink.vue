@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type { Composer } from "vue-i18n";
-import { useClipboard, useDebounceFn } from "@vueuse/core";
+import type { SuggestionUser } from "@/lion/api";
+import { useDebounceFn } from "@vueuse/core";
 import { computed, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { createShareURL } from "@/lion/api";
-import { useColor } from "@/lion/hooks/useColor";
-import { withBaseUrl, withLionUrl } from "@/lion/utils/base";
+import { createShareURL, getSuggestionUsers } from "@/lion/api";
+import { createLionConnectTicket } from "@/lion/hooks/useLionConnectTicket";
+import { withBaseUrl } from "@/lion/utils/base";
+import { writeClipboardText } from "@/utils/clipboard";
 
 export type TranslateFunction = Composer["t"];
 
@@ -13,25 +15,14 @@ const props = defineProps<{
   session: string;
   disabledCreateLink: boolean;
   endpointUrl?: string;
+  tokenId?: string;
+  ticket?: string;
 }>();
 
-const { copy } = useClipboard({ legacy: true });
 const getMinuteLabel = (item: number, t: TranslateFunction): string => {
   const minuteLabel = item > 1 ? t("Minutes") : t("Minute");
   return `${item} ${minuteLabel}`;
 };
-
-export interface ShareUserOptions {
-  id: string;
-  name: string;
-  username: string;
-}
-
-export interface UserInfo {
-  id: string;
-  name: string;
-  username: string;
-}
 
 interface ExpiredOption {
   label: string;
@@ -46,7 +37,6 @@ interface ActionPermOption {
 }
 
 const { t } = useI18n();
-const { lighten } = useColor();
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const shareInfo = ref({
@@ -55,58 +45,76 @@ const shareInfo = ref({
   shareId: "",
   shareURL: ""
 });
-const userOptions = ref<UserInfo[]>([]);
+const PAGE_SIZE = 10;
+const userOptions = ref<SuggestionUser[]>([]);
+const knownUsers = ref<Record<string, SuggestionUser>>({});
 const selectedUserIds = ref<string[]>([]);
-const currentQuery = ref<string>("");
-const currentPage = ref<number>(1);
-const hasMore = ref<boolean>(true);
-const searchLoading = ref<boolean>(false);
-const showLinkResult = ref<boolean>(false);
+const searchTerm = ref("");
+const currentQuery = ref("");
+const currentPage = ref(0);
+const hasMore = ref(true);
+const searchLoading = ref(false);
+const createLoading = ref(false);
+const showLinkResult = ref(false);
+let searchGeneration = 0;
 
-const searchUsers = useDebounceFn(async (value: string, isLoadMore: boolean = false) => {
-  if (value === "" && !isLoadMore) {
-    searchLoading.value = false;
-    return;
-  }
+const normalizeUsers = (users: SuggestionUser[], query: string) => {
+  const normalizedQuery = query.trim().toLowerCase();
+  const seen = new Set<string>();
 
-  if (!isLoadMore || value !== currentQuery.value) {
-    currentQuery.value = value;
-    currentPage.value = 1;
+  return users.filter((user) => {
+    if (!user?.id || seen.has(user.id)) return false;
+    seen.add(user.id);
+    if (!normalizedQuery) return true;
+    return [user.name, user.username].some((value) =>
+      String(value || "")
+        .toLowerCase()
+        .includes(normalizedQuery)
+    );
+  });
+};
+
+const searchUsers = async (value: string, loadMore = false) => {
+  if (searchLoading.value && loadMore) return;
+
+  const query = value.trim();
+  const page = loadMore && query === currentQuery.value ? currentPage.value + 1 : 1;
+  const generation = loadMore ? searchGeneration : ++searchGeneration;
+
+  if (!loadMore) {
+    currentQuery.value = query;
+    currentPage.value = 0;
     userOptions.value = [];
     hasMore.value = true;
   }
 
   searchLoading.value = true;
-
   try {
-    const params = new URLSearchParams({
-      search: currentQuery.value,
-      page: currentPage.value.toString(),
-      limit: "10"
-    });
+    const response = await getSuggestionUsers(query, page, PAGE_SIZE);
+    if (generation !== searchGeneration || query !== currentQuery.value) return;
 
-    const response = await fetch(withBaseUrl(`/api/v1/users/users/suggestions/?${params}`)).then((res: any) =>
-      res.json()
-    );
-
-    const newUsers = response.results || response;
-    const filterUsers = (users: UserInfo[]) =>
-      users.filter((user) => {
-        const query = currentQuery.value.toLowerCase();
-        return user.name.toLowerCase().includes(query) || user.username.toLowerCase().includes(query);
-      });
-
-    userOptions.value =
-      isLoadMore && currentPage.value > 1 ? [...userOptions.value, ...filterUsers(newUsers)] : filterUsers(newUsers);
-
-    hasMore.value = response.next !== null && response.next !== undefined;
+    const paginated = !Array.isArray(response);
+    const pageUsers = normalizeUsers(paginated ? response.results || [] : response, query);
+    const merged = loadMore ? [...userOptions.value, ...pageUsers] : pageUsers;
+    userOptions.value = normalizeUsers(merged, "");
+    knownUsers.value = {
+      ...knownUsers.value,
+      ...Object.fromEntries(pageUsers.map((user) => [user.id, user]))
+    };
+    currentPage.value = page;
+    hasMore.value = paginated ? Boolean(response.next) : false;
   } catch (error) {
+    if (generation !== searchGeneration) return;
     console.error("Search users error:", error);
     addErrorToast({ title: t("NoUserFound") });
   } finally {
-    searchLoading.value = false;
+    if (generation === searchGeneration) searchLoading.value = false;
   }
-}, 300);
+};
+
+const debounceSearch = useDebounceFn((query: string) => searchUsers(query), 300);
+
+watch(searchTerm, (query) => debounceSearch(query));
 
 watch(
   () => shareInfo.value.shareCode,
@@ -115,12 +123,16 @@ watch(
   }
 );
 
-const mappedUserOptions = computed(() =>
-  userOptions.value.map((item) => ({
+const mappedUserOptions = computed(() => {
+  const selectedUsers = selectedUserIds.value
+    .map((id) => knownUsers.value[id])
+    .filter((user): user is SuggestionUser => Boolean(user));
+  return normalizeUsers([...selectedUsers, ...userOptions.value], "").map((item) => ({
     label: item.username,
+    description: item.name,
     value: item.id
-  }))
-);
+  }));
+});
 
 const createSingleSelectHandler = <T, K extends keyof T>(
   options: T[],
@@ -154,7 +166,6 @@ const actionsPermOptions = reactive<ActionPermOption[]>([
   { label: t("ReadOnly"), value: "readonly", checked: false }
 ]);
 
-const debounceSearch = useDebounceFn((query: string) => searchUsers(query, false), 300);
 const handleChangeExpired = createSingleSelectHandler(expiredOptions, "value", "checked", (value) => {
   shareLinkRequest.expiredTime = value;
 });
@@ -164,42 +175,55 @@ const handleChangeActionPerm = createSingleSelectHandler(actionsPermOptions, "va
 
 const generateShareURL = (shareId: string, shareCode: string) => {
   const encodedShareCode = encodeURIComponent(shareCode);
-  return withLionUrl(`/share/${shareId}?code=${encodedShareCode}`, props.endpointUrl);
+  return withBaseUrl(`/lion/share/${shareId}?type=lion&code=${encodedShareCode}`, props.endpointUrl);
 };
 
-const handleCreateLink = () => {
+const handleCreateLink = async () => {
   if (!shareInfo.value.sessionId) {
     addErrorToast({ title: t("FailedCreateConnection") });
     return;
   }
 
   const users = selectedUserIds.value.map((id) => {
-    const user = userOptions.value.find((item) => item.id === id);
+    const user = knownUsers.value[id];
     return user || { id, name: id, username: id };
   });
 
-  createShareURL(
-    {
-      session_id: props.session,
-      expired_time: shareLinkRequest.expiredTime,
-      users,
-      action_perm: shareLinkRequest.actionPerm
-    },
-    props.endpointUrl
-  )
-    .then((response: any) => response.json())
-    .then((res: any) => {
-      if (res.success && !res.success) {
-        addErrorToast({ title: `${t("CreateLinkFailed")}: ${res?.message || ""}` });
-        return;
+  createLoading.value = true;
+  try {
+    let ticket = props.ticket || "";
+    try {
+      ticket =
+        (await createLionConnectTicket(props.endpointUrl || window.location.origin, props.tokenId || "")) || ticket;
+    } catch (error) {
+      if (!ticket) throw error;
+    }
+    const response = await createShareURL(
+      {
+        session_id: props.session,
+        expired_time: shareLinkRequest.expiredTime,
+        users,
+        action_perm: shareLinkRequest.actionPerm
+      },
+      props.endpointUrl,
+      {
+        ticket,
+        token: props.tokenId
       }
-      shareInfo.value.shareId = res.id;
-      shareInfo.value.shareCode = res.verify_code;
-      shareInfo.value.shareURL = generateShareURL(res.id, res.verify_code);
-    })
-    .catch(() => {
-      addErrorToast({ title: t("CreateLinkFailed") });
-    });
+    );
+
+    if (response.success === false || !response.id || !response.verify_code) {
+      throw new Error(response.message || t("CreateLinkFailed"));
+    }
+    shareInfo.value.shareId = response.id;
+    shareInfo.value.shareCode = response.verify_code;
+    shareInfo.value.shareURL = generateShareURL(response.id, response.verify_code);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    addErrorToast({ title: message ? `${t("CreateLinkFailed")}: ${message}` : t("CreateLinkFailed") });
+  } finally {
+    createLoading.value = false;
+  }
 };
 
 const handleCopyShareURL = () => {
@@ -210,15 +234,23 @@ const handleCopyShareURL = () => {
     return;
   }
   const text = `${t("LinkAddr")}: ${url}\n${t("VerifyCode")}: ${shareCode}`;
-  copy(text)
+  writeClipboardText(text)
     .then(() => toast.add({ title: t("CopyShareURLSuccess"), color: "info" }))
-    .catch((err) => console.log("copy share url err: ", err));
+    .catch((error) => {
+      console.error("copy share url failed", error);
+      addErrorToast({ title: t("NoPermission") });
+    });
 };
 
 const handleBack = () => {
   showLinkResult.value = false;
+  shareInfo.value.shareCode = "";
+  shareInfo.value.shareId = "";
+  shareInfo.value.shareURL = "";
   shareLinkRequest.expiredTime = 10;
   shareLinkRequest.actionPerm = "writable";
+  expiredOptions.forEach((item) => (item.checked = item.value === 10));
+  actionsPermOptions.forEach((item) => (item.checked = item.value === "writable"));
   selectedUserIds.value = [];
 };
 </script>
@@ -230,16 +262,16 @@ const handleBack = () => {
         {{ t("ExpiredTime") }}
       </div>
       <div class="flex flex-wrap gap-2">
-        <button
+        <UButton
           v-for="item in expiredOptions"
           :key="item.value"
-          type="button"
-          class="rounded-md border px-4 py-2 text-xs-plus"
-          :style="{ borderColor: item.checked ? lighten(20) : undefined }"
+          :color="item.checked ? 'primary' : 'neutral'"
+          :variant="item.checked ? 'soft' : 'outline'"
+          class="justify-center"
           @click="handleChangeExpired(item.value)"
         >
           {{ item.label }}
-        </button>
+        </UButton>
       </div>
     </div>
 
@@ -250,16 +282,16 @@ const handleBack = () => {
         {{ t("ActionPerm") }}
       </div>
       <div class="grid grid-cols-2 gap-2">
-        <button
+        <UButton
           v-for="item in actionsPermOptions"
           :key="item.value"
-          type="button"
-          class="rounded-md border px-4 py-2 text-xs-plus"
-          :style="{ borderColor: item.checked ? lighten(20) : undefined }"
+          :color="item.checked ? 'primary' : 'neutral'"
+          :variant="item.checked ? 'soft' : 'outline'"
+          class="justify-center"
           @click="handleChangeActionPerm(item.value)"
         >
           {{ item.label }}
-        </button>
+        </UButton>
       </div>
     </div>
 
@@ -269,28 +301,41 @@ const handleBack = () => {
       <div class="mb-2 text-xs-plus">
         {{ t("ShareUser") }}
       </div>
-      <UInput
-        :placeholder="t('GetShareUser')"
-        class="mb-2"
-        @update:model-value="(value) => debounceSearch(String(value ?? ''))"
-        @focus="debounceSearch('')"
-      />
       <USelectMenu
         v-model="selectedUserIds"
+        v-model:search-term="searchTerm"
         multiple
-        searchable
         :items="mappedUserOptions"
         value-key="value"
         label-key="label"
+        ignore-filter
+        :search-input="{ placeholder: t('GetShareUser') }"
         :loading="searchLoading"
         :placeholder="t('GetShareUser')"
         class="w-full"
-      />
+        @focus="userOptions.length || searchLoading ? undefined : searchUsers(searchTerm)"
+        @update:open="(open) => open && !userOptions.length && !searchLoading && searchUsers(searchTerm)"
+      >
+        <template #content-bottom>
+          <div v-if="hasMore" class="border-t border-default p-1.5">
+            <UButton
+              block
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              :loading="searchLoading"
+              @click.stop="searchUsers(currentQuery, true)"
+            >
+              {{ t("LoadMore") }}
+            </UButton>
+          </div>
+        </template>
+      </USelectMenu>
     </div>
 
     <UDivider />
 
-    <UButton block :disabled="disabledCreateLink" @click="handleCreateLink">
+    <UButton block :disabled="disabledCreateLink" :loading="createLoading" @click="handleCreateLink">
       {{ t("CreateLink") }}
     </UButton>
   </div>

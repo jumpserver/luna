@@ -6,8 +6,8 @@ import {
   KubernetesTerminalSocketFailureCode,
   KubernetesTerminalWebSocketProtocol,
   parseKubernetesTerminalMessage
-} from "./protocol";
-import { useKubernetesTerminalSocket } from "./useKubernetesTerminalSocket";
+} from "#koko/composables/kubernetes/protocol";
+import { useKubernetesTerminalSocket } from "#koko/composables/kubernetes/useKubernetesTerminalSocket";
 
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];

@@ -35,15 +35,17 @@ const emit = defineEmits<{
 const colorMode = useColorMode();
 const container = ref<HTMLElement | null>(null);
 const themeSlot = new Compartment();
+const syntaxThemeSlot = new Compartment();
 const editableSlot = new Compartment();
 const sqlLanguageSlot = new Compartment();
 let editor: EditorView | null = null;
+let themeObserver: MutationObserver | null = null;
 let applyingExternalValue = false;
 
 const editorExtensions: Extension[] = [
   basicSetup,
   sqlLanguageSlot.of(sql(chenSqlConfig(props.dbType, props.hints))),
-  createCodeMirrorSyntaxTheme(),
+  syntaxThemeSlot.of(createCodeMirrorSyntaxTheme()),
   EditorView.lineWrapping,
   EditorState.tabSize.of(2),
   Prec.highest(
@@ -111,6 +113,15 @@ function replaceDocument(value: string) {
   replaceChenSqlDocument(editor, value);
 }
 
+function refreshTheme() {
+  editor?.dispatch({
+    effects: [
+      themeSlot.reconfigure(createCodeMirrorTheme()),
+      syntaxThemeSlot.reconfigure(createCodeMirrorSyntaxTheme())
+    ]
+  });
+}
+
 onMounted(() => {
   if (!container.value) return;
   editor = new EditorView({
@@ -123,6 +134,11 @@ onMounted(() => {
         themeSlot.of(createCodeMirrorTheme())
       ]
     })
+  });
+  themeObserver = new MutationObserver(refreshTheme);
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class", "data-theme-preset", "style"]
   });
 });
 
@@ -150,15 +166,12 @@ watch(
   }
 );
 
-watch(
-  () => colorMode.value,
-  async () => {
-    await nextTick();
-    editor?.dispatch({ effects: themeSlot.reconfigure(createCodeMirrorTheme()) });
-  }
-);
+watch(() => colorMode.value, refreshTheme);
 
-onBeforeUnmount(() => editor?.destroy());
+onBeforeUnmount(() => {
+  themeObserver?.disconnect();
+  editor?.destroy();
+});
 
 defineExpose({
   focus,
