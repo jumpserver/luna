@@ -13,6 +13,7 @@ import {
   ViewService
 } from '@app/services';
 import { launchLocalApp, LOCAL_CLIENT_REMINDER_STORAGE_KEY } from '@app/utils/common';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { firstValueFrom } from 'rxjs';
 import { ElementDownloadDialogComponent } from './download-dialog/download-dialog.component';
@@ -39,6 +40,7 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     private _http: HttpService,
     private _connectTokenSvc: ConnectTokenService,
     private _i18n: I18nService,
+    private _message: NzMessageService,
     private _settingSvc: SettingService,
     public viewSrv: ViewService
   ) {}
@@ -76,9 +78,12 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
 
       document.title = node.name + ' - ' + titles[titles.length - 1];
 
-      this._http.getPermedAssetDetail(node.id).subscribe(asset => {
-        this.connectAsset(asset).then();
-      });
+      this._http.getPermedAssetDetail(node.id).subscribe(
+        asset => {
+          this.connectAsset(asset).then();
+        },
+        error => this.handleAssetDetailError(error)
+      );
     });
   }
 
@@ -97,19 +102,31 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
         return;
       }
 
-      this._http.getPermedAssetDetail(evt.node.id).subscribe(asset => {
-        switch (evt.action) {
-          case 'connect': {
-            this._appSvc.disableAutoConnect(asset.id);
-            this.connectAsset(asset, evt.splitConnect).then();
-            break;
+      this._http.getPermedAssetDetail(evt.node.id).subscribe(
+        asset => {
+          switch (evt.action) {
+            case 'connect': {
+              this._appSvc.disableAutoConnect(asset.id);
+              this.connectAsset(asset, evt.splitConnect).then();
+              break;
+            }
+            default: {
+              this.connectAsset(asset, evt.splitConnect).then();
+            }
           }
-          default: {
-            this.connectAsset(asset, evt.splitConnect).then();
-          }
-        }
-      });
+        },
+        error => this.handleAssetDetailError(error)
+      );
     });
+  }
+
+  private handleAssetDetailError(error: any): void {
+    const backendDetail = error?.error?.detail;
+    const message =
+      typeof backendDetail === 'string' && backendDetail
+        ? backendDetail
+        : this._i18n.instant('Unable to connect to asset');
+    this._message.error(message, { nzDuration: 5000 });
   }
 
   ngOnDestroy(): void {
