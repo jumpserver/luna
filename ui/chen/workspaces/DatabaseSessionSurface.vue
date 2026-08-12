@@ -2,6 +2,8 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type {
   ChenActionItem,
+  ChenDatabaseSection,
+  ChenDatabaseWorkspaceTab,
   ChenDataViewAction,
   ChenDataViewActionData,
   ChenDataViewActionTarget,
@@ -21,6 +23,7 @@ import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import { fetchChenActions, fetchChenExport, fetchChenSqlHints, uploadChenSqlFile } from "~/chen/api";
 import ChenSessionState from "~/chen/components/ChenSessionState.vue";
 import ConsolePanel from "~/chen/components/ConsolePanel.vue";
+import DatabaseOverviewPanel from "~/chen/components/DatabaseOverviewPanel.vue";
 import DataViewPanel from "~/chen/components/DataViewPanel.vue";
 import DiscardDataViewChangesDialog from "~/chen/components/DiscardDataViewChangesDialog.vue";
 import QueryConsolePanel from "~/chen/components/QueryConsolePanel.vue";
@@ -35,6 +38,7 @@ import { useChenResourceTree } from "~/chen/composables/useChenResourceTree";
 import { useChenSession } from "~/chen/composables/useChenSession";
 import { useChenSqlHints } from "~/chen/composables/useChenSqlHints";
 import { chenWsUrl, useChenWebSocket } from "~/chen/composables/useChenWebSocket";
+import { useChenWorkspacePreferences } from "~/chen/composables/useChenWorkspacePreferences";
 import { useChenWorkspaceTabs } from "~/chen/composables/useChenWorkspaceTabs";
 import { saveChenExport } from "~/chen/runtime/download";
 import { formatChenDialogValue, normalizeChenDialogMessage } from "~/chen/utils/chenDialog";
@@ -102,6 +106,7 @@ const tree = useChenResourceTree(auth.chenToken, {
   }
 });
 const workspace = useChenWorkspaceTabs();
+const workspacePreferences = useChenWorkspacePreferences();
 const recentTables = useChenRecentTables(`${props.tab.assetId}:${props.tab.protocol}`);
 const dataView = useChenDataView(sendConsoleAction);
 const consoleConnections = new Map<string, ReturnType<typeof useChenWebSocket>>();
@@ -157,6 +162,10 @@ const activeDataViewTab = computed(() => {
   const tab = workspace.activeWorkspaceTab.value;
   return tab?.kind === "data-view" ? tab : null;
 });
+const activeDatabaseTab = computed(() => {
+  const tab = workspace.activeWorkspaceTab.value;
+  return tab?.kind === "database" ? tab : null;
+});
 const activeConnectionError = computed(() => workspace.activeWorkspaceTab.value?.connectionError || "");
 
 const queryConsole = useChenQueryConsole(sendConsoleAction);
@@ -210,6 +219,7 @@ async function downloadExportFile(fileKey: string) {
 }
 
 function initConsoleSocket(tab: ChenWorkspaceTab) {
+  if (tab.kind === "database") return null;
   const existing = consoleConnections.get(tab.id);
   if (existing) return existing;
   if (!session.ready.value) {
@@ -223,7 +233,7 @@ function initConsoleSocket(tab: ChenWorkspaceTab) {
     resolveUrl: resolveChenWsUrl,
     onOpen: () => {
       const reactiveTab = workspace.workspaceTabState[tab.id];
-      if (!reactiveTab) {
+      if (!reactiveTab || reactiveTab.kind === "database") {
         connection.close();
         return;
       }
@@ -238,7 +248,7 @@ function initConsoleSocket(tab: ChenWorkspaceTab) {
     },
     onPacket: (packet) => {
       const reactiveTab = workspace.workspaceTabState[tab.id];
-      if (!reactiveTab) return;
+      if (!reactiveTab || reactiveTab.kind === "database") return;
 
       handleConsolePacket(reactiveTab, packet);
       if (packet.type === "init") {
@@ -248,7 +258,7 @@ function initConsoleSocket(tab: ChenWorkspaceTab) {
     },
     onError: (socketError) => {
       const reactiveTab = workspace.workspaceTabState[tab.id];
-      if (!reactiveTab) return;
+      if (!reactiveTab || reactiveTab.kind === "database") return;
       reactiveTab.socket = null;
       reactiveTab.connectionError = socketError.message;
       queryConsole.failConsoleExecution(reactiveTab, socketError.message);
@@ -454,6 +464,45 @@ function openDataViewWorkspace(nodeKey: string, title = "Data View") {
   if (tab && !consoleConnections.has(tab.id)) initConsoleSocket(tab);
 }
 
+function openDatabaseWorkspace(node: ChenTreeNode) {
+  workspace.openDatabaseTab(node, node.label || node.name || "Database");
+}
+
+async function loadDatabaseCatalog(tab: ChenDatabaseWorkspaceTab) {
+  if (tab.catalogLoaded || tab.catalogLoading) return;
+  tab.catalogLoading = true;
+  tab.catalogError = "";
+
+  try {
+    let containers: ChenTreeNode[] = [tab.node];
+    // Load only catalog containers. Table/view nodes stay leaf nodes, so this
+    // enumerates object names without fetching every table's column schema.
+    // ponytail: five catalog levels cover the current database/schema/group
+    // trees; replace this walk with a paginated catalog API if nesting grows.
+    for (let depth = 0; depth < 5 && containers.length; depth += 1) {
+      await Promise.all(
+        containers.map(async (node) => {
+          if (!node.children?.length && node.hasChildren !== false) await tree.loadNodeChildren(node);
+        })
+      );
+      containers = containers.flatMap((node) =>
+        (node.children || []).filter(
+          (child) => child.type !== "table" && child.type !== "view" && child.type !== "index" && !child.leaf
+        )
+      );
+    }
+    tab.catalogLoaded = true;
+  } catch (cause) {
+    tab.catalogError = cause instanceof Error ? cause.message : String(cause);
+  } finally {
+    tab.catalogLoading = false;
+  }
+}
+
+function updateDatabaseSection(tab: ChenDatabaseWorkspaceTab, section: ChenDatabaseSection) {
+  tab.activeSection = section;
+}
+
 function closeConsoleSocket(id: string) {
   const connection = consoleConnections.get(id);
   connection?.close();
@@ -586,11 +635,7 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
         break;
       case "view_data":
         openDataViewWorkspace(response.data, "Data View");
-        recentTables.add(
-          node,
-          tree.findNodePathByKey(node.key),
-          auth.profile.value?.dbType || props.tab.protocol
-        );
+        recentTables.add(node, tree.findNodePathByKey(node.key), auth.profile.value?.dbType || props.tab.protocol);
         if (!tree.expandedKeys.value.includes(RECENT_TABLES_ROOT_KEY)) {
           tree.expandedKeys.value = [RECENT_TABLES_ROOT_KEY, ...tree.expandedKeys.value];
         }
@@ -616,6 +661,10 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
 
 async function handleNodeClick(node: ChenTreeNode) {
   tree.selectedNodeKey.value = node.key;
+  if (node.type === "database") {
+    openDatabaseWorkspace(node);
+    return;
+  }
   if (node.type === "recent-table" && node.recentEntry) {
     const recentEntry = node.recentEntry;
     const liveNode =
@@ -839,7 +888,9 @@ defineExpose({ focus });
         :loading-children="tree.loadingChildren"
         :db-type="auth.profile.value?.dbType"
         :width="sidebarWidth"
+        :tab-title-format="workspacePreferences.tabTitleFormat"
         @refresh="tree.refreshRoot"
+        @update:tab-title-format="workspacePreferences.tabTitleFormat = $event"
         @select="tree.selectedNodeKey.value = $event.key"
         @activate="handleNodeClick"
         @toggle="tree.toggleTreeNode"
@@ -864,6 +915,7 @@ defineExpose({ focus });
         <WorkspaceTabBar
           :tabs="workspace.workspaceTabs.value"
           :active-tab-id="workspace.activeWorkspaceTabId.value"
+          :tab-title-format="workspacePreferences.tabTitleFormat"
           @activate="workspace.setActiveTab"
           @close="closeWorkspaceTab"
           @create="createWorkspaceTab"
@@ -916,6 +968,14 @@ defineExpose({ focus });
             @data-view-action="runStandaloneDataViewAction"
             @update-panel="updateDataViewPanel"
             @update-property-tab="updateDataViewPropertyTab"
+          />
+
+          <DatabaseOverviewPanel
+            v-else-if="activeDatabaseTab"
+            :tab="activeDatabaseTab"
+            :db-type="auth.profile.value?.dbType"
+            @select-section="updateDatabaseSection(activeDatabaseTab, $event)"
+            @load-catalog="loadDatabaseCatalog(activeDatabaseTab)"
           />
         </div>
 

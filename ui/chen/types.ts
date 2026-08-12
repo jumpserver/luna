@@ -37,7 +37,7 @@ export interface ChenTabDefinition {
   id: string;
   title: string;
   icon?: string;
-  kind: "query" | "data-view" | "console";
+  kind: "query" | "data-view" | "console" | "database";
   nodeKey: string;
   connectionError?: string;
 }
@@ -258,7 +258,14 @@ export interface ChenPromptConsoleTab extends ChenTabDefinition {
 
 export type ChenQueryLikeWorkspaceTab = ChenQueryConsoleTab | ChenPromptConsoleTab;
 
-export type ChenDataViewPropertyTab = "basic" | "columns" | "indexes" | "foreignKeys" | "constraints" | "ddl";
+export type ChenDataViewPropertyTab =
+  | "basic"
+  | "columns"
+  | "indexes"
+  | "foreignKeys"
+  | "constraints"
+  | "ddl"
+  | "diagram";
 
 export interface ChenDataViewConsoleTab extends ChenTabDefinition {
   kind: "data-view";
@@ -270,6 +277,19 @@ export interface ChenDataViewConsoleTab extends ChenTabDefinition {
   activePanel: "data" | "properties";
   activePropertyTab: ChenDataViewPropertyTab;
   socket: WebSocket | null;
+}
+
+export type ChenDatabaseSection = "basic" | "tables" | "views" | "indexes" | "ddl" | "diagram";
+
+export interface ChenDatabaseWorkspaceTab extends ChenTabDefinition {
+  kind: "database";
+  node: ChenTreeNode;
+  activeSection: ChenDatabaseSection;
+  catalogLoaded: boolean;
+  catalogLoading: boolean;
+  catalogError: string;
+  logs: string[];
+  socket: null;
 }
 
 export type ChenDataViewAction =
@@ -288,7 +308,7 @@ export type ChenDataViewActionData = number | ChenDataViewExportOptions | ChenSa
 
 export type ChenDataViewActionTarget = ChenQueryResultTab | ChenDataViewConsoleTab;
 
-export type ChenWorkspaceTab = ChenQueryLikeWorkspaceTab | ChenDataViewConsoleTab;
+export type ChenWorkspaceTab = ChenQueryLikeWorkspaceTab | ChenDataViewConsoleTab | ChenDatabaseWorkspaceTab;
 
 export interface ChenSocketAction {
   type: string;

@@ -526,7 +526,7 @@ export function findChenDataViewTarget(tab: ChenWorkspaceTab, dataView: unknown)
     return null;
   }
 
-  if (tab.kind === "console" || !reference) return null;
+  if (tab.kind !== "query" || !reference) return null;
   return (
     tab.resultTabs.find(
       (item) =>

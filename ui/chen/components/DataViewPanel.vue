@@ -8,6 +8,7 @@ import type {
 } from "~/chen/types";
 
 import ChenDataGrid from "~/chen/components/DataGrid.client.vue";
+import DataViewDiagram from "~/chen/components/DataViewDiagram.vue";
 import DataViewExportDialog from "~/chen/components/DataViewExportDialog.vue";
 import DataViewSavePreviewDialog from "~/chen/components/DataViewSavePreviewDialog.vue";
 import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
@@ -114,8 +115,8 @@ function selectPropertyTab(propertyTab: ChenDataViewPropertyTab) {
 
 <template>
   <div class="flex h-full min-h-0 flex-col">
-    <div class="flex items-center gap-1 overflow-x-auto border-b border-default px-2 py-1">
-      <div class="flex shrink-0 items-center gap-1">
+    <div class="flex flex-wrap items-center gap-1 border-b border-default px-2 py-1">
+      <div class="flex flex-wrap items-center gap-1">
         <button
           class="rounded-md px-2 py-1 text-xs"
           :class="tab.activePanel === 'data' ? 'bg-accented' : 'text-muted'"
@@ -343,6 +344,14 @@ function selectPropertyTab(propertyTab: ChenDataViewPropertyTab) {
           </table>
         </div>
       </div>
+
+      <DataViewDiagram
+        v-else-if="tab.activePropertyTab === 'diagram'"
+        :table="tab.meta?.table || tab.meta?.title || tab.title"
+        :schema="tab.meta?.schema"
+        :columns="dataViewColumns(tab)"
+        :foreign-keys="dataViewForeignKeys(tab)"
+      />
 
       <div v-else class="min-h-0 flex-1 overflow-auto p-3">
         <pre

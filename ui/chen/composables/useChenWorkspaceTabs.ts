@@ -1,4 +1,5 @@
 import type {
+  ChenDatabaseWorkspaceTab,
   ChenDataViewConsoleTab,
   ChenPromptConsoleTab,
   ChenQueryConsoleTab,
@@ -122,6 +123,31 @@ export function useChenWorkspaceTabs() {
     return registerTab(tab);
   }
 
+  function openDatabaseTab(node: ChenDatabaseWorkspaceTab["node"], title: string) {
+    const existingTab = workspaceTabs.value.find((item) => item.kind === "database" && item.nodeKey === node.key);
+    if (existingTab) {
+      activeWorkspaceTabId.value = existingTab.id;
+      return workspaceTabState[existingTab.id] as ChenDatabaseWorkspaceTab;
+    }
+
+    const tab: ChenDatabaseWorkspaceTab = {
+      id: newChenWorkspaceId("database"),
+      title,
+      icon: "i-lucide-database",
+      kind: "database",
+      nodeKey: node.key,
+      node,
+      activeSection: "basic",
+      catalogLoaded: false,
+      catalogLoading: false,
+      catalogError: "",
+      logs: [],
+      socket: null
+    };
+
+    return registerTab(tab);
+  }
+
   function closeTab(id: string) {
     const tab = workspaceTabState[id];
     tab?.socket?.close();
@@ -160,6 +186,7 @@ export function useChenWorkspaceTabs() {
     displayWorkspaceTabTitle,
     nextTabTitle,
     openConsoleTab,
+    openDatabaseTab,
     openDataViewTab,
     openQueryTab,
     renameTab,

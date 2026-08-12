@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
+import type { ChenTabTitleFormat } from "~/chen/composables/useChenWorkspacePreferences";
 import type { ChenTabDefinition } from "~/chen/types";
+
+import { formatChenWorkspaceTabTitle } from "~/chen/composables/useChenWorkspacePreferences";
 
 const props = defineProps<{
   tabs: ChenTabDefinition[];
   activeTabId: string;
+  tabTitleFormat: ChenTabTitleFormat;
 }>();
 
 const emit = defineEmits<{
@@ -39,9 +43,7 @@ const createTabMenuItems = computed<DropdownMenuItem[][]>(() => [
 ]);
 
 function displayWorkspaceTabTitle(tab: ChenTabDefinition) {
-  if (tab.kind !== "data-view") return tab.title;
-  const normalized = tab.title.replace(/^data\s*view\s*[:：\-]?\s*/i, "").trim();
-  return normalized || tab.title;
+  return formatChenWorkspaceTabTitle(tab, props.tabTitleFormat);
 }
 
 function openRenameModal(tab: ChenTabDefinition) {
@@ -78,7 +80,9 @@ function updateRenameModal(open: boolean) {
               ? 'bg-accented text-highlighted'
               : 'text-muted hover:bg-accented hover:text-highlighted'
           "
-          :title="item.kind === 'query' ? `${item.title} · Double-click the title to rename` : item.title"
+          :title="
+            item.kind === 'query' ? `${item.title} · Double-click the title to rename` : displayWorkspaceTabTitle(item)
+          "
           @click="emit('activate', item.id)"
         >
           <UIcon :name="item.icon || 'i-lucide-panel-top'" class="size-3.5" />
