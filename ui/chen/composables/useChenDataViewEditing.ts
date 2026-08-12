@@ -7,6 +7,7 @@ import {
   applyChenDataViewCellChange,
   buildChenSaveChangesPayload,
   cancelChenSaveChangesConfirmation,
+  canEditChenDataViewCell,
   chenDataViewHasDirty,
   chenDataViewRows,
   clearChenDataViewEdits,
@@ -43,6 +44,18 @@ export function useChenDataViewEditing(target: MaybeRefOrGetter<ChenDataViewActi
     return applyChenDataViewCellChange(current.value.editState, dataset.value, row, field, oldValue, newValue);
   }
 
+  function updateRows(targetRows: Array<Record<string, any>>, field: ChenDataViewField, newValue: any) {
+    if (!dataset.value) return 0;
+    let changed = 0;
+    for (const row of targetRows) {
+      if (!canEditChenDataViewCell(dataset.value, current.value.editState, "full", row, field)) continue;
+      if (applyChenDataViewCellChange(current.value.editState, dataset.value, row, field, row[field.name], newValue)) {
+        changed += 1;
+      }
+    }
+    return changed;
+  }
+
   function clear() {
     clearChenDataViewEdits(current.value.editState);
   }
@@ -68,6 +81,7 @@ export function useChenDataViewEditing(target: MaybeRefOrGetter<ChenDataViewActi
     editable,
     insertable,
     refreshRequiredBeforeSave,
-    rows
+    rows,
+    updateRows
   };
 }

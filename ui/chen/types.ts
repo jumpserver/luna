@@ -276,6 +276,7 @@ export interface ChenDataViewConsoleTab extends ChenTabDefinition {
   logs: string[];
   activePanel: "data" | "properties";
   activePropertyTab: ChenDataViewPropertyTab;
+  whereCondition: string;
   socket: WebSocket | null;
 }
 
@@ -299,12 +300,13 @@ export type ChenDataViewAction =
   | "last_page"
   | "refresh"
   | "change_limit"
+  | "change_filter"
   | "toggle_pinned"
   | "export"
   | "save_changes_preview"
   | "save_changes";
 
-export type ChenDataViewActionData = number | ChenDataViewExportOptions | ChenSaveChangesPayload;
+export type ChenDataViewActionData = number | string | ChenDataViewExportOptions | ChenSaveChangesPayload;
 
 export type ChenDataViewActionTarget = ChenQueryResultTab | ChenDataViewConsoleTab;
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
+
 const props = defineProps<{
   open: boolean;
   saving: boolean;
@@ -25,7 +27,7 @@ function close() {
 </script>
 
 <template>
-  <UModal v-model:open="visible" title="Save SQL">
+  <ChenWorkspaceModal v-model:open="visible" title="Save SQL">
     <template #body>
       <UFormField label="Name">
         <UInput v-model="name" autofocus class="w-full" @keydown.enter.prevent="submit" />
@@ -38,5 +40,5 @@ function close() {
         <UButton :loading="saving" @click="submit">Confirm</UButton>
       </div>
     </template>
-  </UModal>
+  </ChenWorkspaceModal>
 </template>

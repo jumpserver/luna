@@ -29,10 +29,45 @@ interface CatalogItem {
   columns: string;
   unique: string;
   method: string;
+  rowCount: string;
+  size: string;
+  engine: string;
+  characterSet: string;
+  collation: string;
+  comment: string;
 }
 
 function nodeName(node: ChenTreeNode) {
   return String(node.label || node.name || node.key);
+}
+
+function metadataValue(node: ChenTreeNode, keys: string[]) {
+  const sources = [node, node.meta, node.metadata, node.extra].filter((item): item is Record<string, any> =>
+    Boolean(item && typeof item === "object")
+  );
+  for (const source of sources) {
+    for (const key of keys) {
+      const value = source[key];
+      if (value !== undefined && value !== null && value !== "") return value;
+    }
+  }
+  return null;
+}
+
+function formatCount(value: unknown) {
+  if (value === null || value === undefined || value === "") return "";
+  const number = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(number) && number >= 0 ? new Intl.NumberFormat().format(number) : "";
+}
+
+function formatBytes(value: unknown) {
+  if (value === null || value === undefined || value === "") return "";
+  const bytes = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(bytes) || bytes < 0) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  const unitIndex = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)) - 1, units.length - 1);
+  return `${(bytes / 1024 ** (unitIndex + 1)).toLocaleString(undefined, { maximumFractionDigits: 1 })} ${units[unitIndex]}`;
 }
 
 function collectCatalog(nodes: ChenTreeNode[], schema = "", result: CatalogItem[] = []) {
@@ -47,7 +82,19 @@ function collectCatalog(nodes: ChenTreeNode[], schema = "", result: CatalogItem[
         table: String(node.table || node.tableName || ""),
         columns: Array.isArray(node.columns) ? node.columns.join(", ") : String(node.columns || ""),
         unique: node.unique == null ? "" : node.unique ? "Yes" : "No",
-        method: String(node.method || node.indexType || "")
+        method: String(node.method || node.indexType || ""),
+        rowCount: formatCount(
+          metadataValue(node, ["rowCount", "row_count", "rows", "tableRows", "table_rows", "estimatedRows"])
+        ),
+        size: formatBytes(
+          metadataValue(node, ["totalSize", "total_size", "tableSize", "table_size", "size", "dataLength"])
+        ),
+        engine: String(metadataValue(node, ["engine", "storageEngine", "storage_engine"]) || ""),
+        characterSet: String(
+          metadataValue(node, ["characterSet", "character_set", "charset", "tableCharset", "table_charset"]) || ""
+        ),
+        collation: String(metadataValue(node, ["collation", "tableCollation", "table_collation"]) || ""),
+        comment: String(metadataValue(node, ["comment", "description", "tableComment", "table_comment"]) || "")
       });
     }
     collectCatalog(node.children || [], nextSchema, result);
@@ -131,8 +178,8 @@ function selectSection(section: ChenDatabaseSection) {
         <span>{{ tab.catalogError }}</span>
         <UButton size="xs" color="neutral" variant="soft" @click="emit('loadCatalog')">Retry</UButton>
       </div>
-      <div v-else-if="visibleCatalog.length" class="overflow-hidden rounded-lg border border-default">
-        <table class="w-full text-left text-sm">
+      <div v-else-if="visibleCatalog.length" class="overflow-x-auto rounded-lg border border-default">
+        <table class="w-full min-w-max text-left text-sm">
           <thead class="bg-[var(--workspace-surface-sub-panel)] text-muted">
             <tr v-if="tab.activeSection === 'indexes'">
               <th class="px-3 py-2 font-medium">Name</th>
@@ -141,6 +188,18 @@ function selectSection(section: ChenDatabaseSection) {
               <th class="px-3 py-2 font-medium">Columns</th>
               <th class="px-3 py-2 font-medium">Unique</th>
               <th class="px-3 py-2 font-medium">Method</th>
+            </tr>
+            <tr v-else-if="tab.activeSection === 'tables'">
+              <th class="px-3 py-2 font-medium">Name</th>
+              <th class="px-3 py-2 font-medium">Schema</th>
+              <th class="px-3 py-2 text-right font-medium" title="May be an estimate depending on the database">
+                Rows
+              </th>
+              <th class="px-3 py-2 text-right font-medium">Size</th>
+              <th class="px-3 py-2 font-medium">Engine</th>
+              <th class="px-3 py-2 font-medium">Character Set</th>
+              <th class="px-3 py-2 font-medium">Collation</th>
+              <th class="px-3 py-2 font-medium">Comment</th>
             </tr>
             <tr v-else>
               <th class="px-3 py-2 font-medium">Name</th>
@@ -159,6 +218,18 @@ function selectSection(section: ChenDatabaseSection) {
                 <td class="px-3 py-2 text-muted">{{ item.method || "-" }}</td>
               </tr>
             </template>
+            <template v-else-if="tab.activeSection === 'tables'">
+              <tr v-for="item in visibleCatalog" :key="item.key" class="border-t border-default">
+                <td class="px-3 py-2">{{ item.name }}</td>
+                <td class="px-3 py-2 text-muted">{{ item.schema || "-" }}</td>
+                <td class="px-3 py-2 text-right tabular-nums text-muted">{{ item.rowCount || "-" }}</td>
+                <td class="px-3 py-2 text-right tabular-nums text-muted">{{ item.size || "-" }}</td>
+                <td class="px-3 py-2 text-muted">{{ item.engine || "-" }}</td>
+                <td class="px-3 py-2 text-muted">{{ item.characterSet || "-" }}</td>
+                <td class="px-3 py-2 text-muted">{{ item.collation || "-" }}</td>
+                <td class="max-w-64 truncate px-3 py-2 text-muted" :title="item.comment">{{ item.comment || "-" }}</td>
+              </tr>
+            </template>
             <template v-else>
               <tr v-for="item in visibleCatalog" :key="item.key" class="border-t border-default">
                 <td class="px-3 py-2">{{ item.name }}</td>
@@ -169,6 +240,10 @@ function selectSection(section: ChenDatabaseSection) {
           </tbody>
         </table>
       </div>
+      <p v-if="tab.activeSection === 'tables' && visibleCatalog.length" class="mt-2 px-1 text-[11px] text-muted">
+        Row counts may be estimated by the database. Statistics, engine, character set, and collation require table
+        metadata from the server; unavailable fields are shown as “-”.
+      </p>
       <div
         v-else-if="tab.activeSection === 'indexes'"
         class="grid h-full place-items-center p-6 text-center text-sm text-muted"

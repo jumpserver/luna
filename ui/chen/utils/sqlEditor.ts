@@ -2,7 +2,7 @@ import type { EditorView } from "@codemirror/view";
 import type { ChenSqlHints } from "~/chen/types";
 import { MariaSQL, MSSQL, MySQL, PLSQL, PostgreSQL, StandardSQL } from "@codemirror/lang-sql";
 
-function chenSqlDialect(dbType: string) {
+export function chenSqlDialect(dbType: string) {
   switch (dbType.trim().toLowerCase()) {
     case "mysql":
       return MySQL;

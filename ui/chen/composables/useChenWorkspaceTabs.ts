@@ -116,6 +116,7 @@ export function useChenWorkspaceTabs() {
       logs: [],
       activePanel: "data",
       activePropertyTab: "basic",
+      whereCondition: "",
       editState: createChenDataViewEditState(),
       socket: null
     };

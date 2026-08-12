@@ -85,7 +85,7 @@ export const useAssetAction = () => {
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
   const userInfoStore = useUserInfoStore();
-  const { markSessionFailed, openSession, updateSessionPayload } = useWorkspaceTabs();
+  const { markSessionFailed, openSession, setSessionConnectMethod, updateSessionPayload } = useWorkspaceTabs();
   const { fetchConnectMethods, getMethodsForProtocol } = useConnectMethods();
   const settingManager = useSettingManager();
   // prettier-ignore
@@ -338,7 +338,11 @@ export const useAssetAction = () => {
       meta?.tabId || meta?.onSessionReady
         ? undefined
         : meta?.asset
-          ? openSession(meta.asset, { protocol: meta.protocol, account: meta.account })
+          ? openSession(meta.asset, {
+              protocol: meta.protocol,
+              account: meta.account,
+              connectMethod: body.connect_method
+            })
           : undefined;
     const tabId = meta?.tabId || session?.id;
 
@@ -634,6 +638,8 @@ export const useAssetAction = () => {
       (await resolveConnectMethod(protocol));
     const connectMethod = preferredConnectMethod;
 
+    if (ephemeral?.tabId) setSessionConnectMethod(ephemeral.tabId, connectMethod);
+
     // Every successful attempt updates the lightweight last-used preference.
     // It must not turn into an auto-connect record unless the user checked
     // "remember selection" (that record is managed by useAssetConnection).
@@ -673,7 +679,7 @@ export const useAssetAction = () => {
         (NATIVE_WORKSPACE_METHODS.has(connectMethod) || isGuideConnectMethod(connectMethod)) &&
         !ephemeral?.onSessionReady
       ) {
-        tabId = openSession(ephemeral.asset, { protocol, account }).id;
+        tabId = openSession(ephemeral.asset, { protocol, account, connectMethod }).id;
       }
 
       if (NATIVE_WORKSPACE_METHODS.has(connectMethod) || isGuideConnectMethod(connectMethod)) {

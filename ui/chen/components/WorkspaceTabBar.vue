@@ -3,6 +3,7 @@ import type { DropdownMenuItem } from "@nuxt/ui";
 import type { ChenTabTitleFormat } from "~/chen/composables/useChenWorkspacePreferences";
 import type { ChenTabDefinition } from "~/chen/types";
 
+import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
 import { formatChenWorkspaceTabTitle } from "~/chen/composables/useChenWorkspacePreferences";
 
 const props = defineProps<{
@@ -122,7 +123,7 @@ function updateRenameModal(open: boolean) {
     </div>
   </div>
 
-  <UModal :open="renameModalOpen" title="Rename query" @update:open="updateRenameModal">
+  <ChenWorkspaceModal :open="renameModalOpen" title="Rename query" @update:open="updateRenameModal">
     <template #body>
       <UInput
         v-model="renameValue"
@@ -138,5 +139,5 @@ function updateRenameModal(open: boolean) {
         <UButton :disabled="renameDisabled" @click="submitRename">Rename</UButton>
       </div>
     </template>
-  </UModal>
+  </ChenWorkspaceModal>
 </template>

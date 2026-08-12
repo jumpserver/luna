@@ -8,8 +8,10 @@ import type {
 } from "~/chen/types";
 
 import ChenDataGrid from "~/chen/components/DataGrid.client.vue";
+import DataViewBatchUpdateDialog from "~/chen/components/DataViewBatchUpdateDialog.vue";
 import DataViewDiagram from "~/chen/components/DataViewDiagram.vue";
 import DataViewExportDialog from "~/chen/components/DataViewExportDialog.vue";
+import DataViewFilter from "~/chen/components/DataViewFilter.client.vue";
 import DataViewSavePreviewDialog from "~/chen/components/DataViewSavePreviewDialog.vue";
 import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
 import { useChenDataViewDerivedMeta } from "~/chen/composables/useChenDataViewDerivedMeta";
@@ -34,9 +36,11 @@ const emit = defineEmits<{
   dataViewAction: [tab: ChenDataViewConsoleTab, action: ChenDataViewAction, data?: ChenDataViewActionData];
   updatePanel: [tab: ChenDataViewConsoleTab, panel: "data" | "properties"];
   updatePropertyTab: [tab: ChenDataViewConsoleTab, propertyTab: ChenDataViewPropertyTab];
+  updateWhereCondition: [tab: ChenDataViewConsoleTab, condition: string];
 }>();
 
 const exportDialogOpen = ref(false);
+const batchUpdateDialogOpen = ref(false);
 const exportTarget = ref<ChenDataViewConsoleTab | null>(null);
 const dataGrid = ref<{ stopEditing: () => void } | null>(null);
 const selectedRows = ref<Array<Record<string, any>>>([]);
@@ -44,6 +48,7 @@ const editing = useChenDataViewEditing(() => props.tab);
 const editState = computed(() => props.tab.editState);
 const previewDialogOpen = computed(() => editState.value.previewResult?.success === true);
 const gridPreferenceKey = computed(() => chenGridPreferenceKey(props.tab.meta, props.tab.id, props.dbType));
+const editableFields = computed(() => (props.tab.data?.fields || []).filter((field) => field.editable === true));
 
 const dbTypeRef = computed(() => props.dbType);
 const protocolRef = computed(() => props.protocol);
@@ -80,6 +85,12 @@ function deleteRows() {
   selectedRows.value = [];
 }
 
+function updateRows(field: (typeof editableFields.value)[number], value: unknown) {
+  if (editing.busy.value || selectedRows.value.length === 0) return;
+  editing.updateRows(selectedRows.value, field, value);
+  selectedRows.value = [];
+}
+
 function saveChangesPreview() {
   dataGrid.value?.stopEditing();
   const payload = editing.buildPayload();
@@ -111,6 +122,11 @@ function selectPropertyTab(propertyTab: ChenDataViewPropertyTab) {
   emit("updatePanel", props.tab, "properties");
   emit("updatePropertyTab", props.tab, propertyTab);
 }
+
+function applyWhereCondition() {
+  if (editing.busy.value || props.tab.state.loading) return;
+  emit("dataViewAction", props.tab, "change_filter", props.tab.whereCondition.trim());
+}
 </script>
 
 <template>
@@ -139,6 +155,31 @@ function selectPropertyTab(propertyTab: ChenDataViewPropertyTab) {
     </div>
 
     <div v-if="tab.activePanel === 'data'" class="flex min-h-0 flex-1 flex-col">
+      <div class="flex shrink-0 items-center gap-1.5 border-b border-default px-2 py-1">
+        <UIcon name="i-lucide-list-filter" class="size-4 shrink-0 text-muted" />
+        <span class="shrink-0 font-mono text-xs font-medium text-muted">WHERE</span>
+        <DataViewFilter
+          :model-value="tab.whereCondition"
+          :fields="tab.data?.fields || []"
+          :table="tab.meta?.table || tab.meta?.title || ''"
+          :db-type="dbType"
+          :disabled="editing.busy.value || tab.state.loading"
+          @update:model-value="emit('updateWhereCondition', tab, $event)"
+          @apply="applyWhereCondition"
+        />
+        <UButton
+          size="xs"
+          icon="i-lucide-play"
+          color="neutral"
+          variant="soft"
+          aria-label="Apply WHERE condition"
+          title="Apply WHERE condition (Enter)"
+          :disabled="editing.busy.value || tab.state.loading"
+          @click="applyWhereCondition"
+        >
+          Apply
+        </UButton>
+      </div>
       <div class="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-default px-2 py-1">
         <div v-if="editing.editable.value" class="flex shrink-0 items-center gap-1">
           <UButton
@@ -161,6 +202,17 @@ function selectPropertyTab(propertyTab: ChenDataViewPropertyTab) {
             @click="deleteRows"
           >
             Delete row
+          </UButton>
+          <UButton
+            v-if="editableFields.length"
+            icon="i-lucide-list-restart"
+            size="xs"
+            color="neutral"
+            variant="soft"
+            :disabled="editing.busy.value || selectedRows.length === 0"
+            @click="batchUpdateDialogOpen = true"
+          >
+            Update rows
           </UButton>
           <UButton
             v-if="editing.dirty.value"
@@ -361,6 +413,14 @@ function selectPropertyTab(propertyTab: ChenDataViewPropertyTab) {
     </div>
 
     <DataViewExportDialog v-if="exportDialogOpen" v-model:open="exportDialogOpen" @confirm="submitExport" />
+
+    <DataViewBatchUpdateDialog
+      v-if="batchUpdateDialogOpen"
+      v-model:open="batchUpdateDialogOpen"
+      :fields="editableFields"
+      :row-count="selectedRows.length"
+      @confirm="updateRows"
+    />
 
     <DataViewSavePreviewDialog
       v-if="previewDialogOpen"

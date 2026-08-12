@@ -28,6 +28,7 @@ import DataViewPanel from "~/chen/components/DataViewPanel.vue";
 import DiscardDataViewChangesDialog from "~/chen/components/DiscardDataViewChangesDialog.vue";
 import QueryConsolePanel from "~/chen/components/QueryConsolePanel.vue";
 import ResourceTreePanel from "~/chen/components/ResourceTreePanel.vue";
+import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
 import WorkspaceTabBar from "~/chen/components/WorkspaceTabBar.vue";
 import { useChenActionMenu } from "~/chen/composables/useChenActionMenu";
 import { useChenAuth } from "~/chen/composables/useChenAuth";
@@ -90,9 +91,11 @@ const GUARDED_DATA_VIEW_ACTIONS = new Set<ChenDataViewAction>([
   "next_page",
   "last_page",
   "refresh",
-  "change_limit"
+  "change_limit",
+  "change_filter"
 ]);
 const auth = useChenAuth(tabRef, endpointUrl);
+const tokenId = computed(() => auth.ensureTokenId());
 const tree = useChenResourceTree(auth.chenToken, {
   endpointUrl,
   onLoadError: (node) => {
@@ -206,6 +209,11 @@ const session = useChenSession({
   },
   downloadFile: downloadExportFile,
   resolveUrl: resolveChenWsUrl
+});
+const startupError = computed(() => {
+  if (session.error.value) return session.error.value;
+  if (!tokenId.value && props.tab.status === "failed") return "Failed to start database workspace";
+  return "";
 });
 
 async function downloadExportFile(fileKey: string) {
@@ -823,6 +831,10 @@ function updateDataViewPropertyTab(
   tab.activePropertyTab = propertyTab;
 }
 
+function updateDataViewWhereCondition(tab: ChenDataViewConsoleTab, condition: string) {
+  tab.whereCondition = condition;
+}
+
 function startResize(event: PointerEvent) {
   if (event.button !== 0) return;
 
@@ -857,8 +869,15 @@ function stopResize() {
 
 function focus() {}
 
+watch(
+  tokenId,
+  (id) => {
+    if (id) void session.bootstrapSession();
+  },
+  { immediate: true }
+);
+
 onMounted(() => {
-  void session.bootstrapSession();
   window.addEventListener("pointermove", handlePointerMove);
   window.addEventListener("pointerup", stopResize);
   window.addEventListener("pointercancel", stopResize);
@@ -878,7 +897,7 @@ defineExpose({ focus });
 </script>
 
 <template>
-  <div class="h-full min-h-0 bg-[var(--workspace-surface-main)] text-[var(--app-fg)]">
+  <div class="relative isolate h-full min-h-0 overflow-hidden bg-[var(--workspace-surface-main)] text-[var(--app-fg)]">
     <div v-if="session.ready.value" class="flex h-full min-h-0">
       <ResourceTreePanel
         :root-nodes="explorerRootNodes"
@@ -968,6 +987,7 @@ defineExpose({ focus });
             @data-view-action="runStandaloneDataViewAction"
             @update-panel="updateDataViewPanel"
             @update-property-tab="updateDataViewPropertyTab"
+            @update-where-condition="updateDataViewWhereCondition"
           />
 
           <DatabaseOverviewPanel
@@ -985,10 +1005,10 @@ defineExpose({ focus });
 
     <ChenSessionState
       v-else
-      :icon="session.error.value ? 'i-lucide-circle-alert' : 'i-lucide-loader-circle'"
-      :loading="!session.error.value"
-      :message="session.error.value || 'Starting database workspace...'"
-      :action-label="session.error.value ? 'Retry' : undefined"
+      :icon="startupError ? 'i-lucide-circle-alert' : 'i-lucide-loader-circle'"
+      :loading="!startupError"
+      :message="startupError || 'Starting database workspace...'"
+      :action-label="startupError ? 'Retry' : undefined"
       @action="emit('reconnect')"
     />
 
@@ -1014,7 +1034,7 @@ defineExpose({ focus });
       />
     </UDropdownMenu>
 
-    <UModal
+    <ChenWorkspaceModal
       v-model:open="dialogVisible"
       :title="session.dialogMessage.value?.title || 'Message'"
       :close="session.dialogMessage.value?.showClose"
@@ -1047,7 +1067,7 @@ defineExpose({ focus });
           </UButton>
         </div>
       </template>
-    </UModal>
+    </ChenWorkspaceModal>
 
     <DiscardDataViewChangesDialog
       v-if="discardDialogOpen"
