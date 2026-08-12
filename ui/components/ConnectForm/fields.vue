@@ -57,7 +57,7 @@ const { t } = useI18n();
       :loading="props.submitting"
       :disabled="props.disabled"
       size="lg"
-      class="mt-6 w-full justify-center uppercase tracking-[0.08em]"
+      class="mt-6 mb-2 w-full justify-center uppercase tracking-[0.08em]"
       @click="emit('submit')"
     />
   </div>

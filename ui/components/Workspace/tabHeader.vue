@@ -71,6 +71,11 @@ function tabDisplayTitle(tab: WorkspaceSessionTab) {
   return tab.title || tab.assetName || "Untitled";
 }
 
+function tabTooltip(tab: WorkspaceSessionTab) {
+  const title = tabDisplayTitle(tab);
+  return tab.address && tab.address !== "-" ? `${title} · ${tab.address}` : title;
+}
+
 function usesPrimaryTabModifier(event: KeyboardEvent) {
   return isMacOS.value
     ? event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey
@@ -514,20 +519,17 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       </button>
     </UTooltip>
 
-    <div v-if="tabs.length" class="workspace-tab-capsule flex w-fit min-w-0 max-w-full items-center rounded-lg">
-      <div
-        ref="tabStripRef"
-        class="workspace-tab-strip flex w-fit min-w-0 max-w-full items-center gap-1 overflow-x-auto"
-      >
+    <div v-if="tabs.length" class="workspace-tab-capsule flex min-w-0 flex-1 items-center rounded-lg">
+      <div ref="tabStripRef" class="workspace-tab-strip flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
         <button
           v-for="(tab, index) in tabs"
           :key="tab.id"
           :data-tab-id="tab.id"
+          :title="tabTooltip(tab)"
           type="button"
           draggable="true"
-          class="group relative flex h-7 min-w-0 shrink-0 items-center gap-1.5 rounded-md px-2 text-left transition-colors"
+          class="group relative flex h-7 min-w-24 max-w-44 basis-44 grow shrink items-center gap-1.5 rounded-md px-2 text-left transition-colors"
           :class="[
-            activeTabId === tab.id ? 'max-w-84 pr-2' : 'max-w-44',
             activeTabId === tab.id ? 'workspace-session-tab-active' : 'text-[var(--app-muted)]',
             draggedTabId === tab.id ? 'opacity-60' : ''
           ]"
@@ -583,27 +585,21 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
             />
           </span>
           <span
-            v-if="activeTabId === tab.id"
-            class="flex min-w-0 items-center gap-1.5 truncate font-ui-mono text-[11px] tracking-[0.01em]"
+            class="min-w-0 flex-1 truncate font-ui-mono text-[11px] tracking-[0.01em]"
+            :class="activeTabId === tab.id ? 'font-medium' : ''"
           >
-            <span class="shrink-0 truncate font-medium">{{ tabDisplayTitle(tab) }}</span>
-            <span
-              v-if="tab.address && tab.address !== '-'"
-              class="workspace-session-tab-address min-w-0 truncate text-[10px]"
-            >
-              {{ tab.address }}
-            </span>
-          </span>
-          <span v-else class="min-w-0 truncate font-ui-mono text-[11px] tracking-[0.01em]">
             {{ tabDisplayTitle(tab) }}
           </span>
           <span
-            class="workspace-session-tab-close flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-0 transition-opacity group-hover:opacity-100"
-            :class="activeTabId === tab.id ? 'opacity-70' : ''"
+            class="workspace-session-tab-close flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-70 transition-opacity hover:opacity-100"
             @click.stop="closeSession(tab.id)"
           >
             <UIcon name="i-lucide-x" class="size-2.5" />
           </span>
+          <span
+            v-if="activeTabId !== tab.id && index < tabs.length - 1 && tabs[index + 1]?.id !== activeTabId"
+            class="workspace-session-tab-divider pointer-events-none absolute top-1/2 -right-[5px] h-4 -translate-y-1/2 border-r"
+          />
         </button>
       </div>
     </div>
@@ -722,16 +718,16 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
   outline: none;
 }
 
-.workspace-session-tab-address {
-  color: color-mix(in srgb, var(--app-fg) 46%, transparent);
-}
-
 .workspace-session-tab-status {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-surface-panel-strong) 88%, white 12%);
 }
 
 .workspace-session-tab-close:hover {
   background: color-mix(in srgb, var(--app-hover-strong) 88%, transparent);
+}
+
+.workspace-session-tab-divider {
+  border-color: color-mix(in srgb, var(--app-border) 75%, var(--app-fg) 25%);
 }
 
 .workspace-tab-strip {

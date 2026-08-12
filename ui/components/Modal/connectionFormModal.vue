@@ -68,7 +68,7 @@ watch(
       header: 'min-h-12 p-3 sm:px-4',
       title: 'text-sm leading-5',
       close: 'top-2 end-2 size-7 p-1',
-      body: 'pt-2 sm:pt-2'
+      body: 'pt-1 sm:pt-1'
     }"
     @update:open="updateOpen"
   >
