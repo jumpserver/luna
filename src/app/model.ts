@@ -289,7 +289,7 @@ export class Setting {
   basic: {
     is_async_asset_tree: boolean;
     connect_default_open_method: string;
-    themes?: string;
+    themes: string;
   };
   graphics: {
     rdp_resolution: string;
@@ -298,6 +298,7 @@ export class Setting {
     applet_connection_method: string;
     rdp_smart_size: string;
     rdp_color_quality: string;
+    file_name_conflict_resolution: string;
   };
   command_line: {
     character_terminal_font_size: number;
@@ -321,7 +322,8 @@ export class Setting {
       rdp_client_option: [],
       applet_connection_method: 'web',
       rdp_smart_size: '0',
-      rdp_color_quality: '32'
+      rdp_color_quality: '32',
+      file_name_conflict_resolution: 'replace'
     };
     this.command_line = {
       character_terminal_font_size: 14,

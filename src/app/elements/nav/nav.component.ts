@@ -144,7 +144,7 @@ export class ElementNavComponent implements OnInit {
               name: 'CHANGE_MAIN_THEME',
               data: theme.name
             });
-            this._settingSvc.save();
+            void this._settingSvc.save({ basic: { themes: theme.name } });
           },
           name: this._i18n.instant(theme.label)
         }))
@@ -189,9 +189,7 @@ export class ElementNavComponent implements OnInit {
       nzWidth: '600px',
       nzCentered: true,
       nzData: { type, name },
-      nzOnOk: cmp => cmp.onSubmit(),
-      nzCancelText: this._i18n.instant('Cancel'),
-      nzOkText: this._i18n.instant('Confirm')
+      nzFooter: null
     });
   }
 
