@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Extension } from "@codemirror/state";
 import type { ChenSqlCompletionSource } from "~/chen/utils/sqlCompletion";
+import { acceptCompletion } from "@codemirror/autocomplete";
 import { Compartment, EditorState, Prec } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
@@ -48,6 +49,10 @@ const editorExtensions: Extension[] = [
   EditorState.tabSize.of(2),
   Prec.highest(
     keymap.of([
+      {
+        key: "Tab",
+        run: acceptCompletion
+      },
       {
         key: "Mod-l",
         run: () => {
