@@ -1,3 +1,5 @@
+import type { CommandSnippetPayload } from "~/composables/useApiRequest";
+import { createCommandSnippet, updateCommandSnippet } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export interface SnippetModule {
@@ -42,6 +44,7 @@ export const useSnippets = () => {
   const { batchCommand, setOpen } = useBatchCommandPanel();
   const snippets = useState<Snippet[]>("sidebar-snippets", () => []);
   const loading = useState<boolean>("sidebar-snippets-loading", () => false);
+  const saving = ref(false);
 
   const load = async () => {
     if (!loggedIn.value || loading.value) return;
@@ -61,9 +64,20 @@ export const useSnippets = () => {
     setOpen(true);
   };
 
+  const save = async (payload: CommandSnippetPayload, id?: string) => {
+    saving.value = true;
+    try {
+      const result = id ? await updateCommandSnippet(id, payload) : await createCommandSnippet(payload);
+      await load();
+      return result;
+    } finally {
+      saving.value = false;
+    }
+  };
+
   watch([loggedIn, currentSite], () => {
     snippets.value = [];
   });
 
-  return { snippets, loading, load, applySnippet };
+  return { snippets, loading, saving, load, save, applySnippet };
 };

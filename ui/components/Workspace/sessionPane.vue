@@ -444,7 +444,12 @@ onBeforeUnmount(() => {
 
             <div v-else :ref="(el: unknown) => setPaneSurfaceTarget(pane.id, el)" class="h-full">
               <div
-                v-if="!pane.payload?.id && !pane.payload?.token?.id && !pane.payload?.webUrl"
+                v-if="
+                  pane.protocol !== 'script-editor' &&
+                  !pane.payload?.id &&
+                  !pane.payload?.token?.id &&
+                  !pane.payload?.webUrl
+                "
                 class="grid h-full place-items-center"
               >
                 <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-[var(--app-muted)]" />

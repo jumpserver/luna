@@ -245,6 +245,8 @@ export const useUserInfoStore = defineStore(
         }).catch((error) => {
           console.error("sync api org failed", error);
         });
+      } else {
+        setWebOrgId(org.id);
       }
     };
 

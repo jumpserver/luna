@@ -14,7 +14,11 @@ const surfaceReady = computed(() => {
   const payload = props.pane.payload || {};
   const connectMethod = String(payload.connectMethod?.value || props.pane.connectMethod || "");
   const isDatabaseWorkspace = findDeclaredCapability(props.pane.protocol, connectMethod)?.surface === "database";
-  return isDatabaseWorkspace || Boolean(payload.id || payload.token?.id || payload.webUrl);
+  return (
+    props.pane.protocol === "script-editor" ||
+    isDatabaseWorkspace ||
+    Boolean(payload.id || payload.token?.id || payload.webUrl)
+  );
 });
 const { reconnectSession } = useWorkspaceTabMenu();
 let surfaceInstance: { focus?: () => void } | null = null;

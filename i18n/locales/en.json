@@ -80,7 +80,17 @@
     "RecentConnections": "Recent connections"
   },
   "Snippets": {
-    "Empty": "No scripts"
+    "Empty": "No scripts",
+    "Create": "Add script",
+    "Edit": "Edit script",
+    "Name": "Script name",
+    "Content": "Script content",
+    "Comment": "Comment (optional)",
+    "Save": "Save",
+    "SaveFailed": "Failed to save script",
+    "DiscardTitle": "Discard changes?",
+    "Discard": "Discard",
+    "DiscardChanges": "This script has unsaved changes. Discard them?"
   },
   "RecentConnections": {
     "Empty": "No recent connections"

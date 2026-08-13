@@ -38,6 +38,14 @@ export interface WorkspaceSessionTab extends WorkspaceSurfaceSession {
   panes: WorkspacePane[];
 }
 
+export interface ScriptEditorInput {
+  id?: string;
+  name?: string;
+  args?: string;
+  module: string;
+  comment?: string;
+}
+
 const tabs = ref<WorkspaceSessionTab[]>([]);
 const activeTabId = ref("");
 const activePaneId = ref("");
@@ -413,6 +421,47 @@ export const useWorkspaceTabs = () => {
     return pane;
   };
 
+  const openScriptEditor = (script: ScriptEditorInput) => {
+    const existing = script.id
+      ? tabs.value.find((tab) => tab.protocol === "script-editor" && tab.payload?.scriptId === script.id)
+      : null;
+    if (existing) {
+      activeTabId.value = existing.id;
+      activePaneId.value = getFirstPaneId(existing);
+      return existing.panes[0];
+    }
+
+    const tabId = createTabId(script.id || "new-script", "script-editor", "");
+    const pane = createPane(
+      tabId,
+      {
+        assetId: script.id || tabId,
+        assetName: script.name || "Untitled script",
+        assetType: "script",
+        assetPlatform: script.module,
+        assetCategory: "script",
+        address: "",
+        protocol: "script-editor",
+        account: "",
+        status: "ready",
+        payload: {
+          scriptId: script.id,
+          name: script.name || "",
+          args: script.args || "",
+          module: script.module,
+          comment: script.comment || ""
+        }
+      },
+      "session"
+    );
+    const tab = createTabFromPane(pane);
+    tab.title = script.name || "Untitled script";
+    tabs.value.push(tab);
+    activeTabId.value = tab.id;
+    activePaneId.value = pane.id;
+    return pane;
+  };
+
   function removeSession(tab: WorkspaceSessionTab) {
     const index = tabs.value.findIndex((item) => item.id === tab.id);
     if (index === -1) return false;
@@ -524,7 +573,7 @@ export const useWorkspaceTabs = () => {
 
   const canSplitWorkspace = (tabId: string, direction: WorkspaceSplitDirection) => {
     const tab = tabs.value.find((item) => item.id === tabId);
-    if (!tab) return false;
+    if (!tab || tab.protocol === "script-editor") return false;
 
     if (tab.panes.length === 1) return true;
     if (tab.panes.length === 2) {
@@ -785,6 +834,7 @@ export const useWorkspaceTabs = () => {
     setSessionConnectMethod,
     markSessionFailed,
     openLocalShell,
+    openScriptEditor,
     openSession,
     openSetupSession,
     placePane,

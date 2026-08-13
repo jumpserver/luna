@@ -528,7 +528,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           :title="tabTooltip(tab)"
           type="button"
           draggable="true"
-          class="group relative flex h-7 min-w-24 max-w-44 basis-44 grow shrink items-center gap-1.5 rounded-md px-2 text-left transition-colors"
+          class="workspace-session-tab group relative flex h-7 min-w-24 max-w-44 basis-44 grow shrink items-center gap-1.5 rounded-md px-2 text-left transition-colors"
           :class="[
             activeTabId === tab.id ? 'workspace-session-tab-active' : 'text-[var(--app-muted)]',
             draggedTabId === tab.id ? 'opacity-60' : ''
@@ -716,6 +716,10 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
   box-shadow: none;
   color: var(--ui-text-highlighted);
   outline: none;
+}
+
+.workspace-session-tab:hover {
+  background-color: var(--app-hover-soft);
 }
 
 .workspace-session-tab-status {

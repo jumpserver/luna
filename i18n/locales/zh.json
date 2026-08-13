@@ -80,7 +80,17 @@
     "RecentConnections": "最近连接"
   },
   "Snippets": {
-    "Empty": "暂无脚本"
+    "Empty": "暂无脚本",
+    "Create": "添加脚本",
+    "Edit": "编辑脚本",
+    "Name": "脚本名称",
+    "Content": "脚本内容",
+    "Comment": "备注（可选）",
+    "Save": "保存",
+    "SaveFailed": "保存脚本失败",
+    "DiscardTitle": "放弃修改？",
+    "Discard": "放弃",
+    "DiscardChanges": "脚本尚未保存，确定放弃修改吗？"
   },
   "RecentConnections": {
     "Empty": "暂无最近连接"

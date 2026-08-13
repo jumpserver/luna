@@ -15,6 +15,7 @@ import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 import GuideSessionSurface from "~/shared/connectors/GuideSessionSurface.vue";
 import LegacyIframeSession from "~/shared/connectors/LegacyIframeSession.vue";
 import LocalShellSessionSurface from "~/workspaces/LocalShellSessionSurface.vue";
+import ScriptEditorSessionSurface from "~/workspaces/ScriptEditorSessionSurface.vue";
 
 export interface ConnectorRegistryEntry {
   component: Component;
@@ -48,6 +49,10 @@ export function resolveSessionComponent(tab: WorkspaceSessionTab): JmsComponent 
 export function resolveSessionSurface(tab: WorkspaceSessionTab): Component {
   if (tab.protocol === "local-shell") {
     return LocalShellSessionSurface;
+  }
+
+  if (tab.protocol === "script-editor") {
+    return ScriptEditorSessionSurface;
   }
 
   const connectMethod = (tab.payload?.connectMethod as { value?: string } | undefined)?.value || tab.connectMethod;

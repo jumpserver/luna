@@ -8,6 +8,7 @@ const props = withDefaults(
     preferredHeight?: number;
     minHeight?: number;
     maxHeight?: string;
+    fillAvailable?: boolean;
   }>(),
   {
     preferredHeight: 200,
@@ -22,10 +23,16 @@ const emit = defineEmits<{
 
 const panelStyle = computed(() =>
   props.open
-    ? {
-        height: `min(${props.preferredHeight}px, ${props.maxHeight})`,
-        minHeight: `min(${props.minHeight}px, ${props.maxHeight})`
-      }
+    ? props.fillAvailable
+      ? {
+          height: "auto",
+          minHeight: `${props.minHeight}px`,
+          flexGrow: 1
+        }
+      : {
+          height: `min(${props.preferredHeight}px, ${props.maxHeight})`,
+          minHeight: `min(${props.minHeight}px, ${props.maxHeight})`
+        }
     : { height: "32px" }
 );
 </script>
