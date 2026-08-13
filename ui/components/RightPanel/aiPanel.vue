@@ -100,6 +100,9 @@ const busy = computed(() => {
   const status = session.value?.chat.status.value;
   return status === "submitted" || status === "streaming";
 });
+const actionLabel = computed(() =>
+  busy.value ? (sqlSession.value ? t("RightPanel.SQLAICancel") : t("RightPanel.AIInterrupt")) : t("RightPanel.AISend")
+);
 const elapsedClock = ref(Date.now());
 let elapsedTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -1188,24 +1191,17 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
                 @update:model-value="changeExecutionMode"
               />
             </div>
-            <UButton
-              v-if="busy"
-              class="ml-auto"
-              size="xs"
-              color="neutral"
-              variant="soft"
-              icon="i-lucide-square"
-              :label="sqlSession ? t('RightPanel.SQLAICancel') : t('RightPanel.AIInterrupt')"
-              @click="interrupt"
-            />
-            <UTooltip :text="t('RightPanel.AISend')">
+            <UTooltip :text="actionLabel">
               <UButton
+                class="ml-auto"
                 size="xs"
                 color="primary"
-                icon="i-lucide-send"
-                :aria-label="t('RightPanel.AISend')"
-                :disabled="busy || !draft.trim()"
-                @click="submit"
+                variant="solid"
+                :icon="busy ? 'i-lucide-square' : 'i-lucide-send'"
+                :ui="{ leadingIcon: busy ? 'size-2.5 fill-current stroke-none' : undefined }"
+                :aria-label="actionLabel"
+                :disabled="!busy && !draft.trim()"
+                @click="busy ? interrupt() : submit()"
               />
             </UTooltip>
           </div>
