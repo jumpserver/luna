@@ -20,7 +20,13 @@ import type {
 } from "~/chen/types";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
-import { fetchChenActions, fetchChenExport, fetchChenSqlHints, uploadChenSqlFile } from "~/chen/api";
+import {
+  fetchChenActions,
+  fetchChenExport,
+  fetchChenSqlColumns,
+  fetchChenSqlRelations,
+  uploadChenSqlFile
+} from "~/chen/api";
 import ChenSessionState from "~/chen/components/ChenSessionState.vue";
 import ConsolePanel from "~/chen/components/ConsolePanel.vue";
 import DatabaseOverviewPanel from "~/chen/components/DatabaseOverviewPanel.vue";
@@ -37,7 +43,6 @@ import { useChenQueryConsole } from "~/chen/composables/useChenQueryConsole";
 import { useChenRecentTables } from "~/chen/composables/useChenRecentTables";
 import { useChenResourceTree } from "~/chen/composables/useChenResourceTree";
 import { useChenSession } from "~/chen/composables/useChenSession";
-import { useChenSqlHints } from "~/chen/composables/useChenSqlHints";
 import { chenWsUrl, useChenWebSocket } from "~/chen/composables/useChenWebSocket";
 import { useChenWorkspacePreferences } from "~/chen/composables/useChenWorkspacePreferences";
 import { useChenWorkspaceTabs } from "~/chen/composables/useChenWorkspaceTabs";
@@ -52,6 +57,7 @@ import {
   findChenDataViewTarget
 } from "~/chen/utils/dataViewEditing";
 import { canOpenChenQueryConsole, chenNodeActivationAction } from "~/chen/utils/resourceTree";
+import { ChenSqlMetadataStore } from "~/chen/utils/sqlMetadata";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const emit = defineEmits<{ reconnect: [] }>();
@@ -113,6 +119,12 @@ const workspacePreferences = useChenWorkspacePreferences();
 const recentTables = useChenRecentTables(`${props.tab.assetId}:${props.tab.protocol}`);
 const dataView = useChenDataView(sendConsoleAction);
 const consoleConnections = new Map<string, ReturnType<typeof useChenWebSocket>>();
+const sqlMetadataStore = new ChenSqlMetadataStore({
+  listRelations: (scope, prefix, limit) =>
+    fetchChenSqlRelations(auth.chenToken.value, scope, prefix, limit, undefined, endpointUrl.value),
+  listColumns: (scope, relations) =>
+    fetchChenSqlColumns(auth.chenToken.value, scope, relations, undefined, endpointUrl.value)
+});
 
 const currentWorkspaceNodeKey = computed(() => {
   return (
@@ -172,16 +184,6 @@ const activeDatabaseTab = computed(() => {
 const activeConnectionError = computed(() => workspace.activeWorkspaceTab.value?.connectionError || "");
 
 const queryConsole = useChenQueryConsole(sendConsoleAction);
-const queryHints = useChenSqlHints(
-  (tab, context) => fetchChenSqlHints(auth.chenToken.value, tab.nodeKey, context, undefined, endpointUrl.value),
-  (cause) => {
-    toast.add({
-      title: "Failed to load SQL hints",
-      description: cause instanceof Error ? cause.message : String(cause),
-      color: "warning"
-    });
-  }
-);
 const session = useChenSession({
   authenticate: auth.authenticate,
   markConnected: () => markSessionConnected(props.tab.id),
@@ -199,7 +201,10 @@ const session = useChenSession({
   onAfterReady: async () => {
     await tree.expandInitialTree();
   },
-  onDisconnected: () => closeAllConsoleSockets("Database session disconnected"),
+  onDisconnected: () => {
+    sqlMetadataStore.clear();
+    closeAllConsoleSockets("Database session disconnected");
+  },
   showMessage: (data) => {
     toast.add({
       title: data?.level || "Message",
@@ -421,13 +426,8 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
 }
 
 function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
-  const previousContext = tab.kind === "query" ? tab.state.currentContext : undefined;
   if (tab.kind === "query" || tab.kind === "console") {
     queryConsole.handleQueryConsolePacket(tab, packet);
-  }
-  if (tab.kind === "query" && packet.type === "update_state") {
-    const currentContext = tab.state.currentContext || "";
-    if (currentContext && currentContext !== previousContext) void queryHints.load(tab, currentContext);
   }
 
   switch (packet.type) {
@@ -636,6 +636,7 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
     const response = await tree.runTreeAction(node, action);
     switch (response.event) {
       case "refresh_node":
+        sqlMetadataStore.clear();
         await tree.loadNodeChildren(node, true);
         break;
       case "new_query":
@@ -715,11 +716,15 @@ function runQueryTab(tab: ChenQueryLikeWorkspaceTab, selectedSql = "") {
     queryConsole.runConsoleTab(tab);
     return;
   }
-  if (tab.state.loading || tab.state.inQuery || !(selectedSql || tab.statement).trim()) {
+  const statement = selectedSql || tab.statement;
+  if (tab.state.loading || tab.state.inQuery || !statement.trim()) {
     queryConsole.runQueryTab(tab, selectedSql);
     return;
   }
-  guardDataViewChanges(chenDataViewTargets(tab), () => queryConsole.runQueryTab(tab, selectedSql));
+  guardDataViewChanges(chenDataViewTargets(tab), () => {
+    queryConsole.runQueryTab(tab, selectedSql);
+    if (mayChangeSqlMetadata(statement)) sqlMetadataStore.clear();
+  });
 }
 
 function uploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
@@ -732,6 +737,7 @@ async function performUploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
   try {
     const result = await uploadChenSqlFile(auth.chenToken.value, file, undefined, endpointUrl.value);
     queryConsole.runQueryFile(tab, result.path);
+    sqlMetadataStore.clear();
     toast.add({ title: "SQL file uploaded", description: file.name, color: "success" });
   } catch (cause) {
     addErrorToast({
@@ -757,6 +763,10 @@ function updateQueryStatement(tab: ChenQueryConsoleTab, value: string) {
 
 function updateConsolePendingSql(tab: ChenPromptConsoleTab, value: string) {
   tab.pendingSql = value;
+}
+
+function mayChangeSqlMetadata(statement: string) {
+  return /^\s*(?:create|alter|drop|rename|truncate|comment)\b/i.test(statement);
 }
 
 function clearConsoleTranscript(tab: ChenPromptConsoleTab) {
@@ -869,6 +879,11 @@ function stopResize() {
 
 function focus() {}
 
+async function refreshResourceRoot() {
+  sqlMetadataStore.clear();
+  await tree.refreshRoot();
+}
+
 watch(
   tokenId,
   (id) => {
@@ -886,6 +901,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   stopResize();
   closeAllConsoleSockets();
+  sqlMetadataStore.clear();
   workspace.closeAllTabs();
   session.cleanupSession();
   window.removeEventListener("pointermove", handlePointerMove);
@@ -908,7 +924,7 @@ defineExpose({ focus });
         :db-type="auth.profile.value?.dbType"
         :width="sidebarWidth"
         :tab-title-format="workspacePreferences.tabTitleFormat"
-        @refresh="tree.refreshRoot"
+        @refresh="refreshResourceRoot"
         @update:tab-title-format="workspacePreferences.tabTitleFormat = $event"
         @select="tree.selectedNodeKey.value = $event.key"
         @activate="handleNodeClick"
@@ -955,6 +971,7 @@ defineExpose({ focus });
             :tab="activeQueryTab"
             :db-type="auth.profile.value?.dbType || ''"
             :can-copy="auth.profile.value?.canCopy === true"
+            :metadata-store="sqlMetadataStore"
             @run="runQueryTab"
             @cancel="cancelQueryLikeTab"
             @change-context="changeQueryContext"

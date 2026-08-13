@@ -1,18 +1,22 @@
 <script setup lang="ts">
 import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
 import type { ChenDataViewAction, ChenDataViewActionData, ChenQueryConsoleTab, ChenQueryResultTab } from "~/chen/types";
+import type { ChenSqlMetadataStore } from "~/chen/utils/sqlMetadata";
 
 import QueryResultTabs from "~/chen/components/QueryResultTabs.vue";
 import ChenSqlEditor from "~/chen/components/SqlEditor.client.vue";
 import SqlSnippetSaveDialog from "~/chen/components/SqlSnippetSaveDialog.vue";
 import SqlSnippetSelectDialog from "~/chen/components/SqlSnippetSelectDialog.vue";
 import { useChenSqlSnippets } from "~/chen/composables/useChenSqlSnippets";
+import { createChenCompletionSource } from "~/chen/utils/sqlCompletion";
+import { chenSqlDialect } from "~/chen/utils/sqlEditor";
 import { formatChenSql } from "~/chen/utils/sqlFormat";
 
 const props = defineProps<{
   tab: ChenQueryConsoleTab;
   dbType: string;
   canCopy: boolean;
+  metadataStore: ChenSqlMetadataStore;
 }>();
 
 const emit = defineEmits<{
@@ -46,6 +50,14 @@ let messageCloseTimer: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const sqlSnippets = useChenSqlSnippets(() => props.dbType);
+const completionSource = createChenCompletionSource({
+  store: props.metadataStore,
+  scope: () => {
+    const context = props.tab.state.currentContext || "";
+    return context ? { nodeKey: props.tab.nodeKey, context } : null;
+  },
+  dialect: () => chenSqlDialect(props.dbType)
+});
 const queryBusy = computed(() => Boolean(props.tab.state.loading || props.tab.state.inQuery));
 const contextBusy = computed(() => Boolean(queryBusy.value || props.tab.state.editorLoading));
 const contextItems = computed(() =>
@@ -276,7 +288,7 @@ onBeforeUnmount(clearMessageTimer);
           v-model="statementValue"
           class="min-h-0 flex-1"
           :db-type="dbType"
-          :hints="tab.sqlHints"
+          :completion-source="completionSource"
           :read-only="Boolean(tab.state.loading || tab.state.editorLoading)"
           @selection-change="hasSelection = $event"
           @format="formatStatement"
