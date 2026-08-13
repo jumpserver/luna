@@ -14,6 +14,8 @@ export interface SftpRemotePane {
   assetName: string;
   transferEndpoint: FileTransferEndpointRef;
   selection: SftpFileEntry | null;
+  /** Pinned tabs survive "close others" / "close right" and sort toward the front. */
+  pinned?: boolean;
 }
 
 export interface FileWorkspaceSourceAsset {

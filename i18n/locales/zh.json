@@ -824,6 +824,8 @@
       "preconnectingAsset": "正在连接 {name}…",
       "recentConnections": "最近连接",
       "dropSameEndpoint": "不能传到同一端点",
+      "pinTab": "固定",
+      "unpinTab": "取消固定",
 
       "searchAssets": "搜索要传输文件的资产…",
       "dropFiles": "拖动文件到这里",

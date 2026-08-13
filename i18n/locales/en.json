@@ -821,6 +821,8 @@
       "preconnectingAsset": "Connecting {name}…",
       "recentConnections": "Recent connections",
       "dropSameEndpoint": "Cannot drop onto the same endpoint",
+      "pinTab": "Pin",
+      "unpinTab": "Unpin",
 
       "searchAssets": "Search assets for file transfer…",
       "dropFiles": "Drop files here",
