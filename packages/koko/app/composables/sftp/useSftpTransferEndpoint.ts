@@ -1,4 +1,4 @@
-import type { SftpDataMessage, SftpIncomingMessage } from "./protocol";
+import type { SftpIncomingMessage } from "./protocol";
 import type { SftpSocketClient } from "./useSftpSocket";
 import type {
   FileTransferChunk,
@@ -6,12 +6,13 @@ import type {
   FileTransferEndpoint,
   FileTransferEndpointRef,
   FileTransferPrepareInput,
-  FileTransferResumeState,
-  FileTransferWriteAck,
   FileTransferWriteInput
 } from "~/shared/file-transfer/types";
 import { getCurrentInstance, onUnmounted } from "vue";
 import { FileTransferUnavailableError } from "~/shared/file-transfer/types";
+import { createSftpMessageId, decodeSftpRawBytes, encodeSftpBytes } from "./core/codec";
+import { rejectPendingRequests } from "./core/pending";
+import { parseSftpTransferState, parseSftpTransferWriteAck } from "./core/transfer";
 import { SftpCommand, SftpMessageType } from "./protocol";
 
 interface PendingRequest {
@@ -20,86 +21,16 @@ interface PendingRequest {
   reject: (error: Error) => void;
 }
 
-interface TransferResponseWire {
-  transfer_id?: string;
-  committed_bytes?: number;
-  total_bytes?: number;
-  state?: FileTransferResumeState["state"];
-  duplicate?: boolean;
-}
-
-const messageId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
-
-function decodeRaw(raw: unknown) {
-  if (typeof raw === "string") {
-    if (!raw) return new Uint8Array();
-
-    const binary = atob(raw);
-    return Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  }
-
-  if (Array.isArray(raw)) return Uint8Array.from(raw);
-
-  return new Uint8Array();
-}
-
-function bytesToBase64(bytes: Uint8Array) {
-  let binary = "";
-  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
-  }
-  return btoa(binary);
-}
-
-function parsePayload<T>(message: SftpDataMessage) {
-  if (message.err) throw new Error(message.err);
-
-  try {
-    return JSON.parse(message.data || "{}") as T;
-  } catch {
-    throw new Error("Invalid SFTP transfer response");
-  }
-}
-
-function parseTransferState(message: SftpDataMessage): FileTransferResumeState {
-  const response = parsePayload<TransferResponseWire>(message);
-  const transferId = response.transfer_id;
-  const state = response.state;
-  const committedBytes = response.committed_bytes;
-  const totalBytes = response.total_bytes;
-  if (
-    !transferId ||
-    !state ||
-    typeof committedBytes !== "number" ||
-    typeof totalBytes !== "number" ||
-    !Number.isSafeInteger(committedBytes) ||
-    !Number.isSafeInteger(totalBytes)
-  ) {
-    throw new Error("Invalid SFTP transfer response");
-  }
-  return {
-    transferId,
-    committedBytes,
-    totalBytes,
-    state
-  };
-}
-
-function parseTransferWriteAck(message: SftpDataMessage): FileTransferWriteAck {
-  const response = parsePayload<TransferResponseWire>(message);
-  const committedBytes = response.committed_bytes;
-  if (typeof committedBytes !== "number" || !Number.isSafeInteger(committedBytes)) {
-    throw new TypeError("Invalid SFTP transfer write acknowledgement");
-  }
-  return { committedBytes, duplicate: Boolean(response.duplicate) };
-}
-
 export function useSftpTransferEndpoint(
   socket: SftpSocketClient,
   ref: FileTransferEndpointRef,
   onTransferCommitted?: FileTransferEndpoint["onTransferCommitted"]
 ): FileTransferEndpoint {
   const pending = new Map<string, PendingRequest>();
+  const rejectAllPending = (error: Error) => {
+    rejectPendingRequests(pending.values(), error);
+    pending.clear();
+  };
 
   const removeMessageListener = socket.onMessage((message) => {
     const request = pending.get(message.id);
@@ -124,24 +55,20 @@ export function useSftpTransferEndpoint(
     }
   });
   const removeFailureListener = socket.onFailure((failure) => {
-    for (const [id, request] of pending) {
-      pending.delete(id);
-      request.reject(new FileTransferUnavailableError(failure.message));
-    }
+    rejectAllPending(new FileTransferUnavailableError(failure.message));
   });
 
   if (getCurrentInstance()) {
     onUnmounted(() => {
       removeMessageListener();
       removeFailureListener();
-      for (const request of pending.values()) request.reject(new FileTransferUnavailableError());
-      pending.clear();
+      rejectAllPending(new FileTransferUnavailableError());
     });
   }
 
   function request(command: SftpCommand, data: Record<string, unknown>, raw = "") {
     if (!socket.connected.value) return Promise.reject(new FileTransferUnavailableError());
-    const id = messageId();
+    const id = createSftpMessageId();
     return new Promise<SftpIncomingMessage>((resolve, reject) => {
       pending.set(id, { command, resolve, reject });
       try {
@@ -156,7 +83,7 @@ export function useSftpTransferEndpoint(
   const requestState = async (command: SftpCommand, data: Record<string, unknown>) => {
     const message = await request(command, data);
     if (message.type !== SftpMessageType.Data) throw new Error("Invalid SFTP transfer response");
-    return parseTransferState(message);
+    return parseSftpTransferState(message);
   };
 
   return {
@@ -182,7 +109,7 @@ export function useSftpTransferEndpoint(
       const metadata = JSON.parse(message.data || "{}") as Omit<FileTransferChunk, "data">;
       if (!metadata.sha256 || !Number.isSafeInteger(metadata.offset))
         throw new Error("Invalid SFTP transfer chunk metadata");
-      return { ...metadata, data: decodeRaw(message.raw) };
+      return { ...metadata, data: decodeSftpRawBytes(message.raw) };
     },
     writeChunk: async (input: FileTransferWriteInput) => {
       const message = await request(
@@ -194,10 +121,10 @@ export function useSftpTransferEndpoint(
           offset: input.offset,
           sha256: input.sha256
         },
-        bytesToBase64(input.data)
+        encodeSftpBytes(input.data)
       );
       if (message.type !== SftpMessageType.Data) throw new Error("Invalid SFTP transfer write acknowledgement");
-      return parseTransferWriteAck(message);
+      return parseSftpTransferWriteAck(message);
     },
     getTransferStatus: (input) =>
       requestState(SftpCommand.TransferStatus, {

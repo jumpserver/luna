@@ -179,6 +179,34 @@
   font-size: 11px;
 }
 
+.sftp-transfer-drop-target--blocked {
+  border-color: color-mix(in srgb, var(--app-muted) 55%, transparent);
+  background: color-mix(in srgb, var(--app-muted) 10%, var(--app-main-bg));
+}
+
+.sftp-transfer-drop-target--blocked .sftp-transfer-drop-target__label {
+  border-color: color-mix(in srgb, var(--app-muted) 40%, transparent);
+  box-shadow: none;
+}
+
+.sftp-transfer-drop-target--blocked .sftp-transfer-drop-target__label > svg {
+  color: var(--app-muted);
+}
+
+.sftp-file-row--highlight {
+  animation: sftp-file-highlight 3.2s ease-out;
+}
+
+@keyframes sftp-file-highlight {
+  0%,
+  35% {
+    background: color-mix(in srgb, var(--ui-color-primary-500) 18%, transparent);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
 .sftp-selection-bar {
   min-height: 44px;
   font-size: var(--sftp-font-body);

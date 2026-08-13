@@ -29,6 +29,11 @@ watch(tokenId, () => void prepareSession(), { immediate: true });
     :error="error"
     :loading-text="t('koko.workspace.preparingSftp')"
   >
-    <KokoFileManagement :sftp-token="tokenId" :compact="compact" class="h-full" />
+    <KokoFileManagement
+      :sftp-token="tokenId"
+      :compact="compact"
+      :source-asset="{ id: tab.assetId, name: tab.assetName || tab.assetId }"
+      class="h-full"
+    />
   </BaseWorkspaceShell>
 </template>

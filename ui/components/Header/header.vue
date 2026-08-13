@@ -26,11 +26,9 @@ const toolWindowTitleClass = computed(() => {
 const pageHeader = computed(() => {
   const path = router.currentRoute.value.path.toLowerCase();
 
+  // /files is a full dual-pane workbench — no redundant page title in the header.
   if (path.includes("/files")) {
-    return {
-      icon: "i-lucide-folder-kanban",
-      title: "文件管理"
-    };
+    return null;
   }
 
   if (path.includes("/videoplayer")) {

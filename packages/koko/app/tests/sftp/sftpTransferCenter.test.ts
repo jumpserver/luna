@@ -1,5 +1,6 @@
 import type { FileTransferStatus, FileTransferTask } from "~/shared/file-transfer/types";
 import { describe, expect, it } from "vitest";
+import { defaultGlobalLeftPaneId } from "#koko/composables/sftp/file-manager/selectors";
 import {
   completedTargetCount,
   failedTargetCount,
@@ -10,9 +11,21 @@ import {
 import fileManagementStyles from "../../assets/css/sftp-file-management.css?inline";
 import transferCenterStyles from "../../assets/css/sftp-transfer-center.scss?inline";
 import fileManagementIndex from "../../components/FileManagement/index.vue?raw";
+import fileManagementLocalPane from "../../components/FileManagement/localPane.vue?raw";
 import fileManagementPane from "../../components/FileManagement/pane.vue?raw";
+import filePaneSelectionBar from "../../components/FileManagement/pane/SftpPaneSelectionBar.vue?raw";
 import transferCenterComponent from "../../components/FileManagement/SftpTransferCenter.vue?raw";
+import transferBatchComponent from "../../components/FileManagement/transfer-center/SftpTransferBatch.vue?raw";
+import transferFileComponent from "../../components/FileManagement/transfer-center/SftpTransferFile.vue?raw";
+import transferTargetComponent from "../../components/FileManagement/transfer-center/SftpTransferTarget.vue?raw";
 import fileManagerSessionSurface from "../../workspaces/FileManagerSessionSurface.vue?raw";
+
+const transferCenterPresentation = [
+  transferCenterComponent,
+  transferBatchComponent,
+  transferTargetComponent,
+  transferFileComponent
+].join("\n");
 
 describe("sftp transfer center layout", () => {
   it("keeps the design drawer width and collapses nested batch content", () => {
@@ -20,33 +33,33 @@ describe("sftp transfer center layout", () => {
     expect(transferCenterStyles).toContain("width: 496px");
     expect(transferCenterStyles).toContain("max-width: calc(100vw - 40px)");
     expect(transferCenterStyles).toMatch(/\.sftp-transfer-targets\s*\{[^}]*display:\s*none/);
-    expect(transferCenterComponent).toContain('v-show="expandedBatches.has(batch.id)"');
-    expect(transferCenterComponent).toContain(':aria-expanded="expandedBatches.has(batch.id)"');
+    expect(transferCenterComponent).toContain(':expanded="expandedBatches.has(batch.id)"');
+    expect(transferBatchComponent).toContain('v-show="expanded"');
+    expect(transferBatchComponent).toContain(':aria-expanded="expanded"');
   });
 
   it("renders a full-width progress track and right-aligned actions for every file", () => {
-    expect(transferCenterComponent).toContain('class="sftp-transfer-file__progress"');
-    expect(transferCenterComponent).not.toMatch(/v-if=[^>]+sftp-transfer-file__progress/);
+    expect(transferCenterPresentation).toContain('class="sftp-transfer-file__progress"');
+    expect(transferCenterPresentation).not.toMatch(/v-if=[^>]+sftp-transfer-file__progress/);
     expect(transferCenterStyles).toContain("grid-template-columns: minmax(0, 1fr) 92px max-content");
     expect(transferCenterStyles).toMatch(/\.sftp-transfer-file__progress\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/);
     expect(transferCenterStyles).toMatch(/\.sftp-transfer-file__actions\s*\{[^}]*justify-content:\s*flex-end/);
   });
 
   it("allows an active file to be paused independently", () => {
-    expect(transferCenterComponent).toContain('v-if="canPause([task])"');
-    expect(transferCenterComponent).toContain('@click="store.pauseTask(task.id)"');
-    expect(transferCenterComponent).toContain('icon="i-lucide-pause"');
+    expect(transferTargetComponent).toContain(':can-pause="canPauseTransferTasks([task])"');
+    expect(transferTargetComponent).toContain("@pause=\"emit('pauseTask', task)\"");
+    expect(transferCenterComponent).toContain('@pause-task="store.pauseTask($event.id)"');
+    expect(transferCenterPresentation).toContain('icon="i-lucide-pause"');
   });
 
-  it("shows resume only when all resumable tasks are paused", () => {
-    expect(transferCenterComponent).toContain(
-      'return resumableTasks.length > 0 && resumableTasks.every((task) => task.status === "paused")'
-    );
+  it("delegates resume availability to the transfer-center selectors", () => {
+    expect(transferTargetComponent).toContain("canResumeTransferTasks");
   });
 
   it("uses compact outlined conflict actions instead of solid default buttons", () => {
-    expect(transferCenterComponent.match(/variant="outline"/g)).toHaveLength(3);
-    expect(transferCenterComponent.match(/size="xs"/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(transferTargetComponent.match(/variant="outline"/g)).toHaveLength(3);
+    expect(transferTargetComponent.match(/size="xs"/g)?.length).toBeGreaterThanOrEqual(3);
     expect(transferCenterStyles).not.toMatch(/\.sftp-conflict-action\s*\{/);
   });
 });
@@ -61,8 +74,8 @@ describe("sftp transfer drop target", () => {
     expect(fileManagementStyles).toMatch(/\.sftp-transfer-drop-target\s*\{[^}]*border:\s*2px dashed/);
   });
 
-  it("does not activate the drop target for the source endpoint itself", () => {
-    expect(fileManagementPane).toContain("activeTransferDragSourceId.value !== props.transferEndpoint.id");
+  it("delegates same-endpoint rejection to the shared drag helper", () => {
+    expect(fileManagementPane).toContain("isCrossEndpointTransferDrag");
   });
 });
 
@@ -70,6 +83,14 @@ describe("sftp right-panel compact mode", () => {
   it("accepts a compact prop on the file manager session surface", () => {
     expect(fileManagerSessionSurface).toContain("compact?: boolean");
     expect(fileManagerSessionSurface).toContain(':compact="compact"');
+  });
+
+  it("passes the session asset so compact mode can upgrade into the professional workbench", () => {
+    expect(fileManagerSessionSurface).toContain(":source-asset=");
+    expect(fileManagementIndex).toContain("sourceAsset?: FileWorkspaceSourceAsset | null");
+    expect(fileManagementIndex).toContain("openProfessionalWorkbench");
+    expect(fileManagementIndex).toContain('v-if="compact"');
+    expect(fileManagementIndex).toContain("koko.fileManagement.openProfessional");
   });
 
   it("hides dual-remote chrome and feature tour in compact mode", () => {
@@ -89,12 +110,45 @@ describe("sftp right-panel compact mode", () => {
     );
     expect(fileManagementPane).toContain("if (canTransferFiles.value)");
     expect(fileManagementPane).toContain('label: t("koko.fileManagement.sendTo")');
-    expect(fileManagementPane).toContain('v-if="canTransferFiles && transferableEntries.length"');
+    expect(fileManagementPane).toContain(':can-send="canTransferFiles"');
+    expect(filePaneSelectionBar).toContain('v-if="canSend && transferableCount"');
     expect(fileManagementPane).toContain(":draggable=\"canTransferFiles && !entry.is_dir && entry.name !== '..'\"");
     // Compact still keeps browse + basic mutations.
     expect(fileManagementPane).toContain('label: t("koko.actions.download")');
     expect(fileManagementPane).toContain('label: t("koko.actions.rename")');
     expect(fileManagementPane).toContain('label: t("koko.actions.delete")');
+  });
+});
+
+describe("sftp local professional pane", () => {
+  it("supports dense list, multi-select, shortcuts, and local CRUD", () => {
+    expect(fileManagementLocalPane).toContain("selectAllState");
+    expect(fileManagementLocalPane).toContain("useSftpPaneSelection");
+    expect(fileManagementLocalPane).toContain("quickPaths");
+    expect(fileManagementLocalPane).toContain("revealInSystem");
+    expect(fileManagementLocalPane).toContain("createDirectory");
+    expect(fileManagementLocalPane).toContain("renameEntry");
+    expect(fileManagementLocalPane).toContain("dropSameEndpoint");
+    expect(fileManagementLocalPane).toContain("sftp-file-row--highlight");
+  });
+});
+
+describe("sftp professional workbench", () => {
+  it("defaults the global workbench to local-left without instructional chrome", () => {
+    expect(defaultGlobalLeftPaneId(true)).toBe("local");
+    expect(defaultGlobalLeftPaneId(false)).toBe("web-upload");
+    expect(fileManagementIndex).toContain("useSftpWorkspacePanes");
+    expect(fileManagementIndex).toContain("initializeGlobalWorkspace");
+    expect(fileManagementIndex).not.toContain("workbenchHint");
+    expect(fileManagementIndex).not.toContain("rightEmptyHint");
+  });
+
+  it("keeps the transfer center on the local pane header", () => {
+    expect(fileManagementIndex).toContain(
+      '<KokoSftpTransferCenter v-if="side === \'left\'" ref="transferCenterRef" prominent />'
+    );
+    expect(transferCenterComponent).toContain("prominent?: boolean");
+    expect(transferCenterComponent).toContain("is-prominent");
   });
 });
 

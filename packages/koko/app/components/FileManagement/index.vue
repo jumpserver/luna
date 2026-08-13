@@ -1,54 +1,18 @@
 <script setup lang="ts">
-import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
-import type { KokoSftpAsset } from "@jumpserver/koko/host";
-import type { SftpFileOperations } from "#koko/composables/sftp/protocol";
-import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
-import type { FileTransferConflictPolicy, FileTransferEndpointRef } from "~/shared/file-transfer/types";
-import { connectorSessionKey, resolveDevHost } from "@jumpserver/connectors-core";
-import { useKokoHostAdapter } from "@jumpserver/koko/host";
+import type {
+  FileWorkspaceSourceAsset,
+  SftpLocalPaneHandle,
+  SftpRemotePaneHandle,
+  SftpTransferCenterHandle
+} from "#koko/composables/sftp/file-manager/workspaceTypes";
 import prettyBytes from "pretty-bytes";
 import KokoLocalFileManagementPane from "#koko/components/FileManagement/localPane.vue";
 import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
 import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
 import KokoWebUploadPane from "#koko/components/FileManagement/webUploadPane.vue";
+import { useSftpTransferCoordinator } from "#koko/composables/sftp/file-manager/useSftpTransferCoordinator";
+import { useSftpWorkspacePanes } from "#koko/composables/sftp/file-manager/useSftpWorkspacePanes";
 import { useSftpTour } from "#koko/composables/sftp/useSftpTour";
-import { buildSftpDistributionGroups } from "#koko/utils/sftpDistribution";
-import { useFileTransferStore } from "~/store/modules/fileTransfer";
-
-interface RemotePane {
-  id: string;
-  side: "left" | "right";
-  context: ConnectorSessionContext;
-  organizationName: string;
-  assetName: string;
-  transferEndpoint: FileTransferEndpointRef;
-  selection: SftpFileEntry | null;
-}
-
-interface SftpTransferDropPayload {
-  sourceEndpoint: FileTransferEndpointRef;
-  sourcePath: string;
-  sourceSelectionRevision: number;
-  entries: Array<Pick<SftpFileEntry, "name" | "size">>;
-  destinationPath: string;
-}
-
-type SftpTransferSourcePayload = Omit<SftpTransferDropPayload, "destinationPath">;
-
-interface DistributionTargetOption {
-  id: string;
-  endpoint: FileTransferEndpointRef;
-  organizationName: string;
-  assetName: string;
-  destinationPath: string;
-  connected: boolean;
-}
-
-interface TransferPane {
-  manager: {
-    operations: Pick<SftpFileOperations, "readFile" | "uploadBlob">;
-  };
-}
 
 const props = defineProps<{
   sftpToken?: string;
@@ -56,552 +20,132 @@ const props = defineProps<{
   global?: boolean;
   /** Single-pane lightweight mode for the SSH right-panel SFTP surface. */
   compact?: boolean;
+  /** Asset that owns the primary SFTP session (for upgrade into the workbench). */
+  sourceAsset?: FileWorkspaceSourceAsset | null;
 }>();
 
 const emit = defineEmits<{ reconnect: [] }>();
 
 const { t } = useI18n();
+const localePath = useLocalePath();
 const sftpTour = useSftpTour();
-const toast = useToast();
 const { addErrorToast: showErrorToast } = useErrorToast();
-const fileTransferStore = useFileTransferStore();
-const hostAdapter = useKokoHostAdapter();
-const createSftpSession = hostAdapter.sftp.useSessionCreator();
-
-const providedContext = inject(connectorSessionKey, ref(null));
-const primaryContext = computed<ConnectorSessionContext | null>(() => {
-  const value = unref(providedContext);
-  if (!value || !props.sftpToken) return null;
-  if (value.tokenId === props.sftpToken) return value;
-  return { ...value, tokenId: props.sftpToken };
-});
-const primaryTransferEndpoint = computed<FileTransferEndpointRef | undefined>(() => {
-  if (!primaryContext.value) return undefined;
-  return {
-    id: `sftp:${primaryContext.value.tokenId}`,
-    label: t("koko.fileManagement.localSftp")
-  };
-});
-
-const paneId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
-
-const dualMode = ref(false);
-const remotePanes = ref<RemotePane[]>([]);
-const activeRemoteId = ref<string | null>(null);
-const connectModalOpen = ref(false);
-const connectSide = ref<"left" | "right">("left");
-const remoteAssetSearch = ref("");
-const remoteConnecting = ref(false);
-const transferring = ref(false);
-const sendModalOpen = ref(false);
-const sendSource = ref<SftpTransferSourcePayload | null>(null);
-const sendTargetSearch = ref("");
-const selectedSendTargetIds = ref<string[]>([]);
-const sendTargetPaths = ref<Record<string, string>>({});
-const sendConflictPolicy = ref<FileTransferConflictPolicy>("ask");
-const sendFilesOpen = ref(false);
-let tourTimer: ReturnType<typeof setTimeout> | undefined;
-
-const terminalTransferStatuses = new Set(["completed", "skipped", "failed", "canceled"]);
-
-// 操作跟踪接口：记录传输操作的元数据
-interface TransferOperationTracking {
-  sourceEndpoint: FileTransferEndpointRef;
-  sourcePath: string;
-  sourceSelectionRevision: number;
-  batchIds: string[];
-  expectedTaskCount: number; // 期望的任务总数
-  createdAt: number; // 创建时间戳，用于超时清理
-}
-
-const pendingSelectionClears = new Map<string, TransferOperationTracking>();
-
-// 分发历史记录：用于智能目标推荐
-const distributionHistory = useLocalStorage<Record<string, string[]>>("sftp-distribution-history", {});
-
-const primaryPaneRef = ref<InstanceType<typeof KokoFileManagementPane> | null>(null);
-const transferCenterRef = ref<InstanceType<typeof KokoSftpTransferCenter> | null>(null);
-const remotePaneRefs = ref<Record<string, InstanceType<typeof KokoFileManagementPane> | null>>({});
-const localSelection = ref<SftpFileEntry | null>(null);
-const localPaneRef = ref<InstanceType<typeof KokoLocalFileManagementPane> | null>(null);
-
-const globalActiveIds = reactive<{ left: string | null; right: string | null }>({ left: null, right: null });
-const panesForSide = (side: "left" | "right") => remotePanes.value.filter((pane) => pane.side === side);
-const activePaneForSide = (side: "left" | "right") =>
-  remotePanes.value.find((pane) => pane.id === globalActiveIds[side]) || null;
-const currentOrgId = computed(() => hostAdapter.sftp.currentOrganization.value?.id || "");
-const currentOrgLabel = computed(
-  () => hostAdapter.sftp.currentOrganization.value?.name || t("koko.fileManagement.selectOrganization")
-);
-const sendTargetOptions = computed<DistributionTargetOption[]>(() => {
-  const sourceId = sendSource.value?.sourceEndpoint.id;
-  const options: DistributionTargetOption[] = [];
-
-  if (primaryTransferEndpoint.value && primaryTransferEndpoint.value.id !== sourceId) {
-    options.push({
-      id: "primary",
-      endpoint: primaryTransferEndpoint.value,
-      organizationName: currentOrgLabel.value,
-      assetName: t("koko.fileManagement.localSftp"),
-      destinationPath: primaryPaneRef.value?.manager.currentPath.value || "/",
-      connected: Boolean(primaryPaneRef.value?.manager.connected.value)
-    });
-  }
-
-  for (const pane of remotePanes.value) {
-    if (pane.transferEndpoint.id === sourceId) continue;
-    const paneRef = remotePaneRefs.value[pane.id];
-    options.push({
-      id: pane.id,
-      endpoint: pane.transferEndpoint,
-      organizationName: pane.organizationName,
-      assetName: pane.assetName,
-      destinationPath: paneRef?.manager.currentPath.value || "/",
-      connected: Boolean(paneRef?.manager.connected.value)
-    });
-  }
-
-  return options;
-});
-const filteredSendTargetOptions = computed(() => {
-  const query = sendTargetSearch.value.trim().toLowerCase();
-  if (!query) return sendTargetOptions.value;
-  return sendTargetOptions.value.filter((target) =>
-    `${target.organizationName} ${target.assetName} ${target.endpoint.label}`.toLowerCase().includes(query)
-  );
-});
-const sendFileCount = computed(() => sendSource.value?.entries.length || 0);
-const sendTotalBytes = computed(() =>
-  (sendSource.value?.entries || []).reduce((total, entry) => {
-    const size = Number(entry.size);
-    return total + (Number.isFinite(size) && size >= 0 ? size : 0);
-  }, 0)
-);
-const selectedSendTargets = computed(() =>
-  sendTargetOptions.value.filter((target) => selectedSendTargetIds.value.includes(target.id) && target.connected)
-);
-const selectedSendTotalBytes = computed(() => sendTotalBytes.value * selectedSendTargets.value.length);
-
-watch(
-  () => fileTransferStore.tasks.map((task) => `${task.id}:${task.status}`),
-  () => {
-    const now = Date.now();
-    const staleThreshold = 5 * 60 * 1000; // 5分钟超时
-
-    for (const [operationId, pending] of pendingSelectionClears) {
-      const batchIds = new Set(pending.batchIds);
-      const tasks = fileTransferStore.tasks.filter((task) => batchIds.has(task.batchId));
-
-      // 统计终态任务数
-      const terminalTasks = tasks.filter((task) => terminalTransferStatuses.has(task.status));
-      const terminalCount = terminalTasks.length;
-
-      // 判断是否所有任务都已完成（达到终态）
-      // 情况1: 任务数匹配期望值且全部终态
-      // 情况2: 操作已超时（防止任务丢失导致永久等待）
-      const allTasksTerminated = terminalCount >= pending.expectedTaskCount;
-      const isStale = now - pending.createdAt > staleThreshold;
-
-      if (!allTasksTerminated && !isStale) continue;
-
-      // 开发模式下输出诊断信息
-      if (import.meta.dev && isStale) {
-        console.warn(
-          `[SFTP Transfer] Operation ${operationId} is stale (${terminalCount}/${pending.expectedTaskCount} tasks terminated)`
-        );
-      }
-
-      // 计算哪些文件在所有目标上都成功了
-      const sourceNames = [...new Set(tasks.map((task) => task.source.name))];
-      const completedNames = sourceNames.filter((name) =>
-        tasks.filter((task) => task.source.name === name).every((task) => task.status === "completed")
-      );
-
-      const sourcePane =
-        primaryTransferEndpoint.value?.id === pending.sourceEndpoint.id
-          ? primaryPaneRef.value
-          : remotePaneRefs.value[
-              remotePanes.value.find((pane) => pane.transferEndpoint.id === pending.sourceEndpoint.id)?.id || ""
-            ];
-
-      // 清除选择状态
-      sourcePane?.clearTransferredSelection(completedNames, pending.sourcePath, pending.sourceSelectionRevision);
-      pendingSelectionClears.delete(operationId);
-    }
-  }
-);
-
-// 性能监控（开发模式）
-if (import.meta.dev) {
-  watch(
-    () => fileTransferStore.tasks.length,
-    (count) => {
-      if (count > 0 && count % 100 === 0) {
-        console.log(`[SFTP Transfer] Active tasks: ${count}`);
-      }
-      if (count > 500) {
-        console.warn(`[SFTP Transfer] High task count (${count}) may impact performance`);
-      }
-    }
-  );
-}
+const translate = (key: string, params?: Record<string, unknown>) => String(params ? t(key, params) : t(key));
 
 function addErrorToast(title: string, error: unknown) {
   showErrorToast({ title, error });
 }
 
-function setRemotePaneRef(id: string, el: unknown) {
-  remotePaneRefs.value[id] = (el as InstanceType<typeof KokoFileManagementPane> | null) || null;
-}
+const primaryPaneRef = ref<SftpRemotePaneHandle | null>(null);
+const transferCenterRef = ref<SftpTransferCenterHandle | null>(null);
+const localPaneRef = ref<SftpLocalPaneHandle | null>(null);
+const focusedSide = ref<"left" | "right">("left");
+let tourTimer: ReturnType<typeof setTimeout> | undefined;
 
-async function buildSftpContext(assetId: string, tokenId: string, tabId: string): Promise<ConnectorSessionContext> {
-  let endpointUrl = resolveDevHost("koko") || hostAdapter.getWindowOrigin();
-  if (!import.meta.dev) {
-    const endpoint = await hostAdapter.getSmartEndpoint(
-      { protocol: "sftp", assetId, token: tokenId },
-      currentOrgId.value
-    );
-    const port = endpoint.https_port || endpoint.port;
-    const scheme = endpoint.https_port ? "https" : "http";
-    const resolved =
-      endpoint.value ||
-      (endpoint.host ? (port ? `${scheme}://${endpoint.host}:${port}` : `${scheme}://${endpoint.host}`) : "");
-    if (!resolved) throw new Error(t("koko.fileManagement.endpointUnavailable"));
+const workspace = useSftpWorkspacePanes({
+  sftpToken: () => props.sftpToken,
+  global: () => props.global,
+  translate,
+  showError: addErrorToast
+});
+const {
+  activePaneForSide,
+  activeRemoteId,
+  assetTree,
+  connectModalOpen,
+  connectRemoteAsset,
+  currentOrgLabel,
+  disconnectAllRemotes,
+  dualMode,
+  focusRemotePane,
+  globalActiveIds,
+  initializeGlobalWorkspace,
+  isTauriRuntime,
+  openRemoteConnect,
+  organizationSelector,
+  panesForSide,
+  pendingPreconnect,
+  preconnecting,
+  preconnectingName,
+  primaryContext,
+  primaryTransferEndpoint,
+  recentConnections,
+  reconnectRecent,
+  remoteAssetSearch,
+  remoteConnecting,
+  remotePaneRefs,
+  remotePanes,
+  removeRemotePane,
+  setRemotePaneRef,
+  toggleDualMode
+} = workspace;
 
-    if (hostAdapter.isTauriRuntime()) {
-      endpointUrl = resolved;
-    } else {
-      const resolvedUrl = new URL(resolved);
-      const isLoopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(resolvedUrl.hostname);
-      const hostOrigin = hostAdapter.getWindowOrigin();
-      const samePort = (resolvedUrl.port || "") === new URL(hostOrigin).port;
-      endpointUrl = isLoopback && !samePort ? hostOrigin : resolved;
-    }
+const transfer = useSftpTransferCoordinator({
+  activePaneForSide,
+  activeRemoteId,
+  currentOrgLabel,
+  globalActiveIds,
+  primaryPaneRef,
+  primaryTransferEndpoint,
+  remotePaneRefs,
+  remotePanes,
+  localPaneRef,
+  transferCenterRef,
+  translate,
+  showError: addErrorToast
+});
+const {
+  activeTransferCount,
+  filteredSendTargetOptions,
+  handleCrossPaneDrop,
+  highlightedNames,
+  localSelection,
+  localSelections,
+  mountTransferEndpoint,
+  openSendModal,
+  queueSftpTransfer,
+  reconnectTarget,
+  remotePaneConnected,
+  selectAllOnlineTargets,
+  selectedSendTargetIds,
+  selectedSendTargets,
+  selectedSendTotalBytes,
+  sendConflictPolicy,
+  sendFileCount,
+  sendFilesOpen,
+  sendModalOpen,
+  sendSource,
+  sendTargetPaths,
+  sendTargetSearch,
+  sendTotalBytes,
+  startDistribution,
+  targetPath,
+  toggleSendTarget,
+  transferGlobal,
+  transferring,
+  connectTransferEndpoint,
+  unmountTransferEndpoint,
+  uploadWebFiles
+} = transfer;
+
+async function openProfessionalWorkbench() {
+  const assetId = props.sourceAsset?.id;
+  const assetName = props.sourceAsset?.name || assetId || "";
+  const tokenId = props.sftpToken || primaryContext.value?.tokenId;
+
+  if (assetId) {
+    pendingPreconnect.value = {
+      assetId,
+      assetName,
+      tokenId: tokenId || undefined
+    };
   }
 
-  let ticket = "";
-  try {
-    ticket = String((await hostAdapter.createTicket({ baseUrl: endpointUrl, tokenId })).ticket || "");
-  } catch (cause) {
-    if (hostAdapter.isTauriRuntime()) throw cause;
-  }
-
-  return { component: "koko", tokenId, ticket, endpointUrl, tabId };
-}
-
-function openRemoteConnect(side: "left" | "right" = "right") {
-  dualMode.value = true;
-  connectSide.value = side;
-  remoteAssetSearch.value = "";
-  connectModalOpen.value = true;
-}
-
-function disconnectAllRemotes() {
-  remotePanes.value = [];
-  remotePaneRefs.value = {};
-  activeRemoteId.value = null;
-  dualMode.value = false;
-}
-
-function removeRemotePane(id: string) {
-  const removed = remotePanes.value.find((pane) => pane.id === id);
-  remotePanes.value = remotePanes.value.filter((pane) => pane.id !== id);
-  delete remotePaneRefs.value[id];
-  if (activeRemoteId.value === id) activeRemoteId.value = remotePanes.value[0]?.id ?? null;
-  if (removed && globalActiveIds[removed.side] === id) {
-    globalActiveIds[removed.side] = panesForSide(removed.side)[0]?.id ?? null;
-  }
-}
-
-function toggleDualMode() {
-  if (dualMode.value) {
-    dualMode.value = false;
-    return;
-  }
-  if (remotePanes.value.length) {
-    dualMode.value = true;
-    return;
-  }
-  openRemoteConnect();
-}
-
-function focusRemotePane(id: string) {
-  activeRemoteId.value = id;
-}
-
-function activeTransferCount(endpointId: string) {
-  return fileTransferStore.tasks.filter(
-    (task) => task.destinationEndpoint.id === endpointId && !terminalTransferStatuses.has(task.status)
-  ).length;
-}
-
-function targetPath(target: DistributionTargetOption) {
-  return sendTargetPaths.value[target.id] ?? target.destinationPath;
-}
-
-function openSendModal(payload: SftpTransferSourcePayload) {
-  sendSource.value = payload;
-  sendTargetSearch.value = "";
-  sendConflictPolicy.value = "ask";
-  sendFilesOpen.value = false;
-  sendTargetPaths.value = Object.fromEntries(
-    sendTargetOptions.value.map((target) => [target.id, target.destinationPath])
-  );
-
-  // 智能目标推荐：基于历史记录
-  const sourceId = payload.sourceEndpoint.id;
-  const frequentTargets = distributionHistory.value[sourceId] || [];
-  const recommendedTargets = sendTargetOptions.value.filter(
-    (target) => frequentTargets.includes(target.id) && target.connected
-  );
-
-  // 如果有历史推荐，使用推荐目标；否则使用当前激活的目标
-  if (recommendedTargets.length > 0) {
-    selectedSendTargetIds.value = recommendedTargets.map((t) => t.id);
-  } else {
-    const activeTarget = sendTargetOptions.value.find(
-      (target) => target.id === activeRemoteId.value && target.connected
-    );
-    selectedSendTargetIds.value = activeTarget ? [activeTarget.id] : [];
-  }
-
-  sendModalOpen.value = true;
-}
-
-function selectAllOnlineTargets() {
-  selectedSendTargetIds.value = sendTargetOptions.value.filter((target) => target.connected).map((target) => target.id);
-}
-
-function toggleSendTarget(id: string, selected: boolean) {
-  selectedSendTargetIds.value = selected
-    ? [...new Set([...selectedSendTargetIds.value, id])]
-    : selectedSendTargetIds.value.filter((targetId) => targetId !== id);
-}
-
-function reconnectTarget(target: DistributionTargetOption) {
-  const pane = target.id === "primary" ? primaryPaneRef.value : remotePaneRefs.value[target.id];
-  void pane?.manager.retry.reconnect();
-}
-
-function startDistribution(event?: MouseEvent) {
-  const source = sendSource.value;
-  if (!source || !selectedSendTargets.value.length) return;
-
-  const animationOrigin =
-    event?.currentTarget instanceof HTMLElement ? event.currentTarget.getBoundingClientRect() : undefined;
-
-  const distributionId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
-  const groups = buildSftpDistributionGroups({
-    ...source,
-    distributionId,
-    conflictPolicy: sendConflictPolicy.value,
-    targets: selectedSendTargets.value.map((target) => ({
-      endpoint: target.endpoint,
-      destinationPath: targetPath(target)
-    }))
-  });
-  const batchIds = groups.map((group) => fileTransferStore.enqueueBatch(group.inputs)).filter(Boolean) as string[];
-  if (!batchIds.length) return;
-
-  // 计算期望的任务总数
-  const expectedTaskCount = source.entries.length * selectedSendTargets.value.length;
-
-  // 使用 "dist:" 前缀标识分发操作
-  const operationId = `dist:${distributionId}`;
-  pendingSelectionClears.set(operationId, {
-    sourceEndpoint: source.sourceEndpoint,
-    sourcePath: source.sourcePath,
-    sourceSelectionRevision: source.sourceSelectionRevision,
-    batchIds,
-    expectedTaskCount,
-    createdAt: Date.now()
-  });
-
-  // 记录分发历史（用于智能推荐）
-  const sourceId = source.sourceEndpoint.id;
-  const targetIds = selectedSendTargets.value.map((t) => t.id);
-  distributionHistory.value[sourceId] = targetIds;
-
-  const sourcePane =
-    primaryTransferEndpoint.value?.id === source.sourceEndpoint.id
-      ? primaryPaneRef.value
-      : remotePaneRefs.value[
-          remotePanes.value.find((pane) => pane.transferEndpoint.id === source.sourceEndpoint.id)?.id || ""
-        ];
-  sourcePane?.clearSelection();
-  sendModalOpen.value = false;
-  transferCenterRef.value?.signalQueued(animationOrigin);
-}
-
-async function connectRemoteAsset(asset: KokoSftpAsset) {
-  remoteConnecting.value = true;
-  try {
-    const connectAsset = await hostAdapter.sftp.prepareAsset(asset);
-
-    const declaredProtocols = (connectAsset.permedProtocols || [])
-      .map((item) =>
-        String(item?.name || "")
-          .trim()
-          .toLowerCase()
-      )
-      .filter(Boolean);
-
-    if (declaredProtocols.length > 0 && !declaredProtocols.includes("sftp")) {
-      toast.add({
-        title: t("koko.fileManagement.unsupportedAsset"),
-        description: t("koko.fileManagement.unsupportedAssetDescription"),
-        color: "warning",
-        icon: "i-lucide-circle-alert"
-      });
-      return;
-    }
-
-    const { tokenId } = await createSftpSession(connectAsset);
-    const id = paneId();
-    remotePanes.value.push({
-      id,
-      side: props.global ? connectSide.value : "right",
-      context: await buildSftpContext(connectAsset.id, tokenId, `remote-sftp:${connectAsset.id}:${id}`),
-      organizationName: currentOrgLabel.value,
-      assetName: connectAsset.name,
-      transferEndpoint: {
-        id: `sftp:${tokenId}`,
-        label: `${currentOrgLabel.value} - ${connectAsset.name}`
-      },
-      selection: null
-    });
-    activeRemoteId.value = id;
-    if (props.global) globalActiveIds[connectSide.value] = id;
-    connectModalOpen.value = false;
-
-    toast.add({ title: t("koko.fileManagement.remoteConnected"), color: "success" });
-  } catch (error) {
-    addErrorToast(t("koko.fileManagement.remoteConnectFailed"), error);
-  } finally {
-    remoteConnecting.value = false;
-  }
-}
-
-function queueSftpTransfer(payload: SftpTransferDropPayload, destination: FileTransferEndpointRef | undefined) {
-  if (!destination || payload.sourceEndpoint.id === destination.id) return;
-  if (!payload.entries.length) return;
-
-  const sourceBasePath = payload.sourcePath.replace(/\/$/, "") || "/";
-  const inputs = payload.entries
-    .map((entry) => ({ ...entry, size: Number(entry.size) }))
-    .filter((entry) => entry.name && Number.isFinite(entry.size) && entry.size >= 0)
-    .map((entry) => ({
-      batchId: "",
-      sourceEndpoint: payload.sourceEndpoint,
-      destinationEndpoint: destination,
-      source: {
-        name: entry.name,
-        size: entry.size,
-        path: `${sourceBasePath}/${entry.name}`.replace(/\/+/g, "/")
-      },
-      destinationPath: payload.destinationPath,
-      conflictPolicy: "ask" as const
-    }));
-
-  if (!inputs.length) return;
-
-  const batchId = fileTransferStore.enqueueBatch(inputs);
-  if (!batchId) return;
-
-  // 使用 "single:" 前缀标识单个传输操作
-  const operationId = `single:${batchId}`;
-  pendingSelectionClears.set(operationId, {
-    sourceEndpoint: payload.sourceEndpoint,
-    sourcePath: payload.sourcePath,
-    sourceSelectionRevision: payload.sourceSelectionRevision,
-    batchIds: [batchId],
-    expectedTaskCount: inputs.length,
-    createdAt: Date.now()
-  });
-}
-
-async function transferEntry(fromPane: TransferPane | null, toPane: TransferPane | null, entry: SftpFileEntry | null) {
-  if (!fromPane || !toPane || !entry || transferring.value) return;
-  if (entry.is_dir) {
-    toast.add({ title: t("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
-    return;
-  }
-
-  transferring.value = true;
-  try {
-    const blob = await fromPane.manager.operations.readFile(entry);
-    await toPane.manager.operations.uploadBlob(entry.name, blob);
-    toast.add({ title: t("koko.fileManagement.transferSuccess"), color: "success" });
-  } catch (error) {
-    addErrorToast(t("koko.fileManagement.transferFailed"), error);
-  } finally {
-    transferring.value = false;
-  }
-}
-
-async function transferGlobal(direction: "left-to-right" | "right-to-left") {
-  const sourceSide = direction === "left-to-right" ? "left" : "right";
-  const targetSide = sourceSide === "left" ? "right" : "left";
-  const source = activePaneForSide(sourceSide);
-  const target = activePaneForSide(targetSide);
-  const sourceIsLocal = sourceSide === "left" && globalActiveIds.left === "local";
-  const targetIsLocal = targetSide === "left" && globalActiveIds.left === "local";
-  const sourcePane = sourceIsLocal ? localPaneRef.value : source ? remotePaneRefs.value[source.id] || null : null;
-  const destinationPane = targetIsLocal ? localPaneRef.value : target ? remotePaneRefs.value[target.id] || null : null;
-  const sourceEntry = sourceIsLocal ? localSelection.value : source?.selection || null;
-
-  if (!sourceIsLocal && !targetIsLocal && source && target && sourceEntry && !sourceEntry.is_dir) {
-    const payload = remotePaneRefs.value[source.id]?.transferSourcePayload?.();
-    if (payload) {
-      queueSftpTransfer(
-        { ...payload, destinationPath: remotePaneRefs.value[target.id]?.manager.currentPath.value || "/" },
-        target.transferEndpoint
-      );
-    }
-    return;
-  }
-
-  await transferEntry(sourcePane, destinationPane, sourceEntry);
-}
-
-async function uploadWebFiles(files: File[]) {
-  const target = activePaneForSide("right");
-  const targetPane = target ? remotePaneRefs.value[target.id] : null;
-
-  if (!targetPane) {
-    toast.add({ title: t("koko.fileManagement.selectRemoteTarget"), color: "warning" });
-    return;
-  }
-
-  if (transferring.value) return;
-
-  transferring.value = true;
-  let success = 0;
-
-  try {
-    for (const file of files) {
-      try {
-        await targetPane.manager.operations.uploadBlob(file.name, file);
-        success += 1;
-      } catch {
-        // Continue with the remaining files and report the aggregate result.
-      }
-    }
-
-    toast.add({
-      title:
-        success === files.length
-          ? t("koko.fileManagement.uploadedFiles", { count: success })
-          : t("koko.fileManagement.uploadedFilesPartial", { success, total: files.length }),
-      color: success === files.length ? "success" : "warning"
-    });
-  } finally {
-    transferring.value = false;
-  }
+  await navigateTo(localePath({ path: "/files" }));
 }
 
 onMounted(() => {
-  if (props.global) globalActiveIds.left = hostAdapter.isTauriRuntime() ? "local" : "web-upload";
+  initializeGlobalWorkspace();
   // Compact right-panel SFTP is intentionally single-pane and tour-free.
   if (!props.global && !props.compact && !props.showEmpty) {
     tourTimer = setTimeout(() => void sftpTour.startOnce(), 650);
@@ -613,9 +157,14 @@ onBeforeUnmount(() => {
   sftpTour.destroy();
 });
 
-watch(currentOrgId, () => {
-  remoteAssetSearch.value = "";
-});
+function onWorkbenchKeydown(event: KeyboardEvent) {
+  if (!props.global) return;
+  if (event.key !== "Tab" || event.altKey || event.metaKey || event.ctrlKey) return;
+  const target = event.target as HTMLElement | null;
+  if (target?.closest("input, textarea, [contenteditable='true']")) return;
+  event.preventDefault();
+  focusedSide.value = focusedSide.value === "left" ? "right" : "left";
+}
 </script>
 
 <template>
@@ -633,12 +182,37 @@ watch(currentOrgId, () => {
     class="sftp-file-management flex h-full min-h-0 flex-col"
     :class="{ 'sftp-file-management--compact': compact }"
     data-sftp-tour="workspace"
+    @keydown="onWorkbenchKeydown"
   >
+    <div v-if="compact" class="flex shrink-0 items-center justify-between gap-2 border-b border-default px-2 py-1">
+      <span class="min-w-0 truncate text-[11px] text-muted">
+        {{ t("koko.fileManagement.lightweightHint") }}
+      </span>
+      <UButton
+        size="xs"
+        color="neutral"
+        variant="soft"
+        icon="i-lucide-arrow-left-right"
+        :label="t('koko.fileManagement.openProfessional')"
+        :title="t('koko.fileManagement.openProfessional')"
+        @click="openProfessionalWorkbench"
+      />
+    </div>
+
     <div
       v-if="!global && !compact"
       class="sftp-file-management__topbar flex shrink-0 items-center justify-between gap-2 border-b border-default"
     >
       <div class="ml-auto flex items-center justify-end gap-1">
+        <UButton
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          icon="i-lucide-arrow-left-right"
+          :label="t('koko.fileManagement.openProfessional')"
+          :title="t('koko.fileManagement.openProfessional')"
+          @click="openProfessionalWorkbench"
+        />
         <UButton
           size="xs"
           color="neutral"
@@ -691,7 +265,7 @@ watch(currentOrgId, () => {
         <div class="flex h-9 shrink-0 items-center gap-1 border-b border-default bg-elevated/50 px-2">
           <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
             <button
-              v-if="side === 'left' && hostAdapter.isTauriRuntime()"
+              v-if="side === 'left' && isTauriRuntime"
               type="button"
               class="flex h-7 min-w-0 items-center gap-1 rounded-md px-2 text-xs"
               :class="globalActiveIds.left === 'local' ? 'bg-accented text-highlighted' : 'text-muted'"
@@ -701,7 +275,7 @@ watch(currentOrgId, () => {
               <span>{{ t("koko.fileManagement.localFiles") }}</span>
             </button>
             <button
-              v-if="side === 'left' && !hostAdapter.isTauriRuntime()"
+              v-if="side === 'left' && !isTauriRuntime"
               type="button"
               class="flex h-7 min-w-0 items-center gap-1 rounded-md px-2 text-xs"
               :class="globalActiveIds.left === 'web-upload' ? 'bg-accented text-highlighted' : 'text-muted'"
@@ -731,18 +305,23 @@ watch(currentOrgId, () => {
             :title="t('koko.fileManagement.addRemoteSftp')"
             @click="openRemoteConnect(side)"
           />
-          <KokoSftpTransferCenter v-if="side === 'left'" ref="transferCenterRef" />
+          <KokoSftpTransferCenter v-if="side === 'left'" ref="transferCenterRef" prominent />
         </div>
 
         <KokoLocalFileManagementPane
-          v-if="side === 'left' && hostAdapter.isTauriRuntime()"
+          v-if="side === 'left' && isTauriRuntime"
           v-show="globalActiveIds.left === 'local'"
           ref="localPaneRef"
           class="min-h-0 flex-1"
+          :focused="focusedSide === 'left'"
+          :highlighted-names="highlightedNames.left"
           @select="localSelection = $event"
+          @selection-change="localSelections = $event"
+          @focus="focusedSide = 'left'"
+          @transfer-drop="handleCrossPaneDrop($event, { id: 'local:fs', label: t('koko.fileManagement.localFiles') })"
         />
         <KokoWebUploadPane
-          v-if="side === 'left' && !hostAdapter.isTauriRuntime()"
+          v-if="side === 'left' && !isTauriRuntime"
           v-show="globalActiveIds.left === 'web-upload'"
           class="min-h-0 flex-1"
           @upload="uploadWebFiles"
@@ -756,32 +335,67 @@ watch(currentOrgId, () => {
             class="min-h-0 flex-1"
             :context="pane.context"
             :transfer-endpoint="pane.transferEndpoint"
+            :focused="focusedSide === side && globalActiveIds[side] === pane.id"
+            :highlighted-names="highlightedNames[side]"
             @select="pane.selection = $event"
+            @focus="focusedSide = side"
             @send="openSendModal"
-            @transfer-drop="queueSftpTransfer($event, pane.transferEndpoint)"
+            @transfer-drop="handleCrossPaneDrop($event, pane.transferEndpoint)"
+            @transfer-endpoint-mounted="mountTransferEndpoint"
+            @transfer-endpoint-connected="connectTransferEndpoint"
+            @transfer-endpoint-unmounted="unmountTransferEndpoint"
           />
         </template>
         <div
           v-else-if="
             !(
               side === 'left' &&
-              (hostAdapter.isTauriRuntime() ? globalActiveIds.left === 'local' : globalActiveIds.left === 'web-upload')
+              (isTauriRuntime ? globalActiveIds.left === 'local' : globalActiveIds.left === 'web-upload')
             )
           "
           class="grid min-h-0 flex-1 place-items-center p-6 text-center text-sm text-muted"
         >
           <div class="space-y-3">
-            <UIcon name="i-lucide-server" class="mx-auto size-7 opacity-60" />
+            <UIcon
+              :name="preconnecting && side === 'right' ? 'i-lucide-loader-circle' : 'i-lucide-server'"
+              class="mx-auto size-7 opacity-60"
+              :class="preconnecting && side === 'right' ? 'animate-spin' : ''"
+            />
             <p>
               {{
-                side === "left" && hostAdapter.isTauriRuntime()
-                  ? t("koko.fileManagement.preparingLocalFolder")
-                  : t("koko.fileManagement.connectSftpServer")
+                preconnecting && side === "right"
+                  ? t("koko.fileManagement.preconnectingAsset", { name: preconnectingName })
+                  : side === "left" && isTauriRuntime
+                    ? t("koko.fileManagement.preparingLocalFolder")
+                    : t("koko.fileManagement.connectSftpServer")
               }}
             </p>
-            <UButton size="sm" color="primary" variant="soft" icon="i-lucide-plus" @click="openRemoteConnect(side)">
+            <UButton
+              v-if="!(preconnecting && side === 'right')"
+              size="sm"
+              color="primary"
+              variant="soft"
+              icon="i-lucide-plus"
+              @click="openRemoteConnect(side)"
+            >
               {{ t("koko.fileManagement.connectRemoteSftp") }}
             </UButton>
+            <div
+              v-if="side === 'right' && !preconnecting && recentConnections.length"
+              class="mx-auto flex max-w-xs flex-wrap justify-center gap-1.5 pt-1"
+            >
+              <UButton
+                v-for="item in recentConnections.slice(0, 5)"
+                :key="item.assetId"
+                size="xs"
+                color="neutral"
+                variant="soft"
+                icon="i-lucide-history"
+                :label="item.assetName"
+                class="max-w-full"
+                @click="reconnectRecent(item)"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -796,7 +410,9 @@ watch(currentOrgId, () => {
             variant="soft"
             icon="i-lucide-arrow-right"
             :disabled="
-              !(globalActiveIds.left === 'local' ? localSelection : activePaneForSide('left')?.selection) ||
+              !(globalActiveIds.left === 'local'
+                ? localSelections.length || localSelection
+                : activePaneForSide('left')?.selection) ||
               !activePaneForSide('right') ||
               transferring
             "
@@ -833,6 +449,9 @@ watch(currentOrgId, () => {
         :title="!compact && dualMode ? t('koko.fileManagement.localSftp') : undefined"
         @send="openSendModal"
         @transfer-drop="queueSftpTransfer($event, primaryTransferEndpoint)"
+        @transfer-endpoint-mounted="mountTransferEndpoint"
+        @transfer-endpoint-connected="connectTransferEndpoint"
+        @transfer-endpoint-unmounted="unmountTransferEndpoint"
       />
 
       <div v-show="!compact && dualMode" class="w-px shrink-0 bg-(--app-border)" />
@@ -857,7 +476,7 @@ watch(currentOrgId, () => {
               >
                 <span
                   class="size-1.5 shrink-0 rounded-full"
-                  :class="remotePaneRefs[pane.id]?.manager.connected.value ? 'bg-success' : 'bg-warning'"
+                  :class="remotePaneConnected(pane.id) ? 'bg-success' : 'bg-warning'"
                 />
                 <span class="min-w-0 flex-1 truncate">{{ pane.assetName }}</span>
                 <UBadge v-if="activeTransferCount(pane.transferEndpoint.id)" color="primary" variant="subtle" size="xs">
@@ -890,6 +509,9 @@ watch(currentOrgId, () => {
               "
               @send="openSendModal"
               @transfer-drop="queueSftpTransfer($event, pane.transferEndpoint)"
+              @transfer-endpoint-mounted="mountTransferEndpoint"
+              @transfer-endpoint-connected="connectTransferEndpoint"
+              @transfer-endpoint-unmounted="unmountTransferEndpoint"
             />
           </div>
         </div>
@@ -915,7 +537,7 @@ watch(currentOrgId, () => {
           <div class="flex items-center justify-between gap-3 px-2.5 py-1 text-[11px] text-muted">
             <span>{{ t("koko.fileManagement.currentOrganization") }}</span>
             <div class="min-w-0 max-w-55 flex-1">
-              <component :is="hostAdapter.sftp.organizationSelector" class="justify-end" />
+              <component :is="organizationSelector" class="justify-end" />
             </div>
           </div>
           <UInput
@@ -923,8 +545,24 @@ watch(currentOrgId, () => {
             icon="i-lucide-search"
             :placeholder="t('koko.fileManagement.searchAssets')"
           />
+          <div v-if="recentConnections.length" class="space-y-1.5">
+            <p class="px-0.5 text-[11px] text-muted">{{ t("koko.fileManagement.recentConnections") }}</p>
+            <div class="flex flex-wrap gap-1.5">
+              <UButton
+                v-for="item in recentConnections"
+                :key="`recent-${item.assetId}`"
+                size="xs"
+                color="neutral"
+                variant="soft"
+                icon="i-lucide-history"
+                :label="item.assetName"
+                :loading="remoteConnecting"
+                @click="reconnectRecent(item)"
+              />
+            </div>
+          </div>
           <div class="max-h-72 overflow-y-auto rounded-lg border border-default">
-            <component :is="hostAdapter.sftp.assetTree" :search="remoteAssetSearch" open @select="connectRemoteAsset" />
+            <component :is="assetTree" :search="remoteAssetSearch" open @select="connectRemoteAsset" />
           </div>
         </div>
       </template>
