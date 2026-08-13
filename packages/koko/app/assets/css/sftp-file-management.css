@@ -27,8 +27,7 @@
   min-height: var(--sftp-title-row-height);
 }
 
-.sftp-file-management__topbar,
-.sftp-file-management__machine-tabs {
+.sftp-file-management__topbar {
   padding-inline: 10px;
 }
 
@@ -58,42 +57,6 @@
 .sftp-file-management__actionbar :where(svg) {
   width: var(--sftp-icon-md);
   height: var(--sftp-icon-md);
-}
-
-.sftp-file-management__machine-tab {
-  height: 28px;
-  min-width: 104px;
-  font-size: var(--sftp-font-body);
-}
-
-.sftp-file-management__connect-button {
-  height: 28px;
-  min-height: 28px;
-  flex: none;
-  gap: 3px;
-  border: 1px dashed var(--app-border-strong);
-  border-radius: 5px;
-  padding-inline: 8px;
-  color: var(--app-muted);
-  font-size: var(--sftp-font-body);
-  font-weight: 400;
-}
-
-.sftp-file-management__connect-button:hover {
-  border-color: var(--app-focus-ring);
-  background: var(--app-hover-soft);
-  color: var(--app-fg);
-}
-
-.sftp-file-management__connect-button:focus-visible {
-  border-color: var(--app-focus-ring);
-  outline: 2px solid color-mix(in srgb, var(--app-focus-ring) 28%, transparent);
-  outline-offset: 1px;
-}
-
-.sftp-file-management__connect-button svg {
-  width: 12px;
-  height: 12px;
 }
 
 .sftp-file-management__table thead th {

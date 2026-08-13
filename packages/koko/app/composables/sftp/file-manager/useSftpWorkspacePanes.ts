@@ -50,6 +50,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
   const activeRemoteId = ref<string | null>(null);
   const connectModalOpen = ref(false);
   const connectSide = ref<SftpWorkspaceSide>("left");
+  const openRemoteInCurrentTab = ref(false);
   const remoteAssetSearch = ref("");
   const remoteConnecting = ref(false);
   const preconnecting = ref(false);
@@ -112,6 +113,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
   function openRemoteConnect(side: SftpWorkspaceSide = "right") {
     dualMode.value = true;
     connectSide.value = side;
+    openRemoteInCurrentTab.value = false;
     remoteAssetSearch.value = "";
     connectModalOpen.value = true;
   }
@@ -194,11 +196,13 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     if (!handle) return;
     try {
       await handle.manager.retry.reconnect();
-      await handle.refresh?.();
-      toast.add({ title: options.translate("koko.fileManagement.remoteConnected"), color: "success" });
     } catch (error) {
       options.showError(options.translate("koko.fileManagement.remoteConnectFailed"), error);
     }
+  }
+
+  function markRemotePaneConnected() {
+    toast.add({ title: options.translate("koko.fileManagement.remoteConnected"), color: "success" });
   }
 
   function reorderRemotePanes(side: SftpWorkspaceSide, orderedIds: string[]) {
@@ -214,6 +218,27 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
   function setRemotePanesOrder(side: SftpWorkspaceSide, nextSidePanes: SftpRemotePane[]) {
     const otherSide = remotePanes.value.filter((pane) => pane.side !== side);
     remotePanes.value = side === "left" ? [...nextSidePanes, ...otherSide] : [...otherSide, ...nextSidePanes];
+  }
+
+  function moveRemotePaneToSide(id: string, targetSide: SftpWorkspaceSide) {
+    const pane = remotePanes.value.find((item) => item.id === id);
+    if (!pane || pane.side === targetSide || pane.pinned) return false;
+
+    const sourceSide = pane.side;
+    pane.side = targetSide;
+    const orderedForSide = (side: SftpWorkspaceSide) => {
+      const sidePanes = remotePanes.value.filter((item) => item.side === side);
+      return [...sidePanes.filter((item) => item.pinned), ...sidePanes.filter((item) => !item.pinned)];
+    };
+    remotePanes.value = [...orderedForSide("left"), ...orderedForSide("right")];
+
+    if (globalActiveIds[sourceSide] === id) {
+      globalActiveIds[sourceSide] =
+        panesForSide(sourceSide)[0]?.id ?? (sourceSide === "left" ? defaultGlobalLeftPaneId(isTauriRuntime) : null);
+    }
+    globalActiveIds[targetSide] = id;
+    activeRemoteId.value = id;
+    return true;
   }
 
   function toggleDualMode() {
@@ -232,25 +257,19 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     activeRemoteId.value = id;
   }
 
-  function findRemotePane(assetId: string, side?: SftpWorkspaceSide) {
-    return remotePanes.value.find((pane) => pane.assetId === assetId && (!side || pane.side === side));
-  }
-
   async function attachRemotePane(input: {
     assetId: string;
     assetName: string;
     tokenId: string;
     side: SftpWorkspaceSide;
+    replacePaneId?: string;
   }) {
-    const existing = findRemotePane(input.assetId, input.side);
-    if (existing) {
-      activeRemoteId.value = existing.id;
-      if (toValue(options.global)) globalActiveIds[input.side] = existing.id;
-      return existing.id;
-    }
-
     const id = paneId();
-    remotePanes.value.push({
+    const replacementIndex = remotePanes.value.findIndex(
+      (pane) => pane.id === input.replacePaneId && pane.side === input.side
+    );
+    const replacement = replacementIndex >= 0 ? remotePanes.value[replacementIndex] : null;
+    const nextPane: SftpRemotePane = {
       id,
       side: input.side,
       assetId: input.assetId,
@@ -262,8 +281,14 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
         label: `${currentOrgLabel.value} - ${input.assetName}`
       },
       selection: null,
-      pinned: false
-    });
+      pinned: replacement?.pinned || false
+    };
+    if (replacement) {
+      remotePanes.value.splice(replacementIndex, 1, nextPane);
+      delete remotePaneRefs.value[replacement.id];
+    } else {
+      remotePanes.value.push(nextPane);
+    }
     activeRemoteId.value = id;
     if (toValue(options.global)) globalActiveIds[input.side] = id;
     else dualMode.value = true;
@@ -275,6 +300,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
   }
 
   async function connectRemoteAsset(asset: KokoSftpAsset) {
+    if (remoteConnecting.value) return;
     remoteConnecting.value = true;
     try {
       const connectAsset = await hostAdapter.sftp.prepareAsset(asset);
@@ -289,16 +315,17 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
       }
 
       const side = toValue(options.global) ? connectSide.value : "right";
-      const existing = findRemotePane(connectAsset.id, side);
-      if (existing) {
-        activeRemoteId.value = existing.id;
-        if (toValue(options.global)) globalActiveIds[side] = existing.id;
-        connectModalOpen.value = false;
-        return;
-      }
-
       const { tokenId } = await createSftpSession(connectAsset);
-      await attachRemotePane({ assetId: connectAsset.id, assetName: connectAsset.name, tokenId, side });
+      const replacePaneId = toValue(options.global)
+        ? activePaneForSide(side)?.id
+        : remotePanes.value.find((pane) => pane.id === activeRemoteId.value)?.id;
+      await attachRemotePane({
+        assetId: connectAsset.id,
+        assetName: connectAsset.name,
+        tokenId,
+        side,
+        replacePaneId: openRemoteInCurrentTab.value ? replacePaneId : undefined
+      });
       connectModalOpen.value = false;
       rememberRecentConnection({
         assetId: connectAsset.id,
@@ -307,7 +334,6 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
         organizationName: currentOrgLabel.value,
         lastConnectedAt: Date.now()
       });
-      toast.add({ title: options.translate("koko.fileManagement.remoteConnected"), color: "success" });
     } catch (error) {
       options.showError(options.translate("koko.fileManagement.remoteConnectFailed"), error);
     } finally {
@@ -315,8 +341,8 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     }
   }
 
-  async function reconnectRecent(entry: RecentSftpConnection) {
-    connectSide.value = "right";
+  async function reconnectRecent(entry: RecentSftpConnection, side?: SftpWorkspaceSide) {
+    if (side) connectSide.value = side;
     await connectRemoteAsset({ id: entry.assetId, name: entry.assetName });
   }
 
@@ -339,7 +365,6 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
           tokenId: intent.tokenId,
           side: "right"
         });
-        toast.add({ title: options.translate("koko.fileManagement.remoteConnected"), color: "success" });
         return;
       }
       await connectRemoteAsset({ id: intent.assetId, name: intent.assetName || intent.assetId });
@@ -382,7 +407,9 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     globalActiveIds,
     initializeGlobalWorkspace,
     isTauriRuntime,
+    markRemotePaneConnected,
     openRemoteConnect,
+    openRemoteInCurrentTab,
     organizationSelector,
     panesForSide,
     pendingPreconnect,
@@ -399,6 +426,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     remotePanes,
     removeRemotePane,
     reorderRemotePanes,
+    moveRemotePaneToSide,
     setRemotePaneRef,
     setRemotePanesOrder,
     toggleDualMode,

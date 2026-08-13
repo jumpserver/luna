@@ -57,6 +57,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   const sendModalOpen = ref(false);
   const sendSource = ref<SftpTransferSourcePayload | null>(null);
   const sendTargetSearch = ref("");
+  const selectedRemoteTargetIds = ref<string[]>([]);
   const selectedSendTargetIds = ref<string[]>([]);
   const sendTargetPaths = ref<Record<string, string>>({});
   const sendConflictPolicy = ref<FileTransferConflictPolicy>("ask");
@@ -113,6 +114,14 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     sendTargetOptions.value.filter((target) => selectedSendTargetIds.value.includes(target.id) && target.connected)
   );
   const selectedSendTotalBytes = computed(() => sendTotalBytes.value * selectedSendTargets.value.length);
+
+  watch(
+    () => options.remotePanes.value.map((pane) => pane.id),
+    (paneIds) => {
+      const available = new Set(paneIds);
+      selectedRemoteTargetIds.value = selectedRemoteTargetIds.value.filter((id) => available.has(id));
+    }
+  );
 
   function sourcePaneFor(endpointId: string) {
     if (options.primaryTransferEndpoint.value?.id === endpointId) return options.primaryPaneRef.value;
@@ -188,7 +197,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     return sendTargetPaths.value[target.id] ?? target.destinationPath;
   }
 
-  function openSendModal(payload: SftpTransferSourcePayload) {
+  function openSendModal(payload: SftpTransferSourcePayload, preferredTargetIds = selectedRemoteTargetIds.value) {
     sendSource.value = payload;
     sendTargetSearch.value = "";
     sendConflictPolicy.value = "ask";
@@ -196,11 +205,16 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     sendTargetPaths.value = Object.fromEntries(
       sendTargetOptions.value.map((target) => [target.id, target.destinationPath])
     );
+    const checkedTargets = sendTargetOptions.value.filter(
+      (target) => preferredTargetIds.includes(target.id) && target.connected
+    );
     const frequentTargets = distributionHistory.value[payload.sourceEndpoint.id] || [];
     const recommendedTargets = sendTargetOptions.value.filter(
       (target) => frequentTargets.includes(target.id) && target.connected
     );
-    if (recommendedTargets.length) {
+    if (checkedTargets.length) {
+      selectedSendTargetIds.value = checkedTargets.map((target) => target.id);
+    } else if (recommendedTargets.length) {
       selectedSendTargetIds.value = recommendedTargets.map((target) => target.id);
     } else {
       const activeTarget = sendTargetOptions.value.find(
@@ -221,6 +235,12 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     selectedSendTargetIds.value = selected
       ? [...new Set([...selectedSendTargetIds.value, id])]
       : selectedSendTargetIds.value.filter((targetId) => targetId !== id);
+  }
+
+  function toggleRemoteTarget(id: string, selected: boolean) {
+    selectedRemoteTargetIds.value = selected
+      ? [...new Set([...selectedRemoteTargetIds.value, id])]
+      : selectedRemoteTargetIds.value.filter((targetId) => targetId !== id);
   }
 
   function reconnectTarget(target: SftpDistributionTargetOption) {
@@ -274,6 +294,20 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
       expectedTaskCount: inputs.length,
       createdAt: Date.now()
     });
+  }
+
+  function queueSftpTransferToSelected(payload: SftpTransferDropPayload, destination?: FileTransferEndpointRef) {
+    const checkedTargets = sendTargetOptions.value.filter(
+      (target) => selectedRemoteTargetIds.value.includes(target.id) && target.connected
+    );
+    if (checkedTargets.length) {
+      openSendModal(
+        payload,
+        checkedTargets.map((target) => target.id)
+      );
+      return;
+    }
+    queueSftpTransfer(payload, destination);
   }
 
   function flashHighlight(side: SftpWorkspaceSide, names: string[]) {
@@ -358,6 +392,37 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     return pane ? options.remotePaneRefs.value[pane.id] || null : null;
   }
 
+  function checkedRemotePanes(side?: SftpWorkspaceSide) {
+    return options.remotePanes.value.filter(
+      (pane) =>
+        selectedRemoteTargetIds.value.includes(pane.id) && (!side || pane.side === side) && remotePaneConnected(pane.id)
+    );
+  }
+
+  async function transferLocalEntriesToCheckedRemotes(
+    entries: SftpFileEntry[],
+    sourcePath?: string,
+    sourceSelection?: Pick<SftpTransferSourcePayload, "sourcePath" | "sourceSelectionRevision">
+  ) {
+    const targets = checkedRemotePanes("right");
+    if (!targets.length) return false;
+    const sourcePane = options.localPaneRef.value;
+    if (!sourcePane) return false;
+
+    for (const target of targets) {
+      await transferEntries(
+        sourcePane,
+        options.remotePaneRefs.value[target.id] || null,
+        entries,
+        "right",
+        sourcePath,
+        sourceSelection
+      );
+    }
+    await Promise.all(targets.map((target) => options.remotePaneRefs.value[target.id]?.manager.loadCurrentDirectory()));
+    return true;
+  }
+
   async function handleCrossPaneDrop(payload: SftpTransferDropPayload, destination?: FileTransferEndpointRef) {
     if (!destination || payload.sourceEndpoint.id === destination.id) return;
     const fromLocal = payload.sourceEndpoint.id === LOCAL_ENDPOINT_ID;
@@ -376,6 +441,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
             is_dir: false
           }) satisfies SftpFileEntry
       );
+      if (fromLocal && (await transferLocalEntriesToCheckedRemotes(sourceEntries, payload.sourcePath, payload))) return;
       await transferEntries(
         sourcePane,
         destinationPane,
@@ -386,7 +452,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
       );
       return;
     }
-    queueSftpTransfer(payload, destination);
+    queueSftpTransferToSelected(payload, destination);
   }
 
   async function transferGlobal(direction: "left-to-right" | "right-to-left") {
@@ -406,6 +472,28 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
       : target
         ? options.remotePaneRefs.value[target.id] || null
         : null;
+
+    if (direction === "left-to-right") {
+      const checkedTargets = checkedRemotePanes("right");
+      if (checkedTargets.length) {
+        if (sourceIsLocal) {
+          const entries = localSelections.value.length
+            ? localSelections.value
+            : localSelection.value
+              ? [localSelection.value]
+              : [];
+          await transferLocalEntriesToCheckedRemotes(entries);
+        } else if (source) {
+          const payload = options.remotePaneRefs.value[source.id]?.transferSourcePayload();
+          if (payload)
+            openSendModal(
+              payload,
+              checkedTargets.map((pane) => pane.id)
+            );
+        }
+        return;
+      }
+    }
 
     if (!sourceIsLocal && !targetIsLocal && source && target) {
       const payload = options.remotePaneRefs.value[source.id]?.transferSourcePayload();
@@ -434,9 +522,10 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   }
 
   async function uploadWebFiles(files: File[]) {
-    const target = options.activePaneForSide("right");
-    const targetPane = target ? options.remotePaneRefs.value[target.id] : null;
-    if (!targetPane) {
+    const checkedTargets = checkedRemotePanes("right");
+    const activeTarget = options.activePaneForSide("right");
+    const targets = checkedTargets.length ? checkedTargets : activeTarget ? [activeTarget] : [];
+    if (!targets.length) {
       toast.add({ title: options.translate("koko.fileManagement.selectRemoteTarget"), color: "warning" });
       return;
     }
@@ -444,21 +533,29 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     transferring.value = true;
     let success = 0;
     try {
-      for (const file of files) {
-        try {
-          await targetPane.manager.operations.uploadBlob(file.name, file);
-          success += 1;
-        } catch {
-          // Continue with remaining files.
+      for (const target of targets) {
+        const targetPane = options.remotePaneRefs.value[target.id];
+        if (!targetPane) continue;
+        for (const file of files) {
+          try {
+            await targetPane.manager.operations.uploadBlob(file.name, file);
+            success += 1;
+          } catch {
+            // Continue with remaining files and targets.
+          }
         }
       }
+      const total = files.length * targets.length;
       toast.add({
         title:
-          success === files.length
+          success === total
             ? options.translate("koko.fileManagement.uploadedFiles", { count: success })
-            : options.translate("koko.fileManagement.uploadedFilesPartial", { success, total: files.length }),
-        color: success === files.length ? "success" : "warning"
+            : options.translate("koko.fileManagement.uploadedFilesPartial", { success, total }),
+        color: success === total ? "success" : "warning"
       });
+      await Promise.all(
+        targets.map((target) => options.remotePaneRefs.value[target.id]?.manager.loadCurrentDirectory())
+      );
     } finally {
       transferring.value = false;
     }
@@ -480,10 +577,12 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     mountTransferEndpoint,
     openSendModal,
     queueSftpTransfer,
+    queueSftpTransferToSelected,
     reconnectTarget,
     remotePaneConnected,
     selectAllOnlineTargets,
     selectedSendTargetIds,
+    selectedRemoteTargetIds,
     selectedSendTargets,
     selectedSendTotalBytes,
     sendConflictPolicy,
@@ -498,6 +597,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     startDistribution,
     targetPath,
     toggleSendTarget,
+    toggleRemoteTarget,
     transferGlobal,
     transferring,
     connectTransferEndpoint,

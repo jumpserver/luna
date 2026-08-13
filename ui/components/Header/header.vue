@@ -26,9 +26,11 @@ const toolWindowTitleClass = computed(() => {
 const pageHeader = computed(() => {
   const path = router.currentRoute.value.path.toLowerCase();
 
-  // /files is a full dual-pane workbench — no redundant page title in the header.
   if (path.includes("/files")) {
-    return null;
+    return {
+      icon: "i-lucide-folder-kanban",
+      title: t("koko.fileManagement.consoleTitle")
+    };
   }
 
   if (path.includes("/videoplayer")) {
@@ -64,7 +66,11 @@ const pageHeader = computed(() => {
 
     <WorkspaceTabHeader v-if="activeWorkspaceMode === 'assets'" />
 
-    <div v-else-if="pageHeader" class="h-full min-w-0 flex items-center gap-2" :class="toolWindowTitleClass">
+    <div
+      v-else-if="pageHeader"
+      class="h-full min-w-0 flex items-center justify-center gap-2"
+      :class="toolWindowTitleClass"
+    >
       <UIcon :name="pageHeader.icon" class="text-primary h-4 w-4 shrink-0" />
       <span class="min-w-0 truncate text-sm font-medium">
         {{ pageHeader.title }}

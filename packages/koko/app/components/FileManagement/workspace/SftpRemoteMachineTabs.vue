@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { SftpRemotePane } from "#koko/composables/sftp/file-manager/workspaceTypes";
-import { VueDraggable } from "vue-draggable-plus";
 
 const props = defineProps<{
   panes: SftpRemotePane[];
   activeId: string | null;
+  selectedIds: string[];
   transferCount: (endpointId: string) => number;
   isConnected: (paneId: string) => boolean;
 }>();
@@ -18,6 +18,9 @@ const emit = defineEmits<{
   closeOthers: [id: string];
   closeRight: [id: string];
   pin: [id: string];
+  toggleSelected: [id: string, selected: boolean];
+  paneDragStart: [id: string];
+  paneDragEnd: [];
 }>();
 
 const { t } = useI18n();
@@ -26,6 +29,9 @@ const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextMenuPane = ref<SftpRemotePane | null>(null);
 const contextMenuIndex = ref(-1);
+const draggedPaneId = ref("");
+const dropTargetId = ref("");
+const dropPlacement = ref<"before" | "after">("before");
 
 function normalizePaneOrder(panes: SftpRemotePane[]) {
   const pinned = panes.filter((pane) => pane.pinned);
@@ -33,18 +39,62 @@ function normalizePaneOrder(panes: SftpRemotePane[]) {
   return [...pinned, ...unpinned];
 }
 
-const panesModel = computed({
-  get: () => props.panes,
-  set: (value: SftpRemotePane[]) => emit("update:panes", normalizePaneOrder(value))
-});
+function resetDragState() {
+  draggedPaneId.value = "";
+  dropTargetId.value = "";
+  dropPlacement.value = "before";
+}
 
-/** Pinned tabs stay fixed; only unpinned tabs can be reordered among themselves. */
-function onMove(event: { related?: HTMLElement | null }) {
-  const related = event.related;
-  if (!related) return true;
-  // Keep the pinned block at the front: never drop relative to a pinned tab.
-  if (related.classList.contains("is-pinned")) return false;
-  return true;
+function beginDrag(pane: SftpRemotePane, event: DragEvent) {
+  if (pane.pinned || !event.dataTransfer) {
+    event.preventDefault();
+    return;
+  }
+  draggedPaneId.value = pane.id;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("application/x-jumpserver-sftp-pane", pane.id);
+  event.dataTransfer.setData("text/plain", pane.id);
+  emit("paneDragStart", pane.id);
+}
+
+function endDrag() {
+  resetDragState();
+  emit("paneDragEnd");
+}
+
+function dragOver(pane: SftpRemotePane, event: DragEvent) {
+  if (pane.pinned || !draggedPaneId.value || draggedPaneId.value === pane.id) {
+    dropTargetId.value = "";
+    return;
+  }
+  event.preventDefault();
+  const element = event.currentTarget as HTMLElement;
+  dropTargetId.value = pane.id;
+  dropPlacement.value =
+    event.clientX < element.getBoundingClientRect().left + element.offsetWidth / 2 ? "before" : "after";
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+}
+
+function dropPane(targetId: string, event: DragEvent) {
+  event.preventDefault();
+  const sourceId = draggedPaneId.value;
+  if (!sourceId || sourceId === targetId) {
+    resetDragState();
+    return;
+  }
+
+  const panes = [...props.panes];
+  const sourceIndex = panes.findIndex((pane) => pane.id === sourceId && !pane.pinned);
+  if (sourceIndex < 0 || panes.find((pane) => pane.id === targetId)?.pinned) {
+    resetDragState();
+    return;
+  }
+
+  const [source] = panes.splice(sourceIndex, 1);
+  const targetIndex = panes.findIndex((pane) => pane.id === targetId);
+  panes.splice(targetIndex + (dropPlacement.value === "after" ? 1 : 0), 0, source!);
+  emit("update:panes", normalizePaneOrder(panes));
+  resetDragState();
 }
 
 function hideContextMenu() {
@@ -129,44 +179,68 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
 </script>
 
 <template>
-  <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-    <VueDraggable
-      v-model="panesModel"
-      :animation="150"
-      class="flex min-w-0 flex-1 items-center gap-1"
-      ghost-class="sftp-machine-tab-ghost"
-      chosen-class="sftp-machine-tab-chosen"
-      drag-class="sftp-machine-tab-drag"
-      filter=".is-pinned"
-      :prevent-on-filter="true"
-      draggable=".sftp-machine-tab-draggable"
-      :on-move="onMove"
-    >
-      <button
-        v-for="(pane, index) in panesModel"
+  <div class="flex h-full w-fit shrink-0 items-center">
+    <div class="flex h-full w-fit items-center gap-1">
+      <div
+        v-for="(pane, index) in panes"
         :key="pane.id"
-        type="button"
-        class="sftp-file-management__machine-tab flex max-w-45 shrink-0 items-center gap-1.5 rounded-md border px-2"
+        :draggable="!pane.pinned"
+        class="sftp-file-management__machine-tab relative flex h-7 min-w-20 max-w-40 basis-40 grow shrink items-center gap-1 rounded-md px-1.5 text-[11px] leading-none transition-colors"
         :class="[
-          activeId === pane.id
-            ? 'border-primary/50 bg-accented text-highlighted'
-            : 'border-default bg-default text-muted hover:text-highlighted',
-          pane.pinned ? 'is-pinned cursor-default' : 'sftp-machine-tab-draggable cursor-grab active:cursor-grabbing'
+          activeId === pane.id ? 'bg-accented text-highlighted' : 'text-muted hover:bg-accented hover:text-highlighted',
+          selectedIds.includes(pane.id) ? 'ring-1 ring-inset ring-primary/50' : '',
+          pane.pinned ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
+          draggedPaneId === pane.id ? 'opacity-60' : ''
         ]"
-        @click="selectPane(pane.id)"
         @dblclick="emit('pin', pane.id)"
         @auxclick="closeWithMiddleClick(pane.id, $event)"
         @contextmenu="openContextMenu(pane, index, $event)"
+        @dragstart="beginDrag(pane, $event)"
+        @dragend="endDrag"
+        @dragenter="dragOver(pane, $event)"
+        @dragover="dragOver(pane, $event)"
+        @dragleave="dropTargetId = dropTargetId === pane.id ? '' : dropTargetId"
+        @drop="dropPane(pane.id, $event)"
       >
-        <span class="size-1.5 shrink-0 rounded-full" :class="isConnected(pane.id) ? 'bg-success' : 'bg-warning'" />
-        <UIcon v-if="pane.pinned" name="i-lucide-pin" class="size-3 shrink-0 text-primary" />
-        <span class="min-w-0 flex-1 truncate">{{ pane.assetName }}</span>
+        <span
+          v-if="dropTargetId === pane.id"
+          class="pointer-events-none absolute inset-y-1 z-10 w-0.5 rounded-full bg-primary"
+          :class="dropPlacement === 'after' ? '-right-[3px]' : '-left-[3px]'"
+        />
+        <UCheckbox
+          :model-value="selectedIds.includes(pane.id)"
+          size="xs"
+          :aria-label="t('koko.fileManagement.selectTransferTarget', { name: pane.assetName })"
+          class="shrink-0"
+          @click.stop
+          @dblclick.stop
+          @dragstart.stop.prevent
+          @update:model-value="emit('toggleSelected', pane.id, $event === true)"
+        />
+        <button type="button" class="flex min-w-0 flex-1 items-center gap-1 text-left" @click="selectPane(pane.id)">
+          <UIcon
+            name="i-lucide-server"
+            class="size-3.5 shrink-0"
+            :class="isConnected(pane.id) ? 'text-success' : 'text-warning'"
+          />
+          <UIcon v-if="pane.pinned" name="i-lucide-pin" class="size-3 shrink-0 text-primary" />
+          <span class="min-w-0 flex-1 truncate">{{ pane.assetName }}</span>
+        </button>
         <UBadge v-if="transferCount(pane.transferEndpoint.id)" color="primary" variant="subtle" size="xs">
           {{ transferCount(pane.transferEndpoint.id) }}
         </UBadge>
-        <UIcon name="i-lucide-x" class="size-3 shrink-0" @click.stop="emit('close', pane.id)" />
-      </button>
-    </VueDraggable>
+        <span
+          class="flex size-4 shrink-0 items-center justify-center rounded text-muted hover:bg-elevated hover:text-foreground"
+          role="button"
+          tabindex="0"
+          @click.stop="emit('close', pane.id)"
+          @keydown.enter.stop.prevent="emit('close', pane.id)"
+          @keydown.space.stop.prevent="emit('close', pane.id)"
+        >
+          <UIcon name="i-lucide-x" class="size-3" />
+        </span>
+      </div>
+    </div>
 
     <UDropdownMenu
       :open="contextMenuVisible"
@@ -183,21 +257,3 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
     </UDropdownMenu>
   </div>
 </template>
-
-<style scoped>
-:deep(.sftp-machine-tab-ghost) {
-  opacity: 0.45;
-}
-
-:deep(.sftp-machine-tab-chosen) {
-  opacity: 0.9;
-}
-
-:deep(.sftp-machine-tab-drag) {
-  opacity: 0.85;
-}
-
-:deep(.is-pinned) {
-  cursor: default;
-}
-</style>

@@ -140,7 +140,6 @@
     "typescript": "^6.0.3",
     "unplugin-auto-import": "^21.1.0",
     "vitest": "^4.1.10",
-    "vue-draggable-plus": "^0.6.1",
     "vue-tsc": "3.2.4"
   },
   "resolutions": {

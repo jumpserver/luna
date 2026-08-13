@@ -63,6 +63,7 @@ const visibleEntries = computed(() => {
       return Number(right.is_dir) - Number(left.is_dir);
     });
 });
+let transferEndpointReady = false;
 const selection = useSftpPaneSelection<SftpFileEntry>({ visibleEntries });
 const {
   selectedEntries,
@@ -259,7 +260,15 @@ watch(manager.currentPath, () => {
   hideContextMenu();
   clearSelection();
 });
-watch(manager.connected, (connected) => connected && manager.transferEndpoint && emit("transferEndpointConnected"));
+watch([manager.connected, manager.loading, manager.error], ([connected, loading, error]) => {
+  if (!connected || error) {
+    transferEndpointReady = false;
+    return;
+  }
+  if (loading || transferEndpointReady || !manager.transferEndpoint) return;
+  transferEndpointReady = true;
+  emit("transferEndpointConnected");
+});
 onMounted(() => {
   if (manager.transferEndpoint) emit("transferEndpointMounted", manager.transferEndpoint);
   document.addEventListener("dragend", clearTransferDragState);

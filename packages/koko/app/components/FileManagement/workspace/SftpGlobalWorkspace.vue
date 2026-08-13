@@ -2,7 +2,12 @@
 import type { ComponentPublicInstance } from "vue";
 import type { useSftpTransferCoordinator } from "#koko/composables/sftp/file-manager/useSftpTransferCoordinator";
 import type { useSftpWorkspacePanes } from "#koko/composables/sftp/file-manager/useSftpWorkspacePanes";
-import type { SftpLocalPaneHandle, SftpRemotePane, SftpTransferCenterHandle, SftpWorkspaceSide  } from "#koko/composables/sftp/file-manager/workspaceTypes";
+import type {
+  SftpLocalPaneHandle,
+  SftpRemotePane,
+  SftpTransferCenterHandle,
+  SftpWorkspaceSide
+} from "#koko/composables/sftp/file-manager/workspaceTypes";
 import KokoLocalFileManagementPane from "#koko/components/FileManagement/localPane.vue";
 import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
 import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
@@ -29,6 +34,8 @@ const {
   closeRightRemotePanes,
   globalActiveIds,
   isTauriRuntime,
+  markRemotePaneConnected,
+  moveRemotePaneToSide,
   openRemoteConnect,
   panesForSide,
   preconnecting,
@@ -36,6 +43,7 @@ const {
   recentConnections,
   reconnectRecent,
   reconnectRemotePane,
+  remotePanes,
   removeRemotePane,
   setRemotePaneRef,
   setRemotePanesOrder,
@@ -51,6 +59,8 @@ const {
   mountTransferEndpoint,
   openSendModal,
   remotePaneConnected,
+  selectedRemoteTargetIds,
+  toggleRemoteTarget,
   transferGlobal,
   transferring,
   unmountTransferEndpoint,
@@ -63,6 +73,11 @@ function setLocalPaneRef(value: TemplateRefValue): void {
 
 function setTransferCenterRef(value: TemplateRefValue): void {
   props.setTransferCenterRef(value as SftpTransferCenterHandle | null);
+}
+
+function handleRemotePaneConnected(): void {
+  connectTransferEndpoint();
+  markRemotePaneConnected();
 }
 
 function onKeydown(event: KeyboardEvent): void {
@@ -85,6 +100,46 @@ const sideRemotePanes = computed(() => ({
   left: panesForSide("left"),
   right: panesForSide("right")
 }));
+
+const draggedRemotePaneId = ref("");
+const remotePaneDropSide = ref<SftpWorkspaceSide | null>(null);
+
+function beginRemotePaneDrag(id: string) {
+  draggedRemotePaneId.value = id;
+}
+
+function endRemotePaneDrag() {
+  draggedRemotePaneId.value = "";
+  remotePaneDropSide.value = null;
+}
+
+function dragRemotePaneOverSide(side: SftpWorkspaceSide, event: DragEvent) {
+  const pane = remotePanes.value.find((item) => item.id === draggedRemotePaneId.value);
+  if (!pane || pane.side === side) {
+    remotePaneDropSide.value = null;
+    return;
+  }
+  event.preventDefault();
+  remotePaneDropSide.value = side;
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+}
+
+function leaveRemotePaneSide(side: SftpWorkspaceSide, event: DragEvent) {
+  const container = event.currentTarget as HTMLElement;
+  const relatedTarget = event.relatedTarget as Node | null;
+  if (relatedTarget && container.contains(relatedTarget)) return;
+  if (remotePaneDropSide.value === side) remotePaneDropSide.value = null;
+}
+
+function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
+  const id = draggedRemotePaneId.value;
+  const pane = remotePanes.value.find((item) => item.id === id);
+  if (!pane || pane.side === side) return;
+  event.preventDefault();
+  moveRemotePaneToSide(id, side);
+  focusedSide.value = side;
+  endRemotePaneDrag();
+}
 </script>
 
 <template>
@@ -92,16 +147,23 @@ const sideRemotePanes = computed(() => ({
     <div
       v-for="side in ['left', 'right'] as const"
       :key="side"
-      class="flex min-h-0 min-w-0 flex-col"
+      class="relative flex min-h-0 min-w-0 flex-col"
       :class="side === 'right' ? 'col-start-3' : 'col-start-1 row-start-1'"
+      @dragover.capture="dragRemotePaneOverSide(side, $event)"
+      @dragleave="leaveRemotePaneSide(side, $event)"
+      @drop.capture="dropRemotePaneOnSide(side, $event)"
     >
-      <div class="flex h-9 shrink-0 items-center gap-1 border-b border-default bg-elevated/50 px-2">
+      <div class="flex h-9 shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2">
         <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           <button
             v-if="side === 'left' && isTauriRuntime"
             type="button"
-            class="flex h-7 min-w-0 items-center gap-1 rounded-md px-2 text-xs"
-            :class="globalActiveIds.left === 'local' ? 'bg-accented text-highlighted' : 'text-muted'"
+            class="flex h-7 min-w-20 max-w-40 basis-40 grow shrink items-center gap-1 rounded-md px-1.5 text-[11px] leading-none transition-colors"
+            :class="
+              globalActiveIds.left === 'local'
+                ? 'bg-accented text-highlighted'
+                : 'text-muted hover:bg-accented hover:text-highlighted'
+            "
             @click="globalActiveIds.left = 'local'"
           >
             <UIcon name="i-lucide-laptop" class="size-3.5 shrink-0" />
@@ -110,8 +172,12 @@ const sideRemotePanes = computed(() => ({
           <button
             v-if="side === 'left' && !isTauriRuntime"
             type="button"
-            class="flex h-7 min-w-0 items-center gap-1 rounded-md px-2 text-xs"
-            :class="globalActiveIds.left === 'web-upload' ? 'bg-accented text-highlighted' : 'text-muted'"
+            class="flex h-7 min-w-20 max-w-40 basis-40 grow shrink items-center gap-1 rounded-md px-1.5 text-[11px] leading-none transition-colors"
+            :class="
+              globalActiveIds.left === 'web-upload'
+                ? 'bg-accented text-highlighted'
+                : 'text-muted hover:bg-accented hover:text-highlighted'
+            "
             @click="globalActiveIds.left = 'web-upload'"
           >
             <UIcon name="i-lucide-upload" class="size-3.5 shrink-0" />
@@ -121,9 +187,9 @@ const sideRemotePanes = computed(() => ({
             v-if="sideRemotePanes[side].length"
             :panes="sideRemotePanes[side]"
             :active-id="globalActiveIds[side]"
+            :selected-ids="selectedRemoteTargetIds"
             :transfer-count="activeTransferCount"
             :is-connected="remotePaneConnected"
-            class="min-w-0 flex-1"
             @update:panes="onSidePanesUpdate(side, $event)"
             @select="selectGlobalRemote(side, $event)"
             @close="removeRemotePane"
@@ -131,16 +197,20 @@ const sideRemotePanes = computed(() => ({
             @close-others="closeOtherRemotePanes"
             @close-right="closeRightRemotePanes"
             @pin="togglePinRemotePane"
+            @toggle-selected="toggleRemoteTarget"
+            @pane-drag-start="beginRemotePaneDrag"
+            @pane-drag-end="endRemotePaneDrag"
+          />
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-plus"
+            class="shrink-0"
+            :title="t('koko.fileManagement.addRemoteSftp')"
+            @click="openRemoteConnect(side)"
           />
         </div>
-        <UButton
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          icon="i-lucide-plus"
-          :title="t('koko.fileManagement.addRemoteSftp')"
-          @click="openRemoteConnect(side)"
-        />
         <KokoSftpTransferCenter v-if="side === 'left'" :ref="setTransferCenterRef" prominent />
       </div>
 
@@ -178,7 +248,7 @@ const sideRemotePanes = computed(() => ({
           @send="openSendModal"
           @transfer-drop="handleCrossPaneDrop($event, pane.transferEndpoint)"
           @transfer-endpoint-mounted="mountTransferEndpoint"
-          @transfer-endpoint-connected="connectTransferEndpoint"
+          @transfer-endpoint-connected="handleRemotePaneConnected"
           @transfer-endpoint-unmounted="unmountTransferEndpoint"
         />
       </template>
@@ -229,9 +299,22 @@ const sideRemotePanes = computed(() => ({
               icon="i-lucide-history"
               :label="item.assetName"
               class="max-w-full"
-              @click="reconnectRecent(item)"
+              @click="reconnectRecent(item, side)"
             />
           </div>
+        </div>
+      </div>
+      <div
+        v-if="remotePaneDropSide === side"
+        class="pointer-events-none absolute inset-1 z-50 grid place-items-center rounded-lg border-2 border-dashed border-primary bg-primary/10 text-primary backdrop-blur-[1px]"
+      >
+        <div class="flex items-center gap-2 rounded-md bg-default px-3 py-2 text-xs shadow-sm">
+          <UIcon name="i-lucide-panels-top-left" class="size-4" />
+          <span>
+            {{
+              t(side === "left" ? "koko.fileManagement.dropTabToLeftPane" : "koko.fileManagement.dropTabToRightPane")
+            }}
+          </span>
         </div>
       </div>
     </div>

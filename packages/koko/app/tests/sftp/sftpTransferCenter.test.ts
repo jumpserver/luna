@@ -20,9 +20,13 @@ import transferCenterComponent from "../../components/FileManagement/SftpTransfe
 import transferBatchComponent from "../../components/FileManagement/transfer-center/SftpTransferBatch.vue?raw";
 import transferFileComponent from "../../components/FileManagement/transfer-center/SftpTransferFile.vue?raw";
 import transferTargetComponent from "../../components/FileManagement/transfer-center/SftpTransferTarget.vue?raw";
+import connectModalComponent from "../../components/FileManagement/workspace/SftpConnectModal.vue?raw";
 import globalWorkspaceComponent from "../../components/FileManagement/workspace/SftpGlobalWorkspace.vue?raw";
+import remoteTabsComponent from "../../components/FileManagement/workspace/SftpRemoteMachineTabs.vue?raw";
 import sessionWorkspaceComponent from "../../components/FileManagement/workspace/SftpSessionWorkspace.vue?raw";
 import remotePaneActions from "../../composables/sftp/file-manager/useSftpRemotePaneActions.ts?raw";
+import transferCoordinatorComposable from "../../composables/sftp/file-manager/useSftpTransferCoordinator.ts?raw";
+import workspacePanesComposable from "../../composables/sftp/file-manager/useSftpWorkspacePanes.ts?raw";
 import fileManagerSessionSurface from "../../workspaces/FileManagerSessionSurface.vue?raw";
 
 const transferCenterPresentation = [
@@ -157,6 +161,59 @@ describe("sftp professional workbench", () => {
     );
     expect(transferCenterComponent).toContain("prominent?: boolean");
     expect(transferCenterComponent).toContain("is-prominent");
+  });
+
+  it("uses the database-console tab presentation", () => {
+    expect(remoteTabsComponent).toContain("min-w-20 max-w-40 basis-40 grow shrink");
+    expect(remoteTabsComponent).toContain("bg-accented text-highlighted");
+    expect(remoteTabsComponent).not.toContain("border-primary/50");
+  });
+
+  it("places organization selection first and supports replacing the active tab", () => {
+    expect(connectModalComponent.indexOf("organizationSelector")).toBeLessThan(
+      connectModalComponent.indexOf("remoteAssetSearch")
+    );
+    expect(connectModalComponent).not.toContain("currentOrganization");
+    expect(connectModalComponent).not.toContain("border border-default bg-elevated/40");
+    expect(connectModalComponent).toContain(':show-recent-connections="true"');
+    expect(connectModalComponent).toContain(":recent-connections-label");
+    expect(connectModalComponent).not.toContain('v-for="item in recentConnections"');
+    expect(connectModalComponent).toContain("openRemoteInCurrentTab");
+    expect(workspacePanesComposable).toContain(
+      "replacePaneId: openRemoteInCurrentTab.value ? replacePaneId : undefined"
+    );
+  });
+
+  it("keeps the add button beside the tabs", () => {
+    expect(globalWorkspaceComponent.indexOf("<SftpRemoteMachineTabs")).toBeLessThan(
+      globalWorkspaceComponent.indexOf('icon="i-lucide-plus"')
+    );
+    expect(remoteTabsComponent).toContain("w-fit shrink-0");
+  });
+
+  it("selects tab targets for multi-host transfers in both workspace modes", () => {
+    expect(remoteTabsComponent).toContain("<UCheckbox");
+    expect(remoteTabsComponent).toContain("selectedIds.includes(pane.id)");
+    expect(remoteTabsComponent).toContain("toggleSelected");
+    expect(globalWorkspaceComponent).toContain(':selected-ids="selectedRemoteTargetIds"');
+    expect(globalWorkspaceComponent).toContain('@toggle-selected="toggleRemoteTarget"');
+    expect(sessionWorkspaceComponent).toContain(':selected-ids="selectedRemoteTargetIds"');
+    expect(sessionWorkspaceComponent).toContain('@toggle-selected="toggleRemoteTarget"');
+    expect(transferCoordinatorComposable).toContain("const checkedTargets = sendTargetOptions.value.filter");
+    expect(transferCoordinatorComposable).toContain("queueSftpTransferToSelected");
+    expect(transferCoordinatorComposable).toContain("transferLocalEntriesToCheckedRemotes");
+  });
+
+  it("guards concurrent connection requests while allowing repeated hosts", () => {
+    expect(workspacePanesComposable).toContain("if (remoteConnecting.value) return");
+    expect(workspacePanesComposable).not.toContain("findRemotePane");
+    expect(workspacePanesComposable).toContain("const id = paneId()");
+  });
+
+  it("only reports success after the pane is ready", () => {
+    expect(workspacePanesComposable).toContain("markRemotePaneConnected");
+    expect(fileManagementPane).toContain("manager.connected, manager.loading, manager.error");
+    expect(globalWorkspaceComponent).toContain('transfer-endpoint-connected="handleRemotePaneConnected"');
   });
 });
 

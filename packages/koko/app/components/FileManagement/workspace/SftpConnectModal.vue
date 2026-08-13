@@ -9,9 +9,8 @@ const {
   assetTree,
   connectModalOpen,
   connectRemoteAsset,
+  openRemoteInCurrentTab,
   organizationSelector,
-  recentConnections,
-  reconnectRecent,
   remoteAssetSearch,
   remoteConnecting
 } = props.workspace;
@@ -25,35 +24,29 @@ const {
   >
     <template #body>
       <div class="space-y-3">
-        <div class="flex items-center justify-between gap-3 px-2.5 py-1 text-[11px] text-muted">
-          <span>{{ t("koko.fileManagement.currentOrganization") }}</span>
-          <div class="min-w-0 max-w-55 flex-1">
-            <component :is="organizationSelector" class="justify-end" />
-          </div>
+        <div class="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)] items-center gap-2">
+          <component :is="organizationSelector" class="min-w-0" />
+          <UInput
+            v-model="remoteAssetSearch"
+            class="min-w-0"
+            icon="i-lucide-search"
+            :placeholder="t('koko.fileManagement.searchAssets')"
+          />
         </div>
-        <UInput
-          v-model="remoteAssetSearch"
-          icon="i-lucide-search"
-          :placeholder="t('koko.fileManagement.searchAssets')"
+        <UCheckbox
+          v-model="openRemoteInCurrentTab"
+          :label="t('koko.fileManagement.openInCurrentTab')"
+          :disabled="remoteConnecting"
         />
-        <div v-if="recentConnections.length" class="space-y-1.5">
-          <p class="px-0.5 text-[11px] text-muted">{{ t("koko.fileManagement.recentConnections") }}</p>
-          <div class="flex flex-wrap gap-1.5">
-            <UButton
-              v-for="item in recentConnections"
-              :key="`recent-${item.assetId}`"
-              size="xs"
-              color="neutral"
-              variant="soft"
-              icon="i-lucide-history"
-              :label="item.assetName"
-              :loading="remoteConnecting"
-              @click="reconnectRecent(item)"
-            />
-          </div>
-        </div>
         <div class="max-h-72 overflow-y-auto rounded-lg border border-default">
-          <component :is="assetTree" :search="remoteAssetSearch" open @select="connectRemoteAsset" />
+          <component
+            :is="assetTree"
+            :search="remoteAssetSearch"
+            :show-recent-connections="true"
+            :recent-connections-label="t('koko.fileManagement.recentConnections')"
+            open
+            @select="connectRemoteAsset"
+          />
         </div>
       </div>
     </template>

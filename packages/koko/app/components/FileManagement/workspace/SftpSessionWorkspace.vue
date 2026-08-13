@@ -4,7 +4,8 @@ import type { useSftpTransferCoordinator } from "#koko/composables/sftp/file-man
 import type { useSftpWorkspacePanes } from "#koko/composables/sftp/file-manager/useSftpWorkspacePanes";
 import type {
   SftpRemotePane,
-  SftpRemotePaneHandle, SftpTransferCenterHandle 
+  SftpRemotePaneHandle,
+  SftpTransferCenterHandle
 } from "#koko/composables/sftp/file-manager/workspaceTypes";
 import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
 import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
@@ -32,6 +33,7 @@ const {
   disconnectAllRemotes,
   dualMode,
   focusRemotePane,
+  markRemotePaneConnected,
   openRemoteConnect,
   primaryContext,
   primaryTransferEndpoint,
@@ -48,8 +50,10 @@ const {
   connectTransferEndpoint,
   mountTransferEndpoint,
   openSendModal,
-  queueSftpTransfer,
+  queueSftpTransferToSelected,
   remotePaneConnected,
+  selectedRemoteTargetIds,
+  toggleRemoteTarget,
   unmountTransferEndpoint
 } = props.transfer;
 
@@ -63,6 +67,11 @@ function setTransferCenterRef(value: TemplateRefValue): void {
 
 function onSessionPanesUpdate(value: SftpRemotePane[]) {
   setRemotePanesOrder("right", value);
+}
+
+function handleRemotePaneConnected(): void {
+  connectTransferEndpoint();
+  markRemotePaneConnected();
 }
 </script>
 
@@ -148,7 +157,7 @@ function onSessionPanesUpdate(value: SftpRemotePane[]) {
       :transfer-endpoint="compact ? undefined : primaryTransferEndpoint"
       :title="!compact && dualMode ? t('koko.fileManagement.localSftp') : undefined"
       @send="openSendModal"
-      @transfer-drop="queueSftpTransfer($event, primaryTransferEndpoint)"
+      @transfer-drop="queueSftpTransferToSelected($event, primaryTransferEndpoint)"
       @transfer-endpoint-mounted="mountTransferEndpoint"
       @transfer-endpoint-connected="connectTransferEndpoint"
       @transfer-endpoint-unmounted="unmountTransferEndpoint"
@@ -159,11 +168,12 @@ function onSessionPanesUpdate(value: SftpRemotePane[]) {
     <div v-show="!compact && dualMode" class="flex min-h-0 min-w-0 flex-1 flex-col">
       <div v-if="remotePanes.length" class="flex min-h-0 flex-1 flex-col">
         <div
-          class="sftp-file-management__machine-tabs flex shrink-0 items-center gap-1.5 border-b border-default bg-elevated/50"
+          class="sftp-file-management__machine-tabs flex shrink-0 items-center gap-1 overflow-x-auto bg-[var(--workspace-surface-main)] px-2"
         >
           <SftpRemoteMachineTabs
             :panes="remotePanes"
             :active-id="activeRemoteId"
+            :selected-ids="selectedRemoteTargetIds"
             :transfer-count="activeTransferCount"
             :is-connected="remotePaneConnected"
             @update:panes="onSessionPanesUpdate"
@@ -173,15 +183,14 @@ function onSessionPanesUpdate(value: SftpRemotePane[]) {
             @close-others="closeOtherRemotePanes"
             @close-right="closeRightRemotePanes"
             @pin="togglePinRemotePane"
+            @toggle-selected="toggleRemoteTarget"
           />
           <UButton
-            class="sftp-file-management__connect-button"
             data-sftp-tour="remote-connect"
             size="xs"
             color="neutral"
             variant="ghost"
             icon="i-lucide-plus"
-            :label="t('koko.fileManagement.connect')"
             :title="t('koko.fileManagement.addRemoteSftp')"
             @click="openRemoteConnect()"
           />
@@ -197,9 +206,9 @@ function onSessionPanesUpdate(value: SftpRemotePane[]) {
               focusRemotePane(pane.id);
             "
             @send="openSendModal"
-            @transfer-drop="queueSftpTransfer($event, pane.transferEndpoint)"
+            @transfer-drop="queueSftpTransferToSelected($event, pane.transferEndpoint)"
             @transfer-endpoint-mounted="mountTransferEndpoint"
-            @transfer-endpoint-connected="connectTransferEndpoint"
+            @transfer-endpoint-connected="handleRemotePaneConnected"
             @transfer-endpoint-unmounted="unmountTransferEndpoint"
           />
         </div>
