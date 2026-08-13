@@ -3,11 +3,12 @@ import type { ComponentPublicInstance } from "vue";
 import type { useSftpTransferCoordinator } from "#koko/composables/sftp/file-manager/useSftpTransferCoordinator";
 import type { useSftpWorkspacePanes } from "#koko/composables/sftp/file-manager/useSftpWorkspacePanes";
 import type {
-  SftpRemotePaneHandle,
-  SftpTransferCenterHandle
+  SftpRemotePane,
+  SftpRemotePaneHandle, SftpTransferCenterHandle 
 } from "#koko/composables/sftp/file-manager/workspaceTypes";
 import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
 import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
+import SftpRemoteMachineTabs from "#koko/components/FileManagement/workspace/SftpRemoteMachineTabs.vue";
 
 type WorkspaceController = ReturnType<typeof useSftpWorkspacePanes>;
 type TransferController = ReturnType<typeof useSftpTransferCoordinator>;
@@ -26,16 +27,21 @@ const props = defineProps<{
 const { t } = useI18n();
 const {
   activeRemoteId,
+  closeOtherRemotePanes,
+  closeRightRemotePanes,
   disconnectAllRemotes,
   dualMode,
   focusRemotePane,
   openRemoteConnect,
   primaryContext,
   primaryTransferEndpoint,
+  reconnectRemotePane,
   remotePanes,
   removeRemotePane,
   setRemotePaneRef,
-  toggleDualMode
+  setRemotePanesOrder,
+  toggleDualMode,
+  togglePinRemotePane
 } = props.workspace;
 const {
   activeTransferCount,
@@ -53,6 +59,10 @@ function setPrimaryPaneRef(value: TemplateRefValue): void {
 
 function setTransferCenterRef(value: TemplateRefValue): void {
   props.setTransferCenterRef(value as SftpTransferCenterHandle | null);
+}
+
+function onSessionPanesUpdate(value: SftpRemotePane[]) {
+  setRemotePanesOrder("right", value);
 }
 </script>
 
@@ -151,30 +161,19 @@ function setTransferCenterRef(value: TemplateRefValue): void {
         <div
           class="sftp-file-management__machine-tabs flex shrink-0 items-center gap-1.5 border-b border-default bg-elevated/50"
         >
-          <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-            <button
-              v-for="pane in remotePanes"
-              :key="pane.id"
-              type="button"
-              class="sftp-file-management__machine-tab flex max-w-45 shrink-0 items-center gap-1.5 rounded-md border px-2"
-              :class="
-                activeRemoteId === pane.id
-                  ? 'border-primary/50 bg-accented text-highlighted'
-                  : 'border-default bg-default text-muted hover:text-highlighted'
-              "
-              @click="focusRemotePane(pane.id)"
-            >
-              <span
-                class="size-1.5 shrink-0 rounded-full"
-                :class="remotePaneConnected(pane.id) ? 'bg-success' : 'bg-warning'"
-              />
-              <span class="min-w-0 flex-1 truncate">{{ pane.assetName }}</span>
-              <UBadge v-if="activeTransferCount(pane.transferEndpoint.id)" color="primary" variant="subtle" size="xs">
-                {{ activeTransferCount(pane.transferEndpoint.id) }}
-              </UBadge>
-              <UIcon name="i-lucide-x" class="size-3 shrink-0" @click.stop="removeRemotePane(pane.id)" />
-            </button>
-          </div>
+          <SftpRemoteMachineTabs
+            :panes="remotePanes"
+            :active-id="activeRemoteId"
+            :transfer-count="activeTransferCount"
+            :is-connected="remotePaneConnected"
+            @update:panes="onSessionPanesUpdate"
+            @select="focusRemotePane"
+            @close="removeRemotePane"
+            @reconnect="reconnectRemotePane"
+            @close-others="closeOtherRemotePanes"
+            @close-right="closeRightRemotePanes"
+            @pin="togglePinRemotePane"
+          />
           <UButton
             class="sftp-file-management__connect-button"
             data-sftp-tour="remote-connect"

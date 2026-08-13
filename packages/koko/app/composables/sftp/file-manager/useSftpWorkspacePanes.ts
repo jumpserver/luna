@@ -123,14 +123,97 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     dualMode.value = false;
   }
 
+  function cleanupRemotePaneRefs(ids: Set<string>) {
+    for (const id of ids) delete remotePaneRefs.value[id];
+  }
+
   function removeRemotePane(id: string) {
     const removed = remotePanes.value.find((pane) => pane.id === id);
     remotePanes.value = remotePanes.value.filter((pane) => pane.id !== id);
     delete remotePaneRefs.value[id];
-    if (activeRemoteId.value === id) activeRemoteId.value = remotePanes.value[0]?.id ?? null;
+    if (activeRemoteId.value === id) {
+      const sameSide = removed ? panesForSide(removed.side) : remotePanes.value;
+      activeRemoteId.value = sameSide[0]?.id ?? remotePanes.value[0]?.id ?? null;
+    }
     if (removed && globalActiveIds[removed.side] === id) {
       globalActiveIds[removed.side] = panesForSide(removed.side)[0]?.id ?? null;
     }
+  }
+
+  function closeOtherRemotePanes(id: string) {
+    const target = remotePanes.value.find((pane) => pane.id === id);
+    if (!target) return;
+    const removedIds = new Set(
+      remotePanes.value
+        .filter((pane) => pane.side === target.side && pane.id !== id && !pane.pinned)
+        .map((pane) => pane.id)
+    );
+    if (!removedIds.size) return;
+    remotePanes.value = remotePanes.value.filter((pane) => !removedIds.has(pane.id));
+    cleanupRemotePaneRefs(removedIds);
+    activeRemoteId.value = id;
+    if (toValue(options.global)) globalActiveIds[target.side] = id;
+  }
+
+  function closeRightRemotePanes(id: string) {
+    const target = remotePanes.value.find((pane) => pane.id === id);
+    if (!target) return;
+    const sidePanes = panesForSide(target.side);
+    const index = sidePanes.findIndex((pane) => pane.id === id);
+    if (index < 0 || index === sidePanes.length - 1) return;
+    const removedIds = new Set(
+      sidePanes.filter((pane, paneIndex) => paneIndex > index && !pane.pinned).map((pane) => pane.id)
+    );
+    if (!removedIds.size) return;
+    remotePanes.value = remotePanes.value.filter((pane) => !removedIds.has(pane.id));
+    cleanupRemotePaneRefs(removedIds);
+    activeRemoteId.value = id;
+    if (toValue(options.global)) globalActiveIds[target.side] = id;
+  }
+
+  function togglePinRemotePane(id: string) {
+    const index = remotePanes.value.findIndex((pane) => pane.id === id);
+    if (index < 0) return;
+    const pane = remotePanes.value[index];
+    if (!pane) return;
+    const nextPinned = !pane.pinned;
+    pane.pinned = nextPinned;
+
+    // Keep pinned tabs packed to the front of their side group.
+    const side = pane.side;
+    const sidePanes = panesForSide(side).filter((item) => item.id !== id);
+    const pinned = sidePanes.filter((item) => item.pinned);
+    const unpinned = sidePanes.filter((item) => !item.pinned);
+    const orderedSide = nextPinned ? [pane, ...pinned, ...unpinned] : [...pinned, pane, ...unpinned];
+    const otherSide = remotePanes.value.filter((item) => item.side !== side);
+    remotePanes.value = side === "left" ? [...orderedSide, ...otherSide] : [...otherSide, ...orderedSide];
+  }
+
+  async function reconnectRemotePane(id: string) {
+    const handle = remotePaneRefs.value[id];
+    if (!handle) return;
+    try {
+      await handle.manager.retry.reconnect();
+      await handle.refresh?.();
+      toast.add({ title: options.translate("koko.fileManagement.remoteConnected"), color: "success" });
+    } catch (error) {
+      options.showError(options.translate("koko.fileManagement.remoteConnectFailed"), error);
+    }
+  }
+
+  function reorderRemotePanes(side: SftpWorkspaceSide, orderedIds: string[]) {
+    const sideSet = new Set(orderedIds);
+    const sidePanes = orderedIds
+      .map((id) => remotePanes.value.find((pane) => pane.id === id && pane.side === side))
+      .filter((pane): pane is SftpRemotePane => Boolean(pane));
+    if (sidePanes.length !== sideSet.size) return;
+    const otherSide = remotePanes.value.filter((pane) => pane.side !== side);
+    remotePanes.value = side === "left" ? [...sidePanes, ...otherSide] : [...otherSide, ...sidePanes];
+  }
+
+  function setRemotePanesOrder(side: SftpWorkspaceSide, nextSidePanes: SftpRemotePane[]) {
+    const otherSide = remotePanes.value.filter((pane) => pane.side !== side);
+    remotePanes.value = side === "left" ? [...nextSidePanes, ...otherSide] : [...otherSide, ...nextSidePanes];
   }
 
   function toggleDualMode() {
@@ -178,7 +261,8 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
         id: `sftp:${input.tokenId}`,
         label: `${currentOrgLabel.value} - ${input.assetName}`
       },
-      selection: null
+      selection: null,
+      pinned: false
     });
     activeRemoteId.value = id;
     if (toValue(options.global)) globalActiveIds[input.side] = id;
@@ -284,6 +368,8 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     activePaneForSide,
     activeRemoteId,
     assetTree,
+    closeOtherRemotePanes,
+    closeRightRemotePanes,
     connectModalOpen,
     connectRemoteAsset,
     connectSide,
@@ -306,12 +392,16 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     primaryTransferEndpoint,
     recentConnections,
     reconnectRecent,
+    reconnectRemotePane,
     remoteAssetSearch,
     remoteConnecting,
     remotePaneRefs,
     remotePanes,
     removeRemotePane,
+    reorderRemotePanes,
     setRemotePaneRef,
-    toggleDualMode
+    setRemotePanesOrder,
+    toggleDualMode,
+    togglePinRemotePane
   };
 }

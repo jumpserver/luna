@@ -2,11 +2,12 @@
 import type { ComponentPublicInstance } from "vue";
 import type { useSftpTransferCoordinator } from "#koko/composables/sftp/file-manager/useSftpTransferCoordinator";
 import type { useSftpWorkspacePanes } from "#koko/composables/sftp/file-manager/useSftpWorkspacePanes";
-import type { SftpLocalPaneHandle, SftpTransferCenterHandle } from "#koko/composables/sftp/file-manager/workspaceTypes";
+import type { SftpLocalPaneHandle, SftpRemotePane, SftpTransferCenterHandle, SftpWorkspaceSide  } from "#koko/composables/sftp/file-manager/workspaceTypes";
 import KokoLocalFileManagementPane from "#koko/components/FileManagement/localPane.vue";
 import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
 import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
 import KokoWebUploadPane from "#koko/components/FileManagement/webUploadPane.vue";
+import SftpRemoteMachineTabs from "#koko/components/FileManagement/workspace/SftpRemoteMachineTabs.vue";
 import { KeyboardKey } from "#koko/constants/keyboard";
 
 type WorkspaceController = ReturnType<typeof useSftpWorkspacePanes>;
@@ -24,6 +25,8 @@ const { t } = useI18n();
 const focusedSide = ref<"left" | "right">("left");
 const {
   activePaneForSide,
+  closeOtherRemotePanes,
+  closeRightRemotePanes,
   globalActiveIds,
   isTauriRuntime,
   openRemoteConnect,
@@ -32,10 +35,14 @@ const {
   preconnectingName,
   recentConnections,
   reconnectRecent,
+  reconnectRemotePane,
   removeRemotePane,
-  setRemotePaneRef
+  setRemotePaneRef,
+  setRemotePanesOrder,
+  togglePinRemotePane
 } = props.workspace;
 const {
+  activeTransferCount,
   connectTransferEndpoint,
   handleCrossPaneDrop,
   highlightedNames,
@@ -43,6 +50,7 @@ const {
   localSelections,
   mountTransferEndpoint,
   openSendModal,
+  remotePaneConnected,
   transferGlobal,
   transferring,
   unmountTransferEndpoint,
@@ -64,6 +72,19 @@ function onKeydown(event: KeyboardEvent): void {
   event.preventDefault();
   focusedSide.value = focusedSide.value === "left" ? "right" : "left";
 }
+
+function selectGlobalRemote(side: SftpWorkspaceSide, id: string) {
+  globalActiveIds[side] = id;
+}
+
+function onSidePanesUpdate(side: SftpWorkspaceSide, next: SftpRemotePane[]) {
+  setRemotePanesOrder(side, next);
+}
+
+const sideRemotePanes = computed(() => ({
+  left: panesForSide("left"),
+  right: panesForSide("right")
+}));
 </script>
 
 <template>
@@ -96,18 +117,21 @@ function onKeydown(event: KeyboardEvent): void {
             <UIcon name="i-lucide-upload" class="size-3.5 shrink-0" />
             <span>{{ t("koko.fileManagement.localUpload") }}</span>
           </button>
-          <button
-            v-for="pane in panesForSide(side)"
-            :key="pane.id"
-            type="button"
-            class="flex h-7 min-w-0 max-w-48 items-center gap-1 rounded-md px-2 text-xs"
-            :class="globalActiveIds[side] === pane.id ? 'bg-accented text-highlighted' : 'text-muted'"
-            @click="globalActiveIds[side] = pane.id"
-          >
-            <UIcon name="i-lucide-server" class="size-3.5 shrink-0" />
-            <span class="truncate">{{ pane.assetName }}</span>
-            <UIcon name="i-lucide-x" class="size-3 shrink-0" @click.stop="removeRemotePane(pane.id)" />
-          </button>
+          <SftpRemoteMachineTabs
+            v-if="sideRemotePanes[side].length"
+            :panes="sideRemotePanes[side]"
+            :active-id="globalActiveIds[side]"
+            :transfer-count="activeTransferCount"
+            :is-connected="remotePaneConnected"
+            class="min-w-0 flex-1"
+            @update:panes="onSidePanesUpdate(side, $event)"
+            @select="selectGlobalRemote(side, $event)"
+            @close="removeRemotePane"
+            @reconnect="reconnectRemotePane"
+            @close-others="closeOtherRemotePanes"
+            @close-right="closeRightRemotePanes"
+            @pin="togglePinRemotePane"
+          />
         </div>
         <UButton
           size="xs"
