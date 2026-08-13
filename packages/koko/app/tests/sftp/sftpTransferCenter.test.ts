@@ -8,7 +8,7 @@ import {
   sftpTransferGroupStatus,
   sftpTransferProgress
 } from "#koko/utils/sftpTransferSummary";
-import fileManagementStyles from "../../assets/css/sftp-file-management.css?inline";
+import fileManagementStyles from "../../assets/css/sftp-file-management.scss?inline";
 import transferCenterStyles from "../../assets/css/sftp-transfer-center.scss?inline";
 import fileManagementIndex from "../../components/FileManagement/index.vue?raw";
 import fileManagementLocalPane from "../../components/FileManagement/localPane.vue?raw";
@@ -82,6 +82,9 @@ describe("sftp transfer drop target", () => {
     expect(fileManagementPane).toContain("manager.currentPath.value");
     expect(filePaneDropOverlay).toContain('t("koko.fileManagement.releaseToCurrentDirectory")');
     expect(fileManagementStyles).toMatch(/\.sftp-transfer-drop-target\s*\{[^}]*border:\s*2px dashed/);
+    // Drag target send/copy icon stays compact (scss may nest `> svg` under `__label`).
+    expect(fileManagementStyles).toMatch(/width:\s*14px/);
+    expect(fileManagementStyles).toContain("sftp-transfer-drop-target");
   });
 
   it("delegates same-endpoint rejection to the shared drag helper", () => {
@@ -95,12 +98,10 @@ describe("sftp right-panel compact mode", () => {
     expect(fileManagerSessionSurface).toContain(':compact="compact"');
   });
 
-  it("passes the session asset so compact mode can upgrade into the professional workbench", () => {
-    expect(fileManagerSessionSurface).toContain(":source-asset=");
-    expect(fileManagementIndex).toContain("sourceAsset?: FileWorkspaceSourceAsset | null");
-    expect(fileManagementIndex).toContain("openProfessionalWorkbench");
-    expect(sessionWorkspaceComponent).toContain('v-if="compact"');
-    expect(sessionWorkspaceComponent).toContain("koko.fileManagement.openProfessional");
+  it("does not surface the professional workbench upgrade control", () => {
+    expect(fileManagementIndex).not.toContain("openProfessionalWorkbench");
+    expect(sessionWorkspaceComponent).not.toContain("koko.fileManagement.openProfessional");
+    expect(sessionWorkspaceComponent).not.toContain("openProfessionalWorkbench");
   });
 
   it("hides dual-remote chrome and feature tour in compact mode", () => {

@@ -434,10 +434,10 @@ defineExpose({
     <div v-else-if="loading" class="grid flex-1 place-items-center">
       <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
     </div>
-    <div v-else class="relative min-h-0 flex-1">
+    <div v-else class="relative flex min-h-0 flex-1 flex-col">
       <SftpPaneFileTable
         variant="local"
-        class="h-full"
+        class="min-h-0 flex-1"
         :entries="visibleEntries"
         :selected-names="selectedEntries.map((entry) => entry.name)"
         :highlighted-names="highlightedNames"

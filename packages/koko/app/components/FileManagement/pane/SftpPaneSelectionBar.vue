@@ -30,7 +30,7 @@ const { t } = useI18n();
 <template>
   <div
     v-if="selectedCount"
-    class="absolute inset-x-2 bottom-2 z-20 flex items-center gap-2 rounded-md border px-3 shadow-lg"
+    class="absolute inset-x-2 bottom-8 z-20 flex items-center gap-2 rounded-md border px-3 shadow-lg"
     :class="
       remoteStyle
         ? 'sftp-selection-bar border-(--app-border-strong) bg-(--app-header-bg)'

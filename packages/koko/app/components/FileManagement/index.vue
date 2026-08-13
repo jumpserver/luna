@@ -26,7 +26,6 @@ const props = defineProps<{
 const emit = defineEmits<{ reconnect: [] }>();
 
 const { t } = useI18n();
-const localePath = useLocalePath();
 const sftpTour = useSftpTour();
 const { addErrorToast: showErrorToast } = useErrorToast();
 const translate = (key: string, params?: Record<string, unknown>) => String(params ? t(key, params) : t(key));
@@ -52,8 +51,6 @@ const {
   currentOrgLabel,
   globalActiveIds,
   initializeGlobalWorkspace,
-  pendingPreconnect,
-  primaryContext,
   primaryTransferEndpoint,
   remotePaneRefs,
   remotePanes
@@ -73,22 +70,6 @@ const transfer = useSftpTransferCoordinator({
   translate,
   showError: addErrorToast
 });
-
-async function openProfessionalWorkbench(): Promise<void> {
-  const assetId = props.sourceAsset?.id;
-  const assetName = props.sourceAsset?.name || assetId || "";
-  const tokenId = props.sftpToken || primaryContext.value?.tokenId;
-
-  if (assetId) {
-    pendingPreconnect.value = {
-      assetId,
-      assetName,
-      tokenId: tokenId || undefined
-    };
-  }
-
-  await navigateTo(localePath({ path: "/files" }));
-}
 
 onMounted(() => {
   initializeGlobalWorkspace();
@@ -144,7 +125,6 @@ function setLocalPaneRef(value: SftpLocalPaneHandle | null): void {
       :compact="compact"
       :workspace="workspace"
       :transfer="transfer"
-      :open-professional-workbench="openProfessionalWorkbench"
       :start-tour="sftpTour.start"
       :set-primary-pane-ref="setPrimaryPaneRef"
       :set-transfer-center-ref="setTransferCenterRef"
