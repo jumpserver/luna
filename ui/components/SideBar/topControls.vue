@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n();
 const { isMacOS } = usePlatform();
 const localePath = useLocalePath();
 const { collapse, setCollapse } = useSettingManager();
@@ -12,14 +13,16 @@ const workspaceModes = computed(() => {
     {
       key: "assets",
       icon: "i-lucide-house",
-      label: "我的资产"
+      label: t("Menu.MyAssets"),
+      tooltip: t("Menu.MyAssets")
     },
     {
       key: "files",
       icon: "i-lucide-folder-kanban",
-      label: "文件管理"
+      label: t("Menu.FileManager"),
+      tooltip: t("Menu.FileManager")
     }
-  ] as Array<{ key: "assets" | "files"; icon: string; label: string }>;
+  ] as Array<{ key: "assets" | "files"; icon: string; label: string; tooltip: string }>;
 });
 
 const setMode = async (mode: "assets" | "files") => {
@@ -51,7 +54,7 @@ const toggleSidebar = () => {
           variant="ghost"
           size="xs"
           :icon="mode.icon"
-          :title="mode.label"
+          :title="mode.tooltip"
           :aria-label="mode.label"
           :class="[
             headerIconButtonClass,

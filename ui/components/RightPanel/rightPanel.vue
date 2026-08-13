@@ -13,13 +13,18 @@ const { activeTab, setActiveTab } = useRightPanel();
 const showSftpTab = computed(() => workspaceTab.value?.protocol?.toLowerCase() === "ssh");
 
 const tabs = computed(() => {
-  const items: Array<{ value: RightPanelTab; label: string; icon: string }> = [
+  const items: Array<{ value: RightPanelTab; label: string; icon: string; title?: string }> = [
     { value: "session" as const, label: t("RightPanel.Session"), icon: "i-lucide-terminal" },
     { value: "ai" as const, label: t("RightPanel.AI"), icon: "i-lucide-sparkles" }
   ];
 
   if (showSftpTab.value) {
-    items.push({ value: "sftp" as const, label: t("RightPanel.SFTP"), icon: "i-lucide-folder-symlink" });
+    items.push({
+      value: "sftp" as const,
+      label: t("RightPanel.SFTP"),
+      icon: "i-lucide-folder-symlink",
+      title: t("RightPanel.SFTPTooltip")
+    });
   }
 
   return items;
@@ -55,6 +60,7 @@ watch(showSftpTab, (visible) => {
           type="button"
           class="right-panel-tab-button"
           :class="{ 'right-panel-tab-button-active': activeTab === tab.value }"
+          :title="tab.title || tab.label"
           @click="setActiveTab(tab.value)"
         >
           <UIcon :name="tab.icon" class="right-panel-tab-icon" />

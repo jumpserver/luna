@@ -8,6 +8,7 @@ import {
   KubernetesTerminalSocketFailureCode
 } from "#koko/composables/kubernetes/protocol";
 import { useKubernetesTerminalSocket } from "#koko/composables/kubernetes/useKubernetesTerminalSocket";
+import { KeyboardKey } from "#koko/constants/keyboard";
 import {
   createUnrestrictedClipboardAccess,
   resolveClipboardAccess,
@@ -133,9 +134,10 @@ function installClipboardControls(el: HTMLElement, terminal: Terminal, terminalT
   el.addEventListener("paste", onPaste, true);
   el.addEventListener("copy", onCopy, true);
   terminal.attachCustomKeyEventHandler((event) => {
-    if (event.key === "Enter" && event.isComposing) return false;
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c" && terminal.hasSelection()) return false;
-    return !((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "v");
+    if (event.key === KeyboardKey.Enter && event.isComposing) return false;
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.C && terminal.hasSelection())
+      return false;
+    return !((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.V);
   });
 
   return () => {

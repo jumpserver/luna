@@ -5,6 +5,7 @@ import type { SftpIncomingMessage, SftpSocketFailure, SftpWireMessage } from "./
 import { resolveWsUrl } from "@jumpserver/connectors-core";
 
 import { getCurrentInstance, onUnmounted, ref, shallowRef } from "vue";
+import { createSftpMessageId } from "./core/codec";
 import {
   parseSftpIncomingMessage,
   SftpControlData,
@@ -17,8 +18,6 @@ const SOCKET_OPEN = 1;
 const SOCKET_CLOSING = 2;
 const SOCKET_CLOSED = 3;
 const connectionTimeoutMs = 15_000;
-
-const messageId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
 
 export interface SftpSocketClient {
   socket: Ref<WebSocket | null>;
@@ -111,7 +110,7 @@ export function useSftpSocket(): SftpSocketClient {
       }
       if (message.type === SftpMessageType.Ping) {
         try {
-          sendPong(messageId());
+          sendPong(createSftpMessageId());
         } catch {
           emitFailure({ code: SftpSocketFailureCode.SendFailed, message: SftpSocketFailureCode.SendFailed });
         }

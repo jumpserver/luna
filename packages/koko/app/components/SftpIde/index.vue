@@ -8,6 +8,7 @@ import { SFTP_REQUEST_TIMEOUT_ERROR } from "#koko/composables/sftp/protocol";
 import { useSftpEditorDrafts } from "#koko/composables/sftp/useSftpEditorDrafts";
 import { sortSftpEntries, useSftpFileManager } from "#koko/composables/sftp/useSftpFileManager";
 import { SftpFileConflictError } from "#koko/composables/sftp/useSftpOperations";
+import { KeyboardKey } from "#koko/constants/keyboard";
 import CodeMirrorEditor from "./CodeMirrorEditor.client.vue";
 
 type PreviewKind = "text" | "image" | "unsupported" | "empty";
@@ -891,23 +892,23 @@ function handleTreeKeydown(row: EntryTreeRow, event: KeyboardEvent) {
     const next = rows[Math.min(rows.length - 1, Math.max(0, nextIndex))];
     if (next) focusTreePath(next.path);
   };
-  if (event.key === "ArrowDown") {
+  if (event.key === KeyboardKey.ArrowDown) {
     event.preventDefault();
     focusAt(index + 1);
-  } else if (event.key === "ArrowUp") {
+  } else if (event.key === KeyboardKey.ArrowUp) {
     event.preventDefault();
     focusAt(index - 1);
-  } else if (event.key === "Home") {
+  } else if (event.key === KeyboardKey.Home) {
     event.preventDefault();
     focusAt(0);
-  } else if (event.key === "End") {
+  } else if (event.key === KeyboardKey.End) {
     event.preventDefault();
     focusAt(rows.length - 1);
-  } else if (event.key === "ArrowRight" && row.entry.is_dir) {
+  } else if (event.key === KeyboardKey.ArrowRight && row.entry.is_dir) {
     event.preventDefault();
     if (!row.expanded) toggleDirectory(row.path);
     else if (rows[index + 1]?.depth === row.depth + 1) focusAt(index + 1);
-  } else if (event.key === "ArrowLeft") {
+  } else if (event.key === KeyboardKey.ArrowLeft) {
     event.preventDefault();
     if (row.entry.is_dir && row.expanded) {
       toggleDirectory(row.path);
@@ -922,13 +923,13 @@ function handleTreeKeydown(row: EntryTreeRow, event: KeyboardEvent) {
       }
     }
     if (parentIndex >= 0) focusAt(parentIndex);
-  } else if (event.key === "Enter") {
+  } else if (event.key === KeyboardKey.Enter) {
     event.preventDefault();
     void openEntry(row.entry, row.path);
-  } else if (event.key === "F2") {
+  } else if (event.key === KeyboardKey.F2) {
     event.preventDefault();
     beginRenameTarget({ entry: row.entry, path: row.path });
-  } else if (event.key === "Delete") {
+  } else if (event.key === KeyboardKey.Delete) {
     event.preventDefault();
     contextTarget.value = { entry: row.entry, path: row.path };
     openDeleteDialog();
@@ -2433,46 +2434,51 @@ defineExpose({ requestClose });
 
 useEventListener(window, "keydown", (event: KeyboardEvent) => {
   const modifier = event.metaKey || event.ctrlKey;
-  if (event.altKey && !modifier && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+  if (event.altKey && !modifier && (event.key === KeyboardKey.ArrowLeft || event.key === KeyboardKey.ArrowRight)) {
     event.preventDefault();
-    void navigateEditorHistory(event.key === "ArrowLeft" ? -1 : 1);
+    void navigateEditorHistory(event.key === KeyboardKey.ArrowLeft ? -1 : 1);
     return;
   }
-  if (modifier && event.shiftKey && event.key.toLowerCase() === "t") {
+  if (modifier && event.shiftKey && event.key.toLowerCase() === KeyboardKey.T) {
     event.preventDefault();
     void reopenLastClosed();
     return;
   }
-  if (modifier && !event.shiftKey && event.key.toLowerCase() === "p") {
+  if (modifier && !event.shiftKey && event.key.toLowerCase() === KeyboardKey.P) {
     event.preventDefault();
     openQuickOpen();
     return;
   }
-  if (modifier && !event.shiftKey && event.key === "\\" && activeTab.value) {
+  if (modifier && !event.shiftKey && event.key === KeyboardKey.Backslash && activeTab.value) {
     event.preventDefault();
     splitEditor(activeTab.value);
     return;
   }
-  if (modifier && !event.shiftKey && !event.altKey && (event.key === "1" || event.key === "2")) {
+  if (
+    modifier &&
+    !event.shiftKey &&
+    !event.altKey &&
+    (event.key === KeyboardKey.Digit1 || event.key === KeyboardKey.Digit2)
+  ) {
     event.preventDefault();
-    const pane: EditorPane = event.key === "1" ? "left" : "right";
+    const pane: EditorPane = event.key === KeyboardKey.Digit1 ? "left" : "right";
     if (pane === "right" && !splitOpen.value && activeTab.value) splitEditor(activeTab.value);
     else focusPane(pane);
     return;
   }
-  if (modifier && event.key.toLowerCase() === "s" && activeTab.value) {
+  if (modifier && event.key.toLowerCase() === KeyboardKey.S && activeTab.value) {
     event.preventDefault();
     if (event.shiftKey) void saveAll();
     else void save();
     return;
   }
-  if (modifier && !event.shiftKey && event.key.toLowerCase() === "w" && activeTab.value) {
+  if (modifier && !event.shiftKey && event.key.toLowerCase() === KeyboardKey.W && activeTab.value) {
     event.preventDefault();
     closeTab(activeTab.value);
     return;
   }
   const activePaneTabs = paneTabs(activePane.value);
-  if (event.ctrlKey && event.key === "Tab" && activePaneTabs.length > 1) {
+  if (event.ctrlKey && event.key === KeyboardKey.Tab && activePaneTabs.length > 1) {
     event.preventDefault();
     const index = activePaneTabs.findIndex((tab) => tab.path === activePath.value);
     const offset = event.shiftKey ? -1 : 1;
@@ -2997,7 +3003,7 @@ onUnmounted(() => {
                       color="primary"
                       variant="soft"
                       :loading="tab.saving"
-                      @click="save(tab)"
+                      @click="void save(tab)"
                     />
                   </UTooltip>
                   <UTooltip
@@ -3122,7 +3128,7 @@ onUnmounted(() => {
                     :line-wrapping="tab.lineWrapping"
                     :path="tab.path"
                     @cursor="(line, column) => updateCursor(tab, line, column)"
-                    @save="save(tab)"
+                    @save="void save(tab)"
                   />
                 </div>
               </div>

@@ -614,6 +614,16 @@ function riskColor(level: number) {
   return "success";
 }
 
+function terminalRiskLabel(level: unknown) {
+  const labels: Record<number, string> = {
+    1: t("RightPanel.AIRiskReadOnly"),
+    2: t("RightPanel.AIRiskLow"),
+    3: t("RightPanel.AIRiskMedium"),
+    4: t("RightPanel.AIRiskHigh")
+  };
+  return labels[Number(level)] || t("RightPanel.AIRisk", { level });
+}
+
 function proposalDecision(item: SqlProposalItem) {
   return sqlSession.value?.proposalDecisions.get(item.key) || "";
 }
@@ -950,7 +960,7 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
                         </span>
                         <div class="flex flex-wrap justify-end gap-1">
                           <UBadge :color="riskColor(Number(execution.command.riskLevel))" variant="subtle" size="xs">
-                            {{ t("RightPanel.AIRisk", { level: execution.command.riskLevel }) }}
+                            {{ terminalRiskLabel(execution.command.riskLevel) }}
                           </UBadge>
                           <UBadge color="neutral" variant="subtle" size="xs">
                             {{ executionLabel(execution.command.execution) }}
