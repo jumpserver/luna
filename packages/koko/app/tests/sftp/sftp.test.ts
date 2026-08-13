@@ -1,3 +1,4 @@
+import type { FileTransferStatus, FileTransferTask } from "~/shared/file-transfer/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 
@@ -12,6 +13,11 @@ import {
 import { useSftpOperations } from "#koko/composables/sftp/useSftpOperations";
 import { useSftpRetry } from "#koko/composables/sftp/useSftpRetry";
 import { useSftpSocket } from "#koko/composables/sftp/useSftpSocket";
+import { buildSftpDistributionGroups } from "#koko/utils/sftpDistribution";
+import { buildSftpTourSteps, SFTP_TOUR_STORAGE_KEY } from "#koko/utils/sftpTour";
+import { finishedTransferCount, sftpTransferGroupStatus, sftpTransferProgress } from "#koko/utils/sftpTransferSummary";
+import enMessages from "../../../../../i18n/locales/en.json";
+import zhMessages from "../../../../../i18n/locales/zh.json";
 
 const context = {
   component: "koko" as const,
@@ -215,5 +221,104 @@ describe("sFTP browser protocol", () => {
     expect(activeContext.value).toMatchObject({ tokenId: "fresh-token", ticket: "fresh-ticket" });
     expect(beforeReconnect).toHaveBeenCalledOnce();
     expect(connect).toHaveBeenCalledWith(activeContext.value);
+  });
+});
+
+describe("sFTP multi-target distribution", () => {
+  it("creates an isolated batch input group for every destination", () => {
+    const sourceEndpoint = { id: "sftp:source", label: "Source" };
+    const groups = buildSftpDistributionGroups({
+      distributionId: "release-42",
+      sourceEndpoint,
+      sourcePath: "/tmp/release/",
+      entries: [
+        { name: "app.tar.gz", size: "1024" },
+        { name: "config.env", size: "64" },
+        { name: "invalid", size: "not-a-number" }
+      ],
+      targets: [
+        { endpoint: { id: "sftp:target-a", label: "Target A" }, destinationPath: "/opt/app/" },
+        { endpoint: { id: "sftp:target-b", label: "Target B" }, destinationPath: "/srv/releases" },
+        { endpoint: sourceEndpoint, destinationPath: "/same-endpoint" }
+      ],
+      conflictPolicy: "overwrite"
+    });
+
+    expect(groups).toHaveLength(2);
+    expect(groups.map((group) => group.destination.id)).toEqual(["sftp:target-a", "sftp:target-b"]);
+    expect(groups[0]?.inputs).toHaveLength(2);
+    expect(groups[0]?.inputs[0]).toMatchObject({
+      batchId: "sftp-dist:release-42::target::sftp%3Atarget-a",
+      source: { name: "app.tar.gz", size: 1024, path: "/tmp/release/app.tar.gz" },
+      destinationPath: "/opt/app",
+      conflictPolicy: "overwrite"
+    });
+    expect(groups[1]?.inputs[1]).toMatchObject({
+      source: { name: "config.env", size: 64, path: "/tmp/release/config.env" },
+      destinationPath: "/srv/releases"
+    });
+  });
+
+  it("preserves byte progress and partial status for mixed terminal outcomes", () => {
+    const task = (status: FileTransferStatus, size: number, confirmedBytes: number) =>
+      ({ status, source: { size }, confirmedBytes }) as FileTransferTask;
+    const tasks = [task("completed", 100, 100), task("canceled", 150, 0)];
+
+    expect(finishedTransferCount(tasks)).toBe(2);
+    expect(sftpTransferProgress(tasks)).toBe(40);
+    expect(sftpTransferGroupStatus(tasks)).toBe("partial");
+  });
+
+  it("keeps byte progress while a group still has active tasks", () => {
+    const tasks = [
+      { status: "completed", source: { size: 100 }, confirmedBytes: 100 },
+      { status: "transferring", source: { size: 150 }, confirmedBytes: 0 }
+    ] as FileTransferTask[];
+
+    expect(finishedTransferCount(tasks)).toBe(1);
+    expect(sftpTransferProgress(tasks)).toBe(40);
+    expect(sftpTransferGroupStatus(tasks)).toBe("transferring");
+  });
+});
+
+describe("sFTP feature tour", () => {
+  it("covers the primary file-management workflow in both languages", () => {
+    const translate = (messages: unknown) => (key: string) => {
+      const value = key.split(".").reduce<unknown>((current, segment) => {
+        if (!current || typeof current !== "object") return undefined;
+        return (current as Record<string, unknown>)[segment];
+      }, messages);
+      if (typeof value !== "string") throw new TypeError(`Missing translation: ${key}`);
+      return value;
+    };
+    const chineseSteps = buildSftpTourSteps(translate(zhMessages));
+    const englishSteps = buildSftpTourSteps(translate(enMessages));
+
+    expect(SFTP_TOUR_STORAGE_KEY).toBe("koko:sftp-tour:v1");
+    expect(chineseSteps).toHaveLength(6);
+    expect(englishSteps).toHaveLength(chineseSteps.length);
+    expect(chineseSteps.map((step) => step.element)).toEqual([
+      '[data-sftp-tour="workspace"]',
+      '[data-sftp-tour="navigation"]',
+      '[data-sftp-tour="file-actions"]',
+      '[data-sftp-tour="file-table"]',
+      '[data-sftp-tour="remote-connect"]',
+      '[data-sftp-tour="transfer-center"]'
+    ]);
+    expect(chineseSteps[0]?.popover?.title).toBe("SFTP 文件工作区");
+    expect(englishSteps[0]?.popover?.title).toBe("SFTP file workspace");
+  });
+
+  it("keeps the SFTP interaction translation trees aligned", () => {
+    const leafKeys = (value: unknown, prefix = ""): string[] => {
+      if (!value || typeof value !== "object") return [prefix];
+      return Object.entries(value).flatMap(([key, child]) => leafKeys(child, prefix ? `${prefix}.${key}` : key));
+    };
+    const zhKoko = zhMessages.koko;
+    const enKoko = enMessages.koko;
+
+    for (const section of ["fileManagement", "sftpTransferCenter", "sftpTour"] as const) {
+      expect(leafKeys(enKoko[section]).sort()).toEqual(leafKeys(zhKoko[section]).sort());
+    }
   });
 });

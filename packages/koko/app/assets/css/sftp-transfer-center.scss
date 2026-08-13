@@ -1,0 +1,480 @@
+/* ========================================
+   SFTP Transfer Center Styles
+   Based on: sftp-multi-target-distribute.html
+   ======================================== */
+
+/* Filter Chips */
+.sftp-transfer-center-drawer[data-slot="content"] {
+  width: 552px;
+  max-width: calc(100vw - 40px);
+}
+
+@media (max-width: 1560px) {
+  .sftp-transfer-center-drawer[data-slot="content"] {
+    width: 496px;
+  }
+}
+
+.sftp-transfer-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 26px;
+  min-width: 52px;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 0 10px;
+  border-radius: 20px;
+  color: var(--app-text-secondary);
+  background: var(--app-surface-panel);
+  border: 1px solid var(--app-border-strong);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background-color 0.15s,
+    border-color 0.15s;
+
+  &:hover {
+    color: var(--app-text-primary);
+    background: var(--app-state-hover);
+    border-color: color-mix(in srgb, var(--app-border-strong) 70%, var(--app-text-primary));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--app-focus-ring);
+    outline-offset: 2px;
+  }
+
+  &.on {
+    color: color-mix(in srgb, var(--theme-accent) 74%, var(--app-text-primary));
+    background: color-mix(in srgb, var(--theme-accent) 14%, var(--app-surface-panel));
+    border-color: color-mix(in srgb, var(--theme-accent) 50%, var(--app-border-strong));
+  }
+}
+
+/* Batch, target and file progress share the same state colors but keep their own dimensions. */
+:is(.sftp-progress-bar, .sftp-target-progress-bar, .sftp-file-progress-bar) {
+  height: 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--app-text-muted) 14%, var(--app-surface-panel));
+  overflow: hidden;
+  position: relative;
+
+  > i {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 3px;
+    background: #3b9eff;
+    transition: width 0.3s ease;
+
+    &.completed {
+      background: #34d399;
+    }
+
+    &.skipped {
+      background: #34d399;
+    }
+
+    &.paused {
+      background: #eab308;
+    }
+
+    &.verifying {
+      background: #a78bfa;
+    }
+
+    &.failed,
+    &.partial {
+      background: #ef4444;
+    }
+
+    &.transferring {
+      background: #3b9eff;
+      background-image: linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.16) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.16) 50%,
+        rgba(255, 255, 255, 0.16) 75%,
+        transparent 75%
+      );
+      background-size: 14px 14px;
+      animation: progress-stripe 1s linear infinite;
+    }
+
+    &.preparing,
+    &.queued {
+      background: #8791a0;
+    }
+  }
+}
+
+.sftp-target-progress-bar {
+  width: 88px;
+  flex: none;
+}
+
+.sftp-file-progress-bar {
+  height: 3px;
+  width: 100%;
+}
+
+@keyframes progress-stripe {
+  to {
+    background-position: 14px 0;
+  }
+}
+
+/* Status Pills */
+.sftp-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px 2px 6px;
+  border-radius: 20px;
+  line-height: 1.4;
+  white-space: nowrap;
+  border: 1px solid transparent;
+
+  svg {
+    width: 11px;
+    height: 11px;
+    stroke-width: 2;
+  }
+
+  &.queued {
+    color: #8791a0;
+    background: rgba(91, 97, 110, 0.16);
+    border-color: rgba(135, 145, 160, 0.3);
+  }
+
+  &.preparing {
+    color: #c4b5fd;
+    background: rgba(167, 139, 250, 0.14);
+    border-color: rgba(167, 139, 250, 0.3);
+  }
+
+  &.transferring {
+    color: #79bbff;
+    background: rgba(59, 158, 255, 0.14);
+    border-color: rgba(59, 158, 255, 0.35);
+  }
+
+  &.verifying {
+    color: #c4b5fd;
+    background: rgba(167, 139, 250, 0.14);
+    border-color: rgba(167, 139, 250, 0.35);
+  }
+
+  &.paused {
+    color: #f0c94a;
+    background: rgba(234, 179, 8, 0.14);
+    border-color: rgba(234, 179, 8, 0.32);
+  }
+
+  &.waitconn {
+    color: #f6b45a;
+    background: rgba(245, 158, 11, 0.14);
+    border-color: rgba(245, 158, 11, 0.34);
+  }
+
+  &.completed {
+    color: #5fe6c6;
+    background: rgba(52, 211, 153, 0.13);
+    border-color: rgba(52, 211, 153, 0.35);
+  }
+
+  &.failed {
+    color: #ff9999;
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(239, 68, 68, 0.35);
+  }
+
+  &.partial {
+    color: #f6b45a;
+    background: rgba(245, 158, 11, 0.14);
+    border-color: rgba(245, 158, 11, 0.34);
+  }
+
+  &.canceled {
+    color: #8791a0;
+    background: rgba(91, 97, 110, 0.16);
+    border-color: rgba(91, 97, 110, 0.4);
+  }
+
+  &.skipped {
+    color: #8791a0;
+    background: rgba(91, 97, 110, 0.16);
+    border-color: rgba(91, 97, 110, 0.3);
+  }
+
+  &.offline {
+    color: #737b88;
+    background: rgba(91, 97, 110, 0.16);
+    border-color: rgba(91, 97, 110, 0.4);
+  }
+}
+
+/* Batch Card */
+.sftp-transfer-batch {
+  width: 100%;
+
+  &__summary {
+    width: 100%;
+    transition: background 0.15s;
+
+    &:hover {
+      background: var(--app-surface-elevated);
+    }
+  }
+
+  &__chevron {
+    transition: transform 0.15s;
+  }
+
+  &__aside {
+    width: 58px;
+    flex: none;
+  }
+
+  &.expanded {
+    .sftp-transfer-batch__chevron {
+      transform: rotate(90deg);
+    }
+
+    .sftp-transfer-targets {
+      display: flex;
+    }
+  }
+
+  &__stats {
+    .stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+
+      svg {
+        width: 12px;
+        height: 12px;
+      }
+
+      &.ok {
+        color: #34d399;
+      }
+
+      &.running {
+        color: #3b9eff;
+      }
+
+      &.fail {
+        color: #ff8080;
+      }
+
+      &.wait {
+        color: #f6b45a;
+      }
+
+      &.queue {
+        color: #8791a0;
+      }
+    }
+
+    .divider {
+      color: var(--app-fg-tertiary);
+    }
+  }
+}
+
+.sftp-transfer-targets {
+  display: none;
+  flex-direction: column;
+}
+
+/* Retry Banner */
+.sftp-transfer-banner {
+  &.warning {
+    color: color-mix(in srgb, var(--theme-accent) 78%, var(--app-text-primary));
+    background: color-mix(in srgb, var(--theme-accent) 14%, transparent);
+    border-color: color-mix(in srgb, var(--theme-accent) 28%, transparent);
+  }
+
+  &.error {
+    color: color-mix(in srgb, var(--color-text-error) 72%, var(--app-text-primary));
+    background: color-mix(in srgb, var(--color-bg-error) 14%, transparent);
+    border-color: color-mix(in srgb, var(--color-border-error) 28%, transparent);
+  }
+}
+
+.sftp-conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.sftp-retry-banner {
+  margin: 0 12px 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-size: 11.5px;
+  color: #ff9a9a;
+
+  svg {
+    width: 13px;
+    height: 13px;
+    flex: none;
+    color: #ff8080;
+  }
+
+  .spacer {
+    flex: 1;
+  }
+}
+
+/* Target */
+.sftp-transfer-target {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &__summary {
+    width: 100%;
+    transition: background 0.15s;
+
+    &:hover {
+      background: var(--app-surface-elevated);
+    }
+  }
+
+  &__chevron {
+    transition: transform 0.15s;
+  }
+
+  &__actions {
+    display: flex;
+    width: 58px;
+    flex: none;
+    justify-content: flex-end;
+  }
+
+  &.expanded {
+    .sftp-transfer-target__chevron {
+      transform: rotate(90deg);
+    }
+
+    .sftp-transfer-files {
+      display: flex;
+    }
+  }
+
+  &__error {
+    margin: 0 12px 9px 34px;
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    background: rgba(239, 68, 68, 0.14);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: var(--radius-sm);
+    padding: 7px 9px;
+    font-size: 11px;
+    color: #ffb0b0;
+    line-height: 1.5;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      flex: none;
+      margin-top: 1px;
+      color: #ff8080;
+    }
+
+    b {
+      color: #ffd0d0;
+    }
+
+    &.conflict {
+      background: rgba(245, 158, 11, 0.14);
+      border-color: rgba(245, 158, 11, 0.25);
+      color: #f6b45a;
+
+      svg {
+        color: #f59e0b;
+      }
+
+      b {
+        color: #fbbf24;
+      }
+    }
+  }
+}
+
+/* Files */
+.sftp-transfer-files {
+  display: none;
+  flex-direction: column;
+  width: 100%;
+}
+
+.sftp-transfer-file {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) 92px max-content;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 3px;
+  font-size: 11.5px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--app-surface-elevated);
+
+    .sftp-transfer-file__actions {
+      opacity: 1;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  &__name {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 7px;
+    color: var(--app-text-secondary);
+  }
+
+  &__status {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--app-text-muted);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  &__progress {
+    grid-column: 1 / -1;
+    margin-top: 2px;
+  }
+}

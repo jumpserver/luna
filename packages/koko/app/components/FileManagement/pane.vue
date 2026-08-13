@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
+import type { DropdownMenuItem } from "@nuxt/ui";
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
 import type { FileTransferEndpointRef } from "~/shared/file-transfer/types";
 import prettyBytes from "pretty-bytes";
@@ -12,18 +13,27 @@ const props = defineProps<{
   context: ConnectorSessionContext | null;
   title?: string;
   transferEndpoint?: FileTransferEndpointRef;
+  /** Lightweight single-pane mode (SSH right panel): browse + basic file ops only. */
+  compact?: boolean;
 }>();
 
 const emit = defineEmits<{
   select: [entry: SftpFileEntry | null];
+  send: [payload: SftpTransferSourcePayload];
   transferDrop: [payload: SftpTransferDropPayload];
 }>();
 
-interface SftpTransferDropPayload {
+/** Cross-machine send/drag is only available in full dual-pane file management. */
+const canTransferFiles = computed(() => Boolean(props.transferEndpoint) && !props.compact);
+
+interface SftpTransferSourcePayload {
   sourceEndpoint: FileTransferEndpointRef;
   sourcePath: string;
   sourceSelectionRevision: number;
   entries: Array<Pick<SftpFileEntry, "name" | "size">>;
+}
+
+interface SftpTransferDropPayload extends SftpTransferSourcePayload {
   destinationPath: string;
 }
 
@@ -33,6 +43,9 @@ const { addErrorToast } = useErrorToast();
 const contextRef = computed(() => props.context);
 const manager = useSftpFileManager(contextRef, props.transferEndpoint);
 const transferStore = useFileTransferStore();
+const activeTransferDragSourceId = useState<string | null>("sftp-active-transfer-drag-source", () => null);
+
+const sftpTransferMimeType = "application/x-jumpserver-sftp-files";
 
 let unregisterTransferEndpoint: (() => void) | undefined;
 
@@ -40,7 +53,15 @@ const search = ref("");
 const uploadInput = ref<HTMLInputElement | null>(null);
 const selectedEntries = ref<SftpFileEntry[]>([]);
 const selectionRevision = ref(0);
-const hoveredEntryName = ref<string | null>(null);
+const contextMenuVisible = ref(false);
+const contextMenuPosition = ref({ x: 0, y: 0 });
+const contextEntry = ref<SftpFileEntry | null>(null);
+const transferDropActive = computed(
+  () =>
+    canTransferFiles.value &&
+    Boolean(activeTransferDragSourceId.value) &&
+    activeTransferDragSourceId.value !== props.transferEndpoint?.id
+);
 
 const promptOpen = ref(false);
 const promptName = ref("");
@@ -48,7 +69,7 @@ const promptTarget = ref<SftpFileEntry | null>(null);
 const promptKind = ref<"folder" | "file">("folder");
 
 const alertOpen = ref(false);
-const alertTarget = ref<{ kind: "delete" | "download"; entry: SftpFileEntry } | null>(null);
+const alertTarget = ref<{ kind: "delete" | "download"; entries: SftpFileEntry[] } | null>(null);
 
 const visibleEntries = computed(() => {
   const query = search.value.toLowerCase();
@@ -62,6 +83,22 @@ const visibleEntries = computed(() => {
 });
 const pathSegments = computed(() => manager.currentPath.value.split("/").filter(Boolean));
 const selectedEntry = computed(() => selectedEntries.value.at(-1) || null);
+const transferableEntries = computed(() =>
+  selectedEntries.value.filter((entry) => !entry.is_dir && entry.name !== "..")
+);
+const selectedSize = computed(() =>
+  transferableEntries.value.reduce((total, entry) => {
+    const size = Number(entry.size);
+    return total + (Number.isFinite(size) && size >= 0 ? size : 0);
+  }, 0)
+);
+const selectableVisibleEntries = computed(() => visibleEntries.value.filter((entry) => entry.name !== ".."));
+const visibleSelectedCount = computed(() => selectableVisibleEntries.value.filter((entry) => isSelected(entry)).length);
+const selectAllState = computed<boolean | "indeterminate">(() => {
+  if (!visibleSelectedCount.value) return false;
+  return visibleSelectedCount.value === selectableVisibleEntries.value.length ? true : "indeterminate";
+});
+const typeColumnLabel = computed(() => t("koko.fileManagement.type"));
 
 function navigateToPath(segmentIndex: number) {
   const path = segmentIndex < 0 ? "/" : `/${pathSegments.value.slice(0, segmentIndex + 1).join("/")}`;
@@ -86,6 +123,23 @@ function formatModifiedTime(value: string) {
   return `${date.getFullYear()}-${twoDigits(date.getMonth() + 1)}-${twoDigits(date.getDate())} ${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`;
 }
 
+function fileType(entry: SftpFileEntry) {
+  if (entry.is_dir) return t("koko.fileManagement.folder");
+
+  const normalizedName = entry.name.toLowerCase();
+  const extension =
+    normalizedName.startsWith(".") && !normalizedName.slice(1).includes(".")
+      ? normalizedName.slice(1)
+      : normalizedName.includes(".")
+        ? normalizedName.split(".").at(-1) || ""
+        : "";
+  if (extension) return extension;
+
+  const serverType = entry.type?.trim().replace(/^\./, "").toLowerCase();
+  if (serverType && !["file", "regular"].includes(serverType)) return serverType;
+  return t("koko.fileManagement.file");
+}
+
 const promptTitle = computed(() =>
   promptTarget.value
     ? t("koko.actions.rename")
@@ -103,14 +157,38 @@ const alertTitle = computed(() =>
 );
 const alertDescription = computed(() => {
   if (!alertTarget.value) return "";
-  if (alertTarget.value.kind === "delete")
-    return t("koko.fileManagement.deleteConfirm", { name: alertTarget.value.entry.name });
+  if (alertTarget.value.kind === "delete") {
+    const entries = alertTarget.value.entries;
+    if (entries.length === 1) return t("koko.fileManagement.deleteConfirm", { name: entries[0]?.name });
+    return `${t("koko.actions.delete")} ${t("koko.fileManagement.items", { count: entries.length })}?`;
+  }
   return t("koko.fileManagement.downloadFolderConfirm");
 });
+
+async function removeEntries(entries: SftpFileEntry[], concurrency = 4) {
+  const results: PromiseSettledResult<void>[] = new Array(entries.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(concurrency, entries.length) }, async () => {
+    while (nextIndex < entries.length) {
+      const index = nextIndex++;
+      const entry = entries[index];
+      if (!entry) continue;
+      try {
+        await manager.operations.removeEntry(entry);
+        results[index] = { status: "fulfilled", value: undefined };
+      } catch (reason) {
+        results[index] = { status: "rejected", reason };
+      }
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
 
 watch(selectedEntry, (entry) => emit("select", entry));
 
 watch(manager.currentPath, () => {
+  hideContextMenu();
   clearSelection();
 });
 
@@ -120,15 +198,22 @@ watch(manager.connected, (connected) => {
 
 onMounted(() => {
   if (manager.transferEndpoint) unregisterTransferEndpoint = registerFileTransferEndpoint(manager.transferEndpoint);
+  document.addEventListener("dragend", clearTransferDragState);
 });
 
 onUnmounted(() => {
+  document.removeEventListener("dragend", clearTransferDragState);
   unregisterTransferEndpoint?.();
   if (props.transferEndpoint) transferStore.pauseEndpoint(props.transferEndpoint);
 });
 
 function clearSelection() {
   selectedEntries.value = [];
+  selectionRevision.value += 1;
+}
+
+function updateSelection(entries: SftpFileEntry[]) {
+  selectedEntries.value = entries;
   selectionRevision.value += 1;
 }
 
@@ -146,24 +231,38 @@ function selectEntry(entry: SftpFileEntry, event?: MouseEvent) {
   if (entry.name === "..") return;
 
   if (!event?.ctrlKey && !event?.metaKey) {
-    selectedEntries.value = [entry];
-    selectionRevision.value += 1;
+    updateSelection([entry]);
     return;
   }
 
   const selected = selectedEntries.value.some((item) => item.name === entry.name);
-  selectedEntries.value = selected
-    ? selectedEntries.value.filter((item) => item.name !== entry.name)
-    : [...selectedEntries.value, entry];
-  selectionRevision.value += 1;
+  updateSelection(
+    selected ? selectedEntries.value.filter((item) => item.name !== entry.name) : [...selectedEntries.value, entry]
+  );
 }
 
 function isSelected(entry: SftpFileEntry) {
   return selectedEntries.value.some((item) => item.name === entry.name);
 }
 
+function toggleEntry(entry: SftpFileEntry, selected: boolean) {
+  if (entry.name === ".." || isSelected(entry) === selected) return;
+  updateSelection(
+    selected ? [...selectedEntries.value, entry] : selectedEntries.value.filter((item) => item.name !== entry.name)
+  );
+}
+
+function toggleAllVisible(selected: boolean) {
+  const visibleNames = new Set(selectableVisibleEntries.value.map((entry) => entry.name));
+  updateSelection(
+    selected
+      ? [...selectedEntries.value.filter((entry) => !visibleNames.has(entry.name)), ...selectableVisibleEntries.value]
+      : selectedEntries.value.filter((entry) => !visibleNames.has(entry.name))
+  );
+}
+
 function onDragStart(event: DragEvent, entry: SftpFileEntry) {
-  if (entry.is_dir || entry.name === ".." || !props.transferEndpoint) {
+  if (entry.is_dir || entry.name === ".." || !canTransferFiles.value || !props.transferEndpoint) {
     event.preventDefault();
     return;
   }
@@ -186,32 +285,85 @@ function onDragStart(event: DragEvent, entry: SftpFileEntry) {
     entries
   };
 
-  event.dataTransfer?.setData("application/x-jumpserver-sftp-files", JSON.stringify(payload));
+  event.dataTransfer?.setData(sftpTransferMimeType, JSON.stringify(payload));
   event.dataTransfer?.setData("text/plain", payload.entries.map((item) => item.name).join("\n"));
 
+  activeTransferDragSourceId.value = props.transferEndpoint.id;
   if (event.dataTransfer) event.dataTransfer.effectAllowed = "copy";
 }
 
-function onTransferDrop(event: DragEvent) {
-  const encoded = event.dataTransfer?.getData("application/x-jumpserver-sftp-files");
-  if (!encoded) return;
+function transferDragPayload(event: DragEvent) {
+  const encoded = event.dataTransfer?.getData(sftpTransferMimeType);
+  if (!encoded || !props.transferEndpoint) return null;
 
   try {
     const payload = JSON.parse(encoded) as Omit<SftpTransferDropPayload, "destinationPath">;
     if (
       !payload.sourceEndpoint?.id ||
+      payload.sourceEndpoint.id === props.transferEndpoint.id ||
       !payload.sourcePath ||
       !Number.isInteger(payload.sourceSelectionRevision) ||
       !Array.isArray(payload.entries) ||
-      !props.transferEndpoint
+      !payload.entries.length
     ) {
-      return;
+      return null;
     }
-
-    emit("transferDrop", { ...payload, destinationPath: manager.currentPath.value });
+    return payload;
   } catch {
-    // Ignore drops from an unrelated or malformed drag source.
+    return null;
   }
+}
+
+function canAcceptTransferDrag(event: DragEvent) {
+  return Boolean(
+    canTransferFiles.value &&
+    props.transferEndpoint &&
+    activeTransferDragSourceId.value &&
+    activeTransferDragSourceId.value !== props.transferEndpoint.id &&
+    Array.from(event.dataTransfer?.types || []).includes(sftpTransferMimeType)
+  );
+}
+
+function onTransferDragEnter(event: DragEvent) {
+  if (!canAcceptTransferDrag(event)) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+}
+
+function onTransferDragOver(event: DragEvent) {
+  if (!canAcceptTransferDrag(event)) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+}
+
+function clearTransferDragState() {
+  activeTransferDragSourceId.value = null;
+}
+
+function transferSourcePayload(): SftpTransferSourcePayload | null {
+  if (!canTransferFiles.value || !props.transferEndpoint || !transferableEntries.value.length) return null;
+  return {
+    sourceEndpoint: props.transferEndpoint,
+    sourcePath: manager.currentPath.value,
+    sourceSelectionRevision: selectionRevision.value,
+    entries: transferableEntries.value.map((entry) => ({ name: entry.name, size: entry.size }))
+  };
+}
+
+function requestSend() {
+  if (!canTransferFiles.value) return;
+  const payload = transferSourcePayload();
+  if (!payload) return;
+  hideContextMenu();
+  emit("send", payload);
+}
+
+function onTransferDrop(event: DragEvent) {
+  const payload = transferDragPayload(event);
+  clearTransferDragState();
+  if (!payload) return;
+  event.preventDefault();
+  emit("transferDrop", { ...payload, destinationPath: manager.currentPath.value });
 }
 
 async function refreshCurrentDirectory() {
@@ -247,17 +399,22 @@ const createFile = () => {
 };
 
 const rename = (entry: SftpFileEntry) => {
+  hideContextMenu();
   promptTarget.value = entry;
   promptName.value = entry.name;
   promptOpen.value = true;
 };
 
-const remove = (entry: SftpFileEntry) => {
-  alertTarget.value = { kind: "delete", entry };
+function requestDelete(entries = selectedEntries.value) {
+  const targets = entries.filter((entry) => entry.name !== "..");
+  if (!targets.length) return;
+  hideContextMenu();
+  alertTarget.value = { kind: "delete", entries: targets };
   alertOpen.value = true;
-};
+}
 
 const downloadEntry = (entry: SftpFileEntry) => {
+  hideContextMenu();
   void runFileOperation(
     () => manager.operations.downloadEntry(entry),
     t("koko.fileManagement.entryDownloaded", { name: entry.name })
@@ -266,14 +423,74 @@ const downloadEntry = (entry: SftpFileEntry) => {
 
 const downloadSelected = () => {
   const entry = selectedEntry.value;
-  if (!entry) return;
+  if (!entry || selectedEntries.value.length !== 1) return;
   if (entry.is_dir) {
-    alertTarget.value = { kind: "download", entry };
+    hideContextMenu();
+    alertTarget.value = { kind: "download", entries: [entry] };
     alertOpen.value = true;
     return;
   }
   downloadEntry(entry);
 };
+
+function openContextMenu(entry: SftpFileEntry, event: MouseEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (entry.name === "..") return;
+  if (!isSelected(entry)) updateSelection([entry]);
+  contextEntry.value = entry;
+  contextMenuPosition.value = { x: event.clientX, y: event.clientY };
+  contextMenuVisible.value = true;
+}
+
+function hideContextMenu() {
+  contextMenuVisible.value = false;
+  contextEntry.value = null;
+}
+
+const contextMenuItems = computed<DropdownMenuItem[]>(() => {
+  const entry = contextEntry.value;
+  if (!entry) return [];
+  const singleSelection = selectedEntries.value.length === 1;
+  const items: DropdownMenuItem[] = [];
+
+  // Full dual-pane mode only: multi-target distribution is intentionally absent from compact SFTP.
+  if (canTransferFiles.value) {
+    items.push(
+      {
+        label: t("koko.fileManagement.sendTo"),
+        icon: "i-lucide-send",
+        disabled: !transferableEntries.value.length,
+        onSelect: requestSend
+      },
+      { type: "separator" }
+    );
+  }
+
+  items.push(
+    {
+      label: t("koko.actions.download"),
+      icon: "i-lucide-download",
+      disabled: !singleSelection,
+      onSelect: downloadSelected
+    },
+    {
+      label: t("koko.actions.rename"),
+      icon: "i-lucide-pencil",
+      disabled: !singleSelection,
+      onSelect: () => rename(entry)
+    },
+    { type: "separator" },
+    {
+      label: t("koko.actions.delete"),
+      icon: "i-lucide-trash-2",
+      color: "error",
+      onSelect: () => requestDelete()
+    }
+  );
+
+  return items;
+});
 
 const submitPrompt = async () => {
   const name = promptName.value.trim();
@@ -305,20 +522,37 @@ const submitPrompt = async () => {
 const confirmAlert = async () => {
   const target = alertTarget.value;
   if (!target) return;
-  const success =
-    target.kind === "delete"
-      ? await runFileOperation(
-          () => manager.operations.removeEntry(target.entry),
-          t("koko.fileManagement.entryDeleted", { name: target.entry.name }),
-          true
-        )
-      : await runFileOperation(
-          () => manager.operations.downloadEntry(target.entry),
-          t("koko.fileManagement.entryDownloaded", { name: target.entry.name })
-        );
-  if (success) {
-    if (target.kind === "delete") clearSelection();
+  const [entry] = target.entries;
+  if (!entry) return;
+
+  if (target.kind === "download") {
+    const success = await runFileOperation(
+      () => manager.operations.downloadEntry(entry),
+      t("koko.fileManagement.entryDownloaded", { name: entry.name })
+    );
+    if (success) alertOpen.value = false;
+    return;
+  }
+
+  const results = await removeEntries(target.entries);
+  const succeeded = results.filter((result) => result.status === "fulfilled").length;
+  const failedEntries = target.entries.filter((_, index) => results[index]?.status === "rejected");
+  if (succeeded) {
+    toast.add({
+      title:
+        target.entries.length === 1
+          ? t("koko.fileManagement.entryDeleted", { name: entry.name })
+          : `${t("koko.actions.delete")}: ${t("koko.fileManagement.items", { count: succeeded })}`,
+      color: succeeded === target.entries.length ? "success" : "warning"
+    });
+    await refreshCurrentDirectory();
+    updateSelection(failedEntries);
     alertOpen.value = false;
+  }
+
+  const failure = results.find((result) => result.status === "rejected");
+  if (failure?.status === "rejected") {
+    addErrorToast({ title: t("koko.fileManagement.operationFailed"), error: failure.reason });
   }
 };
 
@@ -352,7 +586,14 @@ const uploadFromEvent = async (event: Event) => {
   }
 };
 
-defineExpose({ manager, selectedEntry, selectedEntries, clearTransferredSelection });
+defineExpose({
+  manager,
+  selectedEntry,
+  selectedEntries,
+  clearSelection,
+  clearTransferredSelection,
+  transferSourcePayload
+});
 </script>
 
 <template>
@@ -368,14 +609,24 @@ defineExpose({ manager, selectedEntry, selectedEntries, clearTransferredSelectio
       </UButton>
     </div>
   </div>
-  <div v-else class="flex h-full min-h-0 flex-col bg-(--app-main-bg) text-(--app-fg)">
+  <div
+    v-else
+    class="sftp-file-management relative flex h-full min-h-0 flex-col bg-(--app-main-bg) text-(--app-fg)"
+    :class="{ 'sftp-file-management--compact': compact }"
+    @dragenter="canTransferFiles ? onTransferDragEnter($event) : undefined"
+    @dragover="canTransferFiles ? onTransferDragOver($event) : undefined"
+    @drop="canTransferFiles ? onTransferDrop($event) : undefined"
+  >
     <div
       v-if="title"
-      class="flex h-8 shrink-0 items-center border-b border-(--app-border) bg-(--app-header-bg) px-3 text-[11px] font-medium text-(--app-muted)"
+      class="sftp-file-management__pane-title flex shrink-0 items-center border-b border-(--app-border) bg-(--app-header-bg)"
     >
       {{ title }}
     </div>
-    <div class="flex h-11.5 shrink-0 items-center gap-1.5 border-b border-(--app-border) bg-(--app-panel-bg) px-3">
+    <div
+      data-sftp-tour="navigation"
+      class="sftp-file-management__toolbar flex shrink-0 items-center gap-1.5 border-b border-(--app-border) bg-(--app-panel-bg) px-3"
+    >
       <UButton
         icon="i-lucide-chevron-left"
         color="neutral"
@@ -456,7 +707,8 @@ defineExpose({ manager, selectedEntry, selectedEntries, clearTransferredSelectio
       />
     </div>
     <div
-      class="flex h-10.5 shrink-0 items-center justify-between gap-2 border-b border-(--app-border) bg-(--app-panel-bg) px-3"
+      data-sftp-tour="file-actions"
+      class="sftp-file-management__actionbar flex shrink-0 items-center justify-between gap-2 border-b border-(--app-border) bg-(--app-panel-bg) px-3"
     >
       <div class="flex min-w-0 items-center gap-1.5">
         <UButton icon="i-lucide-folder-plus" color="neutral" variant="soft" size="xs" @click="createFolder">
@@ -467,15 +719,6 @@ defineExpose({ manager, selectedEntry, selectedEntries, clearTransferredSelectio
         </UButton>
       </div>
       <div class="flex shrink-0 items-center gap-1.5">
-        <UButton
-          v-if="selectedEntry"
-          icon="i-lucide-download"
-          color="neutral"
-          variant="soft"
-          size="xs"
-          :title="t('koko.actions.download')"
-          @click="downloadSelected"
-        />
         <UButton icon="i-lucide-upload" color="primary" variant="solid" size="xs" @click="uploadInput?.click()">
           {{ t("koko.actions.upload") }}
         </UButton>
@@ -497,131 +740,206 @@ defineExpose({ manager, selectedEntry, selectedEntries, clearTransferredSelectio
     <div v-if="manager.loading.value" class="grid flex-1 place-items-center">
       <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
     </div>
-    <div v-else class="min-h-0 flex-1 overflow-auto bg-(--app-main-bg)">
-      <div class="relative min-h-full select-none" @dragover.prevent @drop.prevent="onTransferDrop">
-        <table class="w-full table-fixed border-separate border-spacing-0">
-          <thead>
-            <tr>
-              <th
-                class="h-8.75 min-w-0 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)"
+    <div v-else class="relative min-h-0 flex-1 bg-(--app-main-bg)">
+      <div class="h-full overflow-auto">
+        <div class="relative min-h-full select-none pb-15">
+          <table
+            class="sftp-file-management__table w-full table-fixed border-separate border-spacing-0"
+            data-sftp-tour="file-table"
+          >
+            <thead>
+              <tr>
+                <th class="h-8.75 w-10 border-b border-(--app-border) bg-(--app-panel-bg) px-3 py-2 text-center">
+                  <UCheckbox
+                    :model-value="selectAllState"
+                    icon="i-lucide-check"
+                    indeterminate-icon="i-lucide-minus"
+                    :aria-label="t('koko.fileManagement.selectAllVisibleFiles')"
+                    :disabled="selectableVisibleEntries.length === 0"
+                    @update:model-value="toggleAllVisible($event === true)"
+                  />
+                </th>
+                <th
+                  class="h-8.75 min-w-0 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)"
+                >
+                  {{ t("koko.fileManagement.name") }}
+                </th>
+                <th
+                  class="hidden h-8.75 w-42 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted) md:table-cell"
+                >
+                  {{ t("koko.fileManagement.modifiedTime") }}
+                </th>
+                <th
+                  class="h-8.75 w-27.5 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)"
+                >
+                  {{ t("koko.fileManagement.size") }}
+                </th>
+                <th
+                  class="h-8.75 w-24 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)"
+                >
+                  {{ typeColumnLabel }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="entry in visibleEntries"
+                :key="entry.name"
+                class="group h-9.5 transition-colors hover:bg-(--app-hover-soft)"
+                :class="isSelected(entry) ? 'bg-(--app-selected-soft)' : ''"
+                :aria-selected="isSelected(entry)"
+                @click="selectEntry(entry, $event)"
+                @contextmenu="openContextMenu(entry, $event)"
               >
-                {{ t("koko.fileManagement.name") }}
-              </th>
-              <th
-                class="h-8.75 w-27.5 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted)"
-              >
-                {{ t("koko.fileManagement.size") }}
-              </th>
-              <th
-                class="hidden h-8.75 w-42 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted) md:table-cell"
-              >
-                {{ t("koko.fileManagement.modifiedTime") }}
-              </th>
-              <th
-                class="hidden h-8.75 w-32 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-(--app-muted) md:table-cell"
-              >
-                {{ t("koko.fileManagement.permissions") }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="entry in visibleEntries"
-              :key="entry.name"
-              class="group h-9.5 transition-colors hover:bg-(--app-hover-soft)"
-              :class="isSelected(entry) ? 'bg-(--app-selected-soft)' : ''"
-              :aria-selected="isSelected(entry)"
-              @mouseenter="hoveredEntryName = entry.name"
-              @mouseleave="hoveredEntryName = null"
-              @click="selectEntry(entry, $event)"
-            >
-              <td class="h-9.5 min-w-0 border-b border-(--app-border)/60 px-3.5 py-1.5 text-[12.5px] text-(--app-fg)">
-                <div class="flex min-w-0 items-center gap-2">
-                  <button
-                    type="button"
-                    class="flex min-w-0 flex-1 items-center gap-2 rounded-[3px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
-                    :class="!entry.is_dir && entry.name !== '..' ? 'cursor-grab active:cursor-grabbing' : ''"
-                    :draggable="!entry.is_dir && entry.name !== '..'"
-                    :title="
-                      !entry.is_dir && entry.name !== '..' ? t('koko.fileManagement.transferToRemote') : undefined
-                    "
-                    @dblclick.stop="entry.is_dir && manager.changeDirectory(entry)"
-                    @dragstart="onDragStart($event, entry)"
-                  >
-                    <UIcon
-                      :name="entry.is_dir ? 'i-lucide-folder' : 'i-lucide-file'"
-                      class="size-4 shrink-0 text-(--app-muted)"
-                      :class="entry.is_dir ? 'text-primary' : ''"
-                    />
-                    <UTooltip :text="entry.name" :delay-duration="150">
-                      <span class="min-w-0 flex-1 truncate" :class="entry.is_dir ? 'font-medium' : ''">
-                        {{ entry.name }}
-                      </span>
-                    </UTooltip>
-                  </button>
-                  <span
+                <td class="h-9.5 w-10 border-b border-(--app-border)/60 px-3 py-1.5 text-center" @click.stop>
+                  <UCheckbox
                     v-if="entry.name !== '..'"
-                    data-file-action
-                    class="flex shrink-0 items-center gap-px text-(--app-muted) transition-opacity focus-within:opacity-100"
-                    :class="hoveredEntryName === entry.name ? 'opacity-100' : 'opacity-0'"
-                  >
-                    <UButton
-                      icon="i-lucide-download"
-                      size="xs"
-                      color="neutral"
-                      variant="ghost"
-                      @click.stop="downloadEntry(entry)"
-                    />
-                    <UButton
-                      icon="i-lucide-pencil"
-                      size="xs"
-                      color="neutral"
-                      variant="ghost"
-                      @click.stop="rename(entry)"
-                    />
-                    <UButton
-                      icon="i-lucide-trash-2"
-                      size="xs"
-                      color="error"
-                      variant="ghost"
-                      @click.stop="remove(entry)"
-                    />
+                    :model-value="isSelected(entry)"
+                    icon="i-lucide-check"
+                    :aria-label="t('koko.fileManagement.selectFile', { name: entry.name })"
+                    @update:model-value="toggleEntry(entry, $event === true)"
+                  />
+                </td>
+                <td class="h-9.5 min-w-0 border-b border-(--app-border)/60 px-3.5 py-1.5 text-[12.5px] text-(--app-fg)">
+                  <div class="flex min-w-0 items-center gap-2">
+                    <button
+                      type="button"
+                      class="flex min-w-0 flex-1 items-center gap-2 rounded-[3px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
+                      :class="
+                        canTransferFiles && !entry.is_dir && entry.name !== '..'
+                          ? 'cursor-grab active:cursor-grabbing'
+                          : ''
+                      "
+                      :draggable="canTransferFiles && !entry.is_dir && entry.name !== '..'"
+                      :title="
+                        canTransferFiles && !entry.is_dir && entry.name !== '..'
+                          ? t('koko.fileManagement.transferToRemote')
+                          : undefined
+                      "
+                      @dblclick.stop="entry.is_dir && manager.changeDirectory(entry)"
+                      @dragstart="onDragStart($event, entry)"
+                    >
+                      <UIcon
+                        :name="entry.is_dir ? 'i-lucide-folder' : 'i-lucide-file'"
+                        class="sftp-file-icon shrink-0 text-(--app-muted)"
+                        :class="entry.is_dir ? 'text-primary' : ''"
+                      />
+                      <UTooltip :text="entry.name" :delay-duration="150">
+                        <span class="sftp-file-name min-w-0 flex-1 truncate" :class="entry.is_dir ? 'font-medium' : ''">
+                          {{ entry.name }}
+                        </span>
+                      </UTooltip>
+                    </button>
+                  </div>
+                </td>
+                <td class="hidden h-9.5 w-42 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right md:table-cell">
+                  <span class="sftp-file-meta block truncate font-ui-mono">
+                    {{ formatModifiedTime(entry.mod_time) }}
                   </span>
-                </div>
-              </td>
-              <td class="h-9.5 w-27.5 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right">
-                <span class="block truncate font-ui-mono text-[11px] text-(--app-muted)">
-                  {{ entry.is_dir ? "—" : formatFileSize(entry.size) }}
-                </span>
-              </td>
-              <td class="hidden h-9.5 w-42 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right md:table-cell">
-                <span class="block truncate font-ui-mono text-[11px] text-(--app-muted)">
-                  {{ formatModifiedTime(entry.mod_time) }}
-                </span>
-              </td>
-              <td class="hidden h-9.5 w-32 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right md:table-cell">
-                <span class="block truncate font-ui-mono text-[10.5px] text-(--app-muted)">
-                  {{ entry.perm || "—" }}
-                </span>
-              </td>
-            </tr>
-            <tr v-if="visibleEntries.length === 0">
-              <td
-                colspan="4"
-                class="h-24 border-b border-(--app-border)/60 px-3.5 text-center text-sm text-(--app-muted)"
-              >
-                {{ t("Common.NoData") }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+                <td class="h-9.5 w-27.5 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right">
+                  <span class="sftp-file-meta block truncate font-ui-mono">
+                    {{ entry.is_dir ? "—" : formatFileSize(entry.size) }}
+                  </span>
+                </td>
+                <td class="h-9.5 w-24 border-b border-(--app-border)/60 px-3.5 py-1.5 text-left">
+                  <span class="sftp-file-meta block truncate font-ui-mono">
+                    {{ fileType(entry) }}
+                  </span>
+                </td>
+              </tr>
+              <tr v-if="visibleEntries.length === 0">
+                <td
+                  colspan="5"
+                  class="h-24 border-b border-(--app-border)/60 px-3.5 text-center text-sm text-(--app-muted)"
+                >
+                  {{ t("Common.NoData") }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div
+          class="flex h-7 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3.5 font-ui-mono text-[10.5px] text-(--app-muted)"
+        >
+          {{ t("koko.fileManagement.items", { count: visibleEntries.length }) }}
+        </div>
       </div>
       <div
-        class="flex h-7 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3.5 font-ui-mono text-[10.5px] text-(--app-muted)"
+        v-if="selectedEntries.length"
+        class="sftp-selection-bar absolute inset-x-2 bottom-2 z-20 flex items-center gap-2 rounded-md border border-(--app-border-strong) bg-(--app-header-bg) px-3 shadow-lg"
       >
-        {{ t("koko.fileManagement.items", { count: visibleEntries.length }) }}
+        <span class="shrink-0 text-xs font-medium">
+          {{ t("koko.fileManagement.selectedItems", selectedEntries.length) }}
+        </span>
+        <span v-if="transferableEntries.length" class="font-ui-mono text-[11px] text-(--app-muted)">
+          {{ prettyBytes(selectedSize) }}
+        </span>
+        <div class="flex-1" />
+        <UButton
+          v-if="canTransferFiles && transferableEntries.length"
+          size="xs"
+          color="primary"
+          icon="i-lucide-send"
+          :label="t('koko.fileManagement.sendTo')"
+          @click="requestSend"
+        />
+        <UButton
+          v-if="selectedEntries.length === 1"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          icon="i-lucide-download"
+          :title="t('koko.actions.download')"
+          @click="downloadSelected"
+        />
+        <UButton
+          size="xs"
+          color="error"
+          variant="ghost"
+          icon="i-lucide-trash-2"
+          :title="t('koko.actions.delete')"
+          @click="requestDelete()"
+        />
+        <UButton
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          icon="i-lucide-x"
+          :title="t('koko.fileManagement.clearSelection')"
+          @click="clearSelection"
+        />
       </div>
     </div>
+    <div v-if="transferDropActive" class="sftp-transfer-drop-target" aria-hidden="true">
+      <div class="sftp-transfer-drop-target__label">
+        <UIcon name="i-lucide-send" />
+        <span>
+          {{ t("koko.fileManagement.copyTo") }}
+          <strong>{{ transferEndpoint?.label }}</strong>
+          ·
+          <span class="font-ui-mono">{{ manager.currentPath.value }}</span>
+        </span>
+      </div>
+      <p class="font-ui-mono">{{ t("koko.fileManagement.releaseToCurrentDirectory") }}</p>
+    </div>
+    <UDropdownMenu
+      :open="contextMenuVisible"
+      :items="contextMenuItems"
+      size="sm"
+      :content="{ align: 'start', side: 'bottom' }"
+      @update:open="
+        (open) => {
+          if (!open) hideContextMenu();
+          else contextMenuVisible = open;
+        }
+      "
+    >
+      <div
+        class="pointer-events-none fixed size-px"
+        :style="{ left: `${contextMenuPosition.x}px`, top: `${contextMenuPosition.y}px` }"
+      />
+    </UDropdownMenu>
     <ModalPromptDialog
       v-model:open="promptOpen"
       v-model="promptName"

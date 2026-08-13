@@ -72,7 +72,7 @@ it("allows clipboard use for shared sessions without token permissions", () => {
 });
 
 it("blocks denied copy and paste events before xterm handles them", () => {
-  const container = document.createElement("div");
+  const container = new EventTarget();
   let keyHandler: ((event: KeyboardEvent) => boolean) | undefined;
   const terminal = {
     attachCustomKeyEventHandler: vi.fn((handler: (event: KeyboardEvent) => boolean) => {
@@ -88,7 +88,7 @@ it("blocks denied copy and paste events before xterm handles them", () => {
   };
   const validate = vi.fn(() => false);
   const input = useKokoTerminalInput({
-    container: ref(container),
+    container: ref(container as HTMLElement),
     terminal: ref(terminal as never),
     socket: ref(null),
     terminalId: ref("terminal-1"),
@@ -125,7 +125,7 @@ it("blocks denied copy and paste events before xterm handles them", () => {
     ["paste", "pasted text"],
     ["copy", "selected text"]
   ]);
-  expect(keyHandler?.(new KeyboardEvent("keydown", { key: "Enter", isComposing: true }))).toBe(false);
+  expect(keyHandler?.({ key: "Enter", isComposing: true } as KeyboardEvent)).toBe(false);
 
   input.stop();
 });
@@ -406,6 +406,7 @@ it("surfaces Terminal AI stream failures through the AI SDK chat state", async (
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 it("sends zmodem files through the local browser adapter", async () => {
@@ -456,15 +457,23 @@ it("sends zmodem files through the local browser adapter", async () => {
 });
 
 it("saves downloaded packets through a temporary anchor element", () => {
-  const appendSpy = vi.spyOn(document.body, "appendChild");
-  const removeSpy = vi.spyOn(document.body, "removeChild");
-  const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+  const click = vi.fn();
+  const link = { style: { display: "" }, href: "", download: "", click };
+  if (typeof document === "undefined") {
+    vi.stubGlobal("document", {
+      createElement: vi.fn(),
+      body: { appendChild: vi.fn(), removeChild: vi.fn() }
+    });
+  }
+  vi.spyOn(document, "createElement").mockReturnValue(link as HTMLAnchorElement);
+  const appendChild = vi.spyOn(document.body, "appendChild").mockImplementation(() => link as unknown as Node);
+  const removeChild = vi.spyOn(document.body, "removeChild").mockImplementation(() => link as unknown as Node);
   vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
   vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
 
   saveZmodemPacketsToDisk([new Uint8Array([1, 2, 3])], "packet.bin");
 
   expect(click).toHaveBeenCalledTimes(1);
-  expect(appendSpy).toHaveBeenCalledTimes(1);
-  expect(removeSpy).toHaveBeenCalledTimes(1);
+  expect(appendChild).toHaveBeenCalledWith(link);
+  expect(removeChild).toHaveBeenCalledWith(link);
 });

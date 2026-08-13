@@ -128,6 +128,7 @@ export function createKokoTerminalMessageHandlers(options: {
   followAppTheme: ComputedRef<boolean>;
   sessionCtxRef: Ref<{
     tabId?: string;
+    tokenId?: string;
     terminalThemeName?: string;
   } | null>;
   t: ReturnType<typeof useI18n>["t"];
@@ -154,20 +155,31 @@ export function createKokoTerminalMessageHandlers(options: {
     }
   };
 
-  const requestFileToken = () =>
-    new Promise<string>((resolve, reject) => {
-      const timeout = window.setTimeout(() => {
+  // Prefer exchanging the current SSH connection token (native clients embedding).
+  // Fall back to the Luna host-bridge postMessage path when the host adapter has no exchange API.
+  const requestFileToken = async () => {
+    const sessionTokenId = String(options.sessionCtxRef.value?.tokenId || "").trim();
+    if (sessionTokenId && typeof options.hostAdapter.sftp?.exchangeConnectToken === "function") {
+      const exchanged = await options.hostAdapter.sftp.exchangeConnectToken(sessionTokenId);
+      const tokenId = String(exchanged?.id || "").trim();
+      if (!tokenId) throw new Error(options.t("koko.fileManagement.unavailableInSession"));
+      return tokenId;
+    }
+
+    return await new Promise<string>((resolve, reject) => {
+      const timeout = globalThis.setTimeout(() => {
         reject(new Error(options.t("koko.fileManagement.tokenRequestTimedOut")));
       }, 15_000);
 
       options.hostBridge.once(HOST_MESSAGE_TYPE.GET_FILE_CONNECT_TOKEN, (message) => {
-        window.clearTimeout(timeout);
+        globalThis.clearTimeout(timeout);
         if (typeof message.token === "string" && message.token) resolve(message.token);
         else reject(new Error(options.t("koko.fileManagement.unavailableInSession")));
       });
 
       options.hostBridge.sendHost(HOST_MESSAGE_TYPE.CREATE_FILE_CONNECT_TOKEN, "");
     });
+  };
 
   return {
     [MESSAGE_TYPE.CLOSE]: () => {

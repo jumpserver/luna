@@ -5,6 +5,7 @@ import type {
   FileTransferStatus,
   FileTransferTask
 } from "~/shared/file-transfer/types";
+import { defineStore } from "pinia";
 import { finalizeFileTransferChecksum, updateFileTransferChecksum } from "~/shared/file-transfer/checksum";
 import { loadFileTransferState, saveFileTransferState } from "~/shared/file-transfer/persistence";
 import { getFileTransferEndpoint } from "~/shared/file-transfer/registry";
@@ -130,6 +131,22 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
     kick();
   }
 
+  function retryTask(id: string) {
+    const task = tasks.value.find((item) => item.id === id);
+    if (!task || task.status !== "failed") return;
+    patchTask(id, { status: "queued", error: undefined });
+    kick();
+  }
+
+  function retryBatch(batchId: string) {
+    for (const task of tasks.value) {
+      if (task.batchId === batchId && task.status === "failed") {
+        patchTask(task.id, { status: "queued", error: undefined });
+      }
+    }
+    kick();
+  }
+
   function resolveBatchConflict(batchId: string, conflictPolicy: Exclude<FileTransferTask["conflictPolicy"], "ask">) {
     for (const task of tasks.value) {
       if (task.batchId !== batchId || terminalStatuses.has(task.status)) continue;
@@ -169,11 +186,18 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
     await Promise.all(taskIds.map((id) => cancelTask(id)));
   }
 
-  function clearFinished() {
-    const finished = new Set(tasks.value.filter((task) => terminalStatuses.has(task.status)).map((task) => task.id));
+  function clearFinished(taskIds?: string[]) {
+    const scope = taskIds ? new Set(taskIds) : null;
+    const finished = new Set(
+      tasks.value
+        .filter((task) => terminalStatuses.has(task.status) && (!scope || scope.has(task.id)))
+        .map((task) => task.id)
+    );
     if (!finished.size) return;
     tasks.value = tasks.value.filter((task) => !finished.has(task.id));
-    batches.value = batches.value.filter((batch) => batch.taskIds.some((id) => !finished.has(id)));
+    batches.value = batches.value
+      .map((batch) => ({ ...batch, taskIds: batch.taskIds.filter((id) => !finished.has(id)) }))
+      .filter((batch) => batch.taskIds.length);
     schedulePersist();
   }
 
@@ -302,13 +326,13 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
           data: chunk.data,
           sha256: checksum.chunkChecksum
         });
-        if (taskStopped(task.id)) return;
         if (ack.committedBytes < offset + chunk.data.length || ack.committedBytes > task.source.size) {
           throw new Error("Invalid file transfer write acknowledgement");
         }
         offset = ack.committedBytes;
         checksumState = checksum.state;
         patchTask(task.id, { confirmedBytes: offset, checksumState });
+        if (taskStopped(task.id)) return;
       }
 
       if (taskStopped(task.id)) return;
@@ -376,6 +400,8 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
     pauseEndpoint,
     pauseTask,
     resumeTask,
+    retryTask,
+    retryBatch,
     resolveBatchConflict,
     cancelBatch,
     markFailed,

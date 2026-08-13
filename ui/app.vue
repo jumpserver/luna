@@ -261,7 +261,6 @@ onBeforeUnmount(() => {
         <NuxtLayout>
           <NuxtPage :page-key="pageKey" />
         </NuxtLayout>
-        <FileTransferCenter />
         <ConnectionFormModal />
         <AclDialog />
       </UApp>
