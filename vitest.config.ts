@@ -20,7 +20,7 @@ export default defineConfig({
   test: {
     include: ["packages/koko/app/tests/**/*.test.ts"],
     css: {
-      include: [/sftp-transfer-center\.scss/]
+      include: [/sftp-(?:transfer-center\.scss|file-management\.css)/]
     },
     browser: {
       enabled: true,

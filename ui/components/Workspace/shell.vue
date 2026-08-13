@@ -55,6 +55,8 @@ const handleRightResize = (event: PointerEvent) => {
 const stopRightResizing = () => {
   if (!isRightResizing.value) return;
   isRightResizing.value = false;
+  delete document.documentElement.dataset.rightPanelResizing;
+  window.dispatchEvent(new Event("right-panel-resize-end"));
   document.body.style.cursor = "";
   document.body.style.userSelect = "";
   window.removeEventListener("pointermove", handleRightResize);
@@ -65,6 +67,7 @@ const startRightResizing = (event: PointerEvent) => {
   if (event.button !== 0 || !rightPanelOpen.value) return;
   event.preventDefault();
   isRightResizing.value = true;
+  document.documentElement.dataset.rightPanelResizing = "true";
   resizeStartX = event.clientX;
   resizeStartWidth = rightPanelWidth.value;
   document.body.style.cursor = "col-resize";

@@ -10,6 +10,16 @@
   --sftp-icon-md: 16px;
 }
 
+.sftp-file-management--compact {
+  --sftp-title-row-height: 32px;
+  --sftp-toolbar-height: 40px;
+  --sftp-actionbar-height: 34px;
+  --sftp-row-height: 34px;
+  --sftp-font-caption: 10px;
+  --sftp-font-body: 11.5px;
+  --sftp-font-label: 12px;
+}
+
 .sftp-file-management__topbar,
 .sftp-file-management__pane-title,
 .sftp-file-management__machine-tabs {
@@ -115,6 +125,58 @@
 .sftp-file-management__table .sftp-file-icon {
   width: var(--sftp-icon-md);
   height: var(--sftp-icon-md);
+}
+
+.sftp-transfer-drop-target {
+  position: absolute;
+  z-index: 40;
+  inset: 6px;
+  display: flex;
+  pointer-events: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px dashed var(--app-focus-ring);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-focus-ring) 12%, var(--app-main-bg));
+  color: var(--app-muted);
+  backdrop-filter: blur(1px);
+}
+
+.sftp-transfer-drop-target__label {
+  display: flex;
+  max-width: calc(100% - 32px);
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--app-focus-ring);
+  border-radius: 6px;
+  background: var(--app-header-bg);
+  padding: 8px 14px;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--app-focus-ring) 18%, transparent);
+  color: var(--app-fg);
+  font-size: 13px;
+}
+
+.sftp-transfer-drop-target__label > svg {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  color: var(--app-focus-ring);
+}
+
+.sftp-transfer-drop-target__label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sftp-transfer-drop-target__label strong {
+  color: var(--theme-accent);
+}
+
+.sftp-transfer-drop-target > p {
+  font-size: 11px;
 }
 
 .sftp-selection-bar {

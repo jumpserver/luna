@@ -54,6 +54,8 @@ const props = defineProps<{
   sftpToken?: string;
   showEmpty?: boolean;
   global?: boolean;
+  /** Single-pane lightweight mode for the SSH right-panel SFTP surface. */
+  compact?: boolean;
 }>();
 
 const emit = defineEmits<{ reconnect: [] }>();
@@ -600,7 +602,8 @@ async function uploadWebFiles(files: File[]) {
 
 onMounted(() => {
   if (props.global) globalActiveIds.left = hostAdapter.isTauriRuntime() ? "local" : "web-upload";
-  if (!props.global && !props.showEmpty) {
+  // Compact right-panel SFTP is intentionally single-pane and tour-free.
+  if (!props.global && !props.compact && !props.showEmpty) {
     tourTimer = setTimeout(() => void sftpTour.startOnce(), 650);
   }
 });
@@ -625,9 +628,14 @@ watch(currentOrgId, () => {
       </UButton>
     </div>
   </div>
-  <div v-else class="sftp-file-management flex h-full min-h-0 flex-col" data-sftp-tour="workspace">
+  <div
+    v-else
+    class="sftp-file-management flex h-full min-h-0 flex-col"
+    :class="{ 'sftp-file-management--compact': compact }"
+    data-sftp-tour="workspace"
+  >
     <div
-      v-if="!global"
+      v-if="!global && !compact"
       class="sftp-file-management__topbar flex shrink-0 items-center justify-between gap-2 border-b border-default"
     >
       <div class="ml-auto flex items-center justify-end gap-1">
@@ -814,21 +822,22 @@ watch(currentOrgId, () => {
       </div>
     </div>
 
-    <div v-else class="flex min-h-0 flex-1" :class="dualMode ? 'gap-1' : ''">
+    <div v-else class="flex min-h-0 flex-1" :class="!compact && dualMode ? 'gap-1' : ''">
       <KokoFileManagementPane
         :key="primaryTransferEndpoint?.id || 'primary-sftp'"
         ref="primaryPaneRef"
         class="min-h-0 min-w-0 flex-1"
         :context="primaryContext"
-        :transfer-endpoint="primaryTransferEndpoint"
-        :title="dualMode ? t('koko.fileManagement.localSftp') : undefined"
+        :compact="compact"
+        :transfer-endpoint="compact ? undefined : primaryTransferEndpoint"
+        :title="!compact && dualMode ? t('koko.fileManagement.localSftp') : undefined"
         @send="openSendModal"
         @transfer-drop="queueSftpTransfer($event, primaryTransferEndpoint)"
       />
 
-      <div v-show="dualMode" class="w-px shrink-0 bg-(--app-border)" />
+      <div v-show="!compact && dualMode" class="w-px shrink-0 bg-(--app-border)" />
 
-      <div v-show="dualMode" class="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div v-show="!compact && dualMode" class="flex min-h-0 min-w-0 flex-1 flex-col">
         <div v-if="remotePanes.length" class="flex min-h-0 flex-1 flex-col">
           <div
             class="sftp-file-management__machine-tabs flex shrink-0 items-center gap-1.5 border-b border-default bg-elevated/50"

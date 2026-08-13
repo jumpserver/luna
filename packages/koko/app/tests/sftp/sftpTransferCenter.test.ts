@@ -7,8 +7,12 @@ import {
   sftpTransferGroupStatus,
   sftpTransferProgress
 } from "#koko/utils/sftpTransferSummary";
+import fileManagementStyles from "../../assets/css/sftp-file-management.css?inline";
 import transferCenterStyles from "../../assets/css/sftp-transfer-center.scss?inline";
+import fileManagementIndex from "../../components/FileManagement/index.vue?raw";
+import fileManagementPane from "../../components/FileManagement/pane.vue?raw";
 import transferCenterComponent from "../../components/FileManagement/SftpTransferCenter.vue?raw";
+import fileManagerSessionSurface from "../../workspaces/FileManagerSessionSurface.vue?raw";
 
 describe("sftp transfer center layout", () => {
   it("keeps the design drawer width and collapses nested batch content", () => {
@@ -44,6 +48,53 @@ describe("sftp transfer center layout", () => {
     expect(transferCenterComponent.match(/variant="outline"/g)).toHaveLength(3);
     expect(transferCenterComponent.match(/size="xs"/g)?.length).toBeGreaterThanOrEqual(3);
     expect(transferCenterStyles).not.toMatch(/\.sftp-conflict-action\s*\{/);
+  });
+});
+
+describe("sftp transfer drop target", () => {
+  it("shows the destination machine and current directory for a valid cross-endpoint drag", () => {
+    expect(fileManagementPane).toContain('class="sftp-transfer-drop-target"');
+    expect(fileManagementPane).toContain('t("koko.fileManagement.copyTo")');
+    expect(fileManagementPane).toContain("transferEndpoint?.label");
+    expect(fileManagementPane).toContain("manager.currentPath.value");
+    expect(fileManagementPane).toContain('t("koko.fileManagement.releaseToCurrentDirectory")');
+    expect(fileManagementStyles).toMatch(/\.sftp-transfer-drop-target\s*\{[^}]*border:\s*2px dashed/);
+  });
+
+  it("does not activate the drop target for the source endpoint itself", () => {
+    expect(fileManagementPane).toContain("activeTransferDragSourceId.value !== props.transferEndpoint.id");
+  });
+});
+
+describe("sftp right-panel compact mode", () => {
+  it("accepts a compact prop on the file manager session surface", () => {
+    expect(fileManagerSessionSurface).toContain("compact?: boolean");
+    expect(fileManagerSessionSurface).toContain(':compact="compact"');
+  });
+
+  it("hides dual-remote chrome and feature tour in compact mode", () => {
+    expect(fileManagementIndex).toContain("compact?: boolean");
+    expect(fileManagementIndex).toContain("sftp-file-management--compact");
+    expect(fileManagementIndex).toContain('v-if="!global && !compact"');
+    expect(fileManagementIndex).toContain("!props.global && !props.compact && !props.showEmpty");
+    expect(fileManagementIndex).toContain('v-show="!compact && dualMode"');
+    expect(fileManagementIndex).toContain(':compact="compact"');
+    expect(fileManagementStyles).toContain(".sftp-file-management--compact");
+  });
+
+  it("keeps only lightweight file ops and removes send/transfer affordances in compact panes", () => {
+    expect(fileManagementPane).toContain("compact?: boolean");
+    expect(fileManagementPane).toContain(
+      "const canTransferFiles = computed(() => Boolean(props.transferEndpoint) && !props.compact)"
+    );
+    expect(fileManagementPane).toContain("if (canTransferFiles.value)");
+    expect(fileManagementPane).toContain('label: t("koko.fileManagement.sendTo")');
+    expect(fileManagementPane).toContain('v-if="canTransferFiles && transferableEntries.length"');
+    expect(fileManagementPane).toContain(":draggable=\"canTransferFiles && !entry.is_dir && entry.name !== '..'\"");
+    // Compact still keeps browse + basic mutations.
+    expect(fileManagementPane).toContain('label: t("koko.actions.download")');
+    expect(fileManagementPane).toContain('label: t("koko.actions.rename")');
+    expect(fileManagementPane).toContain('label: t("koko.actions.delete")');
   });
 });
 

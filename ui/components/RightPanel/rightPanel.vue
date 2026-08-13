@@ -8,27 +8,9 @@ const { t } = useI18n();
 const { activeTab: workspaceTab } = useWorkspaceTabs();
 const { activeTab, setActiveTab } = useRightPanel();
 
-const showSftpTab = computed(() => {
-  const tab = workspaceTab.value;
-  if (!tab || tab.protocol !== "ssh") return false;
-
-  const assetKind = `${tab.assetType} ${tab.assetPlatform}`.toLowerCase();
-  const isLinuxAsset = assetKind.includes("linux") || assetKind.includes("unix");
-  const hasSftpProtocol = (tab.permedProtocols || []).some(
-    (protocol) => protocol?.name?.trim().toLowerCase() === "sftp"
-  );
-
-  const matchingAccount = (tab.permedAccounts || []).find(
-    (account) => account.id === tab.account || [account.name, account.username, account.alias].includes(tab.account)
-  );
-  const accounts = matchingAccount ? [matchingAccount] : tab.permedAccounts || [];
-  const hasFileTransferPermission = accounts.some((account) => {
-    const actions = new Set((account.actions || []).map((action) => action.value?.trim().toLowerCase()));
-    return actions.has("upload") && actions.has("download");
-  });
-
-  return isLinuxAsset && hasSftpProtocol && hasFileTransferPermission;
-});
+// SSH 会话始终提供轻量文件管理入口；真正的 SFTP 权限与令牌由面板在连接时校验，
+// 避免因为资产平台或权限元数据不完整而把入口直接隐藏。
+const showSftpTab = computed(() => workspaceTab.value?.protocol?.toLowerCase() === "ssh");
 
 const tabs = computed(() => {
   const items: Array<{ value: RightPanelTab; label: string; icon: string }> = [

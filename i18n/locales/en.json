@@ -812,6 +812,8 @@
       "folder": "Folder",
       "file": "File",
       "sendTo": "Send to",
+      "copyTo": "Copy to",
+      "releaseToCurrentDirectory": "Release to send to this machine · current directory",
       "selectedItems": "{count} selected",
       "selectAllVisibleFiles": "Select all visible files",
       "selectFile": "Select file {name}",

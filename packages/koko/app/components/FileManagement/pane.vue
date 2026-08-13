@@ -13,6 +13,8 @@ const props = defineProps<{
   context: ConnectorSessionContext | null;
   title?: string;
   transferEndpoint?: FileTransferEndpointRef;
+  /** Lightweight single-pane mode (SSH right panel): browse + basic file ops only. */
+  compact?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -20,6 +22,9 @@ const emit = defineEmits<{
   send: [payload: SftpTransferSourcePayload];
   transferDrop: [payload: SftpTransferDropPayload];
 }>();
+
+/** Cross-machine send/drag is only available in full dual-pane file management. */
+const canTransferFiles = computed(() => Boolean(props.transferEndpoint) && !props.compact);
 
 interface SftpTransferSourcePayload {
   sourceEndpoint: FileTransferEndpointRef;
@@ -38,6 +43,9 @@ const { addErrorToast } = useErrorToast();
 const contextRef = computed(() => props.context);
 const manager = useSftpFileManager(contextRef, props.transferEndpoint);
 const transferStore = useFileTransferStore();
+const activeTransferDragSourceId = useState<string | null>("sftp-active-transfer-drag-source", () => null);
+
+const sftpTransferMimeType = "application/x-jumpserver-sftp-files";
 
 let unregisterTransferEndpoint: (() => void) | undefined;
 
@@ -48,6 +56,12 @@ const selectionRevision = ref(0);
 const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextEntry = ref<SftpFileEntry | null>(null);
+const transferDropActive = computed(
+  () =>
+    canTransferFiles.value &&
+    Boolean(activeTransferDragSourceId.value) &&
+    activeTransferDragSourceId.value !== props.transferEndpoint?.id
+);
 
 const promptOpen = ref(false);
 const promptName = ref("");
@@ -184,9 +198,11 @@ watch(manager.connected, (connected) => {
 
 onMounted(() => {
   if (manager.transferEndpoint) unregisterTransferEndpoint = registerFileTransferEndpoint(manager.transferEndpoint);
+  document.addEventListener("dragend", clearTransferDragState);
 });
 
 onUnmounted(() => {
+  document.removeEventListener("dragend", clearTransferDragState);
   unregisterTransferEndpoint?.();
   if (props.transferEndpoint) transferStore.pauseEndpoint(props.transferEndpoint);
 });
@@ -246,7 +262,7 @@ function toggleAllVisible(selected: boolean) {
 }
 
 function onDragStart(event: DragEvent, entry: SftpFileEntry) {
-  if (entry.is_dir || entry.name === ".." || !props.transferEndpoint) {
+  if (entry.is_dir || entry.name === ".." || !canTransferFiles.value || !props.transferEndpoint) {
     event.preventDefault();
     return;
   }
@@ -269,14 +285,63 @@ function onDragStart(event: DragEvent, entry: SftpFileEntry) {
     entries
   };
 
-  event.dataTransfer?.setData("application/x-jumpserver-sftp-files", JSON.stringify(payload));
+  event.dataTransfer?.setData(sftpTransferMimeType, JSON.stringify(payload));
   event.dataTransfer?.setData("text/plain", payload.entries.map((item) => item.name).join("\n"));
 
+  activeTransferDragSourceId.value = props.transferEndpoint.id;
   if (event.dataTransfer) event.dataTransfer.effectAllowed = "copy";
 }
 
+function transferDragPayload(event: DragEvent) {
+  const encoded = event.dataTransfer?.getData(sftpTransferMimeType);
+  if (!encoded || !props.transferEndpoint) return null;
+
+  try {
+    const payload = JSON.parse(encoded) as Omit<SftpTransferDropPayload, "destinationPath">;
+    if (
+      !payload.sourceEndpoint?.id ||
+      payload.sourceEndpoint.id === props.transferEndpoint.id ||
+      !payload.sourcePath ||
+      !Number.isInteger(payload.sourceSelectionRevision) ||
+      !Array.isArray(payload.entries) ||
+      !payload.entries.length
+    ) {
+      return null;
+    }
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function canAcceptTransferDrag(event: DragEvent) {
+  return Boolean(
+    canTransferFiles.value &&
+    props.transferEndpoint &&
+    activeTransferDragSourceId.value &&
+    activeTransferDragSourceId.value !== props.transferEndpoint.id &&
+    Array.from(event.dataTransfer?.types || []).includes(sftpTransferMimeType)
+  );
+}
+
+function onTransferDragEnter(event: DragEvent) {
+  if (!canAcceptTransferDrag(event)) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+}
+
+function onTransferDragOver(event: DragEvent) {
+  if (!canAcceptTransferDrag(event)) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+}
+
+function clearTransferDragState() {
+  activeTransferDragSourceId.value = null;
+}
+
 function transferSourcePayload(): SftpTransferSourcePayload | null {
-  if (!props.transferEndpoint || !transferableEntries.value.length) return null;
+  if (!canTransferFiles.value || !props.transferEndpoint || !transferableEntries.value.length) return null;
   return {
     sourceEndpoint: props.transferEndpoint,
     sourcePath: manager.currentPath.value,
@@ -286,6 +351,7 @@ function transferSourcePayload(): SftpTransferSourcePayload | null {
 }
 
 function requestSend() {
+  if (!canTransferFiles.value) return;
   const payload = transferSourcePayload();
   if (!payload) return;
   hideContextMenu();
@@ -293,25 +359,11 @@ function requestSend() {
 }
 
 function onTransferDrop(event: DragEvent) {
-  const encoded = event.dataTransfer?.getData("application/x-jumpserver-sftp-files");
-  if (!encoded) return;
-
-  try {
-    const payload = JSON.parse(encoded) as Omit<SftpTransferDropPayload, "destinationPath">;
-    if (
-      !payload.sourceEndpoint?.id ||
-      !payload.sourcePath ||
-      !Number.isInteger(payload.sourceSelectionRevision) ||
-      !Array.isArray(payload.entries) ||
-      !props.transferEndpoint
-    ) {
-      return;
-    }
-
-    emit("transferDrop", { ...payload, destinationPath: manager.currentPath.value });
-  } catch {
-    // Ignore drops from an unrelated or malformed drag source.
-  }
+  const payload = transferDragPayload(event);
+  clearTransferDragState();
+  if (!payload) return;
+  event.preventDefault();
+  emit("transferDrop", { ...payload, destinationPath: manager.currentPath.value });
 }
 
 async function refreshCurrentDirectory() {
@@ -400,15 +452,22 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
   const entry = contextEntry.value;
   if (!entry) return [];
   const singleSelection = selectedEntries.value.length === 1;
+  const items: DropdownMenuItem[] = [];
 
-  return [
-    {
-      label: t("koko.fileManagement.sendTo"),
-      icon: "i-lucide-send",
-      disabled: !transferableEntries.value.length,
-      onSelect: requestSend
-    },
-    { type: "separator" },
+  // Full dual-pane mode only: multi-target distribution is intentionally absent from compact SFTP.
+  if (canTransferFiles.value) {
+    items.push(
+      {
+        label: t("koko.fileManagement.sendTo"),
+        icon: "i-lucide-send",
+        disabled: !transferableEntries.value.length,
+        onSelect: requestSend
+      },
+      { type: "separator" }
+    );
+  }
+
+  items.push(
     {
       label: t("koko.actions.download"),
       icon: "i-lucide-download",
@@ -428,7 +487,9 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
       color: "error",
       onSelect: () => requestDelete()
     }
-  ];
+  );
+
+  return items;
 });
 
 const submitPrompt = async () => {
@@ -548,7 +609,14 @@ defineExpose({
       </UButton>
     </div>
   </div>
-  <div v-else class="sftp-file-management flex h-full min-h-0 flex-col bg-(--app-main-bg) text-(--app-fg)">
+  <div
+    v-else
+    class="sftp-file-management relative flex h-full min-h-0 flex-col bg-(--app-main-bg) text-(--app-fg)"
+    :class="{ 'sftp-file-management--compact': compact }"
+    @dragenter="canTransferFiles ? onTransferDragEnter($event) : undefined"
+    @dragover="canTransferFiles ? onTransferDragOver($event) : undefined"
+    @drop="canTransferFiles ? onTransferDrop($event) : undefined"
+  >
     <div
       v-if="title"
       class="sftp-file-management__pane-title flex shrink-0 items-center border-b border-(--app-border) bg-(--app-header-bg)"
@@ -674,7 +742,7 @@ defineExpose({
     </div>
     <div v-else class="relative min-h-0 flex-1 bg-(--app-main-bg)">
       <div class="h-full overflow-auto">
-        <div class="relative min-h-full select-none pb-15" @dragover.prevent @drop.prevent="onTransferDrop">
+        <div class="relative min-h-full select-none pb-15">
           <table
             class="sftp-file-management__table w-full table-fixed border-separate border-spacing-0"
             data-sftp-tour="file-table"
@@ -737,10 +805,16 @@ defineExpose({
                     <button
                       type="button"
                       class="flex min-w-0 flex-1 items-center gap-2 rounded-[3px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
-                      :class="!entry.is_dir && entry.name !== '..' ? 'cursor-grab active:cursor-grabbing' : ''"
-                      :draggable="!entry.is_dir && entry.name !== '..'"
+                      :class="
+                        canTransferFiles && !entry.is_dir && entry.name !== '..'
+                          ? 'cursor-grab active:cursor-grabbing'
+                          : ''
+                      "
+                      :draggable="canTransferFiles && !entry.is_dir && entry.name !== '..'"
                       :title="
-                        !entry.is_dir && entry.name !== '..' ? t('koko.fileManagement.transferToRemote') : undefined
+                        canTransferFiles && !entry.is_dir && entry.name !== '..'
+                          ? t('koko.fileManagement.transferToRemote')
+                          : undefined
                       "
                       @dblclick.stop="entry.is_dir && manager.changeDirectory(entry)"
                       @dragstart="onDragStart($event, entry)"
@@ -803,7 +877,7 @@ defineExpose({
         </span>
         <div class="flex-1" />
         <UButton
-          v-if="transferEndpoint && transferableEntries.length"
+          v-if="canTransferFiles && transferableEntries.length"
           size="xs"
           color="primary"
           icon="i-lucide-send"
@@ -836,6 +910,18 @@ defineExpose({
           @click="clearSelection"
         />
       </div>
+    </div>
+    <div v-if="transferDropActive" class="sftp-transfer-drop-target" aria-hidden="true">
+      <div class="sftp-transfer-drop-target__label">
+        <UIcon name="i-lucide-send" />
+        <span>
+          {{ t("koko.fileManagement.copyTo") }}
+          <strong>{{ transferEndpoint?.label }}</strong>
+          ·
+          <span class="font-ui-mono">{{ manager.currentPath.value }}</span>
+        </span>
+      </div>
+      <p class="font-ui-mono">{{ t("koko.fileManagement.releaseToCurrentDirectory") }}</p>
     </div>
     <UDropdownMenu
       :open="contextMenuVisible"

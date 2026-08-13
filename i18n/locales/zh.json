@@ -815,6 +815,8 @@
       "folder": "文件夹",
       "file": "文件",
       "sendTo": "发送到",
+      "copyTo": "复制到",
+      "releaseToCurrentDirectory": "松开鼠标发送到当前机器 · 当前目录",
       "selectedItems": "已选择 {count} 项",
       "selectAllVisibleFiles": "选择所有可见文件",
       "selectFile": "选择文件 {name}",
