@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type {
+  ChenSqlAiOperation,
+  ChenSqlEditorContext,
+  ChenSqlProposal,
+  ChenSqlProposalApplyResult
+} from "~/chen/composables/useChenSqlAiSessions";
+import type {
   ChenActionItem,
   ChenDatabaseSection,
   ChenDatabaseWorkspaceTab,
@@ -15,6 +21,7 @@ import type {
   ChenQueryResultTab,
   ChenSaveChangesPreviewResult,
   ChenSaveChangesResult,
+  ChenSqlEditorSnapshot,
   ChenTreeNode,
   ChenWorkspaceTab
 } from "~/chen/types";
@@ -43,6 +50,14 @@ import { useChenQueryConsole } from "~/chen/composables/useChenQueryConsole";
 import { useChenRecentTables } from "~/chen/composables/useChenRecentTables";
 import { useChenResourceTree } from "~/chen/composables/useChenResourceTree";
 import { useChenSession } from "~/chen/composables/useChenSession";
+import {
+  getChenSqlAiSession,
+  handleChenSqlAiError,
+  handleChenSqlAiMessage,
+  handleChenSqlAiReady,
+  registerChenSqlAiSession,
+  unregisterChenSqlAiSession
+} from "~/chen/composables/useChenSqlAiSessions";
 import { chenWsUrl, useChenWebSocket } from "~/chen/composables/useChenWebSocket";
 import { useChenWorkspacePreferences } from "~/chen/composables/useChenWorkspacePreferences";
 import { useChenWorkspaceTabs } from "~/chen/composables/useChenWorkspaceTabs";
@@ -63,6 +78,8 @@ const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const emit = defineEmits<{ reconnect: [] }>();
 
 const toast = useToast();
+const { locale, t } = useI18n();
+const { openWithTab } = useRightPanel();
 const { addErrorToast } = useErrorToast();
 const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
 const tabRef = toRef(props, "tab");
@@ -81,7 +98,7 @@ const endpointUrl = computed(() => {
 
   return window.location.origin;
 });
-const resolveChenWsUrl = (path: "session" | "console") => chenWsUrl(path, endpointUrl.value);
+const resolveChenWsUrl = (path: "session" | "console" | "ai") => chenWsUrl(path, endpointUrl.value);
 
 const sidebarWidth = ref(280);
 const resizing = ref(false);
@@ -119,6 +136,9 @@ const workspacePreferences = useChenWorkspacePreferences();
 const recentTables = useChenRecentTables(`${props.tab.assetId}:${props.tab.protocol}`);
 const dataView = useChenDataView(sendConsoleAction);
 const consoleConnections = new Map<string, ReturnType<typeof useChenWebSocket>>();
+const queryConsolePanel = ref<{ editorSnapshot: () => ChenSqlEditorSnapshot } | null>(null);
+let aiConnection: ReturnType<typeof useChenWebSocket> | null = null;
+let aiSocket: WebSocket | null = null;
 const sqlMetadataStore = new ChenSqlMetadataStore({
   listRelations: (scope, prefix, limit) =>
     fetchChenSqlRelations(auth.chenToken.value, scope, prefix, limit, undefined, endpointUrl.value),
@@ -159,6 +179,18 @@ const currentWorkspaceNode = computed(() => {
   if (node) return node;
   return recentTableNodes.value.find((item) => item.key === currentWorkspaceNodeKey.value)?.recentEntry?.node || null;
 });
+function sqlAiResourceNode() {
+  const isSupported = (node: ChenTreeNode | null | undefined) =>
+    Boolean(node && ["datasource", "database", "schema", "table", "view"].includes(node.type));
+  const selectedNode = tree.findNodeByKey(currentWorkspaceNodeKey.value);
+  if (isSupported(selectedNode)) return selectedNode;
+
+  const path = tree.findNodePathByKey(currentWorkspaceNodeKey.value);
+  for (let index = path.length - 1; index >= 0; index -= 1) {
+    if (isSupported(path[index])) return path[index];
+  }
+  return tree.rootNodes.value.find(isSupported) || null;
+}
 const currentContextLabel = computed(() => currentWorkspaceNode.value?.label || currentWorkspaceNode.value?.name || "");
 const consolePromptLabel = computed(() => {
   const dbType = `${auth.profile.value?.dbType || props.tab.protocol || ""}`.toLowerCase();
@@ -200,8 +232,10 @@ const session = useChenSession({
   },
   onAfterReady: async () => {
     await tree.expandInitialTree();
+    connectSqlAiSession();
   },
   onDisconnected: () => {
+    closeSqlAiSession();
     sqlMetadataStore.clear();
     closeAllConsoleSockets("Database session disconnected");
   },
@@ -229,6 +263,194 @@ async function downloadExportFile(fileKey: string) {
       ? { title: "Export downloaded", description: file.fileName, color: "success" }
       : { title: "Export canceled", description: file.fileName, color: "neutral" }
   );
+}
+
+function buildSqlAiContext(): ChenSqlEditorContext | null {
+  const active = workspace.activeWorkspaceTab.value;
+  const nodeKey = active?.nodeKey || sqlAiResourceNode()?.key || "";
+  if (!nodeKey) return null;
+  if (active && active.kind !== "database" && !active.serverConsoleId) return null;
+
+  let snapshot: ChenSqlEditorSnapshot = {
+    documentSql: "",
+    selectedSql: "",
+    selectionFrom: 0,
+    selectionTo: 0
+  };
+  let tabId = "";
+  let revision = 0;
+  let lastError: Record<string, any> | null = null;
+
+  if (active?.kind === "query") {
+    tabId = active.id;
+    revision = active.aiRevision;
+    snapshot = queryConsolePanel.value?.editorSnapshot() || {
+      documentSql: active.statement,
+      selectedSql: "",
+      selectionFrom: 0,
+      selectionTo: 0
+    };
+    lastError = active.lastSqlError ? { ...active.lastSqlError } : null;
+  } else if (active?.kind === "console") {
+    snapshot.documentSql = active.pendingSql;
+  }
+
+  return {
+    dialect: String(auth.profile.value?.dbType || props.tab.protocol || "").toLowerCase(),
+    nodeKey,
+    consoleId: active?.serverConsoleId || "",
+    paneId: props.tab.id,
+    tabId,
+    workspaceTabId: active?.id || "",
+    workspaceTabKind: active?.kind || "none",
+    currentContext:
+      active?.kind === "query" || active?.kind === "console" ? String(active.state.currentContext || "") : "",
+    revision,
+    selectionFrom: snapshot.selectionFrom,
+    selectionTo: snapshot.selectionTo,
+    selectedSql: snapshot.selectedSql,
+    documentSql: snapshot.documentSql,
+    lastError
+  };
+}
+
+function staleProposal(reason = t("RightPanel.SQLAIProposalStale")): ChenSqlProposalApplyResult {
+  toast.add({
+    title: t("RightPanel.SQLAIApplyFailed"),
+    description: reason,
+    color: "warning"
+  });
+  return { applied: false, reason };
+}
+
+function applySqlProposal(proposal: ChenSqlProposal): ChenSqlProposalApplyResult {
+  const sql = String(proposal?.sql || "").trim();
+  const base = proposal?.base;
+  if (!sql || sql.length > 128 * 1024 || !base || base.paneId !== props.tab.id || !base.nodeKey) {
+    return staleProposal(t("RightPanel.SQLAIProposalInvalid"));
+  }
+  const currentContext = buildSqlAiContext();
+  if (
+    !currentContext ||
+    currentContext.nodeKey !== base.nodeKey ||
+    currentContext.workspaceTabId !== String(base.workspaceTabId || "") ||
+    currentContext.workspaceTabKind !== (base.workspaceTabKind || "none") ||
+    currentContext.currentContext !== String(base.currentContext || "")
+  ) {
+    return staleProposal();
+  }
+
+  if (base.target === "new_query") {
+    const created = openQueryWorkspace(base.nodeKey, workspace.nextTabTitle("Query"), false);
+    if (!created || created.kind !== "query") return staleProposal();
+    created.statement = sql;
+    created.aiRevision += 1;
+    workspace.setActiveTab(created.id);
+    toast.add({ title: t("RightPanel.SQLAIApplied"), color: "success" });
+    return { applied: true };
+  }
+
+  const target = workspace.workspaceTabState[base.tabId];
+  if (!target || target.kind !== "query" || target.nodeKey !== base.nodeKey || target.aiRevision !== base.revision) {
+    return staleProposal();
+  }
+
+  let nextSql = sql;
+  if (base.target === "selection") {
+    const from = Number(base.selectionFrom);
+    const to = Number(base.selectionTo);
+    if (
+      !Number.isInteger(from) ||
+      !Number.isInteger(to) ||
+      from < 0 ||
+      to <= from ||
+      to > target.statement.length ||
+      target.statement.slice(from, to) !== String(proposal.originalSql || "")
+    ) {
+      return staleProposal();
+    }
+    nextSql = `${target.statement.slice(0, from)}${sql}${target.statement.slice(to)}`;
+  } else if (base.target === "document") {
+    if (target.statement !== String(proposal.originalSql || "")) return staleProposal();
+  } else {
+    return staleProposal(t("RightPanel.SQLAIProposalInvalid"));
+  }
+
+  target.statement = nextSql;
+  target.aiRevision += 1;
+  workspace.setActiveTab(target.id);
+  toast.add({ title: t("RightPanel.SQLAIApplied"), color: "success" });
+  return { applied: true };
+}
+
+function closeSqlAiSession() {
+  const socket = aiSocket;
+  aiConnection?.close();
+  aiConnection = null;
+  aiSocket = null;
+  unregisterChenSqlAiSession(props.tab.id, socket);
+}
+
+function connectSqlAiSession() {
+  closeSqlAiSession();
+  const connection = useChenWebSocket({
+    path: "ai",
+    resolveUrl: resolveChenWsUrl,
+    onOpen: () => {
+      connection.sendImmediately({
+        type: "connect",
+        data: { language: locale.value }
+      });
+    },
+    onPacket: (packet) => {
+      if (packet.type === "ai_ready") {
+        connection.markReady();
+        handleChenSqlAiReady(props.tab.id, packet.data || {});
+      } else if (packet.type === "ai_chat") {
+        handleChenSqlAiMessage(props.tab.id, packet.data);
+      } else if (packet.type === "ai_error") {
+        handleChenSqlAiError(props.tab.id, packet.data || {});
+      }
+    },
+    onError: (socketError) => {
+      handleChenSqlAiError(props.tab.id, {
+        code: socketError.code,
+        message: socketError.message
+      });
+      const current = getChenSqlAiSession(props.tab.id);
+      if (current) current.enabled = false;
+    }
+  });
+  aiConnection = connection;
+  const socket = connection.connect(auth.chenToken.value);
+  aiSocket = socket;
+  if (socket) registerChenSqlAiSession(props.tab.id, socket, buildSqlAiContext, applySqlProposal);
+}
+
+function openSqlAi() {
+  openWithTab("ai");
+}
+
+function requestSqlAi(operation: ChenSqlAiOperation) {
+  openSqlAi();
+  const current = getChenSqlAiSession(props.tab.id);
+  if (!current?.enabled) {
+    toast.add({
+      title: t("RightPanel.SQLAIUnavailableTitle"),
+      description: current?.errorText || t("RightPanel.SQLAIUnavailableDescription"),
+      color: "warning"
+    });
+    return;
+  }
+
+  const prompt = operation === "explain" ? t("RightPanel.SQLAIExplainPrompt") : t("RightPanel.SQLAIRepairPrompt");
+  void current.request(operation, prompt).catch((cause) => {
+    toast.add({
+      title: t("RightPanel.SQLAISendFailed"),
+      description: cause instanceof Error ? cause.message : String(cause),
+      color: "error"
+    });
+  });
 }
 
 function initConsoleSocket(tab: ChenWorkspaceTab) {
@@ -432,7 +654,10 @@ function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
 
   switch (packet.type) {
     case "init":
-      if (tab.kind === "data-view") tab.title = packet.data?.title || tab.title;
+      if (tab.kind === "data-view") {
+        tab.title = packet.data?.title || tab.title;
+        tab.serverConsoleId = String(packet.data?.consoleId || "");
+      }
       break;
     case "log":
       if (tab.kind === "data-view") queryConsole.appendLog(tab, packet.data);
@@ -460,6 +685,7 @@ function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
 function openQueryWorkspace(nodeKey: string, title = "Query", reuseExisting = true) {
   const tab = workspace.openQueryTab(nodeKey, title, reuseExisting);
   if (tab && !consoleConnections.has(tab.id)) initConsoleSocket(tab);
+  return tab;
 }
 
 function openConsoleWorkspace(nodeKey: string, title = "Console") {
@@ -758,7 +984,9 @@ function changeQueryContext(tab: ChenQueryConsoleTab, context: string) {
 }
 
 function updateQueryStatement(tab: ChenQueryConsoleTab, value: string) {
+  if (tab.statement === value) return;
   tab.statement = value;
+  tab.aiRevision += 1;
 }
 
 function updateConsolePendingSql(tab: ChenPromptConsoleTab, value: string) {
@@ -900,6 +1128,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   stopResize();
+  closeSqlAiSession();
   closeAllConsoleSockets();
   sqlMetadataStore.clear();
   workspace.closeAllTabs();
@@ -968,6 +1197,7 @@ defineExpose({ focus });
         <div v-if="workspace.activeWorkspaceTab.value" class="min-h-0 flex-1">
           <QueryConsolePanel
             v-if="activeQueryTab"
+            ref="queryConsolePanel"
             :tab="activeQueryTab"
             :db-type="auth.profile.value?.dbType || ''"
             :can-copy="auth.profile.value?.canCopy === true"
@@ -979,6 +1209,9 @@ defineExpose({ focus });
             @data-view-action="runQueryDataViewAction"
             @dismiss-message="dismissQueryMessage"
             @update-statement="updateQueryStatement"
+            @ai-generate="openSqlAi"
+            @ai-explain="requestSqlAi('explain')"
+            @ai-repair="requestSqlAi('repair')"
             @activate-result="activateQueryResult"
             @close-result="closeQueryResult"
           />

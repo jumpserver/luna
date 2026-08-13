@@ -144,6 +144,19 @@ interface ClipboardPolicy {
 
 const BYTES_PER_MEGABYTE = 1024 * 1024;
 const getTextLength = (text: string) => Array.from(text).length;
+const canCaptureAudio = () => {
+  if (typeof navigator === "undefined") return false;
+
+  const mediaNavigator = navigator as Navigator &
+    Record<"getUserMedia" | "webkitGetUserMedia" | "mozGetUserMedia" | "msGetUserMedia", unknown>;
+  return (
+    typeof mediaNavigator.mediaDevices?.getUserMedia === "function" ||
+    typeof mediaNavigator.getUserMedia === "function" ||
+    typeof mediaNavigator.webkitGetUserMedia === "function" ||
+    typeof mediaNavigator.mozGetUserMedia === "function" ||
+    typeof mediaNavigator.msGetUserMedia === "function"
+  );
+};
 
 export function useGuacamoleClient(
   t: any,
@@ -813,6 +826,8 @@ export function useGuacamoleClient(
       console.warn("Guacamole client is not initialized or does not support audio stream");
       return;
     }
+    if (!canCaptureAudio()) return;
+
     const AUDIO_INPUT_MIMETYPE = "audio/L16;rate=44100,channels=2";
     const audioStream = client.createAudioStream(AUDIO_INPUT_MIMETYPE);
     const recorder = Guacamole.AudioRecorder.getInstance(audioStream, AUDIO_INPUT_MIMETYPE);

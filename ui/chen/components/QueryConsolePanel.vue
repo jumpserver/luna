@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
-import type { ChenDataViewAction, ChenDataViewActionData, ChenQueryConsoleTab, ChenQueryResultTab } from "~/chen/types";
+import type {
+  ChenDataViewAction,
+  ChenDataViewActionData,
+  ChenQueryConsoleTab,
+  ChenQueryResultTab,
+  ChenSqlEditorSnapshot
+} from "~/chen/types";
 import type { ChenSqlMetadataStore } from "~/chen/utils/sqlMetadata";
 
 import QueryResultTabs from "~/chen/components/QueryResultTabs.vue";
@@ -32,12 +38,16 @@ const emit = defineEmits<{
   ];
   dismissMessage: [tab: ChenQueryConsoleTab];
   updateStatement: [tab: ChenQueryConsoleTab, value: string];
+  aiGenerate: [tab: ChenQueryConsoleTab];
+  aiExplain: [tab: ChenQueryConsoleTab];
+  aiRepair: [tab: ChenQueryConsoleTab];
   activateResult: [tab: ChenQueryConsoleTab, id: string];
   closeResult: [tab: ChenQueryConsoleTab, title: string];
 }>();
 
 const sqlEditor = ref<{
   replaceDocument: (value: string) => void;
+  snapshot: () => ChenSqlEditorSnapshot;
   selectedText: () => string;
 } | null>(null);
 const sqlUploadInput = ref<HTMLInputElement | null>(null);
@@ -48,6 +58,7 @@ const selectSnippetDialogOpen = ref(false);
 const DEFAULT_MESSAGE_CLOSE_DELAY_SECONDS = 5;
 let messageCloseTimer: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
+const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
 const sqlSnippets = useChenSqlSnippets(() => props.dbType);
 const completionSource = createChenCompletionSource({
@@ -82,6 +93,17 @@ const statementValue = computed({
 
 function runSelectedQuery() {
   emit("run", props.tab, sqlEditor.value?.selectedText() || "");
+}
+
+function editorSnapshot(): ChenSqlEditorSnapshot {
+  return (
+    sqlEditor.value?.snapshot() || {
+      documentSql: props.tab.statement,
+      selectedSql: "",
+      selectionFrom: 0,
+      selectionTo: 0
+    }
+  );
 }
 
 function formatStatement() {
@@ -207,6 +229,8 @@ watch(
 );
 
 onBeforeUnmount(clearMessageTimer);
+
+defineExpose({ editorSnapshot });
 </script>
 
 <template>
@@ -267,6 +291,36 @@ onBeforeUnmount(clearMessageTimer);
           @click="sqlUploadInput?.click()"
         >
           Upload SQL
+        </UButton>
+        <UButton
+          icon="i-lucide-wand-sparkles"
+          size="sm"
+          color="neutral"
+          variant="soft"
+          :disabled="contextBusy"
+          @click="emit('aiGenerate', tab)"
+        >
+          {{ t("RightPanel.SQLAIGenerate") }}
+        </UButton>
+        <UButton
+          icon="i-lucide-message-square-text"
+          size="sm"
+          color="neutral"
+          variant="soft"
+          :disabled="contextBusy || !tab.statement.trim()"
+          @click="emit('aiExplain', tab)"
+        >
+          {{ t("RightPanel.SQLAIExplain") }}
+        </UButton>
+        <UButton
+          icon="i-lucide-wrench"
+          size="sm"
+          color="neutral"
+          variant="soft"
+          :disabled="contextBusy || !tab.statement.trim()"
+          @click="emit('aiRepair', tab)"
+        >
+          {{ t("RightPanel.SQLAIRepair") }}
         </UButton>
         <UDropdownMenu :items="contextItems">
           <UButton

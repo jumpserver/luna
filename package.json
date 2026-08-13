@@ -23,7 +23,7 @@
     "lint": "eslint . --fix",
     "lint:check": "eslint . --ignore-pattern .omx",
     "cargo:fmt": "cargo fmt --manifest-path src-tauri/Cargo.toml",
-    "test": "vitest run --config vitest.config.ts --browser.enabled=false --exclude packages/koko/app/tests/** --passWithNoTests",
+    "test": "vitest run --config vitest.config.ts --browser.enabled=false --exclude \"packages/koko/app/tests/**\" --passWithNoTests",
     "test:browser": "vitest run --config vitest.config.ts",
     "typecheck": "nuxt typecheck",
     "bump": "bumpp",
@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "@ai-sdk/vue": "4.0.44",
+    "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.10.4",
     "@codemirror/lang-cpp": "^6.0.3",
     "@codemirror/lang-css": "^6.3.1",

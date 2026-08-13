@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TerminalAiChatMessage, TerminalAiEventData } from "#koko/composables/terminal/useTerminalAiSessions";
+import type { ChenSqlAiTiming, ChenSqlProposal } from "~/chen/composables/useChenSqlAiSessions";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import {
@@ -9,11 +10,8 @@ import {
   terminalAiExecutionKey,
   terminalAiProgressKey
 } from "#koko/composables/terminal/terminalAiPresentation";
-import {
-  createTerminalAiMessageId,
-  getKokoTerminalAiSession,
-  sendKokoTerminalAiControl
-} from "#koko/composables/terminal/useTerminalAiSessions";
+import { createTerminalAiMessageId, sendKokoTerminalAiControl } from "#koko/composables/terminal/useTerminalAiSessions";
+import { getWorkspaceAiSession, isChenSqlWorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
 
 interface ViewStep {
   id: string;
@@ -55,19 +53,84 @@ interface AlertItem {
   data: TerminalAiEventData;
 }
 
-type ViewItem = TextItem | PlanItem | AlertItem;
+interface SqlAnalysisItem {
+  kind: "sql-analysis";
+  key: string;
+  data: TerminalAiEventData;
+}
+
+interface SqlProposalItem {
+  kind: "sql-proposal";
+  key: string;
+  data: ChenSqlProposal;
+}
+
+interface SqlThoughtItem {
+  kind: "sql-thought";
+  key: string;
+  summaries: string[];
+}
+
+interface SqlTimingItem {
+  kind: "sql-timing";
+  key: string;
+  data: ChenSqlAiTiming;
+}
+
+type ViewItem = TextItem | PlanItem | AlertItem | SqlAnalysisItem | SqlProposalItem | SqlThoughtItem | SqlTimingItem;
 
 const { t } = useI18n();
 const { activePaneId } = useWorkspaceTabs();
 const messagesElement = ref<HTMLElement | null>(null);
-const session = computed(() => getKokoTerminalAiSession(activePaneId.value));
+const session = computed(() => getWorkspaceAiSession(activePaneId.value));
+const sqlSession = computed(() => (isChenSqlWorkspaceAiSession(session.value) ? session.value : null));
+const assistantName = computed(() => (sqlSession.value ? t("RightPanel.SQLAIName") : "Terminal AI"));
 const available = computed(() => Boolean(session.value?.enabled));
+const unavailableTitle = computed(() =>
+  sqlSession.value ? t("RightPanel.SQLAIUnavailableTitle") : t("RightPanel.AIUnavailableTitle")
+);
+const unavailableDescription = computed(() => {
+  if (sqlSession.value?.errorText) return sqlSession.value.errorText;
+  return sqlSession.value ? t("RightPanel.SQLAIUnavailableDescription") : t("RightPanel.AIUnavailableDescription");
+});
 // AI SDK mutates its shallow message array before triggering the ref, so expose
 // a new reference to invalidate viewItems and other computed consumers.
 const messages = computed(() => [...(session.value?.chat.messages.value || [])]);
 const busy = computed(() => {
   const status = session.value?.chat.status.value;
   return status === "submitted" || status === "streaming";
+});
+const elapsedClock = ref(Date.now());
+let elapsedTimer: ReturnType<typeof setInterval> | null = null;
+
+function stopElapsedTimer() {
+  if (elapsedTimer !== null) clearInterval(elapsedTimer);
+  elapsedTimer = null;
+}
+
+watch(
+  () => Boolean(sqlSession.value && busy.value),
+  (running) => {
+    stopElapsedTimer();
+    elapsedClock.value = Date.now();
+    if (running && import.meta.client) {
+      elapsedTimer = setInterval(() => {
+        elapsedClock.value = Date.now();
+      }, 500);
+    }
+  },
+  { immediate: true }
+);
+onBeforeUnmount(stopElapsedTimer);
+
+const sqlElapsedDurationMs = computed(() => {
+  const current = sqlSession.value;
+  if (!current) return 0;
+  const serverDuration = Number(current.timing.durationMs) || 0;
+  if (busy.value && current.requestStartedAt > 0) {
+    return Math.max(serverDuration, elapsedClock.value - current.requestStartedAt);
+  }
+  return Number(current.timing.clientDurationMs) || serverDuration;
 });
 const draft = computed({
   get: () => session.value?.draft || "",
@@ -125,12 +188,14 @@ function translatedProtocolValue(key: string | undefined, fallback = "") {
 const errorLabel = computed(() => {
   const current = session.value;
   if (!current) return "";
+  if (sqlSession.value) return current.errorText ? t("RightPanel.SQLAIFailed") : "";
   const key = terminalAiErrorKey(current.errorCode, current.errorText);
   return translatedProtocolValue(key, current.errorText ? t("RightPanel.AIFailed") : "");
 });
 
 const errorDetail = computed(() => {
   const current = session.value;
+  if (sqlSession.value) return current?.errorText || "";
   if (!current?.errorText || terminalAiErrorKey(current.errorCode, current.errorText)) return "";
   return current.errorText;
 });
@@ -138,6 +203,18 @@ const errorDetail = computed(() => {
 const runtimeStatusLabel = computed(() => {
   const current = session.value;
   if (!current) return "";
+  if (sqlSession.value) {
+    const keys: Record<string, string> = {
+      analyzing: "RightPanel.SQLAIStageAnalyzing",
+      model: "RightPanel.SQLAIStageModel",
+      reviewing: "RightPanel.SQLAIStageReviewing",
+      tool:
+        current.runtimeExecution === "validate_sql" ? "RightPanel.SQLAIStageValidation" : "RightPanel.SQLAIStageTool",
+      cancelled: "RightPanel.SQLAIStageCancelled"
+    };
+    const key = keys[current.runtimeStatusCode];
+    return key ? t(key) : current.runtimeStatus;
+  }
   const key = terminalAiProgressKey({
     code: current.runtimeStatusCode,
     execution: current.runtimeExecution,
@@ -158,6 +235,7 @@ const viewItems = computed<ViewItem[]>(() => {
   const plans = new Map<string, PlanItem>();
   const steps = new Map<string, ViewStep>();
   const executions = new Map<string, ViewExecution>();
+  const sqlThoughts = new Map<string, SqlThoughtItem>();
 
   const ensurePlan = (id: string, key: string) => {
     let plan = plans.get(id);
@@ -221,6 +299,43 @@ const viewItems = computed<ViewItem[]>(() => {
       }
 
       const data = "data" in part ? (part.data as TerminalAiEventData) : {};
+      if (part.type === "data-thought-summary") {
+        const summary = String(data.text || "").trim();
+        if (!summary) return;
+        const key = `${message.id}-sql-thought`;
+        let thought = sqlThoughts.get(key);
+        if (!thought) {
+          thought = { kind: "sql-thought", key, summaries: [] };
+          sqlThoughts.set(key, thought);
+          items.push(thought);
+        }
+        if (!thought.summaries.includes(summary)) thought.summaries.push(summary);
+        return;
+      }
+
+      if (part.type === "data-sql-analysis") {
+        items.push({ kind: "sql-analysis", key: `${message.id}-sql-analysis-${partIndex}`, data });
+        return;
+      }
+
+      if (part.type === "data-sql-proposal") {
+        items.push({
+          kind: "sql-proposal",
+          key: `${message.id}-sql-proposal-${partIndex}`,
+          data: data as ChenSqlProposal
+        });
+        return;
+      }
+
+      if (part.type === "data-agent-timing") {
+        items.push({
+          kind: "sql-timing",
+          key: `${message.id}-sql-timing-${partIndex}`,
+          data: data as ChenSqlAiTiming
+        });
+        return;
+      }
+
       if (part.type === "data-plan") {
         const planId = String(data.id || `plan-${message.id}`);
         const plan = ensurePlan(planId, `${message.id}-plan-${partIndex}`);
@@ -277,6 +392,7 @@ function scrollToBottom() {
 }
 
 function sendMessage(message: TerminalAiChatMessage) {
+  if (sqlSession.value) return;
   sendKokoTerminalAiControl(activePaneId.value, message);
 }
 
@@ -294,7 +410,7 @@ function submit() {
   void current.chat
     .sendMessage({
       text,
-      metadata: { terminalId: Number(current.terminalId) }
+      metadata: sqlSession.value ? { operation: "generate" } : { terminalId: Number(current.terminalId) }
     })
     .catch(() => {
       if (!current.errorCode && !current.errorText) current.errorCode = "send_failed";
@@ -309,7 +425,7 @@ function handleSubmitKeydown(event: KeyboardEvent) {
 
 function updatePolicy() {
   const current = session.value;
-  if (!current) return;
+  if (!current || sqlSession.value) return;
 
   try {
     sendMessage({
@@ -349,7 +465,7 @@ function changeExecutionMode(value: unknown) {
 function decide(data: TerminalAiEventData, approved: boolean) {
   const current = session.value;
   const decisionId = String(data.id || "");
-  if (!current || !decisionId || current.decisions.has(decisionId)) return;
+  if (!current || sqlSession.value || !decisionId || current.decisions.has(decisionId)) return;
 
   current.decisions.add(decisionId);
   try {
@@ -379,6 +495,11 @@ function decide(data: TerminalAiEventData, approved: boolean) {
 function interrupt() {
   const current = session.value;
   if (!current) return;
+
+  if (sqlSession.value) {
+    sqlSession.value.cancelActive();
+    return;
+  }
 
   try {
     sendMessage({
@@ -493,11 +614,48 @@ function riskColor(level: number) {
   return "success";
 }
 
+function proposalDecision(item: SqlProposalItem) {
+  return sqlSession.value?.proposalDecisions.get(item.key) || "";
+}
+
+function applySqlProposal(item: SqlProposalItem) {
+  const current = sqlSession.value;
+  if (!current || proposalDecision(item)) return;
+  const result = current.applyProposal(item.data);
+  current.proposalDecisions.set(item.key, result.applied ? "applied" : "stale");
+}
+
+function rejectSqlProposal(item: SqlProposalItem) {
+  const current = sqlSession.value;
+  if (!current || proposalDecision(item)) return;
+  current.proposalDecisions.set(item.key, "rejected");
+}
+
+function isSqlThoughtExpanded(item: SqlThoughtItem) {
+  return sqlSession.value?.expansionOverrides.get(item.key) ?? false;
+}
+
+function setSqlThoughtExpanded(item: SqlThoughtItem, expanded: boolean) {
+  sqlSession.value?.expansionOverrides.set(item.key, expanded);
+}
+
+function sqlAnalysisErrors(data: TerminalAiEventData) {
+  return Array.isArray(data.errors) ? data.errors.map(String) : [];
+}
+
+function sqlAnalysisItems(value: unknown) {
+  return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+}
+
 function formatExecutionDuration(value: unknown) {
   const durationMs = Number(value);
   if (!Number.isFinite(durationMs) || durationMs < 0) return "";
   if (durationMs < 1000) return `${Math.round(durationMs)} ms`;
   return `${(durationMs / 1000).toFixed(durationMs < 10000 ? 2 : 1)} s`;
+}
+
+function sqlTimingTotal(data: ChenSqlAiTiming) {
+  return Number(data.clientDurationMs) || Number(data.durationMs) || 0;
 }
 
 watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.parts.length], scrollToBottom);
@@ -510,8 +668,8 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
         icon="i-lucide-sparkles"
         size="sm"
         variant="naked"
-        :title="t('RightPanel.AIUnavailableTitle')"
-        :description="t('RightPanel.AIUnavailableDescription')"
+        :title="unavailableTitle"
+        :description="unavailableDescription"
       />
     </div>
 
@@ -522,9 +680,9 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
             <UIcon name="i-lucide-bot" class="size-4" />
           </span>
           <div class="min-w-0">
-            <div class="text-xs font-semibold text-highlighted">Terminal AI</div>
+            <div class="text-xs font-semibold text-highlighted">{{ assistantName }}</div>
             <div class="truncate text-[11px] text-muted">
-              {{ t("RightPanel.AIHeaderDescription") }}
+              {{ sqlSession ? t("RightPanel.SQLAIHeaderDescription") : t("RightPanel.AIHeaderDescription") }}
             </div>
           </div>
         </div>
@@ -533,11 +691,11 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
       <main ref="messagesElement" class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
         <UEmpty
           v-if="messages.length === 0"
-          icon="i-lucide-square-terminal"
+          :icon="sqlSession ? 'i-lucide-database-zap' : 'i-lucide-square-terminal'"
           size="sm"
           variant="naked"
-          :title="t('RightPanel.AIEmptyTitle')"
-          :description="t('RightPanel.AIEmptyDescription')"
+          :title="sqlSession ? t('RightPanel.SQLAIEmptyTitle') : t('RightPanel.AIEmptyTitle')"
+          :description="sqlSession ? t('RightPanel.SQLAIEmptyDescription') : t('RightPanel.AIEmptyDescription')"
         />
 
         <template v-for="item in viewItems" :key="item.key">
@@ -553,7 +711,7 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
             </span>
             <div class="min-w-0 max-w-[88%]" :class="item.role === 'user' ? 'text-right' : ''">
               <div class="text-[10px] text-muted">
-                {{ item.role === "user" ? t("RightPanel.AIYou") : "Terminal AI" }}
+                {{ item.role === "user" ? t("RightPanel.AIYou") : assistantName }}
               </div>
               <div
                 class="markdown-body mt-1 rounded-xl border border-default px-2.5 py-2 text-left text-xs"
@@ -562,6 +720,172 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
               />
             </div>
           </article>
+
+          <UCollapsible
+            v-else-if="item.kind === 'sql-thought'"
+            :open="isSqlThoughtExpanded(item)"
+            class="overflow-hidden rounded-xl border border-default bg-elevated/40"
+            @update:open="setSqlThoughtExpanded(item, $event)"
+          >
+            <UButton
+              color="neutral"
+              variant="ghost"
+              block
+              class="min-h-9 cursor-pointer justify-start rounded-none px-2.5 py-2"
+            >
+              <UIcon name="i-lucide-brain" class="size-3.5 shrink-0 text-primary" />
+              <span class="shrink-0 text-[11px] font-medium text-highlighted">
+                {{ t("RightPanel.SQLAIThoughtSummary") }}
+              </span>
+              <span
+                v-if="!isSqlThoughtExpanded(item)"
+                class="min-w-0 flex-1 truncate text-left text-[10px] font-normal text-muted"
+                :title="item.summaries.at(-1)"
+              >
+                {{ item.summaries.at(-1) }}
+              </span>
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="ml-auto size-3.5 shrink-0 text-muted transition-transform duration-150"
+                :class="isSqlThoughtExpanded(item) ? 'rotate-90' : ''"
+              />
+            </UButton>
+
+            <template #content>
+              <div class="space-y-1.5 border-t border-default px-2.5 py-2 text-[11px] leading-5 text-muted">
+                <p
+                  v-for="summary in item.summaries"
+                  :key="summary"
+                  class="whitespace-pre-wrap [overflow-wrap:anywhere]"
+                >
+                  {{ summary }}
+                </p>
+              </div>
+            </template>
+          </UCollapsible>
+
+          <section
+            v-else-if="item.kind === 'sql-analysis'"
+            class="space-y-2 rounded-xl border border-default bg-elevated/60 p-2.5"
+          >
+            <header class="flex flex-wrap items-center gap-1.5">
+              <span class="mr-auto text-xs font-semibold text-highlighted">
+                {{ t("RightPanel.SQLAIAnalysis") }}
+              </span>
+              <UBadge :color="item.data.valid ? 'success' : 'error'" variant="subtle" size="xs">
+                {{ item.data.valid ? t("RightPanel.SQLAIValid") : t("RightPanel.SQLAIInvalid") }}
+              </UBadge>
+              <UBadge v-if="item.data.statementType" color="neutral" variant="subtle" size="xs">
+                {{ item.data.statementType }}
+              </UBadge>
+              <UBadge
+                v-if="Number(item.data.riskLevel) > 0"
+                :color="riskColor(Number(item.data.riskLevel))"
+                variant="subtle"
+                size="xs"
+              >
+                {{ t("RightPanel.AIRisk", { level: item.data.riskLevel }) }}
+              </UBadge>
+            </header>
+            <p v-if="item.data.riskReason" class="text-[11px] text-muted">
+              {{ item.data.riskReason }}
+            </p>
+            <div v-if="sqlAnalysisItems(item.data.tables).length" class="text-[11px]">
+              <span class="text-muted">{{ t("RightPanel.SQLAITables") }}:</span>
+              {{ sqlAnalysisItems(item.data.tables).join(", ") }}
+            </div>
+            <div v-if="sqlAnalysisItems(item.data.columns).length" class="text-[11px]">
+              <span class="text-muted">{{ t("RightPanel.SQLAIColumns") }}:</span>
+              {{ sqlAnalysisItems(item.data.columns).join(", ") }}
+            </div>
+            <ul v-if="sqlAnalysisErrors(item.data).length" class="space-y-1 text-[11px] text-error">
+              <li v-for="error in sqlAnalysisErrors(item.data)" :key="error" class="flex items-start gap-1.5">
+                <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
+                <span class="break-words">{{ error }}</span>
+              </li>
+            </ul>
+          </section>
+
+          <section
+            v-else-if="item.kind === 'sql-proposal'"
+            class="overflow-hidden rounded-xl border border-default bg-elevated/60"
+          >
+            <header class="flex items-center gap-2 border-b border-default px-2.5 py-2">
+              <UIcon name="i-lucide-file-diff" class="size-4 text-primary" />
+              <span class="mr-auto text-xs font-semibold text-highlighted">
+                {{ t("RightPanel.SQLAIProposal") }}
+              </span>
+              <UBadge v-if="proposalDecision(item)" color="neutral" variant="subtle" size="xs">
+                {{ t(`RightPanel.SQLAIProposalState.${proposalDecision(item)}`) }}
+              </UBadge>
+            </header>
+            <div
+              v-if="item.data.explanation"
+              class="markdown-body border-b border-default p-2.5 text-xs text-muted"
+              v-html="renderMarkdown(String(item.data.explanation))"
+            />
+            <div class="grid min-h-0 gap-px bg-[var(--app-border)] sm:grid-cols-2">
+              <div class="min-w-0 bg-default">
+                <div class="border-b border-default bg-error/10 px-2 py-1 text-[10px] font-medium text-error">
+                  {{ t("RightPanel.SQLAIBefore") }}
+                </div>
+                <pre
+                  class="max-h-72 overflow-auto whitespace-pre-wrap break-words p-2 font-mono text-[11px]"
+                ><code>{{ item.data.originalSql || t("RightPanel.SQLAINewQuery") }}</code></pre>
+              </div>
+              <div class="min-w-0 bg-default">
+                <div class="border-b border-default bg-success/10 px-2 py-1 text-[10px] font-medium text-success">
+                  {{ t("RightPanel.SQLAIAfter") }}
+                </div>
+                <pre
+                  class="max-h-72 overflow-auto whitespace-pre-wrap break-words p-2 font-mono text-[11px]"
+                ><code>{{ item.data.sql }}</code></pre>
+              </div>
+            </div>
+            <div v-if="!proposalDecision(item)" class="flex justify-end gap-1.5 border-t border-default p-2">
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="soft"
+                :label="t('RightPanel.AIReject')"
+                @click="rejectSqlProposal(item)"
+              />
+              <UButton
+                size="xs"
+                color="primary"
+                icon="i-lucide-check"
+                :label="t('RightPanel.SQLAIApply')"
+                @click="applySqlProposal(item)"
+              />
+            </div>
+          </section>
+
+          <section
+            v-else-if="item.kind === 'sql-timing'"
+            class="rounded-xl border border-default bg-elevated/40 px-2.5 py-2 text-[11px] text-muted"
+          >
+            <div class="flex items-center gap-1.5">
+              <UIcon name="i-lucide-clock-3" class="size-3.5 text-primary" />
+              <span class="font-medium text-highlighted">{{ t("RightPanel.SQLAITiming") }}</span>
+              <span class="ml-auto font-mono tabular-nums text-highlighted">
+                {{ formatExecutionDuration(sqlTimingTotal(item.data)) }}
+              </span>
+            </div>
+            <div class="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[10px]">
+              <span v-if="Number(item.data.modelDurationMs) > 0">
+                {{ t("RightPanel.SQLAIModelDuration") }}
+                · {{ formatExecutionDuration(item.data.modelDurationMs) }}
+              </span>
+              <span v-if="Number(item.data.toolDurationMs) > 0">
+                {{ t("RightPanel.SQLAIToolDuration") }}
+                · {{ formatExecutionDuration(item.data.toolDurationMs) }}
+              </span>
+              <span v-if="Number(item.data.queueDurationMs) >= 1">
+                {{ t("RightPanel.SQLAIQueueDuration") }}
+                · {{ formatExecutionDuration(item.data.queueDurationMs) }}
+              </span>
+            </div>
+          </section>
 
           <section
             v-else-if="item.kind === 'plan'"
@@ -765,7 +1089,10 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
             </div>
           </section>
 
-          <div v-else class="flex items-start gap-1.5 rounded-lg bg-warning/10 p-2 text-[11px] text-warning">
+          <div
+            v-else-if="item.kind === 'alert'"
+            class="flex items-start gap-1.5 rounded-lg bg-warning/10 p-2 text-[11px] text-warning"
+          >
             <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
             {{ t("RightPanel.AICommandAcl") }}:
             {{ aclLabel(item.data) }}
@@ -780,6 +1107,13 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
           <span class="min-w-0 flex-1">
             <span class="block">{{ errorLabel }}</span>
             <span v-if="errorDetail" class="mt-0.5 block break-words text-[10px] opacity-80">{{ errorDetail }}</span>
+            <span
+              v-if="sqlSession && sqlElapsedDurationMs > 0"
+              class="mt-1 flex items-center gap-1 font-mono text-[10px] tabular-nums opacity-80"
+            >
+              <UIcon name="i-lucide-clock-3" class="size-3" />
+              {{ t("RightPanel.SQLAITiming") }} · {{ formatExecutionDuration(sqlElapsedDurationMs) }}
+            </span>
           </span>
           <UButton
             size="xs"
@@ -790,15 +1124,18 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
             @click="clearError"
           />
         </div>
-        <div v-if="runtimeStatusLabel" class="flex items-center gap-1.5 text-[11px] text-muted">
+        <div v-if="runtimeStatusLabel || (sqlSession && busy)" class="flex items-center gap-1.5 text-[11px] text-muted">
           <UIcon
             :name="busy ? 'i-lucide-loader-circle' : 'i-lucide-circle-dot'"
             class="size-3"
             :class="{ 'animate-spin': busy }"
           />
-          {{ runtimeStatusLabel }}
+          <span>{{ runtimeStatusLabel }}</span>
+          <span v-if="sqlSession" class="ml-auto font-mono tabular-nums text-highlighted">
+            {{ formatExecutionDuration(sqlElapsedDurationMs) }}
+          </span>
         </div>
-        <p v-if="!session.backgroundExec && backgroundReasonLabel" class="text-[11px] text-muted">
+        <p v-if="!sqlSession && !session.backgroundExec && backgroundReasonLabel" class="text-[11px] text-muted">
           {{ backgroundReasonLabel }}
         </p>
         <div class="relative overflow-hidden rounded-lg bg-[var(--app-input-bg)]">
@@ -807,7 +1144,7 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
             :rows="2"
             autoresize
             :maxrows="5"
-            :placeholder="t('RightPanel.AIInputPlaceholder')"
+            :placeholder="sqlSession ? t('RightPanel.SQLAIInputPlaceholder') : t('RightPanel.AIInputPlaceholder')"
             variant="none"
             class="block w-full"
             :disabled="busy"
@@ -815,7 +1152,7 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
             @keydown.enter.exact="handleSubmitKeydown"
           />
           <div class="absolute inset-x-2 bottom-2 flex items-center gap-1.5">
-            <div class="flex min-w-0 flex-1 items-center gap-1">
+            <div v-if="!sqlSession" class="flex min-w-0 flex-1 items-center gap-1">
               <USelect
                 size="xs"
                 variant="soft"
@@ -843,11 +1180,12 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
             </div>
             <UButton
               v-if="busy"
+              class="ml-auto"
               size="xs"
               color="neutral"
               variant="soft"
               icon="i-lucide-square"
-              :label="t('RightPanel.AIInterrupt')"
+              :label="sqlSession ? t('RightPanel.SQLAICancel') : t('RightPanel.AIInterrupt')"
               @click="interrupt"
             />
             <UTooltip :text="t('RightPanel.AISend')">

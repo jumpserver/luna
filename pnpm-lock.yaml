@@ -11,6 +11,9 @@ importers:
       '@ai-sdk/vue':
         specifier: 4.0.44
         version: 4.0.44(vue@3.5.40(typescript@6.0.3))(zod@4.4.3)
+      '@codemirror/autocomplete':
+        specifier: ^6.20.3
+        version: 6.20.3
       '@codemirror/commands':
         specifier: ^6.10.4
         version: 6.10.4
