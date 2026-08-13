@@ -14,6 +14,8 @@ import { createBatchedPersist } from "~/composables/createBatchedPersist";
 import { normalizeSidebarWidth, useSettingStorage } from "~/composables/useSettingStorage";
 import { DEFAULT_SIDEBAR_SECTIONS, normalizeSidebarSections } from "~/composables/useSidebarSections";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET, isThemePresetId } from "~/composables/useThemePresets";
+import { isCodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
+import { TERMINAL_THEME_PRESETS } from "~/shared/theme/presets/terminal";
 
 const storage = useSettingStorage();
 
@@ -108,6 +110,25 @@ const ensureHydration = () => {
         patch.darkThemePreset = normalizedDarkThemePreset;
       }
 
+      const normalizedTerminalThemePreset = TERMINAL_THEME_PRESETS.some(
+        (preset) => preset.id === state.terminalThemePreset
+      )
+        ? state.terminalThemePreset
+        : "follow-app";
+      const normalizedCodeMirrorThemePreset = isCodeMirrorThemePresetId(state.codeMirrorThemePreset)
+        ? state.codeMirrorThemePreset
+        : "follow-app";
+
+      if (normalizedTerminalThemePreset !== state.terminalThemePreset) {
+        state.terminalThemePreset = normalizedTerminalThemePreset;
+        patch.terminalThemePreset = normalizedTerminalThemePreset;
+      }
+
+      if (normalizedCodeMirrorThemePreset !== state.codeMirrorThemePreset) {
+        state.codeMirrorThemePreset = normalizedCodeMirrorThemePreset;
+        patch.codeMirrorThemePreset = normalizedCodeMirrorThemePreset;
+      }
+
       if (Object.keys(patch).length > 0) {
         try {
           await storage.patch(patch);
@@ -198,6 +219,16 @@ export const useSettingManager = () => {
   const setDarkThemePreset = (preset: UserSettingPersistedState["darkThemePreset"]) => {
     state.darkThemePreset = preset;
     persist({ darkThemePreset: preset });
+  };
+
+  const setTerminalThemePreset = (preset: string) => {
+    state.terminalThemePreset = preset || "follow-app";
+    persist({ terminalThemePreset: state.terminalThemePreset });
+  };
+
+  const setCodeMirrorThemePreset = (preset: UserSettingPersistedState["codeMirrorThemePreset"]) => {
+    state.codeMirrorThemePreset = preset;
+    persist({ codeMirrorThemePreset: preset });
   };
 
   const setLayouts = (l: LayoutsType) => {
@@ -308,6 +339,8 @@ export const useSettingManager = () => {
     setPrimaryColorLight,
     setLightThemePreset,
     setDarkThemePreset,
+    setTerminalThemePreset,
+    setCodeMirrorThemePreset,
     setCharsetPreference,
     setRdpResolutionPreference,
     setBackspacePreference,

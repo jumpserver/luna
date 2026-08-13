@@ -332,7 +332,7 @@ function observeAppTheme() {
   themeObserver = new MutationObserver(() => syncTerminalTheme());
   themeObserver.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ["class", "data-theme-preset", "style"]
+    attributeFilter: ["class", "data-theme-preset", "data-terminal-theme-preset", "style"]
   });
 }
 

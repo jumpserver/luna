@@ -1,4 +1,5 @@
 import type { ITheme } from "@xterm/xterm";
+import xtermTheme from "xterm-theme";
 
 import { isDarkColor } from "~/shared/theme/color";
 import { readResolvedTerminalTokens } from "~/shared/theme/resolvedTokens";
@@ -42,6 +43,10 @@ const LIGHT_ANSI = {
 } as const;
 
 export function toXtermTheme(tokens = readResolvedTerminalTokens()): ITheme {
+  const selected = useSettingManager().terminalThemePreset.value;
+  const preset = (xtermTheme as Record<string, ITheme>)[selected];
+  if (selected !== "follow-app" && preset) return preset;
+
   const dark = isDarkColor(tokens.background);
 
   return {

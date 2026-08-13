@@ -2,6 +2,8 @@
 import type { ThemePresetId } from "~/types";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useThemeOptions } from "~/composables/useThemeOptions";
+import { CODEMIRROR_THEME_PRESETS, isCodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
+import { TERMINAL_THEME_PRESETS } from "~/shared/theme/presets/terminal";
 
 interface FontItem {
   id: string;
@@ -25,7 +27,11 @@ const {
   isHydrated,
   setFontFamily,
   setPrimaryColorLight,
-  setPrimaryColorDark
+  setPrimaryColorDark,
+  setTerminalThemePreset,
+  setCodeMirrorThemePreset,
+  terminalThemePreset,
+  codeMirrorThemePreset
 } = useSettingManager();
 
 const { applyPrimaryColor } = useColor();
@@ -99,10 +105,27 @@ const selectedThemePreset = computed<string>({
   }
 });
 
+const terminalThemeItems = computed(() =>
+  TERMINAL_THEME_PRESETS.map((item) => ({
+    id: item.id,
+    label: item.id === "follow-app" ? t("Common.FollowAppTheme") : item.label
+  }))
+);
+const codeMirrorThemeItems = computed(() => [
+  ...CODEMIRROR_THEME_PRESETS.map((item) => ({
+    id: item.id,
+    label: item.id === "follow-app" ? t("Common.FollowAppTheme") : item.label
+  }))
+]);
+
 function applyFont(font: string) {
   const root = document.documentElement;
   root.style.setProperty("--font-sans", font);
   root.style.setProperty("--font-heading", font);
+}
+
+function selectCodeMirrorTheme(id: string) {
+  if (isCodeMirrorThemePresetId(id)) setCodeMirrorThemePreset(id);
 }
 
 function applyCurrentThemeColor(broadcast = false) {
@@ -200,12 +223,38 @@ watch(
 <template>
   <div class="flex flex-col gap-3 p-4">
     <div class="flex items-center justify-between">
-      <span class="text-sm font-medium">{{ t("Common.Theme") }}</span>
+      <span class="text-sm font-medium">{{ t("Common.Appearance") }}</span>
       <SettingSelect
         v-model="selectedThemePreset"
         :items="themeSelectItems"
-        :aria-label="t('Common.Theme')"
+        :aria-label="t('Common.Appearance')"
         class="w-64"
+      />
+    </div>
+
+    <USeparator />
+
+    <div class="flex items-center justify-between">
+      <span class="text-sm font-medium">{{ t("Common.TerminalColorScheme") }}</span>
+      <SettingSelect
+        :model-value="terminalThemePreset"
+        :items="terminalThemeItems"
+        :aria-label="t('Common.TerminalColorScheme')"
+        class="w-64"
+        @update:model-value="setTerminalThemePreset"
+      />
+    </div>
+
+    <USeparator />
+
+    <div class="flex items-center justify-between">
+      <span class="text-sm font-medium">{{ t("Common.CodeMirrorColorScheme") }}</span>
+      <SettingSelect
+        :model-value="codeMirrorThemePreset"
+        :items="codeMirrorThemeItems"
+        :aria-label="t('Common.CodeMirrorColorScheme')"
+        class="w-64"
+        @update:model-value="selectCodeMirrorTheme"
       />
     </div>
 

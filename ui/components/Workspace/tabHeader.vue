@@ -594,14 +594,14 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
             {{ tabDisplayTitle(tab) }}
           </span>
           <span
-            class="workspace-session-tab-close flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-70 transition-opacity hover:opacity-100"
+            class="workspace-session-tab-close flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-70 transition-colors hover:bg-elevated hover:text-foreground hover:opacity-100"
             @click.stop="closeSession(tab.id)"
           >
             <UIcon name="i-lucide-x" class="size-2.5" />
           </span>
           <span
             v-if="activeTabId !== tab.id && index < tabs.length - 1 && tabs[index + 1]?.id !== activeTabId"
-            class="workspace-session-tab-divider pointer-events-none absolute top-1/2 -right-[5px] h-4 -translate-y-1/2 border-r"
+            class="workspace-session-tab-divider pointer-events-none absolute top-1/2 -right-[5px] hidden h-4 -translate-y-1/2 border-r"
           />
         </button>
       </div>
@@ -727,10 +727,6 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
 .workspace-session-tab-status {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-surface-panel-strong) 88%, white 12%);
-}
-
-.workspace-session-tab-close:hover {
-  background: color-mix(in srgb, var(--app-hover-strong) 88%, transparent);
 }
 
 .workspace-session-tab-divider {

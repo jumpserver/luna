@@ -34,9 +34,11 @@ const emit = defineEmits<{
 const colorMode = useColorMode();
 const container = ref<HTMLElement | null>(null);
 const themeSlot = new Compartment();
+const syntaxThemeSlot = new Compartment();
 const editableSlot = new Compartment();
 const languageSlot = new Compartment();
 let editor: EditorView | null = null;
+let themeObserver: MutationObserver | null = null;
 let applyingExternalValue = false;
 
 function sqlExtension(): Extension {
@@ -60,7 +62,7 @@ onMounted(() => {
       extensions: [
         basicSetup,
         languageSlot.of(sqlExtension()),
-        createCodeMirrorSyntaxTheme(),
+        syntaxThemeSlot.of(createCodeMirrorSyntaxTheme()),
         placeholder("WHERE condition, e.g. status = 'active'"),
         EditorView.contentAttributes.of({ "aria-label": "Table WHERE condition" }),
         EditorView.updateListener.of((update) => {
@@ -79,6 +81,18 @@ onMounted(() => {
         themeSlot.of(createCodeMirrorTheme())
       ]
     })
+  });
+  themeObserver = new MutationObserver(() => {
+    editor?.dispatch({
+      effects: [
+        themeSlot.reconfigure(createCodeMirrorTheme()),
+        syntaxThemeSlot.reconfigure(createCodeMirrorSyntaxTheme())
+      ]
+    });
+  });
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class", "data-theme-preset", "data-codemirror-theme-preset", "style"]
   });
 });
 
@@ -110,7 +124,10 @@ watch(
   }
 );
 
-onBeforeUnmount(() => editor?.destroy());
+onBeforeUnmount(() => {
+  themeObserver?.disconnect();
+  editor?.destroy();
+});
 </script>
 
 <template>
@@ -138,8 +155,7 @@ onBeforeUnmount(() => editor?.destroy());
 }
 
 :deep(.cm-content) {
-  align-items: center;
-  padding: 0 8px;
+  padding: 2px 8px;
   white-space: nowrap;
 }
 

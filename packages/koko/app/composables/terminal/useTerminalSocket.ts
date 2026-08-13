@@ -365,7 +365,7 @@ export const useKokoTerminalSocket = () => {
     });
     themeObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["class", "data-theme-preset", "style"]
+      attributeFilter: ["class", "data-theme-preset", "data-terminal-theme-preset", "style"]
     });
   };
 

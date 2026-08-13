@@ -1,6 +1,7 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { Store } from "@tauri-apps/plugin-store";
 import type { ThemePresetId } from "~/composables/useThemePresets";
+import type { CodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
 import type {
   AppConfigType,
   CharsetType,
@@ -39,6 +40,8 @@ export interface UserSettingPersistedState {
   primaryColorDark: string;
   lightThemePreset: ThemePresetId;
   darkThemePreset: ThemePresetId;
+  terminalThemePreset: string;
+  codeMirrorThemePreset: CodeMirrorThemePresetId;
   appConfig: AppConfigType | null;
   charset: CharsetType;
   rdpResolution: ResolutionType;
@@ -70,6 +73,8 @@ const DEFAULT_STATE: UserSettingPersistedState = {
   primaryColorDark: "#34d399",
   lightThemePreset: DEFAULT_LIGHT_THEME_PRESET,
   darkThemePreset: DEFAULT_DARK_THEME_PRESET,
+  terminalThemePreset: "follow-app",
+  codeMirrorThemePreset: "follow-app",
   appConfig: null,
   charset: "default",
   rdpResolution: "auto",

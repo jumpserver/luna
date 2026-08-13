@@ -22,8 +22,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+export function chenDialogText(value: string) {
+  return value
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(?:div|p|li|tr|h[1-6])\s*>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, "&")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export function formatChenDialogValue(value: unknown) {
-  if (typeof value === "string") return value;
+  if (typeof value === "string") return chenDialogText(value);
 
   try {
     return JSON.stringify(value, null, 2) ?? String(value);
@@ -52,7 +68,7 @@ export function normalizeChenDialogMessage(payload: unknown): ChenDialogMessage 
     return {
       label:
         typeof item.label === "string" ? item.label : typeof item.name === "string" ? item.name : `Item ${index + 1}`,
-      value: item.value
+      value: typeof item.value === "string" ? chenDialogText(item.value) : item.value
     };
   });
   const rawButtons = Array.isArray(payload.buttons) ? payload.buttons : [];
@@ -76,6 +92,6 @@ export function normalizeChenDialogMessage(payload: unknown): ChenDialogMessage 
     // A dialog without actions must always have an escape hatch, even when an
     // older backend explicitly marks it as non-closable.
     showClose: payload.showClose !== false || buttons.length === 0,
-    text: typeof payload.body === "string" ? payload.body : formatChenDialogValue(payload)
+    text: typeof payload.body === "string" ? chenDialogText(payload.body) : formatChenDialogValue(payload)
   };
 }

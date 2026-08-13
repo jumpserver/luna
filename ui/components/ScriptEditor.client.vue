@@ -67,7 +67,7 @@ onMounted(() => {
   themeObserver = new MutationObserver(refreshTheme);
   themeObserver.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ["class", "data-theme-preset", "style"]
+    attributeFilter: ["class", "data-theme-preset", "data-codemirror-theme-preset", "style"]
   });
 });
 

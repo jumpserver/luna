@@ -214,6 +214,14 @@ const activeDatabaseTab = computed(() => {
   return tab?.kind === "database" ? tab : null;
 });
 const activeConnectionError = computed(() => workspace.activeWorkspaceTab.value?.connectionError || "");
+const databaseTarget = computed(() => {
+  const address = String(props.tab.address || "").trim();
+  const protocol = String(props.tab.protocol || "").toLowerCase();
+  const port = props.tab.permedProtocols?.find((item) => item.name.toLowerCase() === protocol)?.port;
+  if (!address) return "";
+  const formattedAddress = address.includes(":") && !address.startsWith("[") ? `[${address}]` : address;
+  return port ? `${formattedAddress}:${port}` : address;
+});
 
 const queryConsole = useChenQueryConsole(sendConsoleAction);
 const session = useChenSession({
@@ -253,6 +261,19 @@ const startupError = computed(() => {
   if (session.error.value) return session.error.value;
   if (!tokenId.value && props.tab.status === "failed") return "Failed to start database workspace";
   return "";
+});
+const startupErrorMessage = computed(() => {
+  const message = startupError.value;
+  if (!message || message.startsWith("Chen WebSocket 连接失败")) return message;
+  return `Chen 服务端请求失败：${message}`;
+});
+const databaseDialogFailed = computed(() =>
+  /连接失败|connection (?:attempt )?failed|unable to connect/i.test(session.dialogMessage.value?.text || "")
+);
+const databaseDialogText = computed(() => {
+  const message = session.dialogMessage.value?.text || "";
+  if (!databaseDialogFailed.value || !databaseTarget.value) return message;
+  return `数据库地址：${databaseTarget.value}\n${message}`;
 });
 
 async function downloadExportFile(fileKey: string) {
@@ -1255,10 +1276,10 @@ defineExpose({ focus });
 
     <ChenSessionState
       v-else
-      :icon="startupError ? 'i-lucide-circle-alert' : 'i-lucide-loader-circle'"
-      :loading="!startupError"
-      :message="startupError || 'Starting database workspace...'"
-      :action-label="startupError ? 'Retry' : undefined"
+      :icon="startupErrorMessage ? 'i-lucide-circle-alert' : 'i-lucide-loader-circle'"
+      :loading="!startupErrorMessage"
+      :message="startupErrorMessage || 'Starting database workspace...'"
+      :action-label="startupErrorMessage ? 'Retry' : undefined"
       @action="emit('reconnect')"
     />
 
@@ -1286,7 +1307,7 @@ defineExpose({ focus });
 
     <ChenWorkspaceModal
       v-model:open="dialogVisible"
-      :title="session.dialogMessage.value?.title || 'Message'"
+      :title="databaseDialogFailed ? '数据库连接失败' : session.dialogMessage.value?.title || 'Message'"
       :close="session.dialogMessage.value?.showClose"
       :dismissible="session.dialogMessage.value?.showClose"
     >
@@ -1301,9 +1322,7 @@ defineExpose({ focus });
             </dd>
           </template>
         </dl>
-        <pre v-else class="whitespace-pre-wrap break-words p-4 text-sm text-muted">{{
-          session.dialogMessage.value?.text
-        }}</pre>
+        <pre v-else class="whitespace-pre-wrap break-words p-4 text-sm text-muted">{{ databaseDialogText }}</pre>
       </template>
 
       <template v-if="session.dialogMessage.value?.buttons.length" #footer>

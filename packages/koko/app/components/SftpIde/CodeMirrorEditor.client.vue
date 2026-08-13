@@ -33,9 +33,11 @@ const colorMode = useColorMode();
 const container = ref<HTMLElement | null>(null);
 const languageSlot = new Compartment();
 const themeSlot = new Compartment();
+const syntaxThemeSlot = new Compartment();
 const lineWrappingSlot = new Compartment();
 const changedLinesSlot = new Compartment();
 let editor: EditorView | null = null;
+let themeObserver: MutationObserver | null = null;
 let languageRequest = 0;
 let applyingExternalValue = false;
 
@@ -138,7 +140,7 @@ onMounted(() => {
         basicSetup,
         EditorState.tabSize.of(2),
         indentUnit.of("  "),
-        hostAdapter.theme.codeMirrorSyntax(),
+        syntaxThemeSlot.of(hostAdapter.theme.codeMirrorSyntax()),
         languageSlot.of([]),
         themeSlot.of(hostAdapter.theme.codeMirror()),
         lineWrappingSlot.of(props.lineWrapping ? EditorView.lineWrapping : []),
@@ -165,6 +167,18 @@ onMounted(() => {
   applyChangedLines();
   emitCursor(editor);
   if (props.active) editor.focus();
+  themeObserver = new MutationObserver(() => {
+    editor?.dispatch({
+      effects: [
+        themeSlot.reconfigure(hostAdapter.theme.codeMirror()),
+        syntaxThemeSlot.reconfigure(hostAdapter.theme.codeMirrorSyntax())
+      ]
+    });
+  });
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class", "data-theme-preset", "data-codemirror-theme-preset", "style"]
+  });
 });
 
 watch(
@@ -209,7 +223,10 @@ watch(
     });
   }
 );
-onBeforeUnmount(() => editor?.destroy());
+onBeforeUnmount(() => {
+  themeObserver?.disconnect();
+  editor?.destroy();
+});
 </script>
 
 <template>
