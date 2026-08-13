@@ -48,7 +48,7 @@ const progress = computed(() => {
     <div class="sftp-transfer-file__actions">
       <UButton
         v-if="canPause"
-        class="size-[22px] justify-center p-0"
+        class="size-5.5 justify-center p-0"
         color="neutral"
         variant="ghost"
         size="xs"
@@ -59,7 +59,7 @@ const progress = computed(() => {
       />
       <UButton
         v-if="task.status === 'failed'"
-        class="size-[22px] justify-center p-0"
+        class="size-5.5 justify-center p-0"
         color="neutral"
         variant="ghost"
         size="xs"
@@ -70,7 +70,7 @@ const progress = computed(() => {
       />
       <UButton
         v-if="canResume"
-        class="size-[22px] justify-center p-0"
+        class="size-5.5 justify-center p-0"
         color="neutral"
         variant="ghost"
         size="xs"
@@ -81,7 +81,7 @@ const progress = computed(() => {
       />
       <UButton
         v-if="!terminalStatuses.has(task.status)"
-        class="size-[22px] justify-center p-0"
+        class="size-5.5 justify-center p-0"
         color="error"
         variant="ghost"
         size="xs"

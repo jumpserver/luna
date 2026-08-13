@@ -5,6 +5,7 @@ import type { ClipboardDirection, ILunaConfig } from "#koko/types";
 import { FORMATTER_MESSAGE_TYPE, HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 
 import { readText, writeText } from "clipboard-polyfill";
+import { KeyboardKey } from "#koko/constants/keyboard";
 import { formatMessage, getXTerminalLineContent, preprocessInput } from "#koko/utils/terminalUtils";
 import { TerminalMittEvent } from "./protocol";
 
@@ -84,7 +85,7 @@ export function useKokoTerminalInput(options: {
       });
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+      if ((event.ctrlKey || event.metaKey) && event.key === KeyboardKey.F) {
         options.sendMittEvent(TerminalMittEvent.OpenSearch);
         event.preventDefault();
       }
@@ -133,13 +134,18 @@ export function useKokoTerminalInput(options: {
       }
     });
     terminal.attachCustomKeyEventHandler((event) => {
-      if (event.key === "Enter" && event.isComposing) return false;
-      if (event.altKey && event.shiftKey && (event.key === "ArrowRight" || event.key === "ArrowLeft")) {
+      if (event.key === KeyboardKey.Enter && event.isComposing) return false;
+      if (
+        event.altKey &&
+        event.shiftKey &&
+        (event.key === KeyboardKey.ArrowRight || event.key === KeyboardKey.ArrowLeft)
+      ) {
         options.onHostKey(event.key);
         return false;
       }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c" && terminal.hasSelection()) return false;
-      return !((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "v");
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.C && terminal.hasSelection())
+        return false;
+      return !((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.V);
     });
   }
 

@@ -111,7 +111,7 @@ function statusIcon(value: SftpTransferGroupStatus): string {
       <div class="sftp-transfer-target__actions flex gap-0.5">
         <UButton
           v-if="canRetry"
-          class="size-[26px] justify-center p-0"
+          class="size-6.5 justify-center p-0"
           color="neutral"
           variant="ghost"
           size="xs"
@@ -122,7 +122,7 @@ function statusIcon(value: SftpTransferGroupStatus): string {
         />
         <UButton
           v-if="canPause"
-          class="size-[26px] justify-center p-0"
+          class="size-6.5 justify-center p-0"
           color="neutral"
           variant="ghost"
           size="xs"
@@ -133,7 +133,7 @@ function statusIcon(value: SftpTransferGroupStatus): string {
         />
         <UButton
           v-if="canResume"
-          class="size-[26px] justify-center p-0"
+          class="size-6.5 justify-center p-0"
           color="neutral"
           variant="ghost"
           size="xs"
@@ -144,7 +144,7 @@ function statusIcon(value: SftpTransferGroupStatus): string {
         />
         <UButton
           v-if="canCancel"
-          class="size-[26px] justify-center p-0"
+          class="size-6.5 justify-center p-0"
           color="error"
           variant="ghost"
           size="xs"
@@ -158,7 +158,7 @@ function statusIcon(value: SftpTransferGroupStatus): string {
 
     <div
       v-if="hasConflict"
-      class="sftp-transfer-banner warning mx-3 mb-2 ml-[34px] flex items-start gap-2 rounded-md border px-2.5 py-2 text-[11px] leading-relaxed"
+      class="sftp-transfer-banner warning mx-3 mb-2 ml-8.5 flex items-start gap-2 rounded-md border px-2.5 py-2 text-[11px] leading-relaxed"
     >
       <UIcon name="i-lucide-alert-triangle" class="size-3 shrink-0 mt-0.5" />
       <div class="flex-1">
@@ -195,7 +195,7 @@ function statusIcon(value: SftpTransferGroupStatus): string {
 
     <div
       v-else-if="error"
-      class="sftp-transfer-banner error mx-3 mb-2 ml-[34px] flex items-start gap-2 rounded-md border px-2.5 py-2 text-[11px] leading-relaxed"
+      class="sftp-transfer-banner error mx-3 mb-2 ml-8.5 flex items-start gap-2 rounded-md border px-2.5 py-2 text-[11px] leading-relaxed"
     >
       <UIcon name="i-lucide-alert-circle" class="size-3 shrink-0 mt-0.5" />
       <div class="flex-1">
@@ -204,7 +204,7 @@ function statusIcon(value: SftpTransferGroupStatus): string {
       </div>
     </div>
 
-    <div v-show="expanded" class="sftp-transfer-files flex-col gap-0.5 px-3 pb-2 pl-[34px]">
+    <div v-show="expanded" class="sftp-transfer-files flex-col gap-0.5 px-3 pb-2 pl-8.5">
       <SftpTransferFile
         v-for="task in target.tasks"
         :key="task.id"

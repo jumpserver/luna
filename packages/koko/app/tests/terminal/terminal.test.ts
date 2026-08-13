@@ -465,7 +465,7 @@ it("saves downloaded packets through a temporary anchor element", () => {
       body: { appendChild: vi.fn(), removeChild: vi.fn() }
     });
   }
-  vi.spyOn(document, "createElement").mockReturnValue(link as HTMLAnchorElement);
+  vi.spyOn(document, "createElement").mockReturnValue(link as unknown as HTMLAnchorElement);
   const appendChild = vi.spyOn(document.body, "appendChild").mockImplementation(() => link as unknown as Node);
   const removeChild = vi.spyOn(document.body, "removeChild").mockImplementation(() => link as unknown as Node);
   vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");

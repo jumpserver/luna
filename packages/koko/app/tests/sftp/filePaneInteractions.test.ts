@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ref } from "vue";
 import {
+  formatSftpFileSize,
+  formatSftpModifiedTime,
+  resolveSftpFileType
+} from "../../composables/sftp/file-manager/filePresentation";
+import {
   buildTransferSourcePayload,
   createMockDataTransfer,
   hasEndpointPrefix,
@@ -116,5 +121,26 @@ describe("file pane transfer helpers", () => {
     expect(hasTransferMimeType({ dataTransfer } as DragEvent)).toBe(true);
     expect(parseTransferDragPayload({ dataTransfer } as DragEvent, "local:fs")).toEqual(payload);
     expect(parseTransferDragPayload({ dataTransfer } as DragEvent, "sftp:asset-1")).toBeNull();
+  });
+});
+
+describe("file pane presentation rules", () => {
+  it("keeps file size, timestamp, extension, and server type formatting stable", () => {
+    expect(formatSftpFileSize("1000")).toBe("1 kB");
+    expect(formatSftpFileSize("")).toBe("0 B");
+    expect(formatSftpModifiedTime("")).toBe("—");
+    expect(formatSftpModifiedTime("not-a-date")).toBe("not-a-date");
+    expect(
+      resolveSftpFileType(
+        { name: ".env", is_dir: false, size: "", perm: "", mod_time: "", type: "" },
+        { folder: "Folder", file: "File" }
+      )
+    ).toBe("env");
+    expect(
+      resolveSftpFileType(
+        { name: "README", is_dir: false, size: "", perm: "", mod_time: "", type: ".socket" },
+        { folder: "Folder", file: "File" }
+      )
+    ).toBe("socket");
   });
 });
