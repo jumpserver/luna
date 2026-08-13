@@ -204,7 +204,8 @@ const connectWithSavedConnection = async (asset: AssetItem) => {
   const saved = connectAsset.savedConnection!;
   const session = openSession(connectAsset, {
     protocol: saved.protocol,
-    account: saved.username
+    account: saved.username,
+    connectMethod: saved.connectMethod
   });
 
   await confirmConnection(connectAsset, {

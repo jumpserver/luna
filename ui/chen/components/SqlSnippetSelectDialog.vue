@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
 
+import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
+
 const props = defineProps<{
   open: boolean;
   snippets: ChenSqlSnippet[];
@@ -39,7 +41,7 @@ function confirmDelete() {
 </script>
 
 <template>
-  <UModal v-model:open="visible" title="Select SQL" :ui="{ content: 'sm:max-w-3xl' }">
+  <ChenWorkspaceModal v-model:open="visible" title="Select SQL" :ui="{ content: 'sm:max-w-3xl' }">
     <template #body>
       <div v-if="loading" class="grid min-h-32 place-items-center text-muted">
         <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
@@ -84,9 +86,9 @@ function confirmDelete() {
         </table>
       </div>
     </template>
-  </UModal>
+  </ChenWorkspaceModal>
 
-  <UModal v-model:open="deleteDialogOpen" title="Delete SQL">
+  <ChenWorkspaceModal v-model:open="deleteDialogOpen" title="Delete SQL">
     <template #body>
       <p class="text-sm text-muted">Delete “{{ deleteCandidate?.name }}”?</p>
     </template>
@@ -97,5 +99,5 @@ function confirmDelete() {
         <UButton color="error" @click="confirmDelete">Confirm</UButton>
       </div>
     </template>
-  </UModal>
+  </ChenWorkspaceModal>
 </template>

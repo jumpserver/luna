@@ -21,6 +21,7 @@ export interface WorkspaceSurfaceSession {
   permedAccounts?: PermedAccount[];
   protocol: string;
   account: string;
+  connectMethod?: string;
   status: WorkspaceSessionStatus;
   connectedAt?: number;
   payload?: Record<string, any>;
@@ -65,6 +66,7 @@ const blankSurface = (): Omit<WorkspaceSurfaceSession, "id"> => ({
   permedAccounts: undefined,
   protocol: "",
   account: "",
+  connectMethod: undefined,
   status: "selecting",
   connectedAt: undefined,
   payload: undefined,
@@ -106,6 +108,7 @@ const syncTabFromPrimaryPane = (tab: WorkspaceSessionTab) => {
   tab.permedAccounts = primaryPane.permedAccounts;
   tab.protocol = primaryPane.protocol;
   tab.account = primaryPane.account;
+  tab.connectMethod = primaryPane.connectMethod;
   tab.status = primaryPane.status;
   tab.connectedAt = primaryPane.connectedAt;
   tab.payload = primaryPane.payload;
@@ -297,7 +300,13 @@ export const useWorkspaceTabs = () => {
 
   const openSession = (
     asset: AssetItem,
-    connection: { protocol: string; account: string; payload?: Record<string, any>; paneId?: string }
+    connection: {
+      protocol: string;
+      account: string;
+      connectMethod?: string;
+      payload?: Record<string, any>;
+      paneId?: string;
+    }
   ) => {
     useRecentConnections().recordRecentConnection(asset);
     const protocol = connection.protocol || asset.savedConnection?.protocol || "ssh";
@@ -317,6 +326,7 @@ export const useWorkspaceTabs = () => {
         permedAccounts: asset.permedAccounts,
         protocol,
         account,
+        connectMethod: connection.connectMethod,
         status: connection.payload ? "ready" : "connecting",
         payload: connection.payload,
         setupAsset: undefined
@@ -669,6 +679,7 @@ export const useWorkspaceTabs = () => {
     if (!found) return;
 
     found.pane.payload = payload;
+    found.pane.connectMethod = String(payload.connectMethod?.value || found.pane.connectMethod || "") || undefined;
     found.pane.status = "ready";
     found.pane.mode = "session";
     if (found.paneIndex === 0) syncTabFromPrimaryPane(found.tab);
@@ -681,6 +692,14 @@ export const useWorkspaceTabs = () => {
     match.pane.status = "connecting";
     match.pane.mode = "session";
     activePaneId.value = paneId;
+    if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
+  };
+
+  const setSessionConnectMethod = (paneId: string, connectMethod: string) => {
+    const match = findPane(paneId);
+    if (!match) return;
+
+    match.pane.connectMethod = connectMethod || undefined;
     if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
 
@@ -763,6 +782,7 @@ export const useWorkspaceTabs = () => {
     isPaneAwaitingAssetSelection,
     markSessionConnected,
     markSessionConnecting,
+    setSessionConnectMethod,
     markSessionFailed,
     openLocalShell,
     openSession,

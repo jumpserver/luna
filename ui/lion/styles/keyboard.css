@@ -29,25 +29,19 @@
   top: 0;
   bottom: 0;
 
-  background: #444;
+  background: var(--app-surface-header);
 
-  border: 0.125em solid #666;
+  border: 0.125em solid var(--app-border-strong);
   -moz-border-radius: 0.25em;
   -webkit-border-radius: 0.25em;
   -khtml-border-radius: 0.25em;
   border-radius: 0.25em;
 
-  color: white;
+  color: var(--app-text-primary);
   font-size: 40%;
   font-weight: lighter;
   text-align: center;
   white-space: pre;
-
-  text-shadow:
-    1px 1px 0 rgba(0, 0, 0, 0.25),
-    1px -1px 0 rgba(0, 0, 0, 0.25),
-    -1px 1px 0 rgba(0, 0, 0, 0.25),
-    -1px -1px 0 rgba(0, 0, 0, 0.25);
 }
 
 .guac-keyboard .guac-keyboard-key:hover {
@@ -55,8 +49,8 @@
 }
 
 .guac-keyboard .guac-keyboard-key.highlight {
-  background: #666;
-  border-color: #666;
+  background: var(--app-state-hover-strong);
+  border-color: var(--app-border-strong);
 }
 
 /* Align some keys to the left */
@@ -97,13 +91,15 @@
 
 /* Active latin */
 .guac-keyboard.guac-keyboard-modifier-lat .guac-keyboard-key-latin {
-  background: #882;
-  border-color: #dd4;
+  color: var(--app-accent-foreground);
+  background: var(--theme-accent);
+  border-color: color-mix(in srgb, var(--theme-accent) 72%, var(--app-border-strong));
 }
 
 .guac-keyboard .guac-keyboard-key.guac-keyboard-pressed {
-  background: #822;
-  border-color: #d44;
+  color: var(--app-text-inverse);
+  background: var(--color-bg-error);
+  border-color: var(--color-border-error);
 }
 
 .guac-keyboard .guac-keyboard-group {

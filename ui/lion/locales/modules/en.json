@@ -1,1 +1,15 @@
-{}
+{
+  "ClipboardTextLimitExceeded": "clipboard text exceeds the limit",
+  "ClipboardFileSizeLimitExceeded": "clipboard file exceeds the limit",
+  "ClipboardCopyDeniedByPolicy": "Clipboard control policy prevents copying",
+  "ClipboardPasteDeniedByPolicy": "Clipboard control policy prevents pasting",
+  "Copy": "Copy",
+  "Paste": "Paste",
+  "NoPermission": "permission denied",
+  "LoadMore": "Load more",
+  "Uploading": "Uploading",
+  "Waiting": "Waiting",
+  "Forward": "Forward",
+  "ZoomIn": "Zoom in",
+  "ZoomOut": "Zoom out"
+}

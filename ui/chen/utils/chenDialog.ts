@@ -73,7 +73,9 @@ export function normalizeChenDialogMessage(payload: unknown): ChenDialogMessage 
     payload,
     items,
     buttons,
-    showClose: payload.showClose !== false,
+    // A dialog without actions must always have an escape hatch, even when an
+    // older backend explicitly marks it as non-closable.
+    showClose: payload.showClose !== false || buttons.length === 0,
     text: typeof payload.body === "string" ? payload.body : formatChenDialogValue(payload)
   };
 }

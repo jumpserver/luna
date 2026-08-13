@@ -50,7 +50,7 @@ export function resolveSessionSurface(tab: WorkspaceSessionTab): Component {
     return LocalShellSessionSurface;
   }
 
-  const connectMethod = (tab.payload?.connectMethod as { value?: string } | undefined)?.value;
+  const connectMethod = (tab.payload?.connectMethod as { value?: string } | undefined)?.value || tab.connectMethod;
   if (connectMethod?.endsWith("_guide")) {
     return GuideSessionSurface;
   }

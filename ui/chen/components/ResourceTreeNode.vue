@@ -79,7 +79,12 @@ function handleRowClick() {
 }
 
 function handleRowDoubleClick() {
-  if (props.node.type === "table" || props.node.type === "view" || props.node.type === "recent-table") {
+  if (
+    props.node.type === "database" ||
+    props.node.type === "table" ||
+    props.node.type === "view" ||
+    props.node.type === "recent-table"
+  ) {
     emit("activate", props.node);
   }
 }

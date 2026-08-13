@@ -9,6 +9,8 @@ import type {
   CellValueChangedEvent,
   ColDef,
   GridReadyEvent,
+  SelectionChangedEvent,
+  SelectionColumnDef,
   ValueFormatterParams
 } from "ag-grid-community";
 import type {
@@ -89,7 +91,13 @@ const currentRow = ref<Record<string, any> | null>(null);
 let resizeObserver: ResizeObserver | null = null;
 
 function displayedColIds() {
-  return gridApi.value?.getAllDisplayedColumns().map((column) => column.getColId()) || [];
+  const fieldNames = new Set(props.dataset?.fields.map((field) => field.name) || []);
+  return (
+    gridApi.value
+      ?.getAllDisplayedColumns()
+      .map((column) => column.getColId())
+      .filter((id) => fieldNames.has(id)) || []
+  );
 }
 
 function refreshSelectionCells() {
@@ -171,6 +179,25 @@ const defaultColDef: ColDef = {
   }
 };
 
+const selectionColumnDef: SelectionColumnDef = {
+  width: 36,
+  minWidth: 36,
+  maxWidth: 36,
+  pinned: "left",
+  lockPinned: true,
+  lockPosition: true,
+  resizable: false,
+  sortable: false,
+  suppressAutoSize: true,
+  suppressMovable: true,
+  headerTooltip: "Select all rows"
+};
+
+function isDataColumn(event: CellMouseDownEvent | CellMouseOverEvent | CellContextMenuEvent | CellClickedEvent) {
+  const colId = event.column.getColId();
+  return props.dataset?.fields.some((field) => field.name === colId) === true;
+}
+
 function eventCell(event: CellMouseDownEvent | CellMouseOverEvent | CellContextMenuEvent) {
   const rowIndex = event.node.rowIndex;
   if (rowIndex == null) return null;
@@ -179,6 +206,7 @@ function eventCell(event: CellMouseDownEvent | CellMouseOverEvent | CellContextM
 
 function handleCellMouseDown(event: CellMouseDownEvent) {
   if (!canUseChenCopy(props.canCopy) && props.editMode !== "full") return;
+  if (!isDataColumn(event)) return;
   const mouseEvent = event.event as MouseEvent | undefined;
   if (mouseEvent && mouseEvent.button !== 0) return;
   const cell = eventCell(event);
@@ -191,6 +219,7 @@ function handleCellMouseDown(event: CellMouseDownEvent) {
 
 function handleCellMouseOver(event: CellMouseOverEvent) {
   if ((!canUseChenCopy(props.canCopy) && props.editMode !== "full") || !selection.value.dragging) return;
+  if (!isDataColumn(event)) return;
   const cell = eventCell(event);
   if (!cell) return;
   selection.value = extendChenGridSelection(selection.value, cell);
@@ -206,6 +235,7 @@ function finishSelection() {
 
 function resetSelection() {
   selection.value = emptyChenGridSelection();
+  gridApi.value?.deselectAll();
   refreshSelectionCells();
   emit("selectionChange", []);
 }
@@ -297,7 +327,7 @@ function captureContextMenu(event: MouseEvent) {
 }
 
 function handleCellContextMenu(event: CellContextMenuEvent) {
-  if (!event.data) return;
+  if (!event.data || !isDataColumn(event)) return;
   const cell = eventCell(event);
   if (
     (canUseChenCopy(props.canCopy) || props.editMode === "full") &&
@@ -313,8 +343,13 @@ function handleCellContextMenu(event: CellContextMenuEvent) {
 }
 
 function handleCellClicked(event: CellClickedEvent) {
+  if (!isDataColumn(event)) return;
   currentRow.value = event.data || null;
   emit("selectionChange", selectedRows());
+}
+
+function handleSelectionChanged(event: SelectionChangedEvent) {
+  emit("selectionChange", event.api.getSelectedRows());
 }
 
 function handleCellValueChanged(event: CellValueChangedEvent) {
@@ -361,7 +396,8 @@ function handleGridReady(event: GridReadyEvent) {
 }
 
 function selectedRows() {
-  return selectedData()?.rows || (currentRow.value ? [currentRow.value] : []);
+  const rowSelection = gridApi.value?.getSelectedRows() || [];
+  return rowSelection.length ? rowSelection : selectedData()?.rows || (currentRow.value ? [currentRow.value] : []);
 }
 
 function stopEditing() {
@@ -414,8 +450,10 @@ onBeforeUnmount(() => {
       :animate-rows="false"
       :suppress-cell-focus="false"
       :ensure-dom-order="true"
-      :row-selection="{ mode: 'multiRow', checkboxes: false, headerCheckbox: false }"
+      :row-selection="{ mode: 'multiRow', checkboxes: true, headerCheckbox: true, enableClickSelection: false }"
+      :selection-column-def="selectionColumnDef"
       @grid-ready="handleGridReady"
+      @selection-changed="handleSelectionChanged"
       @cell-clicked="handleCellClicked"
       @cell-mouse-down="handleCellMouseDown"
       @cell-mouse-over="handleCellMouseOver"
@@ -463,6 +501,8 @@ onBeforeUnmount(() => {
   --ag-row-border-color: color-mix(in srgb, var(--data-grid-border) 72%, transparent);
   --ag-header-column-resize-handle-color: color-mix(in srgb, var(--theme-accent) 40%, transparent);
   --ag-checkbox-unchecked-color: var(--data-grid-text-muted);
+  --ag-checkbox-checked-color: var(--theme-accent);
+  --ag-checkbox-indeterminate-color: var(--theme-accent);
   --ag-input-border-color: var(--data-grid-border);
   --ag-input-focus-border-color: color-mix(in srgb, var(--theme-accent) 52%, transparent);
   --ag-input-focus-box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent) 14%, transparent);

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ChenDataViewExportFormat, ChenDataViewExportOptions, ChenDataViewExportScope } from "~/chen/types";
 
+import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
+
 const props = defineProps<{
   open: boolean;
 }>();
@@ -36,7 +38,7 @@ function submit() {
 </script>
 
 <template>
-  <UModal v-model:open="visible" title="Export data">
+  <ChenWorkspaceModal v-model:open="visible" title="Export data">
     <template #body>
       <div class="space-y-5">
         <UFormField label="Scope">
@@ -66,5 +68,5 @@ function submit() {
         <UButton @click="submit">Export</UButton>
       </div>
     </template>
-  </UModal>
+  </ChenWorkspaceModal>
 </template>

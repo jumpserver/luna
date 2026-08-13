@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import type { ChenTabTitleFormat } from "~/chen/composables/useChenWorkspacePreferences";
 import type { ChenTreeNode } from "~/chen/types";
 
 import ChenResourceTreeNode from "~/chen/components/ResourceTreeNode.vue";
 import WorkspaceAddSessionPopover from "~/components/Workspace/addSessionPopover.vue";
 
-defineProps<{
+const props = defineProps<{
   rootNodes: ChenTreeNode[];
   selectedKey: string;
   expandedKeys: string[];
@@ -12,6 +13,7 @@ defineProps<{
   loadingChildren: Record<string, boolean>;
   dbType?: string;
   width: number;
+  tabTitleFormat: ChenTabTitleFormat;
 }>();
 
 const emit = defineEmits<{
@@ -21,7 +23,17 @@ const emit = defineEmits<{
   toggle: [node: ChenTreeNode];
   menu: [payload: { node: ChenTreeNode; event: MouseEvent }];
   clearRecent: [];
+  "update:tabTitleFormat": [format: ChenTabTitleFormat];
 }>();
+
+const tabTitleFormatOptions = [
+  { label: "仅表名", value: "table" },
+  { label: "表名.Schema", value: "table-schema" }
+];
+const tabTitleFormatModel = computed({
+  get: () => props.tabTitleFormat,
+  set: (format: ChenTabTitleFormat) => emit("update:tabTitleFormat", format)
+});
 </script>
 
 <template>
@@ -43,6 +55,35 @@ const emit = defineEmits<{
             <UIcon name="i-lucide-refresh-cw" class="size-4" />
           </button>
         </UTooltip>
+        <UPopover :content="{ align: 'end', side: 'bottom', sideOffset: 6 }" :ui="{ content: 'p-0' }">
+          <button
+            type="button"
+            class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
+            aria-label="工作台设置"
+            title="工作台设置"
+          >
+            <UIcon name="i-lucide-settings-2" class="size-4" />
+          </button>
+
+          <template #content>
+            <div class="w-64 space-y-3 p-3">
+              <div>
+                <p class="text-xs font-medium text-highlighted">Chen 工作台设置</p>
+                <p class="mt-0.5 text-[11px] text-muted">设置会自动保存并应用到数据库工作台。</p>
+              </div>
+              <label class="flex items-center justify-between gap-3 text-xs">
+                <span>数据表 Tab 名称</span>
+                <USelect
+                  v-model="tabTitleFormatModel"
+                  class="w-28"
+                  size="xs"
+                  :items="tabTitleFormatOptions"
+                  value-key="value"
+                />
+              </label>
+            </div>
+          </template>
+        </UPopover>
       </div>
     </div>
 

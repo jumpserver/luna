@@ -2,6 +2,8 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type {
   ChenActionItem,
+  ChenDatabaseSection,
+  ChenDatabaseWorkspaceTab,
   ChenDataViewAction,
   ChenDataViewActionData,
   ChenDataViewActionTarget,
@@ -27,10 +29,12 @@ import {
 } from "~/chen/api";
 import ChenSessionState from "~/chen/components/ChenSessionState.vue";
 import ConsolePanel from "~/chen/components/ConsolePanel.vue";
+import DatabaseOverviewPanel from "~/chen/components/DatabaseOverviewPanel.vue";
 import DataViewPanel from "~/chen/components/DataViewPanel.vue";
 import DiscardDataViewChangesDialog from "~/chen/components/DiscardDataViewChangesDialog.vue";
 import QueryConsolePanel from "~/chen/components/QueryConsolePanel.vue";
 import ResourceTreePanel from "~/chen/components/ResourceTreePanel.vue";
+import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
 import WorkspaceTabBar from "~/chen/components/WorkspaceTabBar.vue";
 import { useChenActionMenu } from "~/chen/composables/useChenActionMenu";
 import { useChenAuth } from "~/chen/composables/useChenAuth";
@@ -40,6 +44,7 @@ import { useChenRecentTables } from "~/chen/composables/useChenRecentTables";
 import { useChenResourceTree } from "~/chen/composables/useChenResourceTree";
 import { useChenSession } from "~/chen/composables/useChenSession";
 import { chenWsUrl, useChenWebSocket } from "~/chen/composables/useChenWebSocket";
+import { useChenWorkspacePreferences } from "~/chen/composables/useChenWorkspacePreferences";
 import { useChenWorkspaceTabs } from "~/chen/composables/useChenWorkspaceTabs";
 import { saveChenExport } from "~/chen/runtime/download";
 import { formatChenDialogValue, normalizeChenDialogMessage } from "~/chen/utils/chenDialog";
@@ -92,9 +97,11 @@ const GUARDED_DATA_VIEW_ACTIONS = new Set<ChenDataViewAction>([
   "next_page",
   "last_page",
   "refresh",
-  "change_limit"
+  "change_limit",
+  "change_filter"
 ]);
 const auth = useChenAuth(tabRef, endpointUrl);
+const tokenId = computed(() => auth.ensureTokenId());
 const tree = useChenResourceTree(auth.chenToken, {
   endpointUrl,
   onLoadError: (node) => {
@@ -108,6 +115,7 @@ const tree = useChenResourceTree(auth.chenToken, {
   }
 });
 const workspace = useChenWorkspaceTabs();
+const workspacePreferences = useChenWorkspacePreferences();
 const recentTables = useChenRecentTables(`${props.tab.assetId}:${props.tab.protocol}`);
 const dataView = useChenDataView(sendConsoleAction);
 const consoleConnections = new Map<string, ReturnType<typeof useChenWebSocket>>();
@@ -169,6 +177,10 @@ const activeDataViewTab = computed(() => {
   const tab = workspace.activeWorkspaceTab.value;
   return tab?.kind === "data-view" ? tab : null;
 });
+const activeDatabaseTab = computed(() => {
+  const tab = workspace.activeWorkspaceTab.value;
+  return tab?.kind === "database" ? tab : null;
+});
 const activeConnectionError = computed(() => workspace.activeWorkspaceTab.value?.connectionError || "");
 
 const queryConsole = useChenQueryConsole(sendConsoleAction);
@@ -203,6 +215,11 @@ const session = useChenSession({
   downloadFile: downloadExportFile,
   resolveUrl: resolveChenWsUrl
 });
+const startupError = computed(() => {
+  if (session.error.value) return session.error.value;
+  if (!tokenId.value && props.tab.status === "failed") return "Failed to start database workspace";
+  return "";
+});
 
 async function downloadExportFile(fileKey: string) {
   const file = await fetchChenExport(auth.chenToken.value, fileKey, undefined, endpointUrl.value);
@@ -215,6 +232,7 @@ async function downloadExportFile(fileKey: string) {
 }
 
 function initConsoleSocket(tab: ChenWorkspaceTab) {
+  if (tab.kind === "database") return null;
   const existing = consoleConnections.get(tab.id);
   if (existing) return existing;
   if (!session.ready.value) {
@@ -228,7 +246,7 @@ function initConsoleSocket(tab: ChenWorkspaceTab) {
     resolveUrl: resolveChenWsUrl,
     onOpen: () => {
       const reactiveTab = workspace.workspaceTabState[tab.id];
-      if (!reactiveTab) {
+      if (!reactiveTab || reactiveTab.kind === "database") {
         connection.close();
         return;
       }
@@ -243,7 +261,7 @@ function initConsoleSocket(tab: ChenWorkspaceTab) {
     },
     onPacket: (packet) => {
       const reactiveTab = workspace.workspaceTabState[tab.id];
-      if (!reactiveTab) return;
+      if (!reactiveTab || reactiveTab.kind === "database") return;
 
       handleConsolePacket(reactiveTab, packet);
       if (packet.type === "init") {
@@ -253,7 +271,7 @@ function initConsoleSocket(tab: ChenWorkspaceTab) {
     },
     onError: (socketError) => {
       const reactiveTab = workspace.workspaceTabState[tab.id];
-      if (!reactiveTab) return;
+      if (!reactiveTab || reactiveTab.kind === "database") return;
       reactiveTab.socket = null;
       reactiveTab.connectionError = socketError.message;
       queryConsole.failConsoleExecution(reactiveTab, socketError.message);
@@ -454,6 +472,45 @@ function openDataViewWorkspace(nodeKey: string, title = "Data View") {
   if (tab && !consoleConnections.has(tab.id)) initConsoleSocket(tab);
 }
 
+function openDatabaseWorkspace(node: ChenTreeNode) {
+  workspace.openDatabaseTab(node, node.label || node.name || "Database");
+}
+
+async function loadDatabaseCatalog(tab: ChenDatabaseWorkspaceTab) {
+  if (tab.catalogLoaded || tab.catalogLoading) return;
+  tab.catalogLoading = true;
+  tab.catalogError = "";
+
+  try {
+    let containers: ChenTreeNode[] = [tab.node];
+    // Load only catalog containers. Table/view nodes stay leaf nodes, so this
+    // enumerates object names without fetching every table's column schema.
+    // ponytail: five catalog levels cover the current database/schema/group
+    // trees; replace this walk with a paginated catalog API if nesting grows.
+    for (let depth = 0; depth < 5 && containers.length; depth += 1) {
+      await Promise.all(
+        containers.map(async (node) => {
+          if (!node.children?.length && node.hasChildren !== false) await tree.loadNodeChildren(node);
+        })
+      );
+      containers = containers.flatMap((node) =>
+        (node.children || []).filter(
+          (child) => child.type !== "table" && child.type !== "view" && child.type !== "index" && !child.leaf
+        )
+      );
+    }
+    tab.catalogLoaded = true;
+  } catch (cause) {
+    tab.catalogError = cause instanceof Error ? cause.message : String(cause);
+  } finally {
+    tab.catalogLoading = false;
+  }
+}
+
+function updateDatabaseSection(tab: ChenDatabaseWorkspaceTab, section: ChenDatabaseSection) {
+  tab.activeSection = section;
+}
+
 function closeConsoleSocket(id: string) {
   const connection = consoleConnections.get(id);
   connection?.close();
@@ -613,6 +670,10 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
 
 async function handleNodeClick(node: ChenTreeNode) {
   tree.selectedNodeKey.value = node.key;
+  if (node.type === "database") {
+    openDatabaseWorkspace(node);
+    return;
+  }
   if (node.type === "recent-table" && node.recentEntry) {
     const recentEntry = node.recentEntry;
     const liveNode =
@@ -780,6 +841,10 @@ function updateDataViewPropertyTab(
   tab.activePropertyTab = propertyTab;
 }
 
+function updateDataViewWhereCondition(tab: ChenDataViewConsoleTab, condition: string) {
+  tab.whereCondition = condition;
+}
+
 function startResize(event: PointerEvent) {
   if (event.button !== 0) return;
 
@@ -819,8 +884,15 @@ async function refreshResourceRoot() {
   await tree.refreshRoot();
 }
 
+watch(
+  tokenId,
+  (id) => {
+    if (id) void session.bootstrapSession();
+  },
+  { immediate: true }
+);
+
 onMounted(() => {
-  void session.bootstrapSession();
   window.addEventListener("pointermove", handlePointerMove);
   window.addEventListener("pointerup", stopResize);
   window.addEventListener("pointercancel", stopResize);
@@ -841,7 +913,7 @@ defineExpose({ focus });
 </script>
 
 <template>
-  <div class="h-full min-h-0 bg-[var(--workspace-surface-main)] text-[var(--app-fg)]">
+  <div class="relative isolate h-full min-h-0 overflow-hidden bg-[var(--workspace-surface-main)] text-[var(--app-fg)]">
     <div v-if="session.ready.value" class="flex h-full min-h-0">
       <ResourceTreePanel
         :root-nodes="explorerRootNodes"
@@ -851,7 +923,9 @@ defineExpose({ focus });
         :loading-children="tree.loadingChildren"
         :db-type="auth.profile.value?.dbType"
         :width="sidebarWidth"
+        :tab-title-format="workspacePreferences.tabTitleFormat"
         @refresh="refreshResourceRoot"
+        @update:tab-title-format="workspacePreferences.tabTitleFormat = $event"
         @select="tree.selectedNodeKey.value = $event.key"
         @activate="handleNodeClick"
         @toggle="tree.toggleTreeNode"
@@ -876,6 +950,7 @@ defineExpose({ focus });
         <WorkspaceTabBar
           :tabs="workspace.workspaceTabs.value"
           :active-tab-id="workspace.activeWorkspaceTabId.value"
+          :tab-title-format="workspacePreferences.tabTitleFormat"
           @activate="workspace.setActiveTab"
           @close="closeWorkspaceTab"
           @create="createWorkspaceTab"
@@ -929,6 +1004,15 @@ defineExpose({ focus });
             @data-view-action="runStandaloneDataViewAction"
             @update-panel="updateDataViewPanel"
             @update-property-tab="updateDataViewPropertyTab"
+            @update-where-condition="updateDataViewWhereCondition"
+          />
+
+          <DatabaseOverviewPanel
+            v-else-if="activeDatabaseTab"
+            :tab="activeDatabaseTab"
+            :db-type="auth.profile.value?.dbType"
+            @select-section="updateDatabaseSection(activeDatabaseTab, $event)"
+            @load-catalog="loadDatabaseCatalog(activeDatabaseTab)"
           />
         </div>
 
@@ -938,10 +1022,10 @@ defineExpose({ focus });
 
     <ChenSessionState
       v-else
-      :icon="session.error.value ? 'i-lucide-circle-alert' : 'i-lucide-loader-circle'"
-      :loading="!session.error.value"
-      :message="session.error.value || 'Starting database workspace...'"
-      :action-label="session.error.value ? 'Retry' : undefined"
+      :icon="startupError ? 'i-lucide-circle-alert' : 'i-lucide-loader-circle'"
+      :loading="!startupError"
+      :message="startupError || 'Starting database workspace...'"
+      :action-label="startupError ? 'Retry' : undefined"
       @action="emit('reconnect')"
     />
 
@@ -967,7 +1051,7 @@ defineExpose({ focus });
       />
     </UDropdownMenu>
 
-    <UModal
+    <ChenWorkspaceModal
       v-model:open="dialogVisible"
       :title="session.dialogMessage.value?.title || 'Message'"
       :close="session.dialogMessage.value?.showClose"
@@ -1000,7 +1084,7 @@ defineExpose({ focus });
           </UButton>
         </div>
       </template>
-    </UModal>
+    </ChenWorkspaceModal>
 
     <DiscardDataViewChangesDialog
       v-if="discardDialogOpen"

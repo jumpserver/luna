@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ChenSaveChangesPreviewResult } from "~/chen/types";
 
+import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
+
 const props = defineProps<{
   open: boolean;
   result: ChenSaveChangesPreviewResult | null;
@@ -27,7 +29,7 @@ function confirm() {
 </script>
 
 <template>
-  <UModal v-model:open="visible" title="Save changes">
+  <ChenWorkspaceModal v-model:open="visible" title="Save changes">
     <template #body>
       <div class="space-y-3 text-sm">
         <p class="text-muted">Review the prepared operations before saving.</p>
@@ -60,5 +62,5 @@ function confirm() {
         <UButton icon="i-lucide-save" @click="confirm">Save</UButton>
       </div>
     </template>
-  </UModal>
+  </ChenWorkspaceModal>
 </template>

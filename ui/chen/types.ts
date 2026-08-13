@@ -37,7 +37,7 @@ export interface ChenTabDefinition {
   id: string;
   title: string;
   icon?: string;
-  kind: "query" | "data-view" | "console";
+  kind: "query" | "data-view" | "console" | "database";
   nodeKey: string;
   connectionError?: string;
 }
@@ -252,7 +252,14 @@ export interface ChenPromptConsoleTab extends ChenTabDefinition {
 
 export type ChenQueryLikeWorkspaceTab = ChenQueryConsoleTab | ChenPromptConsoleTab;
 
-export type ChenDataViewPropertyTab = "basic" | "columns" | "indexes" | "foreignKeys" | "constraints" | "ddl";
+export type ChenDataViewPropertyTab =
+  | "basic"
+  | "columns"
+  | "indexes"
+  | "foreignKeys"
+  | "constraints"
+  | "ddl"
+  | "diagram";
 
 export interface ChenDataViewConsoleTab extends ChenTabDefinition {
   kind: "data-view";
@@ -263,7 +270,21 @@ export interface ChenDataViewConsoleTab extends ChenTabDefinition {
   logs: string[];
   activePanel: "data" | "properties";
   activePropertyTab: ChenDataViewPropertyTab;
+  whereCondition: string;
   socket: WebSocket | null;
+}
+
+export type ChenDatabaseSection = "basic" | "tables" | "views" | "indexes" | "ddl" | "diagram";
+
+export interface ChenDatabaseWorkspaceTab extends ChenTabDefinition {
+  kind: "database";
+  node: ChenTreeNode;
+  activeSection: ChenDatabaseSection;
+  catalogLoaded: boolean;
+  catalogLoading: boolean;
+  catalogError: string;
+  logs: string[];
+  socket: null;
 }
 
 export type ChenDataViewAction =
@@ -273,16 +294,17 @@ export type ChenDataViewAction =
   | "last_page"
   | "refresh"
   | "change_limit"
+  | "change_filter"
   | "toggle_pinned"
   | "export"
   | "save_changes_preview"
   | "save_changes";
 
-export type ChenDataViewActionData = number | ChenDataViewExportOptions | ChenSaveChangesPayload;
+export type ChenDataViewActionData = number | string | ChenDataViewExportOptions | ChenSaveChangesPayload;
 
 export type ChenDataViewActionTarget = ChenQueryResultTab | ChenDataViewConsoleTab;
 
-export type ChenWorkspaceTab = ChenQueryLikeWorkspaceTab | ChenDataViewConsoleTab;
+export type ChenWorkspaceTab = ChenQueryLikeWorkspaceTab | ChenDataViewConsoleTab | ChenDatabaseWorkspaceTab;
 
 export interface ChenSocketAction {
   type: string;

@@ -3,6 +3,8 @@ import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 import type { Ref } from "vue";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import { connectorSessionKey } from "@jumpserver/connectors-core";
+import { onScopeDispose } from "vue";
+import { createLionConnectTicket } from "@/lion/hooks/useLionConnectTicket";
 
 export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
   const colorMode = useColorMode();
@@ -11,6 +13,7 @@ export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
   const loading = ref(false);
   const error = ref("");
   const context = ref<ConnectorSessionContext | null>(null);
+  let prepareGeneration = 0;
 
   provide(connectorSessionKey, context);
 
@@ -41,7 +44,17 @@ export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
   }
 
   async function prepareSession() {
-    if (!tokenId.value) {
+    const generation = ++prepareGeneration;
+    const preparedTokenId = tokenId.value;
+    const preparedTab = {
+      id: tab.value.id,
+      assetId: tab.value.assetId,
+      protocol: tab.value.protocol,
+      account: tab.value.account
+    };
+    context.value = null;
+
+    if (!preparedTokenId) {
       error.value = "Missing connection token";
       loading.value = false;
       return null;
@@ -51,32 +64,40 @@ export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
     error.value = "";
 
     try {
+      const endpointUrl = resolveEndpointUrl();
+      const ticket = await createLionConnectTicket(endpointUrl, preparedTokenId);
+      if (generation !== prepareGeneration) return null;
       context.value = {
         component: "lion",
-        tokenId: tokenId.value,
-        endpointUrl: resolveEndpointUrl(),
-        tabId: tab.value.id,
+        tokenId: preparedTokenId,
+        ticket,
+        endpointUrl,
+        tabId: preparedTab.id,
         colorMode: colorMode.value,
         themeType: themeType.value
       };
 
-      markSessionConnected(tab.value.id);
+      markSessionConnected(preparedTab.id);
       return context.value;
     } catch (cause) {
+      if (generation !== prepareGeneration) return null;
       error.value = String(cause);
       markSessionFailed({
-        tabId: tab.value.id,
-        assetId: tab.value.assetId,
-        protocol: tab.value.protocol,
-        account: tab.value.account
+        tabId: preparedTab.id,
+        assetId: preparedTab.assetId,
+        protocol: preparedTab.protocol,
+        account: preparedTab.account
       });
       return null;
     } finally {
-      loading.value = false;
+      if (generation === prepareGeneration) loading.value = false;
     }
   }
 
   watch([themeType, () => colorMode.value], syncContextTheme);
+  onScopeDispose(() => {
+    prepareGeneration += 1;
+  });
 
   return {
     context,

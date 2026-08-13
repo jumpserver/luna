@@ -62,6 +62,8 @@ export function useChenDataView(
     const dataView = "kind" in target ? target.meta?.title : target.meta.id || target.title;
     if (!dataView) return false;
 
+    if (action === "change_filter" && typeof data !== "string") return false;
+
     const state = target.editState;
     let request = null;
     let requestData = data;

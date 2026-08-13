@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
+
 const props = defineProps<{
   open: boolean;
 }>();
@@ -24,7 +26,7 @@ function confirmDiscard() {
 </script>
 
 <template>
-  <UModal v-model:open="visible" title="Discard unsaved changes?">
+  <ChenWorkspaceModal v-model:open="visible" title="Discard unsaved changes?">
     <template #body>
       <p class="text-sm text-muted">This data view has unsaved edits. Discard them and continue?</p>
     </template>
@@ -35,5 +37,5 @@ function confirmDiscard() {
         <UButton color="error" icon="i-lucide-trash-2" @click="confirmDiscard">Discard</UButton>
       </div>
     </template>
-  </UModal>
+  </ChenWorkspaceModal>
 </template>
