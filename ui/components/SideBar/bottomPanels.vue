@@ -33,7 +33,7 @@ const {
   renameFolder,
   removeFolder
 } = useFavoriteFolders();
-const { snippets, loading: snippetLoading, load: loadSnippets, applySnippet } = useSnippets();
+const { snippets, loading: snippetLoading, load: loadSnippets } = useSnippets();
 const { openScriptEditor } = useWorkspaceTabs();
 const createModalOpen = ref(false);
 const createParentId = ref<string | null>(null);
@@ -49,7 +49,6 @@ const deleteModalOpen = ref(false);
 const deleteTarget = ref<FavoriteFolder | null>(null);
 const deleting = ref(false);
 const snippetSearch = ref("");
-let snippetClickTimer: ReturnType<typeof setTimeout> | undefined;
 
 const snippetCreateItems = computed<DropdownMenuItem[]>(() =>
   [
@@ -60,7 +59,7 @@ const snippetCreateItems = computed<DropdownMenuItem[]>(() =>
   ].map(([label, module, icon]) => ({
     label,
     icon,
-    onSelect: () => openScriptEditor({ module: module! })
+    onSelect: () => openScriptEditor({ name: t("Snippets.Untitled"), module: module! })
   }))
 );
 
@@ -238,10 +237,6 @@ const filteredSnippets = computed(() => {
   );
 });
 
-function isShellSnippet(snippet: Snippet) {
-  return snippet.module.value === "shell";
-}
-
 function getSnippetIcon(snippet: Snippet) {
   switch (snippet.module.value) {
     case "shell":
@@ -273,14 +268,7 @@ function getSnippetTitle(snippet: Snippet) {
     .join("\n");
 }
 
-function handleSnippetClick(snippet: Snippet) {
-  if (!isShellSnippet(snippet)) return;
-  clearTimeout(snippetClickTimer);
-  snippetClickTimer = setTimeout(applySnippet, 220, snippet);
-}
-
 function handleSnippetDoubleClick(snippet: Snippet) {
-  clearTimeout(snippetClickTimer);
   openScriptEditor({
     id: snippet.id,
     name: snippet.name,
@@ -553,10 +541,8 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
         >
           <button
             type="button"
-            class="flex min-w-0 flex-1 items-start gap-1.5 text-left"
-            :class="isShellSnippet(snippet) ? 'cursor-pointer' : 'cursor-default'"
+            class="flex min-w-0 flex-1 cursor-default items-start gap-1.5 text-left"
             :title="getSnippetTitle(snippet)"
-            @click="handleSnippetClick(snippet)"
             @dblclick="handleSnippetDoubleClick(snippet)"
           >
             <UIcon :name="getSnippetIcon(snippet)" class="mt-0.5 sidebar-icon shrink-0" />

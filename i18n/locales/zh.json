@@ -82,11 +82,13 @@
   "Snippets": {
     "Empty": "暂无脚本",
     "Create": "添加脚本",
+    "Untitled": "未命名脚本",
     "Edit": "编辑脚本",
     "Name": "脚本名称",
     "Content": "脚本内容",
     "Comment": "备注（可选）",
     "Save": "保存",
+    "More": "更多",
     "SaveFailed": "保存脚本失败",
     "DiscardTitle": "放弃修改？",
     "Discard": "放弃",

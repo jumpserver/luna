@@ -12,6 +12,7 @@ const module = ref(String(props.tab.payload?.module || "shell"));
 const comment = ref(String(props.tab.payload?.comment || ""));
 const savedSnapshot = ref("");
 const saving = ref(false);
+const detailsOpen = ref(false);
 const discardModalOpen = ref(false);
 let resolveDiscard: ((discard: boolean) => void) | undefined;
 const moduleItems = [
@@ -30,6 +31,10 @@ watch([dirty, name], ([hasChanges, currentName]) => {
 
 async function submit() {
   const nextName = name.value.trim();
+  if (!props.tab.payload?.scriptId && !detailsOpen.value) {
+    detailsOpen.value = true;
+    return;
+  }
   if (!nextName || !args.value.trim() || saving.value) return;
   saving.value = true;
   try {
@@ -81,19 +86,31 @@ onBeforeUnmount(unregisterCloseGuard);
 
 <template>
   <div class="flex h-full min-h-0 flex-col bg-[var(--workspace-surface-background)]">
-    <header class="flex shrink-0 items-center gap-2 border-b border-[var(--app-border)] px-3 py-2">
-      <UInput v-model="name" class="min-w-40 flex-1" :placeholder="t('Snippets.Name')" />
-      <USelect v-model="module" class="w-36" :items="moduleItems" />
-      <UInput v-model="comment" class="min-w-40 flex-1" :placeholder="t('Snippets.Comment')" />
+    <ScriptEditor v-model="args" :module="module" class="min-h-0 flex-1" @save="submit" />
+    <footer class="flex h-10 shrink-0 items-center gap-1.5 border-t border-[var(--app-border)] px-2.5">
+      <template v-if="detailsOpen">
+        <UInput v-model="name" autofocus size="xs" class="min-w-32 max-w-52 flex-1" :placeholder="t('Snippets.Name')" />
+        <USelect v-model="module" size="xs" class="w-32" :items="moduleItems" />
+        <UInput v-model="comment" size="xs" class="min-w-32 max-w-64 flex-1" :placeholder="t('Snippets.Comment')" />
+      </template>
+      <div class="flex-1" />
       <UButton
+        size="xs"
+        color="neutral"
+        variant="ghost"
+        icon="i-lucide-ellipsis"
+        :label="t('Snippets.More')"
+        @click="detailsOpen = !detailsOpen"
+      />
+      <UButton
+        size="xs"
         icon="i-lucide-save"
         :label="t('Snippets.Save')"
         :loading="saving"
-        :disabled="!dirty || !name.trim() || !args.trim()"
+        :disabled="!dirty || !args.trim()"
         @click="submit"
       />
-    </header>
-    <ScriptEditor v-model="args" :module="module" class="min-h-0 flex-1" @save="submit" />
+    </footer>
   </div>
 
   <Modal

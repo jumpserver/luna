@@ -82,11 +82,13 @@
   "Snippets": {
     "Empty": "No scripts",
     "Create": "Add script",
+    "Untitled": "Untitled script",
     "Edit": "Edit script",
     "Name": "Script name",
     "Content": "Script content",
     "Comment": "Comment (optional)",
     "Save": "Save",
+    "More": "More",
     "SaveFailed": "Failed to save script",
     "DiscardTitle": "Discard changes?",
     "Discard": "Discard",

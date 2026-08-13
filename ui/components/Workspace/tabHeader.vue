@@ -519,8 +519,11 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       </button>
     </UTooltip>
 
-    <div v-if="tabs.length" class="workspace-tab-capsule flex min-w-0 flex-1 items-center rounded-lg">
-      <div ref="tabStripRef" class="workspace-tab-strip flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+    <div v-if="tabs.length" class="workspace-tab-capsule flex w-fit min-w-0 max-w-full items-center rounded-lg">
+      <div
+        ref="tabStripRef"
+        class="workspace-tab-strip flex w-fit min-w-0 max-w-full items-center gap-1 overflow-x-auto"
+      >
         <button
           v-for="(tab, index) in tabs"
           :key="tab.id"
