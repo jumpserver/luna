@@ -187,6 +187,26 @@ describe("sFTP browser protocol", () => {
     await expect(secondUpload).resolves.toBeUndefined();
   });
 
+  it("uses a numeric upload ID when creating an empty file", async () => {
+    const { fake, socket } = openSocket();
+    const operations = useSftpOperations(ref("/workspace"), socket).operations;
+
+    const create = operations.createFileAt("/workspace/new.txt");
+    await vi.waitFor(() => expect(fake.sent).toHaveLength(1));
+    const request = lastSent(fake);
+
+    expect(request).toMatchObject({ type: SftpMessageType.Data, cmd: SftpCommand.Upload });
+    expect(request.id).toMatch(/^\d+$/);
+    expect(JSON.parse(request.data || "{}")).toMatchObject({
+      path: "/workspace/new.txt",
+      size: 0,
+      chunk: false
+    });
+
+    fake.receive({ id: request.id, type: SftpMessageType.Data, cmd: SftpCommand.Upload, data: SftpDataStatus.Ok });
+    await expect(create).resolves.toBeUndefined();
+  });
+
   it("rejects failed mutations", async () => {
     const { fake, socket } = openSocket();
     const operations = useSftpOperations(ref("/workspace"), socket).operations;

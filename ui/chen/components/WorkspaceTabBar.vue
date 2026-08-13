@@ -151,7 +151,10 @@ watch(
       title="Scroll tabs left"
       @click="scrollTabStrip('left')"
     />
-    <div ref="tabStrip" class="chen-workspace-tab-strip flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+    <div
+      ref="tabStrip"
+      class="chen-workspace-tab-strip flex h-full w-fit min-w-0 max-w-full shrink items-center gap-1 overflow-x-auto"
+    >
       <button
         v-for="item in props.tabs"
         :key="item.id"

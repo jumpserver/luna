@@ -484,6 +484,10 @@
     "RenamePlaceholder": "Enter tab name",
     "SplitVertically": "Split vertically",
     "SplitHorizontally": "Split horizontally",
+    "FocusCurrent": "Show only this tab",
+    "FullscreenCurrent": "Fullscreen current workspace",
+    "ExitFocusMode": "Exit focus mode",
+    "ExitFocusModeHint": "Exit focus mode (hold Esc)",
     "CloseCurrent": "Close Current Tab",
     "CloseAll": "Close All Tabs",
     "CloseOther": "Close Other Tabs",
@@ -932,7 +936,7 @@
       "stepResetDefault": "Click “Restore default folder” to return to the default setting."
     },
     "sftpEditor": {
-      "explorerTitle": "Editor",
+      "explorerTitle": "File Editor",
       "nameRequired": "Enter a name",
       "nameCannotContainPathSeparator": "The name cannot contain path separators",
       "nameAlreadyExists": "A file or directory with this name already exists",
@@ -941,6 +945,8 @@
       "unsavedCloseConfirm": "{name} has unsaved changes. Close it?",
       "newFile": "New file",
       "newDirectory": "New directory",
+      "setAsRootDirectory": "Set as root directory",
+      "restoreRootDirectory": "Restore default root",
       "refreshTree": "Refresh file tree",
       "directoryName": "Directory name",
       "fileName": "File name",

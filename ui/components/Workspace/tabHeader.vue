@@ -16,6 +16,8 @@ const {
   activateAdjacentSession,
   canSplitWorkspace,
   draggedTabId,
+  enterFocusMode,
+  enterFullscreenMode,
   reorderTabs,
   renameTabTitle,
   closeAllSessions,
@@ -204,6 +206,27 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
   const canSplitHorizontally = canSplitWorkspace(tab.id, "horizontal");
 
   return [
+    tabMenuItem(
+      {
+        label: t("TabMenu.FocusCurrent"),
+        onSelect: () => {
+          hideContextMenu();
+          enterFocusMode(tab.id);
+        }
+      },
+      "i-lucide-maximize-2"
+    ),
+    tabMenuItem(
+      {
+        label: t("TabMenu.FullscreenCurrent"),
+        onSelect: () => {
+          hideContextMenu();
+          void enterFullscreenMode(tab.id);
+        }
+      },
+      "i-lucide-fullscreen"
+    ),
+    { type: "separator" as const },
     tabMenuItem(
       {
         label: t("TabMenu.CloneConnect"),
@@ -506,7 +529,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 </script>
 
 <template>
-  <div class="workspace-tab-header flex h-full min-w-0 items-center gap-2 px-3">
+  <div class="workspace-tab-header flex h-full min-w-0 items-center gap-2 px-1">
     <UTooltip v-if="hasLeftHidden" text="向左滚动标签" :delay-duration="150">
       <button
         type="button"

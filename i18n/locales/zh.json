@@ -484,6 +484,10 @@
     "RenamePlaceholder": "输入标签名称",
     "SplitVertically": "垂直分屏",
     "SplitHorizontally": "水平分屏",
+    "FocusCurrent": "仅显示当前标签",
+    "FullscreenCurrent": "全屏当前工作区",
+    "ExitFocusMode": "退出专注模式",
+    "ExitFocusModeHint": "退出专注模式（长按 Esc）",
     "CloseCurrent": "关闭当前标签",
     "CloseAll": "关闭全部标签",
     "CloseOther": "关闭其他标签",
@@ -935,7 +939,7 @@
       "stepResetDefault": "如果想回到默认设置，可以点“恢复默认目录”。"
     },
     "sftpEditor": {
-      "explorerTitle": "Editor",
+      "explorerTitle": "File Editor",
       "nameRequired": "请输入名称",
       "nameCannotContainPathSeparator": "名称不能包含路径分隔符",
       "nameAlreadyExists": "同名文件或目录已经存在",
@@ -944,6 +948,8 @@
       "unsavedCloseConfirm": "{name} 尚未保存，确定关闭吗？",
       "newFile": "新建文件",
       "newDirectory": "新建目录",
+      "setAsRootDirectory": "设为根目录",
+      "restoreRootDirectory": "恢复默认根目录",
       "refreshTree": "刷新目录树",
       "directoryName": "目录名称",
       "fileName": "文件名称",

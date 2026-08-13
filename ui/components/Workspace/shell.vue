@@ -2,9 +2,11 @@
 const props = withDefaults(
   defineProps<{
     sidebarVisible?: boolean;
+    focusMode?: boolean;
   }>(),
   {
-    sidebarVisible: true
+    sidebarVisible: true,
+    focusMode: false
   }
 );
 
@@ -87,7 +89,11 @@ onBeforeUnmount(() => {
     class="workspace-shell flex h-screen w-full min-w-0 flex-col overflow-hidden border-none"
     :style="{ backgroundColor: 'var(--app-surface-frame)', color: 'var(--app-fg)' }"
   >
-    <div class="workspace-shell__header shrink-0" :style="{ backgroundColor: 'var(--app-header-bg)' }">
+    <div
+      v-if="!props.focusMode"
+      class="workspace-shell__header shrink-0"
+      :style="{ backgroundColor: 'var(--app-header-bg)' }"
+    >
       <slot name="header" />
     </div>
 
@@ -97,13 +103,13 @@ onBeforeUnmount(() => {
         class="workspace-shell__sidebar relative min-h-0 shrink-0"
         :class="sidebarTransitionClass"
         :style="{
-          width: !props.sidebarVisible || collapse ? '0px' : `${sidebarWidth}px`,
+          width: props.focusMode || !props.sidebarVisible || collapse ? '0px' : `${sidebarWidth}px`,
           backgroundColor: 'var(--app-sidebar-bg)'
         }"
       >
         <slot name="sidebar" />
         <div
-          v-if="props.sidebarVisible && !collapse"
+          v-if="!props.focusMode && props.sidebarVisible && !collapse"
           role="separator"
           aria-orientation="vertical"
           aria-label="调整侧边栏宽度"
@@ -119,7 +125,7 @@ onBeforeUnmount(() => {
         <div class="min-h-0 flex-1 overflow-hidden">
           <slot />
         </div>
-        <slot name="bottomPanel" />
+        <slot v-if="!props.focusMode" name="bottomPanel" />
       </main>
 
       <aside
@@ -127,15 +133,15 @@ onBeforeUnmount(() => {
         class="workspace-shell__right-panel relative min-h-0 shrink-0 overflow-hidden"
         :class="isRightResizing ? '' : 'transition-[width] duration-200'"
         :style="{
-          width: rightPanelOpen ? `${rightPanelWidth}px` : '0px',
+          width: !props.focusMode && rightPanelOpen ? `${rightPanelWidth}px` : '0px',
           backgroundColor: 'var(--app-surface-panel)'
         }"
       >
-        <div class="h-full min-h-0" :aria-hidden="!rightPanelOpen">
+        <div class="h-full min-h-0" :aria-hidden="props.focusMode || !rightPanelOpen">
           <slot name="rightPanel" />
         </div>
         <div
-          v-if="rightPanelOpen"
+          v-if="!props.focusMode && rightPanelOpen"
           role="separator"
           aria-orientation="vertical"
           aria-label="调整右侧面板宽度"
@@ -146,7 +152,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div
-      v-if="$slots.footer"
+      v-if="!props.focusMode && $slots.footer"
       class="workspace-shell__footer shrink-0"
       :style="{ backgroundColor: 'var(--app-footer-bg)' }"
     >

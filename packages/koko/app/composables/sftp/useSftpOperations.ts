@@ -520,7 +520,9 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     listDirectory,
     createDirectory: (name) => mutatePath(SftpCommand.MakeDirectory, pathFor(currentPath.value, name)),
     createDirectoryAt: (path) => mutatePath(SftpCommand.MakeDirectory, path),
-    createFileAt: (path) => enqueueUpload(() => sendUpload(messageId(), { offSet: 0, size: 0, path, chunk: false })),
+    // koko parses upload message IDs as integers, including empty-file uploads.
+    createFileAt: (path) =>
+      enqueueUpload(() => sendUpload(String(Date.now()), { offSet: 0, size: 0, path, chunk: false })),
     renameEntry: (entry, name) =>
       mutatePath(SftpCommand.Rename, pathFor(currentPath.value, entry.name), { new_name: name }),
     renamePath: (path, name) => mutatePath(SftpCommand.Rename, path, { new_name: name }),

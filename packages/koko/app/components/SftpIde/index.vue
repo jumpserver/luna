@@ -127,12 +127,12 @@ const activePath = computed({
   }
 });
 const rootPath = ref("");
+const explorerRootPath = ref("");
 const selectedDirectory = ref("");
 const pendingCreate = ref<{ parent: string; kind: "file" | "directory" } | null>(null);
 const pendingName = ref("");
 const pendingError = ref("");
 const pendingSubmitting = ref(false);
-const pendingInput = ref<HTMLInputElement | null>(null);
 const uploadInput = ref<HTMLInputElement | null>(null);
 const uploadDirectory = ref("");
 const contextMenuVisible = ref(false);
@@ -751,21 +751,21 @@ const treeRows = computed<TreeRow[]>(() => {
       rows.push({ kind: "entry", entry, path, depth, expanded: expanded.value.has(path) });
       if (entry.is_dir && expanded.value.has(path)) walk(path, depth + 1);
     }
-    if (parent !== rootPath.value && node?.loading) {
+    if (parent !== explorerRootPath.value && node?.loading) {
       rows.push({ kind: "loading", path: `loading:${parent}`, parent, depth });
-    } else if (parent !== rootPath.value && node?.error) {
+    } else if (parent !== explorerRootPath.value && node?.error) {
       rows.push({ kind: "error", path: `error:${parent}`, parent, depth, error: node.error });
     }
   };
-  if (rootPath.value) {
+  if (explorerRootPath.value) {
     rows.push({
       kind: "entry",
-      entry: { name: rootPath.value, size: "", perm: "", mod_time: "", type: "", is_dir: true },
-      path: rootPath.value,
+      entry: { name: explorerRootPath.value, size: "", perm: "", mod_time: "", type: "", is_dir: true },
+      path: explorerRootPath.value,
       depth: 0,
-      expanded: expanded.value.has(rootPath.value)
+      expanded: expanded.value.has(explorerRootPath.value)
     });
-    if (expanded.value.has(rootPath.value)) walk(rootPath.value, 1);
+    if (expanded.value.has(explorerRootPath.value)) walk(explorerRootPath.value, 1);
   }
   return rows;
 });
@@ -848,7 +848,7 @@ async function loadDirectory(path: string, force = false) {
 }
 
 async function revealActiveFile(path: string) {
-  const root = rootPath.value;
+  const root = explorerRootPath.value;
   if (!root || (path !== root && !path.startsWith(`${root.replace(/\/$/, "")}/`))) return;
   const directories: string[] = [];
   let current = parentPath(path);
@@ -950,17 +950,31 @@ function nameExists(parent: string, name: string) {
   return tree.value[parent]?.entries.some((entry) => entry.name === name) || false;
 }
 
+function focusPendingCreateInput() {
+  void nextTick(() => {
+    const focus = () => treeScroller.value?.querySelector<HTMLInputElement>("[data-pending-create-input]")?.focus();
+    if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(focus);
+    else focus();
+  });
+}
+
+function confirmPendingCreate(event: KeyboardEvent) {
+  if (event.isComposing) return;
+  event.preventDefault();
+  void commitCreate();
+}
+
 function beginCreate(kind: "file" | "directory") {
-  const parent = selectedDirectory.value || rootPath.value;
+  const parent = selectedDirectory.value || explorerRootPath.value;
   pendingCreate.value = { parent, kind };
   pendingName.value = "";
   pendingError.value = "";
   const next = new Set(expanded.value);
-  next.add(rootPath.value);
+  next.add(explorerRootPath.value);
   next.add(parent);
   expanded.value = next;
-  if (parent !== rootPath.value) void loadDirectory(parent);
-  nextTick(() => pendingInput.value?.focus());
+  if (parent !== explorerRootPath.value) void loadDirectory(parent);
+  focusPendingCreateInput();
 }
 
 function cancelCreate() {
@@ -1008,15 +1022,35 @@ async function commitCreate() {
     pendingName.value = "";
   } catch (cause) {
     pendingError.value = formatError(cause);
-    nextTick(() => pendingInput.value?.focus());
+    focusPendingCreateInput();
   } finally {
     pendingSubmitting.value = false;
   }
 }
 
 async function refreshTree() {
-  const paths = [rootPath.value, ...expanded.value].filter(Boolean);
+  const paths = [explorerRootPath.value, ...expanded.value].filter(Boolean);
   await Promise.all(paths.map((path) => loadDirectory(path, true)));
+}
+
+function setExplorerRoot(path: string) {
+  hideContextMenu();
+  explorerRootPath.value = path;
+  selectedDirectory.value = path;
+  expanded.value = new Set([path]);
+  treeFocusedPath.value = path;
+  void loadDirectory(path);
+}
+
+function setContextDirectoryAsRoot() {
+  const target = contextTarget.value;
+  if (!target?.entry.is_dir) return;
+  setExplorerRoot(target.path);
+}
+
+function restoreExplorerRoot() {
+  if (!rootPath.value) return;
+  setExplorerRoot(rootPath.value);
 }
 
 function openContextMenu(entry: SftpFileEntry, path: string, event: MouseEvent) {
@@ -1042,7 +1076,7 @@ function createFromContext(kind: "file" | "directory") {
 }
 
 function beginRenameTarget(target: ContextTarget | null) {
-  if (!target || target.path === rootPath.value) return;
+  if (!target || target.path === explorerRootPath.value) return;
   renameTarget.value = target;
   renameValue.value = target.entry.name;
   renameError.value = "";
@@ -1144,7 +1178,7 @@ async function submitRename() {
 
 function openDeleteDialog() {
   const target = contextTarget.value;
-  if (!target || target.path === rootPath.value) return;
+  if (!target || target.path === explorerRootPath.value) return;
   hideContextMenu();
   alertTarget.value = { kind: "delete", target };
   alertDialogOpen.value = true;
@@ -1508,7 +1542,7 @@ async function confirmAlert() {
       if (activePane.value === "right") activePane.value = "left";
     }
     if (selectedDirectory.value === target.target.path || selectedDirectory.value.startsWith(`${target.target.path}/`))
-      selectedDirectory.value = rootPath.value;
+      selectedDirectory.value = explorerRootPath.value;
     await loadDirectory(parentPath(target.target.path), true);
     alertDialogOpen.value = false;
   } catch (cause) {
@@ -1593,6 +1627,18 @@ const contextMenuItems = computed(() => {
           onSelect: () => createFromContext("directory")
         },
         { label: t("koko.actions.upload"), icon: "i-lucide-upload", onSelect: chooseUpload },
+        target.path === explorerRootPath.value && explorerRootPath.value !== rootPath.value
+          ? {
+              label: t("koko.sftpEditor.restoreRootDirectory"),
+              icon: "i-lucide-folder-up",
+              onSelect: restoreExplorerRoot
+            }
+          : {
+              label: t("koko.sftpEditor.setAsRootDirectory"),
+              icon: "i-lucide-folder-tree",
+              disabled: target.path === explorerRootPath.value,
+              onSelect: setContextDirectoryAsRoot
+            },
         { type: "separator" as const }
       ]
     : [];
@@ -1613,7 +1659,7 @@ const contextMenuItems = computed(() => {
     {
       label: t("koko.actions.rename"),
       icon: "i-lucide-pencil",
-      disabled: target.path === rootPath.value,
+      disabled: target.path === explorerRootPath.value,
       onSelect: openRenameDialog
     },
     { type: "separator" as const },
@@ -1621,7 +1667,7 @@ const contextMenuItems = computed(() => {
       label: t("koko.actions.delete"),
       icon: "i-lucide-trash-2",
       color: "error" as const,
-      disabled: target.path === rootPath.value,
+      disabled: target.path === explorerRootPath.value,
       onSelect: openDeleteDialog
     }
   ];
@@ -1964,8 +2010,8 @@ function workspaceState(): SftpEditorWorkspaceState {
   const cachedDirectories = Object.entries(tree.value)
     .filter(([, node]) => Boolean(node.updatedAt))
     .sort(([leftPath, left], [rightPath, right]) => {
-      const leftPriority = Number(leftPath === rootPath.value || expanded.value.has(leftPath));
-      const rightPriority = Number(rightPath === rootPath.value || expanded.value.has(rightPath));
+      const leftPriority = Number(leftPath === explorerRootPath.value || expanded.value.has(leftPath));
+      const rightPriority = Number(rightPath === explorerRootPath.value || expanded.value.has(rightPath));
       return rightPriority - leftPriority || (right.updatedAt || 0) - (left.updatedAt || 0);
     })
     .slice(0, 60)
@@ -1976,6 +2022,7 @@ function workspaceState(): SftpEditorWorkspaceState {
     }));
   return {
     rootPath: rootPath.value,
+    explorerRootPath: explorerRootPath.value,
     tabs: tabs.value
       .filter((tab) => !tab.preview || dirty(tab))
       .slice(0, 30)
@@ -2020,17 +2067,21 @@ async function restoreWorkspace() {
 
     explorerWidth.value = Math.min(480, Math.max(220, state.explorerWidth || 280));
     splitRatio.value = Math.min(80, Math.max(20, state.splitRatio || 50));
-    const rootPrefix = `${rootPath.value.replace(/\/$/, "")}/`;
-    selectedDirectory.value =
-      state.selectedDirectory === rootPath.value || state.selectedDirectory.startsWith(rootPrefix)
-        ? state.selectedDirectory
+    const sessionRootPrefix = `${rootPath.value.replace(/\/$/, "")}/`;
+    const storedExplorerRoot = state.explorerRootPath || rootPath.value;
+    explorerRootPath.value =
+      storedExplorerRoot === rootPath.value || storedExplorerRoot.startsWith(sessionRootPrefix)
+        ? storedExplorerRoot
         : rootPath.value;
+    const rootPrefix = `${explorerRootPath.value.replace(/\/$/, "")}/`;
+    selectedDirectory.value =
+      state.selectedDirectory === explorerRootPath.value || state.selectedDirectory.startsWith(rootPrefix)
+        ? state.selectedDirectory
+        : explorerRootPath.value;
     const restoredExpanded = new Set(
-      state.expanded.filter(
-        (path) => path === rootPath.value || path.startsWith(`${rootPath.value.replace(/\/$/, "")}/`)
-      )
+      state.expanded.filter((path) => path === explorerRootPath.value || path.startsWith(rootPrefix))
     );
-    if (!state.treeIncludesRoot) restoredExpanded.add(rootPath.value);
+    if (!state.treeIncludesRoot) restoredExpanded.add(explorerRootPath.value);
     expanded.value = restoredExpanded;
     recentlyClosed.value = state.recentlyClosed.slice(-20);
 
@@ -2076,7 +2127,7 @@ async function restoreWorkspace() {
     const selectedPath = paneActivePaths[activePane.value];
     if (selectedPath) focusPane(activePane.value, selectedPath);
 
-    const refreshPaths = [rootPath.value, ...expanded.value].filter((path) => tree.value[path]).slice(0, 20);
+    const refreshPaths = [explorerRootPath.value, ...expanded.value].filter((path) => tree.value[path]).slice(0, 20);
     refreshPaths.forEach((path) => void loadDirectory(path));
   } catch {
     // Workspace recovery remains optional when browser storage is unavailable.
@@ -2474,6 +2525,7 @@ watch(
     activePaths: [paneActivePaths.left, paneActivePaths.right],
     split: [splitOpen.value, splitRatio.value, explorerWidth.value],
     expanded: [...expanded.value],
+    explorerRootPath: explorerRootPath.value,
     selectedDirectory: selectedDirectory.value,
     recentlyClosed: recentlyClosed.value.map((item) => item.path),
     directories: Object.entries(tree.value).map(([path, node]) => [path, node.updatedAt])
@@ -2506,6 +2558,7 @@ watch(
     if (!path) return;
     if (!rootPath.value) {
       rootPath.value = path as string;
+      explorerRootPath.value = path as string;
       selectedDirectory.value = path as string;
       expanded.value = new Set([path as string]);
       void restoreEditorState();
@@ -2539,103 +2592,104 @@ onUnmounted(() => {
     :class="resizingExplorer || resizingSplit ? 'cursor-col-resize select-none' : ''"
     :style="{ gridTemplateColumns: `${explorerWidth}px minmax(0, 1fr)` }"
   >
-    <aside
-      class="relative flex min-h-0 flex-col border-r border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-sidebar)"
-    >
-      <div
-        class="flex h-9 min-w-0 shrink-0 items-center gap-1 border-b border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-header) px-2"
-      >
-        <p class="min-w-0 flex-1 truncate px-1 text-left text-xs font-medium text-(--app-muted)">
+    <aside class="relative flex min-h-0 flex-col border-r border-default bg-[var(--workspace-surface-sidebar)]">
+      <div class="flex h-9 min-w-0 shrink-0 items-center gap-1 border-b border-default px-2.5">
+        <p class="min-w-0 flex-1 truncate text-left text-xs font-medium text-muted">
           {{ t("koko.sftpEditor.explorerTitle") }}
         </p>
-        <UPopover
-          v-model:open="quickOpenVisible"
-          :content="{ align: 'start', side: 'bottom', sideOffset: 8 }"
-          :ui="{ content: 'p-0' }"
-        >
-          <UButton
-            icon="i-lucide-search"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :title="t('koko.sftpEditor.quickOpenShortcut')"
-          />
-
-          <template #content>
-            <div
-              class="w-[360px] overflow-hidden rounded-xl bg-default shadow-xl ring-1 ring-black/10 dark:ring-white/12"
+        <div class="flex h-7 items-center gap-1">
+          <UPopover
+            v-model:open="quickOpenVisible"
+            :content="{ align: 'start', side: 'bottom', sideOffset: 8 }"
+            :ui="{ content: 'p-0' }"
+          >
+            <button
+              type="button"
+              class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
+              :aria-label="t('koko.sftpEditor.quickOpenShortcut')"
+              :title="t('koko.sftpEditor.quickOpenShortcut')"
             >
-              <div class="border-b border-default p-2">
-                <UInput
-                  v-model="quickOpenQuery"
-                  autofocus
-                  icon="i-lucide-search"
-                  size="sm"
-                  variant="none"
-                  :placeholder="t('koko.sftpEditor.quickOpenPlaceholder')"
-                  class="w-full"
-                  :ui="{ base: 'h-8 rounded-lg bg-elevated/70 ring-1 ring-inset ring-default' }"
-                  @keydown.down.prevent="moveQuickOpenSelection(1)"
-                  @keydown.up.prevent="moveQuickOpenSelection(-1)"
-                  @keydown.enter.prevent="openQuickOpenItem(quickOpenItems[quickOpenIndex])"
-                />
-              </div>
-              <div ref="quickOpenList" role="listbox" class="max-h-80 min-h-32 overflow-y-auto p-1.5">
-                <button
-                  v-for="(item, index) in quickOpenItems"
-                  :key="item.path"
-                  type="button"
-                  tabindex="-1"
-                  class="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-elevated"
-                  :class="quickOpenIndex === index ? 'bg-elevated' : ''"
-                  :title="item.path"
-                  role="option"
-                  :aria-selected="quickOpenIndex === index"
-                  :data-quick-open-active="quickOpenIndex === index"
-                  @mouseenter="quickOpenIndex = index"
-                  @click="openQuickOpenItem(item)"
-                >
-                  <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-elevated">
-                    <UIcon :name="entryIcon(item.entry)" class="size-4" :class="entryIconClass(item.entry)" />
-                  </span>
-                  <span class="min-w-0 flex-1">
-                    <span class="block truncate text-sm text-highlighted">{{ item.entry.name }}</span>
-                    <span class="block truncate font-ui-mono text-[11px] text-muted">
-                      {{ parentPath(item.path) }}
-                    </span>
-                  </span>
-                  <UBadge
-                    v-if="item.open"
-                    color="neutral"
-                    variant="subtle"
+              <UIcon name="i-lucide-search" class="size-4" />
+            </button>
+
+            <template #content>
+              <div
+                class="w-[360px] overflow-hidden rounded-xl bg-default shadow-xl ring-1 ring-black/10 dark:ring-white/12"
+              >
+                <div class="border-b border-default p-2">
+                  <UInput
+                    v-model="quickOpenQuery"
+                    autofocus
+                    icon="i-lucide-search"
                     size="sm"
-                    :label="t('koko.sftpEditor.opened')"
+                    variant="none"
+                    :placeholder="t('koko.sftpEditor.quickOpenPlaceholder')"
+                    class="w-full"
+                    :ui="{ base: 'h-8 rounded-lg bg-elevated/70 ring-1 ring-inset ring-default' }"
+                    @keydown.down.prevent="moveQuickOpenSelection(1)"
+                    @keydown.up.prevent="moveQuickOpenSelection(-1)"
+                    @keydown.enter.prevent="openQuickOpenItem(quickOpenItems[quickOpenIndex])"
                   />
-                </button>
+                </div>
+                <div ref="quickOpenList" role="listbox" class="max-h-80 min-h-32 overflow-y-auto p-1.5">
+                  <button
+                    v-for="(item, index) in quickOpenItems"
+                    :key="item.path"
+                    type="button"
+                    tabindex="-1"
+                    class="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-elevated"
+                    :class="quickOpenIndex === index ? 'bg-elevated' : ''"
+                    :title="item.path"
+                    role="option"
+                    :aria-selected="quickOpenIndex === index"
+                    :data-quick-open-active="quickOpenIndex === index"
+                    @mouseenter="quickOpenIndex = index"
+                    @click="openQuickOpenItem(item)"
+                  >
+                    <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-elevated">
+                      <UIcon :name="entryIcon(item.entry)" class="size-4" :class="entryIconClass(item.entry)" />
+                    </span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block truncate text-sm text-highlighted">{{ item.entry.name }}</span>
+                      <span class="block truncate font-ui-mono text-[11px] text-muted">
+                        {{ parentPath(item.path) }}
+                      </span>
+                    </span>
+                    <UBadge
+                      v-if="item.open"
+                      color="neutral"
+                      variant="subtle"
+                      size="sm"
+                      :label="t('koko.sftpEditor.opened')"
+                    />
+                  </button>
+                  <div
+                    v-if="!quickOpenItems.length"
+                    class="grid h-24 place-items-center px-4 text-center text-xs text-muted"
+                  >
+                    {{ t("koko.sftpEditor.quickOpenNoResults") }}
+                  </div>
+                </div>
                 <div
-                  v-if="!quickOpenItems.length"
-                  class="grid h-24 place-items-center px-4 text-center text-xs text-muted"
+                  class="flex items-center justify-between gap-3 border-t border-default px-3 py-2 text-[10px] text-muted"
                 >
-                  {{ t("koko.sftpEditor.quickOpenNoResults") }}
+                  <span>{{ t("koko.sftpEditor.quickOpenLoadedHint") }}</span>
+                  <span class="shrink-0 font-ui-mono">↑↓ · Enter</span>
                 </div>
               </div>
-              <div
-                class="flex items-center justify-between gap-3 border-t border-default px-3 py-2 text-[10px] text-muted"
-              >
-                <span>{{ t("koko.sftpEditor.quickOpenLoadedHint") }}</span>
-                <span class="shrink-0 font-ui-mono">↑↓ · Enter</span>
-              </div>
-            </div>
-          </template>
-        </UPopover>
-        <UButton
-          icon="i-lucide-refresh-cw"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :title="t('koko.sftpEditor.refreshTree')"
-          @click="refreshTree"
-        />
+            </template>
+          </UPopover>
+          <UTooltip :text="t('koko.sftpEditor.refreshTree')" :delay-duration="150">
+            <button
+              type="button"
+              class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
+              :aria-label="t('koko.sftpEditor.refreshTree')"
+              @click="refreshTree"
+            >
+              <UIcon name="i-lucide-refresh-cw" class="size-4" />
+            </button>
+          </UTooltip>
+        </div>
       </div>
       <div
         v-if="manager.currentUploadName.value"
@@ -2654,7 +2708,7 @@ onUnmounted(() => {
       </div>
       <div
         ref="treeScroller"
-        class="min-h-0 flex-1 overflow-auto bg-(--workspace-surface-sub-tree) py-1"
+        class="min-h-0 flex-1 overflow-auto px-2 py-2"
         role="tree"
         :aria-label="t('koko.sftpEditor.fileTree')"
       >
@@ -2668,18 +2722,18 @@ onUnmounted(() => {
         <template v-for="row in treeRows" :key="row.path">
           <button
             v-if="row.kind === 'entry'"
-            class="group flex h-8 w-full items-center gap-1.5 pr-2 text-left text-xs text-(--app-fg) transition-colors hover:bg-(--app-hover-soft)"
+            class="sidebar-row group flex h-7 w-full items-center gap-1 rounded-lg pr-1 text-left text-xs"
             :class="[
               row.entry.is_dir
                 ? selectedDirectory === row.path
-                  ? 'bg-(--app-selected-soft) text-primary'
+                  ? 'bg-[var(--app-hover-soft)] text-[var(--app-fg)]'
                   : ''
                 : activePath === row.path
-                  ? 'bg-(--app-selected-soft) text-primary'
+                  ? 'bg-[var(--app-hover-soft)] text-[var(--app-fg)]'
                   : '',
               !row.entry.is_dir ? 'cursor-grab active:cursor-grabbing' : ''
             ]"
-            :style="{ paddingLeft: `${8 + row.depth * 14}px` }"
+            :style="{ paddingLeft: `${6 + row.depth * 12}px` }"
             :title="entryTitle(row.entry, row.path)"
             :draggable="!row.entry.is_dir"
             role="treeitem"
@@ -2687,6 +2741,9 @@ onUnmounted(() => {
             :aria-expanded="row.entry.is_dir ? row.expanded : undefined"
             :aria-selected="row.entry.is_dir ? selectedDirectory === row.path : activePath === row.path"
             :tabindex="treeFocusedPath === row.path ? 0 : -1"
+            :data-active="
+              (row.entry.is_dir ? selectedDirectory === row.path : activePath === row.path) ? '' : undefined
+            "
             :data-tree-active="activePath === row.path"
             :data-tree-focused="treeFocusedPath === row.path"
             @click="openEntry(row.entry, row.path)"
@@ -2697,37 +2754,39 @@ onUnmounted(() => {
             @dragstart="beginTreeDrag(row.entry, row.path, $event)"
             @dragend="endEditorDrag"
           >
-            <UIcon
-              v-if="row.entry.is_dir"
-              :name="row.expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
-              class="size-3 shrink-0 text-(--app-muted)"
-            />
-            <span v-else class="w-3 shrink-0" />
-            <UIcon
-              :name="entryIcon(row.entry, row.expanded)"
-              class="size-3.5 shrink-0"
-              :class="entryIconClass(row.entry)"
-            />
+            <span v-if="row.entry.is_dir" class="grid size-4 shrink-0 place-items-center rounded-sm text-muted">
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="sidebar-icon-sm transition-transform"
+                :class="row.expanded ? 'rotate-90' : ''"
+              />
+            </span>
+            <span v-else class="size-4 shrink-0" />
+            <UIcon :name="entryIcon(row.entry, row.expanded)" class="sidebar-icon" :class="entryIconClass(row.entry)" />
             <span class="min-w-0 flex-1 truncate">{{ row.entry.name }}</span>
             <span v-if="!row.entry.is_dir" class="shrink-0 font-ui-mono text-[9px] tabular-nums text-(--app-muted)">
               {{ formatFileSize(row.entry.size) }}
             </span>
           </button>
-          <div v-else-if="row.kind === 'pending'" class="py-1 pr-2" :style="{ paddingLeft: `${8 + row.depth * 14}px` }">
+          <div
+            v-else-if="row.kind === 'pending'"
+            class="py-0.5 pr-1"
+            :style="{ paddingLeft: `${6 + row.depth * 12}px` }"
+          >
             <div class="flex items-center gap-1">
               <UIcon
                 :name="row.createKind === 'directory' ? 'i-lucide-folder' : 'i-lucide-file-code-2'"
-                class="size-3.5 shrink-0 text-(--app-muted)"
+                class="sidebar-icon"
               />
               <input
-                ref="pendingInput"
                 v-model="pendingName"
+                data-pending-create-input
                 class="h-6 min-w-0 flex-1 rounded border border-primary bg-(--workspace-surface-sub-panel) px-1.5 text-xs text-(--app-fg) outline-none"
                 :placeholder="
                   row.createKind === 'directory' ? t('koko.sftpEditor.directoryName') : t('koko.sftpEditor.fileName')
                 "
                 :disabled="pendingSubmitting"
-                @keydown.enter.prevent="commitCreate"
+                @keydown.enter.exact="confirmPendingCreate"
                 @keydown.esc.prevent="cancelCreate"
               />
               <UButton
@@ -2755,9 +2814,9 @@ onUnmounted(() => {
           </div>
           <div
             v-else
-            class="flex min-h-7 items-center gap-1.5 pr-2 text-[11px] text-(--app-muted)"
+            class="flex min-h-7 items-center gap-1 pr-1 text-[11px] text-muted"
             :class="row.kind === 'error' ? 'text-error' : ''"
-            :style="{ paddingLeft: `${22 + row.depth * 14}px` }"
+            :style="{ paddingLeft: `${20 + row.depth * 12}px` }"
           >
             <UIcon
               :name="row.kind === 'loading' ? 'i-lucide-loader-circle' : 'i-lucide-circle-alert'"
@@ -2779,14 +2838,17 @@ onUnmounted(() => {
           </div>
         </template>
         <div
-          v-if="expanded.has(rootPath) && tree[rootPath]?.loading"
-          class="flex h-8 items-center gap-2 px-3 text-xs text-(--app-muted)"
+          v-if="expanded.has(explorerRootPath) && tree[explorerRootPath]?.loading"
+          class="flex h-7 items-center gap-1.5 px-1.5 text-xs text-muted"
         >
           <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
           {{ t("koko.sftpEditor.loading") }}
         </div>
-        <div v-else-if="expanded.has(rootPath) && tree[rootPath]?.error" class="px-3 py-2 text-xs text-error">
-          {{ tree[rootPath]?.error }}
+        <div
+          v-else-if="expanded.has(explorerRootPath) && tree[explorerRootPath]?.error"
+          class="px-1.5 py-1 text-xs text-error"
+        >
+          {{ tree[explorerRootPath]?.error }}
         </div>
       </div>
       <div

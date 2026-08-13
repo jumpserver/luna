@@ -50,6 +50,8 @@ const tabs = ref<WorkspaceSessionTab[]>([]);
 const activeTabId = ref("");
 const activePaneId = ref("");
 const draggedTabId = ref("");
+const focusModeTabId = ref("");
+const workspaceFullscreen = ref(false);
 const pendingPaneTarget = ref<{ tabId: string; paneId: string } | null>(null);
 let tabSequence = 0;
 let paneSequence = 0;
@@ -302,6 +304,26 @@ const resolvePendingTarget = (explicitPaneId?: string) => {
 };
 
 export const useWorkspaceTabs = () => {
+  const setRuntimeFullscreen = async (fullscreen: boolean) => {
+    if (isTauriRuntime()) {
+      await useTauriWindowGetCurrentWindow().setFullscreen(fullscreen);
+      return;
+    }
+
+    if (fullscreen) {
+      await document.documentElement.requestFullscreen();
+    } else if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    }
+  };
+
+  const exitFocusMode = async () => {
+    const shouldExitFullscreen = workspaceFullscreen.value;
+    workspaceFullscreen.value = false;
+    focusModeTabId.value = "";
+    if (shouldExitFullscreen) await setRuntimeFullscreen(false).catch(() => {});
+  };
+
   const registerSessionDisposer = (disposer: ((id: string) => void | Promise<void>) | null) => {
     sessionDisposer = disposer;
   };
@@ -474,6 +496,7 @@ export const useWorkspaceTabs = () => {
     }
 
     tabs.value.splice(index, 1);
+    if (focusModeTabId.value === tab.id) void exitFocusMode();
 
     if (activeTabId.value === tab.id) {
       activeTabId.value = tabs.value[Math.max(index - 1, 0)]?.id || tabs.value[0]?.id || "";
@@ -790,6 +813,28 @@ export const useWorkspaceTabs = () => {
     ensureActivePaneForTab(id);
   };
 
+  const enterFocusMode = (tabId: string) => {
+    if (!tabs.value.some((tab) => tab.id === tabId)) return false;
+
+    setActiveSession(tabId);
+    focusModeTabId.value = tabId;
+    return true;
+  };
+
+  const enterFullscreenMode = async (tabId: string) => {
+    if (!enterFocusMode(tabId)) return false;
+
+    workspaceFullscreen.value = true;
+    try {
+      await setRuntimeFullscreen(true);
+      return true;
+    } catch {
+      workspaceFullscreen.value = false;
+      focusModeTabId.value = "";
+      return false;
+    }
+  };
+
   const setActivePane = (paneId: string) => {
     activatePane(paneId);
   };
@@ -809,6 +854,7 @@ export const useWorkspaceTabs = () => {
   };
 
   const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) || null);
+  const focusMode = computed(() => Boolean(focusModeTabId.value && activeTabId.value === focusModeTabId.value));
 
   return {
     tabs,
@@ -827,6 +873,10 @@ export const useWorkspaceTabs = () => {
     closeRightSessions,
     closeSession,
     draggedTabId,
+    enterFocusMode,
+    enterFullscreenMode,
+    exitFocusMode,
+    focusMode,
     getTabById,
     isPaneAwaitingAssetSelection,
     markSessionConnected,
@@ -848,6 +898,7 @@ export const useWorkspaceTabs = () => {
     swapPanes,
     toSurfaceTab,
     updateSessionPayload,
+    workspaceFullscreen,
     mergeTabIntoWorkspace
   };
 };

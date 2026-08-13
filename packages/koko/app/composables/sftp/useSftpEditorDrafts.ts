@@ -17,6 +17,7 @@ export interface SftpEditorDraft {
 
 export interface SftpEditorWorkspaceState {
   rootPath: string;
+  explorerRootPath?: string;
   tabs: Array<{
     path: string;
     entry: SftpFileEntry;
