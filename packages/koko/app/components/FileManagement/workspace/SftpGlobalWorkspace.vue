@@ -2,7 +2,12 @@
 import type { ComponentPublicInstance } from "vue";
 import type { useSftpTransferCoordinator } from "#koko/composables/sftp/file-manager/useSftpTransferCoordinator";
 import type { useSftpWorkspacePanes } from "#koko/composables/sftp/file-manager/useSftpWorkspacePanes";
-import type { SftpLocalPaneHandle, SftpRemotePane, SftpTransferCenterHandle, SftpWorkspaceSide  } from "#koko/composables/sftp/file-manager/workspaceTypes";
+import type {
+  SftpLocalPaneHandle,
+  SftpRemotePane,
+  SftpTransferCenterHandle,
+  SftpWorkspaceSide
+} from "#koko/composables/sftp/file-manager/workspaceTypes";
 import KokoLocalFileManagementPane from "#koko/components/FileManagement/localPane.vue";
 import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
 import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";

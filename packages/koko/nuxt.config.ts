@@ -8,7 +8,7 @@ export default defineNuxtConfig({
   $meta: { name: "jumpserver-koko" },
   css: [
     "driver.js/dist/driver.css",
-    `${appRoot}/assets/css/sftp-file-management.css`,
+    `${appRoot}/assets/css/sftp-file-management.scss`,
     `${appRoot}/assets/css/sftp-transfer-center.scss`
   ],
   alias: {

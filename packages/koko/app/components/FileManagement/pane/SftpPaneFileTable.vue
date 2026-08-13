@@ -47,13 +47,13 @@ function fileType(entry: SftpFileEntry): string {
 </script>
 
 <template>
-  <div class="h-full overflow-auto">
-    <div :class="showStatusBar ? 'relative min-h-full select-none pb-15' : ''">
+  <div class="sftp-file-table flex h-full min-h-0 flex-col">
+    <div class="sftp-file-table__scroll min-h-0 flex-1 overflow-auto select-none">
       <table
         class="sftp-file-management__table w-full table-fixed border-separate border-spacing-0"
         data-sftp-tour="file-table"
       >
-        <thead>
+        <thead class="sftp-file-table__head">
           <tr>
             <th
               class="w-10 border-b text-center"
@@ -208,7 +208,7 @@ function fileType(entry: SftpFileEntry): string {
     </div>
     <div
       v-if="showStatusBar"
-      class="flex h-7 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3.5 font-ui-mono text-[10.5px] text-(--app-muted)"
+      class="sftp-file-table__status flex h-7 shrink-0 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3.5 font-ui-mono text-[10.5px] text-(--app-muted)"
     >
       {{ t("koko.fileManagement.items", { count: entries.length }) }}
     </div>

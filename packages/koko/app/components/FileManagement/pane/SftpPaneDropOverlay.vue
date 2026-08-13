@@ -14,7 +14,7 @@ const { t } = useI18n();
 <template>
   <div v-if="active" class="sftp-transfer-drop-target" aria-hidden="true">
     <div class="sftp-transfer-drop-target__label">
-      <UIcon :name="icon" />
+      <UIcon :name="icon" class="size-3.5 shrink-0" />
       <span>
         {{ t("koko.fileManagement.copyTo") }}
         <strong>{{ endpointLabel }}</strong>
@@ -29,7 +29,7 @@ const { t } = useI18n();
   </div>
   <div v-else-if="blocked" class="sftp-transfer-drop-target sftp-transfer-drop-target--blocked" aria-hidden="true">
     <div class="sftp-transfer-drop-target__label">
-      <UIcon name="i-lucide-ban" />
+      <UIcon name="i-lucide-ban" class="size-3.5 shrink-0" />
       <span>{{ t("koko.fileManagement.dropSameEndpoint") }}</span>
     </div>
   </div>

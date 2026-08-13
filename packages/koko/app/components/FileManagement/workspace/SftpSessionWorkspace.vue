@@ -4,7 +4,8 @@ import type { useSftpTransferCoordinator } from "#koko/composables/sftp/file-man
 import type { useSftpWorkspacePanes } from "#koko/composables/sftp/file-manager/useSftpWorkspacePanes";
 import type {
   SftpRemotePane,
-  SftpRemotePaneHandle, SftpTransferCenterHandle 
+  SftpRemotePaneHandle,
+  SftpTransferCenterHandle
 } from "#koko/composables/sftp/file-manager/workspaceTypes";
 import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
 import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
@@ -18,7 +19,6 @@ const props = defineProps<{
   compact?: boolean;
   workspace: WorkspaceController;
   transfer: TransferController;
-  openProfessionalWorkbench: () => void | Promise<void>;
   startTour: () => void;
   setPrimaryPaneRef: (value: SftpRemotePaneHandle | null) => void;
   setTransferCenterRef: (value: SftpTransferCenterHandle | null) => void;
@@ -67,35 +67,11 @@ function onSessionPanesUpdate(value: SftpRemotePane[]) {
 </script>
 
 <template>
-  <div v-if="compact" class="flex shrink-0 items-center justify-between gap-2 border-b border-default px-2 py-1">
-    <span class="min-w-0 truncate text-[11px] text-muted">
-      {{ t("koko.fileManagement.lightweightHint") }}
-    </span>
-    <UButton
-      size="xs"
-      color="neutral"
-      variant="soft"
-      icon="i-lucide-arrow-left-right"
-      :label="t('koko.fileManagement.openProfessional')"
-      :title="t('koko.fileManagement.openProfessional')"
-      @click="openProfessionalWorkbench"
-    />
-  </div>
-
   <div
     v-if="!compact"
     class="sftp-file-management__topbar flex shrink-0 items-center justify-between gap-2 border-b border-default"
   >
     <div class="ml-auto flex items-center justify-end gap-1">
-      <UButton
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        icon="i-lucide-arrow-left-right"
-        :label="t('koko.fileManagement.openProfessional')"
-        :title="t('koko.fileManagement.openProfessional')"
-        @click="openProfessionalWorkbench"
-      />
       <UButton
         size="xs"
         color="neutral"
