@@ -2615,7 +2615,7 @@ onUnmounted(() => {
               :aria-label="t('koko.sftpEditor.quickOpenShortcut')"
               :title="t('koko.sftpEditor.quickOpenShortcut')"
             >
-              <UIcon name="i-lucide-search" class="size-4" />
+              <UIcon name="i-lucide-search" class="size-3.5" />
             </button>
 
             <template #content>
@@ -2692,7 +2692,7 @@ onUnmounted(() => {
               :aria-label="t('koko.sftpEditor.refreshTree')"
               @click="refreshTree"
             >
-              <UIcon name="i-lucide-refresh-cw" class="size-4" />
+              <UIcon name="i-lucide-refresh-cw" class="size-3.5" />
             </button>
           </UTooltip>
         </div>

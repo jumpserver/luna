@@ -88,7 +88,7 @@ const folderIdFromRaw = (raw: any): string | null => {
 
 export const useFavoriteFolders = () => {
   const userInfoStore = useUserInfoStore();
-  const { loggedIn, currentSite } = storeToRefs(userInfoStore);
+  const { loggedIn, currentAccountId } = storeToRefs(userInfoStore);
   const folders = useState<FavoriteFolder[]>("favorite-folders", () => []);
   const rootAssets = useState<AssetItem[]>("favorite-root-assets", () => []);
   const loading = useState<boolean>("favorite-folders-loading", () => false);
@@ -102,12 +102,13 @@ export const useFavoriteFolders = () => {
     loading.value = true;
     const requestId = nextRequestId.value + 1;
     const requestVersion = stateVersion.value;
-    const requestSite = currentSite.value;
+    const requestAccountId = currentAccountId.value;
     nextRequestId.value = requestId;
     activeRequestId.value = requestId;
     try {
       const [folderData, assetData] = await Promise.all([getFavoriteFolders(), getFavoriteAssets().catch(() => [])]);
-      if (requestVersion !== stateVersion.value || requestSite !== currentSite.value || !loggedIn.value) return;
+      if (requestVersion !== stateVersion.value || requestAccountId !== currentAccountId.value || !loggedIn.value)
+        return;
       const normalizedFolders = normalizeFolders(folderData);
       const folderMap = new Map(flattenFolders(normalizedFolders).map((folder) => [folder.id, folder]));
       const nextRootAssets: AssetItem[] = [];
@@ -157,7 +158,7 @@ export const useFavoriteFolders = () => {
     useEventBus().emit("favoriteChanged", { assetId, favorite: true });
   };
 
-  watch([loggedIn, currentSite], ([isLoggedIn]) => {
+  watch([loggedIn, currentAccountId], ([isLoggedIn]) => {
     stateVersion.value += 1;
     folders.value = [];
     rootAssets.value = [];

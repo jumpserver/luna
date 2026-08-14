@@ -24,7 +24,11 @@ const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, orgId } = storeToRefs(userInfoStore);
 const { fetchTree, treeNodeToAsset } = useAssetTree();
-const { recentConnections, load: loadRecentConnections } = useRecentConnections();
+const {
+  clearRecentConnections,
+  recentConnections,
+  load: loadRecentConnections,
+} = useRecentConnections();
 const activeTreeKind = ref<PanelKind>("authorization");
 const recentNodeOpen = ref(false);
 const authorizationNodes = ref<AssetTreeNode[]>([]);
@@ -37,7 +41,9 @@ const checkedAssets = ref<Record<string, AssetItem>>({});
 const checkedNodeIds = ref<string[]>([]);
 const nodeMenuVisible = ref(false);
 const nodeMenuPosition = ref({ x: 0, y: 0 });
-const nodeMenuTarget = ref<{ node: AssetTreeNode; kind: PanelKind } | null>(null);
+const nodeMenuTarget = ref<{ node: AssetTreeNode; kind: PanelKind } | null>(
+  null,
+);
 let lastErrorSignature = "";
 let lastErrorAt = 0;
 
@@ -45,7 +51,7 @@ const activeTree = computed(() => {
   if (activeTreeKind.value === "authorization") {
     return {
       label: t("Menu.AuthorizedTree"),
-      nodes: [buildRecentConnectionsNode(), ...authorizationNodes.value]
+      nodes: [buildRecentConnectionsNode(), ...authorizationNodes.value],
     };
   }
 
@@ -54,7 +60,10 @@ const activeTree = computed(() => {
 
 const isRecentRootNode = (node: AssetTreeNode) => node.id === RECENT_NODE_ID;
 
-const assetItemToTreeNode = (asset: AssetItem, level: number): AssetTreeNode => ({
+const assetItemToTreeNode = (
+  asset: AssetItem,
+  level: number,
+): AssetTreeNode => ({
   id: `recent-${asset.id}`,
   key: asset.id,
   name: asset.name,
@@ -72,9 +81,9 @@ const assetItemToTreeNode = (asset: AssetItem, level: number): AssetTreeNode => 
       is_active: asset.isActive !== false,
       comment: asset.comment,
       permedProtocols: asset.permedProtocols,
-      permedAccounts: asset.permedAccounts
-    }
-  }
+      permedAccounts: asset.permedAccounts,
+    },
+  },
 });
 
 function buildRecentConnectionsNode(): AssetTreeNode {
@@ -86,13 +95,17 @@ function buildRecentConnectionsNode(): AssetTreeNode {
     open: recentNodeOpen.value,
     loaded: true,
     level: 0,
-    children: recentConnections.value.map((asset) => assetItemToTreeNode(asset, 1)),
-    meta: { type: "recent-connections" }
+    children: recentConnections.value.map((asset) =>
+      assetItemToTreeNode(asset, 1),
+    ),
+    meta: { type: "recent-connections" },
   };
 }
 
 const treeSwitchLabel = computed(() =>
-  activeTreeKind.value === "authorization" ? t("Tree.SwitchToType") : t("Tree.SwitchToAuthorization")
+  activeTreeKind.value === "authorization"
+    ? t("Tree.SwitchToType")
+    : t("Tree.SwitchToAuthorization"),
 );
 const checkedCount = computed(() => Object.keys(checkedAssets.value).length);
 const batchMenuItems = computed(() => [
@@ -104,9 +117,9 @@ const batchMenuItems = computed(() => [
         batchMode.value = true;
         checkedAssets.value = {};
         checkedNodeIds.value = [];
-      }
-    }
-  ]
+      },
+    },
+  ],
 ]);
 
 const resetTreeLevels = (nodes: AssetTreeNode[], level = 0) => {
@@ -125,10 +138,16 @@ const unwrapAllTypesRoot = (nodes: AssetTreeNode[]) => {
 
 const removeFavoriteNodes = (nodes: AssetTreeNode[]): AssetTreeNode[] =>
   nodes
-    .filter((node) => node.id.toLowerCase() !== "favorite" && node.key?.toLowerCase() !== "favorite")
+    .filter(
+      (node) =>
+        node.id.toLowerCase() !== "favorite" &&
+        node.key?.toLowerCase() !== "favorite",
+    )
     .map((node) => ({
       ...node,
-      children: node.children?.length ? removeFavoriteNodes(node.children) : node.children
+      children: node.children?.length
+        ? removeFavoriteNodes(node.children)
+        : node.children,
     }));
 
 const reportError = (error: unknown) => {
@@ -147,7 +166,7 @@ const reportError = (error: unknown) => {
   addErrorToast({
     title,
     description,
-    icon: "i-lucide-circle-alert"
+    icon: "i-lucide-circle-alert",
   });
 };
 
@@ -168,7 +187,7 @@ const loadRoot = async (kind: PanelKind) => {
           .filter((node) => node.isParent || node.children?.length)
           .map(async (node) => {
             if (!node.open) await toggleNode(node, kind);
-          })
+          }),
       );
     } else {
       typeNodes.value = unwrapAllTypesRoot(nodes);
@@ -189,7 +208,8 @@ const refresh = async () => {
 };
 
 const switchTreeKind = () => {
-  activeTreeKind.value = activeTreeKind.value === "authorization" ? "type" : "authorization";
+  activeTreeKind.value =
+    activeTreeKind.value === "authorization" ? "type" : "authorization";
   checkedAssets.value = {};
   checkedNodeIds.value = [];
   batchMode.value = false;
@@ -212,7 +232,8 @@ async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
   node.loading = true;
   try {
     const children = await fetchTree(kind, node);
-    node.children = kind === "authorization" ? removeFavoriteNodes(children) : children;
+    node.children =
+      kind === "authorization" ? removeFavoriteNodes(children) : children;
     node.loaded = true;
   } catch (error) {
     node.open = false;
@@ -222,7 +243,8 @@ async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
   }
 }
 
-const isBranchNode = (node: AssetTreeNode) => Boolean(node.isParent || node.children?.length);
+const isBranchNode = (node: AssetTreeNode) =>
+  Boolean(node.isParent || node.children?.length);
 
 const collapseNode = (node: AssetTreeNode) => {
   if (isRecentRootNode(node)) {
@@ -352,8 +374,8 @@ const nodeMenuItems = computed<DropdownMenuItem[]>(() => {
             onSelect: async () => {
               closeNodeMenu();
               await toggleNode(node, kind);
-            }
-          } satisfies DropdownMenuItem
+            },
+          } satisfies DropdownMenuItem,
         ]
       : []),
     ...(canCollapse
@@ -364,8 +386,8 @@ const nodeMenuItems = computed<DropdownMenuItem[]>(() => {
             onSelect: () => {
               closeNodeMenu();
               collapseNode(node);
-            }
-          } satisfies DropdownMenuItem
+            },
+          } satisfies DropdownMenuItem,
         ]
       : []),
     ...(canExpandAll
@@ -376,8 +398,8 @@ const nodeMenuItems = computed<DropdownMenuItem[]>(() => {
             onSelect: async () => {
               closeNodeMenu();
               await expandNodeRecursive(node, kind);
-            }
-          } satisfies DropdownMenuItem
+            },
+          } satisfies DropdownMenuItem,
         ]
       : []),
     ...(canCollapseAll
@@ -388,10 +410,10 @@ const nodeMenuItems = computed<DropdownMenuItem[]>(() => {
             onSelect: () => {
               closeNodeMenu();
               collapseNodeRecursive(node);
-            }
-          } satisfies DropdownMenuItem
+            },
+          } satisfies DropdownMenuItem,
         ]
-      : [])
+      : []),
   ];
 });
 
@@ -412,7 +434,7 @@ const searchTree = useDebounceFn(async (keyword: string) => {
 
 watch(
   () => props.search,
-  (value) => searchTree(value)
+  (value) => searchTree(value),
 );
 watch(
   () => props.search,
@@ -421,7 +443,7 @@ watch(
       closeBatchMode();
       closeNodeMenu();
     }
-  }
+  },
 );
 watch(
   [loggedIn, orgId],
@@ -436,7 +458,7 @@ watch(
       closeNodeMenu();
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 defineExpose({ refresh, loading });
@@ -463,9 +485,12 @@ defineExpose({ refresh, loading });
         <UIcon name="i-lucide-search" class="mr-1.5 sidebar-icon" />
         <span class="truncate">{{ t("Operation.Search") }}</span>
       </div>
-      <div class="min-h-0 flex-1 overflow-y-auto py-1">
+      <div class="min-h-0 flex-1 overflow-y-auto py-0">
         <div v-if="searchLoading" class="grid h-20 place-items-center">
-          <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
+          <UIcon
+            name="i-lucide-loader-circle"
+            class="sidebar-icon animate-spin"
+          />
         </div>
         <UEmpty
           v-else-if="searchNodes.length === 0"
@@ -505,8 +530,13 @@ defineExpose({ refresh, loading });
             />
             <span class="min-w-0 flex-1 truncate">{{ activeTree.label }}</span>
           </button>
-          <div v-if="batchMode" class="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
-            <span class="hidden sm:inline">{{ t("Tree.SelectedCount", { count: checkedCount }) }}</span>
+          <div
+            v-if="batchMode"
+            class="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400"
+          >
+            <span class="hidden sm:inline">{{
+              t("Tree.SelectedCount", { count: checkedCount })
+            }}</span>
             <UButton
               color="primary"
               variant="soft"
@@ -538,7 +568,11 @@ defineExpose({ refresh, loading });
                 color="neutral"
                 variant="ghost"
                 size="xs"
-                :icon="activeTreeKind === 'authorization' ? 'i-lucide-list-tree' : 'i-lucide-shield-check'"
+                :icon="
+                  activeTreeKind === 'authorization'
+                    ? 'i-lucide-list-tree'
+                    : 'i-lucide-shield-check'
+                "
                 class="sidebar-icon-button size-6 justify-center p-0"
                 :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
                 :aria-label="treeSwitchLabel"
@@ -574,9 +608,15 @@ defineExpose({ refresh, loading });
           </div>
         </div>
 
-        <div v-if="open !== false" class="min-h-0 flex-1 overflow-y-auto py-1">
-          <div v-if="loading && activeTree.nodes.length === 0" class="grid h-20 place-items-center">
-            <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
+        <div v-if="open !== false" class="min-h-0 flex-1 overflow-y-auto py-0">
+          <div
+            v-if="loading && activeTree.nodes.length === 0"
+            class="grid h-20 place-items-center"
+          >
+            <UIcon
+              name="i-lucide-loader-circle"
+              class="sidebar-icon animate-spin"
+            />
           </div>
           <UEmpty
             v-else-if="activeTree.nodes.length === 0"
@@ -597,6 +637,7 @@ defineExpose({ refresh, loading });
             @toggle="toggleNode"
             @contextmenu="openContextMenu"
             @check="toggleCheckedNode"
+            @clear-recent="clearRecentConnections"
           />
         </div>
       </section>
@@ -608,7 +649,6 @@ defineExpose({ refresh, loading });
     :items="nodeMenuItems"
     size="sm"
     :content="{ align: 'start', side: 'bottom' }"
-    :ui="{ content: 'w-44 p-1' }"
     @update:open="nodeMenuVisible = $event"
   >
     <div
@@ -617,7 +657,7 @@ defineExpose({ refresh, loading });
         left: `${nodeMenuPosition.x}px`,
         top: `${nodeMenuPosition.y}px`,
         width: '1px',
-        height: '1px'
+        height: '1px',
       }"
     />
   </UDropdownMenu>

@@ -21,7 +21,7 @@ export function useKokoTerminalInput(options: {
   isSocketOpen: (socket: WebSocket) => boolean;
   isZmodemActive: () => boolean;
   abortZmodem: () => void;
-  rightClickPasteEnabled: () => boolean;
+  onContextMenu: (event: MouseEvent) => void;
   getTerminalConfig: () => Partial<ILunaConfig>;
   onResize: (size: { cols: number; rows: number }) => void;
   onHostKey: (key: string) => void;
@@ -45,24 +45,9 @@ export function useKokoTerminalInput(options: {
       options.fit();
       terminal.focus();
     };
-    const onContextMenu = async (event: MouseEvent) => {
-      if (event.ctrlKey || !options.rightClickPasteEnabled()) return;
+    const onContextMenu = (event: MouseEvent) => {
       event.preventDefault();
-      let text = "";
-      try {
-        text = await readText();
-      } catch {
-        text = options.selectionText.value;
-      }
-      const socket = options.socket.value;
-      if (!text || !socket || options.inputLocked() || !options.isSocketOpen(socket)) {
-        if (socket && !options.isSocketOpen(socket)) {
-          options.addErrorToast({ title: options.translate("koko.terminal.websocketConnectionClosed") });
-        }
-        return;
-      }
-      if (!options.validateClipboardText("paste", text)) return;
-      socket.send(formatMessage(options.terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, text));
+      options.onContextMenu(event);
     };
     const onPaste = (event: ClipboardEvent) => {
       const text = event.clipboardData?.getData("text/plain") ?? "";
@@ -124,14 +109,8 @@ export function useKokoTerminalInput(options: {
       options.sendToHost(HOST_MESSAGE_TYPE.INPUT_ACTIVE, "");
     });
     terminal.onResize(options.onResize);
-    terminal.onSelectionChange(async () => {
+    terminal.onSelectionChange(() => {
       options.selectionText.value = terminal.getSelection() || "";
-      if (!options.selectionText.value || !options.validateClipboardText("copy", options.selectionText.value)) return;
-      try {
-        await writeText(options.selectionText.value);
-      } catch (error) {
-        console.error("Failed to write terminal selection to clipboard:", error);
-      }
     });
     terminal.attachCustomKeyEventHandler((event) => {
       if (event.key === KeyboardKey.Enter && event.isComposing) return false;
@@ -153,5 +132,40 @@ export function useKokoTerminalInput(options: {
     for (const dispose of cleanup.splice(0)) dispose();
   }
 
-  return { start, stop };
+  return {
+    copySelection: async () => {
+      const terminal = options.terminal.value;
+      const text = terminal?.getSelection() || "";
+      if (!text || !options.validateClipboardText("copy", text)) return false;
+      try {
+        await writeText(text);
+        return true;
+      } catch (error) {
+        console.error("Failed to write terminal selection to clipboard:", error);
+        return false;
+      }
+    },
+    pasteClipboard: async () => {
+      if (!options.validateClipboardText("paste", "")) return false;
+
+      let text = "";
+      try {
+        text = await readText();
+      } catch {
+        text = options.selectionText.value;
+      }
+      const socket = options.socket.value;
+      if (!text || !socket || options.inputLocked() || !options.isSocketOpen(socket)) {
+        if (socket && !options.isSocketOpen(socket)) {
+          options.addErrorToast({ title: options.translate("koko.terminal.websocketConnectionClosed") });
+        }
+        return false;
+      }
+      if (!options.validateClipboardText("paste", text)) return false;
+      socket.send(formatMessage(options.terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, text));
+      return true;
+    },
+    start,
+    stop
+  };
 }

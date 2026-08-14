@@ -16,7 +16,8 @@ import { isTauriRuntime } from "~/utils/runtime";
 
 export default defineNuxtPlugin((nuxtApp) => {
   const { createKokoTicket } = useWorkspaceConnectors();
-  const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
+  const { canSplitWorkspace, markSessionConnected, markSessionFailed, setActiveSession, splitWorkspace, tabs } =
+    useWorkspaceTabs();
   const userInfoStore = useUserInfoStore();
   const { currentUser } = storeToRefs(userInfoStore);
 
@@ -81,6 +82,16 @@ export default defineNuxtPlugin((nuxtApp) => {
       setWorkspaceSessionDetails(tabId, details as Parameters<typeof setWorkspaceSessionDetails>[1]);
     },
     clearSessionDetails: clearWorkspaceSessionDetails,
+    canSplitSession: (paneId, direction) => {
+      const workspaceTab = tabs.value.find((tab) => tab.panes.some((pane) => pane.id === paneId));
+      return workspaceTab ? canSplitWorkspace(workspaceTab.id, direction) : false;
+    },
+    splitSession: (paneId, direction) => {
+      const workspaceTab = tabs.value.find((tab) => tab.panes.some((pane) => pane.id === paneId));
+      if (!workspaceTab || !canSplitWorkspace(workspaceTab.id, direction)) return;
+      splitWorkspace(workspaceTab.id, direction);
+      setActiveSession(workspaceTab.id);
+    },
     sftp: {
       organizationSelector: OrganizationSelector,
       assetTree: SideBarAssetTree,

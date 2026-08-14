@@ -5,7 +5,6 @@ const props = defineProps<{ searchAddon: SearchAddon }>();
 const emit = defineEmits<{ close: [] }>();
 
 const { t } = useI18n();
-const { darken, lighten } = useColor();
 
 const searchOptions = reactive<ISearchOptions>({
   caseSensitive: false,
@@ -70,8 +69,8 @@ useMutationObserver(
 
 <template>
   <div
-    class="absolute z-50 flex items-center gap-2 rounded-md p-2 shadow-md"
-    :style="{ backgroundColor: lighten(10), top: '0.5rem', right: positionRight }"
+    class="absolute top-2 z-50 flex items-center gap-2 rounded-md border border-[var(--app-border-strong)] bg-[var(--app-surface-overlay)] p-2 text-[var(--app-fg)] shadow-md"
+    :style="{ right: positionRight }"
   >
     <UInput
       v-model="searchKey"
@@ -96,7 +95,7 @@ useMutationObserver(
       @click="void props.searchAddon.findNext(searchKey, searchOptions)"
     />
 
-    <div class="mx-1 h-6 w-px" :style="{ backgroundColor: darken(1) }" />
+    <div class="mx-1 h-6 w-px bg-[var(--app-border-strong)]" />
 
     <UButton
       v-for="option in searchOptionButtons"
@@ -105,7 +104,7 @@ useMutationObserver(
       variant="ghost"
       size="xs"
       :icon="option.icon"
-      :class="searchOptions[option.key] ? 'bg-white/10' : ''"
+      :class="searchOptions[option.key] ? 'bg-[var(--app-hover-strong)]' : ''"
       :title="option.label"
       @click="toggleSearchOption(option.key)"
     />

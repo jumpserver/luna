@@ -68,6 +68,7 @@ const openLogin = () => {
     <div class="relative min-h-0 min-w-0 flex-1 overflow-hidden">
       <template v-if="activeTab">
         <WorkspaceSessionPane :tab="activeTab" class="h-full min-h-0" />
+        <WorkspacePaneSurfaceHost v-for="pane in activeTab.panes" :key="pane.id" :pane="pane" />
 
         <div class="absolute top-2 z-40" :style="rightPanelOpen ? { right: `${panelWidth}px` } : { right: '12px' }">
           <UTooltip :text="rightPanelOpen ? t('RightPanel.Close') : t('RightPanel.Open')" :delay-duration="150">

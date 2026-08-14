@@ -615,7 +615,6 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
     :items="folderMenuItems"
     size="sm"
     :content="{ align: 'start', side: 'bottom' }"
-    :ui="{ content: 'w-44 p-1' }"
     @update:open="folderMenuVisible = $event"
   >
     <div

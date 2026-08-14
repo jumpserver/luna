@@ -10,4 +10,5 @@ export interface ConnectorSessionContext {
   colorMode?: string;
   themeType?: string;
   disableAutoHash?: string;
+  actions?: Array<string | { value?: string; label?: string }>;
 }

@@ -100,7 +100,8 @@
     "DiscardChanges": "This script has unsaved changes. Discard them?"
   },
   "RecentConnections": {
-    "Empty": "No recent connections"
+    "Empty": "No recent connections",
+    "Clear": "Clear recent connections"
   },
   "Favorite": {
     "CreateFolder": "Create folder",
@@ -493,10 +494,10 @@
     "RenamePlaceholder": "Enter tab name",
     "SplitVertically": "Split vertically",
     "SplitHorizontally": "Split horizontally",
-    "FocusCurrent": "Show only this tab",
-    "FullscreenCurrent": "Fullscreen current workspace",
-    "ExitFocusMode": "Exit focus mode",
-    "ExitFocusModeHint": "Exit focus mode (hold Esc)",
+    "FocusCurrent": "Clean mode",
+    "FullscreenCurrent": "Fullscreen mode",
+    "ExitFocusMode": "Exit clean mode",
+    "ExitFocusModeHint": "Exit clean mode (hold Esc)",
     "CloseCurrent": "Close Current Tab",
     "CloseAll": "Close All Tabs",
     "CloseOther": "Close Other Tabs",
@@ -514,6 +515,8 @@
     "CurrentOrganization": "Current organization",
     "Reconnect": "Reconnect",
     "ClosePane": "Close pane",
+    "ResizeColumns": "Resize pane columns",
+    "ResizeRows": "Resize pane rows",
     "SplitLimitTitle": "Split limit reached",
     "SplitLimitDescription": "This tab supports up to four panes. Close one before opening another.",
     "MergeLimitDescription": "This tab supports up to four panes, so another tab cannot be dropped here.",
@@ -556,10 +559,13 @@
   "Login": {
     "Title": "Input Login Site",
     "Description": "Please enter the site address (e.g. https://example.com) or IP",
+    "SiteName": "Site name",
     "LoginSuccess": "Login Success",
     "LoginSuccessDescription": "Your operation has been completed successfully",
     "LoginFailed": "Login Failed",
     "EmptyUrlError": "Please enter a site address",
+    "EmptySiteNameError": "Please enter a site name",
+    "DuplicateSiteNameError": "This site name already exists. Use a different name",
     "LoginFailedDescription": "Login failed, the current account has expired, please log in again",
     "InvalidUrlError": "Please enter a valid site address or IP address",
     "InvalidSiteError": "Login failed: site is unreachable or invalid. Please check and try again.",
@@ -752,6 +758,8 @@
       "clipboardCopyDenied": "Copying from the terminal is not permitted",
       "clipboardPasteDenied": "Pasting into the terminal is not permitted",
       "clipboardTextLimitExceeded": "{action} text exceeds the {limit}-character limit",
+      "splitVertically": "Split vertically",
+      "splitHorizontally": "Split horizontally",
       "shareLink": "Link",
       "verificationCode": "Code",
       "shareLinkCopied": "Share link copied"
@@ -1086,6 +1094,7 @@
       "connectCluster": "Connect cluster",
       "resizeSidebar": "Resize Kubernetes sidebar",
       "recentContainers": "Recent containers",
+      "clearRecentContainers": "Clear recent containers",
       "refreshTree": "Refresh tree",
       "filterContainers": "Filter containers",
       "noMatchingContainers": "No matching containers",

@@ -22,6 +22,11 @@ function hydrate() {
 export function useRecentConnections() {
   hydrate();
 
+  const clearRecentConnections = () => {
+    recentConnections.value = [];
+    if (import.meta.client) localStorage.removeItem(STORAGE_KEY);
+  };
+
   const recordRecentConnection = (asset: AssetItem) => {
     const snapshot = JSON.parse(JSON.stringify(asset)) as AssetItem;
     recentConnections.value = [snapshot, ...recentConnections.value.filter((item) => item.id !== asset.id)].slice(
@@ -34,5 +39,5 @@ export function useRecentConnections() {
     }
   };
 
-  return { recentConnections, recordRecentConnection, load: loadRecentConnections };
+  return { clearRecentConnections, recentConnections, recordRecentConnection, load: loadRecentConnections };
 }

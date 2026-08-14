@@ -13,6 +13,7 @@ pub async fn auth_login(
     app: AppHandle,
     flow_state: State<'_, AuthFlowState>,
     site: String,
+    session_id: String,
 ) -> Result<Value, String> {
     log::info!("auth_login started for site: {}", site);
 
@@ -68,7 +69,7 @@ pub async fn auth_login(
         let tokens = exchange_authorization_code(&client, &http_client, callback).await?;
 
         // 保存 OAuth token，供后续请求自动刷新使用。
-        if let Err(e) = tokens.persist(&site, &client_id).await {
+        if let Err(e) = tokens.persist(&session_id, &client_id).await {
             log::warn!("persist tokens failed: {}", e);
         }
 
@@ -79,8 +80,8 @@ pub async fn auth_login(
 }
 
 #[tauri::command]
-pub async fn bootstrap_auth_session(site: String) -> Result<Value, String> {
-    let bearer = ensure_fresh_token(&site, None)
+pub async fn bootstrap_auth_session(site: String, session_id: String) -> Result<Value, String> {
+    let bearer = ensure_fresh_token(&site, &session_id, None)
         .await
         .map_err(|e| e.to_string())?;
 

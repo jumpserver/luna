@@ -193,7 +193,7 @@ onMounted(loadAsset);
           </div>
 
           <div class="flex min-h-[300px] flex-col bg-[var(--app-surface-panel-strong)]">
-            <div class="min-h-0 flex-1 overflow-auto px-6 py-4">
+            <div class="min-h-0 flex-1 overflow-auto px-6 py-4 pt-2">
               <div v-if="launchSuccessVisible" class="flex min-h-full items-center justify-center py-6">
                 <section
                   class="launch-success-card w-full rounded-xl border border-[var(--app-border)] bg-[var(--workspace-surface-panel)] px-5 py-6 sm:px-6"

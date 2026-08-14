@@ -39,7 +39,7 @@ const localePath = useLocalePath();
 const userInfoStore = useUserInfoStore();
 
 const { t, locales, locale } = useI18n();
-const { loggedIn, currentSite, userMap, currentUser } = storeToRefs(userInfoStore);
+const { loggedIn, currentAccountId, userMap, currentUser } = storeToRefs(userInfoStore);
 const { applyLoginPayload } = useAuthSession();
 const { openToolWindow } = useToolWindow();
 
@@ -51,21 +51,27 @@ const { applyPrimaryColor } = useColor();
 const { openSettings, warmupWebSettings } = useSettingsWindow();
 
 const inputSite = ref("");
+const inputSiteName = ref("");
+const siteNameEdited = ref(false);
+const editingAccountId = ref("");
 const errorMessage = ref("");
 const loginBtn = ref(false);
 const openModal = ref(false);
 const hasValidationError = ref(false);
+const validationField = ref<"site" | "name" | null>(null);
 const recentSitesDismissed = ref(false);
 const unlistenAuthUrlRef = ref<UnlistenFn | null>(null);
 const unlistenErrorPageRef = ref<UnlistenFn | null>(null);
 const unlistenLoginFailedRef = ref<UnlistenFn | null>(null);
 const inputRef = ref<ComponentPublicInstance | null>(null);
+const siteNameInputRef = ref<ComponentPublicInstance | null>(null);
 
 let loginBtnUnlockTimer: ReturnType<typeof setTimeout> | null = null;
 
 useEventBus().on("login", openLoginPage);
 
 const normalizedInputSite = computed(() => normalizeSite(inputSite.value));
+const normalizedInputSiteName = computed(() => inputSiteName.value.trim());
 
 const normalizedRecentSites = computed(() => {
   const raw = Array.isArray(recentSites.value) ? recentSites.value : [];
@@ -155,15 +161,17 @@ const toolChildren = computed<DropdownMenuItem[][]>(() => [
 ]);
 
 const profileMenuItems = computed<DropdownMenuItem[][]>(() => {
-  const accountItems: DropdownMenuItem[] = [
-    {
-      label: t("Login.AddAccount"),
-      icon: "i-lucide-user-round-plus",
-      onClick: openLoginPage
-    }
-  ];
+  const accountItems: DropdownMenuItem[] = isTauriRuntime()
+    ? [
+        {
+          label: t("Login.AddAccount"),
+          icon: "i-lucide-user-round-plus",
+          onClick: openLoginPage
+        }
+      ]
+    : [];
 
-  if (loggedIn.value) {
+  if (isTauriRuntime() && loggedIn.value) {
     accountItems.push({
       label: t("Login.SwitchSite"),
       icon: "i-lucide-arrow-down-up",
@@ -303,6 +311,8 @@ const clearRecentSites = async () => {
 
 const selectRecentSite = (site: string) => {
   inputSite.value = site;
+  inputSiteName.value = site;
+  siteNameEdited.value = false;
   clearValidationError();
   recentSitesDismissed.value = true;
   nextTick(() => {
@@ -312,6 +322,7 @@ const selectRecentSite = (site: string) => {
 
 const handleClearInput = () => {
   inputSite.value = "";
+  if (!siteNameEdited.value) inputSiteName.value = "";
   clearValidationError();
   recentSitesDismissed.value = false;
 };
@@ -368,11 +379,11 @@ const emitVersionAlertAndCloseModal = (payload: VersionAlertPayload) => {
   useEventBus().emit("versionAlert", payload);
 };
 
-const checkVersionBeforeOAuth = async (site: string) => {
+const checkVersionBeforeOAuth = async (accountId: string, site: string) => {
   if (!isTauriRuntime()) return true;
 
   await useTauriCoreInvoke("set_api_session", {
-    sessionKey: site,
+    sessionKey: accountId,
     origin: site,
     bearerToken: "",
     orgId: ""
@@ -425,9 +436,15 @@ function openLoginPage() {
     return;
   }
 
+  const reauthUser = !loggedIn.value ? currentUser.value : null;
+  editingAccountId.value = reauthUser ? currentAccountId.value : "";
+  inputSite.value = reauthUser?.site || "";
+  inputSiteName.value = reauthUser?.siteName || reauthUser?.site || "";
+  siteNameEdited.value = Boolean(reauthUser);
   openModal.value = true;
   recentSitesDismissed.value = false;
   hasValidationError.value = false;
+  validationField.value = null;
   errorMessage.value = "";
   nextTick(() => {
     inputRef.value?.$el.querySelector("input")?.focus();
@@ -440,6 +457,7 @@ function openLoginPage() {
 function clearValidationError() {
   if (hasValidationError.value) {
     hasValidationError.value = false;
+    validationField.value = null;
     errorMessage.value = "";
   }
 }
@@ -449,7 +467,7 @@ function clearValidationError() {
  * @returns 切换账户子菜单
  */
 function switchAccountChildren() {
-  const items: DropdownMenuItem[] = (Object.values(userMap.value) as UserData[]).map((u: UserData) => {
+  const items: DropdownMenuItem[] = (Object.entries(userMap.value) as [string, UserData][]).map(([accountId, u]) => {
     let host = u.site;
 
     try {
@@ -458,16 +476,17 @@ function switchAccountChildren() {
       console.log("e", e);
     }
 
-    const label = `${host}`;
-    const isCurrent = u.site === currentSite.value;
+    const label = `${u.siteName || host} · ${u.name}`;
+    const isCurrent = accountId === currentAccountId.value;
 
     return {
       label,
+      description: u.site,
       type: "checkbox",
       checked: isCurrent,
       onUpdateChecked: (checked: boolean) => {
         if (!checked || isCurrent) return;
-        handleSwitchAccount(u.site);
+        handleSwitchAccount(accountId);
       }
     } as DropdownMenuItem;
   });
@@ -477,12 +496,12 @@ function switchAccountChildren() {
 
 /**
  * @description 切换账户
- * @param site 站点
+ * @param accountId 账号 ID
  */
-function handleSwitchAccount(site: string) {
-  if (site === currentSite.value) return;
+function handleSwitchAccount(accountId: string) {
+  if (accountId === currentAccountId.value) return;
 
-  userInfoStore.setCurrentSite(site);
+  userInfoStore.setCurrentAccount(accountId);
 
   nextTick(() => {
     useEventBus().emit("refresh", undefined);
@@ -493,7 +512,7 @@ function handleSwitchAccount(site: string) {
  * @description 清除认证信息
  */
 function clearAuthInfo() {
-  userInfoStore.deleteUserData(currentSite.value);
+  userInfoStore.deleteUserData(currentAccountId.value);
 }
 
 async function openSettingsWindow() {
@@ -539,7 +558,22 @@ const handleInputSanitize = (event: Event) => {
   }
 
   inputSite.value = sanitized;
+  if (!siteNameEdited.value) {
+    inputSiteName.value = normalizeSite(sanitized);
+  }
   recentSitesDismissed.value = false;
+  clearValidationError();
+};
+
+const handleSiteNameInputSanitize = (event: Event) => {
+  const target = event.target as HTMLInputElement | null;
+  if (!target) return;
+
+  const sanitized = sanitizeInput(target.value);
+  if (sanitized !== target.value) target.value = sanitized;
+
+  inputSiteName.value = sanitized;
+  siteNameEdited.value = true;
   clearValidationError();
 };
 
@@ -549,6 +583,7 @@ const handleInputSanitize = (event: Event) => {
  */
 const handleClipboard = (value: string) => {
   inputSite.value = normalizeSite(value);
+  if (!siteNameEdited.value) inputSiteName.value = inputSite.value;
   recentSitesDismissed.value = false;
 };
 
@@ -560,12 +595,15 @@ const handleConfirm = async () => {
 
   errorMessage.value = "";
   hasValidationError.value = false;
+  validationField.value = null;
 
   const normalizedSite = normalizedInputSite.value;
+  const siteName = normalizedInputSiteName.value;
   const urlRegExp = appConfig.componentsConfig.urlRegExp;
 
   if (!normalizedSite) {
     hasValidationError.value = true;
+    validationField.value = "site";
     errorMessage.value = t("Login.EmptyUrlError");
 
     nextTick(() => {
@@ -575,22 +613,34 @@ const handleConfirm = async () => {
     return;
   }
 
-  const users = Object.values(userMap.value) as UserData[];
+  if (!siteName) {
+    hasValidationError.value = true;
+    validationField.value = "name";
+    errorMessage.value = t("Login.EmptySiteNameError");
+    nextTick(() => {
+      siteNameInputRef.value?.$el?.querySelector("input")?.focus();
+    });
+    return;
+  }
 
-  const existingUser = users.find((user) => normalizeSite(user.site) === normalizedSite);
+  const duplicateName = (Object.entries(userMap.value) as [string, UserData][]).some(
+    ([accountId, user]) =>
+      accountId !== editingAccountId.value && user.siteName.trim().toLowerCase() === siteName.toLowerCase()
+  );
 
-  if (existingUser) {
-    if (loggedIn.value) {
-      hasValidationError.value = true;
-      errorMessage.value = t("Login.AlreadyLoggedInError");
-      return;
-    }
-
-    userInfoStore.setCurrentSite(existingUser.site);
+  if (duplicateName) {
+    hasValidationError.value = true;
+    validationField.value = "name";
+    errorMessage.value = t("Login.DuplicateSiteNameError");
+    nextTick(() => {
+      siteNameInputRef.value?.$el?.querySelector("input")?.focus();
+    });
+    return;
   }
 
   if (!urlRegExp.test(normalizedSite)) {
     hasValidationError.value = true;
+    validationField.value = "site";
     errorMessage.value = t("Login.InvalidUrlError");
 
     nextTick(() => {
@@ -608,13 +658,15 @@ const handleConfirm = async () => {
   try {
     clearLoginBtnUnlockTimer();
     loginBtn.value = true;
-    const ok = await checkVersionBeforeOAuth(normalizedSite);
+    const accountId = editingAccountId.value || globalThis.crypto.randomUUID();
+    const ok = await checkVersionBeforeOAuth(accountId, normalizedSite);
     if (!ok) return;
 
     const payload = await useTauriCoreInvoke<any>("auth_login", {
-      site: normalizedSite
+      site: normalizedSite,
+      sessionId: accountId
     });
-    await applyLoginPayload(payload, { showToast: true, navigateHome: true });
+    await applyLoginPayload(payload, { showToast: true, navigateHome: true, accountId, siteName });
     void saveRecentSite(normalizedSite);
   } catch (e: any) {
     const raw = (e?.message || e || "").toString();
@@ -626,6 +678,7 @@ const handleConfirm = async () => {
     ].some((needle) => raw.includes(needle));
 
     hasValidationError.value = true;
+    validationField.value = "site";
     errorMessage.value = looksLikeSiteIssue ? t("Login.InvalidSiteError") : raw || t("Login.LoginFailed");
 
     if (!looksLikeSiteIssue) {
@@ -688,6 +741,7 @@ onMounted(async () => {
 
     if (reason === "invalid-site") {
       hasValidationError.value = true;
+      validationField.value = "site";
       errorMessage.value = t("Login.InvalidSiteError");
 
       nextTick(() => {
@@ -725,6 +779,7 @@ onMounted(async () => {
 
     if (reason === "invalid-site") {
       hasValidationError.value = true;
+      validationField.value = "site";
       errorMessage.value = t("Login.InvalidSiteError");
 
       nextTick(() => {
@@ -785,11 +840,11 @@ onBeforeUnmount(() => {
     @confirm="handleConfirm"
     @clipboard="handleClipboard"
   >
-    <div class="space-y-1">
+    <div class="space-y-3">
       <UInput
         ref="inputRef"
         v-model="inputSite"
-        :color="hasValidationError ? 'error' : 'primary'"
+        :color="validationField === 'site' ? 'error' : 'primary'"
         :ui="{ base: 'peer', leadingIcon: 'sidebar-icon', trailingIcon: 'sidebar-icon' }"
         placeholder=" "
         autocapitalize="none"
@@ -815,6 +870,23 @@ onBeforeUnmount(() => {
             @click="handleClearInput"
           />
         </template>
+      </UInput>
+
+      <UInput
+        ref="siteNameInputRef"
+        v-model="inputSiteName"
+        :color="validationField === 'name' ? 'error' : 'primary'"
+        :ui="{ base: 'peer', leadingIcon: 'sidebar-icon', trailingIcon: 'sidebar-icon' }"
+        placeholder=" "
+        @input="handleSiteNameInputSanitize"
+      >
+        <label
+          class="pointer-events-none absolute left-0 -top-2.5 text-xs font-medium px-1.5 transition-all peer-focus:-top-2.5 peer-focus:text-xs peer-focus:font-medium peer-placeholder-shown:text-sm peer-placeholder-shown:top-1.5 peer-placeholder-shown:font-normal"
+        >
+          <span class="inline-flex bg-default px-1">
+            {{ t("Login.SiteName") }}
+          </span>
+        </label>
       </UInput>
 
       <RecentSites

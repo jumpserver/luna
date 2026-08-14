@@ -13,6 +13,7 @@ type LoginPayload = UserIntiInfo & {
 };
 interface PersistedUserSnapshot {
   loggedIn?: boolean;
+  currentAccountId?: string;
   currentSite?: string;
   currentUser?: Record<string, any> | null;
   currentOrganizations?: PermOrgItem[];
@@ -86,11 +87,11 @@ export const useAuthSession = () => {
   const toast = useToast();
   const localePath = useLocalePath();
   const userInfoStore = useUserInfoStore();
-  const { currentSite, userMap } = storeToRefs(userInfoStore);
+  const { currentAccountId, userMap } = storeToRefs(userInfoStore);
 
   const applyLoginPayload = async (
     payload: LoginPayload | null | undefined,
-    options: { showToast?: boolean; navigateHome?: boolean } = {}
+    options: { showToast?: boolean; navigateHome?: boolean; accountId?: string; siteName?: string } = {}
   ) => {
     if (!payload || payload.status !== "success") return false;
 
@@ -99,8 +100,11 @@ export const useAuthSession = () => {
     const currentOrgData = parseApiData<any>(current_org, null);
     const permissionOrgData = parseApiData<PermissionOrgs>(permission_orgs, {} as PermissionOrgs);
     const resolvedSite = resolved_site || "";
+    const accountId = options.accountId || currentAccountId.value || resolvedSite;
+    const existingUser = userMap.value[accountId];
+    const siteName = options.siteName || existingUser?.siteName || resolvedSite;
 
-    if (!profileData || !resolvedSite) return false;
+    if (!profileData || !resolvedSite || !accountId) return false;
 
     const availableOrgs = initSelectOrganization(permissionOrgData);
     const currentOrg =
@@ -115,7 +119,9 @@ export const useAuthSession = () => {
             comment: ""
           };
 
-    userInfoStore.setUserData(resolvedSite, {
+    userInfoStore.setUserData(accountId, {
+      accountId,
+      siteName,
       name: profileData.name,
       bearerToken: bearer,
       site: resolvedSite,
@@ -153,47 +159,29 @@ export const useAuthSession = () => {
     return true;
   };
 
-  const getPersistedSite = () => {
-    const inMemorySite = currentSite.value || Object.keys(userMap.value || {})[0] || "";
-    if (inMemorySite) return inMemorySite;
+  const getPersistedAccount = () => {
+    const accountId = currentAccountId.value || Object.keys(userMap.value || {})[0] || "";
+    const userData = userMap.value[accountId];
 
-    if (!import.meta.client) return "";
+    if (!accountId || !userData?.site) return null;
 
-    try {
-      const raw = globalThis.localStorage?.getItem("userInfo");
-      if (!raw) return "";
-
-      const parsed = JSON.parse(raw) as {
-        currentSite?: string;
-        userMap?: Record<string, { site?: string }>;
-      };
-
-      if (parsed.currentSite) return parsed.currentSite;
-
-      const firstSite = Object.keys(parsed.userMap || {})[0] || "";
-      if (firstSite) return firstSite;
-
-      return Object.values(parsed.userMap || {})[0]?.site || "";
-    } catch (error) {
-      console.debug("read persisted userInfo failed", error);
-      return "";
-    }
+    return { accountId, userData };
   };
 
   const restorePersistedSnapshot = () => {
     if (!import.meta.client) return false;
 
     try {
-      const raw = globalThis.localStorage?.getItem("userInfo");
+      const raw = globalThis.localStorage?.getItem("userInfoV2");
       if (!raw) {
         console.info("restore persisted userInfo skipped: storage empty");
         return false;
       }
 
       const parsed = JSON.parse(raw) as PersistedUserSnapshot;
-      const snapshotSite = parsed.currentSite || Object.keys(parsed.userMap || {})[0] || "";
+      const snapshotAccountId = parsed.currentAccountId || "";
 
-      if (!snapshotSite || !parsed.userMap) {
+      if (!snapshotAccountId || !parsed.userMap?.[snapshotAccountId]) {
         console.info("restore persisted userInfo skipped: invalid snapshot", parsed);
         return false;
       }
@@ -202,7 +190,8 @@ export const useAuthSession = () => {
         // Only restore the remembered account context here. Real login state
         // must be revalidated against the backend session/token on startup.
         loggedIn: false,
-        currentSite: snapshotSite,
+        currentAccountId: snapshotAccountId,
+        currentSite: parsed.userMap[snapshotAccountId].site || parsed.currentSite || "",
         currentUser: (parsed.currentUser as any) || null,
         currentOrganizations: parsed.currentOrganizations || [],
         userMap: parsed.userMap as any,
@@ -211,10 +200,10 @@ export const useAuthSession = () => {
         currentConnectionPreferenceMap: (parsed.currentConnectionPreferenceMap as any) || {}
       });
 
-      userInfoStore.setCurrentSite(snapshotSite);
+      userInfoStore.setCurrentAccount(snapshotAccountId);
       userInfoStore.setUserLoggedIn(false);
       console.info("restore persisted userInfo success", {
-        snapshotSite,
+        snapshotAccountId,
         loggedIn: parsed.loggedIn,
         userCount: Object.keys(parsed.userMap || {}).length
       });
@@ -279,6 +268,8 @@ export const useAuthSession = () => {
     };
 
     userInfoStore.setUserData(site, {
+      accountId: site,
+      siteName: site,
       name: profileData.name || profileData.username || profileData.display_name || "",
       bearerToken: "",
       site,
@@ -357,18 +348,23 @@ export const useAuthSession = () => {
       return (await bootstrapWebCookieSession()) || restored;
     }
 
-    const site = getPersistedSite();
-    if (!site) {
-      console.info("bootstrap auth session skipped: missing persisted site");
+    const persistedAccount = getPersistedAccount();
+    if (!persistedAccount) {
+      console.info("bootstrap auth session skipped: missing persisted account");
       return false;
     }
+    const { accountId, userData } = persistedAccount;
+    const { site, siteName } = userData;
 
     try {
-      console.info("bootstrap auth session start", { site, restored });
+      console.info("bootstrap auth session start", { accountId, site, restored });
       for (const delay of BOOTSTRAP_RETRY_DELAYS_MS) {
         if (delay > 0) await wait(delay);
 
-        const payload = await useTauriCoreInvoke<LoginPayload>("bootstrap_auth_session", { site });
+        const payload = await useTauriCoreInvoke<LoginPayload>("bootstrap_auth_session", {
+          site,
+          sessionId: accountId
+        });
         const failure = classifyBootstrapFailure(payload);
 
         if (failure === "auth") {
@@ -382,8 +378,13 @@ export const useAuthSession = () => {
           continue;
         }
 
-        const applied = await applyLoginPayload(payload, { showToast: false, navigateHome: false });
-        console.info("bootstrap auth session applied", { site, applied });
+        const applied = await applyLoginPayload(payload, {
+          showToast: false,
+          navigateHome: false,
+          accountId,
+          siteName
+        });
+        console.info("bootstrap auth session applied", { accountId, site, applied });
 
         if (applied) {
           lastBootstrapFailure = null;

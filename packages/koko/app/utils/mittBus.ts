@@ -1,5 +1,4 @@
 import type { Ref } from "vue";
-import type { TerminalMittEvent } from "#koko/composables/terminal/protocol";
 import type { OnlineUser, ShareUserOptions } from "#koko/types";
 
 import mitt from "mitt";
@@ -40,7 +39,6 @@ interface Event extends Record<string | symbol, unknown> {
   };
   writeDataToTerminal: { type: string };
   "write-command": { type: string };
-  [TerminalMittEvent.OpenSearch]: void;
   "connect-error": void;
   "close-drawer": void;
 }

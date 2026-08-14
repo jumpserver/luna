@@ -45,6 +45,7 @@ function recentTableLabel(node: ChenTreeNode, path: ChenTreeNode[], dbType: stri
 
 export function useChenRecentTables(scope: string) {
   const entries = useLocalStorage<ChenRecentTable[]>(`jumpserver-client:chen-recent-tables:${scope}`, []);
+  entries.value = entries.value.slice(0, RECENT_TABLE_LIMIT);
 
   function add(node: ChenTreeNode, path: ChenTreeNode[], dbType = "") {
     if (node.type !== "table" && node.type !== "view") return;

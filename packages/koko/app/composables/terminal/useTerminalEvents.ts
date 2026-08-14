@@ -83,6 +83,7 @@ export const useKokoTerminalEvents = () => {
 
     hostBridge: context.hostBridge,
     setClipboardAccess: context.setClipboardAccess,
+    canUseClipboard: context.canUseClipboard,
     validateClipboardText: context.validateClipboardText
   };
 };

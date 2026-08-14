@@ -1,13 +1,76 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from "@nuxt/ui";
+
+import { connectorSessionKey } from "@jumpserver/connectors-core";
+import { useKokoHostAdapter } from "@jumpserver/koko/host";
 import KokoSearchInput from "#koko/components/SearchInput/index.vue";
 import { TerminalMittEvent } from "#koko/composables/terminal/protocol";
 import { useKokoTerminalEvents } from "#koko/composables/terminal/useTerminalEvents";
 import { useKokoTerminalSocket } from "#koko/composables/terminal/useTerminalSocket";
 
 const showSearchInput = ref(false);
+const { t } = useI18n();
+const host = useKokoHostAdapter();
+const sessionContext = inject(connectorSessionKey, null);
 const { onMittEvent } = useKokoTerminalEvents();
-const { connectionError, containerRef, searchAddon, zmodem } = useKokoTerminalSocket();
+const {
+  connectionError,
+  containerRef,
+  canUseClipboard,
+  contextMenuPosition,
+  contextMenuVisible,
+  copySelection,
+  pasteClipboard,
+  searchAddon,
+  selectionText,
+  zmodem
+} = useKokoTerminalSocket();
 const { uploadOpen, fileInfo, confirmUpload, cancelUpload } = zmodem;
+const tabId = computed(() => unref(sessionContext)?.tabId || "");
+
+function closeContextMenu() {
+  contextMenuVisible.value = false;
+}
+
+const contextMenuItems = computed<DropdownMenuItem[]>(() => [
+  {
+    label: t("koko.actions.copy"),
+    icon: "i-lucide-copy",
+    disabled: !selectionText.value || !canUseClipboard("copy"),
+    onSelect: () => {
+      closeContextMenu();
+      void copySelection();
+    }
+  },
+  {
+    label: t("koko.actions.paste"),
+    icon: "i-lucide-clipboard-paste",
+    disabled: !canUseClipboard("paste"),
+    onSelect: () => {
+      closeContextMenu();
+      void pasteClipboard();
+    }
+  },
+  { type: "separator" as const },
+  {
+    label: t("koko.terminal.splitVertically"),
+    icon: "i-lucide-columns-2",
+    disabled: !tabId.value || !host.canSplitSession(tabId.value, "vertical"),
+    onSelect: () => {
+      closeContextMenu();
+      host.splitSession(tabId.value, "vertical");
+    }
+  },
+  {
+    label: t("koko.terminal.splitHorizontally"),
+    icon: "i-lucide-rows-2",
+    disabled: !tabId.value || !host.canSplitSession(tabId.value, "horizontal"),
+    onSelect: () => {
+      closeContextMenu();
+      host.splitSession(tabId.value, "horizontal");
+    }
+  }
+]);
 
 onMittEvent(TerminalMittEvent.OpenSearch, () => {
   showSearchInput.value = true;
@@ -50,6 +113,18 @@ const onUploadChange = (event: Event) => {
 
   <div class="relative h-full w-full min-h-0">
     <div id="terminal-container" ref="containerRef" class="h-full w-full min-h-0" />
+    <UDropdownMenu
+      :open="contextMenuVisible"
+      :items="contextMenuItems"
+      size="sm"
+      :content="{ align: 'start', side: 'bottom' }"
+      @update:open="(open) => (contextMenuVisible = open)"
+    >
+      <div
+        class="pointer-events-none fixed size-px"
+        :style="{ left: `${contextMenuPosition.x}px`, top: `${contextMenuPosition.y}px` }"
+      />
+    </UDropdownMenu>
     <div
       v-if="connectionError"
       class="absolute inset-0 grid place-items-center bg-default px-6 text-center text-sm text-muted"

@@ -126,12 +126,7 @@ it("uses terminal envelopes for Kubernetes tree and terminal traffic", () => {
     requestId: create.requestId,
     params: { type: KubernetesTerminalMessageType.Created }
   });
-  client.sendTerminalData(
-    "control-1",
-    "tab-1",
-    { namespace: "default", pod: "pod-1", container: "main" },
-    "whoami"
-  );
+  client.sendTerminalData("control-1", "tab-1", { namespace: "default", pod: "pod-1", container: "main" }, "whoami");
   client.resizeTerminal("control-1", "tab-1", 100, 30);
   client.closeTerminal("control-1", "tab-1");
 

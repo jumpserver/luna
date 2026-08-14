@@ -96,7 +96,8 @@ export function useBaseWorkspaceSession(tab: Ref<KokoWorkspaceTab>, options: Use
         tabId: tab.value.id,
         colorMode: colorMode.value,
         themeType: themeType.value,
-        disableAutoHash: options.disableAutoHash
+        disableAutoHash: options.disableAutoHash,
+        actions: tab.value.payload?.actions || token.value?.actions
       };
 
       host.markSessionConnected(tab.value.id);

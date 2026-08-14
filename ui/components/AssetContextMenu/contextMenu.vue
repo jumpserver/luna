@@ -179,10 +179,9 @@ function handleUnfavorite() {
     size="sm"
     :ui="{
       content:
-        'w-52 rounded-xl border border-black/6 bg-white/92 p-1.5 shadow-xl shadow-black/5 backdrop-blur dark:border-white/10 dark:bg-zinc-950/92 dark:shadow-none',
+        'rounded-xl border border-black/6 bg-white/92 p-1.5 shadow-xl shadow-black/5 backdrop-blur dark:border-white/10 dark:bg-zinc-950/92 dark:shadow-none',
       item: 'min-h-8 rounded-lg px-2 py-1.5 text-[12px] font-medium',
       itemLeadingIcon: 'size-3.5 text-gray-500 dark:text-gray-400',
-      label: 'truncate',
       separator: 'my-1 border-black/6 dark:border-white/10'
     }"
     @update:open="emits('update:visible', $event)"

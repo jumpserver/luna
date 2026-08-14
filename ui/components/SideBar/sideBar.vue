@@ -656,7 +656,6 @@ watch(
       :items="assetContextMenuItems"
       size="sm"
       :content="{ align: 'start', side: 'bottom' }"
-      :ui="{ content: 'w-44 p-1' }"
       @update:open="contextMenuVisible = $event"
     >
       <div

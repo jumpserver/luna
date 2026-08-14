@@ -28,6 +28,7 @@ type TerminalEvents = Record<string, unknown> & {
   [TerminalEventType.Host]: { event: string; data: unknown };
   [TerminalEventType.Session]: TerminalSessionInfo;
   [TerminalEventType.Connect]: { id: string };
+  [TerminalMittEvent.OpenSearch]: void;
 };
 
 interface TerminalContext {
@@ -39,6 +40,7 @@ interface TerminalContext {
   onMittEvent: (event: TerminalMittEvent, callback: () => void) => () => void;
   sendHostEvent: (event: string, data: unknown) => void;
   setClipboardAccess: (permission?: ClipboardPermission | null, policy?: ClipboardPolicy | null) => void;
+  canUseClipboard: (direction: ClipboardDirection) => boolean;
   validateClipboardText: (direction: ClipboardDirection, text: string) => boolean;
 }
 
@@ -49,14 +51,20 @@ export const createKokoTerminalContext = (): TerminalContext => {
   const hostBridge = createHostBridge();
   const connectionStore = useKokoConnectionStore();
   const sessionCtxRef = inject(connectorSessionKey, null);
-  const clipboardAccess = shallowRef(createUnrestrictedClipboardAccess());
+  const tokenActions = unref(sessionCtxRef)?.actions;
+  const clipboardAccess = shallowRef(
+    tokenActions ? resolveClipboardAccess({ actions: tokenActions }) : createUnrestrictedClipboardAccess()
+  );
   const toast = useToast();
   const { t } = useI18n();
   let unbindPostMessage: (() => void) | undefined;
 
   const setClipboardAccess = (permission?: ClipboardPermission | null, policy?: ClipboardPolicy | null) => {
-    clipboardAccess.value = resolveClipboardAccess(permission, policy);
+    const effectivePermission = permission ?? (tokenActions ? { actions: tokenActions } : undefined);
+    clipboardAccess.value = resolveClipboardAccess(effectivePermission, policy);
   };
+
+  const canUseClipboard = (direction: ClipboardDirection) => clipboardAccess.value[direction].enabled;
 
   const validateClipboardText = (direction: ClipboardDirection, text: string) => {
     const result = validateClipboardAccess(clipboardAccess.value, direction, text);
@@ -170,12 +178,12 @@ export const createKokoTerminalContext = (): TerminalContext => {
   };
 
   const sendMittEvent = (event: TerminalMittEvent) => {
-    mittBus.emit(event);
+    eventBus.emit(event);
   };
 
   const onMittEvent = (event: TerminalMittEvent, callback: () => void) => {
-    mittBus.on(event, callback);
-    return () => mittBus.off(event, callback);
+    eventBus.on(event, callback);
+    return () => eventBus.off(event, callback);
   };
 
   const initialize = () => {
@@ -199,6 +207,7 @@ export const createKokoTerminalContext = (): TerminalContext => {
     sendMittEvent,
     onMittEvent,
     setClipboardAccess,
+    canUseClipboard,
     validateClipboardText
   };
 };

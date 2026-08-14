@@ -10,6 +10,7 @@ pub struct ApiSessionStore {
 
 #[derive(Debug, Clone)]
 pub struct ApiSessionContext {
+    pub session_key: String,
     pub origin: String,
     pub bearer_token: String,
     pub org_id: String,
@@ -62,6 +63,7 @@ impl ApiSessionStore {
         let session_key = values.get(CURRENT_SESSION_KEY)?.clone();
 
         Some(ApiSessionContext {
+            session_key: session_key.clone(),
             origin: values
                 .get(&Self::field_key(&session_key, "origin"))?
                 .clone(),

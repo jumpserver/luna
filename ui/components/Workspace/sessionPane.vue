@@ -34,19 +34,46 @@ const connectOtherModalOpen = ref(false);
 const connectOtherSearch = ref("");
 const connectOtherPaneId = ref("");
 const PANE_EDGE_DROP_THRESHOLD = 0.3;
+const PANE_MIN_RATIO = 20;
+const PANE_RESIZE_STEP = 2;
+type PaneResizeAxis = "columns" | "rows";
 
-const paneGridClass = computed(() => {
-  switch (props.tab.layoutMode) {
-    case "columns-2":
-      return "grid-cols-2";
-    case "rows-2":
-      return "grid-rows-2";
-    case "grid-2x2":
-      return "grid-cols-2 grid-rows-2";
-    default:
-      return "";
-  }
-});
+const paneGrid = ref<HTMLElement | null>(null);
+const resizingAxis = ref<PaneResizeAxis | "">("");
+const paneSplitRatios = reactive<Record<string, Record<PaneResizeAxis, number>>>({});
+watch(
+  () => props.tab.id,
+  (tabId) => {
+    paneSplitRatios[tabId] ||= { columns: 50, rows: 50 };
+  },
+  { immediate: true }
+);
+const paneRatios = computed(() => paneSplitRatios[props.tab.id]!);
+const hasColumnDivider = computed(() => props.tab.layoutMode === "columns-2" || props.tab.layoutMode === "grid-2x2");
+const hasRowDivider = computed(() => props.tab.layoutMode === "rows-2" || props.tab.layoutMode === "grid-2x2");
+const paneGridStyle = computed(() => ({
+  gridTemplateColumns: hasColumnDivider.value
+    ? `minmax(0, ${paneRatios.value.columns}fr) minmax(0, ${100 - paneRatios.value.columns}fr)`
+    : "minmax(0, 1fr)",
+  gridTemplateRows: hasRowDivider.value
+    ? `minmax(0, ${paneRatios.value.rows}fr) minmax(0, ${100 - paneRatios.value.rows}fr)`
+    : "minmax(0, 1fr)"
+}));
+const hasThreePanes = computed(() => props.tab.layoutMode === "grid-2x2" && props.tab.panes.length === 3);
+const threePaneSpanAxis = computed(() => props.tab.threePaneSpanAxis || "rows");
+const columnDividerStyle = computed(() => ({
+  left: `${paneRatios.value.columns}%`,
+  top: hasThreePanes.value && threePaneSpanAxis.value === "columns" ? `${paneRatios.value.rows}%` : "0"
+}));
+const rowDividerStyle = computed(() => ({
+  left: hasThreePanes.value && threePaneSpanAxis.value === "rows" ? `${paneRatios.value.columns}%` : "0",
+  top: `${paneRatios.value.rows}%`
+}));
+
+function paneGridItemStyle(index: number) {
+  if (!hasThreePanes.value || index !== 0) return;
+  return threePaneSpanAxis.value === "columns" ? { gridColumn: "1 / span 2" } : { gridRow: "1 / span 2" };
+}
 const setupPane = computed(() => {
   const activeSetupPane = props.tab.panes.find((pane) => pane.id === activePaneId.value && pane.mode === "setup");
 
@@ -86,6 +113,56 @@ function setPaneSurfaceTarget(paneId: string, element: unknown) {
 function focusPane(paneId: string) {
   setActivePane(paneId);
   focusPaneSurface(paneId);
+}
+
+function setPaneRatio(axis: PaneResizeAxis, ratio: number) {
+  paneRatios.value[axis] = Math.min(100 - PANE_MIN_RATIO, Math.max(PANE_MIN_RATIO, ratio));
+}
+
+function resizePanes(event: PointerEvent) {
+  const axis = resizingAxis.value;
+  const grid = paneGrid.value;
+  if (!axis || !grid) return;
+
+  const bounds = grid.getBoundingClientRect();
+  const ratio =
+    axis === "columns"
+      ? ((event.clientX - bounds.left) / bounds.width) * 100
+      : ((event.clientY - bounds.top) / bounds.height) * 100;
+  setPaneRatio(axis, ratio);
+}
+
+function beginPaneResize(axis: PaneResizeAxis, event: PointerEvent) {
+  if (event.button !== 0) return;
+  resizingAxis.value = axis;
+  (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  resizePanes(event);
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function endPaneResize(event: PointerEvent) {
+  const target = event.currentTarget as HTMLElement;
+  if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
+  resizingAxis.value = "";
+}
+
+function resizePanesWithKeyboard(axis: PaneResizeAxis, event: KeyboardEvent) {
+  const delta =
+    axis === "columns"
+      ? event.key === "ArrowLeft"
+        ? -PANE_RESIZE_STEP
+        : event.key === "ArrowRight"
+          ? PANE_RESIZE_STEP
+          : 0
+      : event.key === "ArrowUp"
+        ? -PANE_RESIZE_STEP
+        : event.key === "ArrowDown"
+          ? PANE_RESIZE_STEP
+          : 0;
+  if (!delta) return;
+  setPaneRatio(axis, paneRatios.value[axis] + delta);
+  event.preventDefault();
 }
 
 function surfaceTabFor(pane: WorkspacePane) {
@@ -349,9 +426,10 @@ onBeforeUnmount(() => {
   <div class="h-full min-h-0 w-full overflow-hidden">
     <div class="relative h-full min-h-0">
       <div
+        ref="paneGrid"
         class="grid h-full min-h-0 gap-px bg-[var(--workspace-surface-sub-border)]"
+        :style="paneGridStyle"
         :class="[
-          paneGridClass,
           isDraggingExternalTab ? 'relative z-20' : '',
           dragOverWorkspace ? 'ring-2 ring-inset ring-primary/40' : ''
         ]"
@@ -359,9 +437,10 @@ onBeforeUnmount(() => {
         @drop.prevent="handleWorkspaceDrop"
       >
         <section
-          v-for="pane in tab.panes"
+          v-for="(pane, paneIndex) in tab.panes"
           :key="pane.id"
           class="group relative flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--workspace-surface-sub-panel)] transition-[box-shadow]"
+          :style="paneGridItemStyle(paneIndex)"
           :class="[
             showPaneDropHint(pane.id)
               ? 'ring-2 ring-inset ring-primary/50 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]'
@@ -371,7 +450,7 @@ onBeforeUnmount(() => {
           <header
             v-if="showPaneHeaders"
             draggable="true"
-            class="relative z-[2] flex h-8 shrink-0 items-center justify-between gap-3 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-header)] px-2.5 transition-colors"
+            class="relative z-[2] flex h-9 shrink-0 items-center justify-between gap-3 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-header)] px-2.5 transition-colors"
             @dragstart="handlePaneDragStart($event, pane.id)"
             @dragend="handlePaneDragEnd"
           >
@@ -385,7 +464,7 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-              class="flex shrink-0 items-center gap-1.5 transition-opacity"
+              class="flex shrink-0 items-center gap-1 transition-opacity"
               :class="
                 isActivePane(pane.id)
                   ? 'opacity-100'
@@ -398,6 +477,8 @@ onBeforeUnmount(() => {
                 color="neutral"
                 variant="ghost"
                 icon="i-lucide-refresh-cw"
+                class="size-6 justify-center rounded-lg p-0 text-muted hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
+                :ui="{ leadingIcon: 'm-0 size-3.5' }"
                 :aria-label="t('WorkspacePane.Reconnect')"
                 @click="void reconnectSession(surfaceTabFor(pane))"
               />
@@ -407,6 +488,8 @@ onBeforeUnmount(() => {
                 color="neutral"
                 variant="ghost"
                 icon="i-lucide-x"
+                class="size-6 justify-center rounded-lg p-0 text-muted hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
+                :ui="{ leadingIcon: 'm-0 size-3.5' }"
                 :aria-label="t('WorkspacePane.ClosePane')"
                 @click="closePane(pane.id)"
               />
@@ -480,6 +563,52 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </section>
+      </div>
+
+      <div
+        v-if="hasColumnDivider"
+        role="separator"
+        tabindex="0"
+        aria-orientation="vertical"
+        :aria-label="t('WorkspacePane.ResizeColumns')"
+        :aria-valuenow="Math.round(paneRatios.columns)"
+        aria-valuemin="20"
+        aria-valuemax="80"
+        class="group absolute bottom-0 z-[5] w-2 -translate-x-1/2 cursor-col-resize touch-none outline-none"
+        :style="columnDividerStyle"
+        @pointerdown="beginPaneResize('columns', $event)"
+        @pointermove="resizePanes"
+        @pointerup="endPaneResize"
+        @pointercancel="endPaneResize"
+        @keydown="resizePanesWithKeyboard('columns', $event)"
+      >
+        <span
+          class="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors group-hover:bg-primary/70 group-focus-visible:bg-primary"
+          :class="resizingAxis === 'columns' ? 'bg-primary' : 'bg-transparent'"
+        />
+      </div>
+
+      <div
+        v-if="hasRowDivider"
+        role="separator"
+        tabindex="0"
+        aria-orientation="horizontal"
+        :aria-label="t('WorkspacePane.ResizeRows')"
+        :aria-valuenow="Math.round(paneRatios.rows)"
+        aria-valuemin="20"
+        aria-valuemax="80"
+        class="group absolute right-0 z-[5] h-2 -translate-y-1/2 cursor-row-resize touch-none outline-none"
+        :style="rowDividerStyle"
+        @pointerdown="beginPaneResize('rows', $event)"
+        @pointermove="resizePanes"
+        @pointerup="endPaneResize"
+        @pointercancel="endPaneResize"
+        @keydown="resizePanesWithKeyboard('rows', $event)"
+      >
+        <span
+          class="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 transition-colors group-hover:bg-primary/70 group-focus-visible:bg-primary"
+          :class="resizingAxis === 'rows' ? 'bg-primary' : 'bg-transparent'"
+        />
       </div>
 
       <WorkspaceAclPaneHost v-if="activeAclPaneId" :scope-id="activeAclPaneId" />

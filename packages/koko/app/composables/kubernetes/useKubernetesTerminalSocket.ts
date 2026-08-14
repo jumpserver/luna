@@ -233,7 +233,11 @@ export function useKubernetesTerminalSocket(): KubernetesTerminalSocketClient {
 
       if (message.type === KubernetesTerminalMessageType.Ping) {
         try {
-          sendCommand({ id: message.id, type: KubernetesTerminalMessageType.Pong, data: KubernetesTerminalControlData.Pong });
+          sendCommand({
+            id: message.id,
+            type: KubernetesTerminalMessageType.Pong,
+            data: KubernetesTerminalControlData.Pong
+          });
         } catch (cause) {
           emitFailure(KubernetesTerminalSocketFailureCode.PingReplyFailed, cause);
         }

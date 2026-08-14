@@ -40,7 +40,7 @@ const normalizeSnippet = (raw: any): Snippet | null => {
 
 export const useSnippets = () => {
   const userInfoStore = useUserInfoStore();
-  const { loggedIn, currentSite } = storeToRefs(userInfoStore);
+  const { loggedIn, currentAccountId } = storeToRefs(userInfoStore);
   const snippets = useState<Snippet[]>("sidebar-snippets", () => []);
   const loading = useState<boolean>("sidebar-snippets-loading", () => false);
   const saving = ref(false);
@@ -69,7 +69,7 @@ export const useSnippets = () => {
     }
   };
 
-  watch([loggedIn, currentSite], () => {
+  watch([loggedIn, currentAccountId], () => {
     snippets.value = [];
   });
 

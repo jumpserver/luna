@@ -67,6 +67,7 @@ export const useKokoTerminalSocket = () => {
     sendMittEvent,
     sendToHost,
     setClipboardAccess,
+    canUseClipboard,
     validateClipboardText
   } = useKokoTerminalEvents();
 
@@ -76,6 +77,8 @@ export const useKokoTerminalSocket = () => {
   const sessionId = ref("");
   const terminalId = ref("");
   const selectionText = ref("");
+  const contextMenuVisible = ref(false);
+  const contextMenuPosition = ref({ x: 0, y: 0 });
   const lastSendTime = ref(new Date());
   const lastReceiveTime = ref(new Date());
   const onlineUsers = ref<OnlineUser[]>([]);
@@ -149,6 +152,11 @@ export const useKokoTerminalSocket = () => {
     fitToContainer();
   };
 
+  const openContextMenu = (event: MouseEvent) => {
+    contextMenuPosition.value = { x: event.clientX, y: event.clientY };
+    contextMenuVisible.value = true;
+  };
+
   const debouncedResize = useDebounceFn(({ cols, rows }: { cols: number; rows: number }) => {
     if (!socketRef.value || !isSocketOpen(socketRef.value)) return;
     socketRef.value.send(
@@ -173,10 +181,7 @@ export const useKokoTerminalSocket = () => {
     isSocketOpen,
     isZmodemActive: zmodem.isActiveSession,
     abortZmodem: zmodem.abortActiveSession,
-    rightClickPasteEnabled: () => {
-      const socket = socketRef.value;
-      return Boolean(unref(sessionCtxRef)?.tabId && terminalId.value && socket && isSocketOpen(socket));
-    },
+    onContextMenu: openContextMenu,
     getTerminalConfig: () => terminalSettingsStore.getConfig,
     onResize: debouncedResize,
     onHostKey: debouncedSendHostKey,
@@ -414,5 +419,16 @@ export const useKokoTerminalSocket = () => {
     connectionStore.resetConnectionState();
   });
 
-  return { searchAddon, connectionError, containerRef, zmodem };
+  return {
+    searchAddon,
+    connectionError,
+    containerRef,
+    contextMenuPosition,
+    contextMenuVisible,
+    canUseClipboard,
+    copySelection: input.copySelection,
+    pasteClipboard: input.pasteClipboard,
+    selectionText,
+    zmodem
+  };
 };

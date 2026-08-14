@@ -60,7 +60,7 @@ export interface ConnectionState {
 
 export interface TerminalSessionInfo {
   session: { ip: string; id: string; user: string; asset: string; userId: string };
-  permission: { actions: string[] };
+  permission: ClipboardPermission;
   clipboard_policy?: ClipboardPolicy | null;
   backspaceAsCtrlH: boolean;
   ctrlCAsCtrlZ: boolean;
@@ -84,7 +84,7 @@ export interface ClipboardPolicy {
 }
 
 export interface ClipboardPermission {
-  actions?: string[];
+  actions?: Array<string | { value?: string }>;
 }
 
 export interface ClipboardDirectionAccess {

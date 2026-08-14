@@ -52,6 +52,7 @@ interface TreeRow {
 
 const props = defineProps<{ tab: KokoWorkspaceTab }>();
 const emit = defineEmits<{ reconnect: [] }>();
+const RECENT_CONTAINER_LIMIT = 10;
 const { t } = useI18n();
 const toast = useToast();
 const tab = toRef(props, "tab");
@@ -68,6 +69,7 @@ const recentContainers = useLocalStorage<ConnectTarget[]>(
   `jumpserver-client:kubernetes-recent-containers:${props.tab.assetId}`,
   []
 );
+recentContainers.value = recentContainers.value.slice(0, RECENT_CONTAINER_LIMIT);
 const sidebarWidth = ref(260);
 const resizingSidebar = ref(false);
 const connectionError = ref("");
@@ -305,7 +307,6 @@ const treeRows = computed<TreeRow[]>(() => {
 
 function rowIcon(row: TreeRow) {
   if (row.kind === "recent-root") return "i-lucide-history";
-  if (row.kind === "asset-root") return "i-lucide-boxes";
   if (row.kind === "namespace") return row.expanded ? "i-lucide-folder-open" : "i-lucide-folder";
   if (row.kind === "pod") return "i-lucide-box";
   return "i-lucide-container";
@@ -375,7 +376,7 @@ function openTerminal(target: ConnectTarget) {
       ...recentContainers.value.filter(
         (item) => item.namespace !== target.namespace || item.pod !== target.pod || item.container !== target.container
       )
-    ].slice(0, 10);
+    ].slice(0, RECENT_CONTAINER_LIMIT);
   }
 
   const tabItem: TerminalTab = {
@@ -388,6 +389,10 @@ function openTerminal(target: ConnectTarget) {
   terminalTabs.value.push(tabItem);
   activeTabId.value = tabItem.id;
   nextTick(() => mountTerminal(tabItem, target));
+}
+
+function clearRecentContainers() {
+  recentContainers.value = [];
 }
 
 function connectCluster() {
@@ -567,7 +572,7 @@ onUnmounted(() => {
               :aria-label="t('koko.kubernetes.connectCluster')"
               @click="connectCluster"
             >
-              <UIcon name="i-lucide-square-terminal" class="size-4" />
+              <UIcon name="i-lucide-square-terminal" class="size-3.5" />
             </button>
           </UTooltip>
           <UTooltip :text="t('koko.actions.search')" :delay-duration="150">
@@ -579,7 +584,7 @@ onUnmounted(() => {
               :aria-pressed="searchVisible"
               @click="toggleSearch"
             >
-              <UIcon name="i-lucide-search" class="size-4" />
+              <UIcon name="i-lucide-search" class="size-3.5" />
             </button>
           </UTooltip>
           <UTooltip :text="t('koko.kubernetes.refreshTree')" :delay-duration="150">
@@ -589,7 +594,7 @@ onUnmounted(() => {
               :aria-label="t('koko.kubernetes.refreshTree')"
               @click="refreshTree"
             >
-              <UIcon name="i-lucide-refresh-cw" class="size-4" />
+              <UIcon name="i-lucide-refresh-cw" class="size-3.5" />
             </button>
           </UTooltip>
         </div>
@@ -607,28 +612,50 @@ onUnmounted(() => {
         </div>
         <div class="min-h-0 flex-1 overflow-auto px-2 py-2">
           <template v-for="row in treeRows" :key="`${row.kind}:${keyOf(row.node)}`">
-            <button
-              class="flex h-7 w-full items-center gap-1 rounded-lg pr-1 text-left text-xs text-(--app-fg) hover:bg-(--app-hover-soft)"
-              :class="isRowActive(row) ? 'bg-(--app-selected-soft) text-primary' : ''"
-              :style="{ paddingLeft: `${6 + row.depth * 12}px` }"
-              :title="row.kind === 'container' ? containerLabel(row.node) : row.node.label"
-              @click="handleRowClick(row)"
-            >
-              <UIcon
-                v-if="row.kind !== 'container'"
-                :name="row.expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
-                class="size-4 shrink-0 text-(--app-muted)"
-              />
-              <span v-else class="size-4 shrink-0" />
-              <UIcon
-                :name="rowIcon(row)"
-                class="size-3.5 shrink-0"
-                :class="row.kind === 'namespace' ? 'tree-folder-icon' : ''"
-              />
-              <span class="min-w-0 flex-1 truncate">
-                {{ row.kind === "container" && search.trim() ? containerLabel(row.node) : row.node.label }}
-              </span>
-            </button>
+            <div class="group relative">
+              <button
+                class="flex h-7 w-full items-center gap-1 rounded-lg pr-1 text-left text-xs text-(--app-fg) hover:bg-(--app-hover-soft)"
+                :class="[
+                  isRowActive(row) ? 'bg-(--app-selected-soft) text-primary' : '',
+                  row.kind === 'recent-root' && recentContainers.length ? 'pr-6' : ''
+                ]"
+                :style="{ paddingLeft: `${6 + row.depth * 12}px` }"
+                :title="row.kind === 'container' ? containerLabel(row.node) : row.node.label"
+                @click="handleRowClick(row)"
+              >
+                <UIcon
+                  v-if="row.kind !== 'container'"
+                  :name="row.expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
+                  class="size-4 shrink-0 text-(--app-muted)"
+                />
+                <span v-else class="size-4 shrink-0" />
+                <img
+                  v-if="row.kind === 'asset-root'"
+                  src="/icons/kubernetes.svg"
+                  alt=""
+                  class="size-3.5 shrink-0"
+                />
+                <UIcon
+                  v-else
+                  :name="rowIcon(row)"
+                  class="size-3.5 shrink-0"
+                  :class="row.kind === 'namespace' ? 'tree-folder-icon' : ''"
+                />
+                <span class="min-w-0 flex-1 truncate">
+                  {{ row.kind === "container" && search.trim() ? containerLabel(row.node) : row.node.label }}
+                </span>
+              </button>
+              <button
+                v-if="row.kind === 'recent-root' && recentContainers.length"
+                type="button"
+                class="absolute top-1 right-1 grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-[color,background-color,opacity] group-hover:opacity-100 hover:bg-[var(--app-hover-strong)] hover:text-highlighted focus-visible:opacity-100"
+                :aria-label="t('koko.kubernetes.clearRecentContainers')"
+                :title="t('koko.kubernetes.clearRecentContainers')"
+                @click.stop="clearRecentContainers"
+              >
+                <UIcon name="i-lucide-trash-2" class="size-3.5" />
+              </button>
+            </div>
           </template>
           <div v-if="search.trim() && !treeRows.length" class="px-3 py-2 text-xs text-(--app-muted)">
             {{ t("koko.kubernetes.noMatchingContainers") }}

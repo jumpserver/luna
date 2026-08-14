@@ -50,7 +50,7 @@ const tabTitleFormatModel = computed({
             aria-label="刷新"
             @click="emit('refresh')"
           >
-            <UIcon name="i-lucide-refresh-cw" class="size-4" />
+            <UIcon name="i-lucide-refresh-cw" class="size-3.5" />
           </button>
         </UTooltip>
         <UPopover :content="{ align: 'end', side: 'bottom', sideOffset: 6 }" :ui="{ content: 'p-0' }">
@@ -60,7 +60,7 @@ const tabTitleFormatModel = computed({
             aria-label="工作台设置"
             title="工作台设置"
           >
-            <UIcon name="i-lucide-settings-2" class="size-4" />
+            <UIcon name="i-lucide-settings-2" class="size-3.5" />
           </button>
 
           <template #content>

@@ -465,7 +465,6 @@ onBeforeUnmount(() => {
       v-model:open="contextMenuOpen"
       :items="contextMenuItems"
       :content="{ align: 'start', side: 'bottom' }"
-      :ui="{ content: 'w-72 p-1' }"
     >
       <div
         class="pointer-events-none fixed"

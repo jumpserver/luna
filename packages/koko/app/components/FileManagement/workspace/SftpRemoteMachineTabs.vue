@@ -246,7 +246,6 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
       :items="contextMenuItems"
       size="sm"
       :content="{ align: 'start', side: 'bottom', sideOffset: 4 }"
-      :ui="{ content: 'min-w-44' }"
       @update:open="(open) => (!open ? hideContextMenu() : (contextMenuVisible = open))"
     >
       <div

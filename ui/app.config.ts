@@ -83,14 +83,15 @@ export default defineAppConfig({
     dropdownMenu: {
       slots: {
         content:
-          "w-(--reka-dropdown-menu-trigger-width) p-1 bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
+          "w-max min-w-48 max-w-[calc(100vw-1rem)] sm:max-w-96 p-1 bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
         viewport: "relative overflow-y-auto flex-1",
         group: "p-1 isolate",
         label:
           "w-full flex items-center px-2 py-1 text-[11px] font-semibold text-[var(--app-muted)] uppercase tracking-[0.08em]",
         separator: "-mx-1 my-1 h-px bg-[var(--app-border)]",
         item: "mx-0.5 px-3 py-1.5 rounded-md leading-5 transition-colors duration-150 text-[var(--app-fg)] data-highlighted:bg-[var(--app-hover-soft)] data-[state=open]:bg-[var(--app-hover-soft)] data-highlighted:text-[var(--app-fg)] data-[state=open]:text-[var(--app-fg)]",
-        itemLabel: "text-sm"
+        itemWrapper: "min-w-0 flex-1",
+        itemLabel: "text-sm whitespace-normal break-words overflow-visible text-clip"
       }
     },
     modal: {

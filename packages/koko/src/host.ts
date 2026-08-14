@@ -56,6 +56,8 @@ export interface KokoHostAdapter {
   registerSessionCloseGuard?: (tabId: string, guard: () => boolean | Promise<boolean>) => () => void;
   setSessionDetails: (tabId: string, details: Record<string, unknown>) => void;
   clearSessionDetails: (tabId: string) => void;
+  canSplitSession: (tabId: string, direction: "horizontal" | "vertical") => boolean;
+  splitSession: (tabId: string, direction: "horizontal" | "vertical") => void;
   sftp: KokoSftpHostAdapter;
   theme: KokoThemeAdapter;
 }

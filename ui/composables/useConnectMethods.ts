@@ -250,10 +250,10 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
 };
 
 export const useConnectMethods = () => {
-  const { currentSite, orgId } = storeToRefs(useUserInfoStore());
+  const { currentAccountId, orgId } = storeToRefs(useUserInfoStore());
 
   const fetchConnectMethods = async (): Promise<ConnectMethodsResponse> => {
-    const key = `${currentSite.value || ""}:${orgId.value || ""}`;
+    const key = `${currentAccountId.value || ""}:${orgId.value || ""}`;
     const cached = connectMethodsCache.get(key);
 
     if (cached) {

@@ -1731,7 +1731,6 @@ defineExpose({ focus });
       v-model:open="contextMenuVisible"
       :items="contextMenuItems"
       :content="{ align: 'start', side: 'bottom' }"
-      :ui="{ content: 'w-48 p-1' }"
       @update:open="
         (open) => {
           if (!open) closeActionMenu();

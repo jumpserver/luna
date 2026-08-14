@@ -97,7 +97,7 @@ function shortcutHintLabel(index: number) {
 }
 
 const tabDropdownUi = {
-  content: "w-48 p-1",
+  content: "p-1",
   item: "gap-2 items-center",
   itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]",
   itemWrapper: "min-w-0 flex-1",

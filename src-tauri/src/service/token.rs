@@ -22,7 +22,7 @@ pub struct TokenRecord {
 }
 
 pub struct TokenService {
-    site: String,
+    token_key: String,
 }
 
 #[cfg(all(debug_assertions, target_os = "macos"))]
@@ -49,7 +49,7 @@ fn configure_token_store() -> std::result::Result<(), String> {
     keyring::use_native_store(false).map_err(|error| error.to_string())
 }
 
-fn token_entry(site: &str) -> Result<Entry> {
+fn token_entry(token_key: &str) -> Result<Entry> {
     #[cfg(all(debug_assertions, target_os = "macos"))]
     configure_token_store().map_err(anyhow::Error::msg)?;
 
@@ -59,7 +59,7 @@ fn token_entry(site: &str) -> Result<Entry> {
         .as_ref()
         .map_err(|error| anyhow::anyhow!(error.clone()))?;
 
-    Ok(Entry::new(SERVICE_NAME, site)?)
+    Ok(Entry::new(SERVICE_NAME, token_key)?)
 }
 
 #[cfg(all(debug_assertions, target_os = "macos"))]
@@ -71,8 +71,10 @@ fn release_token_store() {
 fn release_token_store() {}
 
 impl TokenService {
-    pub fn new(site: impl Into<String>) -> Self {
-        Self { site: site.into() }
+    pub fn new(token_key: impl Into<String>) -> Self {
+        Self {
+            token_key: token_key.into(),
+        }
     }
 
     pub async fn persist(
@@ -89,13 +91,13 @@ impl TokenService {
             client_id: client_id.map(|c| c.to_string()),
         };
         let payload = serde_json::to_string(&record)?;
-        let site = self.site.clone();
+        let token_key = self.token_key.clone();
 
         tokio::task::spawn_blocking(move || -> Result<()> {
             let _guard = TOKEN_STORE_LOCK
                 .lock()
                 .map_err(|error| anyhow::anyhow!("Token store lock failed: {error}"))?;
-            let result = token_entry(&site)?.set_password(&payload);
+            let result = token_entry(&token_key)?.set_password(&payload);
             release_token_store();
             result?;
             Ok(())
@@ -106,12 +108,12 @@ impl TokenService {
     }
 
     pub async fn load(&self) -> Result<Option<TokenRecord>> {
-        let site = self.site.clone();
+        let token_key = self.token_key.clone();
         tokio::task::spawn_blocking(move || -> Result<Option<TokenRecord>> {
             let _guard = TOKEN_STORE_LOCK
                 .lock()
                 .map_err(|error| anyhow::anyhow!("Token store lock failed: {error}"))?;
-            let entry = token_entry(&site)?;
+            let entry = token_entry(&token_key)?;
             let result = match entry.get_password() {
                 Ok(val) => Ok(Some(serde_json::from_str(&val)?)),
                 Err(KeyringError::NoEntry) => Ok(None),
@@ -125,12 +127,12 @@ impl TokenService {
     }
 
     pub async fn delete(&self) -> Result<()> {
-        let site = self.site.clone();
+        let token_key = self.token_key.clone();
         tokio::task::spawn_blocking(move || -> Result<()> {
             let _guard = TOKEN_STORE_LOCK
                 .lock()
                 .map_err(|error| anyhow::anyhow!("Token store lock failed: {error}"))?;
-            if let Ok(entry) = token_entry(&site) {
+            if let Ok(entry) = token_entry(&token_key) {
                 let _ = entry.delete_credential();
                 drop(entry);
                 release_token_store();

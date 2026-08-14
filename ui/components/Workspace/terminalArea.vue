@@ -65,10 +65,10 @@ const openLogin = () => {
               </span>
             </div>
             <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-download" class="size-4.5 shrink-0" />
+              <UIcon name="i-lucide-maximize-2" class="size-4.5 shrink-0" />
               <span>
-                <strong :style="{ color: 'var(--app-fg)' }">帮助 → 下载</strong>
-                ，下载最新客户端
+                <strong :style="{ color: 'var(--app-fg)' }">右击会话标签 → 纯净模式</strong>
+                ，长按 Esc 退出纯净模式
               </span>
             </div>
             <div class="flex items-center gap-2">

@@ -13,7 +13,18 @@ const connectingCount = computed(
   () => tabs.value.filter((tab) => tab.status === "connecting" || tab.status === "ready").length
 );
 const failedCount = computed(() => tabs.value.filter((tab) => tab.status === "failed").length);
-const siteName = computed(() => currentUser.value?.site || "");
+const username = computed(() => currentUser.value?.name || "");
+const siteName = computed(() => currentUser.value?.siteName || currentUser.value?.site || "");
+const siteAddress = computed(() => currentUser.value?.site || "");
+const loginStatusText = computed(() => {
+  if (!loggedIn.value) return "未登录";
+
+  const user = username.value;
+  if (!user) return "已登录";
+  if (!isTauriRuntime() || !siteName.value) return `已登录 ${user}`;
+
+  return `已登录 ${user}(${siteName.value})`;
+});
 const activeProtocol = computed(() => activeTab.value?.protocol?.toUpperCase() || "");
 const activeText = computed(() => {
   if (activeWorkspaceMode.value !== "assets") return t("Menu.Tool");
@@ -34,15 +45,11 @@ const activeText = computed(() => {
     <div class="flex min-w-0 items-center gap-3">
       <span class="flex items-center gap-1.5">
         <span class="size-1.5 rounded-full" :class="loggedIn ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-gray-500'" />
-        <span class="truncate">{{ loggedIn ? "已登录" : "未登录" }}</span>
-      </span>
-
-      <span v-if="siteName" class="hidden min-w-0 truncate sm:inline">
-        {{ siteName }}
+        <span class="truncate" :title="isTauriRuntime() ? siteAddress : undefined">{{ loginStatusText }}</span>
       </span>
     </div>
 
-    <div class="flex min-w-0 items-center gap-3">
+    <div class="ml-auto flex min-w-0 items-center gap-3">
       <span class="hidden min-w-0 items-center gap-2 truncate md:flex">
         <span class="truncate font-ui-mono">{{ activeText }}</span>
         <span

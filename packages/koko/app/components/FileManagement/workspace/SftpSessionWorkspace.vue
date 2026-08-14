@@ -150,10 +150,7 @@ function handleRemotePaneConnected(): void {
       @transfer-endpoint-unmounted="unmountTransferEndpoint"
     />
 
-    <div
-      v-show="!compact && dualMode"
-      class="flex min-h-0 min-w-0 flex-1 flex-col border-l border-default"
-    >
+    <div v-show="!compact && dualMode" class="flex min-h-0 min-w-0 flex-1 flex-col border-l border-default">
       <div v-if="remotePanes.length" class="flex min-h-0 flex-1 flex-col">
         <div
           class="sftp-file-management__machine-tabs flex shrink-0 items-center gap-1 overflow-x-auto bg-[var(--workspace-surface-main)] px-2"

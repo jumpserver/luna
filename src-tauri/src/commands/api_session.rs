@@ -28,7 +28,13 @@ pub(crate) async fn fresh_api_context(
         .current_context()
         .ok_or_else(|| "missing current api session".to_string())?;
 
-    let bearer = match ensure_fresh_token(&context.origin, Some(&context.bearer_token)).await {
+    let bearer = match ensure_fresh_token(
+        &context.origin,
+        &context.session_key,
+        Some(&context.bearer_token),
+    )
+    .await
+    {
         Ok(bearer) => bearer,
         Err(error) if !context.bearer_token.is_empty() => {
             log::warn!(

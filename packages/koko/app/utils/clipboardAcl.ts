@@ -17,7 +17,10 @@ const hasAction = (permission: ClipboardPermission | null | undefined, action: C
     return true;
   }
 
-  return permission.actions.includes("all") || permission.actions.includes(action);
+  return permission.actions.some((item) => {
+    const value = typeof item === "string" ? item : item?.value;
+    return value === "all" || value === action;
+  });
 };
 
 const resolveDirectionAccess = (

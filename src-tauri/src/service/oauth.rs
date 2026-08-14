@@ -99,8 +99,8 @@ pub struct AuthFlowState {
 
 impl OAuthTokenSet {
     /// 将 OAuth token 写入本地安全存储。
-    pub async fn persist(&self, site: &str, client_id: &str) -> Result<()> {
-        let token_service = TokenService::new(site.to_string());
+    pub async fn persist(&self, token_key: &str, client_id: &str) -> Result<()> {
+        let token_service = TokenService::new(token_key.to_string());
 
         token_service
             .persist(
@@ -313,8 +313,8 @@ pub async fn exchange_authorization_code(
 }
 
 /// 撤销并删除本地保存的 OAuth token。
-pub async fn revoke_and_clear_tokens(site: &str) -> Result<()> {
-    let token_service = TokenService::new(site.to_string());
+pub async fn revoke_and_clear_tokens(site: &str, token_key: &str) -> Result<()> {
+    let token_service = TokenService::new(token_key.to_string());
 
     if let Some(entry) = token_service.load().await? {
         if let Some(refresh_token) = entry.refresh_token {
@@ -335,8 +335,12 @@ pub async fn revoke_and_clear_tokens(site: &str) -> Result<()> {
 }
 
 /// 确保 access_token 可用；如果即将过期，则使用 refresh_token 刷新并写回本地存储。
-pub async fn ensure_fresh_token(site: &str, provided: Option<&str>) -> Result<String> {
-    let token_service = TokenService::new(site.to_string());
+pub async fn ensure_fresh_token(
+    site: &str,
+    token_key: &str,
+    provided: Option<&str>,
+) -> Result<String> {
+    let token_service = TokenService::new(token_key.to_string());
     let entry = token_service.load().await?;
 
     let stored_access = entry.as_ref().map(|token| token.access_token.clone());
@@ -357,7 +361,7 @@ pub async fn ensure_fresh_token(site: &str, provided: Option<&str>) -> Result<St
         let http_client = oauth_client_for_origin(site)?;
         let tokens = refresh_access_token(site, &client_id, refresh_token, &http_client).await?;
 
-        tokens.persist(site, &client_id).await?;
+        tokens.persist(token_key, &client_id).await?;
 
         access = Some(tokens.access_token);
     }

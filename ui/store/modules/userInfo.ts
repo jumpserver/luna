@@ -20,6 +20,7 @@ export type SiteUserData = UserData & {
 export const useUserInfoStore = defineStore(
   "userInfo",
   () => {
+    const currentAccountId = ref("");
     const currentSite = ref("");
     const loggedIn = ref(false);
 
@@ -35,16 +36,16 @@ export const useUserInfoStore = defineStore(
 
     /**
      * @description 将当前前端会话同步给 Rust 请求层
-     * @param site
+     * @param accountId
      * @param userData
      */
-    const syncApiSession = (site: string, userData: UserData) => {
+    const syncApiSession = (accountId: string, userData: UserData) => {
       if (!isTauriRuntime()) return;
-      if (!site || !userData.bearerToken || !userData.org?.id) return;
+      if (!accountId || !userData.bearerToken || !userData.org?.id) return;
 
       void useTauriCoreInvoke("set_api_session", {
-        sessionKey: site,
-        origin: site,
+        sessionKey: accountId,
+        origin: userData.site,
         bearerToken: userData.bearerToken,
         orgId: userData.org.id
       }).catch((error) => {
@@ -53,9 +54,9 @@ export const useUserInfoStore = defineStore(
     };
 
     watch(
-      [currentSite, currentUser],
-      ([site, userData]) => {
-        if (site && userData) syncApiSession(site, userData);
+      [currentAccountId, currentUser],
+      ([accountId, userData]) => {
+        if (accountId && userData) syncApiSession(accountId, userData);
       },
       { immediate: true }
     );
@@ -70,37 +71,39 @@ export const useUserInfoStore = defineStore(
 
     /**
      * @description 获取用户数据
-     * @param site
+     * @param accountId
      */
-    const getUserData = (site: string) => {
-      if (!(site in userMap.value)) {
+    const getUserData = (accountId: string) => {
+      if (!(accountId in userMap.value)) {
         return null;
       }
 
-      return userMap.value[site];
+      return userMap.value[accountId];
     };
 
     /**
      * @description 设置用户数据
-     * @param site
+     * @param accountId
      * @param userData
      */
-    const setUserData = (site: string, userData: UserData) => {
-      const previous = userMap.value[site];
+    const setUserData = (accountId: string, userData: UserData) => {
+      const previous = userMap.value[accountId];
       const next: SiteUserData = {
         ...previous,
         ...userData,
+        accountId,
         connectionInfoMap: previous?.connectionInfoMap || {},
         connectionPreferenceMap: previous?.connectionPreferenceMap || {},
         protocolConnectionPreferenceMap: previous?.protocolConnectionPreferenceMap || {},
         rdpClientOption: previous?.rdpClientOption || {}
       };
 
-      userMap.value[site] = next;
+      userMap.value[accountId] = next;
       currentUser.value = next;
-      currentSite.value = site;
+      currentAccountId.value = accountId;
+      currentSite.value = next.site;
       loggedIn.value = true;
-      syncApiSession(site, next);
+      syncApiSession(accountId, next);
 
       // 初始化当前站点连接信息映射、偏好映射以及 RDP 客户端选项
       currentConnectionInfoMap.value = next.connectionInfoMap || {};
@@ -120,32 +123,36 @@ export const useUserInfoStore = defineStore(
 
     /**
      * @description 删除用户数据
-     * @param site
+     * @param accountId
      */
-    const deleteUserData = (site: string) => {
+    const deleteUserData = (accountId: string) => {
+      const userData = userMap.value[accountId];
+
       // 退出当前站点时立即请求清理其 Cookie
-      if (isTauriRuntime()) {
+      if (isTauriRuntime() && userData) {
         useTauriCoreInvoke("logout", {
           name: "main",
-          site
+          site: userData.site,
+          sessionId: accountId
         });
       }
 
-      if (!(site in userMap.value)) {
+      if (!userData) {
         return;
       }
 
-      delete userMap.value[site];
+      delete userMap.value[accountId];
 
       // 如果还有用户，则切换到下一个用户
       if (hasUser.value) {
-        const nextUser = Object.values(userMap.value)[0] as SiteUserData | undefined;
+        const nextEntry = Object.entries(userMap.value)[0] as [string, SiteUserData] | undefined;
 
-        if (nextUser) {
-          userMap.value[nextUser.site] = nextUser;
+        if (nextEntry) {
+          const [nextAccountId, nextUser] = nextEntry;
           currentUser.value = nextUser;
+          currentAccountId.value = nextAccountId;
           currentSite.value = nextUser.site;
-          syncApiSession(nextUser.site, nextUser);
+          syncApiSession(nextAccountId, nextUser);
 
           // 同步连接信息映射、偏好映射以及 RDP 客户端选项
           currentConnectionInfoMap.value = nextUser.connectionInfoMap || {};
@@ -160,6 +167,7 @@ export const useUserInfoStore = defineStore(
           });
         }
       } else {
+        currentAccountId.value = "";
         currentSite.value = "";
         loggedIn.value = false;
         currentUser.value = null;
@@ -177,20 +185,18 @@ export const useUserInfoStore = defineStore(
     };
 
     /**
-     * @description 设置当前站点
-     * @param site
+     * @description 设置当前账号
+     * @param accountId
      */
-    const setCurrentSite = (site: string) => {
-      currentSite.value = site;
-
-      // 当切换站点时，同时更新当前组织列表
-      const userData = getUserData(site);
+    const setCurrentAccount = (accountId: string) => {
+      const userData = getUserData(accountId);
 
       if (userData) {
-        userMap.value[site] = userData as SiteUserData;
+        currentAccountId.value = accountId;
+        currentSite.value = userData.site;
         currentUser.value = userData as SiteUserData;
         currentOrganizations.value = (userData as SiteUserData).availableOrgs || [];
-        syncApiSession(site, userData);
+        syncApiSession(accountId, userData);
 
         // 同步当前站点的连接信息映射、偏好映射以及 RDP 客户端选项
         currentConnectionInfoMap.value = (userData as SiteUserData).connectionInfoMap || {};
@@ -210,13 +216,13 @@ export const useUserInfoStore = defineStore(
     const setOrganizations = (orgs: PermOrgItem[]) => {
       currentOrganizations.value = orgs;
 
-      if (currentUser.value && currentSite.value) {
+      if (currentUser.value && currentAccountId.value) {
         const updatedUserData = {
           ...currentUser.value,
           availableOrgs: orgs
         };
 
-        userMap.value[currentSite.value] = updatedUserData as SiteUserData;
+        userMap.value[currentAccountId.value] = updatedUserData as SiteUserData;
         currentUser.value = updatedUserData;
       }
     };
@@ -226,7 +232,7 @@ export const useUserInfoStore = defineStore(
      * @param org
      */
     const setCurrentOrg = (org: PermOrgItem) => {
-      if (!currentUser.value || !currentSite.value) {
+      if (!currentUser.value || !currentAccountId.value) {
         console.error("No current user or site when setting organization");
         return;
       }
@@ -237,7 +243,7 @@ export const useUserInfoStore = defineStore(
       };
 
       currentUser.value = updatedUserData as UserData;
-      userMap.value[currentSite.value] = updatedUserData as SiteUserData;
+      userMap.value[currentAccountId.value] = updatedUserData as SiteUserData;
 
       if (isTauriRuntime()) {
         void useTauriCoreInvoke("set_api_org", {
@@ -267,9 +273,9 @@ export const useUserInfoStore = defineStore(
      * @param assetId 资产 ID
      */
     const getConnectionInfoForAsset = (assetId: string) => {
-      if (!currentSite.value) return null;
+      if (!currentAccountId.value) return null;
 
-      const siteData = userMap.value[currentSite.value];
+      const siteData = userMap.value[currentAccountId.value];
       return siteData?.connectionInfoMap?.[assetId] || null;
     };
 
@@ -278,9 +284,9 @@ export const useUserInfoStore = defineStore(
      * @param assetId 资产 ID
      */
     const getConnectionPreferenceForAsset = (assetId: string) => {
-      if (!currentSite.value) return null;
+      if (!currentAccountId.value) return null;
 
-      const siteData = userMap.value[currentSite.value];
+      const siteData = userMap.value[currentAccountId.value];
       return siteData?.connectionPreferenceMap?.[assetId] || null;
     };
 
@@ -289,9 +295,9 @@ export const useUserInfoStore = defineStore(
      * @param protocol 协议名称
      */
     const getConnectionPreferenceForProtocol = (protocol: string) => {
-      if (!currentSite.value || !protocol) return null;
+      if (!currentAccountId.value || !protocol) return null;
 
-      const siteData = userMap.value[currentSite.value];
+      const siteData = userMap.value[currentAccountId.value];
       return siteData?.protocolConnectionPreferenceMap?.[protocol.toLowerCase()] || null;
     };
 
@@ -301,9 +307,9 @@ export const useUserInfoStore = defineStore(
      * @param connectionInfo
      */
     const setConnectionInfoForAsset = (assetId: string, connectionInfo: ConnectionInfo) => {
-      if (!currentSite.value) return;
-      const site = currentSite.value;
-      const siteData = userMap.value[site];
+      if (!currentAccountId.value) return;
+      const accountId = currentAccountId.value;
+      const siteData = userMap.value[accountId];
 
       if (!siteData) return;
 
@@ -333,8 +339,8 @@ export const useUserInfoStore = defineStore(
      * @param assetId
      */
     const deleteConnectionInfoForAsset = (assetId: string) => {
-      if (!currentSite.value) return;
-      const siteData = userMap.value[currentSite.value];
+      if (!currentAccountId.value) return;
+      const siteData = userMap.value[currentAccountId.value];
 
       if (!siteData?.connectionInfoMap?.[assetId]) return;
 
@@ -348,9 +354,9 @@ export const useUserInfoStore = defineStore(
      * @param preference
      */
     const setConnectionPreferenceForAsset = (assetId: string, preference: ConnectionPreferenceInfo) => {
-      if (!currentSite.value) return;
-      const site = currentSite.value;
-      const siteData = userMap.value[site];
+      if (!currentAccountId.value) return;
+      const accountId = currentAccountId.value;
+      const siteData = userMap.value[accountId];
 
       if (!siteData) return;
 
@@ -381,8 +387,8 @@ export const useUserInfoStore = defineStore(
      * @param preference 连接偏好
      */
     const setConnectionPreferenceForProtocol = (protocol: string, preference: ProtocolConnectionPreferenceInfo) => {
-      if (!currentSite.value || !protocol || !preference.connectMethod) return;
-      const siteData = userMap.value[currentSite.value];
+      if (!currentAccountId.value || !protocol || !preference.connectMethod) return;
+      const siteData = userMap.value[currentAccountId.value];
 
       if (!siteData) return;
 
@@ -401,11 +407,11 @@ export const useUserInfoStore = defineStore(
       currentRdpClientOption.value = rdpClientOption;
 
       // 同步到当前站点的用户数据中，便于持久化/切换站点后恢复
-      if (currentSite.value && userMap.value[currentSite.value]) {
-        const site = currentSite.value;
-        const siteData = userMap.value[site] as SiteUserData;
+      if (currentAccountId.value && userMap.value[currentAccountId.value]) {
+        const accountId = currentAccountId.value;
+        const siteData = userMap.value[accountId] as SiteUserData;
 
-        userMap.value[site] = {
+        userMap.value[accountId] = {
           ...siteData,
           rdpClientOption
         } as SiteUserData;
@@ -416,6 +422,7 @@ export const useUserInfoStore = defineStore(
       orgId,
       userMap,
       loggedIn,
+      currentAccountId,
       currentSite,
       currentUser,
       currentOrganizations,
@@ -426,7 +433,7 @@ export const useUserInfoStore = defineStore(
       setUserData,
       getUserData,
       setCurrentOrg,
-      setCurrentSite,
+      setCurrentAccount,
       deleteUserData,
       setUserLoggedIn,
       setOrganizations,
@@ -443,12 +450,13 @@ export const useUserInfoStore = defineStore(
   },
   {
     persist: {
-      key: "userInfo",
+      key: "userInfoV2",
       storage: localStorage,
       pick: [
         "userMap",
         "loggedIn",
         "currentUser",
+        "currentAccountId",
         "currentSite",
         "currentOrganizations",
         "currentRdpClientOption",

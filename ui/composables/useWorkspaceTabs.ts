@@ -35,6 +35,7 @@ export interface WorkspacePane extends WorkspaceSurfaceSession {
 export interface WorkspaceSessionTab extends WorkspaceSurfaceSession {
   title?: string;
   layoutMode: WorkspacePaneLayoutMode;
+  threePaneSpanAxis?: "columns" | "rows";
   panes: WorkspacePane[];
 }
 
@@ -132,10 +133,12 @@ const setLayoutForPaneCount = (
 ) => {
   if (count <= 1) {
     tab.layoutMode = "single";
+    tab.threePaneSpanAxis = undefined;
     return;
   }
 
   if (count === 2) {
+    tab.threePaneSpanAxis = undefined;
     if (preferredDirection) {
       tab.layoutMode = preferredDirection === "vertical" ? "columns-2" : "rows-2";
       return;
@@ -146,6 +149,11 @@ const setLayoutForPaneCount = (
   }
 
   tab.layoutMode = "grid-2x2";
+  if (count === 3) {
+    tab.threePaneSpanAxis ||= preferredDirection === "horizontal" ? "columns" : "rows";
+  } else {
+    tab.threePaneSpanAxis = undefined;
+  }
 };
 
 const orderPanesForMerge = (
@@ -620,16 +628,18 @@ export const useWorkspaceTabs = () => {
     }
 
     if (tab.panes.length === 2) {
-      const newPanes = [createEmptyPane(tab.id), createEmptyPane(tab.id)];
-      tab.panes.push(...newPanes);
+      tab.threePaneSpanAxis = tab.layoutMode === "rows-2" ? "columns" : "rows";
+      const pane = createEmptyPane(tab.id);
+      tab.panes.push(pane);
       tab.layoutMode = "grid-2x2";
-      activePaneId.value = newPanes[0]!.id;
-      return newPanes;
+      activePaneId.value = pane.id;
+      return [pane];
     }
 
     const pane = createEmptyPane(tab.id);
     tab.panes.push(pane);
     tab.layoutMode = "grid-2x2";
+    tab.threePaneSpanAxis = undefined;
     activePaneId.value = pane.id;
     return [pane];
   };

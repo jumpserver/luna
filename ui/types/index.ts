@@ -119,6 +119,8 @@ export interface RoleType {
 }
 
 export interface UserData {
+  accountId: string;
+  siteName: string;
   site: string;
   name: string;
   language?: string;

@@ -256,7 +256,7 @@ export function createKokoTerminalMessageHandlers(options: {
     [MESSAGE_TYPE.TERMINAL_SESSION]: (message) => {
       const sessionInfo = parseJson<{
         session: { id: string; asset?: string; ip?: string; user?: string };
-        permission?: { actions?: string[] };
+        permission?: ClipboardPermission | null;
         clipboard_policy?: ClipboardPolicy | null;
         backspaceAsCtrlH?: boolean;
         ctrlCAsCtrlZ?: boolean;
