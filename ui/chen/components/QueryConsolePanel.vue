@@ -79,6 +79,47 @@ const contextItems = computed(() =>
     onSelect: () => emit("changeContext", props.tab, context)
   }))
 );
+const aiItems = computed(() => {
+  const statementEmpty = !props.tab.statement.trim();
+
+  return [
+    {
+      label: t("RightPanel.SQLAIGenerate"),
+      icon: "i-lucide-wand-sparkles",
+      disabled: contextBusy.value,
+      onSelect: () => emit("aiGenerate", props.tab)
+    },
+    {
+      label: t("RightPanel.SQLAIExplain"),
+      icon: "i-lucide-message-square-text",
+      disabled: contextBusy.value || statementEmpty,
+      onSelect: () => emit("aiExplain", props.tab)
+    },
+    {
+      label: t("RightPanel.SQLAIRepair"),
+      icon: "i-lucide-wrench",
+      disabled: contextBusy.value || statementEmpty,
+      onSelect: () => emit("aiRepair", props.tab)
+    }
+  ];
+});
+const sqlFileItems = computed(() => [
+  {
+    label: "Open",
+    icon: "i-lucide-folder-open",
+    onSelect: openSnippetDialog
+  },
+  {
+    label: "Save",
+    icon: "i-lucide-save",
+    onSelect: openSaveSnippetDialog
+  },
+  {
+    label: "Upload SQL",
+    icon: "i-lucide-upload",
+    onSelect: () => sqlUploadInput.value?.click()
+  }
+]);
 
 const messageColor = computed(() => {
   if (props.tab.message?.type === "error") return "error";
@@ -260,68 +301,32 @@ defineExpose({ editorSnapshot });
         >
           Format
         </UButton>
-        <UButton
-          icon="i-lucide-folder-open"
-          size="sm"
-          color="neutral"
-          variant="soft"
-          :disabled="queryBusy"
-          @click="openSnippetDialog"
-        >
-          Open
-        </UButton>
-        <UButton
-          icon="i-lucide-save"
-          size="sm"
-          color="neutral"
-          variant="soft"
-          :disabled="queryBusy"
-          @click="openSaveSnippetDialog"
-        >
-          Save
-        </UButton>
         <input ref="sqlUploadInput" type="file" accept=".sql" class="hidden" @change="handleSqlFileChange" />
-        <UButton
-          icon="i-lucide-upload"
-          size="sm"
-          color="neutral"
-          variant="soft"
-          :loading="tab.uploadingSql"
-          :disabled="queryBusy || tab.uploadingSql"
-          @click="sqlUploadInput?.click()"
-        >
-          Upload SQL
-        </UButton>
-        <UButton
-          icon="i-lucide-wand-sparkles"
-          size="sm"
-          color="neutral"
-          variant="soft"
-          :disabled="contextBusy"
-          @click="emit('aiGenerate', tab)"
-        >
-          {{ t("RightPanel.SQLAIGenerate") }}
-        </UButton>
-        <UButton
-          icon="i-lucide-message-square-text"
-          size="sm"
-          color="neutral"
-          variant="soft"
-          :disabled="contextBusy || !tab.statement.trim()"
-          @click="emit('aiExplain', tab)"
-        >
-          {{ t("RightPanel.SQLAIExplain") }}
-        </UButton>
-        <UButton
-          icon="i-lucide-wrench"
-          size="sm"
-          color="neutral"
-          variant="soft"
-          :disabled="contextBusy || !tab.statement.trim()"
-          @click="emit('aiRepair', tab)"
-        >
-          {{ t("RightPanel.SQLAIRepair") }}
-        </UButton>
+        <UDropdownMenu :items="sqlFileItems">
+          <UButton
+            icon="i-lucide-file-text"
+            trailing-icon="i-lucide-chevron-down"
+            size="sm"
+            color="neutral"
+            variant="soft"
+            :loading="tab.uploadingSql"
+            :disabled="queryBusy || tab.uploadingSql"
+          >
+            SQL
+          </UButton>
+        </UDropdownMenu>
+        <UDropdownMenu :items="aiItems">
+          <UButton
+            icon="i-lucide-sparkles"
+            trailing-icon="i-lucide-chevron-down"
+            size="sm"
+            color="neutral"
+            variant="soft"
+            :disabled="contextBusy"
+          >
+            AI
+          </UButton>
+        </UDropdownMenu>
         <UDropdownMenu :items="contextItems">
           <UButton
             class="ml-auto"

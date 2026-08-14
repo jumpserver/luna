@@ -42,8 +42,6 @@ const {
           <component
             :is="assetTree"
             :search="remoteAssetSearch"
-            :show-recent-connections="true"
-            :recent-connections-label="t('koko.fileManagement.recentConnections')"
             open
             @select="connectRemoteAsset"
           />

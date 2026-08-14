@@ -173,7 +173,10 @@ export const useKokoTerminalSocket = () => {
     isSocketOpen,
     isZmodemActive: zmodem.isActiveSession,
     abortZmodem: zmodem.abortActiveSession,
-    quickPaste: () => terminalSettingsStore.quickPaste || "0",
+    rightClickPasteEnabled: () => {
+      const socket = socketRef.value;
+      return Boolean(unref(sessionCtxRef)?.tabId && terminalId.value && socket && isSocketOpen(socket));
+    },
     getTerminalConfig: () => terminalSettingsStore.getConfig,
     onResize: debouncedResize,
     onHostKey: debouncedSendHostKey,

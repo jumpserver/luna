@@ -13,6 +13,8 @@
 @theme {
   --font-sans: "Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "SFMono-Regular", "JetBrains Mono", "Cascadia Code", "Fira Code", "Menlo", "Consolas", monospace;
+  --text-regular: 13px;
+  --text-sm: 13px;
   --color-secondary: var(--ui-color-secondary-500);
   --color-elevated: #1e1e20;
 }

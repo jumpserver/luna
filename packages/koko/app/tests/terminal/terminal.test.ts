@@ -87,6 +87,7 @@ it("blocks denied copy and paste events before xterm handles them", () => {
     onSelectionChange: vi.fn()
   };
   const validate = vi.fn(() => false);
+  const rightClickPasteEnabled = vi.fn(() => false);
   const input = useKokoTerminalInput({
     container: ref(container as HTMLElement),
     terminal: ref(terminal as never),
@@ -99,7 +100,7 @@ it("blocks denied copy and paste events before xterm handles them", () => {
     isSocketOpen: vi.fn(() => true),
     isZmodemActive: vi.fn(() => false),
     abortZmodem: vi.fn(),
-    quickPaste: vi.fn(() => "0"),
+    rightClickPasteEnabled,
     getTerminalConfig: vi.fn(() => ({ fontFamily: "monospace" })),
     onResize: vi.fn(),
     onHostKey: vi.fn(),
@@ -116,11 +117,20 @@ it("blocks denied copy and paste events before xterm handles them", () => {
   const pasteEvent = new Event("paste", { bubbles: true, cancelable: true }) as ClipboardEvent;
   Object.defineProperty(pasteEvent, "clipboardData", { value: { getData: () => "pasted text" } });
   const copyEvent = new Event("copy", { bubbles: true, cancelable: true }) as ClipboardEvent;
+  const disabledContextMenuEvent = new Event("contextmenu", { cancelable: true }) as MouseEvent;
+  Object.defineProperty(disabledContextMenuEvent, "ctrlKey", { value: false });
+  container.dispatchEvent(disabledContextMenuEvent);
+  rightClickPasteEnabled.mockReturnValue(true);
+  const enabledContextMenuEvent = new Event("contextmenu", { cancelable: true }) as MouseEvent;
+  Object.defineProperty(enabledContextMenuEvent, "ctrlKey", { value: false });
   container.dispatchEvent(pasteEvent);
   container.dispatchEvent(copyEvent);
+  container.dispatchEvent(enabledContextMenuEvent);
 
   expect(pasteEvent.defaultPrevented).toBe(true);
   expect(copyEvent.defaultPrevented).toBe(true);
+  expect(disabledContextMenuEvent.defaultPrevented).toBe(false);
+  expect(enabledContextMenuEvent.defaultPrevented).toBe(true);
   expect(validate.mock.calls).toEqual([
     ["paste", "pasted text"],
     ["copy", "selected text"]

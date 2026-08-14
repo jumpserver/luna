@@ -21,7 +21,7 @@ export function useKokoTerminalInput(options: {
   isSocketOpen: (socket: WebSocket) => boolean;
   isZmodemActive: () => boolean;
   abortZmodem: () => void;
-  quickPaste: () => string;
+  rightClickPasteEnabled: () => boolean;
   getTerminalConfig: () => Partial<ILunaConfig>;
   onResize: (size: { cols: number; rows: number }) => void;
   onHostKey: (key: string) => void;
@@ -46,7 +46,7 @@ export function useKokoTerminalInput(options: {
       terminal.focus();
     };
     const onContextMenu = async (event: MouseEvent) => {
-      if (event.ctrlKey || options.quickPaste() !== "1") return;
+      if (event.ctrlKey || !options.rightClickPasteEnabled()) return;
       event.preventDefault();
       let text = "";
       try {

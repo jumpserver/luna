@@ -170,14 +170,14 @@ describe("sftp professional workbench", () => {
     expect(remoteTabsComponent).not.toContain("border-primary/50");
   });
 
-  it("places organization selection first and supports replacing the active tab", () => {
+  it("places organization selection first, reuses the shared asset tree, and supports replacing the active tab", () => {
     expect(connectModalComponent.indexOf("organizationSelector")).toBeLessThan(
       connectModalComponent.indexOf("remoteAssetSearch")
     );
     expect(connectModalComponent).not.toContain("currentOrganization");
     expect(connectModalComponent).not.toContain("border border-default bg-elevated/40");
-    expect(connectModalComponent).toContain(':show-recent-connections="true"');
-    expect(connectModalComponent).toContain(":recent-connections-label");
+    expect(connectModalComponent).not.toContain("show-recent-connections");
+    expect(connectModalComponent).not.toContain("recent-connections-label");
     expect(connectModalComponent).not.toContain('v-for="item in recentConnections"');
     expect(connectModalComponent).toContain("openRemoteInCurrentTab");
     expect(workspacePanesComposable).toContain(
