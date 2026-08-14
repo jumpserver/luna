@@ -21,6 +21,7 @@ import {
 } from "#koko/composables/sftp/file-manager/transfer";
 import { useSftpPaneSelection } from "#koko/composables/sftp/file-manager/useSftpPaneSelection";
 import { useSftpRemotePaneActions } from "#koko/composables/sftp/file-manager/useSftpRemotePaneActions";
+import { useSftpShowHiddenFiles } from "#koko/composables/sftp/file-manager/useSftpShowHiddenFiles";
 import { useSftpFileManager } from "#koko/composables/sftp/useSftpFileManager";
 import { KeyboardKey } from "#koko/constants/keyboard";
 
@@ -31,6 +32,7 @@ const props = defineProps<{
   compact?: boolean;
   highlightedNames?: string[];
   focused?: boolean;
+  sendPeerDirection?: "left" | "right";
 }>();
 const emit = defineEmits<{
   select: [entry: SftpFileEntry | null];
@@ -53,9 +55,10 @@ const search = ref("");
 const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextEntry = ref<SftpFileEntry | null>(null);
+const { showHiddenFiles, filterHiddenEntries } = useSftpShowHiddenFiles();
 const visibleEntries = computed(() => {
   const query = search.value.toLowerCase();
-  return manager.entries.value
+  return filterHiddenEntries(manager.entries.value)
     .filter((entry) => entry.name.toLowerCase().includes(query))
     .sort((left, right) => {
       if (left.name === "..") return -1;
@@ -306,7 +309,7 @@ defineExpose({
   <div
     v-else
     class="sftp-file-management relative flex h-full min-h-0 flex-col bg-(--app-main-bg) text-(--app-fg) outline-none"
-    :class="{ 'sftp-file-management--compact': compact, 'ring-1 ring-inset ring-primary/40': focused && !compact }"
+    :class="{ 'sftp-file-management--compact': compact }"
     tabindex="0"
     @mousedown="focusPane"
     @dragenter="onTransferDragOver"
@@ -315,6 +318,7 @@ defineExpose({
   >
     <SftpRemotePaneToolbar
       v-model:search="search"
+      v-model:show-hidden-files="showHiddenFiles"
       :manager="manager"
       :title="title"
       :path-segments="pathSegments"
@@ -323,10 +327,15 @@ defineExpose({
       @create-file="createFile"
       @upload="uploadFromEvent"
     />
-    <div v-if="manager.loading.value" class="grid flex-1 place-items-center">
+    <div v-if="manager.loading.value && !manager.entries.value.length" class="grid flex-1 place-items-center">
       <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
     </div>
     <div v-else class="relative flex min-h-0 flex-1 flex-col bg-(--app-main-bg)">
+      <div
+        v-if="manager.loading.value && manager.entries.value.length"
+        class="sftp-file-table__refresh-bar"
+        aria-hidden="true"
+      />
       <SftpPaneFileTable
         class="min-h-0 flex-1"
         :entries="visibleEntries"
@@ -334,6 +343,9 @@ defineExpose({
         :highlighted-names="highlightedNames"
         :select-all-state="selectAllState"
         :draggable="canTransferFiles"
+        :compact="compact"
+        :list-key="manager.currentPath.value"
+        :refreshing="manager.loading.value && manager.entries.value.length > 0"
         show-status-bar
         @select="selectEntry"
         @toggle="toggleEntry"
@@ -348,7 +360,7 @@ defineExpose({
         :selected-bytes="selectedSize"
         :can-send="canTransferFiles"
         :can-download="selectedEntries.length === 1"
-        remote-style
+        :send-peer-direction="sendPeerDirection"
         @send="requestSend"
         @download="downloadSelected"
         @remove="requestDelete()"

@@ -25,6 +25,7 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
+
 const {
   activeRemoteId,
   closeOtherRemotePanes,
@@ -46,15 +47,25 @@ const {
 } = props.workspace;
 const {
   activeTransferCount,
+  canSendToOpposite,
   connectTransferEndpoint,
+  isSimplePeerMode,
   mountTransferEndpoint,
-  openSendModal,
   queueSftpTransferToSelected,
   remotePaneConnected,
-  selectedRemoteTargetIds,
-  toggleRemoteTarget,
+  sendFromSelection,
   unmountTransferEndpoint
 } = props.transfer;
+
+const simplePeerMode = computed(() => Boolean(dualMode.value && isSimplePeerMode()));
+
+const primarySendPeerDirection = computed<"left" | "right" | undefined>(() =>
+  simplePeerMode.value && canSendToOpposite(primaryTransferEndpoint.value?.id) ? "right" : undefined
+);
+
+function remoteSendPeerDirection(endpointId: string): "left" | "right" | undefined {
+  return simplePeerMode.value && canSendToOpposite(endpointId) ? "left" : undefined;
+}
 
 function setPrimaryPaneRef(value: TemplateRefValue): void {
   props.setPrimaryPaneRef(value as SftpRemotePaneHandle | null);
@@ -122,7 +133,7 @@ function handleRemotePaneConnected(): void {
     </div>
   </div>
 
-  <div class="flex min-h-0 flex-1" :class="!compact && dualMode ? 'gap-1' : ''">
+  <div class="flex min-h-0 flex-1">
     <KokoFileManagementPane
       :key="primaryTransferEndpoint?.id || 'primary-sftp'"
       :ref="setPrimaryPaneRef"
@@ -131,16 +142,18 @@ function handleRemotePaneConnected(): void {
       :compact="compact"
       :transfer-endpoint="compact ? undefined : primaryTransferEndpoint"
       :title="!compact && dualMode ? t('koko.fileManagement.localSftp') : undefined"
-      @send="openSendModal"
+      :send-peer-direction="primarySendPeerDirection"
+      @send="sendFromSelection"
       @transfer-drop="queueSftpTransferToSelected($event, primaryTransferEndpoint)"
       @transfer-endpoint-mounted="mountTransferEndpoint"
       @transfer-endpoint-connected="connectTransferEndpoint"
       @transfer-endpoint-unmounted="unmountTransferEndpoint"
     />
 
-    <div v-show="!compact && dualMode" class="w-px shrink-0 bg-(--app-border)" />
-
-    <div v-show="!compact && dualMode" class="flex min-h-0 min-w-0 flex-1 flex-col">
+    <div
+      v-show="!compact && dualMode"
+      class="flex min-h-0 min-w-0 flex-1 flex-col border-l border-default"
+    >
       <div v-if="remotePanes.length" class="flex min-h-0 flex-1 flex-col">
         <div
           class="sftp-file-management__machine-tabs flex shrink-0 items-center gap-1 overflow-x-auto bg-[var(--workspace-surface-main)] px-2"
@@ -148,7 +161,6 @@ function handleRemotePaneConnected(): void {
           <SftpRemoteMachineTabs
             :panes="remotePanes"
             :active-id="activeRemoteId"
-            :selected-ids="selectedRemoteTargetIds"
             :transfer-count="activeTransferCount"
             :is-connected="remotePaneConnected"
             @update:panes="onSessionPanesUpdate"
@@ -158,7 +170,6 @@ function handleRemotePaneConnected(): void {
             @close-others="closeOtherRemotePanes"
             @close-right="closeRightRemotePanes"
             @pin="togglePinRemotePane"
-            @toggle-selected="toggleRemoteTarget"
           />
           <UButton
             data-sftp-tour="remote-connect"
@@ -176,11 +187,12 @@ function handleRemotePaneConnected(): void {
             class="h-full min-h-0"
             :context="pane.context"
             :transfer-endpoint="pane.transferEndpoint"
+            :send-peer-direction="remoteSendPeerDirection(pane.transferEndpoint.id)"
             @select="
               pane.selection = $event;
               focusRemotePane(pane.id);
             "
-            @send="openSendModal"
+            @send="sendFromSelection"
             @transfer-drop="queueSftpTransferToSelected($event, pane.transferEndpoint)"
             @transfer-endpoint-mounted="mountTransferEndpoint"
             @transfer-endpoint-connected="handleRemotePaneConnected"

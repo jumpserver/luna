@@ -15,16 +15,19 @@ const emit = defineEmits<{
 }>();
 
 const search = defineModel<string>("search", { required: true });
+const showHiddenFiles = defineModel<boolean>("showHiddenFiles", { default: false });
 const uploadInput = ref<HTMLInputElement | null>(null);
 const { t } = useI18n();
 </script>
 
 <template>
-  <div
-    v-if="title"
-    class="sftp-file-management__pane-title flex shrink-0 items-center border-b border-(--app-border) bg-(--app-header-bg)"
-  >
-    {{ title }}
+  <div v-if="title" class="flex h-9 shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2">
+    <div
+      class="flex h-7 min-w-20 max-w-48 items-center gap-1 rounded-md bg-accented px-1.5 text-[11px] leading-none text-highlighted"
+    >
+      <UIcon name="i-lucide-server" class="size-3.5 shrink-0 text-success" />
+      <span class="min-w-0 truncate">{{ title }}</span>
+    </div>
   </div>
   <div
     data-sftp-tour="navigation"
@@ -100,6 +103,14 @@ const { t } = useI18n();
         </button>
       </template>
     </div>
+    <UButton
+      :icon="showHiddenFiles ? 'i-lucide-eye' : 'i-lucide-eye-off'"
+      color="neutral"
+      :variant="showHiddenFiles ? 'soft' : 'ghost'"
+      size="sm"
+      :title="showHiddenFiles ? t('koko.fileManagement.hideHiddenFiles') : t('koko.fileManagement.showHiddenFiles')"
+      @click="showHiddenFiles = !showHiddenFiles"
+    />
     <UInput
       v-model="search"
       icon="i-lucide-search"

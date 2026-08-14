@@ -118,12 +118,12 @@ export function useLocalFileManager(options: UseLocalFileManagerOptions) {
     try {
       const { fs, path: pathApi } = await fsModules();
       if (!rootPath.value) rootPath.value = await resolveInitialRoot();
-      currentPath.value = path || currentPath.value || rootPath.value;
-      await activateSecurityScope(rootPath.value);
-      const items = await fs.readDir(currentPath.value);
+      const targetPath = path || currentPath.value || rootPath.value;
+      await activateSecurityScope(rootPath.value || targetPath);
+      const items = await fs.readDir(targetPath);
       const nextEntries = await Promise.all(
         items.map(async (item) => {
-          const fullPath = await pathApi.join(currentPath.value, item.name);
+          const fullPath = await pathApi.join(targetPath, item.name);
           try {
             const info = await fs.stat(fullPath);
             return {
@@ -146,10 +146,12 @@ export function useLocalFileManager(options: UseLocalFileManagerOptions) {
           }
         })
       );
-      entries.value = nextEntries;
-      if (currentPath.value !== rootPath.value) {
-        entries.value.unshift({ name: "..", size: "", perm: "", mod_time: "", type: "", is_dir: true });
+      if (targetPath !== rootPath.value) {
+        nextEntries.unshift({ name: "..", size: "", perm: "", mod_time: "", type: "", is_dir: true });
       }
+      // Commit path + rows in the same tick so the table never paints a mixed state.
+      currentPath.value = targetPath;
+      entries.value = nextEntries;
       saveRoot(rootPath.value);
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : String(cause);
@@ -175,7 +177,6 @@ export function useLocalFileManager(options: UseLocalFileManagerOptions) {
   async function goToPath(target: string): Promise<void> {
     if (!target) return;
     rootPath.value = target;
-    currentPath.value = target;
     saveRoot(target);
     await activateSecurityScope(target);
     await list(target);

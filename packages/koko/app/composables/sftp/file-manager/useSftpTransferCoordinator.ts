@@ -225,6 +225,107 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     sendModalOpen.value = true;
   }
 
+  function checkedConnectedTargets(sourceEndpointId?: string) {
+    return sendTargetOptions.value.filter(
+      (target) =>
+        selectedRemoteTargetIds.value.includes(target.id) && target.connected && target.endpoint.id !== sourceEndpointId
+    );
+  }
+
+  function isSimplePeerMode() {
+    return options.remotePanes.value.length === 1;
+  }
+
+  function resolveOppositeDestination(sourceEndpointId: string): {
+    endpoint: FileTransferEndpointRef;
+    destinationPath: string;
+  } | null {
+    const primary = options.primaryTransferEndpoint.value;
+    if (primary?.id === sourceEndpointId) {
+      const activeId = options.activeRemoteId.value;
+      if (!activeId || !remotePaneConnected(activeId)) return null;
+      const pane = options.remotePanes.value.find((item) => item.id === activeId);
+      if (!pane) return null;
+      return {
+        endpoint: pane.transferEndpoint,
+        destinationPath: toValue(options.remotePaneRefs.value[activeId]?.manager.currentPath) || "/"
+      };
+    }
+
+    const sourceRemote = options.remotePanes.value.find((item) => item.transferEndpoint.id === sourceEndpointId);
+    if (sourceRemote && primary) {
+      return {
+        endpoint: primary,
+        destinationPath: toValue(options.primaryPaneRef.value?.manager.currentPath) || "/"
+      };
+    }
+
+    if (sourceRemote) {
+      const oppositeSide: SftpWorkspaceSide = sourceRemote.side === "left" ? "right" : "left";
+      const opposite = options.activePaneForSide(oppositeSide);
+      if (opposite && remotePaneConnected(opposite.id) && opposite.transferEndpoint.id !== sourceEndpointId) {
+        return {
+          endpoint: opposite.transferEndpoint,
+          destinationPath: toValue(options.remotePaneRefs.value[opposite.id]?.manager.currentPath) || "/"
+        };
+      }
+      if (oppositeSide === "left" && options.globalActiveIds.left === "local" && options.localPaneRef.value) {
+        return {
+          endpoint: { id: LOCAL_ENDPOINT_ID, label: options.translate("koko.fileManagement.localFiles") },
+          destinationPath: "/"
+        };
+      }
+    }
+
+    if (sourceEndpointId === LOCAL_ENDPOINT_ID) {
+      const right = options.activePaneForSide("right");
+      if (right && remotePaneConnected(right.id)) {
+        return {
+          endpoint: right.transferEndpoint,
+          destinationPath: toValue(options.remotePaneRefs.value[right.id]?.manager.currentPath) || "/"
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function canSendToOpposite(sourceEndpointId: string | undefined | null) {
+    if (!sourceEndpointId || !isSimplePeerMode()) return false;
+    return Boolean(resolveOppositeDestination(sourceEndpointId));
+  }
+
+  function sendFromSelection(payload: SftpTransferSourcePayload) {
+    if (isSimplePeerMode()) {
+      const opposite = resolveOppositeDestination(payload.sourceEndpoint.id);
+      if (opposite) {
+        if (payload.sourceEndpoint.id === LOCAL_ENDPOINT_ID || opposite.endpoint.id === LOCAL_ENDPOINT_ID) {
+          void handleCrossPaneDrop({ ...payload, destinationPath: opposite.destinationPath }, opposite.endpoint);
+          return;
+        }
+        queueSftpTransfer({ ...payload, destinationPath: opposite.destinationPath }, opposite.endpoint);
+        return;
+      }
+    }
+
+    const multi = checkedConnectedTargets(payload.sourceEndpoint.id);
+    if (multi.length > 1) {
+      openSendModal(
+        payload,
+        multi.map((target) => target.id)
+      );
+      return;
+    }
+
+    if (multi.length === 1) {
+      const target = multi[0]!;
+      queueSftpTransfer({ ...payload, destinationPath: targetPath(target) }, target.endpoint);
+      return;
+    }
+
+    openSendModal(payload);
+  }
+
   function selectAllOnlineTargets() {
     selectedSendTargetIds.value = sendTargetOptions.value
       .filter((target) => target.connected)
@@ -569,9 +670,11 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
 
   return {
     activeTransferCount,
+    canSendToOpposite,
     filteredSendTargetOptions,
     handleCrossPaneDrop,
     highlightedNames,
+    isSimplePeerMode,
     localSelection,
     localSelections,
     mountTransferEndpoint,
@@ -580,6 +683,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     queueSftpTransferToSelected,
     reconnectTarget,
     remotePaneConnected,
+    resolveOppositeDestination,
     selectAllOnlineTargets,
     selectedSendTargetIds,
     selectedRemoteTargetIds,
@@ -588,6 +692,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     sendConflictPolicy,
     sendFileCount,
     sendFilesOpen,
+    sendFromSelection,
     sendModalOpen,
     sendSource,
     sendTargetOptions,

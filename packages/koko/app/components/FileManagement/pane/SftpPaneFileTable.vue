@@ -15,12 +15,18 @@ const props = withDefaults(
     draggable?: boolean;
     variant?: "remote" | "local";
     showStatusBar?: boolean;
+    compact?: boolean;
+    listKey?: string;
+    refreshing?: boolean;
   }>(),
   {
     highlightedNames: () => [],
     draggable: false,
     variant: "remote",
-    showStatusBar: false
+    showStatusBar: false,
+    compact: false,
+    listKey: "",
+    refreshing: false
   }
 );
 
@@ -36,7 +42,14 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const selectedSet = computed(() => new Set(props.selectedNames));
 const highlightedSet = computed(() => new Set(props.highlightedNames));
-const isLocal = computed(() => props.variant === "local");
+const emptyColspan = computed(() => (props.compact ? 3 : 5));
+const prefersReducedMotion = ref(false);
+const refreshPulse = ref(false);
+const skipLeaveAnim = ref(false);
+let refreshPulseTimer: ReturnType<typeof setTimeout> | undefined;
+let skipLeaveTimer: ReturnType<typeof setTimeout> | undefined;
+
+const sizeColClass = computed(() => (props.compact ? "w-22 px-2.5" : "w-27.5 px-3.5"));
 
 function fileType(entry: SftpFileEntry): string {
   return resolveSftpFileType(entry, {
@@ -44,25 +57,98 @@ function fileType(entry: SftpFileEntry): string {
     file: t("koko.fileManagement.file")
   });
 }
+
+function rowStyle(index: number) {
+  return { "--sftp-row-index": String(Math.min(index, 16)) } as Record<string, string>;
+}
+
+function onBeforeLeave(el: Element) {
+  if (skipLeaveAnim.value) {
+    const row = el as HTMLElement;
+    row.style.transition = "none";
+    row.style.opacity = "0";
+    return;
+  }
+  const row = el as HTMLElement;
+  const table = row.closest("table");
+  if (!table) return;
+  row.style.width = `${table.getBoundingClientRect().width}px`;
+  row.style.display = "table";
+  row.style.tableLayout = "fixed";
+}
+
+function onAfterLeave(el: Element) {
+  const row = el as HTMLElement;
+  row.style.width = "";
+  row.style.display = "";
+  row.style.tableLayout = "";
+  row.style.transition = "";
+  row.style.opacity = "";
+}
+
+watch(
+  () => props.listKey,
+  (next, prev) => {
+    if (!prev || next === prev) return;
+    skipLeaveAnim.value = true;
+    if (skipLeaveTimer) clearTimeout(skipLeaveTimer);
+    skipLeaveTimer = setTimeout(() => {
+      skipLeaveAnim.value = false;
+    }, 80);
+  },
+  { flush: "sync" }
+);
+
+watch(
+  () => props.refreshing,
+  (refreshing, wasRefreshing) => {
+    if (!wasRefreshing || refreshing || prefersReducedMotion.value) return;
+    refreshPulse.value = true;
+    if (refreshPulseTimer) clearTimeout(refreshPulseTimer);
+    refreshPulseTimer = setTimeout(() => {
+      refreshPulse.value = false;
+    }, 420);
+  }
+);
+
+onMounted(() => {
+  if (typeof window === "undefined" || !window.matchMedia) return;
+  const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+  prefersReducedMotion.value = media.matches;
+  const onChange = () => {
+    prefersReducedMotion.value = media.matches;
+  };
+  media.addEventListener?.("change", onChange);
+  onUnmounted(() => media.removeEventListener?.("change", onChange));
+});
+
+onUnmounted(() => {
+  if (refreshPulseTimer) clearTimeout(refreshPulseTimer);
+  if (skipLeaveTimer) clearTimeout(skipLeaveTimer);
+});
 </script>
 
 <template>
-  <div class="sftp-file-table flex h-full min-h-0 flex-col">
-    <div class="sftp-file-table__scroll min-h-0 flex-1 overflow-auto select-none">
-      <table
-        class="sftp-file-management__table w-full table-fixed border-separate border-spacing-0"
-        data-sftp-tour="file-table"
-      >
+  <div
+    class="sftp-file-table flex h-full min-h-0 flex-col"
+    :class="{
+      'sftp-file-table--refresh-pulse': refreshPulse,
+      'sftp-file-table--skip-leave': skipLeaveAnim
+    }"
+  >
+    <!-- Header stays outside the scrollport so the scrollbar only covers rows. -->
+    <div class="sftp-file-table__head-wrap shrink-0">
+      <table class="sftp-file-management__table w-full table-fixed border-separate border-spacing-0">
+        <colgroup>
+          <col class="w-10" />
+          <col />
+          <col v-if="!compact" class="w-42" />
+          <col :class="compact ? 'w-22' : 'w-27.5'" />
+          <col v-if="!compact" class="w-24" />
+        </colgroup>
         <thead class="sftp-file-table__head">
           <tr>
-            <th
-              class="w-10 border-b text-center"
-              :class="
-                isLocal
-                  ? 'h-8 border-default bg-elevated/50 px-2'
-                  : 'h-8.75 border-(--app-border) bg-(--app-panel-bg) px-3 py-2'
-              "
-            >
+            <th class="h-8.75 border-b border-(--app-border) bg-(--app-panel-bg) px-3 py-2 text-center">
               <UCheckbox
                 :model-value="selectAllState"
                 icon="i-lucide-check"
@@ -73,66 +159,70 @@ function fileType(entry: SftpFileEntry): string {
               />
             </th>
             <th
-              class="min-w-0 border-b text-left text-[10px] font-semibold uppercase text-muted"
-              :class="
-                isLocal
-                  ? 'h-8 border-default bg-elevated/50 px-2 tracking-wide'
-                  : 'h-8.75 border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 tracking-[0.05em]'
-              "
+              class="h-8.75 min-w-0 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-muted"
             >
               {{ t("koko.fileManagement.name") }}
             </th>
             <th
-              class="hidden border-b text-right text-[10px] font-semibold uppercase text-muted md:table-cell"
-              :class="
-                isLocal
-                  ? 'h-8 w-36 border-default bg-elevated/50 px-2 tracking-wide'
-                  : 'h-8.75 w-42 border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 tracking-[0.05em]'
-              "
+              v-if="!compact"
+              class="hidden h-8.75 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-muted md:table-cell"
             >
               {{ t("koko.fileManagement.modifiedTime") }}
             </th>
             <th
-              class="border-b text-right text-[10px] font-semibold uppercase text-muted"
-              :class="
-                isLocal
-                  ? 'h-8 w-24 border-default bg-elevated/50 px-2 tracking-wide'
-                  : 'h-8.75 w-27.5 border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 tracking-[0.05em]'
-              "
+              class="h-8.75 border-b border-(--app-border) bg-(--app-panel-bg) py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-muted"
+              :class="sizeColClass"
             >
               {{ t("koko.fileManagement.size") }}
             </th>
             <th
-              class="border-b text-left text-[10px] font-semibold uppercase text-muted"
-              :class="
-                isLocal
-                  ? 'h-8 w-20 border-default bg-elevated/50 px-2 tracking-wide'
-                  : 'h-8.75 w-24 border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 tracking-[0.05em]'
-              "
+              v-if="!compact"
+              class="h-8.75 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-muted"
             >
               {{ t("koko.fileManagement.type") }}
             </th>
           </tr>
         </thead>
-        <tbody>
+      </table>
+    </div>
+
+    <UScrollArea
+      orientation="vertical"
+      class="sftp-file-table__scroll min-h-0 flex-1 select-none"
+      :ui="{ root: 'min-h-0', viewport: 'min-h-0 w-full' }"
+    >
+      <table
+        class="sftp-file-management__table w-full table-fixed border-separate border-spacing-0"
+        data-sftp-tour="file-table"
+      >
+        <colgroup>
+          <col class="w-10" />
+          <col />
+          <col v-if="!compact" class="w-42" />
+          <col :class="compact ? 'w-22' : 'w-27.5'" />
+          <col v-if="!compact" class="w-24" />
+        </colgroup>
+        <TransitionGroup
+          name="sftp-file-row"
+          tag="tbody"
+          appear
+          @before-leave="onBeforeLeave"
+          @after-leave="onAfterLeave"
+        >
           <tr
-            v-for="entry in entries"
+            v-for="(entry, index) in entries"
             :key="entry.name"
-            class="group transition-colors hover:bg-(--app-hover-soft)"
+            class="sftp-file-row group h-9.5 transition-colors hover:bg-(--app-hover-soft)"
             :class="[
-              isLocal ? 'h-9' : 'h-9.5',
               selectedSet.has(entry.name) ? 'bg-(--app-selected-soft)' : '',
               highlightedSet.has(entry.name) ? 'sftp-file-row--highlight' : ''
             ]"
+            :style="rowStyle(index)"
             :aria-selected="selectedSet.has(entry.name)"
             @click="emit('select', entry, $event)"
             @contextmenu="emit('context', entry, $event)"
           >
-            <td
-              class="w-10 border-b text-center"
-              :class="isLocal ? 'h-9 border-default/60 px-2' : 'h-9.5 border-(--app-border)/60 px-3 py-1.5'"
-              @click.stop
-            >
+            <td class="h-9.5 border-b border-(--app-border)/60 px-3 py-1.5 text-center" @click.stop>
               <UCheckbox
                 v-if="entry.name !== '..'"
                 :model-value="selectedSet.has(entry.name)"
@@ -141,12 +231,7 @@ function fileType(entry: SftpFileEntry): string {
                 @update:model-value="emit('toggle', entry, $event === true)"
               />
             </td>
-            <td
-              class="min-w-0 border-b text-[12.5px]"
-              :class="
-                isLocal ? 'h-9 border-default/60 px-2' : 'h-9.5 border-(--app-border)/60 px-3.5 py-1.5 text-(--app-fg)'
-              "
-            >
+            <td class="h-9.5 min-w-0 border-b border-(--app-border)/60 px-3.5 py-1.5 text-[12.5px] text-(--app-fg)">
               <button
                 type="button"
                 class="flex min-w-0 w-full items-center gap-2 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
@@ -168,47 +253,36 @@ function fileType(entry: SftpFileEntry): string {
               </button>
             </td>
             <td
-              class="hidden border-b text-right font-ui-mono text-muted md:table-cell"
-              :class="
-                isLocal
-                  ? 'h-9 w-36 border-default/60 px-2 text-[11px]'
-                  : 'h-9.5 w-42 border-(--app-border)/60 px-3.5 py-1.5'
-              "
+              v-if="!compact"
+              class="hidden h-9.5 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right font-ui-mono text-muted md:table-cell"
             >
               <span class="sftp-file-meta block truncate">{{ formatSftpModifiedTime(entry.mod_time) }}</span>
             </td>
             <td
-              class="border-b text-right font-ui-mono text-muted"
-              :class="
-                isLocal
-                  ? 'h-9 w-24 border-default/60 px-2 text-[11px]'
-                  : 'h-9.5 w-27.5 border-(--app-border)/60 px-3.5 py-1.5'
-              "
+              class="h-9.5 border-b border-(--app-border)/60 py-1.5 text-right font-ui-mono text-muted"
+              :class="sizeColClass"
             >
               <span class="sftp-file-meta block truncate">
                 {{ entry.is_dir ? "—" : formatSftpFileSize(entry.size) }}
               </span>
             </td>
             <td
-              class="border-b text-left font-ui-mono text-muted"
-              :class="
-                isLocal
-                  ? 'h-9 w-20 border-default/60 px-2 text-[11px]'
-                  : 'h-9.5 w-24 border-(--app-border)/60 px-3.5 py-1.5'
-              "
+              v-if="!compact"
+              class="h-9.5 border-b border-(--app-border)/60 px-3.5 py-1.5 text-left font-ui-mono text-muted"
             >
               <span class="sftp-file-meta block truncate">{{ fileType(entry) }}</span>
             </td>
           </tr>
-          <tr v-if="!entries.length">
-            <td colspan="5" class="h-24 text-center text-sm text-muted">{{ t("Common.NoData") }}</td>
+          <tr v-if="!entries.length" key="__empty__" class="sftp-file-row sftp-file-row--empty">
+            <td :colspan="emptyColspan" class="h-24 text-center text-sm text-muted">{{ t("Common.NoData") }}</td>
           </tr>
-        </tbody>
+        </TransitionGroup>
       </table>
-    </div>
+    </UScrollArea>
+
     <div
       v-if="showStatusBar"
-      class="sftp-file-table__status flex h-7 shrink-0 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3.5 font-ui-mono text-[10.5px] text-(--app-muted)"
+      class="sftp-file-table__status flex h-8.75 shrink-0 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3.5 font-ui-mono text-[10.5px] text-(--app-muted)"
     >
       {{ t("koko.fileManagement.items", { count: entries.length }) }}
     </div>

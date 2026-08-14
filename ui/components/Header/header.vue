@@ -26,13 +26,6 @@ const toolWindowTitleClass = computed(() => {
 const pageHeader = computed(() => {
   const path = router.currentRoute.value.path.toLowerCase();
 
-  if (path.includes("/files")) {
-    return {
-      icon: "i-lucide-folder-kanban",
-      title: t("koko.fileManagement.consoleTitle")
-    };
-  }
-
   if (path.includes("/videoplayer")) {
     return {
       icon: "lucide:clapperboard",

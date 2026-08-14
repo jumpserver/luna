@@ -6,6 +6,7 @@ import type {
 } from "#koko/composables/sftp/file-manager/workspaceTypes";
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
 import type { FileTransferEndpointRef } from "~/shared/file-transfer/types";
+import { useDebounceFn } from "@vueuse/core";
 import SftpLocalPaneDialogs from "#koko/components/FileManagement/pane/SftpLocalPaneDialogs.vue";
 import SftpLocalPaneToolbar from "#koko/components/FileManagement/pane/SftpLocalPaneToolbar.vue";
 import SftpPaneContextMenu from "#koko/components/FileManagement/pane/SftpPaneContextMenu.vue";
@@ -23,17 +24,26 @@ import {
 } from "#koko/composables/sftp/file-manager/transfer";
 import { useLocalFileManager } from "#koko/composables/sftp/file-manager/useLocalFileManager";
 import { useSftpPaneSelection } from "#koko/composables/sftp/file-manager/useSftpPaneSelection";
+import { useSftpShowHiddenFiles } from "#koko/composables/sftp/file-manager/useSftpShowHiddenFiles";
 import { KeyboardKey } from "#koko/constants/keyboard";
 
-const props = withDefaults(defineProps<{ highlightedNames?: string[]; focused?: boolean }>(), {
-  highlightedNames: () => [],
-  focused: false
-});
+const props = withDefaults(
+  defineProps<{
+    highlightedNames?: string[];
+    focused?: boolean;
+    sendPeerDirection?: "left" | "right";
+  }>(),
+  {
+    highlightedNames: () => [],
+    focused: false
+  }
+);
 const emit = defineEmits<{
   select: [entry: SftpFileEntry | null];
   selectionChange: [entries: SftpFileEntry[]];
   focus: [];
   transferDrop: [payload: SftpTransferDropPayload];
+  send: [payload: SftpTransferSourcePayload];
 }>();
 
 const LOCAL_ENDPOINT_ID = "local:fs";
@@ -84,9 +94,10 @@ const transferEndpoint = computed<FileTransferEndpointRef>(() => ({
   id: LOCAL_ENDPOINT_ID,
   label: t("koko.fileManagement.localFiles")
 }));
+const { showHiddenFiles, filterHiddenEntries } = useSftpShowHiddenFiles();
 const visibleEntries = computed(() => {
   const query = search.value.trim().toLowerCase();
-  return entries.value
+  return filterHiddenEntries(entries.value)
     .filter((entry) => !query || entry.name.toLowerCase().includes(query))
     .sort((left, right) => {
       if (left.name === "..") return -1;
@@ -142,9 +153,15 @@ async function changeDirectory(entry: SftpFileEntry): Promise<void> {
   clearSelection();
 }
 
-async function goToPath(path: string): Promise<void> {
+const goToPathDebounced = useDebounceFn(async (path: string) => {
+  if (!path || path === currentPath.value) return;
   await localManager.goToPath(path);
   clearSelection();
+}, 280);
+
+function goToPath(path: string): void {
+  if (!path || path === currentPath.value) return;
+  void goToPathDebounced(path);
 }
 
 async function chooseFolder(): Promise<void> {
@@ -204,6 +221,12 @@ function transferSourcePayload(): SftpTransferSourcePayload | null {
     sourceSelectionRevision: selectionRevision.value,
     entries: transferableEntries.value
   });
+}
+
+function requestSend(): void {
+  const payload = transferSourcePayload();
+  if (!payload) return;
+  emit("send", payload);
 }
 
 function openContextMenu(entry: SftpFileEntry, event: MouseEvent): void {
@@ -279,7 +302,8 @@ async function confirmDelete(): Promise<void> {
       targets.length === 1
         ? t("koko.fileManagement.entryDeleted", { name: targets[0]?.name })
         : `${t("koko.actions.delete")}: ${t("koko.fileManagement.items", { count: success })}`,
-    color: success === targets.length ? "success" : "warning"
+    color: success === targets.length ? "success" : "warning",
+    duration: 1500
   });
   await list();
   clearSelection();
@@ -383,7 +407,6 @@ defineExpose({
   <div
     ref="rootEl"
     class="sftp-file-management relative flex h-full min-h-0 flex-col bg-(--app-main-bg) outline-none"
-    :class="{ 'ring-1 ring-inset ring-primary/40': focused }"
     tabindex="0"
     @mousedown="focusPane"
     @dragenter="onTransferDragOver"
@@ -392,6 +415,7 @@ defineExpose({
   >
     <SftpLocalPaneToolbar
       v-model:search="search"
+      v-model:show-hidden-files="showHiddenFiles"
       :current-path="currentPath"
       :root-path="rootPath"
       :quick-paths="quickPaths"
@@ -431,17 +455,20 @@ defineExpose({
         </div>
       </div>
     </div>
-    <div v-else-if="loading" class="grid flex-1 place-items-center">
+    <div v-else-if="loading && !entries.length" class="grid flex-1 place-items-center">
       <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
     </div>
     <div v-else class="relative flex min-h-0 flex-1 flex-col">
+      <div v-if="loading && entries.length" class="sftp-file-table__refresh-bar" aria-hidden="true" />
       <SftpPaneFileTable
-        variant="local"
         class="min-h-0 flex-1"
         :entries="visibleEntries"
         :selected-names="selectedEntries.map((entry) => entry.name)"
         :highlighted-names="highlightedNames"
         :select-all-state="selectAllState"
+        :list-key="currentPath"
+        :refreshing="loading && entries.length > 0"
+        show-status-bar
         draggable
         @select="selectEntry"
         @toggle="toggleEntry"
@@ -454,6 +481,9 @@ defineExpose({
         :selected-count="selectedEntries.length"
         :transferable-count="transferableEntries.length"
         :selected-bytes="selectedSize"
+        :can-send="transferableEntries.length > 0"
+        :send-peer-direction="sendPeerDirection"
+        @send="requestSend"
         @remove="requestDelete()"
         @clear="clearSelection"
       />

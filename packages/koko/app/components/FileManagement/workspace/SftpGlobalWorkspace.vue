@@ -28,8 +28,8 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const focusedSide = ref<"left" | "right">("left");
+
 const {
-  activePaneForSide,
   closeOtherRemotePanes,
   closeRightRemotePanes,
   globalActiveIds,
@@ -51,21 +51,21 @@ const {
 } = props.workspace;
 const {
   activeTransferCount,
+  canSendToOpposite,
   connectTransferEndpoint,
   handleCrossPaneDrop,
   highlightedNames,
+  isSimplePeerMode,
   localSelection,
   localSelections,
   mountTransferEndpoint,
-  openSendModal,
   remotePaneConnected,
-  selectedRemoteTargetIds,
-  toggleRemoteTarget,
-  transferGlobal,
-  transferring,
+  sendFromSelection,
   unmountTransferEndpoint,
   uploadWebFiles
 } = props.transfer;
+
+const simplePeerMode = computed(() => isSimplePeerMode());
 
 function setLocalPaneRef(value: TemplateRefValue): void {
   props.setLocalPaneRef(value as SftpLocalPaneHandle | null);
@@ -100,6 +100,13 @@ const sideRemotePanes = computed(() => ({
   left: panesForSide("left"),
   right: panesForSide("right")
 }));
+
+function showSideAddButton(side: SftpWorkspaceSide) {
+  // Left always allows adding remote machines next to local files.
+  // Right only shows + after the first connection (empty state has the primary CTA).
+  if (side === "left") return true;
+  return sideRemotePanes.value[side].length > 0;
+}
 
 const draggedRemotePaneId = ref("");
 const remotePaneDropSide = ref<SftpWorkspaceSide | null>(null);
@@ -143,18 +150,22 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
 </script>
 
 <template>
-  <div class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_44px_minmax(0,1fr)]" @keydown="onKeydown">
+  <div class="relative flex min-h-0 flex-1" @keydown="onKeydown">
+    <KokoSftpTransferCenter :ref="setTransferCenterRef" floating />
     <div
       v-for="side in ['left', 'right'] as const"
       :key="side"
-      class="relative flex min-h-0 min-w-0 flex-col"
-      :class="side === 'right' ? 'col-start-3' : 'col-start-1 row-start-1'"
+      class="relative flex min-h-0 min-w-0 flex-1 flex-col"
+      :class="side === 'right' ? 'border-l border-default' : ''"
       @dragover.capture="dragRemotePaneOverSide(side, $event)"
       @dragleave="leaveRemotePaneSide(side, $event)"
       @drop.capture="dropRemotePaneOnSide(side, $event)"
     >
-      <div class="flex h-9 shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2">
-        <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+      <div
+        v-if="side === 'left' || sideRemotePanes[side].length || remotePaneDropSide === side"
+        class="flex h-9 shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2"
+      >
+        <div class="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto overflow-y-visible py-0.5">
           <button
             v-if="side === 'left' && isTauriRuntime"
             type="button"
@@ -187,7 +198,6 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
             v-if="sideRemotePanes[side].length"
             :panes="sideRemotePanes[side]"
             :active-id="globalActiveIds[side]"
-            :selected-ids="selectedRemoteTargetIds"
             :transfer-count="activeTransferCount"
             :is-connected="remotePaneConnected"
             @update:panes="onSidePanesUpdate(side, $event)"
@@ -197,21 +207,21 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
             @close-others="closeOtherRemotePanes"
             @close-right="closeRightRemotePanes"
             @pin="togglePinRemotePane"
-            @toggle-selected="toggleRemoteTarget"
             @pane-drag-start="beginRemotePaneDrag"
             @pane-drag-end="endRemotePaneDrag"
           />
-          <UButton
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            icon="i-lucide-plus"
-            class="shrink-0"
-            :title="t('koko.fileManagement.addRemoteSftp')"
-            @click="openRemoteConnect(side)"
-          />
+          <UTooltip v-if="showSideAddButton(side)" :text="t('koko.fileManagement.addRemoteSftp')">
+            <UButton
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-plus"
+              class="shrink-0"
+              :aria-label="t('koko.fileManagement.addRemoteSftp')"
+              @click="openRemoteConnect(side)"
+            />
+          </UTooltip>
         </div>
-        <KokoSftpTransferCenter v-if="side === 'left'" :ref="setTransferCenterRef" prominent />
       </div>
 
       <KokoLocalFileManagementPane
@@ -221,9 +231,11 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
         class="min-h-0 flex-1"
         :focused="focusedSide === 'left'"
         :highlighted-names="highlightedNames.left"
+        :send-peer-direction="simplePeerMode && canSendToOpposite('local:fs') ? 'right' : undefined"
         @select="localSelection = $event"
         @selection-change="localSelections = $event"
         @focus="focusedSide = 'left'"
+        @send="sendFromSelection"
         @transfer-drop="handleCrossPaneDrop($event, { id: 'local:fs', label: t('koko.fileManagement.localFiles') })"
       />
       <KokoWebUploadPane
@@ -243,9 +255,16 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
           :transfer-endpoint="pane.transferEndpoint"
           :focused="focusedSide === side && globalActiveIds[side] === pane.id"
           :highlighted-names="highlightedNames[side]"
+          :send-peer-direction="
+            simplePeerMode && canSendToOpposite(pane.transferEndpoint.id)
+              ? side === 'left'
+                ? 'right'
+                : 'left'
+              : undefined
+          "
           @select="pane.selection = $event"
           @focus="focusedSide = side"
-          @send="openSendModal"
+          @send="sendFromSelection"
           @transfer-drop="handleCrossPaneDrop($event, pane.transferEndpoint)"
           @transfer-endpoint-mounted="mountTransferEndpoint"
           @transfer-endpoint-connected="handleRemotePaneConnected"
@@ -317,43 +336,6 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
           </span>
         </div>
       </div>
-    </div>
-
-    <div
-      class="col-start-2 row-start-1 flex min-h-0 flex-col items-center justify-center gap-2 border-x border-default"
-    >
-      <UTooltip :text="t('koko.fileManagement.transferToRemote')">
-        <UButton
-          size="xs"
-          color="primary"
-          variant="soft"
-          icon="i-lucide-arrow-right"
-          :disabled="
-            !(globalActiveIds.left === 'local'
-              ? localSelections.length || localSelection
-              : activePaneForSide('left')?.selection) ||
-            !activePaneForSide('right') ||
-            transferring
-          "
-          :loading="transferring"
-          @click="transferGlobal('left-to-right')"
-        />
-      </UTooltip>
-      <UTooltip :text="t('koko.fileManagement.transferToLocal')">
-        <UButton
-          size="xs"
-          color="primary"
-          variant="soft"
-          icon="i-lucide-arrow-left"
-          :disabled="
-            !activePaneForSide('right')?.selection ||
-            !(globalActiveIds.left === 'local' || activePaneForSide('left')) ||
-            transferring
-          "
-          :loading="transferring"
-          @click="transferGlobal('right-to-left')"
-        />
-      </UTooltip>
     </div>
   </div>
 </template>

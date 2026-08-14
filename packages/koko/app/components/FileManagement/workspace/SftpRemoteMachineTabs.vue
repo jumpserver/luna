@@ -5,7 +5,6 @@ import type { SftpRemotePane } from "#koko/composables/sftp/file-manager/workspa
 const props = defineProps<{
   panes: SftpRemotePane[];
   activeId: string | null;
-  selectedIds: string[];
   transferCount: (endpointId: string) => number;
   isConnected: (paneId: string) => boolean;
 }>();
@@ -18,7 +17,6 @@ const emit = defineEmits<{
   closeOthers: [id: string];
   closeRight: [id: string];
   pin: [id: string];
-  toggleSelected: [id: string, selected: boolean];
   paneDragStart: [id: string];
   paneDragEnd: [];
 }>();
@@ -179,8 +177,8 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
 </script>
 
 <template>
-  <div class="flex h-full w-fit shrink-0 items-center">
-    <div class="flex h-full w-fit items-center gap-1">
+  <div class="sftp-file-management__machine-tabs flex h-full w-fit shrink-0 items-center overflow-visible py-0.5">
+    <div class="flex h-full w-fit items-center gap-1.5 overflow-visible">
       <div
         v-for="(pane, index) in panes"
         :key="pane.id"
@@ -188,10 +186,12 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
         class="sftp-file-management__machine-tab relative flex h-7 min-w-20 max-w-40 basis-40 grow shrink items-center gap-1 rounded-md px-1.5 text-[11px] leading-none transition-colors"
         :class="[
           activeId === pane.id ? 'bg-accented text-highlighted' : 'text-muted hover:bg-accented hover:text-highlighted',
-          selectedIds.includes(pane.id) ? 'ring-1 ring-inset ring-primary/50' : '',
-          pane.pinned ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
+          pane.pinned
+            ? 'sftp-file-management__machine-tab--pinned cursor-default'
+            : 'cursor-grab active:cursor-grabbing',
           draggedPaneId === pane.id ? 'opacity-60' : ''
         ]"
+        :title="pane.pinned ? t('koko.fileManagement.unpinTab') : undefined"
         @dblclick="emit('pin', pane.id)"
         @auxclick="closeWithMiddleClick(pane.id, $event)"
         @contextmenu="openContextMenu(pane, index, $event)"
@@ -207,33 +207,32 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
           class="pointer-events-none absolute inset-y-1 z-10 w-0.5 rounded-full bg-primary"
           :class="dropPlacement === 'after' ? '-right-[3px]' : '-left-[3px]'"
         />
-        <UCheckbox
-          :model-value="selectedIds.includes(pane.id)"
-          size="xs"
-          :aria-label="t('koko.fileManagement.selectTransferTarget', { name: pane.assetName })"
-          class="shrink-0"
-          @click.stop
-          @dblclick.stop
-          @dragstart.stop.prevent
-          @update:model-value="emit('toggleSelected', pane.id, $event === true)"
-        />
+        <span
+          v-if="pane.pinned"
+          class="sftp-file-management__machine-tab-pin"
+          :aria-label="t('koko.fileManagement.pinTab')"
+        >
+          <UIcon name="i-lucide-pin" />
+        </span>
         <button type="button" class="flex min-w-0 flex-1 items-center gap-1 text-left" @click="selectPane(pane.id)">
           <UIcon
             name="i-lucide-server"
             class="size-3.5 shrink-0"
             :class="isConnected(pane.id) ? 'text-success' : 'text-warning'"
           />
-          <UIcon v-if="pane.pinned" name="i-lucide-pin" class="size-3 shrink-0 text-primary" />
           <span class="min-w-0 flex-1 truncate">{{ pane.assetName }}</span>
         </button>
         <UBadge v-if="transferCount(pane.transferEndpoint.id)" color="primary" variant="subtle" size="xs">
           {{ transferCount(pane.transferEndpoint.id) }}
         </UBadge>
         <span
-          class="flex size-4 shrink-0 items-center justify-center rounded text-muted hover:bg-elevated hover:text-foreground"
+          v-if="!pane.pinned"
+          class="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded text-muted hover:bg-elevated hover:text-foreground"
           role="button"
           tabindex="0"
           @click.stop="emit('close', pane.id)"
+          @mousedown.stop
+          @dragstart.stop.prevent
           @keydown.enter.stop.prevent="emit('close', pane.id)"
           @keydown.space.stop.prevent="emit('close', pane.id)"
         >

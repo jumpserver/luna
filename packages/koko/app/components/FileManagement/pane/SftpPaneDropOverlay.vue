@@ -14,22 +14,24 @@ const { t } = useI18n();
 <template>
   <div v-if="active" class="sftp-transfer-drop-target" aria-hidden="true">
     <div class="sftp-transfer-drop-target__label">
-      <UIcon :name="icon" class="size-3.5 shrink-0" />
+      <UIcon :name="icon" class="sftp-transfer-drop-target__icon" />
       <span>
         {{ t("koko.fileManagement.copyTo") }}
         <strong>{{ endpointLabel }}</strong>
-        <span v-if="path && releaseHint">
+        <template v-if="path">
           ·
-          <span class="font-ui-mono">{{ path }}</span>
-        </span>
+          <span class="sftp-transfer-drop-target__path">{{ path }}</span>
+        </template>
       </span>
     </div>
-    <p v-if="releaseHint" class="font-ui-mono">{{ t("koko.fileManagement.releaseToCurrentDirectory") }}</p>
-    <p v-else-if="path" class="font-ui-mono">{{ path }}</p>
+    <p v-if="releaseHint" class="sftp-transfer-drop-target__hint">
+      {{ t("koko.fileManagement.releaseToCurrentDirectory") }}
+    </p>
+    <p v-else-if="path" class="sftp-transfer-drop-target__hint sftp-transfer-drop-target__path">{{ path }}</p>
   </div>
   <div v-else-if="blocked" class="sftp-transfer-drop-target sftp-transfer-drop-target--blocked" aria-hidden="true">
     <div class="sftp-transfer-drop-target__label">
-      <UIcon name="i-lucide-ban" class="size-3.5 shrink-0" />
+      <UIcon name="i-lucide-ban" class="sftp-transfer-drop-target__icon" />
       <span>{{ t("koko.fileManagement.dropSameEndpoint") }}</span>
     </div>
   </div>

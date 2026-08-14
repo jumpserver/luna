@@ -27,8 +27,10 @@ const props = withDefaults(
   defineProps<{
     /** Emphasized trigger for the professional workbench header. */
     prominent?: boolean;
+    /** Draggable floating trigger (global workbench). Defaults to bottom-right. */
+    floating?: boolean;
   }>(),
-  { prominent: false }
+  { prominent: false, floating: false }
 );
 
 const { t } = useI18n();
@@ -40,9 +42,38 @@ const expandedTargets = ref(new Set<string>());
 const triggerRef = ref<HTMLElement | null>(null);
 const attracting = ref(false);
 const flight = ref<FlightPosition | null>(null);
+const floatingPosition = useLocalStorage<{ x: number; y: number } | null>(
+  "jumpserver-client:sftp-transfer-center-position",
+  null
+);
+const dragging = ref(false);
+const suppressClick = ref(false);
+let dragOffset = { x: 0, y: 0 };
+let dragOrigin = { x: 0, y: 0 };
 let animationSequence = 0;
 let attentionTimer: ReturnType<typeof setTimeout> | undefined;
 let settleTimer: ReturnType<typeof setTimeout> | undefined;
+
+function isValidFloatingPosition(pos: { x: number; y: number } | null | undefined): pos is { x: number; y: number } {
+  if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return false;
+  // Zero-size clamp / HMR ghosts often land near the origin; treat as unset.
+  if (pos.x <= 16 && pos.y <= 16) return false;
+  if (typeof window === "undefined") return true;
+  return pos.x < window.innerWidth && pos.y < window.innerHeight;
+}
+
+const floatingStyle = computed(() => {
+  if (!props.floating) return undefined;
+  if (isValidFloatingPosition(floatingPosition.value)) {
+    return {
+      left: `${floatingPosition.value.x}px`,
+      top: `${floatingPosition.value.y}px`,
+      right: "auto",
+      bottom: "auto"
+    };
+  }
+  return { right: "16px", bottom: "16px", left: "auto", top: "auto" };
+});
 
 const taskFilters: readonly { value: TaskFilter; labelKey: string }[] = [
   { value: "all", labelKey: "koko.sftpTransferCenter.filters.all" },
@@ -150,12 +181,91 @@ function signalQueued(origin?: DOMRect): void {
   );
 }
 
+function clampFloatingPosition() {
+  if (!props.floating || !triggerRef.value) return;
+  if (!isValidFloatingPosition(floatingPosition.value)) {
+    floatingPosition.value = null;
+    return;
+  }
+  const rect = triggerRef.value.getBoundingClientRect();
+  // Element may not be laid out yet (HMR / first paint); keep CSS bottom-right fallback.
+  if (rect.width < 8 || rect.height < 8) return;
+  const margin = 8;
+  const maxX = Math.max(margin, window.innerWidth - rect.width - margin);
+  const maxY = Math.max(margin, window.innerHeight - rect.height - margin);
+  floatingPosition.value = {
+    x: Math.min(Math.max(margin, floatingPosition.value.x), maxX),
+    y: Math.min(Math.max(margin, floatingPosition.value.y), maxY)
+  };
+}
+
+function onFloatingPointerMove(event: PointerEvent) {
+  if (!dragging.value) return;
+  const moved = Math.hypot(event.clientX - dragOrigin.x, event.clientY - dragOrigin.y) > 4;
+  if (moved) suppressClick.value = true;
+  floatingPosition.value = {
+    x: event.clientX - dragOffset.x,
+    y: event.clientY - dragOffset.y
+  };
+  clampFloatingPosition();
+}
+
+function stopFloatingDrag() {
+  if (!dragging.value) return;
+  dragging.value = false;
+  window.removeEventListener("pointermove", onFloatingPointerMove);
+  window.removeEventListener("pointerup", stopFloatingDrag);
+  window.removeEventListener("pointercancel", stopFloatingDrag);
+  // Only persist coordinates after a real drag; otherwise keep CSS bottom-right default.
+  if (!suppressClick.value) {
+    floatingPosition.value = null;
+    return;
+  }
+  clampFloatingPosition();
+}
+
+function startFloatingDrag(event: PointerEvent) {
+  if (!props.floating || event.button !== 0) return;
+  const rect = triggerRef.value?.getBoundingClientRect();
+  if (!rect) return;
+  event.preventDefault();
+  suppressClick.value = false;
+  dragOrigin = { x: event.clientX, y: event.clientY };
+  floatingPosition.value = { x: rect.left, y: rect.top };
+  dragOffset = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  dragging.value = true;
+  window.addEventListener("pointermove", onFloatingPointerMove);
+  window.addEventListener("pointerup", stopFloatingDrag);
+  window.addEventListener("pointercancel", stopFloatingDrag);
+}
+
+function openTransferCenter() {
+  if (suppressClick.value) {
+    suppressClick.value = false;
+    return;
+  }
+  open.value = true;
+}
+
 onBeforeUnmount(() => {
   if (attentionTimer) clearTimeout(attentionTimer);
   if (settleTimer) clearTimeout(settleTimer);
+  stopFloatingDrag();
+  window.removeEventListener("resize", clampFloatingPosition);
 });
 
-onMounted(() => void store.restore());
+onMounted(async () => {
+  void store.restore();
+  if (!props.floating) return;
+  if (!isValidFloatingPosition(floatingPosition.value)) {
+    floatingPosition.value = null;
+  }
+  window.addEventListener("resize", clampFloatingPosition);
+  await nextTick();
+  requestAnimationFrame(() => {
+    clampFloatingPosition();
+  });
+});
 
 defineExpose({ signalQueued });
 </script>
@@ -164,22 +274,32 @@ defineExpose({ signalQueued });
   <span
     ref="triggerRef"
     class="sftp-transfer-trigger-anchor"
-    :class="{ 'is-attracting': attracting, 'is-prominent': props.prominent }"
+    :class="{
+      'is-attracting': attracting,
+      'is-prominent': props.prominent,
+      'is-floating': props.floating,
+      'is-dragging': dragging
+    }"
+    :style="floatingStyle"
     data-sftp-tour="transfer-center"
+    @pointerdown="startFloatingDrag"
   >
-    <UButton
-      class="sftp-transfer-trigger"
-      :color="activeCount || props.prominent ? 'primary' : 'neutral'"
-      :variant="activeCount || props.prominent ? 'soft' : 'ghost'"
-      :size="props.prominent ? 'sm' : 'xs'"
-      icon="i-lucide-cloud-upload"
-      :label="t('koko.sftpTransferCenter.title')"
-      @click="open = true"
-    >
-      <template #trailing>
-        <UBadge v-if="activeCount" color="primary" variant="solid" size="xs">{{ activeCount }}</UBadge>
-      </template>
-    </UButton>
+    <UTooltip :text="t('koko.sftpTransferCenter.title')">
+      <UButton
+        class="sftp-transfer-trigger"
+        :color="activeCount || props.prominent || props.floating ? 'primary' : 'neutral'"
+        :variant="activeCount || props.prominent || props.floating ? 'soft' : 'ghost'"
+        :size="props.prominent || props.floating ? 'sm' : 'xs'"
+        icon="i-lucide-cloud-upload"
+        :label="props.floating ? undefined : t('koko.sftpTransferCenter.title')"
+        :aria-label="t('koko.sftpTransferCenter.title')"
+        @click="openTransferCenter"
+      >
+        <template #trailing>
+          <UBadge v-if="activeCount" color="primary" variant="solid" size="xs">{{ activeCount }}</UBadge>
+        </template>
+      </UButton>
+    </UTooltip>
   </span>
 
   <Teleport to="body">

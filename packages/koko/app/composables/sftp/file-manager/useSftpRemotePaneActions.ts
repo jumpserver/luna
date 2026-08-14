@@ -216,7 +216,8 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
           target.entries.length === 1
             ? t("koko.fileManagement.entryDeleted", { name: entry.name })
             : `${t("koko.actions.delete")}: ${t("koko.fileManagement.items", { count: succeeded })}`,
-        color: succeeded === target.entries.length ? "success" : "warning"
+        color: succeeded === target.entries.length ? "success" : "warning",
+        duration: 1500
       });
       await refreshCurrentDirectory();
       options.updateSelection(failedEntries);
