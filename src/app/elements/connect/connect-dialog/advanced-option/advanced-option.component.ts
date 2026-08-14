@@ -85,7 +85,7 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
       {
         type: 'select',
         field: 'use_sysdba',
-        label: 'Use SYSDBA',
+        label: 'SYSDBA',
         hidden: () => {
           return !this.protocol || this.protocol.name !== 'oracle';
         },
