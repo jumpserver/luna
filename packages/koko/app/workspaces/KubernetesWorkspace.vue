@@ -629,12 +629,7 @@ onUnmounted(() => {
                   class="size-4 shrink-0 text-(--app-muted)"
                 />
                 <span v-else class="size-4 shrink-0" />
-                <img
-                  v-if="row.kind === 'asset-root'"
-                  src="/icons/kubernetes.svg"
-                  alt=""
-                  class="size-3.5 shrink-0"
-                />
+                <img v-if="row.kind === 'asset-root'" src="/icons/kubernetes.svg" alt="" class="size-3.5 shrink-0" />
                 <UIcon
                   v-else
                   :name="rowIcon(row)"
