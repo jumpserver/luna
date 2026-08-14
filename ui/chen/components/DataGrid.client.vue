@@ -491,7 +491,7 @@ onBeforeUnmount(() => {
   --ag-foreground-color: var(--data-grid-text);
   --ag-header-background-color: var(--data-grid-header-background);
   --ag-header-foreground-color: var(--data-grid-text);
-  --ag-odd-row-background-color: var(--data-grid-row-striped);
+  --ag-odd-row-background-color: var(--data-grid-row-background);
   --ag-row-hover-color: var(--data-grid-row-hover);
   --ag-selected-row-background-color: var(--data-grid-row-selected);
   --ag-range-selection-background-color: color-mix(in srgb, var(--theme-accent) 14%, transparent);

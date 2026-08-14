@@ -16,7 +16,7 @@ export interface ChenGridPreferences {
 const DEFAULT_CHEN_GRID_PREFERENCES: ChenGridPreferences = {
   nullDisplay: "keyword",
   showEmptyStrings: false,
-  stripedRows: true,
+  stripedRows: false,
   showCellBorders: true,
   compactRows: false,
   hiddenFieldsByGrid: {}

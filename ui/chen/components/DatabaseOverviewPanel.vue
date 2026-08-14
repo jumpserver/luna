@@ -9,9 +9,14 @@ const props = defineProps<{
 const emit = defineEmits<{
   selectSection: [section: ChenDatabaseSection];
   loadCatalog: [];
+  openTable: [node: ChenTreeNode];
 }>();
 
-const sections: Array<{ id: ChenDatabaseSection; label: string }> = [
+const databaseSections: Array<{ id: ChenDatabaseSection; label: string }> = [
+  { id: "basic", label: "Basic Info" },
+  { id: "schemas", label: "Schemas" }
+];
+const schemaSections: Array<{ id: ChenDatabaseSection; label: string }> = [
   { id: "basic", label: "Basic Info" },
   { id: "tables", label: "Tables" },
   { id: "views", label: "Views" },
@@ -22,6 +27,7 @@ const sections: Array<{ id: ChenDatabaseSection; label: string }> = [
 
 interface CatalogItem {
   key: string;
+  node: ChenTreeNode;
   name: string;
   schema: string;
   type: string;
@@ -73,9 +79,10 @@ function formatBytes(value: unknown) {
 function collectCatalog(nodes: ChenTreeNode[], schema = "", result: CatalogItem[] = []) {
   for (const node of nodes) {
     const nextSchema = node.type === "schema" ? nodeName(node) : schema;
-    if (node.type === "table" || node.type === "view" || node.type === "index") {
+    if (node.type === "schema" || node.type === "table" || node.type === "view" || node.type === "index") {
       result.push({
         key: node.key,
+        node,
         name: nodeName(node),
         schema: nextSchema,
         type: node.type,
@@ -103,8 +110,17 @@ function collectCatalog(nodes: ChenTreeNode[], schema = "", result: CatalogItem[
 }
 
 const catalog = computed(() => collectCatalog(props.tab.node.children || []));
+const isDatabase = computed(() => props.tab.node.type === "database");
+const sections = computed(() => (isDatabase.value ? databaseSections : schemaSections));
 const visibleCatalog = computed(() => {
-  const type = props.tab.activeSection === "tables" ? "table" : props.tab.activeSection === "views" ? "view" : "index";
+  const type =
+    props.tab.activeSection === "schemas"
+      ? "schema"
+      : props.tab.activeSection === "tables"
+        ? "table"
+        : props.tab.activeSection === "views"
+          ? "view"
+          : "index";
   return catalog.value.filter((item) => item.type === type);
 });
 const databaseName = computed(() => nodeName(props.tab.node));
@@ -112,29 +128,51 @@ const ddl = computed(() => {
   const node = props.tab.node;
   return String(node.ddl || node.createSql || node.createSQL || node.definition || "").trim();
 });
-const basicInfo = computed(() => [
-  { label: "Name", value: databaseName.value },
-  { label: "Database type", value: props.dbType || "-" },
-  { label: "Node type", value: props.tab.node.type || "database" },
-  {
-    label: "Tables",
-    value: props.tab.catalogLoaded ? String(catalog.value.filter((item) => item.type === "table").length) : "Not loaded"
-  },
-  {
-    label: "Views",
-    value: props.tab.catalogLoaded ? String(catalog.value.filter((item) => item.type === "view").length) : "Not loaded"
-  },
-  {
-    label: "Indexes",
-    value: catalog.value.some((item) => item.type === "index")
-      ? String(catalog.value.filter((item) => item.type === "index").length)
-      : "Requires backend metadata"
+const basicInfo = computed(() => {
+  const common = [
+    { label: "Name", value: databaseName.value },
+    { label: "Database type", value: props.dbType || "-" },
+    { label: "Object type", value: props.tab.node.type || "-" }
+  ];
+  if (isDatabase.value) {
+    return [
+      ...common,
+      {
+        label: "Schemas",
+        value: props.tab.catalogLoaded
+          ? String(catalog.value.filter((item) => item.type === "schema").length)
+          : "Not loaded"
+      }
+    ];
   }
-]);
+  return [
+    ...common,
+    {
+      label: "Tables",
+      value: props.tab.catalogLoaded
+        ? String(catalog.value.filter((item) => item.type === "table").length)
+        : "Not loaded"
+    },
+    {
+      label: "Views",
+      value: props.tab.catalogLoaded
+        ? String(catalog.value.filter((item) => item.type === "view").length)
+        : "Not loaded"
+    },
+    {
+      label: "Indexes",
+      value: catalog.value.some((item) => item.type === "index")
+        ? String(catalog.value.filter((item) => item.type === "index").length)
+        : "Requires backend metadata"
+    }
+  ];
+});
 
 function selectSection(section: ChenDatabaseSection) {
   emit("selectSection", section);
-  if (section === "tables" || section === "views" || section === "indexes") emit("loadCatalog");
+  if (section === "schemas" || section === "tables" || section === "views" || section === "indexes") {
+    emit("loadCatalog");
+  }
 }
 </script>
 
@@ -165,7 +203,12 @@ function selectSection(section: ChenDatabaseSection) {
     </div>
 
     <div
-      v-else-if="tab.activeSection === 'tables' || tab.activeSection === 'views' || tab.activeSection === 'indexes'"
+      v-else-if="
+        tab.activeSection === 'schemas' ||
+        tab.activeSection === 'tables' ||
+        tab.activeSection === 'views' ||
+        tab.activeSection === 'indexes'
+      "
       class="min-h-0 flex-1 overflow-auto p-3"
     >
       <div v-if="tab.catalogLoading" class="grid h-full place-items-center text-sm text-muted">
@@ -188,6 +231,10 @@ function selectSection(section: ChenDatabaseSection) {
               <th class="px-3 py-2 font-medium">Columns</th>
               <th class="px-3 py-2 font-medium">Unique</th>
               <th class="px-3 py-2 font-medium">Method</th>
+            </tr>
+            <tr v-else-if="tab.activeSection === 'schemas'">
+              <th class="px-3 py-2 font-medium">Name</th>
+              <th class="px-3 py-2 font-medium">Type</th>
             </tr>
             <tr v-else-if="tab.activeSection === 'tables'">
               <th class="px-3 py-2 font-medium">Name</th>
@@ -218,9 +265,23 @@ function selectSection(section: ChenDatabaseSection) {
                 <td class="px-3 py-2 text-muted">{{ item.method || "-" }}</td>
               </tr>
             </template>
-            <template v-else-if="tab.activeSection === 'tables'">
+            <template v-else-if="tab.activeSection === 'schemas'">
               <tr v-for="item in visibleCatalog" :key="item.key" class="border-t border-default">
                 <td class="px-3 py-2">{{ item.name }}</td>
+                <td class="px-3 py-2 text-muted">Schema</td>
+              </tr>
+            </template>
+            <template v-else-if="tab.activeSection === 'tables'">
+              <tr v-for="item in visibleCatalog" :key="item.key" class="border-t border-default">
+                <td class="px-3 py-2">
+                  <button
+                    type="button"
+                    class="text-left text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    @click="emit('openTable', item.node)"
+                  >
+                    {{ item.name }}
+                  </button>
+                </td>
                 <td class="px-3 py-2 text-muted">{{ item.schema || "-" }}</td>
                 <td class="px-3 py-2 text-right tabular-nums text-muted">{{ item.rowCount || "-" }}</td>
                 <td class="px-3 py-2 text-right tabular-nums text-muted">{{ item.size || "-" }}</td>
@@ -270,9 +331,11 @@ function selectSection(section: ChenDatabaseSection) {
       <div v-else class="grid h-full place-items-center p-6 text-center text-sm text-muted">
         <div class="max-w-lg">
           <UIcon name="i-lucide-file-code-2" class="mx-auto mb-3 size-8" />
-          <div class="font-medium text-[var(--app-fg)]">Database DDL is not available yet</div>
+          <div class="font-medium text-[var(--app-fg)]">
+            {{ isDatabase ? "Database" : "Schema" }} DDL is not available yet
+          </div>
           <p class="mt-2 text-xs leading-5">
-            This page will render the database DDL when it is included in the server metadata response.
+            This page will render the DDL when it is included in the server metadata response.
           </p>
         </div>
       </div>

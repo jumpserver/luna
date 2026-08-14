@@ -81,6 +81,7 @@ function handleRowClick() {
 function handleRowDoubleClick() {
   if (
     props.node.type === "database" ||
+    props.node.type === "schema" ||
     props.node.type === "table" ||
     props.node.type === "view" ||
     props.node.type === "recent-table"

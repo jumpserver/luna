@@ -1,12 +1,16 @@
+import type { ChenDataViewColumnPreview } from "~/chen/composables/useChenDataViewDerivedMeta";
 import type {
+  ChenCreateTableWorkspaceTab,
   ChenDatabaseWorkspaceTab,
   ChenDataViewConsoleTab,
   ChenPromptConsoleTab,
   ChenQueryConsoleTab,
   ChenTabDefinition,
+  ChenTableStructureWorkspaceTab,
   ChenWorkspaceTab
 } from "~/chen/types";
 
+import { chenCreateTableTypes } from "~/chen/utils/createTableSql";
 import { createChenDataViewEditState } from "~/chen/utils/dataViewEditing";
 
 export function newChenWorkspaceId(prefix: string) {
@@ -134,7 +138,7 @@ export function useChenWorkspaceTabs() {
     const tab: ChenDatabaseWorkspaceTab = {
       id: newChenWorkspaceId("database"),
       title,
-      icon: "i-lucide-database",
+      icon: node.type === "schema" ? "i-lucide-library-big" : "i-lucide-database",
       kind: "database",
       nodeKey: node.key,
       node,
@@ -146,6 +150,119 @@ export function useChenWorkspaceTabs() {
       socket: null
     };
 
+    return registerTab(tab);
+  }
+
+  function openCreateTableTab(nodeKey: string, parentNode: ChenCreateTableWorkspaceTab["parentNode"], dbType: string) {
+    const tab: ChenCreateTableWorkspaceTab = {
+      id: newChenWorkspaceId("create-table"),
+      title: nextTabTitle("New Table"),
+      icon: "i-lucide-table-2",
+      kind: "create-table",
+      nodeKey,
+      tableName: "",
+      columns: [
+        {
+          id: newChenWorkspaceId("column"),
+          name: "id",
+          type: chenCreateTableTypes(dbType)[0] || "INTEGER",
+          size: "",
+          nullable: false,
+          primaryKey: true
+        }
+      ],
+      dbType,
+      parentNode,
+      state: {},
+      logs: [],
+      submitting: false,
+      executionStarted: false,
+      submitError: "",
+      created: false,
+      generatedSql: "",
+      socket: null
+    };
+    return registerTab(tab);
+  }
+
+  function parseColumnType(value: string, dbType: string) {
+    const match = value.trim().match(/^(.+?)(?:\((\d+(?:\s*,\s*\d+)?)\))?$/);
+    const rawType = (match?.[1] || value).trim().toLowerCase();
+    const types = chenCreateTableTypes(dbType);
+    const candidates: Record<string, string[]> = {
+      int: ["INT", "INTEGER"],
+      int4: ["INTEGER", "INT"],
+      integer: ["INTEGER", "INT"],
+      int8: ["BIGINT"],
+      bigint: ["BIGINT"],
+      "character varying": ["VARCHAR", "VARCHAR2"],
+      "double precision": ["DECIMAL", "NUMERIC", "NUMBER"],
+      numeric: ["NUMERIC", "DECIMAL", "NUMBER"],
+      number: ["NUMBER", "DECIMAL", "NUMERIC"],
+      decimal: ["DECIMAL", "NUMERIC", "NUMBER"],
+      "timestamp without time zone": ["TIMESTAMP", "DATETIME", "DATETIME2"],
+      "timestamp with time zone": ["TIMESTAMP", "DATETIME", "DATETIME2"]
+    };
+    const requestedTypes = candidates[rawType] || [rawType];
+    const type =
+      requestedTypes
+        .map((candidate) => types.find((item) => item.toLowerCase() === candidate.toLowerCase()))
+        .find(Boolean) || rawType.toUpperCase();
+    return { type, size: match?.[2]?.replaceAll(/\s/g, "") || "" };
+  }
+
+  function openTableStructureTab(
+    sourceTabId: string,
+    nodeKey: string,
+    schemaName: string,
+    tableName: string,
+    columns: ChenDataViewColumnPreview[],
+    dbType: string
+  ) {
+    const existing = workspaceTabs.value.find((item) => item.kind === "table-structure" && item.nodeKey === nodeKey);
+    if (existing) {
+      activeWorkspaceTabId.value = existing.id;
+      return workspaceTabState[existing.id] as ChenTableStructureWorkspaceTab;
+    }
+
+    const tab: ChenTableStructureWorkspaceTab = {
+      id: newChenWorkspaceId("table-structure"),
+      title: `Alter ${tableName}`,
+      icon: "i-lucide-table-properties",
+      kind: "table-structure",
+      nodeKey,
+      schemaName,
+      tableName,
+      columns: columns.map((column) => {
+        const parsed = parseColumnType(column.type, dbType);
+        const primaryKey = column.key === "PK" && column.inferred !== true;
+        const nullable = primaryKey ? false : column.nullable === "YES";
+        return {
+          id: newChenWorkspaceId("column"),
+          name: column.name,
+          type: parsed.type,
+          size: parsed.size,
+          nullable,
+          primaryKey,
+          originalName: column.name,
+          originalType: parsed.type,
+          originalSize: parsed.size,
+          originalNullable: nullable,
+          added: false,
+          deleted: false
+        };
+      }),
+      dbType,
+      sourceTabId,
+      state: {},
+      logs: [],
+      submitting: false,
+      executionStarted: false,
+      submitError: "",
+      saved: false,
+      generatedSql: "",
+      socket: null
+    };
     return registerTab(tab);
   }
 
@@ -187,9 +304,11 @@ export function useChenWorkspaceTabs() {
     displayWorkspaceTabTitle,
     nextTabTitle,
     openConsoleTab,
+    openCreateTableTab,
     openDatabaseTab,
     openDataViewTab,
     openQueryTab,
+    openTableStructureTab,
     renameTab,
     setActiveTab
   };

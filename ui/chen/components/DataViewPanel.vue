@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import type {
+  ChenDataViewColumnPreview,
+  ChenDataViewIndexPreview
+} from "~/chen/composables/useChenDataViewDerivedMeta";
+import type {
   ChenDataViewAction,
   ChenDataViewActionData,
   ChenDataViewConsoleTab,
@@ -9,14 +13,18 @@ import type {
 
 import ChenDataGrid from "~/chen/components/DataGrid.client.vue";
 import DataViewBatchUpdateDialog from "~/chen/components/DataViewBatchUpdateDialog.vue";
+import DataViewCreateIndexDialog from "~/chen/components/DataViewCreateIndexDialog.vue";
 import DataViewDiagram from "~/chen/components/DataViewDiagram.vue";
 import DataViewExportDialog from "~/chen/components/DataViewExportDialog.vue";
 import DataViewFilter from "~/chen/components/DataViewFilter.client.vue";
 import DataViewSavePreviewDialog from "~/chen/components/DataViewSavePreviewDialog.vue";
 import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
+import SqlPreviewDialog from "~/chen/components/SqlPreviewDialog.vue";
+import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
 import { useChenDataViewDerivedMeta } from "~/chen/composables/useChenDataViewDerivedMeta";
 import { useChenDataViewEditing } from "~/chen/composables/useChenDataViewEditing";
 import { chenGridPreferenceKey } from "~/chen/composables/useChenGridPreferences";
+import { buildChenDropIndexSql, chenSupportsIndexDdl } from "~/chen/utils/indexSql";
 
 const props = withDefaults(
   defineProps<{
@@ -37,10 +45,21 @@ const emit = defineEmits<{
   updatePanel: [tab: ChenDataViewConsoleTab, panel: "data" | "properties"];
   updatePropertyTab: [tab: ChenDataViewConsoleTab, propertyTab: ChenDataViewPropertyTab];
   updateWhereCondition: [tab: ChenDataViewConsoleTab, condition: string];
+  editStructure: [tab: ChenDataViewConsoleTab, columns: ChenDataViewColumnPreview[]];
+  executeIndexSql: [
+    tab: ChenDataViewConsoleTab,
+    sql: string,
+    operation: "create" | "drop",
+    indexName: string
+  ];
 }>();
 
 const exportDialogOpen = ref(false);
 const batchUpdateDialogOpen = ref(false);
+const createIndexDialogOpen = ref(false);
+const indexDetailsOpen = ref(false);
+const dropIndexPreviewOpen = ref(false);
+const selectedIndex = ref<ChenDataViewIndexPreview | null>(null);
 const exportTarget = ref<ChenDataViewConsoleTab | null>(null);
 const dataGrid = ref<{ stopEditing: () => void } | null>(null);
 const selectedRows = ref<Array<Record<string, any>>>([]);
@@ -49,6 +68,14 @@ const editState = computed(() => props.tab.editState);
 const previewDialogOpen = computed(() => editState.value.previewResult?.success === true);
 const gridPreferenceKey = computed(() => chenGridPreferenceKey(props.tab.meta, props.tab.id, props.dbType));
 const editableFields = computed(() => (props.tab.data?.fields || []).filter((field) => field.editable === true));
+const tableName = computed(() => String(props.tab.meta?.table || props.tab.meta?.title || props.tab.title).trim());
+const schemaName = computed(() => String(props.tab.meta?.schema || "").trim());
+const indexDdlSupported = computed(() => chenSupportsIndexDdl(props.dbType));
+const dropIndexSql = computed(() =>
+  selectedIndex.value
+    ? buildChenDropIndexSql(schemaName.value, tableName.value, selectedIndex.value.name, props.dbType)
+    : ""
+);
 
 const dbTypeRef = computed(() => props.dbType);
 const protocolRef = computed(() => props.protocol);
@@ -61,6 +88,7 @@ const {
   dataViewIndexes,
   dataViewPropertyTabs
 } = useChenDataViewDerivedMeta(dbTypeRef, protocolRef);
+const tableColumns = computed(() => dataViewColumns(props.tab).map((column) => column.name).filter((name) => name !== "-"));
 
 function openExportDialog() {
   exportTarget.value = props.tab;
@@ -123,9 +151,36 @@ function selectPropertyTab(propertyTab: ChenDataViewPropertyTab) {
   emit("updatePropertyTab", props.tab, propertyTab);
 }
 
+function showIndexDetails(index: ChenDataViewIndexPreview) {
+  selectedIndex.value = index;
+  indexDetailsOpen.value = true;
+}
+
+function previewDropIndex(index: ChenDataViewIndexPreview) {
+  if (index.protected || index.inferred) return;
+  selectedIndex.value = index;
+  dropIndexPreviewOpen.value = true;
+}
+
+function createIndex(sql: string, indexName: string) {
+  emit("executeIndexSql", props.tab, sql, "create", indexName);
+}
+
+function dropIndex() {
+  if (!selectedIndex.value || selectedIndex.value.protected || selectedIndex.value.inferred) return;
+  dropIndexPreviewOpen.value = false;
+  emit("executeIndexSql", props.tab, dropIndexSql.value, "drop", selectedIndex.value.name);
+}
+
 function applyWhereCondition() {
   if (editing.busy.value || props.tab.state.loading) return;
   emit("dataViewAction", props.tab, "change_filter", props.tab.whereCondition.trim());
+}
+
+function clearWhereCondition() {
+  if (editing.busy.value || props.tab.state.loading) return;
+  emit("updateWhereCondition", props.tab, "");
+  emit("dataViewAction", props.tab, "change_filter", "");
 }
 </script>
 
@@ -166,6 +221,7 @@ function applyWhereCondition() {
           :disabled="editing.busy.value || tab.state.loading"
           @update:model-value="emit('updateWhereCondition', tab, $event)"
           @apply="applyWhereCondition"
+          @clear="clearWhereCondition"
         />
         <UButton
           size="xs"
@@ -281,6 +337,17 @@ function applyWhereCondition() {
       </div>
 
       <div v-else-if="tab.activePropertyTab === 'columns'" class="min-h-0 flex-1 overflow-auto p-3">
+        <div class="mb-2 flex justify-end">
+          <UButton
+            icon="i-lucide-table-properties"
+            size="xs"
+            color="neutral"
+            variant="soft"
+            @click="emit('editStructure', tab, dataViewColumns(tab))"
+          >
+            Edit structure
+          </UButton>
+        </div>
         <div class="overflow-hidden rounded-lg border border-default">
           <table class="w-full text-left text-sm">
             <thead class="bg-[var(--workspace-surface-sub-panel)] text-muted">
@@ -312,7 +379,21 @@ function applyWhereCondition() {
       </div>
 
       <div v-else-if="tab.activePropertyTab === 'indexes'" class="min-h-0 flex-1 overflow-auto p-3">
-        <div class="overflow-hidden rounded-lg border border-default">
+        <div class="mb-2 flex items-center justify-between gap-3">
+          <p class="text-xs text-muted">
+            Primary-key and constraint-backed indexes cannot be deleted here.
+          </p>
+          <UButton
+            icon="i-lucide-plus"
+            size="xs"
+            :disabled="!indexDdlSupported"
+            :title="indexDdlSupported ? 'Create index' : 'Index changes are not supported for this database type'"
+            @click="createIndexDialogOpen = true"
+          >
+            New index
+          </UButton>
+        </div>
+        <div v-if="dataViewIndexes(tab).length" class="overflow-hidden rounded-lg border border-default">
           <table class="w-full text-left text-sm">
             <thead class="bg-[var(--workspace-surface-sub-panel)] text-muted">
               <tr>
@@ -320,12 +401,18 @@ function applyWhereCondition() {
                 <th class="px-3 py-2 font-medium">Columns</th>
                 <th class="px-3 py-2 font-medium">Unique</th>
                 <th class="px-3 py-2 font-medium">Method</th>
+                <th class="w-24 px-3 py-2 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="index in dataViewIndexes(tab)" :key="index.name" class="border-t border-default">
                 <td class="px-3 py-2">
-                  {{ index.name }}
+                  <button type="button" class="text-left text-primary hover:underline" @click="showIndexDetails(index)">
+                    {{ index.name }}
+                  </button>
+                  <UBadge v-if="index.inferred" class="ml-2" color="neutral" variant="subtle" size="xs">
+                    Inferred
+                  </UBadge>
                 </td>
                 <td class="px-3 py-2 text-muted">
                   {{ index.columns }}
@@ -336,10 +423,23 @@ function applyWhereCondition() {
                 <td class="px-3 py-2 text-muted">
                   {{ index.method }}
                 </td>
+                <td class="px-3 py-2 text-right">
+                  <UButton
+                    color="error"
+                    variant="ghost"
+                    icon="i-lucide-trash-2"
+                    size="xs"
+                    :disabled="!indexDdlSupported || index.protected || index.inferred"
+                    :title="!indexDdlSupported ? 'Index changes are not supported for this database type' : index.protected || index.inferred ? 'Primary, constraint-backed, or inferred indexes cannot be deleted here' : `Drop ${index.name}`"
+                    :aria-label="`Drop index ${index.name}`"
+                    @click="previewDropIndex(index)"
+                  />
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
+        <div v-else class="grid h-full place-items-center text-sm text-muted">No index metadata available.</div>
       </div>
 
       <div v-else-if="tab.activePropertyTab === 'foreignKeys'" class="min-h-0 flex-1 overflow-auto p-3">
@@ -429,5 +529,62 @@ function applyWhereCondition() {
       @update:open="handlePreviewDialogOpen"
       @confirm="confirmSaveChanges"
     />
+
+    <DataViewCreateIndexDialog
+      v-if="createIndexDialogOpen"
+      v-model:open="createIndexDialogOpen"
+      :schema="schemaName"
+      :table="tableName"
+      :columns="tableColumns"
+      :db-type="dbType"
+      @confirm="createIndex"
+    />
+
+    <SqlPreviewDialog
+      :open="dropIndexPreviewOpen"
+      :title="`Drop index · ${selectedIndex?.name || ''}`"
+      :description="`Review the SQL that will remove this index from ${schemaName ? `${schemaName}.` : ''}${tableName}.`"
+      :sql="dropIndexSql"
+      confirm-label="Drop index"
+      danger
+      danger-message="Dropping an index can slow queries and may briefly lock database metadata. This action cannot be undone here."
+      @confirm="dropIndex"
+      @update:open="dropIndexPreviewOpen = $event"
+    />
+
+    <ChenWorkspaceModal
+      :open="indexDetailsOpen"
+      :title="`Index · ${selectedIndex?.name || ''}`"
+      @update:open="indexDetailsOpen = $event"
+    >
+      <template #body>
+        <dl v-if="selectedIndex" class="grid gap-3 p-4 text-sm sm:grid-cols-2">
+          <div>
+            <dt class="text-xs text-muted">Columns</dt>
+            <dd class="mt-1">{{ selectedIndex.columns }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-muted">Unique</dt>
+            <dd class="mt-1">{{ selectedIndex.unique }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-muted">Method</dt>
+            <dd class="mt-1">{{ selectedIndex.method }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-muted">Managed by constraint</dt>
+            <dd class="mt-1">{{ selectedIndex.protected ? "Yes" : "No" }}</dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="text-xs text-muted">Definition</dt>
+            <dd class="mt-1">
+              <pre class="overflow-auto rounded-md bg-elevated p-3 text-xs text-muted">{{
+                selectedIndex.definition || "Definition is not available from the server."
+              }}</pre>
+            </dd>
+          </div>
+        </dl>
+      </template>
+    </ChenWorkspaceModal>
   </div>
 </template>

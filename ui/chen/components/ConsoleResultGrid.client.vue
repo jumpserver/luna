@@ -104,7 +104,7 @@ watch([columnDefs, () => props.dataset.data], async () => {
   --ag-foreground-color: var(--data-grid-text);
   --ag-header-background-color: var(--data-grid-header-background);
   --ag-header-foreground-color: var(--data-grid-text);
-  --ag-odd-row-background-color: var(--data-grid-row-striped);
+  --ag-odd-row-background-color: var(--data-grid-row-background);
   --ag-row-hover-color: var(--data-grid-row-hover);
   --ag-border-color: var(--data-grid-border);
   --ag-row-border-color: color-mix(in srgb, var(--data-grid-border) 72%, transparent);

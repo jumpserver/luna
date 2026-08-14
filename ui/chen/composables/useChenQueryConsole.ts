@@ -1,9 +1,11 @@
 import type {
   ChenConsoleTimelineEntry,
+  ChenCreateTableWorkspaceTab,
   ChenPacket,
   ChenPromptConsoleTab,
   ChenQueryConsoleTab,
   ChenQueryLikeWorkspaceTab,
+  ChenTableStructureWorkspaceTab,
   ChenWorkspaceTab
 } from "~/chen/types";
 
@@ -18,7 +20,11 @@ const SQL_CHUNK_SIZE = 4096;
 const MAX_CONSOLE_TIMELINE_ENTRIES = 200;
 
 export function useChenQueryConsole(
-  sendConsoleAction: (tab: ChenQueryLikeWorkspaceTab, type: string, data?: any) => boolean | void
+  sendConsoleAction: (
+    tab: ChenQueryLikeWorkspaceTab | ChenCreateTableWorkspaceTab | ChenTableStructureWorkspaceTab,
+    type: string,
+    data?: any
+  ) => boolean | void
 ) {
   function activeConsoleEntry(tab: ChenPromptConsoleTab) {
     return tab.timelineEntries.find((entry) => entry.id === tab.activeTimelineEntryId) || null;
@@ -217,7 +223,10 @@ export function useChenQueryConsole(
     }
   }
 
-  function sendSql(tab: ChenQueryLikeWorkspaceTab, sql: string) {
+  function sendSql(
+    tab: ChenQueryLikeWorkspaceTab | ChenCreateTableWorkspaceTab | ChenTableStructureWorkspaceTab,
+    sql: string
+  ) {
     if (sql.length <= SQL_CHUNK_SIZE) {
       return sendConsoleAction(tab, "query_console_action", { action: "run_sql", data: sql }) !== false;
     }
@@ -343,6 +352,7 @@ export function useChenQueryConsole(
     runConsoleTab,
     runQueryFile,
     runQueryTab,
+    sendSql,
     updateQueryResult
   };
 }

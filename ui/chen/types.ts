@@ -37,7 +37,7 @@ export interface ChenTabDefinition {
   id: string;
   title: string;
   icon?: string;
-  kind: "query" | "data-view" | "console" | "database";
+  kind: "query" | "data-view" | "console" | "database" | "create-table" | "table-structure";
   nodeKey: string;
   connectionError?: string;
 }
@@ -280,7 +280,7 @@ export interface ChenDataViewConsoleTab extends ChenTabDefinition {
   socket: WebSocket | null;
 }
 
-export type ChenDatabaseSection = "basic" | "tables" | "views" | "indexes" | "ddl" | "diagram";
+export type ChenDatabaseSection = "basic" | "schemas" | "tables" | "views" | "indexes" | "ddl" | "diagram";
 
 export interface ChenDatabaseWorkspaceTab extends ChenTabDefinition {
   kind: "database";
@@ -291,6 +291,57 @@ export interface ChenDatabaseWorkspaceTab extends ChenTabDefinition {
   catalogError: string;
   logs: string[];
   socket: null;
+}
+
+export interface ChenCreateTableColumn {
+  id: string;
+  name: string;
+  type: string;
+  size: string;
+  nullable: boolean;
+  primaryKey: boolean;
+}
+
+export interface ChenCreateTableWorkspaceTab extends ChenTabDefinition {
+  kind: "create-table";
+  tableName: string;
+  columns: ChenCreateTableColumn[];
+  dbType: string;
+  parentNode: ChenTreeNode;
+  state: ChenConsoleState;
+  logs: string[];
+  submitting: boolean;
+  executionStarted: boolean;
+  submitError: string;
+  created: boolean;
+  generatedSql: string;
+  socket: WebSocket | null;
+}
+
+export interface ChenTableStructureColumn extends ChenCreateTableColumn {
+  originalName: string;
+  originalType: string;
+  originalSize: string;
+  originalNullable: boolean;
+  added: boolean;
+  deleted: boolean;
+}
+
+export interface ChenTableStructureWorkspaceTab extends ChenTabDefinition {
+  kind: "table-structure";
+  schemaName: string;
+  tableName: string;
+  columns: ChenTableStructureColumn[];
+  dbType: string;
+  sourceTabId: string;
+  state: ChenConsoleState;
+  logs: string[];
+  submitting: boolean;
+  executionStarted: boolean;
+  submitError: string;
+  saved: boolean;
+  generatedSql: string;
+  socket: WebSocket | null;
 }
 
 export type ChenDataViewAction =
@@ -310,7 +361,12 @@ export type ChenDataViewActionData = number | string | ChenDataViewExportOptions
 
 export type ChenDataViewActionTarget = ChenQueryResultTab | ChenDataViewConsoleTab;
 
-export type ChenWorkspaceTab = ChenQueryLikeWorkspaceTab | ChenDataViewConsoleTab | ChenDatabaseWorkspaceTab;
+export type ChenWorkspaceTab =
+  | ChenQueryLikeWorkspaceTab
+  | ChenDataViewConsoleTab
+  | ChenDatabaseWorkspaceTab
+  | ChenCreateTableWorkspaceTab
+  | ChenTableStructureWorkspaceTab;
 
 export interface ChenSocketAction {
   type: string;

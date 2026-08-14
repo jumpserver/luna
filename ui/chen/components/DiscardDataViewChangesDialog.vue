@@ -3,6 +3,7 @@ import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
 
 const props = defineProps<{
   open: boolean;
+  message?: string;
 }>();
 
 const emit = defineEmits<{
@@ -28,7 +29,7 @@ function confirmDiscard() {
 <template>
   <ChenWorkspaceModal v-model:open="visible" title="Discard unsaved changes?">
     <template #body>
-      <p class="text-sm text-muted">This data view has unsaved edits. Discard them and continue?</p>
+      <p class="text-sm text-muted">{{ message || "This data view has unsaved edits. Discard them and continue?" }}</p>
     </template>
 
     <template #footer>

@@ -4,7 +4,7 @@ import type { Extension } from "@codemirror/state";
 import type { ChenDataViewField } from "~/chen/types";
 
 import { sql } from "@codemirror/lang-sql";
-import { Compartment, EditorState } from "@codemirror/state";
+import { Compartment, EditorState, Prec } from "@codemirror/state";
 import { EditorView, keymap, placeholder } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 import { chenSqlDialect } from "~/chen/utils/sqlEditor";
@@ -29,6 +29,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   "update:modelValue": [value: string];
   apply: [];
+  clear: [];
 }>();
 
 const colorMode = useColorMode();
@@ -66,15 +67,17 @@ onMounted(() => {
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !applyingExternalValue) emit("update:modelValue", update.state.doc.toString());
         }),
-        keymap.of([
-          {
-            key: "Enter",
-            run: () => {
-              if (!props.disabled) emit("apply");
-              return true;
+        Prec.highest(
+          keymap.of([
+            {
+              key: "Enter",
+              run: () => {
+                if (!props.disabled) emit("apply");
+                return true;
+              }
             }
-          }
-        ]),
+          ])
+        ),
         editableSlot.of(EditorView.editable.of(!props.disabled)),
         themeSlot.of(createCodeMirrorTheme())
       ]
@@ -115,10 +118,24 @@ onBeforeUnmount(() => editor?.destroy());
 
 <template>
   <div
-    ref="container"
-    class="h-7 min-w-64 flex-1 overflow-hidden rounded-md border border-default bg-default"
+    class="relative h-7 min-w-64 flex-1 overflow-hidden rounded-md border border-default bg-default"
     :class="disabled ? 'opacity-60' : ''"
-  />
+  >
+    <div ref="container" class="h-full" />
+    <UButton
+      v-if="modelValue"
+      class="absolute right-0.5 top-1/2 -translate-y-1/2"
+      size="xs"
+      icon="i-lucide-x"
+      color="neutral"
+      variant="ghost"
+      aria-label="Clear WHERE condition"
+      title="Clear WHERE condition"
+      :disabled="disabled"
+      @mousedown.prevent
+      @click="emit('clear')"
+    />
+  </div>
 </template>
 
 <style scoped>
@@ -139,7 +156,7 @@ onBeforeUnmount(() => editor?.destroy());
 
 :deep(.cm-content) {
   align-items: center;
-  padding: 0 8px;
+  padding: 0 32px 0 8px;
   white-space: nowrap;
 }
 

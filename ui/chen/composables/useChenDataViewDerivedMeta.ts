@@ -6,12 +6,23 @@ export interface ChenDataViewColumnPreview {
   type: string;
   nullable: string;
   key: string;
+  inferred?: boolean;
 }
 
 export interface ChenDataViewForeignKeyPreview {
   name: string;
   column: string;
   references: string;
+  inferred?: boolean;
+}
+
+export interface ChenDataViewIndexPreview {
+  name: string;
+  columns: string;
+  unique: string;
+  method: string;
+  definition: string;
+  protected: boolean;
   inferred?: boolean;
 }
 
@@ -73,14 +84,54 @@ export function useChenDataViewDerivedMeta(profileDbType: Ref<string | undefined
         name: field.name,
         type: field.type || "-",
         nullable: field.nullable === false ? "NO" : "YES",
-        key: field.primaryKey === true || field.isPrimaryKey === true || index === 0 ? "PK" : ""
+        key: field.primaryKey === true || field.isPrimaryKey === true || index === 0 ? "PK" : "",
+        inferred: true
       })
     );
   }
 
   function dataViewIndexes(tab: ChenDataViewConsoleTab) {
-    const first = tab.data?.fields?.[0]?.name || "id";
-    return [{ name: `${tableLabelForProperties(tab)}_pkey`, columns: first, unique: "YES", method: "btree" }];
+    const metadataIndexes = metaList(tab, "indexes", "indices");
+    if (metadataIndexes.length) {
+      return metadataIndexes.map((index, position): ChenDataViewIndexPreview => {
+        const rawColumns = index.columns || index.columnNames || index.column_names || index.fields;
+        const columns = Array.isArray(rawColumns) ? rawColumns.join(", ") : String(rawColumns || index.column || "-");
+        const primary =
+          index.primary === true ||
+          index.primaryKey === true ||
+          index.isPrimary === true ||
+          String(index.type || index.indexType).toUpperCase() === "PRIMARY";
+        const constraint =
+          index.constraint === true || index.constraintBacked === true || index.isConstraint === true;
+        return {
+          name: String(index.name || index.indexName || index.index_name || `index_${position + 1}`),
+          columns,
+          unique:
+            index.unique === true || index.isUnique === true || String(index.unique).toUpperCase() === "YES"
+              ? "YES"
+              : "NO",
+          method: String(index.method || index.indexType || index.index_type || index.type || "-"),
+          definition: String(index.definition || index.ddl || index.sql || ""),
+          protected: primary || constraint
+        };
+      });
+    }
+
+    const primaryColumns = (tab.data?.fields || [])
+      .filter((field) => field.primaryKey === true || field.isPrimaryKey === true)
+      .map((field) => field.name);
+    if (!primaryColumns.length) return [];
+    return [
+      {
+        name: `${tableLabelForProperties(tab)}_pkey`,
+        columns: primaryColumns.join(", "),
+        unique: "YES",
+        method: "-",
+        definition: "",
+        protected: true,
+        inferred: true
+      }
+    ];
   }
 
   function dataViewForeignKeys(tab: ChenDataViewConsoleTab) {

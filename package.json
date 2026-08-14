@@ -23,7 +23,7 @@
     "lint": "eslint . --fix",
     "lint:check": "eslint . --ignore-pattern .omx",
     "cargo:fmt": "cargo fmt --manifest-path src-tauri/Cargo.toml",
-    "test": "vitest run --config vitest.config.ts --browser.enabled=false --exclude packages/koko/app/tests/** --passWithNoTests",
+    "test": "vitest run --config vitest.config.ts --browser.enabled=false --exclude='packages/koko/app/tests/**' --passWithNoTests",
     "test:browser": "vitest run --config vitest.config.ts",
     "typecheck": "nuxt typecheck",
     "bump": "bumpp",

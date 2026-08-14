@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
+import type { ChenDataViewColumnPreview } from "~/chen/composables/useChenDataViewDerivedMeta";
 import type {
   ChenActionItem,
+  ChenCreateTableWorkspaceTab,
   ChenDatabaseSection,
   ChenDatabaseWorkspaceTab,
   ChenDataViewAction,
@@ -15,6 +17,7 @@ import type {
   ChenQueryResultTab,
   ChenSaveChangesPreviewResult,
   ChenSaveChangesResult,
+  ChenTableStructureWorkspaceTab,
   ChenTreeNode,
   ChenWorkspaceTab
 } from "~/chen/types";
@@ -23,11 +26,13 @@ import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import { fetchChenActions, fetchChenExport, fetchChenSqlHints, uploadChenSqlFile } from "~/chen/api";
 import ChenSessionState from "~/chen/components/ChenSessionState.vue";
 import ConsolePanel from "~/chen/components/ConsolePanel.vue";
+import CreateTablePanel from "~/chen/components/CreateTablePanel.vue";
 import DatabaseOverviewPanel from "~/chen/components/DatabaseOverviewPanel.vue";
 import DataViewPanel from "~/chen/components/DataViewPanel.vue";
 import DiscardDataViewChangesDialog from "~/chen/components/DiscardDataViewChangesDialog.vue";
 import QueryConsolePanel from "~/chen/components/QueryConsolePanel.vue";
 import ResourceTreePanel from "~/chen/components/ResourceTreePanel.vue";
+import TableStructurePanel from "~/chen/components/TableStructurePanel.vue";
 import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
 import WorkspaceTabBar from "~/chen/components/WorkspaceTabBar.vue";
 import { useChenActionMenu } from "~/chen/composables/useChenActionMenu";
@@ -40,7 +45,7 @@ import { useChenSession } from "~/chen/composables/useChenSession";
 import { useChenSqlHints } from "~/chen/composables/useChenSqlHints";
 import { chenWsUrl, useChenWebSocket } from "~/chen/composables/useChenWebSocket";
 import { useChenWorkspacePreferences } from "~/chen/composables/useChenWorkspacePreferences";
-import { useChenWorkspaceTabs } from "~/chen/composables/useChenWorkspaceTabs";
+import { newChenWorkspaceId, useChenWorkspaceTabs } from "~/chen/composables/useChenWorkspaceTabs";
 import { saveChenExport } from "~/chen/runtime/download";
 import { formatChenDialogValue, normalizeChenDialogMessage } from "~/chen/utils/chenDialog";
 import {
@@ -84,6 +89,7 @@ let resizeStartWidth = 0;
 let resizeHandle: HTMLElement | null = null;
 let resizePointerId: number | null = null;
 const discardDialogOpen = ref(false);
+const discardDialogMessage = ref("");
 const pendingDiscard = shallowRef<(() => void) | null>(null);
 const GUARDED_DATA_VIEW_ACTIONS = new Set<ChenDataViewAction>([
   "first_page",
@@ -113,6 +119,10 @@ const workspacePreferences = useChenWorkspacePreferences();
 const recentTables = useChenRecentTables(`${props.tab.assetId}:${props.tab.protocol}`);
 const dataView = useChenDataView(sendConsoleAction);
 const consoleConnections = new Map<string, ReturnType<typeof useChenWebSocket>>();
+const indexOperations = new Map<
+  string,
+  { sourceTabId: string; operation: "create" | "drop"; indexName: string; started: boolean; error: string }
+>();
 
 const currentWorkspaceNodeKey = computed(() => {
   return (
@@ -168,6 +178,14 @@ const activeDataViewTab = computed(() => {
 const activeDatabaseTab = computed(() => {
   const tab = workspace.activeWorkspaceTab.value;
   return tab?.kind === "database" ? tab : null;
+});
+const activeCreateTableTab = computed(() => {
+  const tab = workspace.activeWorkspaceTab.value;
+  return tab?.kind === "create-table" ? tab : null;
+});
+const activeTableStructureTab = computed(() => {
+  const tab = workspace.activeWorkspaceTab.value;
+  return tab?.kind === "table-structure" ? tab : null;
 });
 const activeConnectionError = computed(() => workspace.activeWorkspaceTab.value?.connectionError || "");
 
@@ -250,7 +268,12 @@ function initConsoleSocket(tab: ChenWorkspaceTab) {
         type: "connect",
         data: {
           nodeKey: reactiveTab.nodeKey,
-          type: reactiveTab.kind === "data-view" ? "data_view" : reactiveTab.kind
+          type:
+            reactiveTab.kind === "data-view"
+              ? "data_view"
+              : reactiveTab.kind === "create-table" || reactiveTab.kind === "table-structure"
+                ? "query"
+                : reactiveTab.kind
         }
       });
     },
@@ -269,6 +292,12 @@ function initConsoleSocket(tab: ChenWorkspaceTab) {
       if (!reactiveTab || reactiveTab.kind === "database") return;
       reactiveTab.socket = null;
       reactiveTab.connectionError = socketError.message;
+      if ((reactiveTab.kind === "create-table" || reactiveTab.kind === "table-structure") && reactiveTab.submitting) {
+        reactiveTab.submitError = socketError.message;
+        if (reactiveTab.kind === "create-table") void finishCreateTable(reactiveTab, false);
+        else finishTableStructure(reactiveTab, false);
+        return;
+      }
       queryConsole.failConsoleExecution(reactiveTab, socketError.message);
     }
   });
@@ -286,6 +315,19 @@ function sendConsoleAction(tab: ChenWorkspaceTab, type: string, data?: any) {
   tab.connectionError ||= "Console websocket is not connected";
   queryConsole.failConsoleExecution(tab, tab.connectionError);
   return false;
+}
+
+function reconnectConsoleSocket(tab: ChenWorkspaceTab) {
+  consoleConnections.get(tab.id)?.close();
+  consoleConnections.delete(tab.id);
+  tab.socket = null;
+  tab.connectionError = "";
+  return initConsoleSocket(tab);
+}
+
+function refreshDataViewWithNewConnection(tab: ChenWorkspaceTab, target: ChenDataViewActionTarget) {
+  if (!reconnectConsoleSocket(tab)) return false;
+  return dataView.sendDataViewAction(tab, target, "refresh");
 }
 
 function guardDataViewChanges(targets: ChenDataViewActionTarget[], action: () => void) {
@@ -307,12 +349,16 @@ function guardDataViewChanges(targets: ChenDataViewActionTarget[], action: () =>
     dirtyTargets.forEach((target) => clearChenDataViewEdits(target.editState));
     action();
   };
+  discardDialogMessage.value = "This data view has unsaved edits. Discard them and continue?";
   discardDialogOpen.value = true;
 }
 
 function updateDiscardDialog(open: boolean) {
   discardDialogOpen.value = open;
-  if (!open) pendingDiscard.value = null;
+  if (!open) {
+    pendingDiscard.value = null;
+    discardDialogMessage.value = "";
+  }
 }
 
 function confirmDiscardChanges() {
@@ -363,12 +409,14 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
   const outcome = acceptChenSaveChangesResult(target.editState, result);
   if (outcome === "ignored") return;
   if (outcome === "commit-unknown") {
+    clearChenDataViewEdits(target.editState);
     toast.add({
       title: "Save outcome is unknown",
       description:
-        "The connection was reset. Refresh to verify the database state before retrying; transaction and session state were lost.",
+        "The connection was reset. Refreshing with a new connection to verify the database state; do not retry until it finishes.",
       color: "warning"
     });
+    refreshDataViewWithNewConnection(tab, target);
     return;
   }
   if (outcome === "failed") {
@@ -393,6 +441,7 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
       description: `${connectionDetail}${auditDetail}`,
       color: "warning"
     });
+    if (result.connectionInvalidated) reconnectConsoleSocket(tab);
     return;
   }
 
@@ -417,14 +466,24 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
   } else {
     toast.add({ title: result.success ? "Save succeeded" : "Database changes applied", color: "success" });
   }
-  dataView.sendDataViewAction(tab, target, "refresh");
+  if (result.connectionInvalidated) refreshDataViewWithNewConnection(tab, target);
+  else dataView.sendDataViewAction(tab, target, "refresh");
 }
 
 function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
+  if (tab.kind === "create-table") {
+    handleCreateTablePacket(tab, packet);
+    return;
+  }
+  if (tab.kind === "table-structure") {
+    handleTableStructurePacket(tab, packet);
+    return;
+  }
   const previousContext = tab.kind === "query" ? tab.state.currentContext : undefined;
   if (tab.kind === "query" || tab.kind === "console") {
     queryConsole.handleQueryConsolePacket(tab, packet);
   }
+  if (tab.kind === "query") handleIndexOperationPacket(tab, packet);
   if (tab.kind === "query" && packet.type === "update_state") {
     const currentContext = tab.state.currentContext || "";
     if (currentContext && currentContext !== previousContext) void queryHints.load(tab, currentContext);
@@ -457,6 +516,153 @@ function handleConsolePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
   consumeDataViewSavePacket(tab, packet);
 }
 
+function handleIndexOperationPacket(tab: ChenQueryConsoleTab, packet: ChenPacket) {
+  const operation = indexOperations.get(tab.id);
+  if (!operation) return;
+  if (packet.type === "log" && Number(packet.data?.level) === 0) {
+    operation.error ||= packetErrorMessage(packet.data);
+    return;
+  }
+  if (packet.type === "message" && (packet.data?.type === "error" || packet.data?.level === 0)) {
+    operation.error ||= packetErrorMessage(packet.data);
+    return;
+  }
+  if (packet.type !== "update_state") return;
+  if (packet.data?.loading === true || packet.data?.inQuery === true) {
+    operation.started = true;
+    return;
+  }
+  if (
+    packet.data?.loading !== false ||
+    (!operation.started && !["success", "error", "cancelled"].includes(packet.data?.executionStatus))
+  ) {
+    return;
+  }
+
+  indexOperations.delete(tab.id);
+  const failed = ["error", "cancelled"].includes(packet.data?.executionStatus) || Boolean(operation.error);
+  if (failed) {
+    addErrorToast({
+      title: `Failed to ${operation.operation} index`,
+      description: operation.error || tab.message?.message || tab.logs.at(-1) || "The database rejected the index statement."
+    });
+    return;
+  }
+
+  toast.add({
+    title: operation.operation === "create" ? "Index created" : "Index dropped",
+    description: operation.indexName,
+    color: "success"
+  });
+  const source = workspace.workspaceTabState[operation.sourceTabId];
+  performCloseWorkspaceTab(tab.id);
+  if (source?.kind === "data-view") {
+    workspace.setActiveTab(source.id);
+    refreshDataViewWithNewConnection(source, source);
+  }
+}
+
+function packetErrorMessage(data: any) {
+  if (typeof data === "string") return data;
+  return String(data?.message || data?.reason || "").trim();
+}
+
+async function finishCreateTable(tab: ChenCreateTableWorkspaceTab, succeeded: boolean) {
+  tab.submitting = false;
+  if (!succeeded) {
+    tab.submitError ||= "The database rejected the CREATE TABLE statement.";
+    addErrorToast({ title: "Failed to create table", description: tab.submitError });
+    return;
+  }
+
+  tab.created = true;
+  tab.title = tab.tableName.trim() || tab.title;
+  toast.add({ title: "Table created", description: tab.tableName.trim(), color: "success" });
+  await tree.loadNodeChildren(tab.parentNode, true);
+}
+
+function handleCreateTablePacket(tab: ChenCreateTableWorkspaceTab, packet: ChenPacket) {
+  if (packet.type === "log") {
+    queryConsole.appendLog(tab, packet.data);
+    if (Number(packet.data?.level) === 0) tab.submitError ||= packetErrorMessage(packet.data);
+    return;
+  }
+  if (packet.type === "message") {
+    const isError = packet.data?.type === "error" || packet.data?.level === 0;
+    if (isError) tab.submitError ||= packetErrorMessage(packet.data);
+    return;
+  }
+  if (packet.type !== "update_state") return;
+
+  tab.state = packet.data || {};
+  if (!tab.submitting) return;
+  if (packet.data?.loading === true || packet.data?.inQuery === true) {
+    tab.executionStarted = true;
+    return;
+  }
+  if (
+    packet.data?.loading !== false ||
+    (!tab.executionStarted && !["success", "error", "cancelled"].includes(packet.data?.executionStatus))
+  ) {
+    return;
+  }
+  const failed = ["error", "cancelled"].includes(packet.data?.executionStatus) || Boolean(tab.submitError);
+  void finishCreateTable(tab, !failed);
+}
+
+function finishTableStructure(tab: ChenTableStructureWorkspaceTab, succeeded: boolean) {
+  tab.submitting = false;
+  if (!succeeded) {
+    tab.submitError ||= "The database rejected the ALTER TABLE statement.";
+    addErrorToast({ title: "Failed to update table structure", description: tab.submitError });
+    return;
+  }
+
+  tab.saved = true;
+  tab.columns = tab.columns
+    .filter((column) => !column.deleted)
+    .map((column) => ({
+      ...column,
+      originalName: column.name,
+      originalType: column.type,
+      originalSize: column.size,
+      originalNullable: column.nullable,
+      added: false,
+      deleted: false
+    }));
+  toast.add({ title: "Table structure updated", description: tab.tableName, color: "success" });
+  const source = workspace.workspaceTabState[tab.sourceTabId];
+  if (source?.kind === "data-view") dataView.sendDataViewAction(source, source, "refresh");
+}
+
+function handleTableStructurePacket(tab: ChenTableStructureWorkspaceTab, packet: ChenPacket) {
+  if (packet.type === "log") {
+    queryConsole.appendLog(tab, packet.data);
+    if (Number(packet.data?.level) === 0) tab.submitError ||= packetErrorMessage(packet.data);
+    return;
+  }
+  if (packet.type === "message") {
+    const isError = packet.data?.type === "error" || packet.data?.level === 0;
+    if (isError) tab.submitError ||= packetErrorMessage(packet.data);
+    return;
+  }
+  if (packet.type !== "update_state") return;
+
+  tab.state = packet.data || {};
+  if (!tab.submitting) return;
+  if (packet.data?.loading === true || packet.data?.inQuery === true) {
+    tab.executionStarted = true;
+    return;
+  }
+  if (
+    packet.data?.loading !== false ||
+    (!tab.executionStarted && !["success", "error", "cancelled"].includes(packet.data?.executionStatus))
+  ) {
+    return;
+  }
+  finishTableStructure(tab, !["error", "cancelled"].includes(packet.data?.executionStatus) && !tab.submitError);
+}
+
 function openQueryWorkspace(nodeKey: string, title = "Query", reuseExisting = true) {
   const tab = workspace.openQueryTab(nodeKey, title, reuseExisting);
   if (tab && !consoleConnections.has(tab.id)) initConsoleSocket(tab);
@@ -473,7 +679,7 @@ function openDataViewWorkspace(nodeKey: string, title = "Data View") {
 }
 
 function openDatabaseWorkspace(node: ChenTreeNode) {
-  workspace.openDatabaseTab(node, node.label || node.name || "Database");
+  workspace.openDatabaseTab(node, node.label || node.name || (node.type === "schema" ? "Schema" : "Database"));
 }
 
 async function loadDatabaseCatalog(tab: ChenDatabaseWorkspaceTab) {
@@ -482,21 +688,14 @@ async function loadDatabaseCatalog(tab: ChenDatabaseWorkspaceTab) {
   tab.catalogError = "";
 
   try {
-    let containers: ChenTreeNode[] = [tab.node];
-    // Load only catalog containers. Table/view nodes stay leaf nodes, so this
-    // enumerates object names without fetching every table's column schema.
-    // ponytail: five catalog levels cover the current database/schema/group
-    // trees; replace this walk with a paginated catalog API if nesting grows.
-    for (let depth = 0; depth < 5 && containers.length; depth += 1) {
+    if (!tab.node.children?.length && tab.node.hasChildren !== false) await tree.loadNodeChildren(tab.node);
+
+    if (tab.node.type === "schema") {
+      const objectFolders = (tab.node.children || []).filter((child) => child.type === "folder" && !child.leaf);
       await Promise.all(
-        containers.map(async (node) => {
-          if (!node.children?.length && node.hasChildren !== false) await tree.loadNodeChildren(node);
+        objectFolders.map(async (folder) => {
+          if (!folder.children?.length && folder.hasChildren !== false) await tree.loadNodeChildren(folder);
         })
-      );
-      containers = containers.flatMap((node) =>
-        (node.children || []).filter(
-          (child) => child.type !== "table" && child.type !== "view" && child.type !== "index" && !child.leaf
-        )
       );
     }
     tab.catalogLoaded = true;
@@ -533,17 +732,36 @@ function closeAllConsoleSockets(reason = "") {
 }
 
 function performCloseWorkspaceTab(id: string) {
+  indexOperations.delete(id);
   closeConsoleSocket(id);
   workspace.closeTab(id);
 }
 
 function closeWorkspaceTab(id: string) {
   const tab = workspace.workspaceTabState[id];
+  if (tab?.kind === "table-structure" && tableStructureDirty(tab)) {
+    pendingDiscard.value = () => performCloseWorkspaceTab(id);
+    discardDialogMessage.value = "This table structure has unapplied changes. Discard them and close the tab?";
+    discardDialogOpen.value = true;
+    return;
+  }
   if (!tab || tab.kind === "console") {
     performCloseWorkspaceTab(id);
     return;
   }
   guardDataViewChanges(chenDataViewTargets(tab), () => performCloseWorkspaceTab(id));
+}
+
+function tableStructureDirty(tab: ChenTableStructureWorkspaceTab) {
+  return tab.columns.some(
+    (column) =>
+      column.added ||
+      column.deleted ||
+      column.name !== column.originalName ||
+      column.type !== column.originalType ||
+      column.size.replaceAll(/\s/g, "") !== column.originalSize.replaceAll(/\s/g, "") ||
+      column.nullable !== column.originalNullable
+  );
 }
 
 function createWorkspaceTab(kind: "query" | "console") {
@@ -574,7 +792,21 @@ const dialogVisible = computed({
 });
 
 const actionMenu = useChenActionMenu<DropdownMenuItem>({
-  fetchActions: (node) => fetchChenActions(auth.chenToken.value, node, endpointUrl.value),
+  fetchActions: async (node) => {
+    if (!canCreateTableFromNode(node)) return fetchChenActions(auth.chenToken.value, node, endpointUrl.value);
+
+    const createTableAction: ChenActionItem = { key: "__create_table__", label: "New Table" };
+    try {
+      const actions = await fetchChenActions(auth.chenToken.value, node, endpointUrl.value);
+      const otherActions = actions.filter((item) => {
+        const key = item.key.trim().toLowerCase().replaceAll("-", "_");
+        return key !== "new_table" && item.label.trim().toLowerCase() !== "new table";
+      });
+      return [createTableAction, ...otherActions];
+    } catch {
+      return [createTableAction];
+    }
+  },
   mapItems: mapActionItems,
   onError: (node, cause) => {
     addErrorToast({
@@ -594,10 +826,14 @@ const {
 const ACTION_MENU_ICONS: Record<string, string> = {
   query: "i-lucide-file-code-2",
   new_query: "i-lucide-file-code-2",
+  refresh: "i-lucide-refresh-cw",
+  refresh_node: "i-lucide-refresh-cw",
+  reload: "i-lucide-refresh-cw",
   view_data: "i-lucide-table-properties",
   show: "i-lucide-info",
   property: "i-lucide-info",
-  properties: "i-lucide-info"
+  properties: "i-lucide-info",
+  __create_table__: "i-lucide-table-2"
 };
 
 function resolveActionMenuIcon(item: ChenActionItem) {
@@ -606,6 +842,7 @@ function resolveActionMenuIcon(item: ChenActionItem) {
 
   const label = item.label.trim().toLowerCase();
   if (label === "new query" || label === "新建查询") return "i-lucide-file-code-2";
+  if (label === "refresh" || label === "reload" || label === "刷新") return "i-lucide-refresh-cw";
   if (label === "view data" || label === "查看数据") return "i-lucide-table-properties";
   if (label === "properties" || label === "属性") return "i-lucide-info";
 
@@ -632,6 +869,10 @@ function mapActionItems(node: ChenTreeNode, items: ChenActionItem[]): DropdownMe
 }
 
 async function applyTreeAction(node: ChenTreeNode, action: string) {
+  if (action === "__create_table__") {
+    openCreateTableWorkspace(node);
+    return;
+  }
   try {
     const response = await tree.runTreeAction(node, action);
     switch (response.event) {
@@ -667,9 +908,186 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
   }
 }
 
+function isTablesFolder(node: ChenTreeNode) {
+  if (node.type === "table") return false;
+  const name = String(node.label || node.name || "")
+    .trim()
+    .toLowerCase();
+  return node.type === "tables" || (node.type === "folder" && name === "tables");
+}
+
+function canCreateTableFromNode(node: ChenTreeNode) {
+  if (isTablesFolder(node) || node.type === "schema") return true;
+  const dbType = String(auth.profile.value?.dbType || props.tab.protocol || "").toLowerCase();
+  return node.type === "database" && (dbType.includes("mysql") || dbType.includes("mariadb"));
+}
+
+function openCreateTableWorkspace(node: ChenTreeNode) {
+  const contextNode = [...tree.findNodePathByKey(node.key)]
+    .reverse()
+    .find(
+      (candidate) => candidate.type === "schema" || candidate.type === "database" || candidate.type === "datasource"
+    );
+  if (!contextNode) {
+    toast.add({
+      title: "No database context",
+      description: "Refresh the database tree and try again.",
+      color: "warning"
+    });
+    return;
+  }
+
+  const refreshNode = isTablesFolder(node) ? node : (node.children || []).find(isTablesFolder) || node;
+  const tab = workspace.openCreateTableTab(
+    contextNode.key,
+    refreshNode,
+    auth.profile.value?.dbType || props.tab.protocol || ""
+  );
+  initConsoleSocket(tab);
+}
+
+function submitCreateTable(tab: ChenCreateTableWorkspaceTab, sql: string) {
+  if (tab.submitting) return;
+  tab.generatedSql = sql;
+  tab.submitError = "";
+  tab.created = false;
+  tab.submitting = true;
+  tab.executionStarted = false;
+  if (!queryConsole.sendSql(tab, sql)) {
+    tab.submitting = false;
+    tab.submitError = tab.connectionError || "Console websocket is not connected";
+  }
+}
+
+function addCreateTableColumn(tab: ChenCreateTableWorkspaceTab) {
+  tab.columns.push({
+    id: newChenWorkspaceId("column"),
+    name: "",
+    type: tab.columns[0]?.type || "VARCHAR",
+    size: "",
+    nullable: true,
+    primaryKey: false
+  });
+}
+
+function updateCreateTableColumn(
+  tab: ChenCreateTableWorkspaceTab,
+  id: string,
+  patch: Partial<ChenCreateTableWorkspaceTab["columns"][number]>
+) {
+  const column = tab.columns.find((item) => item.id === id);
+  if (column) Object.assign(column, patch);
+}
+
+function updateActiveCreateTableColumn(id: string, patch: Partial<ChenCreateTableWorkspaceTab["columns"][number]>) {
+  const tab = activeCreateTableTab.value;
+  if (tab) updateCreateTableColumn(tab, id, patch);
+}
+
+function openTableStructureWorkspace(tab: ChenDataViewConsoleTab, columns: ChenDataViewColumnPreview[]) {
+  const tableName = String(tab.meta?.table || tab.meta?.title || tab.title).trim();
+  if (!tableName) {
+    toast.add({ title: "Table metadata unavailable", color: "warning" });
+    return;
+  }
+  const structureTab = workspace.openTableStructureTab(
+    tab.id,
+    tab.nodeKey,
+    String(tab.meta?.schema || "").trim(),
+    tableName,
+    columns,
+    auth.profile.value?.dbType || props.tab.protocol || ""
+  );
+  initConsoleSocket(structureTab);
+}
+
+function addTableStructureColumn(tab: ChenTableStructureWorkspaceTab) {
+  const fallbackType = tab.columns.find((column) => !column.deleted)?.type || "VARCHAR";
+  tab.columns.push({
+    id: newChenWorkspaceId("column"),
+    name: "",
+    type: fallbackType,
+    size: "",
+    nullable: true,
+    primaryKey: false,
+    originalName: "",
+    originalType: "",
+    originalSize: "",
+    originalNullable: true,
+    added: true,
+    deleted: false
+  });
+}
+
+function updateActiveTableStructureColumn(
+  id: string,
+  patch: Partial<ChenTableStructureWorkspaceTab["columns"][number]>
+) {
+  const column = activeTableStructureTab.value?.columns.find((item) => item.id === id);
+  if (column) Object.assign(column, patch);
+}
+
+function resetTableStructure(tab: ChenTableStructureWorkspaceTab) {
+  tab.columns = tab.columns
+    .filter((column) => !column.added)
+    .map((column) => ({
+      ...column,
+      name: column.originalName,
+      type: column.originalType,
+      size: column.originalSize,
+      nullable: column.originalNullable,
+      deleted: false
+    }));
+  tab.submitError = "";
+  tab.saved = false;
+}
+
+function submitTableStructure(tab: ChenTableStructureWorkspaceTab, sql: string) {
+  if (tab.submitting) return;
+  tab.generatedSql = sql;
+  tab.submitError = "";
+  tab.saved = false;
+  tab.submitting = true;
+  tab.executionStarted = false;
+  if (!queryConsole.sendSql(tab, sql)) {
+    tab.submitting = false;
+    tab.submitError = tab.connectionError || "Console websocket is not connected";
+  }
+}
+
+function executeIndexSql(
+  sourceTab: ChenDataViewConsoleTab,
+  sql: string,
+  operation: "create" | "drop",
+  indexName: string
+) {
+  if (sourceTab.editState.activeRequest || chenDataViewHasDirty(sourceTab.editState)) {
+    toast.add({
+      title: "Resolve pending row changes first",
+      description: "Save or cancel the table's pending row changes before changing its indexes.",
+      color: "warning"
+    });
+    return;
+  }
+  const activeOperation = [...indexOperations.values()].some((item) => item.sourceTabId === sourceTab.id);
+  if (activeOperation) {
+    toast.add({ title: "Index operation in progress", color: "warning" });
+    return;
+  }
+  const tab = workspace.openQueryTab(sourceTab.nodeKey, `${operation === "create" ? "Create" : "Drop"} index`, false);
+  if (!tab || tab.kind !== "query") return;
+  tab.statement = sql;
+  indexOperations.set(tab.id, { sourceTabId: sourceTab.id, operation, indexName, started: false, error: "" });
+  initConsoleSocket(tab);
+  if (!queryConsole.sendSql(tab, sql)) {
+    indexOperations.delete(tab.id);
+    addErrorToast({ title: `Failed to ${operation} index`, description: tab.connectionError || "Console unavailable" });
+  }
+}
+
 async function handleNodeClick(node: ChenTreeNode) {
   tree.selectedNodeKey.value = node.key;
-  if (node.type === "database") {
+  if (node.type === "database" || node.type === "schema") {
     openDatabaseWorkspace(node);
     return;
   }
@@ -985,6 +1403,8 @@ defineExpose({ focus });
             :protocol="props.tab.protocol"
             :can-copy="auth.profile.value?.canCopy === true"
             @data-view-action="runStandaloneDataViewAction"
+            @edit-structure="openTableStructureWorkspace"
+            @execute-index-sql="executeIndexSql"
             @update-panel="updateDataViewPanel"
             @update-property-tab="updateDataViewPropertyTab"
             @update-where-condition="updateDataViewWhereCondition"
@@ -996,6 +1416,28 @@ defineExpose({ focus });
             :db-type="auth.profile.value?.dbType"
             @select-section="updateDatabaseSection(activeDatabaseTab, $event)"
             @load-catalog="loadDatabaseCatalog(activeDatabaseTab)"
+            @open-table="handleNodeClick"
+          />
+
+          <CreateTablePanel
+            v-else-if="activeCreateTableTab"
+            :tab="activeCreateTableTab"
+            @add-column="addCreateTableColumn(activeCreateTableTab)"
+            @remove-column="
+              activeCreateTableTab.columns = activeCreateTableTab.columns.filter((item) => item.id !== $event)
+            "
+            @submit="submitCreateTable(activeCreateTableTab, $event)"
+            @update-column="updateActiveCreateTableColumn"
+            @update-table-name="activeCreateTableTab.tableName = $event"
+          />
+
+          <TableStructurePanel
+            v-else-if="activeTableStructureTab"
+            :tab="activeTableStructureTab"
+            @add-column="addTableStructureColumn(activeTableStructureTab)"
+            @reset="resetTableStructure(activeTableStructureTab)"
+            @submit="submitTableStructure(activeTableStructureTab, $event)"
+            @update-column="updateActiveTableStructureColumn"
           />
         </div>
 
@@ -1072,6 +1514,7 @@ defineExpose({ focus });
     <DiscardDataViewChangesDialog
       v-if="discardDialogOpen"
       :open="discardDialogOpen"
+      :message="discardDialogMessage"
       @update:open="updateDiscardDialog"
       @confirm="confirmDiscardChanges"
     />
