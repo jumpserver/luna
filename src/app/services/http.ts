@@ -157,14 +157,28 @@ export class HttpService {
     return Object.assign({}, res[0], res[1]);
   }
 
-  getUserSession() {
+  renewUserSession(clientId: string) {
     const url = '/api/v1/authentication/user-session/';
-    return this.get<_User>(url);
+    return this.post<_User>(url, { client_id: clientId });
   }
 
-  deleteUserSession() {
+  releaseUserSessionOnPageHide(clientId: string) {
     const url = '/api/v1/authentication/user-session/';
-    return this.delete<_User>(url);
+    const csrfToken = getCsrfTokenFromCookie();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    if (csrfToken) {
+      headers['X-CSRFToken'] = csrfToken;
+    }
+
+    return fetch(this.resolveUrl(url), {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      keepalive: true,
+      headers,
+      body: JSON.stringify({ client_id: clientId })
+    });
   }
 
   getMyGrantedAssets(keyword) {
@@ -381,8 +395,7 @@ export class HttpService {
     const secret = encryptPassword(manualAuthInfo.secret);
     const connectOption = { ...(connectData.connectOption || {}) };
     // 始终以当前表单为准，避免 connectOption 里残留上一次的 input_secret_type
-    const inputSecretType =
-      (manualAuthInfo && manualAuthInfo['input_secret_type']) || 'password';
+    const inputSecretType = (manualAuthInfo && manualAuthInfo['input_secret_type']) || 'password';
 
     const data = {
       asset: asset.id,
@@ -518,7 +531,10 @@ export class HttpService {
   }
 
   getSmartEndpoint({ assetId, sessionId, token }, protocol): Promise<Endpoint> {
-    const url = new URL(withSitePrefix('/api/v1/terminal/endpoints/smart/'), window.location.origin);
+    const url = new URL(
+      withSitePrefix('/api/v1/terminal/endpoints/smart/'),
+      window.location.origin
+    );
 
     url.searchParams.append('protocol', protocol);
     if (assetId) {

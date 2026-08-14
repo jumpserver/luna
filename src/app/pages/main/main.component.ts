@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { DataStore, User } from '@app/globals';
 import { HttpService, I18nService, LogService, SettingService, ViewService } from '@app/services';
 import { environment } from '@src/environments/environment';
@@ -11,13 +11,31 @@ interface SiteMessagePopup {
   message: string;
 }
 
+function createSessionClientId(): string {
+  if (typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+
+  const bytes = window.crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    hex.slice(12, 16),
+    hex.slice(16, 20),
+    hex.slice(20)
+  ].join('-');
+}
+
 @Component({
   standalone: false,
   selector: 'pages-main',
   templateUrl: 'main.component.html',
   styleUrls: ['main.component.scss']
 })
-export class PageMainComponent implements OnInit {
+export class PageMainComponent implements OnInit, OnDestroy {
   User = User;
   store = DataStore;
   showIframeHider = false;
@@ -34,6 +52,11 @@ export class PageMainComponent implements OnInit {
   private popupMessages: SiteMessagePopup[] = [];
   private popupDialogRef: NzModalRef | null = null;
   private currentPopupMessage: SiteMessagePopup | null = null;
+  private readonly userSessionClientId = createSessionClientId();
+  private userSessionHeartbeatInterval = 30 * 1000;
+  private userSessionHeartbeatTimer: number | null = null;
+  private userSessionHeartbeatInFlight = false;
+  private userSessionReleased = false;
 
   constructor(
     public viewSrv: ViewService,
@@ -56,12 +79,87 @@ export class PageMainComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this._http.getUserSession().subscribe();
+    this.renewUserSession();
     this._settingSvc.isDirectNavigation$.subscribe(state => {
       this.isDirectNavigation = state;
     });
 
     this.connectWebsocket();
+  }
+
+  ngOnDestroy(): void {
+    this.stopUserSessionHeartbeat();
+  }
+
+  private renewUserSession() {
+    if (this.userSessionHeartbeatInFlight) {
+      return;
+    }
+
+    this.stopUserSessionHeartbeat();
+    this.userSessionHeartbeatInFlight = true;
+    this._http.renewUserSession(this.userSessionClientId).subscribe({
+      next: data => {
+        this.userSessionHeartbeatInFlight = false;
+        if (data?.ok === false) {
+          this.userSessionReleased = true;
+          this.stopUserSessionHeartbeat();
+          return;
+        }
+        this.userSessionReleased = false;
+        const interval = Number(data?.heartbeat_interval);
+        if (interval > 0) {
+          this.userSessionHeartbeatInterval = interval * 1000;
+        }
+        this.scheduleUserSessionHeartbeat();
+      },
+      error: () => {
+        this.userSessionHeartbeatInFlight = false;
+        this.stopUserSessionHeartbeat();
+      }
+    });
+  }
+
+  private scheduleUserSessionHeartbeat() {
+    this.stopUserSessionHeartbeat();
+    if (this.userSessionReleased) {
+      return;
+    }
+    this.userSessionHeartbeatTimer = window.setTimeout(
+      () => this.renewUserSession(),
+      this.userSessionHeartbeatInterval
+    );
+  }
+
+  private stopUserSessionHeartbeat() {
+    if (this.userSessionHeartbeatTimer !== null) {
+      window.clearTimeout(this.userSessionHeartbeatTimer);
+      this.userSessionHeartbeatTimer = null;
+    }
+  }
+
+  @HostListener('document:visibilitychange')
+  onVisibilityChange() {
+    if (document.visibilityState === 'visible') {
+      this.renewUserSession();
+    }
+  }
+
+  @HostListener('window:pageshow')
+  onPageShow() {
+    this.userSessionReleased = false;
+    this.renewUserSession();
+  }
+
+  @HostListener('window:pagehide', ['$event'])
+  onPageHide($event: PageTransitionEvent) {
+    if ($event.persisted || this.userSessionReleased) {
+      return;
+    }
+
+    this.userSessionReleased = true;
+    this.stopUserSessionHeartbeat();
+    this._http.releaseUserSessionOnPageHide(this.userSessionClientId).catch(() => {});
   }
 
   handleLayoutSettingChange(collapsed: boolean) {
@@ -164,7 +262,6 @@ export class PageMainComponent implements OnInit {
 
   @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any) {
-    this._http.deleteUserSession().subscribe();
     if (!environment.production || this.isDirectNavigation) {
       return;
     }
