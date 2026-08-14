@@ -8,36 +8,23 @@ const { t } = useI18n();
 const { activeTab: workspaceTab } = useWorkspaceTabs();
 const { activeTab, setActiveTab } = useRightPanel();
 
-const showSftpTab = computed(() => {
-  const tab = workspaceTab.value;
-  if (!tab || tab.protocol !== "ssh") return false;
-
-  const assetKind = `${tab.assetType} ${tab.assetPlatform}`.toLowerCase();
-  const isLinuxAsset = assetKind.includes("linux") || assetKind.includes("unix");
-  const hasSftpProtocol = (tab.permedProtocols || []).some(
-    (protocol) => protocol?.name?.trim().toLowerCase() === "sftp"
-  );
-
-  const matchingAccount = (tab.permedAccounts || []).find(
-    (account) => account.id === tab.account || [account.name, account.username, account.alias].includes(tab.account)
-  );
-  const accounts = matchingAccount ? [matchingAccount] : tab.permedAccounts || [];
-  const hasFileTransferPermission = accounts.some((account) => {
-    const actions = new Set((account.actions || []).map((action) => action.value?.trim().toLowerCase()));
-    return actions.has("upload") && actions.has("download");
-  });
-
-  return isLinuxAsset && hasSftpProtocol && hasFileTransferPermission;
-});
+// SSH 会话始终提供轻量文件管理入口；真正的 SFTP 权限与令牌由面板在连接时校验，
+// 避免因为资产平台或权限元数据不完整而把入口直接隐藏。
+const showSftpTab = computed(() => workspaceTab.value?.protocol?.toLowerCase() === "ssh");
 
 const tabs = computed(() => {
-  const items: Array<{ value: RightPanelTab; label: string; icon: string }> = [
+  const items: Array<{ value: RightPanelTab; label: string; icon: string; title?: string }> = [
     { value: "session" as const, label: t("RightPanel.Session"), icon: "i-lucide-terminal" },
     { value: "ai" as const, label: t("RightPanel.AI"), icon: "i-lucide-sparkles" }
   ];
 
   if (showSftpTab.value) {
-    items.push({ value: "sftp" as const, label: t("RightPanel.SFTP"), icon: "i-lucide-folder-symlink" });
+    items.push({
+      value: "sftp" as const,
+      label: t("RightPanel.SFTP"),
+      icon: "i-lucide-folder-symlink",
+      title: t("RightPanel.SFTPTooltip")
+    });
   }
 
   return items;
@@ -73,6 +60,7 @@ watch(showSftpTab, (visible) => {
           type="button"
           class="right-panel-tab-button"
           :class="{ 'right-panel-tab-button-active': activeTab === tab.value }"
+          :title="tab.title || tab.label"
           @click="setActiveTab(tab.value)"
         >
           <UIcon :name="tab.icon" class="right-panel-tab-icon" />

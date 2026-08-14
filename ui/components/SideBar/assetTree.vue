@@ -6,6 +6,8 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 const props = defineProps<{
   search: string;
   open?: boolean;
+  showRecentConnections?: boolean;
+  recentConnectionsLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -45,7 +47,10 @@ const activeTree = computed(() => {
   if (activeTreeKind.value === "authorization") {
     return {
       label: t("Menu.AuthorizedTree"),
-      nodes: [buildRecentConnectionsNode(), ...authorizationNodes.value]
+      nodes: [
+        ...(props.showRecentConnections === false ? [] : [buildRecentConnectionsNode()]),
+        ...authorizationNodes.value
+      ]
     };
   }
 
@@ -81,7 +86,7 @@ function buildRecentConnectionsNode(): AssetTreeNode {
   return {
     id: RECENT_NODE_ID,
     key: RECENT_NODE_ID,
-    name: t("Menu.RecentConnections"),
+    name: props.recentConnectionsLabel || t("Menu.RecentConnections"),
     isParent: true,
     open: recentNodeOpen.value,
     loaded: true,

@@ -109,17 +109,20 @@ const openSftp = async () => {
   inlinePayload.value = null;
   try {
     const requestFileToken = activeFileTokenRequester.value;
+    // Prefer reusing the active SSH session token (same account/permissions, no extra ACL prompts).
     if (activeTab.value?.assetId === asset.id && requestFileToken) {
       const tokenId = await requestFileToken();
-      if (attempt === connectionAttempt) {
-        inlinePayload.value = {
-          id: tokenId,
-          token: { id: tokenId },
-          connectMethod: { value: SFTP_FILE_MANAGER_VALUE, component: "koko" }
-        };
-      }
+      if (attempt !== connectionAttempt) return;
+      if (!tokenId) throw new Error(t("koko.fileManagement.unavailableInSession") || "SFTP unavailable");
+      inlinePayload.value = {
+        id: tokenId,
+        token: { id: tokenId },
+        connectMethod: { value: SFTP_FILE_MANAGER_VALUE, component: "koko" }
+      };
       return;
     }
+
+    // SSH session details not ready yet — wait for requestFileToken via the watcher.
     if (activeTab.value?.assetId === asset.id) return;
 
     const activeAccount = activeTab.value?.assetId === asset.id ? activeTab.value.account : "";
@@ -144,7 +147,9 @@ const openSftp = async () => {
       }).catch(reject);
     });
   } catch (error) {
-    if (attempt === connectionAttempt) inlineError.value = String(error);
+    if (attempt === connectionAttempt) {
+      inlineError.value = error instanceof Error ? error.message : String(error);
+    }
   } finally {
     if (attempt === connectionAttempt) connecting.value = false;
   }

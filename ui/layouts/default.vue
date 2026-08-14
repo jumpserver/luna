@@ -7,7 +7,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { isWindows } = usePlatform();
 const { activeWorkspaceMode, uiWorkspaceMode } = useWorkspaceMode();
-const { registerSessionDisposer } = useWorkspaceTabs();
+const { exitFocusMode, focusMode, registerSessionDisposer } = useWorkspaceTabs();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
@@ -33,6 +33,35 @@ const cardUi = computed(() => {
     footer: "p-0 sm:p-0",
     root: base.join(" ")
   };
+});
+
+let escapeHoldTimer: ReturnType<typeof setTimeout> | null = null;
+
+const clearEscapeHold = () => {
+  if (!escapeHoldTimer) return;
+  clearTimeout(escapeHoldTimer);
+  escapeHoldTimer = null;
+};
+
+const startEscapeHold = (event: KeyboardEvent) => {
+  if (!focusMode.value || event.key !== "Escape" || event.repeat || escapeHoldTimer) return;
+
+  escapeHoldTimer = setTimeout(() => {
+    escapeHoldTimer = null;
+    void exitFocusMode();
+  }, 800);
+};
+
+const stopEscapeHold = (event: KeyboardEvent) => {
+  if (event.key === "Escape") clearEscapeHold();
+};
+
+useEventListener(window, "keydown", startEscapeHold);
+useEventListener(window, "keyup", stopEscapeHold);
+useEventListener(window, "blur", clearEscapeHold);
+
+watch(focusMode, (active) => {
+  if (!active) clearEscapeHold();
 });
 
 onMounted(() => {
@@ -67,6 +96,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  clearEscapeHold();
   registerSessionDisposer(null);
   registerKokoTicketProvider(null);
 });
@@ -76,7 +106,7 @@ onBeforeUnmount(() => {
   <UCard variant="outline" :ui="cardUi" style="background-color: transparent">
     <SettingsModal v-if="!isTauriRuntime()" />
 
-    <WorkspaceShell :sidebar-visible="showWorkspaceSidebar">
+    <WorkspaceShell :sidebar-visible="showWorkspaceSidebar" :focus-mode="focusMode">
       <template #header>
         <Header />
       </template>
@@ -85,7 +115,22 @@ onBeforeUnmount(() => {
         <SideBar />
       </template>
 
-      <Main class="h-full min-h-0">
+      <Main class="relative h-full min-h-0">
+        <button
+          v-if="focusMode"
+          type="button"
+          :aria-label="$t('TabMenu.ExitFocusMode')"
+          :title="$t('TabMenu.ExitFocusModeHint')"
+          class="group absolute right-0 top-1/2 z-50 flex h-12 w-1.5 -translate-y-1/2 items-center justify-end overflow-hidden rounded-l-lg border border-r-0 border-[var(--app-border)] bg-[var(--app-surface-panel)] text-[var(--app-muted)] opacity-45 shadow-sm transition-[width,opacity] hover:w-32 hover:opacity-100 focus-visible:w-32 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          @click.stop="exitFocusMode"
+        >
+          <span
+            class="flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2 text-xs opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+          >
+            <UIcon name="i-lucide-minimize-2" class="size-3.5" />
+            {{ $t("TabMenu.ExitFocusMode") }}
+          </span>
+        </button>
         <WorkspaceTerminalArea v-show="activeWorkspaceMode === 'assets'" class="h-full min-h-0" />
         <div v-show="activeWorkspaceMode !== 'assets'" class="h-full min-h-0">
           <slot />

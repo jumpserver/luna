@@ -13,6 +13,10 @@ export async function readClipboardText() {
     return await readTauriText();
   }
 
+  if (typeof navigator === "undefined" || typeof navigator.clipboard?.readText !== "function") {
+    return "";
+  }
+
   return await readWebText();
 }
 

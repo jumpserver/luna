@@ -3,7 +3,6 @@ import type { ChenTabTitleFormat } from "~/chen/composables/useChenWorkspacePref
 import type { ChenTreeNode } from "~/chen/types";
 
 import ChenResourceTreeNode from "~/chen/components/ResourceTreeNode.vue";
-import WorkspaceAddSessionPopover from "~/components/Workspace/addSessionPopover.vue";
 
 const props = defineProps<{
   rootNodes: ChenTreeNode[];
@@ -44,7 +43,6 @@ const tabTitleFormatModel = computed({
     <div class="flex h-9 shrink-0 items-center justify-between border-b border-default px-2.5">
       <p class="text-xs font-medium text-muted">Database Explorer</p>
       <div class="flex h-7 items-center gap-1">
-        <WorkspaceAddSessionPopover />
         <UTooltip text="刷新" :delay-duration="150">
           <button
             type="button"

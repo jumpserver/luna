@@ -29,6 +29,8 @@ const {
   primaryColorDark,
   lightThemePreset,
   darkThemePreset,
+  codeMirrorThemePreset,
+  terminalThemePreset,
   hydrationPromise,
   isHydrated
 } = settingManager;
@@ -107,13 +109,25 @@ function applyThemePreset() {
       : lightThemePreset.value || DEFAULT_LIGHT_THEME_PRESET);
 
   document.documentElement.dataset.themePreset = preset;
+  document.documentElement.dataset.codeMirrorThemePreset = codeMirrorThemePreset.value;
+  document.documentElement.dataset.terminalThemePreset = terminalThemePreset.value;
 }
 
 watch(() => [userTheme.value, primaryColorLight.value, primaryColorDark.value], applyCurrentThemeColor, {
   immediate: true
 });
 
-watch(() => [userTheme.value, lightThemePreset.value, darkThemePreset.value], applyThemePreset, { immediate: true });
+watch(
+  () => [
+    userTheme.value,
+    lightThemePreset.value,
+    darkThemePreset.value,
+    codeMirrorThemePreset.value,
+    terminalThemePreset.value
+  ],
+  applyThemePreset,
+  { immediate: true }
+);
 watch(
   () => route.fullPath,
   () => {
@@ -261,7 +275,6 @@ onBeforeUnmount(() => {
         <NuxtLayout>
           <NuxtPage :page-key="pageKey" />
         </NuxtLayout>
-        <FileTransferCenter />
         <ConnectionFormModal />
         <AclDialog />
       </UApp>

@@ -5,7 +5,14 @@ import KokoFileManagement from "#koko/components/FileManagement/index.vue";
 import BaseWorkspaceShell from "#koko/workspaces/BaseWorkspaceShell.vue";
 import { useBaseWorkspaceSession } from "#koko/workspaces/useBaseWorkspaceSession";
 
-const props = defineProps<{ tab: KokoWorkspaceTab }>();
+const props = withDefaults(
+  defineProps<{
+    tab: KokoWorkspaceTab;
+    /** Right-panel / sidebar embedding: single-pane file browser without dual-remote chrome. */
+    compact?: boolean;
+  }>(),
+  { compact: false }
+);
 const { t } = useI18n();
 const tab = toRef(props, "tab");
 const { context, error, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab, {
@@ -22,6 +29,11 @@ watch(tokenId, () => void prepareSession(), { immediate: true });
     :error="error"
     :loading-text="t('koko.workspace.preparingSftp')"
   >
-    <KokoFileManagement :sftp-token="tokenId" class="h-full" />
+    <KokoFileManagement
+      :sftp-token="tokenId"
+      :compact="compact"
+      :source-asset="{ id: tab.assetId, name: tab.assetName || tab.assetId }"
+      class="h-full"
+    />
   </BaseWorkspaceShell>
 </template>

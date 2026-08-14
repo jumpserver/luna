@@ -39,6 +39,7 @@ export interface ChenTabDefinition {
   icon?: string;
   kind: "query" | "data-view" | "console" | "database" | "create-table" | "table-structure";
   nodeKey: string;
+  serverConsoleId?: string;
   connectionError?: string;
 }
 
@@ -169,7 +170,22 @@ export interface ChenDataViewEditState {
 
 export type ChenDataViewEditMode = "none" | "update" | "full";
 
-export type ChenSqlHints = Record<string, string[]>;
+export interface ChenSqlEditorSnapshot {
+  documentSql: string;
+  selectedSql: string;
+  selectionFrom: number;
+  selectionTo: number;
+}
+
+export interface ChenSqlExecutionError {
+  kind: "parse" | "execute" | string;
+  title?: string;
+  message: string;
+  sql?: string;
+  sqlState?: string;
+  vendorCode?: number;
+  timestamp?: number;
+}
 
 export interface ChenConsoleState {
   loading?: boolean;
@@ -231,11 +247,9 @@ export interface ChenConsoleTimelineEntry {
 export interface ChenQueryConsoleTab extends ChenTabDefinition {
   kind: "query";
   statement: string;
+  aiRevision: number;
+  lastSqlError: ChenSqlExecutionError | null;
   uploadingSql: boolean;
-  sqlHints: ChenSqlHints;
-  hintsContext: string;
-  hintsLoading: boolean;
-  hintsRequestGeneration: number;
   state: ChenConsoleState;
   logs: string[];
   message: ChenConsoleMessage | null;

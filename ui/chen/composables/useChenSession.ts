@@ -54,7 +54,7 @@ export function useChenSession(options: UseChenSessionOptions) {
   }
 
   function handleSocketError(socketError: ChenSocketError) {
-    handleFatal(socketError.message);
+    handleFatal(`Chen WebSocket 连接失败：${socketError.message}`);
   }
 
   async function handleSetReady() {

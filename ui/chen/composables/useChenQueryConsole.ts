@@ -141,6 +141,7 @@ export function useChenQueryConsole(
     switch (packet.type) {
       case "init":
         tab.title = packet.data?.title || tab.title;
+        tab.serverConsoleId = String(packet.data?.consoleId || "");
         break;
       case "log":
         appendLog(tab, packet.data);
@@ -150,6 +151,14 @@ export function useChenQueryConsole(
         if (tab.kind === "console") {
           const message = formatLogEntry(packet.data);
           if (message) appendConsoleStatus(tab, message, packet.data?.type === "error" ? 0 : undefined);
+        }
+        break;
+      case "sql_error":
+        if (tab.kind === "query" && packet.data && typeof packet.data === "object") {
+          tab.lastSqlError = {
+            ...packet.data,
+            message: String(packet.data.message || "SQL execution failed")
+          };
         }
         break;
       case "update_state": {
@@ -259,6 +268,7 @@ export function useChenQueryConsole(
     const sql = selectedSql || tab.statement;
     if (!sql.trim()) return;
     dismissQueryMessage(tab);
+    tab.lastSqlError = null;
 
     sendSql(tab, sql);
   }

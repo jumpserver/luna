@@ -13,11 +13,15 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "#koko": fileURLToPath(new URL("./packages/koko/app", import.meta.url))
+      "#koko": fileURLToPath(new URL("./packages/koko/app", import.meta.url)),
+      "~": fileURLToPath(new URL("./ui", import.meta.url))
     }
   },
   test: {
     include: ["packages/koko/app/tests/**/*.test.ts"],
+    css: {
+      include: [/sftp-(?:transfer-center|file-management)\.scss/]
+    },
     browser: {
       enabled: true,
       headless: true,

@@ -29,7 +29,7 @@ const pageHeader = computed(() => {
   if (path.includes("/files")) {
     return {
       icon: "i-lucide-folder-kanban",
-      title: "文件管理"
+      title: t("koko.fileManagement.consoleTitle")
     };
   }
 
@@ -66,7 +66,11 @@ const pageHeader = computed(() => {
 
     <WorkspaceTabHeader v-if="activeWorkspaceMode === 'assets'" />
 
-    <div v-else-if="pageHeader" class="h-full min-w-0 flex items-center gap-2" :class="toolWindowTitleClass">
+    <div
+      v-else-if="pageHeader"
+      class="h-full min-w-0 flex items-center justify-center gap-2"
+      :class="toolWindowTitleClass"
+    >
       <UIcon :name="pageHeader.icon" class="text-primary h-4 w-4 shrink-0" />
       <span class="min-w-0 truncate text-sm font-medium">
         {{ pageHeader.title }}

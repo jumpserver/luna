@@ -21,6 +21,12 @@ export const getWebOrgId = () => {
   return decodeURIComponent(getCookieValue("X-JMS-LUNA-ORG") || getCookieValue("X-JMS-ORG") || "");
 };
 
+export const setWebOrgId = (orgId: string) => {
+  if (!import.meta.client || isTauriRuntime()) return;
+
+  document.cookie = `X-JMS-LUNA-ORG=${encodeURIComponent(orgId)}; Path=/; SameSite=Lax`;
+};
+
 export const getWebApiHeaders = (orgIdOverride?: string) => {
   const orgId = orgIdOverride || getWebOrgId();
   const headers: HeadersInit = {};

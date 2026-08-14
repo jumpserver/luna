@@ -492,44 +492,46 @@ watch(
           <HeaderOrganizationSelector :selectable="shouldShowOrganizationSelector" />
         </div>
 
-        <UTooltip v-if="showSidebarSearchButton" :text="t('Operation.Search')" :delay-duration="150">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            icon="i-lucide-search"
-            :aria-label="t('Operation.Search')"
-            class="sidebar-icon-button size-6 shrink-0 justify-center p-0"
-            :class="showAssetSearch ? 'sidebar-icon-button-active' : ''"
-            :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-            @click="
-              () => {
-                showAssetSearch = !showAssetSearch;
-              }
-            "
-          />
-        </UTooltip>
+        <div class="flex shrink-0 items-center">
+          <UTooltip v-if="showSidebarSearchButton" :text="t('Operation.Search')" :delay-duration="150">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              icon="i-lucide-search"
+              :aria-label="t('Operation.Search')"
+              class="sidebar-icon-button size-6 shrink-0 justify-center p-0"
+              :class="showAssetSearch ? 'sidebar-icon-button-active' : ''"
+              :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+              @click="
+                () => {
+                  showAssetSearch = !showAssetSearch;
+                }
+              "
+            />
+          </UTooltip>
 
-        <UDropdownMenu
-          v-if="showOrganizationMenu"
-          :items="organizationMenuItems"
-          :content="{ align: 'start', side: 'right', sideOffset: 6 }"
-          :ui="{
-            content: 'w-36 p-1',
-            item: 'mx-0 px-2 py-1 rounded-md text-[11px] leading-4 transition-colors duration-150',
-            itemLeadingIcon: 'sidebar-icon-sm'
-          }"
-        >
-          <UButton
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            icon="i-lucide-ellipsis"
-            :aria-label="t('Sidebar.ManageSections')"
-            class="sidebar-icon-button size-6 shrink-0 justify-center p-0"
-            :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-          />
-        </UDropdownMenu>
+          <UDropdownMenu
+            v-if="showOrganizationMenu"
+            :items="organizationMenuItems"
+            :content="{ align: 'start', side: 'right', sideOffset: 6 }"
+            :ui="{
+              content: 'w-36 p-1',
+              item: 'mx-0 px-2 py-1 rounded-md text-[11px] leading-4 transition-colors duration-150',
+              itemLeadingIcon: 'sidebar-icon-sm'
+            }"
+          >
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              icon="i-lucide-ellipsis"
+              :aria-label="t('Sidebar.ManageSections')"
+              class="sidebar-icon-button size-6 shrink-0 justify-center p-0"
+              :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+            />
+          </UDropdownMenu>
+        </div>
       </div>
     </div>
 

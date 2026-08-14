@@ -1,236 +1,408 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from "@nuxt/ui";
+import type {
+  SftpTransferDropPayload,
+  SftpTransferSourcePayload
+} from "#koko/composables/sftp/file-manager/workspaceTypes";
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
+import type { FileTransferEndpointRef } from "~/shared/file-transfer/types";
+import SftpLocalPaneDialogs from "#koko/components/FileManagement/pane/SftpLocalPaneDialogs.vue";
+import SftpLocalPaneToolbar from "#koko/components/FileManagement/pane/SftpLocalPaneToolbar.vue";
+import SftpPaneContextMenu from "#koko/components/FileManagement/pane/SftpPaneContextMenu.vue";
+import SftpPaneDropOverlay from "#koko/components/FileManagement/pane/SftpPaneDropOverlay.vue";
+import SftpPaneFileTable from "#koko/components/FileManagement/pane/SftpPaneFileTable.vue";
+import SftpPaneSelectionBar from "#koko/components/FileManagement/pane/SftpPaneSelectionBar.vue";
+import {
+  buildTransferSourcePayload,
+  hasEndpointPrefix,
+  hasTransferMimeType,
+  isCrossEndpointTransferDrag,
+  parseTransferDragPayload,
+  transferEntriesFromSelection,
+  writeTransferDragData
+} from "#koko/composables/sftp/file-manager/transfer";
+import { useLocalFileManager } from "#koko/composables/sftp/file-manager/useLocalFileManager";
+import { useSftpPaneSelection } from "#koko/composables/sftp/file-manager/useSftpPaneSelection";
+import { KeyboardKey } from "#koko/constants/keyboard";
 
-const emit = defineEmits<{ select: [entry: SftpFileEntry | null] }>();
-const LOCAL_ROOT_STORAGE_KEY = "jumpserver-client:file-manager-local-root";
+const props = withDefaults(defineProps<{ highlightedNames?: string[]; focused?: boolean }>(), {
+  highlightedNames: () => [],
+  focused: false
+});
+const emit = defineEmits<{
+  select: [entry: SftpFileEntry | null];
+  selectionChange: [entries: SftpFileEntry[]];
+  focus: [];
+  transferDrop: [payload: SftpTransferDropPayload];
+}>();
+
+const LOCAL_ENDPOINT_ID = "local:fs";
 const { t } = useI18n();
-
-const entries = ref<SftpFileEntry[]>([]);
-const currentPath = ref("");
-const rootPath = ref("");
-const loading = ref(true);
-const error = ref("");
+const toast = useToast();
+const { addErrorToast } = useErrorToast();
 const setupOpen = ref(false);
-const selectedEntry = ref<SftpFileEntry | null>(null);
-const uploadInput = ref<HTMLInputElement | null>(null);
-const activeScopedPath = ref("");
+const search = ref("");
+const rootEl = ref<HTMLElement | null>(null);
+const promptOpen = ref(false);
+const promptName = ref("");
+const promptTarget = ref<SftpFileEntry | null>(null);
+const promptKind = ref<"folder" | "file">("folder");
+const alertOpen = ref(false);
+const alertEntries = ref<SftpFileEntry[]>([]);
+const contextMenuVisible = ref(false);
+const contextMenuPosition = ref({ x: 0, y: 0 });
+const contextEntry = ref<SftpFileEntry | null>(null);
+const activeTransferDragSourceId = useState<string | null>("sftp-active-transfer-drag-source", () => null);
 
-const isPermissionError = computed(() =>
-  /forbidden path|not allowed on the scope|permission|operation not permitted/i.test(error.value)
+const localManager = useLocalFileManager({
+  translate: (key) => t(key),
+  onPermissionRequired: () => {
+    setupOpen.value = true;
+  }
+});
+const {
+  entries,
+  currentPath,
+  rootPath,
+  loading,
+  error,
+  quickPaths,
+  isPermissionError,
+  list,
+  readFile,
+  uploadBlob,
+  createDirectory,
+  createFileAt,
+  renameEntry,
+  removeEntry,
+  uploadFromEvent,
+  refreshQuickPaths,
+  releaseSecurityScope
+} = localManager;
+
+const transferEndpoint = computed<FileTransferEndpointRef>(() => ({
+  id: LOCAL_ENDPOINT_ID,
+  label: t("koko.fileManagement.localFiles")
+}));
+const visibleEntries = computed(() => {
+  const query = search.value.trim().toLowerCase();
+  return entries.value
+    .filter((entry) => !query || entry.name.toLowerCase().includes(query))
+    .sort((left, right) => {
+      if (left.name === "..") return -1;
+      if (right.name === "..") return 1;
+      if (left.is_dir !== right.is_dir) return Number(right.is_dir) - Number(left.is_dir);
+      return left.name.localeCompare(right.name, undefined, { numeric: true, sensitivity: "base" });
+    });
+});
+const selection = useSftpPaneSelection<SftpFileEntry>({ visibleEntries });
+const {
+  selectedEntries,
+  selectedEntry,
+  selectionRevision,
+  selectAllState,
+  clearSelection,
+  updateSelection,
+  isSelected,
+  moveSelection,
+  moveSelectionToBoundary,
+  selectEntry,
+  toggleEntry,
+  toggleAllVisible
+} = selection;
+const transferableEntries = computed(() => transferEntriesFromSelection(selectedEntries.value));
+const selectedSize = computed(() =>
+  transferableEntries.value.reduce((total, entry) => total + Math.max(0, Number(entry.size) || 0), 0)
 );
+const transferDropActive = computed(
+  () =>
+    isCrossEndpointTransferDrag(activeTransferDragSourceId.value, LOCAL_ENDPOINT_ID) &&
+    hasEndpointPrefix(activeTransferDragSourceId.value, "sftp:")
+);
+const transferDropBlocked = computed(
+  () => Boolean(activeTransferDragSourceId.value) && activeTransferDragSourceId.value === LOCAL_ENDPOINT_ID
+);
+const promptTitle = computed(() =>
+  promptTarget.value
+    ? t("koko.actions.rename")
+    : t(promptKind.value === "file" ? "koko.fileManagement.newFile" : "koko.fileManagement.newFolder")
+);
+const promptConfirmLabel = computed(() => (promptTarget.value ? t("koko.actions.rename") : t("koko.actions.confirm")));
+const promptDisabled = computed(() => {
+  const name = promptName.value.trim();
+  return !name || (promptTarget.value !== null && name === promptTarget.value.name);
+});
 
-function loadSavedRoot() {
-  if (!import.meta.client) return "";
-  return globalThis.localStorage?.getItem(LOCAL_ROOT_STORAGE_KEY)?.trim() || "";
+function clearTransferredSelection(names: string[], sourcePath: string, revision: number): void {
+  selection.clearTransferredSelection(names, sourcePath, revision, currentPath.value);
 }
 
-function saveRoot(path: string) {
-  if (!import.meta.client) return;
-  globalThis.localStorage?.setItem(LOCAL_ROOT_STORAGE_KEY, path);
+async function changeDirectory(entry: SftpFileEntry): Promise<void> {
+  await localManager.changeDirectory(entry);
+  clearSelection();
 }
 
-function clearRoot() {
-  if (!import.meta.client) return;
-  globalThis.localStorage?.removeItem(LOCAL_ROOT_STORAGE_KEY);
+async function goToPath(path: string): Promise<void> {
+  await localManager.goToPath(path);
+  clearSelection();
 }
 
-async function fsModules() {
-  const [fs, path] = await Promise.all([import("@tauri-apps/plugin-fs"), import("@tauri-apps/api/path")]);
-  return { fs, path };
-}
-
-async function releaseSecurityScope(targetPath = activeScopedPath.value) {
-  if (!targetPath || !isTauriRuntime()) return;
+async function chooseFolder(): Promise<void> {
   try {
-    const { fs } = await fsModules();
-    await fs.stopAccessingSecurityScopedResource?.(targetPath);
-  } catch {
-    // Ignore scope release failures so the UI can keep working.
-  } finally {
-    if (targetPath === activeScopedPath.value) {
-      activeScopedPath.value = "";
-    }
-  }
-}
-
-async function activateSecurityScope(targetPath: string) {
-  if (!targetPath || !isTauriRuntime()) return;
-  if (activeScopedPath.value && activeScopedPath.value !== targetPath) {
-    await releaseSecurityScope(activeScopedPath.value);
-  }
-  try {
-    const { fs } = await fsModules();
-    await fs.startAccessingSecurityScopedResource?.(targetPath);
-    activeScopedPath.value = targetPath;
-  } catch {
-    // Some platforms and unsigned/dev builds do not expose security-scoped
-    // access; continue and let the regular fs call decide.
-  }
-}
-
-async function resolveInitialRoot() {
-  const { path } = await fsModules();
-  return loadSavedRoot() || (await path.homeDir());
-}
-
-async function list(path?: string) {
-  if (!isTauriRuntime()) return;
-  loading.value = true;
-  error.value = "";
-  try {
-    const { fs, path: pathApi } = await fsModules();
-    if (!rootPath.value) {
-      rootPath.value = await resolveInitialRoot();
-    }
-    currentPath.value = path || currentPath.value || rootPath.value;
-    await activateSecurityScope(rootPath.value);
-    const items = await fs.readDir(currentPath.value);
-    const nextEntries = await Promise.all(
-      items.map(async (item) => {
-        const fullPath = await pathApi.join(currentPath.value, item.name);
-        try {
-          const info = await fs.stat(fullPath);
-          return {
-            name: item.name,
-            size: info.isFile ? String(info.size) : "",
-            perm: "",
-            mod_time: info.mtime?.toISOString() || "",
-            type: "",
-            is_dir: info.isDirectory
-          } satisfies SftpFileEntry;
-        } catch {
-          return {
-            name: item.name,
-            size: "",
-            perm: "",
-            mod_time: "",
-            type: "",
-            is_dir: item.isDirectory
-          } satisfies SftpFileEntry;
-        }
-      })
-    );
-    entries.value = nextEntries;
-    if (currentPath.value !== rootPath.value) {
-      entries.value.unshift({ name: "..", size: "", perm: "", mod_time: "", type: "", is_dir: true });
-    }
-    saveRoot(rootPath.value);
-  } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : String(cause);
-    if (!currentPath.value && !rootPath.value) {
-      rootPath.value = await resolveInitialRoot().catch(() => "");
-    }
-    if (isPermissionError.value) {
-      setupOpen.value = true;
-    }
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function entryPath(entry: SftpFileEntry) {
-  const { path } = await fsModules();
-  return path.join(currentPath.value, entry.name);
-}
-
-async function changeDirectory(entry: SftpFileEntry) {
-  const { path } = await fsModules();
-  await list(entry.name === ".." ? await path.dirname(currentPath.value) : await entryPath(entry));
-  selectedEntry.value = null;
-}
-
-async function readFile(entry: SftpFileEntry) {
-  const { fs } = await fsModules();
-  return new Blob([await fs.readFile(await entryPath(entry))]);
-}
-
-async function uploadBlob(fileName: string, blob: Blob) {
-  const { fs, path } = await fsModules();
-  await fs.writeFile(await path.join(currentPath.value, fileName), new Uint8Array(await blob.arrayBuffer()));
-  await list();
-}
-
-async function uploadFromEvent(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0];
-  if (file) await uploadBlob(file.name, file);
-  (event.target as HTMLInputElement).value = "";
-}
-
-async function chooseFolder() {
-  try {
-    const selected = (await useTauriDialogOpen({
-      directory: true,
-      multiple: false,
-      title: t("koko.localFile.chooseFolder")
-    })) as string | null;
-
-    if (!selected) return;
-
-    rootPath.value = selected;
-    currentPath.value = selected;
-    saveRoot(selected);
-    setupOpen.value = false;
-    await activateSecurityScope(selected);
-    await list(selected);
+    if (await localManager.chooseFolder()) setupOpen.value = false;
+    clearSelection();
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause);
   }
 }
 
-async function resetToDefaultRoot() {
-  const { path } = await fsModules();
-  const home = await path.homeDir();
-  clearRoot();
-  rootPath.value = home;
-  currentPath.value = home;
+async function resetToDefaultRoot(): Promise<void> {
+  await localManager.resetToDefaultRoot();
   setupOpen.value = false;
-  await list(home);
+  clearSelection();
 }
 
-function openSetup() {
-  setupOpen.value = true;
+async function revealInSystem(entry?: SftpFileEntry | null): Promise<void> {
+  try {
+    await localManager.revealInSystem(entry);
+  } catch (cause) {
+    addErrorToast({ title: t("koko.localFile.revealFailed"), error: cause });
+  }
 }
 
-function closeSetup() {
-  setupOpen.value = false;
+function onDragStart(event: DragEvent, entry: SftpFileEntry): void {
+  if (entry.is_dir || entry.name === "..") return event.preventDefault();
+  if (!isSelected(entry)) selectEntry(entry);
+  const payload = transferSourcePayload();
+  if (!payload) return event.preventDefault();
+  writeTransferDragData(event, payload, activeTransferDragSourceId);
 }
 
-function selectEntry(entry: SftpFileEntry) {
+function clearTransferDragState(): void {
+  activeTransferDragSourceId.value = null;
+}
+
+function onTransferDragOver(event: DragEvent): void {
+  if (!isCrossEndpointTransferDrag(activeTransferDragSourceId.value, LOCAL_ENDPOINT_ID) || !hasTransferMimeType(event))
+    return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+}
+
+function onTransferDrop(event: DragEvent): void {
+  const payload = parseTransferDragPayload(event, LOCAL_ENDPOINT_ID);
+  clearTransferDragState();
+  if (!payload) return;
+  event.preventDefault();
+  emit("transferDrop", { ...payload, destinationPath: currentPath.value });
+}
+
+function transferSourcePayload(): SftpTransferSourcePayload | null {
+  return buildTransferSourcePayload({
+    sourceEndpoint: transferEndpoint.value,
+    sourcePath: currentPath.value,
+    sourceSelectionRevision: selectionRevision.value,
+    entries: transferableEntries.value
+  });
+}
+
+function openContextMenu(entry: SftpFileEntry, event: MouseEvent): void {
+  event.preventDefault();
+  event.stopPropagation();
   if (entry.name === "..") return;
-  selectedEntry.value = entry;
+  if (!isSelected(entry)) updateSelection([entry]);
+  contextEntry.value = entry;
+  contextMenuPosition.value = { x: event.clientX, y: event.clientY };
+  contextMenuVisible.value = true;
+}
+
+function hideContextMenu(): void {
+  contextMenuVisible.value = false;
+  contextEntry.value = null;
+}
+
+function openCreate(kind: "folder" | "file"): void {
+  hideContextMenu();
+  promptTarget.value = null;
+  promptKind.value = kind;
+  promptName.value = "";
+  promptOpen.value = true;
+}
+
+function openRename(entry: SftpFileEntry): void {
+  hideContextMenu();
+  promptTarget.value = entry;
+  promptName.value = entry.name;
+  promptOpen.value = true;
+}
+
+function requestDelete(targets = selectedEntries.value): void {
+  alertEntries.value = targets.filter((entry) => entry.name !== "..");
+  if (!alertEntries.value.length) return;
+  hideContextMenu();
+  alertOpen.value = true;
+}
+
+async function submitPrompt(): Promise<void> {
+  const name = promptName.value.trim();
+  const target = promptTarget.value;
+  if (!name || (target && name === target.name)) return;
+  try {
+    if (target) await renameEntry(target, name);
+    else if (promptKind.value === "file") await createFileAt(name);
+    else await createDirectory(name);
+    toast.add({
+      title: target
+        ? t("koko.fileManagement.entryRenamed", { name })
+        : t(promptKind.value === "file" ? "koko.fileManagement.fileCreated" : "koko.fileManagement.folderCreated", {
+            name
+          }),
+      color: "success"
+    });
+    clearSelection();
+    promptOpen.value = false;
+  } catch (cause) {
+    addErrorToast({ title: t("koko.fileManagement.operationFailed"), error: cause });
+  }
+}
+
+async function confirmDelete(): Promise<void> {
+  const targets = alertEntries.value;
+  const results = await Promise.allSettled(targets.map(removeEntry));
+  const success = results.filter((result) => result.status === "fulfilled").length;
+  if (!success) {
+    addErrorToast({ title: t("koko.fileManagement.operationFailed"), error: "" });
+    return;
+  }
+  toast.add({
+    title:
+      targets.length === 1
+        ? t("koko.fileManagement.entryDeleted", { name: targets[0]?.name })
+        : `${t("koko.actions.delete")}: ${t("koko.fileManagement.items", { count: success })}`,
+    color: success === targets.length ? "success" : "warning"
+  });
+  await list();
+  clearSelection();
+  alertOpen.value = false;
+}
+
+function onKeydown(event: KeyboardEvent): void {
+  if (!props.focused || (event.target as HTMLElement | null)?.closest("input, textarea, [contenteditable='true']"))
+    return;
+  if (event.key.toLowerCase() === KeyboardKey.A && (event.metaKey || event.ctrlKey)) {
+    event.preventDefault();
+    return toggleAllVisible(true);
+  }
+  if (event.key === KeyboardKey.ArrowUp || event.key === KeyboardKey.ArrowDown) {
+    event.preventDefault();
+    return moveSelection(event.key === KeyboardKey.ArrowUp ? -1 : 1, event.shiftKey);
+  }
+  if (event.key === KeyboardKey.Home || event.key === KeyboardKey.End) {
+    event.preventDefault();
+    return moveSelectionToBoundary(event.key === KeyboardKey.Home ? "start" : "end", event.shiftKey);
+  }
+  if (event.key === KeyboardKey.Escape) {
+    clearSelection();
+    return hideContextMenu();
+  }
+  if (event.key === KeyboardKey.F5 || (event.key.toLowerCase() === KeyboardKey.R && (event.metaKey || event.ctrlKey))) {
+    event.preventDefault();
+    return void list();
+  }
+  if ((event.key === KeyboardKey.Delete || event.key === KeyboardKey.Backspace) && selectedEntries.value.length) {
+    event.preventDefault();
+    return requestDelete();
+  }
+  if (event.key === KeyboardKey.Enter && selectedEntry.value?.is_dir) {
+    event.preventDefault();
+    void changeDirectory(selectedEntry.value);
+  }
+}
+
+function focusPane(): void {
+  emit("focus");
+  rootEl.value?.focus({ preventScroll: true });
 }
 
 watch(selectedEntry, (entry) => emit("select", entry));
-onMounted(() => list());
+watch(selectedEntries, (value) => emit("selectionChange", value), { deep: true });
+watch(
+  () => props.focused,
+  (focused) => focused && rootEl.value?.focus({ preventScroll: true })
+);
+onMounted(() => {
+  void list();
+  void refreshQuickPaths();
+  document.addEventListener("dragend", clearTransferDragState);
+  document.addEventListener("keydown", onKeydown);
+});
 onBeforeUnmount(() => {
+  document.removeEventListener("dragend", clearTransferDragState);
+  document.removeEventListener("keydown", onKeydown);
   void releaseSecurityScope();
 });
 
 const manager = {
-  operations: { readFile, uploadBlob }
+  operations: { readFile, uploadBlob },
+  currentPath,
+  connected: computed(() => !error.value && !loading.value)
 };
-defineExpose({ manager, selectedEntry });
+const contextMenuItems = computed<DropdownMenuItem[]>(() => {
+  const entry = contextEntry.value;
+  if (!entry) return [];
+  const single = selectedEntries.value.length === 1;
+  return [
+    {
+      label: t("koko.localFile.revealInFinder"),
+      icon: "i-lucide-folder-open",
+      disabled: !single,
+      onSelect: () => void revealInSystem(entry)
+    },
+    { type: "separator" },
+    { label: t("koko.actions.rename"), icon: "i-lucide-pencil", disabled: !single, onSelect: () => openRename(entry) },
+    { label: t("koko.actions.delete"), icon: "i-lucide-trash-2", color: "error", onSelect: () => requestDelete() }
+  ];
+});
+
+defineExpose({
+  manager,
+  selectedEntry,
+  selectedEntries,
+  clearSelection,
+  clearTransferredSelection,
+  transferSourcePayload,
+  list,
+  refresh: list,
+  transferEndpoint,
+  focus: focusPane,
+  focusPane
+});
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 flex-col bg-(--app-main-bg)">
-    <div class="flex shrink-0 items-center gap-1 border-b border-default p-2">
-      <UButton
-        icon="i-lucide-arrow-left"
-        color="neutral"
-        variant="ghost"
-        size="xs"
-        :disabled="currentPath === rootPath"
-        @click="changeDirectory({ name: '..', is_dir: true } as SftpFileEntry)"
-      />
-      <UButton icon="i-lucide-refresh-cw" color="neutral" variant="ghost" size="xs" @click="list()" />
-      <div class="min-w-0 flex-1 truncate rounded bg-(--app-hover-soft) px-2 py-1 font-ui-mono text-[11px]">
-        {{ currentPath || t("koko.localFile.folder") }}
-      </div>
-      <UButton icon="i-lucide-folder-cog" color="neutral" variant="ghost" size="xs" @click="openSetup" />
-      <UButton icon="i-lucide-upload" color="primary" variant="soft" size="xs" @click="uploadInput?.click()" />
-      <input ref="uploadInput" type="file" class="hidden" @change="uploadFromEvent" />
-    </div>
+  <div
+    ref="rootEl"
+    class="sftp-file-management relative flex h-full min-h-0 flex-col bg-(--app-main-bg) outline-none"
+    :class="{ 'ring-1 ring-inset ring-primary/40': focused }"
+    tabindex="0"
+    @mousedown="focusPane"
+    @dragenter="onTransferDragOver"
+    @dragover="onTransferDragOver"
+    @drop="onTransferDrop"
+  >
+    <SftpLocalPaneToolbar
+      v-model:search="search"
+      :current-path="currentPath"
+      :root-path="rootPath"
+      :quick-paths="quickPaths"
+      @parent="changeDirectory"
+      @refresh="list()"
+      @reveal="revealInSystem()"
+      @setup="setupOpen = true"
+      @upload="uploadFromEvent"
+      @go-to-path="goToPath"
+      @create="openCreate"
+    />
     <div v-if="error" class="grid flex-1 place-items-center p-4">
       <div class="w-full max-w-md space-y-3 rounded-xl border border-default bg-elevated/60 p-4">
         <div class="flex items-start gap-3">
@@ -243,12 +415,6 @@ defineExpose({ manager, selectedEntry });
             </p>
             <p class="text-xs leading-5 text-muted">
               {{ isPermissionError ? t("koko.localFile.permissionHint") : error }}
-            </p>
-            <p
-              v-if="isPermissionError"
-              class="break-all rounded-md bg-default/70 px-2 py-1 font-ui-mono text-[11px] text-muted"
-            >
-              {{ error }}
             </p>
           </div>
         </div>
@@ -268,54 +434,56 @@ defineExpose({ manager, selectedEntry });
     <div v-else-if="loading" class="grid flex-1 place-items-center">
       <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
     </div>
-    <div v-else class="min-h-0 flex-1 overflow-auto">
-      <button
-        v-for="entry in entries"
-        :key="entry.name"
-        type="button"
-        class="grid w-full grid-cols-[minmax(0,1fr)_80px] items-center border-b border-default/60 px-2 py-1.5 text-left text-xs hover:bg-(--app-hover-soft)"
-        :class="selectedEntry?.name === entry.name && entry.name !== '..' ? 'bg-(--app-selected-soft)' : ''"
-        @click="selectEntry(entry)"
-        @dblclick="entry.is_dir && changeDirectory(entry)"
-      >
-        <span class="flex min-w-0 items-center gap-2">
-          <UIcon :name="entry.is_dir ? 'i-lucide-folder' : 'i-lucide-file'" class="size-4 shrink-0" />
-          <span class="truncate">{{ entry.name }}</span>
-        </span>
-        <span class="text-right text-muted">{{ entry.is_dir ? "—" : entry.size }}</span>
-      </button>
+    <div v-else class="relative flex min-h-0 flex-1 flex-col">
+      <SftpPaneFileTable
+        variant="local"
+        class="min-h-0 flex-1"
+        :entries="visibleEntries"
+        :selected-names="selectedEntries.map((entry) => entry.name)"
+        :highlighted-names="highlightedNames"
+        :select-all-state="selectAllState"
+        draggable
+        @select="selectEntry"
+        @toggle="toggleEntry"
+        @toggle-all="toggleAllVisible"
+        @open="changeDirectory"
+        @context="openContextMenu"
+        @drag-start="onDragStart"
+      />
+      <SftpPaneSelectionBar
+        :selected-count="selectedEntries.length"
+        :transferable-count="transferableEntries.length"
+        :selected-bytes="selectedSize"
+        @remove="requestDelete()"
+        @clear="clearSelection"
+      />
     </div>
-
-    <UModal v-model:open="setupOpen" :title="t('koko.localFile.title')" :ui="{ content: 'max-w-lg' }">
-      <template #body>
-        <div class="space-y-4 text-sm">
-          <div class="rounded-xl border border-default bg-elevated/60 p-4">
-            <p class="font-medium text-highlighted">{{ t("koko.localFile.setupDescription") }}</p>
-            <p class="mt-2 leading-6 text-muted">
-              {{ t("koko.localFile.setupHint") }}
-            </p>
-          </div>
-          <div class="space-y-2 rounded-xl border border-default/80 p-4">
-            <p class="font-medium text-highlighted">{{ t("koko.localFile.recommendedSteps") }}</p>
-            <ol class="list-decimal space-y-1 pl-5 text-muted">
-              <li>{{ t("koko.localFile.stepChooseFolder") }}</li>
-              <li>{{ t("koko.localFile.stepSelectDirectory") }}</li>
-              <li>{{ t("koko.localFile.stepResetDefault") }}</li>
-            </ol>
-          </div>
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex w-full flex-wrap justify-end gap-2">
-          <UButton color="neutral" variant="outline" @click="closeSetup">{{ t("koko.actions.close") }}</UButton>
-          <UButton color="neutral" variant="soft" icon="i-lucide-house" @click="resetToDefaultRoot">
-            {{ t("koko.localFile.resetDefault") }}
-          </UButton>
-          <UButton color="primary" icon="i-lucide-folder-open" @click="chooseFolder">
-            {{ t("koko.localFile.chooseFolder") }}
-          </UButton>
-        </div>
-      </template>
-    </UModal>
+    <SftpPaneDropOverlay
+      :active="transferDropActive"
+      :blocked="transferDropBlocked"
+      icon="i-lucide-download"
+      :endpoint-label="t('koko.fileManagement.localFiles')"
+      :path="currentPath"
+    />
+    <SftpPaneContextMenu
+      :open="contextMenuVisible"
+      :items="contextMenuItems"
+      :position="contextMenuPosition"
+      @update-open="(open) => (open ? (contextMenuVisible = true) : hideContextMenu())"
+    />
+    <SftpLocalPaneDialogs
+      v-model:setup-open="setupOpen"
+      v-model:prompt-open="promptOpen"
+      v-model:prompt-name="promptName"
+      v-model:alert-open="alertOpen"
+      :prompt-title="promptTitle"
+      :prompt-confirm-label="promptConfirmLabel"
+      :prompt-disabled="promptDisabled"
+      :alert-entries="alertEntries"
+      @choose-folder="chooseFolder"
+      @reset-root="resetToDefaultRoot"
+      @submit-prompt="submitPrompt"
+      @confirm-delete="confirmDelete"
+    />
   </div>
 </template>

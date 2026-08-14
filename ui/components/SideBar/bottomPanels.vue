@@ -33,7 +33,8 @@ const {
   renameFolder,
   removeFolder
 } = useFavoriteFolders();
-const { snippets, loading: snippetLoading, load: loadSnippets, applySnippet } = useSnippets();
+const { snippets, loading: snippetLoading, load: loadSnippets } = useSnippets();
+const { openScriptEditor } = useWorkspaceTabs();
 const createModalOpen = ref(false);
 const createParentId = ref<string | null>(null);
 const folderName = ref("");
@@ -48,6 +49,19 @@ const deleteModalOpen = ref(false);
 const deleteTarget = ref<FavoriteFolder | null>(null);
 const deleting = ref(false);
 const snippetSearch = ref("");
+
+const snippetCreateItems = computed<DropdownMenuItem[]>(() =>
+  [
+    ["Shell", "shell", "i-lucide-terminal"],
+    ["PowerShell", "win_shell", "i-lucide-monitor"],
+    ["Python", "python", "i-lucide-file-code-2"],
+    ["Raw", "raw", "i-lucide-file-text"]
+  ].map(([label, module, icon]) => ({
+    label,
+    icon,
+    onSelect: () => openScriptEditor({ name: t("Snippets.Untitled"), module: module! })
+  }))
+);
 
 const folderHasClosedBranch = (folder: FavoriteFolder): boolean => {
   if (!folder.open) return true;
@@ -178,7 +192,7 @@ const updateDeleteModal = (open: boolean) => {
 
 const panelConfig = {
   favorites: { exclusiveGroup: "asset-shelves", preferredHeight: 280, minHeight: 128, maxHeight: "50%" },
-  snippets: { exclusiveGroup: "asset-shelves", preferredHeight: 180, minHeight: 96, maxHeight: "30%" }
+  snippets: { exclusiveGroup: "asset-shelves", preferredHeight: 280, minHeight: 128, maxHeight: "50%" }
 } as const;
 
 const panelMaxHeight = (kind: PanelKind) => (props.mainPanelOpen ? panelConfig[kind].maxHeight : "100%");
@@ -223,10 +237,6 @@ const filteredSnippets = computed(() => {
   );
 });
 
-function isShellSnippet(snippet: Snippet) {
-  return snippet.module.value === "shell";
-}
-
 function getSnippetIcon(snippet: Snippet) {
   switch (snippet.module.value) {
     case "shell":
@@ -258,9 +268,14 @@ function getSnippetTitle(snippet: Snippet) {
     .join("\n");
 }
 
-function handleSnippetClick(snippet: Snippet) {
-  if (!isShellSnippet(snippet)) return;
-  applySnippet(snippet);
+function handleSnippetDoubleClick(snippet: Snippet) {
+  openScriptEditor({
+    id: snippet.id,
+    name: snippet.name,
+    args: snippet.args,
+    module: snippet.module.value,
+    comment: snippet.comment
+  });
 }
 
 async function copySnippet(snippet: Snippet) {
@@ -375,6 +390,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
       :title="t('Menu.Favorite')"
       v-bind="panelConfig.favorites"
       :max-height="panelMaxHeight('favorites')"
+      :fill-available="!mainPanelOpen"
       @toggle="togglePanel('favorites')"
     >
       <template #actions>
@@ -443,9 +459,22 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
       :title="t('Menu.Snippets')"
       v-bind="panelConfig.snippets"
       :max-height="panelMaxHeight('snippets')"
+      :fill-available="!mainPanelOpen"
       @toggle="togglePanel('snippets')"
     >
       <template #actions>
+        <UDropdownMenu :items="snippetCreateItems" :content="{ align: 'end', side: 'right' }">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            icon="i-lucide-plus"
+            class="sidebar-icon-button size-6 justify-center p-0"
+            :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+            :aria-label="t('Snippets.Create')"
+            @click.stop
+          />
+        </UDropdownMenu>
         <UButton
           color="neutral"
           variant="ghost"
@@ -512,10 +541,9 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
         >
           <button
             type="button"
-            class="flex min-w-0 flex-1 items-start gap-1.5 text-left"
-            :class="isShellSnippet(snippet) ? 'cursor-pointer' : 'cursor-default'"
+            class="flex min-w-0 flex-1 cursor-default items-start gap-1.5 text-left"
             :title="getSnippetTitle(snippet)"
-            @click="handleSnippetClick(snippet)"
+            @dblclick="handleSnippetDoubleClick(snippet)"
           >
             <UIcon :name="getSnippetIcon(snippet)" class="mt-0.5 sidebar-icon shrink-0" />
             <span class="min-w-0 flex-1">

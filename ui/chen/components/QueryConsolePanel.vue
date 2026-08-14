@@ -1,18 +1,28 @@
 <script setup lang="ts">
 import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
-import type { ChenDataViewAction, ChenDataViewActionData, ChenQueryConsoleTab, ChenQueryResultTab } from "~/chen/types";
+import type {
+  ChenDataViewAction,
+  ChenDataViewActionData,
+  ChenQueryConsoleTab,
+  ChenQueryResultTab,
+  ChenSqlEditorSnapshot
+} from "~/chen/types";
+import type { ChenSqlMetadataStore } from "~/chen/utils/sqlMetadata";
 
 import QueryResultTabs from "~/chen/components/QueryResultTabs.vue";
 import ChenSqlEditor from "~/chen/components/SqlEditor.client.vue";
 import SqlSnippetSaveDialog from "~/chen/components/SqlSnippetSaveDialog.vue";
 import SqlSnippetSelectDialog from "~/chen/components/SqlSnippetSelectDialog.vue";
 import { useChenSqlSnippets } from "~/chen/composables/useChenSqlSnippets";
+import { createChenCompletionSource } from "~/chen/utils/sqlCompletion";
+import { chenSqlDialect } from "~/chen/utils/sqlEditor";
 import { formatChenSql } from "~/chen/utils/sqlFormat";
 
 const props = defineProps<{
   tab: ChenQueryConsoleTab;
   dbType: string;
   canCopy: boolean;
+  metadataStore: ChenSqlMetadataStore;
 }>();
 
 const emit = defineEmits<{
@@ -28,12 +38,16 @@ const emit = defineEmits<{
   ];
   dismissMessage: [tab: ChenQueryConsoleTab];
   updateStatement: [tab: ChenQueryConsoleTab, value: string];
+  aiGenerate: [tab: ChenQueryConsoleTab];
+  aiExplain: [tab: ChenQueryConsoleTab];
+  aiRepair: [tab: ChenQueryConsoleTab];
   activateResult: [tab: ChenQueryConsoleTab, id: string];
   closeResult: [tab: ChenQueryConsoleTab, title: string];
 }>();
 
 const sqlEditor = ref<{
   replaceDocument: (value: string) => void;
+  snapshot: () => ChenSqlEditorSnapshot;
   selectedText: () => string;
 } | null>(null);
 const sqlUploadInput = ref<HTMLInputElement | null>(null);
@@ -44,8 +58,17 @@ const selectSnippetDialogOpen = ref(false);
 const DEFAULT_MESSAGE_CLOSE_DELAY_SECONDS = 5;
 let messageCloseTimer: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
+const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
 const sqlSnippets = useChenSqlSnippets(() => props.dbType);
+const completionSource = createChenCompletionSource({
+  store: props.metadataStore,
+  scope: () => {
+    const context = props.tab.state.currentContext || "";
+    return context ? { nodeKey: props.tab.nodeKey, context } : null;
+  },
+  dialect: () => chenSqlDialect(props.dbType)
+});
 const queryBusy = computed(() => Boolean(props.tab.state.loading || props.tab.state.inQuery));
 const contextBusy = computed(() => Boolean(queryBusy.value || props.tab.state.editorLoading));
 const contextItems = computed(() =>
@@ -70,6 +93,17 @@ const statementValue = computed({
 
 function runSelectedQuery() {
   emit("run", props.tab, sqlEditor.value?.selectedText() || "");
+}
+
+function editorSnapshot(): ChenSqlEditorSnapshot {
+  return (
+    sqlEditor.value?.snapshot() || {
+      documentSql: props.tab.statement,
+      selectedSql: "",
+      selectionFrom: 0,
+      selectionTo: 0
+    }
+  );
 }
 
 function formatStatement() {
@@ -195,6 +229,8 @@ watch(
 );
 
 onBeforeUnmount(clearMessageTimer);
+
+defineExpose({ editorSnapshot });
 </script>
 
 <template>
@@ -256,6 +292,36 @@ onBeforeUnmount(clearMessageTimer);
         >
           Upload SQL
         </UButton>
+        <UButton
+          icon="i-lucide-wand-sparkles"
+          size="sm"
+          color="neutral"
+          variant="soft"
+          :disabled="contextBusy"
+          @click="emit('aiGenerate', tab)"
+        >
+          {{ t("RightPanel.SQLAIGenerate") }}
+        </UButton>
+        <UButton
+          icon="i-lucide-message-square-text"
+          size="sm"
+          color="neutral"
+          variant="soft"
+          :disabled="contextBusy || !tab.statement.trim()"
+          @click="emit('aiExplain', tab)"
+        >
+          {{ t("RightPanel.SQLAIExplain") }}
+        </UButton>
+        <UButton
+          icon="i-lucide-wrench"
+          size="sm"
+          color="neutral"
+          variant="soft"
+          :disabled="contextBusy || !tab.statement.trim()"
+          @click="emit('aiRepair', tab)"
+        >
+          {{ t("RightPanel.SQLAIRepair") }}
+        </UButton>
         <UDropdownMenu :items="contextItems">
           <UButton
             class="ml-auto"
@@ -276,7 +342,7 @@ onBeforeUnmount(clearMessageTimer);
           v-model="statementValue"
           class="min-h-0 flex-1"
           :db-type="dbType"
-          :hints="tab.sqlHints"
+          :completion-source="completionSource"
           :read-only="Boolean(tab.state.loading || tab.state.editorLoading)"
           @selection-change="hasSelection = $event"
           @format="formatStatement"

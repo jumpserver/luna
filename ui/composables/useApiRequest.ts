@@ -45,6 +45,10 @@ export interface SqlSnippetPayload {
   module: string;
 }
 
+export interface CommandSnippetPayload extends SqlSnippetPayload {
+  comment?: string;
+}
+
 let lastAuthFailureAt = 0;
 
 const isAuthFailure = (error: unknown) => {
@@ -317,6 +321,22 @@ export function getCommandSnippets(): Promise<unknown> {
     method: "GET",
     path: "/api/v1/ops/adhocs/",
     query: { only_mine: true }
+  });
+}
+
+export function createCommandSnippet(payload: CommandSnippetPayload): Promise<unknown> {
+  return apiRequest<unknown>({
+    method: "POST",
+    path: "/api/v1/ops/adhocs/",
+    body: payload
+  });
+}
+
+export function updateCommandSnippet(id: string, payload: CommandSnippetPayload): Promise<unknown> {
+  return apiRequest<unknown>({
+    method: "PATCH",
+    path: `/api/v1/ops/adhocs/${encodeURIComponent(id)}/`,
+    body: payload
   });
 }
 

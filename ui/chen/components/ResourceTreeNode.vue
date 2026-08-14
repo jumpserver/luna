@@ -100,7 +100,7 @@ function handleContextMenu(event: MouseEvent) {
   <li>
     <div
       class="sidebar-row group flex h-7 w-full cursor-default items-center gap-1 rounded-lg pr-1 text-left text-xs"
-      :class="selectedKey === node.key ? 'bg-[var(--app-selected-soft)] text-[var(--app-fg)]' : ''"
+      :class="selectedKey === node.key ? 'bg-[var(--app-hover-soft)] text-[var(--app-fg)]' : ''"
       :data-active="selectedKey === node.key ? '' : undefined"
       :style="{ paddingLeft: `${(depth || 0) * 12 + 6}px` }"
       @click="handleRowClick"

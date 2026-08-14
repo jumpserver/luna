@@ -16,6 +16,8 @@ const {
   activateAdjacentSession,
   canSplitWorkspace,
   draggedTabId,
+  enterFocusMode,
+  enterFullscreenMode,
   reorderTabs,
   renameTabTitle,
   closeAllSessions,
@@ -204,6 +206,27 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
   const canSplitHorizontally = canSplitWorkspace(tab.id, "horizontal");
 
   return [
+    tabMenuItem(
+      {
+        label: t("TabMenu.FocusCurrent"),
+        onSelect: () => {
+          hideContextMenu();
+          enterFocusMode(tab.id);
+        }
+      },
+      "i-lucide-maximize-2"
+    ),
+    tabMenuItem(
+      {
+        label: t("TabMenu.FullscreenCurrent"),
+        onSelect: () => {
+          hideContextMenu();
+          void enterFullscreenMode(tab.id);
+        }
+      },
+      "i-lucide-fullscreen"
+    ),
+    { type: "separator" as const },
     tabMenuItem(
       {
         label: t("TabMenu.CloneConnect"),
@@ -506,7 +529,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 </script>
 
 <template>
-  <div class="workspace-tab-header flex h-full min-w-0 items-center gap-2 px-3">
+  <div class="workspace-tab-header flex h-full min-w-0 items-center gap-2 px-1">
     <UTooltip v-if="hasLeftHidden" text="向左滚动标签" :delay-duration="150">
       <button
         type="button"
@@ -519,8 +542,11 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       </button>
     </UTooltip>
 
-    <div v-if="tabs.length" class="workspace-tab-capsule flex min-w-0 flex-1 items-center rounded-lg">
-      <div ref="tabStripRef" class="workspace-tab-strip flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+    <div v-if="tabs.length" class="workspace-tab-capsule flex w-fit min-w-0 max-w-full items-center rounded-lg">
+      <div
+        ref="tabStripRef"
+        class="workspace-tab-strip flex w-fit min-w-0 max-w-full items-center gap-1 overflow-x-auto"
+      >
         <button
           v-for="(tab, index) in tabs"
           :key="tab.id"
@@ -528,7 +554,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           :title="tabTooltip(tab)"
           type="button"
           draggable="true"
-          class="group relative flex h-7 min-w-24 max-w-44 basis-44 grow shrink items-center gap-1.5 rounded-md px-2 text-left transition-colors"
+          class="workspace-session-tab group relative flex h-7 min-w-24 max-w-44 basis-44 grow shrink items-center gap-1.5 rounded-md px-2 text-left transition-colors"
           :class="[
             activeTabId === tab.id ? 'workspace-session-tab-active' : 'text-[var(--app-muted)]',
             draggedTabId === tab.id ? 'opacity-60' : ''
@@ -591,14 +617,14 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
             {{ tabDisplayTitle(tab) }}
           </span>
           <span
-            class="workspace-session-tab-close flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-70 transition-opacity hover:opacity-100"
+            class="workspace-session-tab-close flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-70 transition-colors hover:bg-elevated hover:text-foreground hover:opacity-100"
             @click.stop="closeSession(tab.id)"
           >
             <UIcon name="i-lucide-x" class="size-2.5" />
           </span>
           <span
             v-if="activeTabId !== tab.id && index < tabs.length - 1 && tabs[index + 1]?.id !== activeTabId"
-            class="workspace-session-tab-divider pointer-events-none absolute top-1/2 -right-[5px] h-4 -translate-y-1/2 border-r"
+            class="workspace-session-tab-divider pointer-events-none absolute top-1/2 -right-[5px] hidden h-4 -translate-y-1/2 border-r"
           />
         </button>
       </div>
@@ -718,12 +744,12 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
   outline: none;
 }
 
-.workspace-session-tab-status {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-surface-panel-strong) 88%, white 12%);
+.workspace-session-tab:hover {
+  background-color: var(--app-hover-soft);
 }
 
-.workspace-session-tab-close:hover {
-  background: color-mix(in srgb, var(--app-hover-strong) 88%, transparent);
+.workspace-session-tab-status {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-surface-panel-strong) 88%, white 12%);
 }
 
 .workspace-session-tab-divider {

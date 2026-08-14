@@ -9,6 +9,9 @@ import type {
 import type { SftpSocketClient } from "./useSftpSocket";
 
 import { computed, ref } from "vue";
+import { createSftpMessageId, decodeSftpRawBytes, encodeSftpBytes, joinSftpPath } from "./core/codec";
+import { rejectPendingRequests } from "./core/pending";
+import { createSerialTaskQueue } from "./core/queues";
 import {
   SFTP_FILE_CONFLICT_ERROR,
   SFTP_REQUEST_TIMEOUT_ERROR,
@@ -65,7 +68,6 @@ interface UploadTask {
   status: "queued" | "uploading";
 }
 
-const messageId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
 const uploadChunkSize = 5 * 1024 * 1024;
 const requestTimeoutMs = 30_000;
 const saveRequestTimeoutMs = 120_000;
@@ -77,28 +79,6 @@ const transferCommands = new Set<SftpCommand>([
   SftpCommand.TransferCommit,
   SftpCommand.TransferCancel
 ]);
-
-function pathFor(currentPath: string, name: string) {
-  return `${currentPath.replace(/\/$/, "")}/${name}`;
-}
-
-function decodeRaw(raw: unknown) {
-  if (typeof raw === "string") {
-    if (!raw) return new Uint8Array();
-    const binary = atob(raw);
-    return Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  }
-  if (Array.isArray(raw)) return Uint8Array.from(raw);
-  return new Uint8Array();
-}
-
-function bytesToBase64(bytes: Uint8Array) {
-  let binary = "";
-  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
-  }
-  return btoa(binary);
-}
 
 export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketClient) {
   const uploadTasks = ref<UploadTask[]>([]);
@@ -122,9 +102,9 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
   >();
   const errorListeners = new Set<(error: Error) => void>();
 
-  let navigationQueue: Promise<void> = Promise.resolve();
-  let mutationQueue: Promise<void> = Promise.resolve();
-  let uploadQueue: Promise<void> = Promise.resolve();
+  const navigationQueue = createSerialTaskQueue();
+  const mutationQueue = createSerialTaskQueue();
+  const uploadQueue = createSerialTaskQueue();
 
   const emitError = (error: Error) => {
     for (const listener of errorListeners) listener(error);
@@ -139,57 +119,15 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     }, requestTimeoutMs);
   }
 
-  const enqueueNavigation = <T>(operation: () => Promise<T>) => {
-    const result = navigationQueue.then(operation, operation);
-    navigationQueue = result.then(
-      () => undefined,
-      () => undefined
-    );
-    return result;
-  };
-
-  const enqueueMutation = <T>(operation: () => Promise<T>) => {
-    const result = mutationQueue.then(operation, operation);
-    mutationQueue = result.then(
-      () => undefined,
-      () => undefined
-    );
-    return result;
-  };
-
-  const enqueueUpload = <T>(operation: () => Promise<T>) => {
-    const result = uploadQueue.then(operation, operation);
-    uploadQueue = result.then(
-      () => undefined,
-      () => undefined
-    );
-    return result;
-  };
-
   function rejectPending(message: string) {
     const error = new Error(message);
-    for (const pending of pendingLists.values()) {
-      clearTimeout(pending.timeout);
-      pending.reject(error);
-    }
-    for (const pending of pendingDownloads.values()) {
-      clearTimeout(pending.timeout);
-      pending.reject(error);
-    }
-    for (const pending of pendingMutations.values()) {
-      clearTimeout(pending.timeout);
-      pending.reject(error);
-    }
+    rejectPendingRequests(pendingLists.values(), error);
+    rejectPendingRequests(pendingDownloads.values(), error);
+    rejectPendingRequests(pendingMutations.values(), error);
     for (const waiters of pendingUploadAcks.values()) {
-      for (const waiter of waiters) {
-        clearTimeout(waiter.timeout);
-        waiter.reject(error);
-      }
+      rejectPendingRequests(waiters, error);
     }
-    for (const pending of pendingSaves.values()) {
-      clearTimeout(pending.timeout);
-      pending.reject(error);
-    }
+    rejectPendingRequests(pendingSaves.values(), error);
     pendingLists.clear();
     pendingDownloads.clear();
     pendingMutations.clear();
@@ -198,7 +136,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     uploadTasks.value = [];
   }
 
-  function send(command: SftpCommand, data: Record<string, unknown>, raw = "", id: string = messageId()) {
+  function send(command: SftpCommand, data: Record<string, unknown>, raw = "", id: string = createSftpMessageId()) {
     socket.send({ id, type: SftpMessageType.Data, cmd: command, data: JSON.stringify(data), raw });
     return id;
   }
@@ -335,7 +273,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     if (message.type === SftpMessageType.Binary) {
       const pending = pendingDownloads.get(message.id);
       if (pending) {
-        pending.parts.push(decodeRaw(message.raw));
+        pending.parts.push(decodeSftpRawBytes(message.raw));
         armDownloadTimeout(message.id, pending);
       }
       return;
@@ -391,7 +329,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
   const listDirectory = (path: string, options: { background?: boolean; messageId?: string } = {}) => {
     const request = () =>
       new Promise<SftpFileEntry[]>((resolve, reject) => {
-        const id = options.messageId || messageId();
+        const id = options.messageId || createSftpMessageId();
         const pending: PendingList = {
           background: Boolean(options.background),
           requestedPath: path,
@@ -413,7 +351,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
         }
       });
 
-    return options.background ? Promise.resolve().then(request) : enqueueNavigation(request);
+    return options.background ? Promise.resolve().then(request) : navigationQueue.enqueue(request);
   };
 
   const mutatePath = (
@@ -421,10 +359,10 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     path: string,
     extra = {}
   ) =>
-    enqueueMutation(
+    mutationQueue.enqueue(
       () =>
         new Promise<void>((resolve, reject) => {
-          const id = messageId();
+          const id = createSftpMessageId();
           const pending: PendingMutation = { resolve, reject };
           pending.timeout = setTimeout(() => {
             if (pendingMutations.get(id) !== pending) return;
@@ -444,7 +382,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
 
   const readPath = (path: string, saveAs: boolean, isDir = false) =>
     new Promise<Blob>((resolve, reject) => {
-      const id = messageId();
+      const id = createSftpMessageId();
       const pending: PendingDownload = { parts: [], saveAs, resolve, reject };
       pendingDownloads.set(id, pending);
       armDownloadTimeout(id, pending);
@@ -457,8 +395,8 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
       }
     });
 
-  const uploadFile = (file: File, targetPath = pathFor(currentPath.value, file.name)) =>
-    enqueueUpload(async () => {
+  const uploadFile = (file: File, targetPath = joinSftpPath(currentPath.value, file.name)) =>
+    uploadQueue.enqueue(async () => {
       const chunks = Math.max(1, Math.ceil(file.size / uploadChunkSize));
       const id = String(Date.now());
       const task: UploadTask = { id, name: file.name, progress: 0, status: "queued" };
@@ -473,7 +411,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
           await sendUpload(
             id,
             { offSet: index * uploadChunkSize, size: file.size, path: targetPath, chunk: chunks > 1 },
-            bytesToBase64(bytes)
+            encodeSftpBytes(bytes)
           );
           task.progress = Math.round(((index + 1) / chunks) * 100);
           uploadTasks.value = [...uploadTasks.value];
@@ -485,10 +423,10 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     });
 
   const saveFile = (path: string, bytes: Uint8Array, options: { expectedVersion?: string; force?: boolean } = {}) =>
-    enqueueUpload(
+    uploadQueue.enqueue(
       () =>
         new Promise<SftpFileEntry>((resolve, reject) => {
-          const id = messageId();
+          const id = createSftpMessageId();
           const pending: PendingSave = { resolve, reject };
           pending.timeout = setTimeout(() => {
             if (pendingSaves.get(id) !== pending) return;
@@ -505,7 +443,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
                 expected_version: options.expectedVersion,
                 force: Boolean(options.force)
               },
-              bytesToBase64(bytes),
+              encodeSftpBytes(bytes),
               id
             );
           } catch (cause) {
@@ -518,24 +456,26 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
 
   const operations: SftpFileOperations = {
     listDirectory,
-    createDirectory: (name) => mutatePath(SftpCommand.MakeDirectory, pathFor(currentPath.value, name)),
+    createDirectory: (name) => mutatePath(SftpCommand.MakeDirectory, joinSftpPath(currentPath.value, name)),
     createDirectoryAt: (path) => mutatePath(SftpCommand.MakeDirectory, path),
-    createFileAt: (path) => enqueueUpload(() => sendUpload(messageId(), { offSet: 0, size: 0, path, chunk: false })),
+    // koko parses upload message IDs as integers, including empty-file uploads.
+    createFileAt: (path) =>
+      uploadQueue.enqueue(() => sendUpload(String(Date.now()), { offSet: 0, size: 0, path, chunk: false })),
     renameEntry: (entry, name) =>
-      mutatePath(SftpCommand.Rename, pathFor(currentPath.value, entry.name), { new_name: name }),
+      mutatePath(SftpCommand.Rename, joinSftpPath(currentPath.value, entry.name), { new_name: name }),
     renamePath: (path, name) => mutatePath(SftpCommand.Rename, path, { new_name: name }),
-    removeEntry: (entry) => mutatePath(SftpCommand.Remove, pathFor(currentPath.value, entry.name)),
+    removeEntry: (entry) => mutatePath(SftpCommand.Remove, joinSftpPath(currentPath.value, entry.name)),
     removePath: (path) => mutatePath(SftpCommand.Remove, path),
     downloadEntry: (entry) =>
-      readPath(pathFor(currentPath.value, entry.name), true, entry.is_dir).then(() => undefined),
+      readPath(joinSftpPath(currentPath.value, entry.name), true, entry.is_dir).then(() => undefined),
     downloadPath: (path, isDir) => readPath(path, true, isDir).then(() => undefined),
-    readFile: (entry, targetPath) => readPath(targetPath || pathFor(currentPath.value, entry.name), false),
+    readFile: (entry, targetPath) => readPath(targetPath || joinSftpPath(currentPath.value, entry.name), false),
     uploadFile,
     uploadBlob: async (fileName, blob, targetPath) => {
       const file =
         blob instanceof File ? blob : new File([blob], fileName, { type: blob.type || "application/octet-stream" });
 
-      await uploadFile(file, targetPath || pathFor(currentPath.value, fileName));
+      await uploadFile(file, targetPath || joinSftpPath(currentPath.value, fileName));
     },
     saveFile
   };

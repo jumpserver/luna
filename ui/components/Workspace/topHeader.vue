@@ -1,11 +1,10 @@
 <script setup lang="ts">
 const { collapse } = useSettingManager();
-const { isMacOS } = usePlatform();
 const { sidebarWidth } = useSidebarLayout();
 const router = useRouter();
 const isToolWindow = computed(() => router.currentRoute.value.query.tool_window === "1");
 const leadingAreaStyle = computed(() => ({
-  width: collapse.value ? (isMacOS.value ? "128px" : "44px") : `${sidebarWidth.value}px`
+  width: collapse.value ? "fit-content" : `${sidebarWidth.value}px`
 }));
 
 const handleWindowDrag = async (event: MouseEvent) => {

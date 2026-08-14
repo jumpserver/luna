@@ -111,6 +111,7 @@ export const useKokoTerminalSocket = () => {
   let themeObserver: MutationObserver | null = null;
   let fitAddon: FitAddon | null = null;
   let socketOpened = false;
+  let hasPendingContainerFit = false;
 
   const reportInitialConnectionFailure = () => {
     if (socketOpened || connectionError.value) return;
@@ -135,8 +136,18 @@ export const useKokoTerminalSocket = () => {
 
   const debouncedFitToContainer = useDebounceFn(fitToContainer, 80);
   const { stop: stopContainerResizeObserver } = useResizeObserver(containerRef, () => {
+    if (import.meta.client && document.documentElement.dataset.rightPanelResizing === "true") {
+      hasPendingContainerFit = true;
+      return;
+    }
     void debouncedFitToContainer();
   });
+
+  const handleRightPanelResizeEnd = () => {
+    if (!hasPendingContainerFit) return;
+    hasPendingContainerFit = false;
+    fitToContainer();
+  };
 
   const debouncedResize = useDebounceFn(({ cols, rows }: { cols: number; rows: number }) => {
     if (!socketRef.value || !isSocketOpen(socketRef.value)) return;
@@ -354,12 +365,13 @@ export const useKokoTerminalSocket = () => {
     });
     themeObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["class", "data-theme-preset", "style"]
+      attributeFilter: ["class", "data-theme-preset", "data-terminal-theme-preset", "style"]
     });
   };
 
   onMounted(() => {
     if (!containerRef.value) return;
+    window.addEventListener("right-panel-resize-end", handleRightPanelResizeEnd);
     createTerminal();
     createWebSocket();
     observeAppTheme();
@@ -372,6 +384,7 @@ export const useKokoTerminalSocket = () => {
   });
 
   onUnmounted(() => {
+    window.removeEventListener("right-panel-resize-end", handleRightPanelResizeEnd);
     stopContainerResizeObserver();
     themeObserver?.disconnect();
     input.stop();

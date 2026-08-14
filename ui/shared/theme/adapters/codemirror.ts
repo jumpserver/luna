@@ -3,11 +3,30 @@ import type { Extension } from "@codemirror/state";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
-import { readResolvedEditorTokens, readResolvedWorkspaceTokens } from "~/shared/theme/resolvedTokens";
+import { tokyoNightStyle } from "@uiw/codemirror-theme-tokyo-night";
+import { getCodeMirrorThemePreset } from "~/shared/theme/presets/codemirror";
 
 export function createCodeMirrorTheme(): Extension {
-  const editor = readResolvedEditorTokens();
-  const workspace = readResolvedWorkspaceTokens();
+  const preset = getCodeMirrorThemePreset(useSettingManager().codeMirrorThemePreset.value);
+  if (preset.extension) {
+    return [preset.extension, EditorView.theme({ "&": { height: "100%" } })];
+  }
+
+  const editor = {
+    background: "var(--editor-background)",
+    foreground: "var(--editor-foreground)",
+    gutterBackground: "var(--editor-gutter-background)",
+    gutterForeground: "var(--editor-gutter-foreground)",
+    lineHighlight: "var(--editor-line-highlight)",
+    selection: "var(--editor-selection)",
+    selectionInactive: "var(--editor-selection-inactive)",
+    cursor: "var(--editor-cursor)",
+    findMatch: "var(--editor-find-match)",
+    findMatchActive: "var(--editor-find-match-active)",
+    bracketMatch: "var(--editor-bracket-match)",
+    indentGuide: "var(--editor-indent-guide)",
+    indentGuideActive: "var(--editor-indent-guide-active)"
+  };
 
   return EditorView.theme({
     "&": {
@@ -25,7 +44,7 @@ export function createCodeMirrorTheme(): Extension {
     ".cm-gutters": {
       backgroundColor: editor.gutterBackground,
       color: editor.gutterForeground,
-      borderRight: `1px solid ${workspace.border}`
+      borderRight: "1px solid var(--workspace-surface-border)"
     },
     ".cm-activeLine, .cm-activeLineGutter": {
       backgroundColor: editor.lineHighlight
@@ -42,9 +61,9 @@ export function createCodeMirrorTheme(): Extension {
       outline: "1px solid transparent"
     },
     ".cm-tooltip": {
-      backgroundColor: workspace.panel,
+      backgroundColor: "var(--workspace-surface-panel)",
       color: editor.foreground,
-      border: `1px solid ${workspace.border}`,
+      border: "1px solid var(--workspace-surface-border)",
       boxShadow: "var(--theme-shadow-soft)"
     },
     ".cm-tooltip-autocomplete > ul > li": { color: editor.foreground },
@@ -62,6 +81,12 @@ export function createCodeMirrorTheme(): Extension {
 }
 
 export function createCodeMirrorSyntaxTheme(): Extension {
+  if (getCodeMirrorThemePreset(useSettingManager().codeMirrorThemePreset.value).extension) return [];
+
+  if (import.meta.client && document.documentElement.classList.contains("dark")) {
+    return syntaxHighlighting(HighlightStyle.define(tokyoNightStyle));
+  }
+
   const syntax = {
     keyword: "var(--syntax-keyword)",
     string: "var(--syntax-string)",

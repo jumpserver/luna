@@ -1,23 +1,23 @@
 <script setup lang="ts">
 import type { Extension } from "@codemirror/state";
-import type { ChenSqlHints } from "~/chen/types";
-import { sql } from "@codemirror/lang-sql";
+import type { ChenSqlEditorSnapshot } from "~/chen/types";
+import type { ChenSqlCompletionSource } from "~/chen/utils/sqlCompletion";
+import { acceptCompletion } from "@codemirror/autocomplete";
 import { Compartment, EditorState, Prec } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
-import { chenSqlConfig, replaceChenSqlDocument } from "~/chen/utils/sqlEditor";
+import { chenSqlExtensions, replaceChenSqlDocument } from "~/chen/utils/sqlEditor";
 import { createCodeMirrorSyntaxTheme, createCodeMirrorTheme } from "~/shared/theme/adapters/codemirror";
 
 const props = withDefaults(
   defineProps<{
     modelValue: string;
     dbType?: string;
-    hints?: ChenSqlHints;
+    completionSource?: ChenSqlCompletionSource;
     readOnly?: boolean;
   }>(),
   {
     dbType: "",
-    hints: () => ({}),
     readOnly: false
   }
 );
@@ -44,12 +44,16 @@ let applyingExternalValue = false;
 
 const editorExtensions: Extension[] = [
   basicSetup,
-  sqlLanguageSlot.of(sql(chenSqlConfig(props.dbType, props.hints))),
+  sqlLanguageSlot.of(chenSqlExtensions(props.dbType, props.completionSource)),
   syntaxThemeSlot.of(createCodeMirrorSyntaxTheme()),
   EditorView.lineWrapping,
   EditorState.tabSize.of(2),
   Prec.highest(
     keymap.of([
+      {
+        key: "Tab",
+        run: acceptCompletion
+      },
       {
         key: "Mod-l",
         run: () => {
@@ -104,6 +108,25 @@ function selectedText() {
   return from === to ? "" : state.doc.sliceString(from, to);
 }
 
+function snapshot(): ChenSqlEditorSnapshot {
+  if (!editor) {
+    return {
+      documentSql: props.modelValue,
+      selectedSql: "",
+      selectionFrom: 0,
+      selectionTo: 0
+    };
+  }
+  const { state } = editor;
+  const { from, to } = state.selection.main;
+  return {
+    documentSql: state.doc.toString(),
+    selectedSql: from === to ? "" : state.doc.sliceString(from, to),
+    selectionFrom: from,
+    selectionTo: to
+  };
+}
+
 function focus() {
   editor?.focus();
 }
@@ -138,7 +161,7 @@ onMounted(() => {
   themeObserver = new MutationObserver(refreshTheme);
   themeObserver.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ["class", "data-theme-preset", "style"]
+    attributeFilter: ["class", "data-theme-preset", "data-codemirror-theme-preset", "style"]
   });
 });
 
@@ -160,9 +183,9 @@ watch(
 );
 
 watch(
-  () => [props.dbType, props.hints] as const,
-  ([dbType, hints]) => {
-    editor?.dispatch({ effects: sqlLanguageSlot.reconfigure(sql(chenSqlConfig(dbType, hints))) });
+  () => [props.dbType, props.completionSource] as const,
+  ([dbType, completionSource]) => {
+    editor?.dispatch({ effects: sqlLanguageSlot.reconfigure(chenSqlExtensions(dbType, completionSource)) });
   }
 );
 
@@ -176,6 +199,7 @@ onBeforeUnmount(() => {
 defineExpose({
   focus,
   replaceDocument,
+  snapshot,
   selectedText
 });
 </script>
