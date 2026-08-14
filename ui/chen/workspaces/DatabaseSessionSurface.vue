@@ -544,7 +544,8 @@ function handleIndexOperationPacket(tab: ChenQueryConsoleTab, packet: ChenPacket
   if (failed) {
     addErrorToast({
       title: `Failed to ${operation.operation} index`,
-      description: operation.error || tab.message?.message || tab.logs.at(-1) || "The database rejected the index statement."
+      description:
+        operation.error || tab.message?.message || tab.logs.at(-1) || "The database rejected the index statement."
     });
     return;
   }

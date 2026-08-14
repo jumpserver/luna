@@ -101,8 +101,7 @@ export function useChenDataViewDerivedMeta(profileDbType: Ref<string | undefined
           index.primaryKey === true ||
           index.isPrimary === true ||
           String(index.type || index.indexType).toUpperCase() === "PRIMARY";
-        const constraint =
-          index.constraint === true || index.constraintBacked === true || index.isConstraint === true;
+        const constraint = index.constraint === true || index.constraintBacked === true || index.isConstraint === true;
         return {
           name: String(index.name || index.indexName || index.index_name || `index_${position + 1}`),
           columns,

@@ -46,12 +46,7 @@ const emit = defineEmits<{
   updatePropertyTab: [tab: ChenDataViewConsoleTab, propertyTab: ChenDataViewPropertyTab];
   updateWhereCondition: [tab: ChenDataViewConsoleTab, condition: string];
   editStructure: [tab: ChenDataViewConsoleTab, columns: ChenDataViewColumnPreview[]];
-  executeIndexSql: [
-    tab: ChenDataViewConsoleTab,
-    sql: string,
-    operation: "create" | "drop",
-    indexName: string
-  ];
+  executeIndexSql: [tab: ChenDataViewConsoleTab, sql: string, operation: "create" | "drop", indexName: string];
 }>();
 
 const exportDialogOpen = ref(false);
@@ -88,7 +83,11 @@ const {
   dataViewIndexes,
   dataViewPropertyTabs
 } = useChenDataViewDerivedMeta(dbTypeRef, protocolRef);
-const tableColumns = computed(() => dataViewColumns(props.tab).map((column) => column.name).filter((name) => name !== "-"));
+const tableColumns = computed(() =>
+  dataViewColumns(props.tab)
+    .map((column) => column.name)
+    .filter((name) => name !== "-")
+);
 
 function openExportDialog() {
   exportTarget.value = props.tab;
@@ -380,9 +379,7 @@ function clearWhereCondition() {
 
       <div v-else-if="tab.activePropertyTab === 'indexes'" class="min-h-0 flex-1 overflow-auto p-3">
         <div class="mb-2 flex items-center justify-between gap-3">
-          <p class="text-xs text-muted">
-            Primary-key and constraint-backed indexes cannot be deleted here.
-          </p>
+          <p class="text-xs text-muted">Primary-key and constraint-backed indexes cannot be deleted here.</p>
           <UButton
             icon="i-lucide-plus"
             size="xs"
@@ -430,7 +427,13 @@ function clearWhereCondition() {
                     icon="i-lucide-trash-2"
                     size="xs"
                     :disabled="!indexDdlSupported || index.protected || index.inferred"
-                    :title="!indexDdlSupported ? 'Index changes are not supported for this database type' : index.protected || index.inferred ? 'Primary, constraint-backed, or inferred indexes cannot be deleted here' : `Drop ${index.name}`"
+                    :title="
+                      !indexDdlSupported
+                        ? 'Index changes are not supported for this database type'
+                        : index.protected || index.inferred
+                          ? 'Primary, constraint-backed, or inferred indexes cannot be deleted here'
+                          : `Drop ${index.name}`
+                    "
                     :aria-label="`Drop index ${index.name}`"
                     @click="previewDropIndex(index)"
                   />
