@@ -39,12 +39,7 @@ const {
           :disabled="remoteConnecting"
         />
         <div class="max-h-72 overflow-y-auto rounded-lg border border-default">
-          <component
-            :is="assetTree"
-            :search="remoteAssetSearch"
-            open
-            @select="connectRemoteAsset"
-          />
+          <component :is="assetTree" :search="remoteAssetSearch" open @select="connectRemoteAsset" />
         </div>
       </div>
     </template>

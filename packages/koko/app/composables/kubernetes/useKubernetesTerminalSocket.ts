@@ -12,6 +12,20 @@ import { toWsOrigin } from "@jumpserver/connectors-core";
 import { getCurrentInstance, onUnmounted, ref, shallowRef } from "vue";
 
 import {
+  buildJSONEnvelope,
+  buildTerminalInput,
+  createRequestId,
+  ENVELOPE_ERROR,
+  ENVELOPE_TERMINAL_CLOSE,
+  ENVELOPE_TERMINAL_COMMAND,
+  ENVELOPE_TERMINAL_CREATE,
+  ENVELOPE_TERMINAL_OUTPUT,
+  parseEnvelope,
+  parseJSONPayload,
+  parseTerminalPayload
+} from "../terminal/envelope";
+
+import {
   KubernetesTerminalControlData,
   KubernetesTerminalMessageType,
   KubernetesTerminalSocketFailureCode,
@@ -22,6 +36,14 @@ import {
 const SOCKET_OPEN = 1;
 const SOCKET_CLOSING = 2;
 const SOCKET_CLOSED = 3;
+const TERMINAL_RESIZE = "TERMINAL_RESIZE";
+
+interface TerminalCommandEnvelope {
+  terminalId?: number;
+  command: string;
+  params?: Record<string, unknown>;
+  requestId?: string;
+}
 
 export interface KubernetesTerminalSocketClient {
   connected: Ref<boolean>;
@@ -48,18 +70,94 @@ export function useKubernetesTerminalSocket(): KubernetesTerminalSocketClient {
   const connected = ref(false);
   const messageListeners = new Set<(message: KubernetesTerminalIncomingMessage) => void>();
   const failureListeners = new Set<(failure: KubernetesTerminalFailure) => void>();
+  const terminalIdByK8sId = new Map<string, number>();
+  const k8sIdByTerminalId = new Map<number, string>();
+  const k8sIdByRequestId = new Map<string, string>();
   let generation = 0;
   let intentionalClose = false;
+  let transport: "unknown" | "json" | "envelope" = "unknown";
 
   function emitFailure(code: KubernetesTerminalSocketFailureCode, cause?: unknown) {
     const failure = { cause, code };
     for (const listener of failureListeners) listener(failure);
   }
 
-  function send(message: KubernetesTerminalOutgoingMessage) {
+  function sendLegacy(message: KubernetesTerminalOutgoingMessage) {
     const target = socket.value;
     if (!target || target.readyState !== SOCKET_OPEN) throw new Error("Kubernetes terminal socket is not connected");
     target.send(JSON.stringify(message));
+  }
+
+  function sendEnvelope(payload: Uint8Array) {
+    const target = socket.value;
+    if (!target || target.readyState !== SOCKET_OPEN) throw new Error("Kubernetes terminal socket is not connected");
+    target.send(payload.buffer as ArrayBuffer);
+  }
+
+  function sendCommand(message: KubernetesTerminalOutgoingMessage, terminalId = 0, command: string = message.type) {
+    if (transport === "json") {
+      sendLegacy(message);
+      return;
+    }
+    sendEnvelope(
+      buildJSONEnvelope(ENVELOPE_TERMINAL_COMMAND, {
+        terminalId,
+        command,
+        params: message,
+        timestamp: Date.now()
+      })
+    );
+  }
+
+  function decodeEnvelope(data: ArrayBuffer | Uint8Array) {
+    const frame = parseEnvelope(data);
+    if (frame.type === ENVELOPE_TERMINAL_OUTPUT) {
+      const payload = parseTerminalPayload(frame.payload);
+      return {
+        type: KubernetesTerminalMessageType.Binary,
+        terminalId: payload.terminalId,
+        k8s_id: k8sIdByTerminalId.get(payload.terminalId) || "",
+        raw: payload.data
+      };
+    }
+    if (frame.type === ENVELOPE_TERMINAL_COMMAND) {
+      const command = parseJSONPayload<TerminalCommandEnvelope>(frame.payload);
+      return {
+        ...(command.params || {}),
+        type: command.command,
+        terminalId: command.terminalId || 0,
+        requestId: command.requestId || ""
+      };
+    }
+    if (frame.type === ENVELOPE_ERROR) {
+      const error = parseJSONPayload<Record<string, unknown>>(frame.payload);
+      const terminalId = Number(error.terminalId) || 0;
+      return {
+        type: KubernetesTerminalMessageType.Error,
+        err: String(error.message || "Kubernetes terminal error"),
+        terminalId,
+        requestId: String(error.requestId || ""),
+        k8s_id: k8sIdByTerminalId.get(terminalId) || ""
+      };
+    }
+    if (frame.type === ENVELOPE_TERMINAL_CLOSE) {
+      const closed = parseJSONPayload<Record<string, unknown>>(frame.payload);
+      const terminalId = Number(closed.terminalId) || 0;
+      return {
+        type: KubernetesTerminalMessageType.Close,
+        data: String(closed.reason || ""),
+        terminalId,
+        requestId: String(closed.requestId || ""),
+        k8s_id: k8sIdByTerminalId.get(terminalId) || ""
+      };
+    }
+    throw new Error(`Unsupported Kubernetes terminal envelope type: ${frame.type}`);
+  }
+
+  function resetTerminalIds() {
+    terminalIdByK8sId.clear();
+    k8sIdByTerminalId.clear();
+    k8sIdByRequestId.clear();
   }
 
   function close() {
@@ -68,6 +166,8 @@ export function useKubernetesTerminalSocket(): KubernetesTerminalSocketClient {
     connected.value = false;
     const target = socket.value;
     socket.value = null;
+    transport = "unknown";
+    resetTerminalIds();
     if (target && target.readyState !== SOCKET_CLOSING && target.readyState !== SOCKET_CLOSED) target.close();
   }
 
@@ -79,6 +179,7 @@ export function useKubernetesTerminalSocket(): KubernetesTerminalSocketClient {
     let target: WebSocket;
     try {
       target = new WebSocket(websocketUrl(context), [KubernetesTerminalWebSocketProtocol.Koko]);
+      target.binaryType = "arraybuffer";
     } catch (cause) {
       emitFailure(KubernetesTerminalSocketFailureCode.ConnectionFailed, cause);
       return;
@@ -94,10 +195,34 @@ export function useKubernetesTerminalSocket(): KubernetesTerminalSocketClient {
       if (!isCurrent()) return;
       let raw: unknown;
       try {
-        raw = JSON.parse(String(event.data));
+        if (typeof event.data === "string") {
+          transport = "json";
+          raw = JSON.parse(event.data);
+        } else if (event.data instanceof ArrayBuffer) {
+          transport = "envelope";
+          raw = decodeEnvelope(event.data);
+        } else {
+          throw new TypeError("Unsupported Kubernetes WebSocket message type");
+        }
       } catch (cause) {
         emitFailure(KubernetesTerminalSocketFailureCode.MalformedMessage, cause);
         return;
+      }
+
+      if (
+        raw &&
+        typeof raw === "object" &&
+        (raw as Record<string, unknown>).type === KubernetesTerminalMessageType.Created
+      ) {
+        const created = raw as { terminalId?: unknown; requestId?: unknown };
+        const terminalId = Number(created.terminalId) || 0;
+        const requestId = String(created.requestId || "");
+        const k8sId = k8sIdByRequestId.get(requestId);
+        if (terminalId && k8sId) {
+          terminalIdByK8sId.set(k8sId, terminalId);
+          k8sIdByTerminalId.set(terminalId, k8sId);
+          k8sIdByRequestId.delete(requestId);
+        }
       }
 
       const message = parseKubernetesTerminalMessage(raw);
@@ -108,7 +233,7 @@ export function useKubernetesTerminalSocket(): KubernetesTerminalSocketClient {
 
       if (message.type === KubernetesTerminalMessageType.Ping) {
         try {
-          send({ id: message.id, type: KubernetesTerminalMessageType.Pong, data: KubernetesTerminalControlData.Pong });
+          sendCommand({ id: message.id, type: KubernetesTerminalMessageType.Pong, data: KubernetesTerminalControlData.Pong });
         } catch (cause) {
           emitFailure(KubernetesTerminalSocketFailureCode.PingReplyFailed, cause);
         }
@@ -131,19 +256,42 @@ export function useKubernetesTerminalSocket(): KubernetesTerminalSocketClient {
   }
 
   function requestTree() {
-    send({ type: KubernetesTerminalMessageType.Tree });
+    sendCommand({ type: KubernetesTerminalMessageType.Tree });
   }
 
   function initializeTerminal(terminalId: string, k8sId: string, target: KubernetesTerminalTarget, data: string) {
-    send({ id: terminalId, k8s_id: k8sId, ...target, type: KubernetesTerminalMessageType.Initialize, data });
+    if (transport === "json") {
+      sendLegacy({ id: terminalId, k8s_id: k8sId, ...target, type: KubernetesTerminalMessageType.Initialize, data });
+      return;
+    }
+    const size = JSON.parse(data) as { cols: number; rows: number; code?: string };
+    const requestId = createRequestId("k8s");
+    k8sIdByRequestId.set(requestId, k8sId);
+    sendEnvelope(
+      buildJSONEnvelope(ENVELOPE_TERMINAL_CREATE, {
+        requestId,
+        params: {
+          cols: size.cols,
+          rows: size.rows,
+          code: size.code || "",
+          type: "kubernetes",
+          kubernetes: { id: k8sId, ...target }
+        }
+      })
+    );
   }
 
   function sendTerminalData(terminalId: string, k8sId: string, target: KubernetesTerminalTarget, data: string) {
-    send({ id: terminalId, k8s_id: k8sId, ...target, type: KubernetesTerminalMessageType.Data, data });
+    if (transport === "json") {
+      sendLegacy({ id: terminalId, k8s_id: k8sId, ...target, type: KubernetesTerminalMessageType.Data, data });
+      return;
+    }
+    const serverTerminalId = terminalIdByK8sId.get(k8sId);
+    if (serverTerminalId) sendEnvelope(buildTerminalInput(serverTerminalId, data));
   }
 
   function resizeTerminal(terminalId: string, k8sId: string, cols: number, rows: number) {
-    send({
+    const message: KubernetesTerminalOutgoingMessage = {
       id: terminalId,
       k8s_id: k8sId,
       namespace: "",
@@ -151,11 +299,36 @@ export function useKubernetesTerminalSocket(): KubernetesTerminalSocketClient {
       container: "",
       resizeData: JSON.stringify({ cols, rows }),
       type: KubernetesTerminalMessageType.Resize
-    });
+    };
+    const serverTerminalId = terminalIdByK8sId.get(k8sId);
+    if (transport === "json") sendLegacy(message);
+    else if (serverTerminalId) {
+      sendEnvelope(
+        buildJSONEnvelope(ENVELOPE_TERMINAL_COMMAND, {
+          terminalId: serverTerminalId,
+          command: TERMINAL_RESIZE,
+          params: {
+            id: terminalId,
+            type: TERMINAL_RESIZE,
+            data: JSON.stringify({ cols, rows }),
+            terminalId: serverTerminalId
+          },
+          timestamp: Date.now()
+        })
+      );
+    }
   }
 
   function closeTerminal(terminalId: string, k8sId: string) {
-    send({ id: terminalId, k8s_id: k8sId, type: KubernetesTerminalMessageType.Close });
+    if (transport === "json") {
+      sendLegacy({ id: terminalId, k8s_id: k8sId, type: KubernetesTerminalMessageType.Close });
+      return;
+    }
+    const serverTerminalId = terminalIdByK8sId.get(k8sId);
+    if (!serverTerminalId) return;
+    sendEnvelope(buildJSONEnvelope(ENVELOPE_TERMINAL_CLOSE, { terminalId: serverTerminalId }));
+    terminalIdByK8sId.delete(k8sId);
+    k8sIdByTerminalId.delete(serverTerminalId);
   }
 
   function onMessage(listener: (message: KubernetesTerminalIncomingMessage) => void) {

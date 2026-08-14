@@ -1087,6 +1087,8 @@
       "websocketConnectionFailed": "Kubernetes WebSocket 连接失败",
       "preparingConnection": "正在准备 Kubernetes 连接...",
       "connectCluster": "连接集群",
+      "resizeSidebar": "调整 Kubernetes 侧栏宽度",
+      "recentContainers": "最近 containers",
       "refreshTree": "刷新目录树",
       "filterContainers": "筛选 container",
       "noMatchingContainers": "没有匹配的 container",

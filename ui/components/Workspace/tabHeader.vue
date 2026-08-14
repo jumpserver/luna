@@ -554,7 +554,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           :title="tabTooltip(tab)"
           type="button"
           draggable="true"
-          class="workspace-session-tab group relative flex h-7 min-w-24 max-w-44 basis-44 grow shrink items-center gap-1.5 rounded-md px-2 text-left transition-colors"
+          class="workspace-session-tab group relative flex h-7 min-w-24 max-w-44 basis-44 grow shrink items-center gap-1.5 rounded-md px-2 text-left leading-none transition-colors"
           :class="[
             activeTabId === tab.id ? 'workspace-session-tab-active' : 'text-[var(--app-muted)]',
             draggedTabId === tab.id ? 'opacity-60' : ''

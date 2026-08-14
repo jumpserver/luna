@@ -29,7 +29,7 @@ const toggle = () => {
           class="sidebar-icon-sm transition-transform"
           :class="folder.open ? 'rotate-90' : ''"
         />
-        <UIcon :name="folder.open ? 'i-tabler-folder-open' : 'i-tabler-folder'" class="sidebar-icon" />
+        <UIcon :name="folder.open ? 'i-tabler-folder-open' : 'i-tabler-folder'" class="sidebar-icon tree-folder-icon" />
         <span class="truncate font-medium">{{ folder.name }}</span>
       </button>
     </div>

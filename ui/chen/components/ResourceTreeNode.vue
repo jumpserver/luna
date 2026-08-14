@@ -73,6 +73,8 @@ const iconName = computed(() => {
   }
 });
 
+const isFolderIcon = computed(() => iconName.value === "i-lucide-folder" || iconName.value === "i-lucide-folder-open");
+
 function handleRowClick() {
   emit("select", props.node);
   if (!props.node.leaf) emit("toggle", props.node);
@@ -122,7 +124,7 @@ function handleContextMenu(event: MouseEvent) {
       </button>
       <span v-else class="size-4" />
       <img v-if="datasourceIconSrc" :src="datasourceIconSrc" alt="" class="sidebar-icon-img" />
-      <UIcon v-else :name="iconName" class="sidebar-icon" />
+      <UIcon v-else :name="iconName" class="sidebar-icon" :class="isFolderIcon ? 'tree-folder-icon' : ''" />
       <span class="min-w-0 flex-1 truncate" :title="node.type === 'recent-table' ? node.fullLabel : undefined">
         {{ node.label || node.name || node.key }}
       </span>

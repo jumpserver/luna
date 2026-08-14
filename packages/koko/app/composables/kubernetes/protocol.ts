@@ -1,4 +1,5 @@
 export enum KubernetesTerminalMessageType {
+  Created = "created",
   Connect = "CONNECT",
   Ping = "PING",
   Pong = "PONG",
@@ -54,7 +55,13 @@ export interface KubernetesTerminalDataMessage {
 export interface KubernetesTerminalBinaryMessage {
   type: KubernetesTerminalMessageType.Binary;
   k8s_id: string;
-  raw?: string;
+  raw?: string | Uint8Array;
+}
+
+export interface KubernetesTerminalCreatedMessage {
+  type: KubernetesTerminalMessageType.Created;
+  terminalId: number;
+  requestId: string;
 }
 
 export interface KubernetesTerminalSessionMessage {
@@ -81,6 +88,7 @@ export interface KubernetesTerminalControlMessage {
 }
 
 export type KubernetesTerminalIncomingMessage =
+  | KubernetesTerminalCreatedMessage
   | KubernetesTerminalConnectMessage
   | KubernetesTerminalTreeMessage
   | KubernetesTerminalDataMessage
@@ -160,6 +168,11 @@ export function parseKubernetesTerminalMessage(raw: unknown): KubernetesTerminal
     return { data: optionalString(message.data), id: message.id, type: message.type };
   }
 
+  if (message.type === KubernetesTerminalMessageType.Created) {
+    if (typeof message.terminalId !== "number" || typeof message.requestId !== "string") return null;
+    return { terminalId: message.terminalId, requestId: message.requestId, type: message.type };
+  }
+
   if (message.type === KubernetesTerminalMessageType.Ping) {
     if (typeof message.id !== "string") return null;
     return { id: message.id, type: message.type };
@@ -176,7 +189,8 @@ export function parseKubernetesTerminalMessage(raw: unknown): KubernetesTerminal
 
   if (message.type === KubernetesTerminalMessageType.Binary) {
     if (typeof message.k8s_id !== "string") return null;
-    return { k8s_id: message.k8s_id, raw: optionalString(message.raw), type: message.type };
+    const raw = typeof message.raw === "string" || message.raw instanceof Uint8Array ? message.raw : undefined;
+    return { k8s_id: message.k8s_id, raw, type: message.type };
   }
 
   if (message.type === KubernetesTerminalMessageType.TerminalSession) {

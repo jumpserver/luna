@@ -358,6 +358,12 @@ option {
   color: var(--app-fg);
 }
 
+.tree-folder-icon,
+.sidebar-row:hover .tree-folder-icon,
+.sidebar-row[data-active] .tree-folder-icon {
+  color: var(--theme-accent);
+}
+
 .sidebar-icon-button {
   border-radius: 0.5rem;
   color: var(--app-muted);

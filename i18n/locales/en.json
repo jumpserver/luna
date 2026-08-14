@@ -1084,6 +1084,8 @@
       "websocketConnectionFailed": "Kubernetes WebSocket connection failed",
       "preparingConnection": "Preparing Kubernetes connection...",
       "connectCluster": "Connect cluster",
+      "resizeSidebar": "Resize Kubernetes sidebar",
+      "recentContainers": "Recent containers",
       "refreshTree": "Refresh tree",
       "filterContainers": "Filter containers",
       "noMatchingContainers": "No matching containers",

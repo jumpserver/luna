@@ -106,7 +106,7 @@ const activate = () => {
         v-if="node.loading || icon"
         :name="node.loading ? 'i-lucide-loader-circle' : icon"
         class="sidebar-icon"
-        :class="node.loading ? 'animate-spin' : ''"
+        :class="node.loading ? 'animate-spin' : isParent ? 'tree-folder-icon' : ''"
       />
       <img v-else-if="iconSrc" :src="iconSrc" alt="" class="sidebar-icon-img" />
       <span

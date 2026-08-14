@@ -327,7 +327,11 @@ defineExpose({ editorSnapshot });
             AI
           </UButton>
         </UDropdownMenu>
-        <UDropdownMenu :items="contextItems">
+        <UDropdownMenu
+          :items="contextItems"
+          :content="{ align: 'end' }"
+          :ui="{ content: 'w-max min-w-(--reka-dropdown-menu-trigger-width) max-w-80' }"
+        >
           <UButton
             class="ml-auto"
             icon="i-lucide-database"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from "@nuxt/ui";
 import { nextTick, ref, watch } from "vue";
 
 export interface WorkspaceSubTab {
@@ -38,10 +39,22 @@ const emit = defineEmits<{
 }>();
 
 const strip = ref<HTMLElement | null>(null);
+const hasOverflow = ref(false);
+const hasLeftHidden = ref(false);
+const hasRightHidden = ref(false);
 const localDraggedId = ref("");
 const dropTargetId = ref("");
 const dropPlacement = ref<"before" | "after">("before");
 const editorTabMime = "application/x-jumpserver-editor-tab";
+const tabMenuItems = computed<DropdownMenuItem[]>(() =>
+  props.tabs.map((tab) => ({
+    label: tab.label,
+    icon: tab.icon,
+    type: "checkbox" as const,
+    checked: props.activeId === tab.id,
+    onSelect: () => selectTab(tab.id)
+  }))
+);
 
 function clearDragState() {
   localDraggedId.value = "";
@@ -120,22 +133,83 @@ function scrollTabs(event: WheelEvent) {
   event.preventDefault();
 }
 
+function updateOverflow() {
+  const element = strip.value;
+  if (!element) return;
+  hasOverflow.value = element.scrollWidth > element.clientWidth + 1;
+  hasLeftHidden.value = hasOverflow.value && element.scrollLeft > 1;
+  hasRightHidden.value = hasOverflow.value && element.scrollLeft + element.clientWidth < element.scrollWidth - 1;
+}
+
+function scrollActiveTabIntoView(behavior: ScrollBehavior = "smooth") {
+  strip.value?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({
+    behavior,
+    block: "nearest",
+    inline: "nearest"
+  });
+}
+
+function selectTab(id: string) {
+  emit("select", id);
+  nextTick(scrollActiveTabIntoView);
+}
+
+function scrollTabStrip(direction: "left" | "right") {
+  const element = strip.value;
+  if (!element) return;
+  element.scrollBy({
+    left: direction === "left" ? -Math.max(120, element.clientWidth * 0.6) : Math.max(120, element.clientWidth * 0.6),
+    behavior: "smooth"
+  });
+}
+
+let resizeObserver: ResizeObserver | null = null;
+
 watch(
-  () => props.activeId,
-  async () => {
-    await nextTick();
-    strip.value?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "nearest"
-    });
+  strip,
+  (element, previous) => {
+    previous?.removeEventListener("scroll", updateOverflow);
+    resizeObserver?.disconnect();
+    resizeObserver = null;
+    if (!element) return;
+
+    updateOverflow();
+    scrollActiveTabIntoView("auto");
+    resizeObserver = new ResizeObserver(updateOverflow);
+    resizeObserver.observe(element);
+    element.addEventListener("scroll", updateOverflow, { passive: true });
   },
   { flush: "post" }
+);
+
+onBeforeUnmount(() => {
+  strip.value?.removeEventListener("scroll", updateOverflow);
+  resizeObserver?.disconnect();
+});
+
+watch(
+  () => [props.tabs, props.activeId],
+  async () => {
+    await nextTick();
+    updateOverflow();
+    scrollActiveTabIntoView();
+  },
+  { deep: true, flush: "post" }
 );
 </script>
 
 <template>
-  <div v-if="tabs.length" class="flex h-9 min-w-0 shrink-0 items-center bg-[var(--workspace-surface-main)] px-2">
+  <div v-if="tabs.length" class="flex h-9 min-w-0 shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2">
+    <UButton
+      v-if="hasLeftHidden"
+      size="xs"
+      icon="i-lucide-chevron-left"
+      color="neutral"
+      variant="ghost"
+      aria-label="Scroll tabs left"
+      title="Scroll tabs left"
+      @click="scrollTabStrip('left')"
+    />
     <div class="flex h-full min-w-0 flex-1 items-center overflow-hidden">
       <div
         ref="strip"
@@ -161,10 +235,10 @@ watch(
           :tabindex="activeId === tab.id ? 0 : -1"
           :draggable="reorderable"
           :title="tab.title || tab.label"
-          @click="$emit('select', tab.id)"
+          @click="selectTab(tab.id)"
           @dblclick="$emit('pin', tab.id)"
-          @keydown.enter.prevent="$emit('select', tab.id)"
-          @keydown.space.prevent="$emit('select', tab.id)"
+          @keydown.enter.prevent="selectTab(tab.id)"
+          @keydown.space.prevent="selectTab(tab.id)"
           @auxclick="closeWithMiddleClick(tab.id, $event)"
           @contextmenu="openContextMenu(tab.id, $event)"
           @dragstart="beginDrag(tab.id, $event)"
@@ -195,6 +269,31 @@ watch(
         </div>
       </div>
     </div>
+    <UButton
+      v-if="hasRightHidden"
+      size="xs"
+      icon="i-lucide-chevron-right"
+      color="neutral"
+      variant="ghost"
+      aria-label="Scroll tabs right"
+      title="Scroll tabs right"
+      @click="scrollTabStrip('right')"
+    />
+    <UDropdownMenu
+      v-if="hasOverflow"
+      :items="tabMenuItems"
+      :content="{ align: 'end', side: 'bottom', sideOffset: 6 }"
+      :ui="{ content: 'w-52 max-h-64 overflow-y-auto p-1', label: 'truncate' }"
+    >
+      <UButton
+        size="xs"
+        icon="i-lucide-ellipsis"
+        color="neutral"
+        variant="ghost"
+        aria-label="Select tab"
+        title="Select tab"
+      />
+    </UDropdownMenu>
     <div v-if="$slots.trailing" class="ml-2 flex h-full shrink-0 items-center gap-1 pl-2">
       <slot name="trailing" />
     </div>

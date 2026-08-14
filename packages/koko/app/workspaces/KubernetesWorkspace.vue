@@ -19,7 +19,10 @@ import BaseWorkspaceShell from "#koko/workspaces/BaseWorkspaceShell.vue";
 import { useBaseWorkspaceSession } from "#koko/workspaces/useBaseWorkspaceSession";
 import "@xterm/xterm/css/xterm.css";
 
+type TreeRowKind = "recent-root" | "asset-root" | "namespace" | "pod" | "container";
+
 interface K8sNode {
+  key?: string;
   label: string;
   namespace?: string;
   pod?: string;
@@ -40,7 +43,6 @@ interface TerminalTab {
   container: string;
 }
 
-type TreeRowKind = "namespace" | "pod" | "container";
 interface TreeRow {
   kind: TreeRowKind;
   node: K8sNode;
@@ -49,6 +51,7 @@ interface TreeRow {
 }
 
 const props = defineProps<{ tab: KokoWorkspaceTab }>();
+const emit = defineEmits<{ reconnect: [] }>();
 const { t } = useI18n();
 const toast = useToast();
 const tab = toRef(props, "tab");
@@ -58,8 +61,15 @@ const colorMode = useColorMode();
 
 const tree = ref<K8sNode[]>([]);
 const expanded = ref(new Set<string>());
+const manuallyCollapsedPods = new Set<string>();
 const search = ref("");
 const searchVisible = ref(false);
+const recentContainers = useLocalStorage<ConnectTarget[]>(
+  `jumpserver-client:kubernetes-recent-containers:${props.tab.assetId}`,
+  []
+);
+const sidebarWidth = ref(260);
+const resizingSidebar = ref(false);
 const connectionError = ref("");
 const terminalTabs = ref<TerminalTab[]>([]);
 const activeTabId = ref("");
@@ -69,10 +79,17 @@ const terminals = new Map<string, { terminal: Terminal; fit: FitAddon; cleanupCl
 const defaultClipboardAccess = shallowRef(createUnrestrictedClipboardAccess());
 const sessionClipboardAccess = new Map<string, ClipboardAccess>();
 let themeObserver: MutationObserver | null = null;
+let resizeStartX = 0;
+let resizeStartWidth = 0;
+let resizeHandle: HTMLElement | null = null;
+let resizePointerId: number | null = null;
 const terminalSocket = useKubernetesTerminalSocket();
 
 const activeTab = computed(() => terminalTabs.value.find((item) => item.id === activeTabId.value) || null);
 const assetName = computed(() => tab.value.assetName || t("koko.kubernetes.name"));
+const resize = useDebounceFn(() => {
+  if (activeTabId.value) terminals.get(activeTabId.value)?.fit.fit();
+}, 80);
 
 function tabIcon(item: TerminalTab) {
   return item.container ? "i-lucide-container" : "i-lucide-boxes";
@@ -87,7 +104,13 @@ const subTabs = computed(() =>
   }))
 );
 
-const keyOf = (node: K8sNode) => [node.namespace, node.pod, node.container, node.label].filter(Boolean).join("/");
+const RECENT_ROOT_KEY = "__kubernetes_recent_containers__";
+const ASSET_ROOT_KEY = "__kubernetes_asset__";
+expanded.value.add(RECENT_ROOT_KEY);
+expanded.value.add(ASSET_ROOT_KEY);
+
+const keyOf = (node: K8sNode) =>
+  node.key || [node.namespace, node.pod, node.container, node.label].filter(Boolean).join("/");
 const containerLabel = (node: K8sNode) => `${node.namespace}/${node.pod}/${node.container}`;
 
 function parseJson<T>(value: string | undefined): T | null {
@@ -151,10 +174,57 @@ function toggleSearch() {
   if (!searchVisible.value) search.value = "";
 }
 
-function toggle(node: K8sNode) {
-  const key = keyOf(node);
-  if (expanded.value.has(key)) expanded.value.delete(key);
-  else expanded.value.add(key);
+function startSidebarResize(event: PointerEvent) {
+  if (event.button !== 0) return;
+
+  event.preventDefault();
+  resizingSidebar.value = true;
+  resizeStartX = event.clientX;
+  resizeStartWidth = sidebarWidth.value;
+  resizeHandle = event.currentTarget as HTMLElement;
+  resizePointerId = event.pointerId;
+  resizeHandle.setPointerCapture(event.pointerId);
+  document.body.style.cursor = "col-resize";
+  document.body.style.userSelect = "none";
+}
+
+function resizeSidebar(event: PointerEvent) {
+  if (!resizingSidebar.value) return;
+  sidebarWidth.value = Math.min(420, Math.max(220, resizeStartWidth + event.clientX - resizeStartX));
+  resize();
+}
+
+function stopSidebarResize() {
+  if (!resizingSidebar.value) return;
+
+  resizingSidebar.value = false;
+  if (resizeHandle && resizePointerId !== null && resizeHandle.hasPointerCapture(resizePointerId)) {
+    resizeHandle.releasePointerCapture(resizePointerId);
+  }
+  resizeHandle = null;
+  resizePointerId = null;
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
+}
+
+function toggleRow(row: TreeRow) {
+  const key = keyOf(row.node);
+  if (expanded.value.has(key)) {
+    expanded.value.delete(key);
+    if (row.kind === "pod") manuallyCollapsedPods.add(key);
+    return;
+  }
+
+  expanded.value.add(key);
+  if (row.kind === "pod") manuallyCollapsedPods.delete(key);
+  if (row.kind !== "namespace") return;
+
+  for (const pod of row.node.children || []) {
+    const podKey = keyOf(pod);
+    if (pod.children?.length === 1 && !manuallyCollapsedPods.has(podKey)) {
+      expanded.value.add(podKey);
+    }
+  }
 }
 
 function normalizeTree(raw: Record<string, any>): K8sNode[] {
@@ -195,16 +265,38 @@ const treeRows = computed<TreeRow[]>(() => {
     return rows;
   }
 
+  const recentRoot: K8sNode = {
+    key: RECENT_ROOT_KEY,
+    label: t("koko.kubernetes.recentContainers"),
+    children: recentContainers.value.map((container) => ({
+      ...container,
+      key: `recent:${container.namespace}/${container.pod}/${container.container}`
+    }))
+  };
+  const assetRoot: K8sNode = { key: ASSET_ROOT_KEY, label: assetName.value, children: tree.value };
+
+  const recentExpanded = expanded.value.has(RECENT_ROOT_KEY);
+  rows.push({ kind: "recent-root", node: recentRoot, depth: 0, expanded: recentExpanded });
+  if (recentExpanded) {
+    for (const container of recentRoot.children || []) {
+      rows.push({ kind: "container", node: container, depth: 1, expanded: false });
+    }
+  }
+
+  const assetExpanded = expanded.value.has(ASSET_ROOT_KEY);
+  rows.push({ kind: "asset-root", node: assetRoot, depth: 0, expanded: assetExpanded });
+  if (!assetExpanded) return rows;
+
   for (const namespace of tree.value) {
     const nsExpanded = expanded.value.has(keyOf(namespace));
-    rows.push({ kind: "namespace", node: namespace, depth: 0, expanded: nsExpanded });
+    rows.push({ kind: "namespace", node: namespace, depth: 1, expanded: nsExpanded });
     if (!nsExpanded) continue;
     for (const pod of namespace.children || []) {
       const podExpanded = expanded.value.has(keyOf(pod));
-      rows.push({ kind: "pod", node: pod, depth: 1, expanded: podExpanded });
+      rows.push({ kind: "pod", node: pod, depth: 2, expanded: podExpanded });
       if (!podExpanded) continue;
       for (const container of pod.children || []) {
-        rows.push({ kind: "container", node: container, depth: 2, expanded: false });
+        rows.push({ kind: "container", node: container, depth: 3, expanded: false });
       }
     }
   }
@@ -212,6 +304,8 @@ const treeRows = computed<TreeRow[]>(() => {
 });
 
 function rowIcon(row: TreeRow) {
+  if (row.kind === "recent-root") return "i-lucide-history";
+  if (row.kind === "asset-root") return "i-lucide-boxes";
   if (row.kind === "namespace") return row.expanded ? "i-lucide-folder-open" : "i-lucide-folder";
   if (row.kind === "pod") return "i-lucide-box";
   return "i-lucide-container";
@@ -227,7 +321,7 @@ function handleRowClick(row: TreeRow) {
     });
     return;
   }
-  toggle(row.node);
+  toggleRow(row);
 }
 
 function isRowActive(row: TreeRow) {
@@ -274,6 +368,15 @@ function mountTerminal(tabItem: TerminalTab, target: ConnectTarget) {
 
 function openTerminal(target: ConnectTarget) {
   if (!terminalSocket.connected.value || !globalTerminalId.value) return;
+
+  if (target.container) {
+    recentContainers.value = [
+      target,
+      ...recentContainers.value.filter(
+        (item) => item.namespace !== target.namespace || item.pod !== target.pod || item.container !== target.container
+      )
+    ].slice(0, 10);
+  }
 
   const tabItem: TerminalTab = {
     id: globalThis.crypto?.randomUUID?.() || String(Date.now()),
@@ -323,6 +426,11 @@ function refreshTree() {
   if (terminalSocket.connected.value) terminalSocket.requestTree();
 }
 
+function retryConnection() {
+  terminalSocket.close();
+  emit("reconnect");
+}
+
 function syncTerminalTheme() {
   for (const { terminal } of terminals.values()) {
     terminal.options.theme = appTerminalTheme();
@@ -351,12 +459,16 @@ const stopMessageListener = terminalSocket.onMessage((message) => {
     connectionError.value = "";
   } else if (message.type === KubernetesTerminalMessageType.Tree) {
     tree.value = normalizeTree(JSON.parse(message.data || "{}"));
+    connectionError.value = "";
+    markSessionConnected(props.tab.id);
   } else if (message.type === KubernetesTerminalMessageType.Data && terminals.has(message.k8s_id)) {
     terminals.get(message.k8s_id)?.terminal.write(message.data || "");
   } else if (message.type === KubernetesTerminalMessageType.Binary && terminals.has(message.k8s_id)) {
-    terminals
-      .get(message.k8s_id)
-      ?.terminal.write(Uint8Array.from(atob(message.raw || ""), (char) => char.charCodeAt(0)));
+    const data =
+      message.raw instanceof Uint8Array
+        ? message.raw
+        : Uint8Array.from(atob(message.raw || ""), (char) => char.charCodeAt(0));
+    terminals.get(message.k8s_id)?.terminal.write(data);
   } else if (message.type === KubernetesTerminalMessageType.TerminalSession) {
     const sessionInfo = parseJson<{
       permission?: ClipboardPermission | null;
@@ -375,11 +487,15 @@ const stopMessageListener = terminalSocket.onMessage((message) => {
 });
 
 const stopFailureListener = terminalSocket.onFailure((failure) => {
-  connectionError.value =
-    failure.code === KubernetesTerminalSocketFailureCode.ConnectionClosed ||
-    failure.code === KubernetesTerminalSocketFailureCode.ConnectionFailed
-      ? t("koko.kubernetes.websocketConnectionFailed")
-      : t("koko.kubernetes.connectionFailed");
+  if (
+    failure.code !== KubernetesTerminalSocketFailureCode.ConnectionClosed &&
+    failure.code !== KubernetesTerminalSocketFailureCode.ConnectionFailed
+  ) {
+    console.warn(`[kubernetes] ${failure.code}`, failure.cause);
+    return;
+  }
+
+  connectionError.value = t("koko.kubernetes.websocketConnectionFailed");
   markSessionFailed({
     tabId: props.tab.id,
     assetId: props.tab.assetId,
@@ -387,10 +503,6 @@ const stopFailureListener = terminalSocket.onFailure((failure) => {
     account: props.tab.account || ""
   });
 });
-
-const resize = useDebounceFn(() => {
-  if (activeTabId.value) terminals.get(activeTabId.value)?.fit.fit();
-}, 80);
 
 watch(tokenId, () => void prepareSession(), { immediate: true });
 watch(
@@ -405,8 +517,12 @@ watch(
 watch(activeTabId, () => focusActiveTerminal());
 watch(() => colorMode.value, syncTerminalTheme);
 useEventListener(window, "resize", resize);
+useEventListener(window, "pointermove", resizeSidebar);
+useEventListener(window, "pointerup", stopSidebarResize);
+useEventListener(window, "pointercancel", stopSidebarResize);
 onMounted(observeAppTheme);
 onUnmounted(() => {
+  stopSidebarResize();
   themeObserver?.disconnect();
   stopFailureListener();
   stopMessageListener();
@@ -422,45 +538,60 @@ onUnmounted(() => {
 
 <template>
   <BaseWorkspaceShell
-    :ready="Boolean(context)"
+    :ready="Boolean(context) && !sessionError && !connectionError"
     :loading="loading"
-    :error="sessionError"
+    :error="sessionError || connectionError"
     :loading-text="t('koko.kubernetes.preparingConnection')"
+    :retry-label="t('koko.actions.retry')"
+    @retry="retryConnection"
   >
-    <div class="grid h-full min-h-0 grid-cols-[260px_minmax(0,1fr)] bg-(--app-main-bg) text-(--app-fg)">
+    <div
+      class="flex h-full min-h-0 bg-(--app-main-bg) text-(--app-fg)"
+      :class="resizingSidebar ? 'cursor-col-resize select-none' : ''"
+    >
       <aside
-        class="flex min-h-0 flex-col border-r border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-sidebar)"
+        class="flex min-h-0 shrink-0 flex-col bg-[var(--workspace-surface-sidebar)]"
+        :style="{ width: `${sidebarWidth}px` }"
       >
-        <div
-          class="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-(--workspace-surface-sub-border) bg-(--workspace-surface-sub-header) px-2"
-        >
-          <span class="min-w-0 flex-1 truncate px-1 text-left font-ui-mono text-[10px]" :title="assetName">
-            {{ assetName }}
+        <div class="flex h-9 min-w-0 shrink-0 items-center gap-1 border-b border-default px-2.5">
+          <span
+            class="min-w-0 flex-1 truncate px-1 text-left text-xs font-medium text-muted"
+            :title="t('koko.kubernetes.name')"
+          >
+            {{ t("koko.kubernetes.name") }}
           </span>
-          <UButton
-            icon="i-lucide-square-terminal"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :title="t('koko.kubernetes.connectCluster')"
-            @click="connectCluster"
-          />
-          <UButton
-            icon="i-lucide-search"
-            size="xs"
-            color="neutral"
-            :variant="searchVisible ? 'soft' : 'ghost'"
-            :title="t('koko.actions.search')"
-            @click="toggleSearch"
-          />
-          <UButton
-            icon="i-lucide-refresh-cw"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :title="t('koko.kubernetes.refreshTree')"
-            @click="refreshTree"
-          />
+          <UTooltip :text="t('koko.kubernetes.connectCluster')" :delay-duration="150">
+            <button
+              type="button"
+              class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
+              :aria-label="t('koko.kubernetes.connectCluster')"
+              @click="connectCluster"
+            >
+              <UIcon name="i-lucide-square-terminal" class="size-4" />
+            </button>
+          </UTooltip>
+          <UTooltip :text="t('koko.actions.search')" :delay-duration="150">
+            <button
+              type="button"
+              class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
+              :class="searchVisible ? 'bg-[var(--app-hover-strong)] text-highlighted' : ''"
+              :aria-label="t('koko.actions.search')"
+              :aria-pressed="searchVisible"
+              @click="toggleSearch"
+            >
+              <UIcon name="i-lucide-search" class="size-4" />
+            </button>
+          </UTooltip>
+          <UTooltip :text="t('koko.kubernetes.refreshTree')" :delay-duration="150">
+            <button
+              type="button"
+              class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
+              :aria-label="t('koko.kubernetes.refreshTree')"
+              @click="refreshTree"
+            >
+              <UIcon name="i-lucide-refresh-cw" class="size-4" />
+            </button>
+          </UTooltip>
         </div>
         <div
           v-if="searchVisible"
@@ -474,37 +605,51 @@ onUnmounted(() => {
             class="w-full"
           />
         </div>
-        <div class="min-h-0 flex-1 overflow-auto bg-(--workspace-surface-sub-tree) py-1">
-          <div v-if="connectionError" class="px-3 py-2 text-xs text-error">
-            {{ connectionError }}
-          </div>
+        <div class="min-h-0 flex-1 overflow-auto px-2 py-2">
           <template v-for="row in treeRows" :key="`${row.kind}:${keyOf(row.node)}`">
             <button
-              class="flex h-7 w-full items-center gap-1 pr-2 text-left text-xs text-(--app-fg) hover:bg-(--app-hover-soft)"
+              class="flex h-7 w-full items-center gap-1 rounded-lg pr-1 text-left text-xs text-(--app-fg) hover:bg-(--app-hover-soft)"
               :class="isRowActive(row) ? 'bg-(--app-selected-soft) text-primary' : ''"
-              :style="{ paddingLeft: `${8 + row.depth * 14}px` }"
+              :style="{ paddingLeft: `${6 + row.depth * 12}px` }"
               :title="row.kind === 'container' ? containerLabel(row.node) : row.node.label"
               @click="handleRowClick(row)"
             >
               <UIcon
                 v-if="row.kind !== 'container'"
                 :name="row.expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
-                class="size-3 shrink-0 text-(--app-muted)"
+                class="size-4 shrink-0 text-(--app-muted)"
               />
-              <span v-else class="w-3 shrink-0" />
-              <UIcon :name="rowIcon(row)" class="size-3.5 shrink-0" />
+              <span v-else class="size-4 shrink-0" />
+              <UIcon
+                :name="rowIcon(row)"
+                class="size-3.5 shrink-0"
+                :class="row.kind === 'namespace' ? 'tree-folder-icon' : ''"
+              />
               <span class="min-w-0 flex-1 truncate">
                 {{ row.kind === "container" && search.trim() ? containerLabel(row.node) : row.node.label }}
               </span>
             </button>
           </template>
-          <div v-if="!treeRows.length && !connectionError" class="px-3 py-2 text-xs text-(--app-muted)">
-            {{ tree.length ? t("koko.kubernetes.noMatchingContainers") : t("koko.kubernetes.loadingPods") }}
+          <div v-if="search.trim() && !treeRows.length" class="px-3 py-2 text-xs text-(--app-muted)">
+            {{ t("koko.kubernetes.noMatchingContainers") }}
           </div>
         </div>
       </aside>
 
-      <section class="flex min-h-0 min-w-0 flex-col">
+      <div
+        role="separator"
+        :aria-label="t('koko.kubernetes.resizeSidebar')"
+        aria-orientation="vertical"
+        :aria-valuenow="sidebarWidth"
+        aria-valuemin="220"
+        aria-valuemax="420"
+        class="group relative z-20 w-px shrink-0 cursor-col-resize touch-none bg-(--workspace-surface-sub-border) hover:bg-primary/60 active:bg-primary"
+        @pointerdown="startSidebarResize"
+      >
+        <div class="absolute inset-y-0 -left-1.5 -right-1.5" />
+      </div>
+
+      <section class="flex min-h-0 min-w-0 flex-1 flex-col">
         <WorkspaceSubTabStrip
           :tabs="subTabs"
           :active-id="activeTabId"
@@ -521,7 +666,7 @@ onUnmounted(() => {
             v-for="item in terminalTabs"
             :id="item.id"
             :key="item.id"
-            class="absolute inset-0 p-1"
+            class="kubernetes-terminal absolute inset-0"
             :class="activeTabId === item.id ? '' : 'pointer-events-none invisible'"
           />
           <div v-if="!terminalTabs.length" class="grid h-full place-items-center p-6 text-sm text-(--app-muted)">
@@ -535,3 +680,20 @@ onUnmounted(() => {
     </div>
   </BaseWorkspaceShell>
 </template>
+
+<style scoped>
+.kubernetes-terminal {
+  background: var(--terminal-background);
+  --xterm-scrollbar-top: 4px;
+  --xterm-scrollbar-bottom: 4px;
+}
+
+.kubernetes-terminal :deep(.terminal) {
+  height: 100%;
+  padding: 4px 4px 4px 12px;
+}
+
+.kubernetes-terminal :deep(.xterm-viewport) {
+  background-color: transparent !important;
+}
+</style>

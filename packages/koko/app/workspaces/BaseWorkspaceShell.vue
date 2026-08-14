@@ -4,7 +4,10 @@ defineProps<{
   loading?: boolean;
   loadingText: string;
   ready: boolean;
+  retryLabel?: string;
 }>();
+
+defineEmits<{ retry: [] }>();
 </script>
 
 <template>
@@ -18,6 +21,9 @@ defineProps<{
           :class="error ? 'text-amber-500' : 'animate-spin'"
         />
         <div>{{ loading ? loadingText : error || loadingText }}</div>
+        <UButton v-if="error && retryLabel" size="sm" variant="soft" @click="$emit('retry')">
+          {{ retryLabel }}
+        </UButton>
       </div>
     </div>
   </div>

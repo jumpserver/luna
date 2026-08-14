@@ -411,7 +411,7 @@ function entryIcon(entry: SftpFileEntry, expanded = false) {
 }
 
 function entryIconClass(entry: SftpFileEntry) {
-  if (entry.is_dir) return "text-primary";
+  if (entry.is_dir) return "tree-folder-icon";
   const extension = fileExtension(entry.name);
   if (["crt", "pem", "csv", "xls", "xlsx"].includes(extension)) return "text-success";
   if (["json", "yaml", "yml", "toml", "ini", "conf", "env", "zip", "tar", "tgz", "gz", "xz"].includes(extension))
@@ -2783,6 +2783,7 @@ onUnmounted(() => {
               <UIcon
                 :name="row.createKind === 'directory' ? 'i-lucide-folder' : 'i-lucide-file-code-2'"
                 class="sidebar-icon"
+                :class="row.createKind === 'directory' ? 'tree-folder-icon' : ''"
               />
               <input
                 v-model="pendingName"
