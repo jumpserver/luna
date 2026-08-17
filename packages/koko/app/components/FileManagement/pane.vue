@@ -10,6 +10,7 @@ import SftpPaneContextMenu from "#koko/components/FileManagement/pane/SftpPaneCo
 import SftpPaneDropOverlay from "#koko/components/FileManagement/pane/SftpPaneDropOverlay.vue";
 import SftpPaneFileTable from "#koko/components/FileManagement/pane/SftpPaneFileTable.vue";
 import SftpPaneSelectionBar from "#koko/components/FileManagement/pane/SftpPaneSelectionBar.vue";
+import SftpPaneTableSkeleton from "#koko/components/FileManagement/pane/SftpPaneTableSkeleton.vue";
 import SftpRemotePaneToolbar from "#koko/components/FileManagement/pane/SftpRemotePaneToolbar.vue";
 import {
   buildTransferSourcePayload,
@@ -28,6 +29,10 @@ import { KeyboardKey } from "#koko/constants/keyboard";
 const props = defineProps<{
   context: ConnectorSessionContext | null;
   title?: string;
+  /** Host/asset caption for the unified toolbar. */
+  contextLabel?: string;
+  /** Session single-pane: show add-remote + tour in the toolbar. */
+  showWorkbenchActions?: boolean;
   transferEndpoint?: FileTransferEndpointRef;
   compact?: boolean;
   highlightedNames?: string[];
@@ -42,6 +47,8 @@ const emit = defineEmits<{
   transferEndpointConnected: [];
   transferEndpointUnmounted: [endpoint: FileTransferEndpointRef];
   focus: [];
+  addRemote: [];
+  startTour: [];
 }>();
 
 const { t } = useI18n();
@@ -161,6 +168,13 @@ function navigateToPath(segmentIndex: number): void {
   if (path !== manager.currentPath.value) void manager.loadCurrentDirectory(path);
 }
 
+function goToAbsolutePath(path: string): void {
+  const normalized = path.replace(/\/+/g, "/").replace(/\/$/, "") || "/";
+  if (normalized !== manager.currentPath.value) void manager.loadCurrentDirectory(normalized);
+}
+
+const toolbarRef = ref<{ focusPathEdit?: () => void; focusSearch?: () => void } | null>(null);
+
 function openDirectory(entry: SftpFileEntry): void {
   manager.changeDirectory(entry);
 }
@@ -227,6 +241,14 @@ function onKeydown(event: KeyboardEvent): void {
   if (event.key.toLowerCase() === KeyboardKey.A && (event.metaKey || event.ctrlKey)) {
     event.preventDefault();
     return toggleAllVisible(true);
+  }
+  if (event.key.toLowerCase() === KeyboardKey.L && (event.metaKey || event.ctrlKey)) {
+    event.preventDefault();
+    return toolbarRef.value?.focusPathEdit?.();
+  }
+  if (event.key.toLowerCase() === KeyboardKey.F && (event.metaKey || event.ctrlKey)) {
+    event.preventDefault();
+    return toolbarRef.value?.focusSearch?.();
   }
   if (event.key === KeyboardKey.ArrowUp || event.key === KeyboardKey.ArrowDown) {
     event.preventDefault();
@@ -317,19 +339,28 @@ defineExpose({
     @drop="onTransferDrop"
   >
     <SftpRemotePaneToolbar
+      ref="toolbarRef"
       v-model:search="search"
       v-model:show-hidden-files="showHiddenFiles"
       :manager="manager"
       :title="title"
+      :context-label="contextLabel"
+      :show-workbench-actions="showWorkbenchActions && !compact"
       :path-segments="pathSegments"
+      :dense="Boolean(compact)"
       @navigate="navigateToPath"
+      @go-to-path="goToAbsolutePath"
       @create-folder="createFolder"
       @create-file="createFile"
       @upload="uploadFromEvent"
+      @add-remote="emit('addRemote')"
+      @start-tour="emit('startTour')"
     />
-    <div v-if="manager.loading.value && !manager.entries.value.length" class="grid flex-1 place-items-center">
-      <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
-    </div>
+    <SftpPaneTableSkeleton
+      v-if="manager.loading.value && !manager.entries.value.length"
+      class="min-h-0 flex-1"
+      :compact="compact"
+    />
     <div v-else class="relative flex min-h-0 flex-1 flex-col bg-(--app-main-bg)">
       <div
         v-if="manager.loading.value && manager.entries.value.length"

@@ -23,14 +23,12 @@
     --sftp-font-label: 12px;
   }
 
-  &__topbar,
   &__pane-title,
   &__machine-tabs {
     height: var(--sftp-title-row-height);
     min-height: var(--sftp-title-row-height);
   }
 
-  &__topbar,
   &__machine-tabs {
     padding-inline: 10px;
   }
@@ -45,6 +43,41 @@
   &__toolbar {
     height: var(--sftp-toolbar-height);
     min-height: var(--sftp-toolbar-height);
+    container-type: inline-size;
+    container-name: sftp-toolbar;
+  }
+
+  &__toolbar--unified {
+    gap: 4px;
+  }
+
+  &__path-field {
+    min-width: 72px;
+  }
+
+  &__context-label {
+    min-width: 0;
+  }
+
+  &__toolbar.is-compact &__context-label {
+    max-width: 6.5rem;
+  }
+
+  &__search {
+    &.is-open {
+      min-width: 0;
+    }
+  }
+
+  &__search-input {
+    width: 148px;
+    max-width: min(148px, 34cqi);
+    transition: width 120ms ease;
+  }
+
+  &__toolbar.is-narrow &__search-input {
+    width: 112px;
+    max-width: min(112px, 42cqi);
   }
 
   &__actionbar {

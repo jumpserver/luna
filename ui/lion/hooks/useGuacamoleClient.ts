@@ -352,7 +352,7 @@ export function useGuacamoleClient(
   }
 
   function validateClipboardText(direction: "copy" | "paste", text: string) {
-    if (!canUseClipboardDirection(direction)) {
+    if (isClipboardDirectionDeniedByPolicy(direction) || !canUseClipboardDirection(direction)) {
       showClipboardPermissionWarning(direction);
       return false;
     }
@@ -365,7 +365,7 @@ export function useGuacamoleClient(
   }
 
   function validateClipboardBlob(direction: "copy" | "paste", size: number) {
-    if (!canUseClipboardDirection(direction)) {
+    if (isClipboardDirectionDeniedByPolicy(direction) || !canUseClipboardDirection(direction)) {
       showClipboardPermissionWarning(direction);
       return false;
     }

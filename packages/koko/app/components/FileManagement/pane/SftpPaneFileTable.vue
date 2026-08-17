@@ -5,6 +5,7 @@ import {
   formatSftpModifiedTime,
   resolveSftpFileType
 } from "#koko/composables/sftp/file-manager/filePresentation";
+import { resolveSftpFileIcon } from "#koko/composables/sftp/useSftpFileIcon";
 
 const props = withDefaults(
   defineProps<{
@@ -56,6 +57,10 @@ function fileType(entry: SftpFileEntry): string {
     folder: t("koko.fileManagement.folder"),
     file: t("koko.fileManagement.file")
   });
+}
+
+function fileIcon(entry: SftpFileEntry): string {
+  return resolveSftpFileIcon(entry);
 }
 
 function rowStyle(index: number) {
@@ -240,11 +245,7 @@ onUnmounted(() => {
                 @dblclick.stop="entry.is_dir && emit('open', entry)"
                 @dragstart="emit('dragStart', $event, entry)"
               >
-                <UIcon
-                  :name="entry.is_dir ? 'i-lucide-folder' : 'i-lucide-file'"
-                  class="sftp-file-icon shrink-0 text-muted"
-                  :class="entry.is_dir ? 'text-primary' : ''"
-                />
+                <UIcon :name="fileIcon(entry)" class="sftp-file-icon shrink-0 text-muted" />
                 <UTooltip :text="entry.name" :delay-duration="150">
                   <span class="sftp-file-name min-w-0 flex-1 truncate" :class="entry.is_dir ? 'font-medium' : ''">
                     {{ entry.name }}

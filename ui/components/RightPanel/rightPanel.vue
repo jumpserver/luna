@@ -1,22 +1,44 @@
 <script setup lang="ts">
 import type { RightPanelTab } from "~/composables/useRightPanel";
+import { getLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
 import RightPanelAiPanel from "~/components/RightPanel/aiPanel.vue";
+import RightPanelLionControlPanel from "~/components/RightPanel/lionControlPanel.vue";
+import RightPanelLionFilePanel from "~/components/RightPanel/lionFilePanel.vue";
 import RightPanelSessionPanel from "~/components/RightPanel/sessionPanel.vue";
 import RightPanelSftpPanel from "~/components/RightPanel/sftpPanel.vue";
 
 const { t } = useI18n();
-const { activeTab: workspaceTab } = useWorkspaceTabs();
+const { activePaneId, activeTab: workspaceTab } = useWorkspaceTabs();
 const { activeTab, setActiveTab } = useRightPanel();
+const activeSession = computed(() => {
+  const tab = workspaceTab.value;
+  return tab?.panes.find((pane) => pane.id === activePaneId.value) || tab;
+});
+const lionSession = computed(() => getLionWorkspaceSession(activeSession.value?.id || ""));
 
 // SSH 会话始终提供轻量文件管理入口；真正的 SFTP 权限与令牌由面板在连接时校验，
 // 避免因为资产平台或权限元数据不完整而把入口直接隐藏。
-const showSftpTab = computed(() => workspaceTab.value?.protocol?.toLowerCase() === "ssh");
+const showSftpTab = computed(() => activeSession.value?.protocol?.toLowerCase() === "ssh");
 
 const tabs = computed(() => {
   const items: Array<{ value: RightPanelTab; label: string; icon: string; title?: string }> = [
-    { value: "session" as const, label: t("RightPanel.Session"), icon: "i-lucide-terminal" },
-    { value: "ai" as const, label: t("RightPanel.AI"), icon: "i-lucide-sparkles" }
+    { value: "session" as const, label: t("RightPanel.Session"), icon: "i-lucide-terminal" }
   ];
+
+  if (lionSession.value) {
+    items.push({
+      value: "lion-control" as const,
+      label: t("RightPanel.Control"),
+      icon: "i-lucide-sliders-horizontal"
+    });
+    if (lionSession.value.driverName.value) {
+      items.push({
+        value: "lion-files" as const,
+        label: t("RightPanel.Files"),
+        icon: "i-lucide-folder-kanban"
+      });
+    }
+  }
 
   if (showSftpTab.value) {
     items.push({
@@ -27,20 +49,28 @@ const tabs = computed(() => {
     });
   }
 
+  items.push({ value: "ai" as const, label: t("RightPanel.AI"), icon: "i-lucide-sparkles" });
+
   return items;
 });
 
 const panelComponents = {
   session: RightPanelSessionPanel,
+  "lion-control": RightPanelLionControlPanel,
+  "lion-files": RightPanelLionFilePanel,
   ai: RightPanelAiPanel,
   sftp: RightPanelSftpPanel
 } as const;
 
 const activePanelComponent = computed(() => panelComponents[activeTab.value]);
 
-watch(showSftpTab, (visible) => {
-  if (!visible && activeTab.value === "sftp") setActiveTab("session");
-});
+watch(
+  tabs,
+  (items) => {
+    if (!items.some((item) => item.value === activeTab.value)) setActiveTab("session");
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
@@ -81,6 +111,12 @@ watch(showSftpTab, (visible) => {
 .right-panel-tab-strip {
   display: flex;
   gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.right-panel-tab-strip::-webkit-scrollbar {
+  display: none;
 }
 
 .right-panel-tab-button {

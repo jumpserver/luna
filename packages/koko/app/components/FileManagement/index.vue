@@ -42,6 +42,7 @@ let tourTimer: ReturnType<typeof setTimeout> | undefined;
 const workspace = useSftpWorkspacePanes({
   sftpToken: () => props.sftpToken,
   global: () => props.global,
+  sourceAsset: () => props.sourceAsset,
   translate,
   showError: addErrorToast
 });

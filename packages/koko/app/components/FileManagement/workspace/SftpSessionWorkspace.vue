@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from "@nuxt/ui";
 import type { ComponentPublicInstance } from "vue";
 import type { useSftpTransferCoordinator } from "#koko/composables/sftp/file-manager/useSftpTransferCoordinator";
 import type { useSftpWorkspacePanes } from "#koko/composables/sftp/file-manager/useSftpWorkspacePanes";
@@ -10,6 +11,7 @@ import type {
 import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
 import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
 import SftpRemoteMachineTabs from "#koko/components/FileManagement/workspace/SftpRemoteMachineTabs.vue";
+import SftpTransferRail from "#koko/components/FileManagement/workspace/SftpTransferRail.vue";
 
 type WorkspaceController = ReturnType<typeof useSftpWorkspacePanes>;
 type TransferController = ReturnType<typeof useSftpTransferCoordinator>;
@@ -35,6 +37,7 @@ const {
   focusRemotePane,
   markRemotePaneConnected,
   openRemoteConnect,
+  primaryAssetName,
   primaryContext,
   primaryTransferEndpoint,
   reconnectRemotePane,
@@ -42,7 +45,6 @@ const {
   removeRemotePane,
   setRemotePaneRef,
   setRemotePanesOrder,
-  toggleDualMode,
   togglePinRemotePane
 } = props.workspace;
 const {
@@ -54,6 +56,8 @@ const {
   queueSftpTransferToSelected,
   remotePaneConnected,
   sendFromSelection,
+  transferGlobal,
+  transferring,
   unmountTransferEndpoint
 } = props.transfer;
 
@@ -66,6 +70,10 @@ const primarySendPeerDirection = computed<"left" | "right" | undefined>(() =>
 function remoteSendPeerDirection(endpointId: string): "left" | "right" | undefined {
   return simplePeerMode.value && canSendToOpposite(endpointId) ? "left" : undefined;
 }
+
+const canUseTransferRail = computed(() =>
+  Boolean(!props.compact && dualMode.value && activeRemoteId.value && remotePaneConnected(activeRemoteId.value))
+);
 
 function setPrimaryPaneRef(value: TemplateRefValue): void {
   props.setPrimaryPaneRef(value as SftpRemotePaneHandle | null);
@@ -83,78 +91,75 @@ function handleRemotePaneConnected(): void {
   connectTransferEndpoint();
   markRemotePaneConnected();
 }
+
+const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
+  [
+    {
+      label: t("koko.fileManagement.disconnectAllRemote"),
+      icon: "i-lucide-unplug",
+      color: "error" as const,
+      onSelect: () => disconnectAllRemotes()
+    }
+  ]
+]);
 </script>
 
 <template>
-  <div
-    v-if="!compact"
-    class="sftp-file-management__topbar flex shrink-0 items-center justify-between gap-2 border-b border-default"
-  >
-    <div class="ml-auto flex items-center justify-end gap-1">
-      <UButton
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        icon="i-lucide-circle-help"
-        :title="t('koko.fileManagement.featureTour')"
-        :aria-label="t('koko.fileManagement.featureTour')"
-        @click="startTour"
-      />
-      <KokoSftpTransferCenter :ref="setTransferCenterRef" />
-      <UButton
-        v-if="!dualMode && !remotePanes.length"
-        data-sftp-tour="remote-connect"
-        size="xs"
-        color="primary"
-        variant="soft"
-        icon="i-lucide-plus"
-        :label="t('koko.fileManagement.addRemoteSftp')"
-        @click="openRemoteConnect()"
-      />
-      <UButton
-        v-if="dualMode && remotePanes.length"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        icon="i-lucide-unplug"
-        :label="t('koko.fileManagement.disconnectAllRemote')"
-        @click="disconnectAllRemotes"
-      />
-      <UButton
-        v-if="dualMode || remotePanes.length"
-        size="xs"
-        color="neutral"
-        variant="ghost"
-        :icon="dualMode ? 'i-lucide-panel-right-close' : 'i-lucide-panel-right-open'"
-        :title="t(dualMode ? 'Tree.Collapse' : 'Tree.Expand')"
-        :aria-label="t(dualMode ? 'Tree.Collapse' : 'Tree.Expand')"
-        @click="toggleDualMode"
+  <div class="relative flex min-h-0 flex-1">
+    <KokoSftpTransferCenter v-if="!compact" :ref="setTransferCenterRef" floating />
+
+    <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+      <!-- Dual-pane: match right machine-tab strip height with a fixed primary identity row. -->
+      <div
+        v-if="!compact && dualMode"
+        class="sftp-file-management__machine-tabs flex h-9 shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2"
+      >
+        <div
+          class="flex h-7 min-w-20 max-w-40 items-center gap-1 rounded-md bg-accented px-1.5 text-[11px] leading-none text-highlighted"
+          :title="primaryAssetName"
+        >
+          <UIcon name="i-lucide-server" class="size-3.5 shrink-0 text-success" />
+          <span class="min-w-0 truncate">{{ primaryAssetName }}</span>
+        </div>
+      </div>
+      <KokoFileManagementPane
+        :key="primaryTransferEndpoint?.id || 'primary-sftp'"
+        :ref="setPrimaryPaneRef"
+        class="min-h-0 min-w-0 flex-1"
+        :context="primaryContext"
+        :context-label="!compact && !dualMode ? primaryAssetName : undefined"
+        :show-workbench-actions="!compact && !dualMode"
+        :compact="compact"
+        :transfer-endpoint="compact ? undefined : primaryTransferEndpoint"
+        :send-peer-direction="primarySendPeerDirection"
+        @send="sendFromSelection"
+        @transfer-drop="queueSftpTransferToSelected($event, primaryTransferEndpoint)"
+        @transfer-endpoint-mounted="mountTransferEndpoint"
+        @transfer-endpoint-connected="connectTransferEndpoint"
+        @transfer-endpoint-unmounted="unmountTransferEndpoint"
+        @add-remote="openRemoteConnect()"
+        @start-tour="startTour"
       />
     </div>
-  </div>
 
-  <div class="flex min-h-0 flex-1">
-    <KokoFileManagementPane
-      :key="primaryTransferEndpoint?.id || 'primary-sftp'"
-      :ref="setPrimaryPaneRef"
-      class="min-h-0 min-w-0 flex-1"
-      :context="primaryContext"
-      :compact="compact"
-      :transfer-endpoint="compact ? undefined : primaryTransferEndpoint"
-      :title="!compact && dualMode ? t('koko.fileManagement.localSftp') : undefined"
-      :send-peer-direction="primarySendPeerDirection"
-      @send="sendFromSelection"
-      @transfer-drop="queueSftpTransferToSelected($event, primaryTransferEndpoint)"
-      @transfer-endpoint-mounted="mountTransferEndpoint"
-      @transfer-endpoint-connected="connectTransferEndpoint"
-      @transfer-endpoint-unmounted="unmountTransferEndpoint"
+    <SftpTransferRail
+      v-if="canUseTransferRail"
+      mode="session"
+      :can-transfer-right="canUseTransferRail"
+      :can-transfer-left="canUseTransferRail"
+      :transferring="transferring"
+      @transfer="transferGlobal"
     />
 
-    <div v-show="!compact && dualMode" class="flex min-h-0 min-w-0 flex-1 flex-col border-l border-default">
-      <div v-if="remotePanes.length" class="flex min-h-0 flex-1 flex-col">
-        <div
-          class="sftp-file-management__machine-tabs flex shrink-0 items-center gap-1 overflow-x-auto bg-[var(--workspace-surface-main)] px-2"
-        >
+    <div
+      v-show="!compact && dualMode"
+      class="flex min-h-0 min-w-0 flex-1 flex-col"
+      :class="canUseTransferRail ? '' : 'border-l border-default'"
+    >
+      <div
+        class="sftp-file-management__machine-tabs flex h-9 shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2"
+      >
+        <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           <SftpRemoteMachineTabs
             :panes="remotePanes"
             :active-id="activeRemoteId"
@@ -168,43 +173,61 @@ function handleRemotePaneConnected(): void {
             @close-right="closeRightRemotePanes"
             @pin="togglePinRemotePane"
           />
-          <UButton
-            data-sftp-tour="remote-connect"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            icon="i-lucide-plus"
-            :title="t('koko.fileManagement.addRemoteSftp')"
-            @click="openRemoteConnect()"
-          />
         </div>
-        <div v-for="pane in remotePanes" v-show="activeRemoteId === pane.id" :key="pane.id" class="min-h-0 flex-1">
-          <KokoFileManagementPane
-            :ref="(value) => setRemotePaneRef(pane.id, value)"
-            class="h-full min-h-0"
-            :context="pane.context"
-            :transfer-endpoint="pane.transferEndpoint"
-            :send-peer-direction="remoteSendPeerDirection(pane.transferEndpoint.id)"
-            @select="
-              pane.selection = $event;
-              focusRemotePane(pane.id);
-            "
-            @send="sendFromSelection"
-            @transfer-drop="queueSftpTransferToSelected($event, pane.transferEndpoint)"
-            @transfer-endpoint-mounted="mountTransferEndpoint"
-            @transfer-endpoint-connected="handleRemotePaneConnected"
-            @transfer-endpoint-unmounted="unmountTransferEndpoint"
-          />
+        <!-- Dual-pane: + / help / … always trail the right tab strip (1 or N remotes). -->
+        <div class="flex shrink-0 items-center gap-0.5">
+          <UTooltip :text="t('koko.fileManagement.addRemoteSftp')">
+            <UButton
+              data-sftp-tour="remote-connect"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-plus"
+              class="shrink-0"
+              :aria-label="t('koko.fileManagement.addRemoteSftp')"
+              @click="openRemoteConnect()"
+            />
+          </UTooltip>
+          <UTooltip :text="t('koko.fileManagement.featureTour')">
+            <UButton
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-circle-help"
+              :aria-label="t('koko.fileManagement.featureTour')"
+              @click="startTour"
+            />
+          </UTooltip>
+          <UDropdownMenu :items="remoteOverflowItems" size="sm" :content="{ align: 'end', side: 'bottom' }">
+            <UButton
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-ellipsis"
+              class="shrink-0"
+              :aria-label="t('Common.More')"
+              :title="t('Common.More')"
+            />
+          </UDropdownMenu>
         </div>
       </div>
-      <div v-else class="grid h-full place-items-center p-4 text-center text-xs text-muted">
-        <div class="space-y-2">
-          <UIcon name="i-lucide-server" class="mx-auto size-6 opacity-60" />
-          <p>{{ t("koko.fileManagement.remoteSftpHint") }}</p>
-          <UButton size="xs" color="primary" variant="soft" @click="openRemoteConnect()">
-            {{ t("koko.fileManagement.connectRemoteSftp") }}
-          </UButton>
-        </div>
+      <div v-for="pane in remotePanes" v-show="activeRemoteId === pane.id" :key="pane.id" class="min-h-0 flex-1">
+        <KokoFileManagementPane
+          :ref="(value) => setRemotePaneRef(pane.id, value)"
+          class="h-full min-h-0"
+          :context="pane.context"
+          :transfer-endpoint="pane.transferEndpoint"
+          :send-peer-direction="remoteSendPeerDirection(pane.transferEndpoint.id)"
+          @select="
+            pane.selection = $event;
+            focusRemotePane(pane.id);
+          "
+          @send="sendFromSelection"
+          @transfer-drop="queueSftpTransferToSelected($event, pane.transferEndpoint)"
+          @transfer-endpoint-mounted="mountTransferEndpoint"
+          @transfer-endpoint-connected="handleRemotePaneConnected"
+          @transfer-endpoint-unmounted="unmountTransferEndpoint"
+        />
       </div>
     </div>
   </div>
