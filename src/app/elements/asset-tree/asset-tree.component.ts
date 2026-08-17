@@ -1499,14 +1499,15 @@ export class ElementAssetTreeComponent implements OnInit {
     if (!ztree) {
       return null;
     }
+    const normalizedKeyword = keyword.toLowerCase();
     const filterAssetsCallback = (node: TreeNode) => {
       if (node.isParent) {
-        return false;
+        return (node.name || '').toLowerCase().includes(normalizedKeyword);
       }
-      const host = node.meta.data;
+      const host = node.meta?.data;
       return (
-        host.name.toLowerCase().indexOf(keyword.toLowerCase()) !== -1 ||
-        host.address.indexOf(keyword.toLowerCase()) !== -1
+        (host?.name || '').toLowerCase().includes(normalizedKeyword) ||
+        (host?.address || '').toLowerCase().includes(normalizedKeyword)
       );
     };
     return this._filterZTree(keyword, ztree, filterAssetsCallback);
@@ -1531,11 +1532,10 @@ export class ElementAssetTreeComponent implements OnInit {
     if (!children) {
       return [];
     }
-    let allChildren = [];
-    children.forEach(n => {
-      allChildren = [...children, ...this.recurseChildren(n)];
-    });
-    return allChildren;
+    return children.reduce(
+      (allChildren, child) => [...allChildren, child, ...this.recurseChildren(child)],
+      []
+    );
   }
 
   treeSearch(event, tree: Tree) {
