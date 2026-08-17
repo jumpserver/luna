@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { LionUploadCustomRequestOptions, LionUploadFileInfo } from "@/lion/types/upload";
 import { useElementSize } from "@vueuse/core";
+import prettyBytes from "pretty-bytes";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
@@ -30,7 +31,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const ROW_HEIGHT = 40;
+const ROW_HEIGHT = 34;
 const OVERSCAN = 6;
 let uploadSequence = 0;
 
@@ -43,6 +44,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
 const contextMenuRef = ref<HTMLElement | null>(null);
 const viewportRef = ref<HTMLElement | null>(null);
 const transferOpen = ref(false);
+const searchOpen = ref(false);
 const scrollTop = ref(0);
 const { height: viewportHeight } = useElementSize(viewportRef);
 
@@ -104,7 +106,9 @@ const virtualRows = computed(() =>
     index: startIndex.value + offset
   }))
 );
-const latestTransfer = computed(() => props.displayUploadingFiles.at(-1));
+const activeTransfer = computed(() =>
+  [...props.displayUploadingFiles].reverse().find((file) => file.status === "pending" || file.status === "uploading")
+);
 
 watch([dataList, () => props.folder], () => {
   scrollTop.value = 0;
@@ -145,6 +149,20 @@ const handleRowClick = (row: RowData) => {
 };
 
 const handleRefresh = () => emit("openFolder", props.folder);
+const closeSearchIfEmpty = () => {
+  if (!searchValue.value) searchOpen.value = false;
+};
+const handleSearchKeydown = (event: KeyboardEvent) => {
+  if (event.key !== "Escape") return;
+  event.preventDefault();
+  if (searchValue.value) searchValue.value = "";
+  else searchOpen.value = false;
+};
+const formatFileSize = (row: RowData) => {
+  if (row.is_dir) return "—";
+  const size = Number(row.size);
+  return Number.isFinite(size) && size >= 0 ? prettyBytes(size) : "—";
+};
 
 const handleFileInput = (event: Event) => {
   const input = event.target as HTMLInputElement;
@@ -207,135 +225,189 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex min-h-0 flex-col" :class="compact ? 'gap-2' : 'gap-4'">
-    <div class="flex items-center gap-2 overflow-x-auto">
-      <UButton
-        icon="i-lucide-chevron-left"
-        color="neutral"
-        variant="ghost"
-        size="xs"
-        :disabled="disabledBack"
-        :aria-label="t('Back')"
-        @click="handlePathBack"
-      />
-      <UButton
-        icon="i-lucide-chevron-right"
-        color="neutral"
-        variant="ghost"
-        size="xs"
-        :disabled="disabledForward"
-        :aria-label="t('Forward')"
-        @click="handlePathForward"
-      />
-
-      <div class="flex min-w-0 items-center gap-1 overflow-x-auto">
-        <template v-for="item of filePathList" :key="item.id">
+  <div
+    class="sftp-file-management flex min-h-0 flex-col bg-(--app-main-bg) text-(--app-fg)"
+    :class="{ 'h-full sftp-file-management--compact': compact }"
+  >
+    <div
+      class="sftp-file-management__toolbar sftp-file-management__toolbar--unified flex shrink-0 items-center gap-1 border-b border-(--app-border) bg-(--app-panel-bg) px-2"
+    >
+      <div class="flex shrink-0 items-center gap-0.5">
+        <UTooltip :text="t('koko.fileManagement.back')">
           <UButton
+            icon="i-lucide-chevron-left"
             color="neutral"
             variant="ghost"
-            size="xs"
-            icon="i-lucide-folder"
-            :class="item.active ? 'font-semibold' : ''"
+            size="sm"
+            :disabled="disabledBack"
+            :aria-label="t('koko.fileManagement.back')"
+            @click="handlePathBack"
+          />
+        </UTooltip>
+        <UTooltip :text="t('koko.fileManagement.forward')">
+          <UButton
+            icon="i-lucide-chevron-right"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :disabled="disabledForward"
+            :aria-label="t('koko.fileManagement.forward')"
+            @click="handlePathForward"
+          />
+        </UTooltip>
+      </div>
+
+      <UInput
+        v-if="searchOpen || searchValue"
+        v-model="searchValue"
+        icon="i-lucide-search"
+        size="sm"
+        autofocus
+        :placeholder="t('koko.fileManagement.filterCurrentDirectory')"
+        class="min-w-18 flex-1"
+        :ui="{ base: 'h-8 text-[12px]' }"
+        @keydown="handleSearchKeydown"
+        @blur="closeSearchIfEmpty"
+      />
+      <div
+        v-else
+        class="sftp-file-management__path-field flex h-8 min-w-18 flex-1 items-center overflow-x-auto rounded-[3px] border border-(--app-border) bg-(--app-input-bg) px-1 font-ui-mono text-[12px]"
+        role="navigation"
+        :aria-label="folder?.name || name"
+      >
+        <template v-for="item of filePathList" :key="item.id">
+          <button
+            type="button"
+            class="max-w-28 shrink-0 truncate rounded px-1.5 hover:bg-accented focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
+            :class="item.active ? 'font-semibold' : 'text-(--app-muted)'"
+            :title="item.name"
+            :aria-current="item.active ? 'page' : undefined"
             @click="handlePathClick(item)"
           >
             {{ item.name }}
-          </UButton>
-          <UIcon v-if="item.showArrow" name="i-lucide-chevron-right" class="size-3.5 shrink-0" />
-        </template>
-      </div>
-    </div>
-
-    <div class="flex items-center gap-1.5" :class="compact ? 'flex-nowrap' : 'flex-wrap'">
-      <UInput
-        v-model="searchValue"
-        :placeholder="t('PleaseInput')"
-        :size="compact ? 'xs' : 'md'"
-        class="min-w-0 flex-1"
-      >
-        <template #leading>
-          <UIcon name="i-lucide-search" class="size-4" />
-        </template>
-      </UInput>
-
-      <input ref="fileInputRef" type="file" multiple class="hidden" @change="handleFileInput" />
-      <UButton
-        icon="i-lucide-upload"
-        color="neutral"
-        variant="soft"
-        :size="compact ? 'xs' : 'sm'"
-        :disabled="uploadDisabled"
-        :aria-label="t('UploadFile')"
-        :title="t('UploadFile')"
-        @click="fileInputRef?.click()"
-      >
-        <span v-if="!compact">{{ t("UploadFile") }}</span>
-      </UButton>
-      <UButton
-        icon="i-lucide-list-restart"
-        color="neutral"
-        variant="ghost"
-        :size="compact ? 'xs' : 'sm'"
-        :aria-label="t('TransferHistory')"
-        @click="transferOpen = true"
-      >
-        {{ displayUploadingFiles.length }}
-      </UButton>
-      <UButton
-        icon="i-lucide-refresh-ccw"
-        color="neutral"
-        variant="ghost"
-        :size="compact ? 'xs' : 'sm'"
-        :aria-label="t('Refresh')"
-        @click="handleRefresh"
-      />
-    </div>
-
-    <UCard
-      :class="compact ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : ''"
-      :ui="{ body: compact ? 'flex min-h-0 flex-1 flex-col p-0' : 'p-0' }"
-    >
-      <div v-if="loading" class="flex items-center justify-center p-8 text-sm text-muted">
-        <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
-      </div>
-      <div v-else-if="!dataList.length" class="p-8 text-center text-sm text-muted">
-        {{ t("NoData") }}
-      </div>
-      <div
-        v-else
-        ref="viewportRef"
-        :class="compact ? 'min-h-0 flex-1 overflow-auto' : 'h-[clamp(240px,calc(100vh-420px),520px)] overflow-auto'"
-        @scroll="scrollTop = ($event.currentTarget as HTMLElement).scrollTop"
-      >
-        <div class="relative" :style="{ height: `${totalHeight}px` }">
-          <button
-            v-for="item in virtualRows"
-            :key="`${item.row.name}-${item.index}`"
-            type="button"
-            class="absolute left-0 flex h-10 w-full items-center gap-2 border-b border-default px-3 text-left hover:bg-elevated focus-visible:outline-2 focus-visible:outline-primary"
-            :style="{ transform: `translateY(${item.index * ROW_HEIGHT}px)` }"
-            :title="item.row.name"
-            @click="handleRowClick(item.row)"
-            @contextmenu="openContextMenu($event, item.row)"
-          >
-            <UIcon :name="item.row.is_dir ? 'i-lucide-folder' : 'i-lucide-file'" class="size-4 shrink-0" />
-            <span class="truncate">{{ item.row.name }}</span>
           </button>
+          <UIcon v-if="item.showArrow" name="i-lucide-chevron-right" class="size-3 shrink-0 text-(--app-muted)" />
+        </template>
+      </div>
+
+      <div class="flex shrink-0 items-center gap-0.5">
+        <UTooltip :text="t('koko.fileManagement.refresh')">
+          <UButton
+            icon="i-lucide-refresh-cw"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :aria-label="t('koko.fileManagement.refresh')"
+            @click="handleRefresh"
+          />
+        </UTooltip>
+
+        <UTooltip v-if="!searchOpen && !searchValue" :text="t('koko.fileManagement.filterCurrentDirectory')">
+          <UButton
+            icon="i-lucide-search"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :aria-label="t('koko.fileManagement.filterCurrentDirectory')"
+            @click="searchOpen = true"
+          />
+        </UTooltip>
+
+        <UTooltip v-if="displayUploadingFiles.length" :text="t('TransferHistory')">
+          <UButton
+            icon="i-lucide-list-restart"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :label="displayUploadingFiles.length ? String(displayUploadingFiles.length) : undefined"
+            :aria-label="t('TransferHistory')"
+            @click="transferOpen = true"
+          />
+        </UTooltip>
+
+        <UTooltip :text="t('koko.actions.upload')">
+          <UButton
+            icon="i-lucide-upload"
+            color="primary"
+            variant="solid"
+            size="xs"
+            :disabled="uploadDisabled"
+            :aria-label="t('koko.actions.upload')"
+            @click="fileInputRef?.click()"
+          />
+        </UTooltip>
+        <input ref="fileInputRef" type="file" multiple class="hidden" @change="handleFileInput" />
+      </div>
+    </div>
+
+    <div v-if="activeTransfer" class="border-b border-(--app-border) bg-(--app-panel-bg) px-3 py-1.5">
+      <div class="mb-1 flex items-center justify-between gap-2 text-[10px] text-(--app-muted)">
+        <span class="truncate">{{ activeTransfer.name }}</span>
+        <span>{{ clampPercentage(activeTransfer.percentage) }}%</span>
+      </div>
+      <UProgress :model-value="clampPercentage(activeTransfer.percentage)" size="xs" />
+    </div>
+
+    <div class="relative flex min-h-0 flex-1 flex-col bg-(--app-main-bg)">
+      <div v-if="loading && files.length" class="sftp-file-table__refresh-bar" aria-hidden="true" />
+      <div class="sftp-file-table flex min-h-0 flex-1 flex-col">
+        <div class="sftp-file-table__head-wrap shrink-0">
+          <div
+            class="grid h-8.75 grid-cols-[minmax(0,1fr)_5.5rem] border-b border-(--app-border) bg-(--app-panel-bg) text-[10px] font-semibold uppercase tracking-[0.05em] text-muted"
+          >
+            <div class="min-w-0 px-3.5 py-2 text-left">{{ t("koko.fileManagement.name") }}</div>
+            <div class="px-2.5 py-2 text-right">{{ t("koko.fileManagement.size") }}</div>
+          </div>
+        </div>
+
+        <div
+          ref="viewportRef"
+          class="min-h-0 flex-1 overflow-y-auto select-none"
+          @scroll="scrollTop = ($event.currentTarget as HTMLElement).scrollTop"
+        >
+          <div v-if="loading && !files.length" class="space-y-px px-3.5 py-2">
+            <div v-for="row in 7" :key="row" class="flex h-8.5 items-center gap-2">
+              <USkeleton class="size-4 shrink-0 rounded" />
+              <USkeleton class="h-3" :class="row % 3 === 0 ? 'w-2/5' : row % 2 === 0 ? 'w-3/5' : 'w-1/2'" />
+            </div>
+          </div>
+          <div v-else-if="!dataList.length" class="grid h-24 place-items-center text-sm text-muted">
+            {{ t("Common.NoData") }}
+          </div>
+          <div v-else class="relative" :style="{ height: `${totalHeight}px` }">
+            <button
+              v-for="item in virtualRows"
+              :key="`${item.row.name}-${item.index}`"
+              type="button"
+              class="absolute left-0 grid h-8.5 w-full grid-cols-[minmax(0,1fr)_5.5rem] border-b border-(--app-border)/60 text-left text-[12px] transition-colors hover:bg-(--app-hover-soft) focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-(--app-focus-ring)"
+              :style="{ transform: `translateY(${item.index * ROW_HEIGHT}px)` }"
+              :title="item.row.name"
+              @click="handleRowClick(item.row)"
+              @contextmenu="openContextMenu($event, item.row)"
+            >
+              <span class="flex min-w-0 items-center gap-2 px-3.5 py-1.5 text-(--app-fg)">
+                <UIcon
+                  :name="item.row.is_dir ? 'i-lucide-folder' : 'i-lucide-file'"
+                  class="size-4 shrink-0 text-muted"
+                />
+                <span class="min-w-0 flex-1 truncate" :class="item.row.is_dir ? 'font-medium' : ''">
+                  {{ item.row.name }}
+                </span>
+              </span>
+              <span class="truncate px-2.5 py-1.5 text-right font-ui-mono text-[10px] text-muted">
+                {{ formatFileSize(item.row) }}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div
+          class="sftp-file-table__status flex h-8.75 shrink-0 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3.5 font-ui-mono text-[10.5px] text-(--app-muted)"
+        >
+          {{ t("koko.fileManagement.items", { count: dataList.length }) }}
         </div>
       </div>
-
-      <div v-if="latestTransfer" class="flex items-center gap-3 border-t border-default p-3 text-sm">
-        <UIcon
-          :name="statusIcon(latestTransfer.status)"
-          class="size-4 shrink-0"
-          :class="latestTransfer.status === 'uploading' ? 'animate-spin' : ''"
-        />
-        <span class="min-w-0 flex-1 truncate">{{ latestTransfer.name }}</span>
-        <span class="text-muted">{{ clampPercentage(latestTransfer.percentage) }}%</span>
-        <UButton color="neutral" variant="link" size="xs" @click="transferOpen = true">
-          {{ t("TransferHistory") }}
-        </UButton>
-      </div>
-    </UCard>
+    </div>
 
     <div
       v-if="showContextMenu"
