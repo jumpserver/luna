@@ -1,11 +1,4 @@
-import type { SettingsSection } from "~/components/Settings/settingsPanel.vue";
-
-const open = ref(false);
-const activeSection = ref<SettingsSection>("general");
-
 export const warmupWebSettings = () => {
-  if (isTauriRuntime()) return;
-
   void Promise.all([
     import("~/components/Settings/settingsPanel.vue"),
     import("~/pages/setting/general.vue"),
@@ -14,27 +7,28 @@ export const warmupWebSettings = () => {
   ]);
 };
 
-/** ponytail: warm settings chunks at boot so first open feels like Tolaria overlay */
-export const preloadSettingsModal = () => {
-  warmupWebSettings();
-};
-
 export const useSettingsWindow = () => {
-  const openSettings = () => {
-    activeSection.value = "general";
-    open.value = true;
+  const route = useRoute();
+  const localePath = useLocalePath();
+  const returnPath = useState("settings-return-path", () => "/");
+
+  const openSettings = async (path = "/setting/general") => {
+    if (!route.path.startsWith("/setting/")) {
+      returnPath.value = route.fullPath;
+    }
+
+    await navigateTo(localePath({ path }));
   };
 
-  const closeSettings = () => {
-    open.value = false;
+  const closeSettings = async () => {
+    const target = returnPath.value.startsWith("/setting/") ? "/" : returnPath.value;
+    returnPath.value = "/";
+    await navigateTo(target || "/");
   };
 
   return {
-    open,
-    activeSection,
     openSettings,
     closeSettings,
-    warmupWebSettings,
-    preloadSettingsModal
+    warmupWebSettings
   };
 };

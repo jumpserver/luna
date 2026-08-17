@@ -52,6 +52,8 @@ const toolWindowTheme = computed(() => {
 const unlistenPrimaryColor = ref<UnlistenFn | null>(null);
 const unlistenTheme = ref<UnlistenFn | null>(null);
 const unlistenFont = ref<UnlistenFn | null>(null);
+const unlistenSettingsNavigate = ref<UnlistenFn | null>(null);
+const { openSettings } = useSettingsWindow();
 
 const backgroundColor = computed(() => {
   const isDark = (toolWindowTheme.value?.mode || userTheme.value) === "dark";
@@ -259,12 +261,21 @@ onMounted(async () => {
   } catch (err) {
     console.error("listen font-changed failed", err);
   }
+
+  try {
+    unlistenSettingsNavigate.value = await useTauriEventListen<string>("settings-navigate", ({ payload }) => {
+      if (payload?.startsWith("/setting/")) void openSettings(payload);
+    });
+  } catch (err) {
+    console.error("listen settings-navigate failed", err);
+  }
 });
 
 onBeforeUnmount(() => {
   unlistenPrimaryColor.value?.();
   unlistenTheme.value?.();
   unlistenFont.value?.();
+  unlistenSettingsNavigate.value?.();
 });
 </script>
 

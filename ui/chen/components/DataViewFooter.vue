@@ -7,6 +7,7 @@ const props = withDefaults(
   defineProps<{
     state: ChenConsoleState;
     rowCount?: number;
+    affectedRows?: number;
     busy?: boolean;
   }>(),
   {
@@ -22,6 +23,9 @@ const emit = defineEmits<{
 const limitOptions = [50, 100, 200, 500];
 const controls = computed(() => getChenDataViewToolbarState(props.state));
 const rowSummary = computed(() => {
+  if (Number.isFinite(props.affectedRows)) {
+    return `${props.affectedRows} ${props.affectedRows === 1 ? "row" : "rows"} affected`;
+  }
   if (!controls.value.paged) return `${props.rowCount} ${props.rowCount === 1 ? "row" : "rows"}`;
   if (!controls.value.total || !props.rowCount) return `0 of ${controls.value.total} rows`;
   const first = (controls.value.page - 1) * controls.value.limit + 1;

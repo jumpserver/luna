@@ -27,6 +27,11 @@ export function useChenQueryConsole(
     data?: any
   ) => boolean | void
 ) {
+  const queryExecutions = new WeakMap<
+    ChenQueryConsoleTab,
+    { submittedSql: string; currentSql: string; statementResultsStarted: boolean }
+  >();
+
   function activeConsoleEntry(tab: ChenPromptConsoleTab) {
     return tab.timelineEntries.find((entry) => entry.id === tab.activeTimelineEntryId) || null;
   }
@@ -69,7 +74,48 @@ export function useChenQueryConsole(
     if (tab.kind === "console") {
       const level = line && typeof line === "object" && "level" in line ? Number(line.level) : undefined;
       appendConsoleStatus(tab, content, level);
+    } else if (tab.kind === "query") {
+      handleQueryExecutionLog(tab, line, content);
     }
+  }
+
+  function handleQueryExecutionLog(tab: ChenQueryConsoleTab, line: unknown, content: string) {
+    const execution = queryExecutions.get(tab) || {
+      submittedSql: tab.statement,
+      currentSql: "",
+      statementResultsStarted: false
+    };
+    queryExecutions.set(tab, execution);
+
+    const executionPrefix = content.match(/^execute sql\s*:/i)?.[0];
+    const executedSql = executionPrefix ? content.slice(executionPrefix.length).trim() : "";
+    if (executedSql) {
+      execution.currentSql = executedSql;
+      return;
+    }
+
+    const level = line && typeof line === "object" && "level" in line ? Number(line.level) : undefined;
+    const affected = content.match(/^(-?\d+)\s+rows?\s+affected\s+in\s+(\d+)\s+ms$/i);
+    if (level !== 3 || !affected) return;
+
+    if (!execution.statementResultsStarted) {
+      tab.resultTabs = tab.resultTabs.filter((result) => result.state.pinned);
+      execution.statementResultsStarted = true;
+    }
+
+    const title = execution.currentSql || execution.submittedSql || "Statement result";
+    const id = newChenWorkspaceId("result");
+    tab.resultTabs.push({
+      id,
+      title,
+      meta: { id, title, synthetic: true },
+      data: { fields: [], data: [] },
+      state: { durationMs: Number(affected[2]) },
+      editState: createChenDataViewEditState(),
+      affectedRows: Number(affected[1])
+    });
+    tab.activeResultTabId = id;
+    execution.currentSql = "";
   }
 
   function failConsoleExecution(tab: ChenWorkspaceTab, message: string) {
@@ -134,7 +180,9 @@ export function useChenQueryConsole(
   }
 
   function closeQueryResult(tab: ChenQueryConsoleTab, reference: string) {
+    const result = tab.resultTabs.find((item) => item.id === reference || item.title === reference);
     removeQueryResult(tab, reference);
+    if (result?.meta.synthetic === true) return;
     sendConsoleAction(tab, "close_data_view", reference);
   }
 
@@ -282,6 +330,7 @@ export function useChenQueryConsole(
     dismissQueryMessage(tab);
     tab.lastSqlError = null;
     startChenDataViewTiming(tab.state);
+    queryExecutions.set(tab, { submittedSql: sql, currentSql: "", statementResultsStarted: false });
 
     sendSql(tab, sql);
   }
@@ -289,6 +338,7 @@ export function useChenQueryConsole(
   function runQueryFile(tab: ChenQueryConsoleTab, path: string) {
     if (tab.state.loading || tab.state.inQuery || !path.trim()) return;
     dismissQueryMessage(tab);
+    queryExecutions.set(tab, { submittedSql: "", currentSql: "", statementResultsStarted: false });
     sendConsoleAction(tab, "query_console_action", {
       action: "run_sql_file",
       data: path

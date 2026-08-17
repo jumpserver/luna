@@ -62,6 +62,8 @@ const activeText = computed(() => {
       </span>
       <span class="font-ui-mono">{{ tabs.length }} tabs</span>
       <span v-if="connectedCount" class="font-ui-mono">{{ connectedCount }} connected</span>
+      <span v-if="connectingCount" class="font-ui-mono">{{ connectingCount }} pending</span>
+      <span v-if="failedCount" class="font-ui-mono text-red-500">{{ failedCount }} failed</span>
       <button
         v-if="activeWorkspaceMode === 'assets'"
         type="button"
@@ -77,8 +79,6 @@ const activeText = computed(() => {
       >
         <UIcon name="i-lucide-terminal" class="size-3.5" />
       </button>
-      <span v-if="connectingCount" class="font-ui-mono">{{ connectingCount }} pending</span>
-      <span v-if="failedCount" class="font-ui-mono text-red-500">{{ failedCount }} failed</span>
     </div>
   </footer>
 </template>

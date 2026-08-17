@@ -517,13 +517,7 @@ function clearAuthInfo() {
 
 async function openSettingsWindow() {
   warmupWebSettings();
-
-  if (isTauriRuntime()) {
-    await useTauriCoreInvoke("open_settings_window");
-    return;
-  }
-
-  openSettings();
+  await openSettings();
 }
 
 /**

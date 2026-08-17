@@ -219,6 +219,7 @@ export interface ChenQueryResultTab {
   data: ChenDataViewDataset | null;
   state: ChenConsoleState;
   editState: ChenDataViewEditState;
+  affectedRows?: number;
 }
 
 export interface ChenConsoleHistoryEntry {

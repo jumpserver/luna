@@ -1,6 +1,6 @@
 use tauri::{command, AppHandle, WebviewWindow};
 
-/// 打开或聚焦设置窗口
+/// 在主窗口中打开设置页
 #[command]
 pub fn open_settings_window(app: AppHandle, path: Option<String>) {
     crate::setup::menu::open_settings_window_at(&app, path.as_deref());

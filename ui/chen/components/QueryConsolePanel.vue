@@ -79,7 +79,8 @@ const contextBusy = computed(() => Boolean(queryBusy.value || props.tab.state.ed
 const contextItems = computed(() =>
   (props.tab.state.contexts || []).map((context) => ({
     label: context,
-    icon: context === props.tab.state.currentContext ? "i-lucide-check" : undefined,
+    slot: "context" as const,
+    checked: context === props.tab.state.currentContext,
     disabled: contextBusy.value || context === props.tab.state.currentContext,
     onSelect: () => emit("changeContext", props.tab, context)
   }))
@@ -388,6 +389,9 @@ defineExpose({ editorSnapshot });
           :content="{ align: 'end' }"
           :ui="{ content: 'w-max min-w-(--reka-dropdown-menu-trigger-width) max-w-80' }"
         >
+          <template #context-trailing="{ item }">
+            <UIcon v-if="item.checked" name="i-lucide-check" class="size-4 shrink-0" />
+          </template>
           <UButton
             class="ml-auto"
             icon="i-lucide-database"

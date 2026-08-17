@@ -627,6 +627,13 @@
     "CopyCommand": "Copy command"
   },
   "Setting": {
+    "BackToApp": "Back to app",
+    "SearchPlaceholder": "Search settings",
+    "NoSearchResults": "No matching settings",
+    "GeneralDescription": "Language and connection defaults.",
+    "AppearanceDescription": "Theme, colors, fonts, and editor appearance.",
+    "ApplicationDescription": "Choose desktop applications for each connection protocol.",
+    "AboutDescription": "Version and product information.",
     "CommandTerminal": "Command Terminal",
     "FileTransfer": "File Transfer",
     "RemoteDesktop": "Remote Desktop",

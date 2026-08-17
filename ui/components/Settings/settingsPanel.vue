@@ -1,61 +1,42 @@
 <script setup lang="ts">
-import type { NavigationMenuItem } from "@nuxt/ui";
-
-export type SettingsSection = "general" | "appearance" | "application" | "about";
-
-withDefaults(
-  defineProps<{
-    mode?: "route" | "inline";
-    activeSection?: SettingsSection;
-    embedded?: boolean;
-  }>(),
-  {
-    mode: "route",
-    activeSection: "general",
-    embedded: false
-  }
-);
-
-const emit = defineEmits<{
-  (e: "update:activeSection", value: SettingsSection): void;
-}>();
-
+const route = useRoute();
 const localePath = useLocalePath();
 const { t } = useI18n();
-const panelBackground = "var(--app-sidebar-bg)";
+const { isMacOS } = usePlatform();
+const { closeSettings } = useSettingsWindow();
+const searchQuery = ref("");
+const hasNativeTitlebarInset = computed(() => isTauriRuntime());
 
 const sectionDefs = computed(() => {
-  const defs: Array<{
-    key: SettingsSection;
-    label: string;
-    icon: string;
-    routeName: string;
-    tauriOnly: boolean;
-  }> = [
+  const defs = [
     {
-      key: "general",
+      key: "general" as const,
       label: t("Common.General"),
-      icon: "solar:settings-linear",
+      description: t("Setting.GeneralDescription"),
+      icon: "i-lucide-settings-2",
       routeName: "setting-general",
       tauriOnly: false
     },
     {
-      key: "appearance",
+      key: "appearance" as const,
       label: t("Common.Appearance"),
-      icon: "solar:palette-linear",
+      description: t("Setting.AppearanceDescription"),
+      icon: "i-lucide-palette",
       routeName: "setting-appearance",
       tauriOnly: false
     },
     {
-      key: "application",
+      key: "application" as const,
       label: t("Common.OpenWith"),
-      icon: "tabler:toggle-right",
+      description: t("Setting.ApplicationDescription"),
+      icon: "i-lucide-panels-top-left",
       routeName: "setting-application",
       tauriOnly: true
     },
     {
-      key: "about",
+      key: "about" as const,
       label: t("Common.About"),
+      description: t("Setting.AboutDescription"),
       icon: "i-lucide-info",
       routeName: "setting-about",
       tauriOnly: false
@@ -65,60 +46,114 @@ const sectionDefs = computed(() => {
   return isTauriRuntime() ? defs : defs.filter((item) => !item.tauriOnly);
 });
 
-const routeMenu = computed<NavigationMenuItem[]>(() =>
-  sectionDefs.value.map((item) => ({
-    label: item.label,
-    icon: item.icon,
-    to: localePath({ name: item.routeName })
-  }))
-);
+const activeSection = computed(() => {
+  return sectionDefs.value.find((item) => route.path.startsWith(`/setting/${item.key}`)) || sectionDefs.value[0];
+});
 
-const inlineMenu = computed(() => sectionDefs.value);
+const filteredSections = computed(() => {
+  const query = searchQuery.value.trim().toLocaleLowerCase();
+  if (!query) return sectionDefs.value;
 
-const menuUi = {
-  list: "p-2",
-  link: "px-2 my-1 rounded-sm menu-item flex items-center light:text-gray-800 dark:text-gray-200",
-  linkLeadingIcon: "light:text-gray-800 dark:text-gray-200"
-} as const;
+  return sectionDefs.value.filter((item) => `${item.label} ${item.description}`.toLocaleLowerCase().includes(query));
+});
 
-const selectSection = (key: SettingsSection) => {
-  emit("update:activeSection", key);
+const handleSearchShortcut = (event: KeyboardEvent) => {
+  if (event.key.toLocaleLowerCase() !== "f" || (!event.metaKey && !event.ctrlKey)) return;
+  event.preventDefault();
+  document.querySelector<HTMLInputElement>("#settings-search")?.focus();
 };
+
+useEventListener(document, "keydown", handleSearchShortcut);
 </script>
 
 <template>
-  <div class="flex min-h-0 w-full gap-0" :class="embedded ? 'h-[min(86vh,675px)]' : 'h-full'">
-    <div
-      class="menu setting-menu shrink-0 border-r border-black/5 dark:border-white/10"
-      :style="{ backgroundColor: panelBackground }"
-    >
-      <UNavigationMenu
-        v-if="mode === 'route'"
-        :items="routeMenu"
-        :highlight="false"
-        :ui="menuUi"
-        color="neutral"
-        orientation="vertical"
-        class="w-40"
-      />
-
-      <div v-else class="w-40 p-2">
-        <button
-          v-for="item in inlineMenu"
-          :key="item.key"
-          type="button"
-          class="menu-item flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm light:text-gray-800 dark:text-gray-200"
-          :class="activeSection === item.key ? 'bg-black/6 dark:bg-white/10' : 'hover:bg-black/4 dark:hover:bg-white/6'"
-          @click="selectSection(item.key)"
-        >
-          <UIcon :name="item.icon" class="size-4 shrink-0" />
-          <span class="truncate">{{ item.label }}</span>
-        </button>
+  <div class="flex h-full min-h-0 w-full overflow-hidden bg-[var(--app-main-bg)]">
+    <aside class="flex w-[280px] shrink-0 flex-col border-r border-[var(--app-border)] bg-[var(--app-sidebar-bg)]">
+      <div
+        class="relative z-20 border-b border-[var(--app-border)] px-3"
+        :class="hasNativeTitlebarInset ? 'pb-2 pt-10' : 'py-2'"
+      >
+        <UButton
+          :label="t('Setting.BackToApp')"
+          icon="i-lucide-arrow-left"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          class="h-7 w-full justify-start text-xs"
+          :ui="{ leadingIcon: 'size-3.5' }"
+          @click="closeSettings"
+        />
       </div>
-    </div>
 
-    <div class="min-w-0 flex-1 overflow-y-auto h-full" :style="{ backgroundColor: panelBackground }">
-      <slot />
-    </div>
+      <div class="border-b border-[var(--app-border)] px-3 py-2">
+        <UInput
+          id="settings-search"
+          v-model="searchQuery"
+          :placeholder="t('Setting.SearchPlaceholder')"
+          icon="i-lucide-search"
+          color="neutral"
+          variant="outline"
+          size="xs"
+          class="w-full"
+          :ui="{ base: 'h-7 text-xs', leadingIcon: 'size-3.5', trailing: 'pe-1.5' }"
+        >
+          <template #trailing>
+            <span v-if="!searchQuery" class="flex items-center gap-0.5 text-[10px] text-muted">
+              <UKbd>{{ isMacOS ? "⌘" : "Ctrl" }}</UKbd>
+              <UKbd>F</UKbd>
+            </span>
+            <UButton
+              v-else
+              icon="i-lucide-x"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              :aria-label="t('Common.Cancel')"
+              @click="searchQuery = ''"
+            />
+          </template>
+        </UInput>
+      </div>
+
+      <nav class="min-h-0 flex-1 overflow-y-auto px-3 py-4" :aria-label="t('Common.Settings')">
+        <p class="mb-2 px-3 text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
+          {{ t("Common.Settings") }}
+        </p>
+
+        <div class="space-y-1">
+          <UButton
+            v-for="item in filteredSections"
+            :key="item.key"
+            :to="localePath({ name: item.routeName })"
+            :label="item.label"
+            :icon="item.icon"
+            color="neutral"
+            variant="ghost"
+            class="w-full justify-start rounded-lg"
+            :class="activeSection?.key === item.key ? 'bg-[var(--app-selected-soft)] text-highlighted' : 'text-muted'"
+            :aria-current="activeSection?.key === item.key ? 'page' : undefined"
+          />
+        </div>
+
+        <p v-if="filteredSections.length === 0" class="px-3 py-6 text-center text-xs text-muted">
+          {{ t("Setting.NoSearchResults") }}
+        </p>
+      </nav>
+    </aside>
+
+    <main class="min-w-0 flex-1 overflow-y-auto bg-[var(--app-main-bg)]">
+      <div class="mx-auto w-full max-w-4xl px-8 pb-10 lg:px-12" :class="hasNativeTitlebarInset ? 'pt-[76px]' : 'pt-10'">
+        <header class="mb-6 border-b border-[var(--app-border)] pb-5">
+          <h1 class="text-xl font-semibold text-highlighted">
+            {{ activeSection?.label }}
+          </h1>
+          <p class="mt-1 text-sm text-muted">
+            {{ activeSection?.description }}
+          </p>
+        </header>
+
+        <slot />
+      </div>
+    </main>
   </div>
 </template>

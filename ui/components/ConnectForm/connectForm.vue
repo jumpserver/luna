@@ -341,12 +341,7 @@ async function openProtocolApplicationSettings() {
   if (!routeProtocol) return;
 
   const path = `/setting/application/${encodeURIComponent(routeProtocol)}`;
-  if (isTauriRuntime()) {
-    await useTauriCoreInvoke("open_settings_window", { path });
-    return;
-  }
-
-  await navigateTo(path);
+  await useSettingsWindow().openSettings(path);
 }
 
 const accountItems = computed(() => {

@@ -116,7 +116,17 @@ const discardDialogOpen = ref(false);
 const discardDialogMessage = ref("");
 const pendingDiscard = shallowRef<(() => void) | null>(null);
 const unrestrictedMutationDialogOpen = ref(false);
-const pendingUnrestrictedMutation = shallowRef<{ tab: ChenQueryConsoleTab; sql: string } | null>(null);
+const pendingUnrestrictedMutation = shallowRef<
+  | { kind: "query"; tab: ChenQueryConsoleTab; sql: string }
+  | { kind: "upload"; tab: ChenQueryConsoleTab; sql: string; file: File }
+  | null
+>(null);
+const UNRESTRICTED_SQL_PREVIEW_LIMIT = 8_000;
+const unrestrictedMutationSqlPreview = computed(() => {
+  const sql = pendingUnrestrictedMutation.value?.sql || "";
+  if (sql.length <= UNRESTRICTED_SQL_PREVIEW_LIMIT) return sql;
+  return `${sql.slice(0, UNRESTRICTED_SQL_PREVIEW_LIMIT)}\n\n-- Preview truncated --`;
+});
 const GUARDED_DATA_VIEW_ACTIONS = new Set<ChenDataViewAction>([
   "first_page",
   "prev_page",
@@ -1393,7 +1403,7 @@ function runQueryTab(tab: ChenQueryLikeWorkspaceTab, selectedSql = "") {
   }
   guardDataViewChanges(chenDataViewTargets(tab), () => {
     if (chenUnrestrictedMutations(statement).length) {
-      pendingUnrestrictedMutation.value = { tab, sql: statement };
+      pendingUnrestrictedMutation.value = { kind: "query", tab, sql: statement };
       unrestrictedMutationDialogOpen.value = true;
       return;
     }
@@ -1414,15 +1424,39 @@ function updateUnrestrictedMutationDialog(open: boolean) {
 function confirmUnrestrictedMutation() {
   const pending = pendingUnrestrictedMutation.value;
   updateUnrestrictedMutationDialog(false);
-  if (pending) executeQueryTab(pending.tab, pending.sql);
+  if (!pending) return;
+  if (pending.kind === "upload") {
+    void performUploadQuerySql(pending.tab, pending.file);
+    return;
+  }
+  executeQueryTab(pending.tab, pending.sql);
 }
 
-function uploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
+async function uploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
   if (tab.uploadingSql || tab.state.loading || tab.state.inQuery) return;
-  guardDataViewChanges(chenDataViewTargets(tab), () => void performUploadQuerySql(tab, file));
+  let sql: string;
+  try {
+    sql = await file.text();
+  } catch (cause) {
+    addErrorToast({
+      title: "SQL file could not be read",
+      description: cause instanceof Error ? cause.message : String(cause)
+    });
+    return;
+  }
+
+  guardDataViewChanges(chenDataViewTargets(tab), () => {
+    if (chenUnrestrictedMutations(sql).length) {
+      pendingUnrestrictedMutation.value = { kind: "upload", tab, sql, file };
+      unrestrictedMutationDialogOpen.value = true;
+      return;
+    }
+    void performUploadQuerySql(tab, file);
+  });
 }
 
 async function performUploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
+  if (tab.uploadingSql || tab.state.loading || tab.state.inQuery) return;
   tab.uploadingSql = true;
   try {
     const result = await uploadChenSqlFile(auth.chenToken.value, file, undefined, endpointUrl.value);
@@ -1820,10 +1854,15 @@ defineExpose({ focus });
       @update:open="updateUnrestrictedMutationDialog"
     >
       <template #body>
-        <p class="text-sm text-muted">
-          One or more UPDATE or DELETE statements have no WHERE clause and may affect every row in a table. Confirm that
-          you want to execute them.
-        </p>
+        <div class="space-y-3">
+          <p class="text-sm text-muted">
+            One or more UPDATE or DELETE statements have no WHERE clause and may affect every row in a table. Confirm
+            that you want to execute them.
+          </p>
+          <pre
+            class="max-h-48 overflow-auto rounded-md border border-default bg-[var(--workspace-surface-sub-panel)] p-3 font-ui-mono text-xs whitespace-pre-wrap text-default"
+            >{{ unrestrictedMutationSqlPreview }}</pre>
+        </div>
       </template>
 
       <template #footer>

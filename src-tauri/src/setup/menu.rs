@@ -108,7 +108,48 @@ pub fn build_menu<R: Runtime>(app: &impl Manager<R>) -> tauri::Result<Menu<R>> {
         ],
     )?;
 
-    Menu::with_items(app, &[&app_menu, &edit_menu])
+    let file_menu = Submenu::with_items(
+        app,
+        labels.file_label.as_str(),
+        true,
+        &[&PredefinedMenuItem::close_window(
+            app,
+            Some(labels.close_label.as_str()),
+        )?],
+    )?;
+    let view_menu = Submenu::with_items(
+        app,
+        labels.view_label.as_str(),
+        true,
+        &[&PredefinedMenuItem::fullscreen(
+            app,
+            Some(labels.fullscreen_label.as_str()),
+        )?],
+    )?;
+    let window_menu = Submenu::with_items(
+        app,
+        labels.window_label.as_str(),
+        true,
+        &[
+            &PredefinedMenuItem::minimize(app, Some(labels.minimize_label.as_str()))?,
+            &PredefinedMenuItem::maximize(app, Some(labels.maximize_label.as_str()))?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::close_window(app, Some(labels.close_label.as_str()))?,
+        ],
+    )?;
+    let help_menu = Submenu::with_items(app, labels.help_label.as_str(), true, &[])?;
+
+    Menu::with_items(
+        app,
+        &[
+            &app_menu,
+            &file_menu,
+            &edit_menu,
+            &view_menu,
+            &window_menu,
+            &help_menu,
+        ],
+    )
 }
 
 /// 菜单事件处理
@@ -160,63 +201,23 @@ pub fn handle_menu_event(app_handle: &tauri::AppHandle, event: &MenuEvent) {
     }
 }
 
-/// 打开/聚焦设置窗口
+/// 在主窗口中打开设置页
 pub fn open_settings_window<R: Runtime>(app: &tauri::AppHandle<R>) {
     open_settings_window_at(app, None);
 }
 
 pub fn open_settings_window_at<R: Runtime>(app: &tauri::AppHandle<R>, path: Option<&str>) {
-    let label = "secondary";
     let target = path
         .filter(|value| value.starts_with("/setting/"))
         .unwrap_or("/setting/general");
 
-    if let Some(existing) = app.get_webview_window(label) {
-        let _ = existing.unminimize();
-        let _ = existing.show();
-        let _ = existing.set_focus();
-        let _ = existing.emit("settings-navigate", target);
-        return;
-    }
-
-    let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App(target.into()))
-        .title("Connection Settings")
-        .min_inner_size(930.0, 520.0)
-        .max_inner_size(930.0, 675.0);
-
-    #[cfg(target_os = "macos")]
-    {
-        builder = builder
-            .title_bar_style(tauri::TitleBarStyle::Overlay)
-            .hidden_title(true)
-            .traffic_light_position(LogicalPosition::new(10.0, 24.0));
-    }
-
-    match builder.build() {
-        Ok(_win) => {
-            #[cfg(any(target_os = "windows", target_os = "linux"))]
-            {
-                // Windows / Linux 下禁用原生装饰（标题栏/菜单栏），与主窗口保持一致
-                if let Err(e) = _win.set_decorations(false) {
-                    warn!("Failed to disable decorations for settings window: {}", e);
-                }
-
-                #[cfg(target_os = "windows")]
-                if let Err(e) = _win.set_shadow(false) {
-                    warn!("Failed to disable shadow for settings window: {}", e);
-                }
-
-                // 额外清空该窗口菜单，避免系统残留菜单栏
-                if let Ok(empty_menu) = Menu::with_items(app, &[]) {
-                    if let Err(e) = _win.set_menu(empty_menu) {
-                        warn!("Failed to clear menu for settings window: {}", e);
-                    }
-                } else {
-                    warn!("Failed to create empty menu for settings window");
-                }
-            }
-        }
-        Err(e) => warn!("Failed to build settings window: {}", e),
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.unminimize();
+        let _ = main.show();
+        let _ = main.set_focus();
+        let _ = main.emit("settings-navigate", target);
+    } else {
+        warn!("main window not found, cannot open settings");
     }
 }
 

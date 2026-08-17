@@ -1,150 +1,61 @@
 <script setup lang="ts">
-const route = useRoute();
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
-const windowTitle = computed(() =>
-  String(route.name || "").startsWith("setting-application") ? t("Common.OpenWith") : t("Common.ConnectionSettings")
-);
+const showWindowControls = computed(() => isTauriRuntime() && !isMacOS.value);
 
-const isEmbedded = computed(() => {
-  if (route.query.embedded === "1") return true;
-  return import.meta.client && window.self !== window.top;
-});
-const showWindowControls = computed(() => isTauriRuntime() && !isEmbedded.value);
-const { theme } = useSettingManager();
-const { initialTheme, listenOSThemeChange } = useThemeAdapter();
-let unlistenSettingsNavigate: (() => void) | undefined;
-
-const commonButtonProps = {
-  size: "sm" as const,
-  variant: "ghost" as const,
-  color: "neutral" as const
-};
-
-const windowControlButtons = computed(() => {
-  return [
-    {
-      key: "minimize",
-      iconName: "i-lucide-minus",
-      tooltipLabel: t("ToolTips.Minimize"),
-      onClick: async () => {
-        await useTauriCoreInvoke("minimize_window");
-      }
-    },
-    {
-      key: "maximize",
-      iconName: "i-lucide-square",
-      tooltipLabel: t("ToolTips.Maximize"),
-      onClick: async () => {
-        await useTauriCoreInvoke("toggle_maximize_window");
-      }
-    },
-    {
-      key: "close",
-      iconName: "i-lucide-x",
-      tooltipLabel: t("ToolTips.Close"),
-      onClick: async () => {
-        await useTauriCoreInvoke("close_window");
-      }
+const windowControlButtons = computed(() => [
+  {
+    key: "minimize",
+    icon: "i-lucide-minus",
+    label: t("ToolTips.Minimize"),
+    action: async () => {
+      await useTauriCoreInvoke("minimize_window");
     }
-  ];
-});
-
-const windowControlRailClass = computed(() => {
-  if (!showWindowControls.value) return "w-0";
-  return isMacOS.value ? "w-0" : "w-36";
-});
-
-const getWindowControlButtonClass = (buttonKey: string) => {
-  const baseClass = "rounded-none w-12 h-13 p-1 flex items-center justify-center";
-
-  switch (buttonKey) {
-    case "minimize":
-      return `${baseClass} `;
-    case "maximize":
-      return `${baseClass} `;
-    case "close":
-      return `${baseClass} hover:bg-red-500 hover:text-white active:bg-red-600`;
-    default:
-      return baseClass;
+  },
+  {
+    key: "maximize",
+    icon: "i-lucide-square",
+    label: t("ToolTips.Maximize"),
+    action: async () => {
+      await useTauriCoreInvoke("toggle_maximize_window");
+    }
+  },
+  {
+    key: "close",
+    icon: "i-lucide-x",
+    label: t("ToolTips.Close"),
+    action: async () => {
+      await useTauriCoreInvoke("close_window");
+    }
   }
-};
-
-onMounted(async () => {
-  initialTheme();
-  listenOSThemeChange();
-  if (isTauriRuntime()) {
-    unlistenSettingsNavigate = await useTauriEventListen<string>("settings-navigate", ({ payload }) => {
-      if (payload?.startsWith("/setting/")) {
-        void navigateTo(payload);
-      }
-    });
-  }
-});
-
-onBeforeUnmount(() => unlistenSettingsNavigate?.());
+]);
 </script>
 
 <template>
-  <UPage
-    :class="isEmbedded ? 'h-full min-h-0 flex flex-col' : 'h-screen flex flex-col'"
-    :ui="{
-      center: 'flex flex-col h-full min-h-0'
-    }"
-    :style="{
-      backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5'
-    }"
-  >
-    <UPageHeader
-      :ui="{
-        root: 'p-0'
-      }"
+  <div class="relative h-screen min-h-0 overflow-hidden bg-[var(--app-main-bg)]">
+    <div v-if="isTauriRuntime()" data-tauri-drag-region class="absolute inset-x-0 top-0 z-10 h-9" />
+
+    <div
+      v-if="showWindowControls"
+      data-tauri-drag-region="false"
+      class="absolute right-0 top-0 z-20 flex h-9 items-stretch"
     >
-      <template #default>
-        <!--
-          整条标题栏底层是一个满宽度的 data-tauri-drag-region
-          上层可见内容默认 pointer-events-none，所以标题区域和空白区域都会把事件透传给底层拖拽层
-          右侧窗口按钮区域单独恢复 pointer-events-auto，并且整块都标记 data-tauri-drag-region="false"，确保按钮区域不会触发拖拽事件
-        -->
-        <div class="header-bg relative h-10 px-4">
-          <div v-if="!isEmbedded" data-tauri-drag-region class="absolute inset-0 z-0" />
+      <UButton
+        v-for="button in windowControlButtons"
+        :key="button.key"
+        :icon="button.icon"
+        :aria-label="button.label"
+        :title="button.label"
+        color="neutral"
+        variant="ghost"
+        class="w-12 justify-center rounded-none"
+        :class="button.key === 'close' ? 'hover:bg-red-500 hover:text-white' : ''"
+        @click="button.action"
+      />
+    </div>
 
-          <div class="relative z-10 flex h-full items-center pointer-events-none">
-            <div aria-hidden="true" :class="windowControlRailClass" />
-
-            <div class="min-w-0 flex-1 px-4 text-center select-none">
-              <p class="pointer-events-none truncate text-sm font-bold">
-                {{ windowTitle }}
-              </p>
-            </div>
-
-            <div
-              class="flex h-full shrink-0 items-center justify-end pointer-events-auto"
-              :class="windowControlRailClass"
-              data-tauri-drag-region="false"
-            >
-              <template v-if="showWindowControls && !isMacOS">
-                <template v-for="button of windowControlButtons" :key="button.key">
-                  <UButton
-                    :icon="button.iconName"
-                    :class="getWindowControlButtonClass(button.key)"
-                    :title="button.tooltipLabel"
-                    v-bind="commonButtonProps"
-                    data-tauri-drag-region="false"
-                    @click="button.onClick"
-                  />
-                </template>
-              </template>
-            </div>
-          </div>
-        </div>
-      </template>
-    </UPageHeader>
-
-    <UPageBody class="mt-0 pb-0 flex-1 min-h-0 h-full overflow-hidden">
-      <SettingsPanel :embedded="isEmbedded">
-        <slot />
-      </SettingsPanel>
-    </UPageBody>
-  </UPage>
+    <SettingsPanel class="h-full min-h-0">
+      <slot />
+    </SettingsPanel>
+  </div>
 </template>

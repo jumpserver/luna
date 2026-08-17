@@ -199,7 +199,7 @@ function cancelActiveResultChanges() {
             </UButton>
           </template>
           <DataViewToolbar
-            v-if="dataViewActions"
+            v-if="dataViewActions && activeResult.affectedRows === undefined"
             :state="activeResult.state"
             :fields="activeResult.data?.fields || []"
             :grid-preference-key="gridPreferenceKey"
@@ -210,7 +210,16 @@ function cancelActiveResultChanges() {
           />
         </div>
       </div>
-      <div class="min-h-0 flex-1 overflow-auto">
+      <div
+        v-if="activeResult.affectedRows !== undefined"
+        class="grid min-h-0 flex-1 place-items-center px-6 text-sm text-muted"
+      >
+        <div class="text-center">
+          <UIcon name="i-lucide-circle-check" class="mx-auto mb-2 size-6 text-success" />
+          <p class="font-medium text-default">Statement executed successfully</p>
+        </div>
+      </div>
+      <div v-else class="min-h-0 flex-1 overflow-auto">
         <ChenDataGrid
           ref="dataGrid"
           :key="`${activeResult.id}:${activeResult.data?.fields?.map((field) => field.name).join(',') || ''}:${activeResult.data?.data?.length || 0}`"
@@ -226,6 +235,7 @@ function cancelActiveResultChanges() {
       <DataViewFooter
         :state="activeResult.state"
         :row-count="activeResult.data?.data?.length || 0"
+        :affected-rows="activeResult.affectedRows"
         :busy="activeResultBusy"
         @action="emitActiveDataViewAction"
       />

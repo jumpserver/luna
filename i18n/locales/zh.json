@@ -630,6 +630,13 @@
     "CopyCommand": "复制命令"
   },
   "Setting": {
+    "BackToApp": "返回应用",
+    "SearchPlaceholder": "搜索设置",
+    "NoSearchResults": "没有匹配的设置",
+    "GeneralDescription": "语言与连接默认选项。",
+    "AppearanceDescription": "主题、颜色、字体与编辑器外观。",
+    "ApplicationDescription": "为各连接协议选择桌面应用程序。",
+    "AboutDescription": "版本与产品信息。",
     "CommandTerminal": "命令行终端",
     "FileTransfer": "文件传输",
     "RemoteDesktop": "远程桌面",

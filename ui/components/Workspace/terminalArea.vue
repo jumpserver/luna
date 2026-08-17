@@ -8,6 +8,8 @@ const { isMacOS } = usePlatform();
 const { t } = useI18n();
 const tabArrowSwitchModifier = computed(() => (isMacOS.value ? "Option" : "Alt"));
 const tabNumberSwitchShortcut = computed(() => (isMacOS.value ? "⌘ + 1-9" : "Ctrl + 1-9"));
+const cleanModeShortcut = computed(() => (isMacOS.value ? "⌘ + Shift + P" : "Ctrl + Shift + P"));
+const fullscreenModeShortcut = computed(() => (isMacOS.value ? "⌘ + Shift + F" : "Ctrl + Shift + F"));
 const panes = computed(() => tabs.value.flatMap((tab) => tab.panes));
 
 const openLogin = () => {
@@ -67,8 +69,20 @@ const openLogin = () => {
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-maximize-2" class="size-4.5 shrink-0" />
               <span>
-                <strong :style="{ color: 'var(--app-fg)' }">右击会话标签 → 纯净模式</strong>
-                ，长按 Esc 退出纯净模式
+                <strong :style="{ color: 'var(--app-fg)' }">纯净 / 全屏模式</strong>
+                <kbd
+                  class="ml-1 rounded px-1.5 py-0.5 font-ui-mono text-xs"
+                  :style="{ border: '1px solid var(--app-border)', backgroundColor: 'var(--app-card-bg-soft)' }"
+                >
+                  {{ cleanModeShortcut }}
+                </kbd>
+                <span class="mx-1">/</span>
+                <kbd
+                  class="rounded px-1.5 py-0.5 font-ui-mono text-xs"
+                  :style="{ border: '1px solid var(--app-border)', backgroundColor: 'var(--app-card-bg-soft)' }"
+                >
+                  {{ fullscreenModeShortcut }}
+                </kbd>
               </span>
             </div>
             <div class="flex items-center gap-2">

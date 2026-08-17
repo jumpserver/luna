@@ -5,9 +5,17 @@ import WorkspaceStatusFooter from "~/components/Workspace/statusFooter.vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
-const { isWindows } = usePlatform();
+const { isMacOS, isWindows } = usePlatform();
 const { activeWorkspaceMode, uiWorkspaceMode } = useWorkspaceMode();
-const { exitFocusMode, focusMode, registerSessionDisposer } = useWorkspaceTabs();
+const {
+  activeTabId,
+  enterFocusMode,
+  enterFullscreenMode,
+  exitFocusMode,
+  focusMode,
+  registerSessionDisposer,
+  workspaceFullscreen
+} = useWorkspaceTabs();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
@@ -56,7 +64,27 @@ const stopEscapeHold = (event: KeyboardEvent) => {
   if (event.key === "Escape") clearEscapeHold();
 };
 
+const handleWorkspaceModeShortcut = (event: KeyboardEvent) => {
+  const usesPrimaryModifier = isMacOS.value ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+  if (event.repeat || event.altKey || !event.shiftKey || !usesPrimaryModifier || !activeTabId.value) return;
+
+  if (event.code !== "KeyP" && event.code !== "KeyF") return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (event.code === "KeyP") {
+    if (focusMode.value) void exitFocusMode();
+    else enterFocusMode(activeTabId.value);
+    return;
+  }
+
+  if (workspaceFullscreen.value) void exitFocusMode();
+  else void enterFullscreenMode(activeTabId.value);
+};
+
 useEventListener(window, "keydown", startEscapeHold);
+useEventListener(window, "keydown", handleWorkspaceModeShortcut, { capture: true });
 useEventListener(window, "keyup", stopEscapeHold);
 useEventListener(window, "blur", clearEscapeHold);
 
@@ -68,7 +96,6 @@ onMounted(() => {
   initialTheme();
   listenOSThemeChange();
   warmupWebSettings();
-  preloadSettingsModal();
   // ponytail: koko WS sessions close on component unmount; no Rust builtin bridge
   registerSessionDisposer(() => {});
   registerKokoTicketProvider(async (request) => {
@@ -104,8 +131,6 @@ onBeforeUnmount(() => {
 
 <template>
   <UCard variant="outline" :ui="cardUi" style="background-color: transparent">
-    <SettingsModal v-if="!isTauriRuntime()" />
-
     <WorkspaceShell :sidebar-visible="showWorkspaceSidebar" :focus-mode="focusMode">
       <template #header>
         <Header />

@@ -216,6 +216,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
     tabMenuItem(
       {
         label: t("TabMenu.FocusCurrent"),
+        kbds: ["meta", "shift", "P"],
         onSelect: () => {
           hideContextMenu();
           enterFocusMode(tab.id);
@@ -226,6 +227,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
     tabMenuItem(
       {
         label: t("TabMenu.FullscreenCurrent"),
+        kbds: ["meta", "shift", "F"],
         onSelect: () => {
           hideContextMenu();
           void enterFullscreenMode(tab.id);
