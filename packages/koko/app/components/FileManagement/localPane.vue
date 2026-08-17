@@ -13,6 +13,7 @@ import SftpPaneContextMenu from "#koko/components/FileManagement/pane/SftpPaneCo
 import SftpPaneDropOverlay from "#koko/components/FileManagement/pane/SftpPaneDropOverlay.vue";
 import SftpPaneFileTable from "#koko/components/FileManagement/pane/SftpPaneFileTable.vue";
 import SftpPaneSelectionBar from "#koko/components/FileManagement/pane/SftpPaneSelectionBar.vue";
+import SftpPaneTableSkeleton from "#koko/components/FileManagement/pane/SftpPaneTableSkeleton.vue";
 import {
   buildTransferSourcePayload,
   hasEndpointPrefix,
@@ -455,9 +456,7 @@ defineExpose({
         </div>
       </div>
     </div>
-    <div v-else-if="loading && !entries.length" class="grid flex-1 place-items-center">
-      <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
-    </div>
+    <SftpPaneTableSkeleton v-else-if="loading && !entries.length" class="min-h-0 flex-1" />
     <div v-else class="relative flex min-h-0 flex-1 flex-col">
       <div v-if="loading && entries.length" class="sftp-file-table__refresh-bar" aria-hidden="true" />
       <SftpPaneFileTable

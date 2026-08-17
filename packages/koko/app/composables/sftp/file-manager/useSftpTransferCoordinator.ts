@@ -80,7 +80,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
         id: "primary",
         endpoint: options.primaryTransferEndpoint.value,
         organizationName: options.currentOrgLabel.value,
-        assetName: options.translate("koko.fileManagement.localSftp"),
+        assetName: options.primaryTransferEndpoint.value.label,
         destinationPath: toValue(primaryPane?.manager.currentPath) || "/",
         connected: Boolean(toValue(primaryPane?.manager.connected))
       });
@@ -557,6 +557,43 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   }
 
   async function transferGlobal(direction: "left-to-right" | "right-to-left") {
+    // Session dual-pane: primary SFTP (left) <-> active remote (right).
+    // Center arrows transfer to the opposite pane; selection-bar "send to" still opens the modal.
+    if (options.primaryTransferEndpoint.value && options.primaryPaneRef.value) {
+      const activeId = options.activeRemoteId.value;
+      const remote = activeId ? options.remotePanes.value.find((pane) => pane.id === activeId) : null;
+      if (remote && remotePaneConnected(activeId!)) {
+        if (direction === "left-to-right") {
+          const payload = options.primaryPaneRef.value.transferSourcePayload();
+          if (!payload?.entries.length) {
+            toast.add({ title: options.translate("koko.fileManagement.selectFilesToTransfer"), color: "warning" });
+            return;
+          }
+          queueSftpTransfer(
+            {
+              ...payload,
+              destinationPath: toValue(options.remotePaneRefs.value[remote.id]?.manager.currentPath) || "/"
+            },
+            remote.transferEndpoint
+          );
+          return;
+        }
+        const payload = options.remotePaneRefs.value[remote.id]?.transferSourcePayload();
+        if (!payload?.entries.length) {
+          toast.add({ title: options.translate("koko.fileManagement.selectFilesToTransfer"), color: "warning" });
+          return;
+        }
+        queueSftpTransfer(
+          {
+            ...payload,
+            destinationPath: toValue(options.primaryPaneRef.value.manager.currentPath) || "/"
+          },
+          options.primaryTransferEndpoint.value
+        );
+        return;
+      }
+    }
+
     const sourceSide = direction === "left-to-right" ? "left" : "right";
     const targetSide = sourceSide === "left" ? "right" : "left";
     const source = options.activePaneForSide(sourceSide);

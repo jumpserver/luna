@@ -54,7 +54,8 @@ export function buildSftpTourSteps(t: (key: string) => string): DriveStep[] {
       popover: {
         title: t("koko.sftpTour.transferCenterTitle"),
         description: t("koko.sftpTour.transferCenterDescription"),
-        side: "bottom",
+        // Floating FAB sits bottom-right; open the coachmark above it.
+        side: "top",
         align: "end"
       }
     }

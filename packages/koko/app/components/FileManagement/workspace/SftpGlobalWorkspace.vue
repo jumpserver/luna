@@ -13,6 +13,7 @@ import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
 import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
 import KokoWebUploadPane from "#koko/components/FileManagement/webUploadPane.vue";
 import SftpRemoteMachineTabs from "#koko/components/FileManagement/workspace/SftpRemoteMachineTabs.vue";
+import SftpTransferRail from "#koko/components/FileManagement/workspace/SftpTransferRail.vue";
 import { KeyboardKey } from "#koko/constants/keyboard";
 
 type WorkspaceController = ReturnType<typeof useSftpWorkspacePanes>;
@@ -30,6 +31,7 @@ const { t } = useI18n();
 const focusedSide = ref<"left" | "right">("left");
 
 const {
+  activePaneForSide,
   closeOtherRemotePanes,
   closeRightRemotePanes,
   globalActiveIds,
@@ -61,11 +63,37 @@ const {
   mountTransferEndpoint,
   remotePaneConnected,
   sendFromSelection,
+  transferGlobal,
+  transferring,
   unmountTransferEndpoint,
   uploadWebFiles
 } = props.transfer;
 
 const simplePeerMode = computed(() => isSimplePeerMode());
+
+const canTransferRight = computed(() => {
+  const hasLeftSelection =
+    globalActiveIds.left === "local"
+      ? Boolean(localSelections.value.length || localSelection.value)
+      : Boolean(activePaneForSide("left")?.selection);
+  const right = activePaneForSide("right");
+  return Boolean(hasLeftSelection && right && remotePaneConnected(right.id) && !transferring.value);
+});
+
+const canTransferLeft = computed(() => {
+  const right = activePaneForSide("right");
+  const hasRightSelection = Boolean(right?.selection);
+  const hasLeftDestination =
+    globalActiveIds.left === "local" || globalActiveIds.left === "web-upload" || Boolean(activePaneForSide("left"));
+  return Boolean(
+    hasRightSelection && hasLeftDestination && right && remotePaneConnected(right.id) && !transferring.value
+  );
+});
+
+const showTransferRail = computed(() => {
+  const right = activePaneForSide("right");
+  return Boolean(right && remotePaneConnected(right.id));
+});
 
 function setLocalPaneRef(value: TemplateRefValue): void {
   props.setLocalPaneRef(value as SftpLocalPaneHandle | null);
@@ -152,190 +180,198 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
 <template>
   <div class="relative flex min-h-0 flex-1" @keydown="onKeydown">
     <KokoSftpTransferCenter :ref="setTransferCenterRef" floating />
-    <div
-      v-for="side in ['left', 'right'] as const"
-      :key="side"
-      class="relative flex min-h-0 min-w-0 flex-1 flex-col"
-      :class="side === 'right' ? 'border-l border-default' : ''"
-      @dragover.capture="dragRemotePaneOverSide(side, $event)"
-      @dragleave="leaveRemotePaneSide(side, $event)"
-      @drop.capture="dropRemotePaneOnSide(side, $event)"
-    >
+    <template v-for="side in ['left', 'right'] as const" :key="side">
+      <SftpTransferRail
+        v-if="side === 'right' && showTransferRail"
+        mode="global"
+        :can-transfer-right="canTransferRight"
+        :can-transfer-left="canTransferLeft"
+        :transferring="transferring"
+        @transfer="transferGlobal"
+      />
       <div
-        v-if="side === 'left' || sideRemotePanes[side].length || remotePaneDropSide === side"
-        class="flex h-9 shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2"
+        class="relative flex min-h-0 min-w-0 flex-1 flex-col"
+        :class="side === 'right' && !showTransferRail ? 'border-l border-default' : ''"
+        @dragover.capture="dragRemotePaneOverSide(side, $event)"
+        @dragleave="leaveRemotePaneSide(side, $event)"
+        @drop.capture="dropRemotePaneOnSide(side, $event)"
       >
-        <div class="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto overflow-y-visible py-0.5">
-          <button
-            v-if="side === 'left' && isTauriRuntime"
-            type="button"
-            class="flex h-7 min-w-20 max-w-40 basis-40 grow shrink items-center gap-1 rounded-md px-1.5 text-[11px] leading-none transition-colors"
-            :class="
-              globalActiveIds.left === 'local'
-                ? 'bg-accented text-highlighted'
-                : 'text-muted hover:bg-accented hover:text-highlighted'
-            "
-            @click="globalActiveIds.left = 'local'"
-          >
-            <UIcon name="i-lucide-laptop" class="size-3.5 shrink-0" />
-            <span>{{ t("koko.fileManagement.localFiles") }}</span>
-          </button>
-          <button
-            v-if="side === 'left' && !isTauriRuntime"
-            type="button"
-            class="flex h-7 min-w-20 max-w-40 basis-40 grow shrink items-center gap-1 rounded-md px-1.5 text-[11px] leading-none transition-colors"
-            :class="
-              globalActiveIds.left === 'web-upload'
-                ? 'bg-accented text-highlighted'
-                : 'text-muted hover:bg-accented hover:text-highlighted'
-            "
-            @click="globalActiveIds.left = 'web-upload'"
-          >
-            <UIcon name="i-lucide-upload" class="size-3.5 shrink-0" />
-            <span>{{ t("koko.fileManagement.localUpload") }}</span>
-          </button>
-          <SftpRemoteMachineTabs
-            v-if="sideRemotePanes[side].length"
-            :panes="sideRemotePanes[side]"
-            :active-id="globalActiveIds[side]"
-            :transfer-count="activeTransferCount"
-            :is-connected="remotePaneConnected"
-            @update:panes="onSidePanesUpdate(side, $event)"
-            @select="selectGlobalRemote(side, $event)"
-            @close="removeRemotePane"
-            @reconnect="reconnectRemotePane"
-            @close-others="closeOtherRemotePanes"
-            @close-right="closeRightRemotePanes"
-            @pin="togglePinRemotePane"
-            @pane-drag-start="beginRemotePaneDrag"
-            @pane-drag-end="endRemotePaneDrag"
-          />
-          <UTooltip v-if="showSideAddButton(side)" :text="t('koko.fileManagement.addRemoteSftp')">
-            <UButton
-              size="xs"
-              color="neutral"
-              variant="ghost"
-              icon="i-lucide-plus"
-              class="shrink-0"
-              :aria-label="t('koko.fileManagement.addRemoteSftp')"
-              @click="openRemoteConnect(side)"
+        <div
+          v-if="side === 'left' || sideRemotePanes[side].length || remotePaneDropSide === side"
+          class="flex h-9 shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2"
+        >
+          <div class="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto overflow-y-visible py-0.5">
+            <button
+              v-if="side === 'left' && isTauriRuntime"
+              type="button"
+              class="flex h-7 min-w-20 max-w-40 basis-40 grow shrink items-center gap-1 rounded-md px-1.5 text-[11px] leading-none transition-colors"
+              :class="
+                globalActiveIds.left === 'local'
+                  ? 'bg-accented text-highlighted'
+                  : 'text-muted hover:bg-accented hover:text-highlighted'
+              "
+              @click="globalActiveIds.left = 'local'"
+            >
+              <UIcon name="i-lucide-laptop" class="size-3.5 shrink-0" />
+              <span>{{ t("koko.fileManagement.localFiles") }}</span>
+            </button>
+            <button
+              v-if="side === 'left' && !isTauriRuntime"
+              type="button"
+              class="flex h-7 min-w-20 max-w-40 basis-40 grow shrink items-center gap-1 rounded-md px-1.5 text-[11px] leading-none transition-colors"
+              :class="
+                globalActiveIds.left === 'web-upload'
+                  ? 'bg-accented text-highlighted'
+                  : 'text-muted hover:bg-accented hover:text-highlighted'
+              "
+              @click="globalActiveIds.left = 'web-upload'"
+            >
+              <UIcon name="i-lucide-upload" class="size-3.5 shrink-0" />
+              <span>{{ t("koko.fileManagement.localUpload") }}</span>
+            </button>
+            <SftpRemoteMachineTabs
+              v-if="sideRemotePanes[side].length"
+              :panes="sideRemotePanes[side]"
+              :active-id="globalActiveIds[side]"
+              :transfer-count="activeTransferCount"
+              :is-connected="remotePaneConnected"
+              @update:panes="onSidePanesUpdate(side, $event)"
+              @select="selectGlobalRemote(side, $event)"
+              @close="removeRemotePane"
+              @reconnect="reconnectRemotePane"
+              @close-others="closeOtherRemotePanes"
+              @close-right="closeRightRemotePanes"
+              @pin="togglePinRemotePane"
+              @pane-drag-start="beginRemotePaneDrag"
+              @pane-drag-end="endRemotePaneDrag"
             />
-          </UTooltip>
+            <UTooltip v-if="showSideAddButton(side)" :text="t('koko.fileManagement.addRemoteSftp')">
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-plus"
+                class="shrink-0"
+                :aria-label="t('koko.fileManagement.addRemoteSftp')"
+                @click="openRemoteConnect(side)"
+              />
+            </UTooltip>
+          </div>
         </div>
-      </div>
 
-      <KokoLocalFileManagementPane
-        v-if="side === 'left' && isTauriRuntime"
-        v-show="globalActiveIds.left === 'local'"
-        :ref="setLocalPaneRef"
-        class="min-h-0 flex-1"
-        :focused="focusedSide === 'left'"
-        :highlighted-names="highlightedNames.left"
-        :send-peer-direction="simplePeerMode && canSendToOpposite('local:fs') ? 'right' : undefined"
-        @select="localSelection = $event"
-        @selection-change="localSelections = $event"
-        @focus="focusedSide = 'left'"
-        @send="sendFromSelection"
-        @transfer-drop="handleCrossPaneDrop($event, { id: 'local:fs', label: t('koko.fileManagement.localFiles') })"
-      />
-      <KokoWebUploadPane
-        v-if="side === 'left' && !isTauriRuntime"
-        v-show="globalActiveIds.left === 'web-upload'"
-        class="min-h-0 flex-1"
-        @upload="uploadWebFiles"
-      />
-      <template v-if="panesForSide(side).length">
-        <KokoFileManagementPane
-          v-for="pane in panesForSide(side)"
-          v-show="globalActiveIds[side] === pane.id"
-          :key="pane.id"
-          :ref="(value) => setRemotePaneRef(pane.id, value)"
+        <KokoLocalFileManagementPane
+          v-if="side === 'left' && isTauriRuntime"
+          v-show="globalActiveIds.left === 'local'"
+          :ref="setLocalPaneRef"
           class="min-h-0 flex-1"
-          :context="pane.context"
-          :transfer-endpoint="pane.transferEndpoint"
-          :focused="focusedSide === side && globalActiveIds[side] === pane.id"
-          :highlighted-names="highlightedNames[side]"
-          :send-peer-direction="
-            simplePeerMode && canSendToOpposite(pane.transferEndpoint.id)
-              ? side === 'left'
-                ? 'right'
-                : 'left'
-              : undefined
-          "
-          @select="pane.selection = $event"
-          @focus="focusedSide = side"
+          :focused="focusedSide === 'left'"
+          :highlighted-names="highlightedNames.left"
+          :send-peer-direction="simplePeerMode && canSendToOpposite('local:fs') ? 'right' : undefined"
+          @select="localSelection = $event"
+          @selection-change="localSelections = $event"
+          @focus="focusedSide = 'left'"
           @send="sendFromSelection"
-          @transfer-drop="handleCrossPaneDrop($event, pane.transferEndpoint)"
-          @transfer-endpoint-mounted="mountTransferEndpoint"
-          @transfer-endpoint-connected="handleRemotePaneConnected"
-          @transfer-endpoint-unmounted="unmountTransferEndpoint"
+          @transfer-drop="handleCrossPaneDrop($event, { id: 'local:fs', label: t('koko.fileManagement.localFiles') })"
         />
-      </template>
-      <div
-        v-else-if="
-          !(
-            side === 'left' &&
-            (isTauriRuntime ? globalActiveIds.left === 'local' : globalActiveIds.left === 'web-upload')
-          )
-        "
-        class="grid min-h-0 flex-1 place-items-center p-6 text-center text-sm text-muted"
-      >
-        <div class="space-y-3">
-          <UIcon
-            :name="preconnecting && side === 'right' ? 'i-lucide-loader-circle' : 'i-lucide-server'"
-            class="mx-auto size-7 opacity-60"
-            :class="preconnecting && side === 'right' ? 'animate-spin' : ''"
+        <KokoWebUploadPane
+          v-if="side === 'left' && !isTauriRuntime"
+          v-show="globalActiveIds.left === 'web-upload'"
+          class="min-h-0 flex-1"
+          @upload="uploadWebFiles"
+        />
+        <template v-if="panesForSide(side).length">
+          <KokoFileManagementPane
+            v-for="pane in panesForSide(side)"
+            v-show="globalActiveIds[side] === pane.id"
+            :key="pane.id"
+            :ref="(value) => setRemotePaneRef(pane.id, value)"
+            class="min-h-0 flex-1"
+            :context="pane.context"
+            :transfer-endpoint="pane.transferEndpoint"
+            :focused="focusedSide === side && globalActiveIds[side] === pane.id"
+            :highlighted-names="highlightedNames[side]"
+            :send-peer-direction="
+              simplePeerMode && canSendToOpposite(pane.transferEndpoint.id)
+                ? side === 'left'
+                  ? 'right'
+                  : 'left'
+                : undefined
+            "
+            @select="pane.selection = $event"
+            @focus="focusedSide = side"
+            @send="sendFromSelection"
+            @transfer-drop="handleCrossPaneDrop($event, pane.transferEndpoint)"
+            @transfer-endpoint-mounted="mountTransferEndpoint"
+            @transfer-endpoint-connected="handleRemotePaneConnected"
+            @transfer-endpoint-unmounted="unmountTransferEndpoint"
           />
-          <p>
-            {{
-              preconnecting && side === "right"
-                ? t("koko.fileManagement.preconnectingAsset", { name: preconnectingName })
-                : side === "left" && isTauriRuntime
-                  ? t("koko.fileManagement.preparingLocalFolder")
-                  : t("koko.fileManagement.connectSftpServer")
-            }}
-          </p>
-          <UButton
-            v-if="!(preconnecting && side === 'right')"
-            size="sm"
-            color="primary"
-            variant="soft"
-            icon="i-lucide-plus"
-            @click="openRemoteConnect(side)"
-          >
-            {{ t("koko.fileManagement.connectRemoteSftp") }}
-          </UButton>
-          <div
-            v-if="side === 'right' && !preconnecting && recentConnections.length"
-            class="mx-auto flex max-w-xs flex-wrap justify-center gap-1.5 pt-1"
-          >
-            <UButton
-              v-for="item in recentConnections.slice(0, 5)"
-              :key="item.assetId"
-              size="xs"
-              color="neutral"
-              variant="soft"
-              icon="i-lucide-history"
-              :label="item.assetName"
-              class="max-w-full"
-              @click="reconnectRecent(item, side)"
+        </template>
+        <div
+          v-else-if="
+            !(
+              side === 'left' &&
+              (isTauriRuntime ? globalActiveIds.left === 'local' : globalActiveIds.left === 'web-upload')
+            )
+          "
+          class="grid min-h-0 flex-1 place-items-center p-6 text-center text-sm text-muted"
+        >
+          <div class="space-y-3">
+            <UIcon
+              :name="preconnecting && side === 'right' ? 'i-lucide-loader-circle' : 'i-lucide-server'"
+              class="mx-auto size-7 opacity-60"
+              :class="preconnecting && side === 'right' ? 'animate-spin' : ''"
             />
+            <p>
+              {{
+                preconnecting && side === "right"
+                  ? t("koko.fileManagement.preconnectingAsset", { name: preconnectingName })
+                  : side === "left" && isTauriRuntime
+                    ? t("koko.fileManagement.preparingLocalFolder")
+                    : t("koko.fileManagement.connectSftpServer")
+              }}
+            </p>
+            <UButton
+              v-if="!(preconnecting && side === 'right')"
+              size="sm"
+              color="primary"
+              variant="soft"
+              icon="i-lucide-plus"
+              @click="openRemoteConnect(side)"
+            >
+              {{ t("koko.fileManagement.connectRemoteSftp") }}
+            </UButton>
+            <div
+              v-if="side === 'right' && !preconnecting && recentConnections.length"
+              class="mx-auto flex max-w-xs flex-wrap justify-center gap-1.5 pt-1"
+            >
+              <UButton
+                v-for="item in recentConnections.slice(0, 5)"
+                :key="item.assetId"
+                size="xs"
+                color="neutral"
+                variant="soft"
+                icon="i-lucide-history"
+                :label="item.assetName"
+                class="max-w-full"
+                @click="reconnectRecent(item, side)"
+              />
+            </div>
+          </div>
+        </div>
+        <div
+          v-if="remotePaneDropSide === side"
+          class="pointer-events-none absolute inset-1 z-50 grid place-items-center rounded-lg border-2 border-dashed border-primary bg-primary/10 text-primary backdrop-blur-[1px]"
+        >
+          <div class="flex items-center gap-2 rounded-md bg-default px-3 py-2 text-xs shadow-sm">
+            <UIcon name="i-lucide-panels-top-left" class="size-4" />
+            <span>
+              {{
+                t(side === "left" ? "koko.fileManagement.dropTabToLeftPane" : "koko.fileManagement.dropTabToRightPane")
+              }}
+            </span>
           </div>
         </div>
       </div>
-      <div
-        v-if="remotePaneDropSide === side"
-        class="pointer-events-none absolute inset-1 z-50 grid place-items-center rounded-lg border-2 border-dashed border-primary bg-primary/10 text-primary backdrop-blur-[1px]"
-      >
-        <div class="flex items-center gap-2 rounded-md bg-default px-3 py-2 text-xs shadow-sm">
-          <UIcon name="i-lucide-panels-top-left" class="size-4" />
-          <span>
-            {{
-              t(side === "left" ? "koko.fileManagement.dropTabToLeftPane" : "koko.fileManagement.dropTabToRightPane")
-            }}
-          </span>
-        </div>
-      </div>
-    </div>
+    </template>
   </div>
 </template>

@@ -2,6 +2,7 @@ import type { KokoSftpAsset } from "@jumpserver/koko/host";
 import type { MaybeRefOrGetter } from "vue";
 import type {
   FileWorkspacePreconnect,
+  FileWorkspaceSourceAsset,
   RecentSftpConnection,
   SftpRemotePane,
   SftpRemotePaneHandle,
@@ -16,6 +17,8 @@ import { assetSupportsSftp, defaultGlobalLeftPaneId, rememberSftpConnection } fr
 interface SftpWorkspacePanesOptions {
   sftpToken: MaybeRefOrGetter<string | undefined>;
   global: MaybeRefOrGetter<boolean | undefined>;
+  /** Asset that owns the primary session pane (session workbench only). */
+  sourceAsset?: MaybeRefOrGetter<FileWorkspaceSourceAsset | null | undefined>;
   translate: (key: string, params?: Record<string, unknown>) => string;
   showError: (title: string, error: unknown) => void;
 }
@@ -36,16 +39,22 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     if (value.tokenId === tokenId) return value;
     return { ...value, tokenId };
   });
+  /** Prefer the connected asset name over the generic "Current SFTP" label. */
+  const primaryAssetName = computed(() => {
+    const name = toValue(options.sourceAsset)?.name?.trim();
+    return name || options.translate("koko.fileManagement.localSftp");
+  });
   const primaryTransferEndpoint = computed(() => {
     if (!primaryContext.value) return undefined;
     return {
       id: `sftp:${primaryContext.value.tokenId}`,
-      label: options.translate("koko.fileManagement.localSftp")
+      label: primaryAssetName.value
     };
   });
 
-  const dualMode = ref(false);
   const remotePanes = ref<SftpRemotePane[]>([]);
+  /** Session dual pane is implicit: open when any remote exists, collapse when all close. */
+  const dualMode = computed(() => remotePanes.value.length > 0);
   const remotePaneRefs = ref<Record<string, SftpRemotePaneHandle | null>>({});
   const activeRemoteId = ref<string | null>(null);
   const connectModalOpen = ref(false);
@@ -111,7 +120,6 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
   }
 
   function openRemoteConnect(side: SftpWorkspaceSide = "right") {
-    dualMode.value = true;
     connectSide.value = side;
     openRemoteInCurrentTab.value = false;
     remoteAssetSearch.value = "";
@@ -122,7 +130,6 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     remotePanes.value = [];
     remotePaneRefs.value = {};
     activeRemoteId.value = null;
-    dualMode.value = false;
   }
 
   function cleanupRemotePaneRefs(ids: Set<string>) {
@@ -202,7 +209,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
   }
 
   function markRemotePaneConnected() {
-    toast.add({ title: options.translate("koko.fileManagement.remoteConnected"), color: "success" });
+    // Connection success is visible via tab/status chrome; avoid noisy toasts.
   }
 
   function reorderRemotePanes(side: SftpWorkspaceSide, orderedIds: string[]) {
@@ -242,12 +249,8 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
   }
 
   function toggleDualMode() {
-    if (dualMode.value) {
-      dualMode.value = false;
-      return;
-    }
     if (remotePanes.value.length) {
-      dualMode.value = true;
+      disconnectAllRemotes();
       return;
     }
     openRemoteConnect();
@@ -291,7 +294,6 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     }
     activeRemoteId.value = id;
     if (toValue(options.global)) globalActiveIds[input.side] = id;
-    else dualMode.value = true;
     return id;
   }
 
@@ -415,6 +417,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     pendingPreconnect,
     preconnecting,
     preconnectingName,
+    primaryAssetName,
     primaryContext,
     primaryTransferEndpoint,
     recentConnections,

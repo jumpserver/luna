@@ -27,7 +27,7 @@ const props = withDefaults(
   defineProps<{
     /** Emphasized trigger for the professional workbench header. */
     prominent?: boolean;
-    /** Draggable floating trigger (global workbench). Defaults to bottom-right. */
+    /** Draggable floating trigger (session + global workbench). Defaults to bottom-right. */
     floating?: boolean;
   }>(),
   { prominent: false, floating: false }

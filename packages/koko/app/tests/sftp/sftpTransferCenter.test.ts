@@ -13,9 +13,11 @@ import transferCenterStyles from "../../assets/css/sftp-transfer-center.scss?inl
 import fileManagementIndex from "../../components/FileManagement/index.vue?raw";
 import fileManagementLocalPane from "../../components/FileManagement/localPane.vue?raw";
 import fileManagementPane from "../../components/FileManagement/pane.vue?raw";
+import localPaneToolbar from "../../components/FileManagement/pane/SftpLocalPaneToolbar.vue?raw";
 import filePaneDropOverlay from "../../components/FileManagement/pane/SftpPaneDropOverlay.vue?raw";
 import filePaneTable from "../../components/FileManagement/pane/SftpPaneFileTable.vue?raw";
 import filePaneSelectionBar from "../../components/FileManagement/pane/SftpPaneSelectionBar.vue?raw";
+import remotePaneToolbar from "../../components/FileManagement/pane/SftpRemotePaneToolbar.vue?raw";
 import transferCenterComponent from "../../components/FileManagement/SftpTransferCenter.vue?raw";
 import transferBatchComponent from "../../components/FileManagement/transfer-center/SftpTransferBatch.vue?raw";
 import transferFileComponent from "../../components/FileManagement/transfer-center/SftpTransferFile.vue?raw";
@@ -146,7 +148,13 @@ describe("sftp right-panel compact mode", () => {
     expect(sessionWorkspaceComponent).toContain('v-if="!compact"');
     expect(fileManagementIndex).toContain("!props.global && !props.compact && !props.showEmpty");
     expect(sessionWorkspaceComponent).toContain('v-show="!compact && dualMode"');
+    expect(sessionWorkspaceComponent).toContain('v-if="!compact"');
     expect(sessionWorkspaceComponent).toContain(':compact="compact"');
+    expect(sessionWorkspaceComponent).toContain('<KokoSftpTransferCenter v-if="!compact"');
+    expect(sessionWorkspaceComponent).toContain("floating");
+    expect(sessionWorkspaceComponent).not.toContain("sftp-file-management__topbar");
+    expect(sessionWorkspaceComponent).toContain("disconnectAllRemotes");
+    expect(sessionWorkspaceComponent).toContain("i-lucide-ellipsis");
     expect(fileManagementStyles).toContain(".sftp-file-management--compact");
   });
 
@@ -211,15 +219,91 @@ describe("sftp professional workbench", () => {
 
   it("keeps a floating transfer center in the global workbench", () => {
     expect(globalWorkspaceComponent).toContain('<KokoSftpTransferCenter :ref="setTransferCenterRef" floating />');
-    expect(globalWorkspaceComponent).not.toContain("transferGlobal");
-    expect(globalWorkspaceComponent).not.toContain("i-lucide-arrow-right");
-    expect(globalWorkspaceComponent).not.toContain("i-lucide-arrow-left");
     expect(globalWorkspaceComponent).toContain("showSideAddButton");
     expect(globalWorkspaceComponent).toContain("koko.fileManagement.addRemoteSftp");
     expect(globalWorkspaceComponent).toContain("<UTooltip");
     expect(transferCenterComponent).toContain("floating?: boolean");
     expect(transferCenterComponent).toContain("is-floating");
     expect(transferCenterComponent).toContain("<UTooltip");
+  });
+
+  it("shows a center transfer rail with left/right arrows while keeping send modal flow", () => {
+    expect(globalWorkspaceComponent).toContain("SftpTransferRail");
+    expect(globalWorkspaceComponent).toContain("transferGlobal");
+    expect(globalWorkspaceComponent).toContain('mode="global"');
+    expect(sessionWorkspaceComponent).toContain("SftpTransferRail");
+    expect(sessionWorkspaceComponent).toContain("transferGlobal");
+    expect(sessionWorkspaceComponent).toContain('mode="session"');
+    expect(sessionWorkspaceComponent).toContain('@send="sendFromSelection"');
+    expect(transferCoordinatorComposable).toContain("function openSendModal");
+    expect(transferCoordinatorComposable).toContain("function transferGlobal");
+    expect(transferCoordinatorComposable).toContain("Session dual-pane");
+    expect(fileManagementPane).toContain("SftpPaneTableSkeleton");
+    expect(fileManagementLocalPane).toContain("SftpPaneTableSkeleton");
+    expect(remotePaneToolbar).toContain("<UTooltip");
+    expect(remotePaneToolbar).toContain("koko.fileManagement.back");
+    expect(remotePaneToolbar).toContain("koko.actions.upload");
+  });
+
+  it("uses a floating transfer center and tab overflow for session dual-remote chrome", () => {
+    expect(sessionWorkspaceComponent).toContain("floating");
+    expect(sessionWorkspaceComponent).toContain("KokoSftpTransferCenter");
+    expect(sessionWorkspaceComponent).not.toContain("sftp-file-management__topbar");
+    expect(sessionWorkspaceComponent).not.toContain("toggleDualMode");
+    expect(sessionWorkspaceComponent).toContain("disconnectAllRemotes");
+    expect(sessionWorkspaceComponent).toContain("remoteOverflowItems");
+    expect(sessionWorkspaceComponent).toContain("i-lucide-ellipsis");
+    expect(sessionWorkspaceComponent).toContain('data-sftp-tour="remote-connect"');
+    // Dual pane is implicit: any remote connection expands the right side.
+    expect(workspacePanesComposable).toContain("const dualMode = computed(() => remotePanes.value.length > 0)");
+    expect(workspacePanesComposable).not.toContain("dualMode.value = true");
+    expect(workspacePanesComposable).not.toContain("dualMode.value = false");
+  });
+
+  it("uses a unified single-row toolbar with responsive path/search chrome", () => {
+    expect(remotePaneToolbar).toContain("sftp-file-management__toolbar--unified");
+    expect(remotePaneToolbar).toContain("beginPathEdit");
+    expect(remotePaneToolbar).toContain("goToPath");
+    expect(remotePaneToolbar).toContain("filterCurrentDirectory");
+    expect(remotePaneToolbar).toContain("ResizeObserver");
+    expect(remotePaneToolbar).toContain("isNarrow");
+    expect(remotePaneToolbar).toContain("isCompact");
+    expect(remotePaneToolbar).toContain('data-sftp-tour="navigation"');
+    expect(remotePaneToolbar).toContain('data-sftp-tour="file-actions"');
+    expect(remotePaneToolbar).not.toContain("sftp-file-management__actionbar");
+    expect(localPaneToolbar).toContain("sftp-file-management__toolbar--unified");
+    expect(localPaneToolbar).toContain("beginPathEdit");
+    expect(localPaneToolbar).not.toContain("sftp-file-management__actionbar");
+    expect(fileManagementPane).toContain('@go-to-path="goToAbsolutePath"');
+    expect(fileManagementPane).toContain("focusPathEdit");
+    expect(fileManagementPane).toContain("focusSearch");
+    expect(fileManagementStyles).toContain("toolbar--unified");
+    expect(fileManagementStyles).toContain("container-type: inline-size");
+    expect(fileManagementStyles).toContain("__search-input");
+  });
+
+  it("shows the asset as a toolbar context label or dual-pane identity strip", () => {
+    expect(fileManagementIndex).toContain("sourceAsset: () => props.sourceAsset");
+    expect(fileManagerSessionSurface).toContain(":source-asset=");
+    expect(fileManagerSessionSurface).toContain("tab.assetName");
+    expect(workspacePanesComposable).toContain("primaryAssetName");
+    expect(workspacePanesComposable).toContain("label: primaryAssetName.value");
+    expect(sessionWorkspaceComponent).toContain(
+      ':context-label="!compact && !dualMode ? primaryAssetName : undefined"'
+    );
+    expect(sessionWorkspaceComponent).toContain(":show-workbench-actions=");
+    expect(sessionWorkspaceComponent).toContain('v-if="!compact && dualMode"');
+    expect(sessionWorkspaceComponent).toContain("primaryAssetName");
+    expect(sessionWorkspaceComponent).not.toContain("sftp-file-management__topbar");
+    expect(remotePaneToolbar).toContain("contextLabel");
+    expect(remotePaneToolbar).toContain("sftp-file-management__context-label");
+    expect(fileManagementPane).toContain("contextLabel");
+    expect(transferCoordinatorComposable).toContain("options.primaryTransferEndpoint.value.label");
+  });
+
+  it("does not toast on remote sftp connect", () => {
+    expect(workspacePanesComposable).toContain("function markRemotePaneConnected");
+    expect(workspacePanesComposable).not.toContain("koko.fileManagement.remoteConnected");
   });
 
   it("uses the database-console tab presentation", () => {

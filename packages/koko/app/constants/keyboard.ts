@@ -17,6 +17,7 @@ export enum KeyboardKey {
   F2 = "F2",
   F5 = "F5",
   Home = "Home",
+  L = "l",
   P = "p",
   R = "r",
   S = "s",

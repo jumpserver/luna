@@ -16,6 +16,7 @@ import {
   writeTransferDragData
 } from "../../composables/sftp/file-manager/transfer";
 import { useSftpPaneSelection } from "../../composables/sftp/file-manager/useSftpPaneSelection";
+import { resolveSftpFileExtension, resolveSftpFileIcon } from "../../composables/sftp/useSftpFileIcon";
 
 const entries = [
   { name: "..", is_dir: true, size: "" },
@@ -24,6 +25,20 @@ const entries = [
   { name: "gamma", is_dir: true, size: "" },
   { name: "delta.txt", is_dir: false, size: "30" }
 ];
+
+describe("sftp file icon mapping", () => {
+  it("maps directories, archives, code, and fallbacks to lucide icons", () => {
+    expect(resolveSftpFileIcon({ name: "..", is_dir: true })).toBe("i-lucide-folder-up");
+    expect(resolveSftpFileIcon({ name: "docs", is_dir: true })).toBe("i-lucide-folder");
+    expect(resolveSftpFileIcon({ name: "app.tar.gz", is_dir: false })).toBe("i-lucide-file-archive");
+    expect(resolveSftpFileIcon({ name: "main.ts", is_dir: false })).toBe("i-lucide-braces");
+    expect(resolveSftpFileIcon({ name: "photo.png", is_dir: false })).toBe("i-lucide-image");
+    expect(resolveSftpFileIcon({ name: "notes.txt", is_dir: false })).toBe("i-lucide-file-text");
+    expect(resolveSftpFileIcon({ name: "unknown", is_dir: false })).toBe("i-lucide-file");
+    expect(resolveSftpFileIcon({ name: "weird.xyz", is_dir: false })).toBe("i-lucide-file");
+    expect(resolveSftpFileExtension("archive.tar.gz")).toBe("tgz");
+  });
+});
 
 describe("file pane selection composable", () => {
   it("supports single, range, toggle, and select-all selection with revision tracking", () => {
