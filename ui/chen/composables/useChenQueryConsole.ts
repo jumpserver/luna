@@ -28,7 +28,7 @@ export function useChenQueryConsole(
     const entry = activeConsoleEntry(tab);
     if (!entry) return;
 
-    if (/^execute sql\s*:/i.test(content)) return;
+    if (/^execute(?: raw)? sql\s*:/i.test(content)) return;
     if (/^cancel query\s*:/i.test(content)) {
       if (!entry.logs.includes("Query cancelled.")) entry.logs.push("Query cancelled.");
       entry.status = "cancelled";
