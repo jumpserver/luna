@@ -1,6 +1,7 @@
 import type { DriveStep } from "driver.js";
 
-export const SFTP_TOUR_STORAGE_KEY = "koko:sftp-tour:v1";
+/** Bump when tour steps/copy change so users see the updated guide once. */
+export const SFTP_TOUR_STORAGE_KEY = "koko:sftp-tour:v2";
 
 export function buildSftpTourSteps(t: (key: string) => string): DriveStep[] {
   return [
@@ -10,7 +11,7 @@ export function buildSftpTourSteps(t: (key: string) => string): DriveStep[] {
         title: t("koko.sftpTour.workspaceTitle"),
         description: t("koko.sftpTour.workspaceDescription"),
         side: "bottom",
-        align: "end"
+        align: "start"
       }
     },
     {
@@ -28,7 +29,7 @@ export function buildSftpTourSteps(t: (key: string) => string): DriveStep[] {
         title: t("koko.sftpTour.fileActionsTitle"),
         description: t("koko.sftpTour.fileActionsDescription"),
         side: "bottom",
-        align: "start"
+        align: "end"
       }
     },
     {
@@ -54,7 +55,6 @@ export function buildSftpTourSteps(t: (key: string) => string): DriveStep[] {
       popover: {
         title: t("koko.sftpTour.transferCenterTitle"),
         description: t("koko.sftpTour.transferCenterDescription"),
-        // Floating FAB sits bottom-right; open the coachmark above it.
         side: "top",
         align: "end"
       }

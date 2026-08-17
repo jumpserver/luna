@@ -25,6 +25,8 @@ node_modules
 .nitro
 .cache
 .output
+playwright-report
+test-results
 .env
 .cargo
 .qoder

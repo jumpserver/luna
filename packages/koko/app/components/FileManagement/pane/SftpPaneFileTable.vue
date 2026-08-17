@@ -45,12 +45,13 @@ const selectedSet = computed(() => new Set(props.selectedNames));
 const highlightedSet = computed(() => new Set(props.highlightedNames));
 const emptyColspan = computed(() => (props.compact ? 3 : 5));
 const prefersReducedMotion = ref(false);
-const refreshPulse = ref(false);
+/** Fast path-change: skip leave of the old directory list (enter of the new list still runs). */
 const skipLeaveAnim = ref(false);
-let refreshPulseTimer: ReturnType<typeof setTimeout> | undefined;
 let skipLeaveTimer: ReturnType<typeof setTimeout> | undefined;
 
 const sizeColClass = computed(() => (props.compact ? "w-22 px-2.5" : "w-27.5 px-3.5"));
+/** Keep row enter/leave for transfer highlight & delete; same-key refresh does not re-enter rows. */
+const rowTransitionName = computed(() => (prefersReducedMotion.value ? "" : "sftp-file-row"));
 
 function fileType(entry: SftpFileEntry): string {
   return resolveSftpFileType(entry, {
@@ -67,8 +68,19 @@ function rowStyle(index: number) {
   return { "--sftp-row-index": String(Math.min(index, 16)) } as Record<string, string>;
 }
 
+function clearRowInlineStyles(el: Element) {
+  const row = el as HTMLElement;
+  row.style.width = "";
+  row.style.display = "";
+  row.style.tableLayout = "";
+  row.style.transition = "";
+  row.style.opacity = "";
+  row.style.transform = "";
+  row.style.background = "";
+}
+
 function onBeforeLeave(el: Element) {
-  if (skipLeaveAnim.value) {
+  if (!rowTransitionName.value || skipLeaveAnim.value) {
     const row = el as HTMLElement;
     row.style.transition = "none";
     row.style.opacity = "0";
@@ -77,18 +89,17 @@ function onBeforeLeave(el: Element) {
   const row = el as HTMLElement;
   const table = row.closest("table");
   if (!table) return;
+  // Keep table-row geometry during leave without absolute positioning (breaks delete animation in tables).
   row.style.width = `${table.getBoundingClientRect().width}px`;
-  row.style.display = "table";
-  row.style.tableLayout = "fixed";
 }
 
 function onAfterLeave(el: Element) {
-  const row = el as HTMLElement;
-  row.style.width = "";
-  row.style.display = "";
-  row.style.tableLayout = "";
-  row.style.transition = "";
-  row.style.opacity = "";
+  clearRowInlineStyles(el);
+}
+
+function onAfterEnter(el: Element) {
+  // Prevent interrupted <tr> transitions from leaving opacity/transform stuck after refresh.
+  clearRowInlineStyles(el);
 }
 
 watch(
@@ -104,18 +115,6 @@ watch(
   { flush: "sync" }
 );
 
-watch(
-  () => props.refreshing,
-  (refreshing, wasRefreshing) => {
-    if (!wasRefreshing || refreshing || prefersReducedMotion.value) return;
-    refreshPulse.value = true;
-    if (refreshPulseTimer) clearTimeout(refreshPulseTimer);
-    refreshPulseTimer = setTimeout(() => {
-      refreshPulse.value = false;
-    }, 420);
-  }
-);
-
 onMounted(() => {
   if (typeof window === "undefined" || !window.matchMedia) return;
   const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -128,19 +127,12 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  if (refreshPulseTimer) clearTimeout(refreshPulseTimer);
   if (skipLeaveTimer) clearTimeout(skipLeaveTimer);
 });
 </script>
 
 <template>
-  <div
-    class="sftp-file-table flex h-full min-h-0 flex-col"
-    :class="{
-      'sftp-file-table--refresh-pulse': refreshPulse,
-      'sftp-file-table--skip-leave': skipLeaveAnim
-    }"
-  >
+  <div class="sftp-file-table flex h-full min-h-0 flex-col" :class="{ 'sftp-file-table--skip-leave': skipLeaveAnim }">
     <!-- Header stays outside the scrollport so the scrollbar only covers rows. -->
     <div class="sftp-file-table__head-wrap shrink-0">
       <table class="sftp-file-management__table w-full table-fixed border-separate border-spacing-0">
@@ -208,11 +200,12 @@ onUnmounted(() => {
           <col v-if="!compact" class="w-24" />
         </colgroup>
         <TransitionGroup
-          name="sftp-file-row"
+          :name="rowTransitionName"
           tag="tbody"
           appear
           @before-leave="onBeforeLeave"
           @after-leave="onAfterLeave"
+          @after-enter="onAfterEnter"
         >
           <tr
             v-for="(entry, index) in entries"

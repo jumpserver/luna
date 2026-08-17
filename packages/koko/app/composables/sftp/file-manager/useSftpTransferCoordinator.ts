@@ -381,6 +381,16 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     options.transferCenterRef.value?.signalQueued(animationOrigin);
   }
 
+  function resolveEndpointSide(endpointId: string): SftpWorkspaceSide | null {
+    if (options.primaryTransferEndpoint.value?.id === endpointId) return "left";
+    if (endpointId === LOCAL_ENDPOINT_ID) return "left";
+    const pane = options.remotePanes.value.find((item) => item.transferEndpoint.id === endpointId);
+    if (!pane) return null;
+    // Session dual-pane always treats remotes as the right surface.
+    if (options.primaryTransferEndpoint.value) return "right";
+    return pane.side;
+  }
+
   function queueSftpTransfer(payload: SftpTransferDropPayload, destination?: FileTransferEndpointRef) {
     if (!destination || payload.sourceEndpoint.id === destination.id || !payload.entries.length) return;
     const inputs = buildSftpTransferInputs(payload, destination);
@@ -395,6 +405,12 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
       expectedTaskCount: inputs.length,
       createdAt: Date.now()
     });
+    // Highlight destination rows as soon as transfer is queued; list reload keeps the class.
+    const side = resolveEndpointSide(destination.id);
+    if (side) flashHighlight(
+      side,
+      payload.entries.map((entry) => entry.name)
+    );
   }
 
   function queueSftpTransferToSelected(payload: SftpTransferDropPayload, destination?: FileTransferEndpointRef) {

@@ -51,6 +51,7 @@ const {
   activeTransferCount,
   canSendToOpposite,
   connectTransferEndpoint,
+  highlightedNames,
   isSimplePeerMode,
   mountTransferEndpoint,
   queueSftpTransferToSelected,
@@ -131,6 +132,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
         :show-workbench-actions="!compact && !dualMode"
         :compact="compact"
         :transfer-endpoint="compact ? undefined : primaryTransferEndpoint"
+        :highlighted-names="highlightedNames.left"
         :send-peer-direction="primarySendPeerDirection"
         @send="sendFromSelection"
         @transfer-drop="queueSftpTransferToSelected($event, primaryTransferEndpoint)"
@@ -217,6 +219,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
           class="h-full min-h-0"
           :context="pane.context"
           :transfer-endpoint="pane.transferEndpoint"
+          :highlighted-names="highlightedNames.right"
           :send-peer-direction="remoteSendPeerDirection(pane.transferEndpoint.id)"
           @select="
             pane.selection = $event;

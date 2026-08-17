@@ -247,10 +247,6 @@
     }
   }
 
-  &--refresh-pulse .sftp-file-management__table tbody {
-    animation: sftp-file-list-refresh 0.42s ease;
-  }
-
   &--skip-leave .sftp-file-row-leave-active,
   &--skip-leave .sftp-file-row-leave-to {
     transition: none !important;
@@ -339,9 +335,7 @@
 .sftp-file-row-appear-active {
   transition:
     opacity 0.32s ease,
-    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 0.32s ease;
-  /* Base delay keeps the first paint from flashing full rows before CSS enter applies. */
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
   transition-delay: calc(20ms + var(--sftp-row-index, 0) * 12ms);
 }
 
@@ -349,15 +343,19 @@
 .sftp-file-row-appear-from {
   opacity: 0;
   transform: translateY(-6px);
-  background: color-mix(in srgb, var(--theme-accent) 6%, transparent);
+}
+
+/* Explicit end state — prevents interrupted <tr> transitions from leaving opacity stuck. */
+.sftp-file-row-enter-to,
+.sftp-file-row-appear-to {
+  opacity: 1;
+  transform: none;
 }
 
 .sftp-file-row-leave-active {
-  position: absolute;
-  z-index: 0;
   transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+    opacity 0.22s ease,
+    transform 0.22s ease;
   pointer-events: none;
 }
 
@@ -405,18 +403,6 @@
   }
 }
 
-@keyframes sftp-file-list-refresh {
-  0% {
-    opacity: 0.72;
-    filter: saturate(0.92);
-  }
-
-  100% {
-    opacity: 1;
-    filter: none;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .sftp-file-row-enter-active,
   .sftp-file-row-appear-active,
@@ -426,12 +412,8 @@
     transition-delay: 0ms;
   }
 
-  .sftp-file-row--highlight,
-  .sftp-file-table--refresh-pulse .sftp-file-management__table tbody {
-    animation: none;
-  }
-
   .sftp-file-row--highlight {
+    animation: none;
     background: color-mix(in srgb, var(--theme-accent) 12%, transparent);
   }
 
