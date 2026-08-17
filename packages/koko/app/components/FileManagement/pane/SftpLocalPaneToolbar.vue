@@ -37,7 +37,6 @@ let resizeObserver: ResizeObserver | undefined;
 
 const isNarrow = computed(() => toolbarWidth.value > 0 && toolbarWidth.value < 420);
 const isCompact = computed(() => toolbarWidth.value > 0 && toolbarWidth.value < 560);
-const showUploadLabel = computed(() => !isNarrow.value);
 
 const quickPathItems = computed(() =>
   props.quickPaths.map((item) => ({
@@ -370,11 +369,10 @@ onBeforeUnmount(() => {
 
       <UTooltip :text="t('koko.actions.upload')">
         <UButton
-          icon="i-lucide-upload"
-          color="primary"
-          variant="solid"
-          size="xs"
-          :label="showUploadLabel ? t('koko.actions.upload') : undefined"
+          icon="i-lucide-cloud-upload"
+          color="neutral"
+          variant="ghost"
+          size="sm"
           :aria-label="t('koko.actions.upload')"
           @click="uploadInput?.click()"
         />

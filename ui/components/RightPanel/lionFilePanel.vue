@@ -12,7 +12,7 @@ const controller = computed(() => getLionWorkspaceSession(activeSessionId.value)
 </script>
 
 <template>
-  <div v-if="controller?.driverName.value" class="h-full min-h-0 overflow-hidden p-2">
+  <div v-if="controller?.driverName.value" class="h-full min-h-0 overflow-hidden">
     <FileManager
       compact
       class="h-full"

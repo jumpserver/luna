@@ -47,7 +47,6 @@ const currentPath = computed(() => props.manager.currentPath.value || "/");
 /** Breakpoints relative to pane width (dual-pane halves often ~360–520px). */
 const isNarrow = computed(() => toolbarWidth.value > 0 && toolbarWidth.value < 420);
 const isCompact = computed(() => toolbarWidth.value > 0 && toolbarWidth.value < 560);
-const showUploadLabel = computed(() => !isNarrow.value && !props.dense);
 const showContextLabel = computed(() => Boolean(props.contextLabel?.trim()) && !isNarrow.value);
 
 const visibleBreadcrumbs = computed(() => {
@@ -65,19 +64,9 @@ const visibleBreadcrumbs = computed(() => {
   return [head, { name: "…", index: -2, ellipsis: true as const }, ...tail];
 });
 
-const moreMenuItems = computed<DropdownMenuItem[][]>(() => [
+/** Narrow: collapse eye / create into one menu (nav + refresh stay visible). */
+const fileOpsMenuItems = computed<DropdownMenuItem[][]>(() => [
   [
-    {
-      label: t("koko.fileManagement.home"),
-      icon: "i-lucide-house",
-      disabled: !props.manager.canGoHome.value,
-      onSelect: () => void props.manager.goHome()
-    },
-    {
-      label: t("koko.fileManagement.refresh"),
-      icon: "i-lucide-refresh-cw",
-      onSelect: () => void props.manager.loadCurrentDirectory()
-    },
     {
       label: showHiddenFiles.value
         ? t("koko.fileManagement.hideHiddenFiles")
@@ -86,12 +75,7 @@ const moreMenuItems = computed<DropdownMenuItem[][]>(() => [
       onSelect: () => {
         showHiddenFiles.value = !showHiddenFiles.value;
       }
-    }
-  ]
-]);
-
-const createMenuItems = computed<DropdownMenuItem[][]>(() => [
-  [
+    },
     {
       label: t("koko.fileManagement.newFolder"),
       icon: "i-lucide-folder-plus",
@@ -219,6 +203,7 @@ defineExpose({
     class="sftp-file-management__toolbar sftp-file-management__toolbar--unified flex shrink-0 items-center gap-1 border-b border-(--app-border) bg-(--app-panel-bg) px-2"
     :class="{ 'is-narrow': isNarrow, 'is-compact': isCompact }"
   >
+    <!-- Navigation: back / forward / up / home -->
     <div class="flex shrink-0 items-center gap-0.5">
       <UTooltip :text="t('koko.fileManagement.back')">
         <UButton
@@ -251,6 +236,17 @@ defineExpose({
           :disabled="manager.currentPath.value === '/'"
           :aria-label="t('koko.drawer.up')"
           @click="manager.changeDirectory({ name: '..', is_dir: true } as SftpFileEntry)"
+        />
+      </UTooltip>
+      <UTooltip :text="t('koko.fileManagement.home')">
+        <UButton
+          icon="i-lucide-house"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          :disabled="!manager.canGoHome.value"
+          :aria-label="t('koko.fileManagement.home')"
+          @click="void manager.goHome()"
         />
       </UTooltip>
     </div>
@@ -321,55 +317,18 @@ defineExpose({
       </div>
     </div>
 
+    <!-- View helpers: refresh + filter (not file mutations). -->
     <div class="flex shrink-0 items-center gap-0.5">
-      <template v-if="!isNarrow">
-        <UTooltip :text="t('koko.fileManagement.home')">
-          <UButton
-            icon="i-lucide-house"
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            :disabled="!manager.canGoHome.value"
-            :aria-label="t('koko.fileManagement.home')"
-            @click="void manager.goHome()"
-          />
-        </UTooltip>
-        <UTooltip :text="t('koko.fileManagement.refresh')">
-          <UButton
-            icon="i-lucide-refresh-cw"
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            :aria-label="t('koko.fileManagement.refresh')"
-            @click="void manager.loadCurrentDirectory()"
-          />
-        </UTooltip>
-        <UTooltip
-          :text="showHiddenFiles ? t('koko.fileManagement.hideHiddenFiles') : t('koko.fileManagement.showHiddenFiles')"
-        >
-          <UButton
-            :icon="showHiddenFiles ? 'i-lucide-eye' : 'i-lucide-eye-off'"
-            color="neutral"
-            :variant="showHiddenFiles ? 'soft' : 'ghost'"
-            size="sm"
-            :aria-label="
-              showHiddenFiles ? t('koko.fileManagement.hideHiddenFiles') : t('koko.fileManagement.showHiddenFiles')
-            "
-            @click="showHiddenFiles = !showHiddenFiles"
-          />
-        </UTooltip>
-      </template>
-      <UDropdownMenu v-else :items="moreMenuItems" size="sm" :content="{ align: 'end', side: 'bottom' }">
+      <UTooltip :text="t('koko.fileManagement.refresh')">
         <UButton
-          icon="i-lucide-ellipsis"
+          icon="i-lucide-refresh-cw"
           color="neutral"
           variant="ghost"
           size="sm"
-          :title="t('Common.More')"
-          :aria-label="t('Common.More')"
+          :aria-label="t('koko.fileManagement.refresh')"
+          @click="void manager.loadCurrentDirectory()"
         />
-      </UDropdownMenu>
-
+      </UTooltip>
       <div class="sftp-file-management__search flex items-center" :class="searchOpen || search ? 'is-open' : ''">
         <UTooltip v-if="!searchOpen && !search" :text="t('koko.fileManagement.filterCurrentDirectory')">
           <UButton
@@ -397,8 +356,25 @@ defineExpose({
       </div>
     </div>
 
+    <div class="mx-0.5 h-4 w-px shrink-0 bg-(--app-border)" aria-hidden="true" />
+
+    <!-- File operations: hidden / create / upload -->
     <div data-sftp-tour="file-actions" class="flex shrink-0 items-center gap-0.5">
       <template v-if="!isNarrow">
+        <UTooltip
+          :text="showHiddenFiles ? t('koko.fileManagement.hideHiddenFiles') : t('koko.fileManagement.showHiddenFiles')"
+        >
+          <UButton
+            :icon="showHiddenFiles ? 'i-lucide-eye' : 'i-lucide-eye-off'"
+            color="neutral"
+            :variant="showHiddenFiles ? 'soft' : 'ghost'"
+            size="sm"
+            :aria-label="
+              showHiddenFiles ? t('koko.fileManagement.hideHiddenFiles') : t('koko.fileManagement.showHiddenFiles')
+            "
+            @click="showHiddenFiles = !showHiddenFiles"
+          />
+        </UTooltip>
         <UTooltip :text="t('koko.fileManagement.newFolder')">
           <UButton
             icon="i-lucide-folder-plus"
@@ -420,43 +396,42 @@ defineExpose({
           />
         </UTooltip>
       </template>
-      <UDropdownMenu v-else :items="createMenuItems" size="sm" :content="{ align: 'end', side: 'bottom' }">
+      <UDropdownMenu v-else :items="fileOpsMenuItems" size="sm" :content="{ align: 'end', side: 'bottom' }">
         <UButton
-          icon="i-lucide-plus"
+          icon="i-lucide-ellipsis"
           color="neutral"
           variant="ghost"
           size="sm"
-          :title="t('koko.fileManagement.newEntry')"
-          :aria-label="t('koko.fileManagement.newEntry')"
+          :title="t('Common.More')"
+          :aria-label="t('Common.More')"
         />
       </UDropdownMenu>
-
       <UTooltip :text="t('koko.actions.upload')">
         <UButton
-          icon="i-lucide-upload"
-          color="primary"
-          variant="solid"
-          size="xs"
-          :label="showUploadLabel ? t('koko.actions.upload') : undefined"
+          icon="i-lucide-cloud-upload"
+          color="neutral"
+          variant="ghost"
+          size="sm"
           :aria-label="t('koko.actions.upload')"
           @click="uploadInput?.click()"
         />
       </UTooltip>
       <input ref="uploadInput" type="file" multiple class="hidden" @change="emit('upload', $event)" />
+    </div>
 
-      <template v-if="showWorkbenchActions">
-        <div class="mx-0.5 h-4 w-px shrink-0 bg-(--app-border)" aria-hidden="true" />
-        <UTooltip :text="t('koko.fileManagement.addRemoteSftp')">
-          <UButton
-            data-sftp-tour="remote-connect"
-            icon="i-lucide-plus"
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            :aria-label="t('koko.fileManagement.addRemoteSftp')"
-            @click="emit('addRemote')"
-          />
-        </UTooltip>
+    <template v-if="showWorkbenchActions">
+      <div class="mx-0.5 h-4 w-px shrink-0 bg-(--app-border)" aria-hidden="true" />
+      <div class="flex shrink-0 items-center gap-0.5">
+        <UButton
+          data-sftp-tour="remote-connect"
+          icon="i-lucide-server"
+          color="primary"
+          variant="soft"
+          size="sm"
+          :label="t('koko.fileManagement.addRemoteSftp')"
+          :aria-label="t('koko.fileManagement.addRemoteSftp')"
+          @click="emit('addRemote')"
+        />
         <UTooltip :text="t('koko.fileManagement.featureTour')">
           <UButton
             icon="i-lucide-circle-help"
@@ -467,8 +442,8 @@ defineExpose({
             @click="emit('startTour')"
           />
         </UTooltip>
-      </template>
-    </div>
+      </div>
+    </template>
   </div>
 
   <div v-if="manager.currentUploadName.value" class="border-b border-(--app-border) bg-(--app-panel-bg) px-3 py-1.5">
