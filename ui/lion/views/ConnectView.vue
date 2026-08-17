@@ -21,6 +21,8 @@ import { getCurrentConnectParams } from "@/lion/utils/common";
 import { lunaCommunicator } from "@/lion/utils/lunaBus";
 import { ErrorStatusCodes } from "@/lion/utils/status";
 
+const emit = defineEmits<{ disconnected: [message: string] }>();
+
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const { t } = useI18n();
@@ -67,19 +69,29 @@ const {
 const drawShow = ref(false);
 const autoFit = ref<boolean>(true);
 
-const resolveContainerSize = () => {
+const resolveVisibleContainerSize = () => {
   const rect = containerRef.value?.getBoundingClientRect();
+  if (!rect || rect.width <= 0 || rect.height <= 0) return null;
+
   return {
-    width: Math.max(Math.floor(rect?.width || window.innerWidth), 640),
-    height: Math.max(Math.floor(rect?.height || window.innerHeight), 480)
+    width: Math.max(Math.floor(rect.width), 640),
+    height: Math.max(Math.floor(rect.height), 480)
   };
 };
 
+let remoteWidth = 0;
+let remoteHeight = 0;
+
 const debouncedResize = useDebounceFn(() => {
-  const { width, height } = resolveContainerSize();
+  const size = resolveVisibleContainerSize();
+  if (!size) return;
+
+  const { width, height } = size;
   resizeGuaScale(width, height);
-  if (!autoFit.value) return;
+  if (!autoFit.value || (width === remoteWidth && height === remoteHeight)) return;
   sendGuaSize(width, height);
+  remoteWidth = width;
+  remoteHeight = height;
 }, 300);
 
 let resizeObserver: ResizeObserver | null = null;
@@ -298,7 +310,9 @@ onMounted(async () => {
   activeToken.value = token;
   activeTicket.value = ticket;
   ticketCreatedAt = ticket ? Date.now() : 0;
-  const { width, height } = resolveContainerSize();
+  const initialSize = resolveVisibleContainerSize();
+  const width = initialSize?.width || Math.max(window.innerWidth, 640);
+  const height = initialSize?.height || Math.max(window.innerHeight, 480);
   connectToGuacamole(
     ws,
     {
@@ -381,6 +395,10 @@ const handleDownloadFile = async (file: { name: string; streamName?: GuacamoleFi
 };
 
 const fitPercentage = computed(() => Math.floor(scale.value * 100));
+
+watch(connectStatus, (status) => {
+  if (status === "Disconnected" && !disposed) emit("disconnected", t("GuacamoleErrDisconnected"));
+});
 
 watch(
   autoFit,

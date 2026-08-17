@@ -256,6 +256,10 @@ defineExpose({
   color: var(--app-fg);
 }
 
+:deep(.cm-content) {
+  padding-block: 5px !important;
+}
+
 :deep(.cm-activeLine),
 :deep(.cm-activeLineGutter) {
   background: var(--app-hover-soft) !important;
