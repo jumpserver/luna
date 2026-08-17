@@ -121,9 +121,14 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
   }
 
   private handleAssetDetailError(error: any): void {
+    const isAssetUnavailable =
+      error?.status === 404 || error?.error?.code === 'object_does_not_exist';
     const backendDetail = error?.error?.detail;
-    const message =
-      typeof backendDetail === 'string' && backendDetail
+    const message = isAssetUnavailable
+      ? this._i18n.instant(
+          'Asset not found or You have no permission to access it, please refresh asset tree'
+        )
+      : typeof backendDetail === 'string' && backendDetail
         ? backendDetail
         : this._i18n.instant('Unable to connect to asset');
     this._message.error(message, { nzDuration: 5000 });
