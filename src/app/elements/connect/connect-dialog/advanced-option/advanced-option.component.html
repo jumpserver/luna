@@ -13,7 +13,7 @@
               <label
                 nz-checkbox
                 [name]="item.field"
-                [ngModel]="connectOption[item.field]"
+                [ngModel]="getOptionValue(item)"
                 (ngModelChange)="connectOption[item.field]=$event; onChange()"
               >
                 {{ item.label | translate }}
@@ -25,7 +25,7 @@
               <nz-select
                 style="width: 100%"
                 [name]="item.field"
-                [ngModel]="connectOption[item.field]"
+                [ngModel]="getOptionValue(item)"
                 (ngModelChange)="connectOption[item.field]=$event; onChange()"
               >
                 <nz-option
@@ -40,7 +40,7 @@
             <ng-container *ngIf="item.type === 'radio'">
               <nz-radio-group
                 [name]="item.field"
-                [ngModel]="connectOption[item.field]"
+                [ngModel]="getOptionValue(item)"
                 (ngModelChange)="connectOption[item.field]=$event; onChange()"
               >
                 <label

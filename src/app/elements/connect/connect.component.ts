@@ -170,23 +170,21 @@ export class ElementConnectComponent implements OnInit, OnDestroy {
     const connectMethod = connectInfo.connectMethod;
     const connectOption = connectInfo.connectOption || {};
     connectInfo.connectOption = connectOption;
-    if (connectInfo.protocol.name === 'rdp' && connectOption['remote_microphone'] === undefined) {
-      connectOption['remote_microphone'] = (
-        this._settingSvc.setting.graphics.rdp_client_option || []
-      ).includes('remote_microphone');
-    }
     const connToken = await this._connectTokenSvc.create(asset, connectInfo);
 
     if (!connToken) {
       this._logger.info('Create connection token failed');
       return;
     }
-    let appletConnectMethod = connectOption ? connectOption['appletConnectMethod'] : 'web';
+    const defaultAppletConnectMethod =
+      this._settingSvc.setting.graphics.applet_connection_method || 'web';
+    let appletConnectMethod = connectOption['appletConnectMethod'] ?? defaultAppletConnectMethod;
 
     if (!this._settingSvc.hasXPack()) {
       appletConnectMethod = 'web';
     }
-    let virtualappConnectMethod = connectOption ? connectOption['virtualappConnectMethod'] : 'web';
+    let virtualappConnectMethod =
+      connectOption['virtualappConnectMethod'] ?? defaultAppletConnectMethod;
     if (!this._settingSvc.hasXPack()) {
       virtualappConnectMethod = 'web';
     }
