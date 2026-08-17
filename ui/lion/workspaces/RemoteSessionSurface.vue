@@ -39,7 +39,7 @@ watch(tokenId, () => void prepareSession(), { immediate: true });
       @retry="emit('reconnect')"
     >
       <div class="relative h-full w-full min-h-0">
-        <ConnectView @disconnected="handleDisconnected" />
+        <ConnectView :tab-id="tab.id" @disconnected="handleDisconnected" />
       </div>
     </BaseWorkspaceShell>
   </LionProvider>

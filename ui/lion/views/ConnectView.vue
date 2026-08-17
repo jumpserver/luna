@@ -5,13 +5,7 @@ import { connectorSessionKey } from "@jumpserver/connectors-core";
 import { useDebounceFn } from "@vueuse/core";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import ClipBoardText from "@/lion/components/ClipBoardText.vue";
-import CombinationKey from "@/lion/components/CombinationKey.vue";
-import FileManager from "@/lion/components/FileManager.vue";
-import KeyboardOption from "@/lion/components/KeyboardOption.vue";
 import Osk from "@/lion/components/Osk.vue";
-import OtherOption from "@/lion/components/OtherOption.vue";
-import SessionShare from "@/lion/components/SessionShare/index.vue";
 import { useGuacamoleClient } from "@/lion/hooks/useGuacamoleClient";
 import { createLionConnectTicket } from "@/lion/hooks/useLionConnectTicket";
 import { useLionEndpoint } from "@/lion/hooks/useLionEndpoint";
@@ -20,6 +14,10 @@ import { withLionWsUrl } from "@/lion/utils/base";
 import { getCurrentConnectParams } from "@/lion/utils/common";
 import { lunaCommunicator } from "@/lion/utils/lunaBus";
 import { ErrorStatusCodes } from "@/lion/utils/status";
+import { useLionSessionShareAdapter } from "@/lion/workspaces/useLionSessionShareAdapter";
+import { registerLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
+
+const props = defineProps<{ tabId?: string }>();
 
 const emit = defineEmits<{ disconnected: [message: string] }>();
 
@@ -66,7 +64,6 @@ const {
   sendInputActive
 } = useGuacamoleClient(t, endpointUrl, () => ({ ticket: activeTicket.value, token: activeToken.value }));
 
-const drawShow = ref(false);
 const autoFit = ref<boolean>(true);
 
 const resolveVisibleContainerSize = () => {
@@ -114,6 +111,8 @@ const uploadingFiles = ref<Array<UploadItem>>([]);
 const isUploading = ref(false);
 const displayUploadingFiles = ref<Array<LionUploadFileInfo>>([]);
 const showOsk = ref<boolean>(false);
+const clipboardDraft = ref("");
+const showRemoteClipboard = ref(false);
 let uploadSequence = 0;
 
 const createUploadId = () => {
@@ -134,7 +133,6 @@ function getKeyboardLayout() {
 }
 
 const keyboardLayout = ref<string>(getKeyboardLayout());
-const currentTab = ref("general");
 const shouldEnableScroll = ref(false);
 
 const refreshConnectTicket = async () => {
@@ -258,12 +256,6 @@ const preventDefault = (event: Event) => {
 let displayElement: HTMLElement | null = null;
 let disposed = false;
 
-const handleLunaOpen = () => {
-  nextTick(() => {
-    drawShow.value = !drawShow.value;
-  });
-};
-
 const handleLunaInputActive = () => {
   nextTick(() => sendInputActive());
 };
@@ -293,7 +285,6 @@ onMounted(async () => {
   await nextTick();
   if (disposed) return;
 
-  lunaCommunicator.onLuna(LUNA_MESSAGE_TYPE.OPEN, handleLunaOpen);
   lunaCommunicator.onLuna(LUNA_MESSAGE_TYPE.INPUT_ACTIVE, handleLunaInputActive);
 
   let connectConfig: Awaited<ReturnType<typeof resolveConnectConfig>>;
@@ -361,16 +352,10 @@ onUnmounted(() => {
   displayElement?.removeEventListener("contextmenu", preventDefault, false);
   displayElement = null;
   disconnectGuaclient();
-  lunaCommunicator.offLuna(LUNA_MESSAGE_TYPE.OPEN, handleLunaOpen);
   lunaCommunicator.offLuna(LUNA_MESSAGE_TYPE.INPUT_ACTIVE, handleLunaInputActive);
   lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.CLOSE, "");
   window.removeEventListener("focus", debouncedSendClipboardToRemote);
 });
-
-const ClipBoardTextChange = (text: string) => {
-  if (!text?.trim()) return;
-  sendTextToRemote(text);
-};
 
 const handleScreenKeyboard = (name: string, keysym: any) => {
   if (name === "keydown") sendKeyEvent(1, keysym);
@@ -422,20 +407,60 @@ const scaleGuaDisplay = (value: number) => {
   scale.value = newScale;
 };
 
-const onlineUsers = computed(() => Object.values(onlineUsersMap.value).filter(Boolean));
-const assetName = computed(() => sessionObject.value?.asset?.name || "");
 const isRemoteApp = computed(() => Boolean(sessionObject.value?.remote_app));
-
-const drawerTabs = computed(() => {
-  const tabs = [{ value: "general", label: t("General"), icon: "i-lucide-keyboard" }];
-  if (driverName.value) {
-    tabs.push({ value: "file-manager", label: t("FileManagement"), icon: "i-lucide-folder-kanban" });
-  }
-  if (sessionObject.value) {
-    tabs.push({ value: "share-collaboration", label: t("SessionShare"), icon: "i-lucide-share-2" });
-  }
-  return tabs;
+const shareAdapter = useLionSessionShareAdapter({
+  endpointUrl,
+  enableShare,
+  onlineUsersMap,
+  sessionObject,
+  ticket: activeTicket,
+  tokenId: activeToken,
+  refreshTicket: refreshConnectTicket
 });
+
+const controller = {
+  actionPermission: action_permission,
+  autoFit,
+  clipboardDraft,
+  clipboardPasteTextLimit,
+  currentFolder,
+  currentFolderFiles,
+  displayUploadingFiles,
+  driverName,
+  fileSystemLoading: fileFsLoading,
+  fitPercentage,
+  hasClipboardPermission,
+  isRemoteApp,
+  keyboardLayout,
+  remoteClipboardText,
+  share: shareAdapter,
+  showRemoteClipboard,
+  virtualKeyboardOpen: showOsk,
+  downloadFile: handleDownloadFile,
+  openFolder: handleFolderOpen,
+  removeUploadFile: handleRemoveFile,
+  sendClipboardText: (text: string) => {
+    if (text) sendTextToRemote(text);
+  },
+  sendCombinationKeys: handleCombineKeys,
+  setAutoFit: (value: boolean) => {
+    autoFit.value = value;
+  },
+  setScalePercentage: (value: number) => {
+    autoFit.value = false;
+    scaleGuaDisplay(value);
+  },
+  uploadFile: handleUploadFile
+};
+
+watch(
+  () => props.tabId,
+  (tabId, _previous, onCleanup) => {
+    if (!tabId) return;
+    onCleanup(registerLionWorkspaceSession(tabId, controller));
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
@@ -455,73 +480,4 @@ const drawerTabs = computed(() => {
 
     <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
   </div>
-
-  <USlideover v-model:open="drawShow" :ui="{ content: 'w-full max-w-[min(800px,90vw)] min-w-[600px]' }">
-    <template #header>
-      <div class="flex w-full items-center justify-between gap-3">
-        <span class="font-medium">{{ assetName }}</span>
-        <UButton
-          color="neutral"
-          variant="ghost"
-          icon="i-lucide-x"
-          @click="
-            () => {
-              drawShow = false;
-            }
-          "
-        />
-      </div>
-    </template>
-
-    <template #body>
-      <UTabs v-model="currentTab" :items="drawerTabs" value-key="value" label-key="label" class="w-full" />
-
-      <div class="mt-4 space-y-4">
-        <template v-if="currentTab === 'general'">
-          <ClipBoardText
-            :disabled="!hasClipboardPermission"
-            :copy-disabled="!action_permission.enable_copy"
-            :paste-disabled="!action_permission.enable_paste"
-            :paste-policy-disabled="action_permission.clipboard_policy?.paste?.enabled === false"
-            :remote-text="remoteClipboardText"
-            :text-limit="clipboardPasteTextLimit"
-            @update:text="ClipBoardTextChange"
-          />
-          <KeyboardOption v-if="!isRemoteApp" v-model:opened="showOsk" v-model:keyboard="keyboardLayout" />
-          <CombinationKey :is-remote-app="isRemoteApp" @combine-keys="handleCombineKeys" />
-          <OtherOption
-            v-model:auto-fit="autoFit"
-            :fit-percentage="fitPercentage"
-            :is-remote-app="isRemoteApp"
-            @update-scale="scaleGuaDisplay"
-          />
-        </template>
-
-        <FileManager
-          v-else-if="currentTab === 'file-manager' && driverName"
-          :loading="fileFsLoading"
-          :files="currentFolderFiles"
-          :name="driverName"
-          :folder="currentFolder"
-          :display-uploading-files="displayUploadingFiles"
-          :download-disabled="action_permission?.enable_download === false"
-          :upload-disabled="action_permission?.enable_upload === false"
-          @open-folder="handleFolderOpen"
-          @download-file="handleDownloadFile"
-          @upload-file="handleUploadFile"
-          @remove-upload-file="handleRemoveFile"
-        />
-
-        <SessionShare
-          v-else-if="currentTab === 'share-collaboration' && sessionObject"
-          :session="sessionObject.id"
-          :users="onlineUsers"
-          :disable-create="!enableShare"
-          :endpoint-url="endpointUrl"
-          :token-id="activeToken"
-          :ticket="activeTicket"
-        />
-      </div>
-    </template>
-  </USlideover>
 </template>

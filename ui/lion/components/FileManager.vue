@@ -19,6 +19,7 @@ const props = defineProps<{
   displayUploadingFiles: LionUploadFileInfo[];
   downloadDisabled?: boolean;
   uploadDisabled?: boolean;
+  compact?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -206,7 +207,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex min-h-0 flex-col gap-4">
+  <div class="flex min-h-0 flex-col" :class="compact ? 'gap-2' : 'gap-4'">
     <div class="flex items-center gap-2 overflow-x-auto">
       <UButton
         icon="i-lucide-chevron-left"
@@ -244,8 +245,13 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2">
-      <UInput v-model="searchValue" :placeholder="t('PleaseInput')" class="min-w-40 flex-1">
+    <div class="flex items-center gap-1.5" :class="compact ? 'flex-nowrap' : 'flex-wrap'">
+      <UInput
+        v-model="searchValue"
+        :placeholder="t('PleaseInput')"
+        :size="compact ? 'xs' : 'md'"
+        class="min-w-0 flex-1"
+      >
         <template #leading>
           <UIcon name="i-lucide-search" class="size-4" />
         </template>
@@ -256,17 +262,19 @@ onUnmounted(() => {
         icon="i-lucide-upload"
         color="neutral"
         variant="soft"
-        size="sm"
+        :size="compact ? 'xs' : 'sm'"
         :disabled="uploadDisabled"
+        :aria-label="t('UploadFile')"
+        :title="t('UploadFile')"
         @click="fileInputRef?.click()"
       >
-        {{ t("UploadFile") }}
+        <span v-if="!compact">{{ t("UploadFile") }}</span>
       </UButton>
       <UButton
         icon="i-lucide-list-restart"
         color="neutral"
         variant="ghost"
-        size="sm"
+        :size="compact ? 'xs' : 'sm'"
         :aria-label="t('TransferHistory')"
         @click="transferOpen = true"
       >
@@ -276,13 +284,16 @@ onUnmounted(() => {
         icon="i-lucide-refresh-ccw"
         color="neutral"
         variant="ghost"
-        size="sm"
+        :size="compact ? 'xs' : 'sm'"
         :aria-label="t('Refresh')"
         @click="handleRefresh"
       />
     </div>
 
-    <UCard :ui="{ body: 'p-0' }">
+    <UCard
+      :class="compact ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : ''"
+      :ui="{ body: compact ? 'flex min-h-0 flex-1 flex-col p-0' : 'p-0' }"
+    >
       <div v-if="loading" class="flex items-center justify-center p-8 text-sm text-muted">
         <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
       </div>
@@ -292,7 +303,7 @@ onUnmounted(() => {
       <div
         v-else
         ref="viewportRef"
-        class="h-[clamp(240px,calc(100vh-420px),520px)] overflow-auto"
+        :class="compact ? 'min-h-0 flex-1 overflow-auto' : 'h-[clamp(240px,calc(100vh-420px),520px)] overflow-auto'"
         @scroll="scrollTop = ($event.currentTarget as HTMLElement).scrollTop"
       >
         <div class="relative" :style="{ height: `${totalHeight}px` }">

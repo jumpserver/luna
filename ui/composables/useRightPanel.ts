@@ -1,4 +1,4 @@
-export type RightPanelTab = "session" | "ai" | "sftp";
+export type RightPanelTab = "session" | "lion-control" | "lion-files" | "ai" | "sftp";
 
 const MIN_PANEL_WIDTH = 280;
 const MAX_PANEL_WIDTH = 520;

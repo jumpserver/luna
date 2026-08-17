@@ -7,6 +7,7 @@ import {
 } from "@jumpserver/koko";
 import { useNow } from "@vueuse/core";
 import prettyBytes from "pretty-bytes";
+import { getLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
 import RightPanelMetricSparkline from "~/components/RightPanel/metricSparkline.vue";
 import RightPanelSessionShareSection from "~/components/RightPanel/sessionShareSection.vue";
 
@@ -46,6 +47,7 @@ const sessionDetails = computed(() => {
   const session = activeSession.value;
   return session ? getSessionDetails(session.id) || null : null;
 });
+const lionSession = computed(() => getLionWorkspaceSession(activeSession.value?.id || ""));
 
 const isConnectedSession = computed(() => activeSession.value?.status === "connected");
 const isLinuxSSHSession = computed(() => {
@@ -103,7 +105,11 @@ function formatUptime(seconds: number) {
   return days > 0 ? t("RightPanel.MetricsUptimeDays", { days, hours }) : t("RightPanel.MetricsUptimeHours", { hours });
 }
 
-const showShareSection = computed(() => Boolean(sessionDetails.value?.shareAllowed && isConnectedSession.value));
+const showShareSection = computed(() => {
+  if (!isConnectedSession.value) return false;
+  if (lionSession.value) return Boolean(lionSession.value.share.sessionId.value);
+  return Boolean(sessionDetails.value?.shareAllowed);
+});
 
 const sessionRows = computed(() => {
   const session = activeSession.value;
@@ -119,7 +125,12 @@ const sessionRows = computed(() => {
     { label: t("RightPanel.SessionDuration"), value: connectionDuration.value },
     {
       label: t("RightPanel.SessionId"),
-      value: details?.sessionId || connectionStore.sessionId || tokenId || "-"
+      value:
+        details?.sessionId ||
+        lionSession.value?.share.sessionId.value ||
+        (!lionSession.value ? connectionStore.sessionId : "") ||
+        tokenId ||
+        "-"
     }
   ];
 });
@@ -132,9 +143,13 @@ const statusLabel = computed(() => {
   return t("RightPanel.SessionStatusIdle");
 });
 
-const canShare = computed(
-  () => showShareSection.value && Boolean(connectionStore.enableShare && connectionStore.sessionId)
-);
+const canShare = computed(() => {
+  if (!showShareSection.value) return false;
+  if (lionSession.value) {
+    return Boolean(lionSession.value.share.enableShare.value && lionSession.value.share.sessionId.value);
+  }
+  return Boolean(connectionStore.enableShare && connectionStore.sessionId);
+});
 </script>
 
 <template>

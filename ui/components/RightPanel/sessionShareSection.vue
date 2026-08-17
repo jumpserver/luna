@@ -1,28 +1,34 @@
 <script setup lang="ts">
-import type { ShareUserOptions } from "@jumpserver/koko";
+import type { SuggestionUser } from "@/lion/api";
 import { useKokoSessionAdapter } from "@jumpserver/koko";
+import { getLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
 
 const props = defineProps<{
   disabled?: boolean;
 }>();
 
 const { t } = useI18n();
-const {
-  onlineUsers,
-  shareInfo,
-  userOptions,
-  searchUsers,
-  createShareLink,
-  copyShareURL,
-  removeShareUser,
-  resetShareState
-} = useKokoSessionAdapter();
+const { activePaneId, activeTab } = useWorkspaceTabs();
+const kokoAdapter = useKokoSessionAdapter();
+const activeSessionId = computed(() => {
+  const tab = activeTab.value;
+  return tab?.panes.find((pane) => pane.id === activePaneId.value)?.id || tab?.id || "";
+});
+const lionAdapter = computed(() => getLionWorkspaceSession(activeSessionId.value)?.share || null);
+const onlineUsers = computed(() => lionAdapter.value?.onlineUsers.value || kokoAdapter.onlineUsers.value);
+const shareInfo = computed(() => lionAdapter.value?.shareInfo.value || kokoAdapter.shareInfo.value);
+const userOptions = computed<SuggestionUser[]>(
+  () => (lionAdapter.value?.userOptions.value || kokoAdapter.userOptions.value) as SuggestionUser[]
+);
+const hasMoreUsers = computed(() => Boolean(lionAdapter.value?.hasMoreUsers.value));
+const adapterKey = computed(() => `${lionAdapter.value ? "lion" : "koko"}:${activeSessionId.value}`);
 
 const shareModalOpen = ref(false);
 const searchLoading = ref(false);
 const showLinkResult = ref(false);
 const searchQuery = ref("");
 const selectedUserIds = ref<string[]>([]);
+const selectedUsers = ref<Record<string, SuggestionUser>>({});
 
 const shareLinkRequest = reactive({
   expiredTime: 10,
@@ -37,7 +43,7 @@ const expiredOptions = [
   { label: t("RightPanel.ExpiredHour", { count: 1 }), value: 60 }
 ];
 
-const actionPermOptions = [
+const actionPermOptions: Array<{ label: string; value: "writable" | "readonly" }> = [
   { label: t("RightPanel.Writable"), value: "writable" },
   { label: t("RightPanel.ReadOnly"), value: "readonly" }
 ];
@@ -52,9 +58,12 @@ const userSelectItems = computed(() =>
 function toggleShareUser(userId: string) {
   if (selectedUserIds.value.includes(userId)) {
     selectedUserIds.value = selectedUserIds.value.filter((id) => id !== userId);
+    delete selectedUsers.value[userId];
     return;
   }
 
+  const user = userOptions.value.find((item) => item.id === userId);
+  if (user) selectedUsers.value[userId] = user;
   selectedUserIds.value = [...selectedUserIds.value, userId];
 }
 
@@ -62,11 +71,21 @@ watch(
   () => shareInfo.value.sessionId,
   () => {
     selectedUserIds.value = [];
+    selectedUsers.value = {};
     searchQuery.value = "";
     searchLoading.value = false;
     showLinkResult.value = Boolean(shareInfo.value.shareCode);
   }
 );
+
+watch(adapterKey, () => {
+  shareModalOpen.value = false;
+  showLinkResult.value = Boolean(shareInfo.value.shareCode);
+  selectedUserIds.value = [];
+  selectedUsers.value = {};
+  searchQuery.value = "";
+  searchLoading.value = false;
+});
 
 watch(
   () => shareInfo.value.shareCode,
@@ -79,19 +98,29 @@ watch(
   () => userOptions.value,
   (options) => {
     if (options?.length) searchLoading.value = false;
+    for (const user of options || []) {
+      if (selectedUserIds.value.includes(user.id)) selectedUsers.value[user.id] = user;
+    }
   }
 );
 
-const debouncedSearch = useDebounceFn((query: string) => {
+async function runSearch(query: string, loadMore = false) {
   searchLoading.value = true;
-  searchUsers(query);
-}, 300);
+  const lion = lionAdapter.value;
+  if (!lion) {
+    kokoAdapter.searchUsers(query);
+    return;
+  }
+  await lion.searchUsers(query, loadMore);
+  searchLoading.value = false;
+}
 
-const selectedShareUsers = computed<ShareUserOptions[]>(
-  () =>
-    selectedUserIds.value
-      .map((id) => userOptions.value.find((item) => item.id === id))
-      .filter(Boolean) as ShareUserOptions[]
+const debouncedSearch = useDebounceFn((query: string) => void runSearch(query), 300);
+
+const selectedShareUsers = computed<SuggestionUser[]>(() =>
+  selectedUserIds.value
+    .map((id) => selectedUsers.value[id] || userOptions.value.find((item) => item.id === id))
+    .filter((item): item is SuggestionUser => Boolean(item))
 );
 
 function openShareModal() {
@@ -100,24 +129,34 @@ function openShareModal() {
 }
 
 function handleCreateLink() {
-  createShareLink({
+  const request = {
     expiredTime: shareLinkRequest.expiredTime,
     actionPerm: shareLinkRequest.actionPerm,
     users: selectedShareUsers.value
-  });
+  };
+  if (lionAdapter.value) void lionAdapter.value.createShareLink(request);
+  else kokoAdapter.createShareLink(request);
 }
 
 function handleRemoveShareUser(userId: string) {
   const user = onlineUsers.value.find((item) => item.user_id === userId && !item.primary);
   if (!user) return;
-  removeShareUser(user);
+  if (lionAdapter.value) void lionAdapter.value.removeShareUser(user);
+  else kokoAdapter.removeShareUser(user as any);
 }
 
 function handleBack() {
-  resetShareState();
+  if (lionAdapter.value) lionAdapter.value.resetShareState();
+  else kokoAdapter.resetShareState();
   showLinkResult.value = false;
   selectedUserIds.value = [];
+  selectedUsers.value = {};
   searchQuery.value = "";
+}
+
+function handleCopyShareURL() {
+  if (lionAdapter.value) void lionAdapter.value.copyShareURL();
+  else kokoAdapter.copyShareURL();
 }
 </script>
 
@@ -210,7 +249,11 @@ function handleBack() {
                 class="cursor-pointer"
                 @click="toggleShareUser(userId)"
               >
-                {{ userSelectItems.find((item) => item.value === userId)?.label || userId }}
+                {{
+                  selectedUsers[userId]?.username ||
+                  userSelectItems.find((item) => item.value === userId)?.label ||
+                  userId
+                }}
                 <UIcon name="i-lucide-x" class="ml-1 size-3" />
               </UBadge>
             </div>
@@ -233,6 +276,16 @@ function handleBack() {
                 />
                 <span class="truncate">{{ item.label }}</span>
               </button>
+              <UButton
+                v-if="hasMoreUsers"
+                block
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                :loading="searchLoading"
+                :label="t('RightPanel.LoadMoreUsers')"
+                @click="runSearch(searchQuery, true)"
+              />
             </div>
           </UFormField>
 
@@ -295,7 +348,7 @@ function handleBack() {
         </template>
         <template v-else>
           <UButton color="neutral" variant="ghost" :label="t('RightPanel.Back')" @click="handleBack" />
-          <UButton color="success" icon="i-lucide-copy" :label="t('RightPanel.CopyLink')" @click="copyShareURL" />
+          <UButton color="success" icon="i-lucide-copy" :label="t('RightPanel.CopyLink')" @click="handleCopyShareURL" />
         </template>
       </template>
     </UModal>
