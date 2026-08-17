@@ -2,6 +2,10 @@
 import WorkspaceBatchCommandBottomPanel from "~/components/Workspace/batchCommandBottomPanel.vue";
 import WorkspaceShell from "~/components/Workspace/shell.vue";
 import WorkspaceStatusFooter from "~/components/Workspace/statusFooter.vue";
+import SettingsAboutPage from "~/pages/setting/about.vue";
+import SettingsAppearancePage from "~/pages/setting/appearance.vue";
+import SettingsApplicationPage from "~/pages/setting/application.vue";
+import SettingsGeneralPage from "~/pages/setting/general.vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
@@ -20,6 +24,7 @@ const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const { batchPanelOpen } = useBatchCommandPanel();
+const { open: settingsOpen, activeSection: activeSettingsSection } = useSettingsWindow();
 
 const showWorkspaceSidebar = computed(
   () =>
@@ -131,7 +136,7 @@ onBeforeUnmount(() => {
 
 <template>
   <UCard variant="outline" :ui="cardUi" style="background-color: transparent">
-    <WorkspaceShell :sidebar-visible="showWorkspaceSidebar" :focus-mode="focusMode">
+    <WorkspaceShell v-show="!settingsOpen" :sidebar-visible="showWorkspaceSidebar" :focus-mode="focusMode">
       <template #header>
         <Header />
       </template>
@@ -178,5 +183,19 @@ onBeforeUnmount(() => {
         </div>
       </template>
     </WorkspaceShell>
+
+    <SettingsShell
+      v-if="settingsOpen"
+      mode="inline"
+      :active-section="activeSettingsSection"
+      class="fixed inset-0 z-100"
+    >
+      <KeepAlive>
+        <SettingsGeneralPage v-if="activeSettingsSection === 'general'" />
+        <SettingsAppearancePage v-else-if="activeSettingsSection === 'appearance'" />
+        <SettingsApplicationPage v-else-if="activeSettingsSection === 'application'" embedded />
+        <SettingsAboutPage v-else />
+      </KeepAlive>
+    </SettingsShell>
   </UCard>
 </template>

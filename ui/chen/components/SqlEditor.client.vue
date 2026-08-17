@@ -248,7 +248,10 @@ defineExpose({
 </script>
 
 <template>
-  <div ref="container" class="h-full min-h-0 w-full overflow-hidden rounded-md border border-default bg-default" />
+  <div
+    ref="container"
+    class="h-full min-h-0 w-full overflow-hidden rounded-r-md border-y border-r border-default bg-default"
+  />
 </template>
 
 <style scoped>

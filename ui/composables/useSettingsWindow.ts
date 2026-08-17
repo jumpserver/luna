@@ -1,3 +1,5 @@
+export type SettingsSection = "general" | "appearance" | "application" | "about";
+
 export const warmupWebSettings = () => {
   void Promise.all([
     import("~/components/Settings/settingsPanel.vue"),
@@ -9,24 +11,39 @@ export const warmupWebSettings = () => {
 
 export const useSettingsWindow = () => {
   const route = useRoute();
-  const localePath = useLocalePath();
-  const returnPath = useState("settings-return-path", () => "/");
+  const open = useState("settings-open", () => false);
+  const activeSection = useState<SettingsSection>("settings-active-section", () => "general");
+  const activeApplicationProtocol = useState("settings-active-application-protocol", () => "ssh");
 
   const openSettings = async (path = "/setting/general") => {
-    if (!route.path.startsWith("/setting/")) {
-      returnPath.value = route.fullPath;
+    const [, section, protocol] =
+      path.match(/^\/setting\/(general|appearance|application|about)(?:\/([^/?#]+))?/) || [];
+
+    if (section) {
+      activeSection.value = section as SettingsSection;
+    }
+    if (section === "application" && protocol) {
+      activeApplicationProtocol.value = decodeURIComponent(protocol);
     }
 
-    await navigateTo(localePath({ path }));
+    open.value = true;
   };
 
   const closeSettings = async () => {
-    const target = returnPath.value.startsWith("/setting/") ? "/" : returnPath.value;
-    returnPath.value = "/";
-    await navigateTo(target || "/");
+    if (open.value) {
+      open.value = false;
+      return;
+    }
+
+    if (route.path.startsWith("/setting/")) {
+      await navigateTo("/");
+    }
   };
 
   return {
+    open,
+    activeSection,
+    activeApplicationProtocol,
     openSettings,
     closeSettings,
     warmupWebSettings

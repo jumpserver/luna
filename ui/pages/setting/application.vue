@@ -2,53 +2,66 @@
 import type { NavigationMenuItem } from "@nuxt/ui";
 import { getConfiguredAppName, isDefaultAppName } from "~/composables/useAppName";
 
+const props = defineProps<{
+  embedded?: boolean;
+}>();
+
 definePageMeta({
   layout: "setting"
 });
 
 const { t } = useI18n();
 const localePath = useLocalePath();
+const { activeApplicationProtocol } = useSettingsWindow();
 const HIDDEN_DATABASE_PROTOCOLS = new Set(["mongodb", "oracle"]);
 const appName = getConfiguredAppName();
 
+const protocolComponents = {
+  ssh: defineAsyncComponent(() => import("~/pages/setting/application/ssh.vue")),
+  telnet: defineAsyncComponent(() => import("~/pages/setting/application/telnet.vue")),
+  sftp: defineAsyncComponent(() => import("~/pages/setting/application/sftp.vue")),
+  rdp: defineAsyncComponent(() => import("~/pages/setting/application/rdp.vue")),
+  vnc: defineAsyncComponent(() => import("~/pages/setting/application/vnc.vue")),
+  mysql: defineAsyncComponent(() => import("~/pages/setting/application/mysql.vue")),
+  mariadb: defineAsyncComponent(() => import("~/pages/setting/application/mariadb.vue")),
+  mongodb: defineAsyncComponent(() => import("~/pages/setting/application/mongodb.vue")),
+  redis: defineAsyncComponent(() => import("~/pages/setting/application/redis.vue")),
+  pg: defineAsyncComponent(() => import("~/pages/setting/application/pg.vue")),
+  oracle: defineAsyncComponent(() => import("~/pages/setting/application/oracle.vue")),
+  sqlserver: defineAsyncComponent(() => import("~/pages/setting/application/sqlserver.vue"))
+} as const;
+
+type ApplicationProtocol = keyof typeof protocolComponents;
+
+const protocolItem = (label: string, protocol: ApplicationProtocol, routeName: string): NavigationMenuItem => {
+  if (!props.embedded) {
+    return {
+      label,
+      to: localePath({ name: routeName })
+    };
+  }
+
+  return {
+    label,
+    active: activeApplicationProtocol.value === protocol,
+    onSelect: () => {
+      activeApplicationProtocol.value = protocol;
+    }
+  };
+};
+
 const appMenu = computed<NavigationMenuItem[]>(() => {
   const databaseChildren = [
-    {
-      label: "MySQL",
-      to: localePath({ name: "setting-application-mysql" }),
-      protocol: "mysql"
-    },
-    {
-      label: "MariaDB",
-      to: localePath({ name: "setting-application-mariadb" }),
-      protocol: "mariadb"
-    },
-    {
-      label: "MongoDB",
-      to: localePath({ name: "setting-application-mongodb" }),
-      protocol: "mongodb"
-    },
-    {
-      label: "Redis",
-      to: localePath({ name: "setting-application-redis" }),
-      protocol: "redis"
-    },
-    {
-      label: "PostgreSQL",
-      to: localePath({ name: "setting-application-pg" }),
-      protocol: "postgresql"
-    },
-    {
-      label: "Oracle",
-      to: localePath({ name: "setting-application-oracle" }),
-      protocol: "oracle"
-    },
-    {
-      label: "SQL Server",
-      to: localePath({ name: "setting-application-sqlserver" }),
-      protocol: "sqlserver"
-    }
-  ].filter((item) => isDefaultAppName(appName) || !HIDDEN_DATABASE_PROTOCOLS.has(item.protocol));
+    { label: "MySQL", protocol: "mysql" as const, routeName: "setting-application-mysql" },
+    { label: "MariaDB", protocol: "mariadb" as const, routeName: "setting-application-mariadb" },
+    { label: "MongoDB", protocol: "mongodb" as const, routeName: "setting-application-mongodb" },
+    { label: "Redis", protocol: "redis" as const, routeName: "setting-application-redis" },
+    { label: "PostgreSQL", protocol: "pg" as const, routeName: "setting-application-pg" },
+    { label: "Oracle", protocol: "oracle" as const, routeName: "setting-application-oracle" },
+    { label: "SQL Server", protocol: "sqlserver" as const, routeName: "setting-application-sqlserver" }
+  ]
+    .filter((item) => isDefaultAppName(appName) || !HIDDEN_DATABASE_PROTOCOLS.has(item.protocol))
+    .map((item) => protocolItem(item.label, item.protocol, item.routeName));
 
   return [
     {
@@ -56,40 +69,23 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
       defaultOpen: true,
       icon: "proicons:terminal",
       children: [
-        {
-          label: "SSH",
-          to: localePath({ name: "setting-application-ssh" })
-        },
-        {
-          label: "Telnet",
-          to: localePath({ name: "setting-application-telnet" })
-        }
+        protocolItem("SSH", "ssh", "setting-application-ssh"),
+        protocolItem("Telnet", "telnet", "setting-application-telnet")
       ]
     },
     {
       label: t("Setting.FileTransfer"),
       defaultOpen: true,
       icon: "proicons:document",
-      children: [
-        {
-          label: "SFTP",
-          to: localePath({ name: "setting-application-sftp" })
-        }
-      ]
+      children: [protocolItem("SFTP", "sftp", "setting-application-sftp")]
     },
     {
       label: t("Setting.RemoteDesktop"),
       defaultOpen: true,
       icon: "proicons:laptop",
       children: [
-        {
-          label: "RDP",
-          to: localePath({ name: "setting-application-rdp" })
-        },
-        {
-          label: "VNC",
-          to: localePath({ name: "setting-application-vnc" })
-        }
+        protocolItem("RDP", "rdp", "setting-application-rdp"),
+        protocolItem("VNC", "vnc", "setting-application-vnc")
       ]
     },
     {
@@ -100,11 +96,16 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
     }
   ];
 });
+
+const activeProtocolComponent = computed(() => {
+  const protocol = activeApplicationProtocol.value as ApplicationProtocol;
+  return protocolComponents[protocol] || protocolComponents.ssh;
+});
 </script>
 
 <template>
-  <div class="flex h-full min-h-0">
-    <div class="menu setting-menu shrink-0">
+  <div class="flex min-h-[480px]">
+    <div class="menu setting-menu w-52 shrink-0">
       <UNavigationMenu
         :items="appMenu"
         :highlight="false"
@@ -121,12 +122,11 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
       />
     </div>
 
-    <UCard
-      class="flex-1 min-w-0 h-full min-h-0 rounded-none overflow-hidden"
-      variant="subtle"
-      :ui="{ body: 'sm:p-3 h-full overflow-y-auto' }"
-    >
-      <NuxtPage />
-    </UCard>
+    <div class="min-w-0 flex-1 border-l border-[var(--app-border)] p-3">
+      <KeepAlive v-if="embedded">
+        <component :is="activeProtocolComponent" />
+      </KeepAlive>
+      <NuxtPage v-else />
+    </div>
   </div>
 </template>

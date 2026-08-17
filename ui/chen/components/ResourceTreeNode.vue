@@ -101,7 +101,7 @@ function handleContextMenu(event: MouseEvent) {
 <template>
   <li>
     <div
-      class="sidebar-row group flex h-7 w-full cursor-default items-center gap-1 rounded-lg pr-1 text-left text-xs"
+      class="sidebar-row group/row flex h-7 w-full cursor-default items-center gap-1 rounded-lg pr-1 text-left text-xs"
       :class="selectedKey === node.key ? 'bg-[var(--app-hover-soft)] text-[var(--app-fg)]' : ''"
       :data-active="selectedKey === node.key ? '' : undefined"
       :style="{ paddingLeft: `${(depth || 0) * 12 + 6}px` }"
@@ -131,7 +131,7 @@ function handleContextMenu(event: MouseEvent) {
       <button
         v-if="node.type === 'recent-group' && node.clearable"
         type="button"
-        class="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-[color,background-color,opacity] group-hover:opacity-100 hover:bg-[var(--app-hover-strong)] hover:text-highlighted focus-visible:opacity-100"
+        class="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-[color,background-color,opacity] group-hover/row:opacity-100 hover:bg-[var(--app-hover-strong)] hover:text-highlighted focus-visible:opacity-100"
         aria-label="Clear recent tables"
         title="Clear recent tables"
         @click.stop="emit('clearRecent')"

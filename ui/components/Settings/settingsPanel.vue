@@ -1,9 +1,22 @@
 <script setup lang="ts">
+import type { SettingsSection } from "~/composables/useSettingsWindow";
+
+const props = withDefaults(
+  defineProps<{
+    mode?: "route" | "inline";
+    activeSection?: SettingsSection;
+  }>(),
+  {
+    mode: "route",
+    activeSection: "general"
+  }
+);
+
 const route = useRoute();
 const localePath = useLocalePath();
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
-const { closeSettings } = useSettingsWindow();
+const { closeSettings, activeSection: inlineActiveSection } = useSettingsWindow();
 const searchQuery = ref("");
 const hasNativeTitlebarInset = computed(() => isTauriRuntime());
 
@@ -46,8 +59,15 @@ const sectionDefs = computed(() => {
   return isTauriRuntime() ? defs : defs.filter((item) => !item.tauriOnly);
 });
 
-const activeSection = computed(() => {
+const routeActiveSection = computed(() => {
   return sectionDefs.value.find((item) => route.path.startsWith(`/setting/${item.key}`)) || sectionDefs.value[0];
+});
+
+const activeSection = computed(() => {
+  if (props.mode === "inline") {
+    return sectionDefs.value.find((item) => item.key === props.activeSection) || sectionDefs.value[0];
+  }
+  return routeActiveSection.value;
 });
 
 const filteredSections = computed(() => {
@@ -61,6 +81,12 @@ const handleSearchShortcut = (event: KeyboardEvent) => {
   if (event.key.toLocaleLowerCase() !== "f" || (!event.metaKey && !event.ctrlKey)) return;
   event.preventDefault();
   document.querySelector<HTMLInputElement>("#settings-search")?.focus();
+};
+
+const selectSection = (section: SettingsSection) => {
+  if (props.mode === "inline") {
+    inlineActiveSection.value = section;
+  }
 };
 
 useEventListener(document, "keydown", handleSearchShortcut);
@@ -124,7 +150,7 @@ useEventListener(document, "keydown", handleSearchShortcut);
           <UButton
             v-for="item in filteredSections"
             :key="item.key"
-            :to="localePath({ name: item.routeName })"
+            :to="mode === 'route' ? localePath({ name: item.routeName }) : undefined"
             :label="item.label"
             :icon="item.icon"
             color="neutral"
@@ -132,6 +158,7 @@ useEventListener(document, "keydown", handleSearchShortcut);
             class="w-full justify-start rounded-lg"
             :class="activeSection?.key === item.key ? 'bg-[var(--app-selected-soft)] text-highlighted' : 'text-muted'"
             :aria-current="activeSection?.key === item.key ? 'page' : undefined"
+            @click="selectSection(item.key)"
           />
         </div>
 
