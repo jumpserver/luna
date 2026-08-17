@@ -78,6 +78,7 @@ import {
 } from "~/chen/utils/dataViewEditing";
 import { canOpenChenQueryConsole, chenNodeActivationAction } from "~/chen/utils/resourceTree";
 import { ChenSqlMetadataStore } from "~/chen/utils/sqlMetadata";
+import { chenUnrestrictedMutations } from "~/chen/utils/sqlSafety";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const emit = defineEmits<{ reconnect: [] }>();
@@ -114,6 +115,8 @@ let resizePointerId: number | null = null;
 const discardDialogOpen = ref(false);
 const discardDialogMessage = ref("");
 const pendingDiscard = shallowRef<(() => void) | null>(null);
+const unrestrictedMutationDialogOpen = ref(false);
+const pendingUnrestrictedMutation = shallowRef<{ tab: ChenQueryConsoleTab; sql: string } | null>(null);
 const GUARDED_DATA_VIEW_ACTIONS = new Set<ChenDataViewAction>([
   "first_page",
   "prev_page",
@@ -1389,9 +1392,29 @@ function runQueryTab(tab: ChenQueryLikeWorkspaceTab, selectedSql = "") {
     return;
   }
   guardDataViewChanges(chenDataViewTargets(tab), () => {
-    queryConsole.runQueryTab(tab, selectedSql);
-    if (mayChangeSqlMetadata(statement)) sqlMetadataStore.clear();
+    if (chenUnrestrictedMutations(statement).length) {
+      pendingUnrestrictedMutation.value = { tab, sql: statement };
+      unrestrictedMutationDialogOpen.value = true;
+      return;
+    }
+    executeQueryTab(tab, statement);
   });
+}
+
+function executeQueryTab(tab: ChenQueryConsoleTab, statement: string) {
+  queryConsole.runQueryTab(tab, statement);
+  if (mayChangeSqlMetadata(statement)) sqlMetadataStore.clear();
+}
+
+function updateUnrestrictedMutationDialog(open: boolean) {
+  unrestrictedMutationDialogOpen.value = open;
+  if (!open) pendingUnrestrictedMutation.value = null;
+}
+
+function confirmUnrestrictedMutation() {
+  const pending = pendingUnrestrictedMutation.value;
+  updateUnrestrictedMutationDialog(false);
+  if (pending) executeQueryTab(pending.tab, pending.sql);
 }
 
 function uploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
@@ -1788,5 +1811,29 @@ defineExpose({ focus });
       @update:open="updateDiscardDialog"
       @confirm="confirmDiscardChanges"
     />
+
+    <ChenWorkspaceModal
+      :open="unrestrictedMutationDialogOpen"
+      title="Execute statement without WHERE?"
+      :dismissible="false"
+      :close="false"
+      @update:open="updateUnrestrictedMutationDialog"
+    >
+      <template #body>
+        <p class="text-sm text-muted">
+          One or more UPDATE or DELETE statements have no WHERE clause and may affect every row in a table. Confirm that
+          you want to execute them.
+        </p>
+      </template>
+
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="soft" @click="updateUnrestrictedMutationDialog(false)">Cancel</UButton>
+          <UButton color="error" icon="i-lucide-triangle-alert" @click="confirmUnrestrictedMutation">
+            Execute anyway
+          </UButton>
+        </div>
+      </template>
+    </ChenWorkspaceModal>
   </div>
 </template>

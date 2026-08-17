@@ -10,7 +10,6 @@ import type {
   ColDef,
   GridReadyEvent,
   SelectionChangedEvent,
-  SelectionColumnDef,
   ValueFormatterParams
 } from "ag-grid-community";
 import type {
@@ -89,6 +88,9 @@ const contextMenuOpen = ref(false);
 const contextMenuPosition = reactive({ x: 0, y: 0 });
 const currentRow = ref<Record<string, any> | null>(null);
 let resizeObserver: ResizeObserver | null = null;
+let rowSelectionAnchor: number | null = null;
+
+const ROW_NUMBER_COLUMN_ID = "__chenRowNumber";
 
 function displayedColIds() {
   const fieldNames = new Set(props.dataset?.fields.map((field) => field.name) || []);
@@ -119,7 +121,7 @@ const columnDefs = computed<ColDef[]>(() => {
     showEmptyStrings: gridPreferences.value.showEmptyStrings
   };
   const hiddenFields = new Set(gridPreferences.value.hiddenFieldsByGrid[props.gridPreferenceKey] || []);
-  return (props.dataset?.fields || []).map((field) => ({
+  const dataColumns: ColDef[] = (props.dataset?.fields || []).map((field) => ({
     field: field.name,
     headerName: field.name,
     hide: hiddenFields.has(field.name),
@@ -158,6 +160,28 @@ const columnDefs = computed<ColDef[]>(() => {
       return formatChenGridValue(params.value, preferences);
     }
   }));
+  return [
+    {
+      colId: ROW_NUMBER_COLUMN_ID,
+      headerName: "#",
+      headerTooltip: "Row number",
+      headerClass: "chen-row-number-header",
+      width: 44,
+      minWidth: 44,
+      maxWidth: 44,
+      pinned: "left" as const,
+      lockPinned: true,
+      lockPosition: true,
+      resizable: false,
+      sortable: false,
+      filter: false,
+      suppressAutoSize: true,
+      suppressMovable: true,
+      cellClass: "chen-row-number-cell",
+      valueGetter: (params) => (params.node?.rowIndex == null ? "" : params.node.rowIndex + 1)
+    },
+    ...dataColumns
+  ];
 });
 
 const rowData = computed(() => {
@@ -177,20 +201,6 @@ const defaultColDef: ColDef = {
   cellClassRules: {
     "chen-range-cell": isSelectedCell
   }
-};
-
-const selectionColumnDef: SelectionColumnDef = {
-  width: 36,
-  minWidth: 36,
-  maxWidth: 36,
-  pinned: "left",
-  lockPinned: true,
-  lockPosition: true,
-  resizable: false,
-  sortable: false,
-  suppressAutoSize: true,
-  suppressMovable: true,
-  headerTooltip: "Select all rows"
 };
 
 function isDataColumn(event: CellMouseDownEvent | CellMouseOverEvent | CellContextMenuEvent | CellClickedEvent) {
@@ -235,6 +245,7 @@ function finishSelection() {
 
 function resetSelection() {
   selection.value = emptyChenGridSelection();
+  rowSelectionAnchor = null;
   gridApi.value?.deselectAll();
   refreshSelectionCells();
   emit("selectionChange", []);
@@ -343,9 +354,40 @@ function handleCellContextMenu(event: CellContextMenuEvent) {
 }
 
 function handleCellClicked(event: CellClickedEvent) {
+  if (event.column.getColId() === ROW_NUMBER_COLUMN_ID) {
+    handleRowNumberClicked(event);
+    return;
+  }
   if (!isDataColumn(event)) return;
   currentRow.value = event.data || null;
   emit("selectionChange", selectedRows());
+}
+
+function handleRowNumberClicked(event: CellClickedEvent) {
+  const rowIndex = event.node.rowIndex;
+  if (rowIndex == null) return;
+  const mouseEvent = event.event as MouseEvent | undefined;
+  const additive = Boolean(mouseEvent?.ctrlKey || mouseEvent?.metaKey);
+
+  currentRow.value = event.data || null;
+  selection.value = emptyChenGridSelection();
+  refreshSelectionCells();
+
+  if (mouseEvent?.shiftKey && rowSelectionAnchor != null && gridApi.value) {
+    const first = Math.min(rowSelectionAnchor, rowIndex);
+    const last = Math.max(rowSelectionAnchor, rowIndex);
+    const nodes = [];
+    for (let index = first; index <= last; index += 1) {
+      const node = gridApi.value.getDisplayedRowAtIndex(index);
+      if (node) nodes.push(node);
+    }
+    gridApi.value.deselectAll();
+    gridApi.value.setNodesSelected({ nodes, newValue: true });
+    return;
+  }
+
+  event.node.setSelected(additive ? !event.node.isSelected() : true, !additive);
+  rowSelectionAnchor = rowIndex;
 }
 
 function handleSelectionChanged(event: SelectionChangedEvent) {
@@ -450,8 +492,13 @@ onBeforeUnmount(() => {
       :animate-rows="false"
       :suppress-cell-focus="false"
       :ensure-dom-order="true"
-      :row-selection="{ mode: 'multiRow', checkboxes: true, headerCheckbox: true, enableClickSelection: false }"
-      :selection-column-def="selectionColumnDef"
+      :row-selection="{
+        mode: 'multiRow',
+        checkboxes: false,
+        headerCheckbox: false,
+        enableClickSelection: false,
+        ctrlASelectsRows: true
+      }"
       @grid-ready="handleGridReady"
       @selection-changed="handleSelectionChanged"
       @cell-clicked="handleCellClicked"
@@ -615,6 +662,23 @@ onBeforeUnmount(() => {
 .chen-grid :deep(.ag-cell) {
   display: flex;
   align-items: center;
+}
+
+.chen-grid :deep(.chen-row-number-cell) {
+  justify-content: center;
+  color: var(--data-grid-text-muted);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.chen-grid :deep(.chen-row-number-header .ag-header-cell-label) {
+  justify-content: center;
+}
+
+.chen-grid :deep(.ag-row-selected .chen-row-number-cell) {
+  color: var(--theme-accent);
+  font-weight: 600;
 }
 
 .chen-grid :deep(.chen-range-cell) {

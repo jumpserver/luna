@@ -93,7 +93,9 @@ function submit() {
         <div class="rounded-lg border border-dashed border-default p-4 text-center">
           <UIcon name="i-lucide-file-spreadsheet" class="mx-auto mb-2 size-7 text-muted" />
           <p class="text-sm text-highlighted">{{ fileName || "Choose a CSV file" }}</p>
-          <p class="mt-1 text-xs text-muted">The first row must contain table column names. Maximum 10 MB / 10,000 rows.</p>
+          <p class="mt-1 text-xs text-muted">
+            The first row must contain table column names. Maximum 10 MB / 10,000 rows.
+          </p>
           <UButton class="mt-3" size="sm" color="neutral" variant="soft" @click="fileInput?.click()">
             Choose file
           </UButton>
@@ -120,14 +122,19 @@ function submit() {
               />
             </UFormField>
             <div class="rounded-md border border-default bg-elevated px-3 py-2 text-xs">
-              <div><span class="text-muted">Rows:</span> {{ parsed.rows.length }}</div>
+              <div>
+                <span class="text-muted">Rows:</span>
+                {{ parsed.rows.length }}
+              </div>
               <div class="mt-1 truncate" :title="parsed.headers.join(', ')">
-                <span class="text-muted">Columns:</span> {{ parsed.headers.join(", ") }}
+                <span class="text-muted">Columns:</span>
+                {{ parsed.headers.join(", ") }}
               </div>
             </div>
           </div>
           <p class="text-xs text-muted">
-            Imported rows are staged in the grid. Review them, then click Save to preview and commit the database changes.
+            Imported rows are staged in the grid. Review them, then click Save to preview and commit the database
+            changes.
           </p>
         </template>
       </div>

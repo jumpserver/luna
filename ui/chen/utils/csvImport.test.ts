@@ -24,7 +24,8 @@ describe("csv import", () => {
 
   it("rejects malformed rows and unknown columns", () => {
     expect(() => parseChenCsv("id,name\n1\n")).toThrow("expected 2");
-    expect(() => mapChenCsvRows(parseChenCsv("unknown\nvalue\n"), [{ name: "id" }], "empty-string"))
-      .toThrow("does not match");
+    expect(() => mapChenCsvRows(parseChenCsv("unknown\nvalue\n"), [{ name: "id" }], "empty-string")).toThrow(
+      "does not match"
+    );
   });
 });

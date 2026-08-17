@@ -67,7 +67,10 @@ export function buildChenDataViewFilter(
     return `${column} ${operator === "not_contains" ? "NOT LIKE" : "LIKE"} ${pattern}`;
   }
 
-  const sqlOperator: Record<Exclude<ChenDataViewFilterOperator, "contains" | "not_contains" | "is_null" | "is_not_null">, string> = {
+  const sqlOperator: Record<
+    Exclude<ChenDataViewFilterOperator, "contains" | "not_contains" | "is_null" | "is_not_null">,
+    string
+  > = {
     equals: "=",
     not_equals: "<>",
     greater_than: ">",
