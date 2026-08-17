@@ -33,6 +33,11 @@ interface BatchReviewItem {
   assignees?: string;
 }
 
+const ERROR_MESSAGE_KEYS: { [key: string]: string } = {
+  acl_reject: 'ACL reject login asset',
+  perm_account_invalid: 'Account not found'
+};
+
 @Component({
   standalone: false,
   selector: 'elements-batch-acl-dialog',
@@ -124,11 +129,7 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
           ? 'Please complete the face verification'
           : 'Face verify required';
       }
-      const messages = {
-        acl_reject: 'ACL reject login asset',
-        perm_account_invalid: 'Account not found'
-      };
-      return messages[this.code] || this.code;
+      return ERROR_MESSAGE_KEYS[this.code] || this.code;
     }
     if (this.isReview) {
       return this.submitted ? 'Batch review submitted message' : 'Batch review message';
@@ -367,7 +368,9 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
     return {
       ...data,
       status: this.isActionable ? 'review' : 'failed',
-      detail: this.isActionable ? null : this.getErrorDetail(data.error),
+      detail: this.isActionable
+        ? null
+        : ERROR_MESSAGE_KEYS[data.code] || this.getErrorDetail(data.error),
       resolved: false
     };
   }
