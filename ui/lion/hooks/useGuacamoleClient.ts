@@ -291,6 +291,9 @@ export function useGuacamoleClient(
     client.onerror = onClientError;
     client.onclipboard = onclipboard;
     const display = client.getDisplay();
+    // Guacamole places its canvases at z-index -1. Keep them above workspace backgrounds
+    // without changing the relative stacking order of Guacamole's internal layers.
+    display.getElement().style.isolation = "isolate";
     display.onresize = updateScale;
     display.showCursor(false);
     guaDisplay.value = display;
