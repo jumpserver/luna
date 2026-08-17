@@ -8,6 +8,7 @@ import type {
 
 import ChenDataGrid from "~/chen/components/DataGrid.client.vue";
 import DataViewExportDialog from "~/chen/components/DataViewExportDialog.vue";
+import DataViewFooter from "~/chen/components/DataViewFooter.vue";
 import DataViewSavePreviewDialog from "~/chen/components/DataViewSavePreviewDialog.vue";
 import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
 import { chenGridPreferenceKey } from "~/chen/composables/useChenGridPreferences";
@@ -222,6 +223,12 @@ function cancelActiveResultChanges() {
           :grid-preference-key="gridPreferenceKey"
         />
       </div>
+      <DataViewFooter
+        :state="activeResult.state"
+        :row-count="activeResult.data?.data?.length || 0"
+        :busy="activeResultBusy"
+        @action="emitActiveDataViewAction"
+      />
     </div>
 
     <DataViewExportDialog v-if="exportDialogOpen" v-model:open="exportDialogOpen" @confirm="submitExport" />

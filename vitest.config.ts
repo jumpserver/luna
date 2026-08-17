@@ -18,7 +18,7 @@ export default defineConfig({
     }
   },
   test: {
-    include: ["packages/koko/app/tests/**/*.test.ts"],
+    include: ["packages/koko/app/tests/**/*.test.ts", "ui/**/*.test.ts"],
     css: {
       include: [/sftp-(?:transfer-center|file-management)\.scss/]
     },

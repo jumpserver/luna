@@ -17,6 +17,9 @@ import DataViewCreateIndexDialog from "~/chen/components/DataViewCreateIndexDial
 import DataViewDiagram from "~/chen/components/DataViewDiagram.vue";
 import DataViewExportDialog from "~/chen/components/DataViewExportDialog.vue";
 import DataViewFilter from "~/chen/components/DataViewFilter.client.vue";
+import DataViewFilterDialog from "~/chen/components/DataViewFilterDialog.vue";
+import DataViewFooter from "~/chen/components/DataViewFooter.vue";
+import DataViewImportDialog from "~/chen/components/DataViewImportDialog.vue";
 import DataViewSavePreviewDialog from "~/chen/components/DataViewSavePreviewDialog.vue";
 import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
 import SqlPreviewDialog from "~/chen/components/SqlPreviewDialog.vue";
@@ -51,6 +54,8 @@ const emit = defineEmits<{
 
 const exportDialogOpen = ref(false);
 const batchUpdateDialogOpen = ref(false);
+const filterDialogOpen = ref(false);
+const importDialogOpen = ref(false);
 const createIndexDialogOpen = ref(false);
 const indexDetailsOpen = ref(false);
 const dropIndexPreviewOpen = ref(false);
@@ -63,6 +68,9 @@ const editState = computed(() => props.tab.editState);
 const previewDialogOpen = computed(() => editState.value.previewResult?.success === true);
 const gridPreferenceKey = computed(() => chenGridPreferenceKey(props.tab.meta, props.tab.id, props.dbType));
 const editableFields = computed(() => (props.tab.data?.fields || []).filter((field) => field.editable === true));
+const insertableFields = computed(() =>
+  (props.tab.data?.fields || []).filter((field) => field.insertable === true && Boolean(field.sourceColumn))
+);
 const tableName = computed(() => String(props.tab.meta?.table || props.tab.meta?.title || props.tab.title).trim());
 const schemaName = computed(() => String(props.tab.meta?.schema || "").trim());
 const indexDdlSupported = computed(() => chenSupportsIndexDdl(props.dbType));
@@ -181,6 +189,26 @@ function clearWhereCondition() {
   emit("updateWhereCondition", props.tab, "");
   emit("dataViewAction", props.tab, "change_filter", "");
 }
+
+function applyBuiltFilter(condition: string) {
+  if (editing.busy.value || props.tab.state.loading) return;
+  emit("updateWhereCondition", props.tab, condition);
+  emit("dataViewAction", props.tab, "change_filter", condition);
+}
+
+function importCsvRows(rows: Array<Record<string, string | null>>) {
+  const dataset = props.tab.data;
+  if (!dataset || !editing.insertable.value || editing.busy.value) return;
+  const fieldsByName = new Map(insertableFields.value.map((field) => [field.name, field]));
+  for (const importedRow of rows) {
+    const draft = editing.addRow();
+    for (const [name, value] of Object.entries(importedRow)) {
+      const field = fieldsByName.get(name);
+      if (field) editing.changeCell(draft.data, field, undefined, value);
+    }
+  }
+  selectedRows.value = [];
+}
 </script>
 
 <template>
@@ -210,7 +238,18 @@ function clearWhereCondition() {
 
     <div v-if="tab.activePanel === 'data'" class="flex min-h-0 flex-1 flex-col">
       <div class="flex shrink-0 items-center gap-1.5 border-b border-default px-2 py-1">
-        <UIcon name="i-lucide-list-filter" class="size-4 shrink-0 text-muted" />
+        <UButton
+          size="xs"
+          icon="i-lucide-list-filter"
+          color="neutral"
+          variant="soft"
+          aria-label="Build a filter"
+          title="Build a filter"
+          :disabled="editing.busy.value || tab.state.loading || !tab.data?.fields.length"
+          @click="filterDialogOpen = true"
+        >
+          Filter
+        </UButton>
         <span class="shrink-0 font-mono text-xs font-medium text-muted">WHERE</span>
         <DataViewFilter
           :model-value="tab.whereCondition"
@@ -298,8 +337,10 @@ function clearWhereCondition() {
           :fields="tab.data?.fields || []"
           :grid-preference-key="gridPreferenceKey"
           :busy="editing.busy.value"
+          :importable="editing.insertable.value && insertableFields.length > 0"
           @action="(action, data) => emit('dataViewAction', tab, action, data)"
           @export="openExportDialog"
+          @import="importDialogOpen = true"
         />
       </div>
 
@@ -317,6 +358,12 @@ function clearWhereCondition() {
           @selection-change="selectedRows = $event"
         />
       </div>
+      <DataViewFooter
+        :state="tab.state"
+        :row-count="tab.data?.data?.length || 0"
+        :busy="editing.busy.value"
+        @action="(action, data) => emit('dataViewAction', tab, action, data)"
+      />
     </div>
 
     <div v-else class="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -523,6 +570,21 @@ function clearWhereCondition() {
       :fields="editableFields"
       :row-count="selectedRows.length"
       @confirm="updateRows"
+    />
+
+    <DataViewFilterDialog
+      v-if="filterDialogOpen"
+      v-model:open="filterDialogOpen"
+      :fields="tab.data?.fields || []"
+      :db-type="dbType"
+      @apply="applyBuiltFilter"
+    />
+
+    <DataViewImportDialog
+      v-if="importDialogOpen"
+      v-model:open="importDialogOpen"
+      :fields="insertableFields"
+      @confirm="importCsvRows"
     />
 
     <DataViewSavePreviewDialog

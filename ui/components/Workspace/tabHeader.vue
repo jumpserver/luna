@@ -44,6 +44,13 @@ const renameTabId = ref("");
 const renameValue = ref("");
 const showShortcutHints = ref(false);
 
+const TAB_MAX_WIDTH = 176;
+const TAB_GAP = 4;
+const tabStripIdealWidth = computed(() => {
+  const count = tabs.value.length;
+  return `${count * TAB_MAX_WIDTH + Math.max(0, count - 1) * TAB_GAP}px`;
+});
+
 const { activeTab } = useWorkspaceTabs();
 const brokenTabIcons = ref(new Set<string>());
 const renameDisabled = computed(() => {
@@ -542,8 +549,12 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       </button>
     </UTooltip>
 
-    <div v-if="tabs.length" class="workspace-tab-capsule flex min-w-0 flex-1 items-center rounded-lg">
-      <div ref="tabStripRef" class="workspace-tab-strip flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+    <div
+      v-if="tabs.length"
+      class="workspace-tab-capsule flex min-w-0 max-w-full shrink items-center rounded-lg"
+      :style="{ width: tabStripIdealWidth }"
+    >
+      <div ref="tabStripRef" class="workspace-tab-strip flex w-full min-w-0 items-center gap-1 overflow-x-auto">
         <button
           v-for="(tab, index) in tabs"
           :key="tab.id"

@@ -114,7 +114,7 @@ export function useChenWorkspaceTabs() {
       nodeKey,
       meta: null,
       data: null,
-      state: {},
+      state: { requestStartedAt: Date.now() },
       logs: [],
       activePanel: "data",
       activePropertyTab: "basic",

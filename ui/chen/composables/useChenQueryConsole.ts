@@ -9,6 +9,7 @@ import type {
   ChenWorkspaceTab
 } from "~/chen/types";
 
+import { mergeChenDataViewTiming, startChenDataViewTiming } from "~/chen/composables/useChenDataView";
 import { newChenWorkspaceId } from "~/chen/composables/useChenWorkspaceTabs";
 import {
   acceptChenDataViewResponse,
@@ -91,7 +92,11 @@ export function useChenQueryConsole(
         title: meta.title,
         meta,
         data: data ?? null,
-        state: {},
+        state: Number.isFinite(Number(tab.state.requestStartedAt))
+          ? { requestStartedAt: Number(tab.state.requestStartedAt) }
+          : Number.isFinite(Number(tab.state.durationMs))
+            ? { durationMs: Number(tab.state.durationMs) }
+            : {},
         editState: createChenDataViewEditState()
       };
       tab.resultTabs.push(resultTab);
@@ -171,10 +176,17 @@ export function useChenQueryConsole(
                 : null
             : null;
         if (resultTab) {
-          resultTab.state = packet.data;
+          resultTab.state = mergeChenDataViewTiming(resultTab.state, packet.data);
           if (packet.data?.loading === false) finishChenDataViewRequestWithoutData(resultTab.editState);
         } else {
-          tab.state = packet.data || {};
+          tab.state = mergeChenDataViewTiming(tab.state, packet.data || {});
+          if (tab.kind === "query" && packet.data?.loading === false && Number.isFinite(Number(tab.state.durationMs))) {
+            for (const result of tab.resultTabs) {
+              if (Number.isFinite(Number(result.state.durationMs))) continue;
+              result.state = { ...result.state, durationMs: Number(tab.state.durationMs) };
+              delete result.state.requestStartedAt;
+            }
+          }
           if (tab.kind === "console" && packet.data?.inQuery === false) {
             const entry = activeConsoleEntry(tab);
             if (entry) {
@@ -269,6 +281,7 @@ export function useChenQueryConsole(
     if (!sql.trim()) return;
     dismissQueryMessage(tab);
     tab.lastSqlError = null;
+    startChenDataViewTiming(tab.state);
 
     sendSql(tab, sql);
   }

@@ -80,13 +80,20 @@ watch(
           base: 'flex items-center justify-start gap-1.5 rounded-md bg-transparent transition-colors hover:bg-black/5 focus:bg-transparent active:bg-transparent data-[state=open]:bg-black/[0.06] dark:hover:bg-white/8 dark:data-[state=open]:bg-white/10'
         }"
       >
-        <span class="min-w-0 truncate text-left text-xs font-medium text-gray-700 dark:text-gray-300">
+        <span
+          data-overflow-tooltip
+          class="min-w-0 truncate text-left text-xs font-medium text-gray-700 dark:text-gray-300"
+        >
           {{ currentOrg }}
         </span>
         <UIcon name="i-lucide-chevron-down" class="size-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
       </UButton>
     </UDropdownMenu>
-    <span v-else class="min-w-0 truncate px-1 text-left text-xs font-medium text-gray-700 dark:text-gray-300">
+    <span
+      v-else
+      data-overflow-tooltip
+      class="min-w-0 truncate px-1 text-left text-xs font-medium text-gray-700 dark:text-gray-300"
+    >
       {{ currentOrg }}
     </span>
   </div>

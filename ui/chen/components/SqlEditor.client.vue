@@ -4,9 +4,15 @@ import type { ChenSqlEditorSnapshot } from "~/chen/types";
 import type { ChenSqlCompletionSource } from "~/chen/utils/sqlCompletion";
 import { acceptCompletion } from "@codemirror/autocomplete";
 import { Compartment, EditorState, Prec } from "@codemirror/state";
-import { EditorView, keymap } from "@codemirror/view";
+import { EditorView, gutter, GutterMarker, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
-import { chenSqlExtensions, replaceChenSqlDocument } from "~/chen/utils/sqlEditor";
+import {
+  chenSqlExtensions,
+  chenSqlStatementAtCursor,
+  chenSqlStatementRanges,
+  executableChenSql,
+  replaceChenSqlDocument
+} from "~/chen/utils/sqlEditor";
 import { createCodeMirrorSyntaxTheme, createCodeMirrorTheme } from "~/shared/theme/adapters/codemirror";
 
 const props = withDefaults(
@@ -27,7 +33,7 @@ const emit = defineEmits<{
   selectionChange: [hasSelection: boolean];
   format: [];
   openSnippets: [];
-  run: [];
+  run: [sql?: string];
   saveSnippet: [];
   stop: [];
 }>();
@@ -41,9 +47,49 @@ const sqlLanguageSlot = new Compartment();
 let editor: EditorView | null = null;
 let themeObserver: MutationObserver | null = null;
 let applyingExternalValue = false;
+let gutterDocument: EditorState["doc"] | null = null;
+let gutterStatementLineStarts = new Set<number>();
+
+function statementLineStarts(state: EditorState) {
+  if (gutterDocument === state.doc) return gutterStatementLineStarts;
+  gutterDocument = state.doc;
+  gutterStatementLineStarts = new Set(chenSqlStatementRanges(state).map(({ from }) => state.doc.lineAt(from).from));
+  return gutterStatementLineStarts;
+}
+
+class RunStatementMarker extends GutterMarker {
+  override toDOM() {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "cm-run-statement-button";
+    button.title = "Run statement";
+    button.setAttribute("aria-label", "Run statement");
+    button.textContent = "▶";
+    return button;
+  }
+}
+
+const runStatementMarker = new RunStatementMarker();
+
+const runStatementGutter = gutter({
+  class: "cm-run-statement-gutter",
+  lineMarker(view, line) {
+    return statementLineStarts(view.state).has(line.from) ? runStatementMarker : null;
+  },
+  domEventHandlers: {
+    click(view, line, event) {
+      const statement = chenSqlStatementAtCursor(view.state, line.from);
+      if (!statement) return false;
+      event.preventDefault();
+      emit("run", statement.sql);
+      return true;
+    }
+  }
+});
 
 const editorExtensions: Extension[] = [
   basicSetup,
+  runStatementGutter,
   sqlLanguageSlot.of(chenSqlExtensions(props.dbType, props.completionSource)),
   syntaxThemeSlot.of(createCodeMirrorSyntaxTheme()),
   EditorView.lineWrapping,
@@ -101,11 +147,8 @@ const editorExtensions: Extension[] = [
   })
 ];
 
-function selectedText() {
-  if (!editor) return "";
-  const { state } = editor;
-  const { from, to } = state.selection.main;
-  return from === to ? "" : state.doc.sliceString(from, to);
+function executionText() {
+  return editor ? executableChenSql(editor.state) : "";
 }
 
 function snapshot(): ChenSqlEditorSnapshot {
@@ -198,9 +241,9 @@ onBeforeUnmount(() => {
 
 defineExpose({
   focus,
+  executionText,
   replaceDocument,
-  snapshot,
-  selectedText
+  snapshot
 });
 </script>
 
@@ -227,5 +270,34 @@ defineExpose({
 
 :deep(.cm-gutters) {
   color: var(--app-muted);
+}
+
+:deep(.cm-run-statement-gutter) {
+  width: 22px;
+}
+
+:deep(.cm-run-statement-button) {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  cursor: pointer;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--theme-accent);
+  font-size: 10px;
+  line-height: 1;
+}
+
+:deep(.cm-run-statement-button:hover) {
+  background: var(--app-hover-soft);
+  color: var(--theme-accent);
+}
+
+:deep(.cm-run-statement-button:focus-visible) {
+  outline: 2px solid var(--theme-accent);
+  outline-offset: -2px;
 }
 </style>

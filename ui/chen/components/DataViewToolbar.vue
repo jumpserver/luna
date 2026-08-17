@@ -10,12 +10,14 @@ const props = withDefaults(
     fields?: ChenDataViewField[];
     gridPreferenceKey?: string;
     pinnable?: boolean;
+    importable?: boolean;
     busy?: boolean;
   }>(),
   {
     fields: () => [],
     gridPreferenceKey: "default",
     pinnable: false,
+    importable: false,
     busy: false
   }
 );
@@ -23,9 +25,9 @@ const props = withDefaults(
 const emit = defineEmits<{
   action: [action: ChenDataViewAction, data?: number];
   export: [];
+  import: [];
 }>();
 
-const limitOptions = [50, 100, 200, 500];
 const nullDisplayOptions = [
   { label: "NULL", value: "keyword" },
   { label: "(null)", value: "parenthesized" },
@@ -69,12 +71,6 @@ function showAllFields() {
   setHiddenFields([]);
 }
 
-function changeLimit(value: string | number) {
-  const limit = Number(value);
-  if (!limitOptions.includes(limit)) return;
-  emit("action", "change_limit", limit);
-}
-
 function requestExport() {
   emit("export");
 }
@@ -82,62 +78,6 @@ function requestExport() {
 
 <template>
   <div class="flex items-center gap-1">
-    <template v-if="controls.paged">
-      <UButton
-        size="xs"
-        icon="i-lucide-chevrons-left"
-        color="neutral"
-        variant="ghost"
-        aria-label="First page"
-        title="First page"
-        :disabled="busy || controls.disableFirst"
-        @click="emit('action', 'first_page')"
-      />
-      <UButton
-        size="xs"
-        icon="i-lucide-chevron-left"
-        color="neutral"
-        variant="ghost"
-        aria-label="Previous page"
-        title="Previous page"
-        :disabled="busy || controls.disablePrevious"
-        @click="emit('action', 'prev_page')"
-      />
-      <USelect
-        class="w-20"
-        size="xs"
-        :model-value="controls.limit"
-        :items="limitOptions"
-        :disabled="busy || controls.loading"
-        aria-label="Rows per page"
-        @update:model-value="changeLimit"
-      />
-      <span class="whitespace-nowrap px-1 text-xs text-muted">
-        {{ controls.page }} / {{ controls.lastPage }} · {{ controls.total }} rows
-      </span>
-      <UButton
-        size="xs"
-        icon="i-lucide-chevron-right"
-        color="neutral"
-        variant="ghost"
-        aria-label="Next page"
-        title="Next page"
-        :disabled="busy || controls.disableNext"
-        @click="emit('action', 'next_page')"
-      />
-      <UButton
-        size="xs"
-        icon="i-lucide-chevrons-right"
-        color="neutral"
-        variant="ghost"
-        aria-label="Last page"
-        title="Last page"
-        :disabled="busy || controls.disableLast"
-        @click="emit('action', 'last_page')"
-      />
-    </template>
-    <span v-else class="whitespace-nowrap px-1 text-xs text-muted">{{ controls.total }} rows</span>
-
     <UButton
       size="xs"
       icon="i-lucide-refresh-cw"
@@ -148,6 +88,17 @@ function requestExport() {
       :loading="controls.loading || busy"
       :disabled="controls.loading || busy"
       @click="emit('action', 'refresh')"
+    />
+    <UButton
+      v-if="importable"
+      size="xs"
+      icon="i-lucide-upload"
+      color="neutral"
+      variant="ghost"
+      aria-label="Import CSV"
+      title="Import CSV"
+      :disabled="controls.loading || busy"
+      @click="emit('import')"
     />
     <UButton
       size="xs"

@@ -26,6 +26,12 @@ const tabStrip = ref<HTMLElement | null>(null);
 const hasOverflow = ref(false);
 const hasLeftHidden = ref(false);
 const hasRightHidden = ref(false);
+const TAB_MAX_WIDTH = 176;
+const TAB_GAP = 4;
+const tabStripIdealWidth = computed(() => {
+  const count = props.tabs.length;
+  return `${count * TAB_MAX_WIDTH + Math.max(0, count - 1) * TAB_GAP}px`;
+});
 const renameDisabled = computed(() => {
   const tab = props.tabs.find((item) => item.id === renameTabId.value);
   const title = renameValue.value.trim();
@@ -140,7 +146,7 @@ watch(
 </script>
 
 <template>
-  <div class="flex h-9 items-center gap-1 bg-[var(--workspace-surface-main)] px-2">
+  <div class="flex h-9 min-w-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2">
     <UButton
       v-if="hasLeftHidden"
       size="xs"
@@ -153,13 +159,14 @@ watch(
     />
     <div
       ref="tabStrip"
-      class="chen-workspace-tab-strip flex h-full w-fit min-w-0 max-w-full shrink items-center gap-1 overflow-x-auto"
+      class="chen-workspace-tab-strip flex h-full min-w-0 max-w-full shrink items-center gap-1 overflow-x-auto"
+      :style="{ width: tabStripIdealWidth }"
     >
       <button
         v-for="item in props.tabs"
         :key="item.id"
         :data-workspace-tab-id="item.id"
-        class="flex h-7 min-w-20 max-w-40 basis-40 grow shrink items-center gap-1 self-center rounded-md px-1.5 text-[11px] leading-none transition-colors"
+        class="flex h-7 min-w-24 max-w-44 basis-44 grow shrink items-center gap-1 self-center rounded-md px-1.5 text-[11px] leading-none transition-colors"
         :class="
           props.activeTabId === item.id
             ? 'bg-accented text-highlighted'

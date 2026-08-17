@@ -25,6 +25,39 @@ const DATA_REQUEST_ACTIONS = new Set<ChenDataViewAction>([
   "refresh",
   "change_limit"
 ]);
+const TIMED_DATA_REQUEST_ACTIONS = new Set<ChenDataViewAction>([...DATA_REQUEST_ACTIONS, "change_filter"]);
+
+const SERVER_DURATION_KEYS = ["durationMs", "executionTimeMs", "queryTimeMs", "duration_ms", "execution_time_ms"];
+
+export function startChenDataViewTiming(state: ChenConsoleState, now = Date.now()) {
+  state.requestStartedAt = now;
+  delete state.durationMs;
+}
+
+export function mergeChenDataViewTiming(
+  previous: ChenConsoleState,
+  incoming: ChenConsoleState,
+  now = Date.now()
+): ChenConsoleState {
+  const startedAt = Number(previous.requestStartedAt);
+  const serverDuration = SERVER_DURATION_KEYS.map((key) => incoming[key])
+    .filter((value) => value !== null && value !== undefined && value !== "")
+    .map(Number)
+    .find((value) => Number.isFinite(value) && value >= 0);
+  const completed = incoming.loading === false;
+
+  return {
+    ...incoming,
+    ...(completed && serverDuration !== undefined
+      ? { durationMs: serverDuration }
+      : completed && Number.isFinite(startedAt)
+        ? { durationMs: Math.max(0, now - startedAt) }
+        : completed && Number.isFinite(Number(previous.durationMs))
+          ? { durationMs: Number(previous.durationMs) }
+          : {}),
+    ...(!completed && Number.isFinite(startedAt) ? { requestStartedAt: startedAt } : {})
+  };
+}
 
 export function getChenDataViewToolbarState(state: ChenConsoleState) {
   const loading = Boolean(state.loading);
@@ -86,6 +119,7 @@ export function useChenDataView(
       return false;
     }
 
+    if (TIMED_DATA_REQUEST_ACTIONS.has(action)) startChenDataViewTiming(target.state);
     const sent = sendConsoleAction?.(owner, "data_view_action", {
       action,
       dataView,
@@ -107,7 +141,7 @@ export function useChenDataView(
         break;
       case "update_state":
         if (packet.data?.title === tab.meta?.title) {
-          tab.state = packet.data;
+          tab.state = mergeChenDataViewTiming(tab.state, packet.data);
           if (packet.data?.loading === false) finishChenDataViewRequestWithoutData(tab.editState);
         }
         break;

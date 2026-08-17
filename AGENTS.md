@@ -49,6 +49,9 @@ These instructions apply to the whole repository. Follow them for all changes un
 - Do not copy UI-library patterns from migrated projects. Rebuild migrated UI using the local Nuxt UI patterns.
 - Keep workspace screens compact, operational, and consistent with nearby components in `ui/components/`, `ui/chen/`, `ui/lion/`, and `ui/koko/`.
 - Bespoke markup is acceptable for protocol/editor surfaces such as xterm, CodeMirror, iframe shells, file trees, and data grids when Nuxt UI is not the right primitive.
+- Keep workspace tab strips content-sized up to the available width: with few tabs, each tab should use its preferred wide width and the adjacent create (`+`) control must remain immediately after the last tab, not at the far edge of the header.
+- As workspace tabs increase, shrink them evenly down to their minimum width before enabling horizontal overflow. Do not make the tab strip `flex-1` or replace its explicit ideal width with intrinsic `w-fit`; both have caused regressions between tab sizing and create-control placement. Apply this contract consistently to the main workspace header and nested workspaces such as the Chen database console.
+- When changing workspace tab layout, verify at least the one-tab, two-tab, shrinking, and overflow states, including the position of the create (`+`) control.
 
 ## Theme Rules
 

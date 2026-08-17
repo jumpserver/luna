@@ -47,14 +47,19 @@ const emit = defineEmits<{
 
 const sqlEditor = ref<{
   replaceDocument: (value: string) => void;
+  executionText: () => string;
   snapshot: () => ChenSqlEditorSnapshot;
-  selectedText: () => string;
 } | null>(null);
 const sqlUploadInput = ref<HTMLInputElement | null>(null);
 const hasSelection = ref(false);
 const messageOpen = ref(false);
 const saveSnippetDialogOpen = ref(false);
 const selectSnippetDialogOpen = ref(false);
+const queryPanel = ref<HTMLElement | null>(null);
+const editorHeightRatio = ref(58);
+const resizingQueryPanel = ref(false);
+const QUERY_PANEL_MIN_RATIO = 20;
+const QUERY_PANEL_RESIZE_STEP = 5;
 const DEFAULT_MESSAGE_CLOSE_DELAY_SECONDS = 5;
 let messageCloseTimer: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
@@ -120,6 +125,9 @@ const sqlFileItems = computed(() => [
     onSelect: () => sqlUploadInput.value?.click()
   }
 ]);
+const queryPanelRows = computed(() => ({
+  gridTemplateRows: `${editorHeightRatio.value}fr 1px ${100 - editorHeightRatio.value}fr`
+}));
 
 const messageColor = computed(() => {
   if (props.tab.message?.type === "error") return "error";
@@ -132,8 +140,12 @@ const statementValue = computed({
   set: (value: string) => emit("updateStatement", props.tab, value)
 });
 
-function runSelectedQuery() {
-  emit("run", props.tab, sqlEditor.value?.selectedText() || "");
+function runCurrentQuery() {
+  emit("run", props.tab, sqlEditor.value?.executionText() || "");
+}
+
+function runEditorQuery(sql?: string) {
+  emit("run", props.tab, sql || sqlEditor.value?.executionText() || "");
 }
 
 function editorSnapshot(): ChenSqlEditorSnapshot {
@@ -253,6 +265,45 @@ function handleMessageOpen(open: boolean) {
   if (!open) dismissMessage();
 }
 
+function setEditorHeightRatio(ratio: number) {
+  editorHeightRatio.value = Math.min(100 - QUERY_PANEL_MIN_RATIO, Math.max(QUERY_PANEL_MIN_RATIO, ratio));
+}
+
+function resizeQueryPanel(event: PointerEvent) {
+  if (!resizingQueryPanel.value || !queryPanel.value) return;
+
+  const bounds = queryPanel.value.getBoundingClientRect();
+  setEditorHeightRatio(((event.clientY - bounds.top) / bounds.height) * 100);
+}
+
+function beginQueryPanelResize(event: PointerEvent) {
+  if (event.button !== 0) return;
+
+  resizingQueryPanel.value = true;
+  (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  document.body.style.cursor = "row-resize";
+  document.body.style.userSelect = "none";
+  resizeQueryPanel(event);
+  event.preventDefault();
+}
+
+function endQueryPanelResize(event: PointerEvent) {
+  const target = event.currentTarget as HTMLElement;
+  if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
+  resizingQueryPanel.value = false;
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
+}
+
+function resizeQueryPanelWithKeyboard(event: KeyboardEvent) {
+  const delta =
+    event.key === "ArrowUp" ? -QUERY_PANEL_RESIZE_STEP : event.key === "ArrowDown" ? QUERY_PANEL_RESIZE_STEP : 0;
+  if (!delta) return;
+
+  setEditorHeightRatio(editorHeightRatio.value + delta);
+  event.preventDefault();
+}
+
 watch(
   () => props.tab.message,
   (message) => {
@@ -269,14 +320,19 @@ watch(
   { immediate: true }
 );
 
-onBeforeUnmount(clearMessageTimer);
+onBeforeUnmount(() => {
+  clearMessageTimer();
+  if (!resizingQueryPanel.value) return;
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
+});
 
 defineExpose({ editorSnapshot });
 </script>
 
 <template>
-  <div class="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_minmax(16rem,42%)]">
-    <div class="relative flex min-h-0 flex-col overflow-hidden border-b border-default p-3">
+  <div ref="queryPanel" class="grid h-full min-h-0" :style="queryPanelRows">
+    <div class="relative flex min-h-0 flex-col overflow-hidden p-3">
       <div class="mb-2 flex shrink-0 items-center gap-2">
         <UButton
           v-if="tab.state.inQuery || tab.state.canCancel"
@@ -288,8 +344,8 @@ defineExpose({ editorSnapshot });
         >
           Stop
         </UButton>
-        <UButton v-else icon="i-lucide-play" size="sm" :disabled="Boolean(tab.state.loading)" @click="runSelectedQuery">
-          {{ hasSelection ? "Run selected" : "Run" }}
+        <UButton v-else icon="i-lucide-play" size="sm" :disabled="Boolean(tab.state.loading)" @click="runCurrentQuery">
+          {{ hasSelection ? "Run selected" : "Run current" }}
         </UButton>
         <UButton
           icon="i-lucide-align-left"
@@ -356,7 +412,7 @@ defineExpose({ editorSnapshot });
           @selection-change="hasSelection = $event"
           @format="formatStatement"
           @open-snippets="openSnippetDialog"
-          @run="runSelectedQuery"
+          @run="runEditorQuery"
           @save-snippet="openSaveSnippetDialog"
           @stop="emit('cancel', tab)"
         />
@@ -374,6 +430,25 @@ defineExpose({ editorSnapshot });
           @update:open="handleMessageOpen"
         />
       </div>
+    </div>
+
+    <div
+      role="separator"
+      tabindex="0"
+      aria-label="Resize SQL editor and query results"
+      aria-orientation="horizontal"
+      :aria-valuenow="Math.round(editorHeightRatio)"
+      :aria-valuemin="QUERY_PANEL_MIN_RATIO"
+      :aria-valuemax="100 - QUERY_PANEL_MIN_RATIO"
+      class="group relative z-20 cursor-row-resize touch-none bg-default/60 outline-none hover:bg-primary/40 focus-visible:bg-primary/60"
+      :class="resizingQueryPanel ? 'bg-primary/60' : ''"
+      @pointerdown="beginQueryPanelResize"
+      @pointermove="resizeQueryPanel"
+      @pointerup="endQueryPanelResize"
+      @pointercancel="endQueryPanelResize"
+      @keydown="resizeQueryPanelWithKeyboard"
+    >
+      <div class="absolute -inset-y-1.5 inset-x-0" />
     </div>
 
     <div class="flex min-h-0 flex-col">
