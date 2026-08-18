@@ -357,7 +357,7 @@
     "OpenSFTP": "Open files",
     "OpenProfessional": "Open in professional file manager",
     "OpenProfessionalHint": "Transfer between local and remote",
-    "BatchCommandPlaceholder": "Enter command to run on each terminal… (Ctrl+Enter to send)",
+    "BatchCommandPlaceholder": "Enter command to run on each terminal… ({shortcut} to send)",
     "BatchConnectedTabs": "Connected terminals",
     "BatchNoConnectedTabs": "No connected terminals",
     "BatchNoConnectedTabsDesc": "Connect to SSH hosts from the asset tree and they will appear here.",

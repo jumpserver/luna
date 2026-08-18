@@ -75,7 +75,8 @@ const activeText = computed(() => {
             : 'text-[var(--app-muted)] hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]'
         "
         :aria-label="t('RightPanel.BatchCommand')"
-        :aria-pressed="batchPanelOpen"
+        :aria-expanded="batchPanelOpen"
+        aria-controls="batch-command-panel"
         @click="toggleBatchPanel"
       >
         <UIcon name="i-lucide-terminal" class="size-3.5" />

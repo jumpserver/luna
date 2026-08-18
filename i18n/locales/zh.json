@@ -357,7 +357,7 @@
     "OpenSFTP": "打开文件",
     "OpenProfessional": "在专业文件管理中打开",
     "OpenProfessionalHint": "本地与远程互传",
-    "BatchCommandPlaceholder": "输入要在各终端执行的命令… (Ctrl+Enter 发送)",
+    "BatchCommandPlaceholder": "输入要在各终端执行的命令… ({shortcut} 发送)",
     "BatchConnectedTabs": "已连接终端",
     "BatchNoConnectedTabs": "暂无已连接终端",
     "BatchNoConnectedTabsDesc": "从左侧资产树连接 SSH 主机后，将在此显示。",

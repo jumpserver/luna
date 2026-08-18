@@ -7,6 +7,8 @@ const { setOpen } = useBatchCommandPanel();
 
 <template>
   <section
+    id="batch-command-panel"
+    aria-labelledby="batch-command-panel-title"
     class="flex h-52 min-h-0 shrink-0 flex-col border-t"
     :style="{
       borderColor: 'var(--app-border)',
@@ -20,7 +22,7 @@ const { setOpen } = useBatchCommandPanel();
     >
       <div class="flex min-w-0 items-center gap-1.5 text-[11px] font-medium">
         <UIcon name="i-lucide-terminal" class="size-3.5 shrink-0 text-gray-500 dark:text-gray-400" />
-        <span class="truncate">{{ t("RightPanel.BatchCommand") }}</span>
+        <span id="batch-command-panel-title" class="truncate">{{ t("RightPanel.BatchCommand") }}</span>
       </div>
       <button
         type="button"
