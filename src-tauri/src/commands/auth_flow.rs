@@ -120,18 +120,19 @@ async fn build_login_success_payload(site: String, bearer: String) -> anyhow::Re
         xpack_message.data.len()
     );
 
-    let license_valid = if xpack_message.status == 200 && xpack_message.success {
-        serde_json::from_str::<Value>(&xpack_message.data)
-            .ok()
-            .and_then(|value| {
-                value
-                    .get("XPACK_LICENSE_IS_VALID")
-                    .and_then(|v| v.as_bool())
-            })
-            .unwrap_or(false)
+    let public_settings = if xpack_message.status == 200 && xpack_message.success {
+        serde_json::from_str::<Value>(&xpack_message.data).unwrap_or(Value::Null)
     } else {
-        false
+        Value::Null
     };
+    let license_valid = public_settings
+        .get("XPACK_LICENSE_IS_VALID")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+    let command_execution = public_settings
+        .get("SECURITY_COMMAND_EXECUTION")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
 
     Ok(serde_json::json!({
         "status": "success",
@@ -140,6 +141,7 @@ async fn build_login_success_payload(site: String, bearer: String) -> anyhow::Re
         "resolved_site": site,
         "current_org": current_org,
         "xpack_license_valid": license_valid,
+        "security_command_execution": command_execution,
         "permission_orgs": permission_orgs,
     }))
 }

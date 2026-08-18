@@ -49,6 +49,10 @@ export interface CommandSnippetPayload extends SqlSnippetPayload {
   comment?: string;
 }
 
+export interface PublicSettings {
+  SECURITY_COMMAND_EXECUTION?: boolean;
+}
+
 let lastAuthFailureAt = 0;
 
 const isAuthFailure = (error: unknown) => {
@@ -252,6 +256,13 @@ export function getConnectMethods(): Promise<Record<string, unknown>> {
   return apiRequest<Record<string, unknown>>({
     method: "GET",
     path: "/api/v1/terminal/components/connect-methods/"
+  });
+}
+
+export function getPublicSettings(): Promise<PublicSettings> {
+  return apiRequest<PublicSettings>({
+    method: "GET",
+    path: "/api/v1/settings/public/"
   });
 }
 

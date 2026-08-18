@@ -7,7 +7,8 @@ const toast = useToast();
 const { tabs } = useWorkspaceTabs();
 const { batchCommand } = useBatchCommandPanel();
 const userInfoStore = useUserInfoStore();
-const { loggedIn } = storeToRefs(userInfoStore);
+const { loggedIn, currentUser } = storeToRefs(userInfoStore);
+const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 
 const connectedTabs = computed(() =>
   tabs.value.filter((tab) => !["sftp", "k8s", "kubernetes"].includes(tab.protocol) && tab.status === "connected")
@@ -55,6 +56,8 @@ const sendLabel = computed(() =>
 );
 
 const sendCommand = () => {
+  if (!commandExecutionEnabled.value) return;
+
   const command = batchCommand.value.trim();
   if (!command || selectedTabIds.value.length === 0) return;
 
@@ -85,6 +88,9 @@ const sendCommand = () => {
         <div class="relative h-full min-h-0 p-3">
           <textarea
             v-model="batchCommand"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
             class="h-full min-h-0 w-full resize-none rounded-md border px-2.5 py-2 pb-10 pr-44 font-ui-mono text-[12px] leading-relaxed outline-none focus:ring-1 focus:ring-primary-500/40"
             :style="{
               borderColor: 'var(--app-border)',
