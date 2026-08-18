@@ -2728,7 +2728,7 @@ onUnmounted(() => {
         <template v-for="row in treeRows" :key="row.path">
           <button
             v-if="row.kind === 'entry'"
-            class="sidebar-row group flex h-7 w-full items-center gap-1 rounded-lg pr-1 text-left text-xs"
+            class="sidebar-row group flex h-7 w-full items-center gap-1 rounded-md pr-1 text-left text-xs"
             :class="[
               row.entry.is_dir
                 ? selectedDirectory === row.path

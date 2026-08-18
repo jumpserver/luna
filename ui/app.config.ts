@@ -58,6 +58,14 @@ export default defineAppConfig({
       slots: {
         root: "w-full",
         base: "rounded-[3px] bg-[var(--app-input-bg)] text-[var(--app-fg)] placeholder:text-[var(--app-muted)] ring-[var(--app-border)]"
+      },
+      variants: {
+        size: {
+          md: {
+            leadingIcon: "size-[18px]",
+            trailingIcon: "size-[18px]"
+          }
+        }
       }
     },
     textarea: {
@@ -75,6 +83,14 @@ export default defineAppConfig({
         item: "min-w-0 data-highlighted:bg-[var(--app-hover-soft)] data-[state=checked]:bg-[var(--app-hover-soft)]",
         itemWrapper: "min-w-0 overflow-hidden",
         itemLabel: "block truncate"
+      },
+      variants: {
+        size: {
+          md: {
+            leadingIcon: "size-[18px]",
+            trailingIcon: "size-[18px]"
+          }
+        }
       }
     },
     accordion: {
@@ -132,6 +148,14 @@ export default defineAppConfig({
         item: "mx-0.5 min-w-0 rounded-md px-3 py-2 text-sm text-[var(--app-fg)] transition-colors data-highlighted:bg-[var(--app-hover-soft)] data-[state=checked]:bg-[var(--app-hover-soft)]",
         itemWrapper: "min-w-0 overflow-hidden",
         itemLabel: "block truncate"
+      },
+      variants: {
+        size: {
+          md: {
+            leadingIcon: "size-[18px]",
+            trailingIcon: "size-[18px]"
+          }
+        }
       }
     },
     navigationMenu: {

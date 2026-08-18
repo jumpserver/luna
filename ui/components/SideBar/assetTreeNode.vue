@@ -92,7 +92,7 @@ const activate = () => {
     <div class="group relative">
       <button
         type="button"
-        class="sidebar-row flex h-7 w-full cursor-pointer items-center gap-1 rounded-lg pr-1 text-left text-xs"
+        class="sidebar-row flex h-7 w-full cursor-pointer items-center gap-1 rounded-md pr-1 text-left text-xs"
         :class="[
           node.chkDisabled ? 'opacity-40' : '',
           node.meta?.type === 'recent-connections' && node.children?.length ? 'pr-6' : ''

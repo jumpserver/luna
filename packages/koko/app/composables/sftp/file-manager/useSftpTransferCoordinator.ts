@@ -407,10 +407,11 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     });
     // Highlight destination rows as soon as transfer is queued; list reload keeps the class.
     const side = resolveEndpointSide(destination.id);
-    if (side) flashHighlight(
-      side,
-      payload.entries.map((entry) => entry.name)
-    );
+    if (side)
+      flashHighlight(
+        side,
+        payload.entries.map((entry) => entry.name)
+      );
   }
 
   function queueSftpTransferToSelected(payload: SftpTransferDropPayload, destination?: FileTransferEndpointRef) {
