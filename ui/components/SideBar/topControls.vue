@@ -42,7 +42,7 @@ const toggleSidebar = () => {
     @mousedown.stop
   >
     <div v-if="!isMacClient" class="mr-1.5 flex items-center">
-      <img src="/logo.png" alt="JumpServer" class="h-5 w-5 rounded" />
+      <img src="~/assets/logo.svg" alt="JumpServer" class="h-5 w-5" />
     </div>
 
     <template v-if="!collapse">
