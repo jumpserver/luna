@@ -359,6 +359,8 @@
     "BatchSendToCount": "Send to {count} terminal(s)",
     "BatchCommandSent": "Command sent",
     "BatchCommandSentDesc": "Command dispatched to {count} terminal(s)",
+    "BatchCommandSendResult": "Batch send result",
+    "BatchCommandSendResultDesc": "Sent to {sent}/{total} terminal(s); {failed} not sent",
     "BatchPanelClose": "Close batch command panel"
   },
   "FileManagement": {

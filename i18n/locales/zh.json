@@ -359,6 +359,8 @@
     "BatchSendToCount": "发送到 {count} 个终端",
     "BatchCommandSent": "命令已发送",
     "BatchCommandSentDesc": "已向 {count} 个终端发送命令",
+    "BatchCommandSendResult": "批量发送结果",
+    "BatchCommandSendResultDesc": "已发送 {sent}/{total} 个终端，未发送 {failed} 个",
     "BatchPanelClose": "关闭批量命令面板"
   },
   "FileManagement": {

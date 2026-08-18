@@ -3,6 +3,7 @@ import { sendKokoTerminalDataToMany } from "@jumpserver/koko";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { t } = useI18n();
+const toast = useToast();
 const { tabs } = useWorkspaceTabs();
 const { batchCommand } = useBatchCommandPanel();
 const userInfoStore = useUserInfoStore();
@@ -47,8 +48,6 @@ const toggleTab = (tabId: string) => {
   else selectedTabIds.value.push(tabId);
 };
 
-const sending = ref(false);
-
 const sendLabel = computed(() =>
   selectedTabIds.value.length > 0
     ? t("RightPanel.BatchSendToCount", { count: selectedTabIds.value.length })
@@ -57,14 +56,17 @@ const sendLabel = computed(() =>
 
 const sendCommand = () => {
   const command = batchCommand.value.trim();
-  if (!command || selectedTabIds.value.length === 0 || sending.value) return;
+  if (!command || selectedTabIds.value.length === 0) return;
 
-  sending.value = true;
-  try {
-    sendKokoTerminalDataToMany(selectedTabIds.value, `${command}\r`);
-  } finally {
-    sending.value = false;
-  }
+  const total = selectedTabIds.value.length;
+  const sent = sendKokoTerminalDataToMany(selectedTabIds.value, `${command}\r`);
+  const failed = total - sent;
+  toast.add({
+    title: t("RightPanel.BatchCommandSendResult"),
+    description: t("RightPanel.BatchCommandSendResultDesc", { sent, total, failed }),
+    color: failed === 0 ? "success" : sent > 0 ? "warning" : "error",
+    icon: failed === 0 ? "i-lucide-circle-check" : "i-lucide-circle-alert"
+  });
 };
 </script>
 
@@ -101,7 +103,6 @@ const sendCommand = () => {
             class="absolute bottom-5 right-5"
             :label="sendLabel"
             :disabled="selectedTabIds.length === 0 || !batchCommand.trim()"
-            :loading="sending"
             @click="sendCommand"
           />
         </div>
