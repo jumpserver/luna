@@ -7,6 +7,7 @@ const { tabs, activeTab } = useWorkspaceTabs();
 const { batchPanelOpen, toggle: toggleBatchPanel } = useBatchCommandPanel();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
+const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 
 const connectedCount = computed(() => tabs.value.filter((tab) => tab.status === "connected").length);
 const connectingCount = computed(
@@ -65,7 +66,7 @@ const activeText = computed(() => {
       <span v-if="connectingCount" class="font-ui-mono">{{ connectingCount }} pending</span>
       <span v-if="failedCount" class="font-ui-mono text-red-500">{{ failedCount }} failed</span>
       <button
-        v-if="activeWorkspaceMode === 'assets'"
+        v-if="activeWorkspaceMode === 'assets' && commandExecutionEnabled"
         type="button"
         class="grid size-5 place-items-center rounded transition-colors"
         :class="

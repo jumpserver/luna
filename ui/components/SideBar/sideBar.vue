@@ -40,17 +40,33 @@ const sidebarSectionLabels = computed<Record<SidebarSectionKey, string>>(() => (
 }));
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
+const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 
 watch(showAssetSearch, (open) => {
   if (!open) sidebarSearch.value = "";
 });
 
 const contentBackgroundColor = "var(--app-sidebar-bg)";
-const visibleSectionCount = computed(() => SIDEBAR_SECTION_KEYS.filter((key) => sidebarSections.value[key]).length);
-const showAssetSection = computed(() => sidebarSections.value.assets);
+const availableSidebarSectionKeys = computed(() =>
+  SIDEBAR_SECTION_KEYS.filter((key) => key !== "snippets" || commandExecutionEnabled.value)
+);
+const effectiveSidebarSections = computed(() => {
+  const sections = {
+    assets: sidebarSections.value.assets,
+    favorites: sidebarSections.value.favorites,
+    snippets: sidebarSections.value.snippets && commandExecutionEnabled.value
+  };
+
+  if (!Object.values(sections).some(Boolean)) sections.assets = true;
+  return sections;
+});
+const visibleSectionCount = computed(
+  () => availableSidebarSectionKeys.value.filter((key) => effectiveSidebarSections.value[key]).length
+);
+const showAssetSection = computed(() => effectiveSidebarSections.value.assets);
 const visibleShelfPanels = computed(() => ({
-  favorites: sidebarSections.value.favorites,
-  snippets: sidebarSections.value.snippets
+  favorites: effectiveSidebarSections.value.favorites,
+  snippets: effectiveSidebarSections.value.snippets
 }));
 const hasVisibleShelfPanel = computed(() => Object.values(visibleShelfPanels.value).some(Boolean));
 const showOrganizationMenu = computed(() => loggedIn.value && activeWorkspaceMode.value === "assets");
@@ -78,11 +94,11 @@ function updateSidebarSection(section: SidebarSectionKey, visible: boolean) {
 }
 
 const organizationMenuItems = computed<DropdownMenuItem[][]>(() => [
-  SIDEBAR_SECTION_KEYS.map((key) => ({
+  availableSidebarSectionKeys.value.map((key) => ({
     label: sidebarSectionLabels.value[key],
     type: "checkbox" as const,
-    checked: sidebarSections.value[key],
-    disabled: sidebarSections.value[key] && visibleSectionCount.value <= 1,
+    checked: effectiveSidebarSections.value[key],
+    disabled: effectiveSidebarSections.value[key] && visibleSectionCount.value <= 1,
     onUpdateChecked: (checked: boolean) => {
       if (checked === sidebarSections.value[key]) return;
       updateSidebarSection(key, checked);

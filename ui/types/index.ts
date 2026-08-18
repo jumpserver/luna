@@ -130,6 +130,7 @@ export interface UserData {
   availableOrgs: PermOrgItem[];
   connectionInfo: ConnectionInfo;
   xpackLicenseValid?: boolean;
+  commandExecutionEnabled?: boolean;
 }
 
 export interface UserIntiInfo {
@@ -137,6 +138,7 @@ export interface UserIntiInfo {
   bearer: string;
   version?: string;
   xpack_license_valid?: boolean;
+  security_command_execution?: boolean;
   resolved_site?: string;
   profile: {
     data: string;
