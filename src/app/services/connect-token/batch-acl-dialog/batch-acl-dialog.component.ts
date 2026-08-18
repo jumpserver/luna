@@ -10,6 +10,7 @@ import { Subscription } from 'rxjs';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FaceService } from '@app/services/face';
 import { ActivatedRoute } from '@angular/router';
+import { withUIBase } from '@app/utils/path';
 
 type ReviewStatus =
   | 'review'
@@ -31,12 +32,17 @@ interface BatchReviewItem {
   token?: ConnectionToken;
   detail?: string;
   assignees?: string;
+  code?: string;
 }
 
 const ERROR_MESSAGE_KEYS: { [key: string]: string } = {
   acl_reject: 'ACL reject login asset',
-  perm_account_invalid: 'Account not found'
+  perm_account_invalid: 'Account not found',
+  no_face_feature: 'No facial features'
 };
+
+const SINGLE_DIALOG_WIDTH = '450px';
+const BATCH_DIALOG_WIDTH = '680px';
 
 @Component({
   standalone: false,
@@ -49,6 +55,7 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
   code: string;
   submitted = false;
   faceVerifyUrl: SafeResourceUrl;
+  readonly profileLink = withUIBase('#/profile/index');
   private timers = new Map<BatchReviewItem, number>();
   private subscriptions = new Subscription();
   private faceTimer: number;
@@ -67,6 +74,7 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.code = this.data.code;
     this.items = this.data.items.map(item => this.buildItem(item));
+    this.syncDialogWidth();
   }
 
   ngOnDestroy() {
@@ -97,18 +105,23 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
   }
 
   get titleKey(): string {
-    if (this.isReview) {
-      return 'Login review';
-    }
-    if (this.isFaceVerify) {
+    if (this.faceVerifyUrl || (this.singleItem && this.singleItem.status === 'verifying')) {
       return 'Face Verify';
+    }
+    if (this.isBatch) {
+      if (this.isReview) {
+        return 'Login review';
+      }
+      if (this.isFaceVerify) {
+        return 'Face Verify';
+      }
     }
     return 'Login reminder';
   }
 
   get messageKey(): string {
     if (!this.isBatch) {
-      if (this.singleItem && this.singleItem.detail) {
+      if (this.singleItem && this.singleItem.status === 'failed' && this.singleItem.detail) {
         return this.singleItem.detail;
       }
       if (this.isReview) {
@@ -129,7 +142,7 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
           ? 'Please complete the face verification'
           : 'Face verify required';
       }
-      return ERROR_MESSAGE_KEYS[this.code] || this.code;
+      return this.resolveMessage(this.code, this.singleItem && this.singleItem.error);
     }
     if (this.isReview) {
       return this.submitted ? 'Batch review submitted message' : 'Batch review message';
@@ -141,6 +154,17 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
       return 'Batch face verification message';
     }
     return 'Batch same type error message';
+  }
+
+  get alertType(): 'info' | 'error' {
+    if (this.isBatch) {
+      return this.isActionable ? 'info' : 'error';
+    }
+    const status = this.singleItem && this.singleItem.status;
+    if (this.isActionable && !['rejected', 'closed', 'failed'].includes(status)) {
+      return 'info';
+    }
+    return 'error';
   }
 
   get actionTextKey(): string {
@@ -162,7 +186,17 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
   }
 
   get isSubmitting(): boolean {
-    return this.items.some(item => ['submitting', 'verifying'].includes(item.status));
+    return this.items.some(item => item.status === 'submitting');
+  }
+
+  get showPrimaryAction(): boolean {
+    return this.isActionable && !this.submitted;
+  }
+
+  get showSinglePendingActions(): boolean {
+    return (
+      !this.isBatch && this.isReview && this.singleItem && this.singleItem.status === 'pending'
+    );
   }
 
   get statusType(): { [key in ReviewStatus]: string } {
@@ -181,6 +215,7 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
   addItem(data: any) {
     const item = this.buildItem(data);
     this.items.push(item);
+    this.syncDialogWidth();
     if (!this.submitted) {
       return;
     }
@@ -189,6 +224,13 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
     } else if (this.isFaceVerify) {
       this.verifyNextFace();
     }
+  }
+
+  shouldShowItemDetail(item: BatchReviewItem): boolean {
+    if (!item.detail) {
+      return false;
+    }
+    return item.detail !== ERROR_MESSAGE_KEYS[this.code];
   }
 
   onConfirm() {
@@ -231,8 +273,7 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
           this.checkTicket(item);
         },
         error => {
-          item.status = 'failed';
-          item.detail = this.getErrorDetail(error);
+          this.failItem(item, error);
         }
       )
     );
@@ -271,8 +312,7 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
             this.checkFaceState(item, token);
           },
           error => {
-            item.status = 'failed';
-            item.detail = this.getErrorDetail(error);
+            this.failItem(item, error);
             this.verifyNextFace();
           }
         )
@@ -306,8 +346,7 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
           error => {
             clearInterval(this.faceTimer);
             this.faceVerifyUrl = null;
-            item.status = 'failed';
-            item.detail = this.getErrorDetail(error);
+            this.failItem(item, error);
             this.verifyNextFace();
           }
         )
@@ -337,8 +376,7 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
           },
           error => {
             this.clearTimer(item);
-            item.status = 'failed';
-            item.detail = this.getErrorDetail(error);
+            this.failItem(item, error);
           }
         )
       );
@@ -365,14 +403,23 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
   }
 
   private buildItem(data: any): BatchReviewItem {
+    const code = data.code || this.code;
     return {
       ...data,
+      code,
       status: this.isActionable ? 'review' : 'failed',
-      detail: this.isActionable
-        ? null
-        : ERROR_MESSAGE_KEYS[data.code] || this.getErrorDetail(data.error),
+      detail: this.isActionable ? null : this.resolveMessage(code, data.error),
       resolved: false
     };
+  }
+
+  private failItem(item: BatchReviewItem, error: HttpErrorResponse) {
+    const errorCode = error && error.error && error.error.code;
+    item.status = 'failed';
+    item.detail = this.resolveMessage(errorCode, error);
+    if (!this.isBatch && errorCode) {
+      this.code = errorCode;
+    }
   }
 
   private closeTicket(item: BatchReviewItem) {
@@ -394,8 +441,33 @@ export class ElementBatchACLDialogComponent implements OnInit, OnDestroy {
     this.timers.clear();
   }
 
+  private syncDialogWidth() {
+    if (!this.dialogRef || !this.dialogRef.updateConfig) {
+      return;
+    }
+    this.dialogRef.updateConfig({
+      nzWidth: this.isBatch ? BATCH_DIALOG_WIDTH : SINGLE_DIALOG_WIDTH
+    });
+  }
+
+  private resolveMessage(code: string, error?: HttpErrorResponse): string {
+    if (ERROR_MESSAGE_KEYS[code]) {
+      return ERROR_MESSAGE_KEYS[code];
+    }
+    return this.getErrorDetail(error) || code;
+  }
+
   private getErrorDetail(error: HttpErrorResponse): string {
-    const body = error && error.error;
+    if (!error) {
+      return '';
+    }
+    if (error.status === 500) {
+      return (error.message || '').toString();
+    }
+    const body = error.error;
+    if (Array.isArray(body)) {
+      return body.join(' ');
+    }
     if (body && typeof body === 'object') {
       return body.detail || body.code || JSON.stringify(body);
     }

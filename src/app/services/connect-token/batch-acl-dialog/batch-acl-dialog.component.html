@@ -1,10 +1,35 @@
-<div class="batch-acl-dialog">
+<div class="batch-acl-dialog" [class.is-batch]="isBatch">
   <div *nzModalTitle>{{ titleKey | translate }}</div>
 
-  <nz-alert
-    [nzType]="isActionable ? 'info' : 'error'"
-    [nzDescription]="messageKey | translate"
-  ></nz-alert>
+  <nz-alert [nzType]="alertType" class="content-message" [nzDescription]="alertContent">
+    <ng-template #alertContent>
+      <div>{{ messageKey | translate }}</div>
+
+      <ng-container *ngIf="!isBatch && code === 'no_face_feature'">
+        <br />
+        <a [href]="profileLink">{{ 'Go to profile' | translate }}</a>
+      </ng-container>
+
+      <ng-container *ngIf="!isBatch && isReview && singleItem?.status === 'pending'">
+        <br /><br />
+        {{ 'Assignees' | translate }}: <b>{{ singleItem.assignees }}</b> <br /><br />
+        {{ 'Do not close this page' | translate }}
+        <br /><br />
+        <div class="loading-bar">
+          <div class="loading-bar-progress"></div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="isBatch && isReview && submitted && hasPending">
+        <br /><br />
+        {{ 'Do not close this page' | translate }}
+        <br /><br />
+        <div class="loading-bar">
+          <div class="loading-bar-progress"></div>
+        </div>
+      </ng-container>
+    </ng-template>
+  </nz-alert>
 
   <div class="review-list" *ngIf="isBatch">
     <div class="review-item" *ngFor="let item of items">
@@ -15,20 +40,15 @@
         }}</nz-tag>
       </div>
       <div class="review-detail" *ngIf="isReview && item.status === 'pending'">
-        {{ 'Assignees' | translate }}: {{ item.assignees }}
+        {{ 'Assignees' | translate }}: <b>{{ item.assignees }}</b>
         <button nz-button nzType="link" nzSize="small" (click)="onCopyLink(item)">
           {{ 'Copy link' | translate }}
         </button>
       </div>
-      <div class="review-detail error" *ngIf="item.detail">{{ item.detail | translate }}</div>
+      <div class="review-detail error" *ngIf="shouldShowItemDetail(item)">
+        {{ item.detail | translate }}
+      </div>
     </div>
-  </div>
-
-  <div class="single-detail" *ngIf="!isBatch && isReview && singleItem?.status === 'pending'">
-    {{ 'Assignees' | translate }}: {{ singleItem.assignees }}
-    <button nz-button nzType="link" nzSize="small" (click)="onCopyLink(singleItem)">
-      {{ 'Copy link' | translate }}
-    </button>
   </div>
 
   <iframe
@@ -39,12 +59,26 @@
     sandbox="allow-scripts allow-same-origin"
   ></iframe>
 
-  <div *nzModalFooter>
-    <button nz-button [disabled]="isSubmitting" (click)="onClose()">
-      {{ closeTextKey | translate }}
-    </button>
-    <button nz-button nzType="primary" *ngIf="isActionable && !submitted" (click)="onConfirm()">
-      {{ actionTextKey | translate }}
-    </button>
+  <div *nzModalFooter class="nz-modal-footer">
+    <ng-container *ngIf="showSinglePendingActions">
+      <button nz-button (click)="onClose()">{{ 'Cancel' | translate }}</button>
+      <button nz-button nzType="primary" (click)="onCopyLink(singleItem)">
+        {{ 'Copy link' | translate }}
+      </button>
+    </ng-container>
+
+    <ng-container *ngIf="!showSinglePendingActions">
+      <button
+        nz-button
+        [nzType]="showPrimaryAction ? 'default' : 'primary'"
+        [disabled]="isSubmitting"
+        (click)="onClose()"
+      >
+        {{ closeTextKey | translate }}
+      </button>
+      <button nz-button nzType="primary" *ngIf="showPrimaryAction" (click)="onConfirm()">
+        {{ actionTextKey | translate }}
+      </button>
+    </ng-container>
   </div>
 </div>
