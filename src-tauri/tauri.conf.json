@@ -70,11 +70,7 @@
         "transparent": false,
         "shadow": true,
         "decorations": true,
-        "titleBarStyle": "Overlay",
-        "trafficLightPosition": {
-          "x": 10,
-          "y": 18
-        }
+        "titleBarStyle": "Overlay"
       }
     ],
     "security": {

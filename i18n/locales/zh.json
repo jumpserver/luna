@@ -856,7 +856,6 @@
       "remoteSftp": "远程 SFTP",
       "localSftp": "SFTP",
       "connectRemoteSftp": "连接远程 SFTP",
-      "openInCurrentTab": "在当前标签页中打开",
       "disconnectAllRemote": "断开全部",
       "addRemoteSftp": "添加远程 SFTP",
       "remoteSftpHint": "连接另一台 SFTP 服务器，可在两侧互传文件",

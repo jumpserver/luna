@@ -853,7 +853,6 @@
       "remoteSftp": "Remote SFTP",
       "localSftp": "SFTP",
       "connectRemoteSftp": "Connect remote SFTP",
-      "openInCurrentTab": "Open in current tab",
       "disconnectAllRemote": "Disconnect all",
       "addRemoteSftp": "Add remote SFTP",
       "remoteSftpHint": "Connect another SFTP server to transfer files between both sides",

@@ -5,15 +5,7 @@ type WorkspaceController = ReturnType<typeof useSftpWorkspacePanes>;
 
 const props = defineProps<{ workspace: WorkspaceController }>();
 const { t } = useI18n();
-const {
-  assetTree,
-  connectModalOpen,
-  connectRemoteAsset,
-  openRemoteInCurrentTab,
-  organizationSelector,
-  remoteAssetSearch,
-  remoteConnecting
-} = props.workspace;
+const { assetTree, connectModalOpen, connectRemoteAsset, organizationSelector, remoteAssetSearch } = props.workspace;
 </script>
 
 <template>
@@ -33,11 +25,6 @@ const {
             :placeholder="t('koko.fileManagement.searchAssets')"
           />
         </div>
-        <UCheckbox
-          v-model="openRemoteInCurrentTab"
-          :label="t('koko.fileManagement.openInCurrentTab')"
-          :disabled="remoteConnecting"
-        />
         <div class="max-h-72 overflow-y-auto rounded-lg border border-default">
           <component :is="assetTree" :search="remoteAssetSearch" open @select="connectRemoteAsset" />
         </div>

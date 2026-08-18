@@ -59,7 +59,6 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
   const activeRemoteId = ref<string | null>(null);
   const connectModalOpen = ref(false);
   const connectSide = ref<SftpWorkspaceSide>("left");
-  const openRemoteInCurrentTab = ref(false);
   const remoteAssetSearch = ref("");
   const remoteConnecting = ref(false);
   const preconnecting = ref(false);
@@ -121,7 +120,6 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
 
   function openRemoteConnect(side: SftpWorkspaceSide = "right") {
     connectSide.value = side;
-    openRemoteInCurrentTab.value = false;
     remoteAssetSearch.value = "";
     connectModalOpen.value = true;
   }
@@ -318,15 +316,11 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
 
       const side = toValue(options.global) ? connectSide.value : "right";
       const { tokenId } = await createSftpSession(connectAsset);
-      const replacePaneId = toValue(options.global)
-        ? activePaneForSide(side)?.id
-        : remotePanes.value.find((pane) => pane.id === activeRemoteId.value)?.id;
       await attachRemotePane({
         assetId: connectAsset.id,
         assetName: connectAsset.name,
         tokenId,
-        side,
-        replacePaneId: openRemoteInCurrentTab.value ? replacePaneId : undefined
+        side
       });
       connectModalOpen.value = false;
       rememberRecentConnection({
@@ -411,7 +405,6 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     isTauriRuntime,
     markRemotePaneConnected,
     openRemoteConnect,
-    openRemoteInCurrentTab,
     organizationSelector,
     panesForSide,
     pendingPreconnect,
