@@ -1,6 +1,7 @@
 import type { CommandSnippetPayload } from "~/composables/useApiRequest";
-import { createCommandSnippet, updateCommandSnippet } from "~/composables/useApiRequest";
+import { createCommandSnippet, getCommandSnippetVariableForm, updateCommandSnippet } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { normalizeSnippetVariableFields } from "~/utils/snippetVariables";
 
 export interface SnippetModule {
   value: string;
@@ -69,9 +70,12 @@ export const useSnippets = () => {
     }
   };
 
+  const loadVariableForm = async (id: string) =>
+    normalizeSnippetVariableFields(await getCommandSnippetVariableForm(id));
+
   watch([loggedIn, currentAccountId], () => {
     snippets.value = [];
   });
 
-  return { snippets, loading, saving, load, save };
+  return { snippets, loading, saving, load, save, loadVariableForm };
 };

@@ -10,10 +10,16 @@ export const useBatchCommandPanel = () => {
     batchPanelOpen.value = !batchPanelOpen.value;
   };
 
+  const fillCommand = (command: string) => {
+    batchCommand.value = command;
+    batchPanelOpen.value = true;
+  };
+
   return {
     batchPanelOpen,
     batchCommand,
     setOpen,
-    toggle
+    toggle,
+    fillCommand
   };
 };
