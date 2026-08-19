@@ -72,6 +72,8 @@ const {
 const simplePeerMode = computed(() => isSimplePeerMode());
 
 const canTransferRight = computed(() => {
+  // Web left pane is upload-only (no selectable file list) — use the drop zone, not arrows.
+  if (globalActiveIds.left === "web-upload") return false;
   const hasLeftSelection =
     globalActiveIds.left === "local"
       ? Boolean(localSelections.value.length || localSelection.value)
@@ -83,8 +85,9 @@ const canTransferRight = computed(() => {
 const canTransferLeft = computed(() => {
   const right = activePaneForSide("right");
   const hasRightSelection = Boolean(right?.selection);
+  // web-upload cannot receive files; only desktop local FS or a left-side remote pane can.
   const hasLeftDestination =
-    globalActiveIds.left === "local" || globalActiveIds.left === "web-upload" || Boolean(activePaneForSide("left"));
+    (globalActiveIds.left === "local" && Boolean(isTauriRuntime)) || Boolean(activePaneForSide("left"));
   return Boolean(
     hasRightSelection && hasLeftDestination && right && remotePaneConnected(right.id) && !transferring.value
   );
@@ -92,6 +95,8 @@ const canTransferLeft = computed(() => {
 
 const showTransferRail = computed(() => {
   const right = activePaneForSide("right");
+  // Keep the rail whenever a remote is connected (session criterion). Web still shows it for
+  // remote→… when left can receive; web-upload uses the center drop zone for outbound files.
   return Boolean(right && remotePaneConnected(right.id));
 });
 
@@ -272,6 +277,9 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
           @focus="focusedSide = 'left'"
           @send="sendFromSelection"
           @transfer-drop="handleCrossPaneDrop($event, { id: 'local:fs', label: t('koko.fileManagement.localFiles') })"
+          @transfer-endpoint-mounted="mountTransferEndpoint"
+          @transfer-endpoint-connected="connectTransferEndpoint"
+          @transfer-endpoint-unmounted="unmountTransferEndpoint"
         />
         <KokoWebUploadPane
           v-if="side === 'left' && !isTauriRuntime"

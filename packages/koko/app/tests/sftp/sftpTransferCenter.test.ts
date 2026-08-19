@@ -127,6 +127,19 @@ describe("sftp selection bar and peer transfer", () => {
     expect(remoteTabsComponent).not.toContain("multiTarget");
     expect(remoteTabsComponent).not.toContain("selectedIds");
   });
+
+  it("routes global local transfers through the transfer center queue like session sftp", () => {
+    expect(transferCoordinatorComposable).toContain("Always prefer Transfer Center queue");
+    expect(transferCoordinatorComposable).toContain("queueSftpTransferToSelected(payload, destination)");
+    expect(transferCoordinatorComposable).not.toContain(
+      "void handleCrossPaneDrop({ ...payload, destinationPath: opposite.destinationPath }, opposite.endpoint)"
+    );
+    expect(globalWorkspaceComponent).toContain("SftpTransferRail");
+    expect(globalWorkspaceComponent).toContain('@transfer="transferGlobal"');
+    expect(globalWorkspaceComponent).toContain('@transfer-endpoint-mounted="mountTransferEndpoint"');
+    expect(fileManagementLocalPane).toContain("useLocalFileTransferEndpoint");
+    expect(fileManagementLocalPane).toContain("transferEndpointMounted");
+  });
 });
 
 describe("sftp right-panel compact mode", () => {
@@ -350,7 +363,8 @@ describe("sftp professional workbench", () => {
     expect(sessionWorkspaceComponent).not.toContain("toggle-selected");
     expect(transferCoordinatorComposable).toContain("const checkedTargets = sendTargetOptions.value.filter");
     expect(transferCoordinatorComposable).toContain("queueSftpTransferToSelected");
-    expect(transferCoordinatorComposable).toContain("transferLocalEntriesToCheckedRemotes");
+    expect(transferCoordinatorComposable).not.toContain("transferLocalEntriesToCheckedRemotes");
+    expect(transferCoordinatorComposable).not.toContain("async function transferEntries");
   });
 
   it("guards concurrent connection requests while allowing repeated hosts", () => {
