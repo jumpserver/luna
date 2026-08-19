@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Extension } from "@codemirror/state";
+import type { ChenSqlKeywordCase } from "~/chen/composables/useChenWorkspacePreferences";
 import type { ChenSqlEditorSnapshot } from "~/chen/types";
 import type { ChenSqlCompletionSource } from "~/chen/utils/sqlCompletion";
 import { acceptCompletion } from "@codemirror/autocomplete";
@@ -20,10 +21,12 @@ const props = withDefaults(
     modelValue: string;
     dbType?: string;
     completionSource?: ChenSqlCompletionSource;
+    sqlKeywordCase?: ChenSqlKeywordCase;
     readOnly?: boolean;
   }>(),
   {
     dbType: "",
+    sqlKeywordCase: "lower",
     readOnly: false
   }
 );
@@ -90,7 +93,7 @@ const runStatementGutter = gutter({
 const editorExtensions: Extension[] = [
   basicSetup,
   runStatementGutter,
-  sqlLanguageSlot.of(chenSqlExtensions(props.dbType, props.completionSource)),
+  sqlLanguageSlot.of(chenSqlExtensions(props.dbType, props.completionSource, props.sqlKeywordCase)),
   syntaxThemeSlot.of(createCodeMirrorSyntaxTheme()),
   EditorView.lineWrapping,
   EditorState.tabSize.of(2),
@@ -226,9 +229,11 @@ watch(
 );
 
 watch(
-  () => [props.dbType, props.completionSource] as const,
-  ([dbType, completionSource]) => {
-    editor?.dispatch({ effects: sqlLanguageSlot.reconfigure(chenSqlExtensions(dbType, completionSource)) });
+  () => [props.dbType, props.completionSource, props.sqlKeywordCase] as const,
+  ([dbType, completionSource, sqlKeywordCase]) => {
+    editor?.dispatch({
+      effects: sqlLanguageSlot.reconfigure(chenSqlExtensions(dbType, completionSource, sqlKeywordCase))
+    });
   }
 );
 

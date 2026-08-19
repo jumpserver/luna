@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChenTabTitleFormat } from "~/chen/composables/useChenWorkspacePreferences";
+import type { ChenSqlKeywordCase, ChenTabTitleFormat } from "~/chen/composables/useChenWorkspacePreferences";
 import type { ChenTreeNode } from "~/chen/types";
 
 import ChenResourceTreeNode from "~/chen/components/ResourceTreeNode.vue";
@@ -13,6 +13,7 @@ const props = defineProps<{
   dbType?: string;
   width: number;
   tabTitleFormat: ChenTabTitleFormat;
+  sqlKeywordCase: ChenSqlKeywordCase;
 }>();
 
 const emit = defineEmits<{
@@ -23,6 +24,7 @@ const emit = defineEmits<{
   menu: [payload: { node: ChenTreeNode; event: MouseEvent }];
   clearRecent: [];
   "update:tabTitleFormat": [format: ChenTabTitleFormat];
+  "update:sqlKeywordCase": [keywordCase: ChenSqlKeywordCase];
 }>();
 
 const tabTitleFormatOptions = [
@@ -32,6 +34,14 @@ const tabTitleFormatOptions = [
 const tabTitleFormatModel = computed({
   get: () => props.tabTitleFormat,
   set: (format: ChenTabTitleFormat) => emit("update:tabTitleFormat", format)
+});
+const sqlKeywordCaseOptions = [
+  { label: "小写", value: "lower" },
+  { label: "大写", value: "upper" }
+];
+const sqlKeywordCaseModel = computed({
+  get: () => props.sqlKeywordCase,
+  set: (keywordCase: ChenSqlKeywordCase) => emit("update:sqlKeywordCase", keywordCase)
 });
 </script>
 
@@ -76,6 +86,16 @@ const tabTitleFormatModel = computed({
                   class="w-28"
                   size="xs"
                   :items="tabTitleFormatOptions"
+                  value-key="value"
+                />
+              </label>
+              <label class="flex items-center justify-between gap-3 text-xs">
+                <span>SQL 关键字补全</span>
+                <USelect
+                  v-model="sqlKeywordCaseModel"
+                  class="w-28"
+                  size="xs"
+                  :items="sqlKeywordCaseOptions"
                   value-key="value"
                 />
               </label>

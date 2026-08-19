@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ChenSqlSnippet } from "~/chen/composables/useChenSqlSnippets";
+import type { ChenSqlKeywordCase } from "~/chen/composables/useChenWorkspacePreferences";
 import type {
   ChenDataViewAction,
   ChenDataViewActionData,
@@ -23,6 +24,7 @@ const props = defineProps<{
   dbType: string;
   canCopy: boolean;
   metadataStore: ChenSqlMetadataStore;
+  sqlKeywordCase: ChenSqlKeywordCase;
 }>();
 
 const emit = defineEmits<{
@@ -333,7 +335,7 @@ defineExpose({ editorSnapshot });
 
 <template>
   <div ref="queryPanel" class="grid h-full min-h-0" :style="queryPanelRows">
-    <div class="relative flex min-h-0 flex-col overflow-hidden p-3">
+    <div class="relative flex min-h-0 flex-col overflow-hidden px-3 pt-3 pb-[3px]">
       <div class="mb-2 flex shrink-0 items-center gap-2">
         <UButton
           v-if="tab.state.inQuery || tab.state.canCancel"
@@ -412,6 +414,7 @@ defineExpose({ editorSnapshot });
           class="min-h-0 flex-1"
           :db-type="dbType"
           :completion-source="completionSource"
+          :sql-keyword-case="sqlKeywordCase"
           :read-only="Boolean(tab.state.loading || tab.state.editorLoading)"
           @selection-change="hasSelection = $event"
           @format="formatStatement"
@@ -465,8 +468,6 @@ defineExpose({ editorSnapshot });
         data-view-editing
         :db-type="dbType"
         :can-copy="canCopy"
-        :logs="tab.logs"
-        show-logs
         empty-message="Run a query to open results here."
         @update:active-result-tab-id="emit('activateResult', tab, $event)"
         @close="emit('closeResult', tab, $event)"

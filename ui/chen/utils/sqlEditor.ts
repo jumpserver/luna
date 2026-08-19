@@ -1,5 +1,6 @@
 import type { EditorState, Extension } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
+import type { ChenSqlKeywordCase } from "~/chen/composables/useChenWorkspacePreferences";
 import type { ChenSqlCompletionSource } from "~/chen/utils/sqlCompletion";
 import { MariaSQL, MSSQL, MySQL, PLSQL, PostgreSQL, sql, StandardSQL } from "@codemirror/lang-sql";
 import { syntaxTree } from "@codemirror/language";
@@ -29,9 +30,16 @@ export function chenSqlDialect(dbType: string) {
   }
 }
 
-export function chenSqlExtensions(dbType: string, completionSource?: ChenSqlCompletionSource): Extension {
+export function chenSqlExtensions(
+  dbType: string,
+  completionSource?: ChenSqlCompletionSource,
+  sqlKeywordCase: ChenSqlKeywordCase = "lower"
+): Extension {
   const dialect = chenSqlDialect(dbType);
-  return [sql({ dialect }), completionSource ? dialect.language.data.of({ autocomplete: completionSource }) : []];
+  return [
+    sql({ dialect, upperCaseKeywords: sqlKeywordCase === "upper" }),
+    completionSource ? dialect.language.data.of({ autocomplete: completionSource }) : []
+  ];
 }
 
 export function replaceChenSqlDocument(editor: Pick<EditorView, "dispatch" | "state">, value: string) {

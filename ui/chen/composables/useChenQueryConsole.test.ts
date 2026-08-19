@@ -88,4 +88,35 @@ describe("chen query console mutation results", () => {
     expect(tab.resultTabs).toEqual([]);
     expect(sendConsoleAction).not.toHaveBeenCalled();
   });
+
+  it("keeps pinned results when the server closes previous results", () => {
+    const tab = queryTab();
+    const queryConsole = useChenQueryConsole(sendConsoleAction);
+    queryConsole.handleQueryConsolePacket(tab, {
+      type: "new_data_view",
+      data: { id: "result-1", title: "select 1", data: { fields: [], data: [] } }
+    });
+    queryConsole.handleQueryConsolePacket(tab, {
+      type: "new_data_view",
+      data: { id: "result-2", title: "select 2", data: { fields: [], data: [] } }
+    });
+    const pinned = tab.resultTabs.find((result) => result.id === "result-1");
+    if (!pinned) throw new Error("expected result-1");
+    pinned.state.pinned = true;
+
+    queryConsole.handleQueryConsolePacket(tab, { type: "close_data_view", data: ["result-1", "result-2"] });
+
+    expect(tab.resultTabs.map(({ id }) => id)).toEqual(["result-1"]);
+  });
+
+  it("forwards query logs to the session log console", () => {
+    const tab = queryTab();
+    const onLog = vi.fn();
+    const queryConsole = useChenQueryConsole(sendConsoleAction, { onLog });
+    const line = { level: 0, message: "Query failed" };
+
+    queryConsole.handleQueryConsolePacket(tab, { type: "log", data: line });
+
+    expect(onLog).toHaveBeenCalledWith(tab, line, "Query failed");
+  });
 });

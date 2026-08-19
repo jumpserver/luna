@@ -66,7 +66,9 @@ const selectedRows = ref<Array<Record<string, any>>>([]);
 const editing = useChenDataViewEditing(() => props.tab);
 const editState = computed(() => props.tab.editState);
 const previewDialogOpen = computed(() => editState.value.previewResult?.success === true);
-const gridPreferenceKey = computed(() => chenGridPreferenceKey(props.tab.meta, props.tab.id, props.dbType));
+const gridPreferenceKey = computed(() =>
+  chenGridPreferenceKey(props.tab.meta, props.tab.meta?.title || props.tab.title || props.tab.id, props.dbType)
+);
 const editableFields = computed(() => (props.tab.data?.fields || []).filter((field) => field.editable === true));
 const insertableFields = computed(() =>
   (props.tab.data?.fields || []).filter((field) => field.insertable === true && Boolean(field.sourceColumn))

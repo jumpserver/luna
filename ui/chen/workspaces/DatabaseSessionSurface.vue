@@ -16,6 +16,8 @@ import type {
   ChenDataViewActionData,
   ChenDataViewActionTarget,
   ChenDataViewConsoleTab,
+  ChenLogConsoleEntry,
+  ChenLogConsoleLevel,
   ChenPacket,
   ChenPromptConsoleTab,
   ChenQueryConsoleTab,
@@ -43,6 +45,7 @@ import CreateTablePanel from "~/chen/components/CreateTablePanel.vue";
 import DatabaseOverviewPanel from "~/chen/components/DatabaseOverviewPanel.vue";
 import DataViewPanel from "~/chen/components/DataViewPanel.vue";
 import DiscardDataViewChangesDialog from "~/chen/components/DiscardDataViewChangesDialog.vue";
+import LogConsolePanel from "~/chen/components/LogConsolePanel.vue";
 import QueryConsolePanel from "~/chen/components/QueryConsolePanel.vue";
 import ResourceTreePanel from "~/chen/components/ResourceTreePanel.vue";
 import TableStructurePanel from "~/chen/components/TableStructurePanel.vue";
@@ -153,6 +156,10 @@ const tree = useChenResourceTree(auth.chenToken, {
 const workspace = useChenWorkspaceTabs();
 const workspacePreferences = useChenWorkspacePreferences();
 const recentTables = useChenRecentTables(`${props.tab.assetId}:${props.tab.protocol}`);
+const logConsoleOpen = ref(false);
+const logConsoleEntries = ref<ChenLogConsoleEntry[]>([]);
+const unreadLogErrorCount = ref(0);
+const MAX_LOG_CONSOLE_ENTRIES = 1_000;
 const dataView = useChenDataView(sendConsoleAction);
 const consoleConnections = new Map<string, ReturnType<typeof useChenWebSocket>>();
 const indexOperations = new Map<
@@ -254,7 +261,45 @@ const databaseTarget = computed(() => {
   return port ? `${formattedAddress}:${port}` : address;
 });
 
-const queryConsole = useChenQueryConsole(sendConsoleAction);
+function logConsoleLevel(line: unknown): ChenLogConsoleLevel {
+  if (!line || typeof line !== "object") return "info";
+  const level = "level" in line ? Number(line.level) : undefined;
+  if (level === 0 || ("type" in line && line.type === "error")) return "error";
+  if (level === 1 || ("type" in line && line.type === "warning")) return "warning";
+  return "info";
+}
+
+function appendLogConsoleEntry(tab: ChenWorkspaceTab, line: unknown, content: string) {
+  const level = logConsoleLevel(line);
+  logConsoleEntries.value.push({
+    id: newChenWorkspaceId("log"),
+    timestamp: Date.now(),
+    sourceId: tab.id,
+    sourceTitle: workspace.displayWorkspaceTabTitle(tab),
+    level,
+    message: content
+  });
+  if (logConsoleEntries.value.length > MAX_LOG_CONSOLE_ENTRIES) {
+    logConsoleEntries.value.splice(0, logConsoleEntries.value.length - MAX_LOG_CONSOLE_ENTRIES);
+  }
+  if (level === "error" && !logConsoleOpen.value) unreadLogErrorCount.value += 1;
+}
+
+function toggleLogConsole() {
+  logConsoleOpen.value = !logConsoleOpen.value;
+  if (logConsoleOpen.value) unreadLogErrorCount.value = 0;
+}
+
+function closeLogConsole() {
+  logConsoleOpen.value = false;
+}
+
+function clearLogConsole() {
+  logConsoleEntries.value = [];
+  unreadLogErrorCount.value = 0;
+}
+
+const queryConsole = useChenQueryConsole(sendConsoleAction, { onLog: appendLogConsoleEntry });
 const session = useChenSession({
   authenticate: auth.authenticate,
   markConnected: () => markSessionConnected(props.tab.id),
@@ -849,6 +894,7 @@ function handleCreateTablePacket(tab: ChenCreateTableWorkspaceTab, packet: ChenP
     return;
   }
   if (packet.type === "message") {
+    queryConsole.appendLog(tab, packet.data);
     const isError = packet.data?.type === "error" || packet.data?.level === 0;
     if (isError) tab.submitError ||= packetErrorMessage(packet.data);
     return;
@@ -903,6 +949,7 @@ function handleTableStructurePacket(tab: ChenTableStructureWorkspaceTab, packet:
     return;
   }
   if (packet.type === "message") {
+    queryConsole.appendLog(tab, packet.data);
     const isError = packet.data?.type === "error" || packet.data?.level === 0;
     if (isError) tab.submitError ||= packetErrorMessage(packet.data);
     return;
@@ -1651,8 +1698,10 @@ defineExpose({ focus });
         :db-type="auth.profile.value?.dbType"
         :width="sidebarWidth"
         :tab-title-format="workspacePreferences.tabTitleFormat"
+        :sql-keyword-case="workspacePreferences.sqlKeywordCase"
         @refresh="refreshResourceRoot"
         @update:tab-title-format="workspacePreferences.tabTitleFormat = $event"
+        @update:sql-keyword-case="workspacePreferences.sqlKeywordCase = $event"
         @select="tree.selectedNodeKey.value = $event.key"
         @activate="handleNodeClick"
         @toggle="tree.toggleTreeNode"
@@ -1678,10 +1727,13 @@ defineExpose({ focus });
           :tabs="workspace.workspaceTabs.value"
           :active-tab-id="workspace.activeWorkspaceTabId.value"
           :tab-title-format="workspacePreferences.tabTitleFormat"
+          :log-open="logConsoleOpen"
+          :log-error-count="unreadLogErrorCount"
           @activate="workspace.setActiveTab"
           @close="closeWorkspaceTab"
           @create="createWorkspaceTab"
           @rename="workspace.renameTab"
+          @toggle-log="toggleLogConsole"
         />
 
         <div
@@ -1700,6 +1752,7 @@ defineExpose({ focus });
             :db-type="auth.profile.value?.dbType || ''"
             :can-copy="auth.profile.value?.canCopy === true"
             :metadata-store="sqlMetadataStore"
+            :sql-keyword-case="workspacePreferences.sqlKeywordCase"
             @run="runQueryTab"
             @cancel="cancelQueryLikeTab"
             @change-context="changeQueryContext"
@@ -1772,6 +1825,13 @@ defineExpose({ focus });
         </div>
 
         <ChenSessionState v-else icon="i-lucide-database-zap" message="Select a database action to begin." />
+
+        <LogConsolePanel
+          v-show="logConsoleOpen"
+          :entries="logConsoleEntries"
+          @clear="clearLogConsole"
+          @close="closeLogConsole"
+        />
       </section>
     </div>
 

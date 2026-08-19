@@ -25,7 +25,10 @@ export function useChenQueryConsole(
     tab: ChenQueryLikeWorkspaceTab | ChenCreateTableWorkspaceTab | ChenTableStructureWorkspaceTab,
     type: string,
     data?: any
-  ) => boolean | void
+  ) => boolean | void,
+  options: {
+    onLog?: (tab: ChenWorkspaceTab, line: unknown, content: string) => void;
+  } = {}
 ) {
   const queryExecutions = new WeakMap<
     ChenQueryConsoleTab,
@@ -71,6 +74,7 @@ export function useChenQueryConsole(
     if (tab.logs.length > 400) {
       tab.logs.splice(0, tab.logs.length - 400);
     }
+    options.onLog?.(tab, line, content);
     if (tab.kind === "console") {
       const level = line && typeof line === "object" && "level" in line ? Number(line.level) : undefined;
       appendConsoleStatus(tab, content, level);
@@ -156,8 +160,10 @@ export function useChenQueryConsole(
     tab.activeResultTabId = resultTab.id;
   }
 
-  function removeQueryResult(tab: ChenQueryConsoleTab, reference: string) {
-    tab.resultTabs = tab.resultTabs.filter((item) => item.id !== reference && item.title !== reference);
+  function removeQueryResult(tab: ChenQueryConsoleTab, reference: string, preservePinned = false) {
+    tab.resultTabs = tab.resultTabs.filter(
+      (item) => (preservePinned && item.state.pinned === true) || (item.id !== reference && item.title !== reference)
+    );
     if (!tab.resultTabs.some((item) => item.id === tab.activeResultTabId)) {
       tab.activeResultTabId = tab.resultTabs.at(-1)?.id || "";
     }
@@ -165,17 +171,17 @@ export function useChenQueryConsole(
 
   function removeQueryResults(tab: ChenQueryConsoleTab, data: unknown) {
     if (typeof data === "string") {
-      removeQueryResult(tab, data);
+      removeQueryResult(tab, data, true);
       return;
     }
     if (Array.isArray(data)) {
       data.forEach((reference) => {
-        if (typeof reference === "string") removeQueryResult(tab, reference);
+        if (typeof reference === "string") removeQueryResult(tab, reference, true);
       });
       return;
     }
     if (data && typeof data === "object" && "sql" in data && typeof data.sql === "string") {
-      removeQueryResult(tab, data.sql);
+      removeQueryResult(tab, data.sql, true);
     }
   }
 
@@ -201,10 +207,7 @@ export function useChenQueryConsole(
         break;
       case "message":
         tab.message = typeof packet.data === "string" ? { type: "info", message: packet.data } : packet.data || null;
-        if (tab.kind === "console") {
-          const message = formatLogEntry(packet.data);
-          if (message) appendConsoleStatus(tab, message, packet.data?.type === "error" ? 0 : undefined);
-        }
+        appendLog(tab, packet.data);
         break;
       case "sql_error":
         if (tab.kind === "query" && packet.data && typeof packet.data === "object") {
@@ -212,6 +215,7 @@ export function useChenQueryConsole(
             ...packet.data,
             message: String(packet.data.message || "SQL execution failed")
           };
+          appendLog(tab, { ...packet.data, level: 0, message: tab.lastSqlError.message });
         }
         break;
       case "update_state": {

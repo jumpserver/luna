@@ -83,6 +83,7 @@ function requestExport() {
       icon="i-lucide-refresh-cw"
       color="neutral"
       variant="ghost"
+      class="chen-data-view-toolbar-button text-muted hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
       aria-label="Refresh data"
       title="Refresh data"
       :loading="controls.loading || busy"
@@ -95,6 +96,7 @@ function requestExport() {
       icon="i-lucide-upload"
       color="neutral"
       variant="ghost"
+      class="chen-data-view-toolbar-button text-muted hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
       aria-label="Import CSV"
       title="Import CSV"
       :disabled="controls.loading || busy"
@@ -105,6 +107,7 @@ function requestExport() {
       icon="i-lucide-download"
       color="neutral"
       variant="ghost"
+      class="chen-data-view-toolbar-button text-muted hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
       aria-label="Export data"
       title="Export data"
       :disabled="controls.loading || busy"
@@ -116,6 +119,7 @@ function requestExport() {
         icon="i-lucide-settings-2"
         color="neutral"
         variant="ghost"
+        class="chen-data-view-toolbar-button text-muted hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
         aria-label="Table display settings"
         title="Table display settings"
       />
@@ -210,3 +214,10 @@ function requestExport() {
     />
   </div>
 </template>
+
+<style scoped>
+:deep(.chen-data-view-toolbar-button:hover:not(:disabled)) {
+  background-color: var(--app-hover-soft) !important;
+  color: var(--app-fg) !important;
+}
+</style>

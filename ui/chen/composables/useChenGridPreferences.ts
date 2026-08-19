@@ -34,7 +34,10 @@ export function chenGridPreferenceKey(meta: ChenDataViewMeta | null | undefined,
   if (meta?.schema || meta?.table) {
     return ["table", dbType, meta.schema || "", meta.table || ""].join(":");
   }
-  return `result:${fallback}`;
+  const normalizedFallback = String(meta?.title || fallback)
+    .trim()
+    .replace(/\s+/g, " ");
+  return ["result", dbType, normalizedFallback || "empty"].join(":");
 }
 
 export function formatChenGridValue(

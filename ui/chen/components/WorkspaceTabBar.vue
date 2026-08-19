@@ -10,6 +10,8 @@ const props = defineProps<{
   tabs: ChenTabDefinition[];
   activeTabId: string;
   tabTitleFormat: ChenTabTitleFormat;
+  logOpen?: boolean;
+  logErrorCount?: number;
 }>();
 
 const emit = defineEmits<{
@@ -17,6 +19,7 @@ const emit = defineEmits<{
   close: [id: string];
   create: [kind: "query" | "console"];
   rename: [id: string, title: string];
+  toggleLog: [];
 }>();
 
 const renameModalOpen = ref(false);
@@ -236,6 +239,22 @@ watch(
         title="Create tab"
       />
     </UDropdownMenu>
+    <div class="relative ml-auto shrink-0">
+      <UButton
+        size="xs"
+        icon="i-lucide-scroll-text"
+        color="neutral"
+        :variant="logOpen ? 'soft' : 'ghost'"
+        :aria-pressed="logOpen"
+        aria-label="Toggle Log Console"
+        :title="logErrorCount ? `Log Console · ${logErrorCount} new errors` : 'Log Console'"
+        @click="emit('toggleLog')"
+      />
+      <span
+        v-if="logErrorCount"
+        class="pointer-events-none absolute right-0.5 top-0.5 size-1.5 rounded-full bg-error ring-1 ring-[var(--workspace-surface-main)]"
+      />
+    </div>
   </div>
 
   <ChenWorkspaceModal :open="renameModalOpen" title="Rename query" @update:open="updateRenameModal">

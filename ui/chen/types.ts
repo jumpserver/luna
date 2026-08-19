@@ -227,6 +227,17 @@ export interface ChenConsoleHistoryEntry {
   sql: string;
 }
 
+export type ChenLogConsoleLevel = "error" | "warning" | "info";
+
+export interface ChenLogConsoleEntry {
+  id: string;
+  timestamp: number;
+  sourceId: string;
+  sourceTitle: string;
+  level: ChenLogConsoleLevel;
+  message: string;
+}
+
 export type ChenConsoleExecutionStatus = "running" | "cancelling" | "success" | "error" | "cancelled";
 
 export interface ChenConsoleTimelineResult {

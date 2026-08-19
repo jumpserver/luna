@@ -28,8 +28,6 @@ const props = withDefaults(
     closable?: boolean;
     dataViewActions?: boolean;
     dataViewEditing?: boolean;
-    logs?: string[];
-    showLogs?: boolean;
     dbType?: string;
     canCopy?: boolean;
   }>(),
@@ -37,8 +35,6 @@ const props = withDefaults(
     closable: false,
     dataViewActions: false,
     dataViewEditing: false,
-    logs: () => [],
-    showLogs: false,
     dbType: "",
     canCopy: false
   }
@@ -65,7 +61,11 @@ const activeResultBusy = computed(() => Boolean(activeResult.value?.editState.ac
 const activeResultRefreshRequired = computed(() => activeResult.value?.editState.refreshRequiredBeforeSave === true);
 const previewDialogOpen = computed(() => activeResult.value?.editState.previewResult?.success === true);
 const gridPreferenceKey = computed(() =>
-  chenGridPreferenceKey(activeResult.value?.meta, activeResult.value?.id || "empty", props.dbType)
+  chenGridPreferenceKey(
+    activeResult.value?.meta,
+    activeResult.value?.meta?.title || activeResult.value?.title || activeResult.value?.id || "empty",
+    props.dbType
+  )
 );
 
 function emitActiveDataViewAction(action: ChenDataViewAction, data?: number) {
@@ -123,27 +123,22 @@ function cancelActiveResultChanges() {
   <div class="flex min-h-0 flex-col">
     <div class="shrink-0 border-b border-default px-2 py-1">
       <div class="flex items-center gap-1">
-        <button
-          v-if="showLogs"
-          :disabled="activeResultBusy"
-          class="rounded-md px-2 py-1 text-xs"
-          :class="!activeResult ? 'bg-accented' : 'text-muted'"
-          @click="emit('update:activeResultTabId', '')"
-        >
-          Log
-        </button>
         <div
           v-for="result in resultTabs"
           :key="result.id"
           class="flex items-center rounded-md text-xs"
           :class="activeResultTabId === result.id ? 'bg-accented' : 'text-muted'"
         >
-          <button class="px-2 py-1" :disabled="activeResultBusy" @click="emit('update:activeResultTabId', result.id)">
+          <button
+            class="rounded-md px-2 py-1 transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
+            :disabled="activeResultBusy"
+            @click="emit('update:activeResultTabId', result.id)"
+          >
             {{ result.title }}
           </button>
           <button
             v-if="closable"
-            class="mr-1 rounded p-0.5 hover:bg-elevated"
+            class="mr-1 rounded p-0.5 text-muted transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
             :aria-label="`Close ${result.title}`"
             :disabled="activeResultBusy"
             @click="emit('close', result.id)"
@@ -154,14 +149,7 @@ function cancelActiveResultChanges() {
       </div>
     </div>
 
-    <div
-      v-if="showLogs && !activeResult && logs.length"
-      class="min-h-0 flex-1 overflow-auto bg-[var(--workspace-surface-sub-panel)] p-3 text-xs text-muted"
-    >
-      <pre class="whitespace-pre-wrap">{{ logs.join("\n") }}</pre>
-    </div>
-
-    <div v-else-if="!activeResult" class="grid min-h-0 flex-1 place-items-center px-6 text-sm text-muted">
+    <div v-if="!activeResult" class="grid min-h-0 flex-1 place-items-center px-6 text-sm text-muted">
       <div class="text-center">
         <UIcon name="i-lucide-table-properties" class="mx-auto mb-2 size-5" />
         <p>{{ emptyMessage }}</p>
