@@ -2,7 +2,7 @@ import type { AssetTreeKind, TokenResponse } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export interface ApiRequest {
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
   path: string;
   query?: Record<string, unknown>;
   body?: unknown;
@@ -47,6 +47,10 @@ export interface SqlSnippetPayload {
 
 export interface CommandSnippetPayload extends SqlSnippetPayload {
   comment?: string;
+}
+
+export interface PublicSettings {
+  SECURITY_COMMAND_EXECUTION?: boolean;
 }
 
 let lastAuthFailureAt = 0;
@@ -255,6 +259,13 @@ export function getConnectMethods(): Promise<Record<string, unknown>> {
   });
 }
 
+export function getPublicSettings(): Promise<PublicSettings> {
+  return apiRequest<PublicSettings>({
+    method: "GET",
+    path: "/api/v1/settings/public/"
+  });
+}
+
 export function getSmartEndpoint(
   params: SmartEndpointParams,
   orgId?: string
@@ -321,6 +332,14 @@ export function getCommandSnippets(): Promise<unknown> {
     method: "GET",
     path: "/api/v1/ops/adhocs/",
     query: { only_mine: true }
+  });
+}
+
+export function getCommandSnippetVariableForm(adhocId: string): Promise<unknown> {
+  return apiRequest<unknown>({
+    method: "OPTIONS",
+    path: "/api/v1/ops/variables/form-data/",
+    query: { adhoc: adhocId, t: Date.now() }
   });
 }
 

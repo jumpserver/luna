@@ -95,7 +95,15 @@ export const useAuthSession = () => {
   ) => {
     if (!payload || payload.status !== "success") return false;
 
-    const { profile, bearer, current_org, resolved_site, permission_orgs, xpack_license_valid } = payload;
+    const {
+      profile,
+      bearer,
+      current_org,
+      resolved_site,
+      permission_orgs,
+      xpack_license_valid,
+      security_command_execution
+    } = payload;
     const profileData = parseApiData<any>(profile, null);
     const currentOrgData = parseApiData<any>(current_org, null);
     const permissionOrgData = parseApiData<PermissionOrgs>(permission_orgs, {} as PermissionOrgs);
@@ -129,6 +137,7 @@ export const useAuthSession = () => {
       system_roles: profileData.system_roles,
       availableOrgs,
       xpackLicenseValid: xpack_license_valid ?? true,
+      commandExecutionEnabled: security_command_execution === true,
       connectionInfo: {
         protocol: "",
         username: ""
@@ -240,12 +249,15 @@ export const useAuthSession = () => {
     }
 
     const connectionToken = new URLSearchParams(window.location.search).get("token");
-    const profileData = await fetchWebJson<Record<string, any>>([
-      connectionToken
-        ? `/api/v1/users/profile/?fields_size=mini&token=${encodeURIComponent(connectionToken)}`
-        : "/api/v1/users/profile/?fields_size=mini",
-      "/api/v1/users/profile/",
-      "/api/v1/profile/"
+    const [profileData, publicSettings] = await Promise.all([
+      fetchWebJson<Record<string, any>>([
+        connectionToken
+          ? `/api/v1/users/profile/?fields_size=mini&token=${encodeURIComponent(connectionToken)}`
+          : "/api/v1/users/profile/?fields_size=mini",
+        "/api/v1/users/profile/",
+        "/api/v1/profile/"
+      ]),
+      fetchWebJson<Record<string, any>>(["/api/v1/settings/public/"])
     ]);
 
     if (!profileData) {
@@ -277,6 +289,7 @@ export const useAuthSession = () => {
       system_roles: profileData.system_roles || [],
       availableOrgs: [],
       xpackLicenseValid: profileData.xpack_license_valid ?? profileData.xpackLicenseValid ?? true,
+      commandExecutionEnabled: publicSettings?.SECURITY_COMMAND_EXECUTION === true,
       connectionInfo: {
         protocol: "",
         username: ""

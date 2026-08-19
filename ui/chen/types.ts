@@ -200,6 +200,8 @@ export interface ChenConsoleState {
   limit?: number;
   total?: number;
   paged?: boolean;
+  truncated?: boolean;
+  rowLimit?: number;
   pinned?: boolean;
   [key: string]: any;
 }

@@ -69,6 +69,13 @@ export const useUserInfoStore = defineStore(
       loggedIn.value = l;
     };
 
+    const setCommandExecutionEnabled = (enabled: boolean) => {
+      if (currentUser.value) currentUser.value.commandExecutionEnabled = enabled;
+
+      const userData = userMap.value[currentAccountId.value];
+      if (userData) userData.commandExecutionEnabled = enabled;
+    };
+
     /**
      * @description 获取用户数据
      * @param accountId
@@ -436,6 +443,7 @@ export const useUserInfoStore = defineStore(
       setCurrentAccount,
       deleteUserData,
       setUserLoggedIn,
+      setCommandExecutionEnabled,
       setOrganizations,
       setRdpClientOption,
       setConnectionInfoToUser,

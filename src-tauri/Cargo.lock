@@ -3715,6 +3715,7 @@ dependencies = [
  "log",
  "num_cpus",
  "oauth2",
+ "objc2-app-kit",
  "openh264",
  "percent-encoding",
  "portable-pty",

@@ -2,6 +2,7 @@
 import WorkspaceBatchCommandBottomPanel from "~/components/Workspace/batchCommandBottomPanel.vue";
 import WorkspaceShell from "~/components/Workspace/shell.vue";
 import WorkspaceStatusFooter from "~/components/Workspace/statusFooter.vue";
+import { getPublicSettings } from "~/composables/useApiRequest";
 import SettingsAboutPage from "~/pages/setting/about.vue";
 import SettingsAppearancePage from "~/pages/setting/appearance.vue";
 import SettingsApplicationPage from "~/pages/setting/application.vue";
@@ -22,9 +23,30 @@ const {
 } = useWorkspaceTabs();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const userInfoStore = useUserInfoStore();
-const { loggedIn } = storeToRefs(userInfoStore);
-const { batchPanelOpen } = useBatchCommandPanel();
+const { loggedIn, currentUser } = storeToRefs(userInfoStore);
+const { batchPanelOpen, setOpen: setBatchPanelOpen } = useBatchCommandPanel();
 const { open: settingsOpen, activeSection: activeSettingsSection } = useSettingsWindow();
+const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
+
+const refreshCommandExecutionSetting = async () => {
+  if (!loggedIn.value) return;
+
+  try {
+    const settings = await getPublicSettings();
+    userInfoStore.setCommandExecutionEnabled(settings.SECURITY_COMMAND_EXECUTION === true);
+  } catch (error) {
+    userInfoStore.setCommandExecutionEnabled(false);
+    console.debug("refresh command execution setting failed", error);
+  }
+};
+
+watch(
+  commandExecutionEnabled,
+  (enabled) => {
+    if (!enabled) setBatchPanelOpen(false);
+  },
+  { immediate: true }
+);
 
 const showWorkspaceSidebar = computed(
   () =>
@@ -92,12 +114,14 @@ useEventListener(window, "keydown", startEscapeHold);
 useEventListener(window, "keydown", handleWorkspaceModeShortcut, { capture: true });
 useEventListener(window, "keyup", stopEscapeHold);
 useEventListener(window, "blur", clearEscapeHold);
+useEventListener(window, "focus", refreshCommandExecutionSetting);
 
 watch(focusMode, (active) => {
   if (!active) clearEscapeHold();
 });
 
 onMounted(() => {
+  void refreshCommandExecutionSetting();
   initialTheme();
   listenOSThemeChange();
   warmupWebSettings();
@@ -172,7 +196,7 @@ onBeforeUnmount(() => {
       </template>
 
       <template #bottomPanel>
-        <div v-show="activeWorkspaceMode === 'assets' && batchPanelOpen" class="min-h-0">
+        <div v-show="activeWorkspaceMode === 'assets' && commandExecutionEnabled && batchPanelOpen" class="min-h-0">
           <WorkspaceBatchCommandBottomPanel />
         </div>
       </template>

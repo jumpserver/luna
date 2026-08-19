@@ -320,7 +320,7 @@ describe("sftp professional workbench", () => {
     expect(remoteTabsComponent).not.toContain("border-primary/50");
   });
 
-  it("places organization selection first, reuses the shared asset tree, and supports replacing the active tab", () => {
+  it("places organization selection first and reuses the shared asset tree", () => {
     expect(connectModalComponent.indexOf("organizationSelector")).toBeLessThan(
       connectModalComponent.indexOf("remoteAssetSearch")
     );
@@ -329,10 +329,9 @@ describe("sftp professional workbench", () => {
     expect(connectModalComponent).not.toContain("show-recent-connections");
     expect(connectModalComponent).not.toContain("recent-connections-label");
     expect(connectModalComponent).not.toContain('v-for="item in recentConnections"');
-    expect(connectModalComponent).toContain("openRemoteInCurrentTab");
-    expect(workspacePanesComposable).toContain(
-      "replacePaneId: openRemoteInCurrentTab.value ? replacePaneId : undefined"
-    );
+    expect(connectModalComponent).not.toContain("UCheckbox");
+    expect(connectModalComponent).not.toContain("openRemoteInCurrentTab");
+    expect(workspacePanesComposable).not.toContain("openRemoteInCurrentTab");
   });
 
   it("keeps the add button beside the tabs", () => {

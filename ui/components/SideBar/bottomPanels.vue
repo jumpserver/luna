@@ -3,7 +3,8 @@ import type { DropdownMenuItem } from "@nuxt/ui";
 import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
 import type { Snippet } from "~/composables/useSnippets";
 import type { AssetItem } from "~/types";
-import { writeClipboardText } from "~/utils/clipboard";
+import type { SnippetVariableField } from "~/utils/snippetVariables";
+import { isTerminalSnippetModule, renderSnippetCommand } from "~/utils/snippetVariables";
 
 const props = defineProps<{
   mainPanelOpen: boolean;
@@ -33,8 +34,9 @@ const {
   renameFolder,
   removeFolder
 } = useFavoriteFolders();
-const { snippets, loading: snippetLoading, load: loadSnippets } = useSnippets();
+const { snippets, loading: snippetLoading, load: loadSnippets, loadVariableForm } = useSnippets();
 const { openScriptEditor } = useWorkspaceTabs();
+const { fillCommand: fillBatchCommand } = useBatchCommandPanel();
 const createModalOpen = ref(false);
 const createParentId = ref<string | null>(null);
 const folderName = ref("");
@@ -49,6 +51,18 @@ const deleteModalOpen = ref(false);
 const deleteTarget = ref<FavoriteFolder | null>(null);
 const deleting = ref(false);
 const snippetSearch = ref("");
+const variableModalOpen = ref(false);
+const variableLoadingSnippetId = ref("");
+const variableSnippet = ref<Snippet | null>(null);
+const variableFields = ref<SnippetVariableField[]>([]);
+const variableValues = ref<Record<string, string>>({});
+const variableCommand = ref("");
+
+const variableFormDisabled = computed(
+  () =>
+    !variableCommand.value.trim() ||
+    variableFields.value.some((field) => field.required && !variableValues.value[field.key])
+);
 
 const snippetCreateItems = computed<DropdownMenuItem[]>(() =>
   [
@@ -278,21 +292,75 @@ function handleSnippetDoubleClick(snippet: Snippet) {
   });
 }
 
-async function copySnippet(snippet: Snippet) {
+function updateVariableCommand() {
+  if (!variableSnippet.value) return;
+  variableCommand.value = renderSnippetCommand(variableSnippet.value.args, variableValues.value);
+}
+
+function updateVariableValue(key: string, value: unknown) {
+  variableValues.value = { ...variableValues.value, [key]: String(value ?? "") };
+  updateVariableCommand();
+}
+
+function updateVariableModal(open: boolean) {
+  variableModalOpen.value = open;
+  if (open) return;
+
+  variableSnippet.value = null;
+  variableFields.value = [];
+  variableValues.value = {};
+  variableCommand.value = "";
+}
+
+async function openVariableForm(snippet: Snippet) {
+  if (variableLoadingSnippetId.value) return;
+
+  variableLoadingSnippetId.value = snippet.id;
   try {
-    await writeClipboardText(snippet.args);
-    toast.add({
-      title: t("Common.CopySuccess"),
-      color: "success",
-      duration: 1200
-    });
+    const fields = await loadVariableForm(snippet.id);
+    if (fields.length === 0) throw new Error(t("Snippets.VariableFormEmpty"));
+
+    variableSnippet.value = snippet;
+    variableFields.value = fields;
+    variableValues.value = Object.fromEntries(fields.map((field) => [field.key, field.defaultValue]));
+    updateVariableCommand();
+    variableModalOpen.value = true;
   } catch (error) {
     addErrorToast({
-      title: t("Common.CopyFailed"),
+      title: t("Snippets.VariableFormLoadFailed"),
       error,
       icon: "i-lucide-circle-alert"
     });
+  } finally {
+    variableLoadingSnippetId.value = "";
   }
+}
+
+function confirmVariableCommand() {
+  if (variableFormDisabled.value) return;
+  fillBatchCommand(variableCommand.value);
+  updateVariableModal(false);
+}
+
+async function fillSnippetIntoBatchCommand(snippet: Snippet) {
+  if (!isTerminalSnippetModule(snippet.module.value)) {
+    toast.add({
+      title: t("Snippets.BatchCommandUnsupported"),
+      description: t("Snippets.BatchCommandUnsupportedHint", {
+        module: snippet.module.label || snippet.module.value
+      }),
+      color: "warning",
+      icon: "i-lucide-circle-alert"
+    });
+    return;
+  }
+
+  if (snippet.variable.length > 0) {
+    await openVariableForm(snippet);
+    return;
+  }
+
+  fillBatchCommand(snippet.args);
 }
 
 useEventBus().on("favoriteChanged", () => {
@@ -551,16 +619,18 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
               <span class="block truncate font-ui-mono text-[10px] text-gray-400">{{ snippet.args }}</span>
             </span>
           </button>
-          <UTooltip :text="t('Common.CopyOnly')" :delay-duration="120">
+          <UTooltip :text="t('Snippets.FillBatchCommand')" :delay-duration="120">
             <UButton
               color="neutral"
               variant="ghost"
               size="xs"
-              icon="i-lucide-copy"
+              icon="i-lucide-square-terminal"
               class="mt-0.5 size-6 shrink-0 justify-center p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
               :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-              :aria-label="t('Common.CopyOnly')"
-              @click.stop="copySnippet(snippet)"
+              :aria-label="t('Snippets.FillBatchCommand')"
+              :loading="variableLoadingSnippetId === snippet.id"
+              :disabled="Boolean(variableLoadingSnippetId)"
+              @click.stop="fillSnippetIntoBatchCommand(snippet)"
             />
           </UTooltip>
         </div>
@@ -609,6 +679,70 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
     @confirm="submitDeleteFolder"
     @update:open="updateDeleteModal"
   />
+
+  <UModal
+    :open="variableModalOpen"
+    :title="t('Snippets.VariableFormTitle')"
+    :description="variableSnippet?.name || ''"
+    :ui="{ content: 'w-[calc(100vw-2rem)] max-w-lg', footer: 'justify-end gap-2' }"
+    @update:open="updateVariableModal"
+  >
+    <template #body>
+      <div class="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
+        <UFormField
+          v-for="(field, index) in variableFields"
+          :key="field.key"
+          :label="field.label"
+          :help="field.helpText"
+          :required="field.required"
+          size="sm"
+        >
+          <UInput
+            v-if="field.type === 'string'"
+            :model-value="variableValues[field.key]"
+            :autofocus="index === 0"
+            autocomplete="off"
+            autocapitalize="none"
+            spellcheck="false"
+            class="w-full"
+            @update:model-value="updateVariableValue(field.key, $event)"
+          />
+          <USelect
+            v-else
+            :model-value="variableValues[field.key]"
+            :items="field.choices"
+            value-key="value"
+            label-key="label"
+            :placeholder="t('Snippets.VariableSelectPlaceholder')"
+            class="w-full"
+            @update:model-value="updateVariableValue(field.key, $event)"
+          />
+        </UFormField>
+
+        <UFormField :label="t('Snippets.GeneratedCommand')" :help="t('Snippets.GeneratedCommandHint')" size="sm">
+          <UTextarea
+            v-model="variableCommand"
+            :rows="5"
+            autocomplete="off"
+            autocapitalize="none"
+            spellcheck="false"
+            class="w-full font-ui-mono"
+          />
+        </UFormField>
+      </div>
+    </template>
+
+    <template #footer>
+      <UButton color="neutral" variant="outline" @click="updateVariableModal(false)">
+        {{ t("Common.Cancel") }}
+      </UButton>
+      <UButton
+        :label="t('Snippets.FillBatchCommand')"
+        :disabled="variableFormDisabled"
+        @click="confirmVariableCommand"
+      />
+    </template>
+  </UModal>
 
   <UDropdownMenu
     :open="folderMenuVisible"

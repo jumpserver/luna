@@ -38,16 +38,17 @@ const emits = defineEmits<{
 const { t } = useI18n();
 const { getMethodsForProtocol, getDefaultMethodForProtocol } = useConnectMethods();
 const { appConfig } = useSettingManager();
-const trailingIcon = "group-data-[state=open]:rotate-180 transition-transform duration-200";
 const formFieldUi = {
   label: "text-xs font-semibold tracking-[0.025em] text-[var(--app-text-muted)]",
   container: "mt-2"
 };
 const controlBaseUi =
-  "min-h-9 rounded-[4px] bg-[var(--app-input-bg)] ring-1 ring-inset ring-[var(--app-border)] shadow-sm transition-[box-shadow,background-color] hover:ring-[var(--app-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]";
+  "h-8 rounded-[4px] bg-[var(--app-input-bg)] ring-1 ring-inset ring-[var(--app-border)] shadow-sm transition-[box-shadow,background-color] hover:ring-[var(--app-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]";
 
 const showManualInputArea = ref(false);
 const showDynamicUserArea = ref(false);
+const manualPasswordVisible = ref(false);
+const dynamicPasswordVisible = ref(false);
 const advancedOptionOpen = ref(false);
 const availableConnectMethods = ref<any[]>([]);
 const selectedConnectMethodType = ref<string>("");
@@ -409,6 +410,8 @@ const selectedAccount = computed<string>({
 function handleSpecialAccount(v: string) {
   showManualInputArea.value = false;
   showDynamicUserArea.value = false;
+  manualPasswordVisible.value = false;
+  dynamicPasswordVisible.value = false;
 
   if (v === "手动输入" || v === "Manual input") {
     showManualInputArea.value = true;
@@ -444,10 +447,10 @@ function handleSpecialAccount(v: string) {
         value-key="value"
         label-key="label"
         :ui="{
-          base: controlBaseUi,
-          trailingIcon
+          base: controlBaseUi
         }"
-        icon="i-lucide-user-round"
+        icon="i-lucide-id-card"
+        trailing-icon="i-lucide-chevrons-up-down"
         size="md"
         class="w-full"
       />
@@ -472,15 +475,30 @@ function handleSpecialAccount(v: string) {
           <UFieldGroup class="w-full">
             <UInput
               v-model="localManualPassword"
-              type="password"
+              :type="manualPasswordVisible ? 'text' : 'password'"
               autocapitalize="none"
               autocorrect="off"
               :placeholder="t('Account.Password')"
-              :ui="{ base: controlBaseUi }"
+              :ui="{ base: controlBaseUi, trailing: 'pe-1' }"
               icon="i-lucide-lock-keyhole"
               size="md"
               class="min-w-0 flex-1"
-            />
+            >
+              <template #trailing>
+                <UButton
+                  type="button"
+                  :icon="manualPasswordVisible ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                  :aria-label="t(manualPasswordVisible ? 'Account.HidePassword' : 'Account.ShowPassword')"
+                  :title="t(manualPasswordVisible ? 'Account.HidePassword' : 'Account.ShowPassword')"
+                  :aria-pressed="manualPasswordVisible"
+                  color="neutral"
+                  variant="link"
+                  size="xs"
+                  :ui="{ leadingIcon: 'size-[18px]' }"
+                  @click="manualPasswordVisible = !manualPasswordVisible"
+                />
+              </template>
+            </UInput>
             <UButton
               type="button"
               :icon="localRememberSecret ? 'i-lucide-bookmark-check' : 'i-lucide-bookmark'"
@@ -489,6 +507,7 @@ function handleSpecialAccount(v: string) {
               color="neutral"
               variant="ghost"
               size="md"
+              :ui="{ leadingIcon: 'size-[18px]' }"
               class="remember-secret-button"
               :class="{ 'remember-secret-button-active': localRememberSecret }"
               @click="localRememberSecret = !localRememberSecret"
@@ -504,15 +523,30 @@ function handleSpecialAccount(v: string) {
           <UFieldGroup class="w-full">
             <UInput
               v-model="localDynamicPassword"
-              type="password"
+              :type="dynamicPasswordVisible ? 'text' : 'password'"
               autocapitalize="none"
               autocorrect="off"
               :placeholder="t('Account.Password')"
-              :ui="{ base: controlBaseUi }"
+              :ui="{ base: controlBaseUi, trailing: 'pe-1' }"
               icon="i-lucide-lock-keyhole"
               size="md"
               class="min-w-0 flex-1"
-            />
+            >
+              <template #trailing>
+                <UButton
+                  type="button"
+                  :icon="dynamicPasswordVisible ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                  :aria-label="t(dynamicPasswordVisible ? 'Account.HidePassword' : 'Account.ShowPassword')"
+                  :title="t(dynamicPasswordVisible ? 'Account.HidePassword' : 'Account.ShowPassword')"
+                  :aria-pressed="dynamicPasswordVisible"
+                  color="neutral"
+                  variant="link"
+                  size="xs"
+                  :ui="{ leadingIcon: 'size-[18px]' }"
+                  @click="dynamicPasswordVisible = !dynamicPasswordVisible"
+                />
+              </template>
+            </UInput>
             <UButton
               type="button"
               :icon="localRememberSecret ? 'i-lucide-bookmark-check' : 'i-lucide-bookmark'"
@@ -521,6 +555,7 @@ function handleSpecialAccount(v: string) {
               color="neutral"
               variant="ghost"
               size="md"
+              :ui="{ leadingIcon: 'size-[18px]' }"
               class="remember-secret-button"
               :class="{ 'remember-secret-button-active': localRememberSecret }"
               @click="localRememberSecret = !localRememberSecret"
@@ -583,10 +618,11 @@ function handleSpecialAccount(v: string) {
       </div>
     </UFormField>
 
-    <div v-if="showAdvancedOptions">
+    <div>
       <button
         type="button"
-        class="flex w-full items-center justify-between border-b border-gray-200 px-3 py-2 text-sm dark:border-white/10"
+        :disabled="!showAdvancedOptions"
+        class="flex w-full items-center justify-between border-b border-gray-200 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10"
         @click="advancedOptionOpen = !advancedOptionOpen"
       >
         <span>{{ t("Common.Advanced") }}</span>
@@ -597,12 +633,13 @@ function handleSpecialAccount(v: string) {
         />
       </button>
 
-      <div v-if="advancedOptionOpen" class="space-y-3 px-3 py-3">
+      <div v-if="showAdvancedOptions && advancedOptionOpen" class="space-y-3 px-3 py-3">
         <UFormField v-if="showCharsetOption" :label="t('Setting.Charset')" :ui="formFieldUi" size="sm">
           <USelect
             v-model="selectedCharset"
             :items="charsetItems"
             :ui="{ base: controlBaseUi }"
+            trailing-icon="i-lucide-chevrons-up-down"
             size="md"
             class="w-full"
           />
@@ -623,6 +660,7 @@ function handleSpecialAccount(v: string) {
             v-model="selectedResolution"
             :items="resolutionItems"
             :ui="{ base: controlBaseUi }"
+            trailing-icon="i-lucide-chevrons-up-down"
             size="md"
             class="w-full"
           />
@@ -640,7 +678,7 @@ function handleSpecialAccount(v: string) {
 }
 
 .remember-secret-button {
-  min-height: 2.25rem;
+  height: 32px;
   background: var(--app-input-bg);
   color: var(--app-text-muted);
   box-shadow: inset 0 0 0 1px var(--app-border);

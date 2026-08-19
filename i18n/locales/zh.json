@@ -95,6 +95,15 @@
     "Save": "保存",
     "More": "更多",
     "SaveFailed": "保存脚本失败",
+    "FillBatchCommand": "填入批量命令",
+    "VariableFormTitle": "填写脚本变量",
+    "VariableFormLoadFailed": "加载脚本变量失败",
+    "VariableFormEmpty": "未获取到脚本变量配置，请检查脚本变量设置。",
+    "VariableSelectPlaceholder": "请选择",
+    "GeneratedCommand": "生成的命令",
+    "GeneratedCommandHint": "填入批量命令前仍可修改。",
+    "BatchCommandUnsupported": "无法填入此类脚本",
+    "BatchCommandUnsupportedHint": "{module} 脚本不适用于终端批量命令，请在对应工作区或作业中心中使用。",
     "DiscardTitle": "放弃修改？",
     "Discard": "放弃",
     "DiscardChanges": "脚本尚未保存，确定放弃修改吗？"
@@ -348,7 +357,7 @@
     "OpenSFTP": "打开文件",
     "OpenProfessional": "在专业文件管理中打开",
     "OpenProfessionalHint": "本地与远程互传",
-    "BatchCommandPlaceholder": "输入要在各终端执行的命令… (Ctrl+Enter 发送)",
+    "BatchCommandPlaceholder": "输入要在各终端执行的命令… ({shortcut} 发送)",
     "BatchConnectedTabs": "已连接终端",
     "BatchNoConnectedTabs": "暂无已连接终端",
     "BatchNoConnectedTabsDesc": "从左侧资产树连接 SSH 主机后，将在此显示。",
@@ -359,6 +368,8 @@
     "BatchSendToCount": "发送到 {count} 个终端",
     "BatchCommandSent": "命令已发送",
     "BatchCommandSentDesc": "已向 {count} 个终端发送命令",
+    "BatchCommandSendResult": "批量发送结果",
+    "BatchCommandSendResultDesc": "已发送 {sent}/{total} 个终端，未发送 {failed} 个",
     "BatchPanelClose": "关闭批量命令面板"
   },
   "FileManagement": {
@@ -628,7 +639,9 @@
     "DynamicUser": "同名账号",
     "ManualInput": "手动输入",
     "Anonymous": "匿名账号",
-    "RememberPassword": "记住密码"
+    "RememberPassword": "记住密码",
+    "ShowPassword": "显示密码",
+    "HidePassword": "隐藏密码"
   },
   "ConnectionSetup": {
     "ClientLaunchStarted": "已发起客户端打开",
@@ -843,7 +856,6 @@
       "remoteSftp": "远程 SFTP",
       "localSftp": "SFTP",
       "connectRemoteSftp": "连接远程 SFTP",
-      "openInCurrentTab": "在当前标签页中打开",
       "disconnectAllRemote": "断开全部",
       "addRemoteSftp": "添加远程 SFTP",
       "remoteSftpHint": "连接另一台 SFTP 服务器，可在两侧互传文件",

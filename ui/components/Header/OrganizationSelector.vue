@@ -86,7 +86,7 @@ watch(
         >
           {{ currentOrg }}
         </span>
-        <UIcon name="i-lucide-chevron-down" class="size-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
+        <UIcon name="i-lucide-chevrons-up-down" class="size-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
       </UButton>
     </UDropdownMenu>
     <span

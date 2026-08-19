@@ -109,6 +109,11 @@ function scrollToLatest() {
 
 function resultSummary(result: ChenConsoleTimelineResult) {
   const shown = result.data.data.length;
+  if (result.state.truncated) {
+    const limit =
+      typeof result.state.rowLimit === "number" && result.state.rowLimit > 0 ? result.state.rowLimit : shown;
+    return `${shown} shown · truncated at ${limit}`;
+  }
   const total = typeof result.state.total === "number" && result.state.total >= 0 ? result.state.total : shown;
   return total > shown ? `${shown} shown · ${total} total` : `${shown} ${shown === 1 ? "row" : "rows"}`;
 }

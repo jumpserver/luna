@@ -95,6 +95,15 @@
     "Save": "Save",
     "More": "More",
     "SaveFailed": "Failed to save script",
+    "FillBatchCommand": "Fill batch command",
+    "VariableFormTitle": "Enter script variables",
+    "VariableFormLoadFailed": "Failed to load script variables",
+    "VariableFormEmpty": "No script variable configuration was returned. Check the script variable settings.",
+    "VariableSelectPlaceholder": "Select an option",
+    "GeneratedCommand": "Generated command",
+    "GeneratedCommandHint": "You can edit it before filling the batch command.",
+    "BatchCommandUnsupported": "Unsupported script type",
+    "BatchCommandUnsupportedHint": "{module} scripts are not supported by terminal batch commands. Use the matching workspace or Job Center.",
     "DiscardTitle": "Discard changes?",
     "Discard": "Discard",
     "DiscardChanges": "This script has unsaved changes. Discard them?"
@@ -348,7 +357,7 @@
     "OpenSFTP": "Open files",
     "OpenProfessional": "Open in professional file manager",
     "OpenProfessionalHint": "Transfer between local and remote",
-    "BatchCommandPlaceholder": "Enter command to run on each terminal… (Ctrl+Enter to send)",
+    "BatchCommandPlaceholder": "Enter command to run on each terminal… ({shortcut} to send)",
     "BatchConnectedTabs": "Connected terminals",
     "BatchNoConnectedTabs": "No connected terminals",
     "BatchNoConnectedTabsDesc": "Connect to SSH hosts from the asset tree and they will appear here.",
@@ -359,6 +368,8 @@
     "BatchSendToCount": "Send to {count} terminal(s)",
     "BatchCommandSent": "Command sent",
     "BatchCommandSentDesc": "Command dispatched to {count} terminal(s)",
+    "BatchCommandSendResult": "Batch send result",
+    "BatchCommandSendResultDesc": "Sent to {sent}/{total} terminal(s); {failed} not sent",
     "BatchPanelClose": "Close batch command panel"
   },
   "FileManagement": {
@@ -625,7 +636,9 @@
     "DynamicUser": "Dynamic user",
     "ManualInput": "Manual input",
     "Anonymous": "Anonymous",
-    "RememberPassword": "Remember password"
+    "RememberPassword": "Remember password",
+    "ShowPassword": "Show password",
+    "HidePassword": "Hide password"
   },
   "ConnectionSetup": {
     "ClientLaunchStarted": "Client launch started",
@@ -840,7 +853,6 @@
       "remoteSftp": "Remote SFTP",
       "localSftp": "SFTP",
       "connectRemoteSftp": "Connect remote SFTP",
-      "openInCurrentTab": "Open in current tab",
       "disconnectAllRemote": "Disconnect all",
       "addRemoteSftp": "Add remote SFTP",
       "remoteSftpHint": "Connect another SFTP server to transfer files between both sides",
