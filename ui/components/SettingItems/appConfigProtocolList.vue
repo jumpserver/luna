@@ -16,8 +16,8 @@ const items = computed<ConfigItem[]>(() => {
   return list.filter((item) => item.name !== "builtin_client" && item.protocol?.includes(props.protocol));
 });
 
-const useTerminalHostGrouping = computed(() =>
-  props.category === "terminal" && ["ssh", "telnet"].includes(props.protocol)
+const useTerminalHostGrouping = computed(
+  () => props.category === "terminal" && ["ssh", "telnet"].includes(props.protocol)
 );
 
 const viewMode = computed(() => props.mode || "all");
@@ -30,10 +30,17 @@ const terminalClientItems = computed(() =>
   useTerminalHostGrouping.value ? items.value.filter((item) => !item.use_ssh_helper) : items.value
 );
 
-const selectedTerminalHost = computed(() =>
-  terminalHostItems.value.find((item) => (item.enabled_protocols || item.match_first)?.includes(props.protocol))
-    || terminalHostItems.value[0]
-    || null
+const currentTerminalHost = computed(() =>
+  appConfig.value?.terminal?.find((item) =>
+    item.use_ssh_helper && (item.enabled_protocols || item.match_first)?.includes("ssh")
+  ) || appConfig.value?.terminal?.find((item) => item.use_ssh_helper) || null
+);
+
+const selectedTerminalHost = computed(
+  () =>
+    terminalHostItems.value.find((item) => (item.enabled_protocols || item.match_first)?.includes(props.protocol)) ||
+    terminalHostItems.value[0] ||
+    null
 );
 
 const terminalProxyItem = computed<ConfigItem | null>(() => {
@@ -56,7 +63,39 @@ const terminalProxyItem = computed<ConfigItem | null>(() => {
   };
 });
 
+const databaseDisplayItems = computed<ConfigItem[]>(() => {
+  if (props.category !== "databases") {
+    return [];
+  }
+
+  return items.value.map((item) => {
+    if (item.name !== "terminal") {
+      return item;
+    }
+
+    const terminalHost = currentTerminalHost.value;
+    if (!terminalHost) {
+      return item;
+    }
+
+    return {
+      ...item,
+      path_display: terminalHost.display_name,
+      path_copyable: false,
+      path_selectable: false,
+      comment: {
+        zh: `${t("Setting.TerminalCurrentPrefix")}${terminalHost.display_name}`,
+        en: `${t("Setting.TerminalCurrentPrefix")}${terminalHost.display_name}`
+      }
+    };
+  });
+});
+
 const displayItems = computed<ConfigItem[]>(() => {
+  if (props.category === "databases") {
+    return databaseDisplayItems.value;
+  }
+
   if (!useTerminalHostGrouping.value) {
     return terminalClientItems.value;
   }
@@ -65,10 +104,7 @@ const displayItems = computed<ConfigItem[]>(() => {
     return terminalHostItems.value;
   }
 
-  return [
-    ...(terminalProxyItem.value ? [terminalProxyItem.value] : []),
-    ...terminalClientItems.value
-  ];
+  return [...(terminalProxyItem.value ? [terminalProxyItem.value] : []), ...terminalClientItems.value];
 });
 
 const isSelected = (item: ConfigItem) => (item.enabled_protocols || item.match_first)?.includes(props.protocol);

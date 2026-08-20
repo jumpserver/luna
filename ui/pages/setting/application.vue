@@ -72,11 +72,16 @@ const appMenu = computed<NavigationMenuItem[]>(() => {
 
   return [
     {
-      label: t("Setting.CommandTerminal"),
+      label: t("Setting.TerminalSettings"),
       defaultOpen: true,
       icon: "proicons:terminal",
+      children: [protocolItem(t("Setting.TerminalSettings"), "terminal", "setting-application-terminal")]
+    },
+    {
+      label: t("Setting.CharacterProtocols"),
+      defaultOpen: true,
+      icon: "i-lucide-waypoints",
       children: [
-        protocolItem(t("Setting.TerminalSettings"), "terminal", "setting-application-terminal"),
         protocolItem("SSH", "ssh", "setting-application-ssh"),
         protocolItem("Telnet", "telnet", "setting-application-telnet")
       ]
@@ -234,8 +239,15 @@ const handlePluginUninstall = async (pluginId: string) => {
           <div v-if="pluginList.length" class="grid gap-3 md:grid-cols-2">
             <UCard v-for="plugin in pluginList" :key="plugin.id">
               <div class="flex items-start gap-3">
-                <div class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-black/5 bg-gray-50 p-1 dark:border-white/10 dark:bg-gray-800/60">
-                  <img v-if="pluginIconSrc(plugin)" :src="pluginIconSrc(plugin)" :alt="plugin.display_name" class="h-full w-full object-contain">
+                <div
+                  class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-black/5 bg-gray-50 p-1 dark:border-white/10 dark:bg-gray-800/60"
+                >
+                  <img
+                    v-if="pluginIconSrc(plugin)"
+                    :src="pluginIconSrc(plugin)"
+                    :alt="plugin.display_name"
+                    class="h-full w-full object-contain"
+                  />
                   <UIcon v-else name="i-lucide-package" class="text-lg text-gray-500" />
                 </div>
 
@@ -247,8 +259,12 @@ const handlePluginUninstall = async (pluginId: string) => {
                     </UBadge>
                   </div>
                   <p class="mt-1 text-xs text-gray-500">{{ plugin.id }}</p>
-                  <p v-if="plugin.version" class="text-xs text-gray-500">{{ t("Setting.PluginVersion", { version: plugin.version }) }}</p>
-                  <p v-if="pluginComment(plugin)" class="mt-2 text-xs text-gray-500 text-pretty">{{ pluginComment(plugin) }}</p>
+                  <p v-if="plugin.version" class="text-xs text-gray-500">
+                    {{ t("Setting.PluginVersion", { version: plugin.version }) }}
+                  </p>
+                  <p v-if="pluginComment(plugin)" class="mt-2 text-xs text-gray-500 text-pretty">
+                    {{ pluginComment(plugin) }}
+                  </p>
                   <div class="mt-2 flex flex-wrap gap-1">
                     <UBadge v-for="protocol in plugin.protocols" :key="protocol" size="xs" color="info" variant="soft">
                       {{ protocol.toUpperCase() }}
@@ -274,7 +290,10 @@ const handlePluginUninstall = async (pluginId: string) => {
             </UCard>
           </div>
 
-          <div v-else class="rounded-lg border border-dashed border-[var(--app-border)] px-4 py-8 text-center text-sm text-gray-500">
+          <div
+            v-else
+            class="rounded-lg border border-dashed border-[var(--app-border)] px-4 py-8 text-center text-sm text-gray-500"
+          >
             {{ t("Common.NoData") }}
           </div>
         </div>

@@ -21,6 +21,22 @@ struct PluginEntry {
 pub struct PluginService;
 
 impl PluginService {
+    fn custom_terminal_slug(raw: &str) -> String {
+        let mut slug = String::new();
+        let mut last_dash = false;
+        for ch in raw.trim().chars() {
+            let lower = ch.to_ascii_lowercase();
+            if lower.is_ascii_alphanumeric() {
+                slug.push(lower);
+                last_dash = false;
+            } else if !last_dash {
+                slug.push('-');
+                last_dash = true;
+            }
+        }
+        slug.trim_matches('-').to_string()
+    }
+
     fn os_key() -> &'static str {
         match std::env::consts::OS {
             "macos" => "macos",
@@ -1082,6 +1098,112 @@ impl PluginService {
                 selections.insert(key, Value::String(String::new()));
             }
         }
+    }
+
+    pub fn create_custom_terminal(
+        app: &AppHandle,
+        config_dir: &Path,
+        name: &str,
+        path: &str,
+        template: &str,
+    ) -> Result<Value, String> {
+        let display_name = name.trim();
+        if display_name.is_empty() {
+            return Err("custom terminal name is required".to_string());
+        }
+
+        let executable_path = path.trim();
+        if executable_path.is_empty() {
+            return Err("custom terminal path is required".to_string());
+        }
+
+        let launch_template = template.trim();
+        if launch_template.is_empty() {
+            return Err("custom terminal launch template is required".to_string());
+        }
+
+        let slug = Self::custom_terminal_slug(display_name);
+        if slug.is_empty() {
+            return Err("custom terminal name must contain letters or numbers".to_string());
+        }
+
+        let plugin_id = format!("custom.terminal.{slug}");
+        let user_dir = Self::user_plugins_dir(config_dir);
+        fs::create_dir_all(&user_dir)
+            .map_err(|e| format!("create {} failed: {}", user_dir.display(), e))?;
+
+        let target_dir = user_dir.join(&plugin_id);
+        if target_dir.exists() {
+            return Err(format!("custom terminal '{}' already exists", display_name));
+        }
+
+        let os_key = Self::os_key();
+        let manifest = json!({
+            "id": plugin_id,
+            "name": slug.replace('-', "_"),
+            "display_name": display_name,
+            "version": "1.0.0",
+            "min_client_version": "4.0.0",
+            "author": "User",
+            "homepage": "",
+            "download_url": "",
+            "category": "terminal",
+            "protocols": ["ssh", "telnet"],
+            "builtin": false,
+            "comment": {
+                "zh": "用户自定义终端",
+                "en": "User-defined terminal"
+            }
+        });
+        let mut platforms = Map::new();
+        platforms.insert(
+            os_key.to_string(),
+            json!({
+                "match_first": [],
+                "is_default": false,
+                "is_set": false,
+                "is_internal": false,
+                "executable": {
+                    "type": "user_path",
+                    "default": executable_path,
+                    "required": false
+                },
+                "launch": {
+                    "type": "args",
+                    "use_ssh_helper": true,
+                    "template": launch_template
+                },
+                "display_name": display_name
+            }),
+        );
+        let connect = Value::Object(Map::from_iter([(
+            "platforms".to_string(),
+            Value::Object(platforms),
+        )]));
+
+        fs::create_dir_all(&target_dir)
+            .map_err(|e| format!("create {} failed: {}", target_dir.display(), e))?;
+        let result = (|| -> Result<Value, String> {
+            fs::write(
+                target_dir.join("manifest.json"),
+                serde_json::to_string_pretty(&manifest)
+                    .map_err(|e| format!("serialize manifest.json failed: {}", e))?,
+            )
+            .map_err(|e| format!("write manifest.json failed: {}", e))?;
+            fs::write(
+                target_dir.join("connect.json"),
+                serde_json::to_string_pretty(&connect)
+                    .map_err(|e| format!("serialize connect.json failed: {}", e))?,
+            )
+            .map_err(|e| format!("write connect.json failed: {}", e))?;
+            Self::list_plugins(app, config_dir)
+        })();
+
+        if result.is_err() && target_dir.exists() {
+            let _ = fs::remove_dir_all(&target_dir);
+        }
+
+        result
     }
 
     pub fn install_plugin(

@@ -160,6 +160,29 @@ export const useApplicationConfig = () => {
     }
   };
 
+  const createCustomTerminal = async (name: string, path: string, template: string) => {
+    try {
+      await useTauriCoreInvoke("create_custom_terminal", { name, path, template });
+      await refreshAll();
+      toast.add({
+        title: t("Setting.CustomTerminalCreateSuccess"),
+        color: "primary",
+        icon: "line-md:check-all",
+        progress: false,
+        duration: 1500
+      });
+    } catch (error) {
+      addErrorToast({
+        title: t("Setting.CustomTerminalCreateFailed"),
+        description: String(error ?? "") || t("Common.OperationFailed"),
+        icon: "line-md:close-circle",
+        progress: true,
+        duration: 4000
+      });
+      throw error;
+    }
+  };
+
   return {
     appConfig,
     pluginList,
@@ -168,6 +191,7 @@ export const useApplicationConfig = () => {
     refreshAll,
     selectClient,
     installPlugin,
-    uninstallPlugin
+    uninstallPlugin,
+    createCustomTerminal
   };
 };

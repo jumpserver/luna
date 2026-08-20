@@ -16,14 +16,8 @@ const { openSettings } = useSettingsWindow();
 const { collapse: sidebarCollapsed, setCollapse: setSidebarCollapsed } = useSettingManager();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 const { batchPanelOpen, toggle: toggleBatchPanel } = useBatchCommandPanel();
-const {
-  activeTabId,
-  enterFocusMode,
-  enterFullscreenMode,
-  exitFocusMode,
-  focusMode,
-  workspaceFullscreen
-} = useWorkspaceTabs();
+const { activeTabId, enterFocusMode, enterFullscreenMode, exitFocusMode, focusMode, workspaceFullscreen } =
+  useWorkspaceTabs();
 
 const visible = computed(() => isTauriRuntime() && !isLoading.value && !isMacOS.value);
 const maximized = ref(false);

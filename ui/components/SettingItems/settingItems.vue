@@ -26,6 +26,7 @@ const imagesMap: Record<string, string | undefined> = {
   heidisql: getImageByName("heidisql"),
   mstsc: getImageByName("mstsc"),
   terminal: getImageByName("terminal"),
+  terminal_host: getImageByName("terminal"),
   vncviewer: getImageByName("realvnc"),
   realvnc: getImageByName("realvnc"),
   tigervnc: getImageByName("tigerVnc"),
@@ -234,7 +235,12 @@ const onPathClick = () => {
 
           <div class="min-w-0">
             <template v-if="canPickPath && !props.item.path">
-              <UButton :label="t('Setting.SelectPath')" color="neutral" variant="outline" @click="selectExecutablePath()" />
+              <UButton
+                :label="t('Setting.SelectPath')"
+                color="neutral"
+                variant="outline"
+                @click="selectExecutablePath()"
+              />
             </template>
             <template v-else>
               <div class="flex max-w-full items-center gap-2">

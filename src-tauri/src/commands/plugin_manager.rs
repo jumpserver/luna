@@ -34,3 +34,14 @@ pub async fn uninstall_plugin(app: AppHandle, plugin_id: String) -> Result<Value
     let config_dir = plugin_config_dir(&app)?;
     PluginService::uninstall_plugin(&app, &config_dir, &plugin_id)
 }
+
+#[tauri::command]
+pub async fn create_custom_terminal(
+    app: AppHandle,
+    name: String,
+    path: String,
+    template: String,
+) -> Result<Value, String> {
+    let config_dir = plugin_config_dir(&app)?;
+    PluginService::create_custom_terminal(&app, &config_dir, &name, &path, &template)
+}
