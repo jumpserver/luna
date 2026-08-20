@@ -72,6 +72,11 @@
       "category": "databases"
     },
     {
+      "id": "windows.terminal",
+      "name": "windows-terminal",
+      "category": "terminal"
+    },
+    {
       "id": "windows.windows-rdm",
       "name": "windows_rdm",
       "category": "remotedesktop"

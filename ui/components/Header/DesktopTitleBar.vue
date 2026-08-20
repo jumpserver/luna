@@ -76,14 +76,12 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
     items: [
       {
         label: t("Common.Settings"),
-        icon: "i-lucide-settings",
         kbds: ["ctrl", ","],
         onSelect: () => void openSettings()
       },
       { type: "separator" },
       {
         label: t("ToolTips.Close"),
-        icon: "i-lucide-x",
         kbds: ["alt", "f4"],
         onSelect: () => void useTauriCoreInvoke("close_window")
       }
@@ -106,7 +104,6 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
     items: [
       {
         label: t("TabMenu.FocusCurrent"),
-        icon: "i-lucide-scan",
         type: "checkbox",
         kbds: ["ctrl", "shift", "p"],
         checked: focusMode.value,
@@ -115,21 +112,18 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
       },
       {
         label: t("DesktopMenu.LeftPanel"),
-        icon: "i-lucide-panel-left",
         type: "checkbox",
         checked: !sidebarCollapsed.value,
         onSelect: () => setSidebarCollapsed(!sidebarCollapsed.value)
       },
       {
         label: t("DesktopMenu.RightPanel"),
-        icon: "i-lucide-panel-right",
         type: "checkbox",
         checked: rightPanelOpen.value,
         onSelect: toggleRightPanel
       },
       {
         label: t("RightPanel.BatchCommand"),
-        icon: "i-lucide-terminal",
         type: "checkbox",
         checked: batchPanelOpen.value,
         onSelect: toggleBatchPanel
@@ -137,7 +131,6 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
       { type: "separator" },
       {
         label: t("DesktopMenu.Fullscreen"),
-        icon: "i-lucide-fullscreen",
         type: "checkbox",
         kbds: ["ctrl", "shift", "f"],
         checked: workspaceFullscreen.value,
@@ -151,18 +144,15 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
     items: [
       {
         label: t("ToolTips.Minimize"),
-        icon: "i-lucide-minus",
         onSelect: () => void useTauriCoreInvoke("minimize_window")
       },
       {
         label: maximized.value ? t("DesktopMenu.Restore") : t("ToolTips.Maximize"),
-        icon: "i-lucide-square",
         onSelect: () => void useTauriCoreInvoke("toggle_maximize_window")
       },
       { type: "separator" },
       {
         label: t("ToolTips.Close"),
-        icon: "i-lucide-x",
         onSelect: () => void useTauriCoreInvoke("close_window")
       }
     ]
@@ -172,7 +162,6 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
     items: [
       {
         label: t("DesktopMenu.About"),
-        icon: "i-lucide-info",
         onSelect: () => void openSettings("/setting/about")
       }
     ]
@@ -220,10 +209,17 @@ const windowControls = computed(() => [
             :key="menu.label"
             :items="menu.items"
             :content="{ align: 'start', side: 'bottom', sideOffset: 0 }"
-            :ui="{ content: 'min-w-52 p-1' }"
+            :ui="{
+              content: 'min-w-52 p-1',
+              item: 'px-2 py-1 leading-4',
+              itemLabel: 'text-xs'
+            }"
           >
             <template #item-trailing="{ item }">
-              <span v-if="item.kbds?.length" class="ml-auto text-xs tracking-widest text-[var(--app-muted)]">
+              <span
+                v-if="item.kbds?.length"
+                class="ml-auto text-[11px] leading-4 tracking-widest text-[var(--app-muted)]"
+              >
                 {{ shortcutLabel(item.kbds) }}
               </span>
             </template>

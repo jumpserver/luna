@@ -30,10 +30,13 @@ const terminalClientItems = computed(() =>
   useTerminalHostGrouping.value ? items.value.filter((item) => !item.use_ssh_helper) : items.value
 );
 
-const currentTerminalHost = computed(() =>
-  appConfig.value?.terminal?.find((item) =>
-    item.use_ssh_helper && (item.enabled_protocols || item.match_first)?.includes("ssh")
-  ) || appConfig.value?.terminal?.find((item) => item.use_ssh_helper) || null
+const currentTerminalHost = computed(
+  () =>
+    appConfig.value?.terminal?.find(
+      (item) => item.use_ssh_helper && (item.enabled_protocols || item.match_first)?.includes("ssh")
+    ) ||
+    appConfig.value?.terminal?.find((item) => item.use_ssh_helper) ||
+    null
 );
 
 const selectedTerminalHost = computed(

@@ -42,6 +42,8 @@ const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
 const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
 const isLocalClientMethod = (method: { type?: string } | undefined) =>
   ["native", "client", "local", "desktop"].includes(String(method?.type || "").toLowerCase());
+const normalizeTauriLocalClientUrl = (url: string) =>
+  url.startsWith("jms://") ? `jms2://${url.slice("jms://".length)}` : url;
 const withLocalClientName = (url: string, clientName?: string) => {
   if (!clientName || !url.startsWith("jms2://")) return url;
   const decoded = Uint8Array.from(atob(url.slice("jms2://".length)), (character) => character.charCodeAt(0));
@@ -364,7 +366,9 @@ export const useAssetAction = () => {
 
       if (isTauriRuntime() || isLocalClientMethod(method)) {
         const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams());
-        if (!url?.startsWith("jms2://")) {
+        const localClientUrl = isTauriRuntime() ? normalizeTauriLocalClientUrl(url || "") : url;
+        const expectedScheme = isTauriRuntime() ? "jms2://" : "jms://";
+        if (!localClientUrl?.startsWith(expectedScheme)) {
           throw new Error("Invalid local client URL");
         }
         meta?.onSessionReady?.({
@@ -373,9 +377,11 @@ export const useAssetAction = () => {
           connectMethod: method || { value: body.connect_method }
         });
         if (isTauriRuntime()) {
-          await useTauriCoreInvoke("pull_up", { url: withLocalClientName(url, nativeApp.clientName) });
+          await useTauriCoreInvoke("pull_up", {
+            url: withLocalClientName(localClientUrl, nativeApp.clientName)
+          });
         } else {
-          window.location.assign(url);
+          window.location.assign(localClientUrl);
         }
         return;
       }

@@ -1,0 +1,20 @@
+{
+  "id": "windows.terminal",
+  "name": "windows-terminal",
+  "display_name": "Windows Terminal",
+  "version": "1.0.0",
+  "min_client_version": "4.0.0",
+  "author": "JumpServer",
+  "homepage": "https://github.com/microsoft/terminal",
+  "download_url": "https://aka.ms/terminal",
+  "category": "terminal",
+  "protocols": [
+    "ssh",
+    "telnet"
+  ],
+  "builtin": true,
+  "comment": {
+    "zh": "Windows Terminal 是 Windows 上的现代终端应用，可用于发起 SSH 和 Telnet 连接。",
+    "en": "Windows Terminal is a modern terminal application for Windows that can launch SSH and Telnet connections."
+  }
+}

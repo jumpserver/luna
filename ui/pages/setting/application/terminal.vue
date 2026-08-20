@@ -142,12 +142,25 @@ const createTerminal = async () => {
 
           <UFormField :label="t('Setting.CustomTerminalPath')" required>
             <div class="flex gap-2">
-              <UInput v-model="customTerminalPath" class="flex-1" :placeholder="t('Setting.CustomTerminalPathPlaceholder')" />
-              <UButton color="neutral" variant="outline" :label="t('Setting.SelectPath')" @click="selectCustomTerminalPath" />
+              <UInput
+                v-model="customTerminalPath"
+                class="flex-1"
+                :placeholder="t('Setting.CustomTerminalPathPlaceholder')"
+              />
+              <UButton
+                color="neutral"
+                variant="outline"
+                :label="t('Setting.SelectPath')"
+                @click="selectCustomTerminalPath"
+              />
             </div>
           </UFormField>
 
-          <UFormField :label="t('Setting.CustomTerminalTemplate')" :help="t('Setting.CustomTerminalTemplateHelp')" required>
+          <UFormField
+            :label="t('Setting.CustomTerminalTemplate')"
+            :help="t('Setting.CustomTerminalTemplateHelp')"
+            required
+          >
             <UTextarea
               v-model="customTerminalTemplate"
               :rows="4"

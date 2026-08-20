@@ -106,6 +106,7 @@ pub async fn get_connect_token(
 fn with_client_name(client_url: &str, client_name: &str) -> Result<String, String> {
     let encoded = client_url
         .strip_prefix("jms2://")
+        .or_else(|| client_url.strip_prefix("jms://"))
         .ok_or_else(|| "invalid local client url scheme".to_string())?;
     let decoded = BASE64_STANDARD
         .decode(encoded)
