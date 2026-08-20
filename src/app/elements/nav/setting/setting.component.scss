@@ -16,6 +16,44 @@
   padding-right: 10px;
 
   ::ng-deep {
+    .ant-select,
+    .ant-input-number {
+      width: 100%;
+    }
+
+    .ant-radio-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 12px;
+      min-height: 32px;
+    }
+
+    .setting-option-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 16px;
+      min-height: 32px;
+
+      .ant-checkbox-wrapper,
+      .ant-checkbox-wrapper + .ant-checkbox-wrapper {
+        margin-inline-start: 0;
+        margin-left: 0;
+        line-height: 1.5;
+      }
+    }
+  }
+
+  &:not(.setting-vertical) ::ng-deep {
+    .ant-form-item {
+      margin-bottom: 5px;
+    }
+
+    .ant-form-item-label {
+      line-height: 1.5;
+    }
+
     .ant-form-item-label > label {
       display: inline-block;
       white-space: nowrap;
@@ -24,22 +62,50 @@
       line-height: 30px;
       font-size: 13px;
     }
+  }
 
-    .ant-select {
-      width: 100%;
-    }
-
-    .ant-checkbox-wrapper + .ant-checkbox-wrapper {
-      margin-left: 0;
-      line-height: 1.5;
-    }
-
+  &.setting-vertical ::ng-deep {
     .ant-form-item {
-      margin-bottom: 5px;
+      margin-bottom: 12px;
     }
 
-    .ant-form-item-label {
-      line-height: 1.5;
+    .ant-form-item-row {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .ant-form-item-label,
+    .ant-form-item-control {
+      flex: none;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .ant-form-item .ant-form-item-label {
+      overflow: visible;
+      white-space: normal;
+      text-align: left;
+      padding-bottom: 4px;
+      line-height: 1.4;
+    }
+
+    .ant-form-item .ant-form-item-label > label {
+      display: inline-block;
+      width: auto;
+      max-width: 100%;
+      height: auto;
+      overflow: visible;
+      white-space: normal;
+      word-break: break-word;
+      text-overflow: unset;
+      line-height: 1.4;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    .ant-form-item-control {
+      min-width: 0;
     }
   }
 

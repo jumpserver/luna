@@ -26,6 +26,43 @@
   margin: 0;
 }
 
+.setting-dialog .setting-vertical {
+  .ant-form-item-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ant-form-item-label,
+  .ant-form-item-control {
+    flex: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .ant-form-item-label,
+  .ant-form-item .ant-form-item-label {
+    overflow: visible !important;
+    white-space: normal !important;
+    text-align: left;
+    padding-bottom: 4px;
+  }
+
+  .ant-form-item .ant-form-item-label > label {
+    display: inline-block;
+    width: auto;
+    max-width: 100%;
+    height: auto !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    word-break: break-word;
+    text-overflow: unset !important;
+    line-height: 1.4;
+    font-size: 13px;
+    text-align: left;
+  }
+}
+
 .dark-dropdown {
   background-color: var(--el-dropdown-bg-color);
 
