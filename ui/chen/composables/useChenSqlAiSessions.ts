@@ -68,6 +68,27 @@ export interface ChenSqlAiTiming {
   tool: string;
 }
 
+export interface ChenSqlMetadataApproval {
+  approvalId: string;
+  requestId: string;
+  toolCallId: string;
+  provider: string;
+  model: string;
+  database: string;
+  schema: string;
+  tables: string[];
+  query: string;
+  discovery: boolean;
+  maxMatches: number;
+  followUpTableLimit: number;
+  dataCategories: string[];
+  expandedScope: boolean;
+  expiresInSeconds: number;
+  resolving: boolean;
+}
+
+export type ChenSqlMetadataApprovalDecision = "approve_once" | "approve_session" | "reject";
+
 export interface ChenSqlAiSession {
   kind: "sql";
   paneId: string;
@@ -92,6 +113,7 @@ export interface ChenSqlAiSession {
   timing: ChenSqlAiTiming;
   errorCode: string;
   errorText: string;
+  metadataApproval: ChenSqlMetadataApproval | null;
   decisions: Set<string>;
   executionOverrides: Map<string, string>;
   expansionOverrides: Map<string, boolean>;
@@ -100,6 +122,7 @@ export interface ChenSqlAiSession {
   proposalApplier: (proposal: ChenSqlProposal) => ChenSqlProposalApplyResult;
   request: (operation: ChenSqlAiOperation, question: string) => Promise<void>;
   cancelActive: () => void;
+  resolveMetadataApproval: (decision: ChenSqlMetadataApprovalDecision) => void;
   applyProposal: (proposal: ChenSqlProposal) => ChenSqlProposalApplyResult;
 }
 
@@ -125,7 +148,7 @@ class ChenSqlAiTransport implements ChatTransport<ChenSqlAiChatMessage> {
   private activeResponse: ActiveResponse | null = null;
 
   constructor(
-    private readonly socket: WebSocket,
+    private readonly socket: WebSocket | null,
     private readonly enabled: () => boolean,
     private readonly contextProvider: () => ChenSqlEditorContext | null,
     private readonly onRequestStart: () => void
@@ -133,7 +156,8 @@ class ChenSqlAiTransport implements ChatTransport<ChenSqlAiChatMessage> {
 
   sendMessages: ChatTransport<ChenSqlAiChatMessage>["sendMessages"] = async ({ messages, abortSignal }) => {
     if (this.activeResponse) throw new ChenSqlAiClientError("response_active", "Another SQL AI request is active");
-    if (!this.enabled() || this.socket.readyState !== WebSocket.OPEN) {
+    const socket = this.socket;
+    if (!this.enabled() || !socket || socket.readyState !== WebSocket.OPEN) {
       throw new ChenSqlAiClientError("unavailable", "SQL AI is unavailable for this database session");
     }
 
@@ -161,8 +185,8 @@ class ChenSqlAiTransport implements ChatTransport<ChenSqlAiChatMessage> {
 
     const abortHandler = () => {
       try {
-        if (this.socket.readyState === WebSocket.OPEN) {
-          this.socket.send(JSON.stringify({ type: "ai_cancel", data: { requestId } }));
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: "ai_cancel", data: { requestId } }));
         }
       } finally {
         this.finish(requestId);
@@ -174,7 +198,7 @@ class ChenSqlAiTransport implements ChatTransport<ChenSqlAiChatMessage> {
     }
 
     try {
-      this.socket.send(
+      socket.send(
         JSON.stringify({
           type: "ai_request",
           data: { id: requestId, operation, question, context }
@@ -269,7 +293,7 @@ const chatScopes = new WeakMap<ChenSqlAiSession, EffectScope>();
 
 function createSession(
   paneId: string,
-  socket: WebSocket,
+  socket: WebSocket | null,
   contextProvider: () => ChenSqlEditorContext | null,
   proposalApplier: (proposal: ChenSqlProposal) => ChenSqlProposalApplyResult
 ) {
@@ -286,6 +310,7 @@ function createSession(
         session.runtimeStatusCode = "analyzing";
         session.runtimeState = "running";
         session.runtimeExecution = "";
+        session.metadataApproval = null;
       }
     )
   );
@@ -301,6 +326,7 @@ function createSession(
           session.runtimeStatus = "";
           session.runtimeStatusCode = "";
           session.runtimeState = "idle";
+          session.metadataApproval = null;
           if (error instanceof ChenSqlAiClientError) {
             session.errorCode = error.code;
             session.errorText = error.message;
@@ -316,7 +342,7 @@ function createSession(
   session = reactive({
     kind: "sql",
     paneId,
-    socket: markRaw(socket),
+    socket: socket ? markRaw(socket) : null,
     terminalId: "",
     chat,
     enabled: false,
@@ -337,6 +363,7 @@ function createSession(
     timing: emptyChenSqlAiTiming(),
     errorCode: "",
     errorText: "",
+    metadataApproval: null,
     decisions: new Set<string>(),
     executionOverrides: new Map<string, string>(),
     expansionOverrides: new Map<string, boolean>(),
@@ -348,12 +375,33 @@ function createSession(
     },
     cancelActive: () => {
       const requestId = transport.activeRequestId();
-      if (!requestId || socket.readyState !== WebSocket.OPEN) return;
+      if (!requestId || !socket || socket.readyState !== WebSocket.OPEN) return;
       try {
         socket.send(JSON.stringify({ type: "ai_cancel", data: { requestId } }));
       } catch (cause) {
         session.errorCode = "cancel_failed";
         session.errorText = cause instanceof Error ? cause.message : "Failed to cancel SQL AI request";
+      }
+    },
+    resolveMetadataApproval: (decision: ChenSqlMetadataApprovalDecision) => {
+      const approval = session.metadataApproval;
+      if (!approval || approval.resolving || !socket || socket.readyState !== WebSocket.OPEN) return;
+      approval.resolving = true;
+      try {
+        socket.send(
+          JSON.stringify({
+            type: "ai_tool_approval",
+            data: {
+              requestId: approval.requestId,
+              approvalId: approval.approvalId,
+              decision
+            }
+          })
+        );
+      } catch (cause) {
+        approval.resolving = false;
+        session.errorCode = "approval_failed";
+        session.errorText = cause instanceof Error ? cause.message : "Failed to send metadata approval";
       }
     },
     applyProposal: (proposal: ChenSqlProposal) => session.proposalApplier(proposal)
@@ -365,7 +413,7 @@ function createSession(
 
 export function registerChenSqlAiSession(
   paneId: string,
-  socket: WebSocket,
+  socket: WebSocket | null,
   contextProvider: () => ChenSqlEditorContext | null,
   proposalApplier: (proposal: ChenSqlProposal) => ChenSqlProposalApplyResult
 ) {
@@ -415,9 +463,46 @@ export function handleChenSqlAiError(paneId: string, data: ChenSqlAiEventData) {
   session.runtimeStatus = "";
   session.runtimeStatusCode = "";
   session.runtimeState = "idle";
+  session.metadataApproval = null;
   transports
     .get(session)
     ?.fail(new ChenSqlAiClientError(session.errorCode, session.errorText), String(data.requestId || ""));
+}
+
+export function handleChenSqlAiToolApprovalRequired(paneId: string, data: ChenSqlAiEventData) {
+  const session = sessions.get(paneId);
+  if (!session) return;
+  const requestId = String(data.requestId || "");
+  const approvalId = String(data.approvalId || "");
+  if (!requestId || !approvalId || requestId !== transports.get(session)?.activeRequestId()) return;
+  session.metadataApproval = {
+    approvalId,
+    requestId,
+    toolCallId: String(data.toolCallId || ""),
+    provider: String(data.provider || session.provider),
+    model: String(data.model || session.model),
+    database: String(data.database || ""),
+    schema: String(data.schema || ""),
+    tables: boundedStringArray(data.tables, 8),
+    query: String(data.query || "").slice(0, 1024),
+    discovery: Boolean(data.discovery),
+    maxMatches: Math.max(0, Math.min(100, Number(data.maxMatches) || 0)),
+    followUpTableLimit: Math.max(0, Math.min(8, Number(data.followUpTableLimit) || 0)),
+    dataCategories: boundedStringArray(data.dataCategories, 16),
+    expandedScope: Boolean(data.expandedScope),
+    expiresInSeconds: Math.max(0, Math.min(600, Number(data.expiresInSeconds) || 0)),
+    resolving: false
+  };
+  session.runtimeStatusCode = "approval";
+  session.runtimeState = "running";
+  session.runtimeExecution = "inspect_schema";
+}
+
+export function handleChenSqlAiToolApprovalResolved(paneId: string, data: ChenSqlAiEventData) {
+  const session = sessions.get(paneId);
+  const approval = session?.metadataApproval;
+  if (!session || !approval || approval.approvalId !== String(data.approvalId || "")) return;
+  session.metadataApproval = null;
 }
 
 export function handleChenSqlAiMessage(paneId: string, message: unknown) {
@@ -508,6 +593,11 @@ function finishChenSqlAiTiming(session: ChenSqlAiSession) {
 function partData(message: ChenSqlAiChatMessage, type: string) {
   const part = message.parts.find((candidate) => candidate.type === type);
   return part && "data" in part ? (part.data as ChenSqlAiEventData) : undefined;
+}
+
+function boundedStringArray(value: unknown, maximum: number) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, maximum).map((item) => String(item).slice(0, 1024));
 }
 
 function isChenSqlAiChatMessage(message: unknown): message is ChenSqlAiChatMessage {
