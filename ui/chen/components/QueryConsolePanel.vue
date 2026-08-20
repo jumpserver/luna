@@ -23,6 +23,7 @@ const props = defineProps<{
   tab: ChenQueryConsoleTab;
   dbType: string;
   canCopy: boolean;
+  aiEnabled: boolean;
   metadataStore: ChenSqlMetadataStore;
   sqlKeywordCase: ChenSqlKeywordCase;
 }>();
@@ -94,19 +95,19 @@ const aiItems = computed(() => {
     {
       label: t("RightPanel.SQLAIGenerate"),
       icon: "i-lucide-wand-sparkles",
-      disabled: contextBusy.value,
+      disabled: !props.aiEnabled || contextBusy.value,
       onSelect: () => emit("aiGenerate", props.tab)
     },
     {
       label: t("RightPanel.SQLAIExplain"),
       icon: "i-lucide-message-square-text",
-      disabled: contextBusy.value || statementEmpty,
+      disabled: !props.aiEnabled || contextBusy.value || statementEmpty,
       onSelect: () => emit("aiExplain", props.tab)
     },
     {
       label: t("RightPanel.SQLAIRepair"),
       icon: "i-lucide-wrench",
-      disabled: contextBusy.value || statementEmpty,
+      disabled: !props.aiEnabled || contextBusy.value || statementEmpty,
       onSelect: () => emit("aiRepair", props.tab)
     }
   ];
@@ -374,18 +375,20 @@ defineExpose({ editorSnapshot });
             SQL
           </UButton>
         </UDropdownMenu>
-        <UDropdownMenu :items="aiItems">
-          <UButton
-            icon="i-lucide-sparkles"
-            trailing-icon="i-lucide-chevron-down"
-            size="sm"
-            color="neutral"
-            variant="soft"
-            :disabled="contextBusy"
-          >
-            AI
-          </UButton>
-        </UDropdownMenu>
+        <UTooltip :text="t('RightPanel.SQLAIDisabledDescription')" :disabled="aiEnabled">
+          <UDropdownMenu :items="aiItems">
+            <UButton
+              icon="i-lucide-sparkles"
+              trailing-icon="i-lucide-chevron-down"
+              size="sm"
+              color="neutral"
+              variant="soft"
+              :disabled="!aiEnabled || contextBusy"
+            >
+              AI
+            </UButton>
+          </UDropdownMenu>
+        </UTooltip>
         <UDropdownMenu
           :items="contextItems"
           :content="{ align: 'end' }"

@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import type { TerminalAiChatMessage, TerminalAiEventData } from "#koko/composables/terminal/useTerminalAiSessions";
-import type { ChenSqlAiTiming, ChenSqlProposal } from "~/chen/composables/useChenSqlAiSessions";
+import type {
+  ChenSqlAiTiming,
+  ChenSqlMetadataApproval,
+  ChenSqlMetadataApprovalDecision,
+  ChenSqlProposal
+} from "~/chen/composables/useChenSqlAiSessions";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import {
@@ -12,6 +17,7 @@ import {
 } from "#koko/composables/terminal/terminalAiPresentation";
 import { createTerminalAiMessageId, sendKokoTerminalAiControl } from "#koko/composables/terminal/useTerminalAiSessions";
 import { getWorkspaceAiSession, isChenSqlWorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
+import SqlMetadataApprovalCard from "./SqlMetadataApprovalCard.vue";
 
 interface ViewStep {
   id: string;
@@ -77,13 +83,28 @@ interface SqlTimingItem {
   data: ChenSqlAiTiming;
 }
 
-type ViewItem = TextItem | PlanItem | AlertItem | SqlAnalysisItem | SqlProposalItem | SqlThoughtItem | SqlTimingItem;
+interface MetadataApprovalItem {
+  kind: "metadata-approval";
+  key: string;
+  approval: ChenSqlMetadataApproval;
+}
+
+type ViewItem =
+  | TextItem
+  | PlanItem
+  | AlertItem
+  | SqlAnalysisItem
+  | SqlProposalItem
+  | SqlThoughtItem
+  | SqlTimingItem
+  | MetadataApprovalItem;
 
 const { t } = useI18n();
 const { activePaneId } = useWorkspaceTabs();
 const messagesElement = ref<HTMLElement | null>(null);
 const session = computed(() => getWorkspaceAiSession(activePaneId.value));
 const sqlSession = computed(() => (isChenSqlWorkspaceAiSession(session.value) ? session.value : null));
+const metadataApproval = computed(() => sqlSession.value?.metadataApproval || null);
 const assistantName = computed(() => (sqlSession.value ? t("RightPanel.SQLAIName") : "Terminal AI"));
 const available = computed(() => Boolean(session.value?.enabled));
 const unavailableTitle = computed(() =>
@@ -211,6 +232,7 @@ const runtimeStatusLabel = computed(() => {
       analyzing: "RightPanel.SQLAIStageAnalyzing",
       model: "RightPanel.SQLAIStageModel",
       reviewing: "RightPanel.SQLAIStageReviewing",
+      approval: "RightPanel.SQLAIMetadataApprovalStage",
       tool:
         current.runtimeExecution === "validate_sql" ? "RightPanel.SQLAIStageValidation" : "RightPanel.SQLAIStageTool",
       cancelled: "RightPanel.SQLAIStageCancelled"
@@ -382,6 +404,17 @@ const viewItems = computed<ViewItem[]>(() => {
           items.push({ kind: "alert", key: `${message.id}-acl-${partIndex}`, data });
         }
       }
+    });
+  }
+
+  const approval = metadataApproval.value;
+  if (approval) {
+    const anchorIndex = items.findLastIndex((item) => item.kind === "text" && item.role === "user");
+    const insertAt = anchorIndex >= 0 ? anchorIndex + 1 : items.length;
+    items.splice(insertAt, 0, {
+      kind: "metadata-approval",
+      key: `metadata-approval-${approval.approvalId}`,
+      approval
     });
   }
 
@@ -644,6 +677,10 @@ function rejectSqlProposal(item: SqlProposalItem) {
   current.proposalDecisions.set(item.key, "rejected");
 }
 
+function resolveMetadataApproval(decision: ChenSqlMetadataApprovalDecision) {
+  sqlSession.value?.resolveMetadataApproval(decision);
+}
+
 function isSqlThoughtExpanded(item: SqlThoughtItem) {
   return sqlSession.value?.expansionOverrides.get(item.key) ?? false;
 }
@@ -671,7 +708,10 @@ function sqlTimingTotal(data: ChenSqlAiTiming) {
   return Number(data.clientDurationMs) || Number(data.durationMs) || 0;
 }
 
-watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.parts.length], scrollToBottom);
+watch(
+  [activePaneId, () => messages.value.length, () => messages.value.at(-1)?.parts.length, metadataApproval],
+  scrollToBottom
+);
 </script>
 
 <template>
@@ -733,6 +773,12 @@ watch([activePaneId, () => messages.value.length, () => messages.value.at(-1)?.p
               />
             </div>
           </article>
+
+          <SqlMetadataApprovalCard
+            v-else-if="item.kind === 'metadata-approval'"
+            :approval="item.approval"
+            @resolve="resolveMetadataApproval"
+          />
 
           <UCollapsible
             v-else-if="item.kind === 'sql-thought'"
