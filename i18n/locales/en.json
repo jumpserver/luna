@@ -42,6 +42,24 @@
     "EmptyDescription": "No authorized assets are available for the current type",
     "SelectFromMenu": "Select an item on the left"
   },
+  "DesktopMenu": {
+    "File": "File",
+    "Edit": "Edit",
+    "View": "View",
+    "Window": "Window",
+    "Help": "Help",
+    "Undo": "Undo",
+    "Redo": "Redo",
+    "Cut": "Cut",
+    "Copy": "Copy",
+    "Paste": "Paste",
+    "SelectAll": "Select All",
+    "LeftPanel": "Left Panel",
+    "RightPanel": "Right Panel",
+    "Fullscreen": "Fullscreen",
+    "Restore": "Restore",
+    "About": "About JumpServer Client"
+  },
   "Auth": {
     "SignInTitle": "Sign in from your browser to continue",
     "BrowserHintPrefix": "If your browser hasn't opened for you to sign in,",

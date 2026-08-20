@@ -42,6 +42,24 @@
     "EmptyDescription": "当前类型下暂无可用的授权资产",
     "SelectFromMenu": "请从左侧选择一个配置项"
   },
+  "DesktopMenu": {
+    "File": "文件",
+    "Edit": "编辑",
+    "View": "查看",
+    "Window": "窗口",
+    "Help": "帮助",
+    "Undo": "撤销",
+    "Redo": "重做",
+    "Cut": "剪切",
+    "Copy": "复制",
+    "Paste": "粘贴",
+    "SelectAll": "全选",
+    "LeftPanel": "左侧面板",
+    "RightPanel": "右侧面板",
+    "Fullscreen": "全屏",
+    "Restore": "还原",
+    "About": "关于 JumpServer Client"
+  },
   "Auth": {
     "SignInTitle": "请在浏览器中完成登录",
     "BrowserHintPrefix": "如果浏览器没有自动为你打开登录页面",

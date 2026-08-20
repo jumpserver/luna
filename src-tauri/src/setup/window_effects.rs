@@ -95,18 +95,15 @@ pub fn apply_windows_blur(_win: &WebviewWindow) -> Result<(), Box<dyn std::error
         error!("Failed to set window decorations: {}", e);
     }
 
-    if let Err(e) = _win.set_shadow(false) {
-        error!("Failed to set window shadow: {}", e);
-    }
     Ok(())
 }
 
-/// 为 Linux 窗口保留原生标题栏，使用桌面环境自己的窗口按钮
+/// Linux 与 Windows 共用应用内标题栏，避免原生标题栏与菜单栏重复占用空间。
 #[cfg(target_os = "linux")]
 pub fn apply_linux_window(win: &WebviewWindow) -> Result<(), Box<dyn std::error::Error>> {
-    info!("Keeping Linux native window decorations enabled");
-    if let Err(e) = win.set_decorations(true) {
-        error!("Failed to enable Linux window decorations: {}", e);
+    info!("Using custom Linux window decorations");
+    if let Err(e) = win.set_decorations(false) {
+        error!("Failed to disable Linux window decorations: {}", e);
     }
     Ok(())
 }

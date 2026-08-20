@@ -52,22 +52,25 @@ const pageHeader = computed(() => {
 </script>
 
 <template>
-  <WorkspaceTopHeader>
-    <template v-if="showSidebarChrome" #leading>
-      <SideBarTopControls />
-    </template>
+  <div>
+    <HeaderDesktopTitleBar />
+    <WorkspaceTopHeader>
+      <template v-if="showSidebarChrome" #leading>
+        <SideBarTopControls />
+      </template>
 
-    <WorkspaceTabHeader v-if="activeWorkspaceMode === 'assets'" />
+      <WorkspaceTabHeader v-if="activeWorkspaceMode === 'assets'" />
 
-    <div
-      v-else-if="pageHeader"
-      class="h-full min-w-0 flex items-center justify-center gap-2"
-      :class="toolWindowTitleClass"
-    >
-      <UIcon :name="pageHeader.icon" class="text-primary h-4 w-4 shrink-0" />
-      <span class="min-w-0 truncate text-sm font-medium">
-        {{ pageHeader.title }}
-      </span>
-    </div>
-  </WorkspaceTopHeader>
+      <div
+        v-else-if="pageHeader"
+        class="h-full min-w-0 flex items-center justify-center gap-2"
+        :class="toolWindowTitleClass"
+      >
+        <UIcon :name="pageHeader.icon" class="text-primary h-4 w-4 shrink-0" />
+        <span class="min-w-0 truncate text-sm font-medium">
+          {{ pageHeader.title }}
+        </span>
+      </div>
+    </WorkspaceTopHeader>
+  </div>
 </template>
