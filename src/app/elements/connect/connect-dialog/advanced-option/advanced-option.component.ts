@@ -24,6 +24,13 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
   public globalSetting: GlobalSetting;
   private allOptions: ConnectOption[] = [];
   public advancedOptions: ConnectOption[] = [];
+  private preferenceDefaultFields = new Set([
+    'resolution',
+    'remote_microphone',
+    'backspaceAsCtrlH',
+    'appletConnectMethod',
+    'virtualappConnectMethod',
+  ]);
 
   constructor(public _settingSvc: SettingService) {
     this.setting = _settingSvc.setting;
@@ -109,6 +116,16 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
       },
       {
         type: 'select',
+        field: 'remote_microphone',
+        label: 'Remote microphone',
+        hidden: () => {
+          return !hasX || !this.protocol || this.protocol.name !== 'rdp';
+        },
+        value: (this.setting.graphics.rdp_client_option || []).includes('remote_microphone'),
+        options: this.boolChoices
+      },
+      {
+        type: 'select',
         field: 'backspaceAsCtrlH',
         hidden: () => {
           return this.connectMethod && this.connectMethod.component !== 'koko';
@@ -190,7 +207,10 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
     const onlyUsingDefaultFields = ['reusable'];
 
     this.allOptions.forEach(i => {
-      if (this.connectOption[i.field] === undefined) {
+      if (
+        this.connectOption[i.field] === undefined &&
+        !this.preferenceDefaultFields.has(i.field)
+      ) {
         this.connectOption[i.field] = i.value;
       }
 
@@ -208,7 +228,7 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
       .forEach(i => {
         const options = i.options || [];
         const values = new Set(options.map(opt => opt.value));
-        const current = this.connectOption[i.field];
+        const current = this.getOptionValue(i);
 
         if (!values.has(current)) {
           let fallback: any = 'web';
@@ -221,6 +241,11 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
           }
         }
       });
+  }
+
+  getOptionValue(item: ConnectOption) {
+    const value = this.connectOption[item.field];
+    return value === undefined ? item.value : value;
   }
 
   onChange() {

@@ -133,9 +133,9 @@ export class SettingService {
     });
   }
 
-  save() {
+  async save(data: object): Promise<void> {
     const url = "/api/v1/users/preference/?category=luna";
-    this._http.patch(url, this.setting).toPromise();
+    await this._http.patch(url, data).toPromise();
     this._localStorage.set(this.settingKey, this.setting);
     this.setAppletConnectMethod();
     this.setKeyboardLayout();

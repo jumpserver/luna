@@ -289,7 +289,7 @@ export class Setting {
   basic: {
     is_async_asset_tree: boolean;
     connect_default_open_method: string;
-    themes?: string;
+    themes: string;
   };
   graphics: {
     rdp_resolution: string;
@@ -298,6 +298,7 @@ export class Setting {
     applet_connection_method: string;
     rdp_smart_size: string;
     rdp_color_quality: string;
+    file_name_conflict_resolution: string;
   };
   command_line: {
     character_terminal_font_size: number;
@@ -321,7 +322,8 @@ export class Setting {
       rdp_client_option: [],
       applet_connection_method: 'web',
       rdp_smart_size: '0',
-      rdp_color_quality: '32'
+      rdp_color_quality: '32',
+      file_name_conflict_resolution: 'replace'
     };
     this.command_line = {
       character_terminal_font_size: 14,
@@ -485,11 +487,7 @@ export class Endpoint {
   https_port: number;
   http_port: number;
   ssh_port: number;
-  mysql_port: number;
-  mariadb_port: number;
-  postgresql_port: number;
-  redis_port: number;
-  oracle_port: number;
+  magnus_port: number;
 
   getHost(): string {
     return this.host || window.location.host;
@@ -500,7 +498,16 @@ export class Endpoint {
 
     _protocol = _protocol.replace(':', '');
 
-    let port = this[_protocol + '_port'];
+    const magnusProtocols = [
+      'mysql',
+      'mariadb',
+      'postgresql',
+      'redis',
+      'sqlserver',
+      'oracle',
+      'mongodb'
+    ];
+    let port = magnusProtocols.includes(_protocol) ? this.magnus_port : this[_protocol + '_port'];
 
     // 处理 http(s) 协议的后台端口为0的时候, 使用当前地址中的端口
     if (['http', 'https'].indexOf(_protocol) !== -1 && port === 0) {

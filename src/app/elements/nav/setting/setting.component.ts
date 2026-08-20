@@ -1,14 +1,14 @@
 import _ from 'lodash-es';
 import xtermTheme from 'xterm-theme';
-import { Subscription } from 'rxjs';
 import { I18nService } from '@app/services/i18n';
 import { GlobalSetting, Setting } from '@app/model';
 import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { HttpService, IframeCommunicationService, SettingService } from '@app/services';
-import { Component, Inject, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, Inject, OnInit, ViewChild } from '@angular/core';
 import { NzSelectComponent } from 'ng-zorro-antd/select';
 import { withSitePrefix } from '@app/utils/path';
+import { useTheme } from '@src/sass/theme/util';
 
 interface terminalThemeMap {
   label: string;
@@ -21,7 +21,7 @@ interface terminalThemeMap {
   templateUrl: 'setting.component.html',
   styleUrls: ['setting.component.scss']
 })
-export class ElementSettingComponent implements OnInit, OnDestroy {
+export class ElementSettingComponent implements OnInit {
   @ViewChild('nzSel', { static: false }) nzSel!: NzSelectComponent;
   public boolChoices: any[];
   public name: string;
@@ -30,17 +30,28 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
   resolutionsOptions: any[];
   rdpSmartSizeOptions: any[];
   colorQualityOptions: any[];
+  connectDefaultOpenMethodOptions: any[];
+  themeOptions: any[];
+  fileNameConflictResolutionOptions: any[];
+  connectDefaultOpenMethodLabel = '';
+  themeLabel = '';
+  fileNameConflictResolutionLabel = '';
   setting: Setting = new Setting();
   globalSetting: GlobalSetting;
   rdpClientConfig = {
     full_screen: false,
     multi_screen: false,
-    drives_redirect: false
+    drives_redirect: false,
+    remote_microphone: false
   };
 
   currentTheme = '';
   terminalThemeMap: terminalThemeMap[] = [];
-  messageSubscription: Subscription;
+  compactLayout = true;
+  labelSpan = 8;
+  controlSpan = 16;
+  private saveInProgress = false;
+  private pendingChanges: Record<string, Record<string, any>> = {};
 
   constructor(
     @Inject(NZ_MODAL_DATA) public data: any,
@@ -56,6 +67,14 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
     ];
     this.name = data.name || this.name;
     this.type = data.type || this.type;
+    this.compactLayout = this.isCompactLang();
+    this.labelSpan = this.compactLayout ? 8 : 24;
+    this.controlSpan = this.compactLayout ? 16 : 24;
+  }
+
+  private isCompactLang(): boolean {
+    const lang = (this._i18n.getLangCode() || '').toLowerCase().replace('_', '-');
+    return lang.startsWith('zh') || lang.startsWith('ja') || lang.startsWith('ko');
   }
 
   hasLicense() {
@@ -71,12 +90,6 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
     this.currentTheme = this.setting.command_line.terminal_theme_name;
   }
 
-  ngOnDestroy() {
-    if (this.messageSubscription) {
-      this.messageSubscription.unsubscribe();
-    }
-  }
-
   generateTerminalThemeMap() {
     this.terminalThemeMap = [
       { label: 'Default', value: 'Default' },
@@ -87,11 +100,18 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
   async getSettingOptions() {
     const url = withSitePrefix('/api/v1/users/preference/?category=luna');
     const res: any = await this._http.options(url).toPromise();
+    const basic = res.actions.GET.basic.children;
     const graphics = res.actions.GET.graphics.children;
+    this.connectDefaultOpenMethodOptions = basic.connect_default_open_method.choices;
+    this.themeOptions = basic.themes.choices;
+    this.connectDefaultOpenMethodLabel = basic.connect_default_open_method.label;
+    this.themeLabel = basic.themes.label;
     this.resolutionsOptions = graphics.rdp_resolution.choices;
     this.rdpSmartSizeOptions = graphics.rdp_smart_size.choices;
     this.colorQualityOptions = graphics.rdp_color_quality.choices;
     this.keyboardLayoutOptions = graphics.keyboard_layout.choices;
+    this.fileNameConflictResolutionOptions = graphics.file_name_conflict_resolution.choices;
+    this.fileNameConflictResolutionLabel = graphics.file_name_conflict_resolution.label;
   }
 
   getRdpClientConfig() {
@@ -113,9 +133,71 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
     this.setting.graphics.rdp_client_option = _.uniq(rdpClientConfig);
   }
 
-  onSubmit() {
+  onRdpClientConfigChange() {
     this.setRdpClientConfig();
-    this.settingSrv.save();
+    this.onSettingChange('graphics', 'rdp_client_option', this.setting.graphics.rdp_client_option);
+  }
+
+  onMainThemeChange(theme: string) {
+    useTheme().switchTheme(theme);
+    this._iframeSvc.sendMessage({
+      name: 'CHANGE_MAIN_THEME',
+      data: theme
+    });
+    this.onSettingChange('basic', 'themes', theme);
+  }
+
+  onCharacterTerminalFontSizeChange(fontSize: number | null) {
+    if (fontSize === null || fontSize === undefined) {
+      return;
+    }
+    this.onSettingChange('command_line', 'character_terminal_font_size', fontSize);
+  }
+
+  onSettingChange(group: string, field: string, value: any) {
+    this.pendingChanges[group] = {
+      ...this.pendingChanges[group],
+      [field]: _.cloneDeep(value)
+    };
+    void this.flushSaveQueue();
+  }
+
+  private async flushSaveQueue() {
+    if (this.saveInProgress) {
+      return;
+    }
+
+    this.saveInProgress = true;
+    try {
+      while (Object.keys(this.pendingChanges).length > 0) {
+        const changes = this.pendingChanges;
+        this.pendingChanges = {};
+        try {
+          await this.settingSrv.save(changes);
+        } catch (error) {
+          this.pendingChanges = this.mergeChanges(changes, this.pendingChanges);
+          console.error('Failed to save Luna preferences:', error);
+          this._message.error(this._i18n.instant('Failed'));
+          return;
+        }
+      }
+    } finally {
+      this.saveInProgress = false;
+    }
+  }
+
+  private mergeChanges(
+    original: Record<string, Record<string, any>>,
+    latest: Record<string, Record<string, any>>
+  ) {
+    const merged = _.cloneDeep(original);
+    for (const [group, fields] of Object.entries(latest)) {
+      merged[group] = {
+        ...merged[group],
+        ..._.cloneDeep(fields)
+      };
+    }
+    return merged;
   }
 
   onThemePreview(event: KeyboardEvent) {
@@ -132,14 +214,7 @@ export class ElementSettingComponent implements OnInit, OnDestroy {
     this.currentTheme = theme;
     this.setting.command_line.terminal_theme_name = theme;
     this.changeTheme(theme);
-    this._http.setTerminalPreference({ command_line: { terminal_theme_name: theme } }).subscribe({
-      next: _res => {
-        console.log('Theme saved successfully:', theme);
-      },
-      error: error => {
-        console.error('Failed to set theme preference:', error);
-      }
-    });
+    this.onSettingChange('command_line', 'terminal_theme_name', theme);
   }
 
   changeTheme(theme: string) {

@@ -27,11 +27,15 @@ export class ElementConnectMethodComponent implements OnInit {
   ) {}
 
   get isAppletClientMethod() {
-    return this.connectOption && this.connectOption['appletConnectMethod'] === 'client';
+    const method = this.connectOption?.['appletConnectMethod']
+      ?? this._settingSvc.setting.graphics.applet_connection_method;
+    return method === 'client';
   }
 
   get isVirtualAppClientMethod() {
-    return this.connectOption && this.connectOption['virtualappConnectMethod'] === 'client';
+    const method = this.connectOption?.['virtualappConnectMethod']
+      ?? this._settingSvc.setting.graphics.applet_connection_method;
+    return method === 'client';
   }
 
   private _protocol: Protocol;
