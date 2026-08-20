@@ -1,10 +1,10 @@
-<div class="setting">
+<div class="setting" [class.setting-vertical]="!compactLayout">
   <div *ngIf="type === 'general'">
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24">
+      <nz-form-label [nzSm]="labelSpan" [nzXs]="24">
         {{ 'Load tree async' | translate }}
       </nz-form-label>
-      <nz-form-control>
+      <nz-form-control [nzSm]="controlSpan" [nzXs]="24">
         <nz-select
           [(ngModel)]="setting.basic.is_async_asset_tree"
           (ngModelChange)="onSettingChange('basic', 'is_async_asset_tree', $event)"
@@ -19,10 +19,10 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24">
+      <nz-form-label [nzSm]="labelSpan" [nzXs]="24">
         {{ connectDefaultOpenMethodLabel }}
       </nz-form-label>
-      <nz-form-control>
+      <nz-form-control [nzSm]="controlSpan" [nzXs]="24">
         <nz-select
           name="connect_default_open_method"
           [(ngModel)]="setting.basic.connect_default_open_method"
@@ -38,10 +38,10 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24">
+      <nz-form-label [nzSm]="labelSpan" [nzXs]="24">
         {{ themeLabel }}
       </nz-form-label>
-      <nz-form-control>
+      <nz-form-control [nzSm]="controlSpan" [nzXs]="24">
         <nz-select
           name="themes"
           [(ngModel)]="setting.basic.themes"
@@ -59,8 +59,8 @@
 
   <div *ngIf="type === 'gui'">
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24">{{ 'RDP resolution' | translate }}</nz-form-label>
-      <nz-form-control>
+      <nz-form-label [nzSm]="labelSpan" [nzXs]="24">{{ 'RDP resolution' | translate }}</nz-form-label>
+      <nz-form-control [nzSm]="controlSpan" [nzXs]="24">
         <nz-select
           name="rdp_resolution"
           [(ngModel)]="setting.graphics.rdp_resolution"
@@ -76,10 +76,10 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24">
+      <nz-form-label [nzSm]="labelSpan" [nzXs]="24">
         {{ 'Keyboard layout' | translate }}
       </nz-form-label>
-      <nz-form-control>
+      <nz-form-control [nzSm]="controlSpan" [nzXs]="24">
         <nz-select
           [(ngModel)]="setting.graphics.keyboard_layout"
           (ngModelChange)="onSettingChange('graphics', 'keyboard_layout', $event)"
@@ -95,47 +95,49 @@
 
     <div *ngIf="hasLicense()">
       <nz-form-item>
-        <nz-form-label [nzSm]="8" [nzXs]="24">
+        <nz-form-label [nzSm]="labelSpan" [nzXs]="24">
           {{ 'RDP client options' | translate }}
         </nz-form-label>
-        <nz-form-control>
-          <label
-            [(ngModel)]="rdpClientConfig.full_screen"
-            (ngModelChange)="onRdpClientConfigChange()"
-            nz-checkbox
-          >
-            {{ 'Full screen' | translate }}
-          </label>
-          <label
-            [(ngModel)]="rdpClientConfig.multi_screen"
-            (ngModelChange)="onRdpClientConfigChange()"
-            nz-checkbox
-          >
-            {{ 'Multi Screen' | translate }}
-          </label>
-          <label
-            [(ngModel)]="rdpClientConfig.drives_redirect"
-            (ngModelChange)="onRdpClientConfigChange()"
-            nz-checkbox
-          >
-            {{ 'Driver redirect' | translate }}
-          </label>
-          <label
-            [(ngModel)]="rdpClientConfig.remote_microphone"
-            (ngModelChange)="onRdpClientConfigChange()"
-            nz-checkbox
-          >
-            {{ 'Remote microphone' | translate }}
-          </label>
+        <nz-form-control [nzSm]="controlSpan" [nzXs]="24">
+          <div class="setting-option-group">
+            <label
+              [(ngModel)]="rdpClientConfig.full_screen"
+              (ngModelChange)="onRdpClientConfigChange()"
+              nz-checkbox
+            >
+              {{ 'Full screen' | translate }}
+            </label>
+            <label
+              [(ngModel)]="rdpClientConfig.multi_screen"
+              (ngModelChange)="onRdpClientConfigChange()"
+              nz-checkbox
+            >
+              {{ 'Multi Screen' | translate }}
+            </label>
+            <label
+              [(ngModel)]="rdpClientConfig.drives_redirect"
+              (ngModelChange)="onRdpClientConfigChange()"
+              nz-checkbox
+            >
+              {{ 'Driver redirect' | translate }}
+            </label>
+            <label
+              [(ngModel)]="rdpClientConfig.remote_microphone"
+              (ngModelChange)="onRdpClientConfigChange()"
+              nz-checkbox
+            >
+              {{ 'Remote microphone' | translate }}
+            </label>
+          </div>
         </nz-form-control>
       </nz-form-item>
     </div>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24">
+      <nz-form-label [nzSm]="labelSpan" [nzXs]="24">
         {{ 'RDP color quality' | translate }}
       </nz-form-label>
-      <nz-form-control>
+      <nz-form-control [nzSm]="controlSpan" [nzXs]="24">
         <nz-select
           name="rdp_color_quality"
           [(ngModel)]="setting.graphics.rdp_color_quality"
@@ -151,10 +153,10 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24">
+      <nz-form-label [nzSm]="labelSpan" [nzXs]="24">
         {{ 'RDP smart size' | translate }}
       </nz-form-label>
-      <nz-form-control>
+      <nz-form-control [nzSm]="controlSpan" [nzXs]="24">
         <nz-select
           name="rdp_smart_size"
           [(ngModel)]="setting.graphics.rdp_smart_size"
@@ -171,10 +173,10 @@
 
     <div *ngIf="hasLicense()">
       <nz-form-item>
-        <nz-form-label [nzSm]="8" [nzXs]="24">
+        <nz-form-label [nzSm]="labelSpan" [nzXs]="24">
           {{ 'Applet connect method' | translate }}
         </nz-form-label>
-        <nz-form-control>
+        <nz-form-control [nzSm]="controlSpan" [nzXs]="24">
           <nz-radio-group
             name="applet_connection_method"
             [(ngModel)]="setting.graphics.applet_connection_method"
@@ -188,10 +190,10 @@
     </div>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24">
+      <nz-form-label [nzSm]="labelSpan" [nzXs]="24">
         {{ fileNameConflictResolutionLabel }}
       </nz-form-label>
-      <nz-form-control>
+      <nz-form-control [nzSm]="controlSpan" [nzXs]="24">
         <nz-select
           name="file_name_conflict_resolution"
           [(ngModel)]="setting.graphics.file_name_conflict_resolution"
@@ -209,10 +211,10 @@
 
   <div *ngIf="type === 'cli'">
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24">
+      <nz-form-label [nzSm]="labelSpan" [nzXs]="24">
         {{ 'CLI font size' | translate }}
       </nz-form-label>
-      <nz-form-control>
+      <nz-form-control [nzSm]="controlSpan" [nzXs]="24">
         <nz-input-number
           [(ngModel)]="setting.command_line.character_terminal_font_size"
           (ngModelChange)="onCharacterTerminalFontSizeChange($event)"
@@ -225,10 +227,10 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24">
+      <nz-form-label [nzSm]="labelSpan" [nzXs]="24">
         {{ 'Backspace as Ctrl+H' | translate }}
       </nz-form-label>
-      <nz-form-control>
+      <nz-form-control [nzSm]="controlSpan" [nzXs]="24">
         <nz-select
           name="is_backspace_as_ctrl_h"
           [(ngModel)]="setting.command_line.is_backspace_as_ctrl_h"
@@ -245,10 +247,10 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24">
+      <nz-form-label [nzSm]="labelSpan" [nzXs]="24">
         {{ 'Right mouse quick paste' | translate }}
       </nz-form-label>
-      <nz-form-control>
+      <nz-form-control [nzSm]="controlSpan" [nzXs]="24">
         <nz-select
           name="is_right_click_quickly_paste"
           [(ngModel)]="setting.command_line.is_right_click_quickly_paste"
@@ -265,10 +267,10 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label [nzSm]="8" [nzXs]="24">
+      <nz-form-label [nzSm]="labelSpan" [nzXs]="24">
         {{ 'Theme' | translate }}
       </nz-form-label>
-      <nz-form-control>
+      <nz-form-control [nzSm]="controlSpan" [nzXs]="24">
         <nz-select
           #nzSel
           [(ngModel)]="currentTheme"

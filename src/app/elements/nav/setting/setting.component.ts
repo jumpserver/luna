@@ -47,6 +47,9 @@ export class ElementSettingComponent implements OnInit {
 
   currentTheme = '';
   terminalThemeMap: terminalThemeMap[] = [];
+  compactLayout = true;
+  labelSpan = 8;
+  controlSpan = 16;
   private saveInProgress = false;
   private pendingChanges: Record<string, Record<string, any>> = {};
 
@@ -64,6 +67,14 @@ export class ElementSettingComponent implements OnInit {
     ];
     this.name = data.name || this.name;
     this.type = data.type || this.type;
+    this.compactLayout = this.isCompactLang();
+    this.labelSpan = this.compactLayout ? 8 : 24;
+    this.controlSpan = this.compactLayout ? 16 : 24;
+  }
+
+  private isCompactLang(): boolean {
+    const lang = (this._i18n.getLangCode() || '').toLowerCase().replace('_', '-');
+    return lang.startsWith('zh') || lang.startsWith('ja') || lang.startsWith('ko');
   }
 
   hasLicense() {

@@ -186,7 +186,7 @@ export class ElementNavComponent implements OnInit {
       nzTitle: this._i18n.instant(name),
       nzContent: ElementSettingComponent,
       nzClassName: 'setting-dialog',
-      nzWidth: '600px',
+      nzWidth: '640px',
       nzCentered: true,
       nzData: { type, name },
       nzFooter: null

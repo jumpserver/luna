@@ -83,7 +83,6 @@ export class ElementAssetTreeComponent implements OnInit {
   isShowRMenu = false;
   rightClickSelectNode: any;
   isLoadTreeAsync: boolean;
-  isOpenNewWindow: boolean;
   filterAssetCancel$: Subject<boolean> = new Subject();
   // Current user's favorite folders, used to build "Favorite to xxx" menu on a normal asset
   favoriteFolders: Array<any> = [];
@@ -510,7 +509,6 @@ export class ElementAssetTreeComponent implements OnInit {
     this.currentOrgID = this._cookie.get('X-JMS-LUNA-ORG') || this._cookie.get('X-JMS-ORG');
     this._settingSvc.afterInited().then(state => {
       this.isLoadTreeAsync = this._settingSvc.isLoadTreeAsync();
-      this.isOpenNewWindow = this._settingSvc.isOpenNewWindow();
 
       if (state) {
         if (!this._settingSvc.hasXPack() && this.currentOrgID === SYSTEM_ORG_ID) {
@@ -563,7 +561,7 @@ export class ElementAssetTreeComponent implements OnInit {
       return connectOnNewPage(treeNode, 'new');
     }
 
-    if (this.isOpenNewWindow) {
+    if (this._settingSvc.isOpenNewWindow()) {
       connectOnNewPage(treeNode, 'auto');
     } else {
       this.connectAsset(treeNode).then();
@@ -764,7 +762,7 @@ export class ElementAssetTreeComponent implements OnInit {
       return;
     }
     const node = this.buildConnectableNode(treeNode);
-    if (this.isOpenNewWindow) {
+    if (this._settingSvc.isOpenNewWindow()) {
       connectOnNewPage(node, 'auto');
     } else {
       this.connectAsset(node).then();
