@@ -147,7 +147,9 @@ fn run_with_args(helper_args: Vec<String>) -> ! {
         .enable_all()
         .build()
         .context("start SSH helper runtime")
-        .and_then(|runtime| runtime.block_on(async { connect(parse_options(&helper_args)?).await }));
+        .and_then(|runtime| {
+            runtime.block_on(async { connect(parse_options(&helper_args)?).await })
+        });
     match result {
         Ok(status) => std::process::exit(status as i32),
         Err(error) => {

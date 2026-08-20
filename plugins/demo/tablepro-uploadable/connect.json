@@ -1,0 +1,25 @@
+{
+  "platform": "macos",
+  "match_first": [],
+  "is_default": false,
+  "is_set": true,
+  "is_internal": false,
+  "executable": {
+    "type": "system",
+    "default": "/usr/bin/python3",
+    "required": false
+  },
+  "launch": {
+    "type": "args",
+    "template": "-c \"import os, subprocess, urllib.parse; db_type = os.environ['JMS_DB_TYPE']; host = os.environ['JMS_HOST']; port = os.environ['JMS_PORT']; database = os.environ.get('JMS_DATABASE', ''); username = os.environ['JMS_USERNAME']; password = os.environ.get('JMS_PASSWORD', ''); scheme = 'mysql' if db_type in ('mysql', 'mariadb') else 'postgresql' if db_type in ('postgresql', 'postgres') else None; (_ for _ in ()).throw(SystemExit(f'unsupported database type: {db_type}')) if scheme is None else None; user = urllib.parse.quote(username, safe=''); passwd = urllib.parse.quote(password, safe=''); db = urllib.parse.quote(database, safe=''); url = f'{scheme}://{user}:{passwd}@{host}:{port}/{db}'; subprocess.run(['open', url], check=True)\""
+  },
+  "env": {
+    "JMS_DB_TYPE": "{protocol}",
+    "JMS_HOST": "{host}",
+    "JMS_PORT": "{port}",
+    "JMS_DATABASE": "{dbname}",
+    "JMS_USERNAME": "{username}",
+    "JMS_PASSWORD": "{value}"
+  },
+  "display_name": "TablePro"
+}

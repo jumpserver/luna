@@ -1,7 +1,7 @@
-import { copyFileSync, chmodSync, mkdirSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { chmodSync, copyFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, "..");
