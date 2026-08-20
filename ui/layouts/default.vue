@@ -25,6 +25,8 @@ const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
 const { batchPanelOpen, setOpen: setBatchPanelOpen } = useBatchCommandPanel();
+const { collapse: sidebarCollapsed, setCollapse: setSidebarCollapsed } = useSettingManager();
+const { toggle: toggleRightPanel } = useRightPanel();
 const { open: settingsOpen, activeSection: activeSettingsSection } = useSettingsWindow();
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 
@@ -110,6 +112,49 @@ const handleWorkspaceModeShortcut = (event: KeyboardEvent) => {
   else void enterFullscreenMode(activeTabId.value);
 };
 
+const toggleDesktopFullscreen = async () => {
+  if (workspaceFullscreen.value) {
+    await exitFocusMode();
+    return;
+  }
+  if (activeTabId.value) {
+    await enterFullscreenMode(activeTabId.value);
+    return;
+  }
+
+  const window = useTauriWindowGetCurrentWindow();
+  await window.setFullscreen(!(await window.isFullscreen()));
+};
+
+const handleDesktopMenuCommand = (command: string) => {
+  if (command === "toggle-focus-mode") {
+    if (focusMode.value) void exitFocusMode();
+    else if (activeTabId.value) enterFocusMode(activeTabId.value);
+    return;
+  }
+
+  if (command === "toggle-left-panel") {
+    setSidebarCollapsed(!sidebarCollapsed.value);
+    return;
+  }
+
+  if (command === "toggle-right-panel") {
+    toggleRightPanel();
+    return;
+  }
+
+  if (command === "toggle-batch-command") {
+    setBatchPanelOpen(!batchPanelOpen.value);
+    return;
+  }
+
+  if (command === "toggle-fullscreen-mode") {
+    void toggleDesktopFullscreen();
+  }
+};
+
+let unlistenDesktopMenuCommand: (() => void) | null = null;
+
 useEventListener(window, "keydown", startEscapeHold);
 useEventListener(window, "keydown", handleWorkspaceModeShortcut, { capture: true });
 useEventListener(window, "keyup", stopEscapeHold);
@@ -149,9 +194,18 @@ onMounted(() => {
 
     return response.json() as Promise<{ ticket?: string }>;
   });
+
+  if (isTauriRuntime()) {
+    void useTauriEventListen<string>("desktop-menu-command", ({ payload }) => {
+      handleDesktopMenuCommand(payload);
+    }).then((unlisten) => {
+      unlistenDesktopMenuCommand = unlisten;
+    });
+  }
 });
 
 onBeforeUnmount(() => {
+  unlistenDesktopMenuCommand?.();
   clearEscapeHold();
   registerSessionDisposer(null);
   registerKokoTicketProvider(null);

@@ -16,7 +16,14 @@ const { openSettings } = useSettingsWindow();
 const { collapse: sidebarCollapsed, setCollapse: setSidebarCollapsed } = useSettingManager();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 const { batchPanelOpen, toggle: toggleBatchPanel } = useBatchCommandPanel();
-const { activeTabId, enterFocusMode, exitFocusMode, focusMode } = useWorkspaceTabs();
+const {
+  activeTabId,
+  enterFocusMode,
+  enterFullscreenMode,
+  exitFocusMode,
+  focusMode,
+  workspaceFullscreen
+} = useWorkspaceTabs();
 
 const visible = computed(() => isTauriRuntime() && !isLoading.value && !isMacOS.value);
 const maximized = ref(false);
@@ -42,11 +49,6 @@ const runEditCommand = (command: "undo" | "redo" | "cut" | "copy" | "paste" | "s
   document.execCommand(command);
 };
 
-const toggleFullscreen = async () => {
-  const window = useTauriWindowGetCurrentWindow();
-  await window.setFullscreen(!(await window.isFullscreen()));
-};
-
 const toggleFocusMode = () => {
   if (focusMode.value) {
     void exitFocusMode();
@@ -54,6 +56,14 @@ const toggleFocusMode = () => {
   }
 
   if (activeTabId.value) enterFocusMode(activeTabId.value);
+};
+
+const toggleFullscreenMode = () => {
+  if (workspaceFullscreen.value) {
+    void exitFocusMode();
+    return;
+  }
+  if (activeTabId.value) void enterFullscreenMode(activeTabId.value);
 };
 
 const shortcutLabel = (kbds: DropdownMenuItem["kbds"]) =>
@@ -104,6 +114,7 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
         label: t("TabMenu.FocusCurrent"),
         icon: "i-lucide-scan",
         type: "checkbox",
+        kbds: ["ctrl", "shift", "p"],
         checked: focusMode.value,
         disabled: !activeTabId.value,
         onSelect: toggleFocusMode
@@ -133,8 +144,11 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
       {
         label: t("DesktopMenu.Fullscreen"),
         icon: "i-lucide-fullscreen",
-        kbds: ["f11"],
-        onSelect: () => void toggleFullscreen()
+        type: "checkbox",
+        kbds: ["ctrl", "shift", "f"],
+        checked: workspaceFullscreen.value,
+        disabled: !activeTabId.value,
+        onSelect: toggleFullscreenMode
       }
     ]
   },
