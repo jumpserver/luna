@@ -30,7 +30,6 @@
     "bump": "bumpp",
     "set_version": "node scripts/set-version.js",
     "setup_apple_cert": "bash scripts/setup-apple-cert.sh",
-    "sign_go_binary": "bash scripts/sign-go-binary.sh",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "client:dev": "tauri dev",

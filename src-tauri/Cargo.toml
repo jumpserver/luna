@@ -55,6 +55,7 @@ bytes = "1.11.1"
 portable-pty = "0.9"
 shell-words = "1.1"
 percent-encoding = "2.3"
+crossterm = "0.29"
 
 [dependencies.tokio]
 version = "1.46.1"
@@ -63,7 +64,9 @@ features = [
   "macros",
   "sync",
   "time",
-  "net"
+  "net",
+  "io-std",
+  "io-util"
 ]
 
 [dependencies.image]

@@ -4,6 +4,7 @@ mod http;
 mod offline;
 mod service;
 mod setup;
+mod ssh_helper;
 mod transcode;
 mod utils;
 
@@ -46,6 +47,10 @@ use tauri::Manager;
 use tauri_plugin_deep_link::DeepLinkExt;
 #[cfg(not(target_os = "macos"))]
 use tauri_plugin_single_instance::init as single_instance;
+
+pub fn run_ssh_helper_if_requested() -> bool {
+    ssh_helper::run_if_requested()
+}
 
 fn raise_main_window_for_auth(handle: &tauri::AppHandle) {
     let Some(win) = handle.get_webview_window("main") else {

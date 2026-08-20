@@ -1,0 +1,21 @@
+{
+  "platform": "windows",
+  "match_first": [],
+  "is_default": false,
+  "is_set": true,
+  "is_internal": false,
+  "executable": {
+    "type": "system",
+    "default": "wt.exe"
+  },
+  "launch": {
+    "type": "args",
+    "driver": "windows-terminal",
+    "use_ssh_helper": true,
+    "protocol_aliases": {
+      "telnet": "ssh"
+    },
+    "template": "{protocol} {username}@{host} -p {port} -P {value}"
+  },
+  "display_name": "Windows Terminal"
+}

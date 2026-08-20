@@ -184,7 +184,6 @@ clients/
 │   │   ├── service/      # Business logic
 │   │   └── setup/        # App setup
 │   └── resources/        # Native binaries
-├── go-client/            # Minimal SSH proxy helper
 └── i18n/                 # Internationalization files
 ```
 

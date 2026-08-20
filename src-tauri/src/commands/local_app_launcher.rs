@@ -66,6 +66,7 @@ struct Application {
     name: String,
     display_name: String,
     path: String,
+    executable_type: String,
     arg_format: String,
     launch_type: String,
     launch_driver: String,
@@ -80,6 +81,7 @@ struct Application {
 fn decode_payload(raw: &str) -> Result<LaunchPayload, String> {
     let encoded = raw
         .strip_prefix("jms2://")
+        .or_else(|| raw.strip_prefix("jms://"))
         .ok_or_else(|| "invalid local client URL scheme".to_string())?;
     let decoded = BASE64_STANDARD
         .decode(encoded)
@@ -151,6 +153,7 @@ fn resolve_application(app: &AppHandle, payload: &LaunchPayload) -> Result<Appli
         name: string_field(item, "name"),
         display_name: string_field(item, "display_name"),
         path: string_field(item, "path"),
+        executable_type: string_field(item, "executable_type"),
         arg_format: string_field(item, "arg_format"),
         launch_type: string_field(item, "launch_type"),
         launch_driver: string_field(item, "launch_driver"),
@@ -268,7 +271,10 @@ fn render(template: &str, values: &HashMap<&str, String>) -> String {
 }
 
 fn is_terminal_driver(driver: &str) -> bool {
-    matches!(driver, "terminal" | "iterm2" | "linux-terminal")
+    matches!(
+        driver,
+        "terminal" | "iterm2" | "linux-terminal" | "windows-terminal"
+    )
 }
 
 fn prepare_driver(
@@ -341,13 +347,6 @@ fn helper_candidates(app: &AppHandle) -> Vec<PathBuf> {
     candidates
 }
 
-fn helper_path(app: &AppHandle) -> Result<PathBuf, String> {
-    helper_candidates(app)
-        .into_iter()
-        .find(|path| path.is_file())
-        .ok_or_else(|| "SSH helper executable not found".to_string())
-}
-
 fn spawn(mut command: Command) -> Result<(), String> {
     command
         .stdin(Stdio::null())
@@ -370,9 +369,9 @@ fn launch_terminal(
     use_ssh_helper: bool,
 ) -> Result<(), String> {
     let shell_command = if use_ssh_helper {
-        let helper = helper_path(app)?;
+        let helper = std::env::current_exe().map_err(|error| error.to_string())?;
         format!(
-            "{} {}",
+            "{} --ssh-helper {}",
             shell_words::quote(&helper.to_string_lossy()),
             arguments
         )
@@ -403,9 +402,9 @@ fn launch_terminal(
     use_ssh_helper: bool,
 ) -> Result<(), String> {
     let snippet = if use_ssh_helper {
-        let helper = helper_path(app)?;
+        let helper = std::env::current_exe().map_err(|error| error.to_string())?;
         format!(
-            "{} {}",
+            "{} --ssh-helper {}",
             shell_words::quote(&helper.to_string_lossy()),
             arguments
         )
@@ -427,9 +426,24 @@ fn launch_terminal(
     app: &AppHandle,
     application: &Application,
     arguments: &str,
-    _use_ssh_helper: bool,
+    use_ssh_helper: bool,
 ) -> Result<(), String> {
-    launch_executable(app, application, arguments, &HashMap::new())
+    if application.launch_driver != "windows-terminal" {
+        return launch_executable(app, application, arguments, &HashMap::new());
+    }
+
+    let terminal = resolve_executable(app, application)?;
+    let mut process = Command::new(terminal);
+    process.arg("new-tab");
+    if use_ssh_helper {
+        process.arg(std::env::current_exe().map_err(|error| error.to_string())?);
+        process.arg("--ssh-helper");
+    }
+    process.args(
+        shell_words::split(arguments)
+            .map_err(|error| format!("parse terminal arguments failed: {error}"))?,
+    );
+    spawn(process)
 }
 
 fn resolve_executable(app: &AppHandle, application: &Application) -> Result<PathBuf, String> {
@@ -467,6 +481,9 @@ fn resolve_executable(app: &AppHandle, application: &Application) -> Result<Path
         if !name.is_empty() {
             return Ok(PathBuf::from(name));
         }
+    }
+    if application.executable_type == "system" && !application.path.trim().is_empty() {
+        return Ok(configured);
     }
     Err(format!(
         "configured application '{}' not found at '{}'",
@@ -594,6 +611,15 @@ mod tests {
     }
 
     #[test]
+    fn decodes_legacy_client_url_scheme() {
+        let encoded = BASE64_STANDARD.encode(
+            br#"{"protocol":"ssh","endpoint":{"host":"localhost","port":22},"token":{"id":"id","value":"secret"}}"#,
+        );
+        let payload = decode_payload(&format!("jms://{encoded}")).unwrap();
+        assert_eq!(payload.protocol, "ssh");
+    }
+
+    #[test]
     fn renders_plugin_template() {
         let values = HashMap::from([
             ("username", "JMS-id".to_string()),
@@ -604,5 +630,10 @@ mod tests {
             render("{username}@{host} -p {port}", &values),
             "JMS-id@localhost -p 2222"
         );
+    }
+
+    #[test]
+    fn recognizes_windows_terminal_driver() {
+        assert!(is_terminal_driver("windows-terminal"));
     }
 }

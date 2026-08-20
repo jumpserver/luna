@@ -180,7 +180,6 @@ clients/
 │   │   ├── service/      # 业务逻辑
 │   │   └── setup/        # 应用设置
 │   └── resources/        # 原生二进制文件
-├── go-client/            # Go 客户端组件
 └── i18n/                 # 国际化文件
 ```
 

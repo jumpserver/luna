@@ -32,33 +32,6 @@ permissions:
   contents: write
 
 jobs:
-  pre-build:
-    name: pre-build SSH helper
-    runs-on: ubuntu-latest
-    outputs:
-      go-client-artifacts: ${{ steps.upload-go-client.outputs.artifact-name }}
-
-    steps:
-      - name: Check out git repository
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "1.21"
-
-      - name: Build SSH helper for all platforms
-        run: make build-all
-        working-directory: go-client
-
-      - name: Upload SSH helper artifacts
-        id: upload-go-client
-        uses: actions/upload-artifact@v4
-        with:
-          name: go-client-binaries
-          path: go-client/build/
-          retention-days: 1
-
   create-release-draft:
     name: create latest.json
     runs-on: ubuntu-latest
@@ -110,7 +83,6 @@ jobs:
 
   build:
     name: build tauri app (${{ matrix.target || matrix.platform }})
-    needs: pre-build
     permissions:
       contents: write
     strategy:
@@ -137,16 +109,6 @@ jobs:
       - name: Check out git repository
         uses: actions/checkout@v4
 
-      - name: Download SSH helper artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: go-client-binaries
-          path: go-client/build/
-
-      - name: Install SSH helper for current platform
-        run: make install TARGET="${{ matrix.target }}"
-        working-directory: go-client
-
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
@@ -158,6 +120,9 @@ jobs:
           node-version: "23"
           cache: pnpm
 
+      - name: Copy bundled client plugins
+        run: node scripts/copy-client-plugins.mjs
+
       - name: Setup Apple Certificate
         if: startsWith(matrix.platform, 'macos')
         env:
@@ -165,13 +130,6 @@ jobs:
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: npm run setup_apple_cert
-
-      - name: Sign embedded Go client binary (macOS only)
-        if: startsWith(matrix.platform, 'macos')
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
-          TARGET_ARCH: ${{ matrix.target == 'aarch64-apple-darwin' && 'arm64' || 'amd64' }}
-        run: pnpm run sign_go_binary
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
