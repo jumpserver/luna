@@ -31,6 +31,7 @@ use crate::commands::offline_player::{
     get_offline_entry_url, import_offline_recording, list_offline_recordings,
     remove_offline_recording,
 };
+use crate::commands::plugin_manager::{install_plugin, list_plugins, uninstall_plugin};
 use crate::commands::system_fonts::list_system_fonts;
 use crate::commands::window_control::{
     close_window, minimize_window, open_settings_window, toggle_maximize_window,
@@ -254,6 +255,9 @@ pub fn run() {
             remove_offline_recording,
             get_offline_entry_url,
             transcode_replays,
+            list_plugins,
+            install_plugin,
+            uninstall_plugin,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

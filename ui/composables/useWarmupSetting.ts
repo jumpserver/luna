@@ -10,6 +10,7 @@ export async function useWarmupSetting() {
 
     if (isTauriRuntime()) {
       imports.push(
+        import("@/pages/setting/application/terminal.vue"),
         import("@/pages/setting/application/ssh.vue"),
         import("@/pages/setting/application/telnet.vue"),
         import("@/pages/setting/application/sftp.vue"),

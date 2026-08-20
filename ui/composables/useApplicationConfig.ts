@@ -1,9 +1,11 @@
-import type { AppConfigType } from "~/types";
+import type { AppConfigType, PluginListItem } from "~/types";
 
 export const useApplicationConfig = () => {
   const { t } = useI18n();
+  const toast = useToast();
   const { addErrorToast } = useErrorToast();
   const { setAppConfig, appConfig, hydrationPromise } = useSettingManager();
+  const pluginList = useState<PluginListItem[]>("plugin-list", () => []);
 
   const withErrorDetail = (base: string, raw: string) => {
     const detail = raw.trim();
@@ -31,6 +33,19 @@ export const useApplicationConfig = () => {
     }
   };
 
+  const getPlugins = async () => {
+    if (!isTauriRuntime()) return;
+
+    const plugins = await useTauriCoreInvoke("list_plugins");
+    if (Array.isArray(plugins)) {
+      pluginList.value = plugins as PluginListItem[];
+    }
+  };
+
+  const refreshAll = async () => {
+    await Promise.all([getConfig(), getPlugins()]);
+  };
+
   onMounted(async () => {
     if (!isTauriRuntime()) return;
 
@@ -48,24 +63,38 @@ export const useApplicationConfig = () => {
         await getConfig();
       }
 
+      if (!pluginList.value.length) {
+        await getPlugins();
+      }
+
       return;
     }
 
-    await getConfig();
+    await refreshAll();
   });
 
-  const selectClient = async (category: keyof AppConfigType, protocol: string, name: string, enabled = true) => {
+  const selectClient = async (
+    category: keyof AppConfigType,
+    protocol: string,
+    name: string,
+    enabled = true,
+    pluginId?: string,
+    path?: string
+  ) => {
     try {
       const updated = await useTauriCoreInvoke("update_config_selection", {
         category,
         protocol,
         name,
+        pluginId,
+        path,
         enabled
       });
 
       if (updated) {
         setAppConfig(updated as AppConfigType);
       }
+      await getPlugins();
     } catch (error) {
       const message = String(error ?? "");
       const description = message.toLowerCase().includes("executable not found")
@@ -81,12 +110,64 @@ export const useApplicationConfig = () => {
       });
 
       // Refresh so path_exists reflects the current filesystem state.
-      await getConfig();
+      await refreshAll();
+    }
+  };
+
+  const installPlugin = async (path: string) => {
+    try {
+      await useTauriCoreInvoke("install_plugin", { path });
+      await refreshAll();
+      toast.add({
+        title: t("Setting.PluginInstallSuccess"),
+        color: "primary",
+        icon: "line-md:check-all",
+        progress: false,
+        duration: 1500
+      });
+    } catch (error) {
+      addErrorToast({
+        title: t("Setting.PluginInstallFailed"),
+        description: String(error ?? "") || t("Common.OperationFailed"),
+        icon: "line-md:close-circle",
+        progress: true,
+        duration: 4000
+      });
+      throw error;
+    }
+  };
+
+  const uninstallPlugin = async (pluginId: string) => {
+    try {
+      await useTauriCoreInvoke("uninstall_plugin", { pluginId });
+      await refreshAll();
+      toast.add({
+        title: t("Setting.PluginUninstallSuccess"),
+        color: "primary",
+        icon: "line-md:check-all",
+        progress: false,
+        duration: 1500
+      });
+    } catch (error) {
+      addErrorToast({
+        title: t("Setting.PluginUninstallFailed"),
+        description: String(error ?? "") || t("Common.OperationFailed"),
+        icon: "line-md:close-circle",
+        progress: true,
+        duration: 4000
+      });
+      throw error;
     }
   };
 
   return {
     appConfig,
-    selectClient
+    pluginList,
+    getConfig,
+    getPlugins,
+    refreshAll,
+    selectClient,
+    installPlugin,
+    uninstallPlugin
   };
 };

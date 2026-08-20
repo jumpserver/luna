@@ -243,6 +243,11 @@ fn variables(payload: &LaunchPayload) -> HashMap<&'static str, String> {
     values
 }
 
+fn helper_template_value(app: &AppHandle) -> Result<String, String> {
+    let helper = helper_path(app)?;
+    Ok(helper.to_string_lossy().to_string())
+}
+
 fn navicat_url(payload: &LaunchPayload) -> String {
     let protocol = match payload.protocol.as_str() {
         "oracle" => "ora",
@@ -542,6 +547,9 @@ pub fn launch_local_application(app: AppHandle, raw: String) -> Result<(), Strin
     let payload = decode_payload(&raw)?;
     let application = resolve_application(&app, &payload)?;
     let mut values = variables(&payload);
+    if application.use_ssh_helper {
+        values.insert("helper", helper_template_value(&app)?);
+    }
     if let Some(alias) = application.protocol_aliases.get(&payload.protocol) {
         values.insert("protocol", alias.clone());
     }
