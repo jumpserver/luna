@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { create as createAsciinemaPlayer } from "@cyolosecurity/asciinema-player";
+import { create as createAsciinemaPlayer } from "asciinema-player";
 
 const props = defineProps<{
   source: string;
@@ -104,5 +104,5 @@ onBeforeUnmount(destroyPlayer);
 </style>
 
 <style>
-@import "@cyolosecurity/asciinema-player/dist/bundle/asciinema-player.css";
+@import "asciinema-player/dist/bundle/asciinema-player.css";
 </style>

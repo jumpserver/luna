@@ -4,7 +4,10 @@ import { playwright } from "@vitest/browser-playwright";
 import AutoImport from "unplugin-auto-import/vite";
 import { defineConfig } from "vitest/config";
 
+const rootDir = fileURLToPath(new URL(".", import.meta.url));
+
 export default defineConfig({
+  root: rootDir,
   plugins: [
     AutoImport({
       imports: ["vue"],
@@ -14,11 +17,14 @@ export default defineConfig({
   resolve: {
     alias: {
       "#koko": fileURLToPath(new URL("./packages/koko/app", import.meta.url)),
+      "#online-player": fileURLToPath(new URL("./packages/online-player/app", import.meta.url)),
       "~": fileURLToPath(new URL("./ui", import.meta.url))
     }
   },
   test: {
-    include: ["packages/koko/app/tests/**/*.test.ts", "ui/**/*.test.ts"],
+    dir: rootDir,
+    include: ["packages/koko/app/tests/**/*.test.ts", "packages/online-player/**/*.test.ts", "ui/**/*.test.ts"],
+    exclude: ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/.nuxt/**"],
     css: {
       include: [/sftp-(?:transfer-center|file-management)\.scss/]
     },

@@ -182,6 +182,18 @@
   --sidebar-icon-color: color-mix(in srgb, var(--app-text-primary) 64%, transparent);
   --sidebar-icon-muted: color-mix(in srgb, var(--app-text-muted) 82%, transparent);
   --sidebar-icon-active: var(--app-text-primary);
+  --replay-stage: var(--workspace-surface-background);
+  --replay-chrome: var(--workspace-surface-header);
+  --replay-panel: var(--workspace-surface-sidebar);
+  --replay-viewport: var(--terminal-background);
+  --replay-border: var(--workspace-surface-border);
+  --replay-border-strong: var(--app-border-strong);
+  --replay-control: color-mix(in srgb, var(--app-surface-overlay) 94%, transparent);
+  --replay-fg: var(--app-text-primary);
+  --replay-muted: var(--app-text-muted);
+  --replay-chip: var(--app-surface-panel-strong);
+  --replay-hover: var(--app-state-hover);
+  --replay-shadow: var(--theme-shadow-soft);
 }
 
 .dark {
