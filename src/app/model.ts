@@ -472,6 +472,7 @@ export class ConnectionToken {
   face_monitor_token: string;
   connect_options: {
     token_reusable: boolean;
+    use_sysdba?: boolean;
   };
 }
 

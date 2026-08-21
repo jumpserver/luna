@@ -91,6 +91,16 @@ export class ElementAdvancedOptionComponent implements OnChanges, OnInit {
       },
       {
         type: 'select',
+        field: 'use_sysdba',
+        label: 'SYSDBA',
+        hidden: () => {
+          return !this.protocol || this.protocol.name !== 'oracle';
+        },
+        value: false,
+        options: this.boolChoices
+      },
+      {
+        type: 'select',
         field: 'token_reusable',
         hidden: () => {
           return !(
