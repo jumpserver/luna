@@ -54,6 +54,7 @@ it("defines every Terminal AI presentation key in both locales", () => {
     "RightPanel.AIProgressPlanning",
     "RightPanel.AIProgressSummarizing",
     "RightPanel.AIProgressReadingTerminal",
+    "RightPanel.AIResponding",
     "RightPanel.AIBackgroundDisabledByRules",
     "RightPanel.AIBackgroundInitializing",
     "RightPanel.AIBackgroundUnavailable",

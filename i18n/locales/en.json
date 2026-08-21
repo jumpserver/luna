@@ -347,6 +347,7 @@
     "AIModePty": "Run commands only in the current terminal",
     "AIModeBackground": "Run commands only in the background",
     "AIExecutionPlan": "Execution plan",
+    "AIResponding": "Responding…",
     "AIStep": "Step {count}",
     "AICommand": "Command",
     "AIDecisionDuration": "Decision time",

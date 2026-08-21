@@ -4,6 +4,7 @@ import {
   getKokoTerminalAiSession,
   handleKokoTerminalAiMessage,
   registerKokoTerminalAiSession,
+  sendKokoTerminalAiControl,
   unregisterKokoTerminalAiSession
 } from "#koko/composables/terminal/useTerminalAiSessions";
 
@@ -97,4 +98,28 @@ it("exposes local transport failures as translatable error codes", async () => {
 
   expect(session.errorCode).toBe("unavailable");
   expect(session.errorText).toBe("");
+});
+
+it("stops the active response after sending an interrupt", async () => {
+  const session = createSession("interrupt");
+  handleKokoTerminalAiMessage(session.paneId, {
+    id: "capability",
+    role: "assistant",
+    metadata: { terminalId: 9 },
+    parts: [{ type: "data-capability", data: { enabled: true } }]
+  });
+
+  const response = session.chat.sendMessage({ text: "run", metadata: { terminalId: 9 } });
+  await Promise.resolve();
+  await Promise.resolve();
+  sendKokoTerminalAiControl(session.paneId, {
+    id: "interrupt",
+    role: "user",
+    metadata: { terminalId: 9 },
+    parts: [{ type: "data-interrupt", data: { reason: "user" } }]
+  });
+  await response;
+
+  expect(session.chat.status.value).toBe("ready");
+  expect(session.socket?.send).toHaveBeenCalledTimes(2);
 });

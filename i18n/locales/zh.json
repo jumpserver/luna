@@ -347,6 +347,7 @@
     "AIModePty": "仅在当前终端中执行命令",
     "AIModeBackground": "仅在后台执行命令",
     "AIExecutionPlan": "执行计划",
+    "AIResponding": "正在响应…",
     "AIStep": "步骤 {count}",
     "AICommand": "命令",
     "AIDecisionDuration": "决策耗时",

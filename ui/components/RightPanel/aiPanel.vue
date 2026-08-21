@@ -421,6 +421,24 @@ const viewItems = computed<ViewItem[]>(() => {
   return items;
 });
 
+const waitingForTerminalApproval = computed(() => {
+  const current = session.value;
+  if (!current || sqlSession.value) return false;
+  return viewItems.value.some(
+    (item) =>
+      item.kind === "plan" &&
+      item.steps.some((step) =>
+        step.executions.some(
+          (execution) =>
+            execution.command?.partType === "data-approval" &&
+            !current.decisions.has(String(execution.command.id || ""))
+        )
+      )
+  );
+});
+
+const terminalActivityLabel = computed(() => runtimeStatusLabel.value || t("RightPanel.AIResponding"));
+
 function scrollToBottom() {
   void nextTick(() => {
     if (messagesElement.value) messagesElement.value.scrollTop = messagesElement.value.scrollHeight;
@@ -581,7 +599,7 @@ function renderMarkdown(source: string) {
 }
 
 function stepStatus(step: ViewStep) {
-  if (["completed", "failed", "rejected", "skipped"].includes(step.status)) return step.status;
+  if (["completed", "failed", "interrupted", "rejected", "skipped"].includes(step.status)) return step.status;
   const execution = step.executions.at(-1);
   if (execution?.command && !execution.result) return String(execution.command.state || step.status);
   if (["running", "reviewing"].includes(String(execution?.result?.outcome))) {
@@ -1158,6 +1176,28 @@ watch(
             {{ item.data.decision?.name || item.data.name || "" }}
           </div>
         </template>
+
+        <article
+          v-if="busy && !sqlSession && !waitingForTerminalApproval"
+          role="status"
+          aria-live="polite"
+          class="flex gap-2"
+        >
+          <span
+            class="grid size-6 shrink-0 place-items-center rounded-md border border-default bg-elevated text-primary"
+          >
+            <UIcon name="i-lucide-bot" class="size-3.5" />
+          </span>
+          <div class="min-w-0 max-w-[88%]">
+            <div class="text-[10px] text-muted">{{ assistantName }}</div>
+            <div
+              class="mt-1 flex items-center gap-2 rounded-xl rounded-tl-sm border border-default bg-elevated px-2.5 py-2 text-[11px] text-muted"
+            >
+              <UIcon name="i-lucide-loader-circle" class="size-3.5 shrink-0 animate-spin text-primary" />
+              <span>{{ terminalActivityLabel }}</span>
+            </div>
+          </div>
+        </article>
       </main>
 
       <footer class="shrink-0 space-y-2 border-t border-default p-3">
@@ -1183,7 +1223,7 @@ watch(
             @click="clearError"
           />
         </div>
-        <div v-if="runtimeStatusLabel || (sqlSession && busy)" class="flex items-center gap-1.5 text-[11px] text-muted">
+        <div v-if="sqlSession && (runtimeStatusLabel || busy)" class="flex items-center gap-1.5 text-[11px] text-muted">
           <UIcon
             :name="busy ? 'i-lucide-loader-circle' : 'i-lucide-circle-dot'"
             class="size-3"
