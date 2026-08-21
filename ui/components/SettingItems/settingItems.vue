@@ -17,7 +17,7 @@ const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const { isWindows } = usePlatform();
 const { language } = useSettingManager();
-const { setAppConfig } = useSettingManager();
+const { selectClient } = useApplicationConfig();
 
 const imagesMap: Record<string, string | undefined> = {
   builtin_client: getImageByName("terminal"),
@@ -26,6 +26,7 @@ const imagesMap: Record<string, string | undefined> = {
   heidisql: getImageByName("heidisql"),
   mstsc: getImageByName("mstsc"),
   terminal: getImageByName("terminal"),
+  terminal_host: getImageByName("terminal"),
   vncviewer: getImageByName("realvnc"),
   realvnc: getImageByName("realvnc"),
   tigervnc: getImageByName("tigerVnc"),
@@ -54,17 +55,39 @@ const commentText = computed(() => {
   return props.item?.comment?.[lang as "zh" | "en"] || props.item?.comment?.en || "";
 });
 
-const iconSrc = computed(() => imagesMap[props.item?.name?.toLowerCase?.()]);
+const displayName = computed(() => {
+  if (props.item?.name === "terminal" && props.item?.type === "databases") {
+    return t("Setting.TerminalSettings");
+  }
+  return props.item?.display_name || "";
+});
+
+const bundledIconSrc = computed(() => imagesMap[props.item?.name?.toLowerCase?.()] || "");
+
+const iconSrc = computed(() => {
+  if (bundledIconSrc.value) {
+    return bundledIconSrc.value;
+  }
+  if (props.item?.icon_path && isTauriRuntime()) {
+    return useTauriCoreConvertFileSrc(props.item.icon_path);
+  }
+  return imagesMap.terminal || "";
+});
 const isBuiltInTerminal = computed(() => props.item?.name === "builtin_client");
 
-// Windows 下，除 putty 与 mstsc 外，提供可选择 exe 路径的入口
-const isWindowsPathPickTarget = computed(() => {
-  return props.item?.is_internal === false && isWindows.value;
+const canPickPath = computed(() => {
+  if (props.item?.path_selectable === false) {
+    return false;
+  }
+  return !props.item?.is_internal && !!props.item?.executable_type;
 });
 
 const requiresLocalPath = computed(() =>
   ["user_path", "application_bundle"].includes(props.item?.executable_type || "")
 );
+
+const displayedPath = computed(() => props.item?.path_display ?? props.item?.path ?? "");
+const canCopyPath = computed(() => props.item?.path_copyable !== false && !!props.item?.path);
 
 const canEnable = computed(() => {
   if (isBuiltInTerminal.value) {
@@ -77,7 +100,6 @@ const canEnable = computed(() => {
   return !!(props.item?.path && props.item.path.trim());
 });
 
-// user_path 类型保持开关可点击，以便在应用不存在时提示用户
 const switchDisabled = computed(() => {
   if (isBuiltInTerminal.value) {
     return true;
@@ -155,29 +177,32 @@ const selectExecutablePath = async () => {
   try {
     const selected = (await useTauriDialogOpen({
       multiple: false,
-      filters: [{ name: "Executable", extensions: ["exe"] }]
+      directory: props.item?.executable_type === "application_bundle",
+      filters:
+        props.item?.executable_type === "application_bundle"
+          ? undefined
+          : isWindows.value
+            ? [{ name: "Executable", extensions: ["exe"] }]
+            : undefined
     })) as string | null;
 
     if (selected) {
-      const updated = await useTauriCoreInvoke("update_config_selection", {
-        category: props.item.type,
-        protocol: props.protocol || "",
-        name: props.item.name,
-        path: selected
-      });
-
-      if (updated) {
-        setAppConfig(updated as any);
-      }
+      await selectClient(
+        props.item.type as any,
+        props.protocol || "",
+        props.item.name,
+        true,
+        props.item.plugin_id,
+        selected
+      );
     }
   } catch (e) {
     console.error("select executable failed", e);
   }
 };
 
-// 在 Windows 下，已选择路径后仍允许点击展示区域以重新选择
 const onPathClick = () => {
-  if (isWindowsPathPickTarget.value) {
+  if (canPickPath.value) {
     selectExecutablePath();
   }
 };
@@ -189,7 +214,7 @@ const onPathClick = () => {
       <div class="flex items-center gap-3">
         <img
           :src="iconSrc"
-          :alt="props.item.display_name"
+          :alt="displayName"
           loading="lazy"
           class="h-10 w-10 shrink-0 rounded-md border border-black/5 bg-gray-50 p-1 object-contain dark:border-white/10 dark:bg-gray-800/60"
         />
@@ -197,7 +222,7 @@ const onPathClick = () => {
         <div class="flex min-w-0 flex-1 flex-col gap-0.5">
           <div class="flex items-center justify-between gap-3">
             <p class="min-w-0 truncate text-sm leading-tight font-medium">
-              {{ props.item.display_name }}
+              {{ displayName }}
             </p>
 
             <USwitch
@@ -208,24 +233,28 @@ const onPathClick = () => {
             />
           </div>
 
-          <!-- Windows 下特定项显示路径选择，否则展示已有路径 -->
           <div class="min-w-0">
-            <template v-if="isWindowsPathPickTarget && !props.item.path">
-              <UButton label="Select path" color="neutral" variant="outline" @click="selectExecutablePath()" />
+            <template v-if="canPickPath && !props.item.path">
+              <UButton
+                :label="t('Setting.SelectPath')"
+                color="neutral"
+                variant="outline"
+                @click="selectExecutablePath()"
+              />
             </template>
             <template v-else>
               <div class="flex max-w-full items-center gap-2">
                 <div
                   class="inline-flex max-w-full items-center truncate rounded bg-gray-100/80 px-2 py-0.5 text-xs leading-tight text-gray-600 dark:bg-white/10 dark:text-gray-300"
-                  :class="{ 'cursor-pointer hover:bg-gray-200/60 dark:hover:bg-white/15': isWindowsPathPickTarget }"
-                  :title="props.item.path || '-'"
+                  :class="{ 'cursor-pointer hover:bg-gray-200/60 dark:hover:bg-white/15': canPickPath }"
+                  :title="displayedPath || '-'"
                   @click="onPathClick"
                 >
-                  <span class="truncate">{{ props.item.path || "-" }}</span>
+                  <span class="truncate">{{ displayedPath || "-" }}</span>
                 </div>
 
                 <UButton
-                  v-if="props.item.path"
+                  v-if="canCopyPath"
                   size="xs"
                   color="neutral"
                   variant="ghost"

@@ -5,7 +5,7 @@ import type {
   SftpTransferSourcePayload
 } from "#koko/composables/sftp/file-manager/workspaceTypes";
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
-import type { FileTransferEndpointRef } from "~/shared/file-transfer/types";
+import type { FileTransferEndpoint, FileTransferEndpointRef } from "~/shared/file-transfer/types";
 import { useDebounceFn } from "@vueuse/core";
 import SftpLocalPaneDialogs from "#koko/components/FileManagement/pane/SftpLocalPaneDialogs.vue";
 import SftpLocalPaneToolbar from "#koko/components/FileManagement/pane/SftpLocalPaneToolbar.vue";
@@ -24,6 +24,10 @@ import {
   writeTransferDragData
 } from "#koko/composables/sftp/file-manager/transfer";
 import { useLocalFileManager } from "#koko/composables/sftp/file-manager/useLocalFileManager";
+import {
+  LOCAL_ENDPOINT_ID,
+  useLocalFileTransferEndpoint
+} from "#koko/composables/sftp/file-manager/useLocalFileTransferEndpoint";
 import { useSftpPaneSelection } from "#koko/composables/sftp/file-manager/useSftpPaneSelection";
 import { useSftpShowHiddenFiles } from "#koko/composables/sftp/file-manager/useSftpShowHiddenFiles";
 import { KeyboardKey } from "#koko/constants/keyboard";
@@ -45,9 +49,11 @@ const emit = defineEmits<{
   focus: [];
   transferDrop: [payload: SftpTransferDropPayload];
   send: [payload: SftpTransferSourcePayload];
+  transferEndpointMounted: [endpoint: FileTransferEndpoint];
+  transferEndpointConnected: [];
+  transferEndpointUnmounted: [endpoint: FileTransferEndpointRef];
 }>();
 
-const LOCAL_ENDPOINT_ID = "local:fs";
 const { t } = useI18n();
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
@@ -95,6 +101,14 @@ const transferEndpoint = computed<FileTransferEndpointRef>(() => ({
   id: LOCAL_ENDPOINT_ID,
   label: t("koko.fileManagement.localFiles")
 }));
+const localTransferEndpoint = useLocalFileTransferEndpoint({
+  label: t("koko.fileManagement.localFiles"),
+  getCurrentPath: () => currentPath.value,
+  isAvailable: () => isTauriRuntime() && !error.value,
+  onTransferCommitted: async () => {
+    await list();
+  }
+});
 const { showHiddenFiles, filterHiddenEntries } = useSftpShowHiddenFiles();
 const visibleEntries = computed(() => {
   const query = search.value.trim().toLowerCase();
@@ -360,10 +374,15 @@ onMounted(() => {
   void refreshQuickPaths();
   document.addEventListener("dragend", clearTransferDragState);
   document.addEventListener("keydown", onKeydown);
+  if (isTauriRuntime()) {
+    emit("transferEndpointMounted", localTransferEndpoint);
+    emit("transferEndpointConnected");
+  }
 });
 onBeforeUnmount(() => {
   document.removeEventListener("dragend", clearTransferDragState);
   document.removeEventListener("keydown", onKeydown);
+  if (isTauriRuntime()) emit("transferEndpointUnmounted", transferEndpoint.value);
   void releaseSecurityScope();
 });
 

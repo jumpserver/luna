@@ -9,6 +9,7 @@ pub async fn update_config_selection(
     category: String,
     protocol: String,
     name: String,
+    plugin_id: Option<String>,
     path: Option<String>,
     enabled: Option<bool>,
 ) -> Result<Value, String> {
@@ -17,6 +18,7 @@ pub async fn update_config_selection(
         &category,
         &protocol,
         &name,
+        plugin_id.as_deref(),
         path,
         enabled.unwrap_or(true),
     )

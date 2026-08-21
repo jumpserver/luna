@@ -33,13 +33,22 @@ export function filterSftpDistributionTargets(targets: SftpDistributionTargetOpt
   );
 }
 
+function joinTransferSourcePath(basePath: string, name: string): string {
+  const base = basePath || "/";
+  // Local desktop paths (Windows drive / UNC) must keep platform separators.
+  if (/^[a-z]:[\\/]/i.test(base) || base.startsWith("\\\\")) {
+    const sep = base.includes("\\") ? "\\" : "/";
+    return `${base.replace(/[\\/]+$/, "")}${sep}${name}`;
+  }
+  return `${base.replace(/\/+$/, "") || "/"}/${name}`.replace(/\/+/g, "/");
+}
+
 export function buildSftpTransferInputs(
   payload: SftpTransferDropPayload,
   destination: FileTransferEndpointRef
 ): CreateFileTransferTaskInput[] {
   if (payload.sourceEndpoint.id === destination.id) return [];
 
-  const sourceBasePath = payload.sourcePath.replace(/\/$/, "") || "/";
   return payload.entries
     .map((entry) => ({ ...entry, size: Number(entry.size) }))
     .filter((entry) => entry.name && Number.isFinite(entry.size) && entry.size >= 0)
@@ -50,7 +59,7 @@ export function buildSftpTransferInputs(
       source: {
         name: entry.name,
         size: entry.size,
-        path: `${sourceBasePath}/${entry.name}`.replace(/\/+/g, "/")
+        path: joinTransferSourcePath(payload.sourcePath, entry.name)
       },
       destinationPath: payload.destinationPath,
       conflictPolicy: "ask"

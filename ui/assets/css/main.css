@@ -278,7 +278,7 @@
 } */
 
 .platform-windows {
-  @apply border-gray-300 border-1 overflow-hidden shadow-xl shadow-gray-500;
+  @apply overflow-hidden border-none shadow-none;
 }
 
 .header-bg {

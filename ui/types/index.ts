@@ -74,6 +74,13 @@ export interface ConfigItem {
   is_set: boolean;
   executable_type?: string;
   path_exists?: boolean;
+  plugin_id?: string;
+  builtin?: boolean;
+  icon_path?: string;
+  use_ssh_helper?: boolean;
+  path_display?: string;
+  path_copyable?: boolean;
+  path_selectable?: boolean;
 }
 
 export interface AppConfigType {
@@ -81,6 +88,27 @@ export interface AppConfigType {
   remotedesktop: ConfigItem[];
   filetransfer: ConfigItem[];
   databases: ConfigItem[];
+}
+
+export interface PluginListItem {
+  id: string;
+  name: string;
+  display_name: string;
+  version: string;
+  category: string;
+  protocols: string[];
+  builtin: boolean;
+  enabled: boolean;
+  path: string;
+  path_exists?: boolean;
+  executable_type?: string;
+  icon_path?: string;
+  plugin_dir?: string;
+  download_url?: string;
+  comment?: {
+    zh?: string;
+    en?: string;
+  };
 }
 
 export interface Cookies {

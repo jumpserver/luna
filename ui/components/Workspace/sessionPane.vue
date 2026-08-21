@@ -528,6 +528,7 @@ onBeforeUnmount(() => {
             <div v-else :ref="(el: unknown) => setPaneSurfaceTarget(pane.id, el)" class="h-full">
               <div
                 v-if="
+                  pane.protocol !== 'local-shell' &&
                   pane.protocol !== 'script-editor' &&
                   !pane.payload?.id &&
                   !pane.payload?.token?.id &&

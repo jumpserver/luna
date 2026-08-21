@@ -5,6 +5,7 @@ import {
   formatSftpModifiedTime,
   resolveSftpFileType
 } from "../../composables/sftp/file-manager/filePresentation";
+import { buildSftpTransferInputs } from "../../composables/sftp/file-manager/selectors";
 import {
   buildTransferSourcePayload,
   createMockDataTransfer,
@@ -15,6 +16,11 @@ import {
   transferEntriesFromSelection,
   writeTransferDragData
 } from "../../composables/sftp/file-manager/transfer";
+import {
+  useBrowserUploadTransferEndpoint,
+  WEB_UPLOAD_ENDPOINT_ID
+} from "../../composables/sftp/file-manager/useBrowserUploadTransferEndpoint";
+import { joinLocalFsPath } from "../../composables/sftp/file-manager/useLocalFileTransferEndpoint";
 import { useSftpPaneSelection } from "../../composables/sftp/file-manager/useSftpPaneSelection";
 import { resolveSftpFileExtension, resolveSftpFileIcon } from "../../composables/sftp/useSftpFileIcon";
 
@@ -25,6 +31,50 @@ const entries = [
   { name: "gamma", is_dir: true, size: "" },
   { name: "delta.txt", is_dir: false, size: "30" }
 ];
+
+describe("local transfer path joining", () => {
+  it("keeps windows separators for local sources used by transfer center", () => {
+    expect(joinLocalFsPath("C:\\Users\\demo", "a.txt")).toBe("C:\\Users\\demo\\a.txt");
+    expect(joinLocalFsPath("/home/demo", "a.txt")).toBe("/home/demo/a.txt");
+    const inputs = buildSftpTransferInputs(
+      {
+        sourceEndpoint: { id: "local:fs", label: "Local" },
+        sourcePath: "C:\\Users\\demo",
+        sourceSelectionRevision: 1,
+        entries: [{ name: "notes.txt", size: "12" }],
+        destinationPath: "/tmp"
+      },
+      { id: "sftp:token", label: "Remote" }
+    );
+    expect(inputs[0]?.source.path).toBe("C:\\Users\\demo\\notes.txt");
+  });
+});
+
+describe("browser upload transfer endpoint", () => {
+  it("stages browser File objects as a transfer-center source only", async () => {
+    const endpoint = useBrowserUploadTransferEndpoint({ label: "Web Upload" });
+    expect(endpoint.ref.id).toBe(WEB_UPLOAD_ENDPOINT_ID);
+    const staged = endpoint.stageFiles([new File(["hello"], "hello.txt", { type: "text/plain" })]);
+    expect(staged.entries).toEqual([{ name: "hello.txt", size: "5" }]);
+    const chunk = await endpoint.readChunk({
+      transferId: "t1",
+      path: "/web-upload/hello.txt",
+      offset: 0,
+      length: 5
+    });
+    expect(chunk.data.length).toBe(5);
+    expect(chunk.eof).toBe(true);
+    await expect(
+      endpoint.prepareTransfer({
+        transferId: "t1",
+        targetPath: "/tmp/hello.txt",
+        fileName: "hello.txt",
+        size: 5,
+        conflictPolicy: "ask"
+      })
+    ).rejects.toThrow(/cannot receive/);
+  });
+});
 
 describe("sftp file icon mapping", () => {
   it("maps directories, archives, code, and fallbacks to lucide icons", () => {

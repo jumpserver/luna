@@ -63,6 +63,8 @@ import {
   handleChenSqlAiError,
   handleChenSqlAiMessage,
   handleChenSqlAiReady,
+  handleChenSqlAiToolApprovalRequired,
+  handleChenSqlAiToolApprovalResolved,
   registerChenSqlAiSession,
   unregisterChenSqlAiSession
 } from "~/chen/composables/useChenSqlAiSessions";
@@ -491,6 +493,15 @@ function closeSqlAiSession() {
 
 function connectSqlAiSession() {
   closeSqlAiSession();
+  if (auth.profile.value?.chatAiEnabled !== true) {
+    const disabledSession = registerChenSqlAiSession(props.tab.id, null, buildSqlAiContext, applySqlProposal);
+    if (disabledSession) {
+      disabledSession.enabled = false;
+      disabledSession.errorCode = "disabled";
+      disabledSession.errorText = t("RightPanel.SQLAIDisabledDescription");
+    }
+    return;
+  }
   const connection = useChenWebSocket({
     path: "ai",
     resolveUrl: resolveChenWsUrl,
@@ -508,6 +519,10 @@ function connectSqlAiSession() {
         handleChenSqlAiMessage(props.tab.id, packet.data);
       } else if (packet.type === "ai_error") {
         handleChenSqlAiError(props.tab.id, packet.data || {});
+      } else if (packet.type === "ai_tool_approval_required") {
+        handleChenSqlAiToolApprovalRequired(props.tab.id, packet.data || {});
+      } else if (packet.type === "ai_tool_approval_resolved") {
+        handleChenSqlAiToolApprovalResolved(props.tab.id, packet.data || {});
       }
     },
     onError: (socketError) => {
@@ -1751,6 +1766,7 @@ defineExpose({ focus });
             :tab="activeQueryTab"
             :db-type="auth.profile.value?.dbType || ''"
             :can-copy="auth.profile.value?.canCopy === true"
+            :ai-enabled="auth.profile.value?.chatAiEnabled === true"
             :metadata-store="sqlMetadataStore"
             :sql-keyword-case="workspacePreferences.sqlKeywordCase"
             @run="runQueryTab"

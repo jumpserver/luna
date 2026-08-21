@@ -117,14 +117,53 @@ pub fn build_menu<R: Runtime>(app: &impl Manager<R>) -> tauri::Result<Menu<R>> {
             Some(labels.close_label.as_str()),
         )?],
     )?;
+    let focus_mode_i = MenuItem::with_id(
+        app,
+        "toggle-focus-mode",
+        labels.focus_mode_label.as_str(),
+        true,
+        Some("CmdOrCtrl+Shift+P"),
+    )?;
+    let left_panel_i = MenuItem::with_id(
+        app,
+        "toggle-left-panel",
+        labels.left_panel_label.as_str(),
+        true,
+        None::<&str>,
+    )?;
+    let right_panel_i = MenuItem::with_id(
+        app,
+        "toggle-right-panel",
+        labels.right_panel_label.as_str(),
+        true,
+        None::<&str>,
+    )?;
+    let batch_command_i = MenuItem::with_id(
+        app,
+        "toggle-batch-command",
+        labels.batch_command_label.as_str(),
+        true,
+        None::<&str>,
+    )?;
+    let fullscreen_mode_i = MenuItem::with_id(
+        app,
+        "toggle-fullscreen-mode",
+        labels.fullscreen_label.as_str(),
+        true,
+        Some("CmdOrCtrl+Shift+F"),
+    )?;
     let view_menu = Submenu::with_items(
         app,
         labels.view_label.as_str(),
         true,
-        &[&PredefinedMenuItem::fullscreen(
-            app,
-            Some(labels.fullscreen_label.as_str()),
-        )?],
+        &[
+            &focus_mode_i,
+            &left_panel_i,
+            &right_panel_i,
+            &batch_command_i,
+            &PredefinedMenuItem::separator(app)?,
+            &fullscreen_mode_i,
+        ],
     )?;
     let window_menu = Submenu::with_items(
         app,
@@ -197,6 +236,15 @@ pub fn handle_menu_event(app_handle: &tauri::AppHandle, event: &MenuEvent) {
             }
         }
         "quit" => app_handle.exit(0),
+        "toggle-focus-mode"
+        | "toggle-left-panel"
+        | "toggle-right-panel"
+        | "toggle-batch-command"
+        | "toggle-fullscreen-mode" => {
+            if let Some(main) = app_handle.get_webview_window("main") {
+                let _ = main.emit("desktop-menu-command", event.id().as_ref());
+            }
+        }
         _ => warn!("unhandled menu id: {:?}", event.id()),
     }
 }

@@ -214,8 +214,13 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
   }
 
   function targetPath(task: FileTransferTask) {
-    const base = task.destinationPath.replace(/\/$/, "");
-    return `${base || "/"}/${task.source.name}`.replace(/\/+/g, "/");
+    const base = task.destinationPath || "/";
+    // Preserve Windows/local absolute destinations used by the desktop file manager.
+    if (/^[a-z]:[\\/]/i.test(base) || base.startsWith("\\\\")) {
+      const sep = base.includes("\\") ? "\\" : "/";
+      return `${base.replace(/[\\/]+$/, "")}${sep}${task.source.name}`;
+    }
+    return `${base.replace(/\/$/, "") || "/"}/${task.source.name}`.replace(/\/+/g, "/");
   }
 
   function taskStopped(id: string) {

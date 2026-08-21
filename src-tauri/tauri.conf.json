@@ -38,9 +38,9 @@
     }
   },
   "build": {
-    "beforeBuildCommand": "pnpm generate:client",
+    "beforeBuildCommand": "pnpm build:ssh-helper:release && pnpm generate:client",
     "frontendDist": "../dist",
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "pnpm build:ssh-helper:dev && pnpm dev",
     "devUrl": "http://localhost:3000/luna/"
   },
   "mainBinaryName": "JumpServerClient",
@@ -68,7 +68,6 @@
         "resizable": true,
         "fullscreen": false,
         "transparent": false,
-        "shadow": true,
         "decorations": true,
         "titleBarStyle": "Overlay"
       }

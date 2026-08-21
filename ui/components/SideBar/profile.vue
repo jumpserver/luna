@@ -265,6 +265,26 @@ function normalizeSite(value: string): string {
   return s.replace(/\/+$/, "");
 }
 
+function getDefaultSiteName(value: string): string {
+  const normalized = normalizeSite(value);
+  if (!normalized) return "";
+
+  try {
+    return new URL(normalized).hostname || normalized;
+  } catch {
+    const withoutScheme = normalized.replace(/^[a-z][a-z\d+.-]*:\/\//i, "");
+    const authority = withoutScheme.split(/[/?#]/, 1)[0] || "";
+    const host = authority.includes("@") ? authority.split("@").pop() || authority : authority;
+
+    if (!host) return normalized;
+
+    const ipv6Match = host.match(/^\[([^\]]+)\](?::\d+)?$/);
+    if (ipv6Match) return ipv6Match[1] || normalized;
+
+    return host.replace(/:\d+$/, "");
+  }
+}
+
 const ensureRecentSitesReady = async () => {
   if (hydrationPromise.value) {
     await hydrationPromise.value;
@@ -311,7 +331,7 @@ const clearRecentSites = async () => {
 
 const selectRecentSite = (site: string) => {
   inputSite.value = site;
-  inputSiteName.value = site;
+  inputSiteName.value = getDefaultSiteName(site);
   siteNameEdited.value = false;
   clearValidationError();
   recentSitesDismissed.value = true;
@@ -553,7 +573,7 @@ const handleInputSanitize = (event: Event) => {
 
   inputSite.value = sanitized;
   if (!siteNameEdited.value) {
-    inputSiteName.value = normalizeSite(sanitized);
+    inputSiteName.value = getDefaultSiteName(sanitized);
   }
   recentSitesDismissed.value = false;
   clearValidationError();
@@ -577,7 +597,7 @@ const handleSiteNameInputSanitize = (event: Event) => {
  */
 const handleClipboard = (value: string) => {
   inputSite.value = normalizeSite(value);
-  if (!siteNameEdited.value) inputSiteName.value = inputSite.value;
+  if (!siteNameEdited.value) inputSiteName.value = getDefaultSiteName(inputSite.value);
   recentSitesDismissed.value = false;
 };
 

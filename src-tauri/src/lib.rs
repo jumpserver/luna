@@ -4,6 +4,7 @@ mod http;
 mod offline;
 mod service;
 mod setup;
+mod ssh_helper;
 mod transcode;
 mod utils;
 
@@ -31,6 +32,9 @@ use crate::commands::offline_player::{
     get_offline_entry_url, import_offline_recording, list_offline_recordings,
     remove_offline_recording,
 };
+use crate::commands::plugin_manager::{
+    create_custom_terminal, install_plugin, list_plugins, uninstall_plugin,
+};
 use crate::commands::system_fonts::list_system_fonts;
 use crate::commands::window_control::{
     close_window, minimize_window, open_settings_window, toggle_maximize_window,
@@ -46,6 +50,14 @@ use tauri::Manager;
 use tauri_plugin_deep_link::DeepLinkExt;
 #[cfg(not(target_os = "macos"))]
 use tauri_plugin_single_instance::init as single_instance;
+
+pub fn run_ssh_helper_if_requested() -> bool {
+    ssh_helper::run_if_requested()
+}
+
+pub fn run_ssh_helper_standalone() -> ! {
+    ssh_helper::run_standalone()
+}
 
 fn raise_main_window_for_auth(handle: &tauri::AppHandle) {
     let Some(win) = handle.get_webview_window("main") else {
@@ -254,6 +266,10 @@ pub fn run() {
             remove_offline_recording,
             get_offline_entry_url,
             transcode_replays,
+            list_plugins,
+            install_plugin,
+            uninstall_plugin,
+            create_custom_terminal,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

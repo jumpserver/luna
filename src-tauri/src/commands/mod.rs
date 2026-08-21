@@ -11,5 +11,6 @@ pub(crate) mod get_version;
 pub(crate) mod local_app_launcher;
 pub(crate) mod local_shell;
 pub(crate) mod offline_player;
+pub(crate) mod plugin_manager;
 pub(crate) mod system_fonts;
 pub(crate) mod window_control;

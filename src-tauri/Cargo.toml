@@ -6,6 +6,7 @@ authors = [ "JumpServer" ]
 license = "MIT"
 repository = "https://github.com/jumpserver/clients"
 edition = "2021"
+default-run = "jumpserver-client"
 
 [lib]
 name = "jumpserver_client_lib"
@@ -55,6 +56,8 @@ bytes = "1.11.1"
 portable-pty = "0.9"
 shell-words = "1.1"
 percent-encoding = "2.3"
+zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
+crossterm = "0.29"
 
 [dependencies.tokio]
 version = "1.46.1"
@@ -63,7 +66,9 @@ features = [
   "macros",
   "sync",
   "time",
-  "net"
+  "net",
+  "io-std",
+  "io-util"
 ]
 
 [dependencies.image]
