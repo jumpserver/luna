@@ -150,7 +150,11 @@ function cancelActiveResultChanges() {
           v-for="result in resultTabs"
           :key="result.id"
           class="flex items-center rounded-md text-xs"
-          :class="activeResultTabId === result.id ? 'bg-accented text-highlighted' : 'text-muted hover:bg-accented hover:text-highlighted'"
+          :class="
+            activeResultTabId === result.id
+              ? 'bg-accented text-highlighted'
+              : 'text-muted hover:bg-accented hover:text-highlighted'
+          "
         >
           <button
             class="rounded-md px-2 py-1 transition-colors"
