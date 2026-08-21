@@ -1,15 +1,16 @@
 import type { AssetItem } from "~/types";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const STORAGE_KEY = "workspace-recent-connections";
 const MAX_RECENT = 10;
-const recentConnections = ref<AssetItem[]>([]);
+const storedRecentConnections = ref<AssetItem[]>([]);
 let hydrated = false;
 
 function loadRecentConnections() {
   if (!import.meta.client) return;
   try {
     const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    if (Array.isArray(value)) recentConnections.value = value.slice(0, MAX_RECENT);
+    if (Array.isArray(value)) storedRecentConnections.value = value.slice(0, MAX_RECENT);
   } catch {}
 }
 
@@ -21,20 +22,32 @@ function hydrate() {
 
 export function useRecentConnections() {
   hydrate();
+  const { orgId } = storeToRefs(useUserInfoStore());
+  const recentConnections = computed(() =>
+    storedRecentConnections.value.filter((item) => Boolean(orgId.value) && item.org_id === orgId.value)
+  );
 
   const clearRecentConnections = () => {
-    recentConnections.value = [];
-    if (import.meta.client) localStorage.removeItem(STORAGE_KEY);
+    storedRecentConnections.value = storedRecentConnections.value.filter((item) => item.org_id !== orgId.value);
+    if (import.meta.client) {
+      if (storedRecentConnections.value.length) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(storedRecentConnections.value));
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
   };
 
   const recordRecentConnection = (asset: AssetItem) => {
-    const snapshot = JSON.parse(JSON.stringify(asset)) as AssetItem;
-    recentConnections.value = [snapshot, ...recentConnections.value.filter((item) => item.id !== asset.id)].slice(
-      0,
-      MAX_RECENT
-    );
+    if (!orgId.value) return;
+
+    const snapshot = { ...JSON.parse(JSON.stringify(asset)), org_id: orgId.value } as AssetItem;
+    storedRecentConnections.value = [
+      snapshot,
+      ...storedRecentConnections.value.filter((item) => !(item.id === asset.id && item.org_id === orgId.value))
+    ].slice(0, MAX_RECENT);
     if (import.meta.client) {
-      const persisted = recentConnections.value.map(({ savedConnection: _savedConnection, ...item }) => item);
+      const persisted = storedRecentConnections.value.map(({ savedConnection: _savedConnection, ...item }) => item);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
     }
   };

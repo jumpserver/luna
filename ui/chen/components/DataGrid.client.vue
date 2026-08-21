@@ -8,6 +8,7 @@ import type {
   CellMouseOverEvent,
   CellValueChangedEvent,
   ColDef,
+  ColumnHeaderClickedEvent,
   GridReadyEvent,
   SelectionChangedEvent,
   ValueFormatterParams
@@ -89,6 +90,7 @@ const contextMenuPosition = reactive({ x: 0, y: 0 });
 const currentRow = ref<Record<string, any> | null>(null);
 let resizeObserver: ResizeObserver | null = null;
 let rowSelectionAnchor: number | null = null;
+let rowSelectionDragging = false;
 
 const ROW_NUMBER_COLUMN_ID = "__chenRowNumber";
 
@@ -216,9 +218,13 @@ function eventCell(event: CellMouseDownEvent | CellMouseOverEvent | CellContextM
 
 function handleCellMouseDown(event: CellMouseDownEvent) {
   if (!canUseChenCopy(props.canCopy) && props.editMode !== "full") return;
-  if (!isDataColumn(event)) return;
   const mouseEvent = event.event as MouseEvent | undefined;
   if (mouseEvent && mouseEvent.button !== 0) return;
+  if (event.column.getColId() === ROW_NUMBER_COLUMN_ID) {
+    handleRowNumberMouseDown(event);
+    return;
+  }
+  if (!isDataColumn(event)) return;
   const cell = eventCell(event);
   if (!cell) return;
   currentRow.value = event.data || null;
@@ -228,7 +234,12 @@ function handleCellMouseDown(event: CellMouseDownEvent) {
 }
 
 function handleCellMouseOver(event: CellMouseOverEvent) {
-  if ((!canUseChenCopy(props.canCopy) && props.editMode !== "full") || !selection.value.dragging) return;
+  if (!canUseChenCopy(props.canCopy) && props.editMode !== "full") return;
+  if (event.column.getColId() === ROW_NUMBER_COLUMN_ID) {
+    if (rowSelectionDragging) selectRowsBetween(event.node.rowIndex ?? 0);
+    return;
+  }
+  if (!selection.value.dragging) return;
   if (!isDataColumn(event)) return;
   const cell = eventCell(event);
   if (!cell) return;
@@ -238,6 +249,7 @@ function handleCellMouseOver(event: CellMouseOverEvent) {
 }
 
 function finishSelection() {
+  rowSelectionDragging = false;
   if (!selection.value.dragging) return;
   selection.value = finishChenGridSelection(selection.value);
   emit("selectionChange", selectedRows());
@@ -246,6 +258,7 @@ function finishSelection() {
 function resetSelection() {
   selection.value = emptyChenGridSelection();
   rowSelectionAnchor = null;
+  rowSelectionDragging = false;
   gridApi.value?.deselectAll();
   refreshSelectionCells();
   emit("selectionChange", []);
@@ -355,7 +368,6 @@ function handleCellContextMenu(event: CellContextMenuEvent) {
 
 function handleCellClicked(event: CellClickedEvent) {
   if (event.column.getColId() === ROW_NUMBER_COLUMN_ID) {
-    handleRowNumberClicked(event);
     return;
   }
   if (!isDataColumn(event)) return;
@@ -363,7 +375,20 @@ function handleCellClicked(event: CellClickedEvent) {
   emit("selectionChange", selectedRows());
 }
 
-function handleRowNumberClicked(event: CellClickedEvent) {
+function selectRowsBetween(rowIndex: number) {
+  if (rowSelectionAnchor == null || !gridApi.value) return;
+  const first = Math.min(rowSelectionAnchor, rowIndex);
+  const last = Math.max(rowSelectionAnchor, rowIndex);
+  const nodes = [];
+  for (let index = first; index <= last; index += 1) {
+    const node = gridApi.value.getDisplayedRowAtIndex(index);
+    if (node) nodes.push(node);
+  }
+  gridApi.value.deselectAll();
+  gridApi.value.setNodesSelected({ nodes, newValue: true });
+}
+
+function handleRowNumberMouseDown(event: CellMouseDownEvent) {
   const rowIndex = event.node.rowIndex;
   if (rowIndex == null) return;
   const mouseEvent = event.event as MouseEvent | undefined;
@@ -374,20 +399,29 @@ function handleRowNumberClicked(event: CellClickedEvent) {
   refreshSelectionCells();
 
   if (mouseEvent?.shiftKey && rowSelectionAnchor != null && gridApi.value) {
-    const first = Math.min(rowSelectionAnchor, rowIndex);
-    const last = Math.max(rowSelectionAnchor, rowIndex);
-    const nodes = [];
-    for (let index = first; index <= last; index += 1) {
-      const node = gridApi.value.getDisplayedRowAtIndex(index);
-      if (node) nodes.push(node);
-    }
-    gridApi.value.deselectAll();
-    gridApi.value.setNodesSelected({ nodes, newValue: true });
+    selectRowsBetween(rowIndex);
+    rowSelectionDragging = true;
     return;
   }
 
-  event.node.setSelected(additive ? !event.node.isSelected() : true, !additive);
+  if (!additive) gridApi.value?.deselectAll();
+  event.node.setSelected(additive ? !event.node.isSelected() : true, false);
   rowSelectionAnchor = rowIndex;
+  rowSelectionDragging = true;
+}
+
+function handleColumnHeaderClicked(event: ColumnHeaderClickedEvent) {
+  if (event.column?.getColId() !== ROW_NUMBER_COLUMN_ID || !gridApi.value) return;
+  const nodes = [];
+  for (let index = 0; index < gridApi.value.getDisplayedRowCount(); index += 1) {
+    const node = gridApi.value.getDisplayedRowAtIndex(index);
+    if (node) nodes.push(node);
+  }
+  const allSelected = nodes.length > 0 && nodes.every((node) => node.isSelected());
+  if (allSelected) gridApi.value.deselectAll();
+  else gridApi.value.setNodesSelected({ nodes, newValue: true });
+  rowSelectionAnchor = null;
+  rowSelectionDragging = false;
 }
 
 function handleSelectionChanged(event: SelectionChangedEvent) {
@@ -500,6 +534,7 @@ onBeforeUnmount(() => {
         ctrlASelectsRows: true
       }"
       @grid-ready="handleGridReady"
+      @column-header-clicked="handleColumnHeaderClicked"
       @selection-changed="handleSelectionChanged"
       @cell-clicked="handleCellClicked"
       @cell-mouse-down="handleCellMouseDown"

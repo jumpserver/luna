@@ -68,6 +68,29 @@ const gridPreferenceKey = computed(() =>
   )
 );
 
+function tableNameFromIdentifier(value: string) {
+  const stripQuotes = (identifier: string) => identifier.replace(/^\[|\]$/g, "").replace(/["'`]/g, "");
+  const identifier = stripQuotes(value.trim());
+  return stripQuotes(identifier.split(".").at(-1) || "");
+}
+
+function resultTabLabel(result: ChenQueryResultTab) {
+  const metadataTable = typeof result.meta.table === "string" ? result.meta.table : "";
+  if (metadataTable) return tableNameFromIdentifier(metadataTable) || result.title;
+
+  const tables = new Set(
+    (result.data?.fields || [])
+      .flatMap((field) => [field.sourceTable, field.table])
+      .filter((table): table is string => typeof table === "string" && table.trim().length > 0)
+      .map(tableNameFromIdentifier)
+      .filter(Boolean)
+  );
+  if (tables.size === 1) return [...tables][0] || result.title;
+
+  const match = result.title.match(/\b(?:from|join|update|into)\s+([^\s,;]+)/i);
+  return match?.[1] ? tableNameFromIdentifier(match[1]) || result.title : result.title;
+}
+
 function emitActiveDataViewAction(action: ChenDataViewAction, data?: number) {
   if (!activeResult.value) return;
   emit("dataViewAction", activeResult.value, action, data);
@@ -127,18 +150,19 @@ function cancelActiveResultChanges() {
           v-for="result in resultTabs"
           :key="result.id"
           class="flex items-center rounded-md text-xs"
-          :class="activeResultTabId === result.id ? 'bg-accented' : 'text-muted'"
+          :class="activeResultTabId === result.id ? 'bg-accented text-highlighted' : 'text-muted hover:bg-accented hover:text-highlighted'"
         >
           <button
-            class="rounded-md px-2 py-1 transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
+            class="rounded-md px-2 py-1 transition-colors"
             :disabled="activeResultBusy"
+            :title="result.title"
             @click="emit('update:activeResultTabId', result.id)"
           >
-            {{ result.title }}
+            {{ resultTabLabel(result) }}
           </button>
           <button
             v-if="closable"
-            class="mr-1 rounded p-0.5 text-muted transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
+            class="mr-1 flex size-4 shrink-0 items-center justify-center rounded text-muted hover:bg-elevated hover:text-foreground"
             :aria-label="`Close ${result.title}`"
             :disabled="activeResultBusy"
             @click="emit('close', result.id)"

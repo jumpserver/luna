@@ -262,6 +262,7 @@ export interface AssetItem {
   id: string;
   name: string;
   address: string;
+  org_id?: string;
   user?: string;
   platform: string;
   zone: string;
