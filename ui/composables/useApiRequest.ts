@@ -45,6 +45,13 @@ export interface SqlSnippetPayload {
   module: string;
 }
 
+export interface SqlSnippetListParams extends Record<string, unknown> {
+  module: string;
+  limit: number;
+  offset: number;
+  order: string;
+}
+
 export interface CommandSnippetPayload extends SqlSnippetPayload {
   comment?: string;
 }
@@ -359,10 +366,11 @@ export function updateCommandSnippet(id: string, payload: CommandSnippetPayload)
   });
 }
 
-export function getSqlSnippets(): Promise<unknown> {
+export function getSqlSnippets(query: SqlSnippetListParams): Promise<unknown> {
   return apiRequest<unknown>({
     method: "GET",
-    path: "/api/v1/ops/adhocs/"
+    path: "/api/v1/ops/adhocs/",
+    query
   });
 }
 

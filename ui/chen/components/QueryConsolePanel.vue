@@ -206,16 +206,20 @@ function handleSqlFileChange(event: Event) {
   emit("uploadSql", props.tab, file);
 }
 
-async function openSnippetDialog() {
-  selectSnippetDialogOpen.value = true;
+async function loadSnippetPage(page: number) {
   try {
-    await sqlSnippets.load();
+    await sqlSnippets.load(page);
   } catch (cause) {
     addErrorToast({
       title: "Failed to load SQL",
       description: requestErrorMessage(cause)
     });
   }
+}
+
+async function openSnippetDialog() {
+  selectSnippetDialogOpen.value = true;
+  await loadSnippetPage(1);
 }
 
 function openSaveSnippetDialog() {
@@ -491,8 +495,12 @@ defineExpose({ editorSnapshot });
       :snippets="sqlSnippets.snippets.value"
       :loading="sqlSnippets.loading.value"
       :deleting-id="sqlSnippets.deletingId.value"
+      :page="sqlSnippets.page.value"
+      :page-size="sqlSnippets.pageSize"
+      :total="sqlSnippets.total.value"
       @insert="insertSqlSnippet"
       @delete="deleteSqlSnippet"
+      @page-change="loadSnippetPage"
     />
   </div>
 </template>
