@@ -365,6 +365,7 @@ export function sendKokoTerminalAiControl(paneId: string, message: TerminalAiCha
   }
 
   socket.send(buildJSONEnvelope(ENVELOPE_CHAT, message));
+  if (message.parts.some((part) => part.type === "data-interrupt")) session.chat.stop();
 }
 
 export function createTerminalAiMessageId(prefix: string) {

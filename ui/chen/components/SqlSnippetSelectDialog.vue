@@ -8,12 +8,16 @@ const props = defineProps<{
   snippets: ChenSqlSnippet[];
   loading: boolean;
   deletingId: string;
+  page: number;
+  pageSize: number;
+  total: number;
 }>();
 
 const emit = defineEmits<{
   "update:open": [open: boolean];
   insert: [snippet: ChenSqlSnippet];
   delete: [snippet: ChenSqlSnippet];
+  pageChange: [page: number];
 }>();
 
 const deleteDialogOpen = ref(false);
@@ -41,7 +45,7 @@ function confirmDelete() {
 </script>
 
 <template>
-  <ChenWorkspaceModal v-model:open="visible" title="Select SQL" :ui="{ content: 'sm:max-w-3xl' }">
+  <ChenWorkspaceModal v-model:open="visible" title="Select SQL" :dismissible="false" :ui="{ content: 'sm:max-w-3xl' }">
     <template #body>
       <div v-if="loading" class="grid min-h-32 place-items-center text-muted">
         <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
@@ -49,41 +53,54 @@ function confirmDelete() {
 
       <div v-else-if="!snippets.length" class="grid min-h-32 place-items-center text-sm text-muted">No saved SQL.</div>
 
-      <div v-else class="max-h-[60vh] overflow-auto rounded-md border border-default">
-        <table class="w-full table-fixed text-left text-sm">
-          <thead class="sticky top-0 bg-elevated text-muted">
-            <tr>
-              <th class="w-36 px-3 py-2 font-medium">Name</th>
-              <th class="px-3 py-2 font-medium">Content</th>
-              <th class="w-36 px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-default">
-            <tr v-for="snippet in snippets" :key="snippet.id" class="hover:bg-elevated/60">
-              <td class="truncate px-3 py-2" :title="snippet.name">
-                {{ snippet.name }}
-              </td>
-              <td class="truncate px-3 py-2 font-mono text-xs text-muted" :title="snippet.args">
-                {{ snippet.args }}
-              </td>
-              <td class="px-3 py-2">
-                <div class="flex justify-end gap-1">
-                  <UButton size="xs" variant="ghost" @click="emit('insert', snippet)">Insert</UButton>
-                  <UButton
-                    size="xs"
-                    color="error"
-                    variant="ghost"
-                    :loading="deletingId === snippet.id"
-                    :disabled="Boolean(deletingId)"
-                    @click="requestDelete(snippet)"
-                  >
-                    Delete
-                  </UButton>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div v-else>
+        <div class="max-h-[60vh] overflow-auto rounded-md border border-default">
+          <table class="w-full table-fixed text-left text-sm">
+            <thead class="sticky top-0 bg-elevated text-muted">
+              <tr>
+                <th class="w-36 px-3 py-2 font-medium">Name</th>
+                <th class="px-3 py-2 font-medium">Content</th>
+                <th class="w-36 px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-default">
+              <tr v-for="snippet in snippets" :key="snippet.id" class="hover:bg-elevated/60">
+                <td class="truncate px-3 py-2" :title="snippet.name">
+                  {{ snippet.name }}
+                </td>
+                <td class="truncate px-3 py-2 font-mono text-xs text-muted" :title="snippet.args">
+                  {{ snippet.args }}
+                </td>
+                <td class="px-3 py-2">
+                  <div class="flex justify-end gap-1">
+                    <UButton size="xs" variant="ghost" @click="emit('insert', snippet)">Insert</UButton>
+                    <UButton
+                      size="xs"
+                      color="error"
+                      variant="ghost"
+                      :loading="deletingId === snippet.id"
+                      :disabled="Boolean(deletingId)"
+                      @click="requestDelete(snippet)"
+                    >
+                      Delete
+                    </UButton>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div v-if="total > pageSize" class="mt-3 flex items-center justify-between gap-3">
+          <span class="text-xs text-muted">{{ total }} saved SQL</span>
+          <UPagination
+            :page="page"
+            :items-per-page="pageSize"
+            :total="total"
+            size="sm"
+            @update:page="emit('pageChange', $event)"
+          />
+        </div>
       </div>
     </template>
   </ChenWorkspaceModal>

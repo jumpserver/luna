@@ -1,0 +1,256 @@
+.replay-shell {
+  color: var(--replay-fg);
+  background: var(--replay-stage);
+}
+
+.replay-shell .tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.replay-stage {
+  background: var(--replay-stage);
+}
+
+.replay-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.22;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--replay-fg) 8%, transparent) 1px,
+    transparent 0
+  );
+  background-size: 3px 3px;
+  mix-blend-mode: overlay;
+}
+
+.replay-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 42%,
+    color-mix(in srgb, var(--replay-fg) 10%, transparent) 100%
+  );
+}
+
+.replay-frame {
+  box-shadow: var(--replay-shadow);
+}
+
+.replay-controls {
+  color: var(--replay-fg);
+  background: var(--replay-control);
+  box-shadow: var(--replay-shadow);
+  backdrop-filter: blur(20px);
+}
+
+.replay-progress-bar {
+  height: 6px;
+}
+
+.replay-progress-slider {
+  cursor: pointer;
+}
+
+.replay-progress-bar:hover .replay-progress-thumb,
+.replay-progress-bar:focus-within .replay-progress-thumb {
+  opacity: 1;
+}
+
+.replay-command-marker {
+  position: absolute;
+  top: 50%;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  transform: translate(-50%, -50%);
+}
+
+.replay-command-marker-tick {
+  width: 3px;
+  height: 12px;
+  background: var(--ui-color-warning-500);
+  border-radius: 1.5px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 30%);
+  transition:
+    width 150ms,
+    height 150ms,
+    box-shadow 150ms;
+}
+
+.replay-command-marker.is-danger .replay-command-marker-tick {
+  background: var(--ui-color-error-500);
+}
+
+.replay-command-marker.is-active .replay-command-marker-tick {
+  width: 4px;
+  height: 14px;
+  background: var(--ui-color-primary-500);
+}
+
+.replay-command-marker:hover .replay-command-marker-tick,
+.replay-command-marker:focus-visible .replay-command-marker-tick {
+  width: 4px;
+  height: 16px;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--ui-color-warning-500) 40%, transparent),
+    0 2px 6px rgb(0 0 0 / 50%);
+}
+
+.replay-command-marker.is-danger:hover .replay-command-marker-tick,
+.replay-command-marker.is-danger:focus-visible .replay-command-marker-tick {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--ui-color-error-500) 40%, transparent),
+    0 2px 6px rgb(0 0 0 / 50%);
+}
+
+.replay-command-marker.is-active:hover .replay-command-marker-tick,
+.replay-command-marker.is-active:focus-visible .replay-command-marker-tick {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--ui-color-primary-500) 40%, transparent),
+    0 2px 6px rgb(0 0 0 / 50%);
+}
+
+.replay-command-marker-label {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  z-index: 20;
+  max-width: 280px;
+  padding: 5px 9px;
+  overflow: hidden;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  color: var(--replay-fg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  background: var(--replay-control);
+  border: 1px solid var(--replay-border-strong);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 60%);
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: opacity 200ms;
+}
+
+.replay-command-marker-label::after {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  content: "";
+  border: 5px solid transparent;
+  border-top-color: var(--replay-control);
+  transform: translateX(-50%);
+}
+
+.replay-command-marker:hover .replay-command-marker-label,
+.replay-command-marker:focus-visible .replay-command-marker-label {
+  opacity: 1;
+}
+
+.replay-play-button:hover {
+  background: var(--replay-hover);
+  box-shadow: var(--replay-shadow);
+}
+
+.replay-restart-button:hover,
+.replay-parts-button:hover,
+.replay-speed-button:hover,
+.replay-download-button:hover,
+.replay-command-rail-button:hover {
+  color: var(--replay-fg);
+  background: var(--replay-hover);
+}
+
+.replay-control-icon-button {
+  display: inline-grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.replay-parts-popover {
+  color: var(--replay-fg);
+  background: var(--replay-control);
+  border: 1px solid var(--replay-border-strong);
+  box-shadow: var(--replay-shadow);
+  backdrop-filter: blur(20px);
+}
+
+.replay-infobar {
+  display: flex;
+  align-items: center;
+  height: 52px;
+  padding: 0 20px;
+  overflow-x: auto;
+  background: var(--replay-chrome);
+  border-bottom: 1px solid var(--replay-border);
+  flex-shrink: 0;
+}
+
+.replay-info-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  border-right: 1px solid var(--replay-border);
+  white-space: nowrap;
+}
+
+.replay-info-section:first-child {
+  padding-left: 0;
+}
+
+.replay-info-section:last-child {
+  padding-right: 0;
+  border-right: none;
+}
+
+.replay-info-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--replay-muted);
+  text-transform: uppercase;
+}
+
+.replay-info-value {
+  max-width: 18rem;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--replay-fg);
+  text-overflow: ellipsis;
+}
+
+.replay-command {
+  border-left: 2px solid transparent;
+}
+
+.replay-command.is-active {
+  border-left-color: var(--ui-color-primary-500);
+  background: color-mix(in srgb, var(--ui-color-primary-500) 10%, transparent);
+}
+
+.replay-seek {
+  min-width: 280px;
+  padding: 32px 40px;
+  border: 1px solid var(--replay-border-strong);
+  border-radius: 12px;
+  background: var(--replay-control);
+  box-shadow: var(--replay-shadow);
+  backdrop-filter: blur(24px);
+}
