@@ -25,8 +25,9 @@ impl ApiResponse {
     }
 }
 
-/// 将响应信息转换成前端统一使用的 API 结构格式
+/// Convert a reqwest result into the frontend API response shape.
 pub async fn into_api_response(
+    method: &reqwest::Method,
     url: &str,
     result: Result<reqwest::Response, reqwest::Error>,
 ) -> ApiResponse {
@@ -34,13 +35,29 @@ pub async fn into_api_response(
         Ok(resp) => {
             let status = resp.status().as_u16();
             let data = resp.text().await.unwrap_or_default();
-            log::info!("请求 {} 完成: status={}, bytes={}", url, status, data.len());
+            if is_success_status(status) {
+                log::debug!(
+                    "{} {} status={} bytes={}",
+                    method,
+                    url,
+                    status,
+                    data.len()
+                );
+            } else {
+                log::warn!(
+                    "{} {} status={} bytes={}",
+                    method,
+                    url,
+                    status,
+                    data.len()
+                );
+            }
 
             ApiResponse::ok(status, data)
         }
         Err(err) => {
-            log::warn!("请求 {} 失败: {}", url, err);
-            ApiResponse::failed(format!("请求失败: {}", err))
+            log::warn!("{} {} failed: {}", method, url, err);
+            ApiResponse::failed(format!("request failed: {}", err))
         }
     }
 }

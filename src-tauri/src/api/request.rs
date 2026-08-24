@@ -6,7 +6,6 @@ use crate::{
     },
     utils::tz_offset_string,
 };
-use log::info;
 use reqwest::{header::AUTHORIZATION, Client, Method, RequestBuilder, Response};
 use serde::Serialize;
 use serde_json::Value;
@@ -54,16 +53,12 @@ impl ApiRequestClient {
 
     /// 发送 GET 请求并转换为统一 ApiResponse
     pub async fn get_with_response(&self, url: &str) -> ApiResponse {
-        info!("GET {}", url);
-
         self.send_with_response(Method::GET, url, |request| request)
             .await
     }
 
     /// 发送带超时的 GET 请求并转换为统一 ApiResponse
     pub async fn get_with_response_timeout(&self, url: &str, timeout: Duration) -> ApiResponse {
-        info!("GET {} with timeout {:?}", url, timeout);
-
         self.send_with_response(Method::GET, url, |request| request.timeout(timeout))
             .await
     }
@@ -73,9 +68,6 @@ impl ApiRequestClient {
     where
         T: Serialize + ?Sized,
     {
-        info!("POST WITH BODY {}", url);
-        log_json_body(body);
-
         self.send_with_response(Method::POST, url, |request| request.json(body))
             .await
     }
@@ -88,8 +80,6 @@ impl ApiRequestClient {
         query: Option<&Value>,
         body: Option<&Value>,
     ) -> ApiResponse {
-        info!("{} {}", method, url);
-
         self.send_with_response(method, url, |mut request| {
             if let Some(query) = query {
                 request = request.query(query);
@@ -149,7 +139,7 @@ impl ApiRequestClient {
     where
         F: FnOnce(RequestBuilder) -> RequestBuilder,
     {
-        into_api_response(url, self.send(method, url, apply).await).await
+        into_api_response(&method, url, self.send(method.clone(), url, apply).await).await
     }
 }
 
@@ -171,12 +161,3 @@ fn referer_from(url: &str) -> Option<String> {
     })
 }
 
-/// 输出请求体内容
-fn log_json_body<T>(body: &T)
-where
-    T: Serialize + ?Sized,
-{
-    if let Ok(body) = serde_json::to_string(body) {
-        info!("request body: {}", body);
-    }
-}

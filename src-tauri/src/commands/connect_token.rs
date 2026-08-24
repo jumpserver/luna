@@ -73,7 +73,7 @@ pub async fn get_connect_token(
     let url_data = token_service
         .get_local_client_url(&token_id, rdp_params.as_ref())
         .await;
-    log::info!(
+    log::debug!(
         "get_connect_token client URL response status={}",
         url_data.status
     );

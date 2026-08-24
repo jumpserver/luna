@@ -59,6 +59,64 @@ pub fn run_ssh_helper_standalone() -> ! {
     ssh_helper::run_standalone()
 }
 
+fn logger_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
+    use tauri_plugin_log::fern::colors::{Color, ColoredLevelConfig};
+
+    let crate_level = if cfg!(debug_assertions) {
+        log::LevelFilter::Debug
+    } else {
+        log::LevelFilter::Info
+    };
+    let colors = ColoredLevelConfig::new()
+        .error(Color::Red)
+        .warn(Color::Yellow)
+        .info(Color::Green)
+        .debug(Color::Cyan)
+        .trace(Color::BrightBlack);
+
+    tauri_plugin_log::Builder::new()
+        .level(log::LevelFilter::Info)
+        .level_for("jumpserver_client_lib", crate_level)
+        .level_for("tao", log::LevelFilter::Warn)
+        .level_for("wry", log::LevelFilter::Warn)
+        .level_for("webview", log::LevelFilter::Warn)
+        .level_for("reqwest", log::LevelFilter::Warn)
+        .level_for("hyper", log::LevelFilter::Warn)
+        .max_file_size(500_000 /* bytes */)
+        .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
+        .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(5))
+        .clear_format()
+        .clear_targets()
+        .target(
+            tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout).format(
+                move |out, message, record| {
+                    out.finish(format_args!(
+                        "[{}][{}][{}] {}",
+                        chrono::Local::now().format("%Y-%m-%d][%H:%M:%S"),
+                        colors.color(record.level()),
+                        record.target(),
+                        message
+                    ))
+                },
+            ),
+        )
+        .target(
+            tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
+                file_name: Some("client_logs".to_string()),
+            })
+            .format(|out, message, record| {
+                out.finish(format_args!(
+                    "[{}][{}][{}] {}",
+                    chrono::Local::now().format("%Y-%m-%d][%H:%M:%S"),
+                    record.level(),
+                    record.target(),
+                    message
+                ))
+            }),
+        )
+        .build()
+}
+
 fn raise_main_window_for_auth(handle: &tauri::AppHandle) {
     let Some(win) = handle.get_webview_window("main") else {
         warn!("main window not found, cannot raise for auth callback");
@@ -87,8 +145,6 @@ fn raise_main_window_for_auth(handle: &tauri::AppHandle) {
 }
 
 fn process_deep_link(handle: &tauri::AppHandle, raw: &str) -> bool {
-    info!("deep link received: {}", raw);
-
     if is_auth_callback(raw) {
         info!("deep link is auth callback, handling in current instance");
         raise_main_window_for_auth(handle);
@@ -96,6 +152,8 @@ fn process_deep_link(handle: &tauri::AppHandle, raw: &str) -> bool {
         flow_state.handle_callback(raw);
         return false;
     }
+
+    info!("deep link received");
 
     match pull_up(handle.clone(), raw.to_string()) {
         Ok(_) => {
@@ -146,22 +204,7 @@ pub fn run() {
     }));
 
     builder
-        .plugin(
-            tauri_plugin_log::Builder::new()
-                .level(log::LevelFilter::Info)
-                .max_file_size(500_000 /* bytes */)
-                .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
-                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(5))
-                .target(tauri_plugin_log::Target::new(
-                    tauri_plugin_log::TargetKind::Stdout,
-                ))
-                .target(tauri_plugin_log::Target::new(
-                    tauri_plugin_log::TargetKind::LogDir {
-                        file_name: Some("client_logs".to_string()),
-                    },
-                ))
-                .build(),
-        )
+        .plugin(logger_plugin())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())

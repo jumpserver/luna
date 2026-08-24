@@ -181,7 +181,7 @@ impl AuthFlowState {
 /// 从 JumpServer 获取 OAuth 服务端配置。
 pub async fn fetch_oauth_config(site: &str, client: &Client) -> Result<OAuthConfig> {
     let config_url = format!("{}{}", site, endpoint::oauth::WELL_KNOWN);
-    log::info!("Fetching OAuth config: {}", config_url);
+    log::debug!("Fetching OAuth config: {}", config_url);
 
     let response = client
         .get(&config_url)
@@ -190,8 +190,8 @@ pub async fn fetch_oauth_config(site: &str, client: &Client) -> Result<OAuthConf
         .await?;
     let status = response.status();
     let text = response.text().await?;
-    log::info!(
-        "OAuth config response: {} status={}, bytes={}",
+    log::debug!(
+        "OAuth config response: {} status={} bytes={}",
         config_url,
         status,
         text.len()
@@ -259,12 +259,8 @@ where
         RequestTokenError::Request(req_err) => {
             format!("Token exchange request failed: {}", req_err)
         }
-        RequestTokenError::Parse(parse_err, body) => {
-            let body_text = String::from_utf8_lossy(body);
-            format!(
-                "Failed to parse server response: {}; raw body: {}",
-                parse_err, body_text
-            )
+        RequestTokenError::Parse(parse_err, _) => {
+            format!("Failed to parse server response: {}", parse_err)
         }
         RequestTokenError::Other(msg) => format!("Token exchange error: {}", msg),
     }
