@@ -1,5 +1,12 @@
 import type { ChenActionItem, ChenAuthResponse, ChenProfile, ChenTreeNode } from "~/chen/types";
 import type {
+  ChenSchemaOverview,
+  ChenSchemaOverviewCapabilities,
+  ChenSchemaOverviewIndex,
+  ChenSchemaOverviewTable,
+  ChenSchemaOverviewView
+} from "~/chen/types/schemaOverview";
+import type {
   ChenQualifiedRelation,
   ChenRelationColumnsMetadata,
   ChenRelationMetadataPage,
@@ -157,6 +164,25 @@ export async function fetchChenSqlColumns(
   });
 }
 
+export async function fetchChenSchemaOverview(
+  chenToken: string,
+  nodeKey: string,
+  fetchImpl: typeof fetch = fetch,
+  endpointUrl?: string
+): Promise<ChenSchemaOverview> {
+  const response = await fetchImpl(chenPath("/api/resources/metadata/schema-overview", endpointUrl), {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      ...buildHeaders(chenToken, getWebApiMutationHeaders()),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ nodeKey })
+  });
+
+  return parseSchemaOverview(await readJson<unknown>(response));
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -167,7 +193,7 @@ function parseQualifiedRelation(value: unknown): ChenQualifiedRelation {
     !(typeof value.catalog === "string" || value.catalog === null) ||
     typeof value.schema !== "string" ||
     typeof value.name !== "string" ||
-    !(value.kind === "table" || value.kind === "view")
+    !(value.kind === "table" || value.kind === "view" || value.kind === "materialized_view")
   ) {
     throw new Error("Chen returned malformed SQL relation metadata");
   }
@@ -177,6 +203,114 @@ function parseQualifiedRelation(value: unknown): ChenQualifiedRelation {
     name: value.name,
     kind: value.kind
   };
+}
+
+function parseSchemaOverview(value: unknown): ChenSchemaOverview {
+  if (
+    !isRecord(value) ||
+    !(typeof value.catalog === "string" || value.catalog === null) ||
+    typeof value.schema !== "string" ||
+    !isRecord(value.capabilities) ||
+    !Array.isArray(value.tables) ||
+    !Array.isArray(value.views) ||
+    !Array.isArray(value.indexes) ||
+    !(typeof value.ddl === "string" || value.ddl === null)
+  ) {
+    throw new Error("Chen returned malformed schema overview metadata");
+  }
+
+  return {
+    catalog: value.catalog,
+    schema: value.schema,
+    capabilities: parseSchemaOverviewCapabilities(value.capabilities),
+    tables: value.tables.map(parseSchemaOverviewTable),
+    views: value.views.map(parseSchemaOverviewView),
+    indexes: value.indexes.map(parseSchemaOverviewIndex),
+    ddl: value.ddl
+  };
+}
+
+function parseSchemaOverviewCapabilities(value: Record<string, unknown>): ChenSchemaOverviewCapabilities {
+  const keys = [
+    "tableRows",
+    "tableSize",
+    "tableEngine",
+    "tableCharacterSet",
+    "tableCollation",
+    "tableComment",
+    "viewComment",
+    "indexes",
+    "ddl"
+  ] as const;
+  if (keys.some((key) => typeof value[key] !== "boolean")) {
+    throw new Error("Chen returned malformed schema overview metadata");
+  }
+  return {
+    tableRows: value.tableRows as boolean,
+    tableSize: value.tableSize as boolean,
+    tableEngine: value.tableEngine as boolean,
+    tableCharacterSet: value.tableCharacterSet as boolean,
+    tableCollation: value.tableCollation as boolean,
+    tableComment: value.tableComment as boolean,
+    viewComment: value.viewComment as boolean,
+    indexes: value.indexes as boolean,
+    ddl: value.ddl as boolean
+  };
+}
+
+function parseSchemaOverviewTable(value: unknown): ChenSchemaOverviewTable {
+  if (
+    !isRecord(value) ||
+    typeof value.name !== "string" ||
+    typeof value.schema !== "string" ||
+    !isNullableNumber(value.estimatedRows) ||
+    !isNullableNumber(value.totalSizeBytes) ||
+    !isNullableString(value.engine) ||
+    !isNullableString(value.characterSet) ||
+    !isNullableString(value.collation) ||
+    !isNullableString(value.comment)
+  ) {
+    throw new Error("Chen returned malformed schema overview metadata");
+  }
+  return value as unknown as ChenSchemaOverviewTable;
+}
+
+function parseSchemaOverviewView(value: unknown): ChenSchemaOverviewView {
+  if (
+    !isRecord(value) ||
+    typeof value.name !== "string" ||
+    typeof value.schema !== "string" ||
+    typeof value.type !== "string" ||
+    !isNullableString(value.comment)
+  ) {
+    throw new Error("Chen returned malformed schema overview metadata");
+  }
+  return value as unknown as ChenSchemaOverviewView;
+}
+
+function parseSchemaOverviewIndex(value: unknown): ChenSchemaOverviewIndex {
+  if (
+    !isRecord(value) ||
+    typeof value.name !== "string" ||
+    typeof value.schema !== "string" ||
+    typeof value.table !== "string" ||
+    !Array.isArray(value.columns) ||
+    value.columns.some((column) => typeof column !== "string") ||
+    !(typeof value.unique === "boolean" || value.unique === null) ||
+    !isNullableString(value.method) ||
+    !isNullableString(value.definition)
+  ) {
+    throw new Error("Chen returned malformed schema overview metadata");
+  }
+  return value as unknown as ChenSchemaOverviewIndex;
+}
+
+function isNullableString(value: unknown): value is string | null {
+  return typeof value === "string" || value === null;
+}
+
+function isNullableNumber(value: unknown): value is number | null {
+  return (typeof value === "number" && Number.isFinite(value)) || value === null;
 }
 
 export function sanitizeChenExportFileName(value: string, fallback = "chen-export") {

@@ -39,7 +39,7 @@ export function useChenWorkspaceTabs() {
     return normalized || tab.title;
   }
 
-  function registerTab(tab: ChenWorkspaceTab) {
+  function registerTab<T extends ChenWorkspaceTab>(tab: T): T {
     workspaceTabs.value.push(tab);
     workspaceTabState[tab.id] = tab;
     activeWorkspaceTabId.value = tab.id;
@@ -130,7 +130,15 @@ export function useChenWorkspaceTabs() {
     const existingTab = workspaceTabs.value.find((item) => item.kind === "database" && item.nodeKey === node.key);
     if (existingTab) {
       activeWorkspaceTabId.value = existingTab.id;
-      return workspaceTabState[existingTab.id] as ChenDatabaseWorkspaceTab;
+      const tab = workspaceTabState[existingTab.id] as ChenDatabaseWorkspaceTab;
+      if (toRaw(tab.node) !== toRaw(node)) {
+        tab.node = node;
+        tab.schemaOverview = null;
+        tab.catalogLoaded = false;
+        tab.catalogLoading = false;
+        tab.catalogError = "";
+      }
+      return tab;
     }
 
     const tab: ChenDatabaseWorkspaceTab = {
@@ -140,6 +148,7 @@ export function useChenWorkspaceTabs() {
       kind: "database",
       nodeKey: node.key,
       node,
+      schemaOverview: null,
       activeSection: "basic",
       catalogLoaded: false,
       catalogLoading: false,
