@@ -8,8 +8,17 @@ import { getCodeMirrorThemePreset } from "~/shared/theme/presets/codemirror";
 
 export function createCodeMirrorTheme(): Extension {
   const preset = getCodeMirrorThemePreset(useSettingManager().codeMirrorThemePreset.value);
+  const typography = EditorView.theme({
+    "&": { height: "100%" },
+    ".cm-scroller": {
+      fontFamily: "var(--font-mono), 'SFMono-Regular', Consolas, monospace",
+      fontSize: "var(--app-code-font-size)",
+      lineHeight: "1.6"
+    }
+  });
+
   if (preset.extension) {
-    return [preset.extension, EditorView.theme({ "&": { height: "100%" } })];
+    return [preset.extension, typography];
   }
 
   const editor = {
@@ -28,56 +37,54 @@ export function createCodeMirrorTheme(): Extension {
     indentGuideActive: "var(--editor-indent-guide-active)"
   };
 
-  return EditorView.theme({
-    "&": {
-      height: "100%",
-      backgroundColor: editor.background,
-      color: editor.foreground
-    },
-    ".cm-scroller": {
-      overflow: "auto",
-      fontFamily: "var(--font-mono), 'SFMono-Regular', Consolas, monospace",
-      fontSize: "13px",
-      lineHeight: "21px"
-    },
-    ".cm-content": { padding: "10px 0", caretColor: editor.cursor },
-    ".cm-gutters": {
-      backgroundColor: editor.gutterBackground,
-      color: editor.gutterForeground,
-      borderRight: "1px solid var(--workspace-surface-border)"
-    },
-    ".cm-activeLine, .cm-activeLineGutter": {
-      backgroundColor: editor.lineHighlight
-    },
-    ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection": {
-      backgroundColor: `${editor.selection} !important`
-    },
-    ".cm-cursor, .cm-dropCursor": { borderLeftColor: editor.cursor },
-    ".cm-selectionMatch": { backgroundColor: editor.selectionInactive },
-    ".cm-searchMatch": { backgroundColor: editor.findMatch, outline: "1px solid transparent" },
-    ".cm-searchMatch.cm-searchMatch-selected": { backgroundColor: editor.findMatchActive },
-    ".cm-matchingBracket, .cm-nonmatchingBracket": {
-      backgroundColor: editor.bracketMatch,
-      outline: "1px solid transparent"
-    },
-    ".cm-tooltip": {
-      backgroundColor: "var(--workspace-surface-panel)",
-      color: editor.foreground,
-      border: "1px solid var(--workspace-surface-border)",
-      boxShadow: "var(--theme-shadow-soft)"
-    },
-    ".cm-tooltip-autocomplete > ul > li": { color: editor.foreground },
-    ".cm-tooltip-autocomplete > ul > li[aria-selected]": {
-      backgroundColor: editor.selection,
-      color: editor.foreground
-    },
-    ".cm-completionDetail": { color: editor.gutterForeground },
-    ".cm-completionIcon": { color: editor.gutterForeground },
-    ".cm-completionMatchedText": { color: editor.foreground },
-    ".cm-indent-markers .cm-indent-mark": { borderColor: editor.indentGuide },
-    ".cm-indent-markers .cm-indent-mark.cm-indent-mark-active": { borderColor: editor.indentGuideActive },
-    "&.cm-focused": { outline: "none" }
-  });
+  return [
+    typography,
+    EditorView.theme({
+      "&": {
+        height: "100%",
+        backgroundColor: editor.background,
+        color: editor.foreground
+      },
+      ".cm-scroller": { overflow: "auto" },
+      ".cm-content": { padding: "10px 0", caretColor: editor.cursor },
+      ".cm-gutters": {
+        backgroundColor: editor.gutterBackground,
+        color: editor.gutterForeground,
+        borderRight: "1px solid var(--workspace-surface-border)"
+      },
+      ".cm-activeLine, .cm-activeLineGutter": {
+        backgroundColor: editor.lineHighlight
+      },
+      ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection": {
+        backgroundColor: `${editor.selection} !important`
+      },
+      ".cm-cursor, .cm-dropCursor": { borderLeftColor: editor.cursor },
+      ".cm-selectionMatch": { backgroundColor: editor.selectionInactive },
+      ".cm-searchMatch": { backgroundColor: editor.findMatch, outline: "1px solid transparent" },
+      ".cm-searchMatch.cm-searchMatch-selected": { backgroundColor: editor.findMatchActive },
+      ".cm-matchingBracket, .cm-nonmatchingBracket": {
+        backgroundColor: editor.bracketMatch,
+        outline: "1px solid transparent"
+      },
+      ".cm-tooltip": {
+        backgroundColor: "var(--workspace-surface-panel)",
+        color: editor.foreground,
+        border: "1px solid var(--workspace-surface-border)",
+        boxShadow: "var(--theme-shadow-soft)"
+      },
+      ".cm-tooltip-autocomplete > ul > li": { color: editor.foreground },
+      ".cm-tooltip-autocomplete > ul > li[aria-selected]": {
+        backgroundColor: editor.selection,
+        color: editor.foreground
+      },
+      ".cm-completionDetail": { color: editor.gutterForeground },
+      ".cm-completionIcon": { color: editor.gutterForeground },
+      ".cm-completionMatchedText": { color: editor.foreground },
+      ".cm-indent-markers .cm-indent-mark": { borderColor: editor.indentGuide },
+      ".cm-indent-markers .cm-indent-mark.cm-indent-mark-active": { borderColor: editor.indentGuideActive },
+      "&.cm-focused": { outline: "none" }
+    })
+  ];
 }
 
 export function createCodeMirrorSyntaxTheme(): Extension {

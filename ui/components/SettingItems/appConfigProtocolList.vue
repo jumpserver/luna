@@ -129,8 +129,6 @@ const handleToggle = async (item: ConfigItem, enabled: boolean) => {
       />
     </template>
 
-    <div v-else class="text-center text-sm text-gray-500 py-10">
-      {{ t("Common.NoData") }}
-    </div>
+    <UEmpty v-else icon="i-lucide-inbox" size="sm" variant="naked" :title="t('Common.NoData')" />
   </div>
 </template>

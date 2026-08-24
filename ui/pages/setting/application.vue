@@ -163,67 +163,77 @@ const handlePluginUninstall = async (pluginId: string) => {
 
 <template>
   <div>
-    <div v-if="isTauriRuntime()" class="mb-4">
-      <div class="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-4">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="min-w-0">
-            <p class="text-sm font-medium">{{ t("Setting.PluginManager") }}</p>
-            <p class="mt-1 text-xs text-gray-500">
-              {{ t("Setting.PluginSummary", pluginSummary) }}
-            </p>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <UButton
-              color="primary"
-              icon="i-lucide-upload"
-              :loading="installingPlugin"
-              :label="t('Setting.UploadPlugin')"
-              @click="handlePluginUpload"
-            />
-            <UButton
-              color="neutral"
-              variant="soft"
-              icon="i-lucide-package"
-              :label="t('Setting.ManagePlugins')"
-              @click="pluginModalOpen = true"
-            />
-          </div>
-        </div>
+    <UCard
+      v-if="isTauriRuntime()"
+      variant="outline"
+      class="mb-4"
+      :ui="{
+        root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]',
+        body: 'flex flex-wrap items-center justify-between gap-3'
+      }"
+    >
+      <div class="min-w-0">
+        <p class="text-sm font-medium text-highlighted">{{ t("Setting.PluginManager") }}</p>
+        <p class="mt-1 text-xs text-muted">
+          {{ t("Setting.PluginSummary", pluginSummary) }}
+        </p>
       </div>
-    </div>
 
-    <div class="flex min-h-[480px]">
-      <div class="menu setting-menu flex w-52 shrink-0 flex-col">
+      <div class="flex flex-wrap items-center gap-2">
+        <UButton
+          color="primary"
+          icon="i-lucide-upload"
+          :loading="installingPlugin"
+          :label="t('Setting.UploadPlugin')"
+          @click="handlePluginUpload"
+        />
+        <UButton
+          color="neutral"
+          variant="soft"
+          icon="i-lucide-package"
+          :label="t('Setting.ManagePlugins')"
+          @click="pluginModalOpen = true"
+        />
+      </div>
+    </UCard>
+
+    <UCard
+      variant="outline"
+      :ui="{
+        root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]',
+        body: 'flex min-h-[480px] p-0 sm:p-0'
+      }"
+    >
+      <div class="flex w-52 shrink-0 flex-col bg-[var(--app-sidebar-bg)]">
         <UNavigationMenu
           :items="appMenu"
           :highlight="false"
           :ui="{
             list: 'p-2',
-            link: 'px-2 my-1 rounded-sm menu-item flex items-center light:text-gray-800 dark:text-gray-200',
-            linkLeadingIcon: 'light:text-gray-800 dark:text-gray-200',
+            link: 'px-2.5 my-0.5 before:rounded-lg hover:before:bg-[var(--app-hover-soft)] data-active:before:bg-[var(--app-selected-soft)]',
+            linkLeadingIcon: 'text-current',
             linkTrailing: 'hidden',
             linkTrailingIcon: 'hidden'
           }"
           orientation="vertical"
           color="neutral"
-          class="w-52"
+          class="w-full"
         />
       </div>
 
-      <div class="min-w-0 flex-1 border-l border-[var(--app-border)] p-3">
+      <div class="min-w-0 flex-1 border-l border-[var(--app-border)] p-4">
         <KeepAlive v-if="embedded">
           <component :is="activeProtocolComponent" />
         </KeepAlive>
         <NuxtPage v-else />
       </div>
-    </div>
+    </UCard>
 
     <UModal v-model:open="pluginModalOpen" :title="t('Setting.PluginManager')" :ui="{ content: 'max-w-3xl' }">
       <template #body>
         <div class="flex flex-col gap-3">
           <div class="flex items-center justify-between gap-3">
-            <p class="text-sm text-gray-500">
+            <p class="text-sm text-muted">
               {{ t("Setting.PluginUploadHint") }}
             </p>
             <UButton
@@ -237,32 +247,37 @@ const handlePluginUninstall = async (pluginId: string) => {
           </div>
 
           <div v-if="pluginList.length" class="grid gap-3 md:grid-cols-2">
-            <UCard v-for="plugin in pluginList" :key="plugin.id">
+            <UCard
+              v-for="plugin in pluginList"
+              :key="plugin.id"
+              variant="outline"
+              :ui="{ root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]' }"
+            >
               <div class="flex items-start gap-3">
                 <div
-                  class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-black/5 bg-gray-50 p-1 dark:border-white/10 dark:bg-gray-800/60"
+                  class="flex size-10 items-center justify-center overflow-hidden rounded-md border border-[var(--app-border)] bg-[var(--app-surface-panel)] p-1"
                 >
                   <img
                     v-if="pluginIconSrc(plugin)"
                     :src="pluginIconSrc(plugin)"
                     :alt="plugin.display_name"
-                    class="h-full w-full object-contain"
+                    class="size-full object-contain"
                   />
-                  <UIcon v-else name="i-lucide-package" class="text-lg text-gray-500" />
+                  <UIcon v-else name="i-lucide-package" class="text-lg text-muted" />
                 </div>
 
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-2">
-                    <p class="truncate text-sm font-medium">{{ plugin.display_name }}</p>
+                    <p class="truncate text-sm font-medium text-highlighted">{{ plugin.display_name }}</p>
                     <UBadge size="xs" color="neutral" variant="soft">
                       {{ plugin.builtin ? t("ConnectMethodType.BuiltIn") : t("Setting.UserPlugin") }}
                     </UBadge>
                   </div>
-                  <p class="mt-1 text-xs text-gray-500">{{ plugin.id }}</p>
-                  <p v-if="plugin.version" class="text-xs text-gray-500">
+                  <p class="mt-1 text-xs text-muted">{{ plugin.id }}</p>
+                  <p v-if="plugin.version" class="text-xs text-muted">
                     {{ t("Setting.PluginVersion", { version: plugin.version }) }}
                   </p>
-                  <p v-if="pluginComment(plugin)" class="mt-2 text-xs text-gray-500 text-pretty">
+                  <p v-if="pluginComment(plugin)" class="mt-2 text-pretty text-xs text-muted">
                     {{ pluginComment(plugin) }}
                   </p>
                   <div class="mt-2 flex flex-wrap gap-1">
@@ -275,7 +290,7 @@ const handlePluginUninstall = async (pluginId: string) => {
 
               <template #footer>
                 <div class="flex items-center justify-between gap-3">
-                  <span class="truncate text-xs text-gray-500">{{ plugin.path || plugin.plugin_dir || "-" }}</span>
+                  <span class="truncate text-xs text-muted">{{ plugin.path || plugin.plugin_dir || "-" }}</span>
                   <UButton
                     v-if="!plugin.builtin"
                     color="error"
@@ -290,12 +305,7 @@ const handlePluginUninstall = async (pluginId: string) => {
             </UCard>
           </div>
 
-          <div
-            v-else
-            class="rounded-lg border border-dashed border-[var(--app-border)] px-4 py-8 text-center text-sm text-gray-500"
-          >
-            {{ t("Common.NoData") }}
-          </div>
+          <UEmpty v-else icon="i-lucide-package" size="sm" variant="naked" :title="t('Common.NoData')" />
         </div>
       </template>
     </UModal>

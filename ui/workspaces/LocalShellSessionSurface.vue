@@ -22,6 +22,7 @@ interface LocalShellExit {
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
+const { codeFontSize } = useSettingManager();
 const terminalConfig = getDefaultTerminalConfig();
 const containerRef = shallowRef<HTMLElement | null>(null);
 const terminal = shallowRef<Terminal | null>(null);
@@ -54,7 +55,7 @@ async function start() {
 
   const instance = new Terminal({
     fontFamily: terminalConfig.fontFamily,
-    fontSize: terminalConfig.fontSize,
+    fontSize: codeFontSize.value,
     lineHeight: terminalConfig.lineHeight,
     cursorBlink: true,
     cursorStyle: "block",
@@ -136,6 +137,12 @@ async function start() {
 function focus() {
   terminal.value?.focus();
 }
+
+watch(codeFontSize, (size) => {
+  if (!terminal.value) return;
+  terminal.value.options.fontSize = size;
+  nextTick(() => void debouncedFitTerminal());
+});
 
 onMounted(() => void start());
 

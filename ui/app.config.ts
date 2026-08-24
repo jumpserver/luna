@@ -80,7 +80,7 @@ export default defineAppConfig({
         value: "min-w-0 truncate",
         content:
           "bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
-        item: "min-w-0 data-highlighted:bg-[var(--app-hover-soft)] data-[state=checked]:bg-[var(--app-hover-soft)]",
+        item: "min-w-0 data-highlighted:not-data-disabled:bg-[var(--app-hover-soft)] data-highlighted:not-data-disabled:before:hidden data-[state=checked]:bg-[var(--app-hover-soft)]",
         itemWrapper: "min-w-0 overflow-hidden",
         itemLabel: "block truncate"
       },
@@ -145,7 +145,7 @@ export default defineAppConfig({
         label:
           "w-full flex items-center px-2 py-1 text-[11px] font-semibold text-[var(--app-muted)] uppercase tracking-[0.08em]",
         separator: "-mx-1 my-1 h-px bg-[var(--app-border)]",
-        item: "mx-0.5 min-w-0 rounded-md px-3 py-2 text-sm text-[var(--app-fg)] transition-colors data-highlighted:bg-[var(--app-hover-soft)] data-[state=checked]:bg-[var(--app-hover-soft)]",
+        item: "mx-0.5 min-w-0 rounded-md px-3 py-2 text-sm text-[var(--app-fg)] transition-colors data-highlighted:not-data-disabled:bg-[var(--app-hover-soft)] data-highlighted:not-data-disabled:before:hidden data-[state=checked]:bg-[var(--app-hover-soft)]",
         itemWrapper: "min-w-0 overflow-hidden",
         itemLabel: "block truncate"
       },

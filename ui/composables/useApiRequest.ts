@@ -1,4 +1,4 @@
-import type { AssetTreeKind, TokenResponse } from "~/types";
+import type { AssetTreeKind, TokenResponse, UserProfile } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export interface ApiRequest {
@@ -277,6 +277,35 @@ export function getPublicSettings(): Promise<PublicSettings> {
   return apiRequest<PublicSettings>({
     method: "GET",
     path: "/api/v1/settings/public/"
+  });
+}
+
+export function getUserProfile(): Promise<UserProfile> {
+  return apiRequest<UserProfile>({
+    method: "GET",
+    path: "/api/v1/users/profile/",
+    query: {
+      fields: [
+        "id",
+        "name",
+        "username",
+        "email",
+        "avatar_url",
+        "phone",
+        "wechat",
+        "source",
+        "mfa_level",
+        "mfa_enabled",
+        "is_active",
+        "is_valid",
+        "is_expired",
+        "date_joined",
+        "last_login",
+        "date_expired",
+        "system_roles",
+        "org_roles"
+      ].join(",")
+    }
   });
 }
 

@@ -46,7 +46,12 @@ function onConfirm() {
 
 <template>
   <UPopover v-model:open="open" :ui="{ content: 'p-0' }">
-    <UButton :label="t('Common.ChooseColor')" color="neutral" variant="outline">
+    <UButton
+      :label="props.modelValue?.toUpperCase() || t('Common.ChooseColor')"
+      color="neutral"
+      variant="outline"
+      class="w-full justify-start font-mono"
+    >
       <template #leading>
         <span :style="chip" class="size-3 rounded-full" />
       </template>
@@ -66,7 +71,7 @@ function onConfirm() {
             type="button"
             :style="{ backgroundColor: c }"
             :title="c"
-            class="size-5 rounded-md cursor-pointer ring-1 ring-gray-300 dark:ring-gray-700 hover:scale-105 transition will-change-transform"
+            class="size-5 cursor-pointer rounded-md ring-1 ring-[var(--app-border)] transition will-change-transform hover:scale-105"
             @click="selectSwatch(c)"
           />
         </section>

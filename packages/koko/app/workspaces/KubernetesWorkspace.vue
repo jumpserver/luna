@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { KokoWorkspaceTab } from "@jumpserver/koko/host";
 import type { ClipboardAccess, ClipboardDirection, ClipboardPermission, ClipboardPolicy } from "#koko/types";
+import { useKokoHostAdapter } from "@jumpserver/koko/host";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import {
@@ -55,6 +56,7 @@ const emit = defineEmits<{ reconnect: [] }>();
 const RECENT_CONTAINER_LIMIT = 10;
 const { t } = useI18n();
 const toast = useToast();
+const hostAdapter = useKokoHostAdapter();
 const tab = toRef(props, "tab");
 const { context, error: sessionError, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab);
 const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
@@ -343,7 +345,11 @@ function mountTerminal(tabItem: TerminalTab, target: ConnectTarget) {
   const el = document.getElementById(tabItem.id);
   if (!el || !terminalSocket.connected.value || !globalTerminalId.value) return;
 
-  const terminal = new Terminal({ cursorBlink: true, fontSize: 13, theme: appTerminalTheme() });
+  const terminal = new Terminal({
+    cursorBlink: true,
+    fontSize: hostAdapter.theme.codeFontSize(),
+    theme: appTerminalTheme()
+  });
   const fit = new FitAddon();
   terminal.loadAddon(fit);
   terminal.open(el);
@@ -521,6 +527,15 @@ watch(
 );
 watch(activeTabId, () => focusActiveTerminal());
 watch(() => colorMode.value, syncTerminalTheme);
+watch(
+  () => hostAdapter.theme.codeFontSize(),
+  (size) => {
+    for (const { terminal, fit } of terminals.values()) {
+      terminal.options.fontSize = size;
+      fit.fit();
+    }
+  }
+);
 useEventListener(window, "resize", resize);
 useEventListener(window, "pointermove", resizeSidebar);
 useEventListener(window, "pointerup", stopSidebarResize);

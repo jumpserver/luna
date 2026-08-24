@@ -209,19 +209,26 @@ const onPathClick = () => {
 </script>
 
 <template>
-  <UCard>
+  <UCard
+    variant="outline"
+    :ui="{
+      root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]',
+      header: 'p-4 sm:px-4 sm:py-3',
+      body: 'p-4 sm:p-4'
+    }"
+  >
     <template #header>
       <div class="flex items-center gap-3">
         <img
           :src="iconSrc"
           :alt="displayName"
           loading="lazy"
-          class="h-10 w-10 shrink-0 rounded-md border border-black/5 bg-gray-50 p-1 object-contain dark:border-white/10 dark:bg-gray-800/60"
+          class="size-10 shrink-0 rounded-md border border-[var(--app-border)] bg-[var(--app-surface-panel)] object-contain p-1"
         />
 
         <div class="flex min-w-0 flex-1 flex-col gap-0.5">
           <div class="flex items-center justify-between gap-3">
-            <p class="min-w-0 truncate text-sm leading-tight font-medium">
+            <p class="min-w-0 truncate text-sm font-medium leading-tight text-highlighted">
               {{ displayName }}
             </p>
 
@@ -239,19 +246,22 @@ const onPathClick = () => {
                 :label="t('Setting.SelectPath')"
                 color="neutral"
                 variant="outline"
+                size="xs"
                 @click="selectExecutablePath()"
               />
             </template>
             <template v-else>
               <div class="flex max-w-full items-center gap-2">
-                <div
-                  class="inline-flex max-w-full items-center truncate rounded bg-gray-100/80 px-2 py-0.5 text-xs leading-tight text-gray-600 dark:bg-white/10 dark:text-gray-300"
-                  :class="{ 'cursor-pointer hover:bg-gray-200/60 dark:hover:bg-white/15': canPickPath }"
+                <UButton
+                  :label="displayedPath || '-'"
+                  color="neutral"
+                  :variant="canPickPath ? 'soft' : 'subtle'"
+                  size="xs"
+                  class="max-w-full"
+                  :ui="{ base: 'max-w-full', label: 'truncate font-normal' }"
                   :title="displayedPath || '-'"
                   @click="onPathClick"
-                >
-                  <span class="truncate">{{ displayedPath || "-" }}</span>
-                </div>
+                />
 
                 <UButton
                   v-if="canCopyPath"
@@ -278,7 +288,7 @@ const onPathClick = () => {
             </UBadge>
           </div>
 
-          <div class="text-xs text-gray-500 text-pretty">
+          <div class="text-pretty text-xs text-muted">
             {{ commentText }}
           </div>
         </div>

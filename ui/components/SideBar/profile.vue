@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { LangType, UserData } from "~/types/index";
+import type { UserData } from "~/types/index";
 
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -38,17 +38,14 @@ const appConfig = useAppConfig();
 const localePath = useLocalePath();
 const userInfoStore = useUserInfoStore();
 
-const { t, locales, locale } = useI18n();
+const { t } = useI18n();
 const { loggedIn, currentAccountId, userMap, currentUser } = storeToRefs(userInfoStore);
 const { applyLoginPayload } = useAuthSession();
-const { openToolWindow } = useToolWindow();
-
-const { setLang, primaryColorLight, primaryColorDark, recentSites, setRecentSites, hydrationPromise } =
-  useSettingManager();
-const { userTheme } = useThemeAdapter();
-const { themeDropdownItems } = useThemeOptions();
-const { applyPrimaryColor } = useColor();
 const { openSettings, warmupWebSettings } = useSettingsWindow();
+
+const { primaryColorLight, primaryColorDark, recentSites, setRecentSites, hydrationPromise } = useSettingManager();
+const { userTheme } = useThemeAdapter();
+const { applyPrimaryColor } = useColor();
 
 const inputSite = ref("");
 const inputSiteName = ref("");
@@ -65,6 +62,7 @@ const unlistenErrorPageRef = ref<UnlistenFn | null>(null);
 const unlistenLoginFailedRef = ref<UnlistenFn | null>(null);
 const inputRef = ref<ComponentPublicInstance | null>(null);
 const siteNameInputRef = ref<ComponentPublicInstance | null>(null);
+const profileOpen = ref(false);
 
 let loginBtnUnlockTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -117,117 +115,36 @@ const enableLoginBtnAfter = (ms: number) => {
   }, ms);
 };
 
-const selectedLanguage = computed<LangType>({
-  get: () => (locale.value as LangType) || "zh",
-  set: (code: LangType) => {
-    if (!code) return;
-    setLang(code);
-  }
+const accountTooltip = computed(() => {
+  if (loggedIn.value && currentUser.value?.name) return currentUser.value.name;
+  return t("Common.Account");
 });
 
-const languageItems = computed(() => {
-  const arr = (locales.value as any[]) || [];
-  return arr.map((l: any) => ({
-    id: l.code || l,
-    label: l.name || l
-  }));
-});
+const accountSite = computed(() => currentUser.value?.siteName || currentUser.value?.site || "—");
+const accountOrganization = computed(() => currentUser.value?.org?.name || "—");
+const accountRoleList = computed(() =>
+  (currentUser.value?.system_roles || []).map((role) => role.display_name).filter(Boolean)
+);
+const accountRoles = computed(() => accountRoleList.value.join(", ") || t("UserProfile.NoRole"));
 
-const languageChildren = computed<DropdownMenuItem[][]>(() => [
-  languageItems.value.map((item) => ({
-    label: item.label,
-    type: "checkbox",
-    checked: selectedLanguage.value === (item.id as LangType),
+const siteSwitcherItems = computed<DropdownMenuItem[][]>(() => [
+  (Object.entries(userMap.value) as [string, UserData][]).map(([accountId, account]) => ({
+    label: account.siteName || account.site,
+    description: account.name,
+    type: "checkbox" as const,
+    checked: accountId === currentAccountId.value,
     onUpdateChecked: (checked: boolean) => {
-      if (!checked) return;
-      handleLanguageChange(item.id as LangType);
+      if (checked && accountId !== currentAccountId.value) handleSwitchAccount(accountId);
     }
-  }))
-]);
-
-const toolChildren = computed<DropdownMenuItem[][]>(() => [
+  })),
   [
     {
-      label: t("Menu.Player"),
-      icon: "lucide:clapperboard",
-      onClick: () => openToolWindow(localePath("videoplayer"), "JumpServer Video Player")
-    },
-    {
-      label: t("Menu.Transcode"),
-      icon: "lucide:repeat-2",
-      onClick: () => openToolWindow(localePath({ path: "/transcode" }), t("Transcode.Title"))
+      label: t("Login.AddAccount"),
+      icon: "i-lucide-user-round-plus",
+      onClick: openAddSite
     }
   ]
 ]);
-
-const profileMenuItems = computed<DropdownMenuItem[][]>(() => {
-  const accountItems: DropdownMenuItem[] = isTauriRuntime()
-    ? [
-        {
-          label: t("Login.AddAccount"),
-          icon: "i-lucide-user-round-plus",
-          onClick: openLoginPage
-        }
-      ]
-    : [];
-
-  if (isTauriRuntime() && loggedIn.value) {
-    accountItems.push({
-      label: t("Login.SwitchSite"),
-      icon: "i-lucide-arrow-down-up",
-      children: switchAccountChildren()
-    });
-  }
-
-  const items: DropdownMenuItem[][] = [
-    [
-      ...accountItems,
-      {
-        label: t("Common.Appearance"),
-        icon: "solar:palette-linear",
-        children: themeDropdownItems.value
-      },
-      {
-        label: t("Common.Language"),
-        icon: "solar:global-outline",
-        children: languageChildren.value
-      },
-      ...(isTauriRuntime()
-        ? [
-            {
-              label: t("Menu.Tool"),
-              icon: "i-lucide-wrench",
-              children: toolChildren.value
-            } satisfies DropdownMenuItem
-          ]
-        : []),
-      {
-        label: t("Common.Settings"),
-        icon: "i-lucide-settings",
-        onClick: openSettingsWindow
-      }
-    ]
-  ];
-
-  if (loggedIn.value) {
-    items.push([
-      {
-        label: t("Login.Logout"),
-        icon: "solar:login-outline",
-        color: "error",
-        ui: {
-          itemLabel:
-            "!text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error group-data-[state=checked]:!text-error",
-          itemLeadingIcon:
-            "group-data-[state=checked]:text-error group-data-highlighted:!text-error group-data-[state=open]:!text-error"
-        },
-        onClick: clearAuthInfo
-      }
-    ]);
-  }
-
-  return items;
-});
 
 watch(
   () => userTheme.value,
@@ -246,12 +163,6 @@ function applyCurrentThemeColor(broadcast = false) {
       useTauriEventEmit("primary-color-changed", { hex: hexNow, mode: modeNow });
     }
   }
-}
-
-function handleLanguageChange(code: LangType) {
-  if (!code || code === selectedLanguage.value) return;
-
-  selectedLanguage.value = code;
 }
 
 /**
@@ -483,61 +394,30 @@ function clearValidationError() {
 }
 
 /**
- * @description 切换账户子菜单
- * @returns 切换账户子菜单
- */
-function switchAccountChildren() {
-  const items: DropdownMenuItem[] = (Object.entries(userMap.value) as [string, UserData][]).map(([accountId, u]) => {
-    let host = u.site;
-
-    try {
-      host = new URL(u.site).host;
-    } catch (e) {
-      console.log("e", e);
-    }
-
-    const label = `${u.siteName || host} · ${u.name}`;
-    const isCurrent = accountId === currentAccountId.value;
-
-    return {
-      label,
-      description: u.site,
-      type: "checkbox",
-      checked: isCurrent,
-      onUpdateChecked: (checked: boolean) => {
-        if (!checked || isCurrent) return;
-        handleSwitchAccount(accountId);
-      }
-    } as DropdownMenuItem;
-  });
-
-  return [items];
-}
-
-/**
- * @description 切换账户
- * @param accountId 账号 ID
- */
-function handleSwitchAccount(accountId: string) {
-  if (accountId === currentAccountId.value) return;
-
-  userInfoStore.setCurrentAccount(accountId);
-
-  nextTick(() => {
-    useEventBus().emit("refresh", undefined);
-  });
-}
-
-/**
  * @description 清除认证信息
  */
 function clearAuthInfo() {
+  profileOpen.value = false;
   userInfoStore.deleteUserData(currentAccountId.value);
 }
 
-async function openSettingsWindow() {
+function handleSwitchAccount(accountId: string) {
+  if (accountId === currentAccountId.value) return;
+
+  profileOpen.value = false;
+  userInfoStore.setCurrentAccount(accountId);
+  nextTick(() => useEventBus().emit("refresh", undefined));
+}
+
+function openAddSite() {
+  profileOpen.value = false;
+  openLoginPage();
+}
+
+async function openUserSettings() {
+  profileOpen.value = false;
   warmupWebSettings();
-  await openSettings();
+  await openSettings("/setting/user");
 }
 
 /**
@@ -816,19 +696,27 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <UDropdownMenu
-    :items="profileMenuItems"
-    size="sm"
-    :side="isTopbar ? 'bottom' : 'top'"
-    :align="isTopbar ? 'end' : 'start'"
-    :ui="{ content: 'w-56 p-1' }"
+  <UPopover
+    v-if="loggedIn"
+    v-model:open="profileOpen"
+    :content="{ align: isTopbar ? 'end' : 'start', side: isTopbar ? 'bottom' : 'top', sideOffset: 8 }"
+    :ui="{
+      content: 'w-64 overflow-hidden rounded-xl bg-default p-0 shadow-xl ring-1 ring-[var(--app-border-strong)]'
+    }"
   >
-    <UTooltip v-if="isTopbar" arrow :text="t('Common.Settings')">
-      <UButton color="neutral" variant="ghost" size="sm" icon="i-lucide-settings" />
+    <UTooltip v-if="isTopbar" arrow :text="accountTooltip">
+      <UButton
+        color="neutral"
+        variant="ghost"
+        size="sm"
+        icon="i-lucide-circle-user-round"
+        :aria-label="accountTooltip"
+      />
     </UTooltip>
 
-    <div
+    <button
       v-else
+      type="button"
       class="sidebar-row flex items-center py-1 px-1.5 w-full min-w-0 rounded-lg"
       :style="{
         justifyContent: collapse ? 'center' : ''
@@ -842,8 +730,112 @@ onBeforeUnmount(() => {
           </span>
         </UTooltip>
       </div>
+    </button>
+
+    <template #content>
+      <div class="w-full">
+        <button
+          type="button"
+          class="group flex w-full items-center gap-3 rounded-t-xl border-b border-default px-3 py-3 text-left transition-colors hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+          @click="openUserSettings"
+        >
+          <UAvatar :alt="currentUser?.name || t('Common.User')" color="primary" size="md" class="shrink-0" />
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-semibold text-highlighted">
+              {{ currentUser?.name || t("Common.User") }}
+            </p>
+            <p class="truncate text-xs text-muted" :title="accountSite">
+              {{ accountSite }}
+            </p>
+          </div>
+          <UIcon
+            name="i-lucide-chevron-right"
+            class="size-4 shrink-0 text-dimmed transition-transform group-hover:translate-x-0.5 group-hover:text-muted"
+          />
+        </button>
+
+        <div class="space-y-0.5 p-1.5 text-xs">
+          <div class="flex min-h-8 items-center gap-3 rounded-md px-2 py-1.5">
+            <span class="shrink-0 text-dimmed">{{ t("UserProfile.CurrentOrganization") }}</span>
+            <span class="min-w-0 truncate font-medium text-highlighted" :title="accountOrganization">
+              {{ accountOrganization }}
+            </span>
+          </div>
+          <div class="flex min-h-8 items-center gap-3 rounded-md px-2 py-1.5">
+            <span class="shrink-0 text-dimmed">{{ t("UserProfile.SystemRoles") }}</span>
+            <span
+              class="min-w-0 truncate font-medium text-highlighted"
+              :class="{ 'text-muted': accountRoleList.length === 0 }"
+              :title="accountRoles"
+            >
+              {{ accountRoles }}
+            </span>
+          </div>
+        </div>
+
+        <div v-if="isTauriRuntime()" class="border-t border-default p-1.5">
+          <UDropdownMenu
+            :items="siteSwitcherItems"
+            size="sm"
+            :content="{ align: 'end', side: 'left', sideOffset: 6 }"
+            :ui="{ content: 'w-64 max-h-72 overflow-y-auto p-1' }"
+          >
+            <UButton
+              :label="t('Login.SwitchSite')"
+              icon="i-lucide-arrow-left-right"
+              trailing-icon="i-lucide-chevron-right"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              block
+              class="justify-start"
+              :ui="{ trailingIcon: 'ms-auto' }"
+              @click.stop
+            />
+          </UDropdownMenu>
+        </div>
+
+        <div class="border-t border-default p-1.5">
+          <UButton
+            :label="t('Login.Logout')"
+            icon="i-lucide-log-out"
+            color="error"
+            variant="ghost"
+            size="sm"
+            block
+            class="justify-start"
+            @click="clearAuthInfo"
+          />
+        </div>
+      </div>
+    </template>
+  </UPopover>
+
+  <UTooltip v-else-if="isTopbar" arrow :text="accountTooltip">
+    <UButton
+      color="neutral"
+      variant="ghost"
+      size="sm"
+      icon="i-lucide-circle-user-round"
+      :aria-label="accountTooltip"
+      @click="openLoginPage"
+    />
+  </UTooltip>
+
+  <button
+    v-else
+    type="button"
+    class="sidebar-row flex items-center py-1 px-1.5 w-full min-w-0 rounded-lg"
+    :style="{ justifyContent: collapse ? 'center' : '' }"
+    @click="openLoginPage"
+  >
+    <div class="flex items-center gap-2 min-w-0">
+      <UIcon name="i-lucide-circle-user-round" class="sidebar-icon" />
+      <span v-if="!props.collapse" class="block md:max-w-[150px] truncate leading-tight text-sm font-medium">
+        {{ t("Common.Account") }}
+      </span>
     </div>
-  </UDropdownMenu>
+  </button>
 
   <Modal
     v-if="isTauriRuntime()"

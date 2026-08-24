@@ -720,17 +720,6 @@ watch(
   }
 }
 
-/* 配置页左侧为纯色背景，需要比透明侧边栏更明显的高亮 */
-.dark .setting-menu .menu-item {
-  &[data-active]::before {
-    background-color: rgba(255, 255, 255, 0.16);
-  }
-
-  &:hover:not([data-active]) {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-}
-
 .menu nav[data-collapsed="true"] {
   width: 38px;
 }

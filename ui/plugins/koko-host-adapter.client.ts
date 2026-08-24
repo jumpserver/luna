@@ -20,6 +20,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     useWorkspaceTabs();
   const userInfoStore = useUserInfoStore();
   const { currentUser } = storeToRefs(userInfoStore);
+  const { codeFontSize } = useSettingManager();
 
   const prepareSftpAsset = async (asset: AssetItem) => {
     let connectAsset = asset;
@@ -106,7 +107,8 @@ export default defineNuxtPlugin((nuxtApp) => {
     theme: {
       xterm: toXtermTheme,
       codeMirror: createCodeMirrorTheme,
-      codeMirrorSyntax: createCodeMirrorSyntaxTheme
+      codeMirrorSyntax: createCodeMirrorSyntaxTheme,
+      codeFontSize: () => codeFontSize.value
     }
   };
 

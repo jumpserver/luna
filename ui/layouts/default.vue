@@ -7,6 +7,7 @@ import SettingsAboutPage from "~/pages/setting/about.vue";
 import SettingsAppearancePage from "~/pages/setting/appearance.vue";
 import SettingsApplicationPage from "~/pages/setting/application.vue";
 import SettingsGeneralPage from "~/pages/setting/general.vue";
+import SettingsUserPage from "~/pages/setting/user.vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
@@ -27,7 +28,7 @@ const { loggedIn, currentUser } = storeToRefs(userInfoStore);
 const { batchPanelOpen, setOpen: setBatchPanelOpen } = useBatchCommandPanel();
 const { collapse: sidebarCollapsed, setCollapse: setSidebarCollapsed } = useSettingManager();
 const { toggle: toggleRightPanel } = useRightPanel();
-const { open: settingsOpen, activeSection: activeSettingsSection } = useSettingsWindow();
+const { open: settingsOpen, activeSection: activeSettingsSection, openSettings } = useSettingsWindow();
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 
 const refreshCommandExecutionSetting = async () => {
@@ -93,6 +94,24 @@ const stopEscapeHold = (event: KeyboardEvent) => {
   if (event.key === "Escape") clearEscapeHold();
 };
 
+const handleChromeShortcut = (event: KeyboardEvent) => {
+  if (event.defaultPrevented || event.repeat) return;
+
+  const usesPrimaryModifier = isMacOS.value ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+  if (!usesPrimaryModifier) return;
+
+  if (!event.altKey && !event.shiftKey && event.code === "Comma") {
+    event.preventDefault();
+    void openSettings();
+    return;
+  }
+
+  if (event.altKey && !event.shiftKey && event.code === "Digit2") {
+    event.preventDefault();
+    toggleRightPanel();
+  }
+};
+
 const handleWorkspaceModeShortcut = (event: KeyboardEvent) => {
   const usesPrimaryModifier = isMacOS.value ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
   if (event.repeat || event.altKey || !event.shiftKey || !usesPrimaryModifier || !activeTabId.value) return;
@@ -156,6 +175,7 @@ const handleDesktopMenuCommand = (command: string) => {
 let unlistenDesktopMenuCommand: (() => void) | null = null;
 
 useEventListener(window, "keydown", startEscapeHold);
+useEventListener(window, "keydown", handleChromeShortcut);
 useEventListener(window, "keydown", handleWorkspaceModeShortcut, { capture: true });
 useEventListener(window, "keyup", stopEscapeHold);
 useEventListener(window, "blur", clearEscapeHold);
@@ -269,7 +289,8 @@ onBeforeUnmount(() => {
       class="fixed inset-0 z-100"
     >
       <KeepAlive>
-        <SettingsGeneralPage v-if="activeSettingsSection === 'general'" />
+        <SettingsUserPage v-if="activeSettingsSection === 'user'" />
+        <SettingsGeneralPage v-else-if="activeSettingsSection === 'general'" />
         <SettingsAppearancePage v-else-if="activeSettingsSection === 'appearance'" />
         <SettingsApplicationPage v-else-if="activeSettingsSection === 'application'" embedded />
         <SettingsAboutPage v-else />

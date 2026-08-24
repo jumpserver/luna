@@ -160,4 +160,3 @@ fn referer_from(url: &str) -> Option<String> {
         _ => None,
     })
 }
-

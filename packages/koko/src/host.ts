@@ -41,6 +41,7 @@ export interface KokoThemeAdapter {
   xterm: () => ITheme;
   codeMirror: () => Extension;
   codeMirrorSyntax: () => Extension;
+  codeFontSize: () => number;
 }
 
 export interface KokoHostAdapter {

@@ -8,7 +8,7 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <div class="h-full flex items-center justify-center text-sm text-gray-500">
-    {{ t("Common.SelectFromMenu") }}
+  <div class="flex h-full items-center justify-center">
+    <UEmpty icon="i-lucide-panels-top-left" size="sm" variant="naked" :title="t('Common.SelectFromMenu')" />
   </div>
 </template>

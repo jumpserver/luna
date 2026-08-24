@@ -36,21 +36,9 @@ pub async fn into_api_response(
             let status = resp.status().as_u16();
             let data = resp.text().await.unwrap_or_default();
             if is_success_status(status) {
-                log::debug!(
-                    "{} {} status={} bytes={}",
-                    method,
-                    url,
-                    status,
-                    data.len()
-                );
+                log::debug!("{} {} status={} bytes={}", method, url, status, data.len());
             } else {
-                log::warn!(
-                    "{} {} status={} bytes={}",
-                    method,
-                    url,
-                    status,
-                    data.len()
-                );
+                log::warn!("{} {} status={} bytes={}", method, url, status, data.len());
             }
 
             ApiResponse::ok(status, data)

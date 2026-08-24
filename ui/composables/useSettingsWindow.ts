@@ -1,8 +1,9 @@
-export type SettingsSection = "general" | "appearance" | "application" | "about";
+export type SettingsSection = "user" | "general" | "appearance" | "application" | "about";
 
 export const warmupWebSettings = () => {
   void Promise.all([
     import("~/components/Settings/settingsPanel.vue"),
+    import("~/pages/setting/user.vue"),
     import("~/pages/setting/general.vue"),
     import("~/pages/setting/appearance.vue"),
     import("~/pages/setting/about.vue")
@@ -17,7 +18,7 @@ export const useSettingsWindow = () => {
 
   const openSettings = async (path = "/setting/general") => {
     const [, section, protocol] =
-      path.match(/^\/setting\/(general|appearance|application|about)(?:\/([^/?#]+))?/) || [];
+      path.match(/^\/setting\/(user|general|appearance|application|about)(?:\/([^/?#]+))?/) || [];
 
     if (section) {
       activeSection.value = section as SettingsSection;

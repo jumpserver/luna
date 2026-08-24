@@ -48,41 +48,37 @@ const openLink = async (url: string) => {
 </script>
 
 <template>
-  <UContainer class="h-full">
-    <div class="h-full flex flex-col gap-2 items-center justify-center">
-      <img :src="logoSrc" :alt="appName" class="w-16 h-16 rounded-xl" />
+  <div class="flex h-full flex-col items-center justify-center gap-4">
+    <img :src="logoSrc" :alt="appName" class="size-16 rounded-xl" />
 
-      <div class="space-y-2">
-        <p class="text-base font-semibold">
-          {{ appName }}
-
-          <UBadge icon="i-lucide-rocket" size="sm" color="primary" variant="soft">v{{ version }}</UBadge>
-        </p>
-
-        <div v-if="isDefaultProduct" class="flex items-center justify-center gap-3 text-sm text-gray-400">
-          <button
-            v-for="link in links"
-            :key="link.to"
-            type="button"
-            class="inline-flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
-            @click="openLink(link.to)"
-          >
-            <UIcon :name="link.icon" />
-            {{ link.label }}
-          </button>
-        </div>
+    <div class="flex flex-col items-center gap-3">
+      <div class="flex items-center gap-2">
+        <p class="text-base font-semibold text-highlighted">{{ appName }}</p>
+        <UBadge icon="i-lucide-rocket" size="sm" color="primary" variant="soft">v{{ version }}</UBadge>
       </div>
 
-      <div v-if="isDefaultProduct" class="flex items-center justify-center gap-3 text-sm text-gray-400">
-        <button
-          type="button"
-          class="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
-          @click="openLink(website)"
-        >
-          <UIcon name="i-lucide-mail" />
-          {{ website }}
-        </button>
+      <div v-if="isDefaultProduct" class="flex items-center justify-center gap-2">
+        <UButton
+          v-for="link in links"
+          :key="link.to"
+          :label="link.label"
+          :icon="link.icon"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          @click="openLink(link.to)"
+        />
       </div>
+
+      <UButton
+        v-if="isDefaultProduct"
+        :label="website"
+        icon="i-lucide-mail"
+        color="neutral"
+        variant="ghost"
+        size="sm"
+        @click="openLink(website)"
+      />
     </div>
-  </UContainer>
+  </div>
 </template>
