@@ -42,6 +42,7 @@ export interface KokoThemeAdapter {
   codeMirror: () => Extension;
   codeMirrorSyntax: () => Extension;
   codeFontSize: () => number;
+  ensureCodeMirror?: () => Promise<void>;
 }
 
 export interface KokoHostAdapter {

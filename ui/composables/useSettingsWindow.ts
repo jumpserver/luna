@@ -1,15 +1,5 @@
 export type SettingsSection = "user" | "general" | "appearance" | "application" | "about";
 
-export const warmupWebSettings = () => {
-  void Promise.all([
-    import("~/components/Settings/settingsPanel.vue"),
-    import("~/pages/setting/user.vue"),
-    import("~/pages/setting/general.vue"),
-    import("~/pages/setting/appearance.vue"),
-    import("~/pages/setting/about.vue")
-  ]);
-};
-
 export const useSettingsWindow = () => {
   const route = useRoute();
   const open = useState("settings-open", () => false);
@@ -46,7 +36,6 @@ export const useSettingsWindow = () => {
     activeSection,
     activeApplicationProtocol,
     openSettings,
-    closeSettings,
-    warmupWebSettings
+    closeSettings
   };
 };

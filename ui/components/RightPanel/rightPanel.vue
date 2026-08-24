@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import type { RightPanelTab } from "~/composables/useRightPanel";
 import { getLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
-import RightPanelAiPanel from "~/components/RightPanel/aiPanel.vue";
-import RightPanelLionControlPanel from "~/components/RightPanel/lionControlPanel.vue";
-import RightPanelLionFilePanel from "~/components/RightPanel/lionFilePanel.vue";
-import RightPanelSessionPanel from "~/components/RightPanel/sessionPanel.vue";
-import RightPanelSftpPanel from "~/components/RightPanel/sftpPanel.vue";
 
 const { t } = useI18n();
 const { activePaneId, activeTab: workspaceTab } = useWorkspaceTabs();
@@ -55,11 +50,11 @@ const tabs = computed(() => {
 });
 
 const panelComponents = {
-  session: RightPanelSessionPanel,
-  "lion-control": RightPanelLionControlPanel,
-  "lion-files": RightPanelLionFilePanel,
-  ai: RightPanelAiPanel,
-  sftp: RightPanelSftpPanel
+  session: defineAsyncComponent(() => import("~/components/RightPanel/sessionPanel.vue")),
+  "lion-control": defineAsyncComponent(() => import("~/components/RightPanel/lionControlPanel.vue")),
+  "lion-files": defineAsyncComponent(() => import("~/components/RightPanel/lionFilePanel.vue")),
+  ai: defineAsyncComponent(() => import("~/components/RightPanel/aiPanel.vue")),
+  sftp: defineAsyncComponent(() => import("~/components/RightPanel/sftpPanel.vue"))
 } as const;
 
 const activePanelComponent = computed(() => panelComponents[activeTab.value]);

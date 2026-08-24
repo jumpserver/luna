@@ -41,7 +41,7 @@ const userInfoStore = useUserInfoStore();
 const { t } = useI18n();
 const { loggedIn, currentAccountId, userMap, currentUser } = storeToRefs(userInfoStore);
 const { applyLoginPayload } = useAuthSession();
-const { openSettings, warmupWebSettings } = useSettingsWindow();
+const { openSettings } = useSettingsWindow();
 
 const { primaryColorLight, primaryColorDark, recentSites, setRecentSites, hydrationPromise } = useSettingManager();
 const { userTheme } = useThemeAdapter();
@@ -416,7 +416,6 @@ function openAddSite() {
 
 async function openUserSettings() {
   profileOpen.value = false;
-  warmupWebSettings();
   await openSettings("/setting/user");
 }
 

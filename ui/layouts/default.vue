@@ -1,13 +1,14 @@
 <script lang="ts" setup>
-import WorkspaceBatchCommandBottomPanel from "~/components/Workspace/batchCommandBottomPanel.vue";
 import WorkspaceShell from "~/components/Workspace/shell.vue";
 import WorkspaceStatusFooter from "~/components/Workspace/statusFooter.vue";
+import {
+  SettingsAboutPage,
+  SettingsAppearancePage,
+  SettingsApplicationPage,
+  SettingsGeneralPage,
+  SettingsUserPage
+} from "~/composables/loadSettingsSection";
 import { getPublicSettings } from "~/composables/useApiRequest";
-import SettingsAboutPage from "~/pages/setting/about.vue";
-import SettingsAppearancePage from "~/pages/setting/appearance.vue";
-import SettingsApplicationPage from "~/pages/setting/application.vue";
-import SettingsGeneralPage from "~/pages/setting/general.vue";
-import SettingsUserPage from "~/pages/setting/user.vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
@@ -27,7 +28,7 @@ const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
 const { batchPanelOpen, setOpen: setBatchPanelOpen } = useBatchCommandPanel();
 const { collapse: sidebarCollapsed, setCollapse: setSidebarCollapsed } = useSettingManager();
-const { toggle: toggleRightPanel } = useRightPanel();
+const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 const { open: settingsOpen, activeSection: activeSettingsSection, openSettings } = useSettingsWindow();
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 
@@ -189,7 +190,6 @@ onMounted(() => {
   void refreshCommandExecutionSetting();
   initialTheme();
   listenOSThemeChange();
-  warmupWebSettings();
   // ponytail: koko WS sessions close on component unmount; no Rust builtin bridge
   registerSessionDisposer(() => {});
   registerKokoTicketProvider(async (request) => {
@@ -266,11 +266,11 @@ onBeforeUnmount(() => {
       </Main>
 
       <template #rightPanel>
-        <RightPanel />
+        <RightPanel v-if="rightPanelOpen" />
       </template>
 
       <template #bottomPanel>
-        <div v-show="activeWorkspaceMode === 'assets' && commandExecutionEnabled && batchPanelOpen" class="min-h-0">
+        <div v-if="activeWorkspaceMode === 'assets' && commandExecutionEnabled && batchPanelOpen" class="min-h-0">
           <WorkspaceBatchCommandBottomPanel />
         </div>
       </template>

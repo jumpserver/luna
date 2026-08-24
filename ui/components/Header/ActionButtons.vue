@@ -2,7 +2,7 @@
 import Profile from "~/components/SideBar/profile.vue";
 
 const { t } = useI18n();
-const { openSettings, warmupWebSettings } = useSettingsWindow();
+const { openSettings } = useSettingsWindow();
 
 const commonButtonProps = {
   size: "sm" as const,
@@ -12,7 +12,6 @@ const commonButtonProps = {
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 
 const openSettingsWindow = () => {
-  warmupWebSettings();
   void openSettings();
 };
 </script>

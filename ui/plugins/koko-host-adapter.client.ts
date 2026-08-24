@@ -1,7 +1,7 @@
-import type { KokoHostAdapter, KokoWorkspaceTab } from "@jumpserver/koko";
+import type { KokoHostAdapter, KokoWorkspaceTab } from "@jumpserver/koko/host";
 import type { AssetItem } from "~/types";
 
-import { configureKokoThemeAdapter, kokoHostAdapterKey } from "@jumpserver/koko";
+import { configureKokoThemeAdapter, kokoHostAdapterKey } from "@jumpserver/koko/host";
 import OrganizationSelector from "~/components/Header/OrganizationSelector.vue";
 import SideBarAssetTree from "~/components/SideBar/assetTree.vue";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
@@ -9,7 +9,11 @@ import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
 import { useWorkspaceConnectors } from "~/composables/useWorkspaceConnectors";
 import { clearWorkspaceSessionDetails, setWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 import { registerWorkspaceSessionCloseGuard, useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
-import { createCodeMirrorSyntaxTheme, createCodeMirrorTheme } from "~/shared/theme/adapters/codemirror";
+import {
+  createHostCodeMirrorSyntaxTheme,
+  createHostCodeMirrorTheme,
+  ensureCodeMirrorThemeAdapters
+} from "~/shared/theme/adapters/codeMirrorThemeHost";
 import { toXtermTheme } from "~/shared/theme/adapters/xterm";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { isTauriRuntime } from "~/utils/runtime";
@@ -106,9 +110,12 @@ export default defineNuxtPlugin((nuxtApp) => {
     },
     theme: {
       xterm: toXtermTheme,
-      codeMirror: createCodeMirrorTheme,
-      codeMirrorSyntax: createCodeMirrorSyntaxTheme,
-      codeFontSize: () => codeFontSize.value
+      codeMirror: createHostCodeMirrorTheme,
+      codeMirrorSyntax: createHostCodeMirrorSyntaxTheme,
+      codeFontSize: () => codeFontSize.value,
+      ensureCodeMirror: async () => {
+        await ensureCodeMirrorThemeAdapters();
+      }
     }
   };
 
