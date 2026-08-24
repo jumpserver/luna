@@ -422,7 +422,7 @@ async function openUserSettings() {
 /**
  * @description 过滤输入中的控制字符
  */
-// eslint-disable-next-line no-control-regex
+// oxlint-disable-next-line no-control-regex
 const sanitizeInput = (value: string) => value.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
 
 /**

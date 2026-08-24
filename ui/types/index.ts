@@ -126,6 +126,7 @@ export interface PermOrgItem {
   is_root: boolean;
   is_default: boolean;
   is_system: boolean;
+  comment?: string;
 }
 
 export interface CurrentOrg extends PermOrgItem {

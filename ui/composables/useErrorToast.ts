@@ -1,6 +1,8 @@
-import type { Toast } from "@nuxt/ui/dist/runtime/composables/useToast";
+import type { Toast } from "@nuxt/ui/composables";
 
 import { writeClipboardText } from "~/utils/clipboard";
+
+type ErrorToastAction = NonNullable<Toast["actions"]>[number];
 
 interface ErrorToastOptions {
   title: string;
@@ -9,7 +11,7 @@ interface ErrorToastOptions {
   icon?: string;
   duration?: number;
   progress?: boolean;
-  actions?: Partial<Toast["actions"][number]>[];
+  actions?: ErrorToastAction[];
 }
 
 const COPY_ACTION_ICONS = new Set(["i-lucide-copy", "lucide:copy"]);
@@ -51,7 +53,7 @@ function resolveErrorDescription(error: unknown) {
   return normalizeToastText(error);
 }
 
-function hasCopyAction(actions: Partial<Toast["actions"][number]>[] = []) {
+function hasCopyAction(actions: ErrorToastAction[] = []) {
   return actions.some((action) => {
     const label = normalizeToastText(action?.label).toLowerCase();
     const icon = normalizeToastText(action?.icon);

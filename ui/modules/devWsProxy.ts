@@ -67,11 +67,10 @@ export default defineNuxtModule({
           return;
         }
         const secure = isSecure(route.target);
-        const upstream = (secure ? tls : net).connect({
-          host: route.target.hostname,
-          port: Number(route.target.port) || (secure ? 443 : 80),
-          rejectUnauthorized: false
-        });
+        const connectPort = Number(route.target.port) || (secure ? 443 : 80);
+        const upstream = secure
+          ? tls.connect({ host: route.target.hostname, port: connectPort, rejectUnauthorized: false })
+          : net.connect({ host: route.target.hostname, port: connectPort });
         const destroy = (error?: Error) => {
           if (error) console.warn(`[dev-ws-proxy:${route.prefix}]`, error.message);
           socket.destroy();
@@ -85,6 +84,7 @@ export default defineNuxtModule({
         });
         upstream.on("error", destroy);
         socket.on("error", destroy);
+        socket.on("close", () => upstream.destroy());
       });
     });
   }

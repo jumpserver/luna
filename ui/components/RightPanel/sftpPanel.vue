@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
+import type { KokoWorkspaceTab } from "@jumpserver/koko/host";
 import type { AssetItem, AssetTreeNode } from "~/types";
 import { KokoFileManagerSessionSurface } from "@jumpserver/koko";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
@@ -23,7 +23,7 @@ const inlinePayload = ref<Record<string, any> | null>(null);
 const inlineError = ref("");
 let connectionAttempt = 0;
 
-const inlineTab = computed<WorkspaceSessionTab | null>(() => {
+const inlineTab = computed<KokoWorkspaceTab | null>(() => {
   const asset = selectedAsset.value;
   if (!asset || !inlinePayload.value) return null;
   return {

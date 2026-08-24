@@ -2,6 +2,7 @@ import type { JmsComponent } from "@jumpserver/connectors-core";
 
 import type { Component } from "vue";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
+import type { KokoSurfaceMode } from "~/shared/connectors/types/component";
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 
 const KokoTerminalSessionSurface = defineAsyncComponent(() =>

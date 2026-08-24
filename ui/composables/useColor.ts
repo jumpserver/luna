@@ -89,9 +89,9 @@ export const useColor = () => {
     // 再尝试 rgb/rgba
     const m = (input || "").trim().match(/rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i);
     if (m) {
-      const r = Math.min(255, Number.parseInt(m[1], 10));
-      const g = Math.min(255, Number.parseInt(m[2], 10));
-      const b = Math.min(255, Number.parseInt(m[3], 10));
+      const r = Math.min(255, Number(m[1]));
+      const g = Math.min(255, Number(m[2]));
+      const b = Math.min(255, Number(m[3]));
       return rgbToHex(r, g, b);
     }
 

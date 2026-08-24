@@ -2,5 +2,6 @@
 
 pnpm fmt
 pnpm lint
+pnpm typecheck:frontend
 pnpm cargo:fmt
 pnpm test

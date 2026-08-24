@@ -13,7 +13,7 @@ const fullscreenModeShortcut = computed(() => (isMacOS.value ? "⌘ + Shift + F"
 const panes = computed(() => tabs.value.flatMap((tab) => tab.panes));
 
 const openLogin = () => {
-  useEventBus().emit("login");
+  useEventBus().emit("login", undefined);
 };
 </script>
 

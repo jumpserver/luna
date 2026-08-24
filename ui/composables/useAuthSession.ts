@@ -1,4 +1,4 @@
-import type { PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/types";
+import type { CurrentOrg, PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface BootstrapResponse {
@@ -270,7 +270,7 @@ export const useAuthSession = () => {
 
     const cookieOrgId = getWebOrgId();
     const site = window.location.origin;
-    const profileOrg = {
+    const profileOrg: CurrentOrg = {
       id: cookieOrgId || profileData.org_id || profileData.org?.id || "",
       name: profileData.org_name || profileData.org?.name || "",
       is_root: false,
@@ -321,8 +321,8 @@ export const useAuthSession = () => {
         userInfoStore.setOrganizations(availableOrgs);
         if (currentOrg.id) {
           userInfoStore.setCurrentOrg({
-            comment: resolvedCurrentOrg?.comment || "",
-            ...currentOrg
+            ...currentOrg,
+            comment: resolvedCurrentOrg?.comment || currentOrg.comment || ""
           });
         }
       })
