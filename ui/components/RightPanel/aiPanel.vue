@@ -18,6 +18,7 @@ import {
 import { createTerminalAiMessageId, sendKokoTerminalAiControl } from "#koko/composables/terminal/useTerminalAiSessions";
 import { getWorkspaceAiSession, isChenSqlWorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
 import SqlMetadataApprovalCard from "./SqlMetadataApprovalCard.vue";
+import SqlSchemaResultCard from "./SqlSchemaResultCard.vue";
 
 interface ViewStep {
   id: string;
@@ -87,6 +88,13 @@ interface MetadataApprovalItem {
   kind: "metadata-approval";
   key: string;
   approval: ChenSqlMetadataApproval;
+  terminal: boolean;
+}
+
+interface SchemaResultItem {
+  kind: "schema-result";
+  key: string;
+  data: TerminalAiEventData;
 }
 
 type ViewItem =
@@ -97,14 +105,15 @@ type ViewItem =
   | SqlProposalItem
   | SqlThoughtItem
   | SqlTimingItem
-  | MetadataApprovalItem;
+  | MetadataApprovalItem
+  | SchemaResultItem;
 
 const { t } = useI18n();
 const { activePaneId } = useWorkspaceTabs();
 const messagesElement = ref<HTMLElement | null>(null);
 const session = computed(() => getWorkspaceAiSession(activePaneId.value));
 const sqlSession = computed(() => (isChenSqlWorkspaceAiSession(session.value) ? session.value : null));
-const metadataApproval = computed(() => sqlSession.value?.metadataApproval || null);
+const metadataApproval = computed(() => session.value?.metadataApproval || null);
 const assistantName = computed(() => (sqlSession.value ? t("RightPanel.SQLAIName") : "Terminal AI"));
 const available = computed(() => Boolean(session.value?.enabled));
 const unavailableTitle = computed(() =>
@@ -361,6 +370,11 @@ const viewItems = computed<ViewItem[]>(() => {
         return;
       }
 
+      if (part.type === "data-schema-result") {
+        items.push({ kind: "schema-result", key: `${message.id}-schema-result-${partIndex}`, data });
+        return;
+      }
+
       if (part.type === "data-plan") {
         const planId = String(data.id || `plan-${message.id}`);
         const plan = ensurePlan(planId, `${message.id}-plan-${partIndex}`);
@@ -414,7 +428,8 @@ const viewItems = computed<ViewItem[]>(() => {
     items.splice(insertAt, 0, {
       kind: "metadata-approval",
       key: `metadata-approval-${approval.approvalId}`,
-      approval
+      approval,
+      terminal: !sqlSession.value
     });
   }
 
@@ -696,7 +711,7 @@ function rejectSqlProposal(item: SqlProposalItem) {
 }
 
 function resolveMetadataApproval(decision: ChenSqlMetadataApprovalDecision) {
-  sqlSession.value?.resolveMetadataApproval(decision);
+  session.value?.resolveMetadataApproval(decision);
 }
 
 function isSqlThoughtExpanded(item: SqlThoughtItem) {
@@ -795,8 +810,11 @@ watch(
           <SqlMetadataApprovalCard
             v-else-if="item.kind === 'metadata-approval'"
             :approval="item.approval"
+            :terminal="item.terminal"
             @resolve="resolveMetadataApproval"
           />
+
+          <SqlSchemaResultCard v-else-if="item.kind === 'schema-result'" :data="item.data" />
 
           <UCollapsible
             v-else-if="item.kind === 'sql-thought'"
