@@ -53,7 +53,6 @@ const activePaneId = ref("");
 const draggedTabId = ref("");
 const focusModeTabId = ref("");
 const workspaceFullscreen = ref(false);
-const nativeSurfaceOverlayOpen = ref(false);
 const pendingPaneTarget = ref<{ tabId: string; paneId: string } | null>(null);
 let tabSequence = 0;
 let paneSequence = 0;
@@ -894,7 +893,6 @@ export const useWorkspaceTabs = () => {
     markSessionConnecting,
     setSessionConnectMethod,
     markSessionFailed,
-    nativeSurfaceOverlayOpen,
     openLocalShell,
     openScriptEditor,
     openSession,

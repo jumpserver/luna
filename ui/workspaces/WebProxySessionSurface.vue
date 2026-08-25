@@ -26,7 +26,7 @@ interface WebProxyRecordingState {
 }
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
-const { activeTabId, markSessionConnected, nativeSurfaceOverlayOpen, tabs } = useWorkspaceTabs();
+const { activeTabId, markSessionConnected, tabs } = useWorkspaceTabs();
 const { isMacOS } = usePlatform();
 const toolbarRef = ref<HTMLElement>();
 const contentRef = ref<HTMLElement>();
@@ -41,6 +41,7 @@ const recordingFrames = ref(0);
 const recordingMessage = ref("");
 const recordingPath = ref("");
 const resizeObserver = ref<ResizeObserver>();
+const overlayOpen = ref(false);
 const viewLabel = `web-proxy-${globalThis.crypto?.randomUUID?.() || Date.now()}`;
 const devMode = import.meta.dev;
 const viewCreated = ref(false);
@@ -48,6 +49,21 @@ let viewVisible = false;
 let unlistenState: UnlistenFn | undefined;
 let unlistenAutofillState: UnlistenFn | undefined;
 let unlistenRecordingState: UnlistenFn | undefined;
+let overlayObserver: MutationObserver | undefined;
+
+// Nuxt UI teleports interactive overlays into the main webview, but Tauri child
+// webviews always render above that DOM. Tooltips are intentionally excluded.
+const OVERLAY_SELECTOR = [
+  '[role="menu"][data-state="open"]',
+  '[role="dialog"][data-state="open"]',
+  '[role="alertdialog"][data-state="open"]',
+  '[role="listbox"][data-state="open"]',
+  '[data-reka-popper-content-wrapper] > [data-slot="content"][data-state="open"]:not([role="tooltip"])'
+].join(",");
+
+function syncOverlayState() {
+  overlayOpen.value = Boolean(document.querySelector(OVERLAY_SELECTOR));
+}
 
 async function closeView() {
   if (!viewCreated.value) return true;
@@ -127,7 +143,7 @@ function shouldShowView() {
   return Boolean(
     viewCreated.value &&
     activeTabId.value === ownerTabId.value &&
-    !nativeSurfaceOverlayOpen.value &&
+    !overlayOpen.value &&
     document.visibilityState === "visible" &&
     rect &&
     rect.width > 1 &&
@@ -216,7 +232,7 @@ function focus() {
   if (shouldShowView()) void setViewVisible(true);
 }
 
-watch([activeTabId, ownerTabId, nativeSurfaceOverlayOpen], () => nextTick(syncView));
+watch([activeTabId, ownerTabId, overlayOpen], () => nextTick(syncView));
 
 onMounted(async () => {
   if (!isTauriRuntime()) {
@@ -230,6 +246,15 @@ onMounted(async () => {
     loading.value = false;
     return;
   }
+
+  overlayObserver = new MutationObserver(syncOverlayState);
+  overlayObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["data-state", "role"],
+    childList: true,
+    subtree: true
+  });
+  syncOverlayState();
 
   addressValue.value = request.value.targetUrl;
   unlistenState = await useTauriEventListen<WebProxyState>("web-proxy-state", ({ payload }) => {
@@ -284,6 +309,7 @@ onBeforeUnmount(() => {
   unlistenAutofillState?.();
   unlistenRecordingState?.();
   resizeObserver.value?.disconnect();
+  overlayObserver?.disconnect();
   document.removeEventListener("visibilitychange", syncView);
   if (viewCreated.value) void closeView().catch(() => undefined);
 });
@@ -362,6 +388,19 @@ defineExpose({ focus });
         <div class="flex max-w-lg flex-col items-center gap-3 text-sm text-muted">
           <UIcon name="i-lucide-circle-alert" class="size-9" />
           <p>{{ error }}</p>
+        </div>
+      </div>
+
+      <div
+        aria-hidden="true"
+        class="pointer-events-none absolute inset-0 grid place-items-center bg-[var(--workspace-surface-background)] transition-opacity duration-150"
+        :class="overlayOpen ? 'opacity-100' : 'opacity-0'"
+      >
+        <div
+          class="flex items-center gap-2 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-overlay)] px-3 py-2 text-xs text-[var(--app-muted)] shadow-[var(--theme-shadow-soft)]"
+        >
+          <UIcon name="i-lucide-panels-top-left" class="size-4" />
+          <span>Web 会话暂时置于后台</span>
         </div>
       </div>
     </div>

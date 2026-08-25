@@ -18,7 +18,6 @@ const {
   draggedTabId,
   enterFocusMode,
   enterFullscreenMode,
-  nativeSurfaceOverlayOpen,
   reorderTabs,
   renameTabTitle,
   closeAllSessions,
@@ -521,7 +520,6 @@ onBeforeUnmount(() => {
   tabStripRef.value?.removeEventListener("scroll", updateOverflow);
   resizeObserver?.disconnect();
   resizeObserver = null;
-  nativeSurfaceOverlayOpen.value = false;
   clearShortcutHints();
 });
 
@@ -537,14 +535,6 @@ watch(
 );
 
 watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
-
-watch(
-  [contextMenuVisible, renameModalOpen],
-  ([menuOpen, modalOpen]) => {
-    nativeSurfaceOverlayOpen.value = menuOpen || modalOpen;
-  },
-  { immediate: true }
-);
 </script>
 
 <template>
