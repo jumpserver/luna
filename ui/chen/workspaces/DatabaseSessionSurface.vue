@@ -73,7 +73,7 @@ import { chenWsUrl, useChenWebSocket } from "~/chen/composables/useChenWebSocket
 import { useChenWorkspacePreferences } from "~/chen/composables/useChenWorkspacePreferences";
 import { newChenWorkspaceId, useChenWorkspaceTabs } from "~/chen/composables/useChenWorkspaceTabs";
 import { saveChenExport } from "~/chen/runtime/download";
-import { formatChenDialogValue, normalizeChenDialogMessage } from "~/chen/utils/chenDialog";
+import { formatChenDialogValue } from "~/chen/utils/chenDialog";
 import {
   acceptChenSaveChangesPreviewResult,
   acceptChenSaveChangesResult,
@@ -366,6 +366,20 @@ const startupErrorMessage = computed(() => {
 const databaseDialogFailed = computed(() =>
   /连接失败|connection (?:attempt )?failed|unable to connect/i.test(session.dialogMessage.value?.text || "")
 );
+const startupDialogMessage = computed(() => {
+  const dialog = session.dialogMessage.value;
+  if (!dialog || !session.dialogOpenedDuringStartup.value || dialog.buttons.length || databaseDialogFailed.value)
+    return "";
+  return dialog.text || (dialog.title === "Message" ? "" : dialog.title);
+});
+const startupMessage = computed(() => {
+  if (startupDialogMessage.value) return startupDialogMessage.value;
+  if (!tokenId.value) return "Waiting for connection details…";
+  if (!auth.chenToken.value) return "Authenticating your database session…";
+  if (session.sessionConnection.state.value === "connecting") return "Connecting to the database service…";
+  if (!auth.profile.value) return "Preparing your database session…";
+  return "Loading database resources…";
+});
 const databaseDialogText = computed(() => {
   const message = session.dialogMessage.value?.text || "";
   if (!databaseDialogFailed.value || !databaseTarget.value) return message;
@@ -1156,7 +1170,12 @@ function createWorkspaceTab(kind: "query" | "console") {
 }
 
 const dialogVisible = computed({
-  get: () => Boolean(session.dialogMessage.value),
+  get: () => {
+    const dialog = session.dialogMessage.value;
+    return Boolean(
+      dialog && (!session.dialogOpenedDuringStartup.value || dialog.buttons.length || databaseDialogFailed.value)
+    );
+  },
   set: (open: boolean) => {
     if (!open) session.dismissDialog();
   }
@@ -1268,7 +1287,7 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
         }
         break;
       case "new_dialog":
-        session.dialogMessage.value = normalizeChenDialogMessage(response.data);
+        session.openDialog(response.data);
         break;
       default:
         // No actionable event (e.g. backend returned none for "show" on a
@@ -1894,7 +1913,12 @@ defineExpose({ focus });
           />
         </div>
 
-        <ChenSessionState v-else icon="i-lucide-database-zap" message="Select a database action to begin." />
+        <ChenSessionState
+          v-else
+          icon="i-lucide-database-zap"
+          title="Database workspace"
+          message="Select a database action to begin."
+        />
 
         <LogConsolePanel
           v-show="logConsoleOpen"
@@ -1907,9 +1931,10 @@ defineExpose({ focus });
 
     <ChenSessionState
       v-else
-      :icon="startupErrorMessage ? 'i-lucide-circle-alert' : 'i-lucide-loader-circle'"
+      :icon="startupErrorMessage ? 'i-lucide-circle-alert' : 'i-lucide-database'"
       :loading="!startupErrorMessage"
-      :message="startupErrorMessage || 'Starting database workspace...'"
+      :title="startupErrorMessage ? 'Unable to open database workspace' : 'Opening database workspace'"
+      :message="startupErrorMessage || startupMessage"
       :action-label="startupErrorMessage ? 'Retry' : undefined"
       @action="emit('reconnect')"
     />

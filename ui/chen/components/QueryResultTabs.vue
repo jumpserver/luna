@@ -12,6 +12,7 @@ import DataViewFooter from "~/chen/components/DataViewFooter.vue";
 import DataViewSavePreviewDialog from "~/chen/components/DataViewSavePreviewDialog.vue";
 import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
 import { chenGridPreferenceKey } from "~/chen/composables/useChenGridPreferences";
+import { chenQueryResultLabel } from "~/chen/composables/useChenQueryConsole";
 import {
   buildChenSaveChangesPayload,
   cancelChenSaveChangesConfirmation,
@@ -124,24 +125,26 @@ function cancelActiveResultChanges() {
     <div class="shrink-0 border-b border-default px-2 py-1">
       <div class="flex items-center gap-1">
         <div
-          v-for="result in resultTabs"
+          v-for="(result, index) in resultTabs"
           :key="result.id"
-          class="flex items-center rounded-md text-xs"
+          class="flex max-w-48 items-center rounded-md text-xs transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
           :class="activeResultTabId === result.id ? 'bg-accented' : 'text-muted'"
+          :title="result.title"
         >
           <button
-            class="rounded-md px-2 py-1 transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
+            class="min-w-0 truncate py-1 pl-2"
+            :class="closable ? 'pr-1' : 'pr-2'"
             :disabled="activeResultBusy"
             @click="emit('update:activeResultTabId', result.id)"
           >
-            {{ result.title }}
+            {{ chenQueryResultLabel(result, index) }}
           </button>
           <button
             v-if="closable"
-            class="mr-1 rounded p-0.5 text-muted transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
-            :aria-label="`Close ${result.title}`"
+            class="mr-1 shrink-0 rounded p-0.5 text-muted transition-colors hover:bg-elevated hover:text-[var(--app-fg)]"
+            :aria-label="`Close ${chenQueryResultLabel(result, index)}`"
             :disabled="activeResultBusy"
-            @click="emit('close', result.id)"
+            @click.stop="emit('close', result.id)"
           >
             <UIcon name="i-lucide-x" class="size-3" />
           </button>
