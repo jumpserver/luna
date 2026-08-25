@@ -73,6 +73,11 @@ const recentContainers = useLocalStorage<ConnectTarget[]>(
 );
 recentContainers.value = recentContainers.value.slice(0, RECENT_CONTAINER_LIMIT);
 const sidebarWidth = ref(260);
+const isNarrowScreen = useMediaQuery("(max-width: 767px)");
+const resourceTreeOpen = ref(true);
+const resourceTreeWidth = computed(() =>
+  isNarrowScreen.value ? "min(280px, calc(100vw - 3rem))" : `${sidebarWidth.value}px`
+);
 const resizingSidebar = ref(false);
 const connectionError = ref("");
 const terminalTabs = ref<TerminalTab[]>([]);
@@ -179,7 +184,7 @@ function toggleSearch() {
 }
 
 function startSidebarResize(event: PointerEvent) {
-  if (event.button !== 0) return;
+  if (event.button !== 0 || isNarrowScreen.value) return;
 
   event.preventDefault();
   resizingSidebar.value = true;
@@ -322,6 +327,7 @@ function handleRowClick(row: TreeRow) {
       pod: row.node.pod || "",
       container: row.node.container || ""
     });
+    if (isNarrowScreen.value) resourceTreeOpen.value = false;
     return;
   }
   toggleRow(row);
@@ -403,6 +409,7 @@ function clearRecentContainers() {
 
 function connectCluster() {
   openTerminal({ label: assetName.value, namespace: "", pod: "", container: "" });
+  if (isNarrowScreen.value) resourceTreeOpen.value = false;
 }
 
 function closeTab(tabItem: TerminalTab) {
@@ -566,12 +573,13 @@ onUnmounted(() => {
     @retry="retryConnection"
   >
     <div
-      class="flex h-full min-h-0 bg-(--app-main-bg) text-(--app-fg)"
+      class="relative flex h-full min-h-0 bg-(--app-main-bg) text-(--app-fg)"
       :class="resizingSidebar ? 'cursor-col-resize select-none' : ''"
     >
       <aside
-        class="flex min-h-0 shrink-0 flex-col bg-[var(--workspace-surface-sidebar)]"
-        :style="{ width: `${sidebarWidth}px` }"
+        v-show="!isNarrowScreen || resourceTreeOpen"
+        class="z-40 flex min-h-0 shrink-0 flex-col bg-[var(--workspace-surface-sidebar)] max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
+        :style="{ width: resourceTreeWidth }"
       >
         <div class="flex h-9 min-w-0 shrink-0 items-center gap-1 border-b border-default px-2.5">
           <span
@@ -580,6 +588,15 @@ onUnmounted(() => {
           >
             {{ t("koko.kubernetes.name") }}
           </span>
+          <UButton
+            icon="i-lucide-x"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            class="md:hidden"
+            :aria-label="t('koko.actions.close')"
+            @click="resourceTreeOpen = false"
+          />
           <UTooltip :text="t('koko.kubernetes.connectCluster')" :delay-duration="150">
             <button
               type="button"
@@ -675,6 +692,14 @@ onUnmounted(() => {
         </div>
       </aside>
 
+      <button
+        v-if="isNarrowScreen && resourceTreeOpen"
+        type="button"
+        class="absolute inset-0 z-30 bg-black/35 backdrop-blur-[1px]"
+        :aria-label="t('koko.actions.close')"
+        @click="resourceTreeOpen = false"
+      />
+
       <div
         role="separator"
         :aria-label="t('koko.kubernetes.resizeSidebar')"
@@ -682,13 +707,24 @@ onUnmounted(() => {
         :aria-valuenow="sidebarWidth"
         aria-valuemin="220"
         aria-valuemax="420"
-        class="group relative z-20 w-px shrink-0 cursor-col-resize touch-none bg-(--workspace-surface-sub-border) hover:bg-primary/60 active:bg-primary"
+        class="group relative z-20 w-px shrink-0 cursor-col-resize touch-none bg-(--workspace-surface-sub-border) hover:bg-primary/60 active:bg-primary max-md:hidden"
         @pointerdown="startSidebarResize"
       >
         <div class="absolute inset-y-0 -left-1.5 -right-1.5" />
       </div>
 
       <section class="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div class="flex h-9 shrink-0 items-center border-b border-default px-2 md:hidden">
+          <UButton
+            icon="i-lucide-panel-left"
+            :label="t('koko.kubernetes.name')"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :aria-expanded="resourceTreeOpen"
+            @click="resourceTreeOpen = true"
+          />
+        </div>
         <WorkspaceSubTabStrip
           :tabs="subTabs"
           :active-id="activeTabId"

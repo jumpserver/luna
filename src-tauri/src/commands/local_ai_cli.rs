@@ -592,7 +592,10 @@ fn bounded_error(value: &str) -> String {
     if trimmed.chars().count() <= MAX_ERROR_CHARS {
         return trimmed.to_string();
     }
-    format!("{}…", trimmed.chars().take(MAX_ERROR_CHARS).collect::<String>())
+    format!(
+        "{}…",
+        trimmed.chars().take(MAX_ERROR_CHARS).collect::<String>()
+    )
 }
 
 fn build_command_prompt(request: &GenerateAiCommandRequest) -> Result<String, String> {
@@ -682,7 +685,11 @@ fn proposal_value(value: &Value, depth: usize) -> Option<Value> {
 }
 
 fn command_is_high_risk(command: &str) -> bool {
-    let compact = command.to_ascii_lowercase().split_whitespace().collect::<Vec<_>>().join(" ");
+    let compact = command
+        .to_ascii_lowercase()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
     let high_risk_fragments = [
         "rm -rf",
         "rm -fr",
@@ -762,7 +769,10 @@ fn normalize_proposal(value: Value) -> Result<AiCommandProposal, String> {
 
 fn parse_proposal_output(output: &Output) -> Result<AiCommandProposal, String> {
     if !output.status.success() {
-        return Err(format!("AI CLI failed: {}", bounded_error(&output_text(output))));
+        return Err(format!(
+            "AI CLI failed: {}",
+            bounded_error(&output_text(output))
+        ));
     }
     let stdout = String::from_utf8_lossy(&output.stdout);
     if let Some(value) = json_from_text(&stdout) {

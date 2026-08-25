@@ -214,6 +214,33 @@
   scrollbar-color: var(--app-scrollbar-thumb) transparent;
 }
 
+html,
+body,
+#__nuxt {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+@supports (height: 100dvh) {
+  body,
+  .workspace-shell,
+  .settings-shell {
+    height: 100dvh;
+  }
+}
+
+@media (max-width: 767px) {
+  .workspace-shell {
+    padding-right: env(safe-area-inset-right);
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .workspace-shell__footer {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 *::-webkit-scrollbar {
   width: 4px;
   height: 4px;

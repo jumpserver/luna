@@ -10,9 +10,15 @@ const props = withDefaults(
   }
 );
 
-const { collapse } = useSettingManager();
+const { collapse, setCollapse: setSidebarCollapsed } = useSettingManager();
 const { sidebarWidth, setSidebarWidth, persistSidebarWidth } = useSidebarLayout();
-const { open: rightPanelOpen, panelWidth: rightPanelWidth, setPanelWidth } = useRightPanel();
+const {
+  open: rightPanelOpen,
+  panelWidth: rightPanelWidth,
+  setOpen: setRightPanelOpen,
+  setPanelWidth
+} = useRightPanel();
+const isNarrowScreen = useMediaQuery("(max-width: 767px)");
 const isResizing = ref(false);
 const isRightResizing = ref(false);
 let resizeStartX = 0;
@@ -21,6 +27,22 @@ const sidebarTransitionClass = computed(() => {
   if (isResizing.value || !props.sidebarVisible) return "";
   return "transition-[width] duration-200";
 });
+const sidebarStyleWidth = computed(() => {
+  if (props.focusMode || !props.sidebarVisible || collapse.value) return "0px";
+  return isNarrowScreen.value ? `min(${sidebarWidth.value}px, calc(100vw - 3rem))` : `${sidebarWidth.value}px`;
+});
+const rightPanelStyleWidth = computed(() => {
+  if (props.focusMode || !rightPanelOpen.value) return "0px";
+  return isNarrowScreen.value ? `min(${rightPanelWidth.value}px, calc(100vw - 3rem))` : `${rightPanelWidth.value}px`;
+});
+const mobileOverlayOpen = computed(
+  () => isNarrowScreen.value && !props.focusMode && ((!collapse.value && props.sidebarVisible) || rightPanelOpen.value)
+);
+
+const closeMobilePanels = () => {
+  setSidebarCollapsed(true);
+  setRightPanelOpen(false);
+};
 
 const handleResize = (event: PointerEvent) => {
   if (!isResizing.value) return;
@@ -38,7 +60,7 @@ const stopResizing = () => {
 };
 
 const startResizing = (event: PointerEvent) => {
-  if (event.button !== 0 || collapse.value) return;
+  if (event.button !== 0 || collapse.value || isNarrowScreen.value) return;
   event.preventDefault();
   isResizing.value = true;
   resizeStartX = event.clientX;
@@ -66,7 +88,7 @@ const stopRightResizing = () => {
 };
 
 const startRightResizing = (event: PointerEvent) => {
-  if (event.button !== 0 || !rightPanelOpen.value) return;
+  if (event.button !== 0 || !rightPanelOpen.value || isNarrowScreen.value) return;
   event.preventDefault();
   isRightResizing.value = true;
   document.documentElement.dataset.rightPanelResizing = "true";
@@ -97,13 +119,13 @@ onBeforeUnmount(() => {
       <slot name="header" />
     </div>
 
-    <div class="workspace-shell__body flex min-h-0 flex-1">
+    <div class="workspace-shell__body relative flex min-h-0 flex-1">
       <aside
         v-if="$slots.sidebar"
-        class="workspace-shell__sidebar relative min-h-0 shrink-0"
+        class="workspace-shell__sidebar relative z-40 min-h-0 shrink-0 overflow-hidden max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
         :class="sidebarTransitionClass"
         :style="{
-          width: props.focusMode || !props.sidebarVisible || collapse ? '0px' : `${sidebarWidth}px`,
+          width: sidebarStyleWidth,
           backgroundColor: 'var(--app-sidebar-bg)'
         }"
       >
@@ -118,6 +140,14 @@ onBeforeUnmount(() => {
         />
       </aside>
 
+      <button
+        v-if="mobileOverlayOpen"
+        type="button"
+        class="absolute inset-0 z-30 bg-black/35 backdrop-blur-[1px] md:hidden"
+        aria-label="关闭侧边面板"
+        @click="closeMobilePanels"
+      />
+
       <main
         class="workspace-shell__main flex min-h-0 min-w-0 flex-1 flex-col"
         :style="{ backgroundColor: 'var(--app-surface-canvas)' }"
@@ -130,10 +160,10 @@ onBeforeUnmount(() => {
 
       <aside
         v-if="$slots.rightPanel"
-        class="workspace-shell__right-panel relative min-h-0 shrink-0 overflow-hidden"
+        class="workspace-shell__right-panel relative z-40 min-h-0 shrink-0 overflow-hidden max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:shadow-xl"
         :class="isRightResizing ? '' : 'transition-[width] duration-200'"
         :style="{
-          width: !props.focusMode && rightPanelOpen ? `${rightPanelWidth}px` : '0px',
+          width: rightPanelStyleWidth,
           backgroundColor: 'var(--app-surface-panel)'
         }"
       >

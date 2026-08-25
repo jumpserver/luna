@@ -164,6 +164,11 @@ const workspaceCloseDialogOpen = ref(false);
 const editorLayout = ref<HTMLElement | null>(null);
 const treeScroller = ref<HTMLElement | null>(null);
 const explorerWidth = ref(280);
+const isNarrowScreen = useMediaQuery("(max-width: 767px)");
+const explorerOpen = ref(true);
+const responsiveExplorerWidth = computed(() =>
+  isNarrowScreen.value ? "min(280px, calc(100vw - 3rem))" : `${explorerWidth.value}px minmax(0, 1fr)`
+);
 const resizingExplorer = ref(false);
 const treeFocusedPath = ref("");
 const draggedEditorItem = ref<DraggedEditorItem | null>(null);
@@ -602,6 +607,7 @@ function entryTitle(entry: SftpFileEntry, path: string) {
 }
 
 function beginExplorerResize(event: PointerEvent) {
+  if (isNarrowScreen.value) return;
   event.preventDefault();
   resizingExplorer.value = true;
 }
@@ -1930,6 +1936,7 @@ async function openEntry(entry: SftpFileEntry, path: string) {
     toggleDirectory(path);
     return;
   }
+  if (isNarrowScreen.value) explorerOpen.value = false;
   await openFileInPane(entry, path, activePane.value, false, true);
 }
 
@@ -2594,16 +2601,29 @@ onUnmounted(() => {
 <template>
   <div
     ref="editorLayout"
-    class="grid h-full min-h-0 bg-(--app-main-bg) text-(--app-fg)"
+    class="relative grid h-full min-h-0 bg-(--app-main-bg) text-(--app-fg)"
     :class="resizingExplorer || resizingSplit ? 'cursor-col-resize select-none' : ''"
-    :style="{ gridTemplateColumns: `${explorerWidth}px minmax(0, 1fr)` }"
+    :style="{ gridTemplateColumns: isNarrowScreen ? 'minmax(0, 1fr)' : responsiveExplorerWidth }"
   >
-    <aside class="relative flex min-h-0 flex-col border-r border-default bg-[var(--workspace-surface-sidebar)]">
+    <aside
+      v-show="!isNarrowScreen || explorerOpen"
+      class="relative z-40 flex min-h-0 flex-col border-r border-default bg-[var(--workspace-surface-sidebar)] max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
+      :style="{ width: isNarrowScreen ? responsiveExplorerWidth : undefined }"
+    >
       <div class="flex h-9 min-w-0 shrink-0 items-center gap-1 border-b border-default px-2.5">
         <p class="min-w-0 flex-1 truncate text-left text-xs font-medium text-muted">
           {{ t("koko.sftpEditor.explorerTitle") }}
         </p>
         <div class="flex h-7 items-center gap-1">
+          <UButton
+            icon="i-lucide-x"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            class="md:hidden"
+            :aria-label="t('koko.actions.close')"
+            @click="explorerOpen = false"
+          />
           <UPopover
             v-model:open="quickOpenVisible"
             :content="{ align: 'start', side: 'bottom', sideOffset: 8 }"
@@ -2859,7 +2879,7 @@ onUnmounted(() => {
         </div>
       </div>
       <div
-        class="absolute inset-y-0 -right-1 z-20 w-2 cursor-col-resize"
+        class="absolute inset-y-0 -right-1 z-20 w-2 cursor-col-resize max-md:hidden"
         :title="t('koko.sftpEditor.resizeExplorer')"
         @pointerdown="beginExplorerResize"
         @dblclick="explorerWidth = 280"
@@ -2889,7 +2909,26 @@ onUnmounted(() => {
       </UDropdownMenu>
     </aside>
 
+    <button
+      v-if="isNarrowScreen && explorerOpen"
+      type="button"
+      class="absolute inset-0 z-30 bg-black/35 backdrop-blur-[1px]"
+      :aria-label="t('koko.actions.close')"
+      @click="explorerOpen = false"
+    />
+
     <section class="flex min-h-0 min-w-0 flex-col">
+      <div class="flex h-9 shrink-0 items-center border-b border-default px-2 md:hidden">
+        <UButton
+          icon="i-lucide-panel-left"
+          :label="t('koko.sftpEditor.explorerTitle')"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          :aria-expanded="explorerOpen"
+          @click="explorerOpen = true"
+        />
+      </div>
       <div
         v-if="manager.error.value"
         class="flex min-h-9 shrink-0 items-center gap-2 border-b border-warning/30 bg-warning/10 px-3 text-xs"

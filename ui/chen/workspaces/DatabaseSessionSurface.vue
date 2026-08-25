@@ -113,6 +113,11 @@ const endpointUrl = computed(() => {
 const resolveChenWsUrl = (path: "session" | "console" | "ai") => chenWsUrl(path, endpointUrl.value);
 
 const sidebarWidth = ref(280);
+const isNarrowScreen = useMediaQuery("(max-width: 767px)");
+const resourceTreeOpen = ref(true);
+const resourceTreeWidth = computed(() =>
+  isNarrowScreen.value ? "min(280px, calc(100vw - 3rem))" : sidebarWidth.value
+);
 const resizing = ref(false);
 let resizeStartX = 0;
 let resizeStartWidth = 0;
@@ -1486,6 +1491,7 @@ async function handleNodeClick(node: ChenTreeNode) {
   tree.selectedNodeKey.value = node.key;
   if (node.type === "database" || node.type === "schema") {
     openDatabaseWorkspace(node);
+    if (isNarrowScreen.value) resourceTreeOpen.value = false;
     return;
   }
   if (node.type === "recent-table" && node.recentEntry) {
@@ -1501,11 +1507,13 @@ async function handleNodeClick(node: ChenTreeNode) {
       return;
     }
     await applyTreeAction(liveNode, "view_data");
+    if (isNarrowScreen.value) resourceTreeOpen.value = false;
     return;
   }
   const action = chenNodeActivationAction(node);
   if (action) {
     await applyTreeAction(node, action);
+    if (isNarrowScreen.value) resourceTreeOpen.value = false;
     return;
   }
   if (!node.leaf) tree.toggleTreeNode(node);
@@ -1707,7 +1715,7 @@ function updateDataViewWhereCondition(tab: ChenDataViewConsoleTab, condition: st
 }
 
 function startResize(event: PointerEvent) {
-  if (event.button !== 0) return;
+  if (event.button !== 0 || isNarrowScreen.value) return;
 
   event.preventDefault();
   resizing.value = true;
@@ -1776,17 +1784,20 @@ defineExpose({ focus });
 
 <template>
   <div class="relative isolate h-full min-h-0 overflow-hidden bg-[var(--workspace-surface-main)] text-[var(--app-fg)]">
-    <div v-if="session.ready.value" class="flex h-full min-h-0">
+    <div v-if="session.ready.value" class="relative flex h-full min-h-0">
       <ResourceTreePanel
+        v-show="!isNarrowScreen || resourceTreeOpen"
+        class="z-40 max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
         :root-nodes="explorerRootNodes"
         :selected-key="tree.selectedNodeKey.value"
         :expanded-keys="tree.expandedKeys.value"
         :children-map="tree.childrenMap"
         :loading-children="tree.loadingChildren"
         :db-type="auth.profile.value?.dbType"
-        :width="sidebarWidth"
+        :width="resourceTreeWidth"
         :tab-title-format="workspacePreferences.tabTitleFormat"
         :sql-keyword-case="workspacePreferences.sqlKeywordCase"
+        @close="resourceTreeOpen = false"
         @refresh="refreshResourceRoot"
         @update:tab-title-format="workspacePreferences.tabTitleFormat = $event"
         @update:sql-keyword-case="workspacePreferences.sqlKeywordCase = $event"
@@ -1797,6 +1808,14 @@ defineExpose({ focus });
         @clear-recent="clearRecentTables"
       />
 
+      <button
+        v-if="isNarrowScreen && resourceTreeOpen"
+        type="button"
+        class="absolute inset-0 z-30 bg-black/35 backdrop-blur-[1px]"
+        aria-label="Close database explorer"
+        @click="resourceTreeOpen = false"
+      />
+
       <div
         role="separator"
         aria-label="Resize database sidebar"
@@ -1804,13 +1823,24 @@ defineExpose({ focus });
         :aria-valuenow="sidebarWidth"
         aria-valuemin="220"
         aria-valuemax="420"
-        class="group relative z-20 w-px shrink-0 cursor-col-resize touch-none bg-default/60 hover:bg-primary/40 active:bg-primary/60"
+        class="group relative z-20 w-px shrink-0 cursor-col-resize touch-none bg-default/60 hover:bg-primary/40 active:bg-primary/60 max-md:hidden"
         @pointerdown="startResize"
       >
         <div class="absolute inset-y-0 -left-1.5 -right-1.5" />
       </div>
 
       <section class="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div class="flex h-9 shrink-0 items-center border-b border-default px-2 md:hidden">
+          <UButton
+            icon="i-lucide-panel-left"
+            label="Database Explorer"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :aria-expanded="resourceTreeOpen"
+            @click="resourceTreeOpen = true"
+          />
+        </div>
         <WorkspaceTabBar
           :tabs="workspace.workspaceTabs.value"
           :active-tab-id="workspace.activeWorkspaceTabId.value"

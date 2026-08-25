@@ -17,7 +17,7 @@ const emits = defineEmits<{
 </script>
 
 <template>
-  <div class="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3 p-1">
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(min(280px,100%),1fr))] gap-3 p-1">
     <Card
       v-for="item in props.visibleAssets"
       :key="item.id"

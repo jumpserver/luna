@@ -7,9 +7,10 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { t } = useI18n();
 const toast = useToast();
+const isNarrowScreen = useMediaQuery("(max-width: 767px)");
 const { addErrorToast } = useErrorToast();
 const localePath = useLocalePath();
-const { collapse, sidebarSections, setSidebarSections } = useSettingManager();
+const { collapse, sidebarSections, setCollapse, setSidebarSections } = useSettingManager();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const showTools = computed(() => isTauriRuntime());
 const { confirmConnection } = useAssetConnection();
@@ -302,6 +303,7 @@ const handleOpenMultipleAssets = async (assets: AssetItem[]) => {
 };
 
 const handleAssetConnect = (asset: AssetItem) => {
+  if (isNarrowScreen.value) setCollapse(true);
   connectWithSavedConnection(asset);
 };
 
