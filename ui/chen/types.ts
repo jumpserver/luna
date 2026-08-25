@@ -1,3 +1,5 @@
+import type { ChenSchemaOverview } from "~/chen/types/schemaOverview";
+
 export interface ChenAuthResponse {
   token: string;
   lang: string;
@@ -314,6 +316,7 @@ export type ChenDatabaseSection = "basic" | "schemas" | "tables" | "views" | "in
 export interface ChenDatabaseWorkspaceTab extends ChenTabDefinition {
   kind: "database";
   node: ChenTreeNode;
+  schemaOverview: ChenSchemaOverview | null;
   activeSection: ChenDatabaseSection;
   catalogLoaded: boolean;
   catalogLoading: boolean;

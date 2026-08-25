@@ -19,7 +19,6 @@ impl VersionService {
     /// 获取客户端版本信息
     pub async fn get_version_message(&self) -> ApiResponse {
         let url = self.api.endpoint(endpoint::settings::CLIENT_VERSIONS);
-        log::info!("获取当前版本信息: {}", url);
         // 该接口为公开接口，不需要 bearer_token
         self.api
             .get_with_response_timeout(&url, Duration::from_secs(10))

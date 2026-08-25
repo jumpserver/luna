@@ -2,20 +2,27 @@ import type { JmsComponent } from "@jumpserver/connectors-core";
 
 import type { Component } from "vue";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
-import {
-  KokoFileEditorSessionSurface,
-  KokoFileManagerSessionSurface,
-  KokoKubernetesWorkspace,
-  KokoTerminalSessionSurface
-} from "@jumpserver/koko";
-
-import ChenDatabaseSessionSurface from "~/chen/workspaces/DatabaseSessionSurface.vue";
-import LionRemoteSessionSurface from "~/lion/workspaces/RemoteSessionSurface.vue";
+import type { KokoSurfaceMode } from "~/shared/connectors/types/component";
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
-import GuideSessionSurface from "~/shared/connectors/GuideSessionSurface.vue";
-import LegacyIframeSession from "~/shared/connectors/LegacyIframeSession.vue";
-import LocalShellSessionSurface from "~/workspaces/LocalShellSessionSurface.vue";
-import ScriptEditorSessionSurface from "~/workspaces/ScriptEditorSessionSurface.vue";
+
+const KokoTerminalSessionSurface = defineAsyncComponent(() =>
+  import("@jumpserver/koko").then((module) => module.KokoTerminalSessionSurface)
+);
+const KokoFileManagerSessionSurface = defineAsyncComponent(() =>
+  import("@jumpserver/koko").then((module) => module.KokoFileManagerSessionSurface)
+);
+const KokoFileEditorSessionSurface = defineAsyncComponent(() =>
+  import("@jumpserver/koko").then((module) => module.KokoFileEditorSessionSurface)
+);
+const KokoKubernetesWorkspace = defineAsyncComponent(() =>
+  import("@jumpserver/koko").then((module) => module.KokoKubernetesWorkspace)
+);
+const ChenDatabaseSessionSurface = defineAsyncComponent(() => import("~/chen/workspaces/DatabaseSessionSurface.vue"));
+const LionRemoteSessionSurface = defineAsyncComponent(() => import("~/lion/workspaces/RemoteSessionSurface.vue"));
+const GuideSessionSurface = defineAsyncComponent(() => import("~/shared/connectors/GuideSessionSurface.vue"));
+const LegacyIframeSession = defineAsyncComponent(() => import("~/shared/connectors/LegacyIframeSession.vue"));
+const LocalShellSessionSurface = defineAsyncComponent(() => import("~/workspaces/LocalShellSessionSurface.vue"));
+const ScriptEditorSessionSurface = defineAsyncComponent(() => import("~/workspaces/ScriptEditorSessionSurface.vue"));
 
 export interface ConnectorRegistryEntry {
   component: Component;

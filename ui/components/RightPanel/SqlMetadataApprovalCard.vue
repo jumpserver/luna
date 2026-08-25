@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ChenSqlMetadataApproval, ChenSqlMetadataApprovalDecision } from "~/chen/composables/useChenSqlAiSessions";
 
-defineProps<{ approval: ChenSqlMetadataApproval }>();
+defineProps<{ approval: ChenSqlMetadataApproval; terminal?: boolean }>();
 const emit = defineEmits<{
   resolve: [decision: ChenSqlMetadataApprovalDecision];
 }>();
@@ -25,7 +25,7 @@ function metadataCategoryLabel(category: string) {
           {{ t("RightPanel.SQLAIMetadataApprovalTitle") }}
         </div>
         <p class="mt-0.5 text-[10px] leading-4 text-muted">
-          {{ t("RightPanel.SQLAIMetadataApprovalDescription") }}
+          {{ t(terminal ? "RightPanel.AIMetadataApprovalDescription" : "RightPanel.SQLAIMetadataApprovalDescription") }}
         </p>
       </div>
     </header>
@@ -37,14 +37,16 @@ function metadataCategoryLabel(category: string) {
       </div>
 
       <p class="rounded-lg bg-elevated/60 p-2 text-[10px] leading-4 text-muted">
-        {{ t("RightPanel.SQLAIMetadataInitialContextNotice") }}
+        {{ t(terminal ? "RightPanel.AIMetadataInitialContextNotice" : "RightPanel.SQLAIMetadataInitialContextNotice") }}
       </p>
 
       <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1">
         <dt class="text-muted">{{ t("RightPanel.SQLAIMetadataDatabase") }}</dt>
         <dd class="break-all font-mono text-highlighted">{{ approval.database || "-" }}</dd>
-        <dt class="text-muted">{{ t("RightPanel.SQLAIMetadataSchema") }}</dt>
-        <dd class="break-all font-mono text-highlighted">{{ approval.schema || "-" }}</dd>
+        <template v-if="!terminal || approval.schema">
+          <dt class="text-muted">{{ t("RightPanel.SQLAIMetadataSchema") }}</dt>
+          <dd class="break-all font-mono text-highlighted">{{ approval.schema }}</dd>
+        </template>
         <dt class="text-muted">{{ t("RightPanel.SQLAIMetadataExpires") }}</dt>
         <dd class="text-highlighted">
           {{ t("RightPanel.SQLAIMetadataExpiresValue", { count: approval.expiresInSeconds }) }}
@@ -138,7 +140,11 @@ function metadataCategoryLabel(category: string) {
       />
     </div>
     <p class="border-t border-warning/20 px-2.5 py-2 text-[10px] leading-4 text-muted">
-      {{ t("RightPanel.SQLAIMetadataSessionHint") }}
+      {{
+        t(terminal ? "RightPanel.AIMetadataSessionHint" : "RightPanel.SQLAIMetadataSessionHint", {
+          count: approval.followUpTableLimit
+        })
+      }}
     </p>
   </section>
 </template>

@@ -12,8 +12,30 @@ export const useThemeOptions = () => {
     setPrimaryColorLight,
     setPrimaryColorDark
   } = useSettingManager();
-  const { userTheme, manualSetTheme } = useThemeAdapter();
+  const { userTheme, themeMode, followSystem, manualSetTheme, enableFollowSystem } = useThemeAdapter();
   const { applyPrimaryColor } = useColor();
+
+  const currentAppearanceMode = computed<"withSystem" | "light" | "dark">(() => {
+    if (themeMode.value === "withSystem" || (!themeMode.value && followSystem.value)) {
+      return "withSystem";
+    }
+
+    if (themeMode.value === "dark" || userTheme.value === "dark") return "dark";
+
+    return "light";
+  });
+
+  const applyAppearanceMode = async (mode: "withSystem" | "light" | "dark") => {
+    if (mode === "withSystem") {
+      await enableFollowSystem();
+    } else {
+      manualSetTheme(mode);
+    }
+
+    try {
+      useTauriEventEmit("theme-changed", { mode });
+    } catch {}
+  };
 
   const darkThemeIds = new Set<ThemePresetId>(DARK_THEME_PRESETS.map((item) => item.id));
 
@@ -59,6 +81,36 @@ export const useThemeOptions = () => {
     } catch {}
   };
 
+  const appearanceModeItems = computed<DropdownMenuItem[]>(() => [
+    {
+      label: t("Common.WithSystem"),
+      icon: "i-lucide-monitor",
+      type: "checkbox",
+      checked: currentAppearanceMode.value === "withSystem",
+      onUpdateChecked: (checked: boolean) => {
+        if (checked) void applyAppearanceMode("withSystem");
+      }
+    },
+    {
+      label: t("Common.Light"),
+      icon: "i-lucide-sun-medium",
+      type: "checkbox",
+      checked: currentAppearanceMode.value === "light",
+      onUpdateChecked: (checked: boolean) => {
+        if (checked) void applyAppearanceMode("light");
+      }
+    },
+    {
+      label: t("Common.Dark"),
+      icon: "i-lucide-moon-star",
+      type: "checkbox",
+      checked: currentAppearanceMode.value === "dark",
+      onUpdateChecked: (checked: boolean) => {
+        if (checked) void applyAppearanceMode("dark");
+      }
+    }
+  ]);
+
   const themeDropdownItems = computed<DropdownMenuItem[][]>(() => [
     [
       {
@@ -87,6 +139,9 @@ export const useThemeOptions = () => {
   return {
     currentThemePresetId,
     currentThemePresetLabel,
+    currentAppearanceMode,
+    appearanceModeItems,
+    applyAppearanceMode,
     themeSelectItems,
     themeDropdownItems,
     selectThemePreset

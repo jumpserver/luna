@@ -7,7 +7,7 @@ export interface ChenQualifiedRelation {
   catalog: string | null;
   schema: string;
   name: string;
-  kind: "table" | "view";
+  kind: "table" | "view" | "materialized_view";
 }
 
 export interface ChenSqlColumnMetadata {

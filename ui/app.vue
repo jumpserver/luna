@@ -25,6 +25,8 @@ const settingManager = useSettingManager();
 const {
   language,
   fontFamily,
+  uiFontSize,
+  codeFontSize,
   primaryColorLight,
   primaryColorDark,
   lightThemePreset,
@@ -146,6 +148,12 @@ watch(
 );
 
 watch(
+  () => [uiFontSize.value, codeFontSize.value] as const,
+  ([uiSize, codeSize]) => applyFontSizes(uiSize, codeSize),
+  { immediate: true }
+);
+
+watch(
   () => language.value,
   (pref) => {
     applyLanguagePreference(pref);
@@ -166,6 +174,13 @@ function applyFont(font: string) {
 
   document.documentElement.style.setProperty("--font-sans", font);
   document.documentElement.style.setProperty("--font-heading", font);
+}
+
+function applyFontSizes(uiSize: number, codeSize: number) {
+  if (!import.meta.client) return;
+
+  document.documentElement.style.setProperty("--app-ui-font-size", `${uiSize}px`);
+  document.documentElement.style.setProperty("--app-code-font-size", `${codeSize}px`);
 }
 
 async function resolveEffectiveLanguage(pref: LanguagePreference): Promise<LangType> {

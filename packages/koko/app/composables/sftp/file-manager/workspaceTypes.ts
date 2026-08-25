@@ -65,6 +65,7 @@ export interface SftpRemotePaneHandle {
 
 export interface SftpTransferPaneHandle {
   manager: {
+    currentPath: MaybeRef<string>;
     operations: Pick<SftpFileOperations, "readFile" | "uploadBlob">;
   };
   clearTransferredSelection: (names: string[], sourcePath: string, revision: number) => void;

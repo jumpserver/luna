@@ -1,9 +1,11 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { parseEnvelope, parseJSONPayload } from "#koko/composables/terminal/envelope";
 
 import {
   getKokoTerminalAiSession,
   handleKokoTerminalAiMessage,
   registerKokoTerminalAiSession,
+  sendKokoTerminalAiControl,
   unregisterKokoTerminalAiSession
 } from "#koko/composables/terminal/useTerminalAiSessions";
 
@@ -60,6 +62,41 @@ it("retains structured Terminal AI presentation metadata", () => {
   });
 });
 
+it("resolves SQL metadata approval for the active terminal", () => {
+  const session = createSession("metadata-approval");
+  handleKokoTerminalAiMessage(session.paneId, {
+    id: "capability",
+    role: "assistant",
+    metadata: { terminalId: 9 },
+    parts: [{ type: "data-capability", data: { enabled: true } }]
+  });
+  handleKokoTerminalAiMessage(session.paneId, {
+    id: "metadata",
+    role: "assistant",
+    metadata: { terminalId: 9 },
+    parts: [
+      {
+        type: "data-metadata-approval",
+        data: { id: "approval-1", digest: "digest-1", database: "app", tables: ["users"], tableLimit: 5 }
+      }
+    ]
+  });
+
+  session.resolveMetadataApproval("approve_session");
+
+  const frame = parseEnvelope(vi.mocked(session.socket!.send).mock.calls[0]![0] as Uint8Array);
+  expect(parseJSONPayload<Record<string, any>>(frame.payload)).toMatchObject({
+    metadata: { terminalId: 9 },
+    parts: [
+      {
+        type: "data-metadata-approval",
+        data: { id: "approval-1", digest: "digest-1", decision: "approve_session" }
+      }
+    ]
+  });
+  expect(session.metadataApproval?.resolving).toBe(true);
+});
+
 it("keeps structured runtime error codes when the AI SDK reports the stream error", async () => {
   const session = createSession("runtime-error-code");
   handleKokoTerminalAiMessage(session.paneId, {
@@ -97,4 +134,28 @@ it("exposes local transport failures as translatable error codes", async () => {
 
   expect(session.errorCode).toBe("unavailable");
   expect(session.errorText).toBe("");
+});
+
+it("stops the active response after sending an interrupt", async () => {
+  const session = createSession("interrupt");
+  handleKokoTerminalAiMessage(session.paneId, {
+    id: "capability",
+    role: "assistant",
+    metadata: { terminalId: 9 },
+    parts: [{ type: "data-capability", data: { enabled: true } }]
+  });
+
+  const response = session.chat.sendMessage({ text: "run", metadata: { terminalId: 9 } });
+  await Promise.resolve();
+  await Promise.resolve();
+  sendKokoTerminalAiControl(session.paneId, {
+    id: "interrupt",
+    role: "user",
+    metadata: { terminalId: 9 },
+    parts: [{ type: "data-interrupt", data: { reason: "user" } }]
+  });
+  await response;
+
+  expect(session.chat.status.value).toBe("ready");
+  expect(session.socket?.send).toHaveBeenCalledTimes(2);
 });

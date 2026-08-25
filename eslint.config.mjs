@@ -1,5 +1,17 @@
 import eslintConfig from "@antfu/eslint-config";
+import oxlint from "eslint-plugin-oxlint";
 import nuxtConfig from "./.nuxt/eslint.config.mjs";
+
+const unusedVarsRule = [
+  "error",
+  {
+    vars: "all",
+    varsIgnorePattern: "^_",
+    args: "after-used",
+    argsIgnorePattern: "^_",
+    ignoreRestSiblings: true
+  }
+];
 
 export default eslintConfig(
   // General
@@ -13,16 +25,8 @@ export default eslintConfig(
       "jsonc/indent": "off",
       "no-console": "off",
       "no-new-func": "off",
-      "unused-imports/no-unused-vars": [
-        "error",
-        {
-          vars: "all",
-          varsIgnorePattern: "^_",
-          args: "after-used",
-          argsIgnorePattern: "^_",
-          ignoreRestSiblings: true
-        }
-      ],
+      "unused-imports/no-unused-imports": "off",
+      "unused-imports/no-unused-vars": "off",
       "antfu/consistent-chaining": "off",
       "antfu/consistent-list-newline": "off",
       "unicorn/number-literal-case": "off",
@@ -73,5 +77,19 @@ export default eslintConfig(
     }
   },
 
-  nuxtConfig()
+  nuxtConfig(),
+
+  // Vue template references are invisible to Oxlint, so ESLint keeps ownership
+  // of unused bindings and imports inside single-file components.
+  {
+    files: ["**/*.vue"],
+    rules: {
+      "unused-imports/no-unused-imports": "error",
+      "unused-imports/no-unused-vars": unusedVarsRule
+    }
+  },
+
+  // Oxlint owns every rule it can run natively. ESLint remains responsible for
+  // unsupported rules, including rules that require Vue's template AST.
+  ...oxlint.buildFromOxlintConfigFile("./.oxlintrc.json")
 );

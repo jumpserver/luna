@@ -18,6 +18,7 @@ import {
 import { createTerminalAiMessageId, sendKokoTerminalAiControl } from "#koko/composables/terminal/useTerminalAiSessions";
 import { getWorkspaceAiSession, isChenSqlWorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
 import SqlMetadataApprovalCard from "./SqlMetadataApprovalCard.vue";
+import SqlSchemaResultCard from "./SqlSchemaResultCard.vue";
 
 interface ViewStep {
   id: string;
@@ -87,6 +88,13 @@ interface MetadataApprovalItem {
   kind: "metadata-approval";
   key: string;
   approval: ChenSqlMetadataApproval;
+  terminal: boolean;
+}
+
+interface SchemaResultItem {
+  kind: "schema-result";
+  key: string;
+  data: TerminalAiEventData;
 }
 
 type ViewItem =
@@ -97,14 +105,15 @@ type ViewItem =
   | SqlProposalItem
   | SqlThoughtItem
   | SqlTimingItem
-  | MetadataApprovalItem;
+  | MetadataApprovalItem
+  | SchemaResultItem;
 
 const { t } = useI18n();
 const { activePaneId } = useWorkspaceTabs();
 const messagesElement = ref<HTMLElement | null>(null);
 const session = computed(() => getWorkspaceAiSession(activePaneId.value));
 const sqlSession = computed(() => (isChenSqlWorkspaceAiSession(session.value) ? session.value : null));
-const metadataApproval = computed(() => sqlSession.value?.metadataApproval || null);
+const metadataApproval = computed(() => session.value?.metadataApproval || null);
 const assistantName = computed(() => (sqlSession.value ? t("RightPanel.SQLAIName") : "Terminal AI"));
 const available = computed(() => Boolean(session.value?.enabled));
 const unavailableTitle = computed(() =>
@@ -361,6 +370,11 @@ const viewItems = computed<ViewItem[]>(() => {
         return;
       }
 
+      if (part.type === "data-schema-result") {
+        items.push({ kind: "schema-result", key: `${message.id}-schema-result-${partIndex}`, data });
+        return;
+      }
+
       if (part.type === "data-plan") {
         const planId = String(data.id || `plan-${message.id}`);
         const plan = ensurePlan(planId, `${message.id}-plan-${partIndex}`);
@@ -414,12 +428,31 @@ const viewItems = computed<ViewItem[]>(() => {
     items.splice(insertAt, 0, {
       kind: "metadata-approval",
       key: `metadata-approval-${approval.approvalId}`,
-      approval
+      approval,
+      terminal: !sqlSession.value
     });
   }
 
   return items;
 });
+
+const waitingForTerminalApproval = computed(() => {
+  const current = session.value;
+  if (!current || sqlSession.value) return false;
+  return viewItems.value.some(
+    (item) =>
+      item.kind === "plan" &&
+      item.steps.some((step) =>
+        step.executions.some(
+          (execution) =>
+            execution.command?.partType === "data-approval" &&
+            !current.decisions.has(String(execution.command.id || ""))
+        )
+      )
+  );
+});
+
+const terminalActivityLabel = computed(() => runtimeStatusLabel.value || t("RightPanel.AIResponding"));
 
 function scrollToBottom() {
   void nextTick(() => {
@@ -581,7 +614,7 @@ function renderMarkdown(source: string) {
 }
 
 function stepStatus(step: ViewStep) {
-  if (["completed", "failed", "rejected", "skipped"].includes(step.status)) return step.status;
+  if (["completed", "failed", "interrupted", "rejected", "skipped"].includes(step.status)) return step.status;
   const execution = step.executions.at(-1);
   if (execution?.command && !execution.result) return String(execution.command.state || step.status);
   if (["running", "reviewing"].includes(String(execution?.result?.outcome))) {
@@ -678,7 +711,7 @@ function rejectSqlProposal(item: SqlProposalItem) {
 }
 
 function resolveMetadataApproval(decision: ChenSqlMetadataApprovalDecision) {
-  sqlSession.value?.resolveMetadataApproval(decision);
+  session.value?.resolveMetadataApproval(decision);
 }
 
 function isSqlThoughtExpanded(item: SqlThoughtItem) {
@@ -777,8 +810,11 @@ watch(
           <SqlMetadataApprovalCard
             v-else-if="item.kind === 'metadata-approval'"
             :approval="item.approval"
+            :terminal="item.terminal"
             @resolve="resolveMetadataApproval"
           />
+
+          <SqlSchemaResultCard v-else-if="item.kind === 'schema-result'" :data="item.data" />
 
           <UCollapsible
             v-else-if="item.kind === 'sql-thought'"
@@ -1158,6 +1194,28 @@ watch(
             {{ item.data.decision?.name || item.data.name || "" }}
           </div>
         </template>
+
+        <article
+          v-if="busy && !sqlSession && !waitingForTerminalApproval"
+          role="status"
+          aria-live="polite"
+          class="flex gap-2"
+        >
+          <span
+            class="grid size-6 shrink-0 place-items-center rounded-md border border-default bg-elevated text-primary"
+          >
+            <UIcon name="i-lucide-bot" class="size-3.5" />
+          </span>
+          <div class="min-w-0 max-w-[88%]">
+            <div class="text-[10px] text-muted">{{ assistantName }}</div>
+            <div
+              class="mt-1 flex items-center gap-2 rounded-xl rounded-tl-sm border border-default bg-elevated px-2.5 py-2 text-[11px] text-muted"
+            >
+              <UIcon name="i-lucide-loader-circle" class="size-3.5 shrink-0 animate-spin text-primary" />
+              <span>{{ terminalActivityLabel }}</span>
+            </div>
+          </div>
+        </article>
       </main>
 
       <footer class="shrink-0 space-y-2 border-t border-default p-3">
@@ -1183,7 +1241,7 @@ watch(
             @click="clearError"
           />
         </div>
-        <div v-if="runtimeStatusLabel || (sqlSession && busy)" class="flex items-center gap-1.5 text-[11px] text-muted">
+        <div v-if="sqlSession && (runtimeStatusLabel || busy)" class="flex items-center gap-1.5 text-[11px] text-muted">
           <UIcon
             :name="busy ? 'i-lucide-loader-circle' : 'i-lucide-circle-dot'"
             class="size-3"

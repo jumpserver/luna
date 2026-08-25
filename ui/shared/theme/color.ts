@@ -33,7 +33,9 @@ export function parseColorToRgb(color: string): [number, number, number] | null 
       const ratio = channel.endsWith("%") ? Number(channel.slice(0, -1)) / 100 : Number(channel);
       return Math.round(Math.min(Math.max(ratio, 0), 1) * 255);
     };
-    return [toByte(srgb[1]!), toByte(srgb[2]!), toByte(srgb[3]!)];
+    const [, red, green, blue] = srgb;
+    if (!red || !green || !blue) return null;
+    return [toByte(red), toByte(green), toByte(blue)];
   }
 
   return null;
@@ -74,7 +76,9 @@ export function contrastingTextColor(color: string, fallback = "#ffffff"): strin
     const value = channel / 255;
     return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
   };
-  const [r, g, b] = rgb.map(relativeLuminance);
+  const r = relativeLuminance(rgb[0]);
+  const g = relativeLuminance(rgb[1]);
+  const b = relativeLuminance(rgb[2]);
   const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
   const contrast = (first: number, second: number) =>
     (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);

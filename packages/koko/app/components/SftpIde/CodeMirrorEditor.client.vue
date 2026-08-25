@@ -130,7 +130,9 @@ function applyChangedLines(content = props.modelValue) {
   editor.dispatch({ effects: changedLinesSlot.reconfigure(changedLineExtension(props.baseline, content)) });
 }
 
-onMounted(() => {
+onMounted(async () => {
+  if (!container.value) return;
+  await hostAdapter.theme.ensureCodeMirror?.();
   if (!container.value) return;
   editor = new EditorView({
     parent: container.value,

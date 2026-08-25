@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FilenameStyle, OutputResolution, TranscodePower } from "~/store/modules/transcode";
+import type { FilenameStyle, OutputResolution, TranscodePower, TranscodeTaskStatus } from "~/store/modules/transcode";
 import { storeToRefs } from "pinia";
 import { useTranscodeStore } from "~/store/modules/transcode";
 
@@ -56,7 +56,7 @@ const openOutputFile = async (output: string) => {
   }
 };
 
-const statusLabelMap: Record<string, string> = {
+const statusLabelMap: Record<TranscodeTaskStatus, string> = {
   pending: "Transcode.StatusPending",
   queued: "Transcode.StatusQueued",
   processing: "Transcode.StatusProcessing",
@@ -64,7 +64,7 @@ const statusLabelMap: Record<string, string> = {
   error: "Transcode.StatusFailed"
 };
 
-const statusColorMap: Record<string, "neutral" | "primary" | "success" | "error" | "warning"> = {
+const statusColorMap: Record<TranscodeTaskStatus, "neutral" | "primary" | "success" | "error" | "warning"> = {
   pending: "neutral",
   queued: "warning",
   processing: "primary",
@@ -72,8 +72,8 @@ const statusColorMap: Record<string, "neutral" | "primary" | "success" | "error"
   error: "error"
 };
 
-const getStatusLabel = (status: string) => t(statusLabelMap[status]);
-const getStatusColor = (status: string): "neutral" | "primary" | "success" | "error" | "warning" =>
+const getStatusLabel = (status: TranscodeTaskStatus) => t(statusLabelMap[status]);
+const getStatusColor = (status: TranscodeTaskStatus): "neutral" | "primary" | "success" | "error" | "warning" =>
   statusColorMap[status];
 
 const formatDuration = (seconds?: number | null): string => {

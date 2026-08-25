@@ -13,8 +13,8 @@
 @theme {
   --font-sans: "Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "SFMono-Regular", "JetBrains Mono", "Cascadia Code", "Fira Code", "Menlo", "Consolas", monospace;
-  --text-regular: 13px;
-  --text-sm: 13px;
+  --text-regular: var(--app-ui-font-size);
+  --text-sm: var(--app-ui-font-size);
   --color-secondary: var(--ui-color-secondary-500);
   --color-elevated: #1e1e20;
 }
@@ -24,6 +24,8 @@
 }
 
 :root {
+  --app-ui-font-size: 13px;
+  --app-code-font-size: 13px;
   --ui-color-primary-500: #1ab394;
   --ui-color-elevated-500: #303237;
   --ui-color-secondary-500: #7e7e7e;
@@ -182,6 +184,18 @@
   --sidebar-icon-color: color-mix(in srgb, var(--app-text-primary) 64%, transparent);
   --sidebar-icon-muted: color-mix(in srgb, var(--app-text-muted) 82%, transparent);
   --sidebar-icon-active: var(--app-text-primary);
+  --replay-stage: var(--workspace-surface-background);
+  --replay-chrome: var(--workspace-surface-header);
+  --replay-panel: var(--workspace-surface-sidebar);
+  --replay-viewport: var(--terminal-background);
+  --replay-border: var(--workspace-surface-border);
+  --replay-border-strong: var(--app-border-strong);
+  --replay-control: color-mix(in srgb, var(--app-surface-overlay) 94%, transparent);
+  --replay-fg: var(--app-text-primary);
+  --replay-muted: var(--app-text-muted);
+  --replay-chip: var(--app-surface-panel-strong);
+  --replay-hover: var(--app-state-hover);
+  --replay-shadow: var(--theme-shadow-soft);
 }
 
 .dark {
@@ -299,6 +313,10 @@ body,
   -o-text-size-adjust: 100%;
   text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+body {
+  font-size: var(--app-ui-font-size);
 }
 
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),

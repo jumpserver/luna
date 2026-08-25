@@ -211,11 +211,12 @@ export function useChenQueryConsole(
         break;
       case "sql_error":
         if (tab.kind === "query" && packet.data && typeof packet.data === "object") {
+          const message = String(packet.data.message || "SQL execution failed");
           tab.lastSqlError = {
             ...packet.data,
-            message: String(packet.data.message || "SQL execution failed")
+            message
           };
-          appendLog(tab, { ...packet.data, level: 0, message: tab.lastSqlError.message });
+          appendLog(tab, { ...packet.data, level: 0, message });
         }
         break;
       case "update_state": {

@@ -2,37 +2,45 @@
 import Profile from "~/components/SideBar/profile.vue";
 
 const { t } = useI18n();
-const { currentThemePresetLabel, themeDropdownItems } = useThemeOptions();
+const { openSettings } = useSettingsWindow();
 
-// 公共按钮配置
 const commonButtonProps = {
   size: "sm" as const,
-  variant: "ghost" as const,
   color: "neutral" as const
 };
 
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
+
+const openSettingsWindow = () => {
+  void openSettings();
+};
 </script>
 
 <template>
   <section class="flex items-center h-full">
     <div class="flex items-center gap-1 px-2">
-      <UDropdownMenu
-        :items="themeDropdownItems"
-        :content="{ align: 'end', side: 'bottom', sideOffset: 8 }"
-        :ui="{ content: 'w-64 p-1' }"
-      >
-        <UButton icon="solar:palette-linear" :title="currentThemePresetLabel" v-bind="commonButtonProps" />
-      </UDropdownMenu>
+      <UTooltip arrow :text="t('Common.Settings')">
+        <UButton
+          icon="i-lucide-settings"
+          :aria-label="t('Common.Settings')"
+          v-bind="commonButtonProps"
+          variant="ghost"
+          @click="openSettingsWindow"
+        />
+      </UTooltip>
 
       <Profile placement="topbar" />
 
-      <UButton
-        :icon="rightPanelOpen ? 'i-lucide-panel-right-close' : 'i-lucide-panel-right'"
-        :title="rightPanelOpen ? t('RightPanel.Close') : t('RightPanel.Open')"
-        v-bind="commonButtonProps"
-        @click="toggleRightPanel"
-      />
+      <UTooltip arrow :text="rightPanelOpen ? t('RightPanel.Close') : t('RightPanel.Open')">
+        <UButton
+          :icon="rightPanelOpen ? 'i-lucide-panel-right-close' : 'i-lucide-panel-right'"
+          :aria-label="rightPanelOpen ? t('RightPanel.Close') : t('RightPanel.Open')"
+          :aria-pressed="rightPanelOpen"
+          v-bind="commonButtonProps"
+          :variant="rightPanelOpen ? 'soft' : 'ghost'"
+          @click="toggleRightPanel"
+        />
+      </UTooltip>
     </div>
   </section>
 </template>

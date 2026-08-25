@@ -206,7 +206,7 @@ onMounted(async () => {
               >
                 <span class="select-none font-ui-mono text-xs text-primary">$</span>
                 <code class="min-w-0 flex-1 break-all font-ui-mono text-xs leading-5 text-[var(--app-fg)]">
-                  {{ command.replace(token.value.value, "••••••••") }}
+                  {{ command.replace(token.value, "••••••••") }}
                 </code>
                 <UButton
                   color="neutral"

@@ -19,11 +19,20 @@ export type LayoutsType = "grid" | "table";
 export const MIN_SIDEBAR_WIDTH = 180;
 export const MAX_SIDEBAR_WIDTH = 420;
 export const DEFAULT_SIDEBAR_WIDTH = 220;
+export const MIN_FONT_SIZE = 10;
+export const MAX_FONT_SIZE = 24;
+export const DEFAULT_FONT_SIZE = 13;
 
 export const normalizeSidebarWidth = (width: unknown) => {
   const value = typeof width === "number" && Number.isFinite(width) ? Math.round(width) : DEFAULT_SIDEBAR_WIDTH;
 
   return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, value));
+};
+
+export const normalizeFontSize = (size: unknown) => {
+  const value = typeof size === "number" && Number.isFinite(size) ? Math.round(size) : DEFAULT_FONT_SIZE;
+
+  return Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, value));
 };
 
 export interface UserSettingPersistedState {
@@ -35,6 +44,8 @@ export interface UserSettingPersistedState {
   followSystem: boolean;
   layouts: LayoutsType;
   fontFamily: string;
+  uiFontSize: number;
+  codeFontSize: number;
   primaryColor: string;
   primaryColorLight: string;
   primaryColorDark: string;
@@ -67,7 +78,9 @@ const DEFAULT_STATE: UserSettingPersistedState = {
   themeMode: "" as ThemeType,
   followSystem: false,
   layouts: "grid",
-  fontFamily: '"Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  uiFontSize: DEFAULT_FONT_SIZE,
+  codeFontSize: DEFAULT_FONT_SIZE,
   primaryColor: "#1ab394",
   primaryColorLight: "#1ab394",
   primaryColorDark: "#34d399",
@@ -100,6 +113,8 @@ const loadWebState = () => {
     const parsed = { ...DEFAULT_STATE, ...(JSON.parse(raw) as Partial<UserSettingPersistedState>) };
     return {
       ...parsed,
+      uiFontSize: normalizeFontSize(parsed.uiFontSize),
+      codeFontSize: normalizeFontSize(parsed.codeFontSize),
       sidebarWidth: normalizeSidebarWidth(parsed.sidebarWidth),
       sidebarSections: normalizeSidebarSections(parsed.sidebarSections)
     };
@@ -140,6 +155,8 @@ export const useSettingStorage = () => {
     return {
       ...DEFAULT_STATE,
       ...saved,
+      uiFontSize: normalizeFontSize(saved.uiFontSize),
+      codeFontSize: normalizeFontSize(saved.codeFontSize),
       sidebarWidth: normalizeSidebarWidth(saved.sidebarWidth),
       sidebarSections: normalizeSidebarSections(saved.sidebarSections)
     };
@@ -179,6 +196,8 @@ export const useSettingStorage = () => {
         const next = { ...DEFAULT_STATE, ...((event as CustomEvent<UserSettingPersistedState>).detail || {}) };
         cb({
           ...next,
+          uiFontSize: normalizeFontSize(next.uiFontSize),
+          codeFontSize: normalizeFontSize(next.codeFontSize),
           sidebarWidth: normalizeSidebarWidth(next.sidebarWidth),
           sidebarSections: normalizeSidebarSections(next.sidebarSections)
         });
@@ -194,6 +213,8 @@ export const useSettingStorage = () => {
         const next = { ...DEFAULT_STATE, ...(value as UserSettingPersistedState) };
         cb({
           ...next,
+          uiFontSize: normalizeFontSize(next.uiFontSize),
+          codeFontSize: normalizeFontSize(next.codeFontSize),
           sidebarWidth: normalizeSidebarWidth(next.sidebarWidth),
           sidebarSections: normalizeSidebarSections(next.sidebarSections)
         });

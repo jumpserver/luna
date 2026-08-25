@@ -36,6 +36,21 @@ export function transformAssetData(rawData: RawAssetData): AssetItem {
   return item;
 }
 
+export function transformAssetDetail(assetId: string, detail: Record<string, any>): AssetItem {
+  return {
+    id: assetId,
+    name: detail.name || assetId,
+    address: detail.address || "-",
+    platform: detail.platform?.name || detail.platform || "",
+    zone: detail.zone?.name || detail.zone || "",
+    isActive: true,
+    category: detail.category?.value || detail.category || "",
+    type: detail.type?.value || detail.type || "",
+    permedAccounts: detail.permed_accounts ?? [],
+    permedProtocols: (detail.permed_protocols ?? []).filter((protocol: { name?: string }) => protocol?.name !== "winrm")
+  };
+}
+
 export function transformAssetsData(rawDataArray: RawAssetData[]): AssetItem[] {
   const data: AssetItem[] = [];
 

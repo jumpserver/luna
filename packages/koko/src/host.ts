@@ -23,17 +23,46 @@ export interface KokoEndpoint {
 export interface KokoSftpAsset {
   id: string;
   name: string;
-  permedAccounts?: Array<Record<string, unknown>>;
-  permedProtocols?: Array<{ name?: string }>;
-  [key: string]: unknown;
+}
+
+export interface KokoSftpAccount {
+  alias: string;
+  date_expired: string;
+  has_secret: boolean;
+  has_username: boolean;
+  id: string;
+  name: string;
+  secret_type: string;
+  username: string;
+  actions: Array<{ label: string; value: string }>;
+}
+
+export interface KokoSftpProtocol {
+  name: string;
+  port: number;
+  public: boolean;
+  setting?: unknown;
+}
+
+export interface KokoPreparedSftpAsset extends KokoSftpAsset {
+  address: string;
+  platform: string;
+  zone: string;
+  isActive: boolean;
+  category: string;
+  type: string;
+  user?: string;
+  comment?: string;
+  permedAccounts?: KokoSftpAccount[];
+  permedProtocols?: KokoSftpProtocol[];
 }
 
 export interface KokoSftpHostAdapter {
   organizationSelector: Component;
   assetTree: Component;
   currentOrganization: Ref<{ id: string; name: string } | null>;
-  prepareAsset: (asset: KokoSftpAsset) => Promise<KokoSftpAsset>;
-  useSessionCreator: () => (asset: KokoSftpAsset) => Promise<{ tokenId: string }>;
+  prepareAsset: (asset: KokoSftpAsset) => Promise<KokoPreparedSftpAsset>;
+  useSessionCreator: () => (asset: KokoPreparedSftpAsset) => Promise<{ tokenId: string }>;
   exchangeConnectToken: (tokenId: string) => Promise<{ id: string }>;
 }
 
@@ -41,6 +70,8 @@ export interface KokoThemeAdapter {
   xterm: () => ITheme;
   codeMirror: () => Extension;
   codeMirrorSyntax: () => Extension;
+  codeFontSize: () => number;
+  ensureCodeMirror?: () => Promise<void>;
 }
 
 export interface KokoHostAdapter {

@@ -1,4 +1,4 @@
-import type { AssetTreeKind, TokenResponse } from "~/types";
+import type { AssetTreeKind, TokenResponse, UserProfile } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export interface ApiRequest {
@@ -45,12 +45,26 @@ export interface SqlSnippetPayload {
   module: string;
 }
 
+export interface SqlSnippetListParams extends Record<string, unknown> {
+  module: string;
+  limit: number;
+  offset: number;
+  order: string;
+}
+
 export interface CommandSnippetPayload extends SqlSnippetPayload {
   comment?: string;
 }
 
 export interface PublicSettings {
   SECURITY_COMMAND_EXECUTION?: boolean;
+  SECURITY_WATERMARK_ENABLED?: boolean;
+  SECURITY_WATERMARK_SESSION_CONTENT?: string;
+  SECURITY_WATERMARK_WIDTH?: number;
+  SECURITY_WATERMARK_HEIGHT?: number;
+  SECURITY_WATERMARK_FONT_SIZE?: number;
+  SECURITY_WATERMARK_COLOR?: string;
+  SECURITY_WATERMARK_ROTATE?: number;
 }
 
 let lastAuthFailureAt = 0;
@@ -266,6 +280,35 @@ export function getPublicSettings(): Promise<PublicSettings> {
   });
 }
 
+export function getUserProfile(): Promise<UserProfile> {
+  return apiRequest<UserProfile>({
+    method: "GET",
+    path: "/api/v1/users/profile/",
+    query: {
+      fields: [
+        "id",
+        "name",
+        "username",
+        "email",
+        "avatar_url",
+        "phone",
+        "wechat",
+        "source",
+        "mfa_level",
+        "mfa_enabled",
+        "is_active",
+        "is_valid",
+        "is_expired",
+        "date_joined",
+        "last_login",
+        "date_expired",
+        "system_roles",
+        "org_roles"
+      ].join(",")
+    }
+  });
+}
+
 export function getSmartEndpoint(
   params: SmartEndpointParams,
   orgId?: string
@@ -359,10 +402,11 @@ export function updateCommandSnippet(id: string, payload: CommandSnippetPayload)
   });
 }
 
-export function getSqlSnippets(): Promise<unknown> {
+export function getSqlSnippets(query: SqlSnippetListParams): Promise<unknown> {
   return apiRequest<unknown>({
     method: "GET",
-    path: "/api/v1/ops/adhocs/"
+    path: "/api/v1/ops/adhocs/",
+    query
   });
 }
 

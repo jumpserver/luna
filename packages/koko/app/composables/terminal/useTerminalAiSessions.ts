@@ -7,6 +7,27 @@ import { buildJSONEnvelope, ENVELOPE_CHAT } from "#koko/composables/terminal/env
 
 export type TerminalAiEventData = Record<string, any>;
 export type TerminalAiChatMessage = UIMessage<TerminalAiEventData, Record<string, TerminalAiEventData>>;
+export type KokoTerminalAiMetadataApprovalDecision = "approve_once" | "approve_session" | "reject";
+
+export interface KokoTerminalAiMetadataApproval {
+  approvalId: string;
+  requestId: string;
+  toolCallId: string;
+  provider: string;
+  model: string;
+  database: string;
+  schema: string;
+  tables: string[];
+  query: string;
+  discovery: boolean;
+  maxMatches: number;
+  followUpTableLimit: number;
+  dataCategories: string[];
+  expandedScope: boolean;
+  expiresInSeconds: number;
+  resolving: boolean;
+  digest: string;
+}
 
 export interface KokoTerminalAiSession {
   paneId: string;
@@ -27,9 +48,11 @@ export interface KokoTerminalAiSession {
   runtimeExecution: string;
   errorCode: string;
   errorText: string;
+  metadataApproval: KokoTerminalAiMetadataApproval | null;
   decisions: Set<string>;
   executionOverrides: Map<string, string>;
   expansionOverrides: Map<string, boolean>;
+  resolveMetadataApproval: (decision: KokoTerminalAiMetadataApprovalDecision) => void;
 }
 
 class TerminalAiClientError extends Error {
@@ -238,9 +261,36 @@ function createSession(paneId: string, socket: WebSocket, terminalId: string): K
     runtimeExecution: "",
     errorCode: "",
     errorText: "",
+    metadataApproval: null,
     decisions: new Set<string>(),
     executionOverrides: new Map<string, string>(),
-    expansionOverrides: new Map<string, boolean>()
+    expansionOverrides: new Map<string, boolean>(),
+    resolveMetadataApproval: (decision: KokoTerminalAiMetadataApprovalDecision) => {
+      const approval = session.metadataApproval;
+      if (!approval || approval.resolving) return;
+      approval.resolving = true;
+      try {
+        sendKokoTerminalAiControl(paneId, {
+          id: createTerminalAiMessageId("metadata-approval"),
+          role: "user",
+          metadata: { terminalId: Number(session.terminalId) },
+          parts: [
+            {
+              type: "data-metadata-approval",
+              data: {
+                id: approval.approvalId,
+                digest: approval.digest,
+                decision
+              }
+            }
+          ]
+        });
+      } catch (error) {
+        approval.resolving = false;
+        session.errorCode = "metadata_approval_failed";
+        session.errorText = error instanceof Error ? error.message : "Failed to send metadata approval";
+      }
+    }
   }) as KokoTerminalAiSession;
   transports.set(session, transport);
   chatScopes.set(session, chatScope);
@@ -328,13 +378,48 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
     return;
   }
 
+  const metadataApproval = partData(message, "data-metadata-approval");
+  if (metadataApproval) {
+    session.metadataApproval = {
+      approvalId: String(metadataApproval.id || ""),
+      requestId: "",
+      toolCallId: "",
+      provider: "",
+      model: "",
+      database: String(metadataApproval.database || ""),
+      schema: "",
+      tables: Array.isArray(metadataApproval.tables) ? metadataApproval.tables.map(String) : [],
+      query: String(metadataApproval.query || ""),
+      discovery: false,
+      maxMatches: Number(metadataApproval.maxMatches) || 20,
+      followUpTableLimit: Number(metadataApproval.tableLimit) || 5,
+      dataCategories: Array.isArray(metadataApproval.dataCategories) ? metadataApproval.dataCategories.map(String) : [],
+      expandedScope: false,
+      expiresInSeconds: Number(metadataApproval.expiresInSeconds) || 300,
+      resolving: false,
+      digest: String(metadataApproval.digest || "")
+    };
+    return;
+  }
+
+  const metadataApprovalResolved = partData(message, "data-metadata-approval-resolved");
+  if (metadataApprovalResolved) {
+    if (session.metadataApproval?.approvalId === String(metadataApprovalResolved.id || "")) {
+      session.metadataApproval = null;
+    }
+    return;
+  }
+
   const progress = partData(message, "data-progress");
   if (progress) {
     session.runtimeStatus = String(progress.text || "");
     session.runtimeStatusCode = String(progress.code || "");
     session.runtimeState = String(progress.state || "");
     session.runtimeExecution = String(progress.execution || "");
-    if (session.runtimeState === "idle") transports.get(session)?.finish();
+    if (session.runtimeState === "idle") {
+      session.metadataApproval = null;
+      transports.get(session)?.finish();
+    }
     return;
   }
 
@@ -365,6 +450,7 @@ export function sendKokoTerminalAiControl(paneId: string, message: TerminalAiCha
   }
 
   socket.send(buildJSONEnvelope(ENVELOPE_CHAT, message));
+  if (message.parts.some((part) => part.type === "data-interrupt")) session.chat.stop();
 }
 
 export function createTerminalAiMessageId(prefix: string) {

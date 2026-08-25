@@ -94,8 +94,8 @@ const createTerminal = async () => {
 <template>
   <div class="flex flex-col gap-4">
     <div class="px-1">
-      <p class="text-sm font-medium">{{ t("Setting.TerminalSettings") }}</p>
-      <p class="mt-1 text-xs text-gray-500">{{ t("Setting.TerminalProgramDescription") }}</p>
+      <p class="text-sm font-medium text-highlighted">{{ t("Setting.TerminalSettings") }}</p>
+      <p class="mt-1 text-xs text-muted">{{ t("Setting.TerminalProgramDescription") }}</p>
     </div>
 
     <template v-if="terminalItems.length">
@@ -109,29 +109,28 @@ const createTerminal = async () => {
       />
     </template>
 
-    <div
-      v-else
-      class="rounded-lg border border-dashed border-[var(--app-border)] px-4 py-8 text-center text-sm text-gray-500"
+    <UEmpty v-else icon="i-lucide-monitor" size="sm" variant="naked" :title="t('Common.NoData')" />
+
+    <UCard
+      variant="outline"
+      :ui="{
+        root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]',
+        body: 'flex flex-wrap items-center justify-between gap-3'
+      }"
     >
-      {{ t("Common.NoData") }}
-    </div>
-
-    <div class="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-4">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="min-w-0">
-          <p class="text-sm font-medium">{{ t("Setting.CustomTerminal") }}</p>
-          <p class="mt-1 text-xs text-gray-500">{{ t("Setting.CustomTerminalDescription") }}</p>
-        </div>
-
-        <UButton
-          color="neutral"
-          variant="soft"
-          icon="i-lucide-plus"
-          :label="t('Setting.AddCustomTerminal')"
-          @click="createModalOpen = true"
-        />
+      <div class="min-w-0">
+        <p class="text-sm font-medium text-highlighted">{{ t("Setting.CustomTerminal") }}</p>
+        <p class="mt-1 text-xs text-muted">{{ t("Setting.CustomTerminalDescription") }}</p>
       </div>
-    </div>
+
+      <UButton
+        color="neutral"
+        variant="soft"
+        icon="i-lucide-plus"
+        :label="t('Setting.AddCustomTerminal')"
+        @click="createModalOpen = true"
+      />
+    </UCard>
 
     <UModal v-model:open="createModalOpen" :title="t('Setting.AddCustomTerminal')" :ui="{ content: 'max-w-2xl' }">
       <template #body>

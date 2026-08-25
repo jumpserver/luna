@@ -126,6 +126,7 @@ export interface PermOrgItem {
   is_root: boolean;
   is_default: boolean;
   is_system: boolean;
+  comment?: string;
 }
 
 export interface CurrentOrg extends PermOrgItem {
@@ -144,6 +145,32 @@ export interface PermissionOrgs {
 export interface RoleType {
   display_name: string;
   id: string;
+}
+
+export interface LabeledValue<T extends string | number = string> {
+  label: string;
+  value: T;
+}
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  avatar_url?: string;
+  phone?: string | null;
+  wechat?: string | null;
+  source?: string | LabeledValue;
+  mfa_level?: number | LabeledValue<number>;
+  mfa_enabled?: boolean;
+  is_active?: boolean;
+  is_valid?: boolean;
+  is_expired?: boolean;
+  date_joined?: string | null;
+  last_login?: string | null;
+  date_expired?: string | null;
+  system_roles?: RoleType[];
+  org_roles?: Array<RoleType & { name?: string }>;
 }
 
 export interface UserData {
@@ -430,6 +457,8 @@ export interface UserSettingPersistedState {
   followSystem: boolean;
   layouts: LayoutsType;
   fontFamily: string;
+  uiFontSize: number;
+  codeFontSize: number;
   primaryColor: string;
   primaryColorLight: string;
   primaryColorDark: string;

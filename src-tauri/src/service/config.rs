@@ -37,7 +37,7 @@ impl ConfigService {
     /// 开发环境下的配置路径
     fn resolve_dev_path() -> Option<PathBuf> {
         let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-        log::info!("Current working directory: {:?}", cwd);
+        log::debug!("Current working directory: {:?}", cwd);
 
         let candidates = [
             cwd.join("default-config.json"),
@@ -45,7 +45,7 @@ impl ConfigService {
             cwd.join("../src-tauri/default-config.json"),
         ];
         let result = candidates.into_iter().find(|p| p.is_file());
-        log::info!("Selected dev config path: {:?}", result);
+        log::debug!("Selected dev config path: {:?}", result);
         result
     }
 
@@ -192,21 +192,14 @@ impl ConfigService {
         let should_migrate_plugins =
             default_config.get("_plugins").is_some() && user_config.get("_plugins").is_none();
 
-        log::info!(
-            "Config versions - User: {}, Default: {}",
+        log::debug!(
+            "Config versions user={} default={}",
             user_version,
             default_version
         );
 
         // 如果默认配置版本更高，或当前版本引入了插件配置，则合并配置。
         if default_version > user_version || should_migrate_plugins {
-            log::info!(
-                "Upgrading config from version {} to {} (migrate_plugins={})",
-                user_version,
-                default_version,
-                should_migrate_plugins
-            );
-
             let merged_config = Self::merge_configs(user_config, default_config);
 
             // 写入合并后的配置
@@ -216,11 +209,13 @@ impl ConfigService {
                 .map_err(|e| format!("Failed to write merged config: {}", e))?;
 
             log::info!(
-                "Config upgraded successfully to version {}",
-                default_version
+                "Upgraded config from {} to {} (migrate_plugins={})",
+                user_version,
+                default_version,
+                should_migrate_plugins
             );
         } else {
-            log::info!("User config is up to date, no upgrade needed");
+            log::debug!("User config is up to date");
         }
 
         Ok(())
@@ -235,20 +230,16 @@ impl ConfigService {
 
         // 如果用户配置文件不存在，从模板复制
         if !user_config_path.exists() {
-            log::info!(
+            log::debug!(
                 "Copying config template from {:?} to {:?}",
                 template_path,
                 user_config_path
             );
             std::fs::copy(&template_path, &user_config_path)
                 .map_err(|e| format!("Failed to copy config template: {}", e))?;
-            log::info!("Initial config created successfully");
+            log::info!("Created initial config at {:?}", user_config_path);
         } else {
-            // 如果用户配置已存在，检查是否需要更新
-            log::info!(
-                "User config exists at {:?}, checking for updates",
-                user_config_path
-            );
+            log::debug!("User config exists at {:?}", user_config_path);
             if let Err(e) = Self::update_user_config_if_needed(&user_config_path, &template_path) {
                 log::warn!("Failed to update user config: {}", e);
                 // 不阻断流程，即使更新失败也继续使用现有配置
@@ -261,7 +252,7 @@ impl ConfigService {
     pub fn get_app_config(app: &tauri::AppHandle) -> Result<Value, String> {
         let path = Self::ensure_user_config(app)?;
 
-        log::info!("Reading config from: {:?}", path);
+        log::debug!("Reading config from {:?}", path);
 
         let content = std::fs::read_to_string(&path)
             .map_err(|e| format!("read config.json failed: {}", e))?;
@@ -301,7 +292,7 @@ impl ConfigService {
     ) -> Result<Value, String> {
         let config_path = Self::ensure_user_config(app)?;
 
-        log::info!("Updating config at: {:?}", config_path);
+        log::debug!("Updating config at {:?}", config_path);
 
         let content = std::fs::read_to_string(&config_path)
             .map_err(|e| format!("read config.json failed: {}", e))?;
@@ -364,7 +355,7 @@ impl ConfigService {
                 std::fs::write(&config_path, pretty)
                     .map_err(|e| format!("write config.json failed: {}", e))?;
 
-                log::info!("Config path updated successfully at: {:?}", config_path);
+                log::debug!("Updated config path at {:?}", config_path);
 
                 return Ok(json.get(os_key).cloned().ok_or_else(|| {
                     format!("config.json missing key for current OS: {}", os_key)
@@ -445,7 +436,7 @@ impl ConfigService {
         std::fs::write(&config_path, pretty)
             .map_err(|e| format!("write config.json failed: {}", e))?;
 
-        log::info!("Config updated successfully at: {:?}", config_path);
+        log::debug!("Updated config at {:?}", config_path);
 
         Ok(json
             .get(os_key)

@@ -1,0 +1,20 @@
+{
+  "name": "@jumpserver/online-player",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./nuxt": "./nuxt.config.ts"
+  },
+  "main": "./nuxt.config.ts",
+  "peerDependencies": {
+    "@vueuse/core": "^14.3.0",
+    "@watermark-design/vue": "^1.4.0",
+    "asciinema-player": "^3.10.0",
+    "guacamole-common-js-jumpserver": "1.1.0-c",
+    "nuxt": "^4.4.0",
+    "pretty-bytes": "^7.1.0",
+    "vue": "^3.5.0"
+  }
+}

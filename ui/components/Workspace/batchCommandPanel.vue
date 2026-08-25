@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { sendKokoTerminalDataToMany } from "@jumpserver/koko";
+import { sendKokoTerminalDataToMany } from "#koko/composables/useTerminalSessionRegistry";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { t } = useI18n();

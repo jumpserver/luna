@@ -27,10 +27,10 @@ const configureHttpProxy = (name: string, target: string) => (proxy: any) => {
 };
 
 export default defineNuxtConfig({
-  extends: ["@jumpserver/koko/nuxt"],
+  extends: ["@jumpserver/koko/nuxt", "@jumpserver/online-player/nuxt"],
   typescript: {
     tsConfig: {
-      include: ["../packages/koko/app/**/*"]
+      include: ["../packages/koko/app/**/*", "../packages/online-player/app/**/*"]
     }
   },
   srcDir: "ui/",
@@ -89,7 +89,7 @@ export default defineNuxtConfig({
     ],
     clientBundle: {
       scan: {
-        globInclude: ["ui/**/*.{vue,ts,js}", "packages/koko/**/*.{vue,ts,js}"]
+        globInclude: ["ui/**/*.{vue,ts,js}", "packages/koko/**/*.{vue,ts,js}", "packages/online-player/**/*.{vue,ts,js}"]
       }
     }
   },
@@ -222,7 +222,8 @@ export default defineNuxtConfig({
       }
     },
     build: {
-      sourcemap: false
+      sourcemap: false,
+      modulePreload: false
     }
   },
   devServer: {
@@ -242,7 +243,23 @@ export default defineNuxtConfig({
     enabled: true
   },
   experimental: {
-    typedPages: true
+    typedPages: true,
+    defaults: {
+      nuxtLink: {
+        prefetch: false,
+        prefetchOn: {
+          visibility: false
+        }
+      }
+    }
+  },
+  hooks: {
+    "build:manifest": function(manifest) {
+      for (const item of Object.values(manifest)) {
+        if (!item || typeof item !== "object") continue;
+        item.dynamicImports = [];
+      }
+    }
   },
   compatibilityDate: "2025-07-01"
 });

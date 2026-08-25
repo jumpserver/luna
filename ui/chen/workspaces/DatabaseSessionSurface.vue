@@ -35,6 +35,7 @@ import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import {
   fetchChenActions,
   fetchChenExport,
+  fetchChenSchemaOverview,
   fetchChenSqlColumns,
   fetchChenSqlRelations,
   uploadChenSqlFile
@@ -177,6 +178,23 @@ const sqlMetadataStore = new ChenSqlMetadataStore({
   listColumns: (scope, relations) =>
     fetchChenSqlColumns(auth.chenToken.value, scope, relations, undefined, endpointUrl.value)
 });
+const databaseCatalogLoads = new WeakMap<ChenDatabaseWorkspaceTab, symbol>();
+
+function invalidateDatabaseCatalogs() {
+  for (const tab of Object.values(workspace.workspaceTabState)) {
+    if (tab.kind !== "database") continue;
+    databaseCatalogLoads.set(tab, Symbol("invalidated schema metadata load"));
+    tab.schemaOverview = null;
+    tab.catalogLoaded = false;
+    tab.catalogLoading = false;
+    tab.catalogError = "";
+  }
+}
+
+function clearMetadataCaches() {
+  sqlMetadataStore.clear();
+  invalidateDatabaseCatalogs();
+}
 
 const currentWorkspaceNodeKey = computed(() => {
   return (
@@ -322,7 +340,7 @@ const session = useChenSession({
   },
   onDisconnected: () => {
     closeSqlAiSession();
-    sqlMetadataStore.clear();
+    clearMetadataCaches();
     closeAllConsoleSockets("Database session disconnected");
   },
   showMessage: (data) => {
@@ -898,6 +916,7 @@ async function finishCreateTable(tab: ChenCreateTableWorkspaceTab, succeeded: bo
 
   tab.created = true;
   tab.title = tab.tableName.trim() || tab.title;
+  clearMetadataCaches();
   toast.add({ title: "Table created", description: tab.tableName.trim(), color: "success" });
   await tree.loadNodeChildren(tab.parentNode, true);
 }
@@ -941,6 +960,7 @@ function finishTableStructure(tab: ChenTableStructureWorkspaceTab, succeeded: bo
   }
 
   tab.saved = true;
+  clearMetadataCaches();
   tab.columns = tab.columns
     .filter((column) => !column.deleted)
     .map((column) => ({
@@ -1003,30 +1023,57 @@ function openDataViewWorkspace(nodeKey: string, title = "Data View") {
 }
 
 function openDatabaseWorkspace(node: ChenTreeNode) {
-  workspace.openDatabaseTab(node, node.label || node.name || (node.type === "schema" ? "Schema" : "Database"));
+  const tab = workspace.openDatabaseTab(
+    node,
+    node.label || node.name || (node.type === "schema" ? "Schema" : "Database")
+  );
+  if (node.type === "schema") void loadDatabaseCatalog(tab);
 }
 
-async function loadDatabaseCatalog(tab: ChenDatabaseWorkspaceTab) {
-  if (tab.catalogLoaded || tab.catalogLoading) return;
+async function loadDatabaseCatalog(tab: ChenDatabaseWorkspaceTab, force = false) {
+  if ((!force && tab.catalogLoaded) || tab.catalogLoading) return;
+  const load = Symbol("schema metadata load");
+  databaseCatalogLoads.set(tab, load);
   tab.catalogLoading = true;
   tab.catalogError = "";
 
   try {
-    if (!tab.node.children?.length && tab.node.hasChildren !== false) await tree.loadNodeChildren(tab.node);
-
     if (tab.node.type === "schema") {
-      const objectFolders = (tab.node.children || []).filter((child) => child.type === "folder" && !child.leaf);
-      await Promise.all(
-        objectFolders.map(async (folder) => {
-          if (!folder.children?.length && folder.hasChildren !== false) await tree.loadNodeChildren(folder);
-        })
-      );
+      const overview = await fetchChenSchemaOverview(auth.chenToken.value, tab.nodeKey, undefined, endpointUrl.value);
+      if (databaseCatalogLoads.get(tab) !== load) return;
+      tab.schemaOverview = overview;
+    } else if ((force || !Array.isArray(tab.node.children)) && tab.node.hasChildren !== false) {
+      await tree.loadNodeChildren(tab.node, force);
     }
+    if (databaseCatalogLoads.get(tab) !== load) return;
     tab.catalogLoaded = true;
   } catch (cause) {
+    if (databaseCatalogLoads.get(tab) !== load) return;
     tab.catalogError = cause instanceof Error ? cause.message : String(cause);
   } finally {
-    tab.catalogLoading = false;
+    if (databaseCatalogLoads.get(tab) === load) tab.catalogLoading = false;
+  }
+}
+
+async function openSchemaOverviewTable(tab: ChenDatabaseWorkspaceTab, tableName: string) {
+  if (tab.node.type !== "schema") return;
+  try {
+    if (!Array.isArray(tab.node.children)) await tree.loadNodeChildren(tab.node);
+    const tablesFolder = (tab.node.children || []).find(
+      (child) => child.type === "folder" && String(child.label || child.name || "").toLowerCase() === "tables"
+    );
+    if (!tablesFolder) throw new Error("Tables folder is unavailable");
+    if (!Array.isArray(tablesFolder.children)) await tree.loadNodeChildren(tablesFolder);
+    const tableNode = (tablesFolder.children || []).find(
+      (child) => child.type === "table" && String(child.label || child.name || "") === tableName
+    );
+    if (!tableNode) throw new Error(`Table ${tableName} is unavailable`);
+    await handleNodeClick(tableNode);
+  } catch (cause) {
+    addErrorToast({
+      title: "Failed to open table",
+      description: cause instanceof Error ? cause.message : String(cause)
+    });
   }
 }
 
@@ -1201,8 +1248,14 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
     const response = await tree.runTreeAction(node, action);
     switch (response.event) {
       case "refresh_node":
-        sqlMetadataStore.clear();
+        clearMetadataCaches();
         await tree.loadNodeChildren(node, true);
+        {
+          const databaseTab = Object.values(workspace.workspaceTabState).find(
+            (tab): tab is ChenDatabaseWorkspaceTab => tab.kind === "database" && tab.nodeKey === node.key
+          );
+          if (databaseTab?.node.type === "schema") await loadDatabaseCatalog(databaseTab, true);
+        }
         break;
       case "new_query":
         openQueryWorkspace(response.data, "Query");
@@ -1455,6 +1508,7 @@ function clearRecentTables() {
 
 function runQueryTab(tab: ChenQueryLikeWorkspaceTab, selectedSql = "") {
   if (tab.kind === "console") {
+    if (mayChangeSqlMetadata(tab.pendingSql)) clearMetadataCaches();
     queryConsole.runConsoleTab(tab);
     return;
   }
@@ -1475,7 +1529,7 @@ function runQueryTab(tab: ChenQueryLikeWorkspaceTab, selectedSql = "") {
 
 function executeQueryTab(tab: ChenQueryConsoleTab, statement: string) {
   queryConsole.runQueryTab(tab, statement);
-  if (mayChangeSqlMetadata(statement)) sqlMetadataStore.clear();
+  if (mayChangeSqlMetadata(statement)) clearMetadataCaches();
 }
 
 function updateUnrestrictedMutationDialog(open: boolean) {
@@ -1523,7 +1577,7 @@ async function performUploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
   try {
     const result = await uploadChenSqlFile(auth.chenToken.value, file, undefined, endpointUrl.value);
     queryConsole.runQueryFile(tab, result.path);
-    sqlMetadataStore.clear();
+    clearMetadataCaches();
     toast.add({ title: "SQL file uploaded", description: file.name, color: "success" });
   } catch (cause) {
     addErrorToast({
@@ -1668,7 +1722,7 @@ function stopResize() {
 function focus() {}
 
 async function refreshResourceRoot() {
-  sqlMetadataStore.clear();
+  clearMetadataCaches();
   await tree.refreshRoot();
 }
 
@@ -1690,7 +1744,7 @@ onBeforeUnmount(() => {
   stopResize();
   closeSqlAiSession();
   closeAllConsoleSockets();
-  sqlMetadataStore.clear();
+  clearMetadataCaches();
   workspace.closeAllTabs();
   session.cleanupSession();
   window.removeEventListener("pointermove", handlePointerMove);
@@ -1815,7 +1869,7 @@ defineExpose({ focus });
             :db-type="auth.profile.value?.dbType"
             @select-section="updateDatabaseSection(activeDatabaseTab, $event)"
             @load-catalog="loadDatabaseCatalog(activeDatabaseTab)"
-            @open-table="handleNodeClick"
+            @open-table="openSchemaOverviewTable(activeDatabaseTab, $event)"
           />
 
           <CreateTablePanel

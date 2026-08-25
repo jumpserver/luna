@@ -53,7 +53,7 @@ impl PluginService {
             };
 
             if path.join(marker).is_file() {
-                log::info!("Resolved resource dir '{}' to {:?}", candidate, path);
+                log::debug!("Resolved resource dir '{}' to {:?}", candidate, path);
                 return Some(path);
             }
         }
@@ -68,7 +68,7 @@ impl PluginService {
             };
 
             if path.is_file() {
-                log::info!("Resolved resource file '{}' to {:?}", candidate, path);
+                log::debug!("Resolved resource file '{}' to {:?}", candidate, path);
                 return Some(path);
             }
         }
