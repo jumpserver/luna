@@ -40,18 +40,18 @@ pub async fn auth_login(
     };
 
     let client_id = oauth_config.client_id;
-    log::info!("OAuth config fetched for site: {}", site);
+    log::debug!("OAuth config fetched for site: {}", site);
 
     let fut = async {
         let client = build_oauth_client(&site, &client_id)?;
 
         // 生成 PKCE + 授权 URL
         let authorize = create_authorization_request(&client);
-        log::info!("OAuth authorization URL generated for site: {}", site);
+        log::debug!("OAuth authorization URL generated for site: {}", site);
         let pending = flow_state.register_authorization(authorize);
 
         match app.emit("auth_url", pending.auth_url) {
-            Ok(_) => log::info!("auth_url emitted for site: {}", site),
+            Ok(_) => log::debug!("auth_url emitted for site: {}", site),
             Err(e) => log::warn!("emit auth_url failed: {}", e),
         }
 
@@ -106,18 +106,11 @@ async fn build_login_success_payload(site: String, bearer: String) -> anyhow::Re
     );
 
     log::info!(
-        "login bootstrap responses: profile_status={}, permission_status={}, current_org_status={}, xpack_status={}",
+        "login bootstrap complete: profile={}, orgs={}, current_org={}, xpack={}",
         profile.status,
         permission_orgs.status,
         current_org.status,
         xpack_message.status
-    );
-    log::info!(
-        "login bootstrap payload sizes: profile={}, permission_orgs={}, current_org={}, xpack={}",
-        profile.data.len(),
-        permission_orgs.data.len(),
-        current_org.data.len(),
-        xpack_message.data.len()
     );
 
     let public_settings = if xpack_message.status == 200 && xpack_message.success {

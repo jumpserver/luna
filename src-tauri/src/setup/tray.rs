@@ -1,4 +1,4 @@
-use log::{error, info};
+use log::{error, info, warn};
 use std::error::Error;
 use tauri::{
     image::Image,
@@ -127,7 +127,7 @@ where
             "open-settings" => open_settings_window(app),
             "about" => open_about_window(app),
             "quit" => app.exit(0),
-            other => println!("menu item {} not handled", other),
+            other => warn!("menu item {} not handled", other),
         })
         .build(app);
 

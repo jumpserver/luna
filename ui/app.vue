@@ -25,6 +25,8 @@ const settingManager = useSettingManager();
 const {
   language,
   fontFamily,
+  uiFontSize,
+  codeFontSize,
   primaryColorLight,
   primaryColorDark,
   lightThemePreset,
@@ -35,20 +37,6 @@ const {
   isHydrated
 } = settingManager;
 
-const toolWindowTheme = computed(() => {
-  if (route.query.tool_window !== "1") return null;
-
-  const mode = route.query.theme === "dark" ? "dark" : route.query.theme === "light" ? "light" : null;
-  const preset = typeof route.query.themePreset === "string" ? route.query.themePreset : "";
-  const accent = typeof route.query.accent === "string" ? route.query.accent : "";
-
-  return {
-    mode,
-    preset,
-    accent
-  };
-});
-
 const unlistenPrimaryColor = ref<UnlistenFn | null>(null);
 const unlistenTheme = ref<UnlistenFn | null>(null);
 const unlistenFont = ref<UnlistenFn | null>(null);
@@ -56,7 +44,7 @@ const unlistenSettingsNavigate = ref<UnlistenFn | null>(null);
 const { openSettings } = useSettingsWindow();
 
 const backgroundColor = computed(() => {
-  const isDark = (toolWindowTheme.value?.mode || userTheme.value) === "dark";
+  const isDark = userTheme.value === "dark";
 
   // 只在 macOS 下设置透明度
   if (isMacOS.value) {
@@ -90,10 +78,8 @@ useHead({
 });
 
 function applyCurrentThemeColor() {
-  const mode = toolWindowTheme.value?.mode || (userTheme.value === "dark" ? "dark" : "light");
-  const hex =
-    toolWindowTheme.value?.accent ||
-    (mode === "dark" ? (primaryColorDark.value as string) : (primaryColorLight.value as string));
+  const mode = userTheme.value === "dark" ? "dark" : "light";
+  const hex = mode === "dark" ? (primaryColorDark.value as string) : (primaryColorLight.value as string);
 
   if (hex) {
     applyPrimaryColor(hex);
@@ -103,12 +89,11 @@ function applyCurrentThemeColor() {
 function applyThemePreset() {
   if (!import.meta.client) return;
 
-  const mode = toolWindowTheme.value?.mode || (userTheme.value === "dark" ? "dark" : "light");
+  const mode = userTheme.value === "dark" ? "dark" : "light";
   const preset =
-    toolWindowTheme.value?.preset ||
-    (mode === "dark"
+    mode === "dark"
       ? darkThemePreset.value || DEFAULT_DARK_THEME_PRESET
-      : lightThemePreset.value || DEFAULT_LIGHT_THEME_PRESET);
+      : lightThemePreset.value || DEFAULT_LIGHT_THEME_PRESET;
 
   document.documentElement.dataset.themePreset = preset;
   document.documentElement.dataset.codeMirrorThemePreset = codeMirrorThemePreset.value;
@@ -131,17 +116,14 @@ watch(
   { immediate: true }
 );
 watch(
-  () => route.fullPath,
-  () => {
-    applyCurrentThemeColor();
-    applyThemePreset();
-  },
+  () => fontFamily.value,
+  (val) => applyFont(val),
   { immediate: true }
 );
 
 watch(
-  () => fontFamily.value,
-  (val) => applyFont(val),
+  () => [uiFontSize.value, codeFontSize.value] as const,
+  ([uiSize, codeSize]) => applyFontSizes(uiSize, codeSize),
   { immediate: true }
 );
 
@@ -166,6 +148,13 @@ function applyFont(font: string) {
 
   document.documentElement.style.setProperty("--font-sans", font);
   document.documentElement.style.setProperty("--font-heading", font);
+}
+
+function applyFontSizes(uiSize: number, codeSize: number) {
+  if (!import.meta.client) return;
+
+  document.documentElement.style.setProperty("--app-ui-font-size", `${uiSize}px`);
+  document.documentElement.style.setProperty("--app-code-font-size", `${codeSize}px`);
 }
 
 async function resolveEffectiveLanguage(pref: LanguagePreference): Promise<LangType> {
@@ -204,9 +193,7 @@ async function applyAfterHydration() {
 }
 
 onMounted(async () => {
-  if (route.query.tool_window !== "1") {
-    void authSession.bootstrapPersistedSession();
-  }
+  void authSession.bootstrapPersistedSession();
 
   if (!isTauriRuntime()) return;
 

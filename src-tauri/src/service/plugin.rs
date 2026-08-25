@@ -53,7 +53,7 @@ impl PluginService {
             };
 
             if path.join(marker).is_file() {
-                log::info!("Resolved resource dir '{}' to {:?}", candidate, path);
+                log::debug!("Resolved resource dir '{}' to {:?}", candidate, path);
                 return Some(path);
             }
         }
@@ -68,7 +68,7 @@ impl PluginService {
             };
 
             if path.is_file() {
-                log::info!("Resolved resource file '{}' to {:?}", candidate, path);
+                log::debug!("Resolved resource file '{}' to {:?}", candidate, path);
                 return Some(path);
             }
         }
@@ -558,6 +558,8 @@ impl PluginService {
             "open_with": launch.get("open_with").and_then(|v| v.as_str()).unwrap_or(""),
             "launch_driver": launch.get("driver").and_then(|v| v.as_str()).unwrap_or(""),
             "application_id": launch.get("application_id").and_then(|v| v.as_str()).unwrap_or(""),
+            "script_path": launch.get("script").and_then(|v| v.as_str()).unwrap_or(""),
+            "script_interpreter": launch.get("interpreter").and_then(|v| v.as_str()).unwrap_or(""),
             "use_ssh_helper": launch.get("use_ssh_helper").and_then(|v| v.as_bool()).unwrap_or(false),
             "protocol_aliases": launch.get("protocol_aliases").cloned().unwrap_or(json!({})),
             "protocol_templates": launch.get("protocol_templates").cloned().unwrap_or(json!({})),
@@ -570,6 +572,7 @@ impl PluginService {
             "executable_type": executable_type,
             "path_exists": path_exists,
             "plugin_id": plugin_entry.id,
+            "plugin_dir": plugin_entry.plugin_dir,
             "builtin": plugin_entry.builtin,
             "icon_path": Self::icon_path(&plugin_entry.plugin_dir),
         });

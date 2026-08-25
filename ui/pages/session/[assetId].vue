@@ -59,7 +59,7 @@ watch(
 );
 
 const openLogin = () => {
-  useEventBus().emit("login");
+  useEventBus().emit("login", undefined);
 };
 </script>
 

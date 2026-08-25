@@ -107,45 +107,61 @@ const selectedEnabled = computed<boolean>({
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
-    <div class="flex items-center justify-between">
-      <span class="text-sm font-medium">{{ t("Common.Language") }}</span>
-
-      <SettingSelect
+  <UCard
+    variant="outline"
+    :ui="{
+      root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]',
+      body: 'divide-y divide-[var(--app-border)] p-0 sm:p-0'
+    }"
+  >
+    <div class="flex items-center justify-between gap-6 px-4 py-3">
+      <span class="text-sm font-medium text-highlighted">{{ t("Common.Language") }}</span>
+      <USelect
         v-model="selectedLanguage"
         :items="languageItems"
+        value-key="id"
         :aria-label="t('Common.Language')"
+        size="sm"
         class="w-48"
       />
     </div>
 
-    <USeparator />
-
-    <div class="flex items-center justify-between">
-      <span class="text-sm font-medium">{{ t("Setting.Charset") }}</span>
-
-      <SettingSelect v-model="selectedCharset" :items="charsetItems" :aria-label="t('Setting.Charset')" class="w-48" />
+    <div class="flex items-center justify-between gap-6 px-4 py-3">
+      <div class="min-w-0">
+        <p class="text-sm font-medium text-highlighted">{{ t("Setting.Charset") }}</p>
+        <p class="mt-0.5 text-xs leading-5 text-muted">{{ t("Setting.CharsetDescription") }}</p>
+      </div>
+      <USelect
+        v-model="selectedCharset"
+        :items="charsetItems"
+        value-key="id"
+        :aria-label="t('Setting.Charset')"
+        size="sm"
+        class="w-48"
+      />
     </div>
 
-    <USeparator />
-
-    <div class="flex items-center justify-between">
-      <span class="text-sm font-medium">{{ t("Setting.TerminalBackspace") }}</span>
-
+    <div class="flex items-center justify-between gap-6 px-4 py-3">
+      <div class="min-w-0">
+        <p class="text-sm font-medium text-highlighted">{{ t("Setting.TerminalBackspace") }}</p>
+        <p class="mt-0.5 text-xs leading-5 text-muted">{{ t("Setting.TerminalBackspaceDescription") }}</p>
+      </div>
       <USwitch v-model="selectedEnabled" :aria-label="t('Setting.TerminalBackspace')" />
     </div>
 
-    <USeparator />
-
-    <div class="flex items-center justify-between">
-      <span class="text-sm font-medium">{{ t("Setting.Resolution") }}</span>
-
-      <SettingSelect
+    <div class="flex items-center justify-between gap-6 px-4 py-3">
+      <div class="min-w-0">
+        <p class="text-sm font-medium text-highlighted">{{ t("Setting.Resolution") }}</p>
+        <p class="mt-0.5 text-xs leading-5 text-muted">{{ t("Setting.ResolutionDescription") }}</p>
+      </div>
+      <USelect
         v-model="selectedresolution"
         :items="resolutionItems"
+        value-key="id"
         :aria-label="t('Setting.Resolution')"
+        size="sm"
         class="w-48"
       />
     </div>
-  </div>
+  </UCard>
 </template>

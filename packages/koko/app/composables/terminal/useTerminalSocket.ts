@@ -238,7 +238,11 @@ export const useKokoTerminalSocket = () => {
     onConnected: (id, socket) => {
       const tabId = unref(sessionCtxRef)?.tabId;
       if (tabId) {
-        registerKokoTerminalSession(tabId, { socket, terminalId: id });
+        registerKokoTerminalSession(tabId, {
+          socket,
+          terminalId: id,
+          terminal: terminalRef.value || undefined
+        });
         registerKokoTerminalAiSession(tabId, socket, id);
         registerKokoLinuxMetricsSession(tabId, { socket, terminalId: id });
       }
@@ -321,7 +325,7 @@ export const useKokoTerminalSocket = () => {
 
   const createTerminal = () => {
     const terminal = new Terminal({
-      fontSize: defaultTerminalCfg.fontSize,
+      fontSize: hostAdapter.theme.codeFontSize(),
       fontFamily: defaultTerminalCfg.fontFamily,
       lineHeight: defaultTerminalCfg.lineHeight,
       cursorBlink: true,
@@ -376,6 +380,15 @@ export const useKokoTerminalSocket = () => {
       attributeFilter: ["class", "data-theme-preset", "data-terminal-theme-preset", "style"]
     });
   };
+
+  watch(
+    () => hostAdapter.theme.codeFontSize(),
+    (size) => {
+      if (!terminalRef.value) return;
+      terminalRef.value.options.fontSize = size;
+      nextTick(() => fitToContainer());
+    }
+  );
 
   onMounted(() => {
     if (!containerRef.value) return;

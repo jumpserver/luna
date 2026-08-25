@@ -478,9 +478,11 @@ export function chenDataViewRows(dataset: ChenDataViewDataset, state: ChenDataVi
     }
     return row;
   });
-  return state.insertRows
-    .map((item) => ({ ...item.data, [INSERT_VALUES]: { ...item.data[INSERT_VALUES] } }))
-    .concat(rows);
+  const insertRows = state.insertRows.map<Record<string, any>>((item) => ({
+    ...item.data,
+    [INSERT_VALUES]: { ...item.data[INSERT_VALUES] }
+  }));
+  return [...insertRows, ...rows];
 }
 
 function editableSourceField(dataset: ChenDataViewDataset) {

@@ -1,6 +1,7 @@
 import type {
   ConnectionInfo,
   ConnectionPreferenceInfo,
+  CurrentOrg,
   PermOrgItem,
   ProtocolConnectionPreferenceInfo,
   RdpGraphics,
@@ -244,13 +245,17 @@ export const useUserInfoStore = defineStore(
         return;
       }
 
-      const updatedUserData = {
+      const currentOrg: CurrentOrg = {
+        ...org,
+        comment: org.comment || ""
+      };
+      const updatedUserData: UserData = {
         ...currentUser.value,
-        org
+        org: currentOrg
       };
 
-      currentUser.value = updatedUserData as UserData;
-      userMap.value[currentAccountId.value] = updatedUserData as SiteUserData;
+      currentUser.value = updatedUserData;
+      userMap.value[currentAccountId.value] = updatedUserData;
 
       if (isTauriRuntime()) {
         void useTauriCoreInvoke("set_api_org", {

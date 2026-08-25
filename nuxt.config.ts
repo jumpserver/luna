@@ -222,7 +222,8 @@ export default defineNuxtConfig({
       }
     },
     build: {
-      sourcemap: false
+      sourcemap: false,
+      modulePreload: false
     }
   },
   devServer: {
@@ -242,7 +243,23 @@ export default defineNuxtConfig({
     enabled: true
   },
   experimental: {
-    typedPages: true
+    typedPages: true,
+    defaults: {
+      nuxtLink: {
+        prefetch: false,
+        prefetchOn: {
+          visibility: false
+        }
+      }
+    }
+  },
+  hooks: {
+    "build:manifest": function(manifest) {
+      for (const item of Object.values(manifest)) {
+        if (!item || typeof item !== "object") continue;
+        item.dynamicImports = [];
+      }
+    }
   },
   compatibilityDate: "2025-07-01"
 });

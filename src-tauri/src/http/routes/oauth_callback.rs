@@ -53,11 +53,7 @@ async fn handle_oauth_callback(
         );
     };
 
-    log::info!(
-        "OAuth HTTP callback received: code={}, state={:?}",
-        code.chars().take(20).collect::<String>(),
-        params.state
-    );
+    log::info!("OAuth HTTP callback received");
 
     let mut callback_url = format!("http://localhost/callback?code={}", code);
     if let Some(callback_state) = params.state {

@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use percent_encoding::percent_decode_str;
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -65,12 +65,15 @@ struct Application {
     plugin_id: String,
     name: String,
     display_name: String,
+    plugin_dir: String,
     path: String,
     executable_type: String,
     arg_format: String,
     launch_type: String,
     launch_driver: String,
     application_id: String,
+    script_path: String,
+    script_interpreter: String,
     use_ssh_helper: bool,
     protocol_aliases: HashMap<String, String>,
     protocol_templates: HashMap<String, String>,
@@ -152,12 +155,15 @@ fn resolve_application(app: &AppHandle, payload: &LaunchPayload) -> Result<Appli
         plugin_id: string_field(item, "plugin_id"),
         name: string_field(item, "name"),
         display_name: string_field(item, "display_name"),
+        plugin_dir: string_field(item, "plugin_dir"),
         path: string_field(item, "path"),
         executable_type: string_field(item, "executable_type"),
         arg_format: string_field(item, "arg_format"),
         launch_type: string_field(item, "launch_type"),
         launch_driver: string_field(item, "launch_driver"),
         application_id: string_field(item, "application_id"),
+        script_path: string_field(item, "script_path"),
+        script_interpreter: string_field(item, "script_interpreter"),
         use_ssh_helper: item
             .get("use_ssh_helper")
             .and_then(Value::as_bool)
@@ -279,6 +285,56 @@ fn render(template: &str, values: &HashMap<&str, String>) -> String {
         rendered = rendered.replace(&format!("{{{key}}}"), value);
     }
     rendered
+}
+
+fn plugin_script_path(application: &Application) -> Result<PathBuf, String> {
+    let relative = application.script_path.trim();
+    if relative.is_empty() {
+        return Err(format!(
+            "plugin '{}' does not define a script path",
+            application.display_name
+        ));
+    }
+
+    let plugin_dir = PathBuf::from(application.plugin_dir.trim());
+    if !plugin_dir.is_dir() {
+        return Err(format!(
+            "plugin directory not found for '{}': {}",
+            application.display_name, application.plugin_dir
+        ));
+    }
+
+    let candidate = plugin_dir.join(relative);
+    if candidate.is_file() {
+        return Ok(candidate);
+    }
+
+    Err(format!(
+        "plugin script not found for '{}': {}",
+        application.display_name,
+        candidate.display()
+    ))
+}
+
+fn jms_connect_json(payload: &LaunchPayload) -> Result<String, String> {
+    serde_json::to_string(&json!({
+        "name": decoded_name(payload),
+        "protocol": payload.protocol,
+        "username": username(payload),
+        "value": payload.token.value,
+        "host": payload.endpoint.host,
+        "port": payload.endpoint.port,
+        "asset": {
+            "info": {
+                "db_name": payload.asset.info.db_name
+            }
+        },
+        "file": {
+            "name": payload.file.name,
+            "content": payload.file.content
+        }
+    }))
+    .map_err(|error| format!("serialize JMS_CONNECT_JSON failed: {error}"))
 }
 
 fn is_terminal_driver(driver: &str) -> bool {
@@ -520,6 +576,56 @@ fn launch_executable(
     spawn(process)
 }
 
+fn launch_script(
+    application: &Application,
+    payload: &LaunchPayload,
+    values: &HashMap<&str, String>,
+) -> Result<(), String> {
+    let script = plugin_script_path(application)?;
+    let interpreter = application.script_interpreter.trim();
+    let mut process = if interpreter.is_empty() {
+        Command::new(&script)
+    } else {
+        let mut command = Command::new(interpreter);
+        command.arg(&script);
+        command
+    };
+
+    for (key, template) in &application.env {
+        process.env(key, render(template, values));
+    }
+    process.env("JMS_CONNECT_JSON", jms_connect_json(payload)?);
+    spawn(process)
+}
+
+fn launch_url(arguments: &str, values: &HashMap<&str, String>) -> Result<(), String> {
+    let rendered = render(arguments, values);
+    if rendered.trim().is_empty() {
+        return Err("plugin URL template rendered to an empty string".to_string());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let mut process = Command::new("open");
+        process.arg(rendered);
+        return spawn(process);
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let mut process = Command::new("cmd");
+        process.args(["/C", "start", "", rendered.as_str()]);
+        return spawn(process);
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let mut process = Command::new("xdg-open");
+        process.arg(rendered);
+        return spawn(process);
+    }
+}
+
 fn write_connection_file(app: &AppHandle, payload: &LaunchPayload) -> Result<PathBuf, String> {
     let dir = app
         .path()
@@ -603,6 +709,8 @@ pub fn launch_local_application(app: AppHandle, raw: String) -> Result<(), Strin
             launch_terminal(&app, &application, &arguments, application.use_ssh_helper)
         }
         "args" => launch_executable(&app, &application, &arguments, &values),
+        "script" => launch_script(&application, &payload, &values),
+        "url" => launch_url(&arguments, &values),
         launch_type => Err(format!(
             "unsupported application launch type: {launch_type}"
         )),

@@ -1,5 +1,6 @@
 import type { AssetItem } from "~/types";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { transformAssetDetail } from "~/utils";
 
 export interface SessionWindowConnectionInfo {
   protocol: string;
@@ -38,27 +39,8 @@ export function buildSessionPath(asset: AssetItem, connectionInfo?: SessionWindo
   return `/session/${encodeURIComponent(asset.id)}?${query.toString()}`;
 }
 
-function mapAssetDetail(assetId: string, detail: Record<string, any>): AssetItem {
-  const permedProtocols = (detail.permed_protocols ?? []).filter(
-    (protocol: { name?: string }) => protocol?.name !== "winrm"
-  );
-
-  return {
-    id: assetId,
-    name: detail.name || assetId,
-    address: detail.address || "-",
-    platform: detail.platform?.name || detail.platform || "",
-    zone: detail.zone?.name || detail.zone || "",
-    isActive: true,
-    category: detail.category?.value || detail.category || "",
-    type: detail.type?.value || detail.type || "",
-    permedAccounts: detail.permed_accounts ?? [],
-    permedProtocols
-  };
-}
-
 async function fetchSessionAsset(assetId: string, orgId: string): Promise<AssetItem> {
-  return mapAssetDetail(assetId, await getAssetDetailRequest(assetId, orgId));
+  return transformAssetDetail(assetId, await getAssetDetailRequest(assetId, orgId));
 }
 
 export function useSessionWindowConnect() {

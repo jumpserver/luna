@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { parseEnvelope, parseJSONPayload } from "#koko/composables/terminal/envelope";
 
 import {
   getKokoTerminalAiSession,
@@ -59,6 +60,41 @@ it("retains structured Terminal AI presentation metadata", () => {
     runtimeStatus: "legacy progress",
     runtimeStatusCode: "planning"
   });
+});
+
+it("resolves SQL metadata approval for the active terminal", () => {
+  const session = createSession("metadata-approval");
+  handleKokoTerminalAiMessage(session.paneId, {
+    id: "capability",
+    role: "assistant",
+    metadata: { terminalId: 9 },
+    parts: [{ type: "data-capability", data: { enabled: true } }]
+  });
+  handleKokoTerminalAiMessage(session.paneId, {
+    id: "metadata",
+    role: "assistant",
+    metadata: { terminalId: 9 },
+    parts: [
+      {
+        type: "data-metadata-approval",
+        data: { id: "approval-1", digest: "digest-1", database: "app", tables: ["users"], tableLimit: 5 }
+      }
+    ]
+  });
+
+  session.resolveMetadataApproval("approve_session");
+
+  const frame = parseEnvelope(vi.mocked(session.socket!.send).mock.calls[0]![0] as Uint8Array);
+  expect(parseJSONPayload<Record<string, any>>(frame.payload)).toMatchObject({
+    metadata: { terminalId: 9 },
+    parts: [
+      {
+        type: "data-metadata-approval",
+        data: { id: "approval-1", digest: "digest-1", decision: "approve_session" }
+      }
+    ]
+  });
+  expect(session.metadataApproval?.resolving).toBe(true);
 });
 
 it("keeps structured runtime error codes when the AI SDK reports the stream error", async () => {

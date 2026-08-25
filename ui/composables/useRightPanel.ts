@@ -10,12 +10,10 @@ const panelWidth = ref(DEFAULT_PANEL_WIDTH);
 
 export const useRightPanel = () => {
   const setOpen = (value: boolean) => {
-    if (value && !open.value) activeTab.value = "session";
     open.value = value;
   };
 
   const toggle = () => {
-    if (!open.value) activeTab.value = "session";
     open.value = !open.value;
   };
 

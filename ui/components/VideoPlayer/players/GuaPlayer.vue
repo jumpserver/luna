@@ -71,7 +71,7 @@ function detectVisibleBounds() {
     const rowHasContent = (y: number) => {
       for (let x = 0; x < width; x += xStep) {
         const index = (y * width + x) * 4;
-        const a = image[index + 3];
+        const a = image[index + 3] ?? 0;
 
         if (a > 0) {
           return true;
@@ -84,7 +84,7 @@ function detectVisibleBounds() {
     const columnHasContent = (x: number, top: number, bottom: number) => {
       for (let y = top; y <= bottom; y += yStep) {
         const index = (y * width + x) * 4;
-        const a = image[index + 3];
+        const a = image[index + 3] ?? 0;
 
         if (a > 0) {
           return true;

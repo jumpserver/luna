@@ -1,7 +1,6 @@
-import type { KokoHostAdapter, KokoWorkspaceTab } from "@jumpserver/koko";
-import type { AssetItem } from "~/types";
+import type { KokoHostAdapter, KokoPreparedSftpAsset, KokoSftpAsset, KokoWorkspaceTab } from "@jumpserver/koko/host";
 
-import { configureKokoThemeAdapter, kokoHostAdapterKey } from "@jumpserver/koko";
+import { configureKokoThemeAdapter, kokoHostAdapterKey } from "@jumpserver/koko/host";
 import OrganizationSelector from "~/components/Header/OrganizationSelector.vue";
 import SideBarAssetTree from "~/components/SideBar/assetTree.vue";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
@@ -9,9 +8,14 @@ import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
 import { useWorkspaceConnectors } from "~/composables/useWorkspaceConnectors";
 import { clearWorkspaceSessionDetails, setWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 import { registerWorkspaceSessionCloseGuard, useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
-import { createCodeMirrorSyntaxTheme, createCodeMirrorTheme } from "~/shared/theme/adapters/codemirror";
+import {
+  createHostCodeMirrorSyntaxTheme,
+  createHostCodeMirrorTheme,
+  ensureCodeMirrorThemeAdapters
+} from "~/shared/theme/adapters/codeMirrorThemeHost";
 import { toXtermTheme } from "~/shared/theme/adapters/xterm";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { transformAssetDetail } from "~/utils";
 import { isTauriRuntime } from "~/utils/runtime";
 
 export default defineNuxtPlugin((nuxtApp) => {
@@ -20,26 +24,17 @@ export default defineNuxtPlugin((nuxtApp) => {
     useWorkspaceTabs();
   const userInfoStore = useUserInfoStore();
   const { currentUser } = storeToRefs(userInfoStore);
+  const { codeFontSize } = useSettingManager();
 
-  const prepareSftpAsset = async (asset: AssetItem) => {
-    let connectAsset = asset;
-    if (!connectAsset.permedAccounts?.length || !connectAsset.permedProtocols?.length) {
-      const detail = await getAssetDetailRequest(asset.id, currentUser.value?.org?.id || "");
-      connectAsset = {
-        ...connectAsset,
-        permedAccounts: detail.permed_accounts ?? connectAsset.permedAccounts ?? [],
-        permedProtocols: (detail.permed_protocols ?? connectAsset.permedProtocols ?? []).filter(
-          (protocol: { name?: string }) => protocol?.name !== "winrm"
-        )
-      };
-    }
-    return connectAsset;
+  const prepareSftpAsset = async (asset: KokoSftpAsset) => {
+    const detail = await getAssetDetailRequest(asset.id, currentUser.value?.org?.id || "");
+    return transformAssetDetail(asset.id, { name: asset.name, ...detail });
   };
 
   const useSftpSessionCreator = () => {
     const { displayUser, handleAssetConnection } = useAssetAction();
 
-    return (asset: Awaited<ReturnType<typeof prepareSftpAsset>>) =>
+    return (asset: KokoPreparedSftpAsset) =>
       new Promise<{ tokenId: string }>((resolve, reject) => {
         const preference = userInfoStore.getConnectionPreferenceForAsset(asset.id);
         const remembered = userInfoStore.getConnectionInfoForAsset(asset.id);
@@ -73,8 +68,8 @@ export default defineNuxtPlugin((nuxtApp) => {
       markSessionFailed({
         tabId: tab.id,
         assetId: tab.assetId,
-        protocol: tab.protocol,
-        account: tab.account
+        protocol: tab.protocol || "",
+        account: tab.account || ""
       });
     },
     registerSessionCloseGuard: registerWorkspaceSessionCloseGuard,
@@ -105,8 +100,12 @@ export default defineNuxtPlugin((nuxtApp) => {
     },
     theme: {
       xterm: toXtermTheme,
-      codeMirror: createCodeMirrorTheme,
-      codeMirrorSyntax: createCodeMirrorSyntaxTheme
+      codeMirror: createHostCodeMirrorTheme,
+      codeMirrorSyntax: createHostCodeMirrorSyntaxTheme,
+      codeFontSize: () => codeFontSize.value,
+      ensureCodeMirror: async () => {
+        await ensureCodeMirrorThemeAdapters();
+      }
     }
   };
 

@@ -7,6 +7,7 @@ const { isMacOS } = usePlatform();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
+const hasMacTrafficLightInset = computed(() => isTauriRuntime() && isMacOS.value);
 const isToolRoute = computed(() => {
   const path = router.currentRoute.value.path.toLowerCase();
   return path.includes("/tools") || path.includes("/videoplayer") || path.includes("/transcode");
@@ -15,13 +16,16 @@ const isToolRoute = computed(() => {
 const showSidebarChrome = computed(
   () => !isToolRoute.value && (activeWorkspaceMode.value !== "assets" || loggedIn.value || isTauriRuntime())
 );
-const toolWindowTitleClass = computed(() => {
-  if (!(isMacOS.value && router.currentRoute.value.query.tool_window === "1")) {
-    return "px-4";
+
+const returnFromTool = async () => {
+  const previousPath = router.options.history.state.back;
+  if (typeof previousPath === "string" && previousPath) {
+    router.back();
+    return;
   }
 
-  return "pl-[84px] pr-4";
-});
+  await navigateTo("/");
+};
 
 const pageHeader = computed(() => {
   const path = router.currentRoute.value.path.toLowerCase();
@@ -61,15 +65,27 @@ const pageHeader = computed(() => {
 
       <WorkspaceTabHeader v-if="activeWorkspaceMode === 'assets'" />
 
-      <div
-        v-else-if="pageHeader"
-        class="h-full min-w-0 flex items-center justify-center gap-2"
-        :class="toolWindowTitleClass"
-      >
-        <UIcon :name="pageHeader.icon" class="text-primary h-4 w-4 shrink-0" />
-        <span class="min-w-0 truncate text-sm font-medium">
-          {{ pageHeader.title }}
-        </span>
+      <div v-else-if="pageHeader" class="relative h-full min-w-0 flex items-center justify-center px-10">
+        <UTooltip arrow :text="t('ToolTips.Back')">
+          <UButton
+            icon="i-lucide-arrow-left"
+            :aria-label="t('ToolTips.Back')"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            class="absolute top-1/2 -translate-y-1/2"
+            :class="hasMacTrafficLightInset ? 'left-24' : 'left-1'"
+            :ui="{ leadingIcon: 'size-4' }"
+            @click="returnFromTool"
+          />
+        </UTooltip>
+
+        <div class="flex min-w-0 items-center justify-center gap-2">
+          <UIcon :name="pageHeader.icon" class="text-primary size-4 shrink-0" />
+          <span class="min-w-0 truncate text-sm font-medium">
+            {{ pageHeader.title }}
+          </span>
+        </div>
       </div>
     </WorkspaceTopHeader>
   </div>

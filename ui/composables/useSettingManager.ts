@@ -11,7 +11,7 @@ import type {
 } from "~/types";
 
 import { createBatchedPersist } from "~/composables/createBatchedPersist";
-import { normalizeSidebarWidth, useSettingStorage } from "~/composables/useSettingStorage";
+import { normalizeFontSize, normalizeSidebarWidth, useSettingStorage } from "~/composables/useSettingStorage";
 import { DEFAULT_SIDEBAR_SECTIONS, normalizeSidebarSections } from "~/composables/useSidebarSections";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET, isThemePresetId } from "~/composables/useThemePresets";
 import { isCodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
@@ -63,6 +63,19 @@ const ensureHydration = () => {
       Object.assign(state, saved);
 
       const patch: Partial<UserSettingPersistedState> = {};
+
+      const normalizedUiFontSize = normalizeFontSize(state.uiFontSize);
+      const normalizedCodeFontSize = normalizeFontSize(state.codeFontSize);
+
+      if (normalizedUiFontSize !== state.uiFontSize) {
+        state.uiFontSize = normalizedUiFontSize;
+        patch.uiFontSize = normalizedUiFontSize;
+      }
+
+      if (normalizedCodeFontSize !== state.codeFontSize) {
+        state.codeFontSize = normalizedCodeFontSize;
+        patch.codeFontSize = normalizedCodeFontSize;
+      }
 
       const normalizedMode = (() => {
         const raw = (state.themeMode || "") as ThemeType;
@@ -194,6 +207,16 @@ export const useSettingManager = () => {
   const setFontFamily = (f: string) => {
     state.fontFamily = f;
     persist({ fontFamily: f });
+  };
+
+  const setUiFontSize = (size: number) => {
+    state.uiFontSize = normalizeFontSize(size);
+    persist({ uiFontSize: state.uiFontSize });
+  };
+
+  const setCodeFontSize = (size: number) => {
+    state.codeFontSize = normalizeFontSize(size);
+    persist({ codeFontSize: state.codeFontSize });
   };
 
   const setPrimaryColor = (c: string) => {
@@ -332,6 +355,8 @@ export const useSettingManager = () => {
     setCollapse,
     setAppConfig,
     setFontFamily,
+    setUiFontSize,
+    setCodeFontSize,
     setPrimaryColor,
     setFollowSystem,
     hydrationPromise,

@@ -7,10 +7,13 @@ function contrastRatio(background: string, foreground: string) {
   const relativeLuminance = (color: string) => {
     const rgb = parseColorToRgb(color);
     assert.ok(rgb, `Expected a valid color: ${color}`);
-    const [r, g, b] = rgb.map((channel) => {
+    const normalize = (channel: number) => {
       const value = channel / 255;
       return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-    });
+    };
+    const r = normalize(rgb[0]);
+    const g = normalize(rgb[1]);
+    const b = normalize(rgb[2]);
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   };
   const first = relativeLuminance(background);

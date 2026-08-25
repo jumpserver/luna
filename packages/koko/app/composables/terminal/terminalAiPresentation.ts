@@ -12,6 +12,8 @@ const progressKeys: Record<string, TerminalAiMessageKey> = {
   analyzing: "RightPanel.AIProgressAnalyzing",
   executing: "RightPanel.AIProgressExecuting",
   executing_pty: "RightPanel.AIProgressExecutingPty",
+  metadata_approval: "RightPanel.AIProgressMetadataApproval",
+  metadata_lookup: "RightPanel.AIProgressMetadataLookup",
   planning: "RightPanel.AIProgressPlanning",
   summarizing: "RightPanel.AIProgressSummarizing",
   tool_running: "RightPanel.AIProgressReadingTerminal"
@@ -45,6 +47,7 @@ const errorKeys: Record<string, TerminalAiMessageKey> = {
   failed: "RightPanel.AIFailed",
   interrupt_failed: "RightPanel.AIInterruptFailed",
   invalid_message: "RightPanel.AIErrorInvalidMessage",
+  metadata_approval_failed: "RightPanel.AIMetadataApprovalFailed",
   policy_failed: "RightPanel.AIPolicyFailed",
   response_active: "RightPanel.AIErrorResponseActive",
   send_failed: "RightPanel.AISendFailed",
