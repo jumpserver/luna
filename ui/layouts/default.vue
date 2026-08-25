@@ -3,7 +3,6 @@ import WorkspaceShell from "~/components/Workspace/shell.vue";
 import WorkspaceStatusFooter from "~/components/Workspace/statusFooter.vue";
 import {
   SettingsAboutPage,
-  SettingsAiPage,
   SettingsAppearancePage,
   SettingsApplicationPage,
   SettingsGeneralPage,
@@ -294,7 +293,6 @@ onBeforeUnmount(() => {
         <SettingsGeneralPage v-else-if="activeSettingsSection === 'general'" />
         <SettingsAppearancePage v-else-if="activeSettingsSection === 'appearance'" />
         <SettingsApplicationPage v-else-if="activeSettingsSection === 'application'" embedded />
-        <SettingsAiPage v-else-if="activeSettingsSection === 'ai'" />
         <SettingsAboutPage v-else />
       </KeepAlive>
     </SettingsShell>

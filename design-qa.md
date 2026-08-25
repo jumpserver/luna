@@ -1,20 +1,17 @@
 # Design QA
 
-- Scope: desktop-only AI settings and the SSH/local-shell `Cmd/Ctrl + K` contextual command panel.
-- Visual target: the selected compact two-column settings direction, using the existing JumpServer/Nuxt UI tokens and terminal surfaces.
-- References: the supplied terminal captures plus `/Users/zhaojisen/.codex/generated_images/01a0332e-7bba-7911-831a-9a505f220d2c/exec-a5c07f42-ba38-4c17-a246-cbe8e44e6c5b.png`.
-- Settings capture reviewed: `/tmp/jumpserver-ai-settings-enable4.png`.
+- Scope: Koko Terminal AI 的 Web/桌面 Cmd/Ctrl + K 轻量输入入口及 Xterm 光标提示。
+- Visual target: `/Users/zhaojisen/Desktop/ai-command-spec.html` 仅作为浮层尺寸、光标定位与主题表现参考。
+- Runtime boundary: 入口由当前 pane 的 Koko `data-capability.enabled` 和 WebSocket 状态决定，不依赖 Tauri 或终端协议判断。
 
 ## Review
 
-- Hierarchy: provider/CLI navigation remains compact; status badges use one label per source; endpoint, credential, and model controls use the same two-column rhythm.
-- Runtime boundary: AI settings and keyboard interaction are absent from the standalone web runtime.
-- Terminal panel: non-modal and mask-free; anchored to the active Xterm buffer cursor, constrained to the active terminal pane, and flipped above the cursor when the lower edge has insufficient room.
-- Discoverability: a passive, pointer-transparent shortcut hint remains inside eligible desktop terminal surfaces while the panel is closed.
-- Composition: the prompt state uses a compact two-row command palette with the generation action in the same visual group; proposal and risk states retain distinct hierarchy.
-- Risk states: low, medium, and high use semantic Nuxt UI colors; high risk adds an error ring, tinted command surface, shield alert, risk reason, and explicit destructive-action label.
-- Accessibility: non-modal dialog semantics, labeled prompt and close action, restored terminal focus, interruptible Escape/outside-click handling, reduced-motion support, and live error/proposal updates.
-- Theme consistency: all surfaces, borders, text, and muted states use existing semantic application tokens; no new palette or icon dependency was introduced.
-- Web Interface Guidelines: no remaining findings in the touched command panel.
+- Geometry: 浮层默认宽度 520px、最小宽度 280px，与光标和终端边缘保持 8px 间距；下方空间不足时翻转到光标上方。
+- Discoverability: 提示跟随 Xterm buffer 光标，位于光标右侧 6px，并保持 pointer-transparent。
+- Interaction: 浮层无遮罩；Esc/点击外部只关闭浮层并保留 session 草稿；提交后打开右侧 Terminal AI。
+- Session ownership: 浮层和右侧面板共用 Koko pane session、draft 与 `CHAT_MESSAGE`；任务忙碌或等待审批时快捷键直接打开右侧面板。
+- Policy ownership: 快捷入口不展示或修改审批策略，计划、ACL、审批、执行、结果和中断均由现有 Terminal AI 面板处理。
+- Theme consistency: 表面、边框、前景、弱化文字、终端前景和错误态均使用现有语义 token，无独立明暗主题分支。
+- Removed states: 设计稿中的本地来源、模型、命令 Proposal、风险标签和确认执行状态不再属于快捷入口。
 
-final result: passed
+Implementation review: passed. Runtime screenshot comparison was not run in this change.

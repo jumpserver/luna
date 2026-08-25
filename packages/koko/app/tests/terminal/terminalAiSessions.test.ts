@@ -2,10 +2,15 @@ import { afterEach, expect, it, vi } from "vitest";
 import { parseEnvelope, parseJSONPayload } from "#koko/composables/terminal/envelope";
 
 import {
+  disconnectKokoTerminalAiSession,
   getKokoTerminalAiSession,
   handleKokoTerminalAiMessage,
+  isKokoTerminalAiAvailable,
+  isKokoTerminalAiBusy,
+  isKokoTerminalAiWaitingForApproval,
   registerKokoTerminalAiSession,
   sendKokoTerminalAiControl,
+  submitKokoTerminalAiPrompt,
   unregisterKokoTerminalAiSession
 } from "#koko/composables/terminal/useTerminalAiSessions";
 
@@ -20,6 +25,109 @@ function createSession(paneId: string, readyState: number = WebSocket.OPEN) {
   paneIds.push(paneId);
   return registerKokoTerminalAiSession(paneId, socket, "9")!;
 }
+
+function enableSession(paneId: string, terminalId = 9) {
+  handleKokoTerminalAiMessage(paneId, {
+    id: `capability-${paneId}`,
+    role: "assistant",
+    metadata: { terminalId },
+    parts: [{ type: "data-capability", data: { enabled: true } }]
+  });
+}
+
+it("submits prompts through the enabled pane and rejects unavailable or overlapping tasks", async () => {
+  const active = createSession("prompt-active");
+  const other = createSession("prompt-other");
+  const disabled = createSession("prompt-disabled");
+  const disconnected = createSession("prompt-disconnected", WebSocket.CLOSED);
+  enableSession(active.paneId);
+  enableSession(other.paneId);
+  enableSession(disconnected.paneId);
+
+  await submitKokoTerminalAiPrompt(active.paneId, "  list files  ");
+
+  const frame = parseEnvelope(vi.mocked(active.socket!.send).mock.calls[0]![0] as Uint8Array);
+  expect(parseJSONPayload<Record<string, any>>(frame.payload)).toMatchObject({
+    role: "user",
+    metadata: { terminalId: 9 },
+    parts: [{ type: "text", text: "list files" }]
+  });
+  expect(other.socket?.send).not.toHaveBeenCalled();
+  expect(isKokoTerminalAiBusy(active.paneId)).toBe(true);
+  await expect(submitKokoTerminalAiPrompt(active.paneId, "second task")).rejects.toMatchObject({
+    code: "response_active"
+  });
+  await expect(submitKokoTerminalAiPrompt(disabled.paneId, "task")).rejects.toMatchObject({
+    code: "unavailable"
+  });
+  await expect(submitKokoTerminalAiPrompt(disconnected.paneId, "task")).rejects.toMatchObject({
+    code: "unavailable"
+  });
+
+  handleKokoTerminalAiMessage(active.paneId, {
+    id: "prompt-idle",
+    role: "assistant",
+    metadata: { terminalId: 9 },
+    parts: [{ type: "data-progress", data: { state: "idle" } }]
+  });
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(isKokoTerminalAiBusy(active.paneId)).toBe(false);
+});
+
+it("reports a prompt dispatch failure without sending to another pane", async () => {
+  const send = vi.fn(() => {
+    throw new Error("socket write failed");
+  });
+  const socket = { readyState: WebSocket.OPEN, send } as unknown as WebSocket;
+  paneIds.push("prompt-send-failed");
+  const session = registerKokoTerminalAiSession("prompt-send-failed", socket, "19")!;
+  enableSession(session.paneId, 19);
+
+  await expect(submitKokoTerminalAiPrompt(session.paneId, "status")).rejects.toMatchObject({
+    code: "send_failed"
+  });
+  expect(session.errorCode).toBe("send_failed");
+});
+
+it("makes a disconnected pane unavailable and clears its active task state", async () => {
+  const session = createSession("prompt-disconnect");
+  enableSession(session.paneId);
+  await submitKokoTerminalAiPrompt(session.paneId, "status");
+
+  disconnectKokoTerminalAiSession(session.paneId, session.socket);
+
+  expect(getKokoTerminalAiSession(session.paneId)).toBe(session);
+  expect(isKokoTerminalAiAvailable(session.paneId)).toBe(false);
+  expect(isKokoTerminalAiBusy(session.paneId)).toBe(false);
+  await expect(submitKokoTerminalAiPrompt(session.paneId, "retry")).rejects.toMatchObject({
+    code: "unavailable"
+  });
+});
+
+it("treats terminal command approval as active until a decision is sent", () => {
+  const session = createSession("terminal-approval");
+  enableSession(session.paneId);
+  handleKokoTerminalAiMessage(session.paneId, {
+    id: "approval-message",
+    role: "assistant",
+    metadata: { terminalId: 9 },
+    parts: [{ type: "data-approval", data: { id: "approval-1", command: "rm example" } }]
+  });
+
+  expect(isKokoTerminalAiWaitingForApproval(session.paneId)).toBe(true);
+  expect(isKokoTerminalAiBusy(session.paneId)).toBe(true);
+
+  sendKokoTerminalAiControl(session.paneId, {
+    id: "approval-decision",
+    role: "user",
+    metadata: { terminalId: 9 },
+    parts: [{ type: "data-approval", data: { id: "approval-1", approved: false } }]
+  });
+
+  expect(isKokoTerminalAiWaitingForApproval(session.paneId)).toBe(false);
+  expect(isKokoTerminalAiBusy(session.paneId)).toBe(false);
+});
 
 it("retains structured Terminal AI presentation metadata", () => {
   const session = createSession("presentation-metadata");

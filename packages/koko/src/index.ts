@@ -9,7 +9,8 @@ export { useKokoSessionAdapter } from "../app/composables/useSessionAdapter";
 export {
   getKokoTerminalCursorAnchor,
   sendKokoTerminalData,
-  sendKokoTerminalDataToMany
+  sendKokoTerminalDataToMany,
+  subscribeKokoTerminalCursorAnchor
 } from "../app/composables/useTerminalSessionRegistry";
 export type { TerminalCursorAnchor } from "../app/composables/useTerminalSessionRegistry";
 export {

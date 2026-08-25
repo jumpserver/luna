@@ -34,6 +34,7 @@ export interface KokoTerminalAiSession {
   socket: WebSocket | null;
   terminalId: string;
   chat: UseChatHelpers<TerminalAiChatMessage>;
+  connected: boolean;
   enabled: boolean;
   backgroundExec: boolean;
   backgroundReason: string;
@@ -41,6 +42,7 @@ export interface KokoTerminalAiSession {
   approvalThreshold: number;
   executionMode: string;
   inputLocked: boolean;
+  taskActive: boolean;
   draft: string;
   runtimeStatus: string;
   runtimeStatusCode: string;
@@ -49,6 +51,7 @@ export interface KokoTerminalAiSession {
   errorCode: string;
   errorText: string;
   metadataApproval: KokoTerminalAiMetadataApproval | null;
+  pendingApprovals: Set<string>;
   decisions: Set<string>;
   executionOverrides: Map<string, string>;
   expansionOverrides: Map<string, boolean>;
@@ -76,8 +79,14 @@ interface ActiveChatResponse {
   abortHandler?: () => void;
 }
 
+interface PendingChatDispatch {
+  resolve: () => void;
+  reject: (error: Error) => void;
+}
+
 class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage> {
   private activeResponse: ActiveChatResponse | null = null;
+  private pendingDispatch: PendingChatDispatch | null = null;
 
   constructor(
     private readonly socket: WebSocket,
@@ -86,30 +95,38 @@ class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage
   ) {}
 
   sendMessages: ChatTransport<TerminalAiChatMessage>["sendMessages"] = async ({ messages, abortSignal }) => {
-    if (this.activeResponse) throw clientError("response_active", "A Terminal AI response is already active");
+    if (this.activeResponse) {
+      const failure = clientError("response_active", "A Terminal AI response is already active");
+      this.rejectPendingDispatch(failure);
+      throw failure;
+    }
     if (!this.enabled() || this.socket.readyState !== WebSocket.OPEN) {
-      throw clientError("unavailable", "Terminal AI is not available for the active terminal");
+      const failure = clientError("unavailable", "Terminal AI is not available for the active terminal");
+      this.rejectPendingDispatch(failure);
+      throw failure;
     }
 
     const message = messages.at(-1);
     if (!message || message.role !== "user") {
-      throw clientError("invalid_message", "Terminal AI requires a user message");
-    }
-
-    const stream = new ReadableStream<UIMessageChunk>({
-      start: (controller) => {
-        this.activeResponse = { controller, started: false, abortSignal };
-      },
-      cancel: () => this.clearActiveResponse()
-    });
-
-    const abortHandler = () => this.finish();
-    if (abortSignal) {
-      this.activeResponse!.abortHandler = abortHandler;
-      abortSignal.addEventListener("abort", abortHandler, { once: true });
+      const failure = clientError("invalid_message", "Terminal AI requires a user message");
+      this.rejectPendingDispatch(failure);
+      throw failure;
     }
 
     try {
+      const stream = new ReadableStream<UIMessageChunk>({
+        start: (controller) => {
+          this.activeResponse = { controller, started: false, abortSignal };
+        },
+        cancel: () => this.clearActiveResponse()
+      });
+
+      const abortHandler = () => this.finish();
+      if (abortSignal) {
+        this.activeResponse!.abortHandler = abortHandler;
+        abortSignal.addEventListener("abort", abortHandler, { once: true });
+      }
+
       this.socket.send(
         buildJSONEnvelope(ENVELOPE_CHAT, {
           ...message,
@@ -119,16 +136,17 @@ class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage
           }
         })
       );
+      this.resolvePendingDispatch();
+      return stream;
     } catch (error) {
       const failure =
         error instanceof TerminalAiClientError
           ? error
           : clientError("send_failed", error instanceof Error ? error.message : "Failed to send Terminal AI message");
+      this.rejectPendingDispatch(failure);
       this.fail(failure);
       throw failure;
     }
-
-    return stream;
   };
 
   reconnectToStream: ChatTransport<TerminalAiChatMessage>["reconnectToStream"] = async () => null;
@@ -191,7 +209,27 @@ class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage
   }
 
   disconnect() {
+    this.rejectPendingDispatch(clientError("unavailable", "Terminal AI session disconnected"));
     this.finish();
+  }
+
+  waitForNextDispatch() {
+    if (this.pendingDispatch) {
+      throw clientError("response_active", "A Terminal AI dispatch is already pending");
+    }
+
+    let resolve!: () => void;
+    let reject!: (error: Error) => void;
+    const promise = new Promise<void>((resolvePromise, rejectPromise) => {
+      resolve = resolvePromise;
+      reject = rejectPromise;
+    });
+    this.pendingDispatch = { resolve, reject };
+    return promise;
+  }
+
+  cancelPendingDispatch(error: Error) {
+    this.rejectPendingDispatch(error);
   }
 
   private fail(error: Error) {
@@ -207,6 +245,18 @@ class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage
       response.abortSignal.removeEventListener("abort", response.abortHandler);
     }
     this.activeResponse = null;
+  }
+
+  private resolvePendingDispatch() {
+    const dispatch = this.pendingDispatch;
+    this.pendingDispatch = null;
+    dispatch?.resolve();
+  }
+
+  private rejectPendingDispatch(error: Error) {
+    const dispatch = this.pendingDispatch;
+    this.pendingDispatch = null;
+    dispatch?.reject(error);
   }
 }
 
@@ -247,6 +297,7 @@ function createSession(paneId: string, socket: WebSocket, terminalId: string): K
     socket: markRaw(socket),
     terminalId,
     chat,
+    connected: socket.readyState === WebSocket.OPEN,
     enabled: false,
     backgroundExec: false,
     backgroundReason: "",
@@ -254,6 +305,7 @@ function createSession(paneId: string, socket: WebSocket, terminalId: string): K
     approvalThreshold: 2,
     executionMode: "auto",
     inputLocked: false,
+    taskActive: false,
     draft: "",
     runtimeStatus: "",
     runtimeStatusCode: "",
@@ -262,6 +314,7 @@ function createSession(paneId: string, socket: WebSocket, terminalId: string): K
     errorCode: "",
     errorText: "",
     metadataApproval: null,
+    pendingApprovals: new Set<string>(),
     decisions: new Set<string>(),
     executionOverrides: new Map<string, string>(),
     expansionOverrides: new Map<string, boolean>(),
@@ -345,12 +398,95 @@ export function unregisterKokoTerminalAiSession(paneId: string, socket?: WebSock
   sessions.delete(paneId);
 }
 
+export function connectKokoTerminalAiSession(paneId: string, socket: WebSocket) {
+  const session = sessions.get(paneId);
+  if (!session || session.socket !== socket) return;
+  session.connected = true;
+}
+
+export function disconnectKokoTerminalAiSession(paneId: string, socket?: WebSocket | null) {
+  const session = sessions.get(paneId);
+  if (!session || (socket && session.socket !== socket)) return;
+
+  session.connected = false;
+  session.enabled = false;
+  session.inputLocked = false;
+  session.taskActive = false;
+  session.metadataApproval = null;
+  session.pendingApprovals.clear();
+  transports.get(session)?.disconnect();
+}
+
 export function getKokoTerminalAiSession(paneId: string) {
   return sessions.get(paneId) || null;
 }
 
 export function isKokoTerminalAiInputLocked(paneId: string) {
   return Boolean(sessions.get(paneId)?.inputLocked);
+}
+
+export function isKokoTerminalAiAvailable(paneId: string) {
+  const session = sessions.get(paneId);
+  return Boolean(session?.connected && session.enabled && session.socket?.readyState === WebSocket.OPEN);
+}
+
+export function isKokoTerminalAiWaitingForApproval(paneId: string) {
+  const session = sessions.get(paneId);
+  return Boolean(session?.metadataApproval || session?.pendingApprovals.size);
+}
+
+export function isKokoTerminalAiBusy(paneId: string) {
+  const session = sessions.get(paneId);
+  return Boolean(
+    session?.taskActive || session?.inputLocked || session?.metadataApproval || session?.pendingApprovals.size
+  );
+}
+
+export async function submitKokoTerminalAiPrompt(paneId: string, text: string): Promise<void> {
+  const session = sessions.get(paneId);
+  const socket = session?.socket;
+  if (!session?.connected || !session.enabled || !socket || socket.readyState !== WebSocket.OPEN) {
+    throw clientError("unavailable", "Terminal AI is not available for the active terminal");
+  }
+
+  const prompt = text.trim();
+  if (!prompt) throw clientError("invalid_message", "Terminal AI requires a user message");
+  if (isKokoTerminalAiBusy(paneId)) {
+    throw clientError("response_active", "A Terminal AI response is already active");
+  }
+
+  const transport = transports.get(session);
+  if (!transport) throw clientError("unavailable", "Terminal AI is not available for the active terminal");
+
+  session.errorCode = "";
+  session.errorText = "";
+  session.chat.clearError();
+
+  session.taskActive = true;
+  try {
+    const dispatched = transport.waitForNextDispatch();
+    const response = session.chat.sendMessage({
+      text: prompt,
+      metadata: { terminalId: Number(session.terminalId) }
+    });
+    void response.catch(() => {
+      session.taskActive = false;
+      if (!session.errorCode && !session.errorText) session.errorCode = "send_failed";
+    });
+    await dispatched;
+  } catch (error) {
+    session.taskActive = false;
+    const failure = error instanceof Error ? error : clientError("send_failed", "Failed to send Terminal AI message");
+    transport.cancelPendingDispatch(failure);
+    if (failure instanceof TerminalAiClientError) {
+      session.errorCode = failure.code;
+      session.errorText = "";
+    } else {
+      session.errorCode = "send_failed";
+      session.errorText = failure.message;
+    }
+    throw failure;
+  }
 }
 
 export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
@@ -369,6 +505,13 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
     session.backgroundReasonCode = String(capability.backgroundReasonCode || capability.reasonCode || "");
     session.approvalThreshold = Number(capability.approvalThreshold) || 2;
     session.executionMode = String(capability.executionMode || "auto");
+    if (!session.enabled) {
+      session.inputLocked = false;
+      session.taskActive = false;
+      session.metadataApproval = null;
+      session.pendingApprovals.clear();
+      transports.get(session)?.finish();
+    }
     return;
   }
 
@@ -402,6 +545,12 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
     return;
   }
 
+  const terminalApproval = partData(message, "data-approval");
+  if (message.role === "assistant" && terminalApproval) {
+    const approvalId = String(terminalApproval.id || "");
+    if (approvalId) session.pendingApprovals.add(approvalId);
+  }
+
   const metadataApprovalResolved = partData(message, "data-metadata-approval-resolved");
   if (metadataApprovalResolved) {
     if (session.metadataApproval?.approvalId === String(metadataApprovalResolved.id || "")) {
@@ -417,8 +566,13 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
     session.runtimeState = String(progress.state || "");
     session.runtimeExecution = String(progress.execution || "");
     if (session.runtimeState === "idle") {
+      session.taskActive = false;
+      session.inputLocked = false;
       session.metadataApproval = null;
+      session.pendingApprovals.clear();
       transports.get(session)?.finish();
+    } else if (session.runtimeState) {
+      session.taskActive = true;
     }
     return;
   }
@@ -432,6 +586,10 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
 
   const runtimeError = partData(message, "data-error");
   if (runtimeError) {
+    session.taskActive = false;
+    session.inputLocked = false;
+    session.metadataApproval = null;
+    session.pendingApprovals.clear();
     session.errorCode = String(runtimeError.code || "");
     session.errorText = String(runtimeError.message || "Terminal AI failed");
     if (!session.errorCode && !runtimeError.message) session.errorCode = "failed";
@@ -445,11 +603,16 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
 export function sendKokoTerminalAiControl(paneId: string, message: TerminalAiChatMessage) {
   const session = sessions.get(paneId);
   const socket = session?.socket;
-  if (!session?.enabled || !socket || socket.readyState !== WebSocket.OPEN) {
+  if (!session?.connected || !session.enabled || !socket || socket.readyState !== WebSocket.OPEN) {
     throw clientError("unavailable", "Terminal AI is not available for the active terminal");
   }
 
   socket.send(buildJSONEnvelope(ENVELOPE_CHAT, message));
+  for (const part of message.parts) {
+    if (part.type !== "data-approval" || !("data" in part)) continue;
+    const approvalId = String((part.data as TerminalAiEventData).id || "");
+    if (approvalId) session.pendingApprovals.delete(approvalId);
+  }
   if (message.parts.some((part) => part.type === "data-interrupt")) session.chat.stop();
 }
 

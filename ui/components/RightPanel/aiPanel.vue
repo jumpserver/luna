@@ -15,7 +15,14 @@ import {
   terminalAiExecutionKey,
   terminalAiProgressKey
 } from "#koko/composables/terminal/terminalAiPresentation";
-import { createTerminalAiMessageId, sendKokoTerminalAiControl } from "#koko/composables/terminal/useTerminalAiSessions";
+import {
+  createTerminalAiMessageId,
+  isKokoTerminalAiAvailable,
+  isKokoTerminalAiBusy,
+  isKokoTerminalAiWaitingForApproval,
+  sendKokoTerminalAiControl,
+  submitKokoTerminalAiPrompt
+} from "#koko/composables/terminal/useTerminalAiSessions";
 import { getWorkspaceAiSession, isChenSqlWorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
 import SqlMetadataApprovalCard from "./SqlMetadataApprovalCard.vue";
 import SqlSchemaResultCard from "./SqlSchemaResultCard.vue";
@@ -114,8 +121,10 @@ const messagesElement = ref<HTMLElement | null>(null);
 const session = computed(() => getWorkspaceAiSession(activePaneId.value));
 const sqlSession = computed(() => (isChenSqlWorkspaceAiSession(session.value) ? session.value : null));
 const metadataApproval = computed(() => session.value?.metadataApproval || null);
-const assistantName = computed(() => (sqlSession.value ? t("RightPanel.SQLAIName") : "Terminal AI"));
-const available = computed(() => Boolean(session.value?.enabled));
+const assistantName = computed(() => (sqlSession.value ? t("RightPanel.SQLAIName") : t("TerminalAi.Title")));
+const available = computed(() =>
+  sqlSession.value ? Boolean(session.value?.enabled) : isKokoTerminalAiAvailable(activePaneId.value)
+);
 const unavailableTitle = computed(() =>
   sqlSession.value ? t("RightPanel.SQLAIUnavailableTitle") : t("RightPanel.AIUnavailableTitle")
 );
@@ -127,6 +136,7 @@ const unavailableDescription = computed(() => {
 // a new reference to invalidate viewItems and other computed consumers.
 const messages = computed(() => [...(session.value?.chat.messages.value || [])]);
 const busy = computed(() => {
+  if (session.value && !sqlSession.value) return isKokoTerminalAiBusy(activePaneId.value);
   const status = session.value?.chat.status.value;
   return status === "submitted" || status === "streaming";
 });
@@ -439,17 +449,7 @@ const viewItems = computed<ViewItem[]>(() => {
 const waitingForTerminalApproval = computed(() => {
   const current = session.value;
   if (!current || sqlSession.value) return false;
-  return viewItems.value.some(
-    (item) =>
-      item.kind === "plan" &&
-      item.steps.some((step) =>
-        step.executions.some(
-          (execution) =>
-            execution.command?.partType === "data-approval" &&
-            !current.decisions.has(String(execution.command.id || ""))
-        )
-      )
-  );
+  return isKokoTerminalAiWaitingForApproval(activePaneId.value);
 });
 
 const terminalActivityLabel = computed(() => runtimeStatusLabel.value || t("RightPanel.AIResponding"));
@@ -468,7 +468,17 @@ function sendMessage(message: TerminalAiChatMessage) {
 function submit() {
   const current = session.value;
   const text = draft.value.trim();
-  if (!current || !text || busy.value || !current.enabled) return;
+  if (!current || !text || busy.value || !available.value) return;
+
+  if (!sqlSession.value) {
+    void submitKokoTerminalAiPrompt(activePaneId.value, text)
+      .then(() => {
+        if (current.draft.trim() === text) current.draft = "";
+        scrollToBottom();
+      })
+      .catch(() => undefined);
+    return;
+  }
 
   current.draft = "";
   current.errorCode = "";
@@ -476,14 +486,9 @@ function submit() {
   current.chat.clearError();
   scrollToBottom();
 
-  void current.chat
-    .sendMessage({
-      text,
-      metadata: sqlSession.value ? { operation: "generate" } : { terminalId: Number(current.terminalId) }
-    })
-    .catch(() => {
-      if (!current.errorCode && !current.errorText) current.errorCode = "send_failed";
-    });
+  void current.chat.sendMessage({ text, metadata: { operation: "generate" } }).catch(() => {
+    if (!current.errorCode && !current.errorText) current.errorCode = "send_failed";
+  });
 }
 
 function handleSubmitKeydown(event: KeyboardEvent) {

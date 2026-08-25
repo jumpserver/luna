@@ -20,6 +20,8 @@ import {
   unregisterKokoLinuxMetricsSession
 } from "#koko/composables/terminal/useLinuxMetrics";
 import {
+  connectKokoTerminalAiSession,
+  disconnectKokoTerminalAiSession,
   handleKokoTerminalAiMessage,
   isKokoTerminalAiInputLocked,
   registerKokoTerminalAiSession,
@@ -279,27 +281,30 @@ export const useKokoTerminalSocket = () => {
   });
 
   const listenSocketEvent = () => {
-    if (!socketRef.value) return;
+    const socket = socketRef.value;
+    if (!socket) return;
 
     const paneId = unref(sessionCtxRef)?.tabId;
-    if (paneId) registerKokoTerminalAiSession(paneId, socketRef.value, "");
+    if (paneId) registerKokoTerminalAiSession(paneId, socket, "");
 
-    sentryRef.value = createSentry(terminalRef.value!, socketRef.value!, terminalId, lastSendTime, () => {
+    sentryRef.value = createSentry(terminalRef.value!, socket, terminalId, lastSendTime, () => {
       const paneId = unref(sessionCtxRef)?.tabId || "";
       return !paneId || !isKokoTerminalAiInputLocked(paneId);
     });
 
-    socketRef.value.onopen = () => {
+    socket.onopen = () => {
       socketOpened = true;
       connectionError.value = "";
+      if (paneId) connectKokoTerminalAiSession(paneId, socket);
       heartbeat.start();
     };
 
-    socketRef.value.onerror = reportInitialConnectionFailure;
+    socket.onerror = reportInitialConnectionFailure;
 
-    socketRef.value.onclose = () => {
+    socket.onclose = () => {
       heartbeat.stop();
       zmodem.abortActiveSession();
+      if (paneId) disconnectKokoTerminalAiSession(paneId, socket);
       if (!socketOpened) {
         reportInitialConnectionFailure();
         return;
@@ -309,7 +314,7 @@ export const useKokoTerminalSocket = () => {
       terminalRef.value.write(`\x1B[31m${t("koko.terminal.websocketClosed")}\x1B[0m`);
     };
 
-    socketRef.value.onmessage = async (message: MessageEvent) => {
+    socket.onmessage = async (message: MessageEvent) => {
       await new Promise<void>((resolve) => setTimeout(resolve, 1));
       lastReceiveTime.value = new Date();
       try {

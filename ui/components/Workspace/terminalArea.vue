@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isKokoTerminalAiAvailable } from "#koko/composables/terminal/useTerminalAiSessions";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { activeTab, activePaneId, activeTabId, tabs } = useWorkspaceTabs();
@@ -12,14 +13,10 @@ const cleanModeShortcut = computed(() => (isMacOS.value ? "⌘ + Shift + P" : "C
 const fullscreenModeShortcut = computed(() => (isMacOS.value ? "⌘ + Shift + F" : "Ctrl + Shift + F"));
 const panes = computed(() => tabs.value.flatMap((tab) => tab.panes));
 const activePane = computed(() => activeTab.value?.panes.find((pane) => pane.id === activePaneId.value) || null);
-const supportsLocalAiCommand = computed(() => {
+const supportsTerminalAiCommand = computed(() => {
   const pane = activePane.value;
-  return Boolean(
-    isTauriRuntime() &&
-    pane?.mode === "session" &&
-    pane.status === "connected" &&
-    ["ssh", "local-shell"].includes(pane.protocol.toLowerCase())
-  );
+  if (!pane) return false;
+  return isKokoTerminalAiAvailable(pane.id);
 });
 
 const openLogin = () => {
@@ -119,6 +116,6 @@ const openLogin = () => {
       </div>
     </div>
 
-    <WorkspaceTerminalAiCommandPopover v-if="supportsLocalAiCommand && activePane" :pane="activePane" />
+    <WorkspaceTerminalAiCommandPopover v-if="supportsTerminalAiCommand && activePane" :pane="activePane" />
   </section>
 </template>

@@ -21,7 +21,7 @@ import type {
   ChenDataViewMeta
 } from "~/chen/types";
 
-import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
+import { AllCommunityModule, isColumn, ModuleRegistry } from "ag-grid-community";
 import { AgGridVue } from "ag-grid-vue3";
 import { formatChenGridValue, useChenGridPreferences } from "~/chen/composables/useChenGridPreferences";
 import { writeChenClipboardText } from "~/chen/runtime/clipboard";
@@ -411,7 +411,7 @@ function handleRowNumberMouseDown(event: CellMouseDownEvent) {
 }
 
 function handleColumnHeaderClicked(event: ColumnHeaderClickedEvent) {
-  if (event.column?.getColId() !== ROW_NUMBER_COLUMN_ID || !gridApi.value) return;
+  if (!isColumn(event.column) || event.column.getColId() !== ROW_NUMBER_COLUMN_ID || !gridApi.value) return;
   const nodes = [];
   for (let index = 0; index < gridApi.value.getDisplayedRowCount(); index += 1) {
     const node = gridApi.value.getDisplayedRowAtIndex(index);

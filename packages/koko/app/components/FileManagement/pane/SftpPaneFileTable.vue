@@ -276,7 +276,7 @@ onUnmounted(() => {
 
     <div
       v-if="showStatusBar"
-      class="sftp-file-table__status flex h-8.75 shrink-0 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3.5 font-ui-mono text-[10.5px] text-(--app-muted)"
+      class="sftp-file-table__status flex h-8 shrink-0 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3.5 font-ui-mono text-[10.5px] text-(--app-muted)"
     >
       {{ t("koko.fileManagement.items", { count: entries.length }) }}
     </div>

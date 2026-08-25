@@ -2,74 +2,61 @@
 import type { TerminalCursorAnchor } from "@jumpserver/koko";
 import type { WorkspacePane } from "~/composables/useWorkspaceTabs";
 
-import { getKokoTerminalCursorAnchor, sendKokoTerminalData } from "@jumpserver/koko";
-import { LOCAL_AI_PROVIDER_DEFINITIONS } from "~/composables/useLocalAiSettings";
-
-interface AiCommandProposal {
-  explanation: string;
-  command: string;
-  isHighRisk: boolean;
-  riskLevel: "low" | "medium" | "high";
-  riskReason: string;
-}
+import { getKokoTerminalCursorAnchor, subscribeKokoTerminalCursorAnchor } from "@jumpserver/koko";
+import {
+  getKokoTerminalAiSession,
+  isKokoTerminalAiAvailable,
+  isKokoTerminalAiBusy,
+  submitKokoTerminalAiPrompt
+} from "#koko/composables/terminal/useTerminalAiSessions";
+import { isTerminalAiCommandShortcut, terminalAiCommandShortcutAction } from "~/utils/terminalAiCommand";
 
 const props = defineProps<{ pane: WorkspacePane }>();
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
-const { settings, load } = useLocalAiSettings();
-const { openSettings } = useSettingsWindow();
+const { openWithTab } = useRightPanel();
 const open = ref(false);
-const instruction = ref("");
-const proposal = ref<AiCommandProposal | null>(null);
+const submitting = ref(false);
 const error = ref("");
-const generating = ref(false);
 const inputRef = ref<{ textareaRef?: HTMLTextAreaElement } | null>(null);
 const hostRef = shallowRef<HTMLElement | null>(null);
 const panelRef = shallowRef<HTMLElement | null>(null);
 const activeXterm = shallowRef<HTMLElement | null>(null);
 const anchorRect = shallowRef<TerminalCursorAnchor | null>(null);
-const panelPosition = ref({ left: 8, top: 8, width: 520, maxHeight: 480 });
-let requestVersion = 0;
+const hintAnchor = shallowRef<TerminalCursorAnchor | null>(null);
+const hintVisible = ref(false);
+const panelPosition = ref({ left: 8, top: 8, width: 520, maxHeight: 260 });
+const hintPosition = ref({ left: 0, top: 0, maxWidth: 0 });
+let stopCursorSubscription = () => {};
 
-const shortcutLabel = computed(() => (isMacOS.value ? "⌘ K" : "Ctrl K"));
-const shortcutHint = computed(() => t("TerminalAi.ShortcutHint", { shortcut: isMacOS.value ? "⌘ K" : "Ctrl K" }));
+const session = computed(() => getKokoTerminalAiSession(props.pane.id));
+const available = computed(() => isKokoTerminalAiAvailable(props.pane.id));
+const draft = computed({
+  get: () => session.value?.draft || "",
+  set: (value: string) => {
+    if (session.value) session.value.draft = value;
+  }
+});
+const shortcutLabel = computed(() => (isMacOS.value ? "⌘K" : "Ctrl K"));
+const shortcutHint = computed(() => t("TerminalAi.ShortcutHint", { shortcut: shortcutLabel.value }));
+const sendLabel = computed(() => (submitting.value ? t("TerminalAi.Sending") : t("TerminalAi.Send")));
 const panelStyle = computed(() => ({
   left: `${panelPosition.value.left}px`,
   top: `${panelPosition.value.top}px`,
   width: `${panelPosition.value.width}px`,
   maxHeight: `${panelPosition.value.maxHeight}px`
 }));
-const activeSourceLabel = computed(() => {
-  const source = settings.value.activeSource;
-  if (!source) return t("TerminalAi.NoSource");
-  if (source.type === "provider") {
-    return LOCAL_AI_PROVIDER_DEFINITIONS.find((provider) => provider.id === source.id)?.name || source.id;
-  }
-  const names: Record<string, string> = {
-    codex: "Codex CLI",
-    claude: "Claude Code",
-    grok: "Grok Build",
-    kimi: "Kimi Code",
-    deepseek: "DeepSeek CLI"
-  };
-  return names[source.id] || source.id;
-});
-const riskColor = computed<"success" | "warning" | "error">(() => {
-  if (proposal.value?.isHighRisk || proposal.value?.riskLevel === "high") return "error";
-  if (proposal.value?.riskLevel === "medium") return "warning";
-  return "success";
-});
-const riskLabel = computed(() => {
-  if (proposal.value?.isHighRisk || proposal.value?.riskLevel === "high") return t("TerminalAi.HighRisk");
-  if (proposal.value?.riskLevel === "medium") return t("TerminalAi.MediumRisk");
-  return t("TerminalAi.LowRisk");
-});
+const hintStyle = computed(() => ({
+  left: `${hintPosition.value.left}px`,
+  top: `${hintPosition.value.top}px`,
+  maxWidth: `${hintPosition.value.maxWidth}px`
+}));
 
 function focusInput() {
   nextTick(() => inputRef.value?.textareaRef?.focus());
 }
 
-function getCursorRect(xterm: HTMLElement) {
+function getFallbackCursorRect(xterm: HTMLElement): TerminalCursorAnchor {
   const terminalBounds = xterm.getBoundingClientRect();
   const cursorTextarea = xterm.querySelector<HTMLElement>(".xterm-helper-textarea");
   const cursorBounds = cursorTextarea?.getBoundingClientRect();
@@ -90,6 +77,47 @@ function getCursorRect(xterm: HTMLElement) {
   };
 }
 
+function findXtermForAnchor(anchor: TerminalCursorAnchor) {
+  const scope = hostRef.value?.parentElement;
+  if (!scope) return null;
+  return (
+    Array.from(scope.querySelectorAll<HTMLElement>(".xterm")).find((xterm) => {
+      const bounds = xterm.getBoundingClientRect();
+      return (
+        bounds.width > 0 &&
+        bounds.height > 0 &&
+        anchor.left >= bounds.left &&
+        anchor.left <= bounds.right &&
+        anchor.top >= bounds.top &&
+        anchor.top <= bounds.bottom
+      );
+    }) || null
+  );
+}
+
+async function positionHint(anchor = hintAnchor.value) {
+  await nextTick();
+  const host = hostRef.value;
+  if (!host || !anchor) {
+    hintVisible.value = false;
+    return;
+  }
+  const xterm = findXtermForAnchor(anchor) || activeXterm.value;
+  if (!xterm) {
+    hintVisible.value = false;
+    return;
+  }
+
+  activeXterm.value = xterm;
+  const hostBounds = host.getBoundingClientRect();
+  const terminalBounds = xterm.getBoundingClientRect();
+  const left = anchor.left - hostBounds.left + anchor.width + 6;
+  const top = anchor.top - hostBounds.top + Math.max(0, (anchor.height - 18) / 2);
+  const maxWidth = terminalBounds.right - hostBounds.left - left - 8;
+  hintPosition.value = { left, top, maxWidth: Math.max(0, maxWidth) };
+  hintVisible.value = maxWidth >= 80;
+}
+
 async function positionPanel() {
   await nextTick();
   const host = hostRef.value;
@@ -104,18 +132,16 @@ async function positionPanel() {
   const terminalTop = terminalBounds.top - hostBounds.top;
   const terminalRight = terminalBounds.right - hostBounds.left;
   const terminalBottom = terminalBounds.bottom - hostBounds.top;
-  const width = Math.min(560, Math.max(240, terminalBounds.width - 16));
-  const maxHeight = Math.max(180, terminalBounds.height - 16);
+  const width = Math.min(520, Math.max(280, terminalBounds.width - 16));
+  const maxHeight = Math.max(160, terminalBounds.height - 16);
 
   panelPosition.value = { ...panelPosition.value, width, maxHeight };
   await nextTick();
 
   const panelBounds = panel.getBoundingClientRect();
-  const measuredCell = xterm.querySelector<HTMLElement>(".xterm-char-measure-element")?.getBoundingClientRect();
-  const cursorHeight = Math.max(anchor.height, measuredCell?.height || 0, 18);
   const cursorLeft = anchor.left - hostBounds.left;
   const cursorTop = anchor.top - hostBounds.top;
-  const cursorBottom = Math.min(terminalBottom, cursorTop + cursorHeight);
+  const cursorBottom = Math.min(terminalBottom, cursorTop + Math.max(anchor.height, 18));
   const gap = 8;
   const edge = 8;
   const maxLeft = Math.max(terminalLeft + edge, terminalRight - panelBounds.width - edge);
@@ -127,126 +153,137 @@ async function positionPanel() {
   panelPosition.value = { left, top, width, maxHeight };
 }
 
+function startCursorTracking() {
+  stopCursorSubscription();
+  stopCursorSubscription = subscribeKokoTerminalCursorAnchor(props.pane.id, (anchor) => {
+    hintAnchor.value = anchor;
+    void positionHint(anchor);
+  });
+  const initialAnchor = getKokoTerminalCursorAnchor(props.pane.id);
+  if (initialAnchor) {
+    hintAnchor.value = initialAnchor;
+    void positionHint(initialAnchor);
+  }
+}
+
 async function show(xterm: HTMLElement) {
-  if (!isTauriRuntime()) return;
+  if (!available.value) return;
+  if (isKokoTerminalAiBusy(props.pane.id)) {
+    openWithTab("ai");
+    return;
+  }
+
   activeXterm.value = xterm;
-  anchorRect.value = getKokoTerminalCursorAnchor(props.pane.id) || getCursorRect(xterm);
-  await load();
+  anchorRect.value = getKokoTerminalCursorAnchor(props.pane.id) || getFallbackCursorRect(xterm);
+  error.value = "";
   open.value = true;
-  proposal.value = null;
-  error.value = settings.value.activeSource ? "" : t("TerminalAi.NoSourceDescription");
   await positionPanel();
   focusInput();
 }
 
-function close() {
-  requestVersion += 1;
-  generating.value = false;
+function close(restoreTerminalFocus = true) {
   open.value = false;
-  proposal.value = null;
   error.value = "";
-  instruction.value = "";
-  nextTick(() => activeXterm.value?.querySelector<HTMLTextAreaElement>(".xterm-helper-textarea")?.focus());
+  if (restoreTerminalFocus) {
+    nextTick(() => activeXterm.value?.querySelector<HTMLTextAreaElement>(".xterm-helper-textarea")?.focus());
+  }
 }
 
 function handleWindowKeydown(event: KeyboardEvent) {
-  if (!isTauriRuntime()) return;
-
   if (open.value && event.key === "Escape") {
     event.preventDefault();
+    event.stopPropagation();
     close();
     return;
   }
 
-  const primaryModifier = isMacOS.value ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
-  if (open.value || event.repeat || event.altKey || event.shiftKey || !primaryModifier || event.code !== "KeyK") {
-    return;
-  }
+  if (open.value || !isTerminalAiCommandShortcut(event, isMacOS.value)) return;
 
   const target = event.target instanceof Element ? event.target : null;
   const xterm = target?.closest<HTMLElement>(".xterm");
-  if (!xterm) return;
+  if (!xterm || !available.value) return;
   event.preventDefault();
   event.stopPropagation();
-  void show(xterm);
+
+  const action = terminalAiCommandShortcutAction(available.value, isKokoTerminalAiBusy(props.pane.id));
+  if (action === "panel") {
+    openWithTab("ai");
+    return;
+  }
+  if (action === "popover") void show(xterm);
 }
 
 function handleWindowPointerdown(event: PointerEvent) {
   if (!open.value || panelRef.value?.contains(event.target as Node)) return;
-  close();
+  close(false);
 }
 
 function handleWindowResize() {
+  void positionHint();
   if (open.value) void positionPanel();
 }
 
-async function generate() {
-  const source = settings.value.activeSource;
-  if (!source) {
-    error.value = t("TerminalAi.NoSourceDescription");
+async function submit() {
+  const current = session.value;
+  const paneId = props.pane.id;
+  const text = draft.value.trim();
+  if (!current || !text || submitting.value) return;
+
+  if (isKokoTerminalAiBusy(paneId)) {
+    close(false);
+    openWithTab("ai");
     return;
   }
-  if (!instruction.value.trim() || generating.value) return;
 
-  proposal.value = null;
+  submitting.value = true;
   error.value = "";
-  generating.value = true;
-  const version = ++requestVersion;
   try {
-    const provider = source.type === "provider" ? settings.value.providers[source.id] : null;
-    const result = await useTauriCoreInvoke<AiCommandProposal>("generate_local_ai_command", {
-      request: {
-        sourceType: source.type,
-        sourceId: source.id,
-        endpoint: provider?.endpoint,
-        model: provider?.model,
-        instruction: instruction.value,
-        context: {
-          protocol: props.pane.protocol,
-          assetName: props.pane.assetName,
-          address: props.pane.address,
-          account: props.pane.account,
-          platform: props.pane.assetPlatform
-        }
-      }
-    });
-    if (version === requestVersion && open.value) proposal.value = result;
+    await submitKokoTerminalAiPrompt(paneId, text);
+    if (current.draft.trim() === text) current.draft = "";
+    if (props.pane.id !== paneId) return;
+    close(false);
+    openWithTab("ai");
   } catch (cause) {
-    if (version === requestVersion && open.value) {
-      error.value = cause instanceof Error ? cause.message : String(cause);
+    if (props.pane.id !== paneId) return;
+    const code = cause instanceof Error && "code" in cause ? String(cause.code) : "";
+    if (code === "response_active") {
+      close(false);
+      openWithTab("ai");
+    } else if (code === "unavailable") {
+      error.value = t("RightPanel.AIUnavailableForTerminal");
+    } else {
+      error.value = t("RightPanel.AISendFailed");
     }
   } finally {
-    if (version === requestVersion) generating.value = false;
+    submitting.value = false;
   }
-}
-
-function execute() {
-  if (!proposal.value) return;
-  const sent = sendKokoTerminalData(props.pane.id, `${proposal.value.command}\r`);
-  if (!sent) {
-    error.value = t("TerminalAi.SendFailed");
-    return;
-  }
-  close();
 }
 
 function handleInputKeydown(event: KeyboardEvent) {
+  if (event.isComposing) return;
   if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
     event.preventDefault();
-    void generate();
+    void submit();
   }
 }
 
-watch([proposal, error], () => {
-  if (open.value) void positionPanel();
-});
+watch(
+  () => props.pane.id,
+  () => {
+    close(false);
+    hintVisible.value = false;
+    nextTick(startCursorTracking);
+  }
+);
 
 onMounted(() => {
   window.addEventListener("keydown", handleWindowKeydown, true);
   window.addEventListener("pointerdown", handleWindowPointerdown, true);
   window.addEventListener("resize", handleWindowResize);
+  nextTick(startCursorTracking);
 });
 onBeforeUnmount(() => {
+  stopCursorSubscription();
   window.removeEventListener("keydown", handleWindowKeydown, true);
   window.removeEventListener("pointerdown", handleWindowPointerdown, true);
   window.removeEventListener("resize", handleWindowResize);
@@ -256,12 +293,12 @@ onBeforeUnmount(() => {
 <template>
   <div ref="hostRef" class="pointer-events-none absolute inset-0 z-50 overflow-hidden">
     <div
-      v-if="!open"
+      v-if="!open && hintVisible"
+      :style="hintStyle"
       aria-hidden="true"
-      class="absolute bottom-3 right-3 flex items-center gap-2 rounded-full border border-[var(--app-border-subtle)] bg-[color-mix(in_srgb,var(--app-surface-overlay)_88%,transparent)] px-2.5 py-1 text-[11px] text-muted shadow-[var(--theme-shadow-soft)]"
+      class="terminal-ai-caret-hint absolute truncate font-ui-mono text-[13px] leading-4.5"
     >
-      <UIcon name="i-lucide-sparkles" class="size-3.5 text-primary" />
-      <span>{{ shortcutHint }}</span>
+      {{ shortcutHint }}
     </div>
 
     <Transition
@@ -274,149 +311,60 @@ onBeforeUnmount(() => {
         v-if="open"
         ref="panelRef"
         :style="panelStyle"
-        class="terminal-ai-panel pointer-events-auto absolute flex origin-top-left flex-col overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-overlay)]"
-        :class="proposal?.isHighRisk ? 'ring-1 ring-error/55' : ''"
+        class="terminal-ai-panel pointer-events-auto absolute flex origin-top-left flex-col overflow-hidden bg-(--app-surface-overlay) text-(--app-fg)"
         role="dialog"
         :aria-label="t('TerminalAi.Title')"
       >
-        <header
-          class="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--app-border-subtle)] px-3.5 py-2.5"
-        >
-          <div class="flex min-w-0 items-center gap-2.5">
-            <div class="grid size-7 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-              <UIcon name="i-lucide-terminal-square" class="size-4" />
-            </div>
-            <div class="flex min-w-0 items-baseline gap-2">
-              <h2 class="shrink-0 text-sm font-semibold text-highlighted">{{ t("TerminalAi.Title") }}</h2>
-              <span class="truncate text-xs text-muted">{{ activeSourceLabel }}</span>
-            </div>
+        <header class="terminal-ai-head flex shrink-0 items-center justify-between gap-2 px-2.5 pt-2">
+          <div class="flex min-w-0 items-center gap-1.5 text-[11px] tracking-[0.02em] text-muted">
+            <span class="size-1.5 shrink-0 rounded-full bg-primary" />
+            <span class="truncate">{{ t("TerminalAi.Title") }}</span>
           </div>
-          <div class="flex items-center gap-1.5">
-            <kbd
-              class="rounded-md border border-[var(--app-border-subtle)] bg-[var(--app-surface-card-soft)] px-1.5 py-0.5 font-ui-mono text-[10px] text-muted"
-            >
-              {{ shortcutLabel }}
-            </kbd>
-            <UButton
-              icon="i-lucide-x"
-              color="neutral"
-              variant="ghost"
-              size="xs"
-              :aria-label="t('Common.Cancel')"
-              @click="close"
-            />
-          </div>
+          <span class="shrink-0 text-[11px] tracking-[0.01em] text-muted">{{ shortcutLabel }} · Esc</span>
         </header>
 
-        <div class="min-h-0 overflow-y-auto overscroll-contain">
-          <div v-if="!proposal" class="p-3">
-            <div
-              class="overflow-hidden rounded-lg border border-[var(--app-border)] bg-[var(--app-surface-input)] transition-[border-color,box-shadow] focus-within:border-primary/70 focus-within:ring-2 focus-within:ring-primary/15"
-            >
-              <UTextarea
-                ref="inputRef"
-                v-model="instruction"
-                :aria-label="t('TerminalAi.PromptLabel')"
-                :placeholder="t('TerminalAi.Placeholder')"
-                name="terminal-ai-instruction"
-                autocomplete="off"
-                :spellcheck="false"
-                :rows="2"
-                :disabled="generating"
-                variant="none"
-                class="w-full"
-                :ui="{ base: 'resize-none px-3 py-2.5 text-sm leading-6' }"
-                @keydown="handleInputKeydown"
-              />
-
-              <div
-                class="flex items-center justify-between gap-3 border-t border-[var(--app-border-subtle)] px-2.5 py-2"
-              >
-                <p class="min-w-0 truncate text-[11px] text-muted">{{ t("TerminalAi.GenerateHint") }}</p>
-                <UButton
-                  :label="t('TerminalAi.Generate')"
-                  icon="i-lucide-arrow-up"
-                  size="sm"
-                  :loading="generating"
-                  :disabled="!instruction.trim() || !settings.activeSource"
-                  @click="generate"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div v-else class="space-y-3 p-3" aria-live="polite">
-            <div class="flex items-start justify-between gap-3">
-              <p class="min-w-0 break-words text-sm leading-5 text-highlighted">{{ proposal.explanation }}</p>
-              <UBadge :label="riskLabel" :color="riskColor" variant="soft" class="shrink-0" />
-            </div>
-
-            <div
-              class="flex items-start gap-2.5 rounded-lg border px-3 py-2.5"
-              :class="
-                proposal.isHighRisk
-                  ? 'border-error/50 bg-error/8'
-                  : proposal.riskLevel === 'medium'
-                    ? 'border-warning/45 bg-warning/8'
-                    : 'border-[var(--app-border)] bg-[var(--app-card-bg-soft)]'
-              "
-            >
-              <span class="select-none pt-0.5 font-ui-mono text-xs text-muted">$</span>
-              <code class="min-w-0 break-all font-ui-mono text-sm leading-5 text-highlighted">
-                {{ proposal.command }}
-              </code>
-            </div>
-
-            <UAlert
-              v-if="proposal.isHighRisk"
-              color="error"
-              variant="soft"
-              icon="i-lucide-shield-alert"
-              :title="t('TerminalAi.HighRiskTitle')"
-              :description="proposal.riskReason || t('TerminalAi.HighRiskFallback')"
-            />
-            <UAlert
-              v-else-if="proposal.riskLevel === 'medium' && proposal.riskReason"
-              color="warning"
-              variant="soft"
-              icon="i-lucide-triangle-alert"
-              :description="proposal.riskReason"
-            />
-          </div>
-
-          <UAlert
-            v-if="error"
-            aria-live="polite"
-            color="error"
-            variant="soft"
-            icon="i-lucide-circle-alert"
-            class="mx-3 mb-3"
-            :description="error"
-          >
-            <template v-if="!settings.activeSource" #actions>
-              <UButton
-                :label="t('TerminalAi.OpenSettings')"
-                color="error"
-                variant="soft"
-                size="xs"
-                @click="void openSettings('/setting/ai')"
-              />
-            </template>
-          </UAlert>
+        <div class="terminal-ai-input-row grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2 px-2.5 pb-2.5 pt-2">
+          <UTextarea
+            ref="inputRef"
+            v-model="draft"
+            :aria-label="t('TerminalAi.PromptLabel')"
+            :placeholder="t('TerminalAi.Placeholder')"
+            name="terminal-ai-instruction"
+            autocomplete="off"
+            :spellcheck="false"
+            :rows="2"
+            :disabled="submitting"
+            variant="none"
+            class="terminal-ai-prompt min-w-0"
+            :ui="{
+              base: 'min-h-14 max-h-30 resize-none rounded-none px-0 pb-0 pt-1 text-sm leading-[21px] ring-0 focus-visible:ring-0'
+            }"
+            @keydown="handleInputKeydown"
+          />
+          <UButton
+            :label="sendLabel"
+            size="sm"
+            class="terminal-ai-button h-8 min-w-18 justify-center rounded-md px-3"
+            :loading="submitting"
+            :disabled="!draft.trim()"
+            @click="submit"
+          />
         </div>
 
+        <p v-if="error" aria-live="polite" class="terminal-ai-error px-2.5 pb-2 text-xs leading-5">
+          {{ error }}
+        </p>
+
         <footer
-          v-if="proposal"
-          class="flex shrink-0 items-center justify-end gap-2 border-t border-[var(--app-border-subtle)] bg-[var(--app-surface-card-soft)] px-3 py-2.5"
+          class="terminal-ai-foot flex items-center justify-between gap-3 border-t border-(--app-border) px-2.5 py-1.5 text-[11px] text-muted"
         >
-          <UButton :label="t('Common.Cancel')" color="neutral" variant="ghost" size="sm" @click="close" />
-          <UButton
-            :label="proposal.isHighRisk ? t('TerminalAi.ExecuteHighRisk') : t('TerminalAi.Execute')"
-            :icon="proposal.isHighRisk ? 'i-lucide-shield-alert' : 'i-lucide-terminal'"
-            :color="proposal.isHighRisk ? 'error' : 'primary'"
-            size="sm"
-            @click="execute"
-          />
+          <span class="min-w-0 truncate">{{ t("TerminalAi.ContinueHint") }}</span>
+          <span class="shrink-0">
+            <kbd class="terminal-ai-shortcut-tag font-ui-mono">
+              {{ isMacOS ? "⌘↵" : "Ctrl ↵" }}
+            </kbd>
+            <span class="ml-1">{{ t("TerminalAi.Send") }}</span>
+          </span>
         </footer>
       </section>
     </Transition>
@@ -425,8 +373,64 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .terminal-ai-panel {
+  border-radius: 8px;
   box-shadow:
-    var(--theme-shadow-soft),
-    0 18px 48px color-mix(in srgb, var(--theme-bg) 48%, transparent);
+    0 8px 24px color-mix(in srgb, var(--app-fg) 18%, transparent),
+    0 0 0 1px var(--app-border);
+}
+
+.terminal-ai-head {
+  min-height: 24px;
+}
+
+.terminal-ai-caret-hint {
+  color: color-mix(in srgb, var(--terminal-foreground) 42%, transparent);
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.terminal-ai-shortcut-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 4px;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  color: var(--app-muted);
+  background: transparent;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.terminal-ai-prompt :deep(textarea) {
+  min-height: 56px;
+  max-height: 120px;
+  padding: 4px 0 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--app-fg);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.terminal-ai-prompt :deep(textarea::placeholder) {
+  color: var(--app-muted);
+}
+
+.terminal-ai-button {
+  min-height: 32px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: 0.02em;
+}
+
+.terminal-ai-error {
+  color: color-mix(in srgb, var(--ui-color-error-500) 82%, var(--app-fg));
 }
 </style>
