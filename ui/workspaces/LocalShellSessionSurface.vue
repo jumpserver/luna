@@ -115,12 +115,16 @@ async function start() {
     started = true;
     fitTerminal();
     await resize(instance.cols, instance.rows);
-    registerLocalShellTerminalSession(props.tab.id, (data) => {
-      void useTauriCoreInvoke("write_local_shell", {
-        sessionId: props.tab.id,
-        data: Array.from(new TextEncoder().encode(data))
-      });
-    });
+    registerLocalShellTerminalSession(
+      props.tab.id,
+      (data) => {
+        void useTauriCoreInvoke("write_local_shell", {
+          sessionId: props.tab.id,
+          data: Array.from(new TextEncoder().encode(data))
+        });
+      },
+      instance
+    );
     markSessionConnected(props.tab.id);
     instance.focus();
   } catch (error) {

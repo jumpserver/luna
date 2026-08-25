@@ -25,6 +25,10 @@ use crate::commands::connect_token::{
 use crate::commands::dev_http_server::init_http_callback_server;
 use crate::commands::get_config::get_config;
 use crate::commands::get_version::get_version_message;
+use crate::commands::local_ai_cli::{
+    generate_local_ai_command, has_local_ai_provider_api_key, list_local_ai_clis,
+    set_local_ai_provider_api_key,
+};
 use crate::commands::local_shell::{
     close_local_shell, resize_local_shell, start_local_shell, write_local_shell, LocalShellState,
 };
@@ -294,6 +298,10 @@ pub fn run() {
             get_builtin_connect_session,
             create_koko_connect_ticket,
             get_version_message,
+            list_local_ai_clis,
+            has_local_ai_provider_api_key,
+            set_local_ai_provider_api_key,
+            generate_local_ai_command,
             start_local_shell,
             write_local_shell,
             resize_local_shell,

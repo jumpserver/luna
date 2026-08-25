@@ -238,7 +238,11 @@ export const useKokoTerminalSocket = () => {
     onConnected: (id, socket) => {
       const tabId = unref(sessionCtxRef)?.tabId;
       if (tabId) {
-        registerKokoTerminalSession(tabId, { socket, terminalId: id });
+        registerKokoTerminalSession(tabId, {
+          socket,
+          terminalId: id,
+          terminal: terminalRef.value || undefined
+        });
         registerKokoTerminalAiSession(tabId, socket, id);
         registerKokoLinuxMetricsSession(tabId, { socket, terminalId: id });
       }
