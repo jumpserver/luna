@@ -157,6 +157,12 @@
     "More": "更多",
     "SaveFailed": "保存脚本失败",
     "FillBatchCommand": "填入批量命令",
+    "GroupShell": "Shell",
+    "GroupPowerShell": "PowerShell",
+    "GroupPython": "Python",
+    "GroupRaw": "Raw",
+    "GroupDatabase": "数据库",
+    "GroupOther": "其他",
     "VariableFormTitle": "填写脚本变量",
     "VariableFormLoadFailed": "加载脚本变量失败",
     "VariableFormEmpty": "未获取到脚本变量配置，请检查脚本变量设置。",
@@ -174,6 +180,7 @@
     "Clear": "清空最近连接"
   },
   "Favorite": {
+    "Ungrouped": "未分组",
     "CreateFolder": "创建收藏节点",
     "CreateSubfolder": "创建子节点",
     "FolderName": "节点名称",
@@ -194,11 +201,17 @@
     "ExpandAll": "展开所有",
     "Collapse": "折叠",
     "CollapseAll": "折叠所有",
+    "BatchActions": "批量操作",
     "OpenMultiple": "打开多个",
     "OpenSelected": "打开已选",
+    "FavoriteMultiple": "收藏多个",
+    "FavoriteSelected": "收藏已选",
     "SelectedCount": "已选 {count} 个",
     "MultiOpenNoConnectable": "所选资产不支持 SSH 连接",
-    "MultiOpenSkipped": "已跳过 {count} 个不支持 SSH 或加载失败的资产"
+    "MultiOpenSkipped": "已跳过 {count} 个不支持 SSH 或加载失败的资产",
+    "MultiFavoriteSuccess": "已收藏 {count} 个资产",
+    "MultiFavoritePartial": "收藏成功 {success} 个，失败 {failed} 个",
+    "MultiFavoriteFailed": "批量收藏失败"
   },
   "Operation": {
     "Search": "搜索"

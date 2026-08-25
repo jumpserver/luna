@@ -302,6 +302,45 @@ const handleOpenMultipleAssets = async (assets: AssetItem[]) => {
   }
 };
 
+const handleFavoriteMultipleAssets = async (assets: AssetItem[]) => {
+  const results = await Promise.allSettled(assets.map((asset) => favoriteAsset(asset.id)));
+  const successCount = results.filter((result) => result.status === "fulfilled").length;
+  const failedCount = results.length - successCount;
+
+  if (successCount > 0) {
+    const firstSuccessIndex = results.findIndex((result) => result.status === "fulfilled");
+    useEventBus().emit("favoriteChanged", { assetId: assets[firstSuccessIndex]!.id, favorite: true });
+  }
+
+  if (failedCount === 0) {
+    toast.add({
+      title: t("Tree.MultiFavoriteSuccess", { count: successCount }),
+      color: "success",
+      icon: "i-lucide-star",
+      duration: 2500
+    });
+    return;
+  }
+
+  if (successCount > 0) {
+    toast.add({
+      title: t("Tree.MultiFavoritePartial", { success: successCount, failed: failedCount }),
+      color: "warning",
+      icon: "i-lucide-circle-alert",
+      duration: 4000
+    });
+    return;
+  }
+
+  const firstFailure = results.find((result) => result.status === "rejected");
+  addErrorToast({
+    title: t("Tree.MultiFavoriteFailed"),
+    description: firstFailure?.status === "rejected" ? String(firstFailure.reason) : undefined,
+    icon: "i-lucide-circle-alert",
+    duration: 4000
+  });
+};
+
 const handleAssetConnect = (asset: AssetItem) => {
   if (isNarrowScreen.value) setCollapse(true);
   connectWithSavedConnection(asset);
@@ -584,6 +623,7 @@ watch(
           @contextmenu="handleAssetContextMenu"
           @toggle="assetTreeOpen = !assetTreeOpen"
           @open-multiple="handleOpenMultipleAssets"
+          @favorite-multiple="handleFavoriteMultipleAssets"
         />
         <SideBarBottomPanels
           v-if="hasVisibleShelfPanel"
@@ -647,6 +687,7 @@ watch(
             "
             @contextmenu="handleAssetContextMenu"
             @open-multiple="handleOpenMultipleAssets"
+            @favorite-multiple="handleFavoriteMultipleAssets"
           />
         </div>
 
