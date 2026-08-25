@@ -26,8 +26,11 @@ interface WebProxyRecordingState {
 }
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
-const { activeTabId, markSessionConnected, tabs } = useWorkspaceTabs();
+const { activeTabId, markSessionConnected, nativeSurfaceOverlayOpen, tabs } = useWorkspaceTabs();
+const { isMacOS } = usePlatform();
+const toolbarRef = ref<HTMLElement>();
 const contentRef = ref<HTMLElement>();
+const standaloneAssetWindow = ref(false);
 const addressValue = ref("");
 const loading = ref(true);
 const error = ref("");
@@ -108,11 +111,14 @@ const recordingColor = computed(() => {
 
 function viewBounds() {
   const rect = contentRef.value?.getBoundingClientRect();
+  const toolbarBottom = toolbarRef.value?.getBoundingClientRect().bottom || 0;
+  const top = Math.max(rect?.top || 0, toolbarBottom);
+  const bottom = Math.max(rect?.bottom || top + 1, top + 1);
   return {
     x: rect?.left || 0,
-    y: rect?.top || 0,
+    y: top,
     width: Math.max(rect?.width || 1, 1),
-    height: Math.max(rect?.height || 1, 1)
+    height: bottom - top
   };
 }
 
@@ -121,6 +127,7 @@ function shouldShowView() {
   return Boolean(
     viewCreated.value &&
     activeTabId.value === ownerTabId.value &&
+    !nativeSurfaceOverlayOpen.value &&
     document.visibilityState === "visible" &&
     rect &&
     rect.width > 1 &&
@@ -209,7 +216,7 @@ function focus() {
   if (shouldShowView()) void setViewVisible(true);
 }
 
-watch([activeTabId, ownerTabId], () => nextTick(syncView));
+watch([activeTabId, ownerTabId, nativeSurfaceOverlayOpen], () => nextTick(syncView));
 
 onMounted(async () => {
   if (!isTauriRuntime()) {
@@ -217,6 +224,7 @@ onMounted(async () => {
     loading.value = false;
     return;
   }
+  standaloneAssetWindow.value = useTauriWebviewWindowGetCurrentWebviewWindow().label.startsWith("asset-");
   if (!request.value) {
     error.value = "Web Proxy 会话参数不完整";
     loading.value = false;
@@ -262,6 +270,7 @@ onMounted(async () => {
     viewCreated.value = true;
     viewVisible = true;
     await syncView();
+    requestAnimationFrame(() => void syncView());
     await startRecording();
   } catch (cause) {
     loading.value = false;
@@ -284,7 +293,12 @@ defineExpose({ focus });
 
 <template>
   <div class="flex h-full min-h-0 flex-col overflow-hidden bg-default">
-    <div class="flex h-11 shrink-0 items-center gap-1.5 border-b border-default bg-default px-2">
+    <div
+      ref="toolbarRef"
+      data-tauri-drag-region
+      class="flex h-11 shrink-0 items-center gap-1.5 border-b border-default bg-default px-2"
+      :class="isMacOS && standaloneAssetWindow ? 'pl-22' : ''"
+    >
       <UButton
         icon="i-lucide-arrow-left"
         color="neutral"

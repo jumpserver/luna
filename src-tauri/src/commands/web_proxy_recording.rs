@@ -13,6 +13,12 @@ use url::Url;
 
 const RECORDING_PATH: &str = "/_jumpserver/web-recordings";
 const CAPTURE_INTERVAL: Duration = Duration::from_millis(500);
+const FORCE_FRAME_INTERVAL: Duration = Duration::from_secs(5);
+const COMPARISON_WIDTH: u32 = 160;
+const COMPARISON_HEIGHT: u32 = 90;
+const PIXEL_CHANGE_THRESHOLD: u8 = 12;
+const MIN_CHANGED_PIXEL_RATIO_PER_10_000: usize = 25;
+const MIN_MEAN_PIXEL_DIFFERENCE: usize = 1;
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -46,6 +52,13 @@ struct WebRecordingSession {
     stopped: AtomicBool,
     frame_count: AtomicUsize,
     capture_gate: AsyncMutex<()>,
+    frame_filter: Mutex<FrameFilter>,
+}
+
+#[derive(Default)]
+struct FrameFilter {
+    last_signature: Option<Vec<u8>>,
+    last_uploaded_at: Option<Instant>,
 }
 
 #[derive(Deserialize)]
@@ -156,6 +169,7 @@ impl WebProxyRecordingManager {
             stopped: AtomicBool::new(false),
             frame_count: AtomicUsize::new(0),
             capture_gate: AsyncMutex::new(()),
+            frame_filter: Mutex::new(FrameFilter::default()),
         });
         self.inner
             .sessions
@@ -244,6 +258,13 @@ impl WebProxyRecordingManager {
         session.stopped.store(true, Ordering::Release);
         emit_recording_state(app, session.state("finishing", "正在生成 Web 录像", ""));
         let _capture_guard = session.capture_gate.lock().await;
+        if !session.paused.load(Ordering::Acquire) {
+            // A final forced frame preserves the last visible state even when the
+            // similarity filter skipped the most recent periodic captures.
+            if let Err(error) = session.capture_once(true).await {
+                log::warn!("Failed to capture final Web recording frame for {label}: {error}");
+            }
+        }
         let duration_ms = session.started_at.elapsed().as_millis().min(86_400_000) as u64;
         if session.frame_count.load(Ordering::Acquire) == 0 {
             let _ = session
@@ -298,7 +319,7 @@ impl WebRecordingSession {
         }
     }
 
-    async fn capture_once(&self) -> Result<(), String> {
+    async fn capture_once(&self, force: bool) -> Result<(), String> {
         let webview = self
             .app
             .get_webview(&self.label)
@@ -306,6 +327,18 @@ impl WebRecordingSession {
         let jpeg = capture_webview_jpeg(webview).await?;
         if jpeg.len() > 2 << 20 {
             return Err("Web 录像截图超过 2 MiB".to_string());
+        }
+        let signature = frame_signature(&jpeg);
+        let captured_at = Instant::now();
+        if !force
+            && signature.as_deref().is_some_and(|signature| {
+                self.frame_filter
+                    .lock()
+                    .map(|filter| !filter.should_upload(signature, captured_at))
+                    .unwrap_or(false)
+            })
+        {
+            return Ok(());
         }
         let timestamp_ms = self.started_at.elapsed().as_millis().min(86_400_000) as u64;
         let url = recording_session_url(self)?
@@ -326,8 +359,15 @@ impl WebRecordingSession {
             .json()
             .await
             .map_err(|error| format!("解析 Web 录像帧响应失败: {error}"))?;
+        if let Some(signature) = signature {
+            if let Ok(mut filter) = self.frame_filter.lock() {
+                filter.mark_uploaded(signature, captured_at);
+            }
+        }
         self.frame_count.store(frame.frame_count, Ordering::Release);
-        emit_recording_state(&self.app, self.state("recording", "正在录制 Website", ""));
+        if !self.stopped.load(Ordering::Acquire) {
+            emit_recording_state(&self.app, self.state("recording", "正在录制 Website", ""));
+        }
         Ok(())
     }
 }
@@ -348,12 +388,60 @@ async fn recording_loop(session: Arc<WebRecordingSession>) {
         if session.stopped.load(Ordering::Acquire) || session.paused.load(Ordering::Acquire) {
             continue;
         }
-        if let Err(error) = session.capture_once().await {
+        if let Err(error) = session.capture_once(false).await {
             session.stopped.store(true, Ordering::Release);
             emit_recording_state(&session.app, session.state("error", &error, ""));
             return;
         }
     }
+}
+
+impl FrameFilter {
+    fn should_upload(&self, signature: &[u8], captured_at: Instant) -> bool {
+        let Some(previous) = self.last_signature.as_deref() else {
+            return true;
+        };
+        if self
+            .last_uploaded_at
+            .is_none_or(|last| captured_at.duration_since(last) >= FORCE_FRAME_INTERVAL)
+        {
+            return true;
+        }
+        signatures_differ(previous, signature)
+    }
+
+    fn mark_uploaded(&mut self, signature: Vec<u8>, captured_at: Instant) {
+        self.last_signature = Some(signature);
+        self.last_uploaded_at = Some(captured_at);
+    }
+}
+
+fn frame_signature(jpeg: &[u8]) -> Option<Vec<u8>> {
+    use image::imageops::FilterType;
+
+    let grayscale = image::load_from_memory_with_format(jpeg, image::ImageFormat::Jpeg)
+        .ok()?
+        .grayscale()
+        .resize_exact(COMPARISON_WIDTH, COMPARISON_HEIGHT, FilterType::Triangle)
+        .into_luma8();
+    Some(grayscale.into_raw())
+}
+
+fn signatures_differ(previous: &[u8], current: &[u8]) -> bool {
+    if previous.len() != current.len() || current.is_empty() {
+        return true;
+    }
+
+    let mut total_difference = 0usize;
+    let mut changed_pixels = 0usize;
+    for (&left, &right) in previous.iter().zip(current) {
+        let difference = left.abs_diff(right) as usize;
+        total_difference += difference;
+        changed_pixels += usize::from(difference >= PIXEL_CHANGE_THRESHOLD as usize);
+    }
+
+    total_difference >= current.len() * MIN_MEAN_PIXEL_DIFFERENCE
+        && changed_pixels * 10_000 >= current.len() * MIN_CHANGED_PIXEL_RATIO_PER_10_000
 }
 
 fn emit_recording_state(app: &AppHandle, state: WebProxyRecordingState) {
@@ -460,7 +548,8 @@ async fn capture_webview_jpeg(_webview: Webview) -> Result<Vec<u8>, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_http_url;
+    use super::{parse_http_url, signatures_differ, FrameFilter, FORCE_FRAME_INTERVAL};
+    use std::time::{Duration, Instant};
 
     #[test]
     fn validates_recording_control_urls() {
@@ -468,5 +557,30 @@ mod tests {
         assert!(parse_http_url("https://example.com/login", "target").is_ok());
         assert!(parse_http_url("file:///tmp/frame.jpg", "target").is_err());
         assert!(parse_http_url("http://user:secret@127.0.0.1", "proxy").is_err());
+    }
+
+    #[test]
+    fn skips_similar_frames_but_keeps_meaningful_changes() {
+        let previous = vec![128; 160 * 90];
+        let mut tiny_change = previous.clone();
+        tiny_change[..30].fill(255);
+        let mut meaningful_change = previous.clone();
+        meaningful_change[..120].fill(255);
+
+        assert!(!signatures_differ(&previous, &previous));
+        assert!(!signatures_differ(&previous, &tiny_change));
+        assert!(signatures_differ(&previous, &meaningful_change));
+    }
+
+    #[test]
+    fn forces_a_periodic_frame_when_the_page_stays_static() {
+        let signature = vec![128; 160 * 90];
+        let captured_at = Instant::now();
+        let mut filter = FrameFilter::default();
+
+        assert!(filter.should_upload(&signature, captured_at));
+        filter.mark_uploaded(signature.clone(), captured_at);
+        assert!(!filter.should_upload(&signature, captured_at + Duration::from_secs(4)));
+        assert!(filter.should_upload(&signature, captured_at + FORCE_FRAME_INTERVAL));
     }
 }

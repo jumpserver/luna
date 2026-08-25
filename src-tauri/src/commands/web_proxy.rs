@@ -15,6 +15,7 @@ use url::Url;
 use zeroize::Zeroize;
 
 const MAIN_WINDOW_LABEL: &str = "main";
+const ASSET_WINDOW_LABEL_PREFIX: &str = "asset-";
 const VIEW_LABEL_PREFIX: &str = "web-proxy-";
 const AUTOFILL_SCHEME: &str = "jumpserver-autofill";
 const OPEN_LINKS_IN_SAME_VIEW_SCRIPT: &str = r#"
@@ -214,10 +215,17 @@ return true;
 }
 
 fn validate_host_window<R: Runtime>(window: &Window<R>) -> Result<(), String> {
-    if window.label() != MAIN_WINDOW_LABEL {
+    if !is_valid_host_window_label(window.label()) {
         return Err("Web Proxy command called from an invalid host window".to_string());
     }
     Ok(())
+}
+
+fn is_valid_host_window_label(label: &str) -> bool {
+    label == MAIN_WINDOW_LABEL
+        || label
+            .strip_prefix(ASSET_WINDOW_LABEL_PREFIX)
+            .is_some_and(|suffix| !suffix.is_empty())
 }
 
 fn validate_label(label: &str) -> Result<(), String> {
@@ -662,11 +670,7 @@ pub async fn start_web_proxy_recording(
     width: u32,
     height: u32,
 ) -> Result<WebProxyRecordingState, String> {
-    validate_host_window(&window)?;
-    validate_label(&label)?;
-    if window.app_handle().get_webview(&label).is_none() {
-        return Err("Web Proxy view not found".to_string());
-    }
+    managed_view(&window, &label)?;
     recordings
         .start(
             window.app_handle().clone(),
@@ -685,8 +689,7 @@ pub async fn stop_web_proxy_recording(
     recordings: State<'_, WebProxyRecordingManager>,
     label: String,
 ) -> Result<Option<WebProxyRecordingState>, String> {
-    validate_host_window(&window)?;
-    validate_label(&label)?;
+    managed_view(&window, &label)?;
     recordings.finish(window.app_handle(), &label).await
 }
 
@@ -707,7 +710,7 @@ pub async fn close_web_proxy_view(
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_proxy, parse_target, validate_label};
+    use super::{is_valid_host_window_label, parse_proxy, parse_target, validate_label};
 
     #[test]
     fn validates_web_proxy_trust_boundary_inputs() {
@@ -719,5 +722,10 @@ mod tests {
         assert!(parse_proxy("http://user:secret@127.0.0.1:5001").is_err());
         assert!(validate_label("web-proxy-1234").is_ok());
         assert!(validate_label("other-view").is_err());
+        assert!(is_valid_host_window_label("main"));
+        assert!(is_valid_host_window_label("asset-1234-1720000000000"));
+        assert!(!is_valid_host_window_label("asset-"));
+        assert!(!is_valid_host_window_label("settings"));
+        assert!(!is_valid_host_window_label("web-proxy-1234"));
     }
 }

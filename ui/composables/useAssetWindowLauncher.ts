@@ -25,7 +25,9 @@ export const useAssetWindowLauncher = () => {
       height: 920,
       minWidth: 1080,
       minHeight: 720,
-      center: true
+      center: true,
+      titleBarStyle: "overlay",
+      hiddenTitle: true
     });
 
     return win;
