@@ -9,6 +9,10 @@ import {
   KubernetesTerminalSocketFailureCode
 } from "#koko/composables/kubernetes/protocol";
 import { useKubernetesTerminalSocket } from "#koko/composables/kubernetes/useKubernetesTerminalSocket";
+import {
+  registerKokoTerminalDataSender,
+  unregisterKokoTerminalDataSender
+} from "#koko/composables/useTerminalSessionRegistry";
 import { KeyboardKey } from "#koko/constants/keyboard";
 import {
   createUnrestrictedClipboardAccess,
@@ -412,6 +416,13 @@ function connectCluster() {
   if (isNarrowScreen.value) resourceTreeOpen.value = false;
 }
 
+function sendVirtualKeyboardData(data: string) {
+  const item = activeTab.value;
+  if (!item || !terminalSocket.connected.value || !globalTerminalId.value) return false;
+  terminalSocket.sendTerminalData(globalTerminalId.value, item.id, item, data);
+  return true;
+}
+
 function closeTab(tabItem: TerminalTab) {
   if (terminalSocket.connected.value && globalTerminalId.value) {
     terminalSocket.closeTerminal(globalTerminalId.value, tabItem.id);
@@ -547,8 +558,12 @@ useEventListener(window, "resize", resize);
 useEventListener(window, "pointermove", resizeSidebar);
 useEventListener(window, "pointerup", stopSidebarResize);
 useEventListener(window, "pointercancel", stopSidebarResize);
-onMounted(observeAppTheme);
+onMounted(() => {
+  observeAppTheme();
+  registerKokoTerminalDataSender(props.tab.id, sendVirtualKeyboardData);
+});
 onUnmounted(() => {
+  unregisterKokoTerminalDataSender(props.tab.id);
   stopSidebarResize();
   themeObserver?.disconnect();
   stopFailureListener();

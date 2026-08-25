@@ -1075,7 +1075,9 @@
       "splitHorizontally": "Split horizontally",
       "shareLink": "Link",
       "verificationCode": "Code",
-      "shareLinkCopied": "Share link copied"
+      "shareLinkCopied": "Share link copied",
+      "virtualKeyboard": "Virtual keyboard",
+      "noActiveTerminal": "No active terminal is available"
     },
     "drawer": {
       "general": "General",

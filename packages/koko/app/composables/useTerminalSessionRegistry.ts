@@ -21,8 +21,13 @@ interface LocalShellSession {
   terminal?: Terminal;
 }
 
+interface TerminalDataSender {
+  send: (data: string) => boolean;
+}
+
 const sessions = new Map<string, TerminalSession>();
 const localShellSessions = new Map<string, LocalShellSession>();
+const terminalDataSenders = new Map<string, TerminalDataSender>();
 
 export function registerKokoTerminalSession(tabId: string, session: TerminalSession) {
   if (!tabId) return;
@@ -44,8 +49,21 @@ export function unregisterLocalShellTerminalSession(tabId: string) {
   localShellSessions.delete(tabId);
 }
 
+export function registerKokoTerminalDataSender(tabId: string, send: (data: string) => boolean) {
+  if (!tabId) return;
+  terminalDataSenders.set(tabId, { send });
+}
+
+export function unregisterKokoTerminalDataSender(tabId: string) {
+  if (!tabId) return;
+  terminalDataSenders.delete(tabId);
+}
+
 export function sendKokoTerminalData(tabId: string, data: string) {
   if (isKokoTerminalAiInputLocked(tabId)) return false;
+
+  const customSender = terminalDataSenders.get(tabId);
+  if (customSender) return customSender.send(data);
 
   const session = sessions.get(tabId);
   if (session?.socket.readyState === WebSocket.OPEN) {

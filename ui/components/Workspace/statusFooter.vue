@@ -50,7 +50,7 @@ const activeText = computed(() => {
       </span>
     </div>
 
-    <div class="ml-auto flex min-w-0 items-center gap-3">
+    <div class="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-3">
       <span class="hidden min-w-0 items-center gap-2 truncate md:flex">
         <span class="truncate font-ui-mono">{{ activeText }}</span>
         <span
@@ -61,10 +61,11 @@ const activeText = computed(() => {
           {{ activeProtocol }}
         </span>
       </span>
-      <span class="font-ui-mono">{{ tabs.length }} tabs</span>
-      <span v-if="connectedCount" class="font-ui-mono">{{ connectedCount }} connected</span>
-      <span v-if="connectingCount" class="font-ui-mono">{{ connectingCount }} pending</span>
-      <span v-if="failedCount" class="font-ui-mono text-red-500">{{ failedCount }} failed</span>
+      <span class="hidden font-ui-mono sm:inline">{{ tabs.length }} tabs</span>
+      <span v-if="connectedCount" class="hidden font-ui-mono md:inline">{{ connectedCount }} connected</span>
+      <span v-if="connectingCount" class="hidden font-ui-mono md:inline">{{ connectingCount }} pending</span>
+      <span v-if="failedCount" class="hidden font-ui-mono text-red-500 md:inline">{{ failedCount }} failed</span>
+      <WorkspaceVirtualKeyboardPopover v-if="activeWorkspaceMode === 'assets'" />
       <button
         v-if="activeWorkspaceMode === 'assets' && commandExecutionEnabled"
         type="button"

@@ -1078,7 +1078,9 @@
       "splitHorizontally": "水平分屏",
       "shareLink": "链接",
       "verificationCode": "验证码",
-      "shareLinkCopied": "分享链接已复制"
+      "shareLinkCopied": "分享链接已复制",
+      "virtualKeyboard": "虚拟键盘",
+      "noActiveTerminal": "当前没有可输入的终端"
     },
     "drawer": {
       "general": "通用",
