@@ -638,12 +638,14 @@ onUnmounted(() => {
                 :title="row.kind === 'container' ? containerLabel(row.node) : row.node.label"
                 @click="handleRowClick(row)"
               >
-                <UIcon
-                  v-if="row.kind !== 'container'"
-                  :name="row.expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
-                  class="size-4 shrink-0 text-(--app-muted)"
-                />
-                <span v-else class="size-4 shrink-0" />
+                <span class="grid size-3 shrink-0 place-items-center">
+                  <UIcon
+                    v-if="row.kind !== 'container'"
+                    name="i-lucide-chevron-right"
+                    class="sidebar-icon-sm transition-transform"
+                    :class="row.expanded ? 'rotate-90' : ''"
+                  />
+                </span>
                 <img v-if="row.kind === 'asset-root'" src="/icons/kubernetes.svg" alt="" class="size-3.5 shrink-0" />
                 <UIcon
                   v-else

@@ -46,6 +46,12 @@ const localDraggedId = ref("");
 const dropTargetId = ref("");
 const dropPlacement = ref<"before" | "after">("before");
 const editorTabMime = "application/x-jumpserver-editor-tab";
+const SUB_TAB_MAX_WIDTH = 144;
+const SUB_TAB_GAP = 4;
+const tabStripIdealWidth = computed(() => {
+  const count = props.tabs.length;
+  return `${count * SUB_TAB_MAX_WIDTH + Math.max(0, count - 1) * SUB_TAB_GAP}px`;
+});
 const tabMenuItems = computed<DropdownMenuItem[]>(() =>
   props.tabs.map((tab) => ({
     label: tab.label,
@@ -199,7 +205,10 @@ watch(
 </script>
 
 <template>
-  <div v-if="tabs.length" class="flex h-9 min-w-0 shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2">
+  <div
+    v-if="tabs.length || $slots['after-tabs'] || $slots.trailing"
+    class="flex h-9 min-w-0 shrink-0 items-center gap-1 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-main)] px-2"
+  >
     <UButton
       v-if="hasLeftHidden"
       size="xs"
@@ -210,21 +219,23 @@ watch(
       title="Scroll tabs left"
       @click="scrollTabStrip('left')"
     />
-    <div class="flex h-full min-w-0 flex-1 items-center overflow-hidden">
+    <div
+      v-if="tabs.length"
+      class="flex h-full min-w-0 max-w-full shrink items-center overflow-hidden"
+      :style="{ width: tabStripIdealWidth }"
+    >
       <div
         ref="strip"
         role="tablist"
-        class="workspace-sub-tab-strip flex h-full w-fit min-w-0 max-w-full items-center gap-1 overflow-x-auto"
+        class="workspace-sub-tab-strip flex h-full w-full min-w-0 items-center gap-1 overflow-x-auto"
         @wheel="scrollTabs"
       >
         <div
           v-for="tab in tabs"
           :key="tab.id"
-          class="group relative flex h-7 min-w-0 shrink-0 items-center gap-1.5 self-center rounded-md px-2.5 text-left text-[11px] leading-none transition-colors"
+          class="group relative flex h-full min-w-20 max-w-36 basis-36 grow shrink cursor-pointer items-center gap-1.5 pr-2 pl-2.5 text-left text-[11px] leading-none transition-colors"
           :class="[
-            activeId === tab.id
-              ? 'max-w-36 bg-accented text-highlighted'
-              : 'max-w-36 text-muted hover:bg-accented hover:text-highlighted',
+            activeId === tab.id ? 'text-primary' : 'text-muted',
             reorderable ? 'active:cursor-grabbing' : '',
             localDraggedId === tab.id || draggedId === tab.id ? 'opacity-45' : '',
             tab.preview ? 'italic' : ''
@@ -246,16 +257,19 @@ watch(
           @drop="dropTab(tab.id, $event)"
           @dragend="endDrag"
         >
+          <span v-if="activeId === tab.id" class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-primary" />
           <span
             v-if="dropTargetId === tab.id && dropPlacement === 'before'"
             class="absolute -left-0.5 inset-y-1 w-0.5 rounded-full bg-primary"
           />
-          <UIcon :name="tab.icon" class="size-3.5 shrink-0" />
-          <span class="min-w-0 truncate">{{ tab.label }}</span>
-          <span v-if="tab.dirty" class="size-1.5 shrink-0 rounded-full bg-primary" title="未保存" />
+          <span class="relative flex h-full min-w-0 items-center gap-1.5">
+            <UIcon :name="tab.icon" class="size-3.5 shrink-0" />
+            <span class="min-w-0 truncate">{{ tab.label }}</span>
+            <span v-if="tab.dirty" class="size-1.5 shrink-0 rounded-full bg-primary" title="未保存" />
+          </span>
           <button
             type="button"
-            class="flex size-4 shrink-0 items-center justify-center rounded text-muted hover:bg-elevated hover:text-foreground"
+            class="ml-auto flex size-4 shrink-0 items-center justify-center rounded text-muted hover:bg-elevated hover:text-foreground"
             :aria-label="`${closeLabel} ${tab.label}`"
             :title="`${closeLabel} ${tab.label}`"
             @click.stop="$emit('close', tab.id)"
@@ -294,7 +308,10 @@ watch(
         title="Select tab"
       />
     </UDropdownMenu>
-    <div v-if="$slots.trailing" class="ml-2 flex h-full shrink-0 items-center gap-1 pl-2">
+    <div v-if="$slots['after-tabs']" class="flex h-full shrink-0 items-center gap-1">
+      <slot name="after-tabs" />
+    </div>
+    <div v-if="$slots.trailing" class="ml-auto flex h-full shrink-0 items-center gap-1 pl-2">
       <slot name="trailing" />
     </div>
   </div>
