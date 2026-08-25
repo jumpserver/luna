@@ -1,5 +1,5 @@
 import type { AppConfigType, ConfigItem } from "~/types/index";
-import { COMPONENT_WORKSPACE_CAPABILITIES } from "~/shared/connectors/capabilities";
+import { COMPONENT_WORKSPACE_CAPABILITIES, WEB_PROXY_NATIVE_VALUE } from "~/shared/connectors/capabilities";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export {
@@ -8,6 +8,7 @@ export {
   SFTP_FILE_MANAGER_VALUE,
   WEB_CLI_NATIVE_VALUE,
   WEB_DB_NATIVE_VALUE,
+  WEB_PROXY_NATIVE_VALUE,
   WEB_RDP_NATIVE_VALUE
 } from "~/shared/connectors/capabilities";
 
@@ -122,6 +123,31 @@ export const withKokoWebFallback = (protocol: string, methods: ConnectMethod[]) 
   );
 
   return [...fallbackMethods, ...methods] as ConnectMethod[];
+};
+
+export const withWebProxyBuiltin = (
+  protocol: string,
+  methods: ConnectMethod[],
+  tauriRuntime = isTauriRuntime()
+): ConnectMethod[] => {
+  const normalizedProtocol = protocol.trim().toLowerCase();
+  if (!tauriRuntime || !["http", "https"].includes(normalizedProtocol)) return methods;
+  if (methods.some((method) => method.value === WEB_PROXY_NATIVE_VALUE)) return methods;
+
+  const originIndex = methods.findIndex((method) => !method.origin_value && !method.disabled);
+  if (originIndex === -1) return methods;
+
+  const origin = methods[originIndex]!;
+  const builtin: ConnectMethod = {
+    ...origin,
+    value: WEB_PROXY_NATIVE_VALUE,
+    label: "内置 Web Proxy",
+    type: "web",
+    component: "web-proxy",
+    origin_value: origin.value
+  };
+
+  return [...methods.slice(0, originIndex), builtin, ...methods.slice(originIndex)];
 };
 
 const isWebIframeMethod = (method: ConnectMethod) => {
@@ -284,8 +310,13 @@ export const useConnectMethods = () => {
 
   const getMethodsForProtocol = async (protocol: string): Promise<ConnectMethod[]> => {
     const allMethods = await fetchConnectMethods();
-    const protocolMethods = allMethods[protocol] || [];
-    return withKokoWebFallback(protocol, protocolMethods).filter((method) => !method.disabled);
+    const normalizedProtocol = protocol.trim().toLowerCase();
+    const protocolMethods =
+      Object.entries(allMethods).find(
+        ([key, methods]) => key.toLowerCase() === normalizedProtocol && Array.isArray(methods)
+      )?.[1] || [];
+    const methodsWithFallback = withKokoWebFallback(normalizedProtocol, protocolMethods);
+    return withWebProxyBuiltin(normalizedProtocol, methodsWithFallback).filter((method) => !method.disabled);
   };
 
   const getDefaultMethodForProtocol = async (protocol: string): Promise<string> => {

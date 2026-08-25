@@ -8,6 +8,7 @@ import {
   SFTP_FILE_EDITOR_VALUE,
   SFTP_FILE_MANAGER_VALUE,
   WEB_DB_NATIVE_VALUE,
+  WEB_PROXY_NATIVE_VALUE,
   WEB_RDP_NATIVE_VALUE
 } from "~/composables/useConnectMethods";
 import { useSettingManager } from "~/composables/useSettingManager";
@@ -28,6 +29,7 @@ const NATIVE_WORKSPACE_METHODS = new Set([
   BUILTIN_CLIENT_METHOD,
   WEB_CLI_NATIVE_METHOD,
   WEB_DB_NATIVE_VALUE,
+  WEB_PROXY_NATIVE_VALUE,
   WEB_RDP_NATIVE_VALUE,
   SFTP_FILE_MANAGER_VALUE,
   SFTP_FILE_EDITOR_VALUE,
@@ -430,8 +432,7 @@ export const useAssetAction = () => {
     if (!NATIVE_WORKSPACE_METHODS.has(body.connect_method)) return body.connect_method;
 
     try {
-      const allMethods = await fetchConnectMethods();
-      const methods = allMethods[body.protocol] || [];
+      const methods = await getMethodsForProtocol(body.protocol);
       const injected = methods.find((item) => item.value === body.connect_method);
       if (injected?.origin_value) return injected.origin_value;
 
@@ -472,6 +473,7 @@ export const useAssetAction = () => {
       assetName?: string;
       orgId?: string;
       aclBatchId?: string;
+      asset?: AssetItem;
       onSessionReady?: (payload: Record<string, any>) => void;
       onSessionError?: (error: unknown) => void;
     }
@@ -494,11 +496,21 @@ export const useAssetAction = () => {
         const endpointUrl = import.meta.dev
           ? window.location.origin
           : await fetchSmartEndpointUrl(token, { component, type: "web" }, body, meta.orgId);
+        let webProxy;
+        if (body.connect_method === WEB_PROXY_NATIVE_VALUE) {
+          if (!meta.asset) throw new Error("Website 资产信息不完整");
+          webProxy = useWebProxyManager().buildWebProxyRequest(meta.asset, body.protocol, endpointUrl);
+        }
         const payload = {
           token,
           ...token,
           endpointUrl,
-          connectMethod: { value: body.connect_method, component }
+          webProxy,
+          connectMethod: {
+            value: body.connect_method,
+            component,
+            type: "web"
+          }
         };
         if (meta.onSessionReady) meta.onSessionReady(payload);
         else updateSessionPayload(meta, payload);
@@ -697,6 +709,7 @@ export const useAssetAction = () => {
           assetName: ephemeral?.asset?.name,
           orgId: ephemeral?.orgId,
           aclBatchId: ephemeral?.aclBatchId,
+          asset: ephemeral?.asset,
           onSessionReady: ephemeral?.onSessionReady,
           onSessionError: ephemeral?.onSessionError
         });

@@ -23,6 +23,7 @@ const GuideSessionSurface = defineAsyncComponent(() => import("~/shared/connecto
 const LegacyIframeSession = defineAsyncComponent(() => import("~/shared/connectors/LegacyIframeSession.vue"));
 const LocalShellSessionSurface = defineAsyncComponent(() => import("~/workspaces/LocalShellSessionSurface.vue"));
 const ScriptEditorSessionSurface = defineAsyncComponent(() => import("~/workspaces/ScriptEditorSessionSurface.vue"));
+const WebProxySessionSurface = defineAsyncComponent(() => import("~/workspaces/WebProxySessionSurface.vue"));
 
 export interface ConnectorRegistryEntry {
   component: Component;
@@ -90,6 +91,10 @@ export function resolveSessionSurface(tab: WorkspaceSessionTab): Component {
 
   if (capability?.surface === "remote-desktop") {
     return LionRemoteSessionSurface;
+  }
+
+  if (capability?.surface === "web-browser") {
+    return WebProxySessionSurface;
   }
 
   const component = resolveSessionComponent(tab);
