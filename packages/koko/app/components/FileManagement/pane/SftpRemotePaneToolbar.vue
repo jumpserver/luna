@@ -257,7 +257,7 @@ defineExpose({
       class="sftp-file-management__context-label flex h-8 max-w-32 shrink-0 items-center gap-1 rounded-md border border-(--app-border)/70 bg-(--app-input-bg)/60 px-1.5 text-[11px] leading-none"
       :title="contextLabel"
     >
-      <UIcon name="i-lucide-server" class="size-3.5 shrink-0 text-success" />
+      <UIcon name="i-lucide-server" class="size-3.5 shrink-0 text-(--color-text-accent)" />
       <span class="min-w-0 truncate font-medium text-highlighted">{{ contextLabel }}</span>
     </div>
 

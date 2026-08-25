@@ -10,14 +10,17 @@ const { getPaneTarget, registerPaneSurface, unregisterPaneSurface } = useWorkspa
 const surfaceTab = computed(() => toSurfaceTab(props.pane));
 const surfaceTarget = computed(() => getPaneTarget(props.pane.id));
 const surfaceComponent = computed(() => resolveSessionSurface(surfaceTab.value));
-const surfaceReady = computed(() => {
+const isDatabaseWorkspace = computed(() => {
   const payload = props.pane.payload || {};
   const connectMethod = String(payload.connectMethod?.value || props.pane.connectMethod || "");
-  const isDatabaseWorkspace = findDeclaredCapability(props.pane.protocol, connectMethod)?.surface === "database";
+  return findDeclaredCapability(props.pane.protocol, connectMethod)?.surface === "database";
+});
+const surfaceReady = computed(() => {
+  const payload = props.pane.payload || {};
   return (
     props.pane.protocol === "local-shell" ||
     props.pane.protocol === "script-editor" ||
-    isDatabaseWorkspace ||
+    isDatabaseWorkspace.value ||
     Boolean(payload.id || payload.token?.id || payload.webUrl)
   );
 });
@@ -26,6 +29,10 @@ let surfaceInstance: { focus?: () => void } | null = null;
 
 const surfaceInstanceKey = computed(() => {
   const payload = props.pane.payload || {};
+  // Chen watches token changes and reconnects in place. Remounting here would
+  // discard its workspace state when the initial token arrives or is renewed.
+  if (isDatabaseWorkspace.value) return `${props.pane.id}:database`;
+
   const tokenId = String(payload.id || payload.token?.id || "");
   const webUrl = String(payload.webUrl || "");
   const connectMethod = String(payload.connectMethod?.value || "");

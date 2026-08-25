@@ -538,7 +538,7 @@ defineExpose({ refresh, loading });
                 color="neutral"
                 variant="ghost"
                 size="xs"
-                :icon="activeTreeKind === 'authorization' ? 'i-lucide-list-tree' : 'i-lucide-shield-check'"
+                :icon="activeTreeKind === 'authorization' ? 'i-lucide-shapes' : 'i-lucide-folder-tree'"
                 class="sidebar-icon-button size-6 justify-center p-0"
                 :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
                 :aria-label="treeSwitchLabel"

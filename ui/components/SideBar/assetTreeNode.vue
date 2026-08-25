@@ -37,10 +37,36 @@ const iconCandidates = computed(() => {
     data.type?.value,
     data.type,
     props.node.type,
-    iconSkin
+    iconSkin,
+    props.node.key,
+    props.node.id,
+    props.node.name
   ]
     .map((value) => String(value || "").toLowerCase())
     .filter(Boolean);
+});
+
+const typeGroupIcon = computed(() => {
+  if (props.treeKind !== "type" || !isParent.value || (props.node.level || 0) !== 0) return "";
+
+  const has = (...keywords: string[]) =>
+    iconCandidates.value.some((value) => keywords.some((keyword) => value.includes(keyword)));
+  const hasExact = (...keywords: string[]) => iconCandidates.value.some((value) => keywords.includes(value));
+
+  if (has("k8s", "kubernetes", "container")) return "i-lucide-container";
+  if (has("database", "mysql", "mariadb", "oracle", "postgres", "sqlserver", "redis", "mongodb")) {
+    return "i-lucide-database";
+  }
+  if (has("directory service", "directory_service", "directory-service", "windows_ad")) return "i-lucide-network";
+  if (has("device", "network")) return "i-lucide-router";
+  if (has("website", "web")) return "i-lucide-globe";
+  if (has("cloud")) return "i-lucide-cloud";
+  if (has("windows")) return "i-lucide-monitor";
+  if (has("host", "linux", "unix")) return "i-lucide-server";
+  if (has("gpt") || hasExact("ai")) return "i-lucide-bot";
+  if (has("custom", "other")) return "i-lucide-box";
+
+  return "";
 });
 
 const iconSrc = computed(() => {
@@ -70,11 +96,13 @@ const iconSrc = computed(() => {
 
 const icon = computed(() => {
   if (props.node.meta?.type === "recent-connections") return "i-lucide-history";
+  if (typeGroupIcon.value) return typeGroupIcon.value;
   if (isParent.value) return isOpen.value ? "i-tabler-folder-open" : "i-tabler-folder";
   if (iconSrc.value) return "";
   if ((props.node.meta?.data?.platform_type || "").toLowerCase().includes("device")) return "i-lucide-router";
   return "i-lucide-terminal";
 });
+const isFolderIcon = computed(() => icon.value === "i-tabler-folder" || icon.value === "i-tabler-folder-open");
 
 const activate = () => {
   if (isParent.value && !props.searchMode) {
@@ -117,7 +145,7 @@ const activate = () => {
           v-if="node.loading || icon"
           :name="node.loading ? 'i-lucide-loader-circle' : icon"
           class="sidebar-icon"
-          :class="node.loading ? 'animate-spin' : isParent ? 'tree-folder-icon' : ''"
+          :class="node.loading ? 'animate-spin' : isFolderIcon ? 'tree-folder-icon' : ''"
         />
         <img v-else-if="iconSrc" :src="iconSrc" alt="" class="sidebar-icon-img" />
         <span
