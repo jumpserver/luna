@@ -1,4 +1,3 @@
-
 minimumReleaseAgeExclude:
   - "@ai-sdk/gateway@4.0.33"
   - "@ai-sdk/provider-utils@5.0.16"
@@ -16,3 +15,5 @@ allowBuilds:
   unrs-resolver: true
   vue-demi: true
 
+patchedDependencies:
+  guacamole-common-js-jumpserver@1.1.0-c: patches/guacamole-common-js-jumpserver@1.1.0-c.patch

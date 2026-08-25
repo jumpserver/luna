@@ -1,0 +1,76 @@
+diff --git a/dist/guacamole-common.js b/dist/guacamole-common.js
+index 542c77bb40f2814949b61ed245830f9a66733598..a3cd68057b72438dc0ad1f39b9485a16c845f587 100644
+--- a/dist/guacamole-common.js
++++ b/dist/guacamole-common.js
+@@ -10669,6 +10669,14 @@ Guacamole.SessionRecording = function SessionRecording(tunnel) {
+      */
+     var startRealTimestamp = null;
+ 
++    /**
++     * Playback rate multiplier. 1 plays the recording in realtime.
++     *
++     * @private
++     * @type {Number}
++     */
++    var playbackRate = 1;
++
+     /**
+      * The ID of the timeout which will continue the in-progress seek
+      * operation. If no seek operation is in progress, the ID stored here (if
+@@ -10931,8 +10939,8 @@ Guacamole.SessionRecording = function SessionRecording(tunnel) {
+             var next = frames[currentFrame + 1];
+ 
+             // Calculate the real timestamp corresponding to when the next
+-            // frame begins
+-            var nextRealTimestamp = next.timestamp - startVideoTimestamp + startRealTimestamp;
++            // frame begins, scaled by the current playback rate.
++            var nextRealTimestamp = (next.timestamp - startVideoTimestamp) / playbackRate + startRealTimestamp;
+ 
+             // Calculate the relative delay between the current time and
+             // the next frame start
+@@ -11078,6 +11086,45 @@ Guacamole.SessionRecording = function SessionRecording(tunnel) {
+      * playback resumes at the current position, and the seek is aborted as if
+      * completed.
+      */
++    /**
++     * Returns the current playback rate multiplier.
++     *
++     * @returns {Number}
++     *     The current playback rate. 1 is realtime.
++     */
++    this.getPlaybackRate = function getPlaybackRate() {
++        return playbackRate;
++    };
++
++    /**
++     * Sets the playback rate multiplier. Values greater than 1 play faster
++     * than realtime; values between 0 and 1 play slower. Invalid values are
++     * ignored. If playback is already in progress, the current frame delay is
++     * rescheduled so the new rate takes effect immediately.
++     *
++     * @param {Number} rate
++     *     The desired playback rate. 1 is realtime.
++     */
++    this.setPlaybackRate = function setPlaybackRate(rate) {
++        var nextRate = Number(rate);
++        if (!isFinite(nextRate) || nextRate <= 0)
++            return;
++
++        if (nextRate === playbackRate)
++            return;
++
++        playbackRate = nextRate;
++
++        // Re-anchor and reschedule the next frame so the new rate applies now
++        if (recording.isPlaying() && currentFrame + 1 < frames.length) {
++            abortSeek();
++            var next = frames[currentFrame + 1];
++            startVideoTimestamp = next.timestamp;
++            startRealTimestamp = new Date().getTime();
++            continuePlayback();
++        }
++    };
++
+     this.play = function play() {
+ 
+         // If playback is not already in progress and frames remain,

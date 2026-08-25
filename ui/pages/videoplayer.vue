@@ -21,6 +21,8 @@ const commitActiveId = useDebounceFn((id: string | null) => {
 }, 250);
 const importMessage = ref("");
 const playlistCollapsed = ref(false);
+const isDragOver = ref(false);
+let dragDepth = 0;
 
 const { parseFiles, parsePaths } = useVideoPlayerParser();
 const { removeRecording } = useVideoPlayerTauri();
@@ -189,6 +191,48 @@ function handleInputChange(event: Event) {
   void importFiles(files);
 }
 
+function fileNativePath(file: File) {
+  return (file as File & { path?: string }).path || "";
+}
+
+function resetDragState() {
+  dragDepth = 0;
+  isDragOver.value = false;
+}
+
+function handleDragEnter(event: DragEvent) {
+  event.preventDefault();
+  dragDepth += 1;
+  isDragOver.value = true;
+}
+
+function handleDragOver(event: DragEvent) {
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+}
+
+function handleDragLeave(event: DragEvent) {
+  event.preventDefault();
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (dragDepth === 0) isDragOver.value = false;
+}
+
+function handleDrop(event: DragEvent) {
+  event.preventDefault();
+  resetDragState();
+
+  const files = Array.from(event.dataTransfer?.files || []);
+  if (files.length === 0) return;
+
+  const paths = files.map(fileNativePath).filter(Boolean);
+  if (isTauriRuntime() && paths.length === files.length) {
+    void importPaths(paths);
+    return;
+  }
+
+  void importFiles(files);
+}
+
 watch(
   () => items.value.length,
   (len, prevLen) => {
@@ -221,9 +265,19 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="flex h-full min-h-0 flex-col overflow-hidden py-4 pl-4"
+    class="relative flex h-full min-h-0 flex-col overflow-hidden py-4 pl-4"
     :class="items.length > 0 && playlistCollapsed ? 'pr-0' : 'pr-4'"
+    @dragenter.prevent="handleDragEnter"
+    @dragover.prevent="handleDragOver"
+    @dragleave.prevent="handleDragLeave"
+    @drop.prevent="handleDrop"
   >
+    <div
+      v-if="isDragOver && items.length > 0"
+      class="pointer-events-none absolute inset-4 z-20 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/10 text-sm font-medium text-primary"
+    >
+      松开以导入录像
+    </div>
     <input
       id="videoplayer-file-input"
       ref="fileInputRef"
@@ -254,7 +308,8 @@ onBeforeUnmount(() => {
         </div>
         <div
           v-else
-          class="flex min-h-0 flex-1 items-center justify-center border border-dashed border-default px-6 py-6 text-center text-sm text-muted"
+          class="flex min-h-0 flex-1 items-center justify-center border border-dashed px-6 py-6 text-center text-sm text-muted transition-colors"
+          :class="isDragOver ? 'border-primary bg-primary/5' : 'border-default'"
         >
           <button
             type="button"
@@ -268,7 +323,9 @@ onBeforeUnmount(() => {
             </span>
             <span class="max-w-xl">
               <span class="block text-xl font-semibold tracking-tight text-highlighted">导入录像文件</span>
-              <span class="mt-2 block text-sm leading-6 text-muted">点击这里选择 `.mp4`、`.gz`、`.tar` 文件。</span>
+              <span class="mt-2 block text-sm leading-6 text-muted">
+                拖拽文件到这里，或点击选择 `.mp4`、`.gz`、`.tar` 文件。
+              </span>
             </span>
             <span class="rounded-full bg-muted px-4 py-2 text-sm text-toned transition group-hover:bg-accented">
               选择文件

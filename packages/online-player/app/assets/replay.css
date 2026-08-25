@@ -176,9 +176,13 @@
   background: var(--replay-hover);
 }
 
+.replay-play-button,
+.replay-restart-button,
 .replay-control-icon-button {
   display: inline-grid;
   place-items: center;
+  justify-content: center;
+  padding: 0;
   line-height: 1;
 }
 

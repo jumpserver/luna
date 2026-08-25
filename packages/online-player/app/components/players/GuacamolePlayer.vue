@@ -4,11 +4,13 @@ import type { GuacamoleDisplay, GuacamoleRecording, GuacamoleStatic } from "#onl
 
 import * as GuacamoleModule from "guacamole-common-js-jumpserver/dist/guacamole-common";
 import { fitDisplayScale } from "#online-player/utils/guacamoleBounds";
+import { applyGuacamolePlaybackRate } from "#online-player/utils/guacamolePlayback";
 import { fetchRecordingText } from "#online-player/utils/recordingSource";
 import { interpretTouchGesture } from "#online-player/utils/touchSeek";
 
 const props = defineProps<{
   src: string;
+  speed?: number;
   startAtMs?: number;
 }>();
 
@@ -37,6 +39,10 @@ let touchStart: { x: number; y: number; t: number } | null = null;
 let lastPosition = 0;
 let loadController: AbortController | null = null;
 let seekSequence = 0;
+
+const applySpeed = () => {
+  applyGuacamolePlaybackRate(recording, props.speed);
+};
 
 interface SeekRequest {
   id: number;
@@ -195,6 +201,7 @@ const mount = async () => {
   loadController = controller;
   const tunnel = new Guacamole.StaticHTTPTunnel();
   recording = new Guacamole.SessionRecording(tunnel);
+  applySpeed();
   display = recording.getDisplay();
   const element = display.getElement();
   hostRef.value.appendChild(element);
@@ -314,6 +321,11 @@ function onTouchEnd(event: TouchEvent) {
 watch(
   () => props.src,
   () => void nextTick(mount)
+);
+
+watch(
+  () => props.speed,
+  () => applySpeed()
 );
 
 onMounted(() => void mount());

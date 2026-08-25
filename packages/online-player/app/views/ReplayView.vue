@@ -109,7 +109,6 @@ const showRail = computed(() =>
     commandsError: Boolean(commandsError.value)
   })
 );
-const speedDisabled = computed(() => playerType.value === "guacamole");
 const asciiBleed = computed(() => playerType.value === "asciicast");
 const guacamoleFill = computed(() => playerType.value === "guacamole");
 
@@ -275,7 +274,6 @@ watch(
             :active-command-offset="activeCommandOffset ?? undefined"
             :show-command-rail="showRail"
             :command-rail-open="showRail && !railCollapsed"
-            :speed-disabled="speedDisabled"
             :download-url="downloadUrl"
             @toggle="togglePlayback"
             @restart="restart"

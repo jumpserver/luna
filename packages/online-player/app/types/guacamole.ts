@@ -20,6 +20,8 @@ export interface GuacamoleRecording {
   play: () => void;
   pause: () => void;
   seek: (millis: number, callback?: () => void) => void;
+  setPlaybackRate?: (rate: number) => void;
+  getPlaybackRate?: () => number;
   connect: (data: string) => void;
   disconnect: () => void;
   isPlaying: () => boolean;

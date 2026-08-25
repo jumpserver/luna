@@ -17,6 +17,7 @@ const scale = ref(1);
 const duration = ref(0);
 const currentPosition = ref(0);
 const errorMessage = ref("");
+const speed = ref(1);
 
 let tunnel: any = null;
 let recording: any = null;
@@ -275,6 +276,7 @@ async function loadRecording() {
 
   tunnel = new Guacamole.StaticHTTPTunnel();
   recording = new Guacamole.SessionRecording(tunnel);
+  applySpeed();
   display = recording.getDisplay();
 
   displayHostRef.value!.innerHTML = "";
@@ -305,6 +307,7 @@ async function loadRecording() {
 
     loading.value = false;
     recording.connect(chunks);
+    applySpeed();
     duration.value = recording.getDuration?.() || 0;
     recording.play();
     currentPosition.value = 0;
@@ -363,9 +366,15 @@ function cleanup() {
   duration.value = 0;
 }
 
+function applySpeed() {
+  recording?.setPlaybackRate?.(speed.value);
+}
+
 function handleResize() {
   recomputeScale();
 }
+
+watch(speed, applySpeed);
 
 onMounted(async () => {
   const originalToCanvas = Guacamole.Layer.prototype.toCanvas;
@@ -444,6 +453,7 @@ onBeforeUnmount(() => {
         :disabled="loading || isSeeking || !duration"
         @input="seek"
       />
+      <VideoPlayerSpeedControl v-model="speed" class="shrink-0" />
       <div class="w-16 text-right text-[11px] uppercase tracking-[0.16em] text-(--ui-text-dimmed)">
         {{ Math.round(scale * 100) }}%
       </div>

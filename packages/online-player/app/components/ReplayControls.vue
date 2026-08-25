@@ -118,8 +118,9 @@ const sliderReady = computed(() => Boolean(props.durationReady) && props.duratio
           variant="ghost"
           size="md"
           square
-          class="replay-play-button size-10 rounded-md text-[var(--replay-fg)]"
+          class="replay-play-button replay-control-icon-button size-10 rounded-md p-0 text-[var(--replay-fg)]"
           :icon="playing ? 'i-lucide-pause' : 'i-lucide-play'"
+          :ui="{ leadingIcon: 'm-0 size-5' }"
           :disabled="seeking"
           :aria-label="playing ? t('Replay.Pause') : t('Replay.Play')"
           @click="emit('toggle')"
@@ -129,8 +130,9 @@ const sliderReady = computed(() => Boolean(props.durationReady) && props.duratio
           variant="ghost"
           size="sm"
           square
-          class="replay-restart-button size-[34px] rounded-[5px] text-[var(--replay-muted)]"
+          class="replay-restart-button replay-control-icon-button size-[34px] rounded-[5px] p-0 text-[var(--replay-muted)]"
           icon="i-lucide-rotate-cw"
+          :ui="{ leadingIcon: 'm-0 size-4' }"
           :disabled="seeking"
           :aria-label="t('Replay.Restart')"
           @click="emit('restart')"
@@ -224,6 +226,7 @@ const sliderReady = computed(() => Boolean(props.durationReady) && props.duratio
         <UButton
           v-if="downloadUrl"
           :href="downloadUrl"
+          external
           color="neutral"
           variant="ghost"
           size="xs"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { Player } from "asciinema-player";
 import { create as createAsciinemaPlayer } from "asciinema-player";
 
 const props = defineProps<{
@@ -7,8 +8,10 @@ const props = defineProps<{
 }>();
 
 const terminalRef = ref<HTMLElement | null>(null);
-let playerInstance: { dispose?: () => void } | null = null;
+const speed = ref(1);
+let playerInstance: Player | null = null;
 let resizeObserver: ResizeObserver | null = null;
+let resumeAt = 0;
 
 function resolveCastSource() {
   if (props.castData) {
@@ -39,9 +42,17 @@ function mountPlayer() {
   playerInstance = createAsciinemaPlayer(castSource, mountTarget, {
     fit: "both",
     preload: true,
-    autoplay: true
+    autoplay: true,
+    startAt: resumeAt,
+    speed: speed.value
   });
+  void playerInstance.play?.();
 }
+
+watch(speed, () => {
+  resumeAt = playerInstance?.getCurrentTime?.() || resumeAt;
+  scheduleMount();
+});
 
 function scheduleMount() {
   destroyPlayer();
@@ -74,8 +85,11 @@ onBeforeUnmount(destroyPlayer);
 </script>
 
 <template>
-  <div class="terminal-root">
+  <div class="terminal-root relative">
     <div ref="terminalRef" class="terminal-host" />
+    <div class="absolute right-3 bottom-3 z-20">
+      <VideoPlayerSpeedControl v-model="speed" />
+    </div>
   </div>
 </template>
 

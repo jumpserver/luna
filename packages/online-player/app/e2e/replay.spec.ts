@@ -62,7 +62,12 @@ async function installReplayBackend(
   extra?: { parts?: boolean; manifestSrc?: string; guacamoleDelayMs?: number; guacamoleBody?: string }
 ) {
   await page.route("**/mock.cast", (route) =>
-    route.fulfill({ status: 200, contentType: "application/x-asciicast", body: CAST_BODY })
+    route.fulfill({
+      status: 200,
+      contentType: "application/x-asciicast",
+      headers: { "content-disposition": "attachment; filename=mock.cast" },
+      body: CAST_BODY
+    })
   );
   await page.route("**/mock.cast.gz", (route) =>
     route.fulfill({
@@ -229,7 +234,29 @@ test.describe("online session replay", () => {
     await expect(page.locator("[data-replay-rail]")).toBeVisible();
     await expect(page.getByText("ls -la /var/www")).toBeVisible();
     await expect(page.locator("[data-replay-download]")).toBeVisible();
+    await expect(page.locator("[data-replay-download]")).toHaveAttribute("href", "/mock.cast");
     await expect(page.locator(".replay-infobar").getByRole("link")).toHaveCount(0);
+
+    const replayUrl = page.url();
+    await page.locator("[data-replay-download]").click();
+    await expect(page.locator("[data-replay-root]")).toBeVisible();
+    expect(page.url()).toBe(replayUrl);
+
+    const playButton = page.locator(".replay-play-button");
+    const restartButton = page.locator(".replay-restart-button");
+    const playIcon = playButton.locator("[data-slot=leadingIcon]");
+    const restartIcon = restartButton.locator("[data-slot=leadingIcon]");
+    const [playBox, playIconBox, restartBox, restartIconBox] = await Promise.all([
+      playButton.boundingBox(),
+      playIcon.boundingBox(),
+      restartButton.boundingBox(),
+      restartIcon.boundingBox()
+    ]);
+    expect(playBox && playIconBox && restartBox && restartIconBox).toBeTruthy();
+    expect(playIconBox!.x + playIconBox!.width / 2).toBeCloseTo(playBox!.x + playBox!.width / 2, 1);
+    expect(playIconBox!.y + playIconBox!.height / 2).toBeCloseTo(playBox!.y + playBox!.height / 2, 1);
+    expect(restartIconBox!.x + restartIconBox!.width / 2).toBeCloseTo(restartBox!.x + restartBox!.width / 2, 1);
+    expect(restartIconBox!.y + restartIconBox!.height / 2).toBeCloseTo(restartBox!.y + restartBox!.height / 2, 1);
 
     const [speedBox, downloadBox, railToggleBox] = await Promise.all([
       page.locator("[data-replay-speed]").boundingBox(),
@@ -318,6 +345,44 @@ test.describe("online session replay", () => {
 
     await expect(page.locator("[data-guacamole-root]")).toBeVisible();
     await expect(page.locator("[data-replay-stage]")).toContainText("00:01");
+    await expect(page.locator("[data-replay-speed]")).toBeEnabled();
+  });
+
+  test("changes guacamole playback speed without remounting the player", async ({ page }) => {
+    const frames = Array.from({ length: 21 }, (_, index) => {
+      const timestamp = String(100 + index * 1000);
+      return `4.sync,${timestamp.length}.${timestamp};`;
+    }).join("");
+    const longRecording = [
+      "4.size,1.0,3.800,3.600;",
+      "4.rect,1.0,3.100,3.100,3.200,3.200;",
+      "5.cfill,2.15,1.0,3.255,1.0,1.0,3.255;",
+      frames
+    ].join("");
+    await installReplayBackend(
+      page,
+      {
+        type: "guacamole",
+        src: "/mock.replay.gz",
+        user: "alice",
+        asset: "windows-prod-01",
+        account: "administrator",
+        date_start: "2026-08-20T14:32:00.000Z"
+      },
+      { guacamoleBody: longRecording }
+    );
+    await openReplay(page, "/replay/sid-guacamole-speed");
+
+    const root = page.locator("[data-guacamole-root]");
+    const speed = page.locator("[data-replay-speed]");
+    await expect(root).toBeVisible();
+    await expect(speed).toBeEnabled();
+    await expect(speed).toHaveText("1.0×");
+
+    await speed.click();
+    await page.getByRole("menuitem", { name: "2.0×" }).click();
+    await expect(speed).toHaveText("2.0×");
+    await expect(root).toBeVisible();
   });
 
   test("queues early guacamole command seeks and keeps play controls in sync", async ({ page }) => {
