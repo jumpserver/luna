@@ -6,7 +6,12 @@ export {
 } from "../app/composables/terminal/useLinuxMetrics";
 export type { KokoLinuxMetricsSample, KokoLinuxMetricsState } from "../app/composables/terminal/useLinuxMetrics";
 export { useKokoSessionAdapter } from "../app/composables/useSessionAdapter";
-export { sendKokoTerminalData, sendKokoTerminalDataToMany } from "../app/composables/useTerminalSessionRegistry";
+export {
+  getKokoTerminalCursorAnchor,
+  sendKokoTerminalData,
+  sendKokoTerminalDataToMany
+} from "../app/composables/useTerminalSessionRegistry";
+export type { TerminalCursorAnchor } from "../app/composables/useTerminalSessionRegistry";
 export {
   registerLocalShellTerminalSession,
   unregisterLocalShellTerminalSession

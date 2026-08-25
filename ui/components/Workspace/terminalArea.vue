@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
-const { activeTab, activeTabId, tabs } = useWorkspaceTabs();
+const { activeTab, activePaneId, activeTabId, tabs } = useWorkspaceTabs();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const { isMacOS } = usePlatform();
@@ -11,6 +11,16 @@ const tabNumberSwitchShortcut = computed(() => (isMacOS.value ? "⌘ + 1-9" : "C
 const cleanModeShortcut = computed(() => (isMacOS.value ? "⌘ + Shift + P" : "Ctrl + Shift + P"));
 const fullscreenModeShortcut = computed(() => (isMacOS.value ? "⌘ + Shift + F" : "Ctrl + Shift + F"));
 const panes = computed(() => tabs.value.flatMap((tab) => tab.panes));
+const activePane = computed(() => activeTab.value?.panes.find((pane) => pane.id === activePaneId.value) || null);
+const supportsLocalAiCommand = computed(() => {
+  const pane = activePane.value;
+  return Boolean(
+    isTauriRuntime() &&
+    pane?.mode === "session" &&
+    pane.status === "connected" &&
+    ["ssh", "local-shell"].includes(pane.protocol.toLowerCase())
+  );
+});
 
 const openLogin = () => {
   useEventBus().emit("login", undefined);
@@ -19,7 +29,7 @@ const openLogin = () => {
 
 <template>
   <section
-    class="h-full min-h-0 w-full flex flex-col"
+    class="relative h-full min-h-0 w-full flex flex-col"
     :style="{ backgroundColor: 'color-mix(in srgb, var(--app-main-bg) 88%, transparent)' }"
   >
     <div class="flex-1 min-h-0">
@@ -108,5 +118,7 @@ const openLogin = () => {
         </div>
       </div>
     </div>
+
+    <WorkspaceTerminalAiCommandPopover v-if="supportsLocalAiCommand && activePane" :pane="activePane" />
   </section>
 </template>

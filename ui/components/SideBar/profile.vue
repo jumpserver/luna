@@ -63,6 +63,7 @@ const unlistenLoginFailedRef = ref<UnlistenFn | null>(null);
 const inputRef = ref<ComponentPublicInstance | null>(null);
 const siteNameInputRef = ref<ComponentPublicInstance | null>(null);
 const profileOpen = ref(false);
+const profileOpenedByPointer = ref(false);
 
 let loginBtnUnlockTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -126,6 +127,11 @@ const accountRoleList = computed(() =>
   (currentUser.value?.system_roles || []).map((role) => role.display_name).filter(Boolean)
 );
 const accountRoles = computed(() => accountRoleList.value.join(", ") || t("UserProfile.NoRole"));
+
+const handleProfileOpenAutoFocus = (event: Event) => {
+  if (profileOpenedByPointer.value) event.preventDefault();
+  profileOpenedByPointer.value = false;
+};
 
 const siteSwitcherItems = computed<DropdownMenuItem[][]>(() => [
   (Object.entries(userMap.value) as [string, UserData][]).map(([accountId, account]) => ({
@@ -698,7 +704,12 @@ onBeforeUnmount(() => {
   <UPopover
     v-if="loggedIn"
     v-model:open="profileOpen"
-    :content="{ align: isTopbar ? 'end' : 'start', side: isTopbar ? 'bottom' : 'top', sideOffset: 8 }"
+    :content="{
+      align: isTopbar ? 'end' : 'start',
+      side: isTopbar ? 'bottom' : 'top',
+      sideOffset: 8,
+      onOpenAutoFocus: handleProfileOpenAutoFocus
+    }"
     :ui="{
       content: 'w-64 overflow-hidden rounded-xl bg-default p-0 shadow-xl ring-1 ring-[var(--app-border-strong)]'
     }"
@@ -710,6 +721,8 @@ onBeforeUnmount(() => {
         size="sm"
         icon="i-lucide-circle-user-round"
         :aria-label="accountTooltip"
+        @pointerdown="profileOpenedByPointer = true"
+        @keydown="profileOpenedByPointer = false"
       />
     </UTooltip>
 
@@ -720,6 +733,8 @@ onBeforeUnmount(() => {
       :style="{
         justifyContent: collapse ? 'center' : ''
       }"
+      @pointerdown="profileOpenedByPointer = true"
+      @keydown="profileOpenedByPointer = false"
     >
       <div class="flex items-center gap-2 min-w-0">
         <UIcon name="i-lucide-circle-user-round" class="sidebar-icon" />

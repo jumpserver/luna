@@ -6,7 +6,6 @@ import Profile from "~/components/SideBar/profile.vue";
 
 const { t, locales, locale } = useI18n();
 const { openSettings } = useSettingsWindow();
-const { openToolWindow } = useToolWindow();
 const { themeDropdownItems } = useThemeOptions();
 const { setLang } = useSettingManager();
 const localePath = useLocalePath();
@@ -38,16 +37,16 @@ const toolItems = computed<DropdownMenuItem[]>(() => [
   {
     label: t("Menu.Player"),
     icon: "lucide:clapperboard",
-    onSelect: () => void openToolWindow(localePath("videoplayer"), "JumpServer Video Player")
+    to: localePath("videoplayer")
   },
   {
     label: t("Menu.Transcode"),
     icon: "lucide:repeat-2",
-    onSelect: () => void openToolWindow(localePath({ path: "/transcode" }), t("Transcode.Title"))
+    to: localePath({ path: "/transcode" })
   }
 ]);
 
-const settingsItems = computed<DropdownMenuItem[]>(() => [
+const appMenuItems = computed<DropdownMenuItem[]>(() => [
   {
     label: t("Common.Language"),
     icon: "i-lucide-languages",
@@ -69,7 +68,7 @@ const settingsItems = computed<DropdownMenuItem[]>(() => [
   },
   { type: "separator" },
   {
-    label: t("Common.Settings"),
+    label: t("Common.Preferences"),
     icon: "i-lucide-settings",
     onSelect: () => void openSettings()
   },
@@ -84,13 +83,19 @@ const settingsItems = computed<DropdownMenuItem[]>(() => [
 <template>
   <section class="flex items-center h-full">
     <div class="flex items-center gap-1 px-2">
-      <UDropdownMenu :items="settingsItems" :content="{ align: 'end', side: 'bottom', sideOffset: 6 }">
-        <UTooltip arrow :text="t('Common.Settings')">
+      <UDropdownMenu
+        :items="appMenuItems"
+        size="sm"
+        :content="{ align: 'end', side: 'bottom', sideOffset: 6 }"
+        :ui="{ itemLeadingIcon: 'size-4', itemTrailingIcon: 'size-4' }"
+      >
+        <UTooltip arrow :text="t('Common.AppMenu')">
           <UButton
             icon="i-lucide-settings"
-            :aria-label="t('Common.Settings')"
+            :aria-label="t('Common.AppMenu')"
             v-bind="commonButtonProps"
             variant="ghost"
+            :ui="{ leadingIcon: 'size-4' }"
           />
         </UTooltip>
       </UDropdownMenu>

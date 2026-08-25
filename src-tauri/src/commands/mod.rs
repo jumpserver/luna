@@ -8,6 +8,7 @@ pub(crate) mod connect_token;
 pub(crate) mod dev_http_server;
 pub(crate) mod get_config;
 pub(crate) mod get_version;
+pub(crate) mod local_ai_cli;
 pub(crate) mod local_app_launcher;
 pub(crate) mod local_shell;
 pub(crate) mod offline_player;

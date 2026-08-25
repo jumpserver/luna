@@ -1,8 +1,6 @@
 <script setup lang="ts">
 const { collapse } = useSettingManager();
 const { sidebarWidth } = useSidebarLayout();
-const router = useRouter();
-const isToolWindow = computed(() => router.currentRoute.value.query.tool_window === "1");
 const leadingAreaStyle = computed(() => ({
   width: collapse.value ? "fit-content" : `${sidebarWidth.value}px`
 }));
@@ -23,13 +21,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
   if (event.button !== 0) return;
 
   try {
-    const windows = await useTauriWindowGetAllWindows();
-
-    windows.forEach((window) => {
-      if (window.label === "main") {
-        window.startDragging();
-      }
-    });
+    await useTauriWindowGetCurrentWindow().startDragging();
   } catch (error) {
     console.error(error);
   }
@@ -53,7 +45,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
       <slot />
     </div>
 
-    <div v-if="!isToolWindow" class="h-full shrink-0 flex items-center pl-1">
+    <div class="h-full shrink-0 flex items-center pl-1">
       <HeaderActionButtons />
     </div>
   </div>
