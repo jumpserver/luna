@@ -6,8 +6,8 @@ It is designed to test the upload and install flow for third-party plugins:
 
 - protocol category: `databases`
 - supported protocols: `mysql`, `mariadb`, `postgresql`
-- launch strategy: execute `/usr/bin/python3`
-- behavior: URL-encode connection fields, build a database URL, and call `open`
+- launch strategy: plugin `script` mode with `/bin/bash`
+- behavior: receive `JMS_CONNECT_JSON` plus rendered env vars, URL-encode connection fields, build a database URL, and call `open`
 
 ## Package It
 
@@ -23,3 +23,4 @@ zip -r /Users/guang/projects/clients/dist/com.jumpserver.tablepro@1.0.0.jscplugi
 - This plugin is intentionally macOS-only.
 - It does not depend on builtin plugin indexes.
 - It is shaped for user upload/install testing rather than polished product distribution.
+- It exercises the third-party plugin script path, not only plain argument templating.
