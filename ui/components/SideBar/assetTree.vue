@@ -13,9 +13,11 @@ const emit = defineEmits<{
   contextmenu: [asset: AssetItem, event: MouseEvent];
   toggle: [];
   openMultiple: [assets: AssetItem[]];
+  favoriteMultiple: [assets: AssetItem[]];
 }>();
 
 type PanelKind = Exclude<AssetTreeKind, "search">;
+type BatchAction = "open" | "favorite";
 
 const RECENT_NODE_ID = "__recent_connections__";
 
@@ -33,6 +35,7 @@ const searchNodes = ref<AssetTreeNode[]>([]);
 const loading = ref(false);
 const searchLoading = ref(false);
 const batchMode = ref(false);
+const batchAction = ref<BatchAction>("open");
 const checkedAssets = ref<Record<string, AssetItem>>({});
 const checkedNodeIds = ref<string[]>([]);
 const nodeMenuVisible = ref(false);
@@ -95,16 +98,23 @@ const treeSwitchLabel = computed(() =>
   activeTreeKind.value === "authorization" ? t("Tree.SwitchToType") : t("Tree.SwitchToAuthorization")
 );
 const checkedCount = computed(() => Object.keys(checkedAssets.value).length);
+const startBatchMode = (action: BatchAction) => {
+  batchAction.value = action;
+  batchMode.value = true;
+  checkedAssets.value = {};
+  checkedNodeIds.value = [];
+};
 const batchMenuItems = computed(() => [
   [
     {
       label: t("Tree.OpenMultiple"),
       icon: "i-lucide-list-checks",
-      onSelect: () => {
-        batchMode.value = true;
-        checkedAssets.value = {};
-        checkedNodeIds.value = [];
-      }
+      onSelect: () => startBatchMode("open")
+    },
+    {
+      label: t("Tree.FavoriteMultiple"),
+      icon: "i-lucide-star",
+      onSelect: () => startBatchMode("favorite")
     }
   ]
 ]);
@@ -305,11 +315,12 @@ const closeBatchMode = () => {
   checkedNodeIds.value = [];
 };
 
-const openCheckedAssets = () => {
+const submitCheckedAssets = () => {
   const assets = Object.values(checkedAssets.value);
   if (assets.length === 0) return;
 
-  emit("openMultiple", assets);
+  if (batchAction.value === "favorite") emit("favoriteMultiple", assets);
+  else emit("openMultiple", assets);
   closeBatchMode();
 };
 
@@ -511,12 +522,12 @@ defineExpose({ refresh, loading });
               color="primary"
               variant="soft"
               size="xs"
-              icon="i-lucide-play"
+              :icon="batchAction === 'favorite' ? 'i-lucide-star' : 'i-lucide-play'"
               :disabled="checkedCount === 0"
               class="h-6 rounded-sm px-2"
               :ui="{ leadingIcon: 'sidebar-icon' }"
-              :label="t('Tree.OpenSelected')"
-              @click="openCheckedAssets"
+              :label="t(batchAction === 'favorite' ? 'Tree.FavoriteSelected' : 'Tree.OpenSelected')"
+              @click="submitCheckedAssets"
             />
             <UButton
               color="neutral"
@@ -538,7 +549,7 @@ defineExpose({ refresh, loading });
                 color="neutral"
                 variant="ghost"
                 size="xs"
-                :icon="activeTreeKind === 'authorization' ? 'i-lucide-list-tree' : 'i-lucide-shield-check'"
+                :icon="activeTreeKind === 'authorization' ? 'i-lucide-shapes' : 'i-lucide-folder-tree'"
                 class="sidebar-icon-button size-6 justify-center p-0"
                 :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
                 :aria-label="treeSwitchLabel"
@@ -568,7 +579,7 @@ defineExpose({ refresh, loading });
                 icon="i-lucide-ellipsis"
                 class="sidebar-icon-button size-6 justify-center p-0"
                 :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-                :aria-label="t('Tree.OpenMultiple')"
+                :aria-label="t('Tree.BatchActions')"
               />
             </UDropdownMenu>
           </div>

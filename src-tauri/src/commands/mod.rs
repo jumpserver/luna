@@ -13,4 +13,7 @@ pub(crate) mod local_shell;
 pub(crate) mod offline_player;
 pub(crate) mod plugin_manager;
 pub(crate) mod system_fonts;
+pub(crate) mod web_proxy;
+mod web_proxy_credentials;
+pub(crate) mod web_proxy_recording;
 pub(crate) mod window_control;

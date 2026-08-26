@@ -4,6 +4,7 @@ export const WEB_DB_NATIVE_VALUE = "web_db_native";
 export const SFTP_FILE_MANAGER_VALUE = "sftp_file_manager";
 export const SFTP_FILE_EDITOR_VALUE = "sftp_file_editor";
 export const K8S_NATIVE_VALUE = "k8s_native";
+export const WEB_PROXY_NATIVE_VALUE = "web_proxy_native";
 
 export type WorkspaceComponentId = "koko" | "chen" | "lion";
 export type WorkspaceSurfaceKind =
@@ -12,7 +13,8 @@ export type WorkspaceSurfaceKind =
   | "file-manager"
   | "file-editor"
   | "k8s-ui"
-  | "remote-desktop";
+  | "remote-desktop"
+  | "web-browser";
 
 export interface WorkspaceCapabilityDeclaration {
   component: WorkspaceComponentId;
@@ -87,6 +89,14 @@ export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] 
     protocols: ["rdp", "vnc"],
     connectMethods: [WEB_RDP_NATIVE_VALUE],
     description: "RDP/VNC 连接走 Lion 远程桌面 workspace。"
+  },
+  {
+    component: "koko",
+    surface: "web-browser",
+    label: "内置 Web Proxy",
+    protocols: ["http", "https"],
+    connectMethods: [WEB_PROXY_NATIVE_VALUE],
+    description: "Website 资产使用系统 WebView，流量统一通过 Koko Web Proxy。"
   }
 ];
 

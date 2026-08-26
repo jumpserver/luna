@@ -157,6 +157,12 @@
     "More": "More",
     "SaveFailed": "Failed to save script",
     "FillBatchCommand": "Fill batch command",
+    "GroupShell": "Shell",
+    "GroupPowerShell": "PowerShell",
+    "GroupPython": "Python",
+    "GroupRaw": "Raw",
+    "GroupDatabase": "Database",
+    "GroupOther": "Other",
     "VariableFormTitle": "Enter script variables",
     "VariableFormLoadFailed": "Failed to load script variables",
     "VariableFormEmpty": "No script variable configuration was returned. Check the script variable settings.",
@@ -174,6 +180,7 @@
     "Clear": "Clear recent connections"
   },
   "Favorite": {
+    "Ungrouped": "Ungrouped",
     "CreateFolder": "Create folder",
     "CreateSubfolder": "Create subfolder",
     "FolderName": "Folder name",
@@ -194,11 +201,17 @@
     "ExpandAll": "Expand all",
     "Collapse": "Collapse",
     "CollapseAll": "Collapse all",
+    "BatchActions": "Batch actions",
     "OpenMultiple": "Open multiple",
     "OpenSelected": "Open selected",
+    "FavoriteMultiple": "Favorite multiple",
+    "FavoriteSelected": "Favorite selected",
     "SelectedCount": "{count} selected",
     "MultiOpenNoConnectable": "The selected assets do not support SSH connections",
-    "MultiOpenSkipped": "Skipped {count} assets that do not support SSH or failed to load"
+    "MultiOpenSkipped": "Skipped {count} assets that do not support SSH or failed to load",
+    "MultiFavoriteSuccess": "Added {count} assets to favorites",
+    "MultiFavoritePartial": "Favorited {success} assets; {failed} failed",
+    "MultiFavoriteFailed": "Failed to favorite selected assets"
   },
   "Operation": {
     "Search": "Search"
@@ -1024,7 +1037,9 @@
       "splitHorizontally": "Split horizontally",
       "shareLink": "Link",
       "verificationCode": "Code",
-      "shareLinkCopied": "Share link copied"
+      "shareLinkCopied": "Share link copied",
+      "virtualKeyboard": "Virtual keyboard",
+      "noActiveTerminal": "No active terminal is available"
     },
     "drawer": {
       "general": "General",

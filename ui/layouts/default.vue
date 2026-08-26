@@ -31,6 +31,7 @@ const { collapse: sidebarCollapsed, setCollapse: setSidebarCollapsed } = useSett
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 const { open: settingsOpen, activeSection: activeSettingsSection, openSettings } = useSettingsWindow();
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
+const standaloneAssetWindow = ref(false);
 
 const refreshCommandExecutionSetting = async () => {
   if (!loggedIn.value) return;
@@ -187,6 +188,9 @@ watch(focusMode, (active) => {
 });
 
 onMounted(() => {
+  if (isTauriRuntime()) {
+    standaloneAssetWindow.value = useTauriWebviewWindowGetCurrentWebviewWindow().label.startsWith("asset-");
+  }
   void refreshCommandExecutionSetting();
   initialTheme();
   listenOSThemeChange();
@@ -276,7 +280,7 @@ onBeforeUnmount(() => {
       </template>
 
       <template #footer>
-        <div v-show="activeWorkspaceMode === 'assets'">
+        <div v-if="!standaloneAssetWindow" v-show="activeWorkspaceMode === 'assets'">
           <WorkspaceStatusFooter />
         </div>
       </template>

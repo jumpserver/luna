@@ -5,6 +5,7 @@ import type {
   ChenPromptConsoleTab,
   ChenQueryConsoleTab,
   ChenQueryLikeWorkspaceTab,
+  ChenQueryResultTab,
   ChenTableStructureWorkspaceTab,
   ChenWorkspaceTab
 } from "~/chen/types";
@@ -19,6 +20,24 @@ import {
 
 const SQL_CHUNK_SIZE = 4096;
 const MAX_CONSOLE_TIMELINE_ENTRIES = 200;
+
+export function chenQueryResultLabel(result: ChenQueryResultTab, index: number) {
+  const metaTable = typeof result.meta.table === "string" ? result.meta.table.trim() : "";
+  if (metaTable) return metaTable;
+
+  const sourceTables = new Set<string>();
+  for (const field of result.data?.fields || []) {
+    const table = String(field.sourceTable || field.table || "").trim();
+    if (table) sourceTables.add(table);
+  }
+
+  if (sourceTables.size === 1) return [...sourceTables][0];
+  if (sourceTables.size > 1) {
+    const [first] = sourceTables;
+    return `${first} +${sourceTables.size - 1}`;
+  }
+  return `Result ${index + 1}`;
+}
 
 export function useChenQueryConsole(
   sendConsoleAction: (

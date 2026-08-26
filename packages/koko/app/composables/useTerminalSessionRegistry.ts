@@ -57,6 +57,12 @@ function rebindTerminalCursorAnchor(tabId: string) {
   emit();
 }
 
+interface TerminalDataSender {
+  send: (data: string) => boolean;
+}
+
+const terminalDataSenders = new Map<string, TerminalDataSender>();
+
 export function registerKokoTerminalSession(tabId: string, session: TerminalSession) {
   if (!tabId) return;
   sessions.set(tabId, session);
@@ -81,8 +87,21 @@ export function unregisterLocalShellTerminalSession(tabId: string) {
   rebindTerminalCursorAnchor(tabId);
 }
 
+export function registerKokoTerminalDataSender(tabId: string, send: (data: string) => boolean) {
+  if (!tabId) return;
+  terminalDataSenders.set(tabId, { send });
+}
+
+export function unregisterKokoTerminalDataSender(tabId: string) {
+  if (!tabId) return;
+  terminalDataSenders.delete(tabId);
+}
+
 export function sendKokoTerminalData(tabId: string, data: string) {
   if (isKokoTerminalAiInputLocked(tabId)) return false;
+
+  const customSender = terminalDataSenders.get(tabId);
+  if (customSender) return customSender.send(data);
 
   const session = sessions.get(tabId);
   if (session?.socket.readyState === WebSocket.OPEN) {

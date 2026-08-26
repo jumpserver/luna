@@ -238,7 +238,11 @@ onUnmounted(() => {
                 @dblclick.stop="entry.is_dir && emit('open', entry)"
                 @dragstart="emit('dragStart', $event, entry)"
               >
-                <UIcon :name="fileIcon(entry)" class="sftp-file-icon shrink-0 text-muted" />
+                <UIcon
+                  :name="fileIcon(entry)"
+                  class="sftp-file-icon shrink-0"
+                  :class="entry.is_dir ? 'tree-folder-icon' : 'text-muted'"
+                />
                 <UTooltip :text="entry.name" :delay-duration="150">
                   <span class="sftp-file-name min-w-0 flex-1 truncate" :class="entry.is_dir ? 'font-medium' : ''">
                     {{ entry.name }}

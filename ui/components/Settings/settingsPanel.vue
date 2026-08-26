@@ -126,8 +126,10 @@ watch(
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 w-full overflow-hidden bg-[var(--app-main-bg)]">
-    <aside class="flex w-[280px] shrink-0 flex-col border-r border-[var(--app-border)] bg-[var(--app-sidebar-bg)]">
+  <div class="flex h-full min-h-0 w-full flex-col overflow-hidden bg-[var(--app-main-bg)] md:flex-row">
+    <aside
+      class="flex max-h-[44%] w-full shrink-0 flex-col border-b border-[var(--app-border)] bg-[var(--app-sidebar-bg)] md:max-h-none md:w-[280px] md:border-b-0 md:border-r"
+    >
       <div
         class="relative z-20 border-b border-[var(--app-border)] px-3"
         :class="hasNativeTitlebarInset ? 'pb-2 pt-10' : 'py-2'"
@@ -174,12 +176,15 @@ watch(
         </UInput>
       </div>
 
-      <nav class="min-h-0 flex-1 overflow-y-auto px-3 py-4" :aria-label="t('Common.Settings')">
-        <p class="mb-2 px-3 text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
+      <nav
+        class="shrink-0 overflow-x-auto px-3 py-2 md:min-h-0 md:flex-1 md:overflow-y-auto md:py-4"
+        :aria-label="t('Common.Settings')"
+      >
+        <p class="mb-2 hidden px-3 text-[11px] font-medium uppercase tracking-[0.16em] text-muted md:block">
           {{ t("Common.Settings") }}
         </p>
 
-        <div class="space-y-1">
+        <div class="flex gap-1 md:block md:space-y-1">
           <UButton
             v-for="item in filteredSections"
             :key="item.key"
@@ -188,7 +193,7 @@ watch(
             :icon="item.icon"
             color="neutral"
             variant="ghost"
-            class="w-full justify-start rounded-lg"
+            class="w-auto shrink-0 justify-start rounded-lg md:w-full"
             :class="activeSection?.key === item.key ? 'bg-[var(--app-selected-soft)] text-highlighted' : 'text-muted'"
             :aria-current="activeSection?.key === item.key ? 'page' : undefined"
             @click="selectSection(item.key)"
@@ -202,8 +207,11 @@ watch(
     </aside>
 
     <main class="min-w-0 flex-1 overflow-y-auto bg-[var(--app-main-bg)]">
-      <div class="mx-auto w-full max-w-4xl px-8 pb-10 lg:px-12" :class="hasNativeTitlebarInset ? 'pt-[76px]' : 'pt-10'">
-        <header class="mb-6 border-b border-[var(--app-border)] pb-5">
+      <div
+        class="mx-auto w-full max-w-4xl px-4 pb-8 sm:px-6 md:px-8 md:pb-10 lg:px-12"
+        :class="hasNativeTitlebarInset ? 'pt-6 md:pt-[76px]' : 'pt-5 md:pt-10'"
+      >
+        <header class="mb-5 border-b border-[var(--app-border)] pb-4 md:mb-6 md:pb-5">
           <h1 class="text-xl font-semibold text-highlighted">
             {{ activeSection?.label }}
           </h1>

@@ -327,7 +327,7 @@ function categoryOfConnectMethod(method: any) {
 }
 
 function isBuiltinConnectMethod(method: any) {
-  return String(method?.value || "").toLowerCase() === "web_cli_native";
+  return ["web_cli_native", "web_proxy_native"].includes(String(method?.value || "").toLowerCase());
 }
 
 function selectConnectMethodType(type: string | number) {

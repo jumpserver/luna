@@ -36,6 +36,12 @@ use crate::commands::plugin_manager::{
     create_custom_terminal, install_plugin, list_plugins, uninstall_plugin,
 };
 use crate::commands::system_fonts::list_system_fonts;
+use crate::commands::web_proxy::{
+    close_web_proxy_view, create_web_proxy_view, history_web_proxy_view, navigate_web_proxy_view,
+    reload_web_proxy_view, set_web_proxy_view_active, set_web_proxy_view_bounds,
+    start_web_proxy_recording, stop_web_proxy_recording,
+};
+use crate::commands::web_proxy_recording::WebProxyRecordingManager;
 use crate::commands::window_control::{
     close_window, minimize_window, open_settings_window, toggle_maximize_window,
 };
@@ -45,8 +51,14 @@ use crate::transcode::transcode_replays;
 use crate::utils::is_auth_callback;
 
 use log::{error, info, warn};
-use std::time::Duration;
-use tauri::Manager;
+use std::{
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
+use tauri::{Manager, WindowEvent};
 use tauri_plugin_deep_link::DeepLinkExt;
 #[cfg(not(target_os = "macos"))]
 use tauri_plugin_single_instance::init as single_instance;
@@ -179,6 +191,7 @@ pub fn run() {
         })
         .manage(AuthFlowState::default())
         .manage(ApiSessionStore::default())
+        .manage(WebProxyRecordingManager::default())
         .manage(LocalShellState::default());
 
     // macOS delivers custom URL schemes through RunEvent::Opened. Registering
@@ -245,6 +258,28 @@ pub fn run() {
 
             let win = app.get_webview_window("main").unwrap();
             let app_handle = app.app_handle().clone();
+            let recording_manager = app.state::<WebProxyRecordingManager>().inner().clone();
+            let recording_close_started = Arc::new(AtomicBool::new(false));
+            let win_for_recordings = win.clone();
+            let app_for_recordings = app_handle.clone();
+            win.on_window_event(move |event| {
+                let WindowEvent::CloseRequested { api, .. } = event else {
+                    return;
+                };
+                if !recording_manager.has_sessions()
+                    || recording_close_started.swap(true, Ordering::AcqRel)
+                {
+                    return;
+                }
+                api.prevent_close();
+                let manager = recording_manager.clone();
+                let app = app_for_recordings.clone();
+                let window = win_for_recordings.clone();
+                tauri::async_runtime::spawn(async move {
+                    manager.finish_all(&app).await;
+                    let _ = window.destroy();
+                });
+            });
 
             let start_urls = app.deep_link().get_current()?;
 
@@ -313,6 +348,15 @@ pub fn run() {
             install_plugin,
             uninstall_plugin,
             create_custom_terminal,
+            create_web_proxy_view,
+            set_web_proxy_view_active,
+            set_web_proxy_view_bounds,
+            navigate_web_proxy_view,
+            reload_web_proxy_view,
+            history_web_proxy_view,
+            start_web_proxy_recording,
+            stop_web_proxy_recording,
+            close_web_proxy_view,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

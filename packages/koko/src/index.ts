@@ -14,7 +14,9 @@ export {
 } from "../app/composables/useTerminalSessionRegistry";
 export type { TerminalCursorAnchor } from "../app/composables/useTerminalSessionRegistry";
 export {
+  registerKokoTerminalDataSender,
   registerLocalShellTerminalSession,
+  unregisterKokoTerminalDataSender,
   unregisterLocalShellTerminalSession
 } from "../app/composables/useTerminalSessionRegistry";
 export { default as KokoConnectView } from "../app/pages/ConnectView.vue";

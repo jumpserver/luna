@@ -1,8 +1,9 @@
 <script setup lang="ts">
 const { collapse } = useSettingManager();
 const { sidebarWidth } = useSidebarLayout();
+const isNarrowScreen = useMediaQuery("(max-width: 767px)");
 const leadingAreaStyle = computed(() => ({
-  width: collapse.value ? "fit-content" : `${sidebarWidth.value}px`
+  width: collapse.value || isNarrowScreen.value ? "fit-content" : `${sidebarWidth.value}px`
 }));
 
 const handleWindowDrag = async (event: MouseEvent) => {
@@ -41,11 +42,11 @@ const handleWindowDrag = async (event: MouseEvent) => {
       <slot name="leading" />
     </div>
 
-    <div class="h-full min-w-0 flex-1 overflow-hidden px-1.5">
+    <div class="h-full min-w-0 flex-1 overflow-hidden px-0.5 sm:px-1.5">
       <slot />
     </div>
 
-    <div class="h-full shrink-0 flex items-center pl-1">
+    <div class="h-full shrink-0 flex items-center sm:pl-1">
       <HeaderActionButtons />
     </div>
   </div>

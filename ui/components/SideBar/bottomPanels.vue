@@ -3,8 +3,7 @@ import type { DropdownMenuItem } from "@nuxt/ui";
 import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
 import type { Snippet } from "~/composables/useSnippets";
 import type { AssetItem } from "~/types";
-import type { SnippetVariableField } from "~/utils/snippetVariables";
-import { isTerminalSnippetModule, renderSnippetCommand } from "~/utils/snippetVariables";
+import { writeClipboardText } from "~/utils/clipboard";
 
 const props = defineProps<{
   mainPanelOpen: boolean;
@@ -20,6 +19,10 @@ const emit = defineEmits<{
 }>();
 
 type PanelKind = "favorites" | "snippets";
+type SnippetGroupKey = "shell" | "win_shell" | "python" | "raw" | "database" | "other";
+
+const UNGROUPED_FAVORITES_ID = "__ungrouped_favorites__";
+const DATABASE_SNIPPET_MODULES = new Set(["mysql", "mariadb", "postgresql", "sqlserver", "oracle"]);
 
 const { t } = useI18n();
 const toast = useToast();
@@ -34,9 +37,8 @@ const {
   renameFolder,
   removeFolder
 } = useFavoriteFolders();
-const { snippets, loading: snippetLoading, load: loadSnippets, loadVariableForm } = useSnippets();
+const { snippets, loading: snippetLoading, load: loadSnippets } = useSnippets();
 const { openScriptEditor } = useWorkspaceTabs();
-const { fillCommand: fillBatchCommand } = useBatchCommandPanel();
 const createModalOpen = ref(false);
 const createParentId = ref<string | null>(null);
 const folderName = ref("");
@@ -51,18 +53,23 @@ const deleteModalOpen = ref(false);
 const deleteTarget = ref<FavoriteFolder | null>(null);
 const deleting = ref(false);
 const snippetSearch = ref("");
-const variableModalOpen = ref(false);
-const variableLoadingSnippetId = ref("");
-const variableSnippet = ref<Snippet | null>(null);
-const variableFields = ref<SnippetVariableField[]>([]);
-const variableValues = ref<Record<string, string>>({});
-const variableCommand = ref("");
-
-const variableFormDisabled = computed(
-  () =>
-    !variableCommand.value.trim() ||
-    variableFields.value.some((field) => field.required && !variableValues.value[field.key])
-);
+const snippetGroupOpen = useState<Record<SnippetGroupKey, boolean>>("sidebar-snippet-groups-open", () => ({
+  shell: true,
+  win_shell: true,
+  python: true,
+  raw: true,
+  database: true,
+  other: true
+}));
+const ungroupedFavoritesOpen = ref(true);
+const ungroupedFavorites = computed<FavoriteFolder>(() => ({
+  id: UNGROUPED_FAVORITES_ID,
+  name: t("Favorite.Ungrouped"),
+  parent: null,
+  children: [],
+  assets: favoriteRootAssets.value,
+  open: ungroupedFavoritesOpen.value
+}));
 
 const snippetCreateItems = computed<DropdownMenuItem[]>(() =>
   [
@@ -102,6 +109,10 @@ const collapseFolderRecursive = (folder: FavoriteFolder) => {
 };
 
 const toggleFolder = (folder: FavoriteFolder) => {
+  if (folder.id === UNGROUPED_FAVORITES_ID) {
+    ungroupedFavoritesOpen.value = !ungroupedFavoritesOpen.value;
+    return;
+  }
   folder.open = !folder.open;
 };
 
@@ -237,19 +248,57 @@ const refreshPanel = (kind: PanelKind) => {
 
 const normalizedSnippetSearch = computed(() => snippetSearch.value.trim().toLocaleLowerCase());
 
-const filteredSnippets = computed(() => {
-  const query = normalizedSnippetSearch.value;
-  if (!query) return snippets.value;
+const snippetGroupDefinitions = computed(
+  () =>
+    [
+      { key: "shell", label: t("Snippets.GroupShell"), icon: "i-lucide-terminal" },
+      { key: "win_shell", label: t("Snippets.GroupPowerShell"), icon: "i-lucide-monitor" },
+      { key: "python", label: t("Snippets.GroupPython"), icon: "i-lucide-file-code-2" },
+      { key: "raw", label: t("Snippets.GroupRaw"), icon: "i-lucide-file-text" },
+      { key: "database", label: t("Snippets.GroupDatabase"), icon: "i-lucide-database" },
+      { key: "other", label: t("Snippets.GroupOther"), icon: "i-lucide-braces" }
+    ] satisfies { key: SnippetGroupKey; label: string; icon: string }[]
+);
 
-  return snippets.value.filter((snippet) =>
-    [snippet.name, snippet.args, snippet.comment, snippet.module.label, snippet.module.value, snippet.createdBy].some(
-      (value) =>
+function getSnippetGroupKey(snippet: Snippet): SnippetGroupKey {
+  const module = snippet.module.value;
+  if (DATABASE_SNIPPET_MODULES.has(module)) return "database";
+  if (["shell", "win_shell", "python", "raw"].includes(module)) return module as SnippetGroupKey;
+  return "other";
+}
+
+const snippetGroups = computed(() => {
+  const query = normalizedSnippetSearch.value;
+  return snippetGroupDefinitions.value.flatMap((definition) => {
+    const items = snippets.value.filter((snippet) => {
+      if (getSnippetGroupKey(snippet) !== definition.key) return false;
+      if (!query || definition.label.toLocaleLowerCase().includes(query)) return true;
+
+      return [
+        snippet.name,
+        snippet.args,
+        snippet.comment,
+        snippet.module.label,
+        snippet.module.value,
+        snippet.createdBy
+      ].some((value) =>
         String(value || "")
           .toLocaleLowerCase()
           .includes(query)
-    )
-  );
+      );
+    });
+
+    return items.length > 0 ? [{ ...definition, items }] : [];
+  });
 });
+
+const isSnippetGroupOpen = (key: SnippetGroupKey) =>
+  Boolean(normalizedSnippetSearch.value) || snippetGroupOpen.value[key];
+
+const toggleSnippetGroup = (key: SnippetGroupKey) => {
+  if (normalizedSnippetSearch.value) return;
+  snippetGroupOpen.value = { ...snippetGroupOpen.value, [key]: !snippetGroupOpen.value[key] };
+};
 
 function getSnippetIcon(snippet: Snippet) {
   switch (snippet.module.value) {
@@ -292,75 +341,21 @@ function handleSnippetDoubleClick(snippet: Snippet) {
   });
 }
 
-function updateVariableCommand() {
-  if (!variableSnippet.value) return;
-  variableCommand.value = renderSnippetCommand(variableSnippet.value.args, variableValues.value);
-}
-
-function updateVariableValue(key: string, value: unknown) {
-  variableValues.value = { ...variableValues.value, [key]: String(value ?? "") };
-  updateVariableCommand();
-}
-
-function updateVariableModal(open: boolean) {
-  variableModalOpen.value = open;
-  if (open) return;
-
-  variableSnippet.value = null;
-  variableFields.value = [];
-  variableValues.value = {};
-  variableCommand.value = "";
-}
-
-async function openVariableForm(snippet: Snippet) {
-  if (variableLoadingSnippetId.value) return;
-
-  variableLoadingSnippetId.value = snippet.id;
+async function copySnippet(snippet: Snippet) {
   try {
-    const fields = await loadVariableForm(snippet.id);
-    if (fields.length === 0) throw new Error(t("Snippets.VariableFormEmpty"));
-
-    variableSnippet.value = snippet;
-    variableFields.value = fields;
-    variableValues.value = Object.fromEntries(fields.map((field) => [field.key, field.defaultValue]));
-    updateVariableCommand();
-    variableModalOpen.value = true;
+    await writeClipboardText(snippet.args);
+    toast.add({
+      title: t("Common.CopySuccess"),
+      color: "success",
+      duration: 1200
+    });
   } catch (error) {
     addErrorToast({
-      title: t("Snippets.VariableFormLoadFailed"),
+      title: t("Common.CopyFailed"),
       error,
       icon: "i-lucide-circle-alert"
     });
-  } finally {
-    variableLoadingSnippetId.value = "";
   }
-}
-
-function confirmVariableCommand() {
-  if (variableFormDisabled.value) return;
-  fillBatchCommand(variableCommand.value);
-  updateVariableModal(false);
-}
-
-async function fillSnippetIntoBatchCommand(snippet: Snippet) {
-  if (!isTerminalSnippetModule(snippet.module.value)) {
-    toast.add({
-      title: t("Snippets.BatchCommandUnsupported"),
-      description: t("Snippets.BatchCommandUnsupportedHint", {
-        module: snippet.module.label || snippet.module.value
-      }),
-      color: "warning",
-      icon: "i-lucide-circle-alert"
-    });
-    return;
-  }
-
-  if (snippet.variable.length > 0) {
-    await openVariableForm(snippet);
-    return;
-  }
-
-  fillBatchCommand(snippet.args);
 }
 
 useEventBus().on("favoriteChanged", () => {
@@ -496,18 +491,14 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
           :title="t('Common.NoData')"
           class="py-3"
         />
-        <button
-          v-for="asset in favoriteRootAssets"
-          :key="`root-${asset.id}`"
-          type="button"
-          class="sidebar-row flex h-7 w-full items-center gap-1 rounded-lg pr-1 text-left text-[11px]"
-          :style="{ paddingLeft: '10px' }"
-          @dblclick="emit('select', asset)"
-          @contextmenu.prevent="emit('contextmenu', asset, $event)"
-        >
-          <UIcon name="i-lucide-terminal" class="sidebar-icon" />
-          <span class="truncate font-ui-mono">{{ asset.name }}</span>
-        </button>
+        <SideBarFavoriteTreeNode
+          v-if="favoriteRootAssets.length > 0"
+          :folder="ungroupedFavorites"
+          :level="0"
+          @select="emit('select', $event)"
+          @contextmenu="(asset, event) => emit('contextmenu', asset, event)"
+          @toggle-folder="toggleFolder"
+        />
         <SideBarFavoriteTreeNode
           v-for="folder in favoriteFolders"
           :key="folder.id"
@@ -595,44 +586,63 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
           <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
         </div>
         <UEmpty
-          v-else-if="filteredSnippets.length === 0"
+          v-else-if="snippetGroups.length === 0"
           icon="i-lucide-braces"
           size="sm"
           variant="naked"
           :title="normalizedSnippetSearch ? t('Common.NoData') : t('Snippets.Empty')"
         />
-        <div
-          v-for="snippet in filteredSnippets"
-          v-else
-          :key="snippet.id"
-          class="sidebar-row group flex w-full items-start gap-1.5 px-2.5 py-1.5"
-        >
+        <div v-for="group in snippetGroups" v-else :key="group.key">
           <button
             type="button"
-            class="flex min-w-0 flex-1 cursor-default items-start gap-1.5 text-left"
-            :title="getSnippetTitle(snippet)"
-            @dblclick="handleSnippetDoubleClick(snippet)"
+            class="sidebar-row flex h-7 w-full items-center gap-1 pr-2 text-left text-xs"
+            :class="normalizedSnippetSearch ? 'cursor-default' : ''"
+            :aria-expanded="isSnippetGroupOpen(group.key)"
+            :style="{ paddingLeft: '10px' }"
+            @click="toggleSnippetGroup(group.key)"
           >
-            <UIcon :name="getSnippetIcon(snippet)" class="mt-0.5 sidebar-icon shrink-0" />
-            <span class="min-w-0 flex-1">
-              <span class="block truncate text-[11px] font-medium">{{ snippet.name }}</span>
-              <span class="block truncate font-ui-mono text-[10px] text-gray-400">{{ snippet.args }}</span>
-            </span>
-          </button>
-          <UTooltip :text="t('Snippets.FillBatchCommand')" :delay-duration="120">
-            <UButton
-              color="neutral"
-              variant="ghost"
-              size="xs"
-              icon="i-lucide-square-terminal"
-              class="mt-0.5 size-6 shrink-0 justify-center p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-              :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-              :aria-label="t('Snippets.FillBatchCommand')"
-              :loading="variableLoadingSnippetId === snippet.id"
-              :disabled="Boolean(variableLoadingSnippetId)"
-              @click.stop="fillSnippetIntoBatchCommand(snippet)"
+            <UIcon
+              name="i-lucide-chevron-right"
+              class="sidebar-icon-sm transition-transform"
+              :class="isSnippetGroupOpen(group.key) ? 'rotate-90' : ''"
             />
-          </UTooltip>
+            <UIcon :name="group.icon" class="sidebar-icon" />
+            <span class="min-w-0 flex-1 truncate font-medium">{{ group.label }}</span>
+            <span class="shrink-0 font-ui-mono text-[10px] text-[var(--app-muted)]">{{ group.items.length }}</span>
+          </button>
+
+          <div
+            v-for="snippet in group.items"
+            v-show="isSnippetGroupOpen(group.key)"
+            :key="snippet.id"
+            class="sidebar-row group flex w-full items-center gap-1.5 py-1.5 pr-2.5"
+            :style="{ paddingLeft: '26px' }"
+          >
+            <button
+              type="button"
+              class="flex min-w-0 flex-1 cursor-default items-center gap-1.5 text-left"
+              :title="getSnippetTitle(snippet)"
+              @dblclick="handleSnippetDoubleClick(snippet)"
+            >
+              <UIcon :name="getSnippetIcon(snippet)" class="sidebar-icon shrink-0" />
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-[11px] font-medium">{{ snippet.name }}</span>
+                <span class="block truncate font-ui-mono text-[10px] text-gray-400">{{ snippet.args }}</span>
+              </span>
+            </button>
+            <UTooltip :text="t('Common.CopyOnly')" :delay-duration="120">
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                icon="i-lucide-copy"
+                class="size-6 shrink-0 justify-center p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+                :aria-label="t('Common.CopyOnly')"
+                @click.stop="copySnippet(snippet)"
+              />
+            </UTooltip>
+          </div>
         </div>
       </div>
     </SideBarCollapsiblePanel>
@@ -679,70 +689,6 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
     @confirm="submitDeleteFolder"
     @update:open="updateDeleteModal"
   />
-
-  <UModal
-    :open="variableModalOpen"
-    :title="t('Snippets.VariableFormTitle')"
-    :description="variableSnippet?.name || ''"
-    :ui="{ content: 'w-[calc(100vw-2rem)] max-w-lg', footer: 'justify-end gap-2' }"
-    @update:open="updateVariableModal"
-  >
-    <template #body>
-      <div class="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-        <UFormField
-          v-for="(field, index) in variableFields"
-          :key="field.key"
-          :label="field.label"
-          :help="field.helpText"
-          :required="field.required"
-          size="sm"
-        >
-          <UInput
-            v-if="field.type === 'string'"
-            :model-value="variableValues[field.key]"
-            :autofocus="index === 0"
-            autocomplete="off"
-            autocapitalize="none"
-            spellcheck="false"
-            class="w-full"
-            @update:model-value="updateVariableValue(field.key, $event)"
-          />
-          <USelect
-            v-else
-            :model-value="variableValues[field.key]"
-            :items="field.choices"
-            value-key="value"
-            label-key="label"
-            :placeholder="t('Snippets.VariableSelectPlaceholder')"
-            class="w-full"
-            @update:model-value="updateVariableValue(field.key, $event)"
-          />
-        </UFormField>
-
-        <UFormField :label="t('Snippets.GeneratedCommand')" :help="t('Snippets.GeneratedCommandHint')" size="sm">
-          <UTextarea
-            v-model="variableCommand"
-            :rows="5"
-            autocomplete="off"
-            autocapitalize="none"
-            spellcheck="false"
-            class="w-full font-ui-mono"
-          />
-        </UFormField>
-      </div>
-    </template>
-
-    <template #footer>
-      <UButton color="neutral" variant="outline" @click="updateVariableModal(false)">
-        {{ t("Common.Cancel") }}
-      </UButton>
-      <UButton
-        :label="t('Snippets.FillBatchCommand')"
-        :disabled="variableFormDisabled"
-        @click="confirmVariableCommand"
-      />
-    </template>
-  </UModal>
 
   <UDropdownMenu
     :open="folderMenuVisible"

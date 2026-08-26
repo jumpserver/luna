@@ -23,6 +23,7 @@ export function useChenSession(options: UseChenSessionOptions) {
   const loading = ref(true);
   const error = ref("");
   const dialogMessage = ref<ReturnType<typeof normalizeChenDialogMessage> | null>(null);
+  const dialogOpenedDuringStartup = ref(false);
 
   let bootstrapGeneration = 0;
   let fatalNotified = false;
@@ -90,13 +91,19 @@ export function useChenSession(options: UseChenSessionOptions) {
     }
   }
 
+  function openDialog(payload: unknown) {
+    dialogOpenedDuringStartup.value = !ready.value;
+    dialogMessage.value = normalizeChenDialogMessage(payload);
+  }
+
   function handlePacket(packet: ChenPacket) {
     switch (packet.type) {
       case "show_dialog":
-        dialogMessage.value = normalizeChenDialogMessage(packet.data);
+        openDialog(packet.data);
         break;
       case "close_dialog":
         dialogMessage.value = null;
+        dialogOpenedDuringStartup.value = false;
         break;
       case "show_message":
         options.showMessage(packet.data);
@@ -126,6 +133,7 @@ export function useChenSession(options: UseChenSessionOptions) {
   function dismissDialog() {
     if (!dialogMessage.value?.showClose) return false;
     dialogMessage.value = null;
+    dialogOpenedDuringStartup.value = false;
     return true;
   }
 
@@ -136,6 +144,7 @@ export function useChenSession(options: UseChenSessionOptions) {
     loading.value = true;
     error.value = "";
     dialogMessage.value = null;
+    dialogOpenedDuringStartup.value = false;
 
     try {
       const token = await options.authenticate();
@@ -153,6 +162,7 @@ export function useChenSession(options: UseChenSessionOptions) {
 
   return {
     dialogMessage,
+    dialogOpenedDuringStartup,
     error,
     loading,
     ready,
@@ -161,6 +171,7 @@ export function useChenSession(options: UseChenSessionOptions) {
     bootstrapSession,
     cleanupSession,
     dismissDialog,
+    openDialog,
     sendDialogEvent
   };
 }

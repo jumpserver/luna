@@ -2,6 +2,7 @@
 import type { WorkspacePane, WorkspacePaneDropPlacement, WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { AssetItem } from "~/types";
 
+import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
@@ -204,6 +205,11 @@ function showEmptyActions(pane: WorkspacePane) {
 
 function showReconnect(pane: WorkspacePane) {
   return pane.mode === "session" && Boolean(pane.payload?.id || pane.payload?.token?.id);
+}
+
+function isDatabaseWorkspace(pane: WorkspacePane) {
+  const connectMethod = String(pane.payload?.connectMethod?.value || pane.connectMethod || "");
+  return findDeclaredCapability(pane.protocol, connectMethod)?.surface === "database";
 }
 
 function showPaneDropHint(paneId: string) {
@@ -530,6 +536,7 @@ onBeforeUnmount(() => {
                 v-if="
                   pane.protocol !== 'local-shell' &&
                   pane.protocol !== 'script-editor' &&
+                  !isDatabaseWorkspace(pane) &&
                   !pane.payload?.id &&
                   !pane.payload?.token?.id &&
                   !pane.payload?.webUrl

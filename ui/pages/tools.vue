@@ -21,7 +21,7 @@ const tools = computed(() => [
 </script>
 
 <template>
-  <section class="h-full min-h-0 w-full overflow-auto px-6 py-5">
+  <section class="h-full min-h-0 w-full overflow-auto px-3 py-4 sm:px-6 sm:py-5">
     <div class="grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2">
       <NuxtLink
         v-for="tool in tools"

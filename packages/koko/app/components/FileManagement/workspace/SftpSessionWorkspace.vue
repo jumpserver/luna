@@ -119,7 +119,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
           class="flex h-7 min-w-20 max-w-40 items-center gap-1 rounded-md bg-accented px-1.5 text-[11px] leading-none text-highlighted"
           :title="primaryAssetName"
         >
-          <UIcon name="i-lucide-server" class="size-3.5 shrink-0 text-success" />
+          <UIcon name="i-lucide-server" class="size-3.5 shrink-0 text-(--color-text-accent)" />
           <span class="min-w-0 truncate">{{ primaryAssetName }}</span>
         </div>
       </div>

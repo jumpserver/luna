@@ -96,6 +96,11 @@ async function submit() {
   if (!currentAsset.value || connecting.value) return;
 
   const info = buildConnectionInfo(currentAsset.value);
+  if (!info.protocol || !info.connectMethod) {
+    connectionError.value = t("ConnectError.ConnectFailed");
+    connecting.value = false;
+    return;
+  }
   const localApplication = parseLocalApplicationConnectMethod(info.connectMethod);
   const showLaunchSuccessState = externalClientLaunch.value;
   connecting.value = true;
@@ -249,6 +254,7 @@ onMounted(loadAsset);
                   :preferred-connect-method="preferredConnectMethod"
                   :submit-label="externalClientLaunch ? t('ConnectionSetup.OpenInClient') : t('Common.Connect')"
                   :submitting="connecting"
+                  :disabled="connecting || !draft.protocol || !draft.connectMethod"
                   @submit="submit"
                 />
               </template>

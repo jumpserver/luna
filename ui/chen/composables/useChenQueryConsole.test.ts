@@ -1,7 +1,7 @@
 import type { ChenQueryConsoleTab } from "~/chen/types";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useChenQueryConsole } from "~/chen/composables/useChenQueryConsole";
+import { chenQueryResultLabel, useChenQueryConsole } from "~/chen/composables/useChenQueryConsole";
 
 function queryTab(): ChenQueryConsoleTab {
   return {
@@ -118,5 +118,66 @@ describe("chen query console mutation results", () => {
     queryConsole.handleQueryConsolePacket(tab, { type: "log", data: line });
 
     expect(onLog).toHaveBeenCalledWith(tab, line, "Query failed");
+  });
+});
+
+describe("chen query result labels", () => {
+  function result(overrides: Partial<ChenQueryConsoleTab["resultTabs"][number]> = {}) {
+    return {
+      id: "result-1",
+      title: "select * from users",
+      meta: { title: "select * from users" },
+      data: { fields: [], data: [] },
+      state: {},
+      editState: {} as ChenQueryConsoleTab["resultTabs"][number]["editState"],
+      ...overrides
+    };
+  }
+
+  it("uses explicit table metadata before field source metadata", () => {
+    expect(
+      chenQueryResultLabel(
+        result({
+          meta: { title: "select * from users", table: "users" },
+          data: { fields: [{ name: "id", sourceTable: "accounts" }], data: [] }
+        }),
+        0
+      )
+    ).toBe("users");
+  });
+
+  it("uses the returned field source table", () => {
+    expect(
+      chenQueryResultLabel(
+        result({
+          data: {
+            fields: [
+              { name: "id", sourceTable: "users" },
+              { name: "name", table: "users" }
+            ],
+            data: []
+          }
+        }),
+        0
+      )
+    ).toBe("users");
+  });
+
+  it("summarizes joins and falls back to a numbered result", () => {
+    expect(
+      chenQueryResultLabel(
+        result({
+          data: {
+            fields: [
+              { name: "id", sourceTable: "users" },
+              { name: "role", sourceTable: "roles" }
+            ],
+            data: []
+          }
+        }),
+        0
+      )
+    ).toBe("users +1");
+    expect(chenQueryResultLabel(result(), 2)).toBe("Result 3");
   });
 });

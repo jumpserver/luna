@@ -11,12 +11,13 @@ const props = defineProps<{
   childrenMap: Record<string, ChenTreeNode[]>;
   loadingChildren: Record<string, boolean>;
   dbType?: string;
-  width: number;
+  width: number | string;
   tabTitleFormat: ChenTabTitleFormat;
   sqlKeywordCase: ChenSqlKeywordCase;
 }>();
 
 const emit = defineEmits<{
+  close: [];
   refresh: [];
   select: [node: ChenTreeNode];
   activate: [node: ChenTreeNode];
@@ -48,11 +49,20 @@ const sqlKeywordCaseModel = computed({
 <template>
   <aside
     class="flex min-h-0 shrink-0 flex-col border-r border-default bg-[var(--workspace-surface-sidebar)]"
-    :style="{ width: `${width}px` }"
+    :style="{ width: typeof width === 'number' ? `${width}px` : width }"
   >
     <div class="flex h-9 shrink-0 items-center justify-between border-b border-default px-2.5">
       <p class="text-xs font-medium text-muted">Database Explorer</p>
       <div class="flex h-7 items-center gap-1">
+        <UButton
+          icon="i-lucide-x"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          class="md:hidden"
+          aria-label="Close database explorer"
+          @click="emit('close')"
+        />
         <UTooltip text="刷新" :delay-duration="150">
           <button
             type="button"
