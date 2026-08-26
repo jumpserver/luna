@@ -136,36 +136,36 @@ function formatRelativeTime(timestamp: number): string {
         <div class="flex gap-0.5">
           <UButton
             v-if="canPause"
-            class="size-[26px] justify-center p-0"
+            class="size-6.5 justify-center p-0"
             color="neutral"
             variant="ghost"
             size="xs"
             icon="i-lucide-pause"
             :ui="groupActionButtonUi"
             :title="t('koko.sftpTransferCenter.pauseBatch')"
-            @click.stop="emit('pause', batch.tasks)"
+            @click.stop="void emit('pause', batch.tasks)"
           />
           <UButton
             v-if="canResume"
-            class="size-[26px] justify-center p-0"
+            class="size-6.5 justify-center p-0"
             color="neutral"
             variant="ghost"
             size="xs"
             icon="i-lucide-play"
             :ui="groupActionButtonUi"
             :title="t('koko.sftpTransferCenter.resumeBatch')"
-            @click.stop="emit('resume', batch.tasks)"
+            @click.stop="void emit('resume', batch.tasks)"
           />
           <UButton
             v-if="canCancel"
-            class="size-[26px] justify-center p-0"
+            class="size-6.5 justify-center p-0"
             color="error"
             variant="ghost"
             size="xs"
             icon="i-lucide-x"
             :ui="groupActionButtonUi"
             :title="t('koko.sftpTransferCenter.cancelBatch')"
-            @click.stop="emit('cancel', batch)"
+            @click.stop="void emit('cancel', batch)"
           />
         </div>
       </div>
@@ -197,7 +197,7 @@ function formatRelativeTime(timestamp: number): string {
         color="error"
         variant="link"
         :label="t('koko.sftpTransferCenter.retryFailedFiles')"
-        @click.stop="emit('retry', batch.tasks)"
+        @click.stop="void emit('retry', batch.tasks)"
       />
     </div>
 

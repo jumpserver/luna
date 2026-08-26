@@ -21,7 +21,7 @@ defineEmits<{ retry: [] }>();
           :class="error ? 'text-amber-500' : 'animate-spin'"
         />
         <div>{{ loading ? loadingText : error || loadingText }}</div>
-        <UButton v-if="error && retryLabel" size="sm" variant="soft" @click="$emit('retry')">
+        <UButton v-if="error && retryLabel" size="sm" variant="soft" @click="void $emit('retry')">
           {{ retryLabel }}
         </UButton>
       </div>

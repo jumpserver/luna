@@ -55,7 +55,7 @@ const progress = computed(() => {
         icon="i-lucide-pause"
         :ui="fileActionButtonUi"
         :title="t('FileTransfer.Pause')"
-        @click="emit('pause')"
+        @click="void emit('pause')"
       />
       <UButton
         v-if="task.status === 'failed'"
@@ -66,7 +66,7 @@ const progress = computed(() => {
         icon="i-lucide-rotate-ccw"
         :ui="fileActionButtonUi"
         :title="t('koko.sftpTransferCenter.retryFile')"
-        @click="emit('retry')"
+        @click="void emit('retry')"
       />
       <UButton
         v-if="canResume"
@@ -77,7 +77,7 @@ const progress = computed(() => {
         icon="i-lucide-play"
         :ui="fileActionButtonUi"
         :title="t('FileTransfer.Resume')"
-        @click="emit('resume')"
+        @click="void emit('resume')"
       />
       <UButton
         v-if="!terminalStatuses.has(task.status)"
@@ -88,7 +88,7 @@ const progress = computed(() => {
         icon="i-lucide-x"
         :ui="fileActionButtonUi"
         :title="t('FileTransfer.Cancel')"
-        @click="emit('cancel')"
+        @click="void emit('cancel')"
       />
     </div>
     <div class="sftp-transfer-file__progress">

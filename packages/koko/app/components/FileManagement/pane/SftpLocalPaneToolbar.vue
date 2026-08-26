@@ -201,7 +201,7 @@ onBeforeUnmount(() => {
           size="sm"
           :disabled="currentPath === rootPath"
           :aria-label="t('koko.drawer.up')"
-          @click="emit('parent', { name: '..', is_dir: true } as SftpFileEntry)"
+          @click="void emit('parent', { name: '..', is_dir: true } as SftpFileEntry)"
         />
       </UTooltip>
       <USelectMenu
@@ -258,7 +258,7 @@ onBeforeUnmount(() => {
             variant="ghost"
             size="sm"
             :aria-label="t('koko.fileManagement.refresh')"
-            @click="emit('refresh')"
+            @click="void emit('refresh')"
           />
         </UTooltip>
         <UTooltip :text="t('koko.localFile.revealInFinder')">
@@ -268,7 +268,7 @@ onBeforeUnmount(() => {
             variant="ghost"
             size="sm"
             :aria-label="t('koko.localFile.revealInFinder')"
-            @click="emit('reveal')"
+            @click="void emit('reveal')"
           />
         </UTooltip>
         <UTooltip :text="t('koko.localFile.title')">
@@ -278,7 +278,7 @@ onBeforeUnmount(() => {
             variant="ghost"
             size="sm"
             :aria-label="t('koko.localFile.title')"
-            @click="emit('setup')"
+            @click="void emit('setup')"
           />
         </UTooltip>
         <UTooltip
@@ -292,7 +292,7 @@ onBeforeUnmount(() => {
             :aria-label="
               showHiddenFiles ? t('koko.fileManagement.hideHiddenFiles') : t('koko.fileManagement.showHiddenFiles')
             "
-            @click="showHiddenFiles = !showHiddenFiles"
+            @click="void (showHiddenFiles = !showHiddenFiles)"
           />
         </UTooltip>
       </template>
@@ -342,7 +342,7 @@ onBeforeUnmount(() => {
             variant="ghost"
             size="sm"
             :aria-label="t('koko.fileManagement.newFolder')"
-            @click="emit('create', 'folder')"
+            @click="void emit('create', 'folder')"
           />
         </UTooltip>
         <UTooltip :text="t('koko.fileManagement.newFile')">
@@ -352,7 +352,7 @@ onBeforeUnmount(() => {
             variant="ghost"
             size="sm"
             :aria-label="t('koko.fileManagement.newFile')"
-            @click="emit('create', 'file')"
+            @click="void emit('create', 'file')"
           />
         </UTooltip>
       </template>

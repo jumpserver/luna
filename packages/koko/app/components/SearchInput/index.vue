@@ -25,7 +25,7 @@ const drawerRef = ref<HTMLElement | null>(null);
 const { width } = useElementSize(drawerRef);
 
 const keyWordsSearch = (value: string) => {
-  if (value) props.searchAddon.findNext(value, searchOptions);
+  if (value) void props.searchAddon.findNext(value, searchOptions);
 };
 
 const toggleSearchOption = (option: "caseSensitive" | "wholeWord" | "regex") => {
@@ -109,6 +109,6 @@ useMutationObserver(
       @click="toggleSearchOption(option.key)"
     />
 
-    <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-x" @click="emit('close')" />
+    <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-x" @click="void emit('close')" />
   </div>
 </template>

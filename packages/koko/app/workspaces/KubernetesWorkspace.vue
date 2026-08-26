@@ -593,7 +593,7 @@ onUnmounted(() => {
     >
       <aside
         v-show="!isNarrowScreen || resourceTreeOpen"
-        class="z-40 flex min-h-0 shrink-0 flex-col bg-[var(--workspace-surface-sidebar)] max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
+        class="z-40 flex min-h-0 shrink-0 flex-col bg-(--workspace-surface-sidebar) max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
         :style="{ width: resourceTreeWidth }"
       >
         <div class="flex h-9 min-w-0 shrink-0 items-center gap-1 border-b border-default px-2.5">
@@ -610,12 +610,12 @@ onUnmounted(() => {
             size="xs"
             class="md:hidden"
             :aria-label="t('koko.actions.close')"
-            @click="resourceTreeOpen = false"
+            @click="void (resourceTreeOpen = false)"
           />
           <UTooltip :text="t('koko.kubernetes.connectCluster')" :delay-duration="150">
             <button
               type="button"
-              class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
+              class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-(--app-hover-strong) hover:text-highlighted"
               :aria-label="t('koko.kubernetes.connectCluster')"
               @click="connectCluster"
             >
@@ -625,8 +625,8 @@ onUnmounted(() => {
           <UTooltip :text="t('koko.actions.search')" :delay-duration="150">
             <button
               type="button"
-              class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
-              :class="searchVisible ? 'bg-[var(--app-hover-strong)] text-highlighted' : ''"
+              class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-(--app-hover-strong) hover:text-highlighted"
+              :class="searchVisible ? 'bg-(--app-hover-strong) text-highlighted' : ''"
               :aria-label="t('koko.actions.search')"
               :aria-pressed="searchVisible"
               @click="toggleSearch"
@@ -637,7 +637,7 @@ onUnmounted(() => {
           <UTooltip :text="t('koko.kubernetes.refreshTree')" :delay-duration="150">
             <button
               type="button"
-              class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
+              class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-(--app-hover-strong) hover:text-highlighted"
               :aria-label="t('koko.kubernetes.refreshTree')"
               @click="refreshTree"
             >
@@ -692,7 +692,7 @@ onUnmounted(() => {
               <button
                 v-if="row.kind === 'recent-root' && recentContainers.length"
                 type="button"
-                class="absolute top-1 right-1 grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-[color,background-color,opacity] group-hover:opacity-100 hover:bg-[var(--app-hover-strong)] hover:text-highlighted focus-visible:opacity-100"
+                class="absolute top-1 right-1 grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-[color,background-color,opacity] group-hover:opacity-100 hover:bg-(--app-hover-strong) hover:text-highlighted focus-visible:opacity-100"
                 :aria-label="t('koko.kubernetes.clearRecentContainers')"
                 :title="t('koko.kubernetes.clearRecentContainers')"
                 @click.stop="clearRecentContainers"
@@ -737,7 +737,7 @@ onUnmounted(() => {
             variant="ghost"
             size="xs"
             :aria-expanded="resourceTreeOpen"
-            @click="resourceTreeOpen = true"
+            @click="void (resourceTreeOpen = true)"
           />
         </div>
         <WorkspaceSubTabStrip

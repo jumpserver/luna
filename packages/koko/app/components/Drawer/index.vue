@@ -3,7 +3,7 @@ import { HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import KokoDrawerGeneral from "#koko/components/Drawer/General/index.vue";
 import { useKokoTerminalEvents } from "#koko/composables/terminal/useTerminalEvents";
 import { useKokoConnectionStore } from "#koko/stores/connection";
-import mittBus from "#koko/utils/mittBus";
+import mittBus, { KokoMittEvent } from "#koko/utils/mittBus";
 
 const { t } = useI18n();
 const connectionStore = useKokoConnectionStore();
@@ -20,17 +20,17 @@ onMounted(() => {
     drawerOpen.value = true;
   });
 
-  mittBus.on("open-setting", () => {
+  mittBus.on(KokoMittEvent.OpenSetting, () => {
     drawerOpen.value = !drawerOpen.value;
   });
-  mittBus.on("close-drawer", () => {
+  mittBus.on(KokoMittEvent.CloseDrawer, () => {
     drawerOpen.value = false;
   });
 });
 
 onUnmounted(() => {
-  mittBus.off("open-setting");
-  mittBus.off("close-drawer");
+  mittBus.off(KokoMittEvent.OpenSetting);
+  mittBus.off(KokoMittEvent.CloseDrawer);
 });
 </script>
 

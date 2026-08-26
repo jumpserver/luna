@@ -106,7 +106,7 @@ const {
               color="neutral"
               variant="ghost"
               :label="t('koko.fileManagement.clearSelection')"
-              @click="selectedSendTargetIds = []"
+              @click="void (selectedSendTargetIds = [])"
             />
           </div>
           <UInput
@@ -185,7 +185,7 @@ const {
                     ? t('FileTransfer.Overwrite')
                     : t('FileTransfer.Skip')
               "
-              @click="sendConflictPolicy = policy"
+              @click="void (sendConflictPolicy = policy)"
             />
           </div>
         </div>
@@ -201,7 +201,12 @@ const {
         </p>
         <p class="mt-1">{{ t("koko.fileManagement.distributionQueueHint") }}</p>
       </div>
-      <UButton color="neutral" variant="ghost" :label="t('koko.actions.cancel')" @click="sendModalOpen = false" />
+      <UButton
+        color="neutral"
+        variant="ghost"
+        :label="t('koko.actions.cancel')"
+        @click="void (sendModalOpen = false)"
+      />
       <UButton
         color="primary"
         icon="i-lucide-send"

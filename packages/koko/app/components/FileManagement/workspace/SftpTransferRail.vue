@@ -44,7 +44,7 @@ const leftTooltip = computed(() =>
         :disabled="!canTransferRight || transferring"
         :loading="transferring"
         :aria-label="rightTooltip"
-        @click="emit('transfer', 'left-to-right')"
+        @click="void emit('transfer', 'left-to-right')"
       />
     </UTooltip>
     <UTooltip :text="leftTooltip">
@@ -56,7 +56,7 @@ const leftTooltip = computed(() =>
         :disabled="!canTransferLeft || transferring"
         :loading="transferring"
         :aria-label="leftTooltip"
-        @click="emit('transfer', 'right-to-left')"
+        @click="void emit('transfer', 'right-to-left')"
       />
     </UTooltip>
   </div>
