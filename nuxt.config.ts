@@ -7,6 +7,10 @@ const faceliveTarget = process.env.JMS_FACELIVE_DEV_URL || "http://localhost:517
 const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:5172";
 const uiTarget = process.env.JMS_UI_DEV_URL || "http://localhost:9528";
 const appBaseURL = process.env.NUXT_APP_BASE_URL || "/luna/";
+const buildTime = new Date().toLocaleString("zh-CN", {
+  timeZone: "Asia/Shanghai",
+  hour12: false
+});
 
 const getProxyOrigin = (target: string) => new URL(target).origin;
 const rewriteProxyOrigin = (target: string) => (proxy: any) => {
@@ -28,6 +32,11 @@ const configureHttpProxy = (name: string, target: string) => (proxy: any) => {
 
 export default defineNuxtConfig({
   extends: ["@jumpserver/koko/nuxt", "@jumpserver/online-player/nuxt"],
+  runtimeConfig: {
+    public: {
+      buildTime
+    }
+  },
   typescript: {
     tsConfig: {
       include: ["../packages/koko/app/**/*", "../packages/online-player/app/**/*"]
