@@ -6,7 +6,7 @@ import type {
   FileTransferPrepareInput,
   FileTransferResumeState,
   FileTransferWriteInput
-} from "~/shared/file-transfer/types";
+} from "@jumpserver/connectors-core";
 
 const LOCAL_ENDPOINT_ID = "local:fs";
 

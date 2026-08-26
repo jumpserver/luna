@@ -12,7 +12,7 @@ import { createSerialTaskQueue } from "#koko/composables/sftp/core/queues";
 import { parseSftpTransferState, parseSftpTransferWriteAck } from "#koko/composables/sftp/core/transfer";
 import { SftpCommand, SftpMessageType, SftpSocketFailureCode } from "#koko/composables/sftp/protocol";
 import { useSftpTransferEndpoint } from "#koko/composables/sftp/useSftpTransferEndpoint";
-import { FileTransferUnavailableError } from "~/shared/file-transfer/types";
+import { FileTransferUnavailableError } from "@jumpserver/connectors-core";
 
 function createSocket(connected = true) {
   const messageListeners = new Set<(message: SftpIncomingMessage) => void>();

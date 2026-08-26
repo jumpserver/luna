@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
+import type {
+  ConnectorSessionContext,
+  FileTransferEndpoint,
+  FileTransferEndpointRef
+} from "@jumpserver/connectors-core";
 import type {
   SftpTransferDropPayload,
   SftpTransferSourcePayload
 } from "#koko/composables/sftp/file-manager/workspaceTypes";
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
-import type { FileTransferEndpoint, FileTransferEndpointRef } from "~/shared/file-transfer/types";
 import SftpPaneContextMenu from "#koko/components/FileManagement/pane/SftpPaneContextMenu.vue";
 import SftpPaneDropOverlay from "#koko/components/FileManagement/pane/SftpPaneDropOverlay.vue";
 import SftpPaneFileTable from "#koko/components/FileManagement/pane/SftpPaneFileTable.vue";

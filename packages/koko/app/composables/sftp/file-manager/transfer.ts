@@ -1,7 +1,7 @@
 import type { Ref } from "vue";
 import type { SftpFileEntry } from "../useSftpFileManager";
 import type { SftpTransferSourcePayload } from "./workspaceTypes";
-import type { FileTransferEndpointRef } from "~/shared/file-transfer/types";
+import type { FileTransferEndpointRef } from "@jumpserver/connectors-core";
 
 export const SFTP_TRANSFER_MIME_TYPE = "application/x-jumpserver-sftp-files";
 

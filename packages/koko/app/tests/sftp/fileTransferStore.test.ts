@@ -1,10 +1,10 @@
-import type { FileTransferEndpoint, FileTransferTask } from "~/shared/file-transfer/types";
+import type { FileTransferEndpoint, FileTransferTask } from "@jumpserver/connectors-core";
+import { registerFileTransferEndpoint } from "@jumpserver/connectors-core";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { registerFileTransferEndpoint } from "~/shared/file-transfer/registry";
-import { useFileTransferStore } from "~/store/modules/fileTransfer";
+import { useFileTransferStore } from "#koko/stores/fileTransfer";
 
-vi.mock("~/shared/file-transfer/checksum", () => ({
+vi.mock("#koko/utils/file-transfer/checksum", () => ({
   updateFileTransferChecksum: vi.fn(async () => ({ chunkChecksum: "chunk-checksum", state: "checksum-state" })),
   finalizeFileTransferChecksum: vi.fn(async () => "file-checksum")
 }));

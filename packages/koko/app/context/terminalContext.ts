@@ -3,7 +3,8 @@ import type { HostBridge } from "@jumpserver/connectors-core";
 import type { InjectionKey } from "vue";
 import type { TerminalMittEvent } from "#koko/composables/terminal/protocol";
 
-import type { ClipboardDirection, ClipboardPermission, ClipboardPolicy, TerminalSessionInfo } from "#koko/types";
+import type { ClipboardDirection, ClipboardPermission, ClipboardPolicy } from "#koko/types/clipboard";
+import type { TerminalSessionInfo } from "#koko/types/session";
 import {
   connectorSessionKey,
   createHostBridge,

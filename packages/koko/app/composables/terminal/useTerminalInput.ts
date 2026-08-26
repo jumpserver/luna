@@ -1,6 +1,7 @@
 import type { Terminal } from "@xterm/xterm";
 import type { Ref } from "vue";
-import type { ClipboardDirection, ILunaConfig } from "#koko/types";
+import type { ClipboardDirection } from "#koko/types/clipboard";
+import type { ITerminalSettings } from "#koko/types/settings";
 
 import { FORMATTER_MESSAGE_TYPE, HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 
@@ -22,7 +23,7 @@ export function useKokoTerminalInput(options: {
   isZmodemActive: () => boolean;
   abortZmodem: () => void;
   onContextMenu: (event: MouseEvent) => void;
-  getTerminalConfig: () => Partial<ILunaConfig>;
+  getTerminalConfig: () => Partial<ITerminalSettings>;
   onResize: (size: { cols: number; rows: number }) => void;
   onHostKey: (key: string) => void;
   inputLocked: () => boolean;

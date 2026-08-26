@@ -1,4 +1,4 @@
-import type { FileTransferStatus, FileTransferTask } from "~/shared/file-transfer/types";
+import type { FileTransferStatus, FileTransferTask } from "@jumpserver/connectors-core";
 import { describe, expect, it } from "vitest";
 import { ref } from "vue";
 import {

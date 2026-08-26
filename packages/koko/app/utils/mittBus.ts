@@ -1,5 +1,5 @@
 import type { Ref } from "vue";
-import type { OnlineUser, ShareUserOptions } from "#koko/types";
+import type { OnlineUser, ShareUserOptions } from "#koko/types/session";
 
 import mitt from "mitt";
 

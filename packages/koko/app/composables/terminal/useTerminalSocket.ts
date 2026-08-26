@@ -1,5 +1,5 @@
 import type { TerminalMessageHandlers } from "#koko/composables/terminal/useTerminalMessageHandler";
-import type { OnlineUser, SettingConfig, ShareUserOptions } from "#koko/types";
+import type { OnlineUser, SettingConfig, ShareUserOptions } from "#koko/types/session";
 import type { KokoZmodemSentry } from "./zmodemTypes";
 import { connectorSessionKey, FORMATTER_MESSAGE_TYPE, HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { useKokoHostAdapter } from "@jumpserver/koko/host";

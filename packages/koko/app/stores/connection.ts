@@ -1,6 +1,24 @@
-import type { ConnectionState } from "#koko/types";
+import type { Terminal } from "@xterm/xterm";
+import type { OnlineUser, ShareUserOptions } from "#koko/types/session";
 
 import { defineStore } from "pinia";
+
+export interface ConnectionState {
+  origin: string;
+  lunaId: string;
+  shareId: string;
+  shareCode: string;
+  assetName: string;
+  sessionId: string;
+  terminalId: string;
+  enableShare: boolean;
+  terminal: Terminal;
+  socket: WebSocket | null;
+  userOptions: ShareUserOptions[];
+  onlineUsers: OnlineUser[];
+  drawerOpenState: boolean;
+  drawerTabIndex: number;
+}
 
 export const useKokoConnectionStore = defineStore("koko-connection", {
   state: (): Partial<ConnectionState> => ({

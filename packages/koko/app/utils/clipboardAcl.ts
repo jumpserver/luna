@@ -6,7 +6,7 @@ import type {
   ClipboardPolicy,
   ClipboardPolicyItem,
   ClipboardValidationResult
-} from "#koko/types";
+} from "#koko/types/clipboard";
 
 const normalizeLimit = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;

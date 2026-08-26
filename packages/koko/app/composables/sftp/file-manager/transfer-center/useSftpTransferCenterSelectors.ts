@@ -1,5 +1,5 @@
 import type { MaybeRefOrGetter } from "vue";
-import type { FileTransferStatus, FileTransferTask } from "~/shared/file-transfer/types";
+import type { FileTransferStatus, FileTransferTask } from "@jumpserver/connectors-core";
 import { computed, toValue } from "vue";
 
 export interface SftpTransferTargetGroup {

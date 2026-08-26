@@ -1,4 +1,4 @@
-import type { FileTransferTask } from "~/shared/file-transfer/types";
+import type { FileTransferTask } from "@jumpserver/connectors-core";
 import { describe, expect, it } from "vitest";
 import {
   assetSupportsSftp,

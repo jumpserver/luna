@@ -19,7 +19,7 @@ function requestId() {
 function checksumWorker() {
   if (!import.meta.client) throw new Error("File transfer checksum worker is only available in the browser");
   if (worker) return worker;
-  worker = new Worker(new URL("../../workers/fileTransferChecksum.worker.ts", import.meta.url), { type: "module" });
+  worker = new Worker(new URL("./fileTransferChecksum.worker.ts", import.meta.url), { type: "module" });
   worker.onmessage = (event: MessageEvent<ChecksumWorkerResponse>) => {
     const response = event.data;
     const request = pending.get(response.id);

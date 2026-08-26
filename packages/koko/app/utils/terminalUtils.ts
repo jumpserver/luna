@@ -1,6 +1,6 @@
 import type { Terminal } from "@xterm/xterm";
 
-import type { ILunaConfig } from "#koko/types";
+import type { ITerminalSettings } from "#koko/types/settings";
 import { buildJSONEnvelope, buildTerminalInput, ENVELOPE_TERMINAL_COMMAND } from "#koko/composables/terminal/envelope";
 import { AsciiBackspace, AsciiCtrlC, AsciiCtrlZ, AsciiDel } from "#koko/utils/config";
 
@@ -39,7 +39,7 @@ export function writeBufferToTerminal(
   terminal.write(new Uint8Array(data));
 }
 
-export function preprocessInput(data: string, config: Partial<ILunaConfig>) {
+export function preprocessInput(data: string, config: Partial<ITerminalSettings>) {
   if (config.backspaceAsCtrlH === "1" && data.charCodeAt(0) === AsciiDel) {
     data = String.fromCharCode(AsciiBackspace);
   }

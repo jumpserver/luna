@@ -1,4 +1,4 @@
-import type { OnlineUser, ShareUserOptions } from "#koko/types";
+import type { OnlineUser, ShareUserOptions } from "#koko/types/session";
 import { FORMATTER_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 
 import { writeText } from "clipboard-polyfill";

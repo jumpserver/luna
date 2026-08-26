@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { KokoWorkspaceTab } from "@jumpserver/koko/host";
-import type { ClipboardAccess, ClipboardDirection, ClipboardPermission, ClipboardPolicy } from "#koko/types";
+import type { ClipboardAccess, ClipboardDirection, ClipboardPermission, ClipboardPolicy } from "#koko/types/clipboard";
 import { useKokoHostAdapter } from "@jumpserver/koko/host";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";

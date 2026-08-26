@@ -1,5 +1,3 @@
-import type { SftpIncomingMessage } from "./protocol";
-import type { SftpSocketClient } from "./useSftpSocket";
 import type {
   FileTransferChunk,
   FileTransferCommitInput,
@@ -7,9 +5,11 @@ import type {
   FileTransferEndpointRef,
   FileTransferPrepareInput,
   FileTransferWriteInput
-} from "~/shared/file-transfer/types";
+} from "@jumpserver/connectors-core";
+import type { SftpIncomingMessage } from "./protocol";
+import type { SftpSocketClient } from "./useSftpSocket";
+import { FileTransferUnavailableError } from "@jumpserver/connectors-core";
 import { getCurrentInstance, onUnmounted } from "vue";
-import { FileTransferUnavailableError } from "~/shared/file-transfer/types";
 import { createSftpMessageId, decodeSftpRawBytes, encodeSftpBytes } from "./core/codec";
 import { rejectPendingRequests } from "./core/pending";
 import { parseSftpTransferState, parseSftpTransferWriteAck } from "./core/transfer";

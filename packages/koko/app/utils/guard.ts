@@ -1,4 +1,4 @@
-import type { ITerminalSettings } from "#koko/types";
+import type { ITerminalSettings } from "#koko/types/settings";
 import { useKokoTerminalSettingsStore } from "#koko/stores/terminalSettings";
 
 interface CommandLineConfig {

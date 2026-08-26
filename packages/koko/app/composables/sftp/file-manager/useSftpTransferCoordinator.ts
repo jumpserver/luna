@@ -14,12 +14,11 @@ import type {
   FileTransferConflictPolicy,
   FileTransferEndpoint,
   FileTransferEndpointRef
-} from "~/shared/file-transfer/types";
-
+} from "@jumpserver/connectors-core";
+import { registerFileTransferEndpoint } from "@jumpserver/connectors-core";
 import { computed, onBeforeUnmount, reactive, ref, toValue, watch } from "vue";
 import { buildSftpDistributionGroups } from "#koko/utils/sftpDistribution";
-import { registerFileTransferEndpoint } from "~/shared/file-transfer/registry";
-import { useFileTransferStore } from "~/store/modules/fileTransfer";
+import { useFileTransferStore } from "#koko/stores/fileTransfer";
 import { buildSftpTransferInputs, completedTransferSourceNames, filterSftpDistributionTargets } from "./selectors";
 import { useBrowserUploadTransferEndpoint, WEB_UPLOAD_ENDPOINT_ID } from "./useBrowserUploadTransferEndpoint";
 
