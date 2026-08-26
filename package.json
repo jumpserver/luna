@@ -106,7 +106,7 @@
     "asciinema-player": "^3.10.0",
     "clipboard-polyfill": "^4.1.1",
     "codemirror": "^6.0.2",
-    "dompurify": "3.4.12",
+    "dompurify": "3.4.13",
     "driver.js": "^1.8.0",
     "fflate": "^0.8.2",
     "guacamole-common-js-jumpserver": "1.1.0-c",
