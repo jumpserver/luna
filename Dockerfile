@@ -1,5 +1,5 @@
 # The tag is updated by .github/workflows/build-base-image.yml.
-FROM jumpserver/luna-base:20260806_071716 AS stage-build
+FROM jumpserver/luna-base:20260826_080226 AS stage-build
 
 ADD . /data
 
