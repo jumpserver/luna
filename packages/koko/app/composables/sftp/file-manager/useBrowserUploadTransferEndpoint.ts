@@ -5,7 +5,7 @@ import type {
   FileTransferPrepareInput,
   FileTransferResumeState,
   FileTransferWriteInput
-} from "~/shared/file-transfer/types";
+} from "@jumpserver/connectors-core";
 
 export const WEB_UPLOAD_ENDPOINT_ID = "web-upload";
 const STAGED_ROOT = "/web-upload";

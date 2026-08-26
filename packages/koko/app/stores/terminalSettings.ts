@@ -1,6 +1,10 @@
-import type { ITerminalSettings, ObjToKeyValArray } from "#koko/types";
+import type { ITerminalSettings } from "#koko/types/settings";
 
 import { defineStore } from "pinia";
+
+type TerminalSettingEntry = {
+  [K in keyof ITerminalSettings]-?: [K, ITerminalSettings[K]];
+}[keyof ITerminalSettings];
 
 export const useKokoTerminalSettingsStore = defineStore("koko-terminal-settings", {
   state: (): Partial<ITerminalSettings> => ({
@@ -17,7 +21,7 @@ export const useKokoTerminalSettingsStore = defineStore("koko-terminal-settings"
     getConfig: (state) => state
   },
   actions: {
-    setDefaultTerminalConfig(...args: ObjToKeyValArray<ITerminalSettings>) {
+    setDefaultTerminalConfig(...args: TerminalSettingEntry) {
       this.$patch({ [args[0]]: args[1] });
     }
   }

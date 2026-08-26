@@ -2,7 +2,7 @@ import type {
   CreateFileTransferTaskInput,
   FileTransferConflictPolicy,
   FileTransferEndpointRef
-} from "~/shared/file-transfer/types";
+} from "@jumpserver/connectors-core";
 
 export interface SftpDistributionEntry {
   name: string;

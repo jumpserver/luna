@@ -68,7 +68,7 @@ export interface FileTransferCommitInput {
 }
 
 /**
- * Runtime transport supplied by a connector. The global UI transfer store only
+ * Runtime transport supplied by a connector. The host transfer store only
  * knows this interface and never owns connector sockets or credentials.
  */
 export interface FileTransferEndpoint {

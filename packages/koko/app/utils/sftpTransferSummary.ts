@@ -1,4 +1,4 @@
-import type { FileTransferStatus, FileTransferTask } from "~/shared/file-transfer/types";
+import type { FileTransferStatus, FileTransferTask } from "@jumpserver/connectors-core";
 
 const terminalStatuses = new Set<FileTransferStatus>(["completed", "skipped", "failed", "canceled"]);
 export type SftpTransferGroupStatus = FileTransferStatus | "partial";

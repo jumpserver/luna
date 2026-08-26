@@ -3,7 +3,7 @@ import type {
   CreateFileTransferTaskInput,
   FileTransferEndpointRef,
   FileTransferTask
-} from "~/shared/file-transfer/types";
+} from "@jumpserver/connectors-core";
 
 export function defaultGlobalLeftPaneId(isTauriRuntime: boolean) {
   return isTauriRuntime ? "local" : "web-upload";

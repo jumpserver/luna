@@ -1,17 +1,17 @@
 <script setup lang="ts">
+import type { FileTransferConflictPolicy, FileTransferTask } from "@jumpserver/connectors-core";
 import type {
   SftpTransferBatchGroup as BatchGroup,
   SftpTransferTargetGroup as TargetGroup,
   SftpTransferTaskFilter as TaskFilter
 } from "#koko/composables/sftp/file-manager/transfer-center/useSftpTransferCenterSelectors";
-import type { FileTransferConflictPolicy, FileTransferTask } from "~/shared/file-transfer/types";
 import SftpTransferBatch from "#koko/components/FileManagement/transfer-center/SftpTransferBatch.vue";
 import {
   sftpTransferConflictError,
   sftpTransferTerminalStatuses,
   useSftpTransferCenterSelectors
 } from "#koko/composables/sftp/file-manager/transfer-center/useSftpTransferCenterSelectors";
-import { useFileTransferStore } from "~/store/modules/fileTransfer";
+import { useFileTransferStore } from "#koko/stores/fileTransfer";
 
 interface FlightPosition {
   id: number;

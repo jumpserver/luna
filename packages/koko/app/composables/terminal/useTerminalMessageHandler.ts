@@ -4,14 +4,8 @@ import type { Terminal } from "@xterm/xterm";
 import type { ComputedRef, Ref } from "vue";
 import type { useKokoConnectionStore } from "#koko/stores/connection";
 import type { useKokoTerminalSettingsStore } from "#koko/stores/terminalSettings";
-import type {
-  ClipboardPermission,
-  ClipboardPolicy,
-  OnlineUser,
-  SettingConfig,
-  ShareUserOptions,
-  TerminalSessionInfo
-} from "#koko/types";
+import type { ClipboardPermission, ClipboardPolicy } from "#koko/types/clipboard";
+import type { OnlineUser, SettingConfig, ShareUserOptions, TerminalSessionInfo } from "#koko/types/session";
 import type { TerminalCommandEnvelope } from "./envelope";
 import type { TerminalIncomingMessage } from "./protocol";
 import type { TerminalAiChatMessage } from "./useTerminalAiSessions";

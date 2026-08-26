@@ -1,5 +1,5 @@
 import type { HostEventType } from "@jumpserver/connectors-core";
-import type { TerminalSessionInfo } from "#koko/types";
+import type { TerminalSessionInfo } from "#koko/types/session";
 import type { TerminalMittEvent } from "./protocol";
 import { useKokoTerminalContext } from "#koko/context/terminalContext";
 import { TerminalEventType } from "./protocol";

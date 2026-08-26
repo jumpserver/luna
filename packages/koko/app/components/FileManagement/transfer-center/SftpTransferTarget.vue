@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import type { FileTransferConflictPolicy, FileTransferTask } from "@jumpserver/connectors-core";
 import type { SftpTransferTargetGroup } from "#koko/composables/sftp/file-manager/transfer-center/useSftpTransferCenterSelectors";
 import type { SftpTransferGroupStatus } from "#koko/utils/sftpTransferSummary";
-import type { FileTransferConflictPolicy, FileTransferTask } from "~/shared/file-transfer/types";
 import SftpTransferFile from "#koko/components/FileManagement/transfer-center/SftpTransferFile.vue";
 import {
   canPauseTransferTasks,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FileTransferTask } from "~/shared/file-transfer/types";
+import type { FileTransferTask } from "@jumpserver/connectors-core";
 import prettyBytes from "pretty-bytes";
 
 const props = defineProps<{
