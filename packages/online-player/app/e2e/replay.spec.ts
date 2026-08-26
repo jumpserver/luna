@@ -96,6 +96,16 @@ async function installReplayBackend(
       body: Buffer.from(gzipSync(strToU8(extra?.guacamoleBody || GUACAMOLE_BODY)))
     });
   });
+  await page.route("**/mock.replay", async (route) => {
+    if (extra?.guacamoleDelayMs) {
+      await new Promise((resolve) => setTimeout(resolve, extra.guacamoleDelayMs));
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "text/plain",
+      body: extra?.guacamoleBody || GUACAMOLE_BODY
+    });
+  });
   await page.route("**/mock.replay.json", (route) =>
     route.fulfill({
       status: 200,
@@ -342,6 +352,22 @@ test.describe("online session replay", () => {
       date_start: "2026-08-20T14:32:00.000Z"
     });
     await openReplay(page, "/replay/sid-guacamole-gzip");
+
+    await expect(page.locator("[data-guacamole-root]")).toBeVisible();
+    await expect(page.locator("[data-replay-stage]")).toContainText("00:01");
+    await expect(page.locator("[data-replay-speed]")).toBeEnabled();
+  });
+
+  test("streams uncompressed guacamole recordings over HTTP", async ({ page }) => {
+    await installReplayBackend(page, {
+      type: "guacamole",
+      src: "/mock.replay",
+      user: "alice",
+      asset: "windows-prod-01",
+      account: "administrator",
+      date_start: "2026-08-20T14:32:00.000Z"
+    });
+    await openReplay(page, "/replay/sid-guacamole-stream");
 
     await expect(page.locator("[data-guacamole-root]")).toBeVisible();
     await expect(page.locator("[data-replay-stage]")).toContainText("00:01");

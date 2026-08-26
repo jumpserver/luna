@@ -1,5 +1,5 @@
 diff --git a/dist/guacamole-common.js b/dist/guacamole-common.js
-index 542c77bb40f2814949b61ed245830f9a66733598..a3cd68057b72438dc0ad1f39b9485a16c845f587 100644
+index 542c77b..71230bc 100644
 --- a/dist/guacamole-common.js
 +++ b/dist/guacamole-common.js
 @@ -10669,6 +10669,14 @@ Guacamole.SessionRecording = function SessionRecording(tunnel) {
@@ -74,3 +74,295 @@ index 542c77bb40f2814949b61ed245830f9a66733598..a3cd68057b72438dc0ad1f39b9485a16
      this.play = function play() {
  
          // If playback is not already in progress and frames remain,
+@@ -13278,116 +13325,221 @@ Guacamole.StaticHTTPTunnel = function StaticHTTPTunnel(url, crossDomain, extraTu
+     var tunnel = this;
+ 
+     /**
+-     * The current, in-progress HTTP request. If no request is currently in
+-     * progress, this will be null.
++     * AbortController for the in-progress HTTP stream, if any.
+      *
+      * @private
+-     * @type {XMLHttpRequest}
++     * @type {AbortController}
+      */
+-    var xhr = null;
++    var abortController = null;
+ 
+     /**
+-     * Additional headers to be sent in tunnel requests. This dictionary can be
+-     * populated with key/value header pairs to pass information such as authentication
+-     * tokens, etc.
++     * Additional headers to be sent in tunnel requests.
+      *
+      * @private
+      */
+     var extraHeaders = extraTunnelHeaders || {};
+ 
+     /**
+-     * Adds the configured additional headers to the given request.
++     * @private
++     * @returns {Guacamole.Parser}
++     */
++    var createParser = function createParser() {
++        var parser = new Guacamole.Parser();
++        parser.oninstruction = function instructionReceived(opcode, args) {
++            if (tunnel.oninstruction)
++                tunnel.oninstruction(opcode, args);
++        };
++        return parser;
++    };
++
++    /**
++     * @private
++     * @param {Uint8Array} bytes
++     * @returns {Boolean}
++     */
++    var looksLikeGzip = function looksLikeGzip(bytes) {
++        return !!(bytes && bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b);
++    };
++
++    /**
++     * Rebuild a ReadableStream that starts with an already-read chunk.
+      *
+-     * @param {XMLHttpRequest} request
+-     *     The request where the configured extra headers will be added.
++     * @private
++     * @param {Uint8Array} firstChunk
++     * @param {ReadableStreamDefaultReader} reader
++     * @returns {ReadableStream}
++     */
++    var prependChunk = function prependChunk(firstChunk, reader) {
++        var sentFirst = !firstChunk || !firstChunk.length;
++        return new ReadableStream({
++            pull: function pull(controller) {
++                if (!sentFirst) {
++                    sentFirst = true;
++                    controller.enqueue(firstChunk);
++                    return;
++                }
++                return reader.read().then(function onChunk(result) {
++                    if (result.done)
++                        controller.close();
++                    else
++                        controller.enqueue(result.value);
++                });
++            }
++        });
++    };
++
++    /**
++     * Parse a complete local Guacamole dump. Used by the offline player.
+      *
+-     * @param {Object} headers
+-     *     The headers to be added to the request.
++     * @private
++     * @param {Guacamole.Parser} parser
++     * @param {String} data
++     */
++    var parseLocalData = function parseLocalData(parser, data) {
++        tunnel.setState(Guacamole.Tunnel.State.OPEN);
++        if (data)
++            parser.receive(data);
++    };
++
++    /**
++     * Stream a remote Guacamole dump over HTTP. Raw gzip bodies are inflated
++     * with DecompressionStream; Content-Encoding gzip is left to the browser.
+      *
+      * @private
++     * @param {Guacamole.Parser} parser
+      */
+-    function addExtraHeaders(request, headers) {
+-        for (var name in headers) {
+-            request.setRequestHeader(name, headers[name]);
+-        }
+-    }
++    var streamFromUrl = function streamFromUrl(parser) {
++        abortController = new AbortController();
++        var signal = abortController.signal;
++        var decoder = new TextDecoder("utf-8");
+ 
+-    this.sendMessage = function sendMessage(elements) {
+-        // Do nothing
+-    };
++        var fail = function fail(status) {
++            if (tunnel.onerror)
++                tunnel.onerror(status);
++            tunnel.disconnect();
++        };
+ 
+-    this.connect = function connect(data) {
++        var feed = function feed(bytes) {
++            if (bytes && bytes.length)
++                parser.receive(decoder.decode(bytes, { stream: true }));
++        };
+ 
+-        // Ensure any existing connection is killed
+-        tunnel.disconnect();
++        var finish = function finish() {
++            parser.receive(decoder.decode());
++            tunnel.disconnect();
++        };
+ 
+-        // Connection is now starting
+-        tunnel.setState(Guacamole.Tunnel.State.CONNECTING);
++        var readAll = function readAll(reader) {
++            var pump = function pump() {
++                return reader.read().then(function onChunk(result) {
++                    if (signal.aborted)
++                        return;
++                    if (result.done) {
++                        finish();
++                        return;
++                    }
++                    feed(result.value);
++                    return pump();
++                });
++            };
++            return pump();
++        };
+ 
+-        // Start a new connection
+-        // xhr = new XMLHttpRequest();
+-        // xhr.open('GET', url);
+-        // xhr.withCredentials = !!crossDomain;
+-        // addExtraHeaders(xhr, extraHeaders);
+-        // xhr.responseType = 'text';
+-        // xhr.send(null);
++        fetch(url, {
++            headers: extraHeaders,
++            credentials: crossDomain ? "include" : "same-origin",
++            signal: signal
++        }).then(function gotResponse(response) {
++            if (!response.ok) {
++                fail(new Guacamole.Status(
++                    Guacamole.Status.Code.fromHTTPCode(response.status),
++                    response.statusText
++                ));
++                return;
++            }
+ 
+-        var offset = 0;
++            tunnel.size = response.headers.get("Content-Length");
++            tunnel.setState(Guacamole.Tunnel.State.OPEN);
+ 
+-        // Create Guacamole protocol parser specifically for this connection
+-        var parser = new Guacamole.Parser();
++            var headers = response.headers;
++            var contentEncoding = String(headers.get("Content-Encoding") || "").toLowerCase();
++            var contentType = String(headers.get("Content-Type") || "").toLowerCase();
++            var alreadyDecoded = /gzip|deflate|br/.test(contentEncoding);
++            var typeSaysGzip = /gzip/.test(contentType);
+ 
+-        // Invoke tunnel's oninstruction handler for each parsed instruction
+-        parser.oninstruction = function instructionReceived(opcode, args) {
+-            if (tunnel.oninstruction)
+-                tunnel.oninstruction(opcode, args);
+-        };
++            var bodyPromise = response.body
++                ? Promise.resolve(response.body)
++                : response.arrayBuffer().then(function gotBuffer(buffer) {
++                    return new Response(buffer).body;
++                });
+ 
+-        // Continuously parse received data
+-        // xhr.onreadystatechange = function readyStateChanged() {
++            return bodyPromise.then(function gotBody(body) {
++                if (!body || signal.aborted)
++                    return;
+ 
+-        //     // Parse while data is being received
+-        //     if (xhr.readyState === 3 || xhr.readyState === 4) {
++                var reader = body.getReader();
++                return reader.read().then(function gotFirst(first) {
++                    if (signal.aborted)
++                        return;
++                    if (first.done) {
++                        finish();
++                        return;
++                    }
+ 
+-                // Connection is open
+-                tunnel.setState(Guacamole.Tunnel.State.OPEN);
++                    var firstChunk = first.value;
++                    var shouldInflate = !alreadyDecoded
++                        && (looksLikeGzip(firstChunk) || typeSaysGzip)
++                        && typeof DecompressionStream === "function";
+ 
+-                var buffer = data;
+-                var length = buffer.length;
++                    if (!shouldInflate) {
++                        feed(firstChunk);
++                        return readAll(reader);
++                    }
+ 
+-                // Parse only the portion of data which is newly received
+-                if (offset < length) {
+-                    parser.receive(buffer.substring(offset));
+-                    offset = length;
+-                }
++                    var inflated = prependChunk(firstChunk, reader)
++                        .pipeThrough(new DecompressionStream("gzip"));
++                    return readAll(inflated.getReader());
++                });
++            });
++        }).catch(function streamError(error) {
++            if (signal.aborted || (error && error.name === "AbortError"))
++                return;
++            fail(new Guacamole.Status(
++                Guacamole.Status.Code.SERVER_ERROR,
++                error && error.message ? error.message : String(error || "Failed to load recording")
++            ));
++        });
++    };
++
++    this.sendMessage = function sendMessage(elements) {
++        // Do nothing
++    };
+ 
+-            // }
++    this.connect = function connect(data) {
+ 
+-            // Clean up and close when done
+-        //     if (xhr.readyState === 4)
+-        //         tunnel.disconnect();
++        // Ensure any existing connection is killed
++        tunnel.disconnect();
+ 
+-        // // };
++        // Connection is now starting
++        tunnel.setState(Guacamole.Tunnel.State.CONNECTING);
+ 
+-        // // Reset state and close upon error
+-        // xhr.onerror = function httpError() {
++        var parser = createParser();
+ 
+-        //     // Fail if file could not be downloaded via HTTP
+-        //     if (tunnel.onerror)
+-        //         tunnel.onerror(new Guacamole.Status(
+-        //             Guacamole.Status.Code.fromHTTPCode(xhr.status), xhr.statusText));
++        // Offline / already-decoded dump: parse the provided text in-place.
++        if (!url) {
++            parseLocalData(parser, data);
++            return;
++        }
+ 
+-        //     tunnel.disconnect();
+-        // };
++        streamFromUrl(parser);
+ 
+     };
+ 
+     this.disconnect = function disconnect() {
+ 
+-        // Abort and dispose of XHR if a request is in progress
+-        if (xhr) {
+-            xhr.abort();
+-            xhr = null;
++        if (abortController) {
++            abortController.abort();
++            abortController = null;
+         }
+ 
+         // Connection is now closed

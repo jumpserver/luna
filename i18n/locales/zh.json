@@ -219,7 +219,9 @@
   "Sidebar": {
     "ManageSections": "管理栏目",
     "ShowSection": "显示{section}",
-    "AtLeastOneSection": "至少保留一个栏目"
+    "AtLeastOneSection": "至少保留一个栏目",
+    "Collapse": "折叠侧边栏",
+    "Expand": "展开侧边栏"
   },
   "RightPanel": {
     "Open": "打开右侧面板",

@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import type { ReplayPlayerHandle } from "#online-player/types";
-import type { GuacamoleDisplay, GuacamoleRecording, GuacamoleStatic } from "#online-player/types/guacamole";
+import type {
+  GuacamoleDisplay,
+  GuacamoleRecording,
+  GuacamoleStatic,
+  GuacamoleTunnel
+} from "#online-player/types/guacamole";
 
 import * as GuacamoleModule from "guacamole-common-js-jumpserver/dist/guacamole-common";
 import { fitDisplayScale } from "#online-player/utils/guacamoleBounds";
 import { applyGuacamolePlaybackRate } from "#online-player/utils/guacamolePlayback";
-import { fetchRecordingText } from "#online-player/utils/recordingSource";
 import { interpretTouchGesture } from "#online-player/utils/touchSeek";
 
 const props = defineProps<{
@@ -30,9 +34,13 @@ const viewportRef = ref<HTMLElement | null>(null);
 const hostRef = ref<HTMLElement | null>(null);
 let recording: GuacamoleRecording | null = null;
 let display: GuacamoleDisplay | null = null;
+let sourceTunnel: GuacamoleTunnel | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let scaleTimer: ReturnType<typeof setTimeout> | null = null;
 let recordingLoaded = false;
+let streamOpened = false;
+let startApplied = false;
+let loadFailed = false;
 let playbackIntent = true;
 let ignoreClick = false;
 let touchStart: { x: number; y: number; t: number } | null = null;
@@ -113,19 +121,35 @@ const abortSeek = (resumePlayback: boolean) => {
   if (request) request.resolve();
   emit("seeking", false);
 
-  if (resumePlayback && playbackIntent && recordingLoaded && recording && !recording.isPlaying()) {
+  if (resumePlayback && playbackIntent && recording && !recording.isPlaying()) {
+    recording.play();
+  }
+};
+
+const tryStartPlayback = () => {
+  if (playbackIntent && !activeSeek && !pendingSeek && recording && !recording.isPlaying()) {
     recording.play();
   }
 };
 
 const performSeek = (request: SeekRequest) => {
-  if (!recording || !recordingLoaded) {
+  if (!recording) {
     pendingSeek = request;
     return;
   }
 
-  const targetMs = Math.min(request.targetMs, recording.getDuration());
-  if (recording.getDuration() <= 0) {
+  const duration = recording.getDuration();
+  if (duration <= 0 && !recordingLoaded) {
+    pendingSeek = request;
+    return;
+  }
+  if (!recordingLoaded && duration < request.targetMs) {
+    pendingSeek = request;
+    return;
+  }
+
+  const targetMs = Math.min(request.targetMs, duration);
+  if (duration <= 0) {
     lastPosition = 0;
     emit("position", 0);
     emit("seeking", false);
@@ -141,11 +165,12 @@ const performSeek = (request: SeekRequest) => {
     emit("seeking", false);
     applyScaleWithRetry();
     settleSeek(request);
-    if (playbackIntent && recording && !recording.isPlaying()) recording.play();
+    tryStartPlayback();
   });
 };
 
 const seekRecording = async (ms: number) => {
+  startApplied = true;
   abortSeek(false);
   emit("seeking", true);
   await new Promise<void>((resolve) => {
@@ -158,6 +183,29 @@ const seekRecording = async (ms: number) => {
   });
 };
 
+const flushStartOrPending = () => {
+  if (!recording) return;
+
+  if (pendingSeek) {
+    const request = pendingSeek;
+    const duration = recording.getDuration();
+    if (!recordingLoaded && duration < request.targetMs) return;
+    pendingSeek = null;
+    performSeek(request);
+    return;
+  }
+
+  const start = Math.max(0, props.startAtMs || 0);
+  if (!startApplied && start > 0) {
+    if (!recordingLoaded && recording.getDuration() < start) return;
+    startApplied = true;
+    void seekRecording(start);
+    return;
+  }
+
+  tryStartPlayback();
+};
+
 const destroy = () => {
   loadController?.abort();
   loadController = null;
@@ -166,6 +214,10 @@ const destroy = () => {
   if (scaleTimer) {
     clearTimeout(scaleTimer);
     scaleTimer = null;
+  }
+  if (sourceTunnel) {
+    sourceTunnel.onstatechange = null;
+    sourceTunnel.onerror = null;
   }
   if (recording) {
     recording.onplay = null;
@@ -187,19 +239,45 @@ const destroy = () => {
 
   recording = null;
   display = null;
+  sourceTunnel = null;
   recordingLoaded = false;
+  streamOpened = false;
+  startApplied = false;
+  loadFailed = false;
   playbackIntent = true;
   lastPosition = 0;
   abortSeek(false);
 };
 
-const mount = async () => {
+const mount = () => {
   destroy();
   if (!hostRef.value || !props.src) return;
 
   const controller = new AbortController();
   loadController = controller;
-  const tunnel = new Guacamole.StaticHTTPTunnel();
+  const tunnel = new Guacamole.StaticHTTPTunnel(props.src);
+  sourceTunnel = tunnel;
+
+  tunnel.onerror = (status) => {
+    if (controller.signal.aborted) return;
+    loadFailed = true;
+    playbackIntent = false;
+    startApplied = true;
+    abortSeek(false);
+    if (recording?.isPlaying()) recording.pause();
+    emit("playing", false);
+    emit("error", String(status?.message || "Failed to load recording"));
+  };
+  tunnel.onstatechange = (state) => {
+    if (controller.signal.aborted || !recording) return;
+    if (state === Guacamole.Tunnel.State.OPEN) streamOpened = true;
+    if (state === Guacamole.Tunnel.State.CLOSED && streamOpened) {
+      recordingLoaded = true;
+      emit("duration", recording.getDuration());
+      if (!loadFailed) flushStartOrPending();
+    }
+  };
+
   recording = new Guacamole.SessionRecording(tunnel);
   applySpeed();
   display = recording.getDisplay();
@@ -219,6 +297,7 @@ const mount = async () => {
   recording.onerror = (message: string) => emit("error", String(message || ""));
   recording.onprogress = (millis: number) => {
     emit("duration", millis);
+    flushStartOrPending();
   };
   display.onresize = () => {
     applyScale();
@@ -229,39 +308,14 @@ const mount = async () => {
     resizeObserver.observe(playerAreaRef.value);
   }
 
-  try {
-    const data = await fetchRecordingText(props.src, controller.signal);
-    if (controller.signal.aborted || !recording) return;
-    recording.connect(data);
-    recordingLoaded = true;
-    emit("duration", recording.getDuration());
-
-    if (pendingSeek) {
-      const request = pendingSeek;
-      pendingSeek = null;
-      performSeek(request);
-      return;
-    }
-
-    const start = Math.max(0, props.startAtMs || 0);
-    if (start > 0) {
-      await seekRecording(start);
-      return;
-    }
-
-    if (playbackIntent && !recording.isPlaying()) recording.play();
-  } catch (error) {
-    if (controller.signal.aborted) return;
-    abortSeek(false);
-    emit("error", error instanceof Error ? error.message : String(error || ""));
-  }
+  recording.connect("");
 };
 
 const handle: ReplayPlayerHandle = {
   play() {
     playbackIntent = true;
     if (activeSeek || pendingSeek) return;
-    if (recordingLoaded && recording && !recording.isPlaying()) recording.play();
+    if (recording && !recording.isPlaying()) recording.play();
   },
   pause() {
     playbackIntent = false;
@@ -320,7 +374,7 @@ function onTouchEnd(event: TouchEvent) {
 
 watch(
   () => props.src,
-  () => void nextTick(mount)
+  () => nextTick(mount)
 );
 
 watch(
@@ -328,7 +382,7 @@ watch(
   () => applySpeed()
 );
 
-onMounted(() => void mount());
+onMounted(() => mount());
 onBeforeUnmount(destroy);
 defineExpose(handle);
 </script>

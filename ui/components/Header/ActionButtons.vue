@@ -87,7 +87,13 @@ const appMenuItems = computed<DropdownMenuItem[]>(() => [
         :items="appMenuItems"
         size="sm"
         :content="{ align: 'end', side: 'bottom', sideOffset: 6 }"
-        :ui="{ itemLeadingIcon: 'size-4', itemTrailingIcon: 'size-4' }"
+        :ui="{
+          item: '!items-center leading-none',
+          itemLeadingIcon: 'size-4 shrink-0 block leading-none',
+          itemTrailingIcon: 'size-4 shrink-0 block leading-none',
+          itemLabel: 'block truncate text-start leading-none',
+          itemWrapper: 'min-w-0 flex-1 justify-start text-start'
+        }"
       >
         <UTooltip arrow :text="t('Common.AppMenu')">
           <UButton

@@ -32,7 +32,27 @@ export interface GuacamoleRecording {
   onerror: ((message: string) => void) | null;
 }
 
+export interface GuacamoleStatus {
+  message?: string;
+}
+
+export interface GuacamoleTunnel {
+  connect: (data?: string) => void;
+  disconnect: () => void;
+  oninstruction: ((opcode: string, args: string[]) => void) | null;
+  onstatechange: ((state: number) => void) | null;
+  onerror: ((status: GuacamoleStatus) => void) | null;
+}
+
 export interface GuacamoleStatic {
-  StaticHTTPTunnel: new (url?: string) => unknown;
+  Tunnel: {
+    State: {
+      CONNECTING: number;
+      OPEN: number;
+      CLOSED: number;
+      UNSTABLE: number;
+    };
+  };
+  StaticHTTPTunnel: new (url?: string, crossDomain?: boolean, extraHeaders?: Record<string, string>) => GuacamoleTunnel;
   SessionRecording: new (tunnel: unknown) => GuacamoleRecording;
 }

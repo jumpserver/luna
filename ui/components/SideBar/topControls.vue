@@ -48,48 +48,48 @@ const toggleSidebar = () => {
 
     <template v-if="!collapse">
       <div class="flex items-center gap-1 bg-transparent">
-        <UButton
-          v-for="mode in workspaceModes"
-          :key="mode.key"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          :icon="mode.icon"
-          :title="mode.tooltip"
-          :aria-label="mode.label"
-          :class="[
-            headerIconButtonClass,
-            uiWorkspaceMode === mode.key ? 'bg-black/6 text-gray-800 dark:bg-white/10 dark:text-white' : ''
-          ]"
-          :ui="{ leadingIcon: 'm-0 size-4' }"
-          @click="setMode(mode.key)"
-        />
+        <UTooltip v-for="mode in workspaceModes" :key="mode.key" arrow :text="mode.tooltip">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :icon="mode.icon"
+            :aria-label="mode.label"
+            :class="[
+              headerIconButtonClass,
+              uiWorkspaceMode === mode.key ? 'bg-black/6 text-gray-800 dark:bg-white/10 dark:text-white' : ''
+            ]"
+            :ui="{ leadingIcon: 'm-0 size-4' }"
+            @click="setMode(mode.key)"
+          />
+        </UTooltip>
 
-        <UButton
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          :class="headerIconButtonClass"
-          icon="i-lucide-panel-left"
-          title="折叠侧边栏"
-          aria-label="折叠侧边栏"
-          :ui="{ leadingIcon: 'm-0 size-4' }"
-          @click="toggleSidebar"
-        />
+        <UTooltip arrow :text="t('Sidebar.Collapse')">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :class="headerIconButtonClass"
+            icon="i-lucide-panel-left"
+            :aria-label="t('Sidebar.Collapse')"
+            :ui="{ leadingIcon: 'm-0 size-4' }"
+            @click="toggleSidebar"
+          />
+        </UTooltip>
       </div>
     </template>
 
-    <UButton
-      v-else
-      color="neutral"
-      variant="ghost"
-      size="sm"
-      :class="headerIconButtonClass"
-      icon="i-lucide-panel-left"
-      title="展开侧边栏"
-      aria-label="展开侧边栏"
-      :ui="{ leadingIcon: 'm-0 size-4' }"
-      @click="toggleSidebar"
-    />
+    <UTooltip v-else arrow :text="t('Sidebar.Expand')">
+      <UButton
+        color="neutral"
+        variant="ghost"
+        size="sm"
+        :class="headerIconButtonClass"
+        icon="i-lucide-panel-left"
+        :aria-label="t('Sidebar.Expand')"
+        :ui="{ leadingIcon: 'm-0 size-4' }"
+        @click="toggleSidebar"
+      />
+    </UTooltip>
   </div>
 </template>

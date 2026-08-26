@@ -219,7 +219,9 @@
   "Sidebar": {
     "ManageSections": "Manage sections",
     "ShowSection": "Show {section}",
-    "AtLeastOneSection": "Keep at least one section visible"
+    "AtLeastOneSection": "Keep at least one section visible",
+    "Collapse": "Collapse sidebar",
+    "Expand": "Expand sidebar"
   },
   "RightPanel": {
     "Open": "Open right panel",

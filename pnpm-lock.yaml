@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  guacamole-common-js-jumpserver@1.1.0-c: d8761e87d207f5644bcd882b44cac156e82f059d7b4b9954bc9e2c111f97b0d6
+  guacamole-common-js-jumpserver@1.1.0-c: a0f8b8a251adeeccc58f741db3ab841b4ff8b61519227b3032f3dc1eb2048d23
 
 importers:
 
@@ -193,7 +193,7 @@ importers:
         version: 0.8.3
       guacamole-common-js-jumpserver:
         specifier: 1.1.0-c
-        version: 1.1.0-c(patch_hash=d8761e87d207f5644bcd882b44cac156e82f059d7b4b9954bc9e2c111f97b0d6)
+        version: 1.1.0-c(patch_hash=a0f8b8a251adeeccc58f741db3ab841b4ff8b61519227b3032f3dc1eb2048d23)
       js-untar:
         specifier: ^2.0.0
         version: 2.0.0
@@ -404,7 +404,7 @@ importers:
         version: 3.17.0
       guacamole-common-js-jumpserver:
         specifier: 1.1.0-c
-        version: 1.1.0-c(patch_hash=d8761e87d207f5644bcd882b44cac156e82f059d7b4b9954bc9e2c111f97b0d6)
+        version: 1.1.0-c(patch_hash=a0f8b8a251adeeccc58f741db3ab841b4ff8b61519227b3032f3dc1eb2048d23)
       nuxt:
         specifier: ^4.4.0
         version: 4.5.0(@babel/plugin-syntax-jsx@7.29.7(@babel/core@7.29.7))(@babel/plugin-syntax-typescript@7.29.7(@babel/core@7.29.7))(@parcel/watcher@2.6.0)(@types/node@26.1.1)(@vue/compiler-sfc@3.5.40)(db0@0.3.4)(esbuild@0.28.1)(eslint@10.8.0(jiti@2.7.0))(ioredis@5.11.1)(lightningcss@1.33.0)(magicast@0.5.3)(optionator@0.9.4)(oxc-parser@0.140.0)(oxlint@1.79.0)(pinia@3.0.4(typescript@6.0.3)(vue@3.5.40(typescript@6.0.3)))(rollup-plugin-visualizer@7.0.1(rolldown@1.2.0)(rollup@4.62.3))(rollup@4.62.3)(sass-embedded@1.100.0)(sass@1.100.0)(srvx@0.12.4)(terser@5.49.0)(typescript@6.0.3)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.49.0)(yaml@2.9.0))(vue-tsc@3.2.4(typescript@6.0.3))(yaml@2.9.0)
@@ -13508,7 +13508,7 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  guacamole-common-js-jumpserver@1.1.0-c(patch_hash=d8761e87d207f5644bcd882b44cac156e82f059d7b4b9954bc9e2c111f97b0d6): {}
+  guacamole-common-js-jumpserver@1.1.0-c(patch_hash=a0f8b8a251adeeccc58f741db3ab841b4ff8b61519227b3032f3dc1eb2048d23): {}
 
   gzip-size@7.0.0:
     dependencies:
