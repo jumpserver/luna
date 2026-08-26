@@ -1,7 +1,6 @@
-import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
+import type { ConnectorSessionContext, FileTransferEndpointRef } from "@jumpserver/connectors-core";
 import type { Ref } from "vue";
 import type { SftpFileEntry } from "./protocol";
-import type { FileTransferEndpointRef } from "~/shared/file-transfer/types";
 
 import { computed, onUnmounted, ref, watch } from "vue";
 import { SFTP_REQUEST_TIMEOUT_ERROR, SftpMessageType, SftpSocketFailureCode } from "./protocol";

@@ -4,12 +4,11 @@ import type {
   FileTransferEndpointRef,
   FileTransferStatus,
   FileTransferTask
-} from "~/shared/file-transfer/types";
+} from "@jumpserver/connectors-core";
+import { FileTransferUnavailableError, getFileTransferEndpoint } from "@jumpserver/connectors-core";
 import { defineStore } from "pinia";
-import { finalizeFileTransferChecksum, updateFileTransferChecksum } from "~/shared/file-transfer/checksum";
-import { loadFileTransferState, saveFileTransferState } from "~/shared/file-transfer/persistence";
-import { getFileTransferEndpoint } from "~/shared/file-transfer/registry";
-import { FileTransferUnavailableError } from "~/shared/file-transfer/types";
+import { finalizeFileTransferChecksum, updateFileTransferChecksum } from "#koko/utils/file-transfer/checksum";
+import { loadFileTransferState, saveFileTransferState } from "#koko/utils/file-transfer/persistence";
 
 const resumableStatuses = new Set<FileTransferStatus>(["queued", "preparing", "transferring", "verifying"]);
 const terminalStatuses = new Set<FileTransferStatus>(["completed", "skipped", "failed", "canceled"]);

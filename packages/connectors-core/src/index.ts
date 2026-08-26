@@ -1,5 +1,7 @@
+export * from "./fileTransferRegistry";
 export * from "./sessionContext";
 export * from "./types/component";
+export * from "./types/fileTransfer";
 export * from "./types/message";
 export * from "./types/session";
 export * from "./useConnectorEndpoint";

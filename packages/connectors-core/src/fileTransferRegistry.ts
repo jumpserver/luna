@@ -1,4 +1,4 @@
-import type { FileTransferEndpoint } from "./types";
+import type { FileTransferEndpoint } from "./types/fileTransfer";
 
 const endpoints = new Map<string, FileTransferEndpoint>();
 

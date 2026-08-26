@@ -1,4 +1,4 @@
-import type { FileTransferBatch, FileTransferTask } from "./types";
+import type { FileTransferBatch, FileTransferTask } from "@jumpserver/connectors-core";
 
 const databaseName = "jumpserver-file-transfer";
 const storeName = "tasks";

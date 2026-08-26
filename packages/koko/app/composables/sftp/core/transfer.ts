@@ -1,5 +1,5 @@
 import type { SftpDataMessage } from "../protocol";
-import type { FileTransferResumeState, FileTransferWriteAck } from "~/shared/file-transfer/types";
+import type { FileTransferResumeState, FileTransferWriteAck } from "@jumpserver/connectors-core";
 
 interface TransferResponseWire {
   transfer_id?: string;

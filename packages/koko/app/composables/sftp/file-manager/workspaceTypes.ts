@@ -1,7 +1,6 @@
-import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
+import type { ConnectorSessionContext, FileTransferEndpointRef } from "@jumpserver/connectors-core";
 import type { MaybeRef } from "vue";
 import type { SftpFileEntry, SftpFileOperations } from "../protocol";
-import type { FileTransferEndpointRef } from "~/shared/file-transfer/types";
 
 export type SftpWorkspaceSide = "left" | "right";
 

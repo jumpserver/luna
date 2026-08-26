@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import type { FileTransferEndpoint, FileTransferEndpointRef } from "@jumpserver/connectors-core";
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type {
   SftpTransferDropPayload,
   SftpTransferSourcePayload
 } from "#koko/composables/sftp/file-manager/workspaceTypes";
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
-import type { FileTransferEndpoint, FileTransferEndpointRef } from "~/shared/file-transfer/types";
 import { useDebounceFn } from "@vueuse/core";
 import SftpLocalPaneDialogs from "#koko/components/FileManagement/pane/SftpLocalPaneDialogs.vue";
 import SftpLocalPaneToolbar from "#koko/components/FileManagement/pane/SftpLocalPaneToolbar.vue";
