@@ -118,7 +118,7 @@ function statusIcon(value: SftpTransferGroupStatus): string {
           icon="i-lucide-rotate-ccw"
           :ui="groupActionButtonUi"
           :title="t('koko.sftpTransferCenter.retryTarget')"
-          @click.stop="emit('retry', target.allTasks)"
+          @click.stop="void emit('retry', target.allTasks)"
         />
         <UButton
           v-if="canPause"
@@ -129,7 +129,7 @@ function statusIcon(value: SftpTransferGroupStatus): string {
           icon="i-lucide-pause"
           :ui="groupActionButtonUi"
           :title="t('koko.sftpTransferCenter.pauseTarget')"
-          @click.stop="emit('pause', target.allTasks)"
+          @click.stop="void emit('pause', target.allTasks)"
         />
         <UButton
           v-if="canResume"
@@ -140,7 +140,7 @@ function statusIcon(value: SftpTransferGroupStatus): string {
           icon="i-lucide-play"
           :ui="groupActionButtonUi"
           :title="t('koko.sftpTransferCenter.resumeTarget')"
-          @click.stop="emit('resume', target.allTasks)"
+          @click.stop="void emit('resume', target.allTasks)"
         />
         <UButton
           v-if="canCancel"
@@ -151,7 +151,7 @@ function statusIcon(value: SftpTransferGroupStatus): string {
           icon="i-lucide-x"
           :ui="groupActionButtonUi"
           :title="t('koko.sftpTransferCenter.cancelTarget')"
-          @click.stop="emit('cancel', target)"
+          @click.stop="void emit('cancel', target)"
         />
       </div>
     </div>
@@ -174,18 +174,23 @@ function statusIcon(value: SftpTransferGroupStatus): string {
             size="xs"
             color="neutral"
             variant="outline"
-            @click.stop="emit('resolve', target.allTasks, 'overwrite')"
+            @click.stop="void emit('resolve', target.allTasks, 'overwrite')"
           >
             {{ t("koko.sftpTransferCenter.overwrite") }}
           </UButton>
-          <UButton size="xs" color="neutral" variant="outline" @click.stop="emit('resolve', target.allTasks, 'skip')">
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="outline"
+            @click.stop="void emit('resolve', target.allTasks, 'skip')"
+          >
             {{ t("koko.sftpTransferCenter.skip") }}
           </UButton>
           <UButton
             size="xs"
             color="neutral"
             variant="outline"
-            @click.stop="emit('resolve', target.allTasks, 'keep_both')"
+            @click.stop="void emit('resolve', target.allTasks, 'keep_both')"
           >
             {{ t("koko.sftpTransferCenter.keepBoth") }}
           </UButton>

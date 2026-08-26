@@ -372,7 +372,7 @@ defineExpose({
             :aria-label="
               showHiddenFiles ? t('koko.fileManagement.hideHiddenFiles') : t('koko.fileManagement.showHiddenFiles')
             "
-            @click="showHiddenFiles = !showHiddenFiles"
+            @click="void (showHiddenFiles = !showHiddenFiles)"
           />
         </UTooltip>
         <UTooltip :text="t('koko.fileManagement.newFolder')">
@@ -382,7 +382,7 @@ defineExpose({
             variant="ghost"
             size="sm"
             :aria-label="t('koko.fileManagement.newFolder')"
-            @click="emit('createFolder')"
+            @click="void emit('createFolder')"
           />
         </UTooltip>
         <UTooltip :text="t('koko.fileManagement.newFile')">
@@ -392,7 +392,7 @@ defineExpose({
             variant="ghost"
             size="sm"
             :aria-label="t('koko.fileManagement.newFile')"
-            @click="emit('createFile')"
+            @click="void emit('createFile')"
           />
         </UTooltip>
       </template>
@@ -430,7 +430,7 @@ defineExpose({
           size="sm"
           :label="t('koko.fileManagement.addRemoteSftp')"
           :aria-label="t('koko.fileManagement.addRemoteSftp')"
-          @click="emit('addRemote')"
+          @click="void emit('addRemote')"
         />
         <UTooltip :text="t('koko.fileManagement.featureTour')">
           <UButton
@@ -439,7 +439,7 @@ defineExpose({
             variant="ghost"
             size="sm"
             :aria-label="t('koko.fileManagement.featureTour')"
-            @click="emit('startTour')"
+            @click="void emit('startTour')"
           />
         </UTooltip>
       </div>

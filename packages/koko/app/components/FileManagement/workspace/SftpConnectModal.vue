@@ -31,7 +31,12 @@ const { assetTree, connectModalOpen, connectRemoteAsset, organizationSelector, r
       </div>
     </template>
     <template #footer>
-      <UButton color="neutral" variant="ghost" :label="t('koko.actions.cancel')" @click="connectModalOpen = false" />
+      <UButton
+        color="neutral"
+        variant="ghost"
+        :label="t('koko.actions.cancel')"
+        @click="void (connectModalOpen = false)"
+      />
     </template>
   </UModal>
 </template>

@@ -340,7 +340,7 @@ defineExpose({ signalQueued });
             {{ batches.length }}
           </span>
         </div>
-        <UButton color="neutral" variant="ghost" icon="i-lucide-x" size="sm" @click="open = false" />
+        <UButton color="neutral" variant="ghost" icon="i-lucide-x" size="sm" @click="void (open = false)" />
       </div>
     </template>
 

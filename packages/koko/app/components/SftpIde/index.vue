@@ -2622,7 +2622,7 @@ onUnmounted(() => {
             size="xs"
             class="md:hidden"
             :aria-label="t('koko.actions.close')"
-            @click="explorerOpen = false"
+            @click="void (explorerOpen = false)"
           />
           <UPopover
             v-model:open="quickOpenVisible"
@@ -2926,7 +2926,7 @@ onUnmounted(() => {
           variant="ghost"
           size="xs"
           :aria-expanded="explorerOpen"
-          @click="explorerOpen = true"
+          @click="void (explorerOpen = true)"
         />
       </div>
       <div
@@ -3033,7 +3033,7 @@ onUnmounted(() => {
                       :color="tab.lineWrapping ? 'primary' : 'neutral'"
                       :variant="tab.lineWrapping ? 'soft' : 'ghost'"
                       :aria-pressed="tab.lineWrapping"
-                      @click="tab.lineWrapping = !tab.lineWrapping"
+                      @click="void (tab.lineWrapping = !tab.lineWrapping)"
                     />
                   </UTooltip>
                   <UTooltip v-if="dirty(tab) || tab.saving" :text="t('koko.actions.save')" :delay-duration="150">
@@ -3116,7 +3116,7 @@ onUnmounted(() => {
                     color="info"
                     variant="ghost"
                     :title="t('koko.actions.close')"
-                    @click="tab.draftRestored = false"
+                    @click="void (tab.draftRestored = false)"
                   />
                 </div>
                 <div
@@ -3138,7 +3138,7 @@ onUnmounted(() => {
                     variant="ghost"
                     @click="
                       tab.language = tab.expectedLanguage;
-                      tab.contentLanguageMismatch = false;
+                      void (tab.contentLanguageMismatch = false);
                     "
                   >
                     {{ t("koko.sftpEditor.useExtensionLanguage") }}
@@ -3156,7 +3156,7 @@ onUnmounted(() => {
                     color="error"
                     variant="ghost"
                     :title="t('koko.actions.close')"
-                    @click="tab.error = ''"
+                    @click="void (tab.error = '')"
                   />
                 </div>
                 <div class="min-h-0 flex-1">
@@ -3378,7 +3378,7 @@ onUnmounted(() => {
     :ui="{ content: 'max-w-md', footer: 'justify-end gap-2' }"
   >
     <template #footer>
-      <UButton color="neutral" variant="ghost" :disabled="alertSubmitting" @click="alertDialogOpen = false">
+      <UButton color="neutral" variant="ghost" :disabled="alertSubmitting" @click="void (alertDialogOpen = false)">
         {{ t("Common.Cancel") }}
       </UButton>
       <UButton color="primary" variant="soft" icon="i-lucide-save" :loading="alertSubmitting" @click="saveAndCloseTab">
@@ -3413,7 +3413,7 @@ onUnmounted(() => {
         :disabled="tabCloseSubmitting"
         @click="
           tabCloseDialogOpen = false;
-          tabCloseTargets = [];
+          void (tabCloseTargets = []);
         "
       >
         {{ t("Common.Cancel") }}
@@ -3528,7 +3528,7 @@ onUnmounted(() => {
       </div>
     </template>
     <template #footer>
-      <UButton color="neutral" variant="ghost" @click="localChangesOpen = false">
+      <UButton color="neutral" variant="ghost" @click="void (localChangesOpen = false)">
         {{ t("Common.Close") }}
       </UButton>
       <UButton
@@ -3617,7 +3617,7 @@ onUnmounted(() => {
       </div>
     </template>
     <template #footer>
-      <UButton color="neutral" variant="ghost" :disabled="conflictSubmitting" @click="saveConflict = null">
+      <UButton color="neutral" variant="ghost" :disabled="conflictSubmitting" @click="void (saveConflict = null)">
         {{ t("Common.Cancel") }}
       </UButton>
       <UButton

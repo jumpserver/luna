@@ -4,7 +4,7 @@ import { FORMATTER_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { writeText } from "clipboard-polyfill";
 import { storeToRefs } from "pinia";
 import { useKokoConnectionStore } from "#koko/stores/connection";
-import mittBus from "#koko/utils/mittBus";
+import mittBus, { KokoMittEvent } from "#koko/utils/mittBus";
 import { formatMessage } from "#koko/utils/terminalUtils";
 
 export function useKokoSessionAdapter() {
@@ -69,7 +69,7 @@ export function useKokoSessionAdapter() {
   const removeShareUser = (user: OnlineUser) => {
     if (!connectionStore.sessionId) return;
 
-    mittBus.emit("remove-share-user", {
+    mittBus.emit(KokoMittEvent.RemoveShareUser, {
       sessionId: connectionStore.sessionId,
       userMeta: user,
       type: "remove"

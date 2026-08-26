@@ -21,7 +21,7 @@ import {
   resolveClipboardAccess,
   validateClipboardText as validateClipboardAccess
 } from "#koko/utils/clipboardAcl";
-import mittBus from "#koko/utils/mittBus";
+import mittBus, { KokoMittEvent } from "#koko/utils/mittBus";
 import { terminalTheme } from "#koko/utils/terminalTheme";
 import { formatMessage, getXTerminalLineContent } from "#koko/utils/terminalUtils";
 
@@ -103,7 +103,7 @@ export const createKokoTerminalContext = (): TerminalContext => {
       }
     });
 
-    mittBus.on("remove-share-user", (user) => {
+    mittBus.on(KokoMittEvent.RemoveShareUser, (user) => {
       const socket = connectionStore.socket;
       const terminalId = connectionStore.terminalId;
       if (!socket || !terminalId) return;
@@ -134,7 +134,7 @@ export const createKokoTerminalContext = (): TerminalContext => {
       socket.send(formatMessage(terminalId, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, command));
     };
 
-    mittBus.on("write-command", ({ type }) => {
+    mittBus.on(KokoMittEvent.WriteCommand, ({ type }) => {
       handleHostCommand(type, false);
     });
 

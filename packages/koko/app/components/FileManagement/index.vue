@@ -103,7 +103,7 @@ function setLocalPaneRef(value: SftpLocalPaneHandle | null): void {
     <div class="flex flex-col items-center gap-3">
       <UIcon name="i-lucide-circle-alert" class="size-7" />
       <p>{{ t("koko.fileManagement.expired") }}</p>
-      <UButton size="sm" @click="emit('reconnect')">
+      <UButton size="sm" @click="void emit('reconnect')">
         {{ t("koko.fileManagement.reconnect") }}
       </UButton>
     </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import mittBus from "#koko/utils/mittBus";
+import mittBus, { KokoMittEvent } from "#koko/utils/mittBus";
 
 const { t } = useI18n();
 
@@ -12,7 +12,7 @@ const keyboardList = [
 ];
 
 function writeDataToTerminal(type: string) {
-  mittBus.emit("write-command", { type });
+  mittBus.emit(KokoMittEvent.WriteCommand, { type });
 }
 </script>
 
