@@ -2,6 +2,8 @@
 import type { CharsetType, LangType, ResolutionType } from "~/types";
 
 import { useSettingManager } from "~/composables/useSettingManager";
+import { clearTerminalCommandHistory, getTerminalCommandHistoryScope } from "~/composables/useTerminalCommandHistory";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface LangItem {
   id: LangType;
@@ -14,14 +16,21 @@ definePageMeta({
 
 const { t, locales, locale } = useI18n();
 const settingManager = useSettingManager();
+const userInfoStore = useUserInfoStore();
+const { currentAccountId, currentSite } = storeToRefs(userInfoStore);
+const commandHistoryConfirmOpen = ref(false);
+const clearingCommandHistory = ref(false);
+const toast = useToast();
 const {
   setLang,
   charset,
   rdpResolution,
   backspaceAsCtrlH,
+  terminalCommandSuggestionsEnabled,
   setCharsetPreference,
   setRdpResolutionPreference,
-  setBackspacePreference
+  setBackspacePreference,
+  setTerminalCommandSuggestionsEnabled
 } = settingManager;
 
 const languageItems = computed<LangItem[]>(() => {
@@ -104,64 +113,127 @@ const selectedEnabled = computed<boolean>({
   get: () => backspaceAsCtrlH.value ?? false,
   set: (value: boolean) => setBackspacePreference(!!value)
 });
+
+const commandSuggestionsEnabled = computed<boolean>({
+  get: () => terminalCommandSuggestionsEnabled.value ?? true,
+  set: (value: boolean) => setTerminalCommandSuggestionsEnabled(!!value)
+});
+
+async function clearCommandHistory() {
+  const scope = getTerminalCommandHistoryScope(currentSite.value, currentAccountId.value);
+  if (!scope || clearingCommandHistory.value) return;
+  clearingCommandHistory.value = true;
+  try {
+    await clearTerminalCommandHistory(scope);
+    commandHistoryConfirmOpen.value = false;
+    toast.add({ title: t("Setting.TerminalCommandHistoryCleared"), color: "success" });
+  } finally {
+    clearingCommandHistory.value = false;
+  }
+}
 </script>
 
 <template>
-  <UCard
-    variant="outline"
-    :ui="{
-      root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]',
-      body: 'divide-y divide-[var(--app-border)] p-0 sm:p-0'
-    }"
-  >
-    <div class="flex items-center justify-between gap-6 px-4 py-3">
-      <span class="text-sm font-medium text-highlighted">{{ t("Common.Language") }}</span>
-      <USelect
-        v-model="selectedLanguage"
-        :items="languageItems"
-        value-key="id"
-        :aria-label="t('Common.Language')"
-        size="sm"
-        class="w-48"
-      />
-    </div>
-
-    <div class="flex items-center justify-between gap-6 px-4 py-3">
-      <div class="min-w-0">
-        <p class="text-sm font-medium text-highlighted">{{ t("Setting.Charset") }}</p>
-        <p class="mt-0.5 text-xs leading-5 text-muted">{{ t("Setting.CharsetDescription") }}</p>
+  <div class="space-y-4">
+    <UCard
+      variant="outline"
+      :ui="{
+        root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]',
+        body: 'divide-y divide-[var(--app-border)] p-0 sm:p-0'
+      }"
+    >
+      <div class="flex items-center justify-between gap-6 px-4 py-3">
+        <span class="text-sm font-medium text-highlighted">{{ t("Common.Language") }}</span>
+        <USelect
+          v-model="selectedLanguage"
+          :items="languageItems"
+          value-key="id"
+          :aria-label="t('Common.Language')"
+          size="sm"
+          class="w-48"
+        />
       </div>
-      <USelect
-        v-model="selectedCharset"
-        :items="charsetItems"
-        value-key="id"
-        :aria-label="t('Setting.Charset')"
-        size="sm"
-        class="w-48"
-      />
-    </div>
 
-    <div class="flex items-center justify-between gap-6 px-4 py-3">
-      <div class="min-w-0">
-        <p class="text-sm font-medium text-highlighted">{{ t("Setting.TerminalBackspace") }}</p>
-        <p class="mt-0.5 text-xs leading-5 text-muted">{{ t("Setting.TerminalBackspaceDescription") }}</p>
+      <div class="flex items-center justify-between gap-6 px-4 py-3">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-highlighted">{{ t("Setting.Charset") }}</p>
+          <p class="mt-0.5 text-xs leading-5 text-muted">{{ t("Setting.CharsetDescription") }}</p>
+        </div>
+        <USelect
+          v-model="selectedCharset"
+          :items="charsetItems"
+          value-key="id"
+          :aria-label="t('Setting.Charset')"
+          size="sm"
+          class="w-48"
+        />
       </div>
-      <USwitch v-model="selectedEnabled" :aria-label="t('Setting.TerminalBackspace')" />
-    </div>
 
-    <div class="flex items-center justify-between gap-6 px-4 py-3">
-      <div class="min-w-0">
-        <p class="text-sm font-medium text-highlighted">{{ t("Setting.Resolution") }}</p>
-        <p class="mt-0.5 text-xs leading-5 text-muted">{{ t("Setting.ResolutionDescription") }}</p>
+      <div class="flex items-center justify-between gap-6 px-4 py-3">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-highlighted">{{ t("Setting.TerminalBackspace") }}</p>
+          <p class="mt-0.5 text-xs leading-5 text-muted">{{ t("Setting.TerminalBackspaceDescription") }}</p>
+        </div>
+        <USwitch v-model="selectedEnabled" :aria-label="t('Setting.TerminalBackspace')" />
       </div>
-      <USelect
-        v-model="selectedresolution"
-        :items="resolutionItems"
-        value-key="id"
-        :aria-label="t('Setting.Resolution')"
-        size="sm"
-        class="w-48"
-      />
-    </div>
-  </UCard>
+
+      <div class="flex items-center justify-between gap-6 px-4 py-3">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-highlighted">{{ t("Setting.TerminalCommandSuggestions") }}</p>
+          <p class="mt-0.5 text-xs leading-5 text-muted">
+            {{ t("Setting.TerminalCommandSuggestionsDescription") }}
+          </p>
+        </div>
+        <div class="flex shrink-0 items-center gap-2">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :disabled="!currentAccountId || !currentSite"
+            :label="t('Setting.ClearTerminalCommandHistory')"
+            @click="commandHistoryConfirmOpen = true"
+          />
+          <USwitch v-model="commandSuggestionsEnabled" :aria-label="t('Setting.TerminalCommandSuggestions')" />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between gap-6 px-4 py-3">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-highlighted">{{ t("Setting.Resolution") }}</p>
+          <p class="mt-0.5 text-xs leading-5 text-muted">{{ t("Setting.ResolutionDescription") }}</p>
+        </div>
+        <USelect
+          v-model="selectedresolution"
+          :items="resolutionItems"
+          value-key="id"
+          :aria-label="t('Setting.Resolution')"
+          size="sm"
+          class="w-48"
+        />
+      </div>
+    </UCard>
+
+    <UModal
+      v-model:open="commandHistoryConfirmOpen"
+      :title="t('Setting.ClearTerminalCommandHistory')"
+      :description="t('Setting.ClearTerminalCommandHistoryConfirm')"
+    >
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            :label="t('Common.Cancel')"
+            @click="commandHistoryConfirmOpen = false"
+          />
+          <UButton
+            color="error"
+            :loading="clearingCommandHistory"
+            :label="t('Common.Confirm')"
+            @click="clearCommandHistory"
+          />
+        </div>
+      </template>
+    </UModal>
+  </div>
 </template>

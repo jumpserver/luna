@@ -97,7 +97,13 @@ export function useBaseWorkspaceSession(tab: Ref<KokoWorkspaceTab>, options: Use
         colorMode: colorMode.value,
         themeType: themeType.value,
         disableAutoHash: options.disableAutoHash,
-        actions: tab.value.payload?.actions || token.value?.actions
+        actions: tab.value.payload?.actions || token.value?.actions,
+        terminalProfile: {
+          protocol: tab.value.protocol,
+          assetPlatform: tab.value.assetPlatform,
+          assetType: tab.value.assetType,
+          assetCategory: tab.value.assetCategory
+        }
       };
 
       host.markSessionConnected(tab.value.id);

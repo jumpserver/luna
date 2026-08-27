@@ -29,7 +29,11 @@ onMounted(() => {
     colorMode: colorMode.value,
     themeType: colorMode.value === "dark" ? "darkGary" : "default",
     disableAutoHash: String(route.query.disableautohash || "false"),
-    tabId: paneId
+    tabId: paneId,
+    terminalProfile: {
+      protocol: String(route.query.protocol || "ssh"),
+      assetPlatform: String(route.query.platform || "")
+    }
   };
   activePaneId.value = paneId;
 });

@@ -5,6 +5,13 @@ import OrganizationSelector from "~/components/Header/OrganizationSelector.vue";
 import SideBarAssetTree from "~/components/SideBar/assetTree.vue";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
 import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
+import {
+  clearTerminalCommandHistory,
+  getTerminalCommandHistoryScope,
+  loadTerminalCommandHistory,
+  recordTerminalCommandHistory,
+  subscribeTerminalCommandHistory
+} from "~/composables/useTerminalCommandHistory";
 import { useWorkspaceConnectors } from "~/composables/useWorkspaceConnectors";
 import { clearWorkspaceSessionDetails, setWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 import { registerWorkspaceSessionCloseGuard, useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
@@ -24,7 +31,8 @@ export default defineNuxtPlugin((nuxtApp) => {
     useWorkspaceTabs();
   const userInfoStore = useUserInfoStore();
   const { currentUser } = storeToRefs(userInfoStore);
-  const { codeFontSize } = useSettingManager();
+  const { codeFontSize, terminalCommandSuggestionsEnabled } = useSettingManager();
+  const { currentAccountId, currentSite } = storeToRefs(userInfoStore);
 
   const prepareSftpAsset = async (asset: KokoSftpAsset) => {
     const detail = await getAssetDetailRequest(asset.id, currentUser.value?.org?.id || "");
@@ -86,6 +94,14 @@ export default defineNuxtPlugin((nuxtApp) => {
       if (!workspaceTab || !canSplitWorkspace(workspaceTab.id, direction)) return;
       splitWorkspace(workspaceTab.id, direction);
       setActiveSession(workspaceTab.id);
+    },
+    terminalCommandSuggestions: {
+      enabled: () => terminalCommandSuggestionsEnabled.value,
+      scope: () => getTerminalCommandHistoryScope(currentSite.value, currentAccountId.value),
+      loadHistory: loadTerminalCommandHistory,
+      recordHistory: recordTerminalCommandHistory,
+      clearHistory: clearTerminalCommandHistory,
+      subscribeHistory: subscribeTerminalCommandHistory
     },
     sftp: {
       organizationSelector: OrganizationSelector,

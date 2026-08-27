@@ -1,7 +1,9 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { computed } from "vue";
 import { parseEnvelope, parseJSONPayload } from "#koko/composables/terminal/envelope";
 
 import {
+  connectKokoTerminalAiSession,
   disconnectKokoTerminalAiSession,
   getKokoTerminalAiSession,
   handleKokoTerminalAiMessage,
@@ -34,6 +36,32 @@ function enableSession(paneId: string, terminalId = 9) {
     parts: [{ type: "data-capability", data: { enabled: true } }]
   });
 }
+
+it("exposes late capability to Vue computed availability", () => {
+  const paneId = "reactive-avail";
+  const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
+  const available = computed(() => isKokoTerminalAiAvailable(paneId));
+
+  expect(available.value).toBe(false);
+  registerKokoTerminalAiSession(paneId, socket, "9");
+  paneIds.push(paneId);
+  expect(available.value).toBe(false);
+
+  enableSession(paneId);
+  expect(available.value).toBe(true);
+});
+
+it("connects a session that was registered before the socket finished opening", () => {
+  const session = createSession("opening-socket", WebSocket.CONNECTING);
+  (session.socket as { readyState: number }).readyState = WebSocket.OPEN;
+
+  expect(isKokoTerminalAiAvailable(session.paneId)).toBe(false);
+  connectKokoTerminalAiSession(session.paneId, session.socket!);
+  enableSession(session.paneId);
+
+  expect(session.connected).toBe(true);
+  expect(isKokoTerminalAiAvailable(session.paneId)).toBe(true);
+});
 
 it("submits prompts through the enabled pane and rejects unavailable or overlapping tasks", async () => {
   const active = createSession("prompt-active");
