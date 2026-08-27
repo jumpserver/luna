@@ -28,7 +28,12 @@ const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
 const { batchPanelOpen, setOpen: setBatchPanelOpen } = useBatchCommandPanel();
-const { collapse: sidebarCollapsed, setCollapse: setSidebarCollapsed } = useSettingManager();
+const {
+  collapse: sidebarCollapsed,
+  setCollapse: setSidebarCollapsed,
+  setStatusBarVisible,
+  statusBarVisible
+} = useSettingManager();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 const { open: settingsOpen, activeSection: activeSettingsSection, openSettings } = useSettingsWindow();
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
@@ -169,6 +174,11 @@ const handleDesktopMenuCommand = (command: string) => {
     return;
   }
 
+  if (command === "toggle-status-bar") {
+    setStatusBarVisible(!statusBarVisible.value);
+    return;
+  }
+
   if (command === "toggle-fullscreen-mode") {
     void toggleDesktopFullscreen();
   }
@@ -280,7 +290,7 @@ onBeforeUnmount(() => {
       </template>
 
       <template #footer>
-        <div v-if="!standaloneAssetWindow" v-show="activeWorkspaceMode === 'assets'">
+        <div v-if="!standaloneAssetWindow" v-show="activeWorkspaceMode === 'assets' && statusBarVisible">
           <WorkspaceStatusFooter />
         </div>
       </template>

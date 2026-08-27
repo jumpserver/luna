@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $sshTarget = "guang@192.168.31.169"
-$ports = 5050, 8080, 2222, 8082, 3306, 5432
+$ports = 5001, 5050, 8080, 2222, 8082, 3306, 5432
 
 $sshArguments = @(
     "-N"

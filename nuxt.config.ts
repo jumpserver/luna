@@ -105,6 +105,11 @@ export default defineNuxtConfig({
   vite: {
     clearScreen: false,
     envPrefix: ["VITE_"],
+    // Chen is loaded lazily. Pre-bundle its exclusive dependencies at startup
+    // so Vite does not discover them on first entry and reload the whole app.
+    optimizeDeps: {
+      include: ["ag-grid-community", "ag-grid-vue3", "sql-formatter"]
+    },
     server: {
       strictPort: true,
       hmr: {

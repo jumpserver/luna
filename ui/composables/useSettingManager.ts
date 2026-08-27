@@ -264,6 +264,11 @@ export const useSettingManager = () => {
     persist({ collapse: state.collapse });
   };
 
+  const setStatusBarVisible = (visible: boolean) => {
+    state.statusBarVisible = !!visible;
+    persist({ statusBarVisible: state.statusBarVisible });
+  };
+
   const setSort = (s: SortType) => {
     state.sort = s;
     useEventBus().emit("setSort", s);
@@ -353,6 +358,7 @@ export const useSettingManager = () => {
     isHydrated,
     setLayouts,
     setCollapse,
+    setStatusBarVisible,
     setAppConfig,
     setFontFamily,
     setUiFontSize,

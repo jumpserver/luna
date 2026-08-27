@@ -8,6 +8,7 @@ const { activeWorkspaceMode } = useWorkspaceMode();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const hasMacTrafficLightInset = computed(() => isDesktopRuntime() && isMacOS.value);
+const showWorkspaceHeader = computed(() => !isDesktopRuntime() || loggedIn.value);
 const isToolRoute = computed(() => {
   const path = router.currentRoute.value.path.toLowerCase();
   return path.includes("/tools") || path.includes("/videoplayer") || path.includes("/transcode");
@@ -58,7 +59,7 @@ const pageHeader = computed(() => {
 <template>
   <div>
     <HeaderDesktopTitleBar />
-    <WorkspaceTopHeader>
+    <WorkspaceTopHeader v-show="showWorkspaceHeader">
       <template v-if="showSidebarChrome" #leading>
         <SideBarTopControls />
       </template>
