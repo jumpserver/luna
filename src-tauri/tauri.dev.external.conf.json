@@ -1,6 +1,6 @@
 {
   "build": {
-    "beforeDevCommand": "node -e \"\"",
+    "beforeDevCommand": "node scripts/copy-client-plugins.mjs",
     "devUrl": "http://localhost:3000/luna/"
   }
 }
