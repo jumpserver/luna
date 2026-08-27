@@ -233,12 +233,14 @@ const showCharsetOption = computed(() => ["ssh", "telnet"].includes((props.proto
 const showBackspaceOption = computed(() => showCharsetOption.value);
 const showDisableAutoHashOption = computed(() => ["mysql", "mariadb"].includes((props.protocol || "").toLowerCase()));
 const showResolutionOption = computed(() => (props.protocol || "").toLowerCase() === "rdp");
+const showUseSysDBAOption = computed(() => (props.protocol || "").toLowerCase() === "oracle");
 const showAdvancedOptions = computed(
   () =>
     showCharsetOption.value ||
     showBackspaceOption.value ||
     showDisableAutoHashOption.value ||
-    showResolutionOption.value
+    showResolutionOption.value ||
+    showUseSysDBAOption.value
 );
 
 const charsetItems = computed(() => [
@@ -267,6 +269,10 @@ const selectedBackspaceAsCtrlH = computed<boolean>({
 const selectedDisableAutoHash = computed<boolean>({
   get: () => !!localConnectOptions.value.disableautohash,
   set: (value) => updateConnectOption("disableautohash", !!value)
+});
+const selectedUseSysDBA = computed<boolean>({
+  get: () => !!localConnectOptions.value.use_sysdba,
+  set: (value) => updateConnectOption("use_sysdba", !!value)
 });
 const selectedResolution = computed<ResolutionType>({
   get: () => (localConnectOptions.value.resolution || "auto") as ResolutionType,
@@ -653,6 +659,11 @@ function handleSpecialAccount(v: string) {
         <div v-if="showDisableAutoHashOption" class="flex items-center justify-between">
           <span class="text-sm">Disable auto completion</span>
           <USwitch v-model="selectedDisableAutoHash" />
+        </div>
+
+        <div v-if="showUseSysDBAOption" class="flex items-center justify-between">
+          <span class="text-sm">SYSDBA</span>
+          <USwitch v-model="selectedUseSysDBA" />
         </div>
 
         <UFormField v-if="showResolutionOption" :label="t('Setting.Resolution')" :ui="formFieldUi" size="sm">
