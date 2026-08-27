@@ -306,11 +306,13 @@ export const useAssetAction = () => {
     token: TokenResponse,
     method: { component?: string; value?: string; type?: string; endpoint_protocol?: string } | undefined,
     body: ConnectionBody,
-    endpointUrl = window.location.origin
+    endpointUrl = window.location.origin,
+    assetPlatform = ""
   ) => {
     const tokenId = token.id;
     const component = method?.component || (body.protocol === "ssh" ? "koko" : "default");
-    const params = new URLSearchParams({ token: tokenId });
+    const params = new URLSearchParams({ token: tokenId, protocol: body.protocol });
+    if (assetPlatform) params.set("platform", assetPlatform);
 
     if (body.connect_options?.disableautohash !== undefined) {
       params.set("disableautohash", String(body.connect_options.disableautohash));
@@ -406,7 +408,7 @@ export const useAssetAction = () => {
       const component = method?.component || (body.protocol === "ssh" ? "koko" : "default");
       const devOrigin = getWebConnectorDevOrigin(component);
       const endpointUrl = devOrigin || (await fetchSmartEndpointUrl(token, method, body, meta?.orgId));
-      const webUrl = getWebConnectorPath(token, method, body, endpointUrl);
+      const webUrl = getWebConnectorPath(token, method, body, endpointUrl, meta?.asset?.platform || "");
 
       const payload = {
         token,

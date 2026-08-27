@@ -3,10 +3,16 @@ import { registerFileTransferEndpoint } from "@jumpserver/connectors-core";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useFileTransferStore } from "#koko/stores/fileTransfer";
+import { loadFileTransferState } from "#koko/utils/file-transfer/persistence";
 
 vi.mock("#koko/utils/file-transfer/checksum", () => ({
   updateFileTransferChecksum: vi.fn(async () => ({ chunkChecksum: "chunk-checksum", state: "checksum-state" })),
   finalizeFileTransferChecksum: vi.fn(async () => "file-checksum")
+}));
+
+vi.mock("#koko/utils/file-transfer/persistence", () => ({
+  loadFileTransferState: vi.fn(async () => null),
+  saveFileTransferState: vi.fn(async () => undefined)
 }));
 
 const endpoint = { id: "sftp:target", label: "Target" };
@@ -33,6 +39,8 @@ describe("file transfer store recovery actions", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.stubGlobal("crypto", { randomUUID: () => "generated-id" });
+    vi.mocked(loadFileTransferState).mockReset();
+    vi.mocked(loadFileTransferState).mockResolvedValue(null);
   });
 
   it("preserves resumable progress when retry waits for endpoints to reconnect", () => {
@@ -126,5 +134,44 @@ describe("file transfer store recovery actions", () => {
       unregisterSource();
       unregisterDestination();
     }
+  });
+
+  it("pauses resumable persisted tasks on restore and ignores a second restore", async () => {
+    vi.mocked(loadFileTransferState).mockResolvedValue({
+      batches: [{ id: "batch-1", taskIds: ["a.txt"], createdAt: 1 }],
+      tasks: [task("a.txt", "transferring")]
+    });
+
+    const store = useFileTransferStore();
+    await store.restore();
+
+    expect(store.restored).toBe(true);
+    expect(store.tasks).toHaveLength(1);
+    expect(store.tasks[0]).toMatchObject({
+      id: "a.txt",
+      status: "paused",
+      confirmedBytes: 25,
+      checksumState: "state"
+    });
+    expect(store.batches).toEqual([{ id: "batch-1", taskIds: ["a.txt"], createdAt: 1 }]);
+
+    vi.mocked(loadFileTransferState).mockResolvedValue({
+      batches: [],
+      tasks: [task("other.txt", "queued")]
+    });
+    await store.restore();
+    expect(store.tasks.map((item) => item.id)).toEqual(["a.txt"]);
+  });
+
+  it("keeps completed persisted tasks completed after restore", async () => {
+    vi.mocked(loadFileTransferState).mockResolvedValue({
+      batches: [{ id: "batch-1", taskIds: ["done.txt"], createdAt: 1 }],
+      tasks: [task("done.txt", "completed")]
+    });
+
+    const store = useFileTransferStore();
+    await store.restore();
+
+    expect(store.tasks[0]?.status).toBe("completed");
   });
 });

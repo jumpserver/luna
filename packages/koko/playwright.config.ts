@@ -9,7 +9,7 @@ const workspaceRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 export default defineConfig({
   testDir: "./app/e2e",
-  testMatch: "sftp.spec.ts",
+  testMatch: "*.spec.ts",
   outputDir: "../../test-results/sftp",
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),

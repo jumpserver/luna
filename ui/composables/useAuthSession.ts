@@ -115,6 +115,8 @@ export const useAuthSession = () => {
 
     if (!profileData || !resolvedSite || !accountId) return false;
 
+    const userId = (typeof profileData.id === "string" && profileData.id.trim()) || existingUser?.userId || "";
+
     const availableOrgs = initSelectOrganization(permissionOrgData);
     const currentOrg =
       currentOrgData && typeof currentOrgData === "object"
@@ -130,6 +132,7 @@ export const useAuthSession = () => {
 
     userInfoStore.setUserData(accountId, {
       accountId,
+      userId,
       siteName,
       name: profileData.name,
       bearerToken: bearer,
@@ -280,8 +283,11 @@ export const useAuthSession = () => {
       comment: ""
     };
 
+    const userId = typeof profileData.id === "string" ? profileData.id.trim() : "";
+
     userInfoStore.setUserData(site, {
       accountId: site,
+      userId,
       siteName: site,
       name: profileData.name || profileData.username || profileData.display_name || "",
       bearerToken: "",

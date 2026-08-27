@@ -398,6 +398,10 @@
       "stale": "Out of date"
     },
     "AIHeaderDescription": "Uses the active terminal context",
+    "AIContext": "Context",
+    "AIContextCurrentScreen": "current-screen",
+    "AIContextSelection": "selection",
+    "AIContextLastError": "last-error",
     "AIEmptyTitle": "Ready to assist this terminal",
     "AIEmptyDescription": "Ask for analysis or have Terminal AI plan and execute a task.",
     "AIInputPlaceholder": "Ask about this terminal or describe a task…",
@@ -474,6 +478,7 @@
     "AIStatusPending": "Pending",
     "AIStatusRejected": "Rejected",
     "AIStatusReviewing": "Reviewing",
+    "AIStatusReady": "Ready",
     "AIStatusSkipped": "Skipped",
     "SFTPSearchPlaceholder": "Search assets for file transfer…",
     "SFTPEmptyTitle": "Choose an asset to browse",
@@ -874,6 +879,11 @@
     "CharsetDescription": "Set the character encoding used by command-line terminal sessions. Try another option if text is garbled.",
     "TerminalBackspace": "Terminal Backspace As Ctrl + H",
     "TerminalBackspaceDescription": "Choose whether Backspace sends Ctrl + H in command-line terminal sessions.",
+    "TerminalCommandSuggestions": "Terminal command suggestions",
+    "TerminalCommandSuggestionsDescription": "Show local command catalog and history suggestions while typing in remote terminals.",
+    "ClearTerminalCommandHistory": "Clear command history",
+    "ClearTerminalCommandHistoryConfirm": "Clear all terminal command history saved for the current site and account?",
+    "TerminalCommandHistoryCleared": "Terminal command history cleared",
     "Resolution": "Resolution",
     "ResolutionDescription": "Set the display resolution used when a remote desktop connection is created.",
     "Default": "Default",
@@ -1054,7 +1064,10 @@
       "verificationCode": "Code",
       "shareLinkCopied": "Share link copied",
       "virtualKeyboard": "Virtual keyboard",
-      "noActiveTerminal": "No active terminal is available"
+      "noActiveTerminal": "No active terminal is available",
+      "commandSuggestions": "Command suggestions",
+      "commandSuggestionHistory": "History",
+      "commandSuggestionCatalog": "Catalog"
     },
     "drawer": {
       "general": "General",
