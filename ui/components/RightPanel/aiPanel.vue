@@ -5,7 +5,11 @@ import AiTimeline from "./ai/AiTimeline.vue";
 import { useAiPanelController } from "./ai/useAiPanelController";
 
 const { activePaneId, activeTab } = useWorkspaceTabs();
+const { activeWorkspaceMode } = useWorkspaceMode();
+const { t } = useI18n();
+const aiTargetId = computed(() => (activeWorkspaceMode.value === "files" ? "" : activePaneId.value));
 const activeSurface = computed(() => {
+  if (activeWorkspaceMode.value === "files") return null;
   const tab = activeTab.value;
   return tab?.panes.find((pane) => pane.id === activePaneId.value) || tab;
 });
@@ -30,18 +34,26 @@ const {
   updateApprovalThreshold,
   updateExecutionMode,
   handleTimelineAction
-} = useAiPanelController({ paneId: activePaneId, surface: activeSurface });
+} = useAiPanelController({ paneId: aiTargetId, surface: activeSurface });
+const displayedUnavailableState = computed(() => {
+  if (activeWorkspaceMode.value !== "files" || presentation.value) return unavailableState.value;
+  return {
+    icon: "i-lucide-folder-lock",
+    title: t("RightPanel.FileAIUnavailableTitle"),
+    description: t("RightPanel.FileAIUnavailableDescription")
+  };
+});
 </script>
 
 <template>
   <div class="flex h-full min-h-0 flex-col">
     <div v-if="!presentation?.available" class="grid min-h-0 flex-1 place-items-center p-4">
       <UEmpty
-        :icon="unavailableState.icon"
+        :icon="displayedUnavailableState.icon"
         size="sm"
         variant="naked"
-        :title="unavailableState.title"
-        :description="unavailableState.description"
+        :title="displayedUnavailableState.title"
+        :description="displayedUnavailableState.description"
       />
     </div>
 
@@ -72,7 +84,6 @@ const {
       <AiPanelFooter
         v-model="draft"
         :presentation="presentation"
-        :background-exec="session.backgroundExec"
         @submit="submit"
         @interrupt="interrupt"
         @clear-error="clearError"

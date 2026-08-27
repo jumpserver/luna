@@ -24,7 +24,7 @@ export interface AiViewItemBuildInput {
 
 export interface AiViewItemBuilder {
   domain: Exclude<AiTimelineDomain, "shared">;
-  supports(partType: string): boolean;
+  supports(partType: string, message: TerminalAiChatMessage): boolean;
   append(context: AiViewItemBuildContext, input: AiViewItemBuildInput): void;
 }
 

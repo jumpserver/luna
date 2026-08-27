@@ -3,9 +3,10 @@ import type { TerminalAiEventData } from "#koko/composables/terminal/useTerminal
 import type { AiTimelineAction, TerminalViewItem } from "../../types";
 import type { WorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
 import { terminalAiAclKey } from "#koko/composables/terminal/terminalAiPresentation";
+import { isKokoTerminalWorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
 import AiRunPlan from "../../AiRunPlan.vue";
 
-defineProps<{
+const props = defineProps<{
   item: TerminalViewItem;
   session: WorkspaceAiSession;
   assistantName: string;
@@ -16,6 +17,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const terminalSession = computed(() => (isKokoTerminalWorkspaceAiSession(props.session) ? props.session : null));
 
 function aclLabel(item: Extract<TerminalViewItem, { kind: "alert" }>) {
   const value = item.data.state || item.data.action;
@@ -38,19 +40,22 @@ function setStepExpanded(key: string, expanded: boolean) {
 
 <template>
   <AiRunPlan
-    v-if="item.kind === 'plan'"
+    v-if="item.kind === 'plan' && terminalSession"
     :plan="item"
-    :decisions="session.decisions"
-    :expansion-overrides="session.expansionOverrides"
-    :execution-overrides="session.executionOverrides"
-    :execution-mode="session.executionMode"
-    :background-exec="session.backgroundExec"
+    :decisions="terminalSession.decisions"
+    :expansion-overrides="terminalSession.expansionOverrides"
+    :execution-overrides="terminalSession.executionOverrides"
+    :execution-mode="terminalSession.executionMode"
+    :background-exec="terminalSession.backgroundExec"
     @decide="decide"
     @set-execution-override="setExecutionOverride"
     @set-step-expanded="setStepExpanded"
   />
 
-  <div v-else class="flex items-start gap-1.5 rounded-lg bg-warning/10 p-2 text-[11px] text-warning">
+  <div
+    v-else-if="item.kind === 'alert'"
+    class="flex items-start gap-1.5 rounded-lg bg-warning/10 p-2 text-[11px] text-warning"
+  >
     <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
     {{ t("RightPanel.AICommandAcl") }}:
     {{ aclLabel(item) }}

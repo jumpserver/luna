@@ -104,6 +104,28 @@ describe("sFTP browser protocol", () => {
     expect(lastSent(fake)).toMatchObject({ type: SftpMessageType.Pong, data: SftpControlData.Pong });
   });
 
+  it("routes CHAT_MESSAGE frames without treating them as malformed SFTP data", () => {
+    const { fake, socket } = openSocket();
+    const chats: unknown[] = [];
+    const failures: SftpSocketFailureCode[] = [];
+    socket.onChat((message) => chats.push(message));
+    socket.onFailure((failure) => failures.push(failure.code));
+
+    fake.receive({
+      id: "chat-1",
+      type: SftpMessageType.Chat,
+      data: JSON.stringify({
+        id: "assistant-1",
+        role: "assistant",
+        metadata: { domain: "file", targetId: "file-pane-1" },
+        parts: [{ type: "data-capability", data: { enabled: true } }]
+      })
+    });
+
+    expect(chats).toHaveLength(1);
+    expect(failures).toEqual([]);
+  });
+
   it("surfaces malformed messages and explicit close failures", () => {
     const { fake, socket } = openSocket();
     const failures: SftpSocketFailureCode[] = [];
@@ -151,6 +173,29 @@ describe("sFTP browser protocol", () => {
       current_path: "/first"
     });
     await expect(first).resolves.toEqual([]);
+  });
+
+  it("uses the server canonical path for file and AI context", async () => {
+    const { fake, socket } = openSocket();
+    const client = useSftpOperations(ref("/"), socket);
+    const paths: Array<string | undefined> = [];
+    client.onList(({ currentPath, background }) => {
+      if (!background) paths.push(currentPath);
+    });
+
+    const listed = client.operations.listDirectory("/");
+    await nextMessage();
+    const request = lastSent(fake);
+    fake.receive({
+      id: request.id,
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.List,
+      data: JSON.stringify([]),
+      current_path: "/tmp"
+    });
+
+    await expect(listed).resolves.toEqual([]);
+    expect(paths).toEqual(["/tmp"]);
   });
 
   it("assembles binary download fragments", async () => {

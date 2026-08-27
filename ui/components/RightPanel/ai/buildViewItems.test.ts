@@ -65,6 +65,7 @@ describe("buildAiPanelViewItems", () => {
           { type: "text", text: "Checking the query" },
           { type: "data-thought-summary", data: { text: "Inspect schema first" } },
           { type: "data-sql-analysis", data: { valid: true, riskLevel: 1 } },
+          { type: "data-file-action", data: { id: "action-1", tool: "stat", path: "/srv/app" } },
           { type: "data-command-acl", data: { state: "rejected" } }
         ]
       }
@@ -82,7 +83,101 @@ describe("buildAiPanelViewItems", () => {
       "shared:text",
       "sql:sql-thought",
       "sql:sql-analysis",
+      "file:file-action",
       "terminal:alert"
     ]);
+  });
+
+  it("builds structured file analysis, diff, approval, and result items", () => {
+    const messages = [
+      {
+        id: "assistant-file",
+        role: "assistant",
+        metadata: { domain: "file", targetId: "file-pane-1" },
+        parts: [
+          { type: "data-capability", data: { tools: ["list", "read_text"], maxTextBytes: 65536 } },
+          {
+            type: "data-plan",
+            data: {
+              id: "file-plan-1",
+              summary: "Review and update config",
+              steps: [{ id: "step-1", title: "Inspect config", status: "completed" }]
+            }
+          },
+          {
+            type: "data-file-action",
+            data: { id: "action-1", tool: "save_text", path: "/etc/app.conf", riskLevel: 3, state: "proposed" }
+          },
+          {
+            type: "data-file-diff",
+            data: { id: "action-1", path: "/etc/app.conf", before: "port=80", after: "port=8080" }
+          },
+          {
+            type: "data-file-approval",
+            data: { id: "approval-1", digest: "digest-1", tool: "save_text", path: "/etc/app.conf" }
+          },
+          {
+            type: "data-file-result",
+            data: { id: "action-1", tool: "save_text", path: "/etc/app.conf", outcome: "success" }
+          }
+        ]
+      }
+    ] as unknown as TerminalAiChatMessage[];
+
+    const items = buildAiPanelViewItems({
+      messages,
+      metadataApproval: null,
+      terminalMetadataApproval: false,
+      executionPlanLabel: "Execution plan",
+      stepLabel: (count) => `Step ${count}`
+    });
+
+    expect(items.map(({ domain, kind }) => `${domain}:${kind}`)).toEqual([
+      "file:file-analysis",
+      "file:file-plan",
+      "file:file-diff",
+      "file:file-approval",
+      "file:file-result"
+    ]);
+    expect(items.find((item) => item.kind === "file-diff")?.data.after).toBe("port=8080");
+    const result = items.find((item) => item.kind === "file-result");
+    expect(result?.data.riskLevel).toBe(3);
+    expect(result?.data.state).toBe("proposed");
+  });
+
+  it("merges a replayed File AI action into its existing result", () => {
+    const messages = [
+      {
+        id: "assistant-file-result-first",
+        role: "assistant",
+        metadata: { domain: "file", targetId: "file-pane-1" },
+        parts: [
+          {
+            type: "data-file-result",
+            data: { id: "action-1", tool: "read_text", path: "/root/a.txt", outcome: "error", error: "failed" }
+          },
+          {
+            type: "data-file-action",
+            data: { id: "action-1", tool: "read_text", path: "/root/a.txt", riskLevel: 2, rationale: "inspect" }
+          },
+          {
+            type: "data-error",
+            data: { message: "File AI run failed" }
+          }
+        ]
+      }
+    ] as unknown as TerminalAiChatMessage[];
+
+    const items = buildAiPanelViewItems({
+      messages,
+      metadataApproval: null,
+      terminalMetadataApproval: false,
+      executionPlanLabel: "Execution plan",
+      stepLabel: (count) => `Step ${count}`
+    });
+
+    expect(items.filter((item) => item.domain === "file")).toHaveLength(1);
+    const result = items.find((item) => item.kind === "file-result");
+    expect(result?.data).toMatchObject({ outcome: "error", error: "failed", riskLevel: 2, rationale: "inspect" });
   });
 });

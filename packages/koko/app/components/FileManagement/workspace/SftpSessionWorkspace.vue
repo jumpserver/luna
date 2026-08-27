@@ -37,6 +37,7 @@ const {
   focusRemotePane,
   markRemotePaneConnected,
   openRemoteConnect,
+  primaryAsset,
   primaryAssetName,
   primaryContext,
   primaryTransferEndpoint,
@@ -63,6 +64,7 @@ const {
 } = props.transfer;
 
 const simplePeerMode = computed(() => Boolean(dualMode.value && isSimplePeerMode()));
+const activeAiPaneId = shallowRef("primary");
 
 const primarySendPeerDirection = computed<"left" | "right" | undefined>(() =>
   simplePeerMode.value && canSendToOpposite(primaryTransferEndpoint.value?.id) ? "right" : undefined
@@ -93,13 +95,37 @@ function handleRemotePaneConnected(): void {
   markRemotePaneConnected();
 }
 
+function focusPrimaryPane(): void {
+  activeAiPaneId.value = "primary";
+}
+
+function focusSessionRemote(id: string): void {
+  activeAiPaneId.value = id;
+  focusRemotePane(id);
+}
+
+function disconnectSessionRemotes(): void {
+  activeAiPaneId.value = "primary";
+  disconnectAllRemotes();
+}
+
+watch(
+  remotePanes,
+  (panes) => {
+    if (activeAiPaneId.value !== "primary" && !panes.some((pane) => pane.id === activeAiPaneId.value)) {
+      activeAiPaneId.value = "primary";
+    }
+  },
+  { deep: false }
+);
+
 const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
   [
     {
       label: t("koko.fileManagement.disconnectAllRemote"),
       icon: "i-lucide-unplug",
       color: "error" as const,
-      onSelect: () => disconnectAllRemotes()
+      onSelect: disconnectSessionRemotes
     }
   ]
 ]);
@@ -128,12 +154,20 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
         :ref="setPrimaryPaneRef"
         class="min-h-0 min-w-0 flex-1"
         :context="primaryContext"
+        :ai-active="activeAiPaneId === 'primary'"
+        :ai-target="{
+          targetId: primaryContext?.tabId,
+          assetId: primaryAsset.id,
+          assetName: primaryAsset.name,
+          ...(primaryAsset.account ? { account: primaryAsset.account } : {})
+        }"
         :context-label="!compact && !dualMode ? primaryAssetName : undefined"
         :show-workbench-actions="!compact && !dualMode"
         :compact="compact"
         :transfer-endpoint="compact ? undefined : primaryTransferEndpoint"
         :highlighted-names="highlightedNames.left"
         :send-peer-direction="primarySendPeerDirection"
+        @focus="focusPrimaryPane"
         @send="sendFromSelection"
         @transfer-drop="queueSftpTransferToSelected($event, primaryTransferEndpoint)"
         @transfer-endpoint-mounted="mountTransferEndpoint"
@@ -168,7 +202,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
             :transfer-count="activeTransferCount"
             :is-connected="remotePaneConnected"
             @update:panes="onSessionPanesUpdate"
-            @select="focusRemotePane"
+            @select="focusSessionRemote"
             @close="removeRemotePane"
             @reconnect="reconnectRemotePane"
             @close-others="closeOtherRemotePanes"
@@ -218,13 +252,20 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
           :ref="(value) => setRemotePaneRef(pane.id, value)"
           class="h-full min-h-0"
           :context="pane.context"
+          :ai-active="activeAiPaneId === pane.id"
+          :ai-target="{
+            targetId: pane.context.tabId,
+            assetId: pane.assetId || '',
+            assetName: pane.assetName
+          }"
           :transfer-endpoint="pane.transferEndpoint"
           :highlighted-names="highlightedNames.right"
           :send-peer-direction="remoteSendPeerDirection(pane.transferEndpoint.id)"
           @select="
             pane.selection = $event;
-            focusRemotePane(pane.id);
+            focusSessionRemote(pane.id);
           "
+          @focus="focusSessionRemote(pane.id)"
           @send="sendFromSelection"
           @transfer-drop="queueSftpTransferToSelected($event, pane.transferEndpoint)"
           @transfer-endpoint-mounted="mountTransferEndpoint"

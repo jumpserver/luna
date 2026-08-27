@@ -25,6 +25,7 @@ function proposalDecision(item: SqlProposalItem) {
 }
 
 function isThoughtExpanded(key: string) {
+  if (!isChenSqlWorkspaceAiSession(props.session)) return false;
   return props.session.expansionOverrides.get(key) ?? false;
 }
 

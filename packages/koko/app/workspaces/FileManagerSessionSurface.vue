@@ -32,7 +32,7 @@ watch(tokenId, () => void prepareSession(), { immediate: true });
     <KokoFileManagement
       :sftp-token="tokenId"
       :compact="compact"
-      :source-asset="{ id: tab.assetId, name: tab.assetName || tab.assetId }"
+      :source-asset="{ id: tab.assetId, name: tab.assetName || tab.assetId, account: tab.account }"
       class="h-full"
     />
   </BaseWorkspaceShell>
