@@ -7,6 +7,7 @@ shellEmulator: true
 
 overrides:
   "app-builder-lib@26.15.3>@electron/get": 5.1.0
+  cpu-features: "-"
 
 packages:
   - .
@@ -18,6 +19,7 @@ allowBuilds:
   electron-winstaller: true
   esbuild: true
   node-pty: true
+  ssh2: false
   unrs-resolver: true
   vue-demi: true
 

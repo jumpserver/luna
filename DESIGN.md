@@ -105,7 +105,7 @@ We should treat Zed as an inspiration and an import target, not as the sole sour
 
 - built with Electron + Vue/Nuxt
 - already has asset tree and tabbed workspace behavior
-- recently introduced a built-in SSH path using `xterm.js` plus a Rust SSH bridge
+- provides external-terminal SSH through a Node helper running on Electron's bundled Node runtime
 - plugin system is being introduced for external applications
 
 ### Koko
@@ -486,7 +486,7 @@ Deliverables:
 
 Goal:
 
-Introduce a new connector path in the desktop client that opens `koko` connector views instead of the Rust SSH bridge.
+Introduce a new connector path in the desktop client that opens `koko` connector views instead of the desktop SSH helper.
 
 Scope:
 
@@ -687,7 +687,7 @@ Tasks:
 - add a `koko-web` connection adapter in `clients`
 - wire workspace tabs to host a connector WebView or iframe-like container
 - route SSH built-in connect flow to the `koko-web` adapter by default
-- keep current Rust SSH bridge behind a feature flag or fallback path
+- keep the Node external-terminal SSH helper as a fallback path
 
 ### Milestone B: Desktop Connector Auth Bootstrap
 

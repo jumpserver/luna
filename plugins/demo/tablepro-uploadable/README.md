@@ -1,6 +1,6 @@
 # TablePro Uploadable Plugin
 
-This is a minimal user-installable JumpServer Client plugin for database connections on macOS.
+This is a minimal user-installable JumpServer plugin for database connections on macOS.
 
 It is designed to test the upload and install flow for third-party plugins:
 

@@ -326,7 +326,7 @@ async function loadRecording() {
       return;
     }
 
-    // Rust 已经把 .replay.gz/.part.gz 解压成普通 Guacamole 指令流。
+    // Electron 已经把 .replay.gz/.part.gz 解压成普通 Guacamole 指令流。
     // custom protocol 直接返回文本，不再通过 IPC 逐块发送。
     const response = await fetch(props.source, { signal: currentLoad.signal });
     if (!response.ok) {

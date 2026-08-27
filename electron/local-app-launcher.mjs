@@ -122,30 +122,16 @@ export class LocalApplicationLauncher {
     this.electronShell = electronShell;
   }
 
-  async helperPath() {
-    const platform =
-      process.platform === "darwin"
-        ? process.arch === "arm64"
-          ? "darwin-arm64"
-          : "darwin-amd64"
-        : process.platform === "linux"
-          ? process.arch === "arm64"
-            ? "linux-arm64"
-            : "linux-amd64"
-          : "windows";
-    const name = process.platform === "win32" ? "client.exe" : "client";
-    const candidates = [
-      path.join(this.projectRoot, "resources", "bin", platform, name),
-      path.join(this.projectRoot, "native", "resources", "bin", platform, name)
-    ];
-    if (process.resourcesPath) {
-      candidates.push(
-        path.join(process.resourcesPath, "resources", "bin", platform, name),
-        path.join(process.resourcesPath, "bin", platform, name)
-      );
-    }
-    for (const candidate of candidates) if (await isFile(candidate)) return candidate;
-    throw new Error("bundled SSH helper not found");
+  helperPath() {
+    return path.join(this.app.getAppPath(), "ssh-helper.cjs");
+  }
+
+  helperCommand() {
+    const executable = shellQuote(process.execPath);
+    const script = shellQuote(this.helperPath());
+    return process.platform === "win32"
+      ? `set "ELECTRON_RUN_AS_NODE=1"&& ${executable} ${script}`
+      : `ELECTRON_RUN_AS_NODE=1 ${executable} ${script}`;
   }
 
   async resolveApplication(payload) {
@@ -176,7 +162,7 @@ export class LocalApplicationLauncher {
   }
 
   async launchTerminal(application, argumentString, useHelper) {
-    const command = useHelper ? `${shellQuote(await this.helperPath())} ${argumentString}` : argumentString;
+    const command = useHelper ? `${this.helperCommand()} ${argumentString}` : argumentString;
     if (process.platform === "darwin") {
       const applicationId = appleScriptString(application.application_id);
       const escapedCommand = appleScriptString(command);
@@ -192,6 +178,10 @@ export class LocalApplicationLauncher {
       return;
     }
     const executable = await this.resolveExecutable(application);
+    if (useHelper) {
+      spawnDetached(executable, ["new-tab", "cmd.exe", "/d", "/s", "/c", command]);
+      return;
+    }
     const args = splitArguments(argumentString);
     spawnDetached(executable, application.launch_driver === "windows-terminal" ? ["new-tab", ...args] : args);
   }
@@ -246,7 +236,7 @@ export class LocalApplicationLauncher {
     }
     const application = await this.resolveApplication(payload);
     const values = valuesFor(payload);
-    if (application.use_ssh_helper) values.helper = await this.helperPath();
+    if (application.use_ssh_helper) values.helper = this.helperCommand();
     if (application.protocol_aliases?.[payload.protocol])
       values.protocol = application.protocol_aliases[payload.protocol];
     if (String(payload.command || "").trim()) {
@@ -261,7 +251,11 @@ export class LocalApplicationLauncher {
     if (application.launch_type === "script") return this.launchScript(application, payload, values);
     if (application.launch_type === "url") return this.electronShell.openExternal(argumentString);
     if (["terminal", "iterm2", "linux-terminal", "windows-terminal"].includes(application.launch_driver)) {
-      return this.launchTerminal(application, argumentString, application.use_ssh_helper);
+      return this.launchTerminal(
+        application,
+        argumentString,
+        application.use_ssh_helper && !String(template).includes("{helper}")
+      );
     }
     if (application.launch_type === "args") return this.launchExecutable(application, argumentString, values);
     throw new Error(`unsupported application launch type: ${application.launch_type}`);

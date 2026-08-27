@@ -1,11 +1,11 @@
-# JumpServer Client 连接插件机制设计
+# JumpServer 连接插件机制设计
 
 ## 背景与目标
 
 当前客户端通过单体 `config.json` 定义各协议的外部连接工具（终端、远程桌面、文件传输、数据库等）。随着支持的工具增多，存在以下问题：
 
 - 单体 JSON 难以维护、合并冲突频繁
-- 平台差异逻辑需要由插件配置描述，并由统一的 Rust 启动器执行
+- 平台差异逻辑需要由插件配置描述，并由统一的 Electron/Node 启动器执行
 - 新增工具需改主仓库并发版，第三方无法独立扩展
 - UI 图标与工具名硬编码在 Vue 组件中
 
@@ -35,7 +35,7 @@ flowchart TB
         I[installed/ 用户安装]
     end
 
-    subgraph loader [Plugin Loader - Rust]
+    subgraph loader [Plugin Loader - Electron]
         D[发现与校验]
         M[合并为 AppConfig 兼容结构]
         S[读写 plugins-state.json]
@@ -43,7 +43,7 @@ flowchart TB
 
     subgraph runtime [运行时]
         UI[设置页 / 连接选择]
-        AW[Rust Local App Launcher]
+        AW[Node Local App Launcher]
     end
 
     B --> D
@@ -58,7 +58,7 @@ flowchart TB
 
 1. **启动时**：`PluginService` 扫描 builtin + installed，校验 manifest，合并为现有 `AppConfigType` 结构（**向后兼容**）。
 2. **设置页**：展示所有可用插件；用户切换默认工具、配置 exe 路径 → 写入 `plugins-state.json`。
-3. **连接时**：Electron 内的 Rust 启动器读取合并配置，按 `launch.type` 和 `launch.driver` 执行；只有 SSH 代理连接会调用 Go `client` helper。
+3. **连接时**：Electron 的 Node 启动器读取合并配置，按 `launch.type` 和 `launch.driver` 执行；SSH 代理连接调用随应用分发的 Node helper。
 
 ---
 
@@ -203,7 +203,7 @@ my-terminal-plugin/
 sequenceDiagram
     participant U as 用户
     participant UI as 设置页
-    participant RS as PluginService (Rust)
+    participant RS as PluginService (Electron/Node)
     participant FS as 文件系统
 
     Note over RS,FS: 应用启动
@@ -241,15 +241,15 @@ sequenceDiagram
 ### 阶段 1：插件化配置（已完成）
 
 - 将 `config.json` 中各 `AppItem` 拆为 `plugins/builtin/{name}/`
-- 新增 `PluginService`（Rust），启动时合并为现有 `AppConfigType`
+- 新增 Electron `ApplicationConfigService`，启动时合并为现有 `AppConfigType`
 - `get_config` / `update_config_selection` 改为读写 `plugins-state.json`
 - 前端继续消费统一的 `AppConfigType`
 
 ### 阶段 2：启动器插件化（已完成）
 
-- Rust 启动器按配置分发 `args` / `file` 和可选 driver
+- Node 启动器按配置分发 `args` / `file` 和可选 driver
 - 终端是否调用 SSH helper 由 `use_ssh_helper` 显式声明
-- Go 目录只保留 SSH helper，不再参与第三方应用启动
+- SSH helper 由 Electron 自带的 Node 运行时执行，不参与第三方应用启动
 
 ### 阶段 3：插件市场（可选）
 

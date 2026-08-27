@@ -1,6 +1,6 @@
 # Hello Terminal — 连接插件 Demo
 
-最小可运行的 JumpServer Client 连接插件示例，用于验证插件目录结构、打包流程和脚本启动约定。
+最小可运行的 JumpServer 连接插件示例，用于验证插件目录结构、打包流程和脚本启动约定。
 
 ## 文件说明
 

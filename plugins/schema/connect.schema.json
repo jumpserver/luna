@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://jumpserver.org/schemas/client-plugin/connect.json",
-  "title": "JumpServer Client Plugin Connect Definition",
+  "title": "JumpServer Plugin Connect Definition",
   "type": "object",
   "required": ["platform", "executable", "launch"],
   "additionalProperties": false,

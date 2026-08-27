@@ -57,7 +57,7 @@ function stop(exitCode = 0) {
 process.once("SIGINT", () => stop(0));
 process.once("SIGTERM", () => stop(0));
 
-const nuxt = run("pnpm", ["dev", "--port", String(rendererPort)], {
+const nuxt = run("pnpm", ["web:dev", "--port", String(rendererPort)], {
   ...process.env,
   JMS_HMR_PORT: hmrPort
 });

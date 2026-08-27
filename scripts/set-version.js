@@ -34,13 +34,6 @@ electronPackageJson.version = version;
 writeFileSync(electronPackageJsonPath, `${JSON.stringify(electronPackageJson, null, 2)}\n`);
 console.log("✓ Updated electron/package.json");
 
-// Update Cargo.toml
-const cargoTomlPath = join(rootDir, "native", "Cargo.toml");
-let cargoToml = readFileSync(cargoTomlPath, "utf8");
-cargoToml = cargoToml.replace(/^version = "[^"]*"/m, `version = "${version}"`);
-writeFileSync(cargoTomlPath, cargoToml);
-console.log("✓ Updated native/Cargo.toml");
-
 // Update app.config.ts
 const appConfigPath = join(rootDir, "ui", "app.config.ts");
 let appConfig = readFileSync(appConfigPath, "utf8");

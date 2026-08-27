@@ -425,7 +425,7 @@ export const useTranscodeStore = defineStore(
       try {
         try {
           const results = await desktopInvoke<TranscodeResult[]>("transcode_replays", {
-            tarPaths: archivePaths.value,
+            tarPaths: [...archivePaths.value],
             outputDir: outputDir.value,
             filenameStyle: filenameStyle.value,
             outputResolution: outputResolution.value,

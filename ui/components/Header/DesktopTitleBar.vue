@@ -233,7 +233,7 @@ const windowControls = computed(() => [
           </UDropdownMenu>
         </template>
 
-        <span v-else class="text-xs font-medium">JumpServer Client</span>
+        <span v-else class="text-xs font-medium">JumpServer</span>
       </div>
     </div>
 

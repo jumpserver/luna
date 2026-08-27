@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { FilenameStyle, OutputResolution, TranscodePower, TranscodeTaskStatus } from "~/store/modules/transcode";
 import { storeToRefs } from "pinia";
-import { desktopDialog, desktopOpener } from "~/shared/desktop/bridge";
+import { desktopDialog, desktopInvoke, desktopOpener } from "~/shared/desktop/bridge";
 import { useTranscodeStore } from "~/store/modules/transcode";
 
 definePageMeta({
@@ -12,6 +12,16 @@ const { t } = useI18n();
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const { isWindows } = usePlatform();
+const { openSettings: openApplicationSettings } = useSettingsWindow();
+const ffmpegInstalled = ref<boolean | null>(null);
+
+const refreshFfmpegStatus = async () => {
+  if (!isDesktopRuntime()) return;
+  const status = await desktopInvoke<{ installed: boolean }>("get_ffmpeg_plugin_status");
+  ffmpegInstalled.value = status.installed;
+};
+
+onMounted(refreshFfmpegStatus);
 
 const store = useTranscodeStore();
 const {
@@ -198,7 +208,12 @@ const openSettings = () => {
   settingsOpen.value = true;
 };
 
-const handleStartTranscode = () => {
+const handleStartTranscode = async () => {
+  await refreshFfmpegStatus();
+  if (!ffmpegInstalled.value) {
+    await openApplicationSettings("/setting/general");
+    return;
+  }
   if (!outputDir.value) {
     confirmOpen.value = true;
     return;
@@ -237,6 +252,23 @@ watch(outputDir, () => {
 <template>
   <div class="flex h-full min-h-0 flex-col overflow-hidden p-4">
     <div class="flex shrink-0 flex-col gap-3">
+      <UAlert
+        v-if="ffmpegInstalled === false"
+        color="warning"
+        variant="soft"
+        icon="i-lucide-package-plus"
+        :title="t('Transcode.FfmpegRequired')"
+        :description="t('Transcode.FfmpegRequiredDescription')"
+        :actions="[
+          {
+            label: t('Transcode.OpenPluginSettings'),
+            color: 'warning',
+            variant: 'soft',
+            onClick: () => openApplicationSettings('/setting/general')
+          }
+        ]"
+      />
+
       <div v-if="isTranscoding || hasActiveTasks" class="flex flex-wrap items-center gap-2">
         <UBadge v-if="hasActiveTasks" color="primary" variant="soft">
           {{ t("Transcode.TotalProgress", { progress: totalProgress }) }}
@@ -296,7 +328,7 @@ watch(outputDir, () => {
             color="primary"
             variant="soft"
             size="xs"
-            :disabled="!canStart"
+            :disabled="!canStart || ffmpegInstalled !== true"
             @click="handleStartTranscode"
           >
             {{ t("Transcode.Start") }}

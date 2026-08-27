@@ -1,9 +1,9 @@
 {
   "name": "jumpserver-client-electron",
-  "displayName": "JumpServerClient",
+  "displayName": "JumpServer",
   "version": "4.1.2",
   "private": true,
-  "description": "Electron runtime for JumpServer Client",
+  "description": "Electron runtime for JumpServer",
   "author": "JumpServer",
   "type": "module",
   "main": "main.mjs",
@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "fflate": "^0.8.2",
-    "node-pty": "^1.1.0"
+    "node-pty": "^1.1.0",
+    "ssh2": "^1.17.0",
+    "tar-stream": "2.2.0"
   },
   "devDependencies": {
     "electron": "44.0.0",

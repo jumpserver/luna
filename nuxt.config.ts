@@ -68,7 +68,7 @@ export default defineNuxtConfig({
   app: {
     baseURL: appBaseURL,
     head: {
-      title: "JumpServer Client",
+      title: "JumpServer",
       charset: "utf-8",
       viewport: "width=device-width, initial-scale=1",
       meta: [{ name: "format-detection", content: "no" }]
@@ -221,9 +221,6 @@ export default defineNuxtConfig({
           secure: false,
           changeOrigin: true
         }
-      },
-      watch: {
-        ignored: ["**/native/**"]
       }
     },
     build: {

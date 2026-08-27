@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🚀 JumpServer Client
+# 🚀 JumpServer
 
 **A modern, cross-platform desktop client for JumpServer built with Electron**
 
@@ -11,7 +11,7 @@
 
 [English](README.md) | [中文](README_CN.md)
 
-![JumpServer Client](public/screenshot.png)
+![JumpServer](public/screenshot.png)
 
 </div>
 
@@ -24,7 +24,7 @@
 - 🗄️ **Multi-Database Support** - Connect to MySQL, PostgreSQL, Redis, MongoDB, Oracle, SQL Server, ClickHouse, and more
 - 🖥️ **Device Management** - Manage Linux and Windows servers seamlessly
 - 🎨 **Modern UI** - Beautiful, responsive interface built with Vue 3 and Nuxt UI
-- ⚡ **Native Desktop Integration** - Isolated Electron runtime with focused Rust sidecars
+- ⚡ **Desktop Integration** - Isolated Electron runtime with Node-based desktop services
 - 🔗 **Deep Link Support** - Launch connections directly from web browsers via custom protocol (`jms2://`)
 - 🌓 **Theme Support** - Light and dark mode
 - 🌍 **Internationalization** - Multi-language support (English, Chinese)
@@ -56,8 +56,8 @@ _Windows_
 ### Desktop
 
 - **Electron 44** - Cross-platform windowing, native integration, and packaging
-- **Rust** - Native SSH and replay-transcoding sidecars
-- **Go** - Native client components for protocol handling
+- **Node.js** - SSH helper, replay processing, and desktop services
+- **Optional FFmpeg plugin** - Downloaded from Settings for H.264 replay encoding; system FFmpeg is never required
 
 ## 📦 Installation
 
@@ -73,7 +73,7 @@ _Windows_
 1. Download the `.msi` or `.exe` installer from the [Releases](https://github.com/jumpserver/clients/releases) page
 2. Double-click the installer file
 3. Follow the installation wizard (may take 10-15 seconds)
-4. Launch JumpServer Client from the Start menu
+4. Launch JumpServer from the Start menu
 
 ### Linux
 
@@ -137,9 +137,8 @@ sudo dnf install ./jumpserver-client_*.rpm
 
 ### Prerequisites
 
-- **Node.js** >= 20
-- **pnpm** >= 10.20.0
-- **Rust** (latest stable)
+- **Node.js** >= 22
+- **pnpm** >= 11
 - **System Dependencies**:
   - macOS: Xcode Command Line Tools
   - Windows: Microsoft Visual C++ Build Tools
@@ -171,7 +170,7 @@ pnpm electron:package:dir
 
 ### Build the Web Docker Image
 
-The Web image contains only the generated Nuxt application and nginx; Electron and native sidecars are excluded from its build context.
+The Web image contains only the generated Nuxt application and nginx; Electron desktop code is excluded from its build context.
 
 ```bash
 docker build -t jumpserver/luna:local .
@@ -190,9 +189,8 @@ clients/
 │   ├── composables/      # Vue composables
 │   └── layouts/          # Layout components
 ├── electron/              # Electron main process and preload bridge
-├── native/                # Rust SSH/transcode sidecars
-│   ├── src/
-│   └── resources/        # Native binaries
+│   ├── ssh-helper.cjs     # Node SSH helper for external terminals
+│   └── replay-*.mjs      # Node replay parser, renderer, and encoder bridge
 └── i18n/                 # Internationalization files
 ```
 
@@ -205,8 +203,6 @@ pnpm electron:build   # Build production artifacts
 make docker-build     # Build the Web Docker image
 pnpm fmt              # Format frontend code with Oxfmt
 pnpm lint             # Run lint checks
-pnpm native:fmt       # Format native Rust code
-pnpm native:check     # Check native sidecars
 pnpm reset            # Clean build artifacts
 ```
 

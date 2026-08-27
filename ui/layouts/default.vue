@@ -194,7 +194,7 @@ onMounted(() => {
   void refreshCommandExecutionSetting();
   initialTheme();
   listenOSThemeChange();
-  // ponytail: koko WS sessions close on component unmount; no Rust builtin bridge
+  // ponytail: koko WS sessions close on component unmount; no desktop builtin bridge
   registerSessionDisposer(() => {});
   registerKokoTicketProvider(async (request) => {
     if (isDesktopRuntime()) {

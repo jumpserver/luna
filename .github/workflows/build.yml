@@ -56,27 +56,21 @@ jobs:
         include:
           - name: macOS-arm64
             os: macos-latest
-            rust_target: aarch64-apple-darwin
             builder_args: --mac --arm64
           - name: macOS-x64
-            os: macos-latest
-            rust_target: x86_64-apple-darwin
+            os: macos-15-intel
             builder_args: --mac --x64
           - name: Linux-x64
             os: ubuntu-22.04
-            rust_target: x86_64-unknown-linux-gnu
             builder_args: --linux --x64
           - name: Linux-arm64
             os: ubuntu-22.04-arm
-            rust_target: aarch64-unknown-linux-gnu
             builder_args: --linux --arm64
           - name: Windows-x64
             os: windows-latest
-            rust_target: x86_64-pc-windows-msvc
             builder_args: --win --x64
     runs-on: ${{ matrix.os }}
     env:
-      JMS_ELECTRON_RUST_TARGET: ${{ matrix.rust_target }}
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -92,15 +86,6 @@ jobs:
         with:
           node-version: "22"
           cache: pnpm
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.rust_target }}
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: native
-          key: ${{ matrix.rust_target }}
 
       - name: Install Linux packaging dependencies
         if: startsWith(matrix.os, 'ubuntu')

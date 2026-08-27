@@ -6,7 +6,7 @@ These instructions apply to the whole repository. Follow them for all changes un
 
 ## Project Shape
 
-- This is a JumpServer Client repository with a Nuxt/Vue frontend under `ui/`.
+- This is a JumpServer repository with a Nuxt/Vue frontend under `ui/`.
 - This is also an Electron project with both web and desktop client builds; implementation must consider both runtime environments.
 - Nuxt uses `srcDir: "ui/"`.
 - The frontend is built around Nuxt UI, `@nuxt/icon`, shared theme tokens, and connector/workspace modules.

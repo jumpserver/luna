@@ -31,14 +31,8 @@ node_modules
 playwright-report
 test-results
 .env
-.cargo
 .qoder
 target
 dist
 .electron-resources
 release/electron
-native/target
-native/resources/*
-!native/resources/bin/
-native/resources/bin/*
-!native/resources/bin/.gitkeep

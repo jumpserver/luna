@@ -24,7 +24,7 @@
 - 🗄️ **多数据库支持** - 支持 MySQL、PostgreSQL、Redis、MongoDB、Oracle、SQL Server、ClickHouse、达梦等
 - 🖥️ **设备管理** - 无缝管理 Linux 和 Windows 服务器
 - 🎨 **现代化界面** - 基于 Vue 3 和 Nuxt UI 构建的优雅响应式界面
-- ⚡ **原生桌面集成** - 隔离的 Electron 运行时与专用 Rust sidecar
+- ⚡ **桌面集成** - 隔离的 Electron 运行时与 Node 桌面服务
 - 🔗 **深度链接支持** - 通过自定义协议（`jms2://`）从浏览器直接启动连接
 - 🌓 **主题支持** - 支持浅色和深色模式
 - 🌍 **国际化** - 多语言支持（英文、中文）
@@ -52,8 +52,8 @@ _主界面展示资产管理_
 ### 桌面端
 
 - **Electron 44** - 跨平台窗口、原生集成与打包
-- **Rust** - 原生 SSH 与录像转码 sidecar
-- **Go** - 用于协议处理的原生客户端组件
+- **Node.js** - SSH helper、录像处理与桌面服务
+- **可选 FFmpeg 插件** - 在设置中按需下载，用于 H.264 录像编码，不依赖系统 FFmpeg
 
 ## 📦 安装
 
@@ -133,9 +133,8 @@ sudo dnf install ./jumpserver-client_*.rpm
 
 ### 前置要求
 
-- **Node.js** >= 20
-- **pnpm** >= 10.20.0
-- **Rust** (最新稳定版)
+- **Node.js** >= 22
+- **pnpm** >= 11
 - **系统依赖**：
   - macOS: Xcode Command Line Tools
   - Windows: Microsoft Visual C++ Build Tools
@@ -167,7 +166,7 @@ pnpm electron:package:dir
 
 ### 构建 Web Docker 镜像
 
-Web 镜像只包含 Nuxt 静态产物和 nginx；Electron 与原生 sidecar 不会进入 Docker 构建上下文。
+Web 镜像只包含 Nuxt 静态产物和 nginx；Electron 桌面代码不会进入 Docker 构建上下文。
 
 ```bash
 docker build -t jumpserver/luna:local .
@@ -186,9 +185,8 @@ clients/
 │   ├── composables/      # Vue 组合式函数
 │   └── layouts/          # 布局组件
 ├── electron/              # Electron 主进程与 preload bridge
-├── native/                # Rust SSH/转码 sidecar
-│   ├── src/
-│   └── resources/        # 原生二进制文件
+│   ├── ssh-helper.cjs     # 外部终端使用的 Node SSH helper
+│   └── replay-*.mjs      # Node 录像解析、渲染与编码桥接
 └── i18n/                 # 国际化文件
 ```
 
@@ -201,8 +199,6 @@ pnpm electron:build   # 构建生产应用
 make docker-build     # 构建 Web Docker 镜像
 pnpm fmt              # 使用 Oxfmt 格式化前端代码
 pnpm lint             # 运行代码检查
-pnpm native:fmt       # 格式化 Rust 代码
-pnpm native:check     # 检查原生 sidecar
 pnpm reset            # 清理构建产物
 ```
 

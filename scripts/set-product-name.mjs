@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const DEFAULT_PRODUCT_NAME = "JumpServerClient";
+const DEFAULT_PRODUCT_NAME = "JumpServer";
 
 function parseArgs(argv) {
   const args = argv.slice(2);

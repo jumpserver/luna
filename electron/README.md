@@ -1,6 +1,6 @@
 # Electron desktop runtime
 
-This directory contains the JumpServer Client desktop runtime.
+This directory contains the JumpServer desktop runtime.
 
 Run the current development shell with:
 
@@ -22,7 +22,7 @@ Currently migrated:
 - isolated Web Proxy views, one-time encrypted credential autofill, and Koko recording upload;
 - scoped offline recording import, decompression, and local replay URLs;
 - platform application plugins, external native-client launch, and system font enumeration;
-- replay-to-MP4 conversion through the shared native H.264 codec sidecar.
+- replay-to-MP4 conversion through the Node replay pipeline and optional FFmpeg plugin.
 
 Remaining release work:
 

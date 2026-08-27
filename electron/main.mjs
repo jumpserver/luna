@@ -25,6 +25,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import * as pty from "node-pty";
 import { ApplicationConfigService } from "./application-config.mjs";
 import { DesktopAuthService } from "./auth.mjs";
+import { FfmpegPluginManager } from "./ffmpeg-plugin.mjs";
 import { LocalApplicationLauncher } from "./local-app-launcher.mjs";
 import { OfflineRecordingStore } from "./offline-recordings.mjs";
 import { ReplayTranscoder } from "./replay-transcoder.mjs";
@@ -47,8 +48,9 @@ const isDevelopment = !app.isPackaged;
 const appIconSize = 512;
 const appIconInset = 48;
 const trayIconSize = 16;
-const defaultProductName = "JumpServerClient";
+const defaultProductName = "JumpServer";
 const productName = String(runtimePackage.displayName || defaultProductName);
+app.setName(productName);
 if (isDevelopment) console.info(`[electron] ${app.getName()} ${app.getVersion()}`);
 const windows = new Map();
 const subscriptions = new Map();
@@ -67,6 +69,7 @@ let authService;
 let localApplicationLauncher;
 let offlineRecordings;
 let replayTranscoder;
+let ffmpegPlugin;
 let appIcon;
 
 protocol.registerSchemesAsPrivileged([
@@ -636,7 +639,7 @@ function createWindow(label = "main", options = {}) {
 
   const isMac = process.platform === "darwin";
   const win = new BrowserWindow({
-    title: options.title || "JumpServer Client",
+    title: options.title || "JumpServer",
     icon: loadAppIcon(),
     width: options.width || 1300,
     height: options.height || 780,
@@ -1250,6 +1253,9 @@ async function handleInvoke(event, request) {
   }
   if (command === "install_plugin") return applicationConfig.installPlugin({ path: normalizePath(args.path) });
   if (command === "uninstall_plugin") return applicationConfig.uninstallPlugin(args);
+  if (command === "get_ffmpeg_plugin_status") return ffmpegPlugin.status();
+  if (command === "install_ffmpeg_plugin") return ffmpegPlugin.install(labelForWindow(win));
+  if (command === "uninstall_ffmpeg_plugin") return ffmpegPlugin.uninstall();
   if (command === "create_custom_terminal") {
     return applicationConfig.createCustomTerminal({ ...args, path: normalizePath(args.path) });
   }
@@ -1397,8 +1403,15 @@ app.whenReady().then(async () => {
   await authService.initialize();
   offlineRecordings = new OfflineRecordingStore(path.join(app.getPath("userData"), "offline-recordings"));
   await offlineRecordings.initialize();
-  replayTranscoder = new ReplayTranscoder(projectRoot, (payload, label) =>
-    emitDesktopEvent("transcode-progress", payload, label)
+  ffmpegPlugin = new FfmpegPluginManager(
+    path.join(app.getPath("userData"), "plugins"),
+    (url, options) => net.fetch(url, options),
+    (payload, label) => emitDesktopEvent("ffmpeg-plugin-progress", payload, label)
+  );
+  replayTranscoder = new ReplayTranscoder(
+    projectRoot,
+    (payload, label) => emitDesktopEvent("transcode-progress", payload, label),
+    ffmpegPlugin
   );
   ipcMain.handle("jms:invoke", handleInvoke);
   if (process.platform === "darwin") {

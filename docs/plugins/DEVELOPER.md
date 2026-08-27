@@ -1,6 +1,6 @@
 # 连接插件开发指南
 
-本文档面向第三方开发者，说明如何为 JumpServer Client 编写、调试和分发连接插件。
+本文档面向第三方开发者，说明如何为 JumpServer 编写、调试和分发连接插件。
 
 ## 快速开始
 
@@ -199,7 +199,7 @@ Copy-Item -Recurse plugins\demo\hello-terminal `
 ## 调试技巧
 
 1. **查看合并配置**：调用 Electron `get_config`，确认插件已出现在对应 `category` 数组中
-2. **查看启动日志**：查看 JumpServer Client 的 Electron 日志
+2. **查看启动日志**：查看 JumpServer 的 Electron 日志
 3. **脚本调试**：手动执行脚本并注入环境变量：
 
 ```bash

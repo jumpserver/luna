@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# JumpServer Client plugin launch script (Linux demo)
+# JumpServer plugin launch script (Linux demo)
 # Receives connection context via JMS_CONNECT_JSON environment variable.
 
 set -euo pipefail

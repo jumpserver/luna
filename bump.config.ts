@@ -5,5 +5,5 @@ export default defineConfig({
   commit: false,
   tag: false,
   push: false,
-  files: ["package.json", "electron/package.json", "native/Cargo.toml"]
+  files: ["package.json", "electron/package.json"]
 });

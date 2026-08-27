@@ -1,4 +1,4 @@
-# JumpServer Client plugin launch script (Windows demo)
+# JumpServer plugin launch script (Windows demo)
 # Receives connection context via JMS_CONNECT_JSON environment variable.
 
 $ErrorActionPreference = "Stop"

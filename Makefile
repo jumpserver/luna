@@ -1,17 +1,16 @@
-# JumpServer Client Electron project
+# JumpServer Electron project
 
 .DEFAULT_GOAL := help
 
 .PHONY: help
 help: ## 显示帮助信息
-	@echo "JumpServer Client (Electron)"
+	@echo "JumpServer (Electron)"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .PHONY: check-env
-check-env: ## 检查 Node.js、pnpm 和 Rust 环境
+check-env: ## 检查 Node.js 和 pnpm 环境
 	@command -v node >/dev/null 2>&1 || { echo "错误: Node.js 未安装"; exit 1; }
 	@command -v pnpm >/dev/null 2>&1 || { echo "错误: pnpm 未安装"; exit 1; }
-	@command -v cargo >/dev/null 2>&1 || { echo "错误: Rust/Cargo 未安装"; exit 1; }
 
 .PHONY: install
 install: check-env ## 安装项目依赖
@@ -38,19 +37,17 @@ docker-build: ## 构建 Web Docker 镜像
 	docker build -t jumpserver/luna:local .
 
 .PHONY: check
-check: ## 执行前端和原生 sidecar 检查
+check: ## 执行应用检查
 	pnpm typecheck
-	pnpm native:check
+	pnpm lint:check
 
 .PHONY: test
 test: ## 执行测试
 	pnpm test
-	cargo test --manifest-path native/Cargo.toml
 
 .PHONY: fmt
-fmt: ## 格式化前端和原生代码
+fmt: ## 格式化应用代码
 	pnpm fmt
-	pnpm native:fmt
 
 .PHONY: clean
 clean: ## 清理构建产物和依赖

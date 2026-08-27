@@ -1,4 +1,4 @@
--- JumpServer Client plugin launch script (macOS demo)
+-- JumpServer plugin launch script (macOS demo)
 -- Receives connection context via JMS_CONNECT_JSON environment variable.
 
 on run

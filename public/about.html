@@ -62,7 +62,7 @@
 <body>
   <div class="card">
     <img src="/logo.png" alt="App logo" id="logo" />
-    <div class="name" id="name" data-default-name="JumpServerClient">JumpServerClient</div>
+    <div class="name" id="name" data-default-name="JumpServer">JumpServer</div>
     <div class="version" id="version">Version</div>
     <p class="copyright" id="copyright">
       Copyright © JumpServer
@@ -79,7 +79,7 @@
     const nameEl = document.getElementById('name');
     const versionEl = document.getElementById('version');
     const copyEl = document.getElementById('copyright');
-    const appName = customName || nameEl.dataset.defaultName || 'JumpServerClient';
+    const appName = customName || nameEl.dataset.defaultName || 'JumpServer';
 
     document.title = isZh ? `关于 ${appName}` : `About ${appName}`;
     logoEl.alt = appName;

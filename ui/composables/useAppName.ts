@@ -1,4 +1,4 @@
-export const DEFAULT_APP_NAME = "JumpServerClient";
+export const DEFAULT_APP_NAME = "JumpServer";
 
 export function normalizeAppName(name?: string | null) {
   return (name || DEFAULT_APP_NAME).trim() || DEFAULT_APP_NAME;

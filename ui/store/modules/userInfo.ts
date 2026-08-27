@@ -37,7 +37,7 @@ export const useUserInfoStore = defineStore(
     const orgId = computed(() => currentUser.value?.org?.id || "");
 
     /**
-     * @description 将当前前端会话同步给 Rust 请求层
+     * @description 将当前前端会话同步给 Electron 请求层
      * @param accountId
      * @param userData
      */
