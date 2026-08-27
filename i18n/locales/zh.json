@@ -398,6 +398,10 @@
       "stale": "已过期"
     },
     "AIHeaderDescription": "基于当前激活终端的上下文",
+    "AIContext": "当前上下文",
+    "AIContextCurrentScreen": "当前屏幕",
+    "AIContextSelection": "当前选区",
+    "AIContextLastError": "最近错误",
     "AIEmptyTitle": "准备协助当前终端",
     "AIEmptyDescription": "可以分析终端问题，也可以规划并执行操作。",
     "AIInputPlaceholder": "询问当前终端或描述要完成的任务…",
@@ -474,6 +478,7 @@
     "AIStatusPending": "待执行",
     "AIStatusRejected": "已拒绝",
     "AIStatusReviewing": "分析结果",
+    "AIStatusReady": "就绪",
     "AIStatusSkipped": "未执行",
     "SFTPSearchPlaceholder": "搜索要传输文件的资产…",
     "SFTPEmptyTitle": "选择要查看的资产",
