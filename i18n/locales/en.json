@@ -398,6 +398,10 @@
       "stale": "Out of date"
     },
     "AIHeaderDescription": "Uses the active terminal context",
+    "AIContext": "Context",
+    "AIContextCurrentScreen": "current-screen",
+    "AIContextSelection": "selection",
+    "AIContextLastError": "last-error",
     "AIEmptyTitle": "Ready to assist this terminal",
     "AIEmptyDescription": "Ask for analysis or have Terminal AI plan and execute a task.",
     "AIInputPlaceholder": "Ask about this terminal or describe a task…",
@@ -474,6 +478,7 @@
     "AIStatusPending": "Pending",
     "AIStatusRejected": "Rejected",
     "AIStatusReviewing": "Reviewing",
+    "AIStatusReady": "Ready",
     "AIStatusSkipped": "Skipped",
     "SFTPSearchPlaceholder": "Search assets for file transfer…",
     "SFTPEmptyTitle": "Choose an asset to browse",

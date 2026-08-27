@@ -1,18 +1,11 @@
 <script setup lang="ts">
 import type { TerminalAiChatMessage, TerminalAiEventData } from "#koko/composables/terminal/useTerminalAiSessions";
-import type {
-  ChenSqlAiTiming,
-  ChenSqlMetadataApproval,
-  ChenSqlMetadataApprovalDecision,
-  ChenSqlProposal
-} from "~/chen/composables/useChenSqlAiSessions";
-import DOMPurify from "dompurify";
-import { marked } from "marked";
+import type { AiContextItem, PlanItem, SqlProposalItem, SqlThoughtItem, ViewItem } from "./ai/types";
+import type { ChenSqlAiTiming, ChenSqlMetadataApprovalDecision } from "~/chen/composables/useChenSqlAiSessions";
 import {
   terminalAiAclKey,
   terminalAiBackgroundReasonKey,
   terminalAiErrorKey,
-  terminalAiExecutionKey,
   terminalAiProgressKey
 } from "#koko/composables/terminal/terminalAiPresentation";
 import {
@@ -24,102 +17,23 @@ import {
   submitKokoTerminalAiPrompt
 } from "#koko/composables/terminal/useTerminalAiSessions";
 import { getWorkspaceAiSession, isChenSqlWorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
+import AiComposer from "./ai/AiComposer.vue";
+import AiPresenceHeader from "./ai/AiPresenceHeader.vue";
+import AiRunPlan from "./ai/AiRunPlan.vue";
+import { buildAiPanelViewItems } from "./ai/buildViewItems";
+import { aiRiskColor, formatAiDuration, renderAiMarkdown } from "./ai/presentation";
 import SqlMetadataApprovalCard from "./SqlMetadataApprovalCard.vue";
 import SqlSchemaResultCard from "./SqlSchemaResultCard.vue";
 
-interface ViewStep {
-  id: string;
-  key: string;
-  index: number;
-  title: string;
-  objective: string;
-  status: string;
-  executions: ViewExecution[];
-  acl?: TerminalAiEventData;
-}
-
-interface ViewExecution {
-  id: string;
-  key: string;
-  index: number;
-  command?: TerminalAiEventData;
-  result?: TerminalAiEventData;
-}
-
-interface TextItem {
-  kind: "text";
-  key: string;
-  role: TerminalAiChatMessage["role"];
-  text: string;
-}
-
-interface PlanItem {
-  kind: "plan";
-  key: string;
-  id: string;
-  summary: string;
-  steps: ViewStep[];
-}
-
-interface AlertItem {
-  kind: "alert";
-  key: string;
-  data: TerminalAiEventData;
-}
-
-interface SqlAnalysisItem {
-  kind: "sql-analysis";
-  key: string;
-  data: TerminalAiEventData;
-}
-
-interface SqlProposalItem {
-  kind: "sql-proposal";
-  key: string;
-  data: ChenSqlProposal;
-}
-
-interface SqlThoughtItem {
-  kind: "sql-thought";
-  key: string;
-  summaries: string[];
-}
-
-interface SqlTimingItem {
-  kind: "sql-timing";
-  key: string;
-  data: ChenSqlAiTiming;
-}
-
-interface MetadataApprovalItem {
-  kind: "metadata-approval";
-  key: string;
-  approval: ChenSqlMetadataApproval;
-  terminal: boolean;
-}
-
-interface SchemaResultItem {
-  kind: "schema-result";
-  key: string;
-  data: TerminalAiEventData;
-}
-
-type ViewItem =
-  | TextItem
-  | PlanItem
-  | AlertItem
-  | SqlAnalysisItem
-  | SqlProposalItem
-  | SqlThoughtItem
-  | SqlTimingItem
-  | MetadataApprovalItem
-  | SchemaResultItem;
-
 const { t } = useI18n();
-const { activePaneId } = useWorkspaceTabs();
-const messagesElement = ref<HTMLElement | null>(null);
+const { activePaneId, activeTab } = useWorkspaceTabs();
+const messagesElement = useTemplateRef<HTMLElement>("messagesElement");
 const session = computed(() => getWorkspaceAiSession(activePaneId.value));
 const sqlSession = computed(() => (isChenSqlWorkspaceAiSession(session.value) ? session.value : null));
+const activeSurface = computed(() => {
+  const tab = activeTab.value;
+  return tab?.panes.find((pane) => pane.id === activePaneId.value) || tab;
+});
 const metadataApproval = computed(() => session.value?.metadataApproval || null);
 const assistantName = computed(() => (sqlSession.value ? t("RightPanel.SQLAIName") : t("TerminalAi.Title")));
 const available = computed(() =>
@@ -143,7 +57,7 @@ const busy = computed(() => {
 const actionLabel = computed(() =>
   busy.value ? (sqlSession.value ? t("RightPanel.SQLAICancel") : t("RightPanel.AIInterrupt")) : t("RightPanel.AISend")
 );
-const elapsedClock = ref(Date.now());
+const elapsedClock = shallowRef(Date.now());
 let elapsedTimer: ReturnType<typeof setInterval> | null = null;
 
 function stopElapsedTimer() {
@@ -274,182 +188,158 @@ const backgroundReasonLabel = computed(() => {
   return translatedProtocolValue(terminalAiBackgroundReasonKey(current.backgroundReasonCode, current.backgroundReason));
 });
 
-const viewItems = computed<ViewItem[]>(() => {
-  const items: ViewItem[] = [];
-  const plans = new Map<string, PlanItem>();
-  const steps = new Map<string, ViewStep>();
-  const executions = new Map<string, ViewExecution>();
-  const sqlThoughts = new Map<string, SqlThoughtItem>();
-
-  const ensurePlan = (id: string, key: string) => {
-    let plan = plans.get(id);
-    if (!plan) {
-      plan = {
-        kind: "plan",
-        key,
-        id,
-        summary: t("RightPanel.AIExecutionPlan"),
-        steps: []
-      };
-      plans.set(id, plan);
-      items.push(plan);
-    }
-    return plan;
-  };
-
-  const ensureStep = (plan: PlanItem, data: TerminalAiEventData) => {
-    const id = String(data.stepId || data.id || `step-${plan.steps.length + 1}`);
-    const key = `${plan.id}:${id}`;
-    let step = steps.get(key);
-    if (!step) {
-      step = {
-        id,
-        key,
-        index: Number(data.step) || plan.steps.length + 1,
-        title: String(data.title || t("RightPanel.AIStep", { count: plan.steps.length + 1 })),
-        objective: String(data.objective || ""),
-        status: String(data.status || "pending"),
-        executions: []
-      };
-      steps.set(key, step);
-      plan.steps.push(step);
-    }
-    return step;
-  };
-
-  const ensureExecution = (step: ViewStep, data: TerminalAiEventData) => {
-    const legacyId = data.command ? `legacy:${String(data.command)}` : `legacy:${step.executions.length + 1}`;
-    const id = String(data.executionId || legacyId);
-    const key = `${step.key}:${id}`;
-    let execution = executions.get(key);
-    if (!execution) {
-      execution = { id, key, index: step.executions.length + 1 };
-      executions.set(key, execution);
-      step.executions.push(execution);
-    }
-    return execution;
-  };
-
-  for (const message of messages.value) {
-    message.parts.forEach((part, partIndex) => {
-      if (part.type === "text") {
-        items.push({
-          kind: "text",
-          key: `${message.id}-text-${partIndex}`,
-          role: message.role,
-          text: part.text || ""
-        });
-        return;
-      }
-
-      const data = "data" in part ? (part.data as TerminalAiEventData) : {};
-      if (part.type === "data-thought-summary") {
-        const summary = String(data.text || "").trim();
-        if (!summary) return;
-        const key = `${message.id}-sql-thought`;
-        let thought = sqlThoughts.get(key);
-        if (!thought) {
-          thought = { kind: "sql-thought", key, summaries: [] };
-          sqlThoughts.set(key, thought);
-          items.push(thought);
-        }
-        if (!thought.summaries.includes(summary)) thought.summaries.push(summary);
-        return;
-      }
-
-      if (part.type === "data-sql-analysis") {
-        items.push({ kind: "sql-analysis", key: `${message.id}-sql-analysis-${partIndex}`, data });
-        return;
-      }
-
-      if (part.type === "data-sql-proposal") {
-        items.push({
-          kind: "sql-proposal",
-          key: `${message.id}-sql-proposal-${partIndex}`,
-          data: data as ChenSqlProposal
-        });
-        return;
-      }
-
-      if (part.type === "data-agent-timing") {
-        items.push({
-          kind: "sql-timing",
-          key: `${message.id}-sql-timing-${partIndex}`,
-          data: data as ChenSqlAiTiming
-        });
-        return;
-      }
-
-      if (part.type === "data-schema-result") {
-        items.push({ kind: "schema-result", key: `${message.id}-schema-result-${partIndex}`, data });
-        return;
-      }
-
-      if (part.type === "data-plan") {
-        const planId = String(data.id || `plan-${message.id}`);
-        const plan = ensurePlan(planId, `${message.id}-plan-${partIndex}`);
-        plan.summary = String(data.summary || plan.summary);
-        const rawSteps = Array.isArray(data.steps) ? data.steps : [];
-        rawSteps.forEach((rawStep: TerminalAiEventData, index: number) => {
-          const step = ensureStep(plan, rawStep);
-          step.index = index + 1;
-          step.title = String(rawStep.title || step.title);
-          step.objective = String(rawStep.objective || step.objective);
-          step.status = String(rawStep.status || step.status);
-        });
-        plan.steps.sort((left, right) => left.index - right.index);
-        return;
-      }
-
-      if (part.type === "data-command" || part.type === "data-approval") {
-        const planId = String(data.planId || `plan-${message.id}`);
-        const plan = ensurePlan(planId, `${message.id}-plan-${partIndex}`);
-        const step = ensureStep(plan, data);
-        const execution = ensureExecution(step, data);
-        execution.command = { ...execution.command, ...data, partType: part.type };
-        return;
-      }
-
-      if (part.type === "data-execution") {
-        const planId = String(data.planId || `plan-${message.id}`);
-        const plan = ensurePlan(planId, `${message.id}-plan-${partIndex}`);
-        const step = ensureStep(plan, data);
-        const execution = ensureExecution(step, data);
-        execution.result = { ...execution.result, ...data };
-        return;
-      }
-
-      if (part.type === "data-command-acl") {
-        if (data.planId || data.stepId) {
-          const planId = String(data.planId || `plan-${message.id}`);
-          const plan = ensurePlan(planId, `${message.id}-plan-${partIndex}`);
-          ensureStep(plan, data).acl = data;
-        } else {
-          items.push({ kind: "alert", key: `${message.id}-acl-${partIndex}`, data });
-        }
-      }
-    });
-  }
-
-  const approval = metadataApproval.value;
-  if (approval) {
-    const anchorIndex = items.findLastIndex((item) => item.kind === "text" && item.role === "user");
-    const insertAt = anchorIndex >= 0 ? anchorIndex + 1 : items.length;
-    items.splice(insertAt, 0, {
-      kind: "metadata-approval",
-      key: `metadata-approval-${approval.approvalId}`,
-      approval,
-      terminal: !sqlSession.value
-    });
-  }
-
-  return items;
-});
-
+const viewItems = computed<ViewItem[]>(() =>
+  buildAiPanelViewItems({
+    messages: messages.value,
+    metadataApproval: metadataApproval.value,
+    terminalMetadataApproval: !sqlSession.value,
+    executionPlanLabel: t("RightPanel.AIExecutionPlan"),
+    stepLabel: (count) => t("RightPanel.AIStep", { count })
+  })
+);
 const waitingForTerminalApproval = computed(() => {
   const current = session.value;
   if (!current || sqlSession.value) return false;
   return isKokoTerminalAiWaitingForApproval(activePaneId.value);
+});
+
+const latestPlan = computed(() => viewItems.value.filter((item): item is PlanItem => item.kind === "plan").at(-1));
+
+function effectiveStepStatus(step: PlanItem["steps"][number]) {
+  if (["completed", "failed", "interrupted", "rejected", "skipped"].includes(step.status)) return step.status;
+  const execution = step.executions.at(-1);
+  if (execution?.command && !execution.result) return String(execution.command.state || step.status);
+  return step.status || String(execution?.result?.outcome || "pending");
+}
+
+const runProgress = computed(() => {
+  const steps = latestPlan.value?.steps || [];
+  if (!steps.length) return "";
+  const complete = steps.filter((step) =>
+    ["completed", "success", "succeeded", "skipped"].includes(effectiveStepStatus(step))
+  ).length;
+  return `${complete}/${steps.length}`;
+});
+
+const highestRiskLevel = computed(() => {
+  let level = 0;
+  for (const step of latestPlan.value?.steps || []) {
+    for (const execution of step.executions) {
+      level = Math.max(level, Number(execution.command?.riskLevel) || 0);
+    }
+  }
+  for (const item of viewItems.value) {
+    if (item.kind === "sql-analysis") level = Math.max(level, Number(item.data.riskLevel) || 0);
+  }
+  return level;
+});
+
+function riskLabel(level: number) {
+  const labels: Record<number, string> = {
+    1: t("RightPanel.AIRiskReadOnly"),
+    2: t("RightPanel.AIRiskLow"),
+    3: t("RightPanel.AIRiskMedium"),
+    4: t("RightPanel.AIRiskHigh")
+  };
+  return labels[level] || "";
+}
+
+const headerRiskLabel = computed(() => (highestRiskLevel.value >= 2 ? riskLabel(highestRiskLevel.value) : ""));
+const presenceStatusTone = computed<"ready" | "active" | "warning" | "error" | "success">(() => {
+  if (errorLabel.value) return "error";
+  if (metadataApproval.value || waitingForTerminalApproval.value) return "warning";
+  if (busy.value) return "active";
+  const statuses = latestPlan.value?.steps.map(effectiveStepStatus) || [];
+  if (statuses.some((status) => ["error", "failed", "rejected", "interrupted"].includes(status))) return "error";
+  if (
+    statuses.length &&
+    statuses.every((status) => ["completed", "success", "succeeded", "skipped"].includes(status))
+  ) {
+    return "success";
+  }
+  return "ready";
+});
+const presenceStatusLabel = computed(() => {
+  if (errorLabel.value) return errorLabel.value;
+  if (metadataApproval.value || waitingForTerminalApproval.value) return t("RightPanel.AIStatusAwaitingApproval");
+  if (busy.value) return runtimeStatusLabel.value || t("RightPanel.AIStatusRunning");
+  if (presenceStatusTone.value === "success") return t("RightPanel.AIStatusCompleted");
+  if (presenceStatusTone.value === "error") return t("RightPanel.AIStatusFailed");
+  return t("RightPanel.AIStatusReady");
+});
+const headerDescription = computed(() =>
+  sqlSession.value ? t("RightPanel.SQLAIHeaderDescription") : t("RightPanel.AIHeaderDescription")
+);
+const contextItems = computed<AiContextItem[]>(() => {
+  const items: AiContextItem[] = [];
+  const surface = activeSurface.value;
+  if (surface?.assetName) {
+    items.push({
+      key: "asset",
+      icon: "i-lucide-server",
+      label: `@${surface.assetName}`,
+      title: [surface.assetName, surface.address].filter(Boolean).join(" · ")
+    });
+  }
+  if (surface?.protocol) {
+    items.push({
+      key: "protocol",
+      icon: sqlSession.value ? "i-lucide-database" : "i-lucide-network",
+      label: `@${surface.protocol}`,
+      title: surface.protocol
+    });
+  }
+  if (surface?.account) {
+    items.push({
+      key: "account",
+      icon: "i-lucide-user-key",
+      label: `@${surface.account}`,
+      title: surface.account
+    });
+  }
+  if (!sqlSession.value) {
+    items.push({
+      key: "current-screen",
+      icon: "i-lucide-monitor-dot",
+      label: `@${t("RightPanel.AIContextCurrentScreen")}`,
+      title: t("RightPanel.AIContextCurrentScreen")
+    });
+  }
+
+  const sqlContext = sqlSession.value?.contextProvider();
+  if (sqlContext?.database) {
+    items.push({
+      key: "database",
+      icon: "i-lucide-cylinder",
+      label: `@${sqlContext.database}`,
+      title: sqlContext.database
+    });
+  }
+  if (sqlContext?.schema) {
+    items.push({
+      key: "schema",
+      icon: "i-lucide-table-properties",
+      label: `@${sqlContext.schema}`,
+      title: sqlContext.schema
+    });
+  }
+  if (sqlContext?.selectedSql) {
+    items.push({
+      key: "selection",
+      icon: "i-lucide-text-select",
+      label: `@${t("RightPanel.AIContextSelection")}`,
+      title: t("RightPanel.AIContextSelection")
+    });
+  }
+  if (sqlContext?.lastError) {
+    items.push({
+      key: "last-error",
+      icon: "i-lucide-circle-alert",
+      label: `@${t("RightPanel.AIContextLastError")}`,
+      title: t("RightPanel.AIContextLastError")
+    });
+  }
+  return items;
 });
 
 const terminalActivityLabel = computed(() => runtimeStatusLabel.value || t("RightPanel.AIResponding"));
@@ -489,12 +379,6 @@ function submit() {
   void current.chat.sendMessage({ text, metadata: { operation: "generate" } }).catch(() => {
     if (!current.errorCode && !current.errorText) current.errorCode = "send_failed";
   });
-}
-
-function handleSubmitKeydown(event: KeyboardEvent) {
-  if (event.isComposing) return;
-  event.preventDefault();
-  submit();
 }
 
 function updatePolicy() {
@@ -600,102 +484,13 @@ function setExecutionOverride(id: string, value: string) {
   session.value?.executionOverrides.set(id, value);
 }
 
-function selectedExecution(data: TerminalAiEventData) {
-  return session.value?.executionOverrides.get(String(data.id)) || String(data.execution || "pty");
-}
-
-function executionLabel(value: unknown) {
-  return translatedProtocolValue(terminalAiExecutionKey(value), String(value || ""));
-}
-
 function aclLabel(data: TerminalAiEventData) {
   const value = data.state || data.action;
   return translatedProtocolValue(terminalAiAclKey(value), String(value || ""));
 }
 
-function renderMarkdown(source: string) {
-  const html = marked.parse(source, { async: false, breaks: true, gfm: true }) as string;
-  return DOMPurify.sanitize(html);
-}
-
-function stepStatus(step: ViewStep) {
-  if (["completed", "failed", "interrupted", "rejected", "skipped"].includes(step.status)) return step.status;
-  const execution = step.executions.at(-1);
-  if (execution?.command && !execution.result) return String(execution.command.state || step.status);
-  if (["running", "reviewing"].includes(String(execution?.result?.outcome))) {
-    return String(execution?.result?.outcome);
-  }
-  return step.status || String(execution?.result?.outcome || "pending");
-}
-
-function statusLabel(step: ViewStep) {
-  const labels: Record<string, string> = {
-    approved: t("RightPanel.AIStatusApproved"),
-    auto_approved: t("RightPanel.AIStatusAutoApproved"),
-    awaiting_approval: t("RightPanel.AIStatusAwaitingApproval"),
-    awaiting_risk_approval: t("RightPanel.AIStatusAwaitingApproval"),
-    completed: t("RightPanel.AIStatusCompleted"),
-    error: t("RightPanel.AIStatusFailed"),
-    executing: t("RightPanel.AIStatusRunning"),
-    failed: t("RightPanel.AIStatusFailed"),
-    in_progress: t("RightPanel.AIStatusRunning"),
-    interrupted: t("RightPanel.AIStatusInterrupted"),
-    pending: t("RightPanel.AIStatusPending"),
-    rejected: t("RightPanel.AIStatusRejected"),
-    reviewing: t("RightPanel.AIStatusReviewing"),
-    running: t("RightPanel.AIStatusRunning"),
-    skipped: t("RightPanel.AIStatusSkipped"),
-    success: t("RightPanel.AIStatusCompleted"),
-    succeeded: t("RightPanel.AIStatusCompleted")
-  };
-  const status = stepStatus(step);
-  return labels[status] || status;
-}
-
-function statusColor(step: ViewStep) {
-  const status = stepStatus(step);
-  if (["completed", "success", "succeeded"].includes(status)) return "success";
-  if (["error", "failed", "rejected"].includes(status)) return "error";
-  if (["awaiting_approval", "awaiting_risk_approval"].includes(status)) return "warning";
-  if (["approved", "auto_approved", "executing", "in_progress", "reviewing", "running"].includes(status)) {
-    return "primary";
-  }
-  return "neutral";
-}
-
-function statusIcon(step: ViewStep) {
-  const color = statusColor(step);
-  if (color === "success") return "i-lucide-circle-check";
-  if (color === "error" || color === "warning") return "i-lucide-circle-alert";
-  if (color === "primary") return "i-lucide-loader-circle";
-  return "i-lucide-circle-dot";
-}
-
-function isStepExpanded(step: ViewStep) {
-  const override = session.value?.expansionOverrides.get(step.key);
-  if (override !== undefined) return override;
-  return ["primary", "error", "warning"].includes(statusColor(step));
-}
-
-function toggleStep(step: ViewStep) {
-  session.value?.expansionOverrides.set(step.key, !isStepExpanded(step));
-}
-
-function riskColor(level: number) {
-  if (level >= 4) return "error";
-  if (level >= 3) return "warning";
-  if (level >= 2) return "info";
-  return "success";
-}
-
-function terminalRiskLabel(level: unknown) {
-  const labels: Record<number, string> = {
-    1: t("RightPanel.AIRiskReadOnly"),
-    2: t("RightPanel.AIRiskLow"),
-    3: t("RightPanel.AIRiskMedium"),
-    4: t("RightPanel.AIRiskHigh")
-  };
-  return labels[Number(level)] || t("RightPanel.AIRisk", { level });
+function setStepExpanded(key: string, expanded: boolean) {
+  session.value?.expansionOverrides.set(key, expanded);
 }
 
 function proposalDecision(item: SqlProposalItem) {
@@ -735,13 +530,6 @@ function sqlAnalysisItems(value: unknown) {
   return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
 }
 
-function formatExecutionDuration(value: unknown) {
-  const durationMs = Number(value);
-  if (!Number.isFinite(durationMs) || durationMs < 0) return "";
-  if (durationMs < 1000) return `${Math.round(durationMs)} ms`;
-  return `${(durationMs / 1000).toFixed(durationMs < 10000 ? 2 : 1)} s`;
-}
-
 function sqlTimingTotal(data: ChenSqlAiTiming) {
   return Number(data.clientDurationMs) || Number(data.durationMs) || 0;
 }
@@ -765,19 +553,17 @@ watch(
     </div>
 
     <template v-else-if="session">
-      <header class="shrink-0 space-y-2 border-b border-default p-3">
-        <div class="flex items-center gap-2">
-          <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-            <UIcon name="i-lucide-bot" class="size-4" />
-          </span>
-          <div class="min-w-0">
-            <div class="text-xs font-semibold text-highlighted">{{ assistantName }}</div>
-            <div class="truncate text-[11px] text-muted">
-              {{ sqlSession ? t("RightPanel.SQLAIHeaderDescription") : t("RightPanel.AIHeaderDescription") }}
-            </div>
-          </div>
-        </div>
-      </header>
+      <AiPresenceHeader
+        :assistant-name="assistantName"
+        :description="headerDescription"
+        :status-label="presenceStatusLabel"
+        :status-tone="presenceStatusTone"
+        :busy="busy"
+        :context-items="contextItems"
+        :run-progress="runProgress"
+        :risk-label="headerRiskLabel"
+        :risk-color="aiRiskColor(highestRiskLevel)"
+      />
 
       <main ref="messagesElement" class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
         <UEmpty
@@ -798,7 +584,7 @@ watch(
             <span
               class="grid size-6 shrink-0 place-items-center rounded-md border border-default bg-elevated text-primary"
             >
-              <UIcon :name="item.role === 'user' ? 'i-lucide-user-round' : 'i-lucide-bot'" class="size-3.5" />
+              <UIcon :name="item.role === 'user' ? 'i-lucide-user-round' : 'i-lucide-sparkles'" class="size-3.5" />
             </span>
             <div class="min-w-0 max-w-[88%]" :class="item.role === 'user' ? 'text-right' : ''">
               <div class="text-[10px] text-muted">
@@ -807,7 +593,7 @@ watch(
               <div
                 class="markdown-body mt-1 rounded-xl border border-default px-2.5 py-2 text-left text-xs"
                 :class="item.role === 'user' ? 'rounded-tr-sm bg-primary/10' : 'rounded-tl-sm bg-elevated'"
-                v-html="renderMarkdown(item.text)"
+                v-html="renderAiMarkdown(item.text)"
               />
             </div>
           </article>
@@ -880,7 +666,7 @@ watch(
               </UBadge>
               <UBadge
                 v-if="Number(item.data.riskLevel) > 0"
-                :color="riskColor(Number(item.data.riskLevel))"
+                :color="aiRiskColor(Number(item.data.riskLevel))"
                 variant="subtle"
                 size="xs"
               >
@@ -922,7 +708,7 @@ watch(
             <div
               v-if="item.data.explanation"
               class="markdown-body border-b border-default p-2.5 text-xs text-muted"
-              v-html="renderMarkdown(String(item.data.explanation))"
+              v-html="renderAiMarkdown(String(item.data.explanation))"
             />
             <div class="grid min-h-0 gap-px bg-[var(--app-border)] sm:grid-cols-2">
               <div class="min-w-0 bg-default">
@@ -968,226 +754,37 @@ watch(
               <UIcon name="i-lucide-clock-3" class="size-3.5 text-primary" />
               <span class="font-medium text-highlighted">{{ t("RightPanel.SQLAITiming") }}</span>
               <span class="ml-auto font-mono tabular-nums text-highlighted">
-                {{ formatExecutionDuration(sqlTimingTotal(item.data)) }}
+                {{ formatAiDuration(sqlTimingTotal(item.data)) }}
               </span>
             </div>
             <div class="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[10px]">
               <span v-if="Number(item.data.modelDurationMs) > 0">
                 {{ t("RightPanel.SQLAIModelDuration") }}
-                · {{ formatExecutionDuration(item.data.modelDurationMs) }}
+                · {{ formatAiDuration(item.data.modelDurationMs) }}
               </span>
               <span v-if="Number(item.data.toolDurationMs) > 0">
                 {{ t("RightPanel.SQLAIToolDuration") }}
-                · {{ formatExecutionDuration(item.data.toolDurationMs) }}
+                · {{ formatAiDuration(item.data.toolDurationMs) }}
               </span>
               <span v-if="Number(item.data.queueDurationMs) >= 1">
                 {{ t("RightPanel.SQLAIQueueDuration") }}
-                · {{ formatExecutionDuration(item.data.queueDurationMs) }}
+                · {{ formatAiDuration(item.data.queueDurationMs) }}
               </span>
             </div>
           </section>
 
-          <section
+          <AiRunPlan
             v-else-if="item.kind === 'plan'"
-            class="overflow-hidden rounded-xl border border-default bg-elevated/60"
-          >
-            <header class="flex items-start gap-2 border-b border-default p-2.5">
-              <span class="grid size-7 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-                <UIcon name="i-lucide-square-terminal" class="size-4" />
-              </span>
-              <div class="min-w-0">
-                <div class="text-[10px] text-muted">
-                  {{ t("RightPanel.AIExecutionPlan") }}
-                </div>
-                <div class="markdown-body compact text-xs" v-html="renderMarkdown(item.summary)" />
-              </div>
-            </header>
-
-            <div class="space-y-1.5 p-2">
-              <article
-                v-for="step in item.steps"
-                :key="step.key"
-                class="overflow-hidden rounded-lg border border-default bg-default"
-              >
-                <button
-                  type="button"
-                  class="grid min-h-10 w-full grid-cols-[20px_minmax(0,1fr)_auto_14px] items-center gap-1.5 px-2 py-1.5 text-left hover:bg-elevated"
-                  @click="toggleStep(step)"
-                >
-                  <span class="grid size-5 place-items-center rounded border border-default text-[10px] text-muted">
-                    {{ step.index }}
-                  </span>
-                  <span class="truncate text-xs font-medium">{{ step.title }}</span>
-                  <UBadge :color="statusColor(step)" variant="subtle" size="xs">
-                    <UIcon
-                      :name="statusIcon(step)"
-                      class="size-3"
-                      :class="statusColor(step) === 'primary' ? 'animate-spin' : ''"
-                    />
-                    {{ statusLabel(step) }}
-                  </UBadge>
-                  <UIcon
-                    :name="isStepExpanded(step) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
-                    class="size-3.5"
-                  />
-                </button>
-
-                <div v-if="isStepExpanded(step)" class="space-y-2 px-2 pb-2 pl-8">
-                  <div
-                    v-if="step.objective"
-                    class="markdown-body text-xs text-muted"
-                    v-html="renderMarkdown(step.objective)"
-                  />
-
-                  <div v-for="execution in step.executions" :key="execution.key" class="space-y-2">
-                    <div v-if="execution.command" class="overflow-hidden rounded-lg border border-default">
-                      <div
-                        class="flex items-center justify-between gap-2 border-b border-default px-2 py-1.5 text-[11px] text-muted"
-                      >
-                        <span>
-                          {{ t("RightPanel.AICommand") }}
-                          <span v-if="step.executions.length > 1">{{ execution.index }}</span>
-                        </span>
-                        <div class="flex flex-wrap justify-end gap-1">
-                          <UBadge :color="riskColor(Number(execution.command.riskLevel))" variant="subtle" size="xs">
-                            {{ terminalRiskLabel(execution.command.riskLevel) }}
-                          </UBadge>
-                          <UBadge color="neutral" variant="subtle" size="xs">
-                            {{ executionLabel(execution.command.execution) }}
-                          </UBadge>
-                          <UBadge
-                            v-if="execution.command.decisionDurationMs !== undefined"
-                            color="neutral"
-                            variant="subtle"
-                            size="xs"
-                          >
-                            {{ t("RightPanel.AIDecisionDuration") }}
-                            {{ formatExecutionDuration(execution.command.decisionDurationMs) }}
-                          </UBadge>
-                          <UBadge
-                            v-if="execution.command.state === 'auto_approved'"
-                            color="success"
-                            variant="subtle"
-                            size="xs"
-                          >
-                            {{ t("RightPanel.AIAutoApproved") }}
-                          </UBadge>
-                        </div>
-                      </div>
-                      <pre
-                        class="max-h-72 overflow-auto whitespace-pre-wrap break-words bg-muted/40 p-2 font-mono text-[11px]"
-                      ><code>{{ execution.command.command }}</code></pre>
-                      <div
-                        v-if="execution.command.rationale"
-                        class="markdown-body px-2 pt-2 text-xs text-muted"
-                        v-html="renderMarkdown(String(execution.command.rationale))"
-                      />
-                      <p
-                        v-if="execution.command.riskReason"
-                        class="flex items-start gap-1.5 px-2 py-2 text-[11px] text-warning"
-                      >
-                        <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
-                        {{ execution.command.riskReason }}
-                      </p>
-
-                      <div
-                        v-if="
-                          execution.command.partType === 'data-approval' &&
-                          !session.decisions.has(String(execution.command.id))
-                        "
-                        class="space-y-2 border-t border-default p-2"
-                      >
-                        <div v-if="session.executionMode === 'auto'" class="flex gap-1.5">
-                          <UButton
-                            size="xs"
-                            color="neutral"
-                            :variant="selectedExecution(execution.command) === 'pty' ? 'solid' : 'soft'"
-                            :label="t('RightPanel.AICurrentPty')"
-                            @click="setExecutionOverride(String(execution.command?.id), 'pty')"
-                          />
-                          <UButton
-                            size="xs"
-                            color="neutral"
-                            :variant="selectedExecution(execution.command) === 'background_exec' ? 'solid' : 'soft'"
-                            :label="t('RightPanel.AIBackgroundExecution')"
-                            :disabled="!session.backgroundExec || execution.command.backgroundEligible === false"
-                            @click="setExecutionOverride(String(execution.command?.id), 'background_exec')"
-                          />
-                        </div>
-                        <div class="flex justify-end gap-1.5">
-                          <UButton
-                            size="xs"
-                            color="neutral"
-                            variant="soft"
-                            :label="t('RightPanel.AIReject')"
-                            @click="decide(execution.command || {}, false)"
-                          />
-                          <UButton
-                            size="xs"
-                            color="primary"
-                            :label="t('RightPanel.AIApprove')"
-                            @click="decide(execution.command || {}, true)"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div v-if="execution.result" class="overflow-hidden rounded-lg border border-default">
-                      <div
-                        class="flex items-center justify-between border-b border-default px-2 py-1.5 text-[11px] text-muted"
-                      >
-                        <span>{{ t("RightPanel.AIExecutionResult") }}</span>
-                        <div class="flex flex-wrap justify-end gap-1">
-                          <UBadge
-                            v-if="execution.result.durationMs !== undefined"
-                            color="neutral"
-                            variant="subtle"
-                            size="xs"
-                          >
-                            {{ t("RightPanel.AIExecutionDuration") }}
-                            {{ formatExecutionDuration(execution.result.durationMs) }}
-                          </UBadge>
-                          <UBadge
-                            v-if="execution.result.exitCode !== undefined && execution.result.exitCode !== null"
-                            color="neutral"
-                            variant="subtle"
-                            size="xs"
-                          >
-                            {{ t("RightPanel.AIExitCode", { code: execution.result.exitCode }) }}
-                          </UBadge>
-                        </div>
-                      </div>
-                      <div
-                        v-if="execution.result.summary"
-                        class="markdown-body p-2 text-xs text-muted"
-                        v-html="renderMarkdown(String(execution.result.summary))"
-                      />
-                      <pre
-                        v-if="execution.result.output"
-                        class="max-h-72 overflow-auto whitespace-pre-wrap break-words bg-muted/40 p-2 font-mono text-[11px]"
-                      ><code>{{ execution.result.output }}</code></pre>
-                      <p
-                        v-if="!execution.result.summary && !execution.result.output"
-                        class="p-2 text-[11px] text-muted"
-                      >
-                        {{ statusLabel(step) }}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div
-                    v-if="step.acl"
-                    class="flex items-start gap-1.5 rounded-lg bg-warning/10 p-2 text-[11px] text-warning"
-                  >
-                    <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
-                    {{ t("RightPanel.AICommandAcl") }}:
-                    {{ aclLabel(step.acl) }}
-                    {{ step.acl.decision?.name || step.acl.name || "" }}
-                  </div>
-                </div>
-              </article>
-            </div>
-          </section>
+            :plan="item"
+            :decisions="session.decisions"
+            :expansion-overrides="session.expansionOverrides"
+            :execution-overrides="session.executionOverrides"
+            :execution-mode="session.executionMode"
+            :background-exec="session.backgroundExec"
+            @decide="decide"
+            @set-execution-override="setExecutionOverride"
+            @set-step-expanded="setStepExpanded"
+          />
 
           <div
             v-else-if="item.kind === 'alert'"
@@ -1209,7 +806,7 @@ watch(
           <span
             class="grid size-6 shrink-0 place-items-center rounded-md border border-default bg-elevated text-primary"
           >
-            <UIcon name="i-lucide-bot" class="size-3.5" />
+            <UIcon name="i-lucide-sparkles" class="size-3.5" />
           </span>
           <div class="min-w-0 max-w-[88%]">
             <div class="text-[10px] text-muted">{{ assistantName }}</div>
@@ -1234,7 +831,7 @@ watch(
               class="mt-1 flex items-center gap-1 font-mono text-[10px] tabular-nums opacity-80"
             >
               <UIcon name="i-lucide-clock-3" class="size-3" />
-              {{ t("RightPanel.SQLAITiming") }} · {{ formatExecutionDuration(sqlElapsedDurationMs) }}
+              {{ t("RightPanel.SQLAITiming") }} · {{ formatAiDuration(sqlElapsedDurationMs) }}
             </span>
           </span>
           <UButton
@@ -1254,67 +851,27 @@ watch(
           />
           <span>{{ runtimeStatusLabel }}</span>
           <span v-if="sqlSession" class="ml-auto font-mono tabular-nums text-highlighted">
-            {{ formatExecutionDuration(sqlElapsedDurationMs) }}
+            {{ formatAiDuration(sqlElapsedDurationMs) }}
           </span>
         </div>
         <p v-if="!sqlSession && !session.backgroundExec && backgroundReasonLabel" class="text-[11px] text-muted">
           {{ backgroundReasonLabel }}
         </p>
-        <div class="relative overflow-hidden rounded-lg bg-[var(--app-input-bg)]">
-          <UTextarea
-            v-model="draft"
-            :rows="2"
-            autoresize
-            :maxrows="5"
-            :placeholder="sqlSession ? t('RightPanel.SQLAIInputPlaceholder') : t('RightPanel.AIInputPlaceholder')"
-            variant="none"
-            class="block w-full"
-            :disabled="busy"
-            :ui="{ base: 'min-h-24 rounded-lg pb-11 text-xs' }"
-            @keydown.enter.exact="handleSubmitKeydown"
-          />
-          <div class="absolute inset-x-2 bottom-2 flex items-center gap-1.5">
-            <div v-if="!sqlSession" class="flex min-w-0 flex-1 items-center gap-1">
-              <USelect
-                size="xs"
-                variant="soft"
-                icon="i-lucide-shield-check"
-                class="min-w-0 max-w-36"
-                :model-value="session.approvalThreshold"
-                :items="thresholdOptions"
-                value-key="value"
-                label-key="label"
-                :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
-                @update:model-value="changeApprovalThreshold"
-              />
-              <USelect
-                size="xs"
-                variant="soft"
-                icon="i-lucide-sparkles"
-                class="min-w-0 max-w-32"
-                :model-value="session.executionMode"
-                :items="modeOptions"
-                value-key="value"
-                label-key="label"
-                :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
-                @update:model-value="changeExecutionMode"
-              />
-            </div>
-            <UTooltip :text="actionLabel">
-              <UButton
-                class="ml-auto"
-                size="xs"
-                color="primary"
-                variant="solid"
-                :icon="busy ? 'i-lucide-square' : 'i-lucide-send'"
-                :ui="{ leadingIcon: busy ? 'size-2.5 fill-current stroke-none' : undefined }"
-                :aria-label="actionLabel"
-                :disabled="!busy && !draft.trim()"
-                @click="busy ? interrupt() : submit()"
-              />
-            </UTooltip>
-          </div>
-        </div>
+        <AiComposer
+          v-model="draft"
+          :sql="Boolean(sqlSession)"
+          :busy="busy"
+          :action-label="actionLabel"
+          :placeholder="sqlSession ? t('RightPanel.SQLAIInputPlaceholder') : t('RightPanel.AIInputPlaceholder')"
+          :approval-threshold="session.approvalThreshold"
+          :execution-mode="session.executionMode"
+          :threshold-options="thresholdOptions"
+          :mode-options="modeOptions"
+          @submit="submit"
+          @interrupt="interrupt"
+          @update-approval-threshold="changeApprovalThreshold"
+          @update-execution-mode="changeExecutionMode"
+        />
       </footer>
     </template>
   </div>
