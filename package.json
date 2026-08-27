@@ -8,7 +8,7 @@
   "description": "JumpServer desktop application",
   "author": "JumpServer",
   "license": "MIT",
-  "main": "electron/main.mjs",
+  "main": "electron/bootstrap.mjs",
   "engines": {
     "node": ">=22"
   },

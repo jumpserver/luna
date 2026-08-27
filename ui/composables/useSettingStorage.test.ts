@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FONT_SIZE, MAX_FONT_SIZE, MIN_FONT_SIZE, normalizeFontSize } from "~/composables/useSettingStorage";
+import {
+  DEFAULT_FONT_SIZE,
+  DEFAULT_STATE,
+  MAX_FONT_SIZE,
+  MIN_FONT_SIZE,
+  normalizeFontSize
+} from "~/composables/useSettingStorage";
+
+describe("user setting defaults", () => {
+  it("enables terminal command suggestions for existing settings without the field", () => {
+    expect(DEFAULT_STATE.terminalCommandSuggestionsEnabled).toBe(true);
+  });
+});
 
 describe("normalizeFontSize", () => {
   it("uses 13px when a stored value is missing or invalid", () => {

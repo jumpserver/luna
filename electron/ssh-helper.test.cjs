@@ -15,3 +15,12 @@ test("rejects malformed SSH helper arguments", () => {
   assert.throws(() => parseOptions(["user@host", "-p", "70000"]), /invalid SSH port/);
   assert.throws(() => parseOptions(["user@host", "--unknown"]), /unsupported SSH helper argument/);
 });
+
+test("uses the short Electron bootstrap command in packaged builds", async () => {
+  const { LocalApplicationLauncher } = await import("./local-app-launcher.mjs");
+  const launcher = new LocalApplicationLauncher({ isPackaged: true }, "", null, null);
+  const command = launcher.helperCommand();
+
+  assert.match(command, / --ssh-helper$/);
+  assert.doesNotMatch(command, /ELECTRON_RUN_AS_NODE|ssh-helper\.cjs/);
+});

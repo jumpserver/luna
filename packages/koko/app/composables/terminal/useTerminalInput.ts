@@ -33,6 +33,9 @@ export function useKokoTerminalInput(options: {
   sendToHost: (event: HOST_MESSAGE_TYPE, data: unknown) => void;
   sendMittEvent: (event: TerminalMittEvent) => void;
   validateClipboardText: (direction: ClipboardDirection, text: string) => boolean;
+  onData?: (data: string) => void;
+  onExternalData?: () => void;
+  onKeyEvent?: (event: KeyboardEvent) => boolean | undefined;
 }) {
   const cleanup: Array<() => void> = [];
 
@@ -98,6 +101,7 @@ export function useKokoTerminalInput(options: {
       const socket = options.socket.value;
       if (!socket || options.inputLocked() || !options.isSocketOpen(socket)) return;
       options.lastSendTime.value = new Date();
+      options.onData?.(data);
       const isZmodemInterrupt = options.isZmodemActive() && data.length === 1 && data.charCodeAt(0) === 3;
       socket.send(
         formatMessage(
@@ -114,6 +118,8 @@ export function useKokoTerminalInput(options: {
       options.selectionText.value = terminal.getSelection() || "";
     });
     terminal.attachCustomKeyEventHandler((event) => {
+      const customResult = options.onKeyEvent?.(event);
+      if (customResult !== undefined) return customResult;
       if (event.key === KeyboardKey.Enter && event.isComposing) return false;
       if (
         event.altKey &&
@@ -163,6 +169,7 @@ export function useKokoTerminalInput(options: {
         return false;
       }
       if (!options.validateClipboardText("paste", text)) return false;
+      options.onExternalData?.();
       socket.send(formatMessage(options.terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, text));
       return true;
     },

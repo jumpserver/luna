@@ -23,6 +23,7 @@ import {
   connectKokoTerminalAiSession,
   disconnectKokoTerminalAiSession,
   handleKokoTerminalAiMessage,
+  isKokoTerminalAiBusy,
   isKokoTerminalAiInputLocked,
   registerKokoTerminalAiSession,
   unregisterKokoTerminalAiSession
@@ -30,6 +31,7 @@ import {
 import { useKokoTerminalBinaryHandler } from "#koko/composables/terminal/useTerminalBinaryHandler";
 import { useKokoTerminalEvents } from "#koko/composables/terminal/useTerminalEvents";
 import { useKokoTerminalHeartbeat } from "#koko/composables/terminal/useTerminalHeartbeat";
+import { useKokoTerminalCommandSuggestions } from "#koko/composables/terminal/useTerminalCommandSuggestions";
 import { useKokoTerminalInput } from "#koko/composables/terminal/useTerminalInput";
 import {
   createKokoTerminalMessageHandlers,
@@ -38,7 +40,9 @@ import {
 import { useKokoTerminalTransport } from "#koko/composables/terminal/useTerminalTransport";
 import { useKokoZmodem } from "#koko/composables/terminal/useZmodem";
 import {
+  registerKokoTerminalDataSender,
   registerKokoTerminalSession,
+  unregisterKokoTerminalDataSender,
   unregisterKokoTerminalSession
 } from "#koko/composables/useTerminalSessionRegistry";
 import { useKokoWsUrl } from "#koko/composables/wsUrl";
@@ -46,7 +50,7 @@ import { useKokoConnectionStore } from "#koko/stores/connection";
 import { useKokoTerminalSettingsStore } from "#koko/stores/terminalSettings";
 import { getDefaultTerminalConfig } from "#koko/utils/guard";
 import { appTerminalTheme, terminalTheme } from "#koko/utils/terminalTheme";
-import { formatMessage } from "#koko/utils/terminalUtils";
+import { formatMessage, preprocessInput } from "#koko/utils/terminalUtils";
 
 const isSocketOpen = (socket: WebSocket) => socket.readyState === WebSocket.OPEN;
 
@@ -85,7 +89,7 @@ export const useKokoTerminalSocket = () => {
   const lastReceiveTime = ref(new Date());
   const onlineUsers = ref<OnlineUser[]>([]);
   const userOptions = ref<ShareUserOptions[]>([]);
-  const terminalRef = ref<Terminal | null>(null);
+  const terminalRef = shallowRef<Terminal | null>(null);
   const connectionError = ref("");
   const sentryRef = ref<KokoZmodemSentry | null>(null);
   const socketRef = transport.socket;
@@ -171,6 +175,44 @@ export const useKokoTerminalSocket = () => {
     if (key === "ArrowLeft") sendToHost(HOST_MESSAGE_TYPE.KEYEVENT, "alt+shift+left");
   }, 500);
 
+  const terminalInputLocked = () => {
+    const paneId = unref(sessionCtxRef)?.tabId || "";
+    return Boolean(paneId && isKokoTerminalAiInputLocked(paneId));
+  };
+  const terminalAiBusy = () => {
+    const paneId = unref(sessionCtxRef)?.tabId || "";
+    return Boolean(paneId && isKokoTerminalAiBusy(paneId));
+  };
+  const sendSuggestionData = (data: string) => {
+    const socket = socketRef.value;
+    if (!socket || !isSocketOpen(socket) || terminalAiBusy() || zmodem.isActiveSession()) return false;
+    lastSendTime.value = new Date();
+    socket.send(
+      formatMessage(
+        terminalId.value,
+        FORMATTER_MESSAGE_TYPE.TERMINAL_DATA,
+        preprocessInput(data, terminalSettingsStore.getConfig)
+      )
+    );
+    sendToHost(HOST_MESSAGE_TYPE.INPUT_ACTIVE, "");
+    return true;
+  };
+  const commandSuggestions = useKokoTerminalCommandSuggestions({
+    terminal: terminalRef,
+    container: containerRef,
+    send: sendSuggestionData,
+    disabled: () => terminalAiBusy() || zmodem.isActiveSession() || !socketRef.value || !isSocketOpen(socketRef.value)
+  });
+  const sendExternalTerminalData = (data: string) => {
+    commandSuggestions.invalidate();
+    if (!data) return false;
+    const socket = socketRef.value;
+    if (!socket || !isSocketOpen(socket) || terminalInputLocked() || zmodem.isActiveSession()) return false;
+    lastSendTime.value = new Date();
+    socket.send(formatMessage(terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, data));
+    return true;
+  };
+
   const input = useKokoTerminalInput({
     container: containerRef,
     terminal: terminalRef,
@@ -187,16 +229,16 @@ export const useKokoTerminalSocket = () => {
     getTerminalConfig: () => terminalSettingsStore.getConfig,
     onResize: debouncedResize,
     onHostKey: debouncedSendHostKey,
-    inputLocked: () => {
-      const paneId = unref(sessionCtxRef)?.tabId || "";
-      return Boolean(paneId && isKokoTerminalAiInputLocked(paneId));
-    },
+    inputLocked: terminalInputLocked,
     addErrorToast,
     translate: t,
     sendHostEvent,
     sendToHost,
     sendMittEvent,
-    validateClipboardText
+    validateClipboardText,
+    onData: commandSuggestions.handleData,
+    onExternalData: commandSuggestions.invalidate,
+    onKeyEvent: commandSuggestions.handleKeyEvent
   });
 
   let lastMessage = "";
@@ -245,6 +287,7 @@ export const useKokoTerminalSocket = () => {
           terminalId: id,
           terminal: terminalRef.value || undefined
         });
+        registerKokoTerminalDataSender(tabId, sendExternalTerminalData);
         registerKokoTerminalAiSession(tabId, socket, id);
         registerKokoLinuxMetricsSession(tabId, { socket, terminalId: id });
       }
@@ -279,6 +322,15 @@ export const useKokoTerminalSocket = () => {
       if (tabId) handleKokoTerminalAiMessage(tabId, message);
     }
   });
+  terminalMessageHandlers.CHAT_MESSAGE = (message) => {
+    const tabId = unref(sessionCtxRef)?.tabId;
+    if (!tabId || !message.data) return;
+    try {
+      handleKokoTerminalAiMessage(tabId, JSON.parse(message.data));
+    } catch {
+      // Ignore malformed chat payloads from legacy JSON frames.
+    }
+  };
 
   const listenSocketEvent = () => {
     const socket = socketRef.value;
@@ -292,16 +344,14 @@ export const useKokoTerminalSocket = () => {
       return !paneId || !isKokoTerminalAiInputLocked(paneId);
     });
 
-    socket.onopen = () => {
+    const markSocketOpen = () => {
       socketOpened = true;
       connectionError.value = "";
       if (paneId) connectKokoTerminalAiSession(paneId, socket);
       heartbeat.start();
     };
 
-    socket.onerror = reportInitialConnectionFailure;
-
-    socket.onclose = () => {
+    const handleSocketClose = () => {
       heartbeat.stop();
       zmodem.abortActiveSession();
       if (paneId) disconnectKokoTerminalAiSession(paneId, socket);
@@ -314,18 +364,28 @@ export const useKokoTerminalSocket = () => {
       terminalRef.value.write(`\x1B[31m${t("koko.terminal.websocketClosed")}\x1B[0m`);
     };
 
-    socket.onmessage = async (message: MessageEvent) => {
-      await new Promise<void>((resolve) => setTimeout(resolve, 1));
+    const handleSocketMessage = async (message: MessageEvent) => {
       lastReceiveTime.value = new Date();
       try {
         if (message.data instanceof ArrayBuffer) messageHandler.handleEnvelopeMessage(message.data);
-        else if (typeof message.data === "string") messageHandler.handleRawMessage(message.data);
+        else if (message.data instanceof Blob) {
+          messageHandler.handleEnvelopeMessage(new Uint8Array(await message.data.arrayBuffer()));
+        } else if (typeof message.data === "string") messageHandler.handleRawMessage(message.data);
       } catch (error) {
         addErrorToast({
           title: error instanceof Error ? error.message : t("koko.terminal.invalidMessage")
         });
       }
     };
+
+    // VueUse useWebSocket owns socket.on* handlers. Use addEventListener so
+    // capability/chat frames are not dropped when those handlers are replaced.
+    socket.addEventListener("open", markSocketOpen);
+    socket.addEventListener("error", reportInitialConnectionFailure);
+    socket.addEventListener("close", handleSocketClose);
+    socket.addEventListener("message", handleSocketMessage);
+
+    if (socket.readyState === WebSocket.OPEN) markSocketOpen();
   };
 
   const createTerminal = () => {
@@ -359,7 +419,7 @@ export const useKokoTerminalSocket = () => {
     terminal.loadAddon(search);
     terminal.loadAddon(webgl);
 
-    terminalRef.value = terminal;
+    terminalRef.value = markRaw(terminal);
     fitAddon = fit;
     searchAddon.value = search;
   };
@@ -400,9 +460,9 @@ export const useKokoTerminalSocket = () => {
     window.addEventListener("right-panel-resize-end", handleRightPanelResizeEnd);
     createTerminal();
     createWebSocket();
+    listenSocketEvent();
     observeAppTheme();
     nextTick(() => {
-      listenSocketEvent();
       input.start();
       terminalRef.value?.open(containerRef.value!);
       fitToContainer();
@@ -418,6 +478,7 @@ export const useKokoTerminalSocket = () => {
     if (warningInterval.value) clearInterval(warningInterval.value);
     const tabId = unref(sessionCtxRef)?.tabId;
     if (tabId) {
+      unregisterKokoTerminalDataSender(tabId);
       unregisterKokoTerminalSession(tabId);
       unregisterKokoTerminalAiSession(tabId, socketRef.value);
       unregisterKokoLinuxMetricsSession(tabId, socketRef.value);
@@ -439,6 +500,7 @@ export const useKokoTerminalSocket = () => {
 
   return {
     searchAddon,
+    commandSuggestions,
     connectionError,
     containerRef,
     contextMenuPosition,

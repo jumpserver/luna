@@ -222,7 +222,7 @@ export function createKokoTerminalMessageHandlers(options: {
 
       options.terminalId.value = terminalId;
       options.emitTerminalConnect(terminalId);
-      options.connectionStore.setConnectionState({ socket, terminal, terminalId });
+      options.connectionStore.setConnectionState({ socket, terminal: markRaw(terminal), terminalId });
       options.onConnected(terminalId, socket, terminal);
     },
     [MESSAGE_TYPE.TERMINAL_ERROR]: (message) => {

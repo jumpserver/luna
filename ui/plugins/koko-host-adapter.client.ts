@@ -5,6 +5,13 @@ import OrganizationSelector from "~/components/Header/OrganizationSelector.vue";
 import SideBarAssetTree from "~/components/SideBar/assetTree.vue";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
 import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
+import {
+  clearTerminalCommandHistory,
+  getAuthenticatedTerminalCommandHistoryScope,
+  loadTerminalCommandHistory,
+  recordTerminalCommandHistory,
+  subscribeTerminalCommandHistory
+} from "~/composables/useTerminalCommandHistory";
 import { useWorkspaceConnectors } from "~/composables/useWorkspaceConnectors";
 import { clearWorkspaceSessionDetails, setWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 import { registerWorkspaceSessionCloseGuard, useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
@@ -24,8 +31,8 @@ export default defineNuxtPlugin((nuxtApp) => {
   const { canSplitWorkspace, markSessionConnected, markSessionFailed, setActiveSession, splitWorkspace, tabs } =
     useWorkspaceTabs();
   const userInfoStore = useUserInfoStore();
-  const { currentUser } = storeToRefs(userInfoStore);
-  const { codeFontSize } = useSettingManager();
+  const { currentSite, currentUser, loggedIn } = storeToRefs(userInfoStore);
+  const { codeFontSize, terminalCommandSuggestionsEnabled } = useSettingManager();
 
   const prepareSftpAsset = async (asset: KokoSftpAsset) => {
     const detail = await getAssetDetailRequest(asset.id, currentUser.value?.org?.id || "");
@@ -94,6 +101,19 @@ export default defineNuxtPlugin((nuxtApp) => {
       setActiveSession(workspaceTab.id);
     },
     localFiles: desktopFs,
+    terminalCommandSuggestions: {
+      enabled: () => terminalCommandSuggestionsEnabled.value,
+      scope: () =>
+        getAuthenticatedTerminalCommandHistoryScope({
+          authenticated: loggedIn.value,
+          site: currentSite.value,
+          userId: currentUser.value?.userId || ""
+        }),
+      loadHistory: loadTerminalCommandHistory,
+      recordHistory: recordTerminalCommandHistory,
+      clearHistory: clearTerminalCommandHistory,
+      subscribeHistory: subscribeTerminalCommandHistory
+    },
     sftp: {
       organizationSelector: OrganizationSelector,
       assetTree: SideBarAssetTree,

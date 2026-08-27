@@ -6,7 +6,7 @@
   "description": "Electron runtime for JumpServer",
   "author": "JumpServer",
   "type": "module",
-  "main": "main.mjs",
+  "main": "bootstrap.mjs",
   "scripts": {
     "postinstall": "node ../scripts/fix-node-pty-permissions.mjs"
   },

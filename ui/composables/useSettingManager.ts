@@ -302,6 +302,11 @@ export const useSettingManager = () => {
     persist({ backspaceAsCtrlH: state.backspaceAsCtrlH });
   };
 
+  const setTerminalCommandSuggestionsEnabled = (enabled: boolean) => {
+    state.terminalCommandSuggestionsEnabled = !!enabled;
+    persist({ terminalCommandSuggestionsEnabled: state.terminalCommandSuggestionsEnabled });
+  };
+
   const setKeyboardLayoutPreference = (layout: string) => {
     state.keyboardLayout = layout || "en-us-qwerty";
     persist({ keyboardLayout: state.keyboardLayout });
@@ -375,6 +380,7 @@ export const useSettingManager = () => {
     setCharsetPreference,
     setRdpResolutionPreference,
     setBackspacePreference,
+    setTerminalCommandSuggestionsEnabled,
     setKeyboardLayoutPreference,
     setRdpClientOptionPreference,
     setRdpColorQualityPreference,

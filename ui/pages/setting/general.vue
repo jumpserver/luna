@@ -2,7 +2,12 @@
 import type { CharsetType, LangType, ResolutionType } from "~/types";
 
 import { useSettingManager } from "~/composables/useSettingManager";
+import {
+  clearTerminalCommandHistory,
+  getAuthenticatedTerminalCommandHistoryScope
+} from "~/composables/useTerminalCommandHistory";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface FfmpegPluginStatus {
   installed: boolean;
@@ -30,16 +35,29 @@ definePageMeta({
 
 const { t, locales, locale } = useI18n();
 const settingManager = useSettingManager();
-const toast = useToast();
 const { addErrorToast } = useErrorToast();
+const userInfoStore = useUserInfoStore();
+const { currentSite, currentUser, loggedIn } = storeToRefs(userInfoStore);
+const commandHistoryScope = computed(() =>
+  getAuthenticatedTerminalCommandHistoryScope({
+    authenticated: loggedIn.value,
+    site: currentSite.value,
+    userId: currentUser.value?.userId || ""
+  })
+);
+const commandHistoryConfirmOpen = ref(false);
+const clearingCommandHistory = ref(false);
+const toast = useToast();
 const {
   setLang,
   charset,
   rdpResolution,
   backspaceAsCtrlH,
+  terminalCommandSuggestionsEnabled,
   setCharsetPreference,
   setRdpResolutionPreference,
-  setBackspacePreference
+  setBackspacePreference,
+  setTerminalCommandSuggestionsEnabled
 } = settingManager;
 
 const languageItems = computed<LangItem[]>(() => {
@@ -179,6 +197,24 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => unlistenFfmpegProgress?.());
+
+const commandSuggestionsEnabled = computed<boolean>({
+  get: () => terminalCommandSuggestionsEnabled.value ?? true,
+  set: (value: boolean) => setTerminalCommandSuggestionsEnabled(!!value)
+});
+
+async function clearCommandHistory() {
+  const scope = commandHistoryScope.value;
+  if (!scope || clearingCommandHistory.value) return;
+  clearingCommandHistory.value = true;
+  try {
+    await clearTerminalCommandHistory(scope);
+    commandHistoryConfirmOpen.value = false;
+    toast.add({ title: t("Setting.TerminalCommandHistoryCleared"), color: "success" });
+  } finally {
+    clearingCommandHistory.value = false;
+  }
+}
 </script>
 
 <template>
@@ -223,6 +259,26 @@ onBeforeUnmount(() => unlistenFfmpegProgress?.());
           <p class="mt-0.5 text-xs leading-5 text-muted">{{ t("Setting.TerminalBackspaceDescription") }}</p>
         </div>
         <USwitch v-model="selectedEnabled" :aria-label="t('Setting.TerminalBackspace')" />
+      </div>
+
+      <div class="flex items-center justify-between gap-6 px-4 py-3">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-highlighted">{{ t("Setting.TerminalCommandSuggestions") }}</p>
+          <p class="mt-0.5 text-xs leading-5 text-muted">
+            {{ t("Setting.TerminalCommandSuggestionsDescription") }}
+          </p>
+        </div>
+        <div class="flex shrink-0 items-center gap-2">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :disabled="!commandHistoryScope"
+            :label="t('Setting.ClearTerminalCommandHistory')"
+            @click="commandHistoryConfirmOpen = true"
+          />
+          <USwitch v-model="commandSuggestionsEnabled" :aria-label="t('Setting.TerminalCommandSuggestions')" />
+        </div>
       </div>
 
       <div class="flex items-center justify-between gap-6 px-4 py-3">
@@ -290,5 +346,28 @@ onBeforeUnmount(() => unlistenFfmpegProgress?.());
         <span class="w-10 text-right text-xs tabular-nums text-muted">{{ ffmpegProgress }}%</span>
       </div>
     </UCard>
+
+    <UModal
+      v-model:open="commandHistoryConfirmOpen"
+      :title="t('Setting.ClearTerminalCommandHistory')"
+      :description="t('Setting.ClearTerminalCommandHistoryConfirm')"
+    >
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            :label="t('Common.Cancel')"
+            @click="commandHistoryConfirmOpen = false"
+          />
+          <UButton
+            color="error"
+            :loading="clearingCommandHistory"
+            :label="t('Common.Confirm')"
+            @click="clearCommandHistory"
+          />
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>

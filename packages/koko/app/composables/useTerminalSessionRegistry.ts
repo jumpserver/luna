@@ -97,6 +97,10 @@ export function unregisterKokoTerminalDataSender(tabId: string) {
   terminalDataSenders.delete(tabId);
 }
 
+export function hasKokoTerminalDataSender(tabId: string) {
+  return terminalDataSenders.has(tabId);
+}
+
 export function sendKokoTerminalData(tabId: string, data: string) {
   if (isKokoTerminalAiInputLocked(tabId)) return false;
 

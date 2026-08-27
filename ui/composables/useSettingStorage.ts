@@ -58,6 +58,7 @@ export interface UserSettingPersistedState {
   charset: CharsetType;
   rdpResolution: ResolutionType;
   backspaceAsCtrlH: boolean;
+  terminalCommandSuggestionsEnabled: boolean;
   keyboardLayout: string;
   rdpClientOption: string[];
   rdpColorQuality: string;
@@ -71,7 +72,7 @@ const STORE_PATH = "user-setting.json";
 const STORE_KEY = "state";
 const WEB_STORE_KEY = "jumpserver-client:user-setting";
 
-const DEFAULT_STATE: UserSettingPersistedState = {
+export const DEFAULT_STATE: UserSettingPersistedState = {
   language: "system",
   collapse: false,
   statusBarVisible: true,
@@ -94,6 +95,7 @@ const DEFAULT_STATE: UserSettingPersistedState = {
   charset: "default",
   rdpResolution: "auto",
   backspaceAsCtrlH: false,
+  terminalCommandSuggestionsEnabled: true,
   keyboardLayout: "en-us-qwerty",
   rdpClientOption: [],
   rdpColorQuality: "32",

@@ -126,7 +126,23 @@ async function installSftpBackend(page: Page): Promise<MockSftpServer> {
     const { pathname } = new URL(request.url());
     let body: unknown;
 
-    if (pathname.includes("/nodes/children-with-assets/")) {
+    if (pathname.includes("/users/profile/permissions")) {
+      body = {
+        workbench_orgs: [{ id: "org-1", name: "Demo Org", is_root: false, is_default: true, is_system: false }]
+      };
+    } else if (pathname.includes("/users/profile") || pathname === "/api/v1/profile/") {
+      body = {
+        id: "user-1",
+        name: "SFTP Tester",
+        username: "tester",
+        org_id: "org-1",
+        org_name: "Demo Org"
+      };
+    } else if (pathname.includes("/settings/public")) {
+      body = { SECURITY_COMMAND_EXECUTION: true };
+    } else if (pathname.includes("/orgs/orgs/current")) {
+      body = { id: "org-1", name: "Demo Org", comment: "" };
+    } else if (pathname.includes("/nodes/children-with-assets/")) {
       body = [
         {
           id: "asset-1",
@@ -347,5 +363,14 @@ test.describe("koko SFTP workbench", () => {
       { command: "mkdir", data: { path: "/home/tester/artifacts" } },
       { command: "rm", data: { path: "/home/tester/release.txt" } }
     ]);
+  });
+
+  test("opens an empty transfer center from the file workbench", async ({ page }) => {
+    await installSftpBackend(page);
+    await openSftpWorkbench(page);
+
+    await page.getByRole("button", { name: "Transfer center" }).click();
+    await expect(page.getByRole("heading", { name: "Transfer center" })).toBeVisible();
+    await expect(page.getByText("No file transfers", { exact: true })).toBeVisible();
   });
 });
