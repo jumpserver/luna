@@ -128,6 +128,7 @@ export class LocalApplicationLauncher {
 
   helperCommand() {
     const executable = shellQuote(process.execPath);
+    if (this.app.isPackaged) return `${executable} --ssh-helper`;
     const script = shellQuote(this.helperPath());
     return process.platform === "win32"
       ? `set "ELECTRON_RUN_AS_NODE=1"&& ${executable} ${script}`
