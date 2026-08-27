@@ -1,7 +1,6 @@
-# Electron migration shell
+# Electron desktop runtime
 
-This directory contains the parallel Electron runtime used while the existing
-Tauri client remains releasable.
+This directory contains the JumpServer Client desktop runtime.
 
 Run the current development shell with:
 
@@ -11,8 +10,7 @@ pnpm electron:dev
 
 The launcher allocates independent Nuxt and HMR ports, starts the renderer, and
 then opens Electron. The preload keeps context isolation and the Chromium
-sandbox enabled. It exposes a deliberately narrow compatibility layer for the
-Tauri JavaScript APIs already used by the UI.
+sandbox enabled. It exposes a deliberately narrow desktop bridge to the UI.
 
 Currently migrated:
 

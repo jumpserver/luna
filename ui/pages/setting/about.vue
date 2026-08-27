@@ -31,7 +31,7 @@ onMounted(async () => {
   } catch {}
 
   try {
-    // 运行时读取 Tauri productName，避免只依赖 VITE_APP_NAME 导致定制构建的 About 页面显示为空。
+    // 运行时读取 Electron productName，避免只依赖 VITE_APP_NAME 导致定制构建的 About 页面显示为空。
     const runtimeAppName = (await desktopApp.getName()).trim();
     if (runtimeAppName) {
       appName.value = normalizeAppName(runtimeAppName);

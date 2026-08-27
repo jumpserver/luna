@@ -9,7 +9,7 @@ const executable = process.platform === "win32" ? "jms-transcode.exe" : "jms-tra
 const rustTarget = process.env.JMS_ELECTRON_RUST_TARGET?.trim();
 const transcodeSource = path.join(
   projectRoot,
-  "src-tauri",
+  "native",
   "target",
   ...(rustTarget ? [rustTarget] : []),
   "release",
@@ -30,12 +30,15 @@ await Promise.all([
 await Promise.all([
   cp(transcodeSource, path.join(stagingRoot, "bin", executable)),
   cp(path.join(projectRoot, "plugins", platform), path.join(stagingRoot, "plugins", platform), { recursive: true }),
-  cp(path.join(projectRoot, "src-tauri", "resources", "bin"), path.join(stagingRoot, "resources", "bin"), {
+  cp(path.join(projectRoot, "native", "resources", "bin"), path.join(stagingRoot, "resources", "bin"), {
     recursive: true
   }),
-  cp(path.join(projectRoot, "src-tauri", "icons", "icon.png"), path.join(stagingRoot, "icons", "icon.png")),
-  cp(path.join(projectRoot, "src-tauri", "icons", "32x32.png"), path.join(stagingRoot, "icons", "32x32.png")),
-  cp(path.join(projectRoot, "src-tauri", "icons", "tray-mac.png"), path.join(stagingRoot, "icons", "tray-mac.png"))
+  cp(path.join(projectRoot, "electron", "assets", "icons", "icon.png"), path.join(stagingRoot, "icons", "icon.png")),
+  cp(path.join(projectRoot, "electron", "assets", "icons", "32x32.png"), path.join(stagingRoot, "icons", "32x32.png")),
+  cp(
+    path.join(projectRoot, "electron", "assets", "icons", "tray-mac.png"),
+    path.join(stagingRoot, "icons", "tray-mac.png")
+  )
 ]);
 if (process.platform !== "win32") await chmod(path.join(stagingRoot, "bin", executable), 0o755);
 

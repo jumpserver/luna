@@ -35,7 +35,7 @@ status footer
    - Initially reuse Koko connector pages through iframe URLs.
 
 5. Asset tree parity
-   - Move the current desktop asset tree out of Tauri assumptions.
+   - Move the current desktop asset tree out of Electron assumptions.
    - Add Luna-specific organization, async tree loading, and tree filter behavior through platform services.
 
 6. Feature migration

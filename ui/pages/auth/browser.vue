@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
+
 import { desktopClipboard, desktopInvoke, desktopListen, desktopOpener } from "~/shared/desktop/bridge";
 
 definePageMeta({
@@ -14,7 +15,7 @@ const { t } = useI18n();
 const { userTheme } = useThemeAdapter();
 
 const url = ref<string | null>((route.query.auth_url as string) || null);
-const unlistenAuth = ref<UnlistenFn | null>(null);
+const unlistenAuth = ref<DesktopUnlistenFn | null>(null);
 const didCancel = ref(false);
 
 const cardBgClass = computed(() =>

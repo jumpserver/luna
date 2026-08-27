@@ -222,12 +222,12 @@ body,
   overflow: hidden;
 }
 
-[data-tauri-drag-region] {
+[data-desktop-drag-region] {
   -webkit-app-region: drag;
 }
 
-[data-tauri-drag-region="false"],
-[data-tauri-drag-region] :is(a, button, input, select, textarea, [role="button"], [contenteditable="true"]) {
+[data-desktop-drag-region="false"],
+[data-desktop-drag-region] :is(a, button, input, select, textarea, [role="button"], [contenteditable="true"]) {
   -webkit-app-region: no-drag;
 }
 

@@ -1,216 +1,198 @@
-# build.yml
-
 name: Build and Release Client
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version number (e.g., v1.0.0)"
+        description: "Version number (e.g., v4.1.2)"
         required: true
         type: string
-      build_debug:
-        description: Build debug version
-        required: false
-        default: false
-        type: boolean
       product_name:
-        description: "Custom product name for manual builds (e.g., MyClient)"
+        description: "Custom product name for manual builds"
         required: false
         default: ""
         type: string
   push:
-    branches:
-      - master
-    tags:
-      - "v*" # 只有正式版本标签才触发构建
+    tags: ["v*"]
 
 env:
-  VERSION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref_name }}
+  VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  create-release-draft:
-    name: create latest.json
+  quality:
+    name: validate shared application
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
-    outputs:
-      release-draft-created: ${{ steps.create-release-draft.outputs.release-draft-created }}
-
     steps:
-      - name: Check out git repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Generate latest.json
-        shell: bash
-        run: |
-          echo '{
-            "version": "${{ env.VERSION }}",
-            "notes": "Release ${{ env.VERSION }}",
-            "pub_date": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
-            "platforms": {
-              "darwin-x86_64": {
-                "signature": "",
-                "url": "https://github.com/jumpserver/clients/releases/download/${{ env.VERSION }}/JumpServerClient_${{ env.VERSION }}_x86_64.dmg"
-              },
-              "darwin-aarch64": {
-                "signature": "",
-                "url": "https://github.com/jumpserver/clients/releases/download/${{ env.VERSION }}/JumpServerClient_${{ env.VERSION }}_aarch64.dmg"
-              },
-              "windows-x86_64": {
-                "signature": "",
-                "url": "https://github.com/jumpserver/clients/releases/download/${{ env.VERSION }}/JumpServerClient_${{ env.VERSION }}_x64.exe"
-              },
-              "windows-x86_64-msi": {
-                "signature": "",
-                "url": "https://github.com/jumpserver/clients/releases/download/${{ env.VERSION }}/JumpServerClient_${{ env.VERSION }}_x64.msi"
-              }
-            }
-          }' > latest.json
-
-      - name: Upload latest.json to release
-        uses: softprops/action-gh-release@v1
+      - uses: pnpm/action-setup@v4
         with:
-          tag_name: ${{ env.VERSION }}
-          files: latest.json
-          fail_on_unmatched_files: true
-          draft: true
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate frontend
+        run: pnpm typecheck && pnpm lint:check && pnpm test
 
   build:
-    name: build tauri app (${{ matrix.target || matrix.platform }})
-    permissions:
-      contents: write
+    name: package ${{ matrix.name }}
+    needs: quality
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-latest # for Arm based macs (M1 and above).
-            target: aarch64-apple-darwin
-          - platform: macos-latest # for Intel based macs.
-            target: x86_64-apple-darwin
-          - platform: ubuntu-22.04 # for Tauri v1 you could replace this with ubuntu-20.04.
-            target: ""
-          - platform: ubuntu-22.04-arm
-            target: ""
-          - platform: windows-latest
-            target: ""
-
-    runs-on: ${{ matrix.platform }}
+          - name: macOS-arm64
+            os: macos-latest
+            rust_target: aarch64-apple-darwin
+            builder_args: --mac --arm64
+          - name: macOS-x64
+            os: macos-latest
+            rust_target: x86_64-apple-darwin
+            builder_args: --mac --x64
+          - name: Linux-x64
+            os: ubuntu-22.04
+            rust_target: x86_64-unknown-linux-gnu
+            builder_args: --linux --x64
+          - name: Linux-arm64
+            os: ubuntu-22.04-arm
+            rust_target: aarch64-unknown-linux-gnu
+            builder_args: --linux --arm64
+          - name: Windows-x64
+            os: windows-latest
+            rust_target: x86_64-pc-windows-msvc
+            builder_args: --win --x64
+    runs-on: ${{ matrix.os }}
     env:
+      JMS_ELECTRON_RUST_TARGET: ${{ matrix.rust_target }}
       APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
     steps:
-      - name: Check out git repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        name: Install pnpm
         with:
           run_install: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: "23"
+          node-version: "22"
           cache: pnpm
 
-      - name: Copy bundled client plugins
-        run: node scripts/copy-client-plugins.mjs
-
-      - name: Setup Apple Certificate
-        if: startsWith(matrix.platform, 'macos')
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: npm run setup_apple_cert
-
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
-          targets: ${{ startsWith(matrix.platform, 'macos') && matrix.target || '' }}
+          targets: ${{ matrix.rust_target }}
 
-      - name: Install system dependencies (Ubuntu)
-        if: startsWith(matrix.platform, 'ubuntu')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf xdg-utils desktop-file-utils
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+          key: ${{ matrix.rust_target }}
 
-      - name: Install frontend dependencies
-        run: pnpm install
+      - name: Install Linux packaging dependencies
+        if: startsWith(matrix.os, 'ubuntu')
+        run: sudo apt-get update && sudo apt-get install -y rpm
 
-      - name: Sync app version from workflow version
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Sync version
         env:
           VERSION: ${{ env.VERSION }}
-        run: pnpm run set_version
+        run: pnpm set_version
 
-      # Manual builds: use tauri-action for signing/notarization, but upload to workflow artifacts (temporary download)
-      - name: Set product name (manual only)
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.product_name != ''
-        run: node scripts/set-product-name.mjs --name "${{ github.event.inputs.product_name }}"
+      - name: Set custom product name
+        if: github.event_name == 'workflow_dispatch' && inputs.product_name != ''
+        run: node scripts/set-product-name.mjs --name "${{ inputs.product_name }}"
 
-      - name: Apply brand assets (manual only)
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.product_name != ''
+      - name: Apply custom brand assets
+        if: github.event_name == 'workflow_dispatch' && inputs.product_name != ''
         env:
           CLIENT_BRAND_ASSETS_PASSPHRASE: ${{ secrets.CLIENT_BRAND_ASSETS_PASSPHRASE }}
         shell: bash
         run: |
           encrypted_assets=".github/brand-assets/client-brand-assets.tgz.enc"
-
           if [ ! -f "$encrypted_assets" ]; then
-            echo "No encrypted brand assets found; using repository default assets."
+            echo "No encrypted brand assets found; using repository defaults."
             exit 0
           fi
-
           if [ -z "$CLIENT_BRAND_ASSETS_PASSPHRASE" ]; then
-            echo "CLIENT_BRAND_ASSETS_PASSPHRASE is required to decrypt brand assets."
+            echo "CLIENT_BRAND_ASSETS_PASSPHRASE is required."
             exit 1
           fi
-
-          # Keep these paths relative so Git Bash on Windows does not pass a
-          # drive-letter path like "D:\..." to tar, which tar treats as remote.
           assets_root=".brand-assets-tmp"
           assets_dir="$assets_root/client-brand-assets"
           archive_path="$assets_root/client-brand-assets.tgz"
-
           rm -rf "$assets_root"
-          rm -rf "$assets_dir"
           mkdir -p "$assets_dir"
           openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
             -in "$encrypted_assets" \
             -out "$archive_path" \
             -pass env:CLIENT_BRAND_ASSETS_PASSPHRASE
           tar -xzf "$archive_path" -C "$assets_dir"
-
           node scripts/apply-brand-assets.mjs --dir "$assets_dir"
 
-      - name: Build Tauri app
-        id: tauri_build
-        uses: tauri-apps/tauri-action@v0
+      - name: Setup Apple certificate
+        if: startsWith(matrix.os, 'macos')
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
-          CLIENT_NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.product_name || '' }}
-          VITE_APP_NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.product_name || '' }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: pnpm setup_apple_cert
 
+      - name: Prepare Electron resources
+        run: pnpm electron:prepare
+
+      - name: Build Electron artifacts
+        run: pnpm --dir electron exec electron-builder --projectDir .. --publish never ${{ matrix.builder_args }}
+
+      - name: Upload packaged artifacts
+        uses: actions/upload-artifact@v4
         with:
-          # Create/update release draft on both tag/push and manual dispatch.
-          tagName: ${{ env.VERSION }}
-          args: ${{ matrix.target != '' && '--target ' || '' }}${{ matrix.target }}
-          releaseName: JumpServer Client v__VERSION__
-          releaseBody: See the assets to download this version and install.
-          releaseDraft: true
+          name: desktop-${{ matrix.name }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            release/electron/*.dmg
+            release/electron/*.zip
+            release/electron/*.exe
+            release/electron/*.msi
+            release/electron/*.AppImage
+            release/electron/*.deb
+            release/electron/*.rpm
+
+  release:
+    name: create draft release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          files: release-assets/*
+          fail_on_unmatched_files: true
+          draft: true
           prerelease: false
-          includeDebug: ${{ github.event_name == 'workflow_dispatch' && fromJSON(github.event.inputs.build_debug || 'false') || false }}
-          includeRelease: ${{ github.event_name != 'workflow_dispatch' || !fromJSON(github.event.inputs.build_debug || 'false') }}

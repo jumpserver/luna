@@ -111,11 +111,11 @@ Copy-Item -Recurse plugins\demo\hello-terminal `
 
 `executable.type` 取值：
 
-| 值 | 说明 |
-|----|------|
-| `bundled` | 使用客户端自带的二进制（`default` 为相对路径） |
-| `system` | 系统 PATH 中的命令（`default` 为命令名，如 `putty.exe`） |
-| `user_path` | 用户必须在设置中选择可执行文件路径 |
+| 值          | 说明                                                     |
+| ----------- | -------------------------------------------------------- |
+| `bundled`   | 使用客户端自带的二进制（`default` 为相对路径）           |
+| `system`    | 系统 PATH 中的命令（`default` 为命令名，如 `putty.exe`） |
+| `user_path` | 用户必须在设置中选择可执行文件路径                       |
 
 ### 脚本模式（script）
 
@@ -198,8 +198,8 @@ Copy-Item -Recurse plugins\demo\hello-terminal `
 
 ## 调试技巧
 
-1. **查看合并配置**：调用 Tauri `get_config`，确认插件已出现在对应 `category` 数组中
-2. **查看启动日志**：查看 JumpServer Client 的 Tauri 日志
+1. **查看合并配置**：调用 Electron `get_config`，确认插件已出现在对应 `category` 数组中
+2. **查看启动日志**：查看 JumpServer Client 的 Electron 日志
 3. **脚本调试**：手动执行脚本并注入环境变量：
 
 ```bash

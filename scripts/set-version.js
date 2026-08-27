@@ -34,19 +34,12 @@ electronPackageJson.version = version;
 writeFileSync(electronPackageJsonPath, `${JSON.stringify(electronPackageJson, null, 2)}\n`);
 console.log("✓ Updated electron/package.json");
 
-// Update tauri.conf.json
-const tauriConfPath = join(rootDir, "src-tauri", "tauri.conf.json");
-const tauriConf = JSON.parse(readFileSync(tauriConfPath, "utf8"));
-tauriConf.version = version;
-writeFileSync(tauriConfPath, `${JSON.stringify(tauriConf, null, 2)}\n`);
-console.log("✓ Updated src-tauri/tauri.conf.json");
-
 // Update Cargo.toml
-const cargoTomlPath = join(rootDir, "src-tauri", "Cargo.toml");
+const cargoTomlPath = join(rootDir, "native", "Cargo.toml");
 let cargoToml = readFileSync(cargoTomlPath, "utf8");
 cargoToml = cargoToml.replace(/^version = "[^"]*"/m, `version = "${version}"`);
 writeFileSync(cargoTomlPath, cargoToml);
-console.log("✓ Updated src-tauri/Cargo.toml");
+console.log("✓ Updated native/Cargo.toml");
 
 // Update app.config.ts
 const appConfigPath = join(rootDir, "ui", "app.config.ts");

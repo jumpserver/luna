@@ -1,9 +1,15 @@
 dist
 node_modules
 .git
+.github
 .angular
 .yarn
 .nuxt
 .output
-src-tauri/target
-
+.electron-resources
+electron
+native
+release
+coverage
+playwright-report
+test-results

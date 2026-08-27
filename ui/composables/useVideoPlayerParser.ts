@@ -190,7 +190,7 @@ function withMeta(item: Omit<VideoPlayerItem, "id" | "meta">, meta: VideoPlayerM
 }
 
 export function useVideoPlayerParser() {
-  const { getEntryUrl, importRecording, removeRecording } = useVideoPlayerTauri();
+  const { getEntryUrl, importRecording, removeRecording } = useOfflineRecording();
 
   function buildCastItem(
     fileName: string,

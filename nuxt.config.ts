@@ -63,7 +63,7 @@ export default defineNuxtConfig({
       { code: "en", name: "English", file: "en.json" }
     ],
     defaultLocale: "zh",
-    strategy: 'no_prefix'
+    strategy: "no_prefix"
   },
   app: {
     baseURL: appBaseURL,
@@ -87,19 +87,14 @@ export default defineNuxtConfig({
     provider: "none",
     fallbackToApi: false,
     mode: "svg",
-    collections: [
-      "mingcute",
-      "lucide",
-      "line-md",
-      "proicons",
-      "fluent",
-      "solar",
-      "tabler",
-      "si"
-    ],
+    collections: ["mingcute", "lucide", "line-md", "proicons", "fluent", "solar", "tabler", "si"],
     clientBundle: {
       scan: {
-        globInclude: ["ui/**/*.{vue,ts,js}", "packages/koko/**/*.{vue,ts,js}", "packages/online-player/**/*.{vue,ts,js}"]
+        globInclude: [
+          "ui/**/*.{vue,ts,js}",
+          "packages/koko/**/*.{vue,ts,js}",
+          "packages/online-player/**/*.{vue,ts,js}"
+        ]
       }
     }
   },
@@ -109,7 +104,7 @@ export default defineNuxtConfig({
   },
   vite: {
     clearScreen: false,
-    envPrefix: ["VITE_", "TAURI_"],
+    envPrefix: ["VITE_"],
     server: {
       strictPort: true,
       hmr: {
@@ -228,7 +223,7 @@ export default defineNuxtConfig({
         }
       },
       watch: {
-        ignored: ["**/src-tauri/**"]
+        ignored: ["**/native/**"]
       }
     },
     build: {
@@ -264,7 +259,7 @@ export default defineNuxtConfig({
     }
   },
   hooks: {
-    "build:manifest": function(manifest) {
+    "build:manifest": function (manifest) {
       for (const item of Object.values(manifest)) {
         if (!item || typeof item !== "object") continue;
         item.dynamicImports = [];

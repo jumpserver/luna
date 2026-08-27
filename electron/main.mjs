@@ -17,6 +17,7 @@ import {
 } from "electron";
 import { access, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { constants as fsConstants, createReadStream } from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -38,12 +39,16 @@ import {
 import { WebProxyRecording } from "./web-proxy-recording.mjs";
 
 const electronDir = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+const runtimePackage = require("./package.json");
 const projectRoot = app.isPackaged ? process.resourcesPath : path.resolve(electronDir, "..");
 const rendererUrl = process.env.JMS_ELECTRON_RENDERER_URL || "http://localhost:3000/luna/";
 const isDevelopment = !app.isPackaged;
 const appIconSize = 512;
 const appIconInset = 48;
 const trayIconSize = 16;
+const defaultProductName = "JumpServerClient";
+const productName = String(runtimePackage.displayName || defaultProductName);
 if (isDevelopment) console.info(`[electron] ${app.getName()} ${app.getVersion()}`);
 const windows = new Map();
 const subscriptions = new Map();
@@ -422,8 +427,7 @@ async function createWebProxyView(event, win, args) {
   const target = parseWebProxyUrl(args.targetUrl, ["http:", "https:"], "Website URL");
   const proxy = parseWebProxyUrl(args.proxyUrl, ["http:", "socks5:"], "Koko Web Proxy URL");
   const proxySession = electronSession.fromPartition(`web-proxy:${label}`, { cache: false });
-  const proxyRules =
-    proxy.protocol === "socks5:" ? `socks5://${proxy.host}` : `http=${proxy.host};https=${proxy.host}`;
+  const proxyRules = proxy.protocol === "socks5:" ? `socks5://${proxy.host}` : `http=${proxy.host};https=${proxy.host}`;
   await proxySession.setProxy({ mode: "fixed_servers", proxyRules });
 
   const view = new WebContentsView({
@@ -437,6 +441,7 @@ async function createWebProxyView(event, win, args) {
   const managed = {
     label,
     view,
+    webContents: view.webContents,
     host: win,
     hostLabel: labelForWindow(win),
     hostWebContentsId: event.sender.id,
@@ -556,7 +561,7 @@ function createInsetIcon(iconPath, size, inset) {
 function loadAppIcon() {
   const iconPath = app.isPackaged
     ? path.join(process.resourcesPath, "icons", "icon.png")
-    : path.join(projectRoot, "src-tauri/icons/icon.png");
+    : path.join(projectRoot, "electron/assets/icons/icon.png");
   appIcon ??= createInsetIcon(iconPath, appIconSize, appIconInset);
   return appIcon;
 }
@@ -655,14 +660,15 @@ function createWindow(label = "main", options = {}) {
     }
   });
   installConnectorSessionHooks(win.webContents.session);
-  const windowWebContentsId = win.webContents.id;
+  const windowWebContents = win.webContents;
+  const windowWebContentsId = windowWebContents.id;
 
   windows.set(label, win);
   installNavigationGuard(win);
   win.once("ready-to-show", () => win.show());
   win.on("resize", () => {
     const [width, height] = win.getContentSize();
-    emitDesktopEvent("tauri://resize", { width, height }, label);
+    emitDesktopEvent("desktop://resize", { width, height }, label);
   });
   win.on("closed", () => {
     windows.delete(label);
@@ -678,84 +684,237 @@ function createWindow(label = "main", options = {}) {
       void managed.recording?.finish().catch((error) => {
         console.warn(`[electron] failed to finish Web recording for ${viewLabel}:`, error);
       });
-      if (!managed.view.webContents.isDestroyed()) managed.view.webContents.close();
+      if (!managed.webContents.isDestroyed()) managed.webContents.close();
     }
     for (const [id, subscription] of subscriptions) {
-      if (subscription.webContents === win.webContents) subscriptions.delete(id);
+      if (subscription.webContents === windowWebContents) subscriptions.delete(id);
     }
   });
   void win.loadURL(rendererTarget(options.url || "/luna/"));
   return win;
 }
 
+function prefersZh() {
+  return (app.getLocale() || process.env.LANG || "").toLowerCase().startsWith("zh");
+}
+
+function menuLabels() {
+  const appName = productName;
+  if (prefersZh()) {
+    return {
+      about: `关于 ${appName}`,
+      settings: "设置…",
+      file: "文件",
+      edit: "编辑",
+      view: "视图",
+      window: "窗口",
+      help: "帮助",
+      undo: "撤销",
+      redo: "重做",
+      cut: "剪切",
+      copy: "复制",
+      paste: "粘贴",
+      selectAll: "全选",
+      focusMode: "纯净模式",
+      leftPanel: "左侧面板",
+      rightPanel: "右侧面板",
+      batchCommand: "批量命令",
+      close: "关闭窗口",
+      minimize: "最小化窗口",
+      zoom: "缩放",
+      fullscreen: "进入全屏幕",
+      hide: `隐藏 ${appName}`,
+      hideOthers: "隐藏其他窗口",
+      showAll: "显示所有窗口",
+      showMain: "显示主窗口",
+      quit: "退出"
+    };
+  }
+
+  return {
+    about: `About ${appName}`,
+    settings: "Settings…",
+    file: "File",
+    edit: "Edit",
+    view: "View",
+    window: "Window",
+    help: "Help",
+    undo: "Undo",
+    redo: "Redo",
+    cut: "Cut",
+    copy: "Copy",
+    paste: "Paste",
+    selectAll: "Select All",
+    focusMode: "Focus Mode",
+    leftPanel: "Left Panel",
+    rightPanel: "Right Panel",
+    batchCommand: "Batch Command",
+    close: "Close Window",
+    minimize: "Minimize Window",
+    zoom: "Zoom",
+    fullscreen: "Enter Full Screen",
+    hide: `Hide ${appName}`,
+    hideOthers: "Hide Others",
+    showAll: "Show All",
+    showMain: "Show Main Window",
+    quit: "Quit"
+  };
+}
+
+function showMainWindow() {
+  const win = createWindow("main");
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+  return win;
+}
+
+function openSettingsWindow() {
+  const existing = windows.get("main");
+  const win = showMainWindow();
+  const navigate = () => emitDesktopEvent("settings-navigate", "/setting/general", "main");
+  if (!existing || existing.isDestroyed() || win.webContents.isLoadingMainFrame()) {
+    win.webContents.once("did-finish-load", navigate);
+  } else {
+    navigate();
+  }
+}
+
+function openAboutWindow() {
+  const label = "about-window";
+  const existing = windows.get(label);
+  if (existing && !existing.isDestroyed()) {
+    existing.show();
+    existing.focus();
+    return existing;
+  }
+
+  const appName = productName;
+  const query = new URLSearchParams({
+    name: appName,
+    version: app.getVersion(),
+    custom: appName === defaultProductName ? "0" : "1"
+  });
+  const isMac = process.platform === "darwin";
+  const win = new BrowserWindow({
+    title: prefersZh() ? `关于 ${appName}` : `About ${appName}`,
+    width: 320,
+    height: 300,
+    show: false,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    autoHideMenuBar: true,
+    titleBarStyle: isMac ? "hiddenInset" : "default",
+    trafficLightPosition: isMac ? { x: 12, y: 12 } : undefined,
+    backgroundColor: "#2c2c2c",
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+  windows.set(label, win);
+  installNavigationGuard(win);
+  win.once("ready-to-show", () => win.show());
+  win.on("closed", () => windows.delete(label));
+  void win.loadURL(rendererTarget(`/luna/about.html?${query}`));
+  return win;
+}
+
+function sendMenuCommand(command) {
+  showMainWindow();
+  emitDesktopEvent("desktop-menu-command", command, "main");
+}
+
 function buildMenu() {
-  const template =
-    process.platform === "darwin"
-      ? [
-          {
-            label: app.name,
-            submenu: [
-              { role: "about" },
-              { type: "separator" },
-              {
-                label: "设置…",
-                accelerator: "CmdOrCtrl+,",
-                click: () => emitDesktopEvent("settings-navigate", "/setting/general")
-              },
-              { type: "separator" },
-              { role: "hide" },
-              { role: "hideOthers" },
-              { role: "unhide" },
-              { type: "separator" },
-              { role: "quit" }
-            ]
-          },
-          {
-            label: "编辑",
-            submenu: [
-              { role: "undo" },
-              { role: "redo" },
-              { type: "separator" },
-              { role: "cut" },
-              { role: "copy" },
-              { role: "paste" },
-              { role: "selectAll" }
-            ]
-          },
-          { label: "窗口", submenu: [{ role: "minimize" }, { role: "zoom" }, { role: "front" }] }
-        ]
-      : [
-          {
-            label: "JumpServer Client",
-            submenu: [
-              { label: "设置", click: () => emitDesktopEvent("settings-navigate", "/setting/general") },
-              { type: "separator" },
-              { label: "退出", click: () => app.quit() }
-            ]
-          }
-        ];
+  const labels = menuLabels();
+  const appSubmenu = [
+    { label: labels.about, click: openAboutWindow },
+    { type: "separator" },
+    { label: labels.settings, accelerator: "CmdOrCtrl+,", click: openSettingsWindow },
+    { label: labels.close, accelerator: "CmdOrCtrl+W", role: "close" },
+    { label: labels.minimize, accelerator: "CmdOrCtrl+M", role: "minimize" }
+  ];
+  if (process.platform === "darwin") {
+    appSubmenu.push(
+      { type: "separator" },
+      { label: labels.hide, accelerator: "CmdOrCtrl+H", role: "hide" },
+      { label: labels.hideOthers, accelerator: "CmdOrCtrl+Alt+H", role: "hideOthers" },
+      { label: labels.showAll, role: "unhide" }
+    );
+  }
+  appSubmenu.push({ type: "separator" }, { label: labels.quit, accelerator: "CmdOrCtrl+Q", role: "quit" });
+
+  const template = [
+    { label: productName, submenu: appSubmenu },
+    { label: labels.file, submenu: [{ label: labels.close, accelerator: "CmdOrCtrl+W", role: "close" }] },
+    {
+      label: labels.edit,
+      submenu: [
+        { label: labels.undo, role: "undo" },
+        { label: labels.redo, role: "redo" },
+        { type: "separator" },
+        { label: labels.cut, role: "cut" },
+        { label: labels.copy, role: "copy" },
+        { label: labels.paste, role: "paste" },
+        { label: labels.selectAll, role: "selectAll" }
+      ]
+    },
+    {
+      label: labels.view,
+      submenu: [
+        {
+          label: labels.focusMode,
+          accelerator: "CmdOrCtrl+Shift+P",
+          click: () => sendMenuCommand("toggle-focus-mode")
+        },
+        { label: labels.leftPanel, click: () => sendMenuCommand("toggle-left-panel") },
+        { label: labels.rightPanel, click: () => sendMenuCommand("toggle-right-panel") },
+        { label: labels.batchCommand, click: () => sendMenuCommand("toggle-batch-command") },
+        { type: "separator" },
+        {
+          label: labels.fullscreen,
+          accelerator: "CmdOrCtrl+Shift+F",
+          click: () => sendMenuCommand("toggle-fullscreen-mode")
+        }
+      ]
+    },
+    {
+      label: labels.window,
+      submenu: [
+        { label: labels.minimize, role: "minimize" },
+        { label: labels.zoom, role: "zoom" },
+        { type: "separator" },
+        { label: labels.close, role: "close" }
+      ]
+    },
+    { label: labels.help, submenu: [] }
+  ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 function setupTray() {
+  const labels = menuLabels();
   const iconName = process.platform === "darwin" ? "tray-mac.png" : "32x32.png";
   const iconPath = app.isPackaged
     ? path.join(process.resourcesPath, "icons", iconName)
-    : path.join(projectRoot, "src-tauri/icons", iconName);
+    : path.join(projectRoot, "electron/assets/icons", iconName);
   const icon = nativeImage.createFromPath(iconPath).resize({ height: trayIconSize, quality: "best" });
   if (icon.isEmpty()) return;
   if (process.platform === "darwin") icon.setTemplateImage(true);
   tray = new Tray(icon);
-  tray.setToolTip("JumpServer Client");
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      { label: "显示主窗口", click: () => createWindow("main") },
-      { label: "设置", click: () => emitDesktopEvent("settings-navigate", "/setting/general") },
-      { type: "separator" },
-      { label: "退出", click: () => app.quit() }
-    ])
-  );
-  tray.on("click", () => createWindow("main"));
+  tray.setToolTip(productName);
+  const trayMenu = Menu.buildFromTemplate([
+    { label: labels.showMain, click: showMainWindow },
+    { label: labels.settings, click: openSettingsWindow },
+    { label: labels.about, click: openAboutWindow },
+    { type: "separator" },
+    { label: labels.quit, click: () => app.quit() }
+  ]);
+  tray.setContextMenu(trayMenu);
+  if (process.platform !== "darwin") tray.on("click", () => tray.popUpContextMenu(trayMenu));
 }
 
 async function statPayload(filePath) {
@@ -853,7 +1012,7 @@ async function handleInvoke(event, request) {
   }
 
   if (command === "plugin:app|version") return app.getVersion();
-  if (command === "plugin:app|name") return app.getName();
+  if (command === "plugin:app|name") return productName;
   if (command === "plugin:os|locale") return app.getLocale();
   if (command === "plugin:os|hostname") return os.hostname();
   if (command === "plugin:path|resolve_directory") return resolveBaseDirectory(args.directory);
@@ -1047,10 +1206,7 @@ async function handleInvoke(event, request) {
       if (!managed.active) {
         managed.recording.setPaused("inactive", true, "Website 标签在后台，暂停录像");
       }
-      return managed.recording.state(
-        managed.recording.pauseReasons.size ? "paused" : "recording",
-        "Web 录像已开始"
-      );
+      return managed.recording.state(managed.recording.pauseReasons.size ? "paused" : "recording", "Web 录像已开始");
     } catch (error) {
       emitWebProxyRecordingState(managed, {
         label: managed.label,
@@ -1252,7 +1408,7 @@ app.whenReady().then(async () => {
   buildMenu();
   setupTray();
   nativeTheme.on("updated", () => {
-    emitDesktopEvent("tauri://theme-changed", nativeTheme.shouldUseDarkColors ? "dark" : "light");
+    emitDesktopEvent("desktop://theme-changed", nativeTheme.shouldUseDarkColors ? "dark" : "light");
   });
   createWindow("main");
 });

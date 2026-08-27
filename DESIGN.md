@@ -5,7 +5,7 @@
 The desktop client currently mixes three kinds of responsibilities:
 
 - workspace UI: asset tree, tabs, connection entry, status display
-- platform shell: Tauri windowing, local app launch, native dialogs
+- platform shell: Electron windowing, local app launch, native dialogs
 - protocol runtime: built-in SSH bridge and future potential database protocol bridges
 
 At the same time:
@@ -103,7 +103,7 @@ We should treat Zed as an inspiration and an import target, not as the sole sour
 
 ### Clients
 
-- built with Tauri + Vue/Nuxt
+- built with Electron + Vue/Nuxt
 - already has asset tree and tabbed workspace behavior
 - recently introduced a built-in SSH path using `xterm.js` plus a Rust SSH bridge
 - plugin system is being introduced for external applications
@@ -129,7 +129,7 @@ Use `koko` as the session and protocol gateway.
 
 Build a shared Vue workspace that can run in:
 
-- desktop: inside the Tauri shell
+- desktop: inside the Electron shell
 - web: as the browser workspace replacing Luna incrementally
 
 Keep native local-app launch as a platform adapter, not as the main connection implementation.
@@ -139,7 +139,7 @@ Keep native local-app launch as a platform adapter, not as the main connection i
 ```mermaid
 flowchart LR
     subgraph shell ["Platform Shell"]
-        Desktop["Tauri Desktop Shell"]
+        Desktop["Electron Desktop Shell"]
         Browser["Web Browser Shell"]
     end
 
@@ -380,12 +380,12 @@ Suggested connector adapter interface:
 
 ```ts
 export interface WorkspaceConnectorAdapter {
-  kind: "koko-web" | "native-app" | "builtin-terminal"
-  supports: (protocol: string, connectMethod: string) => boolean
-  open: (session: WorkspaceSession) => Promise<WorkspaceViewHandle>
-  focus: (viewId: string) => void
-  resize: (viewId: string, rect: { width: number, height: number }) => void
-  close: (viewId: string) => Promise<void>
+  kind: "koko-web" | "native-app" | "builtin-terminal";
+  supports: (protocol: string, connectMethod: string) => boolean;
+  open: (session: WorkspaceSession) => Promise<WorkspaceViewHandle>;
+  focus: (viewId: string) => void;
+  resize: (viewId: string, rect: { width: number; height: number }) => void;
+  close: (viewId: string) => Promise<void>;
 }
 ```
 
@@ -409,11 +409,11 @@ Example declaration shape:
 
 ```ts
 export interface WorkspaceCapabilityDeclaration {
-  component: "koko" | "chen" | "lion" | "tinker"
-  surface: "terminal" | "file-manager" | "file-editor" | "k8s-ui"
-  protocols: string[]
-  connectMethods: string[]
-  backendConnectMethod?: string
+  component: "koko" | "chen" | "lion" | "tinker";
+  surface: "terminal" | "file-manager" | "file-editor" | "k8s-ui";
+  protocols: string[];
+  connectMethods: string[];
+  backendConnectMethod?: string;
 }
 ```
 
@@ -533,13 +533,13 @@ Exit criteria:
 
 Goal:
 
-Make the current desktop workspace implementation reusable outside Tauri.
+Make the current desktop workspace implementation reusable outside Electron.
 
 Scope:
 
 - extract workspace domain model
 - extract reusable Vue UI modules
-- isolate Tauri-only code behind platform service interfaces
+- isolate Electron-only code behind platform service interfaces
 
 Deliverables:
 
@@ -548,7 +548,7 @@ Deliverables:
 
 Exit criteria:
 
-- asset tree, tabs, and connect flow no longer depend directly on Tauri APIs
+- asset tree, tabs, and connect flow no longer depend directly on Electron APIs
 
 ### Phase 4: Luna Replacement By Feature Slice
 
@@ -601,7 +601,7 @@ Deliverables:
 
 Will own:
 
-- Tauri shell
+- Electron shell
 - local app launching
 - platform integrations
 - shared Vue workspace consumption
@@ -715,7 +715,7 @@ Suggested desktop work items:
 
 Tasks:
 
-- identify Tauri-bound code in the current Vue workspace
+- identify Electron-bound code in the current Vue workspace
 - extract pure workspace state and tab logic
 - define platform services for shell-only features
 

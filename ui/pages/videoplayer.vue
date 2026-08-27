@@ -26,7 +26,7 @@ const isDragOver = ref(false);
 let dragDepth = 0;
 
 const { parseFiles, parsePaths } = useVideoPlayerParser();
-const { removeRecording } = useVideoPlayerTauri();
+const { removeRecording } = useOfflineRecording();
 
 const currentItem = computed(() => items.value.find((item) => item.id === activeId.value) || null);
 
@@ -69,7 +69,7 @@ async function removeItem(item: VideoPlayerItem) {
 
   const recordingStillUsed = items.value.some((entry) => entry.recordingId === item.recordingId);
 
-  if (isTauriRuntime() && !recordingStillUsed) {
+  if (isDesktopRuntime() && !recordingStillUsed) {
     try {
       await removeRecording(item.recordingId);
     } catch {
@@ -93,7 +93,7 @@ async function appendParsedItems(parsed: VideoPlayerItem[]) {
   const incoming = parsed.filter((item) => !existingNames.has(item.name));
   const duplicates = parsed.length - incoming.length;
 
-  if (isTauriRuntime()) {
+  if (isDesktopRuntime()) {
     const retainedRecordingIds = new Set(incoming.map((item) => item.recordingId));
     const unusedRecordingIds = new Set(
       parsed.filter((item) => !retainedRecordingIds.has(item.recordingId)).map((item) => item.recordingId)
@@ -160,7 +160,7 @@ async function importPaths(filePaths: string[]) {
 }
 
 async function handleFileInputClick(event: MouseEvent) {
-  if (!isTauriRuntime()) return;
+  if (!isDesktopRuntime()) return;
 
   event.preventDefault();
 
@@ -226,7 +226,7 @@ function handleDrop(event: DragEvent) {
   if (files.length === 0) return;
 
   const paths = files.map(fileNativePath).filter(Boolean);
-  if (isTauriRuntime() && paths.length === files.length) {
+  if (isDesktopRuntime() && paths.length === files.length) {
     void importPaths(paths);
     return;
   }
@@ -256,7 +256,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   items.value.forEach(cleanupItem);
 
-  if (isTauriRuntime()) {
+  if (isDesktopRuntime()) {
     const recordingIds = new Set(items.value.map((item) => item.recordingId));
     void Promise.allSettled([...recordingIds].map((recordingId) => removeRecording(recordingId)));
   }

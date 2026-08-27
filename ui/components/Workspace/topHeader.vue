@@ -32,7 +32,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
 
 <template>
   <div
-    data-tauri-drag-region
+    data-desktop-drag-region
     class="header-bg h-10 min-h-10 max-h-10 shrink-0 flex items-center"
     :style="{
       backgroundColor: 'var(--app-header-bg)',

@@ -6,23 +6,23 @@
 
 支持三个平台的原生硬件/软件编码：
 
-| 平台 | 编码器 | 编码方式 |
-|------|--------|----------|
-| macOS | VideoToolbox | 硬件加速（GPU/ANE） |
-| Linux | OpenH264 | 软件编码（CPU） |
+| 平台    | 编码器        | 编码方式                              |
+| ------- | ------------- | ------------------------------------- |
+| macOS   | VideoToolbox  | 硬件加速（GPU/ANE）                   |
+| Linux   | OpenH264      | 软件编码（CPU）                       |
 | Windows | IMFSinkWriter | 系统级管道（自动选择硬件/软件编码器） |
 
 ## 架构
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│  Tauri Command: transcode_replays                                    │
+│  Electron Command: transcode_replays                                    │
 │  (mod.rs)                                                            │
 │  - 接收 tar 文件路径列表 + 输出目录 + 用户配置                        │
 │  - 解压 tar → 提取 replay.json + .part.gz                            │
 │  - gzip 解压得到原始 guacamole 数据                                   │
 │  - 调用 transcode_to_mp4 生成视频                                    │
-│  - 通过 Tauri emit("transcode-progress") 向前端报告进度               │
+│  - 通过 Electron emit("transcode-progress") 向前端报告进度               │
 └──────────────────────────┬───────────────────────────────────────────┘
                            │
          ┌─────────────────┼──────────────────┐
@@ -47,13 +47,13 @@
 
 ### 模块说明
 
-| 文件 | 职责 |
-|------|------|
-| `mod.rs` | Tauri command 入口、tar/gzip 解压、进度事件、分辨率/码率/功率配置 |
-| `parser.rs` | 零拷贝解析 Guacamole 协议的 length-prefixed 指令格式 |
-| `renderer.rs` | 维护多图层画布，处理 `size`/`img`/`blob`/`cfill`/`rect`/`copy` 绘图指令，合成 RGB 帧 |
-| `transcode.rs` | 编码管线：帧时间线构建、渲染调度、缩放、编码、MP4 封装（按平台分支） |
-| `encoder.rs` | 平台编码器抽象：macOS VideoToolbox / Linux OpenH264 / Windows IMFSinkWriter |
+| 文件           | 职责                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------ |
+| `mod.rs`       | Electron command 入口、tar/gzip 解压、进度事件、分辨率/码率/功率配置                 |
+| `parser.rs`    | 零拷贝解析 Guacamole 协议的 length-prefixed 指令格式                                 |
+| `renderer.rs`  | 维护多图层画布，处理 `size`/`img`/`blob`/`cfill`/`rect`/`copy` 绘图指令，合成 RGB 帧 |
+| `transcode.rs` | 编码管线：帧时间线构建、渲染调度、缩放、编码、MP4 封装（按平台分支）                 |
+| `encoder.rs`   | 平台编码器抽象：macOS VideoToolbox / Linux OpenH264 / Windows IMFSinkWriter          |
 
 ## 转码流程
 
@@ -161,12 +161,12 @@ bitrate = pixels × 5 bps    // 5 bits per pixel
 clamp(800 Kbps, 20 Mbps)
 ```
 
-| 分辨率 | 码率 |
-|--------|------|
+| 分辨率    | 码率      |
+| --------- | --------- |
 | 1920×1080 | 10.4 Mbps |
-| 1280×768 | 4.9 Mbps |
-| 1024×768 | 3.9 Mbps |
-| 640×360 | 1.2 Mbps |
+| 1280×768  | 4.9 Mbps  |
+| 1024×768  | 3.9 Mbps  |
+| 640×360   | 1.2 Mbps  |
 
 ### 并行编码（macOS / Linux）
 
@@ -236,45 +236,45 @@ RGB → BGR (逐像素 R/B 交换，DIB 字节序)
 
 ### 用户可选参数
 
-| 参数 | 选项 | 说明 | 平台影响 |
-|------|------|------|----------|
-| `filename_style` | `original` / `friendly` / `friendly_uuid` | 输出文件命名格式 | 全平台 |
-| `output_resolution` | `original` / `p1080` / `p720` / `p360` | 输出分辨率 | 全平台 |
-| `transcode_power` | `auto` / `full` / `fast` / `medium` / `low` | CPU 使用率 | macOS/Linux 有效；Windows 固定 `auto` |
+| 参数                | 选项                                        | 说明             | 平台影响                              |
+| ------------------- | ------------------------------------------- | ---------------- | ------------------------------------- |
+| `filename_style`    | `original` / `friendly` / `friendly_uuid`   | 输出文件命名格式 | 全平台                                |
+| `output_resolution` | `original` / `p1080` / `p720` / `p360`      | 输出分辨率       | 全平台                                |
+| `transcode_power`   | `auto` / `full` / `fast` / `medium` / `low` | CPU 使用率       | macOS/Linux 有效；Windows 固定 `auto` |
 
 ### 进度事件
 
-通过 Tauri `emit("transcode-progress", TranscodeProgress)` 发送：
+通过 Electron `emit("transcode-progress", TranscodeProgress)` 发送：
 
 ```typescript
 interface _TranscodeProgress {
-  file: string // 文件名或 session ID
-  index: number // 当前文件在批次中的索引
-  total: number // 批次总文件数
-  progress: number // 0–100
-  message: string // 状态描述
-  success?: boolean // 完成时设置
-  output?: string // 输出文件路径
-  duration?: number // 转码耗时（秒）
-  metadata?: ReplayMetadata // 会话元数据（首次事件时发送）
+  file: string; // 文件名或 session ID
+  index: number; // 当前文件在批次中的索引
+  total: number; // 批次总文件数
+  progress: number; // 0–100
+  message: string; // 状态描述
+  success?: boolean; // 完成时设置
+  output?: string; // 输出文件路径
+  duration?: number; // 转码耗时（秒）
+  metadata?: ReplayMetadata; // 会话元数据（首次事件时发送）
 }
 ```
 
 ## 依赖
 
-| crate | 用途 | 平台 |
-|-------|------|------|
-| `flate2` | gzip 解压 `.part.gz` | 全平台 |
-| `tar` | 解压 `.tar` 归档 | 全平台 |
-| `image` | PNG/JPEG/WebP 解码（guacamole `blob` 指令） | 全平台 |
-| `fast_image_resize` | 双线性插值缩放 | 全平台 |
-| `base64` | guacamole `blob` 指令中的 base64 解码 | 全平台 |
-| `serde` / `serde_json` | replay.json 解析 | 全平台 |
-| `tokio` | 异步运行时 + `spawn_blocking` | 全平台 |
-| `num_cpus` | 动态计算并行线程数 | macOS / Linux |
-| `shiguredo_video_toolbox` | VideoToolbox 硬件编码器 | macOS |
-| `openh264` | OpenH264 软件编码器 | Linux |
-| `windows` (MediaFoundation) | IMFSinkWriter 系统级编码管道 | Windows |
+| crate                       | 用途                                        | 平台          |
+| --------------------------- | ------------------------------------------- | ------------- |
+| `flate2`                    | gzip 解压 `.part.gz`                        | 全平台        |
+| `tar`                       | 解压 `.tar` 归档                            | 全平台        |
+| `image`                     | PNG/JPEG/WebP 解码（guacamole `blob` 指令） | 全平台        |
+| `fast_image_resize`         | 双线性插值缩放                              | 全平台        |
+| `base64`                    | guacamole `blob` 指令中的 base64 解码       | 全平台        |
+| `serde` / `serde_json`      | replay.json 解析                            | 全平台        |
+| `tokio`                     | 异步运行时 + `spawn_blocking`               | 全平台        |
+| `num_cpus`                  | 动态计算并行线程数                          | macOS / Linux |
+| `shiguredo_video_toolbox`   | VideoToolbox 硬件编码器                     | macOS         |
+| `openh264`                  | OpenH264 软件编码器                         | Linux         |
+| `windows` (MediaFoundation) | IMFSinkWriter 系统级编码管道                | Windows       |
 
 ## 已知限制
 

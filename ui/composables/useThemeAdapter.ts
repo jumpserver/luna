@@ -1,10 +1,9 @@
-import type { Event } from "@tauri-apps/api/event";
-import type { Theme } from "@tauri-apps/api/window";
+import type { DesktopEvent, DesktopTheme } from "~/shared/desktop/bridge";
 import { nextTick } from "vue";
 import { desktopWindow } from "~/shared/desktop/bridge";
 
 export const useThemeAdapter = () => {
-  const currentOSTheme = ref<Theme>("light");
+  const currentOSTheme = ref<DesktopTheme>("light");
 
   const uiColorMode = useColorMode();
   const {
@@ -18,7 +17,7 @@ export const useThemeAdapter = () => {
     setFollowSystem
   } = useSettingManager();
 
-  const getSystemTheme = async (): Promise<Theme> => {
+  const getSystemTheme = async (): Promise<DesktopTheme> => {
     if (!isDesktopRuntime()) {
       return globalThis.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
     }
@@ -56,7 +55,7 @@ export const useThemeAdapter = () => {
     const modeIsManual = savedMode === "dark" || savedMode === "light";
 
     const follow = modeIsWithSystem ? true : modeIsManual ? false : followSystem.value;
-    const savedTheme = (modeIsManual ? savedMode : userTheme.value) as Theme | "";
+    const savedTheme = (modeIsManual ? savedMode : userTheme.value) as DesktopTheme | "";
 
     const osTheme = await getSystemTheme();
 
@@ -94,7 +93,7 @@ export const useThemeAdapter = () => {
     setTheme(osTheme);
   };
 
-  const manualSetTheme = (theme: Theme) => {
+  const manualSetTheme = (theme: DesktopTheme) => {
     setFollowSystem(false);
     setThemeMode(theme as any);
     uiColorMode.preference = theme;
@@ -114,7 +113,7 @@ export const useThemeAdapter = () => {
     }
   };
 
-  const applyThemePreference = (theme: Theme) => {
+  const applyThemePreference = (theme: DesktopTheme) => {
     uiColorMode.preference = theme;
   };
 
@@ -133,7 +132,7 @@ export const useThemeAdapter = () => {
       if (!media) return;
 
       media.addEventListener("change", (event) => {
-        const nextTheme: Theme = event.matches ? "dark" : "light";
+        const nextTheme: DesktopTheme = event.matches ? "dark" : "light";
         currentOSTheme.value = nextTheme;
 
         if (themeMode.value === "withSystem" || followSystem.value) {
@@ -145,7 +144,7 @@ export const useThemeAdapter = () => {
     }
 
     // 监听 OS 主题变化
-    desktopWindow.onThemeChanged((event: Event<Theme>) => {
+    desktopWindow.onThemeChanged((event: DesktopEvent<DesktopTheme>) => {
       currentOSTheme.value = event.payload;
 
       if (themeMode.value === "withSystem" || followSystem.value) {

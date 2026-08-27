@@ -1,20 +1,15 @@
-export type DesktopRuntime = "electron" | "tauri" | "web";
+export type DesktopRuntime = "electron" | "web";
 
 export const getDesktopRuntime = (): DesktopRuntime => {
   if (!import.meta.client) return "web";
   const runtime = globalThis as any;
 
   if (runtime.__JMS_DESKTOP__?.runtime === "electron") return "electron";
-  if (runtime.__TAURI_INTERNALS__ || runtime.__TAURI__ || runtime.__TAURI_IPC__) return "tauri";
   return "web";
 };
 
 export const isDesktopRuntime = () => getDesktopRuntime() !== "web";
 export const isElectronRuntime = () => getDesktopRuntime() === "electron";
-
-// Transitional alias for workspace code that has not moved to Desktop Bridge yet.
-// Electron currently provides the compatible subset those callers expect.
-export const isTauriRuntime = () => isDesktopRuntime();
 
 export const getCookieValue = (name: string) => {
   if (!import.meta.client) return "";

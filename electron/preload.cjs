@@ -64,35 +64,3 @@ contextBridge.exposeInMainWorld(
     }
   })
 );
-contextBridge.exposeInMainWorld("__TAURI_INTERNALS__", {
-  metadata: {
-    currentWindow: { label: currentLabel },
-    currentWebview: { label: currentLabel }
-  },
-  plugins: {
-    path: {
-      sep: process.platform === "win32" ? "\\" : "/",
-      delimiter: process.platform === "win32" ? ";" : ":"
-    }
-  },
-  invoke(command, args, options) {
-    return ipcRenderer.invoke("jms:invoke", { command, args, options });
-  },
-  transformCallback,
-  unregisterCallback,
-  convertFileSrc(filePath, protocol = "asset") {
-    return `jms-${protocol}://localhost/${encodeURIComponent(filePath)}`;
-  }
-});
-contextBridge.exposeInMainWorld("__TAURI_EVENT_PLUGIN_INTERNALS__", {
-  unregisterListener() {}
-});
-contextBridge.exposeInMainWorld("__TAURI_OS_PLUGIN_INTERNALS__", {
-  platform,
-  os_type: platform,
-  family: process.platform === "win32" ? "windows" : "unix",
-  arch: process.arch === "arm64" ? "aarch64" : process.arch,
-  version: process.getSystemVersion?.() || "",
-  eol: process.platform === "win32" ? "\r\n" : "\n",
-  exe_extension: process.platform === "win32" ? "exe" : ""
-});

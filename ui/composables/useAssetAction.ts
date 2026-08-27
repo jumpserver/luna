@@ -1,4 +1,4 @@
-import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
 
@@ -15,14 +15,14 @@ import {
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
-let tauriListenersInitialized = false;
-let tauriListenersRegistering = false;
-let tauriListenersRefCount = 0;
-let unlistenGetTokenFailure: UnlistenFn | null = null;
-let unlistenGetTokenSuccess: UnlistenFn | null = null;
-let unlistenPullUpFailure: UnlistenFn | null = null;
-let unlistenBuiltinSessionSuccess: UnlistenFn | null = null;
-let unlistenBuiltinSessionFailure: UnlistenFn | null = null;
+let desktopListenersInitialized = false;
+let desktopListenersRegistering = false;
+let desktopListenersRefCount = 0;
+let unlistenGetTokenFailure: DesktopUnlistenFn | null = null;
+let unlistenGetTokenSuccess: DesktopUnlistenFn | null = null;
+let unlistenPullUpFailure: DesktopUnlistenFn | null = null;
+let unlistenBuiltinSessionSuccess: DesktopUnlistenFn | null = null;
+let unlistenBuiltinSessionFailure: DesktopUnlistenFn | null = null;
 
 const BUILTIN_CLIENT_METHOD = "builtin_client";
 const WEB_CLI_NATIVE_METHOD = "web_cli_native";
@@ -45,7 +45,7 @@ const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
 const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
 const isLocalClientMethod = (method: { type?: string } | undefined) =>
   ["native", "client", "local", "desktop"].includes(String(method?.type || "").toLowerCase());
-const normalizeTauriLocalClientUrl = (url: string) =>
+const normalizeDesktopLocalClientUrl = (url: string) =>
   url.startsWith("jms://") ? `jms2://${url.slice("jms://".length)}` : url;
 const withLocalClientName = (url: string, clientName?: string) => {
   if (!clientName || !url.startsWith("jms2://")) return url;
@@ -65,10 +65,10 @@ const pendingBuiltinSessions: Array<{
   onSessionError?: (error: unknown) => void;
 }> = [];
 
-function releaseTauriEventListeners() {
-  tauriListenersRefCount = Math.max(tauriListenersRefCount - 1, 0);
-  if (!tauriListenersInitialized || tauriListenersRegistering) return;
-  if (tauriListenersRefCount === 0) {
+function releaseDesktopEventListeners() {
+  desktopListenersRefCount = Math.max(desktopListenersRefCount - 1, 0);
+  if (!desktopListenersInitialized || desktopListenersRegistering) return;
+  if (desktopListenersRefCount === 0) {
     unlistenGetTokenSuccess?.();
     unlistenGetTokenFailure?.();
     unlistenPullUpFailure?.();
@@ -79,7 +79,7 @@ function releaseTauriEventListeners() {
     unlistenPullUpFailure = null;
     unlistenBuiltinSessionSuccess = null;
     unlistenBuiltinSessionFailure = null;
-    tauriListenersInitialized = false;
+    desktopListenersInitialized = false;
   }
 }
 
@@ -383,7 +383,7 @@ export const useAssetAction = () => {
 
       if (isDesktopRuntime() || isLocalClientMethod(method)) {
         const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams());
-        const localClientUrl = isDesktopRuntime() ? normalizeTauriLocalClientUrl(url || "") : url;
+        const localClientUrl = isDesktopRuntime() ? normalizeDesktopLocalClientUrl(url || "") : url;
         const expectedScheme = isDesktopRuntime() ? "jms2://" : "jms://";
         if (!localClientUrl?.startsWith(expectedScheme)) {
           throw new Error("Invalid local client URL");
@@ -853,17 +853,17 @@ export const useAssetAction = () => {
   };
 
   /**
-   * @description 监听 tauri 事件
+   * @description 监听 desktop 事件
    */
-  const listenTauriEvent = async () => {
+  const listenDesktopEvent = async () => {
     if (!isDesktopRuntime()) return;
 
-    if (tauriListenersInitialized || tauriListenersRegistering) {
-      tauriListenersRefCount++;
+    if (desktopListenersInitialized || desktopListenersRegistering) {
+      desktopListenersRefCount++;
       return;
     }
 
-    tauriListenersRegistering = true;
+    desktopListenersRegistering = true;
 
     try {
       unlistenGetTokenSuccess = await desktopListen("get-token-success", (event) => {
@@ -992,20 +992,20 @@ export const useAssetAction = () => {
         });
       });
 
-      tauriListenersInitialized = true;
-      tauriListenersRefCount++;
+      desktopListenersInitialized = true;
+      desktopListenersRefCount++;
     } finally {
-      tauriListenersRegistering = false;
+      desktopListenersRegistering = false;
     }
   };
 
   onMounted(() => {
-    listenTauriEvent();
+    listenDesktopEvent();
   });
 
   onBeforeUnmount(() => {
     if (isDesktopRuntime()) {
-      releaseTauriEventListeners();
+      releaseDesktopEventListeners();
     }
   });
 

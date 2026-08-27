@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
-import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { UserData } from "~/types/index";
 
 import { useSettingManager } from "~/composables/useSettingManager";
@@ -58,9 +58,9 @@ const openModal = ref(false);
 const hasValidationError = ref(false);
 const validationField = ref<"site" | "name" | null>(null);
 const recentSitesDismissed = ref(false);
-const unlistenAuthUrlRef = ref<UnlistenFn | null>(null);
-const unlistenErrorPageRef = ref<UnlistenFn | null>(null);
-const unlistenLoginFailedRef = ref<UnlistenFn | null>(null);
+const unlistenAuthUrlRef = ref<DesktopUnlistenFn | null>(null);
+const unlistenErrorPageRef = ref<DesktopUnlistenFn | null>(null);
+const unlistenLoginFailedRef = ref<DesktopUnlistenFn | null>(null);
 const inputRef = ref<ComponentPublicInstance | null>(null);
 const siteNameInputRef = ref<ComponentPublicInstance | null>(null);
 const profileOpen = ref(false);

@@ -1,13 +1,21 @@
 {
   "name": "jumpserver-client-electron",
+  "displayName": "JumpServerClient",
   "version": "4.1.2",
   "private": true,
   "description": "Electron runtime for JumpServer Client",
   "author": "JumpServer",
   "type": "module",
   "main": "main.mjs",
+  "scripts": {
+    "postinstall": "node ../scripts/fix-node-pty-permissions.mjs"
+  },
   "dependencies": {
     "fflate": "^0.8.2",
     "node-pty": "^1.1.0"
+  },
+  "devDependencies": {
+    "electron": "44.0.0",
+    "electron-builder": "26.15.3"
   }
 }

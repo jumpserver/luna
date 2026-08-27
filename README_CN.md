@@ -2,11 +2,11 @@
 
 # 🚀 JumpServer 客户端
 
-**基于 Tauri 构建的现代化跨平台 JumpServer 桌面客户端**
+**基于 Electron 构建的现代化跨平台 JumpServer 桌面客户端**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)](https://github.com/jumpserver/clients)
-[![Tauri](https://img.shields.io/badge/Tauri-2.9.0-FFC131?logo=tauri&logoColor=white)](https://tauri.app/)
+[![Electron](https://img.shields.io/badge/Electron-44-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org/)
 
 [English](README.md) | [中文](README_CN.md)
@@ -24,7 +24,7 @@
 - 🗄️ **多数据库支持** - 支持 MySQL、PostgreSQL、Redis、MongoDB、Oracle、SQL Server、ClickHouse、达梦等
 - 🖥️ **设备管理** - 无缝管理 Linux 和 Windows 服务器
 - 🎨 **现代化界面** - 基于 Vue 3 和 Nuxt UI 构建的优雅响应式界面
-- ⚡ **高性能** - 轻量级且快速，由 Tauri（Rust 后端）驱动
+- ⚡ **原生桌面集成** - 隔离的 Electron 运行时与专用 Rust sidecar
 - 🔗 **深度链接支持** - 通过自定义协议（`jms2://`）从浏览器直接启动连接
 - 🌓 **主题支持** - 支持浅色和深色模式
 - 🌍 **国际化** - 多语言支持（英文、中文）
@@ -38,19 +38,21 @@
 
 ![主界面](public/screenshot.png)
 
-*主界面展示资产管理*
+_主界面展示资产管理_
 
 </div>
 
 ## 🛠️ 技术栈
 
 ### 前端
+
 - **Vue 3** - 渐进式 JavaScript 框架
 - **Nuxt UI** - 完全样式化和可自定义的组件
 
-### 后端
-- **Tauri 2.9** - 构建更小、更快、更安全的桌面应用程序
-- **Rust** - 系统编程语言
+### 桌面端
+
+- **Electron 44** - 跨平台窗口、原生集成与打包
+- **Rust** - 原生 SSH 与录像转码 sidecar
 - **Go** - 用于协议处理的原生客户端组件
 
 ## 📦 安装
@@ -137,7 +139,7 @@ sudo dnf install ./jumpserver-client_*.rpm
 - **系统依赖**：
   - macOS: Xcode Command Line Tools
   - Windows: Microsoft Visual C++ Build Tools
-  - Linux: `build-essential`, `libwebkit2gtk-4.0-dev`, `libssl-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`
+  - Linux: `build-essential`，生成 RPM 安装包时还需安装 `rpm`
 
 ### 快速开始
 
@@ -150,20 +152,29 @@ cd clients
 pnpm install
 
 # 启动开发服务器
-pnpm tauri:dev
+pnpm electron:dev
 ```
 
 ### 构建生产版本
 
 ```bash
 # 为当前平台构建
-pnpm tauri:build
+pnpm electron:build
 
-# 为特定平台构建（需要交叉编译设置）
-pnpm tauri:build --target x86_64-pc-windows-msi
-pnpm tauri:build --target x86_64-apple-darwin
-pnpm tauri:build --target x86_64-unknown-linux-gnu
+# 构建未打包的应用目录
+pnpm electron:package:dir
 ```
+
+### 构建 Web Docker 镜像
+
+Web 镜像只包含 Nuxt 静态产物和 nginx；Electron 与原生 sidecar 不会进入 Docker 构建上下文。
+
+```bash
+docker build -t jumpserver/luna:local .
+docker run --rm -p 8080:80 jumpserver/luna:local
+```
+
+GitHub Actions 会构建 `linux/amd64` 与 `linux/arm64` 双架构镜像，并在版本标签触发时发布到 `jumpserver/luna`。
 
 ### 项目结构
 
@@ -174,11 +185,9 @@ clients/
 │   ├── pages/            # 应用页面
 │   ├── composables/      # Vue 组合式函数
 │   └── layouts/          # 布局组件
-├── src-tauri/            # 后端 (Rust/Tauri)
+├── electron/              # Electron 主进程与 preload bridge
+├── native/                # Rust SSH/转码 sidecar
 │   ├── src/
-│   │   ├── commands/     # Tauri 命令
-│   │   ├── service/      # 业务逻辑
-│   │   └── setup/        # 应用设置
 │   └── resources/        # 原生二进制文件
 └── i18n/                 # 国际化文件
 ```
@@ -186,12 +195,14 @@ clients/
 ### 可用脚本
 
 ```bash
-pnpm dev              # 启动 Nuxt 开发服务器
-pnpm tauri:dev        # 启动 Tauri 开发模式
-pnpm tauri:build      # 构建生产应用
-pnpm fmt              # 使用 Oxfmt 格式化代码
-pnpm lint             # 运行 ESLint 并自动修复
-pnpm cargo:fmt        # 格式化 Rust 代码
+pnpm web:dev          # 启动 Nuxt Web 开发模式
+pnpm electron:dev     # 启动 Electron 开发模式
+pnpm electron:build   # 构建生产应用
+make docker-build     # 构建 Web Docker 镜像
+pnpm fmt              # 使用 Oxfmt 格式化前端代码
+pnpm lint             # 运行代码检查
+pnpm native:fmt       # 格式化 Rust 代码
+pnpm native:check     # 检查原生 sidecar
 pnpm reset            # 清理构建产物
 ```
 
@@ -220,7 +231,7 @@ pnpm reset            # 清理构建产物
 ## 🙏 致谢
 
 - [JumpServer](https://github.com/jumpserver/jumpserver) - 开源堡垒机
-- [Tauri](https://tauri.app/) - 构建更小、更快、更安全的桌面应用程序
+- [Electron](https://www.electronjs.org/) - 跨平台桌面运行时
 - [Vue.js](https://vuejs.org/) - 渐进式 JavaScript 框架
 - [Nuxt](https://nuxt.com/) - 直观的 Vue 框架
 

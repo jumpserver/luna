@@ -1,9 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "import",
-    "unicorn"
-  ],
+  "plugins": ["import", "unicorn"],
   "categories": {
     "correctness": "off"
   },
@@ -44,10 +41,9 @@
     "**/.qoder",
     "**/target",
     "**/dist",
-    "src-tauri/target",
-    "src-tauri/Cargo.lock",
-    "src-tauri/resources/*",
-    "src-tauri/gen/*",
+    "native/target",
+    "native/Cargo.lock",
+    "native/resources/*",
     "**/package-lock.json",
     "**/yarn.lock",
     "**/pnpm-lock.yaml",
@@ -93,10 +89,7 @@
     "block-scoped-var": "error",
     "constructor-super": "error",
     "default-case-last": "error",
-    "eqeqeq": [
-      "error",
-      "smart"
-    ],
+    "eqeqeq": ["error", "smart"],
     "no-alert": "error",
     "no-array-constructor": "error",
     "no-async-promise-executor": "error",
@@ -104,10 +97,7 @@
     "no-case-declarations": "error",
     "no-class-assign": "error",
     "no-compare-neg-zero": "error",
-    "no-cond-assign": [
-      "error",
-      "always"
-    ],
+    "no-cond-assign": ["error", "always"],
     "no-const-assign": "error",
     "no-control-regex": "error",
     "no-debugger": "error",
@@ -295,10 +285,7 @@
     "prefer-spread": "error",
     "prefer-template": "error",
     "symbol-description": "error",
-    "unicode-bom": [
-      "error",
-      "never"
-    ],
+    "unicode-bom": ["error", "never"],
     "use-isnan": [
       "error",
       {
@@ -313,14 +300,8 @@
       }
     ],
     "vars-on-top": "error",
-    "yoda": [
-      "error",
-      "never"
-    ],
-    "import/consistent-type-specifier-style": [
-      "error",
-      "prefer-top-level"
-    ],
+    "yoda": ["error", "never"],
+    "import/consistent-type-specifier-style": ["error", "prefer-top-level"],
     "import/first": "error",
     "import/no-duplicates": "error",
     "import/no-mutable-exports": "error",
@@ -328,14 +309,9 @@
   },
   "overrides": [
     {
-      "files": [
-        "**/*.?([cm])[jt]s?(x)"
-      ],
+      "files": ["**/*.?([cm])[jt]s?(x)"],
       "rules": {
-        "node/handle-callback-err": [
-          "error",
-          "^(err|error)$"
-        ],
+        "node/handle-callback-err": ["error", "^(err|error)$"],
         "node/no-exports-assign": "error",
         "node/no-new-require": "error",
         "node/no-path-concat": "error",
@@ -364,17 +340,10 @@
         "unicorn/prefer-type-error": "error",
         "unicorn/throw-new-error": "error"
       },
-      "plugins": [
-        "node",
-        "jsdoc"
-      ]
+      "plugins": ["node", "jsdoc"]
     },
     {
-      "files": [
-        "**/*.?([cm])ts",
-        "**/*.?([cm])tsx",
-        "**/*.vue"
-      ],
+      "files": ["**/*.?([cm])ts", "**/*.?([cm])tsx", "**/*.vue"],
       "rules": {
         "constructor-super": "off",
         "getter-return": "off",
@@ -455,10 +424,7 @@
         "typescript/prefer-namespace-keyword": "error",
         "typescript/triple-slash-reference": "off",
         "typescript/unified-signatures": "off",
-        "typescript/consistent-type-definitions": [
-          "error",
-          "interface"
-        ],
+        "typescript/consistent-type-definitions": ["error", "interface"],
         "typescript/consistent-type-imports": [
           "error",
           {
@@ -467,15 +433,10 @@
             "prefer": "type-imports"
           }
         ],
-        "typescript/method-signature-style": [
-          "error",
-          "property"
-        ],
+        "typescript/method-signature-style": ["error", "property"],
         "typescript/no-import-type-side-effects": "error"
       },
-      "plugins": [
-        "typescript"
-      ]
+      "plugins": ["typescript"]
     },
     {
       "files": [
@@ -500,15 +461,10 @@
         "no-unused-expressions": "off",
         "typescript/explicit-function-return-type": "off"
       },
-      "plugins": [
-        "vitest",
-        "typescript"
-      ]
+      "plugins": ["vitest", "typescript"]
     },
     {
-      "files": [
-        "**/*.vue"
-      ],
+      "files": ["**/*.vue"],
       "rules": {
         "vue/no-arrow-functions-in-watch": "error",
         "vue/no-async-in-computed-properties": "error",
@@ -541,10 +497,7 @@
         "vue/valid-define-props": "error",
         "vue/valid-next-tick": "error",
         "vue/component-definition-name-casing": "warn",
-        "vue/prop-name-casing": [
-          "error",
-          "camelCase"
-        ],
+        "vue/prop-name-casing": ["error", "camelCase"],
         "vue/require-default-prop": "off",
         "vue/require-prop-types": "off",
         "vue/no-multiple-slot-args": "warn",
@@ -552,16 +505,10 @@
         "no-unused-vars": "off",
         "typescript/explicit-function-return-type": "off"
       },
-      "plugins": [
-        "vue",
-        "typescript"
-      ]
+      "plugins": ["vue", "typescript"]
     },
     {
-      "files": [
-        "**/*.md/**/*.?([cm])[jt]s?(x)",
-        "**/*.md/**/*.vue"
-      ],
+      "files": ["**/*.md/**/*.?([cm])[jt]s?(x)", "**/*.md/**/*.vue"],
       "rules": {
         "no-alert": "off",
         "no-labels": "off",
@@ -577,44 +524,28 @@
         "typescript/no-namespace": "off",
         "typescript/no-require-imports": "off"
       },
-      "plugins": [
-        "typescript"
-      ]
+      "plugins": ["typescript"]
     },
     {
-      "files": [
-        "**/scripts/**/*.?([cm])[jt]s?(x)"
-      ],
+      "files": ["**/scripts/**/*.?([cm])[jt]s?(x)"],
       "rules": {
         "typescript/explicit-function-return-type": "off"
       },
-      "plugins": [
-        "typescript"
-      ]
+      "plugins": ["typescript"]
     },
     {
-      "files": [
-        "**/*.js",
-        "**/*.cjs"
-      ],
+      "files": ["**/*.js", "**/*.cjs"],
       "rules": {
         "typescript/no-require-imports": "off"
       },
-      "plugins": [
-        "typescript"
-      ]
+      "plugins": ["typescript"]
     },
     {
-      "files": [
-        "**/*.config.?([cm])[jt]s?(x)",
-        "**/*.config.*.?([cm])[jt]s?(x)"
-      ],
+      "files": ["**/*.config.?([cm])[jt]s?(x)", "**/*.config.*.?([cm])[jt]s?(x)"],
       "rules": {
         "typescript/explicit-function-return-type": "off"
       },
-      "plugins": [
-        "typescript"
-      ]
+      "plugins": ["typescript"]
     }
   ]
 }

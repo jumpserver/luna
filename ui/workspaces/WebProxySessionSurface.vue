@@ -51,7 +51,7 @@ let unlistenAutofillState: (() => void) | undefined;
 let unlistenRecordingState: (() => void) | undefined;
 let overlayObserver: MutationObserver | undefined;
 
-// Nuxt UI teleports interactive overlays into the main webview, but Tauri child
+// Nuxt UI teleports interactive overlays into the main webview, but desktop child
 // webviews always render above that DOM. Tooltips are intentionally excluded.
 const OVERLAY_SELECTOR = [
   '[role="menu"][data-state="open"]',
@@ -315,7 +315,7 @@ defineExpose({ focus });
   <div class="flex h-full min-h-0 flex-col overflow-hidden bg-default">
     <div
       ref="toolbarRef"
-      data-tauri-drag-region
+      data-desktop-drag-region
       class="flex h-11 shrink-0 items-center gap-1.5 border-b border-default bg-default px-2"
       :class="isMacOS && standaloneAssetWindow ? 'pl-22' : ''"
     >

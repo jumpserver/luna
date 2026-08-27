@@ -39,7 +39,7 @@ const toggleSidebar = () => {
   <div
     class="relative z-20 flex h-full items-center gap-1"
     :class="isMacClient ? 'pl-[88px] pr-2' : 'px-2.5'"
-    data-tauri-drag-region="false"
+    data-desktop-drag-region="false"
     @mousedown.stop
   >
     <div v-if="showHeaderLogo" class="mr-1.5 flex items-center">

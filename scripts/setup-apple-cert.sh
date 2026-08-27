@@ -96,15 +96,13 @@ if [ -n "$TEAM_ID" ]; then
   echo "::add-mask::$TEAM_ID"
 fi
 
-# Set environment variables
-# Use certificate name (not ID) for APPLE_SIGNING_IDENTITY as required by tauri-action
-echo "APPLE_SIGNING_IDENTITY=$CERT_NAME" >> $GITHUB_ENV
+# Use the certificate name (not the fingerprint) for Electron signing.
+echo "CSC_NAME=$CERT_NAME" >> "$GITHUB_ENV"
 if [ -n "$TEAM_ID" ]; then
-  echo "APPLE_TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
+  echo "APPLE_TEAM_ID=$TEAM_ID" >> "$GITHUB_ENV"
 fi
 
 # Show sanitized info (only certificate type, not full details)
 CERT_TYPE=$(echo "$CERT_INFO" | sed -n 's/.*"\(Developer ID Application\|Apple Distribution\|Apple Development\).*/\1/p')
 echo "✓ Certificate verified: $CERT_TYPE"
 echo "✓ Certificate imported and verified successfully."
-

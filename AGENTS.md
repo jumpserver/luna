@@ -7,18 +7,18 @@ These instructions apply to the whole repository. Follow them for all changes un
 ## Project Shape
 
 - This is a JumpServer Client repository with a Nuxt/Vue frontend under `ui/`.
-- This is also a Tauri project with both web and desktop client builds; implementation must consider both runtime environments.
+- This is also an Electron project with both web and desktop client builds; implementation must consider both runtime environments.
 - Nuxt uses `srcDir: "ui/"`.
 - The frontend is built around Nuxt UI, `@nuxt/icon`, shared theme tokens, and connector/workspace modules.
 
 ## Runtime Rules
 
-- Keep browser and Tauri desktop behavior compatible unless a feature is explicitly desktop-only or web-only.
-- Do not assume `window`, filesystem access, native dialogs, shell commands, or Tauri APIs are available in ordinary shared UI code without a runtime guard.
+- Keep browser and Electron desktop behavior compatible unless a feature is explicitly desktop-only or web-only.
+- Do not assume `window`, filesystem access, native dialogs, shell commands, or Electron APIs are available in ordinary shared UI code without a runtime guard.
 - Use existing runtime helpers and abstractions before adding new environment checks.
-- Keep desktop-specific behavior behind Tauri modules/adapters, and keep web behavior functional when those APIs are unavailable.
+- Keep desktop-specific behavior behind Electron modules/adapters, and keep web behavior functional when those APIs are unavailable.
 - When changing routing, API calls, storage, downloads, websocket/session handling, or connector launch behavior, consider both the web build and the desktop client build.
-- Login flows are intentionally split by runtime: web must redirect unauthenticated users to the server auth page, while the Tauri client keeps the in-app "enter site, then login" flow. Do not replace one runtime's login UX with the other's.
+- Login flows are intentionally split by runtime: web must redirect unauthenticated users to the server auth page, while the Electron client keeps the in-app "enter site, then login" flow. Do not replace one runtime's login UX with the other's.
 - Authentication state is determined by validating the user session/profile, not by organization availability. Missing organization data or an organization-scoped `403` must not mark an authenticated user as logged out.
 - Keep authentication bootstrap connected to the application startup path. Do not use a `*.global.client.ts` route-middleware filename: Nuxt treats it as named middleware rather than global middleware.
 
@@ -75,7 +75,7 @@ These instructions apply to the whole repository. Follow them for all changes un
 - Keep shared/core API helpers near the existing wrapper or in feature modules that use it.
 - Raw `fetch` is acceptable for connector-owned endpoints, websocket/session/protocol setup, streaming or non-JSON responses, third-party URLs, and compatibility modules with intentional header/path behavior.
 - When raw `fetch` is needed, keep it in a small API helper instead of scattering calls through Vue components.
-- Do not duplicate Tauri/browser branching, request headers, mutation headers, or token handling outside the existing wrapper without a clear reason.
+- Do not duplicate Electron/browser branching, request headers, mutation headers, or token handling outside the existing wrapper without a clear reason.
 
 ## Migration Rules
 

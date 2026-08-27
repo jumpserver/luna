@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { LangType, LanguagePreference } from "~/types";
 
 import AclDialog from "~/components/Modal/aclDialog.vue";
@@ -38,10 +38,10 @@ const {
   isHydrated
 } = settingManager;
 
-const unlistenPrimaryColor = ref<UnlistenFn | null>(null);
-const unlistenTheme = ref<UnlistenFn | null>(null);
-const unlistenFont = ref<UnlistenFn | null>(null);
-const unlistenSettingsNavigate = ref<UnlistenFn | null>(null);
+const unlistenPrimaryColor = ref<DesktopUnlistenFn | null>(null);
+const unlistenTheme = ref<DesktopUnlistenFn | null>(null);
+const unlistenFont = ref<DesktopUnlistenFn | null>(null);
+const unlistenSettingsNavigate = ref<DesktopUnlistenFn | null>(null);
 const { openSettings } = useSettingsWindow();
 
 const backgroundColor = computed(() => {

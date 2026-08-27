@@ -31,7 +31,7 @@ const sectionDefs = computed(() => {
       description: t("Setting.UserDescription"),
       icon: "i-lucide-user-round",
       routeName: "setting-user",
-      tauriOnly: false,
+      desktopOnly: false,
       authenticatedOnly: true
     },
     {
@@ -40,7 +40,7 @@ const sectionDefs = computed(() => {
       description: t("Setting.GeneralDescription"),
       icon: "i-lucide-settings-2",
       routeName: "setting-general",
-      tauriOnly: false,
+      desktopOnly: false,
       authenticatedOnly: false
     },
     {
@@ -49,7 +49,7 @@ const sectionDefs = computed(() => {
       description: t("Setting.AppearanceDescription"),
       icon: "i-lucide-palette",
       routeName: "setting-appearance",
-      tauriOnly: false,
+      desktopOnly: false,
       authenticatedOnly: false
     },
     {
@@ -58,7 +58,7 @@ const sectionDefs = computed(() => {
       description: t("Setting.ApplicationDescription"),
       icon: "i-lucide-panels-top-left",
       routeName: "setting-application",
-      tauriOnly: true,
+      desktopOnly: true,
       authenticatedOnly: false
     },
     {
@@ -67,12 +67,14 @@ const sectionDefs = computed(() => {
       description: t("Setting.AboutDescription"),
       icon: "i-lucide-info",
       routeName: "setting-about",
-      tauriOnly: false,
+      desktopOnly: false,
       authenticatedOnly: false
     }
   ];
 
-  return defs.filter((item) => (!item.tauriOnly || isDesktopRuntime()) && (!item.authenticatedOnly || loggedIn.value));
+  return defs.filter(
+    (item) => (!item.desktopOnly || isDesktopRuntime()) && (!item.authenticatedOnly || loggedIn.value)
+  );
 });
 
 const routeActiveSection = computed(() => {

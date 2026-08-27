@@ -195,10 +195,10 @@ const windowControls = computed(() => [
 <template>
   <div
     v-if="visible"
-    data-tauri-drag-region
+    data-desktop-drag-region
     class="flex h-8 min-h-8 items-stretch border-b border-[var(--app-border)] bg-[var(--app-surface-frame)] text-[var(--app-fg)]"
   >
-    <div class="flex min-w-0 flex-1 items-center" data-tauri-drag-region>
+    <div class="flex min-w-0 flex-1 items-center" data-desktop-drag-region>
       <div class="flex h-full items-center px-2">
         <img src="~/assets/logo.svg" alt="JumpServer" class="mr-1.5 size-4 shrink-0" />
 
@@ -311,7 +311,7 @@ const windowControls = computed(() => [
 </template>
 
 <style scoped>
-[data-tauri-drag-region] {
+[data-desktop-drag-region] {
   -webkit-app-region: drag;
 }
 

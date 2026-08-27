@@ -65,7 +65,7 @@ nuxt.once("exit", (code) => stop(code || 0));
 
 try {
   await waitForRenderer();
-  const electron = run("pnpm", ["exec", "electron", "."], {
+  const electron = run("pnpm", ["--dir", "electron", "exec", "electron", "."], {
     ...process.env,
     JMS_ELECTRON_RENDERER_URL: rendererUrl
   });

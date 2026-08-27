@@ -136,7 +136,7 @@ export class LocalApplicationLauncher {
     const name = process.platform === "win32" ? "client.exe" : "client";
     const candidates = [
       path.join(this.projectRoot, "resources", "bin", platform, name),
-      path.join(this.projectRoot, "src-tauri", "resources", "bin", platform, name)
+      path.join(this.projectRoot, "native", "resources", "bin", platform, name)
     ];
     if (process.resourcesPath) {
       candidates.push(
@@ -247,7 +247,8 @@ export class LocalApplicationLauncher {
     const application = await this.resolveApplication(payload);
     const values = valuesFor(payload);
     if (application.use_ssh_helper) values.helper = await this.helperPath();
-    if (application.protocol_aliases?.[payload.protocol]) values.protocol = application.protocol_aliases[payload.protocol];
+    if (application.protocol_aliases?.[payload.protocol])
+      values.protocol = application.protocol_aliases[payload.protocol];
     if (String(payload.command || "").trim()) {
       if (!["terminal", "iterm2", "linux-terminal", "windows-terminal"].includes(application.launch_driver)) {
         throw new Error("selected application cannot open command payloads");

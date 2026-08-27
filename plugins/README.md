@@ -26,7 +26,7 @@ macos.tigervnc/
 └── icon.png         # 设置页图标（可选）
 ```
 
-应用发现、选择和启动均由 Tauri/Rust 直接读取这里的插件配置。Go 工程只保留 SSH
+应用发现、选择和启动均由 Electron/Rust 直接读取这里的插件配置。Go 工程只保留 SSH
 终端 helper，不再维护应用启动配置的副本。
 
 ## 文档

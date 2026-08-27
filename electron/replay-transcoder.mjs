@@ -18,7 +18,7 @@ export class ReplayTranscoder {
 
   async command() {
     const executable = process.platform === "win32" ? "jms-transcode.exe" : "jms-transcode";
-    const candidates = [path.join(this.projectRoot, "src-tauri", "target", "debug", executable)];
+    const candidates = [path.join(this.projectRoot, "native", "target", "debug", executable)];
     if (process.resourcesPath) {
       candidates.push(
         path.join(process.resourcesPath, executable),
@@ -34,7 +34,7 @@ export class ReplayTranscoder {
           "run",
           "--quiet",
           "--manifest-path",
-          path.join(this.projectRoot, "src-tauri", "Cargo.toml"),
+          path.join(this.projectRoot, "native", "Cargo.toml"),
           "--bin",
           "jms-transcode",
           "--"

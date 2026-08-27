@@ -8,7 +8,7 @@ const rootBgClass = computed(() => (userTheme.value === "dark" ? "bg-[#1c1c1e]" 
 <template>
   <div class="flex flex-col w-full h-full" :class="rootBgClass">
     <HeaderDesktopTitleBar :show-menus="false" />
-    <header v-if="isDesktopRuntime() && isMacOS" data-tauri-drag-region class="flex items-center w-full h-8" />
+    <header v-if="isDesktopRuntime() && isMacOS" data-desktop-drag-region class="flex items-center w-full h-8" />
     <main class="flex-1">
       <slot />
     </main>

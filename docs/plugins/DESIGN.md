@@ -15,14 +15,14 @@
 
 ## 核心概念
 
-| 概念 | 说明 |
-|------|------|
-| **插件 (Plugin)** | 一个独立目录或 `.jscplugin` 包，描述一种外部连接工具 |
-| **内置插件 (builtin)** | 随安装包分发，位于 `resources/plugins/builtin/` |
+| 概念                     | 说明                                                     |
+| ------------------------ | -------------------------------------------------------- |
+| **插件 (Plugin)**        | 一个独立目录或 `.jscplugin` 包，描述一种外部连接工具     |
+| **内置插件 (builtin)**   | 随安装包分发，位于 `resources/plugins/builtin/`          |
 | **用户插件 (installed)** | 用户安装，位于 `{config_dir}/jumpserver-client/plugins/` |
-| **清单 (manifest)** | 插件元数据：id、版本、作者、支持协议等 |
-| **连接定义 (connect)** | 各平台如何启动外部程序 |
-| **用户状态 (state)** | 用户选择、自定义路径等，与插件包分离 |
+| **清单 (manifest)**      | 插件元数据：id、版本、作者、支持协议等                   |
+| **连接定义 (connect)**   | 各平台如何启动外部程序                                   |
+| **用户状态 (state)**     | 用户选择、自定义路径等，与插件包分离                     |
 
 ---
 
@@ -58,7 +58,7 @@ flowchart TB
 
 1. **启动时**：`PluginService` 扫描 builtin + installed，校验 manifest，合并为现有 `AppConfigType` 结构（**向后兼容**）。
 2. **设置页**：展示所有可用插件；用户切换默认工具、配置 exe 路径 → 写入 `plugins-state.json`。
-3. **连接时**：Tauri 内的 Rust 启动器读取合并配置，按 `launch.type` 和 `launch.driver` 执行；只有 SSH 代理连接会调用 Go `client` helper。
+3. **连接时**：Electron 内的 Rust 启动器读取合并配置，按 `launch.type` 和 `launch.driver` 执行；只有 SSH 代理连接会调用 Go `client` helper。
 
 ---
 
@@ -132,44 +132,44 @@ my-terminal-plugin/
 }
 ```
 
-| 字段 | 必填 | 说明 |
-|------|------|------|
-| `id` | ✓ | 全局唯一，反向域名，安装后作为目录名 |
-| `name` | ✓ | 短名，用于图标回退与日志 |
-| `display_name` | ✓ | UI 展示名 |
-| `version` | ✓ | 语义化版本 |
-| `min_client_version` | ✓ | 最低客户端版本 |
-| `category` | ✓ | `terminal` \| `remotedesktop` \| `filetransfer` \| `databases` |
-| `protocols` | ✓ | 支持的协议列表 |
-| `builtin` | | `true` 表示内置，不可卸载 |
+| 字段                 | 必填 | 说明                                                           |
+| -------------------- | ---- | -------------------------------------------------------------- |
+| `id`                 | ✓    | 全局唯一，反向域名，安装后作为目录名                           |
+| `name`               | ✓    | 短名，用于图标回退与日志                                       |
+| `display_name`       | ✓    | UI 展示名                                                      |
+| `version`            | ✓    | 语义化版本                                                     |
+| `min_client_version` | ✓    | 最低客户端版本                                                 |
+| `category`           | ✓    | `terminal` \| `remotedesktop` \| `filetransfer` \| `databases` |
+| `protocols`          | ✓    | 支持的协议列表                                                 |
+| `builtin`            |      | `true` 表示内置，不可卸载                                      |
 
 ### connect.json
 
 按平台描述如何启动。`launch.type` 决定执行器：
 
-| type | 说明 | 典型场景 |
-|------|------|----------|
-| `args` | 模板替换后作为命令行参数 | PuTTY、DBeaver |
+| type     | 说明                                         | 典型场景                |
+| -------- | -------------------------------------------- | ----------------------- |
+| `args`   | 模板替换后作为命令行参数                     | PuTTY、DBeaver          |
 | `script` | 执行 `scripts/` 下平台脚本，传入 JSON 上下文 | iTerm2、复杂 GUI 自动化 |
-| `url` | 构建 URL Scheme 并 `open` | Navicat |
-| `file` | 先写临时文件再打开 | RDP `.rdp` |
-| `autoit` | Windows AutoIt 步骤序列（兼容现有配置） | Navicat 填表 |
-| `system` | 调用 OS 内置能力 | macOS `open` RDP 文件 |
+| `url`    | 构建 URL Scheme 并 `open`                    | Navicat                 |
+| `file`   | 先写临时文件再打开                           | RDP `.rdp`              |
+| `autoit` | Windows AutoIt 步骤序列（兼容现有配置）      | Navicat 填表            |
+| `system` | 调用 OS 内置能力                             | macOS `open` RDP 文件   |
 
 **模板变量**（与现 `arg_format` 一致）：
 
-| 变量 | 说明 |
-|------|------|
-| `{name}` | 连接会话名（已转义） |
-| `{protocol}` | 协议名 |
-| `{username}` | 账号（SSH 类会加 `JMS-` 前缀） |
-| `{value}` | 密码/Token |
-| `{host}` | 主机地址 |
-| `{port}` | 端口 |
-| `{file}` | 临时文件路径（`file` 类型） |
-| `{dbname}` | 数据库名 |
-| `{use_ssl}` | 是否 SSL |
-| `{allow_invalid_cert}` | 是否允许无效证书 |
+| 变量                   | 说明                           |
+| ---------------------- | ------------------------------ |
+| `{name}`               | 连接会话名（已转义）           |
+| `{protocol}`           | 协议名                         |
+| `{username}`           | 账号（SSH 类会加 `JMS-` 前缀） |
+| `{value}`              | 密码/Token                     |
+| `{host}`               | 主机地址                       |
+| `{port}`               | 端口                           |
+| `{file}`               | 临时文件路径（`file` 类型）    |
+| `{dbname}`             | 数据库名                       |
+| `{use_ssl}`            | 是否 SSL                       |
+| `{allow_invalid_cert}` | 是否允许无效证书               |
 
 示例见 `plugins/demo/hello-terminal/connect.json`。
 
@@ -273,16 +273,16 @@ sequenceDiagram
 
 ---
 
-## API 设计（Tauri Commands）
+## API 设计（Electron Commands）
 
-| Command | 说明 |
-|---------|------|
-| `list_plugins` | 列出所有插件（builtin + installed）及状态 |
-| `get_config` | 返回合并后的 `AppConfigType`（兼容现有前端） |
-| `install_plugin` | 安装 `.jscplugin` 包 |
-| `uninstall_plugin` | 卸载用户插件 |
+| Command                   | 说明                                          |
+| ------------------------- | --------------------------------------------- |
+| `list_plugins`            | 列出所有插件（builtin + installed）及状态     |
+| `get_config`              | 返回合并后的 `AppConfigType`（兼容现有前端）  |
+| `install_plugin`          | 安装 `.jscplugin` 包                          |
+| `uninstall_plugin`        | 卸载用户插件                                  |
 | `update_config_selection` | 设置协议默认插件 / 自定义路径（兼容现有签名） |
-| `export_plugin_template` | 导出空白模板 ZIP（开发者工具） |
+| `export_plugin_template`  | 导出空白模板 ZIP（开发者工具）                |
 
 ---
 
@@ -311,15 +311,15 @@ sequenceDiagram
 
 ## 内置插件建议清单
 
-| 平台 | category | 建议内置 |
-|------|----------|----------|
-| Windows | terminal | putty |
-| Windows | remotedesktop | mstsc |
-| Windows | filetransfer | winscp（可选） |
-| macOS | terminal | terminal, iterm |
-| macOS | remotedesktop | 系统 RDP（open） |
-| Linux | terminal | 系统 terminal |
-| Linux | remotedesktop | xfreerdp, tigervnc |
-| 全平台 | databases | dbeaver（需用户配路径） |
+| 平台    | category      | 建议内置                |
+| ------- | ------------- | ----------------------- |
+| Windows | terminal      | putty                   |
+| Windows | remotedesktop | mstsc                   |
+| Windows | filetransfer  | winscp（可选）          |
+| macOS   | terminal      | terminal, iterm         |
+| macOS   | remotedesktop | 系统 RDP（open）        |
+| Linux   | terminal      | 系统 terminal           |
+| Linux   | remotedesktop | xfreerdp, tigervnc      |
+| 全平台  | databases     | dbeaver（需用户配路径） |
 
 其余（XShell、Navicat、MobaXterm 等）以**可选插件**形式提供下载或用户自行打包安装。

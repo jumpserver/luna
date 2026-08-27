@@ -37,7 +37,8 @@ target
 dist
 .electron-resources
 release/electron
-src-tauri/target
-src-tauri/Cargo.lock
-src-tauri/resources/*
-src-tauri/gen/*
+native/target
+native/resources/*
+!native/resources/bin/
+native/resources/bin/*
+!native/resources/bin/.gitkeep

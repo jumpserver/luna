@@ -2,11 +2,11 @@
 
 # 🚀 JumpServer Client
 
-**A modern, cross-platform desktop client for JumpServer built with Tauri**
+**A modern, cross-platform desktop client for JumpServer built with Electron**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)](https://github.com/jumpserver/clients)
-[![Tauri](https://img.shields.io/badge/Tauri-2.9.0-FFC131?logo=tauri&logoColor=white)](https://tauri.app/)
+[![Electron](https://img.shields.io/badge/Electron-44-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org/)
 
 [English](README.md) | [中文](README_CN.md)
@@ -24,7 +24,7 @@
 - 🗄️ **Multi-Database Support** - Connect to MySQL, PostgreSQL, Redis, MongoDB, Oracle, SQL Server, ClickHouse, and more
 - 🖥️ **Device Management** - Manage Linux and Windows servers seamlessly
 - 🎨 **Modern UI** - Beautiful, responsive interface built with Vue 3 and Nuxt UI
-- ⚡ **High Performance** - Lightweight and fast, powered by Tauri (Rust backend)
+- ⚡ **Native Desktop Integration** - Isolated Electron runtime with focused Rust sidecars
 - 🔗 **Deep Link Support** - Launch connections directly from web browsers via custom protocol (`jms2://`)
 - 🌓 **Theme Support** - Light and dark mode
 - 🌍 **Internationalization** - Multi-language support (English, Chinese)
@@ -37,24 +37,26 @@
 <div align="center">
 
 ![Main Interface](public/screenshot.png)
-*MacOS*
+_MacOS_
 
 <br/>
 
 ![Windows](public/screenshot-windows.png)
-*Windows*
+_Windows_
 
 </div>
 
 ## 🛠️ Tech Stack
 
 ### Frontend
+
 - **Vue 3** - Progressive JavaScript framework
 - **Nuxt UI** - Fully styled and customizable components
 
-### Backend
-- **Tauri 2.9** - Build smaller, faster, and more secure desktop applications
-- **Rust** - Systems programming language
+### Desktop
+
+- **Electron 44** - Cross-platform windowing, native integration, and packaging
+- **Rust** - Native SSH and replay-transcoding sidecars
 - **Go** - Native client components for protocol handling
 
 ## 📦 Installation
@@ -141,7 +143,7 @@ sudo dnf install ./jumpserver-client_*.rpm
 - **System Dependencies**:
   - macOS: Xcode Command Line Tools
   - Windows: Microsoft Visual C++ Build Tools
-  - Linux: `build-essential`, `libwebkit2gtk-4.0-dev`, `libssl-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`
+  - Linux: `build-essential` and `rpm` when producing RPM packages
 
 ### Getting Started
 
@@ -154,20 +156,29 @@ cd clients
 pnpm install
 
 # Start development server
-pnpm tauri:dev
+pnpm electron:dev
 ```
 
 ### Build for Production
 
 ```bash
 # Build for current platform
-pnpm tauri:build
+pnpm electron:build
 
-# Build for specific platform (requires cross-compilation setup)
-pnpm tauri:build --target x86_64-pc-windows-msi
-pnpm tauri:build --target x86_64-apple-darwin
-pnpm tauri:build --target x86_64-unknown-linux-gnu
+# Build an unpacked application directory
+pnpm electron:package:dir
 ```
+
+### Build the Web Docker Image
+
+The Web image contains only the generated Nuxt application and nginx; Electron and native sidecars are excluded from its build context.
+
+```bash
+docker build -t jumpserver/luna:local .
+docker run --rm -p 8080:80 jumpserver/luna:local
+```
+
+The multi-architecture GitHub workflow builds `linux/amd64` and `linux/arm64`, and publishes tagged releases to `jumpserver/luna`.
 
 ### Project Structure
 
@@ -178,11 +189,9 @@ clients/
 │   ├── pages/            # Application pages
 │   ├── composables/      # Vue composables
 │   └── layouts/          # Layout components
-├── src-tauri/            # Backend (Rust/Tauri)
+├── electron/              # Electron main process and preload bridge
+├── native/                # Rust SSH/transcode sidecars
 │   ├── src/
-│   │   ├── commands/     # Tauri commands
-│   │   ├── service/      # Business logic
-│   │   └── setup/        # App setup
 │   └── resources/        # Native binaries
 └── i18n/                 # Internationalization files
 ```
@@ -190,12 +199,14 @@ clients/
 ### Available Scripts
 
 ```bash
-pnpm dev              # Start Nuxt dev server
-pnpm tauri:dev        # Start Tauri dev mode
-pnpm tauri:build      # Build production app
-pnpm fmt              # Format code with Oxfmt
-pnpm lint             # Run ESLint with automatic fixes
-pnpm cargo:fmt        # Format Rust code
+pnpm web:dev          # Start Nuxt web development
+pnpm electron:dev     # Start Electron development
+pnpm electron:build   # Build production artifacts
+make docker-build     # Build the Web Docker image
+pnpm fmt              # Format frontend code with Oxfmt
+pnpm lint             # Run lint checks
+pnpm native:fmt       # Format native Rust code
+pnpm native:check     # Check native sidecars
 pnpm reset            # Clean build artifacts
 ```
 
@@ -224,7 +235,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - [JumpServer](https://github.com/jumpserver/jumpserver) - The open-source bastion host
-- [Tauri](https://tauri.app/) - Build smaller, faster, and more secure desktop applications
+- [Electron](https://www.electronjs.org/) - Cross-platform desktop runtime
 - [Vue.js](https://vuejs.org/) - The Progressive JavaScript Framework
 - [Nuxt](https://nuxt.com/) - The Intuitive Vue Framework
 

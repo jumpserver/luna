@@ -1,6 +1,5 @@
-import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { DesktopStore, DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { ThemePresetId } from "~/composables/useThemePresets";
-import type { DesktopStore } from "~/shared/desktop/bridge";
 import { desktopStore } from "~/shared/desktop/bridge";
 import type { CodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
 import type {
@@ -188,7 +187,7 @@ export const useSettingStorage = () => {
     await store.save();
   };
 
-  const subscribe = async (cb: (state: UserSettingPersistedState) => void): Promise<UnlistenFn> => {
+  const subscribe = async (cb: (state: UserSettingPersistedState) => void): Promise<DesktopUnlistenFn> => {
     if (!isDesktopRuntime()) {
       const handler = (event: Event) => {
         const next = { ...DEFAULT_STATE, ...((event as CustomEvent<UserSettingPersistedState>).detail || {}) };

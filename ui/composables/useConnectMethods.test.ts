@@ -27,7 +27,7 @@ describe("desktop website connect methods", () => {
     method("360se_app", "360se_app")
   ];
 
-  it("adds the built-in proxy and keeps remote applications in the Tauri client", () => {
+  it("adds the built-in proxy and keeps remote applications in the desktop client", () => {
     const methods = withWebProxyBuiltin("HTTP", websiteMethods, true);
 
     expect(methods.map((item) => item.value)).toEqual([WEB_PROXY_NATIVE_VALUE, "chrome", "edge", "360se_app"]);
