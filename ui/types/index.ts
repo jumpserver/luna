@@ -175,6 +175,7 @@ export interface UserProfile {
 
 export interface UserData {
   accountId: string;
+  userId?: string;
   siteName: string;
   site: string;
   name: string;

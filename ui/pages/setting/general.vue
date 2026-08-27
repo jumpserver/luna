@@ -2,7 +2,10 @@
 import type { CharsetType, LangType, ResolutionType } from "~/types";
 
 import { useSettingManager } from "~/composables/useSettingManager";
-import { clearTerminalCommandHistory, getTerminalCommandHistoryScope } from "~/composables/useTerminalCommandHistory";
+import {
+  clearTerminalCommandHistory,
+  getAuthenticatedTerminalCommandHistoryScope
+} from "~/composables/useTerminalCommandHistory";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface LangItem {
@@ -17,7 +20,14 @@ definePageMeta({
 const { t, locales, locale } = useI18n();
 const settingManager = useSettingManager();
 const userInfoStore = useUserInfoStore();
-const { currentAccountId, currentSite } = storeToRefs(userInfoStore);
+const { currentSite, currentUser, loggedIn } = storeToRefs(userInfoStore);
+const commandHistoryScope = computed(() =>
+  getAuthenticatedTerminalCommandHistoryScope({
+    authenticated: loggedIn.value,
+    site: currentSite.value,
+    userId: currentUser.value?.userId || ""
+  })
+);
 const commandHistoryConfirmOpen = ref(false);
 const clearingCommandHistory = ref(false);
 const toast = useToast();
@@ -120,7 +130,7 @@ const commandSuggestionsEnabled = computed<boolean>({
 });
 
 async function clearCommandHistory() {
-  const scope = getTerminalCommandHistoryScope(currentSite.value, currentAccountId.value);
+  const scope = commandHistoryScope.value;
   if (!scope || clearingCommandHistory.value) return;
   clearingCommandHistory.value = true;
   try {
@@ -189,7 +199,7 @@ async function clearCommandHistory() {
             color="neutral"
             variant="ghost"
             size="sm"
-            :disabled="!currentAccountId || !currentSite"
+            :disabled="!commandHistoryScope"
             :label="t('Setting.ClearTerminalCommandHistory')"
             @click="commandHistoryConfirmOpen = true"
           />

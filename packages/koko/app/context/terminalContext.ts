@@ -15,6 +15,7 @@ import mitt from "mitt";
 import { inject, nextTick, shallowRef } from "vue";
 import { TerminalEventType } from "#koko/composables/terminal/protocol";
 import { isKokoTerminalAiInputLocked } from "#koko/composables/terminal/useTerminalAiSessions";
+import { hasKokoTerminalDataSender, sendKokoTerminalData } from "#koko/composables/useTerminalSessionRegistry";
 import { useKokoConnectionStore } from "#koko/stores/connection";
 import {
   createUnrestrictedClipboardAccess,
@@ -131,6 +132,12 @@ export const createKokoTerminalContext = (): TerminalContext => {
         return;
       }
       if (enforceClipboardPolicy && command && !validateClipboardText("paste", command)) return;
+      // Empty INPUT_ACTIVE keepalives must not go through the custom sender:
+      // that path re-emits INPUT_ACTIVE and would recurse.
+      if (command && paneId && hasKokoTerminalDataSender(paneId)) {
+        sendKokoTerminalData(paneId, command);
+        return;
+      }
       socket.send(formatMessage(terminalId, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, command));
     };
 

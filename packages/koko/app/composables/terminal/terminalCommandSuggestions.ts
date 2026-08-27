@@ -1,5 +1,6 @@
 import type { ConnectorTerminalProfile } from "@jumpserver/connectors-core";
 import type { KokoTerminalCommandProfile } from "@jumpserver/koko/host";
+import { isSafeTerminalCommandHistory } from "@jumpserver/koko/host";
 
 export interface TerminalCommandSuggestion {
   command: string;
@@ -220,7 +221,7 @@ export function resolveTerminalCommandProfile(profile: ConnectorTerminalProfile 
 }
 
 function candidateForTypedCase(command: string, prefix: string, profile: KokoTerminalCommandProfile) {
-  if (!CASE_INSENSITIVE_PROFILES.has(profile)) return command;
+  if (!CASE_INSENSITIVE_PROFILES.has(profile) || profile === "mongodb") return command;
   if (prefix === prefix.toLowerCase()) return command.toLowerCase();
   if (prefix === prefix.toUpperCase()) return command.toUpperCase();
   return command;
@@ -242,6 +243,7 @@ export function getTerminalCommandSuggestions(
     ["catalog", CATALOGS[profile]]
   ] as const) {
     for (const rawCommand of commands) {
+      if (source === "history" && !isSafeTerminalCommandHistory(rawCommand)) continue;
       const command = source === "catalog" ? candidateForTypedCase(rawCommand, prefix, profile) : rawCommand;
       const normalized = insensitive ? command.toLowerCase() : command;
       if (!normalized.startsWith(normalizedPrefix) || normalized === normalizedPrefix || seen.has(normalized)) continue;
@@ -252,36 +254,57 @@ export function getTerminalCommandSuggestions(
   return result;
 }
 
-const SENSITIVE_COMMAND_PATTERNS = [
-  /(?:^|[^a-z0-9])(?:password|passwd|token|secret|api[_-]?key|authorization)(?:[^a-z0-9]|$)/i,
-  /(?:^|\s)--?(?:password|passwd|token|secret|api[_-]?key)(?:=|\s)/i,
-  /(?:https?|ssh):\/\/[^\s/@:]+:[^\s/@]+@/i,
-  /\b(?:MYSQL_PWD|PGPASSWORD|REDISCLI_AUTH|AWS_SECRET_ACCESS_KEY|AZURE_CLIENT_SECRET)\s*=/i,
-  /(?:^|\s)-u\s*[^\s:]+:[^\s]+/i,
-  /(?:^|\s)-p[^\s]+/i
-];
+export { isSafeTerminalCommandHistory } from "@jumpserver/koko/host";
 
 function isControlCharacter(value: string) {
   const code = value.codePointAt(0) || 0;
   return code < 32 || code === 127;
 }
 
-export function isSafeTerminalCommandHistory(command: string) {
-  return (
-    command.length > 0 &&
-    command.length <= 512 &&
-    !Array.from(command).some(isControlCharacter) &&
-    !SENSITIVE_COMMAND_PATTERNS.some((pattern) => pattern.test(command))
-  );
-}
-
-export function terminalCommandSuggestionKeyAction(key: string, open: boolean) {
-  if (!open) return null;
+export function terminalCommandSuggestionKeyAction(key: string, open: boolean, eventType = "keydown") {
+  if (!open || eventType !== "keydown") return null;
   if (key === "ArrowDown") return "next" as const;
   if (key === "ArrowUp") return "previous" as const;
   if (key === "Tab") return "accept" as const;
   if (key === "Escape") return "close" as const;
   return null;
+}
+
+export function getTerminalCommandLineBeforeCursor(
+  buffer: {
+    baseY: number;
+    cursorY: number;
+    cursorX: number;
+    cols?: number;
+    getLine: (
+      index: number
+    ) => { translateToString: (trimRight: boolean, start: number, end: number) => string } | undefined;
+  },
+  endColumn = buffer.cursorX
+) {
+  return buffer.getLine(buffer.baseY + buffer.cursorY)?.translateToString(false, 0, endColumn) || "";
+}
+
+export function terminalCommandEchoContainsPrefix(
+  buffer: {
+    baseY: number;
+    cursorY: number;
+    cursorX: number;
+    cols?: number;
+    getLine: (
+      index: number
+    ) => { translateToString: (trimRight: boolean, start: number, end: number) => string } | undefined;
+  },
+  prefix: string
+) {
+  if (!prefix) return false;
+  const beforeCursor = getTerminalCommandLineBeforeCursor(buffer);
+  if (beforeCursor.endsWith(prefix)) return true;
+  const includingCursor = getTerminalCommandLineBeforeCursor(
+    buffer,
+    Math.min(buffer.cols ?? buffer.cursorX + 1, buffer.cursorX + 1)
+  );
+  return includingCursor.endsWith(prefix);
 }
 
 export class TerminalCommandInputTracker {
@@ -311,9 +334,8 @@ export class TerminalCommandInputTracker {
       if (this.valid) this.line = this.line.slice(0, -1);
       return { changed: true };
     }
-    if (data === "\x15") {
-      this.line = "";
-      this.valid = true;
+    if (data === "\x15" || data === "\x03") {
+      this.reset();
       return { changed: true };
     }
     if (Array.from(data).length === 1 && !isControlCharacter(data)) {

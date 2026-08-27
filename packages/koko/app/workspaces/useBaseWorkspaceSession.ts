@@ -75,6 +75,7 @@ export function useBaseWorkspaceSession(tab: Ref<KokoWorkspaceTab>, options: Use
   }
 
   async function prepareSession() {
+    const terminalCommandHistoryScope = host.terminalCommandSuggestions?.scope() || "";
     if (!tokenId.value) {
       error.value = t("koko.fileManagement.missingConnectionToken");
       loading.value = false;
@@ -98,6 +99,7 @@ export function useBaseWorkspaceSession(tab: Ref<KokoWorkspaceTab>, options: Use
         themeType: themeType.value,
         disableAutoHash: options.disableAutoHash,
         actions: tab.value.payload?.actions || token.value?.actions,
+        terminalCommandHistoryScope,
         terminalProfile: {
           protocol: tab.value.protocol,
           assetPlatform: tab.value.assetPlatform,
