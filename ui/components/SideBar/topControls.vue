@@ -3,6 +3,8 @@ const { t } = useI18n();
 const { isMacOS } = usePlatform();
 const localePath = useLocalePath();
 const { collapse, setCollapse } = useSettingManager();
+const isNarrowScreen = useMediaQuery("(max-width: 767px)");
+const { openHoverPreview, closeHoverPreview, scheduleHoverPreviewClose } = useSidebarLayout();
 const { uiWorkspaceMode } = useWorkspaceMode();
 const isMacClient = computed(() => isDesktopRuntime() && isMacOS.value);
 const showHeaderLogo = computed(() => !isDesktopRuntime());
@@ -31,7 +33,12 @@ const setMode = async (mode: "assets" | "files") => {
 };
 
 const toggleSidebar = () => {
+  closeHoverPreview();
   setCollapse(!collapse.value);
+};
+
+const previewSidebar = () => {
+  if (collapse.value && !isNarrowScreen.value) openHoverPreview();
 };
 </script>
 
@@ -88,6 +95,8 @@ const toggleSidebar = () => {
         icon="i-lucide-panel-left"
         :aria-label="t('Sidebar.Expand')"
         :ui="{ leadingIcon: 'm-0 size-4' }"
+        @pointerenter="previewSidebar"
+        @pointerleave="scheduleHoverPreviewClose"
         @click="toggleSidebar"
       />
     </UTooltip>

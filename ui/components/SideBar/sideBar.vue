@@ -12,6 +12,8 @@ const isNarrowScreen = useMediaQuery("(max-width: 767px)");
 const { addErrorToast } = useErrorToast();
 const localePath = useLocalePath();
 const { collapse, sidebarSections, setCollapse, setSidebarSections } = useSettingManager();
+const { hoverPreviewOpen, closeHoverPreview } = useSidebarLayout();
+const visuallyCollapsed = computed(() => collapse.value && !hoverPreviewOpen.value);
 const { activeWorkspaceMode } = useWorkspaceMode();
 const showTools = computed(() => isDesktopRuntime());
 const { confirmConnection } = useAssetConnection();
@@ -430,6 +432,7 @@ const handleFavoriteMultipleAssets = async (assets: AssetItem[]) => {
 };
 
 const handleAssetConnect = async (asset: AssetItem) => {
+  closeHoverPreview();
   if (isNarrowScreen.value) setCollapse(true);
   if (!hasReusableSavedConnection(asset) && (await connectWebsiteDirectly(asset))) return;
   await connectWithSavedConnection(asset);
@@ -467,10 +470,12 @@ const openAssetInCurrentWorkspace = (asset: AssetItem) => {
 };
 
 const handleAssetQuickConnect = (asset: AssetItem) => {
+  closeHoverPreview();
   connectWithSavedConnection(asset);
 };
 
 const handleAssetConnectWithSelection = (asset: AssetItem) => {
+  closeHoverPreview();
   openSetupSession(asset);
 };
 
@@ -621,7 +626,7 @@ watch(
   <div
     class="flex h-full w-full shrink-0 overflow-hidden flex-col"
     :class="
-      collapse
+      visuallyCollapsed
         ? 'border-r-0 shadow-none'
         : 'border-r border-[color:var(--sidebar-divider-light)] dark:border-[color:var(--sidebar-divider-dark)]'
     "
@@ -631,7 +636,7 @@ watch(
   >
     <div class="flex flex-col w-full">
       <div
-        v-show="!collapse && activeWorkspaceMode === 'assets' && loggedIn"
+        v-show="!visuallyCollapsed && activeWorkspaceMode === 'assets' && loggedIn"
         class="flex h-9 items-center gap-px border-b border-[color:var(--sidebar-divider-light)] px-2.5 dark:border-[color:var(--sidebar-divider-dark)]"
       >
         <div class="min-w-0 flex-1">
@@ -685,14 +690,14 @@ watch(
       v-if="showTools && activeWorkspaceMode === 'tools'"
       class="px-2.5 py-0 flex-1 overflow-auto menu"
       :style="{
-        display: collapse ? 'inline-flex' : '',
-        justifyContent: collapse ? 'center' : ''
+        display: visuallyCollapsed ? 'inline-flex' : '',
+        justifyContent: visuallyCollapsed ? 'center' : ''
       }"
     >
       <UNavigationMenu
         orientation="vertical"
         :items="sideBarItems"
-        :collapsed="collapse"
+        :collapsed="visuallyCollapsed"
         color="neutral"
         :ui="{
           link: 'sidebar-row px-2.5 my-1 rounded-lg menu-item flex items-center light:text-gray-800 dark:text-gray-200',

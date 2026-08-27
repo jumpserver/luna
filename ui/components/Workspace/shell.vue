@@ -11,7 +11,15 @@ const props = withDefaults(
 );
 
 const { collapse, setCollapse: setSidebarCollapsed } = useSettingManager();
-const { sidebarWidth, setSidebarWidth, persistSidebarWidth } = useSidebarLayout();
+const {
+  sidebarWidth,
+  setSidebarWidth,
+  persistSidebarWidth,
+  hoverPreviewOpen,
+  closeHoverPreview,
+  cancelHoverPreviewClose,
+  scheduleHoverPreviewClose
+} = useSidebarLayout();
 const {
   open: rightPanelOpen,
   panelWidth: rightPanelWidth,
@@ -28,9 +36,12 @@ const sidebarTransitionClass = computed(() => {
   return "transition-[width] duration-200";
 });
 const sidebarStyleWidth = computed(() => {
-  if (props.focusMode || !props.sidebarVisible || collapse.value) return "0px";
+  if (props.focusMode || !props.sidebarVisible || (collapse.value && !hoverPreviewOpen.value)) return "0px";
   return isNarrowScreen.value ? `min(${sidebarWidth.value}px, calc(100vw - 3rem))` : `${sidebarWidth.value}px`;
 });
+const sidebarOverlay = computed(
+  () => collapse.value && !isNarrowScreen.value && props.sidebarVisible && !props.focusMode
+);
 const rightPanelStyleWidth = computed(() => {
   if (props.focusMode || !rightPanelOpen.value) return "0px";
   return isNarrowScreen.value ? `min(${rightPanelWidth.value}px, calc(100vw - 3rem))` : `${rightPanelWidth.value}px`;
@@ -43,6 +54,10 @@ const closeMobilePanels = () => {
   setSidebarCollapsed(true);
   setRightPanelOpen(false);
 };
+
+watch([collapse, () => props.sidebarVisible, () => props.focusMode], () => {
+  if (!collapse.value || !props.sidebarVisible || props.focusMode) closeHoverPreview();
+});
 
 const handleResize = (event: PointerEvent) => {
   if (!isResizing.value) return;
@@ -101,6 +116,7 @@ const startRightResizing = (event: PointerEvent) => {
 };
 
 onBeforeUnmount(() => {
+  closeHoverPreview();
   stopResizing();
   stopRightResizing();
 });
@@ -122,12 +138,18 @@ onBeforeUnmount(() => {
     <div class="workspace-shell__body relative flex min-h-0 flex-1">
       <aside
         v-if="$slots.sidebar"
-        class="workspace-shell__sidebar relative z-40 min-h-0 shrink-0 overflow-hidden max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
-        :class="sidebarTransitionClass"
+        class="workspace-shell__sidebar z-40 min-h-0 shrink-0 overflow-hidden max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
+        :class="[
+          sidebarTransitionClass,
+          sidebarOverlay ? 'absolute inset-y-0 left-0' : 'relative',
+          hoverPreviewOpen ? 'border-r border-[var(--app-border)] shadow-xl' : ''
+        ]"
         :style="{
           width: sidebarStyleWidth,
           backgroundColor: 'var(--app-sidebar-bg)'
         }"
+        @pointerenter="cancelHoverPreviewClose"
+        @pointerleave="hoverPreviewOpen && scheduleHoverPreviewClose()"
       >
         <slot name="sidebar" />
         <div
