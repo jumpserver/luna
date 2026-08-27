@@ -712,7 +712,8 @@ onBeforeUnmount(() => {
       onOpenAutoFocus: handleProfileOpenAutoFocus
     }"
     :ui="{
-      content: 'w-64 overflow-hidden rounded-xl bg-[var(--app-surface-overlay)] p-0 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
+      content:
+        'w-64 overflow-hidden rounded-xl bg-[var(--app-surface-overlay)] p-0 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
     }"
   >
     <UTooltip v-if="isTopbar" arrow :text="accountTooltip">
