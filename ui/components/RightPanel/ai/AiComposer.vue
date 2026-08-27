@@ -2,7 +2,7 @@
 import type { AiSelectOption } from "./types";
 
 defineProps<{
-  sql: boolean;
+  showPolicy: boolean;
   busy: boolean;
   actionLabel: string;
   placeholder: string;
@@ -43,7 +43,7 @@ function handleSubmitKeydown(event: KeyboardEvent) {
       @keydown.enter.exact="handleSubmitKeydown"
     />
     <div class="absolute inset-x-2 bottom-2 flex items-center gap-1.5">
-      <div v-if="!sql" class="flex min-w-0 flex-1 items-center gap-1">
+      <div v-if="showPolicy" class="flex min-w-0 flex-1 items-center gap-1">
         <USelect
           size="xs"
           variant="soft"
