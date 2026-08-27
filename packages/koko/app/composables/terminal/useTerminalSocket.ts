@@ -23,6 +23,7 @@ import {
   connectKokoTerminalAiSession,
   disconnectKokoTerminalAiSession,
   handleKokoTerminalAiMessage,
+  isKokoTerminalAiBusy,
   isKokoTerminalAiInputLocked,
   registerKokoTerminalAiSession,
   unregisterKokoTerminalAiSession
@@ -39,7 +40,9 @@ import {
 import { useKokoTerminalTransport } from "#koko/composables/terminal/useTerminalTransport";
 import { useKokoZmodem } from "#koko/composables/terminal/useZmodem";
 import {
+  registerKokoTerminalDataSender,
   registerKokoTerminalSession,
+  unregisterKokoTerminalDataSender,
   unregisterKokoTerminalSession
 } from "#koko/composables/useTerminalSessionRegistry";
 import { useKokoWsUrl } from "#koko/composables/wsUrl";
@@ -86,7 +89,7 @@ export const useKokoTerminalSocket = () => {
   const lastReceiveTime = ref(new Date());
   const onlineUsers = ref<OnlineUser[]>([]);
   const userOptions = ref<ShareUserOptions[]>([]);
-  const terminalRef = ref<Terminal | null>(null);
+  const terminalRef = shallowRef<Terminal | null>(null);
   const connectionError = ref("");
   const sentryRef = ref<KokoZmodemSentry | null>(null);
   const socketRef = transport.socket;
@@ -176,9 +179,13 @@ export const useKokoTerminalSocket = () => {
     const paneId = unref(sessionCtxRef)?.tabId || "";
     return Boolean(paneId && isKokoTerminalAiInputLocked(paneId));
   };
+  const terminalAiBusy = () => {
+    const paneId = unref(sessionCtxRef)?.tabId || "";
+    return Boolean(paneId && isKokoTerminalAiBusy(paneId));
+  };
   const sendSuggestionData = (data: string) => {
     const socket = socketRef.value;
-    if (!socket || !isSocketOpen(socket) || terminalInputLocked() || zmodem.isActiveSession()) return false;
+    if (!socket || !isSocketOpen(socket) || terminalAiBusy() || zmodem.isActiveSession()) return false;
     lastSendTime.value = new Date();
     socket.send(
       formatMessage(
@@ -194,9 +201,17 @@ export const useKokoTerminalSocket = () => {
     terminal: terminalRef,
     container: containerRef,
     send: sendSuggestionData,
-    disabled: () =>
-      terminalInputLocked() || zmodem.isActiveSession() || !socketRef.value || !isSocketOpen(socketRef.value)
+    disabled: () => terminalAiBusy() || zmodem.isActiveSession() || !socketRef.value || !isSocketOpen(socketRef.value)
   });
+  const sendExternalTerminalData = (data: string) => {
+    commandSuggestions.invalidate();
+    if (!data) return false;
+    const socket = socketRef.value;
+    if (!socket || !isSocketOpen(socket) || terminalInputLocked() || zmodem.isActiveSession()) return false;
+    lastSendTime.value = new Date();
+    socket.send(formatMessage(terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, data));
+    return true;
+  };
 
   const input = useKokoTerminalInput({
     container: containerRef,
@@ -222,6 +237,7 @@ export const useKokoTerminalSocket = () => {
     sendMittEvent,
     validateClipboardText,
     onData: commandSuggestions.handleData,
+    onExternalData: commandSuggestions.invalidate,
     onKeyEvent: commandSuggestions.handleKeyEvent
   });
 
@@ -271,6 +287,7 @@ export const useKokoTerminalSocket = () => {
           terminalId: id,
           terminal: terminalRef.value || undefined
         });
+        registerKokoTerminalDataSender(tabId, sendExternalTerminalData);
         registerKokoTerminalAiSession(tabId, socket, id);
         registerKokoLinuxMetricsSession(tabId, { socket, terminalId: id });
       }
@@ -402,7 +419,7 @@ export const useKokoTerminalSocket = () => {
     terminal.loadAddon(search);
     terminal.loadAddon(webgl);
 
-    terminalRef.value = terminal;
+    terminalRef.value = markRaw(terminal);
     fitAddon = fit;
     searchAddon.value = search;
   };
@@ -461,6 +478,7 @@ export const useKokoTerminalSocket = () => {
     if (warningInterval.value) clearInterval(warningInterval.value);
     const tabId = unref(sessionCtxRef)?.tabId;
     if (tabId) {
+      unregisterKokoTerminalDataSender(tabId);
       unregisterKokoTerminalSession(tabId);
       unregisterKokoTerminalAiSession(tabId, socketRef.value);
       unregisterKokoLinuxMetricsSession(tabId, socketRef.value);

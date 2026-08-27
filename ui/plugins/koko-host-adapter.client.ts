@@ -7,7 +7,7 @@ import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
 import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
 import {
   clearTerminalCommandHistory,
-  getTerminalCommandHistoryScope,
+  getAuthenticatedTerminalCommandHistoryScope,
   loadTerminalCommandHistory,
   recordTerminalCommandHistory,
   subscribeTerminalCommandHistory
@@ -30,9 +30,8 @@ export default defineNuxtPlugin((nuxtApp) => {
   const { canSplitWorkspace, markSessionConnected, markSessionFailed, setActiveSession, splitWorkspace, tabs } =
     useWorkspaceTabs();
   const userInfoStore = useUserInfoStore();
-  const { currentUser } = storeToRefs(userInfoStore);
+  const { currentSite, currentUser, loggedIn } = storeToRefs(userInfoStore);
   const { codeFontSize, terminalCommandSuggestionsEnabled } = useSettingManager();
-  const { currentAccountId, currentSite } = storeToRefs(userInfoStore);
 
   const prepareSftpAsset = async (asset: KokoSftpAsset) => {
     const detail = await getAssetDetailRequest(asset.id, currentUser.value?.org?.id || "");
@@ -97,7 +96,12 @@ export default defineNuxtPlugin((nuxtApp) => {
     },
     terminalCommandSuggestions: {
       enabled: () => terminalCommandSuggestionsEnabled.value,
-      scope: () => getTerminalCommandHistoryScope(currentSite.value, currentAccountId.value),
+      scope: () =>
+        getAuthenticatedTerminalCommandHistoryScope({
+          authenticated: loggedIn.value,
+          site: currentSite.value,
+          userId: currentUser.value?.userId || ""
+        }),
       loadHistory: loadTerminalCommandHistory,
       recordHistory: recordTerminalCommandHistory,
       clearHistory: clearTerminalCommandHistory,

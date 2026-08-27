@@ -128,7 +128,7 @@ const onUploadChange = (event: Event) => {
       ref="suggestionListRef"
       role="listbox"
       :aria-label="t('koko.terminal.commandSuggestions')"
-      class="terminal-command-suggestions absolute z-30 overflow-y-auto py-1"
+      class="terminal-command-suggestions absolute z-[60] overflow-y-auto py-1"
       :style="{
         left: `${commandSuggestions.position.value.left}px`,
         top:

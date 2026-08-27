@@ -34,6 +34,7 @@ export function useKokoTerminalInput(options: {
   sendMittEvent: (event: TerminalMittEvent) => void;
   validateClipboardText: (direction: ClipboardDirection, text: string) => boolean;
   onData?: (data: string) => void;
+  onExternalData?: () => void;
   onKeyEvent?: (event: KeyboardEvent) => boolean | undefined;
 }) {
   const cleanup: Array<() => void> = [];
@@ -168,6 +169,7 @@ export function useKokoTerminalInput(options: {
         return false;
       }
       if (!options.validateClipboardText("paste", text)) return false;
+      options.onExternalData?.();
       socket.send(formatMessage(options.terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, text));
       return true;
     },

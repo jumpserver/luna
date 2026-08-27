@@ -19,4 +19,5 @@ export interface ConnectorSessionContext {
   disableAutoHash?: string;
   actions?: Array<string | { value?: string; label?: string }>;
   terminalProfile?: ConnectorTerminalProfile;
+  terminalCommandHistoryScope?: string;
 }

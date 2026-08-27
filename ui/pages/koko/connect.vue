@@ -2,6 +2,8 @@
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 import { connectorSessionKey } from "@jumpserver/connectors-core";
 import { KokoConnectView } from "@jumpserver/koko";
+import { getAuthenticatedTerminalCommandHistoryScope } from "~/composables/useTerminalCommandHistory";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 definePageMeta({ layout: "connect" });
 
@@ -9,6 +11,8 @@ const route = useRoute();
 const colorMode = useColorMode();
 const { t } = useI18n();
 const { activePaneId } = useWorkspaceTabs();
+const { currentSite, currentUser, loggedIn } = storeToRefs(useUserInfoStore());
+const { bootstrapPersistedSession } = useAuthSession();
 const sessionContext = ref<ConnectorSessionContext | null>(null);
 const aiOpen = ref(true);
 
@@ -16,7 +20,22 @@ provide(connectorSessionKey, sessionContext);
 
 const tokenId = computed(() => String(route.query.token || ""));
 
-onMounted(() => {
+function currentHistoryScope() {
+  return getAuthenticatedTerminalCommandHistoryScope({
+    authenticated: loggedIn.value,
+    site: currentSite.value,
+    userId: currentUser.value?.userId || ""
+  });
+}
+
+function syncHistoryScope() {
+  if (!sessionContext.value) return;
+  const scope = currentHistoryScope();
+  if (sessionContext.value.terminalCommandHistoryScope === scope) return;
+  sessionContext.value.terminalCommandHistoryScope = scope;
+}
+
+onMounted(async () => {
   if (!tokenId.value) return;
 
   const paneId = `standalone:${globalThis.crypto?.randomUUID?.() || Date.now()}`;
@@ -30,13 +49,18 @@ onMounted(() => {
     themeType: colorMode.value === "dark" ? "darkGary" : "default",
     disableAutoHash: String(route.query.disableautohash || "false"),
     tabId: paneId,
+    terminalCommandHistoryScope: "",
     terminalProfile: {
       protocol: String(route.query.protocol || "ssh"),
       assetPlatform: String(route.query.platform || "")
     }
   };
   activePaneId.value = paneId;
+  await bootstrapPersistedSession();
+  syncHistoryScope();
 });
+
+watch([loggedIn, currentSite, () => currentUser.value?.userId], syncHistoryScope);
 
 onBeforeUnmount(() => {
   if (activePaneId.value === sessionContext.value?.tabId) {
