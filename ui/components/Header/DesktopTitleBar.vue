@@ -14,7 +14,12 @@ const props = withDefaults(
 const { t } = useI18n();
 const { isLoading, isMacOS } = usePlatform();
 const { openSettings } = useSettingsWindow();
-const { collapse: sidebarCollapsed, setCollapse: setSidebarCollapsed } = useSettingManager();
+const {
+  collapse: sidebarCollapsed,
+  setCollapse: setSidebarCollapsed,
+  setStatusBarVisible,
+  statusBarVisible
+} = useSettingManager();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 const { batchPanelOpen, toggle: toggleBatchPanel } = useBatchCommandPanel();
 const { activeTabId, enterFocusMode, enterFullscreenMode, exitFocusMode, focusMode, workspaceFullscreen } =
@@ -127,6 +132,12 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
         checked: batchPanelOpen.value,
         onSelect: toggleBatchPanel
       },
+      {
+        label: t("DesktopMenu.StatusBar"),
+        type: "checkbox",
+        checked: statusBarVisible.value,
+        onSelect: () => setStatusBarVisible(!statusBarVisible.value)
+      },
       { type: "separator" },
       {
         label: t("DesktopMenu.Fullscreen"),
@@ -196,11 +207,11 @@ const windowControls = computed(() => [
   <div
     v-if="visible"
     data-desktop-drag-region
-    class="flex h-8 min-h-8 items-stretch border-b border-[var(--app-border)] bg-[var(--app-surface-frame)] text-[var(--app-fg)]"
+    class="flex h-[34px] min-h-[34px] items-stretch border-b border-[var(--app-border)] bg-[color:color-mix(in_srgb,var(--app-surface-frame)_94%,transparent)] text-[var(--app-fg)] backdrop-blur-md"
   >
     <div class="flex min-w-0 flex-1 items-center" data-desktop-drag-region>
       <div class="flex h-full items-center px-2">
-        <img src="~/assets/logo.svg" alt="JumpServer" class="mr-1.5 size-4 shrink-0" />
+        <img src="~/assets/logo.svg" alt="JumpServer" class="ml-0.5 mr-1.5 size-[18px] shrink-0" />
 
         <template v-if="props.showMenus">
           <UDropdownMenu
@@ -210,7 +221,7 @@ const windowControls = computed(() => [
             :content="{ align: 'start', side: 'bottom', sideOffset: 0 }"
             :ui="{
               content: 'min-w-52 p-1',
-              item: 'px-2 py-1 leading-4',
+              item: 'px-2 py-1.5 leading-5',
               itemLabel: 'text-xs'
             }"
           >
@@ -228,7 +239,7 @@ const windowControls = computed(() => [
               color="neutral"
               variant="ghost"
               size="xs"
-              class="h-7 rounded px-2 text-xs font-normal"
+              class="h-[26px] rounded px-2.5 text-xs font-normal hover:bg-[color:color-mix(in_srgb,var(--app-fg)_10%,transparent)] data-[state=open]:bg-[color:color-mix(in_srgb,var(--app-fg)_12%,transparent)]"
             />
           </UDropdownMenu>
         </template>
@@ -245,7 +256,7 @@ const windowControls = computed(() => [
         :title="button.label"
         color="neutral"
         variant="ghost"
-        class="h-8 w-[46px] justify-center rounded-none p-0 text-[color:color-mix(in_srgb,var(--app-fg)_70%,transparent)] hover:bg-[color:color-mix(in_srgb,var(--app-fg)_10%,transparent)] hover:text-[var(--app-fg)]"
+        class="h-[34px] w-[46px] justify-center rounded-none p-0 text-[color:color-mix(in_srgb,var(--app-fg)_70%,transparent)] hover:bg-[color:color-mix(in_srgb,var(--app-fg)_10%,transparent)] hover:text-[var(--app-fg)]"
         :class="
           button.key === 'close'
             ? 'hover:bg-red-600 hover:text-white active:bg-red-700 dark:hover:bg-red-600 dark:hover:text-white'

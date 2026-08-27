@@ -90,7 +90,7 @@ const appMenuItems = computed<DropdownMenuItem[]>(() => [
         :ui="{
           item: '!items-center leading-none',
           itemLeadingIcon: 'size-4 shrink-0 block leading-none',
-          itemTrailingIcon: 'size-4 shrink-0 block leading-none',
+          itemTrailingIcon: '!size-4 shrink-0 block leading-none',
           itemLabel: 'block truncate text-start leading-none',
           itemWrapper: 'min-w-0 flex-1 justify-start text-start'
         }"

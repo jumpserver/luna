@@ -38,6 +38,7 @@ export const normalizeFontSize = (size: unknown) => {
 export interface UserSettingPersistedState {
   language: LanguagePreference;
   collapse: boolean;
+  statusBarVisible: boolean;
   sort: SortType;
   theme: ThemeType;
   themeMode: ThemeType;
@@ -74,6 +75,7 @@ const WEB_STORE_KEY = "jumpserver-client:user-setting";
 export const DEFAULT_STATE: UserSettingPersistedState = {
   language: "system",
   collapse: false,
+  statusBarVisible: true,
   sort: "name",
   theme: "" as ThemeType,
   themeMode: "" as ThemeType,
@@ -83,7 +85,7 @@ export const DEFAULT_STATE: UserSettingPersistedState = {
   uiFontSize: DEFAULT_FONT_SIZE,
   codeFontSize: DEFAULT_FONT_SIZE,
   primaryColor: "#1ab394",
-  primaryColorLight: "#1ab394",
+  primaryColorLight: "#1a73e8",
   primaryColorDark: "#34d399",
   lightThemePreset: DEFAULT_LIGHT_THEME_PRESET,
   darkThemePreset: DEFAULT_DARK_THEME_PRESET,

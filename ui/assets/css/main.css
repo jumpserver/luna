@@ -26,19 +26,19 @@
 :root {
   --app-ui-font-size: 13px;
   --app-code-font-size: 13px;
-  --ui-color-primary-500: #1ab394;
+  --ui-color-primary-500: #1a73e8;
   --ui-color-elevated-500: #303237;
   --ui-color-secondary-500: #7e7e7e;
   --ui-color-neutral-100: #d8d8d8;
   --el-font-family: var(--font-sans);
-  --theme-bg: #eff1f5;
-  --theme-fg: #4c4f69;
-  --theme-muted: #9ca0b0;
-  --theme-border: #ccd0da;
-  --theme-accent: #fe640b;
-  --theme-surface: #e6e9ef;
-  --theme-surface-hover: #bcc0cc;
-  --theme-shadow-soft: 0 1px 2px rgba(76, 79, 105, 0.06), 0 2px 8px rgba(76, 79, 105, 0.05);
+  --theme-bg: #ffffff;
+  --theme-fg: #202124;
+  --theme-muted: #6f737a;
+  --theme-border: #dadce0;
+  --theme-accent: #1a73e8;
+  --theme-surface: #f8fafd;
+  --theme-surface-hover: #edf4ff;
+  --theme-shadow-soft: 0 1px 2px rgba(60, 64, 67, 0.08), 0 2px 10px rgba(26, 115, 232, 0.08);
   --color-text-primary: var(--theme-fg);
   --color-text-secondary: color-mix(in srgb, var(--theme-fg) 72%, var(--theme-bg));
   --color-text-tertiary: var(--theme-muted);
@@ -220,6 +220,15 @@ body,
   height: 100%;
   width: 100%;
   overflow: hidden;
+}
+
+body.runtime-windows-mica {
+  --app-header-bg: color-mix(in srgb, var(--app-surface-header) 78%, transparent);
+  --app-sidebar-bg: color-mix(in srgb, var(--app-surface-sidebar) 84%, transparent);
+}
+
+body.runtime-windows-mica .workspace-shell {
+  background-color: transparent !important;
 }
 
 [data-desktop-drag-region] {

@@ -45,8 +45,8 @@ const runtimePackage = require("./package.json");
 const projectRoot = app.isPackaged ? process.resourcesPath : path.resolve(electronDir, "..");
 const rendererUrl = process.env.JMS_ELECTRON_RENDERER_URL || "http://localhost:3000/luna/";
 const isDevelopment = !app.isPackaged;
-const appIconSize = 512;
-const appIconInset = 48;
+const macDockIconSize = 512;
+const macDockIconInset = 48;
 const trayIconSize = 16;
 const defaultProductName = "JumpServer";
 const productName = String(runtimePackage.displayName || defaultProductName);
@@ -562,10 +562,15 @@ function createInsetIcon(iconPath, size, inset) {
 }
 
 function loadAppIcon() {
+  const iconName = process.platform === "win32" ? "icon.ico" : "icon.png";
   const iconPath = app.isPackaged
-    ? path.join(process.resourcesPath, "icons", "icon.png")
-    : path.join(projectRoot, "electron/assets/icons/icon.png");
-  appIcon ??= createInsetIcon(iconPath, appIconSize, appIconInset);
+    ? path.join(process.resourcesPath, "icons", iconName)
+    : path.join(projectRoot, "electron/assets/icons", iconName);
+  appIcon ??=
+    process.platform === "darwin"
+      ? createInsetIcon(iconPath, macDockIconSize, macDockIconInset)
+      : nativeImage.createFromPath(iconPath);
+  if (appIcon.isEmpty()) appIcon = undefined;
   return appIcon;
 }
 
@@ -666,6 +671,21 @@ function createWindow(label = "main", options = {}) {
   const windowWebContents = win.webContents;
   const windowWebContentsId = windowWebContents.id;
 
+  if (isDevelopment) {
+    windowWebContents.on("context-menu", () => {
+      Menu.buildFromTemplate([
+        { label: "Reload", accelerator: "CmdOrCtrl+R", click: () => windowWebContents.reload() },
+        {
+          label: "Force Reload",
+          accelerator: "CmdOrCtrl+Shift+R",
+          click: () => windowWebContents.reloadIgnoringCache()
+        },
+        { type: "separator" },
+        { label: "Toggle Developer Tools", click: () => windowWebContents.toggleDevTools() }
+      ]).popup({ window: win });
+    });
+  }
+
   windows.set(label, win);
   installNavigationGuard(win);
   win.once("ready-to-show", () => win.show());
@@ -721,6 +741,7 @@ function menuLabels() {
       focusMode: "纯净模式",
       leftPanel: "左侧面板",
       rightPanel: "右侧面板",
+      statusBar: "底部状态栏",
       batchCommand: "批量命令",
       close: "关闭窗口",
       minimize: "最小化窗口",
@@ -751,6 +772,7 @@ function menuLabels() {
     focusMode: "Focus Mode",
     leftPanel: "Left Panel",
     rightPanel: "Right Panel",
+    statusBar: "Bottom Status Bar",
     batchCommand: "Batch Command",
     close: "Close Window",
     minimize: "Minimize Window",
@@ -876,6 +898,7 @@ function buildMenu() {
         { label: labels.leftPanel, click: () => sendMenuCommand("toggle-left-panel") },
         { label: labels.rightPanel, click: () => sendMenuCommand("toggle-right-panel") },
         { label: labels.batchCommand, click: () => sendMenuCommand("toggle-batch-command") },
+        { label: labels.statusBar, click: () => sendMenuCommand("toggle-status-bar") },
         { type: "separator" },
         {
           label: labels.fullscreen,

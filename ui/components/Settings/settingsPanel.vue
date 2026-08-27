@@ -21,7 +21,7 @@ const { closeSettings, activeSection: inlineActiveSection } = useSettingsWindow(
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const searchQuery = ref("");
-const hasNativeTitlebarInset = computed(() => isDesktopRuntime());
+const hasNativeTitlebarInset = computed(() => isDesktopRuntime() && isMacOS.value);
 
 const sectionDefs = computed(() => {
   const defs = [
