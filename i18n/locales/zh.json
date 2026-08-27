@@ -874,6 +874,11 @@
     "CharsetDescription": "设置命令行终端会话使用的字符编码，出现乱码时可尝试切换。",
     "TerminalBackspace": "字符终端 Backspace As Ctrl + H",
     "TerminalBackspaceDescription": "决定命令行终端中的 Backspace 键是否发送 Ctrl + H。",
+    "TerminalCommandSuggestions": "终端命令提示",
+    "TerminalCommandSuggestionsDescription": "在远程终端输入命令时显示本机词库和历史候选。",
+    "ClearTerminalCommandHistory": "清空命令历史",
+    "ClearTerminalCommandHistoryConfirm": "确定清空当前站点和账号保存的全部终端命令历史吗？",
+    "TerminalCommandHistoryCleared": "终端命令历史已清空",
     "Resolution": "分辨率",
     "ResolutionDescription": "设置远程桌面连接创建时使用的画面分辨率。",
     "Default": "默认",
@@ -1044,7 +1049,10 @@
       "verificationCode": "验证码",
       "shareLinkCopied": "分享链接已复制",
       "virtualKeyboard": "虚拟键盘",
-      "noActiveTerminal": "当前没有可输入的终端"
+      "noActiveTerminal": "当前没有可输入的终端",
+      "commandSuggestions": "命令候选",
+      "commandSuggestionHistory": "历史",
+      "commandSuggestionCatalog": "词库"
     },
     "drawer": {
       "general": "通用",
