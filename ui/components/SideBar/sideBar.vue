@@ -13,7 +13,7 @@ const { addErrorToast } = useErrorToast();
 const localePath = useLocalePath();
 const { collapse, sidebarSections, setCollapse, setSidebarSections } = useSettingManager();
 const { activeWorkspaceMode } = useWorkspaceMode();
-const showTools = computed(() => isTauriRuntime());
+const showTools = computed(() => isDesktopRuntime());
 const { confirmConnection } = useAssetConnection();
 const { getMethodsForProtocol } = useConnectMethods();
 const { configure, launchWithInfo } = useConnectionLauncher();
@@ -278,7 +278,7 @@ const resolveDirectWebsiteAccount = (asset: AssetItem) => {
 };
 
 const connectWebsiteDirectly = async (asset: AssetItem) => {
-  if (!isTauriRuntime() || !isWebsiteAsset(asset)) return false;
+  if (!isDesktopRuntime() || !isWebsiteAsset(asset)) return false;
 
   try {
     const connectAsset = await loadAssetConnectionDetails(asset);

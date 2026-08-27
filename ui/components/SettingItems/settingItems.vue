@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { ConfigItem } from "~/types/index";
+import { desktopClipboard, desktopConvertFileSrc, desktopDialog, desktopOpener } from "~/shared/desktop/bridge";
 
 const props = defineProps<{
   item: ConfigItem;
@@ -68,8 +69,8 @@ const iconSrc = computed(() => {
   if (bundledIconSrc.value) {
     return bundledIconSrc.value;
   }
-  if (props.item?.icon_path && isTauriRuntime()) {
-    return useTauriCoreConvertFileSrc(props.item.icon_path);
+  if (props.item?.icon_path && isDesktopRuntime()) {
+    return desktopConvertFileSrc(props.item.icon_path);
   }
   return imagesMap.terminal || "";
 });
@@ -134,7 +135,7 @@ const handleCopyPath = async () => {
   if (!path) return;
 
   try {
-    await useTauriClipboardManagerWriteText(path);
+    await desktopClipboard.writeText(path);
     toast.add({
       title: t("Setting.CopyPathSuccess"),
       color: "primary",
@@ -170,12 +171,12 @@ const onSwitch = (v: boolean) => {
 };
 
 const openDownloadPage = async (url: string) => {
-  await useTauriOpenerOpenUrl(url);
+  await desktopOpener.openUrl(url);
 };
 
 const selectExecutablePath = async () => {
   try {
-    const selected = (await useTauriDialogOpen({
+    const selected = (await desktopDialog.open({
       multiple: false,
       directory: props.item?.executable_type === "application_bundle",
       filters:

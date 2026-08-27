@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { desktopClipboard } from "~/shared/desktop/bridge";
 withDefaults(
   defineProps<{
     open: boolean;
@@ -49,7 +50,7 @@ const handleContextMenu = async (e: Event) => {
   e.preventDefault();
 
   try {
-    const clipboardText = await useTauriClipboardManagerReadText();
+    const clipboardText = await desktopClipboard.readText();
 
     if (clipboardText) {
       emits("clipboard", clipboardText);

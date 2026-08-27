@@ -1,16 +1,11 @@
-import { Image as TauriImage } from "@tauri-apps/api/image";
-import {
-  readText as readTauriText,
-  writeImage as writeTauriImage,
-  writeText as writeTauriText
-} from "@tauri-apps/plugin-clipboard-manager";
 import { readText as readWebText, writeText as writeWebText } from "clipboard-polyfill";
 
-import { isTauriRuntime } from "~/utils/runtime";
+import { desktopClipboard } from "~/shared/desktop/bridge";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 export async function readClipboardText() {
-  if (isTauriRuntime()) {
-    return await readTauriText();
+  if (isDesktopRuntime()) {
+    return await desktopClipboard.readText();
   }
 
   if (typeof navigator === "undefined" || typeof navigator.clipboard?.readText !== "function") {
@@ -21,8 +16,8 @@ export async function readClipboardText() {
 }
 
 export async function writeClipboardText(text: string) {
-  if (isTauriRuntime()) {
-    await writeTauriText(text);
+  if (isDesktopRuntime()) {
+    await desktopClipboard.writeText(text);
     return;
   }
 
@@ -30,9 +25,9 @@ export async function writeClipboardText(text: string) {
 }
 
 export async function writeClipboardBlob(blob: Blob) {
-  if (isTauriRuntime()) {
+  if (isDesktopRuntime()) {
     if (!blob.type.startsWith("image/")) {
-      throw new Error(`Tauri clipboard does not support ${blob.type || "this data type"}`);
+      throw new Error(`Desktop clipboard does not support ${blob.type || "this data type"}`);
     }
 
     const bitmap = await createImageBitmap(blob);
@@ -48,12 +43,7 @@ export async function writeClipboardBlob(blob: Blob) {
     context.drawImage(bitmap, 0, 0);
     const rgba = context.getImageData(0, 0, bitmap.width, bitmap.height).data;
     bitmap.close();
-    const image = await TauriImage.new(new Uint8Array(rgba), canvas.width, canvas.height);
-    try {
-      await writeTauriImage(image);
-    } finally {
-      await image.close();
-    }
+    await desktopClipboard.writeImage(new Uint8Array(rgba), canvas.width, canvas.height);
     return;
   }
 

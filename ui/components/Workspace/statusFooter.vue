@@ -22,7 +22,7 @@ const loginStatusText = computed(() => {
 
   const user = username.value;
   if (!user) return "已登录";
-  if (!isTauriRuntime() || !siteName.value) return `已登录 ${user}`;
+  if (!isDesktopRuntime() || !siteName.value) return `已登录 ${user}`;
 
   return `已登录 ${user}(${siteName.value})`;
 });
@@ -46,7 +46,7 @@ const activeText = computed(() => {
     <div class="flex min-w-0 items-center gap-3">
       <span class="flex items-center gap-1.5">
         <span class="size-1.5 rounded-full" :class="loggedIn ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-gray-500'" />
-        <span class="truncate" :title="isTauriRuntime() ? siteAddress : undefined">{{ loginStatusText }}</span>
+        <span class="truncate" :title="isDesktopRuntime() ? siteAddress : undefined">{{ loginStatusText }}</span>
       </span>
     </div>
 

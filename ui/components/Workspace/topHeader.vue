@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { desktopWindow } from "~/shared/desktop/bridge";
 const { collapse } = useSettingManager();
 const { sidebarWidth } = useSidebarLayout();
 const isNarrowScreen = useMediaQuery("(max-width: 767px)");
@@ -7,7 +8,7 @@ const leadingAreaStyle = computed(() => ({
 }));
 
 const handleWindowDrag = async (event: MouseEvent) => {
-  if (!isTauriRuntime()) return;
+  if (!isDesktopRuntime()) return;
 
   const target = event.target as HTMLElement;
   if (
@@ -22,7 +23,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
   if (event.button !== 0) return;
 
   try {
-    await useTauriWindowGetCurrentWindow().startDragging();
+    await desktopWindow.startDragging();
   } catch (error) {
     console.error(error);
   }
@@ -31,6 +32,7 @@ const handleWindowDrag = async (event: MouseEvent) => {
 
 <template>
   <div
+    data-tauri-drag-region
     class="header-bg h-10 min-h-10 max-h-10 shrink-0 flex items-center"
     :style="{
       backgroundColor: 'var(--app-header-bg)',

@@ -4,6 +4,7 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { UserData } from "~/types/index";
 
 import { useSettingManager } from "~/composables/useSettingManager";
+import { desktopApp, desktopEmit, desktopInvoke, desktopListen, desktopOpener } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import RecentSites from "./recentSites.vue";
 
@@ -166,7 +167,7 @@ function applyCurrentThemeColor(broadcast = false) {
   if (hexNow) {
     applyPrimaryColor(hexNow);
     if (broadcast) {
-      useTauriEventEmit("primary-color-changed", { hex: hexNow, mode: modeNow });
+      void desktopEmit("primary-color-changed", { hex: hexNow, mode: modeNow });
     }
   }
 }
@@ -317,9 +318,9 @@ const emitVersionAlertAndCloseModal = (payload: VersionAlertPayload) => {
 };
 
 const checkVersionBeforeOAuth = async (accountId: string, site: string) => {
-  if (!isTauriRuntime()) return true;
+  if (!isDesktopRuntime()) return true;
 
-  await useTauriCoreInvoke("set_api_session", {
+  await desktopInvoke("set_api_session", {
     sessionKey: accountId,
     origin: site,
     bearerToken: "",
@@ -327,10 +328,10 @@ const checkVersionBeforeOAuth = async (accountId: string, site: string) => {
   });
 
   const [versionResponse, appVersion] = await Promise.all([
-    useTauriCoreInvoke<VersionMessageResponse>("get_version_message", {}).catch(() => {
+    desktopInvoke<VersionMessageResponse>("get_version_message").catch(() => {
       return null;
     }),
-    useTauriAppGetVersion().catch(() => "")
+    desktopApp.getVersion().catch(() => "")
   ]);
 
   if (!versionResponse || versionResponse.status === 0) {
@@ -368,7 +369,7 @@ const checkVersionBeforeOAuth = async (accountId: string, site: string) => {
  * @description 打开登录页面
  */
 function openLoginPage() {
-  if (!isTauriRuntime()) {
+  if (!isDesktopRuntime()) {
     redirectToWebLogin();
     return;
   }
@@ -549,7 +550,7 @@ const handleConfirm = async () => {
     return;
   }
 
-  if (!isTauriRuntime()) {
+  if (!isDesktopRuntime()) {
     redirectToWebLogin();
     return;
   }
@@ -561,7 +562,7 @@ const handleConfirm = async () => {
     const ok = await checkVersionBeforeOAuth(accountId, normalizedSite);
     if (!ok) return;
 
-    const payload = await useTauriCoreInvoke<any>("auth_login", {
+    const payload = await desktopInvoke<any>("auth_login", {
       site: normalizedSite,
       sessionId: accountId
     });
@@ -600,9 +601,9 @@ const handleConfirm = async () => {
 onMounted(async () => {
   applyCurrentThemeColor();
 
-  if (!isTauriRuntime()) return;
+  if (!isDesktopRuntime()) return;
 
-  unlistenAuthUrlRef.value = await useTauriEventListen("auth_url", (event) => {
+  unlistenAuthUrlRef.value = await desktopListen("auth_url", (event) => {
     const url = (event?.payload || "").toString();
     if (!url) return;
 
@@ -611,11 +612,11 @@ onMounted(async () => {
     openModal.value = false;
     navigateTo({ path: localePath({ path: "/auth/browser" }), query: { auth_url: url } });
     if (url && typeof url === "string") {
-      useTauriOpenerOpenUrl(url);
+      desktopOpener.openUrl(url);
     }
   });
 
-  unlistenErrorPageRef.value = await useTauriEventListen("error-page", (event) => {
+  unlistenErrorPageRef.value = await desktopListen("error-page", (event) => {
     const payload = (event?.payload || {}) as any;
     const status = (payload?.status || "").toString();
     const reason = (payload?.reason || "").toString();
@@ -655,7 +656,7 @@ onMounted(async () => {
     });
   });
 
-  unlistenLoginFailedRef.value = await useTauriEventListen("login-failed-detected", (event) => {
+  unlistenLoginFailedRef.value = await desktopListen("login-failed-detected", (event) => {
     const payload = (event?.payload || {}) as any;
     const reason = (payload?.reason || "").toString();
     const message = (payload?.message || "").toString();
@@ -787,7 +788,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div v-if="isTauriRuntime()" class="border-t border-default p-1.5">
+        <div v-if="isDesktopRuntime()" class="border-t border-default p-1.5">
           <UDropdownMenu
             :items="siteSwitcherItems"
             size="sm"
@@ -852,7 +853,7 @@ onBeforeUnmount(() => {
   </button>
 
   <Modal
-    v-if="isTauriRuntime()"
+    v-if="isDesktopRuntime()"
     v-model:open="openModal"
     :title="t('Login.Title')"
     :disabled="loginBtn"

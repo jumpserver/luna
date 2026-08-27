@@ -7,6 +7,7 @@ import type {
   FileTransferResumeState,
   FileTransferWriteInput
 } from "@jumpserver/connectors-core";
+import { useKokoHostAdapter } from "@jumpserver/koko/host";
 
 const LOCAL_ENDPOINT_ID = "local:fs";
 
@@ -41,18 +42,14 @@ export function useLocalFileTransferEndpoint(options: {
   isAvailable?: () => boolean;
   onTransferCommitted?: (input: { targetPath: string }) => Promise<void> | void;
 }): FileTransferEndpoint {
+  const { localFiles } = useKokoHostAdapter();
   const ref: FileTransferEndpointRef = { id: LOCAL_ENDPOINT_ID, label: options.label };
   /** transferId → partial file absolute path */
   const partials = new Map<string, string>();
 
-  async function fsModule() {
-    return import("@tauri-apps/plugin-fs");
-  }
-
   async function exists(path: string): Promise<boolean> {
     try {
-      const fs = await fsModule();
-      return Boolean(await fs.exists(path));
+      return Boolean(await localFiles.exists(path));
     } catch {
       return false;
     }
@@ -64,8 +61,7 @@ export function useLocalFileTransferEndpoint(options: {
     if (idx <= 0) return;
     const parent = filePath.slice(0, idx);
     if (!parent || (await exists(parent))) return;
-    const fs = await fsModule();
-    await fs.mkdir(parent, { recursive: true });
+    await localFiles.mkdir(parent, { recursive: true });
   }
 
   return {
@@ -99,9 +95,8 @@ export function useLocalFileTransferEndpoint(options: {
       }
 
       await ensureParentDir(finalPath);
-      const fs = await fsModule();
       // Always restart local partials from zero for a consistent checksum chain.
-      await fs.writeFile(partial, new Uint8Array());
+      await localFiles.writeFile(partial, new Uint8Array());
       return {
         transferId: input.transferId,
         committedBytes: 0,
@@ -116,8 +111,7 @@ export function useLocalFileTransferEndpoint(options: {
       offset: number;
       length: number;
     }): Promise<FileTransferChunk> {
-      const fs = await fsModule();
-      const file = await fs.readFile(input.path);
+      const file = await localFiles.readFile(input.path);
       const bytes = file instanceof Uint8Array ? file : new Uint8Array(file);
       const end = Math.min(bytes.length, input.offset + input.length);
       const slice = bytes.subarray(input.offset, end);
@@ -133,11 +127,9 @@ export function useLocalFileTransferEndpoint(options: {
     async writeChunk(input: FileTransferWriteInput) {
       const partial = partials.get(input.transferId) || partialPathFor(input.targetPath, input.transferId);
       partials.set(input.transferId, partial);
-      const fs = await fsModule();
-
       let existing = new Uint8Array();
       if (await exists(partial)) {
-        const raw = await fs.readFile(partial);
+        const raw = await localFiles.readFile(partial);
         existing = raw instanceof Uint8Array ? raw : new Uint8Array(raw);
       }
 
@@ -145,7 +137,7 @@ export function useLocalFileTransferEndpoint(options: {
       const next = new Uint8Array(nextLength);
       next.set(existing, 0);
       next.set(input.data, input.offset);
-      await fs.writeFile(partial, next);
+      await localFiles.writeFile(partial, next);
 
       return {
         committedBytes: input.offset + input.data.length,
@@ -167,8 +159,7 @@ export function useLocalFileTransferEndpoint(options: {
           state: "missing"
         };
       }
-      const fs = await fsModule();
-      const raw = await fs.readFile(partial);
+      const raw = await localFiles.readFile(partial);
       const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw);
       return {
         transferId: input.transferId,
@@ -180,10 +171,9 @@ export function useLocalFileTransferEndpoint(options: {
 
     async commitTransfer(input: FileTransferCommitInput): Promise<void> {
       const partial = partials.get(input.transferId) || partialPathFor(input.targetPath, input.transferId);
-      const fs = await fsModule();
       if (await exists(input.targetPath)) {
         if (input.conflictPolicy === "skip") {
-          if (await exists(partial)) await fs.remove(partial);
+          if (await exists(partial)) await localFiles.remove(partial);
           partials.delete(input.transferId);
           return;
         }
@@ -195,13 +185,13 @@ export function useLocalFileTransferEndpoint(options: {
             dot > input.targetPath.lastIndexOf("/") && dot > input.targetPath.lastIndexOf("\\")
               ? `${input.targetPath.slice(0, dot)}.${stamp}${input.targetPath.slice(dot)}`
               : `${input.targetPath}.${stamp}`;
-          await fs.rename(partial, renamed);
+          await localFiles.rename(partial, renamed);
           partials.delete(input.transferId);
           return;
         }
-        await fs.remove(input.targetPath);
+        await localFiles.remove(input.targetPath);
       }
-      await fs.rename(partial, input.targetPath);
+      await localFiles.rename(partial, input.targetPath);
       partials.delete(input.transferId);
     },
 
@@ -210,8 +200,7 @@ export function useLocalFileTransferEndpoint(options: {
       partials.delete(input.transferId);
       if (!input.discard) return;
       try {
-        const fs = await fsModule();
-        if (await exists(partial)) await fs.remove(partial);
+        if (await exists(partial)) await localFiles.remove(partial);
       } catch {
         // Best-effort cleanup.
       }

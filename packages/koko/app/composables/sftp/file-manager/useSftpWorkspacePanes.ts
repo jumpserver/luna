@@ -73,7 +73,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
   );
   const organizationSelector = hostAdapter.sftp.organizationSelector;
   const assetTree = hostAdapter.sftp.assetTree;
-  const isTauriRuntime = hostAdapter.isTauriRuntime();
+  const isDesktopRuntime = hostAdapter.isDesktopRuntime();
 
   const panesForSide = (side: SftpWorkspaceSide) => remotePanes.value.filter((pane) => pane.side === side);
   const activePaneForSide = (side: SftpWorkspaceSide) =>
@@ -97,7 +97,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
         (endpoint.host ? (port ? `${scheme}://${endpoint.host}:${port}` : `${scheme}://${endpoint.host}`) : "");
       if (!resolved) throw new Error(options.translate("koko.fileManagement.endpointUnavailable"));
 
-      if (isTauriRuntime) {
+      if (isDesktopRuntime) {
         endpointUrl = resolved;
       } else {
         const resolvedUrl = new URL(resolved);
@@ -112,7 +112,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     try {
       ticket = String((await hostAdapter.createTicket({ baseUrl: endpointUrl, tokenId })).ticket || "");
     } catch (cause) {
-      if (isTauriRuntime) throw cause;
+      if (isDesktopRuntime) throw cause;
     }
 
     return { component: "koko" as const, tokenId, ticket, endpointUrl, tabId };
@@ -239,7 +239,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
 
     if (globalActiveIds[sourceSide] === id) {
       globalActiveIds[sourceSide] =
-        panesForSide(sourceSide)[0]?.id ?? (sourceSide === "left" ? defaultGlobalLeftPaneId(isTauriRuntime) : null);
+        panesForSide(sourceSide)[0]?.id ?? (sourceSide === "left" ? defaultGlobalLeftPaneId(isDesktopRuntime) : null);
     }
     globalActiveIds[targetSide] = id;
     activeRemoteId.value = id;
@@ -350,7 +350,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     pendingPreconnect.value = null;
     preconnecting.value = true;
     preconnectingName.value = intent.assetName || intent.assetId;
-    globalActiveIds.left = defaultGlobalLeftPaneId(isTauriRuntime);
+    globalActiveIds.left = defaultGlobalLeftPaneId(isDesktopRuntime);
     connectSide.value = "right";
 
     try {
@@ -374,7 +374,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
 
   function initializeGlobalWorkspace() {
     if (!toValue(options.global)) return;
-    globalActiveIds.left = defaultGlobalLeftPaneId(isTauriRuntime);
+    globalActiveIds.left = defaultGlobalLeftPaneId(isDesktopRuntime);
     void consumePendingPreconnect();
   }
 
@@ -402,7 +402,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     focusRemotePane,
     globalActiveIds,
     initializeGlobalWorkspace,
-    isTauriRuntime,
+    isDesktopRuntime,
     markRemotePaneConnected,
     openRemoteConnect,
     organizationSelector,

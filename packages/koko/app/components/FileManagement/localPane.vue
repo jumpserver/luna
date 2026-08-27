@@ -6,6 +6,7 @@ import type {
   SftpTransferSourcePayload
 } from "#koko/composables/sftp/file-manager/workspaceTypes";
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
+import { useKokoHostAdapter } from "@jumpserver/koko/host";
 import { useDebounceFn } from "@vueuse/core";
 import SftpLocalPaneDialogs from "#koko/components/FileManagement/pane/SftpLocalPaneDialogs.vue";
 import SftpLocalPaneToolbar from "#koko/components/FileManagement/pane/SftpLocalPaneToolbar.vue";
@@ -55,6 +56,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const { localFiles } = useKokoHostAdapter();
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const setupOpen = ref(false);
@@ -104,7 +106,7 @@ const transferEndpoint = computed<FileTransferEndpointRef>(() => ({
 const localTransferEndpoint = useLocalFileTransferEndpoint({
   label: t("koko.fileManagement.localFiles"),
   getCurrentPath: () => currentPath.value,
-  isAvailable: () => isTauriRuntime() && !error.value,
+  isAvailable: () => localFiles.isAvailable() && !error.value,
   onTransferCommitted: async () => {
     await list();
   }
@@ -374,7 +376,7 @@ onMounted(() => {
   void refreshQuickPaths();
   document.addEventListener("dragend", clearTransferDragState);
   document.addEventListener("keydown", onKeydown);
-  if (isTauriRuntime()) {
+  if (localFiles.isAvailable()) {
     emit("transferEndpointMounted", localTransferEndpoint);
     emit("transferEndpointConnected");
   }
@@ -382,7 +384,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener("dragend", clearTransferDragState);
   document.removeEventListener("keydown", onKeydown);
-  if (isTauriRuntime()) emit("transferEndpointUnmounted", transferEndpoint.value);
+  if (localFiles.isAvailable()) emit("transferEndpointUnmounted", transferEndpoint.value);
   void releaseSecurityScope();
 });
 

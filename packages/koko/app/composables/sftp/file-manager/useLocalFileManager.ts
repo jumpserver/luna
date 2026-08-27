@@ -1,4 +1,5 @@
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
+import { useKokoHostAdapter } from "@jumpserver/koko/host";
 
 const LOCAL_ROOT_STORAGE_KEY = "jumpserver-client:file-manager-local-root";
 
@@ -8,6 +9,7 @@ interface UseLocalFileManagerOptions {
 }
 
 export function useLocalFileManager(options: UseLocalFileManagerOptions) {
+  const { localFiles } = useKokoHostAdapter();
   const entries = ref<SftpFileEntry[]>([]);
   const currentPath = ref("");
   const rootPath = ref("");
@@ -35,16 +37,10 @@ export function useLocalFileManager(options: UseLocalFileManagerOptions) {
     globalThis.localStorage?.removeItem(LOCAL_ROOT_STORAGE_KEY);
   }
 
-  async function fsModules() {
-    const [fs, path] = await Promise.all([import("@tauri-apps/plugin-fs"), import("@tauri-apps/api/path")]);
-    return { fs, path };
-  }
-
   async function releaseSecurityScope(targetPath = activeScopedPath.value): Promise<void> {
-    if (!targetPath || !isTauriRuntime()) return;
+    if (!targetPath || !localFiles.isAvailable()) return;
     try {
-      const { fs } = await fsModules();
-      await fs.stopAccessingSecurityScopedResource?.(targetPath);
+      await localFiles.stopAccessingSecurityScopedResource(targetPath);
     } catch {
       // Scope release is best-effort during teardown and root changes.
     } finally {
@@ -53,13 +49,12 @@ export function useLocalFileManager(options: UseLocalFileManagerOptions) {
   }
 
   async function activateSecurityScope(targetPath: string): Promise<void> {
-    if (!targetPath || !isTauriRuntime()) return;
+    if (!targetPath || !localFiles.isAvailable()) return;
     if (activeScopedPath.value && activeScopedPath.value !== targetPath) {
       await releaseSecurityScope(activeScopedPath.value);
     }
     try {
-      const { fs } = await fsModules();
-      await fs.startAccessingSecurityScopedResource?.(targetPath);
+      await localFiles.startAccessingSecurityScopedResource(targetPath);
       activeScopedPath.value = targetPath;
     } catch {
       // Some platforms and unsigned/dev builds do not expose security-scoped access.
@@ -67,21 +62,19 @@ export function useLocalFileManager(options: UseLocalFileManagerOptions) {
   }
 
   async function resolveInitialRoot(): Promise<string> {
-    const { path } = await fsModules();
-    return loadSavedRoot() || (await path.homeDir());
+    return loadSavedRoot() || (await localFiles.homeDir());
   }
 
   async function refreshQuickPaths(): Promise<void> {
-    if (!isTauriRuntime()) {
+    if (!localFiles.isAvailable()) {
       quickPaths.value = [];
       return;
     }
     try {
-      const { path } = await fsModules();
       const [home, desktop, download] = await Promise.all([
-        path.homeDir().catch(() => ""),
-        path.desktopDir().catch(() => ""),
-        path.downloadDir().catch(() => "")
+        localFiles.homeDir().catch(() => ""),
+        localFiles.desktopDir().catch(() => ""),
+        localFiles.downloadDir().catch(() => "")
       ]);
       const next: typeof quickPaths.value = [];
       if (home)
@@ -112,20 +105,19 @@ export function useLocalFileManager(options: UseLocalFileManagerOptions) {
   }
 
   async function list(path?: string): Promise<void> {
-    if (!isTauriRuntime()) return;
+    if (!localFiles.isAvailable()) return;
     loading.value = true;
     error.value = "";
     try {
-      const { fs, path: pathApi } = await fsModules();
       if (!rootPath.value) rootPath.value = await resolveInitialRoot();
       const targetPath = path || currentPath.value || rootPath.value;
       await activateSecurityScope(rootPath.value || targetPath);
-      const items = await fs.readDir(targetPath);
+      const items = await localFiles.readDir(targetPath);
       const nextEntries = await Promise.all(
         items.map(async (item) => {
-          const fullPath = await pathApi.join(targetPath, item.name);
+          const fullPath = await localFiles.join(targetPath, item.name);
           try {
-            const info = await fs.stat(fullPath);
+            const info = await localFiles.stat(fullPath);
             return {
               name: item.name,
               size: info.isFile ? String(info.size) : "",
@@ -165,13 +157,11 @@ export function useLocalFileManager(options: UseLocalFileManagerOptions) {
   }
 
   async function entryPath(entry: SftpFileEntry): Promise<string> {
-    const { path } = await fsModules();
-    return path.join(currentPath.value, entry.name);
+    return localFiles.join(currentPath.value, entry.name);
   }
 
   async function changeDirectory(entry: SftpFileEntry): Promise<void> {
-    const { path } = await fsModules();
-    await list(entry.name === ".." ? await path.dirname(currentPath.value) : await entryPath(entry));
+    await list(entry.name === ".." ? await localFiles.dirname(currentPath.value) : await entryPath(entry));
   }
 
   async function goToPath(target: string): Promise<void> {
@@ -183,21 +173,18 @@ export function useLocalFileManager(options: UseLocalFileManagerOptions) {
   }
 
   async function readFile(entry: SftpFileEntry, targetPath?: string): Promise<Blob> {
-    const { fs } = await fsModules();
     const fullPath = targetPath || (await entryPath(entry));
-    return new Blob([await fs.readFile(fullPath)]);
+    return new Blob([await localFiles.readFile(fullPath)]);
   }
 
   async function uploadBlob(fileName: string, blob: Blob, targetPath?: string): Promise<void> {
-    const { fs, path } = await fsModules();
-    const fullPath = targetPath || (await path.join(currentPath.value, fileName));
-    await fs.writeFile(fullPath, new Uint8Array(await blob.arrayBuffer()));
+    const fullPath = targetPath || (await localFiles.join(currentPath.value, fileName));
+    await localFiles.writeFile(fullPath, new Uint8Array(await blob.arrayBuffer()));
     await list();
   }
 
   async function createDirectory(name: string): Promise<void> {
-    const { fs, path } = await fsModules();
-    await fs.mkdir(await path.join(currentPath.value, name));
+    await localFiles.mkdir(await localFiles.join(currentPath.value, name));
     await list();
   }
 
@@ -206,16 +193,14 @@ export function useLocalFileManager(options: UseLocalFileManagerOptions) {
   }
 
   async function renameEntry(entry: SftpFileEntry, nextName: string): Promise<void> {
-    const { fs, path } = await fsModules();
-    await fs.rename(await entryPath(entry), await path.join(currentPath.value, nextName));
+    await localFiles.rename(await entryPath(entry), await localFiles.join(currentPath.value, nextName));
     await list();
   }
 
   async function removeEntry(entry: SftpFileEntry): Promise<void> {
-    const { fs } = await fsModules();
     const fullPath = await entryPath(entry);
-    if (entry.is_dir) await fs.remove(fullPath, { recursive: true });
-    else await fs.remove(fullPath);
+    if (entry.is_dir) await localFiles.remove(fullPath, { recursive: true });
+    else await localFiles.remove(fullPath);
   }
 
   async function uploadFromEvent(event: Event): Promise<void> {
@@ -226,27 +211,22 @@ export function useLocalFileManager(options: UseLocalFileManagerOptions) {
   }
 
   async function chooseFolder(): Promise<boolean> {
-    const selected = (await useTauriDialogOpen({
-      directory: true,
-      multiple: false,
-      title: options.translate("koko.localFile.chooseFolder")
-    })) as string | null;
+    const selected = await localFiles.chooseFolder(options.translate("koko.localFile.chooseFolder"));
+    if (Array.isArray(selected)) return false;
     if (!selected) return false;
     await goToPath(selected);
     return true;
   }
 
   async function resetToDefaultRoot(): Promise<void> {
-    const { path } = await fsModules();
     clearRoot();
-    await goToPath(await path.homeDir());
+    await goToPath(await localFiles.homeDir());
   }
 
   async function revealInSystem(entry?: SftpFileEntry | null): Promise<void> {
-    if (!isTauriRuntime()) return;
+    if (!localFiles.isAvailable()) return;
     const target = entry && entry.name !== ".." ? await entryPath(entry) : currentPath.value;
-    const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
-    await revealItemInDir(target);
+    await localFiles.revealItemInDir(target);
   }
 
   return {

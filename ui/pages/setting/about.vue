@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { getConfiguredAppName, isDefaultAppName, normalizeAppName } from "~/composables/useAppName";
+import { desktopApp, desktopOpener } from "~/shared/desktop/bridge";
 
 definePageMeta({
   layout: "setting"
@@ -26,12 +27,12 @@ const links = [
 
 onMounted(async () => {
   try {
-    version.value = await useTauriAppGetVersion();
+    version.value = await desktopApp.getVersion();
   } catch {}
 
   try {
     // 运行时读取 Tauri productName，避免只依赖 VITE_APP_NAME 导致定制构建的 About 页面显示为空。
-    const runtimeAppName = (await useTauriAppGetName()).trim();
+    const runtimeAppName = (await desktopApp.getName()).trim();
     if (runtimeAppName) {
       appName.value = normalizeAppName(runtimeAppName);
     }
@@ -40,7 +41,7 @@ onMounted(async () => {
 
 const openLink = async (url: string) => {
   try {
-    await useTauriOpenerOpenUrl(url);
+    await desktopOpener.openUrl(url);
   } catch (e) {
     console.error("open link failed", e);
   }

@@ -9,6 +9,7 @@ import {
   SettingsUserPage
 } from "~/composables/loadSettingsSection";
 import { getPublicSettings } from "~/composables/useApiRequest";
+import { desktopInvoke, desktopListen, desktopWindow } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
@@ -143,8 +144,7 @@ const toggleDesktopFullscreen = async () => {
     return;
   }
 
-  const window = useTauriWindowGetCurrentWindow();
-  await window.setFullscreen(!(await window.isFullscreen()));
+  await desktopWindow.toggleFullscreen();
 };
 
 const handleDesktopMenuCommand = (command: string) => {
@@ -188,8 +188,8 @@ watch(focusMode, (active) => {
 });
 
 onMounted(() => {
-  if (isTauriRuntime()) {
-    standaloneAssetWindow.value = useTauriWebviewWindowGetCurrentWebviewWindow().label.startsWith("asset-");
+  if (isDesktopRuntime()) {
+    standaloneAssetWindow.value = desktopWindow.label().startsWith("asset-");
   }
   void refreshCommandExecutionSetting();
   initialTheme();
@@ -197,8 +197,8 @@ onMounted(() => {
   // ponytail: koko WS sessions close on component unmount; no Rust builtin bridge
   registerSessionDisposer(() => {});
   registerKokoTicketProvider(async (request) => {
-    if (isTauriRuntime()) {
-      return useTauriCoreInvoke("create_koko_connect_ticket", {
+    if (isDesktopRuntime()) {
+      return desktopInvoke("create_koko_connect_ticket", {
         baseUrl: request.baseUrl,
         tokenId: request.tokenId
       });
@@ -219,8 +219,8 @@ onMounted(() => {
     return response.json() as Promise<{ ticket?: string }>;
   });
 
-  if (isTauriRuntime()) {
-    void useTauriEventListen<string>("desktop-menu-command", ({ payload }) => {
+  if (isDesktopRuntime()) {
+    void desktopListen<string>("desktop-menu-command", ({ payload }) => {
       handleDesktopMenuCommand(payload);
     }).then((unlisten) => {
       unlistenDesktopMenuCommand = unlisten;

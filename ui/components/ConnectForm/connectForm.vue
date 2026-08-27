@@ -131,7 +131,7 @@ watch(
         return;
       }
 
-      if (isTauriRuntime()) {
+      if (isDesktopRuntime()) {
         const protocol = newProtocol.toLowerCase();
         const preferredClient = Object.values(appConfig.value || {})
           .flat()
@@ -163,7 +163,7 @@ watch(
 
 const protocolTabItems = computed(() =>
   sortProtocolNames(
-    (isTauriRuntime()
+    (isDesktopRuntime()
       ? props.protocols
       : props.protocols.filter((protocol: PermedProtocol) => protocol?.public !== false)
     ).map((p: PermedProtocol) => p.name)
@@ -210,7 +210,7 @@ const connectMethodTabItems = computed(() => {
   });
 
   // 服务端提供通用 native 入口，具体应用完全由全局应用配置决定。
-  if (isTauriRuntime() && selectedConnectMethodType.value === "native") {
+  if (isDesktopRuntime() && selectedConnectMethodType.value === "native") {
     if (!configuredClients.value.length) return [];
 
     const nativeMethod = methods[0];
@@ -604,7 +604,7 @@ function handleSpecialAccount(v: string) {
             }"
           />
           <div
-            v-else-if="isTauriRuntime() && selectedConnectMethodType === 'native'"
+            v-else-if="isDesktopRuntime() && selectedConnectMethodType === 'native'"
             class="flex flex-col items-center gap-2 py-3 text-center"
           >
             <p class="text-sm text-[var(--app-text-muted)]">

@@ -5,13 +5,19 @@ minimumReleaseAgeExclude:
   - ai@7.0.44
 shellEmulator: true
 
+overrides:
+  "app-builder-lib@26.15.3>@electron/get": 5.1.0
+
 packages:
   - .
+  - electron
   - packages/*
 
 allowBuilds:
   "@parcel/watcher": true
+  electron-winstaller: true
   esbuild: true
+  node-pty: true
   unrs-resolver: true
   vue-demi: true
 

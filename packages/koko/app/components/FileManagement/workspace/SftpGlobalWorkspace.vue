@@ -35,7 +35,7 @@ const {
   closeOtherRemotePanes,
   closeRightRemotePanes,
   globalActiveIds,
-  isTauriRuntime,
+  isDesktopRuntime,
   markRemotePaneConnected,
   moveRemotePaneToSide,
   openRemoteConnect,
@@ -87,7 +87,7 @@ const canTransferLeft = computed(() => {
   const hasRightSelection = Boolean(right?.selection);
   // web-upload cannot receive files; only desktop local FS or a left-side remote pane can.
   const hasLeftDestination =
-    (globalActiveIds.left === "local" && Boolean(isTauriRuntime)) || Boolean(activePaneForSide("left"));
+    (globalActiveIds.left === "local" && Boolean(isDesktopRuntime)) || Boolean(activePaneForSide("left"));
   return Boolean(
     hasRightSelection && hasLeftDestination && right && remotePaneConnected(right.id) && !transferring.value
   );
@@ -207,7 +207,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
         >
           <div class="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto overflow-y-visible py-0.5">
             <button
-              v-if="side === 'left' && isTauriRuntime"
+              v-if="side === 'left' && isDesktopRuntime"
               type="button"
               class="flex h-7 min-w-20 max-w-40 basis-40 grow shrink items-center gap-1 rounded-md px-1.5 text-[11px] leading-none transition-colors"
               :class="
@@ -221,7 +221,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
               <span>{{ t("koko.fileManagement.localFiles") }}</span>
             </button>
             <button
-              v-if="side === 'left' && !isTauriRuntime"
+              v-if="side === 'left' && !isDesktopRuntime"
               type="button"
               class="flex h-7 min-w-20 max-w-40 basis-40 grow shrink items-center gap-1 rounded-md px-1.5 text-[11px] leading-none transition-colors"
               :class="
@@ -265,7 +265,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
         </div>
 
         <KokoLocalFileManagementPane
-          v-if="side === 'left' && isTauriRuntime"
+          v-if="side === 'left' && isDesktopRuntime"
           v-show="globalActiveIds.left === 'local'"
           :ref="setLocalPaneRef"
           class="min-h-0 flex-1"
@@ -282,7 +282,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
           @transfer-endpoint-unmounted="unmountTransferEndpoint"
         />
         <KokoWebUploadPane
-          v-if="side === 'left' && !isTauriRuntime"
+          v-if="side === 'left' && !isDesktopRuntime"
           v-show="globalActiveIds.left === 'web-upload'"
           class="min-h-0 flex-1"
           @upload="uploadWebFiles"
@@ -318,7 +318,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
           v-else-if="
             !(
               side === 'left' &&
-              (isTauriRuntime ? globalActiveIds.left === 'local' : globalActiveIds.left === 'web-upload')
+              (isDesktopRuntime ? globalActiveIds.left === 'local' : globalActiveIds.left === 'web-upload')
             )
           "
           class="grid min-h-0 flex-1 place-items-center p-6 text-center text-sm text-muted"
@@ -333,7 +333,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
               {{
                 preconnecting && side === "right"
                   ? t("koko.fileManagement.preconnectingAsset", { name: preconnectingName })
-                  : side === "left" && isTauriRuntime
+                  : side === "left" && isDesktopRuntime
                     ? t("koko.fileManagement.preparingLocalFolder")
                     : t("koko.fileManagement.connectSftpServer")
               }}

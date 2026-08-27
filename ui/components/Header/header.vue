@@ -7,14 +7,14 @@ const { isMacOS } = usePlatform();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
-const hasMacTrafficLightInset = computed(() => isTauriRuntime() && isMacOS.value);
+const hasMacTrafficLightInset = computed(() => isDesktopRuntime() && isMacOS.value);
 const isToolRoute = computed(() => {
   const path = router.currentRoute.value.path.toLowerCase();
   return path.includes("/tools") || path.includes("/videoplayer") || path.includes("/transcode");
 });
 
 const showSidebarChrome = computed(
-  () => !isToolRoute.value && (activeWorkspaceMode.value !== "assets" || loggedIn.value || isTauriRuntime())
+  () => !isToolRoute.value && (activeWorkspaceMode.value !== "assets" || loggedIn.value || isDesktopRuntime())
 );
 
 const returnFromTool = async () => {

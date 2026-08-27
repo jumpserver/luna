@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { VideoPlayerItem } from "~/composables/useVideoPlayerParser";
+import { desktopDialog, desktopWindow } from "~/shared/desktop/bridge";
 
 definePageMeta({
   layout: "default"
@@ -164,7 +165,7 @@ async function handleFileInputClick(event: MouseEvent) {
   event.preventDefault();
 
   try {
-    const selected = await useTauriDialogOpen({
+    const selected = await desktopDialog.open({
       multiple: true,
       filters: [
         {
@@ -246,8 +247,7 @@ onMounted(async () => {
   document.title = "JumpServer Video Player";
 
   try {
-    const currentWindow = useTauriWindowGetCurrentWindow();
-    await currentWindow.setTitle("JumpServer Video Player");
+    await desktopWindow.setTitle("JumpServer Video Player");
   } catch {
     // ignore when running in browser
   }

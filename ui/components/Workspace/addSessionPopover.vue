@@ -10,7 +10,7 @@ const { fetchTree, treeNodeToAsset } = useAssetTree();
 const { recentConnections } = useRecentConnections();
 const userInfoStore = useUserInfoStore();
 const { openLocalShell } = useWorkspaceTabs();
-const localShellAvailable = computed(() => isTauriRuntime());
+const localShellAvailable = computed(() => isDesktopRuntime());
 
 function flatten(nodes: AssetTreeNode[]): AssetItem[] {
   return nodes.flatMap((node) => (node.isParent ? flatten(node.children || []) : [treeNodeToAsset(node)]));

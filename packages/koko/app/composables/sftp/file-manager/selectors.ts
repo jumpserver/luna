@@ -5,8 +5,8 @@ import type {
   FileTransferTask
 } from "@jumpserver/connectors-core";
 
-export function defaultGlobalLeftPaneId(isTauriRuntime: boolean) {
-  return isTauriRuntime ? "local" : "web-upload";
+export function defaultGlobalLeftPaneId(isDesktopRuntime: boolean) {
+  return isDesktopRuntime ? "local" : "web-upload";
 }
 
 export function assetSupportsSftp(permedProtocols?: Array<{ name?: string }>) {

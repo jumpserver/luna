@@ -479,7 +479,10 @@ it("saves downloaded packets through a temporary anchor element", () => {
       body: { appendChild: vi.fn(), removeChild: vi.fn() }
     });
   }
-  vi.spyOn(document, "createElement").mockReturnValue(link as unknown as HTMLAnchorElement);
+  // Electron augments createElement("webview") with a narrower overload even
+  // though the application keeps webviewTag disabled. This mock targets the
+  // ordinary anchor path, so the overloaded return type is intentionally erased.
+  vi.spyOn(document, "createElement").mockReturnValue(link as never);
   const appendChild = vi.spyOn(document.body, "appendChild").mockImplementation(() => link as unknown as Node);
   const removeChild = vi.spyOn(document.body, "removeChild").mockImplementation(() => link as unknown as Node);
   vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");

@@ -72,7 +72,7 @@ export const isConnectMethodAvailable = (
   const selected = parseLocalApplicationConnectMethod(value);
   if (!methods.some((method) => method.value === selected.connectMethod)) return false;
   if (!selected.clientName) return true;
-  if (!isTauriRuntime() || !appConfig) return false;
+  if (!isDesktopRuntime() || !appConfig) return false;
 
   return Object.values(appConfig)
     .flat()
@@ -128,10 +128,10 @@ export const withKokoWebFallback = (protocol: string, methods: ConnectMethod[]) 
 export const withWebProxyBuiltin = (
   protocol: string,
   methods: ConnectMethod[],
-  tauriRuntime = isTauriRuntime()
+  desktopRuntime = isDesktopRuntime()
 ): ConnectMethod[] => {
   const normalizedProtocol = protocol.trim().toLowerCase();
-  if (!tauriRuntime || !["http", "https"].includes(normalizedProtocol)) return methods;
+  if (!desktopRuntime || !["http", "https"].includes(normalizedProtocol)) return methods;
   if (methods.some((method) => method.value === WEB_PROXY_NATIVE_VALUE)) return methods;
 
   const originIndex = methods.findIndex((method) => !method.origin_value && !method.disabled);

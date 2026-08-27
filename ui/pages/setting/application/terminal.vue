@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ConfigItem } from "~/types";
+import { desktopDialog } from "~/shared/desktop/bridge";
 
 definePageMeta({
   layout: "setting"
@@ -46,7 +47,7 @@ const resetCustomTerminalForm = () => {
 };
 
 const selectCustomTerminalPath = async () => {
-  const selected = (await useTauriDialogOpen({
+  const selected = (await desktopDialog.open({
     multiple: false
   })) as string | null;
 

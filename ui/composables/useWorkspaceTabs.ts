@@ -2,6 +2,7 @@ import type { AssetItem, PermedAccount, PermedProtocol } from "~/types";
 
 import { useRecentConnections } from "~/composables/useRecentConnections";
 import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
+import { desktopWindow } from "~/shared/desktop/bridge";
 
 export type WorkspaceSessionStatus = "selecting" | "connecting" | "ready" | "connected" | "failed";
 export type WorkspaceSplitDirection = "horizontal" | "vertical";
@@ -313,8 +314,8 @@ const resolvePendingTarget = (explicitPaneId?: string) => {
 
 export const useWorkspaceTabs = () => {
   const setRuntimeFullscreen = async (fullscreen: boolean) => {
-    if (isTauriRuntime()) {
-      await useTauriWindowGetCurrentWindow().setFullscreen(fullscreen);
+    if (isDesktopRuntime()) {
+      await desktopWindow.setFullscreen(fullscreen);
       return;
     }
 

@@ -1,4 +1,5 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
+import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
 
 import {
@@ -220,11 +221,20 @@ export const useAssetAction = () => {
 
   const getEndpointUrl = (endpoint: Record<string, any>, protocol?: string) => {
     const endpointProtocol = (protocol || window.location.protocol.replace(":", "") || "http").replace(":", "");
-    const host = endpoint.host || window.location.hostname;
+    let siteUrl: URL | null = null;
+    try {
+      const candidate = new URL(currentSite.value || window.location.origin);
+      if (["http:", "https:"].includes(candidate.protocol)) siteUrl = candidate;
+    } catch {}
+
+    const host = endpoint.host || siteUrl?.hostname || window.location.hostname;
+    if (!host || host === "app") throw new Error("Smart endpoint did not provide a valid HTTP host");
     let port = endpoint[`${endpointProtocol}_port`] ?? endpoint.port;
 
     if ((endpointProtocol === "http" || endpointProtocol === "https") && port === 0) {
-      port = window.location.port;
+      port = siteUrl?.port || window.location.port;
+    } else if (!endpoint.host && port == null && siteUrl?.protocol === `${endpointProtocol}:`) {
+      port = siteUrl.port;
     }
 
     const endpointPort = port ? String(port) : "";
@@ -256,16 +266,21 @@ export const useAssetAction = () => {
   const resolveWebEndpointProtocol = (
     method: { component?: string; type?: string; endpoint_protocol?: string } | undefined
   ) => {
-    const pageProtocol = window.location.protocol.replace(":", "") || "http";
     const component = method?.component || "";
     const isWebSurface = method?.type === "web" || ["koko", "lion", "chen", "tinker", "default"].includes(component);
     const endpointProtocol = method?.endpoint_protocol?.replace(":", "") || "";
+    const pageProtocol = window.location.protocol.replace(":", "");
+    let siteProtocol = "";
+    try {
+      siteProtocol = new URL(currentSite.value || "").protocol.replace(":", "");
+    } catch {}
+    const httpProtocol = [pageProtocol, siteProtocol].find((value) => value === "http" || value === "https") || "https";
 
     if (isWebSurface) {
-      return endpointProtocol === "http" || endpointProtocol === "https" ? endpointProtocol : pageProtocol;
+      return endpointProtocol === "http" || endpointProtocol === "https" ? endpointProtocol : httpProtocol;
     }
 
-    return endpointProtocol || pageProtocol;
+    return endpointProtocol || httpProtocol;
   };
 
   const fetchSmartEndpointUrl = async (
@@ -366,10 +381,10 @@ export const useAssetAction = () => {
       const allMethods = await fetchConnectMethods();
       const method = (allMethods[body.protocol] || []).find((item) => item.value === serverBody.connect_method);
 
-      if (isTauriRuntime() || isLocalClientMethod(method)) {
+      if (isDesktopRuntime() || isLocalClientMethod(method)) {
         const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams());
-        const localClientUrl = isTauriRuntime() ? normalizeTauriLocalClientUrl(url || "") : url;
-        const expectedScheme = isTauriRuntime() ? "jms2://" : "jms://";
+        const localClientUrl = isDesktopRuntime() ? normalizeTauriLocalClientUrl(url || "") : url;
+        const expectedScheme = isDesktopRuntime() ? "jms2://" : "jms://";
         if (!localClientUrl?.startsWith(expectedScheme)) {
           throw new Error("Invalid local client URL");
         }
@@ -378,8 +393,8 @@ export const useAssetAction = () => {
           ...token,
           connectMethod: method || { value: body.connect_method }
         });
-        if (isTauriRuntime()) {
-          await useTauriCoreInvoke("pull_up", {
+        if (isDesktopRuntime()) {
+          await desktopInvoke("pull_up", {
             url: withLocalClientName(localClientUrl, nativeApp.clientName)
           });
         } else {
@@ -493,9 +508,14 @@ export const useAssetAction = () => {
           return;
         }
         const component = resolveBuiltinComponent(body);
-        const endpointUrl = import.meta.dev
+        let endpointUrl = import.meta.dev
           ? window.location.origin
           : await fetchSmartEndpointUrl(token, { component, type: "web" }, body, meta.orgId);
+        if (component === "chen" && isElectronRuntime()) {
+          endpointUrl = await desktopInvoke<string>("resolve_chen_endpoint");
+        } else if (component === "koko" && isElectronRuntime()) {
+          endpointUrl = await desktopInvoke<string>("resolve_koko_endpoint");
+        }
         let webProxy;
         if (body.connect_method === WEB_PROXY_NATIVE_VALUE) {
           if (!meta.asset) throw new Error("Website 资产信息不完整");
@@ -836,7 +856,7 @@ export const useAssetAction = () => {
    * @description 监听 tauri 事件
    */
   const listenTauriEvent = async () => {
-    if (!isTauriRuntime()) return;
+    if (!isDesktopRuntime()) return;
 
     if (tauriListenersInitialized || tauriListenersRegistering) {
       tauriListenersRefCount++;
@@ -846,7 +866,7 @@ export const useAssetAction = () => {
     tauriListenersRegistering = true;
 
     try {
-      unlistenGetTokenSuccess = await useTauriEventListen("get-token-success", (event) => {
+      unlistenGetTokenSuccess = await desktopListen("get-token-success", (event) => {
         interface eventPayload {
           status: number;
           data: TokenResponse;
@@ -859,7 +879,7 @@ export const useAssetAction = () => {
         }
       });
 
-      unlistenGetTokenFailure = await useTauriEventListen("get-token-failure", (event) => {
+      unlistenGetTokenFailure = await desktopListen("get-token-failure", (event) => {
         interface eventPayload {
           status: number;
           data: string;
@@ -888,7 +908,7 @@ export const useAssetAction = () => {
         });
       });
 
-      unlistenPullUpFailure = await useTauriEventListen("pull-up-failure", (event) => {
+      unlistenPullUpFailure = await desktopListen("pull-up-failure", (event) => {
         interface eventPayload {
           error: string;
         }
@@ -934,7 +954,7 @@ export const useAssetAction = () => {
         });
       });
 
-      unlistenBuiltinSessionSuccess = await useTauriEventListen("get-builtin-session-success", (event) => {
+      unlistenBuiltinSessionSuccess = await desktopListen("get-builtin-session-success", (event) => {
         interface eventPayload {
           status: number;
           data: Record<string, any>;
@@ -952,7 +972,7 @@ export const useAssetAction = () => {
         else updateSessionPayload(meta, data);
       });
 
-      unlistenBuiltinSessionFailure = await useTauriEventListen("get-builtin-session-failure", (event) => {
+      unlistenBuiltinSessionFailure = await desktopListen("get-builtin-session-failure", (event) => {
         interface eventPayload {
           status: number;
           data: string;
@@ -984,7 +1004,7 @@ export const useAssetAction = () => {
   });
 
   onBeforeUnmount(() => {
-    if (isTauriRuntime()) {
+    if (isDesktopRuntime()) {
       releaseTauriEventListeners();
     }
   });

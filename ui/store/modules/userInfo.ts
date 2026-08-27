@@ -8,6 +8,7 @@ import type {
   UserData
 } from "~/types/index";
 import { useConnectMethods } from "~/composables/useConnectMethods";
+import { desktopInvoke } from "~/shared/desktop/bridge";
 
 export type SiteUserData = UserData & {
   language?: string;
@@ -41,10 +42,10 @@ export const useUserInfoStore = defineStore(
      * @param userData
      */
     const syncApiSession = (accountId: string, userData: UserData) => {
-      if (!isTauriRuntime()) return;
+      if (!isDesktopRuntime()) return;
       if (!accountId || !userData.bearerToken || !userData.org?.id) return;
 
-      void useTauriCoreInvoke("set_api_session", {
+      void desktopInvoke("set_api_session", {
         sessionKey: accountId,
         origin: userData.site,
         bearerToken: userData.bearerToken,
@@ -137,8 +138,8 @@ export const useUserInfoStore = defineStore(
       const userData = userMap.value[accountId];
 
       // 退出当前站点时立即请求清理其 Cookie
-      if (isTauriRuntime() && userData) {
-        useTauriCoreInvoke("logout", {
+      if (isDesktopRuntime() && userData) {
+        desktopInvoke("logout", {
           name: "main",
           site: userData.site,
           sessionId: accountId
@@ -257,8 +258,8 @@ export const useUserInfoStore = defineStore(
       currentUser.value = updatedUserData;
       userMap.value[currentAccountId.value] = updatedUserData;
 
-      if (isTauriRuntime()) {
-        void useTauriCoreInvoke("set_api_org", {
+      if (isDesktopRuntime()) {
+        void desktopInvoke("set_api_org", {
           orgId: org.id
         }).catch((error) => {
           console.error("sync api org failed", error);

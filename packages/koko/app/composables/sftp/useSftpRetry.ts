@@ -6,7 +6,7 @@ import type { Ref } from "vue";
 import type { SftpSocketClient } from "./useSftpSocket";
 import { useKokoHostAdapter } from "@jumpserver/koko/host";
 
-type SftpRetryHost = Pick<KokoHostAdapter, "createTicket" | "isTauriRuntime" | "sftp">;
+type SftpRetryHost = Pick<KokoHostAdapter, "createTicket" | "isDesktopRuntime" | "sftp">;
 
 interface SftpRetryOptions {
   beforeReconnect?: () => void;
@@ -34,7 +34,7 @@ export function useSftpRetry(
         ).ticket || ""
       );
     } catch (cause) {
-      if (hostAdapter.isTauriRuntime()) throw cause;
+      if (hostAdapter.isDesktopRuntime()) throw cause;
       console.warn("[sftp] refresh connect ticket failed, fallback to cookie auth:", cause);
       ticket = "";
     }

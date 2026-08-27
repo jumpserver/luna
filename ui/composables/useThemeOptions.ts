@@ -1,6 +1,7 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { ThemePresetId } from "~/types";
 import { DARK_THEME_PRESETS, getThemePreset, LIGHT_THEME_PRESETS } from "~/composables/useThemePresets";
+import { desktopEmit } from "~/shared/desktop/bridge";
 
 export const useThemeOptions = () => {
   const { t } = useI18n();
@@ -33,7 +34,7 @@ export const useThemeOptions = () => {
     }
 
     try {
-      useTauriEventEmit("theme-changed", { mode });
+      void desktopEmit("theme-changed", { mode });
     } catch {}
   };
 
@@ -76,8 +77,8 @@ export const useThemeOptions = () => {
     }
 
     try {
-      useTauriEventEmit("theme-changed", { mode });
-      useTauriEventEmit("primary-color-changed", { hex: preset.accent, mode });
+      void desktopEmit("theme-changed", { mode });
+      void desktopEmit("primary-color-changed", { hex: preset.accent, mode });
     } catch {}
   };
 

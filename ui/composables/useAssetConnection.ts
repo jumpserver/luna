@@ -31,7 +31,7 @@ export function useAssetConnection() {
 
   const normalizeConnectionInfo = async (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
     const assetProtocols = sortPermedProtocols(asset.permedProtocols || [])
-      .filter((protocol) => isTauriRuntime() || protocol?.public !== false)
+      .filter((protocol) => isDesktopRuntime() || protocol?.public !== false)
       .map((protocol) => protocol.name);
     const protocols = assetProtocols.length > 0 ? assetProtocols : connectionInfo.availableProtocols || [];
     const protocol = protocols.includes(connectionInfo.protocol) ? connectionInfo.protocol : protocols[0] || "";

@@ -1,23 +1,23 @@
-import { writeText as writeTauriText } from "@tauri-apps/plugin-clipboard-manager";
 import { writeText as writeWebText } from "clipboard-polyfill";
 
-import { isTauriRuntime } from "~/utils/runtime";
+import { desktopClipboard } from "~/shared/desktop/bridge";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 export interface ChenClipboardRuntime {
-  isTauri: () => boolean;
+  isDesktop: () => boolean;
   writeWeb: (text: string) => Promise<unknown>;
-  writeTauri: (text: string) => Promise<unknown>;
+  writeDesktop: (text: string) => Promise<unknown>;
 }
 
 const defaultRuntime: ChenClipboardRuntime = {
-  isTauri: isTauriRuntime,
+  isDesktop: isDesktopRuntime,
   writeWeb: writeWebText,
-  writeTauri: writeTauriText
+  writeDesktop: desktopClipboard.writeText
 };
 
 export async function writeChenClipboardText(text: string, runtime: ChenClipboardRuntime = defaultRuntime) {
-  if (runtime.isTauri()) {
-    await runtime.writeTauri(text);
+  if (runtime.isDesktop()) {
+    await runtime.writeDesktop(text);
     return;
   }
   await runtime.writeWeb(text);

@@ -1,6 +1,7 @@
 import type { SessionWindowConnectionInfo } from "~/composables/useSessionWindowConnect";
 import type { AssetItem } from "~/types";
 import { buildSessionPath } from "~/composables/useSessionWindowConnect";
+import { desktopWindow } from "~/shared/desktop/bridge";
 
 export type WindowConnectionInfo = SessionWindowConnectionInfo;
 
@@ -12,13 +13,13 @@ export const useAssetWindowLauncher = () => {
   const openAssetInWindow = async (asset: AssetItem, connectionInfo?: WindowConnectionInfo) => {
     const url = buildWindowUrl(asset, connectionInfo);
 
-    if (!isTauriRuntime()) {
+    if (!isDesktopRuntime()) {
       window.open(url, "_blank");
       return;
     }
 
     const label = `asset-${asset.id}-${Date.now()}`;
-    const win = new useTauriWebviewWindowWebviewWindow(label, {
+    const win = await desktopWindow.open(label, {
       url,
       title: asset.name || "JumpServer",
       width: 1440,

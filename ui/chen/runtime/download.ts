@@ -1,7 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
-import { save } from "@tauri-apps/plugin-dialog";
-
-import { isTauriRuntime } from "~/utils/runtime";
+import { desktopDialog, desktopFs } from "~/shared/desktop/bridge";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 interface ChenDownloadAnchor {
   href: string;
@@ -10,7 +8,7 @@ interface ChenDownloadAnchor {
 }
 
 export interface ChenDownloadRuntime {
-  isTauri: () => boolean;
+  isDesktop: () => boolean;
   createAnchor?: () => ChenDownloadAnchor;
   appendAnchor?: (anchor: ChenDownloadAnchor) => void;
   removeAnchor?: (anchor: ChenDownloadAnchor) => void;
@@ -21,18 +19,14 @@ export interface ChenDownloadRuntime {
 }
 
 const defaultRuntime: ChenDownloadRuntime = {
-  isTauri: isTauriRuntime,
+  isDesktop: isDesktopRuntime,
   createAnchor: () => document.createElement("a"),
   appendAnchor: (anchor) => document.body.appendChild(anchor as HTMLAnchorElement),
   removeAnchor: (anchor) => (anchor as HTMLAnchorElement).remove(),
   createObjectURL: (blob) => URL.createObjectURL(blob),
   revokeObjectURL: (url) => URL.revokeObjectURL(url),
-  savePath: (fileName) => save({ defaultPath: fileName }),
-  writeFile: async (path, bytes) => {
-    await invoke("plugin:fs|write_file", bytes, {
-      headers: { path: encodeURIComponent(path) }
-    });
-  }
+  savePath: (fileName) => desktopDialog.save({ defaultPath: fileName }),
+  writeFile: desktopFs.writeFile
 };
 
 export async function saveChenExport(
@@ -40,7 +34,7 @@ export async function saveChenExport(
   fileName: string,
   runtime: ChenDownloadRuntime = defaultRuntime
 ): Promise<"saved" | "cancelled"> {
-  if (runtime.isTauri()) {
+  if (runtime.isDesktop()) {
     const path = await runtime.savePath(fileName);
     if (!path) return "cancelled";
 

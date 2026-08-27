@@ -52,7 +52,7 @@ export function useBaseWorkspaceSession(tab: Ref<KokoWorkspaceTab>, options: Use
 
     if (!resolved) return host.getWindowOrigin();
 
-    if (host.isTauriRuntime()) return resolved;
+    if (host.isDesktopRuntime()) return resolved;
 
     const resolvedUrl = new URL(resolved);
     const isLoopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(resolvedUrl.hostname);
@@ -68,7 +68,7 @@ export function useBaseWorkspaceSession(tab: Ref<KokoWorkspaceTab>, options: Use
       const ticketResult = await host.createTicket({ baseUrl: endpointUrl, tokenId: tokenId.value });
       return String(ticketResult.ticket || "");
     } catch (cause) {
-      if (host.isTauriRuntime()) throw cause;
+      if (host.isDesktopRuntime()) throw cause;
       console.warn("[koko] connect ticket failed, fallback to cookie auth:", cause);
       return "";
     }

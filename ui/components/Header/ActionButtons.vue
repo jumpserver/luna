@@ -52,7 +52,7 @@ const appMenuItems = computed<DropdownMenuItem[]>(() => [
     icon: "i-lucide-languages",
     children: languageItems.value
   },
-  ...(isTauriRuntime()
+  ...(isDesktopRuntime()
     ? [
         {
           label: t("Menu.MyTools"),

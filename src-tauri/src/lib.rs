@@ -5,7 +5,7 @@ mod offline;
 mod service;
 mod setup;
 mod ssh_helper;
-mod transcode;
+pub mod transcode;
 mod utils;
 
 use crate::setup::apply_window_effects;

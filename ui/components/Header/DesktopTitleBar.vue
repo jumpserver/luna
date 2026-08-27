@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
+import { desktopInvoke, desktopWindow } from "~/shared/desktop/bridge";
 
 const props = withDefaults(
   defineProps<{
@@ -19,21 +20,19 @@ const { batchPanelOpen, toggle: toggleBatchPanel } = useBatchCommandPanel();
 const { activeTabId, enterFocusMode, enterFullscreenMode, exitFocusMode, focusMode, workspaceFullscreen } =
   useWorkspaceTabs();
 
-const visible = computed(() => isTauriRuntime() && !isLoading.value && !isMacOS.value);
+const visible = computed(() => isDesktopRuntime() && !isLoading.value && !isMacOS.value);
 const maximized = ref(false);
 let unlistenResize: (() => void) | null = null;
 
 const syncMaximized = async () => {
-  if (!isTauriRuntime()) return;
-  maximized.value = await useTauriWindowGetCurrentWindow()
-    .isMaximized()
-    .catch(() => false);
+  if (!isDesktopRuntime()) return;
+  maximized.value = await desktopWindow.isMaximized().catch(() => false);
 };
 
 onMounted(async () => {
-  if (!isTauriRuntime()) return;
+  if (!isDesktopRuntime()) return;
   await syncMaximized();
-  unlistenResize = await useTauriWindowGetCurrentWindow().onResized(syncMaximized);
+  unlistenResize = await desktopWindow.onResized(syncMaximized);
 });
 
 onBeforeUnmount(() => {
@@ -83,7 +82,7 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
       {
         label: t("ToolTips.Close"),
         kbds: ["alt", "f4"],
-        onSelect: () => void useTauriCoreInvoke("close_window")
+        onSelect: () => void desktopInvoke("close_window")
       }
     ]
   },
@@ -144,16 +143,16 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
     items: [
       {
         label: t("ToolTips.Minimize"),
-        onSelect: () => void useTauriCoreInvoke("minimize_window")
+        onSelect: () => void desktopInvoke("minimize_window")
       },
       {
         label: maximized.value ? t("DesktopMenu.Restore") : t("ToolTips.Maximize"),
-        onSelect: () => void useTauriCoreInvoke("toggle_maximize_window")
+        onSelect: () => void desktopInvoke("toggle_maximize_window")
       },
       { type: "separator" },
       {
         label: t("ToolTips.Close"),
-        onSelect: () => void useTauriCoreInvoke("close_window")
+        onSelect: () => void desktopInvoke("close_window")
       }
     ]
   },
@@ -173,21 +172,21 @@ const windowControls = computed(() => [
     key: "minimize",
     label: t("ToolTips.Minimize"),
     action: async () => {
-      await useTauriCoreInvoke("minimize_window");
+      await desktopInvoke("minimize_window");
     }
   },
   {
     key: "maximize",
     label: maximized.value ? t("DesktopMenu.Restore") : t("ToolTips.Maximize"),
     action: async () => {
-      await useTauriCoreInvoke("toggle_maximize_window");
+      await desktopInvoke("toggle_maximize_window");
     }
   },
   {
     key: "close",
     label: t("ToolTips.Close"),
     action: async () => {
-      await useTauriCoreInvoke("close_window");
+      await desktopInvoke("close_window");
     }
   }
 ]);
@@ -310,3 +309,14 @@ const windowControls = computed(() => [
     </div>
   </div>
 </template>
+
+<style scoped>
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+
+button,
+[role="button"] {
+  -webkit-app-region: no-drag;
+}
+</style>

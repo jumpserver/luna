@@ -8,6 +8,7 @@ import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
 import { useWorkspaceConnectors } from "~/composables/useWorkspaceConnectors";
 import { clearWorkspaceSessionDetails, setWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 import { registerWorkspaceSessionCloseGuard, useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
+import { desktopFs, desktopInvoke } from "~/shared/desktop/bridge";
 import {
   createHostCodeMirrorSyntaxTheme,
   createHostCodeMirrorTheme,
@@ -16,7 +17,7 @@ import {
 import { toXtermTheme } from "~/shared/theme/adapters/xterm";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { transformAssetDetail } from "~/utils";
-import { isTauriRuntime } from "~/utils/runtime";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 export default defineNuxtPlugin((nuxtApp) => {
   const { createKokoTicket } = useWorkspaceConnectors();
@@ -60,9 +61,14 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   const adapter: KokoHostAdapter = {
     createTicket: createKokoTicket,
-    getSmartEndpoint: (request, orgId) => getSmartEndpoint(request, orgId),
+    getSmartEndpoint: async (request, orgId) => {
+      if (isElectronRuntime()) {
+        return { value: await desktopInvoke<string>("resolve_koko_endpoint") };
+      }
+      return getSmartEndpoint(request, orgId);
+    },
     getWindowOrigin: () => window.location.origin,
-    isTauriRuntime,
+    isDesktopRuntime,
     markSessionConnected,
     markSessionFailed: (tab: Pick<KokoWorkspaceTab, "id" | "assetId" | "protocol" | "account">) => {
       markSessionFailed({
@@ -87,6 +93,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       splitWorkspace(workspaceTab.id, direction);
       setActiveSession(workspaceTab.id);
     },
+    localFiles: desktopFs,
     sftp: {
       organizationSelector: OrganizationSelector,
       assetTree: SideBarAssetTree,

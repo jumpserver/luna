@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 definePageMeta({ layout: "connect" });
@@ -20,8 +21,8 @@ onMounted(() => {
   listenOSThemeChange();
   registerSessionDisposer(() => {});
   registerKokoTicketProvider(async (request) => {
-    if (isTauriRuntime()) {
-      return useTauriCoreInvoke("create_koko_connect_ticket", {
+    if (isDesktopRuntime()) {
+      return desktopInvoke("create_koko_connect_ticket", {
         baseUrl: request.baseUrl,
         tokenId: request.tokenId
       });

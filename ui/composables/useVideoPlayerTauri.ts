@@ -1,4 +1,5 @@
 import type { VideoPlayerItemType, VideoPlayerMeta } from "~/composables/useVideoPlayerParser";
+import { desktopInvoke } from "~/shared/desktop/bridge";
 
 export interface OfflineRecordingEntry {
   entry_id: string;
@@ -22,20 +23,20 @@ export interface OfflineRecordingManifest {
 
 export function useVideoPlayerTauri() {
   async function importRecording(filePath: string) {
-    return await useTauriCoreInvoke<OfflineRecordingManifest>("import_offline_recording", {
+    return await desktopInvoke<OfflineRecordingManifest>("import_offline_recording", {
       filePath
     });
   }
 
   async function getEntryUrl(recordingId: string, entryId: string) {
-    return await useTauriCoreInvoke<string>("get_offline_entry_url", {
+    return await desktopInvoke<string>("get_offline_entry_url", {
       recordingId,
       entryId
     });
   }
 
   async function removeRecording(recordingId: string) {
-    await useTauriCoreInvoke("remove_offline_recording", { recordingId });
+    await desktopInvoke("remove_offline_recording", { recordingId });
   }
 
   return {

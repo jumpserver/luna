@@ -232,7 +232,7 @@ describe("sFTP browser protocol", () => {
       hostAdapter: {
         sftp: { exchangeConnectToken: vi.fn().mockResolvedValue({ id: "fresh-token" }) },
         createTicket: vi.fn().mockResolvedValue({ ticket: "fresh-ticket" }),
-        isTauriRuntime: vi.fn().mockReturnValue(false)
+        isDesktopRuntime: vi.fn().mockReturnValue(false)
       } as never
     });
 

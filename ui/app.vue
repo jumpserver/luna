@@ -5,6 +5,7 @@ import type { LangType, LanguagePreference } from "~/types";
 import AclDialog from "~/components/Modal/aclDialog.vue";
 import ConnectionFormModal from "~/components/Modal/connectionFormModal.vue";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composables/useThemePresets";
+import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { resolveLanguageFromSystem } from "~/utils";
 
 useApplicationConfig();
@@ -195,18 +196,18 @@ async function applyAfterHydration() {
 onMounted(async () => {
   void authSession.bootstrapPersistedSession();
 
-  if (!isTauriRuntime()) return;
+  if (!isDesktopRuntime()) return;
 
   // 初始化 HTTP 回调服务器 (开发环境)
   try {
-    await useTauriCoreInvoke("init_http_callback_server", {});
+    await desktopInvoke("init_http_callback_server");
   } catch (error) {
     // 忽略错误，生产环境不需要此服务
     console.debug("HTTP callback server initialization:", error);
   }
 
   try {
-    unlistenPrimaryColor.value = await useTauriEventListen("primary-color-changed", (event: any) => {
+    unlistenPrimaryColor.value = await desktopListen("primary-color-changed", (event: any) => {
       const hex = (event?.payload?.hex || event?.payload || "").toString();
       const mode = (event?.payload?.mode || "").toString();
 
@@ -221,7 +222,7 @@ onMounted(async () => {
   }
 
   try {
-    unlistenTheme.value = await useTauriEventListen("theme-changed", async (event: any) => {
+    unlistenTheme.value = await desktopListen("theme-changed", async (event: any) => {
       const mode = (event?.payload?.mode || event?.payload || "").toString();
 
       if (mode === "withSystem") {
@@ -238,7 +239,7 @@ onMounted(async () => {
   }
 
   try {
-    unlistenFont.value = await useTauriEventListen("font-changed", (event: any) => {
+    unlistenFont.value = await desktopListen("font-changed", (event: any) => {
       const value = (event?.payload?.value || event?.payload || "").toString();
 
       if (!value) return;
@@ -250,7 +251,7 @@ onMounted(async () => {
   }
 
   try {
-    unlistenSettingsNavigate.value = await useTauriEventListen<string>("settings-navigate", ({ payload }) => {
+    unlistenSettingsNavigate.value = await desktopListen<string>("settings-navigate", ({ payload }) => {
       if (payload?.startsWith("/setting/")) void openSettings(payload);
     });
   } catch (err) {

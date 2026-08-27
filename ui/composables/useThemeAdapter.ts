@@ -1,6 +1,7 @@
 import type { Event } from "@tauri-apps/api/event";
 import type { Theme } from "@tauri-apps/api/window";
 import { nextTick } from "vue";
+import { desktopWindow } from "~/shared/desktop/bridge";
 
 export const useThemeAdapter = () => {
   const currentOSTheme = ref<Theme>("light");
@@ -18,11 +19,11 @@ export const useThemeAdapter = () => {
   } = useSettingManager();
 
   const getSystemTheme = async (): Promise<Theme> => {
-    if (!isTauriRuntime()) {
+    if (!isDesktopRuntime()) {
       return globalThis.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
     }
 
-    return (await useTauriWindowGetCurrentWindow().theme()) || "light";
+    return (await desktopWindow.theme()) || "light";
   };
 
   const waitHydration = async () => {
@@ -127,7 +128,7 @@ export const useThemeAdapter = () => {
   };
 
   const listenOSThemeChange = () => {
-    if (!isTauriRuntime()) {
+    if (!isDesktopRuntime()) {
       const media = globalThis.matchMedia?.("(prefers-color-scheme: dark)");
       if (!media) return;
 
@@ -143,9 +144,8 @@ export const useThemeAdapter = () => {
       return;
     }
 
-    const currentWindow = useTauriWindowGetCurrentWindow();
     // 监听 OS 主题变化
-    currentWindow.onThemeChanged((event: Event<Theme>) => {
+    desktopWindow.onThemeChanged((event: Event<Theme>) => {
       currentOSTheme.value = event.payload;
 
       if (themeMode.value === "withSystem" || followSystem.value) {

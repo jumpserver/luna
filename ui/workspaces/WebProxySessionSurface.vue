@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { WebProxyOpenRequest } from "~/composables/useWebProxyManager";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
+import { desktopWebProxy, desktopWindow } from "~/shared/desktop/bridge";
 
 interface WebProxyState {
   label: string;
@@ -46,9 +46,9 @@ const viewLabel = `web-proxy-${globalThis.crypto?.randomUUID?.() || Date.now()}`
 const devMode = import.meta.dev;
 const viewCreated = ref(false);
 let viewVisible = false;
-let unlistenState: UnlistenFn | undefined;
-let unlistenAutofillState: UnlistenFn | undefined;
-let unlistenRecordingState: UnlistenFn | undefined;
+let unlistenState: (() => void) | undefined;
+let unlistenAutofillState: (() => void) | undefined;
+let unlistenRecordingState: (() => void) | undefined;
 let overlayObserver: MutationObserver | undefined;
 
 // Nuxt UI teleports interactive overlays into the main webview, but Tauri child
@@ -67,8 +67,8 @@ function syncOverlayState() {
 
 async function closeView() {
   if (!viewCreated.value) return true;
-  await useTauriCoreInvoke("set_web_proxy_view_active", { label: viewLabel, active: false }).catch(() => undefined);
-  await useTauriCoreInvoke("close_web_proxy_view", { label: viewLabel });
+  await desktopWebProxy.setActive(viewLabel, false).catch(() => undefined);
+  await desktopWebProxy.close(viewLabel);
   viewCreated.value = false;
   viewVisible = false;
   return true;
@@ -154,7 +154,7 @@ function shouldShowView() {
 async function setViewVisible(visible: boolean) {
   if (!viewCreated.value || viewVisible === visible) return;
   viewVisible = visible;
-  await useTauriCoreInvoke("set_web_proxy_view_active", { label: viewLabel, active: visible });
+  await desktopWebProxy.setActive(viewLabel, visible);
 }
 
 async function syncView() {
@@ -163,7 +163,7 @@ async function syncView() {
     error.value = String(cause);
   });
   if (!visible) return;
-  await useTauriCoreInvoke("set_web_proxy_view_bounds", { label: viewLabel, ...viewBounds() }).catch((cause) => {
+  await desktopWebProxy.setBounds(viewLabel, viewBounds()).catch((cause) => {
     error.value = String(cause);
   });
 }
@@ -183,7 +183,7 @@ async function navigate() {
   loading.value = true;
   error.value = "";
   try {
-    await useTauriCoreInvoke("navigate_web_proxy_view", { label: viewLabel, targetUrl });
+    await desktopWebProxy.navigate(viewLabel, targetUrl);
   } catch (cause) {
     loading.value = false;
     error.value = String(cause);
@@ -191,19 +191,19 @@ async function navigate() {
 }
 
 function history(direction: "back" | "forward") {
-  void useTauriCoreInvoke("history_web_proxy_view", { label: viewLabel, direction });
+  void desktopWebProxy.history(viewLabel, direction);
 }
 
 function reload() {
   loading.value = true;
-  void useTauriCoreInvoke("reload_web_proxy_view", { label: viewLabel });
+  void desktopWebProxy.reload(viewLabel);
 }
 
 async function startRecording() {
   if (!request.value || !viewCreated.value) return;
   const bounds = viewBounds();
   try {
-    await useTauriCoreInvoke("start_web_proxy_recording", {
+    await desktopWebProxy.startRecording({
       label: viewLabel,
       targetUrl: request.value.targetUrl,
       proxyUrl: request.value.proxyUrl,
@@ -221,7 +221,7 @@ async function stopRecording() {
   recordingStatus.value = "finishing";
   recordingMessage.value = "正在生成 Web 录像";
   try {
-    await useTauriCoreInvoke("stop_web_proxy_recording", { label: viewLabel });
+    await desktopWebProxy.stopRecording(viewLabel);
   } catch (cause) {
     recordingStatus.value = "error";
     recordingMessage.value = String(cause);
@@ -235,12 +235,12 @@ function focus() {
 watch([activeTabId, ownerTabId, overlayOpen], () => nextTick(syncView));
 
 onMounted(async () => {
-  if (!isTauriRuntime()) {
+  if (!isDesktopRuntime()) {
     error.value = "内置 Web Proxy 仅在桌面客户端中可用";
     loading.value = false;
     return;
   }
-  standaloneAssetWindow.value = useTauriWebviewWindowGetCurrentWebviewWindow().label.startsWith("asset-");
+  standaloneAssetWindow.value = desktopWindow.label().startsWith("asset-");
   if (!request.value) {
     error.value = "Web Proxy 会话参数不完整";
     loading.value = false;
@@ -257,34 +257,28 @@ onMounted(async () => {
   syncOverlayState();
 
   addressValue.value = request.value.targetUrl;
-  unlistenState = await useTauriEventListen<WebProxyState>("web-proxy-state", ({ payload }) => {
+  unlistenState = await desktopWebProxy.onState<WebProxyState>(({ payload }) => {
     handleState(payload);
   });
-  unlistenAutofillState = await useTauriEventListen<WebProxyAutofillState>(
-    "web-proxy-autofill-state",
-    ({ payload }) => {
-      if (payload.label !== viewLabel) return;
-      autofillStatus.value = payload.status;
-      autofillMessage.value = payload.message;
-    }
-  );
-  unlistenRecordingState = await useTauriEventListen<WebProxyRecordingState>(
-    "web-proxy-recording-state",
-    ({ payload }) => {
-      if (payload.label !== viewLabel) return;
-      recordingStatus.value = payload.status;
-      recordingFrames.value = payload.frameCount;
-      recordingMessage.value = payload.message;
-      recordingPath.value = payload.path;
-    }
-  );
+  unlistenAutofillState = await desktopWebProxy.onAutofillState<WebProxyAutofillState>(({ payload }) => {
+    if (payload.label !== viewLabel) return;
+    autofillStatus.value = payload.status;
+    autofillMessage.value = payload.message;
+  });
+  unlistenRecordingState = await desktopWebProxy.onRecordingState<WebProxyRecordingState>(({ payload }) => {
+    if (payload.label !== viewLabel) return;
+    recordingStatus.value = payload.status;
+    recordingFrames.value = payload.frameCount;
+    recordingMessage.value = payload.message;
+    recordingPath.value = payload.path;
+  });
   resizeObserver.value = new ResizeObserver(() => void syncView());
   if (contentRef.value) resizeObserver.value.observe(contentRef.value);
   document.addEventListener("visibilitychange", syncView);
 
   await nextTick();
   try {
-    await useTauriCoreInvoke("create_web_proxy_view", {
+    await desktopWebProxy.create({
       label: viewLabel,
       targetUrl: request.value.targetUrl,
       proxyUrl: request.value.proxyUrl,

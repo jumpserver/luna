@@ -4,8 +4,8 @@ const { isMacOS } = usePlatform();
 const localePath = useLocalePath();
 const { collapse, setCollapse } = useSettingManager();
 const { uiWorkspaceMode } = useWorkspaceMode();
-const isMacClient = computed(() => isTauriRuntime() && isMacOS.value);
-const showHeaderLogo = computed(() => !isTauriRuntime());
+const isMacClient = computed(() => isDesktopRuntime() && isMacOS.value);
+const showHeaderLogo = computed(() => !isDesktopRuntime());
 const headerIconButtonClass =
   "grid size-6 shrink-0 place-items-center rounded-lg p-0 text-gray-500 transition-colors hover:bg-black/6 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white";
 

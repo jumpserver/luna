@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { FilenameStyle, OutputResolution, TranscodePower, TranscodeTaskStatus } from "~/store/modules/transcode";
 import { storeToRefs } from "pinia";
+import { desktopDialog, desktopOpener } from "~/shared/desktop/bridge";
 import { useTranscodeStore } from "~/store/modules/transcode";
 
 definePageMeta({
@@ -44,7 +45,7 @@ const getErrorMessage = (error: unknown) => {
 const openOutputFile = async (output: string) => {
   if (!output) return;
   try {
-    await useTauriOpenerOpenPath(output);
+    await desktopOpener.openPath(output);
   } catch (error) {
     addErrorToast({
       title: t("Transcode.OpenFailed"),
@@ -90,10 +91,10 @@ const hasActiveTasks = computed(() => processingCount.value > 0 || completedCoun
 
 const pickArchives = async (append = false) => {
   try {
-    const selected = (await useTauriDialogOpen({
+    const selected = await desktopDialog.open({
       multiple: true,
       filters: [{ name: "Replay Archive", extensions: ["tar"] }]
-    })) as string | string[] | null;
+    });
     const nextPaths = toPickedPaths(selected);
 
     if (!nextPaths.length) return;
@@ -121,12 +122,12 @@ const pickArchivesSmart = async () => {
 
 const pickOutputDir = async () => {
   try {
-    const selected = (await useTauriDialogOpen({
+    const selected = await desktopDialog.open({
       directory: true,
       multiple: false
-    })) as string | null;
+    });
 
-    if (selected) {
+    if (typeof selected === "string") {
       store.setOutputDir(selected);
     }
   } catch (error) {

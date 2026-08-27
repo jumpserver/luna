@@ -8,6 +8,7 @@ const rootDir = join(__dirname, "..");
 const tauriDir = join(rootDir, "src-tauri");
 
 const mode = process.argv[2] === "release" ? "release" : "debug";
+const withTranscode = process.argv.includes("--with-transcode");
 const binaryName = process.platform === "win32" ? "client.exe" : "client";
 
 function resourcePlatform() {
@@ -27,6 +28,7 @@ function resourcePlatform() {
 
 const cargo = process.platform === "win32" ? "cargo.exe" : "cargo";
 const args = ["build", "--manifest-path", join("src-tauri", "Cargo.toml"), "--bin", "client"];
+if (withTranscode) args.push("--bin", "jms-transcode");
 if (mode === "release") args.push("--release");
 
 const build = spawnSync(cargo, args, {

@@ -1,4 +1,5 @@
 import type { AssetTreeKind, TokenResponse, UserProfile } from "~/types";
+import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export interface ApiRequest {
@@ -87,7 +88,7 @@ const handleApiAuthFailure = () => {
 
   userInfoStore.setUserLoggedIn(false);
   useEventBus().emit("clearAssets", undefined);
-  if (isTauriRuntime()) {
+  if (isDesktopRuntime()) {
     useEventBus().emit("login", undefined);
   } else {
     redirectToWebLogin();
@@ -141,9 +142,9 @@ async function webApiRequest<T>(request: ApiRequest): Promise<T> {
   return data as T;
 }
 
-async function tauriApiRequest<T>(request: ApiRequest): Promise<T> {
+async function desktopApiRequest<T>(request: ApiRequest): Promise<T> {
   try {
-    return await useTauriCoreInvoke<T>("api_request", { request });
+    return await desktopInvoke<T>("api_request", { request });
   } catch (error) {
     if (error && typeof error === "object" && !(error instanceof Error)) {
       const payload = error as { status?: unknown; data?: unknown; body?: unknown; message?: unknown };
@@ -190,8 +191,8 @@ function parseErrorData(data: unknown) {
 
 export async function apiRequest<T>(request: ApiRequest): Promise<T> {
   try {
-    if (isTauriRuntime()) {
-      return await tauriApiRequest<T>(request);
+    if (isDesktopRuntime()) {
+      return await desktopApiRequest<T>(request);
     }
 
     return await webApiRequest<T>(request);

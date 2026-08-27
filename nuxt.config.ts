@@ -39,7 +39,8 @@ export default defineNuxtConfig({
   },
   typescript: {
     tsConfig: {
-      include: ["../packages/koko/app/**/*", "../packages/online-player/app/**/*"]
+      include: ["../packages/koko/app/**/*", "../packages/online-player/app/**/*"],
+      exclude: ["../electron/**/*"]
     }
   },
   srcDir: "ui/",
@@ -114,7 +115,7 @@ export default defineNuxtConfig({
       hmr: {
         protocol: "ws",
         host: "0.0.0.0",
-        port: 3001
+        port: Number(process.env.JMS_HMR_PORT || 3001)
       },
       proxy: {
         "/luna/koko/ws/": {

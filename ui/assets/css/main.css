@@ -222,6 +222,15 @@ body,
   overflow: hidden;
 }
 
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+
+[data-tauri-drag-region="false"],
+[data-tauri-drag-region] :is(a, button, input, select, textarea, [role="button"], [contenteditable="true"]) {
+  -webkit-app-region: no-drag;
+}
+
 @supports (height: 100dvh) {
   body,
   .workspace-shell,

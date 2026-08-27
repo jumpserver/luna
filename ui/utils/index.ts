@@ -1,4 +1,5 @@
 import type { AssetItem, PermedProtocol, RawAssetData } from "~/types/index";
+import { desktopOs } from "~/shared/desktop/bridge";
 
 const PROTOCOL_PRIORITY: Record<string, number> = {
   ssh: 0,
@@ -77,7 +78,7 @@ export async function resolveLanguageFromSystem(): Promise<"zh" | "en"> {
     return "en" as const;
   };
 
-  const locale = await useTauriOsLocale();
+  const locale = isDesktopRuntime() ? await desktopOs.locale() : navigator.language;
   if (locale) {
     return normalize(locale);
   }

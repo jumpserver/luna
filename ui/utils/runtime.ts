@@ -1,9 +1,20 @@
-export const isTauriRuntime = () => {
-  if (!import.meta.client) return false;
+export type DesktopRuntime = "electron" | "tauri" | "web";
+
+export const getDesktopRuntime = (): DesktopRuntime => {
+  if (!import.meta.client) return "web";
   const runtime = globalThis as any;
 
-  return Boolean(runtime.__TAURI_INTERNALS__ || runtime.__TAURI__ || runtime.__TAURI_IPC__);
+  if (runtime.__JMS_DESKTOP__?.runtime === "electron") return "electron";
+  if (runtime.__TAURI_INTERNALS__ || runtime.__TAURI__ || runtime.__TAURI_IPC__) return "tauri";
+  return "web";
 };
+
+export const isDesktopRuntime = () => getDesktopRuntime() !== "web";
+export const isElectronRuntime = () => getDesktopRuntime() === "electron";
+
+// Transitional alias for workspace code that has not moved to Desktop Bridge yet.
+// Electron currently provides the compatible subset those callers expect.
+export const isTauriRuntime = () => isDesktopRuntime();
 
 export const getCookieValue = (name: string) => {
   if (!import.meta.client) return "";
@@ -22,7 +33,7 @@ export const getWebOrgId = () => {
 };
 
 export const setWebOrgId = (orgId: string) => {
-  if (!import.meta.client || isTauriRuntime()) return;
+  if (!import.meta.client || isDesktopRuntime()) return;
 
   document.cookie = `X-JMS-LUNA-ORG=${encodeURIComponent(orgId)}; Path=/; SameSite=Lax`;
 };

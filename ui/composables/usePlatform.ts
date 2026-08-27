@@ -2,6 +2,8 @@
  * 平台检测 composable
  * 提供跨平台的平台检测功能
  */
+import { desktopOs } from "~/shared/desktop/bridge";
+
 export const usePlatform = () => {
   const platform = ref<string>("");
   const isLoading = ref(true);
@@ -19,12 +21,12 @@ export const usePlatform = () => {
   const getPlatform = async () => {
     try {
       isLoading.value = true;
-      if (!isTauriRuntime()) {
+      if (!isDesktopRuntime()) {
         platform.value = navigator.platform.toLowerCase().includes("mac") ? "darwin" : "win32";
         return;
       }
 
-      const currentPlatform = await useTauriOsPlatform();
+      const currentPlatform = await desktopOs.platform();
       platform.value = currentPlatform;
     } catch {
       platform.value = "win32";

@@ -85,6 +85,7 @@ import {
 import { canOpenChenQueryConsole, chenNodeActivationAction } from "~/chen/utils/resourceTree";
 import { ChenSqlMetadataStore } from "~/chen/utils/sqlMetadata";
 import { chenUnrestrictedMutations } from "~/chen/utils/sqlSafety";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const emit = defineEmits<{ reconnect: [] }>();
@@ -93,6 +94,7 @@ const toast = useToast();
 const { locale, t } = useI18n();
 const { openWithTab } = useRightPanel();
 const { addErrorToast } = useErrorToast();
+const userInfoStore = useUserInfoStore();
 const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
 const tabRef = toRef(props, "tab");
 const endpointUrl = computed(() => {
@@ -108,6 +110,7 @@ const endpointUrl = computed(() => {
     }
   }
 
+  if (isDesktopRuntime() && userInfoStore.currentSite) return userInfoStore.currentSite;
   return window.location.origin;
 });
 const resolveChenWsUrl = (path: "session" | "console" | "ai") => chenWsUrl(path, endpointUrl.value);

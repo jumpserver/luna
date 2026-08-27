@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
 import {
@@ -10,15 +9,7 @@ import {
 } from "@jumpserver/koko";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
-
-interface LocalShellOutput {
-  sessionId: string;
-  data: number[];
-}
-
-interface LocalShellExit {
-  sessionId: string;
-}
+import { desktopLocalShell } from "~/shared/desktop/bridge";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
@@ -27,7 +18,7 @@ const terminalConfig = getDefaultTerminalConfig();
 const containerRef = shallowRef<HTMLElement | null>(null);
 const terminal = shallowRef<Terminal | null>(null);
 const fitAddon = new FitAddon();
-const unlisteners: UnlistenFn[] = [];
+const unlisteners: Array<() => void> = [];
 let resizeObserver: ResizeObserver | null = null;
 let started = false;
 
@@ -43,15 +34,11 @@ const debouncedFitTerminal = useDebounceFn(fitTerminal, 80);
 
 async function resize(cols: number, rows: number) {
   if (!started) return;
-  await useTauriCoreInvoke("resize_local_shell", {
-    sessionId: props.tab.id,
-    cols,
-    rows
-  }).catch(() => {});
+  await desktopLocalShell.resize(props.tab.id, cols, rows).catch(() => {});
 }
 
 async function start() {
-  if (!containerRef.value || !isTauriRuntime()) return;
+  if (!containerRef.value || !isDesktopRuntime()) return;
 
   const instance = new Terminal({
     fontFamily: terminalConfig.fontFamily,
@@ -73,12 +60,12 @@ async function start() {
   fitTerminal();
 
   unlisteners.push(
-    await useTauriEventListen<LocalShellOutput>("local-shell-output", ({ payload }) => {
+    await desktopLocalShell.onOutput(({ payload }) => {
       if (payload.sessionId === props.tab.id) {
         instance.write(new Uint8Array(payload.data));
       }
     }),
-    await useTauriEventListen<LocalShellExit>("local-shell-exit", ({ payload }) => {
+    await desktopLocalShell.onExit(({ payload }) => {
       if (payload.sessionId === props.tab.id) {
         started = false;
         unregisterLocalShellTerminalSession(props.tab.id);
@@ -94,10 +81,7 @@ async function start() {
   );
 
   instance.onData((data) => {
-    void useTauriCoreInvoke("write_local_shell", {
-      sessionId: props.tab.id,
-      data: Array.from(new TextEncoder().encode(data))
-    });
+    void desktopLocalShell.write(props.tab.id, data);
   });
   instance.onResize(({ cols, rows }) => {
     void resize(cols, rows);
@@ -107,21 +91,14 @@ async function start() {
   resizeObserver.observe(containerRef.value);
 
   try {
-    await useTauriCoreInvoke("start_local_shell", {
-      sessionId: props.tab.id,
-      cols: instance.cols,
-      rows: instance.rows
-    });
+    await desktopLocalShell.start(props.tab.id, instance.cols, instance.rows);
     started = true;
     fitTerminal();
     await resize(instance.cols, instance.rows);
     registerLocalShellTerminalSession(
       props.tab.id,
       (data) => {
-        void useTauriCoreInvoke("write_local_shell", {
-          sessionId: props.tab.id,
-          data: Array.from(new TextEncoder().encode(data))
-        });
+        void desktopLocalShell.write(props.tab.id, data);
       },
       instance
     );
@@ -155,7 +132,7 @@ onBeforeUnmount(() => {
   unregisterLocalShellTerminalSession(props.tab.id);
   for (const unlisten of unlisteners) unlisten();
   if (started) {
-    void useTauriCoreInvoke("close_local_shell", { sessionId: props.tab.id });
+    void desktopLocalShell.close(props.tab.id);
   }
   terminal.value?.dispose();
   terminal.value = null;

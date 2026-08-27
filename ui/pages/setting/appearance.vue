@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { CodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
 import type { ThemePresetId } from "~/types";
-
 import { useSettingManager } from "~/composables/useSettingManager";
+
 import { MAX_FONT_SIZE, MIN_FONT_SIZE } from "~/composables/useSettingStorage";
 import { useThemeOptions } from "~/composables/useThemeOptions";
 import { DARK_THEME_PRESETS, getThemePreset, LIGHT_THEME_PRESETS } from "~/composables/useThemePresets";
+import { desktopEmit, desktopInvoke } from "~/shared/desktop/bridge";
 import { CODEMIRROR_THEME_PRESETS, isCodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
 import { TERMINAL_THEME_PRESETS } from "~/shared/theme/presets/terminal";
 
@@ -186,7 +187,7 @@ function setAccentColor(mode: "light" | "dark", color: string) {
     setPrimaryColorDark(hex);
   }
 
-  useTauriEventEmit("primary-color-changed", { hex, mode });
+  void desktopEmit("primary-color-changed", { hex, mode });
 }
 
 function selectPalette(mode: "light" | "dark", id: ThemePresetId) {
@@ -209,7 +210,7 @@ function applyCurrentThemeColor(broadcast = false) {
   if (hexNow) {
     applyPrimaryColor(hexNow);
     if (broadcast) {
-      useTauriEventEmit("primary-color-changed", { hex: hexNow, mode: modeNow });
+      void desktopEmit("primary-color-changed", { hex: hexNow, mode: modeNow });
     }
   }
 }
@@ -218,7 +219,7 @@ const loadSystemFonts = async () => {
   const fallback = SYSTEM_FONT_FAMILY;
 
   try {
-    const families = await useTauriCoreInvoke<string[]>("list_system_fonts");
+    const families = await desktopInvoke<string[]>("list_system_fonts");
 
     const dynamicItems: FontItem[] = (families || []).map((name) => ({
       id: name,
@@ -289,7 +290,7 @@ watch(
     applyFont(value);
     setFontFamily(value);
     try {
-      useTauriEventEmit("font-changed", { value });
+      void desktopEmit("font-changed", { value });
     } catch {}
   }
 );

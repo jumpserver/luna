@@ -1,6 +1,7 @@
 import type { MaybeRefOrGetter } from "vue";
 import type { ConnectionBody, TokenResponse } from "~/types";
 import { ApiRequestError } from "~/composables/useApiRequest";
+import { desktopClipboard } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export type AclItemStatus =
@@ -223,7 +224,7 @@ export function useAclDialog() {
   const copyTicketLink = async (item: AclDialogItem) => {
     const link = item.token?.from_ticket_info?.ticket_detail_page_url;
     if (!link) return;
-    if (isTauriRuntime()) await useTauriClipboardManagerWriteText(link);
+    if (isDesktopRuntime()) await desktopClipboard.writeText(link);
     else await navigator.clipboard.writeText(link);
   };
 
@@ -294,7 +295,7 @@ async function verifyNextFace(group: AclDialogGroup) {
     const faceToken = token.face_token;
     item.status = "verifying";
     const userInfoStore = useUserInfoStore();
-    const siteUrl = new URL(isTauriRuntime() ? userInfoStore.currentSite : window.location.origin);
+    const siteUrl = new URL(isDesktopRuntime() ? userInfoStore.currentSite : window.location.origin);
     group.faceUrl = new URL(
       withWebSitePrefix(`/facelive/capture?token=${encodeURIComponent(faceToken)}`, siteUrl.pathname),
       siteUrl.origin
@@ -332,7 +333,7 @@ async function verifyNextFace(group: AclDialogGroup) {
 
 async function callTicketApi(api: { method: string; url: string }) {
   let path = api.url;
-  if (isTauriRuntime() && /^https?:\/\//.test(path)) {
+  if (isDesktopRuntime() && /^https?:\/\//.test(path)) {
     const parsed = new URL(path);
     path = `${parsed.pathname}${parsed.search}`;
   }

@@ -8,7 +8,7 @@ export async function useWarmupSetting() {
       import("@/pages/setting/about.vue")
     ];
 
-    if (isTauriRuntime()) {
+    if (isDesktopRuntime()) {
       imports.push(
         import("@/pages/setting/application/terminal.vue"),
         import("@/pages/setting/application/ssh.vue"),

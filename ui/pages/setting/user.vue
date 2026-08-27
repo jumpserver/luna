@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { LabeledValue, UserData, UserProfile } from "~/types";
-
 import { getUserProfile } from "~/composables/useApiRequest";
+
+import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface DetailRow {
@@ -139,8 +140,8 @@ async function switchAccount(accountId: string, account: UserData) {
   userInfoStore.setCurrentAccount(accountId);
 
   try {
-    if (isTauriRuntime()) {
-      await useTauriCoreInvoke("set_api_session", {
+    if (isDesktopRuntime()) {
+      await desktopInvoke("set_api_session", {
         sessionKey: accountId,
         origin: account.site,
         bearerToken: account.bearerToken,
@@ -178,7 +179,7 @@ watch(
         :title="t('UserProfile.NoUser')"
         :description="t('UserProfile.NoUserDescription')"
       >
-        <template v-if="isTauriRuntime()" #actions>
+        <template v-if="isDesktopRuntime()" #actions>
           <UButton size="sm" color="neutral" variant="outline" @click="addAccount">
             {{ t("Login.AddAccount") }}
           </UButton>
@@ -187,7 +188,7 @@ watch(
     </div>
 
     <template v-else>
-      <section v-if="isTauriRuntime()" class="space-y-3">
+      <section v-if="isDesktopRuntime()" class="space-y-3">
         <div class="flex items-end justify-between gap-4">
           <div>
             <h2 class="text-sm font-semibold text-highlighted">{{ t("UserProfile.SiteAccounts") }}</h2>

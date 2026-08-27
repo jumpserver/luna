@@ -18,7 +18,7 @@ const { isMacOS } = usePlatform();
 <template>
   <div class="settings-shell relative flex h-screen min-h-0 flex-col overflow-hidden bg-[var(--app-main-bg)]">
     <HeaderDesktopTitleBar :show-menus="false" />
-    <div v-if="isTauriRuntime() && isMacOS" data-tauri-drag-region class="absolute inset-x-0 top-0 z-10 h-9" />
+    <div v-if="isDesktopRuntime() && isMacOS" data-tauri-drag-region class="absolute inset-x-0 top-0 z-10 h-9" />
 
     <SettingsPanel :mode="mode" :active-section="activeSection" class="min-h-0 flex-1">
       <slot />

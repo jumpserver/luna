@@ -2,6 +2,7 @@
 import type { NavigationMenuItem } from "@nuxt/ui";
 import type { PluginListItem } from "~/types";
 import { getConfiguredAppName, isDefaultAppName } from "~/composables/useAppName";
+import { desktopConvertFileSrc, desktopDialog } from "~/shared/desktop/bridge";
 
 const props = defineProps<{
   embedded?: boolean;
@@ -127,12 +128,12 @@ const pluginComment = (plugin: PluginListItem) => {
 };
 
 const pluginIconSrc = (plugin: PluginListItem) => {
-  if (!plugin.icon_path || !isTauriRuntime()) return "";
-  return useTauriCoreConvertFileSrc(plugin.icon_path);
+  if (!plugin.icon_path || !isDesktopRuntime()) return "";
+  return desktopConvertFileSrc(plugin.icon_path);
 };
 
 const handlePluginUpload = async () => {
-  const selected = (await useTauriDialogOpen({
+  const selected = (await desktopDialog.open({
     multiple: false,
     filters: [
       { name: "JumpServer Plugin", extensions: ["jscplugin"] },
@@ -164,7 +165,7 @@ const handlePluginUninstall = async (pluginId: string) => {
 <template>
   <div>
     <UCard
-      v-if="isTauriRuntime()"
+      v-if="isDesktopRuntime()"
       variant="outline"
       class="mb-4"
       :ui="{

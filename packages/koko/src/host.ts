@@ -74,6 +74,41 @@ export interface KokoThemeAdapter {
   ensureCodeMirror?: () => Promise<void>;
 }
 
+export interface KokoLocalFileEntry {
+  name: string;
+  isFile: boolean;
+  isDirectory: boolean;
+  isSymlink?: boolean;
+}
+
+export interface KokoLocalFileInfo {
+  isFile: boolean;
+  isDirectory: boolean;
+  size: number;
+  mtime: Date | null;
+}
+
+export interface KokoLocalFilesAdapter {
+  isAvailable: () => boolean;
+  homeDir: () => Promise<string>;
+  desktopDir: () => Promise<string>;
+  downloadDir: () => Promise<string>;
+  join: (...paths: string[]) => Promise<string>;
+  dirname: (path: string) => Promise<string>;
+  readDir: (path: string) => Promise<KokoLocalFileEntry[]>;
+  stat: (path: string) => Promise<KokoLocalFileInfo>;
+  readFile: (path: string) => Promise<Uint8Array<ArrayBuffer>>;
+  writeFile: (path: string, data: Uint8Array) => Promise<void>;
+  exists: (path: string) => Promise<boolean>;
+  mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>;
+  rename: (oldPath: string, newPath: string) => Promise<void>;
+  remove: (path: string, options?: { recursive?: boolean }) => Promise<void>;
+  startAccessingSecurityScopedResource: (path: string) => Promise<void>;
+  stopAccessingSecurityScopedResource: (path: string) => Promise<void>;
+  chooseFolder: (title: string) => Promise<string | string[] | null>;
+  revealItemInDir: (path: string) => Promise<void>;
+}
+
 export interface KokoHostAdapter {
   createTicket: (request: { baseUrl: string; tokenId: string }) => Promise<{ ticket?: string }>;
   getSmartEndpoint: (
@@ -81,7 +116,7 @@ export interface KokoHostAdapter {
     orgId?: string
   ) => Promise<KokoEndpoint>;
   getWindowOrigin: () => string;
-  isTauriRuntime: () => boolean;
+  isDesktopRuntime: () => boolean;
   markSessionConnected: (tabId: string) => void;
   markSessionFailed: (tab: Pick<KokoWorkspaceTab, "id" | "assetId" | "protocol" | "account">) => void;
   registerSessionCloseGuard?: (tabId: string, guard: () => boolean | Promise<boolean>) => () => void;
@@ -89,6 +124,7 @@ export interface KokoHostAdapter {
   clearSessionDetails: (tabId: string) => void;
   canSplitSession: (tabId: string, direction: "horizontal" | "vertical") => boolean;
   splitSession: (tabId: string, direction: "horizontal" | "vertical") => void;
+  localFiles: KokoLocalFilesAdapter;
   sftp: KokoSftpHostAdapter;
   theme: KokoThemeAdapter;
 }

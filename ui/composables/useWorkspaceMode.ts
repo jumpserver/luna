@@ -11,7 +11,7 @@ export const useWorkspaceMode = () => {
       normalizedPath.includes("/transcode");
 
     if (isFileRoute) return "files";
-    if (isTauriRuntime() && isToolRoute) return "tools";
+    if (isDesktopRuntime() && isToolRoute) return "tools";
     return "assets";
   });
   const uiWorkspaceMode = computed(() => activeWorkspaceMode.value);

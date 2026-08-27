@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { UnlistenFn } from "@tauri-apps/api/event";
+import { desktopClipboard, desktopInvoke, desktopListen, desktopOpener } from "~/shared/desktop/bridge";
 
 definePageMeta({
   layout: "auth"
@@ -27,7 +28,7 @@ const subTextClass = computed(() => (userTheme.value === "dark" ? "text-gray-300
 const cancelAuthFlow = () => {
   if (didCancel.value) return;
   didCancel.value = true;
-  void useTauriCoreInvoke("auth_cancel", {}).catch((error) => {
+  void desktopInvoke("auth_cancel").catch((error) => {
     console.debug("auth_cancel failed:", error);
   });
 };
@@ -41,7 +42,7 @@ const back = () => {
 
 const handleCopyUrl = () => {
   if (url.value && typeof url.value === "string") {
-    useTauriClipboardManagerWriteText(url.value).then(() => {
+    desktopClipboard.writeText(url.value).then(() => {
       toast.add({
         title: t("Auth.CopySuccess"),
         color: "primary",
@@ -55,12 +56,12 @@ const handleCopyUrl = () => {
 
 const handleOpenManually = () => {
   if (url.value && typeof url.value === "string") {
-    useTauriOpenerOpenUrl(url.value);
+    desktopOpener.openUrl(url.value);
   }
 };
 
 onMounted(async () => {
-  unlistenAuth.value = await useTauriEventListen("auth_url", (event) => {
+  unlistenAuth.value = await desktopListen("auth_url", (event) => {
     const payload = (event?.payload || "").toString();
     if (payload) {
       url.value = payload;

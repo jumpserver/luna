@@ -9,7 +9,7 @@ const { t } = useI18n();
 const { isMacOS } = usePlatform();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
-const showAddSession = computed(() => loggedIn.value || isTauriRuntime());
+const showAddSession = computed(() => loggedIn.value || isDesktopRuntime());
 const {
   activeTabId,
   tabs,

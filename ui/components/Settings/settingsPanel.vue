@@ -21,7 +21,7 @@ const { closeSettings, activeSection: inlineActiveSection } = useSettingsWindow(
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const searchQuery = ref("");
-const hasNativeTitlebarInset = computed(() => isTauriRuntime());
+const hasNativeTitlebarInset = computed(() => isDesktopRuntime());
 
 const sectionDefs = computed(() => {
   const defs = [
@@ -72,7 +72,7 @@ const sectionDefs = computed(() => {
     }
   ];
 
-  return defs.filter((item) => (!item.tauriOnly || isTauriRuntime()) && (!item.authenticatedOnly || loggedIn.value));
+  return defs.filter((item) => (!item.tauriOnly || isDesktopRuntime()) && (!item.authenticatedOnly || loggedIn.value));
 });
 
 const routeActiveSection = computed(() => {

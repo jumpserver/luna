@@ -24,6 +24,12 @@ export function chenPath(path: string, endpointUrl?: string) {
   const currentOrigin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
   const endpoint = new URL(endpointUrl || currentOrigin, currentOrigin);
 
+  if (isElectronRuntime()) {
+    const target = new URL(withWebSitePrefix(connectorPath), currentOrigin);
+    target.searchParams.set("__jms_chen_endpoint", endpoint.origin);
+    return target.toString();
+  }
+
   if (endpoint.origin === currentOrigin) {
     return withWebSitePrefix(connectorPath);
   }

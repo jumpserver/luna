@@ -1,7 +1,9 @@
 {
   "name": "jumpserver-client",
+  "productName": "JumpServer Client",
   "type": "module",
   "version": "4.1.2",
+  "main": "electron/main.mjs",
   "private": true,
   "packageManager": "pnpm@11.4.0",
   "description": "JumpServer client tool",
@@ -17,8 +19,10 @@
     "generate:client": "node scripts/generate-client.js",
     "build:ssh-helper:dev": "node scripts/build-ssh-helper.mjs debug",
     "build:ssh-helper:release": "node scripts/build-ssh-helper.mjs release",
+    "build:transcode-helper:dev": "cargo build --manifest-path src-tauri/Cargo.toml --bin jms-transcode",
+    "build:transcode-helper:release": "cargo build --release --manifest-path src-tauri/Cargo.toml --bin jms-transcode",
     "preinstall": "npx only-allow pnpm",
-    "postinstall": "nuxt prepare",
+    "postinstall": "nuxt prepare && node scripts/fix-node-pty-permissions.mjs",
     "prepare": "husky",
     "fmt": "oxfmt \"{ui,packages}/**/*.{js,ts,tsx,jsx,vue,css,scss,less,html,md,json,yml,yaml}\"",
     "fmt:check": "oxfmt --check \"{ui,packages}/**/*.{js,ts,tsx,jsx,vue,css,scss,less,html,md,json,yml,yaml}\"",
@@ -40,6 +44,10 @@
     "tauri:dev": "tauri dev",
     "client:dev": "tauri dev",
     "client:dev:external": "tauri dev --config src-tauri/tauri.dev.external.conf.json",
+    "electron:dev": "node scripts/electron-dev.mjs",
+    "electron:prepare": "pnpm generate:client && node scripts/build-ssh-helper.mjs release --with-transcode && node scripts/prepare-electron-resources.mjs",
+    "electron:package:dir": "pnpm electron:prepare && electron-builder --dir --publish never",
+    "electron:build": "pnpm electron:prepare && electron-builder --publish never",
     "web-client:dev": "pnpm --dir web-client dev",
     "web-client:check": "pnpm --dir web-client check",
     "web-client:test-site": "pnpm --dir web-client test-site",
@@ -113,11 +121,13 @@
     "js-untar": "^2.0.0",
     "marked": "17.0.6",
     "mitt": "^3.0.1",
+    "node-pty": "^1.1.0",
     "nuxt": "^4.4.6",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "pretty-bytes": "^7.1.0",
     "sql-formatter": "^9.0.0",
+    "tar-stream": "3.2.0",
     "vue": "^3.5.35",
     "vue-router": "5.0.7",
     "xterm-theme": "^1.1.0",
@@ -143,6 +153,8 @@
     "@vueuse/core": "^14.3.0",
     "@vueuse/nuxt": "^14.3.0",
     "bumpp": "^11.1.0",
+    "electron": "44.0.0",
+    "electron-builder": "26.15.3",
     "eslint": "^10.4.0",
     "eslint-plugin-oxlint": "^1.79.0",
     "husky": "^9.1.7",
@@ -157,6 +169,60 @@
   },
   "resolutions": {
     "typescript": "npm:tslite@latest"
+  },
+  "build": {
+    "appId": "com.jumpserver.client",
+    "productName": "JumpServerClient",
+    "asar": true,
+    "asarUnpack": ["**/node-pty/**", "**/*.node"],
+    "directories": {
+      "app": "electron",
+      "output": "release/electron"
+    },
+    "files": ["**/*", "!**/*.test.mjs", "!MIGRATION.md", "!README.md"],
+    "extraResources": [
+      {
+        "from": ".output/public",
+        "to": "dist",
+        "filter": ["**/*"]
+      },
+      {
+        "from": ".electron-resources",
+        "to": ".",
+        "filter": ["**/*"]
+      }
+    ],
+    "protocols": [
+      {
+        "name": "JumpServer Client URL",
+        "schemes": ["jms2"]
+      }
+    ],
+    "artifactName": "JumpServerClient_${version}_${arch}.${ext}",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "src-tauri/icons/icon.icns",
+      "hardenedRuntime": true,
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "icon": "src-tauri/icons/icon.ico",
+      "target": ["nsis", "msi"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false
+    },
+    "linux": {
+      "category": "Development",
+      "icon": "src-tauri/icons/icon.png",
+      "target": ["AppImage", "deb", "rpm"]
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "jumpserver",
+      "repo": "clients"
+    }
   }
 }
-

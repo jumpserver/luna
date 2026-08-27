@@ -1,4 +1,5 @@
 import type { CurrentOrg, PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/types";
+import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface BootstrapResponse {
@@ -342,7 +343,7 @@ export const useAuthSession = () => {
     const restored = restorePersistedSnapshot();
 
     const promptLogin = () => {
-      if (!import.meta.client || !isTauriRuntime()) return;
+      if (!import.meta.client || !isDesktopRuntime()) return;
       useEventBus().emit("login", undefined);
     };
 
@@ -357,7 +358,7 @@ export const useAuthSession = () => {
       });
     };
 
-    if (!isTauriRuntime()) {
+    if (!isDesktopRuntime()) {
       return (await bootstrapWebCookieSession()) || restored;
     }
 
@@ -374,7 +375,7 @@ export const useAuthSession = () => {
       for (const delay of BOOTSTRAP_RETRY_DELAYS_MS) {
         if (delay > 0) await wait(delay);
 
-        const payload = await useTauriCoreInvoke<LoginPayload>("bootstrap_auth_session", {
+        const payload = await desktopInvoke<LoginPayload>("bootstrap_auth_session", {
           site,
           sessionId: accountId
         });

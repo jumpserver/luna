@@ -1,4 +1,6 @@
-import type { UnlistenFn } from "@tauri-apps/api/event";
+import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
+
+type UnlistenFn = () => void;
 
 export type TranscodeTaskStatus = "pending" | "queued" | "processing" | "success" | "error";
 export type FilenameStyle = "original" | "friendly" | "friendly_uuid";
@@ -379,7 +381,7 @@ export const useTranscodeStore = defineStore(
     const registerProgressListener = async () => {
       if (listenerRegistered) return;
       listenerRegistered = true;
-      unlistenProgress.value = await useTauriEventListen("transcode-progress", (event) => {
+      unlistenProgress.value = await desktopListen("transcode-progress", (event) => {
         handleProgressEvent(event.payload as TranscodeProgressPayload);
       });
     };
@@ -422,13 +424,13 @@ export const useTranscodeStore = defineStore(
 
       try {
         try {
-          const results = (await useTauriCoreInvoke("transcode_replays", {
+          const results = await desktopInvoke<TranscodeResult[]>("transcode_replays", {
             tarPaths: archivePaths.value,
             outputDir: outputDir.value,
             filenameStyle: filenameStyle.value,
             outputResolution: outputResolution.value,
             transcodePower: transcodePower.value
-          })) as TranscodeResult[];
+          });
 
           applyBatchResults(results);
         } catch (error) {

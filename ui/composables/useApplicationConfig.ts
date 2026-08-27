@@ -1,4 +1,5 @@
 import type { AppConfigType, PluginListItem } from "~/types";
+import { desktopInvoke, desktopWindow } from "~/shared/desktop/bridge";
 
 export const useApplicationConfig = () => {
   const { t } = useI18n();
@@ -24,9 +25,9 @@ export const useApplicationConfig = () => {
   };
 
   const getConfig = async () => {
-    if (!isTauriRuntime()) return;
+    if (!isDesktopRuntime()) return;
 
-    const config = await useTauriCoreInvoke("get_config");
+    const config = await desktopInvoke("get_config");
 
     if (config) {
       setAppConfig(config as AppConfigType);
@@ -34,9 +35,9 @@ export const useApplicationConfig = () => {
   };
 
   const getPlugins = async () => {
-    if (!isTauriRuntime()) return;
+    if (!isDesktopRuntime()) return;
 
-    const plugins = await useTauriCoreInvoke("list_plugins");
+    const plugins = await desktopInvoke("list_plugins");
     if (Array.isArray(plugins)) {
       pluginList.value = plugins as PluginListItem[];
     }
@@ -47,12 +48,10 @@ export const useApplicationConfig = () => {
   };
 
   onMounted(async () => {
-    if (!isTauriRuntime()) return;
+    if (!isDesktopRuntime()) return;
 
     // 仅在主窗口拉取配置；其他窗口直接读取结果
-    const cur = await useTauriWebviewWindowGetCurrentWebviewWindow();
-
-    if (cur && cur.label !== "main") {
+    if (desktopWindow.label() !== "main") {
       if (hydrationPromise.value) {
         try {
           await hydrationPromise.value;
@@ -82,7 +81,7 @@ export const useApplicationConfig = () => {
     path?: string
   ) => {
     try {
-      const updated = await useTauriCoreInvoke("update_config_selection", {
+      const updated = await desktopInvoke("update_config_selection", {
         category,
         protocol,
         name,
@@ -116,7 +115,7 @@ export const useApplicationConfig = () => {
 
   const installPlugin = async (path: string) => {
     try {
-      await useTauriCoreInvoke("install_plugin", { path });
+      await desktopInvoke("install_plugin", { path });
       await refreshAll();
       toast.add({
         title: t("Setting.PluginInstallSuccess"),
@@ -139,7 +138,7 @@ export const useApplicationConfig = () => {
 
   const uninstallPlugin = async (pluginId: string) => {
     try {
-      await useTauriCoreInvoke("uninstall_plugin", { pluginId });
+      await desktopInvoke("uninstall_plugin", { pluginId });
       await refreshAll();
       toast.add({
         title: t("Setting.PluginUninstallSuccess"),
@@ -162,7 +161,7 @@ export const useApplicationConfig = () => {
 
   const createCustomTerminal = async (name: string, path: string, template: string) => {
     try {
-      await useTauriCoreInvoke("create_custom_terminal", { name, path, template });
+      await desktopInvoke("create_custom_terminal", { name, path, template });
       await refreshAll();
       toast.add({
         title: t("Setting.CustomTerminalCreateSuccess"),

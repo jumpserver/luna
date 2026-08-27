@@ -1,6 +1,7 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { Store } from "@tauri-apps/plugin-store";
 import type { ThemePresetId } from "~/composables/useThemePresets";
+import type { DesktopStore } from "~/shared/desktop/bridge";
+import { desktopStore } from "~/shared/desktop/bridge";
 import type { CodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
 import type {
   AppConfigType,
@@ -101,8 +102,8 @@ const DEFAULT_STATE: UserSettingPersistedState = {
   sidebarSections: DEFAULT_SIDEBAR_SECTIONS
 };
 
-let storeInstance: Store | null = null;
-let storePromise: Promise<Store> | null = null;
+let storeInstance: DesktopStore | null = null;
+let storePromise: Promise<DesktopStore> | null = null;
 
 const loadWebState = () => {
   if (!import.meta.client) return DEFAULT_STATE;
@@ -134,10 +135,7 @@ async function ensureStore() {
   if (storeInstance) return storeInstance;
 
   if (!storePromise) {
-    const { Store } = await import("@tauri-apps/plugin-store");
-    storePromise = Store.load(STORE_PATH, {
-      defaults: { [STORE_KEY]: DEFAULT_STATE }
-    });
+    storePromise = desktopStore.load(STORE_PATH, { [STORE_KEY]: DEFAULT_STATE });
   }
 
   storeInstance = await storePromise;
@@ -146,7 +144,7 @@ async function ensureStore() {
 
 export const useSettingStorage = () => {
   const load = async (): Promise<UserSettingPersistedState> => {
-    if (!isTauriRuntime()) {
+    if (!isDesktopRuntime()) {
       return loadWebState();
     }
 
@@ -163,7 +161,7 @@ export const useSettingStorage = () => {
   };
 
   const save = async (next: UserSettingPersistedState) => {
-    if (!isTauriRuntime()) {
+    if (!isDesktopRuntime()) {
       saveWebState(next);
       return;
     }
@@ -180,7 +178,7 @@ export const useSettingStorage = () => {
   };
 
   const reset = async () => {
-    if (!isTauriRuntime()) {
+    if (!isDesktopRuntime()) {
       saveWebState(DEFAULT_STATE);
       return;
     }
@@ -191,7 +189,7 @@ export const useSettingStorage = () => {
   };
 
   const subscribe = async (cb: (state: UserSettingPersistedState) => void): Promise<UnlistenFn> => {
-    if (!isTauriRuntime()) {
+    if (!isDesktopRuntime()) {
       const handler = (event: Event) => {
         const next = { ...DEFAULT_STATE, ...((event as CustomEvent<UserSettingPersistedState>).detail || {}) };
         cb({

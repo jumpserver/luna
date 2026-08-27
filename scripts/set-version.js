@@ -27,6 +27,13 @@ packageJson.version = version;
 writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 console.log("✓ Updated package.json");
 
+// Keep the minimal Electron runtime package in sync with the product version.
+const electronPackageJsonPath = join(rootDir, "electron", "package.json");
+const electronPackageJson = JSON.parse(readFileSync(electronPackageJsonPath, "utf8"));
+electronPackageJson.version = version;
+writeFileSync(electronPackageJsonPath, `${JSON.stringify(electronPackageJson, null, 2)}\n`);
+console.log("✓ Updated electron/package.json");
+
 // Update tauri.conf.json
 const tauriConfPath = join(rootDir, "src-tauri", "tauri.conf.json");
 const tauriConf = JSON.parse(readFileSync(tauriConfPath, "utf8"));

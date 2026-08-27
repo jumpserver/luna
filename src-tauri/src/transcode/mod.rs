@@ -161,6 +161,12 @@ struct TranscodeProgress {
     metadata: Option<ReplayMetadata>,
 }
 
+#[derive(Clone)]
+enum ProgressEmitter {
+    Tauri(AppHandle),
+    JsonLines,
+}
+
 /// Transcode one or more `.tar` replay archives to H.264 MP4 video files.
 ///
 /// Each `.tar` should contain:
@@ -171,6 +177,43 @@ struct TranscodeProgress {
 #[tauri::command]
 pub async fn transcode_replays(
     app: AppHandle,
+    tar_paths: Vec<String>,
+    output_dir: String,
+    filename_style: Option<FilenameStyle>,
+    output_resolution: Option<OutputResolution>,
+    transcode_power: Option<TranscodePower>,
+) -> Result<Vec<TranscodeResult>, String> {
+    transcode_replays_with_emitter(
+        ProgressEmitter::Tauri(app),
+        tar_paths,
+        output_dir,
+        filename_style,
+        output_resolution,
+        transcode_power,
+    )
+    .await
+}
+
+pub async fn transcode_replays_json_lines(
+    tar_paths: Vec<String>,
+    output_dir: String,
+    filename_style: Option<FilenameStyle>,
+    output_resolution: Option<OutputResolution>,
+    transcode_power: Option<TranscodePower>,
+) -> Result<Vec<TranscodeResult>, String> {
+    transcode_replays_with_emitter(
+        ProgressEmitter::JsonLines,
+        tar_paths,
+        output_dir,
+        filename_style,
+        output_resolution,
+        transcode_power,
+    )
+    .await
+}
+
+async fn transcode_replays_with_emitter(
+    emitter: ProgressEmitter,
     tar_paths: Vec<String>,
     output_dir: String,
     filename_style: Option<FilenameStyle>,
@@ -193,7 +236,7 @@ pub async fn transcode_replays(
         let mut results = Vec::with_capacity(total);
 
         for (idx, tar_path_str) in tar_paths.into_iter().enumerate() {
-            let app_handle = app.clone();
+            let task_emitter = emitter.clone();
             let output_dir = output_dir.clone();
             let style = style.clone();
             let resolution = resolution.clone();
@@ -209,7 +252,7 @@ pub async fn transcode_replays(
             let result = tokio::task::spawn_blocking(move || {
                 catch_unwind(AssertUnwindSafe(|| {
                     transcode_single_tar(
-                        app_handle,
+                        task_emitter,
                         tar_path_str,
                         output_dir,
                         idx,
@@ -230,7 +273,7 @@ pub async fn transcode_replays(
                         panic_payload_to_string(panic_payload)
                     );
                     emit_progress(
-                        &app,
+                        &emitter,
                         &panic_session_id,
                         idx,
                         total,
@@ -253,7 +296,7 @@ pub async fn transcode_replays(
                 Err(e) => {
                     let err = format!("spawn transcoding task failed: {}", e);
                     emit_progress(
-                        &app,
+                        &emitter,
                         &panic_session_id,
                         idx,
                         total,
@@ -291,7 +334,7 @@ pub async fn transcode_replays(
         );
 
         for (idx, tar_path_str) in tar_paths.into_iter().enumerate() {
-            let app_handle = app.clone();
+            let task_emitter = emitter.clone();
             let output_dir = output_dir.clone();
             let style = style.clone();
             let resolution = resolution.clone();
@@ -309,7 +352,7 @@ pub async fn transcode_replays(
                 let _permit = permit;
                 catch_unwind(AssertUnwindSafe(|| {
                     transcode_single_tar(
-                        app_handle,
+                        task_emitter,
                         tar_path_str,
                         output_dir,
                         idx,
@@ -336,7 +379,7 @@ pub async fn transcode_replays(
                         panic_payload_to_string(panic_payload)
                     );
                     emit_progress(
-                        &app,
+                        &emitter,
                         &panic_session_id,
                         idx,
                         total,
@@ -362,7 +405,7 @@ pub async fn transcode_replays(
                 Err(e) => {
                     let err = format!("spawn transcoding task failed: {}", e);
                     emit_progress(
-                        &app,
+                        &emitter,
                         &panic_session_id,
                         idx,
                         total,
@@ -404,7 +447,7 @@ fn panic_payload_to_string(payload: Box<dyn std::any::Any + Send>) -> String {
 }
 
 fn transcode_single_tar(
-    app: AppHandle,
+    emitter: ProgressEmitter,
     tar_path_str: String,
     output_dir: String,
     file_index: usize,
@@ -426,7 +469,7 @@ fn transcode_single_tar(
         Err((sid, err)) => {
             error!("tar extraction failed for {}: {}", tar_name, err);
             emit_progress(
-                &app,
+                &emitter,
                 &sid,
                 file_index,
                 total,
@@ -454,7 +497,7 @@ fn transcode_single_tar(
             let err = format!("parse replay.json failed: {}", e);
             error!("{} for {}", err, tar_name);
             emit_progress(
-                &app,
+                &emitter,
                 &fallback_session_id,
                 file_index,
                 total,
@@ -479,7 +522,7 @@ fn transcode_single_tar(
     // First per-task event — ship the metadata so the UI can show session
     // details the moment the task appears in the list.
     emit_progress(
-        &app,
+        &emitter,
         &metadata.id,
         file_index,
         total,
@@ -492,7 +535,7 @@ fn transcode_single_tar(
     );
 
     let inner_result = transcode_single_tar_inner(
-        &app,
+        &emitter,
         &metadata,
         extraction.parts,
         &output_dir,
@@ -647,7 +690,7 @@ fn build_output_filename(metadata: &ReplayMetadata, style: &FilenameStyle) -> St
 }
 
 fn transcode_single_tar_inner(
-    app: &AppHandle,
+    emitter: &ProgressEmitter,
     metadata: &ReplayMetadata,
     parts: Vec<(usize, Vec<u8>)>,
     output_dir: &str,
@@ -673,7 +716,7 @@ fn transcode_single_tar_inner(
 
     let transcode_start = std::time::Instant::now();
 
-    let app_clone = app.clone();
+    let progress_emitter = emitter.clone();
     let session_id_clone = session_id.to_string();
 
     match transcode::transcode_to_mp4(
@@ -683,7 +726,7 @@ fn transcode_single_tar_inner(
         power.cpu_fraction(),
         move |pct| {
             emit_progress(
-                &app_clone,
+                &progress_emitter,
                 &session_id_clone,
                 file_index,
                 total,
@@ -699,7 +742,7 @@ fn transcode_single_tar_inner(
         Ok(()) => {
             let duration = transcode_start.elapsed().as_secs_f64();
             emit_progress(
-                app,
+                emitter,
                 session_id,
                 file_index,
                 total,
@@ -714,7 +757,7 @@ fn transcode_single_tar_inner(
         Err(e) => {
             let err = format!("transcoding failed: {}", e);
             emit_progress(
-                app,
+                emitter,
                 session_id,
                 file_index,
                 total,
@@ -733,7 +776,7 @@ fn transcode_single_tar_inner(
 }
 
 fn emit_progress(
-    app: &AppHandle,
+    emitter: &ProgressEmitter,
     file: &str,
     index: usize,
     total: usize,
@@ -744,20 +787,28 @@ fn emit_progress(
     metadata: Option<ReplayMetadata>,
     duration: Option<f64>,
 ) {
-    let _ = app.emit(
-        "transcode-progress",
-        TranscodeProgress {
-            file: file.to_string(),
-            index,
-            total,
-            progress,
-            message,
-            success,
-            output,
-            metadata,
-            duration,
-        },
-    );
+    let payload = TranscodeProgress {
+        file: file.to_string(),
+        index,
+        total,
+        progress,
+        message,
+        success,
+        output,
+        metadata,
+        duration,
+    };
+    match emitter {
+        ProgressEmitter::Tauri(app) => {
+            let _ = app.emit("transcode-progress", payload);
+        }
+        ProgressEmitter::JsonLines => {
+            println!(
+                "{}",
+                serde_json::json!({ "type": "progress", "payload": payload })
+            );
+        }
+    }
 }
 
 fn extract_session_id(tar_name: &str) -> String {

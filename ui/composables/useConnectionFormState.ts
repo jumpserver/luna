@@ -36,7 +36,7 @@ export function useConnectionFormState() {
   );
 
   const getVisibleProtocols = (protocols: PermedProtocol[]) =>
-    isTauriRuntime() ? protocols : protocols.filter((protocol) => protocol?.public !== false);
+    isDesktopRuntime() ? protocols : protocols.filter((protocol) => protocol?.public !== false);
   const getManualInputLabel = () => t("Account.ManualInput");
   const getAnonymousLabel = () => t("Account.Anonymous");
   const getDynamicAccountLabel = (account?: PermedAccount) => {
