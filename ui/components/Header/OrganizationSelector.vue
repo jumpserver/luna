@@ -68,7 +68,8 @@ watch(
       :content="{ align: 'start', side: 'bottom' }"
       :ui="{
         content: 'w-44 max-h-64 overflow-y-auto p-1',
-        item: 'mx-0 px-2 py-1.5 rounded-md text-xs leading-4 transition-colors duration-150'
+        item: 'mx-0 px-2 py-1.5 rounded-md leading-5 transition-colors duration-150',
+        itemLabel: 'text-xs'
       }"
     >
       <UButton
