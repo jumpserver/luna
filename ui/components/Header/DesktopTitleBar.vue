@@ -239,7 +239,7 @@ const windowControls = computed(() => [
               color="neutral"
               variant="ghost"
               size="xs"
-              class="h-[26px] rounded px-2 text-xs font-normal hover:bg-[color:color-mix(in_srgb,var(--app-fg)_10%,transparent)] data-[state=open]:bg-[color:color-mix(in_srgb,var(--app-fg)_12%,transparent)]"
+              class="h-[26px] rounded px-2.5 text-xs font-normal hover:bg-[color:color-mix(in_srgb,var(--app-fg)_10%,transparent)] data-[state=open]:bg-[color:color-mix(in_srgb,var(--app-fg)_12%,transparent)]"
             />
           </UDropdownMenu>
         </template>

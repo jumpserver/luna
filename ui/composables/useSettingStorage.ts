@@ -84,7 +84,7 @@ const DEFAULT_STATE: UserSettingPersistedState = {
   uiFontSize: DEFAULT_FONT_SIZE,
   codeFontSize: DEFAULT_FONT_SIZE,
   primaryColor: "#1ab394",
-  primaryColorLight: "#1ab394",
+  primaryColorLight: "#1a73e8",
   primaryColorDark: "#34d399",
   lightThemePreset: DEFAULT_LIGHT_THEME_PRESET,
   darkThemePreset: DEFAULT_DARK_THEME_PRESET,

@@ -56,7 +56,7 @@ const presetMap = new Map(
   [...LIGHT_THEME_PRESETS, ...DARK_THEME_PRESETS].map((preset) => [preset.id, preset] as const)
 );
 
-export const DEFAULT_LIGHT_THEME_PRESET: ThemePresetId = "latte";
+export const DEFAULT_LIGHT_THEME_PRESET: ThemePresetId = "gemini";
 export const DEFAULT_DARK_THEME_PRESET: ThemePresetId = "mocha";
 
 export const isThemePresetId = (value: string): value is ThemePresetId => presetMap.has(value as ThemePresetId);

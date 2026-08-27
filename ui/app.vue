@@ -16,7 +16,7 @@ const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
 const route = useRoute();
 const authSession = useAuthSession();
 
-const { isMacOS } = usePlatform();
+const { isMacOS, isWindows } = usePlatform();
 const { locale, setLocale } = useI18n();
 const { userTheme, applyThemePreference, applySystemThemePreference } = useThemeAdapter();
 
@@ -65,11 +65,12 @@ const platformClass = computed(() => {
   const platformKey = isMacOS.value ? "darwin" : "windows";
   return `platform-${platformKey}`;
 });
+const micaClass = computed(() => (isDesktopRuntime() && isWindows.value ? "runtime-windows-mica" : ""));
 
 // 因为 <Body> 是一个虚拟组件，底层并不会响应 Vue 的 :style 绑定。它的作用是把插槽内容插入到真正的 <body> 中，但自身不是一个响应式桥梁。
 useHead({
   bodyAttrs: {
-    class: computed(() => `${platformClass.value} font-sans antialiased h-screen w-screen`),
+    class: computed(() => `${platformClass.value} ${micaClass.value} font-sans antialiased h-screen w-screen`),
     style: computed(
       () => `
         background-color: ${backgroundColor.value};
