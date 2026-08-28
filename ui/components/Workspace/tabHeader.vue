@@ -538,7 +538,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 </script>
 
 <template>
-  <div class="workspace-tab-header flex h-full min-w-0 items-center gap-2 px-1">
+  <div data-ai-context="workspace" class="workspace-tab-header flex h-full min-w-0 items-center gap-2 px-1">
     <UTooltip v-if="hasLeftHidden" text="向左滚动标签" :delay-duration="150">
       <button
         type="button"

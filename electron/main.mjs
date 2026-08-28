@@ -56,6 +56,7 @@ const windows = new Map();
 const subscriptions = new Map();
 const stores = new Map();
 const localShellSessions = new Map();
+const apiStreams = new Map();
 const webProxyViews = new Map();
 const allowedChenOrigins = new Set();
 const allowedKokoOrigins = new Set();
@@ -249,6 +250,44 @@ function emitDesktopEvent(name, payload, targetLabel) {
     if (targetLabel && subscription.label && subscription.label !== targetLabel) continue;
     sendCallback(subscription.webContents, subscription.callbackId, { event: name, id, payload });
   }
+}
+
+function startApiStream(event, win, args) {
+  const streamId = String(args.streamId || "").trim();
+  if (!streamId) throw new Error("api stream id is required");
+  if (apiStreams.has(streamId)) throw new Error("api stream already exists");
+
+  const controller = new AbortController();
+  const owner = { controller, webContentsId: event.sender.id };
+  apiStreams.set(streamId, owner);
+  const label = labelForWindow(win);
+  void authService
+    .apiStreamRequest(args.request, {
+      signal: controller.signal,
+      onChunk: (chunk) => emitDesktopEvent("api-stream", { streamId, type: "chunk", chunk }, label)
+    })
+    .then(() => emitDesktopEvent("api-stream", { streamId, type: "done" }, label))
+    .catch((error) => {
+      if (controller.signal.aborted) return;
+      emitDesktopEvent(
+        "api-stream",
+        { streamId, type: "error", error: error instanceof Error ? error.message : String(error) },
+        label
+      );
+    })
+    .finally(() => {
+      if (apiStreams.get(streamId) === owner) apiStreams.delete(streamId);
+    });
+  return null;
+}
+
+function cancelApiStream(event, args) {
+  const streamId = String(args.streamId || "").trim();
+  const stream = apiStreams.get(streamId);
+  if (!stream || stream.webContentsId !== event.sender.id) return false;
+  apiStreams.delete(streamId);
+  stream.controller.abort();
+  return true;
 }
 
 function shellCommand() {
@@ -699,6 +738,11 @@ function createWindow(label = "main", options = {}) {
       if (session.webContentsId !== windowWebContentsId) continue;
       localShellSessions.delete(sessionId);
       session.process.kill();
+    }
+    for (const [streamId, stream] of apiStreams) {
+      if (stream.webContentsId !== windowWebContentsId) continue;
+      apiStreams.delete(streamId);
+      stream.controller.abort();
     }
     for (const [viewLabel, managed] of webProxyViews) {
       if (managed.hostWebContentsId !== windowWebContentsId) continue;
@@ -1152,6 +1196,8 @@ async function handleInvoke(event, request) {
   if (command === "auth_cancel") return authService.cancelAuth();
   if (command === "bootstrap_auth_session") return authService.bootstrapAuthSession(args);
   if (command === "api_request") return authService.apiRequest(args.request);
+  if (command === "api_stream_start") return startApiStream(event, win, args);
+  if (command === "api_stream_cancel") return cancelApiStream(event, args);
   if (command === "resolve_chen_endpoint") return resolveChenEndpoint();
   if (command === "resolve_koko_endpoint") return resolveKokoEndpoint();
   if (command === "create_koko_connect_ticket") return authService.createKokoConnectTicket(args);

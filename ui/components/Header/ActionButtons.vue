@@ -3,13 +3,13 @@ import Profile from "~/components/SideBar/profile.vue";
 
 const { t } = useI18n();
 const { activeWorkspaceMode } = useWorkspaceMode();
-const { activeTab: rightPanelTab, open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
+const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 const { open: aiPanelOpen, toggleAi } = useAiPanel();
 const showRightPanelButton = computed(() => activeWorkspaceMode.value !== "files");
 const aiButtonLabel = computed(() => t(aiPanelOpen.value ? "RightPanel.AIClose" : "RightPanel.AIOpen"));
 
 const handleToggleAi = () => {
-  toggleAi(rightPanelOpen.value && rightPanelTab.value === "sftp" ? "sftp" : "workspace");
+  toggleAi();
 };
 </script>
 
@@ -18,6 +18,7 @@ const handleToggleAi = () => {
     <div class="flex items-center gap-1 px-2">
       <UTooltip arrow :text="aiButtonLabel">
         <UButton
+          data-ai-context="preserve"
           icon="i-lucide-sparkles"
           :aria-label="aiButtonLabel"
           :aria-pressed="aiPanelOpen"
