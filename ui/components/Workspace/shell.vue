@@ -201,6 +201,8 @@ onBeforeUnmount(() => {
           @pointerdown="startRightResizing"
         />
       </aside>
+
+      <slot name="overlayPanel" />
     </div>
 
     <div

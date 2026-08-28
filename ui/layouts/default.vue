@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import AiOverlayPanel from "~/components/RightPanel/AiOverlayPanel.vue";
 import WorkspaceShell from "~/components/Workspace/shell.vue";
 import WorkspaceStatusFooter from "~/components/Workspace/statusFooter.vue";
 import {
@@ -35,6 +36,7 @@ const {
   statusBarVisible
 } = useSettingManager();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
+const { open: aiPanelOpen, setOpen: setAiPanelOpen } = useAiPanel();
 const { open: settingsOpen, activeSection: activeSettingsSection, openSettings } = useSettingsWindow();
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 const standaloneAssetWindow = ref(false);
@@ -281,6 +283,10 @@ onBeforeUnmount(() => {
 
       <template #rightPanel>
         <RightPanel v-if="rightPanelOpen" />
+      </template>
+
+      <template #overlayPanel>
+        <AiOverlayPanel v-if="aiPanelOpen && !focusMode" @close="setAiPanelOpen(false)" />
       </template>
 
       <template #bottomPanel>

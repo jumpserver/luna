@@ -247,6 +247,8 @@
   "RightPanel": {
     "Open": "Open right panel",
     "Close": "Close right panel",
+    "AIOpen": "Open AI assistant",
+    "AIClose": "Close AI assistant",
     "Session": "Session",
     "Control": "Control",
     "Files": "Files",
