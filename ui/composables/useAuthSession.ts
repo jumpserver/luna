@@ -350,6 +350,7 @@ export const useAuthSession = () => {
 
     const promptLogin = () => {
       if (!import.meta.client || !isDesktopRuntime()) return;
+      if (window.location.pathname.includes("/auth")) return;
       useEventBus().emit("login", undefined);
     };
 

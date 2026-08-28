@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 
-import { desktopClipboard, desktopInvoke, desktopListen, desktopOpener } from "~/shared/desktop/bridge";
+import { desktopClipboard, desktopInvoke, desktopListen, desktopOpener, openDesktopAuthUrl } from "~/shared/desktop/bridge";
 
 definePageMeta({
   layout: "auth"
@@ -61,12 +61,18 @@ const handleOpenManually = () => {
   }
 };
 
+watch(
+  url,
+  (next) => {
+    if (next) openDesktopAuthUrl(next);
+  },
+  { immediate: true }
+);
+
 onMounted(async () => {
   unlistenAuth.value = await desktopListen("auth_url", (event) => {
     const payload = (event?.payload || "").toString();
-    if (payload) {
-      url.value = payload;
-    }
+    if (payload) url.value = payload;
   });
 });
 
