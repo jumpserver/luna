@@ -473,6 +473,30 @@ option {
   background-color: var(--app-surface-frame);
 }
 
+.workspace-island-slot,
+.workspace-island-gap {
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  transition: width 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.workspace-island-slot.is-resizing,
+.workspace-island-gap.is-resizing {
+  transition: none;
+}
+
+.workspace-island-gap {
+  cursor: col-resize;
+}
+
+.workspace-island-gap[aria-hidden="true"] {
+  pointer-events: none;
+  cursor: default;
+}
+
 .workspace-island {
   display: flex;
   width: 100%;

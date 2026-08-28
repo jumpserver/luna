@@ -363,6 +363,21 @@ useEventBus().on("favoriteChanged", () => {
   void loadFavorites();
 });
 
+onMounted(() => {
+  if (!props.hideChrome) return;
+  if (props.visiblePanels.favorites) void loadFavorites();
+  if (props.visiblePanels.snippets) void loadSnippets();
+});
+
+defineExpose({
+  openCreateFolder,
+  refreshFavorites: () => refreshPanel("favorites"),
+  favoriteLoading,
+  snippetCreateItems,
+  refreshSnippets: () => refreshPanel("snippets"),
+  snippetLoading
+});
+
 const folderMenuItems = computed<DropdownMenuItem[]>(() => {
   const folder = folderMenuTarget.value;
   const canExpand = !!folder && !folder.open;
