@@ -4,8 +4,10 @@ import { getLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessi
 
 const { t } = useI18n();
 const { activePaneId, activeTab: workspaceTab } = useWorkspaceTabs();
+const { activeWorkspaceMode } = useWorkspaceMode();
 const { activeTab, setActiveTab } = useRightPanel();
 const activeSession = computed(() => {
+  if (activeWorkspaceMode.value === "files") return null;
   const tab = workspaceTab.value;
   return tab?.panes.find((pane) => pane.id === activePaneId.value) || tab;
 });
@@ -16,6 +18,10 @@ const lionSession = computed(() => getLionWorkspaceSession(activeSession.value?.
 const showSftpTab = computed(() => activeSession.value?.protocol?.toLowerCase() === "ssh");
 
 const tabs = computed(() => {
+  if (activeWorkspaceMode.value === "files") {
+    return [{ value: "ai" as const, label: t("RightPanel.AI"), icon: "i-lucide-sparkles" }];
+  }
+
   const items: Array<{ value: RightPanelTab; label: string; icon: string; title?: string }> = [
     { value: "session" as const, label: t("RightPanel.Session"), icon: "i-lucide-terminal" }
   ];
@@ -62,7 +68,7 @@ const activePanelComponent = computed(() => panelComponents[activeTab.value]);
 watch(
   tabs,
   (items) => {
-    if (!items.some((item) => item.value === activeTab.value)) setActiveTab("session");
+    if (!items.some((item) => item.value === activeTab.value)) setActiveTab(items[0]?.value || "session");
   },
   { immediate: true }
 );

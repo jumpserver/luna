@@ -4,6 +4,11 @@ import type { AiViewItemBuilderFactory } from "../viewItems";
 
 const terminalPartTypes = new Set(["data-plan", "data-command", "data-approval", "data-execution", "data-command-acl"]);
 
+function isFileMessage(message: { metadata?: unknown }) {
+  const metadata = message.metadata;
+  return Boolean(metadata && typeof metadata === "object" && "domain" in metadata && metadata.domain === "file");
+}
+
 export const createTerminalViewItemBuilder: AiViewItemBuilderFactory = () => {
   const plans = new Map<string, PlanItem>();
   const steps = new Map<string, ViewStep>();
@@ -61,7 +66,7 @@ export const createTerminalViewItemBuilder: AiViewItemBuilderFactory = () => {
 
   return {
     domain: "terminal",
-    supports: (partType) => terminalPartTypes.has(partType),
+    supports: (partType, message) => terminalPartTypes.has(partType) && !isFileMessage(message),
     append(context, input) {
       const { data, message, partIndex, partType } = input;
       const planId = String(

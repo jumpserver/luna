@@ -99,11 +99,23 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
       showRuntimeStatus: true,
       showElapsedInError: true,
       showActivity: false,
+      refreshElapsedWhileBusy: true,
+      backgroundExecAvailable: false,
       approvalThreshold: current.approvalThreshold,
       executionMode: current.executionMode,
       thresholdOptions: [],
       modeOptions: []
     };
+  },
+
+  summarize(_session, _context, items) {
+    let highestRiskLevel = 0;
+    for (const item of items) {
+      if (item.kind === "sql-analysis") {
+        highestRiskLevel = Math.max(highestRiskLevel, Number(item.data.riskLevel) || 0);
+      }
+    }
+    return { highestRiskLevel, outcome: "ready" };
   },
 
   submit(session, text) {
@@ -129,10 +141,6 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
     current.errorText = "";
     current.chat.clearError();
   },
-
-  updateApprovalThreshold() {},
-
-  updateExecutionMode() {},
 
   handleTimelineAction(session, action) {
     const current = sqlSession(session);

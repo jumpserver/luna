@@ -1,8 +1,8 @@
 import type { ConnectorSessionContext, FileTransferEndpointRef } from "@jumpserver/connectors-core";
 import type { Ref } from "vue";
-import type { SftpFileEntry } from "./protocol";
+import type { SftpFileEntry, SftpIncomingMessage } from "./protocol";
 
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed, onUnmounted, ref, shallowRef, watch } from "vue";
 import { SFTP_REQUEST_TIMEOUT_ERROR, SftpMessageType, SftpSocketFailureCode } from "./protocol";
 import { useSftpOperations } from "./useSftpOperations";
 import { useSftpRetry } from "./useSftpRetry";
@@ -43,6 +43,42 @@ function operationErrorMessage(cause: unknown, t: (key: string) => string) {
   return message === SFTP_REQUEST_TIMEOUT_ERROR ? t("koko.fileManagement.requestTimeout") : message;
 }
 
+export function createSftpFileAiReadiness(currentPath: Ref<string>, loading: Ref<boolean>) {
+  const protocolReady = ref(false);
+  const canonicalPathReady = shallowRef(false);
+  const ready = computed(() => protocolReady.value && canonicalPathReady.value);
+
+  watch(
+    [currentPath, loading],
+    ([path, pending]) => {
+      if (path && !pending) canonicalPathReady.value = true;
+    },
+    { immediate: true, flush: "sync" }
+  );
+
+  function handleMessage(message: SftpIncomingMessage) {
+    if (message.type === SftpMessageType.Connect) {
+      protocolReady.value = true;
+      return;
+    }
+    if (
+      message.type === SftpMessageType.Close ||
+      message.type === SftpMessageType.Closed ||
+      message.type === SftpMessageType.Error
+    ) {
+      protocolReady.value = false;
+      canonicalPathReady.value = false;
+    }
+  }
+
+  function reset() {
+    protocolReady.value = false;
+    canonicalPathReady.value = false;
+  }
+
+  return { ready, handleMessage, reset };
+}
+
 export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, transferRef?: FileTransferEndpointRef) {
   const { t } = useI18n();
 
@@ -62,6 +98,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
   const canGoHome = computed(() => Boolean(initialPath.value) && currentPath.value !== initialPath.value);
 
   const socket = useSftpSocket();
+  const fileAiReadiness = createSftpFileAiReadiness(currentPath, loading);
   const operationClient = useSftpOperations(currentPath, socket);
   const retryClient = useSftpRetry(activeContext, socket, {
     beforeReconnect: () => operationClient.rejectPending(SftpSocketFailureCode.ConnectionReset)
@@ -70,6 +107,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
   async function reconnect() {
     error.value = "";
     loading.value = true;
+    fileAiReadiness.reset();
     try {
       await retryClient.reconnect();
     } catch (cause) {
@@ -169,10 +207,12 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
   });
 
   const stopMessageListener = socket.onMessage((message) => {
+    fileAiReadiness.handleMessage(message);
     if (message.type === SftpMessageType.Connect) void loadCurrentDirectory(currentPath.value || "", message.id);
   });
 
   const stopFailureListener = socket.onFailure((failure) => {
+    fileAiReadiness.reset();
     error.value = errorMessage(failure.code, t);
     loading.value = false;
   });
@@ -180,6 +220,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
   watch(
     ctx,
     (context) => {
+      fileAiReadiness.reset();
       operationClient.rejectPending(SftpSocketFailureCode.ConnectionReset);
       activeContext.value = context ? { ...context } : null;
       entries.value = [];
@@ -216,6 +257,11 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
     canGoForward,
     canGoHome,
     operations: operationClient.operations,
+    ai: {
+      socket: socket.socket,
+      ready: fileAiReadiness.ready,
+      onMessage: socket.onChat
+    },
     transferEndpoint,
     retry: { reconnect },
     loadCurrentDirectory,

@@ -21,7 +21,7 @@ export function buildAiPanelViewItems(options: AiViewItemBuildOptions): ViewItem
         return;
       }
 
-      const builder = builders.find(({ supports }) => supports(part.type));
+      const builder = builders.find(({ supports }) => supports(part.type, message));
       if (!builder) return;
       builder.append(context, {
         message,

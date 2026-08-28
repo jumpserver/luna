@@ -2,12 +2,17 @@
 import type { KokoWorkspaceTab } from "@jumpserver/koko/host";
 import type { AssetItem, AssetTreeNode } from "~/types";
 import { KokoFileManagerSessionSurface } from "@jumpserver/koko";
+import {
+  createKokoCompactFileAiOwnerId,
+  createKokoCompactFileAiTargetId,
+  disposeKokoFileAiOwner
+} from "#koko/composables/sftp/useFileAiSessions";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
-const { activeTab } = useWorkspaceTabs();
+const { activePaneId, activeTab, tabs } = useWorkspaceTabs();
 const { getSessionDetails } = useWorkspaceSessionDetails();
 const { fetchTree, treeNodeToAsset } = useAssetTree();
 const { displayUser, handleAssetConnection } = useAssetAction();
@@ -22,12 +27,26 @@ const connecting = ref(false);
 const inlinePayload = ref<Record<string, any> | null>(null);
 const inlineError = ref("");
 let connectionAttempt = 0;
+const trackedCompactAiOwnerIds = new Set<string>();
+
+const activeWorkspaceSession = computed(() => {
+  const tab = activeTab.value;
+  return tab?.panes.find((pane) => pane.id === activePaneId.value) || tab || null;
+});
+const inlineAccount = computed(() => {
+  const asset = selectedAsset.value;
+  if (!asset) return "";
+  const session = activeWorkspaceSession.value;
+  if (session?.assetId === asset.id && session.account) return session.account;
+  return displayUser(asset.id, asset.permedAccounts);
+});
+const compactAiOwnerId = computed(() => createKokoCompactFileAiOwnerId(activeWorkspaceSession.value?.id || ""));
 
 const inlineTab = computed<KokoWorkspaceTab | null>(() => {
   const asset = selectedAsset.value;
   if (!asset || !inlinePayload.value) return null;
   return {
-    id: `right-panel-sftp:${asset.id}`,
+    id: createKokoCompactFileAiTargetId(activeWorkspaceSession.value?.id || "", asset.id, inlineAccount.value),
     assetId: asset.id,
     assetName: asset.name,
     assetType: asset.type || "",
@@ -35,21 +54,39 @@ const inlineTab = computed<KokoWorkspaceTab | null>(() => {
     assetCategory: asset.category || "",
     address: asset.address,
     protocol: "sftp",
-    account: displayUser(asset.id, asset.permedAccounts),
+    account: inlineAccount.value,
     status: "ready",
     payload: inlinePayload.value
   };
 });
 
 const activeWorkspaceAsset = computed(() => {
-  if (!activeTab.value || activeTab.value.protocol !== "ssh") return null;
+  const session = activeWorkspaceSession.value;
+  if (!session || session.protocol !== "ssh") return null;
   return {
-    id: activeTab.value.assetId,
-    name: activeTab.value.assetName,
-    address: activeTab.value.address
+    id: session.assetId,
+    name: session.assetName,
+    address: session.address
   };
 });
-const activeFileTokenRequester = computed(() => getSessionDetails(activeTab.value?.id || "")?.requestFileToken);
+const activeWorkspaceSessionKey = computed(() => {
+  const session = activeWorkspaceSession.value;
+  if (!session || session.protocol !== "ssh") return "";
+  return [session.id, session.assetId, session.account || "-"].join(":");
+});
+const workspaceSessionIdentities = computed(() => {
+  const identities = new Map<string, string>();
+  for (const tab of tabs.value) {
+    const surfaces = tab.panes.length ? tab.panes : [tab];
+    for (const surface of surfaces) {
+      identities.set(surface.id, [surface.protocol, surface.assetId, surface.account || "-"].join(":"));
+    }
+  }
+  return identities;
+});
+const activeFileTokenRequester = computed(
+  () => getSessionDetails(activeWorkspaceSession.value?.id || "")?.requestFileToken
+);
 const isActiveAssetPreparing = computed(() =>
   Boolean(activeWorkspaceAsset.value && !inlineTab.value && !inlineError.value)
 );
@@ -109,8 +146,9 @@ const openSftp = async () => {
   inlinePayload.value = null;
   try {
     const requestFileToken = activeFileTokenRequester.value;
+    const activeSession = activeWorkspaceSession.value;
     // Prefer reusing the active SSH session token (same account/permissions, no extra ACL prompts).
-    if (activeTab.value?.assetId === asset.id && requestFileToken) {
+    if (activeSession?.assetId === asset.id && requestFileToken) {
       const tokenId = await requestFileToken();
       if (attempt !== connectionAttempt) return;
       if (!tokenId) throw new Error(t("koko.fileManagement.unavailableInSession") || "SFTP unavailable");
@@ -123,14 +161,14 @@ const openSftp = async () => {
     }
 
     // SSH session details not ready yet — wait for requestFileToken via the watcher.
-    if (activeTab.value?.assetId === asset.id) return;
+    if (activeSession?.assetId === asset.id) return;
 
-    const activeAccount = activeTab.value?.assetId === asset.id ? activeTab.value.account : "";
+    const activeAccount = activeSession?.assetId === asset.id ? activeSession.account : "";
     const account = activeAccount || displayUser(asset.id, asset.permedAccounts);
     const preference = userInfoStore.getConnectionPreferenceForAsset(asset.id);
     const remembered = userInfoStore.getConnectionInfoForAsset(asset.id);
     const activeToken =
-      activeTab.value?.assetId === asset.id ? activeTab.value.payload?.token || activeTab.value.payload : undefined;
+      activeSession?.assetId === asset.id ? activeSession.payload?.token || activeSession.payload : undefined;
     const accountId = preference?.accountId || remembered?.accountId || activeToken?.account;
 
     await new Promise<void>((resolve, reject) => {
@@ -156,23 +194,53 @@ const openSftp = async () => {
 };
 
 watch(
-  [() => activeWorkspaceAsset.value?.id, activeFileTokenRequester],
-  ([assetId, requestFileToken], previousValues) => {
-    const previousAssetId = previousValues?.[0];
-    if (assetId && assetId !== previousAssetId) {
+  [activeWorkspaceSessionKey, activeFileTokenRequester],
+  ([sessionKey, requestFileToken], previousValues) => {
+    const previousSessionKey = previousValues?.[0];
+    const previousRequester = previousValues?.[1];
+    const sessionChanged = sessionKey !== previousSessionKey;
+    const requesterChanged = Boolean(requestFileToken && previousRequester && requestFileToken !== previousRequester);
+    if (sessionChanged || requesterChanged) {
       connectionAttempt += 1;
       connecting.value = false;
       inlinePayload.value = null;
       inlineError.value = "";
       selectedAsset.value = null;
-      useActiveAsset();
+      if (sessionKey) useActiveAsset();
     }
-    if (assetId && requestFileToken && !inlinePayload.value && !connecting.value) {
+    if (sessionKey && requestFileToken && !inlinePayload.value && !connecting.value) {
       void openSftp();
     }
   },
   { immediate: true }
 );
+watch(
+  workspaceSessionIdentities,
+  (identities, previousIdentities) => {
+    for (const [paneId, identity] of previousIdentities || []) {
+      if (identities.get(paneId) === identity) continue;
+      const ownerId = createKokoCompactFileAiOwnerId(paneId);
+      disposeKokoFileAiOwner(ownerId);
+      trackedCompactAiOwnerIds.delete(ownerId);
+    }
+    for (const paneId of identities.keys()) trackedCompactAiOwnerIds.add(createKokoCompactFileAiOwnerId(paneId));
+  },
+  { immediate: true }
+);
+
+function disposeTrackedCompactAiOwners() {
+  for (const ownerId of trackedCompactAiOwnerIds) disposeKokoFileAiOwner(ownerId);
+  trackedCompactAiOwnerIds.clear();
+}
+
+watch(
+  loggedIn,
+  (value) => {
+    if (!value) disposeTrackedCompactAiOwners();
+  },
+  { immediate: true }
+);
+onUnmounted(disposeTrackedCompactAiOwners);
 </script>
 
 <template>
@@ -181,7 +249,14 @@ watch(
       {{ t("Common.LoginFirst") }}
     </div>
 
-    <KokoFileManagerSessionSurface v-else-if="inlineTab" :tab="inlineTab" compact class="min-h-0 flex-1" />
+    <KokoFileManagerSessionSurface
+      v-else-if="inlineTab"
+      :key="inlineTab.id"
+      :tab="inlineTab"
+      :ai-owner-id="compactAiOwnerId"
+      compact
+      class="min-h-0 flex-1"
+    />
 
     <div v-else-if="isActiveAssetPreparing" class="grid min-h-0 flex-1 place-items-center text-xs text-muted">
       <div class="flex flex-col items-center gap-2">

@@ -6,7 +6,7 @@ describe("AI panel domain registry", () => {
     const ids = aiPanelDomainRegistry.map(({ adapter }) => adapter.id);
     const builderDomains = createAiViewItemBuilders().map(({ domain }) => domain);
 
-    expect(ids).toEqual(["sql", "terminal"]);
+    expect(ids).toEqual(["sql", "file", "terminal"]);
     expect(builderDomains).toEqual(ids);
     expect(new Set(ids).size).toBe(ids.length);
     expect(resolveAiTimelineRenderer("shared")).toBeTruthy();

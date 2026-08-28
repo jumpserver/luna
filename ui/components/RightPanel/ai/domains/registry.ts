@@ -4,10 +4,13 @@ import type { AiPanelDomainAdapter } from "./types";
 import type { AiViewItemBuilder, AiViewItemBuilderFactory } from "./viewItems";
 import type { WorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
 import { defineAsyncComponent } from "vue";
+import { getKokoFileAiSession } from "#koko/composables/sftp/useFileAiSessions";
 import { getKokoTerminalAiSession } from "#koko/composables/terminal/useTerminalAiSessions";
 import { getChenSqlAiSession } from "~/chen/composables/useChenSqlAiSessions";
 import { sqlAiPanelDomain } from "./sql/adapter";
 import { createSqlViewItemBuilder } from "./sql/viewItems";
+import { fileAiPanelDomain } from "./file/adapter";
+import { createFileViewItemBuilder } from "./file/viewItems";
 import { terminalAiPanelDomain } from "./terminal/adapter";
 import { createTerminalViewItemBuilder } from "./terminal/viewItems";
 
@@ -27,6 +30,12 @@ export const aiPanelDomainRegistry: readonly AiPanelDomainRegistration[] = [
     getSession: getChenSqlAiSession,
     timelineRenderer: () => import("./sql/SqlAiTimelineItem.vue"),
     createViewItemBuilder: createSqlViewItemBuilder
+  },
+  {
+    adapter: fileAiPanelDomain,
+    getSession: getKokoFileAiSession,
+    timelineRenderer: () => import("./file/FileAiTimelineItem.vue"),
+    createViewItemBuilder: createFileViewItemBuilder
   },
   {
     adapter: terminalAiPanelDomain,

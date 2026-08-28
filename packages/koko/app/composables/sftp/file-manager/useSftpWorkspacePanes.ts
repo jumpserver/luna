@@ -44,6 +44,11 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     const name = toValue(options.sourceAsset)?.name?.trim();
     return name || options.translate("koko.fileManagement.localSftp");
   });
+  const primaryAsset = computed<FileWorkspaceSourceAsset>(() => ({
+    id: toValue(options.sourceAsset)?.id || "",
+    name: primaryAssetName.value,
+    ...(toValue(options.sourceAsset)?.account ? { account: toValue(options.sourceAsset)!.account } : {})
+  }));
   const primaryTransferEndpoint = computed(() => {
     if (!primaryContext.value) return undefined;
     return {
@@ -411,6 +416,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     preconnecting,
     preconnectingName,
     primaryAssetName,
+    primaryAsset,
     primaryContext,
     primaryTransferEndpoint,
     recentConnections,

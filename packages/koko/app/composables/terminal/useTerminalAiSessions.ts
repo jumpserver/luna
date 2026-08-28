@@ -30,6 +30,7 @@ export interface KokoTerminalAiMetadataApproval {
 }
 
 export interface KokoTerminalAiSession {
+  kind: "terminal";
   paneId: string;
   socket: WebSocket | null;
   terminalId: string;
@@ -293,6 +294,7 @@ function createSession(paneId: string, socket: WebSocket, terminalId: string): K
   );
 
   session = reactive({
+    kind: "terminal",
     paneId,
     socket: markRaw(socket),
     terminalId,

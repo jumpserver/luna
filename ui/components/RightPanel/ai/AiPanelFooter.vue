@@ -5,7 +5,6 @@ import { formatAiDuration } from "./presentation";
 
 defineProps<{
   presentation: AiPanelDomainPresentation;
-  backgroundExec: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -65,7 +64,10 @@ const { t } = useI18n();
       </span>
     </div>
 
-    <p v-if="!backgroundExec && presentation.backgroundReasonLabel" class="text-[11px] text-muted">
+    <p
+      v-if="!presentation.backgroundExecAvailable && presentation.backgroundReasonLabel"
+      class="text-[11px] text-muted"
+    >
       {{ presentation.backgroundReasonLabel }}
     </p>
 

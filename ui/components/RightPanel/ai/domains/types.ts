@@ -38,10 +38,18 @@ export interface AiPanelDomainPresentation {
   showRuntimeStatus: boolean;
   showElapsedInError: boolean;
   showActivity: boolean;
+  refreshElapsedWhileBusy: boolean;
+  backgroundExecAvailable: boolean;
   approvalThreshold: number;
   executionMode: string;
   thresholdOptions: AiSelectOption[];
   modeOptions: AiSelectOption[];
+}
+
+export interface AiPanelDomainSummary {
+  runProgress?: string;
+  highestRiskLevel?: number;
+  outcome?: "ready" | "success" | "error";
 }
 
 export interface AiPanelDomainAdapter {
@@ -52,11 +60,16 @@ export interface AiPanelDomainAdapter {
     context: AiPanelDomainContext,
     items: readonly ViewItem[]
   ): AiPanelDomainPresentation;
+  summarize(
+    session: WorkspaceAiSession,
+    context: AiPanelDomainContext,
+    items: readonly ViewItem[]
+  ): AiPanelDomainSummary;
   submit(session: WorkspaceAiSession, text: string, context: AiPanelDomainContext): void;
   interrupt(session: WorkspaceAiSession, context: AiPanelDomainContext): void;
   clearError(session: WorkspaceAiSession): void;
-  updateApprovalThreshold(session: WorkspaceAiSession, value: unknown, context: AiPanelDomainContext): void;
-  updateExecutionMode(session: WorkspaceAiSession, value: unknown, context: AiPanelDomainContext): void;
+  updateApprovalThreshold?(session: WorkspaceAiSession, value: unknown, context: AiPanelDomainContext): void;
+  updateExecutionMode?(session: WorkspaceAiSession, value: unknown, context: AiPanelDomainContext): void;
   handleTimelineAction(session: WorkspaceAiSession, action: AiTimelineAction, context: AiPanelDomainContext): void;
 }
 

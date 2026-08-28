@@ -4,7 +4,7 @@ import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { UserData } from "~/types/index";
 
 import { useSettingManager } from "~/composables/useSettingManager";
-import { desktopApp, desktopEmit, desktopInvoke, desktopListen, desktopOpener } from "~/shared/desktop/bridge";
+import { desktopApp, desktopEmit, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import RecentSites from "./recentSites.vue";
 
@@ -611,9 +611,6 @@ onMounted(async () => {
     loginBtn.value = false;
     openModal.value = false;
     navigateTo({ path: localePath({ path: "/auth/browser" }), query: { auth_url: url } });
-    if (url && typeof url === "string") {
-      desktopOpener.openUrl(url);
-    }
   });
 
   unlistenErrorPageRef.value = await desktopListen("error-page", (event) => {
