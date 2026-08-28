@@ -66,14 +66,11 @@ const platformClass = computed(() => {
   return `platform-${platformKey}`;
 });
 const micaClass = computed(() => (isDesktopRuntime() && isWindows.value ? "runtime-windows-mica" : ""));
-const vibrancyClass = computed(() => (isDesktopRuntime() && isMacOS.value ? "runtime-macos-vibrancy" : ""));
 
 // 因为 <Body> 是一个虚拟组件，底层并不会响应 Vue 的 :style 绑定。它的作用是把插槽内容插入到真正的 <body> 中，但自身不是一个响应式桥梁。
 useHead({
   bodyAttrs: {
-    class: computed(
-      () => `${platformClass.value} ${micaClass.value} ${vibrancyClass.value} font-sans antialiased h-screen w-screen`
-    ),
+    class: computed(() => `${platformClass.value} ${micaClass.value} font-sans antialiased h-screen w-screen`),
     style: computed(
       () => `
         background-color: ${backgroundColor.value};

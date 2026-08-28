@@ -231,12 +231,6 @@ body.runtime-windows-mica .workspace-shell {
   background-color: transparent !important;
 }
 
-body.runtime-macos-vibrancy .workspace-shell {
-  --app-sidebar-bg: transparent;
-  --app-header-bg: transparent;
-  background-color: transparent !important;
-}
-
 [data-desktop-drag-region] {
   -webkit-app-region: drag;
 }

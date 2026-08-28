@@ -720,7 +720,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
 <style scoped>
 .workspace-tab-header {
-  background: var(--app-header-bg);
+  background: var(--app-surface-header);
 }
 
 .workspace-tab-capsule {
