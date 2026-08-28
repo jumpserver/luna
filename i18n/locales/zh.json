@@ -247,6 +247,8 @@
   "RightPanel": {
     "Open": "打开右侧面板",
     "Close": "关闭右侧面板",
+    "AIOpen": "打开 AI 助手",
+    "AIClose": "关闭 AI 助手",
     "Session": "会话",
     "Control": "控制",
     "Files": "文件",

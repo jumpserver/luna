@@ -6,6 +6,7 @@ import type { UserData } from "~/types/index";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { desktopApp, desktopEmit, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import ProfileAppMenu from "./ProfileAppMenu.vue";
 import RecentSites from "./recentSites.vue";
 
 interface VersionAlertPayload {
@@ -123,11 +124,6 @@ const accountTooltip = computed(() => {
 });
 
 const accountSite = computed(() => currentUser.value?.siteName || currentUser.value?.site || "—");
-const accountOrganization = computed(() => currentUser.value?.org?.name || "—");
-const accountRoleList = computed(() =>
-  (currentUser.value?.system_roles || []).map((role) => role.display_name).filter(Boolean)
-);
-const accountRoles = computed(() => accountRoleList.value.join(", ") || t("UserProfile.NoRole"));
 
 const handleProfileOpenAutoFocus = (event: Event) => {
   if (profileOpenedByPointer.value) event.preventDefault();
@@ -369,6 +365,8 @@ const checkVersionBeforeOAuth = async (accountId: string, site: string) => {
  * @description 打开登录页面
  */
 function openLoginPage() {
+  profileOpen.value = false;
+
   if (!isDesktopRuntime()) {
     redirectToWebLogin();
     return;
@@ -700,7 +698,7 @@ onBeforeUnmount(() => {
 
 <template>
   <UPopover
-    v-if="loggedIn"
+    v-if="loggedIn || isTopbar"
     v-model:open="profileOpen"
     :content="{
       align: isTopbar ? 'end' : 'start',
@@ -710,7 +708,7 @@ onBeforeUnmount(() => {
     }"
     :ui="{
       content:
-        'w-64 overflow-hidden rounded-xl bg-[var(--app-surface-overlay)] p-0 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
+        'max-h-[calc(100dvh-4rem)] w-64 overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-0 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
     }"
   >
     <UTooltip v-if="isTopbar" arrow :text="accountTooltip">
@@ -747,50 +745,50 @@ onBeforeUnmount(() => {
 
     <template #content>
       <div class="w-full">
-        <button
-          type="button"
-          class="group flex w-full items-center gap-3 rounded-t-xl border-b border-default px-3 py-3 text-left transition-colors hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
-          @click="openUserSettings"
-        >
-          <UAvatar :alt="currentUser?.name || t('Common.User')" color="primary" size="md" class="shrink-0" />
-          <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-semibold text-highlighted">
-              {{ currentUser?.name || t("Common.User") }}
-            </p>
-            <p class="truncate text-xs text-muted" :title="accountSite">
-              {{ accountSite }}
-            </p>
-          </div>
-          <UIcon
-            name="i-lucide-chevron-right"
-            class="size-4 shrink-0 text-dimmed transition-transform group-hover:translate-x-0.5 group-hover:text-muted"
-          />
-        </button>
+        <template v-if="loggedIn">
+          <button
+            type="button"
+            class="group flex w-full items-center gap-3 rounded-t-xl px-3 py-3 text-left transition-colors hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+            @click="openUserSettings"
+          >
+            <UAvatar :alt="currentUser?.name || t('Common.User')" color="primary" size="md" class="shrink-0" />
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-semibold text-highlighted">
+                {{ currentUser?.name || t("Common.User") }}
+              </p>
+              <p class="truncate text-xs text-muted" :title="accountSite">
+                {{ accountSite }}
+              </p>
+            </div>
+            <UIcon
+              name="i-lucide-chevron-right"
+              class="size-4 shrink-0 text-dimmed transition-transform group-hover:translate-x-0.5 group-hover:text-muted"
+            />
+          </button>
+        </template>
 
-        <div class="space-y-0.5 p-1.5 text-xs">
-          <div class="flex min-h-8 items-center gap-3 rounded-md px-2 py-1.5">
-            <span class="shrink-0 text-dimmed">{{ t("UserProfile.CurrentOrganization") }}</span>
-            <span class="min-w-0 truncate font-medium text-highlighted" :title="accountOrganization">
-              {{ accountOrganization }}
-            </span>
-          </div>
-          <div class="flex min-h-8 items-center gap-3 rounded-md px-2 py-1.5">
-            <span class="shrink-0 text-dimmed">{{ t("UserProfile.SystemRoles") }}</span>
-            <span
-              class="min-w-0 truncate font-medium text-highlighted"
-              :class="{ 'text-muted': accountRoleList.length === 0 }"
-              :title="accountRoles"
-            >
-              {{ accountRoles }}
-            </span>
-          </div>
+        <div v-else class="p-1.5">
+          <UButton
+            :label="t('Common.Login')"
+            icon="i-lucide-log-in"
+            color="primary"
+            variant="soft"
+            size="sm"
+            block
+            class="justify-start"
+            @click="openLoginPage"
+          />
         </div>
 
-        <div v-if="isDesktopRuntime()" class="border-t border-default p-1.5">
+        <div v-if="isTopbar" class="border-t border-default p-1.5">
+          <ProfileAppMenu :submenu-side="isTopbar ? 'left' : 'right'" @select="profileOpen = false" />
+        </div>
+
+        <div v-if="loggedIn && isDesktopRuntime()" class="border-t border-default p-1.5">
           <UDropdownMenu
             :items="siteSwitcherItems"
             size="sm"
-            :content="{ align: 'end', side: 'left', sideOffset: 6 }"
+            :content="{ align: 'end', side: isTopbar ? 'left' : 'right', sideOffset: 6 }"
             :ui="{ content: 'w-64 max-h-72 overflow-y-auto p-1' }"
           >
             <UButton
@@ -808,7 +806,7 @@ onBeforeUnmount(() => {
           </UDropdownMenu>
         </div>
 
-        <div class="border-t border-default p-1.5">
+        <div v-if="loggedIn" class="border-t border-default p-1.5">
           <UButton
             :label="t('Login.Logout')"
             icon="i-lucide-log-out"
@@ -823,17 +821,6 @@ onBeforeUnmount(() => {
       </div>
     </template>
   </UPopover>
-
-  <UTooltip v-else-if="isTopbar" arrow :text="accountTooltip">
-    <UButton
-      color="neutral"
-      variant="ghost"
-      size="sm"
-      icon="i-lucide-circle-user-round"
-      :aria-label="accountTooltip"
-      @click="openLoginPage"
-    />
-  </UTooltip>
 
   <button
     v-else

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AiOverlayPanel from "~/components/RightPanel/AiOverlayPanel.vue";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -10,7 +11,8 @@ const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { registerSessionDisposer, activeTab } = useWorkspaceTabs();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const { ensureConnected, error } = useSessionWindowConnect();
-const { open: rightPanelOpen, toggle: toggleRightPanel, panelWidth } = useRightPanel();
+const { activeTab: rightPanelTab, open: rightPanelOpen, panelWidth, toggle: toggleRightPanel } = useRightPanel();
+const { open: aiPanelOpen, setOpen: setAiPanelOpen, toggleAi } = useAiPanel();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 
@@ -62,6 +64,10 @@ watch(
 const openLogin = () => {
   useEventBus().emit("login", undefined);
 };
+
+const handleToggleAi = () => {
+  toggleAi(rightPanelOpen.value && rightPanelTab.value === "sftp" ? "sftp" : "workspace");
+};
 </script>
 
 <template>
@@ -71,15 +77,32 @@ const openLogin = () => {
         <WorkspaceSessionPane :tab="activeTab" class="h-full min-h-0" />
         <WorkspacePaneSurfaceHost v-for="pane in activeTab.panes" :key="pane.id" :pane="pane" />
 
-        <div class="absolute top-2 z-40" :style="rightPanelOpen ? { right: `${panelWidth}px` } : { right: '12px' }">
+        <div
+          class="absolute top-2 z-40 flex items-center gap-1"
+          :style="rightPanelOpen ? { right: `${panelWidth}px` } : { right: '12px' }"
+        >
+          <UTooltip :text="t(aiPanelOpen ? 'RightPanel.AIClose' : 'RightPanel.AIOpen')" :delay-duration="150">
+            <UButton
+              size="sm"
+              color="primary"
+              :variant="aiPanelOpen ? 'soft' : 'ghost'"
+              class="shadow-md backdrop-blur-sm"
+              icon="i-lucide-sparkles"
+              :aria-label="t(aiPanelOpen ? 'RightPanel.AIClose' : 'RightPanel.AIOpen')"
+              :aria-pressed="aiPanelOpen"
+              @click="handleToggleAi"
+            />
+          </UTooltip>
+
           <UTooltip :text="rightPanelOpen ? t('RightPanel.Close') : t('RightPanel.Open')" :delay-duration="150">
             <UButton
               size="sm"
               color="neutral"
-              variant="soft"
+              :variant="rightPanelOpen ? 'soft' : 'ghost'"
               class="shadow-md backdrop-blur-sm"
               :icon="rightPanelOpen ? 'i-lucide-panel-right-close' : 'i-lucide-panel-right'"
               :aria-label="rightPanelOpen ? t('RightPanel.Close') : t('RightPanel.Open')"
+              :aria-pressed="rightPanelOpen"
               @click="toggleRightPanel"
             />
           </UTooltip>
@@ -122,5 +145,7 @@ const openLogin = () => {
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
       </div>
     </div>
+
+    <AiOverlayPanel v-if="activeTab && aiPanelOpen" @close="setAiPanelOpen(false)" />
   </div>
 </template>

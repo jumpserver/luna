@@ -18,7 +18,7 @@ import {
 const props = defineProps<{ pane: WorkspacePane }>();
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
-const { openWithTab } = useRightPanel();
+const { openAi } = useAiPanel();
 const open = ref(false);
 const submitting = ref(false);
 const error = ref("");
@@ -174,7 +174,7 @@ function startCursorTracking() {
 async function show(xterm: HTMLElement) {
   if (!available.value) return;
   if (isKokoTerminalAiBusy(props.pane.id)) {
-    openWithTab("ai");
+    openAi();
     return;
   }
 
@@ -212,7 +212,7 @@ function handleWindowKeydown(event: KeyboardEvent) {
 
   const action = terminalAiCommandShortcutAction(available.value, isKokoTerminalAiBusy(props.pane.id));
   if (action === "panel") {
-    openWithTab("ai");
+    openAi();
     return;
   }
   if (action === "popover") void show(xterm);
@@ -236,7 +236,7 @@ async function submit() {
 
   if (isKokoTerminalAiBusy(paneId)) {
     close(false);
-    openWithTab("ai");
+    openAi();
     return;
   }
 
@@ -247,13 +247,13 @@ async function submit() {
     if (current.draft.trim() === text) current.draft = "";
     if (props.pane.id !== paneId) return;
     close(false);
-    openWithTab("ai");
+    openAi();
   } catch (cause) {
     if (props.pane.id !== paneId) return;
     const code = cause instanceof Error && "code" in cause ? String(cause.code) : "";
     if (code === "response_active") {
       close(false);
-      openWithTab("ai");
+      openAi();
     } else if (code === "unavailable") {
       error.value = t("RightPanel.AIUnavailableForTerminal");
     } else {
