@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { useResizeObserver } from "@vueuse/core";
-import { MAX_SIDEBAR_WIDTH, MIN_SIDEBAR_WIDTH } from "~/composables/useSettingStorage";
-
 const props = withDefaults(
   defineProps<{
     sidebarVisible?: boolean;
@@ -33,19 +30,13 @@ const slots = useSlots();
 const isNarrowScreen = useMediaQuery("(max-width: 767px)");
 const isResizing = ref(false);
 const isRightResizing = ref(false);
-const bodyRef = ref<HTMLElement | null>(null);
-const bodyWidth = ref(1200);
 let resizeStartX = 0;
 let resizeStartWidth = 0;
-const MIN_RIGHT_PANEL_WIDTH = 280;
-const MAX_RIGHT_PANEL_WIDTH = 520;
-const islandHandlePx = 8;
 const useIslandLayout = computed(() => modernIsland.value && !props.focusMode && !isNarrowScreen.value);
 const showIslandSidebar = computed(
   () => Boolean(slots.sidebar) && props.sidebarVisible && !collapse.value && !props.focusMode
 );
 const showIslandRight = computed(() => Boolean(slots.rightPanel) && rightPanelOpen.value && !props.focusMode);
-const islandKey = computed(() => `${showIslandSidebar.value ? "s" : ""}${showIslandRight.value ? "r" : "m"}`);
 const sidebarTransitionClass = computed(() => {
   if (isResizing.value || !props.sidebarVisible) return "";
   return "transition-[width] duration-200";
@@ -64,96 +55,14 @@ const rightPanelStyleWidth = computed(() => {
 const mobileOverlayOpen = computed(
   () => isNarrowScreen.value && !props.focusMode && ((!collapse.value && props.sidebarVisible) || rightPanelOpen.value)
 );
-const islandSplitterUi = {
-  root: "h-full min-h-0 min-w-0 w-full flex-1",
-  panel: "flex h-full min-h-0 min-w-0 flex-col overflow-hidden",
-  handle: "w-2 cursor-col-resize bg-transparent"
-};
-
-const islandAvailableWidth = computed(() => {
-  const panelCount = 1 + Number(showIslandSidebar.value) + Number(showIslandRight.value);
-  return Math.max(1, bodyWidth.value - islandHandlePx * Math.max(0, panelCount - 1));
-});
-
-const toPercent = (px: number, min: number, max: number) => {
-  const available = islandAvailableWidth.value;
-  return Math.min((max / available) * 100, Math.max((min / available) * 100, (px / available) * 100));
-};
-
-const islandItems = computed(() => {
-  const available = islandAvailableWidth.value;
-  const items: Array<{
-    id: string;
-    slot: string;
-    minSize: number;
-    maxSize?: number;
-    defaultSize: number;
-  }> = [];
-
-  if (showIslandSidebar.value) {
-    items.push({
-      id: "sidebar",
-      slot: "sidebar",
-      minSize: (MIN_SIDEBAR_WIDTH / available) * 100,
-      maxSize: (MAX_SIDEBAR_WIDTH / available) * 100,
-      defaultSize: toPercent(sidebarWidth.value, MIN_SIDEBAR_WIDTH, MAX_SIDEBAR_WIDTH)
-    });
-  }
-
-  const sidebarPct = showIslandSidebar.value ? (items[0]?.defaultSize ?? 0) : 0;
-  const rightPct = showIslandRight.value
-    ? toPercent(rightPanelWidth.value, MIN_RIGHT_PANEL_WIDTH, MAX_RIGHT_PANEL_WIDTH)
-    : 0;
-
-  items.push({
-    id: "main",
-    slot: "main",
-    minSize: 20,
-    defaultSize: Math.max(20, 100 - sidebarPct - rightPct)
-  });
-
-  if (showIslandRight.value) {
-    items.push({
-      id: "right",
-      slot: "right",
-      minSize: (MIN_RIGHT_PANEL_WIDTH / available) * 100,
-      maxSize: (MAX_RIGHT_PANEL_WIDTH / available) * 100,
-      defaultSize: rightPct
-    });
-  }
-
-  return items;
-});
 
 const closeMobilePanels = () => {
   setSidebarCollapsed(true);
   setRightPanelOpen(false);
 };
 
-const applyIslandLayout = (sizes: number[]) => {
-  const available = islandAvailableWidth.value;
-  let index = 0;
-
-  if (showIslandSidebar.value) {
-    const size = sizes[index];
-    if (typeof size === "number") setSidebarWidth((size / 100) * available);
-    index += 1;
-  }
-
-  index += 1;
-
-  if (showIslandRight.value) {
-    const size = sizes[index];
-    if (typeof size === "number") setPanelWidth((size / 100) * available);
-  }
-};
-
 watch([collapse, () => props.sidebarVisible, () => props.focusMode], () => {
   if (!collapse.value || !props.sidebarVisible || props.focusMode) closeHoverPreview();
-});
-
-useResizeObserver(bodyRef, (entries) => {
-  bodyWidth.value = Math.round(entries[0]?.contentRect.width ?? 0);
 });
 
 const handleResize = (event: PointerEvent) => {
@@ -234,7 +143,6 @@ onBeforeUnmount(() => {
     </div>
 
     <div
-      ref="bodyRef"
       class="workspace-shell__body relative flex min-h-0 flex-1"
       :class="useIslandLayout ? 'workspace-shell__body--island' : ''"
     >
@@ -272,34 +180,44 @@ onBeforeUnmount(() => {
         @click="closeMobilePanels"
       />
 
-      <USplitter
-        v-if="useIslandLayout"
-        :id="`workspace-island-${islandKey}`"
-        :key="islandKey"
-        :items="islandItems"
-        :ui="islandSplitterUi"
-        @layout="applyIslandLayout"
-        @dragging="(index, dragging) => !dragging && persistSidebarWidth()"
-      >
-        <template v-if="showIslandSidebar" #sidebar>
-          <div class="workspace-island workspace-island--sidebar">
-            <slot name="sidebar" />
+      <template v-if="useIslandLayout">
+        <div
+          v-if="showIslandSidebar"
+          class="workspace-island workspace-island--sidebar"
+          :style="{ width: `${sidebarWidth}px`, flex: '0 0 auto' }"
+        >
+          <slot name="sidebar" />
+        </div>
+        <div
+          v-if="showIslandSidebar"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="调整侧边栏宽度"
+          class="w-3 shrink-0 cursor-col-resize"
+          @pointerdown="startResizing"
+        />
+        <div class="workspace-island workspace-island--main min-w-0" style="flex: 1 1 auto">
+          <div class="min-h-0 flex-1 overflow-hidden">
+            <slot />
           </div>
-        </template>
-        <template #main>
-          <div class="workspace-island workspace-island--main">
-            <div class="min-h-0 flex-1 overflow-hidden">
-              <slot />
-            </div>
-            <slot v-if="!props.focusMode" name="bottomPanel" />
-          </div>
-        </template>
-        <template v-if="showIslandRight" #right>
-          <div class="workspace-island workspace-island--right">
-            <slot name="rightPanel" />
-          </div>
-        </template>
-      </USplitter>
+          <slot v-if="!props.focusMode" name="bottomPanel" />
+        </div>
+        <div
+          v-if="showIslandRight"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="调整右侧面板宽度"
+          class="w-3 shrink-0 cursor-col-resize"
+          @pointerdown="startRightResizing"
+        />
+        <div
+          v-if="showIslandRight"
+          class="workspace-island workspace-island--right"
+          :style="{ width: `${rightPanelWidth}px`, flex: '0 0 auto' }"
+        >
+          <slot name="rightPanel" />
+        </div>
+      </template>
 
       <template v-else>
         <main

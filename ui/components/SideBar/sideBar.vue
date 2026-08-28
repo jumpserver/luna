@@ -92,13 +92,15 @@ const islandAccordionItems = computed(() => {
 });
 const islandAccordionUi = {
   root: "workspace-island-accordion",
-  item: "border-0 last:border-0",
-  header: "shrink-0",
+  item: "border-0 py-0 md:py-0 last:border-0",
+  header: "shrink-0 p-0",
   trigger:
     "h-8 min-w-0 rounded-none px-2.5 py-0 text-xs font-medium text-[var(--app-text-secondary)] hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]",
-  trailingIcon: "size-3.5 text-[var(--app-muted)] transition-transform duration-150 group-data-[state=open]:rotate-90",
-  content: "min-h-0 flex-1 overflow-hidden data-[state=closed]:hidden",
-  body: "flex h-full min-h-0 flex-col p-0"
+  leadingIcon: "sidebar-icon",
+  trailingIcon: "hidden",
+  content:
+    "min-h-0 p-0 overflow-hidden animate-none data-[state=open]:animate-none data-[state=closed]:hidden data-[state=closed]:animate-none",
+  body: "flex min-h-0 flex-col p-0"
 };
 const showOrganizationMenu = computed(() => loggedIn.value && activeWorkspaceMode.value === "assets");
 const showSidebarSearchButton = computed(() => showOrganizationMenu.value && showAssetSection.value);
@@ -739,11 +741,17 @@ watch(
           v-if="modernIsland"
           v-model="islandAccordionValue"
           type="multiple"
-          trailing-icon="i-lucide-chevron-right"
           :items="islandAccordionItems"
-          :unmount-on-hide="false"
+          :unmount-on-hide="true"
           :ui="islandAccordionUi"
         >
+          <template #leading="{ open }">
+            <UIcon
+              name="i-lucide-chevron-right"
+              class="sidebar-icon transition-transform duration-150"
+              :class="open ? 'rotate-90' : ''"
+            />
+          </template>
           <template #assets>
             <SideBarAssetTree
               v-if="showAssetSection"
