@@ -2,7 +2,7 @@ import type { ConnectorSessionContext, FileTransferEndpointRef } from "@jumpserv
 import type { Ref } from "vue";
 import type { SftpFileEntry, SftpIncomingMessage } from "./protocol";
 
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed, onUnmounted, ref, shallowRef, watch } from "vue";
 import { SFTP_REQUEST_TIMEOUT_ERROR, SftpMessageType, SftpSocketFailureCode } from "./protocol";
 import { useSftpOperations } from "./useSftpOperations";
 import { useSftpRetry } from "./useSftpRetry";
@@ -45,7 +45,16 @@ function operationErrorMessage(cause: unknown, t: (key: string) => string) {
 
 export function createSftpFileAiReadiness(currentPath: Ref<string>, loading: Ref<boolean>) {
   const protocolReady = ref(false);
-  const ready = computed(() => protocolReady.value && Boolean(currentPath.value) && !loading.value);
+  const canonicalPathReady = shallowRef(false);
+  const ready = computed(() => protocolReady.value && canonicalPathReady.value);
+
+  watch(
+    [currentPath, loading],
+    ([path, pending]) => {
+      if (path && !pending) canonicalPathReady.value = true;
+    },
+    { immediate: true, flush: "sync" }
+  );
 
   function handleMessage(message: SftpIncomingMessage) {
     if (message.type === SftpMessageType.Connect) {
@@ -58,11 +67,13 @@ export function createSftpFileAiReadiness(currentPath: Ref<string>, loading: Ref
       message.type === SftpMessageType.Error
     ) {
       protocolReady.value = false;
+      canonicalPathReady.value = false;
     }
   }
 
   function reset() {
     protocolReady.value = false;
+    canonicalPathReady.value = false;
   }
 
   return { ready, handleMessage, reset };

@@ -482,7 +482,6 @@ export function disconnectKokoFileAiSession(targetId: string, socket?: WebSocket
   if (!session || (socket && session.socket !== socket)) return;
   session.connected = false;
   session.context.connected = false;
-  session.enabled = false;
   resetTaskState(session);
   transports.get(session)?.disconnect();
 }
