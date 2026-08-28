@@ -451,7 +451,14 @@ watch(
   { immediate: true }
 );
 
-defineExpose({ refresh, loading });
+defineExpose({
+  refresh,
+  loading,
+  switchTreeKind,
+  activeTreeKind,
+  treeSwitchLabel,
+  batchMenuItems
+});
 </script>
 
 <template>

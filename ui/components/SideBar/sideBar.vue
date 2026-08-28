@@ -90,6 +90,24 @@ const islandAccordionItems = computed(() => {
 
   return items;
 });
+const islandAssetTreeRef = ref<{
+  loading: boolean;
+  refresh: () => void | Promise<void>;
+  switchTreeKind: () => void;
+  activeTreeKind: "authorization" | "type";
+  treeSwitchLabel: string;
+  batchMenuItems: DropdownMenuItem[][];
+} | null>(null);
+const islandFavoritePanelRef = ref<{
+  favoriteLoading: boolean;
+  openCreateFolder: (parentId?: string | null) => void;
+  refreshFavorites: () => unknown;
+} | null>(null);
+const islandSnippetPanelRef = ref<{
+  snippetLoading: boolean;
+  snippetCreateItems: DropdownMenuItem[];
+  refreshSnippets: () => unknown;
+} | null>(null);
 const islandAccordionUi = {
   root: "workspace-island-accordion",
   item: "border-0 py-0 md:py-0 last:border-0",
@@ -97,6 +115,7 @@ const islandAccordionUi = {
   trigger:
     "h-8 min-w-0 rounded-none px-2.5 py-0 text-xs font-medium text-[var(--app-text-secondary)] hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]",
   leadingIcon: "sidebar-icon",
+  label: "min-w-0 flex-1 truncate text-start",
   trailingIcon: "hidden",
   content:
     "min-h-0 p-0 overflow-hidden animate-none data-[state=open]:animate-none data-[state=closed]:hidden data-[state=closed]:animate-none",
@@ -742,7 +761,7 @@ watch(
           v-model="islandAccordionValue"
           type="multiple"
           :items="islandAccordionItems"
-          :unmount-on-hide="true"
+          :unmount-on-hide="false"
           :ui="islandAccordionUi"
         >
           <template #leading="{ open }">
@@ -752,9 +771,115 @@ watch(
               :class="open ? 'rotate-90' : ''"
             />
           </template>
+          <template #trailing="{ item }">
+            <div class="relative z-10 ml-auto flex shrink-0 items-center gap-px" @click.stop @pointerdown.stop>
+              <template v-if="item.value === 'assets'">
+                <UTooltip :text="islandAssetTreeRef?.treeSwitchLabel || t('Tree.SwitchToType')" :delay-duration="150">
+                  <UButton
+                    as="span"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    :icon="
+                      islandAssetTreeRef?.activeTreeKind === 'authorization'
+                        ? 'i-lucide-shapes'
+                        : 'i-lucide-folder-tree'
+                    "
+                    class="sidebar-icon-button size-6 justify-center p-0"
+                    :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+                    :aria-label="islandAssetTreeRef?.treeSwitchLabel || t('Tree.SwitchToType')"
+                    @click="islandAssetTreeRef?.switchTreeKind()"
+                  />
+                </UTooltip>
+                <UButton
+                  as="span"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-refresh-cw"
+                  :loading="islandAssetTreeRef?.loading"
+                  class="sidebar-icon-button size-6 justify-center p-0"
+                  :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+                  :aria-label="t('ToolTips.Refresh')"
+                  @click="islandAssetTreeRef?.refresh()"
+                />
+                <UDropdownMenu
+                  :items="islandAssetTreeRef?.batchMenuItems || []"
+                  :content="{ align: 'end', side: 'bottom', sideOffset: 6 }"
+                  :ui="{ content: 'w-36 p-1' }"
+                >
+                  <UButton
+                    as="span"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    icon="i-lucide-ellipsis"
+                    class="sidebar-icon-button size-6 justify-center p-0"
+                    :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+                    :aria-label="t('Tree.BatchActions')"
+                  />
+                </UDropdownMenu>
+              </template>
+              <template v-else-if="item.value === 'favorites'">
+                <UButton
+                  as="span"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-folder-plus"
+                  class="sidebar-icon-button size-6 justify-center p-0"
+                  :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+                  :aria-label="t('Favorite.CreateFolder')"
+                  @click="islandFavoritePanelRef?.openCreateFolder()"
+                />
+                <UButton
+                  as="span"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-refresh-cw"
+                  :loading="islandFavoritePanelRef?.favoriteLoading"
+                  class="sidebar-icon-button size-6 justify-center p-0"
+                  :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+                  :aria-label="t('ToolTips.Refresh')"
+                  @click="islandFavoritePanelRef?.refreshFavorites()"
+                />
+              </template>
+              <template v-else-if="item.value === 'snippets'">
+                <UDropdownMenu
+                  :items="islandSnippetPanelRef?.snippetCreateItems || []"
+                  :content="{ align: 'end', side: 'bottom', sideOffset: 6 }"
+                >
+                  <UButton
+                    as="span"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    icon="i-lucide-plus"
+                    class="sidebar-icon-button size-6 justify-center p-0"
+                    :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+                    :aria-label="t('Snippets.Create')"
+                  />
+                </UDropdownMenu>
+                <UButton
+                  as="span"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-refresh-cw"
+                  :loading="islandSnippetPanelRef?.snippetLoading"
+                  class="sidebar-icon-button size-6 justify-center p-0"
+                  :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+                  :aria-label="t('ToolTips.Refresh')"
+                  @click="islandSnippetPanelRef?.refreshSnippets()"
+                />
+              </template>
+            </div>
+          </template>
           <template #assets>
             <SideBarAssetTree
               v-if="showAssetSection"
+              ref="islandAssetTreeRef"
               search=""
               hide-header
               :open="true"
@@ -766,6 +891,7 @@ watch(
           </template>
           <template #favorites>
             <SideBarBottomPanels
+              ref="islandFavoritePanelRef"
               hide-chrome
               :main-panel-open="true"
               :visible-panels="{ favorites: true, snippets: false }"
@@ -775,6 +901,7 @@ watch(
           </template>
           <template #snippets>
             <SideBarBottomPanels
+              ref="islandSnippetPanelRef"
               hide-chrome
               :main-panel-open="true"
               :visible-panels="{ favorites: false, snippets: true }"

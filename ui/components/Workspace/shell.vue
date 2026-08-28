@@ -33,13 +33,13 @@ const isRightResizing = ref(false);
 let resizeStartX = 0;
 let resizeStartWidth = 0;
 const useIslandLayout = computed(() => modernIsland.value && !props.focusMode && !isNarrowScreen.value);
-const showIslandSidebar = computed(
-  () => Boolean(slots.sidebar) && props.sidebarVisible && !collapse.value && !props.focusMode
-);
-const showIslandRight = computed(() => Boolean(slots.rightPanel) && rightPanelOpen.value && !props.focusMode);
+const islandSidebarMounted = computed(() => Boolean(slots.sidebar) && props.sidebarVisible && !props.focusMode);
+const islandRightMounted = computed(() => Boolean(slots.rightPanel) && !props.focusMode);
+const showIslandSidebar = computed(() => islandSidebarMounted.value && !collapse.value);
+const showIslandRight = computed(() => islandRightMounted.value && rightPanelOpen.value);
 const sidebarTransitionClass = computed(() => {
   if (isResizing.value || !props.sidebarVisible) return "";
-  return "transition-[width] duration-200";
+  return "transition-[width] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)]";
 });
 const sidebarStyleWidth = computed(() => {
   if (props.focusMode || !props.sidebarVisible || (collapse.value && !hoverPreviewOpen.value)) return "0px";
@@ -182,18 +182,29 @@ onBeforeUnmount(() => {
 
       <template v-if="useIslandLayout">
         <div
-          v-if="showIslandSidebar"
-          class="workspace-island workspace-island--sidebar"
-          :style="{ width: `${sidebarWidth}px`, flex: '0 0 auto' }"
+          v-if="islandSidebarMounted"
+          class="workspace-island-slot"
+          :class="{ 'is-resizing': isResizing }"
+          :style="{ width: showIslandSidebar ? `${sidebarWidth}px` : '0px' }"
+          :aria-hidden="!showIslandSidebar || undefined"
+          :inert="!showIslandSidebar"
         >
-          <slot name="sidebar" />
+          <div
+            class="workspace-island workspace-island--sidebar"
+            :style="{ width: `${sidebarWidth}px`, minWidth: `${sidebarWidth}px`, flex: '0 0 auto' }"
+          >
+            <slot name="sidebar" />
+          </div>
         </div>
         <div
-          v-if="showIslandSidebar"
+          v-if="islandSidebarMounted"
           role="separator"
           aria-orientation="vertical"
           aria-label="调整侧边栏宽度"
-          class="w-3 shrink-0 cursor-col-resize"
+          class="workspace-island-gap"
+          :class="{ 'is-resizing': isResizing }"
+          :style="{ width: showIslandSidebar ? '12px' : '0px' }"
+          :aria-hidden="!showIslandSidebar || undefined"
           @pointerdown="startResizing"
         />
         <div class="workspace-island workspace-island--main min-w-0" style="flex: 1 1 auto">
@@ -203,19 +214,30 @@ onBeforeUnmount(() => {
           <slot v-if="!props.focusMode" name="bottomPanel" />
         </div>
         <div
-          v-if="showIslandRight"
+          v-if="islandRightMounted"
           role="separator"
           aria-orientation="vertical"
           aria-label="调整右侧面板宽度"
-          class="w-3 shrink-0 cursor-col-resize"
+          class="workspace-island-gap"
+          :class="{ 'is-resizing': isRightResizing }"
+          :style="{ width: showIslandRight ? '12px' : '0px' }"
+          :aria-hidden="!showIslandRight || undefined"
           @pointerdown="startRightResizing"
         />
         <div
-          v-if="showIslandRight"
-          class="workspace-island workspace-island--right"
-          :style="{ width: `${rightPanelWidth}px`, flex: '0 0 auto' }"
+          v-if="islandRightMounted"
+          class="workspace-island-slot"
+          :class="{ 'is-resizing': isRightResizing }"
+          :style="{ width: showIslandRight ? `${rightPanelWidth}px` : '0px' }"
+          :aria-hidden="!showIslandRight || undefined"
+          :inert="!showIslandRight"
         >
-          <slot name="rightPanel" />
+          <div
+            class="workspace-island workspace-island--right"
+            :style="{ width: `${rightPanelWidth}px`, minWidth: `${rightPanelWidth}px`, flex: '0 0 auto' }"
+          >
+            <slot name="rightPanel" />
+          </div>
         </div>
       </template>
 
@@ -233,7 +255,7 @@ onBeforeUnmount(() => {
         <aside
           v-if="$slots.rightPanel"
           class="workspace-shell__right-panel relative z-40 min-h-0 shrink-0 overflow-hidden max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:shadow-xl"
-          :class="isRightResizing ? '' : 'transition-[width] duration-200'"
+          :class="isRightResizing ? '' : 'transition-[width] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)]'"
           :style="{
             width: rightPanelStyleWidth,
             backgroundColor: 'var(--app-surface-panel)'

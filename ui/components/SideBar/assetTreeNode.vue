@@ -128,7 +128,7 @@ const activate = () => {
         class="sidebar-row flex h-7 w-full cursor-pointer items-center gap-1 rounded-md pr-1 text-left text-xs"
         :class="[
           node.chkDisabled ? 'opacity-40' : '',
-          node.meta?.type === 'recent-connections' && node.children?.length ? 'pr-6' : ''
+          node.meta?.type === 'recent-connections' && node.children?.length ? 'pr-9' : ''
         ]"
         :style="{ paddingLeft: `${10 + (node.level || 0) * 14}px` }"
         :title="node.title || node.name"
@@ -164,12 +164,12 @@ const activate = () => {
       <button
         v-if="node.meta?.type === 'recent-connections' && node.children?.length"
         type="button"
-        class="absolute top-1 right-1 grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-[color,background-color,opacity] group-hover:opacity-100 hover:bg-[var(--app-hover-strong)] hover:text-highlighted focus-visible:opacity-100"
+        class="sidebar-icon-button absolute top-1/2 right-2.5 grid size-6 -translate-y-1/2 place-items-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
         :aria-label="t('RecentConnections.Clear')"
         :title="t('RecentConnections.Clear')"
         @click.stop="emit('clearRecent')"
       >
-        <UIcon name="i-lucide-trash-2" class="size-3.5" />
+        <UIcon name="i-lucide-trash-2" class="sidebar-icon" />
       </button>
     </div>
 
