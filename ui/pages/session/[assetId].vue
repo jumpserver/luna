@@ -11,7 +11,7 @@ const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { registerSessionDisposer, activeTab } = useWorkspaceTabs();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const { ensureConnected, error } = useSessionWindowConnect();
-const { activeTab: rightPanelTab, open: rightPanelOpen, panelWidth, toggle: toggleRightPanel } = useRightPanel();
+const { open: rightPanelOpen, panelWidth, toggle: toggleRightPanel } = useRightPanel();
 const { open: aiPanelOpen, setOpen: setAiPanelOpen, toggleAi } = useAiPanel();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
@@ -66,12 +66,16 @@ const openLogin = () => {
 };
 
 const handleToggleAi = () => {
-  toggleAi(rightPanelOpen.value && rightPanelTab.value === "sftp" ? "sftp" : "workspace");
+  toggleAi();
 };
 </script>
 
 <template>
-  <div class="relative flex h-dvh w-full min-h-0 overflow-hidden" :style="{ backgroundColor: 'var(--app-main-bg)' }">
+  <div
+    data-ai-context="workspace"
+    class="relative flex h-dvh w-full min-h-0 overflow-hidden"
+    :style="{ backgroundColor: 'var(--app-main-bg)' }"
+  >
     <div class="relative min-h-0 min-w-0 flex-1 overflow-hidden">
       <template v-if="activeTab">
         <WorkspaceSessionPane :tab="activeTab" class="h-full min-h-0" />

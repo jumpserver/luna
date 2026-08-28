@@ -30,6 +30,7 @@ const openLogin = () => {
 
 <template>
   <section
+    data-ai-context="workspace"
     class="relative h-full min-h-0 w-full flex flex-col"
     :style="{ backgroundColor: 'color-mix(in srgb, var(--app-main-bg) 88%, transparent)' }"
   >

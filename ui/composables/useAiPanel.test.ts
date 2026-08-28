@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { useAiPanel } from "./useAiPanel";
+import { resolveAiPanelSource, useAiPanel } from "./useAiPanel";
 import { useRightPanel } from "./useRightPanel";
 
 describe("AI overlay panel", () => {
   beforeEach(() => {
     const aiPanel = useAiPanel();
-    aiPanel.openAi();
+    aiPanel.setSource("platform");
+    aiPanel.setWorkspaceFocused(true);
     aiPanel.setOpen(false);
 
     const rightPanel = useRightPanel();
@@ -14,38 +15,97 @@ describe("AI overlay panel", () => {
     rightPanel.setPanelWidth(340);
   });
 
-  it("opens with the selected workspace context without changing layout state", () => {
+  it("opens without changing layout state", () => {
     const panel = useAiPanel();
     const rightPanel = useRightPanel();
     rightPanel.setOpen(true);
     rightPanel.setActiveTab("sftp");
     rightPanel.setPanelWidth(412);
 
-    panel.toggleAi("sftp");
+    panel.toggleAi();
 
     expect(panel.open.value).toBe(true);
-    expect(panel.source.value).toBe("sftp");
     expect(rightPanel.open.value).toBe(true);
     expect(rightPanel.activeTab.value).toBe("sftp");
     expect(rightPanel.panelWidth.value).toBe(412);
   });
 
-  it("closes on the next toggle without changing its context", () => {
+  it("closes on the next toggle", () => {
     const panel = useAiPanel();
-    panel.openAi("sftp");
+    panel.openAi();
 
     panel.toggleAi();
 
     expect(panel.open.value).toBe(false);
-    expect(panel.source.value).toBe("sftp");
   });
 
-  it("uses the active workspace session for programmatic AI entry", () => {
-    const panel = useAiPanel();
-    panel.openAi("sftp");
+  it("uses platform AI without a connected asset", () => {
+    expect(
+      resolveAiPanelSource({
+        workspaceMode: "assets",
+        surfaceStatus: "ready",
+        surfaceAssetId: "asset-1",
+        standaloneWorkspace: false,
+        workspaceFocused: true,
+        rightPanelOpen: false,
+        rightPanelTab: "session"
+      })
+    ).toBe("platform");
+  });
 
-    panel.openAi();
+  it("uses workspace AI for the active connected asset", () => {
+    expect(
+      resolveAiPanelSource({
+        workspaceMode: "assets",
+        surfaceStatus: "connected",
+        surfaceAssetId: "asset-1",
+        standaloneWorkspace: false,
+        workspaceFocused: true,
+        rightPanelOpen: false,
+        rightPanelTab: "session"
+      })
+    ).toBe("workspace");
+  });
 
-    expect(panel.source.value).toBe("workspace");
+  it("uses file AI when the connected asset's SFTP panel is active", () => {
+    expect(
+      resolveAiPanelSource({
+        workspaceMode: "assets",
+        surfaceStatus: "connected",
+        surfaceAssetId: "asset-1",
+        standaloneWorkspace: false,
+        workspaceFocused: true,
+        rightPanelOpen: true,
+        rightPanelTab: "sftp"
+      })
+    ).toBe("sftp");
+  });
+
+  it("returns to platform AI outside the asset workspace", () => {
+    expect(
+      resolveAiPanelSource({
+        workspaceMode: "tools",
+        surfaceStatus: "connected",
+        surfaceAssetId: "asset-1",
+        standaloneWorkspace: false,
+        workspaceFocused: true,
+        rightPanelOpen: false,
+        rightPanelTab: "session"
+      })
+    ).toBe("platform");
+  });
+
+  it("returns to platform AI after focus leaves a connected asset", () => {
+    expect(
+      resolveAiPanelSource({
+        workspaceMode: "assets",
+        surfaceStatus: "connected",
+        surfaceAssetId: "asset-1",
+        standaloneWorkspace: false,
+        workspaceFocused: false,
+        rightPanelOpen: false,
+        rightPanelTab: "session"
+      })
+    ).toBe("platform");
   });
 });
