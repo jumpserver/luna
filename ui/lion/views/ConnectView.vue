@@ -49,7 +49,7 @@ const {
   handleFolderOpen,
   driverName,
   loading,
-  registerMouseAndKeyboardHanlder,
+  registerMouseAndKeyboardHandler,
   sessionObject,
   currentFolder,
   currentFolderFiles,
@@ -338,7 +338,7 @@ onMounted(async () => {
   displayEl.addEventListener("drop", fileDrop, false);
   displayEl.addEventListener("contextmenu", preventDefault, false);
 
-  registerMouseAndKeyboardHanlder();
+  registerMouseAndKeyboardHandler();
   window.addEventListener("focus", debouncedSendClipboardToRemote);
 });
 

@@ -10,7 +10,7 @@ export interface HostMessage {
   data?: unknown;
   theme?: string;
   token?: string;
-  disbaleFileManager?: boolean;
+  disableFileManager?: boolean;
 }
 
 type HostBusEvents = Record<string, HostMessage>;
@@ -33,7 +33,7 @@ export function createHostBridge() {
   const handleExternalMessage = (message: HostMessage) => {
     if (message.name === HOST_MESSAGE_TYPE.PING) {
       hostId = message.id || hostId;
-      disableFileManager = !!message.disbaleFileManager;
+      disableFileManager = !!message.disableFileManager;
       sendHost(HOST_MESSAGE_TYPE.PONG, "");
     }
     bus.emit(message.name, message);
