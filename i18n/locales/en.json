@@ -116,12 +116,30 @@
   },
   "WorkspaceEmpty": {
     "LoginHint": "Sign in to view assets and connect",
-    "ConnectAsset": "Right-click asset → Connect",
-    "ConnectAssetHint": " to choose a connection method",
-    "ExpandNode": "Right-click node → Expand all",
-    "ExpandNodeHint": " to expand all assets under the node",
+    "Shortcuts": "Session shortcuts",
     "SwitchSession": "Switch session",
     "Or": "or"
+  },
+  "WorkspaceTour": {
+    "ConnectAssetTitle": "Right-click asset → Connect",
+    "ConnectAssetDescription": "You can choose a connection method again",
+    "ExpandNodeTitle": "Right-click node → Expand all",
+    "ExpandNodeDescription": "Expand all assets under the node",
+    "AddSessionTitle": "Click + in the header to create a session",
+    "AddSessionDescription": "Search for an asset and open a new connection",
+    "progress": "Step {current} of {total}",
+    "next": "Next",
+    "previous": "Previous",
+    "done": "Done"
+  },
+  "AddSession": {
+    "NewConnection": "New connection",
+    "SearchPlaceholder": "Search by asset name or address…",
+    "Local": "Local",
+    "LocalShell": "Local Shell",
+    "LocalShellHint": "Open a local terminal",
+    "SearchResults": "Search results",
+    "NoMatchingAssets": "No matching assets"
   },
   "Auth": {
     "SignInTitle": "Sign in from your browser to continue",
