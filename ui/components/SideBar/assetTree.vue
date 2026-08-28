@@ -459,6 +459,7 @@ defineExpose({ refresh, loading });
     :class="open === false ? 'h-8 shrink-0' : 'min-h-0 flex-1'"
     role="tree"
     :aria-label="t('Menu.Resource')"
+    :data-workspace-tour="search.trim() ? undefined : 'assets'"
   >
     <div
       v-if="!loggedIn"

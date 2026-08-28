@@ -38,6 +38,25 @@ const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 const { open: settingsOpen, activeSection: activeSettingsSection, openSettings } = useSettingsWindow();
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 const standaloneAssetWindow = ref(false);
+const { authReady } = useAuthSession();
+const workspaceTour = useWorkspaceTour();
+const canStartWorkspaceTour = computed(
+  () =>
+    authReady.value &&
+    loggedIn.value &&
+    !standaloneAssetWindow.value &&
+    !settingsOpen.value &&
+    !focusMode.value &&
+    !sidebarCollapsed.value &&
+    activeWorkspaceMode.value === "assets"
+);
+const { start: scheduleWorkspaceTour, stop: stopScheduledWorkspaceTour } = useTimeoutFn(
+  () => {
+    void workspaceTour.startOnce();
+  },
+  650,
+  { immediate: false }
+);
 
 const refreshCommandExecutionSetting = async () => {
   if (!loggedIn.value) return;
@@ -197,6 +216,19 @@ watch(focusMode, (active) => {
   if (!active) clearEscapeHold();
 });
 
+watch(
+  canStartWorkspaceTour,
+  (canStart) => {
+    stopScheduledWorkspaceTour();
+    if (!canStart) {
+      workspaceTour.destroy();
+      return;
+    }
+    scheduleWorkspaceTour();
+  },
+  { immediate: true }
+);
+
 onMounted(() => {
   if (isDesktopRuntime()) {
     standaloneAssetWindow.value = desktopWindow.label().startsWith("asset-");
@@ -239,6 +271,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  stopScheduledWorkspaceTour();
+  workspaceTour.destroy();
   unlistenDesktopMenuCommand?.();
   clearEscapeHold();
   registerSessionDisposer(null);
