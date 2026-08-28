@@ -7,6 +7,7 @@ import { resolveAssetIconFromFields } from "~/utils/assetIcon";
 
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
+const { open: settingsOpen } = useSettingsWindow();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 const showAddSession = computed(() => loggedIn.value || isDesktopRuntime());
@@ -293,6 +294,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
     tabMenuItem(
       {
         label: t("TabMenu.CloseCurrent"),
+        kbds: ["alt", "shift", "W"],
         onSelect: () => {
           hideContextMenu();
           closeSession(tab.id);
@@ -348,6 +350,7 @@ const tabMenuItems = computed<DropdownMenuItem[]>(() => [
   {
     label: t("TabMenu.CloseCurrent"),
     icon: "i-lucide-x",
+    kbds: ["alt", "shift", "W"],
     ui: { itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]" },
     disabled: !activeTab.value,
     onSelect: () => {
@@ -483,6 +486,23 @@ onMounted(() => {
 
 useEventListener(window, "keydown", (event: KeyboardEvent) => {
   syncShortcutHintsVisibility(event);
+
+  const closeCurrentTab =
+    !event.repeat &&
+    event.altKey &&
+    event.shiftKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    event.code === "KeyW" &&
+    !settingsOpen.value &&
+    activeTab.value;
+  if (closeCurrentTab) {
+    event.preventDefault();
+    event.stopPropagation();
+    void closeSession(closeCurrentTab.id);
+    return;
+  }
+
   if (event.defaultPrevented || tabs.value.length < 2 || isTypingIntoEditable(event)) return;
 
   const targetIndex = getTabIndexFromDigitShortcut(event);
