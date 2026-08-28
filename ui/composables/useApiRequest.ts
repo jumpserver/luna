@@ -60,6 +60,7 @@ export interface CommandSnippetPayload extends SqlSnippetPayload {
 export interface PublicSettings {
   SECURITY_COMMAND_EXECUTION?: boolean;
   SECURITY_WATERMARK_ENABLED?: boolean;
+  SECURITY_WATERMARK_CONSOLE_CONTENT?: string;
   SECURITY_WATERMARK_SESSION_CONTENT?: string;
   SECURITY_WATERMARK_WIDTH?: number;
   SECURITY_WATERMARK_HEIGHT?: number;
