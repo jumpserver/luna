@@ -277,6 +277,7 @@ onBeforeUnmount(() => {
         </NuxtLayout>
         <ConnectionFormModal />
         <AclDialog />
+        <AppWatermark />
       </UApp>
     </Body>
   </Html>
