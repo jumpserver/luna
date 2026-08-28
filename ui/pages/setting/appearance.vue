@@ -74,7 +74,9 @@ const {
   setTerminalThemePreset,
   setCodeMirrorThemePreset,
   terminalThemePreset,
-  codeMirrorThemePreset
+  codeMirrorThemePreset,
+  modernIsland,
+  setModernIsland
 } = useSettingManager();
 
 const { applyPrimaryColor } = useColor();
@@ -151,6 +153,11 @@ const selectedTerminalTheme = computed<string>({
 const selectedCodeMirrorTheme = computed<CodeMirrorThemePresetId>({
   get: () => codeMirrorThemePreset.value,
   set: (id: string) => selectCodeMirrorTheme(id)
+});
+
+const selectedModernIsland = computed<boolean>({
+  get: () => modernIsland.value,
+  set: (enabled: boolean) => setModernIsland(enabled)
 });
 
 const terminalThemeItems = computed(() =>
@@ -427,6 +434,14 @@ watch(
           body: 'divide-y divide-[var(--app-border)] p-0 sm:p-0'
         }"
       >
+        <div class="setting-row">
+          <div>
+            <p class="setting-row__label">{{ t("Setting.ModernIsland") }}</p>
+            <p class="setting-row__description">{{ t("Setting.ModernIslandDescription") }}</p>
+          </div>
+          <USwitch v-model="selectedModernIsland" :aria-label="t('Setting.ModernIsland')" />
+        </div>
+
         <div class="setting-row">
           <div>
             <p class="setting-row__label">{{ t("Setting.InterfaceFont") }}</p>

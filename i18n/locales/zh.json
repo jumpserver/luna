@@ -944,6 +944,8 @@
     "PrimaryColorDescription": "用于按钮、选中状态和重点信息。",
     "WorkspaceAppearance": "工作区外观",
     "WorkspaceAppearanceDescription": "调整界面文字、命令终端和文本编辑区域的显示效果。",
+    "ModernIsland": "现代分割",
+    "ModernIslandDescription": "将左侧资产树、中间会话区和右侧面板拆成独立岛区，使用可拖拽分割与折叠手风琴。",
     "InterfaceFont": "界面字体",
     "InterfaceFontDescription": "应用菜单、导航和内容区域使用的字体。",
     "InterfaceFontSize": "UI 字号",

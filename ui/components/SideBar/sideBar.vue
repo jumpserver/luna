@@ -11,7 +11,7 @@ const toast = useToast();
 const isNarrowScreen = useMediaQuery("(max-width: 767px)");
 const { addErrorToast } = useErrorToast();
 const localePath = useLocalePath();
-const { collapse, sidebarSections, setCollapse, setSidebarSections } = useSettingManager();
+const { collapse, sidebarSections, setCollapse, setSidebarSections, modernIsland } = useSettingManager();
 const { hoverPreviewOpen, closeHoverPreview } = useSidebarLayout();
 const visuallyCollapsed = computed(() => collapse.value && !hoverPreviewOpen.value);
 const { activeWorkspaceMode } = useWorkspaceMode();
@@ -28,6 +28,7 @@ const isLoading = ref(false);
 const sidebarSearch = ref("");
 const showAssetSearch = ref(false);
 const assetTreeOpen = ref(true);
+const islandAccordionValue = ref<string[]>(["assets"]);
 const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextMenuAsset = ref<AssetItem | null>(null);
@@ -74,6 +75,32 @@ const visibleShelfPanels = computed(() => ({
   snippets: effectiveSidebarSections.value.snippets
 }));
 const hasVisibleShelfPanel = computed(() => Object.values(visibleShelfPanels.value).some(Boolean));
+const islandAccordionItems = computed(() => {
+  const items: Array<{ label: string; value: string; slot: string }> = [];
+
+  if (showAssetSection.value) {
+    items.push({ label: sidebarSectionLabels.value.assets, value: "assets", slot: "assets" });
+  }
+  if (visibleShelfPanels.value.favorites) {
+    items.push({ label: sidebarSectionLabels.value.favorites, value: "favorites", slot: "favorites" });
+  }
+  if (visibleShelfPanels.value.snippets) {
+    items.push({ label: sidebarSectionLabels.value.snippets, value: "snippets", slot: "snippets" });
+  }
+
+  return items;
+});
+const islandAccordionUi = {
+  root: "workspace-island-accordion",
+  item: "border-0 last:border-0",
+  header: "shrink-0",
+  trigger:
+    "h-8 min-w-0 rounded-none px-2.5 py-0 text-xs font-medium text-[var(--app-text-secondary)] hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]",
+  trailingIcon:
+    "size-3.5 text-[var(--app-muted)] transition-transform duration-150 group-data-[state=open]:rotate-90",
+  content: "min-h-0 flex-1 overflow-hidden data-[state=closed]:hidden",
+  body: "flex h-full min-h-0 flex-col p-0"
+};
 const showOrganizationMenu = computed(() => loggedIn.value && activeWorkspaceMode.value === "assets");
 const showSidebarSearchButton = computed(() => showOrganizationMenu.value && showAssetSection.value);
 
@@ -626,12 +653,12 @@ watch(
   <div
     class="flex h-full w-full shrink-0 overflow-hidden flex-col"
     :class="
-      visuallyCollapsed
+      visuallyCollapsed || modernIsland
         ? 'border-r-0 shadow-none'
         : 'border-r border-[color:var(--sidebar-divider-light)] dark:border-[color:var(--sidebar-divider-dark)]'
     "
     :style="{
-      backgroundColor: contentBackgroundColor
+      backgroundColor: modernIsland ? 'transparent' : contentBackgroundColor
     }"
   >
     <div class="flex flex-col w-full">
@@ -709,23 +736,65 @@ watch(
 
     <div v-else-if="loggedIn" class="relative flex min-h-0 flex-1 flex-col">
       <div v-show="!showAssetSearch" class="flex min-h-0 flex-1 flex-col">
-        <SideBarAssetTree
-          v-if="showAssetSection"
-          search=""
-          :open="assetTreeOpen"
-          @select="handleAssetConnect"
-          @contextmenu="handleAssetContextMenu"
-          @toggle="assetTreeOpen = !assetTreeOpen"
-          @open-multiple="handleOpenMultipleAssets"
-          @favorite-multiple="handleFavoriteMultipleAssets"
-        />
-        <SideBarBottomPanels
-          v-if="hasVisibleShelfPanel"
-          :main-panel-open="assetTreeOpen"
-          :visible-panels="visibleShelfPanels"
-          @select="handleAssetConnect"
-          @contextmenu="handleAssetContextMenu"
-        />
+        <UAccordion
+          v-if="modernIsland"
+          v-model="islandAccordionValue"
+          type="multiple"
+          trailing-icon="i-lucide-chevron-right"
+          :items="islandAccordionItems"
+          :unmount-on-hide="false"
+          :ui="islandAccordionUi"
+        >
+          <template #assets>
+            <SideBarAssetTree
+              v-if="showAssetSection"
+              search=""
+              hide-header
+              :open="true"
+              @select="handleAssetConnect"
+              @contextmenu="handleAssetContextMenu"
+              @open-multiple="handleOpenMultipleAssets"
+              @favorite-multiple="handleFavoriteMultipleAssets"
+            />
+          </template>
+          <template #favorites>
+            <SideBarBottomPanels
+              hide-chrome
+              :main-panel-open="true"
+              :visible-panels="{ favorites: true, snippets: false }"
+              @select="handleAssetConnect"
+              @contextmenu="handleAssetContextMenu"
+            />
+          </template>
+          <template #snippets>
+            <SideBarBottomPanels
+              hide-chrome
+              :main-panel-open="true"
+              :visible-panels="{ favorites: false, snippets: true }"
+              @select="handleAssetConnect"
+              @contextmenu="handleAssetContextMenu"
+            />
+          </template>
+        </UAccordion>
+        <template v-else>
+          <SideBarAssetTree
+            v-if="showAssetSection"
+            search=""
+            :open="assetTreeOpen"
+            @select="handleAssetConnect"
+            @contextmenu="handleAssetContextMenu"
+            @toggle="assetTreeOpen = !assetTreeOpen"
+            @open-multiple="handleOpenMultipleAssets"
+            @favorite-multiple="handleFavoriteMultipleAssets"
+          />
+          <SideBarBottomPanels
+            v-if="hasVisibleShelfPanel"
+            :main-panel-open="assetTreeOpen"
+            :visible-panels="visibleShelfPanels"
+            @select="handleAssetConnect"
+            @contextmenu="handleAssetContextMenu"
+          />
+        </template>
       </div>
 
       <div
