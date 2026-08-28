@@ -32,7 +32,7 @@ export default defineAppConfig({
     },
     button: {
       slots: {
-        base: "cursor-pointer rounded-[3px]"
+        base: "cursor-pointer rounded-[length:var(--app-radius)]"
       },
       variants: {
         ghost: {
@@ -40,6 +40,11 @@ export default defineAppConfig({
             base: "bg-transparent text-[var(--app-fg)] hover:bg-[var(--app-hover-soft)]"
           }
         }
+      }
+    },
+    badge: {
+      slots: {
+        base: "!rounded-[length:var(--app-radius)]"
       }
     },
     toast: {
@@ -57,7 +62,7 @@ export default defineAppConfig({
     input: {
       slots: {
         root: "w-full",
-        base: "rounded-[3px] bg-[var(--app-input-bg)] text-[var(--app-fg)] placeholder:text-[var(--app-muted)] ring-[var(--app-border)]"
+        base: "rounded-[length:var(--app-radius)] bg-[var(--app-input-bg)] text-[var(--app-fg)] placeholder:text-[var(--app-muted)] ring-[var(--app-border)]"
       },
       variants: {
         size: {
@@ -71,12 +76,12 @@ export default defineAppConfig({
     textarea: {
       slots: {
         root: "w-full",
-        base: "resize-none rounded-[3px] bg-[var(--app-input-bg)] text-[var(--app-fg)] placeholder:text-[var(--app-muted)] ring-[var(--app-border)]"
+        base: "resize-none rounded-[length:var(--app-radius)] bg-[var(--app-input-bg)] text-[var(--app-fg)] placeholder:text-[var(--app-muted)] ring-[var(--app-border)]"
       }
     },
     select: {
       slots: {
-        base: "min-w-0 rounded-[3px]",
+        base: "min-w-0 rounded-[length:var(--app-radius)]",
         value: "min-w-0 truncate",
         content:
           "bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
@@ -136,7 +141,7 @@ export default defineAppConfig({
     },
     selectMenu: {
       slots: {
-        base: "min-w-0 rounded-[3px]",
+        base: "min-w-0 rounded-[length:var(--app-radius)]",
         value: "min-w-0 truncate",
         content:
           "bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",

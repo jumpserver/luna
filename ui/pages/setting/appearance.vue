@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import type { UiRadius } from "~/composables/useSettingStorage";
 import type { CodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
 import type { ThemePresetId } from "~/types";
 import { useSettingManager } from "~/composables/useSettingManager";
 
-import { MAX_FONT_SIZE, MIN_FONT_SIZE } from "~/composables/useSettingStorage";
+import { MAX_FONT_SIZE, MIN_FONT_SIZE, UI_RADIUS_PX } from "~/composables/useSettingStorage";
 import { useThemeOptions } from "~/composables/useThemeOptions";
 import { DARK_THEME_PRESETS, getThemePreset, LIGHT_THEME_PRESETS } from "~/composables/useThemePresets";
 import { desktopEmit, desktopInvoke } from "~/shared/desktop/bridge";
@@ -76,7 +77,9 @@ const {
   terminalThemePreset,
   codeMirrorThemePreset,
   modernIsland,
-  setModernIsland
+  setModernIsland,
+  uiRadius,
+  setUiRadius
 } = useSettingManager();
 
 const { applyPrimaryColor } = useColor();
@@ -160,6 +163,17 @@ const selectedModernIsland = computed<boolean>({
   set: (enabled: boolean) => setModernIsland(enabled)
 });
 
+const selectedUiRadius = computed<UiRadius>({
+  get: () => uiRadius.value,
+  set: (radius: UiRadius) => setUiRadius(radius)
+});
+
+const radiusItems = computed(() => [
+  { id: "none" as const, label: t("Setting.UiRadiusNone"), preview: UI_RADIUS_PX.none },
+  { id: "small" as const, label: t("Setting.UiRadiusSmall"), preview: UI_RADIUS_PX.small },
+  { id: "large" as const, label: t("Setting.UiRadiusLarge"), preview: UI_RADIUS_PX.large }
+]);
+
 const terminalThemeItems = computed(() =>
   TERMINAL_THEME_PRESETS.map((item) => ({
     id: item.id,
@@ -181,6 +195,15 @@ function applyFont(font: string) {
 
 function selectCodeMirrorTheme(id: string) {
   if (isCodeMirrorThemePresetId(id)) setCodeMirrorThemePreset(id);
+}
+
+function sameHex(left: string, right: string) {
+  return left.replace("#", "").toLowerCase() === right.replace("#", "").toLowerCase();
+}
+
+function resetAccent(mode: "light" | "dark") {
+  const preset = getThemePreset(mode === "light" ? lightThemePreset.value : darkThemePreset.value);
+  if (preset?.accent) setAccentColor(mode, preset.accent);
 }
 
 function setAccentColor(mode: "light" | "dark", color: string) {
@@ -377,7 +400,33 @@ watch(
               <p class="setting-row__label">{{ t("Common.PrimaryColor") }}</p>
               <p class="setting-row__description">{{ t("Setting.PrimaryColorDescription") }}</p>
             </div>
-            <ColorPicker v-model="lightAccentColor" :colors="LIGHT_ACCENT_COLORS" class="w-full sm:w-40" />
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <button
+                  v-for="color in LIGHT_ACCENT_COLORS"
+                  :key="color"
+                  type="button"
+                  class="size-[18px] rounded-full"
+                  :class="
+                    sameHex(lightAccentColor, color)
+                      ? 'ring-2 ring-[var(--theme-accent)] ring-offset-2 ring-offset-[var(--app-surface-card)]'
+                      : ''
+                  "
+                  :style="{ backgroundColor: color }"
+                  :aria-label="color"
+                  :aria-pressed="sameHex(lightAccentColor, color)"
+                  @click="lightAccentColor = color"
+                />
+              </div>
+              <ColorPicker v-model="lightAccentColor" compact />
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                :label="t('Setting.ResetAccent')"
+                @click="resetAccent('light')"
+              />
+            </div>
           </div>
         </UCard>
 
@@ -411,7 +460,33 @@ watch(
               <p class="setting-row__label">{{ t("Common.PrimaryColor") }}</p>
               <p class="setting-row__description">{{ t("Setting.PrimaryColorDescription") }}</p>
             </div>
-            <ColorPicker v-model="darkAccentColor" :colors="DARK_ACCENT_COLORS" class="w-full sm:w-40" />
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <button
+                  v-for="color in DARK_ACCENT_COLORS"
+                  :key="color"
+                  type="button"
+                  class="size-[18px] rounded-full"
+                  :class="
+                    sameHex(darkAccentColor, color)
+                      ? 'ring-2 ring-[var(--theme-accent)] ring-offset-2 ring-offset-[var(--app-surface-card)]'
+                      : ''
+                  "
+                  :style="{ backgroundColor: color }"
+                  :aria-label="color"
+                  :aria-pressed="sameHex(darkAccentColor, color)"
+                  @click="darkAccentColor = color"
+                />
+              </div>
+              <ColorPicker v-model="darkAccentColor" compact />
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                :label="t('Setting.ResetAccent')"
+                @click="resetAccent('dark')"
+              />
+            </div>
           </div>
         </UCard>
       </div>
@@ -440,6 +515,36 @@ watch(
             <p class="setting-row__description">{{ t("Setting.ModernIslandDescription") }}</p>
           </div>
           <USwitch v-model="selectedModernIsland" :aria-label="t('Setting.ModernIsland')" />
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <p class="setting-row__label">{{ t("Setting.UiRadius") }}</p>
+            <p class="setting-row__description">{{ t("Setting.UiRadiusDescription") }}</p>
+          </div>
+          <div class="flex shrink-0 gap-2">
+            <UButton
+              v-for="item in radiusItems"
+              :key="item.id"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              class="min-w-16 flex-col gap-1 px-3 py-2"
+              :class="
+                selectedUiRadius === item.id
+                  ? 'bg-[var(--app-selected-soft)] ring-1 ring-[var(--theme-accent)]'
+                  : 'opacity-70'
+              "
+              :ui="{ base: 'rounded-[length:var(--app-radius)]' }"
+              @click="selectedUiRadius = item.id"
+            >
+              <span
+                class="h-4 w-8 bg-[color-mix(in_srgb,var(--app-fg)_14%,transparent)] shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--app-fg)_58%,transparent)]"
+                :style="{ borderRadius: item.preview }"
+              />
+              <span class="text-[11px]">{{ item.label }}</span>
+            </UButton>
+          </div>
         </div>
 
         <div class="setting-row">
@@ -476,7 +581,7 @@ watch(
               :aria-label="t('Setting.InterfaceFontSize')"
               size="sm"
               class="w-20"
-              :ui="{ base: 'rounded-[3px] text-center tabular-nums' }"
+              :ui="{ base: 'rounded-[length:var(--app-radius)] text-center tabular-nums' }"
             />
             <span class="w-4 text-xs text-muted">px</span>
           </div>
@@ -498,7 +603,7 @@ watch(
               :aria-label="t('Setting.CodeFontSize')"
               size="sm"
               class="w-20"
-              :ui="{ base: 'rounded-[3px] text-center tabular-nums' }"
+              :ui="{ base: 'rounded-[length:var(--app-radius)] text-center tabular-nums' }"
             />
             <span class="w-4 text-xs text-muted">px</span>
           </div>

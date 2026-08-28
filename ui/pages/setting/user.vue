@@ -268,10 +268,10 @@ watch(
               @error="avatarFailed = true"
             />
             <div class="min-w-0">
-              <h2 class="truncate text-base font-semibold text-highlighted">
+              <h2 class="truncate font-sans text-sm font-medium text-highlighted">
                 {{ profile.name || profile.username }}
               </h2>
-              <p class="truncate text-sm text-muted">{{ profile.username }} · {{ currentUser?.site }}</p>
+              <p class="truncate font-sans text-xs text-muted">{{ profile.username }} · {{ currentUser?.site }}</p>
             </div>
           </div>
         </UCard>

@@ -59,6 +59,11 @@ const {
   setBackspacePreference,
   setTerminalCommandSuggestionsEnabled
 } = settingManager;
+const { debugLog, setDebugLog, clearLogs, copyLogs, downloadLogs } = useDebugLog();
+const debugLogEnabled = computed({
+  get: () => debugLog.value,
+  set: (value: boolean) => setDebugLog(value)
+});
 
 const languageItems = computed<LangItem[]>(() => {
   const arr = (locales.value as any[]) || [];
@@ -222,7 +227,7 @@ async function clearCommandHistory() {
     <UCard
       variant="outline"
       :ui="{
-        root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]',
+        root: 'rounded-[length:var(--app-radius)] bg-[var(--app-surface-card)] ring-[var(--app-border)]',
         body: 'divide-y divide-[var(--app-border)] p-0 sm:p-0'
       }"
     >
@@ -301,7 +306,7 @@ async function clearCommandHistory() {
       v-if="isDesktopRuntime() && ffmpegStatus"
       variant="outline"
       :ui="{
-        root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]',
+        root: 'rounded-[length:var(--app-radius)] bg-[var(--app-surface-card)] ring-[var(--app-border)]',
         body: 'p-4 sm:p-4'
       }"
     >
@@ -324,19 +329,24 @@ async function clearCommandHistory() {
 
         <UButton
           v-if="!ffmpegStatus.installed"
-          color="primary"
+          color="neutral"
+          variant="outline"
+          size="sm"
           icon="i-lucide-download"
           :loading="ffmpegBusy"
           :label="t('Setting.DownloadFfmpeg')"
+          class="rounded-full"
           @click="installFfmpeg"
         />
         <UButton
           v-else
-          color="error"
-          variant="soft"
+          color="neutral"
+          variant="outline"
+          size="sm"
           icon="i-lucide-trash-2"
           :loading="ffmpegBusy"
           :label="t('Setting.UninstallFfmpeg')"
+          class="rounded-full"
           @click="uninstallFfmpeg"
         />
       </div>
@@ -344,6 +354,33 @@ async function clearCommandHistory() {
       <div v-if="ffmpegBusy" class="mt-4 flex items-center gap-3">
         <UProgress :value="ffmpegProgress" size="sm" class="flex-1" />
         <span class="w-10 text-right text-xs tabular-nums text-muted">{{ ffmpegProgress }}%</span>
+      </div>
+    </UCard>
+
+    <UCard
+      variant="outline"
+      :ui="{
+        root: 'rounded-[length:var(--app-radius)] bg-[var(--app-surface-card)] ring-[var(--app-border)]',
+        body: 'p-4 sm:p-4'
+      }"
+    >
+      <div class="flex items-start justify-between gap-6">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-highlighted">{{ t("Setting.DebugLog") }}</p>
+          <p class="mt-1 text-xs leading-5 text-muted">{{ t("Setting.DebugLogDescription") }}</p>
+        </div>
+        <USwitch v-model="debugLogEnabled" :aria-label="t('Setting.DebugLog')" />
+      </div>
+      <div class="mt-3 flex justify-end gap-2">
+        <UButton color="neutral" variant="outline" size="sm" class="rounded-full" @click="clearLogs">
+          {{ t("Setting.ClearLogs") }}
+        </UButton>
+        <UButton color="neutral" variant="outline" size="sm" class="rounded-full" @click="copyLogs">
+          {{ t("Setting.CopyLogs") }}
+        </UButton>
+        <UButton color="neutral" variant="outline" size="sm" class="rounded-full" @click="downloadLogs">
+          {{ t("Setting.DownloadLogs") }}
+        </UButton>
       </div>
     </UCard>
 

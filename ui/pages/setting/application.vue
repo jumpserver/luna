@@ -152,6 +152,19 @@ const handlePluginUpload = async () => {
   }
 };
 
+const route = useRoute();
+
+const isProtocolActive = (child: NavigationMenuItem) => {
+  if (child.active) return true;
+  return typeof child.to === "string" && (route.path === child.to || route.path.startsWith(`${child.to}/`));
+};
+
+const onProtocolSelect = (child: NavigationMenuItem) => {
+  if (typeof child.onSelect === "function") {
+    child.onSelect({} as never);
+  }
+};
+
 const handlePluginUninstall = async (pluginId: string) => {
   uninstallingPluginId.value = pluginId;
   try {
@@ -169,7 +182,7 @@ const handlePluginUninstall = async (pluginId: string) => {
       variant="outline"
       class="mb-4"
       :ui="{
-        root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]',
+        root: 'rounded-[length:var(--app-radius)] bg-[var(--app-surface-card)] ring-[var(--app-border)]',
         body: 'flex flex-wrap items-center justify-between gap-3'
       }"
     >
@@ -182,16 +195,21 @@ const handlePluginUninstall = async (pluginId: string) => {
 
       <div class="flex flex-wrap items-center gap-2">
         <UButton
-          color="primary"
+          color="neutral"
+          variant="outline"
+          size="sm"
           icon="i-lucide-upload"
+          class="rounded-full"
           :loading="installingPlugin"
           :label="t('Setting.UploadPlugin')"
           @click="handlePluginUpload"
         />
         <UButton
           color="neutral"
-          variant="soft"
+          variant="outline"
+          size="sm"
           icon="i-lucide-package"
+          class="rounded-full"
           :label="t('Setting.ManagePlugins')"
           @click="pluginModalOpen = true"
         />
@@ -201,26 +219,38 @@ const handlePluginUninstall = async (pluginId: string) => {
     <UCard
       variant="outline"
       :ui="{
-        root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]',
+        root: 'rounded-[length:var(--app-radius)] bg-[var(--app-surface-card)] ring-[var(--app-border)]',
         body: 'flex min-h-[480px] p-0 sm:p-0'
       }"
     >
-      <div class="flex w-52 shrink-0 flex-col bg-[var(--app-sidebar-bg)]">
-        <UNavigationMenu
-          :items="appMenu"
-          :highlight="false"
-          :ui="{
-            list: 'p-2',
-            link: 'px-2.5 my-0.5 before:rounded-lg hover:before:bg-[var(--app-hover-soft)] data-active:before:bg-[var(--app-selected-soft)]',
-            linkLeadingIcon: 'text-current',
-            linkTrailing: 'hidden',
-            linkTrailingIcon: 'hidden'
-          }"
-          orientation="vertical"
-          color="neutral"
-          class="w-full"
-        />
-      </div>
+      <nav
+        class="flex w-52 shrink-0 flex-col gap-2 overflow-y-auto p-2.5"
+        :aria-label="t('Setting.ApplicationDescription')"
+      >
+        <div
+          v-for="group in appMenu"
+          :key="group.label"
+          class="rounded-[length:var(--app-radius)] border border-[var(--app-border)] bg-[color-mix(in_srgb,var(--theme-fg)_4%,transparent)] p-1.5"
+        >
+          <div class="mb-1 flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold tracking-[0.06em] text-muted">
+            <UIcon v-if="group.icon" :name="group.icon" class="size-3.5" />
+            <span>{{ group.label }}</span>
+          </div>
+          <UButton
+            v-for="child in group.children || []"
+            :key="String(child.label)"
+            :to="typeof child.to === 'string' ? child.to : undefined"
+            :label="String(child.label || '')"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            class="h-7 w-full justify-start"
+            :class="isProtocolActive(child) ? 'bg-[var(--app-selected-soft)] text-highlighted' : 'text-muted'"
+            :ui="{ base: 'rounded-[length:var(--app-radius)]' }"
+            @click="onProtocolSelect(child)"
+          />
+        </div>
+      </nav>
 
       <div class="min-w-0 flex-1 border-l border-[var(--app-border)] p-4">
         <KeepAlive v-if="embedded">

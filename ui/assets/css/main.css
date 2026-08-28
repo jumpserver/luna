@@ -145,9 +145,10 @@
   );
   --workspace-surface-sub-tree: color-mix(in srgb, var(--app-surface-panel-strong) 68%, var(--app-surface-canvas) 32%);
   --workspace-surface-sub-border: color-mix(in srgb, var(--app-border-subtle) 86%, var(--app-surface-panel) 14%);
+  --app-radius: 3px;
   --workspace-island-inset: 10px;
   --workspace-island-gap: 12px;
-  --workspace-island-radius: 10px;
+  --workspace-island-radius: var(--app-radius);
   --workspace-island-border: color-mix(in srgb, var(--theme-fg) 12%, transparent);
   --ui-bg: var(--app-surface-canvas);
   --ui-bg-muted: var(--app-surface-sidebar);
@@ -543,4 +544,18 @@ option {
 
 .workspace-island--right > * {
   border-left-width: 0;
+}
+
+.settings-island {
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--workspace-island-border);
+  border-radius: var(--app-radius);
+  background-color: var(--app-surface-sidebar);
+}
+
+.settings-island--content {
+  overflow-y: auto;
+  background-color: var(--app-surface-canvas);
+  font-family: var(--font-sans);
 }

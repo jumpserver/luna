@@ -16,6 +16,23 @@ import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composa
 
 export type ThemeType = "light" | "dark" | "withSystem" | "";
 export type LayoutsType = "grid" | "table";
+export type UiRadius = "none" | "small" | "large";
+export const UI_RADIUS_PX: Record<UiRadius, string> = {
+  none: "0px",
+  small: "3px",
+  large: "10px"
+};
+export const isUiRadius = (value: unknown): value is UiRadius =>
+  value === "none" || value === "small" || value === "large";
+
+export const applyUiRadius = (radius: UiRadius) => {
+  if (!import.meta.client) return;
+  const value = UI_RADIUS_PX[radius];
+  const root = document.documentElement;
+  root.style.setProperty("--app-radius", value);
+  root.style.setProperty("--workspace-island-radius", value);
+  root.dataset.uiRadius = radius;
+};
 export const MIN_SIDEBAR_WIDTH = 180;
 export const MAX_SIDEBAR_WIDTH = 420;
 export const DEFAULT_SIDEBAR_WIDTH = 220;
@@ -67,6 +84,8 @@ export interface UserSettingPersistedState {
   sidebarWidth: number;
   sidebarSections: SidebarSectionVisibility;
   modernIsland: boolean;
+  uiRadius: UiRadius;
+  debugLog: boolean;
 }
 
 const STORE_PATH = "user-setting.json";
@@ -104,7 +123,9 @@ export const DEFAULT_STATE: UserSettingPersistedState = {
   recentSites: [],
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   sidebarSections: DEFAULT_SIDEBAR_SECTIONS,
-  modernIsland: false
+  modernIsland: false,
+  uiRadius: "small",
+  debugLog: false
 };
 
 let storeInstance: DesktopStore | null = null;

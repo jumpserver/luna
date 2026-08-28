@@ -16,7 +16,7 @@ const { isMacOS } = usePlatform();
 </script>
 
 <template>
-  <div class="settings-shell relative flex h-screen min-h-0 flex-col overflow-hidden bg-[var(--app-main-bg)]">
+  <div class="settings-shell relative flex h-screen min-h-0 flex-col overflow-hidden bg-[var(--app-surface-frame)]">
     <HeaderDesktopTitleBar :show-menus="false" />
     <div v-if="isDesktopRuntime() && isMacOS" data-desktop-drag-region class="absolute inset-x-0 top-0 z-10 h-9" />
 

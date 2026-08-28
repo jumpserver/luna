@@ -212,102 +212,102 @@ const onPathClick = () => {
 <template>
   <UCard
     variant="outline"
+    :class="props.selected || isBuiltInTerminal ? '' : 'opacity-60'"
     :ui="{
-      root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]',
-      header: 'p-4 sm:px-4 sm:py-3',
-      body: 'p-4 sm:p-4'
+      root: 'rounded-[length:var(--app-radius)] bg-[var(--app-surface-card)] ring-[var(--app-border)]',
+      body: 'p-3.5 sm:p-3.5'
     }"
   >
-    <template #header>
-      <div class="flex items-center gap-3">
-        <img
-          :src="iconSrc"
-          :alt="displayName"
-          loading="lazy"
-          class="size-10 shrink-0 rounded-md border border-[var(--app-border)] bg-[var(--app-surface-panel)] object-contain p-1"
-        />
+    <div class="grid grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
+      <img
+        :src="iconSrc"
+        :alt="displayName"
+        loading="lazy"
+        class="col-start-1 row-span-2 size-10 self-start rounded-[length:var(--app-radius)] border border-[var(--app-border)] bg-[var(--app-surface-panel)] object-contain p-1"
+      />
 
-        <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-          <div class="flex items-center justify-between gap-3">
-            <p class="min-w-0 truncate text-sm font-medium leading-tight text-highlighted">
-              {{ displayName }}
-            </p>
+      <p class="col-start-2 min-w-0 truncate text-sm font-medium leading-5 text-highlighted">
+        {{ displayName }}
+      </p>
 
-            <USwitch
-              class="shrink-0"
-              :model-value="props.selected ?? false"
-              :disabled="switchDisabled"
-              @update:model-value="onSwitch"
-            />
-          </div>
+      <USwitch
+        class="col-start-3 row-start-1 justify-self-end"
+        :model-value="props.selected ?? false"
+        :disabled="switchDisabled"
+        @update:model-value="onSwitch"
+      />
 
-          <div class="min-w-0">
-            <template v-if="canPickPath && !props.item.path">
-              <UButton
-                :label="t('Setting.SelectPath')"
-                color="neutral"
-                variant="outline"
-                size="xs"
-                @click="selectExecutablePath()"
-              />
-            </template>
-            <template v-else>
-              <div class="flex max-w-full items-center gap-2">
-                <UButton
-                  :label="displayedPath || '-'"
-                  color="neutral"
-                  :variant="canPickPath ? 'soft' : 'subtle'"
-                  size="xs"
-                  class="max-w-full"
-                  :ui="{ base: 'max-w-full', label: 'truncate font-normal' }"
-                  :title="displayedPath || '-'"
-                  @click="onPathClick"
-                />
-
-                <UButton
-                  v-if="canCopyPath"
-                  size="xs"
-                  color="neutral"
-                  variant="ghost"
-                  icon="i-lucide-copy"
-                  :title="t('Setting.CopyPath')"
-                  @click.stop="handleCopyPath"
-                />
-              </div>
-            </template>
-          </div>
-        </div>
-      </div>
-    </template>
-
-    <template #default>
-      <div class="flex w-full items-start justify-between gap-3">
-        <div class="flex min-w-0 flex-1 flex-col gap-4">
-          <div class="flex flex-wrap items-center gap-2">
-            <UBadge v-for="(p, idx) in props.item.protocol" :key="idx" color="info" variant="soft">
-              {{ p.toUpperCase() }}
-            </UBadge>
-          </div>
-
-          <div class="text-pretty text-xs text-muted">
-            {{ commentText }}
-          </div>
-        </div>
-
-        <div class="shrink-0">
+      <div class="col-start-2 row-start-2 flex min-h-6 min-w-0 items-center gap-1.5">
+        <template v-if="canPickPath && !props.item.path">
           <UButton
-            v-if="props.item.download_url"
-            size="sm"
+            :label="t('Setting.SelectPath')"
             color="neutral"
-            variant="soft"
-            icon="i-lucide-arrow-down-to-line"
-            class="text-nowrap"
-            @click="openDownloadPage(props.item.download_url)"
-          >
-            {{ t("Setting.DownloadApplication") }}
-          </UButton>
-        </div>
+            variant="outline"
+            size="xs"
+            class="shrink-0"
+            @click="selectExecutablePath()"
+          />
+        </template>
+        <template v-else>
+          <UButton
+            :label="displayedPath || '-'"
+            color="neutral"
+            :variant="canPickPath ? 'soft' : 'subtle'"
+            size="xs"
+            class="min-w-0"
+            :ui="{ base: 'min-w-0 max-w-full', label: 'truncate font-normal' }"
+            :title="displayedPath || '-'"
+            @click="onPathClick"
+          />
+          <UButton
+            v-if="canCopyPath"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-copy"
+            class="shrink-0"
+            :title="t('Setting.CopyPath')"
+            @click.stop="handleCopyPath"
+          />
+        </template>
+        <UBadge
+          size="xs"
+          class="shrink-0 whitespace-nowrap"
+          :color="props.selected ? 'success' : 'neutral'"
+          variant="soft"
+        >
+          {{ props.selected ? t("UserProfile.Enabled") : t("UserProfile.Disabled") }}
+        </UBadge>
       </div>
-    </template>
+
+      <div class="col-span-2 col-start-2 flex items-center justify-between gap-4">
+        <div class="min-w-0 flex-1">
+          <UTooltip
+            v-if="commentText"
+            :text="commentText"
+            :delay-duration="150"
+            :ui="{
+              content: 'h-auto max-w-xs items-start py-1.5',
+              text: 'whitespace-normal break-words'
+            }"
+          >
+            <p class="truncate text-xs leading-5 text-muted">
+              {{ commentText }}
+            </p>
+          </UTooltip>
+        </div>
+        <UButton
+          v-if="props.item.download_url"
+          size="sm"
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-arrow-down-to-line"
+          class="shrink-0 rounded-full text-nowrap"
+          @click="openDownloadPage(props.item.download_url)"
+        >
+          {{ t("Setting.DownloadApplication") }}
+        </UButton>
+      </div>
+    </div>
   </UCard>
 </template>

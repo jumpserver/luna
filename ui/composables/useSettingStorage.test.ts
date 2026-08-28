@@ -15,6 +15,14 @@ describe("user setting defaults", () => {
   it("keeps modern island layout off until the user opts in", () => {
     expect(DEFAULT_STATE.modernIsland).toBe(false);
   });
+
+  it("defaults corner radius to the current small control radius", () => {
+    expect(DEFAULT_STATE.uiRadius).toBe("small");
+  });
+
+  it("keeps debug logging off by default", () => {
+    expect(DEFAULT_STATE.debugLog).toBe(false);
+  });
 });
 
 describe("normalizeFontSize", () => {
