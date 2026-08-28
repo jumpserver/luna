@@ -978,6 +978,8 @@
     "PrimaryColorDescription": "Used for buttons, selections, and emphasized information.",
     "WorkspaceAppearance": "Workspace appearance",
     "WorkspaceAppearanceDescription": "Adjust how interface text, command terminals, and text editors are displayed.",
+    "ModernIsland": "Modern island",
+    "ModernIslandDescription": "Split the asset tree, session area, and right panel into separate islands with a splitter and accordion.",
     "InterfaceFont": "Interface font",
     "InterfaceFontDescription": "Font used by menus, navigation, and content areas.",
     "InterfaceFontSize": "UI font size",

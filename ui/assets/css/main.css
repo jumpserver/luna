@@ -145,6 +145,10 @@
   );
   --workspace-surface-sub-tree: color-mix(in srgb, var(--app-surface-panel-strong) 68%, var(--app-surface-canvas) 32%);
   --workspace-surface-sub-border: color-mix(in srgb, var(--app-border-subtle) 86%, var(--app-surface-panel) 14%);
+  --workspace-island-inset: 10px;
+  --workspace-island-gap: 12px;
+  --workspace-island-radius: 10px;
+  --workspace-island-border: color-mix(in srgb, var(--theme-fg) 12%, transparent);
   --ui-bg: var(--app-surface-canvas);
   --ui-bg-muted: var(--app-surface-sidebar);
   --ui-bg-elevated: var(--app-surface-panel);
@@ -451,4 +455,92 @@ option {
   height: var(--sidebar-icon-size);
   flex-shrink: 0;
   object-fit: contain;
+}
+
+.workspace-shell[data-island] .workspace-shell__header,
+.workspace-shell[data-island] .header-bg {
+  background-color: var(--app-surface-frame);
+  border-bottom-color: transparent;
+}
+
+.workspace-shell[data-island] .workspace-shell__footer {
+  background-color: var(--app-surface-frame);
+}
+
+.workspace-shell__body--island {
+  padding: var(--workspace-island-inset);
+  background-color: var(--app-surface-frame);
+}
+
+.workspace-island {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--workspace-island-border);
+  border-radius: var(--workspace-island-radius);
+  background-color: var(--app-surface-sidebar);
+}
+
+.workspace-island--main {
+  background-color: var(--app-surface-canvas);
+}
+
+.workspace-island--right {
+  background-color: var(--app-surface-panel);
+}
+
+.workspace-island-accordion {
+  display: flex;
+  min-height: 0;
+  flex: 0 0 auto;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.workspace-island-accordion [data-slot="item"] {
+  display: flex;
+  min-height: 32px;
+  padding: 0 !important;
+  flex: 0 0 auto;
+  flex-direction: column;
+}
+
+.workspace-island-accordion [data-slot="header"] {
+  padding: 0;
+}
+
+.workspace-island-accordion [data-slot="content"] {
+  min-height: 0;
+  overflow: hidden;
+  animation: none !important;
+}
+
+.workspace-island-accordion [data-slot="content"][data-state="closed"] {
+  display: none !important;
+  height: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.workspace-shell[data-island] .workspace-shell__sidebar {
+  background-color: transparent;
+  border-right-width: 0;
+}
+
+.workspace-shell[data-island] .workspace-shell__right-panel {
+  background-color: transparent;
+}
+
+.workspace-island--sidebar > * {
+  border-right-width: 0;
+  background-color: transparent;
+}
+
+.workspace-island--right > * {
+  border-left-width: 0;
 }

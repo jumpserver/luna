@@ -11,6 +11,7 @@ const props = defineProps<{
     favorites: boolean;
     snippets: boolean;
   };
+  hideChrome?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -449,11 +450,12 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
   <div class="contents">
     <SideBarCollapsiblePanel
       v-if="visiblePanels.favorites"
-      :open="isOpen('favorites')"
+      :open="hideChrome || isOpen('favorites')"
       :title="t('Menu.Favorite')"
       v-bind="panelConfig.favorites"
       :max-height="panelMaxHeight('favorites')"
       :fill-available="!mainPanelOpen"
+      :hide-chrome="hideChrome"
       @toggle="togglePanel('favorites')"
     >
       <template #actions>
@@ -514,11 +516,12 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
 
     <SideBarCollapsiblePanel
       v-if="visiblePanels.snippets"
-      :open="isOpen('snippets')"
+      :open="hideChrome || isOpen('snippets')"
       :title="t('Menu.Snippets')"
       v-bind="panelConfig.snippets"
       :max-height="panelMaxHeight('snippets')"
       :fill-available="!mainPanelOpen"
+      :hide-chrome="hideChrome"
       @toggle="togglePanel('snippets')"
     >
       <template #actions>

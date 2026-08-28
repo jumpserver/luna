@@ -340,6 +340,11 @@ export const useSettingManager = () => {
     persist({ sidebarWidth: state.sidebarWidth });
   };
 
+  const setModernIsland = (enabled: boolean) => {
+    state.modernIsland = !!enabled;
+    persist({ modernIsland: state.modernIsland });
+  };
+
   const setSidebarSections = (sections: Partial<SidebarSectionVisibility>) => {
     state.sidebarSections = normalizeSidebarSections({
       ...state.sidebarSections,
@@ -388,6 +393,7 @@ export const useSettingManager = () => {
     setRecentSites,
     setSidebarWidth,
     persistSidebarWidth,
+    setModernIsland,
     setSidebarSections,
     resetSidebarSections
   };

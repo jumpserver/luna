@@ -3,6 +3,7 @@ import type { RightPanelTab } from "~/composables/useRightPanel";
 import { getLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
 
 const { t } = useI18n();
+const { modernIsland } = useSettingManager();
 const { activePaneId, activeTab: workspaceTab } = useWorkspaceTabs();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const { activeTab, setActiveTab, setOpen } = useRightPanel();
@@ -78,8 +79,8 @@ watch(
     data-ai-context="workspace"
     class="flex h-full min-h-0 w-full flex-col"
     :style="{
-      borderLeft: '1px solid var(--app-border)',
-      backgroundColor: 'var(--app-panel-bg)',
+      borderLeft: modernIsland ? '0' : '1px solid var(--app-border)',
+      backgroundColor: modernIsland ? 'transparent' : 'var(--app-panel-bg)',
       color: 'var(--app-fg)'
     }"
   >

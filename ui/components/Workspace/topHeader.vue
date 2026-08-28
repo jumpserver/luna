@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { desktopWindow } from "~/shared/desktop/bridge";
-const { collapse } = useSettingManager();
+const { collapse, modernIsland } = useSettingManager();
 const { sidebarWidth } = useSidebarLayout();
 const isNarrowScreen = useMediaQuery("(max-width: 767px)");
-const leadingAreaStyle = computed(() => ({
-  width: collapse.value || isNarrowScreen.value ? "fit-content" : `${sidebarWidth.value}px`
-}));
+const leadingAreaStyle = computed(() => {
+  if (collapse.value || isNarrowScreen.value) return { width: "fit-content" };
+  if (modernIsland.value && !isNarrowScreen.value) {
+    return {
+      width: `calc(var(--workspace-island-inset) + ${sidebarWidth.value}px + var(--workspace-island-gap))`
+    };
+  }
+  return { width: `${sidebarWidth.value}px` };
+});
 
 const handleWindowDrag = async (event: MouseEvent) => {
   if (!isDesktopRuntime()) return;
@@ -44,7 +50,10 @@ const handleWindowDrag = async (event: MouseEvent) => {
       <slot name="leading" />
     </div>
 
-    <div class="h-full min-w-0 flex-1 overflow-hidden px-0.5 sm:px-1.5">
+    <div
+      class="h-full min-w-0 flex-1 overflow-hidden"
+      :class="modernIsland && !isNarrowScreen ? 'px-0' : 'px-0.5 sm:px-1.5'"
+    >
       <slot />
     </div>
 
