@@ -175,6 +175,7 @@ const indexOperations = new Map<
   { sourceTabId: string; operation: "create" | "drop"; indexName: string; started: boolean; error: string }
 >();
 const queryConsolePanel = ref<{ editorSnapshot: () => ChenSqlEditorSnapshot } | null>(null);
+const consolePanel = ref<{ editorSnapshot: () => ChenSqlEditorSnapshot } | null>(null);
 let aiConnection: ReturnType<typeof useChenWebSocket> | null = null;
 let aiSocket: WebSocket | null = null;
 const sqlMetadataStore = new ChenSqlMetadataStore({
@@ -429,7 +430,15 @@ function buildSqlAiContext(): ChenSqlEditorContext | null {
     };
     lastError = active.lastSqlError ? { ...active.lastSqlError } : null;
   } else if (active?.kind === "console") {
-    snapshot.documentSql = active.pendingSql;
+    tabId = active.id;
+    revision = active.aiRevision;
+    snapshot = consolePanel.value?.editorSnapshot() || {
+      documentSql: active.pendingSql,
+      selectedSql: "",
+      selectionFrom: 0,
+      selectionTo: 0
+    };
+    lastError = active.lastSqlError ? { ...active.lastSqlError } : null;
   }
 
   return {
@@ -488,10 +497,16 @@ function applySqlProposal(proposal: ChenSqlProposal): ChenSqlProposalApplyResult
   }
 
   const target = workspace.workspaceTabState[base.tabId];
-  if (!target || target.kind !== "query" || target.nodeKey !== base.nodeKey || target.aiRevision !== base.revision) {
+  if (
+    !target ||
+    (target.kind !== "query" && target.kind !== "console") ||
+    target.nodeKey !== base.nodeKey ||
+    target.aiRevision !== base.revision
+  ) {
     return staleProposal();
   }
 
+  const currentSql = target.kind === "query" ? target.statement : target.pendingSql;
   let nextSql = sql;
   if (base.target === "selection") {
     const from = Number(base.selectionFrom);
@@ -501,19 +516,20 @@ function applySqlProposal(proposal: ChenSqlProposal): ChenSqlProposalApplyResult
       !Number.isInteger(to) ||
       from < 0 ||
       to <= from ||
-      to > target.statement.length ||
-      target.statement.slice(from, to) !== String(proposal.originalSql || "")
+      to > currentSql.length ||
+      currentSql.slice(from, to) !== String(proposal.originalSql || "")
     ) {
       return staleProposal();
     }
-    nextSql = `${target.statement.slice(0, from)}${sql}${target.statement.slice(to)}`;
+    nextSql = `${currentSql.slice(0, from)}${sql}${currentSql.slice(to)}`;
   } else if (base.target === "document") {
-    if (target.statement !== String(proposal.originalSql || "")) return staleProposal();
+    if (currentSql !== String(proposal.originalSql || "")) return staleProposal();
   } else {
     return staleProposal(t("RightPanel.SQLAIProposalInvalid"));
   }
 
-  target.statement = nextSql;
+  if (target.kind === "query") target.statement = nextSql;
+  else target.pendingSql = nextSql;
   target.aiRevision += 1;
   workspace.setActiveTab(target.id);
   toast.add({ title: t("RightPanel.SQLAIApplied"), color: "success" });
@@ -1631,7 +1647,9 @@ function updateQueryStatement(tab: ChenQueryConsoleTab, value: string) {
 }
 
 function updateConsolePendingSql(tab: ChenPromptConsoleTab, value: string) {
+  if (tab.pendingSql === value) return;
   tab.pendingSql = value;
+  tab.aiRevision += 1;
 }
 
 function mayChangeSqlMetadata(statement: string) {
@@ -1888,14 +1906,19 @@ defineExpose({ focus });
 
           <ConsolePanel
             v-else-if="activeConsoleTab"
+            ref="consolePanel"
             :tab="activeConsoleTab"
             :context-label="currentContextLabel"
             :prompt-label="consolePromptLabel"
             :can-copy="auth.profile.value?.canCopy === true"
+            :ai-enabled="auth.profile.value?.chatAiEnabled === true"
             @run="runQueryTab"
             @cancel="cancelQueryLikeTab"
             @clear="clearConsoleTranscript"
             @update-pending-sql="updateConsolePendingSql"
+            @ai-generate="openSqlAi"
+            @ai-explain="requestSqlAi('explain')"
+            @ai-repair="requestSqlAi('repair')"
           />
 
           <DataViewPanel

@@ -229,7 +229,7 @@ export function useChenQueryConsole(
         appendLog(tab, packet.data);
         break;
       case "sql_error":
-        if (tab.kind === "query" && packet.data && typeof packet.data === "object") {
+        if ((tab.kind === "query" || tab.kind === "console") && packet.data && typeof packet.data === "object") {
           const message = String(packet.data.message || "SQL execution failed");
           tab.lastSqlError = {
             ...packet.data,
@@ -391,6 +391,7 @@ export function useChenQueryConsole(
     if (activeConsoleEntry(tab)) return;
     const sql = tab.pendingSql.trim();
     if (!sql) return;
+    tab.lastSqlError = null;
     tab.historyEntries.push({
       id: newChenWorkspaceId("history"),
       sql
