@@ -59,6 +59,11 @@ const pageHeader = computed(() => {
 <template>
   <div>
     <HeaderDesktopTitleBar />
+    <div
+      v-if="hasMacTrafficLightInset && !showWorkspaceHeader"
+      data-desktop-drag-region
+      class="h-10 min-h-10 shrink-0 bg-[var(--app-surface-canvas)]"
+    />
     <WorkspaceTopHeader v-show="showWorkspaceHeader">
       <template v-if="showSidebarChrome" #leading>
         <SideBarTopControls />

@@ -24,3 +24,13 @@ test("uses the short Electron bootstrap command in packaged builds", async () =>
   assert.match(command, / --ssh-helper$/);
   assert.doesNotMatch(command, /ELECTRON_RUN_AS_NODE|ssh-helper\.cjs/);
 });
+
+test("uses the development helper command in the branded macOS wrapper", async () => {
+  const { LocalApplicationLauncher } = await import("./local-app-launcher.mjs");
+  const launcher = new LocalApplicationLauncher({ isPackaged: true, getAppPath: () => "/app" }, "", null, null, false);
+  const command = launcher.helperCommand();
+
+  assert.match(command, /ELECTRON_RUN_AS_NODE|set "ELECTRON_RUN_AS_NODE=1"/);
+  assert.match(command, /ssh-helper\.cjs/);
+  assert.doesNotMatch(command, / --ssh-helper$/);
+});

@@ -1,6 +1,6 @@
 {
   "name": "jumpserver-client-electron",
-  "displayName": "JumpServer",
+  "productName": "JumpServer",
   "version": "4.1.2",
   "private": true,
   "description": "Electron runtime for JumpServer",

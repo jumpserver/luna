@@ -92,7 +92,7 @@ const previewSidebar = () => {
         variant="ghost"
         size="sm"
         :class="headerIconButtonClass"
-        icon="i-lucide-panel-left"
+        icon="i-lucide-panel-left-open"
         :aria-label="t('Sidebar.Expand')"
         :ui="{ leadingIcon: 'm-0 size-4' }"
         @pointerenter="previewSidebar"

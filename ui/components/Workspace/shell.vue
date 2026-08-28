@@ -142,11 +142,13 @@ onBeforeUnmount(() => {
         :class="[
           sidebarTransitionClass,
           sidebarOverlay ? 'absolute inset-y-0 left-0' : 'relative',
-          hoverPreviewOpen ? 'border-r border-[var(--app-border)] shadow-xl' : ''
+          hoverPreviewOpen ? 'border-r border-[var(--app-border)] shadow-xl backdrop-blur-xl' : ''
         ]"
         :style="{
           width: sidebarStyleWidth,
-          backgroundColor: 'var(--app-sidebar-bg)'
+          backgroundColor: hoverPreviewOpen
+            ? 'color-mix(in srgb, var(--app-surface-sidebar) 92%, transparent)'
+            : 'var(--app-sidebar-bg)'
         }"
         @pointerenter="cancelHoverPreviewClose"
         @pointerleave="hoverPreviewOpen && scheduleHoverPreviewClose()"

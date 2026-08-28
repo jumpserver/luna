@@ -115,11 +115,12 @@ async function isDirectory(candidate) {
 }
 
 export class LocalApplicationLauncher {
-  constructor(app, projectRoot, configService, electronShell) {
+  constructor(app, projectRoot, configService, electronShell, isPackaged = app.isPackaged) {
     this.app = app;
     this.projectRoot = projectRoot;
     this.configService = configService;
     this.electronShell = electronShell;
+    this.isPackaged = isPackaged;
   }
 
   helperPath() {
@@ -128,7 +129,7 @@ export class LocalApplicationLauncher {
 
   helperCommand() {
     const executable = shellQuote(process.execPath);
-    if (this.app.isPackaged) return `${executable} --ssh-helper`;
+    if (this.isPackaged) return `${executable} --ssh-helper`;
     const script = shellQuote(this.helperPath());
     return process.platform === "win32"
       ? `set "ELECTRON_RUN_AS_NODE=1"&& ${executable} ${script}`

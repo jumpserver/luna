@@ -42,14 +42,14 @@ import { WebProxyRecording } from "./web-proxy-recording.mjs";
 const electronDir = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const runtimePackage = require("./package.json");
-const projectRoot = app.isPackaged ? process.resourcesPath : path.resolve(electronDir, "..");
 const rendererUrl = process.env.JMS_ELECTRON_RENDERER_URL || "http://localhost:3000/luna/";
-const isDevelopment = !app.isPackaged;
+const isDevelopment = process.env.JMS_ELECTRON_DEV === "1" || !app.isPackaged;
+const projectRoot = isDevelopment ? path.resolve(electronDir, "..") : process.resourcesPath;
 const macDockIconSize = 512;
 const macDockIconInset = 48;
 const trayIconSize = 16;
 const defaultProductName = "JumpServer";
-const productName = String(runtimePackage.displayName || defaultProductName);
+const productName = String(runtimePackage.productName || defaultProductName);
 app.setName(productName);
 if (isDevelopment) console.info(`[electron] ${app.getName()} ${app.getVersion()}`);
 const windows = new Map();
@@ -563,7 +563,7 @@ function createInsetIcon(iconPath, size, inset) {
 
 function loadAppIcon() {
   const iconName = process.platform === "win32" ? "icon.ico" : "icon.png";
-  const iconPath = app.isPackaged
+  const iconPath = !isDevelopment
     ? path.join(process.resourcesPath, "icons", iconName)
     : path.join(projectRoot, "electron/assets/icons", iconName);
   appIcon ??=
@@ -924,7 +924,7 @@ function buildMenu() {
 function setupTray() {
   const labels = menuLabels();
   const iconName = process.platform === "darwin" ? "tray-mac.png" : "32x32.png";
-  const iconPath = app.isPackaged
+  const iconPath = !isDevelopment
     ? path.join(process.resourcesPath, "icons", iconName)
     : path.join(projectRoot, "electron/assets/icons", iconName);
   const icon = nativeImage.createFromPath(iconPath).resize({ height: trayIconSize, quality: "best" });
@@ -1413,7 +1413,7 @@ app.on("window-all-closed", () => {
 });
 app.on("activate", () => createWindow("main"));
 
-if (process.defaultApp && process.argv[1])
+if (isDevelopment && process.argv[1])
   app.setAsDefaultProtocolClient("jms2", process.execPath, [path.resolve(process.argv[1])]);
 else app.setAsDefaultProtocolClient("jms2");
 
@@ -1421,7 +1421,7 @@ app.whenReady().then(async () => {
   await registerProtocols();
   applicationConfig = new ApplicationConfigService(app, projectRoot);
   await applicationConfig.initialize();
-  localApplicationLauncher = new LocalApplicationLauncher(app, projectRoot, applicationConfig, shell);
+  localApplicationLauncher = new LocalApplicationLauncher(app, projectRoot, applicationConfig, shell, !isDevelopment);
   authService = new DesktopAuthService(emitDesktopEvent);
   await authService.initialize();
   offlineRecordings = new OfflineRecordingStore(path.join(app.getPath("userData"), "offline-recordings"));
