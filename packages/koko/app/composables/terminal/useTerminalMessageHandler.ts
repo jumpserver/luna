@@ -9,6 +9,7 @@ import type { OnlineUser, SettingConfig, ShareUserOptions, TerminalSessionInfo }
 import type { TerminalCommandEnvelope } from "./envelope";
 import type { TerminalIncomingMessage } from "./protocol";
 import type { TerminalAiChatMessage } from "./useTerminalAiSessions";
+import { markKokoTerminalAiSessionInfoReady } from "./useTerminalAiSessions";
 import { HOST_MESSAGE_TYPE, MESSAGE_TYPE, ZMODEM_ACTION_TYPE } from "@jumpserver/connectors-core";
 import { terminalTheme } from "../../utils/terminalTheme";
 import { updateIcon } from "../../utils/terminalUtils";
@@ -302,6 +303,10 @@ export function createKokoTerminalMessageHandlers(options: {
         "themeName",
         effectiveThemeName || sessionInfo.themeName || ""
       );
+    },
+    [MESSAGE_TYPE.TERMINAL_READY]: () => {
+      const tabId = options.sessionCtxRef.value?.tabId;
+      if (tabId) markKokoTerminalAiSessionInfoReady(tabId);
     },
     [MESSAGE_TYPE.TERMINAL_SHARE_JOIN]: (message) => {
       const payload = parseJson<OnlineUser>(message.data, {} as OnlineUser);

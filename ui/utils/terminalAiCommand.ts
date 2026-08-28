@@ -16,3 +16,9 @@ export function terminalAiCommandShortcutAction(available: boolean, busy: boolea
   if (!available) return "ignore" as const;
   return busy ? ("panel" as const) : ("popover" as const);
 }
+
+const TERMINAL_AI_HINT_MIN_WIDTH = 80;
+
+export function shouldShowTerminalAiCaretHint(sessionInfoReady: boolean, maxWidth: number) {
+  return sessionInfoReady && maxWidth >= TERMINAL_AI_HINT_MIN_WIDTH;
+}

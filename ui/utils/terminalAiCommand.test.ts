@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isTerminalAiCommandShortcut, terminalAiCommandShortcutAction } from "~/utils/terminalAiCommand";
+import {
+  isTerminalAiCommandShortcut,
+  shouldShowTerminalAiCaretHint,
+  terminalAiCommandShortcutAction
+} from "~/utils/terminalAiCommand";
 
 const shortcutEvent = (overrides: Partial<Parameters<typeof isTerminalAiCommandShortcut>[0]> = {}) => ({
   code: "KeyK",
@@ -24,5 +28,13 @@ describe("Terminal AI command shortcut", () => {
     expect(terminalAiCommandShortcutAction(true, false)).toBe("popover");
     expect(terminalAiCommandShortcutAction(true, true)).toBe("panel");
     expect(terminalAiCommandShortcutAction(false, false)).toBe("ignore");
+  });
+});
+
+describe("shouldShowTerminalAiCaretHint", () => {
+  it("hides the hint until session info is ready and there is enough width", () => {
+    expect(shouldShowTerminalAiCaretHint(false, 200)).toBe(false);
+    expect(shouldShowTerminalAiCaretHint(true, 79)).toBe(false);
+    expect(shouldShowTerminalAiCaretHint(true, 80)).toBe(true);
   });
 });

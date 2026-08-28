@@ -10,7 +10,7 @@
   "main": "./nuxt.config.ts",
   "peerDependencies": {
     "@vueuse/core": "^14.3.0",
-    "@watermark-design/vue": "^1.4.0",
+    "@watermark-design/dom": "^1.3.4",
     "asciinema-player": "^3.10.0",
     "guacamole-common-js-jumpserver": "1.1.0-c",
     "nuxt": "^4.4.0",

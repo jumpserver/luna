@@ -11,6 +11,10 @@ export function resolveWatermarkTemplate(settings: WatermarkTemplateSettings) {
   return String(settings.SECURITY_WATERMARK_SESSION_CONTENT || "");
 }
 
+export function isWatermarkSettingEnabled(value: unknown) {
+  return value === true || value === 1 || value === "1" || value === "true";
+}
+
 export function shouldShowAppWatermark(params: { loggedIn: boolean; enabled: boolean; path: string }) {
   if (!params.loggedIn || !params.enabled) return false;
   return !params.path.includes("/replay/");

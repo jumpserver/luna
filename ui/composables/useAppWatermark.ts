@@ -6,6 +6,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import {
   buildWatermarkViewer,
   interpolateWatermark,
+  isWatermarkSettingEnabled,
   resolveWatermarkTemplate,
   shouldShowAppWatermark,
   softenWatermarkColor
@@ -18,6 +19,7 @@ export function useAppWatermark() {
   const route = useRoute();
   const userInfoStore = useUserInfoStore();
   const { loggedIn, currentUser } = storeToRefs(userInfoStore);
+  const { authReady } = useAuthSession();
   const { activeTab } = useWorkspaceTabs();
 
   const settings = ref<PublicSettings | null>(null);
@@ -31,7 +33,7 @@ export function useAppWatermark() {
   const enabled = computed(() =>
     shouldShowAppWatermark({
       loggedIn: loggedIn.value,
-      enabled: settings.value?.SECURITY_WATERMARK_ENABLED === true,
+      enabled: isWatermarkSettingEnabled(settings.value?.SECURITY_WATERMARK_ENABLED),
       path: route.path
     })
   );
@@ -103,14 +105,15 @@ export function useAppWatermark() {
   };
 
   watch(
-    loggedIn,
-    (isLoggedIn) => {
-      if (!isLoggedIn) {
+    [loggedIn, authReady],
+    () => {
+      if (!loggedIn.value) {
         loadGeneration += 1;
         settings.value = null;
         profile.value = null;
         return;
       }
+      if (!authReady.value) return;
       void load();
     },
     { immediate: true }
