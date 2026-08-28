@@ -188,7 +188,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
       for (const listener of listListeners) {
         listener({
           entries,
-          currentPath: pending.requestedPath || message.current_path,
+          currentPath: message.current_path || pending.requestedPath,
           background: pending.background
         });
       }

@@ -8,6 +8,7 @@ import type {
   SftpTransferDropPayload,
   SftpTransferSourcePayload
 } from "#koko/composables/sftp/file-manager/workspaceTypes";
+import type { KokoFileAiContext, KokoFileAiTarget } from "#koko/composables/sftp/useFileAiSessions";
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
 import SftpPaneContextMenu from "#koko/components/FileManagement/pane/SftpPaneContextMenu.vue";
 import SftpPaneDropOverlay from "#koko/components/FileManagement/pane/SftpPaneDropOverlay.vue";
@@ -26,6 +27,19 @@ import {
 import { useSftpPaneSelection } from "#koko/composables/sftp/file-manager/useSftpPaneSelection";
 import { useSftpRemotePaneActions } from "#koko/composables/sftp/file-manager/useSftpRemotePaneActions";
 import { useSftpShowHiddenFiles } from "#koko/composables/sftp/file-manager/useSftpShowHiddenFiles";
+import {
+  connectKokoFileAiSession,
+  createKokoFileAiMessageId,
+  disconnectKokoFileAiSession,
+  handleKokoFileAiMessage,
+  isSuccessfulKokoFileAiMutationResult,
+  registerKokoFileAiSession,
+  releaseKokoFileAiSession,
+  setActiveKokoFileAiTarget,
+  toKokoFileAiSelectedEntry,
+  unregisterKokoFileAiSession,
+  updateKokoFileAiContext
+} from "#koko/composables/sftp/useFileAiSessions";
 import { useSftpFileManager } from "#koko/composables/sftp/useSftpFileManager";
 import { KeyboardKey } from "#koko/constants/keyboard";
 
@@ -40,6 +54,7 @@ const props = defineProps<{
   compact?: boolean;
   highlightedNames?: string[];
   focused?: boolean;
+  aiTarget?: KokoFileAiTarget;
   sendPeerDirection?: "left" | "right";
 }>();
 const emit = defineEmits<{
@@ -97,6 +112,20 @@ const transferableEntries = computed(() => transferEntriesFromSelection(selected
 const selectedSize = computed(() =>
   transferableEntries.value.reduce((total, entry) => total + Math.max(0, Number(entry.size) || 0), 0)
 );
+const fallbackAiTargetId = createKokoFileAiMessageId("file-target");
+const aiTargetId = computed(() => props.aiTarget?.targetId || props.context?.tabId || fallbackAiTargetId);
+const aiOwnerId = computed(() => props.aiTarget?.ownerId || aiTargetId.value);
+const aiContext = computed<KokoFileAiContext>(() => ({
+  targetId: aiTargetId.value,
+  assetId: props.aiTarget?.assetId || "",
+  assetName: props.aiTarget?.assetName || props.contextLabel || props.title || "",
+  ...(props.aiTarget?.account ? { account: props.aiTarget.account } : {}),
+  currentPath: manager.currentPath.value || "/",
+  selectedEntries: selectedEntries.value
+    .filter((entry) => entry.name !== "..")
+    .map((entry) => toKokoFileAiSelectedEntry(manager.currentPath.value, entry)),
+  connected: manager.ai.ready.value
+}));
 const transferDropActive = computed(
   () =>
     canTransferFiles.value &&
@@ -280,9 +309,59 @@ function onKeydown(event: KeyboardEvent): void {
 }
 
 function focusPane(): void {
+  if (props.context) setActiveKokoFileAiTarget(aiTargetId.value, aiOwnerId.value);
   emit("focus");
 }
 
+let registeredAiTargetId = "";
+let registeredAiSocket: WebSocket | null = null;
+
+function unregisterAiTarget(defer = false): void {
+  if (!registeredAiTargetId) return;
+  if (defer) releaseKokoFileAiSession(registeredAiTargetId, registeredAiSocket);
+  else unregisterKokoFileAiSession(registeredAiTargetId, registeredAiSocket);
+  registeredAiTargetId = "";
+  registeredAiSocket = null;
+}
+
+const stopAiMessageListener = manager.ai.onMessage((message) => {
+  if (!registeredAiTargetId || !registeredAiSocket || manager.ai.socket.value !== registeredAiSocket) return;
+  const metadata =
+    message && typeof message === "object" && "metadata" in message
+      ? (message.metadata as Record<string, unknown> | undefined)
+      : undefined;
+  if (typeof metadata?.targetId === "string" && metadata.targetId !== registeredAiTargetId) return;
+  handleKokoFileAiMessage(registeredAiTargetId, message);
+  if (!isSuccessfulKokoFileAiMutationResult(message, registeredAiTargetId)) return;
+  clearSelection();
+  void manager.loadCurrentDirectory(manager.currentPath.value, undefined, false);
+});
+
+watch(
+  [aiTargetId, manager.ai.socket, () => props.context],
+  ([targetId, socket, context]) => {
+    if (!context || (registeredAiTargetId && registeredAiTargetId !== targetId)) unregisterAiTarget();
+    if (!context) return;
+    if (!socket) {
+      if (registeredAiTargetId) disconnectKokoFileAiSession(registeredAiTargetId, registeredAiSocket);
+      return;
+    }
+    registerKokoFileAiSession(targetId, socket, aiContext.value);
+    registeredAiTargetId = targetId;
+    registeredAiSocket = socket;
+  },
+  { immediate: true }
+);
+watch(
+  [aiTargetId, manager.ai.socket, manager.ai.ready],
+  ([targetId, socket, ready]) => {
+    if (!socket) return;
+    if (ready) connectKokoFileAiSession(targetId, socket);
+    else disconnectKokoFileAiSession(targetId, socket);
+  },
+  { immediate: true }
+);
+watch(aiContext, (context) => updateKokoFileAiContext(context.targetId, context), { immediate: true });
 watch(selectedEntry, (entry) => emit("select", entry));
 watch(manager.currentPath, () => {
   hideContextMenu();
@@ -303,6 +382,8 @@ onMounted(() => {
   document.addEventListener("keydown", onKeydown);
 });
 onUnmounted(() => {
+  stopAiMessageListener();
+  unregisterAiTarget(true);
   document.removeEventListener("dragend", clearTransferDragState);
   document.removeEventListener("keydown", onKeydown);
   if (props.transferEndpoint) emit("transferEndpointUnmounted", props.transferEndpoint);

@@ -1,6 +1,11 @@
 import type { ComputedRef, Ref } from "vue";
-import type { AiPanelDomainContext, AiPanelDomainPresentation, AiTranslate } from "./domains/types";
-import type { AiTimelineAction, PlanItem, ViewItem } from "./types";
+import type {
+  AiPanelDomainContext,
+  AiPanelDomainPresentation,
+  AiPanelDomainSummary,
+  AiTranslate
+} from "./domains/types";
+import type { AiTimelineAction, ViewItem } from "./types";
 import type { WorkspaceSurfaceSession } from "~/composables/useWorkspaceTabs";
 import { buildAiPanelViewItems } from "./buildViewItems";
 import { resolveAiPanelDomain, resolveAiPanelSession } from "./domains/registry";
@@ -12,16 +17,6 @@ interface UseAiPanelControllerOptions {
   surface: ComputedRef<WorkspaceSurfaceSession | null | undefined>;
 }
 
-const completedStatuses = ["completed", "success", "succeeded", "skipped"];
-const failedStatuses = ["error", "failed", "rejected", "interrupted"];
-
-function effectiveStepStatus(step: PlanItem["steps"][number]) {
-  if (["completed", "failed", "interrupted", "rejected", "skipped"].includes(step.status)) return step.status;
-  const execution = step.executions.at(-1);
-  if (execution?.command && !execution.result) return String(execution.command.state || step.status);
-  return step.status || String(execution?.result?.outcome || "pending");
-}
-
 export function useAiPanelController(options: UseAiPanelControllerOptions) {
   const { t } = useI18n();
   const translate: AiTranslate = (key, params) => (params ? t(key, params) : t(key));
@@ -31,7 +26,10 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
   const session = computed(() => resolveAiPanelSession(options.paneId.value));
   const adapter = computed(() => (session.value ? resolveAiPanelDomain(session.value) : null));
   const messages = computed(() => (session.value ? workspaceAiMessages(session.value) : []));
-  const metadataApproval = computed(() => session.value?.metadataApproval || null);
+  const metadataApproval = computed(() => {
+    const current = session.value;
+    return current && "metadataApproval" in current ? current.metadataApproval : null;
+  });
   const domainContext = computed<AiPanelDomainContext>(() => ({
     paneId: options.paneId.value,
     surface: options.surface.value,
@@ -53,6 +51,12 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
     if (!current || !currentAdapter) return null;
     return currentAdapter.describe(current, domainContext.value, viewItems.value);
   });
+  const domainSummary = computed<AiPanelDomainSummary>(() => {
+    const current = session.value;
+    const currentAdapter = adapter.value;
+    if (!current || !currentAdapter) return {};
+    return currentAdapter.summarize(current, domainContext.value, viewItems.value);
+  });
 
   function stopElapsedTimer() {
     if (elapsedTimer !== null) clearInterval(elapsedTimer);
@@ -60,7 +64,7 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
   }
 
   watch(
-    () => Boolean(adapter.value?.id === "sql" && presentation.value?.busy),
+    () => Boolean(presentation.value?.refreshElapsedWhileBusy && presentation.value.busy),
     (running) => {
       stopElapsedTimer();
       elapsedClock.value = Date.now();
@@ -74,25 +78,8 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
   );
   onBeforeUnmount(stopElapsedTimer);
 
-  const latestPlan = computed(() => viewItems.value.findLast((item): item is PlanItem => item.kind === "plan"));
-  const runProgress = computed(() => {
-    const steps = latestPlan.value?.steps || [];
-    if (!steps.length) return "";
-    const complete = steps.filter((step) => completedStatuses.includes(effectiveStepStatus(step))).length;
-    return `${complete}/${steps.length}`;
-  });
-  const highestRiskLevel = computed(() => {
-    let level = 0;
-    for (const step of latestPlan.value?.steps || []) {
-      for (const execution of step.executions) {
-        level = Math.max(level, Number(execution.command?.riskLevel) || 0);
-      }
-    }
-    for (const item of viewItems.value) {
-      if (item.kind === "sql-analysis") level = Math.max(level, Number(item.data.riskLevel) || 0);
-    }
-    return level;
-  });
+  const runProgress = computed(() => domainSummary.value.runProgress || "");
+  const highestRiskLevel = computed(() => domainSummary.value.highestRiskLevel || 0);
   const riskLabel = computed(() => {
     const labels: Record<number, string> = {
       1: t("RightPanel.AIRiskReadOnly"),
@@ -108,9 +95,8 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
     if (current.errorLabel) return "error";
     if (metadataApproval.value || current.waitingForApproval) return "warning";
     if (current.busy) return "active";
-    const statuses = latestPlan.value?.steps.map(effectiveStepStatus) || [];
-    if (statuses.some((status) => failedStatuses.includes(status))) return "error";
-    if (statuses.length && statuses.every((status) => completedStatuses.includes(status))) return "success";
+    if (domainSummary.value.outcome === "error") return "error";
+    if (domainSummary.value.outcome === "success") return "success";
     return "ready";
   });
   const presenceStatusLabel = computed(() => {
@@ -177,12 +163,12 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
 
   function updateApprovalThreshold(value: unknown) {
     const current = session.value;
-    if (current && adapter.value) adapter.value.updateApprovalThreshold(current, value, domainContext.value);
+    if (current && adapter.value) adapter.value.updateApprovalThreshold?.(current, value, domainContext.value);
   }
 
   function updateExecutionMode(value: unknown) {
     const current = session.value;
-    if (current && adapter.value) adapter.value.updateExecutionMode(current, value, domainContext.value);
+    if (current && adapter.value) adapter.value.updateExecutionMode?.(current, value, domainContext.value);
   }
 
   function handleTimelineAction(action: AiTimelineAction) {

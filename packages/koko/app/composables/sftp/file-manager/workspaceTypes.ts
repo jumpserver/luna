@@ -20,6 +20,7 @@ export interface SftpRemotePane {
 export interface FileWorkspaceSourceAsset {
   id: string;
   name: string;
+  account?: string;
 }
 
 export interface FileWorkspacePreconnect {

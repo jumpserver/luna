@@ -16,6 +16,7 @@ import { FileTransferUnavailableError } from "@jumpserver/connectors-core";
 
 function createSocket(connected = true) {
   const messageListeners = new Set<(message: SftpIncomingMessage) => void>();
+  const chatListeners = new Set<(message: unknown) => void>();
   const failureListeners = new Set<(failure: SftpSocketFailure) => void>();
 
   const socket: SftpSocketClient & {
@@ -30,6 +31,10 @@ function createSocket(connected = true) {
     onFailure: (listener) => {
       failureListeners.add(listener);
       return () => failureListeners.delete(listener);
+    },
+    onChat: (listener) => {
+      chatListeners.add(listener);
+      return () => chatListeners.delete(listener);
     },
     onMessage: (listener) => {
       messageListeners.add(listener);

@@ -12,6 +12,11 @@ import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
 import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
 import SftpRemoteMachineTabs from "#koko/components/FileManagement/workspace/SftpRemoteMachineTabs.vue";
 import SftpTransferRail from "#koko/components/FileManagement/workspace/SftpTransferRail.vue";
+import {
+  disposeKokoFileAiOwner,
+  setActiveKokoFileAiTarget,
+  unregisterKokoFileAiSession
+} from "#koko/composables/sftp/useFileAiSessions";
 
 type WorkspaceController = ReturnType<typeof useSftpWorkspacePanes>;
 type TransferController = ReturnType<typeof useSftpTransferCoordinator>;
@@ -19,6 +24,8 @@ type TemplateRefValue = Element | ComponentPublicInstance | null;
 
 const props = defineProps<{
   compact?: boolean;
+  aiOwnerId?: string;
+  retainAiSessionsOnUnmount?: boolean;
   workspace: WorkspaceController;
   transfer: TransferController;
   startTour: () => void;
@@ -37,6 +44,7 @@ const {
   focusRemotePane,
   markRemotePaneConnected,
   openRemoteConnect,
+  primaryAsset,
   primaryAssetName,
   primaryContext,
   primaryTransferEndpoint,
@@ -63,6 +71,41 @@ const {
 } = props.transfer;
 
 const simplePeerMode = computed(() => Boolean(dualMode.value && isSimplePeerMode()));
+const activeAiPaneId = shallowRef("primary");
+const fileAiOwnerId = computed(() => props.aiOwnerId || primaryContext.value?.tabId || "");
+const activeFileAiTargetId = computed(() => {
+  if (activeAiPaneId.value === "primary") return primaryContext.value?.tabId || "";
+  return (
+    remotePanes.value.find((pane) => pane.id === activeAiPaneId.value)?.context.tabId ||
+    primaryContext.value?.tabId ||
+    ""
+  );
+});
+const fileAiTargetIds = computed(() =>
+  [
+    ...(primaryContext.value?.tabId ? [primaryContext.value.tabId] : []),
+    ...remotePanes.value.map((pane) => pane.context.tabId)
+  ].filter((targetId): targetId is string => Boolean(targetId))
+);
+
+watch(
+  [fileAiOwnerId, activeFileAiTargetId],
+  ([ownerId, targetId], previous) => {
+    const previousOwnerId = previous?.[0];
+    if (previousOwnerId && previousOwnerId !== ownerId) disposeKokoFileAiOwner(previousOwnerId);
+    if (ownerId) setActiveKokoFileAiTarget(targetId || null, ownerId);
+  },
+  { immediate: true }
+);
+watch(fileAiTargetIds, (targetIds, previousTargetIds = []) => {
+  const activeTargets = new Set(targetIds);
+  for (const targetId of previousTargetIds) {
+    if (!activeTargets.has(targetId)) unregisterKokoFileAiSession(targetId);
+  }
+});
+onUnmounted(() => {
+  if (!props.retainAiSessionsOnUnmount && fileAiOwnerId.value) disposeKokoFileAiOwner(fileAiOwnerId.value);
+});
 
 const primarySendPeerDirection = computed<"left" | "right" | undefined>(() =>
   simplePeerMode.value && canSendToOpposite(primaryTransferEndpoint.value?.id) ? "right" : undefined
@@ -93,13 +136,37 @@ function handleRemotePaneConnected(): void {
   markRemotePaneConnected();
 }
 
+function focusPrimaryPane(): void {
+  activeAiPaneId.value = "primary";
+}
+
+function focusSessionRemote(id: string): void {
+  activeAiPaneId.value = id;
+  focusRemotePane(id);
+}
+
+function disconnectSessionRemotes(): void {
+  activeAiPaneId.value = "primary";
+  disconnectAllRemotes();
+}
+
+watch(
+  remotePanes,
+  (panes) => {
+    if (activeAiPaneId.value !== "primary" && !panes.some((pane) => pane.id === activeAiPaneId.value)) {
+      activeAiPaneId.value = "primary";
+    }
+  },
+  { deep: false }
+);
+
 const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
   [
     {
       label: t("koko.fileManagement.disconnectAllRemote"),
       icon: "i-lucide-unplug",
       color: "error" as const,
-      onSelect: () => disconnectAllRemotes()
+      onSelect: disconnectSessionRemotes
     }
   ]
 ]);
@@ -128,12 +195,20 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
         :ref="setPrimaryPaneRef"
         class="min-h-0 min-w-0 flex-1"
         :context="primaryContext"
+        :ai-target="{
+          targetId: primaryContext?.tabId,
+          ownerId: fileAiOwnerId,
+          assetId: primaryAsset.id,
+          assetName: primaryAsset.name,
+          ...(primaryAsset.account ? { account: primaryAsset.account } : {})
+        }"
         :context-label="!compact && !dualMode ? primaryAssetName : undefined"
         :show-workbench-actions="!compact && !dualMode"
         :compact="compact"
         :transfer-endpoint="compact ? undefined : primaryTransferEndpoint"
         :highlighted-names="highlightedNames.left"
         :send-peer-direction="primarySendPeerDirection"
+        @focus="focusPrimaryPane"
         @send="sendFromSelection"
         @transfer-drop="queueSftpTransferToSelected($event, primaryTransferEndpoint)"
         @transfer-endpoint-mounted="mountTransferEndpoint"
@@ -168,7 +243,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
             :transfer-count="activeTransferCount"
             :is-connected="remotePaneConnected"
             @update:panes="onSessionPanesUpdate"
-            @select="focusRemotePane"
+            @select="focusSessionRemote"
             @close="removeRemotePane"
             @reconnect="reconnectRemotePane"
             @close-others="closeOtherRemotePanes"
@@ -218,13 +293,20 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
           :ref="(value) => setRemotePaneRef(pane.id, value)"
           class="h-full min-h-0"
           :context="pane.context"
+          :ai-target="{
+            targetId: pane.context.tabId,
+            ownerId: fileAiOwnerId,
+            assetId: pane.assetId || '',
+            assetName: pane.assetName
+          }"
           :transfer-endpoint="pane.transferEndpoint"
           :highlighted-names="highlightedNames.right"
           :send-peer-direction="remoteSendPeerDirection(pane.transferEndpoint.id)"
           @select="
             pane.selection = $event;
-            focusRemotePane(pane.id);
+            focusSessionRemote(pane.id);
           "
+          @focus="focusSessionRemote(pane.id)"
           @send="sendFromSelection"
           @transfer-drop="queueSftpTransferToSelected($event, pane.transferEndpoint)"
           @transfer-endpoint-mounted="mountTransferEndpoint"

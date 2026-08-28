@@ -4,6 +4,7 @@ export enum SftpMessageType {
   Pong = "PONG",
   Data = "SFTP_DATA",
   Binary = "SFTP_BINARY",
+  Chat = "CHAT_MESSAGE",
   Error = "ERROR",
   Close = "CLOSE",
   Closed = "closed"
@@ -76,6 +77,11 @@ export interface SftpBinaryMessage extends SftpMessageBase {
   type: SftpMessageType.Binary;
 }
 
+export interface SftpChatMessage extends SftpMessageBase {
+  type: SftpMessageType.Chat;
+  data: string;
+}
+
 export interface SftpControlMessage extends SftpMessageBase {
   type:
     | SftpMessageType.Connect
@@ -86,7 +92,7 @@ export interface SftpControlMessage extends SftpMessageBase {
     | SftpMessageType.Closed;
 }
 
-export type SftpWireMessage = SftpDataMessage | SftpBinaryMessage | SftpControlMessage;
+export type SftpWireMessage = SftpDataMessage | SftpBinaryMessage | SftpChatMessage | SftpControlMessage;
 export type SftpIncomingMessage = SftpWireMessage;
 
 export interface SftpSocketFailure {
@@ -156,5 +162,9 @@ export function parseSftpIncomingMessage(raw: unknown): SftpIncomingMessage | nu
   }
 
   if (message.type === SftpMessageType.Binary) return { ...base, type: message.type };
+  if (message.type === SftpMessageType.Chat) {
+    if (typeof message.data !== "string") return null;
+    return { ...base, type: message.type, data: message.data };
+  }
   return { ...base, type: message.type };
 }

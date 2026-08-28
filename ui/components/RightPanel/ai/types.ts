@@ -6,7 +6,7 @@ import type {
   ChenSqlProposal
 } from "~/chen/composables/useChenSqlAiSessions";
 
-export type AiTimelineDomain = "shared" | "terminal" | "sql";
+export type AiTimelineDomain = "shared" | "terminal" | "sql" | "file";
 
 interface ViewItemBase<Domain extends AiTimelineDomain, Kind extends string> {
   domain: Domain;
@@ -87,6 +87,96 @@ export interface SchemaResultItem extends ViewItemBase<"sql", "schema-result"> {
   data: TerminalAiEventData;
 }
 
+export interface FileAiEntrySummary {
+  name?: string;
+  path?: string;
+  type?: string;
+  size?: number;
+  permissions?: string;
+  modifiedAt?: string;
+}
+
+export interface FileAiEventData {
+  id?: string;
+  digest?: string;
+  approvalId?: string;
+  planId?: string;
+  stepId?: string;
+  actionId?: string;
+  action?: string;
+  operation?: string;
+  tool?: string;
+  path?: string;
+  newName?: string;
+  destinationPath?: string;
+  sourcePath?: string;
+  targetPath?: string;
+  summary?: string;
+  description?: string;
+  rationale?: string;
+  text?: string;
+  status?: string;
+  state?: string;
+  outcome?: string;
+  riskLevel?: number | string;
+  riskReason?: string;
+  destructive?: boolean;
+  recursive?: boolean;
+  requiresApproval?: boolean;
+  capabilities?: string[];
+  tools?: string[];
+  entries?: FileAiEntrySummary[];
+  steps?: Array<{ id?: string; title?: string; objective?: string; status?: string }>;
+  before?: string;
+  after?: string;
+  diff?: string;
+  beforeVersion?: string;
+  truncated?: boolean;
+  result?: string;
+  message?: string;
+  error?: string;
+  errorCode?: string;
+  success?: boolean;
+  durationMs?: number;
+  completed?: number;
+  total?: number;
+  progress?: number;
+  round?: number;
+  maxRounds?: number;
+  maxDirectoryEntries?: number;
+  maxTextBytes?: number;
+  expiresInSeconds?: number;
+  details?: unknown;
+}
+
+export interface FileAnalysisItem extends ViewItemBase<"file", "file-analysis"> {
+  data: FileAiEventData;
+}
+
+export interface FilePlanItem extends ViewItemBase<"file", "file-plan"> {
+  data: FileAiEventData;
+}
+
+export interface FileProgressItem extends ViewItemBase<"file", "file-progress"> {
+  data: FileAiEventData;
+}
+
+export interface FileActionItem extends ViewItemBase<"file", "file-action"> {
+  data: FileAiEventData;
+}
+
+export interface FileDiffItem extends ViewItemBase<"file", "file-diff"> {
+  data: FileAiEventData;
+}
+
+export interface FileApprovalItem extends ViewItemBase<"file", "file-approval"> {
+  data: FileAiEventData;
+}
+
+export interface FileResultItem extends ViewItemBase<"file", "file-result"> {
+  data: FileAiEventData;
+}
+
 export type TerminalViewItem = PlanItem | AlertItem;
 export type SqlViewItem =
   | SqlAnalysisItem
@@ -95,6 +185,14 @@ export type SqlViewItem =
   | SqlTimingItem
   | MetadataApprovalItem
   | SchemaResultItem;
+export type FileViewItem =
+  | FileAnalysisItem
+  | FilePlanItem
+  | FileProgressItem
+  | FileActionItem
+  | FileDiffItem
+  | FileApprovalItem
+  | FileResultItem;
 
 export type TerminalTimelineAction =
   | { domain: "terminal"; type: "decide"; data: TerminalAiEventData; approved: boolean }
@@ -107,7 +205,15 @@ export type SqlTimelineAction =
   | { domain: "sql"; type: "reject-proposal"; item: SqlProposalItem }
   | { domain: "sql"; type: "set-thought-expanded"; key: string; expanded: boolean };
 
-export type AiTimelineAction = TerminalTimelineAction | SqlTimelineAction;
+export type FileTimelineAction = {
+  domain: "file";
+  type: "resolve-file-approval";
+  approvalId: string;
+  digest: string;
+  decision: "approve" | "reject";
+};
+
+export type AiTimelineAction = TerminalTimelineAction | SqlTimelineAction | FileTimelineAction;
 
 export type ViewItem =
   | TextItem
@@ -118,4 +224,11 @@ export type ViewItem =
   | SqlThoughtItem
   | SqlTimingItem
   | MetadataApprovalItem
-  | SchemaResultItem;
+  | SchemaResultItem
+  | FileAnalysisItem
+  | FilePlanItem
+  | FileProgressItem
+  | FileActionItem
+  | FileDiffItem
+  | FileApprovalItem
+  | FileResultItem;

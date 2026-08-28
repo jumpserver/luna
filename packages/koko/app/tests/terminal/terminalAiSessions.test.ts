@@ -43,8 +43,9 @@ it("exposes late capability to Vue computed availability", () => {
   const available = computed(() => isKokoTerminalAiAvailable(paneId));
 
   expect(available.value).toBe(false);
-  registerKokoTerminalAiSession(paneId, socket, "9");
+  const session = registerKokoTerminalAiSession(paneId, socket, "9");
   paneIds.push(paneId);
+  expect(session?.kind).toBe("terminal");
   expect(available.value).toBe(false);
 
   enableSession(paneId);

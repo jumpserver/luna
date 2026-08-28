@@ -10,6 +10,8 @@ const props = withDefaults(
     tab: KokoWorkspaceTab;
     /** Right-panel / sidebar embedding: single-pane file browser without dual-remote chrome. */
     compact?: boolean;
+    /** Stable owner used by the shared AI panel to resolve the selected SFTP target. */
+    aiOwnerId?: string;
   }>(),
   { compact: false }
 );
@@ -32,7 +34,8 @@ watch(tokenId, () => void prepareSession(), { immediate: true });
     <KokoFileManagement
       :sftp-token="tokenId"
       :compact="compact"
-      :source-asset="{ id: tab.assetId, name: tab.assetName || tab.assetId }"
+      :ai-owner-id="aiOwnerId || tab.id"
+      :source-asset="{ id: tab.assetId, name: tab.assetName || tab.assetId, account: tab.account }"
       class="h-full"
     />
   </BaseWorkspaceShell>

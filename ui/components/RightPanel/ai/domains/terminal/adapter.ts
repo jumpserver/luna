@@ -1,5 +1,5 @@
 import type { KokoTerminalAiSession, TerminalAiChatMessage } from "#koko/composables/terminal/useTerminalAiSessions";
-import type { AiTimelineAction } from "../../types";
+import type { AiTimelineAction, PlanItem } from "../../types";
 import type { AiPanelDomainAdapter, AiPanelDomainContext } from "../types";
 import type { WorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
 import {
@@ -15,11 +15,21 @@ import {
   sendKokoTerminalAiControl,
   submitKokoTerminalAiPrompt
 } from "#koko/composables/terminal/useTerminalAiSessions";
-import { isChenSqlWorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
+import { isKokoTerminalWorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
 import { commonSurfaceContext } from "../types";
 
+const completedStatuses = ["completed", "success", "succeeded", "skipped"];
+const failedStatuses = ["error", "failed", "rejected", "interrupted"];
+
+function effectiveStepStatus(step: PlanItem["steps"][number]) {
+  if (["completed", "failed", "interrupted", "rejected", "skipped"].includes(step.status)) return step.status;
+  const execution = step.executions.at(-1);
+  if (execution?.command && !execution.result) return String(execution.command.state || step.status);
+  return step.status || String(execution?.result?.outcome || "pending");
+}
+
 function terminalSession(session: WorkspaceAiSession): KokoTerminalAiSession | null {
-  return isChenSqlWorkspaceAiSession(session) ? null : session;
+  return isKokoTerminalWorkspaceAiSession(session) ? session : null;
 }
 
 function translatedProtocolValue(context: AiPanelDomainContext, key: string | undefined, fallback = "") {
@@ -85,7 +95,7 @@ export const terminalAiPanelDomain: AiPanelDomainAdapter = {
   id: "terminal",
 
   matches(session) {
-    return !isChenSqlWorkspaceAiSession(session);
+    return isKokoTerminalWorkspaceAiSession(session);
   },
 
   describe(session, context, _items) {
@@ -145,6 +155,8 @@ export const terminalAiPanelDomain: AiPanelDomainAdapter = {
       showRuntimeStatus: false,
       showElapsedInError: false,
       showActivity: true,
+      refreshElapsedWhileBusy: false,
+      backgroundExecAvailable: current.backgroundExec,
       approvalThreshold: current.approvalThreshold,
       executionMode: current.executionMode,
       thresholdOptions: [
@@ -187,6 +199,29 @@ export const terminalAiPanelDomain: AiPanelDomainAdapter = {
           disabled: !current.backgroundExec
         }
       ]
+    };
+  },
+
+  summarize(_session, _context, items) {
+    const latestPlan = items.findLast((item): item is PlanItem => item.kind === "plan");
+    const steps = latestPlan?.steps || [];
+    let highestRiskLevel = 0;
+    for (const step of steps) {
+      for (const execution of step.executions) {
+        highestRiskLevel = Math.max(highestRiskLevel, Number(execution.command?.riskLevel) || 0);
+      }
+    }
+    const statuses = steps.map(effectiveStepStatus);
+    return {
+      runProgress: steps.length
+        ? `${statuses.filter((status) => completedStatuses.includes(status)).length}/${steps.length}`
+        : "",
+      highestRiskLevel,
+      outcome: statuses.some((status) => failedStatuses.includes(status))
+        ? "error"
+        : statuses.length && statuses.every((status) => completedStatuses.includes(status))
+          ? "success"
+          : "ready"
     };
   },
 

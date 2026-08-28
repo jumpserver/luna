@@ -14,6 +14,12 @@ import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransfer
 import KokoWebUploadPane from "#koko/components/FileManagement/webUploadPane.vue";
 import SftpRemoteMachineTabs from "#koko/components/FileManagement/workspace/SftpRemoteMachineTabs.vue";
 import SftpTransferRail from "#koko/components/FileManagement/workspace/SftpTransferRail.vue";
+import {
+  disposeKokoFileAiOwner,
+  KOKO_GLOBAL_FILE_AI_OWNER_ID,
+  setActiveKokoFileAiTarget,
+  unregisterKokoFileAiSession
+} from "#koko/composables/sftp/useFileAiSessions";
 import { KeyboardKey } from "#koko/constants/keyboard";
 
 type WorkspaceController = ReturnType<typeof useSftpWorkspacePanes>;
@@ -122,8 +128,38 @@ function onKeydown(event: KeyboardEvent): void {
 }
 
 function selectGlobalRemote(side: SftpWorkspaceSide, id: string) {
+  focusedSide.value = side;
   globalActiveIds[side] = id;
 }
+
+function selectGlobalLeftUtility(id: "local" | "web-upload") {
+  focusedSide.value = "left";
+  globalActiveIds.left = id;
+}
+
+function syncActiveFileAiTarget(): void {
+  const pane = activePaneForSide(focusedSide.value);
+  setActiveKokoFileAiTarget(pane?.context.tabId || null, KOKO_GLOBAL_FILE_AI_OWNER_ID);
+}
+
+function focusLocalPane(): void {
+  focusedSide.value = "left";
+  syncActiveFileAiTarget();
+}
+
+watch([focusedSide, () => globalActiveIds.left, () => globalActiveIds.right], syncActiveFileAiTarget, {
+  immediate: true
+});
+watch(
+  () => remotePanes.value.map((pane) => pane.context.tabId).filter((targetId): targetId is string => Boolean(targetId)),
+  (targetIds, previousTargetIds = []) => {
+    const activeTargets = new Set(targetIds);
+    for (const targetId of previousTargetIds) {
+      if (!activeTargets.has(targetId)) unregisterKokoFileAiSession(targetId);
+    }
+  }
+);
+onUnmounted(() => disposeKokoFileAiOwner(KOKO_GLOBAL_FILE_AI_OWNER_ID));
 
 function onSidePanesUpdate(side: SftpWorkspaceSide, next: SftpRemotePane[]) {
   setRemotePanesOrder(side, next);
@@ -215,7 +251,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
                   ? 'bg-accented text-highlighted'
                   : 'text-muted hover:bg-accented hover:text-highlighted'
               "
-              @click="globalActiveIds.left = 'local'"
+              @click="selectGlobalLeftUtility('local')"
             >
               <UIcon name="i-lucide-laptop" class="size-3.5 shrink-0" />
               <span>{{ t("koko.fileManagement.localFiles") }}</span>
@@ -229,7 +265,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
                   ? 'bg-accented text-highlighted'
                   : 'text-muted hover:bg-accented hover:text-highlighted'
               "
-              @click="globalActiveIds.left = 'web-upload'"
+              @click="selectGlobalLeftUtility('web-upload')"
             >
               <UIcon name="i-lucide-upload" class="size-3.5 shrink-0" />
               <span>{{ t("koko.fileManagement.localUpload") }}</span>
@@ -274,7 +310,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
           :send-peer-direction="simplePeerMode && canSendToOpposite('local:fs') ? 'right' : undefined"
           @select="localSelection = $event"
           @selection-change="localSelections = $event"
-          @focus="focusedSide = 'left'"
+          @focus="focusLocalPane"
           @send="sendFromSelection"
           @transfer-drop="handleCrossPaneDrop($event, { id: 'local:fs', label: t('koko.fileManagement.localFiles') })"
           @transfer-endpoint-mounted="mountTransferEndpoint"
@@ -295,6 +331,12 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
             :ref="(value) => setRemotePaneRef(pane.id, value)"
             class="min-h-0 flex-1"
             :context="pane.context"
+            :ai-target="{
+              targetId: pane.context.tabId,
+              ownerId: KOKO_GLOBAL_FILE_AI_OWNER_ID,
+              assetId: pane.assetId || '',
+              assetName: pane.assetName
+            }"
             :transfer-endpoint="pane.transferEndpoint"
             :focused="focusedSide === side && globalActiveIds[side] === pane.id"
             :highlighted-names="highlightedNames[side]"
@@ -306,7 +348,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
                 : undefined
             "
             @select="pane.selection = $event"
-            @focus="focusedSide = side"
+            @focus="selectGlobalRemote(side, pane.id)"
             @send="sendFromSelection"
             @transfer-drop="handleCrossPaneDrop($event, pane.transferEndpoint)"
             @transfer-endpoint-mounted="mountTransferEndpoint"

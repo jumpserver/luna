@@ -19,6 +19,8 @@ const props = defineProps<{
   global?: boolean;
   /** Single-pane lightweight mode for the SSH right-panel SFTP surface. */
   compact?: boolean;
+  /** Stable owner used to route this workbench's selected SFTP pane to File AI. */
+  aiOwnerId?: string;
   /** Asset that owns the primary SFTP session (for upgrade into the workbench). */
   sourceAsset?: FileWorkspaceSourceAsset | null;
 }>();
@@ -124,6 +126,8 @@ function setLocalPaneRef(value: SftpLocalPaneHandle | null): void {
     <SftpSessionWorkspace
       v-else
       :compact="compact"
+      :ai-owner-id="aiOwnerId"
+      :retain-ai-sessions-on-unmount="compact"
       :workspace="workspace"
       :transfer="transfer"
       :start-tour="sftpTour.start"
