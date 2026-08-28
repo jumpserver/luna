@@ -7,6 +7,7 @@ const { tabs, activeTab } = useWorkspaceTabs();
 const { batchPanelOpen, toggle: toggleBatchPanel } = useBatchCommandPanel();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
+const { authReady } = useAuthSession();
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 
 const connectedCount = computed(() => tabs.value.filter((tab) => tab.status === "connected").length);
@@ -18,20 +19,24 @@ const username = computed(() => currentUser.value?.name || "");
 const siteName = computed(() => currentUser.value?.siteName || currentUser.value?.site || "");
 const siteAddress = computed(() => currentUser.value?.site || "");
 const loginStatusText = computed(() => {
-  if (!loggedIn.value) return "未登录";
+  if (!authReady.value) return "";
+  if (!loggedIn.value) return t("StatusFooter.LoggedOut");
 
   const user = username.value;
-  if (!user) return "已登录";
-  if (!isDesktopRuntime() || !siteName.value) return `已登录 ${user}`;
+  if (!user) return t("StatusFooter.LoggedIn");
+  if (!isDesktopRuntime() || !siteName.value) return t("StatusFooter.LoggedInUser", { user });
 
-  return `已登录 ${user}(${siteName.value})`;
+  return t("StatusFooter.LoggedInUserSite", { user, site: siteName.value });
 });
 const activeProtocol = computed(() => activeTab.value?.protocol?.toUpperCase() || "");
 const activeText = computed(() => {
   if (activeWorkspaceMode.value !== "assets") return t("Menu.Tool");
-  if (!activeTab.value) return "未连接";
+  if (!activeTab.value) return t("StatusFooter.Disconnected");
   return activeTab.value.assetName;
 });
+const compactBadgeUi = {
+  base: "h-5 rounded px-1.5 font-ui-mono text-[10px] leading-none"
+};
 </script>
 
 <template>
@@ -44,44 +49,76 @@ const activeText = computed(() => {
     }"
   >
     <div class="flex min-w-0 items-center gap-3">
-      <span class="flex items-center gap-1.5">
-        <span class="size-1.5 rounded-full" :class="loggedIn ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-gray-500'" />
+      <UBadge
+        v-if="loginStatusText"
+        color="neutral"
+        variant="soft"
+        size="xs"
+        :ui="{ base: 'max-w-full h-5 px-1.5 text-[11px]' }"
+      >
+        <template #leading>
+          <span class="size-1.5 rounded-full" :class="loggedIn ? 'bg-emerald-500' : 'bg-[var(--app-muted)]'" />
+        </template>
         <span class="truncate" :title="isDesktopRuntime() ? siteAddress : undefined">{{ loginStatusText }}</span>
-      </span>
+      </UBadge>
     </div>
 
-    <div class="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-3">
-      <span class="hidden min-w-0 items-center gap-2 truncate md:flex">
+    <div class="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
+      <span class="hidden min-w-0 items-center gap-1.5 truncate md:flex">
         <span class="truncate font-ui-mono">{{ activeText }}</span>
-        <span
-          v-if="activeProtocol"
-          class="rounded px-1.5 py-0.5 font-ui-mono text-[10px] tracking-[0.08em]"
-          :style="{ backgroundColor: 'var(--app-surface-panel)', color: 'var(--app-text-secondary)' }"
-        >
+        <UBadge v-if="activeProtocol" color="neutral" variant="soft" size="xs" :ui="compactBadgeUi">
           {{ activeProtocol }}
-        </span>
+        </UBadge>
       </span>
-      <span class="hidden font-ui-mono sm:inline">{{ tabs.length }} tabs</span>
-      <span v-if="connectedCount" class="hidden font-ui-mono md:inline">{{ connectedCount }} connected</span>
-      <span v-if="connectingCount" class="hidden font-ui-mono md:inline">{{ connectingCount }} pending</span>
-      <span v-if="failedCount" class="hidden font-ui-mono text-red-500 md:inline">{{ failedCount }} failed</span>
+      <UBadge
+        color="neutral"
+        variant="soft"
+        size="xs"
+        class="hidden sm:inline-flex"
+        :ui="compactBadgeUi"
+        :label="t('StatusFooter.Tabs', { count: tabs.length })"
+      />
+      <UBadge
+        v-if="connectedCount"
+        color="success"
+        variant="soft"
+        size="xs"
+        class="hidden md:inline-flex"
+        :ui="compactBadgeUi"
+        :label="t('StatusFooter.Connected', { count: connectedCount })"
+      />
+      <UBadge
+        v-if="connectingCount"
+        color="warning"
+        variant="soft"
+        size="xs"
+        class="hidden md:inline-flex"
+        :ui="compactBadgeUi"
+        :label="t('StatusFooter.Pending', { count: connectingCount })"
+      />
+      <UBadge
+        v-if="failedCount"
+        color="error"
+        variant="soft"
+        size="xs"
+        class="hidden md:inline-flex"
+        :ui="compactBadgeUi"
+        :label="t('StatusFooter.Failed', { count: failedCount })"
+      />
       <WorkspaceVirtualKeyboardPopover v-if="activeWorkspaceMode === 'assets'" />
-      <button
+      <UButton
         v-if="activeWorkspaceMode === 'assets' && commandExecutionEnabled"
-        type="button"
-        class="grid size-5 place-items-center rounded transition-colors"
-        :class="
-          batchPanelOpen
-            ? 'bg-primary-500/15 text-primary-600 dark:text-primary-400'
-            : 'text-[var(--app-muted)] hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]'
-        "
+        icon="i-lucide-terminal"
+        size="xs"
+        square
+        :variant="batchPanelOpen ? 'soft' : 'ghost'"
+        :color="batchPanelOpen ? 'primary' : 'neutral'"
         :aria-label="t('RightPanel.BatchCommand')"
         :aria-expanded="batchPanelOpen"
         aria-controls="batch-command-panel"
+        class="size-5"
         @click="toggleBatchPanel"
-      >
-        <UIcon name="i-lucide-terminal" class="size-3.5" />
-      </button>
+      />
     </div>
   </footer>
 </template>

@@ -103,6 +103,26 @@
     "Restore": "Restore",
     "About": "About"
   },
+  "StatusFooter": {
+    "LoggedOut": "Signed out",
+    "LoggedIn": "Signed in",
+    "LoggedInUser": "Signed in {user}",
+    "LoggedInUserSite": "Signed in {user}({site})",
+    "Disconnected": "Not connected",
+    "Tabs": "{count} tabs",
+    "Connected": "{count} connected",
+    "Pending": "{count} pending",
+    "Failed": "{count} failed"
+  },
+  "WorkspaceEmpty": {
+    "LoginHint": "Sign in to view assets and connect",
+    "ConnectAsset": "Right-click asset → Connect",
+    "ConnectAssetHint": " to choose a connection method",
+    "ExpandNode": "Right-click node → Expand all",
+    "ExpandNodeHint": " to expand all assets under the node",
+    "SwitchSession": "Switch session",
+    "Or": "or"
+  },
   "Auth": {
     "SignInTitle": "Sign in from your browser to continue",
     "BrowserHintPrefix": "If your browser hasn't opened for you to sign in,",

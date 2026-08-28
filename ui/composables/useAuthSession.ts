@@ -433,9 +433,13 @@ export const useAuthSession = () => {
     }
   };
 
+  const authReady = useState("auth-bootstrap-ready", () => false);
+
   const bootstrapPersistedSession = () => {
     if (!bootstrapPromise) {
-      bootstrapPromise = bootstrapSession();
+      bootstrapPromise = bootstrapSession().finally(() => {
+        authReady.value = true;
+      });
     }
 
     return bootstrapPromise;
@@ -443,6 +447,7 @@ export const useAuthSession = () => {
 
   return {
     applyLoginPayload,
+    authReady,
     bootstrapPersistedSession
   };
 };
