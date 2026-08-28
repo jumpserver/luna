@@ -64,6 +64,9 @@ export function useAppWatermark() {
     fontColor: softenWatermarkColor(String(settings.value?.SECURITY_WATERMARK_COLOR || "rgba(255,255,255,0.08)")),
     fontFamily: "JetBrains Mono, SF Mono, Menlo, monospace",
     globalAlpha: 1,
+    // ponytail: body-wide mutation protection can freeze reactive pages; use a scoped, debounced observer if
+    // tamper recovery is required.
+    mutationObserve: false,
     zIndex: 1000
   }));
 

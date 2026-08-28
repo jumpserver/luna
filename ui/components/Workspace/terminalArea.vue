@@ -60,7 +60,7 @@ const openLogin = () => {
       </template>
 
       <div v-else class="h-full min-h-0 grid place-items-center text-sm" :style="{ color: 'var(--app-muted)' }">
-        <div class="flex max-w-md flex-col items-center px-6 py-5 text-center">
+        <div class="flex max-w-xl flex-col items-center px-6 py-5 text-center">
           <div class="grid w-full gap-3 text-left text-sm">
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-mouse-pointer-click" class="size-4.5 shrink-0" />
