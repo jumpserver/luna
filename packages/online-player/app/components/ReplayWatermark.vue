@@ -5,6 +5,8 @@ const props = defineProps<{
   settings: ReplayWatermarkSettings;
 }>();
 
+const hostRef = useTemplateRef<HTMLElement>("host");
+const enabled = computed(() => props.settings.enabled);
 const options = computed<Record<string, unknown>>(() => ({
   content: props.settings.content,
   contentType: "multi-line-text",
@@ -16,15 +18,10 @@ const options = computed<Record<string, unknown>>(() => ({
   fontFamily: "JetBrains Mono, SF Mono, Menlo, monospace",
   globalAlpha: 1
 }));
+
+useDomWatermark(hostRef, enabled, options);
 </script>
 
 <template>
-  <Watermark
-    class="pointer-events-none absolute inset-0 z-10 overflow-hidden"
-    :options="options"
-    :model-value="settings.enabled"
-    :is-body="false"
-  >
-    <div class="h-full w-full" />
-  </Watermark>
+  <div v-show="settings.enabled" ref="host" class="pointer-events-none absolute inset-0 z-10 overflow-hidden" />
 </template>

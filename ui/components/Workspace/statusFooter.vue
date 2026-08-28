@@ -57,7 +57,7 @@ const compactBadgeUi = {
         :ui="{ base: 'max-w-full h-5 px-1.5 text-[11px]' }"
       >
         <template #leading>
-          <span class="size-1.5 rounded-full" :class="loggedIn ? 'bg-emerald-500' : 'bg-[var(--app-muted)]'" />
+          <span class="size-1.5 rounded-full" :class="loggedIn ? 'bg-emerald-500' : 'bg-(--app-muted)'" />
         </template>
         <span class="truncate" :title="isDesktopRuntime() ? siteAddress : undefined">{{ loginStatusText }}</span>
       </UBadge>

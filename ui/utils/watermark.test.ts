@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildWatermarkViewer,
+  isWatermarkSettingEnabled,
   resolveWatermarkTemplate,
   shouldShowAppWatermark,
   softenWatermarkColor
@@ -26,6 +27,16 @@ describe("resolveWatermarkTemplate", () => {
         SECURITY_WATERMARK_SESSION_CONTENT: sessionContent
       })
     ).toBe(sessionContent);
+  });
+});
+
+describe("isWatermarkSettingEnabled", () => {
+  it("accepts boolean, numeric, and string flags", () => {
+    expect(isWatermarkSettingEnabled(true)).toBe(true);
+    expect(isWatermarkSettingEnabled(1)).toBe(true);
+    expect(isWatermarkSettingEnabled("true")).toBe(true);
+    expect(isWatermarkSettingEnabled(false)).toBe(false);
+    expect(isWatermarkSettingEnabled(undefined)).toBe(false);
   });
 });
 

@@ -84,7 +84,8 @@ const parseApiData = <T>(value: { data?: string } | undefined, fallback: T): T =
 };
 
 export const useAuthSession = () => {
-  const { t } = useI18n();
+  // vue-i18n's useI18n() requires setup(); this composable also runs from route middleware.
+  const t = (key: string) => String(useNuxtApp().$i18n.t(key));
   const toast = useToast();
   const localePath = useLocalePath();
   const userInfoStore = useUserInfoStore();

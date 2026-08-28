@@ -9,7 +9,11 @@ import {
   isKokoTerminalAiBusy,
   submitKokoTerminalAiPrompt
 } from "#koko/composables/terminal/useTerminalAiSessions";
-import { isTerminalAiCommandShortcut, terminalAiCommandShortcutAction } from "~/utils/terminalAiCommand";
+import {
+  isTerminalAiCommandShortcut,
+  shouldShowTerminalAiCaretHint,
+  terminalAiCommandShortcutAction
+} from "~/utils/terminalAiCommand";
 
 const props = defineProps<{ pane: WorkspacePane }>();
 const { t } = useI18n();
@@ -31,6 +35,7 @@ let stopCursorSubscription = () => {};
 
 const session = computed(() => getKokoTerminalAiSession(props.pane.id));
 const available = computed(() => isKokoTerminalAiAvailable(props.pane.id));
+const sessionInfoReady = computed(() => Boolean(session.value?.sessionInfoReady));
 const draft = computed({
   get: () => session.value?.draft || "",
   set: (value: string) => {
@@ -115,7 +120,7 @@ async function positionHint(anchor = hintAnchor.value) {
   const top = anchor.top - hostBounds.top + Math.max(0, (anchor.height - 18) / 2);
   const maxWidth = terminalBounds.right - hostBounds.left - left - 8;
   hintPosition.value = { left, top, maxWidth: Math.max(0, maxWidth) };
-  hintVisible.value = maxWidth >= 80;
+  hintVisible.value = shouldShowTerminalAiCaretHint(sessionInfoReady.value, maxWidth);
 }
 
 async function positionPanel() {
@@ -275,6 +280,9 @@ watch(
     nextTick(startCursorTracking);
   }
 );
+watch(sessionInfoReady, () => {
+  void positionHint();
+});
 
 onMounted(() => {
   window.addEventListener("keydown", handleWindowKeydown, true);
