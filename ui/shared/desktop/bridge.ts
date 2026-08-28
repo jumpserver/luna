@@ -167,6 +167,18 @@ export const desktopOpener = {
     requireElectron().invoke<void>("plugin:opener|reveal_item_in_dir", { paths: [path] })
 };
 
+let lastOpenedAuthUrl = "";
+let lastOpenedAuthAt = 0;
+
+export function openDesktopAuthUrl(url: string) {
+  if (!url || !isElectronRuntime()) return;
+  const now = Date.now();
+  if (url === lastOpenedAuthUrl && now - lastOpenedAuthAt < 3000) return;
+  lastOpenedAuthUrl = url;
+  lastOpenedAuthAt = now;
+  void desktopOpener.openUrl(url);
+}
+
 export const desktopDialog = {
   open: (options?: DesktopOpenDialogOptions) =>
     requireElectron().invoke<string | string[] | null>("plugin:dialog|open", { options }),
