@@ -101,7 +101,7 @@ export interface LunaMessageEvents {
     data: LunaMessage;
   };
   [LUNA_MESSAGE_TYPE.TERMINAL_CONTENT_RESPONSE]: {
-    data: TerminalContentRepsonse;
+    data: TerminalContentResponse;
   };
   [LUNA_MESSAGE_TYPE.CLICK]: {
     data: string;
@@ -171,7 +171,7 @@ export interface TerminalPermission {
   actions: string[];
 }
 
-export interface TerminalContentRepsonse {
+export interface TerminalContentResponse {
   terminalId: string;
   content: string;
   sessionId: string;

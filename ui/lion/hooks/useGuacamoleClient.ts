@@ -417,7 +417,7 @@ export function useGuacamoleClient(
     }
   }, 300);
 
-  const registerMouseAndKeyboardHanlder = () => {
+  const registerMouseAndKeyboardHandler = () => {
     const client = guaClient.value as any;
     if (!client || !client.getDisplay) {
       return console.warn("Guacamole client is not initialized or does not support mouse and keyboard events");
@@ -1202,7 +1202,7 @@ export function useGuacamoleClient(
     onJmsEvent,
     sendTextToRemote,
     debouncedSendClipboardToRemote,
-    registerMouseAndKeyboardHanlder,
+    registerMouseAndKeyboardHandler,
     registerTouchScreen,
     registerMouse,
     onClientError,
