@@ -5,6 +5,8 @@ import type { LangType, LanguagePreference } from "~/types";
 import AppWatermark from "~/components/AppWatermark.vue";
 import AclDialog from "~/components/Modal/aclDialog.vue";
 import ConnectionFormModal from "~/components/Modal/connectionFormModal.vue";
+import { installDebugLogHook, uninstallDebugLogHook } from "~/composables/useDebugLog";
+import { applyUiRadius, isUiRadius } from "~/composables/useSettingStorage";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composables/useThemePresets";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { resolveLanguageFromSystem } from "~/utils";
@@ -36,7 +38,9 @@ const {
   codeMirrorThemePreset,
   terminalThemePreset,
   hydrationPromise,
-  isHydrated
+  isHydrated,
+  uiRadius,
+  debugLog
 } = settingManager;
 
 const unlistenPrimaryColor = ref<DesktopUnlistenFn | null>(null);
@@ -131,6 +135,21 @@ watch(
 );
 
 watch(
+  () => uiRadius.value,
+  (radius) => applyUiRadius(isUiRadius(radius) ? radius : "small"),
+  { immediate: true }
+);
+
+watch(
+  () => debugLog.value,
+  (enabled) => {
+    if (enabled) installDebugLogHook();
+    else uninstallDebugLogHook();
+  },
+  { immediate: true }
+);
+
+watch(
   () => language.value,
   (pref) => {
     applyLanguagePreference(pref);
@@ -193,6 +212,7 @@ async function applyAfterHydration() {
   }
 
   applyCurrentThemeColor();
+  applyUiRadius(isUiRadius(uiRadius.value) ? uiRadius.value : "small");
 }
 
 onMounted(async () => {

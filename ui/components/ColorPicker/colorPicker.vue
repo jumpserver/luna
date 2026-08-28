@@ -1,8 +1,14 @@
 <script setup lang="ts">
-const props = defineProps<{
-  modelValue: string;
-  colors?: string[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    modelValue: string;
+    colors?: string[];
+    compact?: boolean;
+  }>(),
+  {
+    compact: false
+  }
+);
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: string): void;
@@ -47,13 +53,15 @@ function onConfirm() {
 <template>
   <UPopover v-model:open="open" :ui="{ content: 'p-0' }">
     <UButton
-      :label="props.modelValue?.toUpperCase() || t('Common.ChooseColor')"
       color="neutral"
       variant="outline"
-      class="w-full justify-start font-mono"
+      :square="compact"
+      :label="compact ? undefined : props.modelValue?.toUpperCase() || t('Common.ChooseColor')"
+      :aria-label="t('Common.ChooseColor')"
+      :class="compact ? '' : 'w-full justify-start font-mono'"
     >
       <template #leading>
-        <span :style="chip" class="size-3 rounded-full" />
+        <span :style="chip" class="size-3.5 rounded-full ring-1 ring-inset ring-black/20" />
       </template>
     </UButton>
 

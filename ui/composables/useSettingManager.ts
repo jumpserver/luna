@@ -1,4 +1,4 @@
-import type { UserSettingPersistedState } from "~/composables/useSettingStorage";
+import type { UiRadius, UserSettingPersistedState } from "~/composables/useSettingStorage";
 import type {
   AppConfigType,
   CharsetType,
@@ -11,7 +11,13 @@ import type {
 } from "~/types";
 
 import { createBatchedPersist } from "~/composables/createBatchedPersist";
-import { normalizeFontSize, normalizeSidebarWidth, useSettingStorage } from "~/composables/useSettingStorage";
+import {
+  applyUiRadius,
+  isUiRadius,
+  normalizeFontSize,
+  normalizeSidebarWidth,
+  useSettingStorage
+} from "~/composables/useSettingStorage";
 import { DEFAULT_SIDEBAR_SECTIONS, normalizeSidebarSections } from "~/composables/useSidebarSections";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET, isThemePresetId } from "~/composables/useThemePresets";
 import { isCodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
@@ -141,6 +147,13 @@ const ensureHydration = () => {
         state.codeMirrorThemePreset = normalizedCodeMirrorThemePreset;
         patch.codeMirrorThemePreset = normalizedCodeMirrorThemePreset;
       }
+
+      const normalizedUiRadius = isUiRadius(state.uiRadius) ? state.uiRadius : "small";
+      if (normalizedUiRadius !== state.uiRadius) {
+        state.uiRadius = normalizedUiRadius;
+        patch.uiRadius = normalizedUiRadius;
+      }
+      applyUiRadius(normalizedUiRadius);
 
       if (Object.keys(patch).length > 0) {
         try {
@@ -345,6 +358,17 @@ export const useSettingManager = () => {
     persist({ modernIsland: state.modernIsland });
   };
 
+  const setUiRadius = (radius: UiRadius) => {
+    state.uiRadius = radius;
+    applyUiRadius(radius);
+    persist({ uiRadius: radius });
+  };
+
+  const setDebugLog = (enabled: boolean) => {
+    state.debugLog = !!enabled;
+    persist({ debugLog: state.debugLog });
+  };
+
   const setSidebarSections = (sections: Partial<SidebarSectionVisibility>) => {
     state.sidebarSections = normalizeSidebarSections({
       ...state.sidebarSections,
@@ -394,6 +418,8 @@ export const useSettingManager = () => {
     setSidebarWidth,
     persistSidebarWidth,
     setModernIsland,
+    setUiRadius,
+    setDebugLog,
     setSidebarSections,
     resetSidebarSections
   };
