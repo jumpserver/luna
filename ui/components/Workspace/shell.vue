@@ -10,7 +10,7 @@ const props = withDefaults(
   }
 );
 
-const { collapse, setCollapse: setSidebarCollapsed } = useSettingManager();
+const { collapse, modernIsland, setCollapse: setSidebarCollapsed } = useSettingManager();
 const {
   sidebarWidth,
   setSidebarWidth,
@@ -26,11 +26,17 @@ const {
   setOpen: setRightPanelOpen,
   setPanelWidth
 } = useRightPanel();
+const slots = useSlots();
 const isNarrowScreen = useMediaQuery("(max-width: 767px)");
 const isResizing = ref(false);
 const isRightResizing = ref(false);
 let resizeStartX = 0;
 let resizeStartWidth = 0;
+const useIslandLayout = computed(() => modernIsland.value && !props.focusMode && !isNarrowScreen.value);
+const showIslandSidebar = computed(
+  () => Boolean(slots.sidebar) && props.sidebarVisible && !collapse.value && !props.focusMode
+);
+const showIslandRight = computed(() => Boolean(slots.rightPanel) && rightPanelOpen.value && !props.focusMode);
 const sidebarTransitionClass = computed(() => {
   if (isResizing.value || !props.sidebarVisible) return "";
   return "transition-[width] duration-200";
@@ -125,6 +131,7 @@ onBeforeUnmount(() => {
 <template>
   <div
     class="workspace-shell flex h-screen w-full min-w-0 flex-col overflow-hidden border-none"
+    :data-island="useIslandLayout ? 'true' : undefined"
     :style="{ backgroundColor: 'var(--app-surface-frame)', color: 'var(--app-fg)' }"
   >
     <div
@@ -135,13 +142,16 @@ onBeforeUnmount(() => {
       <slot name="header" />
     </div>
 
-    <div class="workspace-shell__body relative flex min-h-0 flex-1">
+    <div
+      class="workspace-shell__body relative flex min-h-0 flex-1"
+      :class="useIslandLayout ? 'workspace-shell__body--island' : ''"
+    >
       <aside
-        v-if="$slots.sidebar"
+        v-if="slots.sidebar && (!useIslandLayout || sidebarOverlay || hoverPreviewOpen)"
         class="workspace-shell__sidebar z-40 min-h-0 shrink-0 overflow-hidden max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
         :class="[
           sidebarTransitionClass,
-          sidebarOverlay ? 'absolute inset-y-0 left-0' : 'relative',
+          sidebarOverlay || (useIslandLayout && hoverPreviewOpen) ? 'absolute inset-y-0 left-0' : 'relative',
           hoverPreviewOpen ? 'border-r border-[var(--app-border)] shadow-xl' : ''
         ]"
         :style="{
@@ -153,7 +163,7 @@ onBeforeUnmount(() => {
       >
         <slot name="sidebar" />
         <div
-          v-if="!props.focusMode && props.sidebarVisible && !collapse"
+          v-if="!useIslandLayout && !props.focusMode && props.sidebarVisible && !collapse"
           role="separator"
           aria-orientation="vertical"
           aria-label="调整侧边栏宽度"
@@ -170,37 +180,80 @@ onBeforeUnmount(() => {
         @click="closeMobilePanels"
       />
 
-      <main
-        class="workspace-shell__main flex min-h-0 min-w-0 flex-1 flex-col"
-        :style="{ backgroundColor: 'var(--app-surface-canvas)' }"
-      >
-        <div class="min-h-0 flex-1 overflow-hidden">
-          <slot />
-        </div>
-        <slot v-if="!props.focusMode" name="bottomPanel" />
-      </main>
-
-      <aside
-        v-if="$slots.rightPanel"
-        class="workspace-shell__right-panel relative z-40 min-h-0 shrink-0 overflow-hidden max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:shadow-xl"
-        :class="isRightResizing ? '' : 'transition-[width] duration-200'"
-        :style="{
-          width: rightPanelStyleWidth,
-          backgroundColor: 'var(--app-surface-panel)'
-        }"
-      >
-        <div class="h-full min-h-0" :aria-hidden="props.focusMode || !rightPanelOpen">
-          <slot name="rightPanel" />
+      <template v-if="useIslandLayout">
+        <div
+          v-if="showIslandSidebar"
+          class="workspace-island workspace-island--sidebar"
+          :style="{ width: `${sidebarWidth}px`, flex: '0 0 auto' }"
+        >
+          <slot name="sidebar" />
         </div>
         <div
-          v-if="!props.focusMode && rightPanelOpen"
+          v-if="showIslandSidebar"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="调整侧边栏宽度"
+          class="w-3 shrink-0 cursor-col-resize"
+          @pointerdown="startResizing"
+        />
+        <div class="workspace-island workspace-island--main min-w-0" style="flex: 1 1 auto">
+          <div class="min-h-0 flex-1 overflow-hidden">
+            <slot />
+          </div>
+          <slot v-if="!props.focusMode" name="bottomPanel" />
+        </div>
+        <div
+          v-if="showIslandRight"
           role="separator"
           aria-orientation="vertical"
           aria-label="调整右侧面板宽度"
-          class="absolute inset-y-0 -left-0.5 z-30 w-1 cursor-col-resize"
+          class="w-3 shrink-0 cursor-col-resize"
           @pointerdown="startRightResizing"
         />
-      </aside>
+        <div
+          v-if="showIslandRight"
+          class="workspace-island workspace-island--right"
+          :style="{ width: `${rightPanelWidth}px`, flex: '0 0 auto' }"
+        >
+          <slot name="rightPanel" />
+        </div>
+      </template>
+
+      <template v-else>
+        <main
+          class="workspace-shell__main flex min-h-0 min-w-0 flex-1 flex-col"
+          :style="{ backgroundColor: 'var(--app-surface-canvas)' }"
+        >
+          <div class="min-h-0 flex-1 overflow-hidden">
+            <slot />
+          </div>
+          <slot v-if="!props.focusMode" name="bottomPanel" />
+        </main>
+
+        <aside
+          v-if="$slots.rightPanel"
+          class="workspace-shell__right-panel relative z-40 min-h-0 shrink-0 overflow-hidden max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:shadow-xl"
+          :class="isRightResizing ? '' : 'transition-[width] duration-200'"
+          :style="{
+            width: rightPanelStyleWidth,
+            backgroundColor: 'var(--app-surface-panel)'
+          }"
+        >
+          <div class="h-full min-h-0" :aria-hidden="props.focusMode || !rightPanelOpen">
+            <slot name="rightPanel" />
+          </div>
+          <div
+            v-if="!props.focusMode && rightPanelOpen"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="调整右侧面板宽度"
+            class="absolute inset-y-0 -left-0.5 z-30 w-1 cursor-col-resize"
+            @pointerdown="startRightResizing"
+          />
+        </aside>
+      </template>
+
+      <slot name="overlayPanel" />
     </div>
 
     <div

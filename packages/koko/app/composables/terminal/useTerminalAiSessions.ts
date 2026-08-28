@@ -37,6 +37,7 @@ export interface KokoTerminalAiSession {
   chat: UseChatHelpers<TerminalAiChatMessage>;
   connected: boolean;
   enabled: boolean;
+  sessionInfoReady: boolean;
   backgroundExec: boolean;
   backgroundReason: string;
   backgroundReasonCode: string;
@@ -301,6 +302,7 @@ function createSession(paneId: string, socket: WebSocket, terminalId: string): K
     chat,
     connected: socket.readyState === WebSocket.OPEN,
     enabled: false,
+    sessionInfoReady: false,
     backgroundExec: false,
     backgroundReason: "",
     backgroundReasonCode: "",
@@ -412,6 +414,7 @@ export function disconnectKokoTerminalAiSession(paneId: string, socket?: WebSock
 
   session.connected = false;
   session.enabled = false;
+  session.sessionInfoReady = false;
   session.inputLocked = false;
   session.taskActive = false;
   session.metadataApproval = null;
@@ -430,6 +433,16 @@ export function isKokoTerminalAiInputLocked(paneId: string) {
 export function isKokoTerminalAiAvailable(paneId: string) {
   const session = sessions.get(paneId);
   return Boolean(session?.connected && session.enabled && session.socket?.readyState === WebSocket.OPEN);
+}
+
+export function isKokoTerminalAiSessionInfoReady(paneId: string) {
+  return Boolean(sessions.get(paneId)?.sessionInfoReady);
+}
+
+export function markKokoTerminalAiSessionInfoReady(paneId: string) {
+  const session = sessions.get(paneId);
+  if (!session) return;
+  session.sessionInfoReady = true;
 }
 
 export function isKokoTerminalAiWaitingForApproval(paneId: string) {

@@ -278,6 +278,8 @@ export interface ChenQueryConsoleTab extends ChenTabDefinition {
 export interface ChenPromptConsoleTab extends ChenTabDefinition {
   kind: "console";
   pendingSql: string;
+  aiRevision: number;
+  lastSqlError: ChenSqlExecutionError | null;
   timelineEntries: ChenConsoleTimelineEntry[];
   activeTimelineEntryId: string;
   state: ChenConsoleState;

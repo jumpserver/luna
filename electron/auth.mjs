@@ -20,6 +20,33 @@ function endpoint(site, endpointPath) {
   return `${site.replace(/\/+$/, "")}${endpointPath}`;
 }
 
+function requestSite(session, request) {
+  if (request.service !== "chat-ai") return session.origin;
+
+  const configured = String(process.env.JMS_AI_DESKTOP_URL || process.env.JMS_AI_DEV_URL || "").trim();
+  if (configured) {
+    const parsed = new URL(configured);
+    if (!["http:", "https:"].includes(parsed.protocol) || !parsed.hostname || parsed.username || parsed.password) {
+      throw new Error("Chat AI endpoint must be an HTTP/HTTPS URL without embedded credentials");
+    }
+    return configured.replace(/\/+$/, "");
+  }
+
+  if (process.env.JMS_ELECTRON_DEV === "1") {
+    const rendererUrl = String(process.env.JMS_ELECTRON_RENDERER_URL || "").trim();
+    if (rendererUrl) {
+      const renderer = new URL(rendererUrl);
+      if (["http:", "https:"].includes(renderer.protocol) && renderer.hostname) return renderer.origin;
+    }
+    const site = new URL(session.origin);
+    if (["localhost", "127.0.0.1", "::1"].includes(site.hostname)) {
+      site.port = "8088";
+      return site.origin;
+    }
+  }
+  return session.origin;
+}
+
 function timezoneOffset() {
   const totalMinutes = -new Date().getTimezoneOffset();
   const sign = totalMinutes >= 0 ? "+" : "-";
@@ -292,7 +319,7 @@ export class DesktopAuthService {
     const session = this.currentSession();
     const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
     session.bearerToken = bearer;
-    const url = new URL(endpoint(session.origin, request.path));
+    const url = new URL(endpoint(requestSite(session, request), request.path));
     for (const [key, value] of Object.entries(request.query || {})) {
       if (value === undefined || value === null) continue;
       if (Array.isArray(value)) value.forEach((item) => url.searchParams.append(key, String(item)));
@@ -318,6 +345,48 @@ export class DesktopAuthService {
     }
     if (!text.trim()) return null;
     return JSON.parse(text);
+  }
+
+  async apiStreamRequest(request, { signal, onChunk } = {}) {
+    const session = this.currentSession();
+    const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
+    session.bearerToken = bearer;
+    const url = new URL(endpoint(requestSite(session, request), request.path));
+    for (const [key, value] of Object.entries(request.query || {})) {
+      if (value === undefined || value === null) continue;
+      if (Array.isArray(value)) value.forEach((item) => url.searchParams.append(key, String(item)));
+      else url.searchParams.set(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+    }
+    const headers = {
+      Accept: "text/event-stream",
+      "X-TZ": timezoneOffset(),
+      Referer: url.origin,
+      Authorization: `Bearer ${bearer}`
+    };
+    const orgId = request.orgId || session.orgId;
+    if (orgId) headers["X-JMS-ORG"] = orgId;
+    const hasBody = request.body !== undefined && request.body !== null;
+    if (hasBody) headers["Content-Type"] = "application/json";
+    const response = await net.fetch(url.toString(), {
+      method: request.method,
+      headers,
+      body: hasBody ? JSON.stringify(request.body) : undefined,
+      signal
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`api stream request failed: status=${response.status}, body=${text}`);
+    }
+    if (!response.body) throw new Error("api stream response body is unavailable");
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    while (true) {
+      const { value, done } = await reader.read();
+      const chunk = decoder.decode(value || new Uint8Array(), { stream: !done });
+      if (chunk) onChunk?.(chunk);
+      if (done) break;
+    }
   }
 
   async createKokoConnectTicket({ baseUrl, tokenId }) {

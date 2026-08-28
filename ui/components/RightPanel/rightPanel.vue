@@ -3,9 +3,10 @@ import type { RightPanelTab } from "~/composables/useRightPanel";
 import { getLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
 
 const { t } = useI18n();
+const { modernIsland } = useSettingManager();
 const { activePaneId, activeTab: workspaceTab } = useWorkspaceTabs();
 const { activeWorkspaceMode } = useWorkspaceMode();
-const { activeTab, setActiveTab } = useRightPanel();
+const { activeTab, setActiveTab, setOpen } = useRightPanel();
 const activeSession = computed(() => {
   if (activeWorkspaceMode.value === "files") return null;
   const tab = workspaceTab.value;
@@ -18,12 +19,10 @@ const lionSession = computed(() => getLionWorkspaceSession(activeSession.value?.
 const showSftpTab = computed(() => activeSession.value?.protocol?.toLowerCase() === "ssh");
 
 const tabs = computed(() => {
-  if (activeWorkspaceMode.value === "files") {
-    return [{ value: "ai" as const, label: t("RightPanel.AI"), icon: "i-lucide-sparkles" }];
-  }
+  if (activeWorkspaceMode.value === "files") return [];
 
   const items: Array<{ value: RightPanelTab; label: string; icon: string; title?: string }> = [
-    { value: "session" as const, label: t("RightPanel.Session"), icon: "i-lucide-terminal" }
+    { value: "session", label: t("RightPanel.Session"), icon: "i-lucide-terminal" }
   ];
 
   if (lionSession.value) {
@@ -50,8 +49,6 @@ const tabs = computed(() => {
     });
   }
 
-  items.push({ value: "ai" as const, label: t("RightPanel.AI"), icon: "i-lucide-sparkles" });
-
   return items;
 });
 
@@ -59,7 +56,6 @@ const panelComponents = {
   session: defineAsyncComponent(() => import("~/components/RightPanel/sessionPanel.vue")),
   "lion-control": defineAsyncComponent(() => import("~/components/RightPanel/lionControlPanel.vue")),
   "lion-files": defineAsyncComponent(() => import("~/components/RightPanel/lionFilePanel.vue")),
-  ai: defineAsyncComponent(() => import("~/components/RightPanel/aiPanel.vue")),
   sftp: defineAsyncComponent(() => import("~/components/RightPanel/sftpPanel.vue"))
 } as const;
 
@@ -68,6 +64,10 @@ const activePanelComponent = computed(() => panelComponents[activeTab.value]);
 watch(
   tabs,
   (items) => {
+    if (!items.length) {
+      setOpen(false);
+      return;
+    }
     if (!items.some((item) => item.value === activeTab.value)) setActiveTab(items[0]?.value || "session");
   },
   { immediate: true }
@@ -76,10 +76,11 @@ watch(
 
 <template>
   <aside
+    data-ai-context="workspace"
     class="flex h-full min-h-0 w-full flex-col"
     :style="{
-      borderLeft: '1px solid var(--app-border)',
-      backgroundColor: 'var(--app-panel-bg)',
+      borderLeft: modernIsland ? '0' : '1px solid var(--app-border)',
+      backgroundColor: modernIsland ? 'transparent' : 'var(--app-panel-bg)',
       color: 'var(--app-fg)'
     }"
   >

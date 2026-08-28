@@ -4,7 +4,8 @@ import type {
   ChenConsoleTimelineEntry,
   ChenConsoleTimelineResult,
   ChenPromptConsoleTab,
-  ChenQueryLikeWorkspaceTab
+  ChenQueryLikeWorkspaceTab,
+  ChenSqlEditorSnapshot
 } from "~/chen/types";
 
 import ConsoleResultGrid from "~/chen/components/ConsoleResultGrid.client.vue";
@@ -14,6 +15,7 @@ const props = defineProps<{
   contextLabel: string;
   promptLabel: string;
   canCopy: boolean;
+  aiEnabled: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -21,7 +23,12 @@ const emit = defineEmits<{
   cancel: [tab: ChenQueryLikeWorkspaceTab];
   clear: [tab: ChenPromptConsoleTab];
   updatePendingSql: [tab: ChenPromptConsoleTab, value: string];
+  aiGenerate: [tab: ChenPromptConsoleTab];
+  aiExplain: [tab: ChenPromptConsoleTab];
+  aiRepair: [tab: ChenPromptConsoleTab];
 }>();
+
+const { t } = useI18n();
 
 const timelineRef = ref<HTMLElement | null>(null);
 const inputRef = ref<HTMLTextAreaElement | null>(null);
@@ -36,6 +43,41 @@ const pendingSqlValue = computed({
 const busy = computed(() =>
   Boolean(props.tab.state.loading || props.tab.state.inQuery || props.tab.activeTimelineEntryId)
 );
+const statementEmpty = computed(() => !props.tab.pendingSql.trim());
+const aiItems = computed(() => [
+  {
+    label: t("RightPanel.SQLAIGenerate"),
+    icon: "i-lucide-wand-sparkles",
+    disabled: !props.aiEnabled || busy.value,
+    onSelect: () => emit("aiGenerate", props.tab)
+  },
+  {
+    label: t("RightPanel.SQLAIExplain"),
+    icon: "i-lucide-message-square-text",
+    disabled: !props.aiEnabled || busy.value || statementEmpty.value,
+    onSelect: () => emit("aiExplain", props.tab)
+  },
+  {
+    label: t("RightPanel.SQLAIRepair"),
+    icon: "i-lucide-wrench",
+    disabled: !props.aiEnabled || busy.value || (statementEmpty.value && !props.tab.lastSqlError),
+    onSelect: () => emit("aiRepair", props.tab)
+  }
+]);
+
+function editorSnapshot(): ChenSqlEditorSnapshot {
+  const documentSql = props.tab.pendingSql;
+  const element = inputRef.value;
+  const selectionFrom = element?.selectionStart ?? 0;
+  const selectionTo = element?.selectionEnd ?? 0;
+  const hasSelection = selectionTo > selectionFrom;
+  return {
+    documentSql,
+    selectedSql: hasSelection ? documentSql.slice(selectionFrom, selectionTo) : "",
+    selectionFrom: hasSelection ? selectionFrom : 0,
+    selectionTo: hasSelection ? selectionTo : 0
+  };
+}
 
 const statusDetails: Record<ChenConsoleExecutionStatus, { icon: string; label: string; class: string }> = {
   running: { icon: "i-lucide-loader-circle", label: "Running", class: "animate-spin text-primary" },
@@ -142,7 +184,7 @@ onMounted(() => {
   inputRef.value?.focus();
 });
 
-defineExpose({ focus: () => inputRef.value?.focus() });
+defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
 </script>
 
 <template>
@@ -153,6 +195,20 @@ defineExpose({ focus: () => inputRef.value?.focus() });
         <span class="truncate">{{ tab.state.currentContext || contextLabel || "Console" }}</span>
       </div>
       <div class="flex items-center gap-1">
+        <UTooltip :text="t('RightPanel.SQLAIDisabledDescription')" :disabled="aiEnabled">
+          <UDropdownMenu :items="aiItems">
+            <UButton
+              icon="i-lucide-sparkles"
+              trailing-icon="i-lucide-chevron-down"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              :disabled="!aiEnabled || busy"
+            >
+              AI
+            </UButton>
+          </UDropdownMenu>
+        </UTooltip>
         <UButton
           v-if="tab.state.canCancel"
           icon="i-lucide-square"

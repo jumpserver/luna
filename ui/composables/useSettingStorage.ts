@@ -66,6 +66,7 @@ export interface UserSettingPersistedState {
   recentSites: string[];
   sidebarWidth: number;
   sidebarSections: SidebarSectionVisibility;
+  modernIsland: boolean;
 }
 
 const STORE_PATH = "user-setting.json";
@@ -102,7 +103,8 @@ export const DEFAULT_STATE: UserSettingPersistedState = {
   rdpSmartSize: "0",
   recentSites: [],
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
-  sidebarSections: DEFAULT_SIDEBAR_SECTIONS
+  sidebarSections: DEFAULT_SIDEBAR_SECTIONS,
+  modernIsland: false
 };
 
 let storeInstance: DesktopStore | null = null;

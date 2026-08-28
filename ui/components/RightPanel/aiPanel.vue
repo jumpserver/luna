@@ -13,7 +13,7 @@ import { useAiPanelController } from "./ai/useAiPanelController";
 
 const { activePaneId, activeTab } = useWorkspaceTabs();
 const { activeWorkspaceMode } = useWorkspaceMode();
-const { aiSourceTab } = useRightPanel();
+const { source: aiSource } = useAiPanel();
 const { t } = useI18n();
 const activeSurface = computed(() => {
   if (activeWorkspaceMode.value === "files") return null;
@@ -31,7 +31,7 @@ const globalFileTargetId = computed(() => getActiveKokoFileAiTargetId(KOKO_GLOBA
 const compactFileOwnerId = computed(() => createKokoCompactFileAiOwnerId(activeSurface.value?.id || ""));
 const compactFileTargetId = computed(() => getActiveKokoFileAiTargetId(compactFileOwnerId.value) || "");
 const preferCompactFileAi = computed(
-  () => aiSourceTab.value === "sftp" && activeSurface.value?.protocol?.toLowerCase() === "ssh"
+  () => aiSource.value === "sftp" && activeSurface.value?.protocol?.toLowerCase() === "ssh"
 );
 const aiTargetId = computed(() =>
   resolveAiPanelTarget({

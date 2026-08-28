@@ -7,11 +7,14 @@ const props = defineProps<{
   ui?: ModalProps["ui"];
 }>();
 
-const workspaceUi = computed<ModalProps["ui"]>(() => ({
-  ...props.ui,
-  overlay: ["!absolute z-40 bg-elevated/75 backdrop-blur-none", props.ui?.overlay],
-  content: ["!absolute z-40 !w-[calc(100%-2rem)] !max-h-[calc(100%-2rem)]", props.ui?.content]
-}));
+const workspaceUi = computed(
+  () =>
+    ({
+      ...props.ui,
+      overlay: ["!absolute z-40 bg-elevated/75 backdrop-blur-none", props.ui?.overlay],
+      content: ["!absolute z-40 !w-[calc(100%-2rem)] !max-h-[calc(100%-2rem)]", props.ui?.content]
+    }) as ModalProps["ui"]
+);
 </script>
 
 <template>

@@ -9,12 +9,16 @@ import {
   isKokoTerminalAiBusy,
   submitKokoTerminalAiPrompt
 } from "#koko/composables/terminal/useTerminalAiSessions";
-import { isTerminalAiCommandShortcut, terminalAiCommandShortcutAction } from "~/utils/terminalAiCommand";
+import {
+  isTerminalAiCommandShortcut,
+  shouldShowTerminalAiCaretHint,
+  terminalAiCommandShortcutAction
+} from "~/utils/terminalAiCommand";
 
 const props = defineProps<{ pane: WorkspacePane }>();
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
-const { openWithTab } = useRightPanel();
+const { openAi } = useAiPanel();
 const open = ref(false);
 const submitting = ref(false);
 const error = ref("");
@@ -31,6 +35,7 @@ let stopCursorSubscription = () => {};
 
 const session = computed(() => getKokoTerminalAiSession(props.pane.id));
 const available = computed(() => isKokoTerminalAiAvailable(props.pane.id));
+const sessionInfoReady = computed(() => Boolean(session.value?.sessionInfoReady));
 const draft = computed({
   get: () => session.value?.draft || "",
   set: (value: string) => {
@@ -115,7 +120,7 @@ async function positionHint(anchor = hintAnchor.value) {
   const top = anchor.top - hostBounds.top + Math.max(0, (anchor.height - 18) / 2);
   const maxWidth = terminalBounds.right - hostBounds.left - left - 8;
   hintPosition.value = { left, top, maxWidth: Math.max(0, maxWidth) };
-  hintVisible.value = maxWidth >= 80;
+  hintVisible.value = shouldShowTerminalAiCaretHint(sessionInfoReady.value, maxWidth);
 }
 
 async function positionPanel() {
@@ -169,7 +174,7 @@ function startCursorTracking() {
 async function show(xterm: HTMLElement) {
   if (!available.value) return;
   if (isKokoTerminalAiBusy(props.pane.id)) {
-    openWithTab("ai");
+    openAi();
     return;
   }
 
@@ -207,7 +212,7 @@ function handleWindowKeydown(event: KeyboardEvent) {
 
   const action = terminalAiCommandShortcutAction(available.value, isKokoTerminalAiBusy(props.pane.id));
   if (action === "panel") {
-    openWithTab("ai");
+    openAi();
     return;
   }
   if (action === "popover") void show(xterm);
@@ -231,7 +236,7 @@ async function submit() {
 
   if (isKokoTerminalAiBusy(paneId)) {
     close(false);
-    openWithTab("ai");
+    openAi();
     return;
   }
 
@@ -242,13 +247,13 @@ async function submit() {
     if (current.draft.trim() === text) current.draft = "";
     if (props.pane.id !== paneId) return;
     close(false);
-    openWithTab("ai");
+    openAi();
   } catch (cause) {
     if (props.pane.id !== paneId) return;
     const code = cause instanceof Error && "code" in cause ? String(cause.code) : "";
     if (code === "response_active") {
       close(false);
-      openWithTab("ai");
+      openAi();
     } else if (code === "unavailable") {
       error.value = t("RightPanel.AIUnavailableForTerminal");
     } else {
@@ -275,6 +280,9 @@ watch(
     nextTick(startCursorTracking);
   }
 );
+watch(sessionInfoReady, () => {
+  void positionHint();
+});
 
 onMounted(() => {
   window.addEventListener("keydown", handleWindowKeydown, true);

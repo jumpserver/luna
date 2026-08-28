@@ -9,12 +9,24 @@ const { authReady } = useAuthSession();
 const showLoginPrompt = computed(
   () => authReady.value && !loggedIn.value && activeTab.value?.protocol !== "local-shell"
 );
-const { isMacOS } = usePlatform();
 const { t } = useI18n();
-const tabArrowSwitchModifier = computed(() => (isMacOS.value ? "Option" : "Alt"));
-const tabNumberSwitchShortcut = computed(() => (isMacOS.value ? "⌘ + 1-9" : "Ctrl + 1-9"));
-const cleanModeShortcut = computed(() => (isMacOS.value ? "⌘ + Shift + P" : "Ctrl + Shift + P"));
-const fullscreenModeShortcut = computed(() => (isMacOS.value ? "⌘ + Shift + F" : "Ctrl + Shift + F"));
+const shortcutRows = computed(() => [
+  {
+    id: "focus",
+    name: t("TabMenu.FocusCurrent"),
+    keys: ["meta", "shift", "P"]
+  },
+  {
+    id: "fullscreen",
+    name: t("TabMenu.FullscreenCurrent"),
+    keys: ["meta", "shift", "F"]
+  },
+  {
+    id: "switch",
+    name: t("WorkspaceEmpty.SwitchSession"),
+    keys: ["alt", "shift", "arrowleft", "arrowright", "or", "meta", "1-9"]
+  }
+]);
 const panes = computed(() => tabs.value.flatMap((tab) => tab.panes));
 const activePane = computed(() => activeTab.value?.panes.find((pane) => pane.id === activePaneId.value) || null);
 const supportsTerminalAiCommand = computed(() => {
@@ -30,6 +42,7 @@ const openLogin = () => {
 
 <template>
   <section
+    data-ai-context="workspace"
     class="relative h-full min-h-0 w-full flex flex-col"
     :style="{ backgroundColor: 'color-mix(in srgb, var(--app-main-bg) 88%, transparent)' }"
   >
@@ -60,43 +73,19 @@ const openLogin = () => {
       </template>
 
       <div v-else class="h-full min-h-0 grid place-items-center text-sm" :style="{ color: 'var(--app-muted)' }">
-        <div class="flex max-w-xl flex-col items-center px-6 py-5 text-center">
-          <div class="grid w-full gap-3 text-left text-sm">
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-mouse-pointer-click" class="size-4.5 shrink-0" />
-              <span>
-                <strong :style="{ color: 'var(--app-fg)' }">{{ t("WorkspaceEmpty.ConnectAsset") }}</strong>
-                {{ t("WorkspaceEmpty.ConnectAssetHint") }}
-              </span>
-            </div>
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-folder-tree" class="size-4.5 shrink-0" />
-              <span>
-                <strong :style="{ color: 'var(--app-fg)' }">{{ t("WorkspaceEmpty.ExpandNode") }}</strong>
-                {{ t("WorkspaceEmpty.ExpandNodeHint") }}
-              </span>
-            </div>
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-maximize-2" class="size-4.5 shrink-0" />
-              <span class="flex flex-wrap items-center gap-1">
-                <strong :style="{ color: 'var(--app-fg)' }">
-                  {{ t("TabMenu.FocusCurrent") }} / {{ t("TabMenu.FullscreenCurrent") }}
-                </strong>
-                <UKbd size="sm">{{ cleanModeShortcut }}</UKbd>
-                <span>/</span>
-                <UKbd size="sm">{{ fullscreenModeShortcut }}</UKbd>
-              </span>
-            </div>
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-panels-top-left" class="size-4.5 shrink-0" />
-              <span class="flex flex-wrap items-center gap-1">
-                <strong :style="{ color: 'var(--app-fg)' }">{{ t("WorkspaceEmpty.SwitchSession") }}</strong>
-                <UKbd size="sm">{{ tabArrowSwitchModifier }} + Shift + ← / →</UKbd>
-                <span>{{ t("WorkspaceEmpty.Or") }}</span>
-                <UKbd size="sm">{{ tabNumberSwitchShortcut }}</UKbd>
-              </span>
-            </div>
+        <div class="grid w-max grid-cols-[auto_auto] items-center gap-x-3 gap-y-1.5 text-left">
+          <div class="col-span-2 text-[11px] font-semibold tracking-[0.08em]">
+            {{ t("WorkspaceEmpty.Shortcuts") }}
           </div>
+          <template v-for="row in shortcutRows" :key="row.id">
+            <span class="font-medium text-(--app-fg)">{{ row.name }}</span>
+            <span class="flex items-center gap-1">
+              <template v-for="(key, index) in row.keys" :key="`${row.id}-${index}`">
+                <span v-if="key === 'or'" class="px-0.5 text-xs">{{ t("WorkspaceEmpty.Or") }}</span>
+                <UKbd v-else :value="key" />
+              </template>
+            </span>
+          </template>
         </div>
       </div>
     </div>

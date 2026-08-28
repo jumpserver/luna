@@ -2,9 +2,10 @@
 iterm = "iterm"
 devlop = "devlop"
 reqest = "reqest"
+brin = "brin"
+ontext = "ontext"
+Ende = "Ende"
+Inser = "Inser"
 
 [files]
-extend-exclude = [
-  "frontend/public",
-  "go-client/go.mod"
-]
+extend-exclude = ["frontend/public", "go-client/go.mod"]

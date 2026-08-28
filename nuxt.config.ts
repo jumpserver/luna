@@ -1,4 +1,5 @@
 const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080";
+const chatAiTarget = process.env.JMS_AI_DEV_URL || "http://localhost:8088";
 const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
 // JMS_LION_DEV_URL remains a compatibility override; Lion is served by Koko by default.
 const lionTarget = process.env.JMS_LION_DEV_URL || kokoTarget;
@@ -82,7 +83,7 @@ export default defineNuxtConfig({
       mode: "out-in"
     }
   },
-  css: ["@/assets/css/main.css"],
+  css: ["@/assets/css/main.css", "@/assets/css/workspace-tour.css"],
   icon: {
     provider: "none",
     fallbackToApi: false,
@@ -118,6 +119,12 @@ export default defineNuxtConfig({
         port: Number(process.env.JMS_HMR_PORT || 3001)
       },
       proxy: {
+        "/api/v1/chat-ai/": {
+          target: chatAiTarget,
+          secure: false,
+          changeOrigin: true,
+          configure: configureHttpProxy("chat-ai", chatAiTarget)
+        },
         "/luna/koko/ws/": {
           target: kokoTarget.replace(/^http/i, "ws"),
           secure: false,

@@ -9,11 +9,13 @@ const props = withDefaults(
     minHeight?: number;
     maxHeight?: string;
     fillAvailable?: boolean;
+    hideChrome?: boolean;
   }>(),
   {
     preferredHeight: 200,
     minHeight: 112,
-    maxHeight: "50%"
+    maxHeight: "50%",
+    hideChrome: false
   }
 );
 
@@ -21,8 +23,16 @@ const emit = defineEmits<{
   toggle: [];
 }>();
 
-const panelStyle = computed(() =>
-  props.open
+const panelStyle = computed(() => {
+  if (props.hideChrome) {
+    return {
+      height: "auto",
+      minHeight: 0,
+      flexGrow: 1
+    };
+  }
+
+  return props.open
     ? props.fillAvailable
       ? {
           height: "auto",
@@ -33,16 +43,18 @@ const panelStyle = computed(() =>
           height: `min(${props.preferredHeight}px, ${props.maxHeight})`,
           minHeight: `min(${props.minHeight}px, ${props.maxHeight})`
         }
-    : { height: "32px" }
-);
+    : { height: "32px" };
+});
 </script>
 
 <template>
   <section
-    class="group flex min-h-8 shrink-0 flex-col overflow-hidden border-t border-gray-200 dark:border-white/10"
+    class="group flex flex-col overflow-hidden"
+    :class="hideChrome ? 'min-h-0 flex-1' : 'min-h-8 shrink-0 border-t border-gray-200 dark:border-white/10'"
     :style="panelStyle"
   >
     <button
+      v-if="!hideChrome"
       type="button"
       class="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 px-2.5 text-left text-xs font-medium text-gray-700 dark:text-gray-200"
       :aria-expanded="open"
@@ -59,7 +71,7 @@ const panelStyle = computed(() =>
       </div>
     </button>
 
-    <div v-if="open" class="min-h-0 flex-1 overflow-y-auto">
+    <div v-if="open || hideChrome" class="min-h-0 flex-1 overflow-y-auto">
       <slot />
     </div>
   </section>

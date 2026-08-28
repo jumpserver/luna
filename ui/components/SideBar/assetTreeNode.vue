@@ -23,6 +23,11 @@ const { t } = useI18n();
 const isParent = computed(() => Boolean(props.node.isParent || props.node.children?.length));
 const isOpen = computed(() => Boolean(props.node.open));
 const isChecked = computed(() => props.checkedAssetIds?.includes(props.node.id) || false);
+const workspaceTourTarget = computed(() => {
+  if (props.searchMode || props.batchMode) return undefined;
+  if (isParent.value && props.node.meta?.type !== "recent-connections") return "node";
+  return undefined;
+});
 const iconCandidates = computed(() => {
   const iconSkin = (props.node.iconSkin || "").toLowerCase();
   const data = props.node.meta?.data || {};
@@ -127,6 +132,7 @@ const activate = () => {
         ]"
         :style="{ paddingLeft: `${10 + (node.level || 0) * 14}px` }"
         :title="node.title || node.name"
+        :data-workspace-tour="workspaceTourTarget"
         @click="activate"
         @contextmenu.prevent="emit('contextmenu', node, $event)"
       >

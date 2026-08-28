@@ -40,7 +40,7 @@ const {
   guaDisplay,
   loading,
   onlineUsersMap,
-  registerMouseAndKeyboardHanlder,
+  registerMouseAndKeyboardHandler,
   resizeGuaScale,
   sendInputActive
 } = useGuacamoleClient(t, endpointUrl);
@@ -107,7 +107,7 @@ async function connectShareSession(code: string) {
     const displayEl = displayRef.value;
     if (displayEl) displayEl.appendChild(guaDisplay.value.getElement());
     if (!readonly.value) {
-      registerMouseAndKeyboardHanlder();
+      registerMouseAndKeyboardHandler();
       window.addEventListener("focus", debouncedSendClipboardToRemote);
     }
   } catch (error) {

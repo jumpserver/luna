@@ -32,7 +32,6 @@ const columnDefs = computed<ColDef[]>(() => {
     field: field.name,
     headerName: field.label || field.name,
     minWidth: 120,
-    maxWidth: 420,
     resizable: true,
     sortable: true,
     valueFormatter: (params: ValueFormatterParams) => formatChenGridValue(params.value, preferences)

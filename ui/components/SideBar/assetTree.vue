@@ -6,6 +6,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 const props = defineProps<{
   search: string;
   open?: boolean;
+  hideHeader?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -456,9 +457,10 @@ defineExpose({ refresh, loading });
 <template>
   <div
     class="flex min-h-8 flex-col"
-    :class="open === false ? 'h-8 shrink-0' : 'min-h-0 flex-1'"
+    :class="open === false && !hideHeader ? 'h-8 shrink-0' : 'min-h-0 flex-1'"
     role="tree"
     :aria-label="t('Menu.Resource')"
+    :data-workspace-tour="search.trim() ? undefined : 'assets'"
   >
     <div
       v-if="!loggedIn"
@@ -501,9 +503,11 @@ defineExpose({ refresh, loading });
     <template v-else>
       <section class="group flex min-h-0 flex-1 flex-col overflow-hidden">
         <div
+          v-if="!hideHeader || batchMode"
           class="flex h-8 w-full shrink-0 items-center gap-1 px-2.5 text-xs font-medium text-gray-700 dark:text-gray-300"
         >
           <button
+            v-if="!hideHeader"
             type="button"
             class="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-left"
             :aria-expanded="open !== false"
@@ -516,6 +520,7 @@ defineExpose({ refresh, loading });
             />
             <span class="min-w-0 flex-1 truncate">{{ activeTree.label }}</span>
           </button>
+          <div v-else class="min-w-0 flex-1" />
           <div v-if="batchMode" class="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
             <span class="hidden sm:inline">{{ t("Tree.SelectedCount", { count: checkedCount }) }}</span>
             <UButton
@@ -585,7 +590,7 @@ defineExpose({ refresh, loading });
           </div>
         </div>
 
-        <div v-if="open !== false" class="min-h-0 flex-1 overflow-y-auto py-0">
+        <div v-if="hideHeader || open !== false" class="min-h-0 flex-1 overflow-y-auto py-0">
           <div v-if="loading && activeTree.nodes.length === 0" class="grid h-20 place-items-center">
             <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
           </div>

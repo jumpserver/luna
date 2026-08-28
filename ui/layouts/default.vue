@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import AiOverlayPanel from "~/components/RightPanel/AiOverlayPanel.vue";
 import WorkspaceShell from "~/components/Workspace/shell.vue";
 import WorkspaceStatusFooter from "~/components/Workspace/statusFooter.vue";
 import {
@@ -17,6 +18,7 @@ const { isMacOS, isWindows } = usePlatform();
 const { activeWorkspaceMode, uiWorkspaceMode } = useWorkspaceMode();
 const {
   activeTabId,
+  closeSession,
   enterFocusMode,
   enterFullscreenMode,
   exitFocusMode,
@@ -35,9 +37,29 @@ const {
   statusBarVisible
 } = useSettingManager();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
+const { open: aiPanelOpen, setOpen: setAiPanelOpen } = useAiPanel();
 const { open: settingsOpen, activeSection: activeSettingsSection, openSettings } = useSettingsWindow();
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 const standaloneAssetWindow = ref(false);
+const { authReady } = useAuthSession();
+const workspaceTour = useWorkspaceTour();
+const canStartWorkspaceTour = computed(
+  () =>
+    authReady.value &&
+    loggedIn.value &&
+    !standaloneAssetWindow.value &&
+    !settingsOpen.value &&
+    !focusMode.value &&
+    !sidebarCollapsed.value &&
+    activeWorkspaceMode.value === "assets"
+);
+const { start: scheduleWorkspaceTour, stop: stopScheduledWorkspaceTour } = useTimeoutFn(
+  () => {
+    void workspaceTour.startOnce();
+  },
+  650,
+  { immediate: false }
+);
 
 const refreshCommandExecutionSetting = async () => {
   if (!loggedIn.value) return;
@@ -121,6 +143,25 @@ const handleChromeShortcut = (event: KeyboardEvent) => {
 };
 
 const handleWorkspaceModeShortcut = (event: KeyboardEvent) => {
+  if (
+    !event.defaultPrevented &&
+    !event.repeat &&
+    event.altKey &&
+    event.shiftKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    event.code === "KeyW" &&
+    !isDesktopRuntime() &&
+    activeWorkspaceMode.value === "assets" &&
+    !settingsOpen.value &&
+    activeTabId.value
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    void closeSession(activeTabId.value);
+    return;
+  }
+
   const usesPrimaryModifier = isMacOS.value ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
   if (event.repeat || event.altKey || !event.shiftKey || !usesPrimaryModifier || !activeTabId.value) return;
 
@@ -153,6 +194,13 @@ const toggleDesktopFullscreen = async () => {
 };
 
 const handleDesktopMenuCommand = (command: string) => {
+  if (command === "close-current-tab") {
+    if (activeWorkspaceMode.value === "assets" && !settingsOpen.value && activeTabId.value) {
+      void closeSession(activeTabId.value);
+    }
+    return;
+  }
+
   if (command === "toggle-focus-mode") {
     if (focusMode.value) void exitFocusMode();
     else if (activeTabId.value) enterFocusMode(activeTabId.value);
@@ -197,6 +245,19 @@ watch(focusMode, (active) => {
   if (!active) clearEscapeHold();
 });
 
+watch(
+  canStartWorkspaceTour,
+  (canStart) => {
+    stopScheduledWorkspaceTour();
+    if (!canStart) {
+      workspaceTour.destroy();
+      return;
+    }
+    scheduleWorkspaceTour();
+  },
+  { immediate: true }
+);
+
 onMounted(() => {
   if (isDesktopRuntime()) {
     standaloneAssetWindow.value = desktopWindow.label().startsWith("asset-");
@@ -239,6 +300,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  stopScheduledWorkspaceTour();
+  workspaceTour.destroy();
   unlistenDesktopMenuCommand?.();
   clearEscapeHold();
   registerSessionDisposer(null);
@@ -281,6 +344,10 @@ onBeforeUnmount(() => {
 
       <template #rightPanel>
         <RightPanel v-if="rightPanelOpen" />
+      </template>
+
+      <template #overlayPanel>
+        <AiOverlayPanel v-if="aiPanelOpen && !focusMode" @close="setAiPanelOpen(false)" />
       </template>
 
       <template #bottomPanel>

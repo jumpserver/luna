@@ -11,6 +11,10 @@ describe("user setting defaults", () => {
   it("enables terminal command suggestions for existing settings without the field", () => {
     expect(DEFAULT_STATE.terminalCommandSuggestionsEnabled).toBe(true);
   });
+
+  it("keeps modern island layout off until the user opts in", () => {
+    expect(DEFAULT_STATE.modernIsland).toBe(false);
+  });
 });
 
 describe("normalizeFontSize", () => {

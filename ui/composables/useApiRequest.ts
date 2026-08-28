@@ -5,6 +5,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 export interface ApiRequest {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
   path: string;
+  service?: "core" | "chat-ai";
   query?: Record<string, unknown>;
   body?: unknown;
   orgId?: string;
