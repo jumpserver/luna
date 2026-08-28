@@ -34,6 +34,7 @@ import {
   handleKokoFileAiMessage,
   isSuccessfulKokoFileAiMutationResult,
   registerKokoFileAiSession,
+  releaseKokoFileAiSession,
   setActiveKokoFileAiTarget,
   toKokoFileAiSelectedEntry,
   unregisterKokoFileAiSession,
@@ -53,7 +54,6 @@ const props = defineProps<{
   compact?: boolean;
   highlightedNames?: string[];
   focused?: boolean;
-  aiActive?: boolean;
   aiTarget?: KokoFileAiTarget;
   sendPeerDirection?: "left" | "right";
 }>();
@@ -114,6 +114,7 @@ const selectedSize = computed(() =>
 );
 const fallbackAiTargetId = createKokoFileAiMessageId("file-target");
 const aiTargetId = computed(() => props.aiTarget?.targetId || props.context?.tabId || fallbackAiTargetId);
+const aiOwnerId = computed(() => props.aiTarget?.ownerId || aiTargetId.value);
 const aiContext = computed<KokoFileAiContext>(() => ({
   targetId: aiTargetId.value,
   assetId: props.aiTarget?.assetId || "",
@@ -308,16 +309,17 @@ function onKeydown(event: KeyboardEvent): void {
 }
 
 function focusPane(): void {
-  if (props.context) setActiveKokoFileAiTarget(aiTargetId.value);
+  if (props.context) setActiveKokoFileAiTarget(aiTargetId.value, aiOwnerId.value);
   emit("focus");
 }
 
 let registeredAiTargetId = "";
 let registeredAiSocket: WebSocket | null = null;
 
-function unregisterAiTarget(): void {
+function unregisterAiTarget(defer = false): void {
   if (!registeredAiTargetId) return;
-  unregisterKokoFileAiSession(registeredAiTargetId, registeredAiSocket);
+  if (defer) releaseKokoFileAiSession(registeredAiTargetId, registeredAiSocket);
+  else unregisterKokoFileAiSession(registeredAiTargetId, registeredAiSocket);
   registeredAiTargetId = "";
   registeredAiSocket = null;
 }
@@ -344,12 +346,9 @@ watch(
       if (registeredAiTargetId) disconnectKokoFileAiSession(registeredAiTargetId, registeredAiSocket);
       return;
     }
-    if (registeredAiSocket && registeredAiSocket !== socket) unregisterAiTarget();
-    if (registeredAiTargetId) return;
     registerKokoFileAiSession(targetId, socket, aiContext.value);
     registeredAiTargetId = targetId;
     registeredAiSocket = socket;
-    if (props.aiActive) setActiveKokoFileAiTarget(targetId);
   },
   { immediate: true }
 );
@@ -363,13 +362,6 @@ watch(
   { immediate: true }
 );
 watch(aiContext, (context) => updateKokoFileAiContext(context.targetId, context), { immediate: true });
-watch(
-  () => props.aiActive,
-  (active) => {
-    if (active && props.context) setActiveKokoFileAiTarget(aiTargetId.value);
-  },
-  { immediate: true }
-);
 watch(selectedEntry, (entry) => emit("select", entry));
 watch(manager.currentPath, () => {
   hideContextMenu();
@@ -391,7 +383,7 @@ onMounted(() => {
 });
 onUnmounted(() => {
   stopAiMessageListener();
-  unregisterAiTarget();
+  unregisterAiTarget(true);
   document.removeEventListener("dragend", clearTransferDragState);
   document.removeEventListener("keydown", onKeydown);
   if (props.transferEndpoint) emit("transferEndpointUnmounted", props.transferEndpoint);

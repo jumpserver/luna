@@ -12,6 +12,11 @@ import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
 import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
 import SftpRemoteMachineTabs from "#koko/components/FileManagement/workspace/SftpRemoteMachineTabs.vue";
 import SftpTransferRail from "#koko/components/FileManagement/workspace/SftpTransferRail.vue";
+import {
+  disposeKokoFileAiOwner,
+  setActiveKokoFileAiTarget,
+  unregisterKokoFileAiSession
+} from "#koko/composables/sftp/useFileAiSessions";
 
 type WorkspaceController = ReturnType<typeof useSftpWorkspacePanes>;
 type TransferController = ReturnType<typeof useSftpTransferCoordinator>;
@@ -19,6 +24,8 @@ type TemplateRefValue = Element | ComponentPublicInstance | null;
 
 const props = defineProps<{
   compact?: boolean;
+  aiOwnerId?: string;
+  retainAiSessionsOnUnmount?: boolean;
   workspace: WorkspaceController;
   transfer: TransferController;
   startTour: () => void;
@@ -65,6 +72,40 @@ const {
 
 const simplePeerMode = computed(() => Boolean(dualMode.value && isSimplePeerMode()));
 const activeAiPaneId = shallowRef("primary");
+const fileAiOwnerId = computed(() => props.aiOwnerId || primaryContext.value?.tabId || "");
+const activeFileAiTargetId = computed(() => {
+  if (activeAiPaneId.value === "primary") return primaryContext.value?.tabId || "";
+  return (
+    remotePanes.value.find((pane) => pane.id === activeAiPaneId.value)?.context.tabId ||
+    primaryContext.value?.tabId ||
+    ""
+  );
+});
+const fileAiTargetIds = computed(() =>
+  [
+    ...(primaryContext.value?.tabId ? [primaryContext.value.tabId] : []),
+    ...remotePanes.value.map((pane) => pane.context.tabId)
+  ].filter((targetId): targetId is string => Boolean(targetId))
+);
+
+watch(
+  [fileAiOwnerId, activeFileAiTargetId],
+  ([ownerId, targetId], previous) => {
+    const previousOwnerId = previous?.[0];
+    if (previousOwnerId && previousOwnerId !== ownerId) disposeKokoFileAiOwner(previousOwnerId);
+    if (ownerId) setActiveKokoFileAiTarget(targetId || null, ownerId);
+  },
+  { immediate: true }
+);
+watch(fileAiTargetIds, (targetIds, previousTargetIds = []) => {
+  const activeTargets = new Set(targetIds);
+  for (const targetId of previousTargetIds) {
+    if (!activeTargets.has(targetId)) unregisterKokoFileAiSession(targetId);
+  }
+});
+onUnmounted(() => {
+  if (!props.retainAiSessionsOnUnmount && fileAiOwnerId.value) disposeKokoFileAiOwner(fileAiOwnerId.value);
+});
 
 const primarySendPeerDirection = computed<"left" | "right" | undefined>(() =>
   simplePeerMode.value && canSendToOpposite(primaryTransferEndpoint.value?.id) ? "right" : undefined
@@ -154,9 +195,9 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
         :ref="setPrimaryPaneRef"
         class="min-h-0 min-w-0 flex-1"
         :context="primaryContext"
-        :ai-active="activeAiPaneId === 'primary'"
         :ai-target="{
           targetId: primaryContext?.tabId,
+          ownerId: fileAiOwnerId,
           assetId: primaryAsset.id,
           assetName: primaryAsset.name,
           ...(primaryAsset.account ? { account: primaryAsset.account } : {})
@@ -252,9 +293,9 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
           :ref="(value) => setRemotePaneRef(pane.id, value)"
           class="h-full min-h-0"
           :context="pane.context"
-          :ai-active="activeAiPaneId === pane.id"
           :ai-target="{
             targetId: pane.context.tabId,
+            ownerId: fileAiOwnerId,
             assetId: pane.assetId || '',
             assetName: pane.assetName
           }"

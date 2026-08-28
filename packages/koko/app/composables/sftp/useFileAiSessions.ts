@@ -2,7 +2,7 @@ import type { UseChatHelpers } from "@ai-sdk/vue";
 import type { ChatTransport, UIMessage, UIMessageChunk } from "ai";
 import type { EffectScope } from "vue";
 import { useChat } from "@ai-sdk/vue";
-import { effectScope, markRaw, reactive, shallowReactive, shallowRef } from "vue";
+import { effectScope, markRaw, reactive, shallowReactive } from "vue";
 import { createSftpMessageId, joinSftpPath } from "./core/codec";
 import { SftpMessageType } from "./protocol";
 
@@ -33,6 +33,7 @@ export interface KokoFileAiContext {
 
 export interface KokoFileAiTarget {
   targetId?: string;
+  ownerId?: string;
   assetId: string;
   assetName: string;
   account?: string;
@@ -257,11 +258,57 @@ class KokoFileAiChatTransport implements ChatTransport<FileAiChatMessage> {
   }
 }
 
+export const KOKO_GLOBAL_FILE_AI_OWNER_ID = "koko:file-workspace:global";
+const defaultFileAiOwnerId = "koko:file-ai:default";
 const sessions = shallowReactive(new Map<string, KokoFileAiSession>());
-const activeTargetId = shallowRef<string | null>(null);
+const activeTargetIds = shallowReactive(new Map<string, string>());
+const ownerTargetIds = new Map<string, Set<string>>();
+const targetOwnerIds = new Map<string, Set<string>>();
 const transports = new WeakMap<KokoFileAiSession, KokoFileAiChatTransport>();
 const chatScopes = new WeakMap<KokoFileAiSession, EffectScope>();
+const pendingSessionReleases = new Map<string, symbol>();
 const mutatingFileAiTools = new Set(["save_text", "mkdir", "rename", "delete"]);
+
+function normalizedFileAiOwnerId(ownerId?: string) {
+  return ownerId || defaultFileAiOwnerId;
+}
+
+function encodedFileAiIdentityPart(value: string) {
+  return encodeURIComponent(value || "-");
+}
+
+function bindFileAiTargetOwner(ownerId: string, targetId: string) {
+  const ownerTargets = ownerTargetIds.get(ownerId) || new Set<string>();
+  ownerTargets.add(targetId);
+  ownerTargetIds.set(ownerId, ownerTargets);
+
+  const targetOwners = targetOwnerIds.get(targetId) || new Set<string>();
+  targetOwners.add(ownerId);
+  targetOwnerIds.set(targetId, targetOwners);
+}
+
+function removeFileAiTargetOwners(targetId: string) {
+  for (const ownerId of targetOwnerIds.get(targetId) || []) {
+    const ownerTargets = ownerTargetIds.get(ownerId);
+    ownerTargets?.delete(targetId);
+    if (!ownerTargets?.size) ownerTargetIds.delete(ownerId);
+    if (activeTargetIds.get(ownerId) === targetId) activeTargetIds.delete(ownerId);
+  }
+  targetOwnerIds.delete(targetId);
+}
+
+export function createKokoCompactFileAiOwnerId(workspacePaneId: string) {
+  return `koko:right-panel-sftp:${encodedFileAiIdentityPart(workspacePaneId)}`;
+}
+
+export function createKokoCompactFileAiTargetId(workspacePaneId: string, assetId: string, account: string) {
+  return [
+    "right-panel-sftp",
+    encodedFileAiIdentityPart(workspacePaneId),
+    encodedFileAiIdentityPart(assetId),
+    encodedFileAiIdentityPart(account)
+  ].join(":");
+}
 
 function createSession(targetId: string, socket: WebSocket, context: KokoFileAiContext): KokoFileAiSession {
   let session: KokoFileAiSession;
@@ -350,17 +397,50 @@ function resetTaskState(session: KokoFileAiSession) {
   session.approvalDigests.clear();
 }
 
+function hasSameFileAiContextIdentity(left: KokoFileAiContext, right: KokoFileAiContext) {
+  return left.assetId === right.assetId && (left.account || "") === (right.account || "");
+}
+
+function destroyKokoFileAiSession(targetId: string, session: KokoFileAiSession) {
+  transports.get(session)?.disconnect();
+  chatScopes.get(session)?.stop();
+  transports.delete(session);
+  chatScopes.delete(session);
+  sessions.delete(targetId);
+}
+
 export function registerKokoFileAiSession(targetId: string, socket: WebSocket, context: KokoFileAiContext) {
   if (!targetId) return null;
+  pendingSessionReleases.delete(targetId);
 
   const existing = sessions.get(targetId);
+  if (existing && !hasSameFileAiContextIdentity(existing.context, context)) {
+    destroyKokoFileAiSession(targetId, existing);
+    const session = createSession(targetId, socket, context);
+    sessions.set(targetId, session);
+    return session;
+  }
   if (existing?.socket === socket) {
     existing.context = context;
+    existing.connected = context.connected && socket.readyState === WebSocket.OPEN;
+    if (existing.connected && !existing.capabilityKnown) existing.enabled = true;
     return existing;
   }
   if (existing) {
     transports.get(existing)?.disconnect();
-    chatScopes.get(existing)?.stop();
+    resetTaskState(existing);
+    existing.socket = markRaw(socket);
+    existing.context = context;
+    existing.connected = context.connected && socket.readyState === WebSocket.OPEN;
+    existing.enabled = true;
+    existing.capabilityKnown = false;
+    existing.runtimeStatus = "";
+    existing.runtimeStatusCode = "";
+    existing.runtimeState = "";
+    existing.errorCode = "";
+    existing.errorText = "";
+    existing.chat.clearError();
+    return existing;
   }
 
   const session = createSession(targetId, socket, context);
@@ -370,13 +450,23 @@ export function registerKokoFileAiSession(targetId: string, socket: WebSocket, c
 
 export function unregisterKokoFileAiSession(targetId: string, socket?: WebSocket | null) {
   const session = sessions.get(targetId);
+  if (socket && (!session || session.socket !== socket)) return;
+  pendingSessionReleases.delete(targetId);
+  if (session) destroyKokoFileAiSession(targetId, session);
+  removeFileAiTargetOwners(targetId);
+}
+
+export function releaseKokoFileAiSession(targetId: string, socket?: WebSocket | null) {
+  const session = sessions.get(targetId);
   if (!session || (socket && session.socket !== socket)) return;
-  transports.get(session)?.disconnect();
-  chatScopes.get(session)?.stop();
-  transports.delete(session);
-  chatScopes.delete(session);
-  sessions.delete(targetId);
-  if (activeTargetId.value === targetId) activeTargetId.value = null;
+  disconnectKokoFileAiSession(targetId, socket);
+  const release = Symbol(targetId);
+  pendingSessionReleases.set(targetId, release);
+  queueMicrotask(() => {
+    if (pendingSessionReleases.get(targetId) !== release) return;
+    pendingSessionReleases.delete(targetId);
+    if (!targetOwnerIds.get(targetId)?.size) unregisterKokoFileAiSession(targetId, socket);
+  });
 }
 
 export function connectKokoFileAiSession(targetId: string, socket: WebSocket) {
@@ -400,23 +490,46 @@ export function disconnectKokoFileAiSession(targetId: string, socket?: WebSocket
 export function updateKokoFileAiContext(targetId: string, context: KokoFileAiContext) {
   const session = sessions.get(targetId);
   if (!session) return;
+  if (session.socket && !hasSameFileAiContextIdentity(session.context, context)) {
+    registerKokoFileAiSession(targetId, session.socket, context);
+    return;
+  }
   session.context = context;
 }
 
-export function setActiveKokoFileAiTarget(targetId: string | null) {
-  activeTargetId.value = targetId;
+export function setActiveKokoFileAiTarget(targetId: string | null, ownerId?: string) {
+  const key = normalizedFileAiOwnerId(ownerId);
+  if (targetId) {
+    bindFileAiTargetOwner(key, targetId);
+    activeTargetIds.set(key, targetId);
+  } else activeTargetIds.delete(key);
 }
 
-export function getActiveKokoFileAiTargetId() {
-  return activeTargetId.value;
+export function disposeKokoFileAiOwner(ownerId?: string) {
+  const key = normalizedFileAiOwnerId(ownerId);
+  activeTargetIds.delete(key);
+  const targets = [...(ownerTargetIds.get(key) || [])];
+  ownerTargetIds.delete(key);
+  for (const targetId of targets) {
+    const targetOwners = targetOwnerIds.get(targetId);
+    targetOwners?.delete(key);
+    if (targetOwners?.size) continue;
+    targetOwnerIds.delete(targetId);
+    unregisterKokoFileAiSession(targetId);
+  }
+}
+
+export function getActiveKokoFileAiTargetId(ownerId?: string) {
+  return activeTargetIds.get(normalizedFileAiOwnerId(ownerId)) || null;
 }
 
 export function getKokoFileAiSession(targetId: string) {
   return sessions.get(targetId) || null;
 }
 
-export function getActiveKokoFileAiSession() {
-  return activeTargetId.value ? getKokoFileAiSession(activeTargetId.value) : null;
+export function getActiveKokoFileAiSession(ownerId?: string) {
+  const targetId = getActiveKokoFileAiTargetId(ownerId);
+  return targetId ? getKokoFileAiSession(targetId) : null;
 }
 
 export function isKokoFileAiAvailable(targetId: string) {

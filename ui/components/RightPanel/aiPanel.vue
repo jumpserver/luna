@@ -1,18 +1,55 @@
 <script setup lang="ts">
+import {
+  createKokoCompactFileAiOwnerId,
+  getActiveKokoFileAiTargetId,
+  KOKO_GLOBAL_FILE_AI_OWNER_ID
+} from "#koko/composables/sftp/useFileAiSessions";
+import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 import AiPanelFooter from "./ai/AiPanelFooter.vue";
 import AiPresenceHeader from "./ai/AiPresenceHeader.vue";
 import AiTimeline from "./ai/AiTimeline.vue";
+import { resolveAiPanelTarget } from "./ai/target";
 import { useAiPanelController } from "./ai/useAiPanelController";
 
 const { activePaneId, activeTab } = useWorkspaceTabs();
 const { activeWorkspaceMode } = useWorkspaceMode();
+const { aiSourceTab } = useRightPanel();
 const { t } = useI18n();
-const aiTargetId = computed(() => (activeWorkspaceMode.value === "files" ? "" : activePaneId.value));
 const activeSurface = computed(() => {
   if (activeWorkspaceMode.value === "files") return null;
   const tab = activeTab.value;
   return tab?.panes.find((pane) => pane.id === activePaneId.value) || tab;
 });
+const activeSurfaceIsFileManager = computed(() => {
+  const surface = activeSurface.value;
+  if (!surface) return false;
+  const payloadMethod = (surface.payload?.connectMethod as { value?: string } | undefined)?.value;
+  return findDeclaredCapability(surface.protocol, payloadMethod || surface.connectMethod)?.surface === "file-manager";
+});
+const ownerFileTargetId = computed(() => getActiveKokoFileAiTargetId(activePaneId.value) || "");
+const globalFileTargetId = computed(() => getActiveKokoFileAiTargetId(KOKO_GLOBAL_FILE_AI_OWNER_ID) || "");
+const compactFileOwnerId = computed(() => createKokoCompactFileAiOwnerId(activeSurface.value?.id || ""));
+const compactFileTargetId = computed(() => getActiveKokoFileAiTargetId(compactFileOwnerId.value) || "");
+const preferCompactFileAi = computed(
+  () => aiSourceTab.value === "sftp" && activeSurface.value?.protocol?.toLowerCase() === "ssh"
+);
+const aiTargetId = computed(() =>
+  resolveAiPanelTarget({
+    workspaceMode: activeWorkspaceMode.value,
+    paneId: activePaneId.value,
+    ownerFileTargetId: ownerFileTargetId.value,
+    ownerFileTargetAllowed: activeSurfaceIsFileManager.value,
+    globalFileTargetId: globalFileTargetId.value,
+    compactFileTargetId: compactFileTargetId.value,
+    preferCompactFileAi: preferCompactFileAi.value
+  })
+);
+const fileAiRequested = computed(
+  () =>
+    activeWorkspaceMode.value === "files" ||
+    Boolean(activeSurfaceIsFileManager.value && ownerFileTargetId.value) ||
+    preferCompactFileAi.value
+);
 
 const {
   session,
@@ -36,7 +73,7 @@ const {
   handleTimelineAction
 } = useAiPanelController({ paneId: aiTargetId, surface: activeSurface });
 const displayedUnavailableState = computed(() => {
-  if (activeWorkspaceMode.value !== "files" || presentation.value) return unavailableState.value;
+  if (!fileAiRequested.value || presentation.value) return unavailableState.value;
   return {
     icon: "i-lucide-folder-lock",
     title: t("RightPanel.FileAIUnavailableTitle"),

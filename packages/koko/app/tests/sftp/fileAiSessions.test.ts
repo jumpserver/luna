@@ -2,15 +2,22 @@ import { afterEach, expect, it, vi } from "vitest";
 import { ref } from "vue";
 import {
   connectKokoFileAiSession,
+  createKokoCompactFileAiOwnerId,
+  createKokoCompactFileAiTargetId,
+  disposeKokoFileAiOwner,
   getActiveKokoFileAiSession,
+  getActiveKokoFileAiTargetId,
+  getKokoFileAiSession,
   handleKokoFileAiMessage,
   isKokoFileAiAvailable,
   isSuccessfulKokoFileAiMutationResult,
   registerKokoFileAiSession,
+  releaseKokoFileAiSession,
   resolveKokoFileAiApproval,
   setActiveKokoFileAiTarget,
   submitKokoFileAiPrompt,
-  unregisterKokoFileAiSession
+  unregisterKokoFileAiSession,
+  updateKokoFileAiContext
 } from "#koko/composables/sftp/useFileAiSessions";
 import { createSftpFileAiReadiness } from "#koko/composables/sftp/useSftpFileManager";
 import { SftpMessageType } from "#koko/composables/sftp/protocol";
@@ -175,6 +182,129 @@ it("rejects an event whose target does not match the socket-bound session", () =
   expect(other.errorText).toBe("");
   expect(source.chat.messages.value).toEqual([]);
   expect(other.chat.messages.value).toEqual([]);
+});
+
+it("keeps owner-scoped File AI focus isolated", () => {
+  const left = createSession("remote-sftp:asset-1:left");
+  const right = createSession("remote-sftp:asset-2:right");
+
+  setActiveKokoFileAiTarget(left.targetId, "workspace:left");
+  setActiveKokoFileAiTarget(right.targetId, "workspace:right");
+
+  expect(getActiveKokoFileAiTargetId("workspace:left")).toBe(left.targetId);
+  expect(getActiveKokoFileAiTargetId("workspace:right")).toBe(right.targetId);
+
+  unregisterKokoFileAiSession(left.targetId, left.socket);
+  expect(getActiveKokoFileAiTargetId("workspace:left")).toBeNull();
+  expect(getActiveKokoFileAiTargetId("workspace:right")).toBe(right.targetId);
+});
+
+it("preserves File AI conversation and draft when the same pane reconnects", async () => {
+  const session = createSession("remote-sftp:asset-1:reconnect");
+  session.draft = "continue after reconnect";
+  session.taskActive = true;
+  session.pendingApprovals.add("approval-1");
+  handleKokoFileAiMessage(session.targetId, {
+    id: "prior-message",
+    role: "assistant",
+    metadata: { domain: "file", targetId: session.targetId },
+    parts: [{ type: "text", text: "prior result" }]
+  });
+
+  const previousSocket = session.socket!;
+  const nextSocket = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
+  const rebound = registerKokoFileAiSession(session.targetId, nextSocket, {
+    ...session.context,
+    currentPath: "/srv/app/releases",
+    connected: true
+  })!;
+
+  expect(rebound).toBe(session);
+  expect(rebound.socket).toBe(nextSocket);
+  expect(rebound.draft).toBe("continue after reconnect");
+  expect(rebound.chat.messages.value).toHaveLength(1);
+  expect(rebound.context.currentPath).toBe("/srv/app/releases");
+  expect(rebound.taskActive).toBe(false);
+  expect(rebound.pendingApprovals.size).toBe(0);
+
+  unregisterKokoFileAiSession(session.targetId, previousSocket);
+  await submitKokoFileAiPrompt(session.targetId, "use the reconnected socket");
+  expect(nextSocket.send).toHaveBeenCalledOnce();
+});
+
+it("resets File AI state when the same workspace pane connects another asset", () => {
+  const session = createSession("remote-sftp:asset-1:reused-pane");
+  session.draft = "asset one draft";
+  session.chat.messages.value = [
+    {
+      id: "asset-one-message",
+      role: "assistant",
+      metadata: { domain: "file", targetId: session.targetId },
+      parts: [{ type: "text", text: "asset one result" }]
+    }
+  ];
+
+  const nextSocket = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
+  const replacement = registerKokoFileAiSession(session.targetId, nextSocket, {
+    ...session.context,
+    assetId: "asset-2",
+    assetName: "db-02",
+    account: "root"
+  })!;
+
+  expect(replacement).not.toBe(session);
+  expect(replacement.context.assetId).toBe("asset-2");
+  expect(replacement.draft).toBe("");
+  expect(replacement.chat.messages.value).toEqual([]);
+});
+
+it("resets File AI state when reactive pane context changes identity before the socket", () => {
+  const session = createSession("remote-sftp:asset-1:reactive-reuse");
+  session.draft = "do not carry this across assets";
+
+  updateKokoFileAiContext(session.targetId, {
+    ...session.context,
+    assetId: "asset-2",
+    assetName: "db-02",
+    account: "root"
+  });
+
+  const replacement = getKokoFileAiSession(session.targetId)!;
+  expect(replacement).not.toBe(session);
+  expect(replacement.context.assetId).toBe("asset-2");
+  expect(replacement.draft).toBe("");
+});
+
+it("preserves File AI state while an owned surface is asynchronously detached", async () => {
+  const session = createSession("remote-sftp:asset-1:remount");
+  session.draft = "keep this draft";
+  const previousSocket = session.socket!;
+  const nextSocket = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
+  const ownerId = "workspace:async-remount";
+
+  setActiveKokoFileAiTarget(session.targetId, ownerId);
+  releaseKokoFileAiSession(session.targetId, previousSocket);
+  await Promise.resolve();
+  expect(getKokoFileAiSession(session.targetId)).toBe(session);
+
+  const rebound = registerKokoFileAiSession(session.targetId, nextSocket, {
+    ...session.context,
+    connected: true
+  });
+
+  expect(rebound).toBe(session);
+  expect(getKokoFileAiSession(session.targetId)).toBe(session);
+  expect(rebound?.draft).toBe("keep this draft");
+
+  disposeKokoFileAiOwner(ownerId);
+  expect(getKokoFileAiSession(session.targetId)).toBeNull();
+});
+
+it("builds distinct compact File AI identities for SSH panes and accounts", () => {
+  expect(createKokoCompactFileAiOwnerId("ssh-pane-1")).not.toBe(createKokoCompactFileAiOwnerId("ssh-pane-2"));
+  expect(createKokoCompactFileAiTargetId("ssh-pane-1", "asset-1", "root")).not.toBe(
+    createKokoCompactFileAiTargetId("ssh-pane-1", "asset-1", "deploy")
+  );
 });
 
 it("keeps run-level errors out of the visible File AI timeline", () => {
