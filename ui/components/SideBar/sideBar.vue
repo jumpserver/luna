@@ -96,8 +96,7 @@ const islandAccordionUi = {
   header: "shrink-0",
   trigger:
     "h-8 min-w-0 rounded-none px-2.5 py-0 text-xs font-medium text-[var(--app-text-secondary)] hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]",
-  trailingIcon:
-    "size-3.5 text-[var(--app-muted)] transition-transform duration-150 group-data-[state=open]:rotate-90",
+  trailingIcon: "size-3.5 text-[var(--app-muted)] transition-transform duration-150 group-data-[state=open]:rotate-90",
   content: "min-h-0 flex-1 overflow-hidden data-[state=closed]:hidden",
   body: "flex h-full min-h-0 flex-col p-0"
 };

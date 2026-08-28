@@ -40,9 +40,7 @@ let resizeStartWidth = 0;
 const MIN_RIGHT_PANEL_WIDTH = 280;
 const MAX_RIGHT_PANEL_WIDTH = 520;
 const islandHandlePx = 8;
-const useIslandLayout = computed(
-  () => modernIsland.value && !props.focusMode && !isNarrowScreen.value
-);
+const useIslandLayout = computed(() => modernIsland.value && !props.focusMode && !isNarrowScreen.value);
 const showIslandSidebar = computed(
   () => Boolean(slots.sidebar) && props.sidebarVisible && !collapse.value && !props.focusMode
 );
