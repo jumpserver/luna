@@ -18,6 +18,7 @@ const { isMacOS, isWindows } = usePlatform();
 const { activeWorkspaceMode, uiWorkspaceMode } = useWorkspaceMode();
 const {
   activeTabId,
+  closeSession,
   enterFocusMode,
   enterFullscreenMode,
   exitFocusMode,
@@ -142,6 +143,25 @@ const handleChromeShortcut = (event: KeyboardEvent) => {
 };
 
 const handleWorkspaceModeShortcut = (event: KeyboardEvent) => {
+  if (
+    !event.defaultPrevented &&
+    !event.repeat &&
+    event.altKey &&
+    event.shiftKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    event.code === "KeyW" &&
+    !isDesktopRuntime() &&
+    activeWorkspaceMode.value === "assets" &&
+    !settingsOpen.value &&
+    activeTabId.value
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    void closeSession(activeTabId.value);
+    return;
+  }
+
   const usesPrimaryModifier = isMacOS.value ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
   if (event.repeat || event.altKey || !event.shiftKey || !usesPrimaryModifier || !activeTabId.value) return;
 
@@ -174,6 +194,13 @@ const toggleDesktopFullscreen = async () => {
 };
 
 const handleDesktopMenuCommand = (command: string) => {
+  if (command === "close-current-tab") {
+    if (activeWorkspaceMode.value === "assets" && !settingsOpen.value && activeTabId.value) {
+      void closeSession(activeTabId.value);
+    }
+    return;
+  }
+
   if (command === "toggle-focus-mode") {
     if (focusMode.value) void exitFocusMode();
     else if (activeTabId.value) enterFocusMode(activeTabId.value);

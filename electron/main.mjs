@@ -710,6 +710,21 @@ function createWindow(label = "main", options = {}) {
   const windowWebContents = win.webContents;
   const windowWebContentsId = windowWebContents.id;
 
+  windowWebContents.on("before-input-event", (event, input) => {
+    const closeCurrentTab =
+      input.type === "keyDown" &&
+      !input.isAutoRepeat &&
+      input.alt &&
+      input.shift &&
+      !input.control &&
+      !input.meta &&
+      (input.code === "KeyW" || input.key.toLowerCase() === "w");
+    if (!closeCurrentTab) return;
+
+    event.preventDefault();
+    emitDesktopEvent("desktop-menu-command", "close-current-tab", label);
+  });
+
   if (isDevelopment) {
     windowWebContents.on("context-menu", () => {
       Menu.buildFromTemplate([
