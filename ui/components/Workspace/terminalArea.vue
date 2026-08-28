@@ -5,6 +5,10 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 const { activeTab, activePaneId, activeTabId, tabs } = useWorkspaceTabs();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
+const { authReady } = useAuthSession();
+const showLoginPrompt = computed(
+  () => authReady.value && !loggedIn.value && activeTab.value?.protocol !== "local-shell"
+);
 const { isMacOS } = usePlatform();
 const { t } = useI18n();
 const tabArrowSwitchModifier = computed(() => (isMacOS.value ? "Option" : "Alt"));
@@ -30,22 +34,21 @@ const openLogin = () => {
     :style="{ backgroundColor: 'color-mix(in srgb, var(--app-main-bg) 88%, transparent)' }"
   >
     <div class="flex-1 min-h-0">
-      <template v-if="!loggedIn && activeTab?.protocol !== 'local-shell'">
+      <template v-if="showLoginPrompt">
         <div class="h-full min-h-0 grid place-items-center text-sm" :style="{ color: 'var(--app-muted)' }">
-          <div
-            class="flex flex-col items-center gap-4 rounded-2xl px-8 py-7 shadow-sm"
-            :style="{
-              border: '1px solid var(--app-border)',
-              backgroundColor: 'var(--app-card-bg-soft)',
-              boxShadow: 'var(--theme-shadow-soft)'
+          <UCard
+            variant="outline"
+            :ui="{
+              root: 'rounded-2xl shadow-sm ring-[var(--app-border)] bg-[var(--app-card-bg-soft)]',
+              body: 'flex flex-col items-center gap-4 px-8 py-7 sm:p-7'
             }"
           >
             <UIcon name="i-lucide-log-in" class="size-10" :style="{ color: 'var(--app-muted)' }" />
-            <div class="font-medium" :style="{ color: 'var(--app-fg)' }">登录后查看资产并发起连接</div>
+            <div class="font-medium" :style="{ color: 'var(--app-fg)' }">{{ t("WorkspaceEmpty.LoginHint") }}</div>
             <UButton color="primary" variant="soft" class="rounded-xl px-4" @click="openLogin">
               {{ t("Common.Login") }}
             </UButton>
-          </div>
+          </UCard>
         </div>
       </template>
 
@@ -62,53 +65,35 @@ const openLogin = () => {
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-mouse-pointer-click" class="size-4.5 shrink-0" />
               <span>
-                <strong :style="{ color: 'var(--app-fg)' }">右击资产 → 连接</strong>
-                ，可重新选择连接方式
+                <strong :style="{ color: 'var(--app-fg)' }">{{ t("WorkspaceEmpty.ConnectAsset") }}</strong>
+                {{ t("WorkspaceEmpty.ConnectAssetHint") }}
               </span>
             </div>
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-folder-tree" class="size-4.5 shrink-0" />
               <span>
-                <strong :style="{ color: 'var(--app-fg)' }">右击节点 → 展开全部</strong>
-                ，展开节点下的所有资产
+                <strong :style="{ color: 'var(--app-fg)' }">{{ t("WorkspaceEmpty.ExpandNode") }}</strong>
+                {{ t("WorkspaceEmpty.ExpandNodeHint") }}
               </span>
             </div>
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-maximize-2" class="size-4.5 shrink-0" />
-              <span>
-                <strong :style="{ color: 'var(--app-fg)' }">纯净 / 全屏模式</strong>
-                <kbd
-                  class="ml-1 rounded px-1.5 py-0.5 font-ui-mono text-xs"
-                  :style="{ border: '1px solid var(--app-border)', backgroundColor: 'var(--app-card-bg-soft)' }"
-                >
-                  {{ cleanModeShortcut }}
-                </kbd>
-                <span class="mx-1">/</span>
-                <kbd
-                  class="rounded px-1.5 py-0.5 font-ui-mono text-xs"
-                  :style="{ border: '1px solid var(--app-border)', backgroundColor: 'var(--app-card-bg-soft)' }"
-                >
-                  {{ fullscreenModeShortcut }}
-                </kbd>
+              <span class="flex flex-wrap items-center gap-1">
+                <strong :style="{ color: 'var(--app-fg)' }">
+                  {{ t("TabMenu.FocusCurrent") }} / {{ t("TabMenu.FullscreenCurrent") }}
+                </strong>
+                <UKbd size="sm">{{ cleanModeShortcut }}</UKbd>
+                <span>/</span>
+                <UKbd size="sm">{{ fullscreenModeShortcut }}</UKbd>
               </span>
             </div>
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-panels-top-left" class="size-4.5 shrink-0" />
-              <span>
-                <strong :style="{ color: 'var(--app-fg)' }">切换会话</strong>
-                <kbd
-                  class="ml-1 rounded px-1.5 py-0.5 font-ui-mono text-xs"
-                  :style="{ border: '1px solid var(--app-border)', backgroundColor: 'var(--app-card-bg-soft)' }"
-                >
-                  {{ tabArrowSwitchModifier }} + Shift + ← / →
-                </kbd>
-                <span class="mx-1">或</span>
-                <kbd
-                  class="rounded px-1.5 py-0.5 font-ui-mono text-xs"
-                  :style="{ border: '1px solid var(--app-border)', backgroundColor: 'var(--app-card-bg-soft)' }"
-                >
-                  {{ tabNumberSwitchShortcut }}
-                </kbd>
+              <span class="flex flex-wrap items-center gap-1">
+                <strong :style="{ color: 'var(--app-fg)' }">{{ t("WorkspaceEmpty.SwitchSession") }}</strong>
+                <UKbd size="sm">{{ tabArrowSwitchModifier }} + Shift + ← / →</UKbd>
+                <span>{{ t("WorkspaceEmpty.Or") }}</span>
+                <UKbd size="sm">{{ tabNumberSwitchShortcut }}</UKbd>
               </span>
             </div>
           </div>

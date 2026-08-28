@@ -103,6 +103,26 @@
     "Restore": "还原",
     "About": "关于"
   },
+  "StatusFooter": {
+    "LoggedOut": "未登录",
+    "LoggedIn": "已登录",
+    "LoggedInUser": "已登录 {user}",
+    "LoggedInUserSite": "已登录 {user}({site})",
+    "Disconnected": "未连接",
+    "Tabs": "{count} 个标签",
+    "Connected": "{count} 个已连接",
+    "Pending": "{count} 个连接中",
+    "Failed": "{count} 个失败"
+  },
+  "WorkspaceEmpty": {
+    "LoginHint": "登录后查看资产并发起连接",
+    "ConnectAsset": "右击资产 → 连接",
+    "ConnectAssetHint": "，可重新选择连接方式",
+    "ExpandNode": "右击节点 → 展开全部",
+    "ExpandNodeHint": "，展开节点下的所有资产",
+    "SwitchSession": "切换会话",
+    "Or": "或"
+  },
   "Auth": {
     "SignInTitle": "请在浏览器中完成登录",
     "BrowserHintPrefix": "如果浏览器没有自动为你打开登录页面",
