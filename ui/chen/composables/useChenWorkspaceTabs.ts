@@ -86,6 +86,8 @@ export function useChenWorkspaceTabs() {
       kind: "console",
       nodeKey,
       pendingSql: "",
+      aiRevision: 0,
+      lastSqlError: null,
       timelineEntries: [],
       activeTimelineEntryId: "",
       state: {},
