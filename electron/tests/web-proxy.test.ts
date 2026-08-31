@@ -1,3 +1,4 @@
+import type { Server } from "node:http";
 import assert from "node:assert/strict";
 import { createCipheriv, createPublicKey, diffieHellman, generateKeyPairSync, hkdfSync } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -7,15 +8,31 @@ import path from "node:path";
 import test from "node:test";
 import { gzipSync } from "node:zlib";
 import { pack as createTarPack } from "tar-stream";
-import { OfflineRecordingStore } from "./offline-recordings.mjs";
+import { OfflineRecordingStore } from "../src/replay/offline-recordings.ts";
+import { requestWebProxyControl } from "../src/web-proxy/control.ts";
 import {
   createCredentialSession,
   normalizedWebOrigin,
   releaseCredentials,
   validateWebSelector
-} from "./web-proxy-credentials.mjs";
-import { signaturesDiffer } from "./web-proxy-recording.mjs";
-import { requestWebProxyControl } from "./web-proxy-control.mjs";
+} from "../src/web-proxy/credentials.ts";
+import { signaturesDiffer } from "../src/web-proxy/recording.ts";
+
+async function listen(server: Server) {
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("test server did not bind a TCP port");
+  return address.port;
+}
+
+function close(server: Server) {
+  return new Promise<void>((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
+}
 
 test("validates Web Proxy trust-boundary values", () => {
   assert.equal(normalizedWebOrigin("HTTPS://Example.com:443/login"), "https://example.com");
@@ -26,7 +43,7 @@ test("validates Web Proxy trust-boundary values", () => {
 
 test("decrypts the Koko-compatible one-time credential envelope", async () => {
   const { privateKey: serverPrivateKey, publicKey: serverPublicKey } = generateKeyPairSync("x25519");
-  let clientPublicKey;
+  let clientPublicKey: ReturnType<typeof createPublicKey> | undefined;
   let requestCount = 0;
   let proxyUrl = "";
   const server = createServer((request, response) => {
@@ -64,6 +81,7 @@ test("decrypts the Koko-compatible one-time credential envelope", async () => {
       }
 
       assert.equal(request.headers.authorization, "Bearer once");
+      assert.ok(clientPublicKey);
       const sharedSecret = diffieHellman({ privateKey: serverPrivateKey, publicKey: clientPublicKey });
       const key = Buffer.from(
         hkdfSync("sha256", sharedSecret, Buffer.alloc(0), Buffer.from("jumpserver-web-autofill-v1"), 32)
@@ -80,9 +98,8 @@ test("decrypts the Koko-compatible one-time credential envelope", async () => {
       response.end(JSON.stringify({ nonce: nonce.toString("base64"), ciphertext: ciphertext.toString("base64") }));
     });
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const address = server.address();
-  proxyUrl = `http://127.0.0.1:${address.port}`;
+  const port = await listen(server);
+  proxyUrl = `http://127.0.0.1:${port}`;
 
   try {
     const session = await createCredentialSession(proxyUrl, "https://example.com/login", "token-id", "token-value");
@@ -90,7 +107,7 @@ test("decrypts the Koko-compatible one-time credential envelope", async () => {
     assert.deepEqual(credentials, { username: "managed-user", password: "managed-password" });
     assert.equal(session.accessToken, "");
   } finally {
-    await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+    await close(server);
   }
 });
 
@@ -99,18 +116,17 @@ test("supports empty control responses returned through the Web Proxy", async ()
     response.writeHead(204);
     response.end();
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const address = server.address();
+  const port = await listen(server);
   try {
     const response = await requestWebProxyControl(
-      `http://127.0.0.1:${address.port}`,
+      `http://127.0.0.1:${port}`,
       "/_jumpserver/web-recordings/session-id",
       { method: "DELETE" }
     );
     assert.equal(response.status, 204);
     assert.equal(await response.text(), "");
   } finally {
-    await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+    await close(server);
   }
 });
 

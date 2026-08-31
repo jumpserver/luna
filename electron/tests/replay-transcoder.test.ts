@@ -7,9 +7,9 @@ import os from "node:os";
 import path from "node:path";
 import { app, net } from "electron";
 import { pack as createTarPack } from "tar-stream";
-import { encodeInstruction } from "./replay-codec.mjs";
-import { FfmpegPluginManager } from "./ffmpeg-plugin.mjs";
-import { ReplayTranscoder } from "./replay-transcoder.mjs";
+import { encodeInstruction } from "../src/replay/codec.ts";
+import { FfmpegPluginManager } from "../src/replay/ffmpeg-plugin.ts";
+import { ReplayTranscoder } from "../src/replay/transcoder.ts";
 
 const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "jms-node-transcode-"));
 
@@ -36,7 +36,7 @@ try {
 
   const progress = [];
   const ffmpegPlugin = new FfmpegPluginManager(path.join(temporaryRoot, "plugins"), (url, options) =>
-    net.fetch(url, options)
+    net.fetch(String(url), options)
   );
   await ffmpegPlugin.install();
   const transcoder = new ReplayTranscoder(temporaryRoot, (event) => progress.push(event), ffmpegPlugin);
