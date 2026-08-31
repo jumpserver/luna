@@ -13,7 +13,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm electron:dev",
+    "dev": "node scripts/dev.mjs",
     "web:dev": "nuxt dev --dotenv .env.development",
     "generate": "nuxt generate",
     "generate:client": "node scripts/generate-client.js",

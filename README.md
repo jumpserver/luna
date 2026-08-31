@@ -154,8 +154,8 @@ cd clients
 # Install dependencies
 pnpm install
 
-# Start development server
-pnpm electron:dev
+# Start the Web and Electron clients together
+pnpm dev
 ```
 
 ### Build for Production
@@ -197,6 +197,7 @@ clients/
 ### Available Scripts
 
 ```bash
+pnpm dev              # Start Web and Electron development together
 pnpm web:dev          # Start Nuxt web development
 pnpm electron:dev     # Start Electron development
 pnpm electron:build   # Build production artifacts

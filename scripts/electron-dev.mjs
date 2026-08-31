@@ -112,11 +112,13 @@ function stop(exitCode = 0) {
 process.once("SIGINT", () => stop(0));
 process.once("SIGTERM", () => stop(0));
 
-const nuxt = run("pnpm", ["web:dev", "--port", String(rendererPort)], {
-  ...process.env,
-  JMS_HMR_PORT: hmrPort
-});
-nuxt.once("exit", (code) => stop(code || 0));
+if (!requestedRendererUrl) {
+  const nuxt = run("pnpm", ["web:dev", "--port", String(rendererPort)], {
+    ...process.env,
+    JMS_HMR_PORT: hmrPort
+  });
+  nuxt.once("exit", (code) => stop(code || 0));
+}
 
 try {
   await waitForRenderer();
