@@ -1,4 +1,5 @@
 export { default as KokoFileManagement } from "../app/components/FileManagement/index.vue";
+export type { SftpCapabilities } from "../app/composables/sftp/protocol";
 export {
   getKokoLinuxMetrics,
   subscribeKokoLinuxMetrics,

@@ -110,6 +110,25 @@ const context = computed<ConnectorSessionContext | null>(() => {
   return { ...value, tokenId: props.sftpToken };
 });
 const manager = useSftpFileManager(context);
+const fileEditorCapability = computed(() => manager.capabilities.value?.file_editor || null);
+const fileEditorSupported = computed(() => {
+  const capability = fileEditorCapability.value;
+  return Boolean(
+    capability?.enabled &&
+    capability.read &&
+    capability.write &&
+    capability.save.version === 1 &&
+    capability.save.expected_version &&
+    capability.save.force
+  );
+});
+const fileEditorUnavailableDescription = computed(() => {
+  const capability = fileEditorCapability.value;
+  if (capability && (!capability.read || !capability.write)) {
+    return t("koko.sftpEditor.capabilityPermissionRequired");
+  }
+  return t("koko.sftpEditor.capabilityUpgradeRequired");
+});
 const draftScope = computed(() => props.workspaceKey || props.sftpToken);
 const drafts = useSftpEditorDrafts(draftScope);
 const tabs = ref<EditorTab[]>([]);
@@ -205,7 +224,22 @@ const alertDescription = computed(() => {
     ? t("koko.sftpEditor.deleteConfirm", { name: target.target.entry.name })
     : t("koko.sftpEditor.unsavedCloseConfirm", { name: target.tab.entry.name });
 });
-const maxEditorBytes = 10 * 1024 * 1024;
+const defaultMaxEditorBytes = 10 * 1024 * 1024;
+const maxEditorBytes = computed(() =>
+  Math.min(defaultMaxEditorBytes, fileEditorCapability.value?.save.max_bytes || defaultMaxEditorBytes)
+);
+watch(fileEditorSupported, (supported) => {
+  if (supported) return;
+  pendingCreate.value = null;
+  uploadDirectory.value = "";
+  contextMenuVisible.value = false;
+  contextTarget.value = null;
+  renameDialogOpen.value = false;
+  renameTarget.value = null;
+  alertDialogOpen.value = false;
+  alertTarget.value = null;
+  saveConflict.value = null;
+});
 const directoryCacheTtlMs = 30_000;
 const encodingItems = [
   { label: "UTF-8", value: "utf-8" },
@@ -992,7 +1026,7 @@ function cancelCreate() {
 }
 
 async function commitCreate() {
-  if (!pendingCreate.value || pendingSubmitting.value) return;
+  if (!fileEditorSupported.value || !pendingCreate.value || pendingSubmitting.value) return;
   const { parent, kind } = pendingCreate.value;
   const name = pendingName.value.trim();
   pendingError.value = "";
@@ -1098,7 +1132,7 @@ function openRenameDialog() {
 
 async function submitRename() {
   const target = renameTarget.value;
-  if (!target || renameSubmitting.value) return;
+  if (!fileEditorSupported.value || !target || renameSubmitting.value) return;
   const name = renameValue.value.trim();
   renameError.value = "";
   if (!name) {
@@ -1520,6 +1554,7 @@ async function confirmAlert() {
     alertDialogOpen.value = false;
     return;
   }
+  if (!fileEditorSupported.value) return;
   alertSubmitting.value = true;
   try {
     await manager.operations.removePath(target.target.path);
@@ -1593,7 +1628,7 @@ async function uploadFiles(event: Event) {
   hideContextMenu();
   uploadDirectory.value = "";
   input.value = "";
-  if (!directory || files.length === 0) return;
+  if (!fileEditorSupported.value || !directory || files.length === 0) return;
   const results = await Promise.allSettled(
     files.map((file) => manager.operations.uploadFile(file, joinPath(directory, file.name)))
   );
@@ -1804,7 +1839,7 @@ function revokePreview(tab: EditorTab) {
 function blockLargeFile(tab: EditorTab) {
   tab.kind = "unsupported";
   tab.largeBlocked = true;
-  tab.error = t("koko.sftpEditor.fileTooLarge", { size: "10 MB" });
+  tab.error = t("koko.sftpEditor.fileTooLarge", { size: formatFileSize(String(maxEditorBytes.value)) });
 }
 
 async function loadTab(tab: EditorTab, forceLarge = false, draft?: SftpEditorDraft) {
@@ -1816,13 +1851,13 @@ async function loadTab(tab: EditorTab, forceLarge = false, draft?: SftpEditorDra
   tab.largeBlocked = false;
   try {
     const reportedSize = parseFileSize(tab.entry.size);
-    if (!forceLarge && reportedSize > maxEditorBytes) {
+    if (!forceLarge && reportedSize > maxEditorBytes.value) {
       blockLargeFile(tab);
       return;
     }
 
     const blob = await manager.operations.readFile(tab.entry, tab.path);
-    if (!forceLarge && blob.size > maxEditorBytes) {
+    if (!forceLarge && blob.size > maxEditorBytes.value) {
       // ponytail: the legacy koko download command has no stat/range phase, so an
       // unknown-size file is already transferred here. Upgrade to ranged reads when
       // the server exposes metadata before content.
@@ -2203,6 +2238,7 @@ async function showSaveConflict(tab: EditorTab, remoteEntry: SftpFileEntry | nul
 }
 
 async function save(tab = activeTab.value, overwrite = false): Promise<boolean> {
+  if (!fileEditorSupported.value) return false;
   if (!tab) return true;
   if (!dirty(tab) && !overwrite) return true;
   if (tab.saving) return false;
@@ -2440,6 +2476,7 @@ async function discardAllAndClose() {
 defineExpose({ requestClose });
 
 useEventListener(window, "keydown", (event: KeyboardEvent) => {
+  if (!fileEditorSupported.value) return;
   const modifier = event.metaKey || event.ctrlKey;
   if (event.altKey && !modifier && (event.key === KeyboardKey.ArrowLeft || event.key === KeyboardKey.ArrowRight)) {
     event.preventDefault();
@@ -2600,6 +2637,35 @@ onUnmounted(() => {
 
 <template>
   <div
+    v-if="manager.error.value && !manager.capabilitiesKnown.value"
+    class="grid h-full min-h-0 place-items-center bg-(--app-main-bg) p-6"
+  >
+    <div class="flex max-w-md flex-col items-center gap-3 text-center">
+      <UIcon name="i-lucide-wifi-off" class="size-7 text-warning" />
+      <p class="text-xs leading-5 text-muted">{{ manager.error.value }}</p>
+      <UButton size="sm" color="warning" variant="soft" icon="i-lucide-refresh-cw" @click="manager.retry.reconnect()">
+        {{ t("koko.fileManagement.reconnect") }}
+      </UButton>
+    </div>
+  </div>
+  <div
+    v-else-if="!manager.capabilitiesKnown.value"
+    class="grid h-full min-h-0 place-items-center bg-(--app-main-bg) p-6"
+  >
+    <div class="flex flex-col items-center gap-2 text-center text-sm text-muted">
+      <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
+      <span>{{ t("koko.sftpEditor.checkingCapabilities") }}</span>
+    </div>
+  </div>
+  <div v-else-if="!fileEditorSupported" class="grid h-full min-h-0 place-items-center bg-(--app-main-bg) p-6">
+    <div class="flex max-w-md flex-col items-center gap-2 text-center">
+      <UIcon name="i-lucide-file-lock-2" class="size-7 text-muted" />
+      <h3 class="text-sm font-medium text-highlighted">{{ t("koko.sftpEditor.capabilityUnavailableTitle") }}</h3>
+      <p class="text-xs leading-5 text-muted">{{ fileEditorUnavailableDescription }}</p>
+    </div>
+  </div>
+  <div
+    v-else
     ref="editorLayout"
     class="relative grid h-full min-h-0 bg-(--app-main-bg) text-(--app-fg)"
     :class="resizingExplorer || resizingSplit ? 'cursor-col-resize select-none' : ''"

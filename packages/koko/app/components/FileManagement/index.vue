@@ -5,6 +5,7 @@ import type {
   SftpRemotePaneHandle,
   SftpTransferCenterHandle
 } from "#koko/composables/sftp/file-manager/workspaceTypes";
+import type { SftpCapabilities } from "#koko/composables/sftp/protocol";
 import SftpConnectModal from "#koko/components/FileManagement/workspace/SftpConnectModal.vue";
 import SftpGlobalWorkspace from "#koko/components/FileManagement/workspace/SftpGlobalWorkspace.vue";
 import SftpSendModal from "#koko/components/FileManagement/workspace/SftpSendModal.vue";
@@ -25,7 +26,10 @@ const props = defineProps<{
   sourceAsset?: FileWorkspaceSourceAsset | null;
 }>();
 
-const emit = defineEmits<{ reconnect: [] }>();
+const emit = defineEmits<{
+  reconnect: [];
+  capabilities: [capabilities: SftpCapabilities | null];
+}>();
 
 const { t } = useI18n();
 const sftpTour = useSftpTour();
@@ -40,6 +44,12 @@ const primaryPaneRef = ref<SftpRemotePaneHandle | null>(null);
 const transferCenterRef = ref<SftpTransferCenterHandle | null>(null);
 const localPaneRef = ref<SftpLocalPaneHandle | null>(null);
 let tourTimer: ReturnType<typeof setTimeout> | undefined;
+const primaryCapabilities = computed(() => {
+  const value = primaryPaneRef.value?.manager.capabilities;
+  return value == null ? null : unref(value);
+});
+
+watch(primaryCapabilities, (capabilities) => emit("capabilities", capabilities), { immediate: true });
 
 const workspace = useSftpWorkspacePanes({
   sftpToken: () => props.sftpToken,

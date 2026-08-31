@@ -1,9 +1,9 @@
 import type { ConnectorSessionContext, FileTransferEndpointRef } from "@jumpserver/connectors-core";
 import type { Ref } from "vue";
-import type { SftpFileEntry, SftpIncomingMessage } from "./protocol";
+import type { SftpCapabilities, SftpFileEntry, SftpIncomingMessage } from "./protocol";
 
 import { computed, onUnmounted, ref, shallowRef, watch } from "vue";
-import { SFTP_REQUEST_TIMEOUT_ERROR, SftpMessageType, SftpSocketFailureCode } from "./protocol";
+import { parseSftpCapabilities, SFTP_REQUEST_TIMEOUT_ERROR, SftpMessageType, SftpSocketFailureCode } from "./protocol";
 import { useSftpOperations } from "./useSftpOperations";
 import { useSftpRetry } from "./useSftpRetry";
 import { useSftpSocket } from "./useSftpSocket";
@@ -83,6 +83,8 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
   const { t } = useI18n();
 
   const error = ref("");
+  const capabilities = shallowRef<SftpCapabilities | null>(null);
+  const capabilitiesKnown = ref(false);
   const currentPath = ref("");
   const initialPath = ref("");
   const loading = ref(true);
@@ -108,6 +110,8 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
     error.value = "";
     loading.value = true;
     fileAiReadiness.reset();
+    capabilities.value = null;
+    capabilitiesKnown.value = false;
     try {
       await retryClient.reconnect();
     } catch (cause) {
@@ -208,11 +212,24 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
 
   const stopMessageListener = socket.onMessage((message) => {
     fileAiReadiness.handleMessage(message);
-    if (message.type === SftpMessageType.Connect) void loadCurrentDirectory(currentPath.value || "", message.id);
+    if (message.type === SftpMessageType.Connect) {
+      capabilities.value = parseSftpCapabilities(message.data);
+      capabilitiesKnown.value = true;
+      void loadCurrentDirectory(currentPath.value || "", message.id);
+    } else if (
+      message.type === SftpMessageType.Close ||
+      message.type === SftpMessageType.Closed ||
+      message.type === SftpMessageType.Error
+    ) {
+      capabilities.value = null;
+      capabilitiesKnown.value = false;
+    }
   });
 
   const stopFailureListener = socket.onFailure((failure) => {
     fileAiReadiness.reset();
+    capabilities.value = null;
+    capabilitiesKnown.value = false;
     error.value = errorMessage(failure.code, t);
     loading.value = false;
   });
@@ -221,6 +238,8 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
     ctx,
     (context) => {
       fileAiReadiness.reset();
+      capabilities.value = null;
+      capabilitiesKnown.value = false;
       operationClient.rejectPending(SftpSocketFailureCode.ConnectionReset);
       activeContext.value = context ? { ...context } : null;
       entries.value = [];
@@ -246,6 +265,8 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
 
   return {
     entries,
+    capabilities,
+    capabilitiesKnown,
     currentPath,
     loading,
     error,

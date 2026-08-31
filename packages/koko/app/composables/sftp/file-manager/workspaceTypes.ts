@@ -1,6 +1,6 @@
 import type { ConnectorSessionContext, FileTransferEndpointRef } from "@jumpserver/connectors-core";
 import type { MaybeRef } from "vue";
-import type { SftpFileEntry, SftpFileOperations } from "../protocol";
+import type { SftpCapabilities, SftpFileEntry, SftpFileOperations } from "../protocol";
 
 export type SftpWorkspaceSide = "left" | "right";
 
@@ -49,6 +49,7 @@ export type SftpTransferSourcePayload = Omit<SftpTransferDropPayload, "destinati
 
 export interface SftpRemotePaneHandle {
   manager: {
+    capabilities: MaybeRef<SftpCapabilities | null>;
     connected: MaybeRef<boolean>;
     currentPath: MaybeRef<string>;
     loadCurrentDirectory: () => Promise<boolean>;
