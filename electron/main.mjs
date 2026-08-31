@@ -1458,7 +1458,9 @@ const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) app.quit();
 
 app.on("second-instance", (_event, commandLine) => {
-  const callbackUrl = commandLine.find((argument) => argument.startsWith("jms2://"));
+  const callbackUrl = commandLine.find(
+    (argument) => argument.startsWith("jms://") || argument.startsWith("jms2://")
+  );
   if (callbackUrl) authService?.handleCallback(callbackUrl);
   const win = createWindow("main");
   if (win.isMinimized()) win.restore();
@@ -1474,9 +1476,11 @@ app.on("window-all-closed", () => {
 });
 app.on("activate", () => createWindow("main"));
 
-if (isDevelopment && process.argv[1])
-  app.setAsDefaultProtocolClient("jms2", process.execPath, [path.resolve(process.argv[1])]);
-else app.setAsDefaultProtocolClient("jms2");
+for (const scheme of ["jms", "jms2"]) {
+  if (isDevelopment && process.argv[1])
+    app.setAsDefaultProtocolClient(scheme, process.execPath, [path.resolve(process.argv[1])]);
+  else app.setAsDefaultProtocolClient(scheme);
+}
 
 app.whenReady().then(async () => {
   await registerProtocols();
