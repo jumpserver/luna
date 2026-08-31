@@ -14,7 +14,7 @@ const CURRENT_ORG = "/api/v1/orgs/orgs/current/";
 const PUBLIC_SETTINGS = "/api/v1/settings/public/";
 const CLIENT_VERSIONS = "/api/v1/settings/client/versions/";
 const DEV_CALLBACK = "http://127.0.0.1:14876/auth/callback";
-const DEEP_LINK_CALLBACK = "jms2://auth/callback";
+const DEEP_LINK_CALLBACK = "jms://auth/callback";
 
 function endpoint(site, endpointPath) {
   return `${site.replace(/\/+$/, "")}${endpointPath}`;
@@ -126,6 +126,12 @@ export class DesktopAuthService {
   }
 
   async startCallbackServer() {
+    // Packaged clients must use the JumpServer-registered deep link.
+    // Binding the dev loopback callback would send http://127.0.0.1:14876, which production rejects.
+    if (app.isPackaged && process.env.JMS_ELECTRON_DEV !== "1") {
+      this.redirectUri = DEEP_LINK_CALLBACK;
+      return;
+    }
     if (this.callbackServer) return;
     const server = createServer((request, response) => {
       const callbackUrl = new URL(request.url || "/", "http://127.0.0.1:14876");
