@@ -133,12 +133,12 @@ sudo dnf install ./jumpserver-client_*.rpm
 
 ### 前置要求
 
-- **Node.js** >= 22
+- **Node.js** >= 22.12
 - **pnpm** >= 11
 - **系统依赖**：
   - macOS: Xcode Command Line Tools
-  - Windows: Microsoft Visual C++ Build Tools
-  - Linux: `build-essential`，生成 RPM 安装包时还需安装 `rpm`
+  - Windows: Microsoft Visual C++ Build Tools；生成 MSI 时还需 WiX Toolset 3（`candle` 和 `light`）
+  - Linux: `build-essential`、`fakeroot`，生成 DEB/RPM 安装包时还需安装 `rpm`
 
 ### 快速开始
 
@@ -185,8 +185,8 @@ clients/
 │   ├── composables/      # Vue 组合式函数
 │   └── layouts/          # 布局组件
 ├── electron/              # Electron 主进程与 preload bridge
-│   ├── ssh-helper.cjs     # 外部终端使用的 Node SSH helper
-│   └── replay-*.mjs      # Node 录像解析、渲染与编码桥接
+│   ├── src/              # 按业务拆分的 TypeScript 桌面运行时
+│   └── tests/            # Electron 单元测试与 fixtures
 └── i18n/                 # 国际化文件
 ```
 
