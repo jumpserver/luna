@@ -1,13 +1,13 @@
-import { availableParallelism } from "node:os";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import { createReadStream } from "node:fs";
 import { mkdir, rename, rm, stat } from "node:fs/promises";
+import { availableParallelism } from "node:os";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import { gunzipSync } from "node:zlib";
-import { once } from "node:events";
-import { extract as createTarExtractor } from "tar-stream";
 import { nativeImage } from "electron";
-import { buildTimeline, computeTargetDimensions, GuacamoleParser, ReplayRenderer } from "./replay-codec.mjs";
+import { extract as createTarExtractor } from "tar-stream";
+import { buildTimeline, computeTargetDimensions, GuacamoleParser, ReplayRenderer } from "./codec";
 
 const FPS = 10;
 const MAX_METADATA_BYTES = 4 * 1024 * 1024;
@@ -44,7 +44,7 @@ function outputFilename(metadata, style) {
 }
 
 function readEntry(stream, maximum) {
-  return new Promise((resolve, reject) => {
+  return new Promise<Buffer>((resolve, reject) => {
     const chunks = [];
     let length = 0;
     stream.on("data", (chunk) => {
@@ -58,7 +58,7 @@ function readEntry(stream, maximum) {
 }
 
 export function extractReplayArchive(archivePath) {
-  return new Promise((resolve, reject) => {
+  return new Promise<{ replayJson: Buffer; parts: Array<[number, Buffer]> }>((resolve, reject) => {
     const extractor = createTarExtractor();
     let replayJson;
     const parts = [];
@@ -80,7 +80,7 @@ export function extractReplayArchive(archivePath) {
           ? readEntry(stream, MAX_PART_BYTES).then((data) => {
               parts.push([partIndex, data]);
             })
-          : new Promise((resolve, reject) => {
+          : new Promise<void>((resolve, reject) => {
               stream.once("end", resolve);
               stream.once("error", reject);
               stream.resume();
@@ -188,7 +188,7 @@ async function startEncoder(executable, outputPath, width, height, power) {
   child.stderr.on("data", (chunk) => {
     errorOutput += chunk;
   });
-  const completion = new Promise((resolve, reject) => {
+  const completion = new Promise<void>((resolve, reject) => {
     child.once("error", reject);
     child.once("close", (code) => {
       if (code === 0) resolve();
@@ -241,6 +241,9 @@ async function encodeGuacamole(data, executable, outputPath, resolution, power, 
 }
 
 export class ReplayTranscoder {
+  // ponytail: migration keeps replay job payloads dynamic; replace with explicit job types when strict mode is enabled.
+  [key: string]: any;
+
   constructor(_projectRoot, emitProgress, ffmpegPlugin) {
     this.emitProgress = emitProgress;
     this.ffmpegPlugin = ffmpegPlugin;

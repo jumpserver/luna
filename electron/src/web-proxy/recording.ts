@@ -1,4 +1,4 @@
-import { requestWebProxyControl } from "./web-proxy-control.mjs";
+import { requestWebProxyControl } from "./control";
 
 const RECORDING_PATH = "/_jumpserver/web-recordings";
 const CAPTURE_INTERVAL_MS = 500;
@@ -48,6 +48,9 @@ export function signaturesDiffer(previous, current) {
 }
 
 export class WebProxyRecording {
+  // ponytail: migration keeps recording session state dynamic; replace with explicit frame/session types when strict mode is enabled.
+  [key: string]: any;
+
   static async start({ label, targetUrl, proxyUrl, width, height, capture, emit }) {
     if (
       !Number.isInteger(width) ||

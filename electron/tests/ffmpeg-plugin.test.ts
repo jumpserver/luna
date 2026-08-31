@@ -3,7 +3,7 @@ import test from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { FfmpegPluginManager, ffmpegPluginInternals } from "./ffmpeg-plugin.mjs";
+import { FfmpegPluginManager, ffmpegPluginInternals } from "../src/replay/ffmpeg-plugin.ts";
 
 test("reports the optional FFmpeg plugin as absent before download", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "jms-ffmpeg-plugin-"));
@@ -25,7 +25,7 @@ test("rejects unsupported FFmpeg plugin targets", () => {
     () =>
       new FfmpegPluginManager(
         "/tmp",
-        () => {},
+        async () => new Response(),
         () => {},
         "win32",
         "arm64"

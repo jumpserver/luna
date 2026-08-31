@@ -3,6 +3,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { parseOAuthCallback } from "./oauth-callback";
+import { parseUrl } from "../shared/url";
 
 const OAUTH_WELL_KNOWN = "/core/auth/oauth2-provider/.well-known/oauth-authorization-server";
 const OAUTH_AUTHORIZE = "/core/auth/oauth2-provider/authorize/";
@@ -20,12 +22,20 @@ function endpoint(site, endpointPath) {
   return `${site.replace(/\/+$/, "")}${endpointPath}`;
 }
 
+function parseJsonResponse(text: string) {
+  try {
+    return JSON.parse(text);
+  } catch (cause) {
+    throw new Error("API returned invalid JSON", { cause });
+  }
+}
+
 function requestSite(session, request) {
   if (request.service !== "chat-ai") return session.origin;
 
   const configured = String(process.env.JMS_AI_DESKTOP_URL || process.env.JMS_AI_DEV_URL || "").trim();
   if (configured) {
-    const parsed = new URL(configured);
+    const parsed = parseUrl(configured);
     if (!["http:", "https:"].includes(parsed.protocol) || !parsed.hostname || parsed.username || parsed.password) {
       throw new Error("Chat AI endpoint must be an HTTP/HTTPS URL without embedded credentials");
     }
@@ -35,10 +45,10 @@ function requestSite(session, request) {
   if (process.env.JMS_ELECTRON_DEV === "1") {
     const rendererUrl = String(process.env.JMS_ELECTRON_RENDERER_URL || "").trim();
     if (rendererUrl) {
-      const renderer = new URL(rendererUrl);
+      const renderer = parseUrl(rendererUrl);
       if (["http:", "https:"].includes(renderer.protocol) && renderer.hostname) return renderer.origin;
     }
-    const site = new URL(session.origin);
+    const site = parseUrl(session.origin);
     if (["localhost", "127.0.0.1", "::1"].includes(site.hostname)) {
       site.port = "8088";
       return site.origin;
@@ -73,12 +83,16 @@ function expiresAt(expiresIn) {
 }
 
 export class DesktopAuthService {
+  // ponytail: migration keeps legacy dynamic state; replace with explicit auth/session types when strict mode is enabled.
+  [key: string]: any;
+
   constructor(emitEvent) {
     this.emitEvent = emitEvent;
     this.sessions = new Map();
     this.currentSessionKey = "";
     this.tokens = {};
     this.pendingAuth = null;
+    this.queuedCallback = null;
     this.callbackServer = null;
     this.redirectUri = DEEP_LINK_CALLBACK;
     this.tokenFile = path.join(app.getPath("userData"), "oauth-tokens.json");
@@ -108,7 +122,7 @@ export class DesktopAuthService {
 
   setSession({ sessionKey, origin, bearerToken = "", orgId = "" }) {
     if (!sessionKey || !origin) throw new Error("session key and origin are required");
-    const parsed = new URL(origin);
+    const parsed = parseUrl(origin);
     if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("site must use HTTP or HTTPS");
     this.currentSessionKey = sessionKey;
     this.sessions.set(sessionKey, { sessionKey, origin: origin.replace(/\/+$/, ""), bearerToken, orgId });
@@ -134,7 +148,7 @@ export class DesktopAuthService {
     }
     if (this.callbackServer) return;
     const server = createServer((request, response) => {
-      const callbackUrl = new URL(request.url || "/", "http://127.0.0.1:14876");
+      const callbackUrl = parseUrl(request.url || "/", "http://127.0.0.1:14876");
       if (callbackUrl.pathname !== "/auth/callback") {
         response.writeHead(404).end("Not found");
         return;
@@ -148,7 +162,7 @@ export class DesktopAuthService {
       );
     });
     try {
-      await new Promise((resolve, reject) => {
+      await new Promise<void>((resolve, reject) => {
         server.once("error", reject);
         server.listen(14876, "127.0.0.1", resolve);
       });
@@ -162,18 +176,25 @@ export class DesktopAuthService {
     }
   }
 
+  isOAuthCallbackUrl(rawUrl) {
+    return Boolean(parseOAuthCallback(rawUrl));
+  }
+
   handleCallback(rawUrl) {
-    if (!this.pendingAuth) return false;
-    const url = new URL(rawUrl);
-    const code = url.searchParams.get("code");
-    if (!code) return false;
+    const parsed = parseOAuthCallback(rawUrl);
+    if (!parsed) return false;
+    if (!this.pendingAuth) {
+      this.queuedCallback = parsed;
+      return true;
+    }
     const pending = this.pendingAuth;
     this.pendingAuth = null;
-    pending.resolve({ code, state: url.searchParams.get("state") });
+    pending.resolve(parsed);
     return true;
   }
 
   cancelAuth() {
+    this.queuedCallback = null;
     if (!this.pendingAuth) return;
     const pending = this.pendingAuth;
     this.pendingAuth = null;
@@ -182,7 +203,7 @@ export class DesktopAuthService {
 
   async requestApiResponse(site, requestPath, { bearerToken = "", orgId = "", timeout = 30_000 } = {}) {
     const url = endpoint(site, requestPath);
-    const headers = { "X-TZ": timezoneOffset(), Referer: new URL(url).origin };
+    const headers: Record<string, string> = { "X-TZ": timezoneOffset(), Referer: parseUrl(url).origin };
     if (bearerToken) headers.Authorization = `Bearer ${bearerToken}`;
     if (orgId) headers["X-JMS-ORG"] = orgId;
     try {
@@ -198,7 +219,7 @@ export class DesktopAuthService {
   }
 
   async authLogin({ site, sessionId }) {
-    let oauthConfig;
+    let oauthConfig: { client_id?: string };
     try {
       const response = await net.fetch(endpoint(site, OAUTH_WELL_KNOWN), { signal: AbortSignal.timeout(10_000) });
       const text = await response.text();
@@ -221,7 +242,7 @@ export class DesktopAuthService {
     const challenge = base64Url(createHash("sha256").update(verifier).digest());
     const state = base64Url(randomBytes(24));
     const redirectUri = this.redirectUri;
-    const authorizeUrl = new URL(endpoint(site, OAUTH_AUTHORIZE));
+    const authorizeUrl = parseUrl(endpoint(site, OAUTH_AUTHORIZE));
     authorizeUrl.searchParams.set("response_type", "code");
     authorizeUrl.searchParams.set("client_id", clientId);
     authorizeUrl.searchParams.set("state", state);
@@ -231,10 +252,17 @@ export class DesktopAuthService {
     authorizeUrl.searchParams.set("scope", "write read");
 
     this.cancelAuth();
-    const callback = new Promise((resolve) => {
+    const callback = new Promise<{ code: string; state: string | null } | null>((resolve) => {
       this.pendingAuth = { resolve };
     });
     this.emitEvent("auth_url", authorizeUrl.toString());
+    if (this.queuedCallback && this.pendingAuth) {
+      const queued = this.queuedCallback;
+      const pending = this.pendingAuth;
+      this.queuedCallback = null;
+      this.pendingAuth = null;
+      pending.resolve(queued);
+    }
     const result = await callback;
     if (!result) return null;
     if (result.state && result.state !== state) throw new Error("OAuth state mismatch");
@@ -260,7 +288,7 @@ export class DesktopAuthService {
     });
     const text = await response.text();
     if (!response.ok) throw new Error(`Token exchange failed: status=${response.status}, body=${text}`);
-    const payload = JSON.parse(text);
+    const payload = parseJsonResponse(text);
     if (!payload.access_token) throw new Error("Token exchange response did not include access_token");
     return {
       access_token: String(payload.access_token),
@@ -303,11 +331,13 @@ export class DesktopAuthService {
       this.requestApiResponse(site, CURRENT_ORG, { bearerToken: bearer }),
       this.requestApiResponse(site, PUBLIC_SETTINGS, { bearerToken: bearer })
     ]);
-    let settings = {};
+    let settings: Record<string, unknown> = {};
     if (publicSettings.success) {
       try {
         settings = JSON.parse(publicSettings.data);
-      } catch {}
+      } catch {
+        // Public settings are optional during authentication bootstrap.
+      }
     }
     return {
       status: "success",
@@ -325,11 +355,14 @@ export class DesktopAuthService {
     const session = this.currentSession();
     const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
     session.bearerToken = bearer;
-    const url = new URL(endpoint(requestSite(session, request), request.path));
+    const url = parseUrl(endpoint(requestSite(session, request), request.path));
     for (const [key, value] of Object.entries(request.query || {})) {
       if (value === undefined || value === null) continue;
-      if (Array.isArray(value)) value.forEach((item) => url.searchParams.append(key, String(item)));
-      else url.searchParams.set(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+      if (Array.isArray(value)) {
+        for (const item of value) url.searchParams.append(key, String(item));
+      } else {
+        url.searchParams.set(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+      }
     }
     const headers = {
       "X-TZ": timezoneOffset(),
@@ -350,18 +383,24 @@ export class DesktopAuthService {
       throw new Error(`api request failed: status=${response.status}, body=${text}`);
     }
     if (!text.trim()) return null;
-    return JSON.parse(text);
+    return parseJsonResponse(text);
   }
 
-  async apiStreamRequest(request, { signal, onChunk } = {}) {
+  async apiStreamRequest(
+    request,
+    { signal, onChunk }: { signal?: AbortSignal; onChunk?: (chunk: string) => void } = {}
+  ) {
     const session = this.currentSession();
     const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
     session.bearerToken = bearer;
-    const url = new URL(endpoint(requestSite(session, request), request.path));
+    const url = parseUrl(endpoint(requestSite(session, request), request.path));
     for (const [key, value] of Object.entries(request.query || {})) {
       if (value === undefined || value === null) continue;
-      if (Array.isArray(value)) value.forEach((item) => url.searchParams.append(key, String(item)));
-      else url.searchParams.set(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+      if (Array.isArray(value)) {
+        for (const item of value) url.searchParams.append(key, String(item));
+      } else {
+        url.searchParams.set(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+      }
     }
     const headers = {
       Accept: "text/event-stream",
@@ -400,7 +439,7 @@ export class DesktopAuthService {
     const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
     session.bearerToken = bearer;
 
-    const base = new URL(baseUrl);
+    const base = parseUrl(baseUrl);
     if (!["http:", "https:"].includes(base.protocol) || !base.hostname || base.username || base.password) {
       throw new Error("Koko endpoint must be an HTTP/HTTPS URL without embedded credentials");
     }
@@ -422,7 +461,7 @@ export class DesktopAuthService {
     if (response.status !== 201) {
       throw new Error(`create koko connect ticket failed: status=${response.status}, body=${text}`);
     }
-    return JSON.parse(text);
+    return parseJsonResponse(text);
   }
 
   async logout({ site, sessionId }) {
@@ -440,6 +479,8 @@ export class DesktopAuthService {
           client_id: token.client_id || ""
         }).toString()
       });
-    } catch {}
+    } catch {
+      // Revocation is best-effort after local credentials are removed.
+    }
   }
 }

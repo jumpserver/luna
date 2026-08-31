@@ -1,7 +1,12 @@
 import http from "node:http";
 
 function controlUrl(proxyUrl, path) {
-  const proxy = proxyUrl instanceof URL ? proxyUrl : new URL(proxyUrl);
+  let proxy: URL;
+  try {
+    proxy = proxyUrl instanceof URL ? proxyUrl : new URL(proxyUrl);
+  } catch (cause) {
+    throw new Error("Koko Web Proxy 地址不是有效 URL", { cause });
+  }
   if (proxy.protocol !== "http:" || !proxy.hostname || proxy.username || proxy.password) {
     throw new Error("Koko Web Proxy 地址必须是不含凭据的 HTTP URL");
   }
@@ -13,7 +18,14 @@ function controlUrl(proxyUrl, path) {
   };
 }
 
-export async function requestWebProxyControl(proxyUrl, path, options = {}) {
+interface WebProxyControlOptions {
+  body?: string | Uint8Array | null;
+  headers?: Record<string, string>;
+  method?: string;
+  signal?: AbortSignal;
+}
+
+export async function requestWebProxyControl(proxyUrl, path, options: WebProxyControlOptions = {}): Promise<Response> {
   const { proxy, target } = controlUrl(proxyUrl, path);
   const body = options.body == null ? null : Buffer.from(options.body);
   const headers = { ...options.headers };
@@ -21,7 +33,7 @@ export async function requestWebProxyControl(proxyUrl, path, options = {}) {
     headers["content-length"] = String(body.length);
   }
 
-  return await new Promise((resolve, reject) => {
+  return await new Promise<Response>((resolve, reject) => {
     const request = http.request(
       {
         hostname: proxy.hostname,
@@ -36,11 +48,20 @@ export async function requestWebProxyControl(proxyUrl, path, options = {}) {
         response.on("data", (chunk) => chunks.push(chunk));
         response.on("end", () => {
           const status = response.statusCode || 500;
+          const responseHeaders = new Headers();
+          for (const [name, value] of Object.entries(response.headers)) {
+            if (Array.isArray(value)) {
+              for (const item of value) responseHeaders.append(name, item);
+            } else if (value !== undefined) {
+              responseHeaders.set(name, String(value));
+            }
+          }
+          const responseBody = [101, 204, 205, 304].includes(status) ? null : new Uint8Array(Buffer.concat(chunks));
           resolve(
-            new Response([101, 204, 205, 304].includes(status) ? null : Buffer.concat(chunks), {
+            new Response(responseBody, {
               status,
               statusText: response.statusMessage,
-              headers: response.headers
+              headers: responseHeaders
             })
           );
         });

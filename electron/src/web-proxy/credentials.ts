@@ -1,5 +1,6 @@
 import { createDecipheriv, createPublicKey, diffieHellman, generateKeyPairSync, hkdfSync } from "node:crypto";
-import { requestWebProxyControl } from "./web-proxy-control.mjs";
+import { parseUrl } from "../shared/url";
+import { requestWebProxyControl } from "./control";
 
 const CREDENTIAL_PATH = "/_jumpserver/web-sessions/";
 const CREDENTIAL_KDF_INFO = Buffer.from("jumpserver-web-autofill-v1");
@@ -27,7 +28,7 @@ async function responseError(response, action) {
 }
 
 export function normalizedWebOrigin(value) {
-  const url = value instanceof URL ? value : new URL(value);
+  const url = value instanceof URL ? value : parseUrl(value);
   if (!["http:", "https:"].includes(url.protocol) || !url.hostname) throw new Error("Website origin 无效");
   return url.origin.toLowerCase();
 }
@@ -49,7 +50,7 @@ export async function createCredentialSession(proxyUrl, targetUrl, tokenId, toke
   if (!tokenId || !tokenValue) return null;
 
   const { privateKey, publicKey } = generateKeyPairSync("x25519");
-  const endpoint = new URL(CREDENTIAL_PATH, proxyUrl);
+  const endpoint = parseUrl(CREDENTIAL_PATH, proxyUrl);
   let response;
   try {
     response = await fetchWithTimeout(proxyUrl, endpoint.pathname, {
@@ -72,7 +73,7 @@ export async function createCredentialSession(proxyUrl, targetUrl, tokenId, toke
   } catch (error) {
     throw new Error(`解析 Web 代填会话失败: ${error}`);
   }
-  const responseTarget = new URL(data.target_url);
+  const responseTarget = parseUrl(data.target_url);
   const targetOrigin = normalizedWebOrigin(targetUrl);
   if (normalizedWebOrigin(responseTarget) !== targetOrigin || String(data.origin).toLowerCase() !== targetOrigin) {
     throw new Error("Koko 返回的 Website origin 不匹配");
@@ -137,7 +138,7 @@ export async function releaseCredentials(session, currentUrl) {
   const key = Buffer.from(hkdfSync("sha256", sharedSecret, Buffer.alloc(0), CREDENTIAL_KDF_INFO, 32));
   sharedSecret.fill(0);
   const tagOffset = ciphertext.length - 16;
-  const decipher = createDecipheriv("aes-256-gcm", key, nonce);
+  const decipher = createDecipheriv("aes-256-gcm", key, nonce, { authTagLength: 16 });
   decipher.setAAD(Buffer.from(`${session.id}\n${session.origin}`));
   decipher.setAuthTag(ciphertext.subarray(tagOffset));
   let plaintext;

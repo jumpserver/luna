@@ -5,11 +5,11 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { strToU8, zipSync } from "fflate";
-import { ApplicationConfigService } from "./application-config.mjs";
-import { localAppLauncherInternals } from "./local-app-launcher.mjs";
-import { systemFontInternals } from "./system-fonts.mjs";
+import { ApplicationConfigService } from "../src/apps/application-config.ts";
+import { localAppLauncherInternals } from "../src/apps/local-app-launcher.ts";
+import { systemFontInternals } from "../src/apps/system-fonts.ts";
 
-const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
 test("builds the Electron application config from platform plugins", async (context) => {
   const appData = await mkdtemp(path.join(os.tmpdir(), "jms-electron-config-"));
@@ -61,7 +61,9 @@ test("decodes local client URLs and preserves quoted application arguments", () 
     endpoint: { host: "127.0.0.1", port: 2222 },
     token: { id: "token-id", value: "secret" }
   };
-  const decoded = localAppLauncherInternals.decodePayload(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+  const decoded = localAppLauncherInternals.decodePayload(
+    `jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`
+  );
   assert.deepEqual(decoded, payload);
   assert.deepEqual(localAppLauncherInternals.splitArguments("-con 'name=one two' escaped\\ value"), [
     "-con",

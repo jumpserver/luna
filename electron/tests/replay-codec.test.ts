@@ -6,7 +6,7 @@ import {
   encodeInstruction,
   GuacamoleParser,
   ReplayRenderer
-} from "./replay-codec.mjs";
+} from "../src/replay/codec.ts";
 
 test("parses byte-length Guacamole instructions", () => {
   const parser = new GuacamoleParser(Buffer.from(encodeInstruction("name", "你好")));

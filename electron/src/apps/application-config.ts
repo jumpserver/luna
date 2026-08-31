@@ -48,7 +48,7 @@ function resolvePlatformConnect(connect) {
   return connect?.platforms?.[platformKey()] || (connect?.executable ? connect : null);
 }
 
-function launchTemplate(launch = {}) {
+function launchTemplate(launch: { type?: string; arg_template?: string; template?: string } = {}) {
   if (launch.type === "file") return launch.arg_template || "{file}";
   if (launch.type === "autoit") return "";
   return launch.template || "";
@@ -79,7 +79,7 @@ function slugify(raw) {
 }
 
 function extractPluginArchive(source, pendingDir) {
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     let fileCount = 0;
     let extractedBytes = 0;
     let failure;
@@ -141,6 +141,9 @@ function extractPluginArchive(source, pendingDir) {
 }
 
 export class ApplicationConfigService {
+  // ponytail: migration keeps legacy dynamic state; replace with explicit service field types when strict mode is enabled.
+  [key: string]: any;
+
   constructor(app, projectRoot) {
     this.app = app;
     this.projectRoot = projectRoot;
@@ -328,7 +331,7 @@ export class ApplicationConfigService {
     return plugins;
   }
 
-  async findEntry({ category, name, pluginId }) {
+  async findEntry({ category, name, pluginId }: { category?: string; name?: string; pluginId?: string }) {
     const normalizedId = pluginId ? normalizePluginId(pluginId) : "";
     for (const entry of await this.entries()) {
       if (normalizedId && entry.id === normalizedId) return entry;
@@ -337,7 +340,9 @@ export class ApplicationConfigService {
         if (manifest.name === name) return entry;
       }
     }
-    throw new Error(normalizedId ? `plugin '${normalizedId}' not found` : `plugin '${name}' not found in '${category}'`);
+    throw new Error(
+      normalizedId ? `plugin '${normalizedId}' not found` : `plugin '${name}' not found in '${category}'`
+    );
   }
 
   async updateSelection({ category, protocol, name, pluginId, path: newPath, enabled = true }) {

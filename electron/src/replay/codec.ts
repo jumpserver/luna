@@ -3,6 +3,9 @@ const DEFAULT_HEIGHT = 768;
 const FRAME_INTERVAL_MS = 100;
 
 export class GuacamoleParser {
+  // ponytail: migration keeps codec buffers dynamic; replace with explicit instruction types when strict mode is enabled.
+  [key: string]: any;
+
   constructor(data) {
     this.data = Buffer.isBuffer(data) ? data : Buffer.from(data);
     this.position = 0;
@@ -72,6 +75,9 @@ function integer(value, fallback = 0) {
 }
 
 export class ReplayRenderer {
+  // ponytail: migration keeps renderer layers dynamic; replace with explicit layer types when strict mode is enabled.
+  [key: string]: any;
+
   constructor(decodeImage, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT) {
     this.decodeImage = decodeImage;
     this.width = width;
@@ -125,7 +131,9 @@ export class ReplayRenderer {
     if (!stream) return;
     try {
       stream.chunks.push(Buffer.from(args[1], "base64"));
-    } catch {}
+    } catch {
+      // Invalid image chunks are ignored like unsupported Guacamole instructions.
+    }
   }
 
   handleEnd(args) {

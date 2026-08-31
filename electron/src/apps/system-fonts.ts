@@ -4,10 +4,18 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 let cachedFonts;
 
-function normalizeFamilies(values) {
-  return [...new Set(values.map((value) => String(value).trim()).filter((value) => value && !value.startsWith(".")))].sort(
-    (left, right) => left.localeCompare(right)
-  );
+function normalizeFamilies(values: unknown[]) {
+  return [
+    ...new Set(values.map((value) => String(value).trim()).filter((value) => value && !value.startsWith(".")))
+  ].sort((left, right) => left.localeCompare(right));
+}
+
+function parseJsonOutput(output: string) {
+  try {
+    return JSON.parse(output);
+  } catch (cause) {
+    throw new Error("System font command returned invalid JSON", { cause });
+  }
 }
 
 async function macOSFonts() {
@@ -17,7 +25,7 @@ async function macOSFonts() {
     timeout: 10_000,
     maxBuffer: 4 * 1024 * 1024
   });
-  return JSON.parse(stdout);
+  return parseJsonOutput(stdout);
 }
 
 async function linuxFonts() {
@@ -38,14 +46,19 @@ async function windowsFonts() {
     timeout: 10_000,
     maxBuffer: 4 * 1024 * 1024
   });
-  const parsed = JSON.parse(stdout || "[]");
+  const parsed = parseJsonOutput(stdout || "[]");
   return Array.isArray(parsed) ? parsed : [parsed];
 }
 
 export async function listSystemFonts() {
   cachedFonts ||= (async () => {
     try {
-      const values = process.platform === "darwin" ? await macOSFonts() : process.platform === "win32" ? await windowsFonts() : await linuxFonts();
+      const values =
+        process.platform === "darwin"
+          ? await macOSFonts()
+          : process.platform === "win32"
+            ? await windowsFonts()
+            : await linuxFonts();
       return normalizeFamilies(values);
     } catch (error) {
       console.warn("[electron] unable to enumerate system fonts:", error);

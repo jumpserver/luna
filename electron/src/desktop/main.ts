@@ -1,6 +1,7 @@
 import {
   app,
   BrowserWindow,
+  ClipboardItem,
   clipboard,
   dialog,
   session as electronSession,
@@ -15,36 +16,37 @@ import {
   Tray,
   WebContentsView
 } from "electron";
+import type { MenuItemConstructorOptions } from "electron";
 import { access, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { constants as fsConstants, createReadStream } from "node:fs";
-import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
-import { Readable } from "node:stream";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 import * as pty from "node-pty";
-import { ApplicationConfigService } from "./application-config.mjs";
-import { DesktopAuthService } from "./auth.mjs";
-import { FfmpegPluginManager } from "./ffmpeg-plugin.mjs";
-import { LocalApplicationLauncher } from "./local-app-launcher.mjs";
-import { OfflineRecordingStore } from "./offline-recordings.mjs";
-import { ReplayTranscoder } from "./replay-transcoder.mjs";
-import { listSystemFonts } from "./system-fonts.mjs";
+import { ApplicationConfigService } from "../apps/application-config";
+import { DesktopAuthService } from "../auth/service";
+import { FfmpegPluginManager } from "../replay/ffmpeg-plugin";
+import { LocalApplicationLauncher } from "../apps/local-app-launcher";
+import { OfflineRecordingStore } from "../replay/offline-recordings";
+import { ReplayTranscoder } from "../replay/transcoder";
+import { listSystemFonts } from "../apps/system-fonts";
 import {
   buildAutofillProbeScript,
   buildAutofillScript,
   createCredentialSession,
   normalizedWebOrigin,
   releaseCredentials
-} from "./web-proxy-credentials.mjs";
-import { WebProxyRecording } from "./web-proxy-recording.mjs";
+} from "../web-proxy/credentials";
+import { WebProxyRecording } from "../web-proxy/recording";
+import { readableToWebBody } from "../shared/bytes";
+import { parseUrl, toFetchUrl } from "../shared/url";
+import runtimePackage from "../../package.json";
 
-const electronDir = path.dirname(fileURLToPath(import.meta.url));
-const require = createRequire(import.meta.url);
-const runtimePackage = require("./package.json");
+const electronDir = __dirname;
+const appRoot = app.getAppPath();
 const rendererUrl = process.env.JMS_ELECTRON_RENDERER_URL || "http://localhost:3000/luna/";
 const isDevelopment = process.env.JMS_ELECTRON_DEV === "1" || !app.isPackaged;
-const projectRoot = isDevelopment ? path.resolve(electronDir, "..") : process.resourcesPath;
+const projectRoot = isDevelopment ? path.resolve(appRoot, "..") : process.resourcesPath;
 const macDockIconSize = 512;
 const macDockIconInset = 48;
 const trayIconSize = 16;
@@ -84,7 +86,7 @@ protocol.registerSchemesAsPrivileged([
 function isAllowedSender(frame) {
   if (!frame?.url) return false;
   try {
-    const url = new URL(frame.url);
+    const url = parseUrl(frame.url);
     if (url.protocol === "jms-app:") return true;
     return isDevelopment && ["localhost", "127.0.0.1"].includes(url.hostname);
   } catch {
@@ -93,7 +95,7 @@ function isAllowedSender(frame) {
 }
 
 function normalizedHttpOrigin(value, label) {
-  const url = new URL(value);
+  const url = parseUrl(value);
   if (!["http:", "https:"].includes(url.protocol) || !url.hostname || url.username || url.password) {
     throw new Error(`${label} must be an HTTP/HTTPS origin without credentials`);
   }
@@ -109,20 +111,22 @@ async function resolveChenEndpoint() {
   }
 
   const siteOrigin = normalizedHttpOrigin(authService.currentSession().origin, "JumpServer site");
-  const site = new URL(siteOrigin);
+  const site = parseUrl(siteOrigin);
   if (["localhost", "127.0.0.1", "::1"].includes(site.hostname)) {
-    const localChen = new URL(siteOrigin);
+    const localChen = parseUrl(siteOrigin);
     localChen.protocol = "http:";
     localChen.port = "8082";
     try {
-      const response = await net.fetch(new URL("/chen/healthy", localChen), {
+      const response = await net.fetch(parseUrl("/chen/healthy", localChen).toString(), {
         signal: AbortSignal.timeout(2_000)
       });
       if (response.ok && (await response.text()).trim() === "ok") {
         allowedChenOrigins.add(localChen.origin);
         return localChen.origin;
       }
-    } catch {}
+    } catch {
+      // Fall back to the JumpServer-hosted Chen endpoint.
+    }
   }
 
   allowedChenOrigins.add(siteOrigin);
@@ -138,20 +142,22 @@ async function resolveKokoEndpoint() {
   }
 
   const siteOrigin = normalizedHttpOrigin(authService.currentSession().origin, "JumpServer site");
-  const site = new URL(siteOrigin);
+  const site = parseUrl(siteOrigin);
   if (["localhost", "127.0.0.1", "::1"].includes(site.hostname)) {
-    const localKoko = new URL(siteOrigin);
+    const localKoko = parseUrl(siteOrigin);
     localKoko.protocol = "http:";
     localKoko.port = "5050";
     try {
-      const response = await net.fetch(new URL("/koko/health/", localKoko), {
+      const response = await net.fetch(parseUrl("/koko/health/", localKoko).toString(), {
         signal: AbortSignal.timeout(2_000)
       });
       if (response.ok) {
         allowedKokoOrigins.add(localKoko.origin);
         return localKoko.origin;
       }
-    } catch {}
+    } catch {
+      // Fall back to the JumpServer-hosted Koko endpoint.
+    }
   }
 
   allowedKokoOrigins.add(siteOrigin);
@@ -161,11 +167,12 @@ async function resolveKokoEndpoint() {
 function installConnectorSessionHooks(targetSession) {
   if (configuredConnectorSessions.has(targetSession)) return;
   configuredConnectorSessions.add(targetSession);
-  targetSession.webRequest.onBeforeSendHeaders({ urls: ["ws://*/*", "wss://*/*"] }, (details, callback) => {
+  const socketPatterns = ["ws", "wss"].map((scheme) => `${scheme}://*/*`);
+  targetSession.webRequest.onBeforeSendHeaders({ urls: socketPatterns }, (details, callback) => {
     const requestHeaders = { ...details.requestHeaders };
     void (async () => {
       try {
-        const target = new URL(details.url);
+        const target = parseUrl(details.url);
         const httpOrigin = `${target.protocol === "wss:" ? "https:" : "http:"}//${target.host}`;
         const isChenSocket = target.pathname.startsWith("/chen/ws/") && allowedChenOrigins.has(httpOrigin);
         const isKokoSocket = target.pathname.startsWith("/koko/ws/") && allowedKokoOrigins.has(httpOrigin);
@@ -185,7 +192,9 @@ function installConnectorSessionHooks(targetSession) {
             }
           }
         }
-      } catch {}
+      } catch {
+        // Leave headers untouched when the connector URL is malformed.
+      }
       callback({ requestHeaders });
     })();
   });
@@ -196,7 +205,7 @@ async function proxyChenRequest(request, url) {
   url.searchParams.delete("__jms_chen_endpoint");
   if (!allowedChenOrigins.has(endpoint)) return new Response("Forbidden Chen endpoint", { status: 403 });
 
-  const target = new URL(`${url.pathname}${url.search}`, endpoint);
+  const target = parseUrl(`${url.pathname}${url.search}`, endpoint);
   const headers = new Headers(request.headers);
   for (const name of [...headers.keys()]) {
     if (name === "origin" || name === "referer" || name === "host" || name.startsWith("sec-fetch-")) {
@@ -208,7 +217,6 @@ async function proxyChenRequest(request, url) {
     method,
     headers,
     body: method === "GET" || method === "HEAD" ? undefined : request.body,
-    duplex: request.body ? "half" : undefined,
     credentials: "include",
     redirect: "manual"
   });
@@ -244,7 +252,7 @@ function sendCallback(webContents, callbackId, payload) {
   if (!webContents.isDestroyed()) webContents.send("jms:callback", callbackId, payload);
 }
 
-function emitDesktopEvent(name, payload, targetLabel) {
+function emitDesktopEvent(name: string, payload: unknown, targetLabel?: string) {
   for (const [id, subscription] of subscriptions) {
     if (subscription.name !== name) continue;
     if (targetLabel && subscription.label && subscription.label !== targetLabel) continue;
@@ -344,7 +352,7 @@ function closeLocalShell(event, sessionId) {
 }
 
 function parseWebProxyUrl(rawUrl, schemes, description) {
-  const url = new URL(rawUrl);
+  const url = parseUrl(rawUrl);
   if (!schemes.includes(url.protocol) || !url.hostname || url.username || url.password) {
     throw new Error(`${description} must use ${schemes.join("/")} and must not contain credentials`);
   }
@@ -508,7 +516,9 @@ async function createWebProxyView(event, win, args) {
     try {
       const next = parseWebProxyUrl(url, ["http:", "https:"], "Website URL");
       void view.webContents.loadURL(next.toString());
-    } catch {}
+    } catch {
+      // Invalid external URLs remain blocked by the deny response below.
+    }
     return { action: "deny" };
   });
   view.webContents.on("will-navigate", (navigationEvent, url) => {
@@ -578,7 +588,7 @@ async function closeWebProxyView(event, label) {
 }
 
 function rendererTarget(target = "/luna/") {
-  if (isDevelopment) return new URL(target, rendererUrl).toString();
+  if (isDevelopment) return parseUrl(target, rendererUrl).toString();
   const desktopTarget = target === "/luna" ? "/" : target.replace(/^\/luna\//, "/");
   const normalized = desktopTarget.startsWith("/") ? desktopTarget : `/${desktopTarget}`;
   return `jms-app://app${normalized}`;
@@ -602,9 +612,9 @@ function createInsetIcon(iconPath, size, inset) {
 
 function loadAppIcon() {
   const iconName = process.platform === "win32" ? "icon.ico" : "icon.png";
-  const iconPath = !isDevelopment
-    ? path.join(process.resourcesPath, "icons", iconName)
-    : path.join(projectRoot, "electron/assets/icons", iconName);
+  const iconPath = isDevelopment
+    ? path.join(projectRoot, "electron/assets/icons", iconName)
+    : path.join(process.resourcesPath, "icons", iconName);
   appIcon ??=
     process.platform === "darwin"
       ? createInsetIcon(iconPath, macDockIconSize, macDockIconInset)
@@ -619,8 +629,8 @@ function installNavigationGuard(win) {
     return { action: "deny" };
   });
   win.webContents.on("will-navigate", (event, target) => {
-    const current = new URL(win.webContents.getURL());
-    const next = new URL(target);
+    const current = parseUrl(win.webContents.getURL());
+    const next = parseUrl(target);
     if (current.origin === next.origin || (current.protocol === "jms-app:" && next.protocol === "jms-app:")) return;
     event.preventDefault();
     if (["http:", "https:"].includes(next.protocol)) void shell.openExternal(next.toString());
@@ -628,7 +638,7 @@ function installNavigationGuard(win) {
 }
 
 function safeExternalUrl(rawUrl) {
-  const url = new URL(rawUrl);
+  const url = parseUrl(rawUrl);
   if (!["http:", "https:", "mailto:"].includes(url.protocol)) {
     throw new Error(`External URL scheme is not allowed: ${url.protocol}`);
   }
@@ -673,7 +683,16 @@ function resolveBaseDirectory(directory) {
   return resolved;
 }
 
-function createWindow(label = "main", options = {}) {
+interface CreateWindowOptions {
+  title?: string;
+  width?: number;
+  height?: number;
+  minWidth?: number;
+  minHeight?: number;
+  url?: string;
+}
+
+function createWindow(label = "main", options: CreateWindowOptions = {}) {
   const existing = windows.get(label);
   if (existing && !existing.isDestroyed()) {
     existing.show();
@@ -698,7 +717,7 @@ function createWindow(label = "main", options = {}) {
     backgroundMaterial: process.platform === "win32" ? "mica" : undefined,
     backgroundColor: "#00000000",
     webPreferences: {
-      preload: path.join(electronDir, "preload.cjs"),
+      preload: path.join(electronDir, "preload.js"),
       additionalArguments: [`--jms-window-label=${label}`],
       contextIsolation: true,
       nodeIntegration: false,
@@ -914,7 +933,7 @@ function sendMenuCommand(command) {
 
 function buildMenu() {
   const labels = menuLabels();
-  const appSubmenu = [
+  const appSubmenu: MenuItemConstructorOptions[] = [
     { label: labels.about, click: openAboutWindow },
     { type: "separator" },
     { label: labels.settings, accelerator: "CmdOrCtrl+,", click: openSettingsWindow },
@@ -931,7 +950,7 @@ function buildMenu() {
   }
   appSubmenu.push({ type: "separator" }, { label: labels.quit, accelerator: "CmdOrCtrl+Q", role: "quit" });
 
-  const template = [
+  const template: MenuItemConstructorOptions[] = [
     { label: productName, submenu: appSubmenu },
     { label: labels.file, submenu: [{ label: labels.close, accelerator: "CmdOrCtrl+W", role: "close" }] },
     {
@@ -983,9 +1002,9 @@ function buildMenu() {
 function setupTray() {
   const labels = menuLabels();
   const iconName = process.platform === "darwin" ? "tray-mac.png" : "32x32.png";
-  const iconPath = !isDevelopment
-    ? path.join(process.resourcesPath, "icons", iconName)
-    : path.join(projectRoot, "electron/assets/icons", iconName);
+  const iconPath = isDevelopment
+    ? path.join(projectRoot, "electron/assets/icons", iconName)
+    : path.join(process.resourcesPath, "icons", iconName);
   const icon = nativeImage.createFromPath(iconPath).resize({ height: trayIconSize, quality: "best" });
   if (icon.isEmpty()) return;
   if (process.platform === "darwin") icon.setTemplateImage(true);
@@ -1024,7 +1043,9 @@ async function handleStore(command, args) {
     let data = { ...(args.options?.defaults || {}) };
     try {
       data = { ...data, ...JSON.parse(await readFile(storePath, "utf8")) };
-    } catch {}
+    } catch {
+      // Missing or invalid stores start from their configured defaults.
+    }
     const rid = nextStoreId++;
     stores.set(rid, { path: storePath, data, defaults: structuredClone(data) });
     return rid;
@@ -1118,7 +1139,8 @@ async function handleInvoke(event, request) {
       scaleFactor: 1
     });
     if (image.isEmpty()) throw new Error("Unable to create Electron clipboard image");
-    clipboard.writeImage(image);
+    const png = new Uint8Array(image.toPNG());
+    await clipboard.write([new ClipboardItem({ "image/png": new Blob([png], { type: "image/png" }) })]);
     return null;
   }
   if (command === "plugin:opener|open_url") return shell.openExternal(safeExternalUrl(args.url));
@@ -1131,8 +1153,8 @@ async function handleInvoke(event, request) {
       defaultPath: args.options?.defaultPath,
       filters: args.options?.filters,
       properties: [
-        args.options?.directory ? "openDirectory" : "openFile",
-        ...(args.options?.multiple ? ["multiSelections"] : [])
+        args.options?.directory ? ("openDirectory" as const) : ("openFile" as const),
+        ...(args.options?.multiple ? (["multiSelections"] as const) : [])
       ]
     });
     if (result.canceled) return null;
@@ -1361,7 +1383,7 @@ async function handleInvoke(event, request) {
 
 async function registerProtocols() {
   protocol.handle("jms-app", async (request) => {
-    const url = new URL(request.url);
+    const url = parseUrl(request.url);
     const relative = decodeURIComponent(url.pathname).replace(/^\/+/, "");
     if (relative.startsWith("chen/")) return proxyChenRequest(request, url);
     const root = path.join(projectRoot, "dist");
@@ -1392,7 +1414,7 @@ async function registerProtocols() {
     }
     if (!["GET", "HEAD"].includes(request.method)) return new Response("Method not allowed", { status: 405 });
     try {
-      const url = new URL(request.url);
+      const url = parseUrl(request.url);
       const decodedPath = decodeURIComponent(url.pathname);
       const filePath = normalizePath(process.platform === "win32" ? decodedPath.replace(/^\/+/, "") : decodedPath);
       const fileInfo = await stat(filePath);
@@ -1410,13 +1432,7 @@ async function registerProtocols() {
             headers: { "content-range": `bytes */${fileLength}`, "access-control-allow-origin": "*" }
           });
         }
-        if (!match[1]) {
-          const suffixLength = Number(match[2]);
-          if (!Number.isSafeInteger(suffixLength) || suffixLength <= 0) {
-            return new Response("Invalid byte range", { status: 416 });
-          }
-          start = Math.max(0, fileLength - suffixLength);
-        } else {
+        if (match[1]) {
           start = Number(match[1]);
           end = match[2] ? Math.min(Number(match[2]), fileLength - 1) : fileLength - 1;
           if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start > end || start >= fileLength) {
@@ -1425,6 +1441,12 @@ async function registerProtocols() {
               headers: { "content-range": `bytes */${fileLength}`, "access-control-allow-origin": "*" }
             });
           }
+        } else {
+          const suffixLength = Number(match[2]);
+          if (!Number.isSafeInteger(suffixLength) || suffixLength <= 0) {
+            return new Response("Invalid byte range", { status: 416 });
+          }
+          start = Math.max(0, fileLength - suffixLength);
         }
         statusCode = 206;
       }
@@ -1446,7 +1468,7 @@ async function registerProtocols() {
       const body =
         request.method === "HEAD" || fileLength === 0
           ? null
-          : Readable.toWeb(createReadStream(filePath, { start, end }));
+          : readableToWebBody(createReadStream(filePath, { start, end }));
       return new Response(body, { status: statusCode, headers });
     } catch {
       return new Response("Not found", { status: 404, headers: { "access-control-allow-origin": "*" } });
@@ -1457,18 +1479,35 @@ async function registerProtocols() {
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) app.quit();
 
+const pendingProtocolUrls: string[] = [];
+
+function handleIncomingProtocolUrl(rawUrl) {
+  const value = String(rawUrl || "");
+  if (!value.startsWith("jms://") && !value.startsWith("jms2://")) return;
+  if (!authService || !localApplicationLauncher) {
+    pendingProtocolUrls.push(value);
+    return;
+  }
+  if (authService.handleCallback(value) || authService.isOAuthCallbackUrl(value)) return;
+  void localApplicationLauncher.launch(value).catch((error) => {
+    console.error("protocol launch failed:", error);
+  });
+}
+
+function drainPendingProtocolUrls() {
+  for (const url of pendingProtocolUrls.splice(0)) handleIncomingProtocolUrl(url);
+}
+
 app.on("second-instance", (_event, commandLine) => {
-  const callbackUrl = commandLine.find(
-    (argument) => argument.startsWith("jms://") || argument.startsWith("jms2://")
-  );
-  if (callbackUrl) authService?.handleCallback(callbackUrl);
+  const protocolUrl = commandLine.find((argument) => argument.startsWith("jms://") || argument.startsWith("jms2://"));
+  handleIncomingProtocolUrl(protocolUrl);
   const win = createWindow("main");
   if (win.isMinimized()) win.restore();
   win.focus();
 });
-app.on("open-url", (event) => {
+app.on("open-url", (event, url) => {
   event.preventDefault();
-  authService?.handleCallback(event.url);
+  handleIncomingProtocolUrl(url);
   createWindow("main").focus();
 });
 app.on("window-all-closed", () => {
@@ -1489,11 +1528,12 @@ app.whenReady().then(async () => {
   localApplicationLauncher = new LocalApplicationLauncher(app, projectRoot, applicationConfig, shell, !isDevelopment);
   authService = new DesktopAuthService(emitDesktopEvent);
   await authService.initialize();
+  drainPendingProtocolUrls();
   offlineRecordings = new OfflineRecordingStore(path.join(app.getPath("userData"), "offline-recordings"));
   await offlineRecordings.initialize();
   ffmpegPlugin = new FfmpegPluginManager(
     path.join(app.getPath("userData"), "plugins"),
-    (url, options) => net.fetch(url, options),
+    (url, options) => net.fetch(toFetchUrl(url), options),
     (payload, label) => emitDesktopEvent("ffmpeg-plugin-progress", payload, label)
   );
   replayTranscoder = new ReplayTranscoder(
