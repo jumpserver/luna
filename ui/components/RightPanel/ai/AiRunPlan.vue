@@ -169,12 +169,20 @@ function terminalRiskLabel(level: unknown) {
                     {{ executionLabel(execution.command.execution) }}
                   </UBadge>
                   <UBadge
+                    v-if="execution.command.timeoutSeconds !== undefined"
+                    color="neutral"
+                    variant="subtle"
+                    size="xs"
+                  >
+                    {{ t("RightPanel.AITimeout", { count: execution.command.timeoutSeconds }) }}
+                  </UBadge>
+                  <UBadge
                     v-if="execution.command.decisionDurationMs !== undefined"
                     color="neutral"
                     variant="subtle"
                     size="xs"
                   >
-                    {{ t("RightPanel.AIDecisionDuration") }}
+                    {{ t("RightPanel.AIModelDuration") }}
                     {{ formatAiDuration(execution.command.decisionDurationMs) }}
                   </UBadge>
                   <UBadge v-if="execution.command.state === 'auto_approved'" color="success" variant="subtle" size="xs">
@@ -197,7 +205,11 @@ function terminalRiskLabel(level: unknown) {
               </p>
 
               <div
-                v-if="execution.command.partType === 'data-approval' && !decisions.has(String(execution.command.id))"
+                v-if="
+                  execution.command.partType === 'data-approval' &&
+                  !execution.command.resolved &&
+                  !decisions.has(String(execution.command.id))
+                "
                 class="space-y-2 border-t border-warning/30 bg-warning/5 p-2"
               >
                 <div class="flex items-center gap-1.5 text-[10px] font-medium text-warning">
@@ -244,8 +256,20 @@ function terminalRiskLabel(level: unknown) {
               <div class="flex items-center justify-between border-b border-default px-2 py-1.5 text-[11px] text-muted">
                 <span>{{ t("RightPanel.AIExecutionResult") }}</span>
                 <div class="flex flex-wrap justify-end gap-1">
+                  <UBadge
+                    v-if="
+                      execution.result.modelDurationMs !== undefined &&
+                      execution.command?.decisionDurationMs === undefined
+                    "
+                    color="neutral"
+                    variant="subtle"
+                    size="xs"
+                  >
+                    {{ t("RightPanel.AIModelDuration") }}
+                    {{ formatAiDuration(execution.result.modelDurationMs) }}
+                  </UBadge>
                   <UBadge v-if="execution.result.durationMs !== undefined" color="neutral" variant="subtle" size="xs">
-                    {{ t("RightPanel.AIExecutionDuration") }}
+                    {{ t("RightPanel.AIToolDuration") }}
                     {{ formatAiDuration(execution.result.durationMs) }}
                   </UBadge>
                   <UBadge

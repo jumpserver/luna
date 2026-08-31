@@ -110,6 +110,7 @@ export const createTerminalViewItemBuilder: AiViewItemBuilderFactory = () => {
       const execution = ensureExecution(step, data);
       if (partType === "data-execution") {
         execution.result = { ...execution.result, ...data };
+        if (data.outcome || data.status) step.status = String(data.outcome || data.status);
         return;
       }
       execution.command = { ...execution.command, ...data, partType };

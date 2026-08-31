@@ -104,25 +104,32 @@ describe("sFTP browser protocol", () => {
     expect(lastSent(fake)).toMatchObject({ type: SftpMessageType.Pong, data: SftpControlData.Pong });
   });
 
-  it("routes CHAT_MESSAGE frames without treating them as malformed SFTP data", () => {
+  it("routes MCP frames without treating them as SFTP data", () => {
     const { fake, socket } = openSocket();
-    const chats: unknown[] = [];
+    const frames: unknown[] = [];
     const failures: SftpSocketFailureCode[] = [];
-    socket.onChat((message) => chats.push(message));
+    socket.onMcp((message) => frames.push(message));
     socket.onFailure((failure) => failures.push(failure.code));
 
     fake.receive({
-      id: "chat-1",
-      type: SftpMessageType.Chat,
+      id: "manifest-1",
+      type: SftpMessageType.MCPManifest,
+      version: 1,
+      resource_session_id: "resource-1",
       data: JSON.stringify({
-        id: "assistant-1",
-        role: "assistant",
-        metadata: { domain: "file", targetId: "file-pane-1" },
-        parts: [{ type: "data-capability", data: { enabled: true } }]
+        profile: "file",
+        revision: 1,
+        tools: []
       })
     });
 
-    expect(chats).toHaveLength(1);
+    expect(frames).toEqual([
+      expect.objectContaining({
+        type: SftpMessageType.MCPManifest,
+        version: 1,
+        resource_session_id: "resource-1"
+      })
+    ]);
     expect(failures).toEqual([]);
   });
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AiTimelineAction, TextItem } from "../../types";
 import type { WorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
-import { renderAiMarkdown } from "../../presentation";
+import { formatAiDuration, renderAiMarkdown } from "../../presentation";
 
 defineProps<{
   item: TextItem;
@@ -24,6 +24,9 @@ const { t } = useI18n();
     <div class="min-w-0 max-w-[88%]" :class="item.role === 'user' ? 'text-right' : ''">
       <div class="text-[10px] text-muted">
         {{ item.role === "user" ? t("RightPanel.AIYou") : assistantName }}
+        <span v-if="item.role === 'assistant' && item.modelDurationMs !== undefined" class="ml-1 font-mono">
+          · {{ t("RightPanel.AIModelDuration") }} {{ formatAiDuration(item.modelDurationMs) }}
+        </span>
       </div>
       <div
         class="markdown-body mt-1 rounded-xl border border-default px-2.5 py-2 text-left text-xs"

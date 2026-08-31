@@ -76,6 +76,7 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
       headerDescription: context.t("RightPanel.SQLAIHeaderDescription"),
       available: Boolean(current.enabled),
       busy,
+      running: busy,
       waitingForApproval: Boolean(current.metadataApproval),
       unavailable: {
         icon: "i-lucide-sparkles",
@@ -88,7 +89,8 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
         description: context.t("RightPanel.SQLAIEmptyDescription")
       },
       inputPlaceholder: context.t("RightPanel.SQLAIInputPlaceholder"),
-      actionLabel: busy ? context.t("RightPanel.SQLAICancel") : context.t("RightPanel.AISend"),
+      actionLabel: context.t("RightPanel.AISend"),
+      interruptLabel: context.t("RightPanel.SQLAICancel"),
       runtimeStatusLabel: runtimeKey ? context.t(runtimeKey) : current.runtimeStatus,
       errorLabel: current.errorText ? context.t("RightPanel.SQLAIFailed") : "",
       errorDetail: current.errorText,

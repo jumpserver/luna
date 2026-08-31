@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { responseSucceeded } from "./http-status.mjs";
 
 const OAUTH_WELL_KNOWN = "/core/auth/oauth2-provider/.well-known/oauth-authorization-server";
 const OAUTH_AUTHORIZE = "/core/auth/oauth2-provider/authorize/";
@@ -21,13 +22,20 @@ function endpoint(site, endpointPath) {
 }
 
 function requestSite(session, request) {
-  if (request.service !== "chat-ai") return session.origin;
+  if (request.service !== "chat-ai" && request.service !== "agent") return session.origin;
 
-  const configured = String(process.env.JMS_AI_DESKTOP_URL || process.env.JMS_AI_DEV_URL || "").trim();
+  const agent = request.service === "agent";
+  const configured = String(
+    agent
+      ? process.env.JMS_AGENT_DESKTOP_URL || process.env.JMS_AGENT_DEV_URL || ""
+      : process.env.JMS_AI_DESKTOP_URL || process.env.JMS_AI_DEV_URL || ""
+  ).trim();
   if (configured) {
     const parsed = new URL(configured);
     if (!["http:", "https:"].includes(parsed.protocol) || !parsed.hostname || parsed.username || parsed.password) {
-      throw new Error("Chat AI endpoint must be an HTTP/HTTPS URL without embedded credentials");
+      throw new Error(
+        `${agent ? "Koko Agent" : "Chat AI"} endpoint must be an HTTP/HTTPS URL without embedded credentials`
+      );
     }
     return configured.replace(/\/+$/, "");
   }
@@ -40,7 +48,7 @@ function requestSite(session, request) {
     }
     const site = new URL(session.origin);
     if (["localhost", "127.0.0.1", "::1"].includes(site.hostname)) {
-      site.port = "8088";
+      site.port = agent ? "5003" : "8088";
       return site.origin;
     }
   }
@@ -55,8 +63,14 @@ function timezoneOffset() {
   return `${sign}${hours}:${minutes}`;
 }
 
-function responseSucceeded(status) {
-  return status === 200 || status === 201 || status === 204;
+function requestHeaders(request) {
+  const headers = {};
+  for (const [name, value] of Object.entries(request.headers || {})) {
+    const normalized = name.toLowerCase();
+    if (["authorization", "cookie", "host", "origin", "referer"].includes(normalized)) continue;
+    headers[name] = String(value);
+  }
+  return headers;
 }
 
 function toApiResponse(status, data) {
@@ -326,6 +340,7 @@ export class DesktopAuthService {
       else url.searchParams.set(key, typeof value === "object" ? JSON.stringify(value) : String(value));
     }
     const headers = {
+      ...requestHeaders(request),
       "X-TZ": timezoneOffset(),
       Referer: url.origin,
       Authorization: `Bearer ${bearer}`
@@ -358,6 +373,7 @@ export class DesktopAuthService {
       else url.searchParams.set(key, typeof value === "object" ? JSON.stringify(value) : String(value));
     }
     const headers = {
+      ...requestHeaders(request),
       Accept: "text/event-stream",
       "X-TZ": timezoneOffset(),
       Referer: url.origin,

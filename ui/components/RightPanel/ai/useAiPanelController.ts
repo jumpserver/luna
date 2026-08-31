@@ -64,7 +64,8 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
   }
 
   watch(
-    () => Boolean(presentation.value?.refreshElapsedWhileBusy && presentation.value.busy),
+    () =>
+      Boolean(presentation.value?.refreshElapsedWhileBusy && (presentation.value.busy || presentation.value.running)),
     (running) => {
       stopElapsedTimer();
       elapsedClock.value = Date.now();
@@ -94,7 +95,7 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
     if (!current) return "ready";
     if (current.errorLabel) return "error";
     if (metadataApproval.value || current.waitingForApproval) return "warning";
-    if (current.busy) return "active";
+    if (current.busy || current.running) return "active";
     if (domainSummary.value.outcome === "error") return "error";
     if (domainSummary.value.outcome === "success") return "success";
     return "ready";
@@ -104,14 +105,14 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
     if (!current) return t("RightPanel.AIStatusReady");
     if (current.errorLabel) return current.errorLabel;
     if (metadataApproval.value || current.waitingForApproval) return t("RightPanel.AIStatusAwaitingApproval");
-    if (current.busy) return current.runtimeStatusLabel || t("RightPanel.AIStatusRunning");
+    if (current.busy || current.running) return current.runtimeStatusLabel || t("RightPanel.AIStatusRunning");
     if (presenceStatusTone.value === "success") return t("RightPanel.AIStatusCompleted");
     if (presenceStatusTone.value === "error") return t("RightPanel.AIStatusFailed");
     return t("RightPanel.AIStatusReady");
   });
   const activityLabel = computed(() => {
     const current = presentation.value;
-    if (!current?.showActivity || !current.busy || current.waitingForApproval) return "";
+    if (!current?.showActivity || !current.running || current.waitingForApproval) return "";
     return current.runtimeStatusLabel || t("RightPanel.AIResponding");
   });
   const timelineRevision = computed(() => {

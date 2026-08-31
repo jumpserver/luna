@@ -31,7 +31,7 @@ import {
   connectKokoFileAiSession,
   createKokoFileAiMessageId,
   disconnectKokoFileAiSession,
-  handleKokoFileAiMessage,
+  handleKokoFileAiWireMessage,
   isSuccessfulKokoFileAiMutationResult,
   registerKokoFileAiSession,
   releaseKokoFileAiSession,
@@ -331,7 +331,7 @@ const stopAiMessageListener = manager.ai.onMessage((message) => {
       ? (message.metadata as Record<string, unknown> | undefined)
       : undefined;
   if (typeof metadata?.targetId === "string" && metadata.targetId !== registeredAiTargetId) return;
-  handleKokoFileAiMessage(registeredAiTargetId, message);
+  handleKokoFileAiWireMessage(registeredAiTargetId, message);
   if (!isSuccessfulKokoFileAiMutationResult(message, registeredAiTargetId)) return;
   clearSelection();
   void manager.loadCurrentDirectory(manager.currentPath.value, undefined, false);

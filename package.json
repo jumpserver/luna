@@ -27,7 +27,7 @@
     "lint:oxlint": "oxlint .",
     "lint:eslint": "eslint \"**/*.vue\" --ignore-pattern .omx --cache --cache-strategy content --cache-location node_modules/.cache/eslint/.eslintcache",
     "test": "vitest run --config vitest.config.ts --browser.enabled=false --exclude \"packages/koko/app/tests/**\" --passWithNoTests && pnpm test:electron",
-    "test:electron": "node --test electron/ssh-helper.test.cjs electron/replay-codec.test.mjs electron/ffmpeg-plugin.test.mjs",
+    "test:electron": "node --test electron/ssh-helper.test.cjs electron/replay-codec.test.mjs electron/ffmpeg-plugin.test.mjs electron/http-status.test.mjs",
     "test:electron:transcode": "pnpm --dir electron exec electron tests/replay-transcoder-app",
     "test:browser": "vitest run --config vitest.config.ts",
     "test:e2e:sftp": "playwright test --config packages/koko/playwright.config.ts",

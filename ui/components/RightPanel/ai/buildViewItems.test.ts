@@ -32,6 +32,7 @@ describe("buildAiPanelViewItems", () => {
               planId: "plan-1",
               stepId: "step-1",
               executionId: "execution-1",
+              outcome: "success",
               exitCode: 0,
               summary: "Service is active"
             }
@@ -54,6 +55,55 @@ describe("buildAiPanelViewItems", () => {
     expect(plan?.steps[0]?.executions).toHaveLength(1);
     expect(plan?.steps[0]?.executions[0]?.command?.command).toBe("systemctl status nginx");
     expect(plan?.steps[0]?.executions[0]?.result?.exitCode).toBe(0);
+    expect(plan?.steps[0]?.status).toBe("success");
+  });
+
+  it("merges a restored approval resolution without losing its command", () => {
+    const identity = {
+      id: "approval-1",
+      planId: "run-1",
+      stepId: "tool-call-1",
+      executionId: "tool-call-1"
+    };
+    const messages = [
+      {
+        id: "approval-requested",
+        role: "assistant",
+        parts: [
+          {
+            type: "data-approval",
+            data: { ...identity, command: "rm trusted", state: "awaiting_approval" }
+          }
+        ]
+      },
+      {
+        id: "approval-resolved",
+        role: "assistant",
+        parts: [
+          {
+            type: "data-approval",
+            data: { ...identity, command: "rm trusted", state: "approved", resolved: true }
+          }
+        ]
+      }
+    ] as unknown as TerminalAiChatMessage[];
+
+    const items = buildAiPanelViewItems({
+      messages,
+      metadataApproval: null,
+      terminalMetadataApproval: true,
+      executionPlanLabel: "Execution plan",
+      stepLabel: (count) => `Step ${count}`
+    });
+
+    const plan = items.find((item) => item.kind === "plan");
+    expect(plan?.steps).toHaveLength(1);
+    expect(plan?.steps[0]?.executions).toHaveLength(1);
+    expect(plan?.steps[0]?.executions[0]?.command).toMatchObject({
+      command: "rm trusted",
+      state: "approved",
+      resolved: true
+    });
   });
 
   it("routes mixed protocol parts to their registered domains", () => {

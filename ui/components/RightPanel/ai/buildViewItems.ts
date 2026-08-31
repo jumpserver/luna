@@ -16,7 +16,10 @@ export function buildAiPanelViewItems(options: AiViewItemBuildOptions): ViewItem
           kind: "text",
           key: `${message.id}-text-${partIndex}`,
           role: message.role,
-          text: part.text || ""
+          text: part.text || "",
+          ...(Number.isFinite(Number(message.metadata?.modelDurationMs))
+            ? { modelDurationMs: Number(message.metadata?.modelDurationMs) }
+            : {})
         });
         return;
       }

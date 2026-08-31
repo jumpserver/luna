@@ -50,6 +50,7 @@ export interface ViewStep {
 export interface TextItem extends ViewItemBase<"shared", "text"> {
   role: TerminalAiChatMessage["role"];
   text: string;
+  modelDurationMs?: number;
 }
 
 export interface PlanItem extends ViewItemBase<"terminal", "plan"> {
@@ -109,6 +110,7 @@ export interface FileAiEventData {
   path?: string;
   newName?: string;
   destinationPath?: string;
+  expectedVersion?: string;
   sourcePath?: string;
   targetPath?: string;
   summary?: string;
@@ -146,6 +148,7 @@ export interface FileAiEventData {
   maxDirectoryEntries?: number;
   maxTextBytes?: number;
   expiresInSeconds?: number;
+  arguments?: Record<string, unknown>;
   details?: unknown;
 }
 
