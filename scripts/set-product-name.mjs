@@ -29,17 +29,23 @@ if (!name) {
   process.exit(2);
 }
 
+function readPackage(packagePath) {
+  try {
+    return JSON.parse(fs.readFileSync(packagePath, "utf8"));
+  } catch (cause) {
+    throw new Error(`Unable to read package metadata from ${packagePath}`, { cause });
+  }
+}
+
 const repoRoot = process.cwd();
 const packagePath = path.join(repoRoot, "package.json");
-const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+const packageJson = readPackage(packagePath);
 packageJson.productName = name;
-packageJson.build.productName = name;
-packageJson.build.artifactName = `${name}_\${version}_\${arch}.\${ext}`;
 
 fs.writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
 const electronPackagePath = path.join(repoRoot, "electron", "package.json");
-const electronPackageJson = JSON.parse(fs.readFileSync(electronPackagePath, "utf8"));
-electronPackageJson.displayName = name;
+const electronPackageJson = readPackage(electronPackagePath);
+electronPackageJson.productName = name;
 fs.writeFileSync(electronPackagePath, `${JSON.stringify(electronPackageJson, null, 2)}\n`);
 console.log(`Set Electron product name to "${name}"${name === DEFAULT_PRODUCT_NAME ? "" : " for the custom build"}.`);

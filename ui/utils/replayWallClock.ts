@@ -4,8 +4,7 @@ export interface ReplayClockFile {
   duration?: number;
 }
 
-const SESSION_DATE_RE =
-  /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?\s*(Z|[+-]\d{2}:?\d{2})?$/;
+const SESSION_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?\s*(Z|[+-]\d{2}:?\d{2})?$/;
 
 function pad2(value: number) {
   return `${value}`.padStart(2, "0");
@@ -88,7 +87,6 @@ export function resolveReplayWallClock(
 
   return {
     date_start: formatSessionDate(parsed.utcMs + startOffset, parsed.tzMinutes),
-    date_end:
-      endOffset === undefined ? undefined : formatSessionDate(parsed.utcMs + endOffset, parsed.tzMinutes)
+    date_end: endOffset === undefined ? undefined : formatSessionDate(parsed.utcMs + endOffset, parsed.tzMinutes)
   };
 }

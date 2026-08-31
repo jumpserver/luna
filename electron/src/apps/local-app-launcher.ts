@@ -1,6 +1,6 @@
+import { spawn } from "node:child_process";
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { spawn } from "node:child_process";
 
 function decodePayload(raw) {
   const value = String(raw || "");
@@ -17,7 +17,9 @@ function sanitizedName(raw) {
   let decoded = String(raw || "");
   try {
     decoded = decodeURIComponent(decoded);
-  } catch {}
+  } catch {
+    // Keep the original plugin-provided label when it is not URI encoded.
+  }
   return decoded.replaceAll(" ", "").replace(/[:-]/g, "_");
 }
 
@@ -33,7 +35,7 @@ function navicatUrl(payload) {
   return `navicat://conn.${protocol}?Conn.Host=${payload.endpoint.host}&Conn.Name=${sanitizedName(payload.name)}&Conn.Port=${payload.endpoint.port}&Conn.Username=${username(payload)}`;
 }
 
-function valuesFor(payload) {
+function valuesFor(payload): Record<string, string> {
   return {
     name: sanitizedName(payload.name),
     protocol: payload.protocol,
@@ -115,6 +117,9 @@ async function isDirectory(candidate) {
 }
 
 export class LocalApplicationLauncher {
+  // ponytail: migration keeps legacy dynamic state; replace with explicit launcher adapter types when strict mode is enabled.
+  [key: string]: any;
+
   constructor(app, projectRoot, configService, electronShell, isPackaged = app.isPackaged) {
     this.app = app;
     this.projectRoot = projectRoot;
@@ -123,17 +128,8 @@ export class LocalApplicationLauncher {
     this.isPackaged = isPackaged;
   }
 
-  helperPath() {
-    return path.join(this.app.getAppPath(), "ssh-helper.cjs");
-  }
-
   helperCommand() {
-    const executable = shellQuote(process.execPath);
-    if (this.isPackaged) return `${executable} --ssh-helper`;
-    const script = shellQuote(this.helperPath());
-    return process.platform === "win32"
-      ? `set "ELECTRON_RUN_AS_NODE=1"&& ${executable} ${script}`
-      : `ELECTRON_RUN_AS_NODE=1 ${executable} ${script}`;
+    return `${shellQuote(process.execPath)} --ssh-helper`;
   }
 
   async resolveApplication(payload) {

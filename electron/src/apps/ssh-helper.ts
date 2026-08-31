@@ -1,6 +1,8 @@
-const { Client } = require("ssh2");
+import type { ClientChannel } from "ssh2";
+import { pathToFileURL } from "node:url";
+import { Client } from "ssh2";
 
-function parseOptions(argv) {
+export function parseOptions(argv) {
   const args = [...argv];
   let index = args[0] === "ssh" ? 1 : 0;
   let destination = "";
@@ -46,8 +48,8 @@ function terminalSize() {
   };
 }
 
-function run(argv = process.argv.slice(2)) {
-  let options;
+export function run(argv = process.argv.slice(2)) {
+  let options: ReturnType<typeof parseOptions>;
   try {
     options = parseOptions(argv);
   } catch (error) {
@@ -55,41 +57,44 @@ function run(argv = process.argv.slice(2)) {
     return Promise.resolve(1);
   }
 
-  return new Promise((resolve) => {
+  return new Promise<number>((resolve) => {
     const connection = new Client();
-    let channel;
+    let channel: ClientChannel | undefined;
     let exitStatus = 0;
     let settled = false;
-    let inactivityTimer;
+    let inactivityTimer: NodeJS.Timeout | undefined;
     const input = process.stdin;
     const output = process.stdout;
     const wasRaw = Boolean(input.isRaw);
 
-    const touch = () => {
-      clearTimeout(inactivityTimer);
-      inactivityTimer = setTimeout(() => finish(1, new Error("SSH session timed out")), 60_000);
-      inactivityTimer.unref?.();
-    };
-    const onResize = () => {
+    function onResize() {
       const size = terminalSize();
       channel?.setWindow(size.rows, size.cols, size.height, size.width);
-    };
-    const cleanup = () => {
+    }
+
+    function cleanup() {
       clearTimeout(inactivityTimer);
       output.off("resize", onResize);
       input.off("data", touch);
       input.unpipe(channel);
       if (input.isTTY) input.setRawMode(wasRaw);
       input.pause();
-    };
-    const finish = (status, error) => {
+    }
+
+    function finish(status: number, error?: Error) {
       if (settled) return;
       settled = true;
       cleanup();
       if (error) process.stderr.write(`SSH connection failed: ${error.message}\n`);
       connection.end();
       resolve(status);
-    };
+    }
+
+    function touch() {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => finish(1, new Error("SSH session timed out")), 60_000);
+      inactivityTimer.unref();
+    }
 
     connection
       .on("ready", () => {
@@ -128,10 +133,9 @@ function run(argv = process.argv.slice(2)) {
   });
 }
 
-if (require.main === module) {
-  run().then((status) => {
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) {
+  void run().then((status) => {
     process.exitCode = status;
   });
 }
-
-module.exports = { parseOptions, run };

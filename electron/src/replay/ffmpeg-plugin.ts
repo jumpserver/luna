@@ -1,11 +1,12 @@
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createWriteStream } from "node:fs";
 import { chmod, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
-import { Readable, Transform } from "node:stream";
+import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createGunzip } from "node:zlib";
+import { readableFromWebBody } from "../shared/bytes";
 
 const VERSION = "6.1.1";
 const RELEASE = `b${VERSION}`;
@@ -53,14 +54,15 @@ async function responseError(response) {
 }
 
 export class FfmpegPluginManager {
-  constructor(root, fetch, emitProgress = () => {}, platform = process.platform, arch = process.arch) {
-    this.root = root;
-    this.fetch = fetch;
-    this.emitProgress = emitProgress;
-    this.platform = platform;
-    this.arch = arch;
-    this.installing = null;
-  }
+  private installing: Promise<unknown> | null = null;
+
+  constructor(
+    private root: string,
+    private fetch: (input: string, init?: RequestInit) => Promise<Response>,
+    private emitProgress: (payload: unknown, label?: string) => void = () => {},
+    private platform: NodeJS.Platform = process.platform,
+    private arch: string = process.arch
+  ) {}
 
   get target() {
     return targetFor(this.platform, this.arch);
@@ -83,7 +85,9 @@ export class FfmpegPluginManager {
     let manifest = null;
     try {
       manifest = JSON.parse(await readFile(this.manifestPath, "utf8"));
-    } catch {}
+    } catch {
+      // Missing or invalid manifests represent an uninstalled plugin.
+    }
     const installed = Boolean(
       info?.isFile() &&
       manifest?.id === "ffmpeg" &&
@@ -112,7 +116,7 @@ export class FfmpegPluginManager {
     return this.executablePath;
   }
 
-  install(targetLabel) {
+  install(targetLabel?: string) {
     if (!this.installing) {
       this.installing = this.installInternal(targetLabel).finally(() => {
         this.installing = null;
@@ -121,7 +125,7 @@ export class FfmpegPluginManager {
     return this.installing;
   }
 
-  async installInternal(targetLabel) {
+  async installInternal(targetLabel?: string) {
     if ((await this.status()).installed) return this.status();
     await mkdir(this.directory, { recursive: true });
     const temporaryPath = path.join(this.directory, `.ffmpeg-${process.pid}-${Date.now()}.download`);
@@ -177,7 +181,7 @@ export class FfmpegPluginManager {
     }
   }
 
-  async downloadBinary(base, destination, targetLabel) {
+  async downloadBinary(base, destination, targetLabel?: string) {
     const filename = `ffmpeg-${this.target.key}.gz`;
     const response = await this.fetch(downloadUrl(base, filename), { signal: AbortSignal.timeout(60_000) });
     if (!response.ok || !response.body) throw await responseError(response);
@@ -198,7 +202,7 @@ export class FfmpegPluginManager {
       }
     });
     await pipeline(
-      Readable.fromWeb(response.body),
+      readableFromWebBody(response.body),
       progress,
       createGunzip(),
       createWriteStream(destination, { mode: 0o700 })

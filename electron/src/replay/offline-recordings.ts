@@ -9,7 +9,7 @@ import { extract as createTarExtractor } from "tar-stream";
 const MAX_EXTRACTED_ENTRY_BYTES = 4 * 1024 * 1024 * 1024;
 const MAX_METADATA_BYTES = 1024 * 1024;
 const MAX_MEDIA_ENTRIES = 10_000;
-const IDENTIFIER_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+const IDENTIFIER_PATTERN = /^[\w-]{1,128}$/;
 let recordingSequence = 0;
 
 function basename(value) {
@@ -52,10 +52,6 @@ function sizeLimiter(sourceName, maximumBytes) {
         return;
       }
       callback(null, chunk);
-    },
-    construct(callback) {
-      this.byteLength = () => byteLength;
-      callback();
     }
   });
 }
@@ -79,10 +75,12 @@ async function readMetadata(stream, sourceName) {
 
 async function writeMedia(stream, sourceName, destination) {
   const limiter = sizeLimiter(sourceName, MAX_EXTRACTED_ENTRY_BYTES);
-  const streams = [stream];
-  if (sourceName.toLowerCase().endsWith(".gz")) streams.push(createGunzip());
-  streams.push(limiter, createWriteStream(destination, { flags: "wx" }));
-  await pipeline(streams);
+  const destinationStream = createWriteStream(destination, { flags: "wx" });
+  if (sourceName.toLowerCase().endsWith(".gz")) {
+    await pipeline(stream, createGunzip(), limiter, destinationStream);
+  } else {
+    await pipeline(stream, limiter, destinationStream);
+  }
   return (await stat(destination)).size;
 }
 
@@ -169,7 +167,9 @@ async function extractTar(sourcePath, entriesDirectory) {
         ...(classified.partIndex === undefined ? {} : { part_index: classified.partIndex })
       });
     };
-    void processEntry().then(next).catch((error) => extractor.destroy(error));
+    void processEntry()
+      .then(next)
+      .catch((error) => extractor.destroy(error));
   });
   await pipeline(createReadStream(sourcePath), extractor);
   return extracted;
@@ -196,6 +196,9 @@ async function extractSingleFile(sourcePath, entriesDirectory) {
 }
 
 export class OfflineRecordingStore {
+  // ponytail: migration keeps legacy dynamic state; replace with explicit recording manifest types when strict mode is enabled.
+  [key: string]: any;
+
   constructor(root) {
     this.root = root;
   }
@@ -207,7 +210,8 @@ export class OfflineRecordingStore {
 
   async importRecording(sourcePath) {
     const sourceInfo = await lstat(sourcePath);
-    if (sourceInfo.isSymbolicLink() || !sourceInfo.isFile()) throw new Error("offline recording source must be a regular file");
+    if (sourceInfo.isSymbolicLink() || !sourceInfo.isFile())
+      throw new Error("offline recording source must be a regular file");
     const recordingId = nextRecordingId();
     const pendingDirectory = path.join(this.root, `.pending-${recordingId}`);
     const finalDirectory = path.join(this.root, recordingId);
@@ -219,7 +223,9 @@ export class OfflineRecordingStore {
         ? await extractTar(sourcePath, entriesDirectory)
         : await extractSingleFile(sourcePath, entriesDirectory);
       const manifest = buildManifest(recordingId, recordingLabel(sourcePath), extracted);
-      await writeFile(path.join(pendingDirectory, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, { flag: "wx" });
+      await writeFile(path.join(pendingDirectory, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, {
+        flag: "wx"
+      });
       await rename(pendingDirectory, finalDirectory);
       return manifest;
     } catch (error) {
@@ -285,7 +291,9 @@ export class OfflineRecordingStore {
       if (!entry.isDirectory() || !IDENTIFIER_PATTERN.test(entry.name)) continue;
       try {
         manifests.push(JSON.parse(await readFile(path.join(this.root, entry.name, "manifest.json"), "utf8")));
-      } catch {}
+      } catch {
+        // Ignore incomplete or corrupted recording directories.
+      }
     }
     return manifests.sort((left, right) => String(right.recording_id).localeCompare(String(left.recording_id)));
   }
