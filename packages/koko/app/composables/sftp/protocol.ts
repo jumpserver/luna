@@ -59,6 +59,23 @@ export interface SftpFileEntry {
   version?: string;
 }
 
+export interface SftpFileEditorCapability {
+  enabled: boolean;
+  read: boolean;
+  write: boolean;
+  save: {
+    version: number;
+    expected_version: boolean;
+    force: boolean;
+    max_bytes: number;
+  };
+}
+
+export interface SftpCapabilities {
+  schema_version: number;
+  file_editor: SftpFileEditorCapability;
+}
+
 interface SftpMessageBase {
   id: string;
   data?: string;
@@ -140,6 +157,61 @@ export function isSftpCommand(value: unknown): value is SftpCommand {
 
 export function isSftpMessageType(value: unknown): value is SftpMessageType {
   return typeof value === "string" && messageTypes.has(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+export function parseSftpCapabilities(data?: string): SftpCapabilities | null {
+  if (!data) return null;
+
+  try {
+    const connectInfo = JSON.parse(data) as unknown;
+    if (!isRecord(connectInfo) || !isRecord(connectInfo.capabilities)) return null;
+    const capability = connectInfo.capabilities.web_sftp;
+    if (!isRecord(capability) || !isRecord(capability.file_editor)) return null;
+
+    const editor = capability.file_editor;
+    const save = editor.save;
+    const schemaVersion = capability.schema_version;
+    if (
+      !isRecord(save) ||
+      typeof schemaVersion !== "number" ||
+      !Number.isInteger(schemaVersion) ||
+      schemaVersion !== 1 ||
+      typeof editor.enabled !== "boolean" ||
+      typeof editor.read !== "boolean" ||
+      typeof editor.write !== "boolean" ||
+      typeof save.version !== "number" ||
+      !Number.isInteger(save.version) ||
+      save.version !== 1 ||
+      typeof save.expected_version !== "boolean" ||
+      typeof save.force !== "boolean" ||
+      typeof save.max_bytes !== "number" ||
+      !Number.isSafeInteger(save.max_bytes) ||
+      save.max_bytes <= 0
+    ) {
+      return null;
+    }
+
+    return {
+      schema_version: schemaVersion,
+      file_editor: {
+        enabled: editor.enabled,
+        read: editor.read,
+        write: editor.write,
+        save: {
+          version: save.version,
+          expected_version: save.expected_version,
+          force: save.force,
+          max_bytes: save.max_bytes
+        }
+      }
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function parseSftpIncomingMessage(raw: unknown): SftpIncomingMessage | null {

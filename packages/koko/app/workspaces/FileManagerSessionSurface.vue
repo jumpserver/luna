@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { KokoWorkspaceTab } from "@jumpserver/koko/host";
+import type { SftpCapabilities } from "#koko/composables/sftp/protocol";
 
 import KokoFileManagement from "#koko/components/FileManagement/index.vue";
 import BaseWorkspaceShell from "#koko/workspaces/BaseWorkspaceShell.vue";
@@ -15,6 +16,9 @@ const props = withDefaults(
   }>(),
   { compact: false }
 );
+const emit = defineEmits<{
+  capabilities: [capabilities: SftpCapabilities | null];
+}>();
 const { t } = useI18n();
 const tab = toRef(props, "tab");
 const { context, error, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab, {
@@ -37,6 +41,7 @@ watch(tokenId, () => void prepareSession(), { immediate: true });
       :ai-owner-id="aiOwnerId || tab.id"
       :source-asset="{ id: tab.assetId, name: tab.assetName || tab.assetId, account: tab.account }"
       class="h-full"
+      @capabilities="emit('capabilities', $event)"
     />
   </BaseWorkspaceShell>
 </template>
