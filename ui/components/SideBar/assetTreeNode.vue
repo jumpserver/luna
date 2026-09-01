@@ -26,9 +26,8 @@ const isParent = computed(() => Boolean(props.node.isParent || props.node.childr
 const isOpen = computed(() => Boolean(props.node.open));
 const isChecked = computed(() => props.checkedAssetIds?.includes(props.node.id) || false);
 const workspaceTourTarget = computed(() => {
-  if (props.searchMode || props.batchMode) return undefined;
-  if (isParent.value && props.node.meta?.type !== "recent-connections") return "node";
-  return undefined;
+  if (props.searchMode || props.batchMode || props.node.meta?.type === "recent-connections") return undefined;
+  return isParent.value ? "node" : "asset";
 });
 const iconCandidates = computed(() => {
   const iconSkin = (props.node.iconSkin || "").toLowerCase();

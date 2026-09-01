@@ -226,7 +226,7 @@ export function useChenQueryConsole(
         break;
       case "message":
         tab.message = typeof packet.data === "string" ? { type: "info", message: packet.data } : packet.data || null;
-        appendLog(tab, packet.data);
+        if (tab.kind !== "console") appendLog(tab, packet.data);
         break;
       case "sql_error":
         if ((tab.kind === "query" || tab.kind === "console") && packet.data && typeof packet.data === "object") {
@@ -235,7 +235,12 @@ export function useChenQueryConsole(
             ...packet.data,
             message
           };
-          appendLog(tab, { ...packet.data, level: 0, message });
+          if (tab.kind === "console") {
+            const entry = activeConsoleEntry(tab);
+            if (entry) entry.status = "error";
+          } else {
+            appendLog(tab, { ...packet.data, level: 0, message });
+          }
         }
         break;
       case "update_state": {

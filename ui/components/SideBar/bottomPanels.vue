@@ -467,6 +467,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
       v-if="visiblePanels.favorites"
       :open="hideChrome || isOpen('favorites')"
       :title="t('Menu.Favorite')"
+      workspace-tour="favorites"
       v-bind="panelConfig.favorites"
       :max-height="panelMaxHeight('favorites')"
       :fill-available="!mainPanelOpen"

@@ -1,5 +1,5 @@
-import { FORMATTER_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import type { Terminal } from "@xterm/xterm";
+import { FORMATTER_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { isKokoTerminalAiInputLocked } from "#koko/composables/terminal/useTerminalAiSessions";
 import { formatMessage } from "#koko/utils/terminalUtils";
 

@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
+import { workspaceTourArmed, workspaceTourCompleted } from "~/composables/useWorkspaceTour";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import {
+  authorizationTreeHasLoadedNodes,
+  buildWorkspaceTourDemoTree,
+  isWorkspaceTourDemoNode,
+  shouldShowWorkspaceTourDemoTree
+} from "~/utils/workspaceTour";
 
 const props = defineProps<{
   search: string;
@@ -34,6 +41,8 @@ const authorizationNodes = ref<AssetTreeNode[]>([]);
 const typeNodes = ref<AssetTreeNode[]>([]);
 const searchNodes = ref<AssetTreeNode[]>([]);
 const loading = ref(false);
+const authorizationLoaded = ref(false);
+const tourDemoNodes = ref<AssetTreeNode[]>([]);
 const searchLoading = ref(false);
 const batchMode = ref(false);
 const batchAction = ref<BatchAction>("open");
@@ -45,16 +54,37 @@ const nodeMenuTarget = ref<{ node: AssetTreeNode; kind: PanelKind } | null>(null
 let lastErrorSignature = "";
 let lastErrorAt = 0;
 
+const showTourDemoTree = computed(() =>
+  shouldShowWorkspaceTourDemoTree({
+    authorizationLoaded: authorizationLoaded.value,
+    hasLoadedNodes: authorizationTreeHasLoadedNodes(authorizationNodes.value),
+    tourCompleted: workspaceTourCompleted.value,
+    tourArmed: workspaceTourArmed.value
+  })
+);
+
 const activeTree = computed(() => {
   if (activeTreeKind.value === "authorization") {
     return {
       label: t("Menu.AuthorizedTree"),
-      nodes: [buildRecentConnectionsNode(), ...authorizationNodes.value]
+      nodes: [buildRecentConnectionsNode(), ...tourDemoNodes.value, ...authorizationNodes.value]
     };
   }
 
   return { label: t("Menu.TypeTree"), nodes: typeNodes.value };
 });
+
+watch(
+  showTourDemoTree,
+  (show) => {
+    if (show) {
+      if (tourDemoNodes.value.length === 0) tourDemoNodes.value = buildWorkspaceTourDemoTree((key) => t(key));
+      return;
+    }
+    tourDemoNodes.value = [];
+  },
+  { immediate: true }
+);
 
 const isRecentRootNode = (node: AssetTreeNode) => node.id === RECENT_NODE_ID;
 
@@ -164,7 +194,10 @@ const reportError = (error: unknown) => {
 
 const loadRoot = async (kind: PanelKind) => {
   if (!loggedIn.value) return;
-  if (kind === "authorization") loadRecentConnections();
+  if (kind === "authorization") {
+    loadRecentConnections();
+    authorizationLoaded.value = false;
+  }
   loading.value = true;
   try {
     const nodes = await fetchTree(kind);
@@ -188,6 +221,7 @@ const loadRoot = async (kind: PanelKind) => {
     reportError(error);
   } finally {
     loading.value = false;
+    if (kind === "authorization") authorizationLoaded.value = true;
   }
 };
 
@@ -207,6 +241,11 @@ const switchTreeKind = () => {
 };
 
 async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
+  if (isWorkspaceTourDemoNode(node.id)) {
+    node.open = !node.open;
+    return;
+  }
+
   if (isRecentRootNode(node)) {
     recentNodeOpen.value = !recentNodeOpen.value;
     if (recentNodeOpen.value) loadRecentConnections();
@@ -271,6 +310,11 @@ const nodeHasOpenBranch = (node: AssetTreeNode): boolean => {
 };
 
 const expandNodeRecursive = async (node: AssetTreeNode, kind: PanelKind) => {
+  if (isWorkspaceTourDemoNode(node.id)) {
+    node.open = true;
+    return;
+  }
+
   if (isRecentRootNode(node)) {
     recentNodeOpen.value = true;
     loadRecentConnections();
@@ -289,12 +333,12 @@ const expandNodeRecursive = async (node: AssetTreeNode, kind: PanelKind) => {
 };
 
 const selectNode = (node: AssetTreeNode) => {
-  if (node.chkDisabled) return;
+  if (node.chkDisabled || isWorkspaceTourDemoNode(node.id)) return;
   emit("select", treeNodeToAsset(node));
 };
 
 const toggleCheckedNode = (node: AssetTreeNode) => {
-  if (node.chkDisabled || node.isParent) return;
+  if (node.chkDisabled || node.isParent || isWorkspaceTourDemoNode(node.id)) return;
 
   const asset = treeNodeToAsset(node);
   const next = { ...checkedAssets.value };
@@ -326,7 +370,7 @@ const submitCheckedAssets = () => {
 };
 
 const openContextMenu = (node: AssetTreeNode, event: MouseEvent) => {
-  if (node.chkDisabled) return;
+  if (node.chkDisabled || isWorkspaceTourDemoNode(node.id)) return;
 
   if (isBranchNode(node)) {
     event.preventDefault();
@@ -444,6 +488,8 @@ watch(
       authorizationNodes.value = [];
       typeNodes.value = [];
       searchNodes.value = [];
+      authorizationLoaded.value = false;
+      tourDemoNodes.value = [];
       closeBatchMode();
       closeNodeMenu();
     }

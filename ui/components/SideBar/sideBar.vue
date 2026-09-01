@@ -113,7 +113,7 @@ const islandAccordionUi = {
   item: "border-0 py-0 md:py-0 last:border-0",
   header: "shrink-0 p-0",
   trigger:
-    "h-8 min-w-0 rounded-none px-2.5 py-0 text-xs font-medium text-[var(--app-text-secondary)] hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]",
+    "relative h-8 min-w-0 rounded-none px-2.5 py-0 text-xs font-medium text-[var(--app-text-secondary)] hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]",
   leadingIcon: "sidebar-icon",
   label: "min-w-0 flex-1 truncate text-start",
   trailingIcon: "hidden",
@@ -772,6 +772,11 @@ watch(
             />
           </template>
           <template #trailing="{ item }">
+            <span
+              v-if="item.value === 'favorites'"
+              data-workspace-tour="favorites"
+              class="pointer-events-none absolute inset-0"
+            />
             <div class="relative z-10 ml-auto flex shrink-0 items-center gap-px" @click.stop @pointerdown.stop>
               <template v-if="item.value === 'assets'">
                 <UTooltip :text="islandAssetTreeRef?.treeSwitchLabel || t('Tree.SwitchToType')" :delay-duration="150">
