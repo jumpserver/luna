@@ -35,7 +35,7 @@ export function installAgentSessionHarness() {
   const cancel = vi.spyOn(agentClient, "cancel").mockResolvedValue(undefined);
   const deleteSession = vi.spyOn(agentClient, "deleteSession").mockResolvedValue(undefined);
   vi.spyOn(agentClient, "retainResource").mockImplementation(() => undefined);
-  vi.spyOn(agentClient, "releaseResource").mockImplementation(() => undefined);
+  vi.spyOn(agentClient, "releaseResource").mockReturnValue(false);
   vi.spyOn(AgentSseConnection.prototype, "start").mockImplementation(function (this: AgentSseConnection) {
     const options = (this as unknown as { options: AgentSseOptions }).options;
     streams.set(options.resourceSessionId, options);

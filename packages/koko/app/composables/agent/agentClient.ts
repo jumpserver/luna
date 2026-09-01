@@ -118,15 +118,16 @@ export class AgentClient {
 
   releaseResource(resourceSessionId: string) {
     const entry = this.bootstraps.get(resourceSessionId);
-    if (!entry) return;
+    if (!entry) return false;
     entry.users = Math.max(0, entry.users - 1);
-    if (entry.users) return;
+    if (entry.users) return false;
     if (entry.promise) {
       entry.releasePending = true;
-      return;
+      return true;
     }
     if (entry.timer) clearTimeout(entry.timer);
     this.bootstraps.delete(resourceSessionId);
+    return true;
   }
 
   async bootstrap(resourceSessionId: string, force = false) {

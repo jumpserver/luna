@@ -480,11 +480,12 @@ it("recreates a committed session when a same-revision manifest changes digest",
   await controller.actions.dispose();
 });
 
-it("does not delete a shared Agent session when same-resource controllers dispose", async () => {
+it("deletes a shared Agent session only after the final same-resource controller disposes", async () => {
   const deleteSession = vi.fn().mockResolvedValue(undefined);
+  const releaseResource = vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true);
   const client = {
     retainResource: vi.fn(),
-    releaseResource: vi.fn(),
+    releaseResource,
     bootstrap: vi.fn().mockResolvedValue({
       csrf_token: "csrf",
       session_id: "agent-shared",
@@ -533,7 +534,7 @@ it("does not delete a shared Agent session when same-resource controllers dispos
   expect(deleteSession).not.toHaveBeenCalled();
   expect(owner.state).toMatchObject({ agentSessionId: "agent-shared", available: true });
   await owner.actions.dispose();
-  expect(deleteSession).not.toHaveBeenCalled();
+  expect(deleteSession).toHaveBeenCalledWith("agent-shared", "resource-1");
 });
 
 it("resumes an existing Agent session through bounded history before SSE", async () => {

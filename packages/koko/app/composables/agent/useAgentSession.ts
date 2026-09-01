@@ -1048,6 +1048,8 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
 
   function dispose() {
     generation += 1;
+    const sessionId = state.agentSessionId;
+    const resourceSessionId = state.resourceSessionId || retainedResourceId;
     attachFlight = null;
     committedManifestKey = "";
     sse?.stop();
@@ -1057,7 +1059,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     pendingModelDurationByRun.clear();
     localUserMessageIds.clear();
     presentedUserMessageIds.clear();
-    if (retainedResourceId) client.releaseResource(retainedResourceId);
+    const deleteReleasedSession = retainedResourceId ? client.releaseResource(retainedResourceId) : false;
     retainedResourceId = "";
     state.status = "closed";
     state.agentSessionId = "";
@@ -1065,7 +1067,12 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     state.activeRunId = "";
     state.toolNames = [];
     setAvailable(false);
-    const cleanup = lifecycleTail.catch(() => undefined);
+    const cleanup = lifecycleTail
+      .catch(() => undefined)
+      .then(async () => {
+        if (!deleteReleasedSession || !sessionId || !resourceSessionId) return;
+        await client.deleteSession(sessionId, resourceSessionId).catch(() => undefined);
+      });
     lifecycleTail = cleanup;
     return cleanup;
   }

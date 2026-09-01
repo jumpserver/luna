@@ -10,6 +10,16 @@ vi.mock("~/utils/runtime", () => ({
   withWebSitePrefix: (path: string) => path
 }));
 
+it("reports only the final Agent resource release", () => {
+  const client = new AgentClient();
+  client.retainResource("resource-1");
+  client.retainResource("resource-1");
+
+  expect(client.releaseResource("resource-1")).toBe(false);
+  expect(client.releaseResource("resource-1")).toBe(true);
+  client.dispose();
+});
+
 it("includes the authenticated web organization in Agent bootstrap", async () => {
   const fetchMock = vi.fn().mockResolvedValue({
     ok: true,
