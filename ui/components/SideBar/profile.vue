@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { DropdownMenuItem } from "@nuxt/ui";
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { LangType, ThemePresetId, UserData } from "~/types/index";
 
@@ -147,14 +146,24 @@ const languageItems = computed(() =>
 const currentLanguageLabel = computed(
   () => languageItems.value.find((item) => item.id === locale.value)?.label || locale.value
 );
-const languageMenuItems = computed<DropdownMenuItem[]>(() =>
-  languageItems.value.map((item) => ({
-    label: item.label,
-    type: "checkbox",
-    checked: item.id === locale.value,
-    onSelect: () => setLang(item.id as LangType)
-  }))
+const primaryLanguageItems = computed(() =>
+  ["zh", "en"]
+    .map((id) => languageItems.value.find((item) => item.id === id))
+    .filter((item): item is { id: string; label: string } => Boolean(item))
 );
+const extraLanguageItems = computed(() => languageItems.value.filter((item) => item.id !== "zh" && item.id !== "en"));
+const extraLanguageLabel = computed(
+  () => extraLanguageItems.value.find((item) => item.id === locale.value)?.label || ""
+);
+const selectedPrimaryLanguage = computed({
+  get: () => locale.value,
+  set: (id: string) => setLang(id as LangType)
+});
+const moreLanguagesOpen = ref(false);
+const selectExtraLanguage = (id: string) => {
+  setLang(id as LangType);
+  moreLanguagesOpen.value = false;
+};
 
 const appearanceModes = computed(() => [
   { id: "withSystem" as const, label: t("Common.System") },
@@ -178,6 +187,14 @@ const menuTabsUi = {
   list: "w-full bg-[var(--app-surface-canvas)] p-1 ring-1 ring-[var(--app-border)]",
   indicator: "bg-[var(--app-state-hover-strong)] shadow-sm",
   trigger: "flex-1 px-3 data-[state=active]:text-highlighted focus-visible:outline-[var(--app-focus-ring)]"
+};
+
+const menuSeparatorUi = {
+  border: "border-t border-[var(--app-border-soft)]"
+};
+
+const menuShortcutButtonUi = {
+  label: "min-w-0 flex-1 truncate text-left"
 };
 
 const currentThemeAccent = computed(() => getThemePreset(currentThemePresetId.value)?.accent || "var(--theme-accent)");
@@ -826,7 +843,7 @@ onBeforeUnmount(() => {
     }"
     :ui="{
       content:
-        'max-h-[calc(100dvh-4rem)] w-64 overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-0 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
+        'max-h-[calc(100dvh-4rem)] w-64 overflow-x-hidden overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-0 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
     }"
   >
     <UTooltip arrow :text="accountTooltip">
@@ -867,7 +884,10 @@ onBeforeUnmount(() => {
             <UIcon name="i-lucide-chevron-right" class="size-4 shrink-0 text-dimmed" />
           </UButton>
 
-          <div v-if="isDesktopRuntime() && hasMultipleSites" class="border-t border-default p-1.5">
+          <div v-if="isDesktopRuntime() && hasMultipleSites" class="px-2">
+            <USeparator :ui="menuSeparatorUi" />
+          </div>
+          <div v-if="isDesktopRuntime() && hasMultipleSites" class="p-1.5">
             <p class="px-2 pb-1 text-[10px] font-semibold tracking-[0.08em] text-muted uppercase">
               {{ t("UserProfile.SiteAccounts") }}
             </p>
@@ -910,7 +930,61 @@ onBeforeUnmount(() => {
           />
         </div>
 
-        <div class="space-y-2.5 border-t border-default p-2">
+        <div class="px-2">
+          <USeparator :ui="menuSeparatorUi" />
+        </div>
+        <div class="space-y-2.5 p-2">
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-2 px-1 text-[11px] font-medium text-muted">
+              <UIcon name="i-lucide-languages" class="size-3.5" />
+              <span>{{ t("Common.Language") }}</span>
+              <span class="ms-auto text-[11px] font-normal text-muted">{{ currentLanguageLabel }}</span>
+            </div>
+            <UTabs
+              v-model="selectedPrimaryLanguage"
+              :items="primaryLanguageItems"
+              value-key="id"
+              :content="false"
+              color="neutral"
+              variant="pill"
+              size="xs"
+              :ui="menuTabsUi"
+            />
+            <UPopover
+              v-if="extraLanguageItems.length"
+              v-model:open="moreLanguagesOpen"
+              :content="{ align: 'start', side: 'left', sideOffset: 8 }"
+              :ui="{
+                content:
+                  'w-56 max-h-80 overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-1.5 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
+              }"
+            >
+              <UButton color="neutral" variant="ghost" size="sm" block class="h-8 justify-start gap-2 px-2">
+                <span class="min-w-0 flex-1 truncate text-left text-xs">{{ t("Common.More") }}</span>
+                <span class="text-[10px] text-muted">{{ extraLanguageLabel }}</span>
+                <UIcon name="i-lucide-chevron-right" class="size-3.5 shrink-0 text-muted" />
+              </UButton>
+
+              <template #content>
+                <div class="space-y-0.5">
+                  <UButton
+                    v-for="item in extraLanguageItems"
+                    :key="item.id"
+                    color="neutral"
+                    variant="ghost"
+                    size="sm"
+                    block
+                    class="justify-start gap-2"
+                    @click="selectExtraLanguage(item.id)"
+                  >
+                    <span class="min-w-0 flex-1 truncate text-left text-xs">{{ item.label }}</span>
+                    <UIcon v-if="locale === item.id" name="i-lucide-check" class="size-3.5 shrink-0 text-primary" />
+                  </UButton>
+                </div>
+              </template>
+            </UPopover>
+          </div>
+
           <div class="space-y-1.5">
             <div class="flex items-center gap-2 px-1 text-[11px] font-medium text-muted">
               <UIcon name="i-lucide-palette" class="size-3.5" />
@@ -976,25 +1050,27 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="border-t border-default p-1.5">
-          <UDropdownMenu :items="languageMenuItems" :content="{ align: 'start', side: 'left', sideOffset: 8 }">
-            <UButton color="neutral" variant="ghost" size="sm" block class="h-8 justify-start gap-2 px-2">
-              <UIcon name="i-lucide-globe-2" class="size-3.5 shrink-0" />
-              <span class="min-w-0 flex-1 truncate text-left text-xs">{{ t("Common.Language") }}</span>
-              <span class="max-w-24 truncate text-[10px] font-normal text-muted">{{ currentLanguageLabel }}</span>
-              <UIcon name="i-lucide-chevron-right" class="size-3.5 shrink-0 text-muted" />
-            </UButton>
-          </UDropdownMenu>
+        <div class="px-2">
+          <USeparator :ui="menuSeparatorUi" />
+        </div>
+        <div class="p-1.5">
           <UButton
+            :label="t('Common.Settings')"
+            icon="i-lucide-settings"
             color="neutral"
             variant="ghost"
             size="sm"
             block
-            class="h-8 justify-start gap-2 px-2"
+            class="justify-start"
+            :ui="menuShortcutButtonUi"
             @click="openPreferences"
           >
-            <UIcon name="i-lucide-settings" class="size-3.5 shrink-0" />
-            <span class="min-w-0 flex-1 truncate text-left text-xs">{{ t("Common.Settings") }}</span>
+            <template #trailing>
+              <span class="ms-auto flex items-center gap-px">
+                <UKbd value="meta" size="sm" />
+                <UKbd value="," size="sm" />
+              </span>
+            </template>
           </UButton>
           <UButton
             v-if="isDesktopRuntime()"
@@ -1005,8 +1081,17 @@ onBeforeUnmount(() => {
             size="sm"
             block
             class="justify-start"
+            :ui="menuShortcutButtonUi"
             @click="openTools"
-          />
+          >
+            <template #trailing>
+              <span class="ms-auto flex items-center gap-px">
+                <UKbd value="meta" size="sm" />
+                <UKbd value="shift" size="sm" />
+                <UKbd value="," size="sm" />
+              </span>
+            </template>
+          </UButton>
           <UButton
             v-if="isDesktopRuntime()"
             :label="t('Login.AddAccount')"
@@ -1020,7 +1105,10 @@ onBeforeUnmount(() => {
           />
         </div>
 
-        <div v-if="loggedIn" class="border-t border-default p-1.5">
+        <div v-if="loggedIn" class="px-2">
+          <USeparator :ui="menuSeparatorUi" />
+        </div>
+        <div v-if="loggedIn" class="p-1.5">
           <UButton
             :label="t('Login.Logout')"
             icon="i-lucide-log-out"

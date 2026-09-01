@@ -51,6 +51,7 @@
     "Active": "Active",
     "Inactive": "Inactive",
     "Language": "Language",
+    "More": "More",
     "Login": "Login",
     "Connect": "Connect",
     "Theme": "Theme",
@@ -83,7 +84,8 @@
     "Refresh": "Refresh",
     "Save": "Save",
     "EmptyDescription": "No authorized assets are available for the current type",
-    "SelectFromMenu": "Select an item on the left"
+    "SelectFromMenu": "Select an item on the left",
+    "More": "More"
   },
   "DesktopMenu": {
     "File": "File",
@@ -1294,7 +1296,6 @@
       "dropSameEndpoint": "Cannot drop onto the same endpoint",
       "pinTab": "Pin",
       "unpinTab": "Unpin",
-
       "searchAssets": "Search assets for file transfer…",
       "dropFiles": "Drop files here",
       "dropFilesHint": "Files will be uploaded in bulk to the current SFTP directory on the right",

@@ -32,16 +32,14 @@ const workspaceTourTarget = computed(() => {
 const iconCandidates = computed(() => {
   const iconSkin = (props.node.iconSkin || "").toLowerCase();
   const data = props.node.meta?.data || {};
+  const choiceText = (value: string | { name?: string; value?: string } | undefined) =>
+    typeof value === "object" ? [value?.name, value?.value] : [value];
 
   return [
-    data.platform?.name,
-    data.platform?.value,
-    data.platform,
+    ...choiceText(data.platform),
     data.platform_type,
-    data.category?.value,
-    data.category,
-    data.type?.value,
-    data.type,
+    ...choiceText(data.category),
+    ...choiceText(data.type),
     props.node.type,
     iconSkin,
     props.node.key,

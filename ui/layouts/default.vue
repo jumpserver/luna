@@ -39,6 +39,7 @@ const {
 } = useSettingManager();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 const { open: aiPanelOpen, setOpen: setAiPanelOpen } = useAiPanel();
+const localePath = useLocalePath();
 const { open: settingsOpen, activeSection: activeSettingsSection, openSettings, closeSettings } = useSettingsWindow();
 const { recentConnections } = useRecentConnections();
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
@@ -135,6 +136,13 @@ const handleChromeShortcut = (event: KeyboardEvent) => {
   if (!event.altKey && !event.shiftKey && event.code === "Comma") {
     event.preventDefault();
     void openSettings();
+    return;
+  }
+
+  if (!event.altKey && event.shiftKey && event.code === "Comma") {
+    if (!isDesktopRuntime()) return;
+    event.preventDefault();
+    void navigateTo(localePath({ path: "/tools" }));
     return;
   }
 
@@ -242,6 +250,12 @@ const handleDesktopMenuCommand = (command: string) => {
 
   if (command === "search-connect") {
     void openAssetWorkspace(() => useEventBus().emit("workspaceQuickSearch", undefined));
+    return;
+  }
+
+  if (command === "open-tools") {
+    if (!isDesktopRuntime()) return;
+    void navigateTo(localePath({ path: "/tools" }));
   }
 };
 

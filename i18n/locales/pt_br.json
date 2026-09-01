@@ -51,6 +51,7 @@
     "Active": "Ativo",
     "Inactive": "Inativo",
     "Language": "Idioma",
+    "More": "Mais",
     "Login": "Entrar",
     "Connect": "Conectar",
     "Theme": "Tema",
@@ -83,7 +84,8 @@
     "Refresh": "Atualizar",
     "Save": "Salvar",
     "EmptyDescription": "Não há ativos autorizados disponíveis para o tipo atual",
-    "SelectFromMenu": "Selecione um item à esquerda"
+    "SelectFromMenu": "Selecione um item à esquerda",
+    "More": "Mais"
   },
   "DesktopMenu": {
     "File": "Arquivo",

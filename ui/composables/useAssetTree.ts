@@ -94,8 +94,10 @@ export const useAssetTree = () => {
       name: String(data.name || node.name),
       address: String(data.address || ""),
       org_id: typeof data.org_id === "string" ? data.org_id : undefined,
-      platform: String(data.platform?.name || data.platform || data.platform_type || ""),
-      zone: String(data.zone?.name || data.zone || ""),
+      platform: String(
+        (typeof data.platform === "object" ? data.platform?.name : data.platform) || data.platform_type || ""
+      ),
+      zone: String((typeof data.zone === "object" ? data.zone?.name : data.zone) || ""),
       category: normalizeChoice(data.category),
       type: normalizeChoice(data.type) || String(data.platform_type || ""),
       isActive: data.is_active !== false && !node.chkDisabled,

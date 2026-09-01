@@ -22,7 +22,7 @@ export type ThemePresetId =
   | "codex"
   | "cursor"
   | "mono-dark"
-  | "min-dark";
+  | "nord";
 export type LayoutsType = "grid" | "table";
 export type LangType = "zh" | "zh_hant" | "en" | "ja" | "pt_br" | "es" | "ru" | "ko" | "vi";
 export type LanguagePreference = LangType | "system";
@@ -224,9 +224,32 @@ export interface AssetNode {
 
 export type AssetTreeKind = "authorization" | "type" | "search";
 
+interface AssetTreeChoice {
+  name?: string;
+  value?: string;
+}
+
+interface AssetTreeNodeData {
+  id?: string;
+  org_id?: string;
+  name?: string;
+  address?: string;
+  comment?: string;
+  type?: string | AssetTreeChoice;
+  category?: string | AssetTreeChoice;
+  platform?: string | AssetTreeChoice;
+  platform_type?: string;
+  zone?: string | AssetTreeChoice;
+  is_active?: boolean;
+  permedProtocols?: PermedProtocol[];
+  permed_protocols?: PermedProtocol[];
+  permedAccounts?: PermedAccount[];
+  permed_accounts?: PermedAccount[];
+}
+
 export interface AssetTreeNodeMeta {
   type?: string;
-  data?: Record<string, any>;
+  data?: AssetTreeNodeData;
 }
 
 export interface AssetTreeNode {

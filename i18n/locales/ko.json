@@ -51,6 +51,7 @@
     "Active": "활성",
     "Inactive": "비활성",
     "Language": "언어",
+    "More": "더보기",
     "Login": "로그인",
     "Connect": "연결",
     "Theme": "테마",
@@ -83,7 +84,8 @@
     "Refresh": "새로 고침",
     "Save": "저장",
     "EmptyDescription": "현재 유형에 사용 가능한 승인된 자산이 없습니다",
-    "SelectFromMenu": "왼쪽에서 항목을 선택하세요"
+    "SelectFromMenu": "왼쪽에서 항목을 선택하세요",
+    "More": "더 보기"
   },
   "DesktopMenu": {
     "File": "파일",

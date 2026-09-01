@@ -830,6 +830,7 @@ function menuLabels() {
     return {
       about: `关于 ${appName}`,
       settings: "设置…",
+      tools: "我的工具",
       file: "文件",
       edit: "编辑",
       view: "视图",
@@ -864,6 +865,7 @@ function menuLabels() {
   return {
     about: `About ${appName}`,
     settings: "Settings…",
+    tools: "My tools",
     file: "File",
     edit: "Edit",
     view: "View",
@@ -977,6 +979,7 @@ function buildMenu() {
     { label: labels.about, click: openAboutWindow },
     { type: "separator" },
     { label: labels.settings, accelerator: "CmdOrCtrl+,", click: openSettingsWindow },
+    { label: labels.tools, accelerator: "CmdOrCtrl+Shift+,", click: () => sendMenuCommand("open-tools") },
     { label: labels.close, accelerator: "CmdOrCtrl+W", role: "close" },
     { label: labels.minimize, accelerator: "CmdOrCtrl+M", role: "minimize" }
   ];

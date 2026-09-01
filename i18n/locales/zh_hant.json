@@ -51,6 +51,7 @@
     "Active": "啟用",
     "Inactive": "未啟用",
     "Language": "語言",
+    "More": "更多",
     "Login": "登入",
     "Connect": "連線",
     "Theme": "主題",
@@ -83,7 +84,8 @@
     "Refresh": "重新整理",
     "Save": "儲存",
     "EmptyDescription": "當前類型下暫無可用的授權資產",
-    "SelectFromMenu": "請從左側選擇一個配置項"
+    "SelectFromMenu": "請從左側選擇一個配置項",
+    "More": "更多"
   },
   "DesktopMenu": {
     "File": "檔案",
