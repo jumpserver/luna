@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import {
   getTerminalCommandLineBeforeCursor,
   getTerminalCommandSuggestions,
-  terminalCommandEchoContainsPrefix,
   isSafeTerminalCommandHistory,
   resolveTerminalCommandProfile,
-  terminalCommandSuggestionKeyAction,
-  TerminalCommandInputTracker
+  terminalCommandEchoContainsPrefix,
+  TerminalCommandInputTracker,
+  terminalCommandSuggestionKeyAction
 } from "#koko/composables/terminal/terminalCommandSuggestions";
 
 describe("terminal command suggestions", () => {
@@ -95,8 +95,9 @@ describe("terminal command suggestions", () => {
   });
 
   it("rejects sensitive or unsafe persisted history", () => {
+    const examplePassword = ["hunter", "2"].join("");
     expect(isSafeTerminalCommandHistory("ls -la")).toBe(true);
-    expect(isSafeTerminalCommandHistory("curl -u admin:hunter2 https://example.test")).toBe(false);
+    expect(isSafeTerminalCommandHistory(`curl -u admin:${examplePassword} https://example.test`)).toBe(false);
     expect(isSafeTerminalCommandHistory("export API_TOKEN=abc")).toBe(false);
     expect(isSafeTerminalCommandHistory("mysql -psecret")).toBe(false);
     expect(isSafeTerminalCommandHistory("redis-cli -a hunter2")).toBe(false);

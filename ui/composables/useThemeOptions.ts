@@ -5,7 +5,7 @@ import { DARK_THEME_PRESETS, getThemePreset, LIGHT_THEME_PRESETS } from "~/compo
 import { desktopEmit } from "~/shared/desktop/bridge";
 
 export const useThemeOptions = () => {
-  const { t, te } = useI18n();
+  const { t } = useI18n();
   const {
     lightThemePreset,
     darkThemePreset,
@@ -47,9 +47,7 @@ export const useThemeOptions = () => {
 
   const themePresetLabel = (preset: ThemePresetOption | null | undefined) => {
     if (!preset) return t("Common.Theme");
-
-    const key = `ThemePresets.${preset.id}`;
-    return te(key) ? t(key) : preset.label;
+    return preset.label;
   };
 
   const currentThemePresetLabel = computed(() => themePresetLabel(getThemePreset(currentThemePresetId.value)));
