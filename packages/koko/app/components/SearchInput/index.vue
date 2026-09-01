@@ -21,7 +21,7 @@ const searchOptions = reactive<ISearchOptions>({
 
 const searchKey = ref("");
 const gutterWidth = 16;
-const drawerRef = ref<HTMLElement | null>(null);
+const drawerRef = shallowRef<HTMLElement | null>(null);
 const { width } = useElementSize(drawerRef);
 
 const keyWordsSearch = (value: string) => {

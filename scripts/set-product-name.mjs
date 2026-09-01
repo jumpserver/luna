@@ -38,12 +38,6 @@ function readPackage(packagePath) {
 }
 
 const repoRoot = process.cwd();
-const packagePath = path.join(repoRoot, "package.json");
-const packageJson = readPackage(packagePath);
-packageJson.productName = name;
-
-fs.writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
-
 const electronPackagePath = path.join(repoRoot, "electron", "package.json");
 const electronPackageJson = readPackage(electronPackagePath);
 electronPackageJson.productName = name;

@@ -1,5 +1,6 @@
 import type { Terminal } from "@xterm/xterm";
 import type { OnlineUser, ShareUserOptions } from "#koko/types/session";
+import type { Raw } from "vue";
 
 import { defineStore } from "pinia";
 
@@ -12,7 +13,7 @@ export interface ConnectionState {
   sessionId: string;
   terminalId: string;
   enableShare: boolean;
-  terminal: Terminal;
+  terminal: Raw<Terminal>;
   socket: WebSocket | null;
   userOptions: ShareUserOptions[];
   onlineUsers: OnlineUser[];

@@ -133,7 +133,7 @@ sudo dnf install ./jumpserver-client_*.rpm
 
 ### 前置要求
 
-- **Node.js** >= 22.12
+- **Node.js** >= 24
 - **pnpm** >= 11
 - **系统依赖**：
   - macOS: Xcode Command Line Tools
@@ -166,14 +166,13 @@ pnpm electron:package:dir
 
 ### 构建 Web Docker 镜像
 
-Web 镜像只包含 Nuxt 静态产物和 nginx；Electron 桌面代码不会进入 Docker 构建上下文。
+Docker 构建只安装 Web workspace 的依赖关系，并将生成的 Nuxt 静态产物写入 `/opt/luna`。Electron 代码及桌面原生依赖不会进入 Docker 构建上下文。
 
 ```bash
 docker build -t jumpserver/luna:local .
-docker run --rm -p 8080:80 jumpserver/luna:local
 ```
 
-GitHub Actions 会构建 `linux/amd64` 与 `linux/arm64` 双架构镜像，并在版本标签触发时发布到 `jumpserver/luna`。
+Web 工作流会构建 `linux/amd64` 与 `linux/arm64` 双架构镜像，并在版本标签触发时发布到 `jumpserver/luna`。macOS、Linux 和 Windows 桌面客户端则由客户端发布工作流单独打包。
 
 ### 项目结构
 

@@ -30,7 +30,7 @@ const {
 } = useWorkspaceTabs();
 const { cloneSession, reconnectSession, splitSession } = useWorkspaceTabMenu();
 
-const tabStripRef = ref<HTMLElement | null>(null);
+const tabStripRef = shallowRef<HTMLElement | null>(null);
 const hasOverflow = ref(false);
 const hasLeftHidden = ref(false);
 const hasRightHidden = ref(false);

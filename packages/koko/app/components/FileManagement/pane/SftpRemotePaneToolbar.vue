@@ -29,10 +29,10 @@ const search = defineModel<string>("search", { required: true });
 const showHiddenFiles = defineModel<boolean>("showHiddenFiles", { default: false });
 
 const { t } = useI18n();
-const uploadInput = ref<HTMLInputElement | null>(null);
-const pathInputRef = ref<HTMLInputElement | null>(null);
-const searchInputRef = ref<HTMLInputElement | null>(null);
-const toolbarRef = ref<HTMLElement | null>(null);
+const uploadInput = shallowRef<HTMLInputElement | null>(null);
+const pathInputRef = shallowRef<HTMLInputElement | null>(null);
+const searchInputRef = shallowRef<HTMLInputElement | null>(null);
+const toolbarRef = shallowRef<HTMLElement | null>(null);
 
 const pathEditing = ref(false);
 const pathDraft = ref("");

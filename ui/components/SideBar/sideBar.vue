@@ -90,7 +90,7 @@ const islandAccordionItems = computed(() => {
 
   return items;
 });
-const islandAssetTreeRef = ref<{
+const islandAssetTreeRef = shallowRef<{
   loading: boolean;
   refresh: () => void | Promise<void>;
   switchTreeKind: () => void;
@@ -98,12 +98,12 @@ const islandAssetTreeRef = ref<{
   treeSwitchLabel: string;
   batchMenuItems: DropdownMenuItem[][];
 } | null>(null);
-const islandFavoritePanelRef = ref<{
+const islandFavoritePanelRef = shallowRef<{
   favoriteLoading: boolean;
   openCreateFolder: (parentId?: string | null) => void;
   refreshFavorites: () => unknown;
 } | null>(null);
-const islandSnippetPanelRef = ref<{
+const islandSnippetPanelRef = shallowRef<{
   snippetLoading: boolean;
   snippetCreateItems: DropdownMenuItem[];
   refreshSnippets: () => unknown;

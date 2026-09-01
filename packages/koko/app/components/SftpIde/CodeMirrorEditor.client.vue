@@ -30,7 +30,7 @@ const emit = defineEmits<{
 }>();
 const hostAdapter = useKokoHostAdapter();
 const colorMode = useColorMode();
-const container = ref<HTMLElement | null>(null);
+const container = shallowRef<HTMLElement | null>(null);
 const languageSlot = new Compartment();
 const themeSlot = new Compartment();
 const syntaxThemeSlot = new Compartment();

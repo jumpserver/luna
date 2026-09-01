@@ -40,14 +40,20 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate frontend
-        run: pnpm typecheck && pnpm lint:check && pnpm test
+      - name: Validate source
+        run: pnpm lint:check
+
+      - name: Validate web application
+        run: pnpm typecheck:web && pnpm test:web
+
+      - name: Validate Electron client
+        run: pnpm typecheck:electron && pnpm test:electron
 
   build:
     name: package ${{ matrix.name }}
@@ -86,7 +92,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: pnpm
 
       - name: Install Linux packaging dependencies

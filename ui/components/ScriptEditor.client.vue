@@ -11,7 +11,7 @@ import { createCodeMirrorSyntaxTheme, createCodeMirrorTheme } from "~/shared/the
 const props = defineProps<{ modelValue: string; module: string }>();
 const emit = defineEmits<{ "update:modelValue": [value: string]; save: [] }>();
 const colorMode = useColorMode();
-const container = ref<HTMLElement | null>(null);
+const container = shallowRef<HTMLElement | null>(null);
 const themeSlot = new Compartment();
 const syntaxThemeSlot = new Compartment();
 const languageSlot = new Compartment();

@@ -1,6 +1,6 @@
 import { MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { afterEach, expect, it, vi } from "vitest";
-import { computed, ref } from "vue";
+import { computed, ref, shallowRef } from "vue";
 
 import {
   buildJSONEnvelope,
@@ -98,7 +98,7 @@ it("blocks denied copy and paste events before xterm handles them", () => {
   const validate = vi.fn(() => false);
   const onContextMenu = vi.fn();
   const input = useKokoTerminalInput({
-    container: ref(container as HTMLElement),
+    container: shallowRef(container as HTMLElement),
     terminal: ref(terminal as never),
     socket: ref(null),
     terminalId: ref("terminal-1"),
