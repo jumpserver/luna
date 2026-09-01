@@ -1,0 +1,8 @@
+.venv/
+.pytest_cache/
+__pycache__/
+*.egg-info/
+*.spec
+:memory:.ses
+build/
+dist/

@@ -189,6 +189,12 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
       icon: "lucide:repeat-2",
       to: localePath({ path: "/transcode" }),
       disabled: isLoading.value
+    },
+    {
+      label: t("Menu.Face"),
+      icon: "lucide:scan-face",
+      to: localePath({ path: "/face" }),
+      disabled: isLoading.value
     }
   ];
 });

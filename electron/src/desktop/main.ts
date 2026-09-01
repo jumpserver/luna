@@ -28,6 +28,7 @@ import { LocalApplicationLauncher } from "../apps/local-app-launcher";
 import { listSystemFonts } from "../apps/system-fonts";
 import { DesktopAuthService } from "../auth/service";
 import { isOAuthCallbackUrl } from "../auth/oauth-callback";
+import { FaceEngineManager } from "../face/manager";
 import { FfmpegPluginManager } from "../replay/ffmpeg-plugin";
 import { OfflineRecordingStore } from "../replay/offline-recordings";
 import { ReplayTranscoder } from "../replay/transcoder";
@@ -80,6 +81,7 @@ let offlineRecordings;
 let replayTranscoder;
 let ffmpegPlugin;
 let debugLogService;
+let faceEngine;
 let appIcon;
 let allowCloseDuringTranscode = false;
 let closeConfirmationPending = false;
@@ -561,6 +563,7 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
     }
     webProxyManager.disposeHost(windowWebContentsId);
     clearDesktopEventSubscriptions(windowWebContents);
+    faceEngine?.stopOwner(windowWebContentsId);
   });
   void win.loadURL(rendererTarget(options.url || "/luna/"));
   return win;
@@ -1184,6 +1187,16 @@ async function handleInvoke(event, request) {
   if (command === "api_request") return authService.apiRequest(args.request);
   if (command === "api_stream_start") return startApiStream(event, win, args);
   if (command === "api_stream_cancel") return cancelApiStream(event, args);
+  if (command === "face_engine_status") return faceEngine.status();
+  if (command === "face_engine_initialize") return faceEngine.initialize();
+  if (command === "face_engine_configure") return faceEngine.configure(args.config || {});
+  if (command === "face_engine_list_people") return faceEngine.listPeople();
+  if (command === "face_engine_remove_person") return faceEngine.removePerson(args.personId);
+  if (command === "face_engine_start_session") {
+    return faceEngine.startSession({ id: event.sender.id, label: labelForWindow(win) }, args);
+  }
+  if (command === "face_engine_process_frame") return faceEngine.processFrame(event.sender.id, args);
+  if (command === "face_engine_stop_session") return faceEngine.stopSession(event.sender.id, args.sessionId);
   if (command === "resolve_chen_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "chen");
   if (command === "resolve_koko_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "koko");
   if (command === "create_koko_connect_ticket") return authService.createKokoConnectTicket(args);
@@ -1445,6 +1458,9 @@ app.on("before-quit", (event) => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
+app.on("will-quit", () => {
+  void faceEngine?.shutdown();
+});
 app.on("activate", () => createWindow("main"));
 
 app.whenReady().then(async () => {
@@ -1483,6 +1499,13 @@ app.whenReady().then(async () => {
     (url, options) => net.fetch(toFetchUrl(url), options),
     (payload, label) => emitDesktopEvent("ffmpeg-plugin-progress", payload, label)
   );
+  faceEngine = new FaceEngineManager({
+    app,
+    projectRoot,
+    isDevelopment,
+    emit: emitDesktopEvent,
+    fetch: (url, options) => net.fetch(url, options)
+  });
   replayTranscoder = new ReplayTranscoder(
     projectRoot,
     (payload, label) => emitDesktopEvent("transcode-progress", payload, label),

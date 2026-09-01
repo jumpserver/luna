@@ -1,0 +1,28 @@
+[project]
+name = "jumpserver-face-engine"
+version = "0.1.0"
+description = "Local InsightFace worker for the JumpServer Electron client."
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "insightface>=0.7.3",
+  "numpy>=2.0",
+  "onnxruntime>=1.20",
+  "opencv-python>=4.10",
+]
+
+[dependency-groups]
+dev = [
+  "pyinstaller>=6.10",
+  "pytest>=8.3",
+]
+
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["faceliveplus*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

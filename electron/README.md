@@ -11,6 +11,18 @@ pnpm electron:dev
 Desktop development and packaging require Go 1.25 or newer to build the bundled `jms-ssh` helper.
 On macOS, development builds ad-hoc sign the helper; release builds use `CSC_NAME` and verify the packaged helper before completing. Windows Authenticode signing is enabled when `WINDOWS_CERTIFICATE_FILE` (and `WINDOWS_CERTIFICATE_PASSWORD`) or `WINDOWS_SIGN_WITH_PARAMS` is configured.
 
+The native Face Center has its own uv-managed Python sidecar. Prepare it once,
+then open **My Tools > Face Center** in the desktop client:
+
+```sh
+pnpm face:setup
+pnpm electron:dev
+```
+
+Face registration, authentication, and presence monitoring stay local to the
+desktop process. Monitoring performs its liveness challenge once during
+initialization and then switches to presence-only checks.
+
 The launcher allocates independent Nuxt and HMR ports, starts the renderer, and
 then opens Electron through Electron Forge. TypeScript sources live under `src/`
 by domain (`desktop`, `auth`, `apps`, `replay`, `web-proxy`). Vite compiles the
@@ -29,6 +41,7 @@ Currently migrated:
 - scoped offline recording import, decompression, and local replay URLs;
 - platform application plugins, external native-client launch, and system font enumeration;
 - replay-to-MP4 conversion through the Node replay pipeline and optional FFmpeg plugin.
+- native face registration, authentication, liveness challenges, and presence monitoring through an isolated Python sidecar.
 
 Remaining release work:
 
