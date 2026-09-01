@@ -167,7 +167,7 @@ function agentToolNames(value: unknown) {
 
 function agentToolProgressCode(domain: AgentDomain, toolName: string) {
   if (domain === "terminal") {
-    if (toolName === "execute_command") return "executing";
+    if (toolName === "execute_command" || toolName.startsWith("execute_")) return "executing";
     if (toolName === "database_schema") return "metadata_lookup";
     return "tool_running";
   }
@@ -376,6 +376,9 @@ function agentToolLifecyclePresentation(event: AgentEvent, domain: AgentDomain, 
       domain,
       ...(toolName ? { toolName } : {}),
       status,
+      ...(Object.hasOwn(payload, "arguments") ? { arguments: payload.arguments } : {}),
+      ...(Object.hasOwn(payload, "result") ? { result: payload.result } : {}),
+      ...(Object.hasOwn(payload, "error") ? { error: payload.error } : {}),
       ...(Number.isFinite(Number(payload.duration_ms)) ? { durationMs: Number(payload.duration_ms) } : {})
     }
   };

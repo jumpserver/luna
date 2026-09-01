@@ -175,7 +175,7 @@ it("projects Chen SQL proposal tool results into the existing SQL review parts",
   });
 });
 
-it("projects SQL tool calls without exposing their arguments", () => {
+it("projects SQL tool calls with their arguments", () => {
   const message = agentEventToUiMessage(
     {
       seq: 3,
@@ -205,12 +205,13 @@ it("projects SQL tool calls without exposing their arguments", () => {
           toolCallId: "tool-schema",
           domain: "sql",
           toolName: "inspect_schema",
-          status: "running"
+          status: "running",
+          arguments: { query: "private_table" }
         }
       }
     ]
   });
-  expect(JSON.stringify(message)).not.toContain("private_table");
+  expect(JSON.stringify(message)).toContain("private_table");
 });
 
 it("projects cancelled tool calls as cancelled lifecycle updates", () => {
@@ -256,11 +257,40 @@ it.each(["terminal", "sql", "file", "script"] satisfies AgentDomain[])(
         toolCallId: `tool-${domain}`,
         domain,
         status: "success",
+        result: { structuredContent: {} },
         durationMs: 42
       }
     });
   }
 );
+
+it("projects tool errors into the shared lifecycle result", () => {
+  const message = agentEventToUiMessage(
+    {
+      seq: 6,
+      type: "tool.result",
+      tool_call_id: "tool-schema",
+      payload: {
+        status: "error",
+        done: true,
+        error: { code: -32602, message: "The active schema is protected" }
+      }
+    },
+    "sql",
+    { domain: "sql" }
+  );
+
+  expect(message?.parts).toContainEqual({
+    type: "data-agent-tool",
+    data: {
+      id: "tool-schema",
+      toolCallId: "tool-schema",
+      domain: "sql",
+      status: "error",
+      error: { code: -32602, message: "The active schema is protected" }
+    }
+  });
+});
 
 it("maps UI messages and approvals to the strict Agent API DTO", async () => {
   let streamOptions!: AgentSseOptions;

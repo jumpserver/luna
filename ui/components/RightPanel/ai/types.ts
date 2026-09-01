@@ -64,6 +64,9 @@ export interface AgentToolItem extends ViewItemBase<"shared", "agent-tool"> {
     toolName?: string;
     status: AgentToolStatus;
     durationMs?: number;
+    arguments?: unknown;
+    result?: unknown;
+    error?: unknown;
   };
 }
 
@@ -87,6 +90,7 @@ export interface SqlAnalysisItem extends ViewItemBase<"sql", "sql-analysis"> {
 }
 
 export interface SqlProposalItem extends ViewItemBase<"sql", "sql-proposal"> {
+  toolCallId: string;
   data: ChenSqlProposal;
 }
 

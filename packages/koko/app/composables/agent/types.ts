@@ -6,6 +6,7 @@ export const MCP_PROTOCOL_VERSION_META_KEY = "io.modelcontextprotocol/protocolVe
 export const MCP_CLIENT_CAPABILITIES_META_KEY = "io.modelcontextprotocol/clientCapabilities";
 export const MCP_CLIENT_INFO_META_KEY = "io.modelcontextprotocol/clientInfo";
 export const MCP_PROTOCOL_VERSION = "2026-07-28";
+export const MCP_FINAL_RESULT_META_KEY = "com.jumpserver/finalResult";
 
 export function agentVersionHeaders(resourceSessionId?: string) {
   return {

@@ -82,7 +82,7 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
       available: Boolean(current.enabled),
       busy,
       running: busy,
-      waitingForApproval: Boolean(current.metadataApproval),
+      waitingForApproval: Boolean(current.metadataApproval || current.pendingProposalCalls.size),
       unavailable: {
         icon: "i-lucide-sparkles",
         title: context.t("RightPanel.SQLAIUnavailableTitle"),
@@ -158,13 +158,14 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
       current.expansionOverrides.set(action.key, action.expanded);
       return;
     }
-    const existingDecision = current.proposalDecisions.get(action.item.key);
+    const proposalId = action.item.toolCallId || action.item.key;
+    const existingDecision = current.proposalDecisions.get(proposalId);
     if (existingDecision) return;
     if (action.type === "reject-proposal") {
-      current.proposalDecisions.set(action.item.key, "rejected");
+      if (current.rejectProposal(proposalId)) current.proposalDecisions.set(proposalId, "rejected");
       return;
     }
-    const result = current.applyProposal(action.item.data);
-    current.proposalDecisions.set(action.item.key, result.applied ? "applied" : "stale");
+    const result = current.applyProposal(proposalId);
+    current.proposalDecisions.set(proposalId, result.applied ? "applied" : "stale");
   }
 };

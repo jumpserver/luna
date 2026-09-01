@@ -1,13 +1,25 @@
 import type { UseChatHelpers } from "@ai-sdk/vue";
 import type { ChatTransport, UIMessage, UIMessageChunk } from "ai";
 import type { EffectScope } from "vue";
-import type { AgentApprovalMode, KokoMcpCancelFrame, KokoMcpRequestFrame } from "#koko/composables/agent/types";
+import type {
+  AgentApprovalMode,
+  KokoMcpCancelFrame,
+  KokoMcpRequestFrame,
+  KokoMcpResponseFrame
+} from "#koko/composables/agent/types";
 import type { AgentSessionController } from "#koko/composables/agent/useAgentSession";
 
 import { useChat } from "@ai-sdk/vue";
 import { effectScope, markRaw, reactive, shallowReactive } from "vue";
 import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
-import { isRecord, kokoMcpWireMessage, manifestFromFrame, parseKokoMcpFrame } from "#koko/composables/agent/types";
+import {
+  AGENT_MCP_BINDING_META_KEY,
+  AGENT_PROTOCOL_VERSION,
+  isRecord,
+  kokoMcpWireMessage,
+  manifestFromFrame,
+  parseKokoMcpFrame
+} from "#koko/composables/agent/types";
 import { useAgentSession } from "#koko/composables/agent/useAgentSession";
 
 const SQL_CONTEXT_META_KEY = "com.jumpserver/sqlContext";
@@ -71,6 +83,12 @@ export interface ChenSqlProposal {
 export interface ChenSqlProposalApplyResult {
   applied: boolean;
   reason?: string;
+}
+
+export interface PendingChenSqlProposalCall {
+  requestId: string;
+  resourceSessionId: string;
+  proposal: ChenSqlProposal;
 }
 
 export interface ChenSqlAiTiming {
@@ -141,12 +159,15 @@ export interface ChenSqlAiSession {
   executionOverrides: Map<string, string>;
   expansionOverrides: Map<string, boolean>;
   proposalDecisions: Map<string, "applied" | "rejected" | "stale">;
+  proposalRequestIds: Map<string, string>;
+  pendingProposalCalls: Map<string, PendingChenSqlProposalCall>;
   contextProvider: () => ChenSqlEditorContext | null;
   proposalApplier: (proposal: ChenSqlProposal) => ChenSqlProposalApplyResult;
   request: (operation: ChenSqlAiOperation, question: string) => Promise<void>;
   cancelActive: () => void;
   resolveMetadataApproval: (decision: ChenSqlMetadataApprovalDecision) => void;
-  applyProposal: (proposal: ChenSqlProposal) => ChenSqlProposalApplyResult;
+  applyProposal: (toolCallId: string) => ChenSqlProposalApplyResult;
+  rejectProposal: (toolCallId: string) => boolean;
 }
 
 type ChenSqlAiRuntimeSession = ChenSqlAiSession & { activeOperation: ChenSqlAiOperation };
@@ -313,8 +334,128 @@ function currentOperation(session: ChenSqlAiSession): ChenSqlAiOperation {
   return (session as ChenSqlAiRuntimeSession).activeOperation || "generate";
 }
 
+function sqlToolCallId(frame: KokoMcpRequestFrame) {
+  const metadata = isRecord(frame.data.params._meta) ? frame.data.params._meta : {};
+  const binding = isRecord(metadata[AGENT_MCP_BINDING_META_KEY]) ? metadata[AGENT_MCP_BINDING_META_KEY] : {};
+  return String(binding.tool_call_id || frame.data.id);
+}
+
+function sqlProposalResult(frame: KokoMcpResponseFrame) {
+  const result = isRecord(frame.data.result) ? frame.data.result : {};
+  const structuredContent = isRecord(result.structuredContent) ? result.structuredContent : {};
+  const proposal = isRecord(structuredContent.proposal) ? structuredContent.proposal : null;
+  if (
+    structuredContent.kind !== "proposal" ||
+    !proposal ||
+    typeof proposal.sql !== "string" ||
+    !isRecord(proposal.base)
+  ) {
+    return null;
+  }
+  return {
+    proposal: proposal as unknown as ChenSqlProposal,
+    analysis: isRecord(structuredContent.analysis) ? structuredContent.analysis : null
+  };
+}
+
+function presentSqlProposal(
+  session: ChenSqlAiSession,
+  toolCallId: string,
+  proposal: ChenSqlProposal,
+  analysis: Record<string, unknown> | null
+) {
+  const parts: ChenSqlAiChatMessage["parts"] = [];
+  if (analysis) parts.push({ type: "data-sql-analysis", data: analysis });
+  parts.push({ type: "data-sql-proposal", data: { ...proposal, toolCallId } });
+  const message = {
+    id: `sql-proposal-${toolCallId}`,
+    role: "assistant",
+    metadata: { domain: "sql", targetId: session.paneId, agentEventType: "tool.proposal" },
+    parts
+  } as ChenSqlAiChatMessage;
+  if (!transports.get(session)?.receive(message)) {
+    session.chat.messages.value = [...session.chat.messages.value, message];
+  }
+}
+
+function queueSqlProposalResponse(session: ChenSqlAiSession, frame: KokoMcpResponseFrame) {
+  queueMicrotask(() => {
+    void session.agent.actions.receiveKokoFrame(frame).catch((cause) => {
+      session.errorCode = "tool_result_failed";
+      session.errorText = cause instanceof Error ? cause.message : "Failed to deliver SQL AI tool result";
+    });
+  });
+}
+
+function settleSqlProposal(
+  session: ChenSqlAiSession,
+  toolCallId: string,
+  status: "applied" | "rejected" | null,
+  error = ""
+) {
+  const pending = session.pendingProposalCalls.get(toolCallId);
+  if (!pending) return false;
+  session.pendingProposalCalls.delete(toolCallId);
+  const text =
+    status === "applied"
+      ? "The user applied the SQL proposal to the editor. It has not been executed."
+      : "The user rejected the SQL proposal. It was not applied or executed.";
+  queueSqlProposalResponse(session, {
+    type: "mcp.response",
+    version: AGENT_PROTOCOL_VERSION,
+    resource_session_id: pending.resourceSessionId,
+    data: {
+      jsonrpc: "2.0",
+      id: pending.requestId,
+      ...(error
+        ? { error: { code: -32602, message: error } }
+        : {
+            result: {
+              content: [{ type: "text", text }],
+              structuredContent: { proposal_id: toolCallId, status }
+            }
+          })
+    }
+  });
+  return true;
+}
+
+function cancelPendingSqlProposal(session: ChenSqlAiSession, requestId: string) {
+  const requestedToolCallId = session.proposalRequestIds.get(requestId);
+  session.proposalRequestIds.delete(requestId);
+  if (requestedToolCallId) session.proposalDecisions.set(requestedToolCallId, "rejected");
+  for (const [toolCallId, pending] of session.pendingProposalCalls) {
+    if (pending.requestId !== requestId) continue;
+    session.pendingProposalCalls.delete(toolCallId);
+    session.proposalDecisions.set(toolCallId, "rejected");
+    return;
+  }
+}
+
+function acceptSqlProposal(session: ChenSqlAiSession, toolCallId: string): ChenSqlProposalApplyResult {
+  const pending = session.pendingProposalCalls.get(toolCallId);
+  if (!pending) return { applied: false, reason: "The SQL proposal is no longer available" };
+  const applied = session.proposalApplier(pending.proposal);
+  if (!applied.applied) {
+    settleSqlProposal(
+      session,
+      toolCallId,
+      null,
+      "The SQL editor changed before the proposal was applied; read_sql_context must be called again"
+    );
+    return applied;
+  }
+  settleSqlProposal(session, toolCallId, "applied");
+  return applied;
+}
+
+function rejectSqlProposal(session: ChenSqlAiSession, toolCallId: string) {
+  return settleSqlProposal(session, toolCallId, "rejected");
+}
+
 function sendToolFrame(session: ChenSqlAiSession, frame: KokoMcpRequestFrame | KokoMcpCancelFrame) {
   let outgoing: KokoMcpRequestFrame | KokoMcpCancelFrame = frame;
+  let proposalRequestId = "";
   if (frame.type === "mcp.request") {
     const request = frame as KokoMcpRequestFrame;
     const context = session.contextProvider();
@@ -336,8 +477,15 @@ function sendToolFrame(session: ChenSqlAiSession, frame: KokoMcpRequestFrame | K
         }
       }
     };
+    if (String(request.data.params.name || "") === "propose_sql") {
+      proposalRequestId = String(request.data.id);
+      session.proposalRequestIds.set(proposalRequestId, sqlToolCallId(request));
+    }
+  } else {
+    cancelPendingSqlProposal(session, String(frame.data.params.requestId));
   }
   if (!session.sendFrame(kokoMcpWireMessage(outgoing))) {
+    if (proposalRequestId) session.proposalRequestIds.delete(proposalRequestId);
     throw new ChenSqlAiClientError("unavailable", "Chen SQL tools are unavailable");
   }
 }
@@ -438,6 +586,8 @@ function createSession(
     executionOverrides: new Map<string, string>(),
     expansionOverrides: new Map<string, boolean>(),
     proposalDecisions: new Map<string, "applied" | "rejected" | "stale">(),
+    proposalRequestIds: new Map<string, string>(),
+    pendingProposalCalls: new Map<string, PendingChenSqlProposalCall>(),
     contextProvider: markRaw(contextProvider),
     proposalApplier: markRaw(proposalApplier),
     request: async (operation: ChenSqlAiOperation, question: string) => {
@@ -468,7 +618,8 @@ function createSession(
           session.errorText = cause instanceof Error ? cause.message : "Failed to resolve metadata approval";
         });
     },
-    applyProposal: (proposal: ChenSqlProposal) => session.proposalApplier(proposal)
+    applyProposal: (toolCallId: string) => acceptSqlProposal(session, toolCallId),
+    rejectProposal: (toolCallId: string) => rejectSqlProposal(session, toolCallId)
   }) as ChenSqlAiSession;
   transports.set(session, transport);
   chatScopes.set(session, chatScope);
@@ -524,6 +675,25 @@ export function handleChenSqlAiWireMessage(paneId: string, value: unknown) {
     return true;
   }
   if (frame.resource_session_id !== session.resourceSessionId) return false;
+  if (frame.type === "mcp.response") {
+    const requestId = String(frame.data.id);
+    if ([...session.pendingProposalCalls.values()].some((pending) => pending.requestId === requestId)) return true;
+    const toolCallId = session.proposalRequestIds.get(requestId) || "";
+    const proposalResult = sqlProposalResult(frame);
+    if (toolCallId && proposalResult) {
+      session.proposalRequestIds.delete(requestId);
+      session.pendingProposalCalls.set(toolCallId, {
+        requestId,
+        resourceSessionId: frame.resource_session_id,
+        proposal: proposalResult.proposal
+      });
+      presentSqlProposal(session, toolCallId, proposalResult.proposal, proposalResult.analysis);
+      return true;
+    }
+    if (toolCallId) session.proposalRequestIds.delete(requestId);
+  } else if (frame.type === "mcp.cancel_result") {
+    cancelPendingSqlProposal(session, String(frame.data.id));
+  }
   void session.agent.actions.receiveKokoFrame(frame).catch((cause) => {
     session.errorCode = "tool_result_failed";
     session.errorText = cause instanceof Error ? cause.message : "Failed to deliver SQL AI tool result";

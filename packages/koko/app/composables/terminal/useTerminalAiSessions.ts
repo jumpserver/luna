@@ -153,6 +153,7 @@ class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage
         ...message,
         metadata: {
           ...message.metadata,
+          domain: "terminal",
           terminalId: Number(session.terminalId),
           execution_mode: terminalExecutionMode(session.executionMode)
         }
@@ -323,7 +324,7 @@ function createSession(paneId: string, socket: WebSocket, terminalId: string): K
     useAgentSession({
       domain: "terminal",
       relay,
-      messageMetadata: () => ({ terminalId: Number(session?.terminalId) || 0 }),
+      messageMetadata: () => ({ domain: "terminal", terminalId: Number(session?.terminalId) || 0 }),
       onMessage: (message) => handleKokoTerminalAiMessage(paneId, message),
       onAvailability: (available) => {
         if (session) session.enabled = available;
@@ -560,6 +561,7 @@ export async function submitKokoTerminalAiPrompt(paneId: string, text: string): 
     const response = session.chat.sendMessage({
       text: prompt,
       metadata: {
+        domain: "terminal",
         terminalId: Number(session.terminalId),
         execution_mode: terminalExecutionMode(session.executionMode)
       }
@@ -590,7 +592,9 @@ export function handleKokoTerminalAiWireMessage(paneId: string, message: unknown
   const session = sessions.get(paneId);
   if (!session) return true;
   if (frame.type === "mcp.manifest") {
-    const commandTool = frame.data.tools.find((tool) => tool.name === "execute_command");
+    const commandTool = frame.data.tools.find(
+      (tool) => tool._meta?.["com.jumpserver/toolKind"] === "command" || tool.name === "execute_command"
+    );
     const executionModes = commandTool?._meta?.["com.jumpserver/executionModes"];
     session.backgroundExec = Array.isArray(executionModes) && executionModes.includes("background");
     if (!session.backgroundExec && session.executionMode === "background") session.executionMode = "auto";

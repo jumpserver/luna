@@ -2,11 +2,27 @@
 import type { AgentToolItem, AgentToolStatus } from "../../types";
 import { formatAiDuration } from "../../presentation";
 
-defineProps<{
+const props = defineProps<{
   item: AgentToolItem;
 }>();
 
 const { t } = useI18n();
+
+const hasArguments = computed(() => Object.hasOwn(props.item.data, "arguments"));
+const hasResult = computed(() => Object.hasOwn(props.item.data, "result") || Object.hasOwn(props.item.data, "error"));
+const argumentsText = computed(() => formatToolValue(props.item.data.arguments));
+const resultText = computed(() =>
+  formatToolValue(Object.hasOwn(props.item.data, "error") ? props.item.data.error : props.item.data.result)
+);
+
+function formatToolValue(value: unknown) {
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value, null, 2) ?? String(value);
+  } catch {
+    return String(value);
+  }
+}
 
 function statusLabel(status: AgentToolStatus) {
   if (status === "running") return t("RightPanel.AIStatusRunning");
@@ -45,5 +61,32 @@ function statusClass(status: AgentToolStatus) {
         {{ formatAiDuration(item.data.durationMs || 0) }}
       </span>
     </div>
+    <div v-if="hasArguments || hasResult" class="mt-2 space-y-2 border-t border-default pt-2">
+      <div v-if="hasArguments" class="min-w-0">
+        <div class="mb-1 text-[10px] font-medium text-muted">{{ t("RightPanel.AIToolArguments") }}</div>
+        <pre class="tool-payload">{{ argumentsText }}</pre>
+      </div>
+      <div v-if="hasResult" class="min-w-0">
+        <div class="mb-1 text-[10px] font-medium text-muted">{{ t("RightPanel.AIToolResult") }}</div>
+        <pre class="tool-payload">{{ resultText }}</pre>
+      </div>
+    </div>
   </section>
 </template>
+
+<style scoped>
+.tool-payload {
+  max-height: 12rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0.5rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.375rem;
+  background: var(--app-card-bg-soft);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  line-height: 1.5;
+}
+</style>

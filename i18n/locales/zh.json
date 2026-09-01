@@ -654,6 +654,8 @@
     "AIStatusRunning": "执行中",
     "AIStatusCancelled": "已取消",
     "AIToolCall": "工具调用",
+    "AIToolArguments": "调用参数",
+    "AIToolResult": "返回结果",
     "AIStatusInterrupted": "已中断",
     "AIStatusPending": "待执行",
     "AIStatusRejected": "已拒绝",

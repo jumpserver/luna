@@ -224,12 +224,20 @@ describe("buildAiPanelViewItems", () => {
               toolCallId: "tool-1",
               domain: "sql",
               toolName: "inspect_schema",
-              status: "running"
+              status: "running",
+              arguments: { query: "users" }
             }
           },
           {
             type: "data-agent-tool",
-            data: { id: "tool-1", toolCallId: "tool-1", domain: "sql", status: "success", durationMs: 123 }
+            data: {
+              id: "tool-1",
+              toolCallId: "tool-1",
+              domain: "sql",
+              status: "success",
+              durationMs: 123,
+              result: { structuredContent: { tables: ["users"] } }
+            }
           },
           { type: "data-file-action", data: { id: "action-1", tool: "stat", path: "/srv/app" } },
           { type: "data-command-acl", data: { state: "rejected" } }
@@ -257,7 +265,39 @@ describe("buildAiPanelViewItems", () => {
       sourceDomain: "sql",
       toolName: "inspect_schema",
       status: "success",
-      durationMs: 123
+      durationMs: 123,
+      arguments: { query: "users" },
+      result: { structuredContent: { tables: ["users"] } }
+    });
+  });
+
+  it("keeps the SQL proposal bound to its pending tool call", () => {
+    const items = buildAiPanelViewItems({
+      messages: [
+        {
+          id: "sql-proposal",
+          role: "assistant",
+          parts: [
+            {
+              type: "data-sql-proposal",
+              data: {
+                toolCallId: "tool-sql",
+                sql: "SELECT 1",
+                base: { paneId: "pane-1", tabId: "", revision: 1, target: "new_query" }
+              }
+            }
+          ]
+        }
+      ] as unknown as TerminalAiChatMessage[],
+      metadataApproval: null,
+      terminalMetadataApproval: false,
+      executionPlanLabel: "Execution plan",
+      stepLabel: (count) => `Step ${count}`
+    });
+
+    expect(items.find((item) => item.kind === "sql-proposal")).toMatchObject({
+      toolCallId: "tool-sql",
+      data: { sql: "SELECT 1" }
     });
   });
 
@@ -389,5 +429,33 @@ describe("buildAiPanelViewItems", () => {
       "script:script-proposal",
       "shared:text"
     ]);
+  });
+
+  it.each(["sql", "script"])("does not render terminal execution plans for %s messages", (domain) => {
+    const items = buildAiPanelViewItems({
+      messages: [
+        {
+          id: `${domain}-plan`,
+          role: "assistant",
+          metadata: { domain },
+          parts: [
+            {
+              type: "data-plan",
+              data: {
+                id: `${domain}-plan-1`,
+                summary: "Internal execution plan",
+                steps: [{ id: "step-1", title: "Inspect", status: "completed" }]
+              }
+            }
+          ]
+        }
+      ] as unknown as TerminalAiChatMessage[],
+      metadataApproval: null,
+      terminalMetadataApproval: false,
+      executionPlanLabel: "Execution plan",
+      stepLabel: (count) => `Step ${count}`
+    });
+
+    expect(items).toEqual([]);
   });
 });

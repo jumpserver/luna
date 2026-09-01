@@ -1,9 +1,11 @@
 import type { AiPanelDomainAdapter } from "../types";
 import type { WorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
 import {
+  acceptScriptAiProposal,
   interruptScriptAi,
   isScriptAiAvailable,
   isScriptAiBusy,
+  rejectScriptAiProposal,
   submitScriptAiPrompt
 } from "~/composables/useScriptAiSessions";
 import { isScriptWorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
@@ -62,7 +64,7 @@ export const scriptAiPanelDomain: AiPanelDomainAdapter = {
       available: isScriptAiAvailable(current.paneId),
       busy,
       running: current.taskActive,
-      waitingForApproval: false,
+      waitingForApproval: current.pendingProposalCalls.size > 0,
       unavailable: {
         icon: "i-lucide-file-lock-2",
         title: context.t("RightPanel.ScriptAIUnavailableTitle"),
@@ -137,7 +139,9 @@ export const scriptAiPanelDomain: AiPanelDomainAdapter = {
     const current = scriptSession(session);
     if (!current || action.domain !== "script" || current.proposalDecisions.has(action.item.key)) return;
     if (action.type === "reject-proposal") {
-      current.proposalDecisions.set(action.item.key, "rejected");
+      if (rejectScriptAiProposal(current.paneId, action.item.toolCallId)) {
+        current.proposalDecisions.set(action.item.key, "rejected");
+      }
       return;
     }
     const proposal = current.proposals.get(action.item.toolCallId);
@@ -145,7 +149,7 @@ export const scriptAiPanelDomain: AiPanelDomainAdapter = {
       current.proposalDecisions.set(action.item.key, "stale");
       return;
     }
-    const result = current.proposalApplier(proposal);
+    const result = acceptScriptAiProposal(current.paneId, action.item.toolCallId, proposal);
     current.proposalDecisions.set(action.item.key, result.applied ? "applied" : "stale");
   }
 };

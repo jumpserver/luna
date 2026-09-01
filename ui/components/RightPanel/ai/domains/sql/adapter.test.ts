@@ -16,6 +16,7 @@ describe("SQL AI panel domain", () => {
       agent: { state: { toolNames: [] } },
       errorText: "",
       metadataApproval: null,
+      pendingProposalCalls: new Map(),
       approvalThreshold: "auto",
       executionMode: "auto"
     } as unknown as WorkspaceAiSession;
@@ -33,5 +34,46 @@ describe("SQL AI panel domain", () => {
       showActivity: true,
       showRuntimeStatus: false
     });
+  });
+
+  it("keeps the run awaiting approval until a SQL proposal is applied", () => {
+    const proposalDecisions = new Map<string, "applied" | "rejected" | "stale">();
+    const session = {
+      kind: "sql",
+      pendingProposalCalls: new Map([["tool-sql", {}]]),
+      proposalDecisions,
+      applyProposal: () => ({ applied: true })
+    } as unknown as WorkspaceAiSession;
+    const item = {
+      domain: "sql",
+      kind: "sql-proposal",
+      key: "proposal-card",
+      toolCallId: "tool-sql",
+      data: {
+        sql: "SELECT 1",
+        base: {
+          paneId: "sql-pane",
+          tabId: "",
+          revision: 1,
+          target: "new_query",
+          selectionFrom: 0,
+          selectionTo: 0,
+          nodeKey: "database"
+        }
+      }
+    } as const;
+
+    sqlAiPanelDomain.handleTimelineAction(
+      session,
+      { domain: "sql", type: "apply-proposal", item },
+      {
+        paneId: "sql-pane",
+        surface: null,
+        now: 0,
+        t: (key) => key
+      }
+    );
+
+    expect(proposalDecisions.get("tool-sql")).toBe("applied");
   });
 });

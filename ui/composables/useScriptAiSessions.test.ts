@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ScriptAiSnapshot } from "./useScriptAiSessions";
-import { normalizeScriptAiProposal, scriptAiReadOnlyApprovalId, scriptAiTimelineMessage } from "./useScriptAiSessions";
+import { MCP_FINAL_RESULT_META_KEY } from "#koko/composables/agent/types";
+import {
+  normalizeScriptAiProposal,
+  scriptAiManifest,
+  scriptAiReadOnlyApprovalId,
+  scriptAiTimelineMessage
+} from "./useScriptAiSessions";
 
 const snapshot: ScriptAiSnapshot = {
   paneId: "script-pane",
@@ -15,6 +21,13 @@ const snapshot: ScriptAiSnapshot = {
 };
 
 describe("Script AI proposals", () => {
+  it("marks the proposal tool result as final", () => {
+    const proposalTool = scriptAiManifest("script-session", snapshot).tools.find(
+      (tool) => tool.name === "propose_script"
+    );
+    expect(proposalTool?._meta?.[MCP_FINAL_RESULT_META_KEY]).toBe(true);
+  });
+
   it("binds an accepted proposal to the current editor revision", () => {
     expect(
       normalizeScriptAiProposal(

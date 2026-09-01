@@ -131,9 +131,12 @@ it("derives background execution availability from the command tool manifest", a
     "resource:background-capability",
     [
       {
-        name: "execute_command",
+        name: "execute_sql",
         inputSchema: { type: "object" },
-        _meta: { "com.jumpserver/executionModes": ["auto", "pty", "background"] }
+        _meta: {
+          "com.jumpserver/toolKind": "command",
+          "com.jumpserver/executionModes": ["auto", "pty", "background"]
+        }
       }
     ]
   );
@@ -159,7 +162,7 @@ it("queues prompts through the enabled pane and rejects unavailable sessions", a
   expect(agentHarness.sendMessage.mock.calls[0]?.[2]).toMatchObject({
     role: "user",
     parts: [{ type: "text", text: "list files" }],
-    metadata: { execution_mode: "pty", terminalId: 9 }
+    metadata: { domain: "terminal", execution_mode: "pty", terminalId: 9 }
   });
   expect(agentHarness.sendMessage.mock.calls[1]?.[2]).toMatchObject({
     role: "user",

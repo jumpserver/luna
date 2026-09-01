@@ -654,6 +654,8 @@
     "AIStatusRunning": "Running",
     "AIStatusCancelled": "Cancelled",
     "AIToolCall": "Tool call",
+    "AIToolArguments": "Arguments",
+    "AIToolResult": "Result",
     "AIStatusInterrupted": "Interrupted",
     "AIStatusPending": "Pending",
     "AIStatusRejected": "Rejected",

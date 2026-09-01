@@ -14,7 +14,12 @@ import type { SnippetVariableDefinition } from "~/utils/snippetVariables";
 import { useChat } from "@ai-sdk/vue";
 import { effectScope, markRaw, reactive, shallowReactive } from "vue";
 import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
-import { AGENT_MCP_BINDING_META_KEY, AGENT_PROTOCOL_VERSION, isRecord } from "#koko/composables/agent/types";
+import {
+  AGENT_MCP_BINDING_META_KEY,
+  AGENT_PROTOCOL_VERSION,
+  MCP_FINAL_RESULT_META_KEY,
+  isRecord
+} from "#koko/composables/agent/types";
 import { useAgentSession } from "#koko/composables/agent/useAgentSession";
 import { normalizeSnippetVariableDefinitions } from "~/utils/snippetVariables";
 
@@ -63,6 +68,11 @@ export interface ScriptAiProposalApplyResult {
   reason?: "invalid" | "stale";
 }
 
+export interface PendingScriptProposalCall {
+  requestId: string;
+  resourceSessionId: string;
+}
+
 export interface ScriptAiSession {
   kind: "script";
   paneId: string;
@@ -82,6 +92,7 @@ export interface ScriptAiSession {
   proposals: Map<string, ScriptAiProposal>;
   proposalErrors: Map<string, string>;
   proposalDecisions: Map<string, "applied" | "rejected" | "stale">;
+  pendingProposalCalls: Map<string, PendingScriptProposalCall>;
   contextProvider: () => ScriptAiSnapshot;
   proposalApplier: (proposal: ScriptAiProposal) => ScriptAiProposalApplyResult;
 }
@@ -268,12 +279,16 @@ const readOnlyAnnotations = {
   openWorldHint: false
 };
 
-function scriptManifest(resourceSessionId: string, snapshot: ScriptAiSnapshot): AgentMcpManifest {
+export function scriptAiManifest(resourceSessionId: string, snapshot: ScriptAiSnapshot): AgentMcpManifest {
   return {
     profile: "script",
     resourceSessionId,
     revision: 1,
     context: {
+      session_kind: "script_editor",
+      interaction_mode: "draft_only",
+      command_language: snapshot.module,
+      dialect: snapshot.module,
       protocol: "script-editor",
       asset_id: snapshot.scriptId,
       asset_name: snapshot.name,
@@ -292,27 +307,52 @@ function scriptManifest(resourceSessionId: string, snapshot: ScriptAiSnapshot): 
         name: "propose_script",
         title: "Propose script changes",
         description:
-          "Prepare a script change for explicit user review. This never edits, saves, or executes the script. expected_revision must come from the latest read_script result.",
+          "Prepare a script change and wait for the user's explicit apply or reject decision. The tool completes only after that decision and never saves or executes the script. expected_revision must come from the latest read_script result.",
         inputSchema: {
           type: "object",
           additionalProperties: false,
           required: ["expected_revision", "content", "name", "module", "comment", "summary", "risk_level", "risks"],
           properties: {
-            expected_revision: { type: "integer", minimum: 1 },
-            content: { type: "string", minLength: 1, maxLength: 8192 },
-            name: { type: "string", minLength: 1, maxLength: 128 },
-            module: { type: "string", enum: [...SCRIPT_AI_MODULES] },
-            comment: { type: "string", maxLength: 1024 },
-            summary: { type: "string", minLength: 1, maxLength: 2048 },
-            risk_level: { type: "integer", minimum: 1, maximum: 4 },
+            expected_revision: {
+              type: "integer",
+              minimum: 1,
+              description: "Exact revision returned by the latest read_script call"
+            },
+            content: {
+              type: "string",
+              minLength: 1,
+              maxLength: 8192,
+              description: "Complete replacement content for the proposed script draft"
+            },
+            name: { type: "string", minLength: 1, maxLength: 128, description: "Proposed script name" },
+            module: {
+              type: "string",
+              enum: [...SCRIPT_AI_MODULES],
+              description: "Script language/module; preserve the current value unless the user requests a conversion"
+            },
+            comment: { type: "string", maxLength: 1024, description: "Optional operator-facing script comment" },
+            summary: {
+              type: "string",
+              minLength: 1,
+              maxLength: 2048,
+              description: "Concise explanation of the proposed change"
+            },
+            risk_level: {
+              type: "integer",
+              minimum: 1,
+              maximum: 4,
+              description: "Risk severity from 1 (low) to 4 (critical)"
+            },
             risks: {
               type: "array",
               maxItems: 16,
+              description: "Concrete operational or security risks introduced by the proposal",
               items: { type: "string", minLength: 1, maxLength: 512 }
             },
             variables: {
               type: "array",
               maxItems: 32,
+              description: "Variable definitions only; never include credential or secret values",
               items: {
                 type: "object",
                 additionalProperties: false,
@@ -333,7 +373,8 @@ function scriptManifest(resourceSessionId: string, snapshot: ScriptAiSnapshot): 
             }
           }
         },
-        annotations: readOnlyAnnotations
+        annotations: readOnlyAnnotations,
+        _meta: { [MCP_FINAL_RESULT_META_KEY]: true }
       }
     ]
   };
@@ -420,8 +461,40 @@ function queueLocalResponse(session: ScriptAiSession, frame: KokoMcpResponseFram
   });
 }
 
+function settleScriptAiProposal(
+  session: ScriptAiSession,
+  callId: string,
+  result: ReturnType<typeof textResult> | null,
+  error = ""
+) {
+  const pending = session.pendingProposalCalls.get(callId);
+  if (!pending) return false;
+  session.pendingProposalCalls.delete(callId);
+  queueLocalResponse(session, {
+    type: "mcp.response",
+    version: AGENT_PROTOCOL_VERSION,
+    resource_session_id: pending.resourceSessionId,
+    data: {
+      jsonrpc: "2.0",
+      id: pending.requestId,
+      ...(error ? { error: { code: -32602, message: error } } : { result })
+    }
+  });
+  return true;
+}
+
+function cancelPendingScriptProposal(session: ScriptAiSession, requestId: string) {
+  for (const [callId, call] of session.pendingProposalCalls) {
+    if (call.requestId !== requestId) continue;
+    session.pendingProposalCalls.delete(callId);
+    session.proposalDecisions.set(callId, "rejected");
+    return;
+  }
+}
+
 function handleLocalToolFrame(session: ScriptAiSession, frame: KokoMcpRequestFrame | KokoMcpCancelFrame) {
   if (frame.type === "mcp.cancel") {
+    cancelPendingScriptProposal(session, String(frame.data.params.requestId));
     queueLocalResponse(session, {
       type: "mcp.cancel_result",
       version: AGENT_PROTOCOL_VERSION,
@@ -456,11 +529,11 @@ function handleLocalToolFrame(session: ScriptAiSession, frame: KokoMcpRequestFra
     } else {
       session.proposals.set(callId, normalized);
       session.proposalErrors.delete(callId);
-      result = textResult("The proposal is ready for user review. It has not been applied, saved, or executed.", {
-        proposal_id: callId,
-        expected_revision: normalized.base.revision,
-        status: "proposed"
+      session.pendingProposalCalls.set(callId, {
+        requestId: String(frame.data.id),
+        resourceSessionId: frame.resource_session_id
       });
+      return;
     }
   } else {
     error = `Unknown Script AI tool: ${name}`;
@@ -476,6 +549,53 @@ function handleLocalToolFrame(session: ScriptAiSession, frame: KokoMcpRequestFra
       ...(error ? { error: { code: -32602, message: error } } : { result })
     }
   });
+}
+
+export function acceptScriptAiProposal(
+  paneId: string,
+  callId: string,
+  proposal: ScriptAiProposal
+): ScriptAiProposalApplyResult {
+  const session = sessions.get(paneId);
+  if (!session) {
+    return { applied: false, reason: "invalid" };
+  }
+  if (!session.pendingProposalCalls.has(callId) || session.proposals.get(callId) !== proposal) {
+    settleScriptAiProposal(session, callId, null, "The script proposal is no longer available");
+    return { applied: false, reason: "invalid" };
+  }
+  const applied = session.proposalApplier(proposal);
+  if (!applied.applied) {
+    settleScriptAiProposal(
+      session,
+      callId,
+      null,
+      "The script changed before the proposal was applied; read_script must be called again"
+    );
+    return applied;
+  }
+  settleScriptAiProposal(
+    session,
+    callId,
+    textResult("The user applied the proposal to the editor. It has not been saved or executed.", {
+      proposal_id: callId,
+      status: "applied"
+    })
+  );
+  return applied;
+}
+
+export function rejectScriptAiProposal(paneId: string, callId: string) {
+  const session = sessions.get(paneId);
+  if (!session || !session.pendingProposalCalls.has(callId) || !session.proposals.has(callId)) return false;
+  return settleScriptAiProposal(
+    session,
+    callId,
+    textResult("The user rejected the proposal. It was not applied, saved, or executed.", {
+      proposal_id: callId,
+      status: "rejected"
+    })
+  );
 }
 
 function createSession(
@@ -553,6 +673,7 @@ function createSession(
     proposals: new Map(),
     proposalErrors: new Map(),
     proposalDecisions: new Map(),
+    pendingProposalCalls: new Map(),
     contextProvider: markRaw(contextProvider),
     proposalApplier: markRaw(proposalApplier)
   }) as ScriptAiSession;
@@ -663,7 +784,7 @@ export function registerScriptAiSession(
   const session = createSession(paneId, contextProvider, proposalApplier);
   sessions.set(paneId, session);
   void session.agent.actions
-    .attachManifest(scriptManifest(session.resourceSessionId, contextProvider()))
+    .attachManifest(scriptAiManifest(session.resourceSessionId, contextProvider()))
     .catch((cause) => {
       session.errorCode = "agent_unavailable";
       session.errorText = cause instanceof Error ? cause.message : "Failed to create Script AI session";

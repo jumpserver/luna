@@ -53,6 +53,9 @@ export function buildAiPanelViewItems(options: AiViewItemBuildOptions): ViewItem
             sourceDomain,
             toolName: String(data.toolName || existing.data.toolName || ""),
             status: agentToolStatus(data.status || existing.data.status),
+            ...(Object.hasOwn(data, "arguments") ? { arguments: data.arguments } : {}),
+            ...(Object.hasOwn(data, "result") ? { result: data.result } : {}),
+            ...(Object.hasOwn(data, "error") ? { error: data.error } : {}),
             ...(Number.isFinite(Number(data.durationMs)) ? { durationMs: Number(data.durationMs) } : {})
           };
           return;
@@ -67,6 +70,9 @@ export function buildAiPanelViewItems(options: AiViewItemBuildOptions): ViewItem
             sourceDomain,
             toolName: String(data.toolName || ""),
             status: agentToolStatus(data.status),
+            ...(Object.hasOwn(data, "arguments") ? { arguments: data.arguments } : {}),
+            ...(Object.hasOwn(data, "result") ? { result: data.result } : {}),
+            ...(Object.hasOwn(data, "error") ? { error: data.error } : {}),
             ...(Number.isFinite(Number(data.durationMs)) ? { durationMs: Number(data.durationMs) } : {})
           }
         };
