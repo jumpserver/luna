@@ -112,7 +112,7 @@ const clearEscapeHold = () => {
 };
 
 const startEscapeHold = (event: KeyboardEvent) => {
-  if (!focusMode.value || event.key !== "Escape" || event.repeat || escapeHoldTimer) return;
+  if (isWorkspaceTourActive() || !focusMode.value || event.key !== "Escape" || event.repeat || escapeHoldTimer) return;
 
   escapeHoldTimer = setTimeout(() => {
     escapeHoldTimer = null;
@@ -125,7 +125,7 @@ const stopEscapeHold = (event: KeyboardEvent) => {
 };
 
 const handleChromeShortcut = (event: KeyboardEvent) => {
-  if (event.defaultPrevented || event.repeat) return;
+  if (isWorkspaceTourActive() || event.defaultPrevented || event.repeat) return;
 
   const usesPrimaryModifier = isMacOS.value ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
   if (!usesPrimaryModifier) return;
@@ -143,6 +143,12 @@ const handleChromeShortcut = (event: KeyboardEvent) => {
 };
 
 const handleWorkspaceModeShortcut = (event: KeyboardEvent) => {
+  if (isWorkspaceTourActive()) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    return;
+  }
+
   if (
     !event.defaultPrevented &&
     !event.repeat &&
@@ -253,6 +259,7 @@ watch(
       workspaceTour.destroy();
       return;
     }
+    workspaceTour.arm();
     scheduleWorkspaceTour();
   },
   { immediate: true }
@@ -326,7 +333,7 @@ onBeforeUnmount(() => {
           type="button"
           :aria-label="$t('TabMenu.ExitFocusMode')"
           :title="$t('TabMenu.ExitFocusModeHint')"
-          class="group absolute right-0 top-1/2 z-50 flex h-12 w-1.5 -translate-y-1/2 items-center justify-end overflow-hidden rounded-l-lg border border-r-0 border-[var(--app-border)] bg-[var(--app-surface-panel)] text-[var(--app-muted)] opacity-45 shadow-sm transition-[width,opacity] hover:w-32 hover:opacity-100 focus-visible:w-32 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          class="group absolute right-0 top-1/2 z-50 flex h-12 w-1.5 -translate-y-1/2 items-center justify-end overflow-hidden rounded-l-lg border border-r-0 border-(--app-border) bg-[var(--app-surface-panel)] text-[var(--app-muted)] opacity-45 shadow-sm transition-[width,opacity] hover:w-32 hover:opacity-100 focus-visible:w-32 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           @click.stop="exitFocusMode"
         >
           <span

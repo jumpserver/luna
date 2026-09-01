@@ -10,6 +10,7 @@ const props = withDefaults(
     maxHeight?: string;
     fillAvailable?: boolean;
     hideChrome?: boolean;
+    workspaceTour?: string;
   }>(),
   {
     preferredHeight: 200,
@@ -57,6 +58,7 @@ const panelStyle = computed(() => {
       v-if="!hideChrome"
       type="button"
       class="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 px-2.5 text-left text-xs font-medium text-gray-700 dark:text-gray-200"
+      :data-workspace-tour="workspaceTour"
       :aria-expanded="open"
       @click="emit('toggle')"
     >

@@ -82,7 +82,8 @@ watch(
         variant="ghost"
         size="sm"
         color="neutral"
-        class="h-7 min-w-0 max-w-full py-0 pr-1.5 pl-1"
+        data-workspace-tour="organization"
+        class="h-7 min-w-0 w-fit max-w-full py-0 pr-1.5 pl-1"
         :ui="{
           base: 'flex items-center justify-start gap-1.5 rounded-md bg-transparent transition-colors hover:bg-black/5 focus:bg-transparent active:bg-transparent data-[state=open]:bg-black/[0.06] dark:hover:bg-white/8 dark:data-[state=open]:bg-white/10'
         }"
@@ -98,6 +99,7 @@ watch(
     </UDropdownMenu>
     <span
       v-else
+      data-workspace-tour="organization"
       data-overflow-tooltip
       class="min-w-0 truncate px-1 text-left text-xs font-medium text-gray-700 dark:text-gray-300"
     >
