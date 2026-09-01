@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from "@nuxt/ui";
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { LangType, ThemePresetId, UserData } from "~/types/index";
 
@@ -140,15 +141,16 @@ const languageItems = computed(() =>
   })
 );
 
-const selectedLanguage = computed({
-  get: () => locale.value,
-  set: (code: string) => {
-    if (code) setLang(code as LangType);
-  }
-});
-
 const currentLanguageLabel = computed(
   () => languageItems.value.find((item) => item.id === locale.value)?.label || locale.value
+);
+const languageMenuItems = computed<DropdownMenuItem[]>(() =>
+  languageItems.value.map((item) => ({
+    label: item.label,
+    type: "checkbox",
+    checked: item.id === locale.value,
+    onSelect: () => setLang(item.id as LangType)
+  }))
 );
 
 const appearanceModes = computed(() => [
@@ -887,24 +889,6 @@ onBeforeUnmount(() => {
         <div class="space-y-2.5 border-t border-default p-2">
           <div class="space-y-1.5">
             <div class="flex items-center gap-2 px-1 text-[11px] font-medium text-muted">
-              <UIcon name="i-lucide-languages" class="size-3.5" />
-              <span>{{ t("Common.Language") }}</span>
-              <span class="ms-auto text-[11px] font-normal text-muted">{{ currentLanguageLabel }}</span>
-            </div>
-            <UTabs
-              v-model="selectedLanguage"
-              :items="languageItems"
-              value-key="id"
-              :content="false"
-              color="neutral"
-              variant="pill"
-              size="xs"
-              :ui="menuTabsUi"
-            />
-          </div>
-
-          <div class="space-y-1.5">
-            <div class="flex items-center gap-2 px-1 text-[11px] font-medium text-muted">
               <UIcon name="i-lucide-palette" class="size-3.5" />
               <span>{{ t("Common.Theme") }}</span>
               <span class="ms-auto text-[11px] font-normal text-muted">{{ currentAppearanceLabel }}</span>
@@ -964,6 +948,15 @@ onBeforeUnmount(() => {
               </template>
             </UPopover>
           </div>
+
+          <UDropdownMenu :items="languageMenuItems" :content="{ align: 'start', side: 'left', sideOffset: 8 }">
+            <UButton color="neutral" variant="ghost" size="sm" block class="h-8 justify-start gap-2 px-2">
+              <UIcon name="i-lucide-languages" class="size-3.5 shrink-0" />
+              <span class="min-w-0 flex-1 truncate text-left text-xs">{{ t("Common.Language") }}</span>
+              <span class="max-w-24 truncate text-[10px] font-normal text-muted">{{ currentLanguageLabel }}</span>
+              <UIcon name="i-lucide-chevron-right" class="size-3.5 shrink-0 text-muted" />
+            </UButton>
+          </UDropdownMenu>
         </div>
 
         <div class="border-t border-default p-1.5">

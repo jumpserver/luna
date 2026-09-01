@@ -187,7 +187,7 @@
   --sidebar-surface-dark: var(--app-sidebar-bg);
   --sidebar-icon-size: 0.875rem;
   --sidebar-icon-size-sm: 0.75rem;
-  --app-tree-font-size: clamp(10px, calc(var(--app-ui-font-size) - 2px), 15px);
+  --app-tree-font-size: clamp(10px, calc(var(--app-ui-font-size) - 1px), 15px);
   --app-tree-icon-size: clamp(12px, calc(var(--app-tree-font-size) + 2px), 16px);
   --app-tree-toggle-icon-size: var(--app-tree-font-size);
   --app-tree-row-height: max(28px, calc(var(--app-tree-font-size) + 16px));

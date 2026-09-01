@@ -68,7 +68,7 @@ const formatDate = (value?: string | null) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
 
-  return new Intl.DateTimeFormat(locale.value === "zh" ? "zh-CN" : "en-US", {
+  return new Intl.DateTimeFormat(toIntlLocale(locale.value), {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(date);

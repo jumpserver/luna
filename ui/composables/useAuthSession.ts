@@ -1,6 +1,7 @@
 import type { CurrentOrg, PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/types";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { resolveOrganizationSelection } from "~/utils/organization";
 
 interface BootstrapResponse {
   data: string;
@@ -119,17 +120,11 @@ export const useAuthSession = () => {
     const userId = (typeof profileData.id === "string" && profileData.id.trim()) || existingUser?.userId || "";
 
     const availableOrgs = initSelectOrganization(permissionOrgData);
-    const currentOrg =
-      currentOrgData && typeof currentOrgData === "object"
-        ? currentOrgData
-        : {
-            id: "",
-            name: "",
-            is_root: false,
-            is_default: false,
-            is_system: false,
-            comment: ""
-          };
+    const selectedOrg = resolveOrganizationSelection(
+      availableOrgs,
+      currentOrgData && typeof currentOrgData === "object" ? currentOrgData : null
+    );
+    const currentOrg: CurrentOrg | null = selectedOrg ? { ...selectedOrg, comment: selectedOrg.comment || "" } : null;
 
     userInfoStore.setUserData(accountId, {
       accountId,
@@ -138,7 +133,14 @@ export const useAuthSession = () => {
       name: profileData.name,
       bearerToken: bearer,
       site: resolvedSite,
-      org: currentOrg,
+      org: currentOrg || {
+        id: "",
+        name: "",
+        is_root: false,
+        is_default: false,
+        is_system: false,
+        comment: ""
+      },
       system_roles: profileData.system_roles,
       availableOrgs,
       xpackLicenseValid: xpack_license_valid ?? true,
@@ -150,7 +152,7 @@ export const useAuthSession = () => {
     });
 
     userInfoStore.setOrganizations(availableOrgs);
-    if (currentOrg.id) {
+    if (currentOrg?.id) {
       userInfoStore.setCurrentOrg(currentOrg);
     }
     userInfoStore.setUserLoggedIn(true);
@@ -322,8 +324,7 @@ export const useAuthSession = () => {
         const resolvedCurrentOrg = currentOrgData && typeof currentOrgData === "object" ? currentOrgData : null;
         const currentOrg =
           availableOrgs.find((org) => org.id === cookieOrgId) ||
-          availableOrgs.find((org) => org.id === resolvedCurrentOrg?.id) ||
-          availableOrgs[0] ||
+          resolveOrganizationSelection(availableOrgs, resolvedCurrentOrg) ||
           profileOrg;
 
         userInfoStore.setOrganizations(availableOrgs);
