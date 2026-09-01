@@ -44,6 +44,11 @@ const sidebarSectionLabels = computed<Record<SidebarSectionKey, string>>(() => (
   favorites: t("Menu.Favorite"),
   snippets: t("Menu.Snippets")
 }));
+const sidebarSectionIcons: Record<SidebarSectionKey, string> = {
+  assets: "i-lucide-folder-tree",
+  favorites: "i-lucide-star",
+  snippets: "i-lucide-scroll-text"
+};
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
@@ -113,7 +118,7 @@ const islandAccordionUi = {
   item: "border-0 py-0 md:py-0 last:border-0",
   header: "shrink-0 p-0",
   trigger:
-    "relative h-8 min-w-0 rounded-none px-2.5 py-0 text-xs font-medium text-[var(--app-text-secondary)] hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]",
+    "relative h-8 min-w-0 rounded-none px-2.5 py-0 text-sm font-medium text-[var(--app-text-secondary)] hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]",
   leadingIcon: "sidebar-icon",
   label: "min-w-0 flex-1 truncate text-start",
   trailingIcon: "hidden",
@@ -146,16 +151,23 @@ function updateSidebarSection(section: SidebarSectionKey, visible: boolean) {
 }
 
 const organizationMenuItems = computed<DropdownMenuItem[][]>(() => [
-  availableSidebarSectionKeys.value.map((key) => ({
-    label: sidebarSectionLabels.value[key],
-    type: "checkbox" as const,
-    checked: effectiveSidebarSections.value[key],
-    disabled: effectiveSidebarSections.value[key] && visibleSectionCount.value <= 1,
-    onUpdateChecked: (checked: boolean) => {
-      if (checked === sidebarSections.value[key]) return;
-      updateSidebarSection(key, checked);
-    }
-  }))
+  [
+    {
+      label: t("Sidebar.ManageSections"),
+      type: "label" as const
+    },
+    ...availableSidebarSectionKeys.value.map((key) => ({
+      label: sidebarSectionLabels.value[key],
+      icon: sidebarSectionIcons[key],
+      type: "checkbox" as const,
+      checked: effectiveSidebarSections.value[key],
+      disabled: effectiveSidebarSections.value[key] && visibleSectionCount.value <= 1,
+      onUpdateChecked: (checked: boolean) => {
+        if (checked === sidebarSections.value[key]) return;
+        updateSidebarSection(key, checked);
+      }
+    }))
+  ]
 ]);
 
 watch(showAssetSection, (visible) => {
@@ -713,11 +725,7 @@ watch(
             v-if="showOrganizationMenu"
             :items="organizationMenuItems"
             :content="{ align: 'start', side: 'right', sideOffset: 6 }"
-            :ui="{
-              content: 'w-36 p-1',
-              item: 'mx-0 px-2 py-1 rounded-md text-[11px] leading-4 transition-colors duration-150',
-              itemLeadingIcon: 'sidebar-icon-sm'
-            }"
+            :ui="{ content: 'w-36 p-1' }"
           >
             <UButton
               color="neutral"

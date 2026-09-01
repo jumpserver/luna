@@ -524,7 +524,7 @@ defineExpose({
 
     <template v-else-if="search.trim()">
       <div
-        class="flex h-8 shrink-0 items-center border-b border-gray-200 px-2.5 text-xs font-medium dark:border-white/10"
+        class="flex h-8 shrink-0 items-center border-b border-gray-200 px-2.5 text-sm font-medium dark:border-white/10"
       >
         <UIcon name="i-lucide-search" class="mr-1.5 sidebar-icon" />
         <span class="truncate">{{ t("Operation.Search") }}</span>
@@ -557,7 +557,7 @@ defineExpose({
       <section class="group flex min-h-0 flex-1 flex-col overflow-hidden">
         <div
           v-if="!hideHeader || batchMode"
-          class="flex h-8 w-full shrink-0 items-center gap-1 px-2.5 text-xs font-medium text-gray-700 dark:text-gray-300"
+          class="flex h-8 w-full shrink-0 items-center gap-1 px-2.5 text-sm font-medium text-gray-700 dark:text-gray-300"
         >
           <button
             v-if="!hideHeader"
