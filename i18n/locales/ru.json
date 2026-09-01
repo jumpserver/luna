@@ -1006,6 +1006,7 @@
     "DownloadLogs": "Скачать журналы",
     "LogsCleared": "Журналы очищены",
     "LogsCopied": "Журналы скопированы",
+    "LogsDownloaded": "Скачано",
     "LogsEmpty": "Журналов пока нет",
     "InterfaceFont": "Шрифт интерфейса",
     "InterfaceFontDescription": "Шрифт, используемый в меню, навигации и областях содержимого.",

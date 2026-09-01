@@ -1006,6 +1006,7 @@
     "DownloadLogs": "Baixar logs",
     "LogsCleared": "Logs limpos",
     "LogsCopied": "Logs copiados",
+    "LogsDownloaded": "Baixado",
     "LogsEmpty": "Ainda não há logs",
     "InterfaceFont": "Fonte da interface",
     "InterfaceFontDescription": "Fonte usada em menus, navegação e áreas de conteúdo.",

@@ -40,6 +40,14 @@ const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 const { open: aiPanelOpen, setOpen: setAiPanelOpen } = useAiPanel();
 const localePath = useLocalePath();
 const { open: settingsOpen, activeSection: activeSettingsSection, openSettings } = useSettingsWindow();
+const settingsSectionPages = {
+  user: SettingsUserPage,
+  general: SettingsGeneralPage,
+  appearance: SettingsAppearancePage,
+  application: SettingsApplicationPage,
+  about: SettingsAboutPage
+} as const;
+const activeSettingsPage = computed(() => settingsSectionPages[activeSettingsSection.value] || SettingsAboutPage);
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 const standaloneAssetWindow = ref(false);
 const { authReady } = useAuthSession();
@@ -332,7 +340,12 @@ onBeforeUnmount(() => {
 
 <template>
   <UCard variant="outline" :ui="cardUi" style="background-color: transparent">
-    <WorkspaceShell v-show="!settingsOpen" :sidebar-visible="showWorkspaceSidebar" :focus-mode="focusMode">
+    <WorkspaceShell
+      :sidebar-visible="showWorkspaceSidebar"
+      :focus-mode="focusMode"
+      :inert="settingsOpen"
+      :class="settingsOpen ? 'pointer-events-none' : undefined"
+    >
       <template #header>
         <Header />
       </template>
@@ -384,19 +397,20 @@ onBeforeUnmount(() => {
       </template>
     </WorkspaceShell>
 
-    <SettingsShell
-      v-if="settingsOpen"
-      mode="inline"
-      :active-section="activeSettingsSection"
-      class="fixed inset-0 z-100"
-    >
-      <KeepAlive>
-        <SettingsUserPage v-if="activeSettingsSection === 'user'" />
-        <SettingsGeneralPage v-else-if="activeSettingsSection === 'general'" />
-        <SettingsAppearancePage v-else-if="activeSettingsSection === 'appearance'" />
-        <SettingsApplicationPage v-else-if="activeSettingsSection === 'application'" embedded />
-        <SettingsAboutPage v-else />
-      </KeepAlive>
-    </SettingsShell>
+    <Transition name="settings-overlay">
+      <div v-if="settingsOpen" class="fixed inset-0 z-[200]">
+        <SettingsShell mode="inline" :active-section="activeSettingsSection" class="h-full">
+          <Transition name="settings-section" mode="out-in">
+            <KeepAlive>
+              <component
+                :is="activeSettingsPage"
+                :key="activeSettingsSection"
+                v-bind="activeSettingsSection === 'application' ? { embedded: true } : {}"
+              />
+            </KeepAlive>
+          </Transition>
+        </SettingsShell>
+      </div>
+    </Transition>
   </UCard>
 </template>

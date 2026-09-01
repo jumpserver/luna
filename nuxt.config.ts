@@ -67,6 +67,10 @@ export default defineNuxtConfig({
   ui: {
     fonts: false
   },
+  colorMode: {
+    classSuffix: "",
+    disableTransition: false
+  },
   i18n: {
     locales: [
       { code: "zh", name: "简体中文", language: "zh-CN", file: "zh.json" },
