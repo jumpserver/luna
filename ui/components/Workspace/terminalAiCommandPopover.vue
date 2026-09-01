@@ -2,7 +2,12 @@
 import type { TerminalCursorAnchor } from "@jumpserver/koko";
 import type { WorkspacePane } from "~/composables/useWorkspaceTabs";
 
-import { getKokoTerminalCursorAnchor, subscribeKokoTerminalCursorAnchor } from "@jumpserver/koko";
+import {
+  getKokoTerminalCursorAnchor,
+  getKokoTerminalElement,
+  subscribeKokoTerminalCursorAnchor,
+  subscribeKokoTerminalUserInput
+} from "@jumpserver/koko";
 import {
   getKokoTerminalAiSession,
   isKokoTerminalAiAvailable,
@@ -12,6 +17,7 @@ import {
 import {
   isTerminalAiCommandShortcut,
   shouldShowTerminalAiCaretHint,
+  TERMINAL_AI_HINT_IDLE_MS,
   terminalAiCommandShortcutAction
 } from "~/utils/terminalAiCommand";
 
@@ -29,9 +35,11 @@ const activeXterm = shallowRef<HTMLElement | null>(null);
 const anchorRect = shallowRef<TerminalCursorAnchor | null>(null);
 const hintAnchor = shallowRef<TerminalCursorAnchor | null>(null);
 const hintVisible = ref(false);
+const hintIdle = ref(true);
 const panelPosition = ref({ left: 8, top: 8, width: 520, maxHeight: 260 });
 const hintPosition = ref({ left: 0, top: 0, maxWidth: 0 });
 let stopCursorSubscription = () => {};
+let stopUserInputSubscription = () => {};
 
 const session = computed(() => getKokoTerminalAiSession(props.pane.id));
 const available = computed(() => isKokoTerminalAiAvailable(props.pane.id));
@@ -100,16 +108,29 @@ function findXtermForAnchor(anchor: TerminalCursorAnchor) {
   );
 }
 
+function hideHint() {
+  if (hintVisible.value) hintVisible.value = false;
+}
+
 async function positionHint(anchor = hintAnchor.value) {
-  await nextTick();
-  const host = hostRef.value;
-  if (!host || !anchor) {
-    hintVisible.value = false;
+  if (open.value || !hintIdle.value) {
+    hideHint();
     return;
   }
-  const xterm = findXtermForAnchor(anchor) || activeXterm.value;
+
+  await nextTick();
+  if (open.value || !hintIdle.value) {
+    hideHint();
+    return;
+  }
+  const host = hostRef.value;
+  if (!host || !anchor) {
+    hideHint();
+    return;
+  }
+  const xterm = getKokoTerminalElement(props.pane.id) || findXtermForAnchor(anchor) || activeXterm.value;
   if (!xterm) {
-    hintVisible.value = false;
+    hideHint();
     return;
   }
 
@@ -119,8 +140,13 @@ async function positionHint(anchor = hintAnchor.value) {
   const left = anchor.left - hostBounds.left + anchor.width + 6;
   const top = anchor.top - hostBounds.top + Math.max(0, (anchor.height - 18) / 2);
   const maxWidth = terminalBounds.right - hostBounds.left - left - 8;
-  hintPosition.value = { left, top, maxWidth: Math.max(0, maxWidth) };
-  hintVisible.value = shouldShowTerminalAiCaretHint(sessionInfoReady.value, maxWidth);
+  const next = { left, top, maxWidth: Math.max(0, maxWidth) };
+  const visible = shouldShowTerminalAiCaretHint(sessionInfoReady.value, next.maxWidth, hintIdle.value);
+  const current = hintPosition.value;
+  if (current.left !== next.left || current.top !== next.top || current.maxWidth !== next.maxWidth) {
+    hintPosition.value = next;
+  }
+  if (hintVisible.value !== visible) hintVisible.value = visible;
 }
 
 async function positionPanel() {
@@ -158,17 +184,44 @@ async function positionPanel() {
   panelPosition.value = { left, top, width, maxHeight };
 }
 
+let hintIdleTimer = 0;
+
+function clearHintIdleTimer() {
+  if (!hintIdleTimer) return;
+  window.clearTimeout(hintIdleTimer);
+  hintIdleTimer = 0;
+}
+
+function noteTypingActivity() {
+  if (hintIdle.value) {
+    hintIdle.value = false;
+    hideHint();
+  }
+  clearHintIdleTimer();
+  hintIdleTimer = window.setTimeout(() => {
+    hintIdleTimer = 0;
+    hintIdle.value = true;
+    const latest = getKokoTerminalCursorAnchor(props.pane.id);
+    if (latest) hintAnchor.value = latest;
+    void positionHint();
+  }, TERMINAL_AI_HINT_IDLE_MS);
+}
+
 function startCursorTracking() {
   stopCursorSubscription();
+  stopUserInputSubscription();
+  clearHintIdleTimer();
+  hintIdle.value = true;
   stopCursorSubscription = subscribeKokoTerminalCursorAnchor(props.pane.id, (anchor) => {
     hintAnchor.value = anchor;
-    void positionHint(anchor);
+    if (hintIdle.value && !open.value && sessionInfoReady.value) {
+      void positionHint(anchor);
+    }
   });
+  stopUserInputSubscription = subscribeKokoTerminalUserInput(props.pane.id, noteTypingActivity);
   const initialAnchor = getKokoTerminalCursorAnchor(props.pane.id);
-  if (initialAnchor) {
-    hintAnchor.value = initialAnchor;
-    void positionHint(initialAnchor);
-  }
+  if (initialAnchor) hintAnchor.value = initialAnchor;
+  void positionHint();
 }
 
 async function show(xterm: HTMLElement) {
@@ -187,11 +240,13 @@ async function show(xterm: HTMLElement) {
 }
 
 function close(restoreTerminalFocus = true) {
+  const wasOpen = open.value;
   open.value = false;
   error.value = "";
   if (restoreTerminalFocus) {
     nextTick(() => activeXterm.value?.querySelector<HTMLTextAreaElement>(".xterm-helper-textarea")?.focus());
   }
+  if (wasOpen && hintIdle.value) void positionHint();
 }
 
 function handleWindowKeydown(event: KeyboardEvent) {
@@ -275,8 +330,13 @@ function handleInputKeydown(event: KeyboardEvent) {
 watch(
   () => props.pane.id,
   () => {
-    close(false);
+    clearHintIdleTimer();
+    open.value = false;
+    error.value = "";
     hintVisible.value = false;
+    hintIdle.value = true;
+    activeXterm.value = null;
+    stopUserInputSubscription();
     nextTick(startCursorTracking);
   }
 );
@@ -291,6 +351,8 @@ onMounted(() => {
   nextTick(startCursorTracking);
 });
 onBeforeUnmount(() => {
+  clearHintIdleTimer();
+  stopUserInputSubscription();
   stopCursorSubscription();
   window.removeEventListener("keydown", handleWindowKeydown, true);
   window.removeEventListener("pointerdown", handleWindowPointerdown, true);

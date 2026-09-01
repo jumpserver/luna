@@ -9,9 +9,11 @@ export type { KokoLinuxMetricsSample, KokoLinuxMetricsState } from "../app/compo
 export { useKokoSessionAdapter } from "../app/composables/useSessionAdapter";
 export {
   getKokoTerminalCursorAnchor,
+  getKokoTerminalElement,
   sendKokoTerminalData,
   sendKokoTerminalDataToMany,
-  subscribeKokoTerminalCursorAnchor
+  subscribeKokoTerminalCursorAnchor,
+  subscribeKokoTerminalUserInput
 } from "../app/composables/useTerminalSessionRegistry";
 export type { TerminalCursorAnchor } from "../app/composables/useTerminalSessionRegistry";
 export {
