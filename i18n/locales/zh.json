@@ -48,6 +48,7 @@
     "LoginSite": "登录站点",
     "All": "全部",
     "Language": "语言",
+    "More": "更多",
     "Active": "激活",
     "Inactive": "未激活",
     "Login": "登录",
@@ -82,7 +83,8 @@
     "Refresh": "刷新",
     "Save": "保存",
     "EmptyDescription": "当前类型下暂无可用的授权资产",
-    "SelectFromMenu": "请从左侧选择一个配置项"
+    "SelectFromMenu": "请从左侧选择一个配置项",
+    "More": "更多"
   },
   "DesktopMenu": {
     "File": "文件",
@@ -1294,7 +1296,6 @@
       "dropSameEndpoint": "不能传到同一端点",
       "pinTab": "固定",
       "unpinTab": "取消固定",
-
       "searchAssets": "搜索要传输文件的资产…",
       "dropFiles": "拖动文件到这里",
       "dropFilesHint": "文件将批量上传到右侧当前 SFTP 目录",

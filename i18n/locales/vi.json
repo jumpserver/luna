@@ -50,6 +50,7 @@
     "Active": "Hoạt động",
     "Inactive": "Không hoạt động",
     "Language": "Ngôn ngữ",
+    "More": "Thêm",
     "Login": "Đăng nhập",
     "Connect": "Kết nối",
     "Theme": "Giao diện",
@@ -82,7 +83,8 @@
     "Refresh": "Làm mới",
     "Save": "Lưu",
     "EmptyDescription": "Không có tài sản được ủy quyền nào cho loại hiện tại",
-    "SelectFromMenu": "Chọn một mục ở bên trái"
+    "SelectFromMenu": "Chọn một mục ở bên trái",
+    "More": "Thêm"
   },
   "DesktopMenu": {
     "File": "Tệp",
