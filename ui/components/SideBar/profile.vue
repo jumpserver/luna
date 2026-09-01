@@ -72,6 +72,9 @@ const inputRef = ref<ComponentPublicInstance | null>(null);
 const siteNameInputRef = ref<ComponentPublicInstance | null>(null);
 const profileOpen = ref(false);
 const profileOpenedByPointer = ref(false);
+const headerIconButtonClass =
+  "grid size-6 shrink-0 place-items-center rounded-lg p-0 text-[var(--app-text-secondary)] transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]";
+const headerIconButtonActiveClass = "bg-[var(--app-hover-soft)] text-[var(--app-fg)]";
 
 let loginBtnUnlockTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -179,6 +182,7 @@ const menuTabsUi = {
 
 const currentThemeAccent = computed(() => getThemePreset(currentThemePresetId.value)?.accent || "var(--theme-accent)");
 const themePaletteOpen = ref(false);
+const previewedThemePresetId = ref<ThemePresetId | null>(null);
 
 const resolvedPaletteMode = computed<"light" | "dark">(() => {
   if (currentAppearanceMode.value === "light") return "light";
@@ -191,7 +195,14 @@ const visibleThemePresets = computed(() =>
 );
 
 watch(profileOpen, (open) => {
-  if (!open) themePaletteOpen.value = false;
+  if (!open) {
+    themePaletteOpen.value = false;
+    restorePalettePreview();
+  }
+});
+
+watch(themePaletteOpen, (open) => {
+  if (!open) restorePalettePreview();
 });
 
 const handleProfileOpenAutoFocus = (event: Event) => {
@@ -199,9 +210,28 @@ const handleProfileOpenAutoFocus = (event: Event) => {
   profileOpenedByPointer.value = false;
 };
 
+const previewPalettePreset = (id: ThemePresetId) => {
+  const preset = getThemePreset(id);
+  if (!preset || !import.meta.client) return;
+
+  previewedThemePresetId.value = id;
+  document.documentElement.dataset.themePreset = id;
+  applyPrimaryColor(preset.accent);
+};
+
+function restorePalettePreview() {
+  if (!previewedThemePresetId.value || !import.meta.client) return;
+
+  previewedThemePresetId.value = null;
+  document.documentElement.dataset.themePreset = currentThemePresetId.value;
+  applyCurrentThemeColor();
+}
+
 const applyPalettePreset = (id: ThemePresetId) => {
   const preset = getThemePreset(id);
   if (!preset) return;
+
+  restorePalettePreview();
 
   if (currentAppearanceMode.value !== "withSystem") {
     selectThemePreset(id);
@@ -777,6 +807,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  restorePalettePreview();
   if (unlistenAuthUrlRef.value) unlistenAuthUrlRef.value();
   if (unlistenErrorPageRef.value) unlistenErrorPageRef.value();
   if (unlistenLoginFailedRef.value) unlistenLoginFailedRef.value();
@@ -805,18 +836,11 @@ onBeforeUnmount(() => {
         size="sm"
         square
         :aria-label="accountTooltip"
-        :ui="{ leadingIcon: 'size-4', base: 'rounded-full' }"
+        :class="[headerIconButtonClass, profileOpen ? headerIconButtonActiveClass : '']"
         @pointerdown="profileOpenedByPointer = true"
         @keydown="profileOpenedByPointer = false"
       >
-        <UAvatar
-          v-if="loggedIn"
-          :alt="currentUser?.name || t('Common.User')"
-          :text="accountInitial(currentUser?.name)"
-          color="primary"
-          size="xs"
-        />
-        <UIcon v-else name="i-lucide-circle-user-round" class="size-4" />
+        <UIcon name="i-lucide-circle-user-round" class="size-4" />
       </UButton>
     </UTooltip>
 
@@ -922,7 +946,7 @@ onBeforeUnmount(() => {
               </UButton>
 
               <template #content>
-                <div class="space-y-0.5">
+                <div class="space-y-0.5" @pointerleave="restorePalettePreview" @focusout="restorePalettePreview">
                   <UButton
                     v-for="item in visibleThemePresets"
                     :key="item.id"
@@ -931,6 +955,8 @@ onBeforeUnmount(() => {
                     size="sm"
                     block
                     class="justify-start gap-2"
+                    @pointerenter="previewPalettePreset(item.id)"
+                    @focus="previewPalettePreset(item.id)"
                     @click="applyPalettePreset(item.id)"
                   >
                     <span
@@ -948,28 +974,28 @@ onBeforeUnmount(() => {
               </template>
             </UPopover>
           </div>
+        </div>
 
+        <div class="border-t border-default p-1.5">
           <UDropdownMenu :items="languageMenuItems" :content="{ align: 'start', side: 'left', sideOffset: 8 }">
             <UButton color="neutral" variant="ghost" size="sm" block class="h-8 justify-start gap-2 px-2">
-              <UIcon name="i-lucide-languages" class="size-3.5 shrink-0" />
+              <UIcon name="i-lucide-globe-2" class="size-3.5 shrink-0" />
               <span class="min-w-0 flex-1 truncate text-left text-xs">{{ t("Common.Language") }}</span>
               <span class="max-w-24 truncate text-[10px] font-normal text-muted">{{ currentLanguageLabel }}</span>
               <UIcon name="i-lucide-chevron-right" class="size-3.5 shrink-0 text-muted" />
             </UButton>
           </UDropdownMenu>
-        </div>
-
-        <div class="border-t border-default p-1.5">
           <UButton
-            :label="t('Common.Settings')"
-            icon="i-lucide-settings"
             color="neutral"
             variant="ghost"
             size="sm"
             block
-            class="justify-start"
+            class="h-8 justify-start gap-2 px-2"
             @click="openPreferences"
-          />
+          >
+            <UIcon name="i-lucide-settings" class="size-3.5 shrink-0" />
+            <span class="min-w-0 flex-1 truncate text-left text-xs">{{ t("Common.Settings") }}</span>
+          </UButton>
           <UButton
             v-if="isDesktopRuntime()"
             :label="t('Menu.MyTools')"

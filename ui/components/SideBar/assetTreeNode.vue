@@ -155,12 +155,13 @@ const activate = () => {
             class="app-tree-icon sidebar-icon"
           />
         </span>
-        <UIcon
-          v-if="node.loading || icon"
-          :name="node.loading ? 'i-lucide-loader-circle' : icon"
-          class="app-tree-icon sidebar-icon"
-          :class="node.loading ? 'animate-spin' : isFolderIcon ? 'tree-folder-icon' : ''"
+        <UIcon v-if="node.loading" name="i-lucide-loader-circle" class="app-tree-icon sidebar-icon animate-spin" />
+        <AppTreeFolderIcon
+          v-else-if="isFolderIcon"
+          :open="isOpen"
+          class="app-tree-icon sidebar-icon tree-folder-icon"
         />
+        <UIcon v-else-if="icon" :name="icon" class="app-tree-icon sidebar-icon" />
         <img v-else-if="iconSrc" :src="iconSrc" alt="" class="app-tree-icon sidebar-icon-img" />
         <span class="min-w-0 flex-1 truncate font-medium" :class="!isParent ? 'font-ui-mono tracking-[0.01em]' : ''">
           {{ node.name }}

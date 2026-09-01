@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem, NavigationMenuItem } from "@nuxt/ui";
+import type { ComponentPublicInstance } from "vue";
 import type { AssetItem, SidebarSectionKey } from "~/types";
 
 import { useConnectMethods, WEB_PROXY_NATIVE_VALUE } from "~/composables/useConnectMethods";
@@ -27,6 +28,7 @@ const { folders: favoriteFolders, load: loadFavoriteFolders, favoriteToFolder } 
 const isLoading = ref(false);
 const sidebarSearch = ref("");
 const showAssetSearch = ref(false);
+const assetSearchInputRef = ref<ComponentPublicInstance | null>(null);
 const assetTreeOpen = ref(true);
 const islandAccordionValue = ref<string[]>(["assets"]);
 const contextMenuVisible = ref(false);
@@ -219,7 +221,7 @@ const hasQuickConnect = (asset: AssetItem) => {
 };
 
 const loadAssetConnectionDetails = async (asset: AssetItem) => {
-  const detail = await getAssetDetailRequest(asset.id, currentUser.value?.org?.id || "");
+  const detail = await getAssetDetailRequest(asset.id, asset.org_id || currentUser.value?.org?.id || "");
 
   return {
     ...asset,
@@ -533,12 +535,21 @@ const handleAssetQuickConnect = (asset: AssetItem) => {
   connectWithSavedConnection(asset);
 };
 
+const handleWorkspaceQuickSearch = async () => {
+  showAssetSearch.value = true;
+  await nextTick();
+  const input = assetSearchInputRef.value?.$el?.querySelector("input") as HTMLInputElement | undefined;
+  input?.focus();
+};
+
 const handleAssetConnectWithSelection = (asset: AssetItem) => {
   closeHoverPreview();
   openSetupSession(asset);
 };
 
 useEventBus().on("workspaceConnectAsset", handleAssetConnectWithSelection);
+useEventBus().on("workspaceQuickConnectAsset", handleAssetConnect);
+useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
 
 const handleAssetOpenInNewWindow = async (asset: AssetItem) => {
   contextMenuVisible.value = false;
@@ -951,6 +962,7 @@ watch(
       >
         <div :style="{ borderBottom: '1px solid var(--app-border)' }" class="px-2.5 py-1.5">
           <UInput
+            ref="assetSearchInputRef"
             v-model="sidebarSearch"
             size="sm"
             autofocus

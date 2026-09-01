@@ -6,6 +6,8 @@ export interface ThemeSeedTokens {
   accent: string;
   /** Defaults to the theme accent when omitted. */
   folderIcon?: string;
+  /** Defaults to outline when omitted. */
+  folderIconStyle?: "outline" | "filled";
   surface: string;
   surfaceHover: string;
   shadowSoft: string;

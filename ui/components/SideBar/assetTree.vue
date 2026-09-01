@@ -99,6 +99,7 @@ const assetItemToTreeNode = (asset: AssetItem, level: number): AssetTreeNode => 
       id: asset.id,
       name: asset.name,
       address: asset.address,
+      org_id: asset.org_id,
       platform: asset.platform,
       zone: asset.zone,
       category: asset.category,

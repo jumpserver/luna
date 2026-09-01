@@ -11,6 +11,8 @@ const { addErrorToast } = useErrorToast();
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const isImporting = ref(false);
 const items = ref<VideoPlayerItem[]>([]);
+
+useHead({ title: "JumpServer Video Player" });
 // selectedId 立即跟随点击,用于播放列表高亮;activeId 经防抖后才更新,
 // 真正驱动播放器组件的挂载/加载。快速来回切换时,只有停手后的最后一次
 // 才会触发销毁旧播放器 + fetch + 全量解析,避免多个 part 的解析结果在
@@ -244,8 +246,6 @@ watch(
 );
 
 onMounted(async () => {
-  document.title = "JumpServer Video Player";
-
   try {
     await desktopWindow.setTitle("JumpServer Video Player");
   } catch {

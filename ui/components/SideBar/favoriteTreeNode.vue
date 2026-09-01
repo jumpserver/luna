@@ -29,10 +29,7 @@ const toggle = () => {
           class="app-tree-toggle-icon sidebar-icon-sm transition-transform"
           :class="folder.open ? 'rotate-90' : ''"
         />
-        <UIcon
-          :name="folder.open ? 'i-tabler-folder-open' : 'i-tabler-folder'"
-          class="app-tree-icon sidebar-icon tree-folder-icon"
-        />
+        <AppTreeFolderIcon :open="folder.open" class="app-tree-icon sidebar-icon tree-folder-icon" />
         <span class="truncate font-medium">{{ folder.name }}</span>
       </button>
     </div>

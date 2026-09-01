@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { getConfiguredAppName, isDefaultAppName, normalizeAppName } from "~/composables/useAppName";
+import { getPublicSettings } from "~/composables/useApiRequest";
 import { desktopApp, desktopOpener } from "~/shared/desktop/bridge";
 
 definePageMeta({
@@ -11,8 +12,11 @@ const logoSrc = computed(() => "/logo.png");
 const isDefaultProduct = computed(() => isDefaultAppName(appName.value));
 const website = "https://jumpserver.org";
 
-const version = ref<string>("—");
-const links = [
+const version = ref("");
+const licenseCompany = ref("");
+const showCommunityLinks = ref(false);
+const { t } = useI18n();
+const links = computed(() => [
   {
     label: "GitHub",
     icon: "line-md:github",
@@ -22,8 +26,13 @@ const links = [
     label: "Discord",
     icon: "line-md:discord",
     to: "https://discord.com/invite/W6vYXmAQG2"
+  },
+  {
+    label: t("Setting.OfficialWebsite"),
+    icon: "i-lucide-globe-2",
+    to: website
   }
-];
+]);
 
 onMounted(async () => {
   try {
@@ -37,9 +46,25 @@ onMounted(async () => {
       appName.value = normalizeAppName(runtimeAppName);
     }
   } catch {}
+
+  try {
+    const settings = await getPublicSettings();
+    const corporation = settings.XPACK_LICENSE_INFO?.corporation;
+    showCommunityLinks.value = settings.XPACK_LICENSE_IS_VALID !== true;
+    if (settings.XPACK_LICENSE_IS_VALID === true && typeof corporation === "string") {
+      licenseCompany.value = corporation.trim();
+    }
+  } catch {
+    showCommunityLinks.value = true;
+  }
 });
 
 const openLink = async (url: string) => {
+  if (!isDesktopRuntime()) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
   try {
     await desktopOpener.openUrl(url);
   } catch (e) {
@@ -49,16 +74,29 @@ const openLink = async (url: string) => {
 </script>
 
 <template>
-  <div class="flex h-full flex-col items-center justify-center gap-4">
-    <img :src="logoSrc" :alt="appName" class="size-16 rounded-xl" />
+  <div class="flex min-h-[420px] items-center justify-center py-8">
+    <section class="flex w-full max-w-md flex-col items-center text-center">
+      <img :src="logoSrc" :alt="appName" class="size-20 rounded-2xl" />
 
-    <div class="flex flex-col items-center gap-3">
-      <div class="flex items-center gap-2">
-        <p class="text-base font-semibold text-highlighted">{{ appName }}</p>
-        <UBadge icon="i-lucide-rocket" size="sm" color="primary" variant="soft">v{{ version }}</UBadge>
+      <div class="mt-4 flex items-center gap-2">
+        <h2 class="text-xl font-semibold text-highlighted">{{ appName }}</h2>
+        <UBadge v-if="version" size="sm" color="primary" variant="soft">v{{ version }}</UBadge>
       </div>
 
-      <div v-if="isDefaultProduct" class="flex items-center justify-center gap-2">
+      <div
+        v-if="licenseCompany"
+        class="mt-5 inline-flex max-w-full items-center gap-2.5 rounded-lg border border-default bg-elevated/40 px-3 py-2 text-left"
+      >
+        <span class="grid size-8 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
+          <UIcon name="i-lucide-badge-check" class="size-4" />
+        </span>
+        <p class="min-w-0 break-words text-sm">
+          <span class="mr-2 text-xs text-muted">{{ t("Setting.LicensedTo") }}</span>
+          <span class="font-medium text-highlighted">{{ licenseCompany }}</span>
+        </p>
+      </div>
+
+      <div v-if="isDefaultProduct && showCommunityLinks" class="mt-4 flex flex-wrap items-center justify-center gap-1">
         <UButton
           v-for="link in links"
           :key="link.to"
@@ -70,16 +108,6 @@ const openLink = async (url: string) => {
           @click="openLink(link.to)"
         />
       </div>
-
-      <UButton
-        v-if="isDefaultProduct"
-        :label="website"
-        icon="i-lucide-mail"
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        @click="openLink(website)"
-      />
-    </div>
+    </section>
   </div>
 </template>

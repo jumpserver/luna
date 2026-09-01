@@ -1,7 +1,9 @@
+import type { PublicSettings } from "~/composables/useApiRequest";
 import type { CurrentOrg, PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/types";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { resolveOrganizationSelection } from "~/utils/organization";
+import { COMMUNITY_WORKSPACE_BRAND, resolveWorkspaceBrand, WORKSPACE_BRAND_STATE_KEY } from "~/utils/pageTitle";
 
 interface BootstrapResponse {
   data: string;
@@ -91,6 +93,7 @@ export const useAuthSession = () => {
   const localePath = useLocalePath();
   const userInfoStore = useUserInfoStore();
   const { currentAccountId, userMap } = storeToRefs(userInfoStore);
+  const webWorkspaceBrand = useState<string>(WORKSPACE_BRAND_STATE_KEY, () => COMMUNITY_WORKSPACE_BRAND);
 
   const applyLoginPayload = async (
     payload: LoginPayload | null | undefined,
@@ -250,6 +253,8 @@ export const useAuthSession = () => {
   };
 
   const bootstrapWebCookieSession = async () => {
+    webWorkspaceBrand.value = COMMUNITY_WORKSPACE_BRAND;
+
     if (isWebAuthPath()) {
       userInfoStore.setUserLoggedIn(false);
       return false;
@@ -264,8 +269,10 @@ export const useAuthSession = () => {
         "/api/v1/users/profile/",
         "/api/v1/profile/"
       ]),
-      fetchWebJson<Record<string, any>>(["/api/v1/settings/public/"])
+      fetchWebJson<PublicSettings>(["/api/v1/settings/public/"])
     ]);
+
+    webWorkspaceBrand.value = resolveWorkspaceBrand(publicSettings);
 
     if (!profileData) {
       userInfoStore.setUserLoggedIn(false);

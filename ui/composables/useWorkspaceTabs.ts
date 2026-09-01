@@ -17,6 +17,7 @@ export interface WorkspaceSurfaceSession {
   assetType: string;
   assetPlatform: string;
   assetCategory: string;
+  orgId?: string;
   address: string;
   permedProtocols?: PermedProtocol[];
   permedAccounts?: PermedAccount[];
@@ -73,6 +74,7 @@ const blankSurface = (): Omit<WorkspaceSurfaceSession, "id"> => ({
   assetType: "",
   assetPlatform: "",
   assetCategory: "",
+  orgId: undefined,
   address: "",
   permedProtocols: undefined,
   permedAccounts: undefined,
@@ -115,6 +117,7 @@ const syncTabFromPrimaryPane = (tab: WorkspaceSessionTab) => {
   tab.assetType = primaryPane.assetType;
   tab.assetPlatform = primaryPane.assetPlatform;
   tab.assetCategory = primaryPane.assetCategory;
+  tab.orgId = primaryPane.orgId;
   tab.address = primaryPane.address;
   tab.permedProtocols = primaryPane.permedProtocols;
   tab.permedAccounts = primaryPane.permedAccounts;
@@ -360,6 +363,7 @@ export const useWorkspaceTabs = () => {
         assetType: asset.type || "",
         assetPlatform: asset.platform || "",
         assetCategory: asset.category || "",
+        orgId: asset.org_id,
         address: asset.address,
         permedProtocols: asset.permedProtocols,
         permedAccounts: asset.permedAccounts,
@@ -401,6 +405,7 @@ export const useWorkspaceTabs = () => {
         assetType: asset.type || "",
         assetPlatform: asset.platform || "",
         assetCategory: asset.category || "",
+        orgId: asset.org_id,
         address: asset.address,
         permedProtocols: asset.permedProtocols,
         permedAccounts: asset.permedAccounts,

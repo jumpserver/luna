@@ -73,6 +73,8 @@ const allowedPaths = new Set([os.homedir(), app.getPath("userData"), process.res
 let nextSubscriptionId = 1;
 let nextStoreId = 1;
 let tray;
+let trayRecentConnections = [];
+let trayQuickConnectEnabled = false;
 let applicationConfig;
 let authService;
 let localApplicationLauncher;
@@ -852,6 +854,9 @@ function menuLabels() {
       hideOthers: "隐藏其他窗口",
       showAll: "显示所有窗口",
       showMain: "显示主窗口",
+      searchConnect: "搜索并连接…",
+      recentConnections: "最近连接",
+      noRecentConnections: "暂无最近连接",
       quit: "退出"
     };
   }
@@ -883,6 +888,9 @@ function menuLabels() {
     hideOthers: "Hide Others",
     showAll: "Show All",
     showMain: "Show Main Window",
+    searchConnect: "Search and Connect…",
+    recentConnections: "Recent Connections",
+    noRecentConnections: "No Recent Connections",
     quit: "Quit"
   };
 }
@@ -950,8 +958,17 @@ function openAboutWindow() {
 }
 
 function sendMenuCommand(command) {
-  showMainWindow();
-  emitDesktopEvent("desktop-menu-command", command, "main");
+  sendMainWindowEvent("desktop-menu-command", command);
+}
+
+function sendMainWindowEvent(name, payload) {
+  const win = showMainWindow();
+  const emit = () => emitDesktopEvent(name, payload, "main");
+  if (win.webContents.isLoadingMainFrame()) {
+    win.webContents.once("did-finish-load", () => setTimeout(emit, 0));
+    return;
+  }
+  emit();
 }
 
 function buildMenu() {
@@ -1022,8 +1039,71 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-function setupTray() {
+function trayConnectionLabel(item) {
+  const detail = item.address || item.platform || "";
+  return detail ? `${item.name} — ${detail}` : item.name;
+}
+
+function sanitizeTrayRecentConnections(items) {
+  if (!Array.isArray(items)) return [];
+
+  return items.slice(0, 10).flatMap((item) => {
+    const id = String(item?.id || "").trim();
+    if (!id) return [];
+    return [
+      {
+        id: id.slice(0, 256),
+        name: String(item?.name || id)
+          .trim()
+          .slice(0, 80),
+        address: String(item?.address || "")
+          .trim()
+          .slice(0, 120),
+        org_id: String(item?.org_id || "")
+          .trim()
+          .slice(0, 256),
+        platform: String(item?.platform || "")
+          .trim()
+          .slice(0, 80),
+        category: String(item?.category || "")
+          .trim()
+          .slice(0, 80),
+        type: String(item?.type || "")
+          .trim()
+          .slice(0, 80)
+      }
+    ];
+  });
+}
+
+function refreshTrayMenu() {
+  if (!tray) return;
   const labels = menuLabels();
+  const recentItems = trayRecentConnections.length
+    ? trayRecentConnections.map((item) => ({
+        label: trayConnectionLabel(item),
+        enabled: trayQuickConnectEnabled,
+        click: () => sendMainWindowEvent("desktop-tray-connect-asset", item)
+      }))
+    : [{ label: labels.noRecentConnections, enabled: false }];
+  const trayMenu = Menu.buildFromTemplate([
+    { label: labels.showMain, click: showMainWindow },
+    {
+      label: labels.searchConnect,
+      enabled: trayQuickConnectEnabled,
+      click: () => sendMenuCommand("search-connect")
+    },
+    { label: labels.recentConnections, submenu: recentItems },
+    { type: "separator" },
+    { label: labels.settings, click: openSettingsWindow },
+    { label: labels.about, click: openAboutWindow },
+    { type: "separator" },
+    { label: labels.quit, click: () => app.quit() }
+  ]);
+  tray.setContextMenu(trayMenu);
+}
+
+function setupTray() {
   const iconName = process.platform === "darwin" ? "tray-mac.png" : "32x32.png";
   const iconPath = isDevelopment
     ? path.join(projectRoot, "electron/assets/icons", iconName)
@@ -1033,15 +1113,8 @@ function setupTray() {
   if (process.platform === "darwin") icon.setTemplateImage(true);
   tray = new Tray(icon);
   tray.setToolTip(productName);
-  const trayMenu = Menu.buildFromTemplate([
-    { label: labels.showMain, click: showMainWindow },
-    { label: labels.settings, click: openSettingsWindow },
-    { label: labels.about, click: openAboutWindow },
-    { type: "separator" },
-    { label: labels.quit, click: () => app.quit() }
-  ]);
-  tray.setContextMenu(trayMenu);
-  if (process.platform !== "darwin") tray.on("click", () => tray.popUpContextMenu(trayMenu));
+  refreshTrayMenu();
+  if (process.platform !== "darwin") tray.on("click", () => tray.popUpContextMenu());
 }
 
 async function statPayload(filePath) {
@@ -1129,6 +1202,13 @@ async function handleInvoke(event, request) {
   if (command === "plugin:event|unlisten") return subscriptions.delete(args.eventId);
   if (command === "plugin:event|emit" || command === "plugin:event|emit_to") {
     emitDesktopEvent(args.event, args.payload);
+    return null;
+  }
+
+  if (command === "set_tray_recent_connections") {
+    trayQuickConnectEnabled = Boolean(args.enabled);
+    trayRecentConnections = sanitizeTrayRecentConnections(args.items);
+    refreshTrayMenu();
     return null;
   }
 
