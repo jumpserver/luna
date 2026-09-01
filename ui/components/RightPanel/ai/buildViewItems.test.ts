@@ -230,4 +230,41 @@ describe("buildAiPanelViewItems", () => {
     const result = items.find((item) => item.kind === "file-result");
     expect(result?.data).toMatchObject({ outcome: "error", error: "failed", riskLevel: 2, rationale: "inspect" });
   });
+
+  it("renders Script AI messages with the shared conversation and script proposal card", () => {
+    const messages = [
+      {
+        id: "script-user",
+        role: "user",
+        metadata: { domain: "script" },
+        parts: [{ type: "text", text: "Create an admin user" }]
+      },
+      {
+        id: "script-proposal",
+        role: "assistant",
+        metadata: { domain: "script" },
+        parts: [
+          {
+            type: "data-progress",
+            data: { tool_name: "propose_script", toolCallId: "proposal-1", state: "tool_running" }
+          },
+          { type: "text", text: "Review this proposal before applying it." }
+        ]
+      }
+    ] as unknown as TerminalAiChatMessage[];
+
+    const items = buildAiPanelViewItems({
+      messages,
+      metadataApproval: null,
+      terminalMetadataApproval: false,
+      executionPlanLabel: "Execution plan",
+      stepLabel: (count) => `Step ${count}`
+    });
+
+    expect(items.map(({ domain, kind }) => `${domain}:${kind}`)).toEqual([
+      "shared:text",
+      "script:script-proposal",
+      "shared:text"
+    ]);
+  });
 });

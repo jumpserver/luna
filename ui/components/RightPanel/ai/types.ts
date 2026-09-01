@@ -5,8 +5,9 @@ import type {
   ChenSqlMetadataApprovalDecision,
   ChenSqlProposal
 } from "~/chen/composables/useChenSqlAiSessions";
+import type { ScriptAiProposal } from "~/composables/useScriptAiSessions";
 
-export type AiTimelineDomain = "shared" | "terminal" | "sql" | "file";
+export type AiTimelineDomain = "shared" | "terminal" | "sql" | "file" | "script";
 
 interface ViewItemBase<Domain extends AiTimelineDomain, Kind extends string> {
   domain: Domain;
@@ -180,6 +181,11 @@ export interface FileResultItem extends ViewItemBase<"file", "file-result"> {
   data: FileAiEventData;
 }
 
+export interface ScriptProposalItem extends ViewItemBase<"script", "script-proposal"> {
+  toolCallId: string;
+  data: TerminalAiEventData;
+}
+
 export type TerminalViewItem = PlanItem | AlertItem;
 export type SqlViewItem =
   | SqlAnalysisItem
@@ -196,6 +202,7 @@ export type FileViewItem =
   | FileDiffItem
   | FileApprovalItem
   | FileResultItem;
+export type ScriptViewItem = ScriptProposalItem;
 
 export type TerminalTimelineAction =
   | { domain: "terminal"; type: "decide"; data: TerminalAiEventData; approved: boolean }
@@ -216,7 +223,11 @@ export type FileTimelineAction = {
   decision: "approve" | "reject";
 };
 
-export type AiTimelineAction = TerminalTimelineAction | SqlTimelineAction | FileTimelineAction;
+export type ScriptTimelineAction =
+  | { domain: "script"; type: "apply-proposal"; item: ScriptProposalItem; proposal: ScriptAiProposal }
+  | { domain: "script"; type: "reject-proposal"; item: ScriptProposalItem };
+
+export type AiTimelineAction = TerminalTimelineAction | SqlTimelineAction | FileTimelineAction | ScriptTimelineAction;
 
 export type ViewItem =
   | TextItem
@@ -234,4 +245,5 @@ export type ViewItem =
   | FileActionItem
   | FileDiffItem
   | FileApprovalItem
-  | FileResultItem;
+  | FileResultItem
+  | ScriptProposalItem;

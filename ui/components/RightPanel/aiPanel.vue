@@ -53,7 +53,6 @@ const fileAiRequested = computed(
 
 const {
   session,
-  messages,
   viewItems,
   presentation,
   unavailableState,
@@ -112,7 +111,7 @@ const displayedUnavailableState = computed(() => {
         :items="viewItems"
         :session="session"
         :assistant-name="presentation.assistantName"
-        :empty="messages.length === 0"
+        :empty="viewItems.length === 0"
         :empty-state="presentation.empty"
         :activity-label="activityLabel"
         :revision="timelineRevision"

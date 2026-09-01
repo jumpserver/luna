@@ -67,6 +67,21 @@ describe("AI overlay panel", () => {
     ).toBe("workspace");
   });
 
+  it("uses workspace AI for the script editor without a connected asset", () => {
+    expect(
+      resolveAiPanelSource({
+        workspaceMode: "assets",
+        surfaceStatus: "ready",
+        surfaceAssetId: "script-1",
+        surfaceProtocol: "script-editor",
+        standaloneWorkspace: false,
+        workspaceFocused: true,
+        rightPanelOpen: false,
+        rightPanelTab: "session"
+      })
+    ).toBe("workspace");
+  });
+
   it("uses file AI when the connected asset's SFTP panel is active", () => {
     expect(
       resolveAiPanelSource({

@@ -85,7 +85,7 @@ function handleSubmitKeydown(event: KeyboardEvent) {
           @click="emit('interrupt')"
         />
       </UTooltip>
-      <UTooltip :text="actionLabel">
+      <UTooltip v-if="!running || !busy" :text="actionLabel">
         <UButton
           :class="{ 'ml-auto': !running }"
           size="xs"

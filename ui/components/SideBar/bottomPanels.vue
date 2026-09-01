@@ -77,7 +77,12 @@ const snippetCreateItems = computed<DropdownMenuItem[]>(() =>
     ["Shell", "shell", "i-lucide-terminal"],
     ["PowerShell", "win_shell", "i-lucide-monitor"],
     ["Python", "python", "i-lucide-file-code-2"],
-    ["Raw", "raw", "i-lucide-file-text"]
+    ["Raw", "raw", "i-lucide-file-text"],
+    ["MySQL", "mysql", "i-lucide-database"],
+    ["MariaDB", "mariadb", "i-lucide-database"],
+    ["PostgreSQL", "postgresql", "i-lucide-database"],
+    ["SQLServer", "sqlserver", "i-lucide-database"],
+    ["Oracle", "oracle", "i-lucide-database"]
   ].map(([label, module, icon]) => ({
     label,
     icon,
@@ -338,7 +343,9 @@ function handleSnippetDoubleClick(snippet: Snippet) {
     name: snippet.name,
     args: snippet.args,
     module: snippet.module.value,
-    comment: snippet.comment
+    comment: snippet.comment,
+    scope: snippet.scope,
+    variable: snippet.variable
   });
 }
 

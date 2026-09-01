@@ -20,6 +20,7 @@ watchEffect(() => {
       workspaceMode: activeWorkspaceMode.value,
       surfaceStatus: activeSurface.value?.status,
       surfaceAssetId: activeSurface.value?.assetId,
+      surfaceProtocol: activeSurface.value?.protocol,
       standaloneWorkspace: !activeTab.value && Boolean(activePaneId.value),
       workspaceFocused: workspaceFocused.value,
       rightPanelOpen: rightPanelOpen.value,

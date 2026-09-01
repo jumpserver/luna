@@ -16,7 +16,7 @@ export function agentVersionHeaders(resourceSessionId?: string) {
 }
 
 export type AgentApprovalMode = "always" | "auto" | "never";
-export type AgentDomain = "terminal" | "file";
+export type AgentDomain = "terminal" | "file" | "script";
 
 export interface AgentMcpTool {
   name: string;
@@ -250,7 +250,10 @@ export function parseKokoMcpFrame(value: unknown): KokoMcpFrame | null {
 
   if (value.type === "mcp.manifest") {
     const manifest = dataRecord || value;
-    if ((manifest.profile !== "terminal" && manifest.profile !== "file") || !Array.isArray(manifest.tools)) {
+    if (
+      (manifest.profile !== "terminal" && manifest.profile !== "file" && manifest.profile !== "script") ||
+      !Array.isArray(manifest.tools)
+    ) {
       return null;
     }
     if (manifest.context !== undefined && !isRecord(manifest.context)) return null;

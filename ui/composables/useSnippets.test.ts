@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   isTerminalSnippetModule,
+  normalizeSnippetVariableDefinitions,
   normalizeSnippetVariableFields,
-  renderSnippetCommand
+  renderSnippetCommand,
+  serializeSnippetVariableDefinitions
 } from "~/utils/snippetVariables";
 
 describe("snippet variables", () => {
@@ -58,5 +60,45 @@ describe("snippet variables", () => {
         environment: "prod"
       })
     ).toBe("echo $& prod {{ untouched }}");
+  });
+
+  it("round-trips editable script variable definitions", () => {
+    const definitions = normalizeSnippetVariableDefinitions([
+      {
+        id: "variable-1",
+        name: "Environment",
+        var_name: "environment",
+        type: { value: "select", label: "Select" },
+        required: true,
+        select_default_value: "prod",
+        tips: "Deployment environment",
+        extra_args: "Production:prod\nStaging:staging"
+      }
+    ]);
+
+    expect(definitions).toEqual([
+      {
+        id: "variable-1",
+        name: "Environment",
+        varName: "environment",
+        type: "select",
+        required: true,
+        defaultValue: "prod",
+        tips: "Deployment environment",
+        options: "Production:prod\nStaging:staging"
+      }
+    ]);
+    expect(serializeSnippetVariableDefinitions(definitions)).toEqual([
+      {
+        id: "variable-1",
+        name: "Environment",
+        var_name: "environment",
+        type: "select",
+        required: true,
+        tips: "Deployment environment",
+        extra_args: "Production:prod\nStaging:staging",
+        select_default_value: "prod"
+      }
+    ]);
   });
 });

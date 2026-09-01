@@ -56,6 +56,20 @@ export interface SqlSnippetListParams extends Record<string, unknown> {
 
 export interface CommandSnippetPayload extends SqlSnippetPayload {
   comment?: string;
+  scope: "private" | "public";
+  variable?: CommandSnippetVariablePayload[];
+}
+
+export interface CommandSnippetVariablePayload {
+  id?: string;
+  name: string;
+  var_name: string;
+  type: "text" | "select";
+  required: boolean;
+  tips?: string;
+  extra_args?: string;
+  text_default_value?: string;
+  select_default_value?: string;
 }
 
 export interface PublicSettings {
