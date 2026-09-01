@@ -60,7 +60,13 @@ watch(
 
 <template>
   <div v-show="loggedIn" class="flex w-full min-w-0 max-w-full items-center gap-1">
-    <UAvatar :alt="currentOrg" color="primary" size="xs" class="shrink-0" :ui="{ root: 'rounded-md' }" />
+    <UAvatar
+      :alt="currentOrg"
+      color="primary"
+      size="xs"
+      class="shrink-0"
+      :ui="{ root: 'rounded-md', fallback: 'uppercase' }"
+    />
     <UDropdownMenu
       v-if="selectable"
       size="sm"

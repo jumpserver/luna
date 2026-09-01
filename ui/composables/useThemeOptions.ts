@@ -1,10 +1,11 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
+import type { ThemePresetOption } from "~/composables/useThemePresets";
 import type { ThemePresetId } from "~/types";
 import { DARK_THEME_PRESETS, getThemePreset, LIGHT_THEME_PRESETS } from "~/composables/useThemePresets";
 import { desktopEmit } from "~/shared/desktop/bridge";
 
 export const useThemeOptions = () => {
-  const { t } = useI18n();
+  const { t, te } = useI18n();
   const {
     lightThemePreset,
     darkThemePreset,
@@ -44,18 +45,23 @@ export const useThemeOptions = () => {
     userTheme.value === "dark" ? darkThemePreset.value : lightThemePreset.value
   );
 
-  const currentThemePresetLabel = computed(
-    () => getThemePreset(currentThemePresetId.value)?.label || t("Common.Theme")
-  );
+  const themePresetLabel = (preset: ThemePresetOption | null | undefined) => {
+    if (!preset) return t("Common.Theme");
+
+    const key = `ThemePresets.${preset.id}`;
+    return te(key) ? t(key) : preset.label;
+  };
+
+  const currentThemePresetLabel = computed(() => themePresetLabel(getThemePreset(currentThemePresetId.value)));
 
   const themeSelectItems = computed(() => [
     ...LIGHT_THEME_PRESETS.map((item) => ({
       id: item.id,
-      label: `${t("Common.Light")} · ${item.label}`
+      label: `${t("Common.Light")} · ${themePresetLabel(item)}`
     })),
     ...DARK_THEME_PRESETS.map((item) => ({
       id: item.id,
-      label: `${t("Common.Dark")} · ${item.label}`
+      label: `${t("Common.Dark")} · ${themePresetLabel(item)}`
     }))
   ]);
 
@@ -119,7 +125,7 @@ export const useThemeOptions = () => {
         disabled: true
       },
       ...LIGHT_THEME_PRESETS.map((item) => ({
-        label: item.label,
+        label: themePresetLabel(item),
         icon: currentThemePresetId.value === item.id ? "i-lucide-check" : "i-lucide-sun-medium",
         onSelect: () => selectThemePreset(item.id)
       }))
@@ -130,7 +136,7 @@ export const useThemeOptions = () => {
         disabled: true
       },
       ...DARK_THEME_PRESETS.map((item) => ({
-        label: item.label,
+        label: themePresetLabel(item),
         icon: currentThemePresetId.value === item.id ? "i-lucide-check" : "i-lucide-moon-star",
         onSelect: () => selectThemePreset(item.id)
       }))
@@ -140,6 +146,7 @@ export const useThemeOptions = () => {
   return {
     currentThemePresetId,
     currentThemePresetLabel,
+    themePresetLabel,
     currentAppearanceMode,
     appearanceModeItems,
     applyAppearanceMode,

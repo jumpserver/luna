@@ -84,7 +84,7 @@ const {
 
 const { applyPrimaryColor } = useColor();
 const { userTheme } = useThemeAdapter();
-const { currentAppearanceMode, applyAppearanceMode } = useThemeOptions();
+const { currentAppearanceMode, applyAppearanceMode, themePresetLabel } = useThemeOptions();
 
 const selectedFont = ref<string>("system");
 const selectedUiFontSize = computed<number>({
@@ -125,8 +125,12 @@ const selectedAppearanceMode = computed<"withSystem" | "light" | "dark">({
   }
 });
 
-const lightThemeItems = LIGHT_THEME_PRESETS.map(({ id, label }) => ({ id, label }));
-const darkThemeItems = DARK_THEME_PRESETS.map(({ id, label }) => ({ id, label }));
+const lightThemeItems = computed(() =>
+  LIGHT_THEME_PRESETS.map((preset) => ({ id: preset.id, label: themePresetLabel(preset) }))
+);
+const darkThemeItems = computed(() =>
+  DARK_THEME_PRESETS.map((preset) => ({ id: preset.id, label: themePresetLabel(preset) }))
+);
 
 const selectedLightTheme = computed<ThemePresetId>({
   get: () => lightThemePreset.value,

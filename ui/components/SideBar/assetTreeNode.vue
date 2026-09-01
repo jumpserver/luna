@@ -87,7 +87,6 @@ const iconSrc = computed(() => {
   if (has("k8s") || has("kubernetes")) src = "/icons/kubernetes.svg";
   else if (has("linux") || has("unix")) src = "/icons/linux.png";
   else if (has("windows")) src = "/icons/windows.png";
-  else if (has("web")) src = "/icons/browser.png";
   else if (has("mysql")) src = "/icons/mysql.png";
   else if (has("mariadb")) src = "/icons/mariadb.png";
   else if (has("oracle")) src = "/icons/oracle.png";
@@ -107,6 +106,7 @@ const icon = computed(() => {
   if (typeGroupIcon.value) return typeGroupIcon.value;
   if (isParent.value) return isOpen.value ? "i-tabler-folder-open" : "i-tabler-folder";
   if (iconSrc.value) return "";
+  if (iconCandidates.value.some((value) => value.includes("web"))) return "i-lucide-globe";
   if ((props.node.meta?.data?.platform_type || "").toLowerCase().includes("device")) return "i-lucide-router";
   return "i-lucide-terminal";
 });

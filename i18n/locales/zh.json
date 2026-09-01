@@ -84,6 +84,27 @@
     "EmptyDescription": "当前类型下暂无可用的授权资产",
     "SelectFromMenu": "请从左侧选择一个配置项"
   },
+  "ThemePresets": {
+    "latte": "Catppuccin 拿铁",
+    "matcha": "抹茶和纸",
+    "claude": "Claude 羊皮纸",
+    "gemini": "Gemini 晴空",
+    "mono": "Mono 素纸",
+    "min": "Min 浅色",
+    "luna-default": "Luna 默认",
+    "luna-darkgray": "Luna 深灰",
+    "luna-deepblue": "Luna 深蓝",
+    "mocha": "Catppuccin 摩卡",
+    "macchiato": "Catppuccin 玛奇朵",
+    "frappe": "Catppuccin 冰沙",
+    "kanagawa": "神奈川墨色",
+    "ayu": "Ayu 蜃景",
+    "rose-pine": "Rosé Pine",
+    "codex": "Codex 石墨",
+    "cursor": "Cursor 暗夜",
+    "mono-dark": "Mono 深色",
+    "min-dark": "Min 深色"
+  },
   "DesktopMenu": {
     "File": "文件",
     "Edit": "编辑",

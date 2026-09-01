@@ -158,7 +158,7 @@ export interface UserProfile {
   username: string;
   email: string;
   avatar_url?: string;
-  phone?: string | null;
+  phone?: string | { code?: string | null; phone?: string | null } | null;
   wechat?: string | null;
   source?: string | LabeledValue;
   mfa_level?: number | LabeledValue<number>;

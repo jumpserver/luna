@@ -52,6 +52,17 @@ const choiceLabel = (value: string | number | LabeledValue | LabeledValue<number
 const roleLabel = (role: { display_name?: string; name?: string; id: string }) =>
   role.display_name || role.name || role.id;
 
+const formatPhone = (value: UserProfile["phone"]) => {
+  if (!value) return "—";
+  if (typeof value === "string") return value.trim() || "—";
+
+  const phone = value.phone?.trim();
+  if (!phone) return "—";
+
+  const code = value.code?.trim();
+  return code ? `${code} ${phone}` : phone;
+};
+
 const formatDate = (value?: string | null) => {
   if (!value) return "—";
   const date = new Date(value);
@@ -72,7 +83,7 @@ const basicRows = computed<DetailRow[]>(() => {
   ];
 
   if (profile.value.phone !== undefined) {
-    rows.push({ label: t("UserProfile.Phone"), value: profile.value.phone || "—" });
+    rows.push({ label: t("UserProfile.Phone"), value: formatPhone(profile.value.phone) });
   }
   if (profile.value.wechat !== undefined) {
     rows.push({ label: t("UserProfile.Wechat"), value: profile.value.wechat || "—" });

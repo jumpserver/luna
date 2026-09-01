@@ -84,6 +84,27 @@
     "EmptyDescription": "No authorized assets are available for the current type",
     "SelectFromMenu": "Select an item on the left"
   },
+  "ThemePresets": {
+    "latte": "Catppuccin Latte",
+    "matcha": "Matcha Washi",
+    "claude": "Claude Parchment",
+    "gemini": "Gemini Air",
+    "mono": "Mono Paper",
+    "min": "Min Light",
+    "luna-default": "Luna Default",
+    "luna-darkgray": "Luna DarkGray",
+    "luna-deepblue": "Luna DeepBlue",
+    "mocha": "Catppuccin Mocha",
+    "macchiato": "Catppuccin Macchiato",
+    "frappe": "Catppuccin Frappe",
+    "kanagawa": "Kanagawa Ink",
+    "ayu": "Ayu Mirage",
+    "rose-pine": "Rosé Pine",
+    "codex": "Codex Graphite",
+    "cursor": "Cursor Noir",
+    "mono-dark": "Mono Dark",
+    "min-dark": "Min Dark"
+  },
   "DesktopMenu": {
     "File": "File",
     "Edit": "Edit",
