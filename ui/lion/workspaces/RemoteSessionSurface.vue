@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
-import { KokoBaseWorkspaceShell as BaseWorkspaceShell } from "@jumpserver/koko";
+import { KokoBaseWorkspaceShell as BaseWorkspaceShell } from "#koko";
 import ConnectView from "@/lion/views/ConnectView.vue";
 import { useBaseWorkspaceSession } from "@/lion/workspaces/useBaseWorkspaceSession";
 import LionProvider from "~/components/lion/LionProvider.vue";

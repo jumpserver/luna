@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TerminalCursorAnchor } from "@jumpserver/koko";
+import type { TerminalCursorAnchor } from "#koko";
 import type { WorkspacePane } from "~/composables/useWorkspaceTabs";
 
 import {
@@ -7,7 +7,7 @@ import {
   getKokoTerminalElement,
   subscribeKokoTerminalCursorAnchor,
   subscribeKokoTerminalUserInput
-} from "@jumpserver/koko";
+} from "#koko";
 import {
   getKokoTerminalAiSession,
   isKokoTerminalAiAvailable,

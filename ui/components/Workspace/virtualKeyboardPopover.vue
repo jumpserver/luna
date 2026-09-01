@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { sendKokoTerminalData } from "@jumpserver/koko";
+import { sendKokoTerminalData } from "#koko";
 import { getLionWorkspaceSession } from "~/lion/workspaces/useLionWorkspaceSessionRegistry";
 
 type Modifier = "ctrl" | "alt" | "shift";

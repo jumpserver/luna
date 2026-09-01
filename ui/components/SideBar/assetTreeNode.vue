@@ -128,7 +128,7 @@ const activate = () => {
     <div class="group relative">
       <button
         type="button"
-        class="sidebar-row flex h-7 w-full cursor-pointer items-center gap-1 rounded-md pr-1 text-left text-xs"
+        class="app-tree-row sidebar-row flex w-full cursor-pointer items-center gap-1 rounded-md pr-1 text-left"
         :class="[
           node.chkDisabled ? 'opacity-40' : '',
           node.meta?.type === 'recent-connections' && node.children?.length ? 'pr-9' : ''
@@ -139,28 +139,31 @@ const activate = () => {
         @click="activate"
         @contextmenu.prevent="emit('contextmenu', node, $event)"
       >
-        <span class="grid size-3 shrink-0 place-items-center">
+        <span class="app-tree-icon-slot grid shrink-0 place-items-center">
           <UIcon
             v-if="isParent"
             name="i-lucide-chevron-right"
-            class="sidebar-icon-sm transition-transform"
+            class="app-tree-toggle-icon sidebar-icon-sm transition-transform"
             :class="isOpen ? 'rotate-90' : ''"
           />
         </span>
-        <span v-if="batchMode && !isParent" class="grid size-3.5 shrink-0 place-items-center sidebar-icon-muted">
-          <UIcon :name="isChecked ? 'i-lucide-square-check-big' : 'i-lucide-square'" class="sidebar-icon" />
+        <span
+          v-if="batchMode && !isParent"
+          class="app-tree-icon-slot sidebar-icon-muted grid shrink-0 place-items-center"
+        >
+          <UIcon
+            :name="isChecked ? 'i-lucide-square-check-big' : 'i-lucide-square'"
+            class="app-tree-icon sidebar-icon"
+          />
         </span>
         <UIcon
           v-if="node.loading || icon"
           :name="node.loading ? 'i-lucide-loader-circle' : icon"
-          class="sidebar-icon"
+          class="app-tree-icon sidebar-icon"
           :class="node.loading ? 'animate-spin' : isFolderIcon ? 'tree-folder-icon' : ''"
         />
-        <img v-else-if="iconSrc" :src="iconSrc" alt="" class="sidebar-icon-img" />
-        <span
-          class="min-w-0 flex-1 truncate font-medium"
-          :class="!isParent ? 'font-ui-mono text-[11px] tracking-[0.01em]' : ''"
-        >
+        <img v-else-if="iconSrc" :src="iconSrc" alt="" class="app-tree-icon sidebar-icon-img" />
+        <span class="min-w-0 flex-1 truncate font-medium" :class="!isParent ? 'font-ui-mono tracking-[0.01em]' : ''">
           {{ node.name }}
         </span>
       </button>
@@ -191,7 +194,7 @@ const activate = () => {
         @check="(target) => emit('check', target)"
         @clear-recent="emit('clearRecent')"
       />
-      <div v-if="node.loading" class="h-7" />
+      <div v-if="node.loading" class="app-tree-row" />
     </div>
   </div>
 </template>

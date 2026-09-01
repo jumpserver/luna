@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 import { connectorSessionKey } from "@jumpserver/connectors-core";
-import { KokoConnectView } from "@jumpserver/koko";
+import { KokoConnectView } from "#koko";
 import AiOverlayPanel from "~/components/RightPanel/AiOverlayPanel.vue";
 import { getAuthenticatedTerminalCommandHistoryScope } from "~/composables/useTerminalCommandHistory";
 import { useUserInfoStore } from "~/store/modules/userInfo";

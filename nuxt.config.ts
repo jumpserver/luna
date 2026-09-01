@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+
 const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080";
 const chatAiTarget = process.env.JMS_AI_DEV_URL || "http://localhost:8088";
 const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
@@ -8,6 +10,7 @@ const faceliveTarget = process.env.JMS_FACELIVE_DEV_URL || "http://localhost:517
 const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:5172";
 const uiTarget = process.env.JMS_UI_DEV_URL || "http://localhost:9528";
 const appBaseURL = process.env.NUXT_APP_BASE_URL || "/luna/";
+const kokoRoot = fileURLToPath(new URL("./ui/koko", import.meta.url));
 const buildTime = new Date().toLocaleString("zh-CN", {
   timeZone: "Asia/Shanghai",
   hour12: false
@@ -32,7 +35,7 @@ const configureHttpProxy = (name: string, target: string) => (proxy: any) => {
 };
 
 export default defineNuxtConfig({
-  extends: ["@jumpserver/koko/nuxt", "@jumpserver/online-player/nuxt"],
+  extends: ["@jumpserver/online-player/nuxt"],
   runtimeConfig: {
     public: {
       buildTime
@@ -40,11 +43,17 @@ export default defineNuxtConfig({
   },
   typescript: {
     tsConfig: {
-      include: ["../packages/koko/app/**/*", "../packages/online-player/app/**/*"],
+      include: ["../packages/online-player/app/**/*"],
       exclude: ["../electron/**/*"]
     }
   },
   srcDir: "ui/",
+  alias: {
+    "#koko": kokoRoot
+  },
+  imports: {
+    dirs: [`${kokoRoot}/composables`, `${kokoRoot}/context`]
+  },
   modules: [
     "@nuxt/ui",
     "@pinia/nuxt",
@@ -83,7 +92,13 @@ export default defineNuxtConfig({
       mode: "out-in"
     }
   },
-  css: ["@/assets/css/main.css", "@/assets/css/workspace-tour.css"],
+  css: [
+    "driver.js/dist/driver.css",
+    "@/koko/assets/css/sftp-file-management.scss",
+    "@/koko/assets/css/sftp-transfer-center.scss",
+    "@/assets/css/main.css",
+    "@/assets/css/workspace-tour.css"
+  ],
   icon: {
     provider: "none",
     fallbackToApi: false,
@@ -91,11 +106,7 @@ export default defineNuxtConfig({
     collections: ["mingcute", "lucide", "line-md", "proicons", "fluent", "solar", "tabler", "si"],
     clientBundle: {
       scan: {
-        globInclude: [
-          "ui/**/*.{vue,ts,js}",
-          "packages/koko/**/*.{vue,ts,js}",
-          "packages/online-player/**/*.{vue,ts,js}"
-        ]
+        globInclude: ["ui/**/*.{vue,ts,js}", "packages/online-player/**/*.{vue,ts,js}"]
       }
     }
   },
@@ -106,10 +117,24 @@ export default defineNuxtConfig({
   vite: {
     clearScreen: false,
     envPrefix: ["VITE_"],
-    // Chen is loaded lazily. Pre-bundle its exclusive dependencies at startup
-    // so Vite does not discover them on first entry and reload the whole app.
+    // Chen is loaded lazily. Pre-bundle its direct runtime dependencies together
+    // so the first workspace entry cannot re-optimize them, reload the app, or split CodeMirror
+    // across incompatible module instances.
     optimizeDeps: {
-      include: ["ag-grid-community", "ag-grid-vue3", "sql-formatter"]
+      include: [
+        "@ai-sdk/vue",
+        "@codemirror/autocomplete",
+        "@codemirror/lang-sql",
+        "@codemirror/language",
+        "@codemirror/state",
+        "@codemirror/view",
+        "@lezer/highlight",
+        "ag-grid-community",
+        "ag-grid-vue3",
+        "clipboard-polyfill",
+        "codemirror",
+        "sql-formatter"
+      ]
     },
     server: {
       strictPort: true,

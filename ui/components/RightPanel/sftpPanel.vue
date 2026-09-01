@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { SftpCapabilities } from "@jumpserver/koko";
-import type { KokoWorkspaceTab } from "@jumpserver/koko/host";
+import type { SftpCapabilities } from "#koko";
+import type { KokoWorkspaceTab } from "#koko/host";
 import type { AssetItem, AssetTreeNode } from "~/types";
-import { KokoFileManagerSessionSurface } from "@jumpserver/koko";
+import { KokoFileManagerSessionSurface } from "#koko";
 import {
   createKokoCompactFileAiOwnerId,
   createKokoCompactFileAiTargetId,

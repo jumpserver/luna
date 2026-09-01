@@ -4,6 +4,7 @@
   --theme-muted: #40516d;
   --theme-border: rgba(0, 0, 0, 0.3);
   --theme-accent: #1ab394;
+  --theme-folder-icon: var(--sidebar-icon-color);
   --theme-surface: #0b0e13;
   --theme-surface-hover: #242e3d;
   --theme-shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.28);

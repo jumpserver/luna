@@ -463,7 +463,7 @@ defineExpose({
 
 <template>
   <div
-    class="flex min-h-8 flex-col"
+    class="app-tree flex min-h-8 flex-col"
     :class="open === false && !hideHeader ? 'h-8 shrink-0' : 'min-h-0 flex-1'"
     role="tree"
     :aria-label="t('Menu.Resource')"

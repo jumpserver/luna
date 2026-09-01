@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
+import { FitAddon } from "@xterm/addon-fit";
+import { Terminal } from "@xterm/xterm";
 import {
   appTerminalTheme,
   getDefaultTerminalConfig,
   registerLocalShellTerminalSession,
   unregisterLocalShellTerminalSession
-} from "@jumpserver/koko";
-import { FitAddon } from "@xterm/addon-fit";
-import { Terminal } from "@xterm/xterm";
+} from "#koko";
 import { desktopLocalShell } from "~/shared/desktop/bridge";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();

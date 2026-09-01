@@ -187,6 +187,10 @@
   --sidebar-surface-dark: var(--app-sidebar-bg);
   --sidebar-icon-size: 0.875rem;
   --sidebar-icon-size-sm: 0.75rem;
+  --app-tree-font-size: clamp(10px, calc(var(--app-ui-font-size) - 2px), 15px);
+  --app-tree-icon-size: clamp(12px, calc(var(--app-tree-font-size) + 2px), 16px);
+  --app-tree-toggle-icon-size: var(--app-tree-font-size);
+  --app-tree-row-height: max(28px, calc(var(--app-tree-font-size) + 16px));
   --sidebar-icon-color: color-mix(in srgb, var(--app-text-primary) 64%, transparent);
   --sidebar-icon-muted: color-mix(in srgb, var(--app-text-muted) 82%, transparent);
   --sidebar-icon-active: var(--app-text-primary);
@@ -413,6 +417,26 @@ option {
   transition:
     background-color 150ms ease,
     color 150ms ease;
+}
+
+.app-tree {
+  font-size: var(--app-tree-font-size);
+}
+
+.app-tree-row {
+  height: var(--app-tree-row-height);
+  font-size: var(--app-tree-font-size);
+}
+
+.app-tree .app-tree-icon,
+.app-tree .app-tree-icon-slot {
+  width: var(--app-tree-icon-size);
+  height: var(--app-tree-icon-size);
+}
+
+.app-tree .app-tree-toggle-icon {
+  width: var(--app-tree-toggle-icon-size);
+  height: var(--app-tree-toggle-icon-size);
 }
 
 .sidebar-row:hover {
