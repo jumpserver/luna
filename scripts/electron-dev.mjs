@@ -4,12 +4,18 @@ import { createServer } from "node:net";
 const children = new Set();
 let stopping = false;
 
-function findAvailablePort() {
+function findAvailablePort(preferredPort = 0) {
   return new Promise((resolve, reject) => {
     const server = createServer();
     server.unref();
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
+    server.once("error", (error) => {
+      if (preferredPort && error.code === "EADDRINUSE") {
+        resolve(findAvailablePort());
+        return;
+      }
+      reject(error);
+    });
+    server.listen(preferredPort, "127.0.0.1", () => {
       const address = server.address();
       const port = typeof address === "object" && address ? address.port : 0;
       server.close(() => resolve(port));
@@ -25,10 +31,14 @@ function portFromRendererUrl(value) {
   }
 }
 
+const sharedWeb = process.argv.includes("--web");
 const requestedRendererUrl = process.env.JMS_ELECTRON_RENDERER_URL;
-const rendererPort = requestedRendererUrl ? portFromRendererUrl(requestedRendererUrl) : await findAvailablePort();
+const rendererHost = "127.0.0.1";
+const rendererPort = requestedRendererUrl
+  ? portFromRendererUrl(requestedRendererUrl)
+  : await findAvailablePort(sharedWeb ? 3000 : 0);
 const hmrPort = process.env.JMS_ELECTRON_HMR_PORT || String(await findAvailablePort());
-const rendererUrl = requestedRendererUrl || `http://localhost:${rendererPort}/luna/`;
+const rendererUrl = requestedRendererUrl || `http://${rendererHost}:${rendererPort}/luna/`;
 
 function run(command, args, env = process.env) {
   const child = spawn(command, args, {
@@ -59,14 +69,15 @@ async function waitForRenderer() {
 function stop(exitCode = 0) {
   if (stopping) return;
   stopping = true;
+  process.exitCode = exitCode;
   for (const child of children) child.kill("SIGTERM");
-  setTimeout(() => process.exit(exitCode), 250).unref();
+  setTimeout(() => process.exit(exitCode), 250);
 }
 
 process.once("SIGINT", () => stop(0));
 process.once("SIGTERM", () => stop(0));
 
-const nuxt = run("pnpm", ["web:dev", "--port", String(rendererPort)], {
+const nuxt = run("pnpm", ["web:dev", "--host", rendererHost, "--port", String(rendererPort)], {
   ...process.env,
   JMS_HMR_PORT: hmrPort
 });

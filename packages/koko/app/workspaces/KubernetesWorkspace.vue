@@ -4,6 +4,7 @@ import type { ClipboardAccess, ClipboardDirection, ClipboardPermission, Clipboar
 import { useKokoHostAdapter } from "@jumpserver/koko/host";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
+import { withBase } from "ufo";
 import {
   KubernetesTerminalMessageType,
   KubernetesTerminalSocketFailureCode
@@ -59,6 +60,7 @@ const props = defineProps<{ tab: KokoWorkspaceTab }>();
 const emit = defineEmits<{ reconnect: [] }>();
 const RECENT_CONTAINER_LIMIT = 10;
 const { t } = useI18n();
+const kubernetesIconSrc = withBase("/icons/kubernetes.svg", useRuntimeConfig().app.baseURL);
 const toast = useToast();
 const hostAdapter = useKokoHostAdapter();
 const tab = toRef(props, "tab");
@@ -678,7 +680,7 @@ onUnmounted(() => {
                     :class="row.expanded ? 'rotate-90' : ''"
                   />
                 </span>
-                <img v-if="row.kind === 'asset-root'" src="/icons/kubernetes.svg" alt="" class="size-3.5 shrink-0" />
+                <img v-if="row.kind === 'asset-root'" :src="kubernetesIconSrc" alt="" class="size-3.5 shrink-0" />
                 <UIcon
                   v-else
                   :name="rowIcon(row)"

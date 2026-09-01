@@ -11,7 +11,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "pnpm web:dev",
+    "dev": "pnpm electron:dev --web",
     "web:dev": "nuxt dev --dotenv .env.development",
     "generate": "pnpm web:generate",
     "web:generate": "nuxt generate",

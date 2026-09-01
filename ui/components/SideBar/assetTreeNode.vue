@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AssetTreeKind, AssetTreeNode } from "~/types";
+import { withBase } from "ufo";
 
 defineOptions({ name: "AssetTreeNode" });
 
@@ -19,6 +20,7 @@ const emit = defineEmits<{
   clearRecent: [];
 }>();
 const { t } = useI18n();
+const appBaseURL = useRuntimeConfig().app.baseURL;
 
 const isParent = computed(() => Boolean(props.node.isParent || props.node.children?.length));
 const isOpen = computed(() => Boolean(props.node.open));
@@ -81,22 +83,23 @@ const iconSrc = computed(() => {
 
   const has = (keyword: string) => candidates.some((value) => value.includes(keyword));
 
-  if (has("k8s") || has("kubernetes")) return "/icons/kubernetes.svg";
-  if (has("linux") || has("unix")) return "/icons/linux.png";
-  if (has("windows")) return "/icons/windows.png";
-  if (has("web")) return "/icons/browser.png";
-  if (has("mysql")) return "/icons/mysql.png";
-  if (has("mariadb")) return "/icons/mariadb.png";
-  if (has("oracle")) return "/icons/oracle.png";
-  if (has("postgres")) return "/icons/postgre.png";
-  if (has("sqlserver")) return "/icons/sqlserver.png";
-  if (has("redis")) return "/icons/redis.png";
-  if (has("mongodb")) return "/icons/mongodb.png";
-  if (has("dameng")) return "/icons/dameng.png";
-  if (has("clickhouse")) return "/icons/clickhouse.png";
-  if (has("database")) return "/icons/mysql.png";
+  let src = "";
+  if (has("k8s") || has("kubernetes")) src = "/icons/kubernetes.svg";
+  else if (has("linux") || has("unix")) src = "/icons/linux.png";
+  else if (has("windows")) src = "/icons/windows.png";
+  else if (has("web")) src = "/icons/browser.png";
+  else if (has("mysql")) src = "/icons/mysql.png";
+  else if (has("mariadb")) src = "/icons/mariadb.png";
+  else if (has("oracle")) src = "/icons/oracle.png";
+  else if (has("postgres")) src = "/icons/postgre.png";
+  else if (has("sqlserver")) src = "/icons/sqlserver.png";
+  else if (has("redis")) src = "/icons/redis.png";
+  else if (has("mongodb")) src = "/icons/mongodb.png";
+  else if (has("dameng")) src = "/icons/dameng.png";
+  else if (has("clickhouse")) src = "/icons/clickhouse.png";
+  else if (has("database")) src = "/icons/mysql.png";
 
-  return "";
+  return src ? withBase(src, appBaseURL) : "";
 });
 
 const icon = computed(() => {

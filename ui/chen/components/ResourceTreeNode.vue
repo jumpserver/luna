@@ -24,6 +24,7 @@ const emit = defineEmits<{
   menu: [payload: { node: ChenTreeNode; event: MouseEvent }];
   clearRecent: [];
 }>();
+const appBaseURL = useRuntimeConfig().app.baseURL;
 
 const isExpanded = computed(() => props.expandedKeys.includes(props.node.key));
 const children = computed(() => props.node.children || []);
@@ -45,7 +46,7 @@ const datasourceIconSrc = computed(() => {
   ];
 
   return supportedVendors.some((vendor) => dbType.includes(vendor))
-    ? resolveAssetIconFromFields({ platform: dbType }).src
+    ? resolveAssetIconFromFields({ platform: dbType }, appBaseURL).src
     : "";
 });
 
