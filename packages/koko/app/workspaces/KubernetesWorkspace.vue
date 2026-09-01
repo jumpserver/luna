@@ -780,7 +780,11 @@ onUnmounted(() => {
 
 .kubernetes-terminal :deep(.terminal) {
   height: 100%;
-  padding: 4px 4px 4px 12px;
+
+  .xterm-scrollable-element {
+    height: 100%;
+    padding: 12px;
+  }
 }
 
 .kubernetes-terminal :deep(.xterm-viewport) {

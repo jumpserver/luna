@@ -3,14 +3,20 @@ import type { Terminal } from "@xterm/xterm";
 import {
   registerKokoTerminalSession,
   subscribeKokoTerminalCursorAnchor,
+  subscribeKokoTerminalUserInput,
   unregisterKokoTerminalSession
 } from "#koko/composables/useTerminalSessionRegistry";
 
-it("tracks the Xterm buffer cursor for the inline Terminal AI hint", () => {
+function flushCursorAnchor() {
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+}
+
+it("tracks the Xterm buffer cursor for the inline Terminal AI hint", async () => {
   let cursorListener = () => {};
   const cursorDisposable = { dispose: vi.fn() };
   const resizeDisposable = { dispose: vi.fn() };
-  const renderDisposable = { dispose: vi.fn() };
   const screen = {
     getBoundingClientRect: () => ({ left: 100, top: 200, width: 800, height: 400 })
   };
@@ -24,8 +30,7 @@ it("tracks the Xterm buffer cursor for the inline Terminal AI hint", () => {
       cursorListener = listener;
       return cursorDisposable;
     }),
-    onResize: vi.fn(() => resizeDisposable),
-    onRender: vi.fn(() => renderDisposable)
+    onResize: vi.fn(() => resizeDisposable)
   } as unknown as Terminal;
   const anchors: Array<{ left: number; top: number; width: number; height: number }> = [];
 
@@ -37,14 +42,56 @@ it("tracks the Xterm buffer cursor for the inline Terminal AI hint", () => {
   const unsubscribe = subscribeKokoTerminalCursorAnchor("cursor-pane", (anchor) => anchors.push(anchor));
 
   expect(anchors.at(-1)).toEqual({ left: 120, top: 260, width: 10, height: 20 });
+  expect(anchors).toHaveLength(1);
+
   activeBuffer.cursorX = 4;
   activeBuffer.cursorY = 5;
   cursorListener();
+  cursorListener();
+  expect(anchors).toHaveLength(1);
+
+  await flushCursorAnchor();
+  expect(anchors).toHaveLength(2);
   expect(anchors.at(-1)).toEqual({ left: 140, top: 300, width: 10, height: 20 });
+
+  cursorListener();
+  await flushCursorAnchor();
+  expect(anchors).toHaveLength(2);
 
   unsubscribe();
   unregisterKokoTerminalSession("cursor-pane");
   expect(cursorDisposable.dispose).toHaveBeenCalled();
   expect(resizeDisposable.dispose).toHaveBeenCalled();
-  expect(renderDisposable.dispose).toHaveBeenCalled();
+});
+
+it("notifies Terminal AI when the user types without intercepting xterm data", () => {
+  let dataListener = (_data: string) => {};
+  const dataDisposable = { dispose: vi.fn() };
+  const terminal = {
+    cols: 80,
+    rows: 20,
+    buffer: { active: { cursorX: 0, cursorY: 0 } },
+    element: { querySelector: () => ({ getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 400 }) }) },
+    onCursorMove: vi.fn(() => ({ dispose: vi.fn() })),
+    onResize: vi.fn(() => ({ dispose: vi.fn() })),
+    onData: vi.fn((listener: (data: string) => void) => {
+      dataListener = listener;
+      return dataDisposable;
+    })
+  } as unknown as Terminal;
+  const typed: string[] = [];
+
+  registerKokoTerminalSession("input-pane", {
+    socket: { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket,
+    terminalId: "8",
+    terminal
+  });
+  const unsubscribe = subscribeKokoTerminalUserInput("input-pane", () => typed.push("l"));
+
+  dataListener("l");
+  expect(typed).toEqual(["l"]);
+
+  unsubscribe();
+  unregisterKokoTerminalSession("input-pane");
+  expect(dataDisposable.dispose).toHaveBeenCalled();
 });

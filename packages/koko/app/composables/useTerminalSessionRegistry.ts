@@ -27,34 +27,80 @@ const sessions = new Map<string, TerminalSession>();
 const localShellSessions = new Map<string, LocalShellSession>();
 const cursorAnchorListeners = new Map<string, Set<TerminalCursorAnchorListener>>();
 const stopCursorAnchorBindings = new Map<string, () => void>();
+const pendingCursorAnchorFrames = new Map<string, number>();
+const lastCursorAnchors = new Map<string, TerminalCursorAnchor>();
+const userInputListeners = new Map<string, Set<() => void>>();
+const stopUserInputBindings = new Map<string, () => void>();
 
 function getRegisteredTerminal(tabId: string) {
   return sessions.get(tabId)?.terminal || localShellSessions.get(tabId)?.terminal;
 }
 
+function sameCursorAnchor(left: TerminalCursorAnchor | undefined, right: TerminalCursorAnchor) {
+  if (!left) return false;
+  return (
+    left.left === right.left && left.top === right.top && left.width === right.width && left.height === right.height
+  );
+}
+
 function emitTerminalCursorAnchor(tabId: string) {
   const anchor = getKokoTerminalCursorAnchor(tabId);
   if (!anchor) return;
+  if (sameCursorAnchor(lastCursorAnchors.get(tabId), anchor)) return;
+  lastCursorAnchors.set(tabId, anchor);
   cursorAnchorListeners.get(tabId)?.forEach((listener) => listener(anchor));
+}
+
+function cancelScheduledTerminalCursorAnchor(tabId: string) {
+  const frame = pendingCursorAnchorFrames.get(tabId);
+  if (frame != null) cancelAnimationFrame(frame);
+  pendingCursorAnchorFrames.delete(tabId);
+}
+
+function scheduleTerminalCursorAnchor(tabId: string) {
+  if (pendingCursorAnchorFrames.has(tabId)) return;
+  pendingCursorAnchorFrames.set(
+    tabId,
+    requestAnimationFrame(() => {
+      pendingCursorAnchorFrames.delete(tabId);
+      emitTerminalCursorAnchor(tabId);
+    })
+  );
 }
 
 function rebindTerminalCursorAnchor(tabId: string) {
   stopCursorAnchorBindings.get(tabId)?.();
   stopCursorAnchorBindings.delete(tabId);
+  cancelScheduledTerminalCursorAnchor(tabId);
+  lastCursorAnchors.delete(tabId);
 
   const terminal = getRegisteredTerminal(tabId);
   if (!terminal || !cursorAnchorListeners.get(tabId)?.size) return;
 
-  const emit = () => emitTerminalCursorAnchor(tabId);
-  const cursorDisposable = terminal.onCursorMove(emit);
-  const resizeDisposable = terminal.onResize(emit);
-  const renderDisposable = terminal.onRender(emit);
+  const schedule = () => scheduleTerminalCursorAnchor(tabId);
+  const cursorDisposable = terminal.onCursorMove(schedule);
+  const resizeDisposable = terminal.onResize(schedule);
   stopCursorAnchorBindings.set(tabId, () => {
     cursorDisposable.dispose();
     resizeDisposable.dispose();
-    renderDisposable.dispose();
   });
-  emit();
+  emitTerminalCursorAnchor(tabId);
+}
+
+function rebindTerminalUserInput(tabId: string) {
+  stopUserInputBindings.get(tabId)?.();
+  stopUserInputBindings.delete(tabId);
+  const terminal = getRegisteredTerminal(tabId);
+  if (!terminal || !userInputListeners.get(tabId)?.size) return;
+  const disposable = terminal.onData(() => {
+    userInputListeners.get(tabId)?.forEach((listener) => listener());
+  });
+  stopUserInputBindings.set(tabId, () => disposable.dispose());
+}
+
+function rebindTerminalListeners(tabId: string) {
+  rebindTerminalCursorAnchor(tabId);
+  rebindTerminalUserInput(tabId);
 }
 
 interface TerminalDataSender {
@@ -66,25 +112,25 @@ const terminalDataSenders = new Map<string, TerminalDataSender>();
 export function registerKokoTerminalSession(tabId: string, session: TerminalSession) {
   if (!tabId) return;
   sessions.set(tabId, session);
-  rebindTerminalCursorAnchor(tabId);
+  rebindTerminalListeners(tabId);
 }
 
 export function unregisterKokoTerminalSession(tabId: string) {
   if (!tabId) return;
   sessions.delete(tabId);
-  rebindTerminalCursorAnchor(tabId);
+  rebindTerminalListeners(tabId);
 }
 
 export function registerLocalShellTerminalSession(tabId: string, send: (data: string) => void, terminal?: Terminal) {
   if (!tabId) return;
   localShellSessions.set(tabId, { send, terminal });
-  rebindTerminalCursorAnchor(tabId);
+  rebindTerminalListeners(tabId);
 }
 
 export function unregisterLocalShellTerminalSession(tabId: string) {
   if (!tabId) return;
   localShellSessions.delete(tabId);
-  rebindTerminalCursorAnchor(tabId);
+  rebindTerminalListeners(tabId);
 }
 
 export function registerKokoTerminalDataSender(tabId: string, send: (data: string) => boolean) {
@@ -120,6 +166,10 @@ export function sendKokoTerminalData(tabId: string, data: string) {
   return true;
 }
 
+export function getKokoTerminalElement(tabId: string) {
+  return getRegisteredTerminal(tabId)?.element ?? null;
+}
+
 export function getKokoTerminalCursorAnchor(tabId: string): TerminalCursorAnchor | null {
   const terminal = getRegisteredTerminal(tabId);
   const screen = terminal?.element?.querySelector<HTMLElement>(".xterm-screen");
@@ -133,6 +183,23 @@ export function getKokoTerminalCursorAnchor(tabId: string): TerminalCursorAnchor
     top: bounds.top + terminal.buffer.active.cursorY * cellHeight,
     width: cellWidth,
     height: cellHeight
+  };
+}
+
+export function subscribeKokoTerminalUserInput(tabId: string, listener: () => void) {
+  if (!tabId) return () => {};
+  const listeners = userInputListeners.get(tabId) || new Set<() => void>();
+  listeners.add(listener);
+  userInputListeners.set(tabId, listeners);
+  rebindTerminalUserInput(tabId);
+
+  return () => {
+    const activeListeners = userInputListeners.get(tabId);
+    activeListeners?.delete(listener);
+    if (!activeListeners?.size) {
+      userInputListeners.delete(tabId);
+      rebindTerminalUserInput(tabId);
+    }
   };
 }
 

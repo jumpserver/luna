@@ -32,9 +32,11 @@ describe("Terminal AI command shortcut", () => {
 });
 
 describe("shouldShowTerminalAiCaretHint", () => {
-  it("hides the hint until session info is ready and there is enough width", () => {
+  it("hides the hint until session info is ready, there is enough width, and input is idle", () => {
     expect(shouldShowTerminalAiCaretHint(false, 200)).toBe(false);
     expect(shouldShowTerminalAiCaretHint(true, 79)).toBe(false);
+    expect(shouldShowTerminalAiCaretHint(true, 80, false)).toBe(false);
     expect(shouldShowTerminalAiCaretHint(true, 80)).toBe(true);
+    expect(shouldShowTerminalAiCaretHint(true, 80, true)).toBe(true);
   });
 });

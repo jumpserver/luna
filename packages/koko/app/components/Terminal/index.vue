@@ -194,7 +194,11 @@ const onUploadChange = (event: Event) => {
 
 #terminal-container :deep(.terminal) {
   height: 100%;
-  padding: 4px 4px 4px 12px;
+
+  .xterm-scrollable-element {
+    height: 100%;
+    padding: 12px;
+  }
 }
 
 /* 主题切换瞬间由容器背景兜底，避免闪色块；滚动条不覆盖，走 main.css 全局窄样式 */

@@ -29,9 +29,9 @@ import {
   unregisterKokoTerminalAiSession
 } from "#koko/composables/terminal/useTerminalAiSessions";
 import { useKokoTerminalBinaryHandler } from "#koko/composables/terminal/useTerminalBinaryHandler";
+import { useKokoTerminalCommandSuggestions } from "#koko/composables/terminal/useTerminalCommandSuggestions";
 import { useKokoTerminalEvents } from "#koko/composables/terminal/useTerminalEvents";
 import { useKokoTerminalHeartbeat } from "#koko/composables/terminal/useTerminalHeartbeat";
-import { useKokoTerminalCommandSuggestions } from "#koko/composables/terminal/useTerminalCommandSuggestions";
 import { useKokoTerminalInput } from "#koko/composables/terminal/useTerminalInput";
 import {
   createKokoTerminalMessageHandlers,
