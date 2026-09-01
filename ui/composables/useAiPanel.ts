@@ -46,6 +46,12 @@ export const useAiPanel = () => {
     open.value = true;
   };
 
+  const openWorkspaceAi = () => {
+    workspaceFocused.value = true;
+    source.value = "workspace";
+    open.value = true;
+  };
+
   const toggleAi = () => {
     if (open.value) {
       open.value = false;
@@ -64,6 +70,7 @@ export const useAiPanel = () => {
     setSource,
     setWorkspaceFocused,
     openAi,
+    openWorkspaceAi,
     toggleAi
   };
 };

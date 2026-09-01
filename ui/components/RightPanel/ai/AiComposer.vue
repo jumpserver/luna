@@ -22,6 +22,7 @@ const emit = defineEmits<{
 }>();
 
 const model = defineModel<string>({ required: true });
+const aiPanelPortalTarget = "#workspace-ai-overlay";
 
 function handleSubmitKeydown(event: KeyboardEvent) {
   if (event.isComposing) return;
@@ -54,6 +55,7 @@ function handleSubmitKeydown(event: KeyboardEvent) {
           class="min-w-0 max-w-36"
           :model-value="approvalThreshold"
           :items="thresholdOptions"
+          :portal="aiPanelPortalTarget"
           value-key="value"
           label-key="label"
           :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
@@ -67,6 +69,7 @@ function handleSubmitKeydown(event: KeyboardEvent) {
           class="min-w-0 max-w-32"
           :model-value="executionMode"
           :items="modeOptions"
+          :portal="aiPanelPortalTarget"
           value-key="value"
           label-key="label"
           :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"

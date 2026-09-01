@@ -1,4 +1,7 @@
 import type { UIMessage } from "ai";
+import type { AgentClient } from "./agentClient";
+import type { AgentSseConnection } from "./agentSse";
+import type { AgentToolRelay, AgentToolRelayResult } from "./agentToolRelay";
 import type {
   AgentApprovalDecision,
   AgentApprovalMode,
@@ -7,9 +10,6 @@ import type {
   AgentMcpManifest,
   AgentMessageRequest
 } from "./types";
-import type { AgentClient } from "./agentClient";
-import type { AgentSseConnection } from "./agentSse";
-import type { AgentToolRelayResult, AgentToolRelay } from "./agentToolRelay";
 import { reactive } from "vue";
 import { agentClient } from "./agentClient";
 import { AgentSseConnection as DefaultAgentSseConnection } from "./agentSse";
@@ -98,7 +98,7 @@ function agentMessageId(value: string) {
   return globalThis.crypto?.randomUUID?.() || `message-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-const sensitiveMetadataKey = /(?:auth|cookie|token|password|secret|certificate|private[_-]?key|ticket)/i;
+const sensitiveMetadataKey = /auth|cookie|token|password|secret|certificate|private[_-]?key|ticket/i;
 
 function jsonMetadataValue(value: unknown, depth = 0): unknown {
   if (depth > 8 || value === undefined || typeof value === "function" || typeof value === "symbol") return undefined;
@@ -123,7 +123,7 @@ function jsonMetadataValue(value: unknown, depth = 0): unknown {
 function agentMessageMetadata(value: unknown) {
   if (!isRecord(value)) return undefined;
   const metadata: Record<string, unknown> = {};
-  for (const key of ["domain", "targetId", "terminalId", "context", "execution_mode"] as const) {
+  for (const key of ["domain", "targetId", "terminalId", "operation", "context", "execution_mode"] as const) {
     const normalized = jsonMetadataValue(value[key]);
     if (normalized !== undefined) metadata[key] = normalized;
   }
@@ -170,6 +170,10 @@ function agentToolProgressCode(domain: AgentDomain, toolName: string) {
     if (toolName === "execute_command") return "executing";
     if (toolName === "database_schema") return "metadata_lookup";
     return "tool_running";
+  }
+  if (domain === "sql") {
+    if (toolName === "inspect_schema") return "metadata_lookup";
+    if (toolName === "propose_sql") return "proposing";
   }
   return ["save_text", "mkdir", "rename", "delete"].includes(toolName) ? "executing" : "tool_running";
 }
@@ -328,6 +332,55 @@ function toolResultPresentation(event: AgentEvent) {
   };
 }
 
+function sqlToolResultPresentations(event: AgentEvent) {
+  const result = isRecord(event.payload?.result) ? event.payload.result : {};
+  const structuredContent = isRecord(result.structuredContent) ? result.structuredContent : {};
+  const kind = String(structuredContent.kind || "");
+  const parts: Record<string, unknown>[] = [];
+  const analysis =
+    kind === "sql_context" && isRecord(structuredContent.context)
+      ? structuredContent.context.currentSqlAnalysis
+      : structuredContent.analysis;
+  if (isRecord(analysis)) parts.push({ type: "data-sql-analysis", data: analysis });
+  if (kind === "proposal" && isRecord(structuredContent.proposal)) {
+    parts.push({ type: "data-sql-proposal", data: structuredContent.proposal });
+  }
+  return parts;
+}
+
+function agentToolLifecyclePresentation(event: AgentEvent, domain: AgentDomain, statusOverride = "") {
+  const payload = event.payload || {};
+  const toolCallId = String(event.tool_call_id || payload.tool_call_id || "");
+  if (!toolCallId) return null;
+
+  const result = isRecord(payload.result) ? payload.result : {};
+  const statusValue = String(payload.status || "").toLowerCase();
+  const status =
+    statusOverride ||
+    (event.type === "tool.call"
+      ? "running"
+      : payload.done === false || statusValue === "running"
+        ? "running"
+        : ["cancelled", "canceled", "interrupted"].includes(statusValue)
+          ? "cancelled"
+          : ["error", "failed", "timeout"].includes(statusValue) || isRecord(payload.error) || result.isError === true
+            ? "error"
+            : "success");
+  const toolName = String(payload.tool_name || payload.name || "");
+
+  return {
+    type: "data-agent-tool",
+    data: {
+      id: toolCallId,
+      toolCallId,
+      domain,
+      ...(toolName ? { toolName } : {}),
+      status,
+      ...(Number.isFinite(Number(payload.duration_ms)) ? { durationMs: Number(payload.duration_ms) } : {})
+    }
+  };
+}
+
 export function agentEventToUiMessage(
   event: AgentEvent,
   domain: AgentDomain,
@@ -367,6 +420,7 @@ export function agentEventToUiMessage(
   }
 
   let part: Record<string, unknown> | null = null;
+  const additionalParts: Record<string, unknown>[] = [];
   if (event.type === "session.created") {
     part = {
       type: "data-capability",
@@ -419,10 +473,31 @@ export function agentEventToUiMessage(
   }
   if (event.type === "tool.call") {
     const toolCallId = String(event.tool_call_id || payload.tool_call_id || "");
-    const code = agentToolProgressCode(domain, String(payload.tool_name || payload.name || ""));
-    part = { type: "data-progress", data: { ...payload, toolCallId, code, state: code } };
+    const toolName = String(payload.tool_name || payload.name || "");
+    const code = agentToolProgressCode(domain, toolName);
+    part = {
+      type: "data-progress",
+      data: {
+        toolCallId,
+        tool_name: toolName,
+        code,
+        state: code,
+        ...(typeof payload.execution === "string" ? { execution: payload.execution } : {})
+      }
+    };
+    const lifecycle = agentToolLifecyclePresentation(event, domain);
+    if (lifecycle) additionalParts.push(lifecycle);
   }
   if (event.type === "tool.result" && domain === "terminal") part = toolResultPresentation(event);
+  if (event.type === "tool.result") {
+    const lifecycle = agentToolLifecyclePresentation(event, domain);
+    if (lifecycle) additionalParts.push(lifecycle);
+    if (domain === "sql") additionalParts.push(...sqlToolResultPresentations(event));
+  }
+  if (event.type === "tool.cancel") {
+    const lifecycle = agentToolLifecyclePresentation(event, domain, "cancelled");
+    if (lifecycle) additionalParts.push(lifecycle);
+  }
   if (event.type === "message.delta") {
     const delta = isRecord(payload.delta) ? payload.delta.text || payload.delta.delta : payload.delta || payload.text;
     if (typeof delta === "string") part = { type: "text", text: delta };
@@ -431,13 +506,14 @@ export function agentEventToUiMessage(
     part = { type: "data-progress", data: { ...payload, state: domain === "terminal" ? "idle" : "completed" } };
   }
   if (event.type === "error") part = { type: "data-error", data: payload };
-  if (!part) return null;
+  if (!part && additionalParts.length === 0) return null;
 
   const parts: Record<string, unknown>[] = [];
   if (typeof payload.input_locked === "boolean") {
     parts.push({ type: "data-input-lock", data: { locked: payload.input_locked } });
   }
-  parts.push(part);
+  if (part) parts.push(part);
+  parts.push(...additionalParts);
   return {
     id: eventMessageId(event),
     role: "assistant",
@@ -624,7 +700,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     if (event.type === "tool.call" || event.type === "tool.cancel") {
       if (event.type === "tool.call" && runId) pendingModelDurationByRun.delete(runId);
       options.relay.forwardAgentEvent(event);
-      if (event.type === "tool.call") {
+      if (event.type === "tool.call" || event.type === "tool.cancel") {
         const message = agentEventToUiMessage(event, options.domain, options.messageMetadata());
         if (message) options.onMessage(message);
       }

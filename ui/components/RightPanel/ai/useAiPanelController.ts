@@ -10,7 +10,7 @@ import type { WorkspaceSurfaceSession } from "~/composables/useWorkspaceTabs";
 import { buildAiPanelViewItems } from "./buildViewItems";
 import { resolveAiPanelDomain, resolveAiPanelSession } from "./domains/registry";
 import { workspaceAiMessages } from "./domains/types";
-import { aiRiskColor } from "./presentation";
+import { aiRiskColor, formatAiDuration } from "./presentation";
 
 interface UseAiPanelControllerOptions {
   paneId: Ref<string>;
@@ -113,7 +113,8 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
   const activityLabel = computed(() => {
     const current = presentation.value;
     if (!current?.showActivity || !current.running || current.waitingForApproval) return "";
-    return current.runtimeStatusLabel || t("RightPanel.AIResponding");
+    const label = current.runtimeStatusLabel || t("RightPanel.AIResponding");
+    return current.elapsedDurationMs > 0 ? `${label} · ${formatAiDuration(current.elapsedDurationMs)}` : label;
   });
   const timelineRevision = computed(() => {
     const lastMessage = messages.value.at(-1);

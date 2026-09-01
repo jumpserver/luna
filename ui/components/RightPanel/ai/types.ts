@@ -54,10 +54,28 @@ export interface TextItem extends ViewItemBase<"shared", "text"> {
   modelDurationMs?: number;
 }
 
+export type AgentToolStatus = "running" | "success" | "error" | "cancelled";
+
+export interface AgentToolItem extends ViewItemBase<"shared", "agent-tool"> {
+  data: {
+    id: string;
+    toolCallId: string;
+    sourceDomain: Exclude<AiTimelineDomain, "shared">;
+    toolName?: string;
+    status: AgentToolStatus;
+    durationMs?: number;
+  };
+}
+
 export interface PlanItem extends ViewItemBase<"terminal", "plan"> {
   id: string;
   summary: string;
   steps: ViewStep[];
+}
+
+export interface TerminalStepItem extends ViewItemBase<"terminal", "terminal-step"> {
+  planId: string;
+  step: ViewStep;
 }
 
 export interface AlertItem extends ViewItemBase<"terminal", "alert"> {
@@ -186,7 +204,7 @@ export interface ScriptProposalItem extends ViewItemBase<"script", "script-propo
   data: TerminalAiEventData;
 }
 
-export type TerminalViewItem = PlanItem | AlertItem;
+export type TerminalViewItem = PlanItem | TerminalStepItem | AlertItem;
 export type SqlViewItem =
   | SqlAnalysisItem
   | SqlProposalItem
@@ -203,6 +221,7 @@ export type FileViewItem =
   | FileApprovalItem
   | FileResultItem;
 export type ScriptViewItem = ScriptProposalItem;
+export type SharedViewItem = TextItem | AgentToolItem;
 
 export type TerminalTimelineAction =
   | { domain: "terminal"; type: "decide"; data: TerminalAiEventData; approved: boolean }
@@ -231,7 +250,9 @@ export type AiTimelineAction = TerminalTimelineAction | SqlTimelineAction | File
 
 export type ViewItem =
   | TextItem
+  | AgentToolItem
   | PlanItem
+  | TerminalStepItem
   | AlertItem
   | SqlAnalysisItem
   | SqlProposalItem

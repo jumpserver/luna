@@ -129,23 +129,6 @@ function metadataCategoryLabel(category: string) {
         :label="t(terminal ? 'RightPanel.AIApprove' : 'RightPanel.SQLAIMetadataAllowOnce')"
         @click="emit('resolve', 'approve_once')"
       />
-      <UButton
-        v-if="!terminal"
-        size="xs"
-        color="primary"
-        variant="soft"
-        icon="i-lucide-shield-check"
-        :disabled="approval.resolving"
-        :label="t('RightPanel.SQLAIMetadataAllowSession')"
-        @click="emit('resolve', 'approve_session')"
-      />
     </div>
-    <p v-if="!terminal" class="border-t border-warning/20 px-2.5 py-2 text-[10px] leading-4 text-muted">
-      {{
-        t("RightPanel.SQLAIMetadataSessionHint", {
-          count: approval.followUpTableLimit
-        })
-      }}
-    </p>
   </section>
 </template>

@@ -84,6 +84,16 @@ describe("Script AI timeline", () => {
           type: "data-progress",
           data: { code: "tool_running", tool_name: "propose_script", toolCallId: "proposal-1" }
         },
+        {
+          type: "data-agent-tool",
+          data: {
+            id: "tool-1",
+            toolCallId: "tool-1",
+            domain: "script",
+            toolName: "read_script",
+            status: "running"
+          }
+        },
         { type: "text", text: "Proposal ready" }
       ]
     } as Parameters<typeof scriptAiTimelineMessage>[0];
@@ -92,6 +102,16 @@ describe("Script AI timeline", () => {
       {
         type: "data-progress",
         data: { code: "tool_running", tool_name: "propose_script", toolCallId: "proposal-1" }
+      },
+      {
+        type: "data-agent-tool",
+        data: {
+          id: "tool-1",
+          toolCallId: "tool-1",
+          domain: "script",
+          toolName: "read_script",
+          status: "running"
+        }
       },
       { type: "text", text: "Proposal ready" }
     ]);

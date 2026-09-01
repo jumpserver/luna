@@ -1,5 +1,6 @@
 import type { AgentClient } from "#koko/composables/agent/agentClient";
 import type { AgentSseConnection, AgentSseOptions } from "#koko/composables/agent/agentSse";
+import type { AgentDomain } from "#koko/composables/agent/types";
 import { expect, it, vi } from "vitest";
 import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
 import { agentEventToUiMessage, useAgentSession } from "#koko/composables/agent/useAgentSession";
@@ -118,11 +119,148 @@ it("projects model and tool activity into session progress", () => {
     parts: [
       {
         type: "data-progress",
-        data: { toolCallId: "tool-1", code: "executing", state: "executing" }
+        data: { toolCallId: "tool-1", tool_name: "execute_command", code: "executing", state: "executing" }
+      },
+      {
+        type: "data-agent-tool",
+        data: {
+          id: "tool-1",
+          toolCallId: "tool-1",
+          domain: "terminal",
+          toolName: "execute_command",
+          status: "running"
+        }
       }
     ]
   });
 });
+
+it("projects Chen SQL proposal tool results into the existing SQL review parts", () => {
+  const proposal = {
+    sql: "SELECT id FROM users",
+    originalSql: "",
+    explanation: "List users",
+    base: { paneId: "pane-1", tabId: "", revision: 1, target: "new_query" }
+  };
+  const message = agentEventToUiMessage(
+    {
+      seq: 4,
+      type: "tool.result",
+      run_id: "run-sql",
+      tool_call_id: "tool-sql",
+      payload: {
+        status: "success",
+        result: {
+          structuredContent: {
+            kind: "proposal",
+            analysis: { valid: true, statementCount: 1, riskLevel: 1 },
+            proposal
+          }
+        }
+      }
+    },
+    "sql",
+    { domain: "sql" }
+  );
+
+  expect(message).toMatchObject({
+    parts: [
+      {
+        type: "data-agent-tool",
+        data: { id: "tool-sql", toolCallId: "tool-sql", domain: "sql", status: "success" }
+      },
+      { type: "data-sql-analysis", data: { valid: true, statementCount: 1, riskLevel: 1 } },
+      { type: "data-sql-proposal", data: proposal }
+    ]
+  });
+});
+
+it("projects SQL tool calls without exposing their arguments", () => {
+  const message = agentEventToUiMessage(
+    {
+      seq: 3,
+      type: "tool.call",
+      tool_call_id: "tool-schema",
+      payload: { tool_name: "inspect_schema", arguments: { query: "private_table" } }
+    },
+    "sql",
+    { domain: "sql" }
+  );
+
+  expect(message).toMatchObject({
+    parts: [
+      {
+        type: "data-progress",
+        data: {
+          toolCallId: "tool-schema",
+          tool_name: "inspect_schema",
+          code: "metadata_lookup",
+          state: "metadata_lookup"
+        }
+      },
+      {
+        type: "data-agent-tool",
+        data: {
+          id: "tool-schema",
+          toolCallId: "tool-schema",
+          domain: "sql",
+          toolName: "inspect_schema",
+          status: "running"
+        }
+      }
+    ]
+  });
+  expect(JSON.stringify(message)).not.toContain("private_table");
+});
+
+it("projects cancelled tool calls as cancelled lifecycle updates", () => {
+  expect(
+    agentEventToUiMessage(
+      {
+        seq: 4,
+        type: "tool.cancel",
+        tool_call_id: "tool-schema",
+        payload: { reason: "run cancelled" }
+      },
+      "sql",
+      { domain: "sql" }
+    )
+  ).toMatchObject({
+    parts: [
+      {
+        type: "data-agent-tool",
+        data: { id: "tool-schema", toolCallId: "tool-schema", domain: "sql", status: "cancelled" }
+      }
+    ]
+  });
+});
+
+it.each(["terminal", "sql", "file", "script"] satisfies AgentDomain[])(
+  "projects %s tool results into the shared lifecycle part",
+  (domain) => {
+    const message = agentEventToUiMessage(
+      {
+        seq: 5,
+        type: "tool.result",
+        tool_call_id: `tool-${domain}`,
+        payload: { status: "success", done: true, duration_ms: 42, result: { structuredContent: {} } }
+      },
+      domain,
+      { domain }
+    );
+
+    expect(message?.parts).toContainEqual({
+      type: "data-agent-tool",
+      data: {
+        id: `tool-${domain}`,
+        toolCallId: `tool-${domain}`,
+        domain,
+        status: "success",
+        durationMs: 42
+      }
+    });
+  }
+);
 
 it("maps UI messages and approvals to the strict Agent API DTO", async () => {
   let streamOptions!: AgentSseOptions;
@@ -287,6 +425,15 @@ it("maps UI messages and approvals to the strict Agent API DTO", async () => {
             outputTruncated: false,
             durationMs: 456,
             modelDurationMs: 2345
+          })
+        }),
+        expect.objectContaining({
+          type: "data-agent-tool",
+          data: expect.objectContaining({
+            id: "tool-call-1",
+            domain: "terminal",
+            status: "success",
+            durationMs: 456
           })
         })
       ]

@@ -12,6 +12,7 @@ interface UseChenSessionOptions {
   onBeforeReady: () => Promise<void>;
   onAfterReady: () => Promise<void>;
   onDisconnected: () => void;
+  onPacket?: (packet: ChenPacket) => void;
   showMessage: (data: any) => void;
   downloadFile?: (fileKey: string) => Promise<void>;
   createSocket?: (url: string, token: string) => WebSocket;
@@ -118,6 +119,8 @@ export function useChenSession(options: UseChenSessionOptions) {
       case "close_session":
         handleFatal(new Error("Chen session disconnected by backend"));
         break;
+      default:
+        options.onPacket?.(packet);
     }
   }
 

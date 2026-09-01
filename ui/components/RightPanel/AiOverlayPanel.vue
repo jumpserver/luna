@@ -31,7 +31,7 @@ watchEffect(() => {
 </script>
 
 <template>
-  <div data-ai-context="preserve" class="pointer-events-none absolute inset-0 z-50">
+  <div id="workspace-ai-overlay" data-ai-context="preserve" class="pointer-events-none absolute inset-0 z-50">
     <button
       v-if="isNarrowScreen"
       type="button"

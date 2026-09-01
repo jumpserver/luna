@@ -269,6 +269,20 @@ it("preserves File AI conversation and draft when the same pane reconnects", asy
     type: SftpMessageType.MCPRequest,
     resource_session_id: resourceSessionId
   });
+  await vi.waitFor(() =>
+    expect(session.chat.messages.value.flatMap((message) => message.parts)).toContainEqual(
+      expect.objectContaining({
+        type: "data-agent-tool",
+        data: expect.objectContaining({
+          id: "tool-1",
+          toolCallId: "tool-1",
+          domain: "file",
+          toolName: "read_text",
+          status: "running"
+        })
+      })
+    )
+  );
 });
 
 it("cancels an outstanding Koko tool call without deleting the shared Agent session on disconnect", async () => {

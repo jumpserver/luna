@@ -39,6 +39,17 @@ describe("AI overlay panel", () => {
     expect(panel.open.value).toBe(false);
   });
 
+  it("opens workspace AI after a teleported workspace action", () => {
+    const panel = useAiPanel();
+    panel.setWorkspaceFocused(false);
+
+    panel.openWorkspaceAi();
+
+    expect(panel.open.value).toBe(true);
+    expect(panel.source.value).toBe("workspace");
+    expect(panel.workspaceFocused.value).toBe(true);
+  });
+
   it("uses platform AI without a connected asset", () => {
     expect(
       resolveAiPanelSource({

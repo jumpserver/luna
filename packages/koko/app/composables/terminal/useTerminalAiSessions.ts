@@ -638,7 +638,7 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
   const inputLock = partData(message, "data-input-lock");
   if (inputLock) {
     session.inputLocked = Boolean(inputLock.locked);
-    return;
+    if (!message.parts.some((part) => part.type === "data-agent-tool" || part.type === "data-execution")) return;
   }
 
   const metadataApproval = partData(message, "data-metadata-approval");
@@ -694,6 +694,15 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
       transports.get(session)?.finish();
     } else if (session.runtimeState) {
       session.taskActive = true;
+    }
+    const timelineParts = message.parts.filter(
+      (part) => part.type !== "data-progress" && part.type !== "data-input-lock"
+    );
+    if (timelineParts.length) {
+      const timelineMessage = { ...message, parts: timelineParts } as TerminalAiChatMessage;
+      if (!transports.get(session)?.receive(timelineMessage)) {
+        session.chat.messages.value = [...session.chat.messages.value, timelineMessage];
+      }
     }
     return;
   }

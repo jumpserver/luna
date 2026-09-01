@@ -24,10 +24,15 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
     const runtimeKeys: Record<string, string> = {
       analyzing: "RightPanel.SQLAIStageAnalyzing",
       model: "RightPanel.SQLAIStageModel",
+      planning: "RightPanel.SQLAIStageModel",
       reviewing: "RightPanel.SQLAIStageReviewing",
+      proposing: "RightPanel.SQLAIStageReviewing",
       approval: "RightPanel.SQLAIMetadataApprovalStage",
       tool:
         current.runtimeExecution === "validate_sql" ? "RightPanel.SQLAIStageValidation" : "RightPanel.SQLAIStageTool",
+      tool_running:
+        current.runtimeExecution === "validate_sql" ? "RightPanel.SQLAIStageValidation" : "RightPanel.SQLAIStageTool",
+      metadata_lookup: "RightPanel.SQLAIStageTool",
       cancelled: "RightPanel.SQLAIStageCancelled"
     };
     const runtimeKey = runtimeKeys[current.runtimeStatusCode];
@@ -97,10 +102,11 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
       backgroundReasonLabel: "",
       elapsedDurationMs,
       contextItems,
+      toolNames: [...current.agent.state.toolNames],
       showPolicy: false,
-      showRuntimeStatus: true,
+      showRuntimeStatus: false,
       showElapsedInError: true,
-      showActivity: false,
+      showActivity: true,
       refreshElapsedWhileBusy: true,
       backgroundExecAvailable: false,
       approvalThreshold: current.approvalThreshold,
@@ -124,10 +130,7 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
     const current = sqlSession(session);
     if (!current) return;
     current.draft = "";
-    current.errorCode = "";
-    current.errorText = "";
-    current.chat.clearError();
-    void current.chat.sendMessage({ text, metadata: { operation: "generate" } }).catch(() => {
+    void current.request("generate", text).catch(() => {
       if (!current.errorCode && !current.errorText) current.errorCode = "send_failed";
     });
   },

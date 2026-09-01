@@ -2,6 +2,7 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { ChenDataViewColumnPreview } from "~/chen/composables/useChenDataViewDerivedMeta";
 import type {
+  ChenSqlAiFrameSender,
   ChenSqlAiOperation,
   ChenSqlEditorContext,
   ChenSqlProposal,
@@ -62,10 +63,7 @@ import { useChenSession } from "~/chen/composables/useChenSession";
 import {
   getChenSqlAiSession,
   handleChenSqlAiError,
-  handleChenSqlAiMessage,
-  handleChenSqlAiReady,
-  handleChenSqlAiToolApprovalRequired,
-  handleChenSqlAiToolApprovalResolved,
+  handleChenSqlAiWireMessage,
   registerChenSqlAiSession,
   unregisterChenSqlAiSession
 } from "~/chen/composables/useChenSqlAiSessions";
@@ -91,8 +89,8 @@ const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const emit = defineEmits<{ reconnect: [] }>();
 
 const toast = useToast();
-const { locale, t } = useI18n();
-const { openAi } = useAiPanel();
+const { t } = useI18n();
+const { openWorkspaceAi } = useAiPanel();
 const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
 const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
@@ -113,7 +111,7 @@ const endpointUrl = computed(() => {
   if (isDesktopRuntime() && userInfoStore.currentSite) return userInfoStore.currentSite;
   return window.location.origin;
 });
-const resolveChenWsUrl = (path: "session" | "console" | "ai") => chenWsUrl(path, endpointUrl.value);
+const resolveChenWsUrl = (path: "session" | "console") => chenWsUrl(path, endpointUrl.value);
 
 const sidebarWidth = ref(280);
 const isNarrowScreen = useMediaQuery("(max-width: 767px)");
@@ -179,8 +177,6 @@ const indexOperations = new Map<
 >();
 const queryConsolePanel = ref<{ editorSnapshot: () => ChenSqlEditorSnapshot } | null>(null);
 const consolePanel = ref<{ editorSnapshot: () => ChenSqlEditorSnapshot } | null>(null);
-let aiConnection: ReturnType<typeof useChenWebSocket> | null = null;
-let aiSocket: WebSocket | null = null;
 const sqlMetadataStore = new ChenSqlMetadataStore({
   listRelations: (scope, prefix, limit) =>
     fetchChenSqlRelations(auth.chenToken.value, scope, prefix, limit, undefined, endpointUrl.value),
@@ -345,12 +341,18 @@ const session = useChenSession({
   },
   onAfterReady: async () => {
     await tree.expandInitialTree();
-    connectSqlAiSession();
   },
   onDisconnected: () => {
     closeSqlAiSession();
     clearMetadataCaches();
     closeAllConsoleSockets("Database session disconnected");
+  },
+  onPacket: (packet) => {
+    if (packet.type === "ai_error") {
+      handleChenSqlAiError(props.tab.id, packet.data || {});
+    } else if (packet.type.startsWith("mcp.")) {
+      handleChenSqlAiWireMessage(props.tab.id, packet);
+    }
   },
   showMessage: (data) => {
     toast.add({
@@ -362,6 +364,7 @@ const session = useChenSession({
   downloadFile: downloadExportFile,
   resolveUrl: resolveChenWsUrl
 });
+const sendSqlAiFrame: ChenSqlAiFrameSender = (frame) => session.sessionConnection.sendWhenReady(frame);
 const startupError = computed(() => {
   if (session.error.value) return session.error.value;
   if (!tokenId.value && props.tab.status === "failed") return "Failed to start database workspace";
@@ -540,64 +543,15 @@ function applySqlProposal(proposal: ChenSqlProposal): ChenSqlProposalApplyResult
 }
 
 function closeSqlAiSession() {
-  const socket = aiSocket;
-  aiConnection?.close();
-  aiConnection = null;
-  aiSocket = null;
-  unregisterChenSqlAiSession(props.tab.id, socket);
+  unregisterChenSqlAiSession(props.tab.id, sendSqlAiFrame);
 }
 
 function connectSqlAiSession() {
-  closeSqlAiSession();
-  if (auth.profile.value?.chatAiEnabled !== true) {
-    const disabledSession = registerChenSqlAiSession(props.tab.id, null, buildSqlAiContext, applySqlProposal);
-    if (disabledSession) {
-      disabledSession.enabled = false;
-      disabledSession.errorCode = "disabled";
-      disabledSession.errorText = t("RightPanel.SQLAIDisabledDescription");
-    }
-    return;
-  }
-  const connection = useChenWebSocket({
-    path: "ai",
-    resolveUrl: resolveChenWsUrl,
-    onOpen: () => {
-      connection.sendImmediately({
-        type: "connect",
-        data: { language: locale.value }
-      });
-    },
-    onPacket: (packet) => {
-      if (packet.type === "ai_ready") {
-        connection.markReady();
-        handleChenSqlAiReady(props.tab.id, packet.data || {});
-      } else if (packet.type === "ai_chat") {
-        handleChenSqlAiMessage(props.tab.id, packet.data);
-      } else if (packet.type === "ai_error") {
-        handleChenSqlAiError(props.tab.id, packet.data || {});
-      } else if (packet.type === "ai_tool_approval_required") {
-        handleChenSqlAiToolApprovalRequired(props.tab.id, packet.data || {});
-      } else if (packet.type === "ai_tool_approval_resolved") {
-        handleChenSqlAiToolApprovalResolved(props.tab.id, packet.data || {});
-      }
-    },
-    onError: (socketError) => {
-      handleChenSqlAiError(props.tab.id, {
-        code: socketError.code,
-        message: socketError.message
-      });
-      const current = getChenSqlAiSession(props.tab.id);
-      if (current) current.enabled = false;
-    }
-  });
-  aiConnection = connection;
-  const socket = connection.connect(auth.chenToken.value);
-  aiSocket = socket;
-  if (socket) registerChenSqlAiSession(props.tab.id, socket, buildSqlAiContext, applySqlProposal);
+  registerChenSqlAiSession(props.tab.id, sendSqlAiFrame, buildSqlAiContext, applySqlProposal);
 }
 
 function openSqlAi() {
-  openAi();
+  openWorkspaceAi();
 }
 
 function requestSqlAi(operation: ChenSqlAiOperation) {
@@ -1777,7 +1731,9 @@ async function refreshResourceRoot() {
 watch(
   tokenId,
   (id) => {
-    if (id) void session.bootstrapSession();
+    if (!id) return;
+    connectSqlAiSession();
+    void session.bootstrapSession();
   },
   { immediate: true }
 );
@@ -1890,7 +1846,7 @@ defineExpose({ focus });
             :tab="activeQueryTab"
             :db-type="auth.profile.value?.dbType || ''"
             :can-copy="auth.profile.value?.canCopy === true"
-            :ai-enabled="auth.profile.value?.chatAiEnabled === true"
+            :ai-enabled="true"
             :metadata-store="sqlMetadataStore"
             :sql-keyword-case="workspacePreferences.sqlKeywordCase"
             @run="runQueryTab"
@@ -1914,7 +1870,7 @@ defineExpose({ focus });
             :context-label="currentContextLabel"
             :prompt-label="consolePromptLabel"
             :can-copy="auth.profile.value?.canCopy === true"
-            :ai-enabled="auth.profile.value?.chatAiEnabled === true"
+            :ai-enabled="true"
             @run="runQueryTab"
             @cancel="cancelQueryLikeTab"
             @clear="clearConsoleTranscript"

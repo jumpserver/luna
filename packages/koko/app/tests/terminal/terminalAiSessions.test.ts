@@ -90,7 +90,7 @@ it("uses a Kubernetes MCP sender for Agent tool calls", async () => {
   const sendMcpFrame = vi.fn();
   const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
   paneIds.push(paneId);
-  registerKokoTerminalAiSession(paneId, socket, "12", { sendMcpFrame });
+  const session = registerKokoTerminalAiSession(paneId, socket, "12", { sendMcpFrame })!;
   const resourceSessionId = await enableSession(paneId);
 
   agentHarness.emit(resourceSessionId, {
@@ -108,6 +108,18 @@ it("uses a Kubernetes MCP sender for Agent tool calls", async () => {
     })
   );
   expect(socket.send).not.toHaveBeenCalled();
+  expect(session.chat.messages.value.flatMap((message) => message.parts)).toContainEqual(
+    expect.objectContaining({
+      type: "data-agent-tool",
+      data: expect.objectContaining({
+        id: "tool-1",
+        toolCallId: "tool-1",
+        domain: "terminal",
+        toolName: "terminal_snapshot",
+        status: "running"
+      })
+    })
+  );
 });
 
 it("derives background execution availability from the command tool manifest", async () => {
