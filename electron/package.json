@@ -10,7 +10,7 @@
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "test": "node --import tsx --test tests/application-config.test.ts tests/ffmpeg-plugin.test.ts tests/oauth-callback.test.ts tests/replay-codec.test.ts tests/ssh-helper.test.ts tests/web-proxy.test.ts",
+    "test": "node --import tsx --test tests/application-config.test.ts tests/debug-log.test.ts tests/ffmpeg-plugin.test.ts tests/oauth-callback.test.ts tests/replay-codec.test.ts tests/ssh-helper.test.ts tests/web-proxy.test.ts",
     "typecheck": "tsc -p tsconfig.json --pretty false",
     "postinstall": "node ../scripts/fix-node-pty-permissions.mjs"
   },

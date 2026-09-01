@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { createWriteStream } from "node:fs";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
-import { finished } from "node:stream/promises";
-import { gzipSync } from "node:zlib";
 import os from "node:os";
 import path from "node:path";
+import { finished } from "node:stream/promises";
+import { gzipSync } from "node:zlib";
 import { app, net } from "electron";
 import { pack as createTarPack } from "tar-stream";
 import { encodeInstruction } from "../src/replay/codec.ts";

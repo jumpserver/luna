@@ -185,7 +185,7 @@ const onUploadChange = (event: Event) => {
 </template>
 
 <style scoped>
-/* 背景与 xterm 主题背景同源；保留轻微上下留白，避免内容贴边 */
+/* FitAddon 会扣除 xterm 根元素的 padding；不要把留白放到内部滚动层，否则会撑出额外空隙 */
 #terminal-container {
   background: var(--terminal-background);
   --xterm-scrollbar-top: 4px;
@@ -194,16 +194,7 @@ const onUploadChange = (event: Event) => {
 
 #terminal-container :deep(.terminal) {
   height: 100%;
-
-  .xterm-scrollable-element {
-    height: 100%;
-    padding: 12px;
-  }
-}
-
-/* 主题切换瞬间由容器背景兜底，避免闪色块；滚动条不覆盖，走 main.css 全局窄样式 */
-#terminal-container :deep(.xterm-viewport) {
-  background-color: transparent !important;
+  padding: 6px 8px;
 }
 
 .terminal-command-suggestions {

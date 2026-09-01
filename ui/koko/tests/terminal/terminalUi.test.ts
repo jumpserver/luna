@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
-import connectView from "../../views/ConnectView.vue?raw";
-import terminalComponent from "../../components/Terminal/index.vue?raw";
-import terminalProvider from "../../components/TerminalProvider/index.vue?raw";
-import drawerComponent from "../../components/Drawer/index.vue?raw";
+import localShellSurface from "../../../workspaces/LocalShellSessionSurface.vue?raw";
 import drawerGeneral from "../../components/Drawer/General/index.vue?raw";
+import drawerComponent from "../../components/Drawer/index.vue?raw";
 import sessionShare from "../../components/Drawer/SessionShare/index.vue?raw";
 import searchInput from "../../components/SearchInput/index.vue?raw";
-import terminalSessionSurface from "../../workspaces/TerminalSessionSurface.vue?raw";
+import terminalComponent from "../../components/Terminal/index.vue?raw";
+import terminalProvider from "../../components/TerminalProvider/index.vue?raw";
+import connectView from "../../views/ConnectView.vue?raw";
 import baseWorkspaceShell from "../../workspaces/BaseWorkspaceShell.vue?raw";
+import terminalSessionSurface from "../../workspaces/TerminalSessionSurface.vue?raw";
 
 describe("terminal UI composition", () => {
   it("wires ConnectView through the terminal provider, xterm surface, and drawer", () => {
@@ -42,6 +43,19 @@ describe("terminal UI composition", () => {
     expect(terminalComponent).toContain("uploadOpen");
     expect(terminalComponent).toContain("confirmUpload");
     expect(terminalComponent).toContain("connectionError");
+  });
+
+  it("keeps terminal spacing on the xterm root so FitAddon can measure it", () => {
+    expect(terminalComponent).toMatch(/:deep\(\.terminal\)\s*\{[^}]*height:\s*100%;[^}]*padding:/);
+    expect(terminalComponent).not.toMatch(/\.xterm-scrollable-element\s*\{[^}]*padding:/);
+    expect(terminalComponent).not.toContain("background-color: transparent !important");
+  });
+
+  it("keeps Local Shell spacing and themed background consistent with SSH", () => {
+    expect(localShellSurface).toMatch(
+      /\.local-shell-terminal :deep\(\.terminal\)\s*\{[^}]*height:\s*100%;[^}]*padding:\s*6px 8px;/
+    );
+    expect(localShellSurface).not.toContain("background-color: transparent !important");
   });
 
   it("opens the drawer from host OPEN and koko mitt events", () => {

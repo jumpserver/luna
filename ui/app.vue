@@ -10,6 +10,7 @@ import { applyUiRadius, isUiRadius } from "~/composables/useSettingStorage";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composables/useThemePresets";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { resolveLanguageFromSystem } from "~/utils";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 useApplicationConfig();
 
@@ -145,6 +146,9 @@ watch(
   (enabled) => {
     if (enabled) installDebugLogHook();
     else uninstallDebugLogHook();
+    if (!isDesktopRuntime()) return;
+    if (!enabled && !isHydrated.value) return;
+    void desktopInvoke("debug_log_set_enabled", { enabled }).catch(() => undefined);
   },
   { immediate: true }
 );

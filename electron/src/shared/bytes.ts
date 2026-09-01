@@ -1,5 +1,5 @@
-import { Readable } from "node:stream";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
+import { Readable } from "node:stream";
 
 export function toUint8Array(data: ArrayBufferView | ArrayBuffer): Uint8Array {
   if (data instanceof ArrayBuffer) return new Uint8Array(data);

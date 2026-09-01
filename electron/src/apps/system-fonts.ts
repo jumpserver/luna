@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { electronLog } from "../shared/debug-log";
 
 const execFileAsync = promisify(execFile);
 let cachedFonts;
@@ -61,7 +62,7 @@ export async function listSystemFonts() {
             : await linuxFonts();
       return normalizeFamilies(values);
     } catch (error) {
-      console.warn("[electron] unable to enumerate system fonts:", error);
+      electronLog.warn("unable to enumerate system fonts", error);
       return [];
     }
   })();

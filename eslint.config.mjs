@@ -89,6 +89,14 @@ export default eslintConfig(
     }
   },
 
+  // Electron main/preload run in Node, so the global Buffer is the right API.
+  {
+    files: ["electron/**/*.{ts,js}"],
+    rules: {
+      "node/prefer-global/buffer": "off"
+    }
+  },
+
   // Oxlint owns every rule it can run natively. ESLint remains responsible for
   // unsupported rules, including rules that require Vue's template AST.
   ...oxlint.buildFromOxlintConfigFile("./.oxlintrc.json")

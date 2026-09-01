@@ -34,9 +34,7 @@ export const useThemeOptions = () => {
       manualSetTheme(mode);
     }
 
-    try {
-      void desktopEmit("theme-changed", { mode });
-    } catch {}
+    void desktopEmit("theme-changed", { mode }).catch(() => undefined);
   };
 
   const darkThemeIds = new Set<ThemePresetId>(DARK_THEME_PRESETS.map((item) => item.id));
@@ -80,10 +78,8 @@ export const useThemeOptions = () => {
       setPrimaryColorLight(preset.accent);
     }
 
-    try {
-      void desktopEmit("theme-changed", { mode });
-      void desktopEmit("primary-color-changed", { hex: preset.accent, mode });
-    } catch {}
+    void desktopEmit("theme-changed", { mode }).catch(() => undefined);
+    void desktopEmit("primary-color-changed", { hex: preset.accent, mode }).catch(() => undefined);
   };
 
   const appearanceModeItems = computed<DropdownMenuItem[]>(() => [

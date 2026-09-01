@@ -1,10 +1,11 @@
-import { app, net, safeStorage } from "electron";
 import { createHash, randomBytes } from "node:crypto";
-import { createServer } from "node:http";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import path from "node:path";
-import { parseOAuthCallback } from "./oauth-callback";
+import { app, net, safeStorage } from "electron";
+import { electronLog } from "../shared/debug-log";
 import { parseUrl } from "../shared/url";
+import { parseOAuthCallback } from "./oauth-callback";
 
 const OAUTH_WELL_KNOWN = "/core/auth/oauth2-provider/.well-known/oauth-authorization-server";
 const OAUTH_AUTHORIZE = "/core/auth/oauth2-provider/authorize/";
@@ -99,11 +100,14 @@ export class DesktopAuthService {
   }
 
   async initialize() {
-    if (!safeStorage.isEncryptionAvailable()) return;
+    const encryption = safeStorage.isEncryptionAvailable();
+    electronLog.info(`auth initialize encryption=${encryption}`);
+    if (!encryption) return;
     try {
       const envelope = JSON.parse(await readFile(this.tokenFile, "utf8"));
       const decrypted = safeStorage.decryptString(Buffer.from(envelope.payload, "base64"));
       this.tokens = JSON.parse(decrypted);
+      electronLog.info(`auth tokens restored sites=${Object.keys(this.tokens).length}`);
     } catch {
       this.tokens = {};
     }
@@ -126,11 +130,13 @@ export class DesktopAuthService {
     if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("site must use HTTP or HTTPS");
     this.currentSessionKey = sessionKey;
     this.sessions.set(sessionKey, { sessionKey, origin: origin.replace(/\/+$/, ""), bearerToken, orgId });
+    electronLog.info(`auth session ${parsed.origin}`);
   }
 
   setCurrentOrg(orgId) {
     const session = this.currentSession();
     session.orgId = orgId || "";
+    electronLog.info(`auth org ${session.orgId || "(none)"}`);
   }
 
   currentSession() {
@@ -168,11 +174,13 @@ export class DesktopAuthService {
       });
       this.callbackServer = server;
       this.redirectUri = DEV_CALLBACK;
+      electronLog.info(`auth callback server ${this.redirectUri}`);
     } catch (error) {
       server.close();
       if (error?.code !== "EADDRINUSE") throw error;
       this.callbackServer = null;
       this.redirectUri = DEEP_LINK_CALLBACK;
+      electronLog.warn(`auth callback server unavailable, using ${this.redirectUri}`);
     }
   }
 
@@ -185,11 +193,13 @@ export class DesktopAuthService {
     if (!parsed) return false;
     if (!this.pendingAuth) {
       this.queuedCallback = parsed;
+      electronLog.info("auth callback queued");
       return true;
     }
     const pending = this.pendingAuth;
     this.pendingAuth = null;
     pending.resolve(parsed);
+    electronLog.info("auth callback resolved");
     return true;
   }
 
@@ -199,6 +209,7 @@ export class DesktopAuthService {
     const pending = this.pendingAuth;
     this.pendingAuth = null;
     pending.resolve(null);
+    electronLog.info("auth cancelled");
   }
 
   async requestApiResponse(site, requestPath, { bearerToken = "", orgId = "", timeout = 30_000 } = {}) {
@@ -219,6 +230,7 @@ export class DesktopAuthService {
   }
 
   async authLogin({ site, sessionId }) {
+    electronLog.info(`auth login start ${site}`);
     let oauthConfig: { client_id?: string };
     try {
       const response = await net.fetch(endpoint(site, OAUTH_WELL_KNOWN), { signal: AbortSignal.timeout(10_000) });
@@ -276,6 +288,7 @@ export class DesktopAuthService {
     });
     this.tokens[sessionId] = { ...token, client_id: clientId };
     await this.persistTokens();
+    electronLog.info(`auth login success ${site}`);
     return this.buildLoginPayload(site, token.access_token);
   }
 
@@ -380,6 +393,7 @@ export class DesktopAuthService {
     });
     const text = await response.text();
     if (!responseSucceeded(response.status)) {
+      electronLog.warn(`api ${request.method} ${url.pathname} status=${response.status}`);
       throw new Error(`api request failed: status=${response.status}, body=${text}`);
     }
     if (!text.trim()) return null;
@@ -459,12 +473,15 @@ export class DesktopAuthService {
     });
     const text = await response.text();
     if (response.status !== 201) {
+      electronLog.warn(`koko connect ticket failed status=${response.status}`);
       throw new Error(`create koko connect ticket failed: status=${response.status}, body=${text}`);
     }
+    electronLog.info(`koko connect ticket ${base.origin}`);
     return parseJsonResponse(text);
   }
 
   async logout({ site, sessionId }) {
+    electronLog.info(`auth logout ${site}`);
     const token = this.tokens[sessionId];
     delete this.tokens[sessionId];
     await this.persistTokens();

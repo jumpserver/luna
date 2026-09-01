@@ -21,14 +21,14 @@ interface LocalShellSession {
   terminal?: Terminal;
 }
 
-type TerminalCursorAnchorListener = (anchor: TerminalCursorAnchor) => void;
+type TerminalCursorAnchorListener = (anchor: TerminalCursorAnchor | null) => void;
 
 const sessions = new Map<string, TerminalSession>();
 const localShellSessions = new Map<string, LocalShellSession>();
 const cursorAnchorListeners = new Map<string, Set<TerminalCursorAnchorListener>>();
 const stopCursorAnchorBindings = new Map<string, () => void>();
 const pendingCursorAnchorFrames = new Map<string, number>();
-const lastCursorAnchors = new Map<string, TerminalCursorAnchor>();
+const lastCursorAnchors = new Map<string, TerminalCursorAnchor | null>();
 const userInputListeners = new Map<string, Set<() => void>>();
 const stopUserInputBindings = new Map<string, () => void>();
 
@@ -36,8 +36,8 @@ function getRegisteredTerminal(tabId: string) {
   return sessions.get(tabId)?.terminal || localShellSessions.get(tabId)?.terminal;
 }
 
-function sameCursorAnchor(left: TerminalCursorAnchor | undefined, right: TerminalCursorAnchor) {
-  if (!left) return false;
+function sameCursorAnchor(left: TerminalCursorAnchor | null | undefined, right: TerminalCursorAnchor | null) {
+  if (!left || !right) return left === right;
   return (
     left.left === right.left && left.top === right.top && left.width === right.width && left.height === right.height
   );
@@ -45,7 +45,6 @@ function sameCursorAnchor(left: TerminalCursorAnchor | undefined, right: Termina
 
 function emitTerminalCursorAnchor(tabId: string) {
   const anchor = getKokoTerminalCursorAnchor(tabId);
-  if (!anchor) return;
   if (sameCursorAnchor(lastCursorAnchors.get(tabId), anchor)) return;
   lastCursorAnchors.set(tabId, anchor);
   cursorAnchorListeners.get(tabId)?.forEach((listener) => listener(anchor));
@@ -80,9 +79,11 @@ function rebindTerminalCursorAnchor(tabId: string) {
   const schedule = () => scheduleTerminalCursorAnchor(tabId);
   const cursorDisposable = terminal.onCursorMove(schedule);
   const resizeDisposable = terminal.onResize(schedule);
+  const scrollDisposable = terminal.onScroll(schedule);
   stopCursorAnchorBindings.set(tabId, () => {
     cursorDisposable.dispose();
     resizeDisposable.dispose();
+    scrollDisposable.dispose();
   });
   emitTerminalCursorAnchor(tabId);
 }
@@ -178,9 +179,13 @@ export function getKokoTerminalCursorAnchor(tabId: string): TerminalCursorAnchor
   const bounds = screen.getBoundingClientRect();
   const cellWidth = bounds.width / terminal.cols;
   const cellHeight = bounds.height / terminal.rows;
+  const buffer = terminal.buffer.active;
+  const cursorRow = buffer.baseY + buffer.cursorY - buffer.viewportY;
+  if (cursorRow < 0 || cursorRow >= terminal.rows) return null;
+
   return {
-    left: bounds.left + terminal.buffer.active.cursorX * cellWidth,
-    top: bounds.top + terminal.buffer.active.cursorY * cellHeight,
+    left: bounds.left + buffer.cursorX * cellWidth,
+    top: bounds.top + cursorRow * cellHeight,
     width: cellWidth,
     height: cellHeight
   };
