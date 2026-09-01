@@ -83,6 +83,11 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
         kbds: ["ctrl", ","],
         onSelect: () => void openSettings()
       },
+      {
+        label: t("Menu.MyTools"),
+        kbds: ["ctrl", "shift", ","],
+        onSelect: () => void navigateTo("/tools")
+      },
       { type: "separator" },
       {
         label: t("ToolTips.Close"),

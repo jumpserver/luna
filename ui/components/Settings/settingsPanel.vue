@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { NavigationMenuItem } from "@nuxt/ui";
 import type { SettingsSection } from "~/composables/useSettingsWindow";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -93,6 +94,17 @@ const selectSection = (section: SettingsSection) => {
   }
 };
 
+const sectionNavItems = computed<NavigationMenuItem[]>(() =>
+  sectionDefs.value.map((item) => ({
+    label: item.label,
+    icon: item.icon,
+    value: item.key,
+    to: props.mode === "route" ? localePath({ name: item.routeName }) : undefined,
+    active: activeSection.value?.key === item.key,
+    onSelect: () => selectSection(item.key)
+  }))
+);
+
 watch(
   loggedIn,
   (value) => {
@@ -112,59 +124,63 @@ watch(
 </script>
 
 <template>
-  <div class="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-[var(--app-surface-frame)]">
-    <div
-      class="flex min-h-0 flex-1 flex-col gap-3 p-[var(--workspace-island-inset)] md:flex-row"
-      :class="hasNativeTitlebarInset ? 'pt-10' : ''"
-    >
-      <aside class="settings-island flex max-h-[44%] w-full shrink-0 flex-col md:max-h-none md:w-[240px]">
-        <div class="px-2 pt-2">
+  <div class="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-[var(--app-surface-canvas)]">
+    <div class="flex min-h-0 flex-1 flex-col md:flex-row">
+      <aside
+        class="flex max-h-[44%] w-full shrink-0 flex-col bg-[var(--app-surface-sidebar)] md:max-h-none md:w-[248px]"
+        :class="hasNativeTitlebarInset ? 'pt-10' : ''"
+      >
+        <div class="px-3 pt-3">
           <UButton
             :label="t('Setting.BackToApp')"
             icon="i-lucide-arrow-left"
             color="neutral"
             variant="ghost"
             size="xs"
-            class="h-8 w-full justify-start text-xs"
-            :ui="{ leadingIcon: 'size-3.5', base: 'rounded-[length:var(--app-radius)]' }"
+            class="h-8 w-full justify-start text-xs text-muted"
+            :ui="{ leadingIcon: 'size-3.5', base: 'rounded-lg' }"
             @click="closeSettings"
           />
         </div>
 
-        <nav class="min-h-0 flex-1 overflow-x-auto px-2 py-3 md:overflow-y-auto" :aria-label="t('Common.Settings')">
-          <p class="mb-2 hidden px-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted md:block">
-            {{ t("Common.Settings") }}
-          </p>
-
-          <div class="flex gap-1 md:block md:space-y-1">
-            <UButton
-              v-for="item in sectionDefs"
-              :key="item.key"
-              :to="mode === 'route' ? localePath({ name: item.routeName }) : undefined"
-              :label="item.label"
-              :icon="item.icon"
-              color="neutral"
-              variant="ghost"
-              class="w-auto shrink-0 justify-start md:w-full"
-              :class="activeSection?.key === item.key ? 'bg-[var(--app-selected-soft)] text-highlighted' : 'text-muted'"
-              :ui="{ base: 'rounded-[length:var(--app-radius)]' }"
-              :aria-current="activeSection?.key === item.key ? 'page' : undefined"
-              @click="selectSection(item.key)"
-            />
-          </div>
+        <nav class="min-h-0 flex-1 overflow-x-auto px-3 py-3 md:overflow-y-auto" :aria-label="t('Common.Settings')">
+          <UNavigationMenu
+            orientation="vertical"
+            color="neutral"
+            variant="pill"
+            :items="sectionNavItems"
+            :ui="{
+              root: 'w-full',
+              list: 'flex flex-row gap-1 md:flex-col md:gap-0.5',
+              item: 'shrink-0 md:w-full',
+              link: 'rounded-lg'
+            }"
+          />
         </nav>
       </aside>
 
-      <main class="settings-island settings-island--content min-w-0 flex-1 overflow-y-auto">
-        <div class="mx-auto w-full max-w-3xl px-5 py-6 sm:px-8 md:px-10 md:py-8">
-          <header class="mb-6">
-            <h1 class="text-xl font-semibold text-highlighted">
-              {{ activeSection?.label }}
-            </h1>
-            <p class="mt-1 text-sm text-muted">
-              {{ activeSection?.description }}
-            </p>
-          </header>
+      <USeparator class="md:hidden" :ui="{ border: 'border-t border-[var(--app-border-soft)]' }" />
+      <USeparator
+        orientation="vertical"
+        class="hidden md:flex"
+        :ui="{ border: 'border-s border-[var(--app-border-soft)]' }"
+      />
+
+      <main
+        class="min-w-0 flex-1 overflow-y-auto bg-[var(--app-surface-canvas)] font-sans"
+        :class="hasNativeTitlebarInset ? 'pt-10' : ''"
+      >
+        <div class="mx-auto w-full max-w-3xl px-5 pt-3 pb-6 sm:px-8 md:px-10 md:pb-8">
+          <UPageHeader
+            :title="activeSection?.label"
+            :description="activeSection?.description"
+            :ui="{
+              root: 'relative mb-8 border-0 py-0',
+              wrapper: 'flex flex-col gap-0',
+              title: 'text-2xl font-semibold tracking-tight text-highlighted',
+              description: 'mt-1.5 text-sm text-muted'
+            }"
+          />
 
           <slot />
         </div>

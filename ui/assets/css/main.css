@@ -73,6 +73,7 @@
   --app-text-inverse: var(--theme-bg);
   --app-accent-foreground: #111111;
   --app-border-subtle: color-mix(in srgb, var(--theme-border) 68%, transparent);
+  --app-border-soft: color-mix(in srgb, var(--theme-fg) 8%, transparent);
   --app-border-strong: color-mix(in srgb, var(--theme-border) 82%, var(--theme-fg) 18%);
   --app-focus-ring: color-mix(in srgb, var(--theme-accent) 32%, transparent);
   --app-surface-frame: color-mix(in srgb, var(--theme-surface) 60%, var(--theme-bg) 40%);
@@ -593,18 +594,4 @@ option {
 
 .workspace-island--right > * {
   border-left-width: 0;
-}
-
-.settings-island {
-  min-height: 0;
-  overflow: hidden;
-  border: 1px solid var(--workspace-island-border);
-  border-radius: var(--app-radius);
-  background-color: var(--app-surface-sidebar);
-}
-
-.settings-island--content {
-  overflow-y: auto;
-  background-color: var(--app-surface-canvas);
-  font-family: var(--font-sans);
 }

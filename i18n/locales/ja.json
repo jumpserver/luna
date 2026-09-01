@@ -50,6 +50,7 @@
     "Active": "有効",
     "Inactive": "無効",
     "Language": "言語",
+    "More": "その他",
     "Login": "ログイン",
     "Connect": "接続",
     "Theme": "テーマ",
@@ -82,7 +83,8 @@
     "Refresh": "更新",
     "Save": "保存",
     "EmptyDescription": "現在の種類で利用できる承認済みアセットはありません",
-    "SelectFromMenu": "左側から項目を選択してください"
+    "SelectFromMenu": "左側から項目を選択してください",
+    "More": "その他"
   },
   "DesktopMenu": {
     "File": "ファイル",
