@@ -1,7 +1,7 @@
 import type { UseChatHelpers } from "@ai-sdk/vue";
 import type { ChatTransport, UIMessage, UIMessageChunk } from "ai";
 import type { EffectScope } from "vue";
-import type { AgentApprovalMode } from "../agent/types";
+import type { AgentApprovalMode, KokoMcpCancelFrame, KokoMcpRequestFrame } from "../agent/types";
 import type { AgentSessionController } from "../agent/useAgentSession";
 import { useChat } from "@ai-sdk/vue";
 import { effectScope, markRaw, reactive, shallowReactive } from "vue";
@@ -13,6 +13,10 @@ import { useAgentSession } from "../agent/useAgentSession";
 export type TerminalAiEventData = Record<string, any>;
 export type TerminalAiChatMessage = UIMessage<TerminalAiEventData, Record<string, TerminalAiEventData>>;
 export type KokoTerminalAiMetadataApprovalDecision = "approve_once" | "approve_session" | "reject";
+
+export interface KokoTerminalAiSessionOptions {
+  sendMcpFrame?: (frame: KokoMcpRequestFrame | KokoMcpCancelFrame) => void;
+}
 
 function terminalExecutionMode(value: unknown) {
   const mode = String(value || "auto").toLowerCase();
@@ -271,8 +275,24 @@ class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage
 }
 
 const sessions = shallowReactive(new Map<string, KokoTerminalAiSession>());
+const activeTargetIds = shallowReactive(new Map<string, string>());
 const transports = new WeakMap<KokoTerminalAiSession, KokoTerminalAiChatTransport>();
 const chatScopes = new WeakMap<KokoTerminalAiSession, EffectScope>();
+const mcpFrameSenders = new WeakMap<KokoTerminalAiSession, NonNullable<KokoTerminalAiSessionOptions["sendMcpFrame"]>>();
+
+function resolvedTerminalAiTargetId(paneId: string) {
+  return activeTargetIds.get(paneId) || paneId;
+}
+
+function resolveTerminalAiSession(paneId: string) {
+  return sessions.get(resolvedTerminalAiTargetId(paneId));
+}
+
+function removeTerminalAiTargetAliases(targetId: string) {
+  for (const [paneId, activeTargetId] of activeTargetIds) {
+    if (activeTargetId === targetId) activeTargetIds.delete(paneId);
+  }
+}
 
 function createSession(paneId: string, socket: WebSocket, terminalId: string): KokoTerminalAiSession {
   let session: KokoTerminalAiSession;
@@ -284,6 +304,11 @@ function createSession(paneId: string, socket: WebSocket, terminalId: string): K
       sendFrame: (frame) => {
         const target = session?.socket;
         if (!target || target.readyState !== WebSocket.OPEN) throw new Error("Terminal MCP relay is disconnected");
+        const sendMcpFrame = mcpFrameSenders.get(session);
+        if (sendMcpFrame) {
+          sendMcpFrame(frame);
+          return;
+        }
         target.send(
           buildJSONEnvelope(ENVELOPE_TERMINAL_COMMAND, {
             terminalId: Number(session.terminalId),
@@ -404,21 +429,29 @@ function isTerminalAiChatMessage(message: unknown): message is TerminalAiChatMes
   });
 }
 
-export function registerKokoTerminalAiSession(paneId: string, socket: WebSocket, terminalId: string) {
+export function registerKokoTerminalAiSession(
+  paneId: string,
+  socket: WebSocket,
+  terminalId: string,
+  options: KokoTerminalAiSessionOptions = {}
+) {
   if (!paneId) return null;
 
   const existing = sessions.get(paneId);
   if (existing?.socket === socket) {
     if (terminalId) existing.terminalId = terminalId;
+    if (options.sendMcpFrame) mcpFrameSenders.set(existing, options.sendMcpFrame);
     return existing;
   }
   if (existing) {
     existing.agent.actions.dispose();
     transports.get(existing)?.disconnect();
     chatScopes.get(existing)?.stop();
+    mcpFrameSenders.delete(existing);
   }
 
   const session = createSession(paneId, socket, terminalId);
+  if (options.sendMcpFrame) mcpFrameSenders.set(session, options.sendMcpFrame);
   sessions.set(paneId, session);
   return session;
 }
@@ -431,7 +464,9 @@ export function unregisterKokoTerminalAiSession(paneId: string, socket?: WebSock
   chatScopes.get(session)?.stop();
   transports.delete(session);
   chatScopes.delete(session);
+  mcpFrameSenders.delete(session);
   sessions.delete(paneId);
+  removeTerminalAiTargetAliases(paneId);
 }
 
 export function connectKokoTerminalAiSession(paneId: string, socket: WebSocket) {
@@ -456,15 +491,21 @@ export function disconnectKokoTerminalAiSession(paneId: string, socket?: WebSock
 }
 
 export function getKokoTerminalAiSession(paneId: string) {
-  return sessions.get(paneId) || null;
+  return resolveTerminalAiSession(paneId) || null;
+}
+
+export function setActiveKokoTerminalAiTarget(paneId: string, targetId: string | null) {
+  if (!paneId) return;
+  if (targetId) activeTargetIds.set(paneId, targetId);
+  else activeTargetIds.delete(paneId);
 }
 
 export function isKokoTerminalAiInputLocked(paneId: string) {
-  return Boolean(sessions.get(paneId)?.inputLocked);
+  return Boolean(resolveTerminalAiSession(paneId)?.inputLocked);
 }
 
 export function isKokoTerminalAiAvailable(paneId: string) {
-  const session = sessions.get(paneId);
+  const session = resolveTerminalAiSession(paneId);
   return Boolean(
     session?.connected &&
     session.enabled &&
@@ -474,27 +515,27 @@ export function isKokoTerminalAiAvailable(paneId: string) {
 }
 
 export function isKokoTerminalAiSessionInfoReady(paneId: string) {
-  return Boolean(sessions.get(paneId)?.sessionInfoReady);
+  return Boolean(resolveTerminalAiSession(paneId)?.sessionInfoReady);
 }
 
 export function markKokoTerminalAiSessionInfoReady(paneId: string) {
-  const session = sessions.get(paneId);
+  const session = resolveTerminalAiSession(paneId);
   if (!session) return;
   session.sessionInfoReady = true;
 }
 
 export function isKokoTerminalAiWaitingForApproval(paneId: string) {
-  const session = sessions.get(paneId);
+  const session = resolveTerminalAiSession(paneId);
   return Boolean(session?.metadataApproval || session?.pendingApprovals.size);
 }
 
 export function isKokoTerminalAiBusy(paneId: string) {
-  const session = sessions.get(paneId);
+  const session = resolveTerminalAiSession(paneId);
   return Boolean(session?.inputLocked || session?.metadataApproval || session?.pendingApprovals.size);
 }
 
 export async function submitKokoTerminalAiPrompt(paneId: string, text: string): Promise<void> {
-  const session = sessions.get(paneId);
+  const session = resolveTerminalAiSession(paneId);
   const socket = session?.socket;
   if (!session?.connected || !session.enabled || !socket || socket.readyState !== WebSocket.OPEN) {
     throw clientError("unavailable", "Terminal AI is not available for the active terminal");
@@ -681,7 +722,7 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
 }
 
 export function sendKokoTerminalAiControl(paneId: string, message: TerminalAiChatMessage) {
-  const session = sessions.get(paneId);
+  const session = resolveTerminalAiSession(paneId);
   const socket = session?.socket;
   if (
     !session?.connected ||

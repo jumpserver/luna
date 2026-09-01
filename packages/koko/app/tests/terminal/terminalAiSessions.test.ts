@@ -13,6 +13,7 @@ import {
   isKokoTerminalAiWaitingForApproval,
   registerKokoTerminalAiSession,
   sendKokoTerminalAiControl,
+  setActiveKokoTerminalAiTarget,
   submitKokoTerminalAiPrompt,
   unregisterKokoTerminalAiSession
 } from "#koko/composables/terminal/useTerminalAiSessions";
@@ -64,6 +65,49 @@ it("connects a session that was registered before the socket finished opening", 
 
   expect(session.connected).toBe(true);
   expect(isKokoTerminalAiAvailable(session.paneId)).toBe(true);
+});
+
+it("resolves a workspace pane to its active Kubernetes terminal session", async () => {
+  const first = createSession("k8s-tab-1");
+  const second = createSession("k8s-tab-2");
+  const active = computed(() => getKokoTerminalAiSession("k8s-workspace"));
+  await enableSession(first.paneId);
+  await enableSession(second.paneId);
+
+  setActiveKokoTerminalAiTarget("k8s-workspace", first.paneId);
+  expect(active.value).toBe(first);
+  expect(isKokoTerminalAiAvailable("k8s-workspace")).toBe(true);
+
+  setActiveKokoTerminalAiTarget("k8s-workspace", second.paneId);
+  expect(active.value).toBe(second);
+
+  setActiveKokoTerminalAiTarget("k8s-workspace", null);
+  expect(active.value).toBeNull();
+});
+
+it("uses a Kubernetes MCP sender for Agent tool calls", async () => {
+  const paneId = "k8s-mcp-sender";
+  const sendMcpFrame = vi.fn();
+  const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
+  paneIds.push(paneId);
+  registerKokoTerminalAiSession(paneId, socket, "12", { sendMcpFrame });
+  const resourceSessionId = await enableSession(paneId);
+
+  agentHarness.emit(resourceSessionId, {
+    type: "tool.call",
+    run_id: "run-1",
+    tool_call_id: "tool-1",
+    payload: { tool_name: "terminal_snapshot", arguments: {} }
+  });
+
+  expect(sendMcpFrame).toHaveBeenCalledWith(
+    expect.objectContaining({
+      type: "mcp.request",
+      resource_session_id: resourceSessionId,
+      data: expect.objectContaining({ id: "tool-1", method: "tools/call" })
+    })
+  );
+  expect(socket.send).not.toHaveBeenCalled();
 });
 
 it("derives background execution availability from the command tool manifest", async () => {
