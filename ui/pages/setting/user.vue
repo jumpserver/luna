@@ -10,18 +10,9 @@ interface DetailRow {
   value: string;
 }
 
-definePageMeta({
-  layout: "setting"
-});
-
 const { t, locale } = useI18n();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentAccountId, currentUser, userMap } = storeToRefs(userInfoStore);
-
-const groupCardUi = {
-  root: "rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]",
-  body: "divide-y divide-[var(--app-border)] p-0 sm:p-0"
-};
 
 const profile = ref<UserProfile | null>(null);
 const loading = ref(false);
@@ -199,12 +190,12 @@ watch(
     </div>
 
     <template v-else>
-      <section v-if="isDesktopRuntime()" class="space-y-3">
-        <div class="flex items-end justify-between gap-4">
-          <div>
-            <h2 class="text-sm font-semibold text-highlighted">{{ t("UserProfile.SiteAccounts") }}</h2>
-            <p class="mt-1 text-xs text-muted">{{ t("UserProfile.SiteAccountsDescription") }}</p>
-          </div>
+      <SettingsSection
+        v-if="isDesktopRuntime()"
+        :title="t('UserProfile.SiteAccounts')"
+        :description="t('UserProfile.SiteAccountsDescription')"
+      >
+        <template #actions>
           <UButton
             :label="t('Login.AddAccount')"
             icon="i-lucide-user-round-plus"
@@ -213,9 +204,9 @@ watch(
             size="sm"
             @click="addAccount"
           />
-        </div>
+        </template>
 
-        <UCard variant="outline" :ui="groupCardUi">
+        <SettingsGroup>
           <div v-for="[accountId, account] in accounts" :key="accountId" class="flex items-center gap-3 px-4 py-3">
             <UAvatar :alt="account.name" color="neutral" size="sm" class="shrink-0" />
             <div class="min-w-0 flex-1">
@@ -235,8 +226,8 @@ watch(
               @click="switchAccount(accountId, account)"
             />
           </div>
-        </UCard>
-      </section>
+        </SettingsGroup>
+      </SettingsSection>
 
       <div v-if="loading" class="space-y-6">
         <div class="flex items-center gap-3">
@@ -268,7 +259,7 @@ watch(
       </UAlert>
 
       <template v-else-if="profile">
-        <UCard variant="outline" :ui="groupCardUi">
+        <SettingsGroup :divided="false">
           <div class="flex items-center gap-4 px-4 py-3">
             <UAvatar
               :src="avatarUrl"
@@ -285,11 +276,10 @@ watch(
               <p class="truncate font-sans text-xs text-muted">{{ profile.username }} · {{ currentUser?.site }}</p>
             </div>
           </div>
-        </UCard>
+        </SettingsGroup>
 
-        <section class="space-y-3">
-          <h2 class="text-sm font-semibold text-highlighted">{{ t("UserProfile.BasicInfo") }}</h2>
-          <UCard variant="outline" :ui="groupCardUi">
+        <SettingsSection :title="t('UserProfile.BasicInfo')">
+          <SettingsGroup>
             <div
               v-for="row in basicRows"
               :key="row.label"
@@ -298,12 +288,11 @@ watch(
               <span class="shrink-0 text-muted">{{ row.label }}</span>
               <span class="min-w-0 break-all text-right text-highlighted">{{ row.value }}</span>
             </div>
-          </UCard>
-        </section>
+          </SettingsGroup>
+        </SettingsSection>
 
-        <section class="space-y-3">
-          <h2 class="text-sm font-semibold text-highlighted">{{ t("UserProfile.AccountAndRoles") }}</h2>
-          <UCard variant="outline" :ui="groupCardUi">
+        <SettingsSection :title="t('UserProfile.AccountAndRoles')">
+          <SettingsGroup>
             <div
               v-for="row in accountRows"
               :key="row.label"
@@ -329,12 +318,11 @@ watch(
                 </UBadge>
               </div>
             </div>
-          </UCard>
-        </section>
+          </SettingsGroup>
+        </SettingsSection>
 
-        <section class="space-y-3">
-          <h2 class="text-sm font-semibold text-highlighted">{{ t("UserProfile.SecurityStatus") }}</h2>
-          <UCard variant="outline" :ui="groupCardUi">
+        <SettingsSection :title="t('UserProfile.SecurityStatus')">
+          <SettingsGroup>
             <div class="flex items-center justify-between gap-8 px-4 py-3">
               <span class="text-sm text-muted">{{ t("UserProfile.AccountStatus") }}</span>
               <UBadge :color="accountStatus.color" variant="subtle">{{ accountStatus.label }}</UBadge>
@@ -346,12 +334,11 @@ watch(
                 <UBadge :color="mfaStatus.color" variant="subtle">{{ mfaStatus.label }}</UBadge>
               </div>
             </div>
-          </UCard>
-        </section>
+          </SettingsGroup>
+        </SettingsSection>
 
-        <section class="space-y-3">
-          <h2 class="text-sm font-semibold text-highlighted">{{ t("UserProfile.LoginInfo") }}</h2>
-          <UCard variant="outline" :ui="groupCardUi">
+        <SettingsSection :title="t('UserProfile.LoginInfo')">
+          <SettingsGroup>
             <div
               v-for="row in loginRows"
               :key="row.label"
@@ -360,8 +347,8 @@ watch(
               <span class="shrink-0 text-muted">{{ row.label }}</span>
               <span class="min-w-0 text-right text-highlighted">{{ row.value }}</span>
             </div>
-          </UCard>
-        </section>
+          </SettingsGroup>
+        </SettingsSection>
       </template>
     </template>
   </div>

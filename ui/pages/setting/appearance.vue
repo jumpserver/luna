@@ -17,11 +17,7 @@ interface FontItem {
   label: string;
 }
 
-definePageMeta({
-  layout: "setting"
-});
-
-const SYSTEM_FONT_FAMILY = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+const SYSTEM_FONT_FAMILY = "system-ui, sans-serif";
 const LEGACY_DEFAULT_FONT_FAMILY =
   '"Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
@@ -118,12 +114,18 @@ const appearanceModes = computed(() => [
   }
 ]);
 
+const themeRevealOrigin = ref<{ x: number; y: number } | null>(null);
+
 const selectedAppearanceMode = computed<"withSystem" | "light" | "dark">({
   get: () => currentAppearanceMode.value,
   set: (mode) => {
-    void applyAppearanceMode(mode);
+    void applyAppearanceMode(mode, themeRevealOrigin.value);
   }
 });
+
+const onThemePointerDown = (event: PointerEvent) => {
+  themeRevealOrigin.value = { x: event.clientX, y: event.clientY };
+};
 
 const lightThemeItems = computed(() =>
   LIGHT_THEME_PRESETS.map((preset) => ({ id: preset.id, label: themePresetLabel(preset) }))
@@ -267,16 +269,7 @@ const loadSystemFonts = async () => {
 
     fontsItems.value = [systemDefault, ...dynamicItems];
   } catch {
-    fontsItems.value = [
-      fontsItems.value[0]!,
-      { label: "System UI", id: "systemUI", value: fallback },
-      {
-        label: "Noto Sans SC",
-        id: "notoSansSC",
-        value: `"Noto Sans SC", "Noto Sans", ${fallback}`
-      },
-      { label: "Inter", id: "inter", value: `"Inter", ${fallback}` }
-    ];
+    fontsItems.value = fontsItems.value[0] ? [fontsItems.value[0]] : fontsItems.value;
   } finally {
     const savedRaw = fontFamily.value;
     const normalizedSaved =
@@ -332,18 +325,9 @@ watch(
 
 <template>
   <div class="space-y-8">
-    <section aria-labelledby="theme-mode-heading">
-      <UCard
-        variant="outline"
-        :ui="{
-          root: 'rounded-xl bg-[var(--app-surface-card)] ring-[var(--app-border)]',
-          body: 'p-0 sm:p-0'
-        }"
-      >
-        <div class="flex min-h-16 items-center justify-between gap-6 px-4 py-3">
-          <h2 id="theme-mode-heading" class="text-sm font-semibold text-highlighted">
-            {{ t("Common.Theme") }}
-          </h2>
+    <SettingsGroup :divided="false">
+      <SettingsRow :title="t('Common.Theme')">
+        <div @pointerdown="onThemePointerDown">
           <UTabs
             v-model="selectedAppearanceMode"
             :items="appearanceModes"
@@ -360,36 +344,13 @@ watch(
             }"
           />
         </div>
-      </UCard>
-    </section>
+      </SettingsRow>
+    </SettingsGroup>
 
-    <section aria-labelledby="palette-heading">
-      <div class="mb-4">
-        <h2 id="palette-heading" class="text-sm font-semibold text-highlighted">
-          {{ t("Setting.ThemePalette") }}
-        </h2>
-        <p class="mt-1 text-xs text-muted">
-          {{ t("Setting.ThemePaletteDescription") }}
-        </p>
-      </div>
-
+    <SettingsSection :title="t('Setting.ThemePalette')" :description="t('Setting.ThemePaletteDescription')">
       <div class="space-y-4">
-        <UCard
-          variant="outline"
-          :ui="{
-            root: 'rounded-xl bg-[var(--app-surface-card)] ring-[var(--app-border)]',
-            body: 'divide-y divide-[var(--app-border)] p-0 sm:p-0'
-          }"
-        >
-          <div class="flex items-center gap-2 px-4 py-3">
-            <UIcon name="i-lucide-sun-medium" class="size-4 text-muted" />
-            <span class="text-sm font-semibold text-highlighted">{{ t("Common.LightThemePalette") }}</span>
-          </div>
-          <div class="setting-row">
-            <div>
-              <p class="setting-row__label">{{ t("Setting.ThemeStyle") }}</p>
-              <p class="setting-row__description">{{ t("Setting.LightThemeDescription") }}</p>
-            </div>
+        <SettingsGroup :title="t('Common.LightThemePalette')" icon="i-lucide-sun-medium">
+          <SettingsRow :title="t('Setting.ThemeStyle')" :description="t('Setting.LightThemeDescription')">
             <USelect
               v-model="selectedLightTheme"
               :items="lightThemeItems"
@@ -398,22 +359,18 @@ watch(
               size="sm"
               class="w-full sm:w-64"
             />
-          </div>
-          <div class="setting-row">
-            <div>
-              <p class="setting-row__label">{{ t("Common.PrimaryColor") }}</p>
-              <p class="setting-row__description">{{ t("Setting.PrimaryColorDescription") }}</p>
-            </div>
+          </SettingsRow>
+          <SettingsRow :title="t('Common.PrimaryColor')" :description="t('Setting.PrimaryColorDescription')">
             <div class="flex flex-wrap items-center gap-2">
               <div class="flex flex-wrap items-center gap-1.5">
                 <button
                   v-for="color in LIGHT_ACCENT_COLORS"
                   :key="color"
                   type="button"
-                  class="size-[18px] rounded-full"
+                  class="size-4.5 rounded-full"
                   :class="
                     sameHex(lightAccentColor, color)
-                      ? 'ring-2 ring-[var(--theme-accent)] ring-offset-2 ring-offset-[var(--app-surface-card)]'
+                      ? 'ring-2 ring-(--theme-accent) ring-offset-2 ring-offset-(--app-surface-card)'
                       : ''
                   "
                   :style="{ backgroundColor: color }"
@@ -431,25 +388,11 @@ watch(
                 @click="resetAccent('light')"
               />
             </div>
-          </div>
-        </UCard>
+          </SettingsRow>
+        </SettingsGroup>
 
-        <UCard
-          variant="outline"
-          :ui="{
-            root: 'rounded-xl bg-[var(--app-surface-card)] ring-[var(--app-border)]',
-            body: 'divide-y divide-[var(--app-border)] p-0 sm:p-0'
-          }"
-        >
-          <div class="flex items-center gap-2 px-4 py-3">
-            <UIcon name="i-lucide-moon-star" class="size-4 text-muted" />
-            <span class="text-sm font-semibold text-highlighted">{{ t("Common.DarkThemePalette") }}</span>
-          </div>
-          <div class="setting-row">
-            <div>
-              <p class="setting-row__label">{{ t("Setting.ThemeStyle") }}</p>
-              <p class="setting-row__description">{{ t("Setting.DarkThemeDescription") }}</p>
-            </div>
+        <SettingsGroup :title="t('Common.DarkThemePalette')" icon="i-lucide-moon-star">
+          <SettingsRow :title="t('Setting.ThemeStyle')" :description="t('Setting.DarkThemeDescription')">
             <USelect
               v-model="selectedDarkTheme"
               :items="darkThemeItems"
@@ -458,22 +401,18 @@ watch(
               size="sm"
               class="w-full sm:w-64"
             />
-          </div>
-          <div class="setting-row">
-            <div>
-              <p class="setting-row__label">{{ t("Common.PrimaryColor") }}</p>
-              <p class="setting-row__description">{{ t("Setting.PrimaryColorDescription") }}</p>
-            </div>
+          </SettingsRow>
+          <SettingsRow :title="t('Common.PrimaryColor')" :description="t('Setting.PrimaryColorDescription')">
             <div class="flex flex-wrap items-center gap-2">
               <div class="flex flex-wrap items-center gap-1.5">
                 <button
                   v-for="color in DARK_ACCENT_COLORS"
                   :key="color"
                   type="button"
-                  class="size-[18px] rounded-full"
+                  class="size-4.5 rounded-full"
                   :class="
                     sameHex(darkAccentColor, color)
-                      ? 'ring-2 ring-[var(--theme-accent)] ring-offset-2 ring-offset-[var(--app-surface-card)]'
+                      ? 'ring-2 ring-(--theme-accent) ring-offset-2 ring-offset-(--app-surface-card)'
                       : ''
                   "
                   :style="{ backgroundColor: color }"
@@ -491,41 +430,21 @@ watch(
                 @click="resetAccent('dark')"
               />
             </div>
-          </div>
-        </UCard>
+          </SettingsRow>
+        </SettingsGroup>
       </div>
-    </section>
+    </SettingsSection>
 
-    <section aria-labelledby="workspace-appearance-heading">
-      <div class="mb-4">
-        <h2 id="workspace-appearance-heading" class="text-sm font-semibold text-highlighted">
-          {{ t("Setting.WorkspaceAppearance") }}
-        </h2>
-        <p class="mt-1 text-xs text-muted">
-          {{ t("Setting.WorkspaceAppearanceDescription") }}
-        </p>
-      </div>
-
-      <UCard
-        variant="outline"
-        :ui="{
-          root: 'rounded-xl bg-[var(--app-surface-card)] ring-[var(--app-border)]',
-          body: 'divide-y divide-[var(--app-border)] p-0 sm:p-0'
-        }"
-      >
-        <div class="setting-row">
-          <div>
-            <p class="setting-row__label">{{ t("Setting.ModernIsland") }}</p>
-            <p class="setting-row__description">{{ t("Setting.ModernIslandDescription") }}</p>
-          </div>
+    <SettingsSection
+      :title="t('Setting.WorkspaceAppearance')"
+      :description="t('Setting.WorkspaceAppearanceDescription')"
+    >
+      <SettingsGroup>
+        <SettingsRow :title="t('Setting.ModernIsland')" :description="t('Setting.ModernIslandDescription')">
           <USwitch v-model="selectedModernIsland" :aria-label="t('Setting.ModernIsland')" />
-        </div>
+        </SettingsRow>
 
-        <div class="setting-row">
-          <div>
-            <p class="setting-row__label">{{ t("Setting.UiRadius") }}</p>
-            <p class="setting-row__description">{{ t("Setting.UiRadiusDescription") }}</p>
-          </div>
+        <SettingsRow :title="t('Setting.UiRadius')" :description="t('Setting.UiRadiusDescription')">
           <div class="flex shrink-0 gap-2">
             <UButton
               v-for="item in radiusItems"
@@ -535,9 +454,7 @@ watch(
               size="sm"
               class="min-w-16 flex-col gap-1 px-3 py-2"
               :class="
-                selectedUiRadius === item.id
-                  ? 'bg-[var(--app-selected-soft)] ring-1 ring-[var(--theme-accent)]'
-                  : 'opacity-70'
+                selectedUiRadius === item.id ? 'bg-(--app-selected-soft) ring-1 ring-(--theme-accent)' : 'opacity-70'
               "
               :ui="{ base: 'rounded-[length:var(--app-radius)]' }"
               @click="selectedUiRadius = item.id"
@@ -549,13 +466,9 @@ watch(
               <span class="text-[11px]">{{ item.label }}</span>
             </UButton>
           </div>
-        </div>
+        </SettingsRow>
 
-        <div class="setting-row">
-          <div>
-            <p class="setting-row__label">{{ t("Setting.InterfaceFont") }}</p>
-            <p class="setting-row__description">{{ t("Setting.InterfaceFontDescription") }}</p>
-          </div>
+        <SettingsRow :title="t('Setting.InterfaceFont')" :description="t('Setting.InterfaceFontDescription')">
           <USelectMenu
             v-model="selectedFont"
             :items="fontsItems"
@@ -567,14 +480,10 @@ watch(
             size="sm"
             class="w-full sm:w-56"
           />
-        </div>
+        </SettingsRow>
 
-        <div class="setting-row">
-          <div>
-            <p class="setting-row__label">{{ t("Setting.InterfaceFontSize") }}</p>
-            <p class="setting-row__description">{{ t("Setting.InterfaceFontSizeDescription") }}</p>
-          </div>
-          <div class="flex shrink-0 items-center gap-2">
+        <SettingsRow :title="t('Setting.InterfaceFontSize')" :description="t('Setting.InterfaceFontSizeDescription')">
+          <div class="flex items-center gap-2">
             <UInputNumber
               v-model="selectedUiFontSize"
               orientation="vertical"
@@ -589,14 +498,10 @@ watch(
             />
             <span class="w-4 text-xs text-muted">px</span>
           </div>
-        </div>
+        </SettingsRow>
 
-        <div class="setting-row">
-          <div>
-            <p class="setting-row__label">{{ t("Setting.CodeFontSize") }}</p>
-            <p class="setting-row__description">{{ t("Setting.CodeFontSizeDescription") }}</p>
-          </div>
-          <div class="flex shrink-0 items-center gap-2">
+        <SettingsRow :title="t('Setting.CodeFontSize')" :description="t('Setting.CodeFontSizeDescription')">
+          <div class="flex items-center gap-2">
             <UInputNumber
               v-model="selectedCodeFontSize"
               orientation="vertical"
@@ -611,13 +516,9 @@ watch(
             />
             <span class="w-4 text-xs text-muted">px</span>
           </div>
-        </div>
+        </SettingsRow>
 
-        <div class="setting-row">
-          <div>
-            <p class="setting-row__label">{{ t("Common.TerminalColorScheme") }}</p>
-            <p class="setting-row__description">{{ t("Setting.TerminalAppearanceDescription") }}</p>
-          </div>
+        <SettingsRow :title="t('Common.TerminalColorScheme')" :description="t('Setting.TerminalAppearanceDescription')">
           <USelect
             v-model="selectedTerminalTheme"
             :items="terminalThemeItems"
@@ -626,13 +527,9 @@ watch(
             size="sm"
             class="w-full sm:w-64"
           />
-        </div>
+        </SettingsRow>
 
-        <div class="setting-row">
-          <div>
-            <p class="setting-row__label">{{ t("Common.CodeMirrorColorScheme") }}</p>
-            <p class="setting-row__description">{{ t("Setting.EditorAppearanceDescription") }}</p>
-          </div>
+        <SettingsRow :title="t('Common.CodeMirrorColorScheme')" :description="t('Setting.EditorAppearanceDescription')">
           <USelect
             v-model="selectedCodeMirrorTheme"
             :items="codeMirrorThemeItems"
@@ -641,39 +538,8 @@ watch(
             size="sm"
             class="w-full sm:w-64"
           />
-        </div>
-      </UCard>
-    </section>
+        </SettingsRow>
+      </SettingsGroup>
+    </SettingsSection>
   </div>
 </template>
-
-<style scoped>
-.setting-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-  padding: 0.75rem 1rem;
-}
-
-.setting-row__label {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--app-text-primary);
-}
-
-.setting-row__description {
-  margin-top: 0.125rem;
-  font-size: 0.75rem;
-  line-height: 1.25rem;
-  color: var(--app-text-muted);
-}
-
-@media (max-width: 639px) {
-  .setting-row {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 0.625rem;
-  }
-}
-</style>

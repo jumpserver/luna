@@ -465,6 +465,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
   <div class="contents">
     <SideBarCollapsiblePanel
       v-if="visiblePanels.favorites"
+      class="order-last"
       :open="hideChrome || isOpen('favorites')"
       :title="t('Menu.Favorite')"
       workspace-tour="favorites"

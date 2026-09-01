@@ -1006,6 +1006,7 @@
     "DownloadLogs": "Tải nhật ký xuống",
     "LogsCleared": "Đã xóa nhật ký",
     "LogsCopied": "Đã sao chép nhật ký",
+    "LogsDownloaded": "Đã tải xuống",
     "LogsEmpty": "Chưa có nhật ký",
     "InterfaceFont": "Phông chữ giao diện",
     "InterfaceFontDescription": "Phông chữ dùng trong trình đơn, điều hướng và vùng nội dung.",

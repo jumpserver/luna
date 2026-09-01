@@ -140,7 +140,7 @@ const activate = () => {
           <UIcon
             v-if="isParent"
             name="i-lucide-chevron-right"
-            class="app-tree-toggle-icon sidebar-icon-sm transition-transform"
+            class="app-tree-toggle-icon sidebar-icon-sm transition-transform duration-200 ease-out motion-reduce:transition-none"
             :class="isOpen ? 'rotate-90' : ''"
           />
         </span>
@@ -176,22 +176,24 @@ const activate = () => {
       </button>
     </div>
 
-    <div v-if="isParent && isOpen" role="group">
-      <AssetTreeNode
-        v-for="child in node.children || []"
-        :key="`${treeKind}-${child.id}`"
-        :node="child"
-        :tree-kind="treeKind"
-        :search-mode="searchMode"
-        :batch-mode="batchMode"
-        :checked-asset-ids="checkedAssetIds"
-        @select="emit('select', $event)"
-        @toggle="(target, kind) => emit('toggle', target, kind)"
-        @contextmenu="(target, event) => emit('contextmenu', target, event)"
-        @check="(target) => emit('check', target)"
-        @clear-recent="emit('clearRecent')"
-      />
-      <div v-if="node.loading" class="app-tree-row" />
+    <div v-if="isParent" class="app-tree-branch" :class="isOpen ? 'is-open' : ''">
+      <div class="app-tree-branch__inner" role="group">
+        <AssetTreeNode
+          v-for="child in node.children || []"
+          :key="`${treeKind}-${child.id}`"
+          :node="child"
+          :tree-kind="treeKind"
+          :search-mode="searchMode"
+          :batch-mode="batchMode"
+          :checked-asset-ids="checkedAssetIds"
+          @select="emit('select', $event)"
+          @toggle="(target, kind) => emit('toggle', target, kind)"
+          @contextmenu="(target, event) => emit('contextmenu', target, event)"
+          @check="(target) => emit('check', target)"
+          @clear-recent="emit('clearRecent')"
+        />
+        <div v-if="node.loading" class="app-tree-row" />
+      </div>
     </div>
   </div>
 </template>

@@ -1,6 +1,5 @@
-import type { DesktopStore, DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { ThemePresetId } from "~/composables/useThemePresets";
-import { desktopStore } from "~/shared/desktop/bridge";
+import type { DesktopStore, DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { CodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
 import type {
   AppConfigType,
@@ -13,6 +12,7 @@ import type {
 
 import { DEFAULT_SIDEBAR_SECTIONS, normalizeSidebarSections } from "~/composables/useSidebarSections";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composables/useThemePresets";
+import { desktopStore } from "~/shared/desktop/bridge";
 
 export type ThemeType = "light" | "dark" | "withSystem" | "";
 export type LayoutsType = "grid" | "table";
@@ -101,7 +101,7 @@ export const DEFAULT_STATE: UserSettingPersistedState = {
   themeMode: "" as ThemeType,
   followSystem: false,
   layouts: "grid",
-  fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  fontFamily: "system-ui, sans-serif",
   uiFontSize: DEFAULT_FONT_SIZE,
   codeFontSize: DEFAULT_FONT_SIZE,
   primaryColor: "#1ab394",

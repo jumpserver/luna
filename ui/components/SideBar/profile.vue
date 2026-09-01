@@ -168,12 +168,18 @@ const appearanceModes = computed(() => [
   { id: "dark" as const, label: t("Common.Dark") }
 ]);
 
+const themeRevealOrigin = ref<{ x: number; y: number } | null>(null);
+
 const selectedAppearanceMode = computed({
   get: () => currentAppearanceMode.value,
   set: (mode: "withSystem" | "light" | "dark") => {
-    void applyAppearanceMode(mode);
+    void applyAppearanceMode(mode, themeRevealOrigin.value);
   }
 });
+
+const onThemePointerDown = (event: PointerEvent) => {
+  themeRevealOrigin.value = { x: event.clientX, y: event.clientY };
+};
 
 const currentAppearanceLabel = computed(
   () => appearanceModes.value.find((item) => item.id === currentAppearanceMode.value)?.label || ""
@@ -967,16 +973,18 @@ onBeforeUnmount(() => {
               <span>{{ t("Common.Theme") }}</span>
               <span class="ms-auto text-[11px] font-normal text-muted">{{ currentAppearanceLabel }}</span>
             </div>
-            <UTabs
-              v-model="selectedAppearanceMode"
-              :items="appearanceModes"
-              value-key="id"
-              :content="false"
-              color="neutral"
-              variant="pill"
-              size="xs"
-              :ui="menuTabsUi"
-            />
+            <div @pointerdown="onThemePointerDown">
+              <UTabs
+                v-model="selectedAppearanceMode"
+                :items="appearanceModes"
+                value-key="id"
+                :content="false"
+                color="neutral"
+                variant="pill"
+                size="xs"
+                :ui="menuTabsUi"
+              />
+            </div>
             <UPopover
               v-model:open="themePaletteOpen"
               :content="{ align: 'start', side: 'left', sideOffset: 8 }"
