@@ -858,7 +858,7 @@ onBeforeUnmount(() => {
               >
                 <UAvatar :alt="account.name" :text="accountInitial(account.name)" color="neutral" size="2xs" />
                 <span class="min-w-0 flex-1 truncate text-left">{{ account.name }}</span>
-                <span class="max-w-[5.5rem] truncate text-xs font-normal text-muted">
+                <span class="max-w-22 truncate text-xs font-normal text-muted">
                   {{ account.siteName || account.site }}
                 </span>
                 <UIcon
@@ -929,7 +929,7 @@ onBeforeUnmount(() => {
             >
               <UButton color="neutral" variant="ghost" size="sm" block class="h-8 justify-start gap-2 px-2">
                 <span
-                  class="size-2.5 shrink-0 rounded-full ring-1 ring-[var(--app-border)]"
+                  class="size-2.5 shrink-0 rounded-full ring-1 ring-(--app-border)"
                   :style="{ backgroundColor: currentThemeAccent }"
                 />
                 <span class="min-w-0 flex-1 truncate text-left text-xs">{{ currentThemePresetLabel }}</span>
@@ -950,7 +950,7 @@ onBeforeUnmount(() => {
                     @click="applyPalettePreset(item.id)"
                   >
                     <span
-                      class="size-2.5 shrink-0 rounded-full ring-1 ring-[var(--app-border)]"
+                      class="size-2.5 shrink-0 rounded-full ring-1 ring-(--app-border)"
                       :style="{ backgroundColor: item.accent }"
                     />
                     <span class="min-w-0 flex-1 truncate text-left text-xs">{{ themePresetLabel(item) }}</span>

@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { electronLog } from "../shared/debug-log";
 
 function decodePayload(raw) {
   const value = String(raw || "");
@@ -233,6 +234,9 @@ export class LocalApplicationLauncher {
       throw new Error("local client payload is missing required connection fields");
     }
     const application = await this.resolveApplication(payload);
+    electronLog.info(
+      `launch ${payload.protocol} ${payload.endpoint.host}:${payload.endpoint.port} via ${application.display_name || application.launch_type}`
+    );
     const values = valuesFor(payload);
     if (application.use_ssh_helper) values.helper = this.helperCommand();
     if (application.protocol_aliases?.[payload.protocol])

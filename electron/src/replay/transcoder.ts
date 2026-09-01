@@ -7,6 +7,7 @@ import path from "node:path";
 import { gunzipSync } from "node:zlib";
 import { nativeImage } from "electron";
 import { extract as createTarExtractor } from "tar-stream";
+import { electronLog } from "../shared/debug-log";
 import { buildTimeline, computeTargetDimensions, GuacamoleParser, ReplayRenderer } from "./codec";
 
 const FPS = 10;
@@ -76,14 +77,14 @@ export function extractReplayArchive(archivePath) {
         ? readEntry(stream, MAX_METADATA_BYTES).then((data) => {
             replayJson = data;
           })
-        : partIndex !== null
-          ? readEntry(stream, MAX_PART_BYTES).then((data) => {
-              parts.push([partIndex, data]);
-            })
-          : new Promise<void>((resolve, reject) => {
+        : partIndex === null
+          ? new Promise<void>((resolve, reject) => {
               stream.once("end", resolve);
               stream.once("error", reject);
               stream.resume();
+            })
+          : readEntry(stream, MAX_PART_BYTES).then((data) => {
+              parts.push([partIndex, data]);
             });
       reading.then(next, fail);
     });
@@ -259,6 +260,7 @@ export class ReplayTranscoder {
     if (!outputDir) throw new Error("output directory is required");
     const ffmpeg = await this.ffmpegPlugin.executable();
     await mkdir(outputDir, { recursive: true });
+    electronLog.info(`transcode ${tarPaths.length} file(s) -> ${outputDir}`);
     const results = [];
     for (const [index, archivePath] of tarPaths.entries()) {
       const fallbackId = extractSessionId(archivePath);
@@ -298,6 +300,7 @@ export class ReplayTranscoder {
       } catch (error) {
         const id = metadata?.id || fallbackId;
         const message = `transcoding failed: ${error instanceof Error ? error.message : error}`;
+        electronLog.error(`transcode failed ${id}`, error);
         this.emit(id, index, tarPaths.length, 100, message, targetLabel, { success: false });
         results.push({
           id,

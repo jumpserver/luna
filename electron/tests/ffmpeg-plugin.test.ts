@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import test from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { FfmpegPluginManager, ffmpegPluginInternals } from "../src/replay/ffmpeg-plugin.ts";
+import test from "node:test";
+import { ffmpegPluginInternals, FfmpegPluginManager } from "../src/replay/ffmpeg-plugin.ts";
 
 test("reports the optional FFmpeg plugin as absent before download", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "jms-ffmpeg-plugin-"));

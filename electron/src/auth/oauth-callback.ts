@@ -5,7 +5,7 @@ export function parseOAuthCallback(rawUrl) {
     value = value.slice(1, -1);
   }
   try {
-    if (!/^[a-z][a-z0-9+.-]*:/i.test(value) && /%[0-9A-Fa-f]{2}/.test(value)) {
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(value) && /%[0-9A-F]{2}/i.test(value)) {
       value = decodeURIComponent(value);
     }
   } catch {

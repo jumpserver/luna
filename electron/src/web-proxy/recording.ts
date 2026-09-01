@@ -1,3 +1,4 @@
+import { electronLog } from "../shared/debug-log";
 import { requestWebProxyControl } from "./control";
 
 const RECORDING_PATH = "/_jumpserver/web-recordings";
@@ -172,7 +173,7 @@ export class WebProxyRecording {
       try {
         await this.captureOnce(true);
       } catch (error) {
-        console.warn(`[electron] final Web recording frame failed for ${this.label}:`, error);
+        electronLog.warn(`final Web recording frame failed for ${this.label}`, error);
       }
     }
 

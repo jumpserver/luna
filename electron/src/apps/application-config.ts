@@ -1,6 +1,7 @@
-import { chmod, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Unzip, UnzipInflate } from "fflate";
+import { electronLog } from "../shared/debug-log";
 
 const categories = ["terminal", "remotedesktop", "filetransfer", "databases"];
 const maxPluginArchiveBytes = 64 * 1024 * 1024;
@@ -62,7 +63,7 @@ function configuredPathExists(connect, executablePath) {
 
 function safeArchiveName(raw) {
   const normalized = String(raw).replaceAll("\\", "/");
-  if (!normalized || normalized.startsWith("/") || /^[A-Za-z]:\//.test(normalized)) {
+  if (!normalized || normalized.startsWith("/") || /^[A-Z]:\//i.test(normalized)) {
     throw new Error(`unsafe plugin archive entry '${raw}'`);
   }
   const parts = normalized.split("/").filter((part) => part && part !== ".");
@@ -155,6 +156,7 @@ export class ApplicationConfigService {
   async initialize() {
     await mkdir(this.userPluginsDir, { recursive: true });
     await this.loadState();
+    electronLog.info(`plugins initialized ${this.userPluginsDir}`);
   }
 
   async builtInDir() {
@@ -211,7 +213,7 @@ export class ApplicationConfigService {
         if (builtinIds.has(id)) continue;
         entries.push({ id, category: manifest.category || "", pluginDir, builtin: false });
       } catch (error) {
-        console.warn(`[electron] skipping invalid plugin ${pluginDir}:`, error);
+        electronLog.warn(`skipping invalid plugin ${pluginDir}`, error);
       }
     }
     return entries.sort((left, right) => left.id.localeCompare(right.id));
@@ -453,6 +455,7 @@ export class ApplicationConfigService {
       try {
         await rename(pendingDir, targetDir);
         if (replacing) await rm(backupDir, { recursive: true, force: true });
+        electronLog.info(`plugin installed ${pluginId}`);
       } catch (error) {
         if (replacing && !(await exists(targetDir, "directory")) && (await exists(backupDir, "directory"))) {
           await rename(backupDir, targetDir);
@@ -468,6 +471,7 @@ export class ApplicationConfigService {
   async uninstallPlugin({ pluginId }) {
     const entry = await this.findEntry({ pluginId });
     if (entry.builtin) throw new Error(`builtin plugin '${entry.id}' cannot be uninstalled`);
+    electronLog.info(`plugin uninstall ${entry.id}`);
     await rm(entry.pluginDir, { recursive: true });
     const state = await this.loadState();
     delete state.plugins?.[entry.id];

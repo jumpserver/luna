@@ -1,8 +1,14 @@
+import type { MenuItemConstructorOptions } from "electron";
+import { createReadStream, constants as fsConstants } from "node:fs";
+import { access, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   app,
   BrowserWindow,
-  ClipboardItem,
   clipboard,
+  ClipboardItem,
   dialog,
   session as electronSession,
   ipcMain,
@@ -16,20 +22,23 @@ import {
   Tray,
   WebContentsView
 } from "electron";
-import type { MenuItemConstructorOptions } from "electron";
-import { access, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
-import { constants as fsConstants, createReadStream } from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { pathToFileURL } from "node:url";
 import * as pty from "node-pty";
+import runtimePackage from "../../package.json";
 import { ApplicationConfigService } from "../apps/application-config";
+import { LocalApplicationLauncher } from "../apps/local-app-launcher";
+import { listSystemFonts } from "../apps/system-fonts";
 import { DesktopAuthService } from "../auth/service";
 import { FfmpegPluginManager } from "../replay/ffmpeg-plugin";
-import { LocalApplicationLauncher } from "../apps/local-app-launcher";
 import { OfflineRecordingStore } from "../replay/offline-recordings";
 import { ReplayTranscoder } from "../replay/transcoder";
-import { listSystemFonts } from "../apps/system-fonts";
+import { readableToWebBody } from "../shared/bytes";
+import {
+  activateDebugLogService,
+  DebugLogService,
+  electronLog,
+  parsePersistedDebugLogEnabled
+} from "../shared/debug-log";
+import { parseUrl, toFetchUrl } from "../shared/url";
 import {
   buildAutofillProbeScript,
   buildAutofillScript,
@@ -38,9 +47,6 @@ import {
   releaseCredentials
 } from "../web-proxy/credentials";
 import { WebProxyRecording } from "../web-proxy/recording";
-import { readableToWebBody } from "../shared/bytes";
-import { parseUrl, toFetchUrl } from "../shared/url";
-import runtimePackage from "../../package.json";
 
 const electronDir = __dirname;
 const appRoot = app.getAppPath();
@@ -73,6 +79,7 @@ let localApplicationLauncher;
 let offlineRecordings;
 let replayTranscoder;
 let ffmpegPlugin;
+let debugLogService;
 let appIcon;
 
 protocol.registerSchemesAsPrivileged([
@@ -107,6 +114,7 @@ async function resolveChenEndpoint() {
   if (configured) {
     const origin = normalizedHttpOrigin(configured, "Chen endpoint");
     allowedChenOrigins.add(origin);
+    electronLog.info(`chen endpoint ${origin}`);
     return origin;
   }
 
@@ -122,6 +130,7 @@ async function resolveChenEndpoint() {
       });
       if (response.ok && (await response.text()).trim() === "ok") {
         allowedChenOrigins.add(localChen.origin);
+        electronLog.info(`chen endpoint ${localChen.origin}`);
         return localChen.origin;
       }
     } catch {
@@ -130,6 +139,7 @@ async function resolveChenEndpoint() {
   }
 
   allowedChenOrigins.add(siteOrigin);
+  electronLog.info(`chen endpoint ${siteOrigin}`);
   return siteOrigin;
 }
 
@@ -138,6 +148,7 @@ async function resolveKokoEndpoint() {
   if (configured) {
     const origin = normalizedHttpOrigin(configured, "Koko endpoint");
     allowedKokoOrigins.add(origin);
+    electronLog.info(`koko endpoint ${origin}`);
     return origin;
   }
 
@@ -153,6 +164,7 @@ async function resolveKokoEndpoint() {
       });
       if (response.ok) {
         allowedKokoOrigins.add(localKoko.origin);
+        electronLog.info(`koko endpoint ${localKoko.origin}`);
         return localKoko.origin;
       }
     } catch {
@@ -161,6 +173,7 @@ async function resolveKokoEndpoint() {
   }
 
   allowedKokoOrigins.add(siteOrigin);
+  electronLog.info(`koko endpoint ${siteOrigin}`);
   return siteOrigin;
 }
 
@@ -335,11 +348,13 @@ function startLocalShell(event, win, args) {
     webContentsId: event.sender.id
   };
   localShellSessions.set(sessionId, session);
+  electronLog.info(`local shell start ${sessionId} ${command.shell}`);
   processHandle.onData((data) => {
     emitDesktopEvent("local-shell-output", { sessionId, data: [...Buffer.from(data, "utf8")] }, session.label);
   });
   processHandle.onExit(() => {
     if (localShellSessions.get(sessionId)?.process === processHandle) localShellSessions.delete(sessionId);
+    electronLog.info(`local shell exit ${sessionId}`);
     emitDesktopEvent("local-shell-exit", { sessionId }, session.label);
   });
   return { shell: command.shell };
@@ -349,6 +364,7 @@ function closeLocalShell(event, sessionId) {
   const session = localShellSession(event, sessionId);
   localShellSessions.delete(sessionId);
   session.process.kill();
+  electronLog.info(`local shell close ${sessionId}`);
 }
 
 function parseWebProxyUrl(rawUrl, schemes, description) {
@@ -505,6 +521,7 @@ async function createWebProxyView(event, win, args) {
     recording: null
   };
   webProxyViews.set(label, managed);
+  electronLog.info(`web proxy open ${label} ${target.origin}`);
   win.contentView.addChildView(view);
   view.setBounds({
     x: Math.max(0, Math.round(Number(args.x) || 0)),
@@ -545,6 +562,7 @@ async function createWebProxyView(event, win, args) {
   view.webContents.on("page-title-updated", () => emitWebProxyState(managed, { loading: false }));
   view.webContents.on("did-fail-load", (_loadEvent, code, description, validatedUrl, isMainFrame) => {
     if (!isMainFrame || code === -3) return;
+    electronLog.warn(`web proxy load failed ${label}: ${description}`);
     emitWebProxyState(managed, { url: validatedUrl, loading: false, error: description });
   });
   void createCredentialSession(proxy, target, String(args.tokenId || ""), String(args.tokenValue || ""))
@@ -559,6 +577,7 @@ async function createWebProxyView(event, win, args) {
       }
     })
     .catch((error) => {
+      electronLog.warn(`web proxy autofill failed ${label}`, error);
       if (!view.webContents.isDestroyed()) {
         emitWebProxyAutofillState(managed, "error", String(error instanceof Error ? error.message : error));
       }
@@ -573,13 +592,14 @@ async function createWebProxyView(event, win, args) {
 
 async function closeWebProxyView(event, label) {
   const managed = webProxyView(event, label);
+  electronLog.info(`web proxy close ${label}`);
   webProxyViews.delete(label);
   managed.autofillProbeId += 1;
   clearAutofillTimeout(managed);
   try {
     await managed.recording?.finish();
   } catch (error) {
-    console.warn(`[electron] failed to finish Web recording for ${label}:`, error);
+    electronLog.warn(`failed to finish Web recording for ${label}`, error);
   }
   managed.recording?.dispose();
   managed.credentialSession = null;
@@ -697,8 +717,10 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
   if (existing && !existing.isDestroyed()) {
     existing.show();
     existing.focus();
+    electronLog.info(`window focus ${label}`);
     return existing;
   }
+  electronLog.info(`window open ${label}`);
 
   const isMac = process.platform === "darwin";
   const win = new BrowserWindow({
@@ -767,6 +789,7 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
     emitDesktopEvent("desktop://resize", { width, height }, label);
   });
   win.on("closed", () => {
+    electronLog.info(`window closed ${label}`);
     windows.delete(label);
     for (const [sessionId, session] of localShellSessions) {
       if (session.webContentsId !== windowWebContentsId) continue;
@@ -783,7 +806,7 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
       webProxyViews.delete(viewLabel);
       clearAutofillTimeout(managed);
       void managed.recording?.finish().catch((error) => {
-        console.warn(`[electron] failed to finish Web recording for ${viewLabel}:`, error);
+        electronLog.warn(`failed to finish Web recording for ${viewLabel}`, error);
       });
       if (!managed.webContents.isDestroyed()) managed.webContents.close();
     }
@@ -1075,8 +1098,20 @@ async function handleStore(command, args) {
   throw new Error(`Unsupported Electron store command: ${command}`);
 }
 
+async function withIpcErrorLog(command, work) {
+  try {
+    return await work();
+  } catch (error) {
+    electronLog.error(`${command} failed:`, error);
+    throw error;
+  }
+}
+
 async function handleInvoke(event, request) {
-  if (!isAllowedSender(event.senderFrame)) throw new Error("Rejected desktop IPC sender");
+  if (!isAllowedSender(event.senderFrame)) {
+    electronLog.warn("rejected desktop IPC sender");
+    throw new Error("Rejected desktop IPC sender");
+  }
   const { command, args = {}, options = {} } = request || {};
   const win = windowForEvent(event);
 
@@ -1229,9 +1264,10 @@ async function handleInvoke(event, request) {
   if (command === "set_api_org") return authService.setCurrentOrg(args.orgId);
   if (command === "get_version_message") return authService.getVersionMessage();
   if (command === "init_http_callback_server") return authService.startCallbackServer();
-  if (command === "auth_login") return authService.authLogin(args);
+  if (command === "auth_login") return withIpcErrorLog("auth_login", () => authService.authLogin(args));
   if (command === "auth_cancel") return authService.cancelAuth();
-  if (command === "bootstrap_auth_session") return authService.bootstrapAuthSession(args);
+  if (command === "bootstrap_auth_session")
+    return withIpcErrorLog("bootstrap_auth_session", () => authService.bootstrapAuthSession(args));
   if (command === "api_request") return authService.apiRequest(args.request);
   if (command === "api_stream_start") return startApiStream(event, win, args);
   if (command === "api_stream_cancel") return cancelApiStream(event, args);
@@ -1258,7 +1294,8 @@ async function handleInvoke(event, request) {
     return null;
   }
   if (command === "close_local_shell") return closeLocalShell(event, args.sessionId);
-  if (command === "create_web_proxy_view") return createWebProxyView(event, win, args);
+  if (command === "create_web_proxy_view")
+    return withIpcErrorLog("create_web_proxy_view", () => createWebProxyView(event, win, args));
   if (command === "set_web_proxy_view_active") {
     const managed = webProxyView(event, args.label);
     const active = Boolean(args.active);
@@ -1315,8 +1352,10 @@ async function handleInvoke(event, request) {
       if (!managed.active) {
         managed.recording.setPaused("inactive", true, "Website 标签在后台，暂停录像");
       }
+      electronLog.info(`web proxy recording start ${managed.label}`);
       return managed.recording.state(managed.recording.pauseReasons.size ? "paused" : "recording", "Web 录像已开始");
     } catch (error) {
+      electronLog.error(`web proxy recording start failed ${managed.label}`, error);
       emitWebProxyRecordingState(managed, {
         label: managed.label,
         status: "error",
@@ -1331,8 +1370,10 @@ async function handleInvoke(event, request) {
     const managed = webProxyView(event, args.label);
     if (!managed.recording) return null;
     try {
+      electronLog.info(`web proxy recording stop ${managed.label}`);
       return await managed.recording.finish();
     } catch (error) {
+      electronLog.error(`web proxy recording stop failed ${managed.label}`, error);
       emitWebProxyRecordingState(managed, {
         label: managed.label,
         status: "error",
@@ -1347,7 +1388,7 @@ async function handleInvoke(event, request) {
     }
   }
   if (command === "close_web_proxy_view") return closeWebProxyView(event, args.label);
-  if (command === "logout") return authService.logout(args);
+  if (command === "logout") return withIpcErrorLog("logout", () => authService.logout(args));
   if (command === "open_settings_window") {
     emitDesktopEvent("settings-navigate", args.path || "/setting/general", labelForWindow(win));
     return null;
@@ -1357,15 +1398,35 @@ async function handleInvoke(event, request) {
   if (command === "update_config_selection") {
     return applicationConfig.updateSelection({ ...args, ...(args.path ? { path: normalizePath(args.path) } : {}) });
   }
-  if (command === "install_plugin") return applicationConfig.installPlugin({ path: normalizePath(args.path) });
-  if (command === "uninstall_plugin") return applicationConfig.uninstallPlugin(args);
+  if (command === "install_plugin")
+    return withIpcErrorLog("install_plugin", () => applicationConfig.installPlugin({ path: normalizePath(args.path) }));
+  if (command === "uninstall_plugin")
+    return withIpcErrorLog("uninstall_plugin", () => applicationConfig.uninstallPlugin(args));
+  if (command === "debug_log_set_enabled") {
+    const enabled = Boolean(args.enabled);
+    if (enabled) {
+      debugLogService?.setEnabled(true);
+      electronLog.info(`debug log enabled: ${debugLogService?.filePath || ""}`);
+    } else {
+      electronLog.info("debug log disabled");
+      debugLogService?.setEnabled(false);
+    }
+    return null;
+  }
+  if (command === "debug_log_read") return debugLogService?.read() || "";
+  if (command === "debug_log_clear") {
+    await debugLogService?.clear();
+    return null;
+  }
   if (command === "get_ffmpeg_plugin_status") return ffmpegPlugin.status();
-  if (command === "install_ffmpeg_plugin") return ffmpegPlugin.install(labelForWindow(win));
-  if (command === "uninstall_ffmpeg_plugin") return ffmpegPlugin.uninstall();
+  if (command === "install_ffmpeg_plugin")
+    return withIpcErrorLog("install_ffmpeg_plugin", () => ffmpegPlugin.install(labelForWindow(win)));
+  if (command === "uninstall_ffmpeg_plugin")
+    return withIpcErrorLog("uninstall_ffmpeg_plugin", () => ffmpegPlugin.uninstall());
   if (command === "create_custom_terminal") {
     return applicationConfig.createCustomTerminal({ ...args, path: normalizePath(args.path) });
   }
-  if (command === "pull_up") return localApplicationLauncher.launch(args.url);
+  if (command === "pull_up") return withIpcErrorLog("pull_up", () => localApplicationLauncher.launch(args.url));
   if (command === "list_system_fonts") return listSystemFonts();
   if (command === "transcode_replays") {
     const request = {
@@ -1375,9 +1436,10 @@ async function handleInvoke(event, request) {
       outputResolution: args.outputResolution,
       transcodePower: args.transcodePower
     };
-    return replayTranscoder.transcode(request, labelForWindow(win));
+    return withIpcErrorLog("transcode_replays", () => replayTranscoder.transcode(request, labelForWindow(win)));
   }
 
+  electronLog.warn(`unmigrated desktop command ${command}`);
   throw new Error(`Electron bridge has not migrated command: ${command}`);
 }
 
@@ -1481,16 +1543,25 @@ if (!gotSingleInstanceLock) app.quit();
 
 const pendingProtocolUrls: string[] = [];
 
+function describeProtocolUrl(rawUrl) {
+  const value = String(rawUrl || "");
+  if (value.includes("auth/callback")) return "auth-callback";
+  if (value.startsWith("jms2://")) return "jms2-launch";
+  if (value.startsWith("jms://")) return "jms-launch";
+  return "unknown";
+}
+
 function handleIncomingProtocolUrl(rawUrl) {
   const value = String(rawUrl || "");
   if (!value.startsWith("jms://") && !value.startsWith("jms2://")) return;
+  electronLog.info(`protocol ${describeProtocolUrl(value)}`);
   if (!authService || !localApplicationLauncher) {
     pendingProtocolUrls.push(value);
     return;
   }
   if (authService.handleCallback(value) || authService.isOAuthCallbackUrl(value)) return;
   void localApplicationLauncher.launch(value).catch((error) => {
-    console.error("protocol launch failed:", error);
+    electronLog.error("protocol launch failed", error);
   });
 }
 
@@ -1522,6 +1593,17 @@ for (const scheme of ["jms", "jms2"]) {
 }
 
 app.whenReady().then(async () => {
+  debugLogService = new DebugLogService({ logsDir: app.getPath("logs") });
+  await debugLogService.initialize();
+  const persistedSettings = await readFile(path.join(app.getPath("userData"), "user-setting.json"), "utf8").catch(
+    () => ""
+  );
+  debugLogService.setEnabled(parsePersistedDebugLogEnabled(persistedSettings));
+  activateDebugLogService(debugLogService);
+  if (debugLogService.isEnabled) {
+    electronLog.info(`debug log enabled: ${debugLogService.filePath}`);
+  }
+  electronLog.info(`${productName} ${app.getVersion()} ready platform=${process.platform} packaged=${app.isPackaged}`);
   await registerProtocols();
   applicationConfig = new ApplicationConfigService(app, projectRoot);
   await applicationConfig.initialize();

@@ -1,4 +1,6 @@
+import { desktopInvoke } from "~/shared/desktop/bridge";
 import { writeClipboardText } from "~/utils/clipboard";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 const MAX_LINES = 2000;
 const methods = ["log", "info", "warn", "error", "debug"] as const;
@@ -10,6 +12,7 @@ const lines: string[] = [];
 
 const formatArg = (value: unknown) => {
   if (typeof value === "string") return value;
+  if (value instanceof Error) return value.stack || value.message;
   try {
     return JSON.stringify(value);
   } catch {
@@ -20,9 +23,17 @@ const formatArg = (value: unknown) => {
 const pushLine = (level: string, args: unknown[]) => {
   const time = new Date().toISOString();
   const message = args.map(formatArg).join(" ");
-  lines.push(`${time} [${level}] ${message}`);
+  lines.push(`${time} [renderer] [${level}] ${message}`);
   if (lines.length > MAX_LINES) lines.splice(0, lines.length - MAX_LINES);
 };
+
+const mergeLogText = (...chunks: string[]) =>
+  chunks
+    .flatMap((chunk) => chunk.split(/\r?\n/))
+    .map((line) => line.trimEnd())
+    .filter(Boolean)
+    .sort((left, right) => left.localeCompare(right))
+    .join("\n");
 
 export const installDebugLogHook = () => {
   if (!import.meta.client || hooked) return;
@@ -51,15 +62,27 @@ export const useDebugLog = () => {
   const toast = useToast();
   const { t } = useI18n();
 
-  const logText = () => lines.join("\n");
+  const readDesktopLogs = async () => {
+    if (!isDesktopRuntime()) return "";
+    try {
+      return (await desktopInvoke<string>("debug_log_read")) || "";
+    } catch {
+      return "";
+    }
+  };
 
-  const clearLogs = () => {
+  const combinedLogText = async () => mergeLogText(lines.join("\n"), await readDesktopLogs());
+
+  const clearLogs = async () => {
     lines.length = 0;
+    if (isDesktopRuntime()) {
+      await desktopInvoke("debug_log_clear").catch(() => undefined);
+    }
     toast.add({ title: t("Setting.LogsCleared"), color: "success" });
   };
 
   const copyLogs = async () => {
-    const text = logText();
+    const text = await combinedLogText();
     if (!text) {
       toast.add({ title: t("Setting.LogsEmpty"), color: "neutral" });
       return;
@@ -68,9 +91,9 @@ export const useDebugLog = () => {
     toast.add({ title: t("Setting.LogsCopied"), color: "success" });
   };
 
-  const downloadLogs = () => {
+  const downloadLogs = async () => {
     if (!import.meta.client) return;
-    const text = logText();
+    const text = await combinedLogText();
     if (!text) {
       toast.add({ title: t("Setting.LogsEmpty"), color: "neutral" });
       return;
