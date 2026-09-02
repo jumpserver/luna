@@ -27,7 +27,11 @@ function requestSite(session, request) {
   const agent = request.service === "agent";
   const configured = String(
     agent
-      ? process.env.JMS_AGENT_DESKTOP_URL || process.env.JMS_AGENT_DEV_URL || ""
+      ? process.env.JMS_AGENT_DESKTOP_URL ||
+          process.env.JMS_AGENT_DEV_URL ||
+          process.env.JMS_KOKO_DESKTOP_URL ||
+          process.env.JMS_KOKO_DEV_URL ||
+          ""
       : process.env.JMS_AI_DESKTOP_URL || process.env.JMS_AI_DEV_URL || ""
   ).trim();
   if (configured) {
@@ -48,7 +52,7 @@ function requestSite(session, request) {
     }
     const site = new URL(session.origin);
     if (["localhost", "127.0.0.1", "::1"].includes(site.hostname)) {
-      site.port = agent ? "5003" : "8088";
+      site.port = agent ? "5050" : "8088";
       return site.origin;
     }
   }

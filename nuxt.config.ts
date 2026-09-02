@@ -1,7 +1,7 @@
 const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080";
 const chatAiTarget = process.env.JMS_AI_DEV_URL || "http://localhost:8088";
 const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
-const agentTarget = process.env.JMS_AGENT_DEV_URL || "http://localhost:5003";
+const agentTarget = kokoTarget;
 // JMS_LION_DEV_URL remains a compatibility override; Lion is served by Koko by default.
 const lionTarget = process.env.JMS_LION_DEV_URL || kokoTarget;
 const chenTarget = process.env.JMS_CHEN_DEV_URL || "http://localhost:8082";
