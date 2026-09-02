@@ -53,7 +53,6 @@ const fileAiRequested = computed(
 
 const {
   session,
-  messages,
   viewItems,
   presentation,
   unavailableState,
@@ -100,8 +99,9 @@ const displayedUnavailableState = computed(() => {
         :description="presentation.headerDescription"
         :status-label="presenceStatusLabel"
         :status-tone="presenceStatusTone"
-        :busy="presentation.busy"
+        :busy="presentation.busy || presentation.running"
         :context-items="presentation.contextItems"
+        :tool-names="presentation.toolNames || []"
         :run-progress="runProgress"
         :risk-label="riskLabel"
         :risk-color="riskColor"
@@ -111,7 +111,7 @@ const displayedUnavailableState = computed(() => {
         :items="viewItems"
         :session="session"
         :assistant-name="presentation.assistantName"
-        :empty="messages.length === 0"
+        :empty="viewItems.length === 0"
         :empty-state="presentation.empty"
         :activity-label="activityLabel"
         :revision="timelineRevision"

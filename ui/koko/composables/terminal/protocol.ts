@@ -22,6 +22,8 @@ export interface TerminalIncomingMessage {
   raw?: string | number[];
   terminalId?: number;
   requestId?: string;
+  version?: number;
+  resource_session_id?: string;
 }
 
 const messageTypes = new Set<string>(Object.values(MESSAGE_TYPE));
@@ -43,6 +45,8 @@ export function parseTerminalIncomingMessage(raw: unknown): TerminalIncomingMess
     err: typeof message.err === "string" ? message.err : undefined,
     raw: typeof message.raw === "string" || Array.isArray(message.raw) ? message.raw : undefined,
     terminalId: typeof message.terminalId === "number" ? message.terminalId : undefined,
-    requestId: typeof message.requestId === "string" ? message.requestId : undefined
+    requestId: typeof message.requestId === "string" ? message.requestId : undefined,
+    version: typeof message.version === "number" ? message.version : undefined,
+    resource_session_id: typeof message.resource_session_id === "string" ? message.resource_session_id : undefined
   };
 }

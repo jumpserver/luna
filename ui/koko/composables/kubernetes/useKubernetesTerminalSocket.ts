@@ -1,5 +1,6 @@
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 import type { Ref } from "vue";
+import type { KokoMcpCancelFrame, KokoMcpFrame, KokoMcpRequestFrame } from "../agent/types";
 
 import type {
   KubernetesTerminalFailure,
@@ -10,6 +11,7 @@ import type {
 
 import { toWsOrigin } from "@jumpserver/connectors-core";
 import { getCurrentInstance, onUnmounted, ref, shallowRef } from "vue";
+import { kokoMcpWireMessage, parseKokoMcpFrame } from "../agent/types";
 
 import {
   buildJSONEnvelope,
@@ -52,11 +54,20 @@ export interface KubernetesTerminalSocketClient {
   closeTerminal: (terminalId: string, k8sId: string) => void;
   initializeTerminal: (terminalId: string, k8sId: string, target: KubernetesTerminalTarget, data: string) => void;
   onFailure: (listener: (failure: KubernetesTerminalFailure) => void) => () => void;
+  onMcpMessage: (listener: (message: KubernetesTerminalMcpMessage) => void) => () => void;
   onMessage: (listener: (message: KubernetesTerminalIncomingMessage) => void) => () => void;
   requestTree: () => void;
   resizeTerminal: (terminalId: string, k8sId: string, cols: number, rows: number) => void;
+  sendMcpFrame: (k8sId: string, frame: KokoMcpRequestFrame | KokoMcpCancelFrame) => void;
   sendTerminalData: (terminalId: string, k8sId: string, target: KubernetesTerminalTarget, data: string) => void;
   socket: Ref<WebSocket | null>;
+  terminalIdFor: (k8sId: string) => number | null;
+}
+
+export interface KubernetesTerminalMcpMessage {
+  frame: KokoMcpFrame;
+  k8sId: string;
+  terminalId: number;
 }
 
 function websocketUrl(context: ConnectorSessionContext) {
@@ -69,6 +80,7 @@ export function useKubernetesTerminalSocket(): KubernetesTerminalSocketClient {
   const socket = shallowRef<WebSocket | null>(null);
   const connected = ref(false);
   const messageListeners = new Set<(message: KubernetesTerminalIncomingMessage) => void>();
+  const mcpMessageListeners = new Set<(message: KubernetesTerminalMcpMessage) => void>();
   const failureListeners = new Set<(failure: KubernetesTerminalFailure) => void>();
   const terminalIdByK8sId = new Map<string, number>();
   const k8sIdByTerminalId = new Map<number, string>();
@@ -225,6 +237,29 @@ export function useKubernetesTerminalSocket(): KubernetesTerminalSocketClient {
         }
       }
 
+      if (raw && typeof raw === "object") {
+        const routed = raw as Record<string, unknown>;
+        const terminalId = Number(routed.terminalId) || 0;
+        const k8sId = String(routed.k8s_id || "");
+        if (terminalId && k8sId) {
+          terminalIdByK8sId.set(k8sId, terminalId);
+          k8sIdByTerminalId.set(terminalId, k8sId);
+        }
+
+        const frame = parseKokoMcpFrame(raw);
+        if (frame) {
+          const routedK8sId = k8sId || k8sIdByTerminalId.get(terminalId) || "";
+          if (!terminalId || !routedK8sId) {
+            emitFailure(KubernetesTerminalSocketFailureCode.MalformedMessage, raw);
+            return;
+          }
+          for (const listener of mcpMessageListeners) {
+            listener({ frame, k8sId: routedK8sId, terminalId });
+          }
+          return;
+        }
+      }
+
       const message = parseKubernetesTerminalMessage(raw);
       if (!message) {
         emitFailure(KubernetesTerminalSocketFailureCode.MalformedMessage, raw);
@@ -335,9 +370,34 @@ export function useKubernetesTerminalSocket(): KubernetesTerminalSocketClient {
     k8sIdByTerminalId.delete(serverTerminalId);
   }
 
+  function sendMcpFrame(k8sId: string, frame: KokoMcpRequestFrame | KokoMcpCancelFrame) {
+    const terminalId = terminalIdByK8sId.get(k8sId);
+    if (!terminalId) throw new Error("Kubernetes terminal resource is unavailable");
+    const message = kokoMcpWireMessage(frame);
+    if (transport === "json") {
+      const target = socket.value;
+      if (!target || target.readyState !== SOCKET_OPEN) throw new Error("Kubernetes terminal socket is not connected");
+      target.send(JSON.stringify({ ...message, terminalId }));
+      return;
+    }
+    sendEnvelope(
+      buildJSONEnvelope(ENVELOPE_TERMINAL_COMMAND, {
+        terminalId,
+        command: frame.type,
+        params: message,
+        timestamp: Date.now()
+      })
+    );
+  }
+
   function onMessage(listener: (message: KubernetesTerminalIncomingMessage) => void) {
     messageListeners.add(listener);
     return () => messageListeners.delete(listener);
+  }
+
+  function onMcpMessage(listener: (message: KubernetesTerminalMcpMessage) => void) {
+    mcpMessageListeners.add(listener);
+    return () => mcpMessageListeners.delete(listener);
   }
 
   function onFailure(listener: (failure: KubernetesTerminalFailure) => void) {
@@ -354,10 +414,13 @@ export function useKubernetesTerminalSocket(): KubernetesTerminalSocketClient {
     connect,
     initializeTerminal,
     onFailure,
+    onMcpMessage,
     onMessage,
     requestTree,
     resizeTerminal,
+    sendMcpFrame,
     sendTerminalData,
-    socket
+    socket,
+    terminalIdFor: (k8sId) => terminalIdByK8sId.get(k8sId) || null
   };
 }

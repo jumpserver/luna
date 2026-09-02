@@ -39,6 +39,17 @@ describe("AI overlay panel", () => {
     expect(panel.open.value).toBe(false);
   });
 
+  it("opens workspace AI after a teleported workspace action", () => {
+    const panel = useAiPanel();
+    panel.setWorkspaceFocused(false);
+
+    panel.openWorkspaceAi();
+
+    expect(panel.open.value).toBe(true);
+    expect(panel.source.value).toBe("workspace");
+    expect(panel.workspaceFocused.value).toBe(true);
+  });
+
   it("uses platform AI without a connected asset", () => {
     expect(
       resolveAiPanelSource({
@@ -59,6 +70,21 @@ describe("AI overlay panel", () => {
         workspaceMode: "assets",
         surfaceStatus: "connected",
         surfaceAssetId: "asset-1",
+        standaloneWorkspace: false,
+        workspaceFocused: true,
+        rightPanelOpen: false,
+        rightPanelTab: "session"
+      })
+    ).toBe("workspace");
+  });
+
+  it("uses workspace AI for the script editor without a connected asset", () => {
+    expect(
+      resolveAiPanelSource({
+        workspaceMode: "assets",
+        surfaceStatus: "ready",
+        surfaceAssetId: "script-1",
+        surfaceProtocol: "script-editor",
         standaloneWorkspace: false,
         workspaceFocused: true,
         rightPanelOpen: false,

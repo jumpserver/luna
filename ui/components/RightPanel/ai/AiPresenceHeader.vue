@@ -8,6 +8,7 @@ defineProps<{
   statusTone: "ready" | "active" | "warning" | "error" | "success";
   busy: boolean;
   contextItems: AiContextItem[];
+  toolNames: readonly string[];
   runProgress?: string;
   riskLabel?: string;
   riskColor?: "success" | "info" | "warning" | "error";
@@ -55,6 +56,19 @@ const { t } = useI18n();
         <span v-for="item in contextItems" :key="item.key" class="ai-context-chip" :title="item.title">
           <UIcon :name="item.icon" class="size-3 shrink-0" />
           <span class="max-w-28 truncate">{{ item.label }}</span>
+        </span>
+      </div>
+    </div>
+
+    <div v-if="toolNames.length" class="ai-context-strip">
+      <span class="flex shrink-0 items-center gap-1 text-[10px] font-medium text-muted">
+        <UIcon name="i-lucide-wrench" class="size-3" />
+        {{ t("RightPanel.AITools") }}
+      </span>
+      <div class="flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <span v-for="toolName in toolNames" :key="toolName" class="ai-context-chip" :title="toolName">
+          <UIcon name="i-lucide-wrench" class="size-3 shrink-0" />
+          <span class="max-w-36 truncate">{{ toolName }}</span>
         </span>
       </div>
     </div>

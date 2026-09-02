@@ -2,7 +2,7 @@ import type { ChenPacket, ChenSocketAction } from "~/chen/types";
 
 import { computed, reactive, ref, shallowRef } from "vue";
 
-export type ChenSocketPath = "session" | "console" | "ai";
+export type ChenSocketPath = "session" | "console";
 export type ChenSocketState = "idle" | "connecting" | "open" | "ready" | "closing" | "closed" | "error" | "timeout";
 export type ChenSocketErrorCode =
   | "connect_timeout"

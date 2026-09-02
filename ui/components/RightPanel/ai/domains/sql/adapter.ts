@@ -24,10 +24,15 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
     const runtimeKeys: Record<string, string> = {
       analyzing: "RightPanel.SQLAIStageAnalyzing",
       model: "RightPanel.SQLAIStageModel",
+      planning: "RightPanel.SQLAIStageModel",
       reviewing: "RightPanel.SQLAIStageReviewing",
+      proposing: "RightPanel.SQLAIStageReviewing",
       approval: "RightPanel.SQLAIMetadataApprovalStage",
       tool:
         current.runtimeExecution === "validate_sql" ? "RightPanel.SQLAIStageValidation" : "RightPanel.SQLAIStageTool",
+      tool_running:
+        current.runtimeExecution === "validate_sql" ? "RightPanel.SQLAIStageValidation" : "RightPanel.SQLAIStageTool",
+      metadata_lookup: "RightPanel.SQLAIStageTool",
       cancelled: "RightPanel.SQLAIStageCancelled"
     };
     const runtimeKey = runtimeKeys[current.runtimeStatusCode];
@@ -76,7 +81,8 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
       headerDescription: context.t("RightPanel.SQLAIHeaderDescription"),
       available: Boolean(current.enabled),
       busy,
-      waitingForApproval: Boolean(current.metadataApproval),
+      running: busy,
+      waitingForApproval: Boolean(current.metadataApproval || current.pendingProposalCalls.size),
       unavailable: {
         icon: "i-lucide-sparkles",
         title: context.t("RightPanel.SQLAIUnavailableTitle"),
@@ -88,17 +94,19 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
         description: context.t("RightPanel.SQLAIEmptyDescription")
       },
       inputPlaceholder: context.t("RightPanel.SQLAIInputPlaceholder"),
-      actionLabel: busy ? context.t("RightPanel.SQLAICancel") : context.t("RightPanel.AISend"),
+      actionLabel: context.t("RightPanel.AISend"),
+      interruptLabel: context.t("RightPanel.SQLAICancel"),
       runtimeStatusLabel: runtimeKey ? context.t(runtimeKey) : current.runtimeStatus,
       errorLabel: current.errorText ? context.t("RightPanel.SQLAIFailed") : "",
       errorDetail: current.errorText,
       backgroundReasonLabel: "",
       elapsedDurationMs,
       contextItems,
+      toolNames: [...current.agent.state.toolNames],
       showPolicy: false,
-      showRuntimeStatus: true,
+      showRuntimeStatus: false,
       showElapsedInError: true,
-      showActivity: false,
+      showActivity: true,
       refreshElapsedWhileBusy: true,
       backgroundExecAvailable: false,
       approvalThreshold: current.approvalThreshold,
@@ -122,10 +130,7 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
     const current = sqlSession(session);
     if (!current) return;
     current.draft = "";
-    current.errorCode = "";
-    current.errorText = "";
-    current.chat.clearError();
-    void current.chat.sendMessage({ text, metadata: { operation: "generate" } }).catch(() => {
+    void current.request("generate", text).catch(() => {
       if (!current.errorCode && !current.errorText) current.errorCode = "send_failed";
     });
   },
@@ -153,13 +158,14 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
       current.expansionOverrides.set(action.key, action.expanded);
       return;
     }
-    const existingDecision = current.proposalDecisions.get(action.item.key);
+    const proposalId = action.item.toolCallId || action.item.key;
+    const existingDecision = current.proposalDecisions.get(proposalId);
     if (existingDecision) return;
     if (action.type === "reject-proposal") {
-      current.proposalDecisions.set(action.item.key, "rejected");
+      if (current.rejectProposal(proposalId)) current.proposalDecisions.set(proposalId, "rejected");
       return;
     }
-    const result = current.applyProposal(action.item.data);
-    current.proposalDecisions.set(action.item.key, result.applied ? "applied" : "stale");
+    const result = current.applyProposal(proposalId);
+    current.proposalDecisions.set(proposalId, result.applied ? "applied" : "stale");
   }
 };

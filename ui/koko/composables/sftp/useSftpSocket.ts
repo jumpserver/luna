@@ -1,12 +1,13 @@
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 import type { Ref } from "vue";
 
-import type { SftpIncomingMessage, SftpSocketFailure, SftpWireMessage } from "./protocol";
+import type { SftpIncomingMessage, SftpMcpMessage, SftpSocketFailure, SftpWireMessage } from "./protocol";
 import { resolveWsUrl } from "@jumpserver/connectors-core";
 
 import { getCurrentInstance, onUnmounted, ref, shallowRef } from "vue";
 import { createSftpMessageId } from "./core/codec";
 import {
+  isSftpMcpMessageType,
   parseSftpIncomingMessage,
   SftpControlData,
   SftpMessageType,
@@ -26,7 +27,7 @@ export interface SftpSocketClient {
   close: (notify?: boolean) => void;
   connect: (context: ConnectorSessionContext) => void;
   onFailure: (listener: (failure: SftpSocketFailure) => void) => () => void;
-  onChat: (listener: (message: unknown) => void) => () => void;
+  onMcp: (listener: (message: SftpMcpMessage) => void) => () => void;
   onMessage: (listener: (message: SftpIncomingMessage) => void) => () => void;
   send: (message: SftpWireMessage) => void;
 }
@@ -36,7 +37,7 @@ export function useSftpSocket(): SftpSocketClient {
   const connected = ref(false);
   const failure = ref<SftpSocketFailure | null>(null);
   const messageListeners = new Set<(message: SftpIncomingMessage) => void>();
-  const chatListeners = new Set<(message: unknown) => void>();
+  const mcpListeners = new Set<(message: SftpMcpMessage) => void>();
   const failureListeners = new Set<(failure: SftpSocketFailure) => void>();
   let generation = 0;
   let intentionalClose = false;
@@ -118,16 +119,9 @@ export function useSftpSocket(): SftpSocketClient {
         }
         return;
       }
-      if (message.type === SftpMessageType.Chat) {
-        try {
-          const chatMessage = JSON.parse(message.data);
-          for (const listener of chatListeners) listener(chatMessage);
-        } catch {
-          emitFailure({
-            code: SftpSocketFailureCode.MalformedMessage,
-            message: SftpSocketFailureCode.MalformedMessage
-          });
-        }
+      if (isSftpMcpMessageType(message.type)) {
+        const mcpMessage = message as SftpMcpMessage;
+        for (const listener of mcpListeners) listener(mcpMessage);
         return;
       }
       for (const listener of messageListeners) listener(message);
@@ -154,9 +148,9 @@ export function useSftpSocket(): SftpSocketClient {
     return () => messageListeners.delete(listener);
   }
 
-  function onChat(listener: (message: unknown) => void) {
-    chatListeners.add(listener);
-    return () => chatListeners.delete(listener);
+  function onMcp(listener: (message: SftpMcpMessage) => void) {
+    mcpListeners.add(listener);
+    return () => mcpListeners.delete(listener);
   }
 
   function onFailure(listener: (nextFailure: SftpSocketFailure) => void) {
@@ -166,5 +160,5 @@ export function useSftpSocket(): SftpSocketClient {
 
   if (getCurrentInstance()) onUnmounted(() => close());
 
-  return { socket, connected, failure, close, connect, onFailure, onChat, onMessage, send };
+  return { socket, connected, failure, close, connect, onFailure, onMcp, onMessage, send };
 }

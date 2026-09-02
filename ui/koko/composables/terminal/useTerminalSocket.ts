@@ -9,6 +9,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { Terminal } from "@xterm/xterm";
+import { KOKO_MCP_FRAME_TYPES } from "#koko/composables/agent/types";
 import {
   handleKokoLatencyPong,
   handleKokoLinuxMetricsStatus,
@@ -22,7 +23,7 @@ import {
 import {
   connectKokoTerminalAiSession,
   disconnectKokoTerminalAiSession,
-  handleKokoTerminalAiMessage,
+  handleKokoTerminalAiWireMessage,
   isKokoTerminalAiBusy,
   isKokoTerminalAiInputLocked,
   registerKokoTerminalAiSession,
@@ -316,22 +317,14 @@ export const useKokoTerminalSocket = () => {
       if (messageTerminalId === Number(terminalId.value)) {
         binaryHandler.handleBinaryMessage(data);
       }
-    },
-    onChat: (message) => {
-      const tabId = unref(sessionCtxRef)?.tabId;
-      if (tabId) handleKokoTerminalAiMessage(tabId, message);
     }
   });
-  terminalMessageHandlers.CHAT_MESSAGE = (message) => {
-    const tabId = unref(sessionCtxRef)?.tabId;
-    if (!tabId || !message.data) return;
-    try {
-      handleKokoTerminalAiMessage(tabId, JSON.parse(message.data));
-    } catch {
-      // Ignore malformed chat payloads from legacy JSON frames.
-    }
-  };
-
+  for (const type of KOKO_MCP_FRAME_TYPES) {
+    terminalMessageHandlers[type] = (message) => {
+      const tabId = unref(sessionCtxRef)?.tabId;
+      if (tabId) handleKokoTerminalAiWireMessage(tabId, message);
+    };
+  }
   const listenSocketEvent = () => {
     const socket = socketRef.value;
     if (!socket) return;

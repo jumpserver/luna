@@ -1,10 +1,14 @@
 import type { UseChatHelpers } from "@ai-sdk/vue";
 import type { ChatTransport, UIMessage, UIMessageChunk } from "ai";
 import type { EffectScope } from "vue";
+import type { AgentApprovalMode } from "../agent/types";
+import type { AgentSessionController } from "../agent/useAgentSession";
 import { useChat } from "@ai-sdk/vue";
 import { effectScope, markRaw, reactive, shallowReactive } from "vue";
+import { AgentToolRelay } from "../agent/agentToolRelay";
+import { kokoMcpWireMessage, manifestFromFrame, parseKokoMcpFrame } from "../agent/types";
+import { useAgentSession } from "../agent/useAgentSession";
 import { createSftpMessageId, joinSftpPath } from "./core/codec";
-import { SftpMessageType } from "./protocol";
 
 export type FileAiEventData = Record<string, unknown>;
 export type FileAiChatMessage = UIMessage<FileAiEventData, Record<string, FileAiEventData>>;
@@ -43,11 +47,13 @@ export interface KokoFileAiSession {
   kind: "file";
   targetId: string;
   socket: WebSocket | null;
+  agent: AgentSessionController;
   chat: UseChatHelpers<FileAiChatMessage>;
   context: KokoFileAiContext;
   connected: boolean;
   enabled: boolean;
   capabilityKnown: boolean;
+  approvalMode: AgentApprovalMode;
   taskActive: boolean;
   draft: string;
   runtimeStatus: string;
@@ -77,6 +83,7 @@ function clientError(code: string, message: string) {
 interface ActiveChatResponse {
   controller: ReadableStreamDefaultController<UIMessageChunk>;
   started: boolean;
+  openTextIds: Set<string>;
   abortSignal?: AbortSignal;
   abortHandler?: () => void;
 }
@@ -87,46 +94,64 @@ interface PendingChatDispatch {
 }
 
 class KokoFileAiChatTransport implements ChatTransport<FileAiChatMessage> {
-  private activeResponse: ActiveChatResponse | null = null;
-  private pendingDispatch: PendingChatDispatch | null = null;
+  private readonly activeResponses: ActiveChatResponse[] = [];
+  private readonly pendingDispatches: PendingChatDispatch[] = [];
 
   constructor(private readonly session: () => KokoFileAiSession) {}
 
   sendMessages: ChatTransport<FileAiChatMessage>["sendMessages"] = async ({ messages, abortSignal }) => {
+    const dispatch = this.pendingDispatches.shift();
     const session = this.session();
     const socket = session.socket;
-    if (this.activeResponse) {
-      const failure = clientError("response_active", "A File AI response is already active");
-      this.rejectPendingDispatch(failure);
-      throw failure;
-    }
-    if (!session.connected || !session.enabled || !socket || socket.readyState !== WebSocket.OPEN) {
+    if (
+      !session.connected ||
+      !session.enabled ||
+      !session.agent.state.available ||
+      !socket ||
+      socket.readyState !== WebSocket.OPEN
+    ) {
       const failure = clientError("unavailable", "File AI is not available for the active file session");
-      this.rejectPendingDispatch(failure);
+      dispatch?.reject(failure);
       throw failure;
     }
 
     const message = messages.at(-1);
     if (!message || message.role !== "user") {
       const failure = clientError("invalid_message", "File AI requires a user message");
-      this.rejectPendingDispatch(failure);
+      dispatch?.reject(failure);
       throw failure;
     }
 
+    let response: ActiveChatResponse | null = null;
     try {
+      let controller!: ReadableStreamDefaultController<UIMessageChunk>;
       const stream = new ReadableStream<UIMessageChunk>({
-        start: (controller) => {
-          this.activeResponse = { controller, started: false, abortSignal };
+        start: (streamController) => {
+          controller = streamController;
         },
-        cancel: () => this.clearActiveResponse()
+        cancel: () => {
+          if (response) this.clearActiveResponse(response);
+        }
       });
-
-      const abortHandler = () => this.finish();
+      response = { controller, started: false, openTextIds: new Set(), abortSignal };
+      this.activeResponses.push(response);
+      const abortHandler = () => this.finish(response!);
       if (abortSignal) {
-        this.activeResponse!.abortHandler = abortHandler;
+        response.abortHandler = abortHandler;
         abortSignal.addEventListener("abort", abortHandler, { once: true });
       }
 
+      if (abortSignal?.aborted) throw new DOMException("File AI request was aborted", "AbortError");
+      if (
+        !session.connected ||
+        !session.enabled ||
+        !session.agent.state.available ||
+        !socket ||
+        socket.readyState !== WebSocket.OPEN
+      ) {
+        throw clientError("unavailable", "File AI is not available for the active file session");
+      }
+      session.taskActive = true;
       const chatMessage: FileAiChatMessage = {
         ...message,
         metadata: {
@@ -136,22 +161,16 @@ class KokoFileAiChatTransport implements ChatTransport<FileAiChatMessage> {
           context: session.context
         }
       };
-      socket.send(
-        JSON.stringify({
-          id: createSftpMessageId(),
-          type: SftpMessageType.Chat,
-          data: JSON.stringify(chatMessage)
-        })
-      );
-      this.resolvePendingDispatch();
+      await session.agent.actions.sendMessage(chatMessage);
+      dispatch?.resolve();
       return stream;
     } catch (error) {
       const failure =
         error instanceof FileAiClientError
           ? error
           : clientError("send_failed", error instanceof Error ? error.message : "Failed to send File AI message");
-      this.rejectPendingDispatch(failure);
-      this.fail(failure);
+      dispatch?.reject(failure);
+      if (response) this.fail(response, failure);
       throw failure;
     }
   };
@@ -159,7 +178,7 @@ class KokoFileAiChatTransport implements ChatTransport<FileAiChatMessage> {
   reconnectToStream: ChatTransport<FileAiChatMessage>["reconnectToStream"] = async () => null;
 
   receive(message: FileAiChatMessage) {
-    const response = this.activeResponse;
+    const response = this.activeResponses[0];
     if (!response || message.role !== "assistant") return false;
 
     if (!response.started) {
@@ -179,9 +198,16 @@ class KokoFileAiChatTransport implements ChatTransport<FileAiChatMessage> {
     for (const [index, part] of message.parts.entries()) {
       const id = `${message.id}-${index}`;
       if (part.type === "text") {
-        response.controller.enqueue({ type: "text-start", id });
+        const isDelta = message.metadata?.agentEventType === "message.delta";
+        if (!response.openTextIds.has(id)) {
+          response.controller.enqueue({ type: "text-start", id });
+          response.openTextIds.add(id);
+        }
         response.controller.enqueue({ type: "text-delta", id, delta: part.text });
-        response.controller.enqueue({ type: "text-end", id });
+        if (!isDelta) {
+          response.controller.enqueue({ type: "text-end", id });
+          response.openTextIds.delete(id);
+        }
         continue;
       }
       if (!part.type.startsWith("data-") || !("data" in part)) continue;
@@ -191,7 +217,7 @@ class KokoFileAiChatTransport implements ChatTransport<FileAiChatMessage> {
           errorText: String((part.data as FileAiEventData).message || "File AI failed")
         });
         response.controller.close();
-        this.clearActiveResponse();
+        this.clearActiveResponse(response);
         return true;
       }
       response.controller.enqueue({ type: part.type, id, data: part.data });
@@ -200,61 +226,49 @@ class KokoFileAiChatTransport implements ChatTransport<FileAiChatMessage> {
     return true;
   }
 
-  finish() {
-    const response = this.activeResponse;
+  finish(response = this.activeResponses[0]) {
     if (!response) return;
+    for (const id of response.openTextIds) response.controller.enqueue({ type: "text-end", id });
+    response.openTextIds.clear();
     if (response.started) response.controller.enqueue({ type: "finish", finishReason: "stop" });
     response.controller.close();
-    this.clearActiveResponse();
+    this.clearActiveResponse(response);
   }
 
   disconnect() {
-    this.rejectPendingDispatch(clientError("unavailable", "File AI session disconnected"));
-    this.finish();
+    const error = clientError("unavailable", "File AI session disconnected");
+    for (const dispatch of this.pendingDispatches.splice(0)) dispatch.reject(error);
+    for (const response of [...this.activeResponses]) this.finish(response);
   }
 
   waitForNextDispatch() {
-    if (this.pendingDispatch) throw clientError("response_active", "A File AI dispatch is already pending");
-
     let resolve!: () => void;
     let reject!: (error: Error) => void;
     const promise = new Promise<void>((resolvePromise, rejectPromise) => {
       resolve = resolvePromise;
       reject = rejectPromise;
     });
-    this.pendingDispatch = { resolve, reject };
+    this.pendingDispatches.push({ resolve, reject });
     return promise;
   }
 
   cancelPendingDispatch(error: Error) {
-    this.rejectPendingDispatch(error);
+    this.pendingDispatches.shift()?.reject(error);
   }
 
-  private fail(error: Error) {
-    const response = this.activeResponse;
-    if (!response) return;
+  private fail(response: ActiveChatResponse, error: Error) {
     response.controller.error(error);
-    this.clearActiveResponse();
+    this.clearActiveResponse(response);
   }
 
-  private clearActiveResponse() {
-    const response = this.activeResponse;
-    if (response?.abortSignal && response.abortHandler) {
+  private clearActiveResponse(response: ActiveChatResponse) {
+    if (response.abortSignal && response.abortHandler) {
       response.abortSignal.removeEventListener("abort", response.abortHandler);
     }
-    this.activeResponse = null;
-  }
-
-  private resolvePendingDispatch() {
-    const dispatch = this.pendingDispatch;
-    this.pendingDispatch = null;
-    dispatch?.resolve();
-  }
-
-  private rejectPendingDispatch(error: Error) {
-    const dispatch = this.pendingDispatch;
-    this.pendingDispatch = null;
-    dispatch?.reject(error);
+    response.openTextIds.clear();
+    const index = this.activeResponses.indexOf(response);
+    if (index < 0) return;
+    this.activeResponses.splice(index, 1);
   }
 }
 
@@ -313,6 +327,38 @@ export function createKokoCompactFileAiTargetId(workspacePaneId: string, assetId
 function createSession(targetId: string, socket: WebSocket, context: KokoFileAiContext): KokoFileAiSession {
   let session: KokoFileAiSession;
   const transport = markRaw(new KokoFileAiChatTransport(() => session));
+  const relay = markRaw(
+    new AgentToolRelay({
+      resourceSessionId: () => session?.agent.state.resourceSessionId || "",
+      revision: () => session?.agent.state.revision || 1,
+      sendFrame: (frame) => {
+        const target = session?.socket;
+        if (!target || target.readyState !== WebSocket.OPEN) throw new Error("File MCP relay is disconnected");
+        target.send(JSON.stringify({ id: createSftpMessageId(), ...kokoMcpWireMessage(frame) }));
+      }
+    })
+  );
+  const agent = markRaw(
+    useAgentSession({
+      domain: "file",
+      relay,
+      messageMetadata: () => ({ domain: "file", targetId, context: session?.context || context }),
+      onMessage: (message) => handleKokoFileAiMessage(targetId, message),
+      onAvailability: (available) => {
+        if (session) session.enabled = available;
+      },
+      onApprovalMode: (mode) => {
+        if (session) session.approvalMode = mode;
+      },
+      onUnavailable: (error) => {
+        if (!session) return;
+        session.errorCode = "agent_unavailable";
+        session.errorText = error.message;
+        resetTaskState(session);
+        transport.disconnect();
+      }
+    })
+  );
   const chatScope = effectScope(true);
   const chat = markRaw(
     chatScope.run(() =>
@@ -336,12 +382,13 @@ function createSession(targetId: string, socket: WebSocket, context: KokoFileAiC
     kind: "file",
     targetId,
     socket: markRaw(socket),
+    agent,
     chat,
     context,
     connected: context.connected && socket.readyState === WebSocket.OPEN,
-    // WebSFTP cannot announce a target-scoped capability before the first prompt.
-    enabled: true,
+    enabled: false,
     capabilityKnown: false,
+    approvalMode: "auto",
     taskActive: false,
     draft: "",
     runtimeStatus: "",
@@ -402,6 +449,7 @@ function hasSameFileAiContextIdentity(left: KokoFileAiContext, right: KokoFileAi
 }
 
 function destroyKokoFileAiSession(targetId: string, session: KokoFileAiSession) {
+  session.agent.actions.dispose();
   transports.get(session)?.disconnect();
   chatScopes.get(session)?.stop();
   transports.delete(session);
@@ -427,12 +475,13 @@ export function registerKokoFileAiSession(targetId: string, socket: WebSocket, c
     return existing;
   }
   if (existing) {
+    existing.agent.actions.dispose();
     transports.get(existing)?.disconnect();
     resetTaskState(existing);
     existing.socket = markRaw(socket);
     existing.context = context;
     existing.connected = context.connected && socket.readyState === WebSocket.OPEN;
-    existing.enabled = true;
+    existing.enabled = false;
     existing.capabilityKnown = false;
     existing.runtimeStatus = "";
     existing.runtimeStatusCode = "";
@@ -474,7 +523,6 @@ export function connectKokoFileAiSession(targetId: string, socket: WebSocket) {
   if (!session || session.socket !== socket) return;
   session.connected = true;
   session.context.connected = true;
-  if (!session.capabilityKnown) session.enabled = true;
 }
 
 export function disconnectKokoFileAiSession(targetId: string, socket?: WebSocket | null) {
@@ -482,7 +530,10 @@ export function disconnectKokoFileAiSession(targetId: string, socket?: WebSocket
   if (!session || (socket && session.socket !== socket)) return;
   session.connected = false;
   session.context.connected = false;
+  session.enabled = false;
+  session.capabilityKnown = false;
   resetTaskState(session);
+  session.agent.actions.dispose();
   transports.get(session)?.disconnect();
 }
 
@@ -533,7 +584,12 @@ export function getActiveKokoFileAiSession(ownerId?: string) {
 
 export function isKokoFileAiAvailable(targetId: string) {
   const session = sessions.get(targetId);
-  return Boolean(session?.connected && session.enabled && session.socket?.readyState === WebSocket.OPEN);
+  return Boolean(
+    session?.connected &&
+    session.enabled &&
+    session.agent.state.available &&
+    session.socket?.readyState === WebSocket.OPEN
+  );
 }
 
 export function isKokoFileAiWaitingForApproval(targetId: string) {
@@ -542,7 +598,7 @@ export function isKokoFileAiWaitingForApproval(targetId: string) {
 
 export function isKokoFileAiBusy(targetId: string) {
   const session = sessions.get(targetId);
-  return Boolean(session?.taskActive || session?.pendingApprovals.size);
+  return Boolean(session?.pendingApprovals.size);
 }
 
 export async function submitKokoFileAiPrompt(targetId: string, text: string): Promise<void> {
@@ -554,7 +610,7 @@ export async function submitKokoFileAiPrompt(targetId: string, text: string): Pr
 
   const prompt = text.trim();
   if (!prompt) throw clientError("invalid_message", "File AI requires a user message");
-  if (isKokoFileAiBusy(targetId)) throw clientError("response_active", "A File AI response is already active");
+  if (session.pendingApprovals.size) throw clientError("response_active", "File AI is waiting for approval");
 
   const transport = transports.get(session);
   if (!transport) throw clientError("unavailable", "File AI is not available for the active file session");
@@ -587,6 +643,25 @@ export async function submitKokoFileAiPrompt(targetId: string, text: string): Pr
     }
     throw failure;
   }
+}
+
+export function handleKokoFileAiWireMessage(targetId: string, message: unknown) {
+  const frame = parseKokoMcpFrame(message);
+  if (!frame) return false;
+  const session = sessions.get(targetId);
+  if (!session) return true;
+  if (frame.type === "mcp.manifest") {
+    void session.agent.actions.attachManifest(manifestFromFrame(frame)).catch((error) => {
+      session.errorCode = "agent_unavailable";
+      session.errorText = error instanceof Error ? error.message : "Failed to create Agent session";
+    });
+    return true;
+  }
+  void session.agent.actions.receiveKokoFrame(frame).catch((error) => {
+    session.errorCode = "tool_result_failed";
+    session.errorText = error instanceof Error ? error.message : "Failed to deliver MCP result";
+  });
+  return true;
 }
 
 export function handleKokoFileAiMessage(targetId: string, message: unknown) {
@@ -625,7 +700,7 @@ export function handleKokoFileAiMessage(targetId: string, message: unknown) {
     session.runtimeStatus = String(progress.text || "");
     session.runtimeStatusCode = String(progress.code || "");
     session.runtimeState = terminalState;
-    if (terminalState && !["idle", "completed", "failed", "cancelled"].includes(terminalState)) {
+    if (terminalState && !["idle", "completed", "failed", "cancelled", "interrupted"].includes(terminalState)) {
       session.taskActive = true;
     }
   }
@@ -640,7 +715,7 @@ export function handleKokoFileAiMessage(targetId: string, message: unknown) {
   const transport = transports.get(session);
   const streamParts = message.parts.filter((part) => part.type !== "data-capability" && part.type !== "data-progress");
   if (!streamParts.length) {
-    if (!session.enabled || ["idle", "completed", "failed", "cancelled"].includes(terminalState)) {
+    if (!session.enabled || ["idle", "completed", "failed", "cancelled", "interrupted"].includes(terminalState)) {
       resetTaskState(session);
       transport?.finish();
     }
@@ -655,7 +730,7 @@ export function handleKokoFileAiMessage(targetId: string, message: unknown) {
     }
   }
 
-  if (!session.enabled || ["idle", "completed", "failed", "cancelled"].includes(terminalState)) {
+  if (!session.enabled || ["idle", "completed", "failed", "cancelled", "interrupted"].includes(terminalState)) {
     resetTaskState(session);
     transport?.finish();
   }
@@ -664,7 +739,13 @@ export function handleKokoFileAiMessage(targetId: string, message: unknown) {
 export function sendKokoFileAiControl(targetId: string, parts: FileAiChatMessage["parts"]) {
   const session = sessions.get(targetId);
   const socket = session?.socket;
-  if (!session?.connected || !session.enabled || !socket || socket.readyState !== WebSocket.OPEN) {
+  if (
+    !session?.connected ||
+    !session.enabled ||
+    !session.agent.state.available ||
+    !socket ||
+    socket.readyState !== WebSocket.OPEN
+  ) {
     throw clientError("unavailable", "File AI is not available for the active file session");
   }
 
@@ -674,13 +755,46 @@ export function sendKokoFileAiControl(targetId: string, parts: FileAiChatMessage
     metadata: { domain: "file", targetId, context: session.context },
     parts
   };
-  socket.send(
-    JSON.stringify({
-      id: createSftpMessageId(),
-      type: SftpMessageType.Chat,
-      data: JSON.stringify(message)
-    })
-  );
+  let handled = false;
+  for (const part of parts) {
+    if (!("data" in part)) continue;
+    const data = part.data as FileAiEventData;
+    if (part.type === "data-file-approval") {
+      const approvalId = String(data.id || "");
+      if (!approvalId) continue;
+      handled = true;
+      const decision = data.decision === "approve" ? "approve" : "reject";
+      void session.agent.actions.resolveApproval(approvalId, decision).catch((error) => {
+        session.resolvingApprovals.delete(approvalId);
+        session.errorCode = "approval_failed";
+        session.errorText = error instanceof Error ? error.message : "Failed to submit approval";
+      });
+    }
+    if (part.type === "data-interrupt") {
+      handled = true;
+      void session.agent.actions.cancel().catch((error) => {
+        session.errorCode = "interrupt_failed";
+        session.errorText = error instanceof Error ? error.message : "Failed to cancel Agent run";
+      });
+      session.chat.stop();
+    }
+    if (part.type === "data-policy") {
+      const mode = String(data.approvalMode || "");
+      if (mode === "always" || mode === "auto" || mode === "never") {
+        void session.agent.actions.setApprovalMode(mode).catch((error) => {
+          session.errorCode = "policy_failed";
+          session.errorText = error instanceof Error ? error.message : "Failed to update approval mode";
+        });
+      }
+      handled = true;
+    }
+  }
+  if (!handled) {
+    void session.agent.actions.sendMessage(message).catch((error) => {
+      session.errorCode = "send_failed";
+      session.errorText = error instanceof Error ? error.message : "Failed to send Agent control message";
+    });
+  }
 }
 
 export function resolveKokoFileAiApproval(targetId: string, approvalId: string, decision: KokoFileAiApprovalDecision) {

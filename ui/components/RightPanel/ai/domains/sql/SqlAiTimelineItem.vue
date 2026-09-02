@@ -21,7 +21,7 @@ const { t } = useI18n();
 
 function proposalDecision(item: SqlProposalItem) {
   if (!isChenSqlWorkspaceAiSession(props.session)) return "";
-  return props.session.proposalDecisions.get(item.key) || "";
+  return props.session.proposalDecisions.get(item.toolCallId || item.key) || "";
 }
 
 function isThoughtExpanded(key: string) {

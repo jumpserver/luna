@@ -30,10 +30,7 @@ const LIGHT_ACCENT_COLORS = [
   "#06b6d4",
   "#64748b",
   "#f43f5e",
-  "#84cc16",
-  "#6366f1",
-  "#fbbf24",
-  "#14b8a6"
+  "#84cc16"
 ];
 const DARK_ACCENT_COLORS = [
   "#34d399",
@@ -44,10 +41,7 @@ const DARK_ACCENT_COLORS = [
   "#67e8f9",
   "#94a3b8",
   "#fb7185",
-  "#a3e635",
-  "#818cf8",
-  "#fcd34d",
-  "#2dd4bf"
+  "#a3e635"
 ];
 
 const { t } = useI18n();
@@ -360,14 +354,14 @@ watch(
               class="w-full sm:w-64"
             />
           </SettingsRow>
-          <SettingsRow :title="t('Common.PrimaryColor')" :description="t('Setting.PrimaryColorDescription')">
-            <div class="flex flex-wrap items-center gap-2">
-              <div class="flex flex-wrap items-center gap-1.5">
+          <SettingsRow :title="t('Common.PrimaryColor')" :description="t('Setting.PrimaryColorDescription')" fluid>
+            <div class="flex items-center justify-end gap-2">
+              <div class="flex flex-wrap justify-end gap-1.5">
                 <button
                   v-for="color in LIGHT_ACCENT_COLORS"
                   :key="color"
                   type="button"
-                  class="size-4.5 rounded-full"
+                  class="size-4.5 shrink-0 rounded-full"
                   :class="
                     sameHex(lightAccentColor, color)
                       ? 'ring-2 ring-(--theme-accent) ring-offset-2 ring-offset-(--app-surface-card)'
@@ -379,14 +373,16 @@ watch(
                   @click="lightAccentColor = color"
                 />
               </div>
-              <ColorPicker v-model="lightAccentColor" compact />
-              <UButton
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                :label="t('Setting.ResetAccent')"
-                @click="resetAccent('light')"
-              />
+              <div class="flex shrink-0 items-center gap-1.5">
+                <ColorPicker v-model="lightAccentColor" compact />
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  :label="t('Setting.ResetAccent')"
+                  @click="resetAccent('light')"
+                />
+              </div>
             </div>
           </SettingsRow>
         </SettingsGroup>
@@ -402,14 +398,14 @@ watch(
               class="w-full sm:w-64"
             />
           </SettingsRow>
-          <SettingsRow :title="t('Common.PrimaryColor')" :description="t('Setting.PrimaryColorDescription')">
-            <div class="flex flex-wrap items-center gap-2">
-              <div class="flex flex-wrap items-center gap-1.5">
+          <SettingsRow :title="t('Common.PrimaryColor')" :description="t('Setting.PrimaryColorDescription')" fluid>
+            <div class="flex items-center justify-end gap-2">
+              <div class="flex flex-wrap justify-end gap-1.5">
                 <button
                   v-for="color in DARK_ACCENT_COLORS"
                   :key="color"
                   type="button"
-                  class="size-4.5 rounded-full"
+                  class="size-4.5 shrink-0 rounded-full"
                   :class="
                     sameHex(darkAccentColor, color)
                       ? 'ring-2 ring-(--theme-accent) ring-offset-2 ring-offset-(--app-surface-card)'
@@ -421,14 +417,16 @@ watch(
                   @click="darkAccentColor = color"
                 />
               </div>
-              <ColorPicker v-model="darkAccentColor" compact />
-              <UButton
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                :label="t('Setting.ResetAccent')"
-                @click="resetAccent('dark')"
-              />
+              <div class="flex shrink-0 items-center gap-1.5">
+                <ColorPicker v-model="darkAccentColor" compact />
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  :label="t('Setting.ResetAccent')"
+                  @click="resetAccent('dark')"
+                />
+              </div>
             </div>
           </SettingsRow>
         </SettingsGroup>

@@ -89,15 +89,32 @@ it("preserves clipboard policy payloads from connection and terminal session mes
     parseKubernetesTerminalMessage({
       type: KubernetesTerminalMessageType.TerminalSession,
       k8s_id: "tab-1",
+      terminalId: 7,
       data: sessionData
     })
-  ).toEqual({ type: KubernetesTerminalMessageType.TerminalSession, k8s_id: "tab-1", data: sessionData });
+  ).toEqual({
+    type: KubernetesTerminalMessageType.TerminalSession,
+    k8s_id: "tab-1",
+    terminalId: 7,
+    data: sessionData
+  });
+  expect(
+    parseKubernetesTerminalMessage({
+      type: KubernetesTerminalMessageType.Ready,
+      k8s_id: "tab-1",
+      terminalId: 7
+    })
+  ).toEqual({ type: KubernetesTerminalMessageType.Ready, k8s_id: "tab-1", terminalId: 7 });
 });
 
 it("uses terminal envelopes for Kubernetes tree and terminal traffic", () => {
   const client = useKubernetesTerminalSocket();
   const received: KubernetesTerminalMessageType[] = [];
+  const mcpMessages: Array<{ k8sId: string; terminalId: number; type: string }> = [];
   client.onMessage((message) => received.push(message.type));
+  client.onMcpMessage(({ frame, k8sId, terminalId }) => {
+    mcpMessages.push({ k8sId, terminalId, type: frame.type });
+  });
 
   client.connect(context as never);
   const socket = FakeWebSocket.instances[0]!;
@@ -126,8 +143,24 @@ it("uses terminal envelopes for Kubernetes tree and terminal traffic", () => {
     requestId: create.requestId,
     params: { type: KubernetesTerminalMessageType.Created }
   });
+  socket.receiveEnvelope(ENVELOPE_TERMINAL_COMMAND, {
+    terminalId: 7,
+    command: "mcp.manifest",
+    params: {
+      type: "mcp.manifest",
+      version: 1,
+      resource_session_id: "resource-1",
+      data: JSON.stringify({ profile: "terminal", revision: 1, tools: [] })
+    }
+  });
   client.sendTerminalData("control-1", "tab-1", { namespace: "default", pod: "pod-1", container: "main" }, "whoami");
   client.resizeTerminal("control-1", "tab-1", 100, 30);
+  client.sendMcpFrame("tab-1", {
+    type: "mcp.request",
+    version: 1,
+    resource_session_id: "resource-1",
+    data: { jsonrpc: "2.0", id: "call-1", method: "tools/call", params: { name: "terminal_snapshot" } }
+  });
   client.closeTerminal("control-1", "tab-1");
 
   expect(socket.protocols).toEqual([KubernetesTerminalWebSocketProtocol.Koko]);
@@ -136,6 +169,7 @@ it("uses terminal envelopes for Kubernetes tree and terminal traffic", () => {
   expect(socket.url).toContain("ticket=ticket-1");
   expect(client.connected.value).toBe(true);
   expect(received).toEqual([KubernetesTerminalMessageType.Connect, KubernetesTerminalMessageType.Created]);
+  expect(mcpMessages).toEqual([{ type: "mcp.manifest", k8sId: "tab-1", terminalId: 7 }]);
 
   const frames = socket.sent.map((message) => parseEnvelope(message as unknown as Uint8Array));
   expect(frames.map((frame) => frame.type)).toEqual([
@@ -143,6 +177,7 @@ it("uses terminal envelopes for Kubernetes tree and terminal traffic", () => {
     ENVELOPE_TERMINAL_COMMAND,
     ENVELOPE_TERMINAL_CREATE,
     ENVELOPE_TERMINAL_INPUT,
+    ENVELOPE_TERMINAL_COMMAND,
     ENVELOPE_TERMINAL_COMMAND,
     ENVELOPE_TERMINAL_CLOSE
   ]);
@@ -160,23 +195,59 @@ it("uses terminal envelopes for Kubernetes tree and terminal traffic", () => {
     command: "TERMINAL_RESIZE",
     params: { data: JSON.stringify({ cols: 100, rows: 30 }) }
   });
-  expect(parseJSONPayload(frames[5]!.payload)).toEqual({ terminalId: 7 });
+  expect(parseJSONPayload(frames[5]!.payload)).toMatchObject({
+    terminalId: 7,
+    command: "mcp.request",
+    params: { type: "mcp.request", resource_session_id: "resource-1" }
+  });
+  expect(parseJSONPayload(frames[6]!.payload)).toEqual({ terminalId: 7 });
 });
 
 it("keeps legacy JSON transport compatible and reports unexpected socket closures", () => {
   const client = useKubernetesTerminalSocket();
   const failures: KubernetesTerminalSocketFailureCode[] = [];
+  const mcpMessages: string[] = [];
   client.onFailure((failure) => failures.push(failure.code));
+  client.onMcpMessage(({ k8sId }) => mcpMessages.push(k8sId));
 
   client.connect(context as never);
   const socket = FakeWebSocket.instances[0]!;
   socket.open();
   socket.receive({ id: "control-1", type: KubernetesTerminalMessageType.Connect });
   client.requestTree();
+  socket.receive({
+    type: KubernetesTerminalMessageType.TerminalSession,
+    k8s_id: "tab-1",
+    terminalId: 8,
+    data: "{}"
+  });
+  socket.receive({
+    type: "mcp.manifest",
+    terminalId: 8,
+    version: 1,
+    resource_session_id: "resource-1",
+    data: JSON.stringify({ profile: "terminal", revision: 1, tools: [] })
+  });
+  client.sendMcpFrame("tab-1", {
+    type: "mcp.cancel",
+    version: 1,
+    resource_session_id: "resource-1",
+    data: {
+      jsonrpc: "2.0",
+      method: "notifications/cancelled",
+      params: { requestId: "call-1", _meta: {} }
+    }
+  });
   socket.receive({ type: "UNSUPPORTED" });
   socket.close();
 
   expect(JSON.parse(socket.sent[0]!)).toEqual({ type: KubernetesTerminalMessageType.Tree });
+  expect(JSON.parse(socket.sent[1]!)).toMatchObject({
+    type: "mcp.cancel",
+    terminalId: 8,
+    resource_session_id: "resource-1"
+  });
+  expect(mcpMessages).toEqual(["tab-1"]);
   expect(failures).toEqual([
     KubernetesTerminalSocketFailureCode.MalformedMessage,
     KubernetesTerminalSocketFailureCode.ConnectionClosed

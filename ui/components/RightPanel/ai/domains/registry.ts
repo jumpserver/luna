@@ -13,6 +13,9 @@ import { fileAiPanelDomain } from "./file/adapter";
 import { createFileViewItemBuilder } from "./file/viewItems";
 import { terminalAiPanelDomain } from "./terminal/adapter";
 import { createTerminalViewItemBuilder } from "./terminal/viewItems";
+import { getScriptAiSession } from "~/composables/useScriptAiSessions";
+import { scriptAiPanelDomain } from "./script/adapter";
+import { createScriptViewItemBuilder } from "./script/viewItems";
 
 export interface AiPanelDomainRegistration {
   adapter: AiPanelDomainAdapter;
@@ -25,6 +28,12 @@ export interface AiPanelDomainRegistration {
 // resolver, adapter, protocol builder, and timeline renderer here. Shared
 // conversation items remain domain-neutral.
 export const aiPanelDomainRegistry: readonly AiPanelDomainRegistration[] = [
+  {
+    adapter: scriptAiPanelDomain,
+    getSession: getScriptAiSession,
+    timelineRenderer: () => import("./script/ScriptAiTimelineItem.vue") as unknown as Promise<{ default: Component }>,
+    createViewItemBuilder: createScriptViewItemBuilder
+  },
   {
     adapter: sqlAiPanelDomain,
     getSession: getChenSqlAiSession,

@@ -4,7 +4,11 @@ export enum SftpMessageType {
   Pong = "PONG",
   Data = "SFTP_DATA",
   Binary = "SFTP_BINARY",
-  Chat = "CHAT_MESSAGE",
+  MCPManifest = "mcp.manifest",
+  MCPRequest = "mcp.request",
+  MCPResponse = "mcp.response",
+  MCPCancel = "mcp.cancel",
+  MCPCancelResult = "mcp.cancel_result",
   Error = "ERROR",
   Close = "CLOSE",
   Closed = "closed"
@@ -83,6 +87,8 @@ interface SftpMessageBase {
   err?: string;
   error_code?: string;
   current_path?: string;
+  version?: number;
+  resource_session_id?: string;
 }
 
 export interface SftpDataMessage extends SftpMessageBase {
@@ -94,9 +100,16 @@ export interface SftpBinaryMessage extends SftpMessageBase {
   type: SftpMessageType.Binary;
 }
 
-export interface SftpChatMessage extends SftpMessageBase {
-  type: SftpMessageType.Chat;
+export interface SftpMcpMessage extends SftpMessageBase {
+  type:
+    | SftpMessageType.MCPManifest
+    | SftpMessageType.MCPRequest
+    | SftpMessageType.MCPResponse
+    | SftpMessageType.MCPCancel
+    | SftpMessageType.MCPCancelResult;
   data: string;
+  version: number;
+  resource_session_id: string;
 }
 
 export interface SftpControlMessage extends SftpMessageBase {
@@ -109,7 +122,7 @@ export interface SftpControlMessage extends SftpMessageBase {
     | SftpMessageType.Closed;
 }
 
-export type SftpWireMessage = SftpDataMessage | SftpBinaryMessage | SftpChatMessage | SftpControlMessage;
+export type SftpWireMessage = SftpDataMessage | SftpBinaryMessage | SftpMcpMessage | SftpControlMessage;
 export type SftpIncomingMessage = SftpWireMessage;
 
 export interface SftpSocketFailure {
@@ -157,6 +170,16 @@ export function isSftpCommand(value: unknown): value is SftpCommand {
 
 export function isSftpMessageType(value: unknown): value is SftpMessageType {
   return typeof value === "string" && messageTypes.has(value);
+}
+
+export function isSftpMcpMessageType(value: unknown): value is SftpMcpMessage["type"] {
+  return (
+    value === SftpMessageType.MCPManifest ||
+    value === SftpMessageType.MCPRequest ||
+    value === SftpMessageType.MCPResponse ||
+    value === SftpMessageType.MCPCancel ||
+    value === SftpMessageType.MCPCancelResult
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -225,7 +248,9 @@ export function parseSftpIncomingMessage(raw: unknown): SftpIncomingMessage | nu
     raw: optionalRaw(message.raw),
     err: optionalString(message.err),
     error_code: optionalString(message.error_code),
-    current_path: optionalString(message.current_path)
+    current_path: optionalString(message.current_path),
+    version: typeof message.version === "number" ? message.version : undefined,
+    resource_session_id: optionalString(message.resource_session_id)
   };
 
   if (message.type === SftpMessageType.Data) {
@@ -234,9 +259,16 @@ export function parseSftpIncomingMessage(raw: unknown): SftpIncomingMessage | nu
   }
 
   if (message.type === SftpMessageType.Binary) return { ...base, type: message.type };
-  if (message.type === SftpMessageType.Chat) {
-    if (typeof message.data !== "string") return null;
-    return { ...base, type: message.type, data: message.data };
+  if (isSftpMcpMessageType(message.type)) {
+    if (typeof message.data !== "string" || typeof message.version !== "number") return null;
+    if (typeof message.resource_session_id !== "string" || !message.resource_session_id) return null;
+    return {
+      ...base,
+      type: message.type,
+      data: message.data,
+      version: message.version,
+      resource_session_id: message.resource_session_id
+    };
   }
   return { ...base, type: message.type };
 }

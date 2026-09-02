@@ -8,7 +8,6 @@ import type { ClipboardPermission, ClipboardPolicy } from "#koko/types/clipboard
 import type { OnlineUser, SettingConfig, ShareUserOptions, TerminalSessionInfo } from "#koko/types/session";
 import type { TerminalCommandEnvelope } from "./envelope";
 import type { TerminalIncomingMessage } from "./protocol";
-import type { TerminalAiChatMessage } from "./useTerminalAiSessions";
 import { markKokoTerminalAiSessionInfoReady } from "./useTerminalAiSessions";
 import { HOST_MESSAGE_TYPE, MESSAGE_TYPE, ZMODEM_ACTION_TYPE } from "@jumpserver/connectors-core";
 import { terminalTheme } from "../../utils/terminalTheme";
@@ -16,7 +15,6 @@ import { updateIcon } from "../../utils/terminalUtils";
 import {
   buildJSONEnvelope,
   createRequestId,
-  ENVELOPE_CHAT,
   ENVELOPE_ERROR,
   ENVELOPE_TERMINAL_CLOSE,
   ENVELOPE_TERMINAL_COMMAND,
@@ -34,7 +32,6 @@ export function useKokoTerminalMessageHandler(
   handlers: TerminalMessageHandlers,
   options?: {
     onTerminalOutput: (terminalId: number, data: Uint8Array) => void;
-    onChat: (message: TerminalAiChatMessage) => void;
   }
 ) {
   function handleRawMessage(raw: string) {
@@ -97,9 +94,6 @@ export function useKokoTerminalMessageHandler(
         });
         break;
       }
-      case ENVELOPE_CHAT:
-        options?.onChat(parseJSONPayload<TerminalAiChatMessage>(frame.payload));
-        break;
       default:
         throw new Error(`Unsupported terminal envelope type: ${frame.type}`);
     }

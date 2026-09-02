@@ -178,22 +178,24 @@ watch(
         class="min-w-0 flex-1 overflow-y-auto bg-(--app-surface-canvas) font-sans"
         :class="hasNativeTitlebarInset ? 'pt-10' : ''"
       >
-        <div class="mx-auto w-full max-w-3xl px-5 pt-3 pb-6 sm:px-8 md:px-10 md:pb-8">
-          <Transition name="settings-section" mode="out-in">
-            <UPageHeader
-              :key="activeSection?.key"
-              :title="activeSection?.label"
-              :description="activeSection?.description"
-              :ui="{
-                root: 'relative mb-8 border-0 py-0',
-                wrapper: 'flex flex-col gap-0',
-                title: 'text-2xl font-semibold tracking-tight text-highlighted',
-                description: 'mt-1.5 text-sm text-muted'
-              }"
-            />
-          </Transition>
+        <div class="px-5 pt-3 pb-6 sm:px-8 md:px-10 md:pb-8">
+          <div class="mx-auto w-full max-w-3xl">
+            <Transition name="settings-section" mode="out-in">
+              <UPageHeader
+                :key="activeSection?.key"
+                :title="activeSection?.label"
+                :description="activeSection?.description"
+                :ui="{
+                  root: 'relative mb-8 border-0 py-0',
+                  wrapper: 'flex flex-col gap-0',
+                  title: 'text-2xl font-semibold tracking-tight text-highlighted',
+                  description: 'mt-1.5 text-sm text-muted'
+                }"
+              />
+            </Transition>
 
-          <slot />
+            <slot />
+          </div>
         </div>
       </main>
     </div>

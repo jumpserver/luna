@@ -1,13 +1,27 @@
 import type { UseChatHelpers } from "@ai-sdk/vue";
 import type { ChatTransport, UIMessage, UIMessageChunk } from "ai";
 import type { EffectScope } from "vue";
+import type { AgentApprovalMode, KokoMcpCancelFrame, KokoMcpRequestFrame } from "../agent/types";
+import type { AgentSessionController } from "../agent/useAgentSession";
 import { useChat } from "@ai-sdk/vue";
 import { effectScope, markRaw, reactive, shallowReactive } from "vue";
-import { buildJSONEnvelope, ENVELOPE_CHAT } from "#koko/composables/terminal/envelope";
+import { buildJSONEnvelope, ENVELOPE_TERMINAL_COMMAND } from "#koko/composables/terminal/envelope";
+import { AgentToolRelay } from "../agent/agentToolRelay";
+import { kokoMcpWireMessage, manifestFromFrame, parseKokoMcpFrame } from "../agent/types";
+import { useAgentSession } from "../agent/useAgentSession";
 
 export type TerminalAiEventData = Record<string, any>;
 export type TerminalAiChatMessage = UIMessage<TerminalAiEventData, Record<string, TerminalAiEventData>>;
 export type KokoTerminalAiMetadataApprovalDecision = "approve_once" | "approve_session" | "reject";
+
+export interface KokoTerminalAiSessionOptions {
+  sendMcpFrame?: (frame: KokoMcpRequestFrame | KokoMcpCancelFrame) => void;
+}
+
+function terminalExecutionMode(value: unknown) {
+  const mode = String(value || "auto").toLowerCase();
+  return mode === "pty" || mode === "background" ? mode : "auto";
+}
 
 export interface KokoTerminalAiMetadataApproval {
   approvalId: string;
@@ -34,6 +48,7 @@ export interface KokoTerminalAiSession {
   paneId: string;
   socket: WebSocket | null;
   terminalId: string;
+  agent: AgentSessionController;
   chat: UseChatHelpers<TerminalAiChatMessage>;
   connected: boolean;
   enabled: boolean;
@@ -42,6 +57,7 @@ export interface KokoTerminalAiSession {
   backgroundReason: string;
   backgroundReasonCode: string;
   approvalThreshold: number;
+  approvalMode: AgentApprovalMode;
   executionMode: string;
   inputLocked: boolean;
   taskActive: boolean;
@@ -77,6 +93,7 @@ function clientError(code: string, message: string) {
 interface ActiveChatResponse {
   controller: ReadableStreamDefaultController<UIMessageChunk>;
   started: boolean;
+  openTextIds: Set<string>;
   abortSignal?: AbortSignal;
   abortHandler?: () => void;
 }
@@ -87,66 +104,69 @@ interface PendingChatDispatch {
 }
 
 class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage> {
-  private activeResponse: ActiveChatResponse | null = null;
-  private pendingDispatch: PendingChatDispatch | null = null;
+  private readonly activeResponses: ActiveChatResponse[] = [];
+  private readonly pendingDispatches: PendingChatDispatch[] = [];
 
-  constructor(
-    private readonly socket: WebSocket,
-    private readonly terminalId: () => string,
-    private readonly enabled: () => boolean
-  ) {}
+  constructor(private readonly getSession: () => KokoTerminalAiSession) {}
 
   sendMessages: ChatTransport<TerminalAiChatMessage>["sendMessages"] = async ({ messages, abortSignal }) => {
-    if (this.activeResponse) {
-      const failure = clientError("response_active", "A Terminal AI response is already active");
-      this.rejectPendingDispatch(failure);
-      throw failure;
-    }
-    if (!this.enabled() || this.socket.readyState !== WebSocket.OPEN) {
+    const dispatch = this.pendingDispatches.shift();
+    const session = this.getSession();
+    if (!session.enabled || !session.agent.state.available || session.socket?.readyState !== WebSocket.OPEN) {
       const failure = clientError("unavailable", "Terminal AI is not available for the active terminal");
-      this.rejectPendingDispatch(failure);
+      dispatch?.reject(failure);
       throw failure;
     }
 
     const message = messages.at(-1);
     if (!message || message.role !== "user") {
       const failure = clientError("invalid_message", "Terminal AI requires a user message");
-      this.rejectPendingDispatch(failure);
+      dispatch?.reject(failure);
       throw failure;
     }
 
+    let response: ActiveChatResponse | null = null;
     try {
+      let controller!: ReadableStreamDefaultController<UIMessageChunk>;
       const stream = new ReadableStream<UIMessageChunk>({
-        start: (controller) => {
-          this.activeResponse = { controller, started: false, abortSignal };
+        start: (streamController) => {
+          controller = streamController;
         },
-        cancel: () => this.clearActiveResponse()
+        cancel: () => {
+          if (response) this.clearActiveResponse(response);
+        }
       });
-
-      const abortHandler = () => this.finish();
+      response = { controller, started: false, openTextIds: new Set(), abortSignal };
+      this.activeResponses.push(response);
+      const abortHandler = () => this.finish(response!);
       if (abortSignal) {
-        this.activeResponse!.abortHandler = abortHandler;
+        response.abortHandler = abortHandler;
         abortSignal.addEventListener("abort", abortHandler, { once: true });
       }
 
-      this.socket.send(
-        buildJSONEnvelope(ENVELOPE_CHAT, {
-          ...message,
-          metadata: {
-            ...message.metadata,
-            terminalId: Number(this.terminalId())
-          }
-        })
-      );
-      this.resolvePendingDispatch();
+      if (abortSignal?.aborted) throw new DOMException("Terminal AI request was aborted", "AbortError");
+      if (!session.enabled || !session.agent.state.available || session.socket?.readyState !== WebSocket.OPEN) {
+        throw clientError("unavailable", "Terminal AI is not available for the active terminal");
+      }
+      session.taskActive = true;
+      await session.agent.actions.sendMessage({
+        ...message,
+        metadata: {
+          ...message.metadata,
+          domain: "terminal",
+          terminalId: Number(session.terminalId),
+          execution_mode: terminalExecutionMode(session.executionMode)
+        }
+      });
+      dispatch?.resolve();
       return stream;
     } catch (error) {
       const failure =
         error instanceof TerminalAiClientError
           ? error
           : clientError("send_failed", error instanceof Error ? error.message : "Failed to send Terminal AI message");
-      this.rejectPendingDispatch(failure);
-      this.fail(failure);
+      dispatch?.reject(failure);
+      if (response) this.fail(response, failure);
       throw failure;
     }
   };
@@ -154,7 +174,7 @@ class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage
   reconnectToStream: ChatTransport<TerminalAiChatMessage>["reconnectToStream"] = async () => null;
 
   receive(message: TerminalAiChatMessage) {
-    const response = this.activeResponse;
+    const response = this.activeResponses[0];
     if (!response || message.role !== "assistant") return false;
 
     if (!response.started) {
@@ -174,9 +194,16 @@ class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage
     for (const [index, part] of message.parts.entries()) {
       const id = `${message.id}-${index}`;
       if (part.type === "text") {
-        response.controller.enqueue({ type: "text-start", id });
+        const isDelta = message.metadata?.agentEventType === "message.delta";
+        if (!response.openTextIds.has(id)) {
+          response.controller.enqueue({ type: "text-start", id });
+          response.openTextIds.add(id);
+        }
         response.controller.enqueue({ type: "text-delta", id, delta: part.text });
-        response.controller.enqueue({ type: "text-end", id });
+        if (!isDelta) {
+          response.controller.enqueue({ type: "text-end", id });
+          response.openTextIds.delete(id);
+        }
         continue;
       }
 
@@ -188,7 +215,7 @@ class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage
           errorText: String(data.message || "Terminal AI failed")
         });
         response.controller.close();
-        this.clearActiveResponse();
+        this.clearActiveResponse(response);
         return true;
       }
 
@@ -202,78 +229,120 @@ class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage
     return true;
   }
 
-  finish() {
-    const response = this.activeResponse;
+  finish(response = this.activeResponses[0]) {
     if (!response) return;
+    for (const id of response.openTextIds) response.controller.enqueue({ type: "text-end", id });
+    response.openTextIds.clear();
     if (response.started) response.controller.enqueue({ type: "finish", finishReason: "stop" });
     response.controller.close();
-    this.clearActiveResponse();
+    this.clearActiveResponse(response);
   }
 
   disconnect() {
-    this.rejectPendingDispatch(clientError("unavailable", "Terminal AI session disconnected"));
-    this.finish();
+    const error = clientError("unavailable", "Terminal AI session disconnected");
+    for (const dispatch of this.pendingDispatches.splice(0)) dispatch.reject(error);
+    for (const response of [...this.activeResponses]) this.finish(response);
   }
 
   waitForNextDispatch() {
-    if (this.pendingDispatch) {
-      throw clientError("response_active", "A Terminal AI dispatch is already pending");
-    }
-
     let resolve!: () => void;
     let reject!: (error: Error) => void;
     const promise = new Promise<void>((resolvePromise, rejectPromise) => {
       resolve = resolvePromise;
       reject = rejectPromise;
     });
-    this.pendingDispatch = { resolve, reject };
+    this.pendingDispatches.push({ resolve, reject });
     return promise;
   }
 
   cancelPendingDispatch(error: Error) {
-    this.rejectPendingDispatch(error);
+    this.pendingDispatches.shift()?.reject(error);
   }
 
-  private fail(error: Error) {
-    const response = this.activeResponse;
-    if (!response) return;
+  private fail(response: ActiveChatResponse, error: Error) {
     response.controller.error(error);
-    this.clearActiveResponse();
+    this.clearActiveResponse(response);
   }
 
-  private clearActiveResponse() {
-    const response = this.activeResponse;
-    if (response?.abortSignal && response.abortHandler) {
+  private clearActiveResponse(response: ActiveChatResponse) {
+    if (response.abortSignal && response.abortHandler) {
       response.abortSignal.removeEventListener("abort", response.abortHandler);
     }
-    this.activeResponse = null;
-  }
-
-  private resolvePendingDispatch() {
-    const dispatch = this.pendingDispatch;
-    this.pendingDispatch = null;
-    dispatch?.resolve();
-  }
-
-  private rejectPendingDispatch(error: Error) {
-    const dispatch = this.pendingDispatch;
-    this.pendingDispatch = null;
-    dispatch?.reject(error);
+    response.openTextIds.clear();
+    const index = this.activeResponses.indexOf(response);
+    if (index < 0) return;
+    this.activeResponses.splice(index, 1);
   }
 }
 
 const sessions = shallowReactive(new Map<string, KokoTerminalAiSession>());
+const activeTargetIds = shallowReactive(new Map<string, string>());
 const transports = new WeakMap<KokoTerminalAiSession, KokoTerminalAiChatTransport>();
 const chatScopes = new WeakMap<KokoTerminalAiSession, EffectScope>();
+const mcpFrameSenders = new WeakMap<KokoTerminalAiSession, NonNullable<KokoTerminalAiSessionOptions["sendMcpFrame"]>>();
+
+function resolvedTerminalAiTargetId(paneId: string) {
+  return activeTargetIds.get(paneId) || paneId;
+}
+
+function resolveTerminalAiSession(paneId: string) {
+  return sessions.get(resolvedTerminalAiTargetId(paneId));
+}
+
+function removeTerminalAiTargetAliases(targetId: string) {
+  for (const [paneId, activeTargetId] of activeTargetIds) {
+    if (activeTargetId === targetId) activeTargetIds.delete(paneId);
+  }
+}
 
 function createSession(paneId: string, socket: WebSocket, terminalId: string): KokoTerminalAiSession {
   let session: KokoTerminalAiSession;
-  const transport = markRaw(
-    new KokoTerminalAiChatTransport(
-      socket,
-      () => session.terminalId,
-      () => session.enabled
-    )
+  const transport = markRaw(new KokoTerminalAiChatTransport(() => session));
+  const relay = markRaw(
+    new AgentToolRelay({
+      resourceSessionId: () => session?.agent.state.resourceSessionId || "",
+      revision: () => session?.agent.state.revision || 1,
+      sendFrame: (frame) => {
+        const target = session?.socket;
+        if (!target || target.readyState !== WebSocket.OPEN) throw new Error("Terminal MCP relay is disconnected");
+        const sendMcpFrame = mcpFrameSenders.get(session);
+        if (sendMcpFrame) {
+          sendMcpFrame(frame);
+          return;
+        }
+        target.send(
+          buildJSONEnvelope(ENVELOPE_TERMINAL_COMMAND, {
+            terminalId: Number(session.terminalId),
+            command: frame.type,
+            params: kokoMcpWireMessage(frame)
+          })
+        );
+      }
+    })
+  );
+  const agent = markRaw(
+    useAgentSession({
+      domain: "terminal",
+      relay,
+      messageMetadata: () => ({ domain: "terminal", terminalId: Number(session?.terminalId) || 0 }),
+      onMessage: (message) => handleKokoTerminalAiMessage(paneId, message),
+      onAvailability: (available) => {
+        if (session) session.enabled = available;
+      },
+      onApprovalMode: (mode) => {
+        if (session) session.approvalMode = mode;
+      },
+      onInputLock: (locked) => {
+        if (session) session.inputLocked = locked;
+      },
+      onUnavailable: (error) => {
+        if (!session) return;
+        session.errorCode = "agent_unavailable";
+        session.errorText = error.message;
+        session.taskActive = false;
+        transport.disconnect();
+      }
+    })
   );
   const chatScope = effectScope(true);
   const chat = markRaw(
@@ -299,6 +368,7 @@ function createSession(paneId: string, socket: WebSocket, terminalId: string): K
     paneId,
     socket: markRaw(socket),
     terminalId,
+    agent,
     chat,
     connected: socket.readyState === WebSocket.OPEN,
     enabled: false,
@@ -307,6 +377,7 @@ function createSession(paneId: string, socket: WebSocket, terminalId: string): K
     backgroundReason: "",
     backgroundReasonCode: "",
     approvalThreshold: 2,
+    approvalMode: "auto",
     executionMode: "auto",
     inputLocked: false,
     taskActive: false,
@@ -326,27 +397,12 @@ function createSession(paneId: string, socket: WebSocket, terminalId: string): K
       const approval = session.metadataApproval;
       if (!approval || approval.resolving) return;
       approval.resolving = true;
-      try {
-        sendKokoTerminalAiControl(paneId, {
-          id: createTerminalAiMessageId("metadata-approval"),
-          role: "user",
-          metadata: { terminalId: Number(session.terminalId) },
-          parts: [
-            {
-              type: "data-metadata-approval",
-              data: {
-                id: approval.approvalId,
-                digest: approval.digest,
-                decision
-              }
-            }
-          ]
-        });
-      } catch (error) {
+      const agentDecision = decision === "reject" ? "reject" : "approve";
+      void session.agent.actions.resolveApproval(approval.approvalId, agentDecision).catch((error) => {
         approval.resolving = false;
         session.errorCode = "metadata_approval_failed";
         session.errorText = error instanceof Error ? error.message : "Failed to send metadata approval";
-      }
+      });
     }
   }) as KokoTerminalAiSession;
   transports.set(session, transport);
@@ -374,20 +430,29 @@ function isTerminalAiChatMessage(message: unknown): message is TerminalAiChatMes
   });
 }
 
-export function registerKokoTerminalAiSession(paneId: string, socket: WebSocket, terminalId: string) {
+export function registerKokoTerminalAiSession(
+  paneId: string,
+  socket: WebSocket,
+  terminalId: string,
+  options: KokoTerminalAiSessionOptions = {}
+) {
   if (!paneId) return null;
 
   const existing = sessions.get(paneId);
   if (existing?.socket === socket) {
     if (terminalId) existing.terminalId = terminalId;
+    if (options.sendMcpFrame) mcpFrameSenders.set(existing, options.sendMcpFrame);
     return existing;
   }
   if (existing) {
+    existing.agent.actions.dispose();
     transports.get(existing)?.disconnect();
     chatScopes.get(existing)?.stop();
+    mcpFrameSenders.delete(existing);
   }
 
   const session = createSession(paneId, socket, terminalId);
+  if (options.sendMcpFrame) mcpFrameSenders.set(session, options.sendMcpFrame);
   sessions.set(paneId, session);
   return session;
 }
@@ -396,10 +461,13 @@ export function unregisterKokoTerminalAiSession(paneId: string, socket?: WebSock
   const session = sessions.get(paneId);
   if (!session || (socket && session.socket !== socket)) return;
   transports.get(session)?.disconnect();
+  session.agent.actions.dispose();
   chatScopes.get(session)?.stop();
   transports.delete(session);
   chatScopes.delete(session);
+  mcpFrameSenders.delete(session);
   sessions.delete(paneId);
+  removeTerminalAiTargetAliases(paneId);
 }
 
 export function connectKokoTerminalAiSession(paneId: string, socket: WebSocket) {
@@ -419,46 +487,56 @@ export function disconnectKokoTerminalAiSession(paneId: string, socket?: WebSock
   session.taskActive = false;
   session.metadataApproval = null;
   session.pendingApprovals.clear();
+  session.agent.actions.dispose();
   transports.get(session)?.disconnect();
 }
 
 export function getKokoTerminalAiSession(paneId: string) {
-  return sessions.get(paneId) || null;
+  return resolveTerminalAiSession(paneId) || null;
+}
+
+export function setActiveKokoTerminalAiTarget(paneId: string, targetId: string | null) {
+  if (!paneId) return;
+  if (targetId) activeTargetIds.set(paneId, targetId);
+  else activeTargetIds.delete(paneId);
 }
 
 export function isKokoTerminalAiInputLocked(paneId: string) {
-  return Boolean(sessions.get(paneId)?.inputLocked);
+  return Boolean(resolveTerminalAiSession(paneId)?.inputLocked);
 }
 
 export function isKokoTerminalAiAvailable(paneId: string) {
-  const session = sessions.get(paneId);
-  return Boolean(session?.connected && session.enabled && session.socket?.readyState === WebSocket.OPEN);
+  const session = resolveTerminalAiSession(paneId);
+  return Boolean(
+    session?.connected &&
+    session.enabled &&
+    session.agent.state.available &&
+    session.socket?.readyState === WebSocket.OPEN
+  );
 }
 
 export function isKokoTerminalAiSessionInfoReady(paneId: string) {
-  return Boolean(sessions.get(paneId)?.sessionInfoReady);
+  return Boolean(resolveTerminalAiSession(paneId)?.sessionInfoReady);
 }
 
 export function markKokoTerminalAiSessionInfoReady(paneId: string) {
-  const session = sessions.get(paneId);
+  const session = resolveTerminalAiSession(paneId);
   if (!session) return;
   session.sessionInfoReady = true;
 }
 
 export function isKokoTerminalAiWaitingForApproval(paneId: string) {
-  const session = sessions.get(paneId);
+  const session = resolveTerminalAiSession(paneId);
   return Boolean(session?.metadataApproval || session?.pendingApprovals.size);
 }
 
 export function isKokoTerminalAiBusy(paneId: string) {
-  const session = sessions.get(paneId);
-  return Boolean(
-    session?.taskActive || session?.inputLocked || session?.metadataApproval || session?.pendingApprovals.size
-  );
+  const session = resolveTerminalAiSession(paneId);
+  return Boolean(session?.inputLocked || session?.metadataApproval || session?.pendingApprovals.size);
 }
 
 export async function submitKokoTerminalAiPrompt(paneId: string, text: string): Promise<void> {
-  const session = sessions.get(paneId);
+  const session = resolveTerminalAiSession(paneId);
   const socket = session?.socket;
   if (!session?.connected || !session.enabled || !socket || socket.readyState !== WebSocket.OPEN) {
     throw clientError("unavailable", "Terminal AI is not available for the active terminal");
@@ -466,7 +544,7 @@ export async function submitKokoTerminalAiPrompt(paneId: string, text: string): 
 
   const prompt = text.trim();
   if (!prompt) throw clientError("invalid_message", "Terminal AI requires a user message");
-  if (isKokoTerminalAiBusy(paneId)) {
+  if (session.inputLocked || session.metadataApproval || session.pendingApprovals.size) {
     throw clientError("response_active", "A Terminal AI response is already active");
   }
 
@@ -482,7 +560,11 @@ export async function submitKokoTerminalAiPrompt(paneId: string, text: string): 
     const dispatched = transport.waitForNextDispatch();
     const response = session.chat.sendMessage({
       text: prompt,
-      metadata: { terminalId: Number(session.terminalId) }
+      metadata: {
+        domain: "terminal",
+        terminalId: Number(session.terminalId),
+        execution_mode: terminalExecutionMode(session.executionMode)
+      }
     });
     void response.catch(() => {
       session.taskActive = false;
@@ -504,6 +586,31 @@ export async function submitKokoTerminalAiPrompt(paneId: string, text: string): 
   }
 }
 
+export function handleKokoTerminalAiWireMessage(paneId: string, message: unknown) {
+  const frame = parseKokoMcpFrame(message);
+  if (!frame) return false;
+  const session = sessions.get(paneId);
+  if (!session) return true;
+  if (frame.type === "mcp.manifest") {
+    const commandTool = frame.data.tools.find(
+      (tool) => tool._meta?.["com.jumpserver/toolKind"] === "command" || tool.name === "execute_command"
+    );
+    const executionModes = commandTool?._meta?.["com.jumpserver/executionModes"];
+    session.backgroundExec = Array.isArray(executionModes) && executionModes.includes("background");
+    if (!session.backgroundExec && session.executionMode === "background") session.executionMode = "auto";
+    void session.agent.actions.attachManifest(manifestFromFrame(frame)).catch((error) => {
+      session.errorCode = "agent_unavailable";
+      session.errorText = error instanceof Error ? error.message : "Failed to create Agent session";
+    });
+    return true;
+  }
+  void session.agent.actions.receiveKokoFrame(frame).catch((error) => {
+    session.errorCode = "tool_result_failed";
+    session.errorText = error instanceof Error ? error.message : "Failed to deliver MCP result";
+  });
+  return true;
+}
+
 export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
   const session = sessions.get(paneId);
   if (!session || !isTerminalAiChatMessage(message)) return;
@@ -515,11 +622,13 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
   const capability = partData(message, "data-capability");
   if (capability) {
     session.enabled = Boolean(capability.enabled);
-    session.backgroundExec = Boolean(capability.backgroundExec);
+    if (capability.backgroundExec !== undefined) session.backgroundExec = Boolean(capability.backgroundExec);
     session.backgroundReason = String(capability.backgroundReason || "");
     session.backgroundReasonCode = String(capability.backgroundReasonCode || capability.reasonCode || "");
     session.approvalThreshold = Number(capability.approvalThreshold) || 2;
-    session.executionMode = String(capability.executionMode || "auto");
+    if (capability.executionMode !== undefined) {
+      session.executionMode = terminalExecutionMode(capability.executionMode);
+    }
     if (!session.enabled) {
       session.inputLocked = false;
       session.taskActive = false;
@@ -533,7 +642,7 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
   const inputLock = partData(message, "data-input-lock");
   if (inputLock) {
     session.inputLocked = Boolean(inputLock.locked);
-    return;
+    if (!message.parts.some((part) => part.type === "data-agent-tool" || part.type === "data-execution")) return;
   }
 
   const metadataApproval = partData(message, "data-metadata-approval");
@@ -563,7 +672,8 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
   const terminalApproval = partData(message, "data-approval");
   if (message.role === "assistant" && terminalApproval) {
     const approvalId = String(terminalApproval.id || "");
-    if (approvalId) session.pendingApprovals.add(approvalId);
+    if (approvalId && terminalApproval.resolved) session.pendingApprovals.delete(approvalId);
+    else if (approvalId) session.pendingApprovals.add(approvalId);
   }
 
   const metadataApprovalResolved = partData(message, "data-metadata-approval-resolved");
@@ -580,7 +690,7 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
     session.runtimeStatusCode = String(progress.code || "");
     session.runtimeState = String(progress.state || "");
     session.runtimeExecution = String(progress.execution || "");
-    if (session.runtimeState === "idle") {
+    if (["idle", "completed", "failed", "cancelled", "interrupted"].includes(session.runtimeState)) {
       session.taskActive = false;
       session.inputLocked = false;
       session.metadataApproval = null;
@@ -588,6 +698,15 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
       transports.get(session)?.finish();
     } else if (session.runtimeState) {
       session.taskActive = true;
+    }
+    const timelineParts = message.parts.filter(
+      (part) => part.type !== "data-progress" && part.type !== "data-input-lock"
+    );
+    if (timelineParts.length) {
+      const timelineMessage = { ...message, parts: timelineParts } as TerminalAiChatMessage;
+      if (!transports.get(session)?.receive(timelineMessage)) {
+        session.chat.messages.value = [...session.chat.messages.value, timelineMessage];
+      }
     }
     return;
   }
@@ -616,19 +735,63 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
 }
 
 export function sendKokoTerminalAiControl(paneId: string, message: TerminalAiChatMessage) {
-  const session = sessions.get(paneId);
+  const session = resolveTerminalAiSession(paneId);
   const socket = session?.socket;
-  if (!session?.connected || !session.enabled || !socket || socket.readyState !== WebSocket.OPEN) {
+  if (
+    !session?.connected ||
+    !session.enabled ||
+    !session.agent.state.available ||
+    !socket ||
+    socket.readyState !== WebSocket.OPEN
+  ) {
     throw clientError("unavailable", "Terminal AI is not available for the active terminal");
   }
 
-  socket.send(buildJSONEnvelope(ENVELOPE_CHAT, message));
+  let handled = false;
   for (const part of message.parts) {
-    if (part.type !== "data-approval" || !("data" in part)) continue;
-    const approvalId = String((part.data as TerminalAiEventData).id || "");
-    if (approvalId) session.pendingApprovals.delete(approvalId);
+    if (!("data" in part)) continue;
+    const data = part.data as TerminalAiEventData;
+    if (part.type === "data-policy") {
+      const mode = String(data.approvalMode || "");
+      if (mode === "always" || mode === "auto" || mode === "never") {
+        void session.agent.actions.setApprovalMode(mode).catch((error) => {
+          session.errorCode = "policy_failed";
+          session.errorText = error instanceof Error ? error.message : "Failed to update approval mode";
+        });
+      }
+      session.executionMode = terminalExecutionMode(data.executionMode || session.executionMode);
+      handled = true;
+    }
+    if (part.type === "data-approval" || part.type === "data-metadata-approval") {
+      const approvalId = String(data.id || "");
+      const decision = data.decision === "reject" || data.approved === false ? "reject" : "approve";
+      if (approvalId) {
+        handled = true;
+        void session.agent.actions
+          .resolveApproval(approvalId, decision)
+          .then(() => session.pendingApprovals.delete(approvalId))
+          .catch((error) => {
+            session.decisions.delete(approvalId);
+            session.errorCode = "approval_failed";
+            session.errorText = error instanceof Error ? error.message : "Failed to submit approval";
+          });
+      }
+    }
+    if (part.type === "data-interrupt") {
+      handled = true;
+      void session.agent.actions.cancel().catch((error) => {
+        session.errorCode = "interrupt_failed";
+        session.errorText = error instanceof Error ? error.message : "Failed to cancel Agent run";
+      });
+      session.chat.stop();
+    }
   }
-  if (message.parts.some((part) => part.type === "data-interrupt")) session.chat.stop();
+  if (!handled) {
+    void session.agent.actions.sendMessage(message).catch((error) => {
+      session.errorCode = "send_failed";
+      session.errorText = error instanceof Error ? error.message : "Failed to send Agent control message";
+    });
+  }
 }
 
 export function createTerminalAiMessageId(prefix: string) {

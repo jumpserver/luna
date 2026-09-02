@@ -50,13 +50,15 @@ const { t } = useI18n();
     </div>
 
     <div
-      v-if="presentation.showRuntimeStatus && (presentation.runtimeStatusLabel || presentation.busy)"
+      v-if="
+        presentation.showRuntimeStatus && (presentation.runtimeStatusLabel || presentation.busy || presentation.running)
+      "
       class="flex items-center gap-1.5 text-[11px] text-muted"
     >
       <UIcon
-        :name="presentation.busy ? 'i-lucide-loader-circle' : 'i-lucide-circle-dot'"
+        :name="presentation.busy || presentation.running ? 'i-lucide-loader-circle' : 'i-lucide-circle-dot'"
         class="size-3"
-        :class="{ 'animate-spin': presentation.busy }"
+        :class="{ 'animate-spin': presentation.busy || presentation.running }"
       />
       <span>{{ presentation.runtimeStatusLabel }}</span>
       <span class="ml-auto font-mono tabular-nums text-highlighted">
@@ -75,7 +77,9 @@ const { t } = useI18n();
       v-model="draft"
       :show-policy="presentation.showPolicy"
       :busy="presentation.busy"
+      :running="presentation.running"
       :action-label="presentation.actionLabel"
+      :interrupt-label="presentation.interruptLabel"
       :placeholder="presentation.inputPlaceholder"
       :approval-threshold="presentation.approvalThreshold"
       :execution-mode="presentation.executionMode"

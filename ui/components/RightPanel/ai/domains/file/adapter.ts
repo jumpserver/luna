@@ -95,6 +95,7 @@ export const fileAiPanelDomain: AiPanelDomainAdapter = {
       headerDescription: context.t("RightPanel.FileAIHeaderDescription"),
       available: isKokoFileAiAvailable(current.targetId),
       busy,
+      running: current.taskActive,
       waitingForApproval,
       unavailable: {
         icon: "i-lucide-folder-lock",
@@ -107,22 +108,40 @@ export const fileAiPanelDomain: AiPanelDomainAdapter = {
         description: context.t("RightPanel.FileAIEmptyDescription")
       },
       inputPlaceholder: context.t("RightPanel.FileAIInputPlaceholder"),
-      actionLabel: busy ? context.t("RightPanel.FileAIInterrupt") : context.t("RightPanel.AISend"),
+      actionLabel: context.t("RightPanel.AISend"),
+      interruptLabel: context.t("RightPanel.FileAIInterrupt"),
       runtimeStatusLabel: runtimeStatusLabel(current.runtimeStatusCode || current.runtimeState, context.t),
       errorLabel,
       errorDetail: current.errorText,
       backgroundReasonLabel: "",
       elapsedDurationMs: 0,
       contextItems,
-      showPolicy: false,
+      toolNames: [...current.agent.state.toolNames],
+      showPolicy: true,
       showRuntimeStatus: true,
       showElapsedInError: false,
       showActivity: false,
       refreshElapsedWhileBusy: false,
       backgroundExecAvailable: false,
-      approvalThreshold: 0,
+      approvalThreshold: current.approvalMode,
       executionMode: "",
-      thresholdOptions: [],
+      thresholdOptions: [
+        {
+          label: context.t("RightPanel.AIAgentApprovalAlwaysShort"),
+          description: context.t("RightPanel.AIAgentApprovalAlways"),
+          value: "always"
+        },
+        {
+          label: context.t("RightPanel.AIAgentApprovalAutoShort"),
+          description: context.t("RightPanel.AIAgentApprovalAuto"),
+          value: "auto"
+        },
+        {
+          label: context.t("RightPanel.AIAgentApprovalNeverShort"),
+          description: context.t("RightPanel.AIAgentApprovalNever"),
+          value: "never"
+        }
+      ],
       modeOptions: []
     };
   },
@@ -184,6 +203,17 @@ export const fileAiPanelDomain: AiPanelDomainAdapter = {
     current.errorCode = "";
     current.errorText = "";
     current.chat.clearError();
+  },
+
+  updateApprovalThreshold(session, value) {
+    const current = fileSession(session);
+    if (!current) return;
+    const mode = String(value || "auto");
+    const approvalMode = mode === "always" || mode === "never" ? mode : "auto";
+    void current.agent.actions.setApprovalMode(approvalMode).catch((error) => {
+      current.errorCode = "policy_failed";
+      current.errorText = error instanceof Error ? error.message : "Failed to update approval mode";
+    });
   },
 
   handleTimelineAction(session, action) {

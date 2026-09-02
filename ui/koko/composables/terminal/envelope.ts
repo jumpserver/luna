@@ -3,7 +3,6 @@ export const ENVELOPE_TERMINAL_INPUT = 0x01;
 export const ENVELOPE_TERMINAL_OUTPUT = 0x02;
 export const ENVELOPE_TERMINAL_COMMAND = 0x03;
 export const ENVELOPE_ERROR = 0x04;
-export const ENVELOPE_CHAT = 0x05;
 export const ENVELOPE_TERMINAL_CREATE = 0x06;
 export const ENVELOPE_TERMINAL_CLOSE = 0x07;
 

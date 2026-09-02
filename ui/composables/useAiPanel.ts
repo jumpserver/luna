@@ -8,6 +8,7 @@ interface AiPanelContext {
   workspaceMode: WorkspaceMode;
   surfaceStatus?: WorkspaceSessionStatus;
   surfaceAssetId?: string;
+  surfaceProtocol?: string;
   standaloneWorkspace: boolean;
   workspaceFocused: boolean;
   rightPanelOpen: boolean;
@@ -21,7 +22,9 @@ const mode = computed(() => (source.value === "platform" ? "platform" : "workspa
 
 export function resolveAiPanelSource(context: AiPanelContext): AiPanelSource {
   const connectedAsset = context.surfaceStatus === "connected" && Boolean(context.surfaceAssetId);
-  const activeWorkspace = context.workspaceFocused && (connectedAsset || context.standaloneWorkspace);
+  const editorWorkspace = context.surfaceProtocol === "script-editor";
+  const activeWorkspace =
+    context.workspaceFocused && (connectedAsset || editorWorkspace || context.standaloneWorkspace);
   if (context.workspaceMode !== "assets" || !activeWorkspace) return "platform";
   return context.rightPanelOpen && context.rightPanelTab === "sftp" ? "sftp" : "workspace";
 }
@@ -43,6 +46,12 @@ export const useAiPanel = () => {
     open.value = true;
   };
 
+  const openWorkspaceAi = () => {
+    workspaceFocused.value = true;
+    source.value = "workspace";
+    open.value = true;
+  };
+
   const toggleAi = () => {
     if (open.value) {
       open.value = false;
@@ -61,6 +70,7 @@ export const useAiPanel = () => {
     setSource,
     setWorkspaceFocused,
     openAi,
+    openWorkspaceAi,
     toggleAi
   };
 };

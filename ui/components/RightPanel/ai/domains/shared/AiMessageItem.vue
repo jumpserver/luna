@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { AiTimelineAction, TextItem } from "../../types";
+import type { AiTimelineAction, SharedViewItem } from "../../types";
 import type { WorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
-import { renderAiMarkdown } from "../../presentation";
+import { formatAiDuration, renderAiMarkdown } from "../../presentation";
+import AiToolCallItem from "./AiToolCallItem.vue";
 
 defineProps<{
-  item: TextItem;
+  item: SharedViewItem;
   session: WorkspaceAiSession;
   assistantName: string;
 }>();
@@ -17,13 +18,18 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <article class="flex gap-2" :class="item.role === 'user' ? 'flex-row-reverse' : ''">
+  <AiToolCallItem v-if="item.kind === 'agent-tool'" :item="item" />
+
+  <article v-else class="flex gap-2" :class="item.role === 'user' ? 'flex-row-reverse' : ''">
     <span class="grid size-6 shrink-0 place-items-center rounded-md border border-default bg-elevated text-primary">
       <UIcon :name="item.role === 'user' ? 'i-lucide-user-round' : 'i-lucide-sparkles'" class="size-3.5" />
     </span>
     <div class="min-w-0 max-w-[88%]" :class="item.role === 'user' ? 'text-right' : ''">
       <div class="text-[10px] text-muted">
         {{ item.role === "user" ? t("RightPanel.AIYou") : assistantName }}
+        <span v-if="item.role === 'assistant' && item.modelDurationMs !== undefined" class="ml-1 font-mono">
+          · {{ t("RightPanel.AIModelDuration") }} {{ formatAiDuration(item.modelDurationMs) }}
+        </span>
       </div>
       <div
         class="markdown-body mt-1 rounded-xl border border-default px-2.5 py-2 text-left text-xs"

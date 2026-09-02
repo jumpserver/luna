@@ -47,6 +47,8 @@ export interface ScriptEditorInput {
   args?: string;
   module: string;
   comment?: string;
+  scope?: "private" | "public";
+  variable?: unknown[];
 }
 
 const tabs = ref<WorkspaceSessionTab[]>([]);
@@ -485,7 +487,9 @@ export const useWorkspaceTabs = () => {
           name: script.name || "",
           args: script.args || "",
           module: script.module,
-          comment: script.comment || ""
+          comment: script.comment || "",
+          scope: script.scope || "private",
+          variable: script.variable || []
         }
       },
       "session"
