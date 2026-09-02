@@ -8,9 +8,15 @@ Run the current development shell with:
 pnpm electron:dev
 ```
 
+Desktop development and packaging require Go 1.25 or newer to build the bundled `jms-ssh` helper.
+On macOS, development builds ad-hoc sign the helper; release builds use `CSC_NAME` and verify the packaged helper before completing. Windows Authenticode signing is enabled when `WINDOWS_CERTIFICATE_FILE` (and `WINDOWS_CERTIFICATE_PASSWORD`) or `WINDOWS_SIGN_WITH_PARAMS` is configured.
+
 The launcher allocates independent Nuxt and HMR ports, starts the renderer, and
-then opens Electron. The preload keeps context isolation and the Chromium
-sandbox enabled. It exposes a deliberately narrow desktop bridge to the UI.
+then opens Electron through Electron Forge. TypeScript sources live under `src/`
+by domain (`desktop`, `auth`, `apps`, `replay`, `web-proxy`). Vite compiles the
+`bootstrap.ts` and `preload.ts` entries. The preload keeps context isolation and
+the Chromium sandbox enabled. It exposes a deliberately narrow desktop bridge to
+the UI.
 
 Currently migrated:
 
@@ -30,7 +36,8 @@ Remaining release work:
 - code signing/notarization and updater channel wiring.
 
 Create a local unpacked production app with `pnpm electron:package:dir`, or build platform artifacts
-with `pnpm electron:build`.
+with `pnpm electron:build`. Packaging uses Electron Forge makers: DMG/ZIP on macOS, Squirrel/WiX on
+Windows, and DEB/RPM on Linux. Windows no longer uses NSIS, and Linux no longer produces AppImage.
 
 Keep new renderer code runtime-neutral. Add native behavior to the preload/main
 bridge rather than enabling Node.js integration or importing Electron from Vue

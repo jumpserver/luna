@@ -73,6 +73,13 @@ export interface CommandSnippetVariablePayload {
 }
 
 export interface PublicSettings {
+  XPACK_LICENSE_IS_VALID?: boolean;
+  INTERFACE?: {
+    login_title?: string;
+  };
+  XPACK_LICENSE_INFO?: {
+    corporation?: unknown;
+  };
   SECURITY_COMMAND_EXECUTION?: boolean;
   SECURITY_WATERMARK_ENABLED?: boolean;
   SECURITY_WATERMARK_CONSOLE_CONTENT?: string;

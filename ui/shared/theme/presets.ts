@@ -17,7 +17,7 @@ export type ThemePresetId =
   | "codex"
   | "cursor"
   | "mono-dark"
-  | "min-dark";
+  | "nord";
 
 export interface ThemePresetOption {
   id: ThemePresetId;
@@ -49,7 +49,7 @@ export const DARK_THEME_PRESETS: ThemePresetOption[] = [
   { id: "codex", label: "Codex Graphite", accent: "#10a37f" },
   { id: "cursor", label: "Cursor Noir", accent: "#f7f7f4" },
   { id: "mono-dark", label: "Mono Dark", accent: "#ffffff" },
-  { id: "min-dark", label: "Min Dark", accent: "#333333" }
+  { id: "nord", label: "Nord", accent: "#88c0d0" }
 ];
 
 const presetMap = new Map(

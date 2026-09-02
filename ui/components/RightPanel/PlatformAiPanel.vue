@@ -100,7 +100,7 @@ function conversationTitle(conversation: PlatformAiConversation) {
 function formatDate(value?: string) {
   const timestamp = Date.parse(value || "");
   if (!Number.isFinite(timestamp)) return "";
-  return new Intl.DateTimeFormat(locale.value, {
+  return new Intl.DateTimeFormat(toIntlLocale(locale.value), {
     month: "short",
     day: "numeric",
     hour: "2-digit",

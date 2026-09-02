@@ -6,6 +6,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { resolveAssetIconFromFields } from "~/utils/assetIcon";
 
 const { t } = useI18n();
+const appBaseURL = useRuntimeConfig().app.baseURL;
 const { isMacOS } = usePlatform();
 const { open: settingsOpen } = useSettingsWindow();
 const userInfoStore = useUserInfoStore();
@@ -30,7 +31,7 @@ const {
 } = useWorkspaceTabs();
 const { cloneSession, reconnectSession, splitSession } = useWorkspaceTabMenu();
 
-const tabStripRef = ref<HTMLElement | null>(null);
+const tabStripRef = shallowRef<HTMLElement | null>(null);
 const hasOverflow = ref(false);
 const hasLeftHidden = ref(false);
 const hasRightHidden = ref(false);
@@ -62,11 +63,14 @@ const renameDisabled = computed(() => {
 });
 
 function tabIcon(tab: WorkspaceSessionTab) {
-  return resolveAssetIconFromFields({
-    type: tab.assetType,
-    platform: tab.assetPlatform,
-    category: tab.assetCategory
-  });
+  return resolveAssetIconFromFields(
+    {
+      type: tab.assetType,
+      platform: tab.assetPlatform,
+      category: tab.assetCategory
+    },
+    appBaseURL
+  );
 }
 
 function showTabIconImage(tab: WorkspaceSessionTab) {

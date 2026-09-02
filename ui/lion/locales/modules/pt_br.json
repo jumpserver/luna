@@ -1,0 +1,15 @@
+{
+  "ClipboardTextLimitExceeded": "O texto da área de transferência excede o limite",
+  "ClipboardFileSizeLimitExceeded": "O arquivo da área de transferência excede o limite",
+  "ClipboardCopyDeniedByPolicy": "A política da área de transferência impede a cópia",
+  "ClipboardPasteDeniedByPolicy": "A política da área de transferência impede a colagem",
+  "Copy": "Copiar",
+  "Paste": "Colar",
+  "NoPermission": "Permissão negada",
+  "LoadMore": "Carregar mais",
+  "Uploading": "Enviando",
+  "Waiting": "Aguardando",
+  "Forward": "Avançar",
+  "ZoomIn": "Ampliar",
+  "ZoomOut": "Reduzir"
+}

@@ -16,7 +16,9 @@ on:
     tags: ["v*"]
 
 env:
-  VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+  VERSION: >-
+    ${{ github.event_name == 'workflow_dispatch'
+    && inputs.version || github.ref_name }}
 
 permissions:
   contents: read
@@ -38,14 +40,24 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: pnpm
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: electron/ssh-helper/go.mod
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate frontend
-        run: pnpm typecheck && pnpm lint:check && pnpm test
+      - name: Validate source
+        run: pnpm lint:check
+
+      - name: Validate web application
+        run: pnpm typecheck:web && pnpm test:web
+
+      - name: Validate Electron client
+        run: pnpm typecheck:electron && pnpm test:electron
 
   build:
     name: package ${{ matrix.name }}
@@ -56,19 +68,19 @@ jobs:
         include:
           - name: macOS-arm64
             os: macos-latest
-            builder_args: --mac --arm64
+            forge_args: --platform darwin --arch arm64
           - name: macOS-x64
             os: macos-15-intel
-            builder_args: --mac --x64
+            forge_args: --platform darwin --arch x64
           - name: Linux-x64
             os: ubuntu-22.04
-            builder_args: --linux --x64
+            forge_args: --platform linux --arch x64
           - name: Linux-arm64
             os: ubuntu-22.04-arm
-            builder_args: --linux --arm64
+            forge_args: --platform linux --arch arm64
           - name: Windows-x64
             os: windows-latest
-            builder_args: --win --x64
+            forge_args: --platform win32 --arch x64
     runs-on: ${{ matrix.os }}
     env:
       APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -84,12 +96,21 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: pnpm
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: electron/ssh-helper/go.mod
 
       - name: Install Linux packaging dependencies
         if: startsWith(matrix.os, 'ubuntu')
-        run: sudo apt-get update && sudo apt-get install -y rpm
+        run: sudo apt-get update && sudo apt-get install -y fakeroot rpm
+
+      - name: Verify WiX Toolset
+        if: startsWith(matrix.os, 'windows')
+        shell: pwsh
+        run: Get-Command candle, light
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -100,13 +121,20 @@ jobs:
         run: pnpm set_version
 
       - name: Set custom product name
-        if: github.event_name == 'workflow_dispatch' && inputs.product_name != ''
-        run: node scripts/set-product-name.mjs --name "${{ inputs.product_name }}"
+        if: >-
+          github.event_name == 'workflow_dispatch'
+          && inputs.product_name != ''
+        run: >-
+          node scripts/set-product-name.mjs
+          --name "${{ inputs.product_name }}"
 
       - name: Apply custom brand assets
-        if: github.event_name == 'workflow_dispatch' && inputs.product_name != ''
+        if: >-
+          github.event_name == 'workflow_dispatch'
+          && inputs.product_name != ''
         env:
-          CLIENT_BRAND_ASSETS_PASSPHRASE: ${{ secrets.CLIENT_BRAND_ASSETS_PASSPHRASE }}
+          CLIENT_BRAND_ASSETS_PASSPHRASE: >-
+            ${{ secrets.CLIENT_BRAND_ASSETS_PASSPHRASE }}
         shell: bash
         run: |
           encrypted_assets=".github/brand-assets/client-brand-assets.tgz.enc"
@@ -142,7 +170,7 @@ jobs:
         run: pnpm electron:prepare
 
       - name: Build Electron artifacts
-        run: pnpm --dir electron exec electron-builder --projectDir .. --publish never ${{ matrix.builder_args }}
+        run: pnpm --dir electron make -- ${{ matrix.forge_args }}
 
       - name: Upload packaged artifacts
         uses: actions/upload-artifact@v4
@@ -151,18 +179,21 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           path: |
-            release/electron/*.dmg
-            release/electron/*.zip
-            release/electron/*.exe
-            release/electron/*.msi
-            release/electron/*.AppImage
-            release/electron/*.deb
-            release/electron/*.rpm
+            release/electron/make/**/*.dmg
+            release/electron/make/**/*.zip
+            release/electron/make/**/*.exe
+            release/electron/make/**/*.msi
+            release/electron/make/**/*.nupkg
+            release/electron/make/**/RELEASES
+            release/electron/make/**/*.deb
+            release/electron/make/**/*.rpm
 
   release:
     name: create draft release
     needs: build
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    if: >-
+      startsWith(github.ref, 'refs/tags/')
+      || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write

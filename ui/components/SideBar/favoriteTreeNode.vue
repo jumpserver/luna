@@ -17,19 +17,19 @@ const toggle = () => {
 </script>
 
 <template>
-  <div>
+  <div class="app-tree">
     <div
-      class="sidebar-row group/folder flex h-7 items-center gap-1 rounded-lg pr-1 text-xs"
+      class="app-tree-row sidebar-row group/folder flex items-center gap-1 rounded-lg pr-1"
       :style="{ paddingLeft: `${10 + (level || 0) * 14}px` }"
       @contextmenu.prevent="emit('folderContextmenu', folder, $event)"
     >
       <button type="button" class="flex min-w-0 flex-1 items-center gap-1 text-left" @click="toggle">
         <UIcon
           name="i-lucide-chevron-right"
-          class="sidebar-icon-sm transition-transform"
+          class="app-tree-toggle-icon sidebar-icon-sm transition-transform"
           :class="folder.open ? 'rotate-90' : ''"
         />
-        <UIcon :name="folder.open ? 'i-tabler-folder-open' : 'i-tabler-folder'" class="sidebar-icon tree-folder-icon" />
+        <AppTreeFolderIcon :open="folder.open" class="app-tree-icon sidebar-icon tree-folder-icon" />
         <span class="truncate font-medium">{{ folder.name }}</span>
       </button>
     </div>
@@ -48,12 +48,12 @@ const toggle = () => {
         v-for="asset in folder.assets"
         :key="`${folder.id}-${asset.id}`"
         type="button"
-        class="sidebar-row flex h-7 w-full items-center gap-1.5 rounded-lg pr-1 text-left text-[11px]"
+        class="app-tree-row sidebar-row flex w-full items-center gap-1.5 rounded-lg pr-1 text-left"
         :style="{ paddingLeft: `${26 + (level || 0) * 14}px` }"
         @dblclick="emit('select', asset)"
         @contextmenu.prevent="emit('contextmenu', asset, $event)"
       >
-        <UIcon name="i-lucide-terminal" class="sidebar-icon" />
+        <UIcon name="i-lucide-terminal" class="app-tree-icon sidebar-icon" />
         <span class="truncate font-ui-mono">{{ asset.name }}</span>
       </button>
     </div>

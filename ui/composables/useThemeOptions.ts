@@ -1,20 +1,14 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
+import type { ThemeRevealOrigin } from "~/composables/useThemeAdapter";
+import type { ThemePresetOption } from "~/composables/useThemePresets";
 import type { ThemePresetId } from "~/types";
 import { DARK_THEME_PRESETS, getThemePreset, LIGHT_THEME_PRESETS } from "~/composables/useThemePresets";
 import { desktopEmit } from "~/shared/desktop/bridge";
 
 export const useThemeOptions = () => {
   const { t } = useI18n();
-  const {
-    lightThemePreset,
-    darkThemePreset,
-    setLightThemePreset,
-    setDarkThemePreset,
-    setPrimaryColorLight,
-    setPrimaryColorDark
-  } = useSettingManager();
+  const { lightThemePreset, darkThemePreset } = useSettingManager();
   const { userTheme, themeMode, followSystem, manualSetTheme, enableFollowSystem } = useThemeAdapter();
-  const { applyPrimaryColor } = useColor();
 
   const currentAppearanceMode = computed<"withSystem" | "light" | "dark">(() => {
     if (themeMode.value === "withSystem" || (!themeMode.value && followSystem.value)) {
@@ -26,16 +20,16 @@ export const useThemeOptions = () => {
     return "light";
   });
 
-  const applyAppearanceMode = async (mode: "withSystem" | "light" | "dark") => {
+  const applyAppearanceMode = async (mode: "withSystem" | "light" | "dark", origin?: ThemeRevealOrigin | null) => {
+    if (currentAppearanceMode.value === mode) return;
+
     if (mode === "withSystem") {
-      await enableFollowSystem();
+      await enableFollowSystem(origin);
     } else {
-      manualSetTheme(mode);
+      manualSetTheme(mode, undefined, origin);
     }
 
-    try {
-      void desktopEmit("theme-changed", { mode });
-    } catch {}
+    void desktopEmit("theme-changed", { mode }).catch(() => undefined);
   };
 
   const darkThemeIds = new Set<ThemePresetId>(DARK_THEME_PRESETS.map((item) => item.id));
@@ -44,18 +38,21 @@ export const useThemeOptions = () => {
     userTheme.value === "dark" ? darkThemePreset.value : lightThemePreset.value
   );
 
-  const currentThemePresetLabel = computed(
-    () => getThemePreset(currentThemePresetId.value)?.label || t("Common.Theme")
-  );
+  const themePresetLabel = (preset: ThemePresetOption | null | undefined) => {
+    if (!preset) return t("Common.Theme");
+    return preset.label;
+  };
+
+  const currentThemePresetLabel = computed(() => themePresetLabel(getThemePreset(currentThemePresetId.value)));
 
   const themeSelectItems = computed(() => [
     ...LIGHT_THEME_PRESETS.map((item) => ({
       id: item.id,
-      label: `${t("Common.Light")} · ${item.label}`
+      label: `${t("Common.Light")} · ${themePresetLabel(item)}`
     })),
     ...DARK_THEME_PRESETS.map((item) => ({
       id: item.id,
-      label: `${t("Common.Dark")} · ${item.label}`
+      label: `${t("Common.Dark")} · ${themePresetLabel(item)}`
     }))
   ]);
 
@@ -64,22 +61,12 @@ export const useThemeOptions = () => {
     if (!preset) return;
 
     const mode = darkThemeIds.has(presetId) ? "dark" : "light";
+    if (currentThemePresetId.value === presetId && currentAppearanceMode.value === mode) return;
 
-    manualSetTheme(mode);
-    applyPrimaryColor(preset.accent);
+    manualSetTheme(mode, { preset: presetId, accent: preset.accent });
 
-    if (mode === "dark") {
-      setDarkThemePreset(presetId);
-      setPrimaryColorDark(preset.accent);
-    } else {
-      setLightThemePreset(presetId);
-      setPrimaryColorLight(preset.accent);
-    }
-
-    try {
-      void desktopEmit("theme-changed", { mode });
-      void desktopEmit("primary-color-changed", { hex: preset.accent, mode });
-    } catch {}
+    void desktopEmit("theme-changed", { mode }).catch(() => undefined);
+    void desktopEmit("primary-color-changed", { hex: preset.accent, mode }).catch(() => undefined);
   };
 
   const appearanceModeItems = computed<DropdownMenuItem[]>(() => [
@@ -119,7 +106,7 @@ export const useThemeOptions = () => {
         disabled: true
       },
       ...LIGHT_THEME_PRESETS.map((item) => ({
-        label: item.label,
+        label: themePresetLabel(item),
         icon: currentThemePresetId.value === item.id ? "i-lucide-check" : "i-lucide-sun-medium",
         onSelect: () => selectThemePreset(item.id)
       }))
@@ -130,7 +117,7 @@ export const useThemeOptions = () => {
         disabled: true
       },
       ...DARK_THEME_PRESETS.map((item) => ({
-        label: item.label,
+        label: themePresetLabel(item),
         icon: currentThemePresetId.value === item.id ? "i-lucide-check" : "i-lucide-moon-star",
         onSelect: () => selectThemePreset(item.id)
       }))
@@ -140,6 +127,7 @@ export const useThemeOptions = () => {
   return {
     currentThemePresetId,
     currentThemePresetLabel,
+    themePresetLabel,
     currentAppearanceMode,
     appearanceModeItems,
     applyAppearanceMode,

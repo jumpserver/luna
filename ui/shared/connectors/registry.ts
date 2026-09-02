@@ -6,16 +6,16 @@ import type { KokoSurfaceMode } from "~/shared/connectors/types/component";
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 
 const KokoTerminalSessionSurface = defineAsyncComponent(() =>
-  import("@jumpserver/koko").then((module) => module.KokoTerminalSessionSurface)
+  import("#koko").then((module) => module.KokoTerminalSessionSurface)
 );
 const KokoFileManagerSessionSurface = defineAsyncComponent(() =>
-  import("@jumpserver/koko").then((module) => module.KokoFileManagerSessionSurface)
+  import("#koko").then((module) => module.KokoFileManagerSessionSurface)
 );
 const KokoFileEditorSessionSurface = defineAsyncComponent(() =>
-  import("@jumpserver/koko").then((module) => module.KokoFileEditorSessionSurface)
+  import("#koko").then((module) => module.KokoFileEditorSessionSurface)
 );
 const KokoKubernetesWorkspace = defineAsyncComponent(() =>
-  import("@jumpserver/koko").then((module) => module.KokoKubernetesWorkspace)
+  import("#koko").then((module) => module.KokoKubernetesWorkspace)
 );
 const ChenDatabaseSessionSurface = defineAsyncComponent(() => import("~/chen/workspaces/DatabaseSessionSurface.vue"));
 const LionRemoteSessionSurface = defineAsyncComponent(() => import("~/lion/workspaces/RemoteSessionSurface.vue"));

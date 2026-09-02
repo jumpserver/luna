@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import type { DropdownMenuItem } from "@nuxt/ui";
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
-import type { UserData } from "~/types/index";
+import type { LangType, ThemePresetId, UserData } from "~/types/index";
 
 import { useSettingManager } from "~/composables/useSettingManager";
+import { DARK_THEME_PRESETS, getThemePreset, LIGHT_THEME_PRESETS } from "~/composables/useThemePresets";
 import { desktopApp, desktopEmit, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import ProfileAppMenu from "./ProfileAppMenu.vue";
 import RecentSites from "./recentSites.vue";
 
 interface VersionAlertPayload {
@@ -20,19 +19,6 @@ interface VersionMessageResponse {
   success: boolean;
 }
 
-const props = withDefaults(
-  defineProps<{
-    collapse?: boolean;
-    placement?: "sidebar" | "topbar";
-  }>(),
-  {
-    collapse: false,
-    placement: "sidebar"
-  }
-);
-
-const isTopbar = computed(() => props.placement === "topbar");
-
 const recentSiteLimit = 5;
 
 const { addErrorToast } = useErrorToast();
@@ -40,12 +26,31 @@ const appConfig = useAppConfig();
 const localePath = useLocalePath();
 const userInfoStore = useUserInfoStore();
 
-const { t } = useI18n();
+const { t, locales, locale } = useI18n();
 const { loggedIn, currentAccountId, userMap, currentUser } = storeToRefs(userInfoStore);
 const { applyLoginPayload } = useAuthSession();
 const { openSettings } = useSettingsWindow();
+const {
+  currentAppearanceMode,
+  applyAppearanceMode,
+  currentThemePresetId,
+  currentThemePresetLabel,
+  selectThemePreset,
+  themePresetLabel
+} = useThemeOptions();
 
-const { primaryColorLight, primaryColorDark, recentSites, setRecentSites, hydrationPromise } = useSettingManager();
+const {
+  primaryColorLight,
+  primaryColorDark,
+  recentSites,
+  setRecentSites,
+  hydrationPromise,
+  setLang,
+  setLightThemePreset,
+  setDarkThemePreset,
+  setPrimaryColorLight,
+  setPrimaryColorDark
+} = useSettingManager();
 const { userTheme } = useThemeAdapter();
 const { applyPrimaryColor } = useColor();
 
@@ -66,6 +71,9 @@ const inputRef = ref<ComponentPublicInstance | null>(null);
 const siteNameInputRef = ref<ComponentPublicInstance | null>(null);
 const profileOpen = ref(false);
 const profileOpenedByPointer = ref(false);
+const headerIconButtonClass =
+  "grid size-6 shrink-0 place-items-center rounded-lg p-0 text-[var(--app-text-secondary)] transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]";
+const headerIconButtonActiveClass = "bg-[var(--app-hover-soft)] text-[var(--app-fg)]";
 
 let loginBtnUnlockTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -124,30 +132,153 @@ const accountTooltip = computed(() => {
 });
 
 const accountSite = computed(() => currentUser.value?.siteName || currentUser.value?.site || "—");
+const siteAccounts = computed(() => Object.entries(userMap.value) as [string, UserData][]);
+const hasMultipleSites = computed(() => siteAccounts.value.length > 1);
+
+const languageItems = computed(() =>
+  ((locales.value as Array<{ code?: string; name?: string } | string>) || []).map((item) => {
+    const id = typeof item === "string" ? item : item.code || "";
+    const label = typeof item === "string" ? item : item.name || id;
+    return { id, label };
+  })
+);
+
+const currentLanguageLabel = computed(
+  () => languageItems.value.find((item) => item.id === locale.value)?.label || locale.value
+);
+const primaryLanguageItems = computed(() =>
+  ["zh", "en"]
+    .map((id) => languageItems.value.find((item) => item.id === id))
+    .filter((item): item is { id: string; label: string } => Boolean(item))
+);
+const extraLanguageItems = computed(() => languageItems.value.filter((item) => item.id !== "zh" && item.id !== "en"));
+const extraLanguageLabel = computed(
+  () => extraLanguageItems.value.find((item) => item.id === locale.value)?.label || ""
+);
+const selectedPrimaryLanguage = computed({
+  get: () => locale.value,
+  set: (id: string) => setLang(id as LangType)
+});
+const moreLanguagesOpen = ref(false);
+const selectExtraLanguage = (id: string) => {
+  setLang(id as LangType);
+  moreLanguagesOpen.value = false;
+};
+
+const appearanceModes = computed(() => [
+  { id: "withSystem" as const, label: t("Common.System") },
+  { id: "light" as const, label: t("Common.Light") },
+  { id: "dark" as const, label: t("Common.Dark") }
+]);
+
+const themeRevealOrigin = ref<{ x: number; y: number } | null>(null);
+
+const selectedAppearanceMode = computed({
+  get: () => currentAppearanceMode.value,
+  set: (mode: "withSystem" | "light" | "dark") => {
+    void applyAppearanceMode(mode, themeRevealOrigin.value);
+  }
+});
+
+const onThemePointerDown = (event: PointerEvent) => {
+  themeRevealOrigin.value = { x: event.clientX, y: event.clientY };
+};
+
+const currentAppearanceLabel = computed(
+  () => appearanceModes.value.find((item) => item.id === currentAppearanceMode.value)?.label || ""
+);
+
+const menuTabsUi = {
+  root: "w-full",
+  list: "w-full bg-[var(--app-surface-canvas)] p-1 ring-1 ring-[var(--app-border)]",
+  indicator: "bg-[var(--app-state-hover-strong)] shadow-sm",
+  trigger: "flex-1 px-3 data-[state=active]:text-highlighted focus-visible:outline-[var(--app-focus-ring)]"
+};
+
+const menuSeparatorUi = {
+  border: "border-t border-[var(--app-border-soft)]"
+};
+
+const menuShortcutButtonUi = {
+  label: "min-w-0 flex-1 truncate text-left"
+};
+
+const currentThemeAccent = computed(() => getThemePreset(currentThemePresetId.value)?.accent || "var(--theme-accent)");
+const themePaletteOpen = ref(false);
+const previewedThemePresetId = ref<ThemePresetId | null>(null);
+
+const resolvedPaletteMode = computed<"light" | "dark">(() => {
+  if (currentAppearanceMode.value === "light") return "light";
+  if (currentAppearanceMode.value === "dark") return "dark";
+  return userTheme.value === "dark" ? "dark" : "light";
+});
+
+const visibleThemePresets = computed(() =>
+  resolvedPaletteMode.value === "dark" ? DARK_THEME_PRESETS : LIGHT_THEME_PRESETS
+);
+
+watch(profileOpen, (open) => {
+  if (!open) {
+    themePaletteOpen.value = false;
+    restorePalettePreview();
+  }
+});
+
+watch(themePaletteOpen, (open) => {
+  if (!open) restorePalettePreview();
+});
 
 const handleProfileOpenAutoFocus = (event: Event) => {
   if (profileOpenedByPointer.value) event.preventDefault();
   profileOpenedByPointer.value = false;
 };
 
-const siteSwitcherItems = computed<DropdownMenuItem[][]>(() => [
-  (Object.entries(userMap.value) as [string, UserData][]).map(([accountId, account]) => ({
-    label: account.siteName || account.site,
-    description: account.name,
-    type: "checkbox" as const,
-    checked: accountId === currentAccountId.value,
-    onUpdateChecked: (checked: boolean) => {
-      if (checked && accountId !== currentAccountId.value) handleSwitchAccount(accountId);
-    }
-  })),
-  [
-    {
-      label: t("Login.AddAccount"),
-      icon: "i-lucide-user-round-plus",
-      onClick: openAddSite
-    }
-  ]
-]);
+const previewPalettePreset = (id: ThemePresetId) => {
+  const preset = getThemePreset(id);
+  if (!preset || !import.meta.client) return;
+
+  previewedThemePresetId.value = id;
+  document.documentElement.dataset.themePreset = id;
+  applyPrimaryColor(preset.accent);
+};
+
+function restorePalettePreview() {
+  if (!previewedThemePresetId.value || !import.meta.client) return;
+
+  previewedThemePresetId.value = null;
+  document.documentElement.dataset.themePreset = currentThemePresetId.value;
+  applyCurrentThemeColor();
+}
+
+const applyPalettePreset = (id: ThemePresetId) => {
+  const preset = getThemePreset(id);
+  if (!preset) return;
+
+  restorePalettePreview();
+
+  if (currentAppearanceMode.value !== "withSystem") {
+    selectThemePreset(id);
+    return;
+  }
+
+  applyPrimaryColor(preset.accent);
+  if (resolvedPaletteMode.value === "dark") {
+    setDarkThemePreset(id);
+    setPrimaryColorDark(preset.accent);
+  } else {
+    setLightThemePreset(id);
+    setPrimaryColorLight(preset.accent);
+  }
+
+  try {
+    void desktopEmit("primary-color-changed", { hex: preset.accent, mode: resolvedPaletteMode.value });
+  } catch {}
+};
+
+const accountInitial = (name?: string) => {
+  const trimmed = (name || "").trim();
+  return trimmed ? trimmed.slice(0, 1).toUpperCase() : "?";
+};
 
 watch(
   () => userTheme.value,
@@ -424,6 +555,16 @@ async function openUserSettings() {
   await openSettings("/setting/user");
 }
 
+async function openPreferences() {
+  profileOpen.value = false;
+  await openSettings();
+}
+
+async function openTools() {
+  profileOpen.value = false;
+  await navigateTo(localePath({ path: "/tools" }));
+}
+
 /**
  * @description 过滤输入中的控制字符
  */
@@ -689,6 +830,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  restorePalettePreview();
   if (unlistenAuthUrlRef.value) unlistenAuthUrlRef.value();
   if (unlistenErrorPageRef.value) unlistenErrorPageRef.value();
   if (unlistenLoginFailedRef.value) unlistenLoginFailedRef.value();
@@ -698,73 +840,87 @@ onBeforeUnmount(() => {
 
 <template>
   <UPopover
-    v-if="loggedIn || isTopbar"
     v-model:open="profileOpen"
     :content="{
-      align: isTopbar ? 'end' : 'start',
-      side: isTopbar ? 'bottom' : 'top',
+      align: 'end',
+      side: 'bottom',
       sideOffset: 8,
       onOpenAutoFocus: handleProfileOpenAutoFocus
     }"
     :ui="{
       content:
-        'max-h-[calc(100dvh-4rem)] w-64 overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-0 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
+        'max-h-[calc(100dvh-4rem)] w-64 overflow-x-hidden overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-0 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
     }"
   >
-    <UTooltip v-if="isTopbar" arrow :text="accountTooltip">
+    <UTooltip arrow :text="accountTooltip">
       <UButton
         color="neutral"
         variant="ghost"
         size="sm"
-        icon="i-lucide-circle-user-round"
+        square
         :aria-label="accountTooltip"
+        :class="[headerIconButtonClass, profileOpen ? headerIconButtonActiveClass : '']"
         @pointerdown="profileOpenedByPointer = true"
         @keydown="profileOpenedByPointer = false"
-      />
+      >
+        <UIcon name="i-lucide-circle-user-round" class="size-4" />
+      </UButton>
     </UTooltip>
-
-    <button
-      v-else
-      type="button"
-      class="sidebar-row flex items-center py-1 px-1.5 w-full min-w-0 rounded-lg"
-      :style="{
-        justifyContent: collapse ? 'center' : ''
-      }"
-      @pointerdown="profileOpenedByPointer = true"
-      @keydown="profileOpenedByPointer = false"
-    >
-      <div class="flex items-center gap-2 min-w-0">
-        <UIcon name="i-lucide-circle-user-round" class="sidebar-icon" />
-        <UTooltip v-if="!props.collapse" arrow :text="currentUser?.name">
-          <span class="block md:max-w-[150px] truncate leading-tight text-sm font-medium cursor-pointer">
-            {{ currentUser?.name }}
-          </span>
-        </UTooltip>
-      </div>
-    </button>
 
     <template #content>
       <div class="w-full">
         <template v-if="loggedIn">
-          <button
-            type="button"
-            class="group flex w-full items-center gap-3 rounded-t-xl px-3 py-3 text-left transition-colors hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+          <UButton
+            color="neutral"
+            variant="ghost"
+            block
+            class="h-auto items-center justify-start gap-3 rounded-none rounded-t-xl px-3 py-3 text-left"
+            :ui="{ base: 'rounded-none rounded-t-xl' }"
             @click="openUserSettings"
           >
             <UAvatar :alt="currentUser?.name || t('Common.User')" color="primary" size="md" class="shrink-0" />
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-semibold text-highlighted">
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-sm font-semibold text-highlighted">
                 {{ currentUser?.name || t("Common.User") }}
-              </p>
-              <p class="truncate text-xs text-muted" :title="accountSite">
+              </span>
+              <span class="mt-0.5 block truncate text-xs font-normal text-muted" :title="accountSite">
                 {{ accountSite }}
-              </p>
+              </span>
+            </span>
+            <UIcon name="i-lucide-chevron-right" class="size-4 shrink-0 text-dimmed" />
+          </UButton>
+
+          <div v-if="isDesktopRuntime() && hasMultipleSites" class="px-2">
+            <USeparator :ui="menuSeparatorUi" />
+          </div>
+          <div v-if="isDesktopRuntime() && hasMultipleSites" class="p-1.5">
+            <p class="px-2 pb-1 text-[10px] font-semibold tracking-[0.08em] text-muted uppercase">
+              {{ t("UserProfile.SiteAccounts") }}
+            </p>
+            <div class="max-h-40 overflow-y-auto">
+              <UButton
+                v-for="[accountId, account] in siteAccounts"
+                :key="accountId"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                block
+                class="justify-start"
+                @click="handleSwitchAccount(accountId)"
+              >
+                <UAvatar :alt="account.name" :text="accountInitial(account.name)" color="neutral" size="2xs" />
+                <span class="min-w-0 flex-1 truncate text-left">{{ account.name }}</span>
+                <span class="max-w-22 truncate text-xs font-normal text-muted">
+                  {{ account.siteName || account.site }}
+                </span>
+                <UIcon
+                  v-if="accountId === currentAccountId"
+                  name="i-lucide-check"
+                  class="size-3.5 shrink-0 text-primary"
+                />
+              </UButton>
             </div>
-            <UIcon
-              name="i-lucide-chevron-right"
-              class="size-4 shrink-0 text-dimmed transition-transform group-hover:translate-x-0.5 group-hover:text-muted"
-            />
-          </button>
+          </div>
         </template>
 
         <div v-else class="p-1.5">
@@ -780,33 +936,187 @@ onBeforeUnmount(() => {
           />
         </div>
 
-        <div v-if="isTopbar" class="border-t border-default p-1.5">
-          <ProfileAppMenu :submenu-side="isTopbar ? 'left' : 'right'" @select="profileOpen = false" />
+        <div class="px-2">
+          <USeparator :ui="menuSeparatorUi" />
         </div>
-
-        <div v-if="loggedIn && isDesktopRuntime()" class="border-t border-default p-1.5">
-          <UDropdownMenu
-            :items="siteSwitcherItems"
-            size="sm"
-            :content="{ align: 'end', side: isTopbar ? 'left' : 'right', sideOffset: 6 }"
-            :ui="{ content: 'w-64 max-h-72 overflow-y-auto p-1' }"
-          >
-            <UButton
-              :label="t('Login.SwitchSite')"
-              icon="i-lucide-arrow-left-right"
-              trailing-icon="i-lucide-chevron-right"
+        <div class="space-y-2.5 p-2">
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-2 px-1 text-[11px] font-medium text-muted">
+              <UIcon name="i-lucide-languages" class="size-3.5" />
+              <span>{{ t("Common.Language") }}</span>
+              <span class="ms-auto text-[11px] font-normal text-muted">{{ currentLanguageLabel }}</span>
+            </div>
+            <UTabs
+              v-model="selectedPrimaryLanguage"
+              :items="primaryLanguageItems"
+              value-key="id"
+              :content="false"
               color="neutral"
-              variant="ghost"
-              size="sm"
-              block
-              class="justify-start"
-              :ui="{ trailingIcon: 'ms-auto' }"
-              @click.stop
+              variant="pill"
+              size="xs"
+              :ui="menuTabsUi"
             />
-          </UDropdownMenu>
+            <UPopover
+              v-if="extraLanguageItems.length"
+              v-model:open="moreLanguagesOpen"
+              :content="{ align: 'start', side: 'left', sideOffset: 8 }"
+              :ui="{
+                content:
+                  'w-56 max-h-80 overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-1.5 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
+              }"
+            >
+              <UButton color="neutral" variant="ghost" size="sm" block class="h-8 justify-start gap-2 px-2">
+                <span class="min-w-0 flex-1 truncate text-left text-xs">{{ t("Common.More") }}</span>
+                <span class="text-[10px] text-muted">{{ extraLanguageLabel }}</span>
+                <UIcon name="i-lucide-chevron-right" class="size-3.5 shrink-0 text-muted" />
+              </UButton>
+
+              <template #content>
+                <div class="space-y-0.5">
+                  <UButton
+                    v-for="item in extraLanguageItems"
+                    :key="item.id"
+                    color="neutral"
+                    variant="ghost"
+                    size="sm"
+                    block
+                    class="justify-start gap-2"
+                    @click="selectExtraLanguage(item.id)"
+                  >
+                    <span class="min-w-0 flex-1 truncate text-left text-xs">{{ item.label }}</span>
+                    <UIcon v-if="locale === item.id" name="i-lucide-check" class="size-3.5 shrink-0 text-primary" />
+                  </UButton>
+                </div>
+              </template>
+            </UPopover>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-2 px-1 text-[11px] font-medium text-muted">
+              <UIcon name="i-lucide-palette" class="size-3.5" />
+              <span>{{ t("Common.Theme") }}</span>
+              <span class="ms-auto text-[11px] font-normal text-muted">{{ currentAppearanceLabel }}</span>
+            </div>
+            <div @pointerdown="onThemePointerDown">
+              <UTabs
+                v-model="selectedAppearanceMode"
+                :items="appearanceModes"
+                value-key="id"
+                :content="false"
+                color="neutral"
+                variant="pill"
+                size="xs"
+                :ui="menuTabsUi"
+              />
+            </div>
+            <UPopover
+              v-model:open="themePaletteOpen"
+              :content="{ align: 'start', side: 'left', sideOffset: 8 }"
+              :ui="{
+                content:
+                  'w-56 max-h-80 overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-1.5 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
+              }"
+            >
+              <UButton color="neutral" variant="ghost" size="sm" block class="h-8 justify-start gap-2 px-2">
+                <span
+                  class="size-2.5 shrink-0 rounded-full ring-1 ring-(--app-border)"
+                  :style="{ backgroundColor: currentThemeAccent }"
+                />
+                <span class="min-w-0 flex-1 truncate text-left text-xs">{{ currentThemePresetLabel }}</span>
+                <span class="text-[10px] text-muted">{{ t("Common.Appearance") }}</span>
+                <UIcon name="i-lucide-chevron-right" class="size-3.5 shrink-0 text-muted" />
+              </UButton>
+
+              <template #content>
+                <div class="space-y-0.5" @pointerleave="restorePalettePreview" @focusout="restorePalettePreview">
+                  <UButton
+                    v-for="item in visibleThemePresets"
+                    :key="item.id"
+                    color="neutral"
+                    variant="ghost"
+                    size="sm"
+                    block
+                    class="justify-start gap-2"
+                    @pointerenter="previewPalettePreset(item.id)"
+                    @focus="previewPalettePreset(item.id)"
+                    @click="applyPalettePreset(item.id)"
+                  >
+                    <span
+                      class="size-2.5 shrink-0 rounded-full ring-1 ring-(--app-border)"
+                      :style="{ backgroundColor: item.accent }"
+                    />
+                    <span class="min-w-0 flex-1 truncate text-left text-xs">{{ themePresetLabel(item) }}</span>
+                    <UIcon
+                      v-if="currentThemePresetId === item.id"
+                      name="i-lucide-check"
+                      class="size-3.5 shrink-0 text-primary"
+                    />
+                  </UButton>
+                </div>
+              </template>
+            </UPopover>
+          </div>
         </div>
 
-        <div v-if="loggedIn" class="border-t border-default p-1.5">
+        <div class="px-2">
+          <USeparator :ui="menuSeparatorUi" />
+        </div>
+        <div class="p-1.5">
+          <UButton
+            :label="t('Common.Settings')"
+            icon="i-lucide-settings"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            block
+            class="justify-start"
+            :ui="menuShortcutButtonUi"
+            @click="openPreferences"
+          >
+            <template #trailing>
+              <span class="ms-auto flex items-center gap-px">
+                <UKbd value="meta" size="sm" />
+                <UKbd value="," size="sm" />
+              </span>
+            </template>
+          </UButton>
+          <UButton
+            v-if="isDesktopRuntime()"
+            :label="t('Menu.MyTools')"
+            icon="i-lucide-wrench"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            block
+            class="justify-start"
+            :ui="menuShortcutButtonUi"
+            @click="openTools"
+          >
+            <template #trailing>
+              <span class="ms-auto flex items-center gap-px">
+                <UKbd value="meta" size="sm" />
+                <UKbd value="shift" size="sm" />
+                <UKbd value="," size="sm" />
+              </span>
+            </template>
+          </UButton>
+          <UButton
+            v-if="isDesktopRuntime()"
+            :label="t('Login.AddAccount')"
+            icon="i-lucide-user-round-plus"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            block
+            class="justify-start"
+            @click="openAddSite"
+          />
+        </div>
+
+        <div v-if="loggedIn" class="px-2">
+          <USeparator :ui="menuSeparatorUi" />
+        </div>
+        <div v-if="loggedIn" class="p-1.5">
           <UButton
             :label="t('Login.Logout')"
             icon="i-lucide-log-out"
@@ -821,21 +1131,6 @@ onBeforeUnmount(() => {
       </div>
     </template>
   </UPopover>
-
-  <button
-    v-else
-    type="button"
-    class="sidebar-row flex items-center py-1 px-1.5 w-full min-w-0 rounded-lg"
-    :style="{ justifyContent: collapse ? 'center' : '' }"
-    @click="openLoginPage"
-  >
-    <div class="flex items-center gap-2 min-w-0">
-      <UIcon name="i-lucide-circle-user-round" class="sidebar-icon" />
-      <span v-if="!props.collapse" class="block md:max-w-[150px] truncate leading-tight text-sm font-medium">
-        {{ t("Common.Account") }}
-      </span>
-    </div>
-  </button>
 
   <Modal
     v-if="isDesktopRuntime()"

@@ -7,7 +7,7 @@ const props = defineProps<{
   castData?: string;
 }>();
 
-const terminalRef = ref<HTMLElement | null>(null);
+const terminalRef = shallowRef<HTMLElement | null>(null);
 const speed = ref(1);
 let playerInstance: Player | null = null;
 let resizeObserver: ResizeObserver | null = null;

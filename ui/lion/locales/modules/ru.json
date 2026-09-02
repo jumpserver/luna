@@ -1,0 +1,15 @@
+{
+  "ClipboardTextLimitExceeded": "Текст в буфере обмена превышает допустимый размер",
+  "ClipboardFileSizeLimitExceeded": "Файл в буфере обмена превышает допустимый размер",
+  "ClipboardCopyDeniedByPolicy": "Политика буфера обмена запрещает копирование",
+  "ClipboardPasteDeniedByPolicy": "Политика буфера обмена запрещает вставку",
+  "Copy": "Копировать",
+  "Paste": "Вставить",
+  "NoPermission": "Доступ запрещён",
+  "LoadMore": "Загрузить ещё",
+  "Uploading": "Загрузка",
+  "Waiting": "Ожидание",
+  "Forward": "Вперёд",
+  "ZoomIn": "Увеличить",
+  "ZoomOut": "Уменьшить"
+}

@@ -5,19 +5,34 @@
   "private": true,
   "description": "Electron runtime for JumpServer",
   "author": "JumpServer",
-  "type": "module",
-  "main": "bootstrap.mjs",
+  "main": ".vite/build/bootstrap.js",
   "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "test": "node --import tsx --test tests/application-config.test.ts tests/debug-log.test.ts tests/ffmpeg-plugin.test.ts tests/oauth-callback.test.ts tests/replay-codec.test.ts tests/ssh-helper.test.ts tests/web-proxy.test.ts && go -C ssh-helper test ./...",
+    "typecheck": "tsc -p tsconfig.json --pretty false",
     "postinstall": "node ../scripts/fix-node-pty-permissions.mjs"
   },
   "dependencies": {
     "fflate": "^0.8.2",
     "node-pty": "^1.1.0",
-    "ssh2": "^1.17.0",
     "tar-stream": "2.2.0"
   },
   "devDependencies": {
+    "@electron-forge/cli": "7.11.2",
+    "@electron-forge/maker-deb": "7.11.2",
+    "@electron-forge/maker-dmg": "7.11.2",
+    "@electron-forge/maker-rpm": "7.11.2",
+    "@electron-forge/maker-squirrel": "7.11.2",
+    "@electron-forge/maker-wix": "7.11.2",
+    "@electron-forge/maker-zip": "7.11.2",
+    "@electron-forge/plugin-auto-unpack-natives": "7.11.2",
+    "@electron-forge/plugin-vite": "7.11.2",
+    "@electron-forge/shared-types": "7.11.2",
     "electron": "44.0.0",
-    "electron-builder": "26.15.3"
+    "electron-squirrel-startup": "^1.0.1",
+    "tsx": "^4.23.13",
+    "vite": "8.1.5"
   }
 }

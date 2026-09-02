@@ -1,12 +1,12 @@
 <script setup lang="ts">
+import { useNow } from "@vueuse/core";
+import prettyBytes from "pretty-bytes";
 import {
   getKokoLinuxMetrics,
   subscribeKokoLinuxMetrics,
   unsubscribeKokoLinuxMetrics,
   useKokoConnectionStore
-} from "@jumpserver/koko";
-import { useNow } from "@vueuse/core";
-import prettyBytes from "pretty-bytes";
+} from "#koko";
 import { getLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
 import RightPanelMetricSparkline from "~/components/RightPanel/metricSparkline.vue";
 import RightPanelSessionShareSection from "~/components/RightPanel/sessionShareSection.vue";

@@ -1,21 +1,32 @@
-import type { WorkspacePane, WorkspaceSessionTab, WorkspaceSplitDirection } from "~/composables/useWorkspaceTabs";
+import type {
+  WorkspacePane,
+  WorkspaceSessionTab,
+  WorkspaceSplitDirection,
+  WorkspaceSurfaceSession
+} from "~/composables/useWorkspaceTabs";
 import type { AssetItem } from "~/types";
 
+import { SFTP_FILE_EDITOR_VALUE } from "~/composables/useConnectMethods";
 import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
 
-function tabToAsset(tab: WorkspaceSessionTab): AssetItem {
+function sessionToAsset(session: WorkspaceSurfaceSession): AssetItem {
   return {
-    id: tab.assetId,
-    name: tab.assetName,
-    address: tab.address,
-    platform: tab.assetPlatform,
-    type: tab.assetType,
-    category: tab.assetCategory,
-    permedProtocols: tab.permedProtocols,
-    permedAccounts: tab.permedAccounts,
+    id: session.assetId,
+    name: session.assetName,
+    address: session.address,
+    platform: session.assetPlatform,
+    type: session.assetType,
+    category: session.assetCategory,
+    org_id: session.orgId,
+    permedProtocols: session.permedProtocols,
+    permedAccounts: session.permedAccounts,
     zone: "",
     isActive: true
   };
+}
+
+function getConnectMethod(session: Pick<WorkspaceSurfaceSession, "connectMethod" | "payload">) {
+  return String(session.payload?.connectMethod?.value || session.connectMethod || "");
 }
 
 function getTokenId(tab: Pick<WorkspaceSessionTab, "payload">) {
@@ -36,6 +47,8 @@ export function useWorkspaceTabMenu() {
   const { addErrorToast } = useErrorToast();
   const { handleAssetConnection } = useAssetAction();
   const {
+    activePaneId,
+    activeTabId,
     getTabById,
     openSession,
     openSetupSession,
@@ -45,6 +58,8 @@ export function useWorkspaceTabMenu() {
     splitWorkspace,
     canSplitWorkspace,
     markSessionConnecting,
+    placePane,
+    setActivePane,
     updateSessionPayload
   } = useWorkspaceTabs();
 
@@ -53,7 +68,8 @@ export function useWorkspaceTabMenu() {
 
     handleAssetConnection(tab.account, tab.assetId, tab.protocol, undefined, undefined, {
       tabId: tab.id,
-      asset: tabToAsset(tab),
+      asset: sessionToAsset(tab),
+      orgId: tab.orgId,
       connectMethod
     });
   };
@@ -68,7 +84,7 @@ export function useWorkspaceTabMenu() {
   const cloneSession = async (tab: WorkspaceSessionTab) => {
     try {
       const token = await exchangeToken(tab);
-      const newPane = openSession(tabToAsset(tab), {
+      const newPane = openSession(sessionToAsset(tab), {
         protocol: tab.protocol,
         account: tab.account,
         payload: buildPayload(tab, token)
@@ -118,7 +134,7 @@ export function useWorkspaceTabMenu() {
 
     try {
       markSessionConnecting(pane.id);
-      openSession(tabToAsset(workspaceTab), {
+      openSession(sessionToAsset(workspaceTab), {
         protocol: workspaceTab.protocol,
         account: workspaceTab.account,
         paneId: pane.id
@@ -137,7 +153,8 @@ export function useWorkspaceTabMenu() {
       const connectMethod = workspaceTab.payload?.connectMethod?.value;
       handleAssetConnection(workspaceTab.account, workspaceTab.assetId, workspaceTab.protocol, undefined, undefined, {
         tabId: pane.id,
-        asset: tabToAsset(workspaceTab),
+        asset: sessionToAsset(workspaceTab),
+        orgId: workspaceTab.orgId,
         connectMethod
       });
       addErrorToast({
@@ -149,6 +166,128 @@ export function useWorkspaceTabMenu() {
 
   const connectOtherPane = (_workspaceTab: WorkspaceSessionTab, pane: WorkspacePane, asset: AssetItem) => {
     openSetupSession(asset, { paneId: pane.id });
+  };
+
+  const openDevelopmentWorkspace = async (
+    workspaceTab: WorkspaceSessionTab,
+    terminalPane: WorkspacePane,
+    requestFileToken?: () => Promise<string>
+  ) => {
+    const sourceIdentity = {
+      paneId: terminalPane.id,
+      assetId: terminalPane.assetId,
+      account: terminalPane.account,
+      tokenId: getTokenId(terminalPane)
+    };
+    const findExistingEditor = (tab: WorkspaceSessionTab, sourcePane = terminalPane) =>
+      tab.panes.find(
+        (pane) =>
+          pane.assetId === sourcePane.assetId &&
+          pane.account === sourcePane.account &&
+          pane.protocol === "sftp" &&
+          getConnectMethod(pane) === SFTP_FILE_EDITOR_VALUE
+      );
+
+    const focusEditor = (pane: WorkspacePane) => {
+      setActiveSession(workspaceTab.id);
+      setActivePane(pane.id);
+      return pane;
+    };
+    const reportSplitLimit = () =>
+      addErrorToast({
+        title: t("WorkspacePane.SplitLimitTitle"),
+        description: t("WorkspacePane.SplitLimitDescription")
+      });
+
+    const existingEditor = findExistingEditor(workspaceTab);
+    if (existingEditor) return focusEditor(existingEditor);
+
+    if (terminalPane.protocol.toLowerCase() !== "ssh" || !requestFileToken) {
+      addErrorToast({
+        title: t("RightPanel.OpenDevelopmentWorkspaceFailed"),
+        description: t("RightPanel.DevelopmentWorkspaceUnavailable")
+      });
+      return null;
+    }
+    const hasEmptyPane = workspaceTab.panes.some((pane) => pane.mode === "empty");
+    if (
+      !hasEmptyPane &&
+      !canSplitWorkspace(workspaceTab.id, "vertical") &&
+      !canSplitWorkspace(workspaceTab.id, "horizontal")
+    ) {
+      reportSplitLimit();
+      return null;
+    }
+
+    try {
+      const tokenId = String(await requestFileToken()).trim();
+      if (!tokenId) throw new Error(t("RightPanel.DevelopmentWorkspaceUnavailable"));
+
+      // Do not steal focus or mutate a workspace after the user has moved elsewhere.
+      if (activeTabId.value !== workspaceTab.id || activePaneId.value !== sourceIdentity.paneId) return null;
+
+      // The token exchange is asynchronous, so resolve the live workspace again before mutating its layout.
+      const currentTab = getTabById(workspaceTab.id);
+      const currentTerminal = currentTab?.panes.find((pane) => pane.id === sourceIdentity.paneId);
+      if (
+        !currentTab ||
+        !currentTerminal ||
+        currentTerminal.protocol.toLowerCase() !== "ssh" ||
+        currentTerminal.assetId !== sourceIdentity.assetId ||
+        currentTerminal.account !== sourceIdentity.account ||
+        getTokenId(currentTerminal) !== sourceIdentity.tokenId
+      ) {
+        return null;
+      }
+
+      const currentEditor = findExistingEditor(currentTab, currentTerminal);
+      if (currentEditor) return focusEditor(currentEditor);
+
+      const wasSinglePane = currentTab.panes.length === 1;
+      let targetPane = currentTab.panes.find((pane) => pane.mode === "empty");
+      if (!targetPane) {
+        const direction =
+          wasSinglePane && canSplitWorkspace(currentTab.id, "horizontal")
+            ? "horizontal"
+            : canSplitWorkspace(currentTab.id, "vertical")
+              ? "vertical"
+              : canSplitWorkspace(currentTab.id, "horizontal")
+                ? "horizontal"
+                : null;
+        if (!direction) {
+          reportSplitLimit();
+          return null;
+        }
+        [targetPane] = splitWorkspace(currentTab.id, direction);
+      }
+      if (!targetPane) throw new Error(t("WorkspacePane.SplitLimitDescription"));
+
+      const editorPane = openSession(sessionToAsset(currentTerminal), {
+        protocol: "sftp",
+        account: currentTerminal.account,
+        connectMethod: SFTP_FILE_EDITOR_VALUE,
+        paneId: targetPane.id,
+        payload: {
+          id: tokenId,
+          token: { id: tokenId },
+          connectMethod: {
+            value: SFTP_FILE_EDITOR_VALUE,
+            component: "koko",
+            type: "web"
+          }
+        }
+      });
+
+      // A fresh development workspace follows the familiar editor-over-terminal layout.
+      if (wasSinglePane) placePane(currentTab.id, editorPane.id, currentTerminal.id, "top");
+      return focusEditor(editorPane);
+    } catch (error) {
+      addErrorToast({
+        title: t("RightPanel.OpenDevelopmentWorkspaceFailed"),
+        error
+      });
+      return null;
+    }
   };
 
   const mergeWorkspaceTabIntoCurrent = (
@@ -168,6 +307,7 @@ export function useWorkspaceTabMenu() {
     connectCurrentPane,
     connectOtherPane,
     mergeWorkspaceTabIntoCurrent,
+    openDevelopmentWorkspace,
     reconnectSession,
     splitSession
   };

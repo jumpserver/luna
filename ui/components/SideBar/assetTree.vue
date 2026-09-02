@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
+import { workspaceTourArmed, workspaceTourCompleted } from "~/composables/useWorkspaceTour";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import {
+  authorizationTreeHasLoadedNodes,
+  buildWorkspaceTourDemoTree,
+  isWorkspaceTourDemoNode,
+  shouldShowWorkspaceTourDemoTree
+} from "~/utils/workspaceTour";
 
 const props = defineProps<{
   search: string;
@@ -34,6 +41,8 @@ const authorizationNodes = ref<AssetTreeNode[]>([]);
 const typeNodes = ref<AssetTreeNode[]>([]);
 const searchNodes = ref<AssetTreeNode[]>([]);
 const loading = ref(false);
+const authorizationLoaded = ref(false);
+const tourDemoNodes = ref<AssetTreeNode[]>([]);
 const searchLoading = ref(false);
 const batchMode = ref(false);
 const batchAction = ref<BatchAction>("open");
@@ -45,16 +54,45 @@ const nodeMenuTarget = ref<{ node: AssetTreeNode; kind: PanelKind } | null>(null
 let lastErrorSignature = "";
 let lastErrorAt = 0;
 
+const showTourDemoTree = computed(() =>
+  shouldShowWorkspaceTourDemoTree({
+    authorizationLoaded: authorizationLoaded.value,
+    hasLoadedNodes: authorizationTreeHasLoadedNodes(authorizationNodes.value),
+    tourCompleted: workspaceTourCompleted.value,
+    tourArmed: workspaceTourArmed.value
+  })
+);
+
 const activeTree = computed(() => {
   if (activeTreeKind.value === "authorization") {
     return {
       label: t("Menu.AuthorizedTree"),
-      nodes: [buildRecentConnectionsNode(), ...authorizationNodes.value]
+      nodes: [buildRecentConnectionsNode(), ...tourDemoNodes.value, ...authorizationNodes.value]
     };
   }
 
   return { label: t("Menu.TypeTree"), nodes: typeNodes.value };
 });
+
+// Recent connections is always prepended, so the tree is never "empty" while
+// Default and other first-level nodes are still in flight. Keep the spinner
+// until that first paint can include them.
+const showTreeLoading = computed(() => {
+  if (activeTreeKind.value === "authorization") return !authorizationLoaded.value;
+  return loading.value && typeNodes.value.length === 0;
+});
+
+watch(
+  showTourDemoTree,
+  (show) => {
+    if (show) {
+      if (tourDemoNodes.value.length === 0) tourDemoNodes.value = buildWorkspaceTourDemoTree((key) => t(key));
+      return;
+    }
+    tourDemoNodes.value = [];
+  },
+  { immediate: true }
+);
 
 const isRecentRootNode = (node: AssetTreeNode) => node.id === RECENT_NODE_ID;
 
@@ -69,6 +107,7 @@ const assetItemToTreeNode = (asset: AssetItem, level: number): AssetTreeNode => 
       id: asset.id,
       name: asset.name,
       address: asset.address,
+      org_id: asset.org_id,
       platform: asset.platform,
       zone: asset.zone,
       category: asset.category,
@@ -164,7 +203,10 @@ const reportError = (error: unknown) => {
 
 const loadRoot = async (kind: PanelKind) => {
   if (!loggedIn.value) return;
-  if (kind === "authorization") loadRecentConnections();
+  if (kind === "authorization") {
+    loadRecentConnections();
+    authorizationLoaded.value = false;
+  }
   loading.value = true;
   try {
     const nodes = await fetchTree(kind);
@@ -172,8 +214,9 @@ const loadRoot = async (kind: PanelKind) => {
       const roots = removeFavoriteNodes(nodes);
       authorizationNodes.value = roots;
 
-      // The authorization API commonly returns one synthetic root. Showing
-      // only that node makes the tree look empty, so reveal its first level.
+      // The authorization API commonly returns one synthetic root. Fetch its
+      // first level before leaving the spinner so Default does not pop in
+      // after the appear animation has already finished.
       await Promise.all(
         roots
           .filter((node) => node.isParent || node.children?.length)
@@ -188,6 +231,7 @@ const loadRoot = async (kind: PanelKind) => {
     reportError(error);
   } finally {
     loading.value = false;
+    if (kind === "authorization") authorizationLoaded.value = true;
   }
 };
 
@@ -207,6 +251,11 @@ const switchTreeKind = () => {
 };
 
 async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
+  if (isWorkspaceTourDemoNode(node.id)) {
+    node.open = !node.open;
+    return;
+  }
+
   if (isRecentRootNode(node)) {
     recentNodeOpen.value = !recentNodeOpen.value;
     if (recentNodeOpen.value) loadRecentConnections();
@@ -218,19 +267,23 @@ async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
     return;
   }
 
-  node.open = true;
-  if (node.loaded || node.loading) return;
-  node.loading = true;
-  try {
-    const children = await fetchTree(kind, node);
-    node.children = kind === "authorization" ? removeFavoriteNodes(children) : children;
-    node.loaded = true;
-  } catch (error) {
-    node.open = false;
-    reportError(error);
-  } finally {
-    node.loading = false;
+  if (!node.loaded) {
+    if (node.loading) return;
+    node.loading = true;
+    try {
+      const children = await fetchTree(kind, node);
+      node.children = kind === "authorization" ? removeFavoriteNodes(children) : children;
+      node.loaded = true;
+    } catch (error) {
+      reportError(error);
+      return;
+    } finally {
+      node.loading = false;
+    }
+    await nextTick();
   }
+
+  node.open = true;
 }
 
 const isBranchNode = (node: AssetTreeNode) => Boolean(node.isParent || node.children?.length);
@@ -271,6 +324,11 @@ const nodeHasOpenBranch = (node: AssetTreeNode): boolean => {
 };
 
 const expandNodeRecursive = async (node: AssetTreeNode, kind: PanelKind) => {
+  if (isWorkspaceTourDemoNode(node.id)) {
+    node.open = true;
+    return;
+  }
+
   if (isRecentRootNode(node)) {
     recentNodeOpen.value = true;
     loadRecentConnections();
@@ -289,12 +347,12 @@ const expandNodeRecursive = async (node: AssetTreeNode, kind: PanelKind) => {
 };
 
 const selectNode = (node: AssetTreeNode) => {
-  if (node.chkDisabled) return;
+  if (node.chkDisabled || isWorkspaceTourDemoNode(node.id)) return;
   emit("select", treeNodeToAsset(node));
 };
 
 const toggleCheckedNode = (node: AssetTreeNode) => {
-  if (node.chkDisabled || node.isParent) return;
+  if (node.chkDisabled || node.isParent || isWorkspaceTourDemoNode(node.id)) return;
 
   const asset = treeNodeToAsset(node);
   const next = { ...checkedAssets.value };
@@ -326,7 +384,7 @@ const submitCheckedAssets = () => {
 };
 
 const openContextMenu = (node: AssetTreeNode, event: MouseEvent) => {
-  if (node.chkDisabled) return;
+  if (node.chkDisabled || isWorkspaceTourDemoNode(node.id)) return;
 
   if (isBranchNode(node)) {
     event.preventDefault();
@@ -444,6 +502,8 @@ watch(
       authorizationNodes.value = [];
       typeNodes.value = [];
       searchNodes.value = [];
+      authorizationLoaded.value = false;
+      tourDemoNodes.value = [];
       closeBatchMode();
       closeNodeMenu();
     }
@@ -463,7 +523,7 @@ defineExpose({
 
 <template>
   <div
-    class="flex min-h-8 flex-col"
+    class="app-tree flex min-h-8 flex-col"
     :class="open === false && !hideHeader ? 'h-8 shrink-0' : 'min-h-0 flex-1'"
     role="tree"
     :aria-label="t('Menu.Resource')"
@@ -478,32 +538,31 @@ defineExpose({
 
     <template v-else-if="search.trim()">
       <div
-        class="flex h-8 shrink-0 items-center border-b border-gray-200 px-2.5 text-xs font-medium dark:border-white/10"
+        class="flex h-8 shrink-0 items-center border-b border-gray-200 px-2.5 text-sm font-medium dark:border-white/10"
       >
         <UIcon name="i-lucide-search" class="mr-1.5 sidebar-icon" />
         <span class="truncate">{{ t("Operation.Search") }}</span>
       </div>
       <div class="min-h-0 flex-1 overflow-y-auto py-0">
-        <div v-if="searchLoading" class="grid h-20 place-items-center">
-          <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
-        </div>
-        <UEmpty
-          v-else-if="searchNodes.length === 0"
-          icon="mingcute:inbox-line"
-          size="sm"
-          variant="naked"
-          :title="t('Common.NoData')"
-        />
-        <SideBarAssetTreeNode
-          v-for="node in searchNodes"
-          v-else
-          :key="`search-${node.id}`"
-          :node="node"
-          tree-kind="authorization"
-          search-mode
-          @select="selectNode"
-          @contextmenu="openContextMenu"
-        />
+        <Transition appear name="tree-appear" mode="out-in">
+          <div v-if="searchLoading" key="search-loading" class="grid h-20 place-items-center">
+            <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
+          </div>
+          <div v-else-if="searchNodes.length === 0" key="search-empty">
+            <UEmpty icon="mingcute:inbox-line" size="sm" variant="naked" :title="t('Common.NoData')" />
+          </div>
+          <div v-else key="search-nodes">
+            <SideBarAssetTreeNode
+              v-for="node in searchNodes"
+              :key="`search-${node.id}`"
+              :node="node"
+              tree-kind="authorization"
+              search-mode
+              @select="selectNode"
+              @contextmenu="openContextMenu"
+            />
+          </div>
+        </Transition>
       </div>
     </template>
 
@@ -511,7 +570,7 @@ defineExpose({
       <section class="group flex min-h-0 flex-1 flex-col overflow-hidden">
         <div
           v-if="!hideHeader || batchMode"
-          class="flex h-8 w-full shrink-0 items-center gap-1 px-2.5 text-xs font-medium text-gray-700 dark:text-gray-300"
+          class="flex h-8 w-full shrink-0 items-center gap-1 px-2.5 text-sm font-medium text-gray-700 dark:text-gray-300"
         >
           <button
             v-if="!hideHeader"
@@ -597,32 +656,33 @@ defineExpose({
           </div>
         </div>
 
-        <div v-if="hideHeader || open !== false" class="min-h-0 flex-1 overflow-y-auto py-0">
-          <div v-if="loading && activeTree.nodes.length === 0" class="grid h-20 place-items-center">
-            <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
+        <Transition appear name="tree-appear">
+          <div v-if="hideHeader || open !== false" class="min-h-0 flex-1 overflow-y-auto py-0">
+            <Transition appear name="tree-appear" mode="out-in">
+              <div v-if="showTreeLoading" key="tree-loading" class="grid h-20 place-items-center">
+                <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
+              </div>
+              <div v-else-if="activeTree.nodes.length === 0" key="tree-empty">
+                <UEmpty icon="mingcute:inbox-line" size="sm" variant="naked" :title="t('Common.NoData')" />
+              </div>
+              <div v-else :key="`tree-${activeTreeKind}`">
+                <SideBarAssetTreeNode
+                  v-for="node in activeTree.nodes"
+                  :key="`${activeTreeKind}-${node.id}`"
+                  :node="node"
+                  :tree-kind="activeTreeKind"
+                  :batch-mode="batchMode"
+                  :checked-asset-ids="checkedNodeIds"
+                  @select="selectNode"
+                  @toggle="toggleNode"
+                  @contextmenu="openContextMenu"
+                  @check="toggleCheckedNode"
+                  @clear-recent="clearRecentConnections"
+                />
+              </div>
+            </Transition>
           </div>
-          <UEmpty
-            v-else-if="activeTree.nodes.length === 0"
-            icon="mingcute:inbox-line"
-            size="sm"
-            variant="naked"
-            :title="t('Common.NoData')"
-          />
-          <SideBarAssetTreeNode
-            v-for="node in activeTree.nodes"
-            v-else
-            :key="`${activeTreeKind}-${node.id}`"
-            :node="node"
-            :tree-kind="activeTreeKind"
-            :batch-mode="batchMode"
-            :checked-asset-ids="checkedNodeIds"
-            @select="selectNode"
-            @toggle="toggleNode"
-            @contextmenu="openContextMenu"
-            @check="toggleCheckedNode"
-            @clear-recent="clearRecentConnections"
-          />
-        </div>
+        </Transition>
       </section>
     </template>
   </div>

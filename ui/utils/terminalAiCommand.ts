@@ -18,7 +18,8 @@ export function terminalAiCommandShortcutAction(available: boolean, busy: boolea
 }
 
 const TERMINAL_AI_HINT_MIN_WIDTH = 80;
+export const TERMINAL_AI_HINT_IDLE_MS = 500;
 
-export function shouldShowTerminalAiCaretHint(sessionInfoReady: boolean, maxWidth: number) {
-  return sessionInfoReady && maxWidth >= TERMINAL_AI_HINT_MIN_WIDTH;
+export function shouldShowTerminalAiCaretHint(sessionInfoReady: boolean, maxWidth: number, idle = true) {
+  return idle && sessionInfoReady && maxWidth >= TERMINAL_AI_HINT_MIN_WIDTH;
 }

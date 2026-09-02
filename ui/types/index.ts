@@ -22,9 +22,9 @@ export type ThemePresetId =
   | "codex"
   | "cursor"
   | "mono-dark"
-  | "min-dark";
+  | "nord";
 export type LayoutsType = "grid" | "table";
-export type LangType = "zh" | "en";
+export type LangType = "zh" | "zh_hant" | "en" | "ja" | "pt_br" | "es" | "ru" | "ko" | "vi";
 export type LanguagePreference = LangType | "system";
 export type CharsetType = "default" | "utf8" | "gbk" | "gb2312" | "ios-8859-1";
 export type ResolutionType = "auto" | "1024x768" | "1366x768" | "1600x900" | "1920x1080";
@@ -158,7 +158,7 @@ export interface UserProfile {
   username: string;
   email: string;
   avatar_url?: string;
-  phone?: string | null;
+  phone?: string | { code?: string | null; phone?: string | null } | null;
   wechat?: string | null;
   source?: string | LabeledValue;
   mfa_level?: number | LabeledValue<number>;
@@ -224,9 +224,32 @@ export interface AssetNode {
 
 export type AssetTreeKind = "authorization" | "type" | "search";
 
+interface AssetTreeChoice {
+  name?: string;
+  value?: string;
+}
+
+interface AssetTreeNodeData {
+  id?: string;
+  org_id?: string;
+  name?: string;
+  address?: string;
+  comment?: string;
+  type?: string | AssetTreeChoice;
+  category?: string | AssetTreeChoice;
+  platform?: string | AssetTreeChoice;
+  platform_type?: string;
+  zone?: string | AssetTreeChoice;
+  is_active?: boolean;
+  permedProtocols?: PermedProtocol[];
+  permed_protocols?: PermedProtocol[];
+  permedAccounts?: PermedAccount[];
+  permed_accounts?: PermedAccount[];
+}
+
 export interface AssetTreeNodeMeta {
   type?: string;
-  data?: Record<string, any>;
+  data?: AssetTreeNodeData;
 }
 
 export interface AssetTreeNode {

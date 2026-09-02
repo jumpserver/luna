@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { AssetItem } from "~/types";
 import AiOverlayPanel from "~/components/RightPanel/AiOverlayPanel.vue";
 import WorkspaceShell from "~/components/Workspace/shell.vue";
 import WorkspaceStatusFooter from "~/components/Workspace/statusFooter.vue";
@@ -38,7 +39,17 @@ const {
 } = useSettingManager();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 const { open: aiPanelOpen, setOpen: setAiPanelOpen } = useAiPanel();
-const { open: settingsOpen, activeSection: activeSettingsSection, openSettings } = useSettingsWindow();
+const localePath = useLocalePath();
+const { open: settingsOpen, activeSection: activeSettingsSection, openSettings, closeSettings } = useSettingsWindow();
+const { recentConnections } = useRecentConnections();
+const settingsSectionPages = {
+  user: SettingsUserPage,
+  general: SettingsGeneralPage,
+  appearance: SettingsAppearancePage,
+  application: SettingsApplicationPage,
+  about: SettingsAboutPage
+} as const;
+const activeSettingsPage = computed(() => settingsSectionPages[activeSettingsSection.value] || SettingsAboutPage);
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 const standaloneAssetWindow = ref(false);
 const { authReady } = useAuthSession();
@@ -112,7 +123,7 @@ const clearEscapeHold = () => {
 };
 
 const startEscapeHold = (event: KeyboardEvent) => {
-  if (!focusMode.value || event.key !== "Escape" || event.repeat || escapeHoldTimer) return;
+  if (isWorkspaceTourActive() || !focusMode.value || event.key !== "Escape" || event.repeat || escapeHoldTimer) return;
 
   escapeHoldTimer = setTimeout(() => {
     escapeHoldTimer = null;
@@ -125,7 +136,7 @@ const stopEscapeHold = (event: KeyboardEvent) => {
 };
 
 const handleChromeShortcut = (event: KeyboardEvent) => {
-  if (event.defaultPrevented || event.repeat) return;
+  if (isWorkspaceTourActive() || event.defaultPrevented || event.repeat) return;
 
   const usesPrimaryModifier = isMacOS.value ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
   if (!usesPrimaryModifier) return;
@@ -136,6 +147,13 @@ const handleChromeShortcut = (event: KeyboardEvent) => {
     return;
   }
 
+  if (!event.altKey && event.shiftKey && event.code === "Comma") {
+    if (!isDesktopRuntime()) return;
+    event.preventDefault();
+    void navigateTo(localePath({ path: "/tools" }));
+    return;
+  }
+
   if (event.altKey && !event.shiftKey && event.code === "Digit2") {
     event.preventDefault();
     toggleRightPanel();
@@ -143,6 +161,12 @@ const handleChromeShortcut = (event: KeyboardEvent) => {
 };
 
 const handleWorkspaceModeShortcut = (event: KeyboardEvent) => {
+  if (isWorkspaceTourActive()) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    return;
+  }
+
   if (
     !event.defaultPrevented &&
     !event.repeat &&
@@ -229,10 +253,48 @@ const handleDesktopMenuCommand = (command: string) => {
 
   if (command === "toggle-fullscreen-mode") {
     void toggleDesktopFullscreen();
+    return;
+  }
+
+  if (command === "search-connect") {
+    void openAssetWorkspace(() => useEventBus().emit("workspaceQuickSearch", undefined));
+    return;
+  }
+
+  if (command === "open-tools") {
+    if (!isDesktopRuntime()) return;
+    void navigateTo(localePath({ path: "/tools" }));
   }
 };
 
 let unlistenDesktopMenuCommand: (() => void) | null = null;
+let unlistenDesktopTrayConnect: (() => void) | null = null;
+
+async function openAssetWorkspace(ready: () => void) {
+  await closeSettings();
+  if (activeWorkspaceMode.value !== "assets") await navigateTo("/");
+  setSidebarCollapsed(false);
+  await nextTick();
+  ready();
+}
+
+const syncTrayRecentConnections = () => {
+  if (!isDesktopRuntime() || desktopWindow.label() !== "main") return;
+  void desktopInvoke("set_tray_recent_connections", {
+    enabled: loggedIn.value,
+    items: loggedIn.value
+      ? recentConnections.value.map(({ id, name, address, org_id, platform, category, type }) => ({
+          id,
+          name,
+          address,
+          org_id,
+          platform,
+          category,
+          type
+        }))
+      : []
+  }).catch((error) => console.debug("sync tray recent connections failed", error));
+};
 
 useEventListener(window, "keydown", startEscapeHold);
 useEventListener(window, "keydown", handleChromeShortcut);
@@ -245,6 +307,8 @@ watch(focusMode, (active) => {
   if (!active) clearEscapeHold();
 });
 
+watch([loggedIn, recentConnections], syncTrayRecentConnections, { immediate: true });
+
 watch(
   canStartWorkspaceTour,
   (canStart) => {
@@ -253,6 +317,7 @@ watch(
       workspaceTour.destroy();
       return;
     }
+    workspaceTour.arm();
     scheduleWorkspaceTour();
   },
   { immediate: true }
@@ -296,6 +361,11 @@ onMounted(() => {
     }).then((unlisten) => {
       unlistenDesktopMenuCommand = unlisten;
     });
+    void desktopListen<AssetItem>("desktop-tray-connect-asset", ({ payload }) => {
+      void openAssetWorkspace(() => useEventBus().emit("workspaceQuickConnectAsset", payload));
+    }).then((unlisten) => {
+      unlistenDesktopTrayConnect = unlisten;
+    });
   }
 });
 
@@ -303,6 +373,7 @@ onBeforeUnmount(() => {
   stopScheduledWorkspaceTour();
   workspaceTour.destroy();
   unlistenDesktopMenuCommand?.();
+  unlistenDesktopTrayConnect?.();
   clearEscapeHold();
   registerSessionDisposer(null);
   registerKokoTicketProvider(null);
@@ -311,7 +382,12 @@ onBeforeUnmount(() => {
 
 <template>
   <UCard variant="outline" :ui="cardUi" style="background-color: transparent">
-    <WorkspaceShell v-show="!settingsOpen" :sidebar-visible="showWorkspaceSidebar" :focus-mode="focusMode">
+    <WorkspaceShell
+      :sidebar-visible="showWorkspaceSidebar"
+      :focus-mode="focusMode"
+      :inert="settingsOpen"
+      :class="settingsOpen ? 'pointer-events-none' : undefined"
+    >
       <template #header>
         <Header />
       </template>
@@ -326,7 +402,7 @@ onBeforeUnmount(() => {
           type="button"
           :aria-label="$t('TabMenu.ExitFocusMode')"
           :title="$t('TabMenu.ExitFocusModeHint')"
-          class="group absolute right-0 top-1/2 z-50 flex h-12 w-1.5 -translate-y-1/2 items-center justify-end overflow-hidden rounded-l-lg border border-r-0 border-[var(--app-border)] bg-[var(--app-surface-panel)] text-[var(--app-muted)] opacity-45 shadow-sm transition-[width,opacity] hover:w-32 hover:opacity-100 focus-visible:w-32 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          class="group absolute right-0 top-1/2 z-50 flex h-12 w-1.5 -translate-y-1/2 items-center justify-end overflow-hidden rounded-l-lg border border-r-0 border-(--app-border) bg-[var(--app-surface-panel)] text-[var(--app-muted)] opacity-45 shadow-sm transition-[width,opacity] hover:w-32 hover:opacity-100 focus-visible:w-32 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           @click.stop="exitFocusMode"
         >
           <span
@@ -363,19 +439,20 @@ onBeforeUnmount(() => {
       </template>
     </WorkspaceShell>
 
-    <SettingsShell
-      v-if="settingsOpen"
-      mode="inline"
-      :active-section="activeSettingsSection"
-      class="fixed inset-0 z-100"
-    >
-      <KeepAlive>
-        <SettingsUserPage v-if="activeSettingsSection === 'user'" />
-        <SettingsGeneralPage v-else-if="activeSettingsSection === 'general'" />
-        <SettingsAppearancePage v-else-if="activeSettingsSection === 'appearance'" />
-        <SettingsApplicationPage v-else-if="activeSettingsSection === 'application'" embedded />
-        <SettingsAboutPage v-else />
-      </KeepAlive>
-    </SettingsShell>
+    <Transition name="settings-overlay">
+      <div v-if="settingsOpen" class="fixed inset-0 z-[200]">
+        <SettingsShell mode="inline" :active-section="activeSettingsSection" class="h-full">
+          <Transition name="settings-section" mode="out-in">
+            <KeepAlive>
+              <component
+                :is="activeSettingsPage"
+                :key="activeSettingsSection"
+                v-bind="activeSettingsSection === 'application' ? { embedded: true } : {}"
+              />
+            </KeepAlive>
+          </Transition>
+        </SettingsShell>
+      </div>
+    </Transition>
   </UCard>
 </template>

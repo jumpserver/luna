@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { KokoFileManagement } from "@jumpserver/koko";
+import { KokoFileManagement } from "#koko";
 
 definePageMeta({
   layout: "default",
