@@ -3,10 +3,6 @@ import { getPublicSettings } from "~/composables/useApiRequest";
 import { getConfiguredAppName, isDefaultAppName, normalizeAppName } from "~/composables/useAppName";
 import { desktopApp, desktopOpener } from "~/shared/desktop/bridge";
 
-definePageMeta({
-  layout: "setting"
-});
-
 const appName = ref(getConfiguredAppName());
 const logoSrc = computed(() => "/logo.png");
 const isDefaultProduct = computed(() => isDefaultAppName(appName.value));

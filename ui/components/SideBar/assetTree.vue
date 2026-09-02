@@ -74,6 +74,14 @@ const activeTree = computed(() => {
   return { label: t("Menu.TypeTree"), nodes: typeNodes.value };
 });
 
+// Recent connections is always prepended, so the tree is never "empty" while
+// Default and other first-level nodes are still in flight. Keep the spinner
+// until that first paint can include them.
+const showTreeLoading = computed(() => {
+  if (activeTreeKind.value === "authorization") return !authorizationLoaded.value;
+  return loading.value && typeNodes.value.length === 0;
+});
+
 watch(
   showTourDemoTree,
   (show) => {
@@ -206,8 +214,9 @@ const loadRoot = async (kind: PanelKind) => {
       const roots = removeFavoriteNodes(nodes);
       authorizationNodes.value = roots;
 
-      // The authorization API commonly returns one synthetic root. Showing
-      // only that node makes the tree look empty, so reveal its first level.
+      // The authorization API commonly returns one synthetic root. Fetch its
+      // first level before leaving the spinner so Default does not pop in
+      // after the appear animation has already finished.
       await Promise.all(
         roots
           .filter((node) => node.isParent || node.children?.length)
@@ -258,19 +267,23 @@ async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
     return;
   }
 
-  node.open = true;
-  if (node.loaded || node.loading) return;
-  node.loading = true;
-  try {
-    const children = await fetchTree(kind, node);
-    node.children = kind === "authorization" ? removeFavoriteNodes(children) : children;
-    node.loaded = true;
-  } catch (error) {
-    node.open = false;
-    reportError(error);
-  } finally {
-    node.loading = false;
+  if (!node.loaded) {
+    if (node.loading) return;
+    node.loading = true;
+    try {
+      const children = await fetchTree(kind, node);
+      node.children = kind === "authorization" ? removeFavoriteNodes(children) : children;
+      node.loaded = true;
+    } catch (error) {
+      reportError(error);
+      return;
+    } finally {
+      node.loading = false;
+    }
+    await nextTick();
   }
+
+  node.open = true;
 }
 
 const isBranchNode = (node: AssetTreeNode) => Boolean(node.isParent || node.children?.length);
@@ -531,26 +544,25 @@ defineExpose({
         <span class="truncate">{{ t("Operation.Search") }}</span>
       </div>
       <div class="min-h-0 flex-1 overflow-y-auto py-0">
-        <div v-if="searchLoading" class="grid h-20 place-items-center">
-          <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
-        </div>
-        <UEmpty
-          v-else-if="searchNodes.length === 0"
-          icon="mingcute:inbox-line"
-          size="sm"
-          variant="naked"
-          :title="t('Common.NoData')"
-        />
-        <SideBarAssetTreeNode
-          v-for="node in searchNodes"
-          v-else
-          :key="`search-${node.id}`"
-          :node="node"
-          tree-kind="authorization"
-          search-mode
-          @select="selectNode"
-          @contextmenu="openContextMenu"
-        />
+        <Transition appear name="tree-appear" mode="out-in">
+          <div v-if="searchLoading" key="search-loading" class="grid h-20 place-items-center">
+            <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
+          </div>
+          <div v-else-if="searchNodes.length === 0" key="search-empty">
+            <UEmpty icon="mingcute:inbox-line" size="sm" variant="naked" :title="t('Common.NoData')" />
+          </div>
+          <div v-else key="search-nodes">
+            <SideBarAssetTreeNode
+              v-for="node in searchNodes"
+              :key="`search-${node.id}`"
+              :node="node"
+              tree-kind="authorization"
+              search-mode
+              @select="selectNode"
+              @contextmenu="openContextMenu"
+            />
+          </div>
+        </Transition>
       </div>
     </template>
 
@@ -644,32 +656,33 @@ defineExpose({
           </div>
         </div>
 
-        <div v-if="hideHeader || open !== false" class="min-h-0 flex-1 overflow-y-auto py-0">
-          <div v-if="loading && activeTree.nodes.length === 0" class="grid h-20 place-items-center">
-            <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
+        <Transition appear name="tree-appear">
+          <div v-if="hideHeader || open !== false" class="min-h-0 flex-1 overflow-y-auto py-0">
+            <Transition appear name="tree-appear" mode="out-in">
+              <div v-if="showTreeLoading" key="tree-loading" class="grid h-20 place-items-center">
+                <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
+              </div>
+              <div v-else-if="activeTree.nodes.length === 0" key="tree-empty">
+                <UEmpty icon="mingcute:inbox-line" size="sm" variant="naked" :title="t('Common.NoData')" />
+              </div>
+              <div v-else :key="`tree-${activeTreeKind}`">
+                <SideBarAssetTreeNode
+                  v-for="node in activeTree.nodes"
+                  :key="`${activeTreeKind}-${node.id}`"
+                  :node="node"
+                  :tree-kind="activeTreeKind"
+                  :batch-mode="batchMode"
+                  :checked-asset-ids="checkedNodeIds"
+                  @select="selectNode"
+                  @toggle="toggleNode"
+                  @contextmenu="openContextMenu"
+                  @check="toggleCheckedNode"
+                  @clear-recent="clearRecentConnections"
+                />
+              </div>
+            </Transition>
           </div>
-          <UEmpty
-            v-else-if="activeTree.nodes.length === 0"
-            icon="mingcute:inbox-line"
-            size="sm"
-            variant="naked"
-            :title="t('Common.NoData')"
-          />
-          <SideBarAssetTreeNode
-            v-for="node in activeTree.nodes"
-            v-else
-            :key="`${activeTreeKind}-${node.id}`"
-            :node="node"
-            :tree-kind="activeTreeKind"
-            :batch-mode="batchMode"
-            :checked-asset-ids="checkedNodeIds"
-            @select="selectNode"
-            @toggle="toggleNode"
-            @contextmenu="openContextMenu"
-            @check="toggleCheckedNode"
-            @clear-recent="clearRecentConnections"
-          />
-        </div>
+        </Transition>
       </section>
     </template>
   </div>

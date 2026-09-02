@@ -1,4 +1,5 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
+import type { ThemeRevealOrigin } from "~/composables/useThemeAdapter";
 import type { ThemePresetOption } from "~/composables/useThemePresets";
 import type { ThemePresetId } from "~/types";
 import { DARK_THEME_PRESETS, getThemePreset, LIGHT_THEME_PRESETS } from "~/composables/useThemePresets";
@@ -6,16 +7,8 @@ import { desktopEmit } from "~/shared/desktop/bridge";
 
 export const useThemeOptions = () => {
   const { t } = useI18n();
-  const {
-    lightThemePreset,
-    darkThemePreset,
-    setLightThemePreset,
-    setDarkThemePreset,
-    setPrimaryColorLight,
-    setPrimaryColorDark
-  } = useSettingManager();
+  const { lightThemePreset, darkThemePreset } = useSettingManager();
   const { userTheme, themeMode, followSystem, manualSetTheme, enableFollowSystem } = useThemeAdapter();
-  const { applyPrimaryColor } = useColor();
 
   const currentAppearanceMode = computed<"withSystem" | "light" | "dark">(() => {
     if (themeMode.value === "withSystem" || (!themeMode.value && followSystem.value)) {
@@ -27,11 +20,13 @@ export const useThemeOptions = () => {
     return "light";
   });
 
-  const applyAppearanceMode = async (mode: "withSystem" | "light" | "dark") => {
+  const applyAppearanceMode = async (mode: "withSystem" | "light" | "dark", origin?: ThemeRevealOrigin | null) => {
+    if (currentAppearanceMode.value === mode) return;
+
     if (mode === "withSystem") {
-      await enableFollowSystem();
+      await enableFollowSystem(origin);
     } else {
-      manualSetTheme(mode);
+      manualSetTheme(mode, undefined, origin);
     }
 
     void desktopEmit("theme-changed", { mode }).catch(() => undefined);
@@ -66,17 +61,9 @@ export const useThemeOptions = () => {
     if (!preset) return;
 
     const mode = darkThemeIds.has(presetId) ? "dark" : "light";
+    if (currentThemePresetId.value === presetId && currentAppearanceMode.value === mode) return;
 
-    manualSetTheme(mode);
-    applyPrimaryColor(preset.accent);
-
-    if (mode === "dark") {
-      setDarkThemePreset(presetId);
-      setPrimaryColorDark(preset.accent);
-    } else {
-      setLightThemePreset(presetId);
-      setPrimaryColorLight(preset.accent);
-    }
+    manualSetTheme(mode, { preset: presetId, accent: preset.accent });
 
     void desktopEmit("theme-changed", { mode }).catch(() => undefined);
     void desktopEmit("primary-color-changed", { hex: preset.accent, mode }).catch(() => undefined);

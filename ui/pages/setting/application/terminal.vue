@@ -2,10 +2,6 @@
 import type { ConfigItem } from "~/types";
 import { desktopDialog } from "~/shared/desktop/bridge";
 
-definePageMeta({
-  layout: "setting"
-});
-
 const { t } = useI18n();
 const toast = useToast();
 const { appConfig } = useSettingManager();
@@ -112,13 +108,7 @@ const createTerminal = async () => {
 
     <UEmpty v-else icon="i-lucide-monitor" size="sm" variant="naked" :title="t('Common.NoData')" />
 
-    <UCard
-      variant="outline"
-      :ui="{
-        root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]',
-        body: 'flex flex-wrap items-center justify-between gap-3'
-      }"
-    >
+    <SettingsGroup :divided="false" padded body-class="flex flex-wrap items-center justify-between gap-3">
       <div class="min-w-0">
         <p class="text-sm font-medium text-highlighted">{{ t("Setting.CustomTerminal") }}</p>
         <p class="mt-1 text-xs text-muted">{{ t("Setting.CustomTerminalDescription") }}</p>
@@ -131,7 +121,7 @@ const createTerminal = async () => {
         :label="t('Setting.AddCustomTerminal')"
         @click="createModalOpen = true"
       />
-    </UCard>
+    </SettingsGroup>
 
     <UModal v-model:open="createModalOpen" :title="t('Setting.AddCustomTerminal')" :ui="{ content: 'max-w-2xl' }">
       <template #body>

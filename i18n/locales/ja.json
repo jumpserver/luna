@@ -1007,6 +1007,7 @@
     "DownloadLogs": "ログをダウンロード",
     "LogsCleared": "ログを消去しました",
     "LogsCopied": "ログをコピーしました",
+    "LogsDownloaded": "ダウンロードしました",
     "LogsEmpty": "ログはまだありません",
     "InterfaceFont": "インターフェースフォント",
     "InterfaceFontDescription": "メニュー、ナビゲーション、コンテンツ領域で使用するフォント。",

@@ -3,8 +3,10 @@ import { writeClipboardText } from "~/utils/clipboard";
 import { isDesktopRuntime } from "~/utils/runtime";
 
 const MAX_LINES = 2000;
+const FEEDBACK_MS = 1600;
 const methods = ["log", "info", "warn", "error", "debug"] as const;
 type ConsoleMethod = (typeof methods)[number];
+export type LogActionFeedback = "idle" | "done" | "empty";
 
 const originalConsole: Partial<Record<ConsoleMethod, (...args: unknown[]) => void>> = {};
 let hooked = false;
@@ -57,10 +59,31 @@ export const uninstallDebugLogHook = () => {
   hooked = false;
 };
 
+const useActionFeedback = () => {
+  const state = ref<LogActionFeedback>("idle");
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const flash = (next: LogActionFeedback) => {
+    state.value = next;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      state.value = "idle";
+      timer = null;
+    }, FEEDBACK_MS);
+  };
+
+  onBeforeUnmount(() => {
+    if (timer) clearTimeout(timer);
+  });
+
+  return { state, flash };
+};
+
 export const useDebugLog = () => {
   const { debugLog, setDebugLog } = useSettingManager();
-  const toast = useToast();
-  const { t } = useI18n();
+  const clearFeedback = useActionFeedback();
+  const copyFeedback = useActionFeedback();
+  const downloadFeedback = useActionFeedback();
 
   const readDesktopLogs = async () => {
     if (!isDesktopRuntime()) return "";
@@ -78,24 +101,24 @@ export const useDebugLog = () => {
     if (isDesktopRuntime()) {
       await desktopInvoke("debug_log_clear").catch(() => undefined);
     }
-    toast.add({ title: t("Setting.LogsCleared"), color: "success" });
+    clearFeedback.flash("done");
   };
 
   const copyLogs = async () => {
     const text = await combinedLogText();
     if (!text) {
-      toast.add({ title: t("Setting.LogsEmpty"), color: "neutral" });
+      copyFeedback.flash("empty");
       return;
     }
     await writeClipboardText(text);
-    toast.add({ title: t("Setting.LogsCopied"), color: "success" });
+    copyFeedback.flash("done");
   };
 
   const downloadLogs = async () => {
     if (!import.meta.client) return;
     const text = await combinedLogText();
     if (!text) {
-      toast.add({ title: t("Setting.LogsEmpty"), color: "neutral" });
+      downloadFeedback.flash("empty");
       return;
     }
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
@@ -105,6 +128,7 @@ export const useDebugLog = () => {
     link.download = `jumpserver-debug-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.log`;
     link.click();
     URL.revokeObjectURL(url);
+    downloadFeedback.flash("done");
   };
 
   return {
@@ -112,6 +136,9 @@ export const useDebugLog = () => {
     setDebugLog,
     clearLogs,
     copyLogs,
-    downloadLogs
+    downloadLogs,
+    clearFeedback: clearFeedback.state,
+    copyFeedback: copyFeedback.state,
+    downloadFeedback: downloadFeedback.state
   };
 };

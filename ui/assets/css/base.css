@@ -1,0 +1,182 @@
+.dark {
+  --syntax-keyword: #89b4fa;
+  --syntax-string: #a6e3a1;
+  --syntax-number: #fab387;
+  --syntax-comment: color-mix(in srgb, var(--theme-fg) 58%, var(--theme-bg));
+  --syntax-type: #94e2d5;
+  --syntax-function: #cba6f7;
+  --syntax-constant: #f5c2e7;
+  --syntax-property: #f9e2af;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar-thumb) transparent;
+}
+
+html,
+body,
+#__nuxt {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body.runtime-windows-mica {
+  --app-header-bg: color-mix(in srgb, var(--app-surface-header) 78%, transparent);
+  --app-sidebar-bg: color-mix(in srgb, var(--app-surface-sidebar) 84%, transparent);
+}
+
+body.runtime-windows-mica .workspace-shell {
+  background-color: transparent !important;
+}
+
+[data-desktop-drag-region] {
+  -webkit-app-region: drag;
+}
+
+[data-desktop-drag-region="false"],
+[data-desktop-drag-region] :is(a, button, input, select, textarea, [role="button"], [contenteditable="true"]) {
+  -webkit-app-region: no-drag;
+}
+
+@supports (height: 100dvh) {
+  body,
+  .workspace-shell,
+  .settings-shell {
+    height: 100dvh;
+  }
+}
+
+@media (max-width: 767px) {
+  .workspace-shell {
+    padding-right: env(safe-area-inset-right);
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .workspace-shell__footer {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--app-scrollbar-thumb);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--app-scrollbar-thumb-hover);
+}
+
+/* xterm 6 renders a virtual scrollbar with inline dimensions and colors. */
+.xterm .xterm-scrollable-element > .scrollbar.vertical,
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider {
+  width: 7px !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar.vertical {
+  background: transparent !important;
+  top: var(--xterm-scrollbar-top, 0) !important;
+  bottom: var(--xterm-scrollbar-bottom, 0) !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider {
+  background: var(--app-scrollbar-thumb) !important;
+  border-radius: 9999px;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider:hover,
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider.active {
+  background: var(--app-scrollbar-thumb-hover) !important;
+}
+
+.text-xs-plus {
+  @apply text-[14px];
+}
+
+.text-overflow-ellipsis {
+  @apply text-ellipsis overflow-hidden whitespace-nowrap;
+}
+
+.font-ui-mono {
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+}
+
+/* 全局按钮样式 */
+.btn-common {
+  @apply rounded-lg transition-colors duration-200;
+}
+
+.btn-common:hover {
+}
+
+.dark .btn-common:hover {
+}
+
+/* App Store 风格按钮 */
+.btn-connect {
+  @apply font-bold rounded-lg text-xs transition-all duration-200;
+}
+
+/* .light .btn-connect:hover {
+  @apply bg-green-500 text-white;
+}
+
+.dark .btn-connect {
+  @apply bg-gray-600 hover:bg-gray-700;
+} */
+
+.platform-windows {
+  @apply overflow-hidden border-none shadow-none;
+}
+
+.header-bg {
+  background-color: var(--app-header-bg);
+}
+
+html,
+body,
+#__nuxt,
+#app {
+  height: 100%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -o-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-size: var(--app-ui-font-size);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+textarea,
+select {
+  background-color: var(--app-input-bg);
+  color: var(--app-fg);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--app-muted);
+}
+
+option {
+  background-color: var(--app-sidebar-bg);
+  color: var(--app-fg);
+}

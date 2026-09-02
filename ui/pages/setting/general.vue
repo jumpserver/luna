@@ -29,10 +29,6 @@ interface LangItem {
   label: string;
 }
 
-definePageMeta({
-  layout: "setting"
-});
-
 const { t, locales, locale } = useI18n();
 const settingManager = useSettingManager();
 const { addErrorToast } = useErrorToast();
@@ -59,7 +55,20 @@ const {
   setBackspacePreference,
   setTerminalCommandSuggestionsEnabled
 } = settingManager;
-const { debugLog, setDebugLog, clearLogs, copyLogs, downloadLogs } = useDebugLog();
+const { debugLog, setDebugLog, clearLogs, copyLogs, downloadLogs, clearFeedback, copyFeedback, downloadFeedback } =
+  useDebugLog();
+
+const logActionIcon = (feedback: typeof clearFeedback.value) => {
+  if (feedback === "done") return "i-lucide-check";
+  if (feedback === "empty") return "i-lucide-minus";
+  return undefined;
+};
+
+const logActionLabel = (feedback: typeof clearFeedback.value, idle: string, done: string) => {
+  if (feedback === "done") return done;
+  if (feedback === "empty") return t("Setting.LogsEmpty");
+  return idle;
+};
 const debugLogEnabled = computed({
   get: () => debugLog.value,
   set: (value: boolean) => setDebugLog(value)
@@ -224,15 +233,8 @@ async function clearCommandHistory() {
 
 <template>
   <div class="flex flex-col gap-4">
-    <UCard
-      variant="outline"
-      :ui="{
-        root: 'rounded-[length:var(--app-radius)] bg-[var(--app-surface-card)] ring-[var(--app-border)]',
-        body: 'divide-y divide-[var(--app-border)] p-0 sm:p-0'
-      }"
-    >
-      <div class="flex items-center justify-between gap-6 px-4 py-3">
-        <span class="text-sm font-medium text-highlighted">{{ t("Common.Language") }}</span>
+    <SettingsGroup>
+      <SettingsRow :title="t('Common.Language')">
         <USelect
           v-model="selectedLanguage"
           :items="languageItems"
@@ -241,13 +243,9 @@ async function clearCommandHistory() {
           size="sm"
           class="w-48"
         />
-      </div>
+      </SettingsRow>
 
-      <div class="flex items-center justify-between gap-6 px-4 py-3">
-        <div class="min-w-0">
-          <p class="text-sm font-medium text-highlighted">{{ t("Setting.Charset") }}</p>
-          <p class="mt-0.5 text-xs leading-5 text-muted">{{ t("Setting.CharsetDescription") }}</p>
-        </div>
+      <SettingsRow :title="t('Setting.Charset')" :description="t('Setting.CharsetDescription')">
         <USelect
           v-model="selectedCharset"
           :items="charsetItems"
@@ -256,24 +254,17 @@ async function clearCommandHistory() {
           size="sm"
           class="w-48"
         />
-      </div>
+      </SettingsRow>
 
-      <div class="flex items-center justify-between gap-6 px-4 py-3">
-        <div class="min-w-0">
-          <p class="text-sm font-medium text-highlighted">{{ t("Setting.TerminalBackspace") }}</p>
-          <p class="mt-0.5 text-xs leading-5 text-muted">{{ t("Setting.TerminalBackspaceDescription") }}</p>
-        </div>
+      <SettingsRow :title="t('Setting.TerminalBackspace')" :description="t('Setting.TerminalBackspaceDescription')">
         <USwitch v-model="selectedEnabled" :aria-label="t('Setting.TerminalBackspace')" />
-      </div>
+      </SettingsRow>
 
-      <div class="flex items-center justify-between gap-6 px-4 py-3">
-        <div class="min-w-0">
-          <p class="text-sm font-medium text-highlighted">{{ t("Setting.TerminalCommandSuggestions") }}</p>
-          <p class="mt-0.5 text-xs leading-5 text-muted">
-            {{ t("Setting.TerminalCommandSuggestionsDescription") }}
-          </p>
-        </div>
-        <div class="flex shrink-0 items-center gap-2">
+      <SettingsRow
+        :title="t('Setting.TerminalCommandSuggestions')"
+        :description="t('Setting.TerminalCommandSuggestionsDescription')"
+      >
+        <div class="flex items-center gap-2">
           <UButton
             color="neutral"
             variant="ghost"
@@ -284,13 +275,9 @@ async function clearCommandHistory() {
           />
           <USwitch v-model="commandSuggestionsEnabled" :aria-label="t('Setting.TerminalCommandSuggestions')" />
         </div>
-      </div>
+      </SettingsRow>
 
-      <div class="flex items-center justify-between gap-6 px-4 py-3">
-        <div class="min-w-0">
-          <p class="text-sm font-medium text-highlighted">{{ t("Setting.Resolution") }}</p>
-          <p class="mt-0.5 text-xs leading-5 text-muted">{{ t("Setting.ResolutionDescription") }}</p>
-        </div>
+      <SettingsRow :title="t('Setting.Resolution')" :description="t('Setting.ResolutionDescription')">
         <USelect
           v-model="selectedresolution"
           :items="resolutionItems"
@@ -299,17 +286,10 @@ async function clearCommandHistory() {
           size="sm"
           class="w-48"
         />
-      </div>
-    </UCard>
+      </SettingsRow>
+    </SettingsGroup>
 
-    <UCard
-      v-if="isDesktopRuntime() && ffmpegStatus"
-      variant="outline"
-      :ui="{
-        root: 'rounded-[length:var(--app-radius)] bg-[var(--app-surface-card)] ring-[var(--app-border)]',
-        body: 'p-4 sm:p-4'
-      }"
-    >
+    <SettingsGroup v-if="isDesktopRuntime() && ffmpegStatus" :divided="false" padded>
       <div class="flex items-start justify-between gap-6">
         <div class="min-w-0">
           <div class="flex items-center gap-2">
@@ -355,15 +335,9 @@ async function clearCommandHistory() {
         <UProgress :value="ffmpegProgress" size="sm" class="flex-1" />
         <span class="w-10 text-right text-xs tabular-nums text-muted">{{ ffmpegProgress }}%</span>
       </div>
-    </UCard>
+    </SettingsGroup>
 
-    <UCard
-      variant="outline"
-      :ui="{
-        root: 'rounded-[length:var(--app-radius)] bg-[var(--app-surface-card)] ring-[var(--app-border)]',
-        body: 'p-4 sm:p-4'
-      }"
-    >
+    <SettingsGroup :divided="false" padded>
       <div class="flex items-start justify-between gap-6">
         <div class="min-w-0">
           <p class="text-sm font-medium text-highlighted">{{ t("Setting.DebugLog") }}</p>
@@ -371,18 +345,54 @@ async function clearCommandHistory() {
         </div>
         <USwitch v-model="debugLogEnabled" :aria-label="t('Setting.DebugLog')" />
       </div>
-      <div class="mt-3 flex justify-end gap-2">
-        <UButton color="neutral" variant="outline" size="sm" class="rounded-full" @click="clearLogs">
-          {{ t("Setting.ClearLogs") }}
+      <div class="mt-3 flex flex-wrap justify-end gap-2">
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          class="shrink-0 rounded-full"
+          :class="clearFeedback !== 'idle' ? 'settings-log-pop' : undefined"
+          @click="clearLogs"
+        >
+          <Transition name="settings-log-label" mode="out-in">
+            <span :key="clearFeedback" class="inline-flex items-center gap-1.5">
+              <UIcon v-if="logActionIcon(clearFeedback)" :name="logActionIcon(clearFeedback)!" class="size-3.5" />
+              {{ logActionLabel(clearFeedback, t("Setting.ClearLogs"), t("Setting.LogsCleared")) }}
+            </span>
+          </Transition>
         </UButton>
-        <UButton color="neutral" variant="outline" size="sm" class="rounded-full" @click="copyLogs">
-          {{ t("Setting.CopyLogs") }}
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          class="shrink-0 rounded-full"
+          :class="copyFeedback !== 'idle' ? 'settings-log-pop' : undefined"
+          @click="copyLogs"
+        >
+          <Transition name="settings-log-label" mode="out-in">
+            <span :key="copyFeedback" class="inline-flex items-center gap-1.5">
+              <UIcon v-if="logActionIcon(copyFeedback)" :name="logActionIcon(copyFeedback)!" class="size-3.5" />
+              {{ logActionLabel(copyFeedback, t("Setting.CopyLogs"), t("Setting.LogsCopied")) }}
+            </span>
+          </Transition>
         </UButton>
-        <UButton color="neutral" variant="outline" size="sm" class="rounded-full" @click="downloadLogs">
-          {{ t("Setting.DownloadLogs") }}
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          class="shrink-0 rounded-full"
+          :class="downloadFeedback !== 'idle' ? 'settings-log-pop' : undefined"
+          @click="downloadLogs"
+        >
+          <Transition name="settings-log-label" mode="out-in">
+            <span :key="downloadFeedback" class="inline-flex items-center gap-1.5">
+              <UIcon v-if="logActionIcon(downloadFeedback)" :name="logActionIcon(downloadFeedback)!" class="size-3.5" />
+              {{ logActionLabel(downloadFeedback, t("Setting.DownloadLogs"), t("Setting.LogsDownloaded")) }}
+            </span>
+          </Transition>
         </UButton>
       </div>
-    </UCard>
+    </SettingsGroup>
 
     <UModal
       v-model:open="commandHistoryConfirmOpen"

@@ -1010,6 +1010,7 @@
     "DownloadLogs": "下载日志",
     "LogsCleared": "已清空日志",
     "LogsCopied": "日志已复制",
+    "LogsDownloaded": "已下载",
     "LogsEmpty": "暂无日志",
     "InterfaceFont": "界面字体",
     "InterfaceFontDescription": "应用菜单、导航和内容区域使用的字体。",

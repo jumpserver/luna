@@ -1007,6 +1007,7 @@
     "DownloadLogs": "로그 다운로드",
     "LogsCleared": "로그를 지웠습니다",
     "LogsCopied": "로그를 복사했습니다",
+    "LogsDownloaded": "다운로드했습니다",
     "LogsEmpty": "아직 로그가 없습니다",
     "InterfaceFont": "인터페이스 글꼴",
     "InterfaceFontDescription": "메뉴, 탐색 및 콘텐츠 영역에 사용되는 글꼴입니다.",
