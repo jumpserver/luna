@@ -206,6 +206,10 @@ const menuShortcutButtonUi = {
 const currentThemeAccent = computed(() => getThemePreset(currentThemePresetId.value)?.accent || "var(--theme-accent)");
 const themePaletteOpen = ref(false);
 const previewedThemePresetId = ref<ThemePresetId | null>(null);
+const palettePreviewArmed = ref(false);
+const PALETTE_PREVIEW_DELAY_MS = 300;
+let palettePreviewArmFrame = 0;
+let palettePreviewTimer: ReturnType<typeof setTimeout> | null = null;
 
 const resolvedPaletteMode = computed<"light" | "dark">(() => {
   if (currentAppearanceMode.value === "light") return "light";
@@ -217,6 +221,38 @@ const visibleThemePresets = computed(() =>
   resolvedPaletteMode.value === "dark" ? DARK_THEME_PRESETS : LIGHT_THEME_PRESETS
 );
 
+const handleProfileOpenAutoFocus = (event: Event) => {
+  if (profileOpenedByPointer.value) event.preventDefault();
+  profileOpenedByPointer.value = false;
+};
+
+const handlePaletteOpenAutoFocus = (event: Event) => {
+  event.preventDefault();
+};
+
+const cancelPalettePreviewArm = () => {
+  if (!palettePreviewArmFrame) return;
+  cancelAnimationFrame(palettePreviewArmFrame);
+  palettePreviewArmFrame = 0;
+};
+
+const cancelPalettePreviewTimer = () => {
+  if (!palettePreviewTimer) return;
+  clearTimeout(palettePreviewTimer);
+  palettePreviewTimer = null;
+};
+
+const disarmPalettePreview = () => {
+  cancelPalettePreviewArm();
+  cancelPalettePreviewTimer();
+  palettePreviewArmed.value = false;
+};
+
+const armPalettePreview = () => {
+  cancelPalettePreviewArm();
+  palettePreviewArmed.value = true;
+};
+
 watch(profileOpen, (open) => {
   if (!open) {
     themePaletteOpen.value = false;
@@ -225,24 +261,44 @@ watch(profileOpen, (open) => {
 });
 
 watch(themePaletteOpen, (open) => {
-  if (!open) restorePalettePreview();
+  if (!open) {
+    disarmPalettePreview();
+    restorePalettePreview();
+    return;
+  }
+
+  disarmPalettePreview();
+  palettePreviewArmFrame = requestAnimationFrame(() => {
+    palettePreviewArmFrame = requestAnimationFrame(() => {
+      palettePreviewArmFrame = 0;
+      if (themePaletteOpen.value) palettePreviewArmed.value = true;
+    });
+  });
 });
 
-const handleProfileOpenAutoFocus = (event: Event) => {
-  if (profileOpenedByPointer.value) event.preventDefault();
-  profileOpenedByPointer.value = false;
-};
-
 const previewPalettePreset = (id: ThemePresetId) => {
-  const preset = getThemePreset(id);
-  if (!preset || !import.meta.client) return;
+  if (!palettePreviewArmed.value) return;
+  if (previewedThemePresetId.value === id) {
+    cancelPalettePreviewTimer();
+    return;
+  }
 
-  previewedThemePresetId.value = id;
-  document.documentElement.dataset.themePreset = id;
-  applyPrimaryColor(preset.accent);
+  cancelPalettePreviewTimer();
+  palettePreviewTimer = setTimeout(() => {
+    palettePreviewTimer = null;
+    if (!palettePreviewArmed.value || !themePaletteOpen.value) return;
+
+    const preset = getThemePreset(id);
+    if (!preset || !import.meta.client) return;
+
+    previewedThemePresetId.value = id;
+    document.documentElement.dataset.themePreset = id;
+    applyPrimaryColor(preset.accent);
+  }, PALETTE_PREVIEW_DELAY_MS);
 };
 
 function restorePalettePreview() {
+  cancelPalettePreviewTimer();
   if (!previewedThemePresetId.value || !import.meta.client) return;
 
   previewedThemePresetId.value = null;
@@ -830,6 +886,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  disarmPalettePreview();
   restorePalettePreview();
   if (unlistenAuthUrlRef.value) unlistenAuthUrlRef.value();
   if (unlistenErrorPageRef.value) unlistenErrorPageRef.value();
@@ -1011,7 +1068,12 @@ onBeforeUnmount(() => {
             </div>
             <UPopover
               v-model:open="themePaletteOpen"
-              :content="{ align: 'start', side: 'left', sideOffset: 8 }"
+              :content="{
+                align: 'start',
+                side: 'left',
+                sideOffset: 8,
+                onOpenAutoFocus: handlePaletteOpenAutoFocus
+              }"
               :ui="{
                 content:
                   'w-56 max-h-80 overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-1.5 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
@@ -1028,7 +1090,12 @@ onBeforeUnmount(() => {
               </UButton>
 
               <template #content>
-                <div class="space-y-0.5" @pointerleave="restorePalettePreview" @focusout="restorePalettePreview">
+                <div
+                  class="space-y-0.5"
+                  @pointermove="armPalettePreview"
+                  @pointerleave="restorePalettePreview"
+                  @focusout="restorePalettePreview"
+                >
                   <UButton
                     v-for="item in visibleThemePresets"
                     :key="item.id"
