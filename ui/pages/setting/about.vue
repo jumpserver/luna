@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { getConfiguredAppName, isDefaultAppName, normalizeAppName } from "~/composables/useAppName";
 import { getPublicSettings } from "~/composables/useApiRequest";
+import { getConfiguredAppName, isDefaultAppName, normalizeAppName } from "~/composables/useAppName";
 import { desktopApp, desktopOpener } from "~/shared/desktop/bridge";
 
 definePageMeta({
