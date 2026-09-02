@@ -78,6 +78,15 @@ body.runtime-windows-mica .workspace-shell {
 }
 
 /* xterm 6 renders a virtual scrollbar with inline dimensions and colors. */
+.xterm {
+  background-color: var(--xterm-theme-background, #000);
+}
+
+/* The legacy viewport remains behind xterm 6's themed scrollable element and is visible through root padding. */
+.xterm .xterm-viewport {
+  background-color: var(--xterm-theme-background, #000) !important;
+}
+
 .xterm .xterm-scrollable-element > .scrollbar.vertical,
 .xterm .xterm-scrollable-element > .scrollbar.vertical > .slider {
   width: 7px !important;

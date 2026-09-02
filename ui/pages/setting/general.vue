@@ -202,6 +202,9 @@ const uninstallFfmpeg = async () => {
   }
 };
 
+const commandHistoryFeedback = ref<"idle" | "done" | "empty">("idle");
+let commandHistoryFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
+
 onMounted(async () => {
   if (!isDesktopRuntime()) return;
   await refreshFfmpegStatus();
@@ -210,12 +213,23 @@ onMounted(async () => {
   });
 });
 
-onBeforeUnmount(() => unlistenFfmpegProgress?.());
+onBeforeUnmount(() => {
+  unlistenFfmpegProgress?.();
+  if (commandHistoryFeedbackTimer) clearTimeout(commandHistoryFeedbackTimer);
+});
 
 const commandSuggestionsEnabled = computed<boolean>({
   get: () => terminalCommandSuggestionsEnabled.value ?? true,
   set: (value: boolean) => setTerminalCommandSuggestionsEnabled(!!value)
 });
+
+const flashCommandHistoryFeedback = (next: "done" | "empty") => {
+  commandHistoryFeedback.value = next;
+  if (commandHistoryFeedbackTimer) clearTimeout(commandHistoryFeedbackTimer);
+  commandHistoryFeedbackTimer = setTimeout(() => {
+    commandHistoryFeedback.value = "idle";
+  }, 1600);
+};
 
 async function clearCommandHistory() {
   const scope = commandHistoryScope.value;
@@ -224,7 +238,7 @@ async function clearCommandHistory() {
   try {
     await clearTerminalCommandHistory(scope);
     commandHistoryConfirmOpen.value = false;
-    toast.add({ title: t("Setting.TerminalCommandHistoryCleared"), color: "success" });
+    flashCommandHistoryFeedback("done");
   } finally {
     clearingCommandHistory.value = false;
   }
@@ -258,23 +272,6 @@ async function clearCommandHistory() {
 
       <SettingsRow :title="t('Setting.TerminalBackspace')" :description="t('Setting.TerminalBackspaceDescription')">
         <USwitch v-model="selectedEnabled" :aria-label="t('Setting.TerminalBackspace')" />
-      </SettingsRow>
-
-      <SettingsRow
-        :title="t('Setting.TerminalCommandSuggestions')"
-        :description="t('Setting.TerminalCommandSuggestionsDescription')"
-      >
-        <div class="flex items-center gap-2">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            :disabled="!commandHistoryScope"
-            :label="t('Setting.ClearTerminalCommandHistory')"
-            @click="commandHistoryConfirmOpen = true"
-          />
-          <USwitch v-model="commandSuggestionsEnabled" :aria-label="t('Setting.TerminalCommandSuggestions')" />
-        </div>
       </SettingsRow>
 
       <SettingsRow :title="t('Setting.Resolution')" :description="t('Setting.ResolutionDescription')">
@@ -334,6 +331,44 @@ async function clearCommandHistory() {
       <div v-if="ffmpegBusy" class="mt-4 flex items-center gap-3">
         <UProgress :value="ffmpegProgress" size="sm" class="flex-1" />
         <span class="w-10 text-right text-xs tabular-nums text-muted">{{ ffmpegProgress }}%</span>
+      </div>
+    </SettingsGroup>
+
+    <SettingsGroup :divided="false" padded>
+      <div class="flex items-start justify-between gap-6">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-highlighted">{{ t("Setting.TerminalCommandSuggestions") }}</p>
+          <p class="mt-1 text-xs leading-5 text-muted">{{ t("Setting.TerminalCommandSuggestionsDescription") }}</p>
+        </div>
+        <USwitch v-model="commandSuggestionsEnabled" :aria-label="t('Setting.TerminalCommandSuggestions')" />
+      </div>
+      <div class="mt-3 flex flex-wrap justify-end gap-2">
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          class="shrink-0 rounded-full"
+          :class="commandHistoryFeedback !== 'idle' ? 'settings-log-pop' : undefined"
+          :disabled="!commandHistoryScope"
+          @click="commandHistoryConfirmOpen = true"
+        >
+          <Transition name="settings-log-label" mode="out-in">
+            <span :key="commandHistoryFeedback" class="inline-flex items-center gap-1.5">
+              <UIcon
+                v-if="logActionIcon(commandHistoryFeedback)"
+                :name="logActionIcon(commandHistoryFeedback)!"
+                class="size-3.5"
+              />
+              {{
+                logActionLabel(
+                  commandHistoryFeedback,
+                  t("Setting.ClearTerminalCommandHistory"),
+                  t("Setting.TerminalCommandHistoryCleared")
+                )
+              }}
+            </span>
+          </Transition>
+        </UButton>
       </div>
     </SettingsGroup>
 

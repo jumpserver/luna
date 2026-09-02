@@ -50,7 +50,7 @@ import { useKokoWsUrl } from "#koko/composables/wsUrl";
 import { useKokoConnectionStore } from "#koko/stores/connection";
 import { useKokoTerminalSettingsStore } from "#koko/stores/terminalSettings";
 import { getDefaultTerminalConfig } from "#koko/utils/guard";
-import { appTerminalTheme, terminalTheme } from "#koko/utils/terminalTheme";
+import { applyXtermTheme, appTerminalTheme, syncXtermBackground, terminalTheme } from "#koko/utils/terminalTheme";
 import { formatMessage, preprocessInput } from "#koko/utils/terminalUtils";
 
 const isSocketOpen = (socket: WebSocket) => socket.readyState === WebSocket.OPEN;
@@ -431,7 +431,7 @@ export const useKokoTerminalSocket = () => {
     if (!followAppTheme.value || !import.meta.client) return;
     themeObserver = new MutationObserver(() => {
       if (!terminalRef.value) return;
-      terminalRef.value.options.theme = appTerminalTheme();
+      applyXtermTheme(terminalRef.value, appTerminalTheme());
     });
     themeObserver.observe(document.documentElement, {
       attributes: true,
@@ -458,6 +458,7 @@ export const useKokoTerminalSocket = () => {
     nextTick(() => {
       input.start();
       terminalRef.value?.open(containerRef.value!);
+      if (terminalRef.value) syncXtermBackground(terminalRef.value);
       fitToContainer();
     });
   });
