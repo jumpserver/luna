@@ -4,7 +4,7 @@ export default defineConfig({
   build: {
     sourcemap: true,
     rollupOptions: {
-      external: ["electron", "node-pty", "ssh2"]
+      external: ["electron", "node-pty"]
     }
   }
 });

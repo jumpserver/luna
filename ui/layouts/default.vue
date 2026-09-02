@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { AssetItem } from "~/types";
 import AiOverlayPanel from "~/components/RightPanel/AiOverlayPanel.vue";
 import WorkspaceShell from "~/components/Workspace/shell.vue";
 import WorkspaceStatusFooter from "~/components/Workspace/statusFooter.vue";
@@ -39,7 +40,8 @@ const {
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 const { open: aiPanelOpen, setOpen: setAiPanelOpen } = useAiPanel();
 const localePath = useLocalePath();
-const { open: settingsOpen, activeSection: activeSettingsSection, openSettings } = useSettingsWindow();
+const { open: settingsOpen, activeSection: activeSettingsSection, openSettings, closeSettings } = useSettingsWindow();
+const { recentConnections } = useRecentConnections();
 const settingsSectionPages = {
   user: SettingsUserPage,
   general: SettingsGeneralPage,
@@ -254,6 +256,11 @@ const handleDesktopMenuCommand = (command: string) => {
     return;
   }
 
+  if (command === "search-connect") {
+    void openAssetWorkspace(() => useEventBus().emit("workspaceQuickSearch", undefined));
+    return;
+  }
+
   if (command === "open-tools") {
     if (!isDesktopRuntime()) return;
     void navigateTo(localePath({ path: "/tools" }));
@@ -261,6 +268,33 @@ const handleDesktopMenuCommand = (command: string) => {
 };
 
 let unlistenDesktopMenuCommand: (() => void) | null = null;
+let unlistenDesktopTrayConnect: (() => void) | null = null;
+
+async function openAssetWorkspace(ready: () => void) {
+  await closeSettings();
+  if (activeWorkspaceMode.value !== "assets") await navigateTo("/");
+  setSidebarCollapsed(false);
+  await nextTick();
+  ready();
+}
+
+const syncTrayRecentConnections = () => {
+  if (!isDesktopRuntime() || desktopWindow.label() !== "main") return;
+  void desktopInvoke("set_tray_recent_connections", {
+    enabled: loggedIn.value,
+    items: loggedIn.value
+      ? recentConnections.value.map(({ id, name, address, org_id, platform, category, type }) => ({
+          id,
+          name,
+          address,
+          org_id,
+          platform,
+          category,
+          type
+        }))
+      : []
+  }).catch((error) => console.debug("sync tray recent connections failed", error));
+};
 
 useEventListener(window, "keydown", startEscapeHold);
 useEventListener(window, "keydown", handleChromeShortcut);
@@ -272,6 +306,8 @@ useEventListener(window, "focus", refreshCommandExecutionSetting);
 watch(focusMode, (active) => {
   if (!active) clearEscapeHold();
 });
+
+watch([loggedIn, recentConnections], syncTrayRecentConnections, { immediate: true });
 
 watch(
   canStartWorkspaceTour,
@@ -325,6 +361,11 @@ onMounted(() => {
     }).then((unlisten) => {
       unlistenDesktopMenuCommand = unlisten;
     });
+    void desktopListen<AssetItem>("desktop-tray-connect-asset", ({ payload }) => {
+      void openAssetWorkspace(() => useEventBus().emit("workspaceQuickConnectAsset", payload));
+    }).then((unlisten) => {
+      unlistenDesktopTrayConnect = unlisten;
+    });
   }
 });
 
@@ -332,6 +373,7 @@ onBeforeUnmount(() => {
   stopScheduledWorkspaceTour();
   workspaceTour.destroy();
   unlistenDesktopMenuCommand?.();
+  unlistenDesktopTrayConnect?.();
   clearEscapeHold();
   registerSessionDisposer(null);
   registerKokoTicketProvider(null);

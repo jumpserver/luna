@@ -111,6 +111,25 @@
   color: var(--theme-folder-icon);
 }
 
+.theme-folder-icon {
+  display: inline-grid;
+}
+
+.theme-folder-icon__outline,
+.theme-folder-icon__filled {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+}
+
+.theme-folder-icon__outline {
+  opacity: calc(1 - var(--theme-folder-icon-filled));
+}
+
+.theme-folder-icon__filled {
+  opacity: var(--theme-folder-icon-filled);
+}
+
 .sidebar-icon-button {
   border-radius: 0.5rem;
   color: var(--app-muted);

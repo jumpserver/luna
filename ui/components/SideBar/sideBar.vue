@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem, NavigationMenuItem } from "@nuxt/ui";
+import type { ComponentPublicInstance } from "vue";
 import type { SidebarSectionKey } from "~/types";
 
 import { SIDEBAR_SECTION_KEYS } from "~/composables/useSidebarSections";
@@ -31,6 +32,7 @@ const {
 const isLoading = ref(false);
 const sidebarSearch = ref("");
 const showAssetSearch = ref(false);
+const assetSearchInputRef = ref<ComponentPublicInstance | null>(null);
 const assetTreeOpen = ref(true);
 const islandAccordionValue = ref<string[]>(["assets"]);
 const sidebarSectionLabels = computed<Record<SidebarSectionKey, string>>(() => ({
@@ -201,6 +203,15 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
     }
   ];
 });
+
+const handleWorkspaceQuickSearch = async () => {
+  showAssetSearch.value = true;
+  await nextTick();
+  const input = assetSearchInputRef.value?.$el?.querySelector("input") as HTMLInputElement | undefined;
+  input?.focus();
+};
+
+useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
 </script>
 
 <template>
@@ -473,6 +484,7 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
       >
         <div :style="{ borderBottom: '1px solid var(--app-border)' }" class="px-2.5 py-1.5">
           <UInput
+            ref="assetSearchInputRef"
             v-model="sidebarSearch"
             size="sm"
             autofocus

@@ -155,7 +155,7 @@ export function useConnectionFormState() {
   const loadAssetDetails = async (asset: AssetItem) => {
     const hasDetails = asset.permedAccounts?.length && asset.permedProtocols?.length;
     if (hasDetails) return asset;
-    const detail = await getAssetDetailRequest(asset.id, userInfoStore.currentUser?.org?.id || "");
+    const detail = await getAssetDetailRequest(asset.id, asset.org_id || userInfoStore.currentUser?.org?.id || "");
     return {
       ...asset,
       permedAccounts: detail.permed_accounts ?? asset.permedAccounts ?? [],

@@ -28,6 +28,8 @@ type BusEvents = {
     permedProtocols: PermedProtocol[];
   };
   workspaceConnectAsset: AssetItem;
+  workspaceQuickConnectAsset: AssetItem;
+  workspaceQuickSearch: undefined;
 } & Record<EventType, unknown>;
 
 const emitter: Emitter<BusEvents> = mitt<BusEvents>();

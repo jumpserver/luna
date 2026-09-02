@@ -56,7 +56,7 @@ export function useSidebarAssetActions() {
   };
 
   const loadAssetConnectionDetails = async (asset: AssetItem) => {
-    const detail = await getAssetDetailRequest(asset.id, currentUser.value?.org?.id || "");
+    const detail = await getAssetDetailRequest(asset.id, asset.org_id || currentUser.value?.org?.id || "");
 
     return {
       ...asset,
@@ -376,6 +376,7 @@ export function useSidebarAssetActions() {
   };
 
   useEventBus().on("workspaceConnectAsset", handleAssetConnectWithSelection);
+  useEventBus().on("workspaceQuickConnectAsset", handleAssetConnect);
 
   const handleAssetOpenInNewWindow = async (asset: AssetItem) => {
     contextMenuVisible.value = false;

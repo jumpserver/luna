@@ -231,6 +231,7 @@ interface AssetTreeChoice {
 
 interface AssetTreeNodeData {
   id?: string;
+  org_id?: string;
   name?: string;
   address?: string;
   comment?: string;

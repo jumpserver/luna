@@ -130,7 +130,9 @@ export class LocalApplicationLauncher {
   }
 
   helperCommand() {
-    return `${shellQuote(process.execPath)} --ssh-helper`;
+    const resourceRoot = this.isPackaged ? this.projectRoot : path.join(this.projectRoot, ".electron-resources");
+    const executable = process.platform === "win32" ? "jms-ssh.exe" : "jms-ssh";
+    return shellQuote(path.join(resourceRoot, "bin", executable));
   }
 
   async resolveApplication(payload) {

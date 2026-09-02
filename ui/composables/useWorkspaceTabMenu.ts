@@ -17,6 +17,7 @@ function sessionToAsset(session: WorkspaceSurfaceSession): AssetItem {
     platform: session.assetPlatform,
     type: session.assetType,
     category: session.assetCategory,
+    org_id: session.orgId,
     permedProtocols: session.permedProtocols,
     permedAccounts: session.permedAccounts,
     zone: "",
@@ -68,6 +69,7 @@ export function useWorkspaceTabMenu() {
     handleAssetConnection(tab.account, tab.assetId, tab.protocol, undefined, undefined, {
       tabId: tab.id,
       asset: sessionToAsset(tab),
+      orgId: tab.orgId,
       connectMethod
     });
   };
@@ -152,6 +154,7 @@ export function useWorkspaceTabMenu() {
       handleAssetConnection(workspaceTab.account, workspaceTab.assetId, workspaceTab.protocol, undefined, undefined, {
         tabId: pane.id,
         asset: sessionToAsset(workspaceTab),
+        orgId: workspaceTab.orgId,
         connectMethod
       });
       addErrorToast({

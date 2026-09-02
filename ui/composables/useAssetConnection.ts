@@ -118,6 +118,7 @@ export function useAssetConnection() {
           manualUsername: "",
           manualPassword: "",
           dynamicPassword: "",
+          orgId: asset.org_id,
           asset
         }
       );
@@ -229,6 +230,7 @@ export function useAssetConnection() {
       aclBatchId: normalized.aclBatchId,
       onSessionReady: normalized.onSessionReady,
       onSessionError: normalized.onSessionError,
+      orgId: asset.org_id,
       asset
     });
   };

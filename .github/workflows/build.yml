@@ -43,6 +43,10 @@ jobs:
           node-version: "24"
           cache: pnpm
 
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: electron/ssh-helper/go.mod
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -94,6 +98,10 @@ jobs:
         with:
           node-version: "24"
           cache: pnpm
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: electron/ssh-helper/go.mod
 
       - name: Install Linux packaging dependencies
         if: startsWith(matrix.os, 'ubuntu')

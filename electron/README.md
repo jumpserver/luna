@@ -8,6 +8,9 @@ Run the current development shell with:
 pnpm electron:dev
 ```
 
+Desktop development and packaging require Go 1.25 or newer to build the bundled `jms-ssh` helper.
+On macOS, development builds ad-hoc sign the helper; release builds use `CSC_NAME` and verify the packaged helper before completing. Windows Authenticode signing is enabled when `WINDOWS_CERTIFICATE_FILE` (and `WINDOWS_CERTIFICATE_PASSWORD`) or `WINDOWS_SIGN_WITH_PARAMS` is configured.
+
 The launcher allocates independent Nuxt and HMR ports, starts the renderer, and
 then opens Electron through Electron Forge. TypeScript sources live under `src/`
 by domain (`desktop`, `auth`, `apps`, `replay`, `web-proxy`). Vite compiles the

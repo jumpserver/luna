@@ -93,6 +93,7 @@ export const useAssetTree = () => {
       id: String(data.id || node.id),
       name: String(data.name || node.name),
       address: String(data.address || ""),
+      org_id: typeof data.org_id === "string" ? data.org_id : undefined,
       platform: String(
         (typeof data.platform === "object" ? data.platform?.name : data.platform) || data.platform_type || ""
       ),

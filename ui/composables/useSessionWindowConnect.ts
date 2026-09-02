@@ -28,7 +28,11 @@ export const decodeLegacyWindowPayload = (payload: string) => {
 
 export function buildSessionPath(asset: AssetItem, connectionInfo?: SessionWindowConnectionInfo) {
   const query = new URLSearchParams();
-  if (!connectionInfo) return `/session/${encodeURIComponent(asset.id)}`;
+  if (asset.org_id) query.set("org", asset.org_id);
+  if (!connectionInfo) {
+    const suffix = query.size ? `?${query.toString()}` : "";
+    return `/session/${encodeURIComponent(asset.id)}${suffix}`;
+  }
 
   query.set("protocol", connectionInfo.protocol);
   if (connectionInfo.account) query.set("account", connectionInfo.account);
@@ -61,7 +65,9 @@ export function useSessionWindowConnect() {
     error.value = "";
 
     try {
-      const asset = await fetchSessionAsset(assetId, userInfoStore.currentUser?.org?.id || "");
+      const orgId = String(route.query.org || userInfoStore.currentUser?.org?.id || "");
+      const asset = await fetchSessionAsset(assetId, orgId);
+      asset.org_id = orgId || undefined;
       asset.savedConnection = saved || undefined;
       openSetupSession(asset, {
         protocol: String(route.query.protocol || preference?.protocol || saved?.protocol || "")
