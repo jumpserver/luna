@@ -6,16 +6,16 @@ detecting Electron directly.
 
 ## Main framework
 
-| Capability                                              | Electron implementation                                              | Status   |
-| ------------------------------------------------------- | -------------------------------------------------------------------- | -------- |
-| Runtime detection and IPC                               | isolated preload API (`__JMS_DESKTOP__`)                             | migrated |
-| OAuth, encrypted token persistence, session bootstrap   | `electron/auth.mjs`                                                  | migrated |
-| Core REST API proxy and organization switching          | `electron/auth.mjs`                                                  | migrated |
-| Window controls, menus, tray, desktop events            | `electron/main.mjs`                                                  | migrated |
-| Settings store, dialogs, clipboard, opener, app/OS info | Desktop Bridge adapters                                              | migrated |
-| Secondary asset windows                                 | Desktop Bridge window adapter                                        | migrated |
-| External native-client launch and plugin management     | `electron/application-config.mjs`, `electron/local-app-launcher.mjs` | migrated |
-| System font enumeration                                 | `electron/system-fonts.mjs`                                          | migrated |
+| Capability                                              | Electron implementation                                                              | Status   |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------ | -------- |
+| Runtime detection and IPC                               | isolated preload API (`__JMS_DESKTOP__`)                                             | migrated |
+| OAuth, encrypted token persistence, session bootstrap   | `electron/src/auth/service.ts`                                                       | migrated |
+| Core REST API proxy and organization switching          | `electron/src/auth/service.ts`                                                       | migrated |
+| Window controls, menus, tray, desktop events            | `electron/src/desktop/main.ts`                                                       | migrated |
+| Settings store, dialogs, clipboard, opener, app/OS info | Desktop Bridge adapters                                                              | migrated |
+| Secondary asset windows                                 | Desktop Bridge window adapter                                                        | migrated |
+| External native-client launch and plugin management     | `electron/src/apps/application-config.ts`, `electron/src/apps/local-app-launcher.ts` | migrated |
+| System font enumeration                                 | `electron/src/apps/system-fonts.ts`                                                  | migrated |
 
 ## Workspace order
 
@@ -33,10 +33,11 @@ Each workspace is considered migrated when it runs through a host adapter in Ele
 functional Web fallback where applicable, and passes its focused
 tests plus an Electron smoke test.
 
-The workspace and local packaging migration is complete. `electron-builder` packages the generated
-renderer, platform plugins, and the Node SSH helper. The optional FFmpeg encoder is downloaded from
-Settings into the user's plugin directory. The Electron runtime uses a minimal package manifest so
-frontend build dependencies are not shipped.
+The workspace and local packaging migration is complete. Electron Forge packages the generated
+renderer, platform plugins, and the Node SSH helper. Windows installers are Squirrel `.exe` plus WiX
+`.msi` instead of NSIS; Linux artifacts are DEB and RPM instead of AppImage. The optional FFmpeg
+encoder is downloaded from Settings into the user's plugin directory. The Electron runtime uses a
+minimal package manifest so frontend build dependencies are not shipped.
 
 The remaining work is release infrastructure: add the cross-platform CI matrix, connect platform code
 signing/notarization, and wire published artifacts into the existing release/update channel.

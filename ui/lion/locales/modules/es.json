@@ -1,0 +1,15 @@
+{
+  "ClipboardTextLimitExceeded": "El texto del portapapeles supera el límite",
+  "ClipboardFileSizeLimitExceeded": "El archivo del portapapeles supera el límite",
+  "ClipboardCopyDeniedByPolicy": "La política del portapapeles impide copiar",
+  "ClipboardPasteDeniedByPolicy": "La política del portapapeles impide pegar",
+  "Copy": "Copiar",
+  "Paste": "Pegar",
+  "NoPermission": "Permiso denegado",
+  "LoadMore": "Cargar más",
+  "Uploading": "Subiendo",
+  "Waiting": "Esperando",
+  "Forward": "Adelante",
+  "ZoomIn": "Acercar",
+  "ZoomOut": "Alejar"
+}

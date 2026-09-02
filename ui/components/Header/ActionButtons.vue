@@ -30,7 +30,7 @@ const handleToggleAi = () => {
         />
       </UTooltip>
 
-      <Profile placement="topbar" />
+      <Profile />
 
       <UTooltip v-if="showRightPanelButton" arrow :text="rightPanelOpen ? t('RightPanel.Close') : t('RightPanel.Open')">
         <UButton

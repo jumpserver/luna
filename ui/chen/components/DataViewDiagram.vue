@@ -20,7 +20,7 @@ const props = defineProps<{
   foreignKeys: ChenDataViewForeignKeyPreview[];
 }>();
 
-const viewport = ref<HTMLElement | null>(null);
+const viewport = shallowRef<HTMLElement | null>(null);
 const scale = ref(1);
 const offset = reactive({ x: 0, y: 0 });
 const dragging = ref(false);

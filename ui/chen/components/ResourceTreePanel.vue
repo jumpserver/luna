@@ -115,7 +115,7 @@ const sqlKeywordCaseModel = computed({
       </div>
     </div>
 
-    <div class="min-h-0 flex-1 overflow-auto px-2 py-2">
+    <div class="app-tree min-h-0 flex-1 overflow-auto px-2 py-2">
       <ul>
         <ChenResourceTreeNode
           v-for="node in rootNodes"

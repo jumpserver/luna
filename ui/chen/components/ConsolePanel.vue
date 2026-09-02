@@ -116,7 +116,7 @@ function moveHistory(direction: -1 | 1) {
 }
 
 function handleKeydown(event: KeyboardEvent) {
-  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+  if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
     event.preventDefault();
     run();
     return;
@@ -298,7 +298,7 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
         class="max-h-32 min-h-7 flex-1 resize-none bg-transparent py-1 text-[var(--app-fg)] outline-none placeholder:text-[var(--app-muted)]"
         :disabled="busy"
         rows="1"
-        placeholder="Enter SQL; press Cmd/Ctrl+Enter to run"
+        placeholder="Enter to run · Shift+Enter for newline"
         spellcheck="false"
         @keydown="handleKeydown"
       />

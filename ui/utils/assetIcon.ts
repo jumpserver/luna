@@ -1,3 +1,5 @@
+import { withBase } from "ufo";
+
 const iconMap: Record<string, string> = {
   windows: "/icons/windows.png",
   linux: "/icons/linux.png",
@@ -19,7 +21,9 @@ const iconMap: Record<string, string> = {
   device: ""
 };
 
-export function resolveAssetIconSrc(type?: string) {
+const withAppBase = (src: string, baseURL: string) => (src ? withBase(src, baseURL) : "");
+
+function resolveAssetIconPath(type?: string) {
   const key = String(type || "linux").toLowerCase();
   if (iconMap[key]) return iconMap[key];
   if (key.includes("linux") || key.includes("unix")) return iconMap.linux!;
@@ -38,36 +42,44 @@ export function resolveAssetIconSrc(type?: string) {
   return "";
 }
 
+export function resolveAssetIconSrc(type?: string, baseURL = "/") {
+  return withAppBase(resolveAssetIconPath(type), baseURL);
+}
+
 export function resolveAssetIconFallback(type?: string) {
   const key = String(type || "").toLowerCase();
   if (key.includes("device")) return "i-lucide-router";
   return "i-lucide-terminal";
 }
 
-export function resolveAssetIconFromFields(fields: { type?: string; platform?: string; category?: string }) {
+export function resolveAssetIconFromFields(
+  fields: { type?: string; platform?: string; category?: string },
+  baseURL = "/"
+) {
   const candidates = [fields.platform, fields.type, fields.category]
     .map((value) => String(value || "").toLowerCase())
     .filter(Boolean);
 
   const has = (keyword: string) => candidates.some((value) => value.includes(keyword));
+  const resolve = (src: string, fallback: string) => ({ src: withAppBase(src, baseURL), fallback });
 
-  if (has("linux") || has("unix")) return { src: iconMap.linux!, fallback: "i-lucide-terminal" };
-  if (has("windows")) return { src: iconMap.windows!, fallback: "i-lucide-terminal" };
-  if (has("web")) return { src: iconMap.website!, fallback: "i-lucide-globe" };
-  if (has("mysql")) return { src: iconMap.mysql!, fallback: "i-lucide-database" };
-  if (has("mariadb")) return { src: iconMap.mariadb!, fallback: "i-lucide-database" };
-  if (has("oracle")) return { src: iconMap.oracle!, fallback: "i-lucide-database" };
-  if (has("postgres")) return { src: iconMap.postgresql!, fallback: "i-lucide-database" };
-  if (has("sqlserver")) return { src: iconMap.sqlserver!, fallback: "i-lucide-database" };
-  if (has("redis")) return { src: iconMap.redis!, fallback: "i-lucide-database" };
-  if (has("mongodb")) return { src: iconMap.mongodb!, fallback: "i-lucide-database" };
-  if (has("dameng")) return { src: iconMap.dameng!, fallback: "i-lucide-database" };
-  if (has("clickhouse")) return { src: iconMap.clickhouse!, fallback: "i-lucide-database" };
-  if (has("database")) return { src: iconMap.database!, fallback: "i-lucide-database" };
+  if (has("linux") || has("unix")) return resolve(iconMap.linux!, "i-lucide-terminal");
+  if (has("windows")) return resolve(iconMap.windows!, "i-lucide-terminal");
+  if (has("web")) return resolve(iconMap.website!, "i-lucide-globe");
+  if (has("mysql")) return resolve(iconMap.mysql!, "i-lucide-database");
+  if (has("mariadb")) return resolve(iconMap.mariadb!, "i-lucide-database");
+  if (has("oracle")) return resolve(iconMap.oracle!, "i-lucide-database");
+  if (has("postgres")) return resolve(iconMap.postgresql!, "i-lucide-database");
+  if (has("sqlserver")) return resolve(iconMap.sqlserver!, "i-lucide-database");
+  if (has("redis")) return resolve(iconMap.redis!, "i-lucide-database");
+  if (has("mongodb")) return resolve(iconMap.mongodb!, "i-lucide-database");
+  if (has("dameng")) return resolve(iconMap.dameng!, "i-lucide-database");
+  if (has("clickhouse")) return resolve(iconMap.clickhouse!, "i-lucide-database");
+  if (has("database")) return resolve(iconMap.database!, "i-lucide-database");
   if (has("device")) return { src: "", fallback: "i-lucide-router" };
 
   for (const candidate of candidates) {
-    const src = resolveAssetIconSrc(candidate);
+    const src = resolveAssetIconSrc(candidate, baseURL);
     if (src) return { src, fallback: resolveAssetIconFallback(candidate) };
   }
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SuggestionUser } from "@/lion/api";
-import { useKokoSessionAdapter } from "@jumpserver/koko";
+import { useKokoSessionAdapter } from "#koko";
 import { getLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
 
 const props = defineProps<{

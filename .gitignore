@@ -35,4 +35,5 @@ test-results
 target
 dist
 .electron-resources
+electron/.vite
 release/electron

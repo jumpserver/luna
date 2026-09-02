@@ -133,12 +133,12 @@ sudo dnf install ./jumpserver-client_*.rpm
 
 ### 前置要求
 
-- **Node.js** >= 22
+- **Node.js** >= 24
 - **pnpm** >= 11
 - **系统依赖**：
   - macOS: Xcode Command Line Tools
-  - Windows: Microsoft Visual C++ Build Tools
-  - Linux: `build-essential`，生成 RPM 安装包时还需安装 `rpm`
+  - Windows: Microsoft Visual C++ Build Tools；生成 MSI 时还需 WiX Toolset 3（`candle` 和 `light`）
+  - Linux: `build-essential`、`fakeroot`，生成 DEB/RPM 安装包时还需安装 `rpm`
 
 ### 快速开始
 
@@ -166,14 +166,13 @@ pnpm electron:package:dir
 
 ### 构建 Web Docker 镜像
 
-Web 镜像只包含 Nuxt 静态产物和 nginx；Electron 桌面代码不会进入 Docker 构建上下文。
+Docker 构建只安装 Web workspace 的依赖关系，并将生成的 Nuxt 静态产物写入 `/opt/luna`。Electron 代码及桌面原生依赖不会进入 Docker 构建上下文。
 
 ```bash
 docker build -t jumpserver/luna:local .
-docker run --rm -p 8080:80 jumpserver/luna:local
 ```
 
-GitHub Actions 会构建 `linux/amd64` 与 `linux/arm64` 双架构镜像，并在版本标签触发时发布到 `jumpserver/luna`。
+Web 工作流会构建 `linux/amd64` 与 `linux/arm64` 双架构镜像，并在版本标签触发时发布到 `jumpserver/luna`。macOS、Linux 和 Windows 桌面客户端则由客户端发布工作流单独打包。
 
 ### 项目结构
 
@@ -185,8 +184,8 @@ clients/
 │   ├── composables/      # Vue 组合式函数
 │   └── layouts/          # 布局组件
 ├── electron/              # Electron 主进程与 preload bridge
-│   ├── ssh-helper.cjs     # 外部终端使用的 Node SSH helper
-│   └── replay-*.mjs      # Node 录像解析、渲染与编码桥接
+│   ├── src/              # 按业务拆分的 TypeScript 桌面运行时
+│   └── tests/            # Electron 单元测试与 fixtures
 └── i18n/                 # 国际化文件
 ```
 

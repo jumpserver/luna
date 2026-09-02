@@ -39,7 +39,7 @@ const { t } = useI18n();
 const { getMethodsForProtocol, getDefaultMethodForProtocol } = useConnectMethods();
 const { appConfig } = useSettingManager();
 const formFieldUi = {
-  label: "text-xs font-semibold tracking-[0.025em] text-[var(--app-text-muted)]",
+  label: "text-sm font-semibold tracking-[0.025em] text-[var(--app-text-muted)]",
   container: "mt-2"
 };
 const controlBaseUi =
@@ -437,7 +437,7 @@ function handleSpecialAccount(v: string) {
           v-for="item in protocolTabItems"
           :key="item.value"
           type="button"
-          class="protocol-tab-button"
+          class="protocol-tab-button text-sm"
           :class="item.value === selectedProtocol ? 'protocol-tab-button-active' : 'protocol-tab-button-idle'"
           @click="selectedProtocol = item.value"
         >
@@ -733,10 +733,8 @@ function handleSpecialAccount(v: string) {
   border: 0;
   background: transparent;
   padding: 0.25rem 1.25rem 0.375rem;
-  font-size: 0.875rem;
   font-weight: 500;
   letter-spacing: 0.08em;
-  line-height: 1.25rem;
   color: var(--app-text-muted);
   transition: color 0.15s ease;
 }

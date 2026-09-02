@@ -137,12 +137,13 @@ sudo dnf install ./jumpserver-client_*.rpm
 
 ### Prerequisites
 
-- **Node.js** >= 22
+- **Node.js** >= 24
 - **pnpm** >= 11
 - **System Dependencies**:
   - macOS: Xcode Command Line Tools
   - Windows: Microsoft Visual C++ Build Tools
-  - Linux: `build-essential` and `rpm` when producing RPM packages
+  - Linux: `build-essential`, `fakeroot`, and `rpm` when producing DEB/RPM packages
+  - Windows: WiX Toolset 3 (`candle` and `light`) when producing MSI packages
 
 ### Getting Started
 
@@ -170,14 +171,13 @@ pnpm electron:package:dir
 
 ### Build the Web Docker Image
 
-The Web image contains only the generated Nuxt application and nginx; Electron desktop code is excluded from its build context.
+The Docker build installs only the Web workspace dependency graph and writes the generated Nuxt application to `/opt/luna`. Electron code and native desktop dependencies are excluded from its build context.
 
 ```bash
 docker build -t jumpserver/luna:local .
-docker run --rm -p 8080:80 jumpserver/luna:local
 ```
 
-The multi-architecture GitHub workflow builds `linux/amd64` and `linux/arm64`, and publishes tagged releases to `jumpserver/luna`.
+The Web workflow builds `linux/amd64` and `linux/arm64`, and publishes tagged images to `jumpserver/luna`. Desktop clients are packaged separately for macOS, Linux, and Windows by the client release workflow.
 
 ### Project Structure
 
@@ -189,8 +189,8 @@ clients/
 │   ├── composables/      # Vue composables
 │   └── layouts/          # Layout components
 ├── electron/              # Electron main process and preload bridge
-│   ├── ssh-helper.cjs     # Node SSH helper for external terminals
-│   └── replay-*.mjs      # Node replay parser, renderer, and encoder bridge
+│   ├── src/              # TypeScript desktop runtime by domain
+│   └── tests/            # Electron unit tests and fixtures
 └── i18n/                 # Internationalization files
 ```
 

@@ -1,0 +1,15 @@
+{
+  "ClipboardTextLimitExceeded": "클립보드 텍스트가 제한을 초과했습니다",
+  "ClipboardFileSizeLimitExceeded": "클립보드 파일이 제한을 초과했습니다",
+  "ClipboardCopyDeniedByPolicy": "클립보드 정책에 따라 복사할 수 없습니다",
+  "ClipboardPasteDeniedByPolicy": "클립보드 정책에 따라 붙여넣을 수 없습니다",
+  "Copy": "복사",
+  "Paste": "붙여넣기",
+  "NoPermission": "권한이 없습니다",
+  "LoadMore": "더 보기",
+  "Uploading": "업로드 중",
+  "Waiting": "대기 중",
+  "Forward": "앞으로",
+  "ZoomIn": "확대",
+  "ZoomOut": "축소"
+}

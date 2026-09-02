@@ -4,9 +4,10 @@ minimumReleaseAgeExclude:
   - "@ai-sdk/vue@4.0.44"
   - ai@7.0.44
 shellEmulator: true
+nodeLinker: hoisted
 
 overrides:
-  "app-builder-lib@26.15.3>@electron/get": 5.1.0
+  "@electron/rebuild": 4.2.0
   cpu-features: "-"
 
 packages:
@@ -15,13 +16,18 @@ packages:
   - packages/*
 
 allowBuilds:
+  "@bitdisaster/exe-icon-extractor": true
   "@parcel/watcher": true
+  electron: true
   electron-winstaller: true
   esbuild: true
+  fs-xattr: true
+  macos-alias: true
   node-pty: true
   ssh2: false
   unrs-resolver: true
   vue-demi: true
 
 patchedDependencies:
-  guacamole-common-js-jumpserver@1.1.0-c: patches/guacamole-common-js-jumpserver@1.1.0-c.patch
+  guacamole-common-js-jumpserver@1.1.0-c: >-
+    patches/guacamole-common-js-jumpserver@1.1.0-c.patch

@@ -4,6 +4,8 @@ export interface ThemeSeedTokens {
   muted: string;
   border: string;
   accent: string;
+  /** Defaults to the theme accent when omitted. */
+  folderIcon?: string;
   surface: string;
   surfaceHover: string;
   shadowSoft: string;

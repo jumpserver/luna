@@ -52,6 +52,7 @@ Theme presets define only the small set of seed tokens:
 - `--theme-muted`
 - `--theme-border`
 - `--theme-accent`
+- `--theme-folder-icon` (optional; defaults to `--theme-accent`)
 - `--theme-surface`
 - `--theme-surface-hover`
 - `--theme-shadow-soft`

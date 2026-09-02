@@ -113,8 +113,9 @@ export default defineAppConfig({
         label:
           "w-full flex items-center px-2 py-1 text-[11px] font-semibold text-[var(--app-muted)] uppercase tracking-[0.08em]",
         separator: "-mx-1 my-1 h-px bg-[var(--app-border)]",
-        item: "mx-0.5 min-w-0 px-3 py-1.5 rounded-md leading-5 transition-colors duration-150 text-[var(--app-fg)] data-highlighted:bg-[var(--app-hover-soft)] data-[state=open]:bg-[var(--app-hover-soft)] data-highlighted:text-[var(--app-fg)] data-[state=open]:text-[var(--app-fg)]",
-        itemTrailingIcon: "!size-4 shrink-0",
+        item: "mx-0.5 min-w-0 items-center px-3 py-1.5 rounded-md leading-5 transition-colors duration-150 text-[var(--app-fg)] data-highlighted:bg-[var(--app-hover-soft)] data-[state=open]:bg-[var(--app-hover-soft)] data-highlighted:text-[var(--app-fg)] data-[state=open]:text-[var(--app-fg)]",
+        itemLeadingIcon: "!size-[var(--app-ui-font-size)] shrink-0",
+        itemTrailingIcon: "!size-[var(--app-ui-font-size)] shrink-0",
         itemWrapper: "min-w-0 flex-1 overflow-hidden",
         itemLabel: "block truncate text-sm"
       }

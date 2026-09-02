@@ -7,10 +7,12 @@ const stagingRoot = path.join(projectRoot, ".electron-resources");
 const platform = process.platform === "darwin" ? "macos" : process.platform === "win32" ? "windows" : "linux";
 await rm(stagingRoot, { recursive: true, force: true });
 await Promise.all([
+  mkdir(path.join(stagingRoot, "dist"), { recursive: true }),
   mkdir(path.join(stagingRoot, "plugins"), { recursive: true }),
   mkdir(path.join(stagingRoot, "icons"), { recursive: true })
 ]);
 await Promise.all([
+  cp(path.join(projectRoot, ".output", "public"), path.join(stagingRoot, "dist"), { recursive: true }),
   cp(path.join(projectRoot, "plugins", platform), path.join(stagingRoot, "plugins", platform), { recursive: true }),
   cp(path.join(projectRoot, "electron", "assets", "icons", "icon.png"), path.join(stagingRoot, "icons", "icon.png")),
   cp(path.join(projectRoot, "electron", "assets", "icons", "icon.ico"), path.join(stagingRoot, "icons", "icon.ico")),

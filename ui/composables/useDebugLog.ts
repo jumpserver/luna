@@ -1,8 +1,12 @@
+import { desktopInvoke } from "~/shared/desktop/bridge";
 import { writeClipboardText } from "~/utils/clipboard";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 const MAX_LINES = 2000;
+const FEEDBACK_MS = 1600;
 const methods = ["log", "info", "warn", "error", "debug"] as const;
 type ConsoleMethod = (typeof methods)[number];
+export type LogActionFeedback = "idle" | "done" | "empty";
 
 const originalConsole: Partial<Record<ConsoleMethod, (...args: unknown[]) => void>> = {};
 let hooked = false;
@@ -10,6 +14,7 @@ const lines: string[] = [];
 
 const formatArg = (value: unknown) => {
   if (typeof value === "string") return value;
+  if (value instanceof Error) return value.stack || value.message;
   try {
     return JSON.stringify(value);
   } catch {
@@ -20,9 +25,17 @@ const formatArg = (value: unknown) => {
 const pushLine = (level: string, args: unknown[]) => {
   const time = new Date().toISOString();
   const message = args.map(formatArg).join(" ");
-  lines.push(`${time} [${level}] ${message}`);
+  lines.push(`${time} [renderer] [${level}] ${message}`);
   if (lines.length > MAX_LINES) lines.splice(0, lines.length - MAX_LINES);
 };
+
+const mergeLogText = (...chunks: string[]) =>
+  chunks
+    .flatMap((chunk) => chunk.split(/\r?\n/))
+    .map((line) => line.trimEnd())
+    .filter(Boolean)
+    .sort((left, right) => left.localeCompare(right))
+    .join("\n");
 
 export const installDebugLogHook = () => {
   if (!import.meta.client || hooked) return;
@@ -46,33 +59,66 @@ export const uninstallDebugLogHook = () => {
   hooked = false;
 };
 
+const useActionFeedback = () => {
+  const state = ref<LogActionFeedback>("idle");
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const flash = (next: LogActionFeedback) => {
+    state.value = next;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      state.value = "idle";
+      timer = null;
+    }, FEEDBACK_MS);
+  };
+
+  onBeforeUnmount(() => {
+    if (timer) clearTimeout(timer);
+  });
+
+  return { state, flash };
+};
+
 export const useDebugLog = () => {
   const { debugLog, setDebugLog } = useSettingManager();
-  const toast = useToast();
-  const { t } = useI18n();
+  const clearFeedback = useActionFeedback();
+  const copyFeedback = useActionFeedback();
+  const downloadFeedback = useActionFeedback();
 
-  const logText = () => lines.join("\n");
+  const readDesktopLogs = async () => {
+    if (!isDesktopRuntime()) return "";
+    try {
+      return (await desktopInvoke<string>("debug_log_read")) || "";
+    } catch {
+      return "";
+    }
+  };
 
-  const clearLogs = () => {
+  const combinedLogText = async () => mergeLogText(lines.join("\n"), await readDesktopLogs());
+
+  const clearLogs = async () => {
     lines.length = 0;
-    toast.add({ title: t("Setting.LogsCleared"), color: "success" });
+    if (isDesktopRuntime()) {
+      await desktopInvoke("debug_log_clear").catch(() => undefined);
+    }
+    clearFeedback.flash("done");
   };
 
   const copyLogs = async () => {
-    const text = logText();
+    const text = await combinedLogText();
     if (!text) {
-      toast.add({ title: t("Setting.LogsEmpty"), color: "neutral" });
+      copyFeedback.flash("empty");
       return;
     }
     await writeClipboardText(text);
-    toast.add({ title: t("Setting.LogsCopied"), color: "success" });
+    copyFeedback.flash("done");
   };
 
-  const downloadLogs = () => {
+  const downloadLogs = async () => {
     if (!import.meta.client) return;
-    const text = logText();
+    const text = await combinedLogText();
     if (!text) {
-      toast.add({ title: t("Setting.LogsEmpty"), color: "neutral" });
+      downloadFeedback.flash("empty");
       return;
     }
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
@@ -82,6 +128,7 @@ export const useDebugLog = () => {
     link.download = `jumpserver-debug-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.log`;
     link.click();
     URL.revokeObjectURL(url);
+    downloadFeedback.flash("done");
   };
 
   return {
@@ -89,6 +136,9 @@ export const useDebugLog = () => {
     setDebugLog,
     clearLogs,
     copyLogs,
-    downloadLogs
+    downloadLogs,
+    clearFeedback: clearFeedback.state,
+    copyFeedback: copyFeedback.state,
+    downloadFeedback: downloadFeedback.state
   };
 };

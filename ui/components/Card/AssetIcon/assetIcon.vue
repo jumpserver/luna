@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { resolveAssetIconSrc } from "~/utils/assetIcon";
+
 interface Props {
   type?: string;
   size?: "sm" | "md" | "lg" | "xl";
@@ -10,28 +12,11 @@ const props = withDefaults(defineProps<Props>(), {
   class: "",
   type: "linux"
 });
+const appBaseURL = useRuntimeConfig().app.baseURL;
 
 const imageProps = computed(() => {
   const prop: { src?: string; alt?: string } = {};
-  const iconMap: Record<string, string> = {
-    windows: "/icons/windows.png",
-    linux: "/icons/linux.png",
-    unix: "/icons/linux.png",
-    other: "/icons/linux.png",
-    mysql: "/icons/mysql.png",
-    mariadb: "/icons/mariadb.png",
-    oracle: "/icons/oracle.png",
-    postgresql: "/icons/postgre.png",
-    sqlserver: "/icons/sqlserver.png",
-    redis: "/icons/redis.png",
-    mongodb: "/icons/mongodb.png",
-    dameng: "/icons/dameng.png",
-    clickhouse: "/icons/clickhouse.png",
-    windows_ad: "/icons/windows.png",
-    website: "/icons/browser.png"
-  };
-
-  const src = iconMap[props.type] || "";
+  const src = resolveAssetIconSrc(props.type, appBaseURL);
   const alt = props.type;
 
   if (src) {

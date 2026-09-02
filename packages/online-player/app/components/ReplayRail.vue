@@ -22,7 +22,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const query = ref("");
-const bodyRef = ref<HTMLElement | null>(null);
+const bodyRef = shallowRef<HTMLElement | null>(null);
 const tab = ref<ReplayRailTab>(initialRailTab(Boolean(props.showParts)));
 
 watch(

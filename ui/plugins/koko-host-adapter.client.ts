@@ -1,6 +1,6 @@
-import type { KokoHostAdapter, KokoPreparedSftpAsset, KokoSftpAsset, KokoWorkspaceTab } from "@jumpserver/koko/host";
+import type { KokoHostAdapter, KokoPreparedSftpAsset, KokoSftpAsset, KokoWorkspaceTab } from "#koko/host";
 
-import { configureKokoThemeAdapter, kokoHostAdapterKey } from "@jumpserver/koko/host";
+import { configureKokoThemeAdapter, kokoHostAdapterKey } from "#koko/host";
 import OrganizationSelector from "~/components/Header/OrganizationSelector.vue";
 import SideBarAssetTree from "~/components/SideBar/assetTree.vue";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";

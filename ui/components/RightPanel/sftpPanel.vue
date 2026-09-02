@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { KokoWorkspaceTab } from "@jumpserver/koko/host";
+import type { SftpCapabilities } from "#koko";
+import type { KokoWorkspaceTab } from "#koko/host";
 import type { AssetItem, AssetTreeNode } from "~/types";
-import { KokoFileManagerSessionSurface } from "@jumpserver/koko";
+import { KokoFileManagerSessionSurface } from "#koko";
 import {
   createKokoCompactFileAiOwnerId,
   createKokoCompactFileAiTargetId,
@@ -13,7 +14,9 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
 const { activePaneId, activeTab, tabs } = useWorkspaceTabs();
+const { openDevelopmentWorkspace: openDevelopmentWorkspaceSession } = useWorkspaceTabMenu();
 const { getSessionDetails } = useWorkspaceSessionDetails();
+const { setOpen: setRightPanelOpen } = useRightPanel();
 const { fetchTree, treeNodeToAsset } = useAssetTree();
 const { displayUser, handleAssetConnection } = useAssetAction();
 const userInfoStore = useUserInfoStore();
@@ -26,12 +29,14 @@ const selectedAsset = ref<AssetItem | null>(null);
 const connecting = ref(false);
 const inlinePayload = ref<Record<string, any> | null>(null);
 const inlineError = ref("");
+const inlineCapabilities = shallowRef<SftpCapabilities | null>(null);
+const developmentOpening = ref(false);
 let connectionAttempt = 0;
 const trackedCompactAiOwnerIds = new Set<string>();
 
 const activeWorkspaceSession = computed(() => {
   const tab = activeTab.value;
-  return tab?.panes.find((pane) => pane.id === activePaneId.value) || tab || null;
+  return tab?.panes.find((pane) => pane.id === activePaneId.value) || tab?.panes[0] || null;
 });
 const inlineAccount = computed(() => {
   const asset = selectedAsset.value;
@@ -87,6 +92,21 @@ const workspaceSessionIdentities = computed(() => {
 const activeFileTokenRequester = computed(
   () => getSessionDetails(activeWorkspaceSession.value?.id || "")?.requestFileToken
 );
+const canOpenDevelopmentWorkspace = computed(() => {
+  const session = activeWorkspaceSession.value;
+  const editor = inlineCapabilities.value?.file_editor;
+  return Boolean(
+    session?.protocol === "ssh" &&
+    inlineTab.value?.assetId === session.assetId &&
+    activeFileTokenRequester.value &&
+    editor?.enabled &&
+    editor.read &&
+    editor.write &&
+    editor.save.version === 1 &&
+    editor.save.expected_version &&
+    editor.save.force
+  );
+});
 const isActiveAssetPreparing = computed(() =>
   Boolean(activeWorkspaceAsset.value && !inlineTab.value && !inlineError.value)
 );
@@ -143,6 +163,7 @@ const openSftp = async () => {
   const attempt = ++connectionAttempt;
   connecting.value = true;
   inlineError.value = "";
+  inlineCapabilities.value = null;
   inlinePayload.value = null;
   try {
     const requestFileToken = activeFileTokenRequester.value;
@@ -193,6 +214,21 @@ const openSftp = async () => {
   }
 };
 
+const openDevelopmentWorkspace = async () => {
+  const workspaceTab = activeTab.value;
+  const terminalPane = activeWorkspaceSession.value;
+  const requestFileToken = activeFileTokenRequester.value;
+  if (!workspaceTab || !terminalPane || !requestFileToken || developmentOpening.value) return;
+
+  developmentOpening.value = true;
+  try {
+    const editorPane = await openDevelopmentWorkspaceSession(workspaceTab, terminalPane, requestFileToken);
+    if (editorPane) setRightPanelOpen(false);
+  } finally {
+    developmentOpening.value = false;
+  }
+};
+
 watch(
   [activeWorkspaceSessionKey, activeFileTokenRequester],
   ([sessionKey, requestFileToken], previousValues) => {
@@ -204,6 +240,7 @@ watch(
       connectionAttempt += 1;
       connecting.value = false;
       inlinePayload.value = null;
+      inlineCapabilities.value = null;
       inlineError.value = "";
       selectedAsset.value = null;
       if (sessionKey) useActiveAsset();
@@ -249,14 +286,30 @@ onUnmounted(disposeTrackedCompactAiOwners);
       {{ t("Common.LoginFirst") }}
     </div>
 
-    <KokoFileManagerSessionSurface
-      v-else-if="inlineTab"
-      :key="inlineTab.id"
-      :tab="inlineTab"
-      :ai-owner-id="compactAiOwnerId"
-      compact
-      class="min-h-0 flex-1"
-    />
+    <div v-else-if="inlineTab" class="flex min-h-0 flex-1 flex-col">
+      <div v-if="canOpenDevelopmentWorkspace" class="shrink-0 border-b border-default px-2 py-2">
+        <UButton
+          color="primary"
+          variant="soft"
+          size="sm"
+          block
+          icon="i-lucide-panels-top-left"
+          :label="t('RightPanel.OpenDevelopmentWorkspace')"
+          :title="t('RightPanel.OpenDevelopmentWorkspaceHint')"
+          :loading="developmentOpening"
+          @click="openDevelopmentWorkspace"
+        />
+      </div>
+
+      <KokoFileManagerSessionSurface
+        :key="inlineTab.id"
+        :tab="inlineTab"
+        :ai-owner-id="compactAiOwnerId"
+        compact
+        class="min-h-0 flex-1"
+        @capabilities="inlineCapabilities = $event"
+      />
+    </div>
 
     <div v-else-if="isActiveAssetPreparing" class="grid min-h-0 flex-1 place-items-center text-xs text-muted">
       <div class="flex flex-col items-center gap-2">

@@ -1,0 +1,15 @@
+{
+  "ClipboardTextLimitExceeded": "Văn bản trong bảng tạm vượt quá giới hạn",
+  "ClipboardFileSizeLimitExceeded": "Tệp trong bảng tạm vượt quá giới hạn",
+  "ClipboardCopyDeniedByPolicy": "Chính sách bảng tạm không cho phép sao chép",
+  "ClipboardPasteDeniedByPolicy": "Chính sách bảng tạm không cho phép dán",
+  "Copy": "Sao chép",
+  "Paste": "Dán",
+  "NoPermission": "Không có quyền",
+  "LoadMore": "Tải thêm",
+  "Uploading": "Đang tải lên",
+  "Waiting": "Đang chờ",
+  "Forward": "Tiến",
+  "ZoomIn": "Phóng to",
+  "ZoomOut": "Thu nhỏ"
+}

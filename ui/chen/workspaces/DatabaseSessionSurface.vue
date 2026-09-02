@@ -254,7 +254,8 @@ const currentContextLabel = computed(() => currentWorkspaceNode.value?.label || 
 const consolePromptLabel = computed(() => {
   const dbType = `${auth.profile.value?.dbType || props.tab.protocol || ""}`.toLowerCase();
   if (dbType.includes("postgres")) return "psql>";
-  return "mysql>";
+  if (dbType.includes("mysql")) return "mysql>";
+  return `${dbType || "sql"}>`;
 });
 const activeQueryTab = computed(() => {
   const tab = workspace.activeWorkspaceTab.value;

@@ -1,5 +1,6 @@
 import { gunzipSync } from "fflate";
 import untar from "js-untar";
+import { resolveReplayWallClock } from "~/utils/replayWallClock";
 
 export type VideoPlayerItemType = "mp4" | "cast" | "gua" | "part";
 
@@ -133,23 +134,6 @@ function formatMillisDuration(millis?: number) {
   return `${hours}:${`${minutes}`.padStart(2, "0")}:${`${seconds}`.padStart(2, "0")}`;
 }
 
-function formatTimestamp(millis?: number) {
-  if (!millis || millis < 0) return undefined;
-
-  const date = new Date(millis);
-
-  if (Number.isNaN(date.getTime())) return undefined;
-
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  const hours = `${date.getHours()}`.padStart(2, "0");
-  const minutes = `${date.getMinutes()}`.padStart(2, "0");
-  const seconds = `${date.getSeconds()}`.padStart(2, "0");
-
-  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
-}
-
 function resolveItemMeta(meta: VideoPlayerMeta | null, entryName: string): EffectiveItemMeta {
   if (!meta) return {};
 
@@ -160,10 +144,13 @@ function resolveItemMeta(meta: VideoPlayerMeta | null, entryName: string): Effec
     return fileBaseName === entryBaseName || file.name === entryName;
   });
 
+  // files[].start/end are Guacamole recording-clock milliseconds, not Unix epoch.
+  const wall = resolveReplayWallClock(meta.date_start, fileMeta, meta.files);
+
   return {
     ...meta,
-    date_start: formatTimestamp(fileMeta?.start) || meta.date_start,
-    date_end: formatTimestamp(fileMeta?.end) || meta.date_end,
+    date_start: wall.date_start || meta.date_start,
+    date_end: wall.date_end || meta.date_end,
     duration: formatMillisDuration(fileMeta?.duration) || meta.duration,
     fileStart: fileMeta?.start,
     fileEnd: fileMeta?.end,
@@ -441,14 +428,24 @@ export function useVideoPlayerParser() {
       for (const filePath of filePaths) {
         const manifest = await importRecording(filePath);
         importedRecordingIds.push(manifest.recording_id);
+        const clocks = manifest.entries.map((item) => ({
+          start: item.start_ms,
+          end: item.end_ms,
+          duration: item.duration_ms
+        }));
 
         const importedItems = await Promise.all(
           manifest.entries.map(async (entry): Promise<VideoPlayerItem> => {
             const source = await getEntryUrl(manifest.recording_id, entry.entry_id);
+            const wall = resolveReplayWallClock(
+              manifest.metadata.date_start,
+              { start: entry.start_ms, end: entry.end_ms, duration: entry.duration_ms },
+              clocks
+            );
             const entryMeta: VideoPlayerMeta = {
               ...manifest.metadata,
-              date_start: formatTimestamp(entry.start_ms) || manifest.metadata.date_start,
-              date_end: formatTimestamp(entry.end_ms) || manifest.metadata.date_end,
+              date_start: wall.date_start || manifest.metadata.date_start,
+              date_end: wall.date_end || manifest.metadata.date_end,
               duration: formatMillisDuration(entry.duration_ms) || manifest.metadata.duration
             };
 

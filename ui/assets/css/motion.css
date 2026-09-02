@@ -1,0 +1,93 @@
+.settings-overlay-enter-active,
+.settings-overlay-leave-active {
+  transition:
+    opacity 220ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.settings-overlay-enter-from,
+.settings-overlay-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.settings-log-label-enter-active,
+.settings-log-label-leave-active {
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.settings-log-label-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.settings-log-label-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+@keyframes settings-log-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.settings-log-pop {
+  animation: settings-log-pop 280ms ease-out;
+}
+
+.settings-section-enter-active,
+.settings-section-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.settings-section-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.settings-section-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* `root` is implicit; naming `html` root drops the old full-page snapshot in Chromium. */
+::view-transition-group(root) {
+  animation: none;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2147483646;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-section-enter-active,
+  .settings-section-leave-active {
+    transition: none;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}

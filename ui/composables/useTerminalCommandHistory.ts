@@ -1,6 +1,6 @@
-import type { KokoTerminalCommandProfile } from "@jumpserver/koko/host";
+import type { KokoTerminalCommandProfile } from "#koko/host";
 import type { DesktopStore } from "~/shared/desktop/bridge";
-import { isSafeTerminalCommandHistory } from "@jumpserver/koko/host";
+import { isSafeTerminalCommandHistory } from "#koko/host";
 import { desktopStore } from "~/shared/desktop/bridge";
 
 export type TerminalCommandHistoryState = Record<string, Partial<Record<KokoTerminalCommandProfile, string[]>>>;

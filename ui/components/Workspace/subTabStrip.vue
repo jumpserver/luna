@@ -38,7 +38,7 @@ const emit = defineEmits<{
   pin: [id: string];
 }>();
 
-const strip = ref<HTMLElement | null>(null);
+const strip = shallowRef<HTMLElement | null>(null);
 const hasOverflow = ref(false);
 const hasLeftHidden = ref(false);
 const hasRightHidden = ref(false);

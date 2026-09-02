@@ -24,6 +24,7 @@ const emit = defineEmits<{
   menu: [payload: { node: ChenTreeNode; event: MouseEvent }];
   clearRecent: [];
 }>();
+const appBaseURL = useRuntimeConfig().app.baseURL;
 
 const isExpanded = computed(() => props.expandedKeys.includes(props.node.key));
 const children = computed(() => props.node.children || []);
@@ -45,7 +46,7 @@ const datasourceIconSrc = computed(() => {
   ];
 
   return supportedVendors.some((vendor) => dbType.includes(vendor))
-    ? resolveAssetIconFromFields({ platform: dbType }).src
+    ? resolveAssetIconFromFields({ platform: dbType }, appBaseURL).src
     : "";
 });
 
@@ -101,7 +102,7 @@ function handleContextMenu(event: MouseEvent) {
 <template>
   <li>
     <div
-      class="sidebar-row group/row flex h-7 w-full cursor-default items-center gap-1 rounded-md pr-1 text-left text-xs"
+      class="app-tree-row sidebar-row group/row flex w-full cursor-default items-center gap-1 rounded-md pr-1 text-left"
       :class="selectedKey === node.key ? 'bg-[var(--app-hover-soft)] text-[var(--app-fg)]' : ''"
       :data-active="selectedKey === node.key ? '' : undefined"
       :style="{ paddingLeft: `${(depth || 0) * 12 + 6}px` }"
@@ -112,19 +113,24 @@ function handleContextMenu(event: MouseEvent) {
       <button
         v-if="!node.leaf"
         type="button"
-        class="grid size-4 shrink-0 place-items-center rounded-sm text-muted"
+        class="app-tree-icon-slot grid shrink-0 place-items-center rounded-sm text-muted"
         :aria-label="isExpanded ? 'Collapse' : 'Expand'"
         @click.stop="emit('toggle', node)"
       >
         <UIcon
           name="i-lucide-chevron-right"
-          class="sidebar-icon-sm transition-transform"
+          class="app-tree-toggle-icon sidebar-icon-sm transition-transform"
           :class="isExpanded ? 'rotate-90' : ''"
         />
       </button>
-      <span v-else class="size-4" />
-      <img v-if="datasourceIconSrc" :src="datasourceIconSrc" alt="" class="sidebar-icon-img" />
-      <UIcon v-else :name="iconName" class="sidebar-icon" :class="isFolderIcon ? 'tree-folder-icon' : ''" />
+      <span v-else class="app-tree-icon-slot" />
+      <img v-if="datasourceIconSrc" :src="datasourceIconSrc" alt="" class="app-tree-icon sidebar-icon-img" />
+      <UIcon
+        v-else
+        :name="iconName"
+        class="app-tree-icon sidebar-icon"
+        :class="isFolderIcon ? 'tree-folder-icon' : ''"
+      />
       <span class="min-w-0 flex-1 truncate" :title="node.type === 'recent-table' ? node.fullLabel : undefined">
         {{ node.label || node.name || node.key }}
       </span>
@@ -143,14 +149,14 @@ function handleContextMenu(event: MouseEvent) {
     <ul v-if="isExpanded">
       <li
         v-if="loadingChildren[node.key]"
-        class="px-1.5 py-0.5 text-[11px] text-muted"
+        class="px-1.5 py-0.5 text-muted"
         :style="{ paddingLeft: `${((depth || 0) + 1) * 12 + 20}px` }"
       >
         Loading...
       </li>
       <li
         v-else-if="!children.length"
-        class="px-1.5 py-0.5 text-[11px] text-muted"
+        class="px-1.5 py-0.5 text-muted"
         :style="{ paddingLeft: `${((depth || 0) + 1) * 12 + 20}px` }"
       >
         No items

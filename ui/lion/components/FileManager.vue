@@ -2,7 +2,7 @@
 import type { LionUploadCustomRequestOptions, LionUploadFileInfo } from "@/lion/types/upload";
 import { useElementSize } from "@vueuse/core";
 import prettyBytes from "pretty-bytes";
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 interface RowData {
@@ -40,9 +40,9 @@ const searchValue = ref("");
 const showContextMenu = ref(false);
 const contextPos = ref({ x: 0, y: 0 });
 const currentRowData = ref<RowData | null>(null);
-const fileInputRef = ref<HTMLInputElement | null>(null);
-const contextMenuRef = ref<HTMLElement | null>(null);
-const viewportRef = ref<HTMLElement | null>(null);
+const fileInputRef = shallowRef<HTMLInputElement | null>(null);
+const contextMenuRef = shallowRef<HTMLElement | null>(null);
+const viewportRef = shallowRef<HTMLElement | null>(null);
 const transferOpen = ref(false);
 const searchOpen = ref(false);
 const scrollTop = ref(0);

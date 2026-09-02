@@ -18,7 +18,7 @@ const emit = defineEmits<{
   duration: [number];
 }>();
 
-const hostRef = ref<HTMLElement | null>(null);
+const hostRef = shallowRef<HTMLElement | null>(null);
 let player: Player | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
 let resumeAtMs = props.startAtMs;

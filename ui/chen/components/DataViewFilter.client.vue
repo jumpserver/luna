@@ -33,7 +33,7 @@ const emit = defineEmits<{
 }>();
 
 const colorMode = useColorMode();
-const container = ref<HTMLElement | null>(null);
+const container = shallowRef<HTMLElement | null>(null);
 const themeSlot = new Compartment();
 const syntaxThemeSlot = new Compartment();
 const editableSlot = new Compartment();

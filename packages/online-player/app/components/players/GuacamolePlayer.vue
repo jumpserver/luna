@@ -29,9 +29,9 @@ const emit = defineEmits<{
 
 const Guacamole = GuacamoleModule as unknown as GuacamoleStatic;
 
-const playerAreaRef = ref<HTMLElement | null>(null);
-const viewportRef = ref<HTMLElement | null>(null);
-const hostRef = ref<HTMLElement | null>(null);
+const playerAreaRef = shallowRef<HTMLElement | null>(null);
+const viewportRef = shallowRef<HTMLElement | null>(null);
+const hostRef = shallowRef<HTMLElement | null>(null);
 let recording: GuacamoleRecording | null = null;
 let display: GuacamoleDisplay | null = null;
 let sourceTunnel: GuacamoleTunnel | null = null;

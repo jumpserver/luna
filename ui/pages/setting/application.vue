@@ -8,10 +8,6 @@ const props = defineProps<{
   embedded?: boolean;
 }>();
 
-definePageMeta({
-  layout: "setting"
-});
-
 const { t } = useI18n();
 const localePath = useLocalePath();
 const { activeApplicationProtocol } = useSettingsWindow();
@@ -177,14 +173,12 @@ const handlePluginUninstall = async (pluginId: string) => {
 
 <template>
   <div>
-    <UCard
+    <SettingsGroup
       v-if="isDesktopRuntime()"
-      variant="outline"
       class="mb-4"
-      :ui="{
-        root: 'rounded-[length:var(--app-radius)] bg-[var(--app-surface-card)] ring-[var(--app-border)]',
-        body: 'flex flex-wrap items-center justify-between gap-3'
-      }"
+      :divided="false"
+      padded
+      body-class="flex flex-wrap items-center justify-between gap-3"
     >
       <div class="min-w-0">
         <p class="text-sm font-medium text-highlighted">{{ t("Setting.PluginManager") }}</p>
@@ -214,15 +208,9 @@ const handlePluginUninstall = async (pluginId: string) => {
           @click="pluginModalOpen = true"
         />
       </div>
-    </UCard>
+    </SettingsGroup>
 
-    <UCard
-      variant="outline"
-      :ui="{
-        root: 'rounded-[length:var(--app-radius)] bg-[var(--app-surface-card)] ring-[var(--app-border)]',
-        body: 'flex min-h-[480px] p-0 sm:p-0'
-      }"
-    >
+    <SettingsGroup :divided="false" body-class="flex min-h-[480px]">
       <nav
         class="flex w-52 shrink-0 flex-col gap-2 overflow-y-auto p-2.5"
         :aria-label="t('Setting.ApplicationDescription')"
@@ -230,7 +218,7 @@ const handlePluginUninstall = async (pluginId: string) => {
         <div
           v-for="group in appMenu"
           :key="group.label"
-          class="rounded-[length:var(--app-radius)] border border-[var(--app-border)] bg-[color-mix(in_srgb,var(--theme-fg)_4%,transparent)] p-1.5"
+          class="rounded-(--app-radius) border border-(--app-border) bg-[color-mix(in_srgb,var(--theme-fg)_4%,transparent)] p-1.5"
         >
           <div class="mb-1 flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold tracking-[0.06em] text-muted">
             <UIcon v-if="group.icon" :name="group.icon" class="size-3.5" />
@@ -245,20 +233,20 @@ const handlePluginUninstall = async (pluginId: string) => {
             variant="ghost"
             size="xs"
             class="h-7 w-full justify-start"
-            :class="isProtocolActive(child) ? 'bg-[var(--app-selected-soft)] text-highlighted' : 'text-muted'"
+            :class="isProtocolActive(child) ? 'bg-(--app-selected-soft) text-highlighted' : 'text-muted'"
             :ui="{ base: 'rounded-[length:var(--app-radius)]' }"
             @click="onProtocolSelect(child)"
           />
         </div>
       </nav>
 
-      <div class="min-w-0 flex-1 border-l border-[var(--app-border)] p-4">
+      <div class="min-w-0 flex-1 border-l border-(--app-border) p-4">
         <KeepAlive v-if="embedded">
           <component :is="activeProtocolComponent" />
         </KeepAlive>
         <NuxtPage v-else />
       </div>
-    </UCard>
+    </SettingsGroup>
 
     <UModal v-model:open="pluginModalOpen" :title="t('Setting.PluginManager')" :ui="{ content: 'max-w-3xl' }">
       <template #body>
@@ -286,7 +274,7 @@ const handlePluginUninstall = async (pluginId: string) => {
             >
               <div class="flex items-start gap-3">
                 <div
-                  class="flex size-10 items-center justify-center overflow-hidden rounded-md border border-[var(--app-border)] bg-[var(--app-surface-panel)] p-1"
+                  class="flex size-10 items-center justify-center overflow-hidden rounded-md border border-(--app-border) bg-(--app-surface-panel) p-1"
                 >
                   <img
                     v-if="pluginIconSrc(plugin)"

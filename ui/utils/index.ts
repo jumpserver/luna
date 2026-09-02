@@ -1,5 +1,17 @@
-import type { AssetItem, PermedProtocol, RawAssetData } from "~/types/index";
+import type { AssetItem, LangType, PermedProtocol, RawAssetData } from "~/types/index";
 import { desktopOs } from "~/shared/desktop/bridge";
+
+const INTL_LOCALE_BY_LANGUAGE: Record<LangType, string> = {
+  zh: "zh-CN",
+  zh_hant: "zh-TW",
+  en: "en",
+  ja: "ja",
+  pt_br: "pt-BR",
+  es: "es",
+  ru: "ru",
+  ko: "ko",
+  vi: "vi"
+};
 
 const PROTOCOL_PRIORITY: Record<string, number> = {
   ssh: 0,
@@ -69,21 +81,31 @@ export function transformAssetsData(rawDataArray: RawAssetData[]): AssetItem[] {
 /**
  * @description 获取操作系统的语言
  */
-export async function resolveLanguageFromSystem(): Promise<"zh" | "en"> {
-  const normalize = (lang: string | null | undefined) => {
-    if (!lang) return "en" as const;
+export function normalizeLanguageCode(lang: string | null | undefined): LangType {
+  const normalized = (lang || "").trim().toLowerCase().replaceAll("_", "-");
+  if (!normalized) return "en";
 
-    const normalized = lang.toLowerCase();
-    if (normalized.includes("zh")) return "zh" as const;
-    return "en" as const;
-  };
-
-  const locale = isDesktopRuntime() ? await desktopOs.locale() : navigator.language;
-  if (locale) {
-    return normalize(locale);
+  if (normalized.startsWith("zh")) {
+    return /(^|-)hant($|-)|^zh-(tw|hk|mo)(-|$)/.test(normalized) ? "zh_hant" : "zh";
   }
 
-  const fallback = (typeof navigator !== "undefined" && (navigator.language || navigator.languages?.[0])) || "";
+  const primary = normalized.split("-")[0] || "";
+  if (primary === "pt") return "pt_br";
+  if (["en", "ja", "es", "ru", "ko", "vi"].includes(primary)) return primary as LangType;
+  return "en";
+}
 
-  return normalize(fallback);
+export function toIntlLocale(lang: string | null | undefined) {
+  return INTL_LOCALE_BY_LANGUAGE[normalizeLanguageCode(lang)];
+}
+
+export async function resolveLanguageFromSystem(): Promise<LangType> {
+  const locale = isDesktopRuntime() ? await desktopOs.locale() : globalThis.navigator?.language;
+  if (locale) {
+    return normalizeLanguageCode(locale);
+  }
+
+  const fallback = globalThis.navigator?.language || globalThis.navigator?.languages?.[0] || "";
+
+  return normalizeLanguageCode(fallback);
 }
