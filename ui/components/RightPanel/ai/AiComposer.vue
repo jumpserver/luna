@@ -4,9 +4,11 @@ import type { AiSelectOption } from "./types";
 defineProps<{
   showPolicy: boolean;
   busy: boolean;
+  running: boolean;
   actionLabel: string;
+  interruptLabel: string;
   placeholder: string;
-  approvalThreshold: number;
+  approvalThreshold: number | string;
   executionMode: string;
   thresholdOptions: AiSelectOption[];
   modeOptions: AiSelectOption[];
@@ -20,6 +22,7 @@ const emit = defineEmits<{
 }>();
 
 const model = defineModel<string>({ required: true });
+const aiPanelPortalTarget = "#workspace-ai-overlay";
 
 function handleSubmitKeydown(event: KeyboardEvent) {
   if (event.isComposing) return;
@@ -45,41 +48,56 @@ function handleSubmitKeydown(event: KeyboardEvent) {
     <div class="absolute inset-x-2 bottom-2 flex items-center gap-1.5">
       <div v-if="showPolicy" class="flex min-w-0 flex-1 items-center gap-1">
         <USelect
+          v-if="thresholdOptions.length"
           size="xs"
           variant="soft"
           icon="i-lucide-shield-check"
           class="min-w-0 max-w-36"
           :model-value="approvalThreshold"
           :items="thresholdOptions"
+          :portal="aiPanelPortalTarget"
           value-key="value"
           label-key="label"
           :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
           @update:model-value="emit('updateApprovalThreshold', $event)"
         />
         <USelect
+          v-if="modeOptions.length"
           size="xs"
           variant="soft"
           icon="i-lucide-git-branch"
           class="min-w-0 max-w-32"
           :model-value="executionMode"
           :items="modeOptions"
+          :portal="aiPanelPortalTarget"
           value-key="value"
           label-key="label"
           :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
           @update:model-value="emit('updateExecutionMode', $event)"
         />
       </div>
-      <UTooltip :text="actionLabel">
+      <UTooltip v-if="running" :text="interruptLabel">
         <UButton
           class="ml-auto"
           size="xs"
+          color="neutral"
+          variant="soft"
+          icon="i-lucide-square"
+          :ui="{ leadingIcon: 'size-2.5 fill-current stroke-none' }"
+          :aria-label="interruptLabel"
+          @click="emit('interrupt')"
+        />
+      </UTooltip>
+      <UTooltip v-if="!running || !busy" :text="actionLabel">
+        <UButton
+          :class="{ 'ml-auto': !running }"
+          size="xs"
           color="primary"
           variant="solid"
-          :icon="busy ? 'i-lucide-square' : 'i-lucide-arrow-up'"
-          :ui="{ leadingIcon: busy ? 'size-2.5 fill-current stroke-none' : undefined }"
+          icon="i-lucide-arrow-up"
           :aria-label="actionLabel"
-          :disabled="!busy && !model.trim()"
-          @click="busy ? emit('interrupt') : emit('submit')"
+          :disabled="busy || !model.trim()"
+          @click="emit('submit')"
         />
       </UTooltip>
     </div>

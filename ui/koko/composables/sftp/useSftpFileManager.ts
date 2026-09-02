@@ -281,7 +281,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
     ai: {
       socket: socket.socket,
       ready: fileAiReadiness.ready,
-      onMessage: socket.onChat
+      onMessage: socket.onMcp
     },
     transferEndpoint,
     retry: { reconnect },

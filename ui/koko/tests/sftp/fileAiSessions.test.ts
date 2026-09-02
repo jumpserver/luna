@@ -1,14 +1,17 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ref } from "vue";
+import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
 import {
   connectKokoFileAiSession,
   createKokoCompactFileAiOwnerId,
   createKokoCompactFileAiTargetId,
   disposeKokoFileAiOwner,
+  disconnectKokoFileAiSession,
   getActiveKokoFileAiSession,
   getActiveKokoFileAiTargetId,
   getKokoFileAiSession,
   handleKokoFileAiMessage,
+  handleKokoFileAiWireMessage,
   isKokoFileAiAvailable,
   isSuccessfulKokoFileAiMutationResult,
   registerKokoFileAiSession,
@@ -23,10 +26,16 @@ import { createSftpFileAiReadiness } from "#koko/composables/sftp/useSftpFileMan
 import { SftpMessageType } from "#koko/composables/sftp/protocol";
 
 const targetIds: string[] = [];
+let agentHarness: ReturnType<typeof installAgentSessionHarness>;
+
+beforeEach(() => {
+  agentHarness = installAgentSessionHarness();
+});
 
 afterEach(() => {
   for (const targetId of targetIds.splice(0)) unregisterKokoFileAiSession(targetId);
   setActiveKokoFileAiTarget(null);
+  vi.restoreAllMocks();
 });
 
 function createSession(targetId: string, connected = true) {
@@ -54,7 +63,11 @@ function createSession(targetId: string, connected = true) {
   })!;
 }
 
-it("keeps File AI unavailable until the SFTP CONNECT message", () => {
+function enableSession(targetId: string) {
+  return agentHarness.attach(handleKokoFileAiWireMessage, targetId, "file");
+}
+
+it("keeps File AI unavailable until SFTP CONNECT and the Agent manifest", async () => {
   const readiness = createSftpFileAiReadiness(ref("/tmp"), ref(false));
   const session = createSession("remote-sftp:asset-1:initializing", false);
 
@@ -65,6 +78,8 @@ it("keeps File AI unavailable until the SFTP CONNECT message", () => {
   connectKokoFileAiSession(session.targetId, session.socket!);
 
   expect(readiness.ready.value).toBe(true);
+  expect(isKokoFileAiAvailable(session.targetId)).toBe(false);
+  await enableSession(session.targetId);
   expect(isKokoFileAiAvailable(session.targetId)).toBe(true);
 });
 
@@ -85,84 +100,86 @@ it("keeps File AI unavailable until the canonical SFTP path is known", () => {
 
 it("sends a target-scoped File AI prompt without SFTP credentials", async () => {
   const session = createSession("remote-sftp:asset-1:pane-1");
+  const resourceSessionId = await enableSession(session.targetId);
   setActiveKokoFileAiTarget(session.targetId);
 
   await submitKokoFileAiPrompt(session.targetId, "  explain the selected file  ");
 
-  const wire = JSON.parse(vi.mocked(session.socket!.send).mock.calls[0]![0] as string) as {
-    type: SftpMessageType;
-    data: string;
-  };
-  const message = JSON.parse(wire.data) as Record<string, any>;
-  expect(wire.type).toBe(SftpMessageType.Chat);
-  expect(message).toMatchObject({
+  expect(agentHarness.sendMessage).toHaveBeenCalledWith(
+    `agent:${resourceSessionId}`,
+    resourceSessionId,
+    expect.objectContaining({
+      role: "user",
+      parts: [{ type: "text", text: "explain the selected file" }]
+    })
+  );
+  const request = agentHarness.sendMessage.mock.calls[0]?.[2];
+  expect(request).toMatchObject({
     role: "user",
+    parts: [{ type: "text", text: "explain the selected file" }],
     metadata: {
       domain: "file",
       targetId: session.targetId,
       context: {
-        assetId: "asset-1",
-        account: "deploy",
         currentPath: "/srv/app",
-        selectedEntries: [{ name: "config.yaml", version: "version-1" }]
+        selectedEntries: [{ name: "config.yaml", path: "/srv/app/config.yaml", version: "version-1" }]
       }
-    },
-    parts: [{ type: "text", text: "explain the selected file" }]
+    }
   });
-  expect(wire.data).not.toContain("tokenId");
-  expect(wire.data).not.toContain("ticket");
-  expect(wire.data).not.toContain("endpointUrl");
+  expect(JSON.stringify(request)).not.toMatch(/tokenId|ticket|endpointUrl|password|certificate/i);
+  expect(session.socket?.send).not.toHaveBeenCalled();
   expect(getActiveKokoFileAiSession()).toBe(session);
 });
 
-it("returns the server approval digest with a File AI decision", () => {
+it("returns the Agent approval digest with a File AI decision", async () => {
   const session = createSession("remote-sftp:asset-1:pane-2");
-  handleKokoFileAiMessage(session.targetId, {
-    id: "approval",
-    role: "assistant",
-    metadata: { domain: "file", targetId: session.targetId },
-    parts: [{ type: "data-file-approval", data: { id: "approval-1", digest: "digest-1" } }]
+  const resourceSessionId = await enableSession(session.targetId);
+  agentHarness.emit(resourceSessionId, {
+    type: "approval.requested",
+    run_id: "run-1",
+    approval_id: "approval-1",
+    payload: {
+      approval_id: "approval-1",
+      digest: "digest-1",
+      tool_name: "delete",
+      arguments: { path: "/srv/app/config.yaml", expected_version: "version-1" }
+    }
   });
 
   resolveKokoFileAiApproval(session.targetId, "approval-1", "approve");
 
-  const wire = JSON.parse(vi.mocked(session.socket!.send).mock.calls[0]![0] as string) as { data: string };
-  expect(JSON.parse(wire.data)).toMatchObject({
-    metadata: { domain: "file", targetId: session.targetId },
-    parts: [
-      {
-        type: "data-file-approval",
-        data: { id: "approval-1", digest: "digest-1", decision: "approve" }
-      }
-    ]
-  });
+  await vi.waitFor(() => expect(agentHarness.resolveApproval).toHaveBeenCalledOnce());
+  expect(agentHarness.resolveApproval).toHaveBeenCalledWith(
+    `agent:${resourceSessionId}`,
+    resourceSessionId,
+    "approval-1",
+    {
+      decision: "approve",
+      run_id: "run-1",
+      digest: "digest-1"
+    }
+  );
   expect(session.resolvingApprovals.has("approval-1")).toBe(true);
 
-  handleKokoFileAiMessage(session.targetId, {
-    id: "approval-resolved",
-    role: "assistant",
-    metadata: { domain: "file", targetId: session.targetId },
-    parts: [{ type: "data-file-approval", data: { id: "approval-1", digest: "digest-1", state: "cancelled" } }]
+  agentHarness.emit(resourceSessionId, {
+    type: "approval.resolved",
+    run_id: "run-1",
+    approval_id: "approval-1",
+    payload: {
+      approval_id: "approval-1",
+      digest: "digest-1",
+      state: "cancelled"
+    }
   });
   expect(session.pendingApprovals.has("approval-1")).toBe(false);
   expect(session.resolvingApprovals.has("approval-1")).toBe(false);
   expect(session.approvalDigests.has("approval-1")).toBe(false);
 });
 
-it("keeps capability and idle control messages out of the visible conversation", () => {
+it("keeps Agent session and run control events out of the visible conversation", async () => {
   const session = createSession("remote-sftp:asset-1:pane-3");
-  handleKokoFileAiMessage(session.targetId, {
-    id: "capability",
-    role: "assistant",
-    metadata: { domain: "file", targetId: session.targetId },
-    parts: [{ type: "data-capability", data: { enabled: true } }]
-  });
-  handleKokoFileAiMessage(session.targetId, {
-    id: "idle",
-    role: "assistant",
-    metadata: { domain: "file", targetId: session.targetId },
-    parts: [{ type: "data-progress", data: { state: "idle", text: "" } }]
-  });
+  const resourceSessionId = await enableSession(session.targetId);
+  agentHarness.emit(resourceSessionId, { type: "run.completed", run_id: "run-1" });
 
   expect(session.chat.messages.value).toEqual([]);
 });
@@ -201,6 +218,7 @@ it("keeps owner-scoped File AI focus isolated", () => {
 
 it("preserves File AI conversation and draft when the same pane reconnects", async () => {
   const session = createSession("remote-sftp:asset-1:reconnect");
+  const resourceSessionId = await enableSession(session.targetId);
   session.draft = "continue after reconnect";
   session.taskActive = true;
   session.pendingApprovals.add("approval-1");
@@ -228,8 +246,82 @@ it("preserves File AI conversation and draft when the same pane reconnects", asy
   expect(rebound.pendingApprovals.size).toBe(0);
 
   unregisterKokoFileAiSession(session.targetId, previousSocket);
+  await enableSession(session.targetId);
   await submitKokoFileAiPrompt(session.targetId, "use the reconnected socket");
+  expect(agentHarness.sendMessage).toHaveBeenCalledWith(
+    `agent:${resourceSessionId}`,
+    resourceSessionId,
+    expect.objectContaining({ parts: [{ type: "text", text: "use the reconnected socket" }] })
+  );
+  expect(nextSocket.send).not.toHaveBeenCalled();
+
+  agentHarness.emit(resourceSessionId, {
+    type: "tool.call",
+    run_id: "run-1",
+    tool_call_id: "tool-1",
+    payload: {
+      name: "read_text",
+      arguments: { path: "/srv/app/config.yaml" }
+    }
+  });
   expect(nextSocket.send).toHaveBeenCalledOnce();
+  expect(JSON.parse(vi.mocked(nextSocket.send).mock.calls[0]![0] as string)).toMatchObject({
+    type: SftpMessageType.MCPRequest,
+    resource_session_id: resourceSessionId
+  });
+  await vi.waitFor(() =>
+    expect(session.chat.messages.value.flatMap((message) => message.parts)).toContainEqual(
+      expect.objectContaining({
+        type: "data-agent-tool",
+        data: expect.objectContaining({
+          id: "tool-1",
+          toolCallId: "tool-1",
+          domain: "file",
+          toolName: "read_text",
+          status: "running"
+        })
+      })
+    )
+  );
+});
+
+it("cancels an outstanding Koko tool call without deleting the shared Agent session on disconnect", async () => {
+  const session = createSession("remote-sftp:asset-1:tool-disconnect");
+  const resourceSessionId = await enableSession(session.targetId);
+  agentHarness.emit(resourceSessionId, { type: "run.started", run_id: "run-1" });
+  agentHarness.emit(resourceSessionId, {
+    type: "tool.call",
+    run_id: "run-1",
+    tool_call_id: "tool-1",
+    payload: {
+      name: "read_text",
+      arguments: { path: "/srv/app/config.yaml" }
+    }
+  });
+  expect(session.socket?.send).toHaveBeenCalledOnce();
+
+  const previousSocket = session.socket!;
+  disconnectKokoFileAiSession(session.targetId, previousSocket);
+  expect(agentHarness.deleteSession).not.toHaveBeenCalled();
+  expect(previousSocket.send).toHaveBeenCalledTimes(2);
+  expect(JSON.parse(vi.mocked(previousSocket.send).mock.calls[1]![0] as string)).toMatchObject({
+    type: SftpMessageType.MCPCancel,
+    resource_session_id: resourceSessionId,
+    data: expect.stringContaining("notifications/cancelled")
+  });
+  expect(session.agent.state.status).toBe("closed");
+  expect(session.taskActive).toBe(false);
+
+  const nextSocket = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
+  registerKokoFileAiSession(session.targetId, nextSocket, { ...session.context, connected: true });
+  await enableSession(session.targetId);
+  expect(agentHarness.createSession).toHaveBeenCalledTimes(2);
+  await submitKokoFileAiPrompt(session.targetId, "continue on the rebuilt Agent session");
+  expect(agentHarness.sendMessage).toHaveBeenCalledWith(
+    `agent:${resourceSessionId}`,
+    resourceSessionId,
+    expect.objectContaining({ parts: [{ type: "text", text: "continue on the rebuilt Agent session" }] })
+  );
 });
 
 it("resets File AI state when the same workspace pane connects another asset", () => {

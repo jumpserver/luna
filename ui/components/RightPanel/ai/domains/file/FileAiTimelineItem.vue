@@ -290,6 +290,10 @@ function resolveApproval(item: FileApprovalItem, decision: "approve" | "reject")
       <p v-if="item.data.summary || item.data.riskReason" class="text-muted">
         {{ item.data.summary || item.data.riskReason }}
       </p>
+      <pre
+        v-if="item.data.arguments && Object.keys(item.data.arguments).length"
+        class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted/40 p-2 font-mono text-[10px] text-muted"
+      ><code>{{ valueText(item.data.arguments) }}</code></pre>
     </div>
     <div v-if="isApprovalPending(item)" class="flex justify-end gap-1.5 border-t border-warning/30 p-2">
       <UButton

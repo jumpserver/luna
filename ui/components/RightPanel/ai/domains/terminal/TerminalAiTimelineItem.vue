@@ -5,6 +5,7 @@ import type { WorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
 import { terminalAiAclKey } from "#koko/composables/terminal/terminalAiPresentation";
 import { isKokoTerminalWorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
 import AiRunPlan from "../../AiRunPlan.vue";
+import AiRunStep from "../../AiRunStep.vue";
 
 const props = defineProps<{
   item: TerminalViewItem;
@@ -32,24 +33,20 @@ function decide(data: TerminalAiEventData, approved: boolean) {
 function setExecutionOverride(id: string, value: string) {
   emit("action", { domain: "terminal", type: "set-execution-override", id, value });
 }
-
-function setStepExpanded(key: string, expanded: boolean) {
-  emit("action", { domain: "terminal", type: "set-step-expanded", key, expanded });
-}
 </script>
 
 <template>
-  <AiRunPlan
-    v-if="item.kind === 'plan' && terminalSession"
-    :plan="item"
+  <AiRunPlan v-if="item.kind === 'plan'" :plan="item" />
+
+  <AiRunStep
+    v-else-if="item.kind === 'terminal-step' && terminalSession"
+    :step="item.step"
     :decisions="terminalSession.decisions"
-    :expansion-overrides="terminalSession.expansionOverrides"
     :execution-overrides="terminalSession.executionOverrides"
     :execution-mode="terminalSession.executionMode"
     :background-exec="terminalSession.backgroundExec"
     @decide="decide"
     @set-execution-override="setExecutionOverride"
-    @set-step-expanded="setStepExpanded"
   />
 
   <div

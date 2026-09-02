@@ -10,8 +10,20 @@ import {
 } from "#koko/composables/kubernetes/protocol";
 import { useKubernetesTerminalSocket } from "#koko/composables/kubernetes/useKubernetesTerminalSocket";
 import {
+  connectKokoTerminalAiSession,
+  disconnectKokoTerminalAiSession,
+  handleKokoTerminalAiWireMessage,
+  isKokoTerminalAiInputLocked,
+  markKokoTerminalAiSessionInfoReady,
+  registerKokoTerminalAiSession,
+  setActiveKokoTerminalAiTarget,
+  unregisterKokoTerminalAiSession
+} from "#koko/composables/terminal/useTerminalAiSessions";
+import {
   registerKokoTerminalDataSender,
-  unregisterKokoTerminalDataSender
+  registerKokoTerminalSession,
+  unregisterKokoTerminalDataSender,
+  unregisterKokoTerminalSession
 } from "#koko/composables/useTerminalSessionRegistry";
 import { KeyboardKey } from "#koko/constants/keyboard";
 import { useKokoHostAdapter } from "#koko/host";
@@ -118,6 +130,33 @@ const subTabs = computed(() =>
     title: item.label
   }))
 );
+
+function registerTerminalAiSession(k8sId: string, terminalId: number) {
+  const socket = terminalSocket.socket.value;
+  if (!socket || !terminalId) return;
+  registerKokoTerminalAiSession(k8sId, socket, String(terminalId), {
+    sendMcpFrame: (frame) => terminalSocket.sendMcpFrame(k8sId, frame)
+  });
+  connectKokoTerminalAiSession(k8sId, socket);
+}
+
+function syncActiveTerminalSession() {
+  const k8sId = activeTabId.value;
+  setActiveKokoTerminalAiTarget(props.tab.id, k8sId || null);
+  unregisterKokoTerminalSession(props.tab.id);
+  if (!k8sId) return;
+
+  const socket = terminalSocket.socket.value;
+  const terminal = terminals.get(k8sId)?.terminal;
+  const terminalId = terminalSocket.terminalIdFor(k8sId);
+  if (!socket || !terminal || !terminalId) return;
+  registerKokoTerminalSession(props.tab.id, { socket, terminal, terminalId: String(terminalId) });
+}
+
+function disconnectTerminalAiSessions() {
+  for (const tabItem of terminalTabs.value) disconnectKokoTerminalAiSession(tabItem.id);
+  unregisterKokoTerminalSession(props.tab.id);
+}
 
 const RECENT_ROOT_KEY = "__kubernetes_recent_containers__";
 const ASSET_ROOT_KEY = "__kubernetes_asset__";
@@ -368,9 +407,10 @@ function mountTerminal(tabItem: TerminalTab, target: ConnectTarget) {
   fit.fit();
   const cleanupClipboard = installClipboardControls(el, terminal, tabItem.id);
   terminals.set(tabItem.id, { terminal, fit, cleanupClipboard });
+  syncActiveTerminalSession();
 
   terminal.onData((data) => {
-    if (!globalTerminalId.value) return;
+    if (!globalTerminalId.value || isKokoTerminalAiInputLocked(tabItem.id)) return;
     terminalSocket.sendTerminalData(globalTerminalId.value, tabItem.id, target, data);
   });
   terminal.onResize(() => sendResize(tabItem.id, terminal));
@@ -433,6 +473,7 @@ function closeTab(tabItem: TerminalTab) {
   terminals.get(tabItem.id)?.terminal.dispose();
   terminals.delete(tabItem.id);
   sessionClipboardAccess.delete(tabItem.id);
+  unregisterKokoTerminalAiSession(tabItem.id);
 
   const index = terminalTabs.value.findIndex((item) => item.id === tabItem.id);
   if (index === -1) return;
@@ -500,6 +541,8 @@ const stopMessageListener = terminalSocket.onMessage((message) => {
         ? message.raw
         : Uint8Array.from(atob(message.raw || ""), (char) => char.charCodeAt(0));
     terminals.get(message.k8s_id)?.terminal.write(data);
+  } else if (message.type === KubernetesTerminalMessageType.Created) {
+    syncActiveTerminalSession();
   } else if (message.type === KubernetesTerminalMessageType.TerminalSession) {
     const sessionInfo = parseJson<{
       permission?: ClipboardPermission | null;
@@ -509,12 +552,21 @@ const stopMessageListener = terminalSocket.onMessage((message) => {
       message.k8s_id,
       resolveClipboardAccess(sessionInfo?.permission, sessionInfo?.clipboard_policy)
     );
+    registerTerminalAiSession(message.k8s_id, message.terminalId || terminalSocket.terminalIdFor(message.k8s_id) || 0);
+    syncActiveTerminalSession();
+  } else if (message.type === KubernetesTerminalMessageType.Ready) {
+    markKokoTerminalAiSessionInfoReady(message.k8s_id);
   } else if (
     message.type === KubernetesTerminalMessageType.Error ||
     message.type === KubernetesTerminalMessageType.TerminalError
   ) {
     connectionError.value = message.err || t("koko.kubernetes.connectionFailed");
   }
+});
+
+const stopMcpMessageListener = terminalSocket.onMcpMessage(({ frame, k8sId, terminalId }) => {
+  registerTerminalAiSession(k8sId, terminalId);
+  handleKokoTerminalAiWireMessage(k8sId, frame);
 });
 
 const stopFailureListener = terminalSocket.onFailure((failure) => {
@@ -526,6 +578,7 @@ const stopFailureListener = terminalSocket.onFailure((failure) => {
     return;
   }
 
+  disconnectTerminalAiSessions();
   connectionError.value = t("koko.kubernetes.websocketConnectionFailed");
   markSessionFailed({
     tabId: props.tab.id,
@@ -545,7 +598,10 @@ watch(
   },
   { immediate: true }
 );
-watch(activeTabId, () => focusActiveTerminal());
+watch(activeTabId, () => {
+  syncActiveTerminalSession();
+  focusActiveTerminal();
+});
 watch(() => colorMode.value, syncTerminalTheme);
 watch(
   () => hostAdapter.theme.codeFontSize(),
@@ -565,11 +621,15 @@ onMounted(() => {
   registerKokoTerminalDataSender(props.tab.id, sendVirtualKeyboardData);
 });
 onUnmounted(() => {
+  setActiveKokoTerminalAiTarget(props.tab.id, null);
   unregisterKokoTerminalDataSender(props.tab.id);
+  unregisterKokoTerminalSession(props.tab.id);
   stopSidebarResize();
   themeObserver?.disconnect();
   stopFailureListener();
+  stopMcpMessageListener();
   stopMessageListener();
+  for (const tabItem of terminalTabs.value) unregisterKokoTerminalAiSession(tabItem.id);
   for (const { terminal, cleanupClipboard } of terminals.values()) {
     cleanupClipboard();
     terminal.dispose();

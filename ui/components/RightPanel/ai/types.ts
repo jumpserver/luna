@@ -5,8 +5,9 @@ import type {
   ChenSqlMetadataApprovalDecision,
   ChenSqlProposal
 } from "~/chen/composables/useChenSqlAiSessions";
+import type { ScriptAiProposal } from "~/composables/useScriptAiSessions";
 
-export type AiTimelineDomain = "shared" | "terminal" | "sql" | "file";
+export type AiTimelineDomain = "shared" | "terminal" | "sql" | "file" | "script";
 
 interface ViewItemBase<Domain extends AiTimelineDomain, Kind extends string> {
   domain: Domain;
@@ -50,12 +51,34 @@ export interface ViewStep {
 export interface TextItem extends ViewItemBase<"shared", "text"> {
   role: TerminalAiChatMessage["role"];
   text: string;
+  modelDurationMs?: number;
+}
+
+export type AgentToolStatus = "running" | "success" | "error" | "cancelled";
+
+export interface AgentToolItem extends ViewItemBase<"shared", "agent-tool"> {
+  data: {
+    id: string;
+    toolCallId: string;
+    sourceDomain: Exclude<AiTimelineDomain, "shared">;
+    toolName?: string;
+    status: AgentToolStatus;
+    durationMs?: number;
+    arguments?: unknown;
+    result?: unknown;
+    error?: unknown;
+  };
 }
 
 export interface PlanItem extends ViewItemBase<"terminal", "plan"> {
   id: string;
   summary: string;
   steps: ViewStep[];
+}
+
+export interface TerminalStepItem extends ViewItemBase<"terminal", "terminal-step"> {
+  planId: string;
+  step: ViewStep;
 }
 
 export interface AlertItem extends ViewItemBase<"terminal", "alert"> {
@@ -67,6 +90,7 @@ export interface SqlAnalysisItem extends ViewItemBase<"sql", "sql-analysis"> {
 }
 
 export interface SqlProposalItem extends ViewItemBase<"sql", "sql-proposal"> {
+  toolCallId: string;
   data: ChenSqlProposal;
 }
 
@@ -109,6 +133,7 @@ export interface FileAiEventData {
   path?: string;
   newName?: string;
   destinationPath?: string;
+  expectedVersion?: string;
   sourcePath?: string;
   targetPath?: string;
   summary?: string;
@@ -146,6 +171,7 @@ export interface FileAiEventData {
   maxDirectoryEntries?: number;
   maxTextBytes?: number;
   expiresInSeconds?: number;
+  arguments?: Record<string, unknown>;
   details?: unknown;
 }
 
@@ -177,7 +203,12 @@ export interface FileResultItem extends ViewItemBase<"file", "file-result"> {
   data: FileAiEventData;
 }
 
-export type TerminalViewItem = PlanItem | AlertItem;
+export interface ScriptProposalItem extends ViewItemBase<"script", "script-proposal"> {
+  toolCallId: string;
+  data: TerminalAiEventData;
+}
+
+export type TerminalViewItem = PlanItem | TerminalStepItem | AlertItem;
 export type SqlViewItem =
   | SqlAnalysisItem
   | SqlProposalItem
@@ -193,6 +224,8 @@ export type FileViewItem =
   | FileDiffItem
   | FileApprovalItem
   | FileResultItem;
+export type ScriptViewItem = ScriptProposalItem;
+export type SharedViewItem = TextItem | AgentToolItem;
 
 export type TerminalTimelineAction =
   | { domain: "terminal"; type: "decide"; data: TerminalAiEventData; approved: boolean }
@@ -213,11 +246,17 @@ export type FileTimelineAction = {
   decision: "approve" | "reject";
 };
 
-export type AiTimelineAction = TerminalTimelineAction | SqlTimelineAction | FileTimelineAction;
+export type ScriptTimelineAction =
+  | { domain: "script"; type: "apply-proposal"; item: ScriptProposalItem; proposal: ScriptAiProposal }
+  | { domain: "script"; type: "reject-proposal"; item: ScriptProposalItem };
+
+export type AiTimelineAction = TerminalTimelineAction | SqlTimelineAction | FileTimelineAction | ScriptTimelineAction;
 
 export type ViewItem =
   | TextItem
+  | AgentToolItem
   | PlanItem
+  | TerminalStepItem
   | AlertItem
   | SqlAnalysisItem
   | SqlProposalItem
@@ -231,4 +270,5 @@ export type ViewItem =
   | FileActionItem
   | FileDiffItem
   | FileApprovalItem
-  | FileResultItem;
+  | FileResultItem
+  | ScriptProposalItem;

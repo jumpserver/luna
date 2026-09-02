@@ -20,6 +20,7 @@ watchEffect(() => {
       workspaceMode: activeWorkspaceMode.value,
       surfaceStatus: activeSurface.value?.status,
       surfaceAssetId: activeSurface.value?.assetId,
+      surfaceProtocol: activeSurface.value?.protocol,
       standaloneWorkspace: !activeTab.value && Boolean(activePaneId.value),
       workspaceFocused: workspaceFocused.value,
       rightPanelOpen: rightPanelOpen.value,
@@ -30,7 +31,7 @@ watchEffect(() => {
 </script>
 
 <template>
-  <div data-ai-context="preserve" class="pointer-events-none absolute inset-0 z-50">
+  <div id="workspace-ai-overlay" data-ai-context="preserve" class="pointer-events-none absolute inset-0 z-50">
     <button
       v-if="isNarrowScreen"
       type="button"

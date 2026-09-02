@@ -9,7 +9,6 @@ export interface ChenProfile {
   dbType: string;
   canCopy: boolean;
   canPaste: boolean;
-  chatAiEnabled: boolean;
 }
 
 export interface ChenTreeNode {

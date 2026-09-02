@@ -40,28 +40,6 @@ function sendControl(session: KokoTerminalAiSession, message: TerminalAiChatMess
   sendKokoTerminalAiControl(session.paneId, message);
 }
 
-function updatePolicy(session: KokoTerminalAiSession) {
-  try {
-    sendControl(session, {
-      id: createTerminalAiMessageId("policy"),
-      role: "user",
-      metadata: { terminalId: Number(session.terminalId) },
-      parts: [
-        {
-          type: "data-policy",
-          data: {
-            approvalThreshold: session.approvalThreshold,
-            executionMode: session.executionMode
-          }
-        }
-      ]
-    });
-  } catch {
-    session.errorCode = "policy_failed";
-    session.errorText = "";
-  }
-}
-
 function handleDecision(session: KokoTerminalAiSession, action: Extract<AiTimelineAction, { type: "decide" }>) {
   const decisionId = String(action.data.id || "");
   if (!decisionId || session.decisions.has(decisionId)) return;
@@ -129,6 +107,7 @@ export const terminalAiPanelDomain: AiPanelDomainAdapter = {
       headerDescription: context.t("RightPanel.AIHeaderDescription"),
       available: isKokoTerminalAiAvailable(context.paneId),
       busy,
+      running: current.taskActive,
       waitingForApproval,
       unavailable: {
         icon: "i-lucide-sparkles",
@@ -141,7 +120,8 @@ export const terminalAiPanelDomain: AiPanelDomainAdapter = {
         description: context.t("RightPanel.AIEmptyDescription")
       },
       inputPlaceholder: context.t("RightPanel.AIInputPlaceholder"),
-      actionLabel: busy ? context.t("RightPanel.AIInterrupt") : context.t("RightPanel.AISend"),
+      actionLabel: context.t("RightPanel.AISend"),
+      interruptLabel: context.t("RightPanel.AIInterrupt"),
       runtimeStatusLabel: translatedProtocolValue(context, progressKey, current.runtimeStatus),
       errorLabel,
       errorDetail: current.errorText && !errorKey ? current.errorText : "",
@@ -151,34 +131,30 @@ export const terminalAiPanelDomain: AiPanelDomainAdapter = {
       ),
       elapsedDurationMs: 0,
       contextItems,
+      toolNames: [...current.agent.state.toolNames],
       showPolicy: true,
       showRuntimeStatus: false,
       showElapsedInError: false,
       showActivity: true,
       refreshElapsedWhileBusy: false,
       backgroundExecAvailable: current.backgroundExec,
-      approvalThreshold: current.approvalThreshold,
+      approvalThreshold: current.approvalMode,
       executionMode: current.executionMode,
       thresholdOptions: [
         {
-          label: context.t("RightPanel.AIApprovalAllShort"),
-          description: context.t("RightPanel.AIApprovalAll"),
-          value: 1
+          label: context.t("RightPanel.AIAgentApprovalAlwaysShort"),
+          description: context.t("RightPanel.AIAgentApprovalAlways"),
+          value: "always"
         },
         {
-          label: context.t("RightPanel.AIApprovalRisk2Short"),
-          description: context.t("RightPanel.AIApprovalRisk2"),
-          value: 2
+          label: context.t("RightPanel.AIAgentApprovalAutoShort"),
+          description: context.t("RightPanel.AIAgentApprovalAuto"),
+          value: "auto"
         },
         {
-          label: context.t("RightPanel.AIApprovalRisk3Short"),
-          description: context.t("RightPanel.AIApprovalRisk3"),
-          value: 3
-        },
-        {
-          label: context.t("RightPanel.AIApprovalRisk4Short"),
-          description: context.t("RightPanel.AIApprovalRisk4"),
-          value: 4
+          label: context.t("RightPanel.AIAgentApprovalNeverShort"),
+          description: context.t("RightPanel.AIAgentApprovalNever"),
+          value: "never"
         }
       ],
       modeOptions: [
@@ -190,12 +166,12 @@ export const terminalAiPanelDomain: AiPanelDomainAdapter = {
         {
           label: context.t("RightPanel.AIModePtyShort"),
           description: context.t("RightPanel.AIModePty"),
-          value: "pty_only"
+          value: "pty"
         },
         {
           label: context.t("RightPanel.AIModeBackgroundShort"),
           description: context.t("RightPanel.AIModeBackground"),
-          value: "background_only",
+          value: "background",
           disabled: !current.backgroundExec
         }
       ]
@@ -262,15 +238,19 @@ export const terminalAiPanelDomain: AiPanelDomainAdapter = {
   updateApprovalThreshold(session, value) {
     const current = terminalSession(session);
     if (!current) return;
-    current.approvalThreshold = Number(value) || 2;
-    updatePolicy(current);
+    const mode = String(value || "auto");
+    const approvalMode = mode === "always" || mode === "never" ? mode : "auto";
+    void current.agent.actions.setApprovalMode(approvalMode).catch((error) => {
+      current.errorCode = "policy_failed";
+      current.errorText = error instanceof Error ? error.message : "Failed to update approval mode";
+    });
   },
 
   updateExecutionMode(session, value) {
     const current = terminalSession(session);
     if (!current) return;
-    current.executionMode = String(value || "auto");
-    updatePolicy(current);
+    const mode = String(value || "auto");
+    current.executionMode = mode === "pty" || mode === "background" ? mode : "auto";
   },
 
   handleTimelineAction(session, action) {

@@ -1,7 +1,8 @@
 import type { CommandSnippetPayload } from "~/composables/useApiRequest";
+import type { SnippetVariableDefinition } from "~/utils/snippetVariables";
 import { createCommandSnippet, getCommandSnippetVariableForm, updateCommandSnippet } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { normalizeSnippetVariableFields } from "~/utils/snippetVariables";
+import { normalizeSnippetVariableDefinitions, normalizeSnippetVariableFields } from "~/utils/snippetVariables";
 
 export interface SnippetModule {
   value: string;
@@ -13,9 +14,10 @@ export interface Snippet {
   name: string;
   args: string;
   module: SnippetModule;
-  variable: unknown[];
+  variable: SnippetVariableDefinition[];
   comment: string;
   createdBy: string;
+  scope: "private" | "public";
 }
 
 const rawList = (value: unknown): any[] =>
@@ -33,9 +35,10 @@ const normalizeSnippet = (raw: any): Snippet | null => {
       value: String(raw?.module?.value || raw?.module || ""),
       label: String(raw?.module?.label || raw?.module || "")
     },
-    variable: Array.isArray(raw?.variable) ? raw.variable : [],
+    variable: normalizeSnippetVariableDefinitions(raw?.variable),
     comment: String(raw?.comment || ""),
-    createdBy: String(raw?.created_by || "")
+    createdBy: String(raw?.created_by || ""),
+    scope: String(raw?.scope?.value || raw?.scope || "private") === "public" ? "public" : "private"
   };
 };
 

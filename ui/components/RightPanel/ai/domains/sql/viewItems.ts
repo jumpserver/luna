@@ -45,6 +45,7 @@ export const createSqlViewItemBuilder: AiViewItemBuilderFactory = () => {
           domain: "sql",
           kind: "sql-proposal",
           key: `${message.id}-sql-proposal-${partIndex}`,
+          toolCallId: String(data.toolCallId || ""),
           data: data as ChenSqlProposal
         });
         return;

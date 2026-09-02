@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Extension } from "@codemirror/state";
 import { python } from "@codemirror/lang-python";
+import { MariaSQL, MSSQL, MySQL, PLSQL, PostgreSQL, sql } from "@codemirror/lang-sql";
 import { StreamLanguage } from "@codemirror/language";
 import { shell } from "@codemirror/legacy-modes/mode/shell";
 import { Compartment, EditorState, Prec } from "@codemirror/state";
@@ -22,6 +23,11 @@ let applyingExternalValue = false;
 function languageExtension(module: string): Extension {
   if (module === "python") return python();
   if (["shell", "win_shell"].includes(module)) return StreamLanguage.define(shell);
+  if (module === "mysql") return sql({ dialect: MySQL });
+  if (module === "mariadb") return sql({ dialect: MariaSQL });
+  if (module === "postgresql") return sql({ dialect: PostgreSQL });
+  if (module === "sqlserver") return sql({ dialect: MSSQL });
+  if (module === "oracle") return sql({ dialect: PLSQL });
   return [];
 }
 

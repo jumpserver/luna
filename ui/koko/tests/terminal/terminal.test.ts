@@ -5,12 +5,12 @@ import { computed, ref, shallowRef } from "vue";
 import {
   buildJSONEnvelope,
   buildTerminalInput,
-  ENVELOPE_CHAT,
   ENVELOPE_TERMINAL_COMMAND,
   parseEnvelope,
   parseJSONPayload,
   parseTerminalPayload
 } from "#koko/composables/terminal/envelope";
+import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
 import { parseTerminalIncomingMessage } from "#koko/composables/terminal/protocol";
 import {
   getKokoLinuxMetrics,
@@ -23,10 +23,9 @@ import {
 } from "#koko/composables/terminal/useLinuxMetrics";
 import {
   getKokoTerminalAiSession,
-  handleKokoTerminalAiMessage,
+  handleKokoTerminalAiWireMessage,
   isKokoTerminalAiInputLocked,
   registerKokoTerminalAiSession,
-  sendKokoTerminalAiControl,
   unregisterKokoTerminalAiSession
 } from "#koko/composables/terminal/useTerminalAiSessions";
 import { useKokoTerminalInput } from "#koko/composables/terminal/useTerminalInput";
@@ -229,61 +228,32 @@ it("subscribes to Linux metrics and keeps bounded per-pane history", () => {
 });
 
 it("keeps terminal AI state isolated by active pane", async () => {
+  const agentHarness = installAgentSessionHarness();
   const send = vi.fn();
   const socket = { readyState: WebSocket.OPEN, send } as unknown as WebSocket;
   registerKokoTerminalAiSession("pane-1", socket, "11");
   registerKokoTerminalAiSession("pane-2", socket, "22");
+  const pane1Resource = await agentHarness.attach(handleKokoTerminalAiWireMessage, "pane-1", "terminal");
+  const pane2Resource = await agentHarness.attach(handleKokoTerminalAiWireMessage, "pane-2", "terminal");
 
-  handleKokoTerminalAiMessage("pane-1", {
-    id: "capability-1",
-    role: "assistant",
-    metadata: { terminalId: 11 },
-    parts: [
-      {
-        type: "data-capability",
-        data: { enabled: true, backgroundExec: true, approvalThreshold: 3, executionMode: "auto" }
-      }
-    ]
+  agentHarness.emit(pane2Resource, {
+    type: "run.started",
+    run_id: "run-pane-2",
+    payload: { input_locked: true }
   });
-  handleKokoTerminalAiMessage("pane-2", {
-    id: "lock-2",
-    role: "assistant",
-    metadata: { terminalId: 22 },
-    parts: [{ type: "data-input-lock", data: { locked: true } }]
-  });
-  handleKokoTerminalAiMessage("pane-1", {
-    id: "wrong-terminal",
-    role: "assistant",
-    metadata: { terminalId: 22 },
-    parts: [{ type: "text", text: "ignored" }]
-  });
-  handleKokoTerminalAiMessage("pane-1", null);
-  handleKokoTerminalAiMessage("pane-1", {
-    id: "malformed",
-    role: "assistant",
-    parts: [null]
+  agentHarness.emit(pane1Resource, {
+    type: "message.created",
+    resource_session_id: pane2Resource,
+    message_id: "wrong-pane",
+    payload: { role: "assistant", text: "ignored" }
   });
 
   expect(getKokoTerminalAiSession("pane-1")).toMatchObject({
-    enabled: true,
-    backgroundExec: true,
-    approvalThreshold: 3
+    enabled: true
   });
   expect(getKokoTerminalAiSession("pane-1")?.chat.messages.value).toHaveLength(0);
   expect(isKokoTerminalAiInputLocked("pane-1")).toBe(false);
   expect(isKokoTerminalAiInputLocked("pane-2")).toBe(true);
-
-  const message = {
-    id: "question-1",
-    role: "user" as const,
-    metadata: { terminalId: 11 },
-    parts: [{ type: "text" as const, text: "status" }]
-  };
-  sendKokoTerminalAiControl("pane-1", message);
-
-  const sentEnvelope = parseEnvelope(send.mock.calls[0]![0]);
-  expect(sentEnvelope.type).toBe(ENVELOPE_CHAT);
-  expect(parseJSONPayload(sentEnvelope.payload)).toEqual(message);
 
   const session = getKokoTerminalAiSession("pane-1")!;
   const renderedMessages = computed(() => [...session.chat.messages.value]);
@@ -295,38 +265,41 @@ it("keeps terminal AI state isolated by active pane", async () => {
   });
   await Promise.resolve();
   await Promise.resolve();
-  expect(parseJSONPayload(parseEnvelope(send.mock.calls[1]![0]).payload)).toMatchObject({
-    role: "user",
-    metadata: { terminalId: 11 },
-    parts: [{ type: "text", text: "stream status" }]
-  });
-  handleKokoTerminalAiMessage("pane-1", {
-    id: "plan-message-1",
-    role: "assistant",
-    metadata: { terminalId: 11, stage: "process" },
-    parts: [
-      {
-        type: "data-plan",
-        data: {
-          id: "plan-1",
-          summary: "Inspect status",
-          steps: [{ id: "step-1", title: "Check", objective: "Read status", status: "pending" }]
+  expect(agentHarness.sendMessage).toHaveBeenCalledWith(
+    `agent:${pane1Resource}`,
+    pane1Resource,
+    expect.objectContaining({
+      role: "user",
+      parts: [{ type: "text", text: "stream status" }],
+      metadata: { terminalId: 11, execution_mode: "auto" }
+    })
+  );
+  expect(agentHarness.sendMessage.mock.calls.some((call) => call[1] === pane2Resource)).toBe(false);
+  expect(send).not.toHaveBeenCalled();
+
+  agentHarness.emit(pane1Resource, {
+    type: "message.created",
+    message_id: "plan-message-1",
+    payload: {
+      role: "assistant",
+      parts: [
+        {
+          type: "data-plan",
+          data: {
+            id: "plan-1",
+            summary: "Inspect status",
+            steps: [{ id: "step-1", title: "Check", objective: "Read status", status: "pending" }]
+          }
         }
-      }
-    ]
+      ]
+    }
   });
-  handleKokoTerminalAiMessage("pane-1", {
-    id: "answer-1",
-    role: "assistant",
-    metadata: { terminalId: 11, stage: "final" },
-    parts: [{ type: "text", text: "ready", state: "done" }]
+  agentHarness.emit(pane1Resource, {
+    type: "message.created",
+    message_id: "answer-1",
+    payload: { role: "assistant", parts: [{ type: "text", text: "ready", state: "done" }] }
   });
-  handleKokoTerminalAiMessage("pane-1", {
-    id: "progress-idle",
-    role: "assistant",
-    metadata: { terminalId: 11 },
-    parts: [{ type: "data-progress", data: { state: "idle", text: "" } }]
-  });
+  agentHarness.emit(pane1Resource, { type: "run.completed", run_id: "run-pane-1" });
   await response;
 
   expect(session.chat.status.value).toBe("ready");
@@ -337,7 +310,6 @@ it("keeps terminal AI state isolated by active pane", async () => {
     parts: [{ type: "text", text: "stream status" }]
   });
   expect(session.chat.messages.value[1]).toMatchObject({
-    id: "plan-message-1",
     role: "assistant",
     parts: [
       { type: "data-plan", data: { id: "plan-1", summary: "Inspect status" } },
@@ -349,16 +321,12 @@ it("keeps terminal AI state isolated by active pane", async () => {
   unregisterKokoTerminalAiSession("pane-2", socket);
 });
 
-it("keeps an AI capability that arrives before terminal creation", () => {
+it("keeps an Agent manifest that arrives before terminal creation", async () => {
+  const agentHarness = installAgentSessionHarness();
   const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
   registerKokoTerminalAiSession("pane-early", socket, "");
 
-  handleKokoTerminalAiMessage("pane-early", {
-    id: "capability-early",
-    role: "assistant",
-    metadata: { terminalId: 7 },
-    parts: [{ type: "data-capability", data: { enabled: true } }]
-  });
+  await agentHarness.attach(handleKokoTerminalAiWireMessage, "pane-early", "terminal");
   registerKokoTerminalAiSession("pane-early", socket, "7");
 
   expect(getKokoTerminalAiSession("pane-early")).toMatchObject({
@@ -370,15 +338,11 @@ it("keeps an AI capability that arrives before terminal creation", () => {
 });
 
 it("surfaces Terminal AI stream failures through the AI SDK chat state", async () => {
+  const agentHarness = installAgentSessionHarness();
   const send = vi.fn();
   const socket = { readyState: WebSocket.OPEN, send } as unknown as WebSocket;
   const session = registerKokoTerminalAiSession("pane-error", socket, "9")!;
-  handleKokoTerminalAiMessage("pane-error", {
-    id: "capability-error",
-    role: "assistant",
-    metadata: { terminalId: 9 },
-    parts: [{ type: "data-capability", data: { enabled: true } }]
-  });
+  const resourceSessionId = await agentHarness.attach(handleKokoTerminalAiWireMessage, "pane-error", "terminal");
 
   const response = session.chat.sendMessage({
     text: "fail",
@@ -386,11 +350,9 @@ it("surfaces Terminal AI stream failures through the AI SDK chat state", async (
   });
   await Promise.resolve();
   await Promise.resolve();
-  handleKokoTerminalAiMessage("pane-error", {
-    id: "error-1",
-    role: "assistant",
-    metadata: { terminalId: 9, stage: "final" },
-    parts: [{ type: "data-error", data: { message: "model unavailable" } }]
+  agentHarness.emit(resourceSessionId, {
+    type: "error",
+    payload: { message: "model unavailable" }
   });
   await response;
 
@@ -405,13 +367,9 @@ it("surfaces Terminal AI stream failures through the AI SDK chat state", async (
   });
   await Promise.resolve();
   await Promise.resolve();
-  expect(send).toHaveBeenCalledTimes(2);
-  handleKokoTerminalAiMessage("pane-error", {
-    id: "progress-retry-idle",
-    role: "assistant",
-    metadata: { terminalId: 9 },
-    parts: [{ type: "data-progress", data: { state: "idle", text: "" } }]
-  });
+  expect(agentHarness.sendMessage).toHaveBeenCalledTimes(2);
+  expect(send).not.toHaveBeenCalled();
+  agentHarness.emit(resourceSessionId, { type: "run.completed", run_id: "run-retry" });
   await retry;
   expect(session.chat.status.value).toBe("ready");
 

@@ -1,4 +1,4 @@
-import type { SftpIncomingMessage, SftpSocketFailure } from "#koko/composables/sftp/protocol";
+import type { SftpIncomingMessage, SftpMcpMessage, SftpSocketFailure } from "#koko/composables/sftp/protocol";
 import type { SftpSocketClient } from "#koko/composables/sftp/useSftpSocket";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
@@ -16,7 +16,7 @@ import { FileTransferUnavailableError } from "@jumpserver/connectors-core";
 
 function createSocket(connected = true) {
   const messageListeners = new Set<(message: SftpIncomingMessage) => void>();
-  const chatListeners = new Set<(message: unknown) => void>();
+  const mcpListeners = new Set<(message: SftpMcpMessage) => void>();
   const failureListeners = new Set<(failure: SftpSocketFailure) => void>();
 
   const socket: SftpSocketClient & {
@@ -32,9 +32,9 @@ function createSocket(connected = true) {
       failureListeners.add(listener);
       return () => failureListeners.delete(listener);
     },
-    onChat: (listener) => {
-      chatListeners.add(listener);
-      return () => chatListeners.delete(listener);
+    onMcp: (listener) => {
+      mcpListeners.add(listener);
+      return () => mcpListeners.delete(listener);
     },
     onMessage: (listener) => {
       messageListeners.add(listener);

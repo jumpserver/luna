@@ -10,6 +10,7 @@ export enum KubernetesTerminalMessageType {
   Data = "TERMINAL_K8S_DATA",
   Binary = "TERMINAL_K8S_BINARY",
   TerminalSession = "TERMINAL_SESSION",
+  Ready = "TERMINAL_READY",
   Resize = "TERMINAL_K8S_RESIZE",
   Close = "K8S_CLOSE"
 }
@@ -67,7 +68,14 @@ export interface KubernetesTerminalCreatedMessage {
 export interface KubernetesTerminalSessionMessage {
   type: KubernetesTerminalMessageType.TerminalSession;
   k8s_id: string;
+  terminalId?: number;
   data?: string;
+}
+
+export interface KubernetesTerminalReadyMessage {
+  type: KubernetesTerminalMessageType.Ready;
+  k8s_id: string;
+  terminalId: number;
 }
 
 export interface KubernetesTerminalPingMessage {
@@ -94,6 +102,7 @@ export type KubernetesTerminalIncomingMessage =
   | KubernetesTerminalDataMessage
   | KubernetesTerminalBinaryMessage
   | KubernetesTerminalSessionMessage
+  | KubernetesTerminalReadyMessage
   | KubernetesTerminalPingMessage
   | KubernetesTerminalControlMessage;
 
@@ -195,7 +204,17 @@ export function parseKubernetesTerminalMessage(raw: unknown): KubernetesTerminal
 
   if (message.type === KubernetesTerminalMessageType.TerminalSession) {
     if (typeof message.k8s_id !== "string") return null;
-    return { data: optionalString(message.data), k8s_id: message.k8s_id, type: message.type };
+    return {
+      data: optionalString(message.data),
+      k8s_id: message.k8s_id,
+      ...(typeof message.terminalId === "number" ? { terminalId: message.terminalId } : {}),
+      type: message.type
+    };
+  }
+
+  if (message.type === KubernetesTerminalMessageType.Ready) {
+    if (typeof message.k8s_id !== "string" || typeof message.terminalId !== "number") return null;
+    return { k8s_id: message.k8s_id, terminalId: message.terminalId, type: message.type };
   }
 
   if (

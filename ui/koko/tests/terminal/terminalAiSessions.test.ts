@@ -1,25 +1,33 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { computed } from "vue";
-import { parseEnvelope, parseJSONPayload } from "#koko/composables/terminal/envelope";
+import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
 
 import {
   connectKokoTerminalAiSession,
   disconnectKokoTerminalAiSession,
   getKokoTerminalAiSession,
   handleKokoTerminalAiMessage,
+  handleKokoTerminalAiWireMessage,
   isKokoTerminalAiAvailable,
   isKokoTerminalAiBusy,
   isKokoTerminalAiWaitingForApproval,
   registerKokoTerminalAiSession,
   sendKokoTerminalAiControl,
+  setActiveKokoTerminalAiTarget,
   submitKokoTerminalAiPrompt,
   unregisterKokoTerminalAiSession
 } from "#koko/composables/terminal/useTerminalAiSessions";
 
 const paneIds: string[] = [];
+let agentHarness: ReturnType<typeof installAgentSessionHarness>;
+
+beforeEach(() => {
+  agentHarness = installAgentSessionHarness();
+});
 
 afterEach(() => {
   for (const paneId of paneIds.splice(0)) unregisterKokoTerminalAiSession(paneId);
+  vi.restoreAllMocks();
 });
 
 function createSession(paneId: string, readyState: number = WebSocket.OPEN) {
@@ -28,16 +36,11 @@ function createSession(paneId: string, readyState: number = WebSocket.OPEN) {
   return registerKokoTerminalAiSession(paneId, socket, "9")!;
 }
 
-function enableSession(paneId: string, terminalId = 9) {
-  handleKokoTerminalAiMessage(paneId, {
-    id: `capability-${paneId}`,
-    role: "assistant",
-    metadata: { terminalId },
-    parts: [{ type: "data-capability", data: { enabled: true } }]
-  });
+function enableSession(paneId: string) {
+  return agentHarness.attach(handleKokoTerminalAiWireMessage, paneId, "terminal");
 }
 
-it("exposes late capability to Vue computed availability", () => {
+it("exposes a late Agent manifest to Vue computed availability", async () => {
   const paneId = "reactive-avail";
   const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
   const available = computed(() => isKokoTerminalAiAvailable(paneId));
@@ -48,44 +51,125 @@ it("exposes late capability to Vue computed availability", () => {
   expect(session?.kind).toBe("terminal");
   expect(available.value).toBe(false);
 
-  enableSession(paneId);
+  await enableSession(paneId);
   expect(available.value).toBe(true);
 });
 
-it("connects a session that was registered before the socket finished opening", () => {
+it("connects a session that was registered before the socket finished opening", async () => {
   const session = createSession("opening-socket", WebSocket.CONNECTING);
   (session.socket as { readyState: number }).readyState = WebSocket.OPEN;
 
   expect(isKokoTerminalAiAvailable(session.paneId)).toBe(false);
   connectKokoTerminalAiSession(session.paneId, session.socket!);
-  enableSession(session.paneId);
+  await enableSession(session.paneId);
 
   expect(session.connected).toBe(true);
   expect(isKokoTerminalAiAvailable(session.paneId)).toBe(true);
 });
 
-it("submits prompts through the enabled pane and rejects unavailable or overlapping tasks", async () => {
+it("resolves a workspace pane to its active Kubernetes terminal session", async () => {
+  const first = createSession("k8s-tab-1");
+  const second = createSession("k8s-tab-2");
+  const active = computed(() => getKokoTerminalAiSession("k8s-workspace"));
+  await enableSession(first.paneId);
+  await enableSession(second.paneId);
+
+  setActiveKokoTerminalAiTarget("k8s-workspace", first.paneId);
+  expect(active.value).toBe(first);
+  expect(isKokoTerminalAiAvailable("k8s-workspace")).toBe(true);
+
+  setActiveKokoTerminalAiTarget("k8s-workspace", second.paneId);
+  expect(active.value).toBe(second);
+
+  setActiveKokoTerminalAiTarget("k8s-workspace", null);
+  expect(active.value).toBeNull();
+});
+
+it("uses a Kubernetes MCP sender for Agent tool calls", async () => {
+  const paneId = "k8s-mcp-sender";
+  const sendMcpFrame = vi.fn();
+  const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
+  paneIds.push(paneId);
+  const session = registerKokoTerminalAiSession(paneId, socket, "12", { sendMcpFrame })!;
+  const resourceSessionId = await enableSession(paneId);
+
+  agentHarness.emit(resourceSessionId, {
+    type: "tool.call",
+    run_id: "run-1",
+    tool_call_id: "tool-1",
+    payload: { tool_name: "terminal_snapshot", arguments: {} }
+  });
+
+  expect(sendMcpFrame).toHaveBeenCalledWith(
+    expect.objectContaining({
+      type: "mcp.request",
+      resource_session_id: resourceSessionId,
+      data: expect.objectContaining({ id: "tool-1", method: "tools/call" })
+    })
+  );
+  expect(socket.send).not.toHaveBeenCalled();
+  expect(session.chat.messages.value.flatMap((message) => message.parts)).toContainEqual(
+    expect.objectContaining({
+      type: "data-agent-tool",
+      data: expect.objectContaining({
+        id: "tool-1",
+        toolCallId: "tool-1",
+        domain: "terminal",
+        toolName: "terminal_snapshot",
+        status: "running"
+      })
+    })
+  );
+});
+
+it("derives background execution availability from the command tool manifest", async () => {
+  const session = createSession("background-capability");
+  await agentHarness.attach(
+    handleKokoTerminalAiWireMessage,
+    session.paneId,
+    "terminal",
+    "resource:background-capability",
+    [
+      {
+        name: "execute_sql",
+        inputSchema: { type: "object" },
+        _meta: {
+          "com.jumpserver/toolKind": "command",
+          "com.jumpserver/executionModes": ["auto", "pty", "background"]
+        }
+      }
+    ]
+  );
+
+  expect(session.backgroundExec).toBe(true);
+});
+
+it("queues prompts through the enabled pane and rejects unavailable sessions", async () => {
   const active = createSession("prompt-active");
   const other = createSession("prompt-other");
   const disabled = createSession("prompt-disabled");
   const disconnected = createSession("prompt-disconnected", WebSocket.CLOSED);
-  enableSession(active.paneId);
-  enableSession(other.paneId);
-  enableSession(disconnected.paneId);
+  const activeResource = await enableSession(active.paneId);
+  await enableSession(other.paneId);
+  await enableSession(disconnected.paneId);
 
+  active.executionMode = "pty";
   await submitKokoTerminalAiPrompt(active.paneId, "  list files  ");
+  await submitKokoTerminalAiPrompt(active.paneId, "second task");
 
-  const frame = parseEnvelope(vi.mocked(active.socket!.send).mock.calls[0]![0] as Uint8Array);
-  expect(parseJSONPayload<Record<string, any>>(frame.payload)).toMatchObject({
+  expect(agentHarness.sendMessage).toHaveBeenCalledTimes(2);
+  expect(agentHarness.sendMessage.mock.calls[0]?.[1]).toBe(activeResource);
+  expect(agentHarness.sendMessage.mock.calls[0]?.[2]).toMatchObject({
     role: "user",
-    metadata: { terminalId: 9 },
-    parts: [{ type: "text", text: "list files" }]
+    parts: [{ type: "text", text: "list files" }],
+    metadata: { domain: "terminal", execution_mode: "pty", terminalId: 9 }
+  });
+  expect(agentHarness.sendMessage.mock.calls[1]?.[2]).toMatchObject({
+    role: "user",
+    parts: [{ type: "text", text: "second task" }]
   });
   expect(other.socket?.send).not.toHaveBeenCalled();
-  expect(isKokoTerminalAiBusy(active.paneId)).toBe(true);
-  await expect(submitKokoTerminalAiPrompt(active.paneId, "second task")).rejects.toMatchObject({
-    code: "response_active"
-  });
+  expect(isKokoTerminalAiBusy(active.paneId)).toBe(false);
   await expect(submitKokoTerminalAiPrompt(disabled.paneId, "task")).rejects.toMatchObject({
     code: "unavailable"
   });
@@ -93,25 +177,19 @@ it("submits prompts through the enabled pane and rejects unavailable or overlapp
     code: "unavailable"
   });
 
-  handleKokoTerminalAiMessage(active.paneId, {
-    id: "prompt-idle",
-    role: "assistant",
-    metadata: { terminalId: 9 },
-    parts: [{ type: "data-progress", data: { state: "idle" } }]
-  });
+  agentHarness.emit(activeResource, { type: "run.completed", run_id: "run-1" });
+  agentHarness.emit(activeResource, { type: "run.completed", run_id: "run-2" });
   await Promise.resolve();
   await Promise.resolve();
   expect(isKokoTerminalAiBusy(active.paneId)).toBe(false);
 });
 
 it("reports a prompt dispatch failure without sending to another pane", async () => {
-  const send = vi.fn(() => {
-    throw new Error("socket write failed");
-  });
-  const socket = { readyState: WebSocket.OPEN, send } as unknown as WebSocket;
+  const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
   paneIds.push("prompt-send-failed");
   const session = registerKokoTerminalAiSession("prompt-send-failed", socket, "19")!;
-  enableSession(session.paneId, 19);
+  await enableSession(session.paneId);
+  agentHarness.sendMessage.mockRejectedValueOnce(new Error("Agent request failed"));
 
   await expect(submitKokoTerminalAiPrompt(session.paneId, "status")).rejects.toMatchObject({
     code: "send_failed"
@@ -121,7 +199,7 @@ it("reports a prompt dispatch failure without sending to another pane", async ()
 
 it("makes a disconnected pane unavailable and clears its active task state", async () => {
   const session = createSession("prompt-disconnect");
-  enableSession(session.paneId);
+  await enableSession(session.paneId);
   await submitKokoTerminalAiPrompt(session.paneId, "status");
 
   disconnectKokoTerminalAiSession(session.paneId, session.socket);
@@ -134,14 +212,19 @@ it("makes a disconnected pane unavailable and clears its active task state", asy
   });
 });
 
-it("treats terminal command approval as active until a decision is sent", () => {
+it("treats an Agent command approval as active until a decision is sent", async () => {
   const session = createSession("terminal-approval");
-  enableSession(session.paneId);
-  handleKokoTerminalAiMessage(session.paneId, {
-    id: "approval-message",
-    role: "assistant",
-    metadata: { terminalId: 9 },
-    parts: [{ type: "data-approval", data: { id: "approval-1", command: "rm example" } }]
+  const resourceSessionId = await enableSession(session.paneId);
+  agentHarness.emit(resourceSessionId, {
+    type: "approval.requested",
+    run_id: "run-1",
+    approval_id: "approval-1",
+    payload: {
+      approval_id: "approval-1",
+      digest: "digest-1",
+      tool_name: "execute_command",
+      arguments: { command: "rm example", execution: "pty" }
+    }
   });
 
   expect(isKokoTerminalAiWaitingForApproval(session.paneId)).toBe(true);
@@ -154,8 +237,20 @@ it("treats terminal command approval as active until a decision is sent", () => 
     parts: [{ type: "data-approval", data: { id: "approval-1", approved: false } }]
   });
 
+  await vi.waitFor(() => expect(isKokoTerminalAiWaitingForApproval(session.paneId)).toBe(false));
+
   expect(isKokoTerminalAiWaitingForApproval(session.paneId)).toBe(false);
   expect(isKokoTerminalAiBusy(session.paneId)).toBe(false);
+  expect(agentHarness.resolveApproval).toHaveBeenCalledWith(
+    "agent:resource:terminal-approval",
+    resourceSessionId,
+    "approval-1",
+    {
+      decision: "reject",
+      run_id: "run-1",
+      digest: "digest-1"
+    }
+  );
 });
 
 it("retains structured Terminal AI presentation metadata", () => {
@@ -199,73 +294,88 @@ it("retains structured Terminal AI presentation metadata", () => {
   });
 });
 
-it("resolves SQL metadata approval for the active terminal", () => {
+it("resolves an Agent metadata approval for the active terminal", async () => {
   const session = createSession("metadata-approval");
-  handleKokoTerminalAiMessage(session.paneId, {
-    id: "capability",
-    role: "assistant",
-    metadata: { terminalId: 9 },
-    parts: [{ type: "data-capability", data: { enabled: true } }]
-  });
-  handleKokoTerminalAiMessage(session.paneId, {
-    id: "metadata",
-    role: "assistant",
-    metadata: { terminalId: 9 },
-    parts: [
-      {
-        type: "data-metadata-approval",
-        data: { id: "approval-1", digest: "digest-1", database: "app", tables: ["users"], tableLimit: 5 }
-      }
-    ]
+  const resourceSessionId = await enableSession(session.paneId);
+  agentHarness.emit(resourceSessionId, {
+    type: "approval.requested",
+    run_id: "run-1",
+    approval_id: "approval-1",
+    payload: {
+      approval_id: "approval-1",
+      digest: "digest-1",
+      tool_name: "database_schema",
+      arguments: { query: "user", tables: ["users"] }
+    }
   });
 
   session.resolveMetadataApproval("approve_session");
 
-  const frame = parseEnvelope(vi.mocked(session.socket!.send).mock.calls[0]![0] as Uint8Array);
-  expect(parseJSONPayload<Record<string, any>>(frame.payload)).toMatchObject({
-    metadata: { terminalId: 9 },
-    parts: [
-      {
-        type: "data-metadata-approval",
-        data: { id: "approval-1", digest: "digest-1", decision: "approve_session" }
-      }
-    ]
-  });
+  await vi.waitFor(() => expect(agentHarness.resolveApproval).toHaveBeenCalledOnce());
+  expect(agentHarness.resolveApproval).toHaveBeenCalledWith(
+    "agent:resource:metadata-approval",
+    resourceSessionId,
+    "approval-1",
+    {
+      decision: "approve",
+      run_id: "run-1",
+      digest: "digest-1"
+    }
+  );
   expect(session.metadataApproval?.resolving).toBe(true);
 });
 
-it("keeps structured runtime error codes when the AI SDK reports the stream error", async () => {
+it("keeps structured runtime error codes when Agent SSE reports the stream error", async () => {
   const session = createSession("runtime-error-code");
-  handleKokoTerminalAiMessage(session.paneId, {
-    id: "capability",
-    role: "assistant",
-    metadata: { terminalId: 9 },
-    parts: [{ type: "data-capability", data: { enabled: true } }]
-  });
+  const resourceSessionId = await enableSession(session.paneId);
 
   const response = session.chat.sendMessage({ text: "run", metadata: { terminalId: 9 } });
   await Promise.resolve();
   await Promise.resolve();
-  handleKokoTerminalAiMessage(session.paneId, {
-    id: "error",
-    role: "assistant",
-    metadata: { terminalId: 9 },
-    parts: [{ type: "data-error", data: { code: "background_unavailable", message: "legacy detail" } }]
+  agentHarness.emit(resourceSessionId, {
+    type: "error",
+    payload: { code: "background_unavailable", message: "Agent detail" }
   });
   await response;
 
   expect(session.errorCode).toBe("background_unavailable");
-  expect(session.errorText).toBe("legacy detail");
+  expect(session.errorText).toBe("Agent detail");
+});
+
+it("shows model activity and settles the response when an Agent run fails", async () => {
+  const session = createSession("model-failure");
+  const resourceSessionId = await enableSession(session.paneId);
+
+  const response = session.chat.sendMessage({ text: "check memory", metadata: { terminalId: 9 } });
+  await Promise.resolve();
+  await Promise.resolve();
+  agentHarness.emit(resourceSessionId, {
+    type: "model.requested",
+    run_id: "run-1",
+    payload: { round: 1 }
+  });
+
+  expect(session).toMatchObject({
+    taskActive: true,
+    runtimeStatusCode: "analyzing",
+    runtimeState: "analyzing"
+  });
+
+  agentHarness.emit(resourceSessionId, {
+    type: "run.failed",
+    run_id: "run-1",
+    payload: { state: "failed", reason: "agent run failed" }
+  });
+  await response;
+
+  expect(session.taskActive).toBe(false);
+  expect(session.errorCode).toBe("run_failed");
+  expect(session.errorText).toBe("agent run failed");
 });
 
 it("exposes local transport failures as translatable error codes", async () => {
   const session = createSession("local-error-code", WebSocket.CLOSED);
-  handleKokoTerminalAiMessage(session.paneId, {
-    id: "capability",
-    role: "assistant",
-    metadata: { terminalId: 9 },
-    parts: [{ type: "data-capability", data: { enabled: true } }]
-  });
+  await enableSession(session.paneId);
 
   await session.chat.sendMessage({ text: "run", metadata: { terminalId: 9 } });
 
@@ -275,16 +385,12 @@ it("exposes local transport failures as translatable error codes", async () => {
 
 it("stops the active response after sending an interrupt", async () => {
   const session = createSession("interrupt");
-  handleKokoTerminalAiMessage(session.paneId, {
-    id: "capability",
-    role: "assistant",
-    metadata: { terminalId: 9 },
-    parts: [{ type: "data-capability", data: { enabled: true } }]
-  });
+  const resourceSessionId = await enableSession(session.paneId);
 
   const response = session.chat.sendMessage({ text: "run", metadata: { terminalId: 9 } });
   await Promise.resolve();
   await Promise.resolve();
+  agentHarness.emit(resourceSessionId, { type: "run.started", run_id: "run-1" });
   sendKokoTerminalAiControl(session.paneId, {
     id: "interrupt",
     role: "user",
@@ -294,5 +400,6 @@ it("stops the active response after sending an interrupt", async () => {
   await response;
 
   expect(session.chat.status.value).toBe("ready");
-  expect(session.socket?.send).toHaveBeenCalledTimes(2);
+  expect(agentHarness.cancel).toHaveBeenCalledWith("agent:resource:interrupt", resourceSessionId, "run-1");
+  expect(session.socket?.send).not.toHaveBeenCalled();
 });
