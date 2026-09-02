@@ -913,6 +913,7 @@
     "ModifyConnectionInfo": "Connect",
     "Description": "Right-click to edit",
     "RememberSelection": "Auto connect next time",
+    "RememberSelectionDescription": "Right-click an asset in the tree to choose a different connection method.",
     "OptionalProtocol": "Protocol",
     "ConnectMethod": "Connect Method",
     "OptionalAccount": "Account"
@@ -1056,7 +1057,7 @@
     "WorkspaceAppearance": "Workspace appearance",
     "WorkspaceAppearanceDescription": "Adjust how interface text, command terminals, and text editors are displayed.",
     "ModernIsland": "Modern island",
-    "ModernIslandDescription": "Split the asset tree, session area, and right panel into separate islands with a splitter and accordion.",
+    "ModernIslandDescription": "Separate the asset tree, session workspace, and right panel into islands you can resize and collapse.",
     "UiRadius": "Corner radius",
     "UiRadiusDescription": "None, small uses the current 3px control radius, and large uses the 10px island radius.",
     "UiRadiusNone": "None",

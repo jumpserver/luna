@@ -23,7 +23,7 @@ import {
   validateClipboardText as validateClipboardAccess
 } from "#koko/utils/clipboardAcl";
 import mittBus, { KokoMittEvent } from "#koko/utils/mittBus";
-import { terminalTheme } from "#koko/utils/terminalTheme";
+import { applyXtermTheme, terminalTheme } from "#koko/utils/terminalTheme";
 import { formatMessage, getXTerminalLineContent } from "#koko/utils/terminalUtils";
 
 type TerminalEvents = Record<string, unknown> & {
@@ -154,7 +154,7 @@ export const createKokoTerminalContext = (): TerminalContext => {
       if (!terminal) return;
       const themeName = message.theme || "Default";
       nextTick(() => {
-        terminal.options.theme = terminalTheme(themeName);
+        applyXtermTheme(terminal, terminalTheme(themeName));
       });
     };
 

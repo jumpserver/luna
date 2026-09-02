@@ -24,6 +24,7 @@ const emit = defineEmits<{ submit: [] }>();
 const draft = defineModel<ConnectionFormDraft>("draft", { required: true });
 
 const { t } = useI18n();
+const { modernIsland } = useSettingManager();
 </script>
 
 <template>
@@ -42,22 +43,22 @@ const { t } = useI18n();
       :protocols="props.asset.permedProtocols || []"
       :asset-type="props.assetType"
     />
-    <div class="mt-4 flex items-center gap-1.5">
-      <UCheckbox v-model="draft.rememberSelection" icon="i-lucide-check" :label="t('EditModal.RememberSelection')" />
-      <UTooltip :text="t('EditModal.Description')" :delay-duration="150">
-        <UIcon
-          name="i-lucide-circle-help"
-          class="size-4 cursor-help text-[var(--app-muted)]"
-          :aria-label="t('EditModal.Description')"
-        />
-      </UTooltip>
+    <div class="mt-4">
+      <UCheckbox
+        v-model="draft.rememberSelection"
+        icon="i-lucide-check"
+        :label="t('EditModal.RememberSelection')"
+        :description="t('EditModal.RememberSelectionDescription')"
+        :ui="{ description: 'text-xs leading-5' }"
+      />
     </div>
     <UButton
       :label="props.submitLabel"
       :loading="props.submitting"
       :disabled="props.disabled"
-      size="lg"
-      class="mt-6 mb-2 w-full justify-center uppercase tracking-[0.08em]"
+      :size="modernIsland ? 'md' : 'lg'"
+      class="mt-6 mb-2 w-full justify-center"
+      :class="modernIsland ? '' : 'uppercase tracking-[0.08em]'"
       @click="emit('submit')"
     />
   </div>

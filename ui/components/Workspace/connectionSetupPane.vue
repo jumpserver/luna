@@ -20,6 +20,7 @@ const props = withDefaults(
 );
 
 const { t } = useI18n();
+const { modernIsland } = useSettingManager();
 const { confirmConnection } = useAssetConnection();
 const { getMethodsForProtocol } = useConnectMethods();
 const { closePane, startSessionConnection } = useWorkspaceTabs();
@@ -153,30 +154,72 @@ watch(
   }
 );
 
+const closing = ref(false);
+const dialogVisible = computed(() => {
+  if (modernIsland.value) return loading.value || !!currentAsset.value;
+  return !loading.value && !!currentAsset.value;
+});
+
+const requestClose = () => {
+  if (!modernIsland.value) {
+    closePane(props.tab.id);
+    return;
+  }
+  if (closing.value) return;
+  closing.value = true;
+};
+
+const onStageTransitionEnd = (event: TransitionEvent) => {
+  if (event.target !== event.currentTarget || event.propertyName !== "opacity") return;
+  if (closing.value) closePane(props.tab.id);
+};
+
 onMounted(loadAsset);
 </script>
 
 <template>
-  <div class="h-full min-h-0 w-full overflow-auto bg-[var(--workspace-surface-background)] px-4 py-4 sm:px-10">
+  <div
+    class="h-full min-h-0 w-full overflow-auto px-4 py-4 sm:px-10"
+    :class="[
+      modernIsland ? 'connection-setup-stage--island' : 'bg-(--workspace-surface-background)',
+      { 'is-leaving': modernIsland && closing }
+    ]"
+    @transitionend="onStageTransitionEnd"
+  >
     <div class="mx-auto flex min-h-full w-full items-center justify-center">
-      <div v-if="loading" class="grid h-full min-h-64 w-full place-items-center text-sm text-[var(--app-muted)]">
+      <div
+        v-if="!modernIsland && loading"
+        class="grid h-full min-h-64 w-full place-items-center text-sm text-(--app-muted)"
+      >
         <div class="flex items-center gap-2">
           <UIcon name="i-lucide-loader-2" class="size-4 animate-spin" />
           <span>{{ t("Loading.Loading") }}</span>
         </div>
       </div>
 
-      <template v-else-if="currentAsset">
+      <Transition :name="modernIsland ? 'island-dialog' : ''" :appear="modernIsland">
         <section
-          class="connection-setup-shell w-[min(640px,100%)] overflow-hidden rounded-lg border border-[var(--app-border)] bg-[var(--workspace-surface-panel)] shadow-[var(--theme-shadow-soft)]"
+          v-if="dialogVisible"
+          class="connection-setup-shell overflow-hidden"
+          :class="
+            modernIsland
+              ? 'connection-setup-shell--island'
+              : 'w-[min(640px,100%)] rounded-lg border border-(--app-border) bg-(--workspace-surface-panel)'
+          "
         >
           <div
-            class="flex h-13 items-center justify-between gap-3 border-b border-[var(--app-border)] bg-[var(--workspace-surface-header)] px-4"
+            class="flex items-center justify-between gap-3 border-b px-4"
+            :class="
+              modernIsland
+                ? 'h-10 border-[color-mix(in_srgb,var(--theme-fg)_14%,transparent)]'
+                : 'h-13 border-(--app-border) bg-(--workspace-surface-header)'
+            "
           >
             <div class="flex min-w-0 items-center gap-2">
-              <span class="truncate text-sm font-semibold text-[var(--app-fg)]">
-                {{ t("ContextMenu.Connect") }} -
-                <span class="font-ui-mono">{{ assetAddress }}</span>
+              <span class="truncate font-semibold text-(--app-fg)" :class="modernIsland ? 'text-[13px]' : 'text-sm'">
+                {{ t("ContextMenu.Connect") }}
+                {{ modernIsland ? " · " : " - " }}
+                <span class="font-ui-mono font-medium">{{ assetAddress }}</span>
               </span>
               <UBadge
                 v-if="assetName && assetName !== assetAddress"
@@ -191,17 +234,25 @@ onMounted(loadAsset);
               color="neutral"
               variant="ghost"
               icon="i-lucide-x"
-              size="sm"
+              :size="modernIsland ? 'xs' : 'sm'"
               :aria-label="t('Common.Cancel')"
-              @click="closePane(props.tab.id)"
+              @click="requestClose"
             />
           </div>
 
-          <div class="flex min-h-[300px] flex-col bg-[var(--app-surface-panel-strong)]">
-            <div class="min-h-0 flex-1 overflow-auto px-6 py-4 pt-2">
+          <div
+            v-if="loading"
+            class="flex min-h-72 flex-col items-center justify-center gap-3 pb-8 text-xs text-(--app-text-muted)"
+          >
+            <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin text-(--theme-accent)" />
+            <span>{{ t("Loading.Loading") }}</span>
+          </div>
+
+          <div v-else class="flex min-h-75 flex-col" :class="modernIsland ? '' : 'bg-(--app-surface-panel-strong)'">
+            <div class="min-h-0 flex-1 overflow-auto py-4 pt-2" :class="modernIsland ? 'px-4' : 'px-6'">
               <div v-if="launchSuccessVisible" class="flex min-h-full items-center justify-center py-6">
                 <section
-                  class="launch-success-card w-full rounded-xl border border-[var(--app-border)] bg-[var(--workspace-surface-panel)] px-5 py-6 sm:px-6"
+                  class="launch-success-card w-full rounded-xl border border-(--app-border) bg-(--workspace-surface-panel) px-5 py-6 sm:px-6"
                 >
                   <div class="flex items-start gap-3">
                     <div class="grid size-11 shrink-0 place-items-center rounded-full bg-primary/12 text-primary">
@@ -209,7 +260,7 @@ onMounted(loadAsset);
                     </div>
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-2">
-                        <h3 class="text-sm font-semibold text-[var(--app-fg)]">
+                        <h3 class="text-sm font-semibold text-(--app-fg)">
                           {{ t("ConnectionSetup.ClientLaunchStarted") }}
                         </h3>
                         <UBadge
@@ -220,25 +271,23 @@ onMounted(loadAsset);
                           size="sm"
                         />
                       </div>
-                      <p class="mt-2 text-sm leading-6 text-[var(--app-fg)]">
+                      <p class="mt-2 text-sm leading-6 text-(--app-fg)">
                         {{ launchSummary }}
                       </p>
-                      <p class="mt-1 text-xs leading-5 text-[var(--app-muted)]">
+                      <p class="mt-1 text-xs leading-5 text-(--app-muted)">
                         {{ launchHint }}
                       </p>
                     </div>
                   </div>
 
-                  <div
-                    class="mt-5 rounded-lg border border-[var(--app-border)] bg-[var(--workspace-surface-header)] px-4 py-3"
-                  >
-                    <div class="text-xs text-[var(--app-muted)]">
+                  <div class="mt-5 rounded-lg border border-(--app-border) bg-(--workspace-surface-header) px-4 py-3">
+                    <div class="text-xs text-(--app-muted)">
                       {{ t("ConnectionSetup.ConnectionTarget") }}
                     </div>
-                    <div class="mt-1 break-all font-ui-mono text-sm text-[var(--app-fg)]">
+                    <div class="mt-1 break-all font-ui-mono text-sm text-(--app-fg)">
                       {{ assetAddress }}
                     </div>
-                    <div v-if="launchedClientName" class="mt-2 text-xs text-[var(--app-muted)]">
+                    <div v-if="launchedClientName" class="mt-2 text-xs text-(--app-muted)">
                       {{ t("ConnectionSetup.Client") }}:
                       {{ launchedClientName }}
                     </div>
@@ -246,7 +295,7 @@ onMounted(loadAsset);
                 </section>
               </div>
 
-              <template v-else>
+              <template v-else-if="currentAsset">
                 <ConnectFormFields
                   v-model:draft="draft"
                   :asset="currentAsset"
@@ -262,10 +311,10 @@ onMounted(loadAsset);
 
             <div
               v-if="connecting || connectionError"
-              class="border-t border-[var(--app-border)] bg-[var(--workspace-surface-footer)] px-5 py-3"
+              class="border-t border-(--app-border) bg-(--workspace-surface-footer) px-5 py-3"
             >
               <div v-if="connecting" class="space-y-2">
-                <div class="flex items-center gap-2 text-xs text-[var(--app-muted)]">
+                <div class="flex items-center gap-2 text-xs text-(--app-muted)">
                   <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
                   <span>{{ t("ConnectionSetup.Establishing") }}</span>
                 </div>
@@ -279,13 +328,13 @@ onMounted(loadAsset);
                 class="mt-2 flex items-start gap-2 rounded-md border border-error/25 bg-error/10 px-3 py-2 text-xs text-error"
               >
                 <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3.5 shrink-0" />
-                <span class="min-w-0 break-words">{{ connectionError }}</span>
+                <span class="min-w-0 wrap-break-word">{{ connectionError }}</span>
               </div>
             </div>
 
             <div
               v-if="launchSuccessVisible"
-              class="border-t border-[var(--app-border)] bg-[var(--workspace-surface-footer)] px-5 pt-3 pb-5"
+              class="border-t border-(--app-border) bg-(--workspace-surface-footer) px-5 pt-3 pb-5"
             >
               <div class="flex flex-col gap-3 sm:flex-row">
                 <UButton
@@ -306,7 +355,7 @@ onMounted(loadAsset);
             </div>
           </div>
         </section>
-      </template>
+      </Transition>
     </div>
   </div>
 </template>
@@ -316,6 +365,43 @@ onMounted(loadAsset);
   box-shadow:
     0 1px 0 color-mix(in srgb, var(--app-surface-panel-strong) 82%, transparent) inset,
     var(--theme-shadow-soft);
+}
+
+.connection-setup-stage--island {
+  background: transparent;
+}
+
+.connection-setup-stage--island.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+
+.connection-setup-shell--island {
+  width: min(520px, 100%);
+  border: 1px solid color-mix(in srgb, var(--theme-fg) 18%, transparent);
+  border-radius: var(--workspace-island-radius);
+  background: var(--app-surface-overlay);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--theme-fg) 8%, transparent) inset,
+    0 18px 50px color-mix(in srgb, #000 42%, transparent);
+}
+
+.connection-setup-shell--island .connection-activity-bar {
+  background: var(--theme-accent);
+}
+
+.island-dialog-enter-active,
+.island-dialog-leave-active {
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+.island-dialog-enter-from,
+.island-dialog-leave-to {
+  opacity: 0;
+  transform: translateY(12px) scale(0.98);
 }
 
 .launch-success-card {

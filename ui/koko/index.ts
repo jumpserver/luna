@@ -26,7 +26,7 @@ export { default as KokoConnectView } from "./views/ConnectView.vue";
 export { useKokoConnectionStore } from "./stores/connection";
 export type { ShareUserOptions } from "./types/session";
 export { getDefaultTerminalConfig } from "./utils/guard";
-export { appTerminalTheme } from "./utils/terminalTheme";
+export { appTerminalTheme, syncXtermBackground } from "./utils/terminalTheme";
 export { default as KokoBaseWorkspaceShell } from "./workspaces/BaseWorkspaceShell.vue";
 export { default as KokoFileEditorSessionSurface } from "./workspaces/FileEditorSessionSurface.vue";
 export { default as KokoFileManagerSessionSurface } from "./workspaces/FileManagerSessionSurface.vue";

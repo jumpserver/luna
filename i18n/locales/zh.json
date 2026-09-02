@@ -913,6 +913,7 @@
     "ModifyConnectionInfo": "连接",
     "Description": "右击重新设置",
     "RememberSelection": "下次自动连接",
+    "RememberSelectionDescription": "如需更换连接方式，可在资产树上右键重新选择。",
     "OptionalProtocol": "协议",
     "ConnectMethod": "连接方法",
     "OptionalAccount": "账号"
@@ -1059,7 +1060,7 @@
     "WorkspaceAppearance": "工作区外观",
     "WorkspaceAppearanceDescription": "调整界面文字、命令终端和文本编辑区域的显示效果。",
     "ModernIsland": "现代分割",
-    "ModernIslandDescription": "将左侧资产树、中间会话区和右侧面板拆成独立岛区，使用可拖拽分割与折叠手风琴。",
+    "ModernIslandDescription": "将资产树、会话区和右侧面板拆成独立岛区，可拖拽调整宽度并折叠分区。",
     "UiRadius": "圆角",
     "UiRadiusDescription": "无圆角、小圆角沿用当前默认 3px，大圆角使用岛区 10px。",
     "UiRadiusNone": "无圆角",

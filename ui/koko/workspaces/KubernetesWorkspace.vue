@@ -32,7 +32,7 @@ import {
   resolveClipboardAccess,
   validateClipboardText as validateClipboardAccess
 } from "#koko/utils/clipboardAcl";
-import { appTerminalTheme } from "#koko/utils/terminalTheme";
+import { applyXtermTheme, appTerminalTheme, syncXtermBackground } from "#koko/utils/terminalTheme";
 import BaseWorkspaceShell from "#koko/workspaces/BaseWorkspaceShell.vue";
 import { useBaseWorkspaceSession } from "#koko/workspaces/useBaseWorkspaceSession";
 import "@xterm/xterm/css/xterm.css";
@@ -404,6 +404,7 @@ function mountTerminal(tabItem: TerminalTab, target: ConnectTarget) {
   const fit = new FitAddon();
   terminal.loadAddon(fit);
   terminal.open(el);
+  syncXtermBackground(terminal);
   fit.fit();
   const cleanupClipboard = installClipboardControls(el, terminal, tabItem.id);
   terminals.set(tabItem.id, { terminal, fit, cleanupClipboard });
@@ -505,7 +506,7 @@ function retryConnection() {
 
 function syncTerminalTheme() {
   for (const { terminal } of terminals.values()) {
-    terminal.options.theme = appTerminalTheme();
+    applyXtermTheme(terminal, appTerminalTheme());
   }
 }
 

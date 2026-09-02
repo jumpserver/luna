@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { SelectMenuItem } from "@nuxt/ui";
-import type { AssetPageType, CharsetType, PermedAccount, PermedProtocol, ResolutionType } from "~/types/index";
+import type { ConnectMethod } from "~/composables/useConnectMethods";
+import type { AssetPageType, PermedAccount, PermedProtocol } from "~/types/index";
 import {
   createLocalApplicationConnectMethod,
   isApplicationConfigItemAvailable,
@@ -8,6 +8,10 @@ import {
   useConnectMethods
 } from "~/composables/useConnectMethods";
 import { sortProtocolNames } from "~/utils";
+import ConnectAccountFields from "./connectAccountFields.vue";
+import ConnectAdvancedOptions from "./connectAdvancedOptions.vue";
+import ConnectMethodPicker from "./connectMethodPicker.vue";
+import { categoryOfConnectMethod } from "./connectMethodUtils";
 
 const props = defineProps<{
   account: string;
@@ -35,66 +39,98 @@ const emits = defineEmits<{
   (e: "update:connectOptions", v: Record<string, any>): void;
 }>();
 
-const { t } = useI18n();
-const { getMethodsForProtocol, getDefaultMethodForProtocol } = useConnectMethods();
-const { appConfig } = useSettingManager();
-const formFieldUi = {
-  label: "text-sm font-semibold tracking-[0.025em] text-[var(--app-text-muted)]",
-  container: "mt-2"
-};
-const controlBaseUi =
-  "h-8 rounded-[4px] bg-[var(--app-input-bg)] ring-1 ring-inset ring-[var(--app-border)] shadow-sm transition-[box-shadow,background-color] hover:ring-[var(--app-border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--app-focus-ring)]";
+const { getMethodsForProtocol } = useConnectMethods();
+const { appConfig, modernIsland } = useSettingManager();
+const methodsByProtocol = reactive<Record<string, ConnectMethod[]>>({});
+const availableConnectMethods = computed(() => methodsByProtocol[props.protocol] || []);
 
-const showManualInputArea = ref(false);
-const showDynamicUserArea = ref(false);
-const manualPasswordVisible = ref(false);
-const dynamicPasswordVisible = ref(false);
-const advancedOptionOpen = ref(false);
-const availableConnectMethods = ref<any[]>([]);
-const selectedConnectMethodType = ref<string>("");
-let connectMethodRequestId = 0;
+const selectedProtocol = computed<string>({
+  get: () => props.protocol,
+  set: (value) => emits("update:protocol", value ?? "")
+});
+
+const selectedAccount = computed<string>({
+  get: () => props.account,
+  set: (value) => emits("update:account", value ?? "")
+});
 
 const localManualUsername = computed<string>({
   get: () => props.manualUsername || "",
-  set: (v: string) => emits("update:manualUsername", v ?? "")
+  set: (value) => emits("update:manualUsername", value ?? "")
 });
 
 const localManualPassword = computed<string>({
   get: () => props.manualPassword || "",
-  set: (v: string) => emits("update:manualPassword", v ?? "")
+  set: (value) => emits("update:manualPassword", value ?? "")
 });
 
 const localDynamicPassword = computed<string>({
   get: () => props.dynamicPassword || "",
-  set: (v: string) => emits("update:dynamicPassword", v ?? "")
+  set: (value) => emits("update:dynamicPassword", value ?? "")
 });
 
 const localRememberSecret = computed<boolean>({
   get: () => props.rememberSecret || false,
-  set: (v: boolean) => emits("update:rememberSecret", !!v)
+  set: (value) => emits("update:rememberSecret", !!value)
 });
 
 const localConnectMethod = computed<string>({
   get: () => props.connectMethod || "",
-  set: (v: string) => emits("update:connectMethod", v ?? "")
+  set: (value) => emits("update:connectMethod", value ?? "")
 });
 
 const localConnectOptions = computed<Record<string, any>>({
   get: () => props.connectOptions || {},
-  set: (v: Record<string, any>) => emits("update:connectOptions", v || {})
+  set: (value) => emits("update:connectOptions", value || {})
 });
 
-const updateConnectOption = (field: string, value: any) => {
-  localConnectOptions.value = {
-    ...localConnectOptions.value,
-    [field]: value
-  };
+const protocolTabItems = computed(() =>
+  sortProtocolNames(
+    (isDesktopRuntime() ? props.protocols : props.protocols.filter((protocol) => protocol?.public !== false)).map(
+      (protocol) => protocol.name
+    )
+  ).map((name) => ({ label: name.toUpperCase(), value: name }))
+);
+
+const ensureProtocolMethods = async (protocol: string) => {
+  if (!protocol) return [];
+  if (!methodsByProtocol[protocol]) {
+    methodsByProtocol[protocol] = await getMethodsForProtocol(protocol);
+  }
+  return methodsByProtocol[protocol] || [];
+};
+
+const pickConnectMethod = (protocol: string, methods: ConnectMethod[], previousProtocol?: string) => {
+  const previousMethod = previousProtocol && previousProtocol !== protocol ? "" : props.connectMethod || "";
+  if (isConnectMethodAvailable(previousMethod, methods, protocol, appConfig.value)) return previousMethod;
+
+  const preferredMethod = props.preferredConnectMethod || "";
+  if (isConnectMethodAvailable(preferredMethod, methods, protocol, appConfig.value)) return preferredMethod;
+
+  if (isDesktopRuntime()) {
+    const normalizedProtocol = protocol.toLowerCase();
+    const preferredClient = Object.values(appConfig.value || {})
+      .flat()
+      .find(
+        (item) =>
+          isApplicationConfigItemAvailable(item, normalizedProtocol) &&
+          item.match_first?.some((value) => value.toLowerCase() === normalizedProtocol)
+      );
+    const nativeMethod = methods.find((method) => categoryOfConnectMethod(method) === "native");
+    if (preferredClient && nativeMethod) {
+      return createLocalApplicationConnectMethod(nativeMethod.value, preferredClient.name);
+    }
+  }
+
+  return methods[0]?.value || "";
 };
 
 watch(
-  () => props.account,
-  (newVal) => {
-    handleSpecialAccount(newVal || "");
+  protocolTabItems,
+  (items) => {
+    for (const item of items) {
+      void ensureProtocolMethods(item.value);
+    }
   },
   { immediate: true }
 );
@@ -102,335 +138,26 @@ watch(
 watch(
   () => props.protocol,
   async (newProtocol, previousProtocol) => {
-    const requestId = ++connectMethodRequestId;
-    availableConnectMethods.value = [];
-
     if (!newProtocol) {
       emits("update:connectMethod", "");
       return;
     }
 
-    // A method belongs to a protocol. Clear it before the async lookup so a
-    // quick protocol-switch-and-connect cannot submit the previous protocol's method.
-    const previousMethod = previousProtocol && previousProtocol !== newProtocol ? "" : props.connectMethod || "";
-    emits("update:connectMethod", "");
-
     try {
-      const methods = await getMethodsForProtocol(newProtocol);
-      if (requestId !== connectMethodRequestId || newProtocol !== props.protocol) return;
-      availableConnectMethods.value = methods;
-
-      if (isConnectMethodAvailable(previousMethod, methods, newProtocol, appConfig.value)) {
-        emits("update:connectMethod", previousMethod);
-        return;
-      }
-
-      const protocolPreferredMethod = props.preferredConnectMethod || "";
-      if (isConnectMethodAvailable(protocolPreferredMethod, methods, newProtocol, appConfig.value)) {
-        emits("update:connectMethod", protocolPreferredMethod);
-        return;
-      }
-
-      if (isDesktopRuntime()) {
-        const protocol = newProtocol.toLowerCase();
-        const preferredClient = Object.values(appConfig.value || {})
-          .flat()
-          .find(
-            (item) =>
-              isApplicationConfigItemAvailable(item, protocol) &&
-              item.match_first?.some((value) => value.toLowerCase() === protocol)
-          );
-        const nativeMethod = methods.find((method) => categoryOfConnectMethod(method) === "native");
-
-        if (preferredClient && nativeMethod) {
-          emits("update:connectMethod", createLocalApplicationConnectMethod(nativeMethod.value, preferredClient.name));
-          return;
-        }
-      }
-
-      const defaultMethod = await getDefaultMethodForProtocol(newProtocol);
-      if (requestId === connectMethodRequestId && newProtocol === props.protocol && defaultMethod) {
-        emits("update:connectMethod", defaultMethod);
-      }
+      const methods = await ensureProtocolMethods(newProtocol);
+      if (newProtocol !== props.protocol) return;
+      emits("update:connectMethod", pickConnectMethod(newProtocol, methods, previousProtocol));
     } catch {
-      if (requestId !== connectMethodRequestId) return;
-      availableConnectMethods.value = [];
+      if (newProtocol !== props.protocol) return;
       emits("update:connectMethod", "");
     }
   },
   { immediate: true }
 );
-
-const protocolTabItems = computed(() =>
-  sortProtocolNames(
-    (isDesktopRuntime()
-      ? props.protocols
-      : props.protocols.filter((protocol: PermedProtocol) => protocol?.public !== false)
-    ).map((p: PermedProtocol) => p.name)
-  ).map((name) => ({ label: name.toUpperCase(), value: name }))
-);
-const connectMethodTypeItems = computed(() => {
-  const metaMap: Record<string, { label: string; icon: string }> = {
-    builtin: { label: t("ConnectMethodType.BuiltIn"), icon: "i-lucide-box" },
-    native: {
-      label: t("ConnectMethodType.Application"),
-      icon: "i-lucide-layout-grid"
-    },
-    remote_app: {
-      label: t("ConnectMethodType.RemoteApplication"),
-      icon: "i-lucide-app-window"
-    }
-  };
-  const order = ["builtin", "native", "remote_app"];
-  const grouped = new Set(availableConnectMethods.value.map((method) => categoryOfConnectMethod(method)));
-  const sorted = [
-    ...order.filter((type) => grouped.has(type)),
-    ...Array.from(grouped).filter((type) => !order.includes(type))
-  ].filter(Boolean);
-
-  return sorted.map((type) => ({
-    value: type,
-    label: metaMap[type]?.label || type,
-    icon: metaMap[type]?.icon || "i-lucide-circle"
-  }));
-});
-const configuredClients = computed(() => {
-  const protocol = (props.protocol || "").toLowerCase();
-  if (!protocol || !appConfig.value) return [];
-
-  return Object.values(appConfig.value)
-    .flat()
-    .filter((item) => isApplicationConfigItemAvailable(item, protocol))
-    .sort((a, b) => Number(b.match_first?.includes(protocol)) - Number(a.match_first?.includes(protocol)));
-});
-const connectMethodTabItems = computed(() => {
-  const methods = availableConnectMethods.value.filter((method) => {
-    if (!selectedConnectMethodType.value) return true;
-    return categoryOfConnectMethod(method) === selectedConnectMethodType.value;
-  });
-
-  // 服务端提供通用 native 入口，具体应用完全由全局应用配置决定。
-  if (isDesktopRuntime() && selectedConnectMethodType.value === "native") {
-    if (!configuredClients.value.length) return [];
-
-    const nativeMethod = methods[0];
-
-    return nativeMethod
-      ? configuredClients.value.map((client) => ({
-          label: client.display_name || client.name,
-          value: createLocalApplicationConnectMethod(nativeMethod.value, client.name)
-        }))
-      : [];
-  }
-
-  return methods.map((method) => ({
-    label: method.label || method.value,
-    value: method.value
-  }));
-});
-
-const showCharsetOption = computed(() => ["ssh", "telnet"].includes((props.protocol || "").toLowerCase()));
-const showBackspaceOption = computed(() => showCharsetOption.value);
-const showDisableAutoHashOption = computed(() => ["mysql", "mariadb"].includes((props.protocol || "").toLowerCase()));
-const showResolutionOption = computed(() => (props.protocol || "").toLowerCase() === "rdp");
-const showUseSysDBAOption = computed(() => (props.protocol || "").toLowerCase() === "oracle");
-const showAdvancedOptions = computed(
-  () =>
-    showCharsetOption.value ||
-    showBackspaceOption.value ||
-    showDisableAutoHashOption.value ||
-    showResolutionOption.value ||
-    showUseSysDBAOption.value
-);
-
-const charsetItems = computed(() => [
-  { label: t("Setting.Default"), value: "default" },
-  { label: "UTF-8", value: "utf8" },
-  { label: "GBK", value: "gbk" },
-  { label: "GB2312", value: "gb2312" },
-  { label: "IOS-8859-1", value: "ios-8859-1" }
-]);
-const resolutionItems = computed(() => [
-  { label: t("Setting.Auto"), value: "auto" },
-  { label: "1024x768", value: "1024x768" },
-  { label: "1366x768", value: "1366x768" },
-  { label: "1600x900", value: "1600x900" },
-  { label: "1920x1080", value: "1920x1080" }
-]);
-
-const selectedCharset = computed<CharsetType>({
-  get: () => (localConnectOptions.value.charset || "default") as CharsetType,
-  set: (value) => updateConnectOption("charset", value || "default")
-});
-const selectedBackspaceAsCtrlH = computed<boolean>({
-  get: () => !!localConnectOptions.value.backspaceAsCtrlH,
-  set: (value) => updateConnectOption("backspaceAsCtrlH", !!value)
-});
-const selectedDisableAutoHash = computed<boolean>({
-  get: () => !!localConnectOptions.value.disableautohash,
-  set: (value) => updateConnectOption("disableautohash", !!value)
-});
-const selectedUseSysDBA = computed<boolean>({
-  get: () => !!localConnectOptions.value.use_sysdba,
-  set: (value) => updateConnectOption("use_sysdba", !!value)
-});
-const selectedResolution = computed<ResolutionType>({
-  get: () => (localConnectOptions.value.resolution || "auto") as ResolutionType,
-  set: (value) => {
-    const resolved = (value || "auto") as ResolutionType;
-    updateConnectOption("resolution", resolved);
-    updateConnectOption("rdp_resolution", resolved);
-  }
-});
-
-watch(
-  () => [props.protocol, showAdvancedOptions.value] as const,
-  () => {
-    advancedOptionOpen.value = false;
-  },
-  { immediate: true }
-);
-
-watch(
-  () => [availableConnectMethods.value, props.connectMethod] as const,
-  () => {
-    if (availableConnectMethods.value.length === 0) {
-      selectedConnectMethodType.value = "";
-      return;
-    }
-
-    if (props.connectMethod?.startsWith("native_app:")) {
-      selectedConnectMethodType.value = "native";
-      if (!connectMethodTabItems.value.some((item) => item.value === props.connectMethod)) {
-        emits("update:connectMethod", connectMethodTabItems.value[0]?.value || "");
-      }
-      return;
-    }
-
-    const current = availableConnectMethods.value.find((method) => method.value === props.connectMethod);
-    if (current) {
-      selectedConnectMethodType.value = categoryOfConnectMethod(current);
-      return;
-    }
-
-    if (!selectedConnectMethodType.value) {
-      selectedConnectMethodType.value = categoryOfConnectMethod(availableConnectMethods.value[0]);
-    }
-  },
-  { deep: true, immediate: true }
-);
-
-function categoryOfConnectMethod(method: any) {
-  if (String(method?.value || "").startsWith("native_app:")) return "native";
-  if (isBuiltinConnectMethod(method)) return "builtin";
-
-  const type = String(method?.type || "").toLowerCase();
-
-  if (type === "web" || type === "builtin") return "builtin";
-  if (["applet", "virtual_app", "remote_app", "remoteapp"].includes(type)) return "remote_app";
-  if (["native", "client", "local", "desktop"].includes(type)) return "native";
-  return type || "builtin";
-}
-
-function isBuiltinConnectMethod(method: any) {
-  return ["web_cli_native", "web_proxy_native"].includes(String(method?.value || "").toLowerCase());
-}
-
-function selectConnectMethodType(type: string | number) {
-  selectedConnectMethodType.value = String(type);
-
-  localConnectMethod.value = connectMethodTabItems.value[0]?.value || "";
-}
-
-async function openProtocolApplicationSettings() {
-  const protocol = (props.protocol || "").toLowerCase();
-  const routeProtocol = protocol === "postgresql" ? "pg" : protocol;
-  if (!routeProtocol) return;
-
-  const path = `/setting/application/${encodeURIComponent(routeProtocol)}`;
-  await useSettingsWindow().openSettings(path);
-}
-
-const accountItems = computed(() => {
-  // web 类型的资产需要保留匿名账号，其它类型不展示 @ANON
-  const filteredAnonymous = props.accounts.filter((a: PermedAccount) => {
-    return a.alias !== "@ANON" || props.assetType?.toLowerCase() === "web";
-  });
-
-  const hosted = filteredAnonymous
-    .filter((acc: PermedAccount) => !acc.alias.includes("@"))
-    .map((acc: PermedAccount) => ({
-      label: acc.name,
-      value: acc.name
-    }));
-
-  const manual = filteredAnonymous
-    .filter((acc: PermedAccount) => acc.alias.includes("@"))
-    .map((acc: PermedAccount) => {
-      if (acc.alias === "@USER") {
-        const base = t("Account.DynamicUser");
-        const username = acc.username || "";
-        const text = username ? `${base}(${username})` : base;
-        return { label: text, value: text };
-      }
-
-      if (acc.alias === "@INPUT") {
-        const text = t("Account.ManualInput");
-        return { label: text, value: text };
-      }
-
-      if (acc.alias === "@ANON") {
-        const text = t("Account.Anonymous");
-        return { label: text, value: "@ANON" };
-      }
-
-      return { label: acc.name, value: acc.name };
-    });
-
-  const items: SelectMenuItem[] = [];
-
-  if (hosted.length > 0) {
-    items.push({ type: "label", label: t("Account.Hosted") });
-    items.push(...hosted);
-  }
-
-  if (manual.length > 0) {
-    if (items.length > 0) items.push({ type: "separator" });
-    items.push({ type: "label", label: t("Account.Manual") });
-    items.push(...manual);
-  }
-
-  return items;
-});
-
-const selectedProtocol = computed<string>({
-  get: () => props.protocol,
-  set: (v: string) => emits("update:protocol", v ?? "")
-});
-
-const selectedAccount = computed<string>({
-  get: () => props.account,
-  set: (v: string) => emits("update:account", v ?? "")
-});
-
-function handleSpecialAccount(v: string) {
-  showManualInputArea.value = false;
-  showDynamicUserArea.value = false;
-  manualPasswordVisible.value = false;
-  dynamicPasswordVisible.value = false;
-
-  if (v === "手动输入" || v === "Manual input") {
-    showManualInputArea.value = true;
-  }
-
-  if (v.includes("同名账号") || v.includes("Dynamic user")) {
-    showDynamicUserArea.value = true;
-  }
-}
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-4" :class="{ 'connect-form--island': modernIsland }">
     <div class="protocol-tabs-track">
       <div class="protocol-tabs">
         <button
@@ -446,270 +173,27 @@ function handleSpecialAccount(v: string) {
       </div>
     </div>
 
-    <UFormField :label="t('EditModal.OptionalAccount')" :ui="formFieldUi" size="md">
-      <USelectMenu
-        v-model="selectedAccount"
-        :items="accountItems"
-        value-key="value"
-        label-key="label"
-        :ui="{
-          base: controlBaseUi
-        }"
-        icon="i-lucide-id-card"
-        trailing-icon="i-lucide-chevrons-up-down"
-        size="md"
-        class="w-full"
+    <div class="flex flex-col gap-4">
+      <ConnectAccountFields
+        v-model:account="selectedAccount"
+        v-model:manual-username="localManualUsername"
+        v-model:manual-password="localManualPassword"
+        v-model:dynamic-password="localDynamicPassword"
+        v-model:remember-secret="localRememberSecret"
+        :accounts="accounts"
+        :asset-type="assetType"
       />
-    </UFormField>
-
-    <template v-if="showManualInputArea">
-      <div class="credentials-fields">
-        <UFormField :label="t('Account.Username')" :ui="formFieldUi" size="md">
-          <UInput
-            v-model="localManualUsername"
-            autocapitalize="none"
-            autocorrect="off"
-            :placeholder="t('Account.Username')"
-            :ui="{ base: controlBaseUi }"
-            icon="i-lucide-user-round"
-            size="md"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField :label="t('Account.Password')" :ui="formFieldUi" size="md">
-          <UFieldGroup class="w-full">
-            <UInput
-              v-model="localManualPassword"
-              :type="manualPasswordVisible ? 'text' : 'password'"
-              autocapitalize="none"
-              autocorrect="off"
-              :placeholder="t('Account.Password')"
-              :ui="{ base: controlBaseUi, trailing: 'pe-1' }"
-              icon="i-lucide-lock-keyhole"
-              size="md"
-              class="min-w-0 flex-1"
-            >
-              <template #trailing>
-                <UButton
-                  type="button"
-                  :icon="manualPasswordVisible ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                  :aria-label="t(manualPasswordVisible ? 'Account.HidePassword' : 'Account.ShowPassword')"
-                  :title="t(manualPasswordVisible ? 'Account.HidePassword' : 'Account.ShowPassword')"
-                  :aria-pressed="manualPasswordVisible"
-                  color="neutral"
-                  variant="link"
-                  size="xs"
-                  :ui="{ leadingIcon: 'size-[18px]' }"
-                  @click="manualPasswordVisible = !manualPasswordVisible"
-                />
-              </template>
-            </UInput>
-            <UButton
-              type="button"
-              :icon="localRememberSecret ? 'i-lucide-bookmark-check' : 'i-lucide-bookmark'"
-              :aria-label="t('Account.RememberPassword')"
-              :title="t('Account.RememberPassword')"
-              color="neutral"
-              variant="ghost"
-              size="md"
-              :ui="{ leadingIcon: 'size-[18px]' }"
-              class="remember-secret-button"
-              :class="{ 'remember-secret-button-active': localRememberSecret }"
-              @click="localRememberSecret = !localRememberSecret"
-            />
-          </UFieldGroup>
-        </UFormField>
-      </div>
-    </template>
-
-    <template v-if="showDynamicUserArea">
-      <div class="credentials-fields">
-        <UFormField :label="t('Account.Password')" :ui="formFieldUi" size="md">
-          <UFieldGroup class="w-full">
-            <UInput
-              v-model="localDynamicPassword"
-              :type="dynamicPasswordVisible ? 'text' : 'password'"
-              autocapitalize="none"
-              autocorrect="off"
-              :placeholder="t('Account.Password')"
-              :ui="{ base: controlBaseUi, trailing: 'pe-1' }"
-              icon="i-lucide-lock-keyhole"
-              size="md"
-              class="min-w-0 flex-1"
-            >
-              <template #trailing>
-                <UButton
-                  type="button"
-                  :icon="dynamicPasswordVisible ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                  :aria-label="t(dynamicPasswordVisible ? 'Account.HidePassword' : 'Account.ShowPassword')"
-                  :title="t(dynamicPasswordVisible ? 'Account.HidePassword' : 'Account.ShowPassword')"
-                  :aria-pressed="dynamicPasswordVisible"
-                  color="neutral"
-                  variant="link"
-                  size="xs"
-                  :ui="{ leadingIcon: 'size-[18px]' }"
-                  @click="dynamicPasswordVisible = !dynamicPasswordVisible"
-                />
-              </template>
-            </UInput>
-            <UButton
-              type="button"
-              :icon="localRememberSecret ? 'i-lucide-bookmark-check' : 'i-lucide-bookmark'"
-              :aria-label="t('Account.RememberPassword')"
-              :title="t('Account.RememberPassword')"
-              color="neutral"
-              variant="ghost"
-              size="md"
-              :ui="{ leadingIcon: 'size-[18px]' }"
-              class="remember-secret-button"
-              :class="{ 'remember-secret-button-active': localRememberSecret }"
-              @click="localRememberSecret = !localRememberSecret"
-            />
-          </UFieldGroup>
-        </UFormField>
-      </div>
-    </template>
-
-    <UFormField :label="t('EditModal.ConnectMethod')" :ui="formFieldUi" size="md">
-      <div class="rounded-[4px] border border-[var(--app-border)] bg-[var(--app-input-bg)] shadow-sm">
-        <UTabs
-          v-if="connectMethodTypeItems.length > 1"
-          :model-value="selectedConnectMethodType"
-          :items="connectMethodTypeItems"
-          value-key="value"
-          label-key="label"
-          color="neutral"
-          variant="link"
-          :content="false"
-          :ui="{
-            root: 'p-0',
-            list: 'p-0 justify-start',
-            trigger: 'py-2'
-          }"
-          class="w-full mb-2 connect-method-type-tabs"
-          @update:model-value="selectConnectMethodType"
-        />
-        <div class="p-2 pt-1">
-          <URadioGroup
-            v-if="connectMethodTabItems.length"
-            v-model="localConnectMethod"
-            :items="connectMethodTabItems"
-            value-key="value"
-            label-key="label"
-            orientation="horizontal"
-            :ui="{
-              fieldset: 'flex flex-wrap gap-2',
-              item: 'rounded-[3px] px-2 py-1.5 hover:bg-[var(--app-hover-soft)]'
-            }"
-          />
-          <div
-            v-else-if="isDesktopRuntime() && selectedConnectMethodType === 'native'"
-            class="flex flex-col items-center gap-2 py-3 text-center"
-          >
-            <p class="text-sm text-[var(--app-text-muted)]">
-              {{ t("Setting.NoClientConfigured") }}
-            </p>
-            <UButton
-              type="button"
-              icon="i-lucide-settings"
-              color="neutral"
-              variant="outline"
-              size="sm"
-              :label="t('Setting.ConfigureClient')"
-              @click="openProtocolApplicationSettings"
-            />
-          </div>
-        </div>
-      </div>
-    </UFormField>
-
-    <div>
-      <button
-        type="button"
-        :disabled="!showAdvancedOptions"
-        class="flex w-full items-center justify-between border-b border-gray-200 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10"
-        @click="advancedOptionOpen = !advancedOptionOpen"
-      >
-        <span>{{ t("Common.Advanced") }}</span>
-        <UIcon
-          name="i-lucide-chevron-down"
-          class="size-4 transition-transform"
-          :class="advancedOptionOpen ? 'rotate-180' : ''"
-        />
-      </button>
-
-      <div v-if="showAdvancedOptions && advancedOptionOpen" class="space-y-3 px-3 py-3">
-        <UFormField v-if="showCharsetOption" :label="t('Setting.Charset')" :ui="formFieldUi" size="sm">
-          <USelect
-            v-model="selectedCharset"
-            :items="charsetItems"
-            :ui="{ base: controlBaseUi }"
-            trailing-icon="i-lucide-chevrons-up-down"
-            size="md"
-            class="w-full"
-          />
-        </UFormField>
-
-        <div v-if="showBackspaceOption" class="flex items-center justify-between">
-          <span class="text-sm">{{ t("Setting.TerminalBackspace") }}</span>
-          <USwitch v-model="selectedBackspaceAsCtrlH" />
-        </div>
-
-        <div v-if="showDisableAutoHashOption" class="flex items-center justify-between">
-          <span class="text-sm">Disable auto completion</span>
-          <USwitch v-model="selectedDisableAutoHash" />
-        </div>
-
-        <div v-if="showUseSysDBAOption" class="flex items-center justify-between">
-          <span class="text-sm">SYSDBA</span>
-          <USwitch v-model="selectedUseSysDBA" />
-        </div>
-
-        <UFormField v-if="showResolutionOption" :label="t('Setting.Resolution')" :ui="formFieldUi" size="sm">
-          <USelect
-            v-model="selectedResolution"
-            :items="resolutionItems"
-            :ui="{ base: controlBaseUi }"
-            trailing-icon="i-lucide-chevrons-up-down"
-            size="md"
-            class="w-full"
-          />
-        </UFormField>
-      </div>
+      <ConnectMethodPicker
+        v-model:connect-method="localConnectMethod"
+        :protocol="selectedProtocol"
+        :methods="availableConnectMethods"
+      />
+      <ConnectAdvancedOptions v-model:connect-options="localConnectOptions" :protocol="selectedProtocol" />
     </div>
   </div>
 </template>
 
 <style scoped>
-.credentials-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.remember-secret-button {
-  height: 32px;
-  background: var(--app-input-bg);
-  color: var(--app-text-muted);
-  box-shadow: inset 0 0 0 1px var(--app-border);
-}
-
-.remember-secret-button:hover {
-  background: var(--app-hover-soft);
-  color: var(--app-fg);
-}
-
-.remember-secret-button-active {
-  background: var(--app-selected-soft);
-  color: var(--theme-accent);
-}
-
-.remember-secret-button-active:hover {
-  background: var(--app-selected-soft);
-  color: var(--theme-accent);
-}
-
 .protocol-tabs-track {
   display: flex;
   justify-content: flex-start;
@@ -759,14 +243,20 @@ function handleSpecialAccount(v: string) {
   color: var(--app-fg);
 }
 
-:deep(.connect-method-type-tabs [data-slot="list"]) {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-  width: 100%;
+.connect-form--island .protocol-tab-button {
+  height: 32px;
+  padding: 0 14px;
+  letter-spacing: 0.04em;
 }
 
-:deep(.connect-method-type-tabs [data-slot="trigger"]) {
-  cursor: pointer;
+.connect-form--island .protocol-tabs-track {
+  border-bottom-color: color-mix(in srgb, var(--theme-fg) 14%, transparent);
+}
+
+.connect-form--island .protocol-tab-button-active::after {
+  right: 8px;
+  left: 8px;
+  border-radius: 2px 2px 0 0;
+  background: var(--theme-accent);
 }
 </style>

@@ -7,6 +7,7 @@ import {
   appTerminalTheme,
   getDefaultTerminalConfig,
   registerLocalShellTerminalSession,
+  syncXtermBackground,
   unregisterLocalShellTerminalSession
 } from "#koko";
 import { desktopLocalShell } from "~/shared/desktop/bridge";
@@ -56,6 +57,7 @@ async function start() {
   });
   instance.loadAddon(fitAddon);
   instance.open(containerRef.value);
+  syncXtermBackground(instance);
   terminal.value = instance;
   fitTerminal();
 

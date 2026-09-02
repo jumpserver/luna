@@ -10,7 +10,7 @@ import type { TerminalCommandEnvelope } from "./envelope";
 import type { TerminalIncomingMessage } from "./protocol";
 import { markKokoTerminalAiSessionInfoReady } from "./useTerminalAiSessions";
 import { HOST_MESSAGE_TYPE, MESSAGE_TYPE, ZMODEM_ACTION_TYPE } from "@jumpserver/connectors-core";
-import { terminalTheme } from "../../utils/terminalTheme";
+import { applyXtermTheme, terminalTheme } from "../../utils/terminalTheme";
 import { updateIcon } from "../../utils/terminalUtils";
 import {
   buildJSONEnvelope,
@@ -279,7 +279,9 @@ export function createKokoTerminalMessageHandlers(options: {
       const effectiveThemeName = options.queryTerminalThemeName.value || sessionInfo.themeName;
       if (effectiveThemeName && !options.followAppTheme.value) {
         nextTick(() => {
-          if (options.terminalRef.value) options.terminalRef.value.options.theme = terminalTheme(effectiveThemeName);
+          if (options.terminalRef.value) {
+            applyXtermTheme(options.terminalRef.value, terminalTheme(effectiveThemeName));
+          }
         });
       }
 
