@@ -33,7 +33,7 @@ function portFromRendererUrl(value) {
 
 const sharedWeb = process.argv.includes("--web");
 const requestedRendererUrl = process.env.JMS_ELECTRON_RENDERER_URL;
-const rendererHost = "127.0.0.1";
+const rendererHost = "localhost";
 const rendererPort = requestedRendererUrl
   ? portFromRendererUrl(requestedRendererUrl)
   : await findAvailablePort(sharedWeb ? 3000 : 0);

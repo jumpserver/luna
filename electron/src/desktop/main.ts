@@ -120,6 +120,13 @@ async function resolveChenEndpoint() {
     return origin;
   }
 
+  if (isDevelopment) {
+    const origin = normalizedHttpOrigin(rendererUrl, "Electron renderer");
+    allowedChenOrigins.add(origin);
+    electronLog.info(`chen endpoint ${origin}`);
+    return origin;
+  }
+
   const siteOrigin = normalizedHttpOrigin(authService.currentSession().origin, "JumpServer site");
   const site = parseUrl(siteOrigin);
   if (["localhost", "127.0.0.1", "::1"].includes(site.hostname)) {
