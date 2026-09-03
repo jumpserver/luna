@@ -85,10 +85,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_APP_SPECIFIC_PASSWORD: >-
-        ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD
-        || secrets.APPLE_ID_PASSWORD
-        || secrets.APPLE_PASSWORD }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
     steps:

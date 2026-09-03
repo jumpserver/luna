@@ -25,8 +25,8 @@ if [ -z "$APPLE_ID" ]; then
   exit 1
 fi
 
-if [ -z "$APPLE_APP_SPECIFIC_PASSWORD" ]; then
-  echo "Error: APPLE_APP_SPECIFIC_PASSWORD, APPLE_ID_PASSWORD, or APPLE_PASSWORD secret is required for notarization"
+if [ -z "$APPLE_ID_PASSWORD" ]; then
+  echo "Error: APPLE_ID_PASSWORD environment variable is required for notarization"
   exit 1
 fi
 

@@ -21,7 +21,7 @@ const stagedResources = path.join(repositoryRoot, ".electron-resources");
 const executableName = "jumpserver";
 const helperEntitlements = path.join(electronRoot, "assets", "entitlements", "ssh-helper.plist");
 const appleId = process.env.APPLE_ID || "";
-const appleIdPassword = process.env.APPLE_APP_SPECIFIC_PASSWORD || "";
+const appleIdPassword = process.env.APPLE_ID_PASSWORD || "";
 const appleTeamId = process.env.APPLE_TEAM_ID || "";
 const macSigningIdentity = process.env.CSC_NAME || "";
 const macSigningAvailable = process.platform === "darwin" && Boolean(macSigningIdentity);
