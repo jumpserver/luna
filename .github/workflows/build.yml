@@ -32,13 +32,13 @@ jobs:
     name: validate shared application
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           run_install: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "24"
           cache: pnpm
@@ -89,13 +89,13 @@ jobs:
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           run_install: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "24"
           cache: pnpm
@@ -191,7 +191,7 @@ jobs:
         run: pnpm --dir electron make -- ${{ matrix.forge_args }}
 
       - name: Upload packaged artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: desktop-${{ matrix.name }}
           if-no-files-found: error
@@ -216,11 +216,39 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: desktop-*
           path: release-assets
           merge-multiple: true
+
+      - name: Create stable download aliases
+        shell: bash
+        run: |
+          version="${VERSION#v}"
+
+          mapfile -d '' windows_installers < <(find release-assets -type f -iname '*setup*.exe' -print0)
+          if [ "${#windows_installers[@]}" -ne 1 ]; then
+            echo "Expected one Windows setup executable, found ${#windows_installers[@]}"
+            exit 1
+          fi
+
+          mapfile -d '' macos_arm64_installers < <(find release-assets -type f -iname '*-arm64.dmg' -print0)
+          if [ "${#macos_arm64_installers[@]}" -ne 1 ]; then
+            echo "Expected one macOS arm64 DMG, found ${#macos_arm64_installers[@]}"
+            exit 1
+          fi
+
+          mkdir -p release-assets/download
+          cp "${windows_installers[0]}" "release-assets/download/Client_${version}_x64-setup.exe"
+          cp "${macos_arm64_installers[0]}" "release-assets/download/Client_${version}_aarch64.dmg"
+          (
+            cd release-assets/download
+            sha256sum \
+              "Client_${version}_x64-setup.exe" \
+              "Client_${version}_aarch64.dmg" \
+              > "Client_${version}_SHA256SUMS"
+          )
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
@@ -229,4 +257,4 @@ jobs:
           files: release-assets/**/*
           fail_on_unmatched_files: true
           draft: true
-          prerelease: false
+          prerelease: ${{ contains(env.VERSION, '-') }}

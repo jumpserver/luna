@@ -15,9 +15,9 @@ if (!versionInput) {
   process.exit(1);
 }
 
-// Remove 'v' prefix if present, then remove '-rcN' suffix
-let version = versionInput.replace(/^v/, "");
-version = version.replace(/-rc\d+$/, "");
+// Keep the complete SemVer value so release candidates remain distinct from
+// the final release in native package metadata and file names.
+const version = versionInput.replace(/^v/, "");
 console.log(`Updating version to: ${version}`);
 
 // Update package.json

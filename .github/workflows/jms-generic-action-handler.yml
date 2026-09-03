@@ -3,7 +3,7 @@ on:
   pull_request:
     types: [opened, synchronize, closed]
   release:
-    types: [created]
+    types: [created, published]
 
 name: JumpServer repos generic handler
 
@@ -34,3 +34,66 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PRIVATE_TOKEN }}
           I18N_TOKEN: ${{ secrets.I18N_TOKEN }}
+
+  sync_client_downloads:
+    if: github.event_name == 'release' && github.event.action == 'published'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Download client release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLIENT_VERSION: ${{ github.event.release.tag_name }}
+        run: |
+          version="${CLIENT_VERSION#v}"
+          mkdir -p upload/download/public
+          gh release download "$CLIENT_VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "Client_${version}_*" \
+            --dir upload/download/public
+          test -f "upload/download/public/Client_${version}_x64-setup.exe"
+          test -f "upload/download/public/Client_${version}_aarch64.dmg"
+          test -f "upload/download/public/Client_${version}_SHA256SUMS"
+
+      - name: Install ossutil
+        run: |
+          set -o pipefail
+          curl -fsSL https://gosspublic.alicdn.com/ossutil/install.sh | sudo bash
+
+      - name: Upload client downloads
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+        run: |
+          test -n "$OSS_ACCESS_KEY_ID"
+          test -n "$OSS_ACCESS_KEY_SECRET"
+          ossutil config \
+            -e oss-cn-beijing.aliyuncs.com \
+            -i "$OSS_ACCESS_KEY_ID" \
+            -k "$OSS_ACCESS_KEY_SECRET" \
+            -L EN \
+            -c ossutilconfig
+          ossutil sync upload/ oss://jms-pkg/ -c ossutilconfig
+
+  notify_client_release:
+    needs: sync_client_downloads
+    if: github.event_name == 'release' && github.event.action == 'published'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify docker-web
+        env:
+          GH_TOKEN: ${{ secrets.PRIVATE_TOKEN }}
+          CLIENT_VERSION: ${{ github.event.release.tag_name }}
+        run: |
+          jq -n \
+            --arg version "${CLIENT_VERSION#v}" \
+            '{event_type: "client-released", client_payload: {version: $version}}' \
+            > dispatch.json
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/jumpserver/docker-web/dispatches \
+            --data @dispatch.json
