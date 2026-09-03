@@ -100,7 +100,7 @@
     "js-untar": "^2.0.0",
     "marked": "17.0.6",
     "mitt": "^3.0.1",
-    "nuxt": "^4.4.6",
+    "nuxt": "^4.5.1",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "pretty-bytes": "^7.1.0",
