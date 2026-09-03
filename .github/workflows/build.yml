@@ -160,13 +160,29 @@ jobs:
           tar -xzf "$archive_path" -C "$assets_dir"
           node scripts/apply-brand-assets.mjs --dir "$assets_dir"
 
-      - name: Setup Apple certificate
+      - name: Import Apple certificate
         if: startsWith(matrix.os, 'macos')
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: bash scripts/setup-apple-cert.sh
+        uses: apple-actions/import-codesign-certs@v7
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
+
+      - name: Select Apple signing identity
+        if: startsWith(matrix.os, 'macos')
+        shell: bash
+        run: |
+          signing_identity=$(
+            security find-identity -v -p codesigning \
+              | sed -n 's/.*"\(Developer ID Application[^\"]*\)".*/\1/p' \
+              | head -n 1
+          )
+          if [ -z "$signing_identity" ]; then
+            echo "No Developer ID Application signing identity found."
+            exit 1
+          fi
+          echo "::add-mask::$signing_identity"
+          echo "CSC_NAME=$signing_identity" >> "$GITHUB_ENV"
 
       - name: Prepare Electron resources
         run: pnpm electron:prepare
