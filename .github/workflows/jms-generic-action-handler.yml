@@ -47,14 +47,26 @@ jobs:
           CLIENT_VERSION: ${{ github.event.release.tag_name }}
         run: |
           version="${CLIENT_VERSION#v}"
+          mkdir -p release-assets
           mkdir -p upload/download/public
           gh release download "$CLIENT_VERSION" \
             --repo "$GITHUB_REPOSITORY" \
-            --pattern "Client_${version}_*" \
-            --dir upload/download/public
-          test -f "upload/download/public/Client_${version}_x64-setup.exe"
-          test -f "upload/download/public/Client_${version}_aarch64.dmg"
-          test -f "upload/download/public/Client_${version}_SHA256SUMS"
+            --pattern "JumpServer-${version}.Setup.exe" \
+            --pattern "JumpServer-${version}-arm64.dmg" \
+            --dir release-assets
+          cp \
+            "release-assets/JumpServer-${version}.Setup.exe" \
+            "upload/download/public/Client_${version}_x64-setup.exe"
+          cp \
+            "release-assets/JumpServer-${version}-arm64.dmg" \
+            "upload/download/public/Client_${version}_aarch64.dmg"
+          (
+            cd upload/download/public
+            sha256sum \
+              "Client_${version}_x64-setup.exe" \
+              "Client_${version}_aarch64.dmg" \
+              > "Client_${version}_SHA256SUMS"
+          )
 
       - name: Install ossutil
         run: |
