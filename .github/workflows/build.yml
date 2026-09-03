@@ -46,6 +46,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: electron/ssh-helper/go.mod
+          cache-dependency-path: electron/ssh-helper/go.sum
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -84,7 +85,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_APP_SPECIFIC_PASSWORD: >-
+        ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD
+        || secrets.APPLE_ID_PASSWORD
+        || secrets.APPLE_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
     steps:
@@ -102,6 +106,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: electron/ssh-helper/go.mod
+          cache-dependency-path: electron/ssh-helper/go.sum
 
       - name: Install Linux packaging dependencies
         if: startsWith(matrix.os, 'ubuntu')
@@ -164,7 +169,7 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: pnpm setup_apple_cert
+        run: bash scripts/setup-apple-cert.sh
 
       - name: Prepare Electron resources
         run: pnpm electron:prepare
@@ -208,7 +213,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.VERSION }}
-          files: release-assets/*
+          files: release-assets/**/*
           fail_on_unmatched_files: true
           draft: true
           prerelease: false

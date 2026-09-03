@@ -5,6 +5,7 @@
   "private": true,
   "description": "Electron runtime for JumpServer",
   "author": "JumpServer",
+  "license": "MIT",
   "main": ".vite/build/bootstrap.js",
   "scripts": {
     "start": "electron-forge start",

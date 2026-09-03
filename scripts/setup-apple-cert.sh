@@ -17,7 +17,21 @@ if [ -z "$APPLE_CERTIFICATE_PASSWORD" ]; then
 fi
 
 if [ -z "$KEYCHAIN_PASSWORD" ]; then
-  echo "Error: KEYCHAIN_PASSWORD environment variable is required"
+  KEYCHAIN_PASSWORD=$(openssl rand -hex 32)
+fi
+
+if [ -z "$APPLE_ID" ]; then
+  echo "Error: APPLE_ID environment variable is required for notarization"
+  exit 1
+fi
+
+if [ -z "$APPLE_APP_SPECIFIC_PASSWORD" ]; then
+  echo "Error: APPLE_APP_SPECIFIC_PASSWORD, APPLE_ID_PASSWORD, or APPLE_PASSWORD secret is required for notarization"
+  exit 1
+fi
+
+if [ -z "$APPLE_TEAM_ID" ]; then
+  echo "Error: APPLE_TEAM_ID environment variable is required for notarization"
   exit 1
 fi
 
