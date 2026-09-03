@@ -188,6 +188,7 @@ const sqlMetadataStore = new ChenSqlMetadataStore({
 });
 const databaseCatalogLoads = new WeakMap<ChenDatabaseWorkspaceTab, symbol>();
 const databaseCatalogPendingSections = new WeakMap<ChenDatabaseWorkspaceTab, Set<ChenSchemaMetadataSection>>();
+const databaseCatalogPendingForce = new WeakMap<ChenDatabaseWorkspaceTab, boolean>();
 const tableMetadataVersions = new WeakMap<ChenDataViewConsoleTab, number>();
 
 function invalidateDatabaseCatalogs() {
@@ -195,6 +196,7 @@ function invalidateDatabaseCatalogs() {
     if (tab.kind !== "database") continue;
     databaseCatalogLoads.set(tab, Symbol("invalidated schema metadata load"));
     databaseCatalogPendingSections.delete(tab);
+    databaseCatalogPendingForce.delete(tab);
     tab.schemaOverview = null;
     tab.catalogLoaded = false;
     tab.catalogLoading = false;
@@ -982,11 +984,10 @@ function finishTableStructure(tab: ChenTableStructureWorkspaceTab, succeeded: bo
   toast.add({ title: "Table structure updated", description: tab.tableName, color: "success" });
   const source = workspace.workspaceTabState[tab.sourceTabId];
   if (source?.kind === "data-view") {
-    tableMetadataVersions.set(source, (tableMetadataVersions.get(source) || 0) + 1);
     source.tableMetadata = null;
     source.tableMetadataLoadingSections = [];
     dataView.sendDataViewAction(source, source, "refresh");
-    void loadTableMetadata(source, ["columns", "primaryKey"]);
+    void loadTableMetadata(source, ["columns", "primaryKey"], true);
   }
 }
 
@@ -1059,6 +1060,10 @@ async function loadTableMetadata(
   requestedSections: ChenTableMetadataSection[],
   force = false
 ) {
+  if (force) {
+    tableMetadataVersions.set(tab, (tableMetadataVersions.get(tab) || 0) + 1);
+    tab.tableMetadataLoadingSections = [];
+  }
   const loaded = new Set(tab.tableMetadata?.loadedSections || []);
   const loading = new Set(tab.tableMetadataLoadingSections);
   const sections = requestedSections.filter((section) => force || (!loaded.has(section) && !loading.has(section)));
@@ -1073,7 +1078,8 @@ async function loadTableMetadata(
       tab.nodeKey,
       sections,
       undefined,
-      endpointUrl.value
+      endpointUrl.value,
+      force
     );
     if ((tableMetadataVersions.get(tab) || 0) !== version) return;
     tab.tableMetadata = mergeTableMetadata(tab.tableMetadata, metadata);
@@ -1135,6 +1141,7 @@ async function loadDatabaseCatalog(
       const pending = databaseCatalogPendingSections.get(tab) || new Set<ChenSchemaMetadataSection>();
       sections.forEach((section) => pending.add(section));
       databaseCatalogPendingSections.set(tab, pending);
+      if (force) databaseCatalogPendingForce.set(tab, true);
     }
     return;
   }
@@ -1150,7 +1157,8 @@ async function loadDatabaseCatalog(
         tab.nodeKey,
         sections,
         undefined,
-        endpointUrl.value
+        endpointUrl.value,
+        force
       );
       if (databaseCatalogLoads.get(tab) !== load) return;
       tab.schemaOverview = mergeSchemaOverview(tab.schemaOverview, overview);
@@ -1166,8 +1174,10 @@ async function loadDatabaseCatalog(
     if (databaseCatalogLoads.get(tab) === load) {
       tab.catalogLoading = false;
       const pending = [...(databaseCatalogPendingSections.get(tab) || [])];
+      const pendingForce = databaseCatalogPendingForce.get(tab) || false;
       databaseCatalogPendingSections.delete(tab);
-      if (pending.length) void loadDatabaseCatalog(tab, false, pending);
+      databaseCatalogPendingForce.delete(tab);
+      if (pending.length) void loadDatabaseCatalog(tab, pendingForce, pending);
     }
   }
 }

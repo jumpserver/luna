@@ -185,7 +185,8 @@ export async function fetchChenSchemaOverview(
   nodeKey: string,
   sections: ChenSchemaMetadataSection[] = ["tables", "views"],
   fetchImpl: typeof fetch = fetch,
-  endpointUrl?: string
+  endpointUrl?: string,
+  force = false
 ): Promise<ChenSchemaOverview> {
   const response = await fetchImpl(chenPath("/api/resources/metadata/schema-overview", endpointUrl), {
     method: "POST",
@@ -194,7 +195,7 @@ export async function fetchChenSchemaOverview(
       ...buildHeaders(chenToken, getWebApiMutationHeaders()),
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ nodeKey, sections })
+    body: JSON.stringify({ nodeKey, sections, ...(force ? { force: true } : {}) })
   });
 
   return parseSchemaOverview(await readJson<unknown>(response));
@@ -205,7 +206,8 @@ export async function fetchChenTableMetadata(
   nodeKey: string,
   sections: ChenTableMetadataSection[] = ["columns", "primaryKey"],
   fetchImpl: typeof fetch = fetch,
-  endpointUrl?: string
+  endpointUrl?: string,
+  force = false
 ): Promise<ChenTableMetadata> {
   const response = await fetchImpl(chenPath("/api/resources/metadata/table", endpointUrl), {
     method: "POST",
@@ -214,7 +216,7 @@ export async function fetchChenTableMetadata(
       ...buildHeaders(chenToken, getWebApiMutationHeaders()),
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ nodeKey, sections })
+    body: JSON.stringify({ nodeKey, sections, ...(force ? { force: true } : {}) })
   });
 
   return parseTableMetadata(await readJson<unknown>(response));
