@@ -18,6 +18,7 @@ const electronRoot = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(electronRoot, "..");
 const iconsRoot = path.join(electronRoot, "assets", "icons");
 const stagedResources = path.join(repositoryRoot, ".electron-resources");
+const executableName = "jumpserver";
 const helperEntitlements = path.join(electronRoot, "assets", "entitlements", "ssh-helper.plist");
 const appleId = process.env.APPLE_ID || "";
 const appleIdPassword = process.env.APPLE_APP_SPECIFIC_PASSWORD || "";
@@ -115,6 +116,7 @@ const config: ForgeConfig = {
   packagerConfig: {
     appBundleId: "com.jumpserver.client",
     appCategoryType: "public.app-category.developer-tools",
+    executableName,
     asar: {
       unpack: "**/node_modules/node-pty/**"
     },
@@ -175,18 +177,22 @@ const config: ForgeConfig = {
       windowsSign: windowsSignOptions
     }),
     new MakerWix({
+      exe: `${executableName}.exe`,
+      icon: path.join(iconsRoot, "icon.ico"),
       language: 1033,
       manufacturer: "JumpServer",
       windowsSign: windowsSignOptions
     }),
     new MakerDeb({
       options: {
+        bin: executableName,
         categories: ["Development"],
         icon: path.join(iconsRoot, "icon.png")
       }
     }),
     new MakerRpm({
       options: {
+        bin: executableName,
         categories: ["Development"],
         icon: path.join(iconsRoot, "icon.png")
       }
