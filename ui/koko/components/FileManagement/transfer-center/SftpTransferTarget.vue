@@ -6,8 +6,10 @@ import SftpTransferFile from "#koko/components/FileManagement/transfer-center/Sf
 import {
   canPauseTransferTasks,
   canResumeTransferTasks,
+  canRetryTransferTask,
   getTargetTransferError,
   sftpTransferConflictError,
+  sftpTransferErrorText,
   sftpTransferTerminalStatuses,
   targetHasConflictTasks
 } from "#koko/composables/sftp/file-manager/transfer-center/useSftpTransferCenterSelectors";
@@ -40,11 +42,11 @@ const conflictTask = computed(() =>
   props.target.allTasks.find((task) => task.status === "paused" && task.error === sftpTransferConflictError)
 );
 const hasConflict = computed(() => targetHasConflictTasks(props.target.allTasks));
-const error = computed(() => getTargetTransferError(props.target.allTasks));
+const error = computed(() => sftpTransferErrorText(getTargetTransferError(props.target.allTasks) || "", t));
 const canPause = computed(() => canPauseTransferTasks(props.target.allTasks));
 const canResume = computed(() => canResumeTransferTasks(props.target.allTasks));
 const canCancel = computed(() => props.target.allTasks.some((task) => !sftpTransferTerminalStatuses.has(task.status)));
-const canRetry = computed(() => props.target.allTasks.some((task) => task.status === "failed"));
+const canRetry = computed(() => props.target.allTasks.some(canRetryTransferTask));
 
 function statusLabel(value: SftpTransferGroupStatus): string {
   return t(`FileTransfer.Status.${value}`);

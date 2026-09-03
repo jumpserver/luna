@@ -55,6 +55,7 @@ const props = defineProps<{
   highlightedNames?: string[];
   focused?: boolean;
   aiTarget?: KokoFileAiTarget;
+  canSend?: boolean;
   sendPeerDirection?: "left" | "right";
 }>();
 const emit = defineEmits<{
@@ -109,9 +110,6 @@ const {
 } = selection;
 const pathSegments = computed(() => manager.currentPath.value.split("/").filter(Boolean));
 const transferableEntries = computed(() => transferEntriesFromSelection(selectedEntries.value));
-const selectedSize = computed(() =>
-  transferableEntries.value.reduce((total, entry) => total + Math.max(0, Number(entry.size) || 0), 0)
-);
 const fallbackAiTargetId = createKokoFileAiMessageId("file-target");
 const aiTargetId = computed(() => props.aiTarget?.targetId || props.context?.tabId || fallbackAiTargetId);
 const aiOwnerId = computed(() => props.aiTarget?.ownerId || aiTargetId.value);
@@ -468,19 +466,21 @@ defineExpose({
         @open="openDirectory"
         @context="openContextMenu"
         @drag-start="onDragStart"
-      />
-      <SftpPaneSelectionBar
-        :selected-count="selectedEntries.length"
-        :transferable-count="transferableEntries.length"
-        :selected-bytes="selectedSize"
-        :can-send="canTransferFiles"
-        :can-download="selectedEntries.length === 1"
-        :send-peer-direction="sendPeerDirection"
-        @send="requestSend"
-        @download="downloadSelected"
-        @remove="requestDelete()"
-        @clear="clearSelection"
-      />
+      >
+        <template #footer>
+          <SftpPaneSelectionBar
+            :selected-count="selectedEntries.length"
+            :transferable-count="transferableEntries.length"
+            :can-send="canTransferFiles && canSend"
+            :can-download="selectedEntries.length === 1"
+            :send-peer-direction="sendPeerDirection"
+            @send="requestSend"
+            @download="downloadSelected"
+            @remove="requestDelete()"
+            @clear="clearSelection"
+          />
+        </template>
+      </SftpPaneFileTable>
     </div>
     <SftpPaneDropOverlay
       :active="transferDropActive"

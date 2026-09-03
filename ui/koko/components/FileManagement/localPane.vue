@@ -37,11 +37,13 @@ const props = withDefaults(
   defineProps<{
     highlightedNames?: string[];
     focused?: boolean;
+    canSend?: boolean;
     sendPeerDirection?: "left" | "right";
   }>(),
   {
     highlightedNames: () => [],
-    focused: false
+    focused: false,
+    canSend: false
   }
 );
 const emit = defineEmits<{
@@ -139,9 +141,6 @@ const {
   toggleAllVisible
 } = selection;
 const transferableEntries = computed(() => transferEntriesFromSelection(selectedEntries.value));
-const selectedSize = computed(() =>
-  transferableEntries.value.reduce((total, entry) => total + Math.max(0, Number(entry.size) || 0), 0)
-);
 const transferDropActive = computed(
   () =>
     isCrossEndpointTransferDrag(activeTransferDragSourceId.value, LOCAL_ENDPOINT_ID) &&
@@ -496,17 +495,19 @@ defineExpose({
         @open="changeDirectory"
         @context="openContextMenu"
         @drag-start="onDragStart"
-      />
-      <SftpPaneSelectionBar
-        :selected-count="selectedEntries.length"
-        :transferable-count="transferableEntries.length"
-        :selected-bytes="selectedSize"
-        :can-send="transferableEntries.length > 0"
-        :send-peer-direction="sendPeerDirection"
-        @send="requestSend"
-        @remove="requestDelete()"
-        @clear="clearSelection"
-      />
+      >
+        <template #footer>
+          <SftpPaneSelectionBar
+            :selected-count="selectedEntries.length"
+            :transferable-count="transferableEntries.length"
+            :can-send="canSend && transferableEntries.length > 0"
+            :send-peer-direction="sendPeerDirection"
+            @send="requestSend"
+            @remove="requestDelete()"
+            @clear="clearSelection"
+          />
+        </template>
+      </SftpPaneFileTable>
     </div>
     <SftpPaneDropOverlay
       :active="transferDropActive"

@@ -6,8 +6,12 @@ import {
   failedTargetCount,
   finishedTransferCount,
   sftpTransferGroupStatus,
-  sftpTransferProgress
+  sftpTransferProgress,
+  sftpTransferProgressColor,
+  sftpTransferStatusClass
 } from "#koko/utils/sftpTransferSummary";
+import statusFooterComponent from "../../../components/Workspace/statusFooter.vue?raw";
+import defaultLayout from "../../../layouts/default.vue?raw";
 import fileManagementStyles from "../../assets/css/sftp-file-management.scss?inline";
 import transferCenterStyles from "../../assets/css/sftp-transfer-center.scss?inline";
 import fileManagementIndex from "../../components/FileManagement/index.vue?raw";
@@ -19,9 +23,8 @@ import filePaneTable from "../../components/FileManagement/pane/SftpPaneFileTabl
 import filePaneSelectionBar from "../../components/FileManagement/pane/SftpPaneSelectionBar.vue?raw";
 import remotePaneToolbar from "../../components/FileManagement/pane/SftpRemotePaneToolbar.vue?raw";
 import transferCenterComponent from "../../components/FileManagement/SftpTransferCenter.vue?raw";
-import transferBatchComponent from "../../components/FileManagement/transfer-center/SftpTransferBatch.vue?raw";
+import transferActionsComponent from "../../components/FileManagement/transfer-center/SftpTransferActions.vue?raw";
 import transferFileComponent from "../../components/FileManagement/transfer-center/SftpTransferFile.vue?raw";
-import transferTargetComponent from "../../components/FileManagement/transfer-center/SftpTransferTarget.vue?raw";
 import connectModalComponent from "../../components/FileManagement/workspace/SftpConnectModal.vue?raw";
 import globalWorkspaceComponent from "../../components/FileManagement/workspace/SftpGlobalWorkspace.vue?raw";
 import remoteTabsComponent from "../../components/FileManagement/workspace/SftpRemoteMachineTabs.vue?raw";
@@ -29,50 +32,81 @@ import sessionWorkspaceComponent from "../../components/FileManagement/workspace
 import remotePaneActions from "../../composables/sftp/file-manager/useSftpRemotePaneActions.ts?raw";
 import transferCoordinatorComposable from "../../composables/sftp/file-manager/useSftpTransferCoordinator.ts?raw";
 import workspacePanesComposable from "../../composables/sftp/file-manager/useSftpWorkspacePanes.ts?raw";
+import transferUiComposable from "../../composables/sftp/useSftpTransferUi.ts?raw";
+import transferPersistence from "../../utils/file-transfer/persistence.ts?raw";
 import fileManagerSessionSurface from "../../workspaces/FileManagerSessionSurface.vue?raw";
 
-const transferCenterPresentation = [
-  transferCenterComponent,
-  transferBatchComponent,
-  transferTargetComponent,
-  transferFileComponent
-].join("\n");
 const localPaneImplementation = [fileManagementLocalPane, filePaneDropOverlay, filePaneTable].join("\n");
 
 describe("sftp transfer center layout", () => {
-  it("keeps the design drawer width and collapses nested batch content", () => {
-    expect(transferCenterStyles).toContain("width: 552px");
-    expect(transferCenterStyles).toContain("width: 496px");
-    expect(transferCenterStyles).toContain("max-width: calc(100vw - 40px)");
-    expect(transferCenterStyles).toMatch(/\.sftp-transfer-targets\s*\{[^}]*display:\s*none/);
-    expect(transferCenterComponent).toContain(':expanded="expandedBatches.has(batch.id)"');
-    expect(transferBatchComponent).toContain('v-show="expanded"');
-    expect(transferBatchComponent).toContain(':aria-expanded="expanded"');
+  it("uses a resizable island dock without an overlay", () => {
+    expect(transferCenterComponent).toContain('class="sftp-transfer-center-drawer"');
+    expect(transferCenterComponent).toContain('class="sftp-transfer-resize-handle"');
+    expect(transferCenterComponent).toContain('role="separator"');
+    expect(transferCenterComponent).toContain('@pointerdown="startResize"');
+    expect(transferCenterComponent).toContain('@keydown="resizeWithKeyboard"');
+    expect(transferCenterComponent).toContain('useLocalStorage("jumpserver-client:sftp-transfer-center-height"');
+    expect(transferCenterComponent).not.toContain("scaleWorkspace");
+    expect(transferCenterComponent).not.toContain("Teleport");
+    expect(transferCenterComponent).not.toContain("<UDrawer");
+    expect(transferCenterStyles).toContain("bottom: calc(1.75rem + var(--workspace-island-inset))");
+    expect(transferCenterStyles).toContain("height: var(--sftp-transfer-center-height, 194px)");
+    expect(transferCenterStyles).toContain("border-radius: var(--workspace-island-radius, 10px)");
   });
 
-  it("renders a full-width progress track and right-aligned actions for every file", () => {
-    expect(transferCenterPresentation).toContain('class="sftp-transfer-file__progress"');
-    expect(transferCenterPresentation).not.toMatch(/v-if=[^>]+sftp-transfer-file__progress/);
-    expect(transferCenterStyles).toContain("grid-template-columns: minmax(0, 1fr) 92px max-content");
-    expect(transferCenterStyles).toMatch(/\.sftp-transfer-file__progress\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/);
-    expect(transferCenterStyles).toMatch(/\.sftp-transfer-file__actions\s*\{[^}]*justify-content:\s*flex-end/);
+  it("renders the compact queue with Nuxt UI table columns including a dedicated actions column", () => {
+    expect(transferCenterComponent).toContain("<UTable");
+    expect(transferCenterComponent).toContain(':data="sftpTasks"');
+    expect(transferCenterComponent).toContain(':columns="columns"');
+    expect(transferCenterComponent).toContain('id: "actions"');
+    expect(transferCenterComponent).toContain('header: t("Common.Actions")');
+    expect(transferCenterComponent).toContain('#actions-cell="{ row }"');
+    expect(transferCenterComponent).toContain("<SftpTransferActions");
+    expect(transferCenterComponent).not.toContain('role="table"');
+    expect(transferCenterComponent).not.toContain("<SftpTransferBatch");
+    expect(transferCenterComponent).toContain('#direction-cell="{ row }"');
+    expect(transferCenterComponent).toContain('#progress-cell="{ row }"');
+    expect(transferCenterComponent).toContain('#rate-cell="{ row }"');
+    expect(transferCenterComponent).toContain('#status-cell="{ row }"');
+    expect(transferCenterComponent).toContain("<UProgress");
+    expect(transferCenterStyles).toContain("[data-slot=th]");
+    expect(transferCenterStyles).toContain("[data-slot=td]");
+    expect(transferCenterStyles).toMatch(/\.sftp-transfer-actions\s*\{[^}]*justify-content:\s*flex-end/);
   });
 
   it("allows an active file to be paused independently", () => {
-    expect(transferTargetComponent).toContain(':can-pause="canPauseTransferTasks([task])"');
-    expect(transferTargetComponent).toContain("@pause=\"emit('pauseTask', task)\"");
-    expect(transferCenterComponent).toContain('@pause-task="store.pauseTask($event.id)"');
-    expect(transferCenterPresentation).toContain('icon="i-lucide-pause"');
+    expect(transferCenterComponent).toContain(':can-pause="canPauseTransferTasks([row.original])"');
+    expect(transferCenterComponent).toContain('@pause="store.pauseTask(row.original.id)"');
+    expect(transferActionsComponent).toContain('icon="i-lucide-pause"');
   });
 
   it("delegates resume availability to the transfer-center selectors", () => {
-    expect(transferTargetComponent).toContain("canResumeTransferTasks");
+    expect(transferCenterComponent).toContain("canResumeTransferTasks");
   });
 
-  it("uses compact outlined conflict actions instead of solid default buttons", () => {
-    expect(transferTargetComponent.match(/variant="outline"/g)).toHaveLength(3);
-    expect(transferTargetComponent.match(/size="xs"/g)?.length).toBeGreaterThanOrEqual(3);
-    expect(transferCenterStyles).not.toMatch(/\.sftp-conflict-action\s*\{/);
+  it("hides retry for connection-lost failures", () => {
+    expect(transferActionsComponent).toContain("canRetryTransferTask");
+    expect(transferActionsComponent).toContain('v-if="canRetry"');
+    expect(transferCenterComponent).toContain("sftpTransferErrorText");
+    expect(transferCoordinatorComposable).toContain("failUnavailableEndpoint");
+  });
+
+  it("keeps conflict resolution available from a compact Nuxt UI menu", () => {
+    expect(transferActionsComponent).toContain("<UDropdownMenu");
+    expect(transferActionsComponent).toContain('emit("resolve", "overwrite")');
+    expect(transferActionsComponent).toContain('emit("resolve", "skip")');
+    expect(transferActionsComponent).toContain('emit("resolve", "keep_both")');
+    expect(transferActionsComponent).toContain('color="warning"');
+  });
+
+  it("clears terminal rows individually or together and removes empty IndexedDB state", () => {
+    expect(transferCenterComponent).toContain("hasFinishedTasks");
+    expect(transferCenterComponent).toContain('icon="i-lucide-trash-2"');
+    expect(transferCenterComponent).toContain('@clear="store.clearFinished([row.original.id])"');
+    expect(transferActionsComponent).toContain("clear: []");
+    expect(transferActionsComponent).toContain("emit('clear')");
+    expect(transferFileComponent).toContain("<SftpTransferActions");
+    expect(transferPersistence).toContain("objectStore.delete(recordKey)");
   });
 });
 
@@ -97,20 +131,45 @@ describe("sftp transfer drop target", () => {
 describe("sftp selection bar and peer transfer", () => {
   it("anchors the selection bar to the source pane for both peer and multi-target modes", () => {
     expect(filePaneSelectionBar).toContain('class="sftp-selection-bar"');
-    expect(filePaneSelectionBar).toContain("sftp-selection-bar__btn--primary");
-    expect(filePaneSelectionBar).toContain("sftp-selection-bar__btn--ghost");
-    expect(filePaneSelectionBar).toContain('t("koko.fileManagement.sendTo")');
-    expect(filePaneSelectionBar).toContain('t("koko.fileManagement.sendToOpposite")');
+    expect(filePaneSelectionBar).toContain("<UButton");
+    expect(filePaneSelectionBar).toContain('color="primary"');
+    expect(filePaneSelectionBar).toContain('color="error"');
+    expect(filePaneSelectionBar).toContain("koko.fileManagement.sendTo");
+    expect(filePaneSelectionBar).toContain("koko.fileManagement.sendToOpposite");
     expect(filePaneSelectionBar).toContain("sendPeerDirection");
     expect(filePaneSelectionBar).toContain("i-lucide-arrow-right");
     expect(filePaneSelectionBar).toContain("i-lucide-arrow-left");
-    expect(filePaneSelectionBar).toContain("i-lucide-send");
+    expect(filePaneSelectionBar).toContain("i-lucide-forward");
+    expect(filePaneSelectionBar).not.toContain("i-lucide-copy");
+    expect(filePaneSelectionBar).not.toContain("i-lucide-send");
     expect(filePaneSelectionBar).not.toContain("Teleport");
     expect(filePaneSelectionBar).not.toContain("sendToEllipsis");
     expect(fileManagementStyles).toContain(".sftp-selection-bar");
-    expect(fileManagementStyles).toContain("bottom: 36px");
-    expect(fileManagementStyles).toContain("left: 10px");
-    expect(fileManagementStyles).toContain("right: 10px");
+    expect(fileManagementStyles).toContain("position: relative");
+    expect(fileManagementStyles).toContain("min-height: 40px");
+    expect(fileManagementStyles).toContain("margin-top: 16px");
+    expect(fileManagementStyles).toContain("box-shadow: inset 3px 0 0 var(--theme-accent)");
+    expect(fileManagementStyles).not.toContain("bottom: 36px");
+  });
+
+  it("places the selection actions above the item count inside the table layout", () => {
+    expect(fileManagementPane).toContain("<template #footer>");
+    expect(fileManagementLocalPane).toContain("<template #footer>");
+    expect(filePaneTable.indexOf('<slot name="footer" />')).toBeLessThan(
+      filePaneTable.indexOf('class="sftp-file-table__status')
+    );
+  });
+
+  it("hides local Send to until a connected remote destination exists", () => {
+    expect(fileManagementLocalPane).toContain("canSend?: boolean");
+    expect(fileManagementLocalPane).toContain(':can-send="canSend && transferableEntries.length > 0"');
+    expect(fileManagementPane).toContain("canSend?: boolean");
+    expect(fileManagementPane).toContain(':can-send="canTransferFiles && canSend"');
+    expect(globalWorkspaceComponent).toContain("const canSendFromLocal = computed");
+    expect(globalWorkspaceComponent).toContain(':can-send="canSendFromLocal"');
+    expect(globalWorkspaceComponent).toContain(':can-send="canSendFromRemote(pane.transferEndpoint.id)"');
+    expect(sessionWorkspaceComponent).toContain("const primaryCanSend = computed");
+    expect(sessionWorkspaceComponent).toContain(':can-send="primaryCanSend"');
   });
 
   it("uses simple peer send behavior only when exactly one remote connection exists", () => {
@@ -126,6 +185,15 @@ describe("sftp selection bar and peer transfer", () => {
     expect(remoteTabsComponent).not.toContain("UCheckbox");
     expect(remoteTabsComponent).not.toContain("multiTarget");
     expect(remoteTabsComponent).not.toContain("selectedIds");
+  });
+
+  it("resets source table selection immediately after a transfer is queued", () => {
+    expect(transferCoordinatorComposable).toContain(
+      "if (endpointId === LOCAL_ENDPOINT_ID) return options.localPaneRef.value"
+    );
+    expect(transferCoordinatorComposable).toContain("sourcePaneFor(payload.sourceEndpoint.id)?.clearSelection()");
+    expect(transferCoordinatorComposable).not.toContain("pendingSelectionClears");
+    expect(transferCoordinatorComposable).not.toContain("clearTransferredSelection(");
   });
 
   it("routes global local transfers through the transfer center queue like session sftp", () => {
@@ -158,13 +226,11 @@ describe("sftp right-panel compact mode", () => {
     expect(fileManagementIndex).toContain("compact?: boolean");
     expect(fileManagementIndex).toContain("sftp-file-management--compact");
     expect(fileManagementIndex).toContain("<SftpSessionWorkspace\n      v-else");
-    expect(sessionWorkspaceComponent).toContain('v-if="!compact"');
+    expect(sessionWorkspaceComponent).toContain('v-if="!compact && dualMode"');
     expect(fileManagementIndex).toContain("!props.global && !props.compact && !props.showEmpty");
     expect(sessionWorkspaceComponent).toContain('v-show="!compact && dualMode"');
-    expect(sessionWorkspaceComponent).toContain('v-if="!compact"');
     expect(sessionWorkspaceComponent).toContain(':compact="compact"');
-    expect(sessionWorkspaceComponent).toContain('<KokoSftpTransferCenter v-if="!compact"');
-    expect(sessionWorkspaceComponent).toContain("floating");
+    expect(sessionWorkspaceComponent).not.toContain("KokoSftpTransferCenter");
     expect(sessionWorkspaceComponent).not.toContain("sftp-file-management__topbar");
     expect(sessionWorkspaceComponent).toContain("disconnectAllRemotes");
     expect(sessionWorkspaceComponent).toContain("i-lucide-ellipsis");
@@ -204,7 +270,7 @@ describe("sftp right-panel compact mode", () => {
     );
     expect(fileManagementPane).toContain("if (!canTransferFiles.value) return null");
     expect(remotePaneActions).toContain('label: t("koko.fileManagement.sendTo")');
-    expect(fileManagementPane).toContain(':can-send="canTransferFiles"');
+    expect(fileManagementPane).toContain(':can-send="canTransferFiles && canSend"');
     expect(filePaneSelectionBar).toContain('v-if="canSend && transferableCount"');
     expect(fileManagementPane).toContain(':draggable="canTransferFiles"');
     expect(filePaneTable).toContain(":draggable=\"draggable && !entry.is_dir && entry.name !== '..'\"");
@@ -238,14 +304,54 @@ describe("sftp professional workbench", () => {
     expect(fileManagementIndex).not.toContain("rightEmptyHint");
   });
 
-  it("keeps a floating transfer center in the global workbench", () => {
-    expect(globalWorkspaceComponent).toContain('<KokoSftpTransferCenter :ref="setTransferCenterRef" floating />');
+  it("hosts the transfer drawer globally from the status footer", () => {
+    expect(globalWorkspaceComponent).not.toContain("KokoSftpTransferCenter");
     expect(globalWorkspaceComponent).toContain("showSideAddButton");
     expect(globalWorkspaceComponent).toContain("koko.fileManagement.addRemoteSftp");
     expect(globalWorkspaceComponent).toContain("<UTooltip");
-    expect(transferCenterComponent).toContain("floating?: boolean");
-    expect(transferCenterComponent).toContain("is-floating");
-    expect(transferCenterComponent).toContain("<UTooltip");
+    expect(defaultLayout).toContain("<KokoSftpTransferCenter");
+    expect(defaultLayout).toContain("data-vaul-drawer-wrapper");
+    expect(statusFooterComponent).toContain("data-sftp-transfer-trigger");
+    expect(statusFooterComponent).not.toContain('v-if="hasTasks"');
+    expect(statusFooterComponent).not.toContain(':disabled="!hasTasks"');
+    expect(transferUiComposable).not.toContain("if (value && !hasTasks.value) return");
+    expect(transferUiComposable).not.toContain("if (!value) open.value = false");
+    expect(statusFooterComponent).toContain("<UBadge");
+    expect(statusFooterComponent).toContain('color="neutral"');
+    expect(statusFooterComponent).not.toContain("!bg-blue-500/10 !text-blue-500");
+    expect(statusFooterComponent).toContain('variant="soft"');
+    expect(statusFooterComponent).toContain("'is-idle': transferTone === 'idle'");
+    expect(statusFooterComponent).toContain("'is-busy': transferTone === 'moving'");
+    expect(statusFooterComponent).toContain("'is-paused': transferTone === 'paused'");
+    expect(statusFooterComponent).toContain("'is-failed': transferTone === 'failed'");
+    expect(statusFooterComponent).toContain("sftp-transfer-trigger-dot");
+    expect(transferUiComposable).toContain("hasMovingTasks");
+    expect(transferUiComposable).toContain("hasPausedTasks");
+    expect(transferUiComposable).toContain("transferTone");
+    expect(transferUiComposable).toContain("hasActiveTasks");
+    expect(transferUiComposable).toContain("hasFailedTasks");
+    expect(statusFooterComponent).not.toContain('icon="i-lucide-arrow-up-down"');
+    expect(statusFooterComponent).toContain(':aria-expanded="transferOpen"');
+    expect(statusFooterComponent).toContain('aria-controls="sftp-transfer-center"');
+    expect(fileManagementStyles).toContain("cursor: pointer");
+    expect(fileManagementStyles).not.toContain("transform: translateY(-1px)");
+    expect(transferCenterComponent).toContain('class="sftp-transfer-center-drawer"');
+    expect(transferCoordinatorComposable).toContain("useSftpTransferUi");
+  });
+
+  it("jumps the footer transfer trigger whenever a new queue signal arrives", () => {
+    expect(transferUiComposable).toContain('useState("sftp-transfer-attention-sequence"');
+    expect(transferUiComposable).toContain("attentionSequence.value += 1");
+    expect(statusFooterComponent).toContain("transferAttracting");
+    expect(statusFooterComponent).toContain("'is-attracting': transferAttracting");
+    expect(fileManagementStyles).toContain("@keyframes sftp-transfer-attention-jump");
+    expect(fileManagementStyles).toContain("translateY(-10px) scale(1.04, 0.96)");
+    expect(fileManagementStyles).toContain("translateY(-7px) scale(1.03, 0.97)");
+    expect(fileManagementStyles).toContain("@keyframes sftp-transfer-text-shine");
+    expect(fileManagementStyles).toContain("background-position: -120% 0");
+    expect(fileManagementStyles).toContain("var(--theme-accent)");
+    expect(fileManagementStyles).toContain(".sftp-transfer-trigger-dot");
+    expect(fileManagementStyles).toContain("@keyframes sftp-transfer-dot-pulse");
   });
 
   it("shows a center transfer rail with left/right arrows while keeping send modal flow", () => {
@@ -266,9 +372,8 @@ describe("sftp professional workbench", () => {
     expect(remotePaneToolbar).toContain("koko.actions.upload");
   });
 
-  it("uses a floating transfer center and tab overflow for session dual-remote chrome", () => {
-    expect(sessionWorkspaceComponent).toContain("floating");
-    expect(sessionWorkspaceComponent).toContain("KokoSftpTransferCenter");
+  it("uses tab overflow for session dual-remote chrome without a floating transfer center", () => {
+    expect(sessionWorkspaceComponent).not.toContain("KokoSftpTransferCenter");
     expect(sessionWorkspaceComponent).not.toContain("sftp-file-management__topbar");
     expect(sessionWorkspaceComponent).not.toContain("toggleDualMode");
     expect(sessionWorkspaceComponent).toContain("disconnectAllRemotes");
@@ -289,11 +394,18 @@ describe("sftp professional workbench", () => {
     expect(remotePaneToolbar).toContain("ResizeObserver");
     expect(remotePaneToolbar).toContain("isNarrow");
     expect(remotePaneToolbar).toContain("isCompact");
+    expect(remotePaneToolbar).toContain("toolbarWidth.value < 720");
     expect(remotePaneToolbar).toContain('data-sftp-tour="navigation"');
     expect(remotePaneToolbar).toContain('data-sftp-tour="file-actions"');
     expect(remotePaneToolbar).not.toContain("sftp-file-management__actionbar");
     expect(localPaneToolbar).toContain("sftp-file-management__toolbar--unified");
     expect(localPaneToolbar).toContain("beginPathEdit");
+    expect(localPaneToolbar).toContain("toolbarWidth.value < 720");
+    expect(localPaneToolbar).toContain("square");
+    expect(remotePaneToolbar).toContain("square");
+    expect(fileManagementStyles).toContain(":not(:has([data-slot=label]))");
+    expect(fileManagementStyles).toContain(":not(:has([data-slot=value]))");
+    expect(fileManagementStyles).toContain("justify-content: center");
     expect(localPaneToolbar).not.toContain("sftp-file-management__actionbar");
     expect(fileManagementPane).toContain('@go-to-path="goToAbsolutePath"');
     expect(fileManagementPane).toContain("focusPathEdit");
@@ -491,6 +603,18 @@ describe("sftpTransferSummary", () => {
         }
       ];
       expect(sftpTransferProgress(tasks as FileTransferTask[])).toBe(100);
+    });
+  });
+
+  describe("sftp transfer status colors", () => {
+    it("maps row status classes and progress colors", () => {
+      expect(sftpTransferStatusClass("failed")).toBe("is-error");
+      expect(sftpTransferStatusClass("paused")).toBe("is-paused");
+      expect(sftpTransferStatusClass("transferring")).toBe("is-busy");
+      expect(sftpTransferStatusClass("queued")).toBeUndefined();
+      expect(sftpTransferProgressColor({ status: "failed" })).toBe("error");
+      expect(sftpTransferProgressColor({ status: "paused" })).toBe("warning");
+      expect(sftpTransferProgressColor({ status: "transferring" })).toBe("primary");
     });
   });
 

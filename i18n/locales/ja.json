@@ -85,6 +85,9 @@
     "Save": "保存",
     "EmptyDescription": "現在の種類で利用できる承認済みアセットはありません",
     "SelectFromMenu": "左側から項目を選択してください",
+    "Actions": "操作",
+    "Close": "閉じる",
+    "Remove": "削除",
     "More": "その他"
   },
   "DesktopMenu": {
@@ -115,7 +118,9 @@
     "Tabs": "{count} 個のタブ",
     "Connected": "{count} 件接続済み",
     "Pending": "{count} 件接続中",
-    "Failed": "{count} 件失敗"
+    "Failed": "{count} 件失敗",
+    "Transfer": "転送センター",
+    "TransferCount": "転送センター {count}"
   },
   "WorkspaceEmpty": {
     "LoginHint": "ログインしてアセットを表示し、接続してください",
@@ -725,12 +730,17 @@
     "Expand": "転送を展開",
     "Collapse": "転送を折りたたむ",
     "Resume": "再開",
+    "Pause": "一時停止",
     "Retry": "再試行",
     "Cancel": "キャンセル",
+    "IdleRate": "—",
+    "TransferredSize": "{size} 転送済み",
+    "SpeedRemaining": "{speed} · {remaining}",
     "ConflictTitle": "重複ファイルの処理",
     "ConflictDescription": "転送先に同名のファイルがあります。この転送の処理方法を選択してください。",
     "Overwrite": "上書き",
     "Skip": "スキップ",
+    "EndpointUnavailable": "今回のアップロードは失敗しました。ファイルを選び直して再度アップロードしてください。",
     "Status": {
       "queued": "待機中",
       "preparing": "準備中",
@@ -1418,6 +1428,17 @@
     },
     "sftpTransferCenter": {
       "title": "転送センター",
+      "queueTitle": "転送キュー",
+      "queueSummary": "{active} 件進行中 · {attention} 件要対応",
+      "resizeHandle": "転送キューのサイズを変更",
+      "collapse": "転送キューを折りたたむ",
+      "columns": {
+        "file": "ファイル",
+        "direction": "転送先",
+        "progress": "進捗",
+        "rate": "速度 / 残り",
+        "status": "状態"
+      },
       "batchCount": "{count} 件の配布バッチ | {count} 件の配布バッチ",
       "filters": {
         "all": "すべて",
@@ -1474,7 +1495,7 @@
       "remoteConnectTitle": "リモート SFTP を追加",
       "remoteConnectDescription": "別の SFTP アセットに接続して 2 ペインモードにします。中央の矢印ですばやく反対側に転送するか、［送信先］から転送ダイアログを開きます。",
       "transferCenterTitle": "転送センター",
-      "transferCenterDescription": "右下のドラッグ可能なコントロールで、バッチの進捗や失敗を確認し、実行中のタスクをキャンセルできます。",
+      "transferCenterDescription": "ステータスバーの転送バッジでキューを開きます。タスクがないときは無効で、転送中は進捗・速度・残り時間・状態を表示します。",
       "progress": "{total} ステップ中 {current}",
       "next": "次へ",
       "previous": "前へ",

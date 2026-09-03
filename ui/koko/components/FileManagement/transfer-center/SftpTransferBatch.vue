@@ -7,9 +7,9 @@ import type {
 import type { SftpTransferGroupStatus } from "#koko/utils/sftpTransferSummary";
 import SftpTransferTarget from "#koko/components/FileManagement/transfer-center/SftpTransferTarget.vue";
 import {
-  batchHasFailedTasks,
   canPauseTransferTasks,
   canResumeTransferTasks,
+  canRetryTransferTask,
   sftpTransferTerminalStatuses
 } from "#koko/composables/sftp/file-manager/transfer-center/useSftpTransferCenterSelectors";
 import {
@@ -48,7 +48,7 @@ const progress = computed(() => sftpTransferProgress(props.batch.tasks));
 const canPause = computed(() => canPauseTransferTasks(props.batch.tasks));
 const canResume = computed(() => canResumeTransferTasks(props.batch.tasks));
 const canCancel = computed(() => props.batch.tasks.some((task) => !sftpTransferTerminalStatuses.has(task.status)));
-const hasFailed = computed(() => batchHasFailedTasks(props.batch.tasks));
+const hasRetryable = computed(() => props.batch.tasks.some(canRetryTransferTask));
 
 function targetKey(endpointId: string): string {
   return `${props.batch.id}:${endpointId}`;
@@ -113,7 +113,7 @@ function formatRelativeTime(timestamp: number): string {
         </div>
 
         <p class="font-mono text-[11.5px] text-muted mt-0.5">
-          {{ t("koko.sftpTransferCenter.fileCount", batch.tasks.length) }} ·
+          {{ t("koko.sftpTransferCenter.fileCount", { count: batch.tasks?.length ?? 0 }) }} ·
           {{ t("koko.sftpTransferCenter.targetMachineCount", batch.targetCount) }} ·
           {{ t("koko.sftpTransferCenter.source", { source: batch.sourceLabel }) }} ·
           {{ formatRelativeTime(batch.createdAt) }}
@@ -185,7 +185,7 @@ function formatRelativeTime(timestamp: number): string {
     </div>
 
     <div
-      v-if="hasFailed"
+      v-if="hasRetryable"
       class="sftp-transfer-banner error mx-3 mb-3 flex items-center gap-2 rounded-md border px-2.5 py-2 text-[11.5px]"
     >
       <UIcon name="i-lucide-rotate-ccw" class="size-3.5 shrink-0" />

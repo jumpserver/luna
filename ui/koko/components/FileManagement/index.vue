@@ -2,8 +2,7 @@
 import type {
   FileWorkspaceSourceAsset,
   SftpLocalPaneHandle,
-  SftpRemotePaneHandle,
-  SftpTransferCenterHandle
+  SftpRemotePaneHandle
 } from "#koko/composables/sftp/file-manager/workspaceTypes";
 import type { SftpCapabilities } from "#koko/composables/sftp/protocol";
 import SftpConnectModal from "#koko/components/FileManagement/workspace/SftpConnectModal.vue";
@@ -41,7 +40,6 @@ function addErrorToast(title: string, error: unknown): void {
 }
 
 const primaryPaneRef = ref<SftpRemotePaneHandle | null>(null);
-const transferCenterRef = ref<SftpTransferCenterHandle | null>(null);
 const localPaneRef = ref<SftpLocalPaneHandle | null>(null);
 let tourTimer: ReturnType<typeof setTimeout> | undefined;
 const primaryCapabilities = computed(() => {
@@ -79,7 +77,6 @@ const transfer = useSftpTransferCoordinator({
   remotePaneRefs,
   remotePanes,
   localPaneRef,
-  transferCenterRef,
   translate,
   showError: addErrorToast
 });
@@ -99,10 +96,6 @@ onBeforeUnmount(() => {
 
 function setPrimaryPaneRef(value: SftpRemotePaneHandle | null): void {
   primaryPaneRef.value = value;
-}
-
-function setTransferCenterRef(value: SftpTransferCenterHandle | null): void {
-  transferCenterRef.value = value;
 }
 
 function setLocalPaneRef(value: SftpLocalPaneHandle | null): void {
@@ -131,7 +124,6 @@ function setLocalPaneRef(value: SftpLocalPaneHandle | null): void {
       :workspace="workspace"
       :transfer="transfer"
       :set-local-pane-ref="setLocalPaneRef"
-      :set-transfer-center-ref="setTransferCenterRef"
     />
     <SftpSessionWorkspace
       v-else
@@ -142,7 +134,6 @@ function setLocalPaneRef(value: SftpLocalPaneHandle | null): void {
       :transfer="transfer"
       :start-tour="sftpTour.start"
       :set-primary-pane-ref="setPrimaryPaneRef"
-      :set-transfer-center-ref="setTransferCenterRef"
     />
     <SftpConnectModal :workspace="workspace" />
     <SftpSendModal :transfer="transfer" />

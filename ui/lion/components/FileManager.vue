@@ -207,10 +207,10 @@ const statusIcon = (status?: LionUploadFileInfo["status"]) => {
   return "i-lucide-clock-3";
 };
 const statusLabel = (status?: LionUploadFileInfo["status"]) => {
-  if (status === "uploading") return t("Uploading");
-  if (status === "finished") return t("UploadSuccess");
-  if (status === "error") return t("UploadError");
-  return t("Waiting");
+  if (status === "uploading") return t("FileTransfer.Status.transferring");
+  if (status === "finished") return t("FileTransfer.Status.completed");
+  if (status === "error") return t("FileTransfer.Status.failed");
+  return t("FileTransfer.Status.queued");
 };
 
 onMounted(() => {
@@ -313,14 +313,14 @@ onUnmounted(() => {
           />
         </UTooltip>
 
-        <UTooltip v-if="displayUploadingFiles.length" :text="t('TransferHistory')">
+        <UTooltip v-if="displayUploadingFiles.length" :text="t('FileTransfer.Title')">
           <UButton
             icon="i-lucide-list-restart"
             color="neutral"
             variant="ghost"
             size="sm"
             :label="displayUploadingFiles.length ? String(displayUploadingFiles.length) : undefined"
-            :aria-label="t('TransferHistory')"
+            :aria-label="t('FileTransfer.Title')"
             @click="transferOpen = true"
           />
         </UTooltip>
@@ -423,11 +423,11 @@ onUnmounted(() => {
         :disabled="downloadDisabled"
         @click="handleDownload"
       >
-        {{ t("Download") }}
+        {{ t("koko.actions.download") }}
       </UButton>
     </div>
 
-    <UModal v-model:open="transferOpen" :title="t('TransferHistory')">
+    <UModal v-model:open="transferOpen" :title="t('FileTransfer.Title')">
       <template #body>
         <div v-if="displayUploadingFiles.length" class="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
           <div v-for="file in displayUploadingFiles" :key="file.id" class="rounded-md border border-default p-3">
@@ -447,7 +447,7 @@ onUnmounted(() => {
                 variant="ghost"
                 size="xs"
                 :disabled="file.status === 'uploading'"
-                :aria-label="t('Remove')"
+                :aria-label="t('Common.Remove')"
                 @click="removeUploadList(file)"
               />
             </div>
@@ -455,7 +455,7 @@ onUnmounted(() => {
           </div>
         </div>
         <div v-else class="py-8 text-center text-sm text-muted">
-          {{ t("NoData") }}
+          {{ t("Common.NoData") }}
         </div>
       </template>
     </UModal>

@@ -384,7 +384,7 @@ onMounted(loadAsset);
   background: var(--app-surface-overlay);
   box-shadow:
     0 1px 0 color-mix(in srgb, var(--theme-fg) 8%, transparent) inset,
-    0 18px 50px color-mix(in srgb, #000 42%, transparent);
+    0 10px 28px color-mix(in srgb, #000 16%, transparent);
 }
 
 .connection-setup-shell--island .connection-activity-bar {

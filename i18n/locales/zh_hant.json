@@ -85,6 +85,9 @@
     "Save": "儲存",
     "EmptyDescription": "當前類型下暫無可用的授權資產",
     "SelectFromMenu": "請從左側選擇一個配置項",
+    "Actions": "操作",
+    "Close": "關閉",
+    "Remove": "移除",
     "More": "更多"
   },
   "DesktopMenu": {
@@ -115,7 +118,9 @@
     "Tabs": "{count} 個標籤",
     "Connected": "{count} 個已連線",
     "Pending": "{count} 個連線中",
-    "Failed": "{count} 個失敗"
+    "Failed": "{count} 個失敗",
+    "Transfer": "傳輸中心",
+    "TransferCount": "傳輸中心 {count}"
   },
   "WorkspaceEmpty": {
     "LoginHint": "登入後檢視資產並發起連線",
@@ -725,12 +730,17 @@
     "Expand": "展開傳輸任務",
     "Collapse": "摺疊傳輸任務",
     "Resume": "繼續",
+    "Pause": "暫停",
     "Retry": "重試",
     "Cancel": "取消",
+    "IdleRate": "—",
+    "TransferredSize": "已傳輸 {size}",
+    "SpeedRemaining": "{speed} · {remaining}",
     "ConflictTitle": "同名檔案處理",
     "ConflictDescription": "目標目錄存在同名檔案。請選擇應用於本次傳輸的處理方式。",
     "Overwrite": "覆蓋",
     "Skip": "跳過",
+    "EndpointUnavailable": "本次上傳失敗，請重新選擇重新上傳",
     "Status": {
       "queued": "排隊中",
       "preparing": "準備中",
@@ -1418,6 +1428,17 @@
     },
     "sftpTransferCenter": {
       "title": "傳輸中心",
+      "queueTitle": "傳輸佇列",
+      "queueSummary": "{active} 進行中 · {attention} 需處理",
+      "resizeHandle": "調整傳輸佇列高度",
+      "collapse": "收起傳輸佇列",
+      "columns": {
+        "file": "檔案",
+        "direction": "傳輸方向",
+        "progress": "進度",
+        "rate": "速度 / 剩餘",
+        "status": "狀態"
+      },
       "batchCount": "{count} 個分發批次 | {count} 個分發批次",
       "filters": {
         "all": "全部",
@@ -1474,7 +1495,7 @@
       "remoteConnectTitle": "新增遠端 SFTP",
       "remoteConnectDescription": "連線另一臺 SFTP 資產後進入雙欄模式，中間箭頭可快速傳到對側，也可用「傳送到」開啟傳輸浮窗。",
       "transferCenterTitle": "傳輸中心",
-      "transferCenterDescription": "右下角可拖動的傳輸中心，用於檢視批次進度、失敗重試，以及取消進行中的任務。",
+      "transferCenterDescription": "狀態列的「傳輸」徽章可開啟佇列。沒有任務時不可點，有傳輸後可查看進度、速度、剩餘時間和狀態。",
       "progress": "第 {current} / {total} 步",
       "next": "下一步",
       "previous": "上一步",

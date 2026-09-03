@@ -1,405 +1,344 @@
 <script setup lang="ts">
 import type { FileTransferConflictPolicy, FileTransferTask } from "@jumpserver/connectors-core";
-import type {
-  SftpTransferBatchGroup as BatchGroup,
-  SftpTransferTargetGroup as TargetGroup,
-  SftpTransferTaskFilter as TaskFilter
-} from "#koko/composables/sftp/file-manager/transfer-center/useSftpTransferCenterSelectors";
-import SftpTransferBatch from "#koko/components/FileManagement/transfer-center/SftpTransferBatch.vue";
+import type { TableColumn } from "@nuxt/ui";
+import type { TransferRateSample } from "#koko/utils/file-transfer/rate";
+import prettyBytes from "pretty-bytes";
+import SftpTransferActions from "#koko/components/FileManagement/transfer-center/SftpTransferActions.vue";
 import {
+  canPauseTransferTasks,
+  canResumeTransferTasks,
   sftpTransferConflictError,
+  sftpTransferErrorText,
   sftpTransferTerminalStatuses,
   useSftpTransferCenterSelectors
 } from "#koko/composables/sftp/file-manager/transfer-center/useSftpTransferCenterSelectors";
+import { useSftpTransferUi } from "#koko/composables/sftp/useSftpTransferUi";
 import { useFileTransferStore } from "#koko/stores/fileTransfer";
-
-interface FlightPosition {
-  id: number;
-  left: number;
-  top: number;
-  deltaX: number;
-  deltaY: number;
-  middleX: number;
-  middleY: number;
-}
-
-const props = withDefaults(
-  defineProps<{
-    /** Emphasized trigger for the professional workbench header. */
-    prominent?: boolean;
-    /** Draggable floating trigger (session + global workbench). Defaults to bottom-right. */
-    floating?: boolean;
-  }>(),
-  { prominent: false, floating: false }
-);
+import {
+  bytesPerSecond,
+  formatBytesPerSecond,
+  formatRemaining,
+  pushTransferRateSample,
+  remainingSeconds
+} from "#koko/utils/file-transfer/rate";
+import {
+  sftpTransferProgress,
+  sftpTransferProgressColor,
+  sftpTransferStatusClass
+} from "#koko/utils/sftpTransferSummary";
 
 const { t } = useI18n();
 const store = useFileTransferStore();
-const open = ref(false);
-const filter = ref<TaskFilter>("all");
-const expandedBatches = ref(new Set<string>());
-const expandedTargets = ref(new Set<string>());
-const triggerRef = ref<HTMLElement | null>(null);
-const attracting = ref(false);
-const flight = ref<FlightPosition | null>(null);
-const floatingPosition = useLocalStorage<{ x: number; y: number } | null>(
-  "jumpserver-client:sftp-transfer-center-position",
-  null
-);
-const dragging = ref(false);
-const suppressClick = ref(false);
-let dragOffset = { x: 0, y: 0 };
-let dragOrigin = { x: 0, y: 0 };
-let animationSequence = 0;
-let attentionTimer: ReturnType<typeof setTimeout> | undefined;
-let settleTimer: ReturnType<typeof setTimeout> | undefined;
+const { open, setOpen, ensureRestored } = useSftpTransferUi();
+const filter = ref<"all">("all");
+const drawerHeight = useLocalStorage("jumpserver-client:sftp-transfer-center-height", 194);
+const resizing = ref(false);
+let resizeStartY = 0;
+let resizeStartHeight = 194;
 
-function isValidFloatingPosition(pos: { x: number; y: number } | null | undefined): pos is { x: number; y: number } {
-  if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return false;
-  // Zero-size clamp / HMR ghosts often land near the origin; treat as unset.
-  if (pos.x <= 16 && pos.y <= 16) return false;
-  if (typeof window === "undefined") return true;
-  return pos.x < window.innerWidth && pos.y < window.innerHeight;
-}
-
-const floatingStyle = computed(() => {
-  if (!props.floating) return undefined;
-  if (isValidFloatingPosition(floatingPosition.value)) {
-    return {
-      left: `${floatingPosition.value.x}px`,
-      top: `${floatingPosition.value.y}px`,
-      right: "auto",
-      bottom: "auto"
-    };
-  }
-  return { right: "16px", bottom: "16px", left: "auto", top: "auto" };
-});
-
-const taskFilters: readonly { value: TaskFilter; labelKey: string }[] = [
-  { value: "all", labelKey: "koko.sftpTransferCenter.filters.all" },
-  { value: "active", labelKey: "koko.sftpTransferCenter.filters.active" },
-  { value: "failed", labelKey: "koko.sftpTransferCenter.filters.failed" },
-  { value: "completed", labelKey: "koko.sftpTransferCenter.filters.completed" },
-  { value: "canceled", labelKey: "koko.sftpTransferCenter.filters.canceled" }
-];
-const { sftpTasks, activeCount, hasFinishedTasks, batches } = useSftpTransferCenterSelectors({
-  tasks: () => store.tasks,
+const { sftpTasks, hasFinishedTasks } = useSftpTransferCenterSelectors({
+  tasks: () => store.tasks ?? [],
   filter
 });
+const activeTaskCount = computed(
+  () => sftpTasks.value.filter((task) => !sftpTransferTerminalStatuses.has(task.status)).length
+);
+const attentionCount = computed(
+  () =>
+    sftpTasks.value.filter(
+      (task) => task.status === "failed" || (task.status === "paused" && task.error === sftpTransferConflictError)
+    ).length
+);
+const progress = computed(() => sftpTransferProgress(sftpTasks.value));
+const drawerStyle = computed(() => ({ "--sftp-transfer-center-height": `${drawerHeight.value}px` }));
+const samplesByTaskId = new Map<string, TransferRateSample[]>();
+const columns = computed<TableColumn<FileTransferTask>[]>(() => [
+  {
+    id: "file",
+    accessorFn: (task) => task.source.name,
+    header: t("koko.sftpTransferCenter.columns.file"),
+    meta: { class: { th: "w-[22%]", td: "w-[22%]" } }
+  },
+  {
+    id: "direction",
+    accessorFn: (task) => transferDirection(task),
+    header: t("koko.sftpTransferCenter.columns.direction"),
+    meta: { class: { th: "w-[24%]", td: "w-[24%]" } }
+  },
+  {
+    id: "progress",
+    accessorFn: (task) => transferProgress(task),
+    header: t("koko.sftpTransferCenter.columns.progress"),
+    meta: { class: { th: "w-[16%]", td: "w-[16%]" } }
+  },
+  {
+    id: "rate",
+    accessorFn: (task) => transferRateText(task),
+    header: t("koko.sftpTransferCenter.columns.rate"),
+    meta: { class: { th: "w-[18%]", td: "w-[18%]" } }
+  },
+  {
+    id: "status",
+    accessorFn: (task) => transferStatusText(task),
+    header: t("koko.sftpTransferCenter.columns.status"),
+    meta: { class: { th: "w-[12%]", td: "w-[12%]" } }
+  },
+  {
+    id: "actions",
+    header: t("Common.Actions"),
+    meta: { class: { th: "w-[112px] text-right", td: "w-[112px]" } }
+  }
+]);
 
 watch(
-  () => batches.value[0]?.id,
-  (id) => {
-    if (id) expandedBatches.value.add(id);
+  () => sftpTasks.value.map((task) => [task.id, task.status, task.confirmedBytes] as const),
+  (taskStates) => {
+    const currentIds = new Set(taskStates.map(([id]) => id));
+    for (const [id, status, confirmedBytes] of taskStates) {
+      if (status !== "transferring") {
+        samplesByTaskId.delete(id);
+        continue;
+      }
+      samplesByTaskId.set(id, pushTransferRateSample(samplesByTaskId.get(id) || [], confirmedBytes));
+    }
+    for (const id of samplesByTaskId.keys()) {
+      if (!currentIds.has(id)) samplesByTaskId.delete(id);
+    }
   },
   { immediate: true }
 );
 
-function toggleBatch(id: string): void {
-  const next = new Set(expandedBatches.value);
-  if (next.has(id)) next.delete(id);
-  else next.add(id);
-  expandedBatches.value = next;
+function transferRowId(task: FileTransferTask): string {
+  return task.id;
 }
 
-function toggleTarget(batchId: string, endpointId: string): void {
-  const key = `${batchId}:${endpointId}`;
-  const next = new Set(expandedTargets.value);
-  if (next.has(key)) next.delete(key);
-  else next.add(key);
-  expandedTargets.value = next;
+function transferDirection(task: FileTransferTask): string {
+  return `${task.sourceEndpoint.label} → ${task.destinationEndpoint.label}`;
 }
 
-function cancelTarget(target: TargetGroup): void {
-  void Promise.all(target.allTasks.map((task) => store.cancelTask(task.id)));
+function transferProgress(task: FileTransferTask): number {
+  if (task.status === "completed" || task.status === "skipped") return 100;
+  if (!task.source.size) return 0;
+  return Math.min(100, Math.round((task.confirmedBytes / task.source.size) * 100));
 }
 
-function cancelDistribution(batch: BatchGroup): void {
-  void Promise.all(batch.batchIds.map((batchId) => store.cancelBatch(batchId)));
-}
-
-function pauseTasks(tasks: FileTransferTask[]): void {
-  tasks.filter((task) => !sftpTransferTerminalStatuses.has(task.status)).forEach((task) => store.pauseTask(task.id));
-}
-
-function resumeTasks(tasks: FileTransferTask[]): void {
-  tasks
-    .filter((task) => task.status === "paused" && task.error !== sftpTransferConflictError)
-    .forEach((task) => store.resumeTask(task.id));
-}
-
-function retryTasks(tasks: FileTransferTask[]): void {
-  tasks.filter((task) => task.status === "failed").forEach((task) => store.retryTask(task.id));
-}
-
-function resolveConflicts(tasks: FileTransferTask[], policy: Exclude<FileTransferConflictPolicy, "ask">): void {
-  const conflictBatchIds = new Set(
-    tasks
-      .filter((task) => task.status === "paused" && task.error === sftpTransferConflictError)
-      .map((task) => task.batchId)
-  );
-  conflictBatchIds.forEach((batchId) => store.resolveBatchConflict(batchId, policy));
-}
-
-function signalQueued(origin?: DOMRect): void {
-  const target = triggerRef.value?.getBoundingClientRect();
-  if (!target) return;
-
-  if (attentionTimer) clearTimeout(attentionTimer);
-  if (settleTimer) clearTimeout(settleTimer);
-  attracting.value = false;
-  flight.value = null;
-
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (origin && !reducedMotion) {
-    const left = origin.left + origin.width / 2 - 14;
-    const top = origin.top + origin.height / 2 - 14;
-    const deltaX = target.left + target.width / 2 - 14 - left;
-    const deltaY = target.top + target.height / 2 - 14 - top;
-    flight.value = {
-      id: ++animationSequence,
-      left,
-      top,
-      deltaX,
-      deltaY,
-      middleX: deltaX * 0.58,
-      middleY: deltaY * 0.48 - 24
-    };
+function transferStatusText(task: FileTransferTask): string {
+  if (task.status === "transferring") {
+    return `${t("FileTransfer.Status.transferring")} ${transferProgress(task)}%`;
   }
-
-  attentionTimer = setTimeout(
-    () => {
-      attracting.value = true;
-      settleTimer = setTimeout(
-        () => {
-          attracting.value = false;
-        },
-        reducedMotion ? 700 : 900
-      );
-    },
-    origin && !reducedMotion ? 430 : 0
-  );
+  if (task.status === "failed" && task.error) return sftpTransferErrorText(task.error, t);
+  return t(`FileTransfer.Status.${task.status}`);
 }
 
-function clampFloatingPosition() {
-  if (!props.floating || !triggerRef.value) return;
-  if (!isValidFloatingPosition(floatingPosition.value)) {
-    floatingPosition.value = null;
-    return;
+function transferRateText(task: FileTransferTask): string {
+  if (task.status === "completed" || task.status === "skipped") return t("koko.sftpTransferCenter.justNow");
+  if (task.status === "failed") {
+    return t("FileTransfer.TransferredSize", { size: prettyBytes(task.confirmedBytes) });
   }
-  const rect = triggerRef.value.getBoundingClientRect();
-  // Element may not be laid out yet (HMR / first paint); keep CSS bottom-right fallback.
-  if (rect.width < 8 || rect.height < 8) return;
-  const margin = 8;
-  const maxX = Math.max(margin, window.innerWidth - rect.width - margin);
-  const maxY = Math.max(margin, window.innerHeight - rect.height - margin);
-  floatingPosition.value = {
-    x: Math.min(Math.max(margin, floatingPosition.value.x), maxX),
-    y: Math.min(Math.max(margin, floatingPosition.value.y), maxY)
-  };
-}
-
-function onFloatingPointerMove(event: PointerEvent) {
-  if (!dragging.value) return;
-  const moved = Math.hypot(event.clientX - dragOrigin.x, event.clientY - dragOrigin.y) > 4;
-  if (moved) suppressClick.value = true;
-  floatingPosition.value = {
-    x: event.clientX - dragOffset.x,
-    y: event.clientY - dragOffset.y
-  };
-  clampFloatingPosition();
-}
-
-function stopFloatingDrag() {
-  if (!dragging.value) return;
-  dragging.value = false;
-  window.removeEventListener("pointermove", onFloatingPointerMove);
-  window.removeEventListener("pointerup", stopFloatingDrag);
-  window.removeEventListener("pointercancel", stopFloatingDrag);
-  // Only persist coordinates after a real drag; otherwise keep CSS bottom-right default.
-  if (!suppressClick.value) {
-    floatingPosition.value = null;
-    return;
-  }
-  clampFloatingPosition();
-}
-
-function startFloatingDrag(event: PointerEvent) {
-  if (!props.floating || event.button !== 0) return;
-  const rect = triggerRef.value?.getBoundingClientRect();
-  if (!rect) return;
-  event.preventDefault();
-  suppressClick.value = false;
-  dragOrigin = { x: event.clientX, y: event.clientY };
-  floatingPosition.value = { x: rect.left, y: rect.top };
-  dragOffset = { x: event.clientX - rect.left, y: event.clientY - rect.top };
-  dragging.value = true;
-  window.addEventListener("pointermove", onFloatingPointerMove);
-  window.addEventListener("pointerup", stopFloatingDrag);
-  window.addEventListener("pointercancel", stopFloatingDrag);
-}
-
-function openTransferCenter() {
-  if (suppressClick.value) {
-    suppressClick.value = false;
-    return;
-  }
-  open.value = true;
-}
-
-onBeforeUnmount(() => {
-  if (attentionTimer) clearTimeout(attentionTimer);
-  if (settleTimer) clearTimeout(settleTimer);
-  stopFloatingDrag();
-  window.removeEventListener("resize", clampFloatingPosition);
-});
-
-onMounted(async () => {
-  void store.restore();
-  if (!props.floating) return;
-  if (!isValidFloatingPosition(floatingPosition.value)) {
-    floatingPosition.value = null;
-  }
-  window.addEventListener("resize", clampFloatingPosition);
-  await nextTick();
-  requestAnimationFrame(() => {
-    clampFloatingPosition();
+  if (task.status !== "transferring") return t("FileTransfer.IdleRate");
+  const rate = bytesPerSecond(samplesByTaskId.get(task.id) || []);
+  const remaining = remainingSeconds(task.source.size, task.confirmedBytes, rate);
+  if (rate == null || remaining == null) return t("FileTransfer.IdleRate");
+  return t("FileTransfer.SpeedRemaining", {
+    speed: formatBytesPerSecond(rate),
+    remaining: formatRemaining(remaining)
   });
+}
+
+function drawerHeightBounds() {
+  if (!import.meta.client) return { min: 96, max: 420 };
+  return { min: 96, max: Math.max(160, Math.min(520, Math.round(window.innerHeight * 0.62))) };
+}
+
+function clampDrawerHeight(value: number): number {
+  const { min, max } = drawerHeightBounds();
+  return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function onResizeMove(event: PointerEvent): void {
+  if (!resizing.value) return;
+  drawerHeight.value = clampDrawerHeight(resizeStartHeight + resizeStartY - event.clientY);
+}
+
+function stopResize(): void {
+  if (!resizing.value || !import.meta.client) return;
+  resizing.value = false;
+  window.removeEventListener("pointermove", onResizeMove);
+  window.removeEventListener("pointerup", stopResize);
+  window.removeEventListener("pointercancel", stopResize);
+}
+
+function startResize(event: PointerEvent): void {
+  if (!import.meta.client || event.button !== 0) return;
+  event.preventDefault();
+  resizeStartY = event.clientY;
+  resizeStartHeight = drawerHeight.value;
+  resizing.value = true;
+  window.addEventListener("pointermove", onResizeMove);
+  window.addEventListener("pointerup", stopResize);
+  window.addEventListener("pointercancel", stopResize);
+}
+
+function resizeWithKeyboard(event: KeyboardEvent): void {
+  const step = event.shiftKey ? 32 : 8;
+  if (event.key === "ArrowUp") drawerHeight.value = clampDrawerHeight(drawerHeight.value + step);
+  else if (event.key === "ArrowDown") drawerHeight.value = clampDrawerHeight(drawerHeight.value - step);
+  else if (event.key === "Home") drawerHeight.value = drawerHeightBounds().min;
+  else if (event.key === "End") drawerHeight.value = drawerHeightBounds().max;
+  else return;
+  event.preventDefault();
+}
+
+function resolveConflict(task: FileTransferTask, policy: Exclude<FileTransferConflictPolicy, "ask">): void {
+  store.resolveBatchConflict(task.batchId, policy);
+}
+
+function clearFinishedTransfers(): void {
+  store.clearFinished(sftpTasks.value.map((task) => task.id));
+}
+
+onMounted(() => {
+  drawerHeight.value = clampDrawerHeight(drawerHeight.value);
+  void ensureRestored();
 });
 
-defineExpose({ signalQueued });
+onBeforeUnmount(stopResize);
 </script>
 
 <template>
-  <span
-    ref="triggerRef"
-    class="sftp-transfer-trigger-anchor"
-    :class="{
-      'is-attracting': attracting,
-      'is-prominent': props.prominent,
-      'is-floating': props.floating,
-      'is-dragging': dragging
-    }"
-    :style="floatingStyle"
-    data-sftp-tour="transfer-center"
-    @pointerdown="startFloatingDrag"
-  >
-    <UTooltip :text="t('koko.sftpTransferCenter.title')">
-      <UButton
-        class="sftp-transfer-trigger"
-        :color="activeCount || props.prominent || props.floating ? 'primary' : 'neutral'"
-        :variant="activeCount || props.prominent || props.floating ? 'soft' : 'ghost'"
-        :size="props.prominent || props.floating ? 'sm' : 'xs'"
-        icon="i-lucide-cloud-upload"
-        :label="props.floating ? undefined : t('koko.sftpTransferCenter.title')"
-        :aria-label="t('koko.sftpTransferCenter.title')"
-        @click="openTransferCenter"
-      >
-        <template #trailing>
-          <UBadge v-if="activeCount" color="primary" variant="solid" size="xs">{{ activeCount }}</UBadge>
-        </template>
-      </UButton>
-    </UTooltip>
-  </span>
-
-  <Teleport to="body">
-    <span
-      v-if="flight"
-      :key="flight.id"
-      class="sftp-transfer-flight"
-      aria-hidden="true"
-      :style="{
-        left: `${flight.left}px`,
-        top: `${flight.top}px`,
-        '--sftp-flight-x': `${flight.deltaX}px`,
-        '--sftp-flight-y': `${flight.deltaY}px`,
-        '--sftp-flight-middle-x': `${flight.middleX}px`,
-        '--sftp-flight-middle-y': `${flight.middleY}px`
-      }"
-      @animationend="flight = null"
+  <Transition name="sftp-transfer-dock">
+    <aside
+      v-if="open"
+      id="sftp-transfer-center"
+      class="sftp-transfer-center-drawer"
+      :class="{ 'is-resizing': resizing }"
+      :style="drawerStyle"
+      role="region"
+      :aria-label="t('koko.sftpTransferCenter.queueTitle')"
     >
-      <UIcon name="i-lucide-send" class="size-3.5" />
-    </span>
-  </Teleport>
+      <div
+        class="sftp-transfer-resize-handle"
+        role="separator"
+        tabindex="0"
+        aria-orientation="horizontal"
+        :aria-label="t('koko.sftpTransferCenter.resizeHandle')"
+        :aria-valuemin="drawerHeightBounds().min"
+        :aria-valuemax="drawerHeightBounds().max"
+        :aria-valuenow="drawerHeight"
+        @pointerdown="startResize"
+        @keydown="resizeWithKeyboard"
+      />
 
-  <USlideover
-    v-model:open="open"
-    class="sftp-transfer-center-drawer"
-    :ui="{
-      body: 'p-0 sm:p-0 flex min-h-0 flex-col overflow-hidden',
-      footer: 'px-3.5 py-2',
-      header: 'px-3.5 py-3'
-    }"
-  >
-    <template #header>
-      <div class="flex items-center justify-between w-full">
-        <div class="flex items-center gap-2.5">
-          <UIcon name="i-lucide-cloud-upload" class="size-4.5 shrink-0 text-primary" />
-          <h2 class="flex-1 text-sm font-semibold">{{ t("koko.sftpTransferCenter.title") }}</h2>
-          <span class="font-mono text-[11px] text-muted bg-elevated rounded-full px-2 py-0.5">
-            {{ batches.length }}
-          </span>
-        </div>
-        <UButton color="neutral" variant="ghost" icon="i-lucide-x" size="sm" @click="void (open = false)" />
-      </div>
-    </template>
-
-    <template #body>
-      <div class="flex shrink-0 items-center gap-1.5 flex-wrap border-b border-default px-3.5 py-2">
-        <button
-          v-for="item in taskFilters"
-          :key="item.value"
-          type="button"
-          class="sftp-transfer-filter-chip"
-          :class="{ on: filter === item.value }"
-          :aria-pressed="filter === item.value"
-          @click="filter = item.value"
-        >
-          {{ t(item.labelKey) }}
-        </button>
-      </div>
-
-      <div v-if="batches.length" class="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3 py-2.5">
-        <SftpTransferBatch
-          v-for="batch in batches"
-          :key="batch.id"
-          :batch="batch"
-          :expanded="expandedBatches.has(batch.id)"
-          :expanded-targets="expandedTargets"
-          @toggle="toggleBatch(batch.id)"
-          @toggle-target="toggleTarget"
-          @pause="pauseTasks"
-          @resume="resumeTasks"
-          @retry="retryTasks"
-          @cancel="cancelDistribution"
-          @cancel-target="cancelTarget"
-          @resolve="resolveConflicts"
-          @pause-task="store.pauseTask($event.id)"
-          @resume-task="store.resumeTask($event.id)"
-          @retry-task="store.retryTask($event.id)"
-          @cancel-task="store.cancelTask($event.id)"
-        />
-      </div>
-
-      <div v-else class="flex flex-col items-center justify-center gap-3 py-16 text-muted">
-        <UIcon name="i-lucide-inbox" class="size-12 opacity-50" />
-        <p class="text-sm">{{ t("FileTransfer.Empty") }}</p>
-      </div>
-    </template>
-
-    <template #footer>
-      <div class="flex w-full items-center justify-between gap-3">
-        <p class="text-[11px] text-muted">{{ t("koko.sftpTransferCenter.schedulingHint") }}</p>
-        <UButton
+      <header class="sftp-transfer-drawer-header">
+        <strong>{{ t("koko.sftpTransferCenter.queueTitle") }}</strong>
+        <span class="sftp-transfer-drawer-summary">
+          {{ t("koko.sftpTransferCenter.queueSummary", { active: activeTaskCount, attention: attentionCount }) }}
+        </span>
+        <UBadge v-if="attentionCount" color="warning" variant="soft" size="xs" :label="String(attentionCount)" />
+        <UProgress
+          class="sftp-transfer-drawer-progress"
+          color="primary"
           size="xs"
+          :model-value="progress"
+          :ui="{ base: 'h-[3px]' }"
+          :aria-label="t('koko.sftpTransferCenter.batchProgress')"
+        />
+        <span class="flex-1" />
+        <UTooltip v-if="hasFinishedTasks" :text="t('FileTransfer.ClearFinished')">
+          <UButton
+            class="size-8 justify-center rounded-lg p-0"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-trash-2"
+            size="sm"
+            :aria-label="t('FileTransfer.ClearFinished')"
+            @click="clearFinishedTransfers"
+          />
+        </UTooltip>
+        <UButton
+          class="size-8 justify-center rounded-lg p-0"
           color="neutral"
           variant="ghost"
-          icon="i-lucide-trash-2"
-          :disabled="!hasFinishedTasks"
-          :label="t('FileTransfer.ClearFinished')"
-          @click="store.clearFinished(sftpTasks.map((task) => task.id))"
+          icon="i-lucide-x"
+          size="sm"
+          :aria-label="t('koko.sftpTransferCenter.collapse')"
+          @click="setOpen(false)"
         />
+      </header>
+
+      <div class="sftp-transfer-drawer-body">
+        <UTable
+          sticky
+          class="sftp-transfer-table"
+          :data="sftpTasks"
+          :columns="columns"
+          :get-row-id="transferRowId"
+          :empty="t('FileTransfer.Empty')"
+        >
+          <template #file-cell="{ row }">
+            <div class="sftp-transfer-table__file">
+              <UIcon
+                :name="
+                  row.original.status === 'completed'
+                    ? 'i-lucide-check'
+                    : row.original.status === 'failed'
+                      ? 'i-lucide-x-circle'
+                      : 'i-lucide-file'
+                "
+                class="size-3 shrink-0 text-tertiary"
+              />
+              <span class="truncate" :title="row.original.source.name">{{ row.original.source.name }}</span>
+            </div>
+          </template>
+
+          <template #direction-cell="{ row }">
+            <span class="sftp-transfer-table__secondary" :title="transferDirection(row.original)">
+              {{ transferDirection(row.original) }}
+            </span>
+          </template>
+
+          <template #progress-cell="{ row }">
+            <UProgress
+              class="sftp-file-progress-bar"
+              :color="sftpTransferProgressColor(row.original)"
+              size="xs"
+              :model-value="transferProgress(row.original)"
+              :ui="{ base: 'h-[3px]' }"
+              :aria-label="t('koko.sftpTransferCenter.fileProgress', { file: row.original.source.name })"
+            />
+          </template>
+
+          <template #rate-cell="{ row }">
+            <span class="sftp-transfer-table__secondary" :title="transferRateText(row.original)">
+              {{ transferRateText(row.original) }}
+            </span>
+          </template>
+
+          <template #status-cell="{ row }">
+            <span
+              class="sftp-transfer-table__status"
+              :class="sftpTransferStatusClass(row.original.status)"
+              :title="transferStatusText(row.original)"
+            >
+              {{ transferStatusText(row.original) }}
+            </span>
+          </template>
+
+          <template #actions-cell="{ row }">
+            <SftpTransferActions
+              :task="row.original"
+              :can-pause="canPauseTransferTasks([row.original])"
+              :can-resume="canResumeTransferTasks([row.original])"
+              @pause="store.pauseTask(row.original.id)"
+              @retry="store.retryTask(row.original.id)"
+              @resume="store.resumeTask(row.original.id)"
+              @cancel="store.cancelTask(row.original.id)"
+              @clear="store.clearFinished([row.original.id])"
+              @resolve="resolveConflict(row.original, $event)"
+            />
+          </template>
+        </UTable>
       </div>
-    </template>
-  </USlideover>
+    </aside>
+  </Transition>
 </template>

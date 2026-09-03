@@ -275,6 +275,12 @@ function emitDesktopEvent(name: string, payload: unknown, targetLabel?: string) 
   }
 }
 
+function clearDesktopEventSubscriptions(webContents) {
+  for (const [id, subscription] of subscriptions) {
+    if (subscription.webContents === webContents) subscriptions.delete(id);
+  }
+}
+
 function startApiStream(event, win, args) {
   const streamId = String(args.streamId || "").trim();
   if (!streamId) throw new Error("api stream id is required");
@@ -790,6 +796,10 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
     const [width, height] = win.getContentSize();
     emitDesktopEvent("desktop://resize", { width, height }, label);
   });
+  windowWebContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
+    if (isMainFrame && !isInPlace) clearDesktopEventSubscriptions(windowWebContents);
+  });
+  windowWebContents.on("render-process-gone", () => clearDesktopEventSubscriptions(windowWebContents));
   win.on("closed", () => {
     electronLog.info(`window closed ${label}`);
     windows.delete(label);
@@ -812,9 +822,7 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
       });
       if (!managed.webContents.isDestroyed()) managed.webContents.close();
     }
-    for (const [id, subscription] of subscriptions) {
-      if (subscription.webContents === windowWebContents) subscriptions.delete(id);
-    }
+    clearDesktopEventSubscriptions(windowWebContents);
   });
   void win.loadURL(rendererTarget(options.url || "/luna/"));
   return win;

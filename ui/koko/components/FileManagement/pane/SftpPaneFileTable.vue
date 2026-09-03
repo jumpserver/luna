@@ -145,7 +145,7 @@ onUnmounted(() => {
         </colgroup>
         <thead class="sftp-file-table__head">
           <tr>
-            <th class="h-8.75 border-b border-(--app-border) bg-(--app-panel-bg) px-3 py-2 text-center">
+            <th class="h-8.5 border-b border-(--app-border) bg-(--app-panel-bg) px-3 py-1.5 text-center">
               <UCheckbox
                 :model-value="selectAllState"
                 icon="i-lucide-check"
@@ -156,25 +156,25 @@ onUnmounted(() => {
               />
             </th>
             <th
-              class="h-8.75 min-w-0 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-muted"
+              class="h-8.5 min-w-0 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-1.5 text-left text-[11px] font-semibold text-muted"
             >
               {{ t("koko.fileManagement.name") }}
             </th>
             <th
               v-if="!compact"
-              class="hidden h-8.75 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-muted md:table-cell"
+              class="hidden h-8.5 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-1.5 text-right text-[11px] font-semibold text-muted md:table-cell"
             >
               {{ t("koko.fileManagement.modifiedTime") }}
             </th>
             <th
-              class="h-8.75 border-b border-(--app-border) bg-(--app-panel-bg) py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-muted"
+              class="h-8.5 border-b border-(--app-border) bg-(--app-panel-bg) py-1.5 text-right text-[11px] font-semibold text-muted"
               :class="sizeColClass"
             >
               {{ t("koko.fileManagement.size") }}
             </th>
             <th
               v-if="!compact"
-              class="h-8.75 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-muted"
+              class="h-8.5 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-1.5 text-left text-[11px] font-semibold text-muted"
             >
               {{ t("koko.fileManagement.type") }}
             </th>
@@ -210,7 +210,7 @@ onUnmounted(() => {
           <tr
             v-for="(entry, index) in entries"
             :key="entry.name"
-            class="sftp-file-row group h-9.5 transition-colors hover:bg-(--app-hover-soft)"
+            class="sftp-file-row group h-8.5 transition-colors hover:bg-(--app-hover-soft)"
             :class="[
               selectedSet.has(entry.name) ? 'bg-(--app-selected-soft)' : '',
               highlightedSet.has(entry.name) ? 'sftp-file-row--highlight' : ''
@@ -220,7 +220,7 @@ onUnmounted(() => {
             @click="emit('select', entry, $event)"
             @contextmenu="emit('context', entry, $event)"
           >
-            <td class="h-9.5 border-b border-(--app-border)/60 px-3 py-1.5 text-center" @click.stop>
+            <td class="h-8.5 border-b border-(--app-border)/60 px-3 py-1 text-center" @click.stop>
               <UCheckbox
                 v-if="entry.name !== '..'"
                 :model-value="selectedSet.has(entry.name)"
@@ -229,7 +229,7 @@ onUnmounted(() => {
                 @update:model-value="emit('toggle', entry, $event === true)"
               />
             </td>
-            <td class="h-9.5 min-w-0 border-b border-(--app-border)/60 px-3.5 py-1.5 text-[12.5px] text-(--app-fg)">
+            <td class="h-8.5 min-w-0 border-b border-(--app-border)/60 px-3.5 py-1 text-[12px] text-(--app-fg)">
               <button
                 type="button"
                 class="flex min-w-0 w-full items-center gap-2 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
@@ -252,12 +252,12 @@ onUnmounted(() => {
             </td>
             <td
               v-if="!compact"
-              class="hidden h-9.5 border-b border-(--app-border)/60 px-3.5 py-1.5 text-right font-ui-mono text-muted md:table-cell"
+              class="hidden h-8.5 border-b border-(--app-border)/60 px-3.5 py-1 text-right font-ui-mono text-muted md:table-cell"
             >
               <span class="sftp-file-meta block truncate">{{ formatSftpModifiedTime(entry.mod_time) }}</span>
             </td>
             <td
-              class="h-9.5 border-b border-(--app-border)/60 py-1.5 text-right font-ui-mono text-muted"
+              class="h-8.5 border-b border-(--app-border)/60 py-1 text-right font-ui-mono text-muted"
               :class="sizeColClass"
             >
               <span class="sftp-file-meta block truncate">
@@ -266,7 +266,7 @@ onUnmounted(() => {
             </td>
             <td
               v-if="!compact"
-              class="h-9.5 border-b border-(--app-border)/60 px-3.5 py-1.5 text-left font-ui-mono text-muted"
+              class="h-8.5 border-b border-(--app-border)/60 px-3.5 py-1 text-left font-ui-mono text-muted"
             >
               <span class="sftp-file-meta block truncate">{{ fileType(entry) }}</span>
             </td>
@@ -278,9 +278,11 @@ onUnmounted(() => {
       </table>
     </UScrollArea>
 
+    <slot name="footer" />
+
     <div
       v-if="showStatusBar"
-      class="sftp-file-table__status flex h-8 shrink-0 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3.5 font-ui-mono text-[10.5px] text-(--app-muted)"
+      class="sftp-file-table__status flex h-7 shrink-0 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3 font-ui-mono text-[10.5px] text-(--app-muted)"
     >
       {{ t("koko.fileManagement.items", { count: entries.length }) }}
     </div>

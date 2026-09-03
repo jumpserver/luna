@@ -85,6 +85,9 @@
     "Save": "Salvar",
     "EmptyDescription": "Não há ativos autorizados disponíveis para o tipo atual",
     "SelectFromMenu": "Selecione um item à esquerda",
+    "Actions": "Ações",
+    "Close": "Fechar",
+    "Remove": "Remover",
     "More": "Mais"
   },
   "DesktopMenu": {
@@ -115,7 +118,9 @@
     "Tabs": "{count} abas",
     "Connected": "{count} conectadas",
     "Pending": "{count} pendentes",
-    "Failed": "{count} com falha"
+    "Failed": "{count} com falha",
+    "Transfer": "Central de transferências",
+    "TransferCount": "Central de transferências {count}"
   },
   "WorkspaceEmpty": {
     "LoginHint": "Entre para visualizar os ativos e se conectar",
@@ -725,12 +730,17 @@
     "Expand": "Expandir transferências",
     "Collapse": "Recolher transferências",
     "Resume": "Retomar",
+    "Pause": "Pausar",
     "Retry": "Tentar novamente",
     "Cancel": "Cancelar",
+    "IdleRate": "—",
+    "TransferredSize": "{size} transferido",
+    "SpeedRemaining": "{speed} · {remaining}",
     "ConflictTitle": "Tratamento de arquivo duplicado",
     "ConflictDescription": "O destino contém um arquivo com o mesmo nome. Escolha como tratar esta transferência.",
     "Overwrite": "Substituir",
     "Skip": "Ignorar",
+    "EndpointUnavailable": "Este envio falhou. Selecione os arquivos novamente e envie.",
     "Status": {
       "queued": "Na fila",
       "preparing": "Preparando",
@@ -1418,6 +1428,17 @@
     },
     "sftpTransferCenter": {
       "title": "Central de transferências",
+      "queueTitle": "Fila de transferências",
+      "queueSummary": "{active} em andamento · {attention} exigem atenção",
+      "resizeHandle": "Redimensionar fila de transferências",
+      "collapse": "Recolher fila de transferências",
+      "columns": {
+        "file": "Arquivo",
+        "direction": "Direção",
+        "progress": "Progresso",
+        "rate": "Velocidade / restante",
+        "status": "Status"
+      },
       "batchCount": "{count} lote de distribuição | {count} lotes de distribuição",
       "filters": {
         "all": "Todos",
@@ -1474,7 +1495,7 @@
       "remoteConnectTitle": "Adicionar SFTP remoto",
       "remoteConnectDescription": "Conecte outro ativo SFTP para entrar no modo de dois painéis. Use as setas centrais para uma transferência direta rápida ou use “Enviar para” para abrir a caixa de diálogo de transferência.",
       "transferCenterTitle": "Central de transferências",
-      "transferCenterDescription": "O controle arrastável no canto inferior direito acompanha o progresso dos lotes e as falhas, além de permitir cancelar tarefas ativas.",
+      "transferCenterDescription": "O selo Transferência na barra de status abre a fila. Fica desativado até existir uma transferência e então mostra progresso, velocidade, tempo restante e status.",
       "progress": "Etapa {current} de {total}",
       "next": "Avançar",
       "previous": "Voltar",

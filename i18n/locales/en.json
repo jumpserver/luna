@@ -85,6 +85,9 @@
     "Save": "Save",
     "EmptyDescription": "No authorized assets are available for the current type",
     "SelectFromMenu": "Select an item on the left",
+    "Actions": "Actions",
+    "Close": "Close",
+    "Remove": "Remove",
     "More": "More"
   },
   "DesktopMenu": {
@@ -115,7 +118,9 @@
     "Tabs": "{count} tabs",
     "Connected": "{count} connected",
     "Pending": "{count} pending",
-    "Failed": "{count} failed"
+    "Failed": "{count} failed",
+    "Transfer": "Transfer center",
+    "TransferCount": "Transfer center {count}"
   },
   "WorkspaceEmpty": {
     "LoginHint": "Sign in to view assets and connect",
@@ -725,12 +730,17 @@
     "Expand": "Expand transfers",
     "Collapse": "Collapse transfers",
     "Resume": "Resume",
+    "Pause": "Pause",
     "Retry": "Retry",
     "Cancel": "Cancel",
+    "IdleRate": "—",
+    "TransferredSize": "{size} transferred",
+    "SpeedRemaining": "{speed} · {remaining}",
     "ConflictTitle": "Duplicate file handling",
     "ConflictDescription": "The destination contains a file with the same name. Choose how to handle this transfer.",
     "Overwrite": "Overwrite",
     "Skip": "Skip",
+    "EndpointUnavailable": "This upload failed. Please select the files again and upload.",
     "Status": {
       "queued": "Queued",
       "preparing": "Preparing",
@@ -1418,6 +1428,17 @@
     },
     "sftpTransferCenter": {
       "title": "Transfer center",
+      "queueTitle": "Transfer queue",
+      "queueSummary": "{active} active · {attention} need attention",
+      "resizeHandle": "Resize transfer queue",
+      "collapse": "Collapse transfer queue",
+      "columns": {
+        "file": "File",
+        "direction": "Direction",
+        "progress": "Progress",
+        "rate": "Speed / remaining",
+        "status": "Status"
+      },
       "batchCount": "{count} distribution batch | {count} distribution batches",
       "filters": {
         "all": "All",
@@ -1474,7 +1495,7 @@
       "remoteConnectTitle": "Add remote SFTP",
       "remoteConnectDescription": "Connect another SFTP asset to enter dual-pane mode. Use the center arrows for a quick peer transfer, or Send to open the transfer dialog.",
       "transferCenterTitle": "Transfer center",
-      "transferCenterDescription": "The draggable control at the bottom-right tracks batch progress, failures, and lets you cancel active tasks.",
+      "transferCenterDescription": "The Transfer badge in the status bar opens the queue. It stays disabled until a transfer exists, then shows progress, speed, remaining time, and status.",
       "progress": "Step {current} of {total}",
       "next": "Next",
       "previous": "Previous",

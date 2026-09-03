@@ -84,6 +84,52 @@ const islandConnectMethodItems = computed(() =>
   }))
 );
 
+const islandMethodTransitionKey = computed(
+  () =>
+    `${props.protocol}:${selectedConnectMethodType.value}:${islandConnectMethodItems.value.map((item) => item.value).join("|")}`
+);
+
+function setIslandMethodHeight(el: Element, height: string) {
+  const node = el as HTMLElement;
+  node.style.height = height;
+  node.style.overflow = "hidden";
+}
+
+function clearIslandMethodHeight(el: Element) {
+  const node = el as HTMLElement;
+  node.style.height = "";
+  node.style.overflow = "";
+}
+
+function onIslandMethodBeforeEnter(el: Element) {
+  setIslandMethodHeight(el, "0px");
+}
+
+function onIslandMethodEnter(el: Element) {
+  const node = el as HTMLElement;
+  void node.offsetHeight;
+  node.style.height = `${node.scrollHeight}px`;
+}
+
+function onIslandMethodAfterEnter(el: Element) {
+  clearIslandMethodHeight(el);
+}
+
+function onIslandMethodBeforeLeave(el: Element) {
+  const node = el as HTMLElement;
+  setIslandMethodHeight(el, `${node.scrollHeight}px`);
+}
+
+function onIslandMethodLeave(el: Element) {
+  const node = el as HTMLElement;
+  void node.offsetHeight;
+  node.style.height = "0px";
+}
+
+function onIslandMethodAfterLeave(el: Element) {
+  clearIslandMethodHeight(el);
+}
+
 watch(
   () => [props.methods, connectMethod.value] as const,
   () => {
@@ -147,8 +193,17 @@ async function openProtocolApplicationSettings() {
         @update:model-value="selectConnectMethodType"
       />
       <div class="connect-method-island__content">
-        <Transition name="island-method" mode="out-in">
-          <div :key="selectedConnectMethodType || 'methods'">
+        <Transition
+          name="island-method"
+          mode="out-in"
+          @before-enter="onIslandMethodBeforeEnter"
+          @enter="onIslandMethodEnter"
+          @after-enter="onIslandMethodAfterEnter"
+          @before-leave="onIslandMethodBeforeLeave"
+          @leave="onIslandMethodLeave"
+          @after-leave="onIslandMethodAfterLeave"
+        >
+          <div :key="islandMethodTransitionKey">
             <URadioGroup
               v-if="islandConnectMethodItems.length"
               v-model="connectMethod"
@@ -341,9 +396,11 @@ async function openProtocolApplicationSettings() {
 
 .island-method-enter-active,
 .island-method-leave-active {
+  overflow: hidden;
   transition:
     opacity 180ms ease,
-    transform 180ms ease;
+    transform 180ms ease,
+    height 220ms ease;
 }
 
 .island-method-enter-from {

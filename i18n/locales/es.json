@@ -85,6 +85,9 @@
     "Save": "Guardar",
     "EmptyDescription": "No hay activos autorizados disponibles para el tipo actual",
     "SelectFromMenu": "Seleccione un elemento de la izquierda",
+    "Actions": "Acciones",
+    "Close": "Cerrar",
+    "Remove": "Quitar",
     "More": "Más"
   },
   "DesktopMenu": {
@@ -115,7 +118,9 @@
     "Tabs": "{count} pestañas",
     "Connected": "{count} conectadas",
     "Pending": "{count} pendientes",
-    "Failed": "{count} con error"
+    "Failed": "{count} con error",
+    "Transfer": "Centro de transferencias",
+    "TransferCount": "Centro de transferencias {count}"
   },
   "WorkspaceEmpty": {
     "LoginHint": "Inicie sesión para ver los activos y conectarse",
@@ -725,12 +730,17 @@
     "Expand": "Expandir transferencias",
     "Collapse": "Contraer transferencias",
     "Resume": "Reanudar",
+    "Pause": "Pausar",
     "Retry": "Intentar de nuevo",
     "Cancel": "Cancelar",
+    "IdleRate": "—",
+    "TransferredSize": "{size} transferido",
+    "SpeedRemaining": "{speed} · {remaining}",
     "ConflictTitle": "Gestión de archivos duplicados",
     "ConflictDescription": "El destino contiene un archivo con el mismo nombre. Elija cómo gestionar esta transferencia.",
     "Overwrite": "Sobrescribir",
     "Skip": "Omitir",
+    "EndpointUnavailable": "Esta carga falló. Vuelva a seleccionar los archivos y súbalos.",
     "Status": {
       "queued": "En cola",
       "preparing": "Preparando",
@@ -1418,6 +1428,17 @@
     },
     "sftpTransferCenter": {
       "title": "Centro de transferencias",
+      "queueTitle": "Cola de transferencias",
+      "queueSummary": "{active} en curso · {attention} requieren atención",
+      "resizeHandle": "Cambiar el tamaño de la cola de transferencias",
+      "collapse": "Contraer la cola de transferencias",
+      "columns": {
+        "file": "Archivo",
+        "direction": "Dirección",
+        "progress": "Progreso",
+        "rate": "Velocidad / restante",
+        "status": "Estado"
+      },
       "batchCount": "{count} lote de distribución | {count} lotes de distribución",
       "filters": {
         "all": "Todos",
@@ -1474,7 +1495,7 @@
       "remoteConnectTitle": "Añadir SFTP remoto",
       "remoteConnectDescription": "Conecte otro activo SFTP para usar dos paneles. Use las flechas centrales para una transferencia rápida o Enviar a para abrir el diálogo.",
       "transferCenterTitle": "Centro de transferencias",
-      "transferCenterDescription": "El control arrastrable de la esquina inferior derecha sigue el progreso y los errores y permite cancelar tareas activas.",
+      "transferCenterDescription": "La insignia Transferencia de la barra de estado abre la cola. Permanece deshabilitada hasta que haya una transferencia y entonces muestra progreso, velocidad, tiempo restante y estado.",
       "progress": "Paso {current} de {total}",
       "next": "Siguiente",
       "previous": "Anterior",

@@ -1,3 +1,8 @@
+import type {
+  FileTransferConflictPolicy,
+  FileTransferEndpoint,
+  FileTransferEndpointRef
+} from "@jumpserver/connectors-core";
 import type { Ref } from "vue";
 import type { SftpFileEntry } from "../protocol";
 import type {
@@ -5,21 +10,16 @@ import type {
   SftpLocalPaneHandle,
   SftpRemotePane,
   SftpRemotePaneHandle,
-  SftpTransferCenterHandle,
   SftpTransferDropPayload,
   SftpTransferSourcePayload,
   SftpWorkspaceSide
 } from "./workspaceTypes";
-import type {
-  FileTransferConflictPolicy,
-  FileTransferEndpoint,
-  FileTransferEndpointRef
-} from "@jumpserver/connectors-core";
 import { registerFileTransferEndpoint } from "@jumpserver/connectors-core";
 import { computed, onBeforeUnmount, reactive, ref, toValue, watch } from "vue";
-import { buildSftpDistributionGroups } from "#koko/utils/sftpDistribution";
+import { useSftpTransferUi } from "#koko/composables/sftp/useSftpTransferUi";
 import { useFileTransferStore } from "#koko/stores/fileTransfer";
-import { buildSftpTransferInputs, completedTransferSourceNames, filterSftpDistributionTargets } from "./selectors";
+import { buildSftpDistributionGroups } from "#koko/utils/sftpDistribution";
+import { buildSftpTransferInputs, filterSftpDistributionTargets } from "./selectors";
 import { useBrowserUploadTransferEndpoint, WEB_UPLOAD_ENDPOINT_ID } from "./useBrowserUploadTransferEndpoint";
 
 interface TransferCoordinatorOptions {
@@ -32,26 +32,17 @@ interface TransferCoordinatorOptions {
   remotePaneRefs: Ref<Record<string, SftpRemotePaneHandle | null>>;
   remotePanes: Ref<SftpRemotePane[]>;
   localPaneRef: Ref<SftpLocalPaneHandle | null>;
-  transferCenterRef: Ref<SftpTransferCenterHandle | null>;
   translate: (key: string, params?: Record<string, unknown>) => string;
   showError: (title: string, error: unknown) => void;
 }
 
-interface TransferOperationTracking {
-  sourceEndpoint: FileTransferEndpointRef;
-  sourcePath: string;
-  sourceSelectionRevision: number;
-  batchIds: string[];
-  expectedTaskCount: number;
-  createdAt: number;
-}
-
-const terminalTransferStatuses = new Set(["completed", "skipped", "failed", "canceled"]);
 const LOCAL_ENDPOINT_ID = "local:fs";
+const terminalTransferStatuses = new Set(["completed", "skipped", "failed", "canceled"]);
 
 export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) {
   const toast = useToast();
   const fileTransferStore = useFileTransferStore();
+  const transferUi = useSftpTransferUi();
   const transferring = ref(false);
   const sendModalOpen = ref(false);
   const sendSource = ref<SftpTransferSourcePayload | null>(null);
@@ -65,7 +56,6 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   const localSelections = ref<SftpFileEntry[]>([]);
   const highlightedNames = reactive<Record<SftpWorkspaceSide, string[]>>({ left: [], right: [] });
   const distributionHistory = useLocalStorage<Record<string, string[]>>("sftp-distribution-history", {});
-  const pendingSelectionClears = new Map<string, TransferOperationTracking>();
   const endpointUnregisters = new Map<string, () => void>();
   let highlightTimer: ReturnType<typeof setTimeout> | undefined;
   /** Web global workbench left pane — stages browser File objects for Transfer Center. */
@@ -135,39 +125,11 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   );
 
   function sourcePaneFor(endpointId: string) {
+    if (endpointId === LOCAL_ENDPOINT_ID) return options.localPaneRef.value;
     if (options.primaryTransferEndpoint.value?.id === endpointId) return options.primaryPaneRef.value;
     const pane = options.remotePanes.value.find((item) => item.transferEndpoint.id === endpointId);
     return pane ? options.remotePaneRefs.value[pane.id] || null : null;
   }
-
-  watch(
-    () => fileTransferStore.tasks.map((task) => `${task.id}:${task.status}`),
-    () => {
-      const now = Date.now();
-      const staleThreshold = 5 * 60 * 1000;
-      for (const [operationId, pending] of pendingSelectionClears) {
-        const batchIds = new Set(pending.batchIds);
-        const tasks = fileTransferStore.tasks.filter((task) => batchIds.has(task.batchId));
-        const terminalCount = tasks.filter((task) => terminalTransferStatuses.has(task.status)).length;
-        const allTasksTerminated = terminalCount >= pending.expectedTaskCount;
-        const isStale = now - pending.createdAt > staleThreshold;
-        if (!allTasksTerminated && !isStale) continue;
-
-        if (import.meta.dev && isStale) {
-          console.warn(
-            `[SFTP Transfer] Operation ${operationId} is stale (${terminalCount}/${pending.expectedTaskCount} tasks terminated)`
-          );
-        }
-        const completedNames = completedTransferSourceNames(tasks);
-        sourcePaneFor(pending.sourceEndpoint.id)?.clearTransferredSelection(
-          completedNames,
-          pending.sourcePath,
-          pending.sourceSelectionRevision
-        );
-        pendingSelectionClears.delete(operationId);
-      }
-    }
-  );
 
   if (import.meta.dev) {
     watch(
@@ -201,7 +163,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   function unmountTransferEndpoint(endpoint: FileTransferEndpointRef) {
     endpointUnregisters.get(endpoint.id)?.();
     endpointUnregisters.delete(endpoint.id);
-    fileTransferStore.pauseEndpoint(endpoint);
+    fileTransferStore.failUnavailableEndpoint(endpoint);
   }
 
   function targetPath(target: SftpDistributionTargetOption) {
@@ -357,11 +319,9 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     void pane?.manager.retry.reconnect();
   }
 
-  function startDistribution(event?: MouseEvent) {
+  function startDistribution() {
     const source = sendSource.value;
     if (!source || !selectedSendTargets.value.length) return;
-    const animationOrigin =
-      event?.currentTarget instanceof HTMLElement ? event.currentTarget.getBoundingClientRect() : undefined;
     const distributionId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
     const groups = buildSftpDistributionGroups({
       ...source,
@@ -372,21 +332,16 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
         destinationPath: targetPath(target)
       }))
     });
-    const batchIds = groups.map((group) => fileTransferStore.enqueueBatch(group.inputs)).filter(Boolean) as string[];
-    if (!batchIds.length) return;
+    let queued = false;
+    for (const group of groups) {
+      if (fileTransferStore.enqueueBatch(group.inputs)) queued = true;
+    }
+    if (!queued) return;
 
-    pendingSelectionClears.set(`dist:${distributionId}`, {
-      sourceEndpoint: source.sourceEndpoint,
-      sourcePath: source.sourcePath,
-      sourceSelectionRevision: source.sourceSelectionRevision,
-      batchIds,
-      expectedTaskCount: source.entries.length * selectedSendTargets.value.length,
-      createdAt: Date.now()
-    });
     distributionHistory.value[source.sourceEndpoint.id] = selectedSendTargets.value.map((target) => target.id);
     sourcePaneFor(source.sourceEndpoint.id)?.clearSelection();
     sendModalOpen.value = false;
-    options.transferCenterRef.value?.signalQueued(animationOrigin);
+    transferUi.signalQueued();
   }
 
   function resolveEndpointSide(endpointId: string): SftpWorkspaceSide | null {
@@ -406,14 +361,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     if (!inputs.length) return;
     const batchId = fileTransferStore.enqueueBatch(inputs);
     if (!batchId) return;
-    pendingSelectionClears.set(`single:${batchId}`, {
-      sourceEndpoint: payload.sourceEndpoint,
-      sourcePath: payload.sourcePath,
-      sourceSelectionRevision: payload.sourceSelectionRevision,
-      batchIds: [batchId],
-      expectedTaskCount: inputs.length,
-      createdAt: Date.now()
-    });
+    sourcePaneFor(payload.sourceEndpoint.id)?.clearSelection();
     // Highlight destination rows as soon as transfer is queued; list reload keeps the class.
     const side = resolveEndpointSide(destination.id);
     if (side) {
@@ -422,7 +370,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
         payload.entries.map((entry) => entry.name)
       );
     }
-    options.transferCenterRef.value?.signalQueued();
+    transferUi.signalQueued();
   }
 
   function queueSftpTransferToSelected(payload: SftpTransferDropPayload, destination?: FileTransferEndpointRef) {

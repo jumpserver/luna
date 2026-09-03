@@ -85,6 +85,9 @@
     "Save": "保存",
     "EmptyDescription": "当前类型下暂无可用的授权资产",
     "SelectFromMenu": "请从左侧选择一个配置项",
+    "Actions": "操作",
+    "Close": "关闭",
+    "Remove": "移除",
     "More": "更多"
   },
   "DesktopMenu": {
@@ -115,7 +118,9 @@
     "Tabs": "{count} 个标签",
     "Connected": "{count} 个已连接",
     "Pending": "{count} 个连接中",
-    "Failed": "{count} 个失败"
+    "Failed": "{count} 个失败",
+    "Transfer": "传输中心",
+    "TransferCount": "传输中心 {count}"
   },
   "WorkspaceEmpty": {
     "LoginHint": "登录后查看资产并发起连接",
@@ -725,12 +730,17 @@
     "Expand": "展开传输任务",
     "Collapse": "折叠传输任务",
     "Resume": "继续",
+    "Pause": "暂停",
     "Retry": "重试",
     "Cancel": "取消",
+    "IdleRate": "—",
+    "TransferredSize": "已传输 {size}",
+    "SpeedRemaining": "{speed} · {remaining}",
     "ConflictTitle": "同名文件处理",
     "ConflictDescription": "目标目录存在同名文件。请选择应用于本次传输的处理方式。",
     "Overwrite": "覆盖",
     "Skip": "跳过",
+    "EndpointUnavailable": "本次上传失败，请重新选择重新上传",
     "Status": {
       "queued": "排队中",
       "preparing": "准备中",
@@ -1421,6 +1431,17 @@
     },
     "sftpTransferCenter": {
       "title": "传输中心",
+      "queueTitle": "传输队列",
+      "queueSummary": "{active} 进行中 · {attention} 需处理",
+      "resizeHandle": "调整传输队列高度",
+      "collapse": "收起传输队列",
+      "columns": {
+        "file": "文件",
+        "direction": "传输方向",
+        "progress": "进度",
+        "rate": "速度 / 剩余",
+        "status": "状态"
+      },
       "batchCount": "{count} 个分发批次",
       "filters": {
         "all": "全部",
@@ -1477,7 +1498,7 @@
       "remoteConnectTitle": "添加远程 SFTP",
       "remoteConnectDescription": "连接另一台 SFTP 资产后进入双栏模式，中间箭头可快速传到对侧，也可用「发送到」打开传输浮窗。",
       "transferCenterTitle": "传输中心",
-      "transferCenterDescription": "右下角可拖动的传输中心，用于查看批次进度、失败重试，以及取消进行中的任务。",
+      "transferCenterDescription": "底栏的「传输」徽章可打开队列。没有任务时不可点，有传输后可查看进度、速度、剩余时间和状态。",
       "progress": "第 {current} / {total} 步",
       "next": "下一步",
       "previous": "上一步",
@@ -1504,7 +1525,7 @@
       "revealFailed": "无法在系统文件管理器中打开"
     },
     "sftpEditor": {
-      "explorerTitle": "File Editor",
+      "explorerTitle": "文件编辑器",
       "nameRequired": "请输入名称",
       "nameCannotContainPathSeparator": "名称不能包含路径分隔符",
       "nameAlreadyExists": "同名文件或目录已经存在",

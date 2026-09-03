@@ -20,6 +20,7 @@ interface VersionMessageResponse {
 }
 
 const recentSiteLimit = 5;
+const loginFailureToastId = "login-failed";
 
 const { addErrorToast } = useErrorToast();
 const appConfig = useAppConfig();
@@ -76,6 +77,16 @@ const headerIconButtonClass =
 const headerIconButtonActiveClass = "bg-[var(--app-hover-soft)] text-[var(--app-fg)]";
 
 let loginBtnUnlockTimer: ReturnType<typeof setTimeout> | null = null;
+let desktopListenersActive = true;
+
+const retainDesktopListener = (target: typeof unlistenAuthUrlRef, unlisten: DesktopUnlistenFn) => {
+  if (!desktopListenersActive) {
+    unlisten();
+    return false;
+  }
+  target.value = unlisten;
+  return true;
+};
 
 useEventBus().on("login", openLoginPage);
 
@@ -778,6 +789,7 @@ const handleConfirm = async () => {
 
     if (!looksLikeSiteIssue) {
       addErrorToast({
+        id: loginFailureToastId,
         title: t("Login.LoginFailed"),
         description: raw || t("Login.LoginFailed"),
         icon: "line-md:close-circle",
@@ -794,11 +806,12 @@ const handleConfirm = async () => {
 };
 
 onMounted(async () => {
+  desktopListenersActive = true;
   applyCurrentThemeColor();
 
   if (!isDesktopRuntime()) return;
 
-  unlistenAuthUrlRef.value = await desktopListen("auth_url", (event) => {
+  const unlistenAuthUrl = await desktopListen("auth_url", (event) => {
     const url = (event?.payload || "").toString();
     if (!url) return;
 
@@ -807,8 +820,9 @@ onMounted(async () => {
     openModal.value = false;
     navigateTo({ path: localePath({ path: "/auth/browser" }), query: { auth_url: url } });
   });
+  if (!retainDesktopListener(unlistenAuthUrlRef, unlistenAuthUrl)) return;
 
-  unlistenErrorPageRef.value = await desktopListen("error-page", (event) => {
+  const unlistenErrorPage = await desktopListen("error-page", (event) => {
     const payload = (event?.payload || {}) as any;
     const status = (payload?.status || "").toString();
     const reason = (payload?.reason || "").toString();
@@ -823,6 +837,7 @@ onMounted(async () => {
     }
 
     addErrorToast({
+      id: loginFailureToastId,
       title: t("Login.LoginFailed"),
       description,
       icon: "line-md:close-circle",
@@ -847,8 +862,9 @@ onMounted(async () => {
       userInfoStore.setUserLoggedIn(false);
     });
   });
+  if (!retainDesktopListener(unlistenErrorPageRef, unlistenErrorPage)) return;
 
-  unlistenLoginFailedRef.value = await desktopListen("login-failed-detected", (event) => {
+  const unlistenLoginFailed = await desktopListen("login-failed-detected", (event) => {
     const payload = (event?.payload || {}) as any;
     const reason = (payload?.reason || "").toString();
     const message = (payload?.message || "").toString();
@@ -860,6 +876,7 @@ onMounted(async () => {
     }
 
     addErrorToast({
+      id: loginFailureToastId,
       title: t("Login.LoginFailed"),
       description,
       icon: "line-md:close-circle",
@@ -883,9 +900,11 @@ onMounted(async () => {
 
     userInfoStore.setUserLoggedIn(false);
   });
+  retainDesktopListener(unlistenLoginFailedRef, unlistenLoginFailed);
 });
 
 onBeforeUnmount(() => {
+  desktopListenersActive = false;
   disarmPalettePreview();
   restorePalettePreview();
   if (unlistenAuthUrlRef.value) unlistenAuthUrlRef.value();

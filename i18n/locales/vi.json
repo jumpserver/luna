@@ -85,6 +85,9 @@
     "Save": "Lưu",
     "EmptyDescription": "Không có tài sản được ủy quyền nào cho loại hiện tại",
     "SelectFromMenu": "Chọn một mục ở bên trái",
+    "Actions": "Thao tác",
+    "Close": "Đóng",
+    "Remove": "Xóa",
     "More": "Thêm"
   },
   "DesktopMenu": {
@@ -115,7 +118,9 @@
     "Tabs": "{count} thẻ",
     "Connected": "{count} đã kết nối",
     "Pending": "{count} đang chờ",
-    "Failed": "{count} thất bại"
+    "Failed": "{count} thất bại",
+    "Transfer": "Trung tâm truyền",
+    "TransferCount": "Trung tâm truyền {count}"
   },
   "WorkspaceEmpty": {
     "LoginHint": "Đăng nhập để xem tài sản và kết nối",
@@ -725,12 +730,17 @@
     "Expand": "Mở rộng danh sách truyền",
     "Collapse": "Thu gọn danh sách truyền",
     "Resume": "Tiếp tục",
+    "Pause": "Tạm dừng",
     "Retry": "Thử lại",
     "Cancel": "Hủy",
+    "IdleRate": "—",
+    "TransferredSize": "đã truyền {size}",
+    "SpeedRemaining": "{speed} · {remaining}",
     "ConflictTitle": "Xử lý tệp trùng lặp",
     "ConflictDescription": "Đích có tệp cùng tên. Chọn cách xử lý lượt truyền này.",
     "Overwrite": "Ghi đè",
     "Skip": "Bỏ qua",
+    "EndpointUnavailable": "Lần tải lên này thất bại. Vui lòng chọn lại tệp và tải lên.",
     "Status": {
       "queued": "Trong hàng đợi",
       "preparing": "Đang chuẩn bị",
@@ -1418,6 +1428,17 @@
     },
     "sftpTransferCenter": {
       "title": "Trung tâm truyền",
+      "queueTitle": "Hàng đợi truyền",
+      "queueSummary": "{active} đang chạy · {attention} cần chú ý",
+      "resizeHandle": "Thay đổi kích thước hàng đợi truyền",
+      "collapse": "Thu gọn hàng đợi truyền",
+      "columns": {
+        "file": "Tệp",
+        "direction": "Hướng",
+        "progress": "Tiến độ",
+        "rate": "Tốc độ / còn lại",
+        "status": "Trạng thái"
+      },
       "batchCount": "{count} lô phân phối | {count} lô phân phối",
       "filters": {
         "all": "Tất cả",
@@ -1474,7 +1495,7 @@
       "remoteConnectTitle": "Thêm SFTP từ xa",
       "remoteConnectDescription": "Kết nối tài sản SFTP khác để dùng chế độ hai khung. Dùng mũi tên giữa để truyền nhanh hoặc Gửi đến để mở hộp thoại truyền.",
       "transferCenterTitle": "Trung tâm truyền",
-      "transferCenterDescription": "Điều khiển có thể kéo ở góc dưới phải theo dõi tiến độ, lỗi và cho phép hủy tác vụ đang hoạt động.",
+      "transferCenterDescription": "Huy hiệu Truyền trên thanh trạng thái mở hàng đợi. Nó bị vô hiệu khi chưa có tác vụ, và khi truyền sẽ hiện tiến độ, tốc độ, thời gian còn lại và trạng thái.",
       "progress": "Bước {current}/{total}",
       "next": "Tiếp theo",
       "previous": "Trước",

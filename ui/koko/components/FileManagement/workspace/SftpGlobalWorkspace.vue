@@ -5,12 +5,10 @@ import type { useSftpWorkspacePanes } from "#koko/composables/sftp/file-manager/
 import type {
   SftpLocalPaneHandle,
   SftpRemotePane,
-  SftpTransferCenterHandle,
   SftpWorkspaceSide
 } from "#koko/composables/sftp/file-manager/workspaceTypes";
 import KokoLocalFileManagementPane from "#koko/components/FileManagement/localPane.vue";
 import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
-import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
 import KokoWebUploadPane from "#koko/components/FileManagement/webUploadPane.vue";
 import SftpRemoteMachineTabs from "#koko/components/FileManagement/workspace/SftpRemoteMachineTabs.vue";
 import SftpTransferRail from "#koko/components/FileManagement/workspace/SftpTransferRail.vue";
@@ -30,7 +28,6 @@ const props = defineProps<{
   workspace: WorkspaceController;
   transfer: TransferController;
   setLocalPaneRef: (value: SftpLocalPaneHandle | null) => void;
-  setTransferCenterRef: (value: SftpTransferCenterHandle | null) => void;
 }>();
 
 const { t } = useI18n();
@@ -76,6 +73,14 @@ const {
 } = props.transfer;
 
 const simplePeerMode = computed(() => isSimplePeerMode());
+const canSendFromLocal = computed(() => remotePanes.value.some((pane) => remotePaneConnected(pane.id)));
+
+function canSendFromRemote(endpointId: string): boolean {
+  return (
+    canSendToOpposite(endpointId) ||
+    remotePanes.value.some((pane) => pane.transferEndpoint.id !== endpointId && remotePaneConnected(pane.id))
+  );
+}
 
 const canTransferRight = computed(() => {
   // Web left pane is upload-only (no selectable file list) — use the drop zone, not arrows.
@@ -108,10 +113,6 @@ const showTransferRail = computed(() => {
 
 function setLocalPaneRef(value: TemplateRefValue): void {
   props.setLocalPaneRef(value as SftpLocalPaneHandle | null);
-}
-
-function setTransferCenterRef(value: TemplateRefValue): void {
-  props.setTransferCenterRef(value as SftpTransferCenterHandle | null);
 }
 
 function handleRemotePaneConnected(): void {
@@ -220,7 +221,6 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
 
 <template>
   <div class="relative flex min-h-0 flex-1" @keydown="onKeydown">
-    <KokoSftpTransferCenter :ref="setTransferCenterRef" floating />
     <template v-for="side in ['left', 'right'] as const" :key="side">
       <SftpTransferRail
         v-if="side === 'right' && showTransferRail"
@@ -307,6 +307,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
           class="min-h-0 flex-1"
           :focused="focusedSide === 'left'"
           :highlighted-names="highlightedNames.left"
+          :can-send="canSendFromLocal"
           :send-peer-direction="simplePeerMode && canSendToOpposite('local:fs') ? 'right' : undefined"
           @select="localSelection = $event"
           @selection-change="localSelections = $event"
@@ -340,6 +341,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
             :transfer-endpoint="pane.transferEndpoint"
             :focused="focusedSide === side && globalActiveIds[side] === pane.id"
             :highlighted-names="highlightedNames[side]"
+            :can-send="canSendFromRemote(pane.transferEndpoint.id)"
             :send-peer-direction="
               simplePeerMode && canSendToOpposite(pane.transferEndpoint.id)
                 ? side === 'left'

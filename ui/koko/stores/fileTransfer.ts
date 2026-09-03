@@ -14,6 +14,12 @@ const resumableStatuses = new Set<FileTransferStatus>(["queued", "preparing", "t
 const terminalStatuses = new Set<FileTransferStatus>(["completed", "skipped", "failed", "canceled"]);
 const transferChunkSize = 2 * 1024 * 1024;
 const conflictError = "target_exists";
+const fileTransferEndpointUnavailableError = "endpoint_unavailable";
+const legacyEndpointUnavailableError = new FileTransferUnavailableError().message;
+
+function isEndpointUnavailableError(error?: string) {
+  return error === fileTransferEndpointUnavailableError || error === legacyEndpointUnavailableError;
+}
 
 function taskId() {
   return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
@@ -117,6 +123,31 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
     }
   }
 
+  function failUnavailableEndpoint(endpoint: FileTransferEndpointRef) {
+    for (const task of tasks.value) {
+      if (
+        !terminalStatuses.has(task.status) &&
+        (task.sourceEndpoint.id === endpoint.id || task.destinationEndpoint.id === endpoint.id)
+      ) {
+        patchTask(task.id, { status: "failed", error: fileTransferEndpointUnavailableError });
+      }
+    }
+  }
+
+  function failUnavailableTask(
+    task: FileTransferTask,
+    source: ReturnType<typeof getFileTransferEndpoint>,
+    destination: ReturnType<typeof getFileTransferEndpoint>
+  ) {
+    const sourceMissing = !source?.isAvailable();
+    const destinationMissing = !destination?.isAvailable();
+    if (sourceMissing) failUnavailableEndpoint(task.sourceEndpoint);
+    if (destinationMissing) failUnavailableEndpoint(task.destinationEndpoint);
+    if (!sourceMissing && !destinationMissing) {
+      patchTask(task.id, { status: "failed", error: fileTransferEndpointUnavailableError });
+    }
+  }
+
   function pauseTask(id: string) {
     const task = tasks.value.find((item) => item.id === id);
     if (!task || terminalStatuses.has(task.status)) return;
@@ -132,14 +163,14 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
 
   function retryTask(id: string) {
     const task = tasks.value.find((item) => item.id === id);
-    if (!task || task.status !== "failed") return;
+    if (!task || task.status !== "failed" || isEndpointUnavailableError(task.error)) return;
     patchTask(id, { status: "queued", error: undefined });
     kick();
   }
 
   function retryBatch(batchId: string) {
     for (const task of tasks.value) {
-      if (task.batchId === batchId && task.status === "failed") {
+      if (task.batchId === batchId && task.status === "failed" && !isEndpointUnavailableError(task.error)) {
         patchTask(task.id, { status: "queued", error: undefined });
       }
     }
@@ -205,10 +236,18 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
     restored.value = true;
     const persisted = await loadFileTransferState();
     if (!persisted) return;
-    batches.value = persisted.batches;
-    tasks.value = persisted.tasks.map((task) =>
-      resumableStatuses.has(task.status) ? { ...task, status: "paused" as const, updatedAt: Date.now() } : task
-    );
+    batches.value = Array.isArray(persisted.batches) ? persisted.batches : [];
+    tasks.value = (persisted.tasks ?? []).map((task) => {
+      if (resumableStatuses.has(task.status) || (task.status === "paused" && isEndpointUnavailableError(task.error))) {
+        return {
+          ...task,
+          status: "failed" as const,
+          error: fileTransferEndpointUnavailableError,
+          updatedAt: Date.now()
+        };
+      }
+      return task;
+    });
     schedulePersist();
   }
 
@@ -224,7 +263,7 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
 
   function taskStopped(id: string) {
     const status = tasks.value.find((task) => task.id === id)?.status;
-    return status === "paused" || status === "canceled";
+    return status === "paused" || Boolean(status && terminalStatuses.has(status));
   }
 
   async function notifyCommitted(
@@ -245,7 +284,7 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
     const source = getFileTransferEndpoint(task.sourceEndpoint.id);
     const destination = getFileTransferEndpoint(task.destinationEndpoint.id);
     if (!source?.isAvailable() || !destination?.isAvailable()) {
-      patchTask(task.id, { status: "paused", error: new FileTransferUnavailableError().message });
+      failUnavailableTask(task, source, destination);
       return;
     }
 
@@ -304,7 +343,7 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
 
       while (offset < task.source.size) {
         const current = tasks.value.find((item) => item.id === task.id);
-        if (!current || current.status === "paused" || current.status === "canceled") return;
+        if (!current || taskStopped(task.id)) return;
         if (!source.isAvailable() || !destination.isAvailable()) throw new FileTransferUnavailableError();
 
         const chunk = await source.readChunk({
@@ -353,10 +392,11 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
       patchTask(task.id, { status: "completed", confirmedBytes: task.source.size, checksum });
       await notifyCommitted(destination, currentTargetPath);
     } catch (error) {
-      if (tasks.value.find((item) => item.id === task.id)?.status === "canceled") return;
+      const status = tasks.value.find((item) => item.id === task.id)?.status;
+      if (status === "canceled" || status === "failed") return;
 
       if (error instanceof FileTransferUnavailableError) {
-        patchTask(task.id, { status: "paused", error: error.message });
+        failUnavailableTask(task, source, destination);
       } else {
         markFailed(task.id, error);
       }
@@ -402,6 +442,7 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
     enqueueBatch,
     patchTask,
     pauseEndpoint,
+    failUnavailableEndpoint,
     pauseTask,
     resumeTask,
     retryTask,
