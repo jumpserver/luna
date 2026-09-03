@@ -1,4 +1,5 @@
 import type { ChenSchemaOverview } from "~/chen/types/schemaOverview";
+import type { ChenTableMetadata, ChenTableMetadataSection } from "~/chen/types/tableMetadata";
 
 export interface ChenAuthResponse {
   token: string;
@@ -308,6 +309,9 @@ export interface ChenDataViewConsoleTab extends ChenTabDefinition {
   logs: string[];
   activePanel: "data" | "properties";
   activePropertyTab: ChenDataViewPropertyTab;
+  tableMetadata: ChenTableMetadata | null;
+  tableMetadataLoadingSections: ChenTableMetadataSection[];
+  tableMetadataError: string;
   whereCondition: string;
   socket: WebSocket | null;
 }
