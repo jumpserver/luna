@@ -5,6 +5,7 @@ import type { AgentApprovalMode } from "../agent/types";
 import type { AgentSessionController } from "../agent/useAgentSession";
 import { useChat } from "@ai-sdk/vue";
 import { effectScope, markRaw, reactive, shallowReactive } from "vue";
+import { agentChatTextId, closeAgentChatText } from "../agent/agentChatStream";
 import { AgentToolRelay } from "../agent/agentToolRelay";
 import { kokoMcpWireMessage, manifestFromFrame, parseKokoMcpFrame } from "../agent/types";
 import { useAgentSession } from "../agent/useAgentSession";
@@ -196,9 +197,9 @@ class KokoFileAiChatTransport implements ChatTransport<FileAiChatMessage> {
     }
 
     for (const [index, part] of message.parts.entries()) {
-      const id = `${message.id}-${index}`;
       if (part.type === "text") {
         const isDelta = message.metadata?.agentEventType === "message.delta";
+        const id = agentChatTextId(response, message.id, index);
         if (!response.openTextIds.has(id)) {
           response.controller.enqueue({ type: "text-start", id });
           response.openTextIds.add(id);
@@ -211,6 +212,8 @@ class KokoFileAiChatTransport implements ChatTransport<FileAiChatMessage> {
         continue;
       }
       if (!part.type.startsWith("data-") || !("data" in part)) continue;
+      closeAgentChatText(response);
+      const id = `${message.id}-${index}`;
       if (part.type === "data-error") {
         response.controller.enqueue({
           type: "error",
@@ -228,8 +231,7 @@ class KokoFileAiChatTransport implements ChatTransport<FileAiChatMessage> {
 
   finish(response = this.activeResponses[0]) {
     if (!response) return;
-    for (const id of response.openTextIds) response.controller.enqueue({ type: "text-end", id });
-    response.openTextIds.clear();
+    closeAgentChatText(response);
     if (response.started) response.controller.enqueue({ type: "finish", finishReason: "stop" });
     response.controller.close();
     this.clearActiveResponse(response);
@@ -349,6 +351,19 @@ function createSession(targetId: string, socket: WebSocket, context: KokoFileAiC
       },
       onApprovalMode: (mode) => {
         if (session) session.approvalMode = mode;
+      },
+      onHistoryReset: () => {
+        if (!session) return;
+        session.chat.messages.value = [];
+        resetTaskState(session);
+        session.pendingApprovals.clear();
+        session.resolvingApprovals.clear();
+        session.approvalDigests.clear();
+        session.runtimeStatus = "";
+        session.runtimeStatusCode = "";
+        session.runtimeState = "";
+        session.errorCode = "";
+        session.errorText = "";
       },
       onUnavailable: (error) => {
         if (!session) return;

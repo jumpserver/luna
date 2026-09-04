@@ -26,7 +26,8 @@ function toolResponse(toolCallId = "tool-1", rpcId = toolCallId) {
       id: rpcId,
       result: {
         resultType: "complete",
-        content: [{ type: "text", text: "/tmp" }],
+        content: [{ type: "text", text: '{"command":"pwd","execution":"background","output":"/tmp"}' }],
+        structuredContent: { command: "pwd", execution: "background", output: "/tmp" },
         _meta: { trace: "kept" }
       }
     }
@@ -69,11 +70,57 @@ it("relays each tool call once and returns a session-bound structured result", (
     seq: 1,
     done: true,
     status: "success",
-    result: response.data.result
+    result: response.data.result.structuredContent
   });
   expect(relay.consumeKokoFrame(response)).toBeNull();
   delivery?.complete(true);
   expect(relay.consumeKokoFrame(response)).toBeNull();
+});
+
+it("falls back to MCP text content when structured content is null", () => {
+  const relay = new AgentToolRelay({ resourceSessionId: () => "resource-1", sendFrame: vi.fn() });
+  relay.forwardAgentEvent(toolCall());
+  const response = toolResponse();
+  (response.data.result as Record<string, unknown>).structuredContent = null;
+
+  expect(relay.consumeKokoFrame(response)?.payload).toMatchObject({
+    status: "success",
+    result: { command: "pwd", execution: "background", output: "/tmp" }
+  });
+});
+
+it("applies the local execution policy before forwarding tool arguments", () => {
+  const sendFrame = vi.fn();
+  const relay = new AgentToolRelay({
+    resourceSessionId: () => "resource-1",
+    transformToolArguments: (_toolCallId, _toolName, argumentsValue) => ({
+      ...(argumentsValue as Record<string, unknown>),
+      execution: "pty"
+    }),
+    sendFrame
+  });
+
+  relay.forwardAgentEvent(toolCall());
+
+  expect(sendFrame.mock.calls[0]?.[0]).toMatchObject({
+    data: { params: { arguments: { command: "pwd", execution: "pty" } } }
+  });
+});
+
+it("converts an MCP tool error into a generic Agent error", () => {
+  const relay = new AgentToolRelay({ resourceSessionId: () => "resource-1", sendFrame: vi.fn() });
+  relay.forwardAgentEvent(toolCall());
+  const response = toolResponse();
+  (response.data as { result: Record<string, unknown> }).result = {
+    content: [{ type: "text", text: "command denied" }],
+    isError: true,
+    _meta: { trace: "kept" }
+  };
+
+  expect(relay.consumeKokoFrame(response)?.payload).toMatchObject({
+    status: "error",
+    error: { code: -32000, message: "command denied" }
+  });
 });
 
 it("rejects a response that contains both a result and an error", () => {

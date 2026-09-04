@@ -11,6 +11,7 @@ import type { AgentSessionController } from "#koko/composables/agent/useAgentSes
 
 import { useChat } from "@ai-sdk/vue";
 import { effectScope, markRaw, reactive, shallowReactive } from "vue";
+import { agentChatTextId, closeAgentChatText } from "#koko/composables/agent/agentChatStream";
 import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
 import {
   AGENT_MCP_BINDING_META_KEY,
@@ -281,9 +282,9 @@ class ChenSqlAiTransport implements ChatTransport<ChenSqlAiChatMessage> {
     }
 
     for (const [index, part] of message.parts.entries()) {
-      const id = `${message.id}-${index}`;
       if (part.type === "text") {
         const isDelta = message.metadata?.agentEventType === "message.delta";
+        const id = agentChatTextId(response, message.id, index);
         if (!response.openTextIds.has(id)) {
           response.controller.enqueue({ type: "text-start", id });
           response.openTextIds.add(id);
@@ -293,16 +294,18 @@ class ChenSqlAiTransport implements ChatTransport<ChenSqlAiChatMessage> {
           response.controller.enqueue({ type: "text-end", id });
           response.openTextIds.delete(id);
         }
-      } else if (part.type.startsWith("data-") && "data" in part) {
-        response.controller.enqueue({ type: part.type, id, data: part.data });
+        continue;
       }
+      if (!part.type.startsWith("data-") || !("data" in part)) continue;
+      closeAgentChatText(response);
+      response.controller.enqueue({ type: part.type, id: `${message.id}-${index}`, data: part.data });
     }
     return true;
   }
 
   finish(response = this.activeResponse) {
     if (!response) return;
-    for (const id of response.openTextIds) response.controller.enqueue({ type: "text-end", id });
+    closeAgentChatText(response);
     if (response.started) response.controller.enqueue({ type: "finish", finishReason: "stop" });
     response.controller.close();
     this.clear(response);
@@ -519,6 +522,27 @@ function createSession(
       },
       onInputLock: (locked) => {
         if (session) session.inputLocked = locked;
+      },
+      onHistoryReset: () => {
+        if (!session) return;
+        session.chat.messages.value = [];
+        session.taskActive = false;
+        session.inputLocked = false;
+        session.metadataApproval = null;
+        session.decisions.clear();
+        session.executionOverrides.clear();
+        session.expansionOverrides.clear();
+        session.proposalDecisions.clear();
+        session.proposalRequestIds.clear();
+        session.pendingProposalCalls.clear();
+        session.runtimeStatus = "";
+        session.runtimeStatusCode = "";
+        session.runtimeState = "";
+        session.runtimeExecution = "";
+        session.requestStartedAt = 0;
+        session.timing = emptyChenSqlAiTiming();
+        session.errorCode = "";
+        session.errorText = "";
       },
       onUnavailable: (cause) => {
         if (!session) return;

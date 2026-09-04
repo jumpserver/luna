@@ -28,8 +28,44 @@ export interface AgentToolRelayResult {
 export interface AgentToolRelayOptions {
   resourceSessionId: () => string;
   revision?: () => number;
+  transformToolArguments?: (toolCallId: string, toolName: string, argumentsValue: unknown) => unknown;
   sendFrame: (frame: KokoMcpRequestFrame | KokoMcpCancelFrame) => void;
   completedLimit?: number;
+}
+
+function mcpTextContent(result: Record<string, unknown>) {
+  if (!Array.isArray(result.content)) return "";
+  return result.content
+    .flatMap((item) => (isRecord(item) && item.type === "text" && typeof item.text === "string" ? [item.text] : []))
+    .join("\n");
+}
+
+function normalizeMcpResult(result: unknown): Pick<AgentToolResultRequest, "status" | "result" | "error"> {
+  if (!isRecord(result)) return { status: "success", result };
+  const text = mcpTextContent(result);
+  if (result.isError === true) {
+    return {
+      status: "error",
+      error: {
+        code: -32000,
+        message: text || "MCP tool execution failed",
+        ...(result.structuredContent !== undefined && result.structuredContent !== null
+          ? { data: result.structuredContent }
+          : {})
+      }
+    };
+  }
+  if (result.structuredContent !== undefined && result.structuredContent !== null) {
+    return { status: "success", result: result.structuredContent };
+  }
+  if (text) {
+    try {
+      return { status: "success", result: JSON.parse(text) };
+    } catch {
+      return { status: "success", result: text };
+    }
+  }
+  return { status: "success", result };
 }
 
 export class AgentToolRelay {
@@ -66,13 +102,16 @@ export class AgentToolRelay {
       const rpcId = String(payload.id || toolCallId);
       const runId = String(event.run_id || payload.run_id || "");
       const revision = Number(payload.revision || this.options.revision?.()) || 1;
+      const toolName = String(payload.tool_name || payload.name || "");
+      const rawArguments = payload.arguments ?? {};
+      const argumentsValue = this.options.transformToolArguments?.(toolCallId, toolName, rawArguments) ?? rawArguments;
       const request: JsonRpcRequest = {
         jsonrpc: "2.0",
         id: rpcId,
         method: "tools/call",
         params: {
-          name: String(payload.tool_name || payload.name || ""),
-          arguments: payload.arguments ?? {},
+          name: toolName,
+          arguments: argumentsValue,
           _meta: {
             [MCP_PROTOCOL_VERSION_META_KEY]: MCP_PROTOCOL_VERSION,
             [MCP_CLIENT_CAPABILITIES_META_KEY]: {},
@@ -191,7 +230,9 @@ export class AgentToolRelay {
     if (hasResult === hasError) throw new Error("Koko MCP response must contain exactly one result or error");
     const pendingCall = this.pendingCalls.get(toolCallId);
     if (!pendingCall?.runId) throw new Error("Koko MCP response does not match an active agent run");
-    const resultIsError = isRecord(data.result) && data.result.isError === true;
+    const normalized = hasError
+      ? { status: "error" as const, error: data.error as AgentToolResultRequest["error"] }
+      : normalizeMcpResult(data.result);
     this.responding.add(toolCallId);
 
     return {
@@ -202,9 +243,7 @@ export class AgentToolRelay {
         run_id: pendingCall.runId,
         seq: 1,
         done: true,
-        status: hasError || resultIsError ? "error" : "success",
-        ...(data.result !== undefined ? { result: data.result } : {}),
-        ...(data.error !== undefined ? { error: data.error } : {})
+        ...normalized
       },
       complete: (delivered) => {
         if (this.epoch !== epoch) return;

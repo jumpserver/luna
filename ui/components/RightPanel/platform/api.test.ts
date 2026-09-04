@@ -1,5 +1,28 @@
 import { describe, expect, it, vi } from "vitest";
+import { platformConversationResults } from "./api";
 import { createEventStreamParser, parseEventBlock } from "./sse";
+
+vi.mock("~/composables/useApiRequest", () => ({
+  ApiRequestError: class extends Error {},
+  apiRequest: vi.fn()
+}));
+
+describe("Platform AI conversations", () => {
+  it("keeps unique general conversations out of the shared capability history", () => {
+    const general = { id: "general-1", kind: "general" as const, surface: "general.chat" };
+
+    expect(
+      platformConversationResults({
+        results: [
+          general,
+          { ...general },
+          { id: "terminal-1", kind: "capability", surface: "session.terminal" },
+          { id: "deleted-1", kind: "general", status: "deleted" }
+        ]
+      })
+    ).toEqual([general]);
+  });
+});
 
 describe("Platform AI event stream", () => {
   it("parses JSON and multi-line SSE data", () => {

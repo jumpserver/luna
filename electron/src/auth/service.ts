@@ -32,24 +32,13 @@ function parseJsonResponse(text: string) {
 }
 
 function requestSite(session, request) {
-  if (request.service !== "chat-ai" && request.service !== "agent") return session.origin;
+  if (request.service !== "kael") return session.origin;
 
-  const agent = request.service === "agent";
-  const configured = String(
-    agent
-      ? process.env.JMS_AGENT_DESKTOP_URL ||
-          process.env.JMS_AGENT_DEV_URL ||
-          process.env.JMS_KOKO_DESKTOP_URL ||
-          process.env.JMS_KOKO_DEV_URL ||
-          ""
-      : process.env.JMS_AI_DESKTOP_URL || process.env.JMS_AI_DEV_URL || ""
-  ).trim();
+  const configured = String(process.env.JMS_KAEL_DESKTOP_URL || process.env.JMS_KAEL_DEV_URL || "").trim();
   if (configured) {
     const parsed = parseUrl(configured);
     if (!["http:", "https:"].includes(parsed.protocol) || !parsed.hostname || parsed.username || parsed.password) {
-      throw new Error(
-        `${agent ? "Koko Agent" : "Chat AI"} endpoint must be an HTTP/HTTPS URL without embedded credentials`
-      );
+      throw new Error("Kael endpoint must be an HTTP/HTTPS URL without embedded credentials");
     }
     return configured.replace(/\/+$/, "");
   }
@@ -62,7 +51,7 @@ function requestSite(session, request) {
     }
     const site = parseUrl(session.origin);
     if (["localhost", "127.0.0.1", "::1"].includes(site.hostname)) {
-      site.port = agent ? "5050" : "8088";
+      site.port = "8083";
       return site.origin;
     }
   }

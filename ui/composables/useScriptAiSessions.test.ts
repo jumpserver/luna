@@ -1,12 +1,29 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScriptAiSnapshot } from "./useScriptAiSessions";
+import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
 import { MCP_FINAL_RESULT_META_KEY } from "#koko/composables/agent/types";
 import {
+  getScriptAiSession,
   normalizeScriptAiProposal,
+  registerScriptAiSession,
   scriptAiManifest,
   scriptAiReadOnlyApprovalId,
-  scriptAiTimelineMessage
+  scriptAiTimelineMessage,
+  submitScriptAiPrompt,
+  unregisterScriptAiSession
 } from "./useScriptAiSessions";
+
+let agentHarness: ReturnType<typeof installAgentSessionHarness>;
+const paneIds: string[] = [];
+
+beforeEach(() => {
+  agentHarness = installAgentSessionHarness();
+});
+
+afterEach(() => {
+  for (const paneId of paneIds.splice(0)) unregisterScriptAiSession(paneId);
+  vi.restoreAllMocks();
+});
 
 const snapshot: ScriptAiSnapshot = {
   paneId: "script-pane",
@@ -129,5 +146,47 @@ describe("Script AI timeline", () => {
       { type: "text", text: "Proposal ready" }
     ]);
     expect(scriptAiTimelineMessage({ ...message, parts: [message.parts[0]!] })).toBeNull();
+  });
+
+  it("keeps streamed script text ordered across progress events", async () => {
+    const paneId = "script-stream-pane";
+    paneIds.push(paneId);
+    const session = registerScriptAiSession(
+      paneId,
+      () => ({ ...snapshot, paneId }),
+      () => ({ applied: true })
+    )!;
+    await vi.waitFor(() => expect(getScriptAiSession(paneId)?.enabled).toBe(true));
+    await submitScriptAiPrompt(paneId, "优化脚本");
+
+    for (const text of ["正在", "检查"]) {
+      agentHarness.emit(session.resourceSessionId, {
+        type: "message.delta",
+        run_id: "run-1",
+        message_id: "answer-1",
+        payload: { role: "assistant", delta: text }
+      });
+    }
+    agentHarness.emit(session.resourceSessionId, {
+      type: "model.completed",
+      run_id: "run-1",
+      message_id: "answer-1",
+      payload: { duration_ms: 10 }
+    });
+    agentHarness.emit(session.resourceSessionId, {
+      type: "message.delta",
+      run_id: "run-1",
+      message_id: "answer-1",
+      payload: { role: "assistant", delta: "完成" }
+    });
+    agentHarness.emit(session.resourceSessionId, { type: "run.completed", run_id: "run-1" });
+
+    await vi.waitFor(() => {
+      const text = session.chat.messages.value
+        .filter((message) => message.role === "assistant")
+        .flatMap((message) => message.parts)
+        .flatMap((part) => (part.type === "text" ? [part.text] : []));
+      expect(text).toEqual(["正在检查完成"]);
+    });
   });
 });

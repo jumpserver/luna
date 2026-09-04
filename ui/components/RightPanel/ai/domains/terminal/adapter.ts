@@ -19,7 +19,6 @@ import { isKokoTerminalWorkspaceAiSession } from "~/composables/useWorkspaceAiSe
 import { commonSurfaceContext } from "../types";
 
 const completedStatuses = ["completed", "success", "succeeded", "skipped"];
-const failedStatuses = ["error", "failed", "rejected", "interrupted"];
 
 function effectiveStepStatus(step: PlanItem["steps"][number]) {
   if (["completed", "failed", "interrupted", "rejected", "skipped"].includes(step.status)) return step.status;
@@ -44,6 +43,10 @@ function handleDecision(session: KokoTerminalAiSession, action: Extract<AiTimeli
   const decisionId = String(action.data.id || "");
   if (!decisionId || session.decisions.has(decisionId)) return;
 
+  const execution = session.executionOverrides.get(decisionId) || String(action.data.execution || "auto");
+  const toolCallId = String(action.data.toolCallId || "");
+  if (action.approved && toolCallId && execution !== "auto") session.executionOverrides.set(toolCallId, execution);
+
   session.decisions.add(decisionId);
   try {
     sendControl(session, {
@@ -57,7 +60,7 @@ function handleDecision(session: KokoTerminalAiSession, action: Extract<AiTimeli
             id: action.data.id,
             digest: action.data.digest,
             approved: action.approved,
-            execution: session.executionOverrides.get(decisionId) || action.data.execution
+            execution
           }
         }
       ]
@@ -193,11 +196,7 @@ export const terminalAiPanelDomain: AiPanelDomainAdapter = {
         ? `${statuses.filter((status) => completedStatuses.includes(status)).length}/${steps.length}`
         : "",
       highestRiskLevel,
-      outcome: statuses.some((status) => failedStatuses.includes(status))
-        ? "error"
-        : statuses.length && statuses.every((status) => completedStatuses.includes(status))
-          ? "success"
-          : "ready"
+      outcome: statuses.length && statuses.every((status) => completedStatuses.includes(status)) ? "success" : "ready"
     };
   },
 

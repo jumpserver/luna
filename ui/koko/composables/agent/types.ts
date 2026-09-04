@@ -1,6 +1,7 @@
 export const AGENT_PROTOCOL_VERSION = 1 as const;
 export const AGENT_CAPABILITY_VERSION = 1 as const;
-export const AGENT_SESSIONS_ROOT = "/koko/agent/sessions/";
+export const KAEL_API_ROOT = "/kael/api/v1";
+export const AGENT_SESSIONS_ROOT = `${KAEL_API_ROOT}/panel-sessions/`;
 export const AGENT_MCP_BINDING_META_KEY = "com.jumpserver/agent";
 export const MCP_PROTOCOL_VERSION_META_KEY = "io.modelcontextprotocol/protocolVersion";
 export const MCP_CLIENT_CAPABILITIES_META_KEY = "io.modelcontextprotocol/clientCapabilities";
@@ -133,6 +134,7 @@ export interface AgentEvent {
   event_id?: string;
   type: AgentEventType;
   session_id?: string;
+  conversation_id?: string;
   resource_session_id?: string;
   run_id?: string;
   message_id?: string;

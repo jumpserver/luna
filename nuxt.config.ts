@@ -1,14 +1,12 @@
 import { fileURLToPath } from "node:url";
 
 const jumpServerTarget = process.env.JMS_CORE_DEV_URL || "http://localhost:8080";
-const chatAiTarget = process.env.JMS_AI_DEV_URL || "http://localhost:8088";
 const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
-const agentTarget = kokoTarget;
 // JMS_LION_DEV_URL remains a compatibility override; Lion is served by Koko by default.
 const lionTarget = process.env.JMS_LION_DEV_URL || kokoTarget;
 const chenTarget = process.env.JMS_CHEN_DEV_URL || "http://localhost:8082";
 const faceliveTarget = process.env.JMS_FACELIVE_DEV_URL || "http://localhost:5173";
-const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:5172";
+const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:8083";
 const uiTarget = process.env.JMS_UI_DEV_URL || "http://localhost:9528";
 const appBaseURL = process.env.NUXT_APP_BASE_URL || "/luna/";
 const kokoRoot = fileURLToPath(new URL("./ui/koko", import.meta.url));
@@ -156,17 +154,11 @@ export default defineNuxtConfig({
         port: Number(process.env.JMS_HMR_PORT || 3001)
       },
       proxy: {
-        "/koko/agent/": {
-          target: agentTarget,
+        "/kael/": {
+          target: kaelTarget,
           secure: false,
           changeOrigin: true,
-          configure: configureHttpProxy("agent", agentTarget)
-        },
-        "/api/v1/chat-ai/": {
-          target: chatAiTarget,
-          secure: false,
-          changeOrigin: true,
-          configure: configureHttpProxy("chat-ai", chatAiTarget)
+          configure: configureHttpProxy("kael", kaelTarget)
         },
         "/luna/koko/ws/": {
           target: kokoTarget.replace(/^http/i, "ws"),

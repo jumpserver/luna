@@ -1,9 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
 import {
   handleChenSqlAiWireMessage,
   registerChenSqlAiSession,
   unregisterChenSqlAiSession
 } from "./useChenSqlAiSessions";
+
+let agentHarness: ReturnType<typeof installAgentSessionHarness>;
+const paneIds: string[] = [];
+
+beforeEach(() => {
+  agentHarness = installAgentSessionHarness();
+});
+
+afterEach(() => {
+  for (const paneId of paneIds.splice(0)) unregisterChenSqlAiSession(paneId);
+  vi.restoreAllMocks();
+});
 
 describe("Chen SQL AI proposals", () => {
   it("buffers a validated proposal until the user decides", () => {
@@ -14,6 +27,7 @@ describe("Chen SQL AI proposals", () => {
       () => null,
       () => ({ applied: true })
     )!;
+    paneIds.push(paneId);
     session.resourceSessionId = "sql-resource";
     session.proposalRequestIds.set("rpc-proposal", "tool-proposal");
 
@@ -53,7 +67,68 @@ describe("Chen SQL AI proposals", () => {
       type: "data-sql-proposal",
       data: expect.objectContaining({ sql: "SELECT 1", toolCallId: "tool-proposal" })
     });
+  });
 
-    unregisterChenSqlAiSession(paneId);
+  it("keeps streamed SQL text ordered across progress events", async () => {
+    const paneId = "sql-stream-pane";
+    const session = registerChenSqlAiSession(
+      paneId,
+      () => true,
+      () => ({
+        dialect: "postgresql",
+        nodeKey: "database",
+        consoleId: "console-1",
+        paneId,
+        tabId: "tab-1",
+        workspaceTabId: "workspace-1",
+        workspaceTabKind: "query",
+        currentContext: "database",
+        revision: 1,
+        selectionFrom: 0,
+        selectionTo: 0,
+        selectedSql: "",
+        documentSql: ""
+      }),
+      () => ({ applied: true })
+    )!;
+    paneIds.push(paneId);
+    session.errorCode = "agent_unavailable";
+    session.errorText = "old error";
+    session.chat.messages.value = [{ id: "stale", role: "assistant", parts: [{ type: "text", text: "旧会话" }] }];
+    const resourceSessionId = await agentHarness.attach(handleChenSqlAiWireMessage, paneId, "sql");
+    expect(session.chat.messages.value.some((message) => message.id === "stale")).toBe(false);
+    expect(session.errorCode).toBe("");
+    expect(session.errorText).toBe("");
+    const request = session.request("generate", "生成查询");
+    await vi.waitFor(() => expect(agentHarness.sendMessage).toHaveBeenCalledOnce());
+
+    for (const text of ["正在", "生成"]) {
+      agentHarness.emit(resourceSessionId, {
+        type: "message.delta",
+        run_id: "run-1",
+        message_id: "answer-1",
+        payload: { role: "assistant", delta: text }
+      });
+    }
+    agentHarness.emit(resourceSessionId, {
+      type: "model.completed",
+      run_id: "run-1",
+      message_id: "answer-1",
+      payload: { duration_ms: 10 }
+    });
+    agentHarness.emit(resourceSessionId, {
+      type: "message.delta",
+      run_id: "run-1",
+      message_id: "answer-1",
+      payload: { role: "assistant", delta: "完成" }
+    });
+    agentHarness.emit(resourceSessionId, { type: "run.completed", run_id: "run-1" });
+    await request;
+
+    const text = session.chat.messages.value
+      .filter((message) => message.role === "assistant")
+      .flatMap((message) => message.parts)
+      .flatMap((part) => (part.type === "text" ? [part.text] : []));
+    expect(text).toEqual(["正在生成", "完成"]);
   });
 });
