@@ -212,7 +212,18 @@ it("queues prompts through the enabled pane and rejects unavailable sessions", a
 it("coalesces consecutive model deltas without repeating the completed message", async () => {
   const session = createSession("streaming-deltas");
   const resourceSessionId = await enableSession(session.paneId);
-  await submitKokoTerminalAiPrompt(session.paneId, "inspect disk");
+  const response = session.chat.sendMessage({ text: "inspect disk", metadata: { terminalId: 9 } });
+  let responseFinished = false;
+  void response.then(() => {
+    responseFinished = true;
+  });
+  await vi.waitFor(() => expect(agentHarness.sendMessage).toHaveBeenCalledOnce());
+
+  const assistantText = () =>
+    session.chat.messages.value
+      .filter((message) => message.role === "assistant")
+      .flatMap((message) => message.parts)
+      .flatMap((part) => (part.type === "text" ? [part.text] : []));
 
   agentHarness.emit(resourceSessionId, {
     type: "message.delta",
@@ -260,15 +271,66 @@ it("coalesces consecutive model deltas without repeating the completed message",
       parts: [{ type: "text", text: "好的，让我检查。检查完成。" }]
     }
   });
+  await vi.waitFor(() => {
+    expect(session.chat.status.value).toBe("streaming");
+    expect(session.taskActive).toBe(true);
+    expect(responseFinished).toBe(false);
+    expect(assistantText()).toEqual(["好的，让我检查。", "检查完成。"]);
+  });
+
   agentHarness.emit(resourceSessionId, { type: "run.completed", run_id: "run-1" });
+  await response;
+
+  expect(session.chat.status.value).toBe("ready");
+  expect(session.taskActive).toBe(false);
+  expect(responseFinished).toBe(true);
+  expect(assistantText()).toEqual(["好的，让我检查。", "检查完成。"]);
+});
+
+it("keeps a failed run active until run.failed and reports the stream error", async () => {
+  const session = createSession("streaming-failure");
+  const resourceSessionId = await enableSession(session.paneId);
+  const response = session.chat.sendMessage({ text: "inspect disk", metadata: { terminalId: 9 } });
+  await vi.waitFor(() => expect(agentHarness.sendMessage).toHaveBeenCalledOnce());
+
+  agentHarness.emit(resourceSessionId, {
+    type: "message.delta",
+    run_id: "run-1",
+    message_id: "answer-1",
+    payload: { role: "assistant", delta: "部分结果" }
+  });
+  agentHarness.emit(resourceSessionId, {
+    type: "message.completed",
+    run_id: "run-1",
+    message_id: "answer-1",
+    payload: {
+      role: "assistant",
+      status: "failed",
+      content: "部分结果",
+      parts: [{ type: "text", text: "部分结果" }]
+    }
+  });
 
   await vi.waitFor(() => {
-    const text = session.chat.messages.value
-      .filter((message) => message.role === "assistant")
-      .flatMap((message) => message.parts)
-      .flatMap((part) => (part.type === "text" ? [part.text] : []));
-    expect(text).toEqual(["好的，让我检查。", "检查完成。"]);
+    expect(session.chat.status.value).toBe("streaming");
+    expect(session.taskActive).toBe(true);
   });
+
+  agentHarness.emit(resourceSessionId, {
+    type: "run.failed",
+    run_id: "run-1",
+    message_id: "answer-1",
+    payload: { state: "failed", reason: "agent run failed" }
+  });
+  await response;
+
+  expect(session.chat.status.value).toBe("error");
+  expect(session.taskActive).toBe(false);
+  expect(session.errorCode).toBe("run_failed");
+  expect(session.errorText).toBe("agent run failed");
+  const assistantMessages = session.chat.messages.value.filter((message) => message.role === "assistant");
+  expect(assistantMessages).toHaveLength(1);
+  expect(assistantMessages[0]?.parts).toMatchObject([{ type: "text", text: "部分结果" }]);
 });
 
 it("reports a prompt dispatch failure without sending to another pane", async () => {

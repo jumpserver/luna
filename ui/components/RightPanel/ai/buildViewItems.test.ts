@@ -271,6 +271,43 @@ describe("buildAiPanelViewItems", () => {
     });
   });
 
+  it("keeps assistant text before and after an agent tool round", () => {
+    const messages = [
+      {
+        id: "assistant-1",
+        role: "assistant",
+        parts: [
+          { type: "text", text: "I will inspect the schema." },
+          {
+            type: "data-agent-tool",
+            data: {
+              id: "tool-1",
+              toolCallId: "tool-1",
+              domain: "sql",
+              toolName: "inspect_schema",
+              status: "success"
+            }
+          },
+          { type: "text", text: "The schema contains the users table." }
+        ]
+      }
+    ] as unknown as TerminalAiChatMessage[];
+
+    const items = buildAiPanelViewItems({
+      messages,
+      metadataApproval: null,
+      terminalMetadataApproval: false,
+      executionPlanLabel: "Execution plan",
+      stepLabel: (count) => `Step ${count}`
+    });
+
+    expect(items.map(({ kind }) => kind)).toEqual(["text", "agent-tool", "text"]);
+    expect(items.filter((item) => item.kind === "text").map((item) => item.text)).toEqual([
+      "I will inspect the schema.",
+      "The schema contains the users table."
+    ]);
+  });
+
   it("keeps the SQL proposal bound to its pending tool call", () => {
     const items = buildAiPanelViewItems({
       messages: [

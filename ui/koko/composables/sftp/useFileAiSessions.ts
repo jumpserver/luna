@@ -11,6 +11,8 @@ import { kokoMcpWireMessage, manifestFromFrame, parseKokoMcpFrame } from "../age
 import { useAgentSession } from "../agent/useAgentSession";
 import { createSftpMessageId, joinSftpPath } from "./core/codec";
 
+const TERMINAL_RUN_EVENTS = new Set(["run.completed", "run.failed", "run.cancelled", "run.interrupted"]);
+
 export type FileAiEventData = Record<string, unknown>;
 export type FileAiChatMessage = UIMessage<FileAiEventData, Record<string, FileAiEventData>>;
 export type KokoFileAiApprovalDecision = "approve" | "reject";
@@ -684,6 +686,7 @@ export function handleKokoFileAiMessage(targetId: string, message: unknown) {
   if (!session || !isFileAiChatMessage(message)) return;
   const messageTargetId = String(message.metadata?.targetId || "");
   if (messageTargetId && messageTargetId !== targetId) return;
+  const runFinished = TERMINAL_RUN_EVENTS.has(String(message.metadata?.agentEventType || ""));
 
   const capability = partData(message, "data-capability");
   if (capability) {
@@ -730,7 +733,7 @@ export function handleKokoFileAiMessage(targetId: string, message: unknown) {
   const transport = transports.get(session);
   const streamParts = message.parts.filter((part) => part.type !== "data-capability" && part.type !== "data-progress");
   if (!streamParts.length) {
-    if (!session.enabled || ["idle", "completed", "failed", "cancelled", "interrupted"].includes(terminalState)) {
+    if (!session.enabled || runtimeError || runFinished) {
       resetTaskState(session);
       transport?.finish();
     }
@@ -745,7 +748,7 @@ export function handleKokoFileAiMessage(targetId: string, message: unknown) {
     }
   }
 
-  if (!session.enabled || ["idle", "completed", "failed", "cancelled", "interrupted"].includes(terminalState)) {
+  if (!session.enabled || runtimeError || runFinished) {
     resetTaskState(session);
     transport?.finish();
   }

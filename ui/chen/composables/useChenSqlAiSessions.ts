@@ -25,6 +25,7 @@ import { useAgentSession } from "#koko/composables/agent/useAgentSession";
 
 const SQL_CONTEXT_META_KEY = "com.jumpserver/sqlContext";
 const SQL_OPERATION_META_KEY = "com.jumpserver/sqlOperation";
+const TERMINAL_RUN_EVENTS = new Set(["run.completed", "run.failed", "run.cancelled", "run.interrupted"]);
 const SQL_METADATA_CATEGORIES = [
   "connection_metadata",
   "tables",
@@ -746,6 +747,7 @@ export function handleChenSqlAiMessage(paneId: string, value: unknown) {
   if (!session || !isChenSqlAiChatMessage(value)) return;
   const message = value;
   const transport = transports.get(session);
+  const runFinished = TERMINAL_RUN_EVENTS.has(String(message.metadata?.agentEventType || ""));
 
   const capability = partData(message, "data-capability");
   if (capability) session.enabled = Boolean(capability.enabled);
@@ -810,7 +812,7 @@ export function handleChenSqlAiMessage(paneId: string, value: unknown) {
   }
 
   if (!transport?.receive(message)) session.chat.messages.value = [...session.chat.messages.value, message];
-  if (!session.enabled || runtimeError || ["completed", "failed", "cancelled", "interrupted"].includes(runtimeState)) {
+  if (!session.enabled || runtimeError || runFinished) {
     transport?.finish();
   }
 }
