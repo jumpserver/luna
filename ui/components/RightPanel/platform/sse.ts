@@ -3,6 +3,9 @@ export interface PlatformAiStreamEvent {
   data: any;
 }
 
+const MAX_BUFFER_BYTES = 384 * 1024;
+const MAX_EVENT_BYTES = 320 * 1024;
+
 export function parseEventBlock(block: string): PlatformAiStreamEvent | null {
   let event = "message";
   const data: string[] = [];
@@ -19,6 +22,7 @@ export function parseEventBlock(block: string): PlatformAiStreamEvent | null {
 
   if (!data.length) return null;
   const raw = data.join("\n");
+  if (raw.length > MAX_EVENT_BYTES) throw new Error("Platform AI SSE event exceeds the configured limit");
   try {
     return { event, data: JSON.parse(raw) };
   } catch {
@@ -48,6 +52,7 @@ export function createEventStreamParser(onEvent: (event: PlatformAiStreamEvent) 
   return {
     push(chunk: string) {
       buffer += chunk;
+      if (buffer.length > MAX_BUFFER_BYTES) throw new Error("Platform AI SSE buffer exceeds the configured limit");
       drain();
     },
     finish() {

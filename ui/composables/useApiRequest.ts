@@ -5,9 +5,10 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 export interface ApiRequest {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
   path: string;
-  service?: "core" | "chat-ai";
+  service?: "core" | "kael";
   query?: Record<string, unknown>;
   body?: unknown;
+  headers?: Record<string, string>;
   orgId?: string;
 }
 
@@ -134,12 +135,15 @@ async function webApiRequest<T>(request: ApiRequest): Promise<T> {
   const query = buildWebQuery(request);
   const url = [withWebSitePrefix(request.path), query].filter(Boolean).join("?");
   const hasBody = request.body !== undefined;
+  const mutating = !["GET", "OPTIONS"].includes(request.method);
   const response = await fetch(url, {
     method: request.method,
     credentials: "include",
-    headers: hasBody
-      ? { ...getWebApiMutationHeaders(request.orgId), "Content-Type": "application/json" }
-      : getWebApiHeaders(request.orgId),
+    headers: {
+      ...(mutating ? getWebApiMutationHeaders(request.orgId) : getWebApiHeaders(request.orgId)),
+      ...request.headers,
+      ...(hasBody ? { "Content-Type": "application/json" } : {})
+    },
     body: hasBody ? JSON.stringify(request.body) : undefined
   });
 

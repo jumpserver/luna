@@ -184,6 +184,42 @@ it("keeps Agent session and run control events out of the visible conversation",
   expect(session.chat.messages.value).toEqual([]);
 });
 
+it("keeps streamed File AI text ordered across progress events", async () => {
+  const session = createSession("remote-sftp:asset-1:stream");
+  const resourceSessionId = await enableSession(session.targetId);
+  await submitKokoFileAiPrompt(session.targetId, "检查文件");
+
+  for (const text of ["正在", "检查"]) {
+    agentHarness.emit(resourceSessionId, {
+      type: "message.delta",
+      run_id: "run-1",
+      message_id: "answer-1",
+      payload: { role: "assistant", delta: text }
+    });
+  }
+  agentHarness.emit(resourceSessionId, {
+    type: "model.completed",
+    run_id: "run-1",
+    message_id: "answer-1",
+    payload: { duration_ms: 10 }
+  });
+  agentHarness.emit(resourceSessionId, {
+    type: "message.delta",
+    run_id: "run-1",
+    message_id: "answer-1",
+    payload: { role: "assistant", delta: "完成" }
+  });
+  agentHarness.emit(resourceSessionId, { type: "run.completed", run_id: "run-1" });
+
+  await vi.waitFor(() => {
+    const text = session.chat.messages.value
+      .filter((message) => message.role === "assistant")
+      .flatMap((message) => message.parts)
+      .flatMap((part) => (part.type === "text" ? [part.text] : []));
+    expect(text).toEqual(["正在检查完成"]);
+  });
+});
+
 it("rejects an event whose target does not match the socket-bound session", () => {
   const source = createSession("remote-sftp:asset-1:source");
   const other = createSession("remote-sftp:asset-2:other");

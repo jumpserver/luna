@@ -37,6 +37,7 @@ interface AgentSessionOptions {
   onAvailability: (available: boolean) => void;
   onApprovalMode?: (mode: AgentApprovalMode) => void;
   onInputLock?: (locked: boolean) => void;
+  onHistoryReset?: () => void;
   onUnavailable?: (error: Error) => void;
   client?: AgentClient;
   createSse?: (options: ConstructorParameters<typeof DefaultAgentSseConnection>[0]) => AgentSseConnection;
@@ -139,6 +140,48 @@ function stableJson(value: unknown): string {
       .join(",")}}`;
   }
   return JSON.stringify(value) ?? "null";
+}
+
+function agentEventDeltaText(event: AgentEvent) {
+  if (event.type !== "message.delta") return null;
+  const delta = event.payload?.delta;
+  const text = isRecord(delta) ? delta.text || delta.delta : delta || event.payload?.text;
+  return typeof text === "string" ? text : null;
+}
+
+function agentEventStreamKey(event: AgentEvent) {
+  const messageId = String(event.message_id || event.payload?.message_id || "");
+  const runId = String(event.run_id || event.payload?.run_id || "");
+  return messageId || runId ? `${messageId}\u0000${runId}` : "";
+}
+
+function canonicalHistoryEvents(history: AgentEvent[], after: number) {
+  const bySequence = new Map<number, AgentEvent>();
+  for (const event of history) {
+    if (event.seq <= after) continue;
+    const existing = bySequence.get(event.seq);
+    if (existing && stableJson(existing) !== stableJson(event)) {
+      throw new Error(`Agent history sequence ${event.seq} contains conflicting events`);
+    }
+    if (!existing) bySequence.set(event.seq, event);
+  }
+
+  const result: AgentEvent[] = [];
+  for (const event of [...bySequence.values()].sort((left, right) => left.seq - right.seq)) {
+    const text = agentEventDeltaText(event);
+    const key = agentEventStreamKey(event);
+    const previous = result.at(-1);
+    const previousText = previous ? agentEventDeltaText(previous) : null;
+    if (text !== null && key && previousText !== null && agentEventStreamKey(previous!) === key) {
+      result[result.length - 1] = {
+        ...event,
+        payload: { ...event.payload, delta: previousText + text }
+      };
+      continue;
+    }
+    result.push(event);
+  }
+  return result;
 }
 
 function agentManifestKey(manifest: AgentMcpManifest) {
@@ -285,7 +328,7 @@ function approvalPresentation(
 function toolResultPresentation(event: AgentEvent) {
   const payload = event.payload || {};
   const result = isRecord(payload.result) ? payload.result : {};
-  const structuredContent = isRecord(result.structuredContent) ? result.structuredContent : {};
+  const structuredContent = isRecord(result.structuredContent) ? result.structuredContent : result;
   const error = isRecord(payload.error) ? payload.error : null;
   const status = String(payload.status || "");
   const done = payload.done !== false;
@@ -334,7 +377,7 @@ function toolResultPresentation(event: AgentEvent) {
 
 function sqlToolResultPresentations(event: AgentEvent) {
   const result = isRecord(event.payload?.result) ? event.payload.result : {};
-  const structuredContent = isRecord(result.structuredContent) ? result.structuredContent : {};
+  const structuredContent = isRecord(result.structuredContent) ? result.structuredContent : result;
   const kind = String(structuredContent.kind || "");
   const parts: Record<string, unknown>[] = [];
   const analysis =
@@ -354,6 +397,8 @@ function agentToolLifecyclePresentation(event: AgentEvent, domain: AgentDomain, 
   if (!toolCallId) return null;
 
   const result = isRecord(payload.result) ? payload.result : {};
+  const hasResult = Object.hasOwn(payload, "result");
+  const hasError = payload.error !== undefined && payload.error !== null;
   const statusValue = String(payload.status || "").toLowerCase();
   const status =
     statusOverride ||
@@ -377,8 +422,8 @@ function agentToolLifecyclePresentation(event: AgentEvent, domain: AgentDomain, 
       ...(toolName ? { toolName } : {}),
       status,
       ...(Object.hasOwn(payload, "arguments") ? { arguments: payload.arguments } : {}),
-      ...(Object.hasOwn(payload, "result") ? { result: payload.result } : {}),
-      ...(Object.hasOwn(payload, "error") ? { error: payload.error } : {}),
+      ...(hasResult ? { result: payload.result } : {}),
+      ...(hasError ? { error: payload.error } : {}),
       ...(Number.isFinite(Number(payload.duration_ms)) ? { durationMs: Number(payload.duration_ms) } : {})
     }
   };
@@ -405,7 +450,7 @@ export function agentEventToUiMessage(
       metadata: { ...eventMetadata, ...(isRecord(embedded.metadata) ? embedded.metadata : {}) }
     };
   }
-  if (event.type.startsWith("message.") && Array.isArray(payload.parts)) {
+  if (event.type !== "message.completed" && event.type.startsWith("message.") && Array.isArray(payload.parts)) {
     return {
       id: eventMessageId(event),
       role: payload.role === "user" || payload.role === "system" ? payload.role : "assistant",
@@ -413,7 +458,7 @@ export function agentEventToUiMessage(
       parts: payload.parts
     } as UIMessage;
   }
-  if (event.type.startsWith("message.") && typeof payload.text === "string") {
+  if (event.type !== "message.completed" && event.type.startsWith("message.") && typeof payload.text === "string") {
     return {
       id: eventMessageId(event),
       role: payload.role === "user" || payload.role === "system" ? payload.role : "assistant",
@@ -585,6 +630,12 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     }
   }
 
+  function resetHistoryPresentation() {
+    localUserMessageIds.clear();
+    presentedUserMessageIds.clear();
+    options.onHistoryReset?.();
+  }
+
   function setAvailable(available: boolean) {
     state.available = available;
     options.onAvailability(available);
@@ -738,7 +789,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     manifest: AgentMcpManifest,
     startAfter = 0
   ) {
-    const events: AgentEvent[] = [];
+    const historyEvents: AgentEvent[] = [];
     let after = startAfter;
     let historyBytes = 0;
     while (true) {
@@ -746,10 +797,10 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       if (generation !== currentGeneration) return after;
       for (const event of history.events) {
         historyBytes += historyTextEncoder.encode(JSON.stringify(event)).byteLength + 1;
-        if (events.length >= historyMaxEvents || historyBytes > historyMaxBytes) {
+        if (historyEvents.length >= historyMaxEvents || historyBytes > historyMaxBytes) {
           throw new AgentSessionHistoryLimitError("Agent history exceeds the bounded recovery limit");
         }
-        events.push(event);
+        historyEvents.push(event);
       }
       const nextCursor = Math.max(0, Math.floor(Number(history.next_cursor) || 0));
       if (!history.has_more) {
@@ -759,6 +810,8 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       if (nextCursor <= after) throw new Error("Agent history cursor did not advance");
       after = nextCursor;
     }
+
+    const events = canonicalHistoryEvents(historyEvents, startAfter);
 
     const created = events.find((event) => event.type === "session.created");
     if (startAfter === 0) {
@@ -773,6 +826,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       ) {
         throw new AgentSessionManifestMismatchError("Existing Agent session does not match the Koko manifest");
       }
+      resetHistoryPresentation();
     }
 
     const eventRunId = (event: AgentEvent) => String(event.run_id || event.payload?.run_id || "");
@@ -858,6 +912,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       if (generation !== currentGeneration) return;
       let after = Math.max(0, Math.floor(Number(bootstrap.cursor) || 0));
       if (!agentSessionId) {
+        resetHistoryPresentation();
         const created = await client.createSession(manifest, state.approvalMode);
         agentSessionId = String(created.session_id || "");
         acquiredSessionId = agentSessionId;
@@ -876,6 +931,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
           acquiredSessionId = "";
           await flushSessionDeletes();
           if (generation !== currentGeneration) return;
+          resetHistoryPresentation();
           const created = await client.createSession(manifest, state.approvalMode);
           agentSessionId = String(created.session_id || "");
           acquiredSessionId = agentSessionId;

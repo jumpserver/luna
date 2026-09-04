@@ -66,7 +66,7 @@ function statusLabel() {
 function statusColor(): "success" | "error" | "warning" | "primary" | "neutral" {
   const status = stepStatus();
   if (["completed", "success", "succeeded"].includes(status)) return "success";
-  if (["error", "failed", "rejected"].includes(status)) return "error";
+  if (["error", "failed"].includes(status)) return "error";
   if (["awaiting_approval", "awaiting_risk_approval"].includes(status)) return "warning";
   if (["approved", "auto_approved", "executing", "in_progress", "reviewing", "running"].includes(status)) {
     return "primary";

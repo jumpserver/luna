@@ -2,7 +2,7 @@ import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { AgentEvent, AgentEventType } from "./types";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { getWebApiHeaders, isDesktopRuntime, withWebSitePrefix } from "~/utils/runtime";
-import { agentVersionHeaders, AGENT_SESSIONS_ROOT, isRecord } from "./types";
+import { AGENT_SESSIONS_ROOT, isRecord } from "./types";
 
 const DEFAULT_MAX_BUFFER_BYTES = 384 * 1024;
 const DEFAULT_MAX_EVENT_BYTES = 320 * 1024;
@@ -31,6 +31,50 @@ const EVENT_TYPES = new Set<AgentEventType>([
   "heartbeat",
   "stream.reset"
 ]);
+
+const KAEL_EVENT_TYPES: Record<string, AgentEventType> = {
+  "panel.ready": "session.created",
+  "panel.resumed": "session.created",
+  "panel.lease_expiring": "session.closed",
+  "registration.updated": "session.created",
+  "registration.revoked": "session.created",
+  "approval.required": "approval.requested",
+  "tool.progress": "tool.result",
+  "tool.completed": "tool.result",
+  "tool.failed": "tool.result",
+  "tool.cancelled": "tool.result"
+};
+
+export function normalizeAgentEvent(value: Record<string, unknown>, eventName = "", eventId = ""): AgentEvent | null {
+  const rawType = String(value.type || eventName);
+  const type = (KAEL_EVENT_TYPES[rawType] || rawType) as AgentEventType;
+  const seq = Number(value.seq ?? eventId);
+  if (!EVENT_TYPES.has(type) || !Number.isSafeInteger(seq) || seq < 0) return null;
+  const sourcePayload = isRecord(value.payload) ? value.payload : {};
+  const payload: Record<string, unknown> = { ...sourcePayload };
+  if (rawType === "registration.updated") {
+    payload.tools = Array.isArray(sourcePayload.registrations) ? sourcePayload.registrations : [];
+    payload.enabled = true;
+  }
+  if (rawType === "approval.required" && typeof sourcePayload.arguments_digest === "string") {
+    payload.digest = sourcePayload.arguments_digest;
+  }
+  if (rawType === "panel.lease_expiring" && sourcePayload.state !== "closed") return null;
+  const timestamp = Date.parse(String(value.timestamp || ""));
+  return {
+    seq,
+    type,
+    ...(typeof value.event_id === "string" ? { event_id: value.event_id } : {}),
+    ...(typeof value.panel_session_id === "string" ? { session_id: value.panel_session_id } : {}),
+    ...(typeof value.conversation_id === "string" ? { conversation_id: value.conversation_id } : {}),
+    ...(typeof value.run_id === "string" ? { run_id: value.run_id } : {}),
+    ...(typeof value.message_id === "string" ? { message_id: value.message_id } : {}),
+    ...(typeof value.approval_id === "string" ? { approval_id: value.approval_id } : {}),
+    ...(typeof value.tool_call_id === "string" ? { tool_call_id: value.tool_call_id } : {}),
+    ...(Number.isFinite(timestamp) ? { timestamp } : {}),
+    payload
+  };
+}
 
 export interface AgentSseParser {
   push(chunk: string): void;
@@ -63,12 +107,11 @@ export function createAgentSseParser(
     if (data.length > maxEventBytes) throw new Error("Agent SSE event exceeds the configured limit");
     const parsed: unknown = JSON.parse(data);
     if (!isRecord(parsed)) throw new Error("Agent SSE event must be a JSON object");
-    const type = String(parsed.type || eventName) as AgentEventType;
-    const seq = Number(parsed.seq ?? eventId);
-    if (!EVENT_TYPES.has(type) || !Number.isSafeInteger(seq) || seq < 0) {
+    const event = normalizeAgentEvent(parsed, eventName, eventId);
+    if (!event) {
       throw new Error("Agent SSE event has an invalid type or sequence");
     }
-    onEvent({ ...parsed, type, seq } as unknown as AgentEvent);
+    onEvent(event);
     resetEvent();
   }
 
@@ -141,7 +184,6 @@ async function openBrowserStream(options: OpenAgentStreamOptions) {
     credentials: "include",
     headers: {
       ...getWebApiHeaders(),
-      ...agentVersionHeaders(options.resourceSessionId),
       Accept: "text/event-stream",
       "Last-Event-ID": String(options.after)
     },
@@ -199,10 +241,9 @@ async function openDesktopStream(options: OpenAgentStreamOptions) {
     const request = {
       method: "GET",
       path: eventPath(options.sessionId),
-      service: "agent",
+      service: "kael",
       query: { after: options.after },
       headers: {
-        ...agentVersionHeaders(options.resourceSessionId),
         "Last-Event-ID": String(options.after)
       }
     };
@@ -241,7 +282,7 @@ function isCursorExpiredError(error: Error) {
       ? error.status
       : Number(error.message.match(/(?:HTTP\s+|status=)(\d{3})/i)?.[1] || 0);
   const detail = error instanceof AgentStreamHttpError ? error.responseBody : error.message;
-  return status === 409 && detail.includes("cursor_expired");
+  return status === 410 && detail.includes("cursor_expired");
 }
 
 function waitFor(delayMs: number, signal: AbortSignal) {

@@ -3,6 +3,7 @@ import type {
   PlatformAiAssistant,
   PlatformAiConversation,
   PlatformAiMessage,
+  PlatformAiResultCard,
   PlatformAiStreamEvent
 } from "./api";
 import {
@@ -14,6 +15,7 @@ import {
   listPlatformAiAssistants,
   listPlatformAiConversations,
   listPlatformAiMessages,
+  platformConversationResults,
   rejectPlatformAiApproval,
   serverResults,
   streamPlatformAiMessage,
@@ -283,7 +285,7 @@ async function selectConversation(id: string) {
 async function loadConversations(selectFirst = false, silent = false) {
   if (!silent) loadingConversations.value = true;
   try {
-    conversations.value = serverResults(await listPlatformAiConversations());
+    conversations.value = platformConversationResults(await listPlatformAiConversations());
     if (activeConversationId.value && !conversations.value.some((item) => item.id === activeConversationId.value)) {
       activeConversationId.value = "";
     }
@@ -352,7 +354,7 @@ async function selectAssistant(key: string) {
 async function ensureConversation(content: string) {
   if (activeConversation.value) return activeConversation.value;
   const conversation = await createPlatformAiConversation(selectedAssistantKey.value);
-  conversations.value = [conversation, ...conversations.value];
+  conversations.value = [conversation, ...conversations.value.filter((item) => item.id !== conversation.id)];
   activeConversationId.value = conversation.id;
   updateConversationLocally(conversation.id, {
     title: content.replace(/\s+/g, " ").trim().slice(0, 80),
@@ -448,7 +450,13 @@ function handleStreamEvent({ event, data }: PlatformAiStreamEvent) {
   }
   if (event === "message_done") {
     const message = messageById(String(payload.message_id || "")) || currentStreamMessage();
-    if (message) message.status = payload.status || "completed";
+    if (message) {
+      message.status = payload.status || "completed";
+      if (Array.isArray(payload.result_cards)) {
+        message.result_cards = payload.result_cards.map((card: PlatformAiResultCard) => ({ ...card }));
+        traces.value[message.id] = restoredTrace(message);
+      }
+    }
   }
   if (event === "message_error") {
     const message = messageById(String(payload.message_id || "")) || currentStreamMessage();
