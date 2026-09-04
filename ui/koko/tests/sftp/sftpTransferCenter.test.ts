@@ -250,6 +250,8 @@ describe("sftp professional workbench", () => {
 
   it("shows a center transfer rail with left/right arrows while keeping send modal flow", () => {
     expect(globalWorkspaceComponent).toContain("SftpTransferRail");
+    expect(globalWorkspaceComponent).toContain("v-if=\"side === 'right'\"");
+    expect(globalWorkspaceComponent).not.toContain("showTransferRail");
     expect(globalWorkspaceComponent).toContain("transferGlobal");
     expect(globalWorkspaceComponent).toContain('mode="global"');
     expect(sessionWorkspaceComponent).toContain("SftpTransferRail");

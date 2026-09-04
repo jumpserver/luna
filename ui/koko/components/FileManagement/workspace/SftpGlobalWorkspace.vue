@@ -99,13 +99,6 @@ const canTransferLeft = computed(() => {
   );
 });
 
-const showTransferRail = computed(() => {
-  const right = activePaneForSide("right");
-  // Keep the rail whenever a remote is connected (session criterion). Web still shows it for
-  // remote→… when left can receive; web-upload uses the center drop zone for outbound files.
-  return Boolean(right && remotePaneConnected(right.id));
-});
-
 function setLocalPaneRef(value: TemplateRefValue): void {
   props.setLocalPaneRef(value as SftpLocalPaneHandle | null);
 }
@@ -223,7 +216,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
     <KokoSftpTransferCenter :ref="setTransferCenterRef" floating />
     <template v-for="side in ['left', 'right'] as const" :key="side">
       <SftpTransferRail
-        v-if="side === 'right' && showTransferRail"
+        v-if="side === 'right'"
         mode="global"
         :can-transfer-right="canTransferRight"
         :can-transfer-left="canTransferLeft"
@@ -232,7 +225,6 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
       />
       <div
         class="relative flex min-h-0 min-w-0 flex-1 flex-col"
-        :class="side === 'right' && !showTransferRail ? 'border-l border-default' : ''"
         @dragover.capture="dragRemotePaneOverSide(side, $event)"
         @dragleave="leaveRemotePaneSide(side, $event)"
         @drop.capture="dropRemotePaneOnSide(side, $event)"
