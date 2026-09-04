@@ -135,6 +135,31 @@ it("projects model and tool activity into session progress", () => {
   });
 });
 
+it("uses completed messages only for status even when they embed the full answer", () => {
+  for (const payload of [
+    { role: "assistant", parts: [{ type: "text", text: "Completed answer" }] },
+    {
+      message: {
+        id: "embedded-answer",
+        role: "assistant",
+        parts: [{ type: "text", text: "Completed answer" }]
+      }
+    }
+  ]) {
+    const message = agentEventToUiMessage(
+      { seq: 4, type: "message.completed", message_id: "answer-1", run_id: "run-1", payload },
+      "sql",
+      {}
+    );
+
+    expect(message).toMatchObject({
+      metadata: { agentEventType: "message.completed" },
+      parts: [{ type: "data-progress", data: { state: "completed" } }]
+    });
+    expect(message?.parts.some((part) => part.type === "text")).toBe(false);
+  }
+});
+
 it("projects Chen SQL proposal tool results into the existing SQL review parts", () => {
   const proposal = {
     sql: "SELECT id FROM users",

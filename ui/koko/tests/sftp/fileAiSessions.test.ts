@@ -187,7 +187,20 @@ it("keeps Agent session and run control events out of the visible conversation",
 it("keeps streamed File AI text ordered across progress events", async () => {
   const session = createSession("remote-sftp:asset-1:stream");
   const resourceSessionId = await enableSession(session.targetId);
-  await submitKokoFileAiPrompt(session.targetId, "检查文件");
+  let completed = false;
+  const response = session.chat.sendMessage({
+    text: "检查文件",
+    metadata: { domain: "file", targetId: session.targetId, context: session.context }
+  });
+  void response.then(
+    () => {
+      completed = true;
+    },
+    () => {
+      completed = true;
+    }
+  );
+  await vi.waitFor(() => expect(agentHarness.sendMessage).toHaveBeenCalledOnce());
 
   for (const text of ["正在", "检查"]) {
     agentHarness.emit(resourceSessionId, {
@@ -198,26 +211,95 @@ it("keeps streamed File AI text ordered across progress events", async () => {
     });
   }
   agentHarness.emit(resourceSessionId, {
-    type: "model.completed",
+    type: "message.completed",
     run_id: "run-1",
     message_id: "answer-1",
-    payload: { duration_ms: 10 }
+    payload: {
+      id: "answer-1",
+      conversation_id: "conversation-1",
+      role: "assistant",
+      status: "completed",
+      parts: [{ type: "text", text: "正在检查" }],
+      content: "正在检查",
+      result_cards: []
+    }
   });
-  agentHarness.emit(resourceSessionId, {
-    type: "message.delta",
-    run_id: "run-1",
-    message_id: "answer-1",
-    payload: { role: "assistant", delta: "完成" }
-  });
-  agentHarness.emit(resourceSessionId, { type: "run.completed", run_id: "run-1" });
 
   await vi.waitFor(() => {
+    expect(session.chat.status.value).toBe("streaming");
+    expect(session.taskActive).toBe(true);
+    expect(completed).toBe(false);
     const text = session.chat.messages.value
       .filter((message) => message.role === "assistant")
       .flatMap((message) => message.parts)
       .flatMap((part) => (part.type === "text" ? [part.text] : []));
-    expect(text).toEqual(["正在检查完成"]);
+    expect(text).toEqual(["正在检查"]);
   });
+
+  agentHarness.emit(resourceSessionId, { type: "run.completed", run_id: "run-1" });
+  await response;
+
+  expect(session.chat.status.value).toBe("ready");
+  expect(session.taskActive).toBe(false);
+  expect(completed).toBe(true);
+  const text = session.chat.messages.value
+    .filter((message) => message.role === "assistant")
+    .flatMap((message) => message.parts)
+    .flatMap((part) => (part.type === "text" ? [part.text] : []));
+  expect(text).toEqual(["正在检查"]);
+});
+
+it("keeps partial File AI text until the run failure ends the stream", async () => {
+  const session = createSession("remote-sftp:asset-1:failed-stream");
+  const resourceSessionId = await enableSession(session.targetId);
+  const response = session.chat.sendMessage({
+    text: "检查失败原因",
+    metadata: { domain: "file", targetId: session.targetId, context: session.context }
+  });
+  await vi.waitFor(() => expect(agentHarness.sendMessage).toHaveBeenCalledOnce());
+
+  agentHarness.emit(resourceSessionId, {
+    type: "message.delta",
+    run_id: "run-1",
+    message_id: "answer-1",
+    payload: { role: "assistant", delta: "已完成部分检查" }
+  });
+  agentHarness.emit(resourceSessionId, {
+    type: "message.completed",
+    run_id: "run-1",
+    message_id: "answer-1",
+    payload: {
+      id: "answer-1",
+      conversation_id: "conversation-1",
+      role: "assistant",
+      status: "failed",
+      parts: [{ type: "text", text: "已完成部分检查" }],
+      content: "已完成部分检查",
+      result_cards: []
+    }
+  });
+
+  await vi.waitFor(() => {
+    expect(session.chat.status.value).toBe("streaming");
+    expect(session.taskActive).toBe(true);
+  });
+
+  agentHarness.emit(resourceSessionId, {
+    type: "run.failed",
+    run_id: "run-1",
+    message_id: "answer-1",
+    payload: { state: "failed", reason: "File inspection failed" }
+  });
+  await response;
+
+  expect(session.chat.status.value).toBe("error");
+  expect(session.taskActive).toBe(false);
+  expect(session.errorCode).toBe("run_failed");
+  const text = session.chat.messages.value
+    .filter((message) => message.role === "assistant")
+    .flatMap((message) => message.parts)
+    .flatMap((part) => (part.type === "text" ? [part.text] : []));
+  expect(text).toEqual(["已完成部分检查"]);
 });
 
 it("rejects an event whose target does not match the socket-bound session", () => {

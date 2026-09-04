@@ -11,6 +11,8 @@ import { AgentToolRelay } from "../agent/agentToolRelay";
 import { isRecord, kokoMcpWireMessage, manifestFromFrame, parseKokoMcpFrame } from "../agent/types";
 import { useAgentSession } from "../agent/useAgentSession";
 
+const TERMINAL_RUN_EVENTS = new Set(["run.completed", "run.failed", "run.cancelled", "run.interrupted"]);
+
 export type TerminalAiEventData = Record<string, any>;
 export type TerminalAiChatMessage = UIMessage<TerminalAiEventData, Record<string, TerminalAiEventData>>;
 export type KokoTerminalAiMetadataApprovalDecision = "approve_once" | "approve_session" | "reject";
@@ -640,6 +642,7 @@ export function handleKokoTerminalAiWireMessage(paneId: string, message: unknown
 export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
   const session = sessions.get(paneId);
   if (!session || !isTerminalAiChatMessage(message)) return;
+  const runFinished = TERMINAL_RUN_EVENTS.has(String(message.metadata?.agentEventType || ""));
 
   const messageTerminalId = Number(message.metadata?.terminalId) || 0;
   if (messageTerminalId && session.terminalId && messageTerminalId !== Number(session.terminalId)) return;
@@ -716,7 +719,7 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
     session.runtimeStatusCode = String(progress.code || "");
     session.runtimeState = String(progress.state || "");
     session.runtimeExecution = String(progress.execution || "");
-    if (["idle", "completed", "failed", "cancelled", "interrupted"].includes(session.runtimeState)) {
+    if (runFinished) {
       session.taskActive = false;
       session.inputLocked = false;
       session.metadataApproval = null;

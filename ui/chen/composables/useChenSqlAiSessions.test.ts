@@ -100,6 +100,10 @@ describe("Chen SQL AI proposals", () => {
     expect(session.errorCode).toBe("");
     expect(session.errorText).toBe("");
     const request = session.request("generate", "生成查询");
+    let requestFinished = false;
+    void request.then(() => {
+      requestFinished = true;
+    });
     await vi.waitFor(() => expect(agentHarness.sendMessage).toHaveBeenCalledOnce());
 
     for (const text of ["正在", "生成"]) {
@@ -122,7 +126,28 @@ describe("Chen SQL AI proposals", () => {
       message_id: "answer-1",
       payload: { role: "assistant", delta: "完成" }
     });
-    agentHarness.emit(resourceSessionId, { type: "run.completed", run_id: "run-1" });
+    agentHarness.emit(resourceSessionId, {
+      type: "message.completed",
+      run_id: "run-1",
+      message_id: "answer-1",
+      payload: {
+        id: "answer-1",
+        role: "assistant",
+        status: "completed",
+        content: "正在生成完成",
+        parts: [{ type: "text", text: "正在生成完成" }]
+      }
+    });
+    await vi.waitFor(() => {
+      expect(session.chat.status.value).toBe("streaming");
+      expect(requestFinished).toBe(false);
+    });
+
+    agentHarness.emit(resourceSessionId, {
+      type: "run.completed",
+      run_id: "run-1",
+      message_id: "answer-1"
+    });
     await request;
 
     const text = session.chat.messages.value

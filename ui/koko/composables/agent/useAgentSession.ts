@@ -443,7 +443,7 @@ export function agentEventToUiMessage(
       : {})
   };
   const embedded = payload.message ?? payload.ui_message;
-  if (isUiMessage(embedded)) {
+  if (event.type !== "message.completed" && isUiMessage(embedded)) {
     return {
       ...embedded,
       id: eventMessageId(event),
@@ -550,7 +550,7 @@ export function agentEventToUiMessage(
     const delta = isRecord(payload.delta) ? payload.delta.text || payload.delta.delta : payload.delta || payload.text;
     if (typeof delta === "string") part = { type: "text", text: delta };
   }
-  if (event.type === "message.completed" && !embedded) {
+  if (event.type === "message.completed") {
     part = { type: "data-progress", data: { ...payload, state: domain === "terminal" ? "idle" : "completed" } };
   }
   if (event.type === "error") part = { type: "data-error", data: payload };
