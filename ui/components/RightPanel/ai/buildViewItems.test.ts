@@ -98,7 +98,7 @@ describe("buildAiPanelViewItems", () => {
     expect(timelineStep?.step.executions[0]?.result?.exitCode).toBe(0);
   });
 
-  it("merges a restored approval resolution without losing its command", () => {
+  it.each(["approved", "expired", "cancelled"])("merges a restored %s approval without losing its command", (state) => {
     const identity = {
       id: "approval-1",
       planId: "run-1",
@@ -122,7 +122,7 @@ describe("buildAiPanelViewItems", () => {
         parts: [
           {
             type: "data-approval",
-            data: { ...identity, command: "rm trusted", state: "approved", resolved: true }
+            data: { ...identity, command: "rm trusted", state, resolved: true }
           }
         ]
       }
@@ -143,12 +143,12 @@ describe("buildAiPanelViewItems", () => {
     expect(plan?.steps[0]?.executions).toHaveLength(1);
     expect(plan?.steps[0]?.executions[0]?.command).toMatchObject({
       command: "rm trusted",
-      state: "approved",
+      state,
       resolved: true
     });
     expect(timelineStep?.step.executions[0]?.command).toMatchObject({
       command: "rm trusted",
-      state: "approved",
+      state,
       resolved: true
     });
   });
@@ -495,4 +495,38 @@ describe("buildAiPanelViewItems", () => {
 
     expect(items).toEqual([]);
   });
+});
+
+it("retains a timeout notice in the conversation timeline", () => {
+  const items = buildAiPanelViewItems({
+    messages: [
+      { id: "timeout", role: "assistant", parts: [{ type: "data-agent-notice", data: { code: "run_timeout" } }] }
+    ] as unknown as TerminalAiChatMessage[],
+    metadataApproval: null,
+    terminalMetadataApproval: true,
+    executionPlanLabel: "Plan",
+    stepLabel: String
+  });
+  expect(items).toEqual([{ domain: "shared", kind: "agent-notice", key: "timeout-notice-0", code: "run_timeout" }]);
+});
+
+it.each([
+  ["unknown", "cancelled", "unknown"],
+  ["success", "unknown", "success"],
+  ["timeout", "unknown", "timeout"]
+])("preserves %s when a %s delivery races with it", (initial, incoming, expected) => {
+  const messages = [initial, incoming].map((status, index) => ({
+    id: String(index),
+    role: "assistant",
+    metadata: { domain: "terminal" },
+    parts: [{ type: "data-agent-tool", data: { id: "call", domain: "terminal", status } }]
+  })) as unknown as TerminalAiChatMessage[];
+  const items = buildAiPanelViewItems({
+    messages,
+    metadataApproval: null,
+    terminalMetadataApproval: true,
+    executionPlanLabel: "Plan",
+    stepLabel: String
+  });
+  expect(items).toMatchObject([{ kind: "agent-tool", data: { status: expected } }]);
 });

@@ -1,12 +1,16 @@
 import type { AgentHttpRequest } from "#koko/composables/agent/agentClient";
 import { expect, it, vi } from "vitest";
-import { AgentClient } from "#koko/composables/agent/agentClient";
+import { AgentClient, AgentHttpError } from "#koko/composables/agent/agentClient";
+
+const runtime = vi.hoisted(() => ({ desktop: false }));
+const desktop = vi.hoisted(() => ({ invoke: vi.fn() }));
+vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke: desktop.invoke }));
 
 vi.mock("~/utils/runtime", () => ({
   getDesktopRuntime: () => "web",
   getWebApiHeaders: () => ({ "X-JMS-ORG": "org-1" }),
   getWebApiMutationHeaders: () => ({ "X-JMS-ORG": "org-1", "X-CSRFToken": "csrf" }),
-  isDesktopRuntime: () => false,
+  isDesktopRuntime: () => runtime.desktop,
   isElectronRuntime: () => false,
   withWebSitePrefix: (path: string) => path
 }));
@@ -145,4 +149,23 @@ it("maps messages, runs, approvals, and tool results to canonical Kael resources
     status: "success"
   });
   client.dispose();
+});
+
+it("preserves structured Kael errors across web and Electron requests", async () => {
+  const body = JSON.stringify({ code: "approval_expired", detail: "approval has expired" });
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 409, text: async () => body }));
+  const client = new AgentClient();
+  try {
+    await expect(client.getApproval("expired")).rejects.toMatchObject({ status: 409, code: "approval_expired" });
+    runtime.desktop = true;
+    desktop.invoke.mockRejectedValue(
+      new Error(`Error invoking remote method 'desktop:invoke': Error: api request failed: status=409, body=${body}`)
+    );
+    await expect(client.getApproval("expired")).rejects.toMatchObject({ status: 409, code: "approval_expired" });
+    expect(new AgentHttpError(502, "Bad Gateway").code).toBe("");
+  } finally {
+    runtime.desktop = false;
+    vi.unstubAllGlobals();
+    client.dispose();
+  }
 });

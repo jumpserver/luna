@@ -1712,7 +1712,7 @@ it("ignores a late failed result delivery from an old generation after attaching
   await controller.actions.dispose();
 });
 
-it("retries the identical tool result then cancels and disables an exhausted session", async () => {
+it("retries the identical tool result then cancels the run while keeping the session available", async () => {
   let streamOptions!: AgentSseOptions;
   const wait = vi.fn().mockResolvedValue(undefined);
   const onUnavailable = vi.fn();
@@ -1775,15 +1775,15 @@ it("retries the identical tool result then cancels and disables an exhausted ses
         result: { resultType: "complete", content: [{ type: "text", text: "/tmp" }] }
       }
     })
-  ).rejects.toThrow("network unavailable");
+  ).resolves.toBe(true);
 
   expect(sendToolResult).toHaveBeenCalledTimes(3);
   expect(sendToolResult.mock.calls[1]?.[3]).toBe(sendToolResult.mock.calls[0]?.[3]);
   expect(sendToolResult.mock.calls[2]?.[3]).toBe(sendToolResult.mock.calls[0]?.[3]);
   expect(wait.mock.calls.map(([delay]) => delay)).toEqual([10, 20]);
   expect(client.cancel).toHaveBeenCalledWith("agent-1", "resource-1", "run-1", "tool_result_failed");
-  expect(controller.state.status).toBe("unavailable");
-  expect(onUnavailable).toHaveBeenCalledOnce();
+  expect(controller.state.available).toBe(true);
+  expect(onUnavailable).not.toHaveBeenCalled();
   controller.actions.dispose();
 });
 

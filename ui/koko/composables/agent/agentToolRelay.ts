@@ -44,8 +44,12 @@ function normalizeMcpResult(result: unknown): Pick<AgentToolResultRequest, "stat
   if (!isRecord(result)) return { status: "success", result };
   const text = mcpTextContent(result);
   if (result.isError === true) {
+    const meta =
+      isRecord(result._meta) && isRecord(result._meta[AGENT_MCP_BINDING_META_KEY])
+        ? result._meta[AGENT_MCP_BINDING_META_KEY]
+        : {};
     return {
-      status: "error",
+      status: meta.status === "timeout" || meta.status === "cancelled" ? meta.status : "error",
       error: {
         code: -32000,
         message: text || "MCP tool execution failed",

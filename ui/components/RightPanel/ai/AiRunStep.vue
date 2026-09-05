@@ -41,6 +41,10 @@ function stepStatus() {
 
 function statusLabel() {
   const labels: Record<string, string> = {
+    expired: t("RightPanel.AIStatusApprovalExpired"),
+    timeout: t("RightPanel.AIStatusTimeout"),
+    unknown: t("RightPanel.AIStatusUnknown"),
+    cancelled: t("RightPanel.AIStatusCancelled"),
     approved: t("RightPanel.AIStatusApproved"),
     auto_approved: t("RightPanel.AIStatusAutoApproved"),
     awaiting_approval: t("RightPanel.AIStatusAwaitingApproval"),
@@ -67,7 +71,8 @@ function statusColor(): "success" | "error" | "warning" | "primary" | "neutral" 
   const status = stepStatus();
   if (["completed", "success", "succeeded"].includes(status)) return "success";
   if (["error", "failed"].includes(status)) return "error";
-  if (["awaiting_approval", "awaiting_risk_approval"].includes(status)) return "warning";
+  if (["expired", "timeout", "unknown", "awaiting_approval", "awaiting_risk_approval"].includes(status))
+    return "warning";
   if (["approved", "auto_approved", "executing", "in_progress", "reviewing", "running"].includes(status)) {
     return "primary";
   }
@@ -177,6 +182,9 @@ function terminalRiskLabel(level: unknown) {
             {{ execution.command.riskReason }}
           </p>
 
+          <p v-if="execution.command.state === 'expired'" class="px-2 py-2 text-xs text-warning">
+            {{ t("RightPanel.AIApprovalExpired") }}
+          </p>
           <div
             v-if="
               execution.command.partType === 'data-approval' &&
