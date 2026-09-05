@@ -3,7 +3,7 @@ import type { AiViewItemBuildOptions } from "./domains/viewItems";
 import type { AgentToolItem, AgentToolStatus, AiTimelineDomain, ViewItem } from "./types";
 import { createAiViewItemBuilders } from "./domains/registry";
 
-const agentToolStatuses = new Set<AgentToolStatus>(["running", "success", "error", "cancelled"]);
+const agentToolStatuses = new Set<AgentToolStatus>(["running", "success", "error", "cancelled", "timeout", "unknown"]);
 const agentToolDomains = new Set<Exclude<AiTimelineDomain, "shared">>(["terminal", "sql", "file", "script"]);
 
 function agentToolStatus(value: unknown): AgentToolStatus {
@@ -38,6 +38,19 @@ export function buildAiPanelViewItems(options: AiViewItemBuildOptions): ViewItem
         return;
       }
 
+      if (part.type === "data-agent-notice" && "data" in part) {
+        const data = part.data as TerminalAiEventData;
+        if (data.code === "approval_expired" || data.code === "run_timeout" || data.code === "tool_result_failed") {
+          items.push({
+            domain: "shared",
+            kind: "agent-notice",
+            key: `${message.id}-notice-${partIndex}`,
+            code: data.code
+          });
+        }
+        return;
+      }
+
       if (part.type === "data-agent-tool" && "data" in part) {
         const data = part.data as TerminalAiEventData;
         const sourceDomain = agentToolDomain(data.domain || message.metadata?.domain);
@@ -46,13 +59,15 @@ export function buildAiPanelViewItems(options: AiViewItemBuildOptions): ViewItem
         const mapKey = `${sourceDomain}:${id}`;
         const existing = agentTools.get(mapKey);
         if (existing) {
+          const nextStatus = agentToolStatus(data.status || existing.data.status);
+          if (nextStatus === "unknown" && ["success", "error", "timeout"].includes(existing.data.status)) return;
           existing.data = {
             ...existing.data,
             id,
             toolCallId: id,
             sourceDomain,
             toolName: String(data.toolName || existing.data.toolName || ""),
-            status: agentToolStatus(data.status || existing.data.status),
+            status: existing.data.status === "unknown" && nextStatus === "cancelled" ? "unknown" : nextStatus,
             ...(Object.hasOwn(data, "arguments") ? { arguments: data.arguments } : {}),
             ...(Object.hasOwn(data, "result") ? { result: data.result } : {}),
             ...(Object.hasOwn(data, "error") ? { error: data.error } : {}),

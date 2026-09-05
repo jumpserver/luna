@@ -25,6 +25,8 @@ function formatToolValue(value: unknown) {
 }
 
 function statusLabel(status: AgentToolStatus) {
+  if (status === "timeout") return t("RightPanel.AIStatusTimeout");
+  if (status === "unknown") return t("RightPanel.AIStatusUnknown");
   if (status === "running") return t("RightPanel.AIStatusRunning");
   if (status === "success") return t("RightPanel.AIStatusCompleted");
   if (status === "cancelled") return t("RightPanel.AIStatusCancelled");
@@ -39,6 +41,7 @@ function statusIcon(status: AgentToolStatus) {
 }
 
 function statusClass(status: AgentToolStatus) {
+  if (status === "timeout" || status === "unknown") return "text-warning";
   if (status === "running") return "animate-spin text-primary";
   if (status === "success") return "text-success";
   if (status === "cancelled") return "text-muted";
@@ -61,6 +64,9 @@ function statusClass(status: AgentToolStatus) {
         {{ formatAiDuration(item.data.durationMs || 0) }}
       </span>
     </div>
+    <p v-if="item.data.status === 'timeout' || item.data.status === 'unknown'" class="mt-1 text-warning">
+      {{ t(item.data.status === "timeout" ? "RightPanel.AIToolTimeout" : "RightPanel.AIToolResultUnknown") }}
+    </p>
     <div v-if="hasArguments || hasResult" class="mt-2 space-y-2 border-t border-default pt-2">
       <div v-if="hasArguments" class="min-w-0">
         <div class="mb-1 text-[10px] font-medium text-muted">{{ t("RightPanel.AIToolArguments") }}</div>

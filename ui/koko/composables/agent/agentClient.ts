@@ -80,12 +80,22 @@ interface AgentBinding {
 }
 
 export class AgentHttpError extends Error {
+  readonly code: string;
+  readonly detail: string;
   constructor(
     readonly status: number,
     readonly responseBody = ""
   ) {
     super(`Kael request failed with HTTP ${status}${responseBody ? `: ${responseBody}` : ""}`);
     this.name = "AgentHttpError";
+    let body: { code?: unknown; detail?: unknown } = {};
+    try {
+      body = JSON.parse(responseBody) || {};
+    } catch {
+      /* Non-JSON proxy errors keep their HTTP status. */
+    }
+    this.code = typeof body.code === "string" ? body.code : "";
+    this.detail = typeof body.detail === "string" ? body.detail : "";
   }
 }
 
@@ -99,7 +109,17 @@ export class AgentInstanceChangedError extends Error {
 }
 
 async function defaultAgentRequest<T>(request: AgentHttpRequest): Promise<T> {
-  if (isDesktopRuntime()) return desktopInvoke<T>("api_request", { request: { ...request, service: "kael" } });
+  if (isDesktopRuntime()) {
+    try {
+      return await desktopInvoke<T>("api_request", { request: { ...request, service: "kael" } });
+    } catch (error) {
+      // Electron IPC serializes Error properties into the existing error message.
+      const match =
+        error instanceof Error && error.message.match(/api request failed: status=(\d{3}), body=([\s\S]*)$/);
+      if (match) throw new AgentHttpError(Number(match[1]), match[2]);
+      throw error;
+    }
+  }
   const hasBody = request.body !== undefined;
   const response = await fetch(withWebSitePrefix(request.path), {
     method: request.method,
@@ -343,6 +363,13 @@ export class AgentClient {
         ...(request.run_id ? { run_id: request.run_id } : {}),
         ...(request.digest ? { arguments_digest: request.digest } : {})
       }
+    });
+  }
+
+  async getApproval(approvalId: string) {
+    return this.request<{ state: string; reason?: string }>({
+      method: "GET",
+      path: `${KAEL_API_ROOT}/approvals/${encodeURIComponent(approvalId)}`
     });
   }
 

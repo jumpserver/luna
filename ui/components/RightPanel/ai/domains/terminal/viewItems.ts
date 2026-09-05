@@ -135,6 +135,8 @@ export const createTerminalViewItemBuilder: AiViewItemBuilderFactory = () => {
       }
       const execution = ensureExecution(step, data);
       if (partType === "data-execution") {
+        if (data.outcome === "unknown" && ["success", "error", "timeout"].includes(String(execution.result?.outcome)))
+          return;
         execution.result = { ...execution.result, ...data };
         if (data.outcome || data.status) step.status = String(data.outcome || data.status);
         return;

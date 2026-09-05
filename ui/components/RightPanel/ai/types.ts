@@ -54,7 +54,11 @@ export interface TextItem extends ViewItemBase<"shared", "text"> {
   modelDurationMs?: number;
 }
 
-export type AgentToolStatus = "running" | "success" | "error" | "cancelled";
+export interface AgentNoticeItem extends ViewItemBase<"shared", "agent-notice"> {
+  code: "approval_expired" | "run_timeout" | "tool_result_failed";
+}
+
+export type AgentToolStatus = "running" | "success" | "error" | "cancelled" | "timeout" | "unknown";
 
 export interface AgentToolItem extends ViewItemBase<"shared", "agent-tool"> {
   data: {
@@ -225,7 +229,7 @@ export type FileViewItem =
   | FileApprovalItem
   | FileResultItem;
 export type ScriptViewItem = ScriptProposalItem;
-export type SharedViewItem = TextItem | AgentToolItem;
+export type SharedViewItem = TextItem | AgentToolItem | AgentNoticeItem;
 
 export type TerminalTimelineAction =
   | { domain: "terminal"; type: "decide"; data: TerminalAiEventData; approved: boolean }
@@ -253,6 +257,7 @@ export type ScriptTimelineAction =
 export type AiTimelineAction = TerminalTimelineAction | SqlTimelineAction | FileTimelineAction | ScriptTimelineAction;
 
 export type ViewItem =
+  | AgentNoticeItem
   | TextItem
   | AgentToolItem
   | PlanItem

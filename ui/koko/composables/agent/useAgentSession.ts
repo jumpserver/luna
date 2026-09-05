@@ -12,7 +12,7 @@ import type {
 } from "./types";
 import { reactive } from "vue";
 import { agentChatStreamMessage, agentEventLifecycle } from "./agentChatStream";
-import { agentClient } from "./agentClient";
+import { agentClient, AgentHttpError } from "./agentClient";
 import { AgentSseConnection as DefaultAgentSseConnection } from "./agentSse";
 import { isRecord } from "./types";
 
@@ -271,15 +271,17 @@ function approvalPresentation(
       ? {
           resolved: true,
           state:
-            payload.approved === true
-              ? "approved"
-              : payload.approved === false
-                ? payload.reason === "run cancelled"
-                  ? "cancelled"
-                  : "rejected"
-                : typeof payload.state === "string" && payload.state
-                  ? payload.state
-                  : "resolved"
+            typeof payload.state === "string" && payload.state
+              ? payload.state
+              : typeof payload.status === "string" && payload.status
+                ? payload.status
+                : payload.approved === true
+                  ? "approved"
+                  : payload.approved === false
+                    ? payload.reason === "run cancelled"
+                      ? "cancelled"
+                      : "rejected"
+                    : "resolved"
         }
       : { state: "awaiting_approval" })
   };
@@ -338,11 +340,13 @@ function toolResultPresentation(event: AgentEvent) {
   const done = payload.done !== false;
   const outcome = !done
     ? "running"
-    : error || result.isError === true || ["error", "failed"].includes(status)
-      ? "error"
+    : status === "timeout" || status === "unknown"
+      ? status
       : ["cancelled", "interrupted"].includes(status)
         ? "interrupted"
-        : "success";
+        : error || result.isError === true || ["error", "failed"].includes(status)
+          ? "error"
+          : "success";
   const content = Array.isArray(result.content)
     ? result.content
         .flatMap((item) => (isRecord(item) && item.type === "text" && typeof item.text === "string" ? [item.text] : []))
@@ -412,9 +416,11 @@ function agentToolLifecyclePresentation(event: AgentEvent, domain: AgentDomain, 
         ? "running"
         : ["cancelled", "canceled", "interrupted"].includes(statusValue)
           ? "cancelled"
-          : ["error", "failed", "timeout"].includes(statusValue) || isRecord(payload.error) || result.isError === true
-            ? "error"
-            : "success");
+          : statusValue === "timeout" || statusValue === "unknown"
+            ? statusValue
+            : ["error", "failed"].includes(statusValue) || isRecord(payload.error) || result.isError === true
+              ? "error"
+              : "success");
   const toolName = String(payload.tool_name || payload.name || "");
 
   return {
@@ -495,7 +501,10 @@ export function agentEventToUiMessage(
       "run.cancelled": "cancelled",
       "run.interrupted": "interrupted"
     };
-    part = { type: "data-progress", data: { ...payload, state: payload.state || stateByType[event.type] } };
+    part = {
+      type: "data-progress",
+      data: { ...payload, code: payload.error_code || "", state: payload.state || stateByType[event.type] }
+    };
   }
   if (event.type === "model.requested") {
     const code = Number(payload.round) > 1 || payload.phase ? "planning" : "analyzing";
@@ -504,10 +513,16 @@ export function agentEventToUiMessage(
   if (event.type === "model.completed") {
     part = { type: "data-progress", data: { ...payload, code: "planning", state: "planning" } };
   }
+  if (event.type === "run.cancelled" && ["approval_expired", "run_timeout"].includes(String(payload.error_code))) {
+    additionalParts.push({ type: "data-agent-notice", data: { code: payload.error_code } });
+  }
+  if (event.type === "run.cancelled" && payload.cancel_reason === "tool_result_failed") {
+    additionalParts.push({ type: "data-agent-notice", data: { code: "tool_result_failed" } });
+  }
   if (event.type === "run.failed") {
     part = {
       type: "data-error",
-      data: { ...payload, code: "run_failed", message: payload.reason || "Agent run failed" }
+      data: { ...payload, code: payload.error_code || "run_failed", message: payload.reason || "Agent run failed" }
     };
   }
   if (event.type === "approval.requested") {
@@ -623,6 +638,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       summary: string;
     }
   >();
+  const resolvedApprovals = new Map(pendingApprovals);
   const localUserMessageIds = new Map<string, true>();
   const presentedUserMessageIds = new Map<string, true>();
   const pendingModelDurationByRun = new Map<string, number>();
@@ -713,6 +729,10 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     }
     if (event.type === "run.started") state.activeRunId = event.run_id || "";
     if (lifecycle.runFinished) {
+      for (const [approvalId, binding] of pendingApprovals) {
+        if (binding.runId === runId)
+          presentApprovalResolution(approvalId, payload.error_code === "approval_expired" ? "expired" : "cancelled");
+      }
       state.activeRunId = "";
       if (runId) {
         pendingModelDurationByRun.delete(runId);
@@ -753,7 +773,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     }
     if (event.type === "approval.resolved") {
       const approvalId = String(event.approval_id || payload.approval_id || "");
-      const binding = pendingApprovals.get(approvalId);
+      const binding = pendingApprovals.get(approvalId) || resolvedApprovals.get(approvalId);
       if (binding) {
         presentationEvent = {
           ...event,
@@ -767,7 +787,10 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
           }
         };
       }
-      if (approvalId) pendingApprovals.delete(approvalId);
+      if (approvalId) {
+        pendingApprovals.delete(approvalId);
+        resolvedApprovals.delete(approvalId);
+      }
     }
     if (event.type === "session.approval_mode_changed") {
       applyApprovalMode(payload.current || payload.mode || payload.approval_mode);
@@ -908,6 +931,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     sse = null;
     cancelAndResetRelay("session_replaced");
     pendingApprovals.clear();
+    resolvedApprovals.clear();
     pendingModelDurationByRun.clear();
     streamedAssistantMessageRuns.clear();
     state.status = "creating";
@@ -1078,14 +1102,52 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     await client.updateContext(state.agentSessionId, state.resourceSessionId, context);
   }
 
+  function presentApprovalResolution(approvalId: string, status: string) {
+    const binding = pendingApprovals.get(approvalId);
+    if (!binding) return;
+    const part = approvalPresentation(
+      {
+        tool_name: binding.toolName,
+        arguments: binding.argumentsValue,
+        summary: binding.summary,
+        state: status
+      },
+      options.domain,
+      approvalId,
+      binding.runId,
+      binding.toolCallId,
+      true
+    );
+    options.onMessage({
+      id: `approval-${approvalId}-${status}`,
+      role: "assistant",
+      metadata: options.messageMetadata(),
+      parts: [part]
+    } as UIMessage);
+    rememberRecentMessage(resolvedApprovals, approvalId, binding);
+    pendingApprovals.delete(approvalId);
+  }
+
   async function resolveApproval(approvalId: string, decision: AgentApprovalDecision) {
     if (!state.agentSessionId || !state.resourceSessionId) throw new Error("Agent session is unavailable");
     const binding = pendingApprovals.get(approvalId);
-    await client.resolveApproval(state.agentSessionId, state.resourceSessionId, approvalId, {
-      decision,
-      ...(binding?.runId ? { run_id: binding.runId } : {}),
-      ...(binding?.digest ? { digest: binding.digest } : {})
-    });
+    try {
+      await client.resolveApproval(state.agentSessionId, state.resourceSessionId, approvalId, {
+        decision,
+        ...(binding?.runId ? { run_id: binding.runId } : {}),
+        ...(binding?.digest ? { digest: binding.digest } : {})
+      });
+    } catch (error) {
+      if (!(error instanceof AgentHttpError) || error.status !== 409) throw error;
+      if (error.code === "approval_expired") {
+        presentApprovalResolution(approvalId, "expired");
+        return;
+      }
+      if (error.code !== "approval_terminal") throw error;
+      const approval = await client.getApproval(approvalId);
+      if (!["approved", "consumed", "rejected", "expired", "cancelled"].includes(approval.state)) throw error;
+      presentApprovalResolution(approvalId, approval.state === "consumed" ? "approved" : approval.state);
+    }
   }
 
   function relaySessionSnapshot(): ToolRelaySessionSnapshot {
@@ -1119,6 +1181,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     cancelAndResetRelay("tool_result_failed");
     if (!isCurrentRelaySession(snapshot)) return null;
     pendingApprovals.clear();
+    resolvedApprovals.clear();
     pendingModelDurationByRun.clear();
     streamedAssistantMessageRuns.clear();
     const failedSse = sse;
@@ -1179,7 +1242,31 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
               discardRelayResult(result);
               return true;
             }
+            if (error instanceof AgentHttpError && error.status === 409 && error.code === "tool_result_terminal") {
+              const message = agentEventToUiMessage(
+                {
+                  seq: state.lastSeq,
+                  type: "tool.result",
+                  run_id: result.payload.run_id,
+                  tool_call_id: result.toolCallId,
+                  payload: { status: "unknown", done: true }
+                },
+                options.domain,
+                options.messageMetadata()
+              );
+              if (message) options.onMessage({ ...message, id: `tool-${result.toolCallId}-unconfirmed` });
+              failure = undefined;
+              break;
+            }
             failure = error;
+            if (
+              error instanceof AgentHttpError &&
+              error.status >= 400 &&
+              error.status < 500 &&
+              error.status !== 408 &&
+              error.status !== 429
+            )
+              break;
             if (attempt < toolResultMaxAttempts) {
               await waitForToolResultRetry(toolResultBaseDelayMs * 2 ** (attempt - 1));
             }
@@ -1193,10 +1280,34 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       }
       result.complete(true);
     } catch (error) {
-      discardRelayResult(result);
-      if (!isCurrentRelaySession(snapshot)) return true;
-      const failure = await failToolRelay(error, snapshot);
-      if (failure) throw failure;
+      if (!isCurrentRelaySession(snapshot)) {
+        discardRelayResult(result);
+        return true;
+      }
+      // Delivery is exhausted, but the executor may already have changed the resource.
+      // Keep the event stream alive to reconcile the run and allow later requests.
+      result.complete(true);
+      const runId = result.payload?.run_id || snapshot.runId;
+      const message = agentEventToUiMessage(
+        {
+          seq: state.lastSeq,
+          type: "tool.result",
+          run_id: runId,
+          tool_call_id: result.toolCallId,
+          payload: {
+            status: "unknown",
+            done: true,
+            error: { message: error instanceof Error ? error.message : String(error) }
+          }
+        },
+        options.domain,
+        options.messageMetadata()
+      );
+      if (message) options.onMessage({ ...message, id: `tool-${result.toolCallId}-unconfirmed` });
+      if (runId)
+        await client
+          .cancel(snapshot.sessionId, snapshot.resourceSessionId, runId, "tool_result_failed")
+          .catch(() => undefined);
       return true;
     }
     return true;
@@ -1232,6 +1343,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     sse = null;
     cancelAndResetRelay("controller_disposed");
     pendingApprovals.clear();
+    resolvedApprovals.clear();
     pendingModelDurationByRun.clear();
     streamedAssistantMessageRuns.clear();
     localUserMessageIds.clear();

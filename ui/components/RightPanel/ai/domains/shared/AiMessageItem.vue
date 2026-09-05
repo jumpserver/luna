@@ -20,6 +20,22 @@ const { t } = useI18n();
 <template>
   <AiToolCallItem v-if="item.kind === 'agent-tool'" :item="item" />
 
+  <UAlert
+    v-else-if="item.kind === 'agent-notice'"
+    color="warning"
+    variant="subtle"
+    icon="i-lucide-clock"
+    :description="
+      t(
+        item.code === 'approval_expired'
+          ? 'RightPanel.AIApprovalExpired'
+          : item.code === 'tool_result_failed'
+            ? 'RightPanel.AIToolResultUnknown'
+            : 'RightPanel.AIRunTimeout'
+      )
+    "
+  />
+
   <article v-else class="flex gap-2" :class="item.role === 'user' ? 'flex-row-reverse' : ''">
     <span class="grid size-6 shrink-0 place-items-center rounded-md border border-default bg-elevated text-primary">
       <UIcon :name="item.role === 'user' ? 'i-lucide-user-round' : 'i-lucide-sparkles'" class="size-3.5" />
