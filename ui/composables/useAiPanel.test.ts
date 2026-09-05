@@ -7,6 +7,7 @@ describe("AI overlay panel", () => {
     const aiPanel = useAiPanel();
     aiPanel.setSource("platform");
     aiPanel.setWorkspaceFocused(true);
+    aiPanel.setWorkspaceAssistantActive(false);
     aiPanel.setOpen(false);
 
     const rightPanel = useRightPanel();
@@ -48,6 +49,27 @@ describe("AI overlay panel", () => {
     expect(panel.open.value).toBe(true);
     expect(panel.source.value).toBe("workspace");
     expect(panel.workspaceFocused.value).toBe(true);
+  });
+
+  it("keeps the explicit workspace assistant active while the workspace source changes", () => {
+    const panel = useAiPanel();
+
+    panel.openWorkspaceAssistant();
+    panel.setSource("workspace");
+
+    expect(panel.open.value).toBe(true);
+    expect(panel.workspaceAssistantActive.value).toBe(true);
+    expect(panel.mode.value).toBe("workspace-assistant");
+  });
+
+  it("returns to the connected workspace assistant when explicitly requested", () => {
+    const panel = useAiPanel();
+    panel.openWorkspaceAssistant();
+
+    panel.openWorkspaceAi();
+
+    expect(panel.workspaceAssistantActive.value).toBe(false);
+    expect(panel.mode.value).toBe("workspace");
   });
 
   it("uses platform AI without a connected asset", () => {

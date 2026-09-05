@@ -35,6 +35,13 @@ const showAssetSearch = ref(false);
 const assetSearchInputRef = ref<ComponentPublicInstance | null>(null);
 const assetTreeOpen = ref(true);
 const islandAccordionValue = ref<string[]>(["assets"]);
+const workspaceUiAutomationHost = useWorkspaceUiAutomationHost();
+const {
+  currentCommand: workspaceUiCommand,
+  reportSearchQuery: reportWorkspaceSearchQuery,
+  resetForContext: resetWorkspaceUiContext,
+  searchQuery: workspaceSearchQuery
+} = workspaceUiAutomationHost;
 const sidebarSectionLabels = computed<Record<SidebarSectionKey, string>>(() => ({
   assets: t("Menu.AuthorizedTree"),
   favorites: t("Menu.Favorite"),
@@ -46,12 +53,53 @@ const sidebarSectionIcons: Record<SidebarSectionKey, string> = {
   snippets: "i-lucide-scroll-text"
 };
 const userInfoStore = useUserInfoStore();
-const { loggedIn, currentUser } = storeToRefs(userInfoStore);
+const { currentAccountId, currentSite, currentUser, loggedIn, orgId } = storeToRefs(userInfoStore);
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 
 watch(showAssetSearch, (open) => {
   if (!open) sidebarSearch.value = "";
 });
+
+watch(sidebarSearch, (query) => reportWorkspaceSearchQuery(query));
+
+watch(
+  [workspaceSearchQuery, workspaceUiCommand],
+  async ([query, command]) => {
+    if (command?.status !== "pending" || (command.type !== "set-search" && command.type !== "focus-asset")) {
+      return;
+    }
+
+    assetTreeOpen.value = true;
+    if (!islandAccordionValue.value.includes("assets")) {
+      islandAccordionValue.value = [...islandAccordionValue.value, "assets"];
+    }
+    showAssetSearch.value = Boolean(query);
+    if (sidebarSearch.value !== query) sidebarSearch.value = query;
+    await nextTick();
+
+    // Empty search has no tree request to acknowledge it, so the sidebar is
+    // the final semantic executor for this command.
+    if (command.type === "set-search" && !query) reportWorkspaceSearchQuery("");
+  },
+  { immediate: true }
+);
+
+watch(
+  [loggedIn, orgId, currentSite, currentAccountId],
+  ([isLoggedIn, currentOrgId, site, accountId], [wasLoggedIn, previousOrgId, previousSite, previousAccountId]) => {
+    if (
+      isLoggedIn === wasLoggedIn &&
+      currentOrgId === previousOrgId &&
+      site === previousSite &&
+      accountId === previousAccountId
+    ) {
+      return;
+    }
+    sidebarSearch.value = "";
+    showAssetSearch.value = false;
+    resetWorkspaceUiContext({ clearSearch: true });
+  }
+);
 
 const contentBackgroundColor = "var(--app-sidebar-bg)";
 const availableSidebarSectionKeys = computed(() =>

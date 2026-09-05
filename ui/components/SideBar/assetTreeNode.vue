@@ -10,6 +10,7 @@ const props = defineProps<{
   searchMode?: boolean;
   batchMode?: boolean;
   checkedAssetIds?: string[];
+  focusedAssetId?: string;
 }>();
 
 const emit = defineEmits<{
@@ -21,10 +22,17 @@ const emit = defineEmits<{
 }>();
 const { t } = useI18n();
 const appBaseURL = useRuntimeConfig().app.baseURL;
+const rowRef = useTemplateRef<HTMLButtonElement>("row");
 
 const isParent = computed(() => Boolean(props.node.isParent || props.node.children?.length));
 const isOpen = computed(() => Boolean(props.node.open));
 const isChecked = computed(() => props.checkedAssetIds?.includes(props.node.id) || false);
+const nodeAssetId = computed(() =>
+  String(props.node.meta?.data?.id || props.node.key || (props.node.isParent ? "" : props.node.id))
+);
+const isAutomationFocused = computed(
+  () => Boolean(props.focusedAssetId) && !isParent.value && nodeAssetId.value === props.focusedAssetId
+);
 const workspaceTourTarget = computed(() => {
   if (props.searchMode || props.batchMode || props.node.meta?.type === "recent-connections") return undefined;
   return isParent.value ? "node" : "asset";
@@ -118,20 +126,35 @@ const activate = () => {
     emit("select", props.node);
   }
 };
+
+watch(
+  isAutomationFocused,
+  async (focused) => {
+    if (!focused) return;
+    await nextTick();
+    rowRef.value?.scrollIntoView({ block: "nearest" });
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
   <div role="treeitem" :aria-expanded="isParent ? isOpen : undefined">
     <div class="group relative">
       <button
+        ref="row"
         type="button"
         class="app-tree-row sidebar-row flex w-full cursor-pointer items-center gap-1 rounded-md pr-1 text-left"
         :class="[
           node.chkDisabled ? 'opacity-40' : '',
-          node.meta?.type === 'recent-connections' && node.children?.length ? 'pr-9' : ''
+          node.meta?.type === 'recent-connections' && node.children?.length ? 'pr-9' : '',
+          isAutomationFocused
+            ? 'bg-[var(--app-hover-soft)] text-[var(--app-fg)] ring-1 ring-inset ring-[var(--app-focus-ring)]'
+            : ''
         ]"
         :style="{ paddingLeft: `${10 + (node.level || 0) * 14}px` }"
         :title="node.title || node.name"
+        :aria-current="isAutomationFocused ? 'true' : undefined"
         :data-workspace-tour="workspaceTourTarget"
         @click="activate"
         @contextmenu.prevent="emit('contextmenu', node, $event)"
@@ -187,6 +210,7 @@ const activate = () => {
           :search-mode="searchMode"
           :batch-mode="batchMode"
           :checked-asset-ids="checkedAssetIds"
+          :focused-asset-id="focusedAssetId"
           @select="emit('select', $event)"
           @toggle="(target, kind) => emit('toggle', target, kind)"
           @contextmenu="(target, event) => emit('contextmenu', target, event)"

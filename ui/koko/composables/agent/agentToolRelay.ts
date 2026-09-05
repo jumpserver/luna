@@ -9,11 +9,11 @@ import type {
 import {
   AGENT_MCP_BINDING_META_KEY,
   AGENT_PROTOCOL_VERSION,
+  isRecord,
   MCP_CLIENT_CAPABILITIES_META_KEY,
   MCP_CLIENT_INFO_META_KEY,
   MCP_PROTOCOL_VERSION,
   MCP_PROTOCOL_VERSION_META_KEY,
-  isRecord,
   parseKokoMcpFrame
 } from "./types";
 
@@ -103,6 +103,8 @@ export class AgentToolRelay {
       const runId = String(event.run_id || payload.run_id || "");
       const revision = Number(payload.revision || this.options.revision?.()) || 1;
       const toolName = String(payload.tool_name || payload.name || "");
+      const registrationId = String(payload.registration_id || "");
+      const invocationId = String(payload.invocation_id || "");
       const rawArguments = payload.arguments ?? {};
       const argumentsValue = this.options.transformToolArguments?.(toolCallId, toolName, rawArguments) ?? rawArguments;
       const request: JsonRpcRequest = {
@@ -119,7 +121,13 @@ export class AgentToolRelay {
             [AGENT_MCP_BINDING_META_KEY]: {
               resource_session_id: resourceSessionId,
               tool_call_id: toolCallId,
-              revision
+              revision,
+              ...(registrationId ? { registration_id: registrationId } : {}),
+              ...(invocationId ? { invocation_id: invocationId } : {}),
+              ...(typeof payload.definition_version === "string"
+                ? { definition_version: payload.definition_version }
+                : {}),
+              ...(typeof payload.definition_digest === "string" ? { definition_digest: payload.definition_digest } : {})
             }
           }
         }

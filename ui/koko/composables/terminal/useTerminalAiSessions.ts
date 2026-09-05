@@ -6,12 +6,15 @@ import type { AgentSessionController } from "../agent/useAgentSession";
 import { useChat } from "@ai-sdk/vue";
 import { effectScope, markRaw, reactive, shallowReactive } from "vue";
 import { buildJSONEnvelope, ENVELOPE_TERMINAL_COMMAND } from "#koko/composables/terminal/envelope";
-import { agentChatTextId, closeAgentChatText } from "../agent/agentChatStream";
+import {
+  agentChatEventLifecycle,
+  agentChatStreamMessage,
+  agentChatTextId,
+  closeAgentChatText
+} from "../agent/agentChatStream";
 import { AgentToolRelay } from "../agent/agentToolRelay";
 import { isRecord, kokoMcpWireMessage, manifestFromFrame, parseKokoMcpFrame } from "../agent/types";
 import { useAgentSession } from "../agent/useAgentSession";
-
-const TERMINAL_RUN_EVENTS = new Set(["run.completed", "run.failed", "run.cancelled", "run.interrupted"]);
 
 export type TerminalAiEventData = Record<string, any>;
 export type TerminalAiChatMessage = UIMessage<TerminalAiEventData, Record<string, TerminalAiEventData>>;
@@ -642,7 +645,7 @@ export function handleKokoTerminalAiWireMessage(paneId: string, message: unknown
 export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
   const session = sessions.get(paneId);
   if (!session || !isTerminalAiChatMessage(message)) return;
-  const runFinished = TERMINAL_RUN_EVENTS.has(String(message.metadata?.agentEventType || ""));
+  const { runFinished } = agentChatEventLifecycle(message);
 
   const messageTerminalId = Number(message.metadata?.terminalId) || 0;
   if (messageTerminalId && session.terminalId && messageTerminalId !== Number(session.terminalId)) return;
@@ -728,11 +731,11 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
     } else if (session.runtimeState) {
       session.taskActive = true;
     }
-    const timelineParts = message.parts.filter(
+    const timelineMessage = agentChatStreamMessage(
+      message,
       (part) => part.type !== "data-progress" && part.type !== "data-input-lock"
     );
-    if (timelineParts.length) {
-      const timelineMessage = { ...message, parts: timelineParts } as TerminalAiChatMessage;
+    if (timelineMessage) {
       if (!transports.get(session)?.receive(timelineMessage)) {
         session.chat.messages.value = [...session.chat.messages.value, timelineMessage];
       }

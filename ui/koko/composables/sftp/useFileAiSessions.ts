@@ -5,13 +5,16 @@ import type { AgentApprovalMode } from "../agent/types";
 import type { AgentSessionController } from "../agent/useAgentSession";
 import { useChat } from "@ai-sdk/vue";
 import { effectScope, markRaw, reactive, shallowReactive } from "vue";
-import { agentChatTextId, closeAgentChatText } from "../agent/agentChatStream";
+import {
+  agentChatEventLifecycle,
+  agentChatStreamMessage,
+  agentChatTextId,
+  closeAgentChatText
+} from "../agent/agentChatStream";
 import { AgentToolRelay } from "../agent/agentToolRelay";
 import { kokoMcpWireMessage, manifestFromFrame, parseKokoMcpFrame } from "../agent/types";
 import { useAgentSession } from "../agent/useAgentSession";
 import { createSftpMessageId, joinSftpPath } from "./core/codec";
-
-const TERMINAL_RUN_EVENTS = new Set(["run.completed", "run.failed", "run.cancelled", "run.interrupted"]);
 
 export type FileAiEventData = Record<string, unknown>;
 export type FileAiChatMessage = UIMessage<FileAiEventData, Record<string, FileAiEventData>>;
@@ -686,7 +689,7 @@ export function handleKokoFileAiMessage(targetId: string, message: unknown) {
   if (!session || !isFileAiChatMessage(message)) return;
   const messageTargetId = String(message.metadata?.targetId || "");
   if (messageTargetId && messageTargetId !== targetId) return;
-  const runFinished = TERMINAL_RUN_EVENTS.has(String(message.metadata?.agentEventType || ""));
+  const { runFinished } = agentChatEventLifecycle(message);
 
   const capability = partData(message, "data-capability");
   if (capability) {
@@ -718,9 +721,7 @@ export function handleKokoFileAiMessage(targetId: string, message: unknown) {
     session.runtimeStatus = String(progress.text || "");
     session.runtimeStatusCode = String(progress.code || "");
     session.runtimeState = terminalState;
-    if (terminalState && !["idle", "completed", "failed", "cancelled", "interrupted"].includes(terminalState)) {
-      session.taskActive = true;
-    }
+    if (terminalState && !runFinished) session.taskActive = true;
   }
 
   const runtimeError = partData(message, "data-error");
@@ -731,17 +732,19 @@ export function handleKokoFileAiMessage(targetId: string, message: unknown) {
   }
 
   const transport = transports.get(session);
-  const streamParts = message.parts.filter((part) => part.type !== "data-capability" && part.type !== "data-progress");
-  if (!streamParts.length) {
+  const streamMessage = agentChatStreamMessage(
+    message,
+    (part) => part.type !== "data-capability" && part.type !== "data-progress"
+  );
+  if (!streamMessage) {
     if (!session.enabled || runtimeError || runFinished) {
       resetTaskState(session);
       transport?.finish();
     }
     return;
   }
-  const streamMessage = { ...message, parts: streamParts } as FileAiChatMessage;
   if (!transport?.receive(streamMessage)) {
-    const timelineParts = streamParts.filter((part) => part.type !== "data-error");
+    const timelineParts = streamMessage.parts.filter((part) => part.type !== "data-error");
     if (timelineParts.length) {
       const timelineMessage = { ...message, parts: timelineParts } as FileAiChatMessage;
       session.chat.messages.value = [...session.chat.messages.value, timelineMessage];

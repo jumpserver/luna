@@ -11,7 +11,7 @@ import type { AgentSessionController } from "#koko/composables/agent/useAgentSes
 
 import { useChat } from "@ai-sdk/vue";
 import { effectScope, markRaw, reactive, shallowReactive } from "vue";
-import { agentChatTextId, closeAgentChatText } from "#koko/composables/agent/agentChatStream";
+import { agentChatEventLifecycle, agentChatTextId, closeAgentChatText } from "#koko/composables/agent/agentChatStream";
 import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
 import {
   AGENT_MCP_BINDING_META_KEY,
@@ -25,7 +25,6 @@ import { useAgentSession } from "#koko/composables/agent/useAgentSession";
 
 const SQL_CONTEXT_META_KEY = "com.jumpserver/sqlContext";
 const SQL_OPERATION_META_KEY = "com.jumpserver/sqlOperation";
-const TERMINAL_RUN_EVENTS = new Set(["run.completed", "run.failed", "run.cancelled", "run.interrupted"]);
 const SQL_METADATA_CATEGORIES = [
   "connection_metadata",
   "tables",
@@ -747,7 +746,7 @@ export function handleChenSqlAiMessage(paneId: string, value: unknown) {
   if (!session || !isChenSqlAiChatMessage(value)) return;
   const message = value;
   const transport = transports.get(session);
-  const runFinished = TERMINAL_RUN_EVENTS.has(String(message.metadata?.agentEventType || ""));
+  const { runFinished } = agentChatEventLifecycle(message);
 
   const capability = partData(message, "data-capability");
   if (capability) session.enabled = Boolean(capability.enabled);
@@ -795,13 +794,12 @@ export function handleChenSqlAiMessage(paneId: string, value: unknown) {
     session.runtimeState = runtimeState;
     session.runtimeExecution = String(progress.tool_name || progress.name || progress.tool || "");
     updateChenSqlAiTiming(session, progress);
-    if (["completed", "failed", "cancelled", "interrupted"].includes(runtimeState)) {
-      session.taskActive = false;
-      session.inputLocked = false;
-      finishChenSqlAiTiming(session);
-    } else if (runtimeState) {
-      session.taskActive = true;
-    }
+    if (runtimeState && !runFinished) session.taskActive = true;
+  }
+  if (runFinished) {
+    session.taskActive = false;
+    session.inputLocked = false;
+    finishChenSqlAiTiming(session);
   }
   const runtimeError = partData(message, "data-error");
   if (runtimeError) {
@@ -811,7 +809,9 @@ export function handleChenSqlAiMessage(paneId: string, value: unknown) {
     session.errorText = String(runtimeError.message || "SQL AI failed");
   }
 
-  if (!transport?.receive(message)) session.chat.messages.value = [...session.chat.messages.value, message];
+  if (!transport?.receive(message)) {
+    session.chat.messages.value = [...session.chat.messages.value, message];
+  }
   if (!session.enabled || runtimeError || runFinished) {
     transport?.finish();
   }

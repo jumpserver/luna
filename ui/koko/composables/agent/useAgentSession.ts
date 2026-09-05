@@ -11,6 +11,7 @@ import type {
   AgentMessageRequest
 } from "./types";
 import { reactive } from "vue";
+import { agentChatStreamMessage, agentEventLifecycle } from "./agentChatStream";
 import { agentClient } from "./agentClient";
 import { AgentSseConnection as DefaultAgentSseConnection } from "./agentSse";
 import { isRecord } from "./types";
@@ -25,12 +26,14 @@ export interface AgentSessionState {
   available: boolean;
   approvalMode: AgentApprovalMode;
   toolNames: string[];
+  registrationIds: Record<string, string>;
   errorCode: string;
   errorText: string;
 }
 
 interface AgentSessionOptions {
   domain: AgentDomain;
+  allowedApprovalModes?: readonly AgentApprovalMode[];
   relay: AgentToolRelay;
   messageMetadata: () => Record<string, unknown>;
   onMessage: (message: UIMessage) => void;
@@ -64,13 +67,14 @@ interface ToolRelaySessionSnapshot {
 
 const DEFAULT_HISTORY_MAX_EVENTS = 131_072;
 const DEFAULT_HISTORY_MAX_BYTES = 64 * 1024 * 1024;
-const USER_MESSAGE_DEDUP_LIMIT = 2_048;
+const MESSAGE_TRACKING_LIMIT = 2_048;
 const historyTextEncoder = new TextEncoder();
 
 export interface AgentSessionController {
   state: AgentSessionState;
   actions: {
     attachManifest: (manifest: AgentMcpManifest) => Promise<void>;
+    updateContext: (context: Record<string, unknown>) => Promise<void>;
     sendMessage: (message: UIMessage) => Promise<void>;
     resolveApproval: (approvalId: string, decision: AgentApprovalDecision) => Promise<void>;
     receiveKokoFrame: (frame: unknown) => Promise<boolean>;
@@ -150,7 +154,7 @@ function agentEventDeltaText(event: AgentEvent) {
 }
 
 function agentEventStreamKey(event: AgentEvent) {
-  const messageId = String(event.message_id || event.payload?.message_id || "");
+  const messageId = String(event.message_id || event.payload?.message_id || event.payload?.id || "");
   const runId = String(event.run_id || event.payload?.run_id || "");
   return messageId || runId ? `${messageId}\u0000${runId}` : "";
 }
@@ -443,14 +447,14 @@ export function agentEventToUiMessage(
       : {})
   };
   const embedded = payload.message ?? payload.ui_message;
-  if (event.type !== "message.completed" && isUiMessage(embedded)) {
+  if (isUiMessage(embedded)) {
     return {
       ...embedded,
       id: eventMessageId(event),
-      metadata: { ...eventMetadata, ...(isRecord(embedded.metadata) ? embedded.metadata : {}) }
+      metadata: { ...(isRecord(embedded.metadata) ? embedded.metadata : {}), ...eventMetadata }
     };
   }
-  if (event.type !== "message.completed" && event.type.startsWith("message.") && Array.isArray(payload.parts)) {
+  if (event.type.startsWith("message.") && Array.isArray(payload.parts) && payload.parts.length) {
     return {
       id: eventMessageId(event),
       role: payload.role === "user" || payload.role === "system" ? payload.role : "assistant",
@@ -458,12 +462,18 @@ export function agentEventToUiMessage(
       parts: payload.parts
     } as UIMessage;
   }
-  if (event.type !== "message.completed" && event.type.startsWith("message.") && typeof payload.text === "string") {
+  const messageText =
+    typeof payload.text === "string"
+      ? payload.text
+      : event.type === "message.completed" && typeof payload.content === "string"
+        ? payload.content
+        : null;
+  if (event.type.startsWith("message.") && messageText !== null) {
     return {
       id: eventMessageId(event),
       role: payload.role === "user" || payload.role === "system" ? payload.role : "assistant",
       metadata: eventMetadata,
-      parts: [{ type: "text", text: payload.text }]
+      parts: [{ type: "text", text: messageText }]
     } as UIMessage;
   }
 
@@ -550,9 +560,6 @@ export function agentEventToUiMessage(
     const delta = isRecord(payload.delta) ? payload.delta.text || payload.delta.delta : payload.delta || payload.text;
     if (typeof delta === "string") part = { type: "text", text: delta };
   }
-  if (event.type === "message.completed") {
-    part = { type: "data-progress", data: { ...payload, state: domain === "terminal" ? "idle" : "completed" } };
-  }
   if (event.type === "error") part = { type: "data-error", data: payload };
   if (!part && additionalParts.length === 0) return null;
 
@@ -590,6 +597,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     available: false,
     approvalMode: "auto",
     toolNames: [],
+    registrationIds: {},
     errorCode: "",
     errorText: ""
   });
@@ -618,12 +626,13 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
   const localUserMessageIds = new Map<string, true>();
   const presentedUserMessageIds = new Map<string, true>();
   const pendingModelDurationByRun = new Map<string, number>();
+  const streamedAssistantMessageRuns = new Map<string, string>();
 
-  function rememberUserMessage(messages: Map<string, true>, messageId: string) {
+  function rememberRecentMessage<T>(messages: Map<string, T>, messageId: string, value: T) {
     if (!messageId) return;
     messages.delete(messageId);
-    messages.set(messageId, true);
-    while (messages.size > USER_MESSAGE_DEDUP_LIMIT) {
+    messages.set(messageId, value);
+    while (messages.size > MESSAGE_TRACKING_LIMIT) {
       const oldest = messages.keys().next().value;
       if (typeof oldest !== "string") break;
       messages.delete(oldest);
@@ -633,6 +642,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
   function resetHistoryPresentation() {
     localUserMessageIds.clear();
     presentedUserMessageIds.clear();
+    streamedAssistantMessageRuns.clear();
     options.onHistoryReset?.();
   }
 
@@ -690,14 +700,26 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     state.lastSeq = event.seq;
     const payload = event.payload || {};
     const runId = String(event.run_id || payload.run_id || "");
+    const lifecycle = agentEventLifecycle(event.type);
+    const assistantStreamKey = agentEventStreamKey(event);
+    if (agentEventDeltaText(event) !== null) {
+      rememberRecentMessage(streamedAssistantMessageRuns, assistantStreamKey, runId);
+    }
+    const completedAfterDelta = lifecycle.messageCompleted && streamedAssistantMessageRuns.has(assistantStreamKey);
+    if (lifecycle.messageCompleted && assistantStreamKey) streamedAssistantMessageRuns.delete(assistantStreamKey);
     if (event.type === "session.created") {
       applyApprovalMode(payload.approval_mode);
       if (Array.isArray(payload.tools)) state.toolNames = agentToolNames(payload.tools);
     }
     if (event.type === "run.started") state.activeRunId = event.run_id || "";
-    if (["run.completed", "run.failed", "run.cancelled", "run.interrupted"].includes(event.type)) {
+    if (lifecycle.runFinished) {
       state.activeRunId = "";
-      if (runId) pendingModelDurationByRun.delete(runId);
+      if (runId) {
+        pendingModelDurationByRun.delete(runId);
+        for (const [messageId, messageRunId] of streamedAssistantMessageRuns) {
+          if (messageRunId === runId) streamedAssistantMessageRuns.delete(messageId);
+        }
+      }
     }
     if (event.type === "approval.requested") {
       const approvalId = String(event.approval_id || payload.approval_id || "");
@@ -771,14 +793,20 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       event.type === "message.created" && payload.role === "user" ? String(event.message_id || "") : "";
     if (userMessageId && localUserMessageIds.has(userMessageId)) {
       localUserMessageIds.delete(userMessageId);
-      rememberUserMessage(presentedUserMessageIds, userMessageId);
+      rememberRecentMessage(presentedUserMessageIds, userMessageId, true);
       return;
     }
     if (userMessageId && presentedUserMessageIds.has(userMessageId)) return;
-    const message = agentEventToUiMessage(presentationEvent, options.domain, options.messageMetadata());
+    const messageMetadata = {
+      ...options.messageMetadata(),
+      ...(lifecycle.messageCompleted ? { agentCompletedSnapshot: !completedAfterDelta } : {})
+    };
+    const projectedMessage = agentEventToUiMessage(presentationEvent, options.domain, messageMetadata);
+    const message =
+      projectedMessage && lifecycle.messageCompleted ? agentChatStreamMessage(projectedMessage) : projectedMessage;
     if (message) {
       options.onMessage(message);
-      if (userMessageId) rememberUserMessage(presentedUserMessageIds, userMessageId);
+      if (userMessageId) rememberRecentMessage(presentedUserMessageIds, userMessageId, true);
     }
   }
 
@@ -833,9 +861,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     const eventToolCallId = (event: AgentEvent) => String(event.tool_call_id || event.payload?.tool_call_id || "");
     const terminalRuns = new Set(
       events.flatMap((event) =>
-        ["run.completed", "run.failed", "run.cancelled", "run.interrupted"].includes(event.type) && eventRunId(event)
-          ? [eventRunId(event)]
-          : []
+        agentEventLifecycle(event.type).runFinished && eventRunId(event) ? [eventRunId(event)] : []
       )
     );
     const completedToolCalls = new Set(
@@ -883,12 +909,14 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     cancelAndResetRelay("session_replaced");
     pendingApprovals.clear();
     pendingModelDurationByRun.clear();
+    streamedAssistantMessageRuns.clear();
     state.status = "creating";
     state.agentSessionId = "";
     state.resourceSessionId = manifest.resourceSessionId;
     state.activeRunId = "";
     state.revision = manifest.revision;
     state.toolNames = agentToolNames(manifest.tools);
+    state.registrationIds = {};
     state.errorCode = "";
     state.errorText = "";
     setAvailable(false);
@@ -918,6 +946,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
         acquiredSessionId = agentSessionId;
         if (generation !== currentGeneration) return;
         after = Math.max(0, Math.floor(Number(created.after) || 0));
+        state.registrationIds = { ...(created.registration_ids || {}) };
       }
       if (!agentSessionId) throw new Error("Agent session creation did not return a session id");
       state.agentSessionId = agentSessionId;
@@ -937,6 +966,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
           acquiredSessionId = agentSessionId;
           if (generation !== currentGeneration) return;
           after = Math.max(0, Math.floor(Number(created.after) || 0));
+          state.registrationIds = { ...(created.registration_ids || {}) };
           state.agentSessionId = agentSessionId;
           state.lastSeq = 0;
         }
@@ -1032,13 +1062,20 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       throw new Error("Agent session is unavailable");
     }
     const request = toAgentMessageRequest(message);
-    rememberUserMessage(localUserMessageIds, request.message_id);
+    rememberRecentMessage(localUserMessageIds, request.message_id, true);
     try {
       await client.sendMessage(state.agentSessionId, state.resourceSessionId, request);
     } catch (error) {
       localUserMessageIds.delete(request.message_id);
       throw error;
     }
+  }
+
+  async function updateContext(context: Record<string, unknown>) {
+    if (!state.available || !state.agentSessionId || !state.resourceSessionId) {
+      throw new Error("Agent session is unavailable");
+    }
+    await client.updateContext(state.agentSessionId, state.resourceSessionId, context);
   }
 
   async function resolveApproval(approvalId: string, decision: AgentApprovalDecision) {
@@ -1083,6 +1120,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     if (!isCurrentRelaySession(snapshot)) return null;
     pendingApprovals.clear();
     pendingModelDurationByRun.clear();
+    streamedAssistantMessageRuns.clear();
     const failedSse = sse;
     sse = null;
     failedSse?.stop();
@@ -1171,6 +1209,9 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
 
   async function setApprovalMode(mode: AgentApprovalMode) {
     if (!["always", "auto", "never"].includes(mode)) return;
+    if (options.allowedApprovalModes && !options.allowedApprovalModes.includes(mode)) {
+      throw new Error(`Approval mode ${mode} is not allowed for the ${options.domain} agent`);
+    }
     if (!state.agentSessionId || !state.resourceSessionId) {
       state.approvalMode = mode;
       options.onApprovalMode?.(mode);
@@ -1192,6 +1233,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     cancelAndResetRelay("controller_disposed");
     pendingApprovals.clear();
     pendingModelDurationByRun.clear();
+    streamedAssistantMessageRuns.clear();
     localUserMessageIds.clear();
     presentedUserMessageIds.clear();
     const deleteReleasedSession = retainedResourceId ? client.releaseResource(retainedResourceId) : false;
@@ -1201,6 +1243,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     state.resourceSessionId = "";
     state.activeRunId = "";
     state.toolNames = [];
+    state.registrationIds = {};
     setAvailable(false);
     const cleanup = lifecycleTail
       .catch(() => undefined)
@@ -1214,6 +1257,15 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
 
   return {
     state,
-    actions: { attachManifest, sendMessage, resolveApproval, receiveKokoFrame, cancel, setApprovalMode, dispose }
+    actions: {
+      attachManifest,
+      updateContext,
+      sendMessage,
+      resolveApproval,
+      receiveKokoFrame,
+      cancel,
+      setApprovalMode,
+      dispose
+    }
   };
 }

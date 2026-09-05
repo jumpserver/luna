@@ -2,6 +2,7 @@ import type { AgentClient } from "#koko/composables/agent/agentClient";
 import type { AgentSseConnection, AgentSseOptions } from "#koko/composables/agent/agentSse";
 import type { AgentDomain } from "#koko/composables/agent/types";
 import { expect, it, vi } from "vitest";
+import { agentEventLifecycle } from "#koko/composables/agent/agentChatStream";
 import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
 import { agentEventToUiMessage, useAgentSession } from "#koko/composables/agent/useAgentSession";
 
@@ -24,6 +25,13 @@ function deferred<T>() {
   });
   return { promise, resolve, reject };
 }
+
+it("finishes chat streams only for terminal run events", () => {
+  expect(agentEventLifecycle("message.completed").runFinished).toBe(false);
+  for (const type of ["run.completed", "run.failed", "run.cancelled", "run.interrupted"]) {
+    expect(agentEventLifecycle(type).runFinished).toBe(true);
+  }
+});
 
 it("stores and presents the tool names supplied for the Agent session", async () => {
   const onMessage = vi.fn();
@@ -133,31 +141,6 @@ it("projects model and tool activity into session progress", () => {
       }
     ]
   });
-});
-
-it("uses completed messages only for status even when they embed the full answer", () => {
-  for (const payload of [
-    { role: "assistant", parts: [{ type: "text", text: "Completed answer" }] },
-    {
-      message: {
-        id: "embedded-answer",
-        role: "assistant",
-        parts: [{ type: "text", text: "Completed answer" }]
-      }
-    }
-  ]) {
-    const message = agentEventToUiMessage(
-      { seq: 4, type: "message.completed", message_id: "answer-1", run_id: "run-1", payload },
-      "sql",
-      {}
-    );
-
-    expect(message).toMatchObject({
-      metadata: { agentEventType: "message.completed" },
-      parts: [{ type: "data-progress", data: { state: "completed" } }]
-    });
-    expect(message?.parts.some((part) => part.type === "text")).toBe(false);
-  }
 });
 
 it("projects Chen SQL proposal tool results into the existing SQL review parts", () => {
@@ -511,6 +494,67 @@ it("maps UI messages and approvals to the strict Agent API DTO", async () => {
     expect.objectContaining({
       metadata: expect.objectContaining({ modelDurationMs: 789 }),
       parts: [{ type: "text", text: "Done" }]
+    })
+  );
+
+  onMessage.mockClear();
+  streamOptions.onEvent({
+    seq: 8,
+    type: "message.delta",
+    session_id: "agent-1",
+    resource_session_id: "resource-1",
+    run_id: "run-2",
+    message_id: "answer-2",
+    payload: { role: "assistant", delta: "Partial answer" }
+  });
+  expect(onMessage).toHaveBeenCalledWith(
+    expect.objectContaining({ parts: [{ type: "text", text: "Partial answer" }] })
+  );
+
+  onMessage.mockClear();
+  streamOptions.onEvent({
+    seq: 9,
+    type: "message.completed",
+    session_id: "agent-1",
+    resource_session_id: "resource-1",
+    run_id: "run-observer",
+    message_id: "answer-2",
+    payload: { role: "assistant", content: "Observer answer" }
+  });
+  expect(onMessage).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      metadata: expect.objectContaining({
+        agentEventType: "message.completed",
+        agentCompletedSnapshot: true
+      }),
+      parts: [{ type: "text", text: "Observer answer" }]
+    })
+  );
+
+  onMessage.mockClear();
+  streamOptions.onEvent({
+    seq: 10,
+    type: "message.completed",
+    session_id: "agent-1",
+    resource_session_id: "resource-1",
+    run_id: "run-2",
+    message_id: "answer-2",
+    payload: {
+      message: {
+        id: "spoofed-answer",
+        role: "assistant",
+        metadata: { agentCompletedSnapshot: true },
+        parts: [
+          { type: "text", text: "Partial answer" },
+          { type: "data-final", data: { artifactId: "artifact-1" } }
+        ]
+      }
+    }
+  });
+  expect(onMessage).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      metadata: expect.objectContaining({ agentCompletedSnapshot: false }),
+      parts: [{ type: "data-final", data: { artifactId: "artifact-1" } }]
     })
   );
   controller.actions.dispose();
@@ -1563,6 +1607,24 @@ it("updates approval mode only after Agent Runtime accepts it and applies restor
   expect(controller.state.approvalMode).toBe("auto");
   expect(onApprovalMode).toHaveBeenLastCalledWith("auto");
   controller.actions.dispose();
+});
+
+it("can lock a capability session to its safe approval modes", async () => {
+  const controller = useAgentSession({
+    domain: "workspace",
+    allowedApprovalModes: ["auto"],
+    relay: new AgentToolRelay({ resourceSessionId: () => "resource-1", sendFrame: vi.fn() }),
+    messageMetadata: () => ({}),
+    onMessage: vi.fn(),
+    onAvailability: vi.fn()
+  });
+
+  await expect(controller.actions.setApprovalMode("never")).rejects.toThrow(
+    "Approval mode never is not allowed for the workspace agent"
+  );
+  await expect(controller.actions.setApprovalMode("auto")).resolves.toBeUndefined();
+  expect(controller.state.approvalMode).toBe("auto");
+  await controller.actions.dispose();
 });
 
 it("ignores a late failed result delivery from an old generation after attaching a replacement session", async () => {

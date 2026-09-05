@@ -179,9 +179,25 @@ describe("Script AI timeline", () => {
       message_id: "answer-1",
       payload: { role: "assistant", delta: "完成" }
     });
+    agentHarness.emit(session.resourceSessionId, {
+      type: "message.completed",
+      run_id: "run-1",
+      message_id: "answer-1",
+      payload: {
+        role: "assistant",
+        parts: [{ type: "text", text: "正在检查完成" }]
+      }
+    });
+    await vi.waitFor(() => {
+      expect(session.chat.status.value).toBe("streaming");
+      expect(session.taskActive).toBe(true);
+    });
+
     agentHarness.emit(session.resourceSessionId, { type: "run.completed", run_id: "run-1" });
 
     await vi.waitFor(() => {
+      expect(session.chat.status.value).toBe("ready");
+      expect(session.taskActive).toBe(false);
       const text = session.chat.messages.value
         .filter((message) => message.role === "assistant")
         .flatMap((message) => message.parts)
