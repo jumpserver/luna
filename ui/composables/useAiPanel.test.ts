@@ -4,156 +4,73 @@ import { useRightPanel } from "./useRightPanel";
 
 describe("AI overlay panel", () => {
   beforeEach(() => {
-    const aiPanel = useAiPanel();
-    aiPanel.setSource("platform");
-    aiPanel.setWorkspaceFocused(true);
-    aiPanel.setWorkspaceAssistantActive(false);
-    aiPanel.setOpen(false);
-
+    const panel = useAiPanel();
+    panel.setSource("workspace");
+    panel.openWorkspaceAssistant();
+    panel.setOpen(false);
     const rightPanel = useRightPanel();
     rightPanel.setOpen(false);
     rightPanel.setActiveTab("session");
     rightPanel.setPanelWidth(340);
   });
 
-  it("opens without changing layout state", () => {
+  it("opens the workspace assistant without changing the resource layout", () => {
     const panel = useAiPanel();
     const rightPanel = useRightPanel();
     rightPanel.setOpen(true);
     rightPanel.setActiveTab("sftp");
     rightPanel.setPanelWidth(412);
-
     panel.toggleAi();
-
     expect(panel.open.value).toBe(true);
+    expect(panel.mode.value).toBe("workspace-assistant");
     expect(rightPanel.open.value).toBe(true);
     expect(rightPanel.activeTab.value).toBe("sftp");
     expect(rightPanel.panelWidth.value).toBe(412);
   });
 
-  it("closes on the next toggle", () => {
+  it("closes and reopens globally in workspace assistant mode", () => {
     const panel = useAiPanel();
-    panel.openAi();
-
-    panel.toggleAi();
-
-    expect(panel.open.value).toBe(false);
-  });
-
-  it("opens workspace AI after a teleported workspace action", () => {
-    const panel = useAiPanel();
-    panel.setWorkspaceFocused(false);
-
     panel.openWorkspaceAi();
-
+    panel.toggleAi();
+    expect(panel.open.value).toBe(false);
+    panel.toggleAi();
     expect(panel.open.value).toBe(true);
-    expect(panel.source.value).toBe("workspace");
-    expect(panel.workspaceFocused.value).toBe(true);
-  });
-
-  it("keeps the explicit workspace assistant active while the workspace source changes", () => {
-    const panel = useAiPanel();
-
-    panel.openWorkspaceAssistant();
-    panel.setSource("workspace");
-
-    expect(panel.open.value).toBe(true);
-    expect(panel.workspaceAssistantActive.value).toBe(true);
     expect(panel.mode.value).toBe("workspace-assistant");
   });
 
-  it("returns to the connected workspace assistant when explicitly requested", () => {
+  it("opens the resource assistant only when explicitly requested", () => {
+    const panel = useAiPanel();
+    panel.openWorkspaceAi();
+    expect(panel.open.value).toBe(true);
+    expect(panel.mode.value).toBe("workspace");
+    panel.openAi();
+    expect(panel.mode.value).toBe("workspace-assistant");
+  });
+
+  it("does not switch assistants when the resource source changes", () => {
     const panel = useAiPanel();
     panel.openWorkspaceAssistant();
-
-    panel.openWorkspaceAi();
-
-    expect(panel.workspaceAssistantActive.value).toBe(false);
+    panel.setSource("sftp");
+    expect(panel.mode.value).toBe("workspace-assistant");
+    panel.setWorkspaceAssistantActive(false);
     expect(panel.mode.value).toBe("workspace");
+    expect(panel.source.value).toBe("sftp");
+    panel.setSource("workspace");
+    expect(panel.mode.value).toBe("workspace");
+    panel.setWorkspaceAssistantActive(true);
+    expect(panel.mode.value).toBe("workspace-assistant");
   });
 
-  it("uses platform AI without a connected asset", () => {
-    expect(
-      resolveAiPanelSource({
-        workspaceMode: "assets",
-        surfaceStatus: "ready",
-        surfaceAssetId: "asset-1",
-        standaloneWorkspace: false,
-        workspaceFocused: true,
-        rightPanelOpen: false,
-        rightPanelTab: "session"
-      })
-    ).toBe("platform");
-  });
-
-  it("uses workspace AI for the active connected asset", () => {
-    expect(
-      resolveAiPanelSource({
-        workspaceMode: "assets",
-        surfaceStatus: "connected",
-        surfaceAssetId: "asset-1",
-        standaloneWorkspace: false,
-        workspaceFocused: true,
-        rightPanelOpen: false,
-        rightPanelTab: "session"
-      })
-    ).toBe("workspace");
-  });
-
-  it("uses workspace AI for the script editor without a connected asset", () => {
-    expect(
-      resolveAiPanelSource({
-        workspaceMode: "assets",
-        surfaceStatus: "ready",
-        surfaceAssetId: "script-1",
-        surfaceProtocol: "script-editor",
-        standaloneWorkspace: false,
-        workspaceFocused: true,
-        rightPanelOpen: false,
-        rightPanelTab: "session"
-      })
-    ).toBe("workspace");
-  });
-
-  it("uses file AI when the connected asset's SFTP panel is active", () => {
-    expect(
-      resolveAiPanelSource({
-        workspaceMode: "assets",
-        surfaceStatus: "connected",
-        surfaceAssetId: "asset-1",
-        standaloneWorkspace: false,
-        workspaceFocused: true,
-        rightPanelOpen: true,
-        rightPanelTab: "sftp"
-      })
-    ).toBe("sftp");
-  });
-
-  it("returns to platform AI outside the asset workspace", () => {
-    expect(
-      resolveAiPanelSource({
-        workspaceMode: "tools",
-        surfaceStatus: "connected",
-        surfaceAssetId: "asset-1",
-        standaloneWorkspace: false,
-        workspaceFocused: true,
-        rightPanelOpen: false,
-        rightPanelTab: "session"
-      })
-    ).toBe("platform");
-  });
-
-  it("returns to platform AI after focus leaves a connected asset", () => {
-    expect(
-      resolveAiPanelSource({
-        workspaceMode: "assets",
-        surfaceStatus: "connected",
-        surfaceAssetId: "asset-1",
-        standaloneWorkspace: false,
-        workspaceFocused: false,
-        rightPanelOpen: false,
-        rightPanelTab: "session"
-      })
-    ).toBe("platform");
-  });
+  it.each([
+    ["assets", true, "sftp", "sftp"],
+    ["assets", false, "sftp", "workspace"],
+    ["assets", true, "session", "workspace"],
+    ["files", true, "sftp", "workspace"],
+    ["tools", false, "session", "workspace"]
+  ] as const)(
+    "resolves %s resources without a platform fallback",
+    (workspaceMode, rightPanelOpen, rightPanelTab, expected) => {
+      expect(resolveAiPanelSource({ workspaceMode, rightPanelOpen, rightPanelTab })).toBe(expected);
+    }
+  );
 });

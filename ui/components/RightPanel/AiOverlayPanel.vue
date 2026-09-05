@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import WorkspaceAiPanel from "./aiPanel.vue";
-import PlatformAiPanel from "./PlatformAiPanel.vue";
 import WorkspaceAssistantPanel from "./WorkspaceAssistantPanel.vue";
 
 const emit = defineEmits<{ close: [] }>();
@@ -9,7 +8,7 @@ const isNarrowScreen = useMediaQuery("(max-width: 767px)");
 const { activeWorkspaceMode } = useWorkspaceMode();
 const { activePaneId, activeTab } = useWorkspaceTabs();
 const { activeTab: rightPanelTab, open: rightPanelOpen } = useRightPanel();
-const { mode, setSource, setWorkspaceAssistantActive, workspaceAssistantActive, workspaceFocused } = useAiPanel();
+const { mode, setSource, setWorkspaceAssistantActive, workspaceAssistantActive } = useAiPanel();
 const panelTitle = computed(() =>
   workspaceAssistantActive.value ? t("RightPanel.WorkspaceAssistantName") : t("RightPanel.AI")
 );
@@ -18,15 +17,19 @@ const activeSurface = computed(() => {
   return tab?.panes.find((pane) => pane.id === activePaneId.value) || tab;
 });
 
+const resourceAssistantAvailable = computed(
+  () =>
+    activeWorkspaceMode.value === "files" ||
+    (activeWorkspaceMode.value === "assets" &&
+      ((activeSurface.value?.status === "connected" && Boolean(activeSurface.value?.assetId)) ||
+        activeSurface.value?.protocol === "script-editor" ||
+        (!activeTab.value && Boolean(activePaneId.value))))
+);
+
 watchEffect(() => {
   setSource(
     resolveAiPanelSource({
       workspaceMode: activeWorkspaceMode.value,
-      surfaceStatus: activeSurface.value?.status,
-      surfaceAssetId: activeSurface.value?.assetId,
-      surfaceProtocol: activeSurface.value?.protocol,
-      standaloneWorkspace: !activeTab.value && Boolean(activePaneId.value),
-      workspaceFocused: workspaceFocused.value,
       rightPanelOpen: rightPanelOpen.value,
       rightPanelTab: rightPanelTab.value
     })
@@ -51,6 +54,7 @@ watchEffect(() => {
         <UIcon name="i-lucide-sparkles" class="size-4 text-primary" />
         <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ panelTitle }}</span>
         <UTooltip
+          v-if="!workspaceAssistantActive || resourceAssistantAvailable"
           :text="
             workspaceAssistantActive ? t('RightPanel.WorkspaceAssistantBack') : t('RightPanel.WorkspaceAssistantOpen')
           "
@@ -79,7 +83,6 @@ watchEffect(() => {
       <div class="min-h-0 flex-1 overflow-hidden">
         <KeepAlive>
           <WorkspaceAssistantPanel v-if="mode === 'workspace-assistant'" />
-          <PlatformAiPanel v-else-if="mode === 'platform'" />
           <WorkspaceAiPanel v-else />
         </KeepAlive>
       </div>

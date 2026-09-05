@@ -150,6 +150,8 @@ const handleToggleAi = () => {
       </div>
     </div>
 
-    <AiOverlayPanel v-if="activeTab && aiPanelOpen" @close="setAiPanelOpen(false)" />
+    <KeepAlive>
+      <AiOverlayPanel v-if="activeTab && aiPanelOpen" @close="setAiPanelOpen(false)" />
+    </KeepAlive>
   </div>
 </template>
