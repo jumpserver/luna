@@ -24,7 +24,7 @@ import {
 const props = defineProps<{ pane: WorkspacePane }>();
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
-const { openAi } = useAiPanel();
+const { openWorkspaceAi: openAi } = useAiPanel();
 const open = ref(false);
 const submitting = ref(false);
 const error = ref("");

@@ -4,6 +4,8 @@ import { MCP_FINAL_RESULT_META_KEY, parseKokoMcpFrame } from "#koko/composables/
 import type { WorkspaceAssistantChatMessage, WorkspaceAssistantSession } from "./useWorkspaceAssistantSession";
 import {
   workspaceAssistantClaimConnectionPlan,
+  workspaceAssistantConnectionForUniqueAccount,
+  workspaceAssistantPersonalCredentialIdentity,
   workspaceAssistantManifest,
   workspaceAssistantMessages,
   workspaceAssistantNeedsAssetSelection,
@@ -22,6 +24,78 @@ vi.mock("~/store/modules/userInfo", () => ({
 vi.mock("~/composables/useApiRequest", () => ({ getAssetDetailRequest: vi.fn() }));
 
 describe("Workspace Assistant capability", () => {
+  const manualAccount = {
+    id: "manual",
+    name: "Manual",
+    alias: "@INPUT",
+    username: "",
+    date_expired: "",
+    has_secret: false,
+    has_username: false,
+    secret_type: "password",
+    actions: []
+  };
+  const savedCredential = {
+    protocol: "ssh",
+    username: "Manual",
+    personalCredentialId: "credential-1",
+    personalCredentialVersion: 2,
+    personalCredentialSecretType: "ssh_key",
+    rememberSecret: false
+  };
+
+  it("connects with a saved personal credential without a locally stored secret", () => {
+    const connection = workspaceAssistantConnectionForUniqueAccount("ssh", manualAccount, savedCredential);
+    expect(connection).toMatchObject({
+      accountMode: "manual",
+      personalCredentialId: "credential-1",
+      personalCredentialVersion: 2,
+      personalCredentialSecretType: "ssh_key",
+      manualPassword: "",
+      rememberSecret: false,
+      preserveStoredSelection: true
+    });
+    expect(connection?.savePersonalCredential).toBeUndefined();
+  });
+
+  it("requires connection input when no matching personal credential is saved", () => {
+    expect(workspaceAssistantConnectionForUniqueAccount("ssh", manualAccount, undefined)).toBeNull();
+    expect(workspaceAssistantConnectionForUniqueAccount("rdp", manualAccount, savedCredential)).toBeNull();
+    expect(
+      workspaceAssistantConnectionForUniqueAccount("ssh", manualAccount, {
+        ...savedCredential,
+        personalCredentialId: undefined
+      })
+    ).toBeNull();
+  });
+
+  it("binds the local connection plan to the selected credential and its version", () => {
+    const connection = workspaceAssistantConnectionForUniqueAccount("ssh", manualAccount, savedCredential)!;
+    const identity = workspaceAssistantPersonalCredentialIdentity(connection);
+    expect(workspaceAssistantPersonalCredentialIdentity({ ...connection })).toBe(identity);
+    expect(
+      workspaceAssistantPersonalCredentialIdentity({ ...connection, personalCredentialId: "credential-2" })
+    ).not.toBe(identity);
+    expect(workspaceAssistantPersonalCredentialIdentity({ ...connection, personalCredentialVersion: 3 })).not.toBe(
+      identity
+    );
+    expect(workspaceAssistantPersonalCredentialIdentity({ ...connection, personalCredentialId: undefined })).not.toBe(
+      identity
+    );
+  });
+
+  it("does not attach personal credentials to hosted or anonymous accounts", () => {
+    for (const alias of ["root", "@ANON"]) {
+      const connection = workspaceAssistantConnectionForUniqueAccount(
+        "ssh",
+        { ...manualAccount, alias },
+        savedCredential
+      );
+      expect(connection).not.toBeNull();
+      expect(connection?.personalCredentialId).toBeUndefined();
+    }
+  });
+
   it("notifies the timeline for every shallow AI SDK message update", () => {
     const message = {
       id: "assistant-1",

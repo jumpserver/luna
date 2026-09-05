@@ -59,6 +59,7 @@ interface WorkspaceConnectionPlan {
   assetName: string;
   protocol: string;
   accountIdentity: string;
+  personalCredentialIdentity: string;
   state: "ready" | "connecting" | "consumed";
 }
 
@@ -524,7 +525,7 @@ function accountIdentity(account: PermedAccount) {
   return boundedString(account.id || account.alias || account.name || account.username, 256);
 }
 
-function connectionForUniqueAccount(
+export function workspaceAssistantConnectionForUniqueAccount(
   protocol: string,
   account: PermedAccount,
   saved: ConnectionInfo | undefined
@@ -552,20 +553,15 @@ function connectionForUniqueAccount(
     };
   }
   if (alias === "@ANON") return { ...base, account: "@ANON", accountMode: "anonymous" };
-  if (
-    alias === "@INPUT" &&
-    savedMatchesProtocol &&
-    saved?.rememberSecret &&
-    saved.manualUsername &&
-    saved.manualPassword
-  ) {
+  if (alias === "@INPUT" && savedMatchesProtocol && saved?.personalCredentialId) {
     return {
       ...base,
       account: account.name || alias,
       accountMode: "manual",
-      manualUsername: saved.manualUsername,
-      manualPassword: saved.manualPassword,
-      rememberSecret: true
+      manualUsername: saved.manualUsername || "",
+      personalCredentialId: saved.personalCredentialId,
+      personalCredentialVersion: saved.personalCredentialVersion,
+      personalCredentialSecretType: saved.personalCredentialSecretType || "password"
     };
   }
   if (alias === "@USER" && savedMatchesProtocol && saved?.rememberSecret && saved.dynamicPassword) {
@@ -578,6 +574,14 @@ function connectionForUniqueAccount(
     };
   }
   return null;
+}
+
+// Keep credential references local; a changed selection requires a new connection plan.
+export function workspaceAssistantPersonalCredentialIdentity(connection: ConnectionFormInfo) {
+  return stableJson({
+    id: connection.personalCredentialId || "",
+    version: connection.personalCredentialVersion ?? null
+  });
 }
 
 function currentOrganizationId(userInfoStore: ReturnType<typeof useUserInfoStore>) {
@@ -788,7 +792,7 @@ async function executeWorkspaceTool(
     const accounts = uniqueAccounts(asset.permedAccounts || []);
     const connection =
       protocols.length === 1 && accounts.length === 1
-        ? connectionForUniqueAccount(protocols[0]!, accounts[0]!, asset.savedConnection)
+        ? workspaceAssistantConnectionForUniqueAccount(protocols[0]!, accounts[0]!, asset.savedConnection)
         : null;
 
     if (!connection) {
@@ -840,6 +844,7 @@ async function executeWorkspaceTool(
       assetName: asset.name,
       protocol: connection.protocol,
       accountIdentity: accountIdentity(accounts[0]!),
+      personalCredentialIdentity: workspaceAssistantPersonalCredentialIdentity(connection),
       state: "ready"
     });
     return {
@@ -893,7 +898,11 @@ async function executeWorkspaceTool(
       const currentAccounts = uniqueAccounts(revalidatedAsset.permedAccounts || []);
       const currentConnection =
         currentProtocols.length === 1 && currentAccounts.length === 1
-          ? connectionForUniqueAccount(currentProtocols[0]!, currentAccounts[0]!, revalidatedAsset.savedConnection)
+          ? workspaceAssistantConnectionForUniqueAccount(
+              currentProtocols[0]!,
+              currentAccounts[0]!,
+              revalidatedAsset.savedConnection
+            )
           : null;
       if (
         !revalidatedAsset.isActive ||
@@ -901,11 +910,12 @@ async function executeWorkspaceTool(
         currentProtocols[0] !== plan.protocol ||
         currentAccounts.length !== 1 ||
         accountIdentity(currentAccounts[0]!) !== plan.accountIdentity ||
-        !currentConnection
+        !currentConnection ||
+        workspaceAssistantPersonalCredentialIdentity(currentConnection) !== plan.personalCredentialIdentity
       ) {
         throw new WorkspaceAssistantError(
           "connection_changed",
-          "The authorized protocol or account choice changed after the connection was prepared"
+          "The authorized protocol, account or personal credential changed after the connection was prepared"
         );
       }
       if (workspaceAssistantPlanExpired(plan.expiresAt)) {

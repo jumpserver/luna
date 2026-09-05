@@ -424,7 +424,9 @@ onBeforeUnmount(() => {
       </template>
 
       <template #overlayPanel>
-        <AiOverlayPanel v-if="aiPanelOpen && !focusMode" @close="setAiPanelOpen(false)" />
+        <KeepAlive>
+          <AiOverlayPanel v-if="aiPanelOpen && !focusMode" @close="setAiPanelOpen(false)" />
+        </KeepAlive>
       </template>
 
       <template #bottomPanel>
