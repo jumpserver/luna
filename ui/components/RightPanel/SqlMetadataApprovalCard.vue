@@ -1,10 +1,18 @@
 <script setup lang="ts">
 import type { ChenSqlMetadataApproval, ChenSqlMetadataApprovalDecision } from "~/chen/composables/useChenSqlAiSessions";
+import { useNow } from "@vueuse/core";
 
-defineProps<{ approval: ChenSqlMetadataApproval; terminal?: boolean }>();
+const props = defineProps<{ approval: ChenSqlMetadataApproval; terminal?: boolean }>();
 const emit = defineEmits<{
   resolve: [decision: ChenSqlMetadataApprovalDecision];
 }>();
+const now = useNow({ interval: 1000 });
+const remainingSeconds = computed(() =>
+  props.approval.expiresAt === undefined
+    ? props.approval.expiresInSeconds
+    : Math.max(0, Math.ceil((props.approval.expiresAt - now.value.getTime()) / 1000))
+);
+const expired = computed(() => props.approval.expiresAt !== undefined && remainingSeconds.value === 0);
 const { t } = useI18n();
 
 function metadataCategoryLabel(category: string) {
@@ -49,7 +57,11 @@ function metadataCategoryLabel(category: string) {
         </template>
         <dt class="text-muted">{{ t("RightPanel.SQLAIMetadataExpires") }}</dt>
         <dd class="text-highlighted">
-          {{ t("RightPanel.SQLAIMetadataExpiresValue", { count: approval.expiresInSeconds }) }}
+          {{
+            expired
+              ? t("RightPanel.AIStatusApprovalExpired")
+              : t("RightPanel.SQLAIMetadataExpiresValue", { count: remainingSeconds })
+          }}
         </dd>
       </dl>
 
@@ -112,12 +124,13 @@ function metadataCategoryLabel(category: string) {
       </p>
     </div>
 
+    <p v-if="expired" class="px-2.5 pb-2 text-[11px] text-warning">{{ t("RightPanel.AIApprovalExpired") }}</p>
     <div class="flex flex-wrap justify-end gap-1.5 border-t border-warning/30 p-2">
       <UButton
         size="xs"
         color="neutral"
         variant="soft"
-        :disabled="approval.resolving"
+        :disabled="approval.resolving || expired"
         :label="t('RightPanel.SQLAIMetadataReject')"
         @click="emit('resolve', 'reject')"
       />
@@ -125,7 +138,7 @@ function metadataCategoryLabel(category: string) {
         size="xs"
         color="primary"
         icon="i-lucide-check"
-        :disabled="approval.resolving"
+        :disabled="approval.resolving || expired"
         :label="t(terminal ? 'RightPanel.AIApprove' : 'RightPanel.SQLAIMetadataAllowOnce')"
         @click="emit('resolve', 'approve_once')"
       />

@@ -448,6 +448,7 @@ export function agentEventToUiMessage(
   const eventMetadata = {
     ...metadata,
     agentEventType: event.type,
+    agentRunId: String(event.run_id || payload.run_id || ""),
     ...(Number.isFinite(Number(payload.model_duration_ms))
       ? { modelDurationMs: Number(payload.model_duration_ms) }
       : {})

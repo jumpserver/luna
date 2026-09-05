@@ -521,6 +521,8 @@
     "AISchemaYes": "Да",
     "AISchemaNo": "Нет",
     "SQLAIProposalState": {
+      "cancelled": "Отменено",
+      "expired": "Срок истёк",
       "applied": "Применено",
       "rejected": "Отклонено",
       "stale": "Устарело"

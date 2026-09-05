@@ -86,7 +86,15 @@ export interface ChenSqlProposalApplyResult {
   reason?: string;
 }
 
+type ChenSqlProposalDecision = "applied" | "rejected" | "stale" | "cancelled" | "expired";
+
+interface ChenSqlProposalRequest {
+  toolCallId: string;
+  runId: string;
+}
+
 export interface PendingChenSqlProposalCall {
+  runId: string;
   requestId: string;
   resourceSessionId: string;
   proposal: ChenSqlProposal;
@@ -122,6 +130,7 @@ export interface ChenSqlMetadataApproval {
   dataCategories: string[];
   expandedScope: boolean;
   expiresInSeconds: number;
+  expiresAt?: number;
   resolving: boolean;
 }
 
@@ -159,8 +168,9 @@ export interface ChenSqlAiSession {
   decisions: Set<string>;
   executionOverrides: Map<string, string>;
   expansionOverrides: Map<string, boolean>;
-  proposalDecisions: Map<string, "applied" | "rejected" | "stale">;
-  proposalRequestIds: Map<string, string>;
+  proposalDecisions: Map<string, ChenSqlProposalDecision>;
+  proposalRequestIds: Map<string, ChenSqlProposalRequest>;
+  closedProposalRequestIds: Set<string>;
   pendingProposalCalls: Map<string, PendingChenSqlProposalCall>;
   contextProvider: () => ChenSqlEditorContext | null;
   proposalApplier: (proposal: ChenSqlProposal) => ChenSqlProposalApplyResult;
@@ -423,15 +433,38 @@ function settleSqlProposal(
   return true;
 }
 
-function cancelPendingSqlProposal(session: ChenSqlAiSession, requestId: string) {
-  const requestedToolCallId = session.proposalRequestIds.get(requestId);
+function closeSqlProposalRequest(session: ChenSqlAiSession, requestId: string) {
+  session.closedProposalRequestIds.add(requestId);
+  if (session.closedProposalRequestIds.size > 256) {
+    session.closedProposalRequestIds.delete(session.closedProposalRequestIds.values().next().value!);
+  }
   session.proposalRequestIds.delete(requestId);
-  if (requestedToolCallId) session.proposalDecisions.set(requestedToolCallId, "rejected");
+}
+
+function cancelPendingSqlProposal(session: ChenSqlAiSession, requestId: string) {
+  const requested = session.proposalRequestIds.get(requestId);
+  closeSqlProposalRequest(session, requestId);
+  if (requested) session.proposalDecisions.set(requested.toolCallId, "cancelled");
   for (const [toolCallId, pending] of session.pendingProposalCalls) {
     if (pending.requestId !== requestId) continue;
     session.pendingProposalCalls.delete(toolCallId);
-    session.proposalDecisions.set(toolCallId, "rejected");
+    session.proposalDecisions.set(toolCallId, "cancelled");
     return;
+  }
+}
+
+function closeSqlInteractions(session: ChenSqlAiSession, decision: "expired" | "cancelled", runId?: string) {
+  if (!runId || session.metadataApproval?.requestId === runId) session.metadataApproval = null;
+  for (const [requestId, request] of session.proposalRequestIds) {
+    if (runId && request.runId !== runId) continue;
+    session.proposalDecisions.set(request.toolCallId, decision);
+    closeSqlProposalRequest(session, requestId);
+  }
+  for (const [toolCallId, pending] of session.pendingProposalCalls) {
+    if (runId && pending.runId !== runId) continue;
+    session.proposalDecisions.set(toolCallId, decision);
+    closeSqlProposalRequest(session, pending.requestId);
+    session.pendingProposalCalls.delete(toolCallId);
   }
 }
 
@@ -482,7 +515,10 @@ function sendToolFrame(session: ChenSqlAiSession, frame: KokoMcpRequestFrame | K
     };
     if (String(request.data.params.name || "") === "propose_sql") {
       proposalRequestId = String(request.data.id);
-      session.proposalRequestIds.set(proposalRequestId, sqlToolCallId(request));
+      session.proposalRequestIds.set(proposalRequestId, {
+        toolCallId: sqlToolCallId(request),
+        runId: session.agent.state.activeRunId
+      });
     }
   } else {
     cancelPendingSqlProposal(session, String(frame.data.params.requestId));
@@ -534,6 +570,7 @@ function createSession(
         session.expansionOverrides.clear();
         session.proposalDecisions.clear();
         session.proposalRequestIds.clear();
+        session.closedProposalRequestIds.clear();
         session.pendingProposalCalls.clear();
         session.runtimeStatus = "";
         session.runtimeStatusCode = "";
@@ -548,6 +585,7 @@ function createSession(
         if (!session) return;
         session.enabled = false;
         session.taskActive = false;
+        closeSqlInteractions(session, "cancelled");
         session.errorCode = "agent_unavailable";
         session.errorText = cause.message;
         transport.disconnect();
@@ -568,7 +606,7 @@ function createSession(
           session.runtimeStatus = "";
           session.runtimeStatusCode = "";
           session.runtimeState = "idle";
-          session.metadataApproval = null;
+          closeSqlInteractions(session, "cancelled");
           session.errorCode = cause instanceof ChenSqlAiClientError ? cause.code : "failed";
           session.errorText = cause.message;
         }
@@ -609,8 +647,9 @@ function createSession(
     decisions: new Set<string>(),
     executionOverrides: new Map<string, string>(),
     expansionOverrides: new Map<string, boolean>(),
-    proposalDecisions: new Map<string, "applied" | "rejected" | "stale">(),
-    proposalRequestIds: new Map<string, string>(),
+    proposalDecisions: new Map<string, ChenSqlProposalDecision>(),
+    proposalRequestIds: new Map<string, ChenSqlProposalRequest>(),
+    closedProposalRequestIds: new Set<string>(),
     pendingProposalCalls: new Map<string, PendingChenSqlProposalCall>(),
     contextProvider: markRaw(contextProvider),
     proposalApplier: markRaw(proposalApplier),
@@ -624,6 +663,7 @@ function createSession(
       await session.chat.sendMessage({ text, metadata: { domain: "sql", targetId: paneId, operation } });
     },
     cancelActive: () => {
+      closeSqlInteractions(session, "cancelled");
       void session.agent.actions.cancel().catch((cause) => {
         session.errorCode = "cancel_failed";
         session.errorText = cause instanceof Error ? cause.message : "Failed to cancel SQL AI request";
@@ -632,7 +672,8 @@ function createSession(
     },
     resolveMetadataApproval: (decision: ChenSqlMetadataApprovalDecision) => {
       const approval = session.metadataApproval;
-      if (!approval || approval.resolving) return;
+      if (!approval || approval.resolving || (approval.expiresAt !== undefined && approval.expiresAt <= Date.now()))
+        return;
       approval.resolving = true;
       void session.agent.actions
         .resolveApproval(approval.approvalId, decision === "reject" ? "reject" : "approve")
@@ -701,12 +742,15 @@ export function handleChenSqlAiWireMessage(paneId: string, value: unknown) {
   if (frame.resource_session_id !== session.resourceSessionId) return false;
   if (frame.type === "mcp.response") {
     const requestId = String(frame.data.id);
+    if (session.closedProposalRequestIds.has(requestId)) return true;
     if ([...session.pendingProposalCalls.values()].some((pending) => pending.requestId === requestId)) return true;
-    const toolCallId = session.proposalRequestIds.get(requestId) || "";
+    const request = session.proposalRequestIds.get(requestId);
+    const toolCallId = request?.toolCallId || "";
     const proposalResult = sqlProposalResult(frame);
     if (toolCallId && proposalResult) {
       session.proposalRequestIds.delete(requestId);
       session.pendingProposalCalls.set(toolCallId, {
+        runId: request!.runId,
         requestId,
         resourceSessionId: frame.resource_session_id,
         proposal: proposalResult.proposal
@@ -737,7 +781,7 @@ export function handleChenSqlAiError(paneId: string, data: ChenSqlAiEventData) {
   session.runtimeStatus = "";
   session.runtimeStatusCode = "";
   session.runtimeState = "idle";
-  session.metadataApproval = null;
+  closeSqlInteractions(session, "cancelled");
   transports.get(session)?.disconnect();
 }
 
@@ -749,7 +793,10 @@ export function handleChenSqlAiMessage(paneId: string, value: unknown) {
   const { runFinished } = agentChatEventLifecycle(message);
 
   const capability = partData(message, "data-capability");
-  if (capability) session.enabled = Boolean(capability.enabled);
+  if (capability) {
+    session.enabled = Boolean(capability.enabled);
+    if (!session.enabled) closeSqlInteractions(session, "cancelled");
+  }
   const inputLock = partData(message, "data-input-lock");
   if (inputLock) session.inputLocked = Boolean(inputLock.locked);
 
@@ -763,6 +810,7 @@ export function handleChenSqlAiMessage(paneId: string, value: unknown) {
     const context = session.contextProvider();
     const query = String(argumentsValue.query || "").slice(0, 1024);
     const tables = boundedStringArray(argumentsValue.tables, 8);
+    const expiresAt = Date.parse(String(approval?.expires_at || ""));
     session.metadataApproval = {
       approvalId: String(approval?.approvalId || approval?.id || ""),
       requestId: String(approval?.runId || ""),
@@ -778,7 +826,8 @@ export function handleChenSqlAiMessage(paneId: string, value: unknown) {
       followUpTableLimit: 8,
       dataCategories: [...SQL_METADATA_CATEGORIES],
       expandedScope: query === "*" || Boolean(query && !tables.length),
-      expiresInSeconds: 300,
+      expiresInSeconds: Number.isFinite(expiresAt) ? Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000)) : 0,
+      expiresAt: Number.isFinite(expiresAt) ? expiresAt : undefined,
       resolving: false
     };
     session.runtimeStatusCode = "approval";
@@ -797,12 +846,18 @@ export function handleChenSqlAiMessage(paneId: string, value: unknown) {
     if (runtimeState && !runFinished) session.taskActive = true;
   }
   if (runFinished) {
+    closeSqlInteractions(
+      session,
+      ["run_timeout", "approval_expired"].includes(String(progress?.code || "")) ? "expired" : "cancelled",
+      String(message.metadata?.agentRunId || "") || undefined
+    );
     session.taskActive = false;
     session.inputLocked = false;
     finishChenSqlAiTiming(session);
   }
   const runtimeError = partData(message, "data-error");
   if (runtimeError) {
+    closeSqlInteractions(session, "cancelled", String(message.metadata?.agentRunId || "") || undefined);
     session.taskActive = false;
     session.inputLocked = false;
     session.errorCode = String(runtimeError.code || "failed");

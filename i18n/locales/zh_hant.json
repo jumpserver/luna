@@ -521,6 +521,8 @@
     "AISchemaYes": "是",
     "AISchemaNo": "否",
     "SQLAIProposalState": {
+      "cancelled": "已取消",
+      "expired": "已過期",
       "applied": "已應用",
       "rejected": "已拒絕",
       "stale": "已過期"
