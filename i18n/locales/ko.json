@@ -521,6 +521,8 @@
     "AISchemaYes": "예",
     "AISchemaNo": "아니오",
     "SQLAIProposalState": {
+      "cancelled": "취소됨",
+      "expired": "만료됨",
       "applied": "적용됨",
       "rejected": "거부됨",
       "stale": "오래됨"

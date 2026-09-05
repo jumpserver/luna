@@ -521,6 +521,8 @@
     "AISchemaYes": "Sim",
     "AISchemaNo": "Não",
     "SQLAIProposalState": {
+      "cancelled": "Cancelada",
+      "expired": "Expirada",
       "applied": "Aplicada",
       "rejected": "Rejeitada",
       "stale": "Desatualizada"

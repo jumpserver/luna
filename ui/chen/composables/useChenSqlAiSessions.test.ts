@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { agentEventToUiMessage } from "#koko/composables/agent/useAgentSession";
 import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
 import {
   handleChenSqlAiWireMessage,
+  handleChenSqlAiMessage,
   registerChenSqlAiSession,
   unregisterChenSqlAiSession
 } from "./useChenSqlAiSessions";
@@ -29,7 +31,7 @@ describe("Chen SQL AI proposals", () => {
     )!;
     paneIds.push(paneId);
     session.resourceSessionId = "sql-resource";
-    session.proposalRequestIds.set("rpc-proposal", "tool-proposal");
+    session.proposalRequestIds.set("rpc-proposal", { toolCallId: "tool-proposal", runId: "run-1" });
 
     expect(
       handleChenSqlAiWireMessage(paneId, {
@@ -67,6 +69,136 @@ describe("Chen SQL AI proposals", () => {
       type: "data-sql-proposal",
       data: expect.objectContaining({ sql: "SELECT 1", toolCallId: "tool-proposal" })
     });
+  });
+
+  it.each([
+    ["run_timeout", "expired"],
+    ["approval_expired", "expired"],
+    ["", "cancelled"]
+  ])("closes drafts on run cancellation (%s) and ignores late responses", (code, decision) => {
+    const paneId = `sql-expiry-${code}`;
+    const apply = vi.fn(() => ({ applied: true }));
+    const session = registerChenSqlAiSession(
+      paneId,
+      () => true,
+      () => null,
+      apply
+    )!;
+    paneIds.push(paneId);
+    session.resourceSessionId = "sql-resource";
+    session.enabled = true;
+    const proposal = {
+      sql: "SELECT 1",
+      base: {
+        paneId,
+        tabId: "",
+        revision: 1,
+        target: "new_query" as const,
+        selectionFrom: 0,
+        selectionTo: 0,
+        nodeKey: "database"
+      }
+    };
+    session.pendingProposalCalls.set("tool-1", {
+      requestId: "rpc-1",
+      runId: "run-1",
+      resourceSessionId: "sql-resource",
+      proposal
+    });
+    session.proposalRequestIds.set("rpc-late", { toolCallId: "tool-late", runId: "run-1" });
+    session.proposalRequestIds.set("rpc-new", { toolCallId: "tool-new", runId: "run-2" });
+    handleChenSqlAiMessage(
+      paneId,
+      agentEventToUiMessage(
+        { seq: 1, type: "run.cancelled", run_id: "run-1", payload: { error_code: code } },
+        "sql",
+        {}
+      )
+    );
+    expect(session.proposalDecisions.get("tool-1")).toBe(decision);
+    expect(session.proposalDecisions.get("tool-late")).toBe(decision);
+    expect(session.proposalRequestIds.has("rpc-new")).toBe(true);
+    expect(session.applyProposal("tool-1").applied).toBe(false);
+    expect(apply).not.toHaveBeenCalled();
+    expect(session.pendingProposalCalls.size).toBe(0);
+    const count = session.chat.messages.value.length;
+    handleChenSqlAiWireMessage(paneId, {
+      type: "mcp.response",
+      version: 1,
+      resource_session_id: "sql-resource",
+      data: {
+        jsonrpc: "2.0",
+        id: "rpc-late",
+        result: { content: [], structuredContent: { kind: "proposal", proposal } }
+      }
+    });
+    expect(session.chat.messages.value).toHaveLength(count);
+    expect(session.enabled).toBe(true);
+    expect(session.errorCode).toBe("");
+  });
+
+  it("distinguishes tool cancellation from user rejection", () => {
+    const paneId = "sql-cancel-pane";
+    const session = registerChenSqlAiSession(
+      paneId,
+      () => true,
+      () => null,
+      () => ({ applied: true })
+    )!;
+    paneIds.push(paneId);
+    session.resourceSessionId = "sql-resource";
+    session.proposalRequestIds.set("rpc-1", { toolCallId: "tool-1", runId: "run-1" });
+    handleChenSqlAiWireMessage(paneId, {
+      type: "mcp.cancel_result",
+      version: 1,
+      resource_session_id: "sql-resource",
+      data: { jsonrpc: "2.0", id: "rpc-1", result: { cancelled: true } }
+    });
+    expect(session.proposalDecisions.get("tool-1")).toBe("cancelled");
+  });
+
+  it("uses the server approval deadline and prevents an expired submission", () => {
+    const paneId = "sql-approval-expiry";
+    const session = registerChenSqlAiSession(
+      paneId,
+      () => true,
+      () => null,
+      () => ({ applied: true })
+    )!;
+    paneIds.push(paneId);
+    const deadline = Date.now() + 90_000;
+    const resolve = vi.spyOn(session.agent.actions, "resolveApproval");
+    handleChenSqlAiMessage(
+      paneId,
+      agentEventToUiMessage(
+        {
+          seq: 1,
+          type: "approval.requested",
+          run_id: "run-1",
+          approval_id: "approval-1",
+          tool_call_id: "tool-1",
+          payload: { tool_name: "inspect_schema", expires_at: new Date(deadline).toISOString() }
+        },
+        "sql",
+        {}
+      )
+    );
+    expect(session.metadataApproval?.expiresAt).toBe(deadline);
+    expect(session.metadataApproval?.expiresInSeconds).toBeGreaterThan(88);
+    expect(session.metadataApproval?.expiresInSeconds).toBeLessThanOrEqual(90);
+    session.metadataApproval!.expiresAt = Date.now() - 1000;
+    session.resolveMetadataApproval("approve_once");
+    expect(resolve).not.toHaveBeenCalled();
+    handleChenSqlAiMessage(
+      paneId,
+      agentEventToUiMessage(
+        { seq: 1, type: "run.cancelled", run_id: "run-1", payload: { error_code: "approval_expired" } },
+        "sql",
+        {}
+      )
+    );
+    expect(session.metadataApproval).toBeNull();
+    expect(session.errorCode).toBe("");
   });
 
   it("keeps streamed SQL text ordered across progress events", async () => {

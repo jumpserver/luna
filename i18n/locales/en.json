@@ -550,6 +550,8 @@
     "AISchemaYes": "Yes",
     "AISchemaNo": "No",
     "SQLAIProposalState": {
+      "cancelled": "Cancelled",
+      "expired": "Expired",
       "applied": "Applied",
       "rejected": "Rejected",
       "stale": "Out of date"

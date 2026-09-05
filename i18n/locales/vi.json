@@ -521,6 +521,8 @@
     "AISchemaYes": "Có",
     "AISchemaNo": "Không",
     "SQLAIProposalState": {
+      "cancelled": "Đã hủy",
+      "expired": "Đã hết hạn",
       "applied": "Đã áp dụng",
       "rejected": "Đã từ chối",
       "stale": "Đã lỗi thời"
