@@ -18,6 +18,50 @@ export type SiteUserData = UserData & {
   protocolConnectionPreferenceMap?: Record<string, ProtocolConnectionPreferenceInfo>;
 };
 
+const clearManualPassword = (connectionInfo?: ConnectionInfo | null) => {
+  if (!connectionInfo || !("manualPassword" in connectionInfo)) return;
+  delete connectionInfo.manualPassword;
+  if (connectionInfo.accountMode === "manual") connectionInfo.rememberSecret = false;
+};
+
+const areConnectionInfoValuesEqual = (left: unknown, right: unknown): boolean => {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return (
+      Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => areConnectionInfoValuesEqual(value, right[index]))
+    );
+  }
+  if (!left || !right || typeof left !== "object" || typeof right !== "object") return false;
+
+  const leftRecord = left as Record<string, unknown>;
+  const rightRecord = right as Record<string, unknown>;
+  const leftKeys = Object.keys(leftRecord).filter((key) => leftRecord[key] !== undefined);
+  const rightKeys = Object.keys(rightRecord).filter((key) => rightRecord[key] !== undefined);
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every((key) => key in rightRecord && areConnectionInfoValuesEqual(leftRecord[key], rightRecord[key]))
+  );
+};
+
+const clearManualPasswords = (state: {
+  userMap?: Record<string, SiteUserData>;
+  currentUser?: SiteUserData | null;
+  currentConnectionInfoMap?: Record<string, ConnectionInfo>;
+}) => {
+  const clearSite = (site?: SiteUserData | null) => {
+    if (!site) return;
+    clearManualPassword(site.connectionInfo);
+    Object.values(site.connectionInfoMap || {}).forEach(clearManualPassword);
+  };
+
+  Object.values(state.userMap || {}).forEach(clearSite);
+  clearSite(state.currentUser);
+  Object.values(state.currentConnectionInfoMap || {}).forEach(clearManualPassword);
+};
+
 // 其实应该叫做 accountInfoStore 比较好
 export const useUserInfoStore = defineStore(
   "userInfo",
@@ -338,11 +382,14 @@ export const useUserInfoStore = defineStore(
       const mergedProtocols =
         incomingProtocols.length > 0 ? Array.from(new Set(incomingProtocols)) : existing?.availableProtocols;
 
-      siteData.connectionInfoMap[assetId] = {
+      const nextConnectionInfo: ConnectionInfo = {
         ...(existing || {}),
         ...connectionInfo,
         ...(mergedProtocols && mergedProtocols.length > 0 ? { availableProtocols: mergedProtocols } : {})
       };
+      clearManualPassword(nextConnectionInfo);
+      if (existing && areConnectionInfoValuesEqual(existing, nextConnectionInfo)) return;
+      siteData.connectionInfoMap[assetId] = nextConnectionInfo;
 
       currentConnectionInfoMap.value = { ...siteData.connectionInfoMap };
     };
@@ -466,6 +513,10 @@ export const useUserInfoStore = defineStore(
     persist: {
       key: "userInfoV2",
       storage: localStorage,
+      afterHydrate: ({ store }) => {
+        clearManualPasswords(store.$state as Parameters<typeof clearManualPasswords>[0]);
+        store.$persist();
+      },
       pick: [
         "userMap",
         "loggedIn",

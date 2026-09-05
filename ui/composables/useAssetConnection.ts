@@ -8,6 +8,10 @@ export interface ConnectionFormInfo {
   account: string;
   manualUsername: string;
   manualPassword: string;
+  personalCredentialId?: string;
+  personalCredentialVersion?: number;
+  personalCredentialSecretType?: string;
+  savePersonalCredential?: boolean;
   dynamicPassword: string;
   rememberSecret: boolean;
   rememberSelection?: boolean;
@@ -91,6 +95,8 @@ export function useAssetConnection() {
       }
     }
 
+    const canUsePersonalCredential = accountMode === "manual";
+
     return {
       ...connectionInfo,
       protocol,
@@ -98,6 +104,9 @@ export function useAssetConnection() {
       accountId,
       accountMode,
       connectMethod,
+      personalCredentialId: canUsePersonalCredential ? connectionInfo.personalCredentialId : undefined,
+      personalCredentialVersion: canUsePersonalCredential ? connectionInfo.personalCredentialVersion : undefined,
+      savePersonalCredential: canUsePersonalCredential && connectionInfo.savePersonalCredential,
       availableProtocols: protocols
     };
   };
@@ -194,10 +203,15 @@ export function useAssetConnection() {
       username: connectionInfo.account,
       accountId: resolvedAccountId,
       accountMode: connectionInfo.accountMode,
-      manualUsername: connectionInfo.rememberSecret ? connectionInfo.manualUsername : "",
-      manualPassword: connectionInfo.rememberSecret ? connectionInfo.manualPassword : "",
+      manualUsername: connectionInfo.accountMode === "manual" ? connectionInfo.manualUsername : "",
+      personalCredentialId:
+        connectionInfo.accountMode === "manual" ? connectionInfo.personalCredentialId || undefined : undefined,
+      personalCredentialVersion:
+        connectionInfo.accountMode === "manual" ? connectionInfo.personalCredentialVersion : undefined,
+      personalCredentialSecretType:
+        connectionInfo.accountMode === "manual" ? connectionInfo.personalCredentialSecretType || "password" : undefined,
       dynamicPassword: connectionInfo.rememberSecret ? connectionInfo.dynamicPassword : "",
-      rememberSecret: connectionInfo.rememberSecret,
+      rememberSecret: connectionInfo.accountMode === "manual" ? false : connectionInfo.rememberSecret,
       connectMethod: connectionInfo.connectMethod,
       connectOptions: connectionInfo.connectOptions,
       availableProtocols
@@ -226,6 +240,10 @@ export function useAssetConnection() {
       accountId: normalized.accountId,
       manualUsername: normalized.manualUsername,
       manualPassword: normalized.manualPassword,
+      personalCredentialId: normalized.personalCredentialId,
+      personalCredentialVersion: normalized.personalCredentialVersion,
+      personalCredentialSecretType: normalized.personalCredentialSecretType,
+      savePersonalCredential: normalized.savePersonalCredential,
       dynamicPassword: normalized.dynamicPassword,
       connectMethod: normalized.connectMethod,
       connectOptions: normalized.connectOptions,

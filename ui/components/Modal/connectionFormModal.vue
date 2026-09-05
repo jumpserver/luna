@@ -6,7 +6,17 @@ import ConnectFormFields from "~/components/ConnectForm/fields.vue";
 const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
 const { activeRequest, settle } = useConnectionFormModal();
-const { buildConnectionInfo, draft, initDraft, loadAssetDetails, preferredConnectMethod } = useConnectionFormState();
+const {
+  buildConnectionInfo,
+  draft,
+  initDraft,
+  loadAssetDetails,
+  personalCredentials,
+  personalCredentialsLoaded,
+  personalCredentialsLoading,
+  personalCredentialsLoadFailed,
+  preferredConnectMethod
+} = useConnectionFormState();
 
 const currentAsset = ref<AssetItem | null>(null);
 const loading = ref(false);
@@ -81,6 +91,10 @@ watch(
           v-model:draft="draft"
           :asset="currentAsset"
           :preferred-connect-method="preferredConnectMethod"
+          :personal-credentials="personalCredentials"
+          :personal-credentials-loading="personalCredentialsLoading"
+          :personal-credentials-loaded="personalCredentialsLoaded"
+          :personal-credentials-load-failed="personalCredentialsLoadFailed"
           :submit-label="t('Common.Connect')"
           asset-type="assets"
           @submit="confirm"

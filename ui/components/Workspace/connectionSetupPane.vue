@@ -24,7 +24,17 @@ const { modernIsland } = useSettingManager();
 const { confirmConnection } = useAssetConnection();
 const { getMethodsForProtocol } = useConnectMethods();
 const { closePane, startSessionConnection } = useWorkspaceTabs();
-const { buildConnectionInfo, draft, initDraft, loadAssetDetails, preferredConnectMethod } = useConnectionFormState();
+const {
+  buildConnectionInfo,
+  draft,
+  initDraft,
+  loadAssetDetails,
+  personalCredentials,
+  personalCredentialsLoaded,
+  personalCredentialsLoading,
+  personalCredentialsLoadFailed,
+  preferredConnectMethod
+} = useConnectionFormState();
 
 const currentAsset = ref<AssetItem | null>(props.tab.setupAsset || null);
 const loading = ref(false);
@@ -301,6 +311,10 @@ onMounted(loadAsset);
                   :asset="currentAsset"
                   :asset-type="props.assetType"
                   :preferred-connect-method="preferredConnectMethod"
+                  :personal-credentials="personalCredentials"
+                  :personal-credentials-loading="personalCredentialsLoading"
+                  :personal-credentials-loaded="personalCredentialsLoaded"
+                  :personal-credentials-load-failed="personalCredentialsLoadFailed"
                   :submit-label="externalClientLaunch ? t('ConnectionSetup.OpenInClient') : t('Common.Connect')"
                   :submitting="connecting"
                   :disabled="connecting || !draft.protocol || !draft.connectMethod"
