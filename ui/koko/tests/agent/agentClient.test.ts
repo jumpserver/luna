@@ -35,7 +35,12 @@ function kaelRequest(requests: AgentHttpRequest[]) {
     if (request.path.endsWith("/conversations")) return { id: "conversation-1" } as T;
     if (request.path.endsWith("/panel-sessions")) return { id: "panel-1", cursor: 1 } as T;
     if (request.path.endsWith("/context")) return { version: 1 } as T;
-    if (request.path.endsWith("/registrations")) return { registry_revision: 1 } as T;
+    if (request.path.endsWith("/registrations")) {
+      return {
+        registry_revision: 1,
+        registrations: [{ id: "registration-1", client_key: "terminal_context", name: "terminal_context" }]
+      } as T;
+    }
     if (request.path.endsWith("/messages")) return { id: "message-1" } as T;
     if (request.path.endsWith("/runs")) return { id: "run-1", state: "queued" } as T;
     return {} as T;
@@ -65,7 +70,11 @@ it("creates a capability conversation, panel, context, and atomic registration s
   const requests: AgentHttpRequest[] = [];
   const client = new AgentClient(kaelRequest(requests));
 
-  await expect(client.createSession(manifest, "auto")).resolves.toEqual({ session_id: "panel-1", after: 0 });
+  await expect(client.createSession(manifest, "auto")).resolves.toEqual({
+    session_id: "panel-1",
+    after: 0,
+    registration_ids: { terminal_context: "registration-1" }
+  });
 
   expect(requests.map((request) => [request.method, request.path])).toEqual([
     ["GET", "/kael/api/v1/bootstrap"],
@@ -92,6 +101,8 @@ it("maps messages, runs, approvals, and tool results to canonical Kael resources
   const client = new AgentClient(kaelRequest(requests));
   await client.createSession(manifest, "auto");
 
+  await client.updateContext("panel-1", "resource-1", { selected_asset_id: "asset-1", ui_revision: 4 });
+
   await client.sendMessage("panel-1", "resource-1", {
     message_id: "message-1",
     idempotency_key: "send-1",
@@ -117,6 +128,10 @@ it("maps messages, runs, approvals, and tool results to canonical Kael resources
     conversation_id: "conversation-1",
     panel_session_id: "panel-1",
     capability_mode: "panel"
+  });
+  expect(requests.filter((request) => request.path.endsWith("/context")).at(-1)?.body).toMatchObject({
+    base_version: 1,
+    data: { selected_asset_id: "asset-1", ui_revision: 4 }
   });
   expect(requests.find((request) => request.path.includes("/approvals/"))?.body).toEqual({
     decision: "approve",

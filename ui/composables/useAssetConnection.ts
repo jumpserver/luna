@@ -11,6 +11,7 @@ export interface ConnectionFormInfo {
   dynamicPassword: string;
   rememberSecret: boolean;
   rememberSelection?: boolean;
+  preserveStoredSelection?: boolean;
   connectMethod: string;
   connectOptions?: Record<string, any>;
 
@@ -210,12 +211,14 @@ export function useAssetConnection() {
    */
   const confirmConnection = async (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
     const normalized = await normalizeConnectionInfo(asset, connectionInfo);
-    saveConnectionPreference(asset, normalized);
 
-    if (normalized.rememberSelection !== false) {
-      saveConnectionInfo(asset, normalized);
-    } else {
-      userInfoStore.deleteConnectionInfoForAsset(asset.id);
+    if (!normalized.preserveStoredSelection) {
+      saveConnectionPreference(asset, normalized);
+      if (normalized.rememberSelection !== false) {
+        saveConnectionInfo(asset, normalized);
+      } else {
+        userInfoStore.deleteConnectionInfoForAsset(asset.id);
+      }
     }
 
     handleAssetConnection(normalized.account, asset.id, normalized.protocol, asset.permedAccounts!, undefined, {

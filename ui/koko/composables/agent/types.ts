@@ -18,7 +18,7 @@ export function agentVersionHeaders(resourceSessionId?: string) {
 }
 
 export type AgentApprovalMode = "always" | "auto" | "never";
-export type AgentDomain = "terminal" | "file" | "script" | "sql";
+export type AgentDomain = "terminal" | "file" | "script" | "sql" | "workspace";
 
 export interface AgentMcpTool {
   name: string;
@@ -65,6 +65,7 @@ export interface AgentSessionCreateRequest {
 export interface AgentSessionCreateResponse {
   session_id: string;
   after: number;
+  registration_ids?: Record<string, string>;
 }
 
 export interface AgentMessageRequest {
@@ -257,7 +258,8 @@ export function parseKokoMcpFrame(value: unknown): KokoMcpFrame | null {
       (manifest.profile !== "terminal" &&
         manifest.profile !== "file" &&
         manifest.profile !== "script" &&
-        manifest.profile !== "sql") ||
+        manifest.profile !== "sql" &&
+        manifest.profile !== "workspace") ||
       !Array.isArray(manifest.tools)
     ) {
       return null;

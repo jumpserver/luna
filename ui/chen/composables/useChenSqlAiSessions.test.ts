@@ -140,6 +140,7 @@ describe("Chen SQL AI proposals", () => {
     });
     await vi.waitFor(() => {
       expect(session.chat.status.value).toBe("streaming");
+      expect(session.taskActive).toBe(true);
       expect(requestFinished).toBe(false);
     });
 

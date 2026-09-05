@@ -10,6 +10,10 @@ function toolCall(toolCallId = "tool-1", rpcId = toolCallId) {
     payload: {
       id: rpcId,
       revision: 3,
+      registration_id: "registration-1",
+      invocation_id: "invocation-1",
+      definition_version: "3",
+      definition_digest: "definition-digest-1",
       tool_name: "execute_command",
       arguments: { command: "pwd" }
     }
@@ -54,7 +58,11 @@ it("relays each tool call once and returns a session-bound structured result", (
           "com.jumpserver/agent": {
             resource_session_id: "resource-1",
             tool_call_id: "tool-1",
-            revision: 3
+            revision: 3,
+            registration_id: "registration-1",
+            invocation_id: "invocation-1",
+            definition_version: "3",
+            definition_digest: "definition-digest-1"
           }
         }
       }

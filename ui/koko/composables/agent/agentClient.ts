@@ -43,6 +43,15 @@ interface KaelPanel {
 
 interface KaelRegistry {
   registry_revision: number;
+  registrations?: Array<{
+    id?: string;
+    client_key?: string;
+    name?: string;
+  }>;
+}
+
+interface KaelContext {
+  version?: number;
 }
 
 interface KaelMessage {
@@ -64,6 +73,9 @@ interface AgentBinding {
   conversationId: string;
   panelId: string;
   activeRunId: string;
+  surface: string;
+  profile: string;
+  contextVersion: number;
   heartbeat: ReturnType<typeof setInterval>;
 }
 
@@ -202,8 +214,9 @@ export class AgentClient {
           approval_mode: approvalMode
         }
       });
+      let contextVersion = 0;
       if (manifest.context) {
-        await this.request({
+        const context = await this.request<KaelContext>({
           method: "PUT",
           path: sessionPath(panel.id, "context"),
           body: {
@@ -214,8 +227,9 @@ export class AgentClient {
             data: manifest.context
           }
         });
+        contextVersion = Math.max(0, Math.floor(Number(context.version) || 1));
       }
-      await this.request<KaelRegistry>({
+      const registry = await this.request<KaelRegistry>({
         method: "PUT",
         path: sessionPath(panel.id, "registrations"),
         body: {
@@ -240,9 +254,23 @@ export class AgentClient {
         conversationId: conversation.id,
         panelId: panel.id,
         activeRunId: "",
+        surface,
+        profile: manifest.profile,
+        contextVersion,
         heartbeat
       });
-      return { session_id: panel.id, after: 0 };
+      const registrationIds = Object.fromEntries(
+        (registry.registrations || []).flatMap((registration) => {
+          const clientKey = String(registration.client_key || registration.name || "");
+          const registrationId = String(registration.id || "");
+          return clientKey && registrationId ? [[clientKey, registrationId]] : [];
+        })
+      );
+      return {
+        session_id: panel.id,
+        after: 0,
+        ...(Object.keys(registrationIds).length ? { registration_ids: registrationIds } : {})
+      };
     } catch (error) {
       if (panel?.id) await this.request({ method: "DELETE", path: sessionPath(panel.id) }).catch(() => undefined);
       await this.request({ method: "DELETE", path: `${KAEL_API_ROOT}/conversations/${conversation.id}` }).catch(
@@ -282,6 +310,22 @@ export class AgentClient {
     });
     binding.activeRunId = run.id;
     return { message_id: created.id, run_id: run.id, cursor: 0 };
+  }
+
+  async updateContext(sessionId: string, resourceSessionId: string, context: Record<string, unknown>) {
+    const binding = this.binding(sessionId, resourceSessionId);
+    const response = await this.request<KaelContext>({
+      method: "PUT",
+      path: sessionPath(binding.panelId, "context"),
+      body: {
+        base_version: binding.contextVersion,
+        domain: binding.profile,
+        surface: binding.surface,
+        sensitivity: "restricted",
+        data: context
+      }
+    });
+    binding.contextVersion = Math.max(binding.contextVersion + 1, Math.floor(Number(response.version) || 0));
   }
 
   async resolveApproval(

@@ -1,5 +1,5 @@
-import type { AgentEvent, AgentDomain, AgentMcpTool } from "#koko/composables/agent/types";
 import type { AgentSseOptions } from "#koko/composables/agent/agentSse";
+import type { AgentDomain, AgentEvent, AgentMcpTool } from "#koko/composables/agent/types";
 import { vi } from "vitest";
 import { agentClient } from "#koko/composables/agent/agentClient";
 import { AgentSseConnection } from "#koko/composables/agent/agentSse";
@@ -29,6 +29,7 @@ export function installAgentSessionHarness() {
       run_id: `run:${message.message_id}`,
       cursor: 0
     }));
+  const updateContext = vi.spyOn(agentClient, "updateContext").mockResolvedValue(undefined);
   const resolveApproval = vi.spyOn(agentClient, "resolveApproval").mockResolvedValue(undefined);
   const setApprovalMode = vi.spyOn(agentClient, "setApprovalMode").mockResolvedValue(undefined);
   const sendToolResult = vi.spyOn(agentClient, "sendToolResult").mockResolvedValue(undefined);
@@ -97,6 +98,7 @@ export function installAgentSessionHarness() {
     bootstrap,
     createSession,
     sendMessage,
+    updateContext,
     resolveApproval,
     setApprovalMode,
     sendToolResult,
