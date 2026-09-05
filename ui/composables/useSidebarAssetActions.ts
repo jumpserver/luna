@@ -42,7 +42,7 @@ export function useSidebarAssetActions() {
 
     const mode = saved.accountMode || "hosted";
     if (mode === "manual") {
-      return !!(saved.rememberSecret && saved.manualUsername && saved.manualPassword);
+      return !!(saved.manualUsername && saved.personalCredentialId);
     }
     if (mode === "dynamic") {
       return !!(saved.rememberSecret && saved.dynamicPassword);
@@ -131,7 +131,11 @@ export function useSidebarAssetActions() {
       accountId: saved.accountId,
       accountMode: (saved.accountMode as any) || "hosted",
       manualUsername: saved.manualUsername || "",
-      manualPassword: saved.manualPassword || "",
+      manualPassword: "",
+      personalCredentialId: saved.personalCredentialId,
+      personalCredentialVersion: saved.personalCredentialVersion,
+      personalCredentialSecretType: saved.personalCredentialSecretType || "password",
+      savePersonalCredential: false,
       dynamicPassword: saved.dynamicPassword || "",
       rememberSecret: !!saved.rememberSecret,
       rememberSelection: true,

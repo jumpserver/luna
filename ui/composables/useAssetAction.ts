@@ -12,6 +12,7 @@ import {
   WEB_PROXY_NATIVE_VALUE,
   WEB_RDP_NATIVE_VALUE
 } from "~/composables/useConnectMethods";
+import { invalidatePersonalAssetCredentialCache } from "~/composables/useApiRequest";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -55,6 +56,12 @@ const withLocalClientName = (url: string, clientName?: string) => {
   const encoded = new TextEncoder().encode(JSON.stringify(payload));
   return `jms2://${btoa(String.fromCharCode(...encoded))}`;
 };
+interface PersonalCredentialSessionScope {
+  accountId: string;
+  currentOrgId: string;
+  requestOrgId: string;
+  site: string;
+}
 const pendingBuiltinSessions: Array<{
   tabId?: string;
   assetId: string;
@@ -187,10 +194,14 @@ export const useAssetAction = () => {
     // 同名账号 account 使用 @USER
     // 手动输入 account 使用 @INPUT
     // prettier-ignore
-    const isManual = saved?.accountMode === "manual" || username === "手动输入" || username === "Manual input";
+    const isManual =
+      saved?.accountMode === "manual" || username === "@INPUT" || username === "手动输入" || username === "Manual input";
 
     const isDynamic =
-      saved?.accountMode === "dynamic" || username.includes("同名账号") || username.includes("Dynamic user");
+      saved?.accountMode === "dynamic" ||
+      username === "@USER" ||
+      username.includes("同名账号") ||
+      username.includes("Dynamic user");
 
     const isAnonymous = saved?.accountMode === "anonymous" || username.includes("@ANON");
 
@@ -337,6 +348,42 @@ export const useAssetAction = () => {
     }
   };
 
+  const syncPersonalCredentialFromToken = (
+    assetId: string | undefined,
+    body: ConnectionBody,
+    token: TokenResponse,
+    scope: PersonalCredentialSessionScope
+  ) => {
+    const resolvedAssetId = assetId || body.asset;
+    if (!resolvedAssetId || body.account !== "@INPUT" || !token.personal_credential_id) return;
+
+    if (body.save_personal_credential) {
+      invalidatePersonalAssetCredentialCache({
+        assetId: resolvedAssetId,
+        orgId: token.org_id || scope.requestOrgId || scope.currentOrgId,
+        protocol: body.protocol
+      });
+    }
+
+    const currentContextMatches =
+      scope.accountId === userInfoStore.currentAccountId &&
+      scope.site === userInfoStore.currentSite &&
+      scope.currentOrgId === (userInfoStore.currentUser?.org?.id || "");
+    if (!currentContextMatches) return;
+
+    const saved = userInfoStore.getConnectionInfoForAsset(resolvedAssetId);
+    if (!saved || saved.accountMode !== "manual") return;
+
+    userInfoStore.setConnectionInfoForAsset(resolvedAssetId, {
+      ...saved,
+      manualUsername: body.input_username || saved.manualUsername || "",
+      personalCredentialId: token.personal_credential_id,
+      personalCredentialVersion: body.save_personal_credential ? undefined : saved.personalCredentialVersion,
+      personalCredentialSecretType: body.input_secret_type || saved.personalCredentialSecretType || "password",
+      rememberSecret: false
+    });
+  };
+
   const getConnectToken = async (
     body: ConnectionBody,
     meta?: {
@@ -352,6 +399,12 @@ export const useAssetAction = () => {
       onSessionError?: (error: unknown) => void;
     }
   ) => {
+    const personalCredentialScope: PersonalCredentialSessionScope = {
+      accountId: userInfoStore.currentAccountId,
+      currentOrgId: userInfoStore.currentUser?.org?.id || "",
+      requestOrgId: meta?.orgId || userInfoStore.currentUser?.org?.id || "",
+      site: userInfoStore.currentSite
+    };
     const nativeApp = parseLocalApplicationConnectMethod(body.connect_method);
     const serverBody = { ...body, connect_method: nativeApp.connectMethod };
 
@@ -380,6 +433,7 @@ export const useAssetAction = () => {
           markSessionFailed({ tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account });
         return;
       }
+      syncPersonalCredentialFromToken(meta?.assetId, serverBody, token, personalCredentialScope);
       const allMethods = await fetchConnectMethods();
       const method = (allMethods[body.protocol] || []).find((item) => item.value === serverBody.connect_method);
 
@@ -495,6 +549,12 @@ export const useAssetAction = () => {
       onSessionError?: (error: unknown) => void;
     }
   ) => {
+    const personalCredentialScope: PersonalCredentialSessionScope = {
+      accountId: userInfoStore.currentAccountId,
+      currentOrgId: userInfoStore.currentUser?.org?.id || "",
+      requestOrgId: meta.orgId || userInfoStore.currentUser?.org?.id || "",
+      site: userInfoStore.currentSite
+    };
     void (async () => {
       try {
         const serverBody = { ...body, connect_method: await resolveServerConnectMethod(body) };
@@ -509,6 +569,7 @@ export const useAssetAction = () => {
           else markSessionFailed(meta);
           return;
         }
+        syncPersonalCredentialFromToken(meta.assetId, serverBody, token, personalCredentialScope);
         const component = resolveBuiltinComponent(body);
         let endpointUrl = import.meta.dev
           ? window.location.origin
@@ -608,6 +669,10 @@ export const useAssetAction = () => {
       accountId?: string;
       manualUsername?: string;
       manualPassword?: string;
+      personalCredentialId?: string;
+      personalCredentialVersion?: number;
+      personalCredentialSecretType?: string;
+      savePersonalCredential?: boolean;
       dynamicPassword?: string;
       connectMethod?: string;
       connectOptions?: Record<string, any>;
@@ -635,11 +700,16 @@ export const useAssetAction = () => {
       (a) => a.username === selected || a.alias === selected || a.name === selected
     );
 
-    if (effectiveMode === "manual" || selected === "手动输入" || selected === "Manual input") {
+    if (effectiveMode === "manual" || selected === "@INPUT" || selected === "手动输入" || selected === "Manual input") {
       // prettier-ignore
       input_username = ephemeral?.manualUsername ?? saved?.manualUsername ?? matchedAccount?.username ?? "";
-      input_secret = ephemeral?.manualPassword ?? saved?.manualPassword ?? "";
-    } else if (effectiveMode === "dynamic" || selected?.includes("同名账号") || selected?.includes("Dynamic user")) {
+      input_secret = ephemeral?.manualPassword ?? "";
+    } else if (
+      effectiveMode === "dynamic" ||
+      selected === "@USER" ||
+      selected?.includes("同名账号") ||
+      selected?.includes("Dynamic user")
+    ) {
       // 同名账号仅需传递密码
       input_username = "";
       input_secret = ephemeral?.dynamicPassword ?? saved?.dynamicPassword ?? "";
@@ -655,10 +725,20 @@ export const useAssetAction = () => {
     const protocol = protocolOverride || displayProtocol;
 
     const accountForToken = (() => {
-      if (effectiveMode === "manual" || selected === "手动输入" || selected === "Manual input") {
+      if (
+        effectiveMode === "manual" ||
+        selected === "@INPUT" ||
+        selected === "手动输入" ||
+        selected === "Manual input"
+      ) {
         return "@INPUT";
       }
-      if (effectiveMode === "dynamic" || selected?.includes("同名账号") || selected?.includes("Dynamic user")) {
+      if (
+        effectiveMode === "dynamic" ||
+        selected === "@USER" ||
+        selected?.includes("同名账号") ||
+        selected?.includes("Dynamic user")
+      ) {
         return "@USER";
       }
       if (effectiveMode === "anonymous" || selected?.includes("@ANON")) {
@@ -698,11 +778,35 @@ export const useAssetAction = () => {
       ...(ephemeral?.connectOptions || {})
     };
 
-    const connectionBody = {
+    const isManual = accountForToken === "@INPUT";
+    const hasEphemeralPersonalCredential = !!ephemeral && "personalCredentialId" in ephemeral;
+    const savedPersonalCredentialMatchesProtocol = saved?.protocol?.toLowerCase() === protocol.toLowerCase();
+    const personalCredentialId = hasEphemeralPersonalCredential
+      ? ephemeral?.personalCredentialId
+      : savedPersonalCredentialMatchesProtocol
+        ? saved?.personalCredentialId
+        : undefined;
+    const personalCredentialVersion = hasEphemeralPersonalCredential
+      ? ephemeral?.personalCredentialVersion
+      : savedPersonalCredentialMatchesProtocol
+        ? saved?.personalCredentialVersion
+        : undefined;
+    const savePersonalCredential = !!ephemeral?.savePersonalCredential;
+    const useSavedPersonalCredential = isManual && !!personalCredentialId && !savePersonalCredential;
+    const connectionBody: ConnectionBody = {
       asset: assetId,
       protocol,
-      input_username,
-      input_secret,
+      ...(!useSavedPersonalCredential ? { input_username, input_secret } : {}),
+      ...(isManual && personalCredentialId ? { personal_credential_id: personalCredentialId } : {}),
+      ...(isManual && savePersonalCredential
+        ? {
+            save_personal_credential: true,
+            input_secret_type: ephemeral.personalCredentialSecretType || "password",
+            ...(personalCredentialVersion !== undefined
+              ? { personal_credential_version: personalCredentialVersion }
+              : {})
+          }
+        : {}),
       account: accountForToken,
       connect_method: connectMethod,
       connect_options: mergedConnectOptions

@@ -315,6 +315,22 @@ export interface PermedAccount {
   actions: Actions[];
 }
 
+export interface PersonalAssetCredential {
+  id: string;
+  asset: {
+    id: string;
+    name: string;
+    address: string;
+  };
+  username: string;
+  secret_type: string | LabeledValue;
+  protocol: string | LabeledValue;
+  comment: string;
+  is_active: boolean;
+  version: number;
+  has_secret: boolean;
+}
+
 export interface RawAssetData {
   id: string;
   name?: string;
@@ -370,6 +386,9 @@ export interface ConnectionInfo {
   accountMode?: "hosted" | "dynamic" | "manual" | "anonymous";
   manualUsername?: string;
   manualPassword?: string;
+  personalCredentialId?: string;
+  personalCredentialVersion?: number;
+  personalCredentialSecretType?: string;
   rememberSecret?: boolean;
   dynamicPassword?: string;
   availableProtocols?: string[];
@@ -434,8 +453,12 @@ export interface ConnectionBody {
   asset: string;
   account: string;
   protocol: string;
-  input_username: string;
-  input_secret: string;
+  input_username?: string;
+  input_secret?: string;
+  input_secret_type?: string;
+  personal_credential_id?: string;
+  personal_credential_version?: number;
+  save_personal_credential?: boolean;
   connect_method: string;
   connect_options: RdpGraphics;
 }
@@ -460,6 +483,7 @@ export interface TokenResponse {
   from_ticket_info: any;
   id: string;
   input_username: string;
+  personal_credential_id?: string;
   is_active: boolean;
   is_expired: boolean;
   is_reusable: boolean;
