@@ -7,6 +7,8 @@ interface ConnectionLaunchOptions {
   aclBatchId?: string;
   position?: number;
   total?: number;
+  onPaneOpened?: (paneId: string) => void;
+  assertCurrent?: () => void;
 }
 
 const isExternalPayload = (payload: Record<string, any>) =>
@@ -20,7 +22,7 @@ export function useConnectionLauncher() {
   const launchWithInfo = (
     asset: AssetItem,
     info: ConnectionFormInfo,
-    options: Pick<ConnectionLaunchOptions, "paneId" | "aclBatchId"> = {}
+    options: Pick<ConnectionLaunchOptions, "paneId" | "aclBatchId" | "onPaneOpened" | "assertCurrent"> = {}
   ) =>
     new Promise<boolean>((resolve) => {
       let settled = false;
@@ -35,13 +37,21 @@ export function useConnectionLauncher() {
         tabId: options.paneId,
         aclBatchId: options.aclBatchId,
         onSessionReady: (payload) => {
+          try {
+            options.assertCurrent?.();
+          } catch {
+            finish(false);
+            return;
+          }
           if (!isExternalPayload(payload)) {
-            openSession(asset, {
+            const pane = openSession(asset, {
               protocol: info.protocol,
               account: info.account,
               payload,
-              paneId: options.paneId
+              paneId: options.paneId,
+              newTab: Boolean(options.assertCurrent && !options.paneId)
             });
+            options.onPaneOpened?.(pane.id);
           }
           finish(true);
         },

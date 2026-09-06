@@ -105,7 +105,8 @@ export class AgentToolRelay {
         return true;
       const rpcId = String(payload.id || toolCallId);
       const runId = String(event.run_id || payload.run_id || "");
-      const revision = Number(payload.revision || this.options.revision?.()) || 1;
+      // Kael revision counts registry replacements; executors validate the toolset definition version.
+      const revision = Number(payload.definition_version ?? this.options.revision?.() ?? payload.revision ?? 1);
       const toolName = String(payload.tool_name || payload.name || "");
       const registrationId = String(payload.registration_id || "");
       const invocationId = String(payload.invocation_id || "");

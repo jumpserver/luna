@@ -22,13 +22,18 @@ import {
   closeAgentChatText
 } from "#koko/composables/agent/agentChatStream";
 import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
-import {
-  AGENT_MCP_BINDING_META_KEY,
-  AGENT_PROTOCOL_VERSION,
-  isRecord,
-  MCP_FINAL_RESULT_META_KEY
-} from "#koko/composables/agent/types";
+import { AGENT_MCP_BINDING_META_KEY, AGENT_PROTOCOL_VERSION, isRecord } from "#koko/composables/agent/types";
 import { useAgentSession } from "#koko/composables/agent/useAgentSession";
+import type { WorkspacePane } from "~/composables/useWorkspaceTabs";
+import {
+  WorkspaceOperationError,
+  workspaceOperationTools,
+  validateWorkspaceToolArguments,
+  executeWorkspaceOperation,
+  useWorkspaceAssistantTools,
+  requireWorkspaceEmptyPane
+} from "~/composables/useWorkspaceAssistantTools";
+import { useConnectMethods, isConnectMethodAvailable } from "~/composables/useConnectMethods";
 import { getAssetDetailRequest } from "~/composables/useApiRequest";
 import { useConnectionLauncher } from "~/composables/useConnectionLauncher";
 import { useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
@@ -58,6 +63,8 @@ interface WorkspaceConnectionPlan {
   assetId: string;
   assetName: string;
   protocol: string;
+  connectMethod: string;
+  targetPane?: WorkspacePane;
   accountIdentity: string;
   personalCredentialIdentity: string;
   state: "ready" | "connecting" | "consumed";
@@ -117,7 +124,7 @@ interface WorkspaceInvocation {
   promise: Promise<Record<string, unknown>>;
 }
 
-interface WorkspaceToolRuntime {
+interface WorkspaceToolRuntime extends WorkspaceAssistantRuntime {
   automation: ReturnType<typeof useWorkspaceUiAutomation>;
   launcher: ReturnType<typeof useConnectionLauncher>;
   tabs: ReturnType<typeof useWorkspaceTabs>;
@@ -130,6 +137,8 @@ interface WorkspaceToolRuntime {
 }
 
 interface WorkspaceAssistantRuntime {
+  operations: ReturnType<typeof useWorkspaceAssistantTools>;
+  methods: ReturnType<typeof useConnectMethods>;
   automation: ReturnType<typeof useWorkspaceUiAutomation>;
   launcher: ReturnType<typeof useConnectionLauncher>;
   tabs: ReturnType<typeof useWorkspaceTabs>;
@@ -332,6 +341,8 @@ const runtimes = new WeakMap<WorkspaceAssistantSession, WorkspaceToolRuntime>();
 
 export function useWorkspaceAssistantRuntime(): WorkspaceAssistantRuntime {
   return {
+    operations: useWorkspaceAssistantTools(),
+    methods: useConnectMethods(),
     automation: useWorkspaceUiAutomation(),
     launcher: useConnectionLauncher(),
     tabs: useWorkspaceTabs(),
@@ -361,17 +372,30 @@ export function workspaceAssistantManifest(
     revision: WORKSPACE_TOOL_REVISION,
     context: {
       session_kind: "workspace",
-      interaction_mode: "assist_navigation_and_connection",
+      interaction_mode: "workspace_operations",
       scope_id: context.scopeId,
       organization_id: context.organizationId,
       ui_revision: context.uiRevision
     },
     tools: [
+      ...workspaceOperationTools,
+      {
+        name: "get_asset_connection_options",
+        description:
+          "Revalidate an authorized asset and list credential-free protocol, account and connection method choices. Use only a choice explicitly specified by the user or the sole available choice. Does not connect.",
+        inputSchema: {
+          type: "object",
+          additionalProperties: false,
+          required: ["asset_id"],
+          properties: { asset_id: { type: "string", minLength: 1, maxLength: 128 } }
+        },
+        annotations: readOnlyAnnotations
+      },
       {
         name: "search_connectable_assets",
         title: "Search connectable assets",
         description:
-          "Search only assets authorized for the current user and mirror the search in the Luna asset tree. Never choose one candidate when multiple assets are returned.",
+          "Search current authorized assets and mirror results in the asset tree. Never merge recent/favorite references into candidates. Matches may include comments; candidate_count counts matching asset IDs, not all assets. Multiple matches require selection.",
         inputSchema: {
           type: "object",
           additionalProperties: false,
@@ -384,32 +408,20 @@ export function workspaceAssistantManifest(
         annotations: readOnlyAnnotations
       },
       {
-        name: "reveal_asset",
-        title: "Reveal an asset",
+        name: "prepare_asset_connection",
+        title: "Prepare an asset connection",
         description:
-          "Navigate to the asset workspace and reveal an authorized asset in the asset tree. This does not choose connection parameters or start a connection.",
+          "Revalidate one authorized asset and prepare a short-lived local connection plan. Use protocol/account_id only when explicitly selected by the user or uniquely available; use connect_method from get_asset_connection_options. Optional pane_id must identify an empty pane. External client connections and missing choices open prefilled setup for user action. Never return credentials.",
         inputSchema: {
           type: "object",
           additionalProperties: false,
           required: ["asset_id"],
           properties: {
             asset_id: { type: "string", minLength: 1, maxLength: 128 },
-            query: { type: "string", maxLength: 256 }
-          }
-        },
-        annotations: readOnlyAnnotations
-      },
-      {
-        name: "prepare_asset_connection",
-        title: "Prepare an asset connection",
-        description:
-          "Revalidate one authorized asset. If its asset, protocol, and account choice is unique, create a short-lived local connection plan. Otherwise open Luna's prefilled setup UI and require the user to choose. Never return credentials.",
-        inputSchema: {
-          type: "object",
-          additionalProperties: false,
-          required: ["asset_id"],
-          properties: {
-            asset_id: { type: "string", minLength: 1, maxLength: 128 }
+            protocol: { type: "string", minLength: 1, maxLength: 64 },
+            account_id: { type: "string", minLength: 1, maxLength: 256 },
+            connect_method: { type: "string", minLength: 1, maxLength: 128 },
+            pane_id: { type: "string", minLength: 1, maxLength: 1024 }
           }
         },
         annotations: readOnlyNonIdempotentAnnotations
@@ -418,17 +430,19 @@ export function workspaceAssistantManifest(
         name: "connect_asset",
         title: "Connect an asset",
         description:
-          "Consume an unexpired Luna-local connection plan after explicit approval and ask Luna's existing connection launcher to start the session. A successful result means only that the Luna session started, not that remote authentication or login completed. A plan is single-use and cannot be replayed.",
+          "Consume an unexpired Luna-local connection plan after explicit approval and ask Luna's existing connection launcher to start the session. Use the returned pane_id with get_workspace_state (pane_id, wait_ms) to observe remote connection readiness; session_started alone is not proof of remote login. A plan is single-use and cannot be replayed.",
         inputSchema: {
           type: "object",
           additionalProperties: false,
-          required: ["plan_id", "plan_digest", "asset_id", "protocol"],
+          required: ["plan_id", "plan_digest", "asset_id", "protocol", "account_id", "connect_method"],
           properties: {
             plan_id: { type: "string", minLength: 1, maxLength: 160 },
             plan_digest: { type: "string", minLength: 16, maxLength: 160 },
             asset_id: { type: "string", minLength: 1, maxLength: 128 },
             asset_name: { type: "string", maxLength: 256 },
-            protocol: { type: "string", minLength: 1, maxLength: 64 }
+            protocol: { type: "string", minLength: 1, maxLength: 64 },
+            account_id: { type: "string", minLength: 1, maxLength: 256 },
+            connect_method: { type: "string", minLength: 1, maxLength: 128 }
           }
         },
         annotations: {
@@ -436,8 +450,7 @@ export function workspaceAssistantManifest(
           destructiveHint: false,
           idempotentHint: false,
           openWorldHint: false
-        },
-        _meta: { [MCP_FINAL_RESULT_META_KEY]: true }
+        }
       }
     ]
   };
@@ -509,6 +522,26 @@ function uniqueProtocols(protocols: PermedProtocol[]) {
     .map((protocol) => boundedString(protocol.name, 64).toLowerCase())
     .filter(Boolean);
   return [...new Set(names)];
+}
+
+export function workspaceAssistantConnectionChoices(asset: AssetItem, protocolValue = "", accountId = "") {
+  const protocols = uniqueProtocols(asset.permedProtocols || []);
+  const accounts = uniqueAccounts(asset.permedAccounts || []);
+  const protocol = protocolValue
+    ? protocols.find((value) => value === protocolValue.toLowerCase())
+    : protocols.length === 1
+      ? protocols[0]
+      : undefined;
+  const account = accountId
+    ? accounts.find((value) => accountIdentity(value) === accountId)
+    : accounts.length === 1
+      ? accounts[0]
+      : undefined;
+  if (protocolValue && !protocol)
+    throw new WorkspaceAssistantError("invalid_protocol", "The selected protocol is not authorized");
+  if (accountId && !account)
+    throw new WorkspaceAssistantError("invalid_account", "The selected account is not authorized");
+  return { protocols, accounts, protocol, account };
 }
 
 function uniqueAccounts(accounts: PermedAccount[]) {
@@ -625,14 +658,14 @@ async function loadAuthorizedAsset(assetId: string, runtime: WorkspaceToolRuntim
   };
 }
 
-function safeCandidates(value: unknown, limit: number) {
+export function workspaceAssistantSearchCandidates(value: unknown) {
   if (!Array.isArray(value)) return [];
-  return value
-    .flatMap((candidate) => {
-      const normalized = normalizeCandidate(candidate);
-      return normalized ? [normalized] : [];
-    })
-    .slice(0, limit);
+  const candidates = new Map<string, NonNullable<ReturnType<typeof normalizeCandidate>>>();
+  for (const entry of value) {
+    const candidate = normalizeCandidate(entry);
+    if (candidate) candidates.set(candidate.id, candidate);
+  }
+  return [...candidates.values()];
 }
 
 function pruneConnectionPlans(runtime: WorkspaceToolRuntime, assetId = "", reserveSlot = false) {
@@ -694,15 +727,66 @@ async function executeWorkspaceTool(
   const runtime = runtimes.get(session);
   if (!runtime) throw new WorkspaceAssistantError("session_closed", "Workspace Assistant session is closed");
   const automation = runtime.automation;
-  if (signal.aborted) throw new DOMException("Workspace tool call was cancelled", "AbortError");
+  const assertCurrent = () => {
+    if (signal.aborted) throw new DOMException("Workspace tool call was cancelled", "AbortError");
+    if (session.contextKey !== currentWorkspaceContextKey(runtime.userInfoStore))
+      throw new WorkspaceAssistantError("context_changed", "The active site, account or organization changed");
+  };
+  assertCurrent();
+  const definition = workspaceAssistantManifest("", {
+    scopeId: session.scopeId,
+    organizationId: session.organizationId,
+    uiRevision: automation.uiRevision.value
+  }).tools.find((tool) => tool.name === name);
+  if (!definition) throw new WorkspaceAssistantError("unknown_tool", "Unknown workspace tool");
+  validateWorkspaceToolArguments(definition, args);
+  if (
+    workspaceOperationTools.some((tool) => tool.name === name) &&
+    !(name === "navigate_workspace" && args.target === "asset")
+  ) {
+    return executeWorkspaceOperation(runtime.operations, name, args, signal, session.organizationId, assertCurrent);
+  }
+  const availableMethods = async (protocol: string) => {
+    const methods = await runtime.methods.getMethodsForProtocol(protocol);
+    assertCurrent();
+    return methods.filter(
+      (method) =>
+        (isDesktopRuntime() || method.type === "web") &&
+        isConnectMethodAvailable(method.value, methods, protocol, runtime.operations.preferences.appConfig.value)
+    );
+  };
+  if (name === "get_asset_connection_options") {
+    const asset = await loadAuthorizedAsset(String(args.asset_id), runtime);
+    assertCurrent();
+    const protocols = [];
+    for (const protocol of uniqueProtocols(asset.permedProtocols || []).slice(0, 32)) {
+      protocols.push({
+        protocol,
+        methods: (await availableMethods(protocol))
+          .slice(0, 32)
+          .map((method) => ({ value: method.value, label: method.label, type: method.type }))
+      });
+    }
+    const accounts = uniqueAccounts(asset.permedAccounts || []);
+    return {
+      status: asset.isActive ? "ok" : "asset_inactive",
+      asset: normalizeCandidate(asset),
+      protocols,
+      accounts: accounts
+        .slice(0, 50)
+        .map((account) => ({ account_id: accountIdentity(account), name: account.name, username: account.username })),
+      accounts_truncated: accounts.length > 50
+    };
+  }
 
   if (name === "search_connectable_assets") {
     const query = boundedString(args.query, 256);
     if (!query) throw new WorkspaceAssistantError("invalid_arguments", "A non-empty asset search query is required");
     const limit = Math.max(1, Math.min(20, Math.floor(Number(args.limit) || 10)));
     const ack = await automation.setSearch(query, { signal });
-    const matchedCandidates = safeCandidates(ack.candidates, 256);
-    const candidateCount = Array.isArray(ack.candidates) ? ack.candidates.length : matchedCandidates.length;
+    assertCurrent();
+    const matchedCandidates = workspaceAssistantSearchCandidates(ack.candidates);
+    const candidateCount = matchedCandidates.length;
     const candidates = matchedCandidates.slice(0, limit);
     runtime.searchGuard.candidateIds = new Set(matchedCandidates.map((candidate) => candidate.id));
     runtime.searchGuard.candidateCount = candidateCount;
@@ -712,6 +796,10 @@ async function executeWorkspaceTool(
     else automation.clearAssetSelectionRequest();
     return {
       status: searchDecision.status,
+      source: "authorized",
+      permission_status: "authorized",
+      organization_id: session.organizationId,
+      returned_count: candidates.length,
       query,
       revision: ack.revision,
       candidate_count: candidateCount,
@@ -722,11 +810,13 @@ async function executeWorkspaceTool(
     };
   }
 
-  if (name === "reveal_asset") {
-    const assetId = boundedString(args.asset_id, 128);
+  if (name === "navigate_workspace" && args.target === "asset") {
+    const assetId = boundedString(args.id, 128);
+    const asset = await loadAuthorizedAsset(assetId, runtime);
+    assertCurrent();
     if (!assetId) throw new WorkspaceAssistantError("invalid_arguments", "asset_id is required");
     const ack = await automation.focusAsset(assetId, {
-      query: boundedString(args.query, 256) || undefined,
+      query: (asset.name || asset.address).slice(0, 256),
       signal
     });
     const focusedAsset = normalizeCandidate(ack.focusedAsset);
@@ -788,30 +878,65 @@ async function executeWorkspaceTool(
       reveal.revision,
       signal
     );
-    const protocols = uniqueProtocols(asset.permedProtocols || []);
-    const accounts = uniqueAccounts(asset.permedAccounts || []);
+    const {
+      protocols,
+      accounts,
+      protocol: selectedProtocol,
+      account: selectedAccount
+    } = workspaceAssistantConnectionChoices(asset, String(args.protocol || ""), String(args.account_id || ""));
     const connection =
-      protocols.length === 1 && accounts.length === 1
-        ? workspaceAssistantConnectionForUniqueAccount(protocols[0]!, accounts[0]!, asset.savedConnection)
+      selectedProtocol && selectedAccount
+        ? workspaceAssistantConnectionForUniqueAccount(selectedProtocol, selectedAccount, asset.savedConnection)
         : null;
+    const targetPane = args.pane_id
+      ? requireWorkspaceEmptyPane(runtime.tabs.tabs.value, String(args.pane_id), preparationOrganizationId)
+      : undefined;
+    const assertEmptyTarget = () => {
+      if (targetPane)
+        requireWorkspaceEmptyPane(runtime.tabs.tabs.value, targetPane.id, preparationOrganizationId, targetPane);
+    };
+    const methods = selectedProtocol ? await availableMethods(selectedProtocol) : [];
+    assertWorkspacePreparationCurrent(
+      runtime,
+      preparationOrganizationId,
+      preparationContextKey,
+      reveal.revision,
+      signal
+    );
+    assertEmptyTarget();
+    const requestedMethod = String(args.connect_method || "");
+    if (requestedMethod && !methods.some((method) => method.value === requestedMethod))
+      throw new WorkspaceAssistantError("invalid_method", "The selected connection method is unavailable");
+    if (connection)
+      connection.connectMethod =
+        requestedMethod ||
+        methods.find((method) => method.value === connection.connectMethod)?.value ||
+        methods[0]?.value ||
+        "";
 
-    if (!connection) {
+    const externalMethod =
+      connection && methods.find((method) => method.value === connection.connectMethod)?.type !== "web";
+    if (!connection || !connection.connectMethod || externalMethod) {
       pruneConnectionPlans(runtime, asset.id);
-      runtime.tabs.openSetupSession(asset, { protocol: protocols.length === 1 ? protocols[0] : undefined });
+      const setupPane = runtime.tabs.openSetupSession(asset, {
+        protocol: selectedProtocol,
+        paneId: targetPane?.id,
+        newTab: !targetPane
+      });
       return {
-        status: protocols.length > 1 || accounts.length > 1 ? "selection_required" : "user_action_required",
+        status: !selectedProtocol || !selectedAccount ? "selection_required" : "user_action_required",
         setup_opened: true,
+        pane_id: setupPane.id,
         asset: normalizeCandidate(asset),
         revision: reveal.revision,
         protocol_count: protocols.length,
         account_count: accounts.length,
         user_selection_required: true,
-        reason:
-          protocols.length > 1
-            ? "multiple_protocols"
-            : accounts.length > 1
-              ? "multiple_accounts"
-              : "connection_input_required"
+        reason: !selectedProtocol
+          ? "multiple_protocols"
+          : !selectedAccount
+            ? "multiple_accounts"
+            : "connection_input_required"
       };
     }
 
@@ -822,6 +947,9 @@ async function executeWorkspaceTool(
       plan_id: planId,
       asset_id: asset.id,
       protocol: connection.protocol,
+      account_id: accountIdentity(selectedAccount!),
+      connect_method: connection.connectMethod,
+      pane_id: targetPane?.id,
       ui_revision: reveal.revision,
       expires_at: expiresAt,
       organization_id: currentOrganizationId(runtime.userInfoStore)
@@ -833,6 +961,7 @@ async function executeWorkspaceTool(
       reveal.revision,
       signal
     );
+    assertEmptyTarget();
     runtime.plans.set(planId, {
       id: planId,
       digest: planDigest,
@@ -843,7 +972,9 @@ async function executeWorkspaceTool(
       assetId: asset.id,
       assetName: asset.name,
       protocol: connection.protocol,
-      accountIdentity: accountIdentity(accounts[0]!),
+      connectMethod: connection.connectMethod,
+      targetPane,
+      accountIdentity: accountIdentity(selectedAccount!),
       personalCredentialIdentity: workspaceAssistantPersonalCredentialIdentity(connection),
       state: "ready"
     });
@@ -851,6 +982,10 @@ async function executeWorkspaceTool(
       status: "ready_to_connect",
       asset: normalizeCandidate(asset),
       protocol: connection.protocol,
+      account_id: accountIdentity(selectedAccount!),
+      account_name: selectedAccount!.name,
+      connect_method: connection.connectMethod,
+      pane_id: targetPane?.id,
       account_count: 1,
       plan_id: planId,
       plan_digest: planDigest,
@@ -871,6 +1006,8 @@ async function executeWorkspaceTool(
       plan.digest !== planDigest ||
       plan.assetId !== assetId ||
       plan.protocol !== protocol ||
+      plan.accountIdentity !== args.account_id ||
+      plan.connectMethod !== args.connect_method ||
       (assetName && plan.assetName !== assetName)
     ) {
       throw new WorkspaceAssistantError("invalid_plan", "The local connection plan is invalid");
@@ -894,30 +1031,39 @@ async function executeWorkspaceTool(
     }
     try {
       const revalidatedAsset = await loadAuthorizedAsset(plan.assetId, runtime);
-      const currentProtocols = uniqueProtocols(revalidatedAsset.permedProtocols || []);
-      const currentAccounts = uniqueAccounts(revalidatedAsset.permedAccounts || []);
+      const { protocol: currentProtocol, account: currentAccount } = workspaceAssistantConnectionChoices(
+        revalidatedAsset,
+        plan.protocol,
+        plan.accountIdentity
+      );
       const currentConnection =
-        currentProtocols.length === 1 && currentAccounts.length === 1
+        currentProtocol && currentAccount
           ? workspaceAssistantConnectionForUniqueAccount(
-              currentProtocols[0]!,
-              currentAccounts[0]!,
+              currentProtocol,
+              currentAccount,
               revalidatedAsset.savedConnection
             )
           : null;
+      const methods = await availableMethods(plan.protocol);
       if (
         !revalidatedAsset.isActive ||
-        currentProtocols.length !== 1 ||
-        currentProtocols[0] !== plan.protocol ||
-        currentAccounts.length !== 1 ||
-        accountIdentity(currentAccounts[0]!) !== plan.accountIdentity ||
         !currentConnection ||
+        !methods.some((method) => method.value === plan.connectMethod && method.type === "web") ||
         workspaceAssistantPersonalCredentialIdentity(currentConnection) !== plan.personalCredentialIdentity
       ) {
         throw new WorkspaceAssistantError(
           "connection_changed",
-          "The authorized protocol, account or personal credential changed after the connection was prepared"
+          "The authorized connection or personal credential changed after preparation"
         );
       }
+      currentConnection.connectMethod = plan.connectMethod;
+      const assertTarget = () => {
+        assertCurrent();
+        if (plan.targetPane) {
+          requireWorkspaceEmptyPane(runtime.tabs.tabs.value, plan.targetPane.id, plan.organizationId, plan.targetPane);
+        }
+      };
+      assertTarget();
       if (workspaceAssistantPlanExpired(plan.expiresAt)) {
         throw new WorkspaceAssistantError("expired_plan", "The local connection plan expired during revalidation");
       }
@@ -934,19 +1080,28 @@ async function executeWorkspaceTool(
         throw new WorkspaceAssistantError("stale_ui", "The workspace changed after the connection was prepared");
       }
       if (signal.aborted) throw new DOMException("Workspace connection was cancelled", "AbortError");
+      let openedPaneId = "";
       const sessionStarted = await runtime.launcher.launchWithInfo(
         {
           ...revalidatedAsset,
           permedProtocols: (revalidatedAsset.permedProtocols || []).filter(
             (item) => item.name.toLowerCase() === plan.protocol
           ),
-          permedAccounts: [currentAccounts[0]!]
+          permedAccounts: [currentAccount!]
         },
-        currentConnection
+        currentConnection,
+        {
+          paneId: plan.targetPane?.id,
+          onPaneOpened: (paneId) => {
+            openedPaneId = paneId;
+          },
+          assertCurrent: assertTarget
+        }
       );
       if (!sessionStarted) throw new WorkspaceAssistantError("connection_failed", "The asset session did not start");
       return {
-        status: "session_started",
+        status: openedPaneId ? "session_started" : "external_session_started",
+        ...(openedPaneId ? { pane_id: openedPaneId } : {}),
         asset: normalizeCandidate(revalidatedAsset),
         protocol: plan.protocol
       };
@@ -1000,6 +1155,8 @@ function workspaceMessageContext(runtime: WorkspaceAssistantRuntime) {
     "";
   return {
     ui_revision: snapshot.revision,
+    active_tab_id: runtime.tabs.activeTabId.value,
+    active_pane_id: runtime.tabs.activePaneId.value,
     ...(selectedAssetId ? { selected_asset_id: selectedAssetId } : {}),
     ...(snapshot.focusedAsset?.id ? { focused_asset_id: snapshot.focusedAsset.id } : {}),
     ...(snapshot.focusedAssetSource ? { focused_asset_source: snapshot.focusedAssetSource } : {})
@@ -1070,7 +1227,7 @@ async function handleLocalToolFrame(
     error = {
       code: cancelled ? -32800 : -32602,
       message:
-        cause instanceof WorkspaceAssistantError
+        cause instanceof WorkspaceAssistantError || cause instanceof WorkspaceOperationError
           ? cause.message
           : cancelled
             ? "Workspace tool call was cancelled"
@@ -1116,7 +1273,7 @@ export function workspaceAssistantTimelineMessage(message: WorkspaceAssistantCha
 export function workspaceAssistantReadOnlyApprovalId(value: unknown) {
   if (!isRecord(value) || value.resolved === true) return "";
   const tool = String(value.tool || "");
-  if (!["search_connectable_assets", "reveal_asset", "prepare_asset_connection"].includes(tool)) return "";
+  if (!["search_connectable_assets", "navigate_workspace", "prepare_asset_connection"].includes(tool)) return "";
   return String(value.approvalId || value.id || "");
 }
 
@@ -1318,7 +1475,7 @@ export async function submitWorkspaceAssistantPrompt(prompt: string, scopeId = D
     if (!runtime) throw new WorkspaceAssistantError("session_closed", "Workspace Assistant session is closed");
     await session.agent.actions.updateContext({
       session_kind: "workspace",
-      interaction_mode: "assist_navigation_and_connection",
+      interaction_mode: "workspace_operations",
       scope_id: session.scopeId,
       organization_id: session.organizationId,
       ...workspaceMessageContext(runtime)

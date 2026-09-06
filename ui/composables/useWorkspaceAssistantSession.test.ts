@@ -4,6 +4,7 @@ import { MCP_FINAL_RESULT_META_KEY, parseKokoMcpFrame } from "#koko/composables/
 import type { WorkspaceAssistantChatMessage, WorkspaceAssistantSession } from "./useWorkspaceAssistantSession";
 import {
   workspaceAssistantClaimConnectionPlan,
+  workspaceAssistantConnectionChoices,
   workspaceAssistantConnectionForUniqueAccount,
   workspaceAssistantPersonalCredentialIdentity,
   workspaceAssistantManifest,
@@ -14,6 +15,7 @@ import {
   workspaceAssistantReadOnlyApprovalId,
   workspaceAssistantScopeId,
   workspaceAssistantSearchDecision,
+  workspaceAssistantSearchCandidates,
   workspaceAssistantTimelineMessage
 } from "./useWorkspaceAssistantSession";
 
@@ -96,6 +98,23 @@ describe("Workspace Assistant capability", () => {
     }
   });
 
+  it("resolves only authorized explicit protocol and account choices", () => {
+    const asset = {
+      permedProtocols: [{ name: "ssh" }, { name: "sftp" }],
+      permedAccounts: [
+        { ...manualAccount, id: "one" },
+        { ...manualAccount, id: "two" }
+      ]
+    } as any;
+    expect(workspaceAssistantConnectionChoices(asset)).toMatchObject({ protocol: undefined, account: undefined });
+    expect(workspaceAssistantConnectionChoices(asset, "sftp", "two")).toMatchObject({
+      protocol: "sftp",
+      account: { id: "two" }
+    });
+    expect(() => workspaceAssistantConnectionChoices(asset, "rdp", "two")).toThrow("not authorized");
+    expect(() => workspaceAssistantConnectionChoices(asset, "ssh", "missing")).toThrow("not authorized");
+  });
+
   it("notifies the timeline for every shallow AI SDK message update", () => {
     const message = {
       id: "assistant-1",
@@ -125,6 +144,18 @@ describe("Workspace Assistant capability", () => {
     stop();
   });
 
+  it("counts asset IDs rather than repeated tree entries or matching labels", () => {
+    const candidates = workspaceAssistantSearchCandidates([
+      { id: "one", name: "server", address: "10.0.0.1", password: "private" },
+      { id: "one", name: "server", address: "10.0.0.1" },
+      { id: "two", name: "server", address: "10.0.0.2" },
+      { name: "invalid" }
+    ]);
+    expect(candidates.map((candidate) => candidate.id)).toEqual(["one", "two"]);
+    expect(workspaceAssistantSearchDecision(false, candidates.length).selectionRequired).toBe(true);
+    expect(JSON.stringify(candidates)).not.toMatch(/password|private/);
+  });
+
   it("registers only the bounded semantic workspace tools", () => {
     const manifest = workspaceAssistantManifest("workspace-resource", {
       scopeId: "global",
@@ -133,12 +164,26 @@ describe("Workspace Assistant capability", () => {
     });
 
     expect(manifest.profile).toBe("workspace");
-    expect(manifest.tools.map((tool) => tool.name)).toEqual([
-      "search_connectable_assets",
-      "reveal_asset",
+    expect(manifest.tools.map((tool) => tool.name).sort()).toEqual([
+      "arrange_workspace",
+      "close_sessions",
+      "connect_asset",
+      "get_asset_connection_options",
+      "get_workspace_state",
+      "list_assets",
+      "navigate_workspace",
+      "open_session",
       "prepare_asset_connection",
-      "connect_asset"
+      "reconnect_session",
+      "search_connectable_assets",
+      "set_asset_favorite"
     ]);
+    const wire = manifest.tools.map(({ name, description, inputSchema }) => ({
+      name,
+      description,
+      parameters: inputSchema
+    }));
+    expect(new TextEncoder().encode(JSON.stringify(wire)).length).toBeLessThan(7500);
     expect(manifest.tools.find((tool) => tool.name === "prepare_asset_connection")?.annotations).toMatchObject({
       readOnlyHint: true,
       idempotentHint: false
@@ -146,10 +191,11 @@ describe("Workspace Assistant capability", () => {
     const connect = manifest.tools.at(-1)!;
     expect(connect.inputSchema).toMatchObject({
       additionalProperties: false,
-      required: ["plan_id", "plan_digest", "asset_id", "protocol"]
+      required: ["plan_id", "plan_digest", "asset_id", "protocol", "account_id", "connect_method"]
     });
     expect(connect.annotations).toMatchObject({ readOnlyHint: false, idempotentHint: false });
-    expect(connect._meta?.[MCP_FINAL_RESULT_META_KEY]).toBe(true);
+    expect(connect._meta?.[MCP_FINAL_RESULT_META_KEY]).toBeUndefined();
+    expect(manifest.tools.some((tool) => /snippet|batch|execute/.test(tool.name))).toBe(false);
     expect(
       parseKokoMcpFrame({
         type: "mcp.manifest",

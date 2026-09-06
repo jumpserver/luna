@@ -357,7 +357,11 @@ export const useWorkspaceUiAutomationHost = () => {
     const query = normalizeQuery(queryValue);
     if (!query || state.searchQuery.value !== query) return;
 
-    state.candidates.value = candidatesValue.map(copyCandidate);
+    state.candidates.value = [
+      ...new Map(
+        candidatesValue.filter((candidate) => candidate.id).map((candidate) => [candidate.id, copyCandidate(candidate)])
+      ).values()
+    ];
     state.advanceRevision();
 
     const command = state.currentCommand.value;

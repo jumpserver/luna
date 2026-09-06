@@ -19,6 +19,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const { tabs } = useWorkspaceTabs();
 const messagesElement = useTemplateRef<HTMLElement>("messagesElement");
 
 function recordData(value: unknown) {
@@ -110,9 +111,37 @@ function approvalId(data: Record<string, any>) {
 
 function approvalTarget(data: Record<string, any>) {
   const args = recordData(data.arguments);
-  const asset = String(args.asset_name || args.asset_id || "");
-  const protocol = String(args.protocol || "");
-  return [asset, protocol].filter(Boolean).join(" · ");
+  const allowed = [
+    "asset_name",
+    "asset_id",
+    "protocol",
+    "account_id",
+    "connect_method",
+    "target",
+    "id",
+    "ids",
+    "tab_id",
+    "pane_id",
+    "target_pane_id",
+    "action",
+    "direction",
+    "placement",
+    "mode",
+    "favorite",
+    "section",
+    "visible"
+  ];
+  const describe = (value: unknown) => {
+    const id = String(value);
+    const tab = tabs.value.find((item) => item.id === id);
+    if (tab) return `${tab.title || tab.assetName} (${id})`;
+    const pane = tabs.value.flatMap((item) => item.panes).find((item) => item.id === id);
+    return pane ? `${pane.assetName} · ${pane.account} (${id})` : id;
+  };
+  return allowed
+    .filter((key) => args[key] !== undefined)
+    .map((key) => `${key}: ${Array.isArray(args[key]) ? args[key].map(describe).join(", ") : describe(args[key])}`)
+    .join("\n");
 }
 
 function approvalStateLabel(data: Record<string, any>) {
@@ -194,7 +223,11 @@ watch(
         <template #description>
           <div class="mt-2 space-y-2 text-xs">
             <p>{{ t("RightPanel.WorkspaceAssistantApprovalDescription") }}</p>
-            <div v-if="approvalTarget(entry.data)" class="rounded-md border border-default bg-default/40 px-2 py-1.5">
+            <p class="font-medium">{{ entry.data.toolName || entry.data.tool_name || entry.data.tool }}</p>
+            <div
+              v-if="approvalTarget(entry.data)"
+              class="whitespace-pre-wrap break-all rounded-md border border-default bg-default/40 px-2 py-1.5"
+            >
               {{ approvalTarget(entry.data) }}
             </div>
             <p v-if="entry.data.resolved" class="text-muted">{{ approvalStateLabel(entry.data) }}</p>

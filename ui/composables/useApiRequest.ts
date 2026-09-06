@@ -337,6 +337,19 @@ export function getAssetTree(kind: AssetTreeKind, params: AssetTreeParams, orgId
   });
 }
 
+export function getAuthorizedAssets(
+  params: { search?: string; limit: number; offset: number },
+  orgId: string
+): Promise<{ count: number; next: string | null; results: Record<string, unknown>[] }> {
+  return apiRequest({
+    method: "GET",
+    path: "/api/v1/perms/users/self/assets/",
+    // Request only display fields; fields also makes the backend count the filtered assets exactly.
+    query: { ...params, fields: "id,name,address,org_id,is_active", order: "name" },
+    orgId
+  });
+}
+
 export function getFavoriteFolders(): Promise<unknown> {
   return apiRequest<unknown>({
     method: "GET",
