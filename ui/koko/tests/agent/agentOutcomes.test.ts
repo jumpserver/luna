@@ -57,6 +57,55 @@ async function session() {
   return { controller, client, emit, stop, onMessage, onUnavailable };
 }
 
+it("projects asynchronous command progress onto its original execution", () => {
+  const message = agentEventToUiMessage(
+    {
+      seq: 1,
+      type: "tool.result",
+      run_id: "run",
+      tool_call_id: "wait-call",
+      payload: {
+        tool_name: "wait_command_execution",
+        status: "success",
+        done: true,
+        result: {
+          execution_id: "job",
+          tool_call_id: "original-call",
+          status: "running",
+          process_finished: false,
+          elapsed_ms: 42000,
+          execution_elapsed_ms: 41000,
+          output_idle_ms: 31000,
+          remaining_ms: 559000,
+          attention_reason: "no_output",
+          output: "partial"
+        }
+      }
+    },
+    "terminal",
+    {}
+  );
+  expect(message?.parts).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        type: "data-execution",
+        data: expect.objectContaining({
+          stepId: "original-call",
+          executionId: "original-call",
+          outcome: "running",
+          done: false,
+          durationMs: 42000,
+          executionElapsedMs: 41000,
+          outputIdleMs: 31000,
+          remainingMs: 559000,
+          attentionReason: "no_output",
+          output: "partial"
+        })
+      })
+    ])
+  );
+});
+
 it.each(["expired", "cancelled"])("preserves the %s approval outcome instead of treating it as rejection", (state) => {
   expect(
     agentEventToUiMessage(

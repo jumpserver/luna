@@ -16,6 +16,7 @@ import {
   workspaceAssistantScopeId,
   workspaceAssistantSearchDecision,
   workspaceAssistantSearchCandidates,
+  workspaceAssistantTerminalTraceTaskId,
   workspaceAssistantTimelineMessage
 } from "./useWorkspaceAssistantSession";
 
@@ -169,21 +170,24 @@ describe("Workspace Assistant capability", () => {
       "close_sessions",
       "connect_asset",
       "get_asset_connection_options",
+      "get_terminal_task",
       "get_workspace_state",
       "list_assets",
+      "list_terminal_targets",
       "navigate_workspace",
       "open_session",
       "prepare_asset_connection",
       "reconnect_session",
       "search_connectable_assets",
-      "set_asset_favorite"
+      "set_asset_favorite",
+      "start_terminal_task"
     ]);
     const wire = manifest.tools.map(({ name, description, inputSchema }) => ({
       name,
       description,
       parameters: inputSchema
     }));
-    expect(new TextEncoder().encode(JSON.stringify(wire)).length).toBeLessThan(7500);
+    expect(new TextEncoder().encode(JSON.stringify(wire)).length).toBeLessThan(10000);
     expect(manifest.tools.find((tool) => tool.name === "prepare_asset_connection")?.annotations).toMatchObject({
       readOnlyHint: true,
       idempotentHint: false
@@ -267,6 +271,60 @@ describe("Workspace Assistant capability", () => {
     } as Parameters<typeof workspaceAssistantTimelineMessage>[0];
 
     expect(workspaceAssistantTimelineMessage(message)?.parts).toEqual([{ type: "text", text: "请选择一个资产" }]);
+  });
+
+  it("lets the child task own pending progress while preserving errors, approvals and the final answer", () => {
+    const message = {
+      id: "parent-poll",
+      role: "assistant",
+      metadata: { domain: "workspace", agentEventType: "message.delta" },
+      parts: [{ type: "text", text: "The command was sent; waiting for approval." }]
+    } as WorkspaceAssistantChatMessage;
+    expect(workspaceAssistantTimelineMessage(message, true)).toBeNull();
+    for (const type of ["data-error", "data-approval", "data-agent-tool", "data-terminal-task"]) {
+      const event = {
+        ...message,
+        parts: [...message.parts, { type, data: { id: "event-1" } }]
+      } as WorkspaceAssistantChatMessage;
+      expect(workspaceAssistantTimelineMessage(event, true)?.parts).toEqual([{ type, data: { id: "event-1" } }]);
+    }
+    expect(workspaceAssistantTimelineMessage({ ...message, role: "user" }, true)?.parts).toEqual(message.parts);
+    const completed = {
+      ...message,
+      parts: [{ type: "text", text: "Disk usage is 46%." }]
+    } as WorkspaceAssistantChatMessage;
+    expect(workspaceAssistantTimelineMessage(completed, false)?.parts).toEqual(completed.parts);
+    expect(message.parts).toEqual([{ type: "text", text: "The command was sent; waiting for approval." }]);
+  });
+
+  it("puts successful dispatch and polling receipts inside their task, never hides failed or unrelated tools", () => {
+    const tasks = [
+      { id: "task-1", prompt: "Inspect", target: { target_id: "target-1" }, active: true, status: "waiting_approval" }
+    ] as WorkspaceAssistantSession["terminalTasks"];
+    expect(
+      workspaceAssistantTerminalTraceTaskId(
+        { toolName: "start_terminal_task", status: "running", arguments: { target_id: "target-1", prompt: "Inspect" } },
+        tasks
+      )
+    ).toBe("task-1");
+    expect(
+      workspaceAssistantTerminalTraceTaskId(
+        {
+          toolName: "start_terminal_task",
+          status: "success",
+          result: { task_id: "task-1", status: "waiting_approval", done: false }
+        },
+        tasks
+      )
+    ).toBe("task-1");
+    const poll = { toolName: "get_terminal_task", status: "success", arguments: { task_id: "task-1" } };
+    expect(workspaceAssistantTerminalTraceTaskId(poll, tasks)).toBe("task-1");
+    for (const status of ["error", "failed", "cancelled", "unknown", "timeout"]) {
+      expect(workspaceAssistantTerminalTraceTaskId({ ...poll, status }, tasks)).toBe("");
+    }
+    expect(workspaceAssistantTerminalTraceTaskId({ ...poll, arguments: { task_id: "another-task" } }, tasks)).toBe("");
+    expect(workspaceAssistantTerminalTraceTaskId({ ...poll, toolName: "connect_asset" }, tasks)).toBe("");
+    expect(tasks[0]?.status).toBe("waiting_approval");
   });
 
   it("treats a connection plan as expired at its exact deadline", () => {

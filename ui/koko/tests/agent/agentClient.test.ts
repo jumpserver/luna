@@ -1,5 +1,6 @@
 import type { AgentHttpRequest } from "#koko/composables/agent/agentClient";
 import { expect, it, vi } from "vitest";
+import { reactive } from "vue";
 import { AgentClient, AgentHttpError } from "#koko/composables/agent/agentClient";
 
 const runtime = vi.hoisted(() => ({ desktop: false }));
@@ -34,7 +35,13 @@ function kaelRequest(requests: AgentHttpRequest[]) {
   return async <T>(request: AgentHttpRequest): Promise<T> => {
     requests.push(request);
     if (request.path.endsWith("/bootstrap")) {
-      return { instance_id: "kael-1", protocol_version: 1, capability_version: 1 } as T;
+      return {
+        agent_engine: "codex",
+        agent_protocol_version: 1,
+        instance_id: "kael-1",
+        protocol_version: 1,
+        capability_version: 1
+      } as T;
     }
     if (request.path.endsWith("/conversations")) return { id: "conversation-1" } as T;
     if (request.path.endsWith("/panel-sessions")) return { id: "panel-1", cursor: 1 } as T;
@@ -55,7 +62,14 @@ it("bootstraps Kael with the authenticated organization", async () => {
   const fetchMock = vi.fn().mockResolvedValue({
     ok: true,
     status: 200,
-    text: async () => JSON.stringify({ instance_id: "kael-1", protocol_version: 1, capability_version: 1 })
+    text: async () =>
+      JSON.stringify({
+        agent_engine: "codex",
+        agent_protocol_version: 1,
+        instance_id: "kael-1",
+        protocol_version: 1,
+        capability_version: 1
+      })
   });
   vi.stubGlobal("fetch", fetchMock);
   const client = new AgentClient();
@@ -98,6 +112,25 @@ it("creates a capability conversation, panel, context, and atomic registration s
     ]
   });
   client.dispose();
+});
+
+it("forwards the executor command policy without marking every shell call read-only", async () => {
+  const requests: AgentHttpRequest[] = [];
+  const client = new AgentClient(kaelRequest(requests));
+  const commandTool = {
+    name: "execute_shell",
+    inputSchema: { type: "object", properties: { command: { type: "string" } }, required: ["command"] },
+    annotations: { readOnlyHint: false, openWorldHint: true },
+    _meta: { "com.jumpserver/commandPolicy": "shell-readonly-v1" }
+  };
+  try {
+    await client.createSession({ ...manifest, tools: [commandTool] }, "auto");
+    expect(requests.find((request) => request.path.endsWith("/registrations"))?.body).toMatchObject({
+      registrations: [{ name: commandTool.name, annotations: commandTool.annotations, _meta: commandTool._meta }]
+    });
+  } finally {
+    client.dispose();
+  }
 });
 
 it("maps messages, runs, approvals, and tool results to canonical Kael resources", async () => {
@@ -151,6 +184,61 @@ it("maps messages, runs, approvals, and tool results to canonical Kael resources
   client.dispose();
 });
 
+it.each([false, true])("sends reactive AI context, messages and results as JSON (desktop=%s)", async (isDesktop) => {
+  const requests: AgentHttpRequest[] = [];
+  const respond = kaelRequest(requests);
+  runtime.desktop = isDesktop;
+  desktop.invoke.mockImplementation(async (_command, { request }) => respond(structuredClone(request)));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init: RequestInit) => {
+      const data = await respond({
+        path,
+        method: init.method as AgentHttpRequest["method"],
+        ...(init.body ? { body: JSON.parse(String(init.body)) } : {})
+      });
+      return { ok: true, status: 200, text: async () => JSON.stringify(data) };
+    })
+  );
+  const client = new AgentClient();
+  try {
+    await client.createSession({ ...manifest, profile: "workspace" }, "auto");
+    const state = reactive({ default_terminal_target: { target_id: "target-1", asset_name: "host-a" } });
+    // Spreading a reactive context unwraps only its root; the target remains a Vue Proxy.
+    await client.updateContext("panel-1", "resource-1", { ...state });
+    await client.sendMessage("panel-1", "resource-1", {
+      message_id: "message-1",
+      idempotency_key: "send-1",
+      role: "user",
+      parts: reactive([{ type: "text", text: "Inspect the current terminal" }])
+    });
+    await client.sendToolResult("panel-1", "resource-1", "tool-1", {
+      jsonrpc: "2.0",
+      id: "rpc-1",
+      run_id: "run-1",
+      seq: 1,
+      done: true,
+      status: "success",
+      result: reactive({ tasks: [{ task_id: "task-1", status: "completed" }] })
+    });
+    state.default_terminal_target.asset_name = "host-b";
+    expect(requests.filter((request) => request.path.endsWith("/context")).at(-1)?.body).toMatchObject({
+      data: { default_terminal_target: { target_id: "target-1", asset_name: "host-a" } }
+    });
+    expect(requests.find((request) => request.path.endsWith("/messages"))?.body).toMatchObject({
+      parts: [{ type: "text", text: "Inspect the current terminal" }]
+    });
+    expect(requests.find((request) => request.path.includes("/tool-calls/"))?.body).toMatchObject({
+      result: { tasks: [{ task_id: "task-1", status: "completed" }] }
+    });
+  } finally {
+    client.dispose();
+    runtime.desktop = false;
+    desktop.invoke.mockReset();
+    vi.unstubAllGlobals();
+  }
+});
+
 it("preserves structured Kael errors across web and Electron requests", async () => {
   const body = JSON.stringify({ code: "approval_expired", detail: "approval has expired" });
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 409, text: async () => body }));
@@ -168,4 +256,15 @@ it("preserves structured Kael errors across web and Electron requests", async ()
     vi.unstubAllGlobals();
     client.dispose();
   }
+});
+
+it("rejects a Kael server without the harness contract before creating a panel", async () => {
+  const requests: AgentHttpRequest[] = [];
+  const client = new AgentClient(async <T>(request: AgentHttpRequest): Promise<T> => {
+    requests.push(request);
+    return { instance_id: "kael-old", protocol_version: 1, capability_version: 1 } as T;
+  });
+  await expect(client.createSession(manifest, "auto")).rejects.toThrow("requires the Codex harness");
+  expect(requests).toHaveLength(1);
+  client.dispose();
 });

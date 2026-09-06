@@ -11,6 +11,7 @@ const props = defineProps<{
   item: TerminalViewItem;
   session: WorkspaceAiSession;
   assistantName: string;
+  readOnly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -41,12 +42,17 @@ function setExecutionOverride(id: string, value: string) {
   <AiRunStep
     v-else-if="item.kind === 'terminal-step' && terminalSession"
     :step="item.step"
+    :expanded="terminalSession.expansionOverrides.get(item.step.key)"
     :decisions="terminalSession.decisions"
     :execution-overrides="terminalSession.executionOverrides"
     :execution-mode="terminalSession.executionMode"
     :background-exec="terminalSession.backgroundExec"
+    :read-only="readOnly"
     @decide="decide"
     @set-execution-override="setExecutionOverride"
+    @set-expanded="
+      emit('action', { domain: 'terminal', type: 'set-step-expanded', key: item.step.key, expanded: $event })
+    "
   />
 
   <div

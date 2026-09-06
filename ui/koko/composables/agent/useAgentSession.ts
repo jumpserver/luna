@@ -336,35 +336,55 @@ function toolResultPresentation(event: AgentEvent) {
   const result = isRecord(payload.result) ? payload.result : {};
   const structuredContent = isRecord(result.structuredContent) ? result.structuredContent : result;
   const error = isRecord(payload.error) ? payload.error : null;
-  const status = String(payload.status || "");
-  const done = payload.done !== false;
-  const outcome = !done
-    ? "running"
-    : status === "timeout" || status === "unknown"
-      ? status
-      : ["cancelled", "interrupted"].includes(status)
-        ? "interrupted"
-        : error || result.isError === true || ["error", "failed"].includes(status)
-          ? "error"
-          : "success";
+  const status = String(structuredContent.status || payload.status || "");
+  const done =
+    typeof structuredContent.process_finished === "boolean"
+      ? structuredContent.process_finished
+      : payload.done !== false;
+  const outcome =
+    status === "unknown"
+      ? "unknown"
+      : !done
+        ? ["reviewing", "waiting_input", "cancelling", "timeout"].includes(status)
+          ? status
+          : "running"
+        : status === "timeout" || status === "unknown"
+          ? status
+          : ["cancelled", "interrupted"].includes(status)
+            ? "interrupted"
+            : error || result.isError === true || ["error", "failed"].includes(status)
+              ? "error"
+              : "success";
   const content = Array.isArray(result.content)
     ? result.content
         .flatMap((item) => (isRecord(item) && item.type === "text" && typeof item.text === "string" ? [item.text] : []))
         .join("\n")
     : "";
   const exitCodeValue = structuredContent.exit_code ?? structuredContent.exitCode;
+  const originalToolCallId = String(structuredContent.tool_call_id || event.tool_call_id || payload.tool_call_id || "");
 
   return {
     type: "data-execution",
     data: {
-      id: String(event.tool_call_id || payload.tool_call_id || ""),
+      id: originalToolCallId,
       planId: String(event.run_id || payload.run_id || ""),
-      stepId: String(event.tool_call_id || payload.tool_call_id || ""),
-      executionId: String(event.tool_call_id || payload.tool_call_id || ""),
+      stepId: originalToolCallId,
+      executionId: originalToolCallId,
       outcome,
       status,
       done,
       ...(Number.isFinite(Number(payload.duration_ms)) ? { durationMs: Number(payload.duration_ms) } : {}),
+      ...(typeof structuredContent.elapsed_ms === "number" ? { durationMs: structuredContent.elapsed_ms } : {}),
+      ...(typeof structuredContent.execution_elapsed_ms === "number"
+        ? { executionElapsedMs: structuredContent.execution_elapsed_ms }
+        : {}),
+      ...(typeof structuredContent.output_idle_ms === "number"
+        ? { outputIdleMs: structuredContent.output_idle_ms }
+        : {}),
+      ...(typeof structuredContent.remaining_ms === "number" ? { remainingMs: structuredContent.remaining_ms } : {}),
+      ...(typeof structuredContent.attention_reason === "string"
+        ? { attentionReason: structuredContent.attention_reason }
+        : {}),
       ...(Number.isFinite(Number(payload.model_duration_ms))
         ? { modelDurationMs: Number(payload.model_duration_ms) }
         : {}),
@@ -378,7 +398,8 @@ function toolResultPresentation(event: AgentEvent) {
       ...(typeof structuredContent.output_truncated === "boolean"
         ? { outputTruncated: structuredContent.output_truncated }
         : {}),
-      ...(error && typeof error.message === "string" ? { summary: error.message } : {})
+      ...(error && typeof error.message === "string" ? { summary: error.message } : {}),
+      ...(typeof structuredContent.error === "string" ? { summary: structuredContent.error } : {})
     }
   };
 }
@@ -730,6 +751,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     }
     if (event.type === "run.started") state.activeRunId = event.run_id || "";
     if (lifecycle.runFinished) {
+      options.relay.cancelPending(event.type, runId);
       for (const [approvalId, binding] of pendingApprovals) {
         if (binding.runId === runId)
           presentApprovalResolution(approvalId, payload.error_code === "approval_expired" ? "expired" : "cancelled");
@@ -756,7 +778,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       }
     }
     let presentationEvent = event;
-    if (event.type === "model.completed" && runId) {
+    if (event.type === "model.completed" && runId && payload.scope !== "agent_turn") {
       const durationMS = Number(payload.duration_ms);
       if (Number.isFinite(durationMS) && durationMS >= 0) {
         pendingModelDurationByRun.set(runId, (pendingModelDurationByRun.get(runId) || 0) + durationMS);

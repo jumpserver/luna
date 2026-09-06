@@ -24,6 +24,8 @@ import {
 import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
 import { AGENT_MCP_BINDING_META_KEY, AGENT_PROTOCOL_VERSION, isRecord } from "#koko/composables/agent/types";
 import { useAgentSession } from "#koko/composables/agent/useAgentSession";
+import type { WorkspaceTerminalTask } from "~/composables/useWorkspaceTerminalTasks";
+import { createWorkspaceTerminalTasks, workspaceTerminalTools } from "~/composables/useWorkspaceTerminalTasks";
 import type { WorkspacePane } from "~/composables/useWorkspaceTabs";
 import {
   WorkspaceOperationError,
@@ -42,7 +44,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { isDesktopRuntime } from "~/utils/runtime";
 
 export const DEFAULT_WORKSPACE_ASSISTANT_SCOPE = "global";
-const WORKSPACE_TOOL_REVISION = 1;
+const WORKSPACE_TOOL_REVISION = 2;
 const CONNECTION_PLAN_TTL_MS = 5 * 60_000;
 const CONNECTION_PLAN_LIMIT = 8;
 const COMPLETED_INVOCATION_LIMIT = 256;
@@ -147,6 +149,10 @@ interface WorkspaceAssistantRuntime {
 
 export interface WorkspaceAssistantSession {
   kind: "workspace";
+  target: string;
+  runTarget: string;
+  runContext: Record<string, unknown> | null;
+  terminalTasks: WorkspaceTerminalTask[];
   scopeId: string;
   organizationId: string;
   contextKey: string;
@@ -338,6 +344,7 @@ const sessions = shallowReactive(new Map<string, WorkspaceAssistantSession>());
 const transports = new WeakMap<WorkspaceAssistantSession, WorkspaceAssistantTransport>();
 const chatScopes = new WeakMap<WorkspaceAssistantSession, EffectScope>();
 const runtimes = new WeakMap<WorkspaceAssistantSession, WorkspaceToolRuntime>();
+const terminalManagers = new WeakMap<WorkspaceAssistantSession, ReturnType<typeof createWorkspaceTerminalTasks>>();
 
 export function useWorkspaceAssistantRuntime(): WorkspaceAssistantRuntime {
   return {
@@ -372,13 +379,14 @@ export function workspaceAssistantManifest(
     revision: WORKSPACE_TOOL_REVISION,
     context: {
       session_kind: "workspace",
-      interaction_mode: "workspace_operations",
+      interaction_mode: "workspace_and_terminal_tasks",
       scope_id: context.scopeId,
       organization_id: context.organizationId,
       ui_revision: context.uiRevision
     },
     tools: [
       ...workspaceOperationTools,
+      ...workspaceTerminalTools,
       {
         name: "get_asset_connection_options",
         description:
@@ -740,6 +748,35 @@ async function executeWorkspaceTool(
   }).tools.find((tool) => tool.name === name);
   if (!definition) throw new WorkspaceAssistantError("unknown_tool", "Unknown workspace tool");
   validateWorkspaceToolArguments(definition, args);
+  const terminalManager = terminalManagers.get(session);
+  if (name === "list_terminal_targets")
+    return {
+      targets: terminalManager?.list() || [],
+      default_terminal_target: session.runContext?.default_terminal_target || null
+    };
+  if (name === "start_terminal_task") {
+    if (!terminalManager) throw new WorkspaceAssistantError("session_closed", "Terminal task manager is unavailable");
+    try {
+      return await terminalManager.start(String(args.target_id), String(args.prompt));
+    } catch (cause) {
+      throw new WorkspaceAssistantError(
+        "terminal_task_failed",
+        cause instanceof Error ? cause.message : "Terminal task failed"
+      );
+    }
+  }
+  if (name === "get_terminal_task") {
+    if (!terminalManager) throw new WorkspaceAssistantError("session_closed", "Terminal task manager is unavailable");
+    try {
+      return await terminalManager.read(String(args.task_id), Number(args.wait_ms) || 0, signal);
+    } catch (cause) {
+      if (signal.aborted) throw cause;
+      throw new WorkspaceAssistantError(
+        "terminal_task_failed",
+        cause instanceof Error ? cause.message : "Terminal task failed"
+      );
+    }
+  }
   if (
     workspaceOperationTools.some((tool) => tool.name === name) &&
     !(name === "navigate_workspace" && args.target === "asset")
@@ -1263,11 +1300,32 @@ function isWorkspaceAssistantChatMessage(value: unknown): value is WorkspaceAssi
   });
 }
 
-export function workspaceAssistantTimelineMessage(message: WorkspaceAssistantChatMessage) {
+export function workspaceAssistantTimelineMessage(message: WorkspaceAssistantChatMessage, terminalTaskActive = false) {
   return agentChatStreamMessage(
     message,
-    (part) => !["data-capability", "data-input-lock", "data-progress"].includes(part.type)
+    (part) =>
+      !["data-capability", "data-input-lock", "data-progress"].includes(part.type) &&
+      // The terminal task owns progress and approvals until it finishes. Parent polling
+      // commentary is transient; it must not reappear as a stale answer after approval.
+      !(terminalTaskActive && message.role === "assistant" && part.type === "text")
   );
+}
+
+export function workspaceAssistantTerminalTraceTaskId(
+  data: WorkspaceAssistantEventData,
+  tasks: WorkspaceTerminalTask[]
+) {
+  const name = String(data.toolName || data.tool_name || "");
+  if (!["start_terminal_task", "get_terminal_task"].includes(name)) return "";
+  if (!["running", "success", "completed"].includes(String(data.status || "running"))) return "";
+  const args = isRecord(data.arguments) ? data.arguments : {};
+  const result = isRecord(data.result) ? data.result : {};
+  const taskId = name === "get_terminal_task" ? args.task_id : result.task_id;
+  if (taskId) return tasks.find((task) => task.id === taskId)?.id || "";
+  // The task card is created before the start call's receipt arrives.
+  return name === "start_terminal_task"
+    ? tasks.findLast((task) => task.target.target_id === args.target_id && task.prompt === args.prompt)?.id || ""
+    : "";
 }
 
 export function workspaceAssistantReadOnlyApprovalId(value: unknown) {
@@ -1308,17 +1366,24 @@ function handleWorkspaceAssistantMessage(scopeId: string, value: unknown) {
   if (runFinished) {
     session.taskActive = false;
     session.inputLocked = false;
-    if (eventType !== "run.completed") runtimes.get(session)?.automation.clearAssetSelectionRequest();
+    if (eventType !== "run.completed") {
+      runtimes.get(session)?.automation.clearAssetSelectionRequest();
+      terminalManagers.get(session)?.cancel();
+    }
   }
   const runtimeError = partData(value, "data-error");
   if (runtimeError) {
+    terminalManagers.get(session)?.cancel();
     session.taskActive = false;
     session.inputLocked = false;
     session.errorCode = String(runtimeError.code || "failed");
     session.errorText = String(runtimeError.message || "Workspace Assistant failed");
   }
 
-  const timelineMessage = workspaceAssistantTimelineMessage(value);
+  const timelineMessage = workspaceAssistantTimelineMessage(
+    value,
+    session.terminalTasks.some((task) => task.active)
+  );
   if (timelineMessage && !transport?.receive(timelineMessage)) {
     session.chat.messages.value = [...session.chat.messages.value, timelineMessage];
   }
@@ -1337,6 +1402,7 @@ function createWorkspaceAssistantSession(scopeId: string, dependencies: Workspac
     new AgentToolRelay({
       resourceSessionId: () => resourceSessionId,
       revision: () => WORKSPACE_TOOL_REVISION,
+      includeRegistrationBinding: true,
       sendFrame: (frame) => {
         void handleLocalToolFrame(session, frame);
       }
@@ -1350,7 +1416,7 @@ function createWorkspaceAssistantSession(scopeId: string, dependencies: Workspac
       messageMetadata: () => ({
         domain: "workspace",
         targetId: scopeId,
-        context: workspaceMessageContext(dependencies)
+        context: session?.runContext || workspaceMessageContext(dependencies)
       }),
       onMessage: (message) => handleWorkspaceAssistantMessage(scopeId, message),
       onAvailability: (available) => {
@@ -1364,6 +1430,8 @@ function createWorkspaceAssistantSession(scopeId: string, dependencies: Workspac
       },
       onHistoryReset: () => {
         if (!session) return;
+        terminalManagers.get(session)?.cancel();
+        session.terminalTasks.splice(0);
         session.chat.messages.value = [];
         session.taskActive = false;
         session.inputLocked = false;
@@ -1373,6 +1441,7 @@ function createWorkspaceAssistantSession(scopeId: string, dependencies: Workspac
       },
       onUnavailable: (cause) => {
         if (!session) return;
+        terminalManagers.get(session)?.cancel();
         dependencies.automation.clearAssetSelectionRequest();
         session.errorCode = "agent_unavailable";
         session.errorText = cause.message;
@@ -1389,6 +1458,7 @@ function createWorkspaceAssistantSession(scopeId: string, dependencies: Workspac
         transport,
         generateId: () => opaqueId("workspace-message"),
         onError: (cause) => {
+          terminalManagers.get(session)?.cancel();
           session.taskActive = false;
           session.inputLocked = false;
           session.errorCode = cause instanceof WorkspaceAssistantError ? cause.code : "failed";
@@ -1400,6 +1470,10 @@ function createWorkspaceAssistantSession(scopeId: string, dependencies: Workspac
 
   session = reactive({
     kind: "workspace",
+    target: "auto",
+    runTarget: "auto",
+    runContext: null,
+    terminalTasks: [],
     scopeId,
     organizationId,
     contextKey,
@@ -1422,6 +1496,28 @@ function createWorkspaceAssistantSession(scopeId: string, dependencies: Workspac
     activeCalls: new Map(),
     searchGuard: { candidateIds: new Set(), candidateCount: 0, ambiguityPending: false }
   });
+  const terminalManager = createWorkspaceTerminalTasks({
+    panes: () => dependencies.tabs.tabs.value.flatMap((tab) => tab.panes),
+    organizationId,
+    targetScope: () => session.runTarget,
+    assertCurrent: () => {
+      if (
+        !runtimes.has(session) ||
+        session.contextKey !== currentWorkspaceContextKey(dependencies.userInfoStore) ||
+        !dependencies.userInfoStore.loggedIn
+      )
+        throw new WorkspaceAssistantError("context_changed", "The active site, account or organization changed");
+    },
+    onStart: (task) =>
+      handleWorkspaceAssistantMessage(scopeId, {
+        id: `terminal-task-${task.id}`,
+        role: "assistant",
+        metadata: { domain: "workspace" },
+        parts: [{ type: "data-terminal-task", data: { taskId: task.id } }]
+      })
+  });
+  terminalManagers.set(session, terminalManager);
+  session.terminalTasks = terminalManager.tasks;
   transports.set(session, transport);
   chatScopes.set(session, chatScope);
   const uiRevision = Number(
@@ -1450,7 +1546,13 @@ export function isWorkspaceAssistantBusy(scopeId = DEFAULT_WORKSPACE_ASSISTANT_S
   const session = sessions.get(scopeId);
   if (!session) return false;
   const status = session.chat.status.value;
-  return session.inputLocked || session.taskActive || status === "submitted" || status === "streaming";
+  return (
+    session.inputLocked ||
+    session.taskActive ||
+    session.terminalTasks.some((task) => task.active) ||
+    status === "submitted" ||
+    status === "streaming"
+  );
 }
 
 export async function submitWorkspaceAssistantPrompt(prompt: string, scopeId = DEFAULT_WORKSPACE_ASSISTANT_SCOPE) {
@@ -1473,13 +1575,36 @@ export async function submitWorkspaceAssistantPrompt(prompt: string, scopeId = D
   try {
     const runtime = runtimes.get(session);
     if (!runtime) throw new WorkspaceAssistantError("session_closed", "Workspace Assistant session is closed");
+    const targets = terminalManagers.get(session)?.list() || [];
+    const defaultTarget =
+      session.target === "auto"
+        ? targets.find((target) => target.pane_id === runtime.tabs.activePaneId.value) || null
+        : targets.find((target) => target.target_id === session.target) || null;
+    if (!["auto", "workspace"].includes(session.target) && !defaultTarget)
+      throw new WorkspaceAssistantError(
+        "terminal_changed",
+        "The selected terminal was closed or reconnected. Select a current target."
+      );
+    session.runTarget = session.target;
+    session.runContext = {
+      ...workspaceMessageContext(runtime),
+      terminal_target_mode: session.target === "auto" ? "auto" : session.target === "workspace" ? "workspace" : "fixed",
+      default_terminal_target: defaultTarget
+    };
     await session.agent.actions.updateContext({
       session_kind: "workspace",
-      interaction_mode: "workspace_operations",
+      interaction_mode: "workspace_and_terminal_tasks",
       scope_id: session.scopeId,
       organization_id: session.organizationId,
-      ...workspaceMessageContext(runtime)
+      ...session.runContext
     });
+    if (
+      sessions.get(scopeId) !== session ||
+      !session.taskActive ||
+      !runtime.userInfoStore.loggedIn ||
+      session.contextKey !== currentWorkspaceContextKey(runtime.userInfoStore)
+    )
+      throw new WorkspaceAssistantError("context_changed", "The conversation changed before the request was sent");
     const dispatched = transport.waitForNextDispatch();
     const response = session.chat.sendMessage({ text, metadata: { domain: "workspace", targetId: scopeId } });
     void response.catch(() => {
@@ -1501,6 +1626,7 @@ export function interruptWorkspaceAssistant(scopeId = DEFAULT_WORKSPACE_ASSISTAN
   const session = sessions.get(scopeId);
   if (!session) return;
   runtimes.get(session)?.automation.clearAssetSelectionRequest();
+  terminalManagers.get(session)?.cancel();
   void session.agent.actions.cancel().catch((cause) => {
     session.errorCode = "interrupt_failed";
     session.errorText = cause instanceof Error ? cause.message : "Failed to interrupt Workspace Assistant";
@@ -1526,6 +1652,8 @@ export function disposeWorkspaceAssistantSession(scopeId = DEFAULT_WORKSPACE_ASS
   if (!session) return;
   runtimes.get(session)?.automation.clearAssetSelectionRequest();
   for (const controller of runtimes.get(session)?.activeCalls.values() || []) controller.abort();
+  terminalManagers.get(session)?.dispose();
+  terminalManagers.delete(session);
   transports.get(session)?.disconnect();
   void session.agent.actions.dispose();
   chatScopes.get(session)?.stop();
@@ -1533,4 +1661,23 @@ export function disposeWorkspaceAssistantSession(scopeId = DEFAULT_WORKSPACE_ASS
   transports.delete(session);
   chatScopes.delete(session);
   sessions.delete(scopeId);
+}
+
+export function workspaceAssistantTerminalTargets(scopeId: string) {
+  const session = sessions.get(scopeId);
+  // Context changes invalidate targets before the panel's cleanup watcher runs.
+  if (!session) return [];
+  const runtime = runtimes.get(session);
+  if (!runtime?.userInfoStore.loggedIn || session.contextKey !== currentWorkspaceContextKey(runtime.userInfoStore))
+    return [];
+  return terminalManagers.get(session)?.list() || [];
+}
+
+export function assertWorkspaceTerminalTaskCurrent(scopeId: string, taskId: string) {
+  const session = sessions.get(scopeId);
+  const task = session?.terminalTasks.find((item) => item.id === taskId);
+  const manager = session && terminalManagers.get(session);
+  if (!task || !manager || !task.active) throw new Error("terminal_task_inactive");
+  manager.assertTask(task);
+  return task;
 }

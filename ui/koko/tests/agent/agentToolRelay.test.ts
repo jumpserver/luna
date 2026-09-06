@@ -38,6 +38,62 @@ function toolResponse(toolCallId = "tool-1", rpcId = toolCallId) {
   };
 }
 
+it("retains registration and invocation bindings only for local workspace execution", () => {
+  const sendFrame = vi.fn();
+  const relay = new AgentToolRelay({
+    resourceSessionId: () => "resource-1",
+    includeRegistrationBinding: true,
+    sendFrame
+  });
+  relay.forwardAgentEvent(toolCall());
+  expect(sendFrame.mock.calls[0]?.[0].data.params._meta["com.jumpserver/agent"]).toEqual({
+    resource_session_id: "resource-1",
+    tool_call_id: "tool-1",
+    revision: 3,
+    registration_id: "registration-1",
+    invocation_id: "invocation-1"
+  });
+});
+
+it("keeps a yielded command cancellable after its RPC result is delivered", () => {
+  const sendFrame = vi.fn();
+  const relay = new AgentToolRelay({ resourceSessionId: () => "resource-1", sendFrame });
+  relay.forwardAgentEvent(toolCall());
+  const response = toolResponse();
+  (response.data.result as Record<string, unknown>).structuredContent = {
+    execution_id: "execution-1",
+    tool_call_id: "tool-1",
+    status: "running",
+    process_finished: false,
+    output: "partial"
+  };
+  const delivery = relay.consumeKokoFrame(response);
+  expect(delivery?.payload).toMatchObject({ done: true, status: "success", result: { status: "running" } });
+  delivery?.complete(true);
+  expect(relay.cancelPending("run.cancelled", "different-run")).toBe(0);
+  expect(relay.cancelPending("run.cancelled", "run-1")).toBe(1);
+  expect(sendFrame.mock.calls.at(-1)?.[0]).toMatchObject({
+    type: "mcp.cancel",
+    data: { params: { requestId: "tool-1" } }
+  });
+});
+
+it("preserves partial timeout output without copying it into the error envelope", () => {
+  const relay = new AgentToolRelay({ resourceSessionId: () => "resource-1", sendFrame: vi.fn() });
+  relay.forwardAgentEvent(toolCall());
+  const response = toolResponse();
+  const result = response.data.result as Record<string, unknown>;
+  result.isError = true;
+  result.content = [{ type: "text", text: "execution deadline exceeded" }];
+  result.structuredContent = { status: "timeout", process_finished: true, stop_confirmed: true, output: "partial" };
+  result._meta = { "com.jumpserver/agent": { status: "timeout" } };
+  expect(relay.consumeKokoFrame(response)?.payload).toMatchObject({
+    status: "timeout",
+    result: { output: "partial" },
+    error: { message: "execution deadline exceeded" }
+  });
+});
+
 it("relays each tool call once and returns a session-bound structured result", () => {
   const sendFrame = vi.fn();
   const relay = new AgentToolRelay({ resourceSessionId: () => "resource-1", sendFrame });
@@ -46,23 +102,25 @@ it("relays each tool call once and returns a session-bound structured result", (
   relay.forwardAgentEvent(event);
   relay.forwardAgentEvent({ ...event, seq: 2 });
   expect(sendFrame).toHaveBeenCalledTimes(1);
-  expect(sendFrame.mock.calls[0]?.[0]).toMatchObject({
+  expect(sendFrame.mock.calls[0]?.[0]).toEqual({
     type: "mcp.request",
+    version: 1,
     resource_session_id: "resource-1",
     data: {
+      jsonrpc: "2.0",
+      id: "tool-1",
       method: "tools/call",
       params: {
         name: "execute_command",
         arguments: { command: "pwd" },
         _meta: {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {},
+          "io.modelcontextprotocol/clientInfo": { name: "luna", version: "1" },
           "com.jumpserver/agent": {
             resource_session_id: "resource-1",
             tool_call_id: "tool-1",
-            revision: 3,
-            registration_id: "registration-1",
-            invocation_id: "invocation-1",
-            definition_version: "3",
-            definition_digest: "definition-digest-1"
+            revision: 3
           }
         }
       }
@@ -227,9 +285,10 @@ it("keeps toolset version separate from the Kael registry revision for calls and
   event.payload.definition_version = "2";
   event.payload.tool_name = "list_assets";
   relay.forwardAgentEvent(event);
-  expect(sendFrame.mock.calls[0]?.[0].data.params._meta["com.jumpserver/agent"]).toMatchObject({
-    revision: 2,
-    definition_version: "2"
+  expect(sendFrame.mock.calls[0]?.[0].data.params._meta["com.jumpserver/agent"]).toEqual({
+    resource_session_id: "resource-1",
+    tool_call_id: "tool-1",
+    revision: 2
   });
   relay.cancelPending("cancelled");
   expect(sendFrame.mock.calls[1]?.[0].data.params._meta["com.jumpserver/agent"].revision).toBe(2);

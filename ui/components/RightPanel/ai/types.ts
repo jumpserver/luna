@@ -35,6 +35,7 @@ export interface ViewExecution {
   index: number;
   command?: TerminalAiEventData;
   result?: TerminalAiEventData;
+  operations?: AgentToolItem[];
 }
 
 export interface ViewStep {
@@ -64,7 +65,7 @@ export interface AgentToolItem extends ViewItemBase<"shared", "agent-tool"> {
   data: {
     id: string;
     toolCallId: string;
-    sourceDomain: Exclude<AiTimelineDomain, "shared">;
+    sourceDomain: Exclude<AiTimelineDomain, "shared"> | "workspace";
     toolName?: string;
     status: AgentToolStatus;
     durationMs?: number;

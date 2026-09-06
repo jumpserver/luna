@@ -11,6 +11,14 @@ interface AiPanelContext {
 }
 
 const open = shallowRef(false);
+interface TerminalPromptBinding {
+  loginContext: string;
+  resourceId: string;
+  agentId: string;
+}
+const pendingTerminalPrompt = shallowRef<({ id: string; paneId: string; text: string } & TerminalPromptBinding) | null>(
+  null
+);
 const source = shallowRef<AiPanelSource>("workspace");
 const workspaceAssistantActive = shallowRef(true);
 const mode = computed<AiPanelMode>(() => {
@@ -58,7 +66,18 @@ export const useAiPanel = () => {
     openAi();
   };
 
+  const requestTerminalPrompt = (paneId: string, text: string, binding: TerminalPromptBinding) => {
+    pendingTerminalPrompt.value = { id: globalThis.crypto.randomUUID(), paneId, text, ...binding };
+    openAi();
+  };
+  const takeTerminalPrompt = (id: string) => {
+    if (pendingTerminalPrompt.value?.id === id) pendingTerminalPrompt.value = null;
+  };
+
   return {
+    pendingTerminalPrompt,
+    requestTerminalPrompt,
+    takeTerminalPrompt,
     open,
     mode,
     source,

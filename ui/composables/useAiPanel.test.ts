@@ -47,6 +47,20 @@ describe("AI overlay panel", () => {
     expect(panel.mode.value).toBe("workspace-assistant");
   });
 
+  it("carries the exact terminal and login binding into the unified assistant once", () => {
+    const panel = useAiPanel();
+    const binding = { loginContext: '["site","account","org"]', resourceId: "resource-a", agentId: "agent-a" };
+    panel.requestTerminalPrompt("pane-a", "Inspect the disk", binding);
+    expect(panel.mode.value).toBe("workspace-assistant");
+    expect(panel.open.value).toBe(true);
+    const request = panel.pendingTerminalPrompt.value!;
+    expect(request).toMatchObject({ ...binding, paneId: "pane-a", text: "Inspect the disk" });
+    panel.takeTerminalPrompt("another-request");
+    expect(panel.pendingTerminalPrompt.value).toBe(request);
+    panel.takeTerminalPrompt(request.id);
+    expect(panel.pendingTerminalPrompt.value).toBeNull();
+  });
+
   it("does not switch assistants when the resource source changes", () => {
     const panel = useAiPanel();
     panel.openWorkspaceAssistant();

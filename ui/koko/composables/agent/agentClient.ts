@@ -25,6 +25,8 @@ export interface AgentHttpRequest {
 type AgentRequest = <T>(request: AgentHttpRequest) => Promise<T>;
 
 interface KaelBootstrap {
+  agent_engine: string;
+  agent_protocol_version: number;
   cluster_id?: string;
   instance_id?: string;
   protocol_version: string | number;
@@ -111,7 +113,9 @@ export class AgentInstanceChangedError extends Error {
 async function defaultAgentRequest<T>(request: AgentHttpRequest): Promise<T> {
   if (isDesktopRuntime()) {
     try {
-      return await desktopInvoke<T>("api_request", { request: { ...request, service: "kael" } });
+      // IPC cannot clone nested Vue proxies. Use the same JSON data contract as the web request.
+      const plainRequest = JSON.parse(JSON.stringify({ ...request, service: "kael" }));
+      return await desktopInvoke<T>("api_request", { request: plainRequest });
     } catch (error) {
       // Electron IPC serializes Error properties into the existing error message.
       const match =
@@ -123,6 +127,7 @@ async function defaultAgentRequest<T>(request: AgentHttpRequest): Promise<T> {
   const hasBody = request.body !== undefined;
   const response = await fetch(withWebSitePrefix(request.path), {
     method: request.method,
+    signal: AbortSignal.timeout(15_000),
     cache: "no-store",
     credentials: "include",
     headers: {
@@ -181,6 +186,9 @@ export class AgentClient {
     const cached = this.bootstraps.get(resourceId);
     if (cached && !force) return cached;
     const response = await this.request<KaelBootstrap>({ method: "GET", path: `${KAEL_API_ROOT}/bootstrap` });
+    if (response.agent_engine !== "codex" || response.agent_protocol_version !== 1) {
+      throw new Error("This Luna build requires the Codex harness version of Kael");
+    }
     const instanceId = String(response.cluster_id || response.instance_id || "");
     if (!instanceId) throw new Error("Kael bootstrap did not return an instance id");
     const previous = this.instanceByResource.get(resourceId);

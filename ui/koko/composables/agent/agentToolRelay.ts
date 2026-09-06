@@ -28,6 +28,8 @@ export interface AgentToolRelayResult {
 export interface AgentToolRelayOptions {
   resourceSessionId: () => string;
   revision?: () => number;
+  /** Local workspace execution validates these IDs; remote protocol executors accept only the core binding. */
+  includeRegistrationBinding?: boolean;
   transformToolArguments?: (toolCallId: string, toolName: string, argumentsValue: unknown) => unknown;
   sendFrame: (frame: KokoMcpRequestFrame | KokoMcpCancelFrame) => void;
   completedLimit?: number;
@@ -50,12 +52,10 @@ function normalizeMcpResult(result: unknown): Pick<AgentToolResultRequest, "stat
         : {};
     return {
       status: meta.status === "timeout" || meta.status === "cancelled" ? meta.status : "error",
+      ...(result.structuredContent !== undefined ? { result: result.structuredContent } : {}),
       error: {
         code: -32000,
-        message: text || "MCP tool execution failed",
-        ...(result.structuredContent !== undefined && result.structuredContent !== null
-          ? { data: result.structuredContent }
-          : {})
+        message: text || "MCP tool execution failed"
       }
     };
   }
@@ -84,6 +84,10 @@ export class AgentToolRelay {
   private readonly cancelledOrder: string[] = [];
   private readonly rpcToolCalls = new Map<string, string>();
   private readonly pendingCalls = new Map<string, { rpcId: string; runId: string; revision: number }>();
+  private readonly executions = new Map<
+    string,
+    { toolCallId: string; rpcId: string; runId: string; revision: number }
+  >();
   private readonly completedLimit: number;
   private epoch = 0;
 
@@ -108,8 +112,6 @@ export class AgentToolRelay {
       // Kael revision counts registry replacements; executors validate the toolset definition version.
       const revision = Number(payload.definition_version ?? this.options.revision?.() ?? payload.revision ?? 1);
       const toolName = String(payload.tool_name || payload.name || "");
-      const registrationId = String(payload.registration_id || "");
-      const invocationId = String(payload.invocation_id || "");
       const rawArguments = payload.arguments ?? {};
       const argumentsValue = this.options.transformToolArguments?.(toolCallId, toolName, rawArguments) ?? rawArguments;
       const request: JsonRpcRequest = {
@@ -123,16 +125,14 @@ export class AgentToolRelay {
             [MCP_PROTOCOL_VERSION_META_KEY]: MCP_PROTOCOL_VERSION,
             [MCP_CLIENT_CAPABILITIES_META_KEY]: {},
             [MCP_CLIENT_INFO_META_KEY]: { name: "luna", version: "1" },
+            // Extra registration fields are opt-in for the local workspace executor only.
             [AGENT_MCP_BINDING_META_KEY]: {
               resource_session_id: resourceSessionId,
               tool_call_id: toolCallId,
               revision,
-              ...(registrationId ? { registration_id: registrationId } : {}),
-              ...(invocationId ? { invocation_id: invocationId } : {}),
-              ...(typeof payload.definition_version === "string"
-                ? { definition_version: payload.definition_version }
-                : {}),
-              ...(typeof payload.definition_digest === "string" ? { definition_digest: payload.definition_digest } : {})
+              ...(this.options.includeRegistrationBinding
+                ? { registration_id: payload.registration_id, invocation_id: payload.invocation_id }
+                : {})
             }
           }
         }
@@ -149,8 +149,9 @@ export class AgentToolRelay {
       return true;
     }
 
-    if (this.completed.has(toolCallId)) return true;
-    const pendingCall = this.pendingCalls.get(toolCallId);
+    const execution = [...this.executions.values()].find((value) => value.toolCallId === toolCallId);
+    if (this.completed.has(toolCallId) && !execution) return true;
+    const pendingCall = this.pendingCalls.get(toolCallId) || execution;
     this.pending.delete(toolCallId);
     this.pendingCalls.delete(toolCallId);
     this.completed.delete(toolCallId);
@@ -167,10 +168,11 @@ export class AgentToolRelay {
     return true;
   }
 
-  cancelPending(reason: string) {
+  cancelPending(reason: string, runId?: string) {
     const resourceSessionId = this.options.resourceSessionId();
     let sent = 0;
     for (const [toolCallId, call] of this.pendingCalls) {
+      if (runId && call.runId !== runId) continue;
       try {
         this.sendCancellation(resourceSessionId, toolCallId, call.rpcId, reason, call.revision);
         sent += 1;
@@ -180,6 +182,16 @@ export class AgentToolRelay {
       this.pending.delete(toolCallId);
       this.pendingCalls.delete(toolCallId);
       this.rememberCompleted(toolCallId, this.cancelled, this.cancelledOrder);
+    }
+    for (const [executionId, call] of this.executions) {
+      if (runId && call.runId !== runId) continue;
+      try {
+        this.sendCancellation(resourceSessionId, call.toolCallId, call.rpcId, reason, call.revision);
+        sent += 1;
+      } catch {
+        // The executor also enforces its own deadline if transport is unavailable.
+      }
+      this.executions.delete(executionId);
     }
     return sent;
   }
@@ -246,6 +258,15 @@ export class AgentToolRelay {
     const normalized = hasError
       ? { status: "error" as const, error: data.error as AgentToolResultRequest["error"] }
       : normalizeMcpResult(data.result);
+    const executionResult = isRecord(normalized.result) ? normalized.result : null;
+    if (executionResult && typeof executionResult.execution_id === "string") {
+      const executionId = executionResult.execution_id;
+      if (executionResult.process_finished === true) {
+        this.executions.delete(executionId);
+      } else if (executionResult.tool_call_id === toolCallId) {
+        this.executions.set(executionId, { ...pendingCall, toolCallId });
+      }
+    }
     this.responding.add(toolCallId);
 
     return {
@@ -278,6 +299,7 @@ export class AgentToolRelay {
     this.respondingControls.clear();
     this.rpcToolCalls.clear();
     this.pendingCalls.clear();
+    this.executions.clear();
     this.completed.clear();
     this.completedOrder.length = 0;
     this.completedControls.clear();

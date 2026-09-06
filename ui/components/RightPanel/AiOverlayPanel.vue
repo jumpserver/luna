@@ -9,8 +9,8 @@ const { activeWorkspaceMode } = useWorkspaceMode();
 const { activePaneId, activeTab } = useWorkspaceTabs();
 const { activeTab: rightPanelTab, open: rightPanelOpen } = useRightPanel();
 const { mode, setSource, setWorkspaceAssistantActive, workspaceAssistantActive } = useAiPanel();
-const panelTitle = computed(() =>
-  workspaceAssistantActive.value ? t("RightPanel.WorkspaceAssistantName") : t("RightPanel.AI")
+const showWorkspaceAssistant = computed(
+  () => mode.value === "workspace-assistant" && (activeTab.value || !activePaneId.value)
 );
 const activeSurface = computed(() => {
   const tab = activeTab.value;
@@ -50,40 +50,48 @@ watchEffect(() => {
     <aside
       class="pointer-events-auto absolute inset-y-0 right-0 flex w-[min(380px,calc(100vw-3rem))] min-h-0 flex-col border-l border-[var(--app-border)] bg-[var(--app-panel-bg)] text-[var(--app-fg)] shadow-2xl"
     >
-      <div class="flex h-10 shrink-0 items-center gap-2 border-b border-[var(--app-border)] px-2">
-        <UIcon name="i-lucide-sparkles" class="size-4 text-primary" />
-        <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ panelTitle }}</span>
-        <UTooltip
-          v-if="!workspaceAssistantActive || resourceAssistantAvailable"
-          :text="
-            workspaceAssistantActive ? t('RightPanel.WorkspaceAssistantBack') : t('RightPanel.WorkspaceAssistantOpen')
-          "
-        >
-          <UButton
-            :icon="workspaceAssistantActive ? 'i-lucide-arrow-left' : 'i-lucide-monitor-cog'"
-            :aria-label="
-              workspaceAssistantActive ? t('RightPanel.WorkspaceAssistantBack') : t('RightPanel.WorkspaceAssistantOpen')
-            "
-            :color="workspaceAssistantActive ? 'primary' : 'neutral'"
-            variant="ghost"
-            size="xs"
-            @click="setWorkspaceAssistantActive(!workspaceAssistantActive)"
-          />
-        </UTooltip>
-        <UButton
-          icon="i-lucide-x"
-          :aria-label="t('RightPanel.AIClose')"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          @click="emit('close')"
-        />
-      </div>
-
       <div class="min-h-0 flex-1 overflow-hidden">
         <KeepAlive>
-          <WorkspaceAssistantPanel v-if="mode === 'workspace-assistant'" />
-          <WorkspaceAiPanel v-else />
+          <component :is="showWorkspaceAssistant ? WorkspaceAssistantPanel : WorkspaceAiPanel">
+            <template #actions>
+              <UButton
+                v-if="!workspaceAssistantActive"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                icon="i-lucide-sparkles"
+                :label="t('RightPanel.LunaAiAutomatic')"
+                @click="setWorkspaceAssistantActive(true)"
+              />
+              <UDropdownMenu
+                v-else-if="resourceAssistantAvailable"
+                :items="[
+                  {
+                    label: t('RightPanel.LunaAiResourceHistory'),
+                    icon: 'i-lucide-history',
+                    onSelect: () => setWorkspaceAssistantActive(false)
+                  }
+                ]"
+                portal="#workspace-ai-overlay"
+              >
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-ellipsis"
+                  :aria-label="t('RightPanel.LunaAiResourceHistory')"
+                />
+              </UDropdownMenu>
+              <UButton
+                icon="i-lucide-x"
+                :aria-label="t('RightPanel.AIClose')"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                @click="emit('close')"
+              />
+            </template>
+          </component>
         </KeepAlive>
       </div>
     </aside>

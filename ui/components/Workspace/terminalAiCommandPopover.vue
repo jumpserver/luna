@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import type { TerminalCursorAnchor } from "#koko";
 import type { WorkspacePane } from "~/composables/useWorkspaceTabs";
-
 import {
   getKokoTerminalCursorAnchor,
   getKokoTerminalElement,
   subscribeKokoTerminalCursorAnchor,
   subscribeKokoTerminalUserInput
 } from "#koko";
+
 import {
   getKokoTerminalAiSession,
   isKokoTerminalAiAvailable,
-  isKokoTerminalAiBusy,
-  submitKokoTerminalAiPrompt
+  isKokoTerminalAiBusy
 } from "#koko/composables/terminal/useTerminalAiSessions";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 import {
   isTerminalAiCommandShortcut,
   shouldShowTerminalAiCaretHint,
@@ -24,7 +24,8 @@ import {
 const props = defineProps<{ pane: WorkspacePane }>();
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
-const { openWorkspaceAi: openAi } = useAiPanel();
+const { openAi, requestTerminalPrompt } = useAiPanel();
+const userInfo = useUserInfoStore();
 const open = ref(false);
 const submitting = ref(false);
 const error = ref("");
@@ -298,7 +299,11 @@ async function submit() {
   submitting.value = true;
   error.value = "";
   try {
-    await submitKokoTerminalAiPrompt(paneId, text);
+    requestTerminalPrompt(paneId, text, {
+      loginContext: JSON.stringify([userInfo.currentSite, userInfo.currentAccountId, userInfo.orgId]),
+      resourceId: current.agent.state.resourceSessionId,
+      agentId: current.agent.state.agentSessionId
+    });
     if (current.draft.trim() === text) current.draft = "";
     if (props.pane.id !== paneId) return;
     close(false);

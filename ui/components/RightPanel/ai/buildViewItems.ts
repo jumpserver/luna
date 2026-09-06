@@ -2,6 +2,7 @@ import type { TerminalAiEventData } from "#koko/composables/terminal/useTerminal
 import type { AiViewItemBuildOptions } from "./domains/viewItems";
 import type { AgentToolItem, AgentToolStatus, AiTimelineDomain, ViewItem } from "./types";
 import { createAiViewItemBuilders } from "./domains/registry";
+import { groupTerminalToolItems } from "./domains/terminal/viewItems";
 
 const agentToolStatuses = new Set<AgentToolStatus>(["running", "success", "error", "cancelled", "timeout", "unknown"]);
 const agentToolDomains = new Set<Exclude<AiTimelineDomain, "shared">>(["terminal", "sql", "file", "script"]);
@@ -25,6 +26,7 @@ export function buildAiPanelViewItems(options: AiViewItemBuildOptions): ViewItem
   for (const message of options.messages) {
     message.parts.forEach((part, partIndex) => {
       if (part.type === "text") {
+        if (!part.text?.trim()) return;
         items.push({
           domain: "shared",
           kind: "text",
@@ -118,5 +120,5 @@ export function buildAiPanelViewItems(options: AiViewItemBuildOptions): ViewItem
     });
   }
 
-  return items;
+  return groupTerminalToolItems(items);
 }
