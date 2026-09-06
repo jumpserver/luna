@@ -72,7 +72,8 @@ describe("workspace UI automation", () => {
     await Promise.resolve();
     expect(host.currentCommand.value).toMatchObject({ type: "set-search", status: "pending" });
 
-    host.reportSearchResults("production", [toWorkspaceUiAssetCandidate(asset)]);
+    host.reportSearchResults("production", [toWorkspaceUiAssetCandidate(asset), toWorkspaceUiAssetCandidate(asset)]);
+    expect(automation.snapshot.value.candidates).toHaveLength(1);
     await expect(resultPromise).resolves.toMatchObject({
       candidates: [{ id: "asset-1" }]
     });

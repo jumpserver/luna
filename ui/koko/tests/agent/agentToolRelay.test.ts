@@ -218,3 +218,29 @@ it("discards tool responses after cancellation", () => {
   });
   expect(relay.consumeKokoFrame(toolResponse())?.payload).toBeNull();
 });
+
+it("keeps toolset version separate from the Kael registry revision for calls and cancellation", () => {
+  const sendFrame = vi.fn();
+  const relay = new AgentToolRelay({ resourceSessionId: () => "resource-1", revision: () => 2, sendFrame });
+  const event = toolCall();
+  event.payload.revision = 1;
+  event.payload.definition_version = "2";
+  event.payload.tool_name = "list_assets";
+  relay.forwardAgentEvent(event);
+  expect(sendFrame.mock.calls[0]?.[0].data.params._meta["com.jumpserver/agent"]).toMatchObject({
+    revision: 2,
+    definition_version: "2"
+  });
+  relay.cancelPending("cancelled");
+  expect(sendFrame.mock.calls[1]?.[0].data.params._meta["com.jumpserver/agent"].revision).toBe(2);
+});
+
+it("preserves an explicitly stale definition version instead of replacing it with the local version", () => {
+  const sendFrame = vi.fn();
+  const relay = new AgentToolRelay({ resourceSessionId: () => "resource-1", revision: () => 2, sendFrame });
+  const event = toolCall();
+  event.payload.revision = 2;
+  event.payload.definition_version = "1";
+  relay.forwardAgentEvent(event);
+  expect(sendFrame.mock.calls[0]?.[0].data.params._meta["com.jumpserver/agent"].revision).toBe(1);
+});

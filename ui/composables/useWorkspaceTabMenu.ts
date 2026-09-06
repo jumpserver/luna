@@ -81,28 +81,38 @@ export function useWorkspaceTabMenu() {
     return await exchangeConnectToken(tokenId);
   };
 
-  const cloneSession = async (tab: WorkspaceSessionTab) => {
+  const cloneSession = async (tab: WorkspaceSessionTab, assertCurrent?: () => void) => {
     try {
       const token = await exchangeToken(tab);
+      assertCurrent?.();
       const newPane = openSession(sessionToAsset(tab), {
         protocol: tab.protocol,
         account: tab.account,
-        payload: buildPayload(tab, token)
+        payload: buildPayload(tab, token),
+        newTab: Boolean(assertCurrent)
       });
       setActiveSession(newPane.id);
+      return { status: "session_started", pane_id: newPane.id };
     } catch (error) {
+      if (assertCurrent) {
+        assertCurrent();
+        return { status: "failed" };
+      }
       addErrorToast({
         title: t("TabMenu.CloneConnect"),
         description: String(error)
       });
+      return { status: "failed" };
     }
   };
 
-  const reconnectSession = async (tab: WorkspaceSessionTab) => {
-    markSessionConnecting(tab.id);
+  const reconnectSession = async (tab: WorkspaceSessionTab, assertCurrent?: () => void) => {
+    if (!assertCurrent) markSessionConnecting(tab.id);
 
     try {
       const token = await exchangeToken(tab);
+      assertCurrent?.();
+      if (assertCurrent) markSessionConnecting(tab.id);
       updateSessionPayload(
         {
           tabId: tab.id,
@@ -112,8 +122,15 @@ export function useWorkspaceTabMenu() {
         },
         buildPayload(tab, token)
       );
+      return { status: "session_started", pane_id: tab.id };
     } catch {
+      if (assertCurrent) {
+        assertCurrent();
+        openSetupSession(sessionToAsset(tab), { protocol: tab.protocol, paneId: tab.id });
+        return { status: "user_action_required", reason: "connection_setup", pane_id: tab.id };
+      }
       reconnectViaConnection(tab);
+      return { status: "connection_requested", pane_id: tab.id };
     }
   };
 
