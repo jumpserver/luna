@@ -240,6 +240,7 @@
 .sftp-file-table {
   position: relative;
   min-height: 0;
+  container-type: inline-size;
 
   &__head-wrap {
     flex: none;
@@ -258,6 +259,18 @@
 
   &__status {
     z-index: 1;
+
+    &.is-selected {
+      background: color-mix(in srgb, var(--theme-accent) 12%, var(--app-panel-bg));
+      color: var(--app-fg);
+      box-shadow: inset 3px 0 0 var(--theme-accent);
+    }
+  }
+
+  @container (max-width: 520px) {
+    .sftp-status-actions :where([data-slot="label"]) {
+      display: none;
+    }
   }
 
   &__refresh-bar {
@@ -454,62 +467,6 @@
     animation: none;
     width: 100%;
     opacity: 0.55;
-  }
-}
-
-.sftp-selection-bar {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  min-height: 40px;
-  flex: none;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 16px;
-  border-top: 1px solid color-mix(in srgb, var(--theme-accent) 32%, var(--app-border));
-  background: color-mix(in srgb, var(--theme-accent) 12%, var(--app-panel-bg));
-  padding: 6px 12px;
-  box-shadow: inset 3px 0 0 var(--theme-accent);
-  font-size: 12px;
-
-  &__info {
-    display: flex;
-    min-width: 0;
-    flex: 1;
-    align-items: center;
-  }
-
-  &__count {
-    flex: none;
-    font-weight: 600;
-    color: var(--app-fg);
-    white-space: nowrap;
-
-    b {
-      margin: 0 2px;
-      color: var(--theme-accent);
-      font-family: var(--font-mono);
-      font-weight: 700;
-    }
-  }
-
-  &__actions {
-    display: flex;
-    flex: none;
-    align-items: center;
-    gap: 2px;
-  }
-
-  &__btn {
-    height: 26px;
-    min-height: 26px;
-    border: 0;
-    border-radius: 6px;
-    padding-inline: 8px;
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
   }
 }
 

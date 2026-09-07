@@ -103,6 +103,32 @@ describe("file transfer store recovery actions", () => {
     expect(store.batches[0]?.taskIds).toEqual(["other-done"]);
   });
 
+  it("discards failed destination data when clearing the task", async () => {
+    const cancelTransfer = vi.fn(async () => undefined);
+    const destination = {
+      ref: endpoint,
+      isAvailable: () => true,
+      cancelTransfer
+    } as unknown as FileTransferEndpoint;
+    const unregister = registerFileTransferEndpoint(destination);
+
+    try {
+      const store = useFileTransferStore();
+      store.tasks = [task("failed.txt", "failed")];
+      store.clearFinished(["failed.txt"]);
+
+      await vi.waitFor(() =>
+        expect(cancelTransfer).toHaveBeenCalledWith({
+          transferId: "failed.txt",
+          targetPath: "/target/failed.txt",
+          discard: true
+        })
+      );
+    } finally {
+      unregister();
+    }
+  });
+
   it("persists an acknowledged chunk before a requested pause takes effect", async () => {
     const sourceRef = { id: "sftp:source", label: "Source" };
     const destinationRef = { id: "sftp:target", label: "Target" };

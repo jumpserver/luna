@@ -1,6 +1,6 @@
 import type { MenuItemConstructorOptions } from "electron";
 import { createReadStream, constants as fsConstants } from "node:fs";
-import { access, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { access, mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -1304,11 +1304,35 @@ async function handleInvoke(event, request) {
   ) {
     return null;
   }
-  if (command === "plugin:fs|read_file") return new Uint8Array(await readFile(normalizePath(args.path)));
+  if (command === "plugin:fs|read_file") {
+    const filePath = normalizePath(args.path);
+    if (Number.isInteger(args.offset) && Number.isInteger(args.length) && args.offset >= 0 && args.length >= 0) {
+      const handle = await open(filePath, "r");
+      try {
+        const buf = Buffer.alloc(args.length);
+        const { bytesRead } = await handle.read(buf, 0, args.length, args.offset);
+        return new Uint8Array(buf.buffer, buf.byteOffset, bytesRead);
+      } finally {
+        await handle.close();
+      }
+    }
+    return new Uint8Array(await readFile(filePath));
+  }
   if (command === "plugin:fs|read_text_file") return readFile(normalizePath(args.path), "utf8");
   if (command === "plugin:fs|write_file") {
-    const filePath = decodeURIComponent(options.headers?.path || "");
-    await writeFile(normalizePath(filePath), new Uint8Array(args));
+    const filePath = normalizePath(decodeURIComponent(options.headers?.path || ""));
+    const bytes = new Uint8Array(args);
+    const offset = Number(options.headers?.offset);
+    if (Number.isInteger(offset)) {
+      const handle = await open(filePath, "r+");
+      try {
+        await handle.write(bytes, 0, bytes.length, offset);
+      } finally {
+        await handle.close();
+      }
+      return null;
+    }
+    await writeFile(filePath, bytes);
     return null;
   }
   if (command === "plugin:fs|mkdir")

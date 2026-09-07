@@ -97,7 +97,6 @@ const {
   createFileAt,
   renameEntry,
   removeEntry,
-  uploadFromEvent,
   refreshQuickPaths,
   releaseSecurityScope
 } = localManager;
@@ -448,7 +447,6 @@ defineExpose({
       @refresh="list()"
       @reveal="revealInSystem()"
       @setup="setupOpen = true"
-      @upload="uploadFromEvent"
       @go-to-path="goToPath"
       @create="openCreate"
     />
@@ -500,7 +498,7 @@ defineExpose({
         @context="openContextMenu"
         @drag-start="onDragStart"
       >
-        <template #footer>
+        <template #status>
           <SftpPaneSelectionBar
             :selected-count="selectedEntries.length"
             :transferable-count="transferableEntries.length"

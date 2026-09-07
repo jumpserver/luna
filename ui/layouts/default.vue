@@ -454,7 +454,10 @@ onBeforeUnmount(() => {
       </template>
 
       <template #footer>
-        <div v-if="!standaloneAssetWindow" v-show="loggedIn && activeWorkspaceMode === 'assets' && statusBarVisible">
+        <div
+          v-if="!standaloneAssetWindow"
+          v-show="loggedIn && (activeWorkspaceMode === 'assets' || activeWorkspaceMode === 'files') && statusBarVisible"
+        >
           <WorkspaceStatusFooter />
         </div>
       </template>

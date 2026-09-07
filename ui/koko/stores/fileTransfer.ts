@@ -218,12 +218,19 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
 
   function clearFinished(taskIds?: string[]) {
     const scope = taskIds ? new Set(taskIds) : null;
-    const finished = new Set(
-      tasks.value
-        .filter((task) => terminalStatuses.has(task.status) && (!scope || scope.has(task.id)))
-        .map((task) => task.id)
+    const finishedTasks = tasks.value.filter(
+      (task) => terminalStatuses.has(task.status) && (!scope || scope.has(task.id))
     );
+    const finished = new Set(finishedTasks.map((task) => task.id));
     if (!finished.size) return;
+    for (const task of finishedTasks) {
+      if (task.status !== "failed") continue;
+      const destination = getFileTransferEndpoint(task.destinationEndpoint.id);
+      if (!destination?.isAvailable()) continue;
+      void destination
+        .cancelTransfer({ transferId: task.id, targetPath: targetPath(task), discard: true })
+        .catch(() => undefined);
+    }
     tasks.value = tasks.value.filter((task) => !finished.has(task.id));
     batches.value = batches.value
       .map((batch) => ({ ...batch, taskIds: batch.taskIds.filter((id) => !finished.has(id)) }))

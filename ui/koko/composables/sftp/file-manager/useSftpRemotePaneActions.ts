@@ -14,6 +14,7 @@ interface UseSftpRemotePaneActionsOptions {
   updateSelection: (entries: SftpFileEntry[]) => void;
   hideContextMenu: () => void;
   requestSend: () => void;
+  requestDownload: () => void;
   translate: (key: string, params?: Record<string, unknown>) => string;
 }
 
@@ -101,18 +102,10 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
     alertOpen.value = true;
   }
 
-  function downloadEntry(entry: SftpFileEntry): void {
-    options.hideContextMenu();
-    void runFileOperation(
-      () => options.manager.operations.downloadEntry(entry),
-      t("koko.fileManagement.entryDownloaded", { name: entry.name })
-    );
-  }
-
   function downloadSelected(): void {
+    if (toValue(options.transferableCount)) return options.requestDownload();
     const entry = options.selectedEntry.value;
-    if (!entry || options.selectedEntries.value.length !== 1) return;
-    if (!entry.is_dir) return downloadEntry(entry);
+    if (!entry?.is_dir || options.selectedEntries.value.length !== 1) return;
     options.hideContextMenu();
     alertTarget.value = { kind: "download", entries: [entry] };
     alertOpen.value = true;
@@ -138,7 +131,7 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
       {
         label: t("koko.actions.download"),
         icon: "i-lucide-download",
-        disabled: !singleSelection,
+        disabled: !toValue(options.transferableCount) && !(singleSelection && entry.is_dir),
         onSelect: downloadSelected
       },
       {
@@ -192,6 +185,7 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
             results[index] = { status: "rejected", reason };
           }
         }
+        return undefined;
       })
     );
     return results;

@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 import {
   formatSftpFileSize,
   formatSftpModifiedTime,
   resolveSftpFileType
 } from "../../composables/sftp/file-manager/filePresentation";
-import { buildSftpTransferInputs } from "../../composables/sftp/file-manager/selectors";
+import { buildSftpTransferInputs, safeLocalDownloadName } from "../../composables/sftp/file-manager/selectors";
 import { SFTP_ENTRY_NAME_MAX_LENGTH, sftpEntryNameError } from "../../composables/sftp/file-manager/sftpEntryName";
 import {
   buildTransferSourcePayload,
@@ -17,6 +17,7 @@ import {
   transferEntriesFromSelection,
   writeTransferDragData
 } from "../../composables/sftp/file-manager/transfer";
+import { useBrowserDownloadTransferEndpoint } from "../../composables/sftp/file-manager/useBrowserDownloadTransferEndpoint";
 import {
   useBrowserUploadTransferEndpoint,
   WEB_UPLOAD_ENDPOINT_ID
@@ -58,6 +59,14 @@ describe("local transfer path joining", () => {
       { id: "sftp:token", label: "Remote" }
     );
     expect(inputs[0]?.source.path).toBe("C:\\Users\\demo\\notes.txt");
+  });
+});
+
+describe("desktop download names", () => {
+  it("keeps remote names inside the local downloads directory", () => {
+    expect(safeLocalDownloadName("..\\Startup\\payload.cmd")).toBe(".._Startup_payload.cmd");
+    expect(safeLocalDownloadName("CON.txt")).toBe("_CON.txt");
+    expect(safeLocalDownloadName("report. ")).toBe("report_");
   });
 });
 
@@ -107,6 +116,63 @@ describe("browser upload transfer endpoint", () => {
     });
     expect(new TextDecoder().decode(firstChunk.data)).toBe("one");
     expect(new TextDecoder().decode(secondChunk.data)).toBe("two-two");
+  });
+});
+
+describe("browser download transfer endpoint", () => {
+  it("buffers transfer chunks and starts a browser download on commit", async () => {
+    const endpoint = useBrowserDownloadTransferEndpoint({ label: "Download" });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const createObjectUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
+    const revokeObjectUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+
+    await endpoint.prepareTransfer({
+      transferId: "download-1",
+      targetPath: "/hello.txt",
+      fileName: "hello.txt",
+      size: 5,
+      conflictPolicy: "ask"
+    });
+    await endpoint.writeChunk({
+      transferId: "download-1",
+      targetPath: "/hello.txt",
+      totalBytes: 5,
+      offset: 0,
+      data: new TextEncoder().encode("hello"),
+      sha256: "unused"
+    });
+    await endpoint.commitTransfer({
+      transferId: "download-1",
+      targetPath: "/hello.txt",
+      totalBytes: 5,
+      sha256: "unused",
+      conflictPolicy: "ask"
+    });
+
+    expect(click).toHaveBeenCalledOnce();
+    expect(createObjectUrl).toHaveBeenCalledOnce();
+    expect(revokeObjectUrl).toHaveBeenCalledWith("blob:test");
+    await expect(
+      endpoint.getTransferStatus({ transferId: "download-1", targetPath: "/hello.txt", totalBytes: 5 })
+    ).resolves.toMatchObject({ state: "missing", committedBytes: 0 });
+    click.mockRestore();
+    createObjectUrl.mockRestore();
+    revokeObjectUrl.mockRestore();
+  });
+
+  it("discards buffered bytes when a failed task is cleared", async () => {
+    const endpoint = useBrowserDownloadTransferEndpoint({ label: "Download" });
+    await endpoint.prepareTransfer({
+      transferId: "failed-download",
+      targetPath: "/failed.bin",
+      fileName: "failed.bin",
+      size: 1024,
+      conflictPolicy: "ask"
+    });
+    await endpoint.cancelTransfer({ transferId: "failed-download", targetPath: "/failed.bin", discard: true });
+    await expect(
+      endpoint.getTransferStatus({ transferId: "failed-download", targetPath: "/failed.bin", totalBytes: 1024 })
+    ).resolves.toMatchObject({ state: "missing", committedBytes: 0 });
   });
 });
 

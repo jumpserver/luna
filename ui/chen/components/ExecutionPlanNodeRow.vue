@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { ChenPlanNode } from "~/chen/types/plan";
-
 import {
   chenPlanFormatEstimated,
   chenPlanNodeDetail,

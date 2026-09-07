@@ -17,10 +17,13 @@ import type {
 import { registerFileTransferEndpoint } from "@jumpserver/connectors-core";
 import { computed, onBeforeUnmount, reactive, ref, toValue, watch } from "vue";
 import { useSftpTransferUi } from "#koko/composables/sftp/useSftpTransferUi";
+import { useKokoHostAdapter } from "#koko/host";
 import { useFileTransferStore } from "#koko/stores/fileTransfer";
 import { buildSftpDistributionGroups } from "#koko/utils/sftpDistribution";
-import { buildSftpTransferInputs, filterSftpDistributionTargets } from "./selectors";
+import { buildSftpTransferInputs, filterSftpDistributionTargets, safeLocalDownloadName } from "./selectors";
+import { useBrowserDownloadTransferEndpoint } from "./useBrowserDownloadTransferEndpoint";
 import { useBrowserUploadTransferEndpoint, WEB_UPLOAD_ENDPOINT_ID } from "./useBrowserUploadTransferEndpoint";
+import { useLocalFileTransferEndpoint } from "./useLocalFileTransferEndpoint";
 
 interface TransferCoordinatorOptions {
   activePaneForSide: (side: SftpWorkspaceSide) => SftpRemotePane | null;
@@ -37,10 +40,15 @@ interface TransferCoordinatorOptions {
 }
 
 const LOCAL_ENDPOINT_ID = "local:fs";
+const LOCAL_DOWNLOADS_ENDPOINT_ID = "local:downloads";
 const terminalTransferStatuses = new Set(["completed", "skipped", "failed", "canceled"]);
+let browserDownloadEndpoint: FileTransferEndpoint | undefined;
+let localDownloadsEndpoint: FileTransferEndpoint | undefined;
 
 export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) {
   const toast = useToast();
+  const host = useKokoHostAdapter();
+  const desktopRuntime = host.isDesktopRuntime();
   const fileTransferStore = useFileTransferStore();
   const transferUi = useSftpTransferUi();
   const transferring = ref(false);
@@ -63,6 +71,16 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     id: `${WEB_UPLOAD_ENDPOINT_ID}:${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`}`,
     label: options.translate("koko.fileManagement.localUpload")
   });
+  const downloadEndpoint = desktopRuntime
+    ? (localDownloadsEndpoint ??= useLocalFileTransferEndpoint({
+        id: LOCAL_DOWNLOADS_ENDPOINT_ID,
+        label: options.translate("koko.localFile.quickDownload"),
+        getCurrentPath: () => "",
+        isAvailable: host.localFiles.isAvailable
+      }))
+    : (browserDownloadEndpoint ??= useBrowserDownloadTransferEndpoint({
+        label: options.translate("koko.actions.download")
+      }));
   let browserUploadMounted = false;
 
   function ensureBrowserUploadEndpointMounted() {
@@ -160,6 +178,8 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   function connectTransferEndpoint() {
     fileTransferStore.kick();
   }
+
+  mountTransferEndpoint(downloadEndpoint);
 
   function unmountTransferEndpoint(endpoint: FileTransferEndpointRef) {
     endpointUnregisters.get(endpoint.id)?.();
@@ -354,6 +374,22 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     // Session dual-pane always treats remotes as the right surface.
     if (options.primaryTransferEndpoint.value) return "right";
     return pane.side;
+  }
+
+  async function queueSftpDownload(payload: SftpTransferSourcePayload) {
+    try {
+      const destinationPath = desktopRuntime ? await host.localFiles.downloadDir() : "/";
+      const inputs = buildSftpTransferInputs({ ...payload, destinationPath }, downloadEndpoint.ref).map((input) => ({
+        ...input,
+        source: desktopRuntime ? { ...input.source, name: safeLocalDownloadName(input.source.name) } : input.source,
+        conflictPolicy: desktopRuntime ? ("keep_both" as const) : input.conflictPolicy
+      }));
+      if (!fileTransferStore.enqueueBatch(inputs)) return;
+      sourcePaneFor(payload.sourceEndpoint.id)?.clearSelection();
+      transferUi.signalQueued();
+    } catch (error) {
+      options.showError(options.translate("koko.fileManagement.operationFailed"), error);
+    }
   }
 
   function queueSftpTransfer(payload: SftpTransferDropPayload, destination?: FileTransferEndpointRef) {
@@ -590,7 +626,9 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
 
   onBeforeUnmount(() => {
     if (highlightTimer) clearTimeout(highlightTimer);
-    for (const unregister of endpointUnregisters.values()) unregister();
+    for (const [endpointId, unregister] of endpointUnregisters) {
+      if (endpointId !== downloadEndpoint.ref.id) unregister();
+    }
     endpointUnregisters.clear();
   });
 
@@ -605,6 +643,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     localSelections,
     mountTransferEndpoint,
     openSendModal,
+    queueSftpDownload,
     queueSftpTransfer,
     queueSftpTransferToSelected,
     reconnectTarget,

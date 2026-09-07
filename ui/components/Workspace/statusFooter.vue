@@ -33,6 +33,7 @@ const loginStatusText = computed(() => {
 });
 const activeProtocol = computed(() => activeTab.value?.protocol?.toUpperCase() || "");
 const activeText = computed(() => {
+  if (activeWorkspaceMode.value === "files") return t("Menu.FileManager");
   if (activeWorkspaceMode.value !== "assets") return t("Menu.Tool");
   if (!activeTab.value) return t("StatusFooter.Disconnected");
   return activeTab.value.assetName;
