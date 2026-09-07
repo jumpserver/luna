@@ -29,9 +29,9 @@ export type KokoTerminalCommandProfile =
 const SENSITIVE_TERMINAL_COMMAND_PATTERNS = [
   /(?:^|[^a-z0-9])(?:password|passwd|token|secret|api[_-]?key|authorization)(?:[^a-z0-9]|$)/i,
   /(?:^|\s)--?(?:password|passwd|pass|token|secret|api[_-]?key)(?:=|\s)/i,
-  /[a-z][a-z0-9+.-]*:\/\/[^\s/@]*:[^\s/@]+@/i,
+  /[a-z][a-z0-9+.-]*:\/\/[^\s/:@]*:[^\s/@]+@/i,
   /\b(?:MYSQL_PWD|PGPASSWORD|REDISCLI_AUTH|AWS_SECRET_ACCESS_KEY|AZURE_CLIENT_SECRET)\s*=/i,
-  /(?:^|\s)-u\s*[^\s:]+:[^\s]+/i,
+  /(?:^|\s)-u\s*[^\s:]+:\S+/i,
   /(?:^|\s)AUTH\s+\S+/i,
   /\bHELLO\s+\d+\s+AUTH\s+\S+/i,
   /\bdb\.auth\s*\(/i,
@@ -39,7 +39,7 @@ const SENSITIVE_TERMINAL_COMMAND_PATTERNS = [
 ];
 
 function hasExecutableShortOption(command: string, executable: RegExp, option: RegExp) {
-  return command.split(/(?:&&|\|\||[;&|])/).some((segment) => {
+  return command.split(/&&|\|\||[;&|]/).some((segment) => {
     const match = executable.exec(segment);
     return Boolean(match && option.test(segment.slice(match.index + match[0].length)));
   });
@@ -169,8 +169,8 @@ export interface KokoLocalFilesAdapter {
   dirname: (path: string) => Promise<string>;
   readDir: (path: string) => Promise<KokoLocalFileEntry[]>;
   stat: (path: string) => Promise<KokoLocalFileInfo>;
-  readFile: (path: string) => Promise<Uint8Array<ArrayBuffer>>;
-  writeFile: (path: string, data: Uint8Array) => Promise<void>;
+  readFile: (path: string, range?: { offset: number; length: number }) => Promise<Uint8Array<ArrayBuffer>>;
+  writeFile: (path: string, data: Uint8Array, range?: { offset: number }) => Promise<void>;
   exists: (path: string) => Promise<boolean>;
   mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>;
   rename: (oldPath: string, newPath: string) => Promise<void>;

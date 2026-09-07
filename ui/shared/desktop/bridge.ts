@@ -195,13 +195,19 @@ export const desktopFs = {
   dirname: (path: string) => requireElectron().invoke<string>("plugin:path|dirname", { path }),
   readDir: (path: string) => requireElectron().invoke<DesktopFileEntry[]>("plugin:fs|read_dir", { path }),
   stat: (path: string) => requireElectron().invoke<DesktopFileInfo>("plugin:fs|stat", { path }),
-  async readFile(path: string): Promise<Uint8Array<ArrayBuffer>> {
-    const data = await requireElectron().invoke<Uint8Array>("plugin:fs|read_file", { path });
+  async readFile(path: string, range?: { offset: number; length: number }): Promise<Uint8Array<ArrayBuffer>> {
+    const data = await requireElectron().invoke<Uint8Array>("plugin:fs|read_file", {
+      path,
+      ...(range || {})
+    });
     return Uint8Array.from(data);
   },
-  writeFile: (path: string, data: Uint8Array) =>
+  writeFile: (path: string, data: Uint8Array, range?: { offset: number }) =>
     requireElectron().invoke<void>("plugin:fs|write_file", data, {
-      headers: { path: encodeURIComponent(path) }
+      headers: {
+        path: encodeURIComponent(path),
+        ...(range && Number.isInteger(range.offset) ? { offset: String(range.offset) } : {})
+      }
     }),
   exists: (path: string) => requireElectron().invoke<boolean>("plugin:fs|exists", { path }),
   mkdir: (path: string, options?: { recursive?: boolean }) =>

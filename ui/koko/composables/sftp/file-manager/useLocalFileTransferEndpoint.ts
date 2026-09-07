@@ -35,7 +35,16 @@ function partialPathFor(targetPath: string, transferId: string): string {
   return `${targetPath}.jms-partial-${safeId}`;
 }
 
+function keepBothPath(targetPath: string, index: number) {
+  const separator = Math.max(targetPath.lastIndexOf("/"), targetPath.lastIndexOf("\\"));
+  const dot = targetPath.lastIndexOf(".");
+  return dot > separator
+    ? `${targetPath.slice(0, dot)} (${index})${targetPath.slice(dot)}`
+    : `${targetPath} (${index})`;
+}
+
 export function useLocalFileTransferEndpoint(options: {
+  id?: string;
   label: string;
   /** Current directory of the local pane (absolute). */
   getCurrentPath: () => string;
@@ -43,7 +52,7 @@ export function useLocalFileTransferEndpoint(options: {
   onTransferCommitted?: (input: { targetPath: string }) => Promise<void> | void;
 }): FileTransferEndpoint {
   const { localFiles } = useKokoHostAdapter();
-  const ref: FileTransferEndpointRef = { id: LOCAL_ENDPOINT_ID, label: options.label };
+  const ref: FileTransferEndpointRef = { id: options.id || LOCAL_ENDPOINT_ID, label: options.label };
   /** transferId → partial file absolute path */
   const partials = new Map<string, string>();
 
@@ -111,34 +120,19 @@ export function useLocalFileTransferEndpoint(options: {
       offset: number;
       length: number;
     }): Promise<FileTransferChunk> {
-      const file = await localFiles.readFile(input.path);
-      const bytes = file instanceof Uint8Array ? file : new Uint8Array(file);
-      const end = Math.min(bytes.length, input.offset + input.length);
-      const slice = bytes.subarray(input.offset, end);
-      const data = slice.slice();
+      const data = await localFiles.readFile(input.path, { offset: input.offset, length: input.length });
       return {
         offset: input.offset,
         data,
         sha256: await sha256Hex(data),
-        eof: end >= bytes.length
+        eof: data.length < input.length
       };
     },
 
     async writeChunk(input: FileTransferWriteInput) {
       const partial = partials.get(input.transferId) || partialPathFor(input.targetPath, input.transferId);
       partials.set(input.transferId, partial);
-      let existing = new Uint8Array();
-      if (await exists(partial)) {
-        const raw = await localFiles.readFile(partial);
-        existing = raw instanceof Uint8Array ? raw : new Uint8Array(raw);
-      }
-
-      const nextLength = Math.max(existing.length, input.offset + input.data.length);
-      const next = new Uint8Array(nextLength);
-      next.set(existing, 0);
-      next.set(input.data, input.offset);
-      await localFiles.writeFile(partial, next);
-
+      await localFiles.writeFile(partial, input.data, { offset: input.offset });
       return {
         committedBytes: input.offset + input.data.length,
         duplicate: false
@@ -159,11 +153,10 @@ export function useLocalFileTransferEndpoint(options: {
           state: "missing"
         };
       }
-      const raw = await localFiles.readFile(partial);
-      const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw);
+      const info = await localFiles.stat(partial);
       return {
         transferId: input.transferId,
-        committedBytes: bytes.length,
+        committedBytes: info.size,
         totalBytes: input.totalBytes,
         state: "ready"
       };
@@ -171,24 +164,27 @@ export function useLocalFileTransferEndpoint(options: {
 
     async commitTransfer(input: FileTransferCommitInput): Promise<void> {
       const partial = partials.get(input.transferId) || partialPathFor(input.targetPath, input.transferId);
-      if (await exists(input.targetPath)) {
-        if (input.conflictPolicy === "skip") {
-          if (await exists(partial)) await localFiles.remove(partial);
+      if (input.conflictPolicy === "skip" && (await exists(input.targetPath))) {
+        if (await exists(partial)) await localFiles.remove(partial);
+        partials.delete(input.transferId);
+        return;
+      }
+
+      const info = await localFiles.stat(partial);
+      if (info.size !== input.totalBytes) throw new Error("Local transfer size mismatch");
+
+      if (input.conflictPolicy === "keep_both") {
+        for (let index = 0; index < 10_000; index++) {
+          const destination = index ? keepBothPath(input.targetPath, index) : input.targetPath;
+          if (await exists(destination)) continue;
+          await localFiles.rename(partial, destination);
           partials.delete(input.transferId);
           return;
         }
-        if (input.conflictPolicy === "keep_both") {
-          // Simple keep-both: append timestamp before extension.
-          const stamp = Date.now();
-          const dot = input.targetPath.lastIndexOf(".");
-          const renamed =
-            dot > input.targetPath.lastIndexOf("/") && dot > input.targetPath.lastIndexOf("\\")
-              ? `${input.targetPath.slice(0, dot)}.${stamp}${input.targetPath.slice(dot)}`
-              : `${input.targetPath}.${stamp}`;
-          await localFiles.rename(partial, renamed);
-          partials.delete(input.transferId);
-          return;
-        }
+        throw new Error("Unable to allocate a unique local file name");
+      }
+
+      if (input.conflictPolicy === "overwrite" && (await exists(input.targetPath))) {
         await localFiles.remove(input.targetPath);
       }
       await localFiles.rename(partial, input.targetPath);
