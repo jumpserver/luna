@@ -61,14 +61,14 @@ export class SftpFileConflictError extends Error {
   }
 }
 
-interface UploadTask {
+export interface SftpUploadTask {
   id: string;
   name: string;
   progress: number;
   status: "queued" | "uploading";
 }
 
-const uploadChunkSize = 5 * 1024 * 1024;
+export const SFTP_UPLOAD_CHUNK_SIZE = 256 * 1024;
 const requestTimeoutMs = 30_000;
 const saveRequestTimeoutMs = 120_000;
 const transferCommands = new Set<SftpCommand>([
@@ -81,7 +81,21 @@ const transferCommands = new Set<SftpCommand>([
 ]);
 
 export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketClient) {
-  const uploadTasks = ref<UploadTask[]>([]);
+  const uploadTasks = ref<SftpUploadTask[]>([]);
+  let nextUploadMessageId = Date.now();
+
+  function takeUploadMessageId() {
+    nextUploadMessageId += 1;
+    return String(nextUploadMessageId);
+  }
+
+  function patchUploadTask(id: string, patch: Partial<SftpUploadTask>) {
+    uploadTasks.value = uploadTasks.value.map((task) => (task.id === id ? { ...task, ...patch } : task));
+  }
+
+  function yieldUploadProgress() {
+    return new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
   const uploadProgress = computed(() => {
     const active = uploadTasks.value.find((task) => task.status === "uploading") || uploadTasks.value[0];
     return active?.progress || 0;
@@ -395,32 +409,32 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
       }
     });
 
-  const uploadFile = (file: File, targetPath = joinSftpPath(currentPath.value, file.name)) =>
-    uploadQueue.enqueue(async () => {
-      const chunks = Math.max(1, Math.ceil(file.size / uploadChunkSize));
-      const id = String(Date.now());
-      const task: UploadTask = { id, name: file.name, progress: 0, status: "queued" };
-      uploadTasks.value = [...uploadTasks.value, task];
+  const uploadFile = (file: File, targetPath = joinSftpPath(currentPath.value, file.name)) => {
+    const id = takeUploadMessageId();
+    uploadTasks.value = [...uploadTasks.value, { id, name: file.name, progress: 0, status: "queued" }];
+    return uploadQueue.enqueue(async () => {
+      const chunks = Math.max(1, Math.ceil(file.size / SFTP_UPLOAD_CHUNK_SIZE));
       try {
-        task.status = "uploading";
+        patchUploadTask(id, { status: "uploading" });
         for (let index = 0; index < chunks; index++) {
           const bytes = new Uint8Array(
-            await file.slice(index * uploadChunkSize, (index + 1) * uploadChunkSize).arrayBuffer()
+            await file.slice(index * SFTP_UPLOAD_CHUNK_SIZE, (index + 1) * SFTP_UPLOAD_CHUNK_SIZE).arrayBuffer()
           );
 
           await sendUpload(
             id,
-            { offSet: index * uploadChunkSize, size: file.size, path: targetPath, chunk: chunks > 1 },
+            { offset: index * SFTP_UPLOAD_CHUNK_SIZE, size: file.size, path: targetPath, chunk: chunks > 1 },
             encodeSftpBytes(bytes)
           );
-          task.progress = Math.round(((index + 1) / chunks) * 100);
-          uploadTasks.value = [...uploadTasks.value];
+          patchUploadTask(id, { progress: Math.round(((index + 1) / chunks) * 100) });
+          await yieldUploadProgress();
         }
-        if (chunks > 1) await sendUpload(id, { offSet: 0, merge: true, size: 0, path: targetPath });
+        if (chunks > 1) await sendUpload(id, { offset: 0, merge: true, size: 0, path: targetPath });
       } finally {
-        uploadTasks.value = uploadTasks.value.filter((item) => item.id !== task.id);
+        uploadTasks.value = uploadTasks.value.filter((item) => item.id !== id);
       }
     });
+  };
 
   const saveFile = (path: string, bytes: Uint8Array, options: { expectedVersion?: string; force?: boolean } = {}) =>
     uploadQueue.enqueue(
@@ -460,7 +474,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     createDirectoryAt: (path) => mutatePath(SftpCommand.MakeDirectory, path),
     // koko parses upload message IDs as integers, including empty-file uploads.
     createFileAt: (path) =>
-      uploadQueue.enqueue(() => sendUpload(String(Date.now()), { offSet: 0, size: 0, path, chunk: false })),
+      uploadQueue.enqueue(() => sendUpload(String(Date.now()), { offset: 0, size: 0, path, chunk: false })),
     renameEntry: (entry, name) =>
       mutatePath(SftpCommand.Rename, joinSftpPath(currentPath.value, entry.name), { new_name: name }),
     renamePath: (path, name) => mutatePath(SftpCommand.Rename, path, { new_name: name }),
@@ -492,6 +506,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
 
   return {
     operations,
+    uploadTasks,
     uploadProgress,
     currentUploadName,
     queuedUploadCount,

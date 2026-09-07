@@ -12,6 +12,7 @@ import {
 } from "#koko/utils/sftpTransferSummary";
 import promptDialogComponent from "../../../components/Modal/promptDialog.vue?raw";
 import statusFooterComponent from "../../../components/Workspace/statusFooter.vue?raw";
+import connectLayout from "../../../layouts/connect.vue?raw";
 import defaultLayout from "../../../layouts/default.vue?raw";
 import fileManagementStyles from "../../assets/css/sftp-file-management.scss?inline";
 import transferCenterStyles from "../../assets/css/sftp-transfer-center.scss?inline";
@@ -281,8 +282,18 @@ describe("sftp right-panel compact mode", () => {
     expect(remotePaneActions).toContain('label: t("koko.actions.rename")');
     expect(remotePaneActions).toContain('label: t("koko.actions.delete")');
   });
-});
 
+  it("queues remote pane uploads through the transfer center", () => {
+    expect(fileManagementPane).toContain('emit("browserUpload"');
+    expect(fileManagementPane).not.toContain("void uploadFromEvent(event)");
+    expect(sessionWorkspaceComponent).toContain(':transfer-endpoint="primaryTransferEndpoint"');
+    expect(sessionWorkspaceComponent).toContain('@browser-upload="uploadToPrimary"');
+    expect(sessionWorkspaceComponent).toContain('@browser-upload="uploadBrowserFiles($event, pane.transferEndpoint)"');
+    expect(globalWorkspaceComponent).toContain('@browser-upload="uploadBrowserFiles($event, pane.transferEndpoint)"');
+    expect(transferCoordinatorComposable).toContain("function uploadBrowserFiles");
+    expect(transferCoordinatorComposable).toContain("function uploadToPrimary");
+    expect(remotePaneActions).not.toContain("COMPACT_SFTP_UPLOAD_MAX_BYTES");
+  });
 
   it("validates create and rename names in the prompt field instead of a toast", () => {
     expect(remotePaneActions).toContain("sftpEntryNameError");
@@ -294,6 +305,7 @@ describe("sftp right-panel compact mode", () => {
     expect(fileManagementLocalPane).toContain(':prompt-error="promptError"');
     expect(localPaneDialogs).toContain("<UFormField");
   });
+});
 
 describe("sftp local professional pane", () => {
   it("supports dense list, multi-select, shortcuts, and local CRUD", () => {
@@ -324,6 +336,7 @@ describe("sftp professional workbench", () => {
     expect(globalWorkspaceComponent).toContain("koko.fileManagement.addRemoteSftp");
     expect(globalWorkspaceComponent).toContain("<UTooltip");
     expect(defaultLayout).toContain("<KokoSftpTransferCenter");
+    expect(connectLayout).toContain("<KokoSftpTransferCenter");
     expect(defaultLayout).toContain("data-vaul-drawer-wrapper");
     expect(statusFooterComponent).toContain("data-sftp-transfer-trigger");
     expect(statusFooterComponent).not.toContain('v-if="hasTasks"');

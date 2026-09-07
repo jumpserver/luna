@@ -10,7 +10,7 @@ import {
   SftpSocketFailureCode,
   SftpWebSocketProtocol
 } from "#koko/composables/sftp/protocol";
-import { useSftpOperations } from "#koko/composables/sftp/useSftpOperations";
+import { SFTP_UPLOAD_CHUNK_SIZE, useSftpOperations } from "#koko/composables/sftp/useSftpOperations";
 import { useSftpRetry } from "#koko/composables/sftp/useSftpRetry";
 import { useSftpSocket } from "#koko/composables/sftp/useSftpSocket";
 import { buildSftpDistributionGroups } from "#koko/utils/sftpDistribution";
@@ -237,6 +237,56 @@ describe("sFTP browser protocol", () => {
       data: SftpDataStatus.Ok
     });
     await expect(secondUpload).resolves.toBeUndefined();
+  });
+
+  it("registers every upload immediately and updates progress per chunk", async () => {
+    const { fake, socket } = openSocket();
+    const client = useSftpOperations(ref("/workspace"), socket);
+    const first = client.operations.uploadFile(new File([new Uint8Array(SFTP_UPLOAD_CHUNK_SIZE + 1)], "big.bin"));
+    const second = client.operations.uploadFile(new File(["x"], "small.txt"));
+
+    expect(client.uploadTasks.value.map((task) => task.name)).toEqual(["big.bin", "small.txt"]);
+    await vi.waitFor(() =>
+      expect(client.uploadTasks.value.map((task) => task.status)).toEqual(["uploading", "queued"])
+    );
+
+    await vi.waitFor(() => expect(fake.sent).toHaveLength(1));
+    fake.receive({
+      id: lastSent(fake).id,
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.Upload,
+      data: SftpDataStatus.Ok
+    });
+    await vi.waitFor(() => expect(client.uploadTasks.value[0]?.progress).toBe(50));
+
+    await vi.waitFor(() => expect(fake.sent).toHaveLength(2));
+    fake.receive({
+      id: lastSent(fake).id,
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.Upload,
+      data: SftpDataStatus.Ok
+    });
+    await vi.waitFor(() => expect(client.uploadTasks.value[0]?.progress).toBe(100));
+
+    await vi.waitFor(() => expect(fake.sent).toHaveLength(3));
+    expect(JSON.parse(lastSent(fake).data || "{}")).toMatchObject({ merge: true });
+    fake.receive({
+      id: lastSent(fake).id,
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.Upload,
+      data: SftpDataStatus.Ok
+    });
+    await expect(first).resolves.toBeUndefined();
+
+    await vi.waitFor(() => expect(fake.sent).toHaveLength(4));
+    fake.receive({
+      id: lastSent(fake).id,
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.Upload,
+      data: SftpDataStatus.Ok
+    });
+    await expect(second).resolves.toBeUndefined();
+    expect(client.uploadTasks.value).toEqual([]);
   });
 
   it("uses a numeric upload ID when creating an empty file", async () => {

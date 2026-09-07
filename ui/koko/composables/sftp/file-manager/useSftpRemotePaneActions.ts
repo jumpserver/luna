@@ -232,32 +232,6 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
       addErrorToast({ title: t("koko.fileManagement.operationFailed"), error: failure.reason });
   }
 
-  async function uploadFromEvent(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    const files = [...(input.files || [])];
-    input.value = "";
-    if (!files.length) return;
-    const results = await Promise.allSettled(files.map((file) => options.manager.operations.uploadFile(file)));
-    const success = results.filter((result) => result.status === "fulfilled").length;
-    if (success) {
-      toast.add({
-        title: t(
-          success === files.length ? "koko.fileManagement.uploadedFiles" : "koko.fileManagement.uploadedFilesPartial",
-          { success, total: files.length, count: success }
-        ),
-        color: success === files.length ? "success" : "warning"
-      });
-      await refreshCurrentDirectory();
-    }
-    if (success !== files.length) {
-      const failure = results.find((result) => result.status === "rejected");
-      addErrorToast({
-        title: t("koko.fileManagement.operationFailed"),
-        error: failure?.status === "rejected" ? failure.reason : ""
-      });
-    }
-  }
-
   return {
     promptOpen,
     promptName,
@@ -277,7 +251,6 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
     downloadSelected,
     submitPrompt,
     confirmAlert,
-    uploadFromEvent,
     refreshCurrentDirectory
   };
 }
