@@ -9,6 +9,8 @@ const THEME_REVEAL_STYLE_ID = "theme-reveal-clip";
 let lastPointerOrigin: ThemeRevealOrigin | null = null;
 let themeRevealActive = false;
 
+export const isThemeRevealActive = () => themeRevealActive;
+
 const installRevealClip = (x: number, y: number, radius: number) => {
   let style = document.getElementById(THEME_REVEAL_STYLE_ID) as HTMLStyleElement | null;
   if (!style) {
@@ -322,6 +324,7 @@ export const useThemeAdapter = () => {
     userTheme,
     themeMode,
     followSystem,
+    isThemeRevealActive,
 
     initialTheme,
     manualSetTheme,
