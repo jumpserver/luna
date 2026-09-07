@@ -191,7 +191,9 @@ describe("file pane transfer helpers", () => {
 
 describe("file pane presentation rules", () => {
   it("keeps file size, timestamp, extension, and server type formatting stable", () => {
-    expect(formatSftpFileSize("1000")).toBe("1 kB");
+    expect(formatSftpFileSize("1000")).toBe("1000 B");
+    expect(formatSftpFileSize("1024")).toBe("1 KB");
+    expect(formatSftpFileSize("1048576")).toBe("1 MB");
     expect(formatSftpFileSize("")).toBe("0 B");
     expect(formatSftpModifiedTime("")).toBe("—");
     expect(formatSftpModifiedTime("not-a-date")).toBe("not-a-date");
