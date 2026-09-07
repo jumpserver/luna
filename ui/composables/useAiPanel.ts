@@ -4,6 +4,10 @@ import type { WorkspaceMode } from "~/composables/useWorkspaceMode";
 export type AiPanelSource = "workspace" | "sftp";
 export type UnifiedAiPanelKind = "workspace" | "resource";
 
+export const AI_PANEL_MIN_WIDTH = 320;
+export const AI_PANEL_MAX_WIDTH = 720;
+export const AI_PANEL_DEFAULT_WIDTH = 380;
+
 interface AiPanelContext {
   workspaceMode: WorkspaceMode;
   rightPanelOpen: boolean;
@@ -28,6 +32,7 @@ const pendingTerminalPrompt = shallowRef<({ id: string; paneId: string; text: st
   null
 );
 const source = shallowRef<AiPanelSource>("workspace");
+const panelWidth = shallowRef(AI_PANEL_DEFAULT_WIDTH);
 
 export function resolveAiPanelSource(context: AiPanelContext): AiPanelSource {
   return context.workspaceMode === "assets" && context.rightPanelOpen && context.rightPanelTab === "sftp"
@@ -63,6 +68,10 @@ export const useAiPanel = () => {
     source.value = value;
   };
 
+  const setPanelWidth = (width: number) => {
+    panelWidth.value = Math.min(AI_PANEL_MAX_WIDTH, Math.max(AI_PANEL_MIN_WIDTH, Math.round(width)));
+  };
+
   const openAi = () => {
     setOpen(true);
   };
@@ -89,8 +98,10 @@ export const useAiPanel = () => {
     takeTerminalPrompt,
     open,
     source,
+    panelWidth,
     setOpen,
     setSource,
+    setPanelWidth,
     openAi,
     openWorkspaceAssistant: openAi,
     toggleAi

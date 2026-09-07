@@ -93,7 +93,6 @@ const timelineEmptyState = computed(() =>
       :status-label="presentation?.available ? presenceStatusLabel : ''"
       :status-tone="presentation?.available ? presenceStatusTone : 'warning'"
       :busy="Boolean(presentation?.busy || presentation?.running)"
-      :context-items="presentation?.contextItems || []"
       :tool-names="presentation?.toolNames || []"
       :run-progress="runProgress"
       :risk-label="riskLabel"

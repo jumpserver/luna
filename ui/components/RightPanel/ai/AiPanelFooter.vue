@@ -85,6 +85,7 @@ const { t } = useI18n();
       :execution-mode="presentation.executionMode"
       :threshold-options="presentation.thresholdOptions"
       :mode-options="presentation.modeOptions"
+      :context-items="presentation.contextItems"
       @submit="emit('submit')"
       @interrupt="emit('interrupt')"
       @update-approval-threshold="emit('updateApprovalThreshold', $event)"

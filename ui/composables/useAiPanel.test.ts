@@ -16,6 +16,7 @@ describe("AI overlay panel", () => {
     const panel = useAiPanel();
     panel.setSource("workspace");
     panel.setOpen(false);
+    panel.setPanelWidth(380);
     const rightPanel = useRightPanel();
     rightPanel.setOpen(false);
     rightPanel.setActiveTab("session");
@@ -55,6 +56,16 @@ describe("AI overlay panel", () => {
     expect(panel.open.value).toBe(false);
     panel.toggleAi();
     expect(panel.open.value).toBe(true);
+  });
+
+  it("clamps its resizable width", () => {
+    const panel = useAiPanel();
+    panel.setPanelWidth(560);
+    expect(panel.panelWidth.value).toBe(560);
+    panel.setPanelWidth(100);
+    expect(panel.panelWidth.value).toBe(320);
+    panel.setPanelWidth(900);
+    expect(panel.panelWidth.value).toBe(720);
   });
 
   it.each([

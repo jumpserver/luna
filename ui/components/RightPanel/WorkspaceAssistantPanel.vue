@@ -214,7 +214,6 @@ watch(
       :status-label="statusLabel"
       :status-tone="statusTone"
       :busy="running && !waitingStatus"
-      :context-items="contextItems"
       :tool-names="capabilities"
     >
       <template #actions>
@@ -274,7 +273,7 @@ watch(
             @click="clearError"
           />
         </div>
-        <div class="flex min-w-0 items-center gap-2">
+        <div v-if="terminalTargets.length > 1 || selectedTarget !== 'auto'" class="flex min-w-0 items-center gap-2">
           <USelect
             v-model="selectedTarget"
             :items="targetOptions"
@@ -288,13 +287,6 @@ watch(
             class="min-w-0 flex-1"
             portal="#workspace-ai-overlay"
           />
-          <span
-            v-if="selectedTarget === 'auto' && (displayedTarget || localShellPane)"
-            class="max-w-32 truncate text-[11px] text-muted"
-            :title="displayedTarget?.address || localShellPane?.assetName"
-          >
-            @{{ displayedTarget?.asset_name || localShellPane?.assetName }}
-          </span>
         </div>
         <AiComposer
           v-model="draft"
@@ -308,6 +300,7 @@ watch(
           execution-mode="foreground"
           :threshold-options="[]"
           :mode-options="[]"
+          :context-items="contextItems"
           @submit="submit"
           @interrupt="interruptWorkspaceAssistant(scopeId)"
         />

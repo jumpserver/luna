@@ -1,13 +1,10 @@
 <script setup lang="ts">
-import type { AiContextItem } from "./types";
-
 defineProps<{
   assistantName: string;
   description: string;
   statusLabel: string;
   statusTone: "ready" | "active" | "warning" | "error" | "success";
   busy: boolean;
-  contextItems: AiContextItem[];
   toolNames: readonly string[];
   runProgress?: string;
   riskLabel?: string;
@@ -49,19 +46,6 @@ const { t } = useI18n();
     </div>
 
     <p v-if="description" class="text-[10px] text-muted">{{ description }}</p>
-
-    <div v-if="contextItems.length" class="ai-context-strip">
-      <span class="flex shrink-0 items-center gap-1 text-[10px] font-medium text-muted">
-        <UIcon name="i-lucide-scan-eye" class="size-3" />
-        {{ t("RightPanel.AIContext") }}
-      </span>
-      <div class="flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <span v-for="item in contextItems" :key="item.key" class="ai-context-chip" :title="item.title">
-          <UIcon :name="item.icon" class="size-3 shrink-0" />
-          <span class="max-w-28 truncate">{{ item.label }}</span>
-        </span>
-      </div>
-    </div>
 
     <div v-if="toolNames.length" class="ai-context-strip">
       <span class="flex shrink-0 items-center gap-1 text-[10px] font-medium text-muted">

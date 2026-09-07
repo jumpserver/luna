@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AiSelectOption } from "./types";
+import type { AiContextItem, AiSelectOption } from "./types";
 
 defineProps<{
   showPolicy: boolean;
@@ -12,6 +12,7 @@ defineProps<{
   executionMode: string;
   thresholdOptions: AiSelectOption[];
   modeOptions: AiSelectOption[];
+  contextItems: AiContextItem[];
 }>();
 
 const emit = defineEmits<{
@@ -32,79 +33,150 @@ function handleSubmitKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="ai-composer">
-    <UTextarea
-      v-model="model"
-      :rows="2"
-      autoresize
-      :maxrows="5"
-      :placeholder="placeholder"
-      variant="none"
-      class="block w-full"
-      :disabled="busy"
-      :ui="{ base: 'min-h-24 rounded-lg pb-11 text-xs' }"
-      @keydown.enter.exact="handleSubmitKeydown"
-    />
-    <div class="absolute inset-x-2 bottom-2 flex items-center gap-1.5">
-      <div v-if="showPolicy" class="flex min-w-0 flex-1 items-center gap-1">
-        <USelect
-          v-if="thresholdOptions.length"
-          size="xs"
-          variant="soft"
-          icon="i-lucide-shield-check"
-          class="min-w-0 max-w-36"
-          :model-value="approvalThreshold"
-          :items="thresholdOptions"
-          :portal="aiPanelPortalTarget"
-          value-key="value"
-          label-key="label"
-          :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
-          @update:model-value="emit('updateApprovalThreshold', $event)"
-        />
-        <USelect
-          v-if="modeOptions.length"
-          size="xs"
-          variant="soft"
-          icon="i-lucide-git-branch"
-          class="min-w-0 max-w-32"
-          :model-value="executionMode"
-          :items="modeOptions"
-          :portal="aiPanelPortalTarget"
-          value-key="value"
-          label-key="label"
-          :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
-          @update:model-value="emit('updateExecutionMode', $event)"
-        />
+  <div class="ai-composer-stack">
+    <div v-if="contextItems.length" class="ai-composer-context">
+      <span class="flex h-[1.375rem] shrink-0 items-center gap-1 text-[10px] font-medium text-muted">
+        <UIcon name="i-lucide-scan-eye" class="size-3" />
+        {{ $t("RightPanel.AIContext") }}
+      </span>
+      <div class="ai-context-scroll flex min-w-0 flex-1 gap-1 overflow-x-auto">
+        <span v-for="item in contextItems" :key="item.key" class="ai-context-chip" :title="item.title">
+          <UIcon :name="item.icon" class="size-3 shrink-0" />
+          <span class="max-w-28 truncate">{{ item.label }}</span>
+        </span>
       </div>
-      <UTooltip v-if="running" :text="interruptLabel">
-        <UButton
-          class="ml-auto"
-          size="xs"
-          color="neutral"
-          variant="outline"
-          icon="i-fluent-stop-16-filled"
-          :ui="{ leadingIcon: 'size-2.5 text-error' }"
-          :aria-label="interruptLabel"
-          @click="emit('interrupt')"
-        />
-      </UTooltip>
-      <UTooltip v-if="!running || !busy" :text="actionLabel">
-        <UButton
-          :class="{ 'ml-auto': !running }"
-          size="xs"
-          color="primary"
-          variant="solid"
-          icon="i-lucide-arrow-up"
-          :aria-label="actionLabel"
-          :disabled="busy || !model.trim()"
-          @click="emit('submit')"
-        />
-      </UTooltip>
+    </div>
+
+    <div class="ai-composer">
+      <UTextarea
+        v-model="model"
+        :rows="2"
+        autoresize
+        :maxrows="5"
+        :placeholder="placeholder"
+        variant="none"
+        class="block w-full"
+        :disabled="busy"
+        :ui="{ base: 'min-h-24 rounded-lg pb-11 text-xs' }"
+        @keydown.enter.exact="handleSubmitKeydown"
+      />
+      <div class="absolute inset-x-2 bottom-2 flex items-center gap-1.5">
+        <div v-if="showPolicy" class="flex min-w-0 flex-1 items-center gap-1">
+          <USelect
+            v-if="thresholdOptions.length"
+            size="xs"
+            variant="soft"
+            icon="i-lucide-shield-check"
+            class="min-w-0 max-w-36"
+            :model-value="approvalThreshold"
+            :items="thresholdOptions"
+            :portal="aiPanelPortalTarget"
+            value-key="value"
+            label-key="label"
+            :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
+            @update:model-value="emit('updateApprovalThreshold', $event)"
+          />
+          <USelect
+            v-if="modeOptions.length"
+            size="xs"
+            variant="soft"
+            icon="i-lucide-git-branch"
+            class="min-w-0 max-w-32"
+            :model-value="executionMode"
+            :items="modeOptions"
+            :portal="aiPanelPortalTarget"
+            value-key="value"
+            label-key="label"
+            :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
+            @update:model-value="emit('updateExecutionMode', $event)"
+          />
+        </div>
+        <UTooltip v-if="running" :text="interruptLabel">
+          <UButton
+            class="ml-auto"
+            size="xs"
+            color="primary"
+            variant="solid"
+            icon="i-fluent-stop-16-filled"
+            :aria-label="interruptLabel"
+            @click="emit('interrupt')"
+          />
+        </UTooltip>
+        <UTooltip v-if="!running || !busy" :text="actionLabel">
+          <UButton
+            :class="{ 'ml-auto': !running }"
+            size="xs"
+            color="primary"
+            variant="solid"
+            icon="i-lucide-arrow-up"
+            :aria-label="actionLabel"
+            :disabled="busy || !model.trim()"
+            @click="emit('submit')"
+          />
+        </UTooltip>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+.ai-composer-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ai-composer-context {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.ai-context-chip {
+  display: inline-flex;
+  height: 1.375rem;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.375rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.375rem;
+  color: var(--app-muted);
+  background: var(--app-card-bg-soft);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+}
+
+.ai-context-scroll {
+  scrollbar-width: none;
+}
+
+.ai-context-scroll::-webkit-scrollbar {
+  height: 0;
+}
+
+.ai-context-scroll:hover,
+.ai-context-scroll:focus-within {
+  margin-bottom: -4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar-thumb) transparent;
+}
+
+.ai-context-scroll:hover::-webkit-scrollbar,
+.ai-context-scroll:focus-within::-webkit-scrollbar {
+  height: 4px;
+}
+
+.ai-context-scroll:hover::-webkit-scrollbar-thumb,
+.ai-context-scroll:focus-within::-webkit-scrollbar-thumb {
+  background-color: var(--app-scrollbar-thumb);
+}
+
+.ai-context-scroll:hover::-webkit-scrollbar-thumb:hover {
+  background-color: var(--app-scrollbar-thumb-hover);
+}
+
 .ai-composer {
   position: relative;
   overflow: hidden;
