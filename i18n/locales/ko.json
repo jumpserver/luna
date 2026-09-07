@@ -1200,6 +1200,7 @@
   },
   "ConnectError": {
     "ConnectFailed": "연결 실패",
+    "CredentialServiceUnavailable": "자격 증명 서비스(예: OpenBao)를 사용할 수 없습니다. 서비스 상태를 확인한 후 다시 시도하세요.",
     "AclFailed": "현재 자산은 ACL 정책으로 제한되어 클라이언트에서 접근할 수 없습니다. 웹 콘솔에서 연결하세요.",
     "ClientNotFound": "데스크톱 클라이언트를 찾을 수 없습니다. 클라이언트를 설치하거나 경로를 설정하세요.",
     "ClientLaunchFailed": "데스크톱 클라이언트를 실행하지 못했습니다. 설치 상태 또는 권한을 확인하세요.",

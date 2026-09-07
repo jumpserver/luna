@@ -1203,6 +1203,7 @@
   },
   "ConnectError": {
     "ConnectFailed": "连接失败",
+    "CredentialServiceUnavailable": "凭据服务（如 OpenBao）不可用，请检查服务状态后重试。",
     "AclFailed": "当前资产受到 ACL 访问限制，无法通过客户端连接，请前往 Web 端进行访问",
     "ClientNotFound": "未找到桌面客户端，请安装或在设置中配置路径",
     "ClientLaunchFailed": "启动桌面客户端失败，请检查安装或权限",

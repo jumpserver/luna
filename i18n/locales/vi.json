@@ -1200,6 +1200,7 @@
   },
   "ConnectError": {
     "ConnectFailed": "Kết nối thất bại",
+    "CredentialServiceUnavailable": "Dịch vụ thông tin xác thực (ví dụ: OpenBao) không khả dụng. Hãy kiểm tra trạng thái dịch vụ rồi thử lại.",
     "AclFailed": "Tài sản hiện tại bị giới hạn bởi chính sách ACL và không thể truy cập bằng máy khách. Hãy dùng bảng điều khiển web để kết nối.",
     "ClientNotFound": "Không tìm thấy máy khách máy tính. Vui lòng cài đặt hoặc cấu hình đường dẫn.",
     "ClientLaunchFailed": "Không thể khởi chạy máy khách máy tính. Hãy kiểm tra cài đặt hoặc quyền.",
