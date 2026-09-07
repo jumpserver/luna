@@ -1472,7 +1472,10 @@
       "askWhenNeeded": "Hỏi khi cần",
       "transferTaskUnit": "tác vụ truyền",
       "distributionQueueHint": "Tác vụ được xếp hàng theo tải kết nối. Theo dõi tiến độ trong trung tâm truyền.",
-      "distributeToTargets": "Phân phối đến {count} máy | Phân phối đến {count} máy"
+      "distributeToTargets": "Phân phối đến {count} máy | Phân phối đến {count} máy",
+      "activeTransferCloseTitle": "Đang tải lên",
+      "activeTransferCloseDescription": "Đóng phiên này sẽ dừng các tác vụ truyền tệp đang dùng phiên.",
+      "activeTransferCloseConfirm": "Vẫn đóng"
     },
     "sftpTransferCenter": {
       "title": "Trung tâm truyền",

@@ -1472,7 +1472,10 @@
       "askWhenNeeded": "Спрашивать при необходимости",
       "transferTaskUnit": "задач передачи",
       "distributionQueueHint": "Задачи ставятся в очередь в зависимости от нагрузки соединения. Отслеживайте прогресс в центре передачи.",
-      "distributeToTargets": "Распределить на {count} машину | Распределить на {count} машин"
+      "distributeToTargets": "Распределить на {count} машину | Распределить на {count} машин",
+      "activeTransferCloseTitle": "Идет загрузка",
+      "activeTransferCloseDescription": "Закрытие этой сессии остановит связанные с ней передачи файлов.",
+      "activeTransferCloseConfirm": "Все равно закрыть"
     },
     "sftpTransferCenter": {
       "title": "Центр передачи",

@@ -1472,7 +1472,10 @@
       "askWhenNeeded": "Ask when needed",
       "transferTaskUnit": "transfer tasks",
       "distributionQueueHint": "Tasks are queued by connection load. Track their progress in the transfer center.",
-      "distributeToTargets": "Distribute to {count} machine | Distribute to {count} machines"
+      "distributeToTargets": "Distribute to {count} machine | Distribute to {count} machines",
+      "activeTransferCloseTitle": "Uploads in progress",
+      "activeTransferCloseDescription": "Closing this session will stop file transfers that use it.",
+      "activeTransferCloseConfirm": "Close anyway"
     },
     "sftpTransferCenter": {
       "title": "Transfer center",

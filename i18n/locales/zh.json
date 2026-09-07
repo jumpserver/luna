@@ -1475,7 +1475,10 @@
       "askWhenNeeded": "遇到时询问",
       "transferTaskUnit": "个传输任务",
       "distributionQueueHint": "任务将按连接负载排队执行，可在传输中心查看进度。",
-      "distributeToTargets": "开始分发到 {count} 台机器"
+      "distributeToTargets": "开始分发到 {count} 台机器",
+      "activeTransferCloseTitle": "文件正在传输",
+      "activeTransferCloseDescription": "关闭此会话会中断正在进行的文件传输。",
+      "activeTransferCloseConfirm": "仍然关闭"
     },
     "sftpTransferCenter": {
       "title": "传输中心",

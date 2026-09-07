@@ -1472,7 +1472,10 @@
       "askWhenNeeded": "필요할 때 묻기",
       "transferTaskUnit": "전송 작업",
       "distributionQueueHint": "작업은 연결 부하에 따라 대기열에 들어갑니다. 진행 상태는 전송 센터에서 확인하세요.",
-      "distributeToTargets": "{count}개 머신에 배포 | {count}개 머신에 배포"
+      "distributeToTargets": "{count}개 머신에 배포 | {count}개 머신에 배포",
+      "activeTransferCloseTitle": "업로드가 진행 중입니다",
+      "activeTransferCloseDescription": "이 세션을 닫으면 해당 세션을 사용하는 파일 전송이 중단됩니다.",
+      "activeTransferCloseConfirm": "그래도 닫기"
     },
     "sftpTransferCenter": {
       "title": "전송 센터",

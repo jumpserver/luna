@@ -1472,7 +1472,10 @@
       "askWhenNeeded": "必要時に確認",
       "transferTaskUnit": "転送タスク",
       "distributionQueueHint": "タスクは接続負荷に応じてキューに追加されます。転送センターで進捗を確認できます。",
-      "distributeToTargets": "{count} 台のマシンに配布 | {count} 台のマシンに配布"
+      "distributeToTargets": "{count} 台のマシンに配布 | {count} 台のマシンに配布",
+      "activeTransferCloseTitle": "アップロード中です",
+      "activeTransferCloseDescription": "このセッションを閉じると、使用中のファイル転送が停止します。",
+      "activeTransferCloseConfirm": "それでも閉じる"
     },
     "sftpTransferCenter": {
       "title": "転送センター",

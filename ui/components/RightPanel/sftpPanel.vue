@@ -305,6 +305,7 @@ onUnmounted(disposeTrackedCompactAiOwners);
         :key="inlineTab.id"
         :tab="inlineTab"
         :ai-owner-id="compactAiOwnerId"
+        :close-guard-session-id="activeWorkspaceSession?.id"
         compact
         class="min-h-0 flex-1"
         @capabilities="inlineCapabilities = $event"

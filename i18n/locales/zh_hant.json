@@ -1472,7 +1472,10 @@
       "askWhenNeeded": "遇到時詢問",
       "transferTaskUnit": "個傳輸任務",
       "distributionQueueHint": "任務將按連線負載排隊執行，可在傳輸中心檢視進度。",
-      "distributeToTargets": "開始分發到 {count} 臺機器 | 開始分發到 {count} 臺機器"
+      "distributeToTargets": "開始分發到 {count} 臺機器 | 開始分發到 {count} 臺機器",
+      "activeTransferCloseTitle": "檔案正在傳輸",
+      "activeTransferCloseDescription": "關閉此工作階段會中斷正在進行的檔案傳輸。",
+      "activeTransferCloseConfirm": "仍然關閉"
     },
     "sftpTransferCenter": {
       "title": "傳輸中心",

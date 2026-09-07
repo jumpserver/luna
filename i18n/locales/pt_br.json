@@ -1472,7 +1472,10 @@
       "askWhenNeeded": "Perguntar quando necessário",
       "transferTaskUnit": "tarefas de transferência",
       "distributionQueueHint": "As tarefas entram na fila de acordo com a carga das conexões. Acompanhe o progresso na central de transferências.",
-      "distributeToTargets": "Distribuir para {count} computador | Distribuir para {count} computadores"
+      "distributeToTargets": "Distribuir para {count} computador | Distribuir para {count} computadores",
+      "activeTransferCloseTitle": "Uploads em andamento",
+      "activeTransferCloseDescription": "Fechar esta sessão interromperá as transferências de arquivos que a usam.",
+      "activeTransferCloseConfirm": "Fechar mesmo assim"
     },
     "sftpTransferCenter": {
       "title": "Central de transferências",

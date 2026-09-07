@@ -292,6 +292,9 @@ describe("sftp right-panel compact mode", () => {
     expect(globalWorkspaceComponent).toContain('@browser-upload="uploadBrowserFiles($event, pane.transferEndpoint)"');
     expect(transferCoordinatorComposable).toContain("function uploadBrowserFiles");
     expect(transferCoordinatorComposable).toContain("function uploadToPrimary");
+    expect(fileManagementIndex).toContain("confirmLeaveActiveTransfers");
+    expect(fileManagerSessionSurface).toContain(":close-guard-session-id=");
+    expect(transferCenterComponent).toContain("activeTransferCloseTitle");
     expect(remotePaneActions).not.toContain("COMPACT_SFTP_UPLOAD_MAX_BYTES");
   });
 

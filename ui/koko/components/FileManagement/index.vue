@@ -12,6 +12,8 @@ import SftpSessionWorkspace from "#koko/components/FileManagement/workspace/Sftp
 import { useSftpTransferCoordinator } from "#koko/composables/sftp/file-manager/useSftpTransferCoordinator";
 import { useSftpWorkspacePanes } from "#koko/composables/sftp/file-manager/useSftpWorkspacePanes";
 import { useSftpTour } from "#koko/composables/sftp/useSftpTour";
+import { useSftpTransferUi } from "#koko/composables/sftp/useSftpTransferUi";
+import { useKokoHostAdapter } from "#koko/host";
 
 const props = defineProps<{
   sftpToken?: string;
@@ -19,6 +21,8 @@ const props = defineProps<{
   global?: boolean;
   /** Single-pane lightweight mode for the SSH right-panel SFTP surface. */
   compact?: boolean;
+  /** Workspace pane id to block-close while this surface has active transfers. */
+  closeGuardSessionId?: string;
   /** Stable owner used to route this workbench's selected SFTP pane to File AI. */
   aiOwnerId?: string;
   /** Asset that owns the primary SFTP session (for upgrade into the workbench). */
@@ -80,6 +84,28 @@ const transfer = useSftpTransferCoordinator({
   translate,
   showError: addErrorToast
 });
+const host = useKokoHostAdapter();
+const { confirmLeaveActiveTransfers } = useSftpTransferUi();
+let unregisterCloseGuard: (() => void) | undefined;
+
+function closeGuardEndpointIds() {
+  return [primaryTransferEndpoint.value?.id, ...remotePanes.value.map((pane) => pane.transferEndpoint.id)].filter(
+    (id): id is string => Boolean(id)
+  );
+}
+
+watch(
+  () => props.closeGuardSessionId,
+  (sessionId) => {
+    unregisterCloseGuard?.();
+    unregisterCloseGuard = undefined;
+    if (!sessionId) return;
+    unregisterCloseGuard = host.registerSessionCloseGuard?.(sessionId, () =>
+      confirmLeaveActiveTransfers(closeGuardEndpointIds())
+    );
+  },
+  { immediate: true }
+);
 
 onMounted(() => {
   initializeGlobalWorkspace();
@@ -91,6 +117,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (tourTimer) clearTimeout(tourTimer);
+  unregisterCloseGuard?.();
   sftpTour.destroy();
 });
 

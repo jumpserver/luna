@@ -1,5 +1,6 @@
 import type { FileTransferStatus } from "@jumpserver/connectors-core";
 import { computed } from "vue";
+import { sftpEndpointHasActiveTransfers } from "#koko/composables/sftp/file-manager/transfer-center/useSftpTransferCenterSelectors";
 import { useFileTransferStore } from "#koko/stores/fileTransfer";
 
 export type SftpTransferTone = "idle" | "moving" | "paused" | "failed";
@@ -43,6 +44,30 @@ export function useSftpTransferUi() {
     await store.restore();
   }
 
+  const leaveConfirm = useState<{ resolve: (confirmed: boolean) => void } | null>(
+    "sftp-transfer-leave-confirm",
+    () => null
+  );
+  const leaveConfirmOpen = computed({
+    get: () => leaveConfirm.value !== null,
+    set: (open) => {
+      if (!open) resolveLeaveConfirm(false);
+    }
+  });
+
+  function resolveLeaveConfirm(confirmed: boolean) {
+    const pending = leaveConfirm.value;
+    leaveConfirm.value = null;
+    pending?.resolve(confirmed);
+  }
+
+  async function confirmLeaveActiveTransfers(endpointIds: Iterable<string>) {
+    if (!sftpEndpointHasActiveTransfers(store.tasks, endpointIds)) return true;
+    return new Promise<boolean>((resolve) => {
+      leaveConfirm.value = { resolve };
+    });
+  }
+
   return {
     open,
     hasTasks,
@@ -53,6 +78,9 @@ export function useSftpTransferUi() {
     transferTone,
     taskCount,
     attentionSequence,
+    leaveConfirmOpen,
+    confirmLeaveActiveTransfers,
+    confirmLeave: () => resolveLeaveConfirm(true),
     toggle,
     setOpen,
     signalQueued,
