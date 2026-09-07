@@ -2,6 +2,7 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { WorkspaceUiAssetCandidate } from "~/composables/useWorkspaceUiAutomation";
 import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
+import { useAssetTreeSearch } from "~/composables/useAssetTree";
 import { workspaceTourArmed, workspaceTourCompleted } from "~/composables/useWorkspaceTour";
 import { toWorkspaceUiAssetCandidate } from "~/composables/useWorkspaceUiAutomation";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -50,11 +51,9 @@ const activeTreeKind = ref<PanelKind>("authorization");
 const recentNodeOpen = ref(false);
 const authorizationNodes = ref<AssetTreeNode[]>([]);
 const typeNodes = ref<AssetTreeNode[]>([]);
-const searchNodes = ref<AssetTreeNode[]>([]);
 const loading = ref(false);
 const authorizationLoaded = ref(false);
 const tourDemoNodes = ref<AssetTreeNode[]>([]);
-const searchLoading = ref(false);
 const batchMode = ref(false);
 const batchAction = ref<BatchAction>("open");
 const checkedAssets = ref<Record<string, AssetItem>>({});
@@ -62,8 +61,6 @@ const checkedNodeIds = ref<string[]>([]);
 const nodeMenuVisible = ref(false);
 const nodeMenuPosition = ref({ x: 0, y: 0 });
 const nodeMenuTarget = ref<{ node: AssetTreeNode; kind: PanelKind } | null>(null);
-const completedSearchQuery = ref("");
-let searchRequestEpoch = 0;
 let treeRequestEpoch = 0;
 let lastErrorSignature = "";
 let lastErrorAt = 0;
@@ -255,7 +252,6 @@ const loadRoot = async (kind: PanelKind, requestEpoch: number) => {
 const refresh = async () => {
   treeRequestEpoch += 1;
   const requestEpoch = treeRequestEpoch;
-  searchNodes.value = [];
   checkedAssets.value = {};
   checkedNodeIds.value = [];
   loadRecentConnections();
@@ -520,7 +516,25 @@ const nodeMenuItems = computed<DropdownMenuItem[]>(() => {
   ];
 });
 
-const respondToWorkspaceUiCommand = () => {
+const {
+  nodes: searchNodes,
+  loading: searchLoading,
+  completedQuery: completedSearchQuery
+} = useAssetTreeSearch(() => props.search, {
+  onResults(query, nodes) {
+    reportWorkspaceSearchResults(query, collectAssetCandidates(nodes));
+    respondToWorkspaceUiCommand();
+  },
+  onError(query, error) {
+    reportError(error);
+    const command = workspaceUiCommand.value;
+    if (command?.status === "pending" && command.type === "set-search" && command.query === query) {
+      rejectWorkspaceUiCommand(command.id, "search_failed", error instanceof Error ? error.message : String(error));
+    }
+  }
+});
+
+function respondToWorkspaceUiCommand() {
   const command = workspaceUiCommand.value;
   if (!command || command.status !== "pending") return;
 
@@ -545,45 +559,8 @@ const respondToWorkspaceUiCommand = () => {
   if (query && completedSearchQuery.value === query && query === workspaceSearchQuery.value) {
     rejectWorkspaceUiCommand(command.id, "asset_not_found", `Asset ${command.assetId} is not in the current search`);
   }
-};
+}
 
-const searchTree = useDebounceFn(async (keyword: string, requestEpoch: number) => {
-  const query = keyword.trim();
-  if (!query || !loggedIn.value) {
-    searchNodes.value = [];
-    completedSearchQuery.value = "";
-    return;
-  }
-  searchLoading.value = true;
-  try {
-    const nodes = await fetchTree("search", undefined, query);
-    if (requestEpoch !== searchRequestEpoch || props.search.trim() !== query) return;
-
-    searchNodes.value = nodes;
-    completedSearchQuery.value = query;
-    reportWorkspaceSearchResults(query, collectAssetCandidates(nodes));
-    respondToWorkspaceUiCommand();
-  } catch (error) {
-    if (requestEpoch !== searchRequestEpoch || props.search.trim() !== query) return;
-    reportError(error);
-    const command = workspaceUiCommand.value;
-    if (command?.status === "pending" && command.type === "set-search" && command.query === query) {
-      rejectWorkspaceUiCommand(command.id, "search_failed", error instanceof Error ? error.message : String(error));
-    }
-  } finally {
-    if (requestEpoch === searchRequestEpoch) searchLoading.value = false;
-  }
-}, 250);
-
-watch(
-  () => props.search,
-  (value) => {
-    searchRequestEpoch += 1;
-    completedSearchQuery.value = "";
-    void searchTree(value, searchRequestEpoch);
-  },
-  { immediate: true }
-);
 watch(
   () => props.search,
   (value) => {
@@ -594,19 +571,15 @@ watch(
   }
 );
 watch(
-  [loggedIn, orgId, currentSite, currentAccountId],
+  [loggedIn, orgId, currentSite, currentAccountId, () => Boolean(props.search.trim())],
   ([isLoggedIn]) => {
-    searchRequestEpoch += 1;
     authorizationNodes.value = [];
     typeNodes.value = [];
-    searchNodes.value = [];
     authorizationLoaded.value = false;
     tourDemoNodes.value = [];
-    completedSearchQuery.value = "";
-    searchLoading.value = false;
     closeBatchMode();
     closeNodeMenu();
-    if (isLoggedIn) {
+    if (isLoggedIn && !props.search.trim()) {
       refresh();
     } else {
       treeRequestEpoch += 1;

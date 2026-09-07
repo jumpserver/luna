@@ -60,7 +60,7 @@ interface WorkspaceUiFocusOptions extends WorkspaceUiActionOptions {
   query?: string;
 }
 
-class WorkspaceUiAutomationError extends Error {
+export class WorkspaceUiAutomationError extends Error {
   readonly code: string;
 
   constructor(code: string, message: string) {
