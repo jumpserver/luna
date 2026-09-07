@@ -1,4 +1,5 @@
 import type { AssetItem, AssetTreeKind, AssetTreeNode, PermedAccount, PermedProtocol } from "~/types";
+import { ref, shallowRef, watch } from "vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface TreeQuery {
@@ -112,4 +113,57 @@ export const useAssetTree = () => {
     fetchTree,
     treeNodeToAsset
   };
+};
+
+export const useAssetTreeSearch = (
+  search: () => string,
+  callbacks: {
+    onResults: (query: string, nodes: AssetTreeNode[]) => void;
+    onError: (query: string, error: unknown) => void;
+  }
+) => {
+  const userInfoStore = useUserInfoStore();
+  const { fetchTree } = useAssetTree();
+  const nodes = ref<AssetTreeNode[]>([]);
+  const loading = shallowRef(false);
+  const completedQuery = shallowRef("");
+
+  watch(
+    [
+      () => search().trim(),
+      () => userInfoStore.loggedIn,
+      () => userInfoStore.orgId,
+      () => userInfoStore.currentSite,
+      () => userInfoStore.currentAccountId
+    ],
+    ([query, loggedIn], _previous, onCleanup) => {
+      nodes.value = [];
+      completedQuery.value = "";
+      loading.value = Boolean(query && loggedIn);
+      if (!query || !loggedIn) return;
+
+      let active = true;
+      const timer = setTimeout(async () => {
+        try {
+          const results = await fetchTree("search", undefined, query);
+          if (!active) return;
+          nodes.value = results;
+          completedQuery.value = query;
+          callbacks.onResults(query, results);
+        } catch (error) {
+          if (active) callbacks.onError(query, error);
+        } finally {
+          if (active) loading.value = false;
+        }
+      }, 250);
+
+      onCleanup(() => {
+        active = false;
+        clearTimeout(timer);
+      });
+    },
+    { immediate: true }
+  );
+
+  return { nodes, loading, completedQuery };
 };

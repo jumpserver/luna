@@ -40,7 +40,7 @@ import { useConnectMethods, isConnectMethodAvailable } from "~/composables/useCo
 import { getAssetDetailRequest } from "~/composables/useApiRequest";
 import { useConnectionLauncher } from "~/composables/useConnectionLauncher";
 import { useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
-import { useWorkspaceUiAutomation } from "~/composables/useWorkspaceUiAutomation";
+import { useWorkspaceUiAutomation, WorkspaceUiAutomationError } from "~/composables/useWorkspaceUiAutomation";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { isDesktopRuntime } from "~/utils/runtime";
 
@@ -1289,11 +1289,15 @@ async function handleLocalToolFrame(
     }
     result = await invocation.promise;
   } catch (cause) {
-    const cancelled = cause instanceof DOMException && cause.name === "AbortError";
+    const cancelled =
+      (cause instanceof DOMException && cause.name === "AbortError") ||
+      (cause instanceof WorkspaceUiAutomationError && cause.code === "aborted");
     error = {
       code: cancelled ? -32800 : -32602,
       message:
-        cause instanceof WorkspaceAssistantError || cause instanceof WorkspaceOperationError
+        cause instanceof WorkspaceAssistantError ||
+        cause instanceof WorkspaceOperationError ||
+        cause instanceof WorkspaceUiAutomationError
           ? cause.message
           : cancelled
             ? "Workspace tool call was cancelled"
