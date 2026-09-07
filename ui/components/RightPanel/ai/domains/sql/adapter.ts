@@ -77,7 +77,7 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
     }
 
     return {
-      assistantName: context.t("RightPanel.SQLAIName"),
+      assistantName: context.t("RightPanel.LunaAiName"),
       headerDescription: context.t("RightPanel.SQLAIHeaderDescription"),
       available: Boolean(current.enabled),
       busy,
@@ -102,7 +102,7 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
       backgroundReasonLabel: "",
       elapsedDurationMs,
       contextItems,
-      toolNames: [...current.agent.state.toolNames],
+      toolNames: [context.t("RightPanel.LunaAiCapabilityWriteSql")],
       showPolicy: false,
       showRuntimeStatus: false,
       showElapsedInError: true,

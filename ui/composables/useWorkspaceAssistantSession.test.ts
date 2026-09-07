@@ -215,6 +215,30 @@ describe("Workspace Assistant capability", () => {
     ).toMatchObject({ data: { profile: "workspace" } });
   });
 
+  it("exposes destructive local shell tools only for a Local Shell tab", () => {
+    const manifest = workspaceAssistantManifest("workspace-resource", {
+      scopeId: "local-tab",
+      organizationId: "org-1",
+      uiRevision: 7,
+      tabId: "tab-local",
+      localShell: true
+    });
+
+    expect(manifest.context).toMatchObject({ tab_id: "tab-local", local_shell_available: true });
+    expect(manifest.tools.map((tool) => tool.name)).toEqual(
+      expect.arrayContaining(["read_local_shell", "run_local_shell_command"])
+    );
+    expect(manifest.tools.find((tool) => tool.name === "read_local_shell")?.annotations).toMatchObject({
+      readOnlyHint: true,
+      destructiveHint: false
+    });
+    expect(manifest.tools.find((tool) => tool.name === "run_local_shell_command")?.annotations).toMatchObject({
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false
+    });
+  });
+
   it("keeps the Kael panel scope identifier within the server limit", () => {
     const scopeId = workspaceAssistantScopeId();
     expect(scopeId).toMatch(/^workspace-scope-/);

@@ -21,6 +21,14 @@ interface LocalShellSession {
   terminal?: Terminal;
 }
 
+export interface LocalShellTerminalSnapshot {
+  text: string;
+  lines: number;
+  truncated: boolean;
+  bufferType: string;
+  cursor: { column: number; row: number };
+}
+
 type TerminalCursorAnchorListener = (anchor: TerminalCursorAnchor | null) => void;
 
 const sessions = new Map<string, TerminalSession>();
@@ -132,6 +140,36 @@ export function unregisterLocalShellTerminalSession(tabId: string) {
   if (!tabId) return;
   localShellSessions.delete(tabId);
   rebindTerminalListeners(tabId);
+}
+
+export function getLocalShellTerminalSnapshot(tabId: string, requestedLines = 80): LocalShellTerminalSnapshot | null {
+  const terminal = localShellSessions.get(tabId)?.terminal;
+  if (!terminal) return null;
+
+  const buffer = terminal.buffer.active;
+  const lineLimit = Math.max(1, Math.min(200, Math.floor(requestedLines) || 80));
+  const start = Math.max(0, buffer.length - lineLimit);
+  const lines: string[] = [];
+  for (let index = start; index < buffer.length; index += 1) {
+    lines.push(buffer.getLine(index)?.translateToString(true) || "");
+  }
+  const fullText = lines.join("\n");
+  const text = fullText.slice(-65536);
+
+  return {
+    text,
+    lines: lines.length,
+    truncated: start > 0 || text.length < fullText.length,
+    bufferType: buffer.type,
+    cursor: { column: buffer.cursorX, row: buffer.baseY + buffer.cursorY }
+  };
+}
+
+export function sendLocalShellTerminalData(tabId: string, data: string) {
+  const session = localShellSessions.get(tabId);
+  if (!session) return false;
+  session.send(data);
+  return true;
 }
 
 export function registerKokoTerminalDataSender(tabId: string, send: (data: string) => boolean) {

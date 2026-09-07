@@ -59,7 +59,7 @@ export const scriptAiPanelDomain: AiPanelDomainAdapter = {
     }
 
     return {
-      assistantName: context.t("RightPanel.ScriptAIName"),
+      assistantName: context.t("RightPanel.LunaAiName"),
       headerDescription: context.t("RightPanel.ScriptAIHeaderDescription"),
       available: isScriptAiAvailable(current.paneId),
       busy,
@@ -84,7 +84,7 @@ export const scriptAiPanelDomain: AiPanelDomainAdapter = {
       backgroundReasonLabel: "",
       elapsedDurationMs: 0,
       contextItems,
-      toolNames: [...current.agent.state.toolNames],
+      toolNames: [context.t("RightPanel.LunaAiCapabilityEditScripts")],
       showPolicy: false,
       showRuntimeStatus: true,
       showElapsedInError: false,

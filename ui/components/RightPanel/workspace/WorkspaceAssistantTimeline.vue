@@ -153,7 +153,13 @@ function approvalId(data: Record<string, any>) {
 
 function terminalToolLabel(data: Record<string, any>) {
   const name = String(data.toolName || data.tool_name || data.tool || "");
-  return ["list_terminal_targets", "start_terminal_task", "get_terminal_task"].includes(name)
+  return [
+    "list_terminal_targets",
+    "start_terminal_task",
+    "get_terminal_task",
+    "read_local_shell",
+    "run_local_shell_command"
+  ].includes(name)
     ? t(`RightPanel.LunaAiTool_${name}`)
     : "";
 }
@@ -185,7 +191,8 @@ function approvalTarget(data: Record<string, any>) {
     "section",
     "visible",
     "target_id",
-    "prompt"
+    "prompt",
+    "command"
   ];
   const describe = (value: unknown) => {
     const id = String(value);

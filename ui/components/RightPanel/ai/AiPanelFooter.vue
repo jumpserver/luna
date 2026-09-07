@@ -76,7 +76,7 @@ const { t } = useI18n();
     <AiComposer
       v-model="draft"
       :show-policy="presentation.showPolicy"
-      :busy="presentation.busy"
+      :busy="presentation.busy || !presentation.available"
       :running="presentation.running"
       :action-label="presentation.actionLabel"
       :interrupt-label="presentation.interruptLabel"

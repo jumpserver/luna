@@ -66,6 +66,7 @@ const {
   timelineRevision,
   submit,
   interrupt,
+  newSession,
   clearError,
   updateApprovalThreshold,
   updateExecutionMode,
@@ -79,6 +80,9 @@ const displayedUnavailableState = computed(() => {
     description: t("RightPanel.FileAIUnavailableDescription")
   };
 });
+const timelineEmptyState = computed(() =>
+  presentation.value?.available ? presentation.value.empty : displayedUnavailableState.value
+);
 </script>
 
 <template>
@@ -96,11 +100,21 @@ const displayedUnavailableState = computed(() => {
       :risk-color="riskColor"
     >
       <template #actions>
+        <UTooltip v-if="session" :text="t('RightPanel.AINewSessionDescription')">
+          <UButton
+            icon="i-lucide-plus"
+            :aria-label="t('RightPanel.AINewSession')"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            @click="newSession"
+          />
+        </UTooltip>
         <slot name="actions" />
       </template>
     </AiPresenceHeader>
 
-    <div v-if="!presentation?.available" class="grid min-h-0 flex-1 place-items-center p-4">
+    <div v-if="!session || !presentation" class="grid min-h-0 flex-1 place-items-center p-4">
       <UEmpty
         :icon="displayedUnavailableState.icon"
         size="sm"
@@ -110,13 +124,13 @@ const displayedUnavailableState = computed(() => {
       />
     </div>
 
-    <template v-else-if="session && presentation">
+    <template v-else>
       <AiTimeline
         :items="viewItems"
         :session="session"
         :assistant-name="presentation.assistantName"
         :empty="viewItems.length === 0"
-        :empty-state="presentation.empty"
+        :empty-state="timelineEmptyState"
         :activity-label="activityLabel"
         :revision="timelineRevision"
         @action="handleTimelineAction"

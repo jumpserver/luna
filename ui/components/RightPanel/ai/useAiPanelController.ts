@@ -158,6 +158,13 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
     if (current && adapter.value) adapter.value.interrupt(current, domainContext.value);
   }
 
+  async function newSession() {
+    const current = session.value;
+    if (!current) return;
+    current.draft = "";
+    await current.agent.actions.newSession().catch(() => undefined);
+  }
+
   function clearError() {
     const current = session.value;
     if (current && adapter.value) adapter.value.clearError(current);
@@ -194,6 +201,7 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
     timelineRevision,
     submit,
     interrupt,
+    newSession,
     clearError,
     updateApprovalThreshold,
     updateExecutionMode,

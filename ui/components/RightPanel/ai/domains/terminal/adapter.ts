@@ -106,7 +106,7 @@ export const terminalAiPanelDomain: AiPanelDomainAdapter = {
     });
 
     return {
-      assistantName: context.t("TerminalAi.Title"),
+      assistantName: context.t("RightPanel.LunaAiName"),
       headerDescription: context.t("RightPanel.AIHeaderDescription"),
       available: isKokoTerminalAiAvailable(context.paneId),
       busy,
@@ -134,7 +134,7 @@ export const terminalAiPanelDomain: AiPanelDomainAdapter = {
       ),
       elapsedDurationMs: 0,
       contextItems,
-      toolNames: [...current.agent.state.toolNames],
+      toolNames: [context.t("RightPanel.LunaAiCapabilityTerminalTasks")],
       showPolicy: true,
       showRuntimeStatus: false,
       showElapsedInError: false,

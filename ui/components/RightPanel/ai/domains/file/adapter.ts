@@ -91,7 +91,7 @@ export const fileAiPanelDomain: AiPanelDomainAdapter = {
     const errorLabel = current.errorCode || current.errorText ? context.t("RightPanel.FileAIFailed") : "";
 
     return {
-      assistantName: context.t("RightPanel.FileAIName"),
+      assistantName: context.t("RightPanel.LunaAiName"),
       headerDescription: context.t("RightPanel.FileAIHeaderDescription"),
       available: isKokoFileAiAvailable(current.targetId),
       busy,
@@ -116,7 +116,7 @@ export const fileAiPanelDomain: AiPanelDomainAdapter = {
       backgroundReasonLabel: "",
       elapsedDurationMs: 0,
       contextItems,
-      toolNames: [...current.agent.state.toolNames],
+      toolNames: [context.t("RightPanel.LunaAiCapabilityManageFiles")],
       showPolicy: true,
       showRuntimeStatus: true,
       showElapsedInError: false,

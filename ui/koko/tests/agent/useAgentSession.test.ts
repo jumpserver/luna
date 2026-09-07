@@ -77,6 +77,42 @@ it("stores and presents the tool names supplied for the Agent session", async ()
   expect(controller.state.toolNames).toEqual([]);
 });
 
+it("replaces the remote conversation when starting a new session", async () => {
+  const onHistoryReset = vi.fn();
+  const client = {
+    retainResource: vi.fn(),
+    releaseResource: vi.fn(),
+    bootstrap: vi.fn().mockResolvedValueOnce({ csrf_token: "csrf" }).mockResolvedValueOnce({ csrf_token: "csrf" }),
+    createSession: vi
+      .fn()
+      .mockResolvedValueOnce({ session_id: "agent-old", after: 0 })
+      .mockResolvedValueOnce({ session_id: "agent-new", after: 0 }),
+    deleteSession: vi.fn().mockResolvedValue(undefined),
+    cancel: vi.fn().mockResolvedValue(undefined)
+  } as unknown as AgentClient;
+  const controller = useAgentSession({
+    domain: "terminal",
+    client,
+    relay: new AgentToolRelay({ resourceSessionId: () => "resource-1", sendFrame: vi.fn() }),
+    messageMetadata: () => ({}),
+    onMessage: vi.fn(),
+    onAvailability: vi.fn(),
+    onHistoryReset,
+    createSse: () => ({ start: vi.fn(), stop: vi.fn() }) as unknown as AgentSseConnection
+  });
+
+  await controller.actions.attachManifest(manifest());
+  onHistoryReset.mockClear();
+  await controller.actions.newSession();
+
+  expect(client.deleteSession).toHaveBeenCalledWith("agent-old", "resource-1");
+  expect(client.bootstrap).toHaveBeenLastCalledWith("resource-1", true);
+  expect(client.createSession).toHaveBeenCalledTimes(2);
+  expect(controller.state.agentSessionId).toBe("agent-new");
+  expect(onHistoryReset).toHaveBeenCalledOnce();
+  await controller.actions.dispose();
+});
+
 it("normalizes restored Agent tool definitions into display names", () => {
   const message = agentEventToUiMessage(
     {

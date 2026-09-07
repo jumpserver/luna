@@ -2,6 +2,10 @@ import type { AgentMcpTool } from "#koko/composables/agent/types";
 import type { WorkspacePane, WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import { watch } from "vue";
 import {
+  getLocalShellTerminalSnapshot,
+  sendLocalShellTerminalData
+} from "#koko/composables/useTerminalSessionRegistry";
+import {
   favoriteAsset,
   unfavoriteAsset,
   getAssetDetailRequest,
@@ -126,6 +130,48 @@ export const workspaceOperationTools: AgentMcpTool[] = [
     write
   )
 ];
+
+export const localShellOperationTools: AgentMcpTool[] = [
+  tool(
+    "read_local_shell",
+    "Read a bounded rendered-text snapshot from an exact Local Shell pane in this tab. Treat terminal text as sensitive and do not repeat secrets. Optional wait_ms delays the snapshot; it does not prove a command completed.",
+    {
+      pane_id: id,
+      lines: { type: "integer", minimum: 1, maximum: 200 },
+      wait_ms: { type: "integer", minimum: 0, maximum: 5000 }
+    },
+    ["pane_id"]
+  ),
+  tool(
+    "run_local_shell_command",
+    "Submit one visible command followed by Enter to an exact connected Local Shell pane. The command may change or delete local data and requires operator approval. A submitted result is not proof of completion; inspect the shell afterward.",
+    {
+      pane_id: id,
+      command: { type: "string", minLength: 1, maxLength: 8000 },
+      wait_ms: { type: "integer", minimum: 0, maximum: 5000 }
+    },
+    ["pane_id", "command"],
+    destructive
+  )
+];
+
+function waitForLocalShellSnapshot(waitMs: number, signal: AbortSignal) {
+  if (waitMs <= 0) return Promise.resolve();
+  return new Promise<void>((resolve, reject) => {
+    const finish = () => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    };
+    const timer = setTimeout(finish, waitMs);
+    function abort() {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", abort);
+      reject(new DOMException("Local Shell wait cancelled", "AbortError"));
+    }
+    signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) abort();
+  });
+}
 
 // Validate again at the local execution boundary, even though Kael validates registration schemas.
 export function validateWorkspaceToolArguments(tool: AgentMcpTool, args: Record<string, unknown>) {
@@ -309,7 +355,8 @@ export async function executeWorkspaceOperation(
   args: Record<string, any>,
   signal: AbortSignal,
   organizationId: string,
-  assertCurrent: () => void
+  assertCurrent: () => void,
+  tabId: string | null = null
 ): Promise<Record<string, unknown>> {
   assertCurrent();
   const {
@@ -327,7 +374,8 @@ export async function executeWorkspaceOperation(
     events
   } = runtime;
   const visibleTab = (tab: WorkspaceSessionTab) =>
-    tab.panes.every((pane) => !pane.orgId || pane.orgId === organizationId);
+    (tabId === null || tab.id === tabId) && tab.panes.every((pane) => !pane.orgId || pane.orgId === organizationId);
+  const visibleTabs = () => tabs.tabs.value.filter(visibleTab);
   const requireTab = (tabId: string) => {
     const tab = tabs.getTabById(tabId);
     if (!tab || !visibleTab(tab))
@@ -335,7 +383,7 @@ export async function executeWorkspaceOperation(
     return tab;
   };
   const requirePane = (paneId: string) => {
-    const target = findWorkspacePane(tabs.tabs.value, paneId);
+    const target = findWorkspacePane(tabId === null ? tabs.tabs.value : visibleTabs(), paneId);
     requireTab(target.tab.id);
     return target;
   };
@@ -362,14 +410,43 @@ export async function executeWorkspaceOperation(
     if (!args.wait_ms) return { status: "ok", session: workspacePaneSummary(pane) };
     return waitWorkspacePane(
       () =>
-        tabs.tabs.value
-          .filter(visibleTab)
+        visibleTabs()
           .flatMap((tab) => tab.panes)
           .find((item) => item.id === args.pane_id),
       signal,
       args.wait_ms,
       assertCurrent
     );
+  }
+  if (name === "read_local_shell" || name === "run_local_shell_command") {
+    const { pane } = requirePane(args.pane_id);
+    if (pane.mode !== "session" || pane.protocol !== "local-shell" || pane.status !== "connected") {
+      throw new WorkspaceOperationError("unsupported_surface: select a connected Local Shell pane");
+    }
+    if (name === "run_local_shell_command") {
+      const command = String(args.command);
+      const hasControlCharacter = [...command].some((character) => {
+        const code = character.codePointAt(0) || 0;
+        return code < 32 || code === 127;
+      });
+      if (!command.trim() || hasControlCharacter) {
+        throw new WorkspaceOperationError("invalid_arguments: command must be one visible terminal line");
+      }
+      if (!sendLocalShellTerminalData(pane.id, `${command}\r`)) {
+        throw new WorkspaceOperationError("session_closed: Local Shell is no longer available");
+      }
+    }
+    const waitMs = args.wait_ms === undefined ? (name === "run_local_shell_command" ? 500 : 0) : args.wait_ms;
+    await waitForLocalShellSnapshot(waitMs, signal);
+    assertCurrent();
+    if (requirePane(pane.id).pane !== pane) throw new WorkspaceOperationError("session_changed: Local Shell changed");
+    const snapshot = getLocalShellTerminalSnapshot(pane.id, args.lines || 80);
+    if (!snapshot) throw new WorkspaceOperationError("session_closed: Local Shell is no longer available");
+    return {
+      status: name === "run_local_shell_command" ? "submitted" : "ok",
+      pane_id: pane.id,
+      snapshot
+    };
   }
   if (name === "get_workspace_state")
     return {
@@ -395,7 +472,7 @@ export async function executeWorkspaceOperation(
       focus_mode: tabs.focusMode.value,
       fullscreen: tabs.workspaceFullscreen.value,
       ...page(
-        tabs.tabs.value.filter(visibleTab).map((tab) => ({
+        visibleTabs().map((tab) => ({
           tab_id: tab.id,
           title: String(tab.title || tab.assetName).slice(0, 128),
           layout: tab.layoutMode,

@@ -14,7 +14,6 @@ const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
 const { save } = useSnippets();
 const { getTabById, renameTabTitle } = useWorkspaceTabs();
-const { openWorkspaceAi: openAi } = useAiPanel();
 const toast = useToast();
 const name = shallowRef(String(props.tab.payload?.name || ""));
 const args = shallowRef(String(props.tab.payload?.args || ""));
@@ -213,14 +212,6 @@ onBeforeUnmount(() => {
         />
       </template>
       <div class="flex-1" />
-      <UButton
-        size="xs"
-        color="primary"
-        variant="soft"
-        icon="i-lucide-sparkles"
-        :label="t('RightPanel.ScriptAIName')"
-        @click="openAi"
-      />
       <UButton
         size="xs"
         color="neutral"

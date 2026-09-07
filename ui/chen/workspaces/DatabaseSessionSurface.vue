@@ -93,7 +93,7 @@ const emit = defineEmits<{ reconnect: [] }>();
 
 const toast = useToast();
 const { t } = useI18n();
-const { openWorkspaceAi } = useAiPanel();
+const { openAi } = useAiPanel();
 const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
 const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
@@ -567,7 +567,7 @@ function connectSqlAiSession() {
 }
 
 function openSqlAi() {
-  openWorkspaceAi();
+  openAi();
 }
 
 function requestSqlAi(operation: ChenSqlAiOperation) {

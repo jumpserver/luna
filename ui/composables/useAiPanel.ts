@@ -2,7 +2,7 @@ import type { RightPanelTab } from "~/composables/useRightPanel";
 import type { WorkspaceMode } from "~/composables/useWorkspaceMode";
 
 export type AiPanelSource = "workspace" | "sftp";
-export type AiPanelMode = "workspace" | "workspace-assistant";
+export type UnifiedAiPanelKind = "workspace" | "resource";
 
 interface AiPanelContext {
   workspaceMode: WorkspaceMode;
@@ -10,7 +10,14 @@ interface AiPanelContext {
   rightPanelTab: RightPanelTab;
 }
 
-const open = shallowRef(false);
+interface UnifiedAiPanelContext {
+  workspaceMode: WorkspaceMode;
+  protocol: string;
+  surface: string;
+}
+
+const openTabs = shallowReactive(new WeakSet<object>());
+const openWithoutTab = shallowRef(false);
 interface TerminalPromptBinding {
   loginContext: string;
   resourceId: string;
@@ -20,11 +27,6 @@ const pendingTerminalPrompt = shallowRef<({ id: string; paneId: string; text: st
   null
 );
 const source = shallowRef<AiPanelSource>("workspace");
-const workspaceAssistantActive = shallowRef(true);
-const mode = computed<AiPanelMode>(() => {
-  if (workspaceAssistantActive.value) return "workspace-assistant";
-  return "workspace";
-});
 
 export function resolveAiPanelSource(context: AiPanelContext): AiPanelSource {
   return context.workspaceMode === "assets" && context.rightPanelOpen && context.rightPanelTab === "sftp"
@@ -32,38 +34,43 @@ export function resolveAiPanelSource(context: AiPanelContext): AiPanelSource {
     : "workspace";
 }
 
+export function resolveUnifiedAiPanel(context: UnifiedAiPanelContext): UnifiedAiPanelKind {
+  if (context.workspaceMode === "files" || context.protocol === "script-editor") return "resource";
+  if (["database", "file-editor", "file-manager"].includes(context.surface)) return "resource";
+  return "workspace";
+}
+
 export const useAiPanel = () => {
+  const { activeTab } = useWorkspaceTabs();
+  const open = computed(() => {
+    const tab = activeTab.value;
+    return tab ? openTabs.has(tab) : openWithoutTab.value;
+  });
+
   const setOpen = (value: boolean) => {
-    open.value = value;
+    const tab = activeTab.value;
+    if (!tab) {
+      openWithoutTab.value = value;
+      return;
+    }
+    if (value) openTabs.add(tab);
+    else openTabs.delete(tab);
   };
 
   const setSource = (value: AiPanelSource) => {
     source.value = value;
   };
 
-  const setWorkspaceAssistantActive = (value: boolean) => {
-    workspaceAssistantActive.value = value;
-    if (value) open.value = true;
-  };
-
   const openAi = () => {
-    workspaceAssistantActive.value = true;
-    open.value = true;
-  };
-
-  const openWorkspaceAi = () => {
-    workspaceAssistantActive.value = false;
-    source.value = "workspace";
-    open.value = true;
+    setOpen(true);
   };
 
   const toggleAi = () => {
     if (open.value) {
-      open.value = false;
+      setOpen(false);
       return;
     }
-
-    openAi();
+    setOpen(true);
   };
 
   const requestTerminalPrompt = (paneId: string, text: string, binding: TerminalPromptBinding) => {
@@ -79,14 +86,10 @@ export const useAiPanel = () => {
     requestTerminalPrompt,
     takeTerminalPrompt,
     open,
-    mode,
     source,
-    workspaceAssistantActive,
     setOpen,
     setSource,
-    setWorkspaceAssistantActive,
     openAi,
-    openWorkspaceAi,
     openWorkspaceAssistant: openAi,
     toggleAi
   };

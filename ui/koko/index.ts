@@ -10,12 +10,14 @@ export { useKokoSessionAdapter } from "./composables/useSessionAdapter";
 export {
   getKokoTerminalCursorAnchor,
   getKokoTerminalElement,
+  getLocalShellTerminalSnapshot,
   sendKokoTerminalData,
   sendKokoTerminalDataToMany,
+  sendLocalShellTerminalData,
   subscribeKokoTerminalCursorAnchor,
   subscribeKokoTerminalUserInput
 } from "./composables/useTerminalSessionRegistry";
-export type { TerminalCursorAnchor } from "./composables/useTerminalSessionRegistry";
+export type { LocalShellTerminalSnapshot, TerminalCursorAnchor } from "./composables/useTerminalSessionRegistry";
 export {
   registerKokoTerminalDataSender,
   registerLocalShellTerminalSession,

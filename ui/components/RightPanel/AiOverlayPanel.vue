@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 import WorkspaceAiPanel from "./aiPanel.vue";
 import WorkspaceAssistantPanel from "./WorkspaceAssistantPanel.vue";
 
@@ -8,22 +9,24 @@ const isNarrowScreen = useMediaQuery("(max-width: 767px)");
 const { activeWorkspaceMode } = useWorkspaceMode();
 const { activePaneId, activeTab } = useWorkspaceTabs();
 const { activeTab: rightPanelTab, open: rightPanelOpen } = useRightPanel();
-const { mode, setSource, setWorkspaceAssistantActive, workspaceAssistantActive } = useAiPanel();
-const showWorkspaceAssistant = computed(
-  () => mode.value === "workspace-assistant" && (activeTab.value || !activePaneId.value)
-);
+const { setSource } = useAiPanel();
 const activeSurface = computed(() => {
   const tab = activeTab.value;
   return tab?.panes.find((pane) => pane.id === activePaneId.value) || tab;
 });
-
-const resourceAssistantAvailable = computed(
+const activeCapability = computed(() => {
+  const surface = activeSurface.value;
+  if (!surface) return "";
+  const payloadMethod = (surface.payload?.connectMethod as { value?: string } | undefined)?.value;
+  return findDeclaredCapability(surface.protocol, payloadMethod || surface.connectMethod)?.surface || "";
+});
+const showWorkspaceAssistant = computed(
   () =>
-    activeWorkspaceMode.value === "files" ||
-    (activeWorkspaceMode.value === "assets" &&
-      ((activeSurface.value?.status === "connected" && Boolean(activeSurface.value?.assetId)) ||
-        activeSurface.value?.protocol === "script-editor" ||
-        (!activeTab.value && Boolean(activePaneId.value))))
+    resolveUnifiedAiPanel({
+      workspaceMode: activeWorkspaceMode.value,
+      protocol: activeSurface.value?.protocol || "",
+      surface: activeCapability.value
+    }) === "workspace"
 );
 
 watchEffect(() => {
@@ -54,34 +57,6 @@ watchEffect(() => {
         <KeepAlive>
           <component :is="showWorkspaceAssistant ? WorkspaceAssistantPanel : WorkspaceAiPanel">
             <template #actions>
-              <UButton
-                v-if="!workspaceAssistantActive"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                icon="i-lucide-sparkles"
-                :label="t('RightPanel.LunaAiAutomatic')"
-                @click="setWorkspaceAssistantActive(true)"
-              />
-              <UDropdownMenu
-                v-else-if="resourceAssistantAvailable"
-                :items="[
-                  {
-                    label: t('RightPanel.LunaAiResourceHistory'),
-                    icon: 'i-lucide-history',
-                    onSelect: () => setWorkspaceAssistantActive(false)
-                  }
-                ]"
-                portal="#workspace-ai-overlay"
-              >
-                <UButton
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  icon="i-lucide-ellipsis"
-                  :aria-label="t('RightPanel.LunaAiResourceHistory')"
-                />
-              </UDropdownMenu>
               <UButton
                 icon="i-lucide-x"
                 :aria-label="t('RightPanel.AIClose')"

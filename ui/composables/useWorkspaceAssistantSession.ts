@@ -29,6 +29,7 @@ import { createWorkspaceTerminalTasks, workspaceTerminalTools } from "~/composab
 import type { WorkspacePane } from "~/composables/useWorkspaceTabs";
 import {
   WorkspaceOperationError,
+  localShellOperationTools,
   workspaceOperationTools,
   validateWorkspaceToolArguments,
   executeWorkspaceOperation,
@@ -44,7 +45,7 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { isDesktopRuntime } from "~/utils/runtime";
 
 export const DEFAULT_WORKSPACE_ASSISTANT_SCOPE = "global";
-const WORKSPACE_TOOL_REVISION = 2;
+const WORKSPACE_TOOL_REVISION = 3;
 const CONNECTION_PLAN_TTL_MS = 5 * 60_000;
 const CONNECTION_PLAN_LIMIT = 8;
 const COMPLETED_INVOCATION_LIMIT = 256;
@@ -149,6 +150,7 @@ interface WorkspaceAssistantRuntime {
 
 export interface WorkspaceAssistantSession {
   kind: "workspace";
+  tabId: string;
   target: string;
   runTarget: string;
   runContext: Record<string, unknown> | null;
@@ -371,7 +373,7 @@ const readOnlyNonIdempotentAnnotations = {
 
 export function workspaceAssistantManifest(
   resourceSessionId: string,
-  context: { scopeId: string; organizationId: string; uiRevision: number }
+  context: { scopeId: string; organizationId: string; uiRevision: number; tabId?: string; localShell?: boolean }
 ): AgentMcpManifest {
   return {
     profile: "workspace",
@@ -382,11 +384,14 @@ export function workspaceAssistantManifest(
       interaction_mode: "workspace_and_terminal_tasks",
       scope_id: context.scopeId,
       organization_id: context.organizationId,
-      ui_revision: context.uiRevision
+      ui_revision: context.uiRevision,
+      ...(context.tabId ? { tab_id: context.tabId } : {}),
+      ...(context.localShell ? { local_shell_available: true } : {})
     },
     tools: [
       ...workspaceOperationTools,
       ...workspaceTerminalTools,
+      ...(context.localShell ? localShellOperationTools : []),
       {
         name: "get_asset_connection_options",
         description:
@@ -735,16 +740,22 @@ async function executeWorkspaceTool(
   const runtime = runtimes.get(session);
   if (!runtime) throw new WorkspaceAssistantError("session_closed", "Workspace Assistant session is closed");
   const automation = runtime.automation;
+  const scopedTabs = () => (session.tabId ? runtime.tabs.tabs.value.filter((tab) => tab.id === session.tabId) : []);
   const assertCurrent = () => {
     if (signal.aborted) throw new DOMException("Workspace tool call was cancelled", "AbortError");
     if (session.contextKey !== currentWorkspaceContextKey(runtime.userInfoStore))
       throw new WorkspaceAssistantError("context_changed", "The active site, account or organization changed");
+    if (session.tabId && !runtime.tabs.getTabById(session.tabId))
+      throw new WorkspaceAssistantError("session_closed", "The workspace tab was closed");
   };
   assertCurrent();
+  const localShell = scopedTabs().some((tab) => tab.panes.some((pane) => pane.protocol === "local-shell"));
   const definition = workspaceAssistantManifest("", {
     scopeId: session.scopeId,
     organizationId: session.organizationId,
-    uiRevision: automation.uiRevision.value
+    uiRevision: automation.uiRevision.value,
+    tabId: session.tabId,
+    localShell
   }).tools.find((tool) => tool.name === name);
   if (!definition) throw new WorkspaceAssistantError("unknown_tool", "Unknown workspace tool");
   validateWorkspaceToolArguments(definition, args);
@@ -778,10 +789,21 @@ async function executeWorkspaceTool(
     }
   }
   if (
-    workspaceOperationTools.some((tool) => tool.name === name) &&
+    [...workspaceOperationTools, ...localShellOperationTools].some((tool) => tool.name === name) &&
     !(name === "navigate_workspace" && args.target === "asset")
   ) {
-    return executeWorkspaceOperation(runtime.operations, name, args, signal, session.organizationId, assertCurrent);
+    if (localShellOperationTools.some((tool) => tool.name === name) && session.runTarget !== "auto") {
+      throw new WorkspaceAssistantError("target_mismatch", "Select Automatic before using the Local Shell");
+    }
+    return executeWorkspaceOperation(
+      runtime.operations,
+      name,
+      args,
+      signal,
+      session.organizationId,
+      assertCurrent,
+      session.tabId
+    );
   }
   const availableMethods = async (protocol: string) => {
     const methods = await runtime.methods.getMethodsForProtocol(protocol);
@@ -926,11 +948,10 @@ async function executeWorkspaceTool(
         ? workspaceAssistantConnectionForUniqueAccount(selectedProtocol, selectedAccount, asset.savedConnection)
         : null;
     const targetPane = args.pane_id
-      ? requireWorkspaceEmptyPane(runtime.tabs.tabs.value, String(args.pane_id), preparationOrganizationId)
+      ? requireWorkspaceEmptyPane(scopedTabs(), String(args.pane_id), preparationOrganizationId)
       : undefined;
     const assertEmptyTarget = () => {
-      if (targetPane)
-        requireWorkspaceEmptyPane(runtime.tabs.tabs.value, targetPane.id, preparationOrganizationId, targetPane);
+      if (targetPane) requireWorkspaceEmptyPane(scopedTabs(), targetPane.id, preparationOrganizationId, targetPane);
     };
     const methods = selectedProtocol ? await availableMethods(selectedProtocol) : [];
     assertWorkspacePreparationCurrent(
@@ -1097,7 +1118,7 @@ async function executeWorkspaceTool(
       const assertTarget = () => {
         assertCurrent();
         if (plan.targetPane) {
-          requireWorkspaceEmptyPane(runtime.tabs.tabs.value, plan.targetPane.id, plan.organizationId, plan.targetPane);
+          requireWorkspaceEmptyPane(scopedTabs(), plan.targetPane.id, plan.organizationId, plan.targetPane);
         }
       };
       assertTarget();
@@ -1183,17 +1204,25 @@ function rememberInvocation(runtime: WorkspaceToolRuntime, invocationId: string)
   }
 }
 
-function workspaceMessageContext(runtime: WorkspaceAssistantRuntime) {
+function workspaceMessageContext(runtime: WorkspaceAssistantRuntime, tabId: string) {
   const snapshot = runtime.automation.snapshot.value;
+  const tab = tabId ? runtime.tabs.getTabById(tabId) : null;
+  const activePaneId = tab?.panes.some((pane) => pane.id === runtime.tabs.activePaneId.value)
+    ? runtime.tabs.activePaneId.value
+    : "";
   const selectedAssetId =
     snapshot.selectionReceipt?.assetId ||
     (snapshot.candidates.length === 1 ? snapshot.candidates[0]?.id : "") ||
     snapshot.focusedAsset?.id ||
     "";
+  const localShell = tab?.panes.find(
+    (pane) => pane.protocol === "local-shell" && (!activePaneId || pane.id === activePaneId)
+  );
   return {
     ui_revision: snapshot.revision,
-    active_tab_id: runtime.tabs.activeTabId.value,
-    active_pane_id: runtime.tabs.activePaneId.value,
+    active_tab_id: tab?.id || "",
+    active_pane_id: activePaneId,
+    ...(localShell ? { local_shell_target: { pane_id: localShell.id, status: localShell.status } } : {}),
     ...(selectedAssetId ? { selected_asset_id: selectedAssetId } : {}),
     ...(snapshot.focusedAsset?.id ? { focused_asset_id: snapshot.focusedAsset.id } : {}),
     ...(snapshot.focusedAssetSource ? { focused_asset_source: snapshot.focusedAssetSource } : {})
@@ -1392,7 +1421,7 @@ function handleWorkspaceAssistantMessage(scopeId: string, value: unknown) {
   }
 }
 
-function createWorkspaceAssistantSession(scopeId: string, dependencies: WorkspaceAssistantRuntime) {
+function createWorkspaceAssistantSession(scopeId: string, dependencies: WorkspaceAssistantRuntime, tabId: string) {
   const organizationId = currentOrganizationId(dependencies.userInfoStore);
   const contextKey = currentWorkspaceContextKey(dependencies.userInfoStore);
   const resourceSessionId = opaqueId("workspace");
@@ -1416,7 +1445,7 @@ function createWorkspaceAssistantSession(scopeId: string, dependencies: Workspac
       messageMetadata: () => ({
         domain: "workspace",
         targetId: scopeId,
-        context: session?.runContext || workspaceMessageContext(dependencies)
+        context: session?.runContext || workspaceMessageContext(dependencies, session?.tabId || tabId)
       }),
       onMessage: (message) => handleWorkspaceAssistantMessage(scopeId, message),
       onAvailability: (available) => {
@@ -1470,6 +1499,7 @@ function createWorkspaceAssistantSession(scopeId: string, dependencies: Workspac
 
   session = reactive({
     kind: "workspace",
+    tabId,
     target: "auto",
     runTarget: "auto",
     runContext: null,
@@ -1497,13 +1527,17 @@ function createWorkspaceAssistantSession(scopeId: string, dependencies: Workspac
     searchGuard: { candidateIds: new Set(), candidateCount: 0, ambiguityPending: false }
   });
   const terminalManager = createWorkspaceTerminalTasks({
-    panes: () => dependencies.tabs.tabs.value.flatMap((tab) => tab.panes),
+    panes: () => {
+      const tab = session.tabId ? dependencies.tabs.getTabById(session.tabId) : null;
+      return tab?.panes || [];
+    },
     organizationId,
     targetScope: () => session.runTarget,
     assertCurrent: () => {
       if (
         !runtimes.has(session) ||
         session.contextKey !== currentWorkspaceContextKey(dependencies.userInfoStore) ||
+        (session.tabId && !dependencies.tabs.getTabById(session.tabId)) ||
         !dependencies.userInfoStore.loggedIn
       )
         throw new WorkspaceAssistantError("context_changed", "The active site, account or organization changed");
@@ -1523,8 +1557,13 @@ function createWorkspaceAssistantSession(scopeId: string, dependencies: Workspac
   const uiRevision = Number(
     dependencies.automation.snapshot.value?.revision || dependencies.automation.uiRevision.value || 0
   );
+  const localShell = Boolean(
+    tabId && dependencies.tabs.getTabById(tabId)?.panes.some((pane) => pane.protocol === "local-shell")
+  );
   void agent.actions
-    .attachManifest(workspaceAssistantManifest(resourceSessionId, { scopeId, organizationId, uiRevision }))
+    .attachManifest(
+      workspaceAssistantManifest(resourceSessionId, { scopeId, organizationId, uiRevision, tabId, localShell })
+    )
     .catch((cause) => {
       session.errorCode = "agent_unavailable";
       session.errorText = cause instanceof Error ? cause.message : "Failed to create Workspace Assistant session";
@@ -1532,12 +1571,12 @@ function createWorkspaceAssistantSession(scopeId: string, dependencies: Workspac
   return session;
 }
 
-export function ensureWorkspaceAssistantSession(scopeId: string, dependencies: WorkspaceAssistantRuntime) {
+export function ensureWorkspaceAssistantSession(scopeId: string, dependencies: WorkspaceAssistantRuntime, tabId = "") {
   const normalizedScopeId = boundedString(scopeId, 128) || DEFAULT_WORKSPACE_ASSISTANT_SCOPE;
   const existing = sessions.get(normalizedScopeId);
   if (existing && existing.contextKey === currentWorkspaceContextKey(dependencies.userInfoStore)) return existing;
   if (existing) disposeWorkspaceAssistantSession(normalizedScopeId);
-  const session = createWorkspaceAssistantSession(normalizedScopeId, dependencies);
+  const session = createWorkspaceAssistantSession(normalizedScopeId, dependencies, tabId);
   sessions.set(normalizedScopeId, session);
   return session;
 }
@@ -1587,7 +1626,7 @@ export async function submitWorkspaceAssistantPrompt(prompt: string, scopeId = D
       );
     session.runTarget = session.target;
     session.runContext = {
-      ...workspaceMessageContext(runtime),
+      ...workspaceMessageContext(runtime, session.tabId),
       terminal_target_mode: session.target === "auto" ? "auto" : session.target === "workspace" ? "workspace" : "fixed",
       default_terminal_target: defaultTarget
     };

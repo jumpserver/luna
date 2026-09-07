@@ -18,7 +18,7 @@ import { terminalAiPanelDomain } from "./ai/domains/terminal/adapter";
 import WorkspaceAssistantTimeline from "./workspace/WorkspaceAssistantTimeline.vue";
 
 const { t } = useI18n();
-const { activePaneId } = useWorkspaceTabs();
+const { activePaneId, activeTab } = useWorkspaceTabs();
 const { pendingTerminalPrompt, takeTerminalPrompt } = useAiPanel();
 const assistantRuntime = useWorkspaceAssistantRuntime();
 const { session, scopeId, newSession } = useWorkspaceAssistantPanelSession(assistantRuntime);
@@ -26,6 +26,16 @@ const approvingScopes = reactive(new Set<string>());
 const approvalProcessing = computed(() => approvingScopes.has(scopeId.value));
 
 const assistantName = computed(() => t("RightPanel.LunaAiName"));
+const localShellPane = computed(
+  () => activeTab.value?.panes.find((pane) => pane.id === activePaneId.value && pane.protocol === "local-shell") || null
+);
+const hasLocalShell = computed(() => activeTab.value?.panes.some((pane) => pane.protocol === "local-shell") || false);
+const capabilities = computed(() => [
+  t("RightPanel.LunaAiCapabilitySearchAssets"),
+  t("RightPanel.LunaAiCapabilityConnectSessions"),
+  t("RightPanel.LunaAiCapabilityTerminalTasks"),
+  ...(hasLocalShell.value ? [t("RightPanel.LunaAiCapabilityLocalShell")] : [])
+]);
 const available = computed(() => Boolean(session.value?.enabled && session.value.agent.state.available));
 const busy = computed(() => Boolean(session.value && isWorkspaceAssistantBusy(scopeId.value)));
 const running = computed(() =>
@@ -102,6 +112,16 @@ const displayedTarget = computed(() =>
 );
 const contextItems = computed<AiContextItem[]>(() => {
   const target = displayedTarget.value;
+  if (!target && localShellPane.value) {
+    return [
+      {
+        key: "local-shell",
+        icon: "i-lucide-square-terminal",
+        label: `@${localShellPane.value.assetName}`,
+        title: localShellPane.value.assetName
+      }
+    ];
+  }
   if (!target) return [];
   return [
     { key: "terminal", icon: "i-lucide-terminal", label: `@${target.asset_name}`, title: target.address },
@@ -195,7 +215,7 @@ watch(
       :status-tone="statusTone"
       :busy="running && !waitingStatus"
       :context-items="contextItems"
-      :tool-names="[]"
+      :tool-names="capabilities"
     >
       <template #actions>
         <UTooltip v-if="session" :text="t('RightPanel.AINewSessionDescription')">
@@ -229,7 +249,7 @@ watch(
         :terminal-tasks="session.terminalTasks"
         :terminal-targets="terminalTargets"
         :scope-id="scopeId"
-        :has-terminal="Boolean(currentTarget)"
+        :has-terminal="Boolean(currentTarget || localShellPane)"
         :running="Boolean(session.taskActive && !session.terminalTasks.some((task) => task.active))"
         :assistant-name="assistantName"
         :approval-processing="approvalProcessing"
@@ -269,11 +289,11 @@ watch(
             portal="#workspace-ai-overlay"
           />
           <span
-            v-if="selectedTarget === 'auto' && displayedTarget"
+            v-if="selectedTarget === 'auto' && (displayedTarget || localShellPane)"
             class="max-w-32 truncate text-[11px] text-muted"
-            :title="displayedTarget.address"
+            :title="displayedTarget?.address || localShellPane?.assetName"
           >
-            @{{ displayedTarget.asset_name }}
+            @{{ displayedTarget?.asset_name || localShellPane?.assetName }}
           </span>
         </div>
         <AiComposer
@@ -291,9 +311,6 @@ watch(
           @submit="submit"
           @interrupt="interruptWorkspaceAssistant(scopeId)"
         />
-        <p class="text-center text-[9px] leading-4 text-muted">
-          {{ t("RightPanel.WorkspaceAssistantScopeNotice") }}
-        </p>
       </footer>
     </template>
   </div>

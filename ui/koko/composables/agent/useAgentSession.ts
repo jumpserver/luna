@@ -79,6 +79,7 @@ export interface AgentSessionController {
     resolveApproval: (approvalId: string, decision: AgentApprovalDecision) => Promise<void>;
     receiveKokoFrame: (frame: unknown) => Promise<boolean>;
     cancel: () => Promise<void>;
+    newSession: () => Promise<void>;
     setApprovalMode: (mode: AgentApprovalMode) => Promise<void>;
     dispose: () => Promise<void>;
   };
@@ -642,6 +643,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
   let lifecycleTail = Promise.resolve();
   let attachFlight: { key: string; promise: Promise<void> } | null = null;
   let committedManifestKey = "";
+  let committedManifest: AgentMcpManifest | null = null;
   let sse: AgentSseConnection | null = null;
   let retainedResourceId = "";
   const pendingSessionDeletes: Array<{
@@ -1055,6 +1057,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       void sse.start();
       committed = true;
       committedManifestKey = manifestKey;
+      committedManifest = manifest;
     } catch (cause) {
       if (generation !== currentGeneration) return;
       const error = cause instanceof Error ? cause : new Error(String(cause || "Agent session creation failed"));
@@ -1341,6 +1344,17 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     await client.cancel(state.agentSessionId, state.resourceSessionId, state.activeRunId);
   }
 
+  async function newSession() {
+    if (attachFlight) await attachFlight.promise;
+    const manifest = committedManifest;
+    if (!manifest || !state.agentSessionId) return;
+    await cancel().catch(() => undefined);
+    // Force the normal replacement path so the old remote history is deleted
+    // before a fresh session is created for the same resource and manifest.
+    committedManifestKey = `${committedManifestKey}:new-session`;
+    await attachManifest(manifest);
+  }
+
   async function setApprovalMode(mode: AgentApprovalMode) {
     if (!["always", "auto", "never"].includes(mode)) return;
     if (options.allowedApprovalModes && !options.allowedApprovalModes.includes(mode)) {
@@ -1362,6 +1376,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     const resourceSessionId = state.resourceSessionId || retainedResourceId;
     attachFlight = null;
     committedManifestKey = "";
+    committedManifest = null;
     sse?.stop();
     sse = null;
     cancelAndResetRelay("controller_disposed");
@@ -1399,6 +1414,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       resolveApproval,
       receiveKokoFrame,
       cancel,
+      newSession,
       setApprovalMode,
       dispose
     }

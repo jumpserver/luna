@@ -6,7 +6,12 @@ import { registerWorkspaceSessionCloseGuard, useWorkspaceTabs } from "./useWorks
 import { getAuthorizedAssets } from "./useApiRequest";
 import { useConnectionLauncher } from "./useConnectionLauncher";
 import {
+  registerLocalShellTerminalSession,
+  unregisterLocalShellTerminalSession
+} from "#koko/composables/useTerminalSessionRegistry";
+import {
   executeWorkspaceOperation,
+  localShellOperationTools,
   validateWorkspaceToolArguments,
   waitWorkspacePane,
   workspaceOperationTools,
@@ -92,13 +97,14 @@ function call(
   rt: ReturnType<typeof useWorkspaceAssistantTools>,
   name: string,
   args: Record<string, unknown>,
-  assertCurrent = () => {}
+  assertCurrent = () => {},
+  tabId: string | null = null
 ) {
   validateWorkspaceToolArguments(
-    workspaceOperationTools.find((tool) => tool.name === name)!,
+    [...workspaceOperationTools, ...localShellOperationTools].find((tool) => tool.name === name)!,
     args
   );
-  return executeWorkspaceOperation(rt, name, args, new AbortController().signal, "org-1", assertCurrent);
+  return executeWorkspaceOperation(rt, name, args, new AbortController().signal, "org-1", assertCurrent, tabId);
 }
 
 beforeEach(() => {
@@ -148,6 +154,27 @@ describe("workspace semantic operations", () => {
       items: [{ panes: [{ asset_name: "Production", status: "ready" }] }]
     });
     expect(JSON.stringify(result)).not.toMatch(/private-token|private-password|Other organization/);
+  });
+
+  it("limits a tab-scoped assistant to its own tab and panes", async () => {
+    const first = open();
+    const firstTab = tabs.tabs.value[0]!;
+    const second = open("Second");
+    const secondTab = tabs.tabs.value[1]!;
+    const rt = runtime();
+
+    const result = await call(rt, "get_workspace_state", {}, () => {}, firstTab.id);
+    expect(result).toMatchObject({
+      total: 1,
+      items: [{ tab_id: firstTab.id, panes: [{ pane_id: first.id }] }]
+    });
+    expect(JSON.stringify(result)).not.toContain(second.id);
+    await expect(
+      call(rt, "navigate_workspace", { target: "tab", id: secondTab.id }, () => {}, firstTab.id)
+    ).rejects.toThrow("unavailable");
+    await expect(
+      call(rt, "navigate_workspace", { target: "pane", id: second.id }, () => {}, firstTab.id)
+    ).rejects.toThrow("no longer exists");
   });
 
   it("splits, activates a non-primary pane and merges a live session without replacing it", async () => {
@@ -259,6 +286,52 @@ describe("workspace semantic operations", () => {
     const waiting = call(rt, "get_workspace_state", { pane_id: pane.id, wait_ms: 1000 });
     tabs.markSessionConnected(pane.id);
     expect(await waiting).toMatchObject({ status: "connected", session: { pane_id: pane.id } });
+  });
+
+  it("reads and submits approved commands only to the scoped Local Shell", async () => {
+    const pane = tabs.openLocalShell();
+    tabs.markSessionConnected(pane.id);
+    const send = vi.fn();
+    const lines = ["$", "$ pwd", "/Users/operator"];
+    registerLocalShellTerminalSession(pane.id, send, {
+      buffer: {
+        active: {
+          type: "normal",
+          length: lines.length,
+          baseY: 1,
+          cursorX: 1,
+          cursorY: 1,
+          getLine: (index: number) => ({ translateToString: () => lines[index] })
+        }
+      }
+    } as never);
+    disposers.push(() => unregisterLocalShellTerminalSession(pane.id));
+
+    const tabId = tabs.activeTabId.value;
+    expect(await call(runtime(), "read_local_shell", { pane_id: pane.id, lines: 2 }, () => {}, tabId)).toMatchObject({
+      status: "ok",
+      pane_id: pane.id,
+      snapshot: { text: "$ pwd\n/Users/operator", lines: 2 }
+    });
+    expect(
+      await call(
+        runtime(),
+        "run_local_shell_command",
+        { pane_id: pane.id, command: "pwd", wait_ms: 0 },
+        () => {},
+        tabId
+      )
+    ).toMatchObject({ status: "submitted" });
+    expect(send).toHaveBeenCalledWith("pwd\r");
+    await expect(
+      call(
+        runtime(),
+        "run_local_shell_command",
+        { pane_id: pane.id, command: "pwd\nwhoami", wait_ms: 0 },
+        () => {},
+        tabId
+      )
+    ).rejects.toThrow("visible terminal line");
   });
 
   it("targets the selected secondary pane when cloning and blocks another organization", async () => {
