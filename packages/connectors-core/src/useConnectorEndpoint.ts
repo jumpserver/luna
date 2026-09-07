@@ -10,36 +10,12 @@ const WS_PREFIX: Record<JmsComponent, string> = {
   default: "/koko/ws/"
 };
 
-const devEnv = () => import.meta.env as Record<string, string | undefined>;
-
-const DEV_WS_KEYS: Partial<Record<JmsComponent, string>> = {
-  koko: "VITE_KOKO_WS",
-  default: "VITE_KOKO_WS",
-  chen: "VITE_CHEN_WS",
-  lion: "VITE_LION_WS",
-  tinker: "VITE_LION_WS"
-};
-
-const DEV_HOST_KEYS: Partial<Record<JmsComponent, string>> = {
-  koko: "VITE_KOKO_HOST",
-  default: "VITE_KOKO_HOST",
-  chen: "VITE_CHEN_HOST",
-  lion: "VITE_LION_HOST",
-  tinker: "VITE_LION_HOST"
-};
-
-const trimSlash = (value: string) => value.replace(/\/+$/, "");
-
-export function resolveDevWsBase(component: JmsComponent) {
-  if (!import.meta.dev) return "";
-  const key = DEV_WS_KEYS[component];
-  return key ? trimSlash(devEnv()[key] || "") : "";
-}
-
-export function resolveDevHost(component: JmsComponent) {
-  if (!import.meta.dev) return "";
-  const key = DEV_HOST_KEYS[component];
-  return key ? trimSlash(devEnv()[key] || "") : "";
+export function isLoopbackUrl(value: string) {
+  try {
+    return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(new URL(value).hostname);
+  } catch {
+    return false;
+  }
 }
 
 export function resolveWsUrl(component: JmsComponent, wsRoute: string, ctx: ConnectorSessionContext) {
@@ -48,7 +24,6 @@ export function resolveWsUrl(component: JmsComponent, wsRoute: string, ctx: Conn
     ticket: ctx.ticket,
     disableautohash: ctx.disableAutoHash
   });
-  const devWsBase = resolveDevWsBase(component);
-  const wsBase = devWsBase || toWsOrigin(ctx.endpointUrl || (import.meta.client ? window.location.origin : ""));
+  const wsBase = toWsOrigin(ctx.endpointUrl || (import.meta.client ? window.location.origin : ""));
   return `${wsBase}${WS_PREFIX[component]}${wsRoute}/?${params.toString()}`;
 }

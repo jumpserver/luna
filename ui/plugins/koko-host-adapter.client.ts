@@ -1,5 +1,6 @@
-import type { KokoHostAdapter, KokoPreparedSftpAsset, KokoSftpAsset, KokoWorkspaceTab } from "#koko/host";
+import type { KokoEndpoint, KokoHostAdapter, KokoPreparedSftpAsset, KokoSftpAsset, KokoWorkspaceTab } from "#koko/host";
 
+import { isLoopbackUrl } from "@jumpserver/connectors-core";
 import { configureKokoThemeAdapter, kokoHostAdapterKey } from "#koko/host";
 import OrganizationSelector from "~/components/Header/OrganizationSelector.vue";
 import SideBarAssetTree from "~/components/SideBar/assetTree.vue";
@@ -66,13 +67,26 @@ export default defineNuxtPlugin((nuxtApp) => {
       });
   };
 
+  const endpointUrl = (endpoint: KokoEndpoint) => {
+    let resolved = endpoint.value || "";
+    if (!resolved && endpoint.host) {
+      const port = endpoint.https_port || endpoint.port;
+      const scheme = endpoint.https_port ? "https" : "http";
+      resolved = `${scheme}://${port ? `${endpoint.host}:${port}` : endpoint.host}`;
+    }
+    return import.meta.dev && isLoopbackUrl(resolved) ? window.location.origin : resolved;
+  };
+
   const adapter: KokoHostAdapter = {
     createTicket: createKokoTicket,
     getSmartEndpoint: async (request, orgId) => {
-      if (isElectronRuntime()) {
-        return { value: await desktopInvoke<string>("resolve_koko_endpoint") };
-      }
-      return getSmartEndpoint(request, orgId);
+      const endpoint = await getSmartEndpoint(request, orgId);
+      if (!isElectronRuntime()) return endpoint;
+
+      return {
+        ...endpoint,
+        value: await desktopInvoke<string>("resolve_koko_endpoint", { endpointUrl: endpointUrl(endpoint) })
+      };
     },
     getWindowOrigin: () => window.location.origin,
     isDesktopRuntime,

@@ -31,6 +31,30 @@ body.runtime-windows-mica .workspace-shell {
   background-color: transparent !important;
 }
 
+body.runtime-macos-vibrancy .workspace-shell {
+  --app-sidebar-bg: color-mix(in srgb, var(--app-surface-sidebar) 20%, transparent);
+  --app-header-bg: color-mix(in srgb, var(--app-surface-header) 16%, transparent);
+  background-color: transparent !important;
+}
+
+body.runtime-macos-vibrancy :is(.workspace-shell__header, .workspace-shell__sidebar) {
+  backdrop-filter: blur(20px) saturate(1.15);
+}
+
+body.runtime-macos-vibrancy .workspace-shell__sidebar--preview {
+  background-color: color-mix(in srgb, var(--app-surface-sidebar) 92%, transparent) !important;
+  backdrop-filter: blur(24px) saturate(1.15);
+}
+
+body.runtime-macos-vibrancy :is(.settings-shell, .settings-panel) {
+  background-color: transparent;
+}
+
+body.runtime-macos-vibrancy .settings-panel__sidebar {
+  background-color: color-mix(in srgb, var(--app-surface-sidebar) 20%, transparent);
+  backdrop-filter: blur(20px) saturate(1.15);
+}
+
 [data-desktop-drag-region] {
   -webkit-app-region: drag;
 }

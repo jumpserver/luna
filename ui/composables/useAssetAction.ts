@@ -12,6 +12,7 @@ import {
   WEB_PROXY_NATIVE_VALUE,
   WEB_RDP_NATIVE_VALUE
 } from "~/composables/useConnectMethods";
+import { isLoopbackUrl } from "@jumpserver/connectors-core";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -237,30 +238,12 @@ export const useAssetAction = () => {
       port = siteUrl.port;
     }
 
-    const endpointPort = port ? String(port) : "";
-    const isLoopbackEndpoint = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(host);
-    const isSameDevServer = isLoopbackEndpoint && endpointPort === window.location.port;
-
-    if (isSameDevServer) {
+    const endpointUrl = `${endpointProtocol}://${port ? `${host}:${port}` : host}`;
+    if (isLoopbackUrl(endpointUrl) && (import.meta.dev || !isDesktopRuntime())) {
       return window.location.origin;
     }
 
-    return `${endpointProtocol}://${port ? `${host}:${port}` : host}`;
-  };
-
-  const getWebConnectorDevOrigin = (component: string) => {
-    if (!import.meta.dev) return "";
-
-    const env = import.meta.env as Record<string, string | undefined>;
-    const devOrigins: Record<string, string | undefined> = {
-      koko: env.VITE_JMS_KOKO_IFRAME_URL,
-      default: env.VITE_JMS_KOKO_IFRAME_URL,
-      lion: env.VITE_JMS_LION_IFRAME_URL,
-      tinker: env.VITE_JMS_LION_IFRAME_URL,
-      chen: env.VITE_JMS_CHEN_IFRAME_URL
-    };
-
-    return devOrigins[component]?.replace(/\/+$/, "") || "";
+    return endpointUrl;
   };
 
   const resolveWebEndpointProtocol = (
@@ -405,15 +388,13 @@ export const useAssetAction = () => {
         return;
       }
 
-      const component = method?.component || (body.protocol === "ssh" ? "koko" : "default");
-      const devOrigin = getWebConnectorDevOrigin(component);
-      const endpointUrl = devOrigin || (await fetchSmartEndpointUrl(token, method, body, meta?.orgId));
+      const endpointUrl = await fetchSmartEndpointUrl(token, method, body, meta?.orgId);
       const webUrl = getWebConnectorPath(token, method, body, endpointUrl, meta?.asset?.platform || "");
 
       const payload = {
         token,
         ...token,
-        endpointUrl: import.meta.dev ? devOrigin || window.location.origin : endpointUrl,
+        endpointUrl,
         webUrl,
         connectMethod: method || { value: body.connect_method }
       };
@@ -510,13 +491,11 @@ export const useAssetAction = () => {
           return;
         }
         const component = resolveBuiltinComponent(body);
-        let endpointUrl = import.meta.dev
-          ? window.location.origin
-          : await fetchSmartEndpointUrl(token, { component, type: "web" }, body, meta.orgId);
+        let endpointUrl = await fetchSmartEndpointUrl(token, { component, type: "web" }, body, meta.orgId);
         if (component === "chen" && isElectronRuntime()) {
-          endpointUrl = await desktopInvoke<string>("resolve_chen_endpoint");
+          endpointUrl = await desktopInvoke<string>("resolve_chen_endpoint", { endpointUrl });
         } else if (component === "koko" && isElectronRuntime()) {
-          endpointUrl = await desktopInvoke<string>("resolve_koko_endpoint");
+          endpointUrl = await desktopInvoke<string>("resolve_koko_endpoint", { endpointUrl });
         }
         let webProxy;
         if (body.connect_method === WEB_PROXY_NATIVE_VALUE) {

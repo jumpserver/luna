@@ -24,6 +24,7 @@ const {
   enterFullscreenMode,
   exitFocusMode,
   focusMode,
+  openLocalShell,
   registerSessionDisposer,
   workspaceFullscreen
 } = useWorkspaceTabs();
@@ -135,6 +136,17 @@ const stopEscapeHold = (event: KeyboardEvent) => {
   if (event.key === "Escape") clearEscapeHold();
 };
 
+const handleOpenLocalShellShortcut = (event: KeyboardEvent) => {
+  if (!isDesktopRuntime() || isWorkspaceTourActive() || event.repeat || event.altKey || event.shiftKey) return;
+
+  const usesPrimaryModifier = isMacOS.value ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+  if (!usesPrimaryModifier || event.code !== "KeyT") return;
+
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  void openAssetWorkspace(openLocalShell);
+};
+
 const handleChromeShortcut = (event: KeyboardEvent) => {
   if (isWorkspaceTourActive() || event.defaultPrevented || event.repeat) return;
 
@@ -218,6 +230,11 @@ const toggleDesktopFullscreen = async () => {
 };
 
 const handleDesktopMenuCommand = (command: string) => {
+  if (command === "open-local-shell") {
+    void openAssetWorkspace(openLocalShell);
+    return;
+  }
+
   if (command === "close-current-tab") {
     if (activeWorkspaceMode.value === "assets" && !settingsOpen.value && activeTabId.value) {
       void closeSession(activeTabId.value);
@@ -297,6 +314,7 @@ const syncTrayRecentConnections = () => {
 };
 
 useEventListener(window, "keydown", startEscapeHold);
+useEventListener(window, "keydown", handleOpenLocalShellShortcut, { capture: true });
 useEventListener(window, "keydown", handleChromeShortcut);
 useEventListener(window, "keydown", handleWorkspaceModeShortcut, { capture: true });
 useEventListener(window, "keyup", stopEscapeHold);

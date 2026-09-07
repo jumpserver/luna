@@ -131,10 +131,10 @@ watch(
 </script>
 
 <template>
-  <div class="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-(--app-surface-canvas)">
+  <div class="settings-panel flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-(--app-surface-canvas)">
     <div class="flex min-h-0 flex-1 flex-col md:flex-row">
       <aside
-        class="flex max-h-[44%] w-full shrink-0 flex-col bg-(--app-surface-sidebar) md:max-h-none md:w-62"
+        class="settings-panel__sidebar flex max-h-[44%] w-full shrink-0 flex-col bg-(--app-surface-sidebar) md:max-h-none md:w-62"
         :class="hasNativeTitlebarInset ? 'pt-10' : ''"
       >
         <div class="px-3 pt-3">
@@ -179,7 +179,7 @@ watch(
         :class="hasNativeTitlebarInset ? 'pt-10' : ''"
       >
         <div class="px-5 pt-3 pb-6 sm:px-8 md:px-10 md:pb-8">
-          <div class="mx-auto w-full max-w-3xl">
+          <div class="mx-auto w-full max-w-4xl">
             <Transition name="settings-section" mode="out-in">
               <UPageHeader
                 :key="activeSection?.key"
@@ -188,7 +188,7 @@ watch(
                 :ui="{
                   root: 'relative mb-8 border-0 py-0',
                   wrapper: 'flex flex-col gap-0',
-                  title: 'text-2xl font-semibold tracking-tight text-highlighted',
+                  title: 'text-xl font-semibold tracking-tight text-highlighted',
                   description: 'mt-1.5 text-sm text-muted'
                 }"
               />

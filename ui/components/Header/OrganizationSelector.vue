@@ -18,6 +18,7 @@ const { setCurrentOrg } = userInfoStore;
 const { loggedIn, currentOrganizations, currentUser } = storeToRefs(userInfoStore);
 
 const currentOrg = ref<string>("");
+const currentOrgAvatarText = computed(() => Array.from(currentOrg.value.trim()).slice(0, 2).join(""));
 
 const organizationDropdownItems = computed<DropdownMenuItem[]>(() =>
   currentOrganizations.value.map((org: PermOrgItem) => ({
@@ -62,6 +63,7 @@ watch(
   <div v-show="loggedIn" class="flex w-full min-w-0 max-w-full items-center gap-1">
     <UAvatar
       :alt="currentOrg"
+      :text="currentOrgAvatarText"
       color="primary"
       size="xs"
       class="shrink-0"

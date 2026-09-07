@@ -152,7 +152,7 @@ onBeforeUnmount(() => {
         :class="[
           sidebarTransitionClass,
           sidebarOverlay || (useIslandLayout && hoverPreviewOpen) ? 'absolute inset-y-0 left-0' : 'relative',
-          hoverPreviewOpen ? 'border-r border-[var(--app-border)] shadow-xl' : ''
+          hoverPreviewOpen ? 'workspace-shell__sidebar--preview border-r border-[var(--app-border)] shadow-xl' : ''
         ]"
         :style="{
           width: sidebarStyleWidth,

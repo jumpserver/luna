@@ -167,7 +167,7 @@
   --app-tree-font-size: clamp(10px, calc(var(--app-ui-font-size) - 1px), 15px);
   --app-tree-icon-size: clamp(12px, calc(var(--app-tree-font-size) + 2px), 16px);
   --app-tree-toggle-icon-size: var(--app-tree-font-size);
-  --app-tree-row-height: max(28px, calc(var(--app-tree-font-size) + 16px));
+  --app-tree-row-height: max(26px, calc(var(--app-tree-font-size) + 14px));
   --sidebar-icon-color: color-mix(in srgb, var(--app-text-primary) 64%, transparent);
   --sidebar-icon-muted: color-mix(in srgb, var(--app-text-muted) 82%, transparent);
   --sidebar-icon-active: var(--app-text-primary);

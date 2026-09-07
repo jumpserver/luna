@@ -53,7 +53,10 @@ describe("terminal UI composition", () => {
 
   it("keeps Local Shell spacing and themed background consistent with SSH", () => {
     expect(localShellSurface).toMatch(
-      /\.local-shell-terminal :deep\(\.terminal\)\s*\{[^}]*height:\s*100%;[^}]*padding:\s*6px 8px;/
+      /\.local-shell-terminal :deep\(\.terminal\)\s*\{[^}]*height:\s*100%;[^}]*padding:\s*6px 8px 2px;/
+    );
+    expect(terminalComponent).toMatch(
+      /#terminal-container :deep\(\.terminal\)\s*\{[^}]*height:\s*100%;[^}]*padding:\s*6px 8px 2px;/
     );
     expect(localShellSurface).not.toContain("background-color: transparent !important");
   });

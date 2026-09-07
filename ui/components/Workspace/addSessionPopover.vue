@@ -11,7 +11,9 @@ const { recentConnections } = useRecentConnections();
 const userInfoStore = useUserInfoStore();
 const { openLocalShell } = useWorkspaceTabs();
 const { t } = useI18n();
+const { isMacOS } = usePlatform();
 const localShellAvailable = computed(() => isDesktopRuntime());
+const localShellShortcutModifier = computed(() => (isMacOS.value ? "meta" : "ctrl"));
 const listTitle = computed(() => (search.value.trim() ? t("AddSession.SearchResults") : t("Menu.RecentConnections")));
 const listEmpty = computed(() =>
   search.value.trim() ? t("AddSession.NoMatchingAssets") : t("RecentConnections.Empty")
@@ -98,7 +100,10 @@ watch(open, (value) => {
                 <span class="block truncate text-sm text-highlighted">{{ t("AddSession.LocalShell") }}</span>
                 <span class="block truncate text-[11px] text-muted">{{ t("AddSession.LocalShellHint") }}</span>
               </span>
-              <UIcon name="i-lucide-chevron-right" class="size-3.5 shrink-0 text-dimmed" />
+              <span class="flex shrink-0 items-center gap-px">
+                <UKbd :value="localShellShortcutModifier" size="sm" />
+                <UKbd value="T" size="sm" />
+              </span>
             </button>
           </template>
           <div class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">

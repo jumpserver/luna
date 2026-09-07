@@ -111,8 +111,8 @@ function normalizedHttpOrigin(value, label) {
   return url.origin;
 }
 
-async function resolveChenEndpoint() {
-  const configured = String(process.env.JMS_CHEN_DESKTOP_URL || process.env.JMS_CHEN_DEV_URL || "").trim();
+async function resolveChenEndpoint(smartEndpoint = "") {
+  const configured = String(process.env.JMS_CHEN_DESKTOP_URL || "").trim();
   if (configured) {
     const origin = normalizedHttpOrigin(configured, "Chen endpoint");
     allowedChenOrigins.add(origin);
@@ -121,32 +121,14 @@ async function resolveChenEndpoint() {
   }
 
   const siteOrigin = normalizedHttpOrigin(authService.currentSession().origin, "JumpServer site");
-  const site = parseUrl(siteOrigin);
-  if (["localhost", "127.0.0.1", "::1"].includes(site.hostname)) {
-    const localChen = parseUrl(siteOrigin);
-    localChen.protocol = "http:";
-    localChen.port = "8082";
-    try {
-      const response = await net.fetch(parseUrl("/chen/healthy", localChen).toString(), {
-        signal: AbortSignal.timeout(2_000)
-      });
-      if (response.ok && (await response.text()).trim() === "ok") {
-        allowedChenOrigins.add(localChen.origin);
-        electronLog.info(`chen endpoint ${localChen.origin}`);
-        return localChen.origin;
-      }
-    } catch {
-      // Fall back to the JumpServer-hosted Chen endpoint.
-    }
-  }
-
-  allowedChenOrigins.add(siteOrigin);
-  electronLog.info(`chen endpoint ${siteOrigin}`);
-  return siteOrigin;
+  const origin = smartEndpoint ? normalizedHttpOrigin(smartEndpoint, "Chen smart endpoint") : siteOrigin;
+  allowedChenOrigins.add(origin);
+  electronLog.info(`chen endpoint ${origin}`);
+  return origin;
 }
 
-async function resolveKokoEndpoint() {
-  const configured = String(process.env.JMS_KOKO_DESKTOP_URL || process.env.JMS_KOKO_DEV_URL || "").trim();
+async function resolveKokoEndpoint(smartEndpoint = "") {
+  const configured = String(process.env.JMS_KOKO_DESKTOP_URL || "").trim();
   if (configured) {
     const origin = normalizedHttpOrigin(configured, "Koko endpoint");
     allowedKokoOrigins.add(origin);
@@ -155,28 +137,10 @@ async function resolveKokoEndpoint() {
   }
 
   const siteOrigin = normalizedHttpOrigin(authService.currentSession().origin, "JumpServer site");
-  const site = parseUrl(siteOrigin);
-  if (["localhost", "127.0.0.1", "::1"].includes(site.hostname)) {
-    const localKoko = parseUrl(siteOrigin);
-    localKoko.protocol = "http:";
-    localKoko.port = "5050";
-    try {
-      const response = await net.fetch(parseUrl("/koko/health/", localKoko).toString(), {
-        signal: AbortSignal.timeout(2_000)
-      });
-      if (response.ok) {
-        allowedKokoOrigins.add(localKoko.origin);
-        electronLog.info(`koko endpoint ${localKoko.origin}`);
-        return localKoko.origin;
-      }
-    } catch {
-      // Fall back to the JumpServer-hosted Koko endpoint.
-    }
-  }
-
-  allowedKokoOrigins.add(siteOrigin);
-  electronLog.info(`koko endpoint ${siteOrigin}`);
-  return siteOrigin;
+  const origin = smartEndpoint ? normalizedHttpOrigin(smartEndpoint, "Koko smart endpoint") : siteOrigin;
+  allowedKokoOrigins.add(origin);
+  electronLog.info(`koko endpoint ${origin}`);
+  return origin;
 }
 
 function installConnectorSessionHooks(targetSession) {
@@ -842,6 +806,7 @@ function menuLabels() {
       copy: "复制",
       paste: "粘贴",
       selectAll: "全选",
+      newLocalShell: "新建本地终端",
       focusMode: "纯净模式",
       leftPanel: "左侧面板",
       rightPanel: "右侧面板",
@@ -877,6 +842,7 @@ function menuLabels() {
     copy: "Copy",
     paste: "Paste",
     selectAll: "Select All",
+    newLocalShell: "New Local Shell",
     focusMode: "Focus Mode",
     leftPanel: "Left Panel",
     rightPanel: "Right Panel",
@@ -995,7 +961,18 @@ function buildMenu() {
 
   const template: MenuItemConstructorOptions[] = [
     { label: productName, submenu: appSubmenu },
-    { label: labels.file, submenu: [{ label: labels.close, accelerator: "CmdOrCtrl+W", role: "close" }] },
+    {
+      label: labels.file,
+      submenu: [
+        {
+          label: labels.newLocalShell,
+          accelerator: "CmdOrCtrl+T",
+          click: () => sendMenuCommand("open-local-shell")
+        },
+        { type: "separator" },
+        { label: labels.close, accelerator: "CmdOrCtrl+W", role: "close" }
+      ]
+    },
     {
       label: labels.edit,
       submenu: [
@@ -1354,8 +1331,8 @@ async function handleInvoke(event, request) {
   if (command === "api_request") return authService.apiRequest(args.request);
   if (command === "api_stream_start") return startApiStream(event, win, args);
   if (command === "api_stream_cancel") return cancelApiStream(event, args);
-  if (command === "resolve_chen_endpoint") return resolveChenEndpoint();
-  if (command === "resolve_koko_endpoint") return resolveKokoEndpoint();
+  if (command === "resolve_chen_endpoint") return resolveChenEndpoint(args.endpointUrl);
+  if (command === "resolve_koko_endpoint") return resolveKokoEndpoint(args.endpointUrl);
   if (command === "create_koko_connect_ticket") return authService.createKokoConnectTicket(args);
   if (command === "import_offline_recording") return offlineRecordings.importRecording(normalizePath(args.filePath));
   if (command === "list_offline_recordings") return offlineRecordings.listRecordings();

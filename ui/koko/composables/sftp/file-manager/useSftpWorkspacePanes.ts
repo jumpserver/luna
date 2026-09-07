@@ -9,7 +9,7 @@ import type {
   SftpWorkspaceSide
 } from "./workspaceTypes";
 
-import { connectorSessionKey, resolveDevHost } from "@jumpserver/connectors-core";
+import { connectorSessionKey } from "@jumpserver/connectors-core";
 import { useKokoHostAdapter } from "#koko/host";
 import { computed, inject, reactive, ref, toValue, unref, watch } from "vue";
 import { assetSupportsSftp, defaultGlobalLeftPaneId, rememberSftpConnection } from "./selectors";
@@ -89,28 +89,24 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
   }
 
   async function buildSftpContext(assetId: string, tokenId: string, tabId: string) {
-    let endpointUrl = resolveDevHost("koko") || hostAdapter.getWindowOrigin();
-    if (!import.meta.dev) {
-      const endpoint = await hostAdapter.getSmartEndpoint(
-        { protocol: "sftp", assetId, token: tokenId },
-        currentOrgId.value
-      );
-      const port = endpoint.https_port || endpoint.port;
-      const scheme = endpoint.https_port ? "https" : "http";
-      const resolved =
-        endpoint.value ||
-        (endpoint.host ? (port ? `${scheme}://${endpoint.host}:${port}` : `${scheme}://${endpoint.host}`) : "");
-      if (!resolved) throw new Error(options.translate("koko.fileManagement.endpointUnavailable"));
+    const endpoint = await hostAdapter.getSmartEndpoint(
+      { protocol: "sftp", assetId, token: tokenId },
+      currentOrgId.value
+    );
+    const port = endpoint.https_port || endpoint.port;
+    const scheme = endpoint.https_port ? "https" : "http";
+    const resolved =
+      endpoint.value ||
+      (endpoint.host ? (port ? `${scheme}://${endpoint.host}:${port}` : `${scheme}://${endpoint.host}`) : "");
+    if (!resolved) throw new Error(options.translate("koko.fileManagement.endpointUnavailable"));
 
-      if (isDesktopRuntime) {
-        endpointUrl = resolved;
-      } else {
-        const resolvedUrl = new URL(resolved);
-        const isLoopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(resolvedUrl.hostname);
-        const hostOrigin = hostAdapter.getWindowOrigin();
-        const samePort = (resolvedUrl.port || "") === new URL(hostOrigin).port;
-        endpointUrl = isLoopback && !samePort ? hostOrigin : resolved;
-      }
+    let endpointUrl = resolved;
+    if (!isDesktopRuntime) {
+      const resolvedUrl = new URL(resolved);
+      const isLoopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(resolvedUrl.hostname);
+      const hostOrigin = hostAdapter.getWindowOrigin();
+      const samePort = (resolvedUrl.port || "") === new URL(hostOrigin).port;
+      endpointUrl = isLoopback && !samePort ? hostOrigin : resolved;
     }
 
     let ticket = "";

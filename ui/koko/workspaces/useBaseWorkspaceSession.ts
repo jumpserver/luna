@@ -3,7 +3,7 @@ import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 import type { KokoWorkspaceTab } from "#koko/host";
 import type { Ref } from "vue";
 
-import { connectorSessionKey, resolveDevHost } from "@jumpserver/connectors-core";
+import { connectorSessionKey } from "@jumpserver/connectors-core";
 import { useKokoHostAdapter } from "#koko/host";
 
 interface UseBaseWorkspaceSessionOptions {
@@ -34,9 +34,8 @@ export function useBaseWorkspaceSession(tab: Ref<KokoWorkspaceTab>, options: Use
   }
 
   async function fetchEndpointUrl() {
-    if (import.meta.dev) {
-      return resolveDevHost("koko") || host.getWindowOrigin();
-    }
+    const explicitEndpoint = String(tab.value.payload?.endpointUrl || "").trim();
+    if (explicitEndpoint) return explicitEndpoint;
 
     const endpoint = await host.getSmartEndpoint({
       protocol: resolvedProtocol.value,

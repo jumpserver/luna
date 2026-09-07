@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
+import type { KokoWorkspaceTab } from "#koko/host";
 
 const host = {
   createTicket: vi.fn(),
@@ -28,7 +29,7 @@ vi.stubGlobal("useI18n", () => ({ t: (key: string) => key }));
 const { useBaseWorkspaceSession } = await import("#koko/workspaces/useBaseWorkspaceSession");
 
 function createTab() {
-  return ref({
+  return ref<KokoWorkspaceTab>({
     id: "tab-1",
     assetId: "asset-1",
     protocol: "ssh",
@@ -80,9 +81,15 @@ describe("useBaseWorkspaceSession", () => {
       component: "koko",
       tokenId: "token-1",
       ticket: "ticket-1",
+      endpointUrl: "https://koko.example.test:443",
       tabId: "tab-1",
       disableAutoHash: undefined,
       actions: ["copy"]
+    });
+    expect(host.getSmartEndpoint).toHaveBeenCalledWith({
+      protocol: "ssh",
+      assetId: "asset-1",
+      token: "token-1"
     });
     expect(host.createTicket).toHaveBeenCalledWith({ baseUrl: expect.any(String), tokenId: "token-1" });
     expect(host.markSessionConnected).toHaveBeenCalledWith("tab-1");
@@ -90,7 +97,18 @@ describe("useBaseWorkspaceSession", () => {
     expect(session.error.value).toBe("");
   });
 
-  it.skipIf(import.meta.dev)("falls back to the window origin for loopback endpoints on web", async () => {
+  it("uses an endpoint already resolved for the session", async () => {
+    const tab = createTab();
+    tab.value.payload = { ...tab.value.payload, endpointUrl: "https://koko.jumpserver-test.example.com" };
+    const session = useBaseWorkspaceSession(tab);
+
+    const context = await session.prepareSession();
+
+    expect(context?.endpointUrl).toBe("https://koko.jumpserver-test.example.com");
+    expect(host.getSmartEndpoint).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the window origin for loopback endpoints on web", async () => {
     host.getSmartEndpoint.mockResolvedValue({ value: "http://127.0.0.1:5050" });
     const session = useBaseWorkspaceSession(createTab());
 
@@ -99,7 +117,7 @@ describe("useBaseWorkspaceSession", () => {
     expect(context?.endpointUrl).toBe("http://127.0.0.1:3300");
   });
 
-  it.skipIf(import.meta.dev)("keeps the resolved endpoint in the desktop runtime", async () => {
+  it("keeps the resolved endpoint in the desktop runtime", async () => {
     host.isDesktopRuntime.mockReturnValue(true);
     host.getSmartEndpoint.mockResolvedValue({ value: "https://koko.internal:443" });
     const session = useBaseWorkspaceSession(createTab());

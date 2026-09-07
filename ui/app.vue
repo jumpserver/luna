@@ -59,7 +59,7 @@ const backgroundColor = computed(() => {
   if (isMacOS.value) {
     return isDark
       ? "color-mix(in srgb, var(--app-frame-bg) 82%, transparent)"
-      : "color-mix(in srgb, var(--app-frame-bg) 90%, transparent)";
+      : "color-mix(in srgb, var(--app-frame-bg) 72%, transparent)";
   } else {
     return isDark
       ? "color-mix(in srgb, var(--app-frame-bg) 84%, transparent)"
@@ -74,6 +74,9 @@ const platformClass = computed(() => {
   return `platform-${platformKey}`;
 });
 const micaClass = computed(() => (isDesktopRuntime() && isWindows.value ? "runtime-windows-mica" : ""));
+const vibrancyClass = computed(() =>
+  isDesktopRuntime() && isMacOS.value && userTheme.value === "light" ? "runtime-macos-vibrancy" : ""
+);
 const appTitle = computed(() => {
   const webTitle = formatWorkspaceTitle(webWorkspaceBrand.value, t("Common.Workspace"));
   return import.meta.client && !isDesktopRuntime() ? webTitle : "JumpServer";
@@ -83,7 +86,9 @@ const appTitle = computed(() => {
 useHead({
   title: appTitle,
   bodyAttrs: {
-    class: computed(() => `${platformClass.value} ${micaClass.value} font-sans antialiased h-screen w-screen`),
+    class: computed(
+      () => `${platformClass.value} ${micaClass.value} ${vibrancyClass.value} font-sans antialiased h-screen w-screen`
+    ),
     style: computed(
       () => `
         background-color: ${backgroundColor.value};

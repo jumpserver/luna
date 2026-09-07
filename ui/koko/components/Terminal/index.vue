@@ -194,7 +194,7 @@ const onUploadChange = (event: Event) => {
 
 #terminal-container :deep(.terminal) {
   height: 100%;
-  padding: 6px 8px;
+  padding: 6px 8px 2px;
 }
 
 .terminal-command-suggestions {

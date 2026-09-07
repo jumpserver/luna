@@ -204,11 +204,20 @@ const sideBarItems = computed<NavigationMenuItem[]>(() => {
   ];
 });
 
-const handleWorkspaceQuickSearch = async () => {
-  showAssetSearch.value = true;
+const focusAssetSearchInput = async () => {
   await nextTick();
   const input = assetSearchInputRef.value?.$el?.querySelector("input") as HTMLInputElement | undefined;
   input?.focus();
+};
+
+const toggleAssetSearch = async () => {
+  showAssetSearch.value = !showAssetSearch.value;
+  if (showAssetSearch.value) await focusAssetSearchInput();
+};
+
+const handleWorkspaceQuickSearch = async () => {
+  showAssetSearch.value = true;
+  await focusAssetSearchInput();
 };
 
 useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
@@ -246,11 +255,7 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
               class="sidebar-icon-button size-6 shrink-0 justify-center p-0"
               :class="showAssetSearch ? 'sidebar-icon-button-active' : ''"
               :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-              @click="
-                () => {
-                  showAssetSearch = !showAssetSearch;
-                }
-              "
+              @click="toggleAssetSearch"
             />
           </UTooltip>
 

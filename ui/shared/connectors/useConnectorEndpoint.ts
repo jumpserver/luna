@@ -1,1 +1,1 @@
-export { resolveDevHost, resolveDevWsBase, resolveWsUrl } from "@jumpserver/connectors-core";
+export { resolveWsUrl } from "@jumpserver/connectors-core";

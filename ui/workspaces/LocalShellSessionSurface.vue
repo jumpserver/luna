@@ -156,6 +156,6 @@ defineExpose({ focus });
 
 .local-shell-terminal :deep(.terminal) {
   height: 100%;
-  padding: 6px 8px;
+  padding: 6px 8px 2px;
 }
 </style>
