@@ -3,6 +3,7 @@ import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { AssetItem, AssetPageType } from "~/types/index";
 
 import ConnectFormFields from "~/components/ConnectForm/fields.vue";
+import { resolveConnectionSetupLoadError } from "~/composables/useConnectionFormState";
 import {
   isExternalClientConnectMethod,
   parseLocalApplicationConnectMethod,
@@ -38,6 +39,7 @@ const {
 
 const currentAsset = ref<AssetItem | null>(props.tab.setupAsset || null);
 const loading = ref(false);
+const loadError = ref("");
 const connecting = ref(false);
 const connectionError = ref("");
 const launchedClientName = ref("");
@@ -95,9 +97,12 @@ async function loadAsset() {
   if (!asset) return;
 
   loading.value = true;
+  loadError.value = "";
   try {
     currentAsset.value = await loadAssetDetails(asset);
     initDraft(currentAsset.value, props.tab.protocol);
+  } catch (error) {
+    loadError.value = resolveConnectionSetupLoadError(error, t);
   } finally {
     loading.value = false;
   }
@@ -260,7 +265,29 @@ onMounted(loadAsset);
 
           <div v-else class="flex min-h-75 flex-col" :class="modernIsland ? '' : 'bg-(--app-surface-panel-strong)'">
             <div class="min-h-0 flex-1 overflow-auto py-4 pt-2" :class="modernIsland ? 'px-4' : 'px-6'">
-              <div v-if="launchSuccessVisible" class="flex min-h-full items-center justify-center py-6">
+              <div v-if="loadError" class="flex min-h-64 items-center justify-center py-6">
+                <UAlert
+                  color="error"
+                  variant="subtle"
+                  icon="i-lucide-circle-alert"
+                  :title="t('Asset.GetAssetFailed')"
+                  :description="loadError"
+                  class="w-full max-w-md"
+                >
+                  <template #actions>
+                    <UButton
+                      color="error"
+                      variant="outline"
+                      size="sm"
+                      icon="i-lucide-refresh-cw"
+                      :label="t('Common.Refresh')"
+                      @click="loadAsset"
+                    />
+                  </template>
+                </UAlert>
+              </div>
+
+              <div v-else-if="launchSuccessVisible" class="flex min-h-full items-center justify-center py-6">
                 <section
                   class="launch-success-card w-full rounded-xl border border-(--app-border) bg-(--workspace-surface-panel) px-5 py-6 sm:px-6"
                 >

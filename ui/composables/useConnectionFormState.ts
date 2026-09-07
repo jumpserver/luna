@@ -8,6 +8,7 @@ import type {
   PersonalAssetCredential
 } from "~/types";
 
+import { ApiRequestError } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols, sortProtocolNames } from "~/utils";
 
@@ -25,6 +26,14 @@ export interface ConnectionFormDraft {
   rememberSelection: boolean;
   connectMethod: string;
   connectOptions: Record<string, any>;
+}
+
+export function resolveConnectionSetupLoadError(error: unknown, translate: (key: string) => string) {
+  if (error instanceof ApiRequestError && error.data?.code === "vault_unavailable") {
+    return translate("ConnectError.CredentialServiceUnavailable");
+  }
+  const detail = error instanceof Error ? error.message : String(error || "");
+  return detail || translate("Asset.GetAssetFailed");
 }
 
 export function useConnectionFormState() {
