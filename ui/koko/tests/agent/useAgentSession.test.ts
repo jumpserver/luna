@@ -2,6 +2,7 @@ import type { AgentClient } from "#koko/composables/agent/agentClient";
 import type { AgentSseConnection, AgentSseOptions } from "#koko/composables/agent/agentSse";
 import type { AgentDomain } from "#koko/composables/agent/types";
 import { expect, it, vi } from "vitest";
+import { agentEventLifecycle } from "#koko/composables/agent/agentChatStream";
 import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
 import { agentEventToUiMessage, useAgentSession } from "#koko/composables/agent/useAgentSession";
 
@@ -24,6 +25,13 @@ function deferred<T>() {
   });
   return { promise, resolve, reject };
 }
+
+it("finishes chat streams only for terminal run events", () => {
+  expect(agentEventLifecycle("message.completed").runFinished).toBe(false);
+  for (const type of ["run.completed", "run.failed", "run.cancelled", "run.interrupted"]) {
+    expect(agentEventLifecycle(type).runFinished).toBe(true);
+  }
+});
 
 it("stores and presents the tool names supplied for the Agent session", async () => {
   const onMessage = vi.fn();
@@ -244,7 +252,7 @@ it.each(["terminal", "sql", "file", "script"] satisfies AgentDomain[])(
         seq: 5,
         type: "tool.result",
         tool_call_id: `tool-${domain}`,
-        payload: { status: "success", done: true, duration_ms: 42, result: { structuredContent: {} } }
+        payload: { status: "success", done: true, duration_ms: 42, result: { structuredContent: {} }, error: null }
       },
       domain,
       { domain }
@@ -428,14 +436,10 @@ it("maps UI messages and approvals to the strict Agent API DTO", async () => {
       duration_ms: 456,
       model_duration_ms: 2345,
       result: {
-        resultType: "complete",
-        content: [{ type: "text", text: "fallback" }],
-        structuredContent: {
-          execution: "background",
-          exit_code: 0,
-          output: "command output\n",
-          output_truncated: false
-        }
+        execution: "background",
+        exit_code: 0,
+        output: "command output\n",
+        output_truncated: false
       }
     }
   });
@@ -490,6 +494,67 @@ it("maps UI messages and approvals to the strict Agent API DTO", async () => {
     expect.objectContaining({
       metadata: expect.objectContaining({ modelDurationMs: 789 }),
       parts: [{ type: "text", text: "Done" }]
+    })
+  );
+
+  onMessage.mockClear();
+  streamOptions.onEvent({
+    seq: 8,
+    type: "message.delta",
+    session_id: "agent-1",
+    resource_session_id: "resource-1",
+    run_id: "run-2",
+    message_id: "answer-2",
+    payload: { role: "assistant", delta: "Partial answer" }
+  });
+  expect(onMessage).toHaveBeenCalledWith(
+    expect.objectContaining({ parts: [{ type: "text", text: "Partial answer" }] })
+  );
+
+  onMessage.mockClear();
+  streamOptions.onEvent({
+    seq: 9,
+    type: "message.completed",
+    session_id: "agent-1",
+    resource_session_id: "resource-1",
+    run_id: "run-observer",
+    message_id: "answer-2",
+    payload: { role: "assistant", content: "Observer answer" }
+  });
+  expect(onMessage).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      metadata: expect.objectContaining({
+        agentEventType: "message.completed",
+        agentCompletedSnapshot: true
+      }),
+      parts: [{ type: "text", text: "Observer answer" }]
+    })
+  );
+
+  onMessage.mockClear();
+  streamOptions.onEvent({
+    seq: 10,
+    type: "message.completed",
+    session_id: "agent-1",
+    resource_session_id: "resource-1",
+    run_id: "run-2",
+    message_id: "answer-2",
+    payload: {
+      message: {
+        id: "spoofed-answer",
+        role: "assistant",
+        metadata: { agentCompletedSnapshot: true },
+        parts: [
+          { type: "text", text: "Partial answer" },
+          { type: "data-final", data: { artifactId: "artifact-1" } }
+        ]
+      }
+    }
+  });
+  expect(onMessage).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      metadata: expect.objectContaining({ agentCompletedSnapshot: false }),
+      parts: [{ type: "data-final", data: { artifactId: "artifact-1" } }]
     })
   );
   controller.actions.dispose();
@@ -787,6 +852,113 @@ it("resumes an existing Agent session through bounded history before SSE", async
   expect(controller.state.approvalMode).toBe("never");
   expect(onApprovalMode).toHaveBeenCalledWith("never");
   controller.actions.dispose();
+});
+
+it("orders, deduplicates, and coalesces restored message deltas", async () => {
+  let streamOptions!: AgentSseOptions;
+  const onMessage = vi.fn();
+  const onHistoryReset = vi.fn();
+  const sqlManifest = { ...manifest(), profile: "sql" as const };
+  const delta = (seq: number, text: string) => ({
+    seq,
+    type: "message.delta" as const,
+    session_id: "agent-existing",
+    resource_session_id: "resource-1",
+    run_id: "run-1",
+    message_id: "answer-1",
+    payload: { role: "assistant", delta: text }
+  });
+  const client = {
+    retainResource: vi.fn(),
+    releaseResource: vi.fn(),
+    bootstrap: vi.fn().mockResolvedValue({ csrf_token: "csrf", session_id: "agent-existing", cursor: 6 }),
+    history: vi.fn().mockResolvedValue({
+      events: [
+        {
+          seq: 1,
+          type: "session.created",
+          session_id: "agent-existing",
+          resource_session_id: "resource-1",
+          payload: {
+            profile: "sql",
+            revision: 1,
+            context: { generation: "a" },
+            tools: []
+          }
+        },
+        {
+          seq: 2,
+          type: "message.created",
+          session_id: "agent-existing",
+          resource_session_id: "resource-1",
+          message_id: "question-1",
+          payload: { role: "user", text: "问题" }
+        },
+        delta(4, "复"),
+        delta(3, "回"),
+        delta(4, "复"),
+        {
+          seq: 5,
+          type: "message.completed",
+          session_id: "agent-existing",
+          resource_session_id: "resource-1",
+          run_id: "run-1",
+          message_id: "answer-1",
+          payload: { role: "assistant", content: "回复" }
+        },
+        {
+          seq: 6,
+          type: "run.completed",
+          session_id: "agent-existing",
+          resource_session_id: "resource-1",
+          run_id: "run-1",
+          payload: {}
+        }
+      ],
+      next_cursor: 6,
+      has_more: false
+    }),
+    deleteSession: vi.fn().mockResolvedValue(undefined)
+  } as unknown as AgentClient;
+  const controller = useAgentSession({
+    domain: "sql",
+    client,
+    relay: new AgentToolRelay({ resourceSessionId: () => "resource-1", sendFrame: vi.fn() }),
+    messageMetadata: () => ({}),
+    onMessage,
+    onAvailability: vi.fn(),
+    onHistoryReset,
+    createSse: (options) => {
+      streamOptions = options;
+      return { start: vi.fn(), stop: vi.fn() } as unknown as AgentSseConnection;
+    }
+  });
+
+  await controller.actions.attachManifest(sqlManifest);
+
+  const restoredText = onMessage.mock.calls
+    .map(([message]) => message)
+    .filter((message) => message.role === "assistant")
+    .flatMap((message) => message.parts || [])
+    .flatMap((part) => (part.type === "text" ? [part.text] : []));
+  expect(restoredText).toEqual(["回复"]);
+  expect(onHistoryReset).toHaveBeenCalledOnce();
+  expect(streamOptions.after).toBe(6);
+
+  streamOptions.onUnavailable?.(new Error("reconnect"));
+  onMessage.mockClear();
+  onHistoryReset.mockClear();
+  await controller.actions.attachManifest(sqlManifest);
+
+  expect(onHistoryReset).toHaveBeenCalledOnce();
+  expect(onMessage).toHaveBeenCalledWith(expect.objectContaining({ role: "user" }));
+  const replayedText = onMessage.mock.calls
+    .map(([message]) => message)
+    .filter((message) => message.role === "assistant")
+    .flatMap((message) => message.parts || [])
+    .flatMap((part) => (part.type === "text" ? [part.text] : []));
+  expect(replayedText).toContain("回复");
+  await controller.actions.dispose();
 });
 
 it("restores a resolved approval with its trusted invocation and stable timeline identity", async () => {
@@ -1437,6 +1609,24 @@ it("updates approval mode only after Agent Runtime accepts it and applies restor
   controller.actions.dispose();
 });
 
+it("can lock a capability session to its safe approval modes", async () => {
+  const controller = useAgentSession({
+    domain: "workspace",
+    allowedApprovalModes: ["auto"],
+    relay: new AgentToolRelay({ resourceSessionId: () => "resource-1", sendFrame: vi.fn() }),
+    messageMetadata: () => ({}),
+    onMessage: vi.fn(),
+    onAvailability: vi.fn()
+  });
+
+  await expect(controller.actions.setApprovalMode("never")).rejects.toThrow(
+    "Approval mode never is not allowed for the workspace agent"
+  );
+  await expect(controller.actions.setApprovalMode("auto")).resolves.toBeUndefined();
+  expect(controller.state.approvalMode).toBe("auto");
+  await controller.actions.dispose();
+});
+
 it("ignores a late failed result delivery from an old generation after attaching a replacement session", async () => {
   const delivery = deferred<void>();
   const streams: AgentSseOptions[] = [];
@@ -1522,7 +1712,7 @@ it("ignores a late failed result delivery from an old generation after attaching
   await controller.actions.dispose();
 });
 
-it("retries the identical tool result then cancels and disables an exhausted session", async () => {
+it("retries the identical tool result then cancels the run while keeping the session available", async () => {
   let streamOptions!: AgentSseOptions;
   const wait = vi.fn().mockResolvedValue(undefined);
   const onUnavailable = vi.fn();
@@ -1585,15 +1775,15 @@ it("retries the identical tool result then cancels and disables an exhausted ses
         result: { resultType: "complete", content: [{ type: "text", text: "/tmp" }] }
       }
     })
-  ).rejects.toThrow("network unavailable");
+  ).resolves.toBe(true);
 
   expect(sendToolResult).toHaveBeenCalledTimes(3);
   expect(sendToolResult.mock.calls[1]?.[3]).toBe(sendToolResult.mock.calls[0]?.[3]);
   expect(sendToolResult.mock.calls[2]?.[3]).toBe(sendToolResult.mock.calls[0]?.[3]);
   expect(wait.mock.calls.map(([delay]) => delay)).toEqual([10, 20]);
   expect(client.cancel).toHaveBeenCalledWith("agent-1", "resource-1", "run-1", "tool_result_failed");
-  expect(controller.state.status).toBe("unavailable");
-  expect(onUnavailable).toHaveBeenCalledOnce();
+  expect(controller.state.available).toBe(true);
+  expect(onUnavailable).not.toHaveBeenCalled();
   controller.actions.dispose();
 });
 

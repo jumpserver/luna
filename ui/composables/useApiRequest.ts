@@ -1,13 +1,14 @@
-import type { AssetTreeKind, TokenResponse, UserProfile } from "~/types";
+import type { AssetTreeKind, PersonalAssetCredential, TokenResponse, UserProfile } from "~/types";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export interface ApiRequest {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
   path: string;
-  service?: "core" | "chat-ai";
+  service?: "core" | "kael";
   query?: Record<string, unknown>;
   body?: unknown;
+  headers?: Record<string, string>;
   orgId?: string;
 }
 
@@ -93,6 +94,97 @@ export interface PublicSettings {
 
 let lastAuthFailureAt = 0;
 
+const PERSONAL_CREDENTIAL_CACHE_TTL_MS = 15_000;
+const PERSONAL_CREDENTIAL_CACHE_MAX_ENTRIES = 128;
+
+interface PersonalCredentialCacheScope {
+  accountId: string;
+  assetId: string;
+  orgId: string;
+  protocol: string;
+  site: string;
+}
+
+interface PersonalCredentialCacheEntry {
+  credentials: PersonalAssetCredential[];
+  expiresAt: number;
+  scope: PersonalCredentialCacheScope;
+}
+
+interface PersonalCredentialRequestEntry {
+  promise: Promise<PersonalAssetCredential[]>;
+  requestId: symbol;
+  scope: PersonalCredentialCacheScope;
+}
+
+export interface PersonalCredentialCacheFilter {
+  assetId?: string;
+  orgId?: string;
+  protocol?: string;
+}
+
+const personalCredentialCache = new Map<string, PersonalCredentialCacheEntry>();
+const personalCredentialRequests = new Map<string, PersonalCredentialRequestEntry>();
+
+const cachePersonalCredentials = (
+  cacheKey: string,
+  scope: PersonalCredentialCacheScope,
+  credentials: PersonalAssetCredential[]
+) => {
+  const now = Date.now();
+  for (const [key, entry] of personalCredentialCache) {
+    if (entry.expiresAt <= now) personalCredentialCache.delete(key);
+  }
+  while (
+    !personalCredentialCache.has(cacheKey) &&
+    personalCredentialCache.size >= PERSONAL_CREDENTIAL_CACHE_MAX_ENTRIES
+  ) {
+    const oldestKey = personalCredentialCache.keys().next().value;
+    if (oldestKey === undefined) break;
+    personalCredentialCache.delete(oldestKey);
+  }
+  personalCredentialCache.set(cacheKey, {
+    credentials,
+    expiresAt: now + PERSONAL_CREDENTIAL_CACHE_TTL_MS,
+    scope
+  });
+};
+
+const getPersonalCredentialCacheScope = (
+  assetId: string,
+  protocol: string,
+  orgId?: string
+): PersonalCredentialCacheScope => {
+  const userInfoStore = useUserInfoStore();
+  return {
+    accountId: userInfoStore.currentAccountId || "",
+    assetId,
+    orgId: orgId || userInfoStore.currentUser?.org?.id || "",
+    protocol: protocol.trim().toLowerCase(),
+    site: userInfoStore.currentSite || ""
+  };
+};
+
+const getPersonalCredentialCacheKey = (scope: PersonalCredentialCacheScope) =>
+  [scope.site, scope.accountId, scope.orgId, scope.assetId, scope.protocol].join("\u0000");
+
+const matchesPersonalCredentialCacheFilter = (
+  scope: PersonalCredentialCacheScope,
+  filter: PersonalCredentialCacheFilter
+) =>
+  (!filter.assetId || scope.assetId === filter.assetId) &&
+  (!filter.orgId || scope.orgId === filter.orgId) &&
+  (!filter.protocol || scope.protocol === filter.protocol.trim().toLowerCase());
+
+export function invalidatePersonalAssetCredentialCache(filter: PersonalCredentialCacheFilter = {}) {
+  for (const [key, entry] of personalCredentialCache) {
+    if (matchesPersonalCredentialCacheFilter(entry.scope, filter)) personalCredentialCache.delete(key);
+  }
+  for (const [key, entry] of personalCredentialRequests) {
+    if (matchesPersonalCredentialCacheFilter(entry.scope, filter)) personalCredentialRequests.delete(key);
+  }
+}
+
 const isAuthFailure = (error: unknown) => {
   if (error instanceof ApiRequestError) return error.status === 401;
   const message = error instanceof Error ? error.message : String(error || "");
@@ -134,12 +226,15 @@ async function webApiRequest<T>(request: ApiRequest): Promise<T> {
   const query = buildWebQuery(request);
   const url = [withWebSitePrefix(request.path), query].filter(Boolean).join("?");
   const hasBody = request.body !== undefined;
+  const mutating = !["GET", "OPTIONS"].includes(request.method);
   const response = await fetch(url, {
     method: request.method,
     credentials: "include",
-    headers: hasBody
-      ? { ...getWebApiMutationHeaders(request.orgId), "Content-Type": "application/json" }
-      : getWebApiHeaders(request.orgId),
+    headers: {
+      ...(mutating ? getWebApiMutationHeaders(request.orgId) : getWebApiHeaders(request.orgId)),
+      ...request.headers,
+      ...(hasBody ? { "Content-Type": "application/json" } : {})
+    },
     body: hasBody ? JSON.stringify(request.body) : undefined
   });
 
@@ -238,6 +333,19 @@ export function getAssetTree(kind: AssetTreeKind, params: AssetTreeParams, orgId
     method: "GET",
     path: paths[kind],
     query: params as Record<string, unknown>,
+    orgId
+  });
+}
+
+export function getAuthorizedAssets(
+  params: { search?: string; limit: number; offset: number },
+  orgId: string
+): Promise<{ count: number; next: string | null; results: Record<string, unknown>[] }> {
+  return apiRequest({
+    method: "GET",
+    path: "/api/v1/perms/users/self/assets/",
+    // Request only display fields; fields also makes the backend count the filtered assets exactly.
+    query: { ...params, fields: "id,name,address,org_id,is_active", order: "name" },
     orgId
   });
 }
@@ -455,6 +563,49 @@ export function getAssetDetailRequest(assetId: string, orgId?: string): Promise<
     path: `/api/v1/perms/users/self/assets/${encodeURIComponent(assetId)}/`,
     orgId
   });
+}
+
+export async function getPersonalAssetCredentials(
+  assetId: string,
+  protocol: string,
+  orgId?: string
+): Promise<PersonalAssetCredential[]> {
+  const scope = getPersonalCredentialCacheScope(assetId, protocol, orgId);
+  const cacheKey = getPersonalCredentialCacheKey(scope);
+  const cached = personalCredentialCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.credentials;
+  if (cached) personalCredentialCache.delete(cacheKey);
+
+  const pending = personalCredentialRequests.get(cacheKey);
+  if (pending) return pending.promise;
+
+  const requestId = Symbol(cacheKey);
+  const request = apiRequest<PersonalAssetCredential[] | { results?: PersonalAssetCredential[] }>({
+    method: "GET",
+    path: "/api/v1/accounts/personal-asset-credentials/",
+    query: {
+      asset: scope.assetId,
+      protocol: scope.protocol,
+      is_active: true,
+      limit: 1000
+    },
+    orgId: scope.orgId || undefined
+  })
+    .then((response) => {
+      const credentials = Array.isArray(response) ? response : response.results || [];
+      if (personalCredentialRequests.get(cacheKey)?.requestId === requestId) {
+        cachePersonalCredentials(cacheKey, scope, credentials);
+      }
+      return credentials;
+    })
+    .finally(() => {
+      if (personalCredentialRequests.get(cacheKey)?.requestId === requestId) {
+        personalCredentialRequests.delete(cacheKey);
+      }
+    });
+
+  personalCredentialRequests.set(cacheKey, { promise: request, requestId, scope });
+  return request;
 }
 
 export function renameAsset(assetId: string, name: string, orgId?: string): Promise<Record<string, any> | null> {

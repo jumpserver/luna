@@ -13,6 +13,12 @@ import type { AgentSessionController } from "#koko/composables/agent/useAgentSes
 import type { SnippetVariableDefinition } from "~/utils/snippetVariables";
 import { useChat } from "@ai-sdk/vue";
 import { effectScope, markRaw, reactive, shallowReactive } from "vue";
+import {
+  agentChatEventLifecycle,
+  agentChatStreamMessage,
+  agentChatTextId,
+  closeAgentChatText
+} from "#koko/composables/agent/agentChatStream";
 import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
 import {
   AGENT_MCP_BINDING_META_KEY,
@@ -205,9 +211,9 @@ class ScriptAiTransport implements ChatTransport<ScriptAiChatMessage> {
     }
 
     for (const [index, part] of message.parts.entries()) {
-      const id = `${message.id}-${index}`;
       if (part.type === "text") {
         const isDelta = message.metadata?.agentEventType === "message.delta";
+        const id = agentChatTextId(response, message.id, index);
         if (!response.openTextIds.has(id)) {
           response.controller.enqueue({ type: "text-start", id });
           response.openTextIds.add(id);
@@ -220,7 +226,8 @@ class ScriptAiTransport implements ChatTransport<ScriptAiChatMessage> {
         continue;
       }
       if (part.type.startsWith("data-") && "data" in part) {
-        response.controller.enqueue({ type: part.type, id, data: part.data });
+        closeAgentChatText(response);
+        response.controller.enqueue({ type: part.type, id: `${message.id}-${index}`, data: part.data });
       }
     }
     return true;
@@ -228,7 +235,7 @@ class ScriptAiTransport implements ChatTransport<ScriptAiChatMessage> {
 
   finish(response = this.activeResponse) {
     if (!response) return;
-    for (const id of response.openTextIds) response.controller.enqueue({ type: "text-end", id });
+    closeAgentChatText(response);
     if (response.started) response.controller.enqueue({ type: "finish", finishReason: "stop" });
     response.controller.close();
     this.clear(response);
@@ -628,6 +635,21 @@ function createSession(
       onInputLock: (locked) => {
         if (session) session.inputLocked = locked;
       },
+      onHistoryReset: () => {
+        if (!session) return;
+        session.chat.messages.value = [];
+        session.taskActive = false;
+        session.inputLocked = false;
+        session.proposals.clear();
+        session.proposalErrors.clear();
+        session.proposalDecisions.clear();
+        session.pendingProposalCalls.clear();
+        session.runtimeStatus = "";
+        session.runtimeStatusCode = "";
+        session.runtimeState = "";
+        session.errorCode = "";
+        session.errorText = "";
+      },
       onUnavailable: (cause) => {
         if (!session) return;
         session.errorCode = "agent_unavailable";
@@ -688,13 +710,12 @@ function partData(message: ScriptAiChatMessage, type: string) {
 }
 
 export function scriptAiTimelineMessage(message: ScriptAiChatMessage) {
-  const parts = message.parts.filter((part) => {
+  return agentChatStreamMessage(message, (part) => {
     if (["data-capability", "data-input-lock", "data-approval", "data-error"].includes(part.type)) return false;
     if (part.type !== "data-progress" || !("data" in part)) return true;
     const data = isRecord(part.data) ? part.data : {};
     return String(data.tool_name || data.name || "") === "propose_script";
   });
-  return parts.length ? ({ ...message, parts } as ScriptAiChatMessage) : null;
 }
 
 export function scriptAiReadOnlyApprovalId(value: unknown) {
@@ -718,6 +739,7 @@ export function handleScriptAiMessage(paneId: string, value: unknown) {
   if (!session || !isScriptAiChatMessage(value)) return;
   const message = value;
   const transport = transports.get(session);
+  const { runFinished } = agentChatEventLifecycle(message);
 
   const capability = partData(message, "data-capability");
   if (capability) {
@@ -743,7 +765,7 @@ export function handleScriptAiMessage(paneId: string, value: unknown) {
     const toolName = String(progress.tool_name || progress.name || "");
     session.runtimeStatusCode = toolName === "propose_script" ? "proposing" : String(progress.code || "");
     session.runtimeState = runtimeState;
-    if (["completed", "failed", "cancelled", "interrupted"].includes(runtimeState)) {
+    if (runFinished) {
       session.taskActive = false;
       session.inputLocked = false;
     } else if (runtimeState) {
@@ -763,7 +785,7 @@ export function handleScriptAiMessage(paneId: string, value: unknown) {
     session.chat.messages.value = [...session.chat.messages.value, timelineMessage];
   }
 
-  if (!session.enabled || runtimeError || ["completed", "failed", "cancelled", "interrupted"].includes(runtimeState)) {
+  if (!session.enabled || runtimeError || runFinished) {
     transport?.finish();
   }
 }

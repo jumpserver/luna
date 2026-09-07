@@ -35,8 +35,8 @@ const toolbarWidth = ref(0);
 
 let resizeObserver: ResizeObserver | undefined;
 
-const isNarrow = computed(() => toolbarWidth.value > 0 && toolbarWidth.value < 420);
-const isCompact = computed(() => toolbarWidth.value > 0 && toolbarWidth.value < 560);
+const isNarrow = computed(() => toolbarWidth.value > 0 && toolbarWidth.value < 720);
+const isCompact = computed(() => toolbarWidth.value > 0 && toolbarWidth.value < 720);
 
 const quickPathItems = computed(() =>
   props.quickPaths.map((item) => ({
@@ -199,6 +199,7 @@ onBeforeUnmount(() => {
           color="neutral"
           variant="ghost"
           size="sm"
+          square
           :disabled="currentPath === rootPath"
           :aria-label="t('koko.drawer.up')"
           @click="void emit('parent', { name: '..', is_dir: true } as SftpFileEntry)"
@@ -224,7 +225,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div
-      class="sftp-file-management__path-field relative flex h-8 min-w-0 flex-1 items-center overflow-hidden rounded-[3px] border border-(--app-border) bg-(--app-input-bg)"
+      class="sftp-file-management__path-field relative flex h-8 min-w-0 flex-1 items-center overflow-hidden rounded-[7px] border border-(--app-border) bg-(--app-input-bg)"
       :class="pathEditing ? 'ring-2 ring-(--app-focus-ring)' : ''"
     >
       <input
@@ -241,7 +242,7 @@ onBeforeUnmount(() => {
       <button
         v-else
         type="button"
-        class="flex h-full min-w-0 flex-1 cursor-text items-center truncate px-2 text-left font-ui-mono text-[12px] text-(--app-fg) hover:bg-accented/40"
+        class="sftp-path-crumb flex h-full min-w-0 flex-1 cursor-text items-center truncate px-2 text-left font-ui-mono text-[12px] text-(--app-fg) hover:bg-accented/40"
         :title="currentPath || t('koko.localFile.folder')"
         @click="beginPathEdit"
       >
@@ -257,6 +258,7 @@ onBeforeUnmount(() => {
             color="neutral"
             variant="ghost"
             size="sm"
+            square
             :aria-label="t('koko.fileManagement.refresh')"
             @click="void emit('refresh')"
           />
@@ -267,6 +269,7 @@ onBeforeUnmount(() => {
             color="neutral"
             variant="ghost"
             size="sm"
+            square
             :aria-label="t('koko.localFile.revealInFinder')"
             @click="void emit('reveal')"
           />
@@ -277,6 +280,7 @@ onBeforeUnmount(() => {
             color="neutral"
             variant="ghost"
             size="sm"
+            square
             :aria-label="t('koko.localFile.title')"
             @click="void emit('setup')"
           />
@@ -289,6 +293,7 @@ onBeforeUnmount(() => {
             color="neutral"
             :variant="showHiddenFiles ? 'soft' : 'ghost'"
             size="sm"
+            square
             :aria-label="
               showHiddenFiles ? t('koko.fileManagement.hideHiddenFiles') : t('koko.fileManagement.showHiddenFiles')
             "
@@ -302,6 +307,7 @@ onBeforeUnmount(() => {
           color="neutral"
           variant="ghost"
           size="sm"
+          square
           :aria-label="t('Common.More')"
           :title="t('Common.More')"
         />
@@ -314,6 +320,7 @@ onBeforeUnmount(() => {
             color="neutral"
             variant="ghost"
             size="sm"
+            square
             :aria-label="t('koko.fileManagement.filterCurrentDirectory')"
             @click="openSearch"
           />
@@ -341,6 +348,7 @@ onBeforeUnmount(() => {
             color="neutral"
             variant="ghost"
             size="sm"
+            square
             :aria-label="t('koko.fileManagement.newFolder')"
             @click="void emit('create', 'folder')"
           />
@@ -351,6 +359,7 @@ onBeforeUnmount(() => {
             color="neutral"
             variant="ghost"
             size="sm"
+            square
             :aria-label="t('koko.fileManagement.newFile')"
             @click="void emit('create', 'file')"
           />
@@ -362,6 +371,7 @@ onBeforeUnmount(() => {
           color="neutral"
           variant="ghost"
           size="sm"
+          square
           :aria-label="t('koko.fileManagement.newEntry')"
           :title="t('koko.fileManagement.newEntry')"
         />
@@ -373,6 +383,7 @@ onBeforeUnmount(() => {
           color="neutral"
           variant="ghost"
           size="sm"
+          square
           :aria-label="t('koko.actions.upload')"
           @click="uploadInput?.click()"
         />

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ConnectMethod } from "~/composables/useConnectMethods";
-import type { AssetPageType, PermedAccount, PermedProtocol } from "~/types/index";
+import type { AssetPageType, PermedAccount, PermedProtocol, PersonalAssetCredential } from "~/types/index";
 import {
   createLocalApplicationConnectMethod,
   isApplicationConfigItemAvailable,
@@ -20,6 +20,14 @@ const props = defineProps<{
   protocols: PermedProtocol[];
   manualUsername?: string;
   manualPassword?: string;
+  personalCredentialId?: string;
+  personalCredentialVersion?: number;
+  personalCredentialSecretType?: string;
+  savePersonalCredential?: boolean;
+  personalCredentials?: PersonalAssetCredential[];
+  personalCredentialsLoading?: boolean;
+  personalCredentialsLoaded?: boolean;
+  personalCredentialsLoadFailed?: boolean;
   dynamicPassword?: string;
   rememberSecret?: boolean;
   connectMethod?: string;
@@ -33,6 +41,10 @@ const emits = defineEmits<{
   (e: "update:account", v: string): void;
   (e: "update:manualUsername", v: string): void;
   (e: "update:manualPassword", v: string): void;
+  (e: "update:personalCredentialId", v: string): void;
+  (e: "update:personalCredentialVersion", v: number | undefined): void;
+  (e: "update:personalCredentialSecretType", v: string): void;
+  (e: "update:savePersonalCredential", v: boolean): void;
   (e: "update:dynamicPassword", v: string): void;
   (e: "update:rememberSecret", v: boolean): void;
   (e: "update:connectMethod", v: string): void;
@@ -62,6 +74,26 @@ const localManualUsername = computed<string>({
 const localManualPassword = computed<string>({
   get: () => props.manualPassword || "",
   set: (value) => emits("update:manualPassword", value ?? "")
+});
+
+const localPersonalCredentialId = computed<string>({
+  get: () => props.personalCredentialId || "",
+  set: (value) => emits("update:personalCredentialId", value ?? "")
+});
+
+const localPersonalCredentialVersion = computed<number | undefined>({
+  get: () => props.personalCredentialVersion,
+  set: (value) => emits("update:personalCredentialVersion", value)
+});
+
+const localPersonalCredentialSecretType = computed<string>({
+  get: () => props.personalCredentialSecretType || "password",
+  set: (value) => emits("update:personalCredentialSecretType", value || "password")
+});
+
+const localSavePersonalCredential = computed<boolean>({
+  get: () => !!props.savePersonalCredential,
+  set: (value) => emits("update:savePersonalCredential", !!value)
 });
 
 const localDynamicPassword = computed<string>({
@@ -178,10 +210,18 @@ watch(
         v-model:account="selectedAccount"
         v-model:manual-username="localManualUsername"
         v-model:manual-password="localManualPassword"
+        v-model:personal-credential-id="localPersonalCredentialId"
+        v-model:personal-credential-version="localPersonalCredentialVersion"
+        v-model:personal-credential-secret-type="localPersonalCredentialSecretType"
+        v-model:save-personal-credential="localSavePersonalCredential"
         v-model:dynamic-password="localDynamicPassword"
         v-model:remember-secret="localRememberSecret"
         :accounts="accounts"
         :asset-type="assetType"
+        :personal-credentials="personalCredentials || []"
+        :personal-credentials-loading="personalCredentialsLoading"
+        :personal-credentials-loaded="personalCredentialsLoaded"
+        :personal-credentials-load-failed="personalCredentialsLoadFailed"
       />
       <ConnectMethodPicker
         v-model:connect-method="localConnectMethod"

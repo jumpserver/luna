@@ -120,6 +120,9 @@ export function useChenWorkspaceTabs() {
       logs: [],
       activePanel: "data",
       activePropertyTab: "basic",
+      tableMetadata: null,
+      tableMetadataLoadingSections: [],
+      tableMetadataError: "",
       whereCondition: "",
       editState: createChenDataViewEditState(),
       socket: null
@@ -244,7 +247,7 @@ export function useChenWorkspaceTabs() {
       tableName,
       columns: columns.map((column) => {
         const parsed = parseColumnType(column.type, dbType);
-        const primaryKey = column.key === "PK" && column.inferred !== true;
+        const primaryKey = column.key === "PK";
         const nullable = primaryKey ? false : column.nullable === "YES";
         return {
           id: newChenWorkspaceId("column"),

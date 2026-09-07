@@ -66,7 +66,11 @@ export async function saveFileTransferState(state: PersistedFileTransferState) {
   const database = await openDatabase();
   try {
     await new Promise<void>((resolve, reject) => {
-      const request = database.transaction(storeName, "readwrite").objectStore(storeName).put(snapshot, recordKey);
+      const objectStore = database.transaction(storeName, "readwrite").objectStore(storeName);
+      const request =
+        snapshot.tasks.length || snapshot.batches.length
+          ? objectStore.put(snapshot, recordKey)
+          : objectStore.delete(recordKey);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error || new Error("Unable to save file transfer storage"));
     });

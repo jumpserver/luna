@@ -11,7 +11,8 @@ import type {
   AgentMessageRequest
 } from "./types";
 import { reactive } from "vue";
-import { agentClient } from "./agentClient";
+import { agentChatStreamMessage, agentEventLifecycle } from "./agentChatStream";
+import { agentClient, AgentHttpError } from "./agentClient";
 import { AgentSseConnection as DefaultAgentSseConnection } from "./agentSse";
 import { isRecord } from "./types";
 
@@ -25,18 +26,21 @@ export interface AgentSessionState {
   available: boolean;
   approvalMode: AgentApprovalMode;
   toolNames: string[];
+  registrationIds: Record<string, string>;
   errorCode: string;
   errorText: string;
 }
 
 interface AgentSessionOptions {
   domain: AgentDomain;
+  allowedApprovalModes?: readonly AgentApprovalMode[];
   relay: AgentToolRelay;
   messageMetadata: () => Record<string, unknown>;
   onMessage: (message: UIMessage) => void;
   onAvailability: (available: boolean) => void;
   onApprovalMode?: (mode: AgentApprovalMode) => void;
   onInputLock?: (locked: boolean) => void;
+  onHistoryReset?: () => void;
   onUnavailable?: (error: Error) => void;
   client?: AgentClient;
   createSse?: (options: ConstructorParameters<typeof DefaultAgentSseConnection>[0]) => AgentSseConnection;
@@ -63,13 +67,14 @@ interface ToolRelaySessionSnapshot {
 
 const DEFAULT_HISTORY_MAX_EVENTS = 131_072;
 const DEFAULT_HISTORY_MAX_BYTES = 64 * 1024 * 1024;
-const USER_MESSAGE_DEDUP_LIMIT = 2_048;
+const MESSAGE_TRACKING_LIMIT = 2_048;
 const historyTextEncoder = new TextEncoder();
 
 export interface AgentSessionController {
   state: AgentSessionState;
   actions: {
     attachManifest: (manifest: AgentMcpManifest) => Promise<void>;
+    updateContext: (context: Record<string, unknown>) => Promise<void>;
     sendMessage: (message: UIMessage) => Promise<void>;
     resolveApproval: (approvalId: string, decision: AgentApprovalDecision) => Promise<void>;
     receiveKokoFrame: (frame: unknown) => Promise<boolean>;
@@ -139,6 +144,48 @@ function stableJson(value: unknown): string {
       .join(",")}}`;
   }
   return JSON.stringify(value) ?? "null";
+}
+
+function agentEventDeltaText(event: AgentEvent) {
+  if (event.type !== "message.delta") return null;
+  const delta = event.payload?.delta;
+  const text = isRecord(delta) ? delta.text || delta.delta : delta || event.payload?.text;
+  return typeof text === "string" ? text : null;
+}
+
+function agentEventStreamKey(event: AgentEvent) {
+  const messageId = String(event.message_id || event.payload?.message_id || event.payload?.id || "");
+  const runId = String(event.run_id || event.payload?.run_id || "");
+  return messageId || runId ? `${messageId}\u0000${runId}` : "";
+}
+
+function canonicalHistoryEvents(history: AgentEvent[], after: number) {
+  const bySequence = new Map<number, AgentEvent>();
+  for (const event of history) {
+    if (event.seq <= after) continue;
+    const existing = bySequence.get(event.seq);
+    if (existing && stableJson(existing) !== stableJson(event)) {
+      throw new Error(`Agent history sequence ${event.seq} contains conflicting events`);
+    }
+    if (!existing) bySequence.set(event.seq, event);
+  }
+
+  const result: AgentEvent[] = [];
+  for (const event of [...bySequence.values()].sort((left, right) => left.seq - right.seq)) {
+    const text = agentEventDeltaText(event);
+    const key = agentEventStreamKey(event);
+    const previous = result.at(-1);
+    const previousText = previous ? agentEventDeltaText(previous) : null;
+    if (text !== null && key && previousText !== null && agentEventStreamKey(previous!) === key) {
+      result[result.length - 1] = {
+        ...event,
+        payload: { ...event.payload, delta: previousText + text }
+      };
+      continue;
+    }
+    result.push(event);
+  }
+  return result;
 }
 
 function agentManifestKey(manifest: AgentMcpManifest) {
@@ -224,15 +271,17 @@ function approvalPresentation(
       ? {
           resolved: true,
           state:
-            payload.approved === true
-              ? "approved"
-              : payload.approved === false
-                ? payload.reason === "run cancelled"
-                  ? "cancelled"
-                  : "rejected"
-                : typeof payload.state === "string" && payload.state
-                  ? payload.state
-                  : "resolved"
+            typeof payload.state === "string" && payload.state
+              ? payload.state
+              : typeof payload.status === "string" && payload.status
+                ? payload.status
+                : payload.approved === true
+                  ? "approved"
+                  : payload.approved === false
+                    ? payload.reason === "run cancelled"
+                      ? "cancelled"
+                      : "rejected"
+                    : "resolved"
         }
       : { state: "awaiting_approval" })
   };
@@ -285,35 +334,57 @@ function approvalPresentation(
 function toolResultPresentation(event: AgentEvent) {
   const payload = event.payload || {};
   const result = isRecord(payload.result) ? payload.result : {};
-  const structuredContent = isRecord(result.structuredContent) ? result.structuredContent : {};
+  const structuredContent = isRecord(result.structuredContent) ? result.structuredContent : result;
   const error = isRecord(payload.error) ? payload.error : null;
-  const status = String(payload.status || "");
-  const done = payload.done !== false;
-  const outcome = !done
-    ? "running"
-    : error || result.isError === true || ["error", "failed"].includes(status)
-      ? "error"
-      : ["cancelled", "interrupted"].includes(status)
-        ? "interrupted"
-        : "success";
+  const status = String(structuredContent.status || payload.status || "");
+  const done =
+    typeof structuredContent.process_finished === "boolean"
+      ? structuredContent.process_finished
+      : payload.done !== false;
+  const outcome =
+    status === "unknown"
+      ? "unknown"
+      : !done
+        ? ["reviewing", "waiting_input", "cancelling", "timeout"].includes(status)
+          ? status
+          : "running"
+        : status === "timeout" || status === "unknown"
+          ? status
+          : ["cancelled", "interrupted"].includes(status)
+            ? "interrupted"
+            : error || result.isError === true || ["error", "failed"].includes(status)
+              ? "error"
+              : "success";
   const content = Array.isArray(result.content)
     ? result.content
         .flatMap((item) => (isRecord(item) && item.type === "text" && typeof item.text === "string" ? [item.text] : []))
         .join("\n")
     : "";
   const exitCodeValue = structuredContent.exit_code ?? structuredContent.exitCode;
+  const originalToolCallId = String(structuredContent.tool_call_id || event.tool_call_id || payload.tool_call_id || "");
 
   return {
     type: "data-execution",
     data: {
-      id: String(event.tool_call_id || payload.tool_call_id || ""),
+      id: originalToolCallId,
       planId: String(event.run_id || payload.run_id || ""),
-      stepId: String(event.tool_call_id || payload.tool_call_id || ""),
-      executionId: String(event.tool_call_id || payload.tool_call_id || ""),
+      stepId: originalToolCallId,
+      executionId: originalToolCallId,
       outcome,
       status,
       done,
       ...(Number.isFinite(Number(payload.duration_ms)) ? { durationMs: Number(payload.duration_ms) } : {}),
+      ...(typeof structuredContent.elapsed_ms === "number" ? { durationMs: structuredContent.elapsed_ms } : {}),
+      ...(typeof structuredContent.execution_elapsed_ms === "number"
+        ? { executionElapsedMs: structuredContent.execution_elapsed_ms }
+        : {}),
+      ...(typeof structuredContent.output_idle_ms === "number"
+        ? { outputIdleMs: structuredContent.output_idle_ms }
+        : {}),
+      ...(typeof structuredContent.remaining_ms === "number" ? { remainingMs: structuredContent.remaining_ms } : {}),
+      ...(typeof structuredContent.attention_reason === "string"
+        ? { attentionReason: structuredContent.attention_reason }
+        : {}),
       ...(Number.isFinite(Number(payload.model_duration_ms))
         ? { modelDurationMs: Number(payload.model_duration_ms) }
         : {}),
@@ -327,14 +398,15 @@ function toolResultPresentation(event: AgentEvent) {
       ...(typeof structuredContent.output_truncated === "boolean"
         ? { outputTruncated: structuredContent.output_truncated }
         : {}),
-      ...(error && typeof error.message === "string" ? { summary: error.message } : {})
+      ...(error && typeof error.message === "string" ? { summary: error.message } : {}),
+      ...(typeof structuredContent.error === "string" ? { summary: structuredContent.error } : {})
     }
   };
 }
 
 function sqlToolResultPresentations(event: AgentEvent) {
   const result = isRecord(event.payload?.result) ? event.payload.result : {};
-  const structuredContent = isRecord(result.structuredContent) ? result.structuredContent : {};
+  const structuredContent = isRecord(result.structuredContent) ? result.structuredContent : result;
   const kind = String(structuredContent.kind || "");
   const parts: Record<string, unknown>[] = [];
   const analysis =
@@ -354,6 +426,8 @@ function agentToolLifecyclePresentation(event: AgentEvent, domain: AgentDomain, 
   if (!toolCallId) return null;
 
   const result = isRecord(payload.result) ? payload.result : {};
+  const hasResult = Object.hasOwn(payload, "result");
+  const hasError = payload.error !== undefined && payload.error !== null;
   const statusValue = String(payload.status || "").toLowerCase();
   const status =
     statusOverride ||
@@ -363,9 +437,11 @@ function agentToolLifecyclePresentation(event: AgentEvent, domain: AgentDomain, 
         ? "running"
         : ["cancelled", "canceled", "interrupted"].includes(statusValue)
           ? "cancelled"
-          : ["error", "failed", "timeout"].includes(statusValue) || isRecord(payload.error) || result.isError === true
-            ? "error"
-            : "success");
+          : statusValue === "timeout" || statusValue === "unknown"
+            ? statusValue
+            : ["error", "failed"].includes(statusValue) || isRecord(payload.error) || result.isError === true
+              ? "error"
+              : "success");
   const toolName = String(payload.tool_name || payload.name || "");
 
   return {
@@ -377,8 +453,8 @@ function agentToolLifecyclePresentation(event: AgentEvent, domain: AgentDomain, 
       ...(toolName ? { toolName } : {}),
       status,
       ...(Object.hasOwn(payload, "arguments") ? { arguments: payload.arguments } : {}),
-      ...(Object.hasOwn(payload, "result") ? { result: payload.result } : {}),
-      ...(Object.hasOwn(payload, "error") ? { error: payload.error } : {}),
+      ...(hasResult ? { result: payload.result } : {}),
+      ...(hasError ? { error: payload.error } : {}),
       ...(Number.isFinite(Number(payload.duration_ms)) ? { durationMs: Number(payload.duration_ms) } : {})
     }
   };
@@ -393,6 +469,7 @@ export function agentEventToUiMessage(
   const eventMetadata = {
     ...metadata,
     agentEventType: event.type,
+    agentRunId: String(event.run_id || payload.run_id || ""),
     ...(Number.isFinite(Number(payload.model_duration_ms))
       ? { modelDurationMs: Number(payload.model_duration_ms) }
       : {})
@@ -402,10 +479,10 @@ export function agentEventToUiMessage(
     return {
       ...embedded,
       id: eventMessageId(event),
-      metadata: { ...eventMetadata, ...(isRecord(embedded.metadata) ? embedded.metadata : {}) }
+      metadata: { ...(isRecord(embedded.metadata) ? embedded.metadata : {}), ...eventMetadata }
     };
   }
-  if (event.type.startsWith("message.") && Array.isArray(payload.parts)) {
+  if (event.type.startsWith("message.") && Array.isArray(payload.parts) && payload.parts.length) {
     return {
       id: eventMessageId(event),
       role: payload.role === "user" || payload.role === "system" ? payload.role : "assistant",
@@ -413,12 +490,18 @@ export function agentEventToUiMessage(
       parts: payload.parts
     } as UIMessage;
   }
-  if (event.type.startsWith("message.") && typeof payload.text === "string") {
+  const messageText =
+    typeof payload.text === "string"
+      ? payload.text
+      : event.type === "message.completed" && typeof payload.content === "string"
+        ? payload.content
+        : null;
+  if (event.type.startsWith("message.") && messageText !== null) {
     return {
       id: eventMessageId(event),
       role: payload.role === "user" || payload.role === "system" ? payload.role : "assistant",
       metadata: eventMetadata,
-      parts: [{ type: "text", text: payload.text }]
+      parts: [{ type: "text", text: messageText }]
     } as UIMessage;
   }
 
@@ -440,7 +523,10 @@ export function agentEventToUiMessage(
       "run.cancelled": "cancelled",
       "run.interrupted": "interrupted"
     };
-    part = { type: "data-progress", data: { ...payload, state: payload.state || stateByType[event.type] } };
+    part = {
+      type: "data-progress",
+      data: { ...payload, code: payload.error_code || "", state: payload.state || stateByType[event.type] }
+    };
   }
   if (event.type === "model.requested") {
     const code = Number(payload.round) > 1 || payload.phase ? "planning" : "analyzing";
@@ -449,10 +535,16 @@ export function agentEventToUiMessage(
   if (event.type === "model.completed") {
     part = { type: "data-progress", data: { ...payload, code: "planning", state: "planning" } };
   }
+  if (event.type === "run.cancelled" && ["approval_expired", "run_timeout"].includes(String(payload.error_code))) {
+    additionalParts.push({ type: "data-agent-notice", data: { code: payload.error_code } });
+  }
+  if (event.type === "run.cancelled" && payload.cancel_reason === "tool_result_failed") {
+    additionalParts.push({ type: "data-agent-notice", data: { code: "tool_result_failed" } });
+  }
   if (event.type === "run.failed") {
     part = {
       type: "data-error",
-      data: { ...payload, code: "run_failed", message: payload.reason || "Agent run failed" }
+      data: { ...payload, code: payload.error_code || "run_failed", message: payload.reason || "Agent run failed" }
     };
   }
   if (event.type === "approval.requested") {
@@ -505,9 +597,6 @@ export function agentEventToUiMessage(
     const delta = isRecord(payload.delta) ? payload.delta.text || payload.delta.delta : payload.delta || payload.text;
     if (typeof delta === "string") part = { type: "text", text: delta };
   }
-  if (event.type === "message.completed" && !embedded) {
-    part = { type: "data-progress", data: { ...payload, state: domain === "terminal" ? "idle" : "completed" } };
-  }
   if (event.type === "error") part = { type: "data-error", data: payload };
   if (!part && additionalParts.length === 0) return null;
 
@@ -545,6 +634,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     available: false,
     approvalMode: "auto",
     toolNames: [],
+    registrationIds: {},
     errorCode: "",
     errorText: ""
   });
@@ -570,19 +660,28 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       summary: string;
     }
   >();
+  const resolvedApprovals = new Map(pendingApprovals);
   const localUserMessageIds = new Map<string, true>();
   const presentedUserMessageIds = new Map<string, true>();
   const pendingModelDurationByRun = new Map<string, number>();
+  const streamedAssistantMessageRuns = new Map<string, string>();
 
-  function rememberUserMessage(messages: Map<string, true>, messageId: string) {
+  function rememberRecentMessage<T>(messages: Map<string, T>, messageId: string, value: T) {
     if (!messageId) return;
     messages.delete(messageId);
-    messages.set(messageId, true);
-    while (messages.size > USER_MESSAGE_DEDUP_LIMIT) {
+    messages.set(messageId, value);
+    while (messages.size > MESSAGE_TRACKING_LIMIT) {
       const oldest = messages.keys().next().value;
       if (typeof oldest !== "string") break;
       messages.delete(oldest);
     }
+  }
+
+  function resetHistoryPresentation() {
+    localUserMessageIds.clear();
+    presentedUserMessageIds.clear();
+    streamedAssistantMessageRuns.clear();
+    options.onHistoryReset?.();
   }
 
   function setAvailable(available: boolean) {
@@ -639,14 +738,31 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     state.lastSeq = event.seq;
     const payload = event.payload || {};
     const runId = String(event.run_id || payload.run_id || "");
+    const lifecycle = agentEventLifecycle(event.type);
+    const assistantStreamKey = agentEventStreamKey(event);
+    if (agentEventDeltaText(event) !== null) {
+      rememberRecentMessage(streamedAssistantMessageRuns, assistantStreamKey, runId);
+    }
+    const completedAfterDelta = lifecycle.messageCompleted && streamedAssistantMessageRuns.has(assistantStreamKey);
+    if (lifecycle.messageCompleted && assistantStreamKey) streamedAssistantMessageRuns.delete(assistantStreamKey);
     if (event.type === "session.created") {
       applyApprovalMode(payload.approval_mode);
       if (Array.isArray(payload.tools)) state.toolNames = agentToolNames(payload.tools);
     }
     if (event.type === "run.started") state.activeRunId = event.run_id || "";
-    if (["run.completed", "run.failed", "run.cancelled", "run.interrupted"].includes(event.type)) {
+    if (lifecycle.runFinished) {
+      options.relay.cancelPending(event.type, runId);
+      for (const [approvalId, binding] of pendingApprovals) {
+        if (binding.runId === runId)
+          presentApprovalResolution(approvalId, payload.error_code === "approval_expired" ? "expired" : "cancelled");
+      }
       state.activeRunId = "";
-      if (runId) pendingModelDurationByRun.delete(runId);
+      if (runId) {
+        pendingModelDurationByRun.delete(runId);
+        for (const [messageId, messageRunId] of streamedAssistantMessageRuns) {
+          if (messageRunId === runId) streamedAssistantMessageRuns.delete(messageId);
+        }
+      }
     }
     if (event.type === "approval.requested") {
       const approvalId = String(event.approval_id || payload.approval_id || "");
@@ -662,7 +778,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       }
     }
     let presentationEvent = event;
-    if (event.type === "model.completed" && runId) {
+    if (event.type === "model.completed" && runId && payload.scope !== "agent_turn") {
       const durationMS = Number(payload.duration_ms);
       if (Number.isFinite(durationMS) && durationMS >= 0) {
         pendingModelDurationByRun.set(runId, (pendingModelDurationByRun.get(runId) || 0) + durationMS);
@@ -680,7 +796,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     }
     if (event.type === "approval.resolved") {
       const approvalId = String(event.approval_id || payload.approval_id || "");
-      const binding = pendingApprovals.get(approvalId);
+      const binding = pendingApprovals.get(approvalId) || resolvedApprovals.get(approvalId);
       if (binding) {
         presentationEvent = {
           ...event,
@@ -694,7 +810,10 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
           }
         };
       }
-      if (approvalId) pendingApprovals.delete(approvalId);
+      if (approvalId) {
+        pendingApprovals.delete(approvalId);
+        resolvedApprovals.delete(approvalId);
+      }
     }
     if (event.type === "session.approval_mode_changed") {
       applyApprovalMode(payload.current || payload.mode || payload.approval_mode);
@@ -720,14 +839,20 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       event.type === "message.created" && payload.role === "user" ? String(event.message_id || "") : "";
     if (userMessageId && localUserMessageIds.has(userMessageId)) {
       localUserMessageIds.delete(userMessageId);
-      rememberUserMessage(presentedUserMessageIds, userMessageId);
+      rememberRecentMessage(presentedUserMessageIds, userMessageId, true);
       return;
     }
     if (userMessageId && presentedUserMessageIds.has(userMessageId)) return;
-    const message = agentEventToUiMessage(presentationEvent, options.domain, options.messageMetadata());
+    const messageMetadata = {
+      ...options.messageMetadata(),
+      ...(lifecycle.messageCompleted ? { agentCompletedSnapshot: !completedAfterDelta } : {})
+    };
+    const projectedMessage = agentEventToUiMessage(presentationEvent, options.domain, messageMetadata);
+    const message =
+      projectedMessage && lifecycle.messageCompleted ? agentChatStreamMessage(projectedMessage) : projectedMessage;
     if (message) {
       options.onMessage(message);
-      if (userMessageId) rememberUserMessage(presentedUserMessageIds, userMessageId);
+      if (userMessageId) rememberRecentMessage(presentedUserMessageIds, userMessageId, true);
     }
   }
 
@@ -738,7 +863,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     manifest: AgentMcpManifest,
     startAfter = 0
   ) {
-    const events: AgentEvent[] = [];
+    const historyEvents: AgentEvent[] = [];
     let after = startAfter;
     let historyBytes = 0;
     while (true) {
@@ -746,10 +871,10 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       if (generation !== currentGeneration) return after;
       for (const event of history.events) {
         historyBytes += historyTextEncoder.encode(JSON.stringify(event)).byteLength + 1;
-        if (events.length >= historyMaxEvents || historyBytes > historyMaxBytes) {
+        if (historyEvents.length >= historyMaxEvents || historyBytes > historyMaxBytes) {
           throw new AgentSessionHistoryLimitError("Agent history exceeds the bounded recovery limit");
         }
-        events.push(event);
+        historyEvents.push(event);
       }
       const nextCursor = Math.max(0, Math.floor(Number(history.next_cursor) || 0));
       if (!history.has_more) {
@@ -759,6 +884,8 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       if (nextCursor <= after) throw new Error("Agent history cursor did not advance");
       after = nextCursor;
     }
+
+    const events = canonicalHistoryEvents(historyEvents, startAfter);
 
     const created = events.find((event) => event.type === "session.created");
     if (startAfter === 0) {
@@ -773,15 +900,14 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       ) {
         throw new AgentSessionManifestMismatchError("Existing Agent session does not match the Koko manifest");
       }
+      resetHistoryPresentation();
     }
 
     const eventRunId = (event: AgentEvent) => String(event.run_id || event.payload?.run_id || "");
     const eventToolCallId = (event: AgentEvent) => String(event.tool_call_id || event.payload?.tool_call_id || "");
     const terminalRuns = new Set(
       events.flatMap((event) =>
-        ["run.completed", "run.failed", "run.cancelled", "run.interrupted"].includes(event.type) && eventRunId(event)
-          ? [eventRunId(event)]
-          : []
+        agentEventLifecycle(event.type).runFinished && eventRunId(event) ? [eventRunId(event)] : []
       )
     );
     const completedToolCalls = new Set(
@@ -828,13 +954,16 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     sse = null;
     cancelAndResetRelay("session_replaced");
     pendingApprovals.clear();
+    resolvedApprovals.clear();
     pendingModelDurationByRun.clear();
+    streamedAssistantMessageRuns.clear();
     state.status = "creating";
     state.agentSessionId = "";
     state.resourceSessionId = manifest.resourceSessionId;
     state.activeRunId = "";
     state.revision = manifest.revision;
     state.toolNames = agentToolNames(manifest.tools);
+    state.registrationIds = {};
     state.errorCode = "";
     state.errorText = "";
     setAvailable(false);
@@ -858,11 +987,13 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       if (generation !== currentGeneration) return;
       let after = Math.max(0, Math.floor(Number(bootstrap.cursor) || 0));
       if (!agentSessionId) {
+        resetHistoryPresentation();
         const created = await client.createSession(manifest, state.approvalMode);
         agentSessionId = String(created.session_id || "");
         acquiredSessionId = agentSessionId;
         if (generation !== currentGeneration) return;
         after = Math.max(0, Math.floor(Number(created.after) || 0));
+        state.registrationIds = { ...(created.registration_ids || {}) };
       }
       if (!agentSessionId) throw new Error("Agent session creation did not return a session id");
       state.agentSessionId = agentSessionId;
@@ -876,11 +1007,13 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
           acquiredSessionId = "";
           await flushSessionDeletes();
           if (generation !== currentGeneration) return;
+          resetHistoryPresentation();
           const created = await client.createSession(manifest, state.approvalMode);
           agentSessionId = String(created.session_id || "");
           acquiredSessionId = agentSessionId;
           if (generation !== currentGeneration) return;
           after = Math.max(0, Math.floor(Number(created.after) || 0));
+          state.registrationIds = { ...(created.registration_ids || {}) };
           state.agentSessionId = agentSessionId;
           state.lastSeq = 0;
         }
@@ -976,7 +1109,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       throw new Error("Agent session is unavailable");
     }
     const request = toAgentMessageRequest(message);
-    rememberUserMessage(localUserMessageIds, request.message_id);
+    rememberRecentMessage(localUserMessageIds, request.message_id, true);
     try {
       await client.sendMessage(state.agentSessionId, state.resourceSessionId, request);
     } catch (error) {
@@ -985,14 +1118,59 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     }
   }
 
+  async function updateContext(context: Record<string, unknown>) {
+    if (!state.available || !state.agentSessionId || !state.resourceSessionId) {
+      throw new Error("Agent session is unavailable");
+    }
+    await client.updateContext(state.agentSessionId, state.resourceSessionId, context);
+  }
+
+  function presentApprovalResolution(approvalId: string, status: string) {
+    const binding = pendingApprovals.get(approvalId);
+    if (!binding) return;
+    const part = approvalPresentation(
+      {
+        tool_name: binding.toolName,
+        arguments: binding.argumentsValue,
+        summary: binding.summary,
+        state: status
+      },
+      options.domain,
+      approvalId,
+      binding.runId,
+      binding.toolCallId,
+      true
+    );
+    options.onMessage({
+      id: `approval-${approvalId}-${status}`,
+      role: "assistant",
+      metadata: options.messageMetadata(),
+      parts: [part]
+    } as UIMessage);
+    rememberRecentMessage(resolvedApprovals, approvalId, binding);
+    pendingApprovals.delete(approvalId);
+  }
+
   async function resolveApproval(approvalId: string, decision: AgentApprovalDecision) {
     if (!state.agentSessionId || !state.resourceSessionId) throw new Error("Agent session is unavailable");
     const binding = pendingApprovals.get(approvalId);
-    await client.resolveApproval(state.agentSessionId, state.resourceSessionId, approvalId, {
-      decision,
-      ...(binding?.runId ? { run_id: binding.runId } : {}),
-      ...(binding?.digest ? { digest: binding.digest } : {})
-    });
+    try {
+      await client.resolveApproval(state.agentSessionId, state.resourceSessionId, approvalId, {
+        decision,
+        ...(binding?.runId ? { run_id: binding.runId } : {}),
+        ...(binding?.digest ? { digest: binding.digest } : {})
+      });
+    } catch (error) {
+      if (!(error instanceof AgentHttpError) || error.status !== 409) throw error;
+      if (error.code === "approval_expired") {
+        presentApprovalResolution(approvalId, "expired");
+        return;
+      }
+      if (error.code !== "approval_terminal") throw error;
+      const approval = await client.getApproval(approvalId);
+      if (!["approved", "consumed", "rejected", "expired", "cancelled"].includes(approval.state)) throw error;
+      presentApprovalResolution(approvalId, approval.state === "consumed" ? "approved" : approval.state);
+    }
   }
 
   function relaySessionSnapshot(): ToolRelaySessionSnapshot {
@@ -1026,7 +1204,9 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     cancelAndResetRelay("tool_result_failed");
     if (!isCurrentRelaySession(snapshot)) return null;
     pendingApprovals.clear();
+    resolvedApprovals.clear();
     pendingModelDurationByRun.clear();
+    streamedAssistantMessageRuns.clear();
     const failedSse = sse;
     sse = null;
     failedSse?.stop();
@@ -1085,7 +1265,31 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
               discardRelayResult(result);
               return true;
             }
+            if (error instanceof AgentHttpError && error.status === 409 && error.code === "tool_result_terminal") {
+              const message = agentEventToUiMessage(
+                {
+                  seq: state.lastSeq,
+                  type: "tool.result",
+                  run_id: result.payload.run_id,
+                  tool_call_id: result.toolCallId,
+                  payload: { status: "unknown", done: true }
+                },
+                options.domain,
+                options.messageMetadata()
+              );
+              if (message) options.onMessage({ ...message, id: `tool-${result.toolCallId}-unconfirmed` });
+              failure = undefined;
+              break;
+            }
             failure = error;
+            if (
+              error instanceof AgentHttpError &&
+              error.status >= 400 &&
+              error.status < 500 &&
+              error.status !== 408 &&
+              error.status !== 429
+            )
+              break;
             if (attempt < toolResultMaxAttempts) {
               await waitForToolResultRetry(toolResultBaseDelayMs * 2 ** (attempt - 1));
             }
@@ -1099,10 +1303,34 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       }
       result.complete(true);
     } catch (error) {
-      discardRelayResult(result);
-      if (!isCurrentRelaySession(snapshot)) return true;
-      const failure = await failToolRelay(error, snapshot);
-      if (failure) throw failure;
+      if (!isCurrentRelaySession(snapshot)) {
+        discardRelayResult(result);
+        return true;
+      }
+      // Delivery is exhausted, but the executor may already have changed the resource.
+      // Keep the event stream alive to reconcile the run and allow later requests.
+      result.complete(true);
+      const runId = result.payload?.run_id || snapshot.runId;
+      const message = agentEventToUiMessage(
+        {
+          seq: state.lastSeq,
+          type: "tool.result",
+          run_id: runId,
+          tool_call_id: result.toolCallId,
+          payload: {
+            status: "unknown",
+            done: true,
+            error: { message: error instanceof Error ? error.message : String(error) }
+          }
+        },
+        options.domain,
+        options.messageMetadata()
+      );
+      if (message) options.onMessage({ ...message, id: `tool-${result.toolCallId}-unconfirmed` });
+      if (runId)
+        await client
+          .cancel(snapshot.sessionId, snapshot.resourceSessionId, runId, "tool_result_failed")
+          .catch(() => undefined);
       return true;
     }
     return true;
@@ -1115,6 +1343,9 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
 
   async function setApprovalMode(mode: AgentApprovalMode) {
     if (!["always", "auto", "never"].includes(mode)) return;
+    if (options.allowedApprovalModes && !options.allowedApprovalModes.includes(mode)) {
+      throw new Error(`Approval mode ${mode} is not allowed for the ${options.domain} agent`);
+    }
     if (!state.agentSessionId || !state.resourceSessionId) {
       state.approvalMode = mode;
       options.onApprovalMode?.(mode);
@@ -1135,7 +1366,9 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     sse = null;
     cancelAndResetRelay("controller_disposed");
     pendingApprovals.clear();
+    resolvedApprovals.clear();
     pendingModelDurationByRun.clear();
+    streamedAssistantMessageRuns.clear();
     localUserMessageIds.clear();
     presentedUserMessageIds.clear();
     const deleteReleasedSession = retainedResourceId ? client.releaseResource(retainedResourceId) : false;
@@ -1145,6 +1378,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     state.resourceSessionId = "";
     state.activeRunId = "";
     state.toolNames = [];
+    state.registrationIds = {};
     setAvailable(false);
     const cleanup = lifecycleTail
       .catch(() => undefined)
@@ -1158,6 +1392,15 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
 
   return {
     state,
-    actions: { attachManifest, sendMessage, resolveApproval, receiveKokoFrame, cancel, setApprovalMode, dispose }
+    actions: {
+      attachManifest,
+      updateContext,
+      sendMessage,
+      resolveApproval,
+      receiveKokoFrame,
+      cancel,
+      setApprovalMode,
+      dispose
+    }
   };
 }

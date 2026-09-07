@@ -83,10 +83,6 @@ export interface SftpLocalPaneHandle extends SftpTransferPaneHandle {
   transferSourcePayload: () => SftpTransferSourcePayload | null;
 }
 
-export interface SftpTransferCenterHandle {
-  signalQueued: (origin?: DOMRect) => void;
-}
-
 export interface SftpDistributionTargetOption {
   id: string;
   endpoint: FileTransferEndpointRef;

@@ -32,6 +32,25 @@ it("accepts a 256 KiB Agent payload envelope and still rejects oversized events"
   ).toThrow("Agent SSE event exceeds");
 });
 
+it("maps canonical Kael capability events into the existing workspace event model", () => {
+  const events: unknown[] = [];
+  const parser = createAgentSseParser((event) => events.push(event));
+  parser.push(
+    'event: approval.required\nid: 4\ndata: {"seq":4,"type":"approval.required","panel_session_id":"panel-1","run_id":"run-1","approval_id":"approval-1","payload":{"arguments_digest":"digest-1"}}\n\n'
+  );
+
+  expect(events).toEqual([
+    {
+      seq: 4,
+      type: "approval.requested",
+      session_id: "panel-1",
+      run_id: "run-1",
+      approval_id: "approval-1",
+      payload: { arguments_digest: "digest-1", digest: "digest-1" }
+    }
+  ]);
+});
+
 it("reconnects from the last delivered sequence and drops replayed events", async () => {
   const events: number[] = [];
   const after: number[] = [];
@@ -109,7 +128,7 @@ it("repairs an expired SSE cursor through history before reconnecting", async ()
       after.push(cursor);
       attempt += 1;
       if (attempt === 1) {
-        throw new AgentStreamHttpError(409, '{"error":{"code":"cursor_expired"}}');
+        throw new AgentStreamHttpError(410, '{"code":"cursor_expired"}');
       }
       await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
     },

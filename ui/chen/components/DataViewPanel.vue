@@ -10,11 +10,11 @@ import type {
   ChenDataViewExportOptions,
   ChenDataViewPropertyTab
 } from "~/chen/types";
+import type { ChenSchemaDiagramTable } from "~/chen/types/schemaOverview";
 
 import ChenDataGrid from "~/chen/components/DataGrid.client.vue";
 import DataViewBatchUpdateDialog from "~/chen/components/DataViewBatchUpdateDialog.vue";
 import DataViewCreateIndexDialog from "~/chen/components/DataViewCreateIndexDialog.vue";
-import DataViewDiagram from "~/chen/components/DataViewDiagram.vue";
 import DataViewExportDialog from "~/chen/components/DataViewExportDialog.vue";
 import DataViewFilter from "~/chen/components/DataViewFilter.client.vue";
 import DataViewFilterDialog from "~/chen/components/DataViewFilterDialog.vue";
@@ -22,6 +22,7 @@ import DataViewFooter from "~/chen/components/DataViewFooter.vue";
 import DataViewImportDialog from "~/chen/components/DataViewImportDialog.vue";
 import DataViewSavePreviewDialog from "~/chen/components/DataViewSavePreviewDialog.vue";
 import DataViewToolbar from "~/chen/components/DataViewToolbar.vue";
+import SchemaDiagram from "~/chen/components/SchemaDiagram.vue";
 import SqlPreviewDialog from "~/chen/components/SqlPreviewDialog.vue";
 import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
 import { useChenDataViewDerivedMeta } from "~/chen/composables/useChenDataViewDerivedMeta";
@@ -75,7 +76,9 @@ const insertableFields = computed(() =>
 );
 const tableName = computed(() => String(props.tab.meta?.table || props.tab.meta?.title || props.tab.title).trim());
 const schemaName = computed(() => String(props.tab.meta?.schema || "").trim());
-const indexDdlSupported = computed(() => chenSupportsIndexDdl(props.dbType));
+const indexDdlSupported = computed(
+  () => chenSupportsIndexDdl(props.dbType) && props.tab.tableMetadata?.capabilities.indexes !== false
+);
 const dropIndexSql = computed(() =>
   selectedIndex.value
     ? buildChenDropIndexSql(schemaName.value, tableName.value, selectedIndex.value.name, props.dbType)
@@ -98,6 +101,49 @@ const tableColumns = computed(() =>
     .map((column) => column.name)
     .filter((name) => name !== "-")
 );
+const tableDiagramTables = computed<ChenSchemaDiagramTable[]>(() => {
+  const metadata = props.tab.tableMetadata;
+  if (!metadata) return [];
+
+  const foreignKeys = metadata.foreignKeys.map((foreignKey) => ({
+    name: foreignKey.name,
+    columns: foreignKey.columns,
+    referencedSchema: foreignKey.referencedSchema,
+    referencedTable: foreignKey.referencedTable,
+    referencedColumns: foreignKey.referencedColumns
+  }));
+  const current: ChenSchemaDiagramTable = {
+    schema: metadata.schema,
+    name: metadata.name,
+    columns: metadata.columns.map((column) => ({
+      name: column.name,
+      ordinal: column.ordinal,
+      nativeType: column.nativeType,
+      nullable: column.nullable
+    })),
+    primaryKey: metadata.primaryKey?.columns || [],
+    foreignKeys
+  };
+  const related = new Map<string, ChenSchemaDiagramTable>();
+  for (const foreignKey of foreignKeys) {
+    const schema = foreignKey.referencedSchema || metadata.schema;
+    const key = `${schema}\0${foreignKey.referencedTable}`;
+    if (schema === metadata.schema && foreignKey.referencedTable === metadata.name) continue;
+    const table = related.get(key) || {
+      schema,
+      name: foreignKey.referencedTable,
+      columns: [],
+      primaryKey: [],
+      foreignKeys: []
+    };
+    for (const name of foreignKey.referencedColumns) {
+      if (table.columns.some((column) => column.name === name)) continue;
+      table.columns.push({ name, ordinal: table.columns.length + 1, nativeType: "-", nullable: false });
+    }
+    related.set(key, table);
+  }
+  return [current, ...related.values()];
+});
 
 function openExportDialog() {
   exportTarget.value = props.tab;
@@ -166,7 +212,7 @@ function showIndexDetails(index: ChenDataViewIndexPreview) {
 }
 
 function previewDropIndex(index: ChenDataViewIndexPreview) {
-  if (index.protected || index.inferred) return;
+  if (index.protected) return;
   selectedIndex.value = index;
   dropIndexPreviewOpen.value = true;
 }
@@ -176,7 +222,7 @@ function createIndex(sql: string, indexName: string) {
 }
 
 function dropIndex() {
-  if (!selectedIndex.value || selectedIndex.value.protected || selectedIndex.value.inferred) return;
+  if (!selectedIndex.value || selectedIndex.value.protected) return;
   dropIndexPreviewOpen.value = false;
   emit("executeIndexSql", props.tab, dropIndexSql.value, "drop", selectedIndex.value.name);
 }
@@ -369,6 +415,15 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
     </div>
 
     <div v-else class="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div v-if="tab.tableMetadataError" class="border-b border-error/40 px-3 py-2 text-xs text-error">
+        {{ tab.tableMetadataError }}
+      </div>
+      <div
+        v-if="tab.tableMetadataLoadingSections.some((section) => section === tab.activePropertyTab)"
+        class="border-b border-default px-3 py-2 text-xs text-muted"
+      >
+        Loading table metadata...
+      </div>
       <div v-if="tab.activePropertyTab === 'basic'" class="grid min-h-0 flex-1 gap-3 overflow-auto p-4 md:grid-cols-2">
         <div
           v-for="item in dataViewBasicInfo(tab)"
@@ -456,9 +511,6 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
                   <button type="button" class="text-left text-primary hover:underline" @click="showIndexDetails(index)">
                     {{ index.name }}
                   </button>
-                  <UBadge v-if="index.inferred" class="ml-2" color="neutral" variant="subtle" size="xs">
-                    Inferred
-                  </UBadge>
                 </td>
                 <td class="px-3 py-2 text-muted">
                   {{ index.columns }}
@@ -475,12 +527,12 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
                     variant="ghost"
                     icon="i-lucide-trash-2"
                     size="xs"
-                    :disabled="!indexDdlSupported || index.protected || index.inferred"
+                    :disabled="!indexDdlSupported || index.protected"
                     :title="
                       !indexDdlSupported
                         ? 'Index changes are not supported for this database type'
-                        : index.protected || index.inferred
-                          ? 'Primary, constraint-backed, or inferred indexes cannot be deleted here'
+                        : index.protected
+                          ? 'Primary or constraint-backed indexes cannot be deleted here'
                           : `Drop ${index.name}`
                     "
                     :aria-label="`Drop index ${index.name}`"
@@ -491,7 +543,9 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
             </tbody>
           </table>
         </div>
-        <div v-else class="grid h-full place-items-center text-sm text-muted">No index metadata available.</div>
+        <div v-else class="grid h-full place-items-center text-sm text-muted">
+          {{ tab.tableMetadata?.capabilities.indexes === false ? "Index metadata is not supported." : "No indexes." }}
+        </div>
       </div>
 
       <div v-else-if="tab.activePropertyTab === 'foreignKeys'" class="min-h-0 flex-1 overflow-auto p-3">
@@ -519,11 +573,23 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
             </tbody>
           </table>
         </div>
-        <div v-else class="grid h-full place-items-center text-sm text-muted">No foreign keys in preview.</div>
+        <div v-else class="grid h-full place-items-center text-sm text-muted">
+          {{
+            tab.tableMetadata?.capabilities.foreignKeys === false
+              ? "Foreign-key metadata is not supported."
+              : "No foreign keys."
+          }}
+        </div>
       </div>
 
       <div v-else-if="tab.activePropertyTab === 'constraints'" class="min-h-0 flex-1 overflow-auto p-3">
-        <div class="overflow-hidden rounded-lg border border-default">
+        <div
+          v-if="tab.tableMetadata?.capabilities.constraints === false"
+          class="grid h-full place-items-center text-sm text-muted"
+        >
+          Constraint metadata is not supported.
+        </div>
+        <div v-else class="overflow-hidden rounded-lg border border-default">
           <table class="w-full text-left text-sm">
             <thead class="bg-[var(--workspace-surface-sub-panel)] text-muted">
               <tr>
@@ -549,16 +615,25 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
         </div>
       </div>
 
-      <DataViewDiagram
+      <SchemaDiagram
         v-else-if="tab.activePropertyTab === 'diagram'"
-        :table="tab.meta?.table || tab.meta?.title || tab.title"
-        :schema="tab.meta?.schema"
-        :columns="dataViewColumns(tab)"
-        :foreign-keys="dataViewForeignKeys(tab)"
+        title="Table Diagram"
+        :tables="tableDiagramTables"
+        :relationships-supported="tab.tableMetadata?.capabilities.foreignKeys !== false"
+        :searchable="false"
+        :openable="false"
+        :initial-table-name="tab.tableMetadata?.name || tableName"
       />
 
       <div v-else class="min-h-0 flex-1 overflow-auto p-3">
+        <div
+          v-if="tab.tableMetadata?.capabilities.ddl === false"
+          class="grid h-full place-items-center text-sm text-muted"
+        >
+          Table DDL is not supported by this database metadata provider.
+        </div>
         <pre
+          v-else
           class="rounded-lg border border-default bg-[var(--workspace-surface-sub-panel)] p-3 font-ui-mono text-xs text-[var(--app-fg)]"
           >{{ dataViewDDL(tab) }}</pre>
       </div>

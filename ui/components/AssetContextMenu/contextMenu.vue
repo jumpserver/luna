@@ -41,7 +41,7 @@ const hasReusableSavedConnection = computed(() => {
 
   const mode = saved.accountMode || "hosted";
   if (mode === "manual") {
-    return !!(saved.rememberSecret && saved.manualUsername && saved.manualPassword);
+    return !!(saved.manualUsername && saved.personalCredentialId);
   }
   if (mode === "dynamic") {
     return !!(saved.rememberSecret && saved.dynamicPassword);

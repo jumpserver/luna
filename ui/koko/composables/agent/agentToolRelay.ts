@@ -9,11 +9,11 @@ import type {
 import {
   AGENT_MCP_BINDING_META_KEY,
   AGENT_PROTOCOL_VERSION,
+  isRecord,
   MCP_CLIENT_CAPABILITIES_META_KEY,
   MCP_CLIENT_INFO_META_KEY,
   MCP_PROTOCOL_VERSION,
   MCP_PROTOCOL_VERSION_META_KEY,
-  isRecord,
   parseKokoMcpFrame
 } from "./types";
 
@@ -28,8 +28,48 @@ export interface AgentToolRelayResult {
 export interface AgentToolRelayOptions {
   resourceSessionId: () => string;
   revision?: () => number;
+  /** Local workspace execution validates these IDs; remote protocol executors accept only the core binding. */
+  includeRegistrationBinding?: boolean;
+  transformToolArguments?: (toolCallId: string, toolName: string, argumentsValue: unknown) => unknown;
   sendFrame: (frame: KokoMcpRequestFrame | KokoMcpCancelFrame) => void;
   completedLimit?: number;
+}
+
+function mcpTextContent(result: Record<string, unknown>) {
+  if (!Array.isArray(result.content)) return "";
+  return result.content
+    .flatMap((item) => (isRecord(item) && item.type === "text" && typeof item.text === "string" ? [item.text] : []))
+    .join("\n");
+}
+
+function normalizeMcpResult(result: unknown): Pick<AgentToolResultRequest, "status" | "result" | "error"> {
+  if (!isRecord(result)) return { status: "success", result };
+  const text = mcpTextContent(result);
+  if (result.isError === true) {
+    const meta =
+      isRecord(result._meta) && isRecord(result._meta[AGENT_MCP_BINDING_META_KEY])
+        ? result._meta[AGENT_MCP_BINDING_META_KEY]
+        : {};
+    return {
+      status: meta.status === "timeout" || meta.status === "cancelled" ? meta.status : "error",
+      ...(result.structuredContent !== undefined ? { result: result.structuredContent } : {}),
+      error: {
+        code: -32000,
+        message: text || "MCP tool execution failed"
+      }
+    };
+  }
+  if (result.structuredContent !== undefined && result.structuredContent !== null) {
+    return { status: "success", result: result.structuredContent };
+  }
+  if (text) {
+    try {
+      return { status: "success", result: JSON.parse(text) };
+    } catch {
+      return { status: "success", result: text };
+    }
+  }
+  return { status: "success", result };
 }
 
 export class AgentToolRelay {
@@ -44,6 +84,10 @@ export class AgentToolRelay {
   private readonly cancelledOrder: string[] = [];
   private readonly rpcToolCalls = new Map<string, string>();
   private readonly pendingCalls = new Map<string, { rpcId: string; runId: string; revision: number }>();
+  private readonly executions = new Map<
+    string,
+    { toolCallId: string; rpcId: string; runId: string; revision: number }
+  >();
   private readonly completedLimit: number;
   private epoch = 0;
 
@@ -65,22 +109,30 @@ export class AgentToolRelay {
         return true;
       const rpcId = String(payload.id || toolCallId);
       const runId = String(event.run_id || payload.run_id || "");
-      const revision = Number(payload.revision || this.options.revision?.()) || 1;
+      // Kael revision counts registry replacements; executors validate the toolset definition version.
+      const revision = Number(payload.definition_version ?? this.options.revision?.() ?? payload.revision ?? 1);
+      const toolName = String(payload.tool_name || payload.name || "");
+      const rawArguments = payload.arguments ?? {};
+      const argumentsValue = this.options.transformToolArguments?.(toolCallId, toolName, rawArguments) ?? rawArguments;
       const request: JsonRpcRequest = {
         jsonrpc: "2.0",
         id: rpcId,
         method: "tools/call",
         params: {
-          name: String(payload.tool_name || payload.name || ""),
-          arguments: payload.arguments ?? {},
+          name: toolName,
+          arguments: argumentsValue,
           _meta: {
             [MCP_PROTOCOL_VERSION_META_KEY]: MCP_PROTOCOL_VERSION,
             [MCP_CLIENT_CAPABILITIES_META_KEY]: {},
             [MCP_CLIENT_INFO_META_KEY]: { name: "luna", version: "1" },
+            // Extra registration fields are opt-in for the local workspace executor only.
             [AGENT_MCP_BINDING_META_KEY]: {
               resource_session_id: resourceSessionId,
               tool_call_id: toolCallId,
-              revision
+              revision,
+              ...(this.options.includeRegistrationBinding
+                ? { registration_id: payload.registration_id, invocation_id: payload.invocation_id }
+                : {})
             }
           }
         }
@@ -97,8 +149,9 @@ export class AgentToolRelay {
       return true;
     }
 
-    if (this.completed.has(toolCallId)) return true;
-    const pendingCall = this.pendingCalls.get(toolCallId);
+    const execution = [...this.executions.values()].find((value) => value.toolCallId === toolCallId);
+    if (this.completed.has(toolCallId) && !execution) return true;
+    const pendingCall = this.pendingCalls.get(toolCallId) || execution;
     this.pending.delete(toolCallId);
     this.pendingCalls.delete(toolCallId);
     this.completed.delete(toolCallId);
@@ -115,10 +168,11 @@ export class AgentToolRelay {
     return true;
   }
 
-  cancelPending(reason: string) {
+  cancelPending(reason: string, runId?: string) {
     const resourceSessionId = this.options.resourceSessionId();
     let sent = 0;
     for (const [toolCallId, call] of this.pendingCalls) {
+      if (runId && call.runId !== runId) continue;
       try {
         this.sendCancellation(resourceSessionId, toolCallId, call.rpcId, reason, call.revision);
         sent += 1;
@@ -128,6 +182,16 @@ export class AgentToolRelay {
       this.pending.delete(toolCallId);
       this.pendingCalls.delete(toolCallId);
       this.rememberCompleted(toolCallId, this.cancelled, this.cancelledOrder);
+    }
+    for (const [executionId, call] of this.executions) {
+      if (runId && call.runId !== runId) continue;
+      try {
+        this.sendCancellation(resourceSessionId, call.toolCallId, call.rpcId, reason, call.revision);
+        sent += 1;
+      } catch {
+        // The executor also enforces its own deadline if transport is unavailable.
+      }
+      this.executions.delete(executionId);
     }
     return sent;
   }
@@ -191,7 +255,18 @@ export class AgentToolRelay {
     if (hasResult === hasError) throw new Error("Koko MCP response must contain exactly one result or error");
     const pendingCall = this.pendingCalls.get(toolCallId);
     if (!pendingCall?.runId) throw new Error("Koko MCP response does not match an active agent run");
-    const resultIsError = isRecord(data.result) && data.result.isError === true;
+    const normalized = hasError
+      ? { status: "error" as const, error: data.error as AgentToolResultRequest["error"] }
+      : normalizeMcpResult(data.result);
+    const executionResult = isRecord(normalized.result) ? normalized.result : null;
+    if (executionResult && typeof executionResult.execution_id === "string") {
+      const executionId = executionResult.execution_id;
+      if (executionResult.process_finished === true) {
+        this.executions.delete(executionId);
+      } else if (executionResult.tool_call_id === toolCallId) {
+        this.executions.set(executionId, { ...pendingCall, toolCallId });
+      }
+    }
     this.responding.add(toolCallId);
 
     return {
@@ -202,9 +277,7 @@ export class AgentToolRelay {
         run_id: pendingCall.runId,
         seq: 1,
         done: true,
-        status: hasError || resultIsError ? "error" : "success",
-        ...(data.result !== undefined ? { result: data.result } : {}),
-        ...(data.error !== undefined ? { error: data.error } : {})
+        ...normalized
       },
       complete: (delivered) => {
         if (this.epoch !== epoch) return;
@@ -226,6 +299,7 @@ export class AgentToolRelay {
     this.respondingControls.clear();
     this.rpcToolCalls.clear();
     this.pendingCalls.clear();
+    this.executions.clear();
     this.completed.clear();
     this.completedOrder.length = 0;
     this.completedControls.clear();

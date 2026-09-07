@@ -15,7 +15,7 @@ const { activePaneId } = useWorkspaceTabs();
 const { currentSite, currentUser, loggedIn } = storeToRefs(useUserInfoStore());
 const { bootstrapPersistedSession } = useAuthSession();
 const sessionContext = ref<ConnectorSessionContext | null>(null);
-const aiOpen = shallowRef(true);
+const { open: aiOpen, setOpen: setAiOpen, openAi, toggleAi } = useAiPanel();
 
 provide(connectorSessionKey, sessionContext);
 
@@ -38,6 +38,7 @@ function syncHistoryScope() {
 
 onMounted(async () => {
   if (!tokenId.value) return;
+  openAi();
 
   const paneId = `standalone:${globalThis.crypto?.randomUUID?.() || Date.now()}`;
   sessionContext.value = {
@@ -87,10 +88,12 @@ onBeforeUnmount(() => {
         icon="i-lucide-sparkles"
         :aria-label="t(aiOpen ? 'RightPanel.AIClose' : 'RightPanel.AIOpen')"
         :aria-pressed="aiOpen"
-        @click="aiOpen = !aiOpen"
+        @click="toggleAi()"
       />
     </div>
 
-    <AiOverlayPanel v-if="sessionContext && aiOpen" @close="aiOpen = false" />
+    <KeepAlive>
+      <AiOverlayPanel v-if="sessionContext && aiOpen" @close="setAiOpen(false)" />
+    </KeepAlive>
   </div>
 </template>

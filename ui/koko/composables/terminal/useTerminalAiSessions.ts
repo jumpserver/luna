@@ -6,8 +6,14 @@ import type { AgentSessionController } from "../agent/useAgentSession";
 import { useChat } from "@ai-sdk/vue";
 import { effectScope, markRaw, reactive, shallowReactive } from "vue";
 import { buildJSONEnvelope, ENVELOPE_TERMINAL_COMMAND } from "#koko/composables/terminal/envelope";
+import {
+  agentChatEventLifecycle,
+  agentChatStreamMessage,
+  agentChatTextId,
+  closeAgentChatText
+} from "../agent/agentChatStream";
 import { AgentToolRelay } from "../agent/agentToolRelay";
-import { kokoMcpWireMessage, manifestFromFrame, parseKokoMcpFrame } from "../agent/types";
+import { isRecord, kokoMcpWireMessage, manifestFromFrame, parseKokoMcpFrame } from "../agent/types";
 import { useAgentSession } from "../agent/useAgentSession";
 
 export type TerminalAiEventData = Record<string, any>;
@@ -20,7 +26,9 @@ export interface KokoTerminalAiSessionOptions {
 
 function terminalExecutionMode(value: unknown) {
   const mode = String(value || "auto").toLowerCase();
-  return mode === "pty" || mode === "background" ? mode : "auto";
+  if (mode === "pty") return "pty";
+  if (mode === "background" || mode === "background_exec") return "background";
+  return "auto";
 }
 
 export interface KokoTerminalAiMetadataApproval {
@@ -192,9 +200,9 @@ class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage
     }
 
     for (const [index, part] of message.parts.entries()) {
-      const id = `${message.id}-${index}`;
       if (part.type === "text") {
         const isDelta = message.metadata?.agentEventType === "message.delta";
+        const id = agentChatTextId(response, message.id, index);
         if (!response.openTextIds.has(id)) {
           response.controller.enqueue({ type: "text-start", id });
           response.openTextIds.add(id);
@@ -208,6 +216,8 @@ class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage
       }
 
       if (!part.type.startsWith("data-") || !("data" in part)) continue;
+      closeAgentChatText(response);
+      const id = `${message.id}-${index}`;
       if (part.type === "data-error") {
         const data = part.data as TerminalAiEventData;
         response.controller.enqueue({
@@ -231,8 +241,7 @@ class KokoTerminalAiChatTransport implements ChatTransport<TerminalAiChatMessage
 
   finish(response = this.activeResponses[0]) {
     if (!response) return;
-    for (const id of response.openTextIds) response.controller.enqueue({ type: "text-end", id });
-    response.openTextIds.clear();
+    closeAgentChatText(response);
     if (response.started) response.controller.enqueue({ type: "finish", finishReason: "stop" });
     response.controller.close();
     this.clearActiveResponse(response);
@@ -302,6 +311,11 @@ function createSession(paneId: string, socket: WebSocket, terminalId: string): K
     new AgentToolRelay({
       resourceSessionId: () => session?.agent.state.resourceSessionId || "",
       revision: () => session?.agent.state.revision || 1,
+      transformToolArguments: (toolCallId, toolName, argumentsValue) => {
+        if (!toolName.startsWith("execute_") || !isRecord(argumentsValue)) return argumentsValue;
+        const execution = terminalExecutionMode(session?.executionOverrides.get(toolCallId) || session?.executionMode);
+        return execution === "auto" ? argumentsValue : { ...argumentsValue, execution };
+      },
       sendFrame: (frame) => {
         const target = session?.socket;
         if (!target || target.readyState !== WebSocket.OPEN) throw new Error("Terminal MCP relay is disconnected");
@@ -334,6 +348,23 @@ function createSession(paneId: string, socket: WebSocket, terminalId: string): K
       },
       onInputLock: (locked) => {
         if (session) session.inputLocked = locked;
+      },
+      onHistoryReset: () => {
+        if (!session) return;
+        session.chat.messages.value = [];
+        session.taskActive = false;
+        session.inputLocked = false;
+        session.metadataApproval = null;
+        session.pendingApprovals.clear();
+        session.decisions.clear();
+        session.executionOverrides.clear();
+        session.expansionOverrides.clear();
+        session.runtimeStatus = "";
+        session.runtimeStatusCode = "";
+        session.runtimeState = "";
+        session.runtimeExecution = "";
+        session.errorCode = "";
+        session.errorText = "";
       },
       onUnavailable: (error) => {
         if (!session) return;
@@ -614,6 +645,7 @@ export function handleKokoTerminalAiWireMessage(paneId: string, message: unknown
 export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
   const session = sessions.get(paneId);
   if (!session || !isTerminalAiChatMessage(message)) return;
+  const { runFinished } = agentChatEventLifecycle(message);
 
   const messageTerminalId = Number(message.metadata?.terminalId) || 0;
   if (messageTerminalId && session.terminalId && messageTerminalId !== Number(session.terminalId)) return;
@@ -690,7 +722,7 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
     session.runtimeStatusCode = String(progress.code || "");
     session.runtimeState = String(progress.state || "");
     session.runtimeExecution = String(progress.execution || "");
-    if (["idle", "completed", "failed", "cancelled", "interrupted"].includes(session.runtimeState)) {
+    if (runFinished) {
       session.taskActive = false;
       session.inputLocked = false;
       session.metadataApproval = null;
@@ -699,11 +731,11 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
     } else if (session.runtimeState) {
       session.taskActive = true;
     }
-    const timelineParts = message.parts.filter(
+    const timelineMessage = agentChatStreamMessage(
+      message,
       (part) => part.type !== "data-progress" && part.type !== "data-input-lock"
     );
-    if (timelineParts.length) {
-      const timelineMessage = { ...message, parts: timelineParts } as TerminalAiChatMessage;
+    if (timelineMessage) {
       if (!transports.get(session)?.receive(timelineMessage)) {
         session.chat.messages.value = [...session.chat.messages.value, timelineMessage];
       }

@@ -5,6 +5,12 @@ import type { AgentApprovalMode } from "../agent/types";
 import type { AgentSessionController } from "../agent/useAgentSession";
 import { useChat } from "@ai-sdk/vue";
 import { effectScope, markRaw, reactive, shallowReactive } from "vue";
+import {
+  agentChatEventLifecycle,
+  agentChatStreamMessage,
+  agentChatTextId,
+  closeAgentChatText
+} from "../agent/agentChatStream";
 import { AgentToolRelay } from "../agent/agentToolRelay";
 import { kokoMcpWireMessage, manifestFromFrame, parseKokoMcpFrame } from "../agent/types";
 import { useAgentSession } from "../agent/useAgentSession";
@@ -196,9 +202,9 @@ class KokoFileAiChatTransport implements ChatTransport<FileAiChatMessage> {
     }
 
     for (const [index, part] of message.parts.entries()) {
-      const id = `${message.id}-${index}`;
       if (part.type === "text") {
         const isDelta = message.metadata?.agentEventType === "message.delta";
+        const id = agentChatTextId(response, message.id, index);
         if (!response.openTextIds.has(id)) {
           response.controller.enqueue({ type: "text-start", id });
           response.openTextIds.add(id);
@@ -211,6 +217,8 @@ class KokoFileAiChatTransport implements ChatTransport<FileAiChatMessage> {
         continue;
       }
       if (!part.type.startsWith("data-") || !("data" in part)) continue;
+      closeAgentChatText(response);
+      const id = `${message.id}-${index}`;
       if (part.type === "data-error") {
         response.controller.enqueue({
           type: "error",
@@ -228,8 +236,7 @@ class KokoFileAiChatTransport implements ChatTransport<FileAiChatMessage> {
 
   finish(response = this.activeResponses[0]) {
     if (!response) return;
-    for (const id of response.openTextIds) response.controller.enqueue({ type: "text-end", id });
-    response.openTextIds.clear();
+    closeAgentChatText(response);
     if (response.started) response.controller.enqueue({ type: "finish", finishReason: "stop" });
     response.controller.close();
     this.clearActiveResponse(response);
@@ -349,6 +356,19 @@ function createSession(targetId: string, socket: WebSocket, context: KokoFileAiC
       },
       onApprovalMode: (mode) => {
         if (session) session.approvalMode = mode;
+      },
+      onHistoryReset: () => {
+        if (!session) return;
+        session.chat.messages.value = [];
+        resetTaskState(session);
+        session.pendingApprovals.clear();
+        session.resolvingApprovals.clear();
+        session.approvalDigests.clear();
+        session.runtimeStatus = "";
+        session.runtimeStatusCode = "";
+        session.runtimeState = "";
+        session.errorCode = "";
+        session.errorText = "";
       },
       onUnavailable: (error) => {
         if (!session) return;
@@ -669,6 +689,7 @@ export function handleKokoFileAiMessage(targetId: string, message: unknown) {
   if (!session || !isFileAiChatMessage(message)) return;
   const messageTargetId = String(message.metadata?.targetId || "");
   if (messageTargetId && messageTargetId !== targetId) return;
+  const { runFinished } = agentChatEventLifecycle(message);
 
   const capability = partData(message, "data-capability");
   if (capability) {
@@ -700,9 +721,7 @@ export function handleKokoFileAiMessage(targetId: string, message: unknown) {
     session.runtimeStatus = String(progress.text || "");
     session.runtimeStatusCode = String(progress.code || "");
     session.runtimeState = terminalState;
-    if (terminalState && !["idle", "completed", "failed", "cancelled", "interrupted"].includes(terminalState)) {
-      session.taskActive = true;
-    }
+    if (terminalState && !runFinished) session.taskActive = true;
   }
 
   const runtimeError = partData(message, "data-error");
@@ -713,24 +732,26 @@ export function handleKokoFileAiMessage(targetId: string, message: unknown) {
   }
 
   const transport = transports.get(session);
-  const streamParts = message.parts.filter((part) => part.type !== "data-capability" && part.type !== "data-progress");
-  if (!streamParts.length) {
-    if (!session.enabled || ["idle", "completed", "failed", "cancelled", "interrupted"].includes(terminalState)) {
+  const streamMessage = agentChatStreamMessage(
+    message,
+    (part) => part.type !== "data-capability" && part.type !== "data-progress"
+  );
+  if (!streamMessage) {
+    if (!session.enabled || runtimeError || runFinished) {
       resetTaskState(session);
       transport?.finish();
     }
     return;
   }
-  const streamMessage = { ...message, parts: streamParts } as FileAiChatMessage;
   if (!transport?.receive(streamMessage)) {
-    const timelineParts = streamParts.filter((part) => part.type !== "data-error");
+    const timelineParts = streamMessage.parts.filter((part) => part.type !== "data-error");
     if (timelineParts.length) {
       const timelineMessage = { ...message, parts: timelineParts } as FileAiChatMessage;
       session.chat.messages.value = [...session.chat.messages.value, timelineMessage];
     }
   }
 
-  if (!session.enabled || ["idle", "completed", "failed", "cancelled", "interrupted"].includes(terminalState)) {
+  if (!session.enabled || runtimeError || runFinished) {
     resetTaskState(session);
     transport?.finish();
   }

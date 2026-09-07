@@ -1,8 +1,56 @@
 import type { TerminalAiEventData } from "#koko/composables/terminal/useTerminalAiSessions";
-import type { PlanItem, TerminalStepItem, ViewExecution, ViewItem, ViewStep } from "../../types";
+import type { AgentToolItem, PlanItem, TerminalStepItem, ViewExecution, ViewItem, ViewStep } from "../../types";
 import type { AiViewItemBuilderFactory } from "../viewItems";
 
 const terminalPartTypes = new Set(["data-plan", "data-command", "data-approval", "data-execution", "data-command-acl"]);
+
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+// A command's RPC receipt and subsequent observations belong to its execution details.
+// Match protocol IDs only: identical command text can represent independent executions.
+export function groupTerminalToolItems(items: ViewItem[]) {
+  const executions = new Map<string, ViewExecution>();
+  for (const item of items) {
+    if (item.kind !== "terminal-step") continue;
+    for (const execution of item.step.executions) {
+      executions.set(execution.id, execution);
+      if (execution.command?.toolCallId) executions.set(String(execution.command.toolCallId), execution);
+    }
+  }
+
+  const tools = items.filter(
+    (item): item is AgentToolItem =>
+      item.kind === "agent-tool" &&
+      item.data.sourceDomain === "terminal" &&
+      (item.data.toolName?.startsWith("execute_") === true || item.data.toolName === "wait_command_execution")
+  );
+  const bindings = new Map<string, ViewExecution>();
+  const jobs = new Map<string, ViewExecution>();
+  for (const tool of tools) {
+    const result = record(tool.data.result);
+    const content = record(result.structuredContent ?? result);
+    const execution = executions.get(String(content.tool_call_id || tool.data.toolCallId));
+    if (!execution) continue;
+    bindings.set(tool.key, execution);
+    if (typeof content.execution_id === "string") jobs.set(content.execution_id, execution);
+  }
+
+  for (const tool of tools) {
+    if (tool.data.toolName !== "wait_command_execution") continue;
+    const execution = jobs.get(String(record(tool.data.arguments).execution_id || ""));
+    if (execution) bindings.set(tool.key, execution);
+  }
+
+  return items.filter((item) => {
+    if (item.kind !== "agent-tool" || !["running", "success"].includes(item.data.status)) return true;
+    const execution = bindings.get(item.key);
+    if (!execution) return true;
+    (execution.operations ??= []).push(item);
+    return false;
+  });
+}
 
 function isTerminalMessage(message: { metadata?: unknown }) {
   const metadata = message.metadata;
@@ -135,6 +183,8 @@ export const createTerminalViewItemBuilder: AiViewItemBuilderFactory = () => {
       }
       const execution = ensureExecution(step, data);
       if (partType === "data-execution") {
+        if (data.outcome === "unknown" && ["success", "error", "timeout"].includes(String(execution.result?.outcome)))
+          return;
         execution.result = { ...execution.result, ...data };
         if (data.outcome || data.status) step.status = String(data.outcome || data.status);
         return;

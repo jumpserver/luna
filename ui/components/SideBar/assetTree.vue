@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
+import type { WorkspaceUiAssetCandidate } from "~/composables/useWorkspaceUiAutomation";
 import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
 import { workspaceTourArmed, workspaceTourCompleted } from "~/composables/useWorkspaceTour";
+import { toWorkspaceUiAssetCandidate } from "~/composables/useWorkspaceUiAutomation";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import {
   authorizationTreeHasLoadedNodes,
@@ -32,9 +34,18 @@ const RECENT_NODE_ID = "__recent_connections__";
 const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
-const { loggedIn, orgId } = storeToRefs(userInfoStore);
+const { currentAccountId, currentSite, loggedIn, orgId } = storeToRefs(userInfoStore);
 const { fetchTree, treeNodeToAsset } = useAssetTree();
 const { clearRecentConnections, recentConnections, load: loadRecentConnections } = useRecentConnections();
+const workspaceUiAutomationHost = useWorkspaceUiAutomationHost();
+const {
+  currentCommand: workspaceUiCommand,
+  focusedAsset: workspaceFocusedAsset,
+  rejectCommand: rejectWorkspaceUiCommand,
+  reportFocusedAsset: reportWorkspaceFocusedAsset,
+  reportSearchResults: reportWorkspaceSearchResults,
+  searchQuery: workspaceSearchQuery
+} = workspaceUiAutomationHost;
 const activeTreeKind = ref<PanelKind>("authorization");
 const recentNodeOpen = ref(false);
 const authorizationNodes = ref<AssetTreeNode[]>([]);
@@ -51,6 +62,9 @@ const checkedNodeIds = ref<string[]>([]);
 const nodeMenuVisible = ref(false);
 const nodeMenuPosition = ref({ x: 0, y: 0 });
 const nodeMenuTarget = ref<{ node: AssetTreeNode; kind: PanelKind } | null>(null);
+const completedSearchQuery = ref("");
+let searchRequestEpoch = 0;
+let treeRequestEpoch = 0;
 let lastErrorSignature = "";
 let lastErrorAt = 0;
 
@@ -201,7 +215,7 @@ const reportError = (error: unknown) => {
   });
 };
 
-const loadRoot = async (kind: PanelKind) => {
+const loadRoot = async (kind: PanelKind, requestEpoch: number) => {
   if (!loggedIn.value) return;
   if (kind === "authorization") {
     loadRecentConnections();
@@ -210,6 +224,7 @@ const loadRoot = async (kind: PanelKind) => {
   loading.value = true;
   try {
     const nodes = await fetchTree(kind);
+    if (requestEpoch !== treeRequestEpoch) return;
     if (kind === "authorization") {
       const roots = removeFavoriteNodes(nodes);
       authorizationNodes.value = roots;
@@ -228,19 +243,28 @@ const loadRoot = async (kind: PanelKind) => {
       typeNodes.value = unwrapAllTypesRoot(nodes);
     }
   } catch (error) {
-    reportError(error);
+    if (requestEpoch === treeRequestEpoch) reportError(error);
   } finally {
-    loading.value = false;
-    if (kind === "authorization") authorizationLoaded.value = true;
+    if (requestEpoch === treeRequestEpoch) {
+      loading.value = false;
+      if (kind === "authorization") authorizationLoaded.value = true;
+    }
   }
 };
 
 const refresh = async () => {
+  treeRequestEpoch += 1;
+  const requestEpoch = treeRequestEpoch;
   searchNodes.value = [];
   checkedAssets.value = {};
   checkedNodeIds.value = [];
   loadRecentConnections();
-  await Promise.all([loadRoot("authorization"), loadRoot("type")]);
+  await Promise.all([loadRoot("authorization", requestEpoch), loadRoot("type", requestEpoch)]);
+};
+
+const reloadRoot = (kind: PanelKind) => {
+  treeRequestEpoch += 1;
+  void loadRoot(kind, treeRequestEpoch);
 };
 
 const switchTreeKind = () => {
@@ -287,6 +311,35 @@ async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
 }
 
 const isBranchNode = (node: AssetTreeNode) => Boolean(node.isParent || node.children?.length);
+
+const assetIdForNode = (node: AssetTreeNode) =>
+  String(node.meta?.data?.id || node.key || (isRecentRootNode(node) ? "" : node.id));
+
+const findAssetNode = (nodes: AssetTreeNode[], assetId: string): AssetTreeNode | null => {
+  for (const node of nodes) {
+    if (!isBranchNode(node) && assetIdForNode(node) === assetId) return node;
+    const child = findAssetNode(node.children || [], assetId);
+    if (child) return child;
+  }
+  return null;
+};
+
+const collectAssetCandidates = (nodes: AssetTreeNode[]) => {
+  const candidates = new Map<string, WorkspaceUiAssetCandidate>();
+
+  const visit = (items: AssetTreeNode[]) => {
+    for (const node of items) {
+      if (!isBranchNode(node) && !node.chkDisabled && !isWorkspaceTourDemoNode(node.id)) {
+        const candidate = toWorkspaceUiAssetCandidate(treeNodeToAsset(node));
+        if (candidate.id) candidates.set(candidate.id, candidate);
+      }
+      if (node.children?.length) visit(node.children);
+    }
+  };
+
+  visit(nodes);
+  return [...candidates.values()];
+};
 
 const collapseNode = (node: AssetTreeNode) => {
   if (isRecentRootNode(node)) {
@@ -348,7 +401,9 @@ const expandNodeRecursive = async (node: AssetTreeNode, kind: PanelKind) => {
 
 const selectNode = (node: AssetTreeNode) => {
   if (node.chkDisabled || isWorkspaceTourDemoNode(node.id)) return;
-  emit("select", treeNodeToAsset(node));
+  const asset = treeNodeToAsset(node);
+  const selectionOnly = reportWorkspaceFocusedAsset(asset, { source: "user" });
+  if (!selectionOnly) emit("select", asset);
 };
 
 const toggleCheckedNode = (node: AssetTreeNode) => {
@@ -465,24 +520,69 @@ const nodeMenuItems = computed<DropdownMenuItem[]>(() => {
   ];
 });
 
-const searchTree = useDebounceFn(async (keyword: string) => {
-  if (!keyword.trim() || !loggedIn.value) {
+const respondToWorkspaceUiCommand = () => {
+  const command = workspaceUiCommand.value;
+  if (!command || command.status !== "pending") return;
+
+  const query = props.search.trim();
+  if (command.type === "set-search") {
+    if (!query || query !== command.query || completedSearchQuery.value !== query) return;
+    reportWorkspaceSearchResults(query, collectAssetCandidates(searchNodes.value));
+    return;
+  }
+
+  if (command.type !== "focus-asset" || !command.assetId) return;
+  const nodes = query ? searchNodes.value : activeTree.value.nodes;
+  const node = findAssetNode(nodes, command.assetId);
+  if (node) {
+    reportWorkspaceFocusedAsset(treeNodeToAsset(node), {
+      commandId: command.id,
+      source: "automation"
+    });
+    return;
+  }
+
+  if (query && completedSearchQuery.value === query && query === workspaceSearchQuery.value) {
+    rejectWorkspaceUiCommand(command.id, "asset_not_found", `Asset ${command.assetId} is not in the current search`);
+  }
+};
+
+const searchTree = useDebounceFn(async (keyword: string, requestEpoch: number) => {
+  const query = keyword.trim();
+  if (!query || !loggedIn.value) {
     searchNodes.value = [];
+    completedSearchQuery.value = "";
     return;
   }
   searchLoading.value = true;
   try {
-    searchNodes.value = await fetchTree("search", undefined, keyword.trim());
+    const nodes = await fetchTree("search", undefined, query);
+    if (requestEpoch !== searchRequestEpoch || props.search.trim() !== query) return;
+
+    searchNodes.value = nodes;
+    completedSearchQuery.value = query;
+    reportWorkspaceSearchResults(query, collectAssetCandidates(nodes));
+    respondToWorkspaceUiCommand();
   } catch (error) {
+    if (requestEpoch !== searchRequestEpoch || props.search.trim() !== query) return;
     reportError(error);
+    const command = workspaceUiCommand.value;
+    if (command?.status === "pending" && command.type === "set-search" && command.query === query) {
+      rejectWorkspaceUiCommand(command.id, "search_failed", error instanceof Error ? error.message : String(error));
+    }
   } finally {
-    searchLoading.value = false;
+    if (requestEpoch === searchRequestEpoch) searchLoading.value = false;
   }
 }, 250);
 
 watch(
   () => props.search,
-  (value) => searchTree(value)
+  (value) => {
+    searchRequestEpoch += 1;
+    completedSearchQuery.value = "";
+    void searchTree(value, searchRequestEpoch);
+  },
+  { immediate: true }
 );
 watch(
   () => props.search,
@@ -494,22 +594,29 @@ watch(
   }
 );
 watch(
-  [loggedIn, orgId],
+  [loggedIn, orgId, currentSite, currentAccountId],
   ([isLoggedIn]) => {
+    searchRequestEpoch += 1;
+    authorizationNodes.value = [];
+    typeNodes.value = [];
+    searchNodes.value = [];
+    authorizationLoaded.value = false;
+    tourDemoNodes.value = [];
+    completedSearchQuery.value = "";
+    searchLoading.value = false;
+    closeBatchMode();
+    closeNodeMenu();
     if (isLoggedIn) {
       refresh();
     } else {
-      authorizationNodes.value = [];
-      typeNodes.value = [];
-      searchNodes.value = [];
-      authorizationLoaded.value = false;
-      tourDemoNodes.value = [];
-      closeBatchMode();
-      closeNodeMenu();
+      treeRequestEpoch += 1;
+      loading.value = false;
     }
   },
   { immediate: true }
 );
+
+watch(workspaceUiCommand, respondToWorkspaceUiCommand, { immediate: true });
 
 defineExpose({
   refresh,
@@ -557,6 +664,7 @@ defineExpose({
               :key="`search-${node.id}`"
               :node="node"
               tree-kind="authorization"
+              :focused-asset-id="workspaceFocusedAsset?.id"
               search-mode
               @select="selectNode"
               @contextmenu="openContextMenu"
@@ -636,7 +744,7 @@ defineExpose({
               class="sidebar-icon-button size-6 justify-center p-0"
               :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
               :aria-label="t('ToolTips.Refresh')"
-              @click="loadRoot(activeTreeKind)"
+              @click="reloadRoot(activeTreeKind)"
             />
             <UDropdownMenu
               :items="batchMenuItems"
@@ -671,6 +779,7 @@ defineExpose({
                   :key="`${activeTreeKind}-${node.id}`"
                   :node="node"
                   :tree-kind="activeTreeKind"
+                  :focused-asset-id="workspaceFocusedAsset?.id"
                   :batch-mode="batchMode"
                   :checked-asset-ids="checkedNodeIds"
                   @select="selectNode"

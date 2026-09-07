@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useSftpTransferUi } from "#koko/composables/sftp/useSftpTransferUi";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { t } = useI18n();
@@ -9,12 +10,14 @@ const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
 const { authReady } = useAuthSession();
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
+const workspaceTabs = computed(() => tabs.value ?? []);
 
-const connectedCount = computed(() => tabs.value.filter((tab) => tab.status === "connected").length);
+const tabCount = computed(() => workspaceTabs.value.length);
+const connectedCount = computed(() => workspaceTabs.value.filter((tab) => tab.status === "connected").length);
 const connectingCount = computed(
-  () => tabs.value.filter((tab) => tab.status === "connecting" || tab.status === "ready").length
+  () => workspaceTabs.value.filter((tab) => tab.status === "connecting" || tab.status === "ready").length
 );
-const failedCount = computed(() => tabs.value.filter((tab) => tab.status === "failed").length);
+const failedCount = computed(() => workspaceTabs.value.filter((tab) => tab.status === "failed").length);
 const username = computed(() => currentUser.value?.name || "");
 const siteName = computed(() => currentUser.value?.siteName || currentUser.value?.site || "");
 const siteAddress = computed(() => currentUser.value?.site || "");
@@ -37,6 +40,28 @@ const activeText = computed(() => {
 const compactBadgeUi = {
   base: "h-5 rounded px-1.5 font-ui-mono text-[10px] leading-none"
 };
+const { open: transferOpen, hasActiveTasks, transferTone, taskCount, attentionSequence, toggle } = useSftpTransferUi();
+const transferAttracting = ref(false);
+let transferAttentionTimer: ReturnType<typeof setTimeout> | undefined;
+const transferLabel = computed(() =>
+  hasActiveTasks.value ? t("StatusFooter.TransferCount", { count: taskCount.value }) : t("StatusFooter.Transfer")
+);
+
+watch(attentionSequence, () => {
+  transferAttracting.value = false;
+  if (transferAttentionTimer) clearTimeout(transferAttentionTimer);
+  void nextTick(() => {
+    transferAttracting.value = true;
+    transferAttentionTimer = setTimeout(() => {
+      transferAttracting.value = false;
+      transferAttentionTimer = undefined;
+    }, 900);
+  });
+});
+
+onBeforeUnmount(() => {
+  if (transferAttentionTimer) clearTimeout(transferAttentionTimer);
+});
 </script>
 
 <template>
@@ -76,7 +101,7 @@ const compactBadgeUi = {
         size="xs"
         class="hidden sm:inline-flex"
         :ui="compactBadgeUi"
-        :label="t('StatusFooter.Tabs', { count: tabs.length })"
+        :label="t('StatusFooter.Tabs', { count: tabCount })"
       />
       <UBadge
         v-if="connectedCount"
@@ -105,6 +130,35 @@ const compactBadgeUi = {
         :ui="compactBadgeUi"
         :label="t('StatusFooter.Failed', { count: failedCount })"
       />
+      <UBadge
+        as="button"
+        type="button"
+        data-sftp-transfer-trigger
+        data-sftp-tour="transfer-center"
+        size="xs"
+        class="sftp-transfer-trigger-anchor cursor-pointer font-ui-mono"
+        :class="{
+          'is-idle': transferTone === 'idle',
+          'is-busy': transferTone === 'moving',
+          'is-paused': transferTone === 'paused',
+          'is-failed': transferTone === 'failed',
+          'is-attracting': transferAttracting
+        }"
+        color="neutral"
+        variant="soft"
+        :ui="compactBadgeUi"
+        :trailing-icon="transferOpen ? 'i-lucide-chevron-down' : 'i-lucide-chevron-up'"
+        :label="transferLabel"
+        :title="t('koko.sftpTransferCenter.queueTitle')"
+        :aria-label="transferLabel"
+        :aria-expanded="transferOpen"
+        aria-controls="sftp-transfer-center"
+        @click="toggle"
+      >
+        <template v-if="transferTone !== 'idle'" #leading>
+          <span class="sftp-transfer-trigger-dot" />
+        </template>
+      </UBadge>
       <WorkspaceVirtualKeyboardPopover v-if="activeWorkspaceMode === 'assets'" />
       <UButton
         v-if="activeWorkspaceMode === 'assets' && commandExecutionEnabled"

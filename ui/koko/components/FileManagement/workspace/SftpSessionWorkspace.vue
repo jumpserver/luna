@@ -3,13 +3,8 @@ import type { DropdownMenuItem } from "@nuxt/ui";
 import type { ComponentPublicInstance } from "vue";
 import type { useSftpTransferCoordinator } from "#koko/composables/sftp/file-manager/useSftpTransferCoordinator";
 import type { useSftpWorkspacePanes } from "#koko/composables/sftp/file-manager/useSftpWorkspacePanes";
-import type {
-  SftpRemotePane,
-  SftpRemotePaneHandle,
-  SftpTransferCenterHandle
-} from "#koko/composables/sftp/file-manager/workspaceTypes";
+import type { SftpRemotePane, SftpRemotePaneHandle } from "#koko/composables/sftp/file-manager/workspaceTypes";
 import KokoFileManagementPane from "#koko/components/FileManagement/pane.vue";
-import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
 import SftpRemoteMachineTabs from "#koko/components/FileManagement/workspace/SftpRemoteMachineTabs.vue";
 import SftpTransferRail from "#koko/components/FileManagement/workspace/SftpTransferRail.vue";
 import {
@@ -30,7 +25,6 @@ const props = defineProps<{
   transfer: TransferController;
   startTour: () => void;
   setPrimaryPaneRef: (value: SftpRemotePaneHandle | null) => void;
-  setTransferCenterRef: (value: SftpTransferCenterHandle | null) => void;
 }>();
 
 const { t } = useI18n();
@@ -110,6 +104,7 @@ onUnmounted(() => {
 const primarySendPeerDirection = computed<"left" | "right" | undefined>(() =>
   simplePeerMode.value && canSendToOpposite(primaryTransferEndpoint.value?.id) ? "right" : undefined
 );
+const primaryCanSend = computed(() => remotePanes.value.some((pane) => remotePaneConnected(pane.id)));
 
 function remoteSendPeerDirection(endpointId: string): "left" | "right" | undefined {
   return simplePeerMode.value && canSendToOpposite(endpointId) ? "left" : undefined;
@@ -121,10 +116,6 @@ const canUseTransferRail = computed(() =>
 
 function setPrimaryPaneRef(value: TemplateRefValue): void {
   props.setPrimaryPaneRef(value as SftpRemotePaneHandle | null);
-}
-
-function setTransferCenterRef(value: TemplateRefValue): void {
-  props.setTransferCenterRef(value as SftpTransferCenterHandle | null);
 }
 
 function onSessionPanesUpdate(value: SftpRemotePane[]) {
@@ -174,8 +165,6 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
 
 <template>
   <div class="relative flex min-h-0 flex-1">
-    <KokoSftpTransferCenter v-if="!compact" :ref="setTransferCenterRef" floating />
-
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
       <!-- Dual-pane: match right machine-tab strip height with a fixed primary identity row. -->
       <div
@@ -207,6 +196,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
         :compact="compact"
         :transfer-endpoint="compact ? undefined : primaryTransferEndpoint"
         :highlighted-names="highlightedNames.left"
+        :can-send="primaryCanSend"
         :send-peer-direction="primarySendPeerDirection"
         @focus="focusPrimaryPane"
         @send="sendFromSelection"
@@ -301,6 +291,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
           }"
           :transfer-endpoint="pane.transferEndpoint"
           :highlighted-names="highlightedNames.right"
+          :can-send="Boolean(primaryTransferEndpoint)"
           :send-peer-direction="remoteSendPeerDirection(pane.transferEndpoint.id)"
           @select="
             pane.selection = $event;

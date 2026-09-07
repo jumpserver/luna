@@ -83,6 +83,23 @@ const displayedUnavailableState = computed(() => {
 
 <template>
   <div class="flex h-full min-h-0 flex-col">
+    <AiPresenceHeader
+      :assistant-name="presentation?.assistantName || t('RightPanel.LunaAiName')"
+      :description="presentation?.headerDescription || ''"
+      :status-label="presentation?.available ? presenceStatusLabel : ''"
+      :status-tone="presentation?.available ? presenceStatusTone : 'warning'"
+      :busy="Boolean(presentation?.busy || presentation?.running)"
+      :context-items="presentation?.contextItems || []"
+      :tool-names="presentation?.toolNames || []"
+      :run-progress="runProgress"
+      :risk-label="riskLabel"
+      :risk-color="riskColor"
+    >
+      <template #actions>
+        <slot name="actions" />
+      </template>
+    </AiPresenceHeader>
+
     <div v-if="!presentation?.available" class="grid min-h-0 flex-1 place-items-center p-4">
       <UEmpty
         :icon="displayedUnavailableState.icon"
@@ -94,19 +111,6 @@ const displayedUnavailableState = computed(() => {
     </div>
 
     <template v-else-if="session && presentation">
-      <AiPresenceHeader
-        :assistant-name="presentation.assistantName"
-        :description="presentation.headerDescription"
-        :status-label="presenceStatusLabel"
-        :status-tone="presenceStatusTone"
-        :busy="presentation.busy || presentation.running"
-        :context-items="presentation.contextItems"
-        :tool-names="presentation.toolNames || []"
-        :run-progress="runProgress"
-        :risk-label="riskLabel"
-        :risk-color="riskColor"
-      />
-
       <AiTimeline
         :items="viewItems"
         :session="session"

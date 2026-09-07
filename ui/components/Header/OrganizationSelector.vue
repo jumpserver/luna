@@ -2,6 +2,7 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { PermOrgItem } from "~/types/index";
 
+import { invalidatePersonalAssetCredentialCache } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 withDefaults(
@@ -37,6 +38,7 @@ function handleOrgChange(org: string) {
   const orgData = currentOrganizations.value.find((o: PermOrgItem) => o.name === org);
 
   if (orgData) {
+    invalidatePersonalAssetCredentialCache();
     setCurrentOrg(orgData);
 
     nextTick(() => {

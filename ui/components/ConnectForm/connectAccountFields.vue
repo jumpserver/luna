@@ -1,25 +1,46 @@
 <script setup lang="ts">
 import type { SelectMenuItem } from "@nuxt/ui";
-import type { AssetPageType, PermedAccount } from "~/types/index";
+import type { AssetPageType, PermedAccount, PersonalAssetCredential } from "~/types/index";
 
 const props = defineProps<{
   accounts: PermedAccount[];
   assetType?: AssetPageType;
+  personalCredentials: PersonalAssetCredential[];
+  personalCredentialsLoading?: boolean;
+  personalCredentialsLoaded?: boolean;
+  personalCredentialsLoadFailed?: boolean;
 }>();
 
 const account = defineModel<string>("account", { required: true });
 const manualUsername = defineModel<string>("manualUsername", { default: "" });
 const manualPassword = defineModel<string>("manualPassword", { default: "" });
+const personalCredentialId = defineModel<string>("personalCredentialId", { default: "" });
+const personalCredentialVersion = defineModel<number | undefined>("personalCredentialVersion");
+const personalCredentialSecretType = defineModel<string>("personalCredentialSecretType", { default: "password" });
+const savePersonalCredential = defineModel<boolean>("savePersonalCredential", { default: false });
 const dynamicPassword = defineModel<string>("dynamicPassword", { default: "" });
 const rememberSecret = defineModel<boolean>("rememberSecret", { default: false });
 
 const { t } = useI18n();
 const { formFieldUi, controlBaseUi, overlayMenuUi } = useConnectFormAppearance();
 
-const showManualInputArea = ref(false);
-const showDynamicUserArea = ref(false);
+const showManualInputArea = computed(
+  () =>
+    account.value === "@INPUT" ||
+    account.value === t("Account.ManualInput") ||
+    account.value === "手动输入" ||
+    account.value === "Manual input"
+);
+const showDynamicUserArea = computed(
+  () =>
+    account.value === "@USER" ||
+    account.value.startsWith(t("Account.DynamicUser")) ||
+    account.value.includes("同名账号") ||
+    account.value.includes("Dynamic user")
+);
 const manualPasswordVisible = ref(false);
 const dynamicPasswordVisible = ref(false);
+const manualCredentialChoice = "__manual_input__";
 
 const accountItems = computed(() => {
   const filteredAnonymous = props.accounts.filter((item) => {
@@ -72,22 +93,94 @@ const accountItems = computed(() => {
   return items;
 });
 
+const personalCredentialItems = computed<SelectMenuItem[]>(() => [
+  {
+    label: t("Account.ManualOtherAccount"),
+    value: manualCredentialChoice
+  },
+  ...props.personalCredentials.map((credential) => {
+    const accountLabel = t("Account.SavedAccount", { username: credential.username });
+    const secretType = credential.secret_type;
+    const secretTypeLabel =
+      typeof secretType === "string"
+        ? secretType === "password"
+          ? t("Account.Password")
+          : secretType.replace(/_/g, " ")
+        : secretType.label;
+    return {
+      label: `${accountLabel} · ${secretTypeLabel}`,
+      value: credential.id
+    };
+  })
+]);
+
+const selectedPersonalCredential = computed(() =>
+  props.personalCredentials.find((credential) => credential.id === personalCredentialId.value)
+);
+
+const selectedCredentialChoice = computed<string>({
+  get: () => personalCredentialId.value || manualCredentialChoice,
+  set: (value) => {
+    personalCredentialId.value = value === manualCredentialChoice ? "" : value || "";
+  }
+});
+
+const usingSavedCredential = computed(() => !!personalCredentialId.value && !savePersonalCredential.value);
+const credentialActionLabel = computed(() => {
+  if (!personalCredentialId.value) return t("Account.SaveAsPersonalCredential");
+  return savePersonalCredential.value
+    ? t("Account.CancelPersonalCredentialUpdate")
+    : t("Account.UpdatePersonalCredential");
+});
+const credentialActionDisabled = computed(
+  () => !!personalCredentialId.value && personalCredentialVersion.value === undefined
+);
+
+const resolveSecretType = (credential: PersonalAssetCredential) => {
+  const secretType = credential.secret_type;
+  return typeof secretType === "string" ? secretType : secretType?.value || "password";
+};
+
+const togglePersonalCredentialSave = () => {
+  savePersonalCredential.value = !savePersonalCredential.value;
+  manualPassword.value = "";
+  manualPasswordVisible.value = false;
+};
+
+watch(personalCredentialId, (id, previousId) => {
+  manualPassword.value = "";
+  manualPasswordVisible.value = false;
+  savePersonalCredential.value = false;
+  if (!id) {
+    if (previousId) manualUsername.value = "";
+    personalCredentialVersion.value = undefined;
+    personalCredentialSecretType.value = "password";
+  }
+});
+
+watch(
+  [selectedPersonalCredential, () => props.personalCredentialsLoaded],
+  ([credential, loaded]) => {
+    if (credential) {
+      manualUsername.value = credential.username;
+      personalCredentialVersion.value = credential.version;
+      personalCredentialSecretType.value = resolveSecretType(credential);
+      return;
+    }
+    if (loaded && personalCredentialId.value) {
+      personalCredentialId.value = "";
+      personalCredentialVersion.value = undefined;
+      personalCredentialSecretType.value = "password";
+    }
+  },
+  { immediate: true }
+);
+
 watch(
   account,
-  (value) => {
-    const next = value || "";
-    showManualInputArea.value = false;
-    showDynamicUserArea.value = false;
+  () => {
     manualPasswordVisible.value = false;
     dynamicPasswordVisible.value = false;
-
-    if (next === "手动输入" || next === "Manual input") {
-      showManualInputArea.value = true;
-    }
-
-    if (next.includes("同名账号") || next.includes("Dynamic user")) {
-      showDynamicUserArea.value = true;
-    }
   },
   { immediate: true }
 );
@@ -114,9 +207,31 @@ watch(
 
     <template v-if="showManualInputArea">
       <div class="credentials-fields">
+        <UFormField :label="t('Account.PersonalCredential')" :ui="formFieldUi" size="md">
+          <USelectMenu
+            v-model="selectedCredentialChoice"
+            :items="personalCredentialItems"
+            value-key="value"
+            label-key="label"
+            :loading="personalCredentialsLoading"
+            :ui="{
+              base: controlBaseUi,
+              ...overlayMenuUi
+            }"
+            icon="i-lucide-key-round"
+            trailing-icon="i-lucide-chevrons-up-down"
+            size="md"
+            class="w-full"
+          />
+          <p v-if="personalCredentialsLoadFailed" class="mt-1 text-xs text-warning">
+            {{ t("Account.LoadPersonalCredentialsFailed") }}
+          </p>
+        </UFormField>
+
         <UFormField :label="t('Account.Username')" :ui="formFieldUi" size="md">
           <UInput
             v-model="manualUsername"
+            :disabled="!!personalCredentialId"
             autocapitalize="none"
             autocorrect="off"
             :placeholder="t('Account.Username')"
@@ -132,15 +247,16 @@ watch(
             <UInput
               v-model="manualPassword"
               :type="manualPasswordVisible ? 'text' : 'password'"
+              :disabled="usingSavedCredential"
               autocapitalize="none"
               autocorrect="off"
-              :placeholder="t('Account.Password')"
+              :placeholder="t(usingSavedCredential ? 'Account.UseSavedPassword' : 'Account.Password')"
               :ui="{ base: controlBaseUi, trailing: 'pe-1' }"
               icon="i-lucide-lock-keyhole"
               size="md"
               class="min-w-0 flex-1"
             >
-              <template #trailing>
+              <template v-if="!usingSavedCredential" #trailing>
                 <UButton
                   type="button"
                   :icon="manualPasswordVisible ? 'i-lucide-eye-off' : 'i-lucide-eye'"
@@ -156,17 +272,27 @@ watch(
               </template>
             </UInput>
             <UButton
+              v-if="!personalCredentialId || personalCredentialSecretType === 'password'"
               type="button"
-              :icon="rememberSecret ? 'i-lucide-bookmark-check' : 'i-lucide-bookmark'"
-              :aria-label="t('Account.RememberPassword')"
-              :title="t('Account.RememberPassword')"
+              :icon="
+                personalCredentialId
+                  ? savePersonalCredential
+                    ? 'i-lucide-x'
+                    : 'i-lucide-refresh-cw'
+                  : savePersonalCredential
+                    ? 'i-lucide-bookmark-check'
+                    : 'i-lucide-bookmark'
+              "
+              :aria-label="credentialActionLabel"
+              :title="credentialActionLabel"
+              :disabled="credentialActionDisabled"
               color="neutral"
               variant="ghost"
               size="md"
               :ui="{ leadingIcon: 'size-[18px]' }"
               class="remember-secret-button"
-              :class="{ 'remember-secret-button-active': rememberSecret }"
-              @click="rememberSecret = !rememberSecret"
+              :class="{ 'remember-secret-button-active': savePersonalCredential }"
+              @click="togglePersonalCredentialSave"
             />
           </UFieldGroup>
         </UFormField>

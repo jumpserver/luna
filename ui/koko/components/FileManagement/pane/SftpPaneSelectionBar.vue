@@ -1,11 +1,8 @@
 <script setup lang="ts">
-import prettyBytes from "pretty-bytes";
-
 const props = withDefaults(
   defineProps<{
     selectedCount: number;
     transferableCount: number;
-    selectedBytes: number;
     canSend?: boolean;
     canDownload?: boolean;
     sendPeerDirection?: "left" | "right";
@@ -29,7 +26,7 @@ const isPeerSend = computed(() => props.sendPeerDirection === "left" || props.se
 const sendIcon = computed(() => {
   if (props.sendPeerDirection === "right") return "i-lucide-arrow-right";
   if (props.sendPeerDirection === "left") return "i-lucide-arrow-left";
-  return "i-lucide-send";
+  return "i-lucide-forward";
 });
 </script>
 
@@ -46,32 +43,46 @@ const sendIcon = computed(() => {
         <b>{{ selectedCount }}</b>
         {{ t("koko.fileManagement.selectedSuffix") }}
       </span>
-      <span v-if="transferableCount" class="sftp-selection-bar__size">
-        {{ t("koko.fileManagement.selectedSizeTotal", { size: prettyBytes(selectedBytes) }) }}
-      </span>
     </div>
     <div class="sftp-selection-bar__actions">
-      <button
+      <UButton
         v-if="canSend && transferableCount"
-        type="button"
-        class="sftp-selection-bar__btn sftp-selection-bar__btn--primary"
+        class="sftp-selection-bar__btn"
+        color="primary"
+        variant="ghost"
+        size="xs"
+        :icon="sendIcon"
+        :label="isPeerSend ? t('koko.fileManagement.sendToOpposite') : t('koko.fileManagement.sendTo')"
         @click="emit('send')"
-      >
-        <UIcon :name="sendIcon" class="size-3.5" />
-        {{ isPeerSend ? t("koko.fileManagement.sendToOpposite") : t("koko.fileManagement.sendTo") }}
-      </button>
-      <button v-if="canDownload" type="button" class="sftp-selection-bar__btn" @click="emit('download')">
-        <UIcon name="i-lucide-download" class="size-3.5" />
-        {{ t("koko.actions.download") }}
-      </button>
-      <button type="button" class="sftp-selection-bar__btn sftp-selection-bar__btn--danger" @click="emit('remove')">
-        <UIcon name="i-lucide-trash-2" class="size-3.5" />
-        {{ t("koko.actions.delete") }}
-      </button>
-      <button type="button" class="sftp-selection-bar__btn sftp-selection-bar__btn--ghost" @click="emit('clear')">
-        <UIcon name="i-lucide-x" class="size-3.5" />
-        {{ t("koko.fileManagement.clearSelection") }}
-      </button>
+      />
+      <UButton
+        v-if="canDownload"
+        class="sftp-selection-bar__btn"
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        icon="i-lucide-download"
+        :label="t('koko.actions.download')"
+        @click="emit('download')"
+      />
+      <UButton
+        class="sftp-selection-bar__btn"
+        color="error"
+        variant="ghost"
+        size="xs"
+        icon="i-lucide-trash-2"
+        :label="t('koko.actions.delete')"
+        @click="emit('remove')"
+      />
+      <UButton
+        class="sftp-selection-bar__btn"
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        icon="i-lucide-x"
+        :label="t('koko.fileManagement.clearSelection')"
+        @click="emit('clear')"
+      />
     </div>
   </div>
 </template>

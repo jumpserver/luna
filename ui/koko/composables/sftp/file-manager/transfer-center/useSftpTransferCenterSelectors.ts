@@ -1,5 +1,5 @@
-import type { MaybeRefOrGetter } from "vue";
 import type { FileTransferStatus, FileTransferTask } from "@jumpserver/connectors-core";
+import type { MaybeRefOrGetter } from "vue";
 import { computed, toValue } from "vue";
 
 export interface SftpTransferTargetGroup {
@@ -24,20 +24,22 @@ export interface SftpTransferBatchGroup {
 export type SftpTransferTaskFilter = "all" | "active" | "failed" | "completed" | "canceled";
 
 export const sftpTransferConflictError = "target_exists";
+export const sftpTransferEndpointUnavailableError = "endpoint_unavailable";
 export const sftpTransferTerminalStatuses = new Set<FileTransferStatus>(["completed", "skipped", "failed", "canceled"]);
 
-export function selectSftpTransferTasks(tasks: FileTransferTask[]): FileTransferTask[] {
-  return tasks.filter(
+export function selectSftpTransferTasks(tasks: FileTransferTask[] | null | undefined): FileTransferTask[] {
+  return (tasks ?? []).filter(
     (task) => task.sourceEndpoint.id.startsWith("sftp:") || task.destinationEndpoint.id.startsWith("sftp:")
   );
 }
 
 export function filterSftpTransferTasks(tasks: FileTransferTask[], filter: SftpTransferTaskFilter): FileTransferTask[] {
-  if (filter === "active") return tasks.filter((task) => !sftpTransferTerminalStatuses.has(task.status));
-  if (filter === "failed") return tasks.filter((task) => task.status === "failed");
-  if (filter === "completed") return tasks.filter((task) => task.status === "completed");
-  if (filter === "canceled") return tasks.filter((task) => task.status === "canceled");
-  return tasks;
+  const list = tasks ?? [];
+  if (filter === "active") return list.filter((task) => !sftpTransferTerminalStatuses.has(task.status));
+  if (filter === "failed") return list.filter((task) => task.status === "failed");
+  if (filter === "completed") return list.filter((task) => task.status === "completed");
+  if (filter === "canceled") return list.filter((task) => task.status === "canceled");
+  return list;
 }
 
 export function countActiveTransferTargets(tasks: FileTransferTask[]): number {
@@ -60,9 +62,9 @@ export function groupSftpTransferBatches(
   displayTasks: FileTransferTask[]
 ): SftpTransferBatchGroup[] {
   const groups = new Map<string, FileTransferTask[]>();
-  const displayTaskIds = new Set(displayTasks.map((task) => task.id));
+  const displayTaskIds = new Set((displayTasks ?? []).map((task) => task.id));
 
-  for (const task of allTasks) {
+  for (const task of allTasks ?? []) {
     const groupId = toBatchGroupId(task.batchId);
     const groupedTasks = groups.get(groupId) || [];
     groupedTasks.push(task);
@@ -115,6 +117,16 @@ export function canResumeTransferTasks(tasks: FileTransferTask[], conflictError 
 
 export function batchHasFailedTasks(tasks: FileTransferTask[]): boolean {
   return tasks.some((task) => task.status === "failed");
+}
+
+export function canRetryTransferTask(task: FileTransferTask): boolean {
+  return task.status === "failed" && task.error !== sftpTransferEndpointUnavailableError;
+}
+
+export function sftpTransferErrorText(error: string | undefined, translate: (key: string) => string): string {
+  if (!error) return "";
+  if (error === sftpTransferEndpointUnavailableError) return translate("FileTransfer.EndpointUnavailable");
+  return error;
 }
 
 export function targetHasConflictTasks(tasks: FileTransferTask[], conflictError = sftpTransferConflictError): boolean {

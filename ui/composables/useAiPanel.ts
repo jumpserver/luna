@@ -1,32 +1,35 @@
 import type { RightPanelTab } from "~/composables/useRightPanel";
 import type { WorkspaceMode } from "~/composables/useWorkspaceMode";
-import type { WorkspaceSessionStatus } from "~/composables/useWorkspaceTabs";
 
-export type AiPanelSource = "platform" | "workspace" | "sftp";
+export type AiPanelSource = "workspace" | "sftp";
+export type AiPanelMode = "workspace" | "workspace-assistant";
 
 interface AiPanelContext {
   workspaceMode: WorkspaceMode;
-  surfaceStatus?: WorkspaceSessionStatus;
-  surfaceAssetId?: string;
-  surfaceProtocol?: string;
-  standaloneWorkspace: boolean;
-  workspaceFocused: boolean;
   rightPanelOpen: boolean;
   rightPanelTab: RightPanelTab;
 }
 
 const open = shallowRef(false);
-const source = shallowRef<AiPanelSource>("platform");
-const workspaceFocused = shallowRef(true);
-const mode = computed(() => (source.value === "platform" ? "platform" : "workspace"));
+interface TerminalPromptBinding {
+  loginContext: string;
+  resourceId: string;
+  agentId: string;
+}
+const pendingTerminalPrompt = shallowRef<({ id: string; paneId: string; text: string } & TerminalPromptBinding) | null>(
+  null
+);
+const source = shallowRef<AiPanelSource>("workspace");
+const workspaceAssistantActive = shallowRef(true);
+const mode = computed<AiPanelMode>(() => {
+  if (workspaceAssistantActive.value) return "workspace-assistant";
+  return "workspace";
+});
 
 export function resolveAiPanelSource(context: AiPanelContext): AiPanelSource {
-  const connectedAsset = context.surfaceStatus === "connected" && Boolean(context.surfaceAssetId);
-  const editorWorkspace = context.surfaceProtocol === "script-editor";
-  const activeWorkspace =
-    context.workspaceFocused && (connectedAsset || editorWorkspace || context.standaloneWorkspace);
-  if (context.workspaceMode !== "assets" || !activeWorkspace) return "platform";
-  return context.rightPanelOpen && context.rightPanelTab === "sftp" ? "sftp" : "workspace";
+  return context.workspaceMode === "assets" && context.rightPanelOpen && context.rightPanelTab === "sftp"
+    ? "sftp"
+    : "workspace";
 }
 
 export const useAiPanel = () => {
@@ -38,16 +41,18 @@ export const useAiPanel = () => {
     source.value = value;
   };
 
-  const setWorkspaceFocused = (value: boolean) => {
-    workspaceFocused.value = value;
+  const setWorkspaceAssistantActive = (value: boolean) => {
+    workspaceAssistantActive.value = value;
+    if (value) open.value = true;
   };
 
   const openAi = () => {
+    workspaceAssistantActive.value = true;
     open.value = true;
   };
 
   const openWorkspaceAi = () => {
-    workspaceFocused.value = true;
+    workspaceAssistantActive.value = false;
     source.value = "workspace";
     open.value = true;
   };
@@ -61,16 +66,28 @@ export const useAiPanel = () => {
     openAi();
   };
 
+  const requestTerminalPrompt = (paneId: string, text: string, binding: TerminalPromptBinding) => {
+    pendingTerminalPrompt.value = { id: globalThis.crypto.randomUUID(), paneId, text, ...binding };
+    openAi();
+  };
+  const takeTerminalPrompt = (id: string) => {
+    if (pendingTerminalPrompt.value?.id === id) pendingTerminalPrompt.value = null;
+  };
+
   return {
+    pendingTerminalPrompt,
+    requestTerminalPrompt,
+    takeTerminalPrompt,
     open,
     mode,
     source,
-    workspaceFocused,
+    workspaceAssistantActive,
     setOpen,
     setSource,
-    setWorkspaceFocused,
+    setWorkspaceAssistantActive,
     openAi,
     openWorkspaceAi,
+    openWorkspaceAssistant: openAi,
     toggleAi
   };
 };

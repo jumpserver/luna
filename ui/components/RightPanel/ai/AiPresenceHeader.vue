@@ -26,15 +26,12 @@ const { t } = useI18n();
         </span>
       </span>
 
-      <div class="min-w-0 flex-1">
-        <div class="flex min-w-0 items-center gap-2">
-          <span class="truncate text-xs font-semibold text-highlighted">{{ assistantName }}</span>
-          <span class="ai-status-label" :class="`ai-status-label-${statusTone}`">
-            <span class="ai-status-dot" />
-            {{ statusLabel }}
-          </span>
-        </div>
-        <p class="mt-0.5 truncate text-[10px] text-muted">{{ description }}</p>
+      <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5">
+        <span class="truncate text-xs font-semibold text-highlighted">{{ assistantName }}</span>
+        <span v-if="statusLabel" class="ai-status-label" :class="`ai-status-label-${statusTone}`">
+          <span class="ai-status-dot" />
+          {{ statusLabel }}
+        </span>
       </div>
 
       <div v-if="runProgress || riskLabel" class="flex shrink-0 flex-col items-end gap-1">
@@ -45,7 +42,13 @@ const { t } = useI18n();
           {{ riskLabel }}
         </UBadge>
       </div>
+
+      <div v-if="$slots.actions" class="flex shrink-0 items-center gap-1">
+        <slot name="actions" />
+      </div>
     </div>
+
+    <p v-if="description" class="text-[10px] text-muted">{{ description }}</p>
 
     <div v-if="contextItems.length" class="ai-context-strip">
       <span class="flex shrink-0 items-center gap-1 text-[10px] font-medium text-muted">
@@ -83,7 +86,6 @@ const { t } = useI18n();
   gap: 0.625rem;
   padding: 0.75rem;
   border-bottom: 1px solid var(--app-border);
-  background: color-mix(in srgb, var(--workspace-surface-header) 86%, transparent);
 }
 
 .ai-presence {
@@ -140,6 +142,7 @@ const { t } = useI18n();
   color: var(--ui-color-error-500);
 }
 
+.ai-presence-ready,
 .ai-presence-success {
   color: var(--ui-color-success-500);
 }
@@ -181,6 +184,7 @@ const { t } = useI18n();
   color: var(--ui-color-error-500);
 }
 
+.ai-status-label-ready,
 .ai-status-label-success {
   color: var(--ui-color-success-500);
 }

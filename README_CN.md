@@ -252,3 +252,10 @@ pnpm reset            # 清理构建产物
 [⭐ 在 GitHub 上给我们点星](https://github.com/jumpserver/clients) | [📖 文档](https://docs.jumpserver.org/) | [🐛 报告问题](https://github.com/jumpserver/clients/issues)
 
 </div>
+
+
+### Harness 分支 AI 联调
+
+本分支要求 Kael bootstrap 返回 `agent_engine: codex` 和 `agent_protocol_version: 1`，不兼容旧 Agent 后端。Kael 安装固定版本 `@openai/codex@0.153.2`，Core 的模型地址须支持 Responses API。
+
+Luna 继续通过 `/kael/api/v1` 注册上下文和工具，经现有 Koko/Chen/本地执行器执行工具，并处理审批、流式结果和取消；浏览器和 Electron 均不直接启动 Codex。`model.completed` 的 `scope: agent_turn` 表示完整任务执行耗时，不能当作单次模型思考时间。启动与能力边界见相邻 Kael 仓库的 `docs/adr/0007-codex-harness.md`。

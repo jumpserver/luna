@@ -350,12 +350,13 @@ export const useWorkspaceTabs = () => {
       connectMethod?: string;
       payload?: Record<string, any>;
       paneId?: string;
+      newTab?: boolean;
     }
   ) => {
     useRecentConnections().recordRecentConnection(asset);
     const protocol = connection.protocol || asset.savedConnection?.protocol || "ssh";
     const account = connection.account || asset.savedConnection?.username || "";
-    const target = resolvePendingTarget(connection.paneId);
+    const target = connection.newTab ? null : resolvePendingTarget(connection.paneId);
 
     const pane = createPane(
       target?.pane.id || createTabId(asset.id, protocol, account),
@@ -393,11 +394,14 @@ export const useWorkspaceTabs = () => {
     return pane;
   };
 
-  const openSetupSession = (asset: AssetItem, options: { protocol?: string; paneId?: string } = {}) => {
+  const openSetupSession = (
+    asset: AssetItem,
+    options: { protocol?: string; paneId?: string; newTab?: boolean } = {}
+  ) => {
     useRecentConnections().recordRecentConnection(asset);
     const protocol = options.protocol || asset.savedConnection?.protocol || "";
     const account = asset.savedConnection?.username || "";
-    const target = resolvePendingTarget(options.paneId);
+    const target = options.newTab ? null : resolvePendingTarget(options.paneId);
 
     const pane = createPane(
       target?.pane.id || createTabId(asset.id, protocol || "setup", account),
@@ -530,23 +534,34 @@ export const useWorkspaceTabs = () => {
     return true;
   }
 
-  async function closeSession(id: string) {
+  async function closeSession(id: string, assertCurrent: () => void = () => {}) {
     const index = tabs.value.findIndex((tab) => tab.id === id);
     if (index === -1) {
-      return closePane(id);
+      return closePane(id, assertCurrent);
     }
 
     const tab = tabs.value[index]!;
+    const originalPanes = [...tab.panes];
     if (!(await canCloseTab(tab))) return false;
+    assertCurrent();
+    if (
+      tabs.value.find((item) => item.id === id) !== tab ||
+      tab.panes.length !== originalPanes.length ||
+      tab.panes.some((pane, index) => pane !== originalPanes[index])
+    )
+      return false;
     return removeSession(tab);
   }
 
-  async function closePane(paneId: string) {
+  async function closePane(paneId: string, assertCurrent: () => void = () => {}) {
     const match = findPane(paneId);
     if (!match) return false;
 
     const { tab, pane, paneIndex } = match;
     if (!(await canCloseWorkspaceSession(pane.id))) return false;
+    assertCurrent();
+    const current = findPane(paneId);
+    if (current?.tab !== tab || current.pane !== pane || current.paneIndex !== paneIndex) return false;
     if (tab.panes.length === 1) {
       return removeSession(tab);
     }
@@ -884,6 +899,7 @@ export const useWorkspaceTabs = () => {
     activateAdjacentSession,
     beginPaneAssetSelection,
     canSplitWorkspace,
+    canCloseWorkspaceSession,
     canMergeTabs,
     cancelPaneAssetSelection,
     closeAllSessions,

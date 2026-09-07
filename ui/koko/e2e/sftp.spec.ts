@@ -365,12 +365,10 @@ test.describe("koko SFTP workbench", () => {
     ]);
   });
 
-  test("opens an empty transfer center from the file workbench", async ({ page }) => {
+  test("hides the transfer queue trigger until a task exists", async ({ page }) => {
     await installSftpBackend(page);
     await openSftpWorkbench(page);
 
-    await page.getByRole("button", { name: "Transfer center" }).click();
-    await expect(page.getByRole("heading", { name: "Transfer center" })).toBeVisible();
-    await expect(page.getByText("No file transfers", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Transfer center" })).toHaveCount(0);
   });
 });

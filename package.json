@@ -37,7 +37,6 @@
     "typecheck:electron": "pnpm --dir electron typecheck",
     "bump": "bumpp",
     "set_version": "node scripts/set-version.js",
-    "setup_apple_cert": "bash scripts/setup-apple-cert.sh",
     "client:dev": "pnpm electron:dev",
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:prepare": "pnpm generate:client && node scripts/prepare-electron-resources.mjs",

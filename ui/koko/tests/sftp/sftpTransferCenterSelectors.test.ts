@@ -5,12 +5,14 @@ import {
   batchHasFailedTasks,
   canPauseTransferTasks,
   canResumeTransferTasks,
+  canRetryTransferTask,
   countActiveTransferTargets,
   filterSftpTransferTasks,
   getTargetTransferError,
   groupSftpTransferBatches,
   hasFinishedTransferTasks,
   selectSftpTransferTasks,
+  sftpTransferErrorText,
   targetHasConflictTasks,
   useSftpTransferCenterSelectors
 } from "#koko/composables/sftp/file-manager/transfer-center/useSftpTransferCenterSelectors";
@@ -124,6 +126,11 @@ describe("sftp transfer center selectors", () => {
     expect(canResumeTransferTasks([pausedReady])).toBe(true);
     expect(canResumeTransferTasks([pausedReady, queuedTask])).toBe(false);
     expect(canResumeTransferTasks([pausedConflict])).toBe(false);
+    expect(canResumeTransferTasks([failedTask])).toBe(false);
+    expect(canRetryTransferTask(failedTask)).toBe(true);
+    expect(canRetryTransferTask(createTask("lost-a", "failed", { error: "endpoint_unavailable" }))).toBe(false);
+    expect(sftpTransferErrorText("endpoint_unavailable", (key) => key)).toBe("FileTransfer.EndpointUnavailable");
+    expect(sftpTransferErrorText("disk full", (key) => key)).toBe("disk full");
     expect(targetHasConflictTasks([pausedConflict])).toBe(true);
     expect(getTargetTransferError([pausedConflict])).toBe("target_exists");
     expect(getTargetTransferError([failedTask, pausedConflict])).toBe("disk full");

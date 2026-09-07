@@ -314,7 +314,7 @@ onUnmounted(disposeTrackedCompactAiOwners);
     <div v-else-if="isActiveAssetPreparing" class="grid min-h-0 flex-1 place-items-center text-xs text-muted">
       <div class="flex flex-col items-center gap-2">
         <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
-        <span>{{ t("PreparingFileManager") || "正在连接 SFTP..." }}</span>
+        <span>{{ t("koko.workspace.preparingSftp") }}</span>
       </div>
     </div>
 
@@ -323,7 +323,7 @@ onUnmounted(disposeTrackedCompactAiOwners);
         <UIcon name="i-lucide-circle-alert" class="size-6 text-error" />
         <span class="break-all text-muted">{{ inlineError }}</span>
         <UButton size="xs" color="neutral" variant="soft" icon="i-lucide-refresh-cw" @click="openSftp">
-          {{ t("Reconnect") || "重新连接" }}
+          {{ t("koko.fileManagement.reconnect") }}
         </UButton>
       </div>
     </div>

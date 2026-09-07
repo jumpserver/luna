@@ -32,13 +32,13 @@ jobs:
     name: validate shared application
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           run_install: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "24"
           cache: pnpm
@@ -46,6 +46,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: electron/ssh-helper/go.mod
+          cache-dependency-path: electron/ssh-helper/go.sum
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -84,17 +85,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           run_install: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "24"
           cache: pnpm
@@ -102,6 +103,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: electron/ssh-helper/go.mod
+          cache-dependency-path: electron/ssh-helper/go.sum
 
       - name: Install Linux packaging dependencies
         if: startsWith(matrix.os, 'ubuntu')
@@ -158,13 +160,29 @@ jobs:
           tar -xzf "$archive_path" -C "$assets_dir"
           node scripts/apply-brand-assets.mjs --dir "$assets_dir"
 
-      - name: Setup Apple certificate
+      - name: Import Apple certificate
         if: startsWith(matrix.os, 'macos')
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: pnpm setup_apple_cert
+        uses: apple-actions/import-codesign-certs@v7
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
+
+      - name: Select Apple signing identity
+        if: startsWith(matrix.os, 'macos')
+        shell: bash
+        run: |
+          signing_identity=$(
+            security find-identity -v -p codesigning \
+              | sed -n 's/.*"\(Developer ID Application[^\"]*\)".*/\1/p' \
+              | head -n 1
+          )
+          if [ -z "$signing_identity" ]; then
+            echo "No Developer ID Application signing identity found."
+            exit 1
+          fi
+          echo "::add-mask::$signing_identity"
+          echo "CSC_NAME=$signing_identity" >> "$GITHUB_ENV"
 
       - name: Prepare Electron resources
         run: pnpm electron:prepare
@@ -173,7 +191,7 @@ jobs:
         run: pnpm --dir electron make -- ${{ matrix.forge_args }}
 
       - name: Upload packaged artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: desktop-${{ matrix.name }}
           if-no-files-found: error
@@ -198,17 +216,45 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: desktop-*
           path: release-assets
           merge-multiple: true
 
+      - name: Create stable download aliases
+        shell: bash
+        run: |
+          version="${VERSION#v}"
+
+          mapfile -d '' windows_installers < <(find release-assets -type f -iname '*setup*.exe' -print0)
+          if [ "${#windows_installers[@]}" -ne 1 ]; then
+            echo "Expected one Windows setup executable, found ${#windows_installers[@]}"
+            exit 1
+          fi
+
+          mapfile -d '' macos_arm64_installers < <(find release-assets -type f -iname '*-arm64.dmg' -print0)
+          if [ "${#macos_arm64_installers[@]}" -ne 1 ]; then
+            echo "Expected one macOS arm64 DMG, found ${#macos_arm64_installers[@]}"
+            exit 1
+          fi
+
+          mkdir -p release-assets/download
+          cp "${windows_installers[0]}" "release-assets/download/Client_${version}_x64-setup.exe"
+          cp "${macos_arm64_installers[0]}" "release-assets/download/Client_${version}_aarch64.dmg"
+          (
+            cd release-assets/download
+            sha256sum \
+              "Client_${version}_x64-setup.exe" \
+              "Client_${version}_aarch64.dmg" \
+              > "Client_${version}_SHA256SUMS"
+          )
+
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.VERSION }}
-          files: release-assets/*
+          files: release-assets/**/*
           fail_on_unmatched_files: true
           draft: true
-          prerelease: false
+          prerelease: ${{ contains(env.VERSION, '-') }}

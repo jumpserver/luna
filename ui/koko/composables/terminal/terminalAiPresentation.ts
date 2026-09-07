@@ -9,6 +9,8 @@ const executionKeys: Record<string, TerminalAiMessageKey> = {
 };
 
 const progressKeys: Record<string, TerminalAiMessageKey> = {
+  approval_expired: "RightPanel.AIApprovalExpired",
+  run_timeout: "RightPanel.AIRunTimeout",
   analyzing: "RightPanel.AIProgressAnalyzing",
   executing: "RightPanel.AIProgressExecuting",
   executing_pty: "RightPanel.AIProgressExecutingPty",
@@ -41,6 +43,9 @@ const legacyBackgroundReasonKeys: Record<string, TerminalAiMessageKey> = {
 };
 
 const errorKeys: Record<string, TerminalAiMessageKey> = {
+  approval_expired: "RightPanel.AIApprovalExpired",
+  tool_result_failed: "RightPanel.AIToolResultUnknown",
+  run_timeout: "RightPanel.AIRunTimeout",
   approval_failed: "RightPanel.AIApprovalFailed",
   approval_rejected: "RightPanel.AIErrorApprovalRejected",
   background_unavailable: "RightPanel.AIBackgroundUnavailable",

@@ -43,18 +43,53 @@ describe("file transfer store recovery actions", () => {
     vi.mocked(loadFileTransferState).mockResolvedValue(null);
   });
 
-  it("preserves resumable progress when retry waits for endpoints to reconnect", () => {
+  it("fails a retry without dropping progress when endpoints are unavailable", () => {
     const store = useFileTransferStore();
     store.tasks = [task("failed.txt", "failed")];
 
     store.retryTask("failed.txt");
 
     expect(store.tasks[0]).toMatchObject({
-      status: "paused",
+      status: "failed",
       confirmedBytes: 25,
       checksumState: "state",
-      error: "File transfer endpoint is unavailable"
+      error: "endpoint_unavailable"
     });
+  });
+
+  it("does not retry a connection-lost failure", () => {
+    const store = useFileTransferStore();
+    store.tasks = [task("lost.txt", "failed")];
+    store.tasks[0]!.error = "endpoint_unavailable";
+
+    store.retryTask("lost.txt");
+
+    expect(store.tasks[0]).toMatchObject({
+      status: "failed",
+      error: "endpoint_unavailable",
+      confirmedBytes: 25
+    });
+  });
+
+  it("fails only the unavailable destination in a one-to-many batch", () => {
+    const store = useFileTransferStore();
+    store.tasks = [task("alpha.txt", "queued", "sftp:alpha"), task("beta.txt", "transferring", "sftp:beta")];
+
+    store.failUnavailableEndpoint({ id: "sftp:alpha", label: "Alpha" });
+
+    expect(store.tasks[0]).toMatchObject({ status: "failed", error: "endpoint_unavailable" });
+    expect(store.tasks[1]).toMatchObject({ status: "transferring", error: "network error" });
+  });
+
+  it("keeps a user pause as paused", () => {
+    const store = useFileTransferStore();
+    store.tasks = [task("paused.txt", "transferring")];
+    store.tasks[0]!.error = undefined;
+
+    store.pauseTask("paused.txt");
+
+    expect(store.tasks[0]).toMatchObject({ status: "paused" });
+    expect(store.tasks[0]?.error).toBeUndefined();
   });
 
   it("clears only the requested terminal tasks and preserves remaining batch membership", () => {
@@ -136,7 +171,7 @@ describe("file transfer store recovery actions", () => {
     }
   });
 
-  it("pauses resumable persisted tasks on restore and ignores a second restore", async () => {
+  it("fails resumable persisted tasks on restore and ignores a second restore", async () => {
     vi.mocked(loadFileTransferState).mockResolvedValue({
       batches: [{ id: "batch-1", taskIds: ["a.txt"], createdAt: 1 }],
       tasks: [task("a.txt", "transferring")]
@@ -149,9 +184,10 @@ describe("file transfer store recovery actions", () => {
     expect(store.tasks).toHaveLength(1);
     expect(store.tasks[0]).toMatchObject({
       id: "a.txt",
-      status: "paused",
+      status: "failed",
       confirmedBytes: 25,
-      checksumState: "state"
+      checksumState: "state",
+      error: "endpoint_unavailable"
     });
     expect(store.batches).toEqual([{ id: "batch-1", taskIds: ["a.txt"], createdAt: 1 }]);
 
@@ -173,5 +209,34 @@ describe("file transfer store recovery actions", () => {
     await store.restore();
 
     expect(store.tasks[0]?.status).toBe("completed");
+  });
+
+  it("migrates persisted unavailable pauses to failed on restore", async () => {
+    vi.mocked(loadFileTransferState).mockResolvedValue({
+      batches: [{ id: "batch-1", taskIds: ["lost.txt"], createdAt: 1 }],
+      tasks: [{ ...task("lost.txt", "paused"), error: "File transfer endpoint is unavailable" }]
+    });
+
+    const store = useFileTransferStore();
+    await store.restore();
+
+    expect(store.tasks[0]).toMatchObject({
+      status: "failed",
+      error: "endpoint_unavailable",
+      confirmedBytes: 25
+    });
+  });
+
+  it("keeps a user-paused persisted task paused on restore", async () => {
+    vi.mocked(loadFileTransferState).mockResolvedValue({
+      batches: [{ id: "batch-1", taskIds: ["paused.txt"], createdAt: 1 }],
+      tasks: [{ ...task("paused.txt", "paused"), error: undefined }]
+    });
+
+    const store = useFileTransferStore();
+    await store.restore();
+
+    expect(store.tasks[0]).toMatchObject({ status: "paused", confirmedBytes: 25 });
+    expect(store.tasks[0]?.error).toBeUndefined();
   });
 });

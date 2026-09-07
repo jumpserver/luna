@@ -28,7 +28,7 @@ export function failedTargetCount(tasks: FileTransferTask[]) {
 }
 
 export function sftpTransferProgress(tasks: FileTransferTask[]) {
-  if (!tasks.length) return 0;
+  if (!tasks?.length) return 0;
   const totalBytes = tasks.reduce((sum, task) => sum + task.source.size, 0);
   if (!totalBytes) return 0;
   const confirmedBytes = tasks.reduce(
@@ -38,8 +38,20 @@ export function sftpTransferProgress(tasks: FileTransferTask[]) {
   return Math.min(100, Math.round((confirmedBytes / totalBytes) * 100));
 }
 
+export function sftpTransferStatusClass(status: FileTransferStatus): string | undefined {
+  if (status === "failed") return "is-error";
+  if (status === "paused") return "is-paused";
+  if (status === "transferring" || status === "preparing" || status === "verifying") return "is-busy";
+}
+
+export function sftpTransferProgressColor(task: Pick<FileTransferTask, "status">): "error" | "warning" | "primary" {
+  if (task.status === "failed") return "error";
+  if (task.status === "paused") return "warning";
+  return "primary";
+}
+
 export function sftpTransferGroupStatus(tasks: FileTransferTask[]): SftpTransferGroupStatus {
-  if (!tasks.length) return "queued";
+  if (!tasks?.length) return "queued";
   if (tasks.some((task) => task.status === "transferring")) return "transferring";
   if (tasks.some((task) => task.status === "verifying")) return "verifying";
   if (tasks.some((task) => task.status === "preparing")) return "preparing";

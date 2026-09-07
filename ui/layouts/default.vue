@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { AssetItem } from "~/types";
+import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
 import AiOverlayPanel from "~/components/RightPanel/AiOverlayPanel.vue";
 import WorkspaceShell from "~/components/Workspace/shell.vue";
 import WorkspaceStatusFooter from "~/components/Workspace/statusFooter.vue";
@@ -101,7 +102,7 @@ const showWorkspaceSidebar = computed(
 );
 
 const cardUi = computed(() => {
-  const base = ["rounded-none", "overflow-visible"];
+  const base = ["relative", "rounded-none", "overflow-visible"];
 
   if (isWindows.value) {
     base.push("border-0", "ring-0", "shadow-none", "bg-transparent");
@@ -399,7 +400,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <UCard variant="outline" :ui="cardUi" style="background-color: transparent">
+  <UCard data-vaul-drawer-wrapper variant="outline" :ui="cardUi" style="background-color: transparent">
     <WorkspaceShell
       :sidebar-visible="showWorkspaceSidebar"
       :focus-mode="focusMode"
@@ -441,7 +442,9 @@ onBeforeUnmount(() => {
       </template>
 
       <template #overlayPanel>
-        <AiOverlayPanel v-if="aiPanelOpen && !focusMode" @close="setAiPanelOpen(false)" />
+        <KeepAlive>
+          <AiOverlayPanel v-if="aiPanelOpen && !focusMode" @close="setAiPanelOpen(false)" />
+        </KeepAlive>
       </template>
 
       <template #bottomPanel>
@@ -456,6 +459,7 @@ onBeforeUnmount(() => {
         </div>
       </template>
     </WorkspaceShell>
+    <KokoSftpTransferCenter />
 
     <Transition name="settings-overlay">
       <div v-if="settingsOpen" class="fixed inset-0 z-[200]">

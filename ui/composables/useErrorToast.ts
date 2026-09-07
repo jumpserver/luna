@@ -5,6 +5,7 @@ import { writeClipboardText } from "~/utils/clipboard";
 type ErrorToastAction = NonNullable<Toast["actions"]>[number];
 
 interface ErrorToastOptions {
+  id?: Toast["id"];
   title: string;
   description?: string;
   error?: unknown;
@@ -88,6 +89,7 @@ export function useErrorToast() {
     }
 
     return toast.add({
+      ...(options.id != null ? { id: options.id } : {}),
       title: options.title,
       description,
       color: "error",

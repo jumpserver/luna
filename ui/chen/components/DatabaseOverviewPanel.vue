@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ChenDatabaseSection, ChenDatabaseWorkspaceTab, ChenTreeNode } from "~/chen/types";
 import type { ChenSchemaOverview } from "~/chen/types/schemaOverview";
+import SchemaDiagram from "./SchemaDiagram.vue";
 
 const props = defineProps<{
   tab: ChenDatabaseWorkspaceTab;
@@ -428,15 +429,34 @@ function selectSection(section: ChenDatabaseSection) {
       </div>
     </div>
 
-    <div v-else class="grid min-h-0 flex-1 place-items-center overflow-auto p-6">
-      <div class="max-w-lg rounded-lg border border-default bg-[var(--workspace-surface-sub-panel)] p-5 text-center">
-        <UIcon name="i-lucide-workflow" class="mx-auto mb-3 size-8 text-muted" />
-        <h3 class="text-sm font-medium">Database diagram is waiting for schema metadata</h3>
-        <p class="mt-2 text-xs leading-5 text-muted">
-          The page is ready, but a database-level diagram needs table columns and relationships from the server. It will
-          be loaded explicitly by selected schema instead of fetching an entire large database when this tab opens.
-        </p>
+    <div v-else class="min-h-0 flex-1 overflow-hidden">
+      <div v-if="tab.catalogLoading" class="grid h-full place-items-center text-sm text-muted">
+        <span class="flex items-center gap-2">
+          <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin" />
+          Loading schema diagram...
+        </span>
       </div>
+      <div v-else-if="tab.catalogError" class="grid h-full place-items-center gap-3 text-sm text-error">
+        <span>{{ tab.catalogError }}</span>
+        <UButton size="xs" color="neutral" variant="soft" @click="emit('selectSection', 'diagram')">Retry</UButton>
+      </div>
+      <div
+        v-else-if="tab.schemaOverview?.capabilities.diagram === false"
+        class="grid h-full place-items-center p-6 text-center text-sm text-muted"
+      >
+        <div class="max-w-lg">
+          <UIcon name="i-lucide-workflow" class="mx-auto mb-3 size-8" />
+          <div class="font-medium text-[var(--app-fg)]">Schema diagram is not supported</div>
+          <p class="mt-2 text-xs leading-5">This provider does not expose table column metadata.</p>
+        </div>
+      </div>
+      <SchemaDiagram
+        v-else-if="tab.schemaOverview?.diagram.length"
+        :tables="tab.schemaOverview.diagram"
+        :relationships-supported="tab.schemaOverview.capabilities.diagramRelationships"
+        @open-table="emit('openTable', $event)"
+      />
+      <div v-else class="grid h-full place-items-center text-sm text-muted">No tables found in this schema.</div>
     </div>
   </div>
 </template>
