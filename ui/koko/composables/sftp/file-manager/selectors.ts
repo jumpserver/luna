@@ -1,23 +1,31 @@
-import type { RecentSftpConnection, SftpDistributionTargetOption, SftpTransferDropPayload } from "./workspaceTypes";
 import type {
   CreateFileTransferTaskInput,
   FileTransferEndpointRef,
   FileTransferTask
 } from "@jumpserver/connectors-core";
+import type { RecentSftpConnection, SftpDistributionTargetOption, SftpTransferDropPayload } from "./workspaceTypes";
 
 export function defaultGlobalLeftPaneId(isDesktopRuntime: boolean) {
   return isDesktopRuntime ? "local" : "web-upload";
 }
 
-export function assetSupportsSftp(permedProtocols?: Array<{ name?: string }>) {
-  const declaredProtocols = (permedProtocols || [])
-    .map((item) =>
-      String(item?.name || "")
-        .trim()
-        .toLowerCase()
-    )
-    .filter(Boolean);
-  return declaredProtocols.length === 0 || declaredProtocols.includes("sftp");
+function protocolName(item?: { name?: unknown }) {
+  const name = item?.name;
+  if (typeof name === "string") return name.trim().toLowerCase();
+  if (name && typeof name === "object" && "value" in name) {
+    return String((name as { value?: unknown }).value || "")
+      .trim()
+      .toLowerCase();
+  }
+  return "";
+}
+
+function declaredProtocolNames(permedProtocols?: Array<{ name?: unknown }>) {
+  return (permedProtocols || []).map(protocolName).filter(Boolean);
+}
+
+export function assetSupportsSftp(permedProtocols?: Array<{ name?: unknown }>) {
+  return declaredProtocolNames(permedProtocols).includes("sftp");
 }
 
 export function rememberSftpConnection(connections: RecentSftpConnection[], entry: RecentSftpConnection, limit = 8) {
