@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
+import { resolveAiPanelSession } from "./ai/domains/registry";
 import WorkspaceAiPanel from "./aiPanel.vue";
 import WorkspaceAssistantPanel from "./WorkspaceAssistantPanel.vue";
 
@@ -20,12 +21,14 @@ const activeCapability = computed(() => {
   const payloadMethod = (surface.payload?.connectMethod as { value?: string } | undefined)?.value;
   return findDeclaredCapability(surface.protocol, payloadMethod || surface.connectMethod)?.surface || "";
 });
+const activeAiSession = computed(() => resolveAiPanelSession(activePaneId.value));
 const showWorkspaceAssistant = computed(
   () =>
     resolveUnifiedAiPanel({
       workspaceMode: activeWorkspaceMode.value,
       protocol: activeSurface.value?.protocol || "",
-      surface: activeCapability.value
+      surface: activeCapability.value,
+      sessionKind: activeAiSession.value?.kind
     }) === "workspace"
 );
 

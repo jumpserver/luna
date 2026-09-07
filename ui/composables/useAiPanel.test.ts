@@ -58,16 +58,20 @@ describe("AI overlay panel", () => {
   });
 
   it.each([
-    ["assets", "", "", "workspace"],
-    ["assets", "ssh", "terminal", "workspace"],
-    ["assets", "local-shell", "", "workspace"],
-    ["assets", "script-editor", "", "resource"],
-    ["assets", "mysql", "database", "resource"],
-    ["assets", "sftp", "file-manager", "resource"],
-    ["files", "", "", "resource"]
-  ] as const)("selects the %s/%s/%s AI surface automatically", (workspaceMode, protocol, surface, expected) => {
-    expect(resolveUnifiedAiPanel({ workspaceMode, protocol, surface })).toBe(expected);
-  });
+    ["assets", "", "", "workspace", undefined],
+    ["assets", "ssh", "terminal", "workspace", undefined],
+    ["assets", "local-shell", "", "workspace", undefined],
+    ["assets", "script-editor", "", "resource", undefined],
+    ["assets", "mysql", "database", "resource", undefined],
+    ["assets", "mysql", "terminal", "resource", "sql"],
+    ["assets", "sftp", "file-manager", "resource", undefined],
+    ["files", "", "", "resource", undefined]
+  ] as const)(
+    "selects the %s/%s/%s AI surface automatically",
+    (workspaceMode, protocol, surface, expected, sessionKind) => {
+      expect(resolveUnifiedAiPanel({ workspaceMode, protocol, surface, sessionKind })).toBe(expected);
+    }
+  );
 
   it("carries the exact terminal and login binding into the unified assistant once", () => {
     const panel = useAiPanel();

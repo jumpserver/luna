@@ -445,7 +445,13 @@ export async function executeWorkspaceOperation(
     return {
       status: name === "run_local_shell_command" ? "submitted" : "ok",
       pane_id: pane.id,
-      snapshot
+      snapshot: {
+        text: snapshot.text,
+        lines: snapshot.lines,
+        truncated: snapshot.truncated,
+        buffer_type: snapshot.bufferType,
+        cursor: snapshot.cursor
+      }
     };
   }
   if (name === "get_workspace_state")

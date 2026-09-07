@@ -14,6 +14,7 @@ interface UnifiedAiPanelContext {
   workspaceMode: WorkspaceMode;
   protocol: string;
   surface: string;
+  sessionKind?: "file" | "terminal" | "sql" | "script";
 }
 
 const openTabs = shallowReactive(new WeakSet<object>());
@@ -35,6 +36,7 @@ export function resolveAiPanelSource(context: AiPanelContext): AiPanelSource {
 }
 
 export function resolveUnifiedAiPanel(context: UnifiedAiPanelContext): UnifiedAiPanelKind {
+  if (context.sessionKind && context.sessionKind !== "terminal") return "resource";
   if (context.workspaceMode === "files" || context.protocol === "script-editor") return "resource";
   if (["database", "file-editor", "file-manager"].includes(context.surface)) return "resource";
   return "workspace";
