@@ -54,7 +54,7 @@ describe("sftp transfer center layout", () => {
     expect(transferCenterComponent).not.toContain("Teleport");
     expect(transferCenterComponent).not.toContain("<UDrawer");
     expect(transferCenterStyles).toContain("flex-shrink: 0");
-    expect(transferCenterStyles).toContain("height: var(--sftp-transfer-center-height, 194px)");
+    expect(transferCenterStyles).toContain("height: var(--sftp-transfer-center-height, 128px)");
     expect(transferCenterStyles).toContain("height 220ms");
     expect(transferCenterStyles).toContain("height: 0 !important");
     expect(transferCenterStyles).toContain(".sftp-transfer-center-drawer {\n  position: relative;");
@@ -365,6 +365,12 @@ describe("sftp professional workbench", () => {
     expect(fileManagementIndex).not.toContain("rightEmptyHint");
   });
 
+  it("falls back to local files or web upload after the last left remote closes", () => {
+    expect(workspacePanesComposable).toContain(
+      'removed.side === "left" ? defaultGlobalLeftPaneId(isDesktopRuntime) : null'
+    );
+  });
+
   it("hosts the transfer drawer globally from the status footer", () => {
     expect(globalWorkspaceComponent).not.toContain("KokoSftpTransferCenter");
     expect(globalWorkspaceComponent).toContain("showSideAddButton");
@@ -407,7 +413,7 @@ describe("sftp professional workbench", () => {
   it("jumps the footer transfer trigger whenever a new queue signal arrives", () => {
     expect(transferUiComposable).toContain('useState("sftp-transfer-attention-sequence"');
     expect(transferUiComposable).toContain("attentionSequence.value += 1");
-    expect(transferUiComposable).not.toContain("setOpen(true)");
+    expect(transferUiComposable).toContain("setOpen(true)");
     expect(statusFooterComponent).toContain("transferAttracting");
     expect(statusFooterComponent).toContain("'is-attracting': transferAttracting");
     expect(fileManagementStyles).toContain("@keyframes sftp-transfer-attention-jump");

@@ -36,6 +36,7 @@ export function useSftpTransferUi() {
   }
 
   function signalQueued() {
+    setOpen(true);
     attentionSequence.value += 1;
   }
 
