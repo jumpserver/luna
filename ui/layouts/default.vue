@@ -448,6 +448,7 @@ onBeforeUnmount(() => {
       </template>
 
       <template #bottomPanel>
+        <KokoSftpTransferCenter />
         <div v-if="activeWorkspaceMode === 'assets' && commandExecutionEnabled && batchPanelOpen" class="min-h-0">
           <WorkspaceBatchCommandBottomPanel />
         </div>
@@ -462,7 +463,6 @@ onBeforeUnmount(() => {
         </div>
       </template>
     </WorkspaceShell>
-    <KokoSftpTransferCenter />
 
     <Transition name="settings-overlay">
       <div v-if="settingsOpen" class="fixed inset-0 z-[200]">

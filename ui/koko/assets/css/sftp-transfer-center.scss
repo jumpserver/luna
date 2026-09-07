@@ -1,21 +1,17 @@
 /* SFTP transfer queue — compact island dock from luna-island-sftp.html. */
 
 .sftp-transfer-center-drawer {
-  position: absolute;
-  right: var(--workspace-island-inset);
-  bottom: calc(1.75rem + var(--workspace-island-inset));
-  left: var(--workspace-island-inset);
-  z-index: 40;
+  position: relative;
+  z-index: 1;
   display: flex;
   height: var(--sftp-transfer-center-height, 194px);
   min-height: 96px;
   max-height: min(62vh, 520px);
+  flex-shrink: 0;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--workspace-island-border, var(--app-border));
-  border-radius: var(--workspace-island-radius, 10px);
+  border-top: 1px solid var(--workspace-island-border, var(--app-border));
   background: var(--app-surface-overlay);
-  box-shadow: var(--theme-shadow-soft);
   container-type: inline-size;
 
   &.is-resizing {
@@ -286,15 +282,19 @@
 
 .sftp-transfer-dock-enter-active,
 .sftp-transfer-dock-leave-active {
+  overflow: hidden;
+  pointer-events: none;
   transition:
-    opacity 200ms ease,
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    height 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    min-height 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 160ms ease;
 }
 
 .sftp-transfer-dock-enter-from,
 .sftp-transfer-dock-leave-to {
+  height: 0 !important;
+  min-height: 0 !important;
   opacity: 0;
-  transform: translateY(12px);
 }
 
 @container (max-width: 820px) {

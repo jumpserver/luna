@@ -43,7 +43,7 @@ import fileManagerSessionSurface from "../../workspaces/FileManagerSessionSurfac
 const localPaneImplementation = [fileManagementLocalPane, filePaneDropOverlay, filePaneTable].join("\n");
 
 describe("sftp transfer center layout", () => {
-  it("uses a resizable island dock without an overlay", () => {
+  it("uses a resizable in-flow panel that occupies layout space", () => {
     expect(transferCenterComponent).toContain('class="sftp-transfer-center-drawer"');
     expect(transferCenterComponent).toContain('class="sftp-transfer-resize-handle"');
     expect(transferCenterComponent).toContain('role="separator"');
@@ -53,9 +53,14 @@ describe("sftp transfer center layout", () => {
     expect(transferCenterComponent).not.toContain("scaleWorkspace");
     expect(transferCenterComponent).not.toContain("Teleport");
     expect(transferCenterComponent).not.toContain("<UDrawer");
-    expect(transferCenterStyles).toContain("bottom: calc(1.75rem + var(--workspace-island-inset))");
+    expect(transferCenterStyles).toContain("flex-shrink: 0");
     expect(transferCenterStyles).toContain("height: var(--sftp-transfer-center-height, 194px)");
-    expect(transferCenterStyles).toContain("border-radius: var(--workspace-island-radius, 10px)");
+    expect(transferCenterStyles).toContain("height 220ms");
+    expect(transferCenterStyles).toContain("height: 0 !important");
+    expect(transferCenterStyles).toContain(".sftp-transfer-center-drawer {\n  position: relative;");
+    expect(transferCenterStyles).not.toContain("bottom: calc(1.75rem + var(--workspace-island-inset))");
+    expect(defaultLayout).toMatch(/#bottomPanel[\s\S]*KokoSftpTransferCenter/);
+    expect(connectLayout).toContain('class="flex h-dvh w-full flex-col overflow-hidden"');
   });
 
   it("renders the compact queue with Nuxt UI table columns including a dedicated actions column", () => {

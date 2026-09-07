@@ -73,7 +73,7 @@ const handleToggleAi = () => {
 <template>
   <div
     data-ai-context="workspace"
-    class="relative flex h-dvh w-full min-h-0 overflow-hidden"
+    class="relative flex h-full w-full min-h-0 overflow-hidden"
     :style="{ backgroundColor: 'var(--app-main-bg)' }"
   >
     <div class="relative min-h-0 min-w-0 flex-1 overflow-hidden">

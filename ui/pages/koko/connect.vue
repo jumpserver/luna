@@ -73,7 +73,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div data-ai-context="workspace" class="relative flex h-full min-h-0">
-    <div class="relative min-w-0 flex-1">
+    <div class="relative min-h-0 min-w-0 flex-1 overflow-hidden">
       <KokoConnectView v-if="sessionContext" />
       <div v-else class="grid h-full place-items-center text-sm text-muted">
         {{ t("koko.workspace.missingToken") }}
