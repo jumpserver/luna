@@ -1371,6 +1371,7 @@
       "items": "{count} item(s)",
       "newFolder": "New folder",
       "newFile": "New file",
+      "nameTooLong": "Name cannot exceed {max} characters",
       "newEntry": "New",
       "editPath": "Edit path",
       "filterCurrentDirectory": "Filter current folder",

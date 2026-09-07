@@ -1371,6 +1371,7 @@
       "items": "{count} elemento(s)",
       "newFolder": "Nueva carpeta",
       "newFile": "Nuevo archivo",
+      "nameTooLong": "El nombre no puede superar {max} caracteres",
       "newEntry": "Nuevo",
       "editPath": "Editar ruta",
       "filterCurrentDirectory": "Filtrar carpeta actual",

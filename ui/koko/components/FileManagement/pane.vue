@@ -177,6 +177,7 @@ const {
   promptName,
   promptTitle,
   promptConfirmLabel,
+  promptError,
   promptDisabled,
   alertOpen,
   alertTarget,
@@ -500,6 +501,7 @@ defineExpose({
       v-model:open="promptOpen"
       v-model="promptName"
       :title="promptTitle"
+      :error="promptError"
       :confirm-label="promptConfirmLabel"
       :disabled="promptDisabled"
       @confirm="submitPrompt"

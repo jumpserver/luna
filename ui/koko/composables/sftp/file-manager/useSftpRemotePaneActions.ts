@@ -1,6 +1,7 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { MaybeRefOrGetter, Ref } from "vue";
 import type { SftpFileEntry, useSftpFileManager } from "#koko/composables/sftp/useSftpFileManager";
+import { SFTP_ENTRY_NAME_MAX_LENGTH, sftpEntryNameError } from "./sftpEntryName";
 
 interface UseSftpRemotePaneActionsOptions {
   manager: ReturnType<typeof useSftpFileManager>;
@@ -35,9 +36,12 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
   const promptConfirmLabel = computed(() =>
     promptTarget.value ? t("koko.actions.rename") : t("koko.actions.confirm")
   );
+  const promptError = computed(() =>
+    sftpEntryNameError(promptName.value, t("koko.fileManagement.nameTooLong", { max: SFTP_ENTRY_NAME_MAX_LENGTH }))
+  );
   const promptDisabled = computed(() => {
     const name = promptName.value.trim();
-    return !name || (promptTarget.value !== null && name === promptTarget.value.name);
+    return !name || Boolean(promptError.value) || (promptTarget.value !== null && name === promptTarget.value.name);
   });
   const alertTitle = computed(() =>
     alertTarget.value?.kind === "delete" ? t("koko.actions.delete") : t("koko.actions.download")
@@ -153,7 +157,7 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
     const name = promptName.value.trim();
     const target = promptTarget.value;
     const isNewFile = promptKind.value === "file";
-    if (!name || (target && name === target.name)) return;
+    if (!name || promptError.value || (target && name === target.name)) return;
     const success = await runFileOperation(
       () => {
         if (target) return options.manager.operations.renameEntry(target, name);
@@ -259,6 +263,7 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
     promptName,
     promptTitle,
     promptConfirmLabel,
+    promptError,
     promptDisabled,
     alertOpen,
     alertTarget,

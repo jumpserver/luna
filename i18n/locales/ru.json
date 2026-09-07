@@ -1371,6 +1371,7 @@
       "items": "Элементов: {count}",
       "newFolder": "Новая папка",
       "newFile": "Новый файл",
+      "nameTooLong": "Имя не может превышать {max} символов",
       "newEntry": "Создать",
       "editPath": "Изменить путь",
       "filterCurrentDirectory": "Фильтровать текущую папку",

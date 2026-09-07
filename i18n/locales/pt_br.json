@@ -1371,6 +1371,7 @@
       "items": "{count} item(ns)",
       "newFolder": "Nova pasta",
       "newFile": "Novo arquivo",
+      "nameTooLong": "O nome não pode ter mais de {max} caracteres",
       "newEntry": "Novo",
       "editPath": "Editar caminho",
       "filterCurrentDirectory": "Filtrar pasta atual",

@@ -1371,6 +1371,7 @@
       "items": "{count} 件",
       "newFolder": "新しいフォルダー",
       "newFile": "新しいファイル",
+      "nameTooLong": "名前は {max} 文字以内にしてください",
       "newEntry": "新規",
       "editPath": "パスを編集",
       "filterCurrentDirectory": "現在のフォルダーを絞り込み",

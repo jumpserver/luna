@@ -6,6 +6,7 @@ import {
   resolveSftpFileType
 } from "../../composables/sftp/file-manager/filePresentation";
 import { buildSftpTransferInputs } from "../../composables/sftp/file-manager/selectors";
+import { SFTP_ENTRY_NAME_MAX_LENGTH, sftpEntryNameError } from "../../composables/sftp/file-manager/sftpEntryName";
 import {
   buildTransferSourcePayload,
   createMockDataTransfer,
@@ -31,6 +32,17 @@ const entries = [
   { name: "gamma", is_dir: true, size: "" },
   { name: "delta.txt", is_dir: false, size: "30" }
 ];
+
+
+describe("sftp entry name length", () => {
+  it("accepts 255 characters and rejects 256 without treating empty as an error", () => {
+    const tooLong = "too long";
+    expect(sftpEntryNameError("", tooLong)).toBe("");
+    expect(sftpEntryNameError("a".repeat(SFTP_ENTRY_NAME_MAX_LENGTH), tooLong)).toBe("");
+    expect(sftpEntryNameError(`  ${"a".repeat(SFTP_ENTRY_NAME_MAX_LENGTH)}  `, tooLong)).toBe("");
+    expect(sftpEntryNameError("a".repeat(SFTP_ENTRY_NAME_MAX_LENGTH + 1), tooLong)).toBe(tooLong);
+  });
+});
 
 describe("local transfer path joining", () => {
   it("keeps windows separators for local sources used by transfer center", () => {

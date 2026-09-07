@@ -10,6 +10,7 @@ import {
   sftpTransferProgressColor,
   sftpTransferStatusClass
 } from "#koko/utils/sftpTransferSummary";
+import promptDialogComponent from "../../../components/Modal/promptDialog.vue?raw";
 import statusFooterComponent from "../../../components/Workspace/statusFooter.vue?raw";
 import defaultLayout from "../../../layouts/default.vue?raw";
 import fileManagementStyles from "../../assets/css/sftp-file-management.scss?inline";
@@ -17,6 +18,7 @@ import transferCenterStyles from "../../assets/css/sftp-transfer-center.scss?inl
 import fileManagementIndex from "../../components/FileManagement/index.vue?raw";
 import fileManagementLocalPane from "../../components/FileManagement/localPane.vue?raw";
 import fileManagementPane from "../../components/FileManagement/pane.vue?raw";
+import localPaneDialogs from "../../components/FileManagement/pane/SftpLocalPaneDialogs.vue?raw";
 import localPaneToolbar from "../../components/FileManagement/pane/SftpLocalPaneToolbar.vue?raw";
 import filePaneDropOverlay from "../../components/FileManagement/pane/SftpPaneDropOverlay.vue?raw";
 import filePaneTable from "../../components/FileManagement/pane/SftpPaneFileTable.vue?raw";
@@ -280,6 +282,18 @@ describe("sftp right-panel compact mode", () => {
     expect(remotePaneActions).toContain('label: t("koko.actions.delete")');
   });
 });
+
+
+  it("validates create and rename names in the prompt field instead of a toast", () => {
+    expect(remotePaneActions).toContain("sftpEntryNameError");
+    expect(remotePaneActions).toContain("SFTP_ENTRY_NAME_MAX_LENGTH");
+    expect(remotePaneActions).toContain('t("koko.fileManagement.nameTooLong"');
+    expect(fileManagementPane).toContain(':error="promptError"');
+    expect(promptDialogComponent).toContain("<UFormField");
+    expect(promptDialogComponent).toContain(":color=\"error ? 'error' : undefined\"");
+    expect(fileManagementLocalPane).toContain(':prompt-error="promptError"');
+    expect(localPaneDialogs).toContain("<UFormField");
+  });
 
 describe("sftp local professional pane", () => {
   it("supports dense list, multi-select, shortcuts, and local CRUD", () => {

@@ -1374,6 +1374,7 @@
       "items": "{count} 项",
       "newFolder": "新建文件夹",
       "newFile": "新建文件",
+      "nameTooLong": "名称不能超过 {max} 个字符",
       "newEntry": "新建",
       "editPath": "编辑路径",
       "filterCurrentDirectory": "过滤当前目录",

@@ -1371,6 +1371,7 @@
       "items": "{count} mục",
       "newFolder": "Thư mục mới",
       "newFile": "Tệp mới",
+      "nameTooLong": "Tên không được vượt quá {max} ký tự",
       "newEntry": "Mới",
       "editPath": "Sửa đường dẫn",
       "filterCurrentDirectory": "Lọc thư mục hiện tại",
