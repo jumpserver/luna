@@ -1,7 +1,5 @@
 <script setup lang="ts">
-defineOptions({ name: "ExecutionPlanNodeRow" });
 import type { ChenPlanNode } from "~/chen/types/plan";
-
 import {
   chenPlanFormatEstimated,
   chenPlanNodeDetail,
@@ -9,6 +7,8 @@ import {
   chenPlanNodeSecondaryFacts,
   chenPlanNodeTitle
 } from "~/chen/utils/executionPlanPresentation";
+
+defineOptions({ name: "ExecutionPlanNodeRow" });
 
 const props = defineProps<{
   node: ChenPlanNode;
