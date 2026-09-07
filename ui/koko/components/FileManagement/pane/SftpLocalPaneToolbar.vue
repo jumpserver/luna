@@ -14,7 +14,6 @@ const emit = defineEmits<{
   refresh: [];
   reveal: [];
   setup: [];
-  upload: [event: Event];
   goToPath: [path: string];
   create: [kind: "folder" | "file"];
 }>();
@@ -23,7 +22,6 @@ const search = defineModel<string>("search", { required: true });
 const showHiddenFiles = defineModel<boolean>("showHiddenFiles", { default: false });
 
 const { t } = useI18n();
-const uploadInput = shallowRef<HTMLInputElement | null>(null);
 const pathInputRef = shallowRef<HTMLInputElement | null>(null);
 const toolbarRef = shallowRef<HTMLElement | null>(null);
 
@@ -61,11 +59,6 @@ const selectedQuickPath = computed({
 const moreMenuItems = computed<DropdownMenuItem[][]>(() => [
   [
     {
-      label: t("koko.fileManagement.refresh"),
-      icon: "i-lucide-refresh-cw",
-      onSelect: () => emit("refresh")
-    },
-    {
       label: t("koko.localFile.revealInFinder"),
       icon: "i-lucide-app-window",
       onSelect: () => emit("reveal")
@@ -83,12 +76,7 @@ const moreMenuItems = computed<DropdownMenuItem[][]>(() => [
       onSelect: () => {
         showHiddenFiles.value = !showHiddenFiles.value;
       }
-    }
-  ]
-]);
-
-const createMenuItems = computed<DropdownMenuItem[][]>(() => [
-  [
+    },
     {
       label: t("koko.fileManagement.newFolder"),
       icon: "i-lucide-folder-plus",
@@ -98,6 +86,11 @@ const createMenuItems = computed<DropdownMenuItem[][]>(() => [
       label: t("koko.fileManagement.newFile"),
       icon: "i-lucide-file-plus-2",
       onSelect: () => emit("create", "file")
+    },
+    {
+      label: t("koko.fileManagement.filterCurrentDirectory"),
+      icon: "i-lucide-search",
+      onSelect: () => openSearch()
     }
   ]
 ]);
@@ -251,18 +244,18 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="flex shrink-0 items-center gap-0.5">
+      <UTooltip :text="t('koko.fileManagement.refresh')">
+        <UButton
+          icon="i-lucide-refresh-cw"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          square
+          :aria-label="t('koko.fileManagement.refresh')"
+          @click="void emit('refresh')"
+        />
+      </UTooltip>
       <template v-if="!isNarrow">
-        <UTooltip :text="t('koko.fileManagement.refresh')">
-          <UButton
-            icon="i-lucide-refresh-cw"
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            square
-            :aria-label="t('koko.fileManagement.refresh')"
-            @click="void emit('refresh')"
-          />
-        </UTooltip>
         <UTooltip :text="t('koko.localFile.revealInFinder')">
           <UButton
             icon="i-lucide-app-window"
@@ -313,8 +306,12 @@ onBeforeUnmount(() => {
         />
       </UDropdownMenu>
 
-      <div class="sftp-file-management__search flex items-center" :class="searchOpen || search ? 'is-open' : ''">
-        <UTooltip v-if="!searchOpen && !search" :text="t('koko.fileManagement.filterCurrentDirectory')">
+      <div
+        v-if="!isNarrow || searchOpen || search"
+        class="sftp-file-management__search flex items-center"
+        :class="searchOpen || search ? 'is-open' : ''"
+      >
+        <UTooltip v-if="!isNarrow && !searchOpen && !search" :text="t('koko.fileManagement.filterCurrentDirectory')">
           <UButton
             icon="i-lucide-search"
             color="neutral"
@@ -365,30 +362,6 @@ onBeforeUnmount(() => {
           />
         </UTooltip>
       </template>
-      <UDropdownMenu v-else :items="createMenuItems" size="sm" :content="{ align: 'end', side: 'bottom' }">
-        <UButton
-          icon="i-lucide-plus"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          square
-          :aria-label="t('koko.fileManagement.newEntry')"
-          :title="t('koko.fileManagement.newEntry')"
-        />
-      </UDropdownMenu>
-
-      <UTooltip :text="t('koko.actions.upload')">
-        <UButton
-          icon="i-lucide-cloud-upload"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          square
-          :aria-label="t('koko.actions.upload')"
-          @click="uploadInput?.click()"
-        />
-      </UTooltip>
-      <input ref="uploadInput" type="file" multiple class="hidden" @change="emit('upload', $event)" />
     </div>
   </div>
 </template>

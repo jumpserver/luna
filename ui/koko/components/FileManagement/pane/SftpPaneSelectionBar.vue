@@ -28,61 +28,59 @@ const sendIcon = computed(() => {
   if (props.sendPeerDirection === "left") return "i-lucide-arrow-left";
   return "i-lucide-forward";
 });
+const sendLabel = computed(() =>
+  isPeerSend.value ? t("koko.fileManagement.sendToOpposite") : t("koko.fileManagement.sendTo")
+);
 </script>
 
 <template>
   <div
     v-if="selectedCount"
-    class="sftp-selection-bar"
+    class="sftp-status-actions flex min-w-0 shrink-0 items-center gap-0.5"
     role="toolbar"
     :aria-label="t('koko.fileManagement.selectedItems', selectedCount)"
   >
-    <div class="sftp-selection-bar__info">
-      <span class="sftp-selection-bar__count">
-        {{ t("koko.fileManagement.selectedPrefix") }}
-        <b>{{ selectedCount }}</b>
-        {{ t("koko.fileManagement.selectedSuffix") }}
-      </span>
-    </div>
-    <div class="sftp-selection-bar__actions">
-      <UButton
-        v-if="canSend && transferableCount"
-        class="sftp-selection-bar__btn"
-        color="primary"
-        variant="ghost"
-        size="xs"
-        :icon="sendIcon"
-        :label="isPeerSend ? t('koko.fileManagement.sendToOpposite') : t('koko.fileManagement.sendTo')"
-        @click="emit('send')"
-      />
-      <UButton
-        v-if="canDownload"
-        class="sftp-selection-bar__btn"
-        color="neutral"
-        variant="ghost"
-        size="xs"
-        icon="i-lucide-download"
-        :label="t('koko.actions.download')"
-        @click="emit('download')"
-      />
-      <UButton
-        class="sftp-selection-bar__btn"
-        color="error"
-        variant="ghost"
-        size="xs"
-        icon="i-lucide-trash-2"
-        :label="t('koko.actions.delete')"
-        @click="emit('remove')"
-      />
-      <UButton
-        class="sftp-selection-bar__btn"
-        color="neutral"
-        variant="ghost"
-        size="xs"
-        icon="i-lucide-x"
-        :label="t('koko.fileManagement.clearSelection')"
-        @click="emit('clear')"
-      />
-    </div>
+    <UButton
+      v-if="canSend && transferableCount"
+      color="primary"
+      variant="ghost"
+      size="xs"
+      :icon="sendIcon"
+      :label="sendLabel"
+      :title="sendLabel"
+      :aria-label="sendLabel"
+      @click="emit('send')"
+    />
+    <UButton
+      v-if="canDownload"
+      color="neutral"
+      variant="ghost"
+      size="xs"
+      icon="i-lucide-download"
+      :label="t('koko.actions.download')"
+      :title="t('koko.actions.download')"
+      :aria-label="t('koko.actions.download')"
+      @click="emit('download')"
+    />
+    <UButton
+      color="error"
+      variant="ghost"
+      size="xs"
+      icon="i-lucide-trash-2"
+      :label="t('koko.actions.delete')"
+      :title="t('koko.actions.delete')"
+      :aria-label="t('koko.actions.delete')"
+      @click="emit('remove')"
+    />
+    <UButton
+      color="neutral"
+      variant="ghost"
+      size="xs"
+      icon="i-lucide-x"
+      :label="t('koko.fileManagement.clearSelection')"
+      :title="t('koko.fileManagement.clearSelection')"
+      :aria-label="t('koko.fileManagement.clearSelection')"
+      @click="emit('clear')"
+    />
   </div>
 </template>

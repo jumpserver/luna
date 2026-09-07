@@ -64,18 +64,24 @@ const visibleBreadcrumbs = computed(() => {
 });
 
 const overflowMenuItems = computed<DropdownMenuItem[][]>(() => {
-  const viewItems: DropdownMenuItem[] = [
+  const navItems: DropdownMenuItem[] = [
     {
-      label: t("koko.fileManagement.refresh"),
-      icon: "i-lucide-refresh-cw",
-      onSelect: () => {
-        void props.manager.loadCurrentDirectory();
-      }
+      label: t("koko.fileManagement.back"),
+      icon: "i-lucide-chevron-left",
+      disabled: !props.manager.canGoBack.value,
+      onSelect: () => void props.manager.goBack()
     },
     {
-      label: t("koko.fileManagement.filterCurrentDirectory"),
-      icon: "i-lucide-search",
-      onSelect: () => openSearch()
+      label: t("koko.fileManagement.forward"),
+      icon: "i-lucide-chevron-right",
+      disabled: !props.manager.canGoForward.value,
+      onSelect: () => void props.manager.goForward()
+    },
+    {
+      label: t("koko.fileManagement.home"),
+      icon: "i-lucide-house",
+      disabled: !props.manager.canGoHome.value,
+      onSelect: () => void props.manager.goHome()
     }
   ];
   const fileItems: DropdownMenuItem[] = [
@@ -99,9 +105,9 @@ const overflowMenuItems = computed<DropdownMenuItem[][]>(() => {
       onSelect: () => emit("createFile")
     },
     {
-      label: t("koko.actions.upload"),
-      icon: "i-lucide-cloud-upload",
-      onSelect: () => uploadInput.value?.click()
+      label: t("koko.fileManagement.filterCurrentDirectory"),
+      icon: "i-lucide-search",
+      onSelect: () => openSearch()
     }
   ];
   const workbenchItems: DropdownMenuItem[] = props.showWorkbenchActions
@@ -118,7 +124,7 @@ const overflowMenuItems = computed<DropdownMenuItem[][]>(() => {
         }
       ]
     : [];
-  return [viewItems, fileItems, workbenchItems].filter((group) => group.length > 0);
+  return [navItems, fileItems, workbenchItems].filter((group) => group.length > 0);
 });
 
 function normalizePathInput(raw: string): string {
@@ -235,32 +241,34 @@ defineExpose({
     class="sftp-file-management__toolbar sftp-file-management__toolbar--unified flex min-w-0 shrink-0 items-center gap-1 overflow-hidden border-b border-(--app-border) bg-(--app-panel-bg) px-2"
     :class="{ 'is-narrow': isNarrow, 'is-compact': isCompact }"
   >
-    <!-- Navigation: back / forward / up / home -->
+    <!-- Wide: back / forward / up / home. Narrow: parent only. -->
     <div class="flex shrink-0 items-center gap-0.5">
-      <UTooltip :text="t('koko.fileManagement.back')">
-        <UButton
-          icon="i-lucide-chevron-left"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          square
-          :disabled="!manager.canGoBack.value"
-          :aria-label="t('koko.fileManagement.back')"
-          @click="void manager.goBack()"
-        />
-      </UTooltip>
-      <UTooltip :text="t('koko.fileManagement.forward')">
-        <UButton
-          icon="i-lucide-chevron-right"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          square
-          :disabled="!manager.canGoForward.value"
-          :aria-label="t('koko.fileManagement.forward')"
-          @click="void manager.goForward()"
-        />
-      </UTooltip>
+      <template v-if="!isNarrow">
+        <UTooltip :text="t('koko.fileManagement.back')">
+          <UButton
+            icon="i-lucide-chevron-left"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            square
+            :disabled="!manager.canGoBack.value"
+            :aria-label="t('koko.fileManagement.back')"
+            @click="void manager.goBack()"
+          />
+        </UTooltip>
+        <UTooltip :text="t('koko.fileManagement.forward')">
+          <UButton
+            icon="i-lucide-chevron-right"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            square
+            :disabled="!manager.canGoForward.value"
+            :aria-label="t('koko.fileManagement.forward')"
+            @click="void manager.goForward()"
+          />
+        </UTooltip>
+      </template>
       <UTooltip :text="t('koko.drawer.up')">
         <UButton
           icon="i-lucide-arrow-up"
@@ -273,7 +281,7 @@ defineExpose({
           @click="manager.changeDirectory({ name: '..', is_dir: true } as SftpFileEntry)"
         />
       </UTooltip>
-      <UTooltip :text="t('koko.fileManagement.home')">
+      <UTooltip v-if="!isNarrow" :text="t('koko.fileManagement.home')">
         <UButton
           icon="i-lucide-house"
           color="neutral"
@@ -354,6 +362,28 @@ defineExpose({
     </div>
 
     <template v-if="isNarrow">
+      <UTooltip :text="t('koko.fileManagement.refresh')">
+        <UButton
+          icon="i-lucide-refresh-cw"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          square
+          :aria-label="t('koko.fileManagement.refresh')"
+          @click="void manager.loadCurrentDirectory()"
+        />
+      </UTooltip>
+      <UTooltip :text="t('koko.actions.upload')">
+        <UButton
+          icon="i-lucide-cloud-upload"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          square
+          :aria-label="t('koko.actions.upload')"
+          @click="uploadInput?.click()"
+        />
+      </UTooltip>
       <UInput
         v-if="searchOpen || search"
         ref="searchInputRef"

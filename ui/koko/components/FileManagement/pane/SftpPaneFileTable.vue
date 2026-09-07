@@ -44,6 +44,10 @@ const { t } = useI18n();
 const selectedSet = computed(() => new Set(props.selectedNames));
 const highlightedSet = computed(() => new Set(props.highlightedNames));
 const emptyColspan = computed(() => (props.compact ? 3 : 5));
+const statusText = computed(() => {
+  if (!props.selectedNames.length) return t("koko.fileManagement.items", { count: props.entries.length });
+  return `${t("koko.fileManagement.selectedPrefix")} ${props.selectedNames.length} / ${props.entries.length}`;
+});
 const prefersReducedMotion = ref(false);
 /** Fast path-change: skip leave of the old directory list (enter of the new list still runs). */
 const skipLeaveAnim = ref(false);
@@ -278,13 +282,15 @@ onUnmounted(() => {
       </table>
     </UScrollArea>
 
-    <slot name="footer" />
-
     <div
       v-if="showStatusBar"
-      class="sftp-file-table__status flex h-7 shrink-0 items-center border-t border-(--app-border) bg-(--app-panel-bg) px-3 font-ui-mono text-[10.5px] text-(--app-muted)"
+      class="sftp-file-table__status flex h-7 shrink-0 items-center gap-1.5 border-t border-(--app-border) bg-(--app-panel-bg) px-3 font-ui-mono text-[10.5px] text-(--app-muted)"
+      :class="selectedNames.length ? 'is-selected' : ''"
     >
-      {{ t("koko.fileManagement.items", { count: entries.length }) }}
+      <span class="min-w-0 truncate">{{ statusText }}</span>
+      <div class="ml-auto flex min-w-0 shrink-0 items-center">
+        <slot name="status" />
+      </div>
     </div>
   </div>
 </template>

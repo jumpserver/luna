@@ -32,6 +32,7 @@ import connectModalComponent from "../../components/FileManagement/workspace/Sft
 import globalWorkspaceComponent from "../../components/FileManagement/workspace/SftpGlobalWorkspace.vue?raw";
 import remoteTabsComponent from "../../components/FileManagement/workspace/SftpRemoteMachineTabs.vue?raw";
 import sessionWorkspaceComponent from "../../components/FileManagement/workspace/SftpSessionWorkspace.vue?raw";
+import localTransferEndpointComposable from "../../composables/sftp/file-manager/useLocalFileTransferEndpoint.ts?raw";
 import remotePaneActions from "../../composables/sftp/file-manager/useSftpRemotePaneActions.ts?raw";
 import transferCoordinatorComposable from "../../composables/sftp/file-manager/useSftpTransferCoordinator.ts?raw";
 import workspacePanesComposable from "../../composables/sftp/file-manager/useSftpWorkspacePanes.ts?raw";
@@ -132,8 +133,8 @@ describe("sftp transfer drop target", () => {
 });
 
 describe("sftp selection bar and peer transfer", () => {
-  it("anchors the selection bar to the source pane for both peer and multi-target modes", () => {
-    expect(filePaneSelectionBar).toContain('class="sftp-selection-bar"');
+  it("keeps selection actions inside the existing status row", () => {
+    expect(filePaneSelectionBar).toContain('class="sftp-status-actions');
     expect(filePaneSelectionBar).toContain("<UButton");
     expect(filePaneSelectionBar).toContain('color="primary"');
     expect(filePaneSelectionBar).toContain('color="error"');
@@ -147,20 +148,20 @@ describe("sftp selection bar and peer transfer", () => {
     expect(filePaneSelectionBar).not.toContain("i-lucide-send");
     expect(filePaneSelectionBar).not.toContain("Teleport");
     expect(filePaneSelectionBar).not.toContain("sendToEllipsis");
-    expect(fileManagementStyles).toContain(".sftp-selection-bar");
-    expect(fileManagementStyles).toContain("position: relative");
-    expect(fileManagementStyles).toContain("min-height: 40px");
-    expect(fileManagementStyles).toContain("margin-top: 16px");
-    expect(fileManagementStyles).toContain("box-shadow: inset 3px 0 0 var(--theme-accent)");
-    expect(fileManagementStyles).not.toContain("bottom: 36px");
-  });
-
-  it("places the selection actions above the item count inside the table layout", () => {
-    expect(fileManagementPane).toContain("<template #footer>");
-    expect(fileManagementLocalPane).toContain("<template #footer>");
-    expect(filePaneTable.indexOf('<slot name="footer" />')).toBeLessThan(
-      filePaneTable.indexOf('class="sftp-file-table__status')
-    );
+    expect(filePaneSelectionBar).toContain(':label="sendLabel"');
+    expect(filePaneSelectionBar).toContain(":label=\"t('koko.actions.download')\"");
+    expect(filePaneSelectionBar).not.toContain("square");
+    expect(fileManagementStyles).not.toContain(".sftp-selection-bar");
+    expect(fileManagementStyles).not.toContain("min-height: 40px");
+    expect(fileManagementStyles).not.toContain("margin-top: 16px");
+    expect(fileManagementStyles).toContain("inset 3px 0 0 var(--theme-accent)");
+    expect(filePaneTable).toContain('class="sftp-file-table__status');
+    expect(filePaneTable).toContain("is-selected");
+    expect(filePaneTable).toContain('<slot name="status" />');
+    expect(filePaneTable).not.toContain('<slot name="footer" />');
+    expect(fileManagementPane).toContain("<template #status>");
+    expect(fileManagementLocalPane).toContain("<template #status>");
+    expect(filePaneTable).toContain("koko.fileManagement.selectedPrefix");
   });
 
   it("hides local Send to until a connected remote destination exists", () => {
@@ -271,7 +272,8 @@ describe("sftp right-panel compact mode", () => {
     expect(fileManagementPane).toContain(
       "const canTransferFiles = computed(() => Boolean(props.transferEndpoint) && !props.compact)"
     );
-    expect(fileManagementPane).toContain("if (!canTransferFiles.value) return null");
+    expect(fileManagementPane).not.toContain("if (!canTransferFiles.value) return null");
+    expect(fileManagementPane).toContain("if (!canTransferFiles.value) return;");
     expect(remotePaneActions).toContain('label: t("koko.fileManagement.sendTo")');
     expect(fileManagementPane).toContain(':can-send="canTransferFiles && canSend"');
     expect(filePaneSelectionBar).toContain('v-if="canSend && transferableCount"');
@@ -281,6 +283,31 @@ describe("sftp right-panel compact mode", () => {
     expect(remotePaneActions).toContain('label: t("koko.actions.download")');
     expect(remotePaneActions).toContain('label: t("koko.actions.rename")');
     expect(remotePaneActions).toContain('label: t("koko.actions.delete")');
+  });
+
+  it("queues file downloads through the transfer center while keeping folder zip downloads", () => {
+    expect(fileManagementPane).toContain("download: [payload: SftpTransferSourcePayload]");
+    expect(fileManagementPane).toContain('emit("download", payload)');
+    expect(fileManagementPane).toMatch(
+      /function transferSourcePayload\(\)[\s\S]*?return buildTransferSourcePayload\(\{[\s\S]*?\n\}/
+    );
+    expect(remotePaneActions).toContain("if (toValue(options.transferableCount)) return options.requestDownload()");
+    expect(remotePaneActions).toContain("options.manager.operations.downloadEntry(entry)");
+    expect(transferCoordinatorComposable).toContain("async function queueSftpDownload");
+    expect(transferCoordinatorComposable).toContain("fileTransferStore.enqueueBatch(inputs)");
+    expect(transferCoordinatorComposable).toContain('"local:downloads"');
+    expect(transferCoordinatorComposable).toContain("host.localFiles.downloadDir()");
+    expect(transferCoordinatorComposable).toContain("safeLocalDownloadName(input.source.name)");
+    expect(transferCoordinatorComposable).toContain("browserDownloadEndpoint ??=");
+    expect(transferCoordinatorComposable).toContain("localDownloadsEndpoint ??=");
+    expect(transferCoordinatorComposable).toContain('"keep_both" as const');
+    expect(localTransferEndpointComposable).toContain("Local transfer size mismatch");
+    expect(localTransferEndpointComposable).toContain("writeFile(partial, input.data, { offset: input.offset })");
+    expect(localTransferEndpointComposable).toContain("keepBothPath");
+    expect(localTransferEndpointComposable).toContain("localFiles.rename(partial, destination)");
+    expect(transferCoordinatorComposable).toContain("if (endpointId !== downloadEndpoint.ref.id) unregister()");
+    expect(sessionWorkspaceComponent).toContain('@download="queueSftpDownload"');
+    expect(globalWorkspaceComponent).toContain('@download="queueSftpDownload"');
   });
 
   it("queues remote pane uploads through the transfer center", () => {
@@ -342,6 +369,9 @@ describe("sftp professional workbench", () => {
     expect(connectLayout).toContain("<KokoSftpTransferCenter");
     expect(defaultLayout).toContain("data-vaul-drawer-wrapper");
     expect(statusFooterComponent).toContain("data-sftp-transfer-trigger");
+    expect(defaultLayout).toContain("activeWorkspaceMode === 'assets' || activeWorkspaceMode === 'files'");
+    expect(statusFooterComponent).toContain('activeWorkspaceMode.value === "files"');
+    expect(statusFooterComponent).toContain('t("Menu.FileManager")');
     expect(statusFooterComponent).not.toContain('v-if="hasTasks"');
     expect(statusFooterComponent).not.toContain(':disabled="!hasTasks"');
     expect(transferUiComposable).not.toContain("if (value && !hasTasks.value) return");
@@ -372,6 +402,7 @@ describe("sftp professional workbench", () => {
   it("jumps the footer transfer trigger whenever a new queue signal arrives", () => {
     expect(transferUiComposable).toContain('useState("sftp-transfer-attention-sequence"');
     expect(transferUiComposable).toContain("attentionSequence.value += 1");
+    expect(transferUiComposable).not.toContain("setOpen(true)");
     expect(statusFooterComponent).toContain("transferAttracting");
     expect(statusFooterComponent).toContain("'is-attracting': transferAttracting");
     expect(fileManagementStyles).toContain("@keyframes sftp-transfer-attention-jump");
@@ -445,6 +476,21 @@ describe("sftp professional workbench", () => {
     expect(fileManagementStyles).toContain("toolbar--unified");
     expect(fileManagementStyles).toContain("container-type: inline-size");
     expect(fileManagementStyles).toContain("__search-input");
+  });
+
+  it("exposes refresh and upload on the remote and local narrow toolbars", () => {
+    const narrow = remotePaneToolbar.split('<template v-if="isNarrow">')[1]?.split("<template v-else>")[0] || "";
+    expect(narrow).toContain("koko.fileManagement.refresh");
+    expect(narrow).toContain("koko.actions.upload");
+    expect(narrow).toContain("i-lucide-refresh-cw");
+    expect(narrow).toContain("i-lucide-cloud-upload");
+    expect(remotePaneToolbar).toContain('label: t("koko.fileManagement.back")');
+    expect(remotePaneToolbar).toContain('label: t("koko.fileManagement.forward")');
+    expect(remotePaneToolbar).toContain('label: t("koko.fileManagement.home")');
+    expect(remotePaneToolbar).not.toContain("onSelect: () => uploadInput.value?.click()");
+    expect(localPaneToolbar).toContain("@click=\"void emit('refresh')\"");
+    expect(localPaneToolbar).not.toContain('onSelect: () => emit("refresh")');
+    expect(localPaneToolbar).not.toContain("koko.actions.upload");
   });
 
   it("shows the asset as a toolbar context label or dual-pane identity strip", () => {
