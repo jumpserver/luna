@@ -7,7 +7,6 @@ import type {
   RdpGraphics,
   UserData
 } from "~/types/index";
-import { useConnectMethods } from "~/composables/useConnectMethods";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 
 export type SiteUserData = UserData & {
@@ -162,16 +161,6 @@ export const useUserInfoStore = defineStore(
       currentConnectionInfoMap.value = next.connectionInfoMap || {};
       currentConnectionPreferenceMap.value = next.connectionPreferenceMap || {};
       currentRdpClientOption.value = next.rdpClientOption || {};
-
-      // 登录后获取连接方法
-      const { fetchConnectMethods } = useConnectMethods();
-      nextTick(async () => {
-        try {
-          await fetchConnectMethods();
-        } catch (error) {
-          console.debug("Failed to fetch connect methods on login:", error);
-        }
-      });
     };
 
     /**

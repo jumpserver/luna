@@ -1,12 +1,4 @@
-export type PlanDatabase =
-  | "postgresql"
-  | "mysql"
-  | "mariadb"
-  | "oracle"
-  | "sqlserver"
-  | "db2"
-  | "dm"
-  | "clickhouse";
+export type PlanDatabase = "postgresql" | "mysql" | "mariadb" | "oracle" | "sqlserver" | "db2" | "dm" | "clickhouse";
 export type PlanMode = "ESTIMATED";
 export type PlanStatus =
   | "SUCCESS"

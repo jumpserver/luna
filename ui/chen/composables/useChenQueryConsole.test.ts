@@ -18,6 +18,10 @@ function queryTab(): ChenQueryConsoleTab {
     message: null,
     resultTabs: [],
     activeResultTabId: "",
+    executionPlan: null,
+    executionPlanLoading: false,
+    activeBottomPane: "results",
+    connectionGeneration: 0,
     socket: null
   };
 }
