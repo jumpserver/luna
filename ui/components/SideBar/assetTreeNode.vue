@@ -144,13 +144,11 @@ watch(
       <button
         ref="row"
         type="button"
-        class="app-tree-row sidebar-row flex w-full cursor-pointer items-center gap-1 rounded-md pr-1 text-left"
+        class="app-tree-row sidebar-row flex w-full cursor-pointer items-center gap-1 pr-1 text-left outline-none"
         :class="[
           node.chkDisabled ? 'opacity-40' : '',
           node.meta?.type === 'recent-connections' && node.children?.length ? 'pr-9' : '',
-          isAutomationFocused
-            ? 'bg-[var(--app-hover-soft)] text-[var(--app-fg)] ring-1 ring-inset ring-[var(--app-focus-ring)]'
-            : ''
+          isAutomationFocused ? 'bg-[var(--app-hover-soft)] text-[var(--app-fg)]' : ''
         ]"
         :style="{ paddingLeft: `${10 + (node.level || 0) * 14}px` }"
         :title="node.title || node.name"
