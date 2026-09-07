@@ -1699,6 +1699,10 @@
       "ERROR": "失敗",
       "CANCELLED": "已取消",
       "CONNECTION_INVALIDATED": "連線已丟棄"
-    }
+    },
+    "estimatedRows": "估算列數",
+    "estimatedCost": "估算成本",
+    "details": "詳情",
+    "hideDetails": "收合詳情"
   }
 }

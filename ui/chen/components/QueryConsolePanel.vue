@@ -17,7 +17,7 @@ import SqlSnippetSaveDialog from "~/chen/components/SqlSnippetSaveDialog.vue";
 import SqlSnippetSelectDialog from "~/chen/components/SqlSnippetSelectDialog.vue";
 import { useChenSqlSnippets } from "~/chen/composables/useChenSqlSnippets";
 import { createChenCompletionSource } from "~/chen/utils/sqlCompletion";
-import { chenSqlDialect } from "~/chen/utils/sqlEditor";
+import { chenPlanRequestSql, chenSqlDialect } from "~/chen/utils/sqlEditor";
 import { formatChenSql } from "~/chen/utils/sqlFormat";
 
 const props = defineProps<{
@@ -120,8 +120,7 @@ const sqlFileItems = computed(() => [
     label: t("ExecutionPlan.explain"),
     icon: "i-lucide-git-fork",
     disabled: contextBusy.value || !(sqlEditor.value?.executionText() || props.tab.statement).trim(),
-    onSelect: () =>
-      emit("explainPlan", props.tab, sqlEditor.value?.executionText() || props.tab.statement)
+    onSelect: () => emit("explainPlan", props.tab, currentPlanSql())
   },
   {
     label: "Open",
@@ -153,6 +152,11 @@ const statementValue = computed({
   get: () => props.tab.statement,
   set: (value: string) => emit("updateStatement", props.tab, value)
 });
+
+function currentPlanSql() {
+  const snapshot = editorSnapshot();
+  return chenPlanRequestSql(snapshot.documentSql || props.tab.statement, snapshot.selectedSql);
+}
 
 function runCurrentQuery() {
   emit("run", props.tab, sqlEditor.value?.executionText() || "");

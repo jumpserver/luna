@@ -72,3 +72,9 @@ export function executableChenSql(state: EditorState) {
   if (from !== to) return state.doc.sliceString(from, to);
   return chenSqlStatementAtCursor(state, head)?.sql || "";
 }
+
+/** Estimated plan uses the selection, otherwise the full editor buffer. Never the cursor statement fragment. */
+export function chenPlanRequestSql(documentSql: string, selectedSql = "") {
+  const selected = selectedSql.trim();
+  return selected ? selectedSql : documentSql;
+}

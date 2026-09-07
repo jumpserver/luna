@@ -1699,6 +1699,10 @@
       "ERROR": "Failed",
       "CANCELLED": "Cancelled",
       "CONNECTION_INVALIDATED": "Connection discarded"
-    }
+    },
+    "estimatedRows": "Est. rows",
+    "estimatedCost": "Est. cost",
+    "details": "Details",
+    "hideDetails": "Hide details"
   }
 }

@@ -1699,6 +1699,10 @@
       "ERROR": "失敗",
       "CANCELLED": "キャンセル済み",
       "CONNECTION_INVALIDATED": "接続を破棄しました"
-    }
+    },
+    "estimatedRows": "見積行数",
+    "estimatedCost": "見積コスト",
+    "details": "詳細",
+    "hideDetails": "詳細を隠す"
   }
 }

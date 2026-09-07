@@ -2,6 +2,14 @@
 defineOptions({ name: "ExecutionPlanNodeRow" });
 import type { ChenPlanNode } from "~/chen/types/plan";
 
+import {
+  chenPlanFormatEstimated,
+  chenPlanNodeDetail,
+  chenPlanNodePrimaryFacts,
+  chenPlanNodeSecondaryFacts,
+  chenPlanNodeTitle
+} from "~/chen/utils/executionPlanPresentation";
+
 const props = defineProps<{
   node: ChenPlanNode;
   depth: number;
@@ -9,14 +17,23 @@ const props = defineProps<{
   showRows: boolean;
 }>();
 
+const { t } = useI18n();
 const expanded = ref(true);
+const showDetails = ref(false);
 const hasChildren = computed(() => props.node.children.length > 0);
-
-function displayMetric(value: number | null) {
-  if (value == null || Number.isNaN(value)) return "—";
-  if (!Number.isFinite(value) || Math.abs(value) > Number.MAX_SAFE_INTEGER) return "raw";
-  return String(value);
-}
+const title = computed(() => chenPlanNodeTitle(props.node));
+const primaryFacts = computed(() => chenPlanNodePrimaryFacts(props.node));
+const secondaryFacts = computed(() => {
+  const facts = chenPlanNodeSecondaryFacts(props.node);
+  const startup = chenPlanFormatEstimated(props.node.startupCost);
+  if (startup != null && !facts.some((fact) => fact.key === "Startup Cost")) {
+    facts.push({ key: "Startup Cost", value: startup });
+  }
+  return facts;
+});
+const detail = computed(() => chenPlanNodeDetail(props.node));
+const estimatedRows = computed(() => (props.showRows ? chenPlanFormatEstimated(props.node.rows) : null));
+const estimatedCost = computed(() => (props.showCost ? chenPlanFormatEstimated(props.node.cost) : null));
 </script>
 
 <template>
@@ -33,14 +50,36 @@ function displayMetric(value: number | null) {
       <span v-else class="mt-0.5 inline-block size-3.5 shrink-0" />
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span class="font-medium text-highlighted">{{ node.nativeOperator || node.nodeType }}</span>
+          <span class="font-medium text-highlighted">{{ title }}</span>
           <span v-if="node.relation" class="text-muted">{{ node.relation }}</span>
-          <span v-if="showRows" class="tabular-nums text-muted">rows {{ displayMetric(node.rows) }}</span>
-          <span v-if="showCost" class="tabular-nums text-muted">cost {{ displayMetric(node.cost) }}</span>
+          <span
+            v-if="estimatedRows != null"
+            class="tabular-nums text-muted"
+            :title="node.rowsMeaning || t('ExecutionPlan.estimatedRows')"
+          >
+            {{ t("ExecutionPlan.estimatedRows") }} {{ estimatedRows }}
+          </span>
+          <span
+            v-if="estimatedCost != null"
+            class="tabular-nums text-muted"
+            :title="node.costMeaning || t('ExecutionPlan.estimatedCost')"
+          >
+            {{ t("ExecutionPlan.estimatedCost") }} {{ estimatedCost }}
+          </span>
         </div>
-        <div v-if="node.detail" class="mt-0.5 font-ui-mono text-[11px] text-muted">{{ node.detail }}</div>
-        <div v-if="Object.keys(node.predicates).length" class="mt-1 space-y-0.5 font-ui-mono text-[11px] text-muted">
-          <div v-for="(value, key) in node.predicates" :key="key">{{ key }}: {{ value }}</div>
+        <div v-if="detail" class="mt-0.5 font-ui-mono text-[11px] text-muted">{{ detail }}</div>
+        <div v-if="primaryFacts.length" class="mt-1 space-y-0.5 font-ui-mono text-[11px] text-muted">
+          <div v-for="fact in primaryFacts" :key="fact.key">{{ fact.key }}: {{ fact.value }}</div>
+        </div>
+        <button
+          v-if="secondaryFacts.length"
+          class="mt-1 text-[11px] text-muted hover:text-highlighted"
+          @click="showDetails = !showDetails"
+        >
+          {{ showDetails ? t("ExecutionPlan.hideDetails") : t("ExecutionPlan.details") }}
+        </button>
+        <div v-if="showDetails && secondaryFacts.length" class="mt-1 space-y-0.5 font-ui-mono text-[11px] text-muted">
+          <div v-for="fact in secondaryFacts" :key="fact.key">{{ fact.key }}: {{ fact.value }}</div>
         </div>
       </div>
     </div>
