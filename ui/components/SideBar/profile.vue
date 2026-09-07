@@ -3,6 +3,7 @@ import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { LangType, ThemePresetId, UserData } from "~/types/index";
 
 import { useSettingManager } from "~/composables/useSettingManager";
+import { closeCurrentSiteWorkspace, confirmLeaveCurrentSiteSessions } from "~/composables/useSiteAccountSwitch";
 import { DARK_THEME_PRESETS, getThemePreset, LIGHT_THEME_PRESETS } from "~/composables/useThemePresets";
 import { desktopApp, desktopEmit, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -599,15 +600,17 @@ function clearValidationError() {
 /**
  * @description 清除认证信息
  */
-function clearAuthInfo() {
+async function clearAuthInfo() {
   profileOpen.value = false;
+  if (!(await confirmLeaveCurrentSiteSessions("logout"))) return;
   userInfoStore.deleteUserData(currentAccountId.value);
 }
 
-function handleSwitchAccount(accountId: string) {
+async function handleSwitchAccount(accountId: string) {
   if (accountId === currentAccountId.value) return;
 
   profileOpen.value = false;
+  if (!(await confirmLeaveCurrentSiteSessions("switch"))) return;
   userInfoStore.setCurrentAccount(accountId);
   nextTick(() => useEventBus().emit("refresh", undefined));
 }
@@ -761,6 +764,10 @@ const handleConfirm = async () => {
     return;
   }
 
+  const isReauth = Boolean(editingAccountId.value && editingAccountId.value === currentAccountId.value);
+  const leavingCurrentSite = loggedIn.value && !isReauth;
+  if (leavingCurrentSite && !(await confirmLeaveCurrentSiteSessions("login", { close: false }))) return;
+
   try {
     clearLoginBtnUnlockTimer();
     loginBtn.value = true;
@@ -772,6 +779,11 @@ const handleConfirm = async () => {
       site: normalizedSite,
       sessionId: accountId
     });
+    if (!payload || payload.status !== "success") {
+      loginBtn.value = false;
+      return;
+    }
+    if (leavingCurrentSite) await closeCurrentSiteWorkspace();
     await applyLoginPayload(payload, { showToast: true, navigateHome: true, accountId, siteName });
     void saveRecentSite(normalizedSite);
   } catch (e: any) {

@@ -341,43 +341,48 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
   ];
 });
 
-const tabMenuItems = computed<DropdownMenuItem[]>(() => [
-  ...tabs.value.map((tab) => ({
-    label: tabDisplayTitle(tab),
-    type: "checkbox" as const,
-    checked: activeTabId.value === tab.id,
-    onSelect: () => selectTab(tab.id)
-  })),
-  {
-    type: "separator" as const
-  },
-  {
-    label: t("TabMenu.CloseCurrent"),
-    icon: "i-lucide-x",
-    kbds: ["alt", "shift", "W"],
-    ui: { itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]" },
-    disabled: !activeTab.value,
-    onSelect: () => {
-      if (activeTab.value) closeSession(activeTab.value.id);
-    }
-  },
-  {
-    label: t("TabMenu.CloseOther"),
-    icon: "i-lucide-copy-x",
-    ui: { itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]" },
-    disabled: !activeTab.value || tabs.value.length < 2,
-    onSelect: () => {
-      if (activeTab.value) closeOtherSessions(activeTab.value.id);
-    }
-  },
-  {
-    label: t("TabMenu.CloseAll"),
-    icon: "i-lucide-trash-2",
-    ui: { itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]" },
-    disabled: tabs.value.length === 0,
-    onSelect: closeAllSessions
-  }
-]);
+const tabMenuItems = computed(
+  () =>
+    [
+      ...tabs.value.map((tab) => ({
+        label: tabDisplayTitle(tab),
+        type: "checkbox" as const,
+        checked: activeTabId.value === tab.id,
+        onSelect: () => selectTab(tab.id)
+      })),
+      {
+        type: "separator" as const
+      },
+      {
+        label: t("TabMenu.CloseCurrent"),
+        icon: "i-lucide-x",
+        kbds: ["alt", "shift", "W"],
+        ui: { itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]" },
+        disabled: !activeTab.value,
+        onSelect: () => {
+          if (activeTab.value) closeSession(activeTab.value.id);
+        }
+      },
+      {
+        label: t("TabMenu.CloseOther"),
+        icon: "i-lucide-copy-x",
+        ui: { itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]" },
+        disabled: !activeTab.value || tabs.value.length < 2,
+        onSelect: () => {
+          if (activeTab.value) closeOtherSessions(activeTab.value.id);
+        }
+      },
+      {
+        label: t("TabMenu.CloseAll"),
+        icon: "i-lucide-trash-2",
+        ui: { itemLeadingIcon: "size-4 w-4 shrink-0 text-[var(--app-muted)]" },
+        disabled: tabs.value.length === 0,
+        onSelect: () => {
+          void closeAllSessions();
+        }
+      }
+    ] as DropdownMenuItem[]
+);
 
 function updateOverflow() {
   const el = tabStripRef.value;

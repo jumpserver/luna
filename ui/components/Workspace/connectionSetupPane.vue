@@ -214,7 +214,7 @@ onMounted(loadAsset);
           :class="
             modernIsland
               ? 'connection-setup-shell--island'
-              : 'w-[min(640px,100%)] rounded-lg border border-(--app-border) bg-(--workspace-surface-panel)'
+              : 'w-[min(640px,100%)] rounded-[length:var(--app-radius)] border border-(--app-border) bg-(--workspace-surface-panel)'
           "
         >
           <div
@@ -290,7 +290,9 @@ onMounted(loadAsset);
                     </div>
                   </div>
 
-                  <div class="mt-5 rounded-lg border border-(--app-border) bg-(--workspace-surface-header) px-4 py-3">
+                  <div
+                    class="mt-5 rounded-[length:var(--app-radius)] border border-(--app-border) bg-(--workspace-surface-header) px-4 py-3"
+                  >
                     <div class="text-xs text-(--app-muted)">
                       {{ t("ConnectionSetup.ConnectionTarget") }}
                     </div>

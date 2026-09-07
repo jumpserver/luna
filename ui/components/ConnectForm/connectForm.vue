@@ -296,7 +296,7 @@ watch(
 .connect-form--island .protocol-tab-button-active::after {
   right: 8px;
   left: 8px;
-  border-radius: 2px 2px 0 0;
+  border-radius: var(--workspace-island-radius) var(--workspace-island-radius) 0 0;
   background: var(--theme-accent);
 }
 </style>

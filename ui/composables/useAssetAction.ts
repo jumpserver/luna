@@ -1,7 +1,8 @@
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
-import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
+import { isLoopbackUrl } from "@jumpserver/connectors-core";
 
+import { invalidatePersonalAssetCredentialCache } from "~/composables/useApiRequest";
 import {
   isConnectMethodAvailable,
   K8S_NATIVE_VALUE,
@@ -12,9 +13,8 @@ import {
   WEB_PROXY_NATIVE_VALUE,
   WEB_RDP_NATIVE_VALUE
 } from "~/composables/useConnectMethods";
-import { isLoopbackUrl } from "@jumpserver/connectors-core";
-import { invalidatePersonalAssetCredentialCache } from "~/composables/useApiRequest";
 import { useSettingManager } from "~/composables/useSettingManager";
+import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 let desktopListenersInitialized = false;
