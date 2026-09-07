@@ -9,6 +9,7 @@ import type {
 } from "~/chen/types";
 
 import ConsoleResultGrid from "~/chen/components/ConsoleResultGrid.client.vue";
+import ExecutionPlanTree from "~/chen/components/ExecutionPlanTree.vue";
 
 const props = defineProps<{
   tab: ChenPromptConsoleTab;
@@ -26,6 +27,7 @@ const emit = defineEmits<{
   aiGenerate: [tab: ChenPromptConsoleTab];
   aiExplain: [tab: ChenPromptConsoleTab];
   aiRepair: [tab: ChenPromptConsoleTab];
+  explainPlan: [tab: ChenPromptConsoleTab, sql: string, entryId?: string];
 }>();
 
 const { t } = useI18n();
@@ -254,7 +256,19 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
               />
               <span>{{ statusDetails[entry.status].label }}</span>
             </div>
-            <span v-if="elapsed(entry)" class="shrink-0 tabular-nums text-muted">{{ elapsed(entry) }}</span>
+            <div class="flex shrink-0 items-center gap-2">
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-git-fork"
+                :disabled="busy && entry.status === 'running'"
+                @click="emit('explainPlan', tab, entry.sql, entry.id)"
+              >
+                {{ t("ExecutionPlan.explain") }}
+              </UButton>
+              <span v-if="elapsed(entry)" class="tabular-nums text-muted">{{ elapsed(entry) }}</span>
+            </div>
           </header>
 
           <pre
@@ -263,6 +277,10 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
 
           <div v-if="entry.logs.length" class="border-t border-default px-3 py-2 font-ui-mono text-xs text-muted">
             <div v-for="(log, logIndex) in entry.logs" :key="`${entry.id}:log:${logIndex}`">{{ log }}</div>
+          </div>
+
+          <div v-if="entry.executionPlanLoading || entry.executionPlan" class="border-t border-default">
+            <ExecutionPlanTree :plan="entry.executionPlan || null" :loading="entry.executionPlanLoading" />
           </div>
 
           <div v-for="(result, resultIndex) in entry.results" :key="result.id" class="border-t border-default">

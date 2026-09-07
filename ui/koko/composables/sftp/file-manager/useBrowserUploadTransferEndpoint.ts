@@ -25,23 +25,24 @@ export interface BrowserStagedUpload {
  * can stream them to remote SFTP the same way as desktop local→remote.
  * It is not a download destination (web has no local FS pane).
  */
-export function useBrowserUploadTransferEndpoint(options: { label: string }): FileTransferEndpoint & {
+export function useBrowserUploadTransferEndpoint(options: { label: string; id?: string }): FileTransferEndpoint & {
   stageFiles: (files: File[]) => BrowserStagedUpload;
   clearStaged: () => void;
 } {
-  const ref: FileTransferEndpointRef = { id: WEB_UPLOAD_ENDPOINT_ID, label: options.label };
+  const ref: FileTransferEndpointRef = { id: options.id || WEB_UPLOAD_ENDPOINT_ID, label: options.label };
   const staged = new Map<string, File>();
 
   function stageFiles(files: File[]): BrowserStagedUpload {
-    staged.clear();
+    const batchId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const sourcePath = `${STAGED_ROOT}/${batchId}`.replace(/\/+/g, "/");
     const entries: Array<{ name: string; size: string }> = [];
     for (const file of files) {
       if (!file?.name) continue;
-      const path = `${STAGED_ROOT}/${file.name}`.replace(/\/+/g, "/");
+      const path = `${sourcePath}/${file.name}`.replace(/\/+/g, "/");
       staged.set(path, file);
       entries.push({ name: file.name, size: String(file.size) });
     }
-    return { sourcePath: STAGED_ROOT, entries };
+    return { sourcePath, entries };
   }
 
   function clearStaged() {

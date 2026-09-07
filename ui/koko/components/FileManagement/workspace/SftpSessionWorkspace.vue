@@ -61,7 +61,9 @@ const {
   sendFromSelection,
   transferGlobal,
   transferring,
-  unmountTransferEndpoint
+  unmountTransferEndpoint,
+  uploadBrowserFiles,
+  uploadToPrimary
 } = props.transfer;
 
 const simplePeerMode = computed(() => Boolean(dualMode.value && isSimplePeerMode()));
@@ -194,12 +196,13 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
         :context-label="!compact && !dualMode ? primaryAssetName : undefined"
         :show-workbench-actions="!compact && !dualMode"
         :compact="compact"
-        :transfer-endpoint="compact ? undefined : primaryTransferEndpoint"
+        :transfer-endpoint="primaryTransferEndpoint"
         :highlighted-names="highlightedNames.left"
         :can-send="primaryCanSend"
         :send-peer-direction="primarySendPeerDirection"
         @focus="focusPrimaryPane"
         @send="sendFromSelection"
+        @browser-upload="uploadToPrimary"
         @transfer-drop="queueSftpTransferToSelected($event, primaryTransferEndpoint)"
         @transfer-endpoint-mounted="mountTransferEndpoint"
         @transfer-endpoint-connected="connectTransferEndpoint"
@@ -299,6 +302,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
           "
           @focus="focusSessionRemote(pane.id)"
           @send="sendFromSelection"
+          @browser-upload="uploadBrowserFiles($event, pane.transferEndpoint)"
           @transfer-drop="queueSftpTransferToSelected($event, pane.transferEndpoint)"
           @transfer-endpoint-mounted="mountTransferEndpoint"
           @transfer-endpoint-connected="handleRemotePaneConnected"

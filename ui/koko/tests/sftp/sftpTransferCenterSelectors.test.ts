@@ -12,6 +12,7 @@ import {
   groupSftpTransferBatches,
   hasFinishedTransferTasks,
   selectSftpTransferTasks,
+  sftpEndpointHasActiveTransfers,
   sftpTransferErrorText,
   targetHasConflictTasks,
   useSftpTransferCenterSelectors
@@ -41,6 +42,18 @@ function createTask(
 }
 
 describe("sftp transfer center selectors", () => {
+  it("detects active transfers for a session endpoint", () => {
+    const transferring = createTask("up", "transferring", {
+      destinationEndpoint: { id: "sftp:alpha", label: "Alpha" }
+    });
+    const done = createTask("done", "completed", {
+      destinationEndpoint: { id: "sftp:alpha", label: "Alpha" }
+    });
+    expect(sftpEndpointHasActiveTransfers([transferring, done], ["sftp:alpha"])).toBe(true);
+    expect(sftpEndpointHasActiveTransfers([done], ["sftp:alpha"])).toBe(false);
+    expect(sftpEndpointHasActiveTransfers([transferring], ["sftp:other"])).toBe(false);
+  });
+
   it("keeps only SFTP tasks and counts active targets by unique destination", () => {
     const tasks = [
       createTask("queued-a", "queued"),

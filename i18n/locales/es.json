@@ -87,8 +87,7 @@
     "SelectFromMenu": "Seleccione un elemento de la izquierda",
     "Actions": "Acciones",
     "Close": "Cerrar",
-    "Remove": "Quitar",
-    "More": "Más"
+    "Remove": "Quitar"
   },
   "DesktopMenu": {
     "File": "Archivo",
@@ -1213,6 +1212,22 @@
     "Application": "Aplicación",
     "RemoteApplication": "Aplicación remota"
   },
+  "ConnectMethod": {
+    "BuiltinTerminal": "Terminal integrado",
+    "BuiltinTerminalDescription": "Las conexiones de caracteres usan el workspace de terminal koko y cubren protocolos de host y base de datos.",
+    "DatabaseWorkbench": "Consola de base de datos",
+    "DatabaseWorkbenchDescription": "Las conexiones de base de datos usan el workspace chen, con árbol de recursos, editor SQL y vistas de resultados.",
+    "FileManager": "Administrador de archivos",
+    "FileManagerDescription": "La gestión de archivos SFTP usa el workspace de archivos de koko.",
+    "FileEditor": "Editor de archivos",
+    "FileEditorDescription": "La edición de archivos SFTP usa el workspace File Editor de koko.",
+    "Kubernetes": "Kubernetes",
+    "KubernetesDescription": "Las conexiones K8s usan el workspace de Kubernetes UI de koko.",
+    "RemoteDesktop": "Escritorio remoto",
+    "RemoteDesktopDescription": "Las conexiones RDP/VNC usan el workspace de escritorio remoto de Lion.",
+    "BuiltinWebProxy": "Web Proxy integrado",
+    "BuiltinWebProxyDescription": "Los activos de sitios web usan el WebView del sistema y el tráfico pasa por Koko Web Proxy."
+  },
   "ConnectError": {
     "ConnectFailed": "Error de conexión",
     "AclFailed": "El activo actual está restringido por políticas de ACL y no se puede acceder a él mediante el cliente. Use la consola web para conectarse.",
@@ -1358,6 +1373,7 @@
       "items": "{count} elemento(s)",
       "newFolder": "Nueva carpeta",
       "newFile": "Nuevo archivo",
+      "nameTooLong": "El nombre no puede superar {max} caracteres",
       "newEntry": "Nuevo",
       "editPath": "Editar ruta",
       "filterCurrentDirectory": "Filtrar carpeta actual",
@@ -1458,7 +1474,10 @@
       "askWhenNeeded": "Preguntar cuando sea necesario",
       "transferTaskUnit": "tareas de transferencia",
       "distributionQueueHint": "Las tareas se ponen en cola según la carga de conexión. Siga su progreso en el centro de transferencias.",
-      "distributeToTargets": "Distribuir a {count} equipo | Distribuir a {count} equipos"
+      "distributeToTargets": "Distribuir a {count} equipo | Distribuir a {count} equipos",
+      "activeTransferCloseTitle": "Cargas en curso",
+      "activeTransferCloseDescription": "Cerrar esta sesión detendrá las transferencias de archivos que la usan.",
+      "activeTransferCloseConfirm": "Cerrar de todos modos"
     },
     "sftpTransferCenter": {
       "title": "Centro de transferencias",
@@ -1691,5 +1710,34 @@
     "errors": {
       "zmodemBlocked": "Zmodem bloqueado: transferencia en curso"
     }
+  },
+  "ExecutionPlan": {
+    "title": "Execution Plan",
+    "explain": "Explain plan",
+    "raw": "Raw Plan",
+    "tree": "Plan tree",
+    "rows": "Rows",
+    "cost": "Cost",
+    "loading": "Estimating plan…",
+    "empty": "Request an estimated plan to inspect the query.",
+    "emptyTree": "No normalized plan nodes.",
+    "emptyRaw": "No raw plan is available.",
+    "modeEstimated": "Estimated",
+    "connectionDiscarded": "The connection was discarded because session state could not be restored.",
+    "auxiliaryResidual": "Auxiliary plan rows may remain for this request.",
+    "status": {
+      "SUCCESS": "Ready",
+      "RAW_ONLY": "Raw plan only",
+      "UNSUPPORTED_STATEMENT": "Statement cannot be estimated",
+      "UNSUPPORTED_DATABASE": "Database is not supported yet",
+      "PREREQUISITES_UNMET": "Prerequisites are not met",
+      "ERROR": "Failed",
+      "CANCELLED": "Cancelled",
+      "CONNECTION_INVALIDATED": "Connection discarded"
+    },
+    "estimatedRows": "Est. rows",
+    "estimatedCost": "Est. cost",
+    "details": "Details",
+    "hideDetails": "Hide details"
   }
 }

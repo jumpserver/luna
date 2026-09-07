@@ -1,4 +1,5 @@
 import type { ChenTabDefinition } from "./base";
+import type { ChenExecutionPlan, ChenQueryBottomPane } from "./plan";
 import type { ChenDataViewDataset, ChenDataViewEditState, ChenDataViewMeta } from "./dataView";
 
 export interface ChenSqlEditorSnapshot {
@@ -87,6 +88,9 @@ export interface ChenConsoleTimelineEntry {
   completedAt?: number;
   logs: string[];
   results: ChenConsoleTimelineResult[];
+  executionPlan?: ChenExecutionPlan | null;
+  executionPlanLoading?: boolean;
+  planOnly?: boolean;
 }
 
 export interface ChenQueryConsoleTab extends ChenTabDefinition {
@@ -101,6 +105,10 @@ export interface ChenQueryConsoleTab extends ChenTabDefinition {
   resultTabs: ChenQueryResultTab[];
   activeResultTabId: string;
   socket: WebSocket | null;
+  executionPlan: ChenExecutionPlan | null;
+  executionPlanLoading: boolean;
+  activeBottomPane: ChenQueryBottomPane;
+  connectionGeneration: number;
 }
 
 export interface ChenPromptConsoleTab extends ChenTabDefinition {
@@ -115,6 +123,7 @@ export interface ChenPromptConsoleTab extends ChenTabDefinition {
   message: ChenConsoleMessage | null;
   historyEntries: ChenConsoleHistoryEntry[];
   socket: WebSocket | null;
+  connectionGeneration: number;
 }
 
 export type ChenQueryLikeWorkspaceTab = ChenQueryConsoleTab | ChenPromptConsoleTab;

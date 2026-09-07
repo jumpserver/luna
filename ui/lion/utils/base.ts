@@ -37,8 +37,8 @@ const resolveRuntimeBase = () => {
 
   return {
     prefix,
-    // ponytail: 嵌入 Luna 后 API/WS 仍走站点根 /lion/*，由 dev proxy 转发，不带 /luna 前缀
-    lionBase: LION_MARKER
+    // Lion 服务由 Koko 承载，API/WS 使用站点根路径，不带 Luna 页面前缀。
+    lionBase: "/koko/lion/"
   };
 };
 
@@ -94,11 +94,7 @@ export function withLionPath(path: string): string {
   if (BASE_PATH && (normalizedPath === BASE_PATH || normalizedPath.startsWith(`${BASE_PATH}/`))) {
     const pathWithoutBase = normalizedPath.slice(BASE_PATH.length) || "/";
 
-    if (pathWithoutBase === LION_SEGMENT || pathWithoutBase.startsWith(LION_MARKER)) {
-      return normalizedPath;
-    }
-
-    return `${LION_BASE}${trimLeadingSlash(pathWithoutBase)}`;
+    return withLionPath(pathWithoutBase);
   }
 
   if (normalizedPath === LION_SEGMENT) {

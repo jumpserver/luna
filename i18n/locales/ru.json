@@ -87,8 +87,7 @@
     "SelectFromMenu": "Выберите пункт слева",
     "Actions": "Действия",
     "Close": "Закрыть",
-    "Remove": "Удалить",
-    "More": "Ещё"
+    "Remove": "Удалить"
   },
   "DesktopMenu": {
     "File": "Файл",
@@ -1213,6 +1212,22 @@
     "Application": "Приложение",
     "RemoteApplication": "Удаленное приложение"
   },
+  "ConnectMethod": {
+    "BuiltinTerminal": "Встроенный терминал",
+    "BuiltinTerminalDescription": "Символьные подключения идут через workspace терминала koko и покрывают протоколы хостов и баз данных.",
+    "DatabaseWorkbench": "Консоль базы данных",
+    "DatabaseWorkbenchDescription": "Подключения к базам данных используют workspace chen с деревом ресурсов, SQL-редактором и представлениями результатов.",
+    "FileManager": "Файловый менеджер",
+    "FileManagerDescription": "Управление файлами SFTP использует workspace файлового менеджера koko.",
+    "FileEditor": "Редактор файлов",
+    "FileEditorDescription": "Редактирование файлов SFTP использует workspace File Editor koko.",
+    "Kubernetes": "Kubernetes",
+    "KubernetesDescription": "Подключения K8s используют workspace Kubernetes UI koko.",
+    "RemoteDesktop": "Удаленный рабочий стол",
+    "RemoteDesktopDescription": "Подключения RDP/VNC идут через workspace удаленного рабочего стола Lion.",
+    "BuiltinWebProxy": "Встроенный Web Proxy",
+    "BuiltinWebProxyDescription": "Веб-активы используют системный WebView, трафик идет через Koko Web Proxy."
+  },
   "ConnectError": {
     "ConnectFailed": "Ошибка подключения",
     "AclFailed": "Доступ к текущему ресурсу ограничен политиками ACL, поэтому подключение через клиент недоступно. Используйте веб-консоль.",
@@ -1358,6 +1373,7 @@
       "items": "Элементов: {count}",
       "newFolder": "Новая папка",
       "newFile": "Новый файл",
+      "nameTooLong": "Имя не может превышать {max} символов",
       "newEntry": "Создать",
       "editPath": "Изменить путь",
       "filterCurrentDirectory": "Фильтровать текущую папку",
@@ -1458,7 +1474,10 @@
       "askWhenNeeded": "Спрашивать при необходимости",
       "transferTaskUnit": "задач передачи",
       "distributionQueueHint": "Задачи ставятся в очередь в зависимости от нагрузки соединения. Отслеживайте прогресс в центре передачи.",
-      "distributeToTargets": "Распределить на {count} машину | Распределить на {count} машин"
+      "distributeToTargets": "Распределить на {count} машину | Распределить на {count} машин",
+      "activeTransferCloseTitle": "Идет загрузка",
+      "activeTransferCloseDescription": "Закрытие этой сессии остановит связанные с ней передачи файлов.",
+      "activeTransferCloseConfirm": "Все равно закрыть"
     },
     "sftpTransferCenter": {
       "title": "Центр передачи",
@@ -1691,5 +1710,34 @@
     "errors": {
       "zmodemBlocked": "Zmodem заблокирован: идет передача"
     }
+  },
+  "ExecutionPlan": {
+    "title": "Execution Plan",
+    "explain": "Explain plan",
+    "raw": "Raw Plan",
+    "tree": "Plan tree",
+    "rows": "Rows",
+    "cost": "Cost",
+    "loading": "Estimating plan…",
+    "empty": "Request an estimated plan to inspect the query.",
+    "emptyTree": "No normalized plan nodes.",
+    "emptyRaw": "No raw plan is available.",
+    "modeEstimated": "Estimated",
+    "connectionDiscarded": "The connection was discarded because session state could not be restored.",
+    "auxiliaryResidual": "Auxiliary plan rows may remain for this request.",
+    "status": {
+      "SUCCESS": "Ready",
+      "RAW_ONLY": "Raw plan only",
+      "UNSUPPORTED_STATEMENT": "Statement cannot be estimated",
+      "UNSUPPORTED_DATABASE": "Database is not supported yet",
+      "PREREQUISITES_UNMET": "Prerequisites are not met",
+      "ERROR": "Failed",
+      "CANCELLED": "Cancelled",
+      "CONNECTION_INVALIDATED": "Connection discarded"
+    },
+    "estimatedRows": "Est. rows",
+    "estimatedCost": "Est. cost",
+    "details": "Details",
+    "hideDetails": "Hide details"
   }
 }

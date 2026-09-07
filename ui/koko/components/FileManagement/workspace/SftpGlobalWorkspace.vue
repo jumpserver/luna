@@ -69,6 +69,7 @@ const {
   transferGlobal,
   transferring,
   unmountTransferEndpoint,
+  uploadBrowserFiles,
   uploadWebFiles
 } = props.transfer;
 
@@ -344,6 +345,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
             @select="pane.selection = $event"
             @focus="selectGlobalRemote(side, pane.id)"
             @send="sendFromSelection"
+            @browser-upload="uploadBrowserFiles($event, pane.transferEndpoint)"
             @transfer-drop="handleCrossPaneDrop($event, pane.transferEndpoint)"
             @transfer-endpoint-mounted="mountTransferEndpoint"
             @transfer-endpoint-connected="handleRemotePaneConnected"

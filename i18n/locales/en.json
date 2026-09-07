@@ -87,8 +87,7 @@
     "SelectFromMenu": "Select an item on the left",
     "Actions": "Actions",
     "Close": "Close",
-    "Remove": "Remove",
-    "More": "More"
+    "Remove": "Remove"
   },
   "DesktopMenu": {
     "File": "File",
@@ -1213,6 +1212,22 @@
     "Application": "Application",
     "RemoteApplication": "Remote Application"
   },
+  "ConnectMethod": {
+    "BuiltinTerminal": "Built-in terminal",
+    "BuiltinTerminalDescription": "Character connections use the koko terminal workspace, covering host and database protocols.",
+    "DatabaseWorkbench": "Database workbench",
+    "DatabaseWorkbenchDescription": "Database connections use the chen workspace, with a resource tree, SQL editor, and result views.",
+    "FileManager": "File manager",
+    "FileManagerDescription": "SFTP file management uses the koko file manager workspace.",
+    "FileEditor": "File editor",
+    "FileEditorDescription": "SFTP file editing uses the koko File Editor workspace.",
+    "Kubernetes": "Kubernetes",
+    "KubernetesDescription": "Kubernetes connections use the koko Kubernetes UI workspace.",
+    "RemoteDesktop": "Remote desktop",
+    "RemoteDesktopDescription": "RDP/VNC connections use the Lion remote desktop workspace.",
+    "BuiltinWebProxy": "Built-in Web Proxy",
+    "BuiltinWebProxyDescription": "Website assets use the system WebView, with traffic routed through Koko Web Proxy."
+  },
   "ConnectError": {
     "ConnectFailed": "Connection failed",
     "AclFailed": "The current asset is restricted by ACL policies and cannot be accessed via the client. Please use the Web console to connect.",
@@ -1358,6 +1373,7 @@
       "items": "{count} item(s)",
       "newFolder": "New folder",
       "newFile": "New file",
+      "nameTooLong": "Name cannot exceed {max} characters",
       "newEntry": "New",
       "editPath": "Edit path",
       "filterCurrentDirectory": "Filter current folder",
@@ -1458,7 +1474,10 @@
       "askWhenNeeded": "Ask when needed",
       "transferTaskUnit": "transfer tasks",
       "distributionQueueHint": "Tasks are queued by connection load. Track their progress in the transfer center.",
-      "distributeToTargets": "Distribute to {count} machine | Distribute to {count} machines"
+      "distributeToTargets": "Distribute to {count} machine | Distribute to {count} machines",
+      "activeTransferCloseTitle": "Uploads in progress",
+      "activeTransferCloseDescription": "Closing this session will stop file transfers that use it.",
+      "activeTransferCloseConfirm": "Close anyway"
     },
     "sftpTransferCenter": {
       "title": "Transfer center",
@@ -1691,5 +1710,34 @@
     "errors": {
       "zmodemBlocked": "Zmodem blocked: transfer in progress"
     }
+  },
+  "ExecutionPlan": {
+    "title": "Execution Plan",
+    "explain": "Explain plan",
+    "raw": "Raw Plan",
+    "tree": "Plan tree",
+    "rows": "Rows",
+    "cost": "Cost",
+    "loading": "Estimating plan…",
+    "empty": "Request an estimated plan to inspect the query.",
+    "emptyTree": "No normalized plan nodes.",
+    "emptyRaw": "No raw plan is available.",
+    "modeEstimated": "Estimated",
+    "connectionDiscarded": "The connection was discarded because session state could not be restored.",
+    "auxiliaryResidual": "Auxiliary plan rows may remain for this request.",
+    "status": {
+      "SUCCESS": "Ready",
+      "RAW_ONLY": "Raw plan only",
+      "UNSUPPORTED_STATEMENT": "Statement cannot be estimated",
+      "UNSUPPORTED_DATABASE": "Database is not supported yet",
+      "PREREQUISITES_UNMET": "Prerequisites are not met",
+      "ERROR": "Failed",
+      "CANCELLED": "Cancelled",
+      "CONNECTION_INVALIDATED": "Connection discarded"
+    },
+    "estimatedRows": "Est. rows",
+    "estimatedCost": "Est. cost",
+    "details": "Details",
+    "hideDetails": "Hide details"
   }
 }

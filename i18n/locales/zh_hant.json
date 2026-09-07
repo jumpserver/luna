@@ -87,8 +87,7 @@
     "SelectFromMenu": "請從左側選擇一個配置項",
     "Actions": "操作",
     "Close": "關閉",
-    "Remove": "移除",
-    "More": "更多"
+    "Remove": "移除"
   },
   "DesktopMenu": {
     "File": "檔案",
@@ -1213,6 +1212,22 @@
     "Application": "應用",
     "RemoteApplication": "遠端應用"
   },
+  "ConnectMethod": {
+    "BuiltinTerminal": "內建終端",
+    "BuiltinTerminalDescription": "字元型連線統一走 koko 終端 workspace，涵蓋主機協定與資料庫協定。",
+    "DatabaseWorkbench": "資料庫工作台",
+    "DatabaseWorkbenchDescription": "資料庫連線使用 chen workspace，提供資源樹、SQL 編輯器與結果檢視。",
+    "FileManager": "檔案管理",
+    "FileManagerDescription": "SFTP 檔案管理使用 koko 檔案管理 workspace。",
+    "FileEditor": "檔案編輯器",
+    "FileEditorDescription": "SFTP 檔案編輯使用 koko File Editor workspace。",
+    "Kubernetes": "Kubernetes",
+    "KubernetesDescription": "K8s 連線使用 koko Kubernetes UI workspace。",
+    "RemoteDesktop": "遠端桌面",
+    "RemoteDesktopDescription": "RDP/VNC 連線走 Lion 遠端桌面 workspace。",
+    "BuiltinWebProxy": "內建 Web Proxy",
+    "BuiltinWebProxyDescription": "Website 資產使用系統 WebView，流量統一經由 Koko Web Proxy。"
+  },
   "ConnectError": {
     "ConnectFailed": "連線失敗",
     "AclFailed": "當前資產受到 ACL 訪問限制，無法透過客戶端連線，請前往 Web 端進行訪問",
@@ -1358,6 +1373,7 @@
       "items": "{count} 項",
       "newFolder": "新建資料夾",
       "newFile": "新建檔案",
+      "nameTooLong": "名稱不能超過 {max} 個字元",
       "newEntry": "新建",
       "editPath": "編輯路徑",
       "filterCurrentDirectory": "過濾當前目錄",
@@ -1458,7 +1474,10 @@
       "askWhenNeeded": "遇到時詢問",
       "transferTaskUnit": "個傳輸任務",
       "distributionQueueHint": "任務將按連線負載排隊執行，可在傳輸中心檢視進度。",
-      "distributeToTargets": "開始分發到 {count} 臺機器 | 開始分發到 {count} 臺機器"
+      "distributeToTargets": "開始分發到 {count} 臺機器 | 開始分發到 {count} 臺機器",
+      "activeTransferCloseTitle": "檔案正在傳輸",
+      "activeTransferCloseDescription": "關閉此工作階段會中斷正在進行的檔案傳輸。",
+      "activeTransferCloseConfirm": "仍然關閉"
     },
     "sftpTransferCenter": {
       "title": "傳輸中心",
@@ -1691,5 +1710,34 @@
     "errors": {
       "zmodemBlocked": "Zmodem 已阻止：傳輸正在進行中"
     }
+  },
+  "ExecutionPlan": {
+    "title": "執行計畫",
+    "explain": "Explain plan",
+    "raw": "原始計畫",
+    "tree": "計畫樹",
+    "rows": "列數",
+    "cost": "成本",
+    "loading": "正在估算執行計畫…",
+    "empty": "請先請求估算計畫。",
+    "emptyTree": "沒有可展示的計畫節點。",
+    "emptyRaw": "沒有原始計畫。",
+    "modeEstimated": "估算",
+    "connectionDiscarded": "工作階段狀態無法還原，連線已被丟棄。",
+    "auxiliaryResidual": "這次請求可能殘留輔助計畫資料。",
+    "status": {
+      "SUCCESS": "完成",
+      "RAW_ONLY": "僅原始計畫",
+      "UNSUPPORTED_STATEMENT": "語句無法估算",
+      "UNSUPPORTED_DATABASE": "目前資料庫尚未支援",
+      "PREREQUISITES_UNMET": "前置條件不符",
+      "ERROR": "失敗",
+      "CANCELLED": "已取消",
+      "CONNECTION_INVALIDATED": "連線已丟棄"
+    },
+    "estimatedRows": "估算列數",
+    "estimatedCost": "估算成本",
+    "details": "詳情",
+    "hideDetails": "收合詳情"
   }
 }

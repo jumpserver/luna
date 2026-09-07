@@ -5,8 +5,8 @@ import { buildWsQueryParams, toWsOrigin } from "./utils/wsQuery";
 const WS_PREFIX: Record<JmsComponent, string> = {
   koko: "/koko/ws/",
   chen: "/chen/ws/",
-  lion: "/lion/ws/",
-  tinker: "/lion/ws/",
+  lion: "/koko/lion/ws/",
+  tinker: "/koko/lion/ws/",
   default: "/koko/ws/"
 };
 

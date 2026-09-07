@@ -87,8 +87,7 @@
     "SelectFromMenu": "Selecione um item à esquerda",
     "Actions": "Ações",
     "Close": "Fechar",
-    "Remove": "Remover",
-    "More": "Mais"
+    "Remove": "Remover"
   },
   "DesktopMenu": {
     "File": "Arquivo",
@@ -1213,6 +1212,22 @@
     "Application": "Aplicativo",
     "RemoteApplication": "Aplicativo remoto"
   },
+  "ConnectMethod": {
+    "BuiltinTerminal": "Terminal integrado",
+    "BuiltinTerminalDescription": "Conexões de caracteres usam o workspace de terminal koko, cobrindo protocolos de host e banco de dados.",
+    "DatabaseWorkbench": "Console de banco de dados",
+    "DatabaseWorkbenchDescription": "Conexões de banco de dados usam o workspace chen, com árvore de recursos, editor SQL e visões de resultado.",
+    "FileManager": "Gerenciador de arquivos",
+    "FileManagerDescription": "O gerenciamento de arquivos SFTP usa o workspace de arquivos koko.",
+    "FileEditor": "Editor de arquivos",
+    "FileEditorDescription": "A edição de arquivos SFTP usa o workspace File Editor do koko.",
+    "Kubernetes": "Kubernetes",
+    "KubernetesDescription": "Conexões Kubernetes usam o workspace da UI Kubernetes do koko.",
+    "RemoteDesktop": "Área de trabalho remota",
+    "RemoteDesktopDescription": "Conexões RDP/VNC usam o workspace de área de trabalho remota do Lion.",
+    "BuiltinWebProxy": "Web Proxy integrado",
+    "BuiltinWebProxyDescription": "Ativos de website usam o WebView do sistema, com o tráfego roteado pelo Koko Web Proxy."
+  },
   "ConnectError": {
     "ConnectFailed": "Falha na conexão",
     "AclFailed": "O ativo atual está restrito por políticas de ACL e não pode ser acessado pelo cliente. Use o console Web para se conectar.",
@@ -1358,6 +1373,7 @@
       "items": "{count} item(ns)",
       "newFolder": "Nova pasta",
       "newFile": "Novo arquivo",
+      "nameTooLong": "O nome não pode ter mais de {max} caracteres",
       "newEntry": "Novo",
       "editPath": "Editar caminho",
       "filterCurrentDirectory": "Filtrar pasta atual",
@@ -1458,7 +1474,10 @@
       "askWhenNeeded": "Perguntar quando necessário",
       "transferTaskUnit": "tarefas de transferência",
       "distributionQueueHint": "As tarefas entram na fila de acordo com a carga das conexões. Acompanhe o progresso na central de transferências.",
-      "distributeToTargets": "Distribuir para {count} computador | Distribuir para {count} computadores"
+      "distributeToTargets": "Distribuir para {count} computador | Distribuir para {count} computadores",
+      "activeTransferCloseTitle": "Uploads em andamento",
+      "activeTransferCloseDescription": "Fechar esta sessão interromperá as transferências de arquivos que a usam.",
+      "activeTransferCloseConfirm": "Fechar mesmo assim"
     },
     "sftpTransferCenter": {
       "title": "Central de transferências",
@@ -1691,5 +1710,34 @@
     "errors": {
       "zmodemBlocked": "Zmodem bloqueado: transferência em andamento"
     }
+  },
+  "ExecutionPlan": {
+    "title": "Execution Plan",
+    "explain": "Explain plan",
+    "raw": "Raw Plan",
+    "tree": "Plan tree",
+    "rows": "Rows",
+    "cost": "Cost",
+    "loading": "Estimating plan…",
+    "empty": "Request an estimated plan to inspect the query.",
+    "emptyTree": "No normalized plan nodes.",
+    "emptyRaw": "No raw plan is available.",
+    "modeEstimated": "Estimated",
+    "connectionDiscarded": "The connection was discarded because session state could not be restored.",
+    "auxiliaryResidual": "Auxiliary plan rows may remain for this request.",
+    "status": {
+      "SUCCESS": "Ready",
+      "RAW_ONLY": "Raw plan only",
+      "UNSUPPORTED_STATEMENT": "Statement cannot be estimated",
+      "UNSUPPORTED_DATABASE": "Database is not supported yet",
+      "PREREQUISITES_UNMET": "Prerequisites are not met",
+      "ERROR": "Failed",
+      "CANCELLED": "Cancelled",
+      "CONNECTION_INVALIDATED": "Connection discarded"
+    },
+    "estimatedRows": "Est. rows",
+    "estimatedCost": "Est. cost",
+    "details": "Details",
+    "hideDetails": "Hide details"
   }
 }

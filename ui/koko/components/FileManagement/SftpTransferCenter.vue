@@ -29,7 +29,7 @@ import {
 
 const { t } = useI18n();
 const store = useFileTransferStore();
-const { open, setOpen, ensureRestored } = useSftpTransferUi();
+const { open, setOpen, ensureRestored, leaveConfirmOpen, confirmLeave } = useSftpTransferUi();
 const filter = ref<"all">("all");
 const drawerHeight = useLocalStorage("jumpserver-client:sftp-transfer-center-height", 194);
 const resizing = ref(false);
@@ -341,4 +341,21 @@ onBeforeUnmount(stopResize);
       </div>
     </aside>
   </Transition>
+  <UModal
+    v-model:open="leaveConfirmOpen"
+    :title="t('koko.fileManagement.activeTransferCloseTitle')"
+    :description="t('koko.fileManagement.activeTransferCloseDescription')"
+    :dismissible="false"
+    :close="false"
+    :ui="{ overlay: '!z-[300]', content: 'max-w-md !z-[300]', footer: 'justify-end gap-2' }"
+  >
+    <template #footer>
+      <UButton color="neutral" variant="ghost" @click="leaveConfirmOpen = false">
+        {{ t("Common.Cancel") }}
+      </UButton>
+      <UButton color="warning" @click="confirmLeave">
+        {{ t("koko.fileManagement.activeTransferCloseConfirm") }}
+      </UButton>
+    </template>
+  </UModal>
 </template>

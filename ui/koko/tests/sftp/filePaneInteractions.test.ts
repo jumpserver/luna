@@ -6,6 +6,7 @@ import {
   resolveSftpFileType
 } from "../../composables/sftp/file-manager/filePresentation";
 import { buildSftpTransferInputs } from "../../composables/sftp/file-manager/selectors";
+import { SFTP_ENTRY_NAME_MAX_LENGTH, sftpEntryNameError } from "../../composables/sftp/file-manager/sftpEntryName";
 import {
   buildTransferSourcePayload,
   createMockDataTransfer,
@@ -32,6 +33,16 @@ const entries = [
   { name: "delta.txt", is_dir: false, size: "30" }
 ];
 
+describe("sftp entry name length", () => {
+  it("accepts 255 characters and rejects 256 without treating empty as an error", () => {
+    const tooLong = "too long";
+    expect(sftpEntryNameError("", tooLong)).toBe("");
+    expect(sftpEntryNameError("a".repeat(SFTP_ENTRY_NAME_MAX_LENGTH), tooLong)).toBe("");
+    expect(sftpEntryNameError(`  ${"a".repeat(SFTP_ENTRY_NAME_MAX_LENGTH)}  `, tooLong)).toBe("");
+    expect(sftpEntryNameError("a".repeat(SFTP_ENTRY_NAME_MAX_LENGTH + 1), tooLong)).toBe(tooLong);
+  });
+});
+
 describe("local transfer path joining", () => {
   it("keeps windows separators for local sources used by transfer center", () => {
     expect(joinLocalFsPath("C:\\Users\\demo", "a.txt")).toBe("C:\\Users\\demo\\a.txt");
@@ -56,9 +67,10 @@ describe("browser upload transfer endpoint", () => {
     expect(endpoint.ref.id).toBe(WEB_UPLOAD_ENDPOINT_ID);
     const staged = endpoint.stageFiles([new File(["hello"], "hello.txt", { type: "text/plain" })]);
     expect(staged.entries).toEqual([{ name: "hello.txt", size: "5" }]);
+    expect(staged.sourcePath).toMatch(/^\/web-upload\/[^/]+$/);
     const chunk = await endpoint.readChunk({
       transferId: "t1",
-      path: "/web-upload/hello.txt",
+      path: `${staged.sourcePath}/hello.txt`,
       offset: 0,
       length: 5
     });
@@ -73,6 +85,28 @@ describe("browser upload transfer endpoint", () => {
         conflictPolicy: "ask"
       })
     ).rejects.toThrow(/cannot receive/);
+  });
+
+  it("keeps same-name files from later stageFiles batches independently readable", async () => {
+    const endpoint = useBrowserUploadTransferEndpoint({ id: "web-upload:compact", label: "Compact Upload" });
+    expect(endpoint.ref.id).toBe("web-upload:compact");
+    const first = endpoint.stageFiles([new File(["one"], "same.txt", { type: "text/plain" })]);
+    const second = endpoint.stageFiles([new File(["two-two"], "same.txt", { type: "text/plain" })]);
+    expect(first.sourcePath).not.toBe(second.sourcePath);
+    const firstChunk = await endpoint.readChunk({
+      transferId: "t1",
+      path: `${first.sourcePath}/same.txt`,
+      offset: 0,
+      length: 8
+    });
+    const secondChunk = await endpoint.readChunk({
+      transferId: "t2",
+      path: `${second.sourcePath}/same.txt`,
+      offset: 0,
+      length: 8
+    });
+    expect(new TextDecoder().decode(firstChunk.data)).toBe("one");
+    expect(new TextDecoder().decode(secondChunk.data)).toBe("two-two");
   });
 });
 
@@ -191,7 +225,9 @@ describe("file pane transfer helpers", () => {
 
 describe("file pane presentation rules", () => {
   it("keeps file size, timestamp, extension, and server type formatting stable", () => {
-    expect(formatSftpFileSize("1000")).toBe("1 kB");
+    expect(formatSftpFileSize("1000")).toBe("1000 B");
+    expect(formatSftpFileSize("1024")).toBe("1 KB");
+    expect(formatSftpFileSize("1048576")).toBe("1 MB");
     expect(formatSftpFileSize("")).toBe("0 B");
     expect(formatSftpModifiedTime("")).toBe("—");
     expect(formatSftpModifiedTime("not-a-date")).toBe("not-a-date");

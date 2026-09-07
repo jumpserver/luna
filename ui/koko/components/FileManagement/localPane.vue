@@ -14,6 +14,7 @@ import SftpPaneDropOverlay from "#koko/components/FileManagement/pane/SftpPaneDr
 import SftpPaneFileTable from "#koko/components/FileManagement/pane/SftpPaneFileTable.vue";
 import SftpPaneSelectionBar from "#koko/components/FileManagement/pane/SftpPaneSelectionBar.vue";
 import SftpPaneTableSkeleton from "#koko/components/FileManagement/pane/SftpPaneTableSkeleton.vue";
+import { SFTP_ENTRY_NAME_MAX_LENGTH, sftpEntryNameError } from "#koko/composables/sftp/file-manager/sftpEntryName";
 import {
   buildTransferSourcePayload,
   hasEndpointPrefix,
@@ -155,9 +156,12 @@ const promptTitle = computed(() =>
     : t(promptKind.value === "file" ? "koko.fileManagement.newFile" : "koko.fileManagement.newFolder")
 );
 const promptConfirmLabel = computed(() => (promptTarget.value ? t("koko.actions.rename") : t("koko.actions.confirm")));
+const promptError = computed(() =>
+  sftpEntryNameError(promptName.value, t("koko.fileManagement.nameTooLong", { max: SFTP_ENTRY_NAME_MAX_LENGTH }))
+);
 const promptDisabled = computed(() => {
   const name = promptName.value.trim();
-  return !name || (promptTarget.value !== null && name === promptTarget.value.name);
+  return !name || Boolean(promptError.value) || (promptTarget.value !== null && name === promptTarget.value.name);
 });
 
 function clearTransferredSelection(names: string[], sourcePath: string, revision: number): void {
@@ -285,7 +289,7 @@ function requestDelete(targets = selectedEntries.value): void {
 async function submitPrompt(): Promise<void> {
   const name = promptName.value.trim();
   const target = promptTarget.value;
-  if (!name || (target && name === target.name)) return;
+  if (!name || promptError.value || (target && name === target.name)) return;
   try {
     if (target) await renameEntry(target, name);
     else if (promptKind.value === "file") await createFileAt(name);
@@ -529,6 +533,7 @@ defineExpose({
       v-model:alert-open="alertOpen"
       :prompt-title="promptTitle"
       :prompt-confirm-label="promptConfirmLabel"
+      :prompt-error="promptError"
       :prompt-disabled="promptDisabled"
       :alert-entries="alertEntries"
       @choose-folder="chooseFolder"

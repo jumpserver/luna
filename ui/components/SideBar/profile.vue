@@ -53,7 +53,7 @@ const {
   setPrimaryColorLight,
   setPrimaryColorDark
 } = useSettingManager();
-const { userTheme } = useThemeAdapter();
+const { userTheme, isThemeRevealActive } = useThemeAdapter();
 const { applyPrimaryColor } = useColor();
 
 const inputSite = ref("");
@@ -242,6 +242,17 @@ const handlePaletteOpenAutoFocus = (event: Event) => {
   event.preventDefault();
 };
 
+const handleProfileInteractOutside = (event: Event) => {
+  const nested = event
+    .composedPath()
+    .some((node) => node instanceof Element && node.hasAttribute("data-profile-nested-popover"));
+  if (nested || isThemeRevealActive()) event.preventDefault();
+};
+
+const handlePaletteInteractOutside = (event: Event) => {
+  if (isThemeRevealActive()) event.preventDefault();
+};
+
 const cancelPalettePreviewArm = () => {
   if (!palettePreviewArmFrame) return;
   cancelAnimationFrame(palettePreviewArmFrame);
@@ -320,7 +331,7 @@ function restorePalettePreview() {
 
 const applyPalettePreset = (id: ThemePresetId) => {
   const preset = getThemePreset(id);
-  if (!preset) return;
+  if (!preset || isThemeRevealActive()) return;
 
   restorePalettePreview();
 
@@ -933,7 +944,8 @@ onBeforeUnmount(() => {
       align: 'end',
       side: 'bottom',
       sideOffset: 8,
-      onOpenAutoFocus: handleProfileOpenAutoFocus
+      onOpenAutoFocus: handleProfileOpenAutoFocus,
+      onInteractOutside: handleProfileInteractOutside
     }"
     :ui="{
       content:
@@ -1060,7 +1072,7 @@ onBeforeUnmount(() => {
               </UButton>
 
               <template #content>
-                <div class="space-y-0.5">
+                <div data-profile-nested-popover class="space-y-0.5">
                   <UButton
                     v-for="item in extraLanguageItems"
                     :key="item.id"
@@ -1103,7 +1115,8 @@ onBeforeUnmount(() => {
                 align: 'start',
                 side: 'left',
                 sideOffset: 8,
-                onOpenAutoFocus: handlePaletteOpenAutoFocus
+                onOpenAutoFocus: handlePaletteOpenAutoFocus,
+                onInteractOutside: handlePaletteInteractOutside
               }"
               :ui="{
                 content:
@@ -1122,6 +1135,7 @@ onBeforeUnmount(() => {
 
               <template #content>
                 <div
+                  data-profile-nested-popover
                   class="space-y-0.5"
                   @pointermove="armPalettePreview"
                   @pointerleave="restorePalettePreview"

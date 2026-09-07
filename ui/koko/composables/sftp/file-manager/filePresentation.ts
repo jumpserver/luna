@@ -1,9 +1,18 @@
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
-import prettyBytes from "pretty-bytes";
+
+const sizeUnits = ["B", "KB", "MB", "GB", "TB"];
 
 export function formatSftpFileSize(value: string): string {
   const bytes = Number(value);
-  return Number.isFinite(bytes) && bytes >= 0 ? prettyBytes(bytes) : value || "—";
+  if (!Number.isFinite(bytes) || bytes < 0) return value || "—";
+  let amount = bytes;
+  let unit = 0;
+  while (amount >= 1024 && unit < sizeUnits.length - 1) {
+    amount /= 1024;
+    unit += 1;
+  }
+  const digits = unit === 0 || amount >= 10 ? 0 : 1;
+  return `${Number(amount.toFixed(digits))} ${sizeUnits[unit]}`;
 }
 
 export function formatSftpModifiedTime(value: string): string {

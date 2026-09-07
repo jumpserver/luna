@@ -271,6 +271,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
     loading,
     error,
     connected: socket.connected,
+    uploadTasks: operationClient.uploadTasks,
     uploadProgress: operationClient.uploadProgress,
     currentUploadName: operationClient.currentUploadName,
     queuedUploadCount: operationClient.queuedUploadCount,

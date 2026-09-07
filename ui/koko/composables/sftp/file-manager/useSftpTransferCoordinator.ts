@@ -60,6 +60,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   let highlightTimer: ReturnType<typeof setTimeout> | undefined;
   /** Web global workbench left pane — stages browser File objects for Transfer Center. */
   const browserUploadEndpoint = useBrowserUploadTransferEndpoint({
+    id: `${WEB_UPLOAD_ENDPOINT_ID}:${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`}`,
     label: options.translate("koko.fileManagement.localUpload")
   });
   let browserUploadMounted = false;
@@ -347,7 +348,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   function resolveEndpointSide(endpointId: string): SftpWorkspaceSide | null {
     if (options.primaryTransferEndpoint.value?.id === endpointId) return "left";
     if (endpointId === LOCAL_ENDPOINT_ID) return "left";
-    if (endpointId === WEB_UPLOAD_ENDPOINT_ID) return "left";
+    if (endpointId === WEB_UPLOAD_ENDPOINT_ID || endpointId.startsWith(`${WEB_UPLOAD_ENDPOINT_ID}:`)) return "left";
     const pane = options.remotePanes.value.find((item) => item.transferEndpoint.id === endpointId);
     if (!pane) return null;
     // Session dual-pane always treats remotes as the right surface.
@@ -558,6 +559,35 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     );
   }
 
+  function destinationPathFor(destination: FileTransferEndpointRef) {
+    if (options.primaryTransferEndpoint.value?.id === destination.id) {
+      return toValue(options.primaryPaneRef.value?.manager.currentPath) || "/";
+    }
+    const pane = options.remotePanes.value.find((item) => item.transferEndpoint.id === destination.id);
+    return toValue(options.remotePaneRefs.value[pane?.id || ""]?.manager.currentPath) || "/";
+  }
+
+  function uploadBrowserFiles(files: File[], destination?: FileTransferEndpointRef) {
+    if (!destination || !files.length) return;
+    ensureBrowserUploadEndpointMounted();
+    const staged = browserUploadEndpoint.stageFiles(files);
+    if (!staged.entries.length) return;
+    queueSftpTransfer(
+      {
+        sourceEndpoint: browserUploadEndpoint.ref,
+        sourcePath: staged.sourcePath,
+        sourceSelectionRevision: Date.now(),
+        entries: staged.entries,
+        destinationPath: destinationPathFor(destination)
+      },
+      destination
+    );
+  }
+
+  function uploadToPrimary(files: File[]) {
+    uploadBrowserFiles(files, options.primaryTransferEndpoint.value);
+  }
+
   onBeforeUnmount(() => {
     if (highlightTimer) clearTimeout(highlightTimer);
     for (const unregister of endpointUnregisters.values()) unregister();
@@ -603,6 +633,8 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     transferring,
     connectTransferEndpoint,
     unmountTransferEndpoint,
+    uploadBrowserFiles,
+    uploadToPrimary,
     uploadWebFiles
   };
 }

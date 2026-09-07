@@ -4,6 +4,7 @@ import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
 defineProps<{
   promptTitle: string;
   promptConfirmLabel: string;
+  promptError?: string;
   promptDisabled: boolean;
   alertEntries: SftpFileEntry[];
 }>();
@@ -45,7 +46,15 @@ const { t } = useI18n();
   </UModal>
   <UModal v-model:open="promptOpen" :title="promptTitle" :ui="{ content: 'max-w-sm' }">
     <template #body>
-      <UInput v-model="promptName" autofocus @keydown.enter.prevent="!promptDisabled && emit('submitPrompt')" />
+      <UFormField :error="promptError || undefined">
+        <UInput
+          v-model="promptName"
+          autofocus
+          :aria-invalid="Boolean(promptError)"
+          :color="promptError ? 'error' : undefined"
+          @keydown.enter.prevent="!promptDisabled && emit('submitPrompt')"
+        />
+      </UFormField>
     </template>
     <template #footer>
       <div class="flex w-full justify-end gap-2">

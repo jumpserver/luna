@@ -506,17 +506,4 @@ defineExpose({
     </template>
     <input ref="uploadInput" type="file" multiple class="hidden" @change="emit('upload', $event)" />
   </div>
-
-  <div v-if="manager.currentUploadName.value" class="border-b border-(--app-border) bg-(--app-panel-bg) px-3 py-1.5">
-    <div class="mb-1 flex items-center justify-between gap-2 text-[10px] text-(--app-muted)">
-      <span class="truncate">{{ manager.currentUploadName.value }}</span>
-      <span>{{ manager.uploadProgress.value }}%</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <UProgress :value="manager.uploadProgress.value" size="xs" class="flex-1" />
-      <span v-if="manager.queuedUploadCount.value" class="shrink-0 text-[11px] text-(--app-muted)">
-        +{{ manager.queuedUploadCount.value }}
-      </span>
-    </div>
-  </div>
 </template>

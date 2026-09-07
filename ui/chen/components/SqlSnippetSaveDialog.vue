@@ -27,7 +27,7 @@ function close() {
 </script>
 
 <template>
-  <ChenWorkspaceModal v-model:open="visible" title="Save SQL">
+  <ChenWorkspaceModal v-model:open="visible" title="Save SQL" :dismissible="false">
     <template #body>
       <UFormField label="Name">
         <UInput v-model="name" autofocus class="w-full" @keydown.enter.prevent="submit" />

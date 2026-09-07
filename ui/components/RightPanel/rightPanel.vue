@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { RightPanelTab } from "~/composables/useRightPanel";
+import { assetSupportsSftp } from "#koko/composables/sftp/file-manager/selectors";
 import { getLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
+import { getAssetDetailRequest } from "~/composables/useApiRequest";
 
 const { t } = useI18n();
 const { modernIsland } = useSettingManager();
@@ -14,9 +16,51 @@ const activeSession = computed(() => {
 });
 const lionSession = computed(() => getLionWorkspaceSession(activeSession.value?.id || ""));
 
-// SSH 会话始终提供轻量文件管理入口；真正的 SFTP 权限与令牌由面板在连接时校验，
-// 避免因为资产平台或权限元数据不完整而把入口直接隐藏。
-const showSftpTab = computed(() => activeSession.value?.protocol?.toLowerCase() === "ssh");
+const localPermedProtocols = computed(() => {
+  const session = activeSession.value;
+  const tab = workspaceTab.value;
+  return session?.permedProtocols?.length ? session.permedProtocols : tab?.permedProtocols;
+});
+const resolvedPermedProtocols = shallowRef<Array<{ name?: unknown }> | undefined>(undefined);
+let protocolFetch = 0;
+
+watch(
+  () => ({
+    sessionId: activeSession.value?.id,
+    assetId: activeSession.value?.assetId,
+    orgId: activeSession.value?.orgId,
+    protocol: activeSession.value?.protocol,
+    local: localPermedProtocols.value
+  }),
+  async ({ assetId, orgId, protocol, local }) => {
+    if (protocol?.toLowerCase() !== "ssh") {
+      resolvedPermedProtocols.value = undefined;
+      return;
+    }
+    if (local?.length) {
+      resolvedPermedProtocols.value = local;
+      return;
+    }
+    const gen = ++protocolFetch;
+    resolvedPermedProtocols.value = undefined;
+    if (!assetId) return;
+    try {
+      const detail = await getAssetDetailRequest(assetId, orgId);
+      if (gen !== protocolFetch) return;
+      resolvedPermedProtocols.value = detail.permed_protocols ?? detail.permedProtocols ?? [];
+    } catch {
+      if (gen !== protocolFetch) return;
+      resolvedPermedProtocols.value = [];
+    }
+  },
+  { immediate: true }
+);
+
+const showSftpTab = computed(() => {
+  if (activeSession.value?.protocol?.toLowerCase() !== "ssh") return false;
+  if (!resolvedPermedProtocols.value) return false;
+  return assetSupportsSftp(resolvedPermedProtocols.value);
+});
 
 const tabs = computed(() => {
   if (activeWorkspaceMode.value === "files") return [];

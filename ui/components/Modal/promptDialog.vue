@@ -40,17 +40,18 @@ function submit() {
 <template>
   <UModal v-model:open="open" :title="title" :ui="{ content: 'max-w-md', footer: 'justify-end gap-2' }">
     <template #body>
-      <div ref="inputContainer" class="space-y-2">
-        <UInput
-          v-model="modelValue"
-          :aria-label="title"
-          :placeholder="placeholder"
-          :disabled="loading"
-          @keydown.enter.prevent="submit"
-        />
-        <p v-if="error" class="text-sm text-error" role="alert">
-          {{ error }}
-        </p>
+      <div ref="inputContainer">
+        <UFormField :error="error || undefined">
+          <UInput
+            v-model="modelValue"
+            :aria-label="title"
+            :aria-invalid="Boolean(error)"
+            :placeholder="placeholder"
+            :color="error ? 'error' : undefined"
+            :disabled="loading"
+            @keydown.enter.prevent="submit"
+          />
+        </UFormField>
       </div>
     </template>
     <template #footer>

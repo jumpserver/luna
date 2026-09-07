@@ -87,8 +87,7 @@
     "SelectFromMenu": "请从左侧选择一个配置项",
     "Actions": "操作",
     "Close": "关闭",
-    "Remove": "移除",
-    "More": "更多"
+    "Remove": "移除"
   },
   "DesktopMenu": {
     "File": "文件",
@@ -1216,6 +1215,22 @@
     "Application": "应用",
     "RemoteApplication": "远程应用"
   },
+  "ConnectMethod": {
+    "BuiltinTerminal": "内置终端",
+    "BuiltinTerminalDescription": "字符型连接统一走 koko 终端 workspace，覆盖主机协议和数据库协议。",
+    "DatabaseWorkbench": "数据库工作台",
+    "DatabaseWorkbenchDescription": "数据库连接使用 chen workspace，提供资源树、SQL 编辑器和结果视图。",
+    "FileManager": "文件管理",
+    "FileManagerDescription": "SFTP 文件管理使用 koko 文件管理 workspace。",
+    "FileEditor": "文件编辑器",
+    "FileEditorDescription": "SFTP 文件编辑使用 koko File Editor workspace。",
+    "Kubernetes": "Kubernetes",
+    "KubernetesDescription": "K8s 连接使用 koko Kubernetes UI workspace。",
+    "RemoteDesktop": "远程桌面",
+    "RemoteDesktopDescription": "RDP/VNC 连接走 Lion 远程桌面 workspace。",
+    "BuiltinWebProxy": "内置 Web Proxy",
+    "BuiltinWebProxyDescription": "Website 资产使用系统 WebView，流量统一通过 Koko Web Proxy。"
+  },
   "ConnectError": {
     "ConnectFailed": "连接失败",
     "AclFailed": "当前资产受到 ACL 访问限制，无法通过客户端连接，请前往 Web 端进行访问",
@@ -1361,6 +1376,7 @@
       "items": "{count} 项",
       "newFolder": "新建文件夹",
       "newFile": "新建文件",
+      "nameTooLong": "名称不能超过 {max} 个字符",
       "newEntry": "新建",
       "editPath": "编辑路径",
       "filterCurrentDirectory": "过滤当前目录",
@@ -1461,7 +1477,10 @@
       "askWhenNeeded": "遇到时询问",
       "transferTaskUnit": "个传输任务",
       "distributionQueueHint": "任务将按连接负载排队执行，可在传输中心查看进度。",
-      "distributeToTargets": "开始分发到 {count} 台机器"
+      "distributeToTargets": "开始分发到 {count} 台机器",
+      "activeTransferCloseTitle": "文件正在传输",
+      "activeTransferCloseDescription": "关闭此会话会中断正在进行的文件传输。",
+      "activeTransferCloseConfirm": "仍然关闭"
     },
     "sftpTransferCenter": {
       "title": "传输中心",
@@ -1694,5 +1713,34 @@
     "errors": {
       "zmodemBlocked": "Zmodem 已阻止：传输正在进行中"
     }
+  },
+  "ExecutionPlan": {
+    "title": "执行计划",
+    "explain": "Explain plan",
+    "raw": "原始计划",
+    "tree": "计划树",
+    "rows": "行数",
+    "cost": "成本",
+    "loading": "正在估算执行计划…",
+    "empty": "请求估算计划后可在此查看。",
+    "emptyTree": "没有可展示的计划节点。",
+    "emptyRaw": "没有原始计划。",
+    "modeEstimated": "估算",
+    "connectionDiscarded": "会话状态无法恢复，连接已被丢弃。",
+    "auxiliaryResidual": "本次请求可能残留辅助计划行。",
+    "status": {
+      "SUCCESS": "完成",
+      "RAW_ONLY": "仅原始计划",
+      "UNSUPPORTED_STATEMENT": "语句无法估算",
+      "UNSUPPORTED_DATABASE": "当前数据库尚未支持",
+      "PREREQUISITES_UNMET": "前置条件不满足",
+      "ERROR": "失败",
+      "CANCELLED": "已取消",
+      "CONNECTION_INVALIDATED": "连接已丢弃"
+    },
+    "estimatedRows": "估算行数",
+    "estimatedCost": "估算成本",
+    "details": "详情",
+    "hideDetails": "收起详情"
   }
 }

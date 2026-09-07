@@ -9,6 +9,7 @@ import type {
   ChenTableStructureWorkspaceTab,
   ChenWorkspaceTab
 } from "~/chen/types";
+import type { ChenExecutionPlan } from "~/chen/types/plan";
 
 import { mergeChenDataViewTiming, startChenDataViewTiming } from "~/chen/composables/useChenDataView";
 import { newChenWorkspaceId } from "~/chen/composables/useChenWorkspaceTabs";
@@ -20,6 +21,15 @@ import {
 
 const SQL_CHUNK_SIZE = 4096;
 const MAX_CONSOLE_TIMELINE_ENTRIES = 200;
+
+interface PendingExecutionPlan {
+  tabId: string;
+  entryId?: string;
+  generation: number;
+  target: "query" | "console";
+}
+
+const pendingExecutionPlans = new Map<string, PendingExecutionPlan>();
 
 export function chenQueryResultLabel(result: ChenQueryResultTab, index: number) {
   const metaTable = typeof result.meta.table === "string" ? result.meta.table.trim() : "";
@@ -220,6 +230,7 @@ export function useChenQueryConsole(
       case "init":
         tab.title = packet.data?.title || tab.title;
         tab.serverConsoleId = String(packet.data?.consoleId || "");
+        tab.connectionGeneration = (tab.connectionGeneration || 0) + 1;
         break;
       case "log":
         appendLog(tab, packet.data);
@@ -288,6 +299,9 @@ export function useChenQueryConsole(
         break;
       case "close_data_view":
         if (tab.kind === "query") removeQueryResults(tab, packet.data);
+        break;
+      case "execution_plan":
+        applyExecutionPlan(tab, packet.data);
         break;
       case "console_result":
         if (tab.kind === "console" && packet.data?.data) {
@@ -432,6 +446,95 @@ export function useChenQueryConsole(
     tab.timelineEntries = [];
   }
 
+  function tabHasPendingPlan(tabId: string) {
+    for (const pending of pendingExecutionPlans.values()) {
+      if (pending.tabId === tabId) return true;
+    }
+    return false;
+  }
+
+  function applyExecutionPlan(tab: ChenQueryLikeWorkspaceTab, data: ChenExecutionPlan | null | undefined) {
+    if (!data || typeof data !== "object" || !data.requestId) return;
+    const pending = pendingExecutionPlans.get(data.requestId);
+    if (!pending || pending.tabId !== tab.id) return;
+    pendingExecutionPlans.delete(data.requestId);
+    if ((tab.connectionGeneration || 0) !== pending.generation) return;
+
+    if (tab.kind === "query") {
+      tab.executionPlan = data;
+      tab.executionPlanLoading = false;
+      tab.activeBottomPane = "plan";
+      return;
+    }
+
+    const entry =
+      tab.timelineEntries.find((item) => item.id === pending.entryId) ||
+      tab.timelineEntries.find((item) => item.id === tab.activeTimelineEntryId);
+    if (!entry) return;
+    entry.executionPlan = data;
+    entry.executionPlanLoading = false;
+  }
+
+  function requestExecutionPlan(tab: ChenQueryLikeWorkspaceTab, sql: string, targetEntryId?: string) {
+    const statement = sql.trim();
+    if (!statement || tab.state.loading || tab.state.inQuery) return;
+    if (tabHasPendingPlan(tab.id)) return;
+
+    const requestId = newChenWorkspaceId("plan");
+    let entryId = targetEntryId;
+    if (tab.kind === "query") {
+      tab.executionPlanLoading = true;
+      tab.activeBottomPane = "plan";
+    } else {
+      let entry = entryId ? tab.timelineEntries.find((item) => item.id === entryId) : null;
+      if (!entry) {
+        entry = {
+          id: newChenWorkspaceId("execution"),
+          sql: statement,
+          status: "success",
+          startedAt: Date.now(),
+          completedAt: Date.now(),
+          logs: [],
+          results: [],
+          executionPlanLoading: true,
+          planOnly: true
+        };
+        tab.timelineEntries.push(entry);
+        if (tab.timelineEntries.length > MAX_CONSOLE_TIMELINE_ENTRIES) {
+          tab.timelineEntries.splice(0, tab.timelineEntries.length - MAX_CONSOLE_TIMELINE_ENTRIES);
+        }
+        entryId = entry.id;
+      } else {
+        entry.executionPlanLoading = true;
+      }
+    }
+
+    pendingExecutionPlans.set(requestId, {
+      tabId: tab.id,
+      entryId,
+      generation: tab.connectionGeneration || 0,
+      target: tab.kind === "console" ? "console" : "query"
+    });
+
+    const sent = sendConsoleAction(tab, "query_console_action", {
+      action: "get_execution_plan",
+      data: statement,
+      requestId
+    });
+    if (sent !== false) return;
+
+    pendingExecutionPlans.delete(requestId);
+    if (tab.kind === "query") tab.executionPlanLoading = false;
+    else if (entryId) {
+      const entry = tab.timelineEntries.find((item) => item.id === entryId);
+      if (entry) entry.executionPlanLoading = false;
+    }
+  }
+
+  function activateQueryBottomPane(tab: ChenQueryConsoleTab, pane: "results" | "plan") {
+    tab.activeBottomPane = pane;
+  }
+
   function cancelQueryLikeTab(tab: ChenQueryLikeWorkspaceTab) {
     if (tab.kind === "query" && !tab.state.canCancel) return;
     if (tab.kind === "console") {
@@ -443,6 +546,7 @@ export function useChenQueryConsole(
   }
 
   return {
+    activateQueryBottomPane,
     appendLog,
     cancelQueryLikeTab,
     changeQueryContext,
@@ -452,6 +556,7 @@ export function useChenQueryConsole(
     failConsoleExecution,
     handleQueryConsolePacket,
     removeQueryResult,
+    requestExecutionPlan,
     runConsoleTab,
     runQueryFile,
     runQueryTab,

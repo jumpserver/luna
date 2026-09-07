@@ -1,4 +1,4 @@
-import { BASE_URL, BASE_WS_URL, ORIGIN, withBasePath, withBaseUrl, withLionWsUrl } from "./base";
+import { BASE_URL, BASE_WS_URL, ORIGIN, withBasePath, withLionUrl, withLionWsUrl } from "./base";
 
 export function sanitizeFilename(filename: string): string {
   return filename.replace(/[\\/]+/g, "_");
@@ -17,7 +17,7 @@ export { BASE_URL, BASE_WS_URL };
 
 export const OriginSite = ORIGIN;
 
-export const BaseAPIURL = withBaseUrl("/lion/api");
+export const BaseAPIURL = withLionUrl("/api");
 
 const sessionBaseAPI = withBasePath("/api");
 const wsURL = withLionWsUrl("/ws/connect/");

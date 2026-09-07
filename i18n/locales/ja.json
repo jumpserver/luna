@@ -87,8 +87,7 @@
     "SelectFromMenu": "左側から項目を選択してください",
     "Actions": "操作",
     "Close": "閉じる",
-    "Remove": "削除",
-    "More": "その他"
+    "Remove": "削除"
   },
   "DesktopMenu": {
     "File": "ファイル",
@@ -1213,6 +1212,22 @@
     "Application": "アプリケーション",
     "RemoteApplication": "リモートアプリケーション"
   },
+  "ConnectMethod": {
+    "BuiltinTerminal": "内蔵ターミナル",
+    "BuiltinTerminalDescription": "文字系接続は koko ターミナル workspace に統一し、ホストとデータベースのプロトコルをカバーします。",
+    "DatabaseWorkbench": "データベースワークベンチ",
+    "DatabaseWorkbenchDescription": "データベース接続は chen workspace を使用し、リソースツリー、SQL エディター、結果ビューを提供します。",
+    "FileManager": "ファイル管理",
+    "FileManagerDescription": "SFTP ファイル管理は koko ファイル管理 workspace を使用します。",
+    "FileEditor": "ファイルエディター",
+    "FileEditorDescription": "SFTP ファイル編集は koko File Editor workspace を使用します。",
+    "Kubernetes": "Kubernetes",
+    "KubernetesDescription": "K8s 接続は koko Kubernetes UI workspace を使用します。",
+    "RemoteDesktop": "リモートデスクトップ",
+    "RemoteDesktopDescription": "RDP/VNC 接続は Lion リモートデスクトップ workspace を使用します。",
+    "BuiltinWebProxy": "内蔵 Web Proxy",
+    "BuiltinWebProxyDescription": "Website 資産はシステム WebView を使用し、トラフィックは Koko Web Proxy 経由で統一します。"
+  },
   "ConnectError": {
     "ConnectFailed": "接続に失敗しました",
     "AclFailed": "現在のアセットは ACL ポリシーによって制限されているため、クライアントからアクセスできません。Web コンソールから接続してください。",
@@ -1358,6 +1373,7 @@
       "items": "{count} 件",
       "newFolder": "新しいフォルダー",
       "newFile": "新しいファイル",
+      "nameTooLong": "名前は {max} 文字以内にしてください",
       "newEntry": "新規",
       "editPath": "パスを編集",
       "filterCurrentDirectory": "現在のフォルダーを絞り込み",
@@ -1458,7 +1474,10 @@
       "askWhenNeeded": "必要時に確認",
       "transferTaskUnit": "転送タスク",
       "distributionQueueHint": "タスクは接続負荷に応じてキューに追加されます。転送センターで進捗を確認できます。",
-      "distributeToTargets": "{count} 台のマシンに配布 | {count} 台のマシンに配布"
+      "distributeToTargets": "{count} 台のマシンに配布 | {count} 台のマシンに配布",
+      "activeTransferCloseTitle": "アップロード中です",
+      "activeTransferCloseDescription": "このセッションを閉じると、使用中のファイル転送が停止します。",
+      "activeTransferCloseConfirm": "それでも閉じる"
     },
     "sftpTransferCenter": {
       "title": "転送センター",
@@ -1691,5 +1710,34 @@
     "errors": {
       "zmodemBlocked": "Zmodem をブロックしました：転送中です"
     }
+  },
+  "ExecutionPlan": {
+    "title": "実行計画",
+    "explain": "Explain plan",
+    "raw": "生のプラン",
+    "tree": "プランツリー",
+    "rows": "行",
+    "cost": "コスト",
+    "loading": "実行計画を推定しています…",
+    "empty": "推定プランを取得するとここに表示されます。",
+    "emptyTree": "正規化されたノードがありません。",
+    "emptyRaw": "生のプランがありません。",
+    "modeEstimated": "推定",
+    "connectionDiscarded": "セッション状態を復元できなかったため接続を破棄しました。",
+    "auxiliaryResidual": "このリクエストの補助プラン行が残っている可能性があります。",
+    "status": {
+      "SUCCESS": "完了",
+      "RAW_ONLY": "生プランのみ",
+      "UNSUPPORTED_STATEMENT": "この文は推定できません",
+      "UNSUPPORTED_DATABASE": "このデータベースは未対応です",
+      "PREREQUISITES_UNMET": "前提条件を満たしていません",
+      "ERROR": "失敗",
+      "CANCELLED": "キャンセル済み",
+      "CONNECTION_INVALIDATED": "接続を破棄しました"
+    },
+    "estimatedRows": "見積行数",
+    "estimatedCost": "見積コスト",
+    "details": "詳細",
+    "hideDetails": "詳細を隠す"
   }
 }

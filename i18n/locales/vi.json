@@ -87,8 +87,7 @@
     "SelectFromMenu": "Chọn một mục ở bên trái",
     "Actions": "Thao tác",
     "Close": "Đóng",
-    "Remove": "Xóa",
-    "More": "Thêm"
+    "Remove": "Xóa"
   },
   "DesktopMenu": {
     "File": "Tệp",
@@ -1213,6 +1212,22 @@
     "Application": "Ứng dụng",
     "RemoteApplication": "Ứng dụng từ xa"
   },
+  "ConnectMethod": {
+    "BuiltinTerminal": "Terminal tích hợp",
+    "BuiltinTerminalDescription": "Kết nối ký tự thống nhất qua workspace terminal koko, bao gồm giao thức máy chủ và cơ sở dữ liệu.",
+    "DatabaseWorkbench": "Bàn làm việc cơ sở dữ liệu",
+    "DatabaseWorkbenchDescription": "Kết nối cơ sở dữ liệu dùng workspace chen, với cây tài nguyên, trình soạn SQL và khung kết quả.",
+    "FileManager": "Quản lý tệp",
+    "FileManagerDescription": "Quản lý tệp SFTP dùng workspace quản lý tệp koko.",
+    "FileEditor": "Trình soạn thảo tệp",
+    "FileEditorDescription": "Chỉnh sửa tệp SFTP dùng workspace File Editor của koko.",
+    "Kubernetes": "Kubernetes",
+    "KubernetesDescription": "Kết nối K8s dùng workspace Kubernetes UI của koko.",
+    "RemoteDesktop": "Máy tính từ xa",
+    "RemoteDesktopDescription": "Kết nối RDP/VNC đi qua workspace máy tính từ xa Lion.",
+    "BuiltinWebProxy": "Web Proxy tích hợp",
+    "BuiltinWebProxyDescription": "Tài sản website dùng WebView hệ thống, lưu lượng đi qua Koko Web Proxy."
+  },
   "ConnectError": {
     "ConnectFailed": "Kết nối thất bại",
     "AclFailed": "Tài sản hiện tại bị giới hạn bởi chính sách ACL và không thể truy cập bằng máy khách. Hãy dùng bảng điều khiển web để kết nối.",
@@ -1358,6 +1373,7 @@
       "items": "{count} mục",
       "newFolder": "Thư mục mới",
       "newFile": "Tệp mới",
+      "nameTooLong": "Tên không được vượt quá {max} ký tự",
       "newEntry": "Mới",
       "editPath": "Sửa đường dẫn",
       "filterCurrentDirectory": "Lọc thư mục hiện tại",
@@ -1458,7 +1474,10 @@
       "askWhenNeeded": "Hỏi khi cần",
       "transferTaskUnit": "tác vụ truyền",
       "distributionQueueHint": "Tác vụ được xếp hàng theo tải kết nối. Theo dõi tiến độ trong trung tâm truyền.",
-      "distributeToTargets": "Phân phối đến {count} máy | Phân phối đến {count} máy"
+      "distributeToTargets": "Phân phối đến {count} máy | Phân phối đến {count} máy",
+      "activeTransferCloseTitle": "Đang tải lên",
+      "activeTransferCloseDescription": "Đóng phiên này sẽ dừng các tác vụ truyền tệp đang dùng phiên.",
+      "activeTransferCloseConfirm": "Vẫn đóng"
     },
     "sftpTransferCenter": {
       "title": "Trung tâm truyền",
@@ -1691,5 +1710,34 @@
     "errors": {
       "zmodemBlocked": "Zmodem bị chặn: đang truyền dữ liệu"
     }
+  },
+  "ExecutionPlan": {
+    "title": "Execution Plan",
+    "explain": "Explain plan",
+    "raw": "Raw Plan",
+    "tree": "Plan tree",
+    "rows": "Rows",
+    "cost": "Cost",
+    "loading": "Estimating plan…",
+    "empty": "Request an estimated plan to inspect the query.",
+    "emptyTree": "No normalized plan nodes.",
+    "emptyRaw": "No raw plan is available.",
+    "modeEstimated": "Estimated",
+    "connectionDiscarded": "The connection was discarded because session state could not be restored.",
+    "auxiliaryResidual": "Auxiliary plan rows may remain for this request.",
+    "status": {
+      "SUCCESS": "Ready",
+      "RAW_ONLY": "Raw plan only",
+      "UNSUPPORTED_STATEMENT": "Statement cannot be estimated",
+      "UNSUPPORTED_DATABASE": "Database is not supported yet",
+      "PREREQUISITES_UNMET": "Prerequisites are not met",
+      "ERROR": "Failed",
+      "CANCELLED": "Cancelled",
+      "CONNECTION_INVALIDATED": "Connection discarded"
+    },
+    "estimatedRows": "Est. rows",
+    "estimatedCost": "Est. cost",
+    "details": "Details",
+    "hideDetails": "Hide details"
   }
 }

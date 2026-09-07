@@ -27,6 +27,19 @@ export const sftpTransferConflictError = "target_exists";
 export const sftpTransferEndpointUnavailableError = "endpoint_unavailable";
 export const sftpTransferTerminalStatuses = new Set<FileTransferStatus>(["completed", "skipped", "failed", "canceled"]);
 
+export function sftpEndpointHasActiveTransfers(
+  tasks: FileTransferTask[] | null | undefined,
+  endpointIds: Iterable<string>
+) {
+  const ids = new Set([...endpointIds].filter(Boolean));
+  if (!ids.size) return false;
+  return (tasks ?? []).some(
+    (task) =>
+      !sftpTransferTerminalStatuses.has(task.status) &&
+      (ids.has(task.destinationEndpoint.id) || ids.has(task.sourceEndpoint.id))
+  );
+}
+
 export function selectSftpTransferTasks(tasks: FileTransferTask[] | null | undefined): FileTransferTask[] {
   return (tasks ?? []).filter(
     (task) => task.sourceEndpoint.id.startsWith("sftp:") || task.destinationEndpoint.id.startsWith("sftp:")

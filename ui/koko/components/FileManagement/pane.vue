@@ -68,6 +68,7 @@ const emit = defineEmits<{
   focus: [];
   addRemote: [];
   startTour: [];
+  browserUpload: [files: File[]];
 }>();
 
 const { t } = useI18n();
@@ -177,6 +178,7 @@ const {
   promptName,
   promptTitle,
   promptConfirmLabel,
+  promptError,
   promptDisabled,
   alertOpen,
   alertTarget,
@@ -189,7 +191,6 @@ const {
   downloadSelected,
   submitPrompt,
   confirmAlert,
-  uploadFromEvent,
   refreshCurrentDirectory
 } = actions;
 
@@ -233,17 +234,39 @@ function canAcceptTransferDrag(event: DragEvent): boolean {
   );
 }
 
+function hasNativeFileDrag(event: DragEvent): boolean {
+  return Array.from(event.dataTransfer?.types || []).includes("Files");
+}
+
 function onTransferDragOver(event: DragEvent): void {
-  if (!canAcceptTransferDrag(event)) return;
-  event.preventDefault();
-  if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+  if (hasNativeFileDrag(event) || canAcceptTransferDrag(event)) {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+  }
 }
 
 function clearTransferDragState(): void {
   activeTransferDragSourceId.value = null;
 }
 
+function emitBrowserUpload(files: File[]): void {
+  if (files.length) emit("browserUpload", files);
+}
+
+function onUpload(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  const files = [...(input.files || [])];
+  input.value = "";
+  emitBrowserUpload(files);
+}
+
 function onTransferDrop(event: DragEvent): void {
+  const files = [...(event.dataTransfer?.files || [])];
+  if (files.length) {
+    event.preventDefault();
+    emitBrowserUpload(files);
+    return;
+  }
   const payload = parseTransferDragPayload(event, props.transferEndpoint?.id);
   clearTransferDragState();
   if (!payload) return;
@@ -434,7 +457,7 @@ defineExpose({
       @go-to-path="goToAbsolutePath"
       @create-folder="createFolder"
       @create-file="createFile"
-      @upload="uploadFromEvent"
+      @upload="onUpload"
       @add-remote="emit('addRemote')"
       @start-tour="emit('startTour')"
     />
@@ -500,6 +523,7 @@ defineExpose({
       v-model:open="promptOpen"
       v-model="promptName"
       :title="promptTitle"
+      :error="promptError"
       :confirm-label="promptConfirmLabel"
       :disabled="promptDisabled"
       @confirm="submitPrompt"

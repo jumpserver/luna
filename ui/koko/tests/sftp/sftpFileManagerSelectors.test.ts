@@ -18,11 +18,12 @@ describe("sftp workspace selectors", () => {
     expect(defaultGlobalLeftPaneId(false)).toBe("web-upload");
   });
 
-  it("accepts undeclared or SFTP-capable assets and rejects explicit non-SFTP assets", () => {
-    expect(assetSupportsSftp()).toBe(true);
-    expect(assetSupportsSftp([])).toBe(true);
-    expect(assetSupportsSftp([{ name: "SSH" }, { name: " SFTP " }])).toBe(true);
+  it("requires an explicit SFTP protocol", () => {
+    expect(assetSupportsSftp()).toBe(false);
+    expect(assetSupportsSftp([])).toBe(false);
     expect(assetSupportsSftp([{ name: "SSH" }])).toBe(false);
+    expect(assetSupportsSftp([{ name: "SSH" }, { name: " SFTP " }])).toBe(true);
+    expect(assetSupportsSftp([{ name: { value: "sftp" } }])).toBe(true);
   });
 
   it("moves a recent connection to the front without duplicating the asset", () => {
