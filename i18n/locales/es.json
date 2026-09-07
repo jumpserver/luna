@@ -1708,5 +1708,34 @@
     "errors": {
       "zmodemBlocked": "Zmodem bloqueado: transferencia en curso"
     }
+  },
+  "ExecutionPlan": {
+    "title": "Execution Plan",
+    "explain": "Explain plan",
+    "raw": "Raw Plan",
+    "tree": "Plan tree",
+    "rows": "Rows",
+    "cost": "Cost",
+    "loading": "Estimating plan…",
+    "empty": "Request an estimated plan to inspect the query.",
+    "emptyTree": "No normalized plan nodes.",
+    "emptyRaw": "No raw plan is available.",
+    "modeEstimated": "Estimated",
+    "connectionDiscarded": "The connection was discarded because session state could not be restored.",
+    "auxiliaryResidual": "Auxiliary plan rows may remain for this request.",
+    "status": {
+      "SUCCESS": "Ready",
+      "RAW_ONLY": "Raw plan only",
+      "UNSUPPORTED_STATEMENT": "Statement cannot be estimated",
+      "UNSUPPORTED_DATABASE": "Database is not supported yet",
+      "PREREQUISITES_UNMET": "Prerequisites are not met",
+      "ERROR": "Failed",
+      "CANCELLED": "Cancelled",
+      "CONNECTION_INVALIDATED": "Connection discarded"
+    },
+    "estimatedRows": "Est. rows",
+    "estimatedCost": "Est. cost",
+    "details": "Details",
+    "hideDetails": "Hide details"
   }
 }

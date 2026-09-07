@@ -71,7 +71,11 @@ export function useChenWorkspaceTabs() {
       message: null,
       resultTabs: [],
       activeResultTabId: "",
-      socket: null
+      socket: null,
+      executionPlan: null,
+      executionPlanLoading: false,
+      activeBottomPane: "results",
+      connectionGeneration: 0
     };
 
     return registerTab(tab);
@@ -94,7 +98,8 @@ export function useChenWorkspaceTabs() {
       logs: [],
       message: null,
       historyEntries: [],
-      socket: null
+      socket: null,
+      connectionGeneration: 0
     };
 
     return registerTab(tab);

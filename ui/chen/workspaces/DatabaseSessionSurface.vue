@@ -1771,6 +1771,18 @@ function dismissQueryMessage(tab: ChenQueryConsoleTab) {
   queryConsole.dismissQueryMessage(tab);
 }
 
+function requestQueryExecutionPlan(tab: ChenQueryConsoleTab, sql: string) {
+  queryConsole.requestExecutionPlan(tab, sql);
+}
+
+function activateQueryBottomPane(tab: ChenQueryConsoleTab, pane: "results" | "plan") {
+  queryConsole.activateQueryBottomPane(tab, pane);
+}
+
+function requestConsoleExecutionPlan(tab: ChenPromptConsoleTab, sql: string, entryId?: string) {
+  queryConsole.requestExecutionPlan(tab, sql, entryId);
+}
+
 function runQueryDataViewAction(
   tab: ChenQueryConsoleTab,
   result: ChenQueryResultTab,
@@ -2011,6 +2023,8 @@ defineExpose({ focus });
             @ai-repair="requestSqlAi('repair')"
             @activate-result="activateQueryResult"
             @close-result="closeQueryResult"
+            @explain-plan="requestQueryExecutionPlan"
+            @activate-bottom-pane="activateQueryBottomPane"
           />
 
           <ConsolePanel
@@ -2025,6 +2039,7 @@ defineExpose({ focus });
             @cancel="cancelQueryLikeTab"
             @clear="clearConsoleTranscript"
             @update-pending-sql="updateConsolePendingSql"
+            @explain-plan="requestConsoleExecutionPlan"
             @ai-generate="openSqlAi"
             @ai-explain="requestSqlAi('explain')"
             @ai-repair="requestSqlAi('repair')"
