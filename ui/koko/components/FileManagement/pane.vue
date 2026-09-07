@@ -61,6 +61,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [entry: SftpFileEntry | null];
   send: [payload: SftpTransferSourcePayload];
+  download: [payload: SftpTransferSourcePayload];
   transferDrop: [payload: SftpTransferDropPayload];
   transferEndpointMounted: [endpoint: FileTransferEndpoint];
   transferEndpointConnected: [];
@@ -144,7 +145,6 @@ function hideContextMenu(): void {
 }
 
 function transferSourcePayload(): SftpTransferSourcePayload | null {
-  if (!canTransferFiles.value) return null;
   return buildTransferSourcePayload({
     sourceEndpoint: props.transferEndpoint,
     sourcePath: manager.currentPath.value,
@@ -154,10 +154,18 @@ function transferSourcePayload(): SftpTransferSourcePayload | null {
 }
 
 function requestSend(): void {
+  if (!canTransferFiles.value) return;
   const payload = transferSourcePayload();
   if (!payload) return;
   hideContextMenu();
   emit("send", payload);
+}
+
+function requestDownload(): void {
+  const payload = transferSourcePayload();
+  if (!payload) return;
+  hideContextMenu();
+  emit("download", payload);
 }
 
 const actions = useSftpRemotePaneActions({
@@ -171,6 +179,7 @@ const actions = useSftpRemotePaneActions({
   updateSelection,
   hideContextMenu,
   requestSend,
+  requestDownload,
   translate: (key, params) => String(params ? t(key, params) : t(key))
 });
 const {
@@ -490,12 +499,14 @@ defineExpose({
         @context="openContextMenu"
         @drag-start="onDragStart"
       >
-        <template #footer>
+        <template #status>
           <SftpPaneSelectionBar
             :selected-count="selectedEntries.length"
             :transferable-count="transferableEntries.length"
             :can-send="canTransferFiles && canSend"
-            :can-download="selectedEntries.length === 1"
+            :can-download="
+              Boolean(transferableEntries.length || (selectedEntries.length === 1 && selectedEntry?.is_dir))
+            "
             :send-peer-direction="sendPeerDirection"
             @send="requestSend"
             @download="downloadSelected"

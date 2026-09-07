@@ -64,6 +64,7 @@ const {
   localSelection,
   localSelections,
   mountTransferEndpoint,
+  queueSftpDownload,
   remotePaneConnected,
   sendFromSelection,
   transferGlobal,
@@ -345,6 +346,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
             @select="pane.selection = $event"
             @focus="selectGlobalRemote(side, pane.id)"
             @send="sendFromSelection"
+            @download="queueSftpDownload"
             @browser-upload="uploadBrowserFiles($event, pane.transferEndpoint)"
             @transfer-drop="handleCrossPaneDrop($event, pane.transferEndpoint)"
             @transfer-endpoint-mounted="mountTransferEndpoint"

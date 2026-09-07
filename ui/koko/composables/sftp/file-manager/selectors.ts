@@ -51,6 +51,13 @@ function joinTransferSourcePath(basePath: string, name: string): string {
   return `${base.replace(/\/+$/, "") || "/"}/${name}`.replace(/\/+/g, "/");
 }
 
+export function safeLocalDownloadName(name: string) {
+  let safeName = name.replace(/[<>:"/\\|?*\p{Cc}]/gu, "_").replace(/[. ]+$/g, "_");
+  if (!safeName) safeName = "download";
+  if (/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(safeName)) safeName = `_${safeName}`;
+  return safeName;
+}
+
 export function buildSftpTransferInputs(
   payload: SftpTransferDropPayload,
   destination: FileTransferEndpointRef

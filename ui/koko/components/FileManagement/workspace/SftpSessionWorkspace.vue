@@ -56,6 +56,7 @@ const {
   highlightedNames,
   isSimplePeerMode,
   mountTransferEndpoint,
+  queueSftpDownload,
   queueSftpTransferToSelected,
   remotePaneConnected,
   sendFromSelection,
@@ -202,6 +203,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
         :send-peer-direction="primarySendPeerDirection"
         @focus="focusPrimaryPane"
         @send="sendFromSelection"
+        @download="queueSftpDownload"
         @browser-upload="uploadToPrimary"
         @transfer-drop="queueSftpTransferToSelected($event, primaryTransferEndpoint)"
         @transfer-endpoint-mounted="mountTransferEndpoint"
@@ -302,6 +304,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
           "
           @focus="focusSessionRemote(pane.id)"
           @send="sendFromSelection"
+          @download="queueSftpDownload"
           @browser-upload="uploadBrowserFiles($event, pane.transferEndpoint)"
           @transfer-drop="queueSftpTransferToSelected($event, pane.transferEndpoint)"
           @transfer-endpoint-mounted="mountTransferEndpoint"
