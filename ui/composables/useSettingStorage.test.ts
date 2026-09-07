@@ -12,6 +12,10 @@ describe("user setting defaults", () => {
     expect(DEFAULT_STATE.terminalCommandSuggestionsEnabled).toBe(true);
   });
 
+  it("enables xterm right-click quick paste by default", () => {
+    expect(DEFAULT_STATE.rightClickQuickPaste).toBe(true);
+  });
+
   it("keeps modern island layout off until the user opts in", () => {
     expect(DEFAULT_STATE.modernIsland).toBe(false);
   });

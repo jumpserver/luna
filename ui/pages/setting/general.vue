@@ -49,10 +49,12 @@ const {
   charset,
   rdpResolution,
   backspaceAsCtrlH,
+  rightClickQuickPaste,
   terminalCommandSuggestionsEnabled,
   setCharsetPreference,
   setRdpResolutionPreference,
   setBackspacePreference,
+  setRightClickQuickPaste,
   setTerminalCommandSuggestionsEnabled
 } = settingManager;
 const { debugLog, setDebugLog, clearLogs, copyLogs, downloadLogs, clearFeedback, copyFeedback, downloadFeedback } =
@@ -153,6 +155,11 @@ const selectedresolution = computed<ResolutionType>({
 const selectedEnabled = computed<boolean>({
   get: () => backspaceAsCtrlH.value ?? false,
   set: (value: boolean) => setBackspacePreference(!!value)
+});
+
+const selectedRightClickQuickPaste = computed<boolean>({
+  get: () => rightClickQuickPaste.value ?? true,
+  set: (value: boolean) => setRightClickQuickPaste(!!value)
 });
 
 const ffmpegStatus = ref<FfmpegPluginStatus | null>(null);
@@ -272,6 +279,13 @@ async function clearCommandHistory() {
 
       <SettingsRow :title="t('Setting.TerminalBackspace')" :description="t('Setting.TerminalBackspaceDescription')">
         <USwitch v-model="selectedEnabled" :aria-label="t('Setting.TerminalBackspace')" />
+      </SettingsRow>
+
+      <SettingsRow
+        :title="t('Setting.TerminalRightClickPaste')"
+        :description="t('Setting.TerminalRightClickPasteDescription')"
+      >
+        <USwitch v-model="selectedRightClickQuickPaste" :aria-label="t('Setting.TerminalRightClickPaste')" />
       </SettingsRow>
 
       <SettingsRow :title="t('Setting.Resolution')" :description="t('Setting.ResolutionDescription')">
