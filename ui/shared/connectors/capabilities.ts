@@ -30,16 +30,16 @@ export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] 
   {
     component: "koko",
     surface: "terminal",
-    label: "内置终端",
+    label: "ConnectMethod.BuiltinTerminal",
     protocols: ["ssh", "telnet", "mariadb", "mongodb", "mysql", "oracle", "postgresql", "redis", "sqlserver"],
     connectMethods: [WEB_CLI_NATIVE_VALUE],
     backendConnectMethod: "web_cli",
-    description: "字符型连接统一走 koko 终端 workspace，覆盖主机协议和数据库协议。"
+    description: "ConnectMethod.BuiltinTerminalDescription"
   },
   {
     component: "chen",
     surface: "database",
-    label: "数据库工作台",
+    label: "ConnectMethod.DatabaseWorkbench",
     protocols: [
       "clickhouse",
       "dameng",
@@ -53,50 +53,50 @@ export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] 
       "sqlserver"
     ],
     connectMethods: [WEB_DB_NATIVE_VALUE],
-    description: "数据库连接使用 chen workspace，提供资源树、SQL 编辑器和结果视图。"
+    description: "ConnectMethod.DatabaseWorkbenchDescription"
   },
   {
     component: "koko",
     surface: "file-manager",
-    label: "文件管理",
+    label: "ConnectMethod.FileManager",
     protocols: ["sftp"],
     connectMethods: [SFTP_FILE_MANAGER_VALUE],
     backendConnectMethod: "web_sftp",
-    description: "SFTP 文件管理使用 koko 文件管理 workspace。"
+    description: "ConnectMethod.FileManagerDescription"
   },
   {
     component: "koko",
     surface: "file-editor",
-    label: "File Editor",
+    label: "ConnectMethod.FileEditor",
     protocols: ["sftp"],
     connectMethods: [SFTP_FILE_EDITOR_VALUE],
     backendConnectMethod: "web_sftp",
-    description: "SFTP 文件编辑使用 koko File Editor workspace。"
+    description: "ConnectMethod.FileEditorDescription"
   },
   {
     component: "koko",
     surface: "k8s-ui",
-    label: "Kubernetes",
+    label: "ConnectMethod.Kubernetes",
     protocols: ["k8s", "kubernetes"],
     connectMethods: [K8S_NATIVE_VALUE],
     backendConnectMethod: "web_cli",
-    description: "K8s 连接使用 koko Kubernetes UI workspace。"
+    description: "ConnectMethod.KubernetesDescription"
   },
   {
     component: "lion",
     surface: "remote-desktop",
-    label: "远程桌面",
+    label: "ConnectMethod.RemoteDesktop",
     protocols: ["rdp", "vnc"],
     connectMethods: [WEB_RDP_NATIVE_VALUE],
-    description: "RDP/VNC 连接走 Lion 远程桌面 workspace。"
+    description: "ConnectMethod.RemoteDesktopDescription"
   },
   {
     component: "koko",
     surface: "web-browser",
-    label: "内置 Web Proxy",
+    label: "ConnectMethod.BuiltinWebProxy",
     protocols: ["http", "https"],
     connectMethods: [WEB_PROXY_NATIVE_VALUE],
-    description: "Website 资产使用系统 WebView，流量统一通过 Koko Web Proxy。"
+    description: "ConnectMethod.BuiltinWebProxyDescription"
   }
 ];
 

@@ -87,8 +87,7 @@
     "SelectFromMenu": "請從左側選擇一個配置項",
     "Actions": "操作",
     "Close": "關閉",
-    "Remove": "移除",
-    "More": "更多"
+    "Remove": "移除"
   },
   "DesktopMenu": {
     "File": "檔案",
@@ -1210,6 +1209,22 @@
     "BuiltIn": "內建",
     "Application": "應用",
     "RemoteApplication": "遠端應用"
+  },
+  "ConnectMethod": {
+    "BuiltinTerminal": "內建終端",
+    "BuiltinTerminalDescription": "字元型連線統一走 koko 終端 workspace，涵蓋主機協定與資料庫協定。",
+    "DatabaseWorkbench": "資料庫工作台",
+    "DatabaseWorkbenchDescription": "資料庫連線使用 chen workspace，提供資源樹、SQL 編輯器與結果檢視。",
+    "FileManager": "檔案管理",
+    "FileManagerDescription": "SFTP 檔案管理使用 koko 檔案管理 workspace。",
+    "FileEditor": "檔案編輯器",
+    "FileEditorDescription": "SFTP 檔案編輯使用 koko File Editor workspace。",
+    "Kubernetes": "Kubernetes",
+    "KubernetesDescription": "K8s 連線使用 koko Kubernetes UI workspace。",
+    "RemoteDesktop": "遠端桌面",
+    "RemoteDesktopDescription": "RDP/VNC 連線走 Lion 遠端桌面 workspace。",
+    "BuiltinWebProxy": "內建 Web Proxy",
+    "BuiltinWebProxyDescription": "Website 資產使用系統 WebView，流量統一經由 Koko Web Proxy。"
   },
   "ConnectError": {
     "ConnectFailed": "連線失敗",

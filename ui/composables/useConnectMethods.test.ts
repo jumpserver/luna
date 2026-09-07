@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import type { ConnectMethod } from "~/composables/useConnectMethods";
+import { describe, expect, it, vi } from "vitest";
 import {
   isExternalClientConnectMethod,
   WEB_PROXY_NATIVE_VALUE,
@@ -32,7 +32,7 @@ describe("desktop website connect methods", () => {
 
     expect(methods.map((item) => item.value)).toEqual([WEB_PROXY_NATIVE_VALUE, "chrome", "edge", "360se_app"]);
     expect(methods[0]).toMatchObject({
-      label: "内置 Web Proxy",
+      label: "ConnectMethod.BuiltinWebProxy",
       type: "web",
       component: "web-proxy",
       origin_value: "chrome"

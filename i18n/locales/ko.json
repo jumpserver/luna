@@ -87,8 +87,7 @@
     "SelectFromMenu": "왼쪽에서 항목을 선택하세요",
     "Actions": "작업",
     "Close": "닫기",
-    "Remove": "제거",
-    "More": "더 보기"
+    "Remove": "제거"
   },
   "DesktopMenu": {
     "File": "파일",
@@ -1210,6 +1209,22 @@
     "BuiltIn": "내장",
     "Application": "애플리케이션",
     "RemoteApplication": "원격 애플리케이션"
+  },
+  "ConnectMethod": {
+    "BuiltinTerminal": "내장 터미널",
+    "BuiltinTerminalDescription": "문자형 연결은 koko 터미널 workspace로 통일되며 호스트와 데이터베이스 프로토콜을 포함합니다.",
+    "DatabaseWorkbench": "데이터베이스 워크벤치",
+    "DatabaseWorkbenchDescription": "데이터베이스 연결은 chen workspace를 사용하며 리소스 트리, SQL 편집기, 결과 뷰를 제공합니다.",
+    "FileManager": "파일 관리",
+    "FileManagerDescription": "SFTP 파일 관리는 koko 파일 관리 workspace를 사용합니다.",
+    "FileEditor": "파일 에디터",
+    "FileEditorDescription": "SFTP 파일 편집은 koko File Editor workspace를 사용합니다.",
+    "Kubernetes": "Kubernetes",
+    "KubernetesDescription": "K8s 연결은 koko Kubernetes UI workspace를 사용합니다.",
+    "RemoteDesktop": "원격 데스크톱",
+    "RemoteDesktopDescription": "RDP/VNC 연결은 Lion 원격 데스크톱 workspace를 사용합니다.",
+    "BuiltinWebProxy": "내장 Web Proxy",
+    "BuiltinWebProxyDescription": "Website 자산은 시스템 WebView를 사용하며 트래픽은 Koko Web Proxy를 통해 전달됩니다."
   },
   "ConnectError": {
     "ConnectFailed": "연결 실패",

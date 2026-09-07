@@ -87,8 +87,7 @@
     "SelectFromMenu": "Chọn một mục ở bên trái",
     "Actions": "Thao tác",
     "Close": "Đóng",
-    "Remove": "Xóa",
-    "More": "Thêm"
+    "Remove": "Xóa"
   },
   "DesktopMenu": {
     "File": "Tệp",
@@ -1210,6 +1209,22 @@
     "BuiltIn": "Tích hợp",
     "Application": "Ứng dụng",
     "RemoteApplication": "Ứng dụng từ xa"
+  },
+  "ConnectMethod": {
+    "BuiltinTerminal": "Terminal tích hợp",
+    "BuiltinTerminalDescription": "Kết nối ký tự thống nhất qua workspace terminal koko, bao gồm giao thức máy chủ và cơ sở dữ liệu.",
+    "DatabaseWorkbench": "Bàn làm việc cơ sở dữ liệu",
+    "DatabaseWorkbenchDescription": "Kết nối cơ sở dữ liệu dùng workspace chen, với cây tài nguyên, trình soạn SQL và khung kết quả.",
+    "FileManager": "Quản lý tệp",
+    "FileManagerDescription": "Quản lý tệp SFTP dùng workspace quản lý tệp koko.",
+    "FileEditor": "Trình soạn thảo tệp",
+    "FileEditorDescription": "Chỉnh sửa tệp SFTP dùng workspace File Editor của koko.",
+    "Kubernetes": "Kubernetes",
+    "KubernetesDescription": "Kết nối K8s dùng workspace Kubernetes UI của koko.",
+    "RemoteDesktop": "Máy tính từ xa",
+    "RemoteDesktopDescription": "Kết nối RDP/VNC đi qua workspace máy tính từ xa Lion.",
+    "BuiltinWebProxy": "Web Proxy tích hợp",
+    "BuiltinWebProxyDescription": "Tài sản website dùng WebView hệ thống, lưu lượng đi qua Koko Web Proxy."
   },
   "ConnectError": {
     "ConnectFailed": "Kết nối thất bại",

@@ -87,8 +87,7 @@
     "SelectFromMenu": "Selecione um item à esquerda",
     "Actions": "Ações",
     "Close": "Fechar",
-    "Remove": "Remover",
-    "More": "Mais"
+    "Remove": "Remover"
   },
   "DesktopMenu": {
     "File": "Arquivo",
@@ -1210,6 +1209,22 @@
     "BuiltIn": "Integrado",
     "Application": "Aplicativo",
     "RemoteApplication": "Aplicativo remoto"
+  },
+  "ConnectMethod": {
+    "BuiltinTerminal": "Terminal integrado",
+    "BuiltinTerminalDescription": "Conexões de caracteres usam o workspace de terminal koko, cobrindo protocolos de host e banco de dados.",
+    "DatabaseWorkbench": "Console de banco de dados",
+    "DatabaseWorkbenchDescription": "Conexões de banco de dados usam o workspace chen, com árvore de recursos, editor SQL e visões de resultado.",
+    "FileManager": "Gerenciador de arquivos",
+    "FileManagerDescription": "O gerenciamento de arquivos SFTP usa o workspace de arquivos koko.",
+    "FileEditor": "Editor de arquivos",
+    "FileEditorDescription": "A edição de arquivos SFTP usa o workspace File Editor do koko.",
+    "Kubernetes": "Kubernetes",
+    "KubernetesDescription": "Conexões Kubernetes usam o workspace da UI Kubernetes do koko.",
+    "RemoteDesktop": "Área de trabalho remota",
+    "RemoteDesktopDescription": "Conexões RDP/VNC usam o workspace de área de trabalho remota do Lion.",
+    "BuiltinWebProxy": "Web Proxy integrado",
+    "BuiltinWebProxyDescription": "Ativos de website usam o WebView do sistema, com o tráfego roteado pelo Koko Web Proxy."
   },
   "ConnectError": {
     "ConnectFailed": "Falha na conexão",

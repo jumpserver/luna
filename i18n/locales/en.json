@@ -87,8 +87,7 @@
     "SelectFromMenu": "Select an item on the left",
     "Actions": "Actions",
     "Close": "Close",
-    "Remove": "Remove",
-    "More": "More"
+    "Remove": "Remove"
   },
   "DesktopMenu": {
     "File": "File",
@@ -1210,6 +1209,22 @@
     "BuiltIn": "Built-in",
     "Application": "Application",
     "RemoteApplication": "Remote Application"
+  },
+  "ConnectMethod": {
+    "BuiltinTerminal": "Built-in terminal",
+    "BuiltinTerminalDescription": "Character connections use the koko terminal workspace, covering host and database protocols.",
+    "DatabaseWorkbench": "Database workbench",
+    "DatabaseWorkbenchDescription": "Database connections use the chen workspace, with a resource tree, SQL editor, and result views.",
+    "FileManager": "File manager",
+    "FileManagerDescription": "SFTP file management uses the koko file manager workspace.",
+    "FileEditor": "File editor",
+    "FileEditorDescription": "SFTP file editing uses the koko File Editor workspace.",
+    "Kubernetes": "Kubernetes",
+    "KubernetesDescription": "Kubernetes connections use the koko Kubernetes UI workspace.",
+    "RemoteDesktop": "Remote desktop",
+    "RemoteDesktopDescription": "RDP/VNC connections use the Lion remote desktop workspace.",
+    "BuiltinWebProxy": "Built-in Web Proxy",
+    "BuiltinWebProxyDescription": "Website assets use the system WebView, with traffic routed through Koko Web Proxy."
   },
   "ConnectError": {
     "ConnectFailed": "Connection failed",

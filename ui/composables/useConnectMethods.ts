@@ -141,7 +141,7 @@ export const withWebProxyBuiltin = (
   const builtin: ConnectMethod = {
     ...origin,
     value: WEB_PROXY_NATIVE_VALUE,
-    label: "内置 Web Proxy",
+    label: "ConnectMethod.BuiltinWebProxy",
     type: "web",
     component: "web-proxy",
     origin_value: origin.value
@@ -276,6 +276,7 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
 };
 
 export const useConnectMethods = () => {
+  const { t } = useI18n();
   const { currentAccountId, orgId } = storeToRefs(useUserInfoStore());
 
   const fetchConnectMethods = async (): Promise<ConnectMethodsResponse> => {
@@ -316,7 +317,12 @@ export const useConnectMethods = () => {
         ([key, methods]) => key.toLowerCase() === normalizedProtocol && Array.isArray(methods)
       )?.[1] || [];
     const methodsWithFallback = withKokoWebFallback(normalizedProtocol, protocolMethods);
-    return withWebProxyBuiltin(normalizedProtocol, methodsWithFallback).filter((method) => !method.disabled);
+    return withWebProxyBuiltin(normalizedProtocol, methodsWithFallback)
+      .filter((method) => !method.disabled)
+      .map((method) => ({
+        ...method,
+        label: method.label.startsWith("ConnectMethod.") ? t(method.label) : method.label
+      }));
   };
 
   const getDefaultMethodForProtocol = async (protocol: string): Promise<string> => {
