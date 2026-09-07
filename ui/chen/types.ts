@@ -5,3 +5,4 @@ export type * from "./types/workspace";
 export type * from "./types/schemaOverview";
 export type * from "./types/sqlMetadata";
 export type * from "./types/tableMetadata";
+export type * from "./types/plan";

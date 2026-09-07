@@ -87,8 +87,7 @@
     "SelectFromMenu": "左側から項目を選択してください",
     "Actions": "操作",
     "Close": "閉じる",
-    "Remove": "削除",
-    "More": "その他"
+    "Remove": "削除"
   },
   "DesktopMenu": {
     "File": "ファイル",
@@ -1675,6 +1674,31 @@
     },
     "errors": {
       "zmodemBlocked": "Zmodem をブロックしました：転送中です"
+    }
+  },
+  "ExecutionPlan": {
+    "title": "実行計画",
+    "explain": "Explain plan",
+    "raw": "生のプラン",
+    "tree": "プランツリー",
+    "rows": "行",
+    "cost": "コスト",
+    "loading": "実行計画を推定しています…",
+    "empty": "推定プランを取得するとここに表示されます。",
+    "emptyTree": "正規化されたノードがありません。",
+    "emptyRaw": "生のプランがありません。",
+    "modeEstimated": "推定",
+    "connectionDiscarded": "セッション状態を復元できなかったため接続を破棄しました。",
+    "auxiliaryResidual": "このリクエストの補助プラン行が残っている可能性があります。",
+    "status": {
+      "SUCCESS": "完了",
+      "RAW_ONLY": "生プランのみ",
+      "UNSUPPORTED_STATEMENT": "この文は推定できません",
+      "UNSUPPORTED_DATABASE": "このデータベースは未対応です",
+      "PREREQUISITES_UNMET": "前提条件を満たしていません",
+      "ERROR": "失敗",
+      "CANCELLED": "キャンセル済み",
+      "CONNECTION_INVALIDATED": "接続を破棄しました"
     }
   }
 }

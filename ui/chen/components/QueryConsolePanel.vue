@@ -10,6 +10,7 @@ import type {
 } from "~/chen/types";
 import type { ChenSqlMetadataStore } from "~/chen/utils/sqlMetadata";
 
+import ExecutionPlanTree from "~/chen/components/ExecutionPlanTree.vue";
 import QueryResultTabs from "~/chen/components/QueryResultTabs.vue";
 import ChenSqlEditor from "~/chen/components/SqlEditor.client.vue";
 import SqlSnippetSaveDialog from "~/chen/components/SqlSnippetSaveDialog.vue";
@@ -46,6 +47,8 @@ const emit = defineEmits<{
   aiRepair: [tab: ChenQueryConsoleTab];
   activateResult: [tab: ChenQueryConsoleTab, id: string];
   closeResult: [tab: ChenQueryConsoleTab, title: string];
+  explainPlan: [tab: ChenQueryConsoleTab, sql: string];
+  activateBottomPane: [tab: ChenQueryConsoleTab, pane: "results" | "plan"];
 }>();
 
 const sqlEditor = ref<{
@@ -113,6 +116,13 @@ const aiItems = computed(() => {
   ];
 });
 const sqlFileItems = computed(() => [
+  {
+    label: t("ExecutionPlan.explain"),
+    icon: "i-lucide-git-fork",
+    disabled: contextBusy.value || !(sqlEditor.value?.executionText() || props.tab.statement).trim(),
+    onSelect: () =>
+      emit("explainPlan", props.tab, sqlEditor.value?.executionText() || props.tab.statement)
+  },
   {
     label: "Open",
     icon: "i-lucide-folder-open",
@@ -466,7 +476,24 @@ defineExpose({ editorSnapshot });
     </div>
 
     <div class="flex min-h-0 flex-col">
+      <div class="flex shrink-0 items-center gap-1 border-b border-default px-2 py-1">
+        <button
+          class="rounded-md px-2 py-1 text-xs"
+          :class="tab.activeBottomPane !== 'plan' ? 'bg-accented' : 'text-muted hover:bg-[var(--app-hover-soft)]'"
+          @click="emit('activateBottomPane', tab, 'results')"
+        >
+          Results
+        </button>
+        <button
+          class="rounded-md px-2 py-1 text-xs"
+          :class="tab.activeBottomPane === 'plan' ? 'bg-accented' : 'text-muted hover:bg-[var(--app-hover-soft)]'"
+          @click="emit('activateBottomPane', tab, 'plan')"
+        >
+          {{ t("ExecutionPlan.title") }}
+        </button>
+      </div>
       <QueryResultTabs
+        v-if="tab.activeBottomPane !== 'plan'"
         class="min-h-0 flex-1"
         :result-tabs="tab.resultTabs"
         :active-result-tab-id="tab.activeResultTabId"
@@ -480,6 +507,7 @@ defineExpose({ editorSnapshot });
         @close="emit('closeResult', tab, $event)"
         @data-view-action="(result, action, data) => emit('dataViewAction', tab, result, action, data)"
       />
+      <ExecutionPlanTree v-else class="min-h-0 flex-1" :plan="tab.executionPlan" :loading="tab.executionPlanLoading" />
     </div>
 
     <SqlSnippetSaveDialog

@@ -87,8 +87,7 @@
     "SelectFromMenu": "請從左側選擇一個配置項",
     "Actions": "操作",
     "Close": "關閉",
-    "Remove": "移除",
-    "More": "更多"
+    "Remove": "移除"
   },
   "DesktopMenu": {
     "File": "檔案",
@@ -1675,6 +1674,31 @@
     },
     "errors": {
       "zmodemBlocked": "Zmodem 已阻止：傳輸正在進行中"
+    }
+  },
+  "ExecutionPlan": {
+    "title": "執行計畫",
+    "explain": "Explain plan",
+    "raw": "原始計畫",
+    "tree": "計畫樹",
+    "rows": "列數",
+    "cost": "成本",
+    "loading": "正在估算執行計畫…",
+    "empty": "請先請求估算計畫。",
+    "emptyTree": "沒有可展示的計畫節點。",
+    "emptyRaw": "沒有原始計畫。",
+    "modeEstimated": "估算",
+    "connectionDiscarded": "工作階段狀態無法還原，連線已被丟棄。",
+    "auxiliaryResidual": "這次請求可能殘留輔助計畫資料。",
+    "status": {
+      "SUCCESS": "完成",
+      "RAW_ONLY": "僅原始計畫",
+      "UNSUPPORTED_STATEMENT": "語句無法估算",
+      "UNSUPPORTED_DATABASE": "目前資料庫尚未支援",
+      "PREREQUISITES_UNMET": "前置條件不符",
+      "ERROR": "失敗",
+      "CANCELLED": "已取消",
+      "CONNECTION_INVALIDATED": "連線已丟棄"
     }
   }
 }

@@ -51,7 +51,7 @@
     "Active": "활성",
     "Inactive": "비활성",
     "Language": "언어",
-    "More": "더보기",
+    "More": "더 보기",
     "Login": "로그인",
     "Connect": "연결",
     "Theme": "테마",
@@ -87,8 +87,7 @@
     "SelectFromMenu": "왼쪽에서 항목을 선택하세요",
     "Actions": "작업",
     "Close": "닫기",
-    "Remove": "제거",
-    "More": "더 보기"
+    "Remove": "제거"
   },
   "DesktopMenu": {
     "File": "파일",
@@ -1675,6 +1674,31 @@
     },
     "errors": {
       "zmodemBlocked": "Zmodem 차단됨: 전송 진행 중"
+    }
+  },
+  "ExecutionPlan": {
+    "title": "Execution Plan",
+    "explain": "Explain plan",
+    "raw": "Raw Plan",
+    "tree": "Plan tree",
+    "rows": "Rows",
+    "cost": "Cost",
+    "loading": "Estimating plan…",
+    "empty": "Request an estimated plan to inspect the query.",
+    "emptyTree": "No normalized plan nodes.",
+    "emptyRaw": "No raw plan is available.",
+    "modeEstimated": "Estimated",
+    "connectionDiscarded": "The connection was discarded because session state could not be restored.",
+    "auxiliaryResidual": "Auxiliary plan rows may remain for this request.",
+    "status": {
+      "SUCCESS": "Ready",
+      "RAW_ONLY": "Raw plan only",
+      "UNSUPPORTED_STATEMENT": "Statement cannot be estimated",
+      "UNSUPPORTED_DATABASE": "Database is not supported yet",
+      "PREREQUISITES_UNMET": "Prerequisites are not met",
+      "ERROR": "Failed",
+      "CANCELLED": "Cancelled",
+      "CONNECTION_INVALIDATED": "Connection discarded"
     }
   }
 }
