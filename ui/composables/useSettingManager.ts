@@ -315,6 +315,11 @@ export const useSettingManager = () => {
     persist({ backspaceAsCtrlH: state.backspaceAsCtrlH });
   };
 
+  const setRightClickQuickPaste = (enabled: boolean) => {
+    state.rightClickQuickPaste = !!enabled;
+    persist({ rightClickQuickPaste: state.rightClickQuickPaste });
+  };
+
   const setTerminalCommandSuggestionsEnabled = (enabled: boolean) => {
     state.terminalCommandSuggestionsEnabled = !!enabled;
     persist({ terminalCommandSuggestionsEnabled: state.terminalCommandSuggestionsEnabled });
@@ -409,6 +414,7 @@ export const useSettingManager = () => {
     setCharsetPreference,
     setRdpResolutionPreference,
     setBackspacePreference,
+    setRightClickQuickPaste,
     setTerminalCommandSuggestionsEnabled,
     setKeyboardLayoutPreference,
     setRdpClientOptionPreference,

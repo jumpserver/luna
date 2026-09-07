@@ -1,4 +1,5 @@
 import { MESSAGE_TYPE } from "@jumpserver/connectors-core";
+import { readText } from "clipboard-polyfill";
 import { afterEach, expect, it, vi } from "vitest";
 import { computed, ref, shallowRef } from "vue";
 
@@ -10,7 +11,6 @@ import {
   parseJSONPayload,
   parseTerminalPayload
 } from "#koko/composables/terminal/envelope";
-import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
 import { parseTerminalIncomingMessage } from "#koko/composables/terminal/protocol";
 import {
   getKokoLinuxMetrics,
@@ -31,7 +31,13 @@ import {
 import { useKokoTerminalInput } from "#koko/composables/terminal/useTerminalInput";
 import { useKokoTerminalMessageHandler } from "#koko/composables/terminal/useTerminalMessageHandler";
 import { saveZmodemPacketsToDisk, sendZmodemFiles } from "#koko/composables/terminal/zmodemBrowser";
+import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
 import { resolveClipboardAccess, validateClipboardText } from "#koko/utils/clipboardAcl";
+
+vi.mock("clipboard-polyfill", () => ({
+  readText: vi.fn(async () => "clipped"),
+  writeText: vi.fn(async () => undefined)
+}));
 
 it("combines token actions with clipboard policy and text limits", () => {
   const access = resolveClipboardAccess(
@@ -140,6 +146,88 @@ it("blocks denied copy and paste events before xterm handles them", () => {
   ]);
   expect(keyHandler?.({ key: "Enter", isComposing: true } as KeyboardEvent)).toBe(false);
 
+  input.stop();
+});
+
+function startContextMenuInput(overrides: {
+  getTerminalConfig: () => { quickPaste?: string };
+  socket?: { send: ReturnType<typeof vi.fn> } | null;
+}) {
+  const container = new EventTarget();
+  const onContextMenu = vi.fn();
+  const send = overrides.socket?.send ?? vi.fn();
+  const input = useKokoTerminalInput({
+    container: shallowRef(container as HTMLElement),
+    terminal: ref({
+      attachCustomKeyEventHandler: vi.fn(),
+      blur: vi.fn(),
+      focus: vi.fn(),
+      getSelection: vi.fn(() => ""),
+      hasSelection: vi.fn(() => false),
+      onData: vi.fn(),
+      onResize: vi.fn(),
+      onSelectionChange: vi.fn()
+    } as never),
+    socket: ref(overrides.socket === null ? null : ({ send } as never)),
+    terminalId: ref("1"),
+    sessionId: ref("session-1"),
+    selectionText: ref(""),
+    lastSendTime: ref(new Date()),
+    fit: vi.fn(),
+    isSocketOpen: vi.fn(() => true),
+    isZmodemActive: vi.fn(() => false),
+    abortZmodem: vi.fn(),
+    onContextMenu,
+    getTerminalConfig: vi.fn(overrides.getTerminalConfig),
+    onResize: vi.fn(),
+    onHostKey: vi.fn(),
+    inputLocked: vi.fn(() => false),
+    addErrorToast: vi.fn(),
+    translate: vi.fn((key) => key),
+    sendHostEvent: vi.fn(),
+    sendToHost: vi.fn(),
+    sendMittEvent: vi.fn(),
+    validateClipboardText: vi.fn(() => true)
+  });
+  input.start();
+  return { container, input, onContextMenu, send };
+}
+
+it("pastes on right-click when quickPaste is enabled", async () => {
+  vi.mocked(readText).mockResolvedValue("clipped");
+  const { container, input, onContextMenu, send } = startContextMenuInput({
+    getTerminalConfig: () => ({ quickPaste: "1" }),
+    socket: { send: vi.fn() }
+  });
+  const event = new Event("contextmenu", { cancelable: true }) as MouseEvent;
+  container.dispatchEvent(event);
+  await vi.waitFor(() => expect(send).toHaveBeenCalled());
+  expect(onContextMenu).not.toHaveBeenCalled();
+  input.stop();
+});
+
+it("opens the menu on ctrl+right-click even when quickPaste is enabled", () => {
+  const { container, input, onContextMenu, send } = startContextMenuInput({
+    getTerminalConfig: () => ({ quickPaste: "1" }),
+    socket: { send: vi.fn() }
+  });
+  const event = new Event("contextmenu", { cancelable: true }) as MouseEvent;
+  Object.defineProperty(event, "ctrlKey", { value: true });
+  container.dispatchEvent(event);
+  expect(onContextMenu).toHaveBeenCalledWith(event);
+  expect(send).not.toHaveBeenCalled();
+  input.stop();
+});
+
+it("opens the menu on right-click when quickPaste is disabled", () => {
+  const { container, input, onContextMenu, send } = startContextMenuInput({
+    getTerminalConfig: () => ({ quickPaste: "0" }),
+    socket: { send: vi.fn() }
+  });
+  const event = new Event("contextmenu", { cancelable: true }) as MouseEvent;
+  container.dispatchEvent(event);
+  expect(onContextMenu).toHaveBeenCalledWith(event);
+  expect(send).not.toHaveBeenCalled();
   input.stop();
 });
 

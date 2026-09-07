@@ -39,6 +39,28 @@ export function useKokoTerminalInput(options: {
 }) {
   const cleanup: Array<() => void> = [];
 
+  const pasteClipboard = async () => {
+    if (!options.validateClipboardText("paste", "")) return false;
+
+    let text = "";
+    try {
+      text = await readText();
+    } catch {
+      text = options.selectionText.value;
+    }
+    const socket = options.socket.value;
+    if (!text || !socket || options.inputLocked() || !options.isSocketOpen(socket)) {
+      if (socket && !options.isSocketOpen(socket)) {
+        options.addErrorToast({ title: options.translate("koko.terminal.websocketConnectionClosed") });
+      }
+      return false;
+    }
+    if (!options.validateClipboardText("paste", text)) return false;
+    options.onExternalData?.();
+    socket.send(formatMessage(options.terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, text));
+    return true;
+  };
+
   function start() {
     const terminal = options.terminal.value;
     const container = options.container.value;
@@ -51,6 +73,10 @@ export function useKokoTerminalInput(options: {
     };
     const onContextMenu = (event: MouseEvent) => {
       event.preventDefault();
+      if (options.getTerminalConfig().quickPaste === "1" && !event.ctrlKey) {
+        void pasteClipboard();
+        return;
+      }
       options.onContextMenu(event);
     };
     const onPaste = (event: ClipboardEvent) => {
@@ -152,27 +178,7 @@ export function useKokoTerminalInput(options: {
         return false;
       }
     },
-    pasteClipboard: async () => {
-      if (!options.validateClipboardText("paste", "")) return false;
-
-      let text = "";
-      try {
-        text = await readText();
-      } catch {
-        text = options.selectionText.value;
-      }
-      const socket = options.socket.value;
-      if (!text || !socket || options.inputLocked() || !options.isSocketOpen(socket)) {
-        if (socket && !options.isSocketOpen(socket)) {
-          options.addErrorToast({ title: options.translate("koko.terminal.websocketConnectionClosed") });
-        }
-        return false;
-      }
-      if (!options.validateClipboardText("paste", text)) return false;
-      options.onExternalData?.();
-      socket.send(formatMessage(options.terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, text));
-      return true;
-    },
+    pasteClipboard,
     start,
     stop
   };

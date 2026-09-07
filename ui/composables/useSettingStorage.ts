@@ -75,6 +75,7 @@ export interface UserSettingPersistedState {
   charset: CharsetType;
   rdpResolution: ResolutionType;
   backspaceAsCtrlH: boolean;
+  rightClickQuickPaste: boolean;
   terminalCommandSuggestionsEnabled: boolean;
   keyboardLayout: string;
   rdpClientOption: string[];
@@ -115,6 +116,7 @@ export const DEFAULT_STATE: UserSettingPersistedState = {
   charset: "default",
   rdpResolution: "auto",
   backspaceAsCtrlH: false,
+  rightClickQuickPaste: true,
   terminalCommandSuggestionsEnabled: true,
   keyboardLayout: "en-us-qwerty",
   rdpClientOption: [],

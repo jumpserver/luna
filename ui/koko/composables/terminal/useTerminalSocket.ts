@@ -2,10 +2,9 @@ import type { TerminalMessageHandlers } from "#koko/composables/terminal/useTerm
 import type { OnlineUser, SettingConfig, ShareUserOptions } from "#koko/types/session";
 import type { KokoZmodemSentry } from "./zmodemTypes";
 import { connectorSessionKey, FORMATTER_MESSAGE_TYPE, HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
-import { useKokoHostAdapter } from "#koko/host";
 import { useDebounceFn, useResizeObserver } from "@vueuse/core";
-
 import { FitAddon } from "@xterm/addon-fit";
+
 import { SearchAddon } from "@xterm/addon-search";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { Terminal } from "@xterm/xterm";
@@ -47,6 +46,7 @@ import {
   unregisterKokoTerminalSession
 } from "#koko/composables/useTerminalSessionRegistry";
 import { useKokoWsUrl } from "#koko/composables/wsUrl";
+import { useKokoHostAdapter } from "#koko/host";
 import { useKokoConnectionStore } from "#koko/stores/connection";
 import { useKokoTerminalSettingsStore } from "#koko/stores/terminalSettings";
 import { getDefaultTerminalConfig } from "#koko/utils/guard";
@@ -114,6 +114,14 @@ export const useKokoTerminalSocket = () => {
   const hostAdapter = useKokoHostAdapter();
   const defaultTerminalCfg = getDefaultTerminalConfig();
   const terminalSettingsStore = useKokoTerminalSettingsStore();
+  const { rightClickQuickPaste } = useSettingManager();
+  watch(
+    rightClickQuickPaste,
+    (enabled) => {
+      terminalSettingsStore.setDefaultTerminalConfig("quickPaste", enabled ? "1" : "0");
+    },
+    { immediate: true }
+  );
   const sessionCtxRef = inject(connectorSessionKey, null);
   const queryTerminalThemeName = computed(() => unref(sessionCtxRef)?.terminalThemeName || "");
   // 未显式指定主题名（workspace 内嵌场景）时跟随应用主题；独立 /koko/connect 路由带主题名则维持原逻辑

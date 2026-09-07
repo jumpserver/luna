@@ -184,10 +184,11 @@ async function openProtocolApplicationSettings() {
         :content="false"
         :ui="{
           root: 'w-full p-1.5',
-          list: 'w-full',
-          trigger: 'cursor-pointer data-[state=active]:text-[var(--app-text-primary)]',
+          list: 'w-full rounded-[length:var(--workspace-island-radius)]',
+          trigger:
+            'cursor-pointer rounded-[length:var(--workspace-island-radius)] data-[state=active]:text-[var(--app-text-primary)]',
           indicator:
-            'bg-[var(--app-surface-overlay)] shadow-none ring-1 ring-[color-mix(in_srgb,var(--theme-fg)_12%,transparent)]'
+            'rounded-[length:var(--workspace-island-radius)] bg-[var(--app-surface-overlay)] shadow-none ring-1 ring-[color-mix(in_srgb,var(--theme-fg)_12%,transparent)]'
         }"
         class="w-full"
         @update:model-value="selectConnectMethodType"
@@ -252,7 +253,10 @@ async function openProtocolApplicationSettings() {
         </Transition>
       </div>
     </div>
-    <div v-else class="rounded-[4px] border border-[var(--app-border)] bg-[var(--app-input-bg)] shadow-sm">
+    <div
+      v-else
+      class="rounded-[length:var(--app-radius)] border border-[var(--app-border)] bg-[var(--app-input-bg)] shadow-sm"
+    >
       <UTabs
         v-if="connectMethodTypeItems.length > 1"
         :model-value="selectedConnectMethodType"
@@ -280,7 +284,7 @@ async function openProtocolApplicationSettings() {
           orientation="horizontal"
           :ui="{
             fieldset: 'flex flex-wrap gap-2',
-            item: 'rounded-[3px] px-2 py-1.5 hover:bg-[var(--app-hover-soft)]'
+            item: 'rounded-[length:var(--app-radius)] px-2 py-1.5 hover:bg-[var(--app-hover-soft)]'
           }"
         />
         <div
@@ -342,13 +346,16 @@ async function openProtocolApplicationSettings() {
 
 .connect-method-island :deep([data-slot="list"]) {
   width: 100%;
+  border-radius: var(--workspace-island-radius);
 }
 
 .connect-method-island :deep([data-slot="trigger"]) {
   cursor: pointer;
+  border-radius: var(--workspace-island-radius);
 }
 
 .connect-method-island :deep([data-slot="indicator"]) {
+  border-radius: var(--workspace-island-radius);
   background: var(--app-surface-overlay);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--theme-fg) 12%, transparent);
 }

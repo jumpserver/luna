@@ -51,6 +51,11 @@ const unlistenTheme = ref<DesktopUnlistenFn | null>(null);
 const unlistenFont = ref<DesktopUnlistenFn | null>(null);
 const unlistenSettingsNavigate = ref<DesktopUnlistenFn | null>(null);
 const { openSettings } = useSettingsWindow();
+const {
+  confirmOpen: siteLeaveConfirmOpen,
+  leaveKind: siteLeaveKind,
+  confirmLeave: confirmSiteLeave
+} = useSiteAccountSwitch();
 
 const backgroundColor = computed(() => {
   const isDark = userTheme.value === "dark";
@@ -314,6 +319,25 @@ onBeforeUnmount(() => {
         </NuxtLayout>
         <ConnectionFormModal />
         <AclDialog />
+        <UModal
+          v-model:open="siteLeaveConfirmOpen"
+          :title="siteLeaveKind === 'logout' ? t('Login.Logout') : t('Login.SwitchSite')"
+          :description="
+            siteLeaveKind === 'logout' ? t('Login.LogoutSessionsDescription') : t('Login.SwitchSiteSessionsDescription')
+          "
+          :dismissible="false"
+          :close="false"
+          :ui="{ overlay: '!z-[300]', content: 'max-w-md !z-[300]', footer: 'justify-end gap-2' }"
+        >
+          <template #footer>
+            <UButton color="neutral" variant="ghost" @click="siteLeaveConfirmOpen = false">
+              {{ t("Common.Cancel") }}
+            </UButton>
+            <UButton color="warning" @click="confirmSiteLeave">
+              {{ t("Common.Confirm") }}
+            </UButton>
+          </template>
+        </UModal>
         <AppWatermark />
       </UApp>
     </Body>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { LabeledValue, UserData, UserProfile } from "~/types";
 import { getUserProfile } from "~/composables/useApiRequest";
+import { confirmLeaveCurrentSiteSessions } from "~/composables/useSiteAccountSwitch";
 
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -137,6 +138,7 @@ async function loadProfile() {
 
 async function switchAccount(accountId: string, account: UserData) {
   if (accountId === currentAccountId.value || switchingAccount.value) return;
+  if (!(await confirmLeaveCurrentSiteSessions("switch"))) return;
 
   switchingAccount.value = true;
   userInfoStore.setCurrentAccount(accountId);

@@ -586,7 +586,13 @@ export const useWorkspaceTabs = () => {
     return true;
   };
 
-  const closeAllSessions = async () => {
+  const closeAllSessions = async (options?: { force?: boolean }) => {
+    if (options?.force === true) {
+      for (const tab of [...tabs.value]) removeSession(tab);
+      pendingPaneTarget.value = null;
+      return true;
+    }
+
     const closed = await closeTabs([...tabs.value]);
     if (closed) pendingPaneTarget.value = null;
     return closed;
