@@ -175,6 +175,31 @@ export default defineNuxtConfig({
           changeOrigin: true,
           configure: bindProxyErrorHandler("koko-ws")
         },
+        "/koko/lion/ws/": {
+          target: lionTarget.replace(/^http/i, "ws"),
+          secure: false,
+          ws: true,
+          changeOrigin: true,
+          configure: bindProxyErrorHandler("lion-ws")
+        },
+        "/koko/lion/api/": {
+          target: lionTarget,
+          secure: false,
+          changeOrigin: true,
+          configure: configureHttpProxy("lion-api", lionTarget)
+        },
+        "/koko/lion/token/": {
+          target: lionTarget,
+          secure: false,
+          changeOrigin: true,
+          configure: bindProxyErrorHandler("lion-token")
+        },
+        "/koko/lion/health/": {
+          target: lionTarget,
+          secure: false,
+          changeOrigin: true,
+          configure: bindProxyErrorHandler("lion-health")
+        },
         "/koko/": {
           target: kokoTarget,
           secure: false,
@@ -211,31 +236,6 @@ export default defineNuxtConfig({
           secure: false,
           changeOrigin: true,
           configure: rewriteProxyOrigin(jumpServerTarget)
-        },
-        "/lion/ws/": {
-          target: lionTarget.replace(/^http/i, "ws"),
-          secure: false,
-          ws: true,
-          changeOrigin: true,
-          configure: bindProxyErrorHandler("lion-ws")
-        },
-        "/lion/api/": {
-          target: lionTarget,
-          secure: false,
-          changeOrigin: true,
-          configure: configureHttpProxy("lion-api", lionTarget)
-        },
-        "/lion/token/": {
-          target: lionTarget,
-          secure: false,
-          changeOrigin: true,
-          configure: bindProxyErrorHandler("lion-token")
-        },
-        "/lion/health/": {
-          target: lionTarget,
-          secure: false,
-          changeOrigin: true,
-          configure: bindProxyErrorHandler("lion-health")
         },
         "/chen/ws/": {
           target: chenTarget.replace(/^http/i, "ws"),
