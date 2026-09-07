@@ -124,7 +124,8 @@
   },
   "WorkspaceEmpty": {
     "LoginHint": "登录后查看资产并发起连接",
-    "Shortcuts": "会话快捷键",
+    "ResetConnectionConfig": "重置连接配置",
+    "ReselectConnectionHint": "右击资产 → 连接",
     "SwitchSession": "切换会话",
     "Or": "或"
   },
@@ -647,6 +648,7 @@
     "AIProgressSummarizing": "正在生成执行总结…",
     "AIMetadataApprovalFailed": "数据库结构查询授权发送失败",
     "AIApprove": "批准",
+    "AIApproveForSession": "此命令始终放行",
     "AIReject": "拒绝",
     "AIExecutionDetails": "执行详情",
     "AIRawOutput": "原始输出",

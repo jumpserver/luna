@@ -369,7 +369,8 @@ export class AgentClient {
       body: {
         decision: request.decision,
         ...(request.run_id ? { run_id: request.run_id } : {}),
-        ...(request.digest ? { arguments_digest: request.digest } : {})
+        ...(request.digest ? { arguments_digest: request.digest } : {}),
+        ...(request.remember ? { remember: true } : {})
       }
     });
   }

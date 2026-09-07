@@ -402,6 +402,42 @@ it("treats an Agent command approval as active until a decision is sent", async 
   );
 });
 
+it("forwards a remembered command approval to Agent Runtime", async () => {
+  const session = createSession("remembered-command-approval");
+  const resourceSessionId = await enableSession(session.paneId);
+  agentHarness.emit(resourceSessionId, {
+    type: "approval.requested",
+    run_id: "run-1",
+    approval_id: "approval-1",
+    payload: {
+      approval_id: "approval-1",
+      digest: "digest-1",
+      tool_name: "execute_shell",
+      arguments: { command: "rm example" }
+    }
+  });
+
+  sendKokoTerminalAiControl(session.paneId, {
+    id: "approval-decision",
+    role: "user",
+    metadata: { terminalId: 9 },
+    parts: [{ type: "data-approval", data: { id: "approval-1", approved: true, remember: true } }]
+  });
+
+  await vi.waitFor(() => expect(agentHarness.resolveApproval).toHaveBeenCalledOnce());
+  expect(agentHarness.resolveApproval).toHaveBeenCalledWith(
+    "agent:resource:remembered-command-approval",
+    resourceSessionId,
+    "approval-1",
+    {
+      decision: "approve",
+      run_id: "run-1",
+      digest: "digest-1",
+      remember: true
+    }
+  );
+});
+
 it("retains structured Terminal AI presentation metadata", () => {
   const session = createSession("presentation-metadata");
 

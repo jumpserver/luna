@@ -124,7 +124,8 @@
   },
   "WorkspaceEmpty": {
     "LoginHint": "登入後檢視資產並發起連線",
-    "Shortcuts": "會話快捷鍵",
+    "ResetConnectionConfig": "重設連線設定",
+    "ReselectConnectionHint": "右擊資產 → 連線",
     "SwitchSession": "切換會話",
     "Or": "或"
   },
@@ -607,6 +608,7 @@
     "AIProgressSummarizing": "正在生成執行總結…",
     "AIMetadataApprovalFailed": "資料庫結構查詢授權傳送失敗",
     "AIApprove": "批准",
+    "AIApproveForSession": "始終允許此命令",
     "AIReject": "拒絕",
     "AIExecutionDetails": "執行詳情",
     "AIRawOutput": "原始輸出",

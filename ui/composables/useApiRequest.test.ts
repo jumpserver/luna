@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { apiRequest, getAuthorizedAssets } from "./useApiRequest";
 
+const { desktopInvoke } = vi.hoisted(() => ({ desktopInvoke: vi.fn() }));
+
+vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke }));
 vi.mock("~/store/modules/userInfo", () => ({
-  useUserInfoStore: () => ({ loggedIn: false })
+  useUserInfoStore: () => ({ loggedIn: false, orgId: "org-current" })
 }));
 
 describe("API request headers", () => {
@@ -49,5 +52,20 @@ describe("API request headers", () => {
         headers: expect.objectContaining({ "X-CSRFToken": "csrf-token" })
       })
     );
+  });
+
+  it("scopes desktop requests to the current organization without waiting for session IPC", async () => {
+    vi.stubGlobal("isDesktopRuntime", () => true);
+    desktopInvoke.mockResolvedValueOnce([]);
+
+    await apiRequest({ method: "GET", path: "/api/v1/assets/favorite-assets/" });
+
+    expect(desktopInvoke).toHaveBeenCalledWith("api_request", {
+      request: {
+        method: "GET",
+        path: "/api/v1/assets/favorite-assets/",
+        orgId: "org-current"
+      }
+    });
   });
 });

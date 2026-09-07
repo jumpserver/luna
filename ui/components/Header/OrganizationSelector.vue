@@ -18,15 +18,20 @@ const userInfoStore = useUserInfoStore();
 const { setCurrentOrg } = userInfoStore;
 const { loggedIn, currentOrganizations, currentUser } = storeToRefs(userInfoStore);
 
-const currentOrg = ref<string>("");
-const currentOrgAvatarText = computed(() => Array.from(currentOrg.value.trim()).slice(0, 2).join(""));
+const currentOrgName = computed(() => {
+  const currentOrg = currentUser.value?.org;
+  return currentOrganizations.value.find((org) => org.id === currentOrg?.id)?.name || currentOrg?.name || "";
+});
+const currentOrgAvatarText = computed(() => Array.from(currentOrgName.value.trim()).slice(0, 2).join(""));
 
 const organizationDropdownItems = computed<DropdownMenuItem[]>(() =>
   currentOrganizations.value.map((org: PermOrgItem) => ({
     label: org.name,
     type: "checkbox" as const,
-    checked: org.name === currentOrg.value,
-    onSelect: () => handleOrgChange(org.name)
+    checked: org.id === currentUser.value?.org?.id,
+    onUpdateChecked: (checked: boolean) => {
+      if (checked) handleOrgChange(org);
+    }
   }))
 );
 
@@ -34,37 +39,18 @@ const organizationDropdownItems = computed<DropdownMenuItem[]>(() =>
  * @description 切换组织
  * @param org
  */
-function handleOrgChange(org: string) {
-  const orgData = currentOrganizations.value.find((o: PermOrgItem) => o.name === org);
+function handleOrgChange(org: PermOrgItem) {
+  if (org.id === currentUser.value?.org?.id) return;
 
-  if (orgData) {
-    invalidatePersonalAssetCredentialCache();
-    setCurrentOrg(orgData);
-
-    nextTick(() => {
-      useEventBus().emit("refresh", undefined);
-    });
-  }
+  invalidatePersonalAssetCredentialCache();
+  setCurrentOrg(org);
 }
-
-onMounted(async () => {
-  if (loggedIn.value && userInfoStore.currentUser) {
-    currentOrg.value = userInfoStore.currentUser.org.name;
-  }
-});
-
-watch(
-  () => currentUser.value?.org?.name,
-  (name: string | undefined) => {
-    if (name) currentOrg.value = name;
-  }
-);
 </script>
 
 <template>
   <div v-show="loggedIn" class="flex w-full min-w-0 max-w-full items-center gap-1">
     <UAvatar
-      :alt="currentOrg"
+      :alt="currentOrgName"
       :text="currentOrgAvatarText"
       color="primary"
       size="xs"
@@ -96,7 +82,7 @@ watch(
           data-overflow-tooltip
           class="min-w-0 truncate text-left text-xs font-medium text-gray-700 dark:text-gray-300"
         >
-          {{ currentOrg }}
+          {{ currentOrgName }}
         </span>
         <UIcon name="i-lucide-chevrons-up-down" class="size-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
       </UButton>
@@ -107,7 +93,7 @@ watch(
       data-overflow-tooltip
       class="min-w-0 truncate px-1 text-left text-xs font-medium text-gray-700 dark:text-gray-300"
     >
-      {{ currentOrg }}
+      {{ currentOrgName }}
     </span>
   </div>
 </template>

@@ -137,15 +137,16 @@ export class LocalApplicationLauncher {
 
   async resolveApplication(payload) {
     const config = await this.configService.getConfig();
+    const client = String(payload.client || payload.client_name || "");
     for (const category of ["terminal", "filetransfer", "remotedesktop", "databases"]) {
       for (const item of config[category] || []) {
         if (!item.protocol.includes(payload.protocol) || !item.is_set) continue;
-        if (payload.client && item.name === payload.client) return item;
-        if (!payload.client && item.match_first.includes(payload.protocol)) return item;
+        if (client && item.name === client) return item;
+        if (!client && item.match_first.includes(payload.protocol)) return item;
       }
     }
     throw new Error(
-      `no configured application selected for protocol '${payload.protocol}'${payload.client ? ` and client '${payload.client}'` : ""}`
+      `no configured application selected for protocol '${payload.protocol}'${client ? ` and client '${client}'` : ""}`
     );
   }
 
@@ -232,10 +233,18 @@ export class LocalApplicationLauncher {
 
   async launch(raw) {
     const payload = decodePayload(raw);
-    if (!payload.protocol || !payload.endpoint?.host || !payload.endpoint?.port || !payload.token?.id) {
+    if (!payload.protocol || !payload.token?.id) {
       throw new Error("local client payload is missing required connection fields");
     }
     const application = await this.resolveApplication(payload);
+    if (application.launch_type === "file") {
+      if (!payload.file?.content) throw new Error("local client payload is missing connection file content");
+      electronLog.info(`launch ${payload.protocol} connection file via ${application.display_name || "file handler"}`);
+      return this.launchFile(application, payload);
+    }
+    if (!payload.endpoint?.host || !payload.endpoint?.port) {
+      throw new Error("local client payload is missing required connection fields");
+    }
     electronLog.info(
       `launch ${payload.protocol} ${payload.endpoint.host}:${payload.endpoint.port} via ${application.display_name || application.launch_type}`
     );
@@ -251,7 +260,6 @@ export class LocalApplicationLauncher {
     }
     const template = application.protocol_templates?.[payload.protocol] || application.arg_format;
     const argumentString = render(template, values);
-    if (application.launch_type === "file") return this.launchFile(application, payload);
     if (application.launch_type === "script") return this.launchScript(application, payload, values);
     if (application.launch_type === "url") return this.electronShell.openExternal(argumentString);
     if (["terminal", "iterm2", "linux-terminal", "windows-terminal"].includes(application.launch_driver)) {

@@ -76,7 +76,7 @@ export interface AgentSessionController {
     attachManifest: (manifest: AgentMcpManifest) => Promise<void>;
     updateContext: (context: Record<string, unknown>) => Promise<void>;
     sendMessage: (message: UIMessage) => Promise<void>;
-    resolveApproval: (approvalId: string, decision: AgentApprovalDecision) => Promise<void>;
+    resolveApproval: (approvalId: string, decision: AgentApprovalDecision, remember?: boolean) => Promise<void>;
     receiveKokoFrame: (frame: unknown) => Promise<boolean>;
     cancel: () => Promise<void>;
     newSession: () => Promise<void>;
@@ -1154,14 +1154,15 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     pendingApprovals.delete(approvalId);
   }
 
-  async function resolveApproval(approvalId: string, decision: AgentApprovalDecision) {
+  async function resolveApproval(approvalId: string, decision: AgentApprovalDecision, remember = false) {
     if (!state.agentSessionId || !state.resourceSessionId) throw new Error("Agent session is unavailable");
     const binding = pendingApprovals.get(approvalId);
     try {
       await client.resolveApproval(state.agentSessionId, state.resourceSessionId, approvalId, {
         decision,
         ...(binding?.runId ? { run_id: binding.runId } : {}),
-        ...(binding?.digest ? { digest: binding.digest } : {})
+        ...(binding?.digest ? { digest: binding.digest } : {}),
+        ...(remember ? { remember: true } : {})
       });
     } catch (error) {
       if (!(error instanceof AgentHttpError) || error.status !== 409) throw error;

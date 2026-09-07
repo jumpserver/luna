@@ -6,7 +6,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { strToU8, zipSync } from "fflate";
 import { ApplicationConfigService } from "../src/apps/application-config.ts";
-import { localAppLauncherInternals } from "../src/apps/local-app-launcher.ts";
+import { LocalApplicationLauncher, localAppLauncherInternals } from "../src/apps/local-app-launcher.ts";
 import { systemFontInternals } from "../src/apps/system-fonts.ts";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -70,6 +70,40 @@ test("decodes local client URLs and preserves quoted application arguments", () 
     "name=one two",
     "escaped value"
   ]);
+});
+
+test("launches RDP connection files without endpoint fields", async () => {
+  const payload = {
+    protocol: "rdp",
+    client: "mstsc",
+    name: "admin@windows",
+    token: { id: "token-id", value: "secret" },
+    file: { name: "admin-windows", content: "full address:s:127.0.0.1:3389\n" }
+  };
+  const application = {
+    name: "mstsc",
+    display_name: "Microsoft Remote Desktop",
+    protocol: ["rdp"],
+    is_set: true,
+    match_first: [],
+    launch_type: "file"
+  };
+  const launcher = new LocalApplicationLauncher(
+    { isPackaged: false },
+    projectRoot,
+    {
+      getConfig: async () => ({ terminal: [], filetransfer: [], remotedesktop: [application], databases: [] })
+    },
+    null
+  );
+  let launchedPayload;
+  launcher.launchFile = async (_application, receivedPayload) => {
+    launchedPayload = receivedPayload;
+  };
+
+  await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+
+  assert.deepEqual(launchedPayload, payload);
 });
 
 test("normalizes duplicate and hidden system font families", () => {

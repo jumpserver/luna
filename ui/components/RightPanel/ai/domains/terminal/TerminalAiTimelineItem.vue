@@ -27,8 +27,8 @@ function aclLabel(item: Extract<TerminalViewItem, { kind: "alert" }>) {
   return key ? t(key) : String(value || "");
 }
 
-function decide(data: TerminalAiEventData, approved: boolean) {
-  emit("action", { domain: "terminal", type: "decide", data, approved });
+function decide(data: TerminalAiEventData, approved: boolean, remember?: boolean) {
+  emit("action", { domain: "terminal", type: "decide", data, approved, remember });
 }
 
 function setExecutionOverride(id: string, value: string) {
@@ -46,6 +46,7 @@ function setExecutionOverride(id: string, value: string) {
     :decisions="terminalSession.decisions"
     :execution-overrides="terminalSession.executionOverrides"
     :execution-mode="terminalSession.executionMode"
+    :approval-mode="terminalSession.approvalMode"
     :background-exec="terminalSession.backgroundExec"
     :read-only="readOnly"
     @decide="decide"

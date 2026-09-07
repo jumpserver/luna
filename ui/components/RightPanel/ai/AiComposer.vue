@@ -98,6 +98,7 @@ function handleSubmitKeydown(event: KeyboardEvent) {
             color="primary"
             variant="solid"
             icon="i-fluent-stop-16-filled"
+            :ui="{ leadingIcon: 'size-4 scale-75' }"
             :aria-label="interruptLabel"
             @click="emit('interrupt')"
           />

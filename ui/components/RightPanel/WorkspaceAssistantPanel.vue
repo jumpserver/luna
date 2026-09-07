@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AiContextItem, AiTimelineAction } from "./ai/types";
+import type { AiContextItem, AiSelectOption, AiTimelineAction } from "./ai/types";
 import { getKokoTerminalAiSession } from "#koko/composables/terminal/useTerminalAiSessions";
 import { useWorkspaceAssistantPanelSession } from "~/composables/useWorkspaceAssistantPanelSession";
 import {
@@ -55,6 +55,11 @@ const currentTarget = computed(() =>
     selectedTarget.value === "auto" ? target.pane_id === activePaneId.value : target.target_id === selectedTarget.value
   )
 );
+const approvalSession = computed(() => {
+  if (selectedTarget.value === "workspace") return null;
+  const paneId = currentTarget.value?.pane_id || localShellPane.value?.id;
+  return paneId ? getKokoTerminalAiSession(paneId) : null;
+});
 const targetOptions = computed(() => [
   { value: "auto", label: t("RightPanel.LunaAiAutomatic"), icon: "i-lucide-sparkles" },
   { value: "workspace", label: t("RightPanel.LunaAiWorkspaceOnly"), icon: "i-lucide-layout-dashboard" },
@@ -128,6 +133,23 @@ const contextItems = computed<AiContextItem[]>(() => {
     { key: "account", icon: "i-lucide-user-key", label: target.account, title: target.account }
   ];
 });
+const approvalOptions = computed<AiSelectOption[]>(() => [
+  {
+    label: t("RightPanel.AIAgentApprovalAlwaysShort"),
+    description: t("RightPanel.AIAgentApprovalAlways"),
+    value: "always"
+  },
+  {
+    label: t("RightPanel.AIAgentApprovalAutoShort"),
+    description: t("RightPanel.AIAgentApprovalAuto"),
+    value: "auto"
+  },
+  {
+    label: t("RightPanel.AIAgentApprovalNeverShort"),
+    description: t("RightPanel.AIAgentApprovalNever"),
+    value: "never"
+  }
+]);
 
 function terminalAction(taskId: string, action: AiTimelineAction) {
   const task = session.value?.terminalTasks.find((item) => item.id === taskId);
@@ -174,6 +196,17 @@ function clearError() {
   session.value.errorCode = "";
   session.value.errorText = "";
   session.value.chat.clearError();
+}
+
+function updateApprovalMode(value: unknown) {
+  const current = approvalSession.value;
+  if (!current) return;
+  const valueString = String(value || "auto");
+  const mode = valueString === "always" || valueString === "never" ? valueString : "auto";
+  void current.agent.actions.setApprovalMode(mode).catch((cause) => {
+    current.errorCode = "policy_failed";
+    current.errorText = cause instanceof Error ? cause.message : "Failed to update approval mode";
+  });
 }
 
 // A shortcut carries a concrete pane; resolve its current binding once before sending.
@@ -290,19 +323,20 @@ watch(
         </div>
         <AiComposer
           v-model="draft"
-          :show-policy="false"
+          :show-policy="Boolean(approvalSession)"
           :busy="busy || !available || approvalProcessing"
           :running="running"
           :action-label="t('RightPanel.AISend')"
           :interrupt-label="t('RightPanel.AIInterrupt')"
           :placeholder="t('RightPanel.LunaAiPlaceholder')"
-          :approval-threshold="session.approvalMode"
+          :approval-threshold="approvalSession?.approvalMode || 'auto'"
           execution-mode="foreground"
-          :threshold-options="[]"
+          :threshold-options="approvalOptions"
           :mode-options="[]"
           :context-items="contextItems"
           @submit="submit"
           @interrupt="interruptWorkspaceAssistant(scopeId)"
+          @update-approval-threshold="updateApprovalMode"
         />
       </footer>
     </template>

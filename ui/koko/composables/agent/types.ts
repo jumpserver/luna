@@ -89,6 +89,7 @@ export interface AgentApprovalRequest {
   decision: AgentApprovalDecision;
   run_id?: string;
   digest?: string;
+  remember?: boolean;
 }
 
 export interface AgentApprovalModeRequest {

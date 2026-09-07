@@ -124,7 +124,8 @@
   },
   "WorkspaceEmpty": {
     "LoginHint": "Entre para visualizar os ativos e se conectar",
-    "Shortcuts": "Atalhos da sessão",
+    "ResetConnectionConfig": "Redefinir conexão",
+    "ReselectConnectionHint": "Clique com o botão direito no ativo → Conectar",
     "SwitchSession": "Alternar sessão",
     "Or": "ou"
   },
@@ -607,6 +608,7 @@
     "AIProgressSummarizing": "Gerando o resumo da execução…",
     "AIMetadataApprovalFailed": "Falha ao enviar a aprovação do esquema do banco de dados",
     "AIApprove": "Aprovar",
+    "AIApproveForSession": "Sempre permitir este comando",
     "AIReject": "Rejeitar",
     "AIExecutionDetails": "Detalhes da execução",
     "AIRawOutput": "Saída bruta",

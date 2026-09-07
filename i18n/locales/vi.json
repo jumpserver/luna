@@ -124,7 +124,8 @@
   },
   "WorkspaceEmpty": {
     "LoginHint": "Đăng nhập để xem tài sản và kết nối",
-    "Shortcuts": "Phím tắt phiên",
+    "ResetConnectionConfig": "Đặt lại kết nối",
+    "ReselectConnectionHint": "Nhấp phải vào tài sản → Kết nối",
     "SwitchSession": "Chuyển phiên",
     "Or": "hoặc"
   },
@@ -607,6 +608,7 @@
     "AIProgressSummarizing": "Đang tạo tóm tắt thực thi…",
     "AIMetadataApprovalFailed": "Không thể gửi phê duyệt lược đồ cơ sở dữ liệu",
     "AIApprove": "Phê duyệt",
+    "AIApproveForSession": "Luôn cho phép lệnh này",
     "AIReject": "Từ chối",
     "AIExecutionDetails": "Chi tiết thực thi",
     "AIRawOutput": "Đầu ra thô",

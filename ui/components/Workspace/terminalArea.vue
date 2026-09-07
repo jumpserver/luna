@@ -12,17 +12,26 @@ const showLoginPrompt = computed(
 const { t } = useI18n();
 const shortcutRows = computed(() => [
   {
+    id: "connection",
+    icon: "i-lucide-refresh-cw",
+    name: t("WorkspaceEmpty.ResetConnectionConfig"),
+    hint: t("WorkspaceEmpty.ReselectConnectionHint")
+  },
+  {
     id: "focus",
+    icon: "i-lucide-maximize-2",
     name: t("TabMenu.FocusCurrent"),
     keys: ["meta", "shift", "P"]
   },
   {
     id: "fullscreen",
+    icon: "i-lucide-fullscreen",
     name: t("TabMenu.FullscreenCurrent"),
     keys: ["meta", "shift", "F"]
   },
   {
     id: "switch",
+    icon: "i-lucide-arrow-left-right",
     name: t("WorkspaceEmpty.SwitchSession"),
     keys: ["alt", "shift", "arrowleft", "arrowright", "or", "meta", "1-9"]
   }
@@ -73,13 +82,14 @@ const openLogin = () => {
       </template>
 
       <div v-else class="h-full min-h-0 grid place-items-center text-sm" :style="{ color: 'var(--app-muted)' }">
-        <div class="grid w-max grid-cols-[auto_auto] items-center gap-x-3 gap-y-1.5 text-left">
-          <div class="col-span-2 text-[11px] font-semibold tracking-[0.08em]">
-            {{ t("WorkspaceEmpty.Shortcuts") }}
-          </div>
+        <div class="grid w-max grid-cols-[14px_auto_auto] items-center gap-x-3 gap-y-1.5 text-left">
           <template v-for="row in shortcutRows" :key="row.id">
+            <UIcon :name="row.icon" class="size-3.5" />
             <span class="font-medium text-(--app-fg)">{{ row.name }}</span>
-            <span class="flex items-center gap-1">
+            <span v-if="row.hint" class="flex items-center gap-1 whitespace-nowrap">
+              {{ row.hint }}
+            </span>
+            <span v-else class="flex items-center gap-1">
               <template v-for="(key, index) in row.keys" :key="`${row.id}-${index}`">
                 <span v-if="key === 'or'" class="px-0.5 text-xs">{{ t("WorkspaceEmpty.Or") }}</span>
                 <UKbd v-else :value="key" />

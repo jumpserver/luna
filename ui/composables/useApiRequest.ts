@@ -261,8 +261,11 @@ async function webApiRequest<T>(request: ApiRequest): Promise<T> {
 }
 
 async function desktopApiRequest<T>(request: ApiRequest): Promise<T> {
+  const userInfoStore = useUserInfoStore();
+  const scopedRequest = request.orgId || !userInfoStore.orgId ? request : { ...request, orgId: userInfoStore.orgId };
+
   try {
-    return await desktopInvoke<T>("api_request", { request });
+    return await desktopInvoke<T>("api_request", { request: scopedRequest });
   } catch (error) {
     if (error && typeof error === "object" && !(error instanceof Error)) {
       const payload = error as { status?: unknown; data?: unknown; body?: unknown; message?: unknown };

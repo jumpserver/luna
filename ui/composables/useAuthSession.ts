@@ -327,10 +327,15 @@ export const useAuthSession = () => {
       fetchWebJson<Record<string, any>>(["/api/v1/orgs/orgs/current/"])
     ])
       .then(([permissionOrgData, currentOrgData]) => {
+        if (userInfoStore.currentAccountId !== site || userInfoStore.currentUser?.userId !== userId) return;
+
         const availableOrgs = initSelectOrganization(permissionOrgData || {});
         const resolvedCurrentOrg = currentOrgData && typeof currentOrgData === "object" ? currentOrgData : null;
+        const selectedOrgId = getWebOrgId();
+        const activeOrg = userInfoStore.currentUser?.org;
         const currentOrg =
-          availableOrgs.find((org) => org.id === cookieOrgId) ||
+          availableOrgs.find((org) => org.id === selectedOrgId) ||
+          (activeOrg?.id === selectedOrgId ? activeOrg : null) ||
           resolveOrganizationSelection(availableOrgs, resolvedCurrentOrg) ||
           profileOrg;
 

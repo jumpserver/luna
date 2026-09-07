@@ -124,7 +124,8 @@
   },
   "WorkspaceEmpty": {
     "LoginHint": "로그인하여 자산을 보고 연결하세요",
-    "Shortcuts": "세션 단축키",
+    "ResetConnectionConfig": "연결 설정 재설정",
+    "ReselectConnectionHint": "자산을 마우스 오른쪽 버튼으로 클릭 → 연결",
     "SwitchSession": "세션 전환",
     "Or": "또는"
   },
@@ -607,6 +608,7 @@
     "AIProgressSummarizing": "실행 요약 생성 중…",
     "AIMetadataApprovalFailed": "데이터베이스 스키마 승인 전송 실패",
     "AIApprove": "승인",
+    "AIApproveForSession": "이 명령 항상 허용",
     "AIReject": "거부",
     "AIExecutionDetails": "실행 세부 정보",
     "AIRawOutput": "원본 출력",

@@ -124,7 +124,8 @@
   },
   "WorkspaceEmpty": {
     "LoginHint": "Sign in to view assets and connect",
-    "Shortcuts": "Session shortcuts",
+    "ResetConnectionConfig": "Reset connection",
+    "ReselectConnectionHint": "Right-click asset → Connect",
     "SwitchSession": "Switch session",
     "Or": "or"
   },
@@ -647,6 +648,7 @@
     "AIProgressSummarizing": "Generating the execution summary…",
     "AIMetadataApprovalFailed": "Failed to send database schema approval",
     "AIApprove": "Approve",
+    "AIApproveForSession": "Always allow this command",
     "AIReject": "Reject",
     "AIExecutionDetails": "Execution details",
     "AIRawOutput": "Raw output",

@@ -20,6 +20,7 @@ const props = withDefaults(
     decisions: ReadonlySet<string>;
     executionOverrides: ReadonlyMap<string, string>;
     executionMode: string;
+    approvalMode: string;
     backgroundExec: boolean;
     readOnly?: boolean;
   }>(),
@@ -28,7 +29,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   setExpanded: [expanded: boolean];
-  decide: [data: TerminalAiEventData, approved: boolean];
+  decide: [data: TerminalAiEventData, approved: boolean, remember?: boolean];
   setExecutionOverride: [id: string, value: string];
 }>();
 
@@ -47,7 +48,8 @@ const expanded = computed(() => props.expanded ?? needsAttention.value);
 const stepTitle = computed(() => {
   const title = props.step.title;
   if (title && title !== t("RightPanel.AIStep", { count: props.step.index })) return title;
-  return String(props.step.executions.at(-1)?.command?.command || title);
+  if (props.step.executions.length === 1) return t("RightPanel.AICommand");
+  return title || t("RightPanel.AIStep", { count: props.step.index });
 });
 
 // New approval or attention states must surface even after the user collapsed an earlier execution.
@@ -191,12 +193,15 @@ function terminalRiskLabel(level: unknown) {
 
         <section v-for="execution in step.executions" :key="execution.key" class="execution-card">
           <template v-if="execution.command">
-            <div class="flex flex-wrap items-center gap-1.5 px-2.5 pt-2 text-[11px] text-muted">
+            <div
+              v-if="step.executions.length > 1 || Number(execution.command.riskLevel) > 0"
+              class="flex flex-wrap items-center gap-1.5 px-2.5 pt-2 text-[11px] text-muted"
+            >
               <UIcon name="i-lucide-terminal" class="size-3.5" />
-              <span class="mr-auto">
-                {{ t("RightPanel.AICommand") }}
-                <template v-if="step.executions.length > 1">{{ execution.index }}</template>
+              <span v-if="step.executions.length > 1" class="mr-auto">
+                {{ t("RightPanel.AICommand") }} {{ execution.index }}
               </span>
+              <span v-else class="mr-auto" />
               <UBadge
                 v-if="Number(execution.command.riskLevel) > 0"
                 :color="aiRiskColor(Number(execution.command.riskLevel))"
@@ -224,12 +229,8 @@ function terminalRiskLabel(level: unknown) {
             </p>
             <div
               v-if="!readOnly && terminalApprovalPending(execution.command, decisions)"
-              class="space-y-2 border-t border-warning/30 bg-warning/5 p-2.5"
+              class="space-y-2 bg-warning/5 p-2.5"
             >
-              <div class="flex items-center gap-1.5 text-[11px] font-medium text-warning">
-                <UIcon name="i-lucide-shield-alert" class="size-3.5" />
-                {{ t("RightPanel.AIStatusAwaitingApproval") }}
-              </div>
               <div v-if="executionMode === 'auto'" class="flex flex-wrap gap-1.5">
                 <UButton
                   size="xs"
@@ -247,13 +248,25 @@ function terminalRiskLabel(level: unknown) {
                   @click="emit('setExecutionOverride', String(execution.command?.id), 'background_exec')"
                 />
               </div>
-              <div class="flex justify-end gap-1.5">
+              <div class="flex flex-wrap justify-end gap-1.5">
                 <UButton
                   size="xs"
                   color="neutral"
                   variant="soft"
                   :label="t('RightPanel.AIReject')"
                   @click="emit('decide', execution.command, false)"
+                />
+                <UButton
+                  v-if="
+                    approvalMode === 'auto' &&
+                    ['execute_shell', 'execute_command'].includes(String(execution.command.tool || ''))
+                  "
+                  size="xs"
+                  color="primary"
+                  variant="soft"
+                  icon="i-lucide-shield-check"
+                  :label="t('RightPanel.AIApproveForSession')"
+                  @click="emit('decide', execution.command, true, true)"
                 />
                 <UButton
                   size="xs"
@@ -391,9 +404,11 @@ function terminalRiskLabel(level: unknown) {
 .execution-card {
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--app-border);
-  border-radius: 0.5rem;
-  background: var(--app-card-bg-soft);
+}
+
+.execution-card + .execution-card {
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--app-border);
 }
 
 .command-output {

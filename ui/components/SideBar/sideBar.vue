@@ -135,19 +135,19 @@ const islandAccordionItems = computed(() => {
       class: "workspace-island-accordion__assets"
     });
   }
-  if (visibleShelfPanels.value.snippets) {
-    items.push({
-      label: sidebarSectionLabels.value.snippets,
-      value: "snippets",
-      slot: "snippets"
-    });
-  }
   if (visibleShelfPanels.value.favorites) {
     items.push({
       label: sidebarSectionLabels.value.favorites,
       value: "favorites",
       slot: "favorites",
       class: "workspace-island-accordion__favorites"
+    });
+  }
+  if (visibleShelfPanels.value.snippets) {
+    items.push({
+      label: sidebarSectionLabels.value.snippets,
+      value: "snippets",
+      slot: "snippets"
     });
   }
 

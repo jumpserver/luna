@@ -60,6 +60,7 @@ function handleDecision(session: KokoTerminalAiSession, action: Extract<AiTimeli
             id: action.data.id,
             digest: action.data.digest,
             approved: action.approved,
+            remember: action.remember,
             execution
           }
         }

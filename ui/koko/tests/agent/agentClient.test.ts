@@ -149,7 +149,8 @@ it("maps messages, runs, approvals, and tool results to canonical Kael resources
   await client.resolveApproval("panel-1", "resource-1", "approval-1", {
     decision: "approve",
     run_id: "run-1",
-    digest: "digest-1"
+    digest: "digest-1",
+    remember: true
   });
   await client.sendToolResult("panel-1", "resource-1", "tool-1", {
     jsonrpc: "2.0",
@@ -173,7 +174,8 @@ it("maps messages, runs, approvals, and tool results to canonical Kael resources
   expect(requests.find((request) => request.path.includes("/approvals/"))?.body).toEqual({
     decision: "approve",
     run_id: "run-1",
-    arguments_digest: "digest-1"
+    arguments_digest: "digest-1",
+    remember: true
   });
   expect(requests.find((request) => request.path.includes("/tool-calls/"))?.body).toMatchObject({
     panel_session_id: "panel-1",

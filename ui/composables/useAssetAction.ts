@@ -53,7 +53,7 @@ const withLocalClientName = (url: string, clientName?: string) => {
   if (!clientName || !url.startsWith("jms2://")) return url;
   const decoded = Uint8Array.from(atob(url.slice("jms2://".length)), (character) => character.charCodeAt(0));
   const payload = JSON.parse(new TextDecoder().decode(decoded));
-  payload.client_name = clientName;
+  payload.client = clientName;
   const encoded = new TextEncoder().encode(JSON.stringify(payload));
   return `jms2://${btoa(String.fromCharCode(...encoded))}`;
 };

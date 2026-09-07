@@ -124,7 +124,8 @@
   },
   "WorkspaceEmpty": {
     "LoginHint": "Войдите, чтобы просматривать ресурсы и подключаться",
-    "Shortcuts": "Горячие клавиши сеанса",
+    "ResetConnectionConfig": "Сбросить подключение",
+    "ReselectConnectionHint": "Правый клик по ресурсу → Подключиться",
     "SwitchSession": "Переключить сеанс",
     "Or": "или"
   },
@@ -607,6 +608,7 @@
     "AIProgressSummarizing": "Формирование итогового отчета…",
     "AIMetadataApprovalFailed": "Не удалось отправить подтверждение доступа к схеме базы данных",
     "AIApprove": "Подтвердить",
+    "AIApproveForSession": "Всегда разрешать эту команду",
     "AIReject": "Отклонить",
     "AIExecutionDetails": "Подробности выполнения",
     "AIRawOutput": "Исходный вывод",

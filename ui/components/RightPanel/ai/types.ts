@@ -233,7 +233,7 @@ export type ScriptViewItem = ScriptProposalItem;
 export type SharedViewItem = TextItem | AgentToolItem | AgentNoticeItem;
 
 export type TerminalTimelineAction =
-  | { domain: "terminal"; type: "decide"; data: TerminalAiEventData; approved: boolean }
+  | { domain: "terminal"; type: "decide"; data: TerminalAiEventData; approved: boolean; remember?: boolean }
   | { domain: "terminal"; type: "set-execution-override"; id: string; value: string }
   | { domain: "terminal"; type: "set-step-expanded"; key: string; expanded: boolean };
 

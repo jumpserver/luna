@@ -425,11 +425,12 @@ it("maps UI messages and approvals to the strict Agent API DTO", async () => {
       ]
     })
   );
-  await controller.actions.resolveApproval("approval-1", "approve");
+  await controller.actions.resolveApproval("approval-1", "approve", true);
   expect(client.resolveApproval).toHaveBeenCalledWith("agent-1", "resource-1", "approval-1", {
     decision: "approve",
     run_id: "run-1",
-    digest: "sha256:digest"
+    digest: "sha256:digest",
+    remember: true
   });
   streamOptions.onEvent({
     seq: 4,

@@ -124,7 +124,8 @@
   },
   "WorkspaceEmpty": {
     "LoginHint": "ログインしてアセットを表示し、接続してください",
-    "Shortcuts": "セッションのショートカット",
+    "ResetConnectionConfig": "接続設定をリセット",
+    "ReselectConnectionHint": "アセットを右クリック → 接続",
     "SwitchSession": "セッションを切り替え",
     "Or": "または"
   },
@@ -607,6 +608,7 @@
     "AIProgressSummarizing": "実行結果の要約を生成中…",
     "AIMetadataApprovalFailed": "データベーススキーマの承認送信に失敗しました",
     "AIApprove": "承認",
+    "AIApproveForSession": "このコマンドを常に許可",
     "AIReject": "拒否",
     "AIExecutionDetails": "実行の詳細",
     "AIRawOutput": "生の出力",

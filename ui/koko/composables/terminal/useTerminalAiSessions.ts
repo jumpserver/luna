@@ -800,7 +800,7 @@ export function sendKokoTerminalAiControl(paneId: string, message: TerminalAiCha
       if (approvalId) {
         handled = true;
         void session.agent.actions
-          .resolveApproval(approvalId, decision)
+          .resolveApproval(approvalId, decision, data.remember === true)
           .then(() => session.pendingApprovals.delete(approvalId))
           .catch((error) => {
             session.decisions.delete(approvalId);
