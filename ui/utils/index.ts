@@ -1,4 +1,4 @@
-import type { AssetItem, LangType, PermedProtocol, RawAssetData } from "~/types/index";
+import type { AssetDetail, AssetDetailField, AssetItem, LangType, PermedProtocol, RawAssetData } from "~/types/index";
 import { desktopOs } from "~/shared/desktop/bridge";
 
 const INTL_LOCALE_BY_LANGUAGE: Record<LangType, string> = {
@@ -49,18 +49,23 @@ export function transformAssetData(rawData: RawAssetData): AssetItem {
   return item;
 }
 
-export function transformAssetDetail(assetId: string, detail: Record<string, any>): AssetItem {
+const assetDetailFieldValue = (field: AssetDetailField | undefined) => {
+  if (typeof field === "string") return field;
+  return field?.name || field?.value || "";
+};
+
+export function transformAssetDetail(assetId: string, detail: AssetDetail): AssetItem {
   return {
     id: assetId,
     name: detail.name || assetId,
     address: detail.address || "-",
-    platform: detail.platform?.name || detail.platform || "",
-    zone: detail.zone?.name || detail.zone || "",
+    platform: assetDetailFieldValue(detail.platform),
+    zone: assetDetailFieldValue(detail.zone),
     isActive: true,
-    category: detail.category?.value || detail.category || "",
-    type: detail.type?.value || detail.type || "",
+    category: assetDetailFieldValue(detail.category),
+    type: assetDetailFieldValue(detail.type),
     permedAccounts: detail.permed_accounts ?? [],
-    permedProtocols: (detail.permed_protocols ?? []).filter((protocol: { name?: string }) => protocol?.name !== "winrm")
+    permedProtocols: (detail.permed_protocols ?? []).filter((protocol) => protocol?.name !== "winrm")
   };
 }
 
@@ -86,7 +91,7 @@ export function normalizeLanguageCode(lang: string | null | undefined): LangType
   if (!normalized) return "en";
 
   if (normalized.startsWith("zh")) {
-    return /(^|-)hant($|-)|^zh-(tw|hk|mo)(-|$)/.test(normalized) ? "zh_hant" : "zh";
+    return /(?:^|-)hant(?:$|-)|^zh-(?:tw|hk|mo)(?:-|$)/.test(normalized) ? "zh_hant" : "zh";
   }
 
   const primary = normalized.split("-")[0] || "";
