@@ -25,4 +25,15 @@ describe("web proxy endpoint", () => {
 
     expect(request.proxyUrl).toBe("http://web-proxy.example.test:15001");
   });
+
+  it("passes the configured login-success selector to the desktop session", () => {
+    const request = useWebProxyManager().buildWebProxyRequest(
+      asset,
+      "https",
+      "http://koko.example.test:5050",
+      "css=.dashboard"
+    );
+
+    expect(request.successSelector).toBe("css=.dashboard");
+  });
 });

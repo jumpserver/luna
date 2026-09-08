@@ -13,7 +13,7 @@ interface WebProxyState {
 
 interface WebProxyAutofillState {
   label: string;
-  status: "ready" | "filling" | "submitted" | "unavailable" | "error";
+  status: "ready" | "filling" | "submitted" | "success" | "unavailable" | "error";
   message: string;
 }
 
@@ -87,7 +87,9 @@ const autofillLabel = computed(() => {
     case "filling":
       return "安全登录中";
     case "submitted":
-      return "已触发登录";
+      return "验证登录中";
+    case "success":
+      return "登录成功";
     case "unavailable":
       return "未配置代填";
     case "error":
@@ -97,7 +99,7 @@ const autofillLabel = computed(() => {
   }
 });
 const autofillColor = computed(() => {
-  if (autofillStatus.value === "submitted") return "success";
+  if (autofillStatus.value === "success") return "success";
   if (autofillStatus.value === "error") return "error";
   if (autofillStatus.value === "filling") return "warning";
   return "neutral";
@@ -284,6 +286,7 @@ onMounted(async () => {
       proxyUrl: request.value.proxyUrl,
       tokenId: String(props.tab.payload?.id || props.tab.payload?.token?.id || ""),
       tokenValue: String(props.tab.payload?.value || props.tab.payload?.token?.value || ""),
+      successSelector: request.value.successSelector,
       ...viewBounds()
     });
     viewCreated.value = true;

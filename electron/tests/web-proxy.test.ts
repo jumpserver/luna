@@ -12,6 +12,7 @@ import { OfflineRecordingStore } from "../src/replay/offline-recordings.ts";
 import { requestWebProxyControl } from "../src/web-proxy/control.ts";
 import {
   createCredentialSession,
+  buildLoginSuccessProbeScript,
   normalizedWebOrigin,
   releaseCredentials,
   validateWebSelector
@@ -66,6 +67,7 @@ test("decrypts the Koko-compatible one-time credential envelope", async () => {
         response.setHeader("content-type", "application/json");
         response.end(
           JSON.stringify({
+            session_id: "62a7496e-369d-4f3d-b3f9-a20b61a33980",
             id: "session-id",
             access_token: "once",
             target_url: "https://example.com/login",
@@ -102,13 +104,26 @@ test("decrypts the Koko-compatible one-time credential envelope", async () => {
   proxyUrl = `http://127.0.0.1:${port}`;
 
   try {
-    const session = await createCredentialSession(proxyUrl, "https://example.com/login", "token-id", "token-value");
+    const session = await createCredentialSession(
+      proxyUrl,
+      "https://example.com/login",
+      "token-id",
+      "token-value",
+      "css=.dashboard"
+    );
+    assert.equal(session.sessionId, "62a7496e-369d-4f3d-b3f9-a20b61a33980");
+    assert.equal(session.selectors.success, "css=.dashboard");
     const credentials = await releaseCredentials(session, "https://example.com/login");
     assert.deepEqual(credentials, { username: "managed-user", password: "managed-password" });
     assert.equal(session.accessToken, "");
   } finally {
     await close(server);
   }
+});
+
+test("builds a login-success probe from the configured selector", () => {
+  const script = buildLoginSuccessProbeScript('css=[data-state="authenticated"]');
+  assert.ok(script.includes('findElement("css=[data-state=\\"authenticated\\"]")'));
 });
 
 test("supports empty control responses returned through the Web Proxy", async () => {

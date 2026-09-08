@@ -2,7 +2,7 @@ import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
 import { isLoopbackUrl } from "@jumpserver/connectors-core";
 
-import { invalidatePersonalAssetCredentialCache } from "~/composables/useApiRequest";
+import { getAssetDetailRequest, invalidatePersonalAssetCredentialCache } from "~/composables/useApiRequest";
 import {
   isConnectMethodAvailable,
   K8S_NATIVE_VALUE,
@@ -561,7 +561,12 @@ export const useAssetAction = () => {
         let webProxy;
         if (body.connect_method === WEB_PROXY_NATIVE_VALUE) {
           if (!meta.asset) throw new Error("Website 资产信息不完整");
-          webProxy = useWebProxyManager().buildWebProxyRequest(meta.asset, body.protocol, endpointUrl);
+          const assetDetail = await getAssetDetailRequest(meta.assetId, meta.orgId);
+          const successSelector = String(assetDetail.spec_info?.success_selector || "").trim();
+          if (assetDetail.spec_info?.autofill === "basic" && !successSelector) {
+            throw new Error("Website 资产未配置登录成功选择器");
+          }
+          webProxy = useWebProxyManager().buildWebProxyRequest(meta.asset, body.protocol, endpointUrl, successSelector);
         }
         const payload = {
           token,

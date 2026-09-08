@@ -42,6 +42,7 @@ import { parseUrl, toFetchUrl } from "../shared/url";
 import {
   buildAutofillProbeScript,
   buildAutofillScript,
+  buildLoginSuccessProbeScript,
   createCredentialSession,
   normalizedWebOrigin,
   releaseCredentials
@@ -360,18 +361,22 @@ function webProxyView(event, label) {
 
 function emitWebProxyState(managed, overrides = {}) {
   const url = managed.view.webContents.getURL() || managed.targetUrl;
-  emitDesktopEvent(
-    "web-proxy-state",
-    {
-      label: managed.label,
-      url,
-      title: managed.view.webContents.getTitle(),
-      loading: managed.view.webContents.isLoading(),
-      error: "",
-      ...overrides
-    },
-    managed.hostLabel
-  );
+  const state = {
+    label: managed.label,
+    url,
+    title: managed.view.webContents.getTitle(),
+    loading: managed.view.webContents.isLoading(),
+    error: managed.autofillFailure,
+    ...overrides
+  };
+  if (managed.autofillVisibilityBlocked && !state.error) state.loading = true;
+  emitDesktopEvent("web-proxy-state", state, managed.hostLabel);
+}
+
+function syncWebProxyVisibility(managed) {
+  const visible = managed.active && !managed.autofillVisibilityBlocked;
+  managed.view.setVisible(visible);
+  if (visible) managed.view.webContents.focus();
 }
 
 function emitWebProxyAutofillState(managed, status, message) {
@@ -389,6 +394,44 @@ function setWebProxyRecordingPaused(managed, reason, paused, message) {
 function clearAutofillTimeout(managed) {
   clearTimeout(managed.autofillTimeout);
   managed.autofillTimeout = null;
+  clearInterval(managed.autofillProbeTimer);
+  managed.autofillProbeTimer = null;
+}
+
+function finishWebProxyAutofill(managed, status, message) {
+  if (!managed.autofillInProgress) return;
+  clearAutofillTimeout(managed);
+  managed.autofillInProgress = false;
+  managed.autofillFailure = status === "success" ? "" : message;
+  managed.autofillVisibilityBlocked = status !== "success";
+  setWebProxyRecordingPaused(
+    managed,
+    "autofill",
+    false,
+    status === "success" ? "账号代填登录成功，继续录像" : "账号代填登录失败，继续录像"
+  );
+  emitWebProxyAutofillState(managed, status, message);
+  emitWebProxyState(managed, { loading: false });
+  syncWebProxyVisibility(managed);
+}
+
+async function checkWebProxyLoginSuccess(managed) {
+  if (!managed.autofillInProgress || managed.autofillSuccessProbePending || managed.view.webContents.isDestroyed()) {
+    return;
+  }
+  managed.autofillSuccessProbePending = true;
+  try {
+    const success = await managed.view.webContents.executeJavaScript(
+      buildLoginSuccessProbeScript(managed.autofillSuccessSelector),
+      true
+    );
+    if (success) finishWebProxyAutofill(managed, "success", "已检测到登录成功标记");
+  } catch {
+    // A full-page login redirects while this probe is running. The timer retries
+    // against the new document until the success marker appears or times out.
+  } finally {
+    managed.autofillSuccessProbePending = false;
+  }
 }
 
 async function tryWebProxyAutofill(managed) {
@@ -403,13 +446,34 @@ async function tryWebProxyAutofill(managed) {
   if (currentOrigin !== session.origin) return;
 
   const probeId = ++managed.autofillProbeId;
+  try {
+    const alreadyLoggedIn = await managed.view.webContents.executeJavaScript(
+      buildLoginSuccessProbeScript(session.selectors.success),
+      true
+    );
+    if (alreadyLoggedIn && probeId === managed.autofillProbeId && managed.credentialSession === session) {
+      managed.credentialSession = null;
+      managed.autofillInProgress = true;
+      finishWebProxyAutofill(managed, "success", "已检测到登录成功标记");
+      return;
+    }
+  } catch {
+    return;
+  }
+
   let ready = false;
   try {
     ready = await managed.view.webContents.executeJavaScript(buildAutofillProbeScript(session.selectors), true);
   } catch {
     return;
   }
-  if (!ready || probeId !== managed.autofillProbeId || managed.credentialSession !== session) return;
+  if (probeId !== managed.autofillProbeId || managed.credentialSession !== session) return;
+  if (!ready) {
+    managed.credentialSession = null;
+    managed.autofillInProgress = true;
+    finishWebProxyAutofill(managed, "error", "登录失败：15 秒内未找到登录元素");
+    return;
+  }
 
   managed.credentialSession = null;
   managed.autofillInProgress = true;
@@ -425,22 +489,20 @@ async function tryWebProxyAutofill(managed) {
     credentials.password = "";
     const submitted = await managed.view.webContents.executeJavaScript(script, true);
     if (!submitted) throw new Error("登录元素在代填前发生变化");
-    emitWebProxyAutofillState(managed, "submitted", "已触发页面的登录提交动作");
+    managed.autofillSuccessSelector = session.selectors.success;
+    emitWebProxyAutofillState(managed, "filling", "已提交登录，正在验证登录结果");
     clearAutofillTimeout(managed);
     managed.autofillTimeout = setTimeout(() => {
-      if (!managed.autofillInProgress) return;
-      managed.autofillInProgress = false;
-      setWebProxyRecordingPaused(managed, "autofill", false, "账号代填已结束，继续录像");
-      emitWebProxyAutofillState(managed, "error", "已触发登录，但页面在 20 秒内没有离开密码阶段");
+      finishWebProxyAutofill(managed, "error", "登录失败：20 秒内未检测到登录成功标记");
     }, 20_000);
+    managed.autofillProbeTimer = setInterval(() => void checkWebProxyLoginSuccess(managed), 250);
+    void checkWebProxyLoginSuccess(managed);
   } catch (error) {
     if (credentials) {
       credentials.username = "";
       credentials.password = "";
     }
-    managed.autofillInProgress = false;
-    setWebProxyRecordingPaused(managed, "autofill", false, "账号代填失败，继续录像");
-    emitWebProxyAutofillState(managed, "error", String(error instanceof Error ? error.message : error));
+    finishWebProxyAutofill(managed, "error", String(error instanceof Error ? error.message : error));
   }
 }
 
@@ -489,11 +551,19 @@ async function createWebProxyView(event, win, args) {
     autofillInProgress: false,
     autofillProbeId: 0,
     autofillTimeout: null,
+    autofillProbeTimer: null,
+    autofillSuccessProbePending: false,
+    autofillSuccessSelector: "",
+    autofillFailure: "",
+    autofillVisibilityBlocked: true,
     active: true,
-    recording: null
+    recording: null,
+    webSessionPromise: null,
+    webSessionError: null
   };
   webProxyViews.set(label, managed);
   electronLog.info(`web proxy open ${label} ${target.origin}`);
+  view.setVisible(false);
   win.contentView.addChildView(view);
   view.setBounds({
     x: Math.max(0, Math.round(Number(args.x) || 0)),
@@ -517,42 +587,49 @@ async function createWebProxyView(event, win, args) {
       navigationEvent.preventDefault();
     }
   });
-  view.webContents.on("did-start-navigation", (_navigationEvent, url, _isInPlace, isMainFrame) => {
-    if (!isMainFrame || !managed.autofillInProgress) return;
-    try {
-      parseWebProxyUrl(url, ["http:", "https:"], "Website URL");
-    } catch {
-      return;
-    }
-    clearAutofillTimeout(managed);
-    managed.autofillInProgress = false;
-    setWebProxyRecordingPaused(managed, "autofill", false, "页面已离开密码阶段，继续录像");
-  });
   view.webContents.on("did-start-loading", () => emitWebProxyState(managed, { loading: true }));
   view.webContents.on("did-stop-loading", () => emitWebProxyState(managed, { loading: false }));
-  view.webContents.on("did-finish-load", () => void tryWebProxyAutofill(managed));
+  view.webContents.on("did-finish-load", () => {
+    if (managed.autofillInProgress) void checkWebProxyLoginSuccess(managed);
+    else void tryWebProxyAutofill(managed);
+  });
   view.webContents.on("page-title-updated", () => emitWebProxyState(managed, { loading: false }));
   view.webContents.on("did-fail-load", (_loadEvent, code, description, validatedUrl, isMainFrame) => {
     if (!isMainFrame || code === -3) return;
     electronLog.warn(`web proxy load failed ${label}: ${description}`);
     emitWebProxyState(managed, { url: validatedUrl, loading: false, error: description });
   });
-  void createCredentialSession(proxy, target, String(args.tokenId || ""), String(args.tokenValue || ""))
+  managed.webSessionPromise = createCredentialSession(
+    proxy,
+    target,
+    String(args.tokenId || ""),
+    String(args.tokenValue || ""),
+    String(args.successSelector || "")
+  )
     .then((session) => {
       if (view.webContents.isDestroyed() || webProxyViews.get(label) !== managed) return;
-      managed.credentialSession = session;
-      if (session) {
+      managed.credentialSession = session?.autofillAvailable ? session : null;
+      if (managed.credentialSession) {
         emitWebProxyAutofillState(managed, "ready", "等待登录元素");
         void tryWebProxyAutofill(managed);
       } else {
+        managed.autofillVisibilityBlocked = false;
+        emitWebProxyState(managed);
+        syncWebProxyVisibility(managed);
         emitWebProxyAutofillState(managed, "unavailable", "资产未启用账号代填");
       }
+      return session;
     })
     .catch((error) => {
+      managed.webSessionError = error;
       electronLog.warn(`web proxy autofill failed ${label}`, error);
       if (!view.webContents.isDestroyed()) {
-        emitWebProxyAutofillState(managed, "error", String(error instanceof Error ? error.message : error));
+        const message = String(error instanceof Error ? error.message : error);
+        managed.autofillFailure = message;
+        emitWebProxyAutofillState(managed, "error", message);
+        emitWebProxyState(managed, { loading: false });
       }
+      return null;
     });
   void view.webContents.loadURL(target.toString()).catch((error) => {
     if (!view.webContents.isDestroyed()) {
@@ -1392,14 +1469,13 @@ async function handleInvoke(event, request) {
     const managed = webProxyView(event, args.label);
     const active = Boolean(args.active);
     managed.active = active;
-    managed.view.setVisible(active);
+    syncWebProxyVisibility(managed);
     setWebProxyRecordingPaused(
       managed,
       "inactive",
       !active,
       active ? "Website 标签已激活，继续录像" : "Website 标签在后台，暂停录像"
     );
-    if (active) managed.view.webContents.focus();
     return null;
   }
   if (command === "set_web_proxy_view_bounds") {
@@ -1432,8 +1508,13 @@ async function handleInvoke(event, request) {
       throw new Error("Web 录像参数与当前 Website 会话不匹配");
     }
     try {
+      const webSession = await managed.webSessionPromise;
+      if (!webSession?.sessionId) {
+        throw managed.webSessionError || new Error("Koko Web 会话尚未建立");
+      }
       managed.recording = await WebProxyRecording.start({
         label: managed.label,
+        sessionId: webSession.sessionId,
         targetUrl: target.toString(),
         proxyUrl: proxy.toString(),
         width: Math.round(Number(args.width)),

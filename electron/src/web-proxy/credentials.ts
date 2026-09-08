@@ -46,7 +46,13 @@ export function validateWebSelector(selector) {
   return selector;
 }
 
-export async function createCredentialSession(proxyUrl, targetUrl, tokenId, tokenValue) {
+export async function createCredentialSession(
+  proxyUrl,
+  targetUrl,
+  tokenId,
+  tokenValue,
+  configuredSuccessSelector = ""
+) {
   if (!tokenId || !tokenValue) return null;
 
   const { privateKey, publicKey } = generateKeyPairSync("x25519");
@@ -78,12 +84,16 @@ export async function createCredentialSession(proxyUrl, targetUrl, tokenId, toke
   if (normalizedWebOrigin(responseTarget) !== targetOrigin || String(data.origin).toLowerCase() !== targetOrigin) {
     throw new Error("Koko 返回的 Website origin 不匹配");
   }
-  if (!data.autofill_available) return null;
+  const sessionId = required(data.session_id, "Web 会话 ID");
+  if (!data.autofill_available) return { sessionId, autofillAvailable: false };
 
   const usernameSelector = data.username_selector || "";
   if (usernameSelector) validateWebSelector(usernameSelector);
   const passwordSelector = validateWebSelector(required(data.password_selector, "密码元素配置"));
   const submitSelector = validateWebSelector(required(data.submit_selector, "提交元素配置"));
+  const successSelector = validateWebSelector(
+    required(configuredSuccessSelector || data.success_selector, "登录成功元素配置")
+  );
   const serverPublicKey = Buffer.from(required(data.server_public_key, "Web 公钥"), "base64");
   if (
     serverPublicKey.length !== X25519_SPKI_PREFIX.length + 32 ||
@@ -93,11 +103,18 @@ export async function createCredentialSession(proxyUrl, targetUrl, tokenId, toke
   }
 
   return {
+    sessionId,
+    autofillAvailable: true,
     id: required(data.id, "代填会话 ID"),
     accessToken: required(data.access_token, "代填访问令牌"),
     endpoint,
     origin: targetOrigin,
-    selectors: { username: usernameSelector, password: passwordSelector, submit: submitSelector },
+    selectors: {
+      username: usernameSelector,
+      password: passwordSelector,
+      submit: submitSelector,
+      success: successSelector
+    },
     serverPublicKey,
     privateKey
   };
@@ -223,7 +240,8 @@ export function buildAutofillScript(selectors, credentials) {
     passwordValue: credentials.password,
     usernameSelector: selectors.username,
     passwordSelector: selectors.password,
-    submitSelector: selectors.submit
+    submitSelector: selectors.submit,
+    successSelector: selectors.success
   };
   return `(() => {
 ${selectorLookupScript}
@@ -248,6 +266,17 @@ const blocker = (event) => {
   event.stopImmediatePropagation();
 };
 for (const name of blockedEvents) document.addEventListener(name, blocker, true);
+let cleanedUp = false;
+const cleanup = () => {
+  if (cleanedUp) return;
+  cleanedUp = true;
+  successObserver.disconnect();
+  for (const name of blockedEvents) document.removeEventListener(name, blocker, true);
+  overlay.remove();
+  if (!password.isConnected) return;
+  if (username?.isConnected) setValue(username, "");
+  setValue(password, "");
+};
 const setValue = (element, value) => {
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
   setter.call(element, value);
@@ -258,13 +287,11 @@ if (username) setValue(username, payload.usernameValue);
 setValue(password, payload.passwordValue);
 payload.usernameValue = "";
 payload.passwordValue = "";
-setTimeout(() => {
-  for (const name of blockedEvents) document.removeEventListener(name, blocker, true);
-  overlay.remove();
-  if (!password.isConnected) return;
-  if (username?.isConnected) setValue(username, "");
-  setValue(password, "");
-}, 20000);
+const successObserver = new MutationObserver(() => {
+  if (findElement(payload.successSelector)) cleanup();
+});
+successObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+setTimeout(cleanup, 20000);
 internalAction = true;
 try {
   const form = submit.closest("form");
@@ -278,5 +305,12 @@ try {
   internalAction = false;
 }
 return true;
+})()`;
+}
+
+export function buildLoginSuccessProbeScript(selector) {
+  return `(() => {
+${selectorLookupScript}
+return Boolean(findElement(${JSON.stringify(selector)}));
 })()`;
 }

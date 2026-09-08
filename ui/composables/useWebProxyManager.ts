@@ -5,6 +5,7 @@ export interface WebProxyOpenRequest {
   title: string;
   targetUrl: string;
   proxyUrl: string;
+  successSelector: string;
 }
 
 function normalizeTargetUrl(asset: AssetItem, protocol: string) {
@@ -50,11 +51,17 @@ function normalizeProxyUrl(endpointUrl: string) {
 }
 
 export function useWebProxyManager() {
-  const buildWebProxyRequest = (asset: AssetItem, protocol: string, endpointUrl: string): WebProxyOpenRequest => ({
+  const buildWebProxyRequest = (
+    asset: AssetItem,
+    protocol: string,
+    endpointUrl: string,
+    successSelector = ""
+  ): WebProxyOpenRequest => ({
     assetId: asset.id,
     title: asset.name || new URL(normalizeTargetUrl(asset, protocol)).hostname,
     targetUrl: normalizeTargetUrl(asset, protocol),
-    proxyUrl: normalizeProxyUrl(endpointUrl)
+    proxyUrl: normalizeProxyUrl(endpointUrl),
+    successSelector
   });
 
   return { buildWebProxyRequest };

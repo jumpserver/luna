@@ -4,6 +4,7 @@ import { requestWebProxyControl } from "./control";
 const RECORDING_PATH = "/_jumpserver/web-recordings";
 const CAPTURE_INTERVAL_MS = 500;
 const FORCE_FRAME_INTERVAL_MS = 5_000;
+const FINISH_TIMEOUT_MS = 5 * 60_000;
 const PIXEL_CHANGE_THRESHOLD = 12;
 const MIN_CHANGED_PIXEL_RATIO_PER_10_000 = 25;
 
@@ -52,7 +53,7 @@ export class WebProxyRecording {
   // ponytail: migration keeps recording session state dynamic; replace with explicit frame/session types when strict mode is enabled.
   [key: string]: any;
 
-  static async start({ label, targetUrl, proxyUrl, width, height, capture, emit }) {
+  static async start({ label, sessionId, targetUrl, proxyUrl, width, height, capture, emit }) {
     if (
       !Number.isInteger(width) ||
       !Number.isInteger(height) ||
@@ -69,7 +70,7 @@ export class WebProxyRecording {
       response = await fetchWithTimeout(proxyUrl, endpoint.pathname, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ target_url: targetUrl, width, height })
+        body: JSON.stringify({ session_id: sessionId, target_url: targetUrl, width, height })
       });
     } catch (error) {
       throw new Error(`启动 Koko Web 录像失败: ${error}`);
@@ -195,7 +196,7 @@ export class WebProxyRecording {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ duration_ms: duration })
         },
-        120_000
+        FINISH_TIMEOUT_MS
       );
     } catch (error) {
       throw new Error(`结束 Koko Web 录像失败: ${error}`);
