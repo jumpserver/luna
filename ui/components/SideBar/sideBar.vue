@@ -34,7 +34,6 @@ const sidebarSearch = ref("");
 const showAssetSearch = ref(false);
 const assetSearchInputRef = ref<ComponentPublicInstance | null>(null);
 const assetTreeOpen = ref(true);
-const islandAccordionValue = ref<string[]>(["assets"]);
 const workspaceUiAutomationHost = useWorkspaceUiAutomationHost();
 const {
   currentCommand: workspaceUiCommand,
@@ -70,9 +69,6 @@ watch(
     }
 
     assetTreeOpen.value = true;
-    if (!islandAccordionValue.value.includes("assets")) {
-      islandAccordionValue.value = [...islandAccordionValue.value, "assets"];
-    }
     showAssetSearch.value = Boolean(query);
     if (sidebarSearch.value !== query) sidebarSearch.value = query;
     await nextTick();
@@ -124,65 +120,6 @@ const visibleShelfPanels = computed(() => ({
   snippets: effectiveSidebarSections.value.snippets
 }));
 const hasVisibleShelfPanel = computed(() => Object.values(visibleShelfPanels.value).some(Boolean));
-const islandAccordionItems = computed(() => {
-  const items: Array<{ label: string; value: string; slot: string; class?: string }> = [];
-
-  if (showAssetSection.value) {
-    items.push({
-      label: sidebarSectionLabels.value.assets,
-      value: "assets",
-      slot: "assets",
-      class: "workspace-island-accordion__assets"
-    });
-  }
-  if (visibleShelfPanels.value.favorites) {
-    items.push({
-      label: sidebarSectionLabels.value.favorites,
-      value: "favorites",
-      slot: "favorites",
-      class: "workspace-island-accordion__favorites"
-    });
-  }
-  if (visibleShelfPanels.value.snippets) {
-    items.push({
-      label: sidebarSectionLabels.value.snippets,
-      value: "snippets",
-      slot: "snippets"
-    });
-  }
-
-  return items;
-});
-const islandAssetTreeRef = shallowRef<{
-  loading: boolean;
-  refresh: () => void | Promise<void>;
-  switchTreeKind: () => void;
-  activeTreeKind: "authorization" | "type";
-  treeSwitchLabel: string;
-  batchMenuItems: DropdownMenuItem[][];
-} | null>(null);
-const islandFavoritePanelRef = shallowRef<{
-  favoriteLoading: boolean;
-  openCreateFolder: (parentId?: string | null) => void;
-  refreshFavorites: () => unknown;
-} | null>(null);
-const islandSnippetPanelRef = shallowRef<{
-  snippetLoading: boolean;
-  snippetCreateItems: DropdownMenuItem[];
-  refreshSnippets: () => unknown;
-} | null>(null);
-const islandAccordionUi = {
-  root: "workspace-island-accordion",
-  item: "border-0 py-0 md:py-0 last:border-0",
-  header: "shrink-0 p-0",
-  trigger:
-    "relative h-8 min-w-0 rounded-none px-2.5 py-0 text-sm font-medium text-[var(--app-text-secondary)] hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]",
-  leadingIcon: "sidebar-icon",
-  label: "min-w-0 flex-1 truncate text-start",
-  trailingIcon: "hidden",
-  content: "min-h-0 p-0 overflow-hidden animate-none data-[state=open]:animate-none data-[state=closed]:animate-none",
-  body: "flex min-h-0 flex-1 flex-col p-0"
-};
 const showOrganizationMenu = computed(() => loggedIn.value && activeWorkspaceMode.value === "assets");
 const showSidebarSearchButton = computed(() => showOrganizationMenu.value && showAssetSection.value);
 
@@ -350,184 +287,23 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
 
     <div v-else-if="loggedIn" class="relative flex min-h-0 flex-1 flex-col">
       <div v-show="!showAssetSearch" class="flex min-h-0 flex-1 flex-col">
-        <UAccordion
-          v-if="modernIsland"
-          v-model="islandAccordionValue"
-          type="multiple"
-          :items="islandAccordionItems"
-          :unmount-on-hide="false"
-          :ui="islandAccordionUi"
-        >
-          <template #leading="{ open }">
-            <UIcon
-              name="i-lucide-chevron-right"
-              class="sidebar-icon transition-transform duration-150"
-              :class="open ? 'rotate-90' : ''"
-            />
-          </template>
-          <template #trailing="{ item }">
-            <span
-              v-if="item.value === 'favorites'"
-              data-workspace-tour="favorites"
-              class="pointer-events-none absolute inset-0"
-            />
-            <div class="relative z-10 ml-auto flex shrink-0 items-center gap-px" @click.stop @pointerdown.stop>
-              <template v-if="item.value === 'assets'">
-                <UTooltip :text="islandAssetTreeRef?.treeSwitchLabel || t('Tree.SwitchToType')" :delay-duration="150">
-                  <UButton
-                    as="span"
-                    color="neutral"
-                    variant="ghost"
-                    size="xs"
-                    :icon="
-                      islandAssetTreeRef?.activeTreeKind === 'authorization'
-                        ? 'i-lucide-shapes'
-                        : 'i-lucide-folder-tree'
-                    "
-                    class="sidebar-icon-button size-6 justify-center p-0"
-                    :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-                    :aria-label="islandAssetTreeRef?.treeSwitchLabel || t('Tree.SwitchToType')"
-                    @click="islandAssetTreeRef?.switchTreeKind()"
-                  />
-                </UTooltip>
-                <UButton
-                  as="span"
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  icon="i-lucide-refresh-cw"
-                  :loading="islandAssetTreeRef?.loading"
-                  class="sidebar-icon-button size-6 justify-center p-0"
-                  :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-                  :aria-label="t('ToolTips.Refresh')"
-                  @click="islandAssetTreeRef?.refresh()"
-                />
-                <UDropdownMenu
-                  :items="islandAssetTreeRef?.batchMenuItems || []"
-                  :content="{ align: 'end', side: 'bottom', sideOffset: 6 }"
-                  :ui="{ content: 'w-36 p-1' }"
-                >
-                  <UButton
-                    as="span"
-                    color="neutral"
-                    variant="ghost"
-                    size="xs"
-                    icon="i-lucide-ellipsis"
-                    class="sidebar-icon-button size-6 justify-center p-0"
-                    :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-                    :aria-label="t('Tree.BatchActions')"
-                  />
-                </UDropdownMenu>
-              </template>
-              <template v-else-if="item.value === 'favorites'">
-                <UButton
-                  as="span"
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  icon="i-lucide-folder-plus"
-                  class="sidebar-icon-button size-6 justify-center p-0"
-                  :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-                  :aria-label="t('Favorite.CreateFolder')"
-                  @click="islandFavoritePanelRef?.openCreateFolder()"
-                />
-                <UButton
-                  as="span"
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  icon="i-lucide-refresh-cw"
-                  :loading="islandFavoritePanelRef?.favoriteLoading"
-                  class="sidebar-icon-button size-6 justify-center p-0"
-                  :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-                  :aria-label="t('ToolTips.Refresh')"
-                  @click="islandFavoritePanelRef?.refreshFavorites()"
-                />
-              </template>
-              <template v-else-if="item.value === 'snippets'">
-                <UDropdownMenu
-                  :items="islandSnippetPanelRef?.snippetCreateItems || []"
-                  :content="{ align: 'end', side: 'bottom', sideOffset: 6 }"
-                >
-                  <UButton
-                    as="span"
-                    color="neutral"
-                    variant="ghost"
-                    size="xs"
-                    icon="i-lucide-plus"
-                    class="sidebar-icon-button size-6 justify-center p-0"
-                    :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-                    :aria-label="t('Snippets.Create')"
-                  />
-                </UDropdownMenu>
-                <UButton
-                  as="span"
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  icon="i-lucide-refresh-cw"
-                  :loading="islandSnippetPanelRef?.snippetLoading"
-                  class="sidebar-icon-button size-6 justify-center p-0"
-                  :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-                  :aria-label="t('ToolTips.Refresh')"
-                  @click="islandSnippetPanelRef?.refreshSnippets()"
-                />
-              </template>
-            </div>
-          </template>
-          <template #assets>
-            <SideBarAssetTree
-              v-if="showAssetSection"
-              ref="islandAssetTreeRef"
-              search=""
-              hide-header
-              :open="true"
-              @select="handleAssetConnect"
-              @contextmenu="handleAssetContextMenu"
-              @open-multiple="handleOpenMultipleAssets"
-              @favorite-multiple="handleFavoriteMultipleAssets"
-            />
-          </template>
-          <template #favorites>
-            <SideBarBottomPanels
-              ref="islandFavoritePanelRef"
-              hide-chrome
-              :main-panel-open="true"
-              :visible-panels="{ favorites: true, snippets: false }"
-              @select="handleAssetConnect"
-              @contextmenu="handleAssetContextMenu"
-            />
-          </template>
-          <template #snippets>
-            <SideBarBottomPanels
-              ref="islandSnippetPanelRef"
-              hide-chrome
-              :main-panel-open="true"
-              :visible-panels="{ favorites: false, snippets: true }"
-              @select="handleAssetConnect"
-              @contextmenu="handleAssetContextMenu"
-            />
-          </template>
-        </UAccordion>
-        <template v-else>
-          <SideBarAssetTree
-            v-if="showAssetSection"
-            search=""
-            :open="assetTreeOpen"
-            @select="handleAssetConnect"
-            @contextmenu="handleAssetContextMenu"
-            @toggle="assetTreeOpen = !assetTreeOpen"
-            @open-multiple="handleOpenMultipleAssets"
-            @favorite-multiple="handleFavoriteMultipleAssets"
-          />
-          <SideBarBottomPanels
-            v-if="hasVisibleShelfPanel"
-            :main-panel-open="assetTreeOpen"
-            :visible-panels="visibleShelfPanels"
-            @select="handleAssetConnect"
-            @contextmenu="handleAssetContextMenu"
-          />
-        </template>
+        <SideBarAssetTree
+          v-if="showAssetSection"
+          search=""
+          :open="assetTreeOpen"
+          @select="handleAssetConnect"
+          @contextmenu="handleAssetContextMenu"
+          @toggle="assetTreeOpen = !assetTreeOpen"
+          @open-multiple="handleOpenMultipleAssets"
+          @favorite-multiple="handleFavoriteMultipleAssets"
+        />
+        <SideBarBottomPanels
+          v-if="hasVisibleShelfPanel"
+          :main-panel-open="assetTreeOpen"
+          :visible-panels="visibleShelfPanels"
+          @select="handleAssetConnect"
+          @contextmenu="handleAssetContextMenu"
+        />
       </div>
 
       <div
