@@ -58,6 +58,22 @@ const draggedTabId = ref("");
 const focusModeTabId = ref("");
 const workspaceFullscreen = ref(false);
 const pendingPaneTarget = ref<{ tabId: string; paneId: string } | null>(null);
+const SIDEBAR_COLLAPSE_DURATION = 240;
+let restoreSidebarAfterFullscreen = false;
+const useSharedDocumentFullscreen = createSharedComposable(() => {
+  const fullscreen = useFullscreen();
+  const { setCollapse } = useSettingManager();
+
+  watch(fullscreen.isFullscreen, (full) => {
+    if (full || !workspaceFullscreen.value) return;
+    workspaceFullscreen.value = false;
+    focusModeTabId.value = "";
+    if (restoreSidebarAfterFullscreen) setCollapse(false);
+    restoreSidebarAfterFullscreen = false;
+  });
+
+  return fullscreen;
+});
 let tabSequence = 0;
 let paneSequence = 0;
 let sessionDisposer: ((id: string) => void | Promise<void>) | null = null;
@@ -318,24 +334,31 @@ const resolvePendingTarget = (explicitPaneId?: string) => {
 };
 
 export const useWorkspaceTabs = () => {
+  const desktopRuntime = isDesktopRuntime();
+  const webFullscreen = desktopRuntime ? null : useSharedDocumentFullscreen();
+  const { collapse, setCollapse } = useSettingManager();
+  const collapseSidebar = async () => {
+    setCollapse(true);
+    await new Promise<void>((resolve) => setTimeout(resolve, SIDEBAR_COLLAPSE_DURATION));
+  };
   const setRuntimeFullscreen = async (fullscreen: boolean) => {
-    if (isDesktopRuntime()) {
+    if (desktopRuntime) {
       await desktopWindow.setFullscreen(fullscreen);
       return;
     }
 
-    if (fullscreen) {
-      await document.documentElement.requestFullscreen();
-    } else if (document.fullscreenElement) {
-      await document.exitFullscreen();
-    }
+    if (fullscreen) await webFullscreen!.enter();
+    else await webFullscreen!.exit();
   };
 
   const exitFocusMode = async () => {
     const shouldExitFullscreen = workspaceFullscreen.value;
+    const shouldRestoreSidebar = shouldExitFullscreen && restoreSidebarAfterFullscreen;
     workspaceFullscreen.value = false;
     focusModeTabId.value = "";
+    restoreSidebarAfterFullscreen = false;
     if (shouldExitFullscreen) await setRuntimeFullscreen(false).catch(() => {});
+    if (shouldRestoreSidebar) setCollapse(false);
   };
 
   const registerSessionDisposer = (disposer: ((id: string) => void | Promise<void>) | null) => {
@@ -863,15 +886,25 @@ export const useWorkspaceTabs = () => {
   };
 
   const enterFullscreenMode = async (tabId: string) => {
-    if (!enterFocusMode(tabId)) return false;
+    if (!tabs.value.some((tab) => tab.id === tabId)) return false;
 
+    setActiveSession(tabId);
+    restoreSidebarAfterFullscreen = !collapse.value;
     workspaceFullscreen.value = true;
     try {
+      if (restoreSidebarAfterFullscreen && desktopRuntime) await collapseSidebar();
+      if (!workspaceFullscreen.value) return false;
       await setRuntimeFullscreen(true);
+      if (!workspaceFullscreen.value) return false;
+      if (restoreSidebarAfterFullscreen && !desktopRuntime) await collapseSidebar();
+      if (!workspaceFullscreen.value) return false;
+      focusModeTabId.value = tabId;
       return true;
     } catch {
       workspaceFullscreen.value = false;
       focusModeTabId.value = "";
+      if (restoreSidebarAfterFullscreen) setCollapse(false);
+      restoreSidebarAfterFullscreen = false;
       return false;
     }
   };
