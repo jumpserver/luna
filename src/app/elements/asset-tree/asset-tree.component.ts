@@ -682,6 +682,7 @@ export class ElementAssetTreeComponent implements OnInit {
             id: this.buildFavoriteLeafId(folderId || 'root', assetId),
             pId: folderId ? 'folder-' + folderId : 'favorite-root',
             name: info.name,
+            title: info.meta?.data?.address,
             isParent: false,
             iconSkin: info.iconSkin,
             chkDisabled: info.chkDisabled,
