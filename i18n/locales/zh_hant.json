@@ -869,7 +869,9 @@
     "Actions": "操作",
     "Status": "狀態",
     "RenameSuccess": "重新命名成功",
-    "RenameFail": "重新命名失敗"
+    "RenameFail": "重新命名失敗",
+    "DuplicateName": "資產名稱已存在",
+    "NameTooLong": "資產名稱不能超過 {max} 個字元"
   },
   "ContextMenu": {
     "QuickConnect": "快速連線",

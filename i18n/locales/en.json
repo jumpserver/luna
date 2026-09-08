@@ -869,7 +869,9 @@
     "Actions": "Actions",
     "Status": "Status",
     "RenameSuccess": "Rename successful",
-    "RenameFail": "Rename failed"
+    "RenameFail": "Rename failed",
+    "DuplicateName": "An asset with this name already exists",
+    "NameTooLong": "Asset name cannot exceed {max} characters"
   },
   "ContextMenu": {
     "QuickConnect": "Quick Connect",

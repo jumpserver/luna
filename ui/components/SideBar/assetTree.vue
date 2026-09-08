@@ -2,7 +2,7 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { WorkspaceUiAssetCandidate } from "~/composables/useWorkspaceUiAutomation";
 import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
-import { applyAssetRename, useAssetTreeSearch } from "~/composables/useAssetTree";
+import { applyAssetRename, hasAssetName, registerAssetNameLookup, useAssetTreeSearch } from "~/composables/useAssetTree";
 import { workspaceTourArmed, workspaceTourCompleted } from "~/composables/useWorkspaceTour";
 import { toWorkspaceUiAssetCandidate } from "~/composables/useWorkspaceUiAutomation";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -56,6 +56,10 @@ const activeTreeKind = ref<PanelKind>("authorization");
 const recentNodeOpen = ref(false);
 const authorizationNodes = ref<AssetTreeNode[]>([]);
 const typeNodes = ref<AssetTreeNode[]>([]);
+registerAssetNameLookup(
+  (name, excludeId) =>
+    hasAssetName(authorizationNodes.value, name, excludeId) || hasAssetName(typeNodes.value, name, excludeId)
+);
 const loading = ref(false);
 const authorizationLoaded = ref(false);
 const tourDemoNodes = ref<AssetTreeNode[]>([]);

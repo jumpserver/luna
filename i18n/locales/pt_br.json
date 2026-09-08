@@ -869,7 +869,9 @@
     "Actions": "Ações",
     "Status": "Status",
     "RenameSuccess": "Renomeado com sucesso",
-    "RenameFail": "Falha ao renomear"
+    "RenameFail": "Falha ao renomear",
+    "DuplicateName": "Já existe um ativo com este nome",
+    "NameTooLong": "O nome do ativo não pode exceder {max} caracteres"
   },
   "ContextMenu": {
     "QuickConnect": "Conexão rápida",

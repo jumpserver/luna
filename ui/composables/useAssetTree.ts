@@ -1,6 +1,7 @@
 import type { AssetItem, AssetTreeKind, AssetTreeNode, PermedAccount, PermedProtocol } from "~/types";
-import { ref, shallowRef, watch } from "vue";
+import { onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { hasItemName } from "~/utils/itemName";
 
 interface TreeQuery {
   key?: string;
@@ -60,6 +61,38 @@ export function applyAssetRename(nodes: AssetTreeNode[], assetId: string, name: 
     }
     if (node.children?.length) applyAssetRename(node.children, assetId, name);
   }
+}
+
+const collectAssetLeaves = (nodes: AssetTreeNode[]): Array<{ id: string; name: string }> => {
+  const items: Array<{ id: string; name: string }> = [];
+  const walk = (tree: AssetTreeNode[]) => {
+    for (const node of tree) {
+      const isBranch = Boolean(node.isParent || node.children?.length);
+      if (!isBranch) items.push({ id: String(node.meta?.data?.id || node.key || node.id), name: node.name });
+      if (node.children?.length) walk(node.children);
+    }
+  };
+  walk(nodes);
+  return items;
+};
+
+export function hasAssetName(nodes: AssetTreeNode[], name: string, excludeId?: string): boolean {
+  return hasItemName(collectAssetLeaves(nodes), name, excludeId);
+}
+
+type AssetNameLookup = (name: string, excludeId?: string) => boolean;
+const assetNameLookups = new Set<AssetNameLookup>();
+
+export function registerAssetNameLookup(lookup: AssetNameLookup) {
+  assetNameLookups.add(lookup);
+  onBeforeUnmount(() => assetNameLookups.delete(lookup));
+}
+
+export function isAssetNameTaken(name: string, excludeId?: string) {
+  for (const lookup of assetNameLookups) {
+    if (lookup(name, excludeId)) return true;
+  }
+  return false;
 }
 
 export const useAssetTree = () => {

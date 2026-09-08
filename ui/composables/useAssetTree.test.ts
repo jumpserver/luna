@@ -2,7 +2,7 @@ import type { EffectScope } from "vue";
 import type { AssetTreeNode } from "~/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, reactive, ref } from "vue";
-import { applyAssetRename, useAssetTreeSearch } from "./useAssetTree";
+import { applyAssetRename, hasAssetName, useAssetTreeSearch } from "./useAssetTree";
 
 describe("applyAssetRename", () => {
   it("renames matching leaves in place and leaves parents open", () => {
@@ -24,6 +24,23 @@ describe("applyAssetRename", () => {
     expect(nodes[0]).toMatchObject({ name: "Linux", open: true });
     expect(nodes[0]!.children?.[0]).toMatchObject({ name: "new", meta: { data: { name: "new" } } });
     expect(nodes[0]!.children?.[1]).toMatchObject({ name: "other" });
+  });
+});
+
+describe("asset rename names", () => {
+  const nodes: AssetTreeNode[] = [
+    {
+      id: "folder-1",
+      name: "Linux",
+      isParent: true,
+      children: [{ id: "node-1", key: "asset-1", name: "web-1", meta: { data: { id: "asset-1", name: "web-1" } } }]
+    }
+  ];
+
+  it("detects duplicate leaf names and ignores the asset being renamed", () => {
+    expect(hasAssetName(nodes, "web-1")).toBe(true);
+    expect(hasAssetName(nodes, " WEB-1 ")).toBe(true);
+    expect(hasAssetName(nodes, "web-1", "asset-1")).toBe(false);
   });
 });
 

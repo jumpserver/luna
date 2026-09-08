@@ -869,7 +869,9 @@
     "Actions": "操作",
     "Status": "状态",
     "RenameSuccess": "重命名成功",
-    "RenameFail": "重命名失败"
+    "RenameFail": "重命名失败",
+    "DuplicateName": "资产名称已存在",
+    "NameTooLong": "资产名称不能超过 {max} 个字符"
   },
   "ContextMenu": {
     "QuickConnect": "快速连接",

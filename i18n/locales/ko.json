@@ -869,7 +869,9 @@
     "Actions": "작업",
     "Status": "상태",
     "RenameSuccess": "이름 변경 성공",
-    "RenameFail": "이름 변경 실패"
+    "RenameFail": "이름 변경 실패",
+    "DuplicateName": "같은 이름의 자산이 이미 있습니다",
+    "NameTooLong": "자산 이름은 {max}자를 초과할 수 없습니다"
   },
   "ContextMenu": {
     "QuickConnect": "빠른 연결",

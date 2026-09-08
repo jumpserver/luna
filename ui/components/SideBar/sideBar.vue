@@ -5,6 +5,7 @@ import type { SidebarSectionKey } from "~/types";
 
 import { SIDEBAR_SECTION_KEYS } from "~/composables/useSidebarSections";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { ITEM_NAME_MAX_LENGTH } from "~/utils/itemName";
 
 const { t } = useI18n();
 const localePath = useLocalePath();
@@ -25,6 +26,8 @@ const {
   renameAsset,
   renameValue,
   renameDisabled,
+  renameNameTooLong,
+  renameNameDuplicate,
   submitAssetRename,
   updateRenameModal
 } = useSidebarAssetActions();
@@ -380,7 +383,23 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
       @confirm="submitAssetRename"
       @update:open="updateRenameModal"
     >
-      <UInput v-model="renameValue" autofocus class="w-full" :placeholder="t('AssetCard.AssetName')" />
+      <UFormField
+        :error="
+          renameNameTooLong
+            ? t('AssetCard.NameTooLong', { max: ITEM_NAME_MAX_LENGTH })
+            : renameNameDuplicate
+              ? t('AssetCard.DuplicateName')
+              : undefined
+        "
+      >
+        <UInput
+          v-model="renameValue"
+          autofocus
+          class="w-full"
+          :maxlength="ITEM_NAME_MAX_LENGTH"
+          :placeholder="t('AssetCard.AssetName')"
+        />
+      </UFormField>
     </Modal>
 
     <UDropdownMenu

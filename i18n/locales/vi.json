@@ -869,7 +869,9 @@
     "Actions": "Thao tác",
     "Status": "Trạng thái",
     "RenameSuccess": "Đổi tên thành công",
-    "RenameFail": "Đổi tên thất bại"
+    "RenameFail": "Đổi tên thất bại",
+    "DuplicateName": "Đã có tài sản mang tên này",
+    "NameTooLong": "Tên tài sản không được vượt quá {max} ký tự"
   },
   "ContextMenu": {
     "QuickConnect": "Kết nối nhanh",

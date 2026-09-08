@@ -869,7 +869,9 @@
     "Actions": "操作",
     "Status": "状態",
     "RenameSuccess": "名前を変更しました",
-    "RenameFail": "名前の変更に失敗しました"
+    "RenameFail": "名前の変更に失敗しました",
+    "DuplicateName": "同じ名前のアセットが既に存在します",
+    "NameTooLong": "アセット名は {max} 文字以内で入力してください"
   },
   "ContextMenu": {
     "QuickConnect": "クイック接続",

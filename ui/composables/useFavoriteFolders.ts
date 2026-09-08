@@ -8,6 +8,7 @@ import {
   updateFavoriteFolder
 } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { hasItemName, isItemNameTooLong, ITEM_NAME_MAX_LENGTH } from "~/utils/itemName";
 
 export interface FavoriteFolder {
   id: string;
@@ -18,7 +19,7 @@ export interface FavoriteFolder {
   open: boolean;
 }
 
-export const FAVORITE_FOLDER_NAME_MAX_LENGTH = 128;
+export const FAVORITE_FOLDER_NAME_MAX_LENGTH = ITEM_NAME_MAX_LENGTH;
 
 const rawList = (value: any): any[] =>
   Array.isArray(value)
@@ -82,19 +83,10 @@ const normalizeFolders = (value: unknown): FavoriteFolder[] => {
 const flattenFolders = (folders: FavoriteFolder[]): FavoriteFolder[] =>
   folders.flatMap((folder) => [folder, ...flattenFolders(folder.children)]);
 
-const normalizeFolderName = (name: string) => name.trim().toLocaleLowerCase();
+export const isFavoriteFolderNameTooLong = isItemNameTooLong;
 
-export const isFavoriteFolderNameTooLong = (name: string): boolean =>
-  Array.from(name.trim()).length > FAVORITE_FOLDER_NAME_MAX_LENGTH;
-
-export const hasFavoriteFolderName = (folders: FavoriteFolder[], name: string, excludeId?: string): boolean => {
-  const normalizedName = normalizeFolderName(name);
-  if (!normalizedName) return false;
-
-  return flattenFolders(folders).some(
-    (folder) => folder.id !== excludeId && normalizeFolderName(folder.name) === normalizedName
-  );
-};
+export const hasFavoriteFolderName = (folders: FavoriteFolder[], name: string, excludeId?: string): boolean =>
+  hasItemName(flattenFolders(folders), name, excludeId);
 
 const folderIdFromRaw = (raw: any): string | null => {
   const value = raw?.folder;
