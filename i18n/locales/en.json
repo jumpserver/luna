@@ -1003,6 +1003,7 @@
     "GetAssetFailed": "Get asset failed, please refresh and try again"
   },
   "Account": {
+    "NoAuthorizedAccounts": "No accounts have been authorized for this asset",
     "Hosted": "With secret accounts",
     "Manual": "Manual accounts",
     "Username": "Username",

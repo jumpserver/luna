@@ -1003,6 +1003,7 @@
     "GetAssetFailed": "アセットの取得に失敗しました。更新して再試行してください"
   },
   "Account": {
+    "NoAuthorizedAccounts": "このアセットに承認されたアカウントはありません",
     "Hosted": "シークレット付きアカウント",
     "Manual": "手動アカウント",
     "Username": "ユーザー名",

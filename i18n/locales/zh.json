@@ -1006,6 +1006,7 @@
     "GetAssetFailed": "获取资产失败,请刷新重试"
   },
   "Account": {
+    "NoAuthorizedAccounts": "此资产未授权任何账号",
     "Hosted": "托管账号",
     "Manual": "手动账号",
     "Username": "用户名",

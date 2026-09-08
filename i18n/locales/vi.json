@@ -1003,6 +1003,7 @@
     "GetAssetFailed": "Không thể lấy tài sản, hãy làm mới và thử lại"
   },
   "Account": {
+    "NoAuthorizedAccounts": "Không có tài khoản nào được cấp quyền cho tài sản này",
     "Hosted": "Tài khoản có thông tin xác thực",
     "Manual": "Tài khoản thủ công",
     "Username": "Tên người dùng",

@@ -1003,6 +1003,7 @@
     "GetAssetFailed": "獲取資產失敗,請重新整理重試"
   },
   "Account": {
+    "NoAuthorizedAccounts": "此資產未授權任何帳號",
     "Hosted": "託管帳號",
     "Manual": "手動帳號",
     "Username": "使用者名稱",

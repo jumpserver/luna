@@ -40,7 +40,9 @@ const manualCredentialReady = computed(() => {
   if (draft.value.personalCredentialId && draft.value.personalCredentialVersion === undefined) return false;
   return !!draft.value.manualUsername.trim() && !!draft.value.manualPassword;
 });
-const submitDisabled = computed(() => props.disabled || !manualCredentialReady.value);
+const submitDisabled = computed(
+  () => props.disabled || !props.asset.permedAccounts?.length || !manualCredentialReady.value
+);
 const submit = () => {
   if (!submitDisabled.value) emit("submit");
 };

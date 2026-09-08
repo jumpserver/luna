@@ -1003,6 +1003,7 @@
     "GetAssetFailed": "Falha ao obter o ativo. Atualize e tente novamente"
   },
   "Account": {
+    "NoAuthorizedAccounts": "Nenhuma conta foi autorizada para este ativo",
     "Hosted": "Contas com credenciais",
     "Manual": "Contas manuais",
     "Username": "Nome de usuário",
