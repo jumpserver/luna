@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { sendKokoTerminalDataToMany } from "#koko/composables/useTerminalSessionRegistry";
+import {
+  collectConnectedBatchCommandPanes,
+  reconcileSelectedBatchCommandIds,
+  sendBatchCommandToTargets
+} from "~/composables/batchCommandTargets";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const { t } = useI18n();
@@ -11,9 +15,7 @@ const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 
-const connectedTabs = computed(() =>
-  tabs.value.filter((tab) => !["sftp", "k8s", "kubernetes"].includes(tab.protocol) && tab.status === "connected")
-);
+const connectedTabs = computed(() => collectConnectedBatchCommandPanes(tabs.value));
 const canUseBatchCommand = computed(
   () => loggedIn.value || connectedTabs.value.some((tab) => tab.protocol === "local-shell")
 );
@@ -23,11 +25,7 @@ const selectedTabIds = ref<string[]>([]);
 watch(
   connectedTabs,
   (newTabs, oldTabs = []) => {
-    const oldIds = new Set(oldTabs.map((tab) => tab.id));
-    for (const tab of newTabs) {
-      if (!oldIds.has(tab.id)) selectedTabIds.value.push(tab.id);
-    }
-    selectedTabIds.value = selectedTabIds.value.filter((id) => newTabs.some((tab) => tab.id === id));
+    selectedTabIds.value = reconcileSelectedBatchCommandIds(newTabs, oldTabs, selectedTabIds.value);
   },
   { immediate: true }
 );
@@ -62,12 +60,10 @@ const commandPlaceholder = computed(() =>
 const sendCommand = () => {
   if (!commandExecutionEnabled.value) return;
 
-  const command = batchCommand.value.trim();
-  if (!command || selectedTabIds.value.length === 0) return;
+  const result = sendBatchCommandToTargets(selectedTabIds.value, batchCommand.value);
+  if (!result) return;
 
-  const total = selectedTabIds.value.length;
-  const sent = sendKokoTerminalDataToMany(selectedTabIds.value, `${command}\r`);
-  const failed = total - sent;
+  const { sent, total, failed } = result;
   toast.add({
     title: t("RightPanel.BatchCommandSendResult"),
     description: t("RightPanel.BatchCommandSendResultDesc", { sent, total, failed }),

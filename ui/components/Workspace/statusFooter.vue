@@ -12,12 +12,13 @@ const { authReady } = useAuthSession();
 const commandExecutionEnabled = computed(() => currentUser.value?.commandExecutionEnabled === true);
 const workspaceTabs = computed(() => tabs.value ?? []);
 
+const workspacePanes = computed(() => workspaceTabs.value.flatMap((tab) => tab.panes));
 const tabCount = computed(() => workspaceTabs.value.length);
-const connectedCount = computed(() => workspaceTabs.value.filter((tab) => tab.status === "connected").length);
+const connectedCount = computed(() => workspacePanes.value.filter((pane) => pane.status === "connected").length);
 const connectingCount = computed(
-  () => workspaceTabs.value.filter((tab) => tab.status === "connecting" || tab.status === "ready").length
+  () => workspacePanes.value.filter((pane) => pane.status === "connecting" || pane.status === "ready").length
 );
-const failedCount = computed(() => workspaceTabs.value.filter((tab) => tab.status === "failed").length);
+const failedCount = computed(() => workspacePanes.value.filter((pane) => pane.status === "failed").length);
 const username = computed(() => currentUser.value?.name || "");
 const siteName = computed(() => currentUser.value?.siteName || currentUser.value?.site || "");
 const siteAddress = computed(() => currentUser.value?.site || "");
