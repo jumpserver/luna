@@ -254,10 +254,15 @@ function handleCopyShareURL() {
               value-key="value"
               label-key="label"
               icon="i-lucide-search"
+              size="md"
               class="w-full"
               :items="userSelectItems"
               :loading="searchLoading"
-              :placeholder="t('RightPanel.GetShareUser')"
+              :placeholder="selectedUserIds.length ? '' : t('RightPanel.GetShareUser')"
+              :ui="{
+                base: 'w-full min-h-9 items-center',
+                tagsInput: 'min-w-0 flex-1'
+              }"
               @update:open="handleShareUserOpen"
             >
               <template #content-bottom>
@@ -282,19 +287,23 @@ function handleCopyShareURL() {
               :items="expiredOptions"
               value-key="value"
               label-key="label"
+              size="md"
               class="w-full"
             />
           </UFormField>
 
           <UFormField :label="t('RightPanel.ActionPerm')">
-            <URadioGroup
+            <UTabs
               v-model="shareLinkRequest.actionPerm"
               :items="actionPermOptions"
               value-key="value"
               label-key="label"
-              variant="card"
-              orientation="horizontal"
+              color="neutral"
+              variant="pill"
+              size="md"
+              :content="false"
               class="w-full"
+              :ui="{ root: 'w-full', list: 'w-full', trigger: 'w-full justify-center' }"
             />
           </UFormField>
         </div>
