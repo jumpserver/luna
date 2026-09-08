@@ -28,6 +28,13 @@
   transition: none;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .workspace-island-slot,
+  .workspace-island-gap {
+    transition: none;
+  }
+}
+
 .workspace-island-gap {
   cursor: col-resize;
 }
