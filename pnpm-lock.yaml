@@ -9,6 +9,7 @@ overrides:
   cpu-features: '-'
 
 patchedDependencies:
+  asciinema-player@3.17.0: 670395619c52cad1e2369c01ff5e88c0e601fb052483077eaee25b9351a7633c
   guacamole-common-js-jumpserver@1.1.0-c: a0f8b8a251adeeccc58f741db3ab841b4ff8b61519227b3032f3dc1eb2048d23
 
 importers:
@@ -137,7 +138,7 @@ importers:
         version: 7.0.44(zod@4.4.3)
       asciinema-player:
         specifier: ^3.10.0
-        version: 3.17.0
+        version: 3.17.0(patch_hash=670395619c52cad1e2369c01ff5e88c0e601fb052483077eaee25b9351a7633c)
       clipboard-polyfill:
         specifier: ^4.1.1
         version: 4.1.1
@@ -355,7 +356,7 @@ importers:
         version: 1.3.4
       asciinema-player:
         specifier: ^3.10.0
-        version: 3.17.0
+        version: 3.17.0(patch_hash=670395619c52cad1e2369c01ff5e88c0e601fb052483077eaee25b9351a7633c)
       guacamole-common-js-jumpserver:
         specifier: 1.1.0-c
         version: 1.1.0-c(patch_hash=a0f8b8a251adeeccc58f741db3ab841b4ff8b61519227b3032f3dc1eb2048d23)
@@ -14445,7 +14446,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  asciinema-player@3.17.0:
+  asciinema-player@3.17.0(patch_hash=670395619c52cad1e2369c01ff5e88c0e601fb052483077eaee25b9351a7633c):
     dependencies:
       '@babel/runtime': 7.29.7
       solid-js: 1.9.14
