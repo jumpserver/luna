@@ -23,12 +23,28 @@ export class ApiRequestError extends Error {
 }
 
 export interface AssetTreeParams {
+  parent_key?: string;
+  include_nodes?: boolean;
+  include_assets?: boolean;
+  node_page_size?: number;
+  node_cursor?: string;
+  asset_page_size?: number;
+  asset_offset?: number;
   key?: string;
   n?: string;
   lv?: number;
   type?: string;
   category?: string;
   search?: string;
+}
+
+export interface UserAssetTreeMetricResource {
+  type: "node" | "asset";
+  id: string;
+}
+
+export interface UserAssetTreeMetricResult extends UserAssetTreeMetricResource {
+  count: number;
 }
 
 export interface FavoriteFolderPayload {
@@ -341,6 +357,21 @@ export function getAssetTree(kind: AssetTreeKind, params: AssetTreeParams, orgId
   });
 }
 
+export function getUserAssetTreeMetrics(
+  resources: UserAssetTreeMetricResource[],
+  orgId?: string
+): Promise<{ results: UserAssetTreeMetricResult[] }> {
+  return apiRequest({
+    method: "POST",
+    path: "/api/v1/perms/users/self/tree-metrics/",
+    body: {
+      tree: "authorization",
+      resources
+    },
+    orgId
+  });
+}
+
 export function getAuthorizedAssets(
   params: { search?: string; limit: number; offset: number },
   orgId: string
@@ -391,7 +422,7 @@ export function deleteFavoriteFolder(id: string): Promise<unknown> {
   });
 }
 
-export function favoriteAssetToFolder(assetId: string, folderId: string): Promise<unknown> {
+export function favoriteAssetToFolder(assetId: string, folderId: string | null): Promise<unknown> {
   return apiRequest<unknown>({
     method: "POST",
     path: "/api/v1/assets/favorite-assets/",
@@ -399,6 +430,14 @@ export function favoriteAssetToFolder(assetId: string, folderId: string): Promis
       asset: assetId,
       folder: folderId
     }
+  });
+}
+
+export function favoriteAssetsToFolder(assetIds: string[], folderId: string | null): Promise<unknown> {
+  return apiRequest<unknown>({
+    method: "POST",
+    path: "/api/v1/assets/favorite-assets/batch/",
+    body: { assets: assetIds, folder: folderId }
   });
 }
 

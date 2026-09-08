@@ -3,11 +3,7 @@ import type { DropdownMenuItem } from "@nuxt/ui";
 import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
 import type { Snippet } from "~/composables/useSnippets";
 import type { AssetItem } from "~/types";
-import {
-  FAVORITE_FOLDER_NAME_MAX_LENGTH,
-  hasFavoriteFolderName,
-  isFavoriteFolderNameTooLong
-} from "~/composables/useFavoriteFolders";
+import { getFavoriteRootAssetCount, isFavoriteFolderNameTooLong } from "~/composables/useFavoriteFolders";
 import { writeClipboardText } from "~/utils/clipboard";
 
 const props = defineProps<{
@@ -27,7 +23,7 @@ const emit = defineEmits<{
 type PanelKind = "favorites" | "snippets";
 type SnippetGroupKey = "shell" | "win_shell" | "python" | "raw" | "database" | "other";
 
-const UNGROUPED_FAVORITES_ID = "__ungrouped_favorites__";
+const FAVORITE_ROOT_ID = "__favorite_root__";
 const DATABASE_SNIPPET_MODULES = new Set(["mysql", "mariadb", "postgresql", "sqlserver", "oracle"]);
 
 const { t } = useI18n();
@@ -46,16 +42,14 @@ const {
 } = useFavoriteFolders();
 const { snippets, loading: snippetLoading, load: loadSnippets } = useSnippets();
 const { openScriptEditor } = useWorkspaceTabs();
-const createModalOpen = ref(false);
-const createParentId = ref<string | null>(null);
-const folderName = ref("");
 const creating = ref(false);
 const folderMenuVisible = ref(false);
 const folderMenuPosition = ref({ x: 0, y: 0 });
 const folderMenuTarget = ref<FavoriteFolder | null>(null);
-const renameModalOpen = ref(false);
-const renameTarget = ref<FavoriteFolder | null>(null);
-const renameValue = ref("");
+const editingFolderId = ref<string | null>(null);
+const editingSource = ref("");
+const editingValue = ref("");
+const renaming = ref(false);
 const deleteModalOpen = ref(false);
 const deleteTarget = ref<FavoriteFolder | null>(null);
 const deleting = ref(false);
@@ -68,14 +62,15 @@ const snippetGroupOpen = useState<Record<SnippetGroupKey, boolean>>("sidebar-sni
   database: true,
   other: true
 }));
-const ungroupedFavoritesOpen = ref(true);
-const ungroupedFavorites = computed<FavoriteFolder>(() => ({
-  id: UNGROUPED_FAVORITES_ID,
-  name: t("Favorite.Ungrouped"),
+const favoriteRootOpen = ref(true);
+const favoriteRoot = computed<FavoriteFolder>(() => ({
+  id: FAVORITE_ROOT_ID,
+  name: t("Favorite.All"),
   parent: null,
-  children: [],
+  children: favoriteFolders.value,
   assets: favoriteRootAssets.value,
-  open: ungroupedFavoritesOpen.value
+  assetCount: getFavoriteRootAssetCount(favoriteFolders.value, favoriteRootAssets.value),
+  open: favoriteRootOpen.value
 }));
 
 const snippetCreateItems = computed<DropdownMenuItem[]>(() =>
@@ -121,30 +116,42 @@ const collapseFolderRecursive = (folder: FavoriteFolder) => {
 };
 
 const toggleFolder = (folder: FavoriteFolder) => {
-  if (folder.id === UNGROUPED_FAVORITES_ID) {
-    ungroupedFavoritesOpen.value = !ungroupedFavoritesOpen.value;
+  if (folder.id === FAVORITE_ROOT_ID) {
+    favoriteRootOpen.value = !favoriteRootOpen.value;
     return;
   }
   folder.open = !folder.open;
 };
 
-const openCreateFolder = (parentId: string | null = null) => {
-  createParentId.value = parentId;
-  folderName.value = "";
-  createModalOpen.value = true;
+const startRenameFolder = (folder: FavoriteFolder) => {
+  folderMenuVisible.value = false;
+  editingFolderId.value = folder.id;
+  editingSource.value = folder.name;
+  editingValue.value = folder.name;
 };
 
-const createNameDuplicate = computed(() => hasFavoriteFolderName(favoriteFolders.value, folderName.value));
-const createNameTooLong = computed(() => isFavoriteFolderNameTooLong(folderName.value));
+const findFavoriteFolder = (folders: FavoriteFolder[], folderId: string): FavoriteFolder | undefined => {
+  for (const folder of folders) {
+    if (folder.id === folderId) return folder;
+    const child = findFavoriteFolder(folder.children, folderId);
+    if (child) return child;
+  }
+};
 
-const submitCreateFolder = async () => {
-  const name = folderName.value.trim();
-  if (!name || createNameDuplicate.value || createNameTooLong.value || creating.value) return;
-
+const createAndRenameFolder = async (parentId: string | null = null) => {
+  folderMenuVisible.value = false;
+  if (creating.value) return;
   creating.value = true;
   try {
-    await createFolder(name, createParentId.value);
-    createModalOpen.value = false;
+    const folder = await createFolder(t("Favorite.DefaultFolderName"), parentId);
+    if (!folder) return;
+    if (parentId) {
+      const parent = findFavoriteFolder(favoriteFolders.value, parentId);
+      if (parent) parent.open = true;
+    } else {
+      favoriteRootOpen.value = true;
+    }
+    startRenameFolder(folder);
   } catch (error) {
     addErrorToast({
       title: t("Favorite.CreateFailed"),
@@ -164,44 +171,34 @@ const openFolderMenu = (event: MouseEvent, folder: FavoriteFolder | null = null)
   folderMenuVisible.value = true;
 };
 
-const openRenameFolder = (folder: FavoriteFolder) => {
-  folderMenuVisible.value = false;
-  renameTarget.value = folder;
-  renameValue.value = folder.name;
-  renameModalOpen.value = true;
+const cancelRenameFolder = () => {
+  editingFolderId.value = null;
+  editingSource.value = "";
+  editingValue.value = "";
 };
 
-const renameNameDuplicate = computed(() =>
-  hasFavoriteFolderName(favoriteFolders.value, renameValue.value, renameTarget.value?.id)
-);
-const renameNameTooLong = computed(() => isFavoriteFolderNameTooLong(renameValue.value));
+const finishRenameFolder = async (folder: FavoriteFolder) => {
+  if (editingFolderId.value !== folder.id || renaming.value) return;
+  const name = editingValue.value.trim();
+  if (!name || name === editingSource.value) {
+    cancelRenameFolder();
+    return;
+  }
+  if (isFavoriteFolderNameTooLong(name)) return;
 
-const renameDisabled = computed(() => {
-  const name = renameValue.value.trim();
-  return !name || name === renameTarget.value?.name || renameNameDuplicate.value || renameNameTooLong.value;
-});
-
-const submitRenameFolder = async () => {
-  const folder = renameTarget.value;
-  const name = renameValue.value.trim();
-  if (!folder || !name || name === folder.name || renameNameDuplicate.value || renameNameTooLong.value) return;
-
+  renaming.value = true;
   try {
     await renameFolder(folder.id, name);
-    renameModalOpen.value = false;
-    renameTarget.value = null;
+    cancelRenameFolder();
   } catch (error) {
     addErrorToast({
       title: t("Favorite.RenameFailed"),
       error,
       icon: "i-lucide-circle-alert"
     });
+  } finally {
+    renaming.value = false;
   }
-};
-
-const updateRenameModal = (open: boolean) => {
-  renameModalOpen.value = open;
-  if (!open) renameTarget.value = null;
 };
 
 const openDeleteFolder = (folder: FavoriteFolder) => {
@@ -394,7 +391,7 @@ onMounted(() => {
 });
 
 defineExpose({
-  openCreateFolder,
+  openCreateFolder: () => createAndRenameFolder(),
   refreshFavorites: () => refreshPanel("favorites"),
   favoriteLoading,
   snippetCreateItems,
@@ -462,8 +459,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
       label: folder ? t("Favorite.CreateSubfolder") : t("Favorite.CreateFolder"),
       icon: "i-lucide-folder-plus",
       onSelect: () => {
-        folderMenuVisible.value = false;
-        openCreateFolder(folder?.id ?? null);
+        void createAndRenameFolder(folder?.id ?? null);
       }
     },
     ...(folder
@@ -471,7 +467,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
           {
             label: t("ContextMenu.Rename"),
             icon: "i-lucide-pencil",
-            onSelect: () => openRenameFolder(folder)
+            onSelect: () => startRenameFolder(folder)
           },
           {
             label: t("Favorite.DeleteFolder"),
@@ -496,6 +492,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
       :max-height="panelMaxHeight('favorites')"
       :fill-available="!mainPanelOpen"
       :hide-chrome="hideChrome"
+      content-overflow="hidden"
       @toggle="togglePanel('favorites')"
     >
       <template #actions>
@@ -507,7 +504,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
           class="sidebar-icon-button size-6 justify-center p-0"
           :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
           :aria-label="t('Favorite.CreateFolder')"
-          @click.stop="openCreateFolder()"
+          @click.stop="createAndRenameFolder()"
         />
         <UButton
           color="neutral"
@@ -524,32 +521,19 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
       <div v-if="favoriteLoading && favoriteFolders.length === 0" class="grid h-20 place-items-center">
         <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
       </div>
-      <div v-else class="pb-1">
-        <UEmpty
-          v-if="favoriteFolders.length === 0 && favoriteRootAssets.length === 0"
-          icon="i-lucide-star"
-          size="sm"
-          variant="naked"
-          :title="t('Common.NoData')"
-          class="py-3"
-        />
+      <div v-else class="sidebar-tree-scroll h-full overflow-x-auto overflow-y-auto pb-1">
         <SideBarFavoriteTreeNode
-          v-if="favoriteRootAssets.length > 0"
-          :folder="ungroupedFavorites"
+          :folder="favoriteRoot"
           :level="0"
+          :editing-folder-id="editingFolderId"
+          :editing-value="editingValue"
           @select="emit('select', $event)"
           @contextmenu="(asset, event) => emit('contextmenu', asset, event)"
+          @folder-contextmenu="(folder, event) => openFolderMenu(event, folder.id === FAVORITE_ROOT_ID ? null : folder)"
           @toggle-folder="toggleFolder"
-        />
-        <SideBarFavoriteTreeNode
-          v-for="folder in favoriteFolders"
-          :key="folder.id"
-          :folder="folder"
-          :level="0"
-          @select="emit('select', $event)"
-          @contextmenu="(asset, event) => emit('contextmenu', asset, event)"
-          @folder-contextmenu="(folder, event) => openFolderMenu(event, folder)"
-          @toggle-folder="toggleFolder"
+          @update-editing-value="editingValue = $event"
+          @finish-folder-rename="finishRenameFolder"
+          @cancel-folder-rename="cancelRenameFolder"
         />
       </div>
     </SideBarCollapsiblePanel>
@@ -690,61 +674,6 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
       </div>
     </SideBarCollapsiblePanel>
   </div>
-
-  <Modal
-    :open="createModalOpen"
-    :title="createParentId ? t('Favorite.CreateSubfolder') : t('Favorite.CreateFolder')"
-    :disabled="!folderName.trim() || createNameDuplicate || createNameTooLong || creating"
-    @confirm="submitCreateFolder"
-    @update:open="createModalOpen = $event"
-  >
-    <UFormField
-      :error="
-        createNameTooLong
-          ? t('Favorite.NameTooLong', { max: FAVORITE_FOLDER_NAME_MAX_LENGTH })
-          : createNameDuplicate
-            ? t('Favorite.DuplicateName')
-            : undefined
-      "
-    >
-      <UInput
-        v-model="folderName"
-        autofocus
-        class="w-full"
-        :maxlength="FAVORITE_FOLDER_NAME_MAX_LENGTH"
-        :placeholder="t('Favorite.FolderName')"
-        @keydown.enter="submitCreateFolder"
-      />
-    </UFormField>
-  </Modal>
-
-  <Modal
-    :open="renameModalOpen"
-    :title="t('ContextMenu.Rename')"
-    :description="renameTarget?.name || ''"
-    :disabled="renameDisabled"
-    @confirm="submitRenameFolder"
-    @update:open="updateRenameModal"
-  >
-    <UFormField
-      :error="
-        renameNameTooLong
-          ? t('Favorite.NameTooLong', { max: FAVORITE_FOLDER_NAME_MAX_LENGTH })
-          : renameNameDuplicate
-            ? t('Favorite.DuplicateName')
-            : undefined
-      "
-    >
-      <UInput
-        v-model="renameValue"
-        autofocus
-        class="w-full"
-        :maxlength="FAVORITE_FOLDER_NAME_MAX_LENGTH"
-        :placeholder="t('Favorite.FolderName')"
-        @keydown.enter="submitRenameFolder"
-      />
-    </UFormField>
-  </Modal>
 
   <ModalAlertDialog
     :open="deleteModalOpen"

@@ -2,7 +2,7 @@ import type { EffectScope } from "vue";
 import type { AssetTreeNode } from "~/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, reactive, ref } from "vue";
-import { applyAssetRename, hasAssetName, useAssetTreeSearch } from "./useAssetTree";
+import { applyAssetRename, hasAssetName, useAssetTree, useAssetTreeSearch } from "./useAssetTree";
 
 describe("applyAssetRename", () => {
   it("renames matching leaves in place and leaves parents open", () => {
@@ -50,6 +50,7 @@ vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => userInfoSto
 describe("asset tree search", () => {
   let scope: EffectScope;
   const getAssetTree = vi.fn();
+  const getUserAssetTreeMetrics = vi.fn();
   const onResults = vi.fn();
   const onError = vi.fn();
 
@@ -63,6 +64,7 @@ describe("asset tree search", () => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     vi.stubGlobal("getAssetTree", getAssetTree);
+    vi.stubGlobal("getUserAssetTreeMetrics", getUserAssetTreeMetrics);
     Object.assign(userInfoStore, { loggedIn: true, orgId: "org-1", currentSite: "site-1", currentAccountId: "user-1" });
     getAssetTree.mockResolvedValue([{ id: "asset-1", name: "Production" }]);
     scope = effectScope();
@@ -182,5 +184,111 @@ describe("asset tree search", () => {
 
     expect(onResults).not.toHaveBeenCalled();
     expect(search.nodes.value).toEqual([]);
+  });
+
+  it("loads authorization nodes before the first direct asset page", async () => {
+    getAssetTree
+      .mockResolvedValueOnce({
+        results: [{ id: "1:1", name: "Production", isParent: true }],
+        node_pagination: { has_more: false, next: null }
+      })
+      .mockResolvedValueOnce({
+        results: [{ id: "asset-1", name: "web-1", isParent: false }],
+        node_pagination: { has_more: false, next: null },
+        asset_pagination: { has_more: true, next_offset: 100 }
+      });
+    const { fetchAuthorizationTreePage } = useAssetTree();
+    const parent = { id: "1", name: "Default", isParent: true, level: 0 } as AssetTreeNode;
+
+    const page = await fetchAuthorizationTreePage(parent);
+
+    expect(getAssetTree).toHaveBeenNthCalledWith(
+      1,
+      "authorization",
+      { parent_key: "1", node_page_size: 100 },
+      undefined
+    );
+    expect(getAssetTree).toHaveBeenNthCalledWith(
+      2,
+      "authorization",
+      { parent_key: "1", include_nodes: false, include_assets: true, asset_page_size: 100 },
+      undefined
+    );
+    expect(page.nodes).toHaveLength(2);
+    expect(page.nextPage).toEqual({ phase: "assets", assetOffset: 100 });
+  });
+
+  it("recognizes lightweight authorization nodes by their metadata", async () => {
+    getAssetTree.mockResolvedValueOnce({
+      results: [
+        { id: "ungrouped", name: "Ungrouped", meta: { type: "node", data: { id: "ungrouped" } } },
+        { id: "1:2", name: "Child", meta: { type: "node", data: { id: "node-2" } } }
+      ],
+      node_pagination: { has_more: false, next: null }
+    });
+    const { fetchAuthorizationTreePage } = useAssetTree();
+
+    const page = await fetchAuthorizationTreePage();
+
+    expect(page.nodes).toMatchObject([
+      { id: "ungrouped", isParent: true, meta: { type: "node" } },
+      { id: "1:2", isParent: true, meta: { type: "node" } }
+    ]);
+  });
+
+  it("loads counts for every supplied authorization node in one request", async () => {
+    getUserAssetTreeMetrics.mockResolvedValueOnce({
+      results: [
+        { type: "node", id: "ungrouped", count: 3 },
+        { type: "node", id: "node-2", count: 8 }
+      ]
+    });
+    const { fetchAuthorizationTreeMetrics } = useAssetTree();
+    const nodes = [
+      {
+        id: "ungrouped",
+        name: "Ungrouped",
+        meta: { type: "node", data: { id: "ungrouped" } }
+      },
+      { id: "1:2", name: "Child", meta: { type: "node", data: { id: "node-2" } } },
+      { id: "asset-1", name: "Asset", meta: { type: "asset" } }
+    ] as AssetTreeNode[];
+
+    const counts = await fetchAuthorizationTreeMetrics(nodes);
+
+    expect(getUserAssetTreeMetrics).toHaveBeenCalledExactlyOnceWith(
+      [
+        { type: "node", id: "ungrouped" },
+        { type: "node", id: "node-2" }
+      ],
+      undefined
+    );
+    expect(Object.fromEntries(counts)).toEqual({ ungrouped: 3, "node-2": 8 });
+  });
+
+  it("loads type-tree assets in pages of 100", async () => {
+    getAssetTree.mockResolvedValueOnce({
+      results: [{ id: "asset-1", name: "linux-1", meta: { type: "asset" } }],
+      asset_pagination: { has_more: true, next_offset: 100 }
+    });
+    const { fetchTypeTreePage } = useAssetTree();
+    const parent = {
+      id: "ROOT_HOST_LINUX",
+      name: "Linux",
+      isParent: true,
+      level: 1,
+      type: "linux",
+      category: "host"
+    } as AssetTreeNode;
+
+    const page = await fetchTypeTreePage(parent);
+
+    expect(getAssetTree).toHaveBeenCalledExactlyOnceWith(
+      "type",
+      { type: "linux", category: "host", asset_page_size: 100 },
+      undefined
+    );
+    expect(page.nodes).toHaveLength(1);
+    expect(page.nextPage).toEqual({ phase: "assets", assetOffset: 100 });
   });
 });

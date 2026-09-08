@@ -19,6 +19,7 @@ const {
   handleOpenMultipleAssets,
   handleFavoriteMultipleAssets,
   handleAssetContextMenu,
+  addContextMenuAssetToFavoriteFolder,
   assetContextMenuItems,
   contextMenuVisible,
   contextMenuPosition,
@@ -418,10 +419,27 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
           height: '1px'
         }"
       />
+      <template #item-label="{ item }">
+        <SideBarFavoriteFolderMenuTree
+          v-if="item.favoriteFolderTree"
+          :folders="item.favoriteFolders"
+          :root-asset-count="item.favoriteRootAssetCount"
+          :current-folder-id="item.currentFavoriteFolderId"
+          @select="addContextMenuAssetToFavoriteFolder"
+        />
+        <template v-else>{{ item.label }}</template>
+      </template>
     </UDropdownMenu>
   </div>
 </template>
 
 <style>
 /* sidebar styles live in assets/css/sidebar.css */
+.favorite-folder-submenu [data-slot="viewport"] {
+  overflow-x: auto;
+}
+
+.favorite-folder-submenu [data-slot="viewport"]::-webkit-scrollbar {
+  height: 0;
+}
 </style>

@@ -8,7 +8,7 @@ import {
   updateFavoriteFolder
 } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { hasItemName, isItemNameTooLong, ITEM_NAME_MAX_LENGTH } from "~/utils/itemName";
+import { isItemNameTooLong, ITEM_NAME_MAX_LENGTH } from "~/utils/itemName";
 
 export interface FavoriteFolder {
   id: string;
@@ -16,6 +16,7 @@ export interface FavoriteFolder {
   parent: string | null;
   children: FavoriteFolder[];
   assets: AssetItem[];
+  assetCount?: number;
   open: boolean;
 }
 
@@ -52,6 +53,22 @@ const assetFromRaw = (raw: any): AssetItem | null => {
   };
 };
 
+export const sortFavoriteFoldersByName = (folders: FavoriteFolder[]): FavoriteFolder[] => {
+  for (const folder of folders) sortFavoriteFoldersByName(folder.children);
+  return folders.sort((left, right) => left.name.localeCompare(right.name));
+};
+
+export const restoreFavoriteFolderOpenState = (
+  folders: FavoriteFolder[],
+  openFolderIds: ReadonlySet<string>
+): FavoriteFolder[] => {
+  for (const folder of folders) {
+    if (openFolderIds.has(folder.id)) folder.open = true;
+    restoreFavoriteFolderOpenState(folder.children, openFolderIds);
+  }
+  return folders;
+};
+
 const normalizeFolders = (value: unknown): FavoriteFolder[] => {
   const rawFolders = rawList(value);
   const folders = rawFolders
@@ -62,6 +79,7 @@ const normalizeFolders = (value: unknown): FavoriteFolder[] => {
         parent: raw.parent == null ? null : String(raw.parent?.id || raw.parent),
         children: normalizeFolders(raw.children || raw.folders || []),
         assets: [],
+        assetCount: 0,
         open: Boolean(raw.open)
       } satisfies FavoriteFolder;
     })
@@ -77,16 +95,56 @@ const normalizeFolders = (value: unknown): FavoriteFolder[] => {
     if (parent && parent !== folder) parent.children.push(folder);
     else roots.push(folder);
   }
-  return roots;
+  return sortFavoriteFoldersByName(roots);
 };
 
 const flattenFolders = (folders: FavoriteFolder[]): FavoriteFolder[] =>
   folders.flatMap((folder) => [folder, ...flattenFolders(folder.children)]);
 
+export const flattenFavoriteFolderTree = (
+  folders: FavoriteFolder[],
+  depth = 1
+): Array<{ folder: FavoriteFolder; depth: number }> =>
+  folders.flatMap((folder) => [{ folder, depth }, ...flattenFavoriteFolderTree(folder.children, depth + 1)]);
+
+export const flattenVisibleFavoriteFolderTree = (
+  folders: FavoriteFolder[],
+  expandedFolderIds: ReadonlySet<string>,
+  depth = 1
+): Array<{ folder: FavoriteFolder; depth: number }> =>
+  folders.flatMap((folder) => [
+    { folder, depth },
+    ...(expandedFolderIds.has(folder.id)
+      ? flattenVisibleFavoriteFolderTree(folder.children, expandedFolderIds, depth + 1)
+      : [])
+  ]);
+
+export const findFavoriteAssetFolderId = (
+  assetId: string,
+  folders: FavoriteFolder[],
+  rootAssets: AssetItem[]
+): string | null | undefined => {
+  if (rootAssets.some((asset) => asset.id === assetId)) return null;
+
+  for (const folder of folders) {
+    if (folder.assets.some((asset) => asset.id === assetId)) return folder.id;
+    const childFolderId = findFavoriteAssetFolderId(assetId, folder.children, []);
+    if (childFolderId !== undefined) return childFolderId;
+  }
+
+  return undefined;
+};
+
 export const isFavoriteFolderNameTooLong = isItemNameTooLong;
 
-export const hasFavoriteFolderName = (folders: FavoriteFolder[], name: string, excludeId?: string): boolean =>
-  hasItemName(flattenFolders(folders), name, excludeId);
+export const updateFavoriteFolderAssetCount = (folder: FavoriteFolder): number => {
+  folder.assetCount =
+    folder.assets.length + folder.children.reduce((total, child) => total + updateFavoriteFolderAssetCount(child), 0);
+  return folder.assetCount;
+};
+
+export const getFavoriteRootAssetCount = (folders: FavoriteFolder[], rootAssets: AssetItem[]): number =>
+  rootAssets.length + folders.reduce((total, folder) => total + (folder.assetCount || 0), 0);
 
 const folderIdFromRaw = (raw: any): string | null => {
   const value = raw?.folder;
@@ -117,7 +175,12 @@ export const useFavoriteFolders = () => {
       const [folderData, assetData] = await Promise.all([getFavoriteFolders(), getFavoriteAssets().catch(() => [])]);
       if (requestVersion !== stateVersion.value || requestAccountId !== currentAccountId.value || !loggedIn.value)
         return;
-      const normalizedFolders = normalizeFolders(folderData);
+      const openFolderIds = new Set(
+        flattenFolders(folders.value)
+          .filter((folder) => folder.open)
+          .map((folder) => folder.id)
+      );
+      const normalizedFolders = restoreFavoriteFolderOpenState(normalizeFolders(folderData), openFolderIds);
       const folderMap = new Map(flattenFolders(normalizedFolders).map((folder) => [folder.id, folder]));
       const nextRootAssets: AssetItem[] = [];
 
@@ -130,6 +193,8 @@ export const useFavoriteFolders = () => {
         if (folder) folder.assets.push(asset);
         else nextRootAssets.push(asset);
       }
+
+      for (const folder of normalizedFolders) updateFavoriteFolderAssetCount(folder);
 
       folders.value = normalizedFolders;
       rootAssets.value = nextRootAssets;
@@ -147,14 +212,25 @@ export const useFavoriteFolders = () => {
 
   const createFolder = async (name: string, parent: string | null = null) => {
     if (isFavoriteFolderNameTooLong(name)) throw new Error("Favorite folder name is too long");
-    if (hasFavoriteFolderName(folders.value, name)) throw new Error("Favorite folder name already exists");
-    await createFavoriteFolder(parent ? { name, parent } : { name });
+    const created = await createFavoriteFolder({ name, parent });
     await load();
+    const createdId = String((created as { id?: unknown } | null)?.id || "");
+    const createdFolder = createdId ? flattenFolders(folders.value).find((folder) => folder.id === createdId) : null;
+    if (!createdFolder) return null;
+
+    const siblings = parent
+      ? flattenFolders(folders.value).find((folder) => folder.id === parent)?.children
+      : folders.value;
+    const createdIndex = siblings?.findIndex((folder) => folder.id === createdId) ?? -1;
+    if (siblings && createdIndex > 0) {
+      siblings.splice(createdIndex, 1);
+      siblings.unshift(createdFolder);
+    }
+    return createdFolder;
   };
 
   const renameFolder = async (id: string, name: string) => {
     if (isFavoriteFolderNameTooLong(name)) throw new Error("Favorite folder name is too long");
-    if (hasFavoriteFolderName(folders.value, name, id)) throw new Error("Favorite folder name already exists");
     await updateFavoriteFolder(id, { name });
     await load();
   };
@@ -164,7 +240,7 @@ export const useFavoriteFolders = () => {
     await load();
   };
 
-  const favoriteToFolder = async (assetId: string, folderId: string) => {
+  const favoriteToFolder = async (assetId: string, folderId: string | null) => {
     await favoriteAssetToFolder(assetId, folderId);
     await load();
     useEventBus().emit("favoriteChanged", { assetId, favorite: true });

@@ -109,14 +109,18 @@ const buildMenuItems = computed(() => {
         label: t("Favorite.AddToFolder"),
         icon: "lucide:star",
         onClick: () => void 0,
-        children:
-          flatFavoriteFolders.value.length > 0
-            ? flatFavoriteFolders.value.map((folder) => ({
-                label: folder.name,
-                icon: "i-lucide-folder",
-                onClick: () => favoriteToFolder(asset.id, folder.id)
-              }))
-            : [{ label: t("Favorite.CreateFolderFirst"), icon: "i-lucide-folder-plus", onClick: () => void 0 }]
+        children: [
+          {
+            label: t("Favorite.All"),
+            icon: "i-lucide-star",
+            onClick: () => favoriteToFolder(asset.id, null)
+          },
+          ...flatFavoriteFolders.value.map((folder) => ({
+            label: folder.name,
+            icon: "i-lucide-folder",
+            onClick: () => favoriteToFolder(asset.id, folder.id)
+          }))
+        ]
       },
       ...(asset.isFavorite
         ? [
