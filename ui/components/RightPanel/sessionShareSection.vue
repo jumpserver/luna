@@ -48,23 +48,29 @@ const actionPermOptions: Array<{ label: string; value: "writable" | "readonly" }
   { label: t("RightPanel.ReadOnly"), value: "readonly" }
 ];
 
-const userSelectItems = computed(() =>
-  (userOptions.value || []).map((item) => ({
-    label: item.username,
-    value: item.id
-  }))
-);
+const userSelectItems = computed(() => {
+  const seen = new Set<string>();
+  const items: Array<{ label: string; value: string }> = [];
+  const push = (id: string, label?: string) => {
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    items.push({ label: label || id, value: id });
+  };
 
-function toggleShareUser(userId: string) {
-  if (selectedUserIds.value.includes(userId)) {
-    selectedUserIds.value = selectedUserIds.value.filter((id) => id !== userId);
-    delete selectedUsers.value[userId];
-    return;
+  for (const id of selectedUserIds.value) {
+    const user = selectedUsers.value[id] || userOptions.value.find((item) => item.id === id);
+    push(id, user?.username);
   }
+  for (const user of userOptions.value || []) push(user.id, user.username);
+  return items;
+});
 
-  const user = userOptions.value.find((item) => item.id === userId);
-  if (user) selectedUsers.value[userId] = user;
-  selectedUserIds.value = [...selectedUserIds.value, userId];
+function cacheSelectedUsers(ids: string[]) {
+  for (const id of ids) {
+    if (selectedUsers.value[id]) continue;
+    const user = userOptions.value.find((item) => item.id === id);
+    if (user) selectedUsers.value[id] = user;
+  }
 }
 
 watch(
@@ -98,11 +104,11 @@ watch(
   () => userOptions.value,
   (options) => {
     if (options?.length) searchLoading.value = false;
-    for (const user of options || []) {
-      if (selectedUserIds.value.includes(user.id)) selectedUsers.value[user.id] = user;
-    }
+    cacheSelectedUsers(selectedUserIds.value);
   }
 );
+
+watch(selectedUserIds, (ids) => cacheSelectedUsers(ids));
 
 async function runSearch(query: string, loadMore = false) {
   searchLoading.value = true;
@@ -117,6 +123,11 @@ async function runSearch(query: string, loadMore = false) {
 
 const debouncedSearch = useDebounceFn((query: string) => void runSearch(query), 300);
 
+watch(searchQuery, (query) => {
+  if (!shareModalOpen.value) return;
+  debouncedSearch(query);
+});
+
 const selectedShareUsers = computed<SuggestionUser[]>(() =>
   selectedUserIds.value
     .map((id) => selectedUsers.value[id] || userOptions.value.find((item) => item.id === id))
@@ -126,6 +137,10 @@ const selectedShareUsers = computed<SuggestionUser[]>(() =>
 function openShareModal() {
   showLinkResult.value = Boolean(shareInfo.value.shareCode);
   shareModalOpen.value = true;
+}
+
+function handleShareUserOpen(open: boolean) {
+  if (open) void runSearch(searchQuery.value);
 }
 
 function handleCreateLink() {
@@ -230,114 +245,75 @@ function handleCopyShareURL() {
       <template #body>
         <div v-if="!showLinkResult" class="space-y-4">
           <UFormField :label="t('RightPanel.ShareUser')">
-            <UInput
-              v-model="searchQuery"
+            <UInputMenu
+              v-model="selectedUserIds"
+              v-model:search-term="searchQuery"
+              multiple
+              ignore-filter
+              open-on-focus
+              value-key="value"
+              label-key="label"
               icon="i-lucide-search"
-              :placeholder="t('RightPanel.GetShareUser')"
+              class="w-full"
+              :items="userSelectItems"
               :loading="searchLoading"
-              @update:model-value="debouncedSearch"
-              @focus="debouncedSearch('')"
-            />
-
-            <div v-if="selectedUserIds.length" class="mt-2 flex flex-wrap gap-1.5">
-              <UBadge
-                v-for="userId in selectedUserIds"
-                :key="userId"
-                size="sm"
-                color="primary"
-                variant="subtle"
-                class="cursor-pointer"
-                @click="toggleShareUser(userId)"
-              >
-                {{
-                  selectedUsers[userId]?.username ||
-                  userSelectItems.find((item) => item.value === userId)?.label ||
-                  userId
-                }}
-                <UIcon name="i-lucide-x" class="ml-1 size-3" />
-              </UBadge>
-            </div>
-
-            <div
-              v-if="userSelectItems.length"
-              class="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-lg border border-gray-200 p-1.5 dark:border-white/10"
+              :placeholder="t('RightPanel.GetShareUser')"
+              @update:open="handleShareUserOpen"
             >
-              <button
-                v-for="item in userSelectItems"
-                :key="item.value"
-                type="button"
-                class="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-black/5 dark:hover:bg-white/8"
-                :class="selectedUserIds.includes(item.value) ? 'bg-primary/8 text-primary' : ''"
-                @click="toggleShareUser(item.value)"
-              >
-                <UIcon
-                  :name="selectedUserIds.includes(item.value) ? 'i-lucide-check-circle-2' : 'i-lucide-circle'"
-                  class="size-4 shrink-0"
-                />
-                <span class="truncate">{{ item.label }}</span>
-              </button>
-              <UButton
-                v-if="hasMoreUsers"
-                block
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                :loading="searchLoading"
-                :label="t('RightPanel.LoadMoreUsers')"
-                @click="runSearch(searchQuery, true)"
-              />
-            </div>
+              <template #content-bottom>
+                <div v-if="hasMoreUsers" class="border-t border-default p-1.5">
+                  <UButton
+                    block
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    :loading="searchLoading"
+                    :label="t('RightPanel.LoadMoreUsers')"
+                    @click.stop="runSearch(searchQuery, true)"
+                  />
+                </div>
+              </template>
+            </UInputMenu>
           </UFormField>
 
-          <div>
-            <div class="mb-2 text-sm text-gray-600 dark:text-gray-300">
-              {{ t("RightPanel.ExpiredTime") }}
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <UButton
-                v-for="item in expiredOptions"
-                :key="item.value"
-                size="sm"
-                :color="shareLinkRequest.expiredTime === item.value ? 'primary' : 'neutral'"
-                :variant="shareLinkRequest.expiredTime === item.value ? 'soft' : 'outline'"
-                @click="shareLinkRequest.expiredTime = item.value"
-              >
-                {{ item.label }}
-              </UButton>
-            </div>
-          </div>
+          <UFormField :label="t('RightPanel.ExpiredTime')">
+            <USelect
+              v-model="shareLinkRequest.expiredTime"
+              :items="expiredOptions"
+              value-key="value"
+              label-key="label"
+              class="w-full"
+            />
+          </UFormField>
 
-          <div>
-            <div class="mb-2 text-sm text-gray-600 dark:text-gray-300">
-              {{ t("RightPanel.ActionPerm") }}
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <UButton
-                v-for="item in actionPermOptions"
-                :key="item.value"
-                size="sm"
-                block
-                :color="shareLinkRequest.actionPerm === item.value ? 'primary' : 'neutral'"
-                :variant="shareLinkRequest.actionPerm === item.value ? 'soft' : 'outline'"
-                @click="shareLinkRequest.actionPerm = item.value"
-              >
-                {{ item.label }}
-              </UButton>
-            </div>
-          </div>
+          <UFormField :label="t('RightPanel.ActionPerm')">
+            <URadioGroup
+              v-model="shareLinkRequest.actionPerm"
+              :items="actionPermOptions"
+              value-key="value"
+              label-key="label"
+              variant="card"
+              orientation="horizontal"
+              class="w-full"
+            />
+          </UFormField>
         </div>
 
         <div v-else class="space-y-4">
-          <UInput readonly :model-value="shareInfo.shareURL" icon="i-lucide-link" />
+          <UFormField :label="t('RightPanel.ShareLink')">
+            <UInput readonly :model-value="shareInfo.shareURL" icon="i-lucide-link" />
+          </UFormField>
 
-          <div class="rounded-lg border border-gray-200 px-4 py-4 text-center dark:border-white/10">
-            <div class="text-sm text-gray-500 dark:text-gray-400">
-              {{ t("RightPanel.VerifyCode") }}
+          <UCard>
+            <div class="py-2 text-center">
+              <p class="text-sm text-muted">
+                {{ t("RightPanel.VerifyCode") }}
+              </p>
+              <p class="mt-1 font-ui-mono text-2xl tracking-widest text-highlighted">
+                {{ shareInfo.shareCode }}
+              </p>
             </div>
-            <div class="mt-1 font-ui-mono text-2xl tracking-widest text-gray-900 dark:text-white">
-              {{ shareInfo.shareCode }}
-            </div>
-          </div>
+          </UCard>
         </div>
       </template>
 
