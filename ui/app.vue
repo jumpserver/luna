@@ -2,6 +2,7 @@
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { LangType, LanguagePreference } from "~/types";
 
+import defaultFavicon from "~/assets/facio.ico";
 import AppWatermark from "~/components/AppWatermark.vue";
 import AclDialog from "~/components/Modal/aclDialog.vue";
 import ConnectionFormModal from "~/components/Modal/connectionFormModal.vue";
@@ -10,7 +11,12 @@ import { applyUiRadius, isUiRadius } from "~/composables/useSettingStorage";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composables/useThemePresets";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { resolveLanguageFromSystem } from "~/utils";
-import { COMMUNITY_WORKSPACE_BRAND, formatWorkspaceTitle, WORKSPACE_BRAND_STATE_KEY } from "~/utils/pageTitle";
+import {
+  COMMUNITY_WORKSPACE_BRAND,
+  formatWorkspaceTitle,
+  WORKSPACE_BRAND_STATE_KEY,
+  WORKSPACE_FAVICON_STATE_KEY
+} from "~/utils/pageTitle";
 import { isDesktopRuntime } from "~/utils/runtime";
 
 useApplicationConfig();
@@ -21,6 +27,7 @@ const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
 const route = useRoute();
 const authSession = useAuthSession();
 const webWorkspaceBrand = useState<string>(WORKSPACE_BRAND_STATE_KEY, () => COMMUNITY_WORKSPACE_BRAND);
+const webWorkspaceFavicon = useState<string>(WORKSPACE_FAVICON_STATE_KEY, () => "");
 
 const { isMacOS, isWindows } = usePlatform();
 const { locale, setLocale, t } = useI18n();
@@ -90,6 +97,10 @@ const appTitle = computed(() => {
 // 因为 <Body> 是一个虚拟组件，底层并不会响应 Vue 的 :style 绑定。它的作用是把插槽内容插入到真正的 <body> 中，但自身不是一个响应式桥梁。
 useHead({
   title: appTitle,
+  link: computed(() => {
+    if (!import.meta.client || isDesktopRuntime()) return [];
+    return [{ key: "workspace-favicon", rel: "icon", href: webWorkspaceFavicon.value || defaultFavicon }];
+  }),
   bodyAttrs: {
     class: computed(
       () => `${platformClass.value} ${micaClass.value} ${vibrancyClass.value} font-sans antialiased h-screen w-screen`

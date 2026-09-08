@@ -18,21 +18,25 @@ const toggle = () => {
 
 <template>
   <div class="app-tree">
-    <div
-      class="app-tree-row sidebar-row group/folder flex items-center gap-1 rounded-lg pr-1"
-      :style="{ paddingLeft: `${10 + (level || 0) * 14}px` }"
-      @contextmenu.prevent="emit('folderContextmenu', folder, $event)"
-    >
-      <button type="button" class="flex min-w-0 flex-1 items-center gap-1 text-left" @click="toggle">
-        <UIcon
-          name="i-lucide-chevron-right"
-          class="app-tree-toggle-icon sidebar-icon-sm transition-transform"
-          :class="folder.open ? 'rotate-90' : ''"
-        />
+    <UTooltip :text="folder.name" :delay-duration="150">
+      <button
+        type="button"
+        class="app-tree-row sidebar-row flex w-full cursor-pointer items-center gap-1 pr-1 text-left outline-none"
+        :style="{ paddingLeft: `${10 + (level || 0) * 14}px` }"
+        @click="toggle"
+        @contextmenu.prevent="emit('folderContextmenu', folder, $event)"
+      >
+        <span class="app-tree-icon-slot grid shrink-0 place-items-center">
+          <UIcon
+            name="i-lucide-chevron-right"
+            class="app-tree-toggle-icon sidebar-icon-sm transition-transform"
+            :class="folder.open ? 'rotate-90' : ''"
+          />
+        </span>
         <AppTreeFolderIcon :open="folder.open" class="app-tree-icon sidebar-icon tree-folder-icon" />
-        <span class="truncate font-medium">{{ folder.name }}</span>
+        <span class="min-w-0 flex-1 truncate font-medium">{{ folder.name }}</span>
       </button>
-    </div>
+    </UTooltip>
     <div v-if="folder.open">
       <FavoriteTreeNode
         v-for="child in folder.children"
@@ -44,18 +48,24 @@ const toggle = () => {
         @folder-contextmenu="(target, event) => emit('folderContextmenu', target, event)"
         @toggle-folder="(target) => emit('toggleFolder', target)"
       />
-      <button
+      <UTooltip
         v-for="asset in folder.assets"
         :key="`${folder.id}-${asset.id}`"
-        type="button"
-        class="app-tree-row sidebar-row flex w-full items-center gap-1.5 rounded-lg pr-1 text-left"
-        :style="{ paddingLeft: `${26 + (level || 0) * 14}px` }"
-        @dblclick="emit('select', asset)"
-        @contextmenu.prevent="emit('contextmenu', asset, $event)"
+        :text="asset.name"
+        :delay-duration="150"
       >
-        <UIcon name="i-lucide-terminal" class="app-tree-icon sidebar-icon" />
-        <span class="truncate font-ui-mono">{{ asset.name }}</span>
-      </button>
+        <button
+          type="button"
+          class="app-tree-row sidebar-row flex w-full cursor-pointer items-center gap-1 pr-1 text-left outline-none"
+          :style="{ paddingLeft: `${10 + ((level || 0) + 1) * 14}px` }"
+          @click="emit('select', asset)"
+          @contextmenu.prevent="emit('contextmenu', asset, $event)"
+        >
+          <span class="app-tree-icon-slot grid shrink-0 place-items-center" />
+          <UIcon name="i-lucide-terminal" class="app-tree-icon sidebar-icon" />
+          <span class="min-w-0 flex-1 truncate font-medium font-ui-mono tracking-[0.01em]">{{ asset.name }}</span>
+        </button>
+      </UTooltip>
     </div>
   </div>
 </template>

@@ -127,6 +127,44 @@ const activate = () => {
   }
 };
 
+const reducedMotion = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const animateBranchHeight = (el: Element, from: number, to: number, done: () => void) => {
+  const node = el as HTMLElement;
+  if (reducedMotion()) {
+    done();
+    return;
+  }
+
+  node.style.overflow = "hidden";
+  node.style.height = `${from}px`;
+  void node.offsetHeight;
+
+  let timer = 0;
+  const finish = (event?: Event) => {
+    if (event && (event.target !== node || (event as TransitionEvent).propertyName !== "height")) return;
+    node.removeEventListener("transitionend", finish);
+    clearTimeout(timer);
+    node.style.height = "";
+    node.style.overflow = "";
+    node.style.transition = "";
+    done();
+  };
+
+  node.addEventListener("transitionend", finish);
+  timer = window.setTimeout(finish, 280);
+  node.style.transition = "height 220ms cubic-bezier(0.22, 1, 0.36, 1)";
+  node.style.height = `${to}px`;
+};
+
+const enterBranch = (el: Element, done: () => void) => {
+  animateBranchHeight(el, 0, (el as HTMLElement).scrollHeight, done);
+};
+
+const leaveBranch = (el: Element, done: () => void) => {
+  animateBranchHeight(el, (el as HTMLElement).scrollHeight, 0, done);
+};
+
 watch(
   isAutomationFocused,
   async (focused) => {
@@ -198,8 +236,8 @@ watch(
       </button>
     </div>
 
-    <div v-if="isParent" class="app-tree-branch" :class="isOpen ? 'is-open' : ''">
-      <div class="app-tree-branch__inner" role="group">
+    <Transition :css="false" @enter="enterBranch" @leave="leaveBranch">
+      <div v-if="isParent && isOpen" class="overflow-hidden" role="group">
         <AssetTreeNode
           v-for="child in node.children || []"
           :key="`${treeKind}-${child.id}`"
@@ -217,6 +255,6 @@ watch(
         />
         <div v-if="node.loading" class="app-tree-row" />
       </div>
-    </div>
+    </Transition>
   </div>
 </template>

@@ -257,6 +257,8 @@
     "CreateFolder": "Crear carpeta",
     "CreateSubfolder": "Crear subcarpeta",
     "FolderName": "Nombre de la carpeta",
+    "DuplicateName": "Ya existe una carpeta con este nombre",
+    "NameTooLong": "El nombre de la carpeta no puede superar los {max} caracteres",
     "CreateFailed": "Error al crear la carpeta",
     "RenameFailed": "Error al renombrar la carpeta",
     "CreateFolderFirst": "Cree primero una carpeta de favoritos",
@@ -867,7 +869,9 @@
     "Actions": "Acciones",
     "Status": "Estado",
     "RenameSuccess": "Renombrado correctamente",
-    "RenameFail": "Error al renombrar"
+    "RenameFail": "Error al renombrar",
+    "DuplicateName": "Ya existe un activo con este nombre",
+    "NameTooLong": "El nombre del activo no puede superar los {max} caracteres"
   },
   "ContextMenu": {
     "QuickConnect": "Conexión rápida",
@@ -1001,6 +1005,7 @@
     "GetAssetFailed": "Error al obtener el activo. Actualice e inténtelo de nuevo"
   },
   "Account": {
+    "NoAuthorizedAccounts": "No hay cuentas autorizadas para este activo",
     "Hosted": "Cuentas con credenciales",
     "Manual": "Cuentas manuales",
     "Username": "Nombre de usuario",

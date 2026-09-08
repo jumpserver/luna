@@ -1,7 +1,7 @@
 import ts from "typescript";
 import { expect, it, vi } from "vitest";
 import { computed, ref } from "vue";
-import source from "./WebProxySessionSurface.vue?raw";
+import source from "../../packages/web-proxy/src/WebProxySurface.vue?raw";
 
 function setupSurface(safeMode = false) {
   const desktopWebProxy = {
@@ -14,22 +14,31 @@ function setupSurface(safeMode = false) {
     history: vi.fn(),
     reload: vi.fn()
   };
-  const emit = vi.fn();
   const markSessionConnected = vi.fn();
+  const emit = vi.fn((name) => {
+    if (name === "connected") markSessionConnected("tab");
+  });
   const closeSession = vi.fn(async () => true);
   // Execute the component's setup without mounting its native Electron view.
   const script = source.match(/<script setup lang="ts">([\s\S]*?)<\/script>/)![1]!;
   const { outputText } = ts.transpileModule(script, { compilerOptions: { module: ts.ModuleKind.CommonJS } });
   const scope = {
     exports: {},
-    require: () => ({ desktopWebProxy }),
+    require: () => ({
+      ref,
+      computed,
+      watch: vi.fn(),
+      onMounted: vi.fn(),
+      onBeforeUnmount: vi.fn(),
+      nextTick: async (fn?: () => void) => fn?.()
+    }),
     ref,
     computed,
     watch: vi.fn(),
     onMounted: vi.fn(),
     onBeforeUnmount: vi.fn(),
     defineExpose: vi.fn(),
-    defineProps: () => ({ tab: { id: "tab", payload: { webProxy: { safeMode } } } }),
+    defineProps: () => ({ request: { safeMode }, bridge: desktopWebProxy, active: true, supported: true }),
     defineEmits: () => emit,
     useWorkspaceTabs: () => ({ activeTabId: ref("tab"), tabs: ref([]), markSessionConnected, closeSession }),
     usePlatform: () => ({}),

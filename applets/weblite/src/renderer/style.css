@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+@import "../../../../ui/assets/css/tokens.css";
+@source "../../../../packages/web-proxy/src";
+html,
+body,
+#app,
+#app > div {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+body {
+  background: var(--app-surface-canvas);
+  color: var(--app-text-primary);
+}

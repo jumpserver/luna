@@ -3,9 +3,9 @@ import { createServer } from "node:http";
 import { createCipheriv, createPublicKey, diffieHellman, generateKeyPairSync, hkdfSync } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { BrowserWindow, WebContentsView } from "electron";
-import { createCredentialSession, validateWebScript } from "../src/web-proxy/credentials.ts";
-import { WebProxyScript, installWebProxyNavigationGuard } from "../src/web-proxy/script.ts";
-import { INTERACTION_WORLD } from "../src/web-proxy/interaction.ts";
+import { createCredentialSession, validateWebScript } from "../../packages/web-proxy/src/credentials.ts";
+import { WebProxyScript, installWebProxyNavigationGuard } from "../../packages/web-proxy/src/script.ts";
+import { INTERACTION_WORLD } from "../../packages/web-proxy/src/interaction.ts";
 
 async function listen(server) {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -228,6 +228,81 @@ async function loginCase(crossOrigin: boolean) {
     );
     assert.equal(await spa.run(), "success");
     assert.equal(await view.webContents.executeJavaScript("document.querySelector('#renamed').value"), "");
+
+    // Missing/hidden verification skips immediately by default. Required
+    // verification still waits for an asynchronously rendered challenge.
+    for (const challenge of ["absent", "hidden", "delayed"]) {
+      await view.webContents.executeJavaScript(`
+        document.body.innerHTML = '<input id="password" type="password"><div id="mfa" style="display:none;width:240px;height:100px"><input id="otp"></div><button id="go">Go</button>';
+        globalThis.submissions = 0;
+        globalThis.submittedPassword = '';
+        if (${JSON.stringify(challenge)} === 'absent') document.querySelector('#mfa').remove();
+        document.querySelector('#password').onchange = event => {
+          if (event.target.value && ${JSON.stringify(challenge)} === 'delayed') setTimeout(() => document.querySelector('#mfa').style.display = 'block', 200);
+        };
+        document.querySelector('#go').onclick = () => {
+          globalThis.submissions++;
+          globalThis.submittedPassword = document.querySelector('#password').value;
+          document.body.insertAdjacentHTML('beforeend', '<div id="done">Done</div>');
+        };
+        void 0;
+      `);
+      let verificationShown = false;
+      const optional = new WebProxyScript(
+        view.webContents,
+        {
+          accessToken: "",
+          steps: validateWebScript(
+            [
+              { step: 1, command: "type", target: "id=password", value: "optional-secret" },
+              {
+                step: 2,
+                command: "interactive",
+                target: "id=mfa",
+                // Hidden Electron pages can throttle the 200 ms rendering timer.
+                ...(challenge === "delayed" ? { optional: false, timeout: 5 } : {})
+              },
+              { step: 3, command: "click", target: "id=go" },
+              { step: 4, command: "success", target: "id=done" }
+            ],
+            appOrigin
+          )
+        },
+        {
+          active: () => true,
+          state: () => {},
+          interaction: (_value, visible) => {
+            verificationShown ||= visible;
+          },
+          frame: () => {}
+        }
+      );
+      const skippedPromptly =
+        challenge !== "delayed"
+          ? setTimeout(() => optional.cancel(new Error("Missing verification blocked submission")), 1500)
+          : undefined;
+      const optionalResult = optional.run();
+      void optionalResult.catch(() => {});
+      try {
+        if (challenge === "delayed") {
+          await Promise.race([
+            waitFor(() => verificationShown, "Delayed required verification did not become ready"),
+            optionalResult.then(() => assert.fail("Required verification was skipped"))
+          ]);
+          assert.equal(await view.webContents.executeJavaScript("globalThis.submissions"), 0);
+          assert.equal(await optional.completeVerification(), true);
+        }
+        assert.equal(await optionalResult, "success", challenge);
+        assert.equal(verificationShown, challenge === "delayed");
+        assert.equal(await view.webContents.executeJavaScript("globalThis.submissions"), 1);
+        assert.equal(await view.webContents.executeJavaScript("globalThis.submittedPassword"), "optional-secret");
+        assert.equal(await view.webContents.executeJavaScript("document.querySelector('#password').value"), "");
+      } finally {
+        clearTimeout(skippedPromptly);
+        optional.cancel();
+        await optionalResult.catch(() => {});
+      }
+    }
 
     const linkedOrigin = appOrigin.replace("127.0.0.1", "localhost");
     await view.webContents.executeJavaScript(

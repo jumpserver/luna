@@ -1,8 +1,11 @@
 import type { AssetItem, PermedAccount, PermedProtocol } from "~/types";
+import { createSharedComposable, useFullscreen } from "@vueuse/core";
 
 import { useRecentConnections } from "~/composables/useRecentConnections";
+import { useSettingManager } from "~/composables/useSettingManager";
 import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 import { desktopWindow } from "~/shared/desktop/bridge";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 export type WorkspaceSessionStatus = "selecting" | "connecting" | "ready" | "connected" | "failed";
 export type WorkspaceSplitDirection = "horizontal" | "vertical";
@@ -58,6 +61,32 @@ const draggedTabId = ref("");
 const focusModeTabId = ref("");
 const workspaceFullscreen = ref(false);
 const pendingPaneTarget = ref<{ tabId: string; paneId: string } | null>(null);
+const SIDEBAR_COLLAPSE_DURATION = 240;
+let restoreSidebarAfterFullscreen = false;
+let desktopFullscreenListening = false;
+const leaveWorkspaceFullscreen = () => {
+  if (!workspaceFullscreen.value) return;
+  workspaceFullscreen.value = false;
+  focusModeTabId.value = "";
+  if (restoreSidebarAfterFullscreen) useSettingManager().collapse.value = false;
+  restoreSidebarAfterFullscreen = false;
+};
+const listenDesktopFullscreen = () => {
+  if (desktopFullscreenListening || !import.meta.client) return;
+  desktopFullscreenListening = true;
+  void desktopWindow.onFullscreenChanged((full) => {
+    if (!full) leaveWorkspaceFullscreen();
+  });
+};
+const useSharedDocumentFullscreen = createSharedComposable(() => {
+  const fullscreen = useFullscreen();
+
+  watch(fullscreen.isFullscreen, (full) => {
+    if (!full) leaveWorkspaceFullscreen();
+  });
+
+  return fullscreen;
+});
 let tabSequence = 0;
 let paneSequence = 0;
 let sessionDisposer: ((id: string) => void | Promise<void>) | null = null;
@@ -318,23 +347,27 @@ const resolvePendingTarget = (explicitPaneId?: string) => {
 };
 
 export const useWorkspaceTabs = () => {
+  const desktopRuntime = isDesktopRuntime();
+  if (desktopRuntime) listenDesktopFullscreen();
+  const webFullscreen = desktopRuntime ? null : useSharedDocumentFullscreen();
+  const { collapse } = useSettingManager();
+  const collapseSidebar = async () => {
+    collapse.value = true;
+    await new Promise<void>((resolve) => setTimeout(resolve, SIDEBAR_COLLAPSE_DURATION));
+  };
   const setRuntimeFullscreen = async (fullscreen: boolean) => {
-    if (isDesktopRuntime()) {
+    if (desktopRuntime) {
       await desktopWindow.setFullscreen(fullscreen);
       return;
     }
 
-    if (fullscreen) {
-      await document.documentElement.requestFullscreen();
-    } else if (document.fullscreenElement) {
-      await document.exitFullscreen();
-    }
+    if (fullscreen) await webFullscreen!.enter();
+    else await webFullscreen!.exit();
   };
 
   const exitFocusMode = async () => {
     const shouldExitFullscreen = workspaceFullscreen.value;
-    workspaceFullscreen.value = false;
-    focusModeTabId.value = "";
+    leaveWorkspaceFullscreen();
     if (shouldExitFullscreen) await setRuntimeFullscreen(false).catch(() => {});
   };
 
@@ -863,15 +896,22 @@ export const useWorkspaceTabs = () => {
   };
 
   const enterFullscreenMode = async (tabId: string) => {
-    if (!enterFocusMode(tabId)) return false;
+    if (!tabs.value.some((tab) => tab.id === tabId)) return false;
 
+    setActiveSession(tabId);
+    restoreSidebarAfterFullscreen = !collapse.value;
     workspaceFullscreen.value = true;
     try {
+      if (restoreSidebarAfterFullscreen && desktopRuntime) await collapseSidebar();
+      if (!workspaceFullscreen.value) return false;
       await setRuntimeFullscreen(true);
+      if (!workspaceFullscreen.value) return false;
+      if (restoreSidebarAfterFullscreen && !desktopRuntime) await collapseSidebar();
+      if (!workspaceFullscreen.value) return false;
+      focusModeTabId.value = tabId;
       return true;
     } catch {
-      workspaceFullscreen.value = false;
-      focusModeTabId.value = "";
+      leaveWorkspaceFullscreen();
       return false;
     }
   };

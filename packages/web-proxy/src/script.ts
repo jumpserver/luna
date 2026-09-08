@@ -21,12 +21,16 @@ if (!globalThis.__jmsScriptCleanup) {
 `;
 
 function probeScript(step) {
+  // false means an optional target is absent; null means the document/required
+  // target is not ready and still needs to be polled.
+  const missing = step.command === "interactive" && step.optional !== false ? "false" : "null";
   return `(() => {
-if (location.origin.toLowerCase() !== ${JSON.stringify(step.origin)} || document.readyState === 'loading') return null;
+if (document.readyState === 'loading') return null;
+if (location.origin.toLowerCase() !== ${JSON.stringify(step.origin)}) return ${missing};
 ${selectorLookupScript}
 ${documentSetup}
 const element = findElement(${JSON.stringify(step.target)});
-if (!(element instanceof Element) || !element.isConnected || !element.getClientRects().length || getComputedStyle(element).visibility !== 'visible') return null;
+if (!(element instanceof Element) || !element.isConnected || !element.getClientRects().length || getComputedStyle(element).visibility !== 'visible') return ${missing};
 const command = ${JSON.stringify(step.command)};
 if (['click','button'].includes(command) && !(element instanceof HTMLElement)) return null;
 if (command === 'type' && !((element instanceof HTMLInputElement && ['text','email','tel','password','search','url','number'].includes(element.type)) || element instanceof HTMLTextAreaElement)) return null;
@@ -120,14 +124,16 @@ export class WebProxyScript {
     this.assertRunning();
   }
 
-  private async waitFor(step, read, timeout = (step.timeout || 20) * 1000) {
+  private async waitFor(step, read, optional = false) {
+    const timeout = (step.timeout || 20) * 1000;
     const deadline = Date.now() + timeout;
     const timedOut = new Error(`登录脚本第 ${step.step} 步（${step.command}）超时`);
     const timer = setTimeout(() => this.cancel(timedOut), timeout);
     try {
       while (Date.now() < deadline) {
         this.assertRunning();
-        if (this.onOrigin(step.origin)) {
+        if (optional ? !this.contents.isLoadingMainFrame() : this.onOrigin(step.origin)) {
+          const navigation = this.navigation;
           let result;
           try {
             result = await read();
@@ -135,7 +141,9 @@ export class WebProxyScript {
             this.assertRunning();
           }
           this.assertRunning();
-          if (result) return result;
+          // Ignore probes of the old document if navigation started during the read.
+          if (optional && (navigation !== this.navigation || this.contents.isLoadingMainFrame())) result = null;
+          if (result || (optional && result === false)) return result;
         }
         await this.pause();
       }
@@ -174,7 +182,8 @@ export class WebProxyScript {
   }
 
   private async verify(step) {
-    await this.waitFor(step, () => this.runCode(probeScript(step)));
+    const optional = step.command === "interactive" && step.optional !== false;
+    if (!(await this.waitFor(step, () => this.runCode(probeScript(step)), optional))) return;
     this.verificationReady = false;
     this.verificationDone = false;
     const interaction = new WebProxyInteraction(

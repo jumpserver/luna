@@ -31,10 +31,10 @@ const { t } = useI18n();
 const store = useFileTransferStore();
 const { open, setOpen, ensureRestored, leaveConfirmOpen, confirmLeave } = useSftpTransferUi();
 const filter = ref<"all">("all");
-const drawerHeight = useLocalStorage("jumpserver-client:sftp-transfer-center-height", 194);
+const drawerHeight = useLocalStorage("jumpserver-client:sftp-transfer-center-height", 128);
 const resizing = ref(false);
 let resizeStartY = 0;
-let resizeStartHeight = 194;
+let resizeStartHeight = 128;
 
 const { sftpTasks, hasFinishedTasks } = useSftpTransferCenterSelectors({
   tasks: () => store.tasks ?? [],

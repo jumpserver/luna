@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { COMMUNITY_WORKSPACE_BRAND, formatWorkspaceTitle, resolveWorkspaceBrand } from "~/utils/pageTitle";
+import {
+  COMMUNITY_WORKSPACE_BRAND,
+  formatWorkspaceTitle,
+  resolveWorkspaceBrand,
+  resolveWorkspaceFavicon
+} from "~/utils/pageTitle";
 
 describe("resolveWorkspaceBrand", () => {
   it("keeps the community edition title fixed", () => {
@@ -29,5 +34,13 @@ describe("resolveWorkspaceBrand", () => {
   it("formats the title with the localized workspace label", () => {
     expect(formatWorkspaceTitle("JumpServer", "工作台")).toBe("Luna - JumpServer 工作台");
     expect(formatWorkspaceTitle("JumpServer", "Workspace")).toBe("Luna - JumpServer Workspace");
+  });
+
+  it("keeps the public interface favicon when present", () => {
+    expect(resolveWorkspaceFavicon({ INTERFACE: { favicon: " /static/img/favicon.ico " } })).toBe(
+      "/static/img/favicon.ico"
+    );
+    expect(resolveWorkspaceFavicon(null)).toBe("");
+    expect(resolveWorkspaceFavicon({ INTERFACE: { login_title: "Acme" } })).toBe("");
   });
 });

@@ -22,7 +22,7 @@ Koko 现有部署级网络访问配置 `WEB_PROXY_ALLOWED_HOSTS` 仍然生效，
   { "step": 2, "command": "click", "target": "id=next", "origin": "https://sso.example.com" },
   { "step": 3, "command": "type", "target": "id=password", "value": "{SECRET}", "origin": "https://sso.example.com" },
   { "step": 4, "command": "click", "target": "id=login", "origin": "https://sso.example.com" },
-  { "step": 5, "command": "interactive", "target": "css=#mfa-dialog", "origin": "https://sso.example.com" },
+  { "step": 5, "command": "interactive", "target": "css=#mfa-dialog", "optional": false, "origin": "https://sso.example.com" },
   { "step": 6, "command": "click", "target": "id=verify", "origin": "https://sso.example.com" },
   { "step": 7, "command": "success", "target": "css=#dashboard" }
 ]
@@ -35,13 +35,21 @@ Koko 现有部署级网络访问配置 `WEB_PROXY_ALLOWED_HOSTS` 仍然生效，
 | `type`             | 等待可见、可编辑的输入框，然后追加 `value`。支持 `{USERNAME}`、`{SECRET}`，替换后的值仅传给当前步骤。         |
 | `click` / `button` | 等待可见、可用的目标并点击。下一步重新等待自己的元素，适配整页跳转和 SPA。                                    |
 | `open`             | 打开 `value`，为空时使用 `target`。支持绝对 URL，或相对该步骤 origin 的路径；目标必须是有效 HTTP/HTTPS 地址。 |
-| `interactive`      | 等待并展示 `target` 指定的验证区域，暂停脚本。用户点击“完成交互”后继续后续步骤，此时不额外提交或清空字段。    |
+| `interactive`      | 页面就绪后，`target` 可见时展示验证区域并暂停；不存在或隐藏则立即跳过。设置 `optional: false` 时必须等待目标出现。用户点击“完成交互”后继续，不额外提交或清空字段。 |
 | `code`             | 兼容旧验证码步骤：通过目标输入框的受控交互区域输入验证码，完成后继续。                                        |
 | `check`            | 等待目标元素可见，可以用于中间页面的条件检查。                                                                |
 | `success`          | 等待最终页面上的目标可见，确认登录成功；必须是最后一步。已在成功页时不重新执行代填。                          |
 | `sleep`            | `target` 为等待秒数，支持 0–30 秒。通常由元素等待替代固定延时。                                               |
 
-元素查找沿用 `kind=value`，支持 `name`、`id`、`type`、`class_name`、`css`、`css_selector`、`xpath`。普通步骤默认等待 20 秒；人工验证默认等待 180 秒。可用 `timeout` 指定 1–180 秒。单次脚本总时限 10 分钟，收起验证区域或切换标签不会延长时限。首次领取凭据仍受 Koko 一次性凭据的有效期限制。
+`optional` 仅用于 `interactive`，必须是 JSON 布尔值。省略或填写 `true` 表示可选：页面就绪且目标不存在或隐藏时立即跳过，不等待超时；填写 `false` 表示必需：等待目标出现，超时则终止脚本。页面跳转或加载期间不会将旧页面或尚未就绪的页面判定为“没有验证码”。两种配置在目标出现后都必须完成人工交互，后续提交及成功检查仍须满足。旧 `code` 步骤仍要求验证码目标出现。
+
+例如用户名、密码之后的可选验证码可以写为：
+
+```json
+{ "step": 3, "command": "interactive", "target": "css=div.captcha-field", "optional": true }
+```
+
+元素查找沿用 `kind=value`，支持 `name`、`id`、`type`、`class_name`、`css`、`css_selector`、`xpath`。普通步骤、页面就绪及必需验证区域检测默认最多等待 20 秒；检测到验证区域后，人工验证默认等待 180 秒。可用 `timeout` 指定 1–180 秒，同时覆盖该步骤的等待及人工验证时限；它不改变 `optional` 的含义。对于页面就绪后才异步出现、且必须完成的验证码，使用 `optional: false`。单次脚本总时限 10 分钟，收起验证区域或切换标签不会延长时限。首次领取凭据仍受 Koko 一次性凭据的有效期限制。
 
 没有 `success` 时，结束状态仅表示“脚本执行完成”，不声称认证成功。步骤条件超时、无效地址跳转、凭据清理失败时保留遮罩，不开放目标页面。导航过程中无法确认结果的点击不会自动重放，后续条件不满足时需要重新连接。
 

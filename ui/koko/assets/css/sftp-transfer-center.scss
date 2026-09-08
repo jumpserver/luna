@@ -4,7 +4,7 @@
   position: relative;
   z-index: 1;
   display: flex;
-  height: var(--sftp-transfer-center-height, 194px);
+  height: var(--sftp-transfer-center-height, 128px);
   min-height: 96px;
   max-height: min(62vh, 520px);
   flex-shrink: 0;

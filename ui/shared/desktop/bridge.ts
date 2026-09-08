@@ -1,3 +1,4 @@
+import { createWebProxyBridge } from "@jumpserver/web-proxy/bridge";
 import { getDesktopRuntime, isElectronRuntime } from "~/utils/runtime";
 
 export interface DesktopEvent<T> {
@@ -111,6 +112,8 @@ export const desktopWindow = {
     return electron.invoke<boolean>("plugin:window|is_maximized", { label: electron.windowLabel });
   },
   onResized: (handler: () => void) => desktopListen("desktop://resize", handler),
+  onFullscreenChanged: (handler: (fullscreen: boolean) => void) =>
+    desktopListen<boolean>("desktop://fullscreen", (event) => handler(Boolean(event.payload))),
   async toggleFullscreen() {
     const electron = requireElectron();
     const fullscreen = await electron.invoke<boolean>("plugin:window|is_fullscreen", {
@@ -249,28 +252,7 @@ export const desktopLocalShell = {
   onExit: (handler: (event: DesktopEvent<DesktopLocalShellExit>) => void) => desktopListen("local-shell-exit", handler)
 };
 
-export const desktopWebProxy = {
-  create: (request: Record<string, unknown>) => desktopInvoke("create_web_proxy_view", request),
-  setActive: (label: string, active: boolean) => desktopInvoke<void>("set_web_proxy_view_active", { label, active }),
-  setBounds: (label: string, bounds: { x: number; y: number; width: number; height: number }) =>
-    desktopInvoke<void>("set_web_proxy_view_bounds", { label, ...bounds }),
-  navigate: (label: string, targetUrl: string) => desktopInvoke<void>("navigate_web_proxy_view", { label, targetUrl }),
-  history: (label: string, direction: "back" | "forward") =>
-    desktopInvoke<void>("history_web_proxy_view", { label, direction }),
-  reload: (label: string) => desktopInvoke<void>("reload_web_proxy_view", { label }),
-  completeVerification: (label: string) => desktopInvoke<boolean>("complete_web_proxy_verification", { label }),
-  interactionInput: (label: string, input: Record<string, unknown>) =>
-    desktopInvoke<boolean>("web_proxy_interaction_input", { label, input }),
-  onInteraction: <T>(handler: (event: DesktopEvent<T>) => void) => desktopListen<T>("web-proxy-interaction", handler),
-  startRecording: (request: Record<string, unknown>) => desktopInvoke("start_web_proxy_recording", request),
-  stopRecording: (label: string) => desktopInvoke("stop_web_proxy_recording", { label }),
-  close: (label: string) => desktopInvoke<void>("close_web_proxy_view", { label }),
-  onState: <T>(handler: (event: DesktopEvent<T>) => void) => desktopListen<T>("web-proxy-state", handler),
-  onAutofillState: <T>(handler: (event: DesktopEvent<T>) => void) =>
-    desktopListen<T>("web-proxy-autofill-state", handler),
-  onRecordingState: <T>(handler: (event: DesktopEvent<T>) => void) =>
-    desktopListen<T>("web-proxy-recording-state", handler)
-};
+export const desktopWebProxy = createWebProxyBridge(desktopInvoke, desktopListen);
 
 export interface DesktopStore {
   get<T>(key: string): Promise<T | null | undefined>;

@@ -11,7 +11,7 @@ import { runInNewContext } from "node:vm";
 import { gzipSync } from "node:zlib";
 import { pack as createTarPack } from "tar-stream";
 import { OfflineRecordingStore } from "../src/replay/offline-recordings.ts";
-import { requestWebProxyControl } from "../src/web-proxy/control.ts";
+import { requestWebProxyControl } from "../../packages/web-proxy/src/control.ts";
 import {
   createCredentialSession,
   buildLoginSuccessProbeScript,
@@ -20,13 +20,13 @@ import {
   validateWebSelector,
   exactWebOrigin,
   validateWebScript
-} from "../src/web-proxy/credentials.ts";
-import { signaturesDiffer } from "../src/web-proxy/recording.ts";
-import { WebProxyInteraction } from "../src/web-proxy/interaction.ts";
-import { installWebProxyNavigationGuard } from "../src/web-proxy/script.ts";
+} from "../../packages/web-proxy/src/credentials.ts";
+import { signaturesDiffer } from "../../packages/web-proxy/src/recording.ts";
+import { WebProxyInteraction } from "../../packages/web-proxy/src/interaction.ts";
+import { WebProxyScript, installWebProxyNavigationGuard } from "../../packages/web-proxy/src/script.ts";
 
 async function setupNavigation(safeMode: unknown) {
-  const main = await readFile(new URL("../src/desktop/main.ts", import.meta.url), "utf8");
+  const main = await readFile(new URL("../../packages/web-proxy/src/manager.ts", import.meta.url), "utf8");
   const source = [
     main.slice(main.indexOf("function parseWebProxyUrl("), main.indexOf("function emitWebProxyState(")),
     main.slice(main.indexOf("async function createWebProxyView("), main.indexOf("async function closeWebProxyView("))
@@ -47,6 +47,9 @@ async function setupNavigation(safeMode: unknown) {
   let preferences: any;
   const views = new Map();
   const scope = {
+    requireRecording: false,
+    direct: false,
+    createSession: undefined,
     parseUrl: (value) => new URL(value),
     normalizedWebOrigin,
     installWebProxyNavigationGuard,
@@ -218,10 +221,132 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
+test("interactive optional accepts only booleans and preserves required verification", () => {
+  const step = { step: 1, command: "interactive", target: "id=mfa" };
+  const origin = "https://example.test";
+  for (const optional of [true, false]) {
+    assert.equal(validateWebScript([{ ...step, optional }], origin)[0].optional, optional);
+  }
+  for (const optional of ["true", "false", 0, 1, null]) {
+    assert.throws(() => validateWebScript([{ ...step, optional }], origin), /optional/);
+  }
+  assert.throws(() => validateWebScript([{ ...step, command: "success", optional: true }], origin), /optional/);
+});
+
+test("optional script verification skips absent or hidden targets on a ready page without waiting", async () => {
+  const origin = "https://example.test";
+  for (const page of ["missing", "hidden", "other-origin"]) {
+    class Element {
+      isConnected = true;
+      getClientRects() {
+        return [];
+      }
+    }
+    const interaction = mock.fn();
+    let followingStep = false;
+    const contents = Object.assign(new EventEmitter(), {
+      isDestroyed: () => false,
+      isLoadingMainFrame: () => false,
+      getURL: () => (page === "other-origin" ? "https://sso.example.test/login" : `${origin}/login`),
+      executeJavaScriptInIsolatedWorld: async (_world, [{ code }]) => {
+        if (code.includes('findElement("id=mfa")'))
+          return runInNewContext(code, {
+            location: { origin: new URL(contents.getURL()).origin },
+            document: { readyState: "complete", getElementById: () => (page === "hidden" ? new Element() : null) },
+            Element,
+            addEventListener() {}
+          });
+        if (code.includes('findElement("id=next")')) followingStep = true;
+        return true;
+      }
+    });
+    const runner = new WebProxyScript(
+      contents,
+      {
+        accessToken: "once",
+        steps: validateWebScript(
+          [
+            {
+              step: 1,
+              command: "interactive",
+              target: "id=mfa",
+              ...(page === "hidden" ? { optional: true, timeout: 180 } : {})
+            },
+            { step: 2, command: "check", target: "id=next", origin: new URL(contents.getURL()).origin }
+          ],
+          origin
+        )
+      },
+      { active: () => true, state: () => {}, interaction, frame: () => {} }
+    );
+    const timer = setTimeout(() => runner.cancel(new Error("Missing verification blocked the following step")), 1000);
+    try {
+      assert.equal(await runner.run(), "submitted", page);
+      assert.equal(followingStep, true, page);
+      assert.equal(interaction.mock.callCount(), 0, page);
+      assert.equal(contents.listenerCount("did-start-navigation"), 0);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+});
+
+test("required script conditions still time out and cancelling optional verification still aborts", async () => {
+  const origin = "https://example.test";
+  const contents = Object.assign(new EventEmitter(), {
+    isDestroyed: () => false,
+    isLoadingMainFrame: () => false,
+    getURL: () => `${origin}/login`,
+    executeJavaScriptInIsolatedWorld: async () => null
+  });
+  const runnerFor = (command, optional?) =>
+    new WebProxyScript(
+      contents,
+      {
+        accessToken: "once",
+        steps: validateWebScript([{ step: 1, command, target: "id=missing", timeout: 1, optional }], origin)
+      },
+      { active: () => true, state: () => {}, interaction: () => {}, frame: () => {} }
+    );
+  for (const command of ["code", "check", "success"]) {
+    await assert.rejects(runnerFor(command).run(), new RegExp(`（${command}）超时`));
+  }
+  await assert.rejects(runnerFor("interactive", false).run(), /（interactive）超时/);
+  const cancelled = runnerFor("interactive");
+  const result = cancelled.run();
+  const reason = new Error("connection closed");
+  cancelled.cancel(reason);
+  await assert.rejects(result, (error) => error === reason);
+  assert.equal(contents.listenerCount("did-start-navigation"), 0);
+});
+
+test("optional verification still requires completion once its target has appeared", async () => {
+  const origin = "https://example.test";
+  const interaction = mock.fn();
+  const contents = Object.assign(new EventEmitter(), {
+    isDestroyed: () => false,
+    isLoadingMainFrame: () => false,
+    getURL: () => `${origin}/login`,
+    executeJavaScriptInIsolatedWorld: async (_world, [{ code }]) =>
+      code.includes('findElement("id=mfa")') ? "document-id" : null
+  });
+  const runner = new WebProxyScript(
+    contents,
+    {
+      accessToken: "once",
+      steps: validateWebScript([{ step: 1, command: "interactive", target: "id=mfa", timeout: 1 }], origin)
+    },
+    { active: () => true, state: () => {}, interaction, frame: () => {} }
+  );
+  await assert.rejects(runner.run(), /人工验证超时/);
+  assert.ok(interaction.mock.calls[0].arguments[0] instanceof WebProxyInteraction);
+  assert.deepEqual(interaction.mock.calls.at(-1).arguments, [null, false]);
+});
+
 async function setupAutofill() {
   // Exercise the main-process lifecycle with a fake native view, without starting
   // Electron or connecting to an asset. Keep the production functions as the SUT.
-  const main = await readFile(new URL("../src/desktop/main.ts", import.meta.url), "utf8");
+  const main = await readFile(new URL("../../packages/web-proxy/src/manager.ts", import.meta.url), "utf8");
   const source = main.slice(
     main.indexOf("function emitWebProxyState("),
     main.indexOf("async function captureWebProxyFrame(")

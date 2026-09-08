@@ -6,8 +6,12 @@ import {
   buildAutofillProbeScript,
   buildAutofillScript,
   buildLoginSuccessProbeScript
-} from "../src/web-proxy/credentials.ts";
-import { WebProxyInteraction, INTERACTION_WORLD, buildInteractionGuardScript } from "../src/web-proxy/interaction.ts";
+} from "../../packages/web-proxy/src/credentials.ts";
+import {
+  WebProxyInteraction,
+  INTERACTION_WORLD,
+  buildInteractionGuardScript
+} from "../../packages/web-proxy/src/interaction.ts";
 
 const page = `<!doctype html><html><body style="margin:0">
 <form id="login"><input id="username"><input id="password" type="password"><button id="login-btn" disabled>Login</button></form>

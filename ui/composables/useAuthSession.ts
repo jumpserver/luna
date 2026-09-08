@@ -3,7 +3,13 @@ import type { CurrentOrg, PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/ty
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { resolveOrganizationSelection } from "~/utils/organization";
-import { COMMUNITY_WORKSPACE_BRAND, resolveWorkspaceBrand, WORKSPACE_BRAND_STATE_KEY } from "~/utils/pageTitle";
+import {
+  COMMUNITY_WORKSPACE_BRAND,
+  resolveWorkspaceBrand,
+  resolveWorkspaceFavicon,
+  WORKSPACE_BRAND_STATE_KEY,
+  WORKSPACE_FAVICON_STATE_KEY
+} from "~/utils/pageTitle";
 
 interface BootstrapResponse {
   data: string;
@@ -95,6 +101,7 @@ export const useAuthSession = () => {
   const userInfoStore = useUserInfoStore();
   const { currentAccountId, userMap } = storeToRefs(userInfoStore);
   const webWorkspaceBrand = useState<string>(WORKSPACE_BRAND_STATE_KEY, () => COMMUNITY_WORKSPACE_BRAND);
+  const webWorkspaceFavicon = useState<string>(WORKSPACE_FAVICON_STATE_KEY, () => "");
 
   const applyLoginPayload = async (
     payload: LoginPayload | null | undefined,
@@ -255,6 +262,7 @@ export const useAuthSession = () => {
 
   const bootstrapWebCookieSession = async () => {
     webWorkspaceBrand.value = COMMUNITY_WORKSPACE_BRAND;
+    webWorkspaceFavicon.value = "";
 
     if (isWebAuthPath()) {
       userInfoStore.setUserLoggedIn(false);
@@ -274,6 +282,7 @@ export const useAuthSession = () => {
     ]);
 
     webWorkspaceBrand.value = resolveWorkspaceBrand(publicSettings);
+    webWorkspaceFavicon.value = resolveWorkspaceFavicon(publicSettings);
 
     if (!profileData) {
       userInfoStore.setUserLoggedIn(false);

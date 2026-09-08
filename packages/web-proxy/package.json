@@ -1,0 +1,18 @@
+{
+  "name": "@jumpserver/web-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts",
+    "./surface": {
+      "types": "./src/surface.d.ts",
+      "default": "./src/WebProxySurface.vue"
+    }
+  },
+  "peerDependencies": {
+    "electron": "^44.0.0",
+    "vue": "^3.5.0",
+    "@nuxt/ui": "^4.11.0"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "extends": "../../electron/tsconfig.json",
+  "compilerOptions": { "lib": ["ES2023", "DOM"], "types": ["node", "vite/client"], "paths": {} },
+  "include": ["src/**/*.ts", "src/**/*.vue", "tests/**/*.ts", "../../packages/web-proxy/src/**/*"]
+}

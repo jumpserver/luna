@@ -81,6 +81,8 @@ export function useBaseWorkspaceSession(tab: Ref<KokoWorkspaceTab>, options: Use
       return null;
     }
 
+    if (context.value?.tokenId === tokenId.value && !error.value) return context.value;
+
     loading.value = true;
     error.value = "";
 

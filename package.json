@@ -19,8 +19,8 @@
     "preinstall": "npx only-allow pnpm",
     "postinstall": "nuxt prepare",
     "prepare": "husky",
-    "fmt": "oxfmt \"{ui,packages,electron}/**/*.{js,ts,tsx,jsx,vue,css,scss,less,html,md,json,yml,yaml}\"",
-    "fmt:check": "oxfmt --check \"{ui,packages,electron}/**/*.{js,ts,tsx,jsx,vue,css,scss,less,html,md,json,yml,yaml}\"",
+    "fmt": "oxfmt \"{ui,packages,electron,applets}/**/*.{js,ts,tsx,jsx,vue,css,scss,less,html,md,json,yml,yaml}\"",
+    "fmt:check": "oxfmt --check \"{ui,packages,electron,applets}/**/*.{js,ts,tsx,jsx,vue,css,scss,less,html,md,json,yml,yaml}\"",
     "lint": "pnpm lint:oxlint --fix && pnpm lint:eslint --fix",
     "lint:check": "pnpm lint:oxlint && pnpm lint:eslint",
     "lint:oxlint": "oxlint .",
@@ -46,7 +46,10 @@
     "web-client:check": "pnpm --dir web-client check",
     "web-client:test-site": "pnpm --dir web-client test-site",
     "update:dependencies": "npx npm-check-updates -u && pnpm install",
-    "reset": "rm -rf node_modules .nuxt dist"
+    "reset": "rm -rf node_modules .nuxt dist",
+    "applet:build": "pnpm --dir applets/weblite build",
+    "applet:package": "pnpm --dir applets/weblite package",
+    "applet:test": "pnpm --dir applets/weblite test"
   },
   "dependencies": {
     "@ai-sdk/vue": "4.0.44",
@@ -107,7 +110,8 @@
     "vue": "^3.5.35",
     "vue-router": "5.0.7",
     "xterm-theme": "^1.1.0",
-    "zmodem-ts": "^1.0.8"
+    "zmodem-ts": "^1.0.8",
+    "@jumpserver/web-proxy": "workspace:*"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.0.0",

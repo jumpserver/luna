@@ -50,7 +50,7 @@ const panelStyle = computed(() => {
 
 <template>
   <section
-    class="group flex flex-col overflow-hidden"
+    class="group flex flex-col overflow-hidden transition-[height,min-height] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
     :class="hideChrome ? 'min-h-0 flex-1' : 'min-h-8 shrink-0 border-t border-gray-200 dark:border-white/10'"
     :style="panelStyle"
   >
@@ -73,7 +73,7 @@ const panelStyle = computed(() => {
       </div>
     </button>
 
-    <div v-if="open || hideChrome" class="min-h-0 flex-1 overflow-y-auto">
+    <div v-show="open || hideChrome" class="min-h-0 flex-1 overflow-y-auto">
       <slot />
     </div>
   </section>

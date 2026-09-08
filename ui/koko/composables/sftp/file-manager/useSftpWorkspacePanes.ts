@@ -1,5 +1,5 @@
-import type { KokoSftpAsset } from "#koko/host";
 import type { MaybeRefOrGetter } from "vue";
+import type { KokoSftpAsset } from "#koko/host";
 import type {
   FileWorkspacePreconnect,
   FileWorkspaceSourceAsset,
@@ -10,8 +10,8 @@ import type {
 } from "./workspaceTypes";
 
 import { connectorSessionKey } from "@jumpserver/connectors-core";
-import { useKokoHostAdapter } from "#koko/host";
 import { computed, inject, reactive, ref, toValue, unref, watch } from "vue";
+import { useKokoHostAdapter } from "#koko/host";
 import { assetSupportsSftp, defaultGlobalLeftPaneId, rememberSftpConnection } from "./selectors";
 
 interface SftpWorkspacePanesOptions {
@@ -144,7 +144,9 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
       activeRemoteId.value = sameSide[0]?.id ?? remotePanes.value[0]?.id ?? null;
     }
     if (removed && globalActiveIds[removed.side] === id) {
-      globalActiveIds[removed.side] = panesForSide(removed.side)[0]?.id ?? null;
+      globalActiveIds[removed.side] =
+        panesForSide(removed.side)[0]?.id ??
+        (removed.side === "left" ? defaultGlobalLeftPaneId(isDesktopRuntime) : null);
     }
   }
 

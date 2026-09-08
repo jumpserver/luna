@@ -60,6 +60,9 @@ jobs:
       - name: Validate Electron client
         run: pnpm typecheck:electron && pnpm test:electron
 
+      - name: Validate Web applet
+        run: pnpm applet:test && pnpm --dir applets/weblite typecheck && pnpm applet:build
+
   build:
     name: package ${{ matrix.name }}
     needs: quality
@@ -190,6 +193,10 @@ jobs:
       - name: Build Electron artifacts
         run: pnpm --dir electron make -- ${{ matrix.forge_args }}
 
+      - name: Build Web applet
+        if: startsWith(matrix.os, 'windows')
+        run: pnpm applet:package
+
       - name: Upload packaged artifacts
         uses: actions/upload-artifact@v6
         with:
@@ -197,6 +204,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           path: |
+            release/applets/*.zip
             release/electron/make/**/*.dmg
             release/electron/make/**/*.exe
             release/electron/make/**/*.msi

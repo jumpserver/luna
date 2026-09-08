@@ -1,6 +1,6 @@
 import { createDecipheriv, createPublicKey, diffieHellman, generateKeyPairSync, hkdfSync } from "node:crypto";
-import { parseUrl } from "../shared/url";
 import { requestWebProxyControl } from "./control";
+const parseUrl = (value, base?) => new URL(value, base);
 
 const CREDENTIAL_PATH = "/_jumpserver/web-sessions/";
 const CREDENTIAL_KDF_INFO = Buffer.from("jumpserver-web-autofill-v1");
@@ -68,6 +68,8 @@ export function validateWebScript(value, origin) {
         throw new Error("登录脚本步骤内容无效");
       if (step.timeout !== undefined && (!Number.isInteger(step.timeout) || step.timeout < 1 || step.timeout > 180))
         throw new Error("步骤超时应为 1 至 180 秒");
+      if (step.optional !== undefined && (step.command !== "interactive" || typeof step.optional !== "boolean"))
+        throw new Error("optional 仅支持 interactive 步骤，且必须是布尔值");
       if (/\{USERNAME\}|\{SECRET\}/.test(step.value) && step.command !== "type")
         throw new Error(`第 ${step.step} 步不允许填写凭据`);
       if (["type", "click", "button", "check", "code", "interactive", "success"].includes(step.command))
@@ -202,6 +204,7 @@ export async function createCredentialSession(
 export async function releaseCredentials(session, currentUrl) {
   const currentOrigin = normalizedWebOrigin(currentUrl);
   if (!session.credentialOrigins.includes(currentOrigin)) throw new Error("当前页面与脚本指定的凭据填写域不匹配");
+  if (session.release) return session.release();
   const url = new URL(`${encodeURIComponent(session.id)}/credentials`, session.endpoint);
   const accessToken = session.accessToken;
   session.accessToken = "";

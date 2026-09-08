@@ -77,6 +77,7 @@ export interface PublicSettings {
   XPACK_LICENSE_IS_VALID?: boolean;
   INTERFACE?: {
     login_title?: string;
+    favicon?: string;
   };
   XPACK_LICENSE_INFO?: {
     corporation?: unknown;

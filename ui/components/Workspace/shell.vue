@@ -32,18 +32,21 @@ const isResizing = ref(false);
 const isRightResizing = ref(false);
 let resizeStartX = 0;
 let resizeStartWidth = 0;
-const useIslandLayout = computed(() => modernIsland.value && !props.focusMode && !isNarrowScreen.value);
-const islandSidebarMounted = computed(() => Boolean(slots.sidebar) && props.sidebarVisible && !props.focusMode);
+const useIslandLayout = computed(() => modernIsland.value && !isNarrowScreen.value);
+const islandSidebarMounted = computed(() => Boolean(slots.sidebar) && props.sidebarVisible);
 const islandRightMounted = computed(() => Boolean(slots.rightPanel) && !props.focusMode);
-const showIslandSidebar = computed(() => islandSidebarMounted.value && !collapse.value);
+const showIslandSidebar = computed(() => islandSidebarMounted.value && !collapse.value && !props.focusMode);
 const showIslandRight = computed(() => islandRightMounted.value && rightPanelOpen.value);
 const sidebarTransitionClass = computed(() => {
   if (isResizing.value || !props.sidebarVisible) return "";
-  return "transition-[width] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)]";
+  return "transition-[width] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none";
 });
+const sidebarContentWidth = computed(() =>
+  isNarrowScreen.value ? `min(${sidebarWidth.value}px, calc(100vw - 3rem))` : `${sidebarWidth.value}px`
+);
 const sidebarStyleWidth = computed(() => {
   if (props.focusMode || !props.sidebarVisible || (collapse.value && !hoverPreviewOpen.value)) return "0px";
-  return isNarrowScreen.value ? `min(${sidebarWidth.value}px, calc(100vw - 3rem))` : `${sidebarWidth.value}px`;
+  return sidebarContentWidth.value;
 });
 const sidebarOverlay = computed(
   () => collapse.value && !isNarrowScreen.value && props.sidebarVisible && !props.focusMode
@@ -161,7 +164,9 @@ onBeforeUnmount(() => {
         @pointerenter="cancelHoverPreviewClose"
         @pointerleave="hoverPreviewOpen && scheduleHoverPreviewClose()"
       >
-        <slot name="sidebar" />
+        <div class="h-full min-h-0" :style="{ width: sidebarContentWidth, minWidth: sidebarContentWidth }">
+          <slot name="sidebar" />
+        </div>
         <div
           v-if="!useIslandLayout && !props.focusMode && props.sidebarVisible && !collapse"
           role="separator"

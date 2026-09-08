@@ -22,6 +22,16 @@ export function normalizeRecentConnections(value: unknown): AssetItem[] {
 const getScopedStorageKey = (site: string, userId: string) =>
   site && userId ? `${STORAGE_KEY}:${encodeURIComponent(site)}:${encodeURIComponent(userId)}` : "";
 
+function persistRecentConnections(storageKey: string) {
+  if (!import.meta.client || !storageKey) return;
+  try {
+    const persisted = storedRecentConnections.value.map(({ savedConnection: _savedConnection, ...item }) => item);
+    localStorage.setItem(storageKey, JSON.stringify(persisted));
+  } catch {
+    // ponytail: quota/private-mode; in-memory list is already updated
+  }
+}
+
 function loadRecentConnections(storageKey: string, organizationIds: string[]) {
   activeStorageKey = storageKey;
   if (!import.meta.client || !storageKey) {
@@ -65,23 +75,36 @@ export function useRecentConnections() {
 
   const clearRecentConnections = () => {
     storedRecentConnections.value = [];
-    if (import.meta.client && storageKey.value) localStorage.setItem(storageKey.value, "[]");
+    persistRecentConnections(storageKey.value);
   };
 
   const recordRecentConnection = (asset: AssetItem) => {
     if (!storageKey.value) return;
     if (activeStorageKey !== storageKey.value) load();
 
-    const snapshot = {
-      ...JSON.parse(JSON.stringify(asset)),
-      org_id: asset.org_id || orgId.value || undefined
-    } as AssetItem;
-    storedRecentConnections.value = normalizeRecentConnections([snapshot, ...storedRecentConnections.value]);
-    if (import.meta.client) {
-      const persisted = storedRecentConnections.value.map(({ savedConnection: _savedConnection, ...item }) => item);
-      localStorage.setItem(storageKey.value, JSON.stringify(persisted));
+    let snapshot: AssetItem;
+    try {
+      snapshot = {
+        ...JSON.parse(JSON.stringify(asset)),
+        org_id: asset.org_id || orgId.value || undefined
+      } as AssetItem;
+    } catch {
+      return;
     }
+    storedRecentConnections.value = normalizeRecentConnections([snapshot, ...storedRecentConnections.value]);
+    persistRecentConnections(storageKey.value);
   };
 
-  return { clearRecentConnections, recentConnections, recordRecentConnection, load };
+  const renameRecentConnection = (assetId: string, name: string) => {
+    if (activeStorageKey !== storageKey.value) return;
+    let changed = false;
+    storedRecentConnections.value = storedRecentConnections.value.map((asset) => {
+      if (asset.id !== assetId || asset.name === name) return asset;
+      changed = true;
+      return { ...asset, name };
+    });
+    if (changed) persistRecentConnections(storageKey.value);
+  };
+
+  return { clearRecentConnections, recentConnections, recordRecentConnection, renameRecentConnection, load };
 }

@@ -1,0 +1,29 @@
+{
+  "name": "@jumpserver/weblite",
+  "productName": "JumpServer WebLite",
+  "version": "4.1.2",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "electron .",
+    "package": "node scripts/package.mjs",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:runtime": "node tests/runtime-check.mjs && node tests/runtime-check.mjs script && node tests/runtime-check.mjs recording",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@jumpserver/web-proxy": "workspace:*",
+    "@nuxt/ui": "4.11.0",
+    "vue": "^3.5.35"
+  },
+  "devDependencies": {
+    "@electron/packager": "18.3.5",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "electron": "44.0.0",
+    "fflate": "^0.8.2",
+    "tsx": "^4.23.13",
+    "vite": "8.1.5"
+  }
+}

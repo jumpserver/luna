@@ -192,6 +192,8 @@ watch(
       <USelectMenu
         v-model="account"
         :items="accountItems"
+        :disabled="accounts.length === 0"
+        :placeholder="accounts.length === 0 ? t('Account.NoAuthorizedAccounts') : undefined"
         value-key="value"
         label-key="label"
         :ui="{

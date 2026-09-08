@@ -257,6 +257,8 @@
     "CreateFolder": "创建收藏节点",
     "CreateSubfolder": "创建子节点",
     "FolderName": "节点名称",
+    "DuplicateName": "节点名称已存在",
+    "NameTooLong": "节点名称不能超过 {max} 个字符",
     "CreateFailed": "创建收藏节点失败",
     "RenameFailed": "重命名收藏节点失败",
     "CreateFolderFirst": "请先创建收藏节点",
@@ -867,7 +869,9 @@
     "Actions": "操作",
     "Status": "状态",
     "RenameSuccess": "重命名成功",
-    "RenameFail": "重命名失败"
+    "RenameFail": "重命名失败",
+    "DuplicateName": "资产名称已存在",
+    "NameTooLong": "资产名称不能超过 {max} 个字符"
   },
   "ContextMenu": {
     "QuickConnect": "快速连接",
@@ -1004,6 +1008,7 @@
     "GetAssetFailed": "获取资产失败,请刷新重试"
   },
   "Account": {
+    "NoAuthorizedAccounts": "此资产未授权任何账号",
     "Hosted": "托管账号",
     "Manual": "手动账号",
     "Username": "用户名",

@@ -257,6 +257,8 @@
     "CreateFolder": "フォルダーを作成",
     "CreateSubfolder": "サブフォルダーを作成",
     "FolderName": "フォルダー名",
+    "DuplicateName": "同じ名前のフォルダーが既に存在します",
+    "NameTooLong": "フォルダー名は {max} 文字以内で入力してください",
     "CreateFailed": "フォルダーの作成に失敗しました",
     "RenameFailed": "フォルダー名の変更に失敗しました",
     "CreateFolderFirst": "先にお気に入りフォルダーを作成してください",
@@ -867,7 +869,9 @@
     "Actions": "操作",
     "Status": "状態",
     "RenameSuccess": "名前を変更しました",
-    "RenameFail": "名前の変更に失敗しました"
+    "RenameFail": "名前の変更に失敗しました",
+    "DuplicateName": "同じ名前のアセットが既に存在します",
+    "NameTooLong": "アセット名は {max} 文字以内で入力してください"
   },
   "ContextMenu": {
     "QuickConnect": "クイック接続",
@@ -1001,6 +1005,7 @@
     "GetAssetFailed": "アセットの取得に失敗しました。更新して再試行してください"
   },
   "Account": {
+    "NoAuthorizedAccounts": "このアセットに承認されたアカウントはありません",
     "Hosted": "シークレット付きアカウント",
     "Manual": "手動アカウント",
     "Username": "ユーザー名",

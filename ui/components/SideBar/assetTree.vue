@@ -2,7 +2,12 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { WorkspaceUiAssetCandidate } from "~/composables/useWorkspaceUiAutomation";
 import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
-import { useAssetTreeSearch } from "~/composables/useAssetTree";
+import {
+  applyAssetRename,
+  hasAssetName,
+  registerAssetNameLookup,
+  useAssetTreeSearch
+} from "~/composables/useAssetTree";
 import { workspaceTourArmed, workspaceTourCompleted } from "~/composables/useWorkspaceTour";
 import { toWorkspaceUiAssetCandidate } from "~/composables/useWorkspaceUiAutomation";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -37,7 +42,12 @@ const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
 const { currentAccountId, currentSite, loggedIn, orgId } = storeToRefs(userInfoStore);
 const { fetchTree, treeNodeToAsset } = useAssetTree();
-const { clearRecentConnections, recentConnections, load: loadRecentConnections } = useRecentConnections();
+const {
+  clearRecentConnections,
+  recentConnections,
+  load: loadRecentConnections,
+  renameRecentConnection
+} = useRecentConnections();
 const workspaceUiAutomationHost = useWorkspaceUiAutomationHost();
 const {
   currentCommand: workspaceUiCommand,
@@ -51,6 +61,10 @@ const activeTreeKind = ref<PanelKind>("authorization");
 const recentNodeOpen = ref(false);
 const authorizationNodes = ref<AssetTreeNode[]>([]);
 const typeNodes = ref<AssetTreeNode[]>([]);
+registerAssetNameLookup(
+  (name, excludeId) =>
+    hasAssetName(authorizationNodes.value, name, excludeId) || hasAssetName(typeNodes.value, name, excludeId)
+);
 const loading = ref(false);
 const authorizationLoaded = ref(false);
 const tourDemoNodes = ref<AssetTreeNode[]>([]);
@@ -300,7 +314,6 @@ async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
     } finally {
       node.loading = false;
     }
-    await nextTick();
   }
 
   node.open = true;
@@ -591,6 +604,15 @@ watch(
 
 watch(workspaceUiCommand, respondToWorkspaceUiCommand, { immediate: true });
 
+useEventBus().on("assetRenamed", ({ assetId, name }) => {
+  applyAssetRename(authorizationNodes.value, assetId, name);
+  applyAssetRename(typeNodes.value, assetId, name);
+  applyAssetRename(searchNodes.value, assetId, name);
+  renameRecentConnection(assetId, name);
+  const checked = checkedAssets.value[assetId];
+  if (checked) checkedAssets.value[assetId] = { ...checked, name };
+});
+
 defineExpose({
   refresh,
   loading,
@@ -648,7 +670,7 @@ defineExpose({
     </template>
 
     <template v-else>
-      <section class="group flex min-h-0 flex-1 flex-col overflow-hidden">
+      <section class="app-tree-panel group min-h-0 flex-1" :class="hideHeader || open !== false ? 'is-open' : ''">
         <div
           v-if="!hideHeader || batchMode"
           class="flex h-8 w-full shrink-0 items-center gap-1 px-2.5 text-sm font-medium text-gray-700 dark:text-gray-300"
@@ -662,7 +684,7 @@ defineExpose({
           >
             <UIcon
               name="i-lucide-chevron-right"
-              class="sidebar-icon transition-transform duration-150"
+              class="sidebar-icon transition-transform duration-200 ease-out motion-reduce:transition-none"
               :class="open === false ? '' : 'rotate-90'"
             />
             <span class="min-w-0 flex-1 truncate">{{ activeTree.label }}</span>
@@ -737,8 +759,8 @@ defineExpose({
           </div>
         </div>
 
-        <Transition appear name="tree-appear">
-          <div v-if="hideHeader || open !== false" class="min-h-0 flex-1 overflow-y-auto py-0">
+        <div class="app-tree-panel__body">
+          <div class="h-full overflow-y-auto py-0">
             <Transition appear name="tree-appear" mode="out-in">
               <div v-if="showTreeLoading" key="tree-loading" class="grid h-20 place-items-center">
                 <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
@@ -764,7 +786,7 @@ defineExpose({
               </div>
             </Transition>
           </div>
-        </Transition>
+        </div>
       </section>
     </template>
   </div>

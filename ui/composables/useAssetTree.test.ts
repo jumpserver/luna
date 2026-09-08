@@ -1,7 +1,48 @@
 import type { EffectScope } from "vue";
+import type { AssetTreeNode } from "~/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, reactive, ref } from "vue";
-import { useAssetTreeSearch } from "./useAssetTree";
+import { applyAssetRename, hasAssetName, useAssetTreeSearch } from "./useAssetTree";
+
+describe("applyAssetRename", () => {
+  it("renames matching leaves in place and leaves parents open", () => {
+    const nodes: AssetTreeNode[] = [
+      {
+        id: "folder-1",
+        name: "Linux",
+        isParent: true,
+        open: true,
+        children: [
+          { id: "node-1", key: "asset-1", name: "old", meta: { data: { id: "asset-1", name: "old" } } },
+          { id: "node-2", key: "asset-2", name: "other", meta: { data: { id: "asset-2", name: "other" } } }
+        ]
+      }
+    ];
+
+    applyAssetRename(nodes, "asset-1", "new");
+
+    expect(nodes[0]).toMatchObject({ name: "Linux", open: true });
+    expect(nodes[0]!.children?.[0]).toMatchObject({ name: "new", meta: { data: { name: "new" } } });
+    expect(nodes[0]!.children?.[1]).toMatchObject({ name: "other" });
+  });
+});
+
+describe("asset rename names", () => {
+  const nodes: AssetTreeNode[] = [
+    {
+      id: "folder-1",
+      name: "Linux",
+      isParent: true,
+      children: [{ id: "node-1", key: "asset-1", name: "web-1", meta: { data: { id: "asset-1", name: "web-1" } } }]
+    }
+  ];
+
+  it("detects duplicate leaf names and ignores the asset being renamed", () => {
+    expect(hasAssetName(nodes, "web-1")).toBe(true);
+    expect(hasAssetName(nodes, " WEB-1 ")).toBe(true);
+    expect(hasAssetName(nodes, "web-1", "asset-1")).toBe(false);
+  });
+});
 
 const userInfoStore = reactive({ loggedIn: true, orgId: "org-1", currentSite: "site-1", currentAccountId: "user-1" });
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => userInfoStore }));

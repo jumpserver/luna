@@ -1,8 +1,11 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
+import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
 import type { AssetItem } from "~/types";
 import { favoriteAsset, getAssetDetailRequest } from "~/composables/useApiRequest";
+import { isAssetNameTaken } from "~/composables/useAssetTree";
 import { useConnectMethods, WEB_PROXY_NATIVE_VALUE } from "~/composables/useConnectMethods";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { hasItemName, isItemNameTooLong } from "~/utils/itemName";
 
 export function useSidebarAssetActions() {
   const { t } = useI18n();
@@ -17,7 +20,13 @@ export function useSidebarAssetActions() {
   const { activeTab, canSplitWorkspace, openSession, openSetupSession, splitWorkspace } = useWorkspaceTabs();
   const { openAssetInWindow } = useAssetWindowLauncher();
   const { handleAssetFavorite, handleAssetRename, handleAssetUnfavorite } = useAssetAction();
-  const { folders: favoriteFolders, load: loadFavoriteFolders, favoriteToFolder } = useFavoriteFolders();
+  const {
+    folders: favoriteFolders,
+    rootAssets: favoriteRootAssets,
+    load: loadFavoriteFolders,
+    favoriteToFolder
+  } = useFavoriteFolders();
+  const { recentConnections } = useRecentConnections();
   const userInfoStore = useUserInfoStore();
   const { currentUser, loggedIn } = storeToRefs(userInfoStore);
 
@@ -27,9 +36,23 @@ export function useSidebarAssetActions() {
   const renameModalOpen = ref(false);
   const renameAsset = ref<AssetItem | null>(null);
   const renameValue = ref("");
+  const collectFavoriteAssets = (folders = favoriteFolders.value): AssetItem[] =>
+    folders.flatMap((folder: FavoriteFolder) => [...folder.assets, ...collectFavoriteAssets(folder.children)]);
+  const renameNameTooLong = computed(() => isItemNameTooLong(renameValue.value));
+  const renameNameDuplicate = computed(() => {
+    const name = renameValue.value;
+    const id = renameAsset.value?.id;
+    if (!name.trim() || !id) return false;
+    return (
+      isAssetNameTaken(name, id) ||
+      hasItemName(collectFavoriteAssets(), name, id) ||
+      hasItemName(favoriteRootAssets.value, name, id) ||
+      hasItemName(recentConnections.value, name, id)
+    );
+  });
   const renameDisabled = computed(() => {
     const name = renameValue.value.trim();
-    return !name || name === renameAsset.value?.name;
+    return !name || name === renameAsset.value?.name || renameNameTooLong.value || renameNameDuplicate.value;
   });
 
   const hasSshProtocol = (asset: AssetItem) => {
@@ -397,7 +420,7 @@ export function useSidebarAssetActions() {
   const submitAssetRename = () => {
     const asset = renameAsset.value;
     const name = renameValue.value.trim();
-    if (!asset || !name || name === asset.name) return;
+    if (!asset || !name || name === asset.name || renameNameTooLong.value || renameNameDuplicate.value) return;
 
     handleAssetRename(asset.id, name);
     renameModalOpen.value = false;
@@ -534,6 +557,8 @@ export function useSidebarAssetActions() {
     renameAsset,
     renameValue,
     renameDisabled,
+    renameNameTooLong,
+    renameNameDuplicate,
     submitAssetRename,
     updateRenameModal
   };

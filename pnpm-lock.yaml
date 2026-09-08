@@ -15,6 +15,9 @@ importers:
 
   .:
     dependencies:
+      '@jumpserver/web-proxy':
+        specifier: workspace:*
+        version: link:packages/web-proxy
       '@ai-sdk/vue':
         specifier: 4.0.44
         version: 4.0.44(vue@3.5.40(typescript@6.0.3))(zod@4.4.3)
@@ -283,6 +286,9 @@ importers:
 
   electron:
     dependencies:
+      '@jumpserver/web-proxy':
+        specifier: workspace:*
+        version: link:../packages/web-proxy
       fflate:
         specifier: ^0.8.2
         version: 0.8.3
@@ -365,6 +371,48 @@ importers:
       vue:
         specifier: ^3.5.0
         version: 3.5.40(typescript@6.0.3)
+
+  applets/weblite:
+    dependencies:
+      '@jumpserver/web-proxy':
+        specifier: workspace:*
+        version: link:../../packages/web-proxy
+      '@nuxt/ui':
+        specifier: 4.11.0
+        version: 4.11.0(c55ab64d90e9a4d3f81ab9239c8c433b)
+      vue:
+        specifier: ^3.5.35
+        version: 3.5.40(typescript@6.0.3)
+    devDependencies:
+      '@electron/packager':
+        specifier: 18.3.5
+        version: 18.3.5
+      '@vitejs/plugin-vue':
+        specifier: ^6.0.8
+        version: 6.0.8(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.49.0)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3))
+      electron:
+        specifier: 44.0.0
+        version: 44.0.0
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.3
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
+      vite:
+        specifier: 8.1.5
+        version: 8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0)
+  packages/web-proxy:
+    dependencies:
+      electron:
+        specifier: ^44.0.0
+        version: 44.0.0
+      vue:
+        specifier: ^3.5.0
+        version: 3.5.40(typescript@6.0.3)
+      '@nuxt/ui':
+        specifier: ^4.11.0
+        version: 4.11.0(c55ab64d90e9a4d3f81ab9239c8c433b)
 
 packages:
 

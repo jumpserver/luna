@@ -34,6 +34,11 @@ electronPackageJson.version = version;
 writeFileSync(electronPackageJsonPath, `${JSON.stringify(electronPackageJson, null, 2)}\n`);
 console.log("✓ Updated electron/package.json");
 
+const appletPackageJsonPath = join(rootDir, "applets", "weblite", "package.json");
+const appletPackageJson = JSON.parse(readFileSync(appletPackageJsonPath, "utf8"));
+appletPackageJson.version = version;
+writeFileSync(appletPackageJsonPath, `${JSON.stringify(appletPackageJson, null, 2)}\n`);
+
 // Update app.config.ts
 const appConfigPath = join(rootDir, "ui", "app.config.ts");
 let appConfig = readFileSync(appConfigPath, "utf8");

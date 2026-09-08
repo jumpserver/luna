@@ -8,6 +8,7 @@ import {
   updateFavoriteFolder
 } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { hasItemName, isItemNameTooLong, ITEM_NAME_MAX_LENGTH } from "~/utils/itemName";
 
 export interface FavoriteFolder {
   id: string;
@@ -17,6 +18,8 @@ export interface FavoriteFolder {
   assets: AssetItem[];
   open: boolean;
 }
+
+export const FAVORITE_FOLDER_NAME_MAX_LENGTH = ITEM_NAME_MAX_LENGTH;
 
 const rawList = (value: any): any[] =>
   Array.isArray(value)
@@ -80,6 +83,11 @@ const normalizeFolders = (value: unknown): FavoriteFolder[] => {
 const flattenFolders = (folders: FavoriteFolder[]): FavoriteFolder[] =>
   folders.flatMap((folder) => [folder, ...flattenFolders(folder.children)]);
 
+export const isFavoriteFolderNameTooLong = isItemNameTooLong;
+
+export const hasFavoriteFolderName = (folders: FavoriteFolder[], name: string, excludeId?: string): boolean =>
+  hasItemName(flattenFolders(folders), name, excludeId);
+
 const folderIdFromRaw = (raw: any): string | null => {
   const value = raw?.folder;
   if (!value) return null;
@@ -138,11 +146,15 @@ export const useFavoriteFolders = () => {
   };
 
   const createFolder = async (name: string, parent: string | null = null) => {
+    if (isFavoriteFolderNameTooLong(name)) throw new Error("Favorite folder name is too long");
+    if (hasFavoriteFolderName(folders.value, name)) throw new Error("Favorite folder name already exists");
     await createFavoriteFolder(parent ? { name, parent } : { name });
     await load();
   };
 
   const renameFolder = async (id: string, name: string) => {
+    if (isFavoriteFolderNameTooLong(name)) throw new Error("Favorite folder name is too long");
+    if (hasFavoriteFolderName(folders.value, name, id)) throw new Error("Favorite folder name already exists");
     await updateFavoriteFolder(id, { name });
     await load();
   };
@@ -156,6 +168,19 @@ export const useFavoriteFolders = () => {
     await favoriteAssetToFolder(assetId, folderId);
     await load();
     useEventBus().emit("favoriteChanged", { assetId, favorite: true });
+  };
+
+  const renameFavoriteAsset = (assetId: string, name: string) => {
+    const visit = (folder: FavoriteFolder) => {
+      for (const asset of folder.assets) {
+        if (asset.id === assetId) asset.name = name;
+      }
+      for (const child of folder.children) visit(child);
+    };
+    for (const folder of folders.value) visit(folder);
+    for (const asset of rootAssets.value) {
+      if (asset.id === assetId) asset.name = name;
+    }
   };
 
   watch([loggedIn, currentAccountId], ([isLoggedIn]) => {
@@ -172,5 +197,15 @@ export const useFavoriteFolders = () => {
     }
     void load();
   });
-  return { folders, rootAssets, loading, load, createFolder, renameFolder, removeFolder, favoriteToFolder };
+  return {
+    folders,
+    rootAssets,
+    loading,
+    load,
+    createFolder,
+    renameFolder,
+    removeFolder,
+    favoriteToFolder,
+    renameFavoriteAsset
+  };
 };

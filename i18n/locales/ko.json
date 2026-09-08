@@ -257,6 +257,8 @@
     "CreateFolder": "폴더 만들기",
     "CreateSubfolder": "하위 폴더 만들기",
     "FolderName": "폴더 이름",
+    "DuplicateName": "같은 이름의 폴더가 이미 있습니다",
+    "NameTooLong": "폴더 이름은 {max}자를 초과할 수 없습니다",
     "CreateFailed": "폴더 만들기 실패",
     "RenameFailed": "폴더 이름 변경 실패",
     "CreateFolderFirst": "먼저 즐겨찾기 폴더를 만드세요",
@@ -867,7 +869,9 @@
     "Actions": "작업",
     "Status": "상태",
     "RenameSuccess": "이름 변경 성공",
-    "RenameFail": "이름 변경 실패"
+    "RenameFail": "이름 변경 실패",
+    "DuplicateName": "같은 이름의 자산이 이미 있습니다",
+    "NameTooLong": "자산 이름은 {max}자를 초과할 수 없습니다"
   },
   "ContextMenu": {
     "QuickConnect": "빠른 연결",
@@ -1001,6 +1005,7 @@
     "GetAssetFailed": "자산을 가져오지 못했습니다. 새로 고침 후 다시 시도하세요"
   },
   "Account": {
+    "NoAuthorizedAccounts": "이 자산에 승인된 계정이 없습니다",
     "Hosted": "관리형 계정",
     "Manual": "수동 계정",
     "Username": "사용자 이름",

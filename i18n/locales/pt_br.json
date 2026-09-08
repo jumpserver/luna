@@ -257,6 +257,8 @@
     "CreateFolder": "Criar pasta",
     "CreateSubfolder": "Criar subpasta",
     "FolderName": "Nome da pasta",
+    "DuplicateName": "Já existe uma pasta com este nome",
+    "NameTooLong": "O nome da pasta não pode exceder {max} caracteres",
     "CreateFailed": "Falha ao criar a pasta",
     "RenameFailed": "Falha ao renomear a pasta",
     "CreateFolderFirst": "Crie primeiro uma pasta de favoritos",
@@ -867,7 +869,9 @@
     "Actions": "Ações",
     "Status": "Status",
     "RenameSuccess": "Renomeado com sucesso",
-    "RenameFail": "Falha ao renomear"
+    "RenameFail": "Falha ao renomear",
+    "DuplicateName": "Já existe um ativo com este nome",
+    "NameTooLong": "O nome do ativo não pode exceder {max} caracteres"
   },
   "ContextMenu": {
     "QuickConnect": "Conexão rápida",
@@ -1001,6 +1005,7 @@
     "GetAssetFailed": "Falha ao obter o ativo. Atualize e tente novamente"
   },
   "Account": {
+    "NoAuthorizedAccounts": "Nenhuma conta foi autorizada para este ativo",
     "Hosted": "Contas com credenciais",
     "Manual": "Contas manuais",
     "Username": "Nome de usuário",

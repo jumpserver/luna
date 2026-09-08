@@ -257,6 +257,8 @@
     "CreateFolder": "Create folder",
     "CreateSubfolder": "Create subfolder",
     "FolderName": "Folder name",
+    "DuplicateName": "A folder with this name already exists",
+    "NameTooLong": "Folder name cannot exceed {max} characters",
     "CreateFailed": "Failed to create folder",
     "RenameFailed": "Failed to rename folder",
     "CreateFolderFirst": "Create a favorite folder first",
@@ -867,7 +869,9 @@
     "Actions": "Actions",
     "Status": "Status",
     "RenameSuccess": "Rename successful",
-    "RenameFail": "Rename failed"
+    "RenameFail": "Rename failed",
+    "DuplicateName": "An asset with this name already exists",
+    "NameTooLong": "Asset name cannot exceed {max} characters"
   },
   "ContextMenu": {
     "QuickConnect": "Quick Connect",
@@ -1001,6 +1005,7 @@
     "GetAssetFailed": "Get asset failed, please refresh and try again"
   },
   "Account": {
+    "NoAuthorizedAccounts": "No accounts have been authorized for this asset",
     "Hosted": "With secret accounts",
     "Manual": "Manual accounts",
     "Username": "Username",
