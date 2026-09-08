@@ -72,6 +72,16 @@ describe("useBaseWorkspaceSession", () => {
     expect(host.markSessionConnected).not.toHaveBeenCalled();
   });
 
+  it("reuses a live connector context instead of consuming the token again", async () => {
+    const session = useBaseWorkspaceSession(createTab());
+    const first = await session.prepareSession();
+
+    const second = await session.prepareSession();
+
+    expect(second).toBe(first);
+    expect(host.createTicket).toHaveBeenCalledTimes(1);
+  });
+
   it("prepares connector context and marks the tab connected", async () => {
     const session = useBaseWorkspaceSession(createTab());
 
