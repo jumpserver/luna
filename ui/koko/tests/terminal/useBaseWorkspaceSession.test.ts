@@ -8,6 +8,7 @@ const host = {
   getWindowOrigin: vi.fn(() => "http://127.0.0.1:3300"),
   isDesktopRuntime: vi.fn(() => false),
   markSessionConnected: vi.fn(),
+  markSessionDisconnected: vi.fn(),
   markSessionFailed: vi.fn()
 };
 
@@ -47,6 +48,7 @@ describe("useBaseWorkspaceSession", () => {
     host.isDesktopRuntime.mockReset();
     host.isDesktopRuntime.mockReturnValue(false);
     host.markSessionConnected.mockReset();
+    host.markSessionDisconnected.mockReset();
     host.markSessionFailed.mockReset();
     host.createTicket.mockResolvedValue({ ticket: "ticket-1" });
     host.getSmartEndpoint.mockResolvedValue({

@@ -17,13 +17,15 @@ export function useKokoSessionAdapter() {
 
   const shareInfo = computed(() => {
     const shareId = connectionStore.shareId || "";
-    const origin = import.meta.client ? window.location.origin : "";
+    const origin = globalThis.window?.location.origin || "";
     return {
       shareId,
       shareCode: connectionStore.shareCode || "",
       sessionId: connectionStore.sessionId || "",
       enableShare: connectionStore.enableShare || false,
-      shareURL: shareId ? `${origin}/luna/share/${shareId}/?code=${connectionStore.shareCode}` : ""
+      shareURL: shareId
+        ? `${origin}/luna/share/${shareId}?code=${encodeURIComponent(connectionStore.shareCode || "")}`
+        : ""
     };
   });
 
@@ -77,14 +79,10 @@ export function useKokoSessionAdapter() {
   };
 
   const copyShareURL = () => {
-    const { shareId, shareCode, enableShare } = shareInfo.value;
-    if (!shareId || !enableShare) return;
+    const { shareURL, enableShare } = shareInfo.value;
+    if (!shareURL || !enableShare) return;
 
-    const origin = window.location.origin;
-    const url = `${origin}/luna/share/${shareId}`;
-    const text = `${t("koko.terminal.shareLink")}: ${url}\n${t("koko.terminal.verificationCode")}: ${shareCode}`;
-
-    writeText(text)
+    writeText(shareURL)
       .then(() => toast.add({ title: t("koko.terminal.shareLinkCopied"), color: "success" }))
       .catch((error) => addErrorToast({ title: String(error) }));
   };

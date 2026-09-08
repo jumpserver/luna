@@ -14,7 +14,7 @@ interface LionSessionShareSource {
   endpointUrl: ComputedRef<string>;
   enableShare: Ref<boolean>;
   onlineUsersMap: Ref<Record<string, LionOnlineUser>>;
-  sessionObject: Ref<Record<string, any>>;
+  sessionObject: Ref<Record<string, unknown>>;
   ticket: Ref<string>;
   tokenId: Ref<string>;
   refreshTicket: () => Promise<string>;
@@ -127,9 +127,7 @@ export function useLionSessionShareAdapter(source: LionSessionShareSource): Lion
   const copyShareURL = async () => {
     if (!shareURL.value || !shareCode.value) return;
     try {
-      await writeClipboardText(
-        `${t("RightPanel.ShareLink")}: ${shareURL.value}\n${t("RightPanel.VerifyCode")}: ${shareCode.value}`
-      );
+      await writeClipboardText(shareURL.value);
       toast.add({ title: t("RightPanel.ShareCopySuccess"), color: "success" });
     } catch (error) {
       addErrorToast({ title: t("RightPanel.ShareCopyFailed"), description: String(error) });

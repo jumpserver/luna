@@ -22,7 +22,8 @@ export function resolveWsUrl(component: JmsComponent, wsRoute: string, ctx: Conn
   const params = buildWsQueryParams({
     token: ctx.tokenId,
     ticket: ctx.ticket,
-    disableautohash: ctx.disableAutoHash
+    disableautohash: ctx.disableAutoHash,
+    ...ctx.wsQuery
   });
   const wsBase = toWsOrigin(ctx.endpointUrl || (import.meta.client ? window.location.origin : ""));
   return `${wsBase}${WS_PREFIX[component]}${wsRoute}/?${params.toString()}`;

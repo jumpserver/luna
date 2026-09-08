@@ -17,6 +17,7 @@ export interface ConnectorSessionContext {
   colorMode?: string;
   themeType?: string;
   disableAutoHash?: string;
+  wsQuery?: Record<string, string>;
   actions?: Array<string | { value?: string; label?: string }>;
   terminalProfile?: ConnectorTerminalProfile;
   terminalCommandHistoryScope?: string;
