@@ -38,3 +38,6 @@ dist
 electron/.vite
 release/electron
 .empryo
+.context
+.impeccable
+PRODUCT.md
