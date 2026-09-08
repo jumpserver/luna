@@ -125,7 +125,17 @@ const clearEscapeHold = () => {
 };
 
 const startEscapeHold = (event: KeyboardEvent) => {
-  if (isWorkspaceTourActive() || !focusMode.value || event.key !== "Escape" || event.repeat || escapeHoldTimer) return;
+  if (isWorkspaceTourActive() || event.key !== "Escape" || event.repeat) return;
+
+  // Fullscreen: Esc exits immediately. Capture it before xterm/Guacamole swallow the key.
+  if (workspaceFullscreen.value) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    void exitFocusMode();
+    return;
+  }
+
+  if (!focusMode.value || escapeHoldTimer) return;
 
   escapeHoldTimer = setTimeout(() => {
     escapeHoldTimer = null;
@@ -314,11 +324,11 @@ const syncTrayRecentConnections = () => {
   }).catch((error) => console.debug("sync tray recent connections failed", error));
 };
 
-useEventListener(window, "keydown", startEscapeHold);
+useEventListener(window, "keydown", startEscapeHold, { capture: true });
 useEventListener(window, "keydown", handleOpenLocalShellShortcut, { capture: true });
 useEventListener(window, "keydown", handleChromeShortcut);
 useEventListener(window, "keydown", handleWorkspaceModeShortcut, { capture: true });
-useEventListener(window, "keyup", stopEscapeHold);
+useEventListener(window, "keyup", stopEscapeHold, { capture: true });
 useEventListener(window, "blur", clearEscapeHold);
 useEventListener(window, "focus", refreshCommandExecutionSetting);
 

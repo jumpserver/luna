@@ -111,6 +111,8 @@ export const desktopWindow = {
     return electron.invoke<boolean>("plugin:window|is_maximized", { label: electron.windowLabel });
   },
   onResized: (handler: () => void) => desktopListen("desktop://resize", handler),
+  onFullscreenChanged: (handler: (fullscreen: boolean) => void) =>
+    desktopListen<boolean>("desktop://fullscreen", (event) => handler(Boolean(event.payload))),
   async toggleFullscreen() {
     const electron = requireElectron();
     const fullscreen = await electron.invoke<boolean>("plugin:window|is_fullscreen", {

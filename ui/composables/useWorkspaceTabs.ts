@@ -1,8 +1,11 @@
 import type { AssetItem, PermedAccount, PermedProtocol } from "~/types";
+import { createSharedComposable, useFullscreen } from "@vueuse/core";
 
 import { useRecentConnections } from "~/composables/useRecentConnections";
+import { useSettingManager } from "~/composables/useSettingManager";
 import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 import { desktopWindow } from "~/shared/desktop/bridge";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 export type WorkspaceSessionStatus = "selecting" | "connecting" | "ready" | "connected" | "failed";
 export type WorkspaceSplitDirection = "horizontal" | "vertical";
@@ -60,16 +63,26 @@ const workspaceFullscreen = ref(false);
 const pendingPaneTarget = ref<{ tabId: string; paneId: string } | null>(null);
 const SIDEBAR_COLLAPSE_DURATION = 240;
 let restoreSidebarAfterFullscreen = false;
+let desktopFullscreenListening = false;
+const leaveWorkspaceFullscreen = () => {
+  if (!workspaceFullscreen.value) return;
+  workspaceFullscreen.value = false;
+  focusModeTabId.value = "";
+  if (restoreSidebarAfterFullscreen) useSettingManager().collapse.value = false;
+  restoreSidebarAfterFullscreen = false;
+};
+const listenDesktopFullscreen = () => {
+  if (desktopFullscreenListening || !import.meta.client) return;
+  desktopFullscreenListening = true;
+  void desktopWindow.onFullscreenChanged((full) => {
+    if (!full) leaveWorkspaceFullscreen();
+  });
+};
 const useSharedDocumentFullscreen = createSharedComposable(() => {
   const fullscreen = useFullscreen();
-  const { setCollapse } = useSettingManager();
 
   watch(fullscreen.isFullscreen, (full) => {
-    if (full || !workspaceFullscreen.value) return;
-    workspaceFullscreen.value = false;
-    focusModeTabId.value = "";
-    if (restoreSidebarAfterFullscreen) setCollapse(false);
-    restoreSidebarAfterFullscreen = false;
+    if (!full) leaveWorkspaceFullscreen();
   });
 
   return fullscreen;
@@ -335,10 +348,11 @@ const resolvePendingTarget = (explicitPaneId?: string) => {
 
 export const useWorkspaceTabs = () => {
   const desktopRuntime = isDesktopRuntime();
+  if (desktopRuntime) listenDesktopFullscreen();
   const webFullscreen = desktopRuntime ? null : useSharedDocumentFullscreen();
-  const { collapse, setCollapse } = useSettingManager();
+  const { collapse } = useSettingManager();
   const collapseSidebar = async () => {
-    setCollapse(true);
+    collapse.value = true;
     await new Promise<void>((resolve) => setTimeout(resolve, SIDEBAR_COLLAPSE_DURATION));
   };
   const setRuntimeFullscreen = async (fullscreen: boolean) => {
@@ -353,12 +367,8 @@ export const useWorkspaceTabs = () => {
 
   const exitFocusMode = async () => {
     const shouldExitFullscreen = workspaceFullscreen.value;
-    const shouldRestoreSidebar = shouldExitFullscreen && restoreSidebarAfterFullscreen;
-    workspaceFullscreen.value = false;
-    focusModeTabId.value = "";
-    restoreSidebarAfterFullscreen = false;
+    leaveWorkspaceFullscreen();
     if (shouldExitFullscreen) await setRuntimeFullscreen(false).catch(() => {});
-    if (shouldRestoreSidebar) setCollapse(false);
   };
 
   const registerSessionDisposer = (disposer: ((id: string) => void | Promise<void>) | null) => {
@@ -901,10 +911,7 @@ export const useWorkspaceTabs = () => {
       focusModeTabId.value = tabId;
       return true;
     } catch {
-      workspaceFullscreen.value = false;
-      focusModeTabId.value = "";
-      if (restoreSidebarAfterFullscreen) setCollapse(false);
-      restoreSidebarAfterFullscreen = false;
+      leaveWorkspaceFullscreen();
       return false;
     }
   };

@@ -837,6 +837,8 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
     const [width, height] = win.getContentSize();
     emitDesktopEvent("desktop://resize", { width, height }, label);
   });
+  win.on("enter-full-screen", () => emitDesktopEvent("desktop://fullscreen", true, label));
+  win.on("leave-full-screen", () => emitDesktopEvent("desktop://fullscreen", false, label));
   windowWebContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace) clearDesktopEventSubscriptions(windowWebContents);
   });
