@@ -50,6 +50,7 @@ const sessionDetails = computed(() => {
 const lionSession = computed(() => getLionWorkspaceSession(activeSession.value?.id || ""));
 
 const isConnectedSession = computed(() => activeSession.value?.status === "connected");
+const isDisconnectedSession = computed(() => activeSession.value?.status === "disconnected");
 const isLinuxSSHSession = computed(() => {
   const session = activeSession.value;
   if (!session || session.protocol.toLowerCase() !== "ssh") return false;
@@ -139,6 +140,7 @@ const statusLabel = computed(() => {
   const status = activeSession.value?.status;
   if (status === "connected") return t("RightPanel.SessionStatusConnected");
   if (status === "connecting" || status === "ready") return t("RightPanel.SessionStatusConnecting");
+  if (status === "disconnected") return t("RightPanel.SessionStatusDisconnected");
   if (status === "failed") return t("RightPanel.SessionStatusFailed");
   return t("RightPanel.SessionStatusIdle");
 });
@@ -198,7 +200,7 @@ const canShare = computed(() => {
                 :color="
                   activeSession.status === 'connected'
                     ? 'success'
-                    : activeSession.status === 'failed'
+                    : activeSession.status === 'failed' || activeSession.status === 'disconnected'
                       ? 'error'
                       : 'warning'
                 "
@@ -222,143 +224,153 @@ const canShare = computed(() => {
         </template>
       </UCollapsible>
 
-      <UCollapsible
-        v-if="isConnectedSession && isLinuxSSHSession"
-        v-model:open="metricsOpen"
-        class="shrink-0 border-t border-default"
+      <Transition
+        mode="out-in"
+        enter-active-class="transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none"
+        enter-from-class="opacity-0 translate-y-1"
+        leave-active-class="transition-[opacity,transform] duration-150 ease-in motion-reduce:transition-none"
+        leave-to-class="opacity-0 -translate-y-1"
       >
-        <UButton
-          color="neutral"
-          variant="ghost"
-          block
-          class="h-9 cursor-pointer justify-start rounded-none px-3 text-xs font-semibold"
-          :aria-label="t('RightPanel.MonitorInfo')"
-        >
-          <UIcon name="i-lucide-activity" class="size-3.5 shrink-0 text-primary" />
-          <span>{{ t("RightPanel.MonitorInfo") }}</span>
-          <div v-if="metrics" class="ml-auto flex min-w-0 items-center gap-1.5 text-[10px] font-normal text-muted">
-            <UBadge v-if="metricsState?.cached" size="xs" color="neutral" variant="subtle">
-              {{ t("RightPanel.MetricsCached") }}
-            </UBadge>
-            <span class="inline-flex shrink-0 items-center gap-1 font-ui-mono">
-              <UIcon name="i-lucide-radio" class="size-3" />
-              Koko {{ metricsState?.latencyMs == null ? "--" : `${metricsState.latencyMs} ms` }}
-            </span>
-          </div>
-          <UIcon
-            name="i-lucide-chevron-right"
-            class="size-3.5 shrink-0 transition-transform duration-150"
-            :class="[metricsOpen ? 'rotate-90' : '', metrics ? '' : 'ml-auto']"
-          />
-        </UButton>
-
-        <template #content>
-          <div v-if="metrics" class="space-y-2 px-3 pb-3">
-            <div class="grid grid-cols-2 gap-2 text-[10px] text-muted">
-              <span class="truncate">{{ metrics.hostname }} · {{ metrics.kernel }}</span>
-              <span class="text-right">
-                {{ metrics.architecture }} · {{ metrics.cpuCores }} CPU · {{ formatUptime(metrics.uptimeSeconds) }}
-              </span>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2">
-              <div class="rounded-lg border border-default bg-elevated/40 p-2">
-                <div class="flex items-center justify-between text-[11px]">
-                  <span class="text-muted">CPU</span>
-                  <span class="font-ui-mono font-medium text-highlighted">{{ formatPercent(metrics.cpuPercent) }}</span>
-                </div>
-                <RightPanelMetricSparkline :primary="cpuHistory" :fixed-max="100" />
+        <div v-if="isConnectedSession" key="live" class="flex min-h-0 flex-1 flex-col">
+          <UCollapsible v-if="isLinuxSSHSession" v-model:open="metricsOpen" class="shrink-0 border-t border-default">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              block
+              class="h-9 cursor-pointer justify-start rounded-none px-3 text-xs font-semibold"
+              :aria-label="t('RightPanel.MonitorInfo')"
+            >
+              <UIcon name="i-lucide-activity" class="size-3.5 shrink-0 text-primary" />
+              <span>{{ t("RightPanel.MonitorInfo") }}</span>
+              <div v-if="metrics" class="ml-auto flex min-w-0 items-center gap-1.5 text-[10px] font-normal text-muted">
+                <UBadge v-if="metricsState?.cached" size="xs" color="neutral" variant="subtle">
+                  {{ t("RightPanel.MetricsCached") }}
+                </UBadge>
+                <span class="inline-flex shrink-0 items-center gap-1 font-ui-mono">
+                  <UIcon name="i-lucide-radio" class="size-3" />
+                  Koko {{ metricsState?.latencyMs == null ? "--" : `${metricsState.latencyMs} ms` }}
+                </span>
               </div>
-              <div class="rounded-lg border border-default bg-elevated/40 p-2">
-                <div class="flex items-center justify-between gap-1 text-[11px]">
-                  <span class="text-muted">{{ t("RightPanel.MetricsMemory") }}</span>
-                  <span class="font-ui-mono font-medium text-highlighted">
-                    {{ formatPercent(metrics.memoryPercent) }}
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-3.5 shrink-0 transition-transform duration-150"
+                :class="[metricsOpen ? 'rotate-90' : '', metrics ? '' : 'ml-auto']"
+              />
+            </UButton>
+
+            <template #content>
+              <div v-if="metrics" class="space-y-2 px-3 pb-3">
+                <div class="grid grid-cols-2 gap-2 text-[10px] text-muted">
+                  <span class="truncate">{{ metrics.hostname }} · {{ metrics.kernel }}</span>
+                  <span class="text-right">
+                    {{ metrics.architecture }} · {{ metrics.cpuCores }} CPU · {{ formatUptime(metrics.uptimeSeconds) }}
                   </span>
                 </div>
-                <RightPanelMetricSparkline :primary="memoryHistory" :fixed-max="100" />
-                <div class="truncate text-[9px] text-muted">
-                  {{ formatBytes(metrics.memoryUsedBytes) }} / {{ formatBytes(metrics.memoryTotalBytes) }}
+
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="rounded-lg border border-default bg-elevated/40 p-2">
+                    <div class="flex items-center justify-between text-[11px]">
+                      <span class="text-muted">CPU</span>
+                      <span class="font-ui-mono font-medium text-highlighted">
+                        {{ formatPercent(metrics.cpuPercent) }}
+                      </span>
+                    </div>
+                    <RightPanelMetricSparkline :primary="cpuHistory" :fixed-max="100" />
+                  </div>
+                  <div class="rounded-lg border border-default bg-elevated/40 p-2">
+                    <div class="flex items-center justify-between gap-1 text-[11px]">
+                      <span class="text-muted">{{ t("RightPanel.MetricsMemory") }}</span>
+                      <span class="font-ui-mono font-medium text-highlighted">
+                        {{ formatPercent(metrics.memoryPercent) }}
+                      </span>
+                    </div>
+                    <RightPanelMetricSparkline :primary="memoryHistory" :fixed-max="100" />
+                    <div class="truncate text-[9px] text-muted">
+                      {{ formatBytes(metrics.memoryUsedBytes) }} / {{ formatBytes(metrics.memoryTotalBytes) }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="rounded-lg border border-default bg-elevated/40 p-2">
+                  <div class="flex items-center justify-between gap-2 text-[11px]">
+                    <span class="text-muted">
+                      {{ t("RightPanel.MetricsDisk") }} · {{ formatPercent(metrics.diskPercent) }}
+                    </span>
+                    <span class="font-ui-mono text-[10px] text-highlighted">
+                      R {{ formatRate(metrics.diskReadBytesPerSecond) }} · W
+                      {{ formatRate(metrics.diskWriteBytesPerSecond) }}
+                    </span>
+                  </div>
+                  <RightPanelMetricSparkline :primary="diskReadHistory" :secondary="diskWriteHistory" />
+                </div>
+
+                <div class="rounded-lg border border-default bg-elevated/40 p-2">
+                  <div class="flex items-center justify-between gap-2 text-[11px]">
+                    <span class="text-muted">{{ t("RightPanel.MetricsNetwork") }}</span>
+                    <span class="font-ui-mono text-[10px] text-highlighted">
+                      ↓ {{ formatRate(metrics.networkRxBytesPerSecond) }} · ↑
+                      {{ formatRate(metrics.networkTxBytesPerSecond) }}
+                    </span>
+                  </div>
+                  <RightPanelMetricSparkline :primary="networkRXHistory" :secondary="networkTXHistory" />
                 </div>
               </div>
-            </div>
 
-            <div class="rounded-lg border border-default bg-elevated/40 p-2">
-              <div class="flex items-center justify-between gap-2 text-[11px]">
-                <span class="text-muted">
-                  {{ t("RightPanel.MetricsDisk") }} · {{ formatPercent(metrics.diskPercent) }}
-                </span>
-                <span class="font-ui-mono text-[10px] text-highlighted">
-                  R {{ formatRate(metrics.diskReadBytesPerSecond) }} · W
-                  {{ formatRate(metrics.diskWriteBytesPerSecond) }}
-                </span>
+              <div
+                v-else-if="metricsState?.status === 'unavailable'"
+                class="mx-3 mb-3 flex items-start gap-2 rounded-lg bg-elevated p-2 text-[11px] text-muted"
+              >
+                <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3.5 shrink-0" />
+                <span>{{ metricsState.message || t("RightPanel.MetricsUnavailable") }}</span>
               </div>
-              <RightPanelMetricSparkline :primary="diskReadHistory" :secondary="diskWriteHistory" />
-            </div>
 
-            <div class="rounded-lg border border-default bg-elevated/40 p-2">
-              <div class="flex items-center justify-between gap-2 text-[11px]">
-                <span class="text-muted">{{ t("RightPanel.MetricsNetwork") }}</span>
-                <span class="font-ui-mono text-[10px] text-highlighted">
-                  ↓ {{ formatRate(metrics.networkRxBytesPerSecond) }} · ↑
-                  {{ formatRate(metrics.networkTxBytesPerSecond) }}
-                </span>
+              <div v-else class="flex items-center gap-2 px-3 pb-3 text-[11px] text-muted">
+                <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
+                {{ t("RightPanel.MetricsLoading") }}
               </div>
-              <RightPanelMetricSparkline :primary="networkRXHistory" :secondary="networkTXHistory" />
-            </div>
-          </div>
+            </template>
+          </UCollapsible>
 
-          <div
-            v-else-if="metricsState?.status === 'unavailable'"
-            class="mx-3 mb-3 flex items-start gap-2 rounded-lg bg-elevated p-2 text-[11px] text-muted"
-          >
-            <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3.5 shrink-0" />
-            <span>{{ metricsState.message || t("RightPanel.MetricsUnavailable") }}</span>
-          </div>
+          <UCollapsible v-if="showShareSection" v-model:open="shareInfoOpen" class="shrink-0 border-t border-default">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              block
+              class="h-9 cursor-pointer justify-start rounded-none px-3 text-xs font-semibold"
+              :aria-label="t('RightPanel.ShareInfo')"
+            >
+              <UIcon name="i-lucide-share-2" class="size-3.5 shrink-0 text-primary" />
+              <span>{{ t("RightPanel.ShareInfo") }}</span>
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="ml-auto size-3.5 shrink-0 transition-transform duration-150"
+                :class="shareInfoOpen ? 'rotate-90' : ''"
+              />
+            </UButton>
 
-          <div v-else class="flex items-center gap-2 px-3 pb-3 text-[11px] text-muted">
-            <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
-            {{ t("RightPanel.MetricsLoading") }}
-          </div>
-        </template>
-      </UCollapsible>
-
-      <UCollapsible v-if="showShareSection" v-model:open="shareInfoOpen" class="shrink-0 border-t border-default">
-        <UButton
-          color="neutral"
-          variant="ghost"
-          block
-          class="h-9 cursor-pointer justify-start rounded-none px-3 text-xs font-semibold"
-          :aria-label="t('RightPanel.ShareInfo')"
-        >
-          <UIcon name="i-lucide-share-2" class="size-3.5 shrink-0 text-primary" />
-          <span>{{ t("RightPanel.ShareInfo") }}</span>
-          <UIcon
-            name="i-lucide-chevron-right"
-            class="ml-auto size-3.5 shrink-0 transition-transform duration-150"
-            :class="shareInfoOpen ? 'rotate-90' : ''"
+            <template #content>
+              <div class="px-3 pb-3">
+                <RightPanelSessionShareSection :disabled="!canShare" />
+              </div>
+            </template>
+          </UCollapsible>
+        </div>
+        <div v-else key="idle" class="grid flex-1 place-items-center border-t border-default px-4 text-center">
+          <UEmpty
+            :icon="isDisconnectedSession ? 'i-lucide-unplug' : 'i-lucide-loader-circle'"
+            size="sm"
+            variant="naked"
+            :title="
+              isDisconnectedSession ? t('RightPanel.SessionStatusDisconnected') : t('RightPanel.SessionWaitingTitle')
+            "
+            :description="
+              isDisconnectedSession
+                ? t('RightPanel.SessionDisconnectedDescription')
+                : t('RightPanel.SessionWaitingDescription')
+            "
           />
-        </UButton>
-
-        <template #content>
-          <div class="px-3 pb-3">
-            <RightPanelSessionShareSection :disabled="!canShare" />
-          </div>
-        </template>
-      </UCollapsible>
-
-      <div
-        v-else-if="!isConnectedSession"
-        class="grid flex-1 place-items-center border-t border-default px-4 text-center"
-      >
-        <UEmpty
-          icon="i-lucide-loader-circle"
-          size="sm"
-          variant="naked"
-          :title="t('RightPanel.SessionWaitingTitle')"
-          :description="t('RightPanel.SessionWaitingDescription')"
-        />
-      </div>
+        </div>
+      </Transition>
     </div>
   </div>
 </template>
