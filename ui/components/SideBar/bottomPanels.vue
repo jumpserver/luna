@@ -3,6 +3,11 @@ import type { DropdownMenuItem } from "@nuxt/ui";
 import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
 import type { Snippet } from "~/composables/useSnippets";
 import type { AssetItem } from "~/types";
+import {
+  FAVORITE_FOLDER_NAME_MAX_LENGTH,
+  hasFavoriteFolderName,
+  isFavoriteFolderNameTooLong
+} from "~/composables/useFavoriteFolders";
 import { writeClipboardText } from "~/utils/clipboard";
 
 const props = defineProps<{
@@ -129,9 +134,12 @@ const openCreateFolder = (parentId: string | null = null) => {
   createModalOpen.value = true;
 };
 
+const createNameDuplicate = computed(() => hasFavoriteFolderName(favoriteFolders.value, folderName.value));
+const createNameTooLong = computed(() => isFavoriteFolderNameTooLong(folderName.value));
+
 const submitCreateFolder = async () => {
   const name = folderName.value.trim();
-  if (!name || creating.value) return;
+  if (!name || createNameDuplicate.value || createNameTooLong.value || creating.value) return;
 
   creating.value = true;
   try {
@@ -163,15 +171,20 @@ const openRenameFolder = (folder: FavoriteFolder) => {
   renameModalOpen.value = true;
 };
 
+const renameNameDuplicate = computed(() =>
+  hasFavoriteFolderName(favoriteFolders.value, renameValue.value, renameTarget.value?.id)
+);
+const renameNameTooLong = computed(() => isFavoriteFolderNameTooLong(renameValue.value));
+
 const renameDisabled = computed(() => {
   const name = renameValue.value.trim();
-  return !name || name === renameTarget.value?.name;
+  return !name || name === renameTarget.value?.name || renameNameDuplicate.value || renameNameTooLong.value;
 });
 
 const submitRenameFolder = async () => {
   const folder = renameTarget.value;
   const name = renameValue.value.trim();
-  if (!folder || !name || name === folder.name) return;
+  if (!folder || !name || name === folder.name || renameNameDuplicate.value || renameNameTooLong.value) return;
 
   try {
     await renameFolder(folder.id, name);
@@ -681,17 +694,28 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
   <Modal
     :open="createModalOpen"
     :title="createParentId ? t('Favorite.CreateSubfolder') : t('Favorite.CreateFolder')"
-    :disabled="!folderName.trim() || creating"
+    :disabled="!folderName.trim() || createNameDuplicate || createNameTooLong || creating"
     @confirm="submitCreateFolder"
     @update:open="createModalOpen = $event"
   >
-    <UInput
-      v-model="folderName"
-      autofocus
-      class="w-full"
-      :placeholder="t('Favorite.FolderName')"
-      @keydown.enter="submitCreateFolder"
-    />
+    <UFormField
+      :error="
+        createNameTooLong
+          ? t('Favorite.NameTooLong', { max: FAVORITE_FOLDER_NAME_MAX_LENGTH })
+          : createNameDuplicate
+            ? t('Favorite.DuplicateName')
+            : undefined
+      "
+    >
+      <UInput
+        v-model="folderName"
+        autofocus
+        class="w-full"
+        :maxlength="FAVORITE_FOLDER_NAME_MAX_LENGTH"
+        :placeholder="t('Favorite.FolderName')"
+        @keydown.enter="submitCreateFolder"
+      />
+    </UFormField>
   </Modal>
 
   <Modal
@@ -702,20 +726,32 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
     @confirm="submitRenameFolder"
     @update:open="updateRenameModal"
   >
-    <UInput
-      v-model="renameValue"
-      autofocus
-      class="w-full"
-      :placeholder="t('Favorite.FolderName')"
-      @keydown.enter="submitRenameFolder"
-    />
+    <UFormField
+      :error="
+        renameNameTooLong
+          ? t('Favorite.NameTooLong', { max: FAVORITE_FOLDER_NAME_MAX_LENGTH })
+          : renameNameDuplicate
+            ? t('Favorite.DuplicateName')
+            : undefined
+      "
+    >
+      <UInput
+        v-model="renameValue"
+        autofocus
+        class="w-full"
+        :maxlength="FAVORITE_FOLDER_NAME_MAX_LENGTH"
+        :placeholder="t('Favorite.FolderName')"
+        @keydown.enter="submitRenameFolder"
+      />
+    </UFormField>
   </Modal>
 
-  <Modal
+  <ModalAlertDialog
     :open="deleteModalOpen"
     :title="t('Favorite.DeleteFolder')"
     :description="t('Favorite.DeleteFolderConfirm', { name: deleteTarget?.name || '' })"
-    :disabled="deleting"
+    confirm-color="error"
+    :loading="deleting"
     @confirm="submitDeleteFolder"
     @update:open="updateDeleteModal"
   />

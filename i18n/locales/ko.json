@@ -257,6 +257,8 @@
     "CreateFolder": "폴더 만들기",
     "CreateSubfolder": "하위 폴더 만들기",
     "FolderName": "폴더 이름",
+    "DuplicateName": "같은 이름의 폴더가 이미 있습니다",
+    "NameTooLong": "폴더 이름은 {max}자를 초과할 수 없습니다",
     "CreateFailed": "폴더 만들기 실패",
     "RenameFailed": "폴더 이름 변경 실패",
     "CreateFolderFirst": "먼저 즐겨찾기 폴더를 만드세요",

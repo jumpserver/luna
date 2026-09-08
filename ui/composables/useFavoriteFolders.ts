@@ -18,6 +18,8 @@ export interface FavoriteFolder {
   open: boolean;
 }
 
+export const FAVORITE_FOLDER_NAME_MAX_LENGTH = 128;
+
 const rawList = (value: any): any[] =>
   Array.isArray(value)
     ? value
@@ -80,6 +82,20 @@ const normalizeFolders = (value: unknown): FavoriteFolder[] => {
 const flattenFolders = (folders: FavoriteFolder[]): FavoriteFolder[] =>
   folders.flatMap((folder) => [folder, ...flattenFolders(folder.children)]);
 
+const normalizeFolderName = (name: string) => name.trim().toLocaleLowerCase();
+
+export const isFavoriteFolderNameTooLong = (name: string): boolean =>
+  Array.from(name.trim()).length > FAVORITE_FOLDER_NAME_MAX_LENGTH;
+
+export const hasFavoriteFolderName = (folders: FavoriteFolder[], name: string, excludeId?: string): boolean => {
+  const normalizedName = normalizeFolderName(name);
+  if (!normalizedName) return false;
+
+  return flattenFolders(folders).some(
+    (folder) => folder.id !== excludeId && normalizeFolderName(folder.name) === normalizedName
+  );
+};
+
 const folderIdFromRaw = (raw: any): string | null => {
   const value = raw?.folder;
   if (!value) return null;
@@ -138,11 +154,15 @@ export const useFavoriteFolders = () => {
   };
 
   const createFolder = async (name: string, parent: string | null = null) => {
+    if (isFavoriteFolderNameTooLong(name)) throw new Error("Favorite folder name is too long");
+    if (hasFavoriteFolderName(folders.value, name)) throw new Error("Favorite folder name already exists");
     await createFavoriteFolder(parent ? { name, parent } : { name });
     await load();
   };
 
   const renameFolder = async (id: string, name: string) => {
+    if (isFavoriteFolderNameTooLong(name)) throw new Error("Favorite folder name is too long");
+    if (hasFavoriteFolderName(folders.value, name, id)) throw new Error("Favorite folder name already exists");
     await updateFavoriteFolder(id, { name });
     await load();
   };

@@ -257,6 +257,8 @@
     "CreateFolder": "创建收藏节点",
     "CreateSubfolder": "创建子节点",
     "FolderName": "节点名称",
+    "DuplicateName": "节点名称已存在",
+    "NameTooLong": "节点名称不能超过 {max} 个字符",
     "CreateFailed": "创建收藏节点失败",
     "RenameFailed": "重命名收藏节点失败",
     "CreateFolderFirst": "请先创建收藏节点",

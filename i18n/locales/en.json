@@ -257,6 +257,8 @@
     "CreateFolder": "Create folder",
     "CreateSubfolder": "Create subfolder",
     "FolderName": "Folder name",
+    "DuplicateName": "A folder with this name already exists",
+    "NameTooLong": "Folder name cannot exceed {max} characters",
     "CreateFailed": "Failed to create folder",
     "RenameFailed": "Failed to rename folder",
     "CreateFolderFirst": "Create a favorite folder first",

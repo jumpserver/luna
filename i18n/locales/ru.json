@@ -257,6 +257,8 @@
     "CreateFolder": "Создать папку",
     "CreateSubfolder": "Создать подпапку",
     "FolderName": "Имя папки",
+    "DuplicateName": "Папка с таким именем уже существует",
+    "NameTooLong": "Имя папки не может превышать {max} символов",
     "CreateFailed": "Не удалось создать папку",
     "RenameFailed": "Не удалось переименовать папку",
     "CreateFolderFirst": "Сначала создайте папку избранного",

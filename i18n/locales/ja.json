@@ -257,6 +257,8 @@
     "CreateFolder": "フォルダーを作成",
     "CreateSubfolder": "サブフォルダーを作成",
     "FolderName": "フォルダー名",
+    "DuplicateName": "同じ名前のフォルダーが既に存在します",
+    "NameTooLong": "フォルダー名は {max} 文字以内で入力してください",
     "CreateFailed": "フォルダーの作成に失敗しました",
     "RenameFailed": "フォルダー名の変更に失敗しました",
     "CreateFolderFirst": "先にお気に入りフォルダーを作成してください",

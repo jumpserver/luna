@@ -257,6 +257,8 @@
     "CreateFolder": "Tạo thư mục",
     "CreateSubfolder": "Tạo thư mục con",
     "FolderName": "Tên thư mục",
+    "DuplicateName": "Đã có thư mục mang tên này",
+    "NameTooLong": "Tên thư mục không được vượt quá {max} ký tự",
     "CreateFailed": "Không thể tạo thư mục",
     "RenameFailed": "Không thể đổi tên thư mục",
     "CreateFolderFirst": "Hãy tạo thư mục yêu thích trước",

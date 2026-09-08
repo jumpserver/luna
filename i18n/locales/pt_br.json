@@ -257,6 +257,8 @@
     "CreateFolder": "Criar pasta",
     "CreateSubfolder": "Criar subpasta",
     "FolderName": "Nome da pasta",
+    "DuplicateName": "Já existe uma pasta com este nome",
+    "NameTooLong": "O nome da pasta não pode exceder {max} caracteres",
     "CreateFailed": "Falha ao criar a pasta",
     "RenameFailed": "Falha ao renomear a pasta",
     "CreateFolderFirst": "Crie primeiro uma pasta de favoritos",
