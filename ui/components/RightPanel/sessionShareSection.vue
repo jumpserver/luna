@@ -24,6 +24,7 @@ const hasMoreUsers = computed(() => Boolean(lionAdapter.value?.hasMoreUsers.valu
 const adapterKey = computed(() => `${lionAdapter.value ? "lion" : "koko"}:${activeSessionId.value}`);
 
 const shareModalOpen = ref(false);
+const shareUserMenuOpen = ref(false);
 const searchLoading = ref(false);
 const showLinkResult = ref(false);
 const searchQuery = ref("");
@@ -47,6 +48,15 @@ const actionPermOptions: Array<{ label: string; value: "writable" | "readonly" }
   { label: t("RightPanel.Writable"), value: "writable" },
   { label: t("RightPanel.ReadOnly"), value: "readonly" }
 ];
+const actionPermTabsUi = {
+  root: "w-full",
+  list: "w-full bg-[var(--app-surface-canvas)] p-1 ring-1 ring-[var(--app-border)]",
+  indicator: "bg-[var(--app-state-hover-strong)] shadow-sm",
+  trigger: "flex-1 px-3 data-[state=active]:text-highlighted focus-visible:outline-[var(--app-focus-ring)]"
+};
+const shareControlUi = {
+  base: "w-full min-h-9 items-center rounded-[length:var(--app-radius)] bg-[var(--app-input-bg)] text-[var(--app-fg)] ring ring-inset ring-[var(--app-border)]"
+};
 
 const userSelectItems = computed(() => {
   const seen = new Set<string>();
@@ -86,6 +96,7 @@ watch(
 
 watch(adapterKey, () => {
   shareModalOpen.value = false;
+  shareUserMenuOpen.value = false;
   showLinkResult.value = Boolean(shareInfo.value.shareCode);
   selectedUserIds.value = [];
   selectedUsers.value = {};
@@ -144,6 +155,7 @@ function handleShareUserOpen(open: boolean) {
 }
 
 function handleCreateLink() {
+  shareUserMenuOpen.value = false;
   const request = {
     expiredTime: shareLinkRequest.expiredTime,
     actionPerm: shareLinkRequest.actionPerm,
@@ -247,21 +259,26 @@ function handleCopyShareURL() {
           <UFormField :label="t('RightPanel.ShareUser')">
             <UInputMenu
               v-model="selectedUserIds"
+              v-model:open="shareUserMenuOpen"
               v-model:search-term="searchQuery"
               multiple
               ignore-filter
-              open-on-focus
               value-key="value"
               label-key="label"
               icon="i-lucide-search"
               size="md"
               class="w-full"
               :items="userSelectItems"
-              :loading="searchLoading"
               :placeholder="selectedUserIds.length ? '' : t('RightPanel.GetShareUser')"
+              :content="{ side: 'top', sideOffset: 8, collisionPadding: 8 }"
               :ui="{
-                base: 'w-full min-h-9 items-center',
-                tagsInput: 'min-w-0 flex-1'
+                ...shareControlUi,
+                tagsInput: 'min-w-0 flex-1 placeholder:text-[var(--app-muted)]',
+                leadingIcon: 'text-[var(--app-muted)]',
+                trailingIcon: 'text-[var(--app-muted)]',
+                content:
+                  'bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md',
+                item: 'data-highlighted:not-data-disabled:bg-[var(--app-hover-soft)] data-highlighted:not-data-disabled:before:hidden data-[state=checked]:bg-[var(--app-hover-soft)]'
               }"
               @update:open="handleShareUserOpen"
             >
@@ -289,6 +306,7 @@ function handleCopyShareURL() {
               label-key="label"
               size="md"
               class="w-full"
+              :ui="shareControlUi"
             />
           </UFormField>
 
@@ -300,10 +318,10 @@ function handleCopyShareURL() {
               label-key="label"
               color="neutral"
               variant="pill"
-              size="md"
+              size="sm"
               :content="false"
               class="w-full"
-              :ui="{ root: 'w-full', list: 'w-full', trigger: 'w-full justify-center' }"
+              :ui="actionPermTabsUi"
             />
           </UFormField>
         </div>
@@ -333,7 +351,7 @@ function handleCopyShareURL() {
         </template>
         <template v-else>
           <UButton color="neutral" variant="ghost" :label="t('RightPanel.Back')" @click="handleBack" />
-          <UButton color="success" icon="i-lucide-copy" :label="t('RightPanel.CopyLink')" @click="handleCopyShareURL" />
+          <UButton color="primary" icon="i-lucide-copy" :label="t('RightPanel.CopyLink')" @click="handleCopyShareURL" />
         </template>
       </template>
     </UModal>
