@@ -27,6 +27,7 @@ node_modules
 .nuxt
 .nitro
 .cache
+.angular
 .output
 playwright-report
 test-results

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiRequest, getAuthorizedAssets } from "./useApiRequest";
+import { apiRequest, favoriteAssetsToFolder, getAuthorizedAssets } from "./useApiRequest";
 
 const { desktopInvoke } = vi.hoisted(() => ({ desktopInvoke: vi.fn() }));
 
@@ -50,6 +50,42 @@ describe("API request headers", () => {
       expect.objectContaining({
         method: "DELETE",
         headers: expect.objectContaining({ "X-CSRFToken": "csrf-token" })
+      })
+    );
+  });
+
+  it("adds selected assets to a favorite target in one request", async () => {
+    const fetch = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("isDesktopRuntime", () => false);
+    vi.stubGlobal("withWebSitePrefix", (path: string) => path);
+    vi.stubGlobal("getWebApiMutationHeaders", () => ({}));
+    vi.stubGlobal("fetch", fetch);
+
+    await favoriteAssetsToFolder(["asset-1", "asset-2"], "folder-1");
+
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/v1/assets/favorite-assets/batch/",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ assets: ["asset-1", "asset-2"], folder: "folder-1" })
+      })
+    );
+  });
+
+  it("adds selected assets directly to all favorites", async () => {
+    const fetch = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("isDesktopRuntime", () => false);
+    vi.stubGlobal("withWebSitePrefix", (path: string) => path);
+    vi.stubGlobal("getWebApiMutationHeaders", () => ({}));
+    vi.stubGlobal("fetch", fetch);
+
+    await favoriteAssetsToFolder(["asset-1"], null);
+
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/v1/assets/favorite-assets/batch/",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ assets: ["asset-1"], folder: null })
       })
     );
   });

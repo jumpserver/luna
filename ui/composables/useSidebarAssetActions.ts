@@ -1,9 +1,10 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
 import type { AssetItem } from "~/types";
-import { favoriteAsset, getAssetDetailRequest } from "~/composables/useApiRequest";
+import { favoriteAssetsToFolder, getAssetDetailRequest } from "~/composables/useApiRequest";
 import { isAssetNameTaken } from "~/composables/useAssetTree";
 import { useConnectMethods, WEB_PROXY_NATIVE_VALUE } from "~/composables/useConnectMethods";
+import { findFavoriteAssetFolderId, getFavoriteRootAssetCount } from "~/composables/useFavoriteFolders";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { hasItemName, isItemNameTooLong } from "~/utils/itemName";
 
@@ -315,43 +316,29 @@ export function useSidebarAssetActions() {
     }
   };
 
-  const handleFavoriteMultipleAssets = async (assets: AssetItem[]) => {
-    const results = await Promise.allSettled(assets.map((asset) => favoriteAsset(asset.id)));
-    const successCount = results.filter((result) => result.status === "fulfilled").length;
-    const failedCount = results.length - successCount;
+  const handleFavoriteMultipleAssets = async (assets: AssetItem[], folderId: string | null) => {
+    const assetIds = [...new Set(assets.map((asset) => asset.id).filter(Boolean))];
+    if (assetIds.length === 0) return;
 
-    if (successCount > 0) {
-      const firstSuccessIndex = results.findIndex((result) => result.status === "fulfilled");
-      useEventBus().emit("favoriteChanged", { assetId: assets[firstSuccessIndex]!.id, favorite: true });
-    }
-
-    if (failedCount === 0) {
+    try {
+      await favoriteAssetsToFolder(assetIds, folderId);
+      const reload = loadFavoriteFolders();
+      useEventBus().emit("favoriteChanged", { assetId: assetIds[0]!, favorite: true });
+      await reload;
       toast.add({
-        title: t("Tree.MultiFavoriteSuccess", { count: successCount }),
+        title: t("Tree.MultiFavoriteSuccess", { count: assetIds.length }),
         color: "success",
         icon: "i-lucide-star",
         duration: 2500
       });
-      return;
-    }
-
-    if (successCount > 0) {
-      toast.add({
-        title: t("Tree.MultiFavoritePartial", { success: successCount, failed: failedCount }),
-        color: "warning",
+    } catch (error) {
+      addErrorToast({
+        title: t("Tree.MultiFavoriteFailed"),
+        error,
         icon: "i-lucide-circle-alert",
         duration: 4000
       });
-      return;
     }
-
-    const firstFailure = results.find((result) => result.status === "rejected");
-    addErrorToast({
-      title: t("Tree.MultiFavoriteFailed"),
-      description: firstFailure?.status === "rejected" ? String(firstFailure.reason) : undefined,
-      icon: "i-lucide-circle-alert",
-      duration: 4000
-    });
   };
 
   async function openSetupOrToast(asset: AssetItem, options?: { paneId?: string }) {
@@ -456,10 +443,7 @@ export function useSidebarAssetActions() {
     useEventBus().emit("favoriteChanged", { assetId: asset.id, favorite });
   };
 
-  const flattenFavoriteFolders = (folders = favoriteFolders.value): Array<{ id: string; name: string }> =>
-    folders.flatMap((folder) => [{ id: folder.id, name: folder.name }, ...flattenFavoriteFolders(folder.children)]);
-
-  const addAssetToFavoriteFolder = async (asset: AssetItem, folderId: string) => {
+  const addAssetToFavoriteFolder = async (asset: AssetItem, folderId: string | null) => {
     contextMenuVisible.value = false;
     try {
       await favoriteToFolder(asset.id, folderId);
@@ -482,16 +466,33 @@ export function useSidebarAssetActions() {
     contextMenuVisible.value = true;
   };
 
+  const addContextMenuAssetToFavoriteFolder = (folderId: string | null) => {
+    const asset = contextMenuAsset.value;
+    if (asset) void addAssetToFavoriteFolder(asset, folderId);
+  };
+
   const assetContextMenuItems = computed<DropdownMenuItem[]>(() => {
     const asset = contextMenuAsset.value;
     if (!asset) return [];
 
     const isFavorited = !!asset.isFavorite;
-    const folderItems: DropdownMenuItem[] = flattenFavoriteFolders().map((folder) => ({
-      label: folder.name,
-      icon: "i-lucide-folder",
-      onSelect: () => addAssetToFavoriteFolder(asset, folder.id)
-    }));
+    const currentFolderId = findFavoriteAssetFolderId(asset.id, favoriteFolders.value, favoriteRootAssets.value);
+    const favoriteRootAssetCount = getFavoriteRootAssetCount(favoriteFolders.value, favoriteRootAssets.value);
+    const folderItems: DropdownMenuItem[] = [
+      {
+        label: t("Favorite.All"),
+        type: "label",
+        favoriteFolderTree: true,
+        favoriteFolders: favoriteFolders.value,
+        favoriteRootAssetCount,
+        currentFavoriteFolderId: currentFolderId,
+        class: "w-max min-w-full p-0",
+        ui: {
+          itemWrapper: "w-full min-w-max overflow-visible",
+          itemLabel: "w-full overflow-visible"
+        }
+      }
+    ];
 
     return [
       ...(hasQuickConnect(asset)
@@ -534,7 +535,8 @@ export function useSidebarAssetActions() {
       {
         label: t("Favorite.AddToFolder"),
         icon: "lucide:star",
-        children: folderItems.length > 0 ? folderItems : [{ label: t("Favorite.CreateFolderFirst"), disabled: true }]
+        children: folderItems,
+        ui: { content: "favorite-folder-submenu w-72 max-h-[70vh]" }
       },
       ...(isFavorited
         ? [
@@ -564,6 +566,7 @@ export function useSidebarAssetActions() {
     handleOpenMultipleAssets,
     handleFavoriteMultipleAssets,
     handleAssetContextMenu,
+    addContextMenuAssetToFavoriteFolder,
     assetContextMenuItems,
     contextMenuVisible,
     contextMenuPosition,

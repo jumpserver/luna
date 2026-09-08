@@ -24,7 +24,9 @@ const { t } = useI18n();
 const appBaseURL = useRuntimeConfig().app.baseURL;
 const rowRef = useTemplateRef<HTMLButtonElement>("row");
 
-const isParent = computed(() => Boolean(props.node.isParent || props.node.children?.length));
+const isParent = computed(() =>
+  Boolean(props.node.meta?.type === "node" || props.node.isParent || props.node.children?.length)
+);
 const isOpen = computed(() => Boolean(props.node.open));
 const isChecked = computed(() => props.checkedAssetIds?.includes(props.node.id) || false);
 const nodeAssetId = computed(() =>
@@ -116,6 +118,9 @@ const icon = computed(() => {
   return "i-lucide-terminal";
 });
 const isFolderIcon = computed(() => icon.value === "i-tabler-folder" || icon.value === "i-tabler-folder-open");
+const assetCountTitle = computed(() =>
+  t(props.node.id === "ungrouped" ? "Tree.UngroupedAssetCount" : "Tree.AuthorizationAssetCount")
+);
 
 const activate = () => {
   if (isParent.value && !props.searchMode) {
@@ -182,7 +187,7 @@ watch(
       <button
         ref="row"
         type="button"
-        class="app-tree-row sidebar-row flex w-full cursor-pointer items-center gap-1 pr-1 text-left outline-none"
+        class="app-tree-row sidebar-row flex w-max min-w-full cursor-pointer items-center gap-1 pr-1 text-left outline-none"
         :class="[
           node.chkDisabled ? 'opacity-40' : '',
           node.meta?.type === 'recent-connections' && node.children?.length ? 'pr-9' : '',
@@ -220,8 +225,18 @@ watch(
         />
         <UIcon v-else-if="icon" :name="icon" class="app-tree-icon sidebar-icon" />
         <img v-else-if="iconSrc" :src="iconSrc" alt="" class="app-tree-icon sidebar-icon-img" />
-        <span class="min-w-0 flex-1 truncate font-medium" :class="!isParent ? 'font-ui-mono tracking-[0.01em]' : ''">
-          {{ node.name }}
+        <span
+          class="inline-flex min-w-max flex-1 items-center font-medium"
+          :class="!isParent ? 'font-ui-mono tracking-[0.01em]' : ''"
+        >
+          <span class="whitespace-nowrap">{{ node.name }}</span>
+          <span
+            v-if="isParent && node.assetCount != null"
+            class="ml-1 shrink-0"
+            :title="treeKind === 'authorization' ? '' : assetCountTitle"
+          >
+            ({{ node.assetCount }})
+          </span>
         </span>
       </button>
       <button
@@ -237,7 +252,7 @@ watch(
     </div>
 
     <Transition :css="false" @enter="enterBranch" @leave="leaveBranch">
-      <div v-if="isParent && isOpen" class="overflow-hidden" role="group">
+      <div v-if="isParent && isOpen" class="min-w-max" role="group">
         <AssetTreeNode
           v-for="child in node.children || []"
           :key="`${treeKind}-${child.id}`"
@@ -253,6 +268,9 @@ watch(
           @check="(target) => emit('check', target)"
           @clear-recent="emit('clearRecent')"
         />
+        <div v-if="node.loadingMore" class="app-tree-row grid place-items-center" aria-hidden="true">
+          <UIcon name="i-lucide-loader-circle" class="app-tree-icon sidebar-icon animate-spin" />
+        </div>
         <div v-if="node.loading" class="app-tree-row" />
       </div>
     </Transition>

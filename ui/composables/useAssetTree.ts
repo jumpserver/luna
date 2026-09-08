@@ -1,16 +1,35 @@
-import type { AssetItem, AssetTreeKind, AssetTreeNode, PermedAccount, PermedProtocol } from "~/types";
+import type {
+  AssetItem,
+  AssetTreeKind,
+  AssetTreeNextPage,
+  AssetTreeNode,
+  PermedAccount,
+  PermedProtocol
+} from "~/types";
 import { onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { hasItemName } from "~/utils/itemName";
 
 interface TreeQuery {
-  key?: string;
-  n?: string;
-  lv?: number;
+  parent_key?: string;
   type?: string;
   category?: string;
   search?: string;
 }
+
+interface AssetTreePage {
+  nodes: AssetTreeNode[];
+  nextPage: AssetTreeNextPage | null;
+}
+
+const AUTHORIZATION_NODE_PAGE_SIZE = 100;
+const AUTHORIZATION_ASSET_PAGE_SIZE = 100;
+const TYPE_TREE_ASSET_PAGE_SIZE = 100;
+
+const treeNodeType = (node: Pick<AssetTreeNode, "isParent" | "meta">) =>
+  node.meta?.type === "node" || node.isParent ? "node" : "asset";
+
+export const authorizationTreeMetricId = (node: AssetTreeNode) => String(node.meta?.data?.id ?? node.key ?? node.id);
 
 const normalizeChoice = (value: unknown) => {
   if (typeof value === "string") return value;
@@ -27,7 +46,7 @@ const normalizeTreeNodes = (value: unknown, baseLevel = 0): AssetTreeNode[] => {
     id: String(raw.id ?? raw.key ?? ""),
     pId: raw.pId == null ? null : String(raw.pId),
     name: String(raw.name || raw.title || ""),
-    isParent: Boolean(raw.isParent),
+    isParent: treeNodeType(raw) === "node",
     open: Boolean(raw.open && Array.isArray(raw.children)),
     level: Number.isFinite(raw.level) ? raw.level : baseLevel,
     loaded: Array.isArray(raw.children),
@@ -110,11 +129,108 @@ export const useAssetTree = () => {
       };
     }
 
+    return { parent_key: parent.key || parent.id };
+  };
+
+  const requestAuthorizationPage = async (
+    parent?: AssetTreeNode,
+    nextPage: AssetTreeNextPage = { phase: "nodes" },
+    options?: { orgId?: string }
+  ): Promise<AssetTreePage> => {
+    const parentKey = parent?.key || parent?.id;
+    const query =
+      nextPage.phase === "assets"
+        ? {
+            ...(parentKey ? { parent_key: parentKey } : {}),
+            include_nodes: false,
+            include_assets: true,
+            asset_page_size: AUTHORIZATION_ASSET_PAGE_SIZE,
+            ...(nextPage.assetOffset ? { asset_offset: nextPage.assetOffset } : {})
+          }
+        : {
+            ...(parentKey ? { parent_key: parentKey } : {}),
+            node_page_size: AUTHORIZATION_NODE_PAGE_SIZE,
+            ...(nextPage.nodeCursor ? { node_cursor: nextPage.nodeCursor } : {})
+          };
+    const response: any = await getAssetTree("authorization", query, options?.orgId);
+    const nodes = normalizeTreeNodes(response, parent ? (parent.level || 0) + 1 : 0);
+    const nodePagination = response?.node_pagination;
+    const assetPagination = response?.asset_pagination;
+
+    if (nextPage.phase === "nodes" && nodePagination?.has_more && nodePagination.next) {
+      const cursor = new URL(nodePagination.next, "http://localhost").searchParams.get("node_cursor");
+      return {
+        nodes,
+        nextPage: cursor ? { phase: "nodes", nodeCursor: cursor } : null
+      };
+    }
+    if (nextPage.phase === "assets" && assetPagination?.has_more) {
+      return {
+        nodes,
+        nextPage: { phase: "assets", assetOffset: assetPagination.next_offset }
+      };
+    }
+    return { nodes, nextPage: null };
+  };
+
+  const fetchAuthorizationTreePage = async (
+    parent?: AssetTreeNode,
+    nextPage?: AssetTreeNextPage,
+    options?: { orgId?: string }
+  ): Promise<AssetTreePage> => {
+    const nodePage = await requestAuthorizationPage(parent, nextPage || { phase: "nodes" }, options);
+    if (nodePage.nextPage || !parent || nextPage?.phase === "assets") return nodePage;
+
+    // A branch exposes all direct child nodes before the first direct asset
+    // page, matching the regular Lina node/asset tree contract.
+    const assetPage = await requestAuthorizationPage(parent, { phase: "assets" }, options);
     return {
-      key: parent.key || parent.id,
-      n: parent.name,
-      lv: parent.level || 0
+      nodes: [...nodePage.nodes, ...assetPage.nodes],
+      nextPage: assetPage.nextPage
     };
+  };
+
+  const fetchTypeTreePage = async (
+    parent: AssetTreeNode,
+    nextPage?: AssetTreeNextPage,
+    options?: { orgId?: string }
+  ): Promise<AssetTreePage> => {
+    const query = {
+      ...buildQuery("type", parent),
+      asset_page_size: TYPE_TREE_ASSET_PAGE_SIZE,
+      ...(nextPage?.assetOffset ? { asset_offset: nextPage.assetOffset } : {})
+    };
+    const response: any = await getAssetTree("type", query, options?.orgId);
+    const nodes = normalizeTreeNodes(response, (parent.level || 0) + 1);
+    const assetPagination = response?.asset_pagination;
+    return {
+      nodes,
+      nextPage: assetPagination?.has_more ? { phase: "assets", assetOffset: assetPagination.next_offset } : null
+    };
+  };
+
+  const fetchAuthorizationTreeMetrics = async (
+    nodes: AssetTreeNode[],
+    options?: { orgId?: string }
+  ): Promise<Map<string, number>> => {
+    const resources = Array.from(
+      new Map(
+        nodes
+          .filter((node) => treeNodeType(node) === "node")
+          .map((node) => {
+            const id = authorizationTreeMetricId(node);
+            return [id, { type: "node" as const, id }];
+          })
+      ).values()
+    );
+    if (!resources.length) return new Map();
+
+    const response = await getUserAssetTreeMetrics(resources, options?.orgId);
+    return new Map(
+      (response?.results || [])
+        .filter((item) => item.type === "node" && Number.isFinite(Number(item.count)))
+        .map((item) => [String(item.id), Number(item.count)])
+    );
   };
 
   const fetchTree = async (
@@ -123,6 +239,12 @@ export const useAssetTree = () => {
     search?: string,
     options?: { orgId?: string }
   ) => {
+    if (kind === "authorization") {
+      return (await fetchAuthorizationTreePage(parent, undefined, options)).nodes;
+    }
+    if (kind === "type" && parent) {
+      return (await fetchTypeTreePage(parent, undefined, options)).nodes;
+    }
     const query = buildQuery(kind, parent, search);
     const data = await getAssetTree(kind, query, options?.orgId);
 
@@ -154,6 +276,9 @@ export const useAssetTree = () => {
   };
 
   return {
+    fetchAuthorizationTreePage,
+    fetchAuthorizationTreeMetrics,
+    fetchTypeTreePage,
     fetchTree,
     treeNodeToAsset
   };

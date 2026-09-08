@@ -4,8 +4,10 @@ import type { WorkspaceUiAssetCandidate } from "~/composables/useWorkspaceUiAuto
 import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
 import {
   applyAssetRename,
+  authorizationTreeMetricId,
   hasAssetName,
   registerAssetNameLookup,
+  useAssetTree,
   useAssetTreeSearch
 } from "~/composables/useAssetTree";
 import { workspaceTourArmed, workspaceTourCompleted } from "~/composables/useWorkspaceTour";
@@ -29,7 +31,7 @@ const emit = defineEmits<{
   contextmenu: [asset: AssetItem, event: MouseEvent];
   toggle: [];
   openMultiple: [assets: AssetItem[]];
-  favoriteMultiple: [assets: AssetItem[]];
+  favoriteMultiple: [assets: AssetItem[], folderId: string | null];
 }>();
 
 type PanelKind = Exclude<AssetTreeKind, "search">;
@@ -40,8 +42,9 @@ const RECENT_NODE_ID = "__recent_connections__";
 const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
-const { currentAccountId, currentSite, loggedIn, orgId } = storeToRefs(userInfoStore);
-const { fetchTree, treeNodeToAsset } = useAssetTree();
+const { currentAccountId, currentSite, currentUser, loggedIn, orgId } = storeToRefs(userInfoStore);
+const { fetchAuthorizationTreeMetrics, fetchAuthorizationTreePage, fetchTree, fetchTypeTreePage, treeNodeToAsset } =
+  useAssetTree();
 const {
   clearRecentConnections,
   recentConnections,
@@ -70,14 +73,17 @@ const authorizationLoaded = ref(false);
 const tourDemoNodes = ref<AssetTreeNode[]>([]);
 const batchMode = ref(false);
 const batchAction = ref<BatchAction>("open");
+const batchFavoriteMenuOpen = ref(false);
 const checkedAssets = ref<Record<string, AssetItem>>({});
 const checkedNodeIds = ref<string[]>([]);
 const nodeMenuVisible = ref(false);
 const nodeMenuPosition = ref({ x: 0, y: 0 });
 const nodeMenuTarget = ref<{ node: AssetTreeNode; kind: PanelKind } | null>(null);
+const treeScrollRef = useTemplateRef<HTMLElement>("treeScroll");
 let treeRequestEpoch = 0;
 let lastErrorSignature = "";
 let lastErrorAt = 0;
+let autoPageLoadFrame: number | null = null;
 
 const showTourDemoTree = computed(() =>
   shouldShowWorkspaceTourDemoTree({
@@ -163,9 +169,28 @@ const treeSwitchLabel = computed(() =>
   activeTreeKind.value === "authorization" ? t("Tree.SwitchToType") : t("Tree.SwitchToAuthorization")
 );
 const checkedCount = computed(() => Object.keys(checkedAssets.value).length);
+const { folders: favoriteFolders, rootAssets: favoriteRootAssets, load: loadFavoriteFolders } = useFavoriteFolders();
+const favoriteRootAssetCount = computed(() =>
+  getFavoriteRootAssetCount(favoriteFolders.value, favoriteRootAssets.value)
+);
+const batchFavoriteFolderMenuItems = computed<DropdownMenuItem[]>(() => [
+  {
+    label: t("Favorite.All"),
+    type: "label",
+    favoriteFolderTree: true,
+    favoriteFolders: favoriteFolders.value,
+    favoriteRootAssetCount: favoriteRootAssetCount.value,
+    class: "w-max min-w-full p-0",
+    ui: {
+      itemWrapper: "w-full min-w-max overflow-visible",
+      itemLabel: "w-full overflow-visible"
+    }
+  }
+]);
 const startBatchMode = (action: BatchAction) => {
   batchAction.value = action;
   batchMode.value = true;
+  batchFavoriteMenuOpen.value = false;
   checkedAssets.value = {};
   checkedNodeIds.value = [];
 };
@@ -226,6 +251,37 @@ const reportError = (error: unknown) => {
   });
 };
 
+const loadAuthorizationNodeCounts = async (nodes: AssetTreeNode[]) => {
+  const pendingNodes: AssetTreeNode[] = [];
+  const visit = (items: AssetTreeNode[]) => {
+    for (const node of items) {
+      if ((node.meta?.type === "node" || node.isParent) && node.assetCount == null && !node.assetCountLoading) {
+        pendingNodes.push(node);
+      }
+      if (node.children?.length) visit(node.children);
+    }
+  };
+  visit(nodes);
+  if (!pendingNodes.length) return;
+
+  pendingNodes.forEach((node) => {
+    node.assetCountLoading = true;
+  });
+  try {
+    const counts = await fetchAuthorizationTreeMetrics(pendingNodes);
+    pendingNodes.forEach((node) => {
+      const id = authorizationTreeMetricId(node);
+      if (counts.has(id)) node.assetCount = counts.get(id)!;
+    });
+  } catch (error) {
+    console.warn("Failed to load authorization tree metrics", error);
+  } finally {
+    pendingNodes.forEach((node) => {
+      node.assetCountLoading = false;
+    });
+  }
+};
+
 const loadRoot = async (kind: PanelKind, requestEpoch: number) => {
   if (!loggedIn.value) return;
   if (kind === "authorization") {
@@ -234,22 +290,25 @@ const loadRoot = async (kind: PanelKind, requestEpoch: number) => {
   }
   loading.value = true;
   try {
-    const nodes = await fetchTree(kind);
+    const rootPage = kind === "authorization" ? await fetchAuthorizationTreePage() : null;
+    const nodes = rootPage?.nodes || (await fetchTree(kind));
     if (requestEpoch !== treeRequestEpoch) return;
     if (kind === "authorization") {
-      const roots = removeFavoriteNodes(nodes);
-      authorizationNodes.value = roots;
+      authorizationNodes.value = removeFavoriteNodes(nodes);
+      const roots = authorizationNodes.value;
+      void loadAuthorizationNodeCounts(roots);
 
-      // The authorization API commonly returns one synthetic root. Fetch its
-      // first level before leaving the spinner so Default does not pop in
-      // after the appear animation has already finished.
-      await Promise.all(
-        roots
-          .filter((node) => node.isParent || node.children?.length)
-          .map(async (node) => {
-            if (!node.open) await toggleNode(node, kind);
-          })
-      );
+      // A concrete organization opens only its organization root. Global
+      // organization and special branches such as Ungrouped stay collapsed.
+      if (!currentUser.value?.org?.is_root) {
+        await Promise.all(
+          roots
+            .filter((node) => node.meta?.data?.is_root === true)
+            .map(async (node) => {
+              if (!node.open) await toggleNode(node, kind);
+            })
+        );
+      }
     } else {
       typeNodes.value = unwrapAllTypesRoot(nodes);
     }
@@ -305,8 +364,16 @@ async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
     if (node.loading) return;
     node.loading = true;
     try {
-      const children = await fetchTree(kind, node);
-      node.children = kind === "authorization" ? removeFavoriteNodes(children) : children;
+      if (kind === "authorization") {
+        const page = await fetchAuthorizationTreePage(node);
+        node.children = removeFavoriteNodes(page.nodes);
+        updateNodePagination(node, page.nextPage, node.children.length);
+        void loadAuthorizationNodeCounts(node.children);
+      } else {
+        const page = await fetchTypeTreePage(node);
+        node.children = page.nodes;
+        updateNodePagination(node, page.nextPage, node.children.length);
+      }
       node.loaded = true;
     } catch (error) {
       reportError(error);
@@ -317,7 +384,98 @@ async function toggleNode(node: AssetTreeNode, kind: PanelKind) {
   }
 
   node.open = true;
+  await nextTick();
+  scheduleAutoPageLoad();
 }
+
+function updateNodePagination(node: AssetTreeNode, nextPage: AssetTreeNode["nextPage"], appendedCount: number) {
+  node.nextPage = nextPage;
+  if (!nextPage) {
+    node.nextPageTriggerIndex = undefined;
+    return;
+  }
+
+  const total = node.children?.length || 0;
+  node.nextPageTriggerIndex = Math.max(1, total - Math.floor(appendedCount / 2));
+}
+
+async function loadMoreNode(node: AssetTreeNode, kind: PanelKind) {
+  if (!node.nextPage || node.loadingMore) return;
+  node.loadingMore = true;
+  let loaded = false;
+  try {
+    const page =
+      kind === "authorization"
+        ? await fetchAuthorizationTreePage(node, node.nextPage)
+        : await fetchTypeTreePage(node, node.nextPage);
+    const knownIds = new Set((node.children || []).map((child) => child.id));
+    const pageNodes = kind === "authorization" ? removeFavoriteNodes(page.nodes) : page.nodes;
+    const appended = pageNodes.filter((child) => !knownIds.has(child.id));
+    const previousLength = node.children?.length || 0;
+    node.children = [...(node.children || []), ...appended];
+    updateNodePagination(node, page.nextPage, appended.length);
+    if (kind === "authorization") {
+      // Read the inserted rows back through Vue's reactive array before
+      // writing metrics. Mutating the raw response objects would not repaint.
+      void loadAuthorizationNodeCounts((node.children || []).slice(previousLength));
+    }
+    loaded = true;
+  } catch (error) {
+    reportError(error);
+  } finally {
+    node.loadingMore = false;
+  }
+  if (loaded) {
+    await nextTick();
+    scheduleAutoPageLoad();
+  }
+}
+
+const collectExpandedTreeRows = (nodes: AssetTreeNode[]) => {
+  const rows: AssetTreeNode[] = [];
+  const visit = (items: AssetTreeNode[]) => {
+    for (const node of items) {
+      rows.push(node);
+      if (node.open && node.children?.length) visit(node.children);
+    }
+  };
+  visit(nodes);
+  return rows;
+};
+
+const maybeLoadNextTreePage = (scrollElement: HTMLElement) => {
+  const rows = collectExpandedTreeRows(activeTree.value.nodes);
+  if (!rows.length) return;
+
+  const rowIndexes = new Map(rows.map((node, index) => [node, index]));
+  const measuredRow = scrollElement.querySelector<HTMLElement>(".app-tree-row");
+  const rowHeight = measuredRow?.getBoundingClientRect().height || 26;
+  const lastVisibleIndex = Math.ceil((scrollElement.scrollTop + scrollElement.clientHeight) / rowHeight);
+  const candidate = rows
+    .filter((node) => node.open && node.nextPage && !node.loadingMore)
+    .map((node) => {
+      const children = node.children || [];
+      const triggerIndex = Math.min(node.nextPageTriggerIndex || children.length, children.length);
+      const triggerNode = children[triggerIndex - 1];
+      return { node, rowIndex: rowIndexes.get(triggerNode || node) ?? Number.POSITIVE_INFINITY };
+    })
+    .filter(({ rowIndex }) => rowIndex <= lastVisibleIndex)
+    .sort((left, right) => left.rowIndex - right.rowIndex)[0];
+
+  if (candidate) void loadMoreNode(candidate.node, activeTreeKind.value);
+};
+
+function scheduleAutoPageLoad(scrollElement = treeScrollRef.value) {
+  if (!scrollElement || typeof window === "undefined" || autoPageLoadFrame != null) return;
+  autoPageLoadFrame = window.requestAnimationFrame(() => {
+    autoPageLoadFrame = null;
+    maybeLoadNextTreePage(scrollElement);
+  });
+}
+
+const handleTreeScroll = (event: Event) => {
+  scheduleAutoPageLoad(event.currentTarget as HTMLElement);
+};
 
 const isBranchNode = (node: AssetTreeNode) => Boolean(node.isParent || node.children?.length);
 
@@ -434,16 +592,29 @@ const toggleCheckedNode = (node: AssetTreeNode) => {
 
 const closeBatchMode = () => {
   batchMode.value = false;
+  batchFavoriteMenuOpen.value = false;
   checkedAssets.value = {};
   checkedNodeIds.value = [];
 };
 
 const submitCheckedAssets = () => {
   const assets = Object.values(checkedAssets.value);
+  if (assets.length === 0 || batchAction.value === "favorite") return;
+
+  emit("openMultiple", assets);
+  closeBatchMode();
+};
+
+const updateBatchFavoriteMenuOpen = (open: boolean) => {
+  batchFavoriteMenuOpen.value = open;
+  if (open) void loadFavoriteFolders();
+};
+
+const submitCheckedFavoriteAssets = (folderId: string | null) => {
+  const assets = Object.values(checkedAssets.value);
   if (assets.length === 0) return;
 
-  if (batchAction.value === "favorite") emit("favoriteMultiple", assets);
-  else emit("openMultiple", assets);
+  emit("favoriteMultiple", assets, folderId);
   closeBatchMode();
 };
 
@@ -604,6 +775,10 @@ watch(
 
 watch(workspaceUiCommand, respondToWorkspaceUiCommand, { immediate: true });
 
+onBeforeUnmount(() => {
+  if (autoPageLoadFrame != null) window.cancelAnimationFrame(autoPageLoadFrame);
+});
+
 useEventBus().on("assetRenamed", ({ assetId, name }) => {
   applyAssetRename(authorizationNodes.value, assetId, name);
   applyAssetRename(typeNodes.value, assetId, name);
@@ -645,7 +820,7 @@ defineExpose({
         <UIcon name="i-lucide-search" class="mr-1.5 sidebar-icon" />
         <span class="truncate">{{ t("Operation.Search") }}</span>
       </div>
-      <div class="min-h-0 flex-1 overflow-y-auto py-0">
+      <div class="sidebar-tree-scroll min-h-0 flex-1 overflow-x-auto overflow-y-auto py-0">
         <Transition appear name="tree-appear" mode="out-in">
           <div v-if="searchLoading" key="search-loading" class="grid h-20 place-items-center">
             <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />
@@ -692,15 +867,45 @@ defineExpose({
           <div v-else class="min-w-0 flex-1" />
           <div v-if="batchMode" class="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
             <span class="hidden sm:inline">{{ t("Tree.SelectedCount", { count: checkedCount }) }}</span>
+            <UDropdownMenu
+              v-if="batchAction === 'favorite'"
+              :open="batchFavoriteMenuOpen"
+              :items="batchFavoriteFolderMenuItems"
+              size="sm"
+              :content="{ align: 'start', side: 'right', sideOffset: 6 }"
+              :ui="{ content: 'favorite-folder-submenu w-72 max-h-[70vh] p-0' }"
+              @update:open="updateBatchFavoriteMenuOpen"
+            >
+              <UButton
+                color="primary"
+                variant="soft"
+                size="xs"
+                icon="i-lucide-star"
+                :disabled="checkedCount === 0"
+                class="h-6 rounded-sm px-2"
+                :ui="{ leadingIcon: 'sidebar-icon' }"
+                :label="t('Tree.FavoriteSelected')"
+              />
+              <template #item-label="{ item }">
+                <SideBarFavoriteFolderMenuTree
+                  v-if="item.favoriteFolderTree"
+                  :folders="item.favoriteFolders"
+                  :root-asset-count="item.favoriteRootAssetCount"
+                  @select="submitCheckedFavoriteAssets"
+                />
+                <template v-else>{{ item.label }}</template>
+              </template>
+            </UDropdownMenu>
             <UButton
+              v-else
               color="primary"
               variant="soft"
               size="xs"
-              :icon="batchAction === 'favorite' ? 'i-lucide-star' : 'i-lucide-play'"
+              icon="i-lucide-play"
               :disabled="checkedCount === 0"
               class="h-6 rounded-sm px-2"
               :ui="{ leadingIcon: 'sidebar-icon' }"
-              :label="t(batchAction === 'favorite' ? 'Tree.FavoriteSelected' : 'Tree.OpenSelected')"
+              :label="t('Tree.OpenSelected')"
               @click="submitCheckedAssets"
             />
             <UButton
@@ -760,7 +965,11 @@ defineExpose({
         </div>
 
         <div class="app-tree-panel__body">
-          <div class="h-full overflow-y-auto py-0">
+          <div
+            ref="treeScroll"
+            class="sidebar-tree-scroll h-full overflow-x-auto overflow-y-auto py-0"
+            @scroll.passive="handleTreeScroll"
+          >
             <Transition appear name="tree-appear" mode="out-in">
               <div v-if="showTreeLoading" key="tree-loading" class="grid h-20 place-items-center">
                 <UIcon name="i-lucide-loader-circle" class="sidebar-icon animate-spin" />

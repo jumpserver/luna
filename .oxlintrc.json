@@ -33,6 +33,7 @@
     "**/.nuxt",
     "**/.nitro",
     "**/.cache",
+    "**/.angular",
     "**/.output",
     "**/playwright-report",
     "**/test-results",

@@ -11,12 +11,14 @@ const props = withDefaults(
     fillAvailable?: boolean;
     hideChrome?: boolean;
     workspaceTour?: string;
+    contentOverflow?: "auto" | "hidden";
   }>(),
   {
     preferredHeight: 200,
     minHeight: 112,
     maxHeight: "50%",
-    hideChrome: false
+    hideChrome: false,
+    contentOverflow: "auto"
   }
 );
 
@@ -73,7 +75,11 @@ const panelStyle = computed(() => {
       </div>
     </button>
 
-    <div v-show="open || hideChrome" class="min-h-0 flex-1 overflow-y-auto">
+    <div
+      v-show="open || hideChrome"
+      class="min-h-0 flex-1"
+      :class="contentOverflow === 'hidden' ? 'overflow-hidden' : 'overflow-y-auto'"
+    >
       <slot />
     </div>
   </section>

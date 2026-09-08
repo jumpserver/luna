@@ -245,6 +245,13 @@ interface AssetTreeNodeData {
   permed_protocols?: PermedProtocol[];
   permedAccounts?: PermedAccount[];
   permed_accounts?: PermedAccount[];
+  is_root?: boolean;
+}
+
+export interface AssetTreeNextPage {
+  phase: "nodes" | "assets";
+  nodeCursor?: string;
+  assetOffset?: number;
 }
 
 export interface AssetTreeNodeMeta {
@@ -269,6 +276,11 @@ export interface AssetTreeNode {
   level?: number;
   loaded?: boolean;
   loading?: boolean;
+  loadingMore?: boolean;
+  nextPage?: AssetTreeNextPage | null;
+  nextPageTriggerIndex?: number;
+  assetCount?: number | null;
+  assetCountLoading?: boolean;
 }
 
 export interface AssetPlatform {
