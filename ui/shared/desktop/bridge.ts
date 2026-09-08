@@ -258,6 +258,10 @@ export const desktopWebProxy = {
   history: (label: string, direction: "back" | "forward") =>
     desktopInvoke<void>("history_web_proxy_view", { label, direction }),
   reload: (label: string) => desktopInvoke<void>("reload_web_proxy_view", { label }),
+  completeVerification: (label: string) => desktopInvoke<boolean>("complete_web_proxy_verification", { label }),
+  interactionInput: (label: string, input: Record<string, unknown>) =>
+    desktopInvoke<boolean>("web_proxy_interaction_input", { label, input }),
+  onInteraction: <T>(handler: (event: DesktopEvent<T>) => void) => desktopListen<T>("web-proxy-interaction", handler),
   startRecording: (request: Record<string, unknown>) => desktopInvoke("start_web_proxy_recording", request),
   stopRecording: (label: string) => desktopInvoke("stop_web_proxy_recording", { label }),
   close: (label: string) => desktopInvoke<void>("close_web_proxy_view", { label }),

@@ -11,7 +11,8 @@
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "test": "node --import tsx --test tests/application-config.test.ts tests/debug-log.test.ts tests/ffmpeg-plugin.test.ts tests/oauth-callback.test.ts tests/replay-codec.test.ts tests/ssh-helper.test.ts tests/web-proxy.test.ts && go -C ssh-helper test ./...",
+    "test": "node --import tsx --test tests/application-config.test.ts tests/debug-log.test.ts tests/ffmpeg-plugin.test.ts tests/forge-artifacts.test.ts tests/oauth-callback.test.ts tests/replay-codec.test.ts tests/ssh-helper.test.ts tests/web-proxy.test.ts && go -C ssh-helper test ./...",
+    "test:web-proxy:interaction": "electron tests/fixtures/web-proxy-interaction-app",
     "typecheck": "tsc -p tsconfig.json --pretty false",
     "postinstall": "node ../scripts/fix-node-pty-permissions.mjs"
   },
@@ -27,7 +28,6 @@
     "@electron-forge/maker-rpm": "7.11.2",
     "@electron-forge/maker-squirrel": "7.11.2",
     "@electron-forge/maker-wix": "7.11.2",
-    "@electron-forge/maker-zip": "7.11.2",
     "@electron-forge/plugin-auto-unpack-natives": "7.11.2",
     "@electron-forge/plugin-vite": "7.11.2",
     "@electron-forge/shared-types": "7.11.2",

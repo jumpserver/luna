@@ -311,9 +311,6 @@ importers:
       '@electron-forge/maker-wix':
         specifier: 7.11.2
         version: 7.11.2
-      '@electron-forge/maker-zip':
-        specifier: 7.11.2
-        version: 7.11.2
       '@electron-forge/plugin-auto-unpack-natives':
         specifier: 7.11.2
         version: 7.11.2
@@ -782,10 +779,6 @@ packages:
 
   '@electron-forge/maker-wix@7.11.2':
     resolution: {integrity: sha512-uf+wmWCqTA23m0KabkQT7m+lyEtdB/Hbtn9Rb8KVSK4FPLrcSC/glYLlHKJhg6DikQraZVfD8JcUPKyZ1YTX2A==}
-    engines: {node: '>= 16.4.0'}
-
-  '@electron-forge/maker-zip@7.11.2':
-    resolution: {integrity: sha512-FWnOm2MORX/nt8psnEtID3Vnt8Blby1NkzjU3KjXBPF9kave71C3lI8KbBbCeKKyTQ/S00i2FiglKdRWQ1WNTw==}
     engines: {node: '>= 16.4.0'}
 
   '@electron-forge/plugin-auto-unpack-natives@7.11.2':
@@ -10077,16 +10070,6 @@ snapshots:
       log-symbols: 4.1.0
       parse-author: 2.0.0
       semver: 7.8.5
-    transitivePeerDependencies:
-      - supports-color
-
-  '@electron-forge/maker-zip@7.11.2':
-    dependencies:
-      '@electron-forge/maker-base': 7.11.2
-      '@electron-forge/shared-types': 7.11.2
-      cross-zip: 4.0.1
-      fs-extra: 10.0.0
-      got: 11.8.5
     transitivePeerDependencies:
       - supports-color
 

@@ -198,7 +198,6 @@ jobs:
           retention-days: 14
           path: |
             release/electron/make/**/*.dmg
-            release/electron/make/**/*.zip
             release/electron/make/**/*.exe
             release/electron/make/**/*.msi
             release/electron/make/**/*.nupkg
@@ -222,33 +221,14 @@ jobs:
           path: release-assets
           merge-multiple: true
 
-      - name: Create stable download aliases
+      - name: Generate release checksums
         shell: bash
         run: |
-          version="${VERSION#v}"
-
-          mapfile -d '' windows_installers < <(find release-assets -type f -iname '*setup*.exe' -print0)
-          if [ "${#windows_installers[@]}" -ne 1 ]; then
-            echo "Expected one Windows setup executable, found ${#windows_installers[@]}"
-            exit 1
-          fi
-
-          mapfile -d '' macos_arm64_installers < <(find release-assets -type f -iname '*-arm64.dmg' -print0)
-          if [ "${#macos_arm64_installers[@]}" -ne 1 ]; then
-            echo "Expected one macOS arm64 DMG, found ${#macos_arm64_installers[@]}"
-            exit 1
-          fi
-
-          mkdir -p release-assets/download
-          cp "${windows_installers[0]}" "release-assets/download/Client_${version}_x64-setup.exe"
-          cp "${macos_arm64_installers[0]}" "release-assets/download/Client_${version}_aarch64.dmg"
-          (
-            cd release-assets/download
-            sha256sum \
-              "Client_${version}_x64-setup.exe" \
-              "Client_${version}_aarch64.dmg" \
-              > "Client_${version}_SHA256SUMS"
-          )
+          # GitHub Release assets are downloaded without the maker subdirectories.
+          find release-assets -type f ! -name SHA256SUMS -print0 | sort -z |
+            while IFS= read -r -d '' artifact; do
+              (cd "$(dirname "$artifact")" && sha256sum "$(basename "$artifact")")
+            done > release-assets/SHA256SUMS
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2

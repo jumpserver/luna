@@ -6,6 +6,8 @@ export interface WebProxyOpenRequest {
   targetUrl: string;
   proxyUrl: string;
   successSelector: string;
+  interactiveSelector: string;
+  safeMode: boolean;
 }
 
 function normalizeTargetUrl(asset: AssetItem, protocol: string) {
@@ -55,13 +57,16 @@ export function useWebProxyManager() {
     asset: AssetItem,
     protocol: string,
     endpointUrl: string,
-    successSelector = ""
+    successSelector = "",
+    interactiveSelector = ""
   ): WebProxyOpenRequest => ({
     assetId: asset.id,
     title: asset.name || new URL(normalizeTargetUrl(asset, protocol)).hostname,
     targetUrl: normalizeTargetUrl(asset, protocol),
     proxyUrl: normalizeProxyUrl(endpointUrl),
-    successSelector
+    successSelector,
+    interactiveSelector,
+    safeMode: asset.permedProtocols?.find((item) => item.name === protocol)?.setting?.safe_mode === true
   });
 
   return { buildWebProxyRequest };

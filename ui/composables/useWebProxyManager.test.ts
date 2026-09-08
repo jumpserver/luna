@@ -36,4 +36,27 @@ describe("web proxy endpoint", () => {
 
     expect(request.successSelector).toBe("css=.dashboard");
   });
+
+  it("uses safe mode from the selected protocol, with missing settings disabled", () => {
+    const configuredAsset = {
+      ...asset,
+      permedProtocols: [
+        { name: "http", port: 80, public: true, setting: { safe_mode: true } },
+        { name: "https", port: 443, public: true, setting: { safe_mode: false } }
+      ]
+    };
+    const { buildWebProxyRequest } = useWebProxyManager();
+    expect(buildWebProxyRequest(configuredAsset, "http", "http://koko.example.test").safeMode).toBe(true);
+    expect(buildWebProxyRequest(configuredAsset, "https", "http://koko.example.test").safeMode).toBe(false);
+    expect(buildWebProxyRequest(asset, "http", "http://koko.example.test").safeMode).toBe(false);
+  });
+});
+
+it("passes the optional verification-area selector without changing unconfigured sessions", () => {
+  const { buildWebProxyRequest } = useWebProxyManager();
+  expect(buildWebProxyRequest(asset, "https", "http://koko.example.test").interactiveSelector).toBe("");
+  expect(
+    buildWebProxyRequest(asset, "https", "http://koko.example.test", "id=success", "css=#mfa-dialog")
+      .interactiveSelector
+  ).toBe("css=#mfa-dialog");
 });

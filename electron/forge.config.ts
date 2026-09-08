@@ -1,7 +1,7 @@
 import type { ForgeConfig } from "@electron-forge/shared-types";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { cp, mkdir, readdir, readFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, rename } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { MakerDeb } from "@electron-forge/maker-deb";
@@ -9,7 +9,6 @@ import { MakerDMG } from "@electron-forge/maker-dmg";
 import { MakerRpm } from "@electron-forge/maker-rpm";
 import { MakerSquirrel } from "@electron-forge/maker-squirrel";
 import { MakerWix } from "@electron-forge/maker-wix";
-import { MakerZIP } from "@electron-forge/maker-zip";
 import { AutoUnpackNativesPlugin } from "@electron-forge/plugin-auto-unpack-natives";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import { buildSshHelper } from "../scripts/build-ssh-helper.mjs";
@@ -166,11 +165,30 @@ const config: ForgeConfig = {
     async postPackage(_config, { platform, outputPaths }) {
       if (platform === "darwin") await verifyMacPackageSignatures(outputPaths);
       if (platform === "win32") await verifyWindowsHelperSignatures(outputPaths);
+    },
+    async postMake(_config, results) {
+      for (const result of results) {
+        const { packageJSON, platform, arch } = result;
+        const productName = (packageJSON.productName || packageJSON.name).replace(/\s+/g, "-");
+        const archSuffix = platform === "win32" && arch === "x64" ? "" : `-${arch}`;
+        for (let index = 0; index < result.artifacts.length; index++) {
+          const artifact = result.artifacts[index];
+          const extension = path.extname(artifact);
+          // Squirrel's RELEASES manifest references its .nupkg filenames directly.
+          if (![".dmg", ".exe", ".msi", ".deb", ".rpm"].includes(extension)) continue;
+          const destination = path.join(
+            path.dirname(artifact),
+            `${productName}-${packageJSON.version}${archSuffix}${extension}`
+          );
+          if (artifact !== destination) await rename(artifact, destination);
+          result.artifacts[index] = destination;
+        }
+      }
+      return results;
     }
   },
   makers: [
     new MakerDMG({ icon: path.join(iconsRoot, "icon.icns") }),
-    new MakerZIP({}, ["darwin"]),
     new MakerSquirrel({
       name: "JumpServer",
       setupIcon: path.join(iconsRoot, "icon.ico"),
