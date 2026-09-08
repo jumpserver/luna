@@ -1230,6 +1230,7 @@
   },
   "ConnectError": {
     "ConnectFailed": "Connection failed",
+    "CredentialServiceUnavailable": "The credential service (such as OpenBao) is unavailable. Check the service status and try again.",
     "AclFailed": "The current asset is restricted by ACL policies and cannot be accessed via the client. Please use the Web console to connect.",
     "ClientNotFound": "Desktop client not found. Please install or configure the client path.",
     "ClientLaunchFailed": "Failed to launch desktop client. Please check installation or permissions.",
