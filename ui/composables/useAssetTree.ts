@@ -51,6 +51,17 @@ const normalizeTreeNodes = (value: unknown, baseLevel = 0): AssetTreeNode[] => {
   return roots;
 };
 
+export function applyAssetRename(nodes: AssetTreeNode[], assetId: string, name: string) {
+  for (const node of nodes) {
+    const isBranch = Boolean(node.isParent || node.children?.length);
+    if (!isBranch && String(node.meta?.data?.id || node.key || node.id) === assetId) {
+      node.name = name;
+      if (node.meta?.data) node.meta.data.name = name;
+    }
+    if (node.children?.length) applyAssetRename(node.children, assetId, name);
+  }
+}
+
 export const useAssetTree = () => {
   const userInfoStore = useUserInfoStore();
 

@@ -36,7 +36,8 @@ const {
   load: loadFavorites,
   createFolder,
   renameFolder,
-  removeFolder
+  removeFolder,
+  renameFavoriteAsset
 } = useFavoriteFolders();
 const { snippets, loading: snippetLoading, load: loadSnippets } = useSnippets();
 const { openScriptEditor } = useWorkspaceTabs();
@@ -368,6 +369,9 @@ async function copySnippet(snippet: Snippet) {
 
 useEventBus().on("favoriteChanged", () => {
   void loadFavorites();
+});
+useEventBus().on("assetRenamed", ({ assetId, name }) => {
+  renameFavoriteAsset(assetId, name);
 });
 
 onMounted(() => {

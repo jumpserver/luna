@@ -158,6 +158,19 @@ export const useFavoriteFolders = () => {
     useEventBus().emit("favoriteChanged", { assetId, favorite: true });
   };
 
+  const renameFavoriteAsset = (assetId: string, name: string) => {
+    const visit = (folder: FavoriteFolder) => {
+      for (const asset of folder.assets) {
+        if (asset.id === assetId) asset.name = name;
+      }
+      for (const child of folder.children) visit(child);
+    };
+    for (const folder of folders.value) visit(folder);
+    for (const asset of rootAssets.value) {
+      if (asset.id === assetId) asset.name = name;
+    }
+  };
+
   watch([loggedIn, currentAccountId], ([isLoggedIn]) => {
     stateVersion.value += 1;
     folders.value = [];
@@ -172,5 +185,15 @@ export const useFavoriteFolders = () => {
     }
     void load();
   });
-  return { folders, rootAssets, loading, load, createFolder, renameFolder, removeFolder, favoriteToFolder };
+  return {
+    folders,
+    rootAssets,
+    loading,
+    load,
+    createFolder,
+    renameFolder,
+    removeFolder,
+    favoriteToFolder,
+    renameFavoriteAsset
+  };
 };

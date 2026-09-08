@@ -2,7 +2,7 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { WorkspaceUiAssetCandidate } from "~/composables/useWorkspaceUiAutomation";
 import type { AssetItem, AssetTreeKind, AssetTreeNode } from "~/types";
-import { useAssetTreeSearch } from "~/composables/useAssetTree";
+import { applyAssetRename, useAssetTreeSearch } from "~/composables/useAssetTree";
 import { workspaceTourArmed, workspaceTourCompleted } from "~/composables/useWorkspaceTour";
 import { toWorkspaceUiAssetCandidate } from "~/composables/useWorkspaceUiAutomation";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -37,7 +37,12 @@ const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
 const { currentAccountId, currentSite, loggedIn, orgId } = storeToRefs(userInfoStore);
 const { fetchTree, treeNodeToAsset } = useAssetTree();
-const { clearRecentConnections, recentConnections, load: loadRecentConnections } = useRecentConnections();
+const {
+  clearRecentConnections,
+  recentConnections,
+  load: loadRecentConnections,
+  renameRecentConnection
+} = useRecentConnections();
 const workspaceUiAutomationHost = useWorkspaceUiAutomationHost();
 const {
   currentCommand: workspaceUiCommand,
@@ -590,6 +595,15 @@ watch(
 );
 
 watch(workspaceUiCommand, respondToWorkspaceUiCommand, { immediate: true });
+
+useEventBus().on("assetRenamed", ({ assetId, name }) => {
+  applyAssetRename(authorizationNodes.value, assetId, name);
+  applyAssetRename(typeNodes.value, assetId, name);
+  applyAssetRename(searchNodes.value, assetId, name);
+  renameRecentConnection(assetId, name);
+  const checked = checkedAssets.value[assetId];
+  if (checked) checkedAssets.value[assetId] = { ...checked, name };
+});
 
 defineExpose({
   refresh,
