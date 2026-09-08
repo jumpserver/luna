@@ -237,7 +237,9 @@ export const useAssetAction = () => {
     try {
       const candidate = new URL(currentSite.value || window.location.origin);
       if (["http:", "https:"].includes(candidate.protocol)) siteUrl = candidate;
-    } catch {}
+    } catch {
+      siteUrl = null;
+    }
 
     const host = endpoint.host || siteUrl?.hostname || window.location.hostname;
     if (!host || host === "app") throw new Error("Smart endpoint did not provide a valid HTTP host");
@@ -267,7 +269,9 @@ export const useAssetAction = () => {
     let siteProtocol = "";
     try {
       siteProtocol = new URL(currentSite.value || "").protocol.replace(":", "");
-    } catch {}
+    } catch {
+      siteProtocol = "";
+    }
     const httpProtocol = [pageProtocol, siteProtocol].find((value) => value === "http" || value === "https") || "https";
 
     if (isWebSurface) {
@@ -504,7 +508,9 @@ export const useAssetAction = () => {
         (item) => item.type === "web" && ["koko", "default"].includes(item.component) && !item.origin_value
       );
       if (kokoWeb) return kokoWeb.value;
-    } catch {}
+    } catch {
+      return NATIVE_WORKSPACE_METHOD_ORIGINS[body.connect_method] || body.connect_method;
+    }
 
     return NATIVE_WORKSPACE_METHOD_ORIGINS[body.connect_method] || body.connect_method;
   };
