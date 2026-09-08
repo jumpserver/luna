@@ -24,8 +24,12 @@ const getScopedStorageKey = (site: string, userId: string) =>
 
 function persistRecentConnections(storageKey: string) {
   if (!import.meta.client || !storageKey) return;
-  const persisted = storedRecentConnections.value.map(({ savedConnection: _savedConnection, ...item }) => item);
-  localStorage.setItem(storageKey, JSON.stringify(persisted));
+  try {
+    const persisted = storedRecentConnections.value.map(({ savedConnection: _savedConnection, ...item }) => item);
+    localStorage.setItem(storageKey, JSON.stringify(persisted));
+  } catch {
+    // ponytail: quota/private-mode; in-memory list is already updated
+  }
 }
 
 function loadRecentConnections(storageKey: string, organizationIds: string[]) {
@@ -71,7 +75,7 @@ export function useRecentConnections() {
 
   const clearRecentConnections = () => {
     storedRecentConnections.value = [];
-    if (import.meta.client && storageKey.value) localStorage.setItem(storageKey.value, "[]");
+    persistRecentConnections(storageKey.value);
   };
 
   const recordRecentConnection = (asset: AssetItem) => {
