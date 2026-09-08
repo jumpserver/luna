@@ -6,6 +6,8 @@ export function createWebProxyBridge(invoke: Invoke, listen: Listen) {
     setActive: (label: string, active: boolean) => invoke<void>("set_web_proxy_view_active", { label, active }),
     setBounds: (label: string, bounds: { x: number; y: number; width: number; height: number }) =>
       invoke<void>("set_web_proxy_view_bounds", { label, ...bounds }),
+    setColorScheme: (label: string, colorScheme?: "light" | "dark") =>
+      invoke<void>("set_web_proxy_view_color_scheme", { label, colorScheme }),
     navigate: (label: string, targetUrl: string) => invoke<void>("navigate_web_proxy_view", { label, targetUrl }),
     history: (label: string, direction: "back" | "forward") =>
       invoke<void>("history_web_proxy_view", { label, direction }),

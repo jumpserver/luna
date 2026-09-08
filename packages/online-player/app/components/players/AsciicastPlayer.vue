@@ -130,10 +130,7 @@ watch(
 
 watch(
   () => props.speed,
-  async () => {
-    resumeAtMs = (await readTime("getCurrentTime")) || resumeAtMs;
-    await nextTick(mount);
-  }
+  (value) => void player?.setPlaybackRate(value)
 );
 
 onMounted(() => void mount());

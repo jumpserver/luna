@@ -16,6 +16,15 @@ describe("web proxy endpoint", () => {
     const request = useWebProxyManager().buildWebProxyRequest(asset, "https", "http://koko.example.test:5050");
 
     expect(request.proxyUrl).toBe("http://koko.example.test:5001");
+    expect(request.allowedUrls).toEqual([]);
+  });
+
+  it("passes only the asset navigation allowlist to its own session", () => {
+    const { buildWebProxyRequest } = useWebProxyManager();
+    expect(
+      buildWebProxyRequest(asset, "https", "http://koko.example.test", "", "", ["https://sso.test"]).allowedUrls
+    ).toEqual(["https://sso.test"]);
+    expect(buildWebProxyRequest(asset, "https", "http://koko.example.test").allowedUrls).toEqual([]);
   });
 
   it("supports an external Nginx proxy endpoint", () => {

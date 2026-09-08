@@ -6,6 +6,7 @@ const props = defineProps<{ tab: WorkspaceSessionTab }>();
 const emit = defineEmits<{ reconnect: [] }>();
 const { activeTabId, markSessionConnected, tabs } = useWorkspaceTabs();
 const { isMacOS } = usePlatform();
+const colorMode = useColorMode();
 const surface = ref<InstanceType<typeof WebProxySurface>>();
 const request = computed(() =>
   props.tab.payload?.webProxy
@@ -36,6 +37,7 @@ defineExpose({ focus: () => surface.value?.focus() });
     :bridge="desktopWebProxy"
     :active="activeTabId === ownerTabId"
     :supported="supported"
+    :color-scheme="colorMode.value === 'dark' ? 'dark' : 'light'"
     :mac-inset="macInset"
     reconnectable
     @connected="markSessionConnected(props.tab.id)"

@@ -1,4 +1,4 @@
-import type { AssetTreeKind, PersonalAssetCredential, TokenResponse, UserProfile } from "~/types";
+import type { AssetDetail, AssetTreeKind, PersonalAssetCredential, TokenResponse, UserProfile } from "~/types";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -20,6 +20,13 @@ export class ApiRequestError extends Error {
     super(typeof data === "string" ? data : data?.detail || data?.code || `HTTP ${status}`);
     this.name = "ApiRequestError";
   }
+}
+
+export interface AssetRenameResponse {
+  asset?: string;
+  asset_id?: string;
+  id?: string;
+  name?: string;
 }
 
 export interface AssetTreeParams {
@@ -75,9 +82,10 @@ export interface CommandSnippetVariablePayload {
 
 export interface PublicSettings {
   XPACK_LICENSE_IS_VALID?: boolean;
+  XPACK_LICENSE_EDITION_ULTIMATE?: boolean;
   INTERFACE?: {
     login_title?: string;
-    favicon?: string;
+    version?: string;
   };
   XPACK_LICENSE_INFO?: {
     corporation?: unknown;
@@ -561,8 +569,8 @@ export function deleteSqlSnippet(id: string): Promise<unknown> {
   });
 }
 
-export function getAssetDetailRequest(assetId: string, orgId?: string): Promise<Record<string, any>> {
-  return apiRequest<Record<string, any>>({
+export function getAssetDetailRequest(assetId: string, orgId?: string): Promise<AssetDetail> {
+  return apiRequest<AssetDetail>({
     method: "GET",
     path: `/api/v1/perms/users/self/assets/${encodeURIComponent(assetId)}/`,
     orgId
@@ -612,8 +620,8 @@ export async function getPersonalAssetCredentials(
   return request;
 }
 
-export function renameAsset(assetId: string, name: string, orgId?: string): Promise<Record<string, any> | null> {
-  return apiRequest<Record<string, any> | null>({
+export function renameAsset(assetId: string, name: string, orgId?: string): Promise<AssetRenameResponse | null> {
+  return apiRequest<AssetRenameResponse | null>({
     method: "POST",
     path: "/api/v1/assets/my-asset/",
     body: {

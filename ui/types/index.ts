@@ -353,6 +353,30 @@ export interface RawAssetData {
   permedAccounts?: PermedAccount[];
 }
 
+export type AssetDetailField = string | { name?: string; value?: string };
+
+export interface AssetDetail {
+  id?: string;
+  name?: string;
+  address?: string;
+  org_id?: string;
+  platform?: AssetDetailField;
+  type?: AssetDetailField;
+  zone?: AssetDetailField;
+  category?: AssetDetailField;
+  is_active?: boolean;
+  permed_protocols?: PermedProtocol[];
+  permed_accounts?: PermedAccount[];
+  permedProtocols?: PermedProtocol[];
+  permedAccounts?: PermedAccount[];
+  spec_info?: {
+    success_selector?: string;
+    interactive_selector?: string;
+    allowed_urls?: string[];
+    autofill?: string;
+  };
+}
+
 export interface AssetItem {
   id: string;
   name: string;

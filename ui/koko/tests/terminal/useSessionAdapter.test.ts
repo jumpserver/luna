@@ -1,7 +1,7 @@
+import { FORMATTER_MESSAGE_TYPE } from "@jumpserver/connectors-core";
+import { writeText } from "clipboard-polyfill";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { writeText } from "clipboard-polyfill";
-import { FORMATTER_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { ENVELOPE_TERMINAL_COMMAND, parseEnvelope, parseJSONPayload } from "#koko/composables/terminal/envelope";
 import { useKokoSessionAdapter } from "#koko/composables/useSessionAdapter";
 import { useKokoConnectionStore } from "#koko/stores/connection";
@@ -55,7 +55,7 @@ describe("useKokoSessionAdapter", () => {
 
     const { shareInfo } = useKokoSessionAdapter();
 
-    expect(shareInfo.value.shareURL).toContain("/luna/share/share-1/?code=code-1");
+    expect(shareInfo.value.shareURL).toContain("/luna/share/share-1?code=code-1");
     expect(shareInfo.value.enableShare).toBe(true);
   });
 
@@ -82,8 +82,7 @@ describe("useKokoSessionAdapter", () => {
     });
 
     const copied = String(vi.mocked(writeText).mock.calls[0]?.[0]);
-    expect(copied).toContain("/luna/share/share-1");
-    expect(copied).toContain("code-1");
+    expect(copied).toBe(`${window.location.origin}/luna/share/share-1?code=code-1`);
     expect(toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({ title: "koko.terminal.shareLinkCopied", color: "success" })
     );

@@ -7,7 +7,7 @@ import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionD
 import { desktopWindow } from "~/shared/desktop/bridge";
 import { isDesktopRuntime } from "~/utils/runtime";
 
-export type WorkspaceSessionStatus = "selecting" | "connecting" | "ready" | "connected" | "failed";
+export type WorkspaceSessionStatus = "selecting" | "connecting" | "ready" | "connected" | "disconnected" | "failed";
 export type WorkspaceSplitDirection = "horizontal" | "vertical";
 export type WorkspacePaneDropPlacement = "center" | "left" | "right" | "top" | "bottom";
 export type WorkspacePaneMode = "empty" | "setup" | "session";
@@ -882,6 +882,14 @@ export const useWorkspaceTabs = () => {
     if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
 
+  const markSessionDisconnected = (paneId: string) => {
+    const match = findPane(paneId);
+    if (!match) return;
+
+    match.pane.status = "disconnected";
+    if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
+  };
+
   const setActiveSession = (id: string) => {
     activeTabId.value = id;
     ensureActivePaneForTab(id);
@@ -963,6 +971,7 @@ export const useWorkspaceTabs = () => {
     isPaneAwaitingAssetSelection,
     markSessionConnected,
     markSessionConnecting,
+    markSessionDisconnected,
     setSessionConnectMethod,
     markSessionFailed,
     openLocalShell,

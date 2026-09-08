@@ -23,9 +23,13 @@ import {
 } from "../../packages/web-proxy/src/credentials.ts";
 import { signaturesDiffer } from "../../packages/web-proxy/src/recording.ts";
 import { WebProxyInteraction } from "../../packages/web-proxy/src/interaction.ts";
-import { WebProxyScript, installWebProxyNavigationGuard } from "../../packages/web-proxy/src/script.ts";
+import {
+  WebProxyScript,
+  installWebProxyNavigationGuard,
+  webProxyNavigationPolicy
+} from "../../packages/web-proxy/src/script.ts";
 
-async function setupNavigation(safeMode: unknown) {
+async function setupNavigation(safeMode: unknown, allowedUrls: unknown = []) {
   const main = await readFile(new URL("../../packages/web-proxy/src/manager.ts", import.meta.url), "utf8");
   const source = [
     main.slice(main.indexOf("function parseWebProxyUrl("), main.indexOf("function emitWebProxyState(")),
@@ -38,12 +42,14 @@ async function setupNavigation(safeMode: unknown) {
   const createContents = () =>
     Object.assign(new EventEmitter(), {
       loadURL: mock.fn(async (_url: string) => {}),
+      debugger: { isAttached: () => false },
       reload: mock.fn(),
       isDestroyed: () => false,
       setWindowOpenHandler: mock.fn((_handler: (details: { url: string }) => { action: string }) => {}),
       navigationHistory: { canGoBack: () => true, canGoForward: () => true, goBack: mock.fn(), goForward: mock.fn() }
     });
   const contents = createContents();
+  const state = mock.fn();
   let preferences: any;
   const views = new Map();
   const scope = {
@@ -53,6 +59,7 @@ async function setupNavigation(safeMode: unknown) {
     parseUrl: (value) => new URL(value),
     normalizedWebOrigin,
     installWebProxyNavigationGuard,
+    webProxyNavigationPolicy,
     webProxyViews: views,
     electronSession: { fromPartition: () => ({ setProxy: async () => {} }) },
     WebContentsView: class {
@@ -74,6 +81,7 @@ async function setupNavigation(safeMode: unknown) {
     syncWebProxyVisibility() {},
     createCredentialSession: async () => ({ autofillAvailable: false }),
     finishWebProxyAutofill() {},
+    emitWebProxyState: state,
     event: { sender: { id: 1 } },
     win: { contentView: { addChildView() {} } }
   };
@@ -85,13 +93,92 @@ async function setupNavigation(safeMode: unknown) {
     };`
   )(...Object.values(scope));
   const label = "web-proxy-navigation-test";
-  await api.create({ label, targetUrl: "https://example.test/login", proxyUrl: "http://localhost:5001", safeMode });
+  await api.create({
+    label,
+    targetUrl: "https://example.test/login",
+    proxyUrl: "http://localhost:5001",
+    safeMode,
+    allowedUrls
+  });
   const managed = views.get(label);
   await managed.webSessionPromise;
   managed.autofillVisibilityBlocked = false;
   managed.autofillPending = false;
-  return { contents, preferences, invoke: (command, args = {}) => api.invoke(command, { label, ...args }) };
+  return { contents, preferences, state, invoke: (command, args = {}) => api.invoke(command, { label, ...args }) };
 }
+
+test("asset navigation is unrestricted by default and matches exact sites only when configured", () => {
+  for (const allowed of [undefined, []]) {
+    const permits = webProxyNavigationPolicy("https://asset.test/login", allowed);
+    assert.equal(permits("https://other.test/"), true);
+    assert.equal(permits("http://other.test:8080/path"), true);
+    assert.equal(permits("file:///tmp"), false);
+  }
+  const permits = webProxyNavigationPolicy("https://asset.test/login", [
+    "https://SSO.test:443/",
+    "http://localhost:8080"
+  ]);
+  for (const url of ["https://asset.test/dashboard", "https://sso.test/login?q=1", "http://localhost:8080/path"])
+    assert.equal(permits(url), true, url);
+  for (const url of [
+    "http://asset.test",
+    "https://asset.test:8443",
+    "https://sso.test.evil.test",
+    "https://sub.sso.test",
+    "https://sso.test@evil.test",
+    "https://user:pass@sso.test",
+    "javascript:alert(1)"
+  ])
+    assert.equal(permits(url), false, url);
+  for (const value of [
+    null,
+    "*",
+    ["*"],
+    ["https://sso.test/path"],
+    ["file:///tmp"],
+    Array(101).fill("https://sso.test")
+  ])
+    assert.throws(() => webProxyNavigationPolicy("https://asset.test", value));
+});
+
+test("configured asset allowlist blocks links, redirects and popups while preserving page resources", async () => {
+  const { contents, state } = await setupNavigation(false, ["https://sso.test"]);
+  for (const name of ["will-navigate", "will-redirect"]) {
+    for (const [url, isMainFrame, denied] of [
+      ["https://example.test/dashboard", true, false],
+      ["https://sso.test/login", true, false],
+      ["https://outside.test", true, true],
+      ["https://outside.test/frame", false, false]
+    ] as const) {
+      const preventDefault = mock.fn();
+      contents.emit(name, { url, isMainFrame, preventDefault });
+      assert.equal(preventDefault.mock.callCount(), Number(denied), `${name}: ${url}`);
+    }
+  }
+  const popup = contents.setWindowOpenHandler.mock.calls[0].arguments[0];
+  popup({ url: "https://outside.test" });
+  assert.equal(contents.loadURL.mock.callCount(), 1);
+  assert.match(state.mock.calls.at(-1).arguments[1].navigationError, /白名单/);
+  popup({ url: "https://sso.test/login" });
+  assert.equal(contents.loadURL.mock.callCount(), 2);
+});
+
+test("login script open commands respect the same asset navigation allowlist", async () => {
+  const contents = Object.assign(new EventEmitter(), { isDestroyed: () => false, loadURL: mock.fn() });
+  const runner = new WebProxyScript(
+    contents,
+    { steps: [{ step: 1, command: "open", url: "https://outside.test" }] },
+    {
+      active: () => true,
+      canNavigate: webProxyNavigationPolicy("https://asset.test", ["https://sso.test"]),
+      state() {},
+      interaction() {},
+      frame() {}
+    }
+  );
+  await assert.rejects(runner.run(), /白名单/);
+  assert.equal(contents.loadURL.mock.callCount(), 0);
+});
 
 test("safe mode blocks manual navigation and popups while allowing cross-origin links and redirects", async () => {
   const { contents, preferences, invoke } = await setupNavigation(true);

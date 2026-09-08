@@ -70,7 +70,8 @@ async function start() {
         targetUrl: launch.targetUrl,
         proxyUrl: launch.proxyUrl,
         safeMode: launch.safeMode,
-        recordingEnabled: launch.recordingEnabled
+        recordingEnabled: launch.recordingEnabled,
+        allowedUrls: launch.allowedUrls
       };
     if (command === "fatal") {
       void close("Web 录像无法启动，请重新连接");
@@ -85,6 +86,7 @@ async function start() {
         proxyUrl: launch.proxyUrl,
         safeMode: launch.safeMode,
         tokenId: launch.tokenId,
+        allowedUrls: launch.allowedUrls,
         tokenValue: launch.tokenValue
       };
       const result = await manager.invoke(command, event, win, args);

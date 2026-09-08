@@ -1,6 +1,7 @@
 import type { Readable } from "node:stream";
 import { normalizedWebOrigin } from "@jumpserver/web-proxy/credentials";
 import { createLocalCredentialSession } from "@jumpserver/web-proxy/local-credentials";
+import { webProxyNavigationPolicy } from "@jumpserver/web-proxy/script";
 
 export function parseLaunch(value: unknown) {
   if (!value || typeof value !== "object") throw new Error("缺少 Web applet 启动参数");
@@ -12,6 +13,8 @@ export function parseLaunch(value: unknown) {
   };
   const target = new URL(text("target_url"));
   normalizedWebOrigin(target);
+  const allowedUrls = data.allowed_urls === undefined ? [] : data.allowed_urls;
+  webProxyNavigationPolicy(target, allowedUrls);
   if (typeof data.safe_mode !== "boolean") throw new Error("缺少安全模式配置");
   if (data.recording_enabled !== undefined && typeof data.recording_enabled !== "boolean")
     throw new Error("录像开关无效");
@@ -43,6 +46,7 @@ export function parseLaunch(value: unknown) {
     tokenValue,
     safeMode: data.safe_mode,
     recordingEnabled,
+    allowedUrls,
     localSession
   };
 }

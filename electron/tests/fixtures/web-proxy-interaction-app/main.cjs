@@ -5,6 +5,9 @@ app.on("window-all-closed", () => {});
 app.whenReady().then(async () => {
   try {
     const { tsImport } = await import("tsx/esm/api");
+    const { runThemeChecks } = await tsImport("../../web-proxy-theme-check.ts", pathToFileURL(__filename).href);
+    await runThemeChecks();
+    if (process.argv.includes("theme")) return app.exit(0);
     const { run } = await tsImport("../../web-proxy-interaction-check.ts", pathToFileURL(__filename).href);
     await run();
     const { runScriptChecks } = await tsImport("../../web-proxy-script-check.ts", pathToFileURL(__filename).href);

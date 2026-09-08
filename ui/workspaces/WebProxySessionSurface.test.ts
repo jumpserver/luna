@@ -1,14 +1,21 @@
 import ts from "typescript";
 import { expect, it, vi } from "vitest";
-import { computed, ref } from "vue";
+import { computed, effectScope, nextTick, reactive, ref, toRaw, watch } from "vue";
 import source from "../../packages/web-proxy/src/WebProxySurface.vue?raw";
 
-function setupSurface(safeMode = false) {
+function setupSurface(safeMode = false, observe = false) {
   const desktopWebProxy = {
+    create: vi.fn(async (request: Record<string, unknown>) => structuredClone(request)),
+    onState: vi.fn(async () => vi.fn()),
+    onAutofillState: vi.fn(async () => vi.fn()),
+    onInteraction: vi.fn(async () => vi.fn()),
+    onRecordingState: vi.fn(async () => vi.fn()),
+    startRecording: vi.fn(async () => {}),
     completeVerification: vi.fn(async () => true),
     interactionInput: vi.fn(async () => true),
     setActive: vi.fn(async () => {}),
     setBounds: vi.fn(async () => {}),
+    setColorScheme: vi.fn(async () => {}),
     close: vi.fn(async () => {}),
     navigate: vi.fn(),
     history: vi.fn(),
@@ -19,17 +26,34 @@ function setupSurface(safeMode = false) {
     if (name === "connected") markSessionConnected("tab");
   });
   const closeSession = vi.fn(async () => true);
+  const props = reactive({
+    request: {
+      safeMode,
+      targetUrl: "https://asset.test/login",
+      proxyUrl: "http://127.0.0.1:5001",
+      tokenId: "test-token",
+      tokenValue: "test-value",
+      allowedUrls: [] as string[] | undefined
+    },
+    bridge: desktopWebProxy,
+    active: true,
+    supported: true,
+    colorScheme: "light" as "light" | "dark"
+  });
   // Execute the component's setup without mounting its native Electron view.
   const script = source.match(/<script setup lang="ts">([\s\S]*?)<\/script>/)![1]!;
   const { outputText } = ts.transpileModule(script, { compilerOptions: { module: ts.ModuleKind.CommonJS } });
+  const onMounted = vi.fn();
+  const onBeforeUnmount = vi.fn();
   const scope = {
     exports: {},
     require: () => ({
       ref,
       computed,
-      watch: vi.fn(),
-      onMounted: vi.fn(),
-      onBeforeUnmount: vi.fn(),
+      toRaw,
+      watch: observe ? watch : vi.fn(),
+      onMounted,
+      onBeforeUnmount,
       nextTick: async (fn?: () => void) => fn?.()
     }),
     ref,
@@ -38,23 +62,105 @@ function setupSurface(safeMode = false) {
     onMounted: vi.fn(),
     onBeforeUnmount: vi.fn(),
     defineExpose: vi.fn(),
-    defineProps: () => ({ request: { safeMode }, bridge: desktopWebProxy, active: true, supported: true }),
+    defineProps: () => props,
     defineEmits: () => emit,
     useWorkspaceTabs: () => ({ activeTabId: ref("tab"), tabs: ref([]), markSessionConnected, closeSession }),
     usePlatform: () => ({}),
     registerWorkspaceSessionCloseGuard: vi.fn(),
-    document: { visibilityState: "visible" }
+    document: {
+      visibilityState: "visible",
+      querySelector: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn()
+    },
+    MutationObserver: class {
+      observe() {}
+      disconnect() {}
+    },
+    ResizeObserver: class {
+      observe() {}
+      disconnect() {}
+    },
+    setInterval: vi.fn(() => 1),
+    clearInterval: vi.fn(),
+    requestAnimationFrame: vi.fn()
   };
-  const surface = new Function(
-    ...Object.keys(scope),
-    `${outputText}\nreturn { interactivePending, interactiveCanComplete, verificationCollapsed, collapseVerification, resumeVerification, verificationCompletionError, completeVerification, verificationFrame, verificationRenderedRevision, verificationCursor, verificationWaitingMessage, autofillStatus, verificationInputRef, verificationPointer, verificationText, closeView, syncView, viewCreated, contentRef, viewLabel, handleState, preview, error, navigationDisabled, safeMode, history, reload, reconnect };`
-  )(...Object.values(scope));
+  const effects = effectScope();
+  const surface = effects.run(() =>
+    new Function(
+      ...Object.keys(scope),
+      `${outputText}\nreturn { interactivePending, interactiveCanComplete, verificationCollapsed, collapseVerification, resumeVerification, verificationCompletionError, completeVerification, verificationFrame, verificationRenderedRevision, verificationCursor, verificationWaitingMessage, autofillStatus, verificationInputRef, verificationPointer, verificationText, closeView, syncView, viewCreated, contentRef, viewLabel, handleState, preview, error, navigationDisabled, safeMode, history, reload, reconnect };`
+    )(...Object.values(scope))
+  );
   surface.viewCreated.value = true;
   surface.contentRef.value = {
     getBoundingClientRect: () => ({ left: 0, top: 0, bottom: 100, width: 100, height: 100 })
   };
-  return { surface, desktopWebProxy, emit, markSessionConnected, closeSession };
+  return {
+    surface,
+    desktopWebProxy,
+    emit,
+    markSessionConnected,
+    closeSession,
+    props,
+    mount: () => onMounted.mock.calls[0]![0](),
+    stop: () => {
+      onBeforeUnmount.mock.calls[0]![0]();
+      effects.stop();
+    }
+  };
 }
+
+it.each([undefined, [], ["https://sso.test", "https://asset.test:8443"]].map((allowedUrls) => ({ allowedUrls })))(
+  "creates a view from reactive session data with allowed URLs $allowedUrls",
+  async ({ allowedUrls }) => {
+    const { surface, desktopWebProxy, props, mount, stop } = setupSurface();
+    props.request.allowedUrls = allowedUrls;
+    surface.viewCreated.value = false;
+    try {
+      await mount();
+      expect(surface.error.value).toBe("");
+      expect(surface.viewCreated.value).toBe(true);
+      expect(desktopWebProxy.create).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          targetUrl: props.request.targetUrl,
+          tokenId: "test-token",
+          tokenValue: "test-value",
+          safeMode: false,
+          allowedUrls
+        })
+      );
+      const created = await desktopWebProxy.create.mock.results[0]!.value;
+      expect(created.allowedUrls).toEqual(allowedUrls);
+      expect(desktopWebProxy.startRecording).toHaveBeenCalledOnce();
+    } finally {
+      stop();
+    }
+  }
+);
+
+it("syncs the latest theme after pending creation, including inactive views, and stops on close", async () => {
+  const { surface, desktopWebProxy, props, stop } = setupSurface(false, true);
+  try {
+    surface.viewCreated.value = false;
+    props.colorScheme = "dark";
+    await nextTick();
+    expect(desktopWebProxy.setColorScheme).not.toHaveBeenCalled();
+    surface.viewCreated.value = true;
+    await nextTick();
+    expect(desktopWebProxy.setColorScheme).toHaveBeenLastCalledWith(surface.viewLabel, "dark");
+    props.active = false;
+    props.colorScheme = "light";
+    await nextTick();
+    expect(desktopWebProxy.setColorScheme).toHaveBeenLastCalledWith(surface.viewLabel, "light");
+    await surface.closeView();
+    props.colorScheme = "dark";
+    await nextTick();
+    expect(desktopWebProxy.setColorScheme).toHaveBeenCalledTimes(2);
+  } finally {
+    stop();
+  }
+});
 
 it.each([true, false])(
   "keeps the address read-only with safe mode %s while allowing history and reload",
@@ -104,6 +210,22 @@ it("shares recording finalization across concurrent closes and stops view update
   expect(closed).toHaveBeenCalledWith(true);
   await surface.closeView();
   expect(desktopWebProxy.close).toHaveBeenCalledTimes(1);
+});
+
+it("keeps the current page usable after a blocked navigation", async () => {
+  const { surface, desktopWebProxy } = setupSurface();
+  surface.handleState({
+    label: surface.viewLabel,
+    url: "https://asset.test/dashboard",
+    error: "",
+    loading: false,
+    autofillPending: false,
+    navigationError: "页面地址不在此资产的访问白名单中"
+  });
+  expect(surface.error.value).toBe("");
+  expect(surface.navigationDisabled.value).toBe(false);
+  await surface.syncView();
+  expect(desktopWebProxy.setActive).toHaveBeenLastCalledWith(surface.viewLabel, true);
 });
 
 it("keeps a safe preview through timeout and only marks the session connected after autofill finishes", async () => {

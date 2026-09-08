@@ -360,6 +360,7 @@ export const useKokoTerminalSocket = () => {
         reportInitialConnectionFailure();
         return;
       }
+      if (paneId) hostAdapter.markSessionDisconnected(paneId);
       if (!terminalRef.value) return;
       terminalRef.value.write("\r\n");
       terminalRef.value.write(`\x1B[31m${t("koko.terminal.websocketClosed")}\x1B[0m`);

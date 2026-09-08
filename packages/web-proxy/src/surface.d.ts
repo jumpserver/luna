@@ -5,6 +5,7 @@ export interface WebProxySurfaceProps {
   bridge: WebProxyBridge;
   active: boolean;
   supported: boolean;
+  colorScheme?: "light" | "dark";
   macInset?: boolean;
   recordingRequired?: boolean;
   reconnectable?: boolean;

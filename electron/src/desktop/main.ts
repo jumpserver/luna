@@ -188,6 +188,7 @@ async function proxyChenRequest(request, url) {
     method,
     headers,
     body: method === "GET" || method === "HEAD" ? undefined : request.body,
+    duplex: request.body ? "half" : undefined,
     credentials: "include",
     redirect: "manual"
   });

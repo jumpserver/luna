@@ -1,0 +1,78 @@
+diff --git a/dist/core-BSn7GtYU.js b/dist/core-BSn7GtYU.js
+index 3b9004c7a7e1fc218471ef99a565e5ab7da91d23..5d02b55eb59d319eb55e8f29f6e3e894f5f036e3 100644
+--- a/dist/core-BSn7GtYU.js
++++ b/dist/core-BSn7GtYU.js
+@@ -1436,6 +1436,24 @@ function recording(src, {
+   function pause() {
+     return sendCommand(EVENT.PAUSE_REQUESTED);
+   }
++  function setPlaybackRate(rate) {
++    if (!Number.isFinite(rate) || rate <= 0) {
++      throw new Error(`invalid playback rate: ${rate}`);
++    }
++
++    const currentTime = getCurrentTimeMs();
++    speed = rate;
++
++    if (state === STATE.READY_PLAYING) {
++      cancelScheduledRecordingEvent();
++      ctx.startTime = now() - currentTime;
++      scheduleNextRecordingEvent();
++    } else {
++      ctx.pauseElapsedTime = currentTime;
++    }
++
++    return true;
++  }
+   function pausePlaybackClock() {
+     cancelScheduledRecordingEvent();
+     ctx.pauseElapsedTime = now() - ctx.startTime;
+@@ -1870,6 +1888,7 @@ function recording(src, {
+     getCurrentTime,
+     play,
+     pause,
++    setPlaybackRate,
+     seek,
+     step,
+     mute,
+@@ -3352,6 +3371,16 @@ class Core {
+       return this.driver.pause();
+     });
+   }
++  setPlaybackRate(rate) {
++    if (!Number.isFinite(rate) || rate <= 0) {
++      throw new Error(`invalid playback rate: ${rate}`);
++    }
++    return this._enqueue(function () {
++      if (this.driver.setPlaybackRate === undefined) return false;
++      this.speed = rate;
++      return this.driver.setPlaybackRate(rate);
++    });
++  }
+   seek(where) {
+     return this._enqueue(function () {
+       return this.driver.seek(where);
+diff --git a/dist/index.js b/dist/index.js
+index 57e6410b71cfde2948d0c68b6f9b507eed8aeca8..5b1da1d44e1c3a3d9c7a2df2d51c903057815778 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -24,6 +24,7 @@ function create(src, elem, opts = {}) {
+     getDuration: () => core.getDuration(),
+     play: () => core.play(),
+     pause: () => core.pause(),
++    setPlaybackRate: rate => core.setPlaybackRate(rate),
+     seek: pos => core.seek(pos)
+   };
+   player.addEventListener = (name, callback) => {
+diff --git a/index.d.ts b/index.d.ts
+index 9bf29a9b8db05eab0cddbe3b5b4cba20acf5f900..9a2d56baaad97aaa69f9809641200e4636344536 100644
+--- a/index.d.ts
++++ b/index.d.ts
+@@ -102,6 +102,7 @@ export interface Player {
+   getDuration(): number | undefined;
+   play(): Promise<boolean | void>;
+   pause(): Promise<boolean | void>;
++  setPlaybackRate(rate: number): Promise<boolean | void>;
+   seek(location: SeekLocation): Promise<boolean | void>;
+   addEventListener(
+     eventName: "play" | "playing" | "pause" | "ended",

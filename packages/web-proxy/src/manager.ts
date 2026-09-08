@@ -8,7 +8,7 @@ import {
   releaseCredentials
 } from "./credentials";
 import { WebProxyInteraction, buildInteractionGuardScript, INTERACTION_WORLD } from "./interaction";
-import { WebProxyScript, installWebProxyNavigationGuard } from "./script";
+import { WebProxyScript, installWebProxyNavigationGuard, webProxyNavigationPolicy } from "./script";
 import { WebProxyRecording } from "./recording";
 const parseUrl = (value) => new URL(value);
 
@@ -39,6 +39,25 @@ export function createWebProxyManager({
 
   function validateWebProxyLabel(label) {
     if (!/^web-proxy-[\w/:-]+$/.test(label)) throw new Error("invalid Web Proxy view label");
+  }
+
+  function validateColorScheme(colorScheme) {
+    if (colorScheme !== undefined && colorScheme !== "light" && colorScheme !== "dark")
+      throw new Error("invalid Web Proxy color scheme");
+  }
+
+  async function setWebProxyColorScheme(webContents, colorScheme) {
+    validateColorScheme(colorScheme);
+    const debuggerSession = webContents.debugger;
+    if (colorScheme === undefined && !debuggerSession.isAttached()) return;
+    // Scope the preference to this website; nativeTheme would also override the
+    // shell's OS-theme detection and break its follow-system setting.
+    // ponytail: If these views gain a DevTools UI, restore the media override
+    // after DevTools detaches this dedicated debugger session.
+    if (!debuggerSession.isAttached()) debuggerSession.attach("1.3");
+    await debuggerSession.sendCommand("Emulation.setEmulatedMedia", {
+      features: colorScheme ? [{ name: "prefers-color-scheme", value: colorScheme }] : []
+    });
   }
 
   function webProxyView(event, label) {
@@ -250,6 +269,7 @@ export function createWebProxyManager({
       emitWebProxyState(managed);
       const runner = new WebProxyScript(managed.view.webContents, session, {
         active: () => managed.active && managed.autofillPending,
+        canNavigate: managed.canNavigate,
         state: (status, message) => emitWebProxyAutofillState(managed, status, message),
         frame: (frame) => emitDesktopEvent("web-proxy-interaction", { label: managed.label, frame }, managed.hostLabel),
         interaction: (interaction, ready) => {
@@ -419,10 +439,12 @@ export function createWebProxyManager({
     validateWebProxyLabel(label);
     if (webProxyViews.has(label)) throw new Error("Web Proxy view label already exists");
     const target = parseWebProxyUrl(args.targetUrl, ["http:", "https:"], "Website URL");
+    const canNavigate = webProxyNavigationPolicy(target, args.allowedUrls);
     const proxy = direct ? null : parseWebProxyUrl(args.proxyUrl, ["http:", "socks5:"], "Koko Web Proxy URL");
     if (args.safeMode !== undefined && typeof args.safeMode !== "boolean")
       throw new Error("invalid Web Proxy safe mode");
     const safeMode = args.safeMode === true;
+    validateColorScheme(args.colorScheme);
     const proxySession = electronSession.fromPartition(`web-proxy:${label}`, { cache: false });
     if (proxy) {
       const proxyRules =
@@ -441,6 +463,15 @@ export function createWebProxyManager({
         sandbox: true
       }
     });
+    try {
+      // Initialize Chromium's renderer before sending its media preference.
+      if (args.colorScheme) await view.webContents.loadURL("about:blank");
+      // Apply before the first navigation so CSS and startup scripts agree.
+      await setWebProxyColorScheme(view.webContents, args.colorScheme);
+    } catch (error) {
+      view.webContents?.close();
+      throw error;
+    }
     // A separate native surface catches mouse and keyboard input above the target.
     // Unlike a DOM overlay injected into the target, the website cannot remove it.
     const inputShield = new WebContentsView({
@@ -460,6 +491,7 @@ export function createWebProxyManager({
       targetUrl: target.toString(),
       proxyUrl: proxy?.toString() || "",
       safeMode,
+      canNavigate,
       credentialSession: null,
       autofillScript: null,
       autofillPending: true,
@@ -508,20 +540,26 @@ export function createWebProxyManager({
       }
     });
     syncWebProxyVisibility(managed);
+    const blockedNavigation = (message) => {
+      if (managed.autofillPending) finishWebProxyAutofill(managed, "error", message);
+      else emitWebProxyState(managed, { navigationError: message });
+    };
     view.webContents.setWindowOpenHandler(({ url }) => {
       // Separate popup login windows need their own guarded session ownership.
       if (managed.safeMode || managed.autofillPending) return { action: "deny" };
       try {
         const next = parseWebProxyUrl(url, ["http:", "https:"], "Website URL");
+        if (!canNavigate(next)) {
+          blockedNavigation("页面地址不在此资产的访问白名单中");
+          return { action: "deny" };
+        }
         void view.webContents.loadURL(next.toString());
       } catch {
         // Invalid external URLs remain blocked by the deny response below.
       }
       return { action: "deny" };
     });
-    installWebProxyNavigationGuard(view.webContents, (message) => {
-      if (managed.autofillPending) finishWebProxyAutofill(managed, "error", message);
-    });
+    installWebProxyNavigationGuard(view.webContents, blockedNavigation, canNavigate);
     view.webContents.on("before-mouse-event", (inputEvent, mouse) => {
       if (managed.safeMode && (mouse.button === "right" || mouse.type === "contextMenu")) {
         inputEvent.preventDefault();
@@ -544,7 +582,7 @@ export function createWebProxyManager({
     view.webContents.on("did-start-navigation", (navigation) => {
       if (navigation.isMainFrame) managed.interaction?.invalidate();
     });
-    view.webContents.on("did-start-loading", () => emitWebProxyState(managed, { loading: true }));
+    view.webContents.on("did-start-loading", () => emitWebProxyState(managed, { loading: true, navigationError: "" }));
     view.webContents.on("did-stop-loading", () => emitWebProxyState(managed, { loading: false }));
     view.webContents.on("dom-ready", () => {
       if (managed.credentialSession) void tryWebProxyAutofill(managed);
@@ -649,6 +687,10 @@ export function createWebProxyManager({
 
   async function invoke(command, event, win, args) {
     if (command === "create_web_proxy_view") return createWebProxyView(event, win, args);
+    if (command === "set_web_proxy_view_color_scheme") {
+      const managed = webProxyView(event, args.label);
+      return setWebProxyColorScheme(managed.view.webContents, args.colorScheme);
+    }
     if (command === "set_web_proxy_view_active") {
       const managed = webProxyView(event, args.label);
       const active = Boolean(args.active);

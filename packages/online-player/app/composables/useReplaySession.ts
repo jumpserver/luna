@@ -15,7 +15,7 @@ import {
   REPLAY_POLL_START_DELAY_MS
 } from "#online-player/utils/replay";
 import { formatLocalDateTime } from "#online-player/utils/time";
-import { interpolateWatermark } from "#online-player/utils/watermark";
+import { interpolateWatermark, softenWatermarkColor } from "#online-player/utils/watermark";
 
 export function useReplaySession(sessionId: MaybeRefOrGetter<string>) {
   const replay = ref<Replay | null>(null);
@@ -64,11 +64,11 @@ export function useReplaySession(sessionId: MaybeRefOrGetter<string>) {
 
       watermark.value = {
         enabled: true,
-        content: [viewer && `${viewer}`, sessionText].filter(Boolean).join("\n"),
-        width: Number(settings.SECURITY_WATERMARK_WIDTH) || 300,
-        height: Number(settings.SECURITY_WATERMARK_HEIGHT) || 200,
+        content: sessionText || viewer,
+        width: Math.max(Number(settings.SECURITY_WATERMARK_WIDTH) || 300, 360),
+        height: Math.max(Number(settings.SECURITY_WATERMARK_HEIGHT) || 200, 240),
         fontSize: Number(settings.SECURITY_WATERMARK_FONT_SIZE) || 15,
-        fontColor: String(settings.SECURITY_WATERMARK_COLOR || "rgba(255,255,255,0.08)"),
+        fontColor: softenWatermarkColor(String(settings.SECURITY_WATERMARK_COLOR || "rgba(255,255,255,0.08)")),
         rotate: Number(settings.SECURITY_WATERMARK_ROTATE) || 22
       };
     } catch {

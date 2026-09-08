@@ -46,12 +46,11 @@ function mountPlayer() {
     startAt: resumeAt,
     speed: speed.value
   });
-  void playerInstance.play?.();
+  void playerInstance.play();
 }
 
-watch(speed, () => {
-  resumeAt = playerInstance?.getCurrentTime?.() || resumeAt;
-  scheduleMount();
+watch(speed, (value) => {
+  void playerInstance?.setPlaybackRate(value);
 });
 
 function scheduleMount() {

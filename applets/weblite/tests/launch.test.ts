@@ -21,6 +21,14 @@ const launch = {
     secret_type: "password"
   }
 };
+test("applet retains an optional asset navigation allowlist and rejects malformed policies", () => {
+  assert.deepEqual(parseLaunch(launch).allowedUrls, []);
+  assert.deepEqual(parseLaunch({ ...launch, allowed_urls: ["https://sso.example.com"] }).allowedUrls, [
+    "https://sso.example.com"
+  ]);
+  for (const allowed_urls of [null, "*", ["*"], ["file:///tmp"], ["https://example.com/path"]])
+    assert.throws(() => parseLaunch({ ...launch, allowed_urls }), /白名单/);
+});
 test("direct launch needs no Koko endpoint or token and releases credentials once on the permitted origin", async () => {
   const result = await readLaunch(Readable.from([JSON.stringify(launch)]));
   assert.equal(result.recordingEnabled, false);

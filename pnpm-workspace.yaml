@@ -30,5 +30,6 @@ allowBuilds:
   vue-demi: true
 
 patchedDependencies:
+  asciinema-player@3.17.0: patches/asciinema-player@3.17.0.patch
   guacamole-common-js-jumpserver@1.1.0-c: >-
     patches/guacamole-common-js-jumpserver@1.1.0-c.patch

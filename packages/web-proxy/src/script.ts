@@ -1,5 +1,5 @@
 import { setTimeout as delay } from "node:timers/promises";
-import { normalizedWebOrigin, releaseCredentials, selectorLookupScript } from "./credentials";
+import { exactWebOrigin, normalizedWebOrigin, releaseCredentials, selectorLookupScript } from "./credentials";
 import { INTERACTION_WORLD, WebProxyInteraction } from "./interaction";
 
 const documentSetup = `
@@ -76,6 +76,7 @@ export class WebProxyScript {
     private session,
     private hooks: {
       active: () => boolean;
+      canNavigate?: (url: string) => boolean;
       state: (status: string, message: string) => void;
       interaction: (interaction: WebProxyInteraction | null, ready: boolean) => void;
       frame: (frame) => void;
@@ -262,6 +263,8 @@ export class WebProxyScript {
         switch (step.command) {
           case "open":
             // Script URLs are validated as HTTP(S) before the runner starts.
+            if (this.hooks.canNavigate && !this.hooks.canNavigate(step.url))
+              throw new Error("页面地址不在此资产的访问白名单中");
             await this.contents.loadURL(step.url);
             break;
           case "sleep":
@@ -295,11 +298,35 @@ export class WebProxyScript {
   }
 }
 
-export function installWebProxyNavigationGuard(contents, blocked) {
+export function webProxyNavigationPolicy(targetUrl, allowedUrls: unknown = []) {
+  if (!Array.isArray(allowedUrls) || allowedUrls.length > 100) throw new Error("Website 访问白名单最多支持 100 个站点");
+  let origins: Set<string>;
+  try {
+    origins = new Set(allowedUrls.map(exactWebOrigin));
+  } catch {
+    throw new Error("Website 访问白名单请填写完整 HTTP/HTTPS 站点地址，不支持路径或通配符");
+  }
+  const restricted = origins.size > 0;
+  origins.add(normalizedWebOrigin(targetUrl));
+  return (url) => {
+    try {
+      const origin = normalizedWebOrigin(url);
+      return !restricted || origins.has(origin);
+    } catch {
+      return false;
+    }
+  };
+}
+
+export function installWebProxyNavigationGuard(contents, blocked, canNavigate?) {
   const guard = (event) => {
     if (!event.isMainFrame) return;
     try {
       normalizedWebOrigin(event.url);
+      if (canNavigate && !canNavigate(event.url)) {
+        event.preventDefault();
+        blocked("页面地址不在此资产的访问白名单中");
+      }
     } catch {
       event.preventDefault();
       blocked("页面跳转地址无效");

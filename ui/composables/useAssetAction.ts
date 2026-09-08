@@ -574,7 +574,8 @@ export const useAssetAction = () => {
             body.protocol,
             endpointUrl,
             successSelector,
-            String(assetDetail.spec_info?.interactive_selector || "").trim()
+            String(assetDetail.spec_info?.interactive_selector || "").trim(),
+            assetDetail.spec_info?.allowed_urls
           );
         }
         const payload = {

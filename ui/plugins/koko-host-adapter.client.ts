@@ -29,8 +29,15 @@ import { isDesktopRuntime } from "~/utils/runtime";
 
 export default defineNuxtPlugin((nuxtApp) => {
   const { createKokoTicket } = useWorkspaceConnectors();
-  const { canSplitWorkspace, markSessionConnected, markSessionFailed, setActiveSession, splitWorkspace, tabs } =
-    useWorkspaceTabs();
+  const {
+    canSplitWorkspace,
+    markSessionConnected,
+    markSessionDisconnected,
+    markSessionFailed,
+    setActiveSession,
+    splitWorkspace,
+    tabs
+  } = useWorkspaceTabs();
   const userInfoStore = useUserInfoStore();
   const { currentSite, currentUser, loggedIn } = storeToRefs(userInfoStore);
   const { codeFontSize, terminalCommandSuggestionsEnabled } = useSettingManager();
@@ -91,6 +98,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     getWindowOrigin: () => window.location.origin,
     isDesktopRuntime,
     markSessionConnected,
+    markSessionDisconnected,
     markSessionFailed: (tab: Pick<KokoWorkspaceTab, "id" | "assetId" | "protocol" | "account">) => {
       markSessionFailed({
         tabId: tab.id,

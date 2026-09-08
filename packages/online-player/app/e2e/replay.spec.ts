@@ -59,14 +59,20 @@ async function seedAuthenticatedUser(page: Page) {
 async function installReplayBackend(
   page: Page,
   replay: ReplayFixture,
-  extra?: { parts?: boolean; manifestSrc?: string; guacamoleDelayMs?: number; guacamoleBody?: string }
+  extra?: {
+    parts?: boolean;
+    manifestSrc?: string;
+    guacamoleDelayMs?: number;
+    guacamoleBody?: string;
+    castBody?: string;
+  }
 ) {
   await page.route("**/mock.cast", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/x-asciicast",
       headers: { "content-disposition": "attachment; filename=mock.cast" },
-      body: CAST_BODY
+      body: extra?.castBody || CAST_BODY
     })
   );
   await page.route("**/mock.cast.gz", (route) =>
@@ -409,6 +415,45 @@ test.describe("online session replay", () => {
     await page.getByRole("menuitem", { name: "2.0×" }).click();
     await expect(speed).toHaveText("2.0×");
     await expect(root).toBeVisible();
+  });
+
+  test("changes asciicast playback speed without remounting or resizing the player", async ({ page }) => {
+    const longCast = [
+      '{"version":2,"width":80,"height":24}',
+      ...Array.from({ length: 21 }, (_, index) => `[${index},"o","line ${index}\\r\\n"]`)
+    ].join("\n");
+    await installReplayBackend(
+      page,
+      {
+        type: "asciicast",
+        src: "/mock.cast",
+        user: "alice",
+        asset: "web-prod-01",
+        account: "root",
+        date_start: "2026-08-20T14:32:00.000Z"
+      },
+      { castBody: longCast }
+    );
+    await openReplay(page, "/replay/sid-asciicast-speed");
+
+    const root = page.locator("[data-asciicast-root]");
+    const speed = page.locator("[data-replay-speed]");
+    const player = root.locator(".ap-player");
+    await expect(player).toBeVisible();
+    await player.evaluate((element) => element.setAttribute("data-speed-instance", "original"));
+    const before = await player.boundingBox();
+
+    await speed.click();
+    await page.getByRole("menuitem", { name: "2.0×" }).click();
+    await expect(speed).toHaveText("2.0×");
+    await page.waitForTimeout(100);
+
+    const originalPlayer = root.locator('.ap-player[data-speed-instance="original"]');
+    await expect(originalPlayer).toBeVisible();
+    const after = await originalPlayer.boundingBox();
+    expect(before && after).toBeTruthy();
+    expect(after!.width).toBeCloseTo(before!.width, 1);
+    expect(after!.height).toBeCloseTo(before!.height, 1);
   });
 
   test("queues early guacamole command seeks and keeps play controls in sync", async ({ page }) => {

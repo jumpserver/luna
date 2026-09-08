@@ -8,10 +8,23 @@ const logoSrc = computed(() => "/logo.png");
 const isDefaultProduct = computed(() => isDefaultAppName(appName.value));
 const website = "https://jumpserver.org";
 
-const version = ref("");
+const productVersion = ref("");
 const licenseCompany = ref("");
+const isEnterpriseEdition = ref(false);
 const showCommunityLinks = ref(false);
+const isWebRuntime = computed(() => !isDesktopRuntime());
+const downloadCenterUrl = computed(() =>
+  import.meta.client ? withWebSitePrefix("/core/download/") : "/core/download/"
+);
 const { t } = useI18n();
+const productInfo = computed(() => [
+  {
+    label: t("Setting.Product"),
+    value: t(isEnterpriseEdition.value ? "Setting.EnterpriseEdition" : "Setting.CommunityEdition")
+  },
+  { label: t("Common.Version"), value: productVersion.value || "—" },
+  { label: t("Setting.LicenseCompany"), value: licenseCompany.value || "—" }
+]);
 const links = computed(() => [
   {
     label: "GitHub",
@@ -32,10 +45,6 @@ const links = computed(() => [
 
 onMounted(async () => {
   try {
-    version.value = await desktopApp.getVersion();
-  } catch {}
-
-  try {
     // 运行时读取 Electron productName，避免只依赖 VITE_APP_NAME 导致定制构建的 About 页面显示为空。
     const runtimeAppName = (await desktopApp.getName()).trim();
     if (runtimeAppName) {
@@ -46,7 +55,10 @@ onMounted(async () => {
   try {
     const settings = await getPublicSettings();
     const corporation = settings.XPACK_LICENSE_INFO?.corporation;
+    const interfaceVersion = settings.INTERFACE?.version;
+    isEnterpriseEdition.value = settings.XPACK_LICENSE_EDITION_ULTIMATE === true;
     showCommunityLinks.value = settings.XPACK_LICENSE_IS_VALID !== true;
+    if (typeof interfaceVersion === "string") productVersion.value = interfaceVersion.trim();
     if (settings.XPACK_LICENSE_IS_VALID === true && typeof corporation === "string") {
       licenseCompany.value = corporation.trim();
     }
@@ -70,39 +82,56 @@ const openLink = async (url: string) => {
 </script>
 
 <template>
-  <div class="flex min-h-[420px] items-center justify-center py-8">
-    <section class="flex w-full max-w-md flex-col items-center text-center">
-      <img :src="logoSrc" :alt="appName" class="size-20 rounded-2xl" />
+  <div class="flex min-h-[420px] items-center justify-center py-8 sm:py-12">
+    <section
+      class="w-full max-w-xl overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-card-bg)]"
+    >
+      <header class="flex items-center gap-4 px-5 py-6 sm:px-8">
+        <img :src="logoSrc" :alt="appName" class="size-14 shrink-0 rounded-xl sm:size-16" />
+        <div class="min-w-0">
+          <h2 class="truncate text-lg font-semibold tracking-[-0.02em] text-highlighted sm:text-xl">{{ appName }}</h2>
+          <p class="mt-1 text-xs leading-5 text-muted">{{ t("Setting.AboutDescription") }}</p>
+        </div>
+      </header>
 
-      <div class="mt-4 flex items-center gap-2">
-        <h2 class="text-xl font-semibold text-highlighted">{{ appName }}</h2>
-        <UBadge v-if="version" size="sm" color="primary" variant="soft">v{{ version }}</UBadge>
-      </div>
+      <div class="border-t border-[var(--app-border)]">
+        <dl class="divide-y divide-[var(--app-border)] px-5 sm:px-8">
+          <div
+            v-for="item in productInfo"
+            :key="item.label"
+            class="grid grid-cols-[7rem_minmax(0,1fr)] gap-4 py-3 text-sm"
+          >
+            <dt class="text-muted">{{ item.label }}</dt>
+            <dd class="min-w-0 break-words font-medium text-highlighted">{{ item.value }}</dd>
+          </div>
+          <div v-if="isWebRuntime" class="grid grid-cols-[7rem_minmax(0,1fr)] gap-4 py-3 text-sm">
+            <dt class="text-muted">{{ t("Setting.DownloadCenter") }}</dt>
+            <dd>
+              <ULink
+                :to="downloadCenterUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {{ t("Setting.DownloadCenter") }}
+                <UIcon name="i-lucide-arrow-up-right" class="size-3.5" />
+              </ULink>
+            </dd>
+          </div>
+        </dl>
 
-      <div
-        v-if="licenseCompany"
-        class="mt-5 inline-flex max-w-full items-center gap-2.5 rounded-lg border border-default bg-elevated/40 px-3 py-2 text-left"
-      >
-        <span class="grid size-8 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
-          <UIcon name="i-lucide-badge-check" class="size-4" />
-        </span>
-        <p class="min-w-0 break-words text-sm">
-          <span class="mr-2 text-xs text-muted">{{ t("Setting.LicensedTo") }}</span>
-          <span class="font-medium text-highlighted">{{ licenseCompany }}</span>
-        </p>
-      </div>
-
-      <div v-if="isDefaultProduct && showCommunityLinks" class="mt-4 flex flex-wrap items-center justify-center gap-1">
-        <UButton
-          v-for="link in links"
-          :key="link.to"
-          :label="link.label"
-          :icon="link.icon"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          @click="openLink(link.to)"
-        />
+        <div v-if="isDefaultProduct && showCommunityLinks" class="flex flex-wrap gap-1 px-4 py-3 sm:px-7">
+          <UButton
+            v-for="link in links"
+            :key="link.to"
+            :label="link.label"
+            :icon="link.icon"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            @click="openLink(link.to)"
+          />
+        </div>
       </div>
     </section>
   </div>

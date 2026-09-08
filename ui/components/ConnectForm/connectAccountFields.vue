@@ -143,7 +143,6 @@ const resolveSecretType = (credential: PersonalAssetCredential) => {
 
 const togglePersonalCredentialSave = () => {
   savePersonalCredential.value = !savePersonalCredential.value;
-  manualPassword.value = "";
   manualPasswordVisible.value = false;
 };
 

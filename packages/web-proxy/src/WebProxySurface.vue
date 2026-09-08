@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { WebProxySurfaceProps } from "./surface";
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRaw, watch } from "vue";
 
 interface WebProxyState {
   label: string;
@@ -8,6 +8,7 @@ interface WebProxyState {
   title: string;
   loading: boolean;
   error: string;
+  navigationError?: string;
   autofillPending: boolean;
   autofillStartedAt: number;
   autofillPreviewFrozen: boolean;
@@ -38,6 +39,7 @@ const contentRef = ref<HTMLElement>();
 const addressValue = ref("");
 const loading = ref(true);
 const error = ref("");
+const navigationError = ref("");
 const autofillStatus = ref<WebProxyAutofillState["status"]>();
 const autofillPending = ref(true);
 const autofillPreviewFrozen = ref(false);
@@ -219,6 +221,7 @@ function handleState(state: WebProxyState) {
   if (state.url) addressValue.value = state.url;
   loading.value = state.loading;
   error.value = state.error;
+  if (state.navigationError !== undefined) navigationError.value = state.navigationError;
   autofillPending.value = state.autofillPending;
   interactivePending.value = state.autofillPending && state.interactivePending === true;
   interactiveCanComplete.value = interactivePending.value && state.interactiveCanComplete === true;
@@ -407,6 +410,13 @@ function focus() {
 }
 
 watch([() => props.active, overlayOpen, error, verificationCollapsed], () => nextTick(syncView));
+watch([() => props.colorScheme, viewCreated], async ([colorScheme, created]) => {
+  if (!created) return;
+  // Also sync after creation in case the theme changed while its IPC was pending.
+  await desktopWebProxy.setColorScheme(viewLabel, colorScheme).catch((cause) => {
+    console.warn("Web Proxy color scheme sync failed", cause);
+  });
+});
 
 onMounted(async () => {
   if (!props.supported) {
@@ -480,6 +490,9 @@ onMounted(async () => {
       successSelector: request.value.successSelector,
       interactiveSelector: request.value.interactiveSelector,
       safeMode: safeMode.value,
+      colorScheme: props.colorScheme,
+      // Session props are reactive; Electron IPC cannot clone a Vue proxy array.
+      allowedUrls: toRaw(request.value.allowedUrls),
       applet: request.value.applet === true,
       ...viewBounds()
     });
@@ -582,6 +595,16 @@ defineExpose({ focus, close: closeView });
       </UTooltip>
     </div>
 
+    <UAlert
+      v-if="navigationError"
+      role="alert"
+      color="warning"
+      variant="subtle"
+      :description="navigationError"
+      :ui="{ root: 'rounded-none py-2', description: 'text-xs' }"
+      class="shrink-0"
+    />
+
     <div
       v-if="autofillPending && !error"
       class="flex min-h-10 shrink-0 items-center gap-2 border-b border-default bg-default px-3 text-xs text-muted"
@@ -623,18 +646,27 @@ defineExpose({ focus, close: closeView });
       />
       <div
         v-if="error || (autofillPending && !interactivePending && (autofillPreviewFrozen || !viewCreated))"
-        class="web-proxy-login-overlay absolute inset-0 grid place-items-center p-6 text-center"
+        class="web-proxy-login-overlay absolute inset-0 flex flex-col overflow-auto p-6 text-center"
         :aria-busy="autofillPending && !error"
       >
         <div
-          class="flex max-w-lg flex-col items-center gap-3 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-overlay)] px-6 py-5 text-sm text-[var(--app-fg)] shadow-[var(--theme-shadow-soft)]"
+          class="m-auto flex min-w-0 shrink-0 flex-col items-center justify-center gap-4 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-overlay)] text-sm text-[var(--app-fg)] shadow-[var(--theme-shadow-soft)]"
+          :class="error ? 'min-h-56 w-full max-w-2xl px-8 py-8' : 'max-w-lg px-6 py-5'"
         >
           <UIcon
             :name="error ? 'i-lucide-circle-alert' : 'i-lucide-loader-circle'"
             class="size-7 text-muted"
             :class="{ 'animate-spin motion-reduce:animate-none': !error }"
           />
-          <p :role="error ? 'alert' : 'status'" aria-live="polite">{{ error || autofillMessage }}</p>
+          <p v-if="error" class="text-base font-medium">连接失败</p>
+          <p
+            :role="error ? 'alert' : 'status'"
+            aria-live="polite"
+            class="max-h-[40vh] w-full overflow-auto whitespace-pre-wrap [overflow-wrap:anywhere]"
+            :class="error ? 'text-left leading-6' : ''"
+          >
+            {{ error || autofillMessage }}
+          </p>
           <p v-if="!error" class="text-xs text-muted">已等待 {{ waitingSeconds }} 秒</p>
           <p v-if="preview && !error" class="text-xs text-muted">安全登录期间显示页面预览</p>
           <div class="flex items-center gap-2">
