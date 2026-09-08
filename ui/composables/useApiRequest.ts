@@ -75,9 +75,10 @@ export interface CommandSnippetVariablePayload {
 
 export interface PublicSettings {
   XPACK_LICENSE_IS_VALID?: boolean;
+  XPACK_LICENSE_EDITION_ULTIMATE?: boolean;
   INTERFACE?: {
     login_title?: string;
-    favicon?: string;
+    version?: string;
   };
   XPACK_LICENSE_INFO?: {
     corporation?: unknown;
