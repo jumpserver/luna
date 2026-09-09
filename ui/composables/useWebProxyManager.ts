@@ -31,7 +31,7 @@ function normalizeTargetUrl(asset: AssetItem, protocol: string) {
   return url.toString();
 }
 
-function normalizeProxyUrl(endpointUrl: string) {
+function normalizeProxyUrl(endpointUrl: string, endpointPort?: number) {
   const env = import.meta.env as Record<string, string | undefined>;
   const configured = env.VITE_JMS_WEB_PROXY_URL?.trim();
   const url = configured
@@ -42,7 +42,7 @@ function normalizeProxyUrl(endpointUrl: string) {
 
   if (!configured && !import.meta.dev) {
     url.protocol = "http:";
-    url.port = env.VITE_JMS_WEB_PROXY_PORT?.trim() || "5001";
+    url.port = env.VITE_JMS_WEB_PROXY_PORT?.trim() || String(endpointPort || 5001);
     url.pathname = "/";
     url.search = "";
     url.hash = "";
@@ -60,12 +60,13 @@ export function useWebProxyManager() {
     endpointUrl: string,
     successSelector = "",
     interactiveSelector = "",
-    allowedUrls: string[] = []
+    allowedUrls: string[] = [],
+    endpointPort?: number
   ): WebProxyOpenRequest => ({
     assetId: asset.id,
     title: asset.name || new URL(normalizeTargetUrl(asset, protocol)).hostname,
     targetUrl: normalizeTargetUrl(asset, protocol),
-    proxyUrl: normalizeProxyUrl(endpointUrl),
+    proxyUrl: normalizeProxyUrl(endpointUrl, endpointPort),
     successSelector,
     interactiveSelector,
     allowedUrls,

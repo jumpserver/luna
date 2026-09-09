@@ -12,11 +12,25 @@ const asset = {
 describe("web proxy endpoint", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("uses the dedicated Koko Web Proxy port", () => {
-    const request = useWebProxyManager().buildWebProxyRequest(asset, "https", "http://koko.example.test:5050");
+  it("uses the Koko Web Proxy port from the endpoint", () => {
+    const request = useWebProxyManager().buildWebProxyRequest(
+      asset,
+      "https",
+      "http://koko.example.test:5001",
+      "",
+      "",
+      [],
+      15001
+    );
+
+    expect(request.proxyUrl).toBe("http://koko.example.test:15001");
+    expect(request.allowedUrls).toEqual([]);
+  });
+
+  it("falls back to port 5001 for older endpoints", () => {
+    const request = useWebProxyManager().buildWebProxyRequest(asset, "https", "http://koko.example.test");
 
     expect(request.proxyUrl).toBe("http://koko.example.test:5001");
-    expect(request.allowedUrls).toEqual([]);
   });
 
   it("passes only the asset navigation allowlist to its own session", () => {

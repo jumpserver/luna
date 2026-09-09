@@ -232,7 +232,7 @@ export const useAssetAction = () => {
     return new URL(targetPath, endpoint.origin).toString();
   };
 
-  const getEndpointUrl = (endpoint: Record<string, any>, protocol?: string) => {
+  const getEndpointUrl = (endpoint: Record<string, any>, protocol?: string, portField?: string) => {
     const endpointProtocol = (protocol || window.location.protocol.replace(":", "") || "http").replace(":", "");
     let siteUrl: URL | null = null;
     try {
@@ -244,9 +244,9 @@ export const useAssetAction = () => {
 
     const host = endpoint.host || siteUrl?.hostname || window.location.hostname;
     if (!host || host === "app") throw new Error("Smart endpoint did not provide a valid HTTP host");
-    let port = endpoint[`${endpointProtocol}_port`] ?? endpoint.port;
+    let port = endpoint[portField || `${endpointProtocol}_port`] ?? endpoint.port;
 
-    if ((endpointProtocol === "http" || endpointProtocol === "https") && port === 0) {
+    if (!portField && (endpointProtocol === "http" || endpointProtocol === "https") && port === 0) {
       port = siteUrl?.port || window.location.port;
     } else if (!endpoint.host && port == null && siteUrl?.protocol === `${endpointProtocol}:`) {
       port = siteUrl.port;
@@ -559,7 +559,20 @@ export const useAssetAction = () => {
         }
         syncPersonalCredentialFromToken(meta.assetId, serverBody, token, personalCredentialScope);
         const component = resolveBuiltinComponent(body);
-        let endpointUrl = await fetchSmartEndpointUrl(token, { component, type: "web" }, body, meta.orgId);
+        const isWebProxy = body.connect_method === WEB_PROXY_NATIVE_VALUE;
+        let webProxyEndpoint = isWebProxy
+          ? await getSmartEndpoint({ protocol: "web_proxy", assetId: body.asset, token: token.id }, meta.orgId)
+          : null;
+        if (webProxyEndpoint && webProxyEndpoint.web_proxy_port == null) {
+          webProxyEndpoint = await getSmartEndpoint(
+            { protocol: "http", assetId: body.asset, token: token.id },
+            meta.orgId
+          );
+        }
+        const webProxyPort = Number(webProxyEndpoint?.web_proxy_port) || 5001;
+        let endpointUrl = webProxyEndpoint
+          ? getEndpointUrl(webProxyEndpoint, "http", "web_proxy_port")
+          : await fetchSmartEndpointUrl(token, { component, type: "web" }, body, meta.orgId);
         if (component === "chen" && isElectronRuntime()) {
           endpointUrl = await desktopInvoke<string>("resolve_chen_endpoint", { endpointUrl });
         } else if (component === "koko" && isElectronRuntime()) {
@@ -576,7 +589,8 @@ export const useAssetAction = () => {
             endpointUrl,
             successSelector,
             String(assetDetail.spec_info?.interactive_selector || "").trim(),
-            assetDetail.spec_info?.allowed_urls
+            assetDetail.spec_info?.allowed_urls,
+            webProxyPort
           );
         }
         const payload = {

@@ -58,38 +58,43 @@
   height: var(--app-tree-toggle-icon-size);
 }
 
-.app-tree-branch,
-.app-tree-panel {
+.app-tree-branch {
   display: grid;
   overflow: hidden;
   transition: grid-template-rows 240ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.app-tree-branch {
   grid-template-rows: 0fr;
 }
 
 .app-tree-panel {
-  grid-template-rows: auto 0fr;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .app-tree-branch.is-open {
   grid-template-rows: 1fr;
 }
 
-.app-tree-panel.is-open {
-  grid-template-rows: auto 1fr;
-}
-
-.app-tree-branch__inner,
-.app-tree-panel__body {
+.app-tree-branch__inner {
   min-height: 0;
   overflow: hidden;
 }
 
+.app-tree-panel__body {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  clip-path: inset(0 0 100%);
+  transition: clip-path 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.app-tree-panel.is-open .app-tree-panel__body {
+  clip-path: inset(0);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .app-tree-branch,
-  .app-tree-panel {
+  .app-tree-panel__body {
     transition: none;
   }
 }
