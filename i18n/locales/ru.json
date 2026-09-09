@@ -1758,5 +1758,8 @@
     "estimatedCost": "Est. cost",
     "details": "Details",
     "hideDetails": "Hide details"
+  },
+  "Chen": {
+    "TerminatedByAdmin": "Администратор {name} прервал соединение"
   }
 }

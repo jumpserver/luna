@@ -1758,5 +1758,8 @@
     "estimatedCost": "見積コスト",
     "details": "詳細",
     "hideDetails": "詳細を隠す"
+  },
+  "Chen": {
+    "TerminatedByAdmin": "{name}管理者が接続を終了"
   }
 }

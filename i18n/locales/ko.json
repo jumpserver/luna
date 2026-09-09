@@ -1758,5 +1758,8 @@
     "estimatedCost": "Est. cost",
     "details": "Details",
     "hideDetails": "Hide details"
+  },
+  "Chen": {
+    "TerminatedByAdmin": "{name} 관리자 연결이 끊겼습니다"
   }
 }
