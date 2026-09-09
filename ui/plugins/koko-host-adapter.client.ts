@@ -1,9 +1,8 @@
 import type { KokoEndpoint, KokoHostAdapter, KokoPreparedSftpAsset, KokoSftpAsset, KokoWorkspaceTab } from "#koko/host";
 
 import { isLoopbackUrl } from "@jumpserver/connectors-core";
+import { HeaderOrganizationSelector, SideBarAssetTree } from "#components";
 import { configureKokoThemeAdapter, kokoHostAdapterKey } from "#koko/host";
-import OrganizationSelector from "~/components/Header/OrganizationSelector.vue";
-import SideBarAssetTree from "~/components/SideBar/assetTree.vue";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
 import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
 import {
@@ -137,7 +136,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       subscribeHistory: subscribeTerminalCommandHistory
     },
     sftp: {
-      organizationSelector: OrganizationSelector,
+      organizationSelector: HeaderOrganizationSelector,
       assetTree: SideBarAssetTree,
       currentOrganization: computed(() => {
         const org = currentUser.value?.org;
