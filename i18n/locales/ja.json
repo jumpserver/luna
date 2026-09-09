@@ -316,7 +316,7 @@
     "LunaAiTool_get_terminal_task": "タスクの進行状況を確認",
     "LunaAiTool_read_local_shell": "ローカルシェルを読み取る",
     "LunaAiTool_run_local_shell_command": "ローカルシェルコマンドを実行",
-    "LunaAiName": "Luna AI",
+    "LunaAiName": "AI アシスタント",
     "LunaAiAutomatic": "自動選択",
     "LunaAiWorkspaceOnly": "ワークスペースのみ",
     "LunaAiTarget": "操作対象",

@@ -316,7 +316,7 @@
     "LunaAiTool_get_terminal_task": "Проверить ход задачи",
     "LunaAiTool_read_local_shell": "Прочитать локальную оболочку",
     "LunaAiTool_run_local_shell_command": "Выполнить команду в локальной оболочке",
-    "LunaAiName": "Luna AI",
+    "LunaAiName": "ИИ-ассистент",
     "LunaAiAutomatic": "Автоматически",
     "LunaAiWorkspaceOnly": "Только рабочая область",
     "LunaAiTarget": "Цель задачи",

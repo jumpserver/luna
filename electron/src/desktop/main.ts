@@ -1288,7 +1288,17 @@ async function registerProtocols() {
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) app.quit();
 
-const pendingProtocolUrls: string[] = [];
+interface PendingProtocolUrl {
+  url: string;
+  quitAfterLaunch: boolean;
+}
+
+const pendingProtocolUrls: PendingProtocolUrl[] = [];
+let startupFinished = false;
+
+function findProtocolUrl(values: string[]) {
+  return values.find((value) => value.startsWith("jms://") || value.startsWith("jms2://"));
+}
 
 function describeProtocolUrl(rawUrl) {
   const value = String(rawUrl || "");
@@ -1298,35 +1308,58 @@ function describeProtocolUrl(rawUrl) {
   return "unknown";
 }
 
-function handleIncomingProtocolUrl(rawUrl) {
+async function processIncomingProtocolUrl(value: string) {
+  if (authService.handleCallback(value) || authService.isOAuthCallbackUrl(value)) return false;
+  await localApplicationLauncher.launch(value);
+  return true;
+}
+
+function queueProtocolUrl(url: string, quitAfterLaunch: boolean) {
+  if (pendingProtocolUrls.some((pending) => pending.url === url)) return;
+  pendingProtocolUrls.push({ url, quitAfterLaunch });
+}
+
+function handleIncomingProtocolUrl(rawUrl, quitAfterLaunch = false) {
   const value = String(rawUrl || "");
-  if (!value.startsWith("jms://") && !value.startsWith("jms2://")) return;
-  electronLog.info(`protocol ${describeProtocolUrl(value)}`);
-  if (!authService || !localApplicationLauncher) {
-    pendingProtocolUrls.push(value);
-    return;
+  const kind = describeProtocolUrl(value);
+  if (kind === "unknown") return kind;
+  electronLog.info(`protocol ${kind}`);
+  if (!startupFinished) {
+    queueProtocolUrl(value, quitAfterLaunch);
+    return kind;
   }
-  if (authService.handleCallback(value) || authService.isOAuthCallbackUrl(value)) return;
-  void localApplicationLauncher.launch(value).catch((error) => {
+  void processIncomingProtocolUrl(value).catch((error) => {
     electronLog.error("protocol launch failed", error);
   });
+  return kind;
 }
 
-function drainPendingProtocolUrls() {
-  for (const url of pendingProtocolUrls.splice(0)) handleIncomingProtocolUrl(url);
+async function drainPendingProtocolUrls() {
+  let shouldQuit = false;
+  while (pendingProtocolUrls.length) {
+    const pending = pendingProtocolUrls.shift()!;
+    try {
+      const didLaunch = await processIncomingProtocolUrl(pending.url);
+      shouldQuit ||= didLaunch && pending.quitAfterLaunch;
+    } catch (error) {
+      electronLog.error("protocol launch failed", error);
+    }
+  }
+  return shouldQuit;
 }
+
+const initialProtocolUrl = findProtocolUrl(process.argv);
+if (initialProtocolUrl) queueProtocolUrl(initialProtocolUrl, true);
 
 app.on("second-instance", (_event, commandLine) => {
-  const protocolUrl = commandLine.find((argument) => argument.startsWith("jms://") || argument.startsWith("jms2://"));
-  handleIncomingProtocolUrl(protocolUrl);
-  const win = createWindow("main");
-  if (win.isMinimized()) win.restore();
-  win.focus();
+  const protocolUrl = findProtocolUrl(commandLine);
+  const kind = handleIncomingProtocolUrl(protocolUrl);
+  if (kind !== "jms-launch" && kind !== "jms2-launch" && startupFinished) showMainWindow();
 });
 app.on("open-url", (event, url) => {
   event.preventDefault();
-  handleIncomingProtocolUrl(url);
-  createWindow("main").focus();
+  const kind = handleIncomingProtocolUrl(url, !startupFinished);
+  if (kind !== "jms-launch" && kind !== "jms2-launch" && startupFinished) showMainWindow();
 });
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
@@ -1334,9 +1367,12 @@ app.on("window-all-closed", () => {
 app.on("activate", () => createWindow("main"));
 
 for (const scheme of ["jms", "jms2"]) {
-  if (isDevelopment && process.argv[1])
-    app.setAsDefaultProtocolClient(scheme, process.execPath, [path.resolve(process.argv[1])]);
-  else app.setAsDefaultProtocolClient(scheme);
+  // Unpackaged protocol handlers only work on Windows. Registering Electron.app
+  // on macOS makes Launch Services open the generic "path-to-app" page instead.
+  if (process.defaultApp) {
+    if (process.platform === "win32" && process.argv[1])
+      app.setAsDefaultProtocolClient(scheme, process.execPath, [path.resolve(process.argv[1])]);
+  } else app.setAsDefaultProtocolClient(scheme);
 }
 
 app.whenReady().then(async () => {
@@ -1357,7 +1393,12 @@ app.whenReady().then(async () => {
   localApplicationLauncher = new LocalApplicationLauncher(app, projectRoot, applicationConfig, shell, !isDevelopment);
   authService = new DesktopAuthService(emitDesktopEvent);
   await authService.initialize();
-  drainPendingProtocolUrls();
+  const quitAfterProtocolLaunch = await drainPendingProtocolUrls();
+  if (quitAfterProtocolLaunch) {
+    app.quit();
+    return;
+  }
+  startupFinished = true;
   offlineRecordings = new OfflineRecordingStore(path.join(app.getPath("userData"), "offline-recordings"));
   await offlineRecordings.initialize();
   ffmpegPlugin = new FfmpegPluginManager(
