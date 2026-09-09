@@ -3,17 +3,27 @@ import type { AssetItem } from "~/types";
 import { describe, expect, it, vi } from "vitest";
 import {
   FAVORITE_FOLDER_NAME_MAX_LENGTH,
+  favoriteFolderSiblings,
   findFavoriteAssetFolderId,
   flattenFavoriteFolderTree,
   flattenVisibleFavoriteFolderTree,
   getFavoriteRootAssetCount,
+  hasFavoriteFolderName,
   isFavoriteFolderNameTooLong,
   restoreFavoriteFolderOpenState,
   sortFavoriteFoldersByName,
   updateFavoriteFolderAssetCount
 } from "~/composables/useFavoriteFolders";
+import { uniqueItemName } from "~/utils/itemName";
 
-vi.mock("~/composables/useApiRequest", () => ({}));
+vi.mock("~/composables/useApiRequest", () => ({
+  createFavoriteFolder: vi.fn(),
+  deleteFavoriteFolder: vi.fn(),
+  favoriteAssetToFolder: vi.fn(),
+  getFavoriteAssets: vi.fn(),
+  getFavoriteFolders: vi.fn(),
+  updateFavoriteFolder: vi.fn()
+}));
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: vi.fn() }));
 
 const asset = (id: string): AssetItem => ({
@@ -31,6 +41,46 @@ describe("favorite folder names", () => {
   it("limits folder names to the supported length", () => {
     expect(isFavoriteFolderNameTooLong("a".repeat(FAVORITE_FOLDER_NAME_MAX_LENGTH))).toBe(false);
     expect(isFavoriteFolderNameTooLong("a".repeat(FAVORITE_FOLDER_NAME_MAX_LENGTH + 1))).toBe(true);
+  });
+
+  it("allows a child to reuse an ancestor or uncle name", () => {
+    const folders = [
+      {
+        id: "alpha",
+        name: "New folder",
+        parent: null,
+        assets: [],
+        open: false,
+        children: []
+      },
+      {
+        id: "beta",
+        name: "Beta",
+        parent: null,
+        assets: [],
+        open: false,
+        children: [
+          {
+            id: "beta-child",
+            name: "Child",
+            parent: "beta",
+            assets: [],
+            open: false,
+            children: []
+          }
+        ]
+      }
+    ] satisfies FavoriteFolder[];
+
+    expect(uniqueItemName(favoriteFolderSiblings(folders, "beta"), "New folder")).toBe("New folder");
+    expect(uniqueItemName(favoriteFolderSiblings(folders, "beta"), "Beta")).toBe("Beta");
+    expect(uniqueItemName(favoriteFolderSiblings(folders, null), "New folder")).toBe("New folder 2");
+    expect(uniqueItemName(favoriteFolderSiblings(folders, "beta"), "Child")).toBe("Child 2");
+    expect(hasFavoriteFolderName(folders, "New folder", "beta")).toBe(false);
+    expect(hasFavoriteFolderName(folders, "Beta", "beta")).toBe(false);
+    expect(hasFavoriteFolderName(folders, "Child", "beta", "beta-child")).toBe(false);
+    expect(hasFavoriteFolderName(folders, "Child", "beta")).toBe(true);
+    expect(hasFavoriteFolderName(folders, "New folder", null)).toBe(true);
   });
 });
 

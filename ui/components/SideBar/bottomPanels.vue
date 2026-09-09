@@ -3,7 +3,12 @@ import type { DropdownMenuItem } from "@nuxt/ui";
 import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
 import type { Snippet } from "~/composables/useSnippets";
 import type { AssetItem } from "~/types";
-import { getFavoriteRootAssetCount, isFavoriteFolderNameTooLong } from "~/composables/useFavoriteFolders";
+import {
+  FAVORITE_FOLDER_DUPLICATE_NAME,
+  getFavoriteRootAssetCount,
+  isFavoriteFolderDuplicateNameError,
+  isFavoriteFolderNameTooLong
+} from "~/composables/useFavoriteFolders";
 import { writeClipboardText } from "~/utils/clipboard";
 
 const props = defineProps<{
@@ -96,11 +101,6 @@ const folderHasClosedBranch = (folder: FavoriteFolder): boolean => {
   return folder.children.some((child) => folderHasClosedBranch(child));
 };
 
-const folderHasOpenBranch = (folder: FavoriteFolder): boolean => {
-  if (folder.open) return true;
-  return folder.children.some((child) => folderHasOpenBranch(child));
-};
-
 const expandFolderRecursive = (folder: FavoriteFolder) => {
   folder.open = true;
   for (const child of folder.children) {
@@ -191,11 +191,20 @@ const finishRenameFolder = async (folder: FavoriteFolder) => {
     await renameFolder(folder.id, name);
     cancelRenameFolder();
   } catch (error) {
-    addErrorToast({
-      title: t("Favorite.RenameFailed"),
-      error,
-      icon: "i-lucide-circle-alert"
-    });
+    if (isFavoriteFolderDuplicateNameError(error)) {
+      toast.add({
+        id: FAVORITE_FOLDER_DUPLICATE_NAME,
+        title: t("Favorite.DuplicateName"),
+        color: "error",
+        icon: "i-lucide-circle-alert"
+      });
+    } else {
+      addErrorToast({
+        title: t("Favorite.RenameFailed"),
+        error,
+        icon: "i-lucide-circle-alert"
+      });
+    }
   } finally {
     renaming.value = false;
   }
@@ -404,7 +413,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
   const canExpand = !!folder && !folder.open;
   const canCollapse = !!folder?.open;
   const canExpandAll = !!folder && folderHasClosedBranch(folder);
-  const canCollapseAll = !!folder && folderHasOpenBranch(folder);
+  const canCollapseAll = canCollapse;
 
   return [
     ...(canExpand

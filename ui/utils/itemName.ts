@@ -10,3 +10,12 @@ export function hasItemName(items: Array<{ id: string; name: string }>, name: st
   if (!normalized) return false;
   return items.some((item) => item.id !== excludeId && normalizeItemName(item.name) === normalized);
 }
+
+export function uniqueItemName(items: Array<{ id: string; name: string }>, name: string, excludeId?: string) {
+  const base = name.trim();
+  if (!base || !hasItemName(items, base, excludeId)) return base;
+  for (let n = 2; ; n += 1) {
+    const candidate = `${base} ${n}`;
+    if (!hasItemName(items, candidate, excludeId)) return candidate;
+  }
+}
