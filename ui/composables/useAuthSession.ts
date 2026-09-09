@@ -2,7 +2,7 @@ import type { PublicSettings } from "~/composables/useApiRequest";
 import type { CurrentOrg, PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/types";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { resolveOrganizationSelection } from "~/utils/organization";
+import { recordedOrganizationForBootstrap, resolveOrganizationSelection } from "~/utils/organization";
 import {
   COMMUNITY_WORKSPACE_BRAND,
   resolveWorkspaceBrand,
@@ -133,7 +133,10 @@ export const useAuthSession = () => {
     const availableOrgs = initSelectOrganization(permissionOrgData);
     const selectedOrg = resolveOrganizationSelection(
       availableOrgs,
-      currentOrgData && typeof currentOrgData === "object" ? currentOrgData : null
+      recordedOrganizationForBootstrap(
+        existingUser?.org,
+        currentOrgData && typeof currentOrgData === "object" ? currentOrgData : null
+      )
     );
     const currentOrg: CurrentOrg | null = selectedOrg ? { ...selectedOrg, comment: selectedOrg.comment || "" } : null;
 
