@@ -205,6 +205,13 @@ describe("sftp selection bar and peer transfer", () => {
     expect(transferCoordinatorComposable).not.toContain("clearTransferredSelection(");
   });
 
+  it("resolves local destinations from the local pane instead of unix root", () => {
+    expect(transferCoordinatorComposable).toContain("resolveLocalFsDestinationPath");
+    expect(transferCoordinatorComposable).toContain("function localDestinationPath");
+    expect(transferCoordinatorComposable).toContain("await host.localFiles.homeDir()");
+    expect(transferCoordinatorComposable).toContain("await localDestinationPath(payload.destinationPath)");
+  });
+
   it("routes global local transfers through the transfer center queue like session sftp", () => {
     expect(transferCoordinatorComposable).toContain("Always prefer Transfer Center queue");
     expect(transferCoordinatorComposable).toContain("queueSftpTransferToSelected(payload, destination)");
@@ -306,7 +313,10 @@ describe("sftp right-panel compact mode", () => {
     expect(transferCoordinatorComposable).toContain("browserDownloadEndpoint ??=");
     expect(transferCoordinatorComposable).toContain("localDownloadsEndpoint ??=");
     expect(transferCoordinatorComposable).toContain('"keep_both" as const');
-    expect(localTransferEndpointComposable).toContain("Local transfer size mismatch");
+    expect(localTransferEndpointComposable).toMatch(
+      /if \(info\.size > input\.size\) throw new Error\("Local transfer size mismatch"\);\s*return \{\s*transferId: input\.transferId,\s*committedBytes: info\.size/
+    );
+    expect(localTransferEndpointComposable).not.toContain("Always restart local partials from zero");
     expect(localTransferEndpointComposable).toContain("writeFile(partial, input.data, { offset: input.offset })");
     expect(localTransferEndpointComposable).toContain("keepBothPath");
     expect(localTransferEndpointComposable).toContain("localFiles.rename(partial, destination)");
