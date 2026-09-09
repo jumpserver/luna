@@ -1,6 +1,6 @@
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
-import { isLoopbackUrl } from "@jumpserver/connectors-core";
+import { alignEndpointUrlWithPage, isLoopbackUrl } from "@jumpserver/connectors-core";
 
 import { getAssetDetailRequest, invalidatePersonalAssetCredentialCache } from "~/composables/useApiRequest";
 import {
@@ -271,7 +271,7 @@ export const useAssetAction = () => {
       return window.location.origin;
     }
 
-    return endpointUrl;
+    return alignEndpointUrlWithPage(endpointUrl, window.location.origin, isDesktopRuntime());
   };
 
   const resolveWebEndpointProtocol = (

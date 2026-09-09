@@ -18,6 +18,21 @@ export function isLoopbackUrl(value: string) {
   }
 }
 
+export function alignEndpointUrlWithPage(endpointUrl: string, pageOrigin: string, isDesktop: boolean) {
+  if (isDesktop) return endpointUrl;
+  try {
+    const endpoint = new URL(endpointUrl);
+    const page = new URL(pageOrigin);
+    if (page.protocol !== "https:" || endpoint.protocol !== "http:") return endpointUrl;
+    if (endpoint.hostname === page.hostname) return page.origin;
+    endpoint.protocol = "https:";
+    if (endpoint.port === "80") endpoint.port = "";
+    return endpoint.origin;
+  } catch {
+    return endpointUrl;
+  }
+}
+
 export function resolveWsUrl(component: JmsComponent, wsRoute: string, ctx: ConnectorSessionContext) {
   const params = buildWsQueryParams({
     token: ctx.tokenId,

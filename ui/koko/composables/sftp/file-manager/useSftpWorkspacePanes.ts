@@ -9,7 +9,7 @@ import type {
   SftpWorkspaceSide
 } from "./workspaceTypes";
 
-import { connectorSessionKey } from "@jumpserver/connectors-core";
+import { alignEndpointUrlWithPage, connectorSessionKey } from "@jumpserver/connectors-core";
 import { computed, inject, reactive, ref, toValue, unref, watch } from "vue";
 import { useKokoHostAdapter } from "#koko/host";
 import { assetSupportsSftp, defaultGlobalLeftPaneId, rememberSftpConnection } from "./selectors";
@@ -101,13 +101,18 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     if (!resolved) throw new Error(options.translate("koko.fileManagement.endpointUnavailable"));
 
     let endpointUrl = resolved;
+    const hostOrigin = hostAdapter.getWindowOrigin();
     if (!isDesktopRuntime) {
-      const resolvedUrl = new URL(resolved);
-      const isLoopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(resolvedUrl.hostname);
-      const hostOrigin = hostAdapter.getWindowOrigin();
-      const samePort = (resolvedUrl.port || "") === new URL(hostOrigin).port;
-      endpointUrl = isLoopback && !samePort ? hostOrigin : resolved;
+      try {
+        const resolvedUrl = new URL(resolved);
+        const isLoopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(resolvedUrl.hostname);
+        const samePort = (resolvedUrl.port || "") === new URL(hostOrigin).port;
+        endpointUrl = isLoopback && !samePort ? hostOrigin : resolved;
+      } catch {
+        endpointUrl = resolved;
+      }
     }
+    endpointUrl = alignEndpointUrlWithPage(endpointUrl, hostOrigin, isDesktopRuntime);
 
     let ticket = "";
     try {
