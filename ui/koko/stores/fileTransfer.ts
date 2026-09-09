@@ -22,7 +22,13 @@ function isEndpointUnavailableError(error?: string) {
 }
 
 function taskId() {
-  return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  return `t${Date.now()}`;
 }
 
 export const useFileTransferStore = defineStore("file-transfer", () => {
