@@ -64,24 +64,37 @@ export function parseChenCsv(source: string): ChenParsedCsv {
   while (records.length > 1 && records.at(-1)?.every((cell) => cell === "")) records.pop();
 
   const headers = (records.shift() || []).map((header) => header.trim());
-  if (!headers.length || headers.every((header) => !header)) throw new Error("CSV header row is empty");
-  if (headers.some((header) => !header)) throw new Error("CSV contains an empty column header");
+  const rows = records.filter((row) => row.some((cell) => cell !== ""));
+  const parsed = dropHistoricalTrailingEmptyColumn(headers, rows);
+  if (!parsed.headers.length || parsed.headers.every((header) => !header)) throw new Error("CSV header row is empty");
+  if (parsed.headers.some((header) => !header)) throw new Error("CSV contains an empty column header");
 
   const seen = new Set<string>();
-  for (const header of headers) {
+  for (const header of parsed.headers) {
     const key = header.toLocaleLowerCase();
     if (seen.has(key)) throw new Error(`CSV column “${header}” is duplicated`);
     seen.add(key);
   }
 
-  const rows = records.filter((row) => row.some((cell) => cell !== ""));
-  rows.forEach((row, index) => {
-    if (row.length !== headers.length) {
-      throw new Error(`CSV row ${index + 2} has ${row.length} values; expected ${headers.length}`);
+  parsed.rows.forEach((row, index) => {
+    if (row.length !== parsed.headers.length) {
+      throw new Error(`CSV row ${index + 2} has ${row.length} values; expected ${parsed.headers.length}`);
     }
   });
-  if (!rows.length) throw new Error("CSV contains no data rows");
-  return { headers, rows };
+  if (!parsed.rows.length) throw new Error("CSV contains no data rows");
+  return parsed;
+}
+
+function dropHistoricalTrailingEmptyColumn(headers: string[], rows: string[][]): ChenParsedCsv {
+  if (!headers.length || headers.at(-1)) return { headers, rows };
+  const index = headers.length - 1;
+  if (rows.some((row) => (row[index] ?? "") !== "")) {
+    throw new Error("CSV contains an empty column header");
+  }
+  return {
+    headers: headers.slice(0, -1),
+    rows: rows.map((row) => (row.length > index ? row.slice(0, -1) : row))
+  };
 }
 
 export function mapChenCsvRows(
