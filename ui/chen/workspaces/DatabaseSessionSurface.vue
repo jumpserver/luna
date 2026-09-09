@@ -2112,7 +2112,13 @@ defineExpose({ focus });
       v-else
       :icon="startupErrorMessage ? 'i-lucide-circle-alert' : 'i-lucide-database'"
       :loading="!startupErrorMessage"
-      :title="startupErrorMessage ? (adminTerminated ? startupErrorMessage : 'Unable to open database workspace') : 'Opening database workspace'"
+      :title="
+        startupErrorMessage
+          ? adminTerminated
+            ? startupErrorMessage
+            : 'Unable to open database workspace'
+          : 'Opening database workspace'
+      "
       :message="adminTerminated ? '' : startupErrorMessage || startupMessage"
       :action-label="startupErrorMessage && !adminTerminated ? 'Retry' : undefined"
       @action="emit('reconnect')"

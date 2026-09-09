@@ -1,5 +1,6 @@
 import type { PermOrgItem } from "~/types";
 import { describe, expect, it, vi } from "vitest";
+import { syncSessionWindowOrganization } from "./useSessionWindowConnect";
 
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: vi.fn() }));
 vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke: vi.fn(), desktopOs: {} }));
@@ -8,8 +9,6 @@ vi.mock("~/utils/connection", () => ({
   hasReusableSavedConnection: vi.fn(),
   isSavedConnectionAvailable: vi.fn()
 }));
-
-import { syncSessionWindowOrganization } from "./useSessionWindowConnect";
 
 const organization = (id: string): PermOrgItem => ({
   id,
