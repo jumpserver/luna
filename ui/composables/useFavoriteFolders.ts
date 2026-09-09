@@ -164,7 +164,11 @@ export const useFavoriteFolders = () => {
   const pendingReload = useState<boolean>("favorite-folders-pending-reload", () => false);
 
   const load = async () => {
-    if (!loggedIn.value || loading.value) return;
+    if (!loggedIn.value) return;
+    if (loading.value) {
+      pendingReload.value = true;
+      return;
+    }
     loading.value = true;
     const requestId = nextRequestId.value + 1;
     const requestVersion = stateVersion.value;

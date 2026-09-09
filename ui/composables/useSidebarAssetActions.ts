@@ -392,13 +392,9 @@ export function useSidebarAssetActions() {
     if (!open) renameAsset.value = null;
   };
 
-  const toggleAssetFavorite = (asset: AssetItem, favorite: boolean) => {
-    if (favorite) {
-      handleAssetFavorite(asset.id);
-    } else {
-      handleAssetUnfavorite(asset.id);
-    }
-
+  const toggleAssetFavorite = async (asset: AssetItem, favorite: boolean) => {
+    const succeeded = favorite ? await handleAssetFavorite(asset.id) : await handleAssetUnfavorite(asset.id);
+    if (!succeeded) return;
     useEventBus().emit("favoriteChanged", { assetId: asset.id, favorite });
   };
 
@@ -504,7 +500,7 @@ export function useSidebarAssetActions() {
               icon: "lucide:star-off",
               onSelect: () => {
                 contextMenuVisible.value = false;
-                toggleAssetFavorite(asset, false);
+                void toggleAssetFavorite(asset, false);
               }
             } satisfies DropdownMenuItem
           ]
