@@ -471,6 +471,11 @@ describe("sftp professional workbench", () => {
     expect(remotePaneToolbar).toContain("toolbarWidth.value < 720");
     expect(remotePaneToolbar).toContain('data-sftp-tour="navigation"');
     expect(remotePaneToolbar).toContain('data-sftp-tour="file-actions"');
+    expect(localPaneToolbar).toContain("showHiddenFiles");
+    expect(remotePaneToolbar).not.toContain("showHiddenFiles");
+    expect(fileManagementPane).not.toContain("show-hidden-files-toggle");
+    expect(globalWorkspaceComponent).not.toContain("show-hidden-files-toggle");
+    expect(sessionWorkspaceComponent).not.toContain("show-hidden-files-toggle");
     expect(remotePaneToolbar).not.toContain("sftp-file-management__actionbar");
     expect(localPaneToolbar).toContain("sftp-file-management__toolbar--unified");
     expect(localPaneToolbar).toContain("beginPathEdit");

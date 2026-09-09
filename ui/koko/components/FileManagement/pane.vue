@@ -84,7 +84,7 @@ const search = ref("");
 const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextEntry = ref<SftpFileEntry | null>(null);
-const { showHiddenFiles, filterHiddenEntries } = useSftpShowHiddenFiles();
+const { filterHiddenEntries } = useSftpShowHiddenFiles();
 const visibleEntries = computed(() => {
   const query = search.value.toLowerCase();
   return filterHiddenEntries(manager.entries.value)
@@ -457,7 +457,6 @@ defineExpose({
     <SftpRemotePaneToolbar
       ref="toolbarRef"
       v-model:search="search"
-      v-model:show-hidden-files="showHiddenFiles"
       :manager="manager"
       :title="title"
       :context-label="contextLabel"

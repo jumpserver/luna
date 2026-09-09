@@ -303,10 +303,6 @@ async function selectToolbarAction(page: Page, label: string) {
   await page.getByRole("menuitem", { name: label }).click();
 }
 
-async function showHiddenFiles(page: Page) {
-  await selectToolbarAction(page, "Show hidden files");
-}
-
 async function connectRemoteSftp(page: Page) {
   await openSftpWorkbench(page);
   await page.getByRole("button", { name: "Connect remote SFTP" }).click();
@@ -356,8 +352,6 @@ test.describe("koko SFTP workbench", () => {
     expect(server.websocketUrls[0]).toContain("/koko/ws/sftp/?token=sftp-token&ticket=sftp-ticket");
 
     await expect(table.getByText(".env", { exact: true })).toHaveCount(0);
-    await showHiddenFiles(page);
-    await expect(table.getByText(".env", { exact: true })).toBeVisible();
 
     await table.getByRole("button", { name: "docs" }).dblclick();
     await expect(page.getByRole("navigation", { name: "/home/tester/docs" })).toBeVisible();

@@ -26,7 +26,6 @@ const emit = defineEmits<{
 }>();
 
 const search = defineModel<string>("search", { required: true });
-const showHiddenFiles = defineModel<boolean>("showHiddenFiles", { default: false });
 
 const { t } = useI18n();
 const uploadInput = shallowRef<HTMLInputElement | null>(null);
@@ -85,15 +84,6 @@ const overflowMenuItems = computed<DropdownMenuItem[][]>(() => {
     }
   ];
   const fileItems: DropdownMenuItem[] = [
-    {
-      label: showHiddenFiles.value
-        ? t("koko.fileManagement.hideHiddenFiles")
-        : t("koko.fileManagement.showHiddenFiles"),
-      icon: showHiddenFiles.value ? "i-lucide-eye" : "i-lucide-eye-off",
-      onSelect: () => {
-        showHiddenFiles.value = !showHiddenFiles.value;
-      }
-    },
     {
       label: t("koko.fileManagement.newFolder"),
       icon: "i-lucide-folder-plus",
@@ -456,23 +446,8 @@ defineExpose({
 
       <div class="mx-0.5 h-4 w-px shrink-0 bg-(--app-border)" aria-hidden="true" />
 
-      <!-- File operations: hidden / create / upload -->
+      <!-- File operations: create / upload -->
       <div data-sftp-tour="file-actions" class="flex shrink-0 items-center gap-0.5">
-        <UTooltip
-          :text="showHiddenFiles ? t('koko.fileManagement.hideHiddenFiles') : t('koko.fileManagement.showHiddenFiles')"
-        >
-          <UButton
-            :icon="showHiddenFiles ? 'i-lucide-eye' : 'i-lucide-eye-off'"
-            color="neutral"
-            :variant="showHiddenFiles ? 'soft' : 'ghost'"
-            size="sm"
-            square
-            :aria-label="
-              showHiddenFiles ? t('koko.fileManagement.hideHiddenFiles') : t('koko.fileManagement.showHiddenFiles')
-            "
-            @click="void (showHiddenFiles = !showHiddenFiles)"
-          />
-        </UTooltip>
         <UTooltip :text="t('koko.fileManagement.newFolder')">
           <UButton
             icon="i-lucide-folder-plus"
