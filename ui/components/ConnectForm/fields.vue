@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import type { ConnectionFormDraft } from "~/composables/useConnectionFormState";
+import type { ConnectMethod } from "~/composables/useConnectMethods";
 import type { AssetItem, AssetPageType, PersonalAssetCredential } from "~/types";
 
 import ConnectForm from "~/components/ConnectForm/connectForm.vue";
+import { getPublicSettings, getSessionOnlineNum } from "~/composables/useApiRequest";
+import { useConnectMethods } from "~/composables/useConnectMethods";
+import { resolveOnlineSessionAccount } from "./onlineSession";
 
 const props = withDefaults(
   defineProps<{
@@ -33,6 +37,18 @@ const draft = defineModel<ConnectionFormDraft>("draft", { required: true });
 
 const { t } = useI18n();
 const { modernIsland } = useSettingManager();
+const { getMethodsForProtocol } = useConnectMethods();
+const protocolMethods = shallowRef<ConnectMethod[]>([]);
+const viewAssetOnlineSessionInfo = ref(false);
+const onlineNum = ref<number | null>(null);
+let onlineFetchGeneration = 0;
+const showOnlineNum = computed(
+  () => viewAssetOnlineSessionInfo.value && draft.value.protocol.trim().toLowerCase() === "rdp"
+);
+const submitLabel = computed(() => {
+  if (!showOnlineNum.value) return props.submitLabel;
+  return `${props.submitLabel} (${t("EditModal.CurrentOnline", { count: onlineNum.value ?? "-" })})`;
+});
 const manualCredentialReady = computed(() => {
   const isManual = draft.value.account === "@INPUT" || draft.value.account === t("Account.ManualInput");
   if (!isManual) return true;
@@ -40,12 +56,76 @@ const manualCredentialReady = computed(() => {
   if (draft.value.personalCredentialId && draft.value.personalCredentialVersion === undefined) return false;
   return !!draft.value.manualUsername.trim() && !!draft.value.manualPassword;
 });
+const methodDisabled = computed(() =>
+  protocolMethods.value.some((method) => method.value === draft.value.connectMethod && method.disabled)
+);
 const submitDisabled = computed(
-  () => props.disabled || !props.asset.permedAccounts?.length || !manualCredentialReady.value
+  () => props.disabled || !props.asset.permedAccounts?.length || !manualCredentialReady.value || methodDisabled.value
 );
 const submit = () => {
   if (!submitDisabled.value) emit("submit");
 };
+
+watch(
+  () => draft.value.protocol,
+  async (protocol) => {
+    if (!protocol) {
+      protocolMethods.value = [];
+      return;
+    }
+    try {
+      protocolMethods.value = await getMethodsForProtocol(protocol);
+    } catch {
+      protocolMethods.value = [];
+    }
+  },
+  { immediate: true }
+);
+
+onMounted(async () => {
+  try {
+    const settings = await getPublicSettings();
+    viewAssetOnlineSessionInfo.value = settings.VIEW_ASSET_ONLINE_SESSION_INFO === true;
+  } catch {
+    viewAssetOnlineSessionInfo.value = false;
+  }
+});
+
+watchDebounced(
+  () => ({
+    enabled: viewAssetOnlineSessionInfo.value,
+    protocol: draft.value.protocol,
+    account: draft.value.account,
+    manualUsername: draft.value.manualUsername,
+    personalCredentialUsername: props.personalCredentials.find(
+      (credential) => credential.id === draft.value.personalCredentialId
+    )?.username,
+    assetId: props.asset.id
+  }),
+  async (query) => {
+    const account = resolveOnlineSessionAccount({
+      enabled: query.enabled,
+      protocol: query.protocol,
+      accounts: props.asset.permedAccounts || [],
+      selectedAccount: query.account,
+      manualUsername: query.manualUsername,
+      personalCredentialUsername: query.personalCredentialUsername,
+      manualInputLabel: t("Account.ManualInput")
+    });
+    const generation = ++onlineFetchGeneration;
+    onlineNum.value = null;
+    if (!import.meta.client || !account || !query.assetId) return;
+    try {
+      const data = await getSessionOnlineNum(query.assetId, account);
+      if (generation !== onlineFetchGeneration) return;
+      onlineNum.value = typeof data.count === "number" ? data.count : null;
+    } catch {
+      if (generation !== onlineFetchGeneration) return;
+      onlineNum.value = null;
+    }
+  },
+  { debounce: 500, immediate: true }
+);
 </script>
 
 <template>
@@ -81,8 +161,11 @@ const submit = () => {
         :ui="{ description: 'text-xs leading-5' }"
       />
     </div>
+    <p v-if="methodDisabled" class="mt-4 text-xs text-[var(--app-muted)]">
+      {{ t("ConnectError.MethodDisabled") }}
+    </p>
     <UButton
-      :label="props.submitLabel"
+      :label="submitLabel"
       :loading="props.submitting"
       :disabled="submitDisabled"
       :size="modernIsland ? 'md' : 'lg'"
