@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 
 import {
-  SFTP_PATH_NOT_FOUND_ERROR,
   SftpCommand,
   SftpControlData,
   SftpDataStatus,
@@ -197,8 +196,7 @@ describe("sFTP browser protocol", () => {
       type: SftpMessageType.Data,
       cmd: SftpCommand.List,
       data: JSON.stringify([]),
-      err: "file does not exist",
-      error_code: SFTP_PATH_NOT_FOUND_ERROR
+      err: "file does not exist"
     });
 
     await expect(list).rejects.toBeInstanceOf(SftpPathNotFoundError);

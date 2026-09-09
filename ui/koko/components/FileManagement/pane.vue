@@ -73,7 +73,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { addErrorToast } = useErrorToast();
+const toast = useToast();
 const manager = useSftpFileManager(
   computed(() => props.context),
   props.transferEndpoint
@@ -212,7 +212,7 @@ function navigateToPath(segmentIndex: number): void {
 async function goToAbsolutePath(path: string): Promise<void> {
   const normalized = path.replace(/\/+/g, "/").replace(/\/$/, "") || "/";
   if (normalized === manager.currentPath.value || (await manager.loadCurrentDirectory(normalized))) return;
-  addErrorToast({ title: manager.error.value });
+  toast.add({ title: manager.error.value, color: "error" });
 }
 
 const toolbarRef = ref<{ focusPathEdit?: () => void; focusSearch?: () => void } | null>(null);

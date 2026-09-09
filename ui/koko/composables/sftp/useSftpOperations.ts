@@ -200,7 +200,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     if (!pending) return;
     pendingLists.delete(message.id);
     clearTimeout(pending.timeout);
-    if (message.error_code === SFTP_PATH_NOT_FOUND_ERROR) {
+    if (message.error_code === SFTP_PATH_NOT_FOUND_ERROR || message.err === "file does not exist") {
       pending.reject(new SftpPathNotFoundError());
       return;
     }

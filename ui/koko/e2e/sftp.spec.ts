@@ -383,6 +383,7 @@ test.describe("koko SFTP workbench", () => {
     await pathInput.press("Enter");
 
     await expect(page.getByText("Path does not exist", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Copy" })).toHaveCount(0);
     await expect(table.getByText("release.txt", { exact: true })).toBeVisible();
     await expect(page.getByRole("navigation", { name: "/home/tester" })).toBeVisible();
     expect(server.websocketUrls).toHaveLength(1);
