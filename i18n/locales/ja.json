@@ -1401,6 +1401,7 @@
       "entryDownloaded": "{name} をダウンロードしました",
       "operationFailed": "ファイル操作に失敗しました",
       "refreshFailed": "ファイル一覧を更新できませんでした",
+      "pathNotFound": "パスが存在しません",
       "remoteSftp": "リモート SFTP",
       "localSftp": "SFTP",
       "connectRemoteSftp": "リモート SFTP に接続",

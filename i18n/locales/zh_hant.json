@@ -1401,6 +1401,7 @@
       "entryDownloaded": "已下載 {name}",
       "operationFailed": "檔案操作失敗",
       "refreshFailed": "檔案列表重新整理失敗",
+      "pathNotFound": "路徑不存在",
       "remoteSftp": "遠端 SFTP",
       "localSftp": "SFTP",
       "connectRemoteSftp": "連線遠端 SFTP",

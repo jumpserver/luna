@@ -1401,6 +1401,7 @@
       "entryDownloaded": "{name} descargado",
       "operationFailed": "Error en la operación de archivo",
       "refreshFailed": "Error al actualizar la lista de archivos",
+      "pathNotFound": "La ruta no existe",
       "remoteSftp": "SFTP remoto",
       "localSftp": "SFTP",
       "connectRemoteSftp": "Conectar SFTP remoto",

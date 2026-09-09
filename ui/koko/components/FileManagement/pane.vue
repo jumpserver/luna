@@ -73,6 +73,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const { addErrorToast } = useErrorToast();
 const manager = useSftpFileManager(
   computed(() => props.context),
   props.transferEndpoint
@@ -208,9 +209,10 @@ function navigateToPath(segmentIndex: number): void {
   if (path !== manager.currentPath.value) void manager.loadCurrentDirectory(path);
 }
 
-function goToAbsolutePath(path: string): void {
+async function goToAbsolutePath(path: string): Promise<void> {
   const normalized = path.replace(/\/+/g, "/").replace(/\/$/, "") || "/";
-  if (normalized !== manager.currentPath.value) void manager.loadCurrentDirectory(normalized);
+  if (normalized === manager.currentPath.value || (await manager.loadCurrentDirectory(normalized))) return;
+  addErrorToast({ title: manager.error.value });
 }
 
 const toolbarRef = ref<{ focusPathEdit?: () => void; focusSearch?: () => void } | null>(null);
@@ -397,8 +399,8 @@ watch(manager.currentPath, () => {
   hideContextMenu();
   clearSelection();
 });
-watch([manager.connected, manager.loading, manager.error], ([connected, loading, error]) => {
-  if (!connected || error) {
+watch([manager.connected, manager.loading, manager.fatalError], ([connected, loading, fatalError]) => {
+  if (!connected || fatalError) {
     transferEndpointReady = false;
     return;
   }
@@ -433,7 +435,7 @@ defineExpose({
 
 <template>
   <div
-    v-if="manager.error.value"
+    v-if="manager.fatalError.value"
     class="grid h-full place-items-center bg-(--app-main-bg) p-4 text-sm text-(--app-muted)"
   >
     <div class="flex flex-col items-center gap-2 text-center">

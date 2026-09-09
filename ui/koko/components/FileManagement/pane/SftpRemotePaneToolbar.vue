@@ -150,6 +150,7 @@ function cancelPathEdit() {
 }
 
 function commitPathEdit() {
+  if (!pathEditing.value) return;
   if (pathEditCancelled.value) {
     pathEditCancelled.value = false;
     return;

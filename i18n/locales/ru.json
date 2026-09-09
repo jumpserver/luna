@@ -1401,6 +1401,7 @@
       "entryDownloaded": "Скачано: {name}",
       "operationFailed": "Ошибка файловой операции",
       "refreshFailed": "Не удалось обновить список файлов",
+      "pathNotFound": "Путь не существует",
       "remoteSftp": "Удаленный SFTP",
       "localSftp": "SFTP",
       "connectRemoteSftp": "Подключить удаленный SFTP",

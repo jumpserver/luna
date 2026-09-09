@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 
 import {
+  SFTP_PATH_NOT_FOUND_ERROR,
   SftpCommand,
   SftpControlData,
   SftpDataStatus,
@@ -10,7 +11,11 @@ import {
   SftpSocketFailureCode,
   SftpWebSocketProtocol
 } from "#koko/composables/sftp/protocol";
-import { SFTP_UPLOAD_CHUNK_SIZE, useSftpOperations } from "#koko/composables/sftp/useSftpOperations";
+import {
+  SFTP_UPLOAD_CHUNK_SIZE,
+  SftpPathNotFoundError,
+  useSftpOperations
+} from "#koko/composables/sftp/useSftpOperations";
 import { useSftpRetry } from "#koko/composables/sftp/useSftpRetry";
 import { useSftpSocket } from "#koko/composables/sftp/useSftpSocket";
 import { buildSftpDistributionGroups } from "#koko/utils/sftpDistribution";
@@ -180,6 +185,25 @@ describe("sFTP browser protocol", () => {
       current_path: "/first"
     });
     await expect(first).resolves.toEqual([]);
+  });
+
+  it("keeps the socket connected when a directory does not exist", async () => {
+    const { fake, socket } = openSocket();
+    const list = useSftpOperations(ref("/home/tester"), socket).operations.listDirectory("/missing");
+    await nextMessage();
+    const request = lastSent(fake);
+    fake.receive({
+      id: request.id,
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.List,
+      data: JSON.stringify([]),
+      err: "file does not exist",
+      error_code: SFTP_PATH_NOT_FOUND_ERROR
+    });
+
+    await expect(list).rejects.toBeInstanceOf(SftpPathNotFoundError);
+    expect(socket.connected.value).toBe(true);
+    expect(FakeWebSocket.instances).toHaveLength(1);
   });
 
   it("uses the server canonical path for file and AI context", async () => {

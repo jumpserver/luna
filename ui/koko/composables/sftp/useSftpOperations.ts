@@ -14,6 +14,7 @@ import { rejectPendingRequests } from "./core/pending";
 import { createSerialTaskQueue } from "./core/queues";
 import {
   SFTP_FILE_CONFLICT_ERROR,
+  SFTP_PATH_NOT_FOUND_ERROR,
   SFTP_REQUEST_TIMEOUT_ERROR,
   SftpCommand,
   SftpDataStatus,
@@ -58,6 +59,13 @@ export class SftpFileConflictError extends Error {
   constructor() {
     super(SFTP_FILE_CONFLICT_ERROR);
     this.name = "SftpFileConflictError";
+  }
+}
+
+export class SftpPathNotFoundError extends Error {
+  constructor() {
+    super(SFTP_PATH_NOT_FOUND_ERROR);
+    this.name = "SftpPathNotFoundError";
   }
 }
 
@@ -192,6 +200,10 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     if (!pending) return;
     pendingLists.delete(message.id);
     clearTimeout(pending.timeout);
+    if (message.error_code === SFTP_PATH_NOT_FOUND_ERROR) {
+      pending.reject(new SftpPathNotFoundError());
+      return;
+    }
     if (message.err) {
       pending.reject(new Error(message.err));
       return;
