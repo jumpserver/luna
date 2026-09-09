@@ -5,9 +5,11 @@ import { desktopInvoke, desktopWindow } from "~/shared/desktop/bridge";
 const props = withDefaults(
   defineProps<{
     showMenus?: boolean;
+    title?: string;
   }>(),
   {
-    showMenus: true
+    showMenus: true,
+    title: "JumpServer"
   }
 );
 
@@ -215,7 +217,8 @@ const windowControls = computed(() => [
     class="flex h-[34px] min-h-[34px] items-stretch border-b border-[var(--app-border)] bg-[color:color-mix(in_srgb,var(--app-surface-frame)_94%,transparent)] text-[var(--app-fg)] backdrop-blur-md"
   >
     <div class="flex min-w-0 flex-1 items-center" data-desktop-drag-region>
-      <div class="flex h-full items-center px-2">
+      <slot v-if="$slots.default" />
+      <div v-else class="flex h-full items-center px-2">
         <img src="~/assets/logo.svg" alt="JumpServer" class="ml-0.5 mr-1.5 size-[18px] shrink-0" />
 
         <template v-if="props.showMenus">
@@ -249,7 +252,7 @@ const windowControls = computed(() => [
           </UDropdownMenu>
         </template>
 
-        <span v-else class="text-xs font-medium">JumpServer</span>
+        <span v-else class="truncate text-xs font-medium">{{ props.title }}</span>
       </div>
     </div>
 

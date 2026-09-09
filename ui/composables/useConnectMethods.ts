@@ -88,6 +88,36 @@ export const isExternalClientConnectMethod = (value: string, methods: ConnectMet
   return ["native", "client", "local", "desktop"].includes(type);
 };
 
+export const pickConnectMethod = (
+  protocol: string,
+  methods: ConnectMethod[],
+  currentMethod = "",
+  preferredMethod = "",
+  appConfig?: AppConfigType | null,
+  desktopRuntime = isDesktopRuntime()
+) => {
+  if (isConnectMethodAvailable(currentMethod, methods, protocol, appConfig)) return currentMethod;
+  if (isConnectMethodAvailable(preferredMethod, methods, protocol, appConfig)) return preferredMethod;
+
+  if (desktopRuntime) {
+    const normalizedProtocol = protocol.toLowerCase();
+    const preferredClient = (Object.values(appConfig || {}) as ConfigItem[][])
+      .flat()
+      .find(
+        (item) =>
+          isApplicationConfigItemAvailable(item, normalizedProtocol) &&
+          item.match_first?.some((value) => value.toLowerCase() === normalizedProtocol)
+      );
+    const nativeMethod = methods.find((method) =>
+      ["native", "client", "local", "desktop"].includes(String(method.type || "").toLowerCase())
+    );
+    if (preferredClient && nativeMethod)
+      return createLocalApplicationConnectMethod(nativeMethod.value, preferredClient.name);
+  }
+
+  return methods[0]?.value || "";
+};
+
 const connectMethodsCache = new Map<string, ConnectMethodsResponse>();
 const fetchPromise = new Map<string, Promise<ConnectMethodsResponse>>();
 

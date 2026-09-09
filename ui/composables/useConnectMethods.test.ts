@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   isExternalClientConnectMethod,
   normalizeWebConnectMethods,
+  pickConnectMethod,
   WEB_PROXY_NATIVE_VALUE,
   withKokoWebFallback
 } from "~/composables/useConnectMethods";
@@ -60,5 +61,34 @@ describe("desktop website connect methods", () => {
   it("opens the built-in proxy inside the workspace instead of an external window", () => {
     const methods = normalizeWebConnectMethods({ http: [webProxyMethod], originals: [] }, true).http!;
     expect(isExternalClientConnectMethod(WEB_PROXY_NATIVE_VALUE, methods)).toBe(false);
+  });
+
+  it("prefers the configured match-first local application over the first method", () => {
+    const nativeMethod = { ...appletMethod("ssh_client", "SSH client"), type: "native" };
+    const appConfig = {
+      terminal: [
+        {
+          name: "putty",
+          display_name: "PuTTY",
+          protocol: ["ssh"],
+          comment: { zh: "", en: "" },
+          download_url: "",
+          type: "",
+          path: "",
+          arg_format: "",
+          match_first: ["ssh"],
+          is_internal: false,
+          is_default: false,
+          is_set: true
+        }
+      ],
+      remotedesktop: [],
+      filetransfer: [],
+      databases: []
+    };
+
+    expect(pickConnectMethod("ssh", [appletMethod("koko", "Built-in"), nativeMethod], "", "", appConfig, true)).toBe(
+      "native_app:ssh_client:putty"
+    );
   });
 });

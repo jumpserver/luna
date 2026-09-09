@@ -52,12 +52,26 @@ const normalizeDesktopLocalClientUrl = (url: string) =>
   url.startsWith("jms://") ? `jms2://${url.slice("jms://".length)}` : url;
 const withLocalClientName = (url: string, clientName?: string) => {
   if (!clientName || !url.startsWith("jms2://")) return url;
-  const decoded = Uint8Array.from(atob(url.slice("jms2://".length)), (character) => character.charCodeAt(0));
-  const payload = JSON.parse(new TextDecoder().decode(decoded));
-  payload.client = clientName;
-  const encoded = new TextEncoder().encode(JSON.stringify(payload));
-  return `jms2://${btoa(String.fromCharCode(...encoded))}`;
+
+  try {
+    const decoded = Uint8Array.from(atob(url.slice("jms2://".length)), (character) => character.charCodeAt(0));
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(decoded));
+    if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") return url;
+
+    const payload = { ...(parsed as Record<string, unknown>), client: clientName };
+    const encoded = new TextEncoder().encode(JSON.stringify(payload));
+    return `jms2://${btoa(String.fromCharCode(...encoded))}`;
+  } catch {
+    return url;
+  }
 };
+interface ConnectionSessionPayload {
+  id?: string;
+  token?: { id?: string };
+  connectMethod?: { value?: string; component?: string; type?: string };
+  [key: string]: unknown;
+}
+
 interface PersonalCredentialSessionScope {
   accountId: string;
   currentOrgId: string;
@@ -70,7 +84,7 @@ const pendingBuiltinSessions: Array<{
   protocol: string;
   account: string;
   connectMethod?: string;
-  onSessionReady?: (payload: Record<string, any>) => void;
+  onSessionReady?: (payload: ConnectionSessionPayload) => void;
   onSessionError?: (error: unknown) => void;
 }> = [];
 
@@ -232,7 +246,7 @@ export const useAssetAction = () => {
     return new URL(targetPath, endpoint.origin).toString();
   };
 
-  const getEndpointUrl = (endpoint: Record<string, any>, protocol?: string) => {
+  const getEndpointUrl = (endpoint: Record<string, string | number | undefined>, protocol?: string) => {
     const endpointProtocol = (protocol || window.location.protocol.replace(":", "") || "http").replace(":", "");
     let siteUrl: URL | null = null;
     try {
@@ -383,7 +397,7 @@ export const useAssetAction = () => {
       assetName?: string;
       orgId?: string;
       aclBatchId?: string;
-      onSessionReady?: (payload: Record<string, any>) => void;
+      onSessionReady?: (payload: ConnectionSessionPayload) => void;
       onSessionError?: (error: unknown) => void;
     }
   ) => {
@@ -432,16 +446,18 @@ export const useAssetAction = () => {
         if (!localClientUrl?.startsWith(expectedScheme)) {
           throw new Error("Invalid local client URL");
         }
-        meta?.onSessionReady?.({
+        const payload = {
           token,
           ...token,
           connectMethod: method || { value: body.connect_method }
-        });
+        };
         if (isDesktopRuntime()) {
           await desktopInvoke("pull_up", {
             url: withLocalClientName(localClientUrl, nativeApp.clientName)
           });
+          meta?.onSessionReady?.(payload);
         } else {
+          meta?.onSessionReady?.(payload);
           window.location.assign(localClientUrl);
         }
         return;
@@ -465,7 +481,7 @@ export const useAssetAction = () => {
           payload
         );
       } else {
-        window.open(webUrl, "_blank");
+        globalThis.open(webUrl, "_blank", "noopener,noreferrer");
       }
     } catch (error) {
       if (meta?.onSessionError) {
@@ -533,7 +549,7 @@ export const useAssetAction = () => {
       orgId?: string;
       aclBatchId?: string;
       asset?: AssetItem;
-      onSessionReady?: (payload: Record<string, any>) => void;
+      onSessionReady?: (payload: ConnectionSessionPayload) => void;
       onSessionError?: (error: unknown) => void;
     }
   ) => {
@@ -670,11 +686,11 @@ export const useAssetAction = () => {
       savePersonalCredential?: boolean;
       dynamicPassword?: string;
       connectMethod?: string;
-      connectOptions?: Record<string, any>;
+      connectOptions?: Record<string, unknown>;
       tabId?: string;
       aclBatchId?: string;
       asset?: AssetItem;
-      onSessionReady?: (payload: Record<string, any>) => void;
+      onSessionReady?: (payload: ConnectionSessionPayload) => void;
       onSessionError?: (error: unknown) => void;
       orgId?: string;
     }
@@ -1062,7 +1078,7 @@ export const useAssetAction = () => {
       unlistenBuiltinSessionSuccess = await desktopListen("get-builtin-session-success", (event) => {
         interface eventPayload {
           status: number;
-          data: Record<string, any>;
+          data: Record<string, unknown>;
         }
 
         const payload = event.payload as eventPayload;

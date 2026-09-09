@@ -1,17 +1,11 @@
 <script setup lang="ts">
 import type { ConnectMethod } from "~/composables/useConnectMethods";
 import type { AssetPageType, PermedAccount, PermedProtocol, PersonalAssetCredential } from "~/types/index";
-import {
-  createLocalApplicationConnectMethod,
-  isApplicationConfigItemAvailable,
-  isConnectMethodAvailable,
-  useConnectMethods
-} from "~/composables/useConnectMethods";
+import { pickConnectMethod, useConnectMethods } from "~/composables/useConnectMethods";
 import { sortProtocolNames } from "~/utils";
 import ConnectAccountFields from "./connectAccountFields.vue";
 import ConnectAdvancedOptions from "./connectAdvancedOptions.vue";
 import ConnectMethodPicker from "./connectMethodPicker.vue";
-import { categoryOfConnectMethod } from "./connectMethodUtils";
 
 const props = defineProps<{
   account: string;
@@ -132,31 +126,6 @@ const ensureProtocolMethods = async (protocol: string) => {
   return methodsByProtocol[protocol] || [];
 };
 
-const pickConnectMethod = (protocol: string, methods: ConnectMethod[], previousProtocol?: string) => {
-  const previousMethod = previousProtocol && previousProtocol !== protocol ? "" : props.connectMethod || "";
-  if (isConnectMethodAvailable(previousMethod, methods, protocol, appConfig.value)) return previousMethod;
-
-  const preferredMethod = props.preferredConnectMethod || "";
-  if (isConnectMethodAvailable(preferredMethod, methods, protocol, appConfig.value)) return preferredMethod;
-
-  if (isDesktopRuntime()) {
-    const normalizedProtocol = protocol.toLowerCase();
-    const preferredClient = Object.values(appConfig.value || {})
-      .flat()
-      .find(
-        (item) =>
-          isApplicationConfigItemAvailable(item, normalizedProtocol) &&
-          item.match_first?.some((value) => value.toLowerCase() === normalizedProtocol)
-      );
-    const nativeMethod = methods.find((method) => categoryOfConnectMethod(method) === "native");
-    if (preferredClient && nativeMethod) {
-      return createLocalApplicationConnectMethod(nativeMethod.value, preferredClient.name);
-    }
-  }
-
-  return methods[0]?.value || "";
-};
-
 watch(
   protocolTabItems,
   (items) => {
@@ -178,7 +147,16 @@ watch(
     try {
       const methods = await ensureProtocolMethods(newProtocol);
       if (newProtocol !== props.protocol) return;
-      emits("update:connectMethod", pickConnectMethod(newProtocol, methods, previousProtocol));
+      emits(
+        "update:connectMethod",
+        pickConnectMethod(
+          newProtocol,
+          methods,
+          previousProtocol && previousProtocol !== newProtocol ? "" : props.connectMethod || "",
+          props.preferredConnectMethod,
+          appConfig.value
+        )
+      );
     } catch {
       if (newProtocol !== props.protocol) return;
       emits("update:connectMethod", "");

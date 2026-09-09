@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import Profile from "~/components/SideBar/profile.vue";
 
+const props = withDefaults(defineProps<{ showProfile?: boolean }>(), { showProfile: true });
+
 const { t } = useI18n();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
@@ -34,7 +36,7 @@ const handleToggleAi = () => {
         />
       </UTooltip>
 
-      <Profile />
+      <Profile v-if="props.showProfile" />
 
       <UTooltip v-if="showRightPanelButton" arrow :text="rightPanelOpen ? t('RightPanel.Close') : t('RightPanel.Open')">
         <UButton
