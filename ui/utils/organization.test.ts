@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { PermOrgItem } from "~/types";
-import { getFallbackOrganization, resolveOrganizationSelection } from "~/utils/organization";
+import { getFallbackOrganization, getOrganizationAvatarText, resolveOrganizationSelection } from "~/utils/organization";
 
 const organization = (id: string, isDefault = false): PermOrgItem => ({
   id,
@@ -43,5 +43,12 @@ describe("organization fallback", () => {
 
   it("returns null for an empty organization list", () => {
     expect(getFallbackOrganization([])).toBeNull();
+  });
+});
+
+describe("organization avatar text", () => {
+  it("uses one Han character and keeps two-character Latin initials", () => {
+    expect(getOrganizationAvatarText("开发团队")).toBe("开");
+    expect(getOrganizationAvatarText("Acme")).toBe("Ac");
   });
 });

@@ -4,6 +4,7 @@ import type { PermOrgItem } from "~/types/index";
 
 import { invalidatePersonalAssetCredentialCache } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { getOrganizationAvatarText } from "~/utils/organization";
 
 withDefaults(
   defineProps<{
@@ -22,7 +23,7 @@ const currentOrgName = computed(() => {
   const currentOrg = currentUser.value?.org;
   return currentOrganizations.value.find((org) => org.id === currentOrg?.id)?.name || currentOrg?.name || "";
 });
-const currentOrgAvatarText = computed(() => Array.from(currentOrgName.value.trim()).slice(0, 2).join(""));
+const currentOrgAvatarText = computed(() => getOrganizationAvatarText(currentOrgName.value));
 
 const organizationDropdownItems = computed<DropdownMenuItem[]>(() =>
   currentOrganizations.value.map((org: PermOrgItem) => ({

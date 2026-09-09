@@ -43,6 +43,7 @@ release/electron
 .impeccable
 PRODUCT.md
 
-# Independently built Web applet
+# Independently built WebLite application
 applets/*/.nuxt-ui
 release/applets
+release/weblite

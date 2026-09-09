@@ -1,5 +1,12 @@
 import type { PermOrgItem } from "~/types";
 
+export const getOrganizationAvatarText = (name: string) => {
+  const characters = Array.from(name.trim());
+  const length = /^\p{Script=Han}$/u.test(characters[0] || "") ? 1 : 2;
+
+  return characters.slice(0, length).join("");
+};
+
 export const getFallbackOrganization = (orgs: PermOrgItem[]) => orgs.find((org) => org.is_default) || orgs[0] || null;
 
 export const resolveOrganizationSelection = (

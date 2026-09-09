@@ -47,9 +47,9 @@
     "web-client:test-site": "pnpm --dir web-client test-site",
     "update:dependencies": "npx npm-check-updates -u && pnpm install",
     "reset": "rm -rf node_modules .nuxt dist",
-    "applet:build": "pnpm --dir applets/weblite build",
-    "applet:package": "pnpm --dir applets/weblite package",
-    "applet:test": "pnpm --dir applets/weblite test"
+    "weblite:build": "pnpm --dir applets/weblite build",
+    "weblite:package": "pnpm --dir applets/weblite package",
+    "weblite:test": "pnpm --dir applets/weblite test"
   },
   "dependencies": {
     "@ai-sdk/vue": "4.0.44",
