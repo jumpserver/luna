@@ -188,7 +188,18 @@ const config: ForgeConfig = {
     }
   },
   makers: [
-    new MakerDMG({ icon: path.join(iconsRoot, "icon.icns") }),
+    new MakerDMG({
+      icon: path.join(iconsRoot, "icon.icns"),
+      background: path.join(electronRoot, "assets", "dmg", "background.png"),
+      iconSize: 80,
+      contents: (opts) => [
+        { x: 130, y: 220, type: "file", path: opts.appPath },
+        { x: 410, y: 220, type: "link", path: "/Applications" }
+      ],
+      additionalDMGOptions: {
+        window: { size: { width: 540, height: 380 } }
+      }
+    }),
     new MakerSquirrel({
       name: "JumpServer",
       setupIcon: path.join(iconsRoot, "icon.ico"),

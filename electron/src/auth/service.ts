@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import path from "node:path";
 import { app, net, safeStorage } from "electron";
 import { electronLog } from "../shared/debug-log";
-import { parseUrl } from "../shared/url";
+import { isTrustedCertificateHost, parseUrl, siteHostname } from "../shared/url";
 import { parseOAuthCallback } from "./oauth-callback";
 
 const OAUTH_WELL_KNOWN = "/core/auth/oauth2-provider/.well-known/oauth-authorization-server";
@@ -107,6 +107,25 @@ export class DesktopAuthService {
     this.callbackServer = null;
     this.redirectUri = DEEP_LINK_CALLBACK;
     this.tokenFile = path.join(app.getPath("userData"), "oauth-tokens.json");
+    this.trustedHosts = new Set();
+  }
+
+  trustSite(site) {
+    try {
+      const host = siteHostname(site);
+      if (host) this.trustedHosts.add(host);
+    } catch {
+      // Invalid URLs stay untrusted; parse/fetch still fail on the caller path.
+    }
+  }
+
+  isTrustedSiteHost(hostname) {
+    return isTrustedCertificateHost(this.trustedHosts, hostname);
+  }
+
+  fetchSite(url, init) {
+    this.trustSite(url);
+    return net.fetch(url, init);
   }
 
   async initialize() {
@@ -228,7 +247,7 @@ export class DesktopAuthService {
     if (bearerToken) headers.Authorization = `Bearer ${bearerToken}`;
     if (orgId) headers["X-JMS-ORG"] = orgId;
     try {
-      const response = await net.fetch(url, { headers, signal: AbortSignal.timeout(timeout) });
+      const response = await this.fetchSite(url, { headers, signal: AbortSignal.timeout(timeout) });
       return toApiResponse(response.status, await response.text());
     } catch (error) {
       return { status: 0, data: `request failed: ${error}`, success: false };
@@ -243,7 +262,9 @@ export class DesktopAuthService {
     electronLog.info(`auth login start ${site}`);
     let oauthConfig: { client_id?: string };
     try {
-      const response = await net.fetch(endpoint(site, OAUTH_WELL_KNOWN), { signal: AbortSignal.timeout(10_000) });
+      const response = await this.fetchSite(endpoint(site, OAUTH_WELL_KNOWN), {
+        signal: AbortSignal.timeout(10_000)
+      });
       const text = await response.text();
       if (!response.ok) throw new Error(`OAuth config endpoint returned ${response.status}: ${text}`);
       oauthConfig = JSON.parse(text);
@@ -303,7 +324,7 @@ export class DesktopAuthService {
   }
 
   async exchangeToken(site, parameters) {
-    const response = await net.fetch(endpoint(site, OAUTH_TOKEN), {
+    const response = await this.fetchSite(endpoint(site, OAUTH_TOKEN), {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
       body: new URLSearchParams(parameters).toString(),
@@ -397,7 +418,7 @@ export class DesktopAuthService {
     if (orgId) headers["X-JMS-ORG"] = orgId;
     const hasBody = request.body !== undefined && request.body !== null;
     if (hasBody) headers["Content-Type"] = "application/json";
-    const response = await net.fetch(url.toString(), {
+    const response = await this.fetchSite(url.toString(), {
       method: request.method,
       ...(request.service === "kael" ? { signal: AbortSignal.timeout(15_000) } : {}),
       headers,
@@ -439,7 +460,7 @@ export class DesktopAuthService {
     if (orgId) headers["X-JMS-ORG"] = orgId;
     const hasBody = request.body !== undefined && request.body !== null;
     if (hasBody) headers["Content-Type"] = "application/json";
-    const response = await net.fetch(url.toString(), {
+    const response = await this.fetchSite(url.toString(), {
       method: request.method,
       headers,
       body: hasBody ? JSON.stringify(request.body) : undefined,
@@ -472,7 +493,7 @@ export class DesktopAuthService {
     }
 
     const url = new URL("koko/api/connect-ticket/", `${base.toString().replace(/\/+$/, "")}/`);
-    const response = await net.fetch(url.toString(), {
+    const response = await this.fetchSite(url.toString(), {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -500,7 +521,7 @@ export class DesktopAuthService {
     await this.persistTokens();
     if (!token?.refresh_token) return;
     try {
-      await net.fetch(endpoint(site, OAUTH_REVOKE), {
+      await this.fetchSite(endpoint(site, OAUTH_REVOKE), {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({

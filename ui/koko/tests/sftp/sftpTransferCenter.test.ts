@@ -205,6 +205,13 @@ describe("sftp selection bar and peer transfer", () => {
     expect(transferCoordinatorComposable).not.toContain("clearTransferredSelection(");
   });
 
+  it("resolves local destinations from the local pane instead of unix root", () => {
+    expect(transferCoordinatorComposable).toContain("resolveLocalFsDestinationPath");
+    expect(transferCoordinatorComposable).toContain("function localDestinationPath");
+    expect(transferCoordinatorComposable).toContain("await host.localFiles.homeDir()");
+    expect(transferCoordinatorComposable).toContain("await localDestinationPath(payload.destinationPath)");
+  });
+
   it("routes global local transfers through the transfer center queue like session sftp", () => {
     expect(transferCoordinatorComposable).toContain("Always prefer Transfer Center queue");
     expect(transferCoordinatorComposable).toContain("queueSftpTransferToSelected(payload, destination)");
@@ -306,7 +313,10 @@ describe("sftp right-panel compact mode", () => {
     expect(transferCoordinatorComposable).toContain("browserDownloadEndpoint ??=");
     expect(transferCoordinatorComposable).toContain("localDownloadsEndpoint ??=");
     expect(transferCoordinatorComposable).toContain('"keep_both" as const');
-    expect(localTransferEndpointComposable).toContain("Local transfer size mismatch");
+    expect(localTransferEndpointComposable).toMatch(
+      /if \(info\.size > input\.size\) throw new Error\("Local transfer size mismatch"\);\s*return \{\s*transferId: input\.transferId,\s*committedBytes: info\.size/
+    );
+    expect(localTransferEndpointComposable).not.toContain("Always restart local partials from zero");
     expect(localTransferEndpointComposable).toContain("writeFile(partial, input.data, { offset: input.offset })");
     expect(localTransferEndpointComposable).toContain("keepBothPath");
     expect(localTransferEndpointComposable).toContain("localFiles.rename(partial, destination)");
@@ -471,6 +481,11 @@ describe("sftp professional workbench", () => {
     expect(remotePaneToolbar).toContain("toolbarWidth.value < 720");
     expect(remotePaneToolbar).toContain('data-sftp-tour="navigation"');
     expect(remotePaneToolbar).toContain('data-sftp-tour="file-actions"');
+    expect(localPaneToolbar).toContain("showHiddenFiles");
+    expect(remotePaneToolbar).not.toContain("showHiddenFiles");
+    expect(fileManagementPane).not.toContain("show-hidden-files-toggle");
+    expect(globalWorkspaceComponent).not.toContain("show-hidden-files-toggle");
+    expect(sessionWorkspaceComponent).not.toContain("show-hidden-files-toggle");
     expect(remotePaneToolbar).not.toContain("sftp-file-management__actionbar");
     expect(localPaneToolbar).toContain("sftp-file-management__toolbar--unified");
     expect(localPaneToolbar).toContain("beginPathEdit");
@@ -584,7 +599,7 @@ describe("sftp professional workbench", () => {
 
   it("only reports success after the pane is ready", () => {
     expect(workspacePanesComposable).toContain("markRemotePaneConnected");
-    expect(fileManagementPane).toContain("manager.connected, manager.loading, manager.error");
+    expect(fileManagementPane).toContain("manager.connected, manager.loading, manager.fatalError");
     expect(globalWorkspaceComponent).toContain('transfer-endpoint-connected="handleRemotePaneConnected"');
   });
 });

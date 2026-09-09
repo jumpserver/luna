@@ -14,7 +14,11 @@ export const useAssetWindowLauncher = () => {
     const url = buildWindowUrl(asset, connectionInfo);
 
     if (!isDesktopRuntime()) {
-      window.open(url, "_blank");
+      const target = new URL(url, window.location.origin);
+      if (target.origin !== window.location.origin || !target.pathname.startsWith("/session/")) {
+        throw new Error("Invalid session window URL");
+      }
+      globalThis.open(target, "_blank", "noopener,noreferrer");
       return;
     }
 
@@ -34,8 +38,16 @@ export const useAssetWindowLauncher = () => {
     return win;
   };
 
+  const dispatchAssetWindow = (
+    externalClient: boolean,
+    asset: AssetItem,
+    connectionInfo: WindowConnectionInfo | undefined,
+    launchExternal: () => Promise<unknown>
+  ) => (externalClient ? launchExternal() : openAssetInWindow(asset, connectionInfo));
+
   return {
     openAssetInWindow,
-    buildWindowUrl
+    buildWindowUrl,
+    dispatchAssetWindow
   };
 };

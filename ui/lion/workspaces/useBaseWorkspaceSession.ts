@@ -17,7 +17,7 @@ export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
 
   provide(connectorSessionKey, context);
 
-  const token = computed(() => tab.value.payload?.token || tab.value.payload || {});
+  const token = computed<{ id?: string }>(() => tab.value.payload?.token || tab.value.payload || {});
   const tokenId = computed(() => String(tab.value.payload?.id || token.value?.id || ""));
   const themeType = computed(() => (colorMode.value === "dark" ? "darkGary" : "default"));
 

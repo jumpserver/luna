@@ -9,6 +9,7 @@ import {
   parseLocalApplicationConnectMethod,
   useConnectMethods
 } from "~/composables/useConnectMethods";
+import { desktopInvoke } from "~/shared/desktop/bridge";
 
 const props = withDefaults(
   defineProps<{
@@ -20,6 +21,7 @@ const props = withDefaults(
   }
 );
 
+const route = useRoute();
 const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
 const { modernIsland } = useSettingManager();
@@ -59,6 +61,7 @@ const launchSummary = computed(() => {
     : t("ConnectionSetup.LaunchWithLocalClient");
 });
 const launchHint = computed(() => t("ConnectionSetup.LaunchHint"));
+const standaloneSessionWindow = computed(() => route.path.startsWith("/session/"));
 
 const updateExternalLaunchState = async () => {
   const protocol = draft.value.protocol.trim();
@@ -124,7 +127,7 @@ async function submit() {
     return;
   }
   const localApplication = parseLocalApplicationConnectMethod(info.connectMethod);
-  const showLaunchSuccessState = externalClientLaunch.value;
+  const showLaunchSuccessState = externalClientLaunch.value && !standaloneSessionWindow.value;
   connecting.value = true;
   connectionError.value = "";
   if (!showLaunchSuccessState) {
@@ -146,7 +149,9 @@ async function submit() {
             launchedClientName.value = localApplication.clientName || "";
             launchedProtocol.value = info.protocol;
           }
-        : undefined,
+        : externalClientLaunch.value && standaloneSessionWindow.value && isDesktopRuntime()
+          ? () => void desktopInvoke("close_window")
+          : undefined,
       onSessionError: (error) => {
         connecting.value = false;
         connectionError.value =

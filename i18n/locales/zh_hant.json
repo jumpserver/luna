@@ -957,7 +957,8 @@
     "RememberSelectionDescription": "如需更換連線方式，可在資產樹上右鍵重新選擇。",
     "OptionalProtocol": "協議",
     "ConnectMethod": "連線方法",
-    "OptionalAccount": "帳號"
+    "OptionalAccount": "帳號",
+    "CurrentOnline": "目前在線: {count}"
   },
   "Layout": {
     "Grid": "卡片檢視",
@@ -976,7 +977,7 @@
   },
   "Login": {
     "Title": "輸入登入站點",
-    "Description": "請輸入要登入的站點地址 (例如: https://example.com) 或 IP 地址",
+    "Description": "請輸入完整站點地址，如 https://example.com 或 http://192.168.1.1",
     "SiteName": "站點名稱",
     "LoginSuccess": "登入成功",
     "LoginSuccessDescription": "歡迎回來，您已成功登入",
@@ -985,7 +986,7 @@
     "EmptySiteNameError": "請輸入站點名稱",
     "DuplicateSiteNameError": "站點名稱已存在，請使用其他名稱",
     "LoginFailedDescription": "登入失敗, 當前帳號登入已失效，請重新登入",
-    "InvalidUrlError": "請輸入有效的站點地址或IP地址",
+    "InvalidUrlError": "站點地址格式不正確，請輸入包含 http:// 或 https:// 的完整地址",
     "InvalidSiteError": "登入失敗：站點不可用或地址不正確，請檢查後重試",
     "AddAccount": "新增站點",
     "SwitchSite": "切換站點",
@@ -1248,6 +1249,7 @@
     "ConnectFailed": "連線失敗",
     "CredentialServiceUnavailable": "憑據服務（例如 OpenBao）無法使用，請檢查服務狀態後重試。",
     "AclFailed": "當前資產受到 ACL 訪問限制，無法透過客戶端連線，請前往 Web 端進行訪問",
+    "MethodDisabled": "該連線方式已被管理員停用",
     "ClientNotFound": "未找到桌面客戶端，請安裝或在設定中配置路徑",
     "ClientLaunchFailed": "啟動桌面客戶端失敗，請檢查安裝或權限",
     "ClientExited": "桌面客戶端異常退出",
@@ -1758,5 +1760,8 @@
     "estimatedCost": "估算成本",
     "details": "詳情",
     "hideDetails": "收合詳情"
+  },
+  "Chen": {
+    "TerminatedByAdmin": "{name} 管理員中斷連接。"
   }
 }

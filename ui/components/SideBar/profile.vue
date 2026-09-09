@@ -74,7 +74,7 @@ const siteNameInputRef = ref<ComponentPublicInstance | null>(null);
 const profileOpen = ref(false);
 const profileOpenedByPointer = ref(false);
 const headerIconButtonClass =
-  "grid size-6 shrink-0 place-items-center rounded-lg p-0 text-[var(--app-text-secondary)] transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]";
+  "grid size-6 shrink-0 place-items-center rounded-[length:var(--app-radius)] p-0 text-[var(--app-text-secondary)] transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]";
 const headerIconButtonActiveClass = "bg-[var(--app-hover-soft)] text-[var(--app-fg)]";
 
 let loginBtnUnlockTimer: ReturnType<typeof setTimeout> | null = null;
@@ -202,9 +202,10 @@ const currentAppearanceLabel = computed(
 
 const menuTabsUi = {
   root: "w-full",
-  list: "w-full bg-[var(--app-surface-canvas)] p-1 ring-1 ring-[var(--app-border)]",
-  indicator: "bg-[var(--app-state-hover-strong)] shadow-sm",
-  trigger: "flex-1 px-3 data-[state=active]:text-highlighted focus-visible:outline-[var(--app-focus-ring)]"
+  list: "w-full rounded-[length:var(--app-radius)] bg-[var(--app-surface-canvas)] p-1 ring-1 ring-[var(--app-border)]",
+  indicator: "rounded-[length:var(--app-radius)] bg-[var(--app-state-hover-strong)] shadow-sm",
+  trigger:
+    "flex-1 rounded-[length:var(--app-radius)] px-3 data-[state=active]:text-highlighted focus-visible:outline-[var(--app-focus-ring)]"
 };
 
 const menuSeparatorUi = {
@@ -615,6 +616,13 @@ async function clearAuthInfo() {
   profileOpen.value = false;
   if (!(await confirmLeaveCurrentSiteSessions("logout"))) return;
   userInfoStore.deleteUserData(currentAccountId.value);
+  if (loggedIn.value) return;
+  // ponytail: don't watch loggedIn to leave /files — bootstrap sets false before revalidation
+  if (!isDesktopRuntime()) {
+    redirectToWebLogin();
+    return;
+  }
+  await navigateTo(localePath({ path: "/" }));
 }
 
 async function handleSwitchAccount(accountId: string) {
@@ -949,7 +957,7 @@ onBeforeUnmount(() => {
     }"
     :ui="{
       content:
-        'max-h-[calc(100dvh-4rem)] w-64 overflow-x-hidden overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-0 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
+        'max-h-[calc(100dvh-4rem)] w-64 overflow-x-hidden overflow-y-auto rounded-[length:var(--app-radius)] bg-[var(--app-surface-overlay)] p-0 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
     }"
   >
     <UTooltip arrow :text="accountTooltip">
@@ -974,8 +982,8 @@ onBeforeUnmount(() => {
             color="neutral"
             variant="ghost"
             block
-            class="h-auto items-center justify-start gap-3 rounded-none rounded-t-xl px-3 py-3 text-left"
-            :ui="{ base: 'rounded-none rounded-t-xl' }"
+            class="h-auto items-center justify-start gap-3 rounded-none rounded-t-[length:var(--app-radius)] px-3 py-3 text-left"
+            :ui="{ base: 'rounded-none rounded-t-[length:var(--app-radius)]' }"
             @click="openUserSettings"
           >
             <UAvatar :alt="currentUser?.name || t('Common.User')" color="primary" size="md" class="shrink-0" />
@@ -1062,7 +1070,7 @@ onBeforeUnmount(() => {
               :content="{ align: 'start', side: 'left', sideOffset: 8 }"
               :ui="{
                 content:
-                  'w-56 max-h-80 overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-1.5 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
+                  'w-56 max-h-80 overflow-y-auto rounded-[length:var(--app-radius)] bg-[var(--app-surface-overlay)] p-1.5 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
               }"
             >
               <UButton color="neutral" variant="ghost" size="sm" block class="h-8 justify-start gap-2 px-2">
@@ -1120,7 +1128,7 @@ onBeforeUnmount(() => {
               }"
               :ui="{
                 content:
-                  'w-56 max-h-80 overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-1.5 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
+                  'w-56 max-h-80 overflow-y-auto rounded-[length:var(--app-radius)] bg-[var(--app-surface-overlay)] p-1.5 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
               }"
             >
               <UButton color="neutral" variant="ghost" size="sm" block class="h-8 justify-start gap-2 px-2">
@@ -1265,9 +1273,9 @@ onBeforeUnmount(() => {
         @input="handleInputSanitize"
       >
         <label
-          class="pointer-events-none absolute left-0 -top-2.5 text-xs font-medium px-1.5 transition-all peer-focus:-top-2.5 peer-focus:text-xs peer-focus:font-medium peer-placeholder-shown:text-sm peer-placeholder-shown:top-1.5 peer-placeholder-shown:font-normal"
+          class="pointer-events-none absolute left-0 -top-2.5 text-xs font-medium px-1.5 transition-all peer-focus:-top-2.5 peer-focus:text-xs peer-focus:font-medium peer-placeholder-shown:text-sm peer-placeholder-shown:top-1.5 peer-placeholder-shown:font-normal [&>span]:bg-[var(--app-surface-modal)] peer-placeholder-shown:not-peer-focus:[&>span]:bg-[var(--app-input-bg)]"
         >
-          <span class="inline-flex bg-default px-1">
+          <span class="inline-flex px-1">
             {{ t("Login.Description") }}
           </span>
         </label>
@@ -1294,9 +1302,9 @@ onBeforeUnmount(() => {
         @input="handleSiteNameInputSanitize"
       >
         <label
-          class="pointer-events-none absolute left-0 -top-2.5 text-xs font-medium px-1.5 transition-all peer-focus:-top-2.5 peer-focus:text-xs peer-focus:font-medium peer-placeholder-shown:text-sm peer-placeholder-shown:top-1.5 peer-placeholder-shown:font-normal"
+          class="pointer-events-none absolute left-0 -top-2.5 text-xs font-medium px-1.5 transition-all peer-focus:-top-2.5 peer-focus:text-xs peer-focus:font-medium peer-placeholder-shown:text-sm peer-placeholder-shown:top-1.5 peer-placeholder-shown:font-normal [&>span]:bg-[var(--app-surface-modal)] peer-placeholder-shown:not-peer-focus:[&>span]:bg-[var(--app-input-bg)]"
         >
-          <span class="inline-flex bg-default px-1">
+          <span class="inline-flex px-1">
             {{ t("Login.SiteName") }}
           </span>
         </label>

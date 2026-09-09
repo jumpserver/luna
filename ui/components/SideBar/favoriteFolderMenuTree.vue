@@ -3,8 +3,10 @@ import type { ContextMenuItem } from "@nuxt/ui";
 import type { ComponentPublicInstance } from "vue";
 import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
 import {
+  FAVORITE_FOLDER_DUPLICATE_NAME,
   FAVORITE_FOLDER_NAME_MAX_LENGTH,
   flattenVisibleFavoriteFolderTree,
+  isFavoriteFolderDuplicateNameError,
   isFavoriteFolderNameTooLong
 } from "~/composables/useFavoriteFolders";
 
@@ -19,6 +21,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const { createFolder, renameFolder, removeFolder } = useFavoriteFolders();
 const expandedFolderIds = ref<Set<string>>(new Set());
@@ -102,11 +105,20 @@ const finishRenameFolder = async (folder: FavoriteFolder) => {
     await renameFolder(folder.id, name);
     cancelRenameFolder();
   } catch (error) {
-    addErrorToast({
-      title: t("Favorite.RenameFailed"),
-      error,
-      icon: "i-lucide-circle-alert"
-    });
+    if (isFavoriteFolderDuplicateNameError(error)) {
+      toast.add({
+        id: FAVORITE_FOLDER_DUPLICATE_NAME,
+        title: t("Favorite.DuplicateName"),
+        color: "error",
+        icon: "i-lucide-circle-alert"
+      });
+    } else {
+      addErrorToast({
+        title: t("Favorite.RenameFailed"),
+        error,
+        icon: "i-lucide-circle-alert"
+      });
+    }
     void focusRenameInput();
   } finally {
     renaming.value = false;

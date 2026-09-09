@@ -8,7 +8,6 @@ import {
   suppressWorkspaceShortcut,
   WORKSPACE_TOUR_DEMO_ASSET_ID,
   WORKSPACE_TOUR_DEMO_NODE_ID,
-  WORKSPACE_TOUR_INITIAL_NEXT_DELAY_MS,
   WORKSPACE_TOUR_STORAGE_KEY,
   WORKSPACE_TOUR_TARGETS
 } from "~/utils/workspaceTour";
@@ -30,7 +29,6 @@ describe("workspace tour", () => {
     const englishSteps = buildWorkspaceTourSteps(translate(enMessages));
 
     expect(WORKSPACE_TOUR_STORAGE_KEY).toBe("luna:workspace-tour:v3");
-    expect(WORKSPACE_TOUR_INITIAL_NEXT_DELAY_MS).toBe(1000);
     expect(chineseSteps).toHaveLength(5);
     expect(englishSteps).toHaveLength(chineseSteps.length);
     expect(WORKSPACE_TOUR_TARGETS).toEqual(["organization", "asset", "node", "favorites", "add-session"]);

@@ -25,6 +25,15 @@ export function joinLocalFsPath(base: string, name: string): string {
   return `${base.replace(/\/+$/, "") || "/"}/${name}`.replace(/\/+/g, "/");
 }
 
+/** Local FS dest directory. Never "/" — Windows resolves that to the drive root. */
+export function resolveLocalFsDestinationPath(...candidates: string[]): string {
+  for (const candidate of candidates) {
+    const value = candidate.trim();
+    if (value && value !== "/") return value;
+  }
+  return "";
+}
+
 async function sha256Hex(data: Uint8Array): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", data.slice());
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -104,7 +113,16 @@ export function useLocalFileTransferEndpoint(options: {
       }
 
       await ensureParentDir(finalPath);
-      // Always restart local partials from zero for a consistent checksum chain.
+      if (await exists(partial)) {
+        const info = await localFiles.stat(partial);
+        if (info.size > input.size) throw new Error("Local transfer size mismatch");
+        return {
+          transferId: input.transferId,
+          committedBytes: info.size,
+          totalBytes: input.size,
+          state: "ready"
+        };
+      }
       await localFiles.writeFile(partial, new Uint8Array());
       return {
         transferId: input.transferId,

@@ -1,7 +1,7 @@
 :root[data-theme-preset="luna-darkgray"] {
   --theme-bg: #111113;
   --theme-fg: #efeff0;
-  --theme-muted: #5f636d;
+  --theme-muted: #878c97;
   --theme-border: rgba(0, 0, 0, 0.3);
   --theme-accent: #1ab394;
   --theme-folder-icon: var(--sidebar-icon-color);

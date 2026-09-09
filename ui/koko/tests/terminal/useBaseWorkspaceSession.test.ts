@@ -1,6 +1,7 @@
+import type { KokoWorkspaceTab } from "#koko/host";
+import { alignEndpointUrlWithPage } from "@jumpserver/connectors-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
-import type { KokoWorkspaceTab } from "#koko/host";
 
 const host = {
   createTicket: vi.fn(),
@@ -129,6 +130,27 @@ describe("useBaseWorkspaceSession", () => {
     expect(context?.endpointUrl).toBe("http://127.0.0.1:3300");
   });
 
+  it("upgrades same-host http endpoints to the https page origin", async () => {
+    host.getWindowOrigin.mockReturnValue("https://47.242.2.24");
+    host.getSmartEndpoint.mockResolvedValue({ value: "http://47.242.2.24" });
+    const session = useBaseWorkspaceSession(createTab());
+
+    const context = await session.prepareSession();
+
+    expect(context?.endpointUrl).toBe("https://47.242.2.24");
+    expect(host.createTicket).toHaveBeenCalledWith({ baseUrl: "https://47.242.2.24", tokenId: "token-1" });
+  });
+
+  it("keeps the https page port when upgrading a same-host http endpoint", async () => {
+    host.getWindowOrigin.mockReturnValue("https://host:8443");
+    host.getSmartEndpoint.mockResolvedValue({ value: "http://host" });
+    const session = useBaseWorkspaceSession(createTab());
+
+    const context = await session.prepareSession();
+
+    expect(context?.endpointUrl).toBe("https://host:8443");
+  });
+
   it("keeps the resolved endpoint in the desktop runtime", async () => {
     host.isDesktopRuntime.mockReturnValue(true);
     host.getSmartEndpoint.mockResolvedValue({ value: "https://koko.internal:443" });
@@ -137,6 +159,16 @@ describe("useBaseWorkspaceSession", () => {
     const context = await session.prepareSession();
 
     expect(context?.endpointUrl).toBe("https://koko.internal:443");
+  });
+
+  it("keeps http endpoints in the desktop runtime", async () => {
+    host.isDesktopRuntime.mockReturnValue(true);
+    host.getSmartEndpoint.mockResolvedValue({ value: "http://koko.internal" });
+    const session = useBaseWorkspaceSession(createTab());
+
+    const context = await session.prepareSession();
+
+    expect(context?.endpointUrl).toBe("http://koko.internal");
   });
 
   it("falls back to cookie auth when ticket creation fails on web", async () => {
@@ -167,5 +199,12 @@ describe("useBaseWorkspaceSession", () => {
       protocol: "ssh",
       account: "root"
     });
+  });
+});
+
+describe("alignEndpointUrlWithPage", () => {
+  it("upgrades cross-host http to https and drops port 80", () => {
+    expect(alignEndpointUrlWithPage("http://koko.other", "https://luna.example", false)).toBe("https://koko.other");
+    expect(alignEndpointUrlWithPage("http://koko.other:80", "https://luna.example", false)).toBe("https://koko.other");
   });
 });

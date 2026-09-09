@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { desktopWindow } from "~/shared/desktop/bridge";
+
+const props = withDefaults(defineProps<{ showActions?: boolean; showProfile?: boolean }>(), {
+  showActions: true,
+  showProfile: true
+});
 const { collapse, modernIsland } = useSettingManager();
 const { sidebarWidth } = useSidebarLayout();
 const isNarrowScreen = useMediaQuery("(max-width: 767px)");
@@ -57,8 +62,8 @@ const handleWindowDrag = async (event: MouseEvent) => {
       <slot />
     </div>
 
-    <div class="h-full shrink-0 flex items-center sm:pl-1">
-      <HeaderActionButtons />
+    <div v-if="props.showActions" class="h-full shrink-0 flex items-center sm:pl-1">
+      <HeaderActionButtons :show-profile="props.showProfile" />
     </div>
   </div>
 </template>

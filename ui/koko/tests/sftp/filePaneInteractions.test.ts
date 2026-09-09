@@ -22,7 +22,10 @@ import {
   useBrowserUploadTransferEndpoint,
   WEB_UPLOAD_ENDPOINT_ID
 } from "../../composables/sftp/file-manager/useBrowserUploadTransferEndpoint";
-import { joinLocalFsPath } from "../../composables/sftp/file-manager/useLocalFileTransferEndpoint";
+import {
+  joinLocalFsPath,
+  resolveLocalFsDestinationPath
+} from "../../composables/sftp/file-manager/useLocalFileTransferEndpoint";
 import { useSftpPaneSelection } from "../../composables/sftp/file-manager/useSftpPaneSelection";
 import { resolveSftpFileExtension, resolveSftpFileIcon } from "../../composables/sftp/useSftpFileIcon";
 
@@ -45,6 +48,14 @@ describe("sftp entry name length", () => {
 });
 
 describe("local transfer path joining", () => {
+  it("never uses unix root as a local fs destination", () => {
+    expect(resolveLocalFsDestinationPath("C:\\Users\\demo", "C:\\Users\\demo")).toBe("C:\\Users\\demo");
+    expect(resolveLocalFsDestinationPath("", "C:\\Users\\demo")).toBe("C:\\Users\\demo");
+    expect(resolveLocalFsDestinationPath("/", "C:\\Users\\demo")).toBe("C:\\Users\\demo");
+    expect(resolveLocalFsDestinationPath("/home/demo", "/home/demo")).toBe("/home/demo");
+    expect(resolveLocalFsDestinationPath("", "/")).toBe("");
+  });
+
   it("keeps windows separators for local sources used by transfer center", () => {
     expect(joinLocalFsPath("C:\\Users\\demo", "a.txt")).toBe("C:\\Users\\demo\\a.txt");
     expect(joinLocalFsPath("/home/demo", "a.txt")).toBe("/home/demo/a.txt");

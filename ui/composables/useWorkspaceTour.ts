@@ -3,7 +3,6 @@ import {
   buildWorkspaceTourSteps,
   hasVisibleWorkspaceTourTargets,
   suppressWorkspaceShortcut,
-  WORKSPACE_TOUR_INITIAL_NEXT_DELAY_MS,
   WORKSPACE_TOUR_STORAGE_KEY
 } from "~/utils/workspaceTour";
 
@@ -15,15 +14,8 @@ let autoStartPending = false;
 let startGeneration = 0;
 export const workspaceTourCompleted = ref(Boolean(globalThis.localStorage?.getItem(WORKSPACE_TOUR_STORAGE_KEY)));
 export const workspaceTourArmed = ref(false);
-let nextButtonTimer: ReturnType<typeof globalThis.setInterval> | null = null;
 let assetRevealTimer: ReturnType<typeof globalThis.setInterval> | null = null;
 let retryTimer: ReturnType<typeof globalThis.setInterval> | null = null;
-
-function clearNextButtonTimer() {
-  if (!nextButtonTimer) return;
-  globalThis.clearInterval(nextButtonTimer);
-  nextButtonTimer = null;
-}
 
 function clearAssetRevealTimer() {
   if (!assetRevealTimer) return;
@@ -119,6 +111,10 @@ export function useWorkspaceTour() {
     }
 
     const steps = buildWorkspaceTourSteps((key) => t(key));
+    const complete = () => {
+      globalThis.localStorage?.setItem(WORKSPACE_TOUR_STORAGE_KEY, "completed");
+      workspaceTourCompleted.value = true;
+    };
     const tour = driver({
       steps,
       animate: true,
@@ -126,7 +122,7 @@ export function useWorkspaceTour() {
       overlayColor: "#05070b",
       overlayOpacity: 0.68,
       smoothScroll: true,
-      allowClose: false,
+      allowClose: true,
       allowKeyboardControl: false,
       allowScroll: true,
       overlayClickBehavior: () => {},
@@ -136,34 +132,21 @@ export function useWorkspaceTour() {
       stageRadius: 6,
       popoverClass: "workspace-driver-popover",
       popoverOffset: 10,
-      showButtons: ["next", "previous"],
+      showButtons: ["next", "previous", "close"],
       showProgress: true,
       progressText: t("WorkspaceTour.progress", { current: "{{current}}", total: "{{total}}" }),
       nextBtnText: t("WorkspaceTour.next"),
       prevBtnText: t("WorkspaceTour.previous"),
       doneBtnText: t("WorkspaceTour.done"),
-      onPopoverRender: (popover, { index }) => {
-        clearNextButtonTimer();
-
-        const actionLabel = index === steps.length - 1 ? t("WorkspaceTour.done") : t("WorkspaceTour.next");
-        const unlockAt = Date.now() + WORKSPACE_TOUR_INITIAL_NEXT_DELAY_MS;
-        const updateNextButton = () => {
-          const seconds = Math.max(0, Math.ceil((unlockAt - Date.now()) / 1000));
-          popover.nextButton.disabled = seconds > 0;
-          popover.nextButton.textContent = seconds > 0 ? `${actionLabel} (${seconds}s)` : actionLabel;
-          if (seconds === 0) clearNextButtonTimer();
-        };
-
-        updateNextButton();
-        nextButtonTimer = globalThis.setInterval(updateNextButton, 100);
-      },
       onDoneClick: () => {
-        globalThis.localStorage?.setItem(WORKSPACE_TOUR_STORAGE_KEY, "completed");
-        workspaceTourCompleted.value = true;
+        complete();
+        tour.destroy();
+      },
+      onCloseClick: () => {
+        complete();
         tour.destroy();
       },
       onDestroyed: () => {
-        clearNextButtonTimer();
         clearAssetRevealTimer();
         disableKeyboardLock();
         if (activeTour === tour) activeTour = null;
@@ -213,7 +196,6 @@ export function useWorkspaceTour() {
 
   function destroy() {
     startGeneration += 1;
-    clearNextButtonTimer();
     clearAssetRevealTimer();
     clearRetryTimer();
     disableKeyboardLock();

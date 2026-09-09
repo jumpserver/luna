@@ -10,13 +10,16 @@ const { t } = useI18n();
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { registerSessionDisposer, activeTab } = useWorkspaceTabs();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
-const { ensureConnected, error } = useSessionWindowConnect();
-const { open: rightPanelOpen, panelWidth, toggle: toggleRightPanel } = useRightPanel();
-const { open: aiPanelOpen, setOpen: setAiPanelOpen, toggleAi } = useAiPanel();
+const { ensureConnected, error, assetName } = useSessionWindowConnect();
+const { authReady } = useAuthSession();
+const { open: rightPanelOpen, panelWidth } = useRightPanel();
+const { open: aiPanelOpen, setOpen: setAiPanelOpen } = useAiPanel();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 
 const bootstrapped = ref(false);
+
+useHead(() => ({ title: assetName.value || "JumpServer" }));
 
 onMounted(() => {
   initialTheme();
@@ -53,9 +56,17 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  () => [bootstrapped.value, loggedIn.value, route.params.assetId, route.query.protocol, route.query.method] as const,
+  () =>
+    [
+      bootstrapped.value,
+      authReady.value,
+      loggedIn.value,
+      route.params.assetId,
+      route.query.protocol,
+      route.query.method
+    ] as const,
   () => {
-    if (!bootstrapped.value || !loggedIn.value) return;
+    if (!bootstrapped.value || !authReady.value || !loggedIn.value) return;
     void ensureConnected();
   },
   { immediate: true }
@@ -63,10 +74,6 @@ watch(
 
 const openLogin = () => {
   useEventBus().emit("login", undefined);
-};
-
-const handleToggleAi = () => {
-  toggleAi();
 };
 </script>
 
@@ -80,37 +87,6 @@ const handleToggleAi = () => {
       <template v-if="activeTab">
         <WorkspaceSessionPane :tab="activeTab" class="h-full min-h-0" />
         <WorkspacePaneSurfaceHost v-for="pane in activeTab.panes" :key="pane.id" :pane="pane" />
-
-        <div
-          class="absolute top-2 z-40 flex items-center gap-1"
-          :style="rightPanelOpen ? { right: `${panelWidth}px` } : { right: '12px' }"
-        >
-          <UTooltip :text="t(aiPanelOpen ? 'RightPanel.AIClose' : 'RightPanel.AIOpen')" :delay-duration="150">
-            <UButton
-              size="sm"
-              color="primary"
-              :variant="aiPanelOpen ? 'soft' : 'ghost'"
-              class="shadow-md backdrop-blur-sm"
-              icon="i-lucide-sparkles"
-              :aria-label="t(aiPanelOpen ? 'RightPanel.AIClose' : 'RightPanel.AIOpen')"
-              :aria-pressed="aiPanelOpen"
-              @click="handleToggleAi"
-            />
-          </UTooltip>
-
-          <UTooltip :text="rightPanelOpen ? t('RightPanel.Close') : t('RightPanel.Open')" :delay-duration="150">
-            <UButton
-              size="sm"
-              color="neutral"
-              :variant="rightPanelOpen ? 'soft' : 'ghost'"
-              class="shadow-md backdrop-blur-sm"
-              :icon="rightPanelOpen ? 'i-lucide-panel-right-close' : 'i-lucide-panel-right'"
-              :aria-label="rightPanelOpen ? t('RightPanel.Close') : t('RightPanel.Open')"
-              :aria-pressed="rightPanelOpen"
-              @click="toggleRightPanel"
-            />
-          </UTooltip>
-        </div>
 
         <aside
           class="absolute inset-y-0 right-0 z-30 overflow-hidden border-l border-default transition-transform duration-150 ease-out will-change-transform"

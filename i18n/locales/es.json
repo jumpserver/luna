@@ -957,7 +957,8 @@
     "RememberSelectionDescription": "Para elegir otro método de conexión, haga clic derecho en el activo del árbol.",
     "OptionalProtocol": "Protocolo",
     "ConnectMethod": "Método de conexión",
-    "OptionalAccount": "Cuenta"
+    "OptionalAccount": "Cuenta",
+    "CurrentOnline": "Current online: {count}"
   },
   "Layout": {
     "Grid": "Vista de cuadrícula",
@@ -976,7 +977,7 @@
   },
   "Login": {
     "Title": "Introduzca el sitio de inicio de sesión",
-    "Description": "Introduzca la dirección del sitio (por ejemplo, https://example.com) o la IP",
+    "Description": "Introduzca la dirección completa del sitio, como https://example.com o http://192.168.1.1",
     "SiteName": "Nombre del sitio",
     "LoginSuccess": "Inicio de sesión correcto",
     "LoginSuccessDescription": "La operación se ha completado correctamente",
@@ -985,7 +986,7 @@
     "EmptySiteNameError": "Introduzca el nombre del sitio",
     "DuplicateSiteNameError": "Este nombre de sitio ya existe. Use otro nombre",
     "LoginFailedDescription": "El inicio de sesión falló porque la cuenta actual ha caducado. Vuelva a iniciar sesión",
-    "InvalidUrlError": "Introduzca una dirección de sitio o IP válida",
+    "InvalidUrlError": "El formato de la dirección del sitio no es correcto. Introduzca una dirección completa que incluya http:// o https://",
     "InvalidSiteError": "Error de inicio de sesión: no se puede acceder al sitio o no es válido. Revíselo e inténtelo de nuevo.",
     "AddAccount": "Añadir sitio",
     "SwitchSite": "Cambiar de sitio",
@@ -1248,6 +1249,7 @@
     "ConnectFailed": "Error de conexión",
     "CredentialServiceUnavailable": "El servicio de credenciales (por ejemplo, OpenBao) no está disponible. Compruebe su estado e inténtelo de nuevo.",
     "AclFailed": "El activo actual está restringido por políticas de ACL y no se puede acceder a él mediante el cliente. Use la consola web para conectarse.",
+    "MethodDisabled": "Este método de conexión está deshabilitado",
     "ClientNotFound": "No se encontró el cliente de escritorio. Instale o configure su ruta.",
     "ClientLaunchFailed": "Error al iniciar el cliente de escritorio. Compruebe la instalación o los permisos.",
     "ClientExited": "El cliente de escritorio se cerró inesperadamente.",
@@ -1758,5 +1760,8 @@
     "estimatedCost": "Est. cost",
     "details": "Details",
     "hideDetails": "Hide details"
+  },
+  "Chen": {
+    "TerminatedByAdmin": "Terminado por el administrador {name}"
   }
 }

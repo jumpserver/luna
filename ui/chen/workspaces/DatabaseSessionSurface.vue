@@ -343,6 +343,7 @@ function clearLogConsole() {
 const queryConsole = useChenQueryConsole(sendConsoleAction, { onLog: appendLogConsoleEntry });
 const session = useChenSession({
   authenticate: auth.authenticate,
+  translate: t,
   markConnected: () => markSessionConnected(props.tab.id),
   markFailed: () =>
     markSessionFailed({
@@ -386,9 +387,10 @@ const startupError = computed(() => {
   if (!tokenId.value && props.tab.status === "failed") return "Failed to start database workspace";
   return "";
 });
+const adminTerminated = computed(() => session.errorReason.value === "admin_terminate");
 const startupErrorMessage = computed(() => {
   const message = startupError.value;
-  if (!message || message.startsWith("Chen WebSocket 连接失败")) return message;
+  if (!message || adminTerminated.value || message.startsWith("Chen WebSocket 连接失败")) return message;
   return `Chen 服务端请求失败：${message}`;
 });
 const databaseDialogFailed = computed(() =>
@@ -2110,9 +2112,15 @@ defineExpose({ focus });
       v-else
       :icon="startupErrorMessage ? 'i-lucide-circle-alert' : 'i-lucide-database'"
       :loading="!startupErrorMessage"
-      :title="startupErrorMessage ? 'Unable to open database workspace' : 'Opening database workspace'"
-      :message="startupErrorMessage || startupMessage"
-      :action-label="startupErrorMessage ? 'Retry' : undefined"
+      :title="
+        startupErrorMessage
+          ? adminTerminated
+            ? startupErrorMessage
+            : 'Unable to open database workspace'
+          : 'Opening database workspace'
+      "
+      :message="adminTerminated ? '' : startupErrorMessage || startupMessage"
+      :action-label="startupErrorMessage && !adminTerminated ? 'Retry' : undefined"
       @action="emit('reconnect')"
     />
 

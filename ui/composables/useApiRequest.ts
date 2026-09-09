@@ -115,6 +115,7 @@ export interface PublicSettings {
   SECURITY_WATERMARK_FONT_SIZE?: number;
   SECURITY_WATERMARK_COLOR?: string;
   SECURITY_WATERMARK_ROTATE?: number;
+  VIEW_ASSET_ONLINE_SESSION_INFO?: boolean;
 }
 
 let lastAuthFailureAt = 0;
@@ -460,6 +461,14 @@ export function getPublicSettings(): Promise<PublicSettings> {
   return apiRequest<PublicSettings>({
     method: "GET",
     path: "/api/v1/settings/public/"
+  });
+}
+
+export function getSessionOnlineNum(assetId: string, account: string): Promise<{ count: number }> {
+  return apiRequest<{ count: number }>({
+    method: "GET",
+    path: "/api/v1/terminal/sessions/online-info/",
+    query: { asset_id: assetId, account }
   });
 }
 

@@ -957,7 +957,8 @@
     "RememberSelectionDescription": "如需更换连接方式，可在资产树上右键重新选择。",
     "OptionalProtocol": "协议",
     "ConnectMethod": "连接方法",
-    "OptionalAccount": "账号"
+    "OptionalAccount": "账号",
+    "CurrentOnline": "当前在线: {count}"
   },
   "SettingModal": {
     "Description": "连接设置用于配置后续连接中默认启动的应用程序"
@@ -974,7 +975,7 @@
   },
   "Login": {
     "Title": "输入登录站点",
-    "Description": "请输入要登录的站点地址 (例如: https://example.com) 或 IP 地址",
+    "Description": "请输入完整站点地址，如 https://example.com 或 http://192.168.1.1",
     "SiteName": "站点名称",
     "LoginSuccess": "登录成功",
     "LoginSuccessDescription": "欢迎回来，您已成功登录",
@@ -983,7 +984,7 @@
     "EmptyUrlError": "请输入站点地址",
     "EmptySiteNameError": "请输入站点名称",
     "DuplicateSiteNameError": "站点名称已存在，请使用其他名称",
-    "InvalidUrlError": "请输入有效的站点地址或IP地址",
+    "InvalidUrlError": "站点地址格式不正确，请输入包含 http:// 或 https:// 的完整地址",
     "InvalidSiteError": "登录失败：站点不可用或地址不正确，请检查后重试",
     "AddAccount": "新增站点",
     "SwitchSite": "切换站点",
@@ -1251,6 +1252,7 @@
     "ConnectFailed": "连接失败",
     "CredentialServiceUnavailable": "凭据服务（如 OpenBao）不可用，请检查服务状态后重试。",
     "AclFailed": "当前资产受到 ACL 访问限制，无法通过客户端连接，请前往 Web 端进行访问",
+    "MethodDisabled": "该连接方式已被管理员禁用",
     "ClientNotFound": "未找到桌面客户端，请安装或在设置中配置路径",
     "ClientLaunchFailed": "启动桌面客户端失败，请检查安装或权限",
     "ClientExited": "桌面客户端异常退出",
@@ -1761,5 +1763,8 @@
     "estimatedCost": "估算成本",
     "details": "详情",
     "hideDetails": "收起详情"
+  },
+  "Chen": {
+    "TerminatedByAdmin": "{name} 管理员终断连接。"
   }
 }

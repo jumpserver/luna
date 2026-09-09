@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiRequest, favoriteAssetsToFolder, getAuthorizedAssets } from "./useApiRequest";
+import { apiRequest, favoriteAssetsToFolder, getAuthorizedAssets, getSessionOnlineNum } from "./useApiRequest";
 
 const { desktopInvoke } = vi.hoisted(() => ({ desktopInvoke: vi.fn() }));
 
@@ -88,6 +88,28 @@ describe("API request headers", () => {
         body: JSON.stringify({ assets: ["asset-1"], folder: null })
       })
     );
+  });
+
+  it("queries online session count by asset and account", async () => {
+    const fetch = vi.fn(
+      async (_request: string) =>
+        new Response(JSON.stringify({ count: 3 }), {
+          headers: { "Content-Type": "application/json" }
+        })
+    );
+    vi.stubGlobal("isDesktopRuntime", () => false);
+    vi.stubGlobal("withWebSitePrefix", (path: string) => path);
+    vi.stubGlobal("getWebApiHeaders", () => ({}));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(getSessionOnlineNum("asset-1", "admin")).resolves.toEqual({ count: 3 });
+
+    const url = new URL(String(fetch.mock.calls[0]?.[0]), "https://luna.test");
+    expect(url.pathname).toBe("/api/v1/terminal/sessions/online-info/");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      asset_id: "asset-1",
+      account: "admin"
+    });
   });
 
   it("scopes desktop requests to the current organization without waiting for session IPC", async () => {

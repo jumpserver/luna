@@ -8,7 +8,7 @@ import {
   updateFavoriteFolder
 } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { isItemNameTooLong, ITEM_NAME_MAX_LENGTH } from "~/utils/itemName";
+import { hasItemName, isItemNameTooLong, ITEM_NAME_MAX_LENGTH, uniqueItemName } from "~/utils/itemName";
 
 export interface FavoriteFolder {
   id: string;
@@ -100,6 +100,21 @@ const normalizeFolders = (value: unknown): FavoriteFolder[] => {
 
 const flattenFolders = (folders: FavoriteFolder[]): FavoriteFolder[] =>
   folders.flatMap((folder) => [folder, ...flattenFolders(folder.children)]);
+
+export const favoriteFolderSiblings = (folders: FavoriteFolder[], parentId: string | null): FavoriteFolder[] =>
+  parentId ? (flattenFolders(folders).find((folder) => folder.id === parentId)?.children ?? []) : folders;
+
+export const FAVORITE_FOLDER_DUPLICATE_NAME = "duplicate-favorite-folder-name";
+
+export const hasFavoriteFolderName = (
+  folders: FavoriteFolder[],
+  name: string,
+  parentId: string | null,
+  excludeId?: string
+) => hasItemName(favoriteFolderSiblings(folders, parentId), name, excludeId);
+
+export const isFavoriteFolderDuplicateNameError = (error: unknown) =>
+  error instanceof Error && error.message === FAVORITE_FOLDER_DUPLICATE_NAME;
 
 export const flattenFavoriteFolderTree = (
   folders: FavoriteFolder[],
@@ -216,17 +231,18 @@ export const useFavoriteFolders = () => {
 
   const createFolder = async (name: string, parent: string | null = null) => {
     if (isFavoriteFolderNameTooLong(name)) throw new Error("Favorite folder name is too long");
-    const created = await createFavoriteFolder({ name, parent });
+    const created = await createFavoriteFolder({
+      name: uniqueItemName(favoriteFolderSiblings(folders.value, parent), name),
+      parent
+    });
     await load();
     const createdId = String((created as { id?: unknown } | null)?.id || "");
     const createdFolder = createdId ? flattenFolders(folders.value).find((folder) => folder.id === createdId) : null;
     if (!createdFolder) return null;
 
-    const siblings = parent
-      ? flattenFolders(folders.value).find((folder) => folder.id === parent)?.children
-      : folders.value;
-    const createdIndex = siblings?.findIndex((folder) => folder.id === createdId) ?? -1;
-    if (siblings && createdIndex > 0) {
+    const siblings = favoriteFolderSiblings(folders.value, parent);
+    const createdIndex = siblings.findIndex((folder) => folder.id === createdId);
+    if (createdIndex > 0) {
       siblings.splice(createdIndex, 1);
       siblings.unshift(createdFolder);
     }
@@ -235,7 +251,11 @@ export const useFavoriteFolders = () => {
 
   const renameFolder = async (id: string, name: string) => {
     if (isFavoriteFolderNameTooLong(name)) throw new Error("Favorite folder name is too long");
-    await updateFavoriteFolder(id, { name });
+    const folder = flattenFolders(folders.value).find((item) => item.id === id);
+    if (folder && hasFavoriteFolderName(folders.value, name, folder.parent, id)) {
+      throw new Error(FAVORITE_FOLDER_DUPLICATE_NAME);
+    }
+    await updateFavoriteFolder(id, { name, parent: folder?.parent ?? null });
     await load();
   };
 

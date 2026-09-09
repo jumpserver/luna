@@ -1,5 +1,14 @@
 import type { AppConfigType, ConfigItem } from "~/types/index";
-import { COMPONENT_WORKSPACE_CAPABILITIES } from "~/shared/connectors/capabilities";
+import {
+  COMPONENT_WORKSPACE_CAPABILITIES,
+  K8S_NATIVE_VALUE,
+  SFTP_FILE_EDITOR_VALUE,
+  SFTP_FILE_MANAGER_VALUE,
+  WEB_CLI_NATIVE_VALUE,
+  WEB_DB_NATIVE_VALUE,
+  WEB_PROXY_NATIVE_VALUE,
+  WEB_RDP_NATIVE_VALUE
+} from "~/shared/connectors/capabilities";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export {
@@ -10,7 +19,7 @@ export {
   WEB_DB_NATIVE_VALUE,
   WEB_PROXY_NATIVE_VALUE,
   WEB_RDP_NATIVE_VALUE
-} from "~/shared/connectors/capabilities";
+};
 
 export interface ConnectMethod {
   value: string;
@@ -88,7 +97,53 @@ export const isExternalClientConnectMethod = (value: string, methods: ConnectMet
   return ["native", "client", "local", "desktop"].includes(type);
 };
 
-const connectMethodsCache = new Map<string, ConnectMethodsResponse>();
+const BUILTIN_WORKSPACE_METHOD_VALUES = new Set([
+  WEB_CLI_NATIVE_VALUE,
+  WEB_RDP_NATIVE_VALUE,
+  WEB_DB_NATIVE_VALUE,
+  WEB_PROXY_NATIVE_VALUE,
+  SFTP_FILE_MANAGER_VALUE,
+  SFTP_FILE_EDITOR_VALUE,
+  K8S_NATIVE_VALUE
+]);
+
+export const pickConnectMethod = (
+  protocol: string,
+  methods: ConnectMethod[],
+  currentMethod = "",
+  preferredMethod = "",
+  appConfig?: AppConfigType | null,
+  desktopRuntime = isDesktopRuntime()
+) => {
+  const builtin = methods.find((method) => BUILTIN_WORKSPACE_METHOD_VALUES.has(method.value));
+  const canUse = (value: string) => {
+    if (builtin && value.startsWith(LOCAL_APPLICATION_METHOD_PREFIX)) return false;
+    return isConnectMethodAvailable(value, methods, protocol, appConfig);
+  };
+
+  if (canUse(currentMethod)) return currentMethod;
+  if (canUse(preferredMethod)) return preferredMethod;
+  if (builtin) return builtin.value;
+
+  if (desktopRuntime) {
+    const normalizedProtocol = protocol.toLowerCase();
+    const preferredClient = (Object.values(appConfig || {}) as ConfigItem[][])
+      .flat()
+      .find(
+        (item) =>
+          isApplicationConfigItemAvailable(item, normalizedProtocol) &&
+          item.match_first?.some((value) => value.toLowerCase() === normalizedProtocol)
+      );
+    const nativeMethod = methods.find((method) =>
+      ["native", "client", "local", "desktop"].includes(String(method.type || "").toLowerCase())
+    );
+    if (preferredClient && nativeMethod)
+      return createLocalApplicationConnectMethod(nativeMethod.value, preferredClient.name);
+  }
+
+  return methods[0]?.value || "";
+};
+
 const fetchPromise = new Map<string, Promise<ConnectMethodsResponse>>();
 
 const WEB_IFRAME_COMPONENTS = new Set(["koko", "lion", "chen", "tinker", "default"]);
@@ -107,21 +162,27 @@ export const withKokoWebFallback = (protocol: string, methods: ConnectMethod[]) 
       capability.surface !== "web-browser" &&
       capability.protocols.includes(normalizedProtocol) &&
       capability.backendConnectMethod
-  ).flatMap((capability) =>
-    capability.connectMethods
+  ).flatMap((capability) => {
+    const origin = methods.find(
+      (method) =>
+        method.value === capability.backendConnectMethod || method.origin_value === capability.backendConnectMethod
+    );
+    if (!origin || origin.disabled) return [];
+
+    return capability.connectMethods
       .filter((value) => !existingValues.has(value))
       .map((value) => ({
         value,
         label: capability.label,
-        type: "web",
-        icon: "",
+        type: origin?.type || "web",
+        icon: origin?.icon || "",
         disabled: false,
-        listen: "",
-        component: "koko",
-        endpoint_protocol: "http",
+        listen: origin?.listen || "",
+        component: origin?.component || "koko",
+        endpoint_protocol: origin?.endpoint_protocol || "http",
         origin_value: capability.backendConnectMethod
-      }))
-  );
+      }));
+  });
 
   return [...fallbackMethods, ...methods] as ConnectMethod[];
 };
@@ -174,15 +235,13 @@ export const normalizeWebConnectMethods = (
     for (const capability of COMPONENT_WORKSPACE_CAPABILITIES) {
       if (
         capability.component !== "koko" ||
-        !capability.protocols.includes(key) ||
+        !capability.protocols.includes(key.toLowerCase()) ||
         !capability.backendConnectMethod ||
         (!desktopRuntime && capability.surface === "web-browser")
       )
         continue;
 
-      const originIndex = normalizedMethods.findIndex(
-        (method) => method.value === capability.backendConnectMethod && method.type === "web"
-      );
+      const originIndex = normalizedMethods.findIndex((method) => method.value === capability.backendConnectMethod);
       if (originIndex === -1) continue;
 
       const origin = normalizedMethods[originIndex]!;
@@ -208,7 +267,7 @@ export const normalizeWebConnectMethods = (
     if (lionWebIndex !== -1) {
       const origin = normalizedMethods[lionWebIndex]!;
       const declaredMethods = COMPONENT_WORKSPACE_CAPABILITIES.filter(
-        (item) => item.component === "lion" && item.protocols.includes(key)
+        (item) => item.component === "lion" && item.protocols.includes(key.toLowerCase())
       ).flatMap((item) =>
         item.connectMethods.map(
           (methodValue) =>
@@ -231,7 +290,7 @@ export const normalizeWebConnectMethods = (
     if (chenWebIndex !== -1) {
       const origin = normalizedMethods[chenWebIndex]!;
       const declaredMethods = COMPONENT_WORKSPACE_CAPABILITIES.filter(
-        (item) => item.component === "chen" && item.protocols.includes(key)
+        (item) => item.component === "chen" && item.protocols.includes(key.toLowerCase())
       ).flatMap((item) =>
         item.connectMethods.map(
           (methodValue) =>
@@ -265,23 +324,13 @@ export const useConnectMethods = () => {
 
   const fetchConnectMethods = async (): Promise<ConnectMethodsResponse> => {
     const key = `${currentAccountId.value || ""}:${orgId.value || ""}`;
-    const cached = connectMethodsCache.get(key);
-
-    if (cached) {
-      return cached;
-    }
-
     const running = fetchPromise.get(key);
 
     if (running) {
       return running;
     }
 
-    const promise = getConnectMethods().then((data) => {
-      const methods = normalizeWebConnectMethods(data as ConnectMethodsResponse);
-      connectMethodsCache.set(key, methods);
-      return methods;
-    });
+    const promise = getConnectMethods().then((data) => normalizeWebConnectMethods(data as ConnectMethodsResponse));
 
     fetchPromise.set(key, promise);
 
@@ -324,7 +373,7 @@ export const useConnectMethods = () => {
   };
 
   const clearCache = () => {
-    connectMethodsCache.clear();
+    fetchPromise.clear();
   };
 
   return {

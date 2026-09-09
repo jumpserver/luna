@@ -2,8 +2,11 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 
+import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { resolveAssetIconFromFields } from "~/utils/assetIcon";
+
+const props = withDefaults(defineProps<{ standalone?: boolean }>(), { standalone: false });
 
 const { t } = useI18n();
 const appBaseURL = useRuntimeConfig().app.baseURL;
@@ -11,7 +14,7 @@ const { isMacOS } = usePlatform();
 const { open: settingsOpen } = useSettingsWindow();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
-const showAddSession = computed(() => loggedIn.value || isDesktopRuntime());
+const showAddSession = computed(() => !props.standalone && (loggedIn.value || isDesktopRuntime()));
 const {
   activeTabId,
   tabs,
@@ -144,6 +147,17 @@ function hideContextMenu() {
   contextMenuTabIndex.value = -1;
 }
 
+const closeTab = async (tab: WorkspaceSessionTab) => {
+  await closeSession(tab.id).catch(() => undefined);
+  if (!props.standalone) return;
+
+  if (isDesktopRuntime()) {
+    await desktopInvoke("close_window");
+  } else {
+    window.close();
+  }
+};
+
 function openRenameModal(tab: WorkspaceSessionTab) {
   hideContextMenu();
   renameTabId.value = tab.id;
@@ -216,6 +230,80 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
   const hasToken = Boolean(tab.payload?.id || tab.payload?.token?.id);
   const canSplitVertically = canSplitWorkspace(tab.id, "vertical");
   const canSplitHorizontally = canSplitWorkspace(tab.id, "horizontal");
+
+  if (props.standalone) {
+    return [
+      tabMenuItem(
+        {
+          label: t("TabMenu.Reconnect"),
+          disabled: !hasToken,
+          onSelect: () => {
+            hideContextMenu();
+            void reconnectSession(tab);
+          }
+        },
+        "i-lucide-refresh-cw"
+      ),
+      tabMenuItem(
+        {
+          label: t("TabMenu.RenameTitle"),
+          onSelect: () => openRenameModal(tab)
+        },
+        "i-lucide-pencil"
+      ),
+      tabMenuItem(
+        {
+          label: t("TabMenu.FullscreenCurrent"),
+          kbds: ["meta", "shift", "F"],
+          onSelect: () => {
+            hideContextMenu();
+            void enterFullscreenMode(tab.id);
+          }
+        },
+        "i-lucide-fullscreen"
+      ),
+      ...(canSplitVertically
+        ? [
+            tabMenuItem(
+              {
+                label: t("TabMenu.SplitVertically"),
+                onSelect: () => {
+                  hideContextMenu();
+                  splitSession(tab, "vertical");
+                }
+              },
+              "i-lucide-columns-2"
+            )
+          ]
+        : []),
+      ...(canSplitHorizontally
+        ? [
+            tabMenuItem(
+              {
+                label: t("TabMenu.SplitHorizontally"),
+                onSelect: () => {
+                  hideContextMenu();
+                  splitSession(tab, "horizontal");
+                }
+              },
+              "i-lucide-rows-2"
+            )
+          ]
+        : []),
+      { type: "separator" as const },
+      tabMenuItem(
+        {
+          label: t("TabMenu.CloseCurrent"),
+          kbds: ["alt", "shift", "W"],
+          onSelect: () => {
+            hideContextMenu();
+            void closeTab(tab);
+          }
+        },
+        "i-lucide-x"
+      )
+    ];
+  }
 
   return [
     tabMenuItem(
@@ -301,7 +389,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
         kbds: ["alt", "shift", "W"],
         onSelect: () => {
           hideContextMenu();
-          closeSession(tab.id);
+          void closeTab(tab);
         }
       },
       "i-lucide-x"
@@ -508,7 +596,7 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
   if (closeCurrentTab) {
     event.preventDefault();
     event.stopPropagation();
-    void closeSession(closeCurrentTab.id);
+    void closeTab(closeCurrentTab);
     return;
   }
 
@@ -568,7 +656,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
 <template>
   <div data-ai-context="workspace" class="workspace-tab-header flex h-full min-w-0 items-center gap-2 px-1">
-    <UTooltip v-if="hasLeftHidden" text="向左滚动标签" :delay-duration="150">
+    <UTooltip v-if="!props.standalone && hasLeftHidden" text="向左滚动标签" :delay-duration="150">
       <button
         type="button"
         class="workspace-tab-overflow flex size-5 shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-default disabled:opacity-40"
@@ -592,7 +680,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           :data-tab-id="tab.id"
           :title="tabTooltip(tab)"
           type="button"
-          draggable="true"
+          :draggable="!props.standalone"
           class="workspace-session-tab group relative flex h-7 min-w-24 max-w-44 basis-44 grow shrink items-center gap-1.5 rounded-md px-2 text-left leading-none transition-colors"
           :class="[
             activeTabId === tab.id ? 'workspace-session-tab-active' : 'text-[var(--app-muted)]',
@@ -657,7 +745,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           </span>
           <span
             class="workspace-session-tab-close flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-70 transition-colors hover:bg-elevated hover:text-foreground hover:opacity-100"
-            @click.stop="closeSession(tab.id)"
+            @click.stop="void closeTab(tab)"
           >
             <UIcon name="i-lucide-x" class="size-2.5" />
           </span>
@@ -671,7 +759,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
     <WorkspaceAddSessionPopover v-if="showAddSession" />
 
-    <UTooltip v-if="hasRightHidden" text="向右滚动标签" :delay-duration="150">
+    <UTooltip v-if="!props.standalone && hasRightHidden" text="向右滚动标签" :delay-duration="150">
       <button
         type="button"
         class="workspace-tab-overflow flex size-5 shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-default disabled:opacity-40"
@@ -684,7 +772,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
     </UTooltip>
 
     <UDropdownMenu
-      v-if="hasOverflow"
+      v-if="!props.standalone && hasOverflow"
       :items="tabMenuItems"
       :content="{ align: 'end', side: 'bottom' }"
       :ui="{

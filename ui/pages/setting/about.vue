@@ -84,10 +84,10 @@ const openLink = async (url: string) => {
 <template>
   <div class="flex min-h-[420px] items-center justify-center py-8 sm:py-12">
     <section
-      class="w-full max-w-xl overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-card-bg)]"
+      class="w-full max-w-xl overflow-hidden rounded-[length:var(--app-radius)] border border-[var(--app-border)] bg-[var(--app-card-bg)]"
     >
       <header class="flex items-center gap-4 px-5 py-6 sm:px-8">
-        <img :src="logoSrc" :alt="appName" class="size-14 shrink-0 rounded-xl sm:size-16" />
+        <img :src="logoSrc" :alt="appName" class="size-14 shrink-0 rounded-[length:var(--app-radius)] sm:size-16" />
         <div class="min-w-0">
           <h2 class="truncate text-lg font-semibold tracking-[-0.02em] text-highlighted sm:text-xl">{{ appName }}</h2>
           <p class="mt-1 text-xs leading-5 text-muted">{{ t("Setting.AboutDescription") }}</p>

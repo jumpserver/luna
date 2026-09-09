@@ -957,7 +957,8 @@
     "RememberSelectionDescription": "接続方法を変更するには、資産ツリーで右クリックしてください。",
     "OptionalProtocol": "プロトコル",
     "ConnectMethod": "接続方法",
-    "OptionalAccount": "アカウント"
+    "OptionalAccount": "アカウント",
+    "CurrentOnline": "Current online: {count}"
   },
   "Layout": {
     "Grid": "グリッド表示",
@@ -976,7 +977,7 @@
   },
   "Login": {
     "Title": "ログインサイトを入力",
-    "Description": "サイトのアドレス（例：https://example.com）または IP を入力してください",
+    "Description": "完全なサイトアドレスを入力してください。例: https://example.com または http://192.168.1.1",
     "SiteName": "サイト名",
     "LoginSuccess": "ログインしました",
     "LoginSuccessDescription": "操作が正常に完了しました",
@@ -985,7 +986,7 @@
     "EmptySiteNameError": "サイト名を入力してください",
     "DuplicateSiteNameError": "このサイト名はすでに使用されています。別の名前を使用してください",
     "LoginFailedDescription": "ログインに失敗しました。現在のアカウントの有効期限が切れています。再度ログインしてください",
-    "InvalidUrlError": "有効なサイトのアドレスまたは IP アドレスを入力してください",
+    "InvalidUrlError": "サイトアドレスの形式が正しくありません。http:// または https:// を含む完全なアドレスを入力してください",
     "InvalidSiteError": "ログインに失敗しました。サイトに接続できないか、アドレスが無効です。確認して再試行してください。",
     "AddAccount": "サイトを追加",
     "SwitchSite": "サイトを切り替え",
@@ -1248,6 +1249,7 @@
     "ConnectFailed": "接続に失敗しました",
     "CredentialServiceUnavailable": "認証情報サービス（OpenBao など）を利用できません。サービスの状態を確認してから再試行してください。",
     "AclFailed": "現在のアセットは ACL ポリシーによって制限されているため、クライアントからアクセスできません。Web コンソールから接続してください。",
+    "MethodDisabled": "この接続方法は無効になっています",
     "ClientNotFound": "デスクトップクライアントが見つかりません。クライアントをインストールするか、パスを設定してください。",
     "ClientLaunchFailed": "デスクトップクライアントを起動できませんでした。インストールまたは権限を確認してください。",
     "ClientExited": "デスクトップクライアントが予期せず終了しました。",
@@ -1758,5 +1760,8 @@
     "estimatedCost": "見積コスト",
     "details": "詳細",
     "hideDetails": "詳細を隠す"
+  },
+  "Chen": {
+    "TerminatedByAdmin": "{name}管理者が接続を終了"
   }
 }

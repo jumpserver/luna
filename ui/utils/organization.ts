@@ -9,6 +9,11 @@ export const getOrganizationAvatarText = (name: string) => {
 
 export const getFallbackOrganization = (orgs: PermOrgItem[]) => orgs.find((org) => org.is_default) || orgs[0] || null;
 
+export const recordedOrganizationForBootstrap = (
+  persistedOrg?: Partial<PermOrgItem> | null,
+  coreCurrentOrg?: Partial<PermOrgItem> | null
+) => (persistedOrg?.id ? persistedOrg : coreCurrentOrg) || null;
+
 export const resolveOrganizationSelection = (
   orgs: PermOrgItem[],
   recordedOrg?: Partial<PermOrgItem> | null

@@ -145,7 +145,7 @@ watch(
             variant="ghost"
             size="xs"
             class="h-8 w-full justify-start text-xs text-muted"
-            :ui="{ leadingIcon: 'size-3.5', base: 'rounded-lg' }"
+            :ui="{ leadingIcon: 'size-3.5', base: 'rounded-[length:var(--app-radius)]' }"
             @click="closeSettings"
           />
         </div>
@@ -160,7 +160,7 @@ watch(
               root: 'w-full',
               list: 'flex flex-row gap-1 md:flex-col md:gap-0.5',
               item: 'shrink-0 md:w-full',
-              link: 'rounded-lg',
+              link: 'rounded-[length:var(--app-radius)]',
               linkLeadingIcon: 'size-4'
             }"
           />

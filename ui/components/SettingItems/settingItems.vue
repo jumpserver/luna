@@ -302,7 +302,7 @@ const onPathClick = () => {
           color="neutral"
           variant="outline"
           icon="i-lucide-arrow-down-to-line"
-          class="shrink-0 rounded-full text-nowrap"
+          class="shrink-0 text-nowrap"
           @click="openDownloadPage(props.item.download_url)"
         >
           {{ t("Setting.DownloadApplication") }}

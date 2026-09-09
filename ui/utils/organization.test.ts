@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
-
 import type { PermOrgItem } from "~/types";
-import { getFallbackOrganization, getOrganizationAvatarText, resolveOrganizationSelection } from "~/utils/organization";
+
+import { describe, expect, it } from "vitest";
+import {
+  getFallbackOrganization,
+  getOrganizationAvatarText,
+  recordedOrganizationForBootstrap,
+  resolveOrganizationSelection
+} from "~/utils/organization";
 
 const organization = (id: string, isDefault = false): PermOrgItem => ({
   id,
@@ -43,6 +48,19 @@ describe("organization fallback", () => {
 
   it("returns null for an empty organization list", () => {
     expect(getFallbackOrganization([])).toBeNull();
+  });
+
+  it("keeps the persisted organization ahead of Core current org", () => {
+    const persistedOrg = organization("persisted");
+
+    expect(recordedOrganizationForBootstrap(persistedOrg, organization("core-current", true))).toBe(persistedOrg);
+  });
+
+  it("uses Core current org when nothing is persisted", () => {
+    const coreCurrentOrg = organization("core-current", true);
+
+    expect(recordedOrganizationForBootstrap({ id: "" }, coreCurrentOrg)).toBe(coreCurrentOrg);
+    expect(recordedOrganizationForBootstrap(null, coreCurrentOrg)).toBe(coreCurrentOrg);
   });
 });
 

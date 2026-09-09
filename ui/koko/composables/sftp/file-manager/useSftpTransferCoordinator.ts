@@ -23,7 +23,7 @@ import { buildSftpDistributionGroups } from "#koko/utils/sftpDistribution";
 import { buildSftpTransferInputs, filterSftpDistributionTargets, safeLocalDownloadName } from "./selectors";
 import { useBrowserDownloadTransferEndpoint } from "./useBrowserDownloadTransferEndpoint";
 import { useBrowserUploadTransferEndpoint, WEB_UPLOAD_ENDPOINT_ID } from "./useBrowserUploadTransferEndpoint";
-import { useLocalFileTransferEndpoint } from "./useLocalFileTransferEndpoint";
+import { resolveLocalFsDestinationPath, useLocalFileTransferEndpoint } from "./useLocalFileTransferEndpoint";
 
 interface TransferCoordinatorOptions {
   activePaneForSide: (side: SftpWorkspaceSide) => SftpRemotePane | null;
@@ -266,7 +266,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
       if (oppositeSide === "left" && options.globalActiveIds.left === "local" && options.localPaneRef.value) {
         return {
           endpoint: { id: LOCAL_ENDPOINT_ID, label: options.translate("koko.fileManagement.localFiles") },
-          destinationPath: "/"
+          destinationPath: resolveLocalFsDestinationPath(toValue(options.localPaneRef.value.manager.currentPath) || "")
         };
       }
     }
@@ -392,9 +392,33 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     }
   }
 
-  function queueSftpTransfer(payload: SftpTransferDropPayload, destination?: FileTransferEndpointRef) {
+  async function localDestinationPath(preferred = "") {
+    const fromPane = resolveLocalFsDestinationPath(
+      preferred,
+      toValue(options.localPaneRef.value?.manager.currentPath) || ""
+    );
+    if (fromPane) return fromPane;
+    try {
+      return resolveLocalFsDestinationPath(await host.localFiles.homeDir());
+    } catch {
+      return "";
+    }
+  }
+
+  async function queueSftpTransfer(payload: SftpTransferDropPayload, destination?: FileTransferEndpointRef) {
     if (!destination || payload.sourceEndpoint.id === destination.id || !payload.entries.length) return;
-    const inputs = buildSftpTransferInputs(payload, destination);
+    const destinationPath =
+      destination.id === LOCAL_ENDPOINT_ID
+        ? await localDestinationPath(payload.destinationPath)
+        : payload.destinationPath;
+    if (destination.id === LOCAL_ENDPOINT_ID && !destinationPath) {
+      options.showError(
+        options.translate("koko.fileManagement.operationFailed"),
+        new Error("Local destination path is unavailable")
+      );
+      return;
+    }
+    const inputs = buildSftpTransferInputs({ ...payload, destinationPath }, destination);
     if (!inputs.length) return;
     const batchId = fileTransferStore.enqueueBatch(inputs);
     if (!batchId) return;
@@ -533,7 +557,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     }
 
     if (targetIsLocal) {
-      const localPath = toValue(options.localPaneRef.value?.manager.currentPath) || "/";
+      const localPath = resolveLocalFsDestinationPath(toValue(options.localPaneRef.value?.manager.currentPath) || "");
       queueSftpTransfer(
         { ...payload, destinationPath: localPath },
         {

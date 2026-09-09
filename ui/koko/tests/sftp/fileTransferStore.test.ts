@@ -253,6 +253,28 @@ describe("file transfer store recovery actions", () => {
     });
   });
 
+  it("generates koko-safe transfer ids without randomUUID", () => {
+    vi.stubGlobal("crypto", {
+      getRandomValues: (bytes: Uint8Array) => {
+        bytes.fill(0xab);
+        return bytes;
+      }
+    });
+    const store = useFileTransferStore();
+    store.enqueueBatch([
+      {
+        batchId: "batch-safe",
+        sourceEndpoint: { id: "sftp:source", label: "Source" },
+        destinationEndpoint: endpoint,
+        source: { path: "/source/file.txt", name: "file.txt", size: 1 },
+        destinationPath: "/target",
+        conflictPolicy: "ask"
+      }
+    ]);
+    expect(store.tasks[0]?.id).toMatch(/^[\w-]+$/);
+    expect(store.tasks[0]?.id).not.toContain(".");
+  });
+
   it("keeps a user-paused persisted task paused on restore", async () => {
     vi.mocked(loadFileTransferState).mockResolvedValue({
       batches: [{ id: "batch-1", taskIds: ["paused.txt"], createdAt: 1 }],

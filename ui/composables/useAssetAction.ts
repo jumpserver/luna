@@ -1,12 +1,13 @@
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
-import { isLoopbackUrl } from "@jumpserver/connectors-core";
+import { alignEndpointUrlWithPage, isLoopbackUrl } from "@jumpserver/connectors-core";
 
 import { getAssetDetailRequest, invalidatePersonalAssetCredentialCache } from "~/composables/useApiRequest";
 import {
   isConnectMethodAvailable,
   K8S_NATIVE_VALUE,
   parseLocalApplicationConnectMethod,
+  pickConnectMethod,
   SFTP_FILE_EDITOR_VALUE,
   SFTP_FILE_MANAGER_VALUE,
   WEB_DB_NATIVE_VALUE,
@@ -52,12 +53,26 @@ const normalizeDesktopLocalClientUrl = (url: string) =>
   url.startsWith("jms://") ? `jms2://${url.slice("jms://".length)}` : url;
 const withLocalClientName = (url: string, clientName?: string) => {
   if (!clientName || !url.startsWith("jms2://")) return url;
-  const decoded = Uint8Array.from(atob(url.slice("jms2://".length)), (character) => character.charCodeAt(0));
-  const payload = JSON.parse(new TextDecoder().decode(decoded));
-  payload.client = clientName;
-  const encoded = new TextEncoder().encode(JSON.stringify(payload));
-  return `jms2://${btoa(String.fromCharCode(...encoded))}`;
+
+  try {
+    const decoded = Uint8Array.from(atob(url.slice("jms2://".length)), (character) => character.charCodeAt(0));
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(decoded));
+    if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") return url;
+
+    const payload = { ...(parsed as Record<string, unknown>), client: clientName };
+    const encoded = new TextEncoder().encode(JSON.stringify(payload));
+    return `jms2://${btoa(String.fromCharCode(...encoded))}`;
+  } catch {
+    return url;
+  }
 };
+interface ConnectionSessionPayload {
+  id?: string;
+  token?: { id?: string };
+  connectMethod?: { value?: string; component?: string; type?: string };
+  [key: string]: unknown;
+}
+
 interface PersonalCredentialSessionScope {
   accountId: string;
   currentOrgId: string;
@@ -70,7 +85,7 @@ const pendingBuiltinSessions: Array<{
   protocol: string;
   account: string;
   connectMethod?: string;
-  onSessionReady?: (payload: Record<string, any>) => void;
+  onSessionReady?: (payload: ConnectionSessionPayload) => void;
   onSessionError?: (error: unknown) => void;
 }> = [];
 
@@ -232,7 +247,11 @@ export const useAssetAction = () => {
     return new URL(targetPath, endpoint.origin).toString();
   };
 
-  const getEndpointUrl = (endpoint: Record<string, any>, protocol?: string, portField?: string) => {
+  const getEndpointUrl = (
+    endpoint: Record<string, string | number | undefined>,
+    protocol?: string,
+    portField?: string
+  ) => {
     const endpointProtocol = (protocol || window.location.protocol.replace(":", "") || "http").replace(":", "");
     let siteUrl: URL | null = null;
     try {
@@ -257,7 +276,7 @@ export const useAssetAction = () => {
       return window.location.origin;
     }
 
-    return endpointUrl;
+    return alignEndpointUrlWithPage(endpointUrl, window.location.origin, isDesktopRuntime());
   };
 
   const resolveWebEndpointProtocol = (
@@ -372,120 +391,17 @@ export const useAssetAction = () => {
     });
   };
 
-  const getConnectToken = async (
-    body: ConnectionBody,
-    meta?: {
-      tabId?: string;
-      asset?: AssetItem;
-      assetId: string;
-      protocol: string;
-      account: string;
-      assetName?: string;
-      orgId?: string;
-      aclBatchId?: string;
-      onSessionReady?: (payload: Record<string, any>) => void;
-      onSessionError?: (error: unknown) => void;
-    }
-  ) => {
-    const personalCredentialScope: PersonalCredentialSessionScope = {
-      accountId: userInfoStore.currentAccountId,
-      currentOrgId: userInfoStore.currentUser?.org?.id || "",
-      requestOrgId: meta?.orgId || userInfoStore.currentUser?.org?.id || "",
-      site: userInfoStore.currentSite
-    };
-    const nativeApp = parseLocalApplicationConnectMethod(body.connect_method);
-    const serverBody = { ...body, connect_method: nativeApp.connectMethod };
-
-    const session =
-      meta?.tabId || meta?.onSessionReady
-        ? undefined
-        : meta?.asset
-          ? openSession(meta.asset, {
-              protocol: meta.protocol,
-              account: meta.account,
-              connectMethod: body.connect_method
-            })
-          : undefined;
-    const tabId = meta?.tabId || session?.id;
-
-    try {
-      const token = await createConnectionTokenWithAcl(serverBody, {
-        orgId: meta?.orgId,
-        assetName: meta?.asset?.name || meta?.assetId || body.asset,
-        scopeId: tabId,
-        batchId: meta?.aclBatchId
-      });
-      if (!token) {
-        if (meta?.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
-        else if (meta)
-          markSessionFailed({ tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account });
-        return;
-      }
-      syncPersonalCredentialFromToken(meta?.assetId, serverBody, token, personalCredentialScope);
-      const allMethods = await fetchConnectMethods();
-      const method = (allMethods[body.protocol] || []).find((item) => item.value === serverBody.connect_method);
-
-      if (isDesktopRuntime() || isLocalClientMethod(method)) {
-        const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams());
-        const localClientUrl = isDesktopRuntime() ? normalizeDesktopLocalClientUrl(url || "") : url;
-        const expectedScheme = isDesktopRuntime() ? "jms2://" : "jms://";
-        if (!localClientUrl?.startsWith(expectedScheme)) {
-          throw new Error("Invalid local client URL");
-        }
-        meta?.onSessionReady?.({
-          token,
-          ...token,
-          connectMethod: method || { value: body.connect_method }
-        });
-        if (isDesktopRuntime()) {
-          await desktopInvoke("pull_up", {
-            url: withLocalClientName(localClientUrl, nativeApp.clientName)
-          });
-        } else {
-          window.location.assign(localClientUrl);
-        }
-        return;
-      }
-
-      const endpointUrl = await fetchSmartEndpointUrl(token, method, body, meta?.orgId);
-      const webUrl = getWebConnectorPath(token, method, body, endpointUrl, meta?.asset?.platform || "");
-
-      const payload = {
-        token,
-        ...token,
-        endpointUrl,
-        webUrl,
-        connectMethod: method || { value: body.connect_method }
-      };
-      if (meta?.onSessionReady) {
-        meta.onSessionReady(payload);
-      } else if (tabId) {
-        updateSessionPayload(
-          { tabId, assetId: meta!.assetId, protocol: meta!.protocol, account: meta!.account },
-          payload
-        );
-      } else {
-        window.open(webUrl, "_blank");
-      }
-    } catch (error) {
-      if (meta?.onSessionError) {
-        meta.onSessionError(error);
-      } else if (meta) {
-        markSessionFailed({ tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account });
-      }
-
-      addErrorToast({
-        title: t("ConnectError.ConnectFailed"),
-        description: String(error),
-        icon: "line-md:close-circle",
-        progress: true,
-        duration: 4000
-      });
-    }
+  const assertConnectMethodEnabled = async (protocol: string, connectMethod: string) => {
+    const methods = await getMethodsForProtocol(protocol);
+    const selected = parseLocalApplicationConnectMethod(connectMethod);
+    const method = methods.find((item) => item.value === selected.connectMethod);
+    if (!method || method.disabled) throw new Error(t("ConnectError.MethodDisabled"));
   };
 
   const resolveServerConnectMethod = async (body: ConnectionBody) => {
     // 服务端不认识本地注入的 method（builtin_client / web_cli_native / web_rdp_native），换成真实 web method
+    const origin = NATIVE_WORKSPACE_METHOD_ORIGINS[body.connect_method];
+    if (origin) return origin;
     if (!NATIVE_WORKSPACE_METHODS.has(body.connect_method)) return body.connect_method;
 
     try {
@@ -516,6 +432,124 @@ export const useAssetAction = () => {
     return NATIVE_WORKSPACE_METHOD_ORIGINS[body.connect_method] || body.connect_method;
   };
 
+  const getConnectToken = async (
+    body: ConnectionBody,
+    meta?: {
+      tabId?: string;
+      asset?: AssetItem;
+      assetId: string;
+      protocol: string;
+      account: string;
+      assetName?: string;
+      orgId?: string;
+      aclBatchId?: string;
+      onSessionReady?: (payload: ConnectionSessionPayload) => void;
+      onSessionError?: (error: unknown) => void;
+    }
+  ) => {
+    const personalCredentialScope: PersonalCredentialSessionScope = {
+      accountId: userInfoStore.currentAccountId,
+      currentOrgId: userInfoStore.currentUser?.org?.id || "",
+      requestOrgId: meta?.orgId || userInfoStore.currentUser?.org?.id || "",
+      site: userInfoStore.currentSite
+    };
+    const nativeApp = parseLocalApplicationConnectMethod(body.connect_method);
+    const serverBody = {
+      ...body,
+      connect_method: await resolveServerConnectMethod({ ...body, connect_method: nativeApp.connectMethod })
+    };
+
+    const session =
+      meta?.tabId || meta?.onSessionReady
+        ? undefined
+        : meta?.asset
+          ? openSession(meta.asset, {
+              protocol: meta.protocol,
+              account: meta.account,
+              connectMethod: body.connect_method
+            })
+          : undefined;
+    const tabId = meta?.tabId || session?.id;
+
+    try {
+      await assertConnectMethodEnabled(body.protocol, nativeApp.connectMethod);
+      const token = await createConnectionTokenWithAcl(serverBody, {
+        orgId: meta?.orgId,
+        assetName: meta?.asset?.name || meta?.assetId || body.asset,
+        scopeId: tabId,
+        batchId: meta?.aclBatchId
+      });
+      if (!token) {
+        if (meta?.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
+        else if (meta)
+          markSessionFailed({ tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account });
+        return;
+      }
+      syncPersonalCredentialFromToken(meta?.assetId, serverBody, token, personalCredentialScope);
+      const allMethods = await fetchConnectMethods();
+      const method = (allMethods[body.protocol] || []).find((item) => item.value === nativeApp.connectMethod);
+
+      if (isDesktopRuntime() || isLocalClientMethod(method)) {
+        const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams());
+        const localClientUrl = isDesktopRuntime() ? normalizeDesktopLocalClientUrl(url || "") : url;
+        const expectedScheme = isDesktopRuntime() ? "jms2://" : "jms://";
+        if (!localClientUrl?.startsWith(expectedScheme)) {
+          throw new Error("Invalid local client URL");
+        }
+        const payload = {
+          token,
+          ...token,
+          connectMethod: method || { value: body.connect_method }
+        };
+        if (isDesktopRuntime()) {
+          await desktopInvoke("pull_up", {
+            url: withLocalClientName(localClientUrl, nativeApp.clientName)
+          });
+          meta?.onSessionReady?.(payload);
+        } else {
+          meta?.onSessionReady?.(payload);
+          window.location.assign(localClientUrl);
+        }
+        return;
+      }
+
+      const endpointUrl = await fetchSmartEndpointUrl(token, method, body, meta?.orgId);
+      const webUrl = getWebConnectorPath(token, method, body, endpointUrl, meta?.asset?.platform || "");
+
+      const payload = {
+        token,
+        ...token,
+        endpointUrl,
+        webUrl,
+        connectMethod: method || { value: body.connect_method }
+      };
+      if (meta?.onSessionReady) {
+        meta.onSessionReady(payload);
+      } else if (tabId) {
+        updateSessionPayload(
+          { tabId, assetId: meta!.assetId, protocol: meta!.protocol, account: meta!.account },
+          payload
+        );
+      } else {
+        globalThis.open(webUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (error) {
+      if (meta?.onSessionError) {
+        meta.onSessionError(error);
+      } else if (meta) {
+        markSessionFailed({ tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account });
+      }
+
+      addErrorToast({
+        title: t("ConnectError.ConnectFailed"),
+        description: String(error),
+        icon: "line-md:close-circle",
+        progress: true,
+        duration: 4000
+      });
+    }
+  };
+
   const resolveBuiltinComponent = (body: ConnectionBody) => {
     if (body.connect_method === WEB_RDP_NATIVE_VALUE) return "lion";
     if (body.connect_method === WEB_DB_NATIVE_VALUE) return "chen";
@@ -533,7 +567,7 @@ export const useAssetAction = () => {
       orgId?: string;
       aclBatchId?: string;
       asset?: AssetItem;
-      onSessionReady?: (payload: Record<string, any>) => void;
+      onSessionReady?: (payload: ConnectionSessionPayload) => void;
       onSessionError?: (error: unknown) => void;
     }
   ) => {
@@ -545,6 +579,7 @@ export const useAssetAction = () => {
     };
     void (async () => {
       try {
+        await assertConnectMethodEnabled(body.protocol, body.connect_method);
         const serverBody = { ...body, connect_method: await resolveServerConnectMethod(body) };
         const token = await createConnectionTokenWithAcl(serverBody, {
           orgId: meta.orgId,
@@ -684,11 +719,11 @@ export const useAssetAction = () => {
       savePersonalCredential?: boolean;
       dynamicPassword?: string;
       connectMethod?: string;
-      connectOptions?: Record<string, any>;
+      connectOptions?: Record<string, unknown>;
       tabId?: string;
       aclBatchId?: string;
       asset?: AssetItem;
-      onSessionReady?: (payload: Record<string, any>) => void;
+      onSessionReady?: (payload: ConnectionSessionPayload) => void;
       onSessionError?: (error: unknown) => void;
       orgId?: string;
     }
@@ -761,11 +796,15 @@ export const useAssetAction = () => {
     })();
 
     // 当前连接显式选择优先；仅在协议一致时复用已保存连接方法，避免跨协议复用错误的客户端
-    const preferredConnectMethod =
-      ephemeral?.connectMethod?.trim() ||
-      (saved?.protocol === protocol ? saved?.connectMethod?.trim() : "") ||
-      (await resolveConnectMethod(protocol));
-    const connectMethod = preferredConnectMethod;
+    const methods = await getMethodsForProtocol(protocol);
+    const connectMethod =
+      pickConnectMethod(
+        protocol,
+        methods,
+        ephemeral?.connectMethod?.trim() || "",
+        saved?.protocol === protocol ? saved?.connectMethod?.trim() || "" : "",
+        settingManager.appConfig.value
+      ) || (await resolveConnectMethod(protocol));
 
     if (ephemeral?.tabId) setSessionConnectMethod(ephemeral.tabId, connectMethod);
 
@@ -1076,7 +1115,7 @@ export const useAssetAction = () => {
       unlistenBuiltinSessionSuccess = await desktopListen("get-builtin-session-success", (event) => {
         interface eventPayload {
           status: number;
-          data: Record<string, any>;
+          data: Record<string, unknown>;
         }
 
         const payload = event.payload as eventPayload;

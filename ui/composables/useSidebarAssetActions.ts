@@ -1,9 +1,15 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
+import type { ConnectMethod } from "~/composables/useConnectMethods";
 import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
-import type { AssetItem } from "~/types";
+import type { AssetItem, RdpGraphics } from "~/types";
 import { favoriteAssetsToFolder, getAssetDetailRequest } from "~/composables/useApiRequest";
 import { isAssetNameTaken } from "~/composables/useAssetTree";
-import { useConnectMethods, WEB_PROXY_NATIVE_VALUE } from "~/composables/useConnectMethods";
+import {
+  isExternalClientConnectMethod,
+  pickConnectMethod,
+  useConnectMethods,
+  WEB_PROXY_NATIVE_VALUE
+} from "~/composables/useConnectMethods";
 import { findFavoriteAssetFolderId, getFavoriteRootAssetCount } from "~/composables/useFavoriteFolders";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { hasReusableSavedConnection, isSavedConnectionAvailable } from "~/utils/connection";
@@ -14,13 +20,13 @@ export function useSidebarAssetActions() {
   const toast = useToast();
   const isNarrowScreen = useMediaQuery("(max-width: 767px)");
   const { addErrorToast } = useErrorToast();
-  const { setCollapse } = useSettingManager();
+  const { appConfig, setCollapse } = useSettingManager();
   const { closeHoverPreview } = useSidebarLayout();
   const { confirmConnection } = useAssetConnection();
   const { getMethodsForProtocol } = useConnectMethods();
   const { configure, launchWithInfo } = useConnectionLauncher();
   const { activeTab, canSplitWorkspace, openSession, openSetupSession, splitWorkspace } = useWorkspaceTabs();
-  const { openAssetInWindow } = useAssetWindowLauncher();
+  const { dispatchAssetWindow } = useAssetWindowLauncher();
   const { handleAssetFavorite, handleAssetRename, handleAssetUnfavorite } = useAssetAction();
   const {
     folders: favoriteFolders,
@@ -365,9 +371,106 @@ export function useSidebarAssetActions() {
   useEventBus().on("workspaceConnectAsset", handleAssetConnectWithSelection);
   useEventBus().on("workspaceQuickConnectAsset", handleAssetConnect);
 
+  const toWindowConnectionInfo = (connection: {
+    protocol?: string;
+    username?: string;
+    accountId?: string;
+    accountMode?: "hosted" | "dynamic" | "manual" | "anonymous";
+    manualUsername?: string;
+    rememberSecret?: boolean;
+    connectMethod?: string;
+    connectOptions?: RdpGraphics;
+  }) => ({
+    protocol: connection.protocol || "",
+    account: connection.username || "",
+    accountId: connection.accountId,
+    accountMode: connection.accountMode || "hosted",
+    manualUsername: connection.manualUsername || "",
+    manualPassword: "",
+    dynamicPassword: "",
+    rememberSecret: Boolean(connection.rememberSecret),
+    connectMethod: connection.connectMethod || "",
+    connectOptions: connection.connectOptions
+  });
+
   const handleAssetOpenInNewWindow = async (asset: AssetItem) => {
     contextMenuVisible.value = false;
-    await openAssetInWindow(asset);
+    const saved = userInfoStore.getConnectionInfoForAsset(asset.id) || asset.savedConnection;
+    const preference = userInfoStore.getConnectionPreferenceForAsset(asset.id);
+    const rememberedAsset = { ...asset, savedConnection: saved || undefined };
+    const selection = { ...(preference || {}), ...(saved || {}) };
+    const protocol = selection.protocol || "";
+    const dispatchProtocol = protocol || asset.permedProtocols?.[0]?.name || "";
+    let methods: ConnectMethod[] = [];
+
+    if (dispatchProtocol) {
+      try {
+        methods = await getMethodsForProtocol(dispatchProtocol);
+      } catch {
+        // Open the session window when methods cannot be loaded; it can still show the connection form.
+      }
+    }
+
+    const connectionInfo = toWindowConnectionInfo({
+      ...selection,
+      protocol: protocol || dispatchProtocol,
+      connectMethod: pickConnectMethod(
+        dispatchProtocol,
+        methods,
+        selection.connectMethod || "",
+        userInfoStore.getConnectionPreferenceForProtocol(dispatchProtocol)?.connectMethod || "",
+        appConfig.value
+      )
+    });
+    const externalClient = Boolean(
+      dispatchProtocol &&
+      connectionInfo.connectMethod &&
+      isExternalClientConnectMethod(connectionInfo.connectMethod, methods)
+    );
+
+    try {
+      if (hasReusableSavedConnection(rememberedAsset)) {
+        const detailed = await loadAssetConnectionDetails(rememberedAsset);
+        detailed.savedConnection = saved || undefined;
+        if (isSavedConnectionAvailable(detailed)) {
+          await dispatchAssetWindow(externalClient, detailed, connectionInfo, () =>
+            launchWithInfo(detailed, {
+              ...connectionInfo,
+              personalCredentialId: saved?.personalCredentialId,
+              personalCredentialVersion: saved?.personalCredentialVersion,
+              personalCredentialSecretType: saved?.personalCredentialSecretType,
+              savePersonalCredential: false,
+              dynamicPassword: saved?.dynamicPassword || ""
+            })
+          );
+          return;
+        }
+      }
+
+      if (!externalClient) {
+        await dispatchAssetWindow(false, rememberedAsset, undefined, async () => undefined);
+        return;
+      }
+
+      const detailed = await loadAssetConnectionDetails(rememberedAsset);
+      detailed.savedConnection = saved || undefined;
+      const info = await configure(detailed, { protocol: dispatchProtocol });
+      if (!info) return;
+      const selectedMethods = await getMethodsForProtocol(info.protocol);
+      await dispatchAssetWindow(
+        isExternalClientConnectMethod(info.connectMethod, selectedMethods),
+        detailed,
+        info,
+        () => launchWithInfo(detailed, info)
+      );
+    } catch (error) {
+      addErrorToast({
+        title: t("ConnectError.ConnectFailed"),
+        description: String(error),
+        icon: "i-lucide-circle-alert",
+        duration: 4000
+      });
+    }
   };
 
   const openRenameModal = (asset: AssetItem) => {

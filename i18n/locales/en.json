@@ -957,7 +957,8 @@
     "RememberSelectionDescription": "Right-click an asset in the tree to choose a different connection method.",
     "OptionalProtocol": "Protocol",
     "ConnectMethod": "Connect Method",
-    "OptionalAccount": "Account"
+    "OptionalAccount": "Account",
+    "CurrentOnline": "Current online: {count}"
   },
   "Layout": {
     "Grid": "Grid View",
@@ -976,7 +977,7 @@
   },
   "Login": {
     "Title": "Input Login Site",
-    "Description": "Please enter the site address (e.g. https://example.com) or IP",
+    "Description": "Enter the full site address, such as https://example.com or http://192.168.1.1",
     "SiteName": "Site name",
     "LoginSuccess": "Login Success",
     "LoginSuccessDescription": "Your operation has been completed successfully",
@@ -985,7 +986,7 @@
     "EmptySiteNameError": "Please enter a site name",
     "DuplicateSiteNameError": "This site name already exists. Use a different name",
     "LoginFailedDescription": "Login failed, the current account has expired, please log in again",
-    "InvalidUrlError": "Please enter a valid site address or IP address",
+    "InvalidUrlError": "Invalid site address. Enter a full address that includes http:// or https://",
     "InvalidSiteError": "Login failed: site is unreachable or invalid. Please check and try again.",
     "AddAccount": "Add Site",
     "SwitchSite": "Switch Site",
@@ -1248,6 +1249,7 @@
     "ConnectFailed": "Connection failed",
     "CredentialServiceUnavailable": "The credential service (such as OpenBao) is unavailable. Check the service status and try again.",
     "AclFailed": "The current asset is restricted by ACL policies and cannot be accessed via the client. Please use the Web console to connect.",
+    "MethodDisabled": "This connection method is disabled",
     "ClientNotFound": "Desktop client not found. Please install or configure the client path.",
     "ClientLaunchFailed": "Failed to launch desktop client. Please check installation or permissions.",
     "ClientExited": "Desktop client exited unexpectedly.",
@@ -1758,5 +1760,8 @@
     "estimatedCost": "Est. cost",
     "details": "Details",
     "hideDetails": "Hide details"
+  },
+  "Chen": {
+    "TerminatedByAdmin": "Terminated by admin {name}"
   }
 }

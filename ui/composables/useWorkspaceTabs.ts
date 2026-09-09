@@ -1,4 +1,5 @@
-import type { AssetItem, PermedAccount, PermedProtocol } from "~/types";
+import type { WebProxyOpenRequest } from "~/composables/useWebProxyManager";
+import type { AssetItem, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
 import { createSharedComposable, useFullscreen } from "@vueuse/core";
 
 import { useRecentConnections } from "~/composables/useRecentConnections";
@@ -12,6 +13,27 @@ export type WorkspaceSplitDirection = "horizontal" | "vertical";
 export type WorkspacePaneDropPlacement = "center" | "left" | "right" | "top" | "bottom";
 export type WorkspacePaneMode = "empty" | "setup" | "session";
 export type WorkspacePaneLayoutMode = "single" | "columns-2" | "rows-2" | "grid-2x2";
+
+interface WorkspaceSessionPayload {
+  id?: string;
+  account?: string;
+  value?: string;
+  token?: TokenResponse | { id?: string; account?: string; value?: string; actions?: unknown[] };
+  connectMethod?: { value?: string; component?: string; type?: string };
+  endpointUrl?: string;
+  webProxy?: WebProxyOpenRequest;
+  webUrl?: string;
+  actions?: unknown[];
+  scriptId?: string;
+  name?: string;
+  args?: string;
+  module?: string;
+  comment?: string;
+  scope?: "private" | "public";
+  variable?: unknown[];
+  disableautohash?: unknown;
+  [key: string]: unknown;
+}
 
 export interface WorkspaceSurfaceSession {
   id: string;
@@ -29,7 +51,7 @@ export interface WorkspaceSurfaceSession {
   connectMethod?: string;
   status: WorkspaceSessionStatus;
   connectedAt?: number;
-  payload?: Record<string, any>;
+  payload?: WorkspaceSessionPayload;
   setupAsset?: AssetItem;
 }
 
@@ -381,7 +403,7 @@ export const useWorkspaceTabs = () => {
       protocol: string;
       account: string;
       connectMethod?: string;
-      payload?: Record<string, any>;
+      payload?: WorkspaceSessionPayload;
       paneId?: string;
       newTab?: boolean;
     }
@@ -819,7 +841,7 @@ export const useWorkspaceTabs = () => {
 
   const updateSessionPayload = (
     match: { tabId?: string; assetId: string; protocol: string; account: string },
-    payload: Record<string, any>
+    payload: WorkspaceSessionPayload
   ) => {
     const found = findSession(match);
     if (!found) return;

@@ -15,7 +15,7 @@ const { t } = useI18n();
 
 <template>
   <Transition name="recent-sites">
-    <div v-if="visible" class="rounded-md border border-black/10 dark:border-white/10 p-1 mt-2">
+    <div v-if="visible" class="rounded-[length:var(--app-radius)] border border-black/10 dark:border-white/10 p-1 mt-2">
       <div class="flex items-center justify-between px-1">
         <span class="text-[11px] text-gray-500 dark:text-gray-400">
           {{ t("Login.RecentSites") }}

@@ -1,9 +1,9 @@
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 
-import type { KokoWorkspaceTab } from "#koko/host";
 import type { Ref } from "vue";
+import type { KokoWorkspaceTab } from "#koko/host";
 
-import { connectorSessionKey } from "@jumpserver/connectors-core";
+import { alignEndpointUrlWithPage, connectorSessionKey } from "@jumpserver/connectors-core";
 import { useKokoHostAdapter } from "#koko/host";
 
 interface UseBaseWorkspaceSessionOptions {
@@ -34,8 +34,12 @@ export function useBaseWorkspaceSession(tab: Ref<KokoWorkspaceTab>, options: Use
   }
 
   async function fetchEndpointUrl() {
+    const pageOrigin = host.getWindowOrigin();
+    const desktop = host.isDesktopRuntime();
+    const align = (url: string) => alignEndpointUrlWithPage(url, pageOrigin, desktop);
+
     const explicitEndpoint = String(tab.value.payload?.endpointUrl || "").trim();
-    if (explicitEndpoint) return explicitEndpoint;
+    if (explicitEndpoint) return align(explicitEndpoint);
 
     const endpoint = await host.getSmartEndpoint({
       protocol: resolvedProtocol.value,
@@ -49,17 +53,19 @@ export function useBaseWorkspaceSession(tab: Ref<KokoWorkspaceTab>, options: Use
       endpoint.value ||
       (endpointHost ? (port ? `${scheme}://${endpointHost}:${port}` : `${scheme}://${endpointHost}`) : "");
 
-    if (!resolved) return host.getWindowOrigin();
+    if (!resolved) return align(pageOrigin);
+    if (desktop) return resolved;
 
-    if (host.isDesktopRuntime()) return resolved;
+    try {
+      const resolvedUrl = new URL(resolved);
+      const isLoopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(resolvedUrl.hostname);
+      const samePort = (resolvedUrl.port || "") === new URL(pageOrigin).port;
+      if (isLoopback && !samePort) return align(pageOrigin);
+    } catch {
+      return align(resolved);
+    }
 
-    const resolvedUrl = new URL(resolved);
-    const isLoopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(resolvedUrl.hostname);
-    const samePort = (resolvedUrl.port || "") === new URL(host.getWindowOrigin()).port;
-
-    if (isLoopback && !samePort) return host.getWindowOrigin();
-
-    return resolved;
+    return align(resolved);
   }
 
   async function fetchTicket(endpointUrl: string) {
