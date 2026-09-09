@@ -81,7 +81,7 @@ export const isConnectMethodAvailable = (
 
 export const isExternalClientConnectMethod = (value: string, methods: ConnectMethod[]) => {
   const selected = parseLocalApplicationConnectMethod(value);
-  if (selected.clientName) return true;
+  if (selected.connectMethod.endsWith("_guide")) return false;
 
   const method = methods.find((item) => item.value === selected.connectMethod);
   const type = String(method?.type || "").toLowerCase();
