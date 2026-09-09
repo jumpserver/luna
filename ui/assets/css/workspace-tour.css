@@ -43,11 +43,13 @@
   position: absolute;
   top: 6px;
   right: 6px;
+  z-index: 1;
   display: grid;
   place-items: center;
   width: 22px;
   height: 22px;
   cursor: pointer;
+  pointer-events: auto;
   color: var(--app-muted);
   font-size: 16px;
   line-height: 1;
