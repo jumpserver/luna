@@ -1,5 +1,5 @@
 import type { AppConfigType, ConfigItem } from "~/types/index";
-import { COMPONENT_WORKSPACE_CAPABILITIES, WEB_PROXY_NATIVE_VALUE } from "~/shared/connectors/capabilities";
+import { COMPONENT_WORKSPACE_CAPABILITIES } from "~/shared/connectors/capabilities";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 export {
@@ -24,7 +24,7 @@ export interface ConnectMethod {
   origin_value?: string;
 }
 
-interface ConnectMethodsResponse {
+export interface ConnectMethodsResponse {
   [protocol: string]: ConnectMethod[];
   originals: ConnectMethod[];
 }
@@ -104,6 +104,7 @@ export const withKokoWebFallback = (protocol: string, methods: ConnectMethod[]) 
   const fallbackMethods = COMPONENT_WORKSPACE_CAPABILITIES.filter(
     (capability) =>
       capability.component === "koko" &&
+      capability.surface !== "web-browser" &&
       capability.protocols.includes(normalizedProtocol) &&
       capability.backendConnectMethod
   ).flatMap((capability) =>
@@ -123,31 +124,6 @@ export const withKokoWebFallback = (protocol: string, methods: ConnectMethod[]) 
   );
 
   return [...fallbackMethods, ...methods] as ConnectMethod[];
-};
-
-export const withWebProxyBuiltin = (
-  protocol: string,
-  methods: ConnectMethod[],
-  desktopRuntime = isDesktopRuntime()
-): ConnectMethod[] => {
-  const normalizedProtocol = protocol.trim().toLowerCase();
-  if (!desktopRuntime || !["http", "https"].includes(normalizedProtocol)) return methods;
-  if (methods.some((method) => method.value === WEB_PROXY_NATIVE_VALUE)) return methods;
-
-  const originIndex = methods.findIndex((method) => !method.origin_value && !method.disabled);
-  if (originIndex === -1) return methods;
-
-  const origin = methods[originIndex]!;
-  const builtin: ConnectMethod = {
-    ...origin,
-    value: WEB_PROXY_NATIVE_VALUE,
-    label: "ConnectMethod.BuiltinWebProxy",
-    type: "web",
-    component: "web-proxy",
-    origin_value: origin.value
-  };
-
-  return [...methods.slice(0, originIndex), builtin, ...methods.slice(originIndex)];
 };
 
 const isWebIframeMethod = (method: ConnectMethod) => {
@@ -183,7 +159,10 @@ function assertWebIframeFilter() {
 
 if (import.meta.dev) assertWebIframeFilter();
 
-const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMethodsResponse => {
+export const normalizeWebConnectMethods = (
+  methods: ConnectMethodsResponse,
+  desktopRuntime = isDesktopRuntime()
+): ConnectMethodsResponse => {
   const normalized: ConnectMethodsResponse = { ...methods };
 
   Object.keys(normalized).forEach((key) => {
@@ -193,7 +172,12 @@ const normalizeWebConnectMethods = (methods: ConnectMethodsResponse): ConnectMet
     const normalizedMethods = [...value];
 
     for (const capability of COMPONENT_WORKSPACE_CAPABILITIES) {
-      if (capability.component !== "koko" || !capability.protocols.includes(key) || !capability.backendConnectMethod)
+      if (
+        capability.component !== "koko" ||
+        !capability.protocols.includes(key) ||
+        !capability.backendConnectMethod ||
+        (!desktopRuntime && capability.surface === "web-browser")
+      )
         continue;
 
       const originIndex = normalizedMethods.findIndex(
@@ -317,7 +301,7 @@ export const useConnectMethods = () => {
         ([key, methods]) => key.toLowerCase() === normalizedProtocol && Array.isArray(methods)
       )?.[1] || [];
     const methodsWithFallback = withKokoWebFallback(normalizedProtocol, protocolMethods);
-    return withWebProxyBuiltin(normalizedProtocol, methodsWithFallback)
+    return methodsWithFallback
       .filter((method) => !method.disabled)
       .map((method) => ({
         ...method,

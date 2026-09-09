@@ -29,9 +29,21 @@ test("applet retains an optional asset navigation allowlist and rejects malforme
   for (const allowed_urls of [null, "*", ["*"], ["file:///tmp"], ["https://example.com/path"]])
     assert.throws(() => parseLaunch({ ...launch, allowed_urls }), /白名单/);
 });
+test("empty or terminal stdin starts an unrestricted standalone browser without credentials", async () => {
+  for (const input of [Readable.from([]), Object.assign(Readable.from([]), { isTTY: true })]) {
+    const result = await readLaunch(input);
+    assert.equal(result.targetUrl, "https://www.jumpserver.org/");
+    assert.equal(result.standalone, true);
+    assert.equal(result.safeMode, false);
+    assert.equal(result.recordingEnabled, false);
+    assert.equal(result.localSession, null);
+  }
+  await assert.rejects(readLaunch(Readable.from([" "])), SyntaxError);
+});
 test("direct launch needs no Koko endpoint or token and releases credentials once on the permitted origin", async () => {
   const result = await readLaunch(Readable.from([JSON.stringify(launch)]));
   assert.equal(result.recordingEnabled, false);
+  assert.equal(result.standalone, false);
   assert.equal(result.proxyUrl, "");
   assert.equal(result.tokenValue, "");
   assert.ok(!JSON.stringify(result).includes("one-use-secret"));

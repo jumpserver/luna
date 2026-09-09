@@ -7,6 +7,7 @@ export interface WebProxySurfaceProps {
   supported: boolean;
   colorScheme?: "light" | "dark";
   macInset?: boolean;
+  browsable?: boolean;
   recordingRequired?: boolean;
   reconnectable?: boolean;
 }

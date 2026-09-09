@@ -18,6 +18,7 @@ interface ManagerOptions {
   log?: Pick<Console, "info" | "warn" | "error">;
   requireRecording?: boolean;
   direct?: boolean;
+  allowManualNavigation?: boolean;
   createSession?: () => Promise<any>;
 }
 export function createWebProxyManager({
@@ -26,6 +27,7 @@ export function createWebProxyManager({
   log: electronLog = console,
   requireRecording = false,
   direct = false,
+  allowManualNavigation = false,
   createSession
 }: ManagerOptions) {
   const webProxyViews = new Map();
@@ -599,6 +601,15 @@ export function createWebProxyManager({
         finishWebProxyAutofill(managed, "error", `登录页面加载失败：${description}`);
         return;
       }
+      if (allowManualNavigation) {
+        emitWebProxyState(managed, {
+          url: validatedUrl,
+          loading: false,
+          error: "",
+          navigationError: `页面加载失败：${description}`
+        });
+        return;
+      }
       emitWebProxyState(managed, { url: validatedUrl, loading: false, error: description });
     });
     startWebProxyAutofillWait(managed);
@@ -720,8 +731,15 @@ export function createWebProxyManager({
       return null;
     }
     if (command === "navigate_web_proxy_view") {
-      webProxyView(event, args.label);
-      throw new Error("当前不支持手动输入地址，请通过页面内链接访问");
+      const managed = webProxyView(event, args.label);
+      if (!allowManualNavigation) throw new Error("当前不支持手动输入地址，请通过页面内链接访问");
+      if (managed.autofillVisibilityBlocked) throw new Error("安全登录期间无法导航，请等待或重新连接");
+      const target = parseWebProxyUrl(args.targetUrl, ["http:", "https:"], "Website URL");
+      if (!managed.canNavigate(target)) throw new Error("页面地址不在此资产的访问白名单中");
+      managed.targetUrl = target.toString();
+      managed.autofillFailure = "";
+      emitWebProxyState(managed, { url: target.toString(), loading: true, error: "", navigationError: "" });
+      return managed.view.webContents.loadURL(target.toString());
     }
     if (command === "reload_web_proxy_view") {
       const managed = webProxyView(event, args.label);

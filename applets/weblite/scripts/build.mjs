@@ -22,6 +22,7 @@ await build({
             "lucide:arrow-left",
             "lucide:arrow-right",
             "lucide:rotate-cw",
+            "lucide:globe-2",
             "lucide:lock-keyhole",
             "lucide:info",
             "lucide:loader-circle",

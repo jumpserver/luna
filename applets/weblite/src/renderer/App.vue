@@ -18,6 +18,7 @@ onMounted(async () => {
       :bridge="bridge"
       active
       supported
+      :browsable="request.standalone"
       :recording-required="request.recordingEnabled"
       @fatal="host.invoke('fatal')"
     />

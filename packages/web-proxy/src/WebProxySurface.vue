@@ -158,17 +158,23 @@ const recordingLabel = computed(() => {
   }
 });
 const statusSummary = computed(() =>
-  [
-    error.value
+  props.browsable
+    ? error.value
       ? "连接异常"
-      : !viewCreated.value || loading.value
-        ? "正在连接"
-        : request.value?.proxyUrl
-          ? "已通过代理连接"
-          : "已连接",
-    `账号代填：${autofillLabel.value || "等待状态"}`,
-    request.value?.recordingEnabled === false ? "远程会话录像" : recordingLabel.value || "录像准备中"
-  ].join(" · ")
+      : loading.value
+        ? "正在加载"
+        : "轻量浏览模式"
+    : [
+        error.value
+          ? "连接异常"
+          : !viewCreated.value || loading.value
+            ? "正在连接"
+            : request.value?.proxyUrl
+              ? "已通过代理连接"
+              : "已连接",
+        `账号代填：${autofillLabel.value || "等待状态"}`,
+        request.value?.recordingEnabled === false ? "远程会话录像" : recordingLabel.value || "录像准备中"
+      ].join(" · ")
 );
 
 function viewBounds() {
@@ -249,6 +255,33 @@ function reload() {
   if (navigationDisabled.value) return;
   loading.value = true;
   void desktopWebProxy.reload(viewLabel);
+}
+
+async function navigate() {
+  if (!props.browsable || navigationDisabled.value) return;
+  const value = addressValue.value.trim();
+  let target: URL;
+  try {
+    if (
+      !value ||
+      /^(?:about|data|file|javascript):/i.test(value) ||
+      (/^[a-z][a-z\d+.-]*:\/\//i.test(value) && !/^https?:\/\//i.test(value))
+    )
+      throw new Error();
+    target = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+    if (!target.hostname || target.username || target.password) throw new Error();
+  } catch {
+    navigationError.value = "请输入有效的 HTTP/HTTPS 页面地址";
+    return;
+  }
+  navigationError.value = "";
+  loading.value = true;
+  try {
+    await desktopWebProxy.navigate(viewLabel, target.toString());
+  } catch (cause) {
+    loading.value = false;
+    navigationError.value = `无法打开页面：${String(cause instanceof Error ? cause.message : cause)}`;
+  }
 }
 
 async function completeVerification() {
@@ -420,7 +453,7 @@ watch([() => props.colorScheme, viewCreated], async ([colorScheme, created]) => 
 
 onMounted(async () => {
   if (!props.supported) {
-    error.value = "内置 Web Proxy 仅在桌面客户端中可用";
+    error.value = "内置浏览器仅在桌面客户端中可用";
     loading.value = false;
     return;
   }
@@ -564,20 +597,20 @@ defineExpose({ focus, close: closeView });
         aria-label="刷新"
         @click="reload"
       />
-      <div class="min-w-0 flex-1">
+      <form class="min-w-0 flex-1" @submit.prevent="navigate">
         <UInput
-          :model-value="addressValue"
-          icon="i-lucide-lock-keyhole"
+          v-model="addressValue"
+          :icon="props.browsable ? 'i-lucide-globe-2' : 'i-lucide-lock-keyhole'"
           size="sm"
           class="w-full"
           autocomplete="off"
           spellcheck="false"
           :disabled="navigationDisabled"
-          readonly
-          aria-label="地址栏只读"
-          title="当前不支持手动输入地址"
+          :readonly="!props.browsable"
+          :aria-label="props.browsable ? '地址栏' : '地址栏只读'"
+          :title="props.browsable ? '输入地址并按 Enter 访问' : '当前不支持手动输入地址'"
         />
-      </div>
+      </form>
       <!-- Keep the tooltip inside the toolbar, above the native desktop webview. -->
       <UTooltip
         :text="statusSummary"

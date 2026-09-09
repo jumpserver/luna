@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">JumpServer WebLite</title>
+  <desc id="desc">A simple white globe on a green app icon.</desc>
+  <rect x="96" y="96" width="832" height="832" rx="192" fill="#27B88C"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="44">
+    <circle cx="512" cy="512" r="280"/>
+    <ellipse cx="512" cy="512" rx="128" ry="280"/>
+    <path d="M232 512h560"/>
+  </g>
+</svg>

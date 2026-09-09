@@ -38,6 +38,7 @@ function setupSurface(safeMode = false, observe = false) {
     bridge: desktopWebProxy,
     active: true,
     supported: true,
+    browsable: false,
     colorScheme: "light" as "light" | "dark"
   });
   // Execute the component's setup without mounting its native Electron view.
@@ -89,7 +90,7 @@ function setupSurface(safeMode = false, observe = false) {
   const surface = effects.run(() =>
     new Function(
       ...Object.keys(scope),
-      `${outputText}\nreturn { interactivePending, interactiveCanComplete, verificationCollapsed, collapseVerification, resumeVerification, verificationCompletionError, completeVerification, verificationFrame, verificationRenderedRevision, verificationCursor, verificationWaitingMessage, autofillStatus, verificationInputRef, verificationPointer, verificationText, closeView, syncView, viewCreated, contentRef, viewLabel, handleState, preview, error, navigationDisabled, safeMode, history, reload, reconnect };`
+      `${outputText}\nreturn { interactivePending, interactiveCanComplete, verificationCollapsed, collapseVerification, resumeVerification, verificationCompletionError, completeVerification, verificationFrame, verificationRenderedRevision, verificationCursor, verificationWaitingMessage, autofillStatus, verificationInputRef, verificationPointer, verificationText, closeView, syncView, viewCreated, contentRef, viewLabel, handleState, preview, error, navigationError, navigationDisabled, safeMode, addressValue, navigate, history, reload, reconnect };`
     )(...Object.values(scope))
   );
   surface.viewCreated.value = true;
@@ -175,8 +176,7 @@ it.each([true, false])(
       autofillStartedAt: Date.now()
     });
     expect(surface.safeMode.value).toBe(safeMode);
-    expect(source).toMatch(/<UInput[^>]+:model-value="addressValue"[^>]+\sreadonly\s/);
-    expect(source).not.toContain('@submit.prevent="navigate"');
+    expect(source).toContain(':readonly="!props.browsable"');
     expect(desktopWebProxy.navigate).not.toHaveBeenCalled();
     surface.history("back");
     surface.history("forward");
@@ -188,6 +188,34 @@ it.each([true, false])(
     expect(desktopWebProxy.reload).toHaveBeenCalledExactlyOnceWith(surface.viewLabel);
   }
 );
+
+it("allows normalized HTTP navigation only in standalone browser mode", async () => {
+  const { surface, desktopWebProxy, props } = setupSurface();
+  surface.handleState({
+    label: surface.viewLabel,
+    url: "https://www.jumpserver.org/",
+    loading: false,
+    error: "",
+    autofillPending: false,
+    autofillStartedAt: Date.now()
+  });
+  surface.addressValue.value = "docs.jumpserver.org/guide";
+  await surface.navigate();
+  expect(desktopWebProxy.navigate).not.toHaveBeenCalled();
+
+  props.browsable = true;
+  await surface.navigate();
+  expect(desktopWebProxy.navigate).toHaveBeenCalledExactlyOnceWith(
+    surface.viewLabel,
+    "https://docs.jumpserver.org/guide"
+  );
+  for (const value of ["", "file:///tmp", "https://user:secret@example.test/"]) {
+    surface.addressValue.value = value;
+    await surface.navigate();
+  }
+  expect(desktopWebProxy.navigate).toHaveBeenCalledTimes(1);
+  expect(surface.navigationError.value).toMatch(/HTTP\/HTTPS/);
+});
 
 it("shares recording finalization across concurrent closes and stops view updates immediately", async () => {
   const { surface, desktopWebProxy } = setupSurface();

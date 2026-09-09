@@ -39,7 +39,7 @@ try {
     prune: false,
     overwrite: true,
     executableName: "weblite",
-    icon: path.join(repo, "electron/assets/icons/icon.ico")
+    icon: path.join(root, "assets/icon.ico")
   });
   if (platform !== "win32") {
     console.info(`Local validation app: ${appDir}`);
@@ -79,7 +79,7 @@ try {
     await writeFile(path.join(stage, "setup.yml"), "type: manual\n");
     await add("manifest.yml", path.join(stage, "manifest.yml"));
     await add("setup.yml", path.join(stage, "setup.yml"));
-    await add("icon.png", path.join(repo, "electron/assets/icons/icon.png"));
+    await add("icon.png", path.join(root, "assets/icon.png"));
     zip.end();
     await closed;
     console.info(`Applet package: ${archive}`);

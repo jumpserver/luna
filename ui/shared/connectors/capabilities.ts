@@ -96,6 +96,7 @@ export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] 
     label: "ConnectMethod.BuiltinWebProxy",
     protocols: ["http", "https"],
     connectMethods: [WEB_PROXY_NATIVE_VALUE],
+    backendConnectMethod: "web_proxy",
     description: "ConnectMethod.BuiltinWebProxyDescription"
   }
 ];

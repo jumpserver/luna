@@ -3,6 +3,20 @@ import { normalizedWebOrigin } from "@jumpserver/web-proxy/credentials";
 import { createLocalCredentialSession } from "@jumpserver/web-proxy/local-credentials";
 import { webProxyNavigationPolicy } from "@jumpserver/web-proxy/script";
 
+export function standaloneLaunch() {
+  return {
+    targetUrl: "https://www.jumpserver.org/",
+    proxyUrl: "",
+    tokenId: "",
+    tokenValue: "",
+    safeMode: false,
+    recordingEnabled: false,
+    allowedUrls: [],
+    localSession: null,
+    standalone: true
+  };
+}
+
 export function parseLaunch(value: unknown) {
   if (!value || typeof value !== "object") throw new Error("缺少 Web applet 启动参数");
   const data = value as Record<string, unknown>;
@@ -47,11 +61,15 @@ export function parseLaunch(value: unknown) {
     safeMode: data.safe_mode,
     recordingEnabled,
     allowedUrls,
-    localSession
+    localSession,
+    standalone: false
   };
 }
 
 export async function readLaunch(input: Readable) {
+  // A terminal or an inherited null stdin means the executable was launched
+  // directly instead of by Tinker.
+  if ((input as Readable & { isTTY?: boolean }).isTTY) return standaloneLaunch();
   // Bounded inherited pipe; credentials never enter process arguments or files.
   // 128 script steps plus the account secret must fit in this envelope.
   const chunks: Buffer[] = [];
@@ -64,6 +82,7 @@ export async function readLaunch(input: Readable) {
       if (size > 1_048_576) throw new Error("启动参数过长");
       chunks.push(buffer);
     }
+    if (size === 0) return standaloneLaunch();
     return parseLaunch(JSON.parse(Buffer.concat(chunks).toString("utf8")));
   } finally {
     clearTimeout(timer);

@@ -10,7 +10,7 @@
     "start": "electron .",
     "package": "node scripts/package.mjs",
     "test": "node --import tsx --test tests/*.test.ts",
-    "test:runtime": "node tests/runtime-check.mjs && node tests/runtime-check.mjs script && node tests/runtime-check.mjs recording",
+    "test:runtime": "node tests/runtime-check.mjs && node tests/runtime-check.mjs script && node tests/runtime-check.mjs recording && node tests/runtime-check.mjs standalone",
     "typecheck": "vue-tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

@@ -40,6 +40,7 @@ const NATIVE_WORKSPACE_METHODS = new Set([
 ]);
 const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
   [WEB_CLI_NATIVE_METHOD]: "web_cli",
+  [WEB_PROXY_NATIVE_VALUE]: "web_proxy",
   [SFTP_FILE_MANAGER_VALUE]: "web_sftp",
   [SFTP_FILE_EDITOR_VALUE]: "web_sftp",
   [K8S_NATIVE_VALUE]: "web_cli"

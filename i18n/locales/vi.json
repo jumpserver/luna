@@ -1241,7 +1241,7 @@
     "KubernetesDescription": "Kết nối K8s dùng workspace Kubernetes UI của koko.",
     "RemoteDesktop": "Máy tính từ xa",
     "RemoteDesktopDescription": "Kết nối RDP/VNC đi qua workspace máy tính từ xa Lion.",
-    "BuiltinWebProxy": "Web Proxy tích hợp",
+    "BuiltinWebProxy": "Trình duyệt tích hợp",
     "BuiltinWebProxyDescription": "Tài sản website dùng WebView hệ thống, lưu lượng đi qua Koko Web Proxy."
   },
   "ConnectError": {

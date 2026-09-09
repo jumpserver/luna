@@ -9,6 +9,7 @@ import { chromium } from "playwright";
 const applet = fileURLToPath(new URL("..", import.meta.url));
 const mode = process.argv[2] || "basic";
 const recording = mode === "recording";
+const standalone = mode === "standalone";
 const requests = [];
 let frames = 0;
 let recordingStarts = 0;
@@ -38,6 +39,7 @@ const server = createServer((req, res) => {
   if (route.endsWith("/finish")) return json({ frame_count: frames });
   if (recording) assert.equal(recordingStarts, 1, "target loaded before required recording started");
   res.setHeader("content-type", "text/html");
+  if (standalone) return res.end("<!doctype html><html><body><h1>Standalone browsing works</h1></body></html>");
   res.end(`<!doctype html><html><body>
     <form id="login"><input id="username"><input id="password" type="password"><button id="submit">Login</button></form>
     <h1 id="dashboard" style="display:${recording ? "block" : "none"}">Signed in</h1>
@@ -49,8 +51,10 @@ const server = createServer((req, res) => {
     };</script></body></html>`);
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-const target = `http://127.0.0.1:${server.address().port}/login`;
-const child = spawn(electron, ["--remote-debugging-port=0", applet], { stdio: ["pipe", "pipe", "pipe"] });
+const target = `http://127.0.0.1:${server.address().port}/${standalone ? "standalone" : "login"}`;
+const child = spawn(electron, ["--remote-debugging-port=0", applet], {
+  stdio: [standalone ? "ignore" : "pipe", "pipe", "pipe"]
+});
 let stderr = "";
 child.stdout.on("data", (chunk) => {
   stderr += chunk;
@@ -58,40 +62,41 @@ child.stdout.on("data", (chunk) => {
 child.stderr.on("data", (chunk) => {
   stderr += chunk;
 });
-child.stdin.end(
-  JSON.stringify({
-    target_url: target,
-    safe_mode: true,
-    recording_enabled: recording,
-    ...(recording
-      ? { proxy_url: new URL(target).origin, token_id: "test-token", token_value: "test-token-value" }
-      : {}),
-    login: {
-      config:
-        mode === "script"
-          ? {
-              autofill: "script",
-              script: [
-                { step: 1, command: "type", target: "id=username", value: "{USERNAME}" },
-                { step: 2, command: "type", target: "id=password", value: "{SECRET}" },
-                { step: 3, command: "interactive", target: "css=div.captcha-field" },
-                { step: 4, command: "click", target: "id=submit" },
-                { step: 5, command: "success", target: "id=dashboard" }
-              ]
-            }
-          : {
-              autofill: "basic",
-              username_selector: "id=username",
-              password_selector: "id=password",
-              submit_selector: "id=submit",
-              success_selector: "id=dashboard"
-            },
-      username: "tester",
-      password: "runtime-secret",
-      secret_type: "password"
-    }
-  })
-);
+if (!standalone)
+  child.stdin.end(
+    JSON.stringify({
+      target_url: target,
+      safe_mode: true,
+      recording_enabled: recording,
+      ...(recording
+        ? { proxy_url: new URL(target).origin, token_id: "test-token", token_value: "test-token-value" }
+        : {}),
+      login: {
+        config:
+          mode === "script"
+            ? {
+                autofill: "script",
+                script: [
+                  { step: 1, command: "type", target: "id=username", value: "{USERNAME}" },
+                  { step: 2, command: "type", target: "id=password", value: "{SECRET}" },
+                  { step: 3, command: "interactive", target: "css=div.captcha-field" },
+                  { step: 4, command: "click", target: "id=submit" },
+                  { step: 5, command: "success", target: "id=dashboard" }
+                ]
+              }
+            : {
+                autofill: "basic",
+                username_selector: "id=username",
+                password_selector: "id=password",
+                submit_selector: "id=submit",
+                success_selector: "id=dashboard"
+              },
+        username: "tester",
+        password: "runtime-secret",
+        secret_type: "password"
+      }
+    })
+  );
 let browser;
 async function waitFor(check, message) {
   for (let n = 0; n < 150; n++) {
@@ -109,14 +114,23 @@ try {
   browser = await chromium.connectOverCDP(endpoint);
   const pages = () => browser.contexts().flatMap((context) => context.pages());
   const shell = await waitFor(() => pages().find((page) => page.url().startsWith("file:")), "Applet shell not loaded");
+  if (standalone) {
+    const address = shell.getByRole("textbox", { name: "地址栏" });
+    await address.fill(target);
+    await address.press("Enter");
+  }
   const page = await waitFor(() => pages().find((page) => page.url() === target), "Direct target never loaded");
-  await page.locator("#dashboard").waitFor({ state: "visible", timeout: 15_000 });
-  await shell
-    .getByRole("button", { name: recording ? /会话状态：.*未配置代填/ : /会话状态：.*登录成功/ })
-    .waitFor({ state: "visible" });
+  if (standalone) await page.getByRole("heading", { name: "Standalone browsing works" }).waitFor();
+  else {
+    await page.locator("#dashboard").waitFor({ state: "visible", timeout: 15_000 });
+    await shell
+      .getByRole("button", { name: recording ? /会话状态：.*未配置代填/ : /会话状态：.*登录成功/ })
+      .waitFor({ state: "visible" });
+  }
   const bootstrap = await shell.evaluate(() => window.webApplet.invoke("bootstrap"));
   assert.equal(bootstrap.proxyUrl, recording ? new URL(target).origin : "");
   assert.equal(bootstrap.recordingEnabled, recording);
+  assert.equal(bootstrap.standalone, standalone);
   assert.ok(!JSON.stringify(bootstrap).includes("runtime-secret"));
   assert.equal(await page.evaluate(() => typeof window.webApplet), "undefined");
   if (recording) {

@@ -2,6 +2,8 @@
 
 Luna 工作区中的独立 Electron 浏览器，用于替换内置 Chrome applet。Tinker 仍负责 RemoteApp 启动，浏览器直接复用 `packages/web-proxy` 的代填、登录脚本、交互区域、成功 selector 和安全输入控制。客户端也使用同一份实现。
 
+直接运行 `weblite.exe` 且不传入 Tinker 启动管道时，会打开轻量浏览模式。地址栏支持输入 HTTP/HTTPS 地址，并保留后退、前进和刷新；该模式不读取账号凭据、不连接 Koko，也不启用 Web 录像。收到 Tinker 启动参数时，地址栏仍保持只读，并继续执行资产白名单与安全登录约束。
+
 ## 默认链路
 
 ```text

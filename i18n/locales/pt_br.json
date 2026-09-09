@@ -1241,7 +1241,7 @@
     "KubernetesDescription": "Conexões Kubernetes usam o workspace da UI Kubernetes do koko.",
     "RemoteDesktop": "Área de trabalho remota",
     "RemoteDesktopDescription": "Conexões RDP/VNC usam o workspace de área de trabalho remota do Lion.",
-    "BuiltinWebProxy": "Web Proxy integrado",
+    "BuiltinWebProxy": "Navegador integrado",
     "BuiltinWebProxyDescription": "Ativos de website usam o WebView do sistema, com o tráfego roteado pelo Koko Web Proxy."
   },
   "ConnectError": {

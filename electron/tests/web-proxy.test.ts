@@ -29,7 +29,7 @@ import {
   webProxyNavigationPolicy
 } from "../../packages/web-proxy/src/script.ts";
 
-async function setupNavigation(safeMode: unknown, allowedUrls: unknown = []) {
+async function setupNavigation(safeMode: unknown, allowedUrls: unknown = [], allowManualNavigation = false) {
   const main = await readFile(new URL("../../packages/web-proxy/src/manager.ts", import.meta.url), "utf8");
   const source = [
     main.slice(main.indexOf("function parseWebProxyUrl("), main.indexOf("function emitWebProxyState(")),
@@ -55,6 +55,7 @@ async function setupNavigation(safeMode: unknown, allowedUrls: unknown = []) {
   const scope = {
     requireRecording: false,
     direct: false,
+    allowManualNavigation,
     createSession: undefined,
     parseUrl: (value) => new URL(value),
     normalizedWebOrigin,
@@ -254,6 +255,18 @@ test("manual navigation remains disabled outside safe mode while page navigation
     }
   }
   await assert.rejects(setupNavigation("false"), /invalid Web Proxy safe mode/);
+});
+
+test("standalone browser navigation accepts only HTTP pages without unlocking managed sessions", async () => {
+  const { contents, state, invoke } = await setupNavigation(false, [], true);
+  await invoke("navigate_web_proxy_view", { targetUrl: "https://docs.jumpserver.org/guide/" });
+  assert.equal(contents.loadURL.mock.calls.at(-1).arguments[0], "https://docs.jumpserver.org/guide/");
+  assert.equal(state.mock.calls.at(-1).arguments[1].navigationError, "");
+  for (const targetUrl of ["file:///tmp", "javascript:alert(1)", "https://user:secret@example.test/"])
+    await assert.rejects(invoke("navigate_web_proxy_view", { targetUrl }));
+
+  const restricted = await setupNavigation(false, ["https://sso.test"], true);
+  await assert.rejects(restricted.invoke("navigate_web_proxy_view", { targetUrl: "https://outside.test/" }), /白名单/);
 });
 
 test("script supports explicit SSO origins without an asset allowlist and validates terminal success", () => {

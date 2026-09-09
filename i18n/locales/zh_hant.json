@@ -1241,7 +1241,7 @@
     "KubernetesDescription": "K8s 連線使用 koko Kubernetes UI workspace。",
     "RemoteDesktop": "遠端桌面",
     "RemoteDesktopDescription": "RDP/VNC 連線走 Lion 遠端桌面 workspace。",
-    "BuiltinWebProxy": "內建 Web Proxy",
+    "BuiltinWebProxy": "內建瀏覽器",
     "BuiltinWebProxyDescription": "Website 資產使用系統 WebView，流量統一經由 Koko Web Proxy。"
   },
   "ConnectError": {

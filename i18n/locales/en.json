@@ -1241,7 +1241,7 @@
     "KubernetesDescription": "Kubernetes connections use the koko Kubernetes UI workspace.",
     "RemoteDesktop": "Remote desktop",
     "RemoteDesktopDescription": "RDP/VNC connections use the Lion remote desktop workspace.",
-    "BuiltinWebProxy": "Built-in Web Proxy",
+    "BuiltinWebProxy": "Built-in Browser",
     "BuiltinWebProxyDescription": "Website assets use the system WebView, with traffic routed through Koko Web Proxy."
   },
   "ConnectError": {

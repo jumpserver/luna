@@ -2,15 +2,16 @@ import type { ConnectMethod } from "~/composables/useConnectMethods";
 import { describe, expect, it, vi } from "vitest";
 import {
   isExternalClientConnectMethod,
+  normalizeWebConnectMethods,
   WEB_PROXY_NATIVE_VALUE,
-  withWebProxyBuiltin
+  withKokoWebFallback
 } from "~/composables/useConnectMethods";
 
 vi.mock("~/store/modules/userInfo", () => ({
   useUserInfoStore: vi.fn()
 }));
 
-const method = (value: string, label: string): ConnectMethod => ({
+const appletMethod = (value: string, label: string): ConnectMethod => ({
   value,
   label,
   type: "applet",
@@ -21,35 +22,43 @@ const method = (value: string, label: string): ConnectMethod => ({
 });
 
 describe("desktop website connect methods", () => {
-  const websiteMethods = [
-    method("chrome", "Chrome Browser"),
-    method("edge", "Microsoft Edge"),
-    method("360se_app", "360se_app")
-  ];
+  const webProxyMethod: ConnectMethod = {
+    value: "web_proxy",
+    label: "Built-in Browser",
+    type: "web",
+    icon: "",
+    disabled: false,
+    listen: "",
+    component: "koko",
+    endpoint_protocol: "http"
+  };
+  const weblite = appletMethod("weblite", "JumpServer WebLite");
 
-  it("adds the built-in proxy and keeps remote applications in the desktop client", () => {
-    const methods = withWebProxyBuiltin("HTTP", websiteMethods, true);
+  it("maps the Core web proxy method and keeps remote applications in the desktop client", () => {
+    const methods = normalizeWebConnectMethods({ http: [webProxyMethod, weblite], originals: [] }, true).http!;
 
-    expect(methods.map((item) => item.value)).toEqual([WEB_PROXY_NATIVE_VALUE, "chrome", "edge", "360se_app"]);
+    expect(methods.map((item) => item.value)).toEqual([WEB_PROXY_NATIVE_VALUE, "weblite"]);
     expect(methods[0]).toMatchObject({
       label: "ConnectMethod.BuiltinWebProxy",
       type: "web",
-      component: "web-proxy",
-      origin_value: "chrome"
+      component: "koko",
+      origin_value: "web_proxy"
     });
   });
 
-  it("does not add the desktop-only proxy to the web build", () => {
-    expect(withWebProxyBuiltin("http", websiteMethods, false)).toEqual(websiteMethods);
+  it("hides the desktop-only proxy from the web build", () => {
+    const methods = normalizeWebConnectMethods({ http: [webProxyMethod, weblite], originals: [] }, false).http!;
+    expect(methods).toEqual([weblite]);
   });
 
-  it("does not duplicate an existing built-in proxy", () => {
-    const existing = withWebProxyBuiltin("https", websiteMethods, true);
-    expect(withWebProxyBuiltin("https", existing, true)).toEqual(existing);
+  it("does not borrow an applet method when Core omits the web proxy", () => {
+    const methods = normalizeWebConnectMethods({ http: [weblite], originals: [] }, true).http!;
+    expect(methods).toEqual([weblite]);
+    expect(withKokoWebFallback("http", methods)).toEqual([weblite]);
   });
 
   it("opens the built-in proxy inside the workspace instead of an external window", () => {
-    const methods = withWebProxyBuiltin("http", websiteMethods, true);
+    const methods = normalizeWebConnectMethods({ http: [webProxyMethod], originals: [] }, true).http!;
     expect(isExternalClientConnectMethod(WEB_PROXY_NATIVE_VALUE, methods)).toBe(false);
   });
 });

@@ -1241,7 +1241,7 @@
     "KubernetesDescription": "Подключения K8s используют workspace Kubernetes UI koko.",
     "RemoteDesktop": "Удаленный рабочий стол",
     "RemoteDesktopDescription": "Подключения RDP/VNC идут через workspace удаленного рабочего стола Lion.",
-    "BuiltinWebProxy": "Встроенный Web Proxy",
+    "BuiltinWebProxy": "Встроенный браузер",
     "BuiltinWebProxyDescription": "Веб-активы используют системный WebView, трафик идет через Koko Web Proxy."
   },
   "ConnectError": {

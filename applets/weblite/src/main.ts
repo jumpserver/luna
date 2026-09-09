@@ -31,6 +31,7 @@ async function start() {
     labelForWindow: () => "applet",
     requireRecording: launch.recordingEnabled,
     direct: !launch.recordingEnabled,
+    allowManualNavigation: launch.standalone,
     createSession: launch.recordingEnabled
       ? undefined
       : async () => {
@@ -71,7 +72,8 @@ async function start() {
         proxyUrl: launch.proxyUrl,
         safeMode: launch.safeMode,
         recordingEnabled: launch.recordingEnabled,
-        allowedUrls: launch.allowedUrls
+        allowedUrls: launch.allowedUrls,
+        standalone: launch.standalone
       };
     if (command === "fatal") {
       void close("Web 录像无法启动，请重新连接");
@@ -103,6 +105,6 @@ async function start() {
 
 void start().catch(async () => {
   await app.whenReady();
-  dialog.showErrorBox("JumpServer WebLite", "Web applet 启动失败，请从 JumpServer 重新连接，并检查发布机配置。");
+  dialog.showErrorBox("JumpServer WebLite", "WebLite 启动失败，请重试；如从 JumpServer 连接，请检查发布机配置。");
   app.exit(1);
 });
