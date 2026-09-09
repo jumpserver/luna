@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DropdownMenuItem } from "@nuxt/ui";
+import type { ContextMenuItem } from "@nuxt/ui";
 import type { ComponentPublicInstance } from "vue";
 import type { FavoriteFolder } from "~/composables/useFavoriteFolders";
 import {
@@ -22,8 +22,6 @@ const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
 const { createFolder, renameFolder, removeFolder } = useFavoriteFolders();
 const expandedFolderIds = ref<Set<string>>(new Set());
-const folderMenuVisible = ref(false);
-const folderMenuPosition = ref({ x: 0, y: 0 });
 const folderMenuTarget = ref<FavoriteFolder | null>(null);
 const creating = ref(false);
 const editingFolderId = ref<string | null>(null);
@@ -43,10 +41,8 @@ const toggleFolder = (folder: FavoriteFolder) => {
   expandedFolderIds.value = expanded;
 };
 
-const openFolderMenu = (event: MouseEvent, folder: FavoriteFolder | null) => {
+const prepareFolderMenu = (folder: FavoriteFolder | null) => {
   folderMenuTarget.value = folder;
-  folderMenuPosition.value = { x: event.clientX, y: event.clientY };
-  folderMenuVisible.value = true;
 };
 
 const focusRenameInput = async () => {
@@ -58,7 +54,6 @@ const focusRenameInput = async () => {
 };
 
 const startRenameFolder = (folder: FavoriteFolder) => {
-  folderMenuVisible.value = false;
   editingFolderId.value = folder.id;
   editingSource.value = folder.name;
   editingValue.value = folder.name;
@@ -66,7 +61,6 @@ const startRenameFolder = (folder: FavoriteFolder) => {
 };
 
 const createAndRenameFolder = async (parentId: string | null) => {
-  folderMenuVisible.value = false;
   if (creating.value) return;
   creating.value = true;
   try {
@@ -120,7 +114,6 @@ const finishRenameFolder = async (folder: FavoriteFolder) => {
 };
 
 const openDeleteFolder = (folder: FavoriteFolder) => {
-  folderMenuVisible.value = false;
   deleteTarget.value = folder;
   deleteModalOpen.value = true;
 };
@@ -153,7 +146,7 @@ const updateDeleteModal = (open: boolean) => {
   if (!open) deleteTarget.value = null;
 };
 
-const folderMenuItems = computed<DropdownMenuItem[]>(() => {
+const folderMenuItems = computed<ContextMenuItem[]>(() => {
   const folder = folderMenuTarget.value;
   return [
     {
@@ -181,116 +174,100 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
 </script>
 
 <template>
-  <div class="app-tree w-max min-w-full py-1 leading-[18px] text-default" role="tree">
-    <button
-      type="button"
-      class="app-tree-row sidebar-row flex w-max min-w-full cursor-pointer items-center gap-1 pr-1 text-left font-medium"
-      :class="currentFolderId === null ? 'bg-[var(--app-selected-soft)] text-[var(--app-fg)]' : ''"
-      :style="{ paddingLeft: '10px' }"
-      role="treeitem"
-      aria-expanded="true"
-      @click.stop="emit('select', null)"
-      @contextmenu.prevent.stop="openFolderMenu($event, null)"
-      @pointerdown.stop
-    >
-      <span class="app-tree-icon-slot grid shrink-0 place-items-center">
-        <UIcon
-          v-if="folders.length > 0"
-          name="i-lucide-chevron-right"
-          class="app-tree-toggle-icon sidebar-icon-sm rotate-90"
-        />
-      </span>
-      <AppTreeFolderIcon :open="true" class="app-tree-icon sidebar-icon tree-folder-icon shrink-0" />
-      <span class="whitespace-nowrap">{{ t("Favorite.All") }}</span>
-      <span class="ml-1 shrink-0">({{ rootAssetCount }})</span>
-    </button>
-
-    <div
-      v-for="{ folder, depth } in visibleFolders"
-      :key="folder.id"
-      class="app-tree-row sidebar-row flex w-max min-w-full items-center gap-1 pr-1"
-      :class="currentFolderId === folder.id ? 'bg-[var(--app-selected-soft)] text-[var(--app-fg)]' : ''"
-      :style="{ paddingLeft: `${10 + depth * 14}px` }"
-      role="treeitem"
-      :aria-expanded="folder.children.length > 0 ? expandedFolderIds.has(folder.id) : undefined"
-      @contextmenu.prevent.stop="openFolderMenu($event, folder)"
-    >
-      <button
-        v-if="folder.children.length > 0"
-        type="button"
-        class="app-tree-icon-slot grid shrink-0 cursor-pointer place-items-center"
-        :aria-label="folder.name"
-        @click.stop.prevent="toggleFolder(folder)"
-        @pointerdown.stop
-      >
-        <UIcon
-          name="i-lucide-chevron-right"
-          class="app-tree-toggle-icon sidebar-icon-sm transition-transform duration-150"
-          :class="expandedFolderIds.has(folder.id) ? 'rotate-90' : ''"
-        />
-      </button>
-      <span v-else class="app-tree-icon-slot shrink-0" />
-
+  <UContextMenu :items="folderMenuItems" :modal="false" size="sm" :ui="{ content: 'min-w-40' }">
+    <div class="app-tree w-max min-w-full py-1 leading-[18px] text-default" role="tree">
       <button
         type="button"
-        class="flex min-w-max flex-1 cursor-pointer items-center gap-1 text-left"
-        :class="editingFolderId === folder.id ? 'hidden' : ''"
-        @click.stop="emit('select', folder.id)"
+        class="app-tree-row sidebar-row flex w-max min-w-full cursor-pointer items-center gap-1 pr-1 text-left font-medium"
+        :class="currentFolderId === null ? 'bg-[var(--app-selected-soft)] text-[var(--app-fg)]' : ''"
+        :style="{ paddingLeft: '10px' }"
+        role="treeitem"
+        aria-expanded="true"
+        @click.stop="emit('select', null)"
+        @contextmenu="prepareFolderMenu(null)"
         @pointerdown.stop
       >
-        <AppTreeFolderIcon
-          :open="expandedFolderIds.has(folder.id)"
-          class="app-tree-icon sidebar-icon tree-folder-icon shrink-0"
-        />
-        <span class="inline-flex min-w-max flex-1 items-center font-medium">
-          <span class="whitespace-nowrap">{{ folder.name }}</span>
-          <span class="ml-1 shrink-0">({{ folder.assetCount || 0 }})</span>
+        <span class="app-tree-icon-slot grid shrink-0 place-items-center">
+          <UIcon
+            v-if="folders.length > 0"
+            name="i-lucide-chevron-right"
+            class="app-tree-toggle-icon sidebar-icon-sm rotate-90"
+          />
         </span>
+        <AppTreeFolderIcon :open="true" class="app-tree-icon sidebar-icon tree-folder-icon shrink-0" />
+        <span class="whitespace-nowrap">{{ t("Favorite.All") }}</span>
+        <span class="ml-1 shrink-0">({{ rootAssetCount }})</span>
       </button>
+
       <div
-        v-if="editingFolderId === folder.id"
-        class="flex min-w-max flex-1 items-center gap-1"
-        @click.stop
-        @pointerdown.stop
+        v-for="{ folder, depth } in visibleFolders"
+        :key="folder.id"
+        class="app-tree-row sidebar-row flex w-max min-w-full items-center gap-1 pr-1"
+        :class="currentFolderId === folder.id ? 'bg-[var(--app-selected-soft)] text-[var(--app-fg)]' : ''"
+        :style="{ paddingLeft: `${10 + depth * 14}px` }"
+        role="treeitem"
+        :aria-expanded="folder.children.length > 0 ? expandedFolderIds.has(folder.id) : undefined"
+        @contextmenu="prepareFolderMenu(folder)"
       >
-        <AppTreeFolderIcon
-          :open="expandedFolderIds.has(folder.id)"
-          class="app-tree-icon sidebar-icon tree-folder-icon shrink-0"
-        />
-        <UInput
-          ref="renameInputRef"
-          v-model="editingValue"
-          size="xs"
-          class="w-36"
-          :maxlength="FAVORITE_FOLDER_NAME_MAX_LENGTH"
-          :ui="{ base: 'h-5 py-0 px-1 text-xs' }"
+        <button
+          v-if="folder.children.length > 0"
+          type="button"
+          class="app-tree-icon-slot grid shrink-0 cursor-pointer place-items-center"
+          :aria-label="folder.name"
+          @click.stop.prevent="toggleFolder(folder)"
+          @pointerdown.stop
+        >
+          <UIcon
+            name="i-lucide-chevron-right"
+            class="app-tree-toggle-icon sidebar-icon-sm transition-transform duration-150"
+            :class="expandedFolderIds.has(folder.id) ? 'rotate-90' : ''"
+          />
+        </button>
+        <span v-else class="app-tree-icon-slot shrink-0" />
+
+        <button
+          type="button"
+          class="flex min-w-max flex-1 cursor-pointer items-center gap-1 text-left"
+          :class="editingFolderId === folder.id ? 'hidden' : ''"
+          @click.stop="emit('select', folder.id)"
+          @pointerdown.stop
+        >
+          <AppTreeFolderIcon
+            :open="expandedFolderIds.has(folder.id)"
+            class="app-tree-icon sidebar-icon tree-folder-icon shrink-0"
+          />
+          <span class="inline-flex min-w-max flex-1 items-center font-medium">
+            <span class="whitespace-nowrap">{{ folder.name }}</span>
+            <span class="ml-1 shrink-0">({{ folder.assetCount || 0 }})</span>
+          </span>
+        </button>
+        <div
+          v-if="editingFolderId === folder.id"
+          class="flex min-w-max flex-1 items-center gap-1"
           @click.stop
           @pointerdown.stop
-          @keydown.enter.prevent="finishRenameFolder(folder)"
-          @keydown.esc.prevent="cancelRenameFolder"
-          @blur="finishRenameFolder(folder)"
-        />
+        >
+          <AppTreeFolderIcon
+            :open="expandedFolderIds.has(folder.id)"
+            class="app-tree-icon sidebar-icon tree-folder-icon shrink-0"
+          />
+          <UInput
+            ref="renameInputRef"
+            v-model="editingValue"
+            size="xs"
+            class="w-36"
+            :maxlength="FAVORITE_FOLDER_NAME_MAX_LENGTH"
+            :ui="{ base: 'h-5 py-0 px-1 text-xs' }"
+            @click.stop
+            @pointerdown.stop
+            @keydown.enter.prevent="finishRenameFolder(folder)"
+            @keydown.esc.prevent="cancelRenameFolder"
+            @blur="finishRenameFolder(folder)"
+          />
+        </div>
       </div>
     </div>
-
-    <UDropdownMenu
-      :open="folderMenuVisible"
-      :items="folderMenuItems"
-      size="sm"
-      :content="{ align: 'start', side: 'bottom' }"
-      @update:open="folderMenuVisible = $event"
-    >
-      <span
-        class="fixed pointer-events-none"
-        :style="{
-          left: `${folderMenuPosition.x}px`,
-          top: `${folderMenuPosition.y}px`,
-          width: '1px',
-          height: '1px'
-        }"
-      />
-    </UDropdownMenu>
-  </div>
+  </UContextMenu>
 
   <ModalAlertDialog
     :open="deleteModalOpen"

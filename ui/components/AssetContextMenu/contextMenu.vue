@@ -155,12 +155,10 @@ watch(
 /**
  * @description 取消搜藏
  */
-function handleUnfavorite() {
-  handleAssetUnfavorite(props.asset.id);
-  try {
-    useEventBus().emit("favoriteChanged", { assetId: props.asset.id, favorite: false });
-  } catch {}
+async function handleUnfavorite() {
   emits("update:visible", false);
+  if (!(await handleAssetUnfavorite(props.asset.id))) return;
+  useEventBus().emit("favoriteChanged", { assetId: props.asset.id, favorite: false });
 }
 </script>
 
