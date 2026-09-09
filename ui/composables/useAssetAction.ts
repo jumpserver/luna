@@ -881,8 +881,8 @@ export const useAssetAction = () => {
    * @description 处理资产收藏
    * @param assetId
    */
-  const handleAssetFavorite = (assetId: string) => {
-    void favoriteAsset(assetId)
+  const handleAssetFavorite = (assetId: string): Promise<boolean> => {
+    return favoriteAsset(assetId)
       .then(() => {
         toast.add({
           title: t("ContextMenu.FavoriteSuccess"),
@@ -891,6 +891,7 @@ export const useAssetAction = () => {
           progress: false,
           duration: 1000
         });
+        return true;
       })
       .catch(() => {
         addErrorToast({
@@ -899,6 +900,7 @@ export const useAssetAction = () => {
           progress: true,
           duration: 4000
         });
+        return false;
       });
   };
 
@@ -906,8 +908,8 @@ export const useAssetAction = () => {
    * @description 处理取消收藏
    * @param assetId
    */
-  const handleAssetUnfavorite = (assetId: string) => {
-    void unfavoriteAsset(assetId)
+  const handleAssetUnfavorite = (assetId: string): Promise<boolean> => {
+    return unfavoriteAsset(assetId)
       .then(() => {
         toast.add({
           title: t("ContextMenu.UnfavoriteSuccess"),
@@ -916,6 +918,7 @@ export const useAssetAction = () => {
           progress: false,
           duration: 1000
         });
+        return true;
       })
       .catch(() => {
         addErrorToast({
@@ -924,6 +927,7 @@ export const useAssetAction = () => {
           progress: true,
           duration: 4000
         });
+        return false;
       });
   };
 

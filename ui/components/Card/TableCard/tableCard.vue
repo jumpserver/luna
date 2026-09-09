@@ -172,8 +172,8 @@ const buildMenuItems = computed(() => {
   };
 });
 
-function handleUnfavorite(asset: AssetItem) {
-  handleAssetUnfavorite(asset.id);
+async function handleUnfavorite(asset: AssetItem) {
+  if (!(await handleAssetUnfavorite(asset.id))) return;
   emitFavoriteChanged(asset.id, false);
 }
 
