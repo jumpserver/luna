@@ -44,7 +44,7 @@ pnpm weblite:package
 
 `test:runtime` 启动真实 Electron，使用本地测试站验证无 Koko 的基本/脚本登录、隐藏成功元素的处理、IPC 隔离和窗口退出，也用本地控制端点验证可选录像只启动一次。交互回归覆盖验证码输入、按钮点击、拖动、失败后再次验证及脚本流程。
 
-Windows x64 安装包输出到 `release/weblite/JumpServer-WebLite-<version>-x64.msi`。这是一个 per-machine MSI，会将完整运行时安装到 `Program Files`，无需预装 Chrome、ChromeDriver 或 Python。CI 只发布这个安装包，不附带 applet 的 `manifest.yml`、`setup.yml` 或独立图标文件。
+Windows x64 安装包输出到 `release/weblite/JumpServer-WebLite-<version>-x64.msi`。这是一个 per-machine MSI，会将完整运行时安装到 `Program Files/JumpServer/Weblite`，无需预装 Chrome、ChromeDriver 或 Python。CI 只发布这个安装包，不附带 applet 的 `manifest.yml`、`setup.yml` 或独立图标文件。
 
 ## 联合发布
 

@@ -35,7 +35,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PRIVATE_TOKEN }}
           I18N_TOKEN: ${{ secrets.I18N_TOKEN }}
 
-  sync_client_downloads:
+  sync_release_downloads:
     if: github.event_name == 'release' && github.event.action == 'published'
     runs-on: ubuntu-latest
     permissions:
@@ -49,10 +49,12 @@ jobs:
           version="${CLIENT_VERSION#v}"
           mkdir -p release-assets
           mkdir -p upload/download/public
+          mkdir -p upload/download/applets
           gh release download "$CLIENT_VERSION" \
             --repo "$GITHUB_REPOSITORY" \
             --pattern "JumpServer-${version}.exe" \
             --pattern "JumpServer-${version}-arm64.dmg" \
+            --pattern "JumpServer-WebLite-${version}-x64.msi" \
             --dir release-assets
           # Preserve legacy website download URLs in OSS only.
           cp \
@@ -61,12 +63,21 @@ jobs:
           cp \
             "release-assets/JumpServer-${version}-arm64.dmg" \
             "upload/download/public/Client_${version}_aarch64.dmg"
+          cp \
+            "release-assets/JumpServer-WebLite-${version}-x64.msi" \
+            "upload/download/applets/JumpServer-WebLite-${version}-x64.msi"
           (
             cd upload/download/public
             sha256sum \
               "Client_${version}_x64-setup.exe" \
               "Client_${version}_aarch64.dmg" \
               > "Client_${version}_SHA256SUMS"
+          )
+          (
+            cd upload/download/applets
+            sha256sum \
+              "JumpServer-WebLite-${version}-x64.msi" \
+              > "JumpServer-WebLite-${version}-x64_SHA256SUMS"
           )
 
       - name: Install ossutil
@@ -90,7 +101,7 @@ jobs:
           ossutil sync upload/ oss://jms-pkg/ -c ossutilconfig
 
   notify_client_release:
-    needs: sync_client_downloads
+    needs: sync_release_downloads
     if: github.event_name == 'release' && github.event.action == 'published'
     runs-on: ubuntu-latest
     steps:

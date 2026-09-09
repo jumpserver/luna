@@ -197,6 +197,8 @@ const config: ForgeConfig = {
     new MakerWix({
       exe: `${executableName}.exe`,
       icon: path.join(iconsRoot, "icon.ico"),
+      programFilesFolderName: "Client",
+      nestedFolderName: "JumpServer",
       language: 1033,
       manufacturer: "JumpServer",
       windowsSign: windowsSignOptions
