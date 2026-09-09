@@ -107,7 +107,6 @@
   border-color: var(--theme-accent);
   background: var(--theme-accent);
   color: var(--app-accent-foreground);
-  font-variant-numeric: tabular-nums;
 }
 
 .driver-popover.workspace-driver-popover .driver-popover-next-btn:hover,

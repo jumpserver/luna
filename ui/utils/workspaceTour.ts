@@ -3,7 +3,6 @@ import type { AssetTreeNode } from "~/types";
 
 /** Persisted after a user completes the first-run workspace guide. */
 export const WORKSPACE_TOUR_STORAGE_KEY = "luna:workspace-tour:v3";
-export const WORKSPACE_TOUR_INITIAL_NEXT_DELAY_MS = 1000;
 export const WORKSPACE_TOUR_TARGETS = ["organization", "asset", "node", "favorites", "add-session"] as const;
 export const WORKSPACE_TOUR_DEMO_NODE_ID = "luna-workspace-tour-demo-node";
 export const WORKSPACE_TOUR_DEMO_ASSET_ID = "luna-workspace-tour-demo-asset";
