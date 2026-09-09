@@ -1590,6 +1590,7 @@
       "quickDesktop": "데스크톱",
       "quickDownload": "다운로드",
       "revealInFinder": "Finder에서 보기",
+      "revealInFileExplorer": "파일 탐색기에서 보기",
       "revealFailed": "시스템 파일 관리자에서 표시할 수 없습니다"
     },
     "sftpEditor": {

@@ -7,6 +7,7 @@ const props = defineProps<{
   currentPath: string;
   rootPath: string;
   quickPaths: Array<{ key: string; label: string; path: string; icon: string }>;
+  revealLabel: string;
 }>();
 
 const emit = defineEmits<{
@@ -59,7 +60,7 @@ const selectedQuickPath = computed({
 const moreMenuItems = computed<DropdownMenuItem[][]>(() => [
   [
     {
-      label: t("koko.localFile.revealInFinder"),
+      label: props.revealLabel,
       icon: "i-lucide-app-window",
       onSelect: () => emit("reveal")
     },
@@ -256,14 +257,14 @@ onBeforeUnmount(() => {
         />
       </UTooltip>
       <template v-if="!isNarrow">
-        <UTooltip :text="t('koko.localFile.revealInFinder')">
+        <UTooltip :text="revealLabel">
           <UButton
             icon="i-lucide-app-window"
             color="neutral"
             variant="ghost"
             size="sm"
             square
-            :aria-label="t('koko.localFile.revealInFinder')"
+            :aria-label="revealLabel"
             @click="void emit('reveal')"
           />
         </UTooltip>
