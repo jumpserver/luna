@@ -4,6 +4,7 @@ import type { ChenPacket } from "~/chen/types";
 import { ref } from "vue";
 import { useChenWebSocket } from "~/chen/composables/useChenWebSocket";
 import { normalizeChenDialogMessage } from "~/chen/utils/chenDialog";
+import { resolveChenSessionCloseFatal } from "~/chen/utils/chenSessionClose";
 
 interface UseChenSessionOptions {
   authenticate: () => Promise<string>;
@@ -17,12 +18,14 @@ interface UseChenSessionOptions {
   downloadFile?: (fileKey: string) => Promise<void>;
   createSocket?: (url: string, token: string) => WebSocket;
   resolveUrl?: (path: ChenSocketPath) => string;
+  translate?: (key: string, values?: Record<string, unknown>) => string;
 }
 
 export function useChenSession(options: UseChenSessionOptions) {
   const ready = ref(false);
   const loading = ref(true);
   const error = ref("");
+  const errorReason = ref("");
   const dialogMessage = ref<ReturnType<typeof normalizeChenDialogMessage> | null>(null);
   const dialogOpenedDuringStartup = ref(false);
 
@@ -41,12 +44,13 @@ export function useChenSession(options: UseChenSessionOptions) {
     return cause instanceof Error ? cause.message : String(cause);
   }
 
-  function handleFatal(cause: unknown) {
+  function handleFatal(cause: unknown, reason = "") {
     if (fatalNotified) return;
     fatalNotified = true;
     ready.value = false;
     loading.value = false;
     error.value = normalizeError(cause);
+    errorReason.value = reason;
     options.markFailed();
 
     // A Chen session owns all of its consoles. Close dependent consoles first
@@ -116,9 +120,11 @@ export function useChenSession(options: UseChenSessionOptions) {
         void handleSetReady();
         break;
       case "session_close":
-      case "close_session":
-        handleFatal(new Error("Chen session disconnected by backend"));
+      case "close_session": {
+        const closed = resolveChenSessionCloseFatal(packet.data, options.translate ?? ((key: string) => key));
+        handleFatal(new Error(closed.message), closed.reason);
         break;
+      }
       default:
         options.onPacket?.(packet);
     }
@@ -146,6 +152,7 @@ export function useChenSession(options: UseChenSessionOptions) {
     ready.value = false;
     loading.value = true;
     error.value = "";
+    errorReason.value = "";
     dialogMessage.value = null;
     dialogOpenedDuringStartup.value = false;
 
@@ -167,6 +174,7 @@ export function useChenSession(options: UseChenSessionOptions) {
     dialogMessage,
     dialogOpenedDuringStartup,
     error,
+    errorReason,
     loading,
     ready,
     sessionConnection,

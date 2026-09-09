@@ -1758,5 +1758,8 @@
     "estimatedCost": "估算成本",
     "details": "詳情",
     "hideDetails": "收合詳情"
+  },
+  "Chen": {
+    "TerminatedByAdmin": "{name} 管理員中斷連接。"
   }
 }
