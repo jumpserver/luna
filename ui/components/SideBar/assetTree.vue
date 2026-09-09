@@ -536,13 +536,6 @@ const nodeHasClosedBranch = (node: AssetTreeNode): boolean => {
   return (node.children || []).some((child) => nodeHasClosedBranch(child));
 };
 
-const nodeHasOpenBranch = (node: AssetTreeNode): boolean => {
-  if (isRecentRootNode(node)) return recentNodeOpen.value;
-  if (!isBranchNode(node)) return false;
-  if (node.open) return true;
-  return (node.children || []).some((child) => nodeHasOpenBranch(child));
-};
-
 const expandNodeRecursive = async (node: AssetTreeNode, kind: PanelKind) => {
   if (isWorkspaceTourDemoNode(node.id)) {
     node.open = true;
@@ -646,7 +639,7 @@ const nodeMenuItems = computed<DropdownMenuItem[]>(() => {
   const canExpand = !node.open;
   const canCollapse = !!node.open;
   const canExpandAll = nodeHasClosedBranch(node);
-  const canCollapseAll = nodeHasOpenBranch(node);
+  const canCollapseAll = canCollapse;
 
   return [
     ...(canExpand
