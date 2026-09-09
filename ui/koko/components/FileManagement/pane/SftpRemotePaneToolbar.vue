@@ -93,11 +93,6 @@ const overflowMenuItems = computed<DropdownMenuItem[][]>(() => {
       label: t("koko.fileManagement.newFile"),
       icon: "i-lucide-file-plus-2",
       onSelect: () => emit("createFile")
-    },
-    {
-      label: t("koko.fileManagement.filterCurrentDirectory"),
-      icon: "i-lucide-search",
-      onSelect: () => openSearch()
     }
   ];
   const workbenchItems: DropdownMenuItem[] = props.showWorkbenchActions
@@ -353,6 +348,32 @@ defineExpose({
     </div>
 
     <template v-if="isNarrow">
+      <div class="sftp-file-management__search flex items-center" :class="searchOpen || search ? 'is-open' : ''">
+        <UTooltip v-if="!searchOpen && !search" :text="t('koko.fileManagement.filterCurrentDirectory')">
+          <UButton
+            icon="i-lucide-search"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            square
+            :aria-label="t('koko.fileManagement.filterCurrentDirectory')"
+            @click="openSearch"
+          />
+        </UTooltip>
+        <UInput
+          v-else
+          ref="searchInputRef"
+          v-model="search"
+          icon="i-lucide-search"
+          size="sm"
+          autofocus
+          :placeholder="t('koko.fileManagement.filterCurrentDirectory')"
+          class="sftp-file-management__search-input"
+          :ui="{ base: 'h-8 text-[12px]' }"
+          @keydown="onSearchKeydown"
+          @blur="closeSearchIfEmpty"
+        />
+      </div>
       <UTooltip :text="t('koko.fileManagement.refresh')">
         <UButton
           icon="i-lucide-refresh-cw"
@@ -375,19 +396,6 @@ defineExpose({
           @click="uploadInput?.click()"
         />
       </UTooltip>
-      <UInput
-        v-if="searchOpen || search"
-        ref="searchInputRef"
-        v-model="search"
-        icon="i-lucide-search"
-        size="sm"
-        autofocus
-        :placeholder="t('koko.fileManagement.filterCurrentDirectory')"
-        class="sftp-file-management__search-input max-w-36 shrink"
-        :ui="{ base: 'h-8 text-[12px]' }"
-        @keydown="onSearchKeydown"
-        @blur="closeSearchIfEmpty"
-      />
       <UDropdownMenu :items="overflowMenuItems" size="sm" :content="{ align: 'end', side: 'bottom' }">
         <UButton
           data-sftp-tour="file-actions"
@@ -405,17 +413,6 @@ defineExpose({
     <template v-else>
       <!-- View helpers: refresh + filter (not file mutations). -->
       <div class="flex shrink-0 items-center gap-0.5">
-        <UTooltip :text="t('koko.fileManagement.refresh')">
-          <UButton
-            icon="i-lucide-refresh-cw"
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            square
-            :aria-label="t('koko.fileManagement.refresh')"
-            @click="void manager.loadCurrentDirectory()"
-          />
-        </UTooltip>
         <div class="sftp-file-management__search flex items-center" :class="searchOpen || search ? 'is-open' : ''">
           <UTooltip v-if="!searchOpen && !search" :text="t('koko.fileManagement.filterCurrentDirectory')">
             <UButton
@@ -442,6 +439,17 @@ defineExpose({
             @blur="closeSearchIfEmpty"
           />
         </div>
+        <UTooltip :text="t('koko.fileManagement.refresh')">
+          <UButton
+            icon="i-lucide-refresh-cw"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            square
+            :aria-label="t('koko.fileManagement.refresh')"
+            @click="void manager.loadCurrentDirectory()"
+          />
+        </UTooltip>
       </div>
 
       <div class="mx-0.5 h-4 w-px shrink-0 bg-(--app-border)" aria-hidden="true" />
