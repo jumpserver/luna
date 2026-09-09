@@ -40,8 +40,8 @@ function createHandlers(overrides: {
     t: ((key: string) => key) as never,
     toast: { add: vi.fn() } as never,
     connectionStore: {
-      updateConnectionState: vi.fn(),
-      setConnectionState: vi.fn()
+      pane: () => ({}),
+      updatePane: vi.fn()
     } as never,
     terminalSettingsStore: {
       setDefaultTerminalConfig: vi.fn()

@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { connectorSessionKey } from "@jumpserver/connectors-core";
 import { useKokoSessionAdapter } from "#koko/composables/useSessionAdapter";
 
 const { t } = useI18n();
-const { onlineUsers, shareInfo, copyShareURL } = useKokoSessionAdapter();
+const sessionContext = inject(connectorSessionKey, null);
+const { onlineUsers, shareInfo, copyShareURL } = useKokoSessionAdapter(() => unref(sessionContext)?.tabId || "");
 </script>
 
 <template>

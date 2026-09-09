@@ -22,7 +22,9 @@ export interface ShareUserOptions {
 }
 
 export interface TerminalSessionInfo {
-  session: { ip: string; id: string; user: string; asset: string; userId: string };
+  // koko marshals model.Session: `user` is the JumpServer login user rendered as
+  // "Name(username)", `account` the asset account, `asset` a "name(address)" composite.
+  session: { id: string; user: string; account: string; asset: string; remote_addr?: string; user_id?: string };
   permission: ClipboardPermission;
   clipboard_policy?: ClipboardPolicy | null;
   backspaceAsCtrlH: boolean;

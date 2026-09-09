@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { connectorSessionKey } from "@jumpserver/connectors-core";
 import mittBus, { KokoMittEvent } from "#koko/utils/mittBus";
 
 const { t } = useI18n();
+const sessionContext = inject(connectorSessionKey, null);
 
 const keyboardList = [
   { label: "Ctrl+C", value: "\x03", icon: "i-lucide-ban" },
@@ -12,7 +14,9 @@ const keyboardList = [
 ];
 
 function writeDataToTerminal(type: string) {
-  mittBus.emit(KokoMittEvent.WriteCommand, { type });
+  const paneId = unref(sessionContext)?.tabId || "";
+  if (!paneId) return;
+  mittBus.emit(KokoMittEvent.WriteCommand, { paneId, type });
 }
 </script>
 
