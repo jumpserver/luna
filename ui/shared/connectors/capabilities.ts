@@ -31,7 +31,18 @@ export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] 
     component: "koko",
     surface: "terminal",
     label: "ConnectMethod.BuiltinTerminal",
-    protocols: ["ssh", "telnet", "mariadb", "mongodb", "mysql", "oracle", "postgresql", "redis", "sqlserver"],
+    protocols: [
+      "ssh",
+      "telnet",
+      "clickhouse",
+      "mariadb",
+      "mongodb",
+      "mysql",
+      "oracle",
+      "postgresql",
+      "redis",
+      "sqlserver"
+    ],
     connectMethods: [WEB_CLI_NATIVE_VALUE],
     backendConnectMethod: "web_cli",
     description: "ConnectMethod.BuiltinTerminalDescription"

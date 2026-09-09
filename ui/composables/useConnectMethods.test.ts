@@ -4,6 +4,7 @@ import {
   isExternalClientConnectMethod,
   normalizeWebConnectMethods,
   pickConnectMethod,
+  WEB_CLI_NATIVE_VALUE,
   WEB_PROXY_NATIVE_VALUE,
   withKokoWebFallback
 } from "~/composables/useConnectMethods";
@@ -56,6 +57,23 @@ describe("desktop website connect methods", () => {
     const methods = normalizeWebConnectMethods({ http: [weblite], originals: [] }, true).http!;
     expect(methods).toEqual([weblite]);
     expect(withKokoWebFallback("http", methods)).toEqual([weblite]);
+  });
+
+  it("keeps koko web cli for clickhouse after stripping iframe methods", () => {
+    const webCli: ConnectMethod = {
+      value: "web_cli",
+      label: "Web CLI",
+      type: "web",
+      icon: "",
+      disabled: false,
+      listen: "",
+      component: "koko",
+      endpoint_protocol: "http"
+    };
+    const methods = normalizeWebConnectMethods({ clickhouse: [webCli], originals: [] }, true).clickhouse!;
+
+    expect(methods.map((item) => item.value)).toEqual([WEB_CLI_NATIVE_VALUE]);
+    expect(withKokoWebFallback("clickhouse", []).map((item) => item.value)).toEqual([WEB_CLI_NATIVE_VALUE]);
   });
 
   it("opens the built-in proxy inside the workspace instead of an external window", () => {
