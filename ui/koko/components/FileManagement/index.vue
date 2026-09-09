@@ -14,6 +14,7 @@ import { useSftpWorkspacePanes } from "#koko/composables/sftp/file-manager/useSf
 import { useSftpTour } from "#koko/composables/sftp/useSftpTour";
 import { useSftpTransferUi } from "#koko/composables/sftp/useSftpTransferUi";
 import { useKokoHostAdapter } from "#koko/host";
+import { registerFileWorkspaceLeaveHandler } from "~/composables/useSiteAccountSwitch";
 
 const props = defineProps<{
   sftpToken?: string;
@@ -64,6 +65,7 @@ const {
   activePaneForSide,
   activeRemoteId,
   currentOrgLabel,
+  disconnectAllRemotes,
   globalActiveIds,
   initializeGlobalWorkspace,
   primaryTransferEndpoint,
@@ -87,6 +89,15 @@ const transfer = useSftpTransferCoordinator({
 const host = useKokoHostAdapter();
 const { confirmLeaveActiveTransfers } = useSftpTransferUi();
 let unregisterCloseGuard: (() => void) | undefined;
+const unregisterFileWorkspaceLeave = props.global
+  ? registerFileWorkspaceLeaveHandler({
+      hasActive: () => remotePanes.value.length > 0,
+      close: async () => {
+        disconnectAllRemotes();
+        await nextTick();
+      }
+    })
+  : undefined;
 
 function closeGuardEndpointIds() {
   return [primaryTransferEndpoint.value?.id, ...remotePanes.value.map((pane) => pane.transferEndpoint.id)].filter(
@@ -118,6 +129,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (tourTimer) clearTimeout(tourTimer);
   unregisterCloseGuard?.();
+  unregisterFileWorkspaceLeave?.();
   sftpTour.destroy();
 });
 

@@ -615,6 +615,13 @@ async function clearAuthInfo() {
   profileOpen.value = false;
   if (!(await confirmLeaveCurrentSiteSessions("logout"))) return;
   userInfoStore.deleteUserData(currentAccountId.value);
+  if (loggedIn.value) return;
+  // ponytail: don't watch loggedIn to leave /files — bootstrap sets false before revalidation
+  if (!isDesktopRuntime()) {
+    redirectToWebLogin();
+    return;
+  }
+  await navigateTo(localePath({ path: "/" }));
 }
 
 async function handleSwitchAccount(accountId: string) {

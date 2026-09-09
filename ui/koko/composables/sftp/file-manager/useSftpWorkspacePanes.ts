@@ -134,6 +134,8 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     remotePanes.value = [];
     remotePaneRefs.value = {};
     activeRemoteId.value = null;
+    globalActiveIds.left = defaultGlobalLeftPaneId(isDesktopRuntime);
+    globalActiveIds.right = null;
   }
 
   function cleanupRemotePaneRefs(ids: Set<string>) {

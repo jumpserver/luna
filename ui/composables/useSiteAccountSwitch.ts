@@ -3,6 +3,11 @@ import { useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
 
 export type LeaveCurrentSiteKind = "switch" | "logout" | "login";
 
+export type FileWorkspaceLeaveHandler = {
+  hasActive: () => boolean;
+  close: () => void | Promise<void>;
+};
+
 type LeaveConfirmRequest = {
   kind: LeaveCurrentSiteKind;
   resolve: (confirmed: boolean) => void;
@@ -10,6 +15,7 @@ type LeaveConfirmRequest = {
 
 const leaveConfirm = ref<LeaveConfirmRequest | null>(null);
 let leaveInFlight = false;
+let fileWorkspaceLeaveHandler: FileWorkspaceLeaveHandler | null = null;
 
 const resolveLeaveConfirm = (confirmed: boolean) => {
   const pending = leaveConfirm.value;
@@ -17,12 +23,21 @@ const resolveLeaveConfirm = (confirmed: boolean) => {
   pending?.resolve(confirmed);
 };
 
+export const registerFileWorkspaceLeaveHandler = (handler: FileWorkspaceLeaveHandler | null) => {
+  fileWorkspaceLeaveHandler = handler;
+  return () => {
+    if (fileWorkspaceLeaveHandler === handler) fileWorkspaceLeaveHandler = null;
+  };
+};
+
 export const hasActiveWorkspaceSessions = () =>
-  useWorkspaceTabs().tabs.value.some((tab) => tab.panes.some((pane) => pane.mode !== "empty"));
+  useWorkspaceTabs().tabs.value.some((tab) => tab.panes.some((pane) => pane.mode !== "empty")) ||
+  Boolean(fileWorkspaceLeaveHandler?.hasActive());
 
 export const closeCurrentSiteWorkspace = async () => {
   useBatchCommandPanel().setOpen(false);
   await useWorkspaceTabs().closeAllSessions({ force: true });
+  await fileWorkspaceLeaveHandler?.close();
 };
 
 export const confirmLeaveCurrentSiteSessions = async (

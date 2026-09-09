@@ -5,6 +5,7 @@ import {
   closeCurrentSiteWorkspace,
   confirmLeaveCurrentSiteSessions,
   hasActiveWorkspaceSessions,
+  registerFileWorkspaceLeaveHandler,
   useSiteAccountSwitch
 } from "./useSiteAccountSwitch";
 import { registerWorkspaceSessionCloseGuard, useWorkspaceTabs } from "./useWorkspaceTabs";
@@ -43,6 +44,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   confirmOpen.value = false;
+  registerFileWorkspaceLeaveHandler(null);
   disposers.splice(0).forEach((dispose) => dispose());
 });
 
@@ -110,5 +112,34 @@ describe("site account switch isolation", () => {
     confirmOpen.value = false;
     await expect(first).resolves.toBe(false);
     expect(tabs.tabs.value).toHaveLength(1);
+  });
+
+  it("prompts and closes file workspace remotes without asset tabs", async () => {
+    const close = vi.fn();
+    registerFileWorkspaceLeaveHandler({
+      hasActive: () => true,
+      close
+    });
+    expect(hasActiveWorkspaceSessions()).toBe(true);
+
+    const pending = confirmLeaveCurrentSiteSessions("logout");
+    await vi.waitFor(() => expect(confirmOpen.value).toBe(true));
+    confirmLeave();
+    await expect(pending).resolves.toBe(true);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("closes file workspace remotes when switching sites", async () => {
+    const close = vi.fn();
+    registerFileWorkspaceLeaveHandler({
+      hasActive: () => true,
+      close
+    });
+
+    const pending = confirmLeaveCurrentSiteSessions("switch");
+    await vi.waitFor(() => expect(confirmOpen.value).toBe(true));
+    confirmLeave();
+    await expect(pending).resolves.toBe(true);
+    expect(close).toHaveBeenCalledOnce();
   });
 });
