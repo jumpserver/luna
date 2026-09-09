@@ -47,8 +47,12 @@ export default defineAppConfig({
         base: "!rounded-[length:var(--app-radius)]"
       }
     },
+    kbd: {
+      base: "!rounded-[length:min(var(--app-radius),3px)]"
+    },
     toast: {
       slots: {
+        root: "rounded-[length:var(--app-radius)]",
         wrapper: "w-0 min-w-0 flex-1 flex flex-col",
         description: "text-sm text-muted whitespace-pre-wrap break-all",
         actions: "flex gap-1.5 shrink-0 flex-wrap"
@@ -107,13 +111,13 @@ export default defineAppConfig({
     dropdownMenu: {
       slots: {
         content:
-          "w-max min-w-48 max-w-[calc(100vw-1rem)] sm:max-w-96 p-1 bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
+          "w-max min-w-48 max-w-[calc(100vw-1rem)] sm:max-w-96 p-1 bg-[var(--app-surface-overlay)] text-[var(--app-fg)] rounded-[length:var(--app-radius)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
         viewport: "relative overflow-y-auto flex-1",
         group: "p-1 isolate",
         label:
           "w-full flex items-center px-2 py-1 text-[11px] font-semibold text-[var(--app-muted)] uppercase tracking-[0.08em]",
         separator: "-mx-1 my-1 h-px bg-[var(--app-border)]",
-        item: "mx-0.5 min-w-0 items-center px-3 py-1.5 rounded-md leading-5 transition-colors duration-150 text-[var(--app-fg)] data-highlighted:bg-[var(--app-hover-soft)] data-[state=open]:bg-[var(--app-hover-soft)] data-highlighted:text-[var(--app-fg)] data-[state=open]:text-[var(--app-fg)]",
+        item: "mx-0.5 min-w-0 items-center px-3 py-1.5 rounded-[length:var(--app-radius)] leading-5 transition-colors duration-150 text-[var(--app-fg)] data-highlighted:bg-[var(--app-hover-soft)] data-[state=open]:bg-[var(--app-hover-soft)] data-highlighted:text-[var(--app-fg)] data-[state=open]:text-[var(--app-fg)]",
         itemLeadingIcon: "!size-[var(--app-ui-font-size)] shrink-0",
         itemTrailingIcon: "!size-[var(--app-ui-font-size)] shrink-0",
         itemWrapper: "min-w-0 flex-1 overflow-hidden",
@@ -124,7 +128,7 @@ export default defineAppConfig({
       slots: {
         overlay: "fixed inset-0 bg-black/35 backdrop-blur-[2px]",
         content:
-          "bg-[var(--app-surface-modal)] text-[var(--app-fg)] divide-y divide-[var(--app-modal-border)] flex flex-col focus:outline-none ring-1 ring-[var(--app-modal-border)] shadow-[var(--app-modal-shadow)]",
+          "bg-[var(--app-surface-modal)] text-[var(--app-fg)] divide-y divide-[var(--app-modal-border)] flex flex-col focus:outline-none rounded-[length:var(--app-radius)] ring-1 ring-[var(--app-modal-border)] shadow-[var(--app-modal-shadow)]",
         header: "flex items-center gap-1.5 px-4 py-2 sm:px-6 min-h-(--ui-header-height) bg-[var(--app-surface-modal)]",
         body: "flex-1 p-4 sm:p-6 bg-[var(--app-surface-modal)]",
         footer: "flex items-center gap-1.5 p-4 sm:px-6 bg-[var(--app-surface-modal)]",
@@ -136,7 +140,7 @@ export default defineAppConfig({
     popover: {
       slots: {
         content:
-          "bg-[var(--app-panel-bg)] text-[var(--app-fg)] shadow-[var(--theme-shadow-soft)] rounded-md ring ring-[var(--app-border)] data-[state=open]:animate-[scale-in_100ms_ease-out] data-[state=closed]:animate-[scale-out_100ms_ease-in] origin-(--reka-popover-content-transform-origin) focus:outline-none pointer-events-auto backdrop-blur-md",
+          "bg-[var(--app-panel-bg)] text-[var(--app-fg)] shadow-[var(--theme-shadow-soft)] rounded-[length:var(--app-radius)] ring ring-[var(--app-border)] data-[state=open]:animate-[scale-in_100ms_ease-out] data-[state=closed]:animate-[scale-out_100ms_ease-in] origin-(--reka-popover-content-transform-origin) focus:outline-none pointer-events-auto backdrop-blur-md",
         arrow: "fill-[var(--app-panel-bg)] stroke-[var(--app-border)]"
       }
     },
@@ -152,7 +156,7 @@ export default defineAppConfig({
         label:
           "w-full flex items-center px-2 py-1 text-[11px] font-semibold text-[var(--app-muted)] uppercase tracking-[0.08em]",
         separator: "-mx-1 my-1 h-px bg-[var(--app-border)]",
-        item: "mx-0.5 min-w-0 rounded-md px-3 py-2 text-sm text-[var(--app-fg)] transition-colors data-highlighted:not-data-disabled:bg-[var(--app-hover-soft)] data-highlighted:not-data-disabled:before:hidden data-[state=checked]:bg-[var(--app-hover-soft)]",
+        item: "mx-0.5 min-w-0 rounded-[length:var(--app-radius)] px-3 py-2 text-sm text-[var(--app-fg)] transition-colors data-highlighted:not-data-disabled:bg-[var(--app-hover-soft)] data-highlighted:not-data-disabled:before:hidden data-[state=checked]:bg-[var(--app-hover-soft)]",
         itemWrapper: "min-w-0 overflow-hidden",
         itemLabel: "block truncate"
       },
@@ -163,6 +167,18 @@ export default defineAppConfig({
             trailingIcon: "size-[18px]"
           }
         }
+      }
+    },
+    tabs: {
+      slots: {
+        list: "rounded-[length:var(--app-radius)]",
+        indicator: "rounded-[length:var(--app-radius)]",
+        trigger: "rounded-[length:var(--app-radius)]"
+      }
+    },
+    card: {
+      slots: {
+        root: "rounded-[length:var(--app-radius)]"
       }
     },
     navigationMenu: {

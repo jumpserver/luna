@@ -193,7 +193,6 @@ const handlePluginUninstall = async (pluginId: string) => {
           variant="outline"
           size="sm"
           icon="i-lucide-upload"
-          class="rounded-full"
           :loading="installingPlugin"
           :label="t('Setting.UploadPlugin')"
           @click="handlePluginUpload"
@@ -203,7 +202,6 @@ const handlePluginUninstall = async (pluginId: string) => {
           variant="outline"
           size="sm"
           icon="i-lucide-package"
-          class="rounded-full"
           :label="t('Setting.ManagePlugins')"
           @click="pluginModalOpen = true"
         />
@@ -270,11 +268,11 @@ const handlePluginUninstall = async (pluginId: string) => {
               v-for="plugin in pluginList"
               :key="plugin.id"
               variant="outline"
-              :ui="{ root: 'rounded-lg bg-[var(--app-surface-card)] ring-[var(--app-border)]' }"
+              :ui="{ root: 'rounded-[length:var(--app-radius)] bg-[var(--app-surface-card)] ring-[var(--app-border)]' }"
             >
               <div class="flex items-start gap-3">
                 <div
-                  class="flex size-10 items-center justify-center overflow-hidden rounded-md border border-(--app-border) bg-(--app-surface-panel) p-1"
+                  class="flex size-10 items-center justify-center overflow-hidden rounded-[length:var(--app-radius)] border border-(--app-border) bg-(--app-surface-panel) p-1"
                 >
                   <img
                     v-if="pluginIconSrc(plugin)"

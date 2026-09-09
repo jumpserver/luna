@@ -326,7 +326,6 @@ async function clearCommandHistory() {
           icon="i-lucide-download"
           :loading="ffmpegBusy"
           :label="t('Setting.DownloadFfmpeg')"
-          class="rounded-full"
           @click="installFfmpeg"
         />
         <UButton
@@ -337,7 +336,6 @@ async function clearCommandHistory() {
           icon="i-lucide-trash-2"
           :loading="ffmpegBusy"
           :label="t('Setting.UninstallFfmpeg')"
-          class="rounded-full"
           @click="uninstallFfmpeg"
         />
       </div>
@@ -361,7 +359,7 @@ async function clearCommandHistory() {
           color="neutral"
           variant="outline"
           size="sm"
-          class="shrink-0 rounded-full"
+          class="shrink-0"
           :class="commandHistoryFeedback !== 'idle' ? 'settings-log-pop' : undefined"
           :disabled="!commandHistoryScope"
           @click="commandHistoryConfirmOpen = true"
@@ -399,7 +397,7 @@ async function clearCommandHistory() {
           color="neutral"
           variant="outline"
           size="sm"
-          class="shrink-0 rounded-full"
+          class="shrink-0"
           :class="clearFeedback !== 'idle' ? 'settings-log-pop' : undefined"
           @click="clearLogs"
         >
@@ -414,7 +412,7 @@ async function clearCommandHistory() {
           color="neutral"
           variant="outline"
           size="sm"
-          class="shrink-0 rounded-full"
+          class="shrink-0"
           :class="copyFeedback !== 'idle' ? 'settings-log-pop' : undefined"
           @click="copyLogs"
         >
@@ -429,7 +427,7 @@ async function clearCommandHistory() {
           color="neutral"
           variant="outline"
           size="sm"
-          class="shrink-0 rounded-full"
+          class="shrink-0"
           :class="downloadFeedback !== 'idle' ? 'settings-log-pop' : undefined"
           @click="downloadLogs"
         >

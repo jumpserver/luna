@@ -74,7 +74,7 @@ const siteNameInputRef = ref<ComponentPublicInstance | null>(null);
 const profileOpen = ref(false);
 const profileOpenedByPointer = ref(false);
 const headerIconButtonClass =
-  "grid size-6 shrink-0 place-items-center rounded-lg p-0 text-[var(--app-text-secondary)] transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]";
+  "grid size-6 shrink-0 place-items-center rounded-[length:var(--app-radius)] p-0 text-[var(--app-text-secondary)] transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]";
 const headerIconButtonActiveClass = "bg-[var(--app-hover-soft)] text-[var(--app-fg)]";
 
 let loginBtnUnlockTimer: ReturnType<typeof setTimeout> | null = null;
@@ -202,9 +202,10 @@ const currentAppearanceLabel = computed(
 
 const menuTabsUi = {
   root: "w-full",
-  list: "w-full bg-[var(--app-surface-canvas)] p-1 ring-1 ring-[var(--app-border)]",
-  indicator: "bg-[var(--app-state-hover-strong)] shadow-sm",
-  trigger: "flex-1 px-3 data-[state=active]:text-highlighted focus-visible:outline-[var(--app-focus-ring)]"
+  list: "w-full rounded-[length:var(--app-radius)] bg-[var(--app-surface-canvas)] p-1 ring-1 ring-[var(--app-border)]",
+  indicator: "rounded-[length:var(--app-radius)] bg-[var(--app-state-hover-strong)] shadow-sm",
+  trigger:
+    "flex-1 rounded-[length:var(--app-radius)] px-3 data-[state=active]:text-highlighted focus-visible:outline-[var(--app-focus-ring)]"
 };
 
 const menuSeparatorUi = {
@@ -956,7 +957,7 @@ onBeforeUnmount(() => {
     }"
     :ui="{
       content:
-        'max-h-[calc(100dvh-4rem)] w-64 overflow-x-hidden overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-0 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
+        'max-h-[calc(100dvh-4rem)] w-64 overflow-x-hidden overflow-y-auto rounded-[length:var(--app-radius)] bg-[var(--app-surface-overlay)] p-0 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
     }"
   >
     <UTooltip arrow :text="accountTooltip">
@@ -981,8 +982,8 @@ onBeforeUnmount(() => {
             color="neutral"
             variant="ghost"
             block
-            class="h-auto items-center justify-start gap-3 rounded-none rounded-t-xl px-3 py-3 text-left"
-            :ui="{ base: 'rounded-none rounded-t-xl' }"
+            class="h-auto items-center justify-start gap-3 rounded-none rounded-t-[length:var(--app-radius)] px-3 py-3 text-left"
+            :ui="{ base: 'rounded-none rounded-t-[length:var(--app-radius)]' }"
             @click="openUserSettings"
           >
             <UAvatar :alt="currentUser?.name || t('Common.User')" color="primary" size="md" class="shrink-0" />
@@ -1069,7 +1070,7 @@ onBeforeUnmount(() => {
               :content="{ align: 'start', side: 'left', sideOffset: 8 }"
               :ui="{
                 content:
-                  'w-56 max-h-80 overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-1.5 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
+                  'w-56 max-h-80 overflow-y-auto rounded-[length:var(--app-radius)] bg-[var(--app-surface-overlay)] p-1.5 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
               }"
             >
               <UButton color="neutral" variant="ghost" size="sm" block class="h-8 justify-start gap-2 px-2">
@@ -1127,7 +1128,7 @@ onBeforeUnmount(() => {
               }"
               :ui="{
                 content:
-                  'w-56 max-h-80 overflow-y-auto rounded-xl bg-[var(--app-surface-overlay)] p-1.5 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
+                  'w-56 max-h-80 overflow-y-auto rounded-[length:var(--app-radius)] bg-[var(--app-surface-overlay)] p-1.5 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
               }"
             >
               <UButton color="neutral" variant="ghost" size="sm" block class="h-8 justify-start gap-2 px-2">

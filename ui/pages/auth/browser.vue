@@ -89,9 +89,12 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="flex flex-col items-center justify-center px-6 py-10 h-full">
-    <div class="flex flex-col items-center gap-6 rounded-3xl px-8 py-10 w-full max-w-xl border" :class="cardBgClass">
+    <div
+      class="flex flex-col items-center gap-6 rounded-[length:var(--app-radius)] px-8 py-10 w-full max-w-xl border"
+      :class="cardBgClass"
+    >
       <div class="flex flex-col items-center gap-3">
-        <img src="/logo.png" alt="logo" class="w-16 h-16 rounded-2xl" />
+        <img src="/logo.png" alt="logo" class="w-16 h-16 rounded-[length:var(--app-radius)]" />
       </div>
 
       <section class="text-center space-y-4 w-full">

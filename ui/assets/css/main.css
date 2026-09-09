@@ -14,6 +14,15 @@
   --text-sm: var(--app-ui-font-size);
   --color-secondary: var(--ui-color-secondary-500);
   --color-elevated: #1e1e20;
+  --radius: var(--app-radius);
+  --radius-xs: var(--app-radius);
+  --radius-sm: var(--app-radius);
+  --radius-md: var(--app-radius);
+  --radius-lg: var(--app-radius);
+  --radius-xl: var(--app-radius);
+  --radius-2xl: var(--app-radius);
+  --radius-3xl: var(--app-radius);
+  --radius-4xl: var(--app-radius);
 }
 
 @theme .dark {

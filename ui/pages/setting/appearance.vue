@@ -332,9 +332,10 @@ watch(
             size="xs"
             :ui="{
               root: 'w-auto shrink-0',
-              list: 'w-auto bg-[var(--app-surface-canvas)] p-1 ring-1 ring-[var(--app-border)]',
-              indicator: 'bg-[var(--app-state-hover-strong)] shadow-sm',
-              trigger: 'grow-0 px-3 data-[state=active]:text-highlighted focus-visible:outline-[var(--app-focus-ring)]'
+              list: 'w-auto rounded-[length:var(--app-radius)] bg-[var(--app-surface-canvas)] p-1 ring-1 ring-[var(--app-border)]',
+              indicator: 'rounded-[length:var(--app-radius)] bg-[var(--app-state-hover-strong)] shadow-sm',
+              trigger:
+                'grow-0 rounded-[length:var(--app-radius)] px-3 data-[state=active]:text-highlighted focus-visible:outline-[var(--app-focus-ring)]'
             }"
           />
         </div>
