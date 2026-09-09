@@ -1,5 +1,6 @@
 import type { MaybeRefOrGetter } from "vue";
 import type { LionUploadCustomRequestOptions } from "@/lion/types/upload";
+import type { LionOnlineUser } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
 import { useDebounceFn } from "@vueuse/core";
 
 import * as Guacamole from "guacamole-common-js-jumpserver/dist/guacamole-common";
@@ -118,7 +119,7 @@ const sanitizeFilename = (filename: string) => {
   return filename.replace(/[\\/]+/g, "_");
 };
 
-const withErrorDetails = (message: string, details: Record<string, any> = {}) => {
+const withErrorDetails = (message: string, details: Record<string, unknown> = {}) => {
   return Object.assign(new Error(message), details);
 };
 
@@ -183,7 +184,7 @@ export function useGuacamoleClient(
   const hasClipboardPermission = ref(false);
   const currentUser = ref<any>({});
   const shareId = ref<string | null>(null);
-  const onlineUsersMap = ref<Record<string, any>>({});
+  const onlineUsersMap = ref<Record<string, LionOnlineUser>>({});
   const warningIntervalId = ref<number | null>(null);
   const loading = ref(true);
   const scale = ref(1);
@@ -208,11 +209,16 @@ export function useGuacamoleClient(
   const enableFilesystem = ref(false);
   const currentGuacFsObject = ref<any>(null);
   const getApiUrl = (path: string) => {
-    const url = new URL(withLionUrl(`/api${path}`, toValue(endpointUrl) || window.location.origin));
+    const target = withLionUrl(`/api${path}`, toValue(endpointUrl) || window.location.origin);
     const auth = requestAuth ? toValue(requestAuth) : undefined;
-    if (auth?.ticket) url.searchParams.set("ticket", auth.ticket);
-    if (auth?.token) url.searchParams.set("token", auth.token);
-    return url.toString();
+    try {
+      const url = new URL(target);
+      if (auth?.ticket) url.searchParams.set("ticket", auth.ticket);
+      if (auth?.token) url.searchParams.set("token", auth.token);
+      return url.toString();
+    } catch {
+      return target;
+    }
   };
 
   function disconnectGuaclient() {
@@ -250,7 +256,7 @@ export function useGuacamoleClient(
 
   function connectToGuacamole(
     wsUrl: string,
-    connectParams: Record<string, any>,
+    connectParams: Record<string, string>,
     width: any,
     height: any,
     supportFs: boolean = false
@@ -1064,7 +1070,7 @@ export function useGuacamoleClient(
       throw error; // 重新抛出异常，让调用者知道上传失败
     }
   };
-  function onclipboard(stream: object, mimetype: string) {
+  function onclipboard(stream: unknown, mimetype: string) {
     let reader: any = null;
     // If the received data is text, read it as a simple string
     if (/^text\//.test(mimetype)) {
