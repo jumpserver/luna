@@ -52,6 +52,7 @@ export enum SftpSocketFailureCode {
 
 export const SFTP_REQUEST_TIMEOUT_ERROR = "sftp_request_timeout";
 export const SFTP_FILE_CONFLICT_ERROR = "sftp_file_conflict";
+export const SFTP_PATH_NOT_FOUND_ERROR = "sftp_path_not_found";
 
 export interface SftpFileEntry {
   name: string;

@@ -1401,6 +1401,7 @@
       "entryDownloaded": "{name}을(를) 다운로드했습니다",
       "operationFailed": "파일 작업 실패",
       "refreshFailed": "파일 목록을 새로고침하지 못했습니다",
+      "pathNotFound": "경로가 존재하지 않습니다",
       "remoteSftp": "원격 SFTP",
       "localSftp": "SFTP",
       "connectRemoteSftp": "원격 SFTP 연결",

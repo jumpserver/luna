@@ -4,7 +4,7 @@ import type { SftpCapabilities, SftpFileEntry, SftpIncomingMessage } from "./pro
 
 import { computed, onUnmounted, ref, shallowRef, watch } from "vue";
 import { parseSftpCapabilities, SFTP_REQUEST_TIMEOUT_ERROR, SftpMessageType, SftpSocketFailureCode } from "./protocol";
-import { useSftpOperations } from "./useSftpOperations";
+import { SftpPathNotFoundError, useSftpOperations } from "./useSftpOperations";
 import { useSftpRetry } from "./useSftpRetry";
 import { useSftpSocket } from "./useSftpSocket";
 import { useSftpTransferEndpoint } from "./useSftpTransferEndpoint";
@@ -39,6 +39,7 @@ function errorMessage(code: SftpSocketFailureCode, t: (key: string) => string) {
 }
 
 function operationErrorMessage(cause: unknown, t: (key: string) => string) {
+  if (cause instanceof SftpPathNotFoundError) return t("koko.fileManagement.pathNotFound");
   const message = cause instanceof Error ? cause.message : String(cause);
   return message === SFTP_REQUEST_TIMEOUT_ERROR ? t("koko.fileManagement.requestTimeout") : message;
 }
@@ -83,6 +84,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
   const { t } = useI18n();
 
   const error = ref("");
+  const fatalError = ref(false);
   const capabilities = shallowRef<SftpCapabilities | null>(null);
   const capabilitiesKnown = ref(false);
   const currentPath = ref("");
@@ -108,6 +110,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
 
   async function reconnect() {
     error.value = "";
+    fatalError.value = false;
     loading.value = true;
     fileAiReadiness.reset();
     capabilities.value = null;
@@ -116,6 +119,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
       await retryClient.reconnect();
     } catch (cause) {
       error.value = operationErrorMessage(cause, t);
+      fatalError.value = true;
       loading.value = false;
     }
   }
@@ -221,12 +225,14 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
       message.type === SftpMessageType.Closed ||
       message.type === SftpMessageType.Error
     ) {
+      fatalError.value = true;
       capabilities.value = null;
       capabilitiesKnown.value = false;
     }
   });
 
   const stopFailureListener = socket.onFailure((failure) => {
+    fatalError.value = true;
     fileAiReadiness.reset();
     capabilities.value = null;
     capabilitiesKnown.value = false;
@@ -248,6 +254,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
       navigationHistory.value = [];
       navigationIndex.value = -1;
       error.value = "";
+      fatalError.value = false;
       loading.value = Boolean(context);
 
       if (activeContext.value) socket.connect(activeContext.value);
@@ -270,6 +277,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
     currentPath,
     loading,
     error,
+    fatalError,
     connected: socket.connected,
     uploadTasks: operationClient.uploadTasks,
     uploadProgress: operationClient.uploadProgress,

@@ -1401,6 +1401,7 @@
       "entryDownloaded": "{name} baixado",
       "operationFailed": "Falha na operação de arquivo",
       "refreshFailed": "Falha ao atualizar a lista de arquivos",
+      "pathNotFound": "O caminho não existe",
       "remoteSftp": "SFTP remoto",
       "localSftp": "SFTP",
       "connectRemoteSftp": "Conectar SFTP remoto",

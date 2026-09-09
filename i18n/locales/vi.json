@@ -1401,6 +1401,7 @@
       "entryDownloaded": "Đã tải {name}",
       "operationFailed": "Thao tác tệp thất bại",
       "refreshFailed": "Không thể làm mới danh sách tệp",
+      "pathNotFound": "Đường dẫn không tồn tại",
       "remoteSftp": "SFTP từ xa",
       "localSftp": "SFTP",
       "connectRemoteSftp": "Kết nối SFTP từ xa",

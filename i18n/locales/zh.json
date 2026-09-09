@@ -1404,6 +1404,7 @@
       "entryDownloaded": "已下载 {name}",
       "operationFailed": "文件操作失败",
       "refreshFailed": "文件列表刷新失败",
+      "pathNotFound": "路径不存在",
       "remoteSftp": "远程 SFTP",
       "localSftp": "SFTP",
       "connectRemoteSftp": "连接远程 SFTP",

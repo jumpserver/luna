@@ -142,6 +142,14 @@ async function installSftpBackend(page: Page): Promise<MockSftpServer> {
       body = { SECURITY_COMMAND_EXECUTION: true };
     } else if (pathname.includes("/orgs/orgs/current")) {
       body = { id: "org-1", name: "Demo Org", comment: "" };
+    } else if (pathname.includes("/perms/users/") && pathname.endsWith("/assets/asset-1/")) {
+      body = {
+        id: "asset-1",
+        name: "SFTP Host",
+        address: "10.0.0.10",
+        permed_protocols: [{ name: "sftp" }],
+        permed_accounts: [{ id: "account-1", name: "root", username: "root", alias: "root" }]
+      };
     } else if (pathname.includes("/nodes/children-with-assets/")) {
       body = [
         {
@@ -163,6 +171,8 @@ async function installSftpBackend(page: Page): Promise<MockSftpServer> {
       body = [];
     } else if (pathname === "/api/v1/assets/favorite-assets/") {
       body = [];
+    } else if (pathname === "/api/v1/terminal/endpoints/smart/") {
+      body = { value: page.url().split("/luna/")[0] };
     } else if (pathname === "/api/v1/terminal/components/connect-methods/") {
       body = {
         sftp: [
@@ -208,6 +218,19 @@ async function installSftpBackend(page: Page): Promise<MockSftpServer> {
 
       if (message.cmd === "list") {
         const path = data.path || "/home/tester";
+        if (path === "/missing") {
+          socket.send(
+            JSON.stringify({
+              id: message.id,
+              type: "SFTP_DATA",
+              cmd: "list",
+              data: "[]",
+              err: "file does not exist",
+              error_code: "sftp_path_not_found"
+            })
+          );
+          return;
+        }
         socket.send(
           JSON.stringify({
             id: message.id,
@@ -270,6 +293,20 @@ async function openSftpWorkbench(page: Page) {
   throw lastError;
 }
 
+async function selectToolbarAction(page: Page, label: string) {
+  const action = page.getByRole("button", { name: label });
+  if (await action.isVisible()) {
+    await action.click();
+    return;
+  }
+  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("menuitem", { name: label }).click();
+}
+
+async function showHiddenFiles(page: Page) {
+  await selectToolbarAction(page, "Show hidden files");
+}
+
 async function connectRemoteSftp(page: Page) {
   await openSftpWorkbench(page);
   await page.getByRole("button", { name: "Connect remote SFTP" }).click();
@@ -319,14 +356,14 @@ test.describe("koko SFTP workbench", () => {
     expect(server.websocketUrls[0]).toContain("/koko/ws/sftp/?token=sftp-token&ticket=sftp-ticket");
 
     await expect(table.getByText(".env", { exact: true })).toHaveCount(0);
-    await page.getByRole("button", { name: "Show hidden files" }).click();
+    await showHiddenFiles(page);
     await expect(table.getByText(".env", { exact: true })).toBeVisible();
 
     await table.getByRole("button", { name: "docs" }).dblclick();
     await expect(page.getByRole("navigation", { name: "/home/tester/docs" })).toBeVisible();
     await expect(table.getByText("guide.md", { exact: true })).toBeVisible();
 
-    await page.getByRole("button", { name: "Back" }).click();
+    await selectToolbarAction(page, "Back");
     await expect(page.getByRole("navigation", { name: "/home/tester" })).toBeVisible();
     await expect(table.getByText("release.txt", { exact: true })).toBeVisible();
 
@@ -336,11 +373,27 @@ test.describe("koko SFTP workbench", () => {
     expect(listedPaths).toEqual(["", "/home/tester/docs", "/home/tester"]);
   });
 
+  test("keeps the SFTP session open when a path does not exist", async ({ page }) => {
+    const server = await installSftpBackend(page);
+    const table = await connectRemoteSftp(page);
+
+    await page.getByRole("navigation", { name: "/home/tester" }).dblclick();
+    const pathInput = page.getByRole("textbox", { name: "Edit path" });
+    await pathInput.fill("/missing");
+    await pathInput.press("Enter");
+
+    await expect(page.getByText("Path does not exist", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Copy" })).toHaveCount(0);
+    await expect(table.getByText("release.txt", { exact: true })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "/home/tester" })).toBeVisible();
+    expect(server.websocketUrls).toHaveLength(1);
+  });
+
   test("creates and deletes entries through the SFTP mutation workflow", async ({ page }) => {
     const server = await installSftpBackend(page);
     const table = await connectRemoteSftp(page);
 
-    await page.getByRole("button", { name: "New folder" }).click();
+    await selectToolbarAction(page, "New folder");
     const createDialog = page.getByRole("dialog", { name: "New folder" });
     await createDialog.getByRole("textbox", { name: "New folder" }).fill("artifacts");
     await createDialog.getByRole("button", { name: "Confirm" }).click();
@@ -365,10 +418,10 @@ test.describe("koko SFTP workbench", () => {
     ]);
   });
 
-  test("hides the transfer queue trigger until a task exists", async ({ page }) => {
+  test("shows the transfer center trigger without a task", async ({ page }) => {
     await installSftpBackend(page);
     await openSftpWorkbench(page);
 
-    await expect(page.getByRole("button", { name: "Transfer center" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Transfer center" })).toBeVisible();
   });
 });
