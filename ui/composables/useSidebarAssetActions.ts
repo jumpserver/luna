@@ -6,6 +6,7 @@ import { isAssetNameTaken } from "~/composables/useAssetTree";
 import { useConnectMethods, WEB_PROXY_NATIVE_VALUE } from "~/composables/useConnectMethods";
 import { findFavoriteAssetFolderId, getFavoriteRootAssetCount } from "~/composables/useFavoriteFolders";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { hasReusableSavedConnection, isSavedConnectionAvailable } from "~/utils/connection";
 import { hasItemName, isItemNameTooLong } from "~/utils/itemName";
 
 export function useSidebarAssetActions() {
@@ -60,25 +61,6 @@ export function useSidebarAssetActions() {
     return (asset.permedProtocols || []).some((protocol) => protocol.name === "ssh");
   };
 
-  const hasReusableSavedConnection = (asset: AssetItem) => {
-    const saved = asset.savedConnection;
-    if (!saved?.protocol || !saved.username) return false;
-
-    const mode = saved.accountMode || "hosted";
-    if (mode === "manual") {
-      return !!(saved.manualUsername && saved.personalCredentialId);
-    }
-    if (mode === "dynamic") {
-      return !!(saved.rememberSecret && saved.dynamicPassword);
-    }
-
-    return true;
-  };
-
-  const hasQuickConnect = (asset: AssetItem) => {
-    return hasReusableSavedConnection(asset);
-  };
-
   const loadAssetConnectionDetails = async (asset: AssetItem) => {
     const detail = await getAssetDetailRequest(asset.id, asset.org_id || currentUser.value?.org?.id || "");
 
@@ -89,29 +71,6 @@ export function useSidebarAssetActions() {
         (protocol: { name?: string }) => protocol?.name !== "winrm"
       )
     };
-  };
-
-  const savedConnectionIsAvailable = (asset: AssetItem) => {
-    const saved = asset.savedConnection;
-    if (!saved || !(asset.permedProtocols || []).some((protocol) => protocol.name === saved.protocol)) {
-      return false;
-    }
-
-    const accounts = asset.permedAccounts || [];
-    const mode = saved.accountMode || "hosted";
-
-    if (mode === "manual") return accounts.some((account) => account.alias === "@INPUT");
-    if (mode === "dynamic") return accounts.some((account) => account.alias === "@USER");
-    if (mode === "anonymous") return accounts.some((account) => account.alias === "@ANON");
-
-    return accounts.some(
-      (account) =>
-        !(account.alias || "").startsWith("@") &&
-        ((saved.accountId && account.id === saved.accountId) ||
-          account.name === saved.username ||
-          account.username === saved.username ||
-          account.alias === saved.username)
-    );
   };
 
   const connectWithSavedConnection = async (asset: AssetItem) => {
@@ -137,7 +96,7 @@ export function useSidebarAssetActions() {
       return;
     }
 
-    if (!savedConnectionIsAvailable(connectAsset)) {
+    if (!isSavedConnectionAvailable(connectAsset)) {
       openSetupSession(connectAsset);
       return;
     }
@@ -495,7 +454,7 @@ export function useSidebarAssetActions() {
     ];
 
     return [
-      ...(hasQuickConnect(asset)
+      ...(hasReusableSavedConnection(asset)
         ? [
             {
               label: t("ContextMenu.QuickConnect"),
