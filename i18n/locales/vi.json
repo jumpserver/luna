@@ -976,7 +976,7 @@
   },
   "Login": {
     "Title": "Nhập trang đăng nhập",
-    "Description": "Nhập địa chỉ trang web (ví dụ https://example.com) hoặc IP",
+    "Description": "Nhập địa chỉ trang đầy đủ, ví dụ https://example.com hoặc http://192.168.1.1",
     "SiteName": "Tên trang web",
     "LoginSuccess": "Đăng nhập thành công",
     "LoginSuccessDescription": "Thao tác của bạn đã hoàn tất thành công",
@@ -985,7 +985,7 @@
     "EmptySiteNameError": "Vui lòng nhập tên trang web",
     "DuplicateSiteNameError": "Tên trang web này đã tồn tại. Hãy dùng tên khác",
     "LoginFailedDescription": "Đăng nhập thất bại vì tài khoản hiện tại đã hết hạn. Vui lòng đăng nhập lại",
-    "InvalidUrlError": "Vui lòng nhập địa chỉ trang web hoặc IP hợp lệ",
+    "InvalidUrlError": "Định dạng địa chỉ trang không đúng. Hãy nhập địa chỉ đầy đủ bao gồm http:// hoặc https://",
     "InvalidSiteError": "Đăng nhập thất bại: trang web không truy cập được hoặc không hợp lệ. Hãy kiểm tra và thử lại.",
     "AddAccount": "Thêm trang web",
     "SwitchSite": "Chuyển trang web",

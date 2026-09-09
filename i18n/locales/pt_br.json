@@ -976,7 +976,7 @@
   },
   "Login": {
     "Title": "Insira o site de login",
-    "Description": "Insira o endereço do site (por exemplo, https://example.com) ou o IP",
+    "Description": "Insira o endereço completo do site, como https://example.com ou http://192.168.1.1",
     "SiteName": "Nome do site",
     "LoginSuccess": "Login realizado com sucesso",
     "LoginSuccessDescription": "A operação foi concluída com sucesso",
@@ -985,7 +985,7 @@
     "EmptySiteNameError": "Insira o nome do site",
     "DuplicateSiteNameError": "Este nome de site já existe. Use outro nome",
     "LoginFailedDescription": "O login falhou porque a conta atual expirou. Entre novamente",
-    "InvalidUrlError": "Insira um endereço de site ou IP válido",
+    "InvalidUrlError": "O formato do endereço do site está incorreto. Insira um endereço completo que inclua http:// ou https://",
     "InvalidSiteError": "Falha no login: o site está inacessível ou é inválido. Verifique e tente novamente.",
     "AddAccount": "Adicionar site",
     "SwitchSite": "Alternar site",

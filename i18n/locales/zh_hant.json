@@ -976,7 +976,7 @@
   },
   "Login": {
     "Title": "輸入登入站點",
-    "Description": "請輸入要登入的站點地址 (例如: https://example.com) 或 IP 地址",
+    "Description": "請輸入完整站點地址，如 https://example.com 或 http://192.168.1.1",
     "SiteName": "站點名稱",
     "LoginSuccess": "登入成功",
     "LoginSuccessDescription": "歡迎回來，您已成功登入",
@@ -985,7 +985,7 @@
     "EmptySiteNameError": "請輸入站點名稱",
     "DuplicateSiteNameError": "站點名稱已存在，請使用其他名稱",
     "LoginFailedDescription": "登入失敗, 當前帳號登入已失效，請重新登入",
-    "InvalidUrlError": "請輸入有效的站點地址或IP地址",
+    "InvalidUrlError": "站點地址格式不正確，請輸入包含 http:// 或 https:// 的完整地址",
     "InvalidSiteError": "登入失敗：站點不可用或地址不正確，請檢查後重試",
     "AddAccount": "新增站點",
     "SwitchSite": "切換站點",

@@ -976,7 +976,7 @@
   },
   "Login": {
     "Title": "로그인 사이트 입력",
-    "Description": "사이트 주소(예: https://example.com) 또는 IP 주소를 입력하세요",
+    "Description": "전체 사이트 주소를 입력하세요. 예: https://example.com 또는 http://192.168.1.1",
     "SiteName": "사이트 이름",
     "LoginSuccess": "로그인 성공",
     "LoginSuccessDescription": "작업이 성공적으로 완료되었습니다",
@@ -985,7 +985,7 @@
     "EmptySiteNameError": "사이트 이름을 입력하세요",
     "DuplicateSiteNameError": "이미 사용 중인 사이트 이름입니다. 다른 이름을 사용하세요",
     "LoginFailedDescription": "현재 계정의 로그인이 만료되었습니다. 다시 로그인하세요",
-    "InvalidUrlError": "올바른 사이트 주소 또는 IP 주소를 입력하세요",
+    "InvalidUrlError": "사이트 주소 형식이 올바르지 않습니다. http:// 또는 https://가 포함된 전체 주소를 입력하세요",
     "InvalidSiteError": "로그인 실패: 사이트에 연결할 수 없거나 주소가 올바르지 않습니다. 확인 후 다시 시도하세요.",
     "AddAccount": "사이트 추가",
     "SwitchSite": "사이트 전환",

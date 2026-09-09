@@ -976,7 +976,7 @@
   },
   "Login": {
     "Title": "Introduzca el sitio de inicio de sesión",
-    "Description": "Introduzca la dirección del sitio (por ejemplo, https://example.com) o la IP",
+    "Description": "Introduzca la dirección completa del sitio, como https://example.com o http://192.168.1.1",
     "SiteName": "Nombre del sitio",
     "LoginSuccess": "Inicio de sesión correcto",
     "LoginSuccessDescription": "La operación se ha completado correctamente",
@@ -985,7 +985,7 @@
     "EmptySiteNameError": "Introduzca el nombre del sitio",
     "DuplicateSiteNameError": "Este nombre de sitio ya existe. Use otro nombre",
     "LoginFailedDescription": "El inicio de sesión falló porque la cuenta actual ha caducado. Vuelva a iniciar sesión",
-    "InvalidUrlError": "Introduzca una dirección de sitio o IP válida",
+    "InvalidUrlError": "El formato de la dirección del sitio no es correcto. Introduzca una dirección completa que incluya http:// o https://",
     "InvalidSiteError": "Error de inicio de sesión: no se puede acceder al sitio o no es válido. Revíselo e inténtelo de nuevo.",
     "AddAccount": "Añadir sitio",
     "SwitchSite": "Cambiar de sitio",

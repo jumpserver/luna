@@ -976,7 +976,7 @@
   },
   "Login": {
     "Title": "ログインサイトを入力",
-    "Description": "サイトのアドレス（例：https://example.com）または IP を入力してください",
+    "Description": "完全なサイトアドレスを入力してください。例: https://example.com または http://192.168.1.1",
     "SiteName": "サイト名",
     "LoginSuccess": "ログインしました",
     "LoginSuccessDescription": "操作が正常に完了しました",
@@ -985,7 +985,7 @@
     "EmptySiteNameError": "サイト名を入力してください",
     "DuplicateSiteNameError": "このサイト名はすでに使用されています。別の名前を使用してください",
     "LoginFailedDescription": "ログインに失敗しました。現在のアカウントの有効期限が切れています。再度ログインしてください",
-    "InvalidUrlError": "有効なサイトのアドレスまたは IP アドレスを入力してください",
+    "InvalidUrlError": "サイトアドレスの形式が正しくありません。http:// または https:// を含む完全なアドレスを入力してください",
     "InvalidSiteError": "ログインに失敗しました。サイトに接続できないか、アドレスが無効です。確認して再試行してください。",
     "AddAccount": "サイトを追加",
     "SwitchSite": "サイトを切り替え",
