@@ -599,7 +599,7 @@ describe("sftp professional workbench", () => {
 
   it("only reports success after the pane is ready", () => {
     expect(workspacePanesComposable).toContain("markRemotePaneConnected");
-    expect(fileManagementPane).toContain("manager.connected, manager.loading, manager.error");
+    expect(fileManagementPane).toContain("manager.connected, manager.loading, manager.fatalError");
     expect(globalWorkspaceComponent).toContain('transfer-endpoint-connected="handleRemotePaneConnected"');
   });
 });
