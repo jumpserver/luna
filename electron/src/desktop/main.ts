@@ -1393,6 +1393,10 @@ app.whenReady().then(async () => {
   localApplicationLauncher = new LocalApplicationLauncher(app, projectRoot, applicationConfig, shell, !isDevelopment);
   authService = new DesktopAuthService(emitDesktopEvent);
   await authService.initialize();
+  electronSession.defaultSession.setCertificateVerifyProc((request, callback) => {
+    // ponytail: accept any cert for user-entered JumpServer hosts; pin/TOFU if MITM becomes a real threat
+    callback(authService.isTrustedSiteHost(request.hostname) ? 0 : -2);
+  });
   const quitAfterProtocolLaunch = await drainPendingProtocolUrls();
   if (quitAfterProtocolLaunch) {
     app.quit();
