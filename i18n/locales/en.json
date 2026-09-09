@@ -1590,6 +1590,7 @@
       "quickDesktop": "Desktop",
       "quickDownload": "Downloads",
       "revealInFinder": "Show in Finder",
+      "revealInFileExplorer": "Show in File Explorer",
       "revealFailed": "Unable to reveal in the system file manager"
     },
     "sftpEditor": {

@@ -59,6 +59,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const { isWindows } = usePlatform();
 const { localFiles } = useKokoHostAdapter();
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
@@ -162,6 +163,9 @@ const promptDisabled = computed(() => {
   const name = promptName.value.trim();
   return !name || Boolean(promptError.value) || (promptTarget.value !== null && name === promptTarget.value.name);
 });
+const revealLabel = computed(() =>
+  t(isWindows.value ? "koko.localFile.revealInFileExplorer" : "koko.localFile.revealInFinder")
+);
 
 function clearTransferredSelection(names: string[], sourcePath: string, revision: number): void {
   selection.clearTransferredSelection(names, sourcePath, revision, currentPath.value);
@@ -401,7 +405,7 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
   const single = selectedEntries.value.length === 1;
   return [
     {
-      label: t("koko.localFile.revealInFinder"),
+      label: revealLabel.value,
       icon: "i-lucide-folder-open",
       disabled: !single,
       onSelect: () => void revealInSystem(entry)
@@ -443,6 +447,7 @@ defineExpose({
       :current-path="currentPath"
       :root-path="rootPath"
       :quick-paths="quickPaths"
+      :reveal-label="revealLabel"
       @parent="changeDirectory"
       @refresh="list()"
       @reveal="revealInSystem()"

@@ -463,7 +463,7 @@ describe("sFTP feature tour", () => {
     const zhKoko = zhMessages.koko;
     const enKoko = enMessages.koko;
 
-    for (const section of ["fileManagement", "sftpTransferCenter", "sftpTour"] as const) {
+    for (const section of ["fileManagement", "localFile", "sftpTransferCenter", "sftpTour"] as const) {
       expect(leafKeys(enKoko[section]).sort()).toEqual(leafKeys(zhKoko[section]).sort());
     }
   });

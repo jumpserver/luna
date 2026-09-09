@@ -135,6 +135,15 @@ export function createKokoTerminalMessageHandlers(options: {
   onZmodemEnd: () => void;
   onZmodemAbort: () => void;
 }) {
+  // Every write below is scoped to the pane that owns this socket. Without the
+  // pane key a second connection would overwrite the first one's session id,
+  // asset name and share state.
+  const paneId = () => options.sessionCtxRef.value?.tabId || "";
+  const paneState = () => options.connectionStore.pane(paneId());
+  const updatePane = (patch: Parameters<typeof options.connectionStore.updatePane>[1]) => {
+    options.connectionStore.updatePane(paneId(), patch);
+  };
+
   const parseJson = <T>(value: string | undefined, fallback: T) => {
     if (!value) return fallback;
     try {
@@ -172,7 +181,7 @@ export function createKokoTerminalMessageHandlers(options: {
 
   return {
     [MESSAGE_TYPE.CLOSE]: () => {
-      options.connectionStore.updateConnectionState({ enableShare: false, onlineUsers: [] });
+      updatePane({ enableShare: false, onlineUsers: [] });
       options.socketRef.value?.close();
       options.sendHostEvent(HOST_MESSAGE_TYPE.CLOSE, "");
     },
@@ -194,7 +203,7 @@ export function createKokoTerminalMessageHandlers(options: {
       }>(message.data, { setting: {} });
       options.featureSetting.value = info.setting;
       options.setClipboardAccess(info.permission, info.clipboard_policy);
-      if (info.asset?.name) options.connectionStore.setConnectionState({ assetName: info.asset.name });
+      if (info.asset?.name) updatePane({ assetName: info.asset.name });
       updateIcon(info.setting);
 
       socket.send(
@@ -204,7 +213,7 @@ export function createKokoTerminalMessageHandlers(options: {
             type: "primary",
             cols: terminal.cols,
             rows: terminal.rows,
-            code: options.connectionStore.shareCode
+            code: paneState().shareCode
           }
         })
       );
@@ -217,7 +226,7 @@ export function createKokoTerminalMessageHandlers(options: {
 
       options.terminalId.value = terminalId;
       options.emitTerminalConnect(terminalId);
-      options.connectionStore.setConnectionState({ socket, terminal: markRaw(terminal), terminalId });
+      updatePane({ socket, terminal: markRaw(terminal), terminalId });
       options.onConnected(terminalId, socket, terminal);
     },
     [MESSAGE_TYPE.TERMINAL_ERROR]: (message) => {
@@ -233,7 +242,7 @@ export function createKokoTerminalMessageHandlers(options: {
       const payload = parseJson<{ share_id: string; code: string }>(message.data, { share_id: "", code: "" });
       options.shareId.value = payload.share_id;
       options.shareCode.value = payload.code;
-      options.connectionStore.updateConnectionState({ shareId: payload.share_id, shareCode: payload.code });
+      updatePane({ shareId: payload.share_id, shareCode: payload.code });
     },
     [MESSAGE_TYPE.TERMINAL_ACTION]: (message) => {
       if (message.data === ZMODEM_ACTION_TYPE.ZMODEM_END) {
@@ -244,7 +253,7 @@ export function createKokoTerminalMessageHandlers(options: {
     },
     [MESSAGE_TYPE.TERMINAL_SESSION]: (message) => {
       const sessionInfo = parseJson<{
-        session: { id: string; asset?: string; ip?: string; user?: string };
+        session: { id: string; asset?: string; user?: string; account?: string };
         permission?: ClipboardPermission | null;
         clipboard_policy?: ClipboardPolicy | null;
         backspaceAsCtrlH?: boolean;
@@ -254,13 +263,17 @@ export function createKokoTerminalMessageHandlers(options: {
       options.emitTerminalSession(sessionInfo as TerminalSessionInfo);
       options.setClipboardAccess(sessionInfo.permission, sessionInfo.clipboard_policy);
 
-      const tabId = options.sessionCtxRef.value?.tabId;
+      const tabId = paneId();
       if (tabId) {
+        // koko sends model.Session: `user` is the JumpServer login user
+        // ("Administrator(admin)"), `account` the asset account ("root(root)").
+        // Only the account and the session id are remote facts; asset name and
+        // address already come from the workspace pane, so they are not
+        // republished here (`session.asset` is a "name(address)" composite and
+        // there is no `ip` field at all).
         options.hostAdapter.setSessionDetails(tabId, {
           sessionId: sessionInfo.session.id,
-          asset: sessionInfo.session.asset,
-          address: sessionInfo.session.ip,
-          account: sessionInfo.session.user,
+          account: sessionInfo.session.account,
           shareAllowed: sessionInfo.permission?.actions?.includes("share"),
           requestFileToken
         });
@@ -286,11 +299,11 @@ export function createKokoTerminalMessageHandlers(options: {
       }
 
       if (options.featureSetting.value.SECURITY_SESSION_SHARE && sessionInfo.permission?.actions?.includes("share")) {
-        options.connectionStore.updateConnectionState({ enableShare: true });
+        updatePane({ enableShare: true });
       }
 
       options.sessionId.value = sessionInfo.session.id;
-      options.connectionStore.updateConnectionState({ sessionId: sessionInfo.session.id });
+      updatePane({ sessionId: sessionInfo.session.id });
       options.terminalSettingsStore.setDefaultTerminalConfig(
         "theme",
         effectiveThemeName || sessionInfo.themeName || ""
@@ -301,13 +314,13 @@ export function createKokoTerminalMessageHandlers(options: {
       );
     },
     [MESSAGE_TYPE.TERMINAL_READY]: () => {
-      const tabId = options.sessionCtxRef.value?.tabId;
+      const tabId = paneId();
       if (tabId) markKokoTerminalAiSessionInfoReady(tabId);
     },
     [MESSAGE_TYPE.TERMINAL_SHARE_JOIN]: (message) => {
       const payload = parseJson<OnlineUser>(message.data, {} as OnlineUser);
       options.onlineUsers.value.push(payload);
-      options.connectionStore.updateConnectionState({ onlineUsers: options.onlineUsers.value });
+      updatePane({ onlineUsers: [...options.onlineUsers.value] });
       options.sendHostEvent(
         HOST_MESSAGE_TYPE.SHARE_USER_ADD,
         JSON.stringify({ ...payload, sessionId: options.sessionId.value })
@@ -326,7 +339,7 @@ export function createKokoTerminalMessageHandlers(options: {
       const index = options.onlineUsers.value.findIndex((item) => item.user_id === payload.user_id && !item.primary);
       if (index !== -1) {
         options.onlineUsers.value.splice(index, 1);
-        options.connectionStore.updateConnectionState({ onlineUsers: options.onlineUsers.value });
+        updatePane({ onlineUsers: [...options.onlineUsers.value] });
         options.toast.add({ title: `${payload.user} ${options.t("koko.terminal.leftShare")}`, color: "info" });
       }
     },
@@ -349,7 +362,7 @@ export function createKokoTerminalMessageHandlers(options: {
     },
     [MESSAGE_TYPE.TERMINAL_GET_SHARE_USER]: (message) => {
       options.userOptions.value = parseJson<ShareUserOptions[]>(message.data, []);
-      options.connectionStore.updateConnectionState({ userOptions: options.userOptions.value });
+      updatePane({ userOptions: [...options.userOptions.value] });
     },
     [MESSAGE_TYPE.TERMINAL_SHARE_USER_REMOVE]: () => {
       options.toast.add({ title: options.t("koko.terminal.removedFromShare"), color: "info" });

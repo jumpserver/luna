@@ -1590,6 +1590,7 @@
       "quickDesktop": "Área de Trabalho",
       "quickDownload": "Downloads",
       "revealInFinder": "Mostrar no Finder",
+      "revealInFileExplorer": "Mostrar no Explorador de Arquivos",
       "revealFailed": "Não foi possível mostrar no gerenciador de arquivos do sistema"
     },
     "sftpEditor": {

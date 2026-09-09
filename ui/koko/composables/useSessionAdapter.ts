@@ -1,81 +1,76 @@
 import type { OnlineUser, ShareUserOptions } from "#koko/types/session";
+import type { MaybeRefOrGetter } from "vue";
 import { FORMATTER_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 
 import { writeText } from "clipboard-polyfill";
-import { storeToRefs } from "pinia";
 import { useKokoConnectionStore } from "#koko/stores/connection";
-import mittBus, { KokoMittEvent } from "#koko/utils/mittBus";
 import { formatMessage } from "#koko/utils/terminalUtils";
 
-export function useKokoSessionAdapter() {
+/**
+ * Share/session view of a single Koko pane. The pane id is required so the
+ * right panel and the in-terminal drawer always act on the terminal they show,
+ * never on the most recently connected one.
+ */
+export function useKokoSessionAdapter(paneId: MaybeRefOrGetter<string>) {
   const { t } = useI18n();
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
   const connectionStore = useKokoConnectionStore();
 
-  const onlineUsers = computed(() => connectionStore.onlineUsers || []);
+  const pane = computed(() => connectionStore.pane(toValue(paneId)));
+
+  const onlineUsers = computed(() => pane.value.onlineUsers);
 
   const shareInfo = computed(() => {
-    const shareId = connectionStore.shareId || "";
+    const { shareId, shareCode, sessionId, enableShare } = pane.value;
     const origin = globalThis.window?.location.origin || "";
     return {
       shareId,
-      shareCode: connectionStore.shareCode || "",
-      sessionId: connectionStore.sessionId || "",
-      enableShare: connectionStore.enableShare || false,
-      shareURL: shareId
-        ? `${origin}/luna/share/${shareId}?code=${encodeURIComponent(connectionStore.shareCode || "")}`
-        : ""
+      shareCode,
+      sessionId,
+      enableShare,
+      shareURL: shareId ? `${origin}/luna/share/${shareId}?code=${encodeURIComponent(shareCode)}` : ""
     };
   });
 
-  const userOptions = computed<ShareUserOptions[]>(() => connectionStore.userOptions || []);
+  const userOptions = computed<ShareUserOptions[]>(() => pane.value.userOptions);
+
+  const sendToPane = (type: FORMATTER_MESSAGE_TYPE, payload: unknown) => {
+    const { socket, terminalId } = pane.value;
+    if (!socket || !terminalId) return false;
+
+    socket.send(formatMessage(terminalId, type, JSON.stringify(payload)));
+    return true;
+  };
 
   const createShareLink = (shareLinkRequest: {
     expiredTime: number;
     actionPerm: string;
     users: ShareUserOptions[];
   }) => {
-    const { socket, terminalId } = storeToRefs(connectionStore);
-    const sessionId = connectionStore.sessionId;
+    const sessionId = pane.value.sessionId;
+    const sent =
+      Boolean(sessionId) &&
+      sendToPane(FORMATTER_MESSAGE_TYPE.TERMINAL_SHARE, {
+        origin: window.location.origin,
+        session: sessionId,
+        users: shareLinkRequest.users,
+        expired_time: shareLinkRequest.expiredTime,
+        action_permission: shareLinkRequest.actionPerm
+      });
 
-    if (!socket?.value || !terminalId?.value || !sessionId) {
-      addErrorToast({ title: t("koko.terminal.failedCreateConnection") });
-      return;
-    }
-
-    socket.value.send(
-      formatMessage(
-        terminalId.value,
-        FORMATTER_MESSAGE_TYPE.TERMINAL_SHARE,
-        JSON.stringify({
-          origin: window.location.origin,
-          session: sessionId,
-          users: shareLinkRequest.users,
-          expired_time: shareLinkRequest.expiredTime,
-          action_permission: shareLinkRequest.actionPerm
-        })
-      )
-    );
+    if (!sent) addErrorToast({ title: t("koko.terminal.failedCreateConnection") });
   };
 
   const searchUsers = (query: string) => {
-    const { socket, terminalId } = storeToRefs(connectionStore);
-    if (!socket?.value || !terminalId?.value) return;
-
-    socket.value.send(
-      formatMessage(terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_GET_SHARE_USER, JSON.stringify({ query }))
-    );
+    sendToPane(FORMATTER_MESSAGE_TYPE.TERMINAL_GET_SHARE_USER, { query });
   };
 
   const removeShareUser = (user: OnlineUser) => {
-    if (!connectionStore.sessionId) return;
+    const sessionId = pane.value.sessionId;
+    if (!sessionId) return;
 
-    mittBus.emit(KokoMittEvent.RemoveShareUser, {
-      sessionId: connectionStore.sessionId,
-      userMeta: user,
-      type: "remove"
-    });
+    sendToPane(FORMATTER_MESSAGE_TYPE.TERMINAL_SHARE_USER_REMOVE, { session: sessionId, user_meta: user });
   };
 
   const copyShareURL = () => {
@@ -88,7 +83,7 @@ export function useKokoSessionAdapter() {
   };
 
   const resetShareState = () => {
-    connectionStore.updateConnectionState({ shareId: "", shareCode: "" });
+    connectionStore.updatePane(toValue(paneId), { shareId: "", shareCode: "" });
   };
 
   return {

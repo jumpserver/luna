@@ -1590,6 +1590,7 @@
       "quickDesktop": "桌面",
       "quickDownload": "下載",
       "revealInFinder": "在訪達中顯示",
+      "revealInFileExplorer": "在檔案總管中顯示",
       "revealFailed": "無法在系統檔案管理器中開啟"
     },
     "sftpEditor": {

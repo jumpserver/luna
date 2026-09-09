@@ -486,6 +486,8 @@ export const useKokoTerminalSocket = () => {
       unregisterKokoTerminalAiSession(tabId, socketRef.value);
       unregisterKokoLinuxMetricsSession(tabId, socketRef.value);
       hostAdapter.clearSessionDetails(tabId);
+      // Only this pane's runtime is dropped; other terminals stay connected.
+      connectionStore.resetPane(tabId);
     }
     transport.close();
     sentryRef.value = null;
@@ -498,7 +500,6 @@ export const useKokoTerminalSocket = () => {
     terminalRef.value = null;
     fitAddon = null;
     searchAddon.value = null;
-    connectionStore.resetConnectionState();
   });
 
   return {

@@ -1590,6 +1590,7 @@
       "quickDesktop": "Màn hình nền",
       "quickDownload": "Tải xuống",
       "revealInFinder": "Hiện trong Finder",
+      "revealInFileExplorer": "Hiện trong File Explorer",
       "revealFailed": "Không thể hiển thị trong trình quản lý tệp hệ thống"
     },
     "sftpEditor": {

@@ -1,5 +1,5 @@
 import type { Ref } from "vue";
-import type { OnlineUser, ShareUserOptions } from "#koko/types/session";
+import type { ShareUserOptions } from "#koko/types/session";
 
 import mitt from "mitt";
 
@@ -22,7 +22,6 @@ export enum KokoMittEvent {
   TerminalSearch = "terminal-search",
   ShareUser = "share-user",
   SyncTheme = "sync-theme",
-  RemoveShareUser = "remove-share-user",
   CreateShareUrl = "create-share-url",
   WriteDataToTerminal = "writeDataToTerminal",
   WriteCommand = "write-command",
@@ -54,7 +53,6 @@ interface Event extends Record<string | symbol, unknown> {
   [KokoMittEvent.TerminalSearch]: { keyword: string; type?: string };
   [KokoMittEvent.ShareUser]: { type: string; query: string };
   [KokoMittEvent.SyncTheme]: { type: string; data: unknown };
-  [KokoMittEvent.RemoveShareUser]: { sessionId: string; userMeta: OnlineUser; type: string };
   [KokoMittEvent.CreateShareUrl]: {
     type: string;
     sessionId: string;
@@ -65,7 +63,8 @@ interface Event extends Record<string | symbol, unknown> {
     };
   };
   [KokoMittEvent.WriteDataToTerminal]: { type: string };
-  [KokoMittEvent.WriteCommand]: { type: string };
+  // paneId addresses the terminal that must receive the command: the bus is global.
+  [KokoMittEvent.WriteCommand]: { paneId: string; type: string };
   [KokoMittEvent.ConnectError]: void;
   [KokoMittEvent.CloseDrawer]: void;
 }

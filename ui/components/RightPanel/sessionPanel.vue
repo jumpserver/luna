@@ -48,6 +48,9 @@ const sessionDetails = computed(() => {
   return session ? getSessionDetails(session.id) || null : null;
 });
 const lionSession = computed(() => getLionWorkspaceSession(activeSession.value?.id || ""));
+// Koko runtime of the pane on screen. Reading the store without a pane id would
+// show whichever terminal connected last.
+const kokoPane = computed(() => connectionStore.pane(activeSession.value?.id || ""));
 
 const isConnectedSession = computed(() => activeSession.value?.status === "connected");
 const isDisconnectedSession = computed(() => activeSession.value?.status === "disconnected");
@@ -119,9 +122,11 @@ const sessionRows = computed(() => {
   const tokenId = session.payload?.id || session.payload?.token?.id;
 
   return [
-    { label: t("RightPanel.SessionAsset"), value: details?.asset || session.assetName },
-    { label: t("RightPanel.SessionAddress"), value: details?.address || session.address },
-    { label: t("RightPanel.SessionAccount"), value: details?.account || session.account },
+    { label: t("RightPanel.SessionAsset"), value: session.assetName },
+    { label: t("RightPanel.SessionAddress"), value: session.address },
+    // The remote account wins because it resolves aliases such as manual input
+    // or dynamic (same-name) accounts; otherwise show the one picked at connect.
+    { label: t("RightPanel.SessionAccount"), value: formatSessionAccount(details?.account || session.account) },
     { label: t("RightPanel.SessionProtocol"), value: session.protocol.toUpperCase() },
     { label: t("RightPanel.SessionDuration"), value: connectionDuration.value },
     {
@@ -129,7 +134,7 @@ const sessionRows = computed(() => {
       value:
         details?.sessionId ||
         lionSession.value?.share.sessionId.value ||
-        (!lionSession.value ? connectionStore.sessionId : "") ||
+        (!lionSession.value ? kokoPane.value.sessionId : "") ||
         tokenId ||
         "-"
     }
@@ -150,7 +155,7 @@ const canShare = computed(() => {
   if (lionSession.value) {
     return Boolean(lionSession.value.share.enableShare.value && lionSession.value.share.sessionId.value);
   }
-  return Boolean(connectionStore.enableShare && connectionStore.sessionId);
+  return Boolean(kokoPane.value.enableShare && kokoPane.value.sessionId);
 });
 </script>
 

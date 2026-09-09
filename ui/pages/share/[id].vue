@@ -25,7 +25,8 @@ function startShareSession(code: string) {
   if (!trimmed || !shareId.value) return;
 
   const paneId = `share:${shareId.value}`;
-  connectionStore.updateConnectionState({ shareId: shareId.value, shareCode: trimmed });
+  // The terminal handshake reads the code back from this pane's runtime state.
+  connectionStore.updatePane(paneId, { shareId: shareId.value, shareCode: trimmed });
   sessionContext.value = {
     component: "koko",
     tokenId: "",

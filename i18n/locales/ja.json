@@ -1590,6 +1590,7 @@
       "quickDesktop": "デスクトップ",
       "quickDownload": "ダウンロード",
       "revealInFinder": "Finder で表示",
+      "revealInFileExplorer": "エクスプローラーで表示",
       "revealFailed": "システムのファイルマネージャーで表示できません"
     },
     "sftpEditor": {

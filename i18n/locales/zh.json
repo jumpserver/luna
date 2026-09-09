@@ -1593,6 +1593,7 @@
       "quickDesktop": "桌面",
       "quickDownload": "下载",
       "revealInFinder": "在访达中显示",
+      "revealInFileExplorer": "在文件资源管理器中显示",
       "revealFailed": "无法在系统文件管理器中打开"
     },
     "sftpEditor": {

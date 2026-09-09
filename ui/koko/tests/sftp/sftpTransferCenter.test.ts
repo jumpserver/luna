@@ -489,6 +489,14 @@ describe("sftp professional workbench", () => {
     expect(fileManagementStyles).toContain("__search-input");
   });
 
+  it("uses the Windows File Explorer label for local reveal actions", () => {
+    expect(fileManagementLocalPane).toContain("usePlatform()");
+    expect(fileManagementLocalPane).toContain("isWindows.value");
+    expect(fileManagementLocalPane).toContain("koko.localFile.revealInFileExplorer");
+    expect(localPaneToolbar).toContain("props.revealLabel");
+    expect(localPaneToolbar).not.toContain("koko.localFile.revealInFinder");
+  });
+
   it("exposes refresh and upload on the remote and local narrow toolbars", () => {
     const narrow = remotePaneToolbar.split('<template v-if="isNarrow">')[1]?.split("<template v-else>")[0] || "";
     expect(narrow).toContain("koko.fileManagement.refresh");

@@ -1590,6 +1590,7 @@
       "quickDesktop": "Рабочий стол",
       "quickDownload": "Загрузки",
       "revealInFinder": "Показать в Finder",
+      "revealInFileExplorer": "Показать в Проводнике",
       "revealFailed": "Не удалось показать папку в системном файловом менеджере"
     },
     "sftpEditor": {

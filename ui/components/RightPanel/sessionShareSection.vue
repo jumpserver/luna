@@ -9,11 +9,11 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const { activePaneId, activeTab } = useWorkspaceTabs();
-const kokoAdapter = useKokoSessionAdapter();
 const activeSessionId = computed(() => {
   const tab = activeTab.value;
   return tab?.panes.find((pane) => pane.id === activePaneId.value)?.id || tab?.id || "";
 });
+const kokoAdapter = useKokoSessionAdapter(activeSessionId);
 const lionAdapter = computed(() => getLionWorkspaceSession(activeSessionId.value)?.share || null);
 const onlineUsers = computed(() => lionAdapter.value?.onlineUsers.value || kokoAdapter.onlineUsers.value);
 const shareInfo = computed(() => lionAdapter.value?.shareInfo.value || kokoAdapter.shareInfo.value);

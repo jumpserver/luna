@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AssetItem } from "~/types/index";
+import { hasReusableSavedConnection } from "~/utils/connection";
 
 interface Props {
   asset: AssetItem;
@@ -35,20 +36,7 @@ const flatFavoriteFolders = computed(() => {
     folders.flatMap((folder) => [{ id: folder.id, name: folder.name }, ...flatten(folder.children)]);
   return flatten();
 });
-const hasReusableSavedConnection = computed(() => {
-  const saved = props.asset.savedConnection;
-  if (!saved?.protocol || !saved.username) return false;
-
-  const mode = saved.accountMode || "hosted";
-  if (mode === "manual") {
-    return !!(saved.manualUsername && saved.personalCredentialId);
-  }
-  if (mode === "dynamic") {
-    return !!(saved.rememberSecret && saved.dynamicPassword);
-  }
-
-  return true;
-});
+const hasSavedConnection = computed(() => hasReusableSavedConnection(props.asset));
 
 const menuItems = computed((): MenuItem[] => {
   const baseItems: MenuItem[] = [
@@ -91,7 +79,7 @@ const menuItems = computed((): MenuItem[] => {
       : [])
   ];
 
-  if (hasReusableSavedConnection.value) {
+  if (hasSavedConnection.value) {
     baseItems.unshift({
       value: "quickConnect",
       label: t("ContextMenu.QuickConnect"),

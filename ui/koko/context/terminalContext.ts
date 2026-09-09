@@ -53,6 +53,9 @@ export const createKokoTerminalContext = (): TerminalContext => {
   const hostBridge = createHostBridge();
   const connectionStore = useKokoConnectionStore();
   const sessionCtxRef = inject(connectorSessionKey, null);
+  // One context per pane: every host command must reach this pane's socket only.
+  const paneId = () => unref(sessionCtxRef)?.tabId || "";
+  const pane = () => connectionStore.pane(paneId());
   const tokenActions = unref(sessionCtxRef)?.actions;
   const clipboardAccess = shallowRef(
     tokenActions ? resolveClipboardAccess({ actions: tokenActions }) : createUnrestrictedClipboardAccess()
@@ -60,6 +63,7 @@ export const createKokoTerminalContext = (): TerminalContext => {
   const toast = useToast();
   const { t } = useI18n();
   let unbindPostMessage: (() => void) | undefined;
+  let unbindMittEvents: (() => void) | undefined;
 
   const setClipboardAccess = (permission?: ClipboardPermission | null, policy?: ClipboardPolicy | null) => {
     const effectivePermission = permission ?? (tokenActions ? { actions: tokenActions } : undefined);
@@ -104,53 +108,43 @@ export const createKokoTerminalContext = (): TerminalContext => {
       }
     });
 
-    mittBus.on(KokoMittEvent.RemoveShareUser, (user) => {
-      const socket = connectionStore.socket;
-      const terminalId = connectionStore.terminalId;
-      if (!socket || !terminalId) return;
-
-      socket.send(
-        formatMessage(
-          terminalId,
-          FORMATTER_MESSAGE_TYPE.TERMINAL_SHARE_USER_REMOVE,
-          JSON.stringify({ session: user.sessionId, user_meta: user.userMeta })
-        )
-      );
-    });
-
     const handleHostCommand = (data: unknown, enforceClipboardPolicy = true) => {
-      const socket = connectionStore.socket;
-      const terminalId = connectionStore.terminalId;
-      const paneId = unref(sessionCtxRef)?.tabId || "";
+      const { socket, terminalId } = pane();
+      const tabId = paneId();
       const command = String(data ?? "");
       if (
         !socket ||
         !terminalId ||
         socket.readyState !== WebSocket.OPEN ||
-        (paneId && isKokoTerminalAiInputLocked(paneId))
+        (tabId && isKokoTerminalAiInputLocked(tabId))
       ) {
         return;
       }
       if (enforceClipboardPolicy && command && !validateClipboardText("paste", command)) return;
       // Empty INPUT_ACTIVE keepalives must not go through the custom sender:
       // that path re-emits INPUT_ACTIVE and would recurse.
-      if (command && paneId && hasKokoTerminalDataSender(paneId)) {
-        sendKokoTerminalData(paneId, command);
+      if (command && tabId && hasKokoTerminalDataSender(tabId)) {
+        sendKokoTerminalData(tabId, command);
         return;
       }
       socket.send(formatMessage(terminalId, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, command));
     };
 
-    mittBus.on(KokoMittEvent.WriteCommand, ({ type }) => {
+    // mittBus is global, so every open terminal receives this event. Ignore the
+    // ones addressed to another pane instead of echoing input into this session.
+    const handleWriteCommand = ({ paneId: targetPaneId, type }: { paneId: string; type: string }) => {
+      if (targetPaneId !== paneId()) return;
       handleHostCommand(type, false);
-    });
+    };
+    mittBus.on(KokoMittEvent.WriteCommand, handleWriteCommand);
+    unbindMittEvents = () => mittBus.off(KokoMittEvent.WriteCommand, handleWriteCommand);
 
     const handleHostFocus = () => {
-      connectionStore.terminal?.focus();
+      pane().terminal?.focus();
     };
 
     const handleHostThemeChange = (message: { theme?: string }) => {
-      const terminal = connectionStore.terminal;
+      const terminal = pane().terminal;
       if (!terminal) return;
       const themeName = message.theme || "Default";
       nextTick(() => {
@@ -158,14 +152,8 @@ export const createKokoTerminalContext = (): TerminalContext => {
       });
     };
 
-    const handleDrawerOpen = () => {
-      connectionStore.updateConnectionState({ drawerOpenState: true });
-    };
-
     const handleTerminalContent = () => {
-      const terminal = connectionStore.terminal;
-      const sessionId = connectionStore.sessionId;
-      const terminalId = connectionStore.terminalId;
+      const { terminal, sessionId, terminalId } = pane();
       if (!terminal || !sessionId || !terminalId) return;
 
       hostBridge.sendHost(HOST_MESSAGE_TYPE.TERMINAL_CONTENT_RESPONSE, {
@@ -175,7 +163,6 @@ export const createKokoTerminalContext = (): TerminalContext => {
       });
     };
 
-    hostBridge.onHost(HOST_MESSAGE_TYPE.OPEN, handleDrawerOpen);
     hostBridge.onHost(HOST_MESSAGE_TYPE.CMD, (message) => handleHostCommand(message.data));
     hostBridge.onHost(HOST_MESSAGE_TYPE.FOCUS, handleHostFocus);
     hostBridge.onHost(HOST_MESSAGE_TYPE.TERMINAL_THEME_CHANGE, (message) =>
@@ -201,7 +188,8 @@ export const createKokoTerminalContext = (): TerminalContext => {
 
   const cleanup = () => {
     eventBus.all.clear();
-    mittBus.all.clear();
+    // Never clear the whole mittBus here: it is shared by every open terminal.
+    unbindMittEvents?.();
     unbindPostMessage?.();
     hostBridge.destroy();
   };
