@@ -1,7 +1,7 @@
 :root[data-theme-preset="luna-deepblue"] {
   --theme-bg: #020203;
   --theme-fg: #efeff0;
-  --theme-muted: #40516d;
+  --theme-muted: #6b82a8;
   --theme-border: rgba(0, 0, 0, 0.3);
   --theme-accent: #1ab394;
   --theme-folder-icon: var(--sidebar-icon-color);
