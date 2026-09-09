@@ -29,7 +29,13 @@
     "UnsupportedHint": "Trình phát trực tuyến không hỗ trợ loại bản ghi này.",
     "Reload": "Tải lại",
     "DesktopBlocked": "Chỉ dùng trên trình duyệt",
-    "DesktopBlockedHint": "Tính năng phát lại phiên chỉ khả dụng trên trình duyệt web. Hãy sao chép liên kết và mở trong trình duyệt."
+    "DesktopBlockedHint": "Tính năng phát lại phiên chỉ khả dụng trên trình duyệt web. Hãy sao chép liên kết và mở trong trình duyệt.",
+    "ShortcutsTitle": "Phím tắt",
+    "ShortcutPlayPause": "Phát/Tạm dừng",
+    "ShortcutSeekBackward": "Tua lại",
+    "ShortcutSeekForward": "Tua nhanh",
+    "ShortcutJumpMarker": "Chuyển đến dấu mốc",
+    "ShortcutFullscreen": "Toàn màn hình"
   },
   "Common": {
     "AI": "AI",
@@ -1758,5 +1764,21 @@
     "estimatedCost": "Est. cost",
     "details": "Details",
     "hideDetails": "Hide details"
+  },
+  "Chen": {
+    "DatabaseExplorer": "Trình duyệt cơ sở dữ liệu",
+    "RecentlyTables": "Bảng gần đây",
+    "DatabaseWorkspace": "Không gian làm việc cơ sở dữ liệu",
+    "SelectDatabaseAction": "Chọn một thao tác cơ sở dữ liệu để bắt đầu.",
+    "OpenDatabaseWorkspaceFailed": "Không thể mở không gian làm việc cơ sở dữ liệu",
+    "OpeningDatabaseWorkspace": "Đang mở không gian làm việc cơ sở dữ liệu",
+    "Retry": "Thử lại",
+    "ResizeDatabaseSidebar": "Điều chỉnh kích thước thanh bên cơ sở dữ liệu",
+    "CloseDatabaseExplorer": "Đóng trình duyệt cơ sở dữ liệu",
+    "WaitingConnection": "Đang chờ thông tin kết nối…",
+    "AuthenticatingSession": "Đang xác thực phiên cơ sở dữ liệu…",
+    "ConnectingDatabaseService": "Đang kết nối đến dịch vụ cơ sở dữ liệu…",
+    "PreparingSession": "Đang chuẩn bị phiên cơ sở dữ liệu…",
+    "LoadingDatabaseResources": "Đang tải tài nguyên cơ sở dữ liệu…"
   }
 }

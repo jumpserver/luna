@@ -29,7 +29,13 @@
     "UnsupportedHint": "This recording type is not supported in the online player.",
     "Reload": "Reload",
     "DesktopBlocked": "Browser only",
-    "DesktopBlockedHint": "Session replay is only available in a web browser. Copy the link and open it there."
+    "DesktopBlockedHint": "Session replay is only available in a web browser. Copy the link and open it there.",
+    "ShortcutsTitle": "Keyboard shortcuts",
+    "ShortcutPlayPause": "Play/Pause",
+    "ShortcutSeekBackward": "Rewind",
+    "ShortcutSeekForward": "Fast forward",
+    "ShortcutJumpMarker": "Jump to marker",
+    "ShortcutFullscreen": "Fullscreen"
   },
   "Common": {
     "AI": "AI",
@@ -1758,5 +1764,21 @@
     "estimatedCost": "Est. cost",
     "details": "Details",
     "hideDetails": "Hide details"
+  },
+  "Chen": {
+    "DatabaseExplorer": "Database Explorer",
+    "RecentlyTables": "Recently tables",
+    "DatabaseWorkspace": "Database workspace",
+    "SelectDatabaseAction": "Select a database action to begin.",
+    "OpenDatabaseWorkspaceFailed": "Unable to open database workspace",
+    "OpeningDatabaseWorkspace": "Opening database workspace",
+    "Retry": "Retry",
+    "ResizeDatabaseSidebar": "Resize database sidebar",
+    "CloseDatabaseExplorer": "Close database explorer",
+    "WaitingConnection": "Waiting for connection details…",
+    "AuthenticatingSession": "Authenticating your database session…",
+    "ConnectingDatabaseService": "Connecting to the database service…",
+    "PreparingSession": "Preparing your database session…",
+    "LoadingDatabaseResources": "Loading database resources…"
   }
 }

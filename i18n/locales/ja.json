@@ -29,7 +29,13 @@
     "UnsupportedHint": "この録画形式はオンラインプレイヤーでサポートされていません。",
     "Reload": "再読み込み",
     "DesktopBlocked": "ブラウザーのみ",
-    "DesktopBlockedHint": "セッションリプレイは Web ブラウザーでのみ利用できます。リンクをコピーしてブラウザーで開いてください。"
+    "DesktopBlockedHint": "セッションリプレイは Web ブラウザーでのみ利用できます。リンクをコピーしてブラウザーで開いてください。",
+    "ShortcutsTitle": "キーボードショートカット",
+    "ShortcutPlayPause": "再生/一時停止",
+    "ShortcutSeekBackward": "早戻し",
+    "ShortcutSeekForward": "早送り",
+    "ShortcutJumpMarker": "マーカーへジャンプ",
+    "ShortcutFullscreen": "全画面"
   },
   "Common": {
     "AI": "AI",
@@ -1758,5 +1764,21 @@
     "estimatedCost": "見積コスト",
     "details": "詳細",
     "hideDetails": "詳細を隠す"
+  },
+  "Chen": {
+    "DatabaseExplorer": "データベースエクスプローラー",
+    "RecentlyTables": "最近使用したテーブル",
+    "DatabaseWorkspace": "データベースワークスペース",
+    "SelectDatabaseAction": "開始するにはデータベース操作を選択してください。",
+    "OpenDatabaseWorkspaceFailed": "データベースワークスペースを開けません",
+    "OpeningDatabaseWorkspace": "データベースワークスペースを開いています",
+    "Retry": "再試行",
+    "ResizeDatabaseSidebar": "データベースサイドバーのサイズ変更",
+    "CloseDatabaseExplorer": "データベースエクスプローラーを閉じる",
+    "WaitingConnection": "接続情報を待っています…",
+    "AuthenticatingSession": "データベースセッションを認証しています…",
+    "ConnectingDatabaseService": "データベースサービスに接続しています…",
+    "PreparingSession": "データベースセッションを準備しています…",
+    "LoadingDatabaseResources": "データベースリソースを読み込んでいます…"
   }
 }

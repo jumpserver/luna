@@ -29,7 +29,13 @@
     "UnsupportedHint": "Этот тип записи не поддерживается встроенным проигрывателем.",
     "Reload": "Перезагрузить",
     "DesktopBlocked": "Только в браузере",
-    "DesktopBlockedHint": "Воспроизведение сеанса доступно только в веб-браузере. Скопируйте ссылку и откройте ее там."
+    "DesktopBlockedHint": "Воспроизведение сеанса доступно только в веб-браузере. Скопируйте ссылку и откройте ее там.",
+    "ShortcutsTitle": "Горячие клавиши",
+    "ShortcutPlayPause": "Воспроизведение/Пауза",
+    "ShortcutSeekBackward": "Перемотка назад",
+    "ShortcutSeekForward": "Перемотка вперёд",
+    "ShortcutJumpMarker": "Перейти к маркеру",
+    "ShortcutFullscreen": "Во весь экран"
   },
   "Common": {
     "AI": "AI",
@@ -1758,5 +1764,21 @@
     "estimatedCost": "Est. cost",
     "details": "Details",
     "hideDetails": "Hide details"
+  },
+  "Chen": {
+    "DatabaseExplorer": "Проводник базы данных",
+    "RecentlyTables": "Недавние таблицы",
+    "DatabaseWorkspace": "Рабочая область базы данных",
+    "SelectDatabaseAction": "Выберите действие с базой данных, чтобы начать.",
+    "OpenDatabaseWorkspaceFailed": "Не удалось открыть рабочую область базы данных",
+    "OpeningDatabaseWorkspace": "Открытие рабочей области базы данных",
+    "Retry": "Повторить",
+    "ResizeDatabaseSidebar": "Изменить размер боковой панели базы данных",
+    "CloseDatabaseExplorer": "Закрыть проводник базы данных",
+    "WaitingConnection": "Ожидание данных подключения…",
+    "AuthenticatingSession": "Аутентификация сеанса базы данных…",
+    "ConnectingDatabaseService": "Подключение к службе базы данных…",
+    "PreparingSession": "Подготовка сеанса базы данных…",
+    "LoadingDatabaseResources": "Загрузка ресурсов базы данных…"
   }
 }

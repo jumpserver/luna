@@ -29,7 +29,13 @@
     "UnsupportedHint": "온라인 플레이어에서 이 녹화 형식을 지원하지 않습니다.",
     "Reload": "다시 불러오기",
     "DesktopBlocked": "브라우저 전용",
-    "DesktopBlockedHint": "세션 리플레이는 웹 브라우저에서만 사용할 수 있습니다. 링크를 복사하여 브라우저에서 여세요."
+    "DesktopBlockedHint": "세션 리플레이는 웹 브라우저에서만 사용할 수 있습니다. 링크를 복사하여 브라우저에서 여세요.",
+    "ShortcutsTitle": "키보드 단축키",
+    "ShortcutPlayPause": "재생/일시정지",
+    "ShortcutSeekBackward": "되감기",
+    "ShortcutSeekForward": "빨리 감기",
+    "ShortcutJumpMarker": "마커로 이동",
+    "ShortcutFullscreen": "전체 화면"
   },
   "Common": {
     "AI": "AI",
@@ -1758,5 +1764,21 @@
     "estimatedCost": "Est. cost",
     "details": "Details",
     "hideDetails": "Hide details"
+  },
+  "Chen": {
+    "DatabaseExplorer": "데이터베이스 탐색기",
+    "RecentlyTables": "최근 사용한 테이블",
+    "DatabaseWorkspace": "데이터베이스 워크스페이스",
+    "SelectDatabaseAction": "시작하려면 데이터베이스 작업을 선택하세요.",
+    "OpenDatabaseWorkspaceFailed": "데이터베이스 워크스페이스를 열 수 없음",
+    "OpeningDatabaseWorkspace": "데이터베이스 워크스페이스를 여는 중",
+    "Retry": "다시 시도",
+    "ResizeDatabaseSidebar": "데이터베이스 사이드바 크기 조정",
+    "CloseDatabaseExplorer": "데이터베이스 탐색기 닫기",
+    "WaitingConnection": "연결 정보를 기다리는 중…",
+    "AuthenticatingSession": "데이터베이스 세션을 인증하는 중…",
+    "ConnectingDatabaseService": "데이터베이스 서비스에 연결하는 중…",
+    "PreparingSession": "데이터베이스 세션을 준비하는 중…",
+    "LoadingDatabaseResources": "데이터베이스 리소스를 불러오는 중…"
   }
 }

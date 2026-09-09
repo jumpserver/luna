@@ -29,7 +29,13 @@
     "UnsupportedHint": "在线播放器暂不支持该录像类型",
     "Reload": "重新加载",
     "DesktopBlocked": "仅支持浏览器访问",
-    "DesktopBlockedHint": "会话回放只能在 Web 浏览器中打开，请复制链接后在浏览器中访问。"
+    "DesktopBlockedHint": "会话回放只能在 Web 浏览器中打开，请复制链接后在浏览器中访问。",
+    "ShortcutsTitle": "快捷键",
+    "ShortcutPlayPause": "播放/暂停",
+    "ShortcutSeekBackward": "快退",
+    "ShortcutSeekForward": "快进",
+    "ShortcutJumpMarker": "跳转标记",
+    "ShortcutFullscreen": "全屏"
   },
   "Common": {
     "AI": "AI",
@@ -1761,5 +1767,21 @@
     "estimatedCost": "估算成本",
     "details": "详情",
     "hideDetails": "收起详情"
+  },
+  "Chen": {
+    "DatabaseExplorer": "数据库资源管理",
+    "RecentlyTables": "最近使用的表",
+    "DatabaseWorkspace": "数据库工作台",
+    "SelectDatabaseAction": "选择一个数据库操作开始。",
+    "OpenDatabaseWorkspaceFailed": "无法打开数据库工作台",
+    "OpeningDatabaseWorkspace": "正在打开数据库工作台",
+    "Retry": "重试",
+    "ResizeDatabaseSidebar": "调整数据库侧栏宽度",
+    "CloseDatabaseExplorer": "关闭数据库资源管理",
+    "WaitingConnection": "等待连接信息…",
+    "AuthenticatingSession": "正在验证数据库会话…",
+    "ConnectingDatabaseService": "正在连接数据库服务…",
+    "PreparingSession": "正在准备数据库会话…",
+    "LoadingDatabaseResources": "正在加载数据库资源…"
   }
 }

@@ -4,6 +4,8 @@ import type { ChenTreeNode } from "~/chen/types";
 
 import ChenResourceTreeNode from "~/chen/components/ResourceTreeNode.vue";
 
+const { t } = useI18n();
+
 const props = defineProps<{
   rootNodes: ChenTreeNode[];
   selectedKey: string;
@@ -52,7 +54,7 @@ const sqlKeywordCaseModel = computed({
     :style="{ width: typeof width === 'number' ? `${width}px` : width }"
   >
     <div class="flex h-9 shrink-0 items-center justify-between border-b border-default px-2.5">
-      <p class="text-xs font-medium text-muted">Database Explorer</p>
+      <p class="text-xs font-medium text-muted">{{ t("Chen.DatabaseExplorer") }}</p>
       <div class="flex h-7 items-center gap-1">
         <UButton
           icon="i-lucide-x"
@@ -60,7 +62,7 @@ const sqlKeywordCaseModel = computed({
           variant="ghost"
           size="xs"
           class="md:hidden"
-          aria-label="Close database explorer"
+          :aria-label="t('Chen.CloseDatabaseExplorer')"
           @click="emit('close')"
         />
         <UTooltip text="刷新" :delay-duration="150">

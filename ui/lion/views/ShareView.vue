@@ -34,7 +34,7 @@ let disposed = false;
 
 const {
   connectToGuacamole,
-  connectStatus,
+  connectStatusLabel,
   debouncedSendClipboardToRemote,
   disconnectGuaclient,
   guaDisplay,
@@ -171,7 +171,7 @@ onUnmounted(() => {
     <div v-if="loading" class="flex h-screen w-screen items-center justify-center">
       <div class="flex flex-col items-center gap-2 text-sm text-muted">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>{{ t("Connecting") }}: {{ connectStatus }}</span>
+        <span>{{ connectStatusLabel }}</span>
       </div>
     </div>
 

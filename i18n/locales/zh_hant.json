@@ -29,7 +29,13 @@
     "UnsupportedHint": "線上播放器暫不支援該錄影類型",
     "Reload": "重新載入",
     "DesktopBlocked": "僅支援瀏覽器訪問",
-    "DesktopBlockedHint": "會話回放只能在 Web 瀏覽器中開啟，請複製連結後在瀏覽器中訪問。"
+    "DesktopBlockedHint": "會話回放只能在 Web 瀏覽器中開啟，請複製連結後在瀏覽器中訪問。",
+    "ShortcutsTitle": "快捷鍵",
+    "ShortcutPlayPause": "播放/暫停",
+    "ShortcutSeekBackward": "快退",
+    "ShortcutSeekForward": "快進",
+    "ShortcutJumpMarker": "跳轉標記",
+    "ShortcutFullscreen": "全螢幕"
   },
   "Common": {
     "AI": "AI",
@@ -1758,5 +1764,21 @@
     "estimatedCost": "估算成本",
     "details": "詳情",
     "hideDetails": "收合詳情"
+  },
+  "Chen": {
+    "DatabaseExplorer": "資料庫資源管理",
+    "RecentlyTables": "最近使用的資料表",
+    "DatabaseWorkspace": "資料庫工作台",
+    "SelectDatabaseAction": "選擇一個資料庫操作開始。",
+    "OpenDatabaseWorkspaceFailed": "無法開啟資料庫工作台",
+    "OpeningDatabaseWorkspace": "正在開啟資料庫工作台",
+    "Retry": "重試",
+    "ResizeDatabaseSidebar": "調整資料庫側欄寬度",
+    "CloseDatabaseExplorer": "關閉資料庫資源管理",
+    "WaitingConnection": "等待連線資訊…",
+    "AuthenticatingSession": "正在驗證資料庫工作階段…",
+    "ConnectingDatabaseService": "正在連線資料庫服務…",
+    "PreparingSession": "正在準備資料庫工作階段…",
+    "LoadingDatabaseResources": "正在載入資料庫資源…"
   }
 }

@@ -11,5 +11,11 @@
   "Waiting": "等待中",
   "Forward": "前進",
   "ZoomIn": "放大",
-  "ZoomOut": "縮小"
+  "ZoomOut": "縮小",
+  "LionIdle": "空閒",
+  "LionConnecting": "連線中",
+  "LionConnectedWaiting": "已連線，等待中",
+  "LionConnected": "已連線",
+  "LionDisconnecting": "正在中斷",
+  "LionDisconnected": "已中斷"
 }
