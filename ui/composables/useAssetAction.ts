@@ -7,6 +7,7 @@ import {
   isConnectMethodAvailable,
   K8S_NATIVE_VALUE,
   parseLocalApplicationConnectMethod,
+  pickConnectMethod,
   SFTP_FILE_EDITOR_VALUE,
   SFTP_FILE_MANAGER_VALUE,
   WEB_DB_NATIVE_VALUE,
@@ -386,6 +387,47 @@ export const useAssetAction = () => {
     });
   };
 
+  const assertConnectMethodEnabled = async (protocol: string, connectMethod: string) => {
+    const methods = await getMethodsForProtocol(protocol);
+    const selected = parseLocalApplicationConnectMethod(connectMethod);
+    const method = methods.find((item) => item.value === selected.connectMethod);
+    if (!method || method.disabled) throw new Error(t("ConnectError.MethodDisabled"));
+  };
+
+  const resolveServerConnectMethod = async (body: ConnectionBody) => {
+    // 服务端不认识本地注入的 method（builtin_client / web_cli_native / web_rdp_native），换成真实 web method
+    const origin = NATIVE_WORKSPACE_METHOD_ORIGINS[body.connect_method];
+    if (origin) return origin;
+    if (!NATIVE_WORKSPACE_METHODS.has(body.connect_method)) return body.connect_method;
+
+    try {
+      const methods = await getMethodsForProtocol(body.protocol);
+      const injected = methods.find((item) => item.value === body.connect_method);
+      if (injected?.origin_value) return injected.origin_value;
+
+      if (body.connect_method === WEB_RDP_NATIVE_VALUE) {
+        const lionWeb = methods.find(
+          (item) => item.type === "web" && ["lion", "tinker"].includes(item.component) && !item.origin_value
+        );
+        if (lionWeb) return lionWeb.value;
+      }
+
+      if (body.connect_method === WEB_DB_NATIVE_VALUE) {
+        const chenWeb = methods.find((item) => item.type === "web" && item.component === "chen" && !item.origin_value);
+        if (chenWeb) return chenWeb.value;
+      }
+
+      const kokoWeb = methods.find(
+        (item) => item.type === "web" && ["koko", "default"].includes(item.component) && !item.origin_value
+      );
+      if (kokoWeb) return kokoWeb.value;
+    } catch {
+      return NATIVE_WORKSPACE_METHOD_ORIGINS[body.connect_method] || body.connect_method;
+    }
+
+    return NATIVE_WORKSPACE_METHOD_ORIGINS[body.connect_method] || body.connect_method;
+  };
+
   const getConnectToken = async (
     body: ConnectionBody,
     meta?: {
@@ -408,7 +450,10 @@ export const useAssetAction = () => {
       site: userInfoStore.currentSite
     };
     const nativeApp = parseLocalApplicationConnectMethod(body.connect_method);
-    const serverBody = { ...body, connect_method: nativeApp.connectMethod };
+    const serverBody = {
+      ...body,
+      connect_method: await resolveServerConnectMethod({ ...body, connect_method: nativeApp.connectMethod })
+    };
 
     const session =
       meta?.tabId || meta?.onSessionReady
@@ -423,6 +468,7 @@ export const useAssetAction = () => {
     const tabId = meta?.tabId || session?.id;
 
     try {
+      await assertConnectMethodEnabled(body.protocol, nativeApp.connectMethod);
       const token = await createConnectionTokenWithAcl(serverBody, {
         orgId: meta?.orgId,
         assetName: meta?.asset?.name || meta?.assetId || body.asset,
@@ -437,7 +483,7 @@ export const useAssetAction = () => {
       }
       syncPersonalCredentialFromToken(meta?.assetId, serverBody, token, personalCredentialScope);
       const allMethods = await fetchConnectMethods();
-      const method = (allMethods[body.protocol] || []).find((item) => item.value === serverBody.connect_method);
+      const method = (allMethods[body.protocol] || []).find((item) => item.value === nativeApp.connectMethod);
 
       if (isDesktopRuntime() || isLocalClientMethod(method)) {
         const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams());
@@ -500,38 +546,6 @@ export const useAssetAction = () => {
     }
   };
 
-  const resolveServerConnectMethod = async (body: ConnectionBody) => {
-    // 服务端不认识本地注入的 method（builtin_client / web_cli_native / web_rdp_native），换成真实 web method
-    if (!NATIVE_WORKSPACE_METHODS.has(body.connect_method)) return body.connect_method;
-
-    try {
-      const methods = await getMethodsForProtocol(body.protocol);
-      const injected = methods.find((item) => item.value === body.connect_method);
-      if (injected?.origin_value) return injected.origin_value;
-
-      if (body.connect_method === WEB_RDP_NATIVE_VALUE) {
-        const lionWeb = methods.find(
-          (item) => item.type === "web" && ["lion", "tinker"].includes(item.component) && !item.origin_value
-        );
-        if (lionWeb) return lionWeb.value;
-      }
-
-      if (body.connect_method === WEB_DB_NATIVE_VALUE) {
-        const chenWeb = methods.find((item) => item.type === "web" && item.component === "chen" && !item.origin_value);
-        if (chenWeb) return chenWeb.value;
-      }
-
-      const kokoWeb = methods.find(
-        (item) => item.type === "web" && ["koko", "default"].includes(item.component) && !item.origin_value
-      );
-      if (kokoWeb) return kokoWeb.value;
-    } catch {
-      return NATIVE_WORKSPACE_METHOD_ORIGINS[body.connect_method] || body.connect_method;
-    }
-
-    return NATIVE_WORKSPACE_METHOD_ORIGINS[body.connect_method] || body.connect_method;
-  };
-
   const resolveBuiltinComponent = (body: ConnectionBody) => {
     if (body.connect_method === WEB_RDP_NATIVE_VALUE) return "lion";
     if (body.connect_method === WEB_DB_NATIVE_VALUE) return "chen";
@@ -561,6 +575,7 @@ export const useAssetAction = () => {
     };
     void (async () => {
       try {
+        await assertConnectMethodEnabled(body.protocol, body.connect_method);
         const serverBody = { ...body, connect_method: await resolveServerConnectMethod(body) };
         const token = await createConnectionTokenWithAcl(serverBody, {
           orgId: meta.orgId,
@@ -763,11 +778,15 @@ export const useAssetAction = () => {
     })();
 
     // 当前连接显式选择优先；仅在协议一致时复用已保存连接方法，避免跨协议复用错误的客户端
-    const preferredConnectMethod =
-      ephemeral?.connectMethod?.trim() ||
-      (saved?.protocol === protocol ? saved?.connectMethod?.trim() : "") ||
-      (await resolveConnectMethod(protocol));
-    const connectMethod = preferredConnectMethod;
+    const methods = await getMethodsForProtocol(protocol);
+    const connectMethod =
+      pickConnectMethod(
+        protocol,
+        methods,
+        ephemeral?.connectMethod?.trim() || "",
+        saved?.protocol === protocol ? saved?.connectMethod?.trim() || "" : "",
+        settingManager.appConfig.value
+      ) || (await resolveConnectMethod(protocol));
 
     if (ephemeral?.tabId) setSessionConnectMethod(ephemeral.tabId, connectMethod);
 

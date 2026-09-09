@@ -173,7 +173,7 @@ async function openProtocolApplicationSettings() {
   <UFormField :label="t('EditModal.ConnectMethod')" :ui="formFieldUi" size="md">
     <div v-if="modernIsland" class="connect-method-island">
       <UTabs
-        v-if="connectMethodTypeItems.length > 1"
+        v-if="connectMethodTypeItems.length"
         :model-value="selectedConnectMethodType"
         :items="connectMethodTypeItems"
         value-key="value"
@@ -258,7 +258,7 @@ async function openProtocolApplicationSettings() {
       class="rounded-[length:var(--app-radius)] border border-[var(--app-border)] bg-[var(--app-input-bg)] shadow-sm"
     >
       <UTabs
-        v-if="connectMethodTypeItems.length > 1"
+        v-if="connectMethodTypeItems.length"
         :model-value="selectedConnectMethodType"
         :items="connectMethodTypeItems"
         value-key="value"

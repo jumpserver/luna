@@ -957,7 +957,8 @@
     "RememberSelectionDescription": "如需更換連線方式，可在資產樹上右鍵重新選擇。",
     "OptionalProtocol": "協議",
     "ConnectMethod": "連線方法",
-    "OptionalAccount": "帳號"
+    "OptionalAccount": "帳號",
+    "CurrentOnline": "目前在線: {count}"
   },
   "Layout": {
     "Grid": "卡片檢視",
@@ -1248,6 +1249,7 @@
     "ConnectFailed": "連線失敗",
     "CredentialServiceUnavailable": "憑據服務（例如 OpenBao）無法使用，請檢查服務狀態後重試。",
     "AclFailed": "當前資產受到 ACL 訪問限制，無法透過客戶端連線，請前往 Web 端進行訪問",
+    "MethodDisabled": "該連線方式已被管理員停用",
     "ClientNotFound": "未找到桌面客戶端，請安裝或在設定中配置路徑",
     "ClientLaunchFailed": "啟動桌面客戶端失敗，請檢查安裝或權限",
     "ClientExited": "桌面客戶端異常退出",

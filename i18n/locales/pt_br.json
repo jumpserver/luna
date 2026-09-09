@@ -957,7 +957,8 @@
     "RememberSelectionDescription": "Para escolher outro método de conexão, clique com o botão direito no ativo na árvore.",
     "OptionalProtocol": "Protocolo",
     "ConnectMethod": "Método de conexão",
-    "OptionalAccount": "Conta"
+    "OptionalAccount": "Conta",
+    "CurrentOnline": "Current online: {count}"
   },
   "Layout": {
     "Grid": "Visualização em grade",
@@ -1248,6 +1249,7 @@
     "ConnectFailed": "Falha na conexão",
     "CredentialServiceUnavailable": "O serviço de credenciais (como o OpenBao) não está disponível. Verifique o status do serviço e tente novamente.",
     "AclFailed": "O ativo atual está restrito por políticas de ACL e não pode ser acessado pelo cliente. Use o console Web para se conectar.",
+    "MethodDisabled": "Este método de conexão está desativado",
     "ClientNotFound": "Cliente de desktop não encontrado. Instale ou configure o caminho do cliente.",
     "ClientLaunchFailed": "Falha ao iniciar o cliente de desktop. Verifique a instalação ou as permissões.",
     "ClientExited": "O cliente de desktop foi encerrado inesperadamente.",

@@ -957,7 +957,8 @@
     "RememberSelectionDescription": "接続方法を変更するには、資産ツリーで右クリックしてください。",
     "OptionalProtocol": "プロトコル",
     "ConnectMethod": "接続方法",
-    "OptionalAccount": "アカウント"
+    "OptionalAccount": "アカウント",
+    "CurrentOnline": "Current online: {count}"
   },
   "Layout": {
     "Grid": "グリッド表示",
@@ -1248,6 +1249,7 @@
     "ConnectFailed": "接続に失敗しました",
     "CredentialServiceUnavailable": "認証情報サービス（OpenBao など）を利用できません。サービスの状態を確認してから再試行してください。",
     "AclFailed": "現在のアセットは ACL ポリシーによって制限されているため、クライアントからアクセスできません。Web コンソールから接続してください。",
+    "MethodDisabled": "この接続方法は無効になっています",
     "ClientNotFound": "デスクトップクライアントが見つかりません。クライアントをインストールするか、パスを設定してください。",
     "ClientLaunchFailed": "デスクトップクライアントを起動できませんでした。インストールまたは権限を確認してください。",
     "ClientExited": "デスクトップクライアントが予期せず終了しました。",

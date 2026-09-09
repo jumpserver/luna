@@ -957,7 +957,8 @@
     "RememberSelectionDescription": "Để đổi cách kết nối, hãy nhấp chuột phải tài sản trên cây.",
     "OptionalProtocol": "Giao thức",
     "ConnectMethod": "Phương thức kết nối",
-    "OptionalAccount": "Tài khoản"
+    "OptionalAccount": "Tài khoản",
+    "CurrentOnline": "Current online: {count}"
   },
   "Layout": {
     "Grid": "Dạng lưới",
@@ -1248,6 +1249,7 @@
     "ConnectFailed": "Kết nối thất bại",
     "CredentialServiceUnavailable": "Dịch vụ thông tin xác thực (ví dụ: OpenBao) không khả dụng. Hãy kiểm tra trạng thái dịch vụ rồi thử lại.",
     "AclFailed": "Tài sản hiện tại bị giới hạn bởi chính sách ACL và không thể truy cập bằng máy khách. Hãy dùng bảng điều khiển web để kết nối.",
+    "MethodDisabled": "Phương thức kết nối này đã bị tắt",
     "ClientNotFound": "Không tìm thấy máy khách máy tính. Vui lòng cài đặt hoặc cấu hình đường dẫn.",
     "ClientLaunchFailed": "Không thể khởi chạy máy khách máy tính. Hãy kiểm tra cài đặt hoặc quyền.",
     "ClientExited": "Máy khách máy tính đã thoát bất ngờ.",

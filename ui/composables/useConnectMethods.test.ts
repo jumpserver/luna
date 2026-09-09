@@ -73,7 +73,34 @@ describe("desktop website connect methods", () => {
     const methods = normalizeWebConnectMethods({ clickhouse: [webCli], originals: [] }, true).clickhouse!;
 
     expect(methods.map((item) => item.value)).toEqual([WEB_CLI_NATIVE_VALUE]);
-    expect(withKokoWebFallback("clickhouse", []).map((item) => item.value)).toEqual([WEB_CLI_NATIVE_VALUE]);
+    expect(withKokoWebFallback("clickhouse", []).map((item) => item.value)).toEqual([]);
+    expect(withKokoWebFallback("clickhouse", methods).map((item) => item.value)).toEqual([WEB_CLI_NATIVE_VALUE]);
+  });
+
+  it("does not invent koko web cli when Core omits it", () => {
+    expect(withKokoWebFallback("ssh", []).map((item) => item.value)).toEqual([]);
+    expect(withKokoWebFallback("ssh", [weblite]).map((item) => item.value)).toEqual(["weblite"]);
+  });
+
+  it("does not resurrect a disabled web cli", () => {
+    const webCli: ConnectMethod = {
+      value: "web_cli",
+      label: "Web CLI",
+      type: "web",
+      icon: "",
+      disabled: true,
+      listen: "",
+      component: "koko",
+      endpoint_protocol: "http"
+    };
+    const methods = normalizeWebConnectMethods({ ssh: [webCli], originals: [] }, true).ssh!;
+
+    expect(methods[0]).toMatchObject({
+      value: WEB_CLI_NATIVE_VALUE,
+      disabled: true,
+      origin_value: "web_cli"
+    });
+    expect(withKokoWebFallback("ssh", methods).filter((item) => !item.disabled)).toEqual([]);
   });
 
   it("opens the built-in proxy inside the workspace instead of an external window", () => {
@@ -108,5 +135,52 @@ describe("desktop website connect methods", () => {
     expect(pickConnectMethod("ssh", [appletMethod("koko", "Built-in"), nativeMethod], "", "", appConfig, true)).toBe(
       "native_app:ssh_client:putty"
     );
+  });
+
+  it("hides builtin from the enabled list when Core omits or disables web_cli", () => {
+    const nativeMethod = { ...appletMethod("ssh_client", "SSH client"), type: "native" };
+    const disabledWebCli: ConnectMethod = {
+      value: "web_cli",
+      label: "Web CLI",
+      type: "web",
+      icon: "",
+      disabled: true,
+      listen: "",
+      component: "koko",
+      endpoint_protocol: "http"
+    };
+    const enabledValues = (raw: ConnectMethod[]) =>
+      withKokoWebFallback("ssh", normalizeWebConnectMethods({ ssh: raw, originals: [] }, true).ssh!)
+        .filter((method) => !method.disabled)
+        .map((method) => method.value);
+
+    expect(enabledValues([disabledWebCli, nativeMethod])).toContain("ssh_client");
+    expect(enabledValues([disabledWebCli, nativeMethod])).not.toContain(WEB_CLI_NATIVE_VALUE);
+    expect(enabledValues([nativeMethod])).toContain("ssh_client");
+    expect(enabledValues([nativeMethod])).not.toContain(WEB_CLI_NATIVE_VALUE);
+  });
+
+  it("prefers the workspace terminal over a saved local application", () => {
+    const nativeMethod = { ...appletMethod("ssh_client", "SSH client"), type: "native" };
+    const builtin: ConnectMethod = {
+      value: WEB_CLI_NATIVE_VALUE,
+      label: "Built-in",
+      type: "web",
+      icon: "",
+      disabled: false,
+      listen: "",
+      component: "koko"
+    };
+
+    expect(
+      pickConnectMethod(
+        "ssh",
+        [builtin, nativeMethod],
+        "native_app:ssh_client:putty",
+        "native_app:ssh_client:putty",
+        undefined,
+        true
+      )
+    ).toBe(WEB_CLI_NATIVE_VALUE);
   });
 });
