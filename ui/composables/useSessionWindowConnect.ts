@@ -1,4 +1,5 @@
-import type { AssetItem, RdpGraphics } from "~/types";
+import type { AssetItem, PermOrgItem, RdpGraphics } from "~/types";
+import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { transformAssetDetail } from "~/utils";
 import { hasReusableSavedConnection, isSavedConnectionAvailable } from "~/utils/connection";
@@ -52,6 +53,21 @@ async function fetchSessionAsset(assetId: string, orgId: string): Promise<AssetI
   return transformAssetDetail(assetId, await getAssetDetailRequest(assetId, orgId));
 }
 
+export async function syncSessionWindowOrganization(
+  orgId: string,
+  options: {
+    organizations: PermOrgItem[];
+    currentOrgId: string;
+    setCurrentOrg: (org: PermOrgItem) => void;
+    syncDesktopOrg?: (orgId: string) => Promise<unknown>;
+  }
+) {
+  if (!orgId) return;
+  const matched = options.organizations.find((org) => org.id === orgId);
+  if (matched && matched.id !== options.currentOrgId) options.setCurrentOrg(matched);
+  await options.syncDesktopOrg?.(orgId);
+}
+
 const sessionAccountModes = new Set<SessionWindowConnectionInfo["accountMode"]>([
   "hosted",
   "dynamic",
@@ -98,6 +114,12 @@ export function useSessionWindowConnect() {
 
     try {
       const orgId = String(route.query.org || userInfoStore.currentUser?.org?.id || "");
+      await syncSessionWindowOrganization(orgId, {
+        organizations: userInfoStore.currentOrganizations,
+        currentOrgId: userInfoStore.currentUser?.org?.id || "",
+        setCurrentOrg: userInfoStore.setCurrentOrg,
+        syncDesktopOrg: isDesktopRuntime() ? (id) => desktopInvoke("set_api_org", { orgId: id }) : undefined
+      });
       const asset = await fetchSessionAsset(assetId, orgId);
       asset.org_id = orgId || undefined;
       asset.savedConnection = saved || undefined;

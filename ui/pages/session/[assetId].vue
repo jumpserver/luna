@@ -11,6 +11,7 @@ const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { registerSessionDisposer, activeTab } = useWorkspaceTabs();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const { ensureConnected, error, assetName } = useSessionWindowConnect();
+const { authReady } = useAuthSession();
 const { open: rightPanelOpen, panelWidth } = useRightPanel();
 const { open: aiPanelOpen, setOpen: setAiPanelOpen } = useAiPanel();
 const userInfoStore = useUserInfoStore();
@@ -55,9 +56,17 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  () => [bootstrapped.value, loggedIn.value, route.params.assetId, route.query.protocol, route.query.method] as const,
+  () =>
+    [
+      bootstrapped.value,
+      authReady.value,
+      loggedIn.value,
+      route.params.assetId,
+      route.query.protocol,
+      route.query.method
+    ] as const,
   () => {
-    if (!bootstrapped.value || !loggedIn.value) return;
+    if (!bootstrapped.value || !authReady.value || !loggedIn.value) return;
     void ensureConnected();
   },
   { immediate: true }
