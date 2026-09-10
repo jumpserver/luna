@@ -3,6 +3,7 @@ import type { Player } from "asciinema-player";
 import type { ReplayPlayerHandle } from "#online-player/types";
 
 import { create as createAsciinemaPlayer } from "asciinema-player";
+import { useI18n } from "vue-i18n";
 import { fetchRecordingBuffer } from "#online-player/utils/recordingSource";
 
 const props = defineProps<{
@@ -18,12 +19,50 @@ const emit = defineEmits<{
   duration: [number];
 }>();
 
+const { t } = useI18n();
+
 const hostRef = shallowRef<HTMLElement | null>(null);
 let player: Player | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
 let resumeAtMs = props.startAtMs;
 let mounting = false;
 let loadController: AbortController | null = null;
+let helpObserver: MutationObserver | null = null;
+
+// asciinema-player renders its "Keyboard shortcuts" help popup with hardcoded
+// English strings and exposes no i18n option, so we translate the overlay text
+// in place (keeping the <kbd> key labels) when it is shown via the `?` key.
+const HELP_KEYS: Record<string, string> = {
+  space: "Replay.ShortcutPlayPause",
+  f: "Replay.ShortcutFullscreen",
+  k: "Replay.ShortcutKeystrokeOverlay",
+  "?": "Replay.ShortcutHelp"
+};
+
+function localizeHelpOverlay(root: HTMLElement) {
+  const overlay = root.querySelector<HTMLElement>(".ap-overlay-help");
+  if (!overlay) return;
+  const title = overlay.querySelector("p");
+  if (!title || title.textContent === t("Replay.ShortcutsTitle")) return;
+  title.textContent = t("Replay.ShortcutsTitle");
+  overlay.querySelectorAll("li").forEach((item) => {
+    const key = item.querySelector("kbd")?.textContent?.trim();
+    const translation = key ? HELP_KEYS[key] : undefined;
+    if (!translation) return;
+    // Replace the trailing description text (everything after the <kbd>) so the
+    // key label stays untouched while the description is localized.
+    [...item.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE).forEach((node) => node.remove());
+    item.appendChild(document.createTextNode(` - ${t(translation)}`));
+  });
+}
+
+function observeHelpOverlay() {
+  if (helpObserver || !hostRef.value) return;
+  helpObserver = new MutationObserver(() => {
+    if (hostRef.value) localizeHelpOverlay(hostRef.value);
+  });
+  helpObserver.observe(hostRef.value, { subtree: true, childList: true, characterData: true });
+}
 
 const clearTimer = () => {
   if (!timer) return;
@@ -56,6 +95,8 @@ const destroy = () => {
   loadController?.abort();
   loadController = null;
   clearTimer();
+  helpObserver?.disconnect();
+  helpObserver = null;
   try {
     player?.dispose?.();
   } catch {
@@ -68,6 +109,7 @@ const mount = async () => {
   if (!hostRef.value || !props.src || mounting) return;
   mounting = true;
   destroy();
+  observeHelpOverlay();
 
   try {
     const controller = new AbortController();

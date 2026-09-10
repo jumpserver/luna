@@ -17,7 +17,7 @@ const sessionId = String(route.query.session || "");
 const wsUrl = computed(() => withLionWsUrl("/ws/monitor/", endpointUrl.value));
 const connectError = ref("");
 let disposed = false;
-const { connectToGuacamole, connectStatus, disconnectGuaclient, guaDisplay, loading, resizeGuaScale } =
+const { connectToGuacamole, connectStatusLabel, disconnectGuaclient, guaDisplay, loading, resizeGuaScale } =
   useGuacamoleClient(t, endpointUrl);
 
 watch(
@@ -64,7 +64,7 @@ onUnmounted(() => {
     <div v-if="loading" class="absolute inset-0 z-10 flex items-center justify-center bg-default/80">
       <div class="flex flex-col items-center gap-2 text-sm text-muted">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>{{ t("Connecting") }}: {{ connectStatus }}</span>
+        <span>{{ connectStatusLabel }}</span>
       </div>
     </div>
     <div v-show="!loading" ref="displayRef" class="relative flex h-full w-full justify-center" />

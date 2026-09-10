@@ -384,7 +384,7 @@ async function clearCommandHistory() {
       </div>
     </SettingsGroup>
 
-    <SettingsGroup :divided="false" padded>
+    <SettingsGroup v-if="isDesktopRuntime()" :divided="false" padded>
       <div class="flex items-start justify-between gap-6">
         <div class="min-w-0">
           <p class="text-sm font-medium text-highlighted">{{ t("Setting.DebugLog") }}</p>

@@ -28,18 +28,20 @@ const emit = defineEmits<{
   "update:sqlKeywordCase": [keywordCase: ChenSqlKeywordCase];
 }>();
 
-const tabTitleFormatOptions = [
-  { label: "仅表名", value: "table" },
-  { label: "表名.Schema", value: "table-schema" }
-];
+const { t } = useI18n();
+
+const tabTitleFormatOptions = computed(() => [
+  { label: t("Chen.TabTitleOnly"), value: "table" },
+  { label: t("Chen.TabTitleTableSchema"), value: "table-schema" }
+]);
 const tabTitleFormatModel = computed({
   get: () => props.tabTitleFormat,
   set: (format: ChenTabTitleFormat) => emit("update:tabTitleFormat", format)
 });
-const sqlKeywordCaseOptions = [
-  { label: "小写", value: "lower" },
-  { label: "大写", value: "upper" }
-];
+const sqlKeywordCaseOptions = computed(() => [
+  { label: t("Chen.SqlCaseLower"), value: "lower" },
+  { label: t("Chen.SqlCaseUpper"), value: "upper" }
+]);
 const sqlKeywordCaseModel = computed({
   get: () => props.sqlKeywordCase,
   set: (keywordCase: ChenSqlKeywordCase) => emit("update:sqlKeywordCase", keywordCase)
@@ -52,7 +54,7 @@ const sqlKeywordCaseModel = computed({
     :style="{ width: typeof width === 'number' ? `${width}px` : width }"
   >
     <div class="flex h-9 shrink-0 items-center justify-between border-b border-default px-2.5">
-      <p class="text-xs font-medium text-muted">Database Explorer</p>
+      <p class="text-xs font-medium text-muted">{{ t("Chen.DatabaseExplorer") }}</p>
       <div class="flex h-7 items-center gap-1">
         <UButton
           icon="i-lucide-x"
@@ -60,14 +62,14 @@ const sqlKeywordCaseModel = computed({
           variant="ghost"
           size="xs"
           class="md:hidden"
-          aria-label="Close database explorer"
+          :aria-label="t('Chen.CloseDatabaseExplorer')"
           @click="emit('close')"
         />
-        <UTooltip text="刷新" :delay-duration="150">
+        <UTooltip :text="t('Common.Refresh')" :delay-duration="150">
           <button
             type="button"
             class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
-            aria-label="刷新"
+            :aria-label="t('Common.Refresh')"
             @click="emit('refresh')"
           >
             <UIcon name="i-lucide-refresh-cw" class="size-3.5" />
@@ -77,8 +79,8 @@ const sqlKeywordCaseModel = computed({
           <button
             type="button"
             class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
-            aria-label="工作台设置"
-            title="工作台设置"
+            :aria-label="t('Chen.WorkspaceSettings')"
+            :title="t('Chen.WorkspaceSettings')"
           >
             <UIcon name="i-lucide-settings-2" class="size-3.5" />
           </button>
@@ -86,11 +88,11 @@ const sqlKeywordCaseModel = computed({
           <template #content>
             <div class="w-64 space-y-3 p-3">
               <div>
-                <p class="text-xs font-medium text-highlighted">Chen 工作台设置</p>
-                <p class="mt-0.5 text-[11px] text-muted">设置会自动保存并应用到数据库工作台。</p>
+                <p class="text-xs font-medium text-highlighted">{{ t("Chen.WorkspaceSettingsTitle") }}</p>
+                <p class="mt-0.5 text-[11px] text-muted">{{ t("Chen.WorkspaceSettingsDescription") }}</p>
               </div>
               <label class="flex items-center justify-between gap-3 text-xs">
-                <span>数据表 Tab 名称</span>
+                <span>{{ t("Chen.TableTabName") }}</span>
                 <USelect
                   v-model="tabTitleFormatModel"
                   class="w-28"
@@ -100,7 +102,7 @@ const sqlKeywordCaseModel = computed({
                 />
               </label>
               <label class="flex items-center justify-between gap-3 text-xs">
-                <span>SQL 关键字补全</span>
+                <span>{{ t("Chen.SqlKeywordCompletion") }}</span>
                 <USelect
                   v-model="sqlKeywordCaseModel"
                   class="w-28"

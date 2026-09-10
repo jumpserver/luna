@@ -177,7 +177,19 @@ export function useGuacamoleClient(
   const guaDisplay = ref<any>(null);
   const fsObject = ref<any>(null);
   const driverName = ref<string>("");
-  const connectStatus = ref("Connecting");
+  // Guacamole tunnel state code (0-5). Kept as a code so it doubles as the
+  // internal state machine (e.g. "Disconnected" == 5) while the UI renders a
+  // localized label via connectStatusLabel.
+  const connectStatus = ref(1);
+  const CONNECT_STATUS_KEYS: Record<number, string> = {
+    0: "LionIdle",
+    1: "LionConnecting",
+    2: "LionConnectedWaiting",
+    3: "LionConnected",
+    4: "LionDisconnecting",
+    5: "LionDisconnected"
+  };
+  const connectStatusLabel = computed(() => t(CONNECT_STATUS_KEYS[connectStatus.value] ?? "LionConnecting"));
   const sessionObject = ref<any>({});
   const action_permission = ref<any>({});
   const enableShare = ref(false);
@@ -779,27 +791,22 @@ export function useGuacamoleClient(
   }
 
   function clientStateChanged(state: any) {
+    connectStatus.value = state;
     switch (state) {
       case 0:
-        connectStatus.value = "IDLE";
         break;
       case 1:
-        connectStatus.value = "Connecting";
         break;
       case 2:
-        connectStatus.value = "Connected + waiting";
         break;
       case 3:
-        connectStatus.value = "Connected";
         loading.value = false;
         requestAudioStream(guaClient.value);
         break;
       case 4:
-        connectStatus.value = "Disconnecting";
         loading.value = false;
         break;
       case 5:
-        connectStatus.value = "Disconnected";
         loading.value = false;
         lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.CLOSE, "");
         guaDisplay.value?.getElement()?.remove();
@@ -1195,6 +1202,7 @@ export function useGuacamoleClient(
     guaDisplay,
     connectToGuacamole,
     connectStatus,
+    connectStatusLabel,
     sessionObject,
     action_permission,
     enableShare,

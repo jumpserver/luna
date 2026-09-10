@@ -11,5 +11,11 @@
   "Waiting": "Aguardando",
   "Forward": "Avançar",
   "ZoomIn": "Ampliar",
-  "ZoomOut": "Reduzir"
+  "ZoomOut": "Reduzir",
+  "LionIdle": "Ocioso",
+  "LionConnecting": "Conectando",
+  "LionConnectedWaiting": "Conectado, aguardando",
+  "LionConnected": "Conectado",
+  "LionDisconnecting": "Desconectando",
+  "LionDisconnected": "Desconectado"
 }

@@ -29,7 +29,12 @@
     "UnsupportedHint": "この録画形式はオンラインプレイヤーでサポートされていません。",
     "Reload": "再読み込み",
     "DesktopBlocked": "ブラウザーのみ",
-    "DesktopBlockedHint": "セッションリプレイは Web ブラウザーでのみ利用できます。リンクをコピーしてブラウザーで開いてください。"
+    "DesktopBlockedHint": "セッションリプレイは Web ブラウザーでのみ利用できます。リンクをコピーしてブラウザーで開いてください。",
+    "ShortcutsTitle": "キーボードショートカット",
+    "ShortcutPlayPause": "一時停止 / 再生",
+    "ShortcutFullscreen": "全画面の切り替え",
+    "ShortcutKeystrokeOverlay": "キー入力オーバーレイの切り替え",
+    "ShortcutHelp": "このヘルプを表示"
   },
   "Common": {
     "AI": "AI",
@@ -421,6 +426,8 @@
     "CopyLink": "リンクをコピー",
     "Back": "戻る",
     "PrimaryUser": "メイン",
+    "OnlineUserSourceIp": "接続元 IP",
+    "OnlineUserSourceIpHint": "このユーザーがセッションに参加したクライアントアドレスです。資産の IP ではありません",
     "RemoveShareUser": "ユーザーを削除",
     "ShareSessionUnavailable": "Lion セッションの準備ができていません",
     "ShareSearchFailed": "共有ユーザーの検索に失敗しました",
@@ -1767,6 +1774,33 @@
     "hideDetails": "詳細を隠す"
   },
   "Chen": {
-    "TerminatedByAdmin": "{name}管理者が接続を終了"
+    "TerminatedByAdmin": "{name}管理者が接続を終了",
+    "DatabaseExplorer": "データベースエクスプローラー",
+    "RecentlyTables": "最近使用したテーブル",
+    "DatabaseWorkspace": "データベースワークスペース",
+    "SelectDatabaseAction": "開始するにはデータベース操作を選択してください。",
+    "OpenDatabaseWorkspaceFailed": "データベースワークスペースを開けません",
+    "OpeningDatabaseWorkspace": "データベースワークスペースを開いています",
+    "Retry": "再試行",
+    "ResizeDatabaseSidebar": "データベースサイドバーのサイズ変更",
+    "CloseDatabaseExplorer": "データベースエクスプローラーを閉じる",
+    "WaitingConnection": "接続情報を待っています…",
+    "AuthenticatingSession": "データベースセッションを認証しています…",
+    "ConnectingDatabaseService": "データベースサービスに接続しています…",
+    "PreparingSession": "データベースセッションを準備しています…",
+    "LoadingDatabaseResources": "データベースリソースを読み込んでいます…",
+    "WorkspaceSettings": "ワークスペース設定",
+    "WorkspaceSettingsTitle": "Chen ワークスペース設定",
+    "WorkspaceSettingsDescription": "設定は自動的に保存され、データベースワークスペースに適用されます。",
+    "TableTabName": "データ表タブ名",
+    "SqlKeywordCompletion": "SQL キーワード補完",
+    "TabTitleOnly": "テーブル名のみ",
+    "TabTitleTableSchema": "テーブル名.Schema",
+    "SqlCaseLower": "小文字",
+    "SqlCaseUpper": "大文字",
+    "ServerRequestFailedPrefix": "Chen サーバーリクエストに失敗しました：",
+    "DatabaseAddressPrefix": "データベースアドレス：",
+    "DatabaseConnectionFailed": "データベース接続に失敗",
+    "WebSocketFailedPrefix": "Chen WebSocket 接続に失敗しました："
   }
 }

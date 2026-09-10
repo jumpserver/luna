@@ -4,11 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version number (e.g., v4.1.2)"
+        description: >-
+          Version number (e.g., v4.1.2 or v5.0.0-beta8).
+          Versions containing beta enable Electron DevTools.
         required: true
         type: string
       product_name:
-        description: "Custom product name for manual builds"
+        description: >-
+          Custom product name for manual builds.
+          Names containing beta also enable DevTools.
         required: false
         default: ""
         type: string
@@ -61,7 +65,10 @@ jobs:
         run: pnpm typecheck:electron && pnpm test:electron
 
       - name: Validate WebLite
-        run: pnpm weblite:test && pnpm --dir applets/weblite typecheck && pnpm weblite:build
+        run: >-
+          pnpm weblite:test &&
+          pnpm --dir applets/weblite typecheck &&
+          pnpm weblite:build
 
   build:
     name: package ${{ matrix.name }}
@@ -232,10 +239,12 @@ jobs:
       - name: Generate release checksums
         shell: bash
         run: |
-          # GitHub Release assets are downloaded without the maker subdirectories.
+          # GitHub Release assets are downloaded without the
+          # maker subdirectories.
           find release-assets -type f ! -name SHA256SUMS -print0 | sort -z |
             while IFS= read -r -d '' artifact; do
-              (cd "$(dirname "$artifact")" && sha256sum "$(basename "$artifact")")
+              (cd "$(dirname "$artifact")" &&
+                sha256sum "$(basename "$artifact")")
             done > release-assets/SHA256SUMS
 
       - name: Upload release assets

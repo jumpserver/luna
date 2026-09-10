@@ -29,7 +29,12 @@
     "UnsupportedHint": "온라인 플레이어에서 이 녹화 형식을 지원하지 않습니다.",
     "Reload": "다시 불러오기",
     "DesktopBlocked": "브라우저 전용",
-    "DesktopBlockedHint": "세션 리플레이는 웹 브라우저에서만 사용할 수 있습니다. 링크를 복사하여 브라우저에서 여세요."
+    "DesktopBlockedHint": "세션 리플레이는 웹 브라우저에서만 사용할 수 있습니다. 링크를 복사하여 브라우저에서 여세요.",
+    "ShortcutsTitle": "키보드 단축키",
+    "ShortcutPlayPause": "일시정지 / 재개",
+    "ShortcutFullscreen": "전체 화면 모드 전환",
+    "ShortcutKeystrokeOverlay": "키 입력 오버레이 전환",
+    "ShortcutHelp": "이 도움말 표시"
   },
   "Common": {
     "AI": "AI",
@@ -421,6 +426,8 @@
     "CopyLink": "링크 복사",
     "Back": "뒤로",
     "PrimaryUser": "주요 핵심",
+    "OnlineUserSourceIp": "출발지 IP",
+    "OnlineUserSourceIpHint": "이 사용자가 세션에 접속한 클라이언트 주소이며, 자산 IP가 아닙니다",
     "RemoveShareUser": "사용자 제거",
     "ShareSessionUnavailable": "Lion 세션이 준비되지 않았습니다",
     "ShareSearchFailed": "공유 사용자 검색 실패",
@@ -1767,6 +1774,33 @@
     "hideDetails": "Hide details"
   },
   "Chen": {
-    "TerminatedByAdmin": "{name} 관리자 연결이 끊겼습니다"
+    "TerminatedByAdmin": "{name} 관리자 연결이 끊겼습니다",
+    "DatabaseExplorer": "데이터베이스 탐색기",
+    "RecentlyTables": "최근 사용한 테이블",
+    "DatabaseWorkspace": "데이터베이스 워크스페이스",
+    "SelectDatabaseAction": "시작하려면 데이터베이스 작업을 선택하세요.",
+    "OpenDatabaseWorkspaceFailed": "데이터베이스 워크스페이스를 열 수 없음",
+    "OpeningDatabaseWorkspace": "데이터베이스 워크스페이스를 여는 중",
+    "Retry": "다시 시도",
+    "ResizeDatabaseSidebar": "데이터베이스 사이드바 크기 조정",
+    "CloseDatabaseExplorer": "데이터베이스 탐색기 닫기",
+    "WaitingConnection": "연결 정보를 기다리는 중…",
+    "AuthenticatingSession": "데이터베이스 세션을 인증하는 중…",
+    "ConnectingDatabaseService": "데이터베이스 서비스에 연결하는 중…",
+    "PreparingSession": "데이터베이스 세션을 준비하는 중…",
+    "LoadingDatabaseResources": "데이터베이스 리소스를 불러오는 중…",
+    "WorkspaceSettings": "워크스페이스 설정",
+    "WorkspaceSettingsTitle": "Chen 워크스페이스 설정",
+    "WorkspaceSettingsDescription": "설정은 자동으로 저장되어 데이터베이스 워크스페이스에 적용됩니다.",
+    "TableTabName": "데이터 테이블 탭 이름",
+    "SqlKeywordCompletion": "SQL 키워드 자동 완성",
+    "TabTitleOnly": "테이블 이름만",
+    "TabTitleTableSchema": "테이블.Schema",
+    "SqlCaseLower": "소문자",
+    "SqlCaseUpper": "대문자",
+    "ServerRequestFailedPrefix": "Chen 서버 요청 실패: ",
+    "DatabaseAddressPrefix": "데이터베이스 주소: ",
+    "DatabaseConnectionFailed": "데이터베이스 연결 실패",
+    "WebSocketFailedPrefix": "Chen WebSocket 연결 실패: "
   }
 }

@@ -13,6 +13,7 @@ import {
   isKokoTerminalAiAvailable,
   isKokoTerminalAiBusy
 } from "#koko/composables/terminal/useTerminalAiSessions";
+import { contrastingTextColor } from "~/shared/theme/color";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import {
   isTerminalAiCommandShortcut,
@@ -136,6 +137,7 @@ async function positionHint(anchor = hintAnchor.value) {
   }
 
   activeXterm.value = xterm;
+  host.style.setProperty("--terminal-ai-hint-fg", contrastingTextColor(getComputedStyle(xterm).backgroundColor));
   const hostBounds = host.getBoundingClientRect();
   const terminalBounds = xterm.getBoundingClientRect();
   const left = anchor.left - hostBounds.left + anchor.width + 6;
@@ -459,7 +461,7 @@ onBeforeUnmount(() => {
 }
 
 .terminal-ai-caret-hint {
-  color: color-mix(in srgb, var(--terminal-foreground) 42%, transparent);
+  color: color-mix(in srgb, var(--terminal-ai-hint-fg, var(--terminal-foreground)) 52%, transparent);
   letter-spacing: 0.02em;
   user-select: none;
 }

@@ -1,6 +1,7 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { MaybeRefOrGetter, Ref } from "vue";
 import type { SftpFileEntry, useSftpFileManager } from "#koko/composables/sftp/useSftpFileManager";
+import { sftpCanUpload } from "#koko/composables/sftp/protocol";
 import { SFTP_ENTRY_NAME_MAX_LENGTH, sftpEntryNameError } from "./sftpEntryName";
 
 interface UseSftpRemotePaneActionsOptions {
@@ -74,6 +75,7 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
   }
 
   function createFolder(): void {
+    if (!sftpCanUpload(options.manager.capabilities.value)) return;
     promptTarget.value = null;
     promptKind.value = "folder";
     promptName.value = "";
@@ -81,6 +83,7 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
   }
 
   function createFile(): void {
+    if (!sftpCanUpload(options.manager.capabilities.value)) return;
     promptTarget.value = null;
     promptKind.value = "file";
     promptName.value = "";
@@ -88,6 +91,7 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
   }
 
   function rename(entry: SftpFileEntry): void {
+    if (!sftpCanUpload(options.manager.capabilities.value)) return;
     options.hideContextMenu();
     promptTarget.value = entry;
     promptName.value = entry.name;
@@ -137,7 +141,7 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
       {
         label: t("koko.actions.rename"),
         icon: "i-lucide-pencil",
-        disabled: !singleSelection,
+        disabled: !singleSelection || !sftpCanUpload(options.manager.capabilities.value),
         onSelect: () => rename(entry)
       },
       { type: "separator" },
@@ -151,6 +155,7 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
     const target = promptTarget.value;
     const isNewFile = promptKind.value === "file";
     if (!name || promptError.value || (target && name === target.name)) return;
+    if (!sftpCanUpload(options.manager.capabilities.value)) return;
     const success = await runFileOperation(
       () => {
         if (target) return options.manager.operations.renameEntry(target, name);

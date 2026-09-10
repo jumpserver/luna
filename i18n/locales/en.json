@@ -29,7 +29,12 @@
     "UnsupportedHint": "This recording type is not supported in the online player.",
     "Reload": "Reload",
     "DesktopBlocked": "Browser only",
-    "DesktopBlockedHint": "Session replay is only available in a web browser. Copy the link and open it there."
+    "DesktopBlockedHint": "Session replay is only available in a web browser. Copy the link and open it there.",
+    "ShortcutsTitle": "Keyboard shortcuts",
+    "ShortcutPlayPause": "pause / resume",
+    "ShortcutFullscreen": "toggle fullscreen mode",
+    "ShortcutKeystrokeOverlay": "toggle keystroke overlay",
+    "ShortcutHelp": "show this help popup"
   },
   "Common": {
     "AI": "AI",
@@ -421,6 +426,8 @@
     "CopyLink": "Copy link",
     "Back": "Back",
     "PrimaryUser": "Primary",
+    "OnlineUserSourceIp": "Source IP",
+    "OnlineUserSourceIpHint": "The client address this user joined from, not the asset IP",
     "RemoveShareUser": "Remove user",
     "ShareSessionUnavailable": "The Lion session is not ready",
     "ShareSearchFailed": "Failed to search share users",
@@ -1767,6 +1774,33 @@
     "hideDetails": "Hide details"
   },
   "Chen": {
-    "TerminatedByAdmin": "Terminated by admin {name}"
+    "TerminatedByAdmin": "Terminated by admin {name}",
+    "DatabaseExplorer": "Database Explorer",
+    "RecentlyTables": "Recently tables",
+    "DatabaseWorkspace": "Database workspace",
+    "SelectDatabaseAction": "Select a database action to begin.",
+    "OpenDatabaseWorkspaceFailed": "Unable to open database workspace",
+    "OpeningDatabaseWorkspace": "Opening database workspace",
+    "Retry": "Retry",
+    "ResizeDatabaseSidebar": "Resize database sidebar",
+    "CloseDatabaseExplorer": "Close database explorer",
+    "WaitingConnection": "Waiting for connection details…",
+    "AuthenticatingSession": "Authenticating your database session…",
+    "ConnectingDatabaseService": "Connecting to the database service…",
+    "PreparingSession": "Preparing your database session…",
+    "LoadingDatabaseResources": "Loading database resources…",
+    "WorkspaceSettings": "Workspace settings",
+    "WorkspaceSettingsTitle": "Chen workspace settings",
+    "WorkspaceSettingsDescription": "Settings are saved automatically and applied to the database workspace.",
+    "TableTabName": "Table tab name",
+    "SqlKeywordCompletion": "SQL keyword completion",
+    "TabTitleOnly": "Table name only",
+    "TabTitleTableSchema": "Table.Schema",
+    "SqlCaseLower": "Lowercase",
+    "SqlCaseUpper": "Uppercase",
+    "ServerRequestFailedPrefix": "Chen server request failed: ",
+    "DatabaseAddressPrefix": "Database address: ",
+    "DatabaseConnectionFailed": "Database connection failed",
+    "WebSocketFailedPrefix": "Chen WebSocket connection failed: "
   }
 }
