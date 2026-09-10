@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import type { VideoPlayerItem } from "~/composables/useVideoPlayerParser";
+import { useVideoPlayerTour, videoPlayerTourDemo, videoPlayerTourFilled } from "~/composables/useVideoPlayerTour";
 import { desktopDialog, desktopWindow } from "~/shared/desktop/bridge";
+import {
+  buildVideoPlayerTourDemoItems,
+  isVideoPlayerTourDemoItem,
+  VIDEO_PLAYER_TOUR_DEMO_ACTIVE_ID
+} from "~/utils/videoPlayerTour";
 
 definePageMeta({
   layout: "default"
 });
 
+const { t } = useI18n();
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const fileInputRef = ref<HTMLInputElement | null>(null);
@@ -27,8 +34,20 @@ const playlistCollapsed = ref(false);
 const isDragOver = ref(false);
 let dragDepth = 0;
 
+const { modernIsland } = useSettingManager();
+const isNarrowScreen = useMediaQuery("(max-width: 767px)");
+const useIslandLayout = computed(() => modernIsland.value && !isNarrowScreen.value);
+const PLAYLIST_MAX_WIDTH = 420;
+const PLAYLIST_DEFAULT_WIDTH = 288;
+const PLAYLIST_COLLAPSED_WIDTH = 40;
+const { setOpen: setRightPanelOpen, setPanelWidth, setPanelBounds, resetPanelBounds } = useRightPanel();
+
 const { parseFiles, parsePaths } = useVideoPlayerParser();
 const { removeRecording } = useOfflineRecording();
+const { destroy: destroyTour, startOnce: startTourOnce } = useVideoPlayerTour();
+const playlistItems = computed(() =>
+  videoPlayerTourDemo.value ? [...buildVideoPlayerTourDemoItems(), ...items.value] : items.value
+);
 
 const currentItem = computed(() => items.value.find((item) => item.id === activeId.value) || null);
 
@@ -37,7 +56,6 @@ const playerComponent = computed(() => {
     case "cast":
       return resolveComponent("VideoPlayerPlayersAsciinemaPlayer");
     case "gua":
-    case "part":
       return resolveComponent("VideoPlayerPlayersGuaPlayer");
     case "mp4":
       return resolveComponent("VideoPlayerPlayersMp4Player");
@@ -84,8 +102,8 @@ async function appendParsedItems(parsed: VideoPlayerItem[]) {
   if (parsed.length === 0) {
     importMessage.value = "";
     toast.add({
-      title: "未识别到可播放文件",
-      description: "请导入 mp4、cast.gz、replay.gz、part.gz 或包含这些文件的 tar 包。",
+      title: t("VideoPlayer.UnrecognizedTitle"),
+      description: t("VideoPlayer.UnrecognizedHint"),
       color: "warning"
     });
     return;
@@ -116,8 +134,8 @@ async function appendParsedItems(parsed: VideoPlayerItem[]) {
 
   if (duplicates > 0) {
     toast.add({
-      title: "部分文件已跳过",
-      description: `有 ${duplicates} 个同名条目已存在，未重复导入。`,
+      title: t("VideoPlayer.SkippedTitle"),
+      description: t("VideoPlayer.SkippedHint", { count: duplicates }),
       color: "neutral"
     });
   }
@@ -127,14 +145,14 @@ async function importFiles(files: File[]) {
   if (files.length === 0 || isImporting.value) return;
 
   isImporting.value = true;
-  importMessage.value = `正在导入 ${files.length} 个文件…`;
+  importMessage.value = t("VideoPlayer.Importing", { count: files.length });
 
   try {
     await appendParsedItems(await parseFiles(files));
   } catch (error: any) {
     importMessage.value = "";
     addErrorToast({
-      title: "导入失败",
+      title: t("VideoPlayer.ImportFailed"),
       description: error?.message || String(error)
     });
   } finally {
@@ -146,14 +164,14 @@ async function importPaths(filePaths: string[]) {
   if (filePaths.length === 0 || isImporting.value) return;
 
   isImporting.value = true;
-  importMessage.value = `正在导入 ${filePaths.length} 个文件…`;
+  importMessage.value = t("VideoPlayer.Importing", { count: filePaths.length });
 
   try {
     await appendParsedItems(await parsePaths(filePaths));
   } catch (error: any) {
     importMessage.value = "";
     addErrorToast({
-      title: "导入失败",
+      title: t("VideoPlayer.ImportFailed"),
       description: error?.message || String(error)
     });
   } finally {
@@ -171,7 +189,7 @@ async function handleFileInputClick(event: MouseEvent) {
       multiple: true,
       filters: [
         {
-          name: "录像文件",
+          name: t("VideoPlayer.FileFilter"),
           extensions: ["mp4", "cast", "gz", "tar"]
         }
       ]
@@ -181,7 +199,7 @@ async function handleFileInputClick(event: MouseEvent) {
     await importPaths(paths);
   } catch (error: any) {
     addErrorToast({
-      title: "选择文件失败",
+      title: t("VideoPlayer.SelectFailed"),
       description: error?.message || String(error)
     });
   }
@@ -236,13 +254,36 @@ function handleDrop(event: DragEvent) {
   void importFiles(files);
 }
 
-watch(
-  () => items.value.length,
-  (len, prevLen) => {
-    if (prevLen === 0 && len > 0) {
-      playlistCollapsed.value = false;
-    }
+watch(videoPlayerTourDemo, (on) => {
+  if (on) {
+    selectedId.value = VIDEO_PLAYER_TOUR_DEMO_ACTIVE_ID;
+    return;
   }
+  if (isVideoPlayerTourDemoItem(selectedId.value || "")) {
+    selectedId.value = items.value[0]?.id ?? null;
+  }
+});
+
+watch(
+  () => playlistItems.value.length,
+  (len, prevLen) => {
+    if (prevLen === 0 && len > 0) playlistCollapsed.value = false;
+  }
+);
+
+watch(
+  [() => playlistItems.value.length, playlistCollapsed],
+  () => {
+    if (playlistItems.value.length === 0) {
+      setRightPanelOpen(false);
+      return;
+    }
+
+    setPanelBounds(PLAYLIST_COLLAPSED_WIDTH, PLAYLIST_MAX_WIDTH);
+    setRightPanelOpen(true);
+    setPanelWidth(playlistCollapsed.value ? PLAYLIST_COLLAPSED_WIDTH : PLAYLIST_DEFAULT_WIDTH);
+  },
+  { immediate: true }
 );
 
 onMounted(async () => {
@@ -251,9 +292,13 @@ onMounted(async () => {
   } catch {
     // ignore when running in browser
   }
+  void startTourOnce();
 });
 
 onBeforeUnmount(() => {
+  destroyTour();
+  resetPanelBounds();
+  setRightPanelOpen(false);
   items.value.forEach(cleanupItem);
 
   if (isDesktopRuntime()) {
@@ -265,8 +310,8 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="relative flex h-full min-h-0 flex-col overflow-hidden py-4 pl-4"
-    :class="items.length > 0 && playlistCollapsed ? 'pr-0' : 'pr-4'"
+    class="relative flex h-full min-h-0 flex-col overflow-hidden"
+    :class="useIslandLayout ? '' : 'py-4 pl-4 pr-0'"
     @dragenter.prevent="handleDragEnter"
     @dragover.prevent="handleDragOver"
     @dragleave.prevent="handleDragLeave"
@@ -276,7 +321,7 @@ onBeforeUnmount(() => {
       v-if="isDragOver && items.length > 0"
       class="pointer-events-none absolute inset-4 z-20 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/10 text-sm font-medium text-primary"
     >
-      松开以导入录像
+      {{ $t("VideoPlayer.DropToImport") }}
     </div>
     <input
       id="videoplayer-file-input"
@@ -289,31 +334,68 @@ onBeforeUnmount(() => {
       @change="handleInputChange"
     />
 
-    <p v-if="importMessage && items.length === 0" class="shrink-0 text-sm text-muted">
+    <p v-if="importMessage && items.length === 0" class="shrink-0 px-4 text-sm text-muted">
       {{ importMessage }}
     </p>
 
-    <div class="flex min-h-0 flex-1 overflow-hidden" :class="importMessage && items.length === 0 ? 'pt-3' : ''">
-      <section
-        class="flex min-h-0 min-w-0 flex-1 flex-col"
-        :class="items.length > 0 && !playlistCollapsed ? 'pr-3' : ''"
-      >
-        <div v-if="playerComponent && currentItem" class="flex min-h-0 flex-1 flex-col overflow-hidden bg-black">
-          <component
-            :is="playerComponent"
-            :key="currentItem.id"
-            :source="currentItem.source"
-            :cast-data="currentItem.castData"
-          />
-        </div>
-        <div
+    <Teleport defer to="#offline-playlist-host">
+      <div v-if="playlistItems.length > 0" class="flex h-full min-h-0 flex-col">
+        <UTooltip v-if="playlistCollapsed" :text="$t('VideoPlayer.ExpandPlaylist')">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            class="flex h-full min-h-0 w-full flex-col items-center gap-2 px-0 py-3"
+            @click="playlistCollapsed = false"
+          >
+            <UIcon name="i-lucide-list-music" class="size-4 text-[var(--app-text-muted)]" />
+            <UBadge color="primary" variant="subtle" size="sm">{{ playlistItems.length }}</UBadge>
+          </UButton>
+        </UTooltip>
+        <VideoPlayerPlaylist
           v-else
-          class="flex min-h-0 flex-1 items-center justify-center border border-dashed px-6 py-6 text-center text-sm text-muted transition-colors"
-          :class="isDragOver ? 'border-primary bg-primary/5' : 'border-default'"
+          class="min-h-0 flex-1 px-3"
+          :active-id="selectedId"
+          :items="playlistItems"
+          @play="selectItem"
+          @remove="removeItem"
+          @collapse="playlistCollapsed = true"
+        />
+      </div>
+    </Teleport>
+
+    <div data-videoplayer-tour="stage" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <section v-if="items.length > 0" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-black">
+        <component
+          :is="playerComponent"
+          v-if="playerComponent && currentItem"
+          :key="currentItem.id"
+          class="h-full w-full min-h-0"
+          :source="currentItem.source"
+          :cast-data="currentItem.castData"
+        />
+      </section>
+
+      <section v-else-if="videoPlayerTourFilled" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-black">
+        <div
+          class="m-4 flex min-h-0 flex-1 items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/10 text-sm font-medium text-primary"
         >
-          <button
-            type="button"
-            class="group flex cursor-pointer flex-col items-center gap-4 rounded-lg px-8 py-6 transition hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          {{ $t("VideoPlayer.DropToImport") }}
+        </div>
+      </section>
+
+      <div v-else class="flex min-h-0 flex-1 overflow-hidden" :class="useIslandLayout ? '' : 'pr-4'">
+        <div
+          data-videoplayer-tour="import"
+          class="flex min-h-0 flex-1 items-center justify-center border border-dashed px-6 py-6 text-center text-sm text-muted transition-colors"
+          :class="[
+            isDragOver ? 'border-primary bg-primary/5' : 'border-default',
+            useIslandLayout ? 'rounded-[length:var(--workspace-island-radius)]' : ''
+          ]"
+        >
+          <UButton
+            color="neutral"
+            variant="ghost"
+            class="group flex h-auto cursor-pointer flex-col items-center gap-4 rounded-lg px-8 py-6"
             @click="fileInputRef?.click()"
           >
             <span
@@ -321,52 +403,20 @@ onBeforeUnmount(() => {
             >
               <UIcon name="line-md:upload-loop" />
             </span>
-            <span class="max-w-xl">
-              <span class="block text-xl font-semibold tracking-tight text-highlighted">导入录像文件</span>
+            <span class="max-w-xl text-center">
+              <span class="block text-xl font-semibold tracking-tight text-highlighted">
+                {{ $t("VideoPlayer.ImportTitle") }}
+              </span>
               <span class="mt-2 block text-sm leading-6 text-muted">
-                拖拽文件到这里，或点击选择 `.mp4`、`.gz`、`.tar` 文件。
+                {{ $t("VideoPlayer.ImportHint") }}
               </span>
             </span>
             <span class="rounded-full bg-muted px-4 py-2 text-sm text-toned transition group-hover:bg-accented">
-              选择文件
+              {{ $t("VideoPlayer.ChooseFiles") }}
             </span>
-          </button>
+          </UButton>
         </div>
-      </section>
-
-      <aside
-        v-if="items.length > 0"
-        class="flex shrink-0 flex-col border-l border-default transition-[width] duration-200 ease-out"
-        :class="playlistCollapsed ? 'w-9 items-center' : 'w-52 pl-3'"
-      >
-        <UTooltip v-if="playlistCollapsed" text="展开播放列表">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            icon="i-lucide-panel-left"
-            class="mx-auto mb-1 shrink-0"
-            @click="playlistCollapsed = false"
-          />
-        </UTooltip>
-
-        <VideoPlayerPlaylist
-          v-if="!playlistCollapsed"
-          class="min-h-0 flex-1"
-          :active-id="selectedId"
-          :items="items"
-          @play="selectItem"
-          @remove="removeItem"
-          @collapse="playlistCollapsed = true"
-        />
-
-        <div v-else class="flex flex-col items-center gap-2 pt-1">
-          <UIcon name="i-lucide-list-music" class="size-4 text-dimmed" />
-          <span class="rounded-full bg-(--ui-primary)/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-            {{ items.length }}
-          </span>
-        </div>
-      </aside>
+      </div>
     </div>
   </div>
 </template>

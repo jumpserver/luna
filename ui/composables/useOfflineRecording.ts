@@ -4,7 +4,7 @@ import { desktopInvoke } from "~/shared/desktop/bridge";
 export interface OfflineRecordingEntry {
   entry_id: string;
   source_name: string;
-  media_type: VideoPlayerItemType;
+  media_type: VideoPlayerItemType | "part";
   byte_length: number;
   part_index?: number;
   part_total?: number;

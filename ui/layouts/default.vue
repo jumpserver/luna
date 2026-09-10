@@ -18,7 +18,7 @@ const AiOverlayPanel = defineAsyncComponent(() => import("~/components/RightPane
 
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { isMacOS, isWindows } = usePlatform();
-const { activeWorkspaceMode, uiWorkspaceMode } = useWorkspaceMode();
+const { activeWorkspaceMode, uiWorkspaceMode, isVideoPlayerRoute } = useWorkspaceMode();
 const {
   activeTabId,
   closeSession,
@@ -449,7 +449,8 @@ onBeforeUnmount(() => {
       </Main>
 
       <template #rightPanel>
-        <RightPanel v-if="rightPanelOpen" />
+        <div v-if="isVideoPlayerRoute" id="offline-playlist-host" class="h-full min-h-0" />
+        <RightPanel v-else-if="rightPanelOpen" />
       </template>
 
       <template #overlayPanel>

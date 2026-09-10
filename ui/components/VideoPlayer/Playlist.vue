@@ -12,6 +12,8 @@ const emit = defineEmits<{
   collapse: [];
 }>();
 
+const { t } = useI18n();
+
 interface PlaylistGroup {
   key: string;
   isPartGroup: boolean;
@@ -75,21 +77,17 @@ function itemAssetLabel(item: VideoPlayerItem) {
   return item.meta?.asset || item.recordingLabel || item.name;
 }
 
-function stripParenthetical(value: string) {
+function displayValue(value: string) {
   const stripped = value.replace(/\s*\([^)]*\)/g, "").trim();
   return stripped || value;
 }
 
-function displayValue(value: string) {
-  return stripParenthetical(value);
-}
-
 function isPartSessionItem(item: VideoPlayerItem) {
-  return item.type === "part" && (item.partTotal ?? 0) > 1;
+  return (item.partTotal ?? 0) > 1;
 }
 
 function sessionGroupKey(item: VideoPlayerItem) {
-  return item.meta?.id || item.recordingId;
+  return `${item.type}:${item.meta?.id || item.recordingId}`;
 }
 
 const playlistGroups = computed<PlaylistGroup[]>(() => {
@@ -117,184 +115,209 @@ const playlistGroups = computed<PlaylistGroup[]>(() => {
   for (const group of groups) {
     if (!group.isPartGroup) continue;
     group.items.sort((left, right) => (left.partIndex ?? 0) - (right.partIndex ?? 0));
+    if (group.items[0]) group.representative = group.items[0];
   }
 
   return groups;
 });
 
-function sessionDetailFields(item: VideoPlayerItem) {
-  return [
-    { label: "账号", value: item.meta?.account || "-" },
-    { label: "用户", value: item.meta?.user || "-" },
-    { label: "协议", value: item.meta?.protocol || "-" }
-  ];
-}
-
-function itemDetailFields(item: VideoPlayerItem) {
-  return [
-    ...sessionDetailFields(item),
-    { label: "开始时间", value: formatLocalStartTime(item.meta?.date_start) },
-    {
-      label: "总时长",
-      value: formatDuration(item.meta?.duration, item.meta?.date_start, item.meta?.date_end)
-    }
-  ];
-}
-
-function partDetailFields(item: VideoPlayerItem) {
-  return [
-    { label: "开始时间", value: formatLocalStartTime(item.meta?.date_start) },
-    {
-      label: "总时长",
-      value: formatDuration(item.meta?.duration, item.meta?.date_start, item.meta?.date_end)
-    }
-  ];
-}
-
 function partLabel(item: VideoPlayerItem) {
-  if (item.partIndex && item.partTotal) {
-    return `片段 ${item.partIndex} / ${item.partTotal}`;
+  if (item.partIndex != null && item.partTotal != null) {
+    return t("VideoPlayer.PartIndex", { index: item.partIndex, total: item.partTotal });
   }
-
-  return "片段";
+  return t("VideoPlayer.Part");
 }
 
 function groupHasActivePart(group: PlaylistGroup) {
   return group.items.some((item) => item.id === props.activeId);
 }
+
+function itemTypeIcon(type: VideoPlayerItem["type"]) {
+  if (type === "cast") return "i-lucide-terminal";
+  if (type === "gua") return "i-lucide-monitor";
+  return "i-lucide-clapperboard";
+}
+
+function compactDuration(item: VideoPlayerItem) {
+  const raw = formatDuration(item.meta?.duration, item.meta?.date_start, item.meta?.date_end);
+  if (!raw || raw === "-") return "—";
+  return raw.startsWith("00:") ? raw.slice(3) : raw;
+}
+
+function shortStamp(value?: string) {
+  const full = formatLocalStartTime(value);
+  if (full === "-") return "";
+  const match = full.match(/(\d{2})\/(\d{2})\s+(\d{2}:\d{2})/);
+  return match ? `${match[1]}-${match[2]} ${match[3]}` : full;
+}
+
+function itemSubline(item: VideoPlayerItem, active: boolean) {
+  const bits: string[] = [];
+  if (active) bits.push(t("VideoPlayer.Playing"));
+  const user = item.meta?.user ? displayValue(item.meta.user) : "";
+  const protocol = item.meta?.protocol ? item.meta.protocol.toUpperCase() : "";
+
+  if (!user && !protocol && !item.meta?.date_start) {
+    bits.push(item.type === "mp4" ? t("VideoPlayer.LocalFile") : item.type.toUpperCase());
+    if (item.type === "mp4") bits.push("MP4");
+    return bits.join(" · ");
+  }
+
+  if (user) bits.push(user);
+  if (protocol) bits.push(protocol);
+  if (!active) {
+    const stamp = shortStamp(item.meta?.date_start);
+    if (stamp) bits.push(stamp);
+  }
+
+  return bits.join(" · ");
+}
+
+function groupSubline(item: VideoPlayerItem) {
+  const bits: string[] = [];
+  if (item.meta?.user) bits.push(displayValue(item.meta.user));
+  if (item.meta?.protocol) bits.push(item.meta.protocol.toUpperCase());
+  const stamp = shortStamp(item.meta?.date_start);
+  if (stamp) bits.push(stamp);
+  return bits.join(" · ") || t("VideoPlayer.Session");
+}
 </script>
 
 <template>
   <div class="flex min-h-0 flex-1 flex-col">
-    <div class="mb-2 flex items-center justify-between gap-2">
-      <h3 class="min-w-0 truncate text-sm font-semibold tracking-wide text-(--ui-text-highlighted)">播放列表</h3>
-      <div class="flex shrink-0 items-center gap-1.5">
-        <UTooltip text="添加录像">
-          <label
-            for="videoplayer-file-input"
-            class="flex size-7 cursor-pointer items-center justify-center rounded-full border border-(--ui-border) text-(--ui-text-toned) transition hover:border-(--ui-primary)/50 hover:text-(--ui-primary)"
-          >
-            <UIcon name="i-lucide-plus" class="size-3.5" />
+    <div class="flex items-center justify-between gap-2 py-2.5">
+      <h3 class="min-w-0 truncate text-sm font-semibold text-[var(--app-text-primary)]">
+        {{ $t("VideoPlayer.Playlist") }}
+        <span class="font-medium text-[var(--app-text-muted)]">· {{ items.length }}</span>
+      </h3>
+      <div class="flex shrink-0 items-center">
+        <UTooltip :text="$t('VideoPlayer.AddRecording')">
+          <label for="videoplayer-file-input" data-videoplayer-tour="add" class="inline-flex">
+            <UButton as="span" color="neutral" variant="ghost" size="xs" icon="i-lucide-plus" />
           </label>
         </UTooltip>
-        <UTooltip text="收起播放列表">
-          <button
-            type="button"
-            class="flex size-7 cursor-pointer items-center justify-center rounded-full border border-(--ui-border) text-(--ui-text-toned) transition hover:border-(--ui-primary)/50 hover:text-(--ui-primary)"
-            @click="emit('collapse')"
-          >
-            <UIcon name="i-lucide-panel-right" class="size-3.5" />
-          </button>
+        <UTooltip :text="$t('VideoPlayer.CollapsePlaylist')">
+          <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-panel-right" @click="emit('collapse')" />
         </UTooltip>
       </div>
     </div>
 
-    <div class="playlist-scroll flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+    <div class="playlist-scroll flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-3">
       <template v-for="group in playlistGroups" :key="group.key">
-        <div
+        <UCollapsible
           v-if="group.isPartGroup"
-          class="rounded-lg border border-(--ui-border) p-2"
-          :class="groupHasActivePart(group) ? 'border-(--ui-primary)/40' : ''"
+          data-videoplayer-tour="parts"
+          :default-open="true"
+          class="my-1 overflow-hidden rounded-lg border border-[var(--app-border)]"
+          :class="
+            groupHasActivePart(group) ? 'border-[color-mix(in_srgb,var(--theme-accent)_38%,var(--app-border))]' : ''
+          "
         >
-          <div class="px-1 pb-2">
-            <UTooltip
-              arrow
-              :text="itemAssetLabel(group.representative)"
-              :disabled="displayValue(itemAssetLabel(group.representative)) === itemAssetLabel(group.representative)"
+          <template #default="{ open }">
+            <div
+              class="grid w-full grid-cols-[18px_minmax(0,1fr)_auto] gap-x-2 px-2.5 py-2 text-left hover:bg-[var(--app-hover-soft)]"
             >
-              <p class="truncate text-sm font-medium text-(--ui-text-highlighted)">
-                {{ displayValue(itemAssetLabel(group.representative)) }}
-              </p>
-            </UTooltip>
-            <p
-              v-for="field in sessionDetailFields(group.representative)"
-              :key="field.label"
-              class="mt-1 flex min-w-0 items-center text-[11px] text-(--ui-text-muted)"
-            >
-              <span class="shrink-0">{{ field.label }}&nbsp;</span>
-              <span class="min-w-0 flex-1 overflow-hidden">
-                <UTooltip arrow :text="field.value" :disabled="displayValue(field.value) === field.value">
-                  <span class="block truncate">{{ displayValue(field.value) }}</span>
-                </UTooltip>
-              </span>
-            </p>
-          </div>
-
-          <div class="flex flex-col gap-1 border-t border-(--ui-border) pt-2">
-            <button
-              v-for="part in group.items"
-              :key="part.id"
-              class="group flex items-start justify-between rounded-md px-2 py-2 text-left transition-colors duration-150"
-              :class="part.id === activeId ? 'bg-(--ui-primary)/8' : 'hover:bg-(--ui-bg-accented)/60'"
-              @click="emit('play', part)"
-            >
-              <div class="min-w-0 flex-1 overflow-hidden pr-1">
-                <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-(--ui-text-toned)">
-                  {{ partLabel(part) }}
-                </p>
-                <p
-                  v-for="field in partDetailFields(part)"
-                  :key="field.label"
-                  class="mt-1 flex min-w-0 items-center text-[11px] text-(--ui-text-muted)"
-                >
-                  <span class="shrink-0">{{ field.label }}&nbsp;</span>
-                  <span class="min-w-0 flex-1 overflow-hidden">
-                    <UTooltip arrow :text="field.value" :disabled="displayValue(field.value) === field.value">
-                      <span class="block truncate">{{ displayValue(field.value) }}</span>
-                    </UTooltip>
-                  </span>
-                </p>
-              </div>
-              <UButton
-                color="neutral"
-                variant="ghost"
-                icon="line-md:close-small"
-                class="opacity-70 group-hover:opacity-100"
-                @click.stop="emit('remove', part)"
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-4 self-center text-[var(--app-text-muted)] transition-transform"
+                :class="open ? 'rotate-90' : ''"
               />
-            </button>
-          </div>
-        </div>
+              <span class="truncate text-sm font-medium text-[var(--app-text-primary)]">
+                {{ displayValue(itemAssetLabel(group.representative)) }}
+              </span>
+              <span class="font-mono text-[11px] tabular-nums text-[var(--app-text-muted)]">
+                {{ $t("VideoPlayer.PartCount", { count: group.items.length }) }}
+              </span>
+              <span class="col-start-2 truncate text-[11px] text-[var(--app-text-muted)]">
+                {{ groupSubline(group.representative) }}
+              </span>
+            </div>
+          </template>
+          <template #content>
+            <div class="flex flex-col gap-0.5 px-1.5 pb-1.5 pl-7">
+              <div
+                v-for="part in group.items"
+                :key="part.id"
+                role="button"
+                tabindex="0"
+                class="group relative grid grid-cols-[16px_minmax(0,1fr)_auto] items-center gap-x-1.5 rounded-md px-2 py-1.5 text-left"
+                :class="part.id === activeId ? 'bg-[var(--app-selected-soft)]' : 'hover:bg-[var(--app-hover-soft)]'"
+                @click="emit('play', part)"
+                @keydown.enter="emit('play', part)"
+              >
+                <span
+                  class="size-1.5 justify-self-center rounded-full"
+                  :class="
+                    part.id === activeId
+                      ? 'bg-primary shadow-[0_0_0_3px_color-mix(in_srgb,var(--theme-accent)_22%,transparent)]'
+                      : 'bg-[var(--app-border)]'
+                  "
+                />
+                <span class="min-w-0">
+                  <span class="text-xs text-[var(--app-text-primary)]">{{ partLabel(part) }}</span>
+                  <span class="text-[11px] text-[var(--app-text-muted)]">
+                    ·
+                    {{
+                      part.id === activeId
+                        ? $t("VideoPlayer.Playing")
+                        : shortStamp(part.meta?.date_start) || compactDuration(part)
+                    }}
+                  </span>
+                </span>
+                <span class="font-mono text-[11px] tabular-nums text-[var(--app-text-muted)] group-hover:invisible">
+                  {{ compactDuration(part) }}
+                </span>
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-x"
+                  class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                  @click.stop="emit('remove', part)"
+                />
+              </div>
+            </div>
+          </template>
+        </UCollapsible>
 
         <template v-else>
-          <button
+          <div
             v-for="item in group.items"
             :key="item.id"
-            class="group flex items-start justify-between rounded-lg px-2 py-2.5 text-left transition-colors duration-150"
-            :class="item.id === activeId ? 'bg-(--ui-primary)/8' : 'hover:bg-(--ui-bg-accented)/60'"
+            role="button"
+            tabindex="0"
+            class="group relative grid grid-cols-[18px_minmax(0,1fr)_auto] gap-x-2 rounded-md px-2.5 py-2 text-left"
+            :class="item.id === activeId ? 'bg-[var(--app-selected-soft)]' : 'hover:bg-[var(--app-hover-soft)]'"
             @click="emit('play', item)"
+            @keydown.enter="emit('play', item)"
           >
-            <div class="min-w-0 flex-1 overflow-hidden pr-1">
-              <UTooltip
-                arrow
-                :text="itemAssetLabel(item)"
-                :disabled="displayValue(itemAssetLabel(item)) === itemAssetLabel(item)"
-              >
-                <p class="truncate text-sm font-medium text-(--ui-text-highlighted)">
-                  {{ displayValue(itemAssetLabel(item)) }}
-                </p>
-              </UTooltip>
-              <p
-                v-for="field in itemDetailFields(item)"
-                :key="field.label"
-                class="mt-1 flex min-w-0 items-center text-[11px] text-(--ui-text-muted)"
-              >
-                <span class="shrink-0">{{ field.label }}&nbsp;</span>
-                <span class="min-w-0 flex-1 overflow-hidden">
-                  <UTooltip arrow :text="field.value" :disabled="displayValue(field.value) === field.value">
-                    <span class="block truncate">{{ displayValue(field.value) }}</span>
-                  </UTooltip>
-                </span>
-              </p>
-            </div>
+            <span v-if="item.id === activeId" class="absolute top-2 bottom-2 left-0 w-0.5 rounded-full bg-primary" />
+            <UIcon
+              :name="itemTypeIcon(item.type)"
+              class="size-4 self-center"
+              :class="item.id === activeId ? 'text-primary' : 'text-[var(--app-text-muted)]'"
+            />
+            <span class="truncate text-sm font-medium text-[var(--app-text-primary)]">
+              {{ displayValue(itemAssetLabel(item)) }}
+            </span>
+            <span class="font-mono text-[11px] tabular-nums text-[var(--app-text-muted)] group-hover:invisible">
+              {{ compactDuration(item) }}
+            </span>
+            <span class="col-start-2 truncate text-[11px] text-[var(--app-text-muted)]">
+              <span v-if="item.id === activeId" class="font-semibold text-primary">
+                {{ $t("VideoPlayer.Playing") }} ·
+              </span>
+              {{ itemSubline(item, false) }}
+            </span>
             <UButton
               color="neutral"
               variant="ghost"
-              icon="line-md:close-small"
-              class="opacity-70 group-hover:opacity-100"
+              size="xs"
+              icon="i-lucide-x"
+              class="absolute top-1.5 right-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
               @click.stop="emit('remove', item)"
             />
-          </button>
+          </div>
         </template>
       </template>
     </div>
@@ -304,7 +327,7 @@ function groupHasActivePart(group: PlaylistGroup) {
 <style scoped>
 .playlist-scroll {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--ui-border) 85%, transparent) transparent;
+  scrollbar-color: color-mix(in srgb, var(--app-border) 85%, transparent) transparent;
 }
 
 .playlist-scroll::-webkit-scrollbar {
@@ -317,10 +340,6 @@ function groupHasActivePart(group: PlaylistGroup) {
 
 .playlist-scroll::-webkit-scrollbar-thumb {
   border-radius: 9999px;
-  background: color-mix(in srgb, var(--ui-border) 85%, transparent);
-}
-
-.playlist-scroll::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--ui-text-dimmed) 55%, transparent);
+  background: color-mix(in srgb, var(--app-border) 85%, transparent);
 }
 </style>

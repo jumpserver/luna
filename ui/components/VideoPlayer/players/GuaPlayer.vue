@@ -6,6 +6,8 @@ const props = defineProps<{
   source: string;
 }>();
 
+const { t } = useI18n();
+
 const playerAreaRef = ref<HTMLElement | null>(null);
 const canvasRef = ref<HTMLElement | null>(null);
 const displayViewportRef = ref<HTMLElement | null>(null);
@@ -320,9 +322,16 @@ async function loadRecording() {
   try {
     if (props.source.startsWith("blob:")) {
       const response = await fetch(props.source);
-      const compressed = new Uint8Array(await response.arrayBuffer());
-      const output = gunzipSync(compressed);
-      startPlayback(new TextDecoder("utf-8").decode(output));
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      let text = new TextDecoder("utf-8").decode(bytes);
+      if (bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b) {
+        try {
+          text = new TextDecoder("utf-8").decode(gunzipSync(bytes));
+        } catch {
+          // already decoded as utf-8 above
+        }
+      }
+      startPlayback(text);
       return;
     }
 
@@ -330,7 +339,7 @@ async function loadRecording() {
     // custom protocol 直接返回文本，不再通过 IPC 逐块发送。
     const response = await fetch(props.source, { signal: currentLoad.signal });
     if (!response.ok) {
-      throw new Error(`读取录像失败：HTTP ${response.status}`);
+      throw new Error(t("VideoPlayer.ReadFailed", { status: response.status }));
     }
 
     startPlayback(await response.text());
@@ -422,7 +431,7 @@ onBeforeUnmount(() => {
         v-if="loading"
         class="absolute inset-0 z-10 flex items-center justify-center bg-black/40 text-sm text-white/80"
       >
-        正在解析录像…
+        {{ $t("VideoPlayer.Parsing") }}
       </div>
 
       <div
