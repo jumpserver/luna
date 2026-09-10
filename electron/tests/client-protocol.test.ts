@@ -314,6 +314,28 @@ test("OAuth denial completes the matching login with an error and does not excha
   assert.equal(service.pendingAuth, null);
 });
 
+test("HTML-escaped confirmation callbacks still require the current login state", async () => {
+  for (const callback of [CLIENT_AUTH_CALLBACK, "http://127.0.0.1:14876/auth/callback"]) {
+    const { service, authorized } = authServiceFixture();
+    let exchangedCode = "";
+    service.exchangeToken = async (_site: string, parameters: Record<string, string>) => {
+      exchangedCode = parameters.code;
+      return { access_token: "test-token" };
+    };
+    const login = service.authLogin({ site: "https://site.example", sessionId: "account" });
+    const state = new URL(await authorized.promise).searchParams.get("state");
+    const pending = service.pendingAuth;
+    assert.equal(service.handleCallback(`${callback}?code=stale&amp;state=old`), false);
+    assert.equal(service.handleCallback(`${callback}?code=missing-state`), false);
+    assert.equal(service.handleCallback(`${callback}?code=ambiguous&state=${state}&amp;state=old`), false);
+    assert.equal(service.pendingAuth, pending);
+    assert.equal(service.handleCallback(`${callback}?code=a%2Bb&amp;state=${state}`), true);
+    assert.equal((await login).status, "success");
+    assert.equal(exchangedCode, "a+b");
+    assert.equal(service.handleCallback(`${callback}?code=duplicate&amp;state=${state}`), false);
+  }
+});
+
 test("cancelling a login rejects its later callback", async () => {
   const { service, authorized } = authServiceFixture();
   const login = service.authLogin({ site: "https://site.example", sessionId: "account" });

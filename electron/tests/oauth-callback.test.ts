@@ -39,3 +39,32 @@ test("recognizes OAuth failures as callbacks instead of asset launch URLs", () =
   assert.equal(isOAuthCallbackUrl("jms2://auth/callback"), true);
   assert.equal(isOAuthCallbackUrl("jms2://auth/callback-other?code=abc"), false);
 });
+
+test("parses HTML-escaped confirmation redirects without decoding entities inside parameter values", () => {
+  for (const callback of ["jms2://auth/callback", "http://127.0.0.1:14876/auth/callback"]) {
+    const url = `${callback}?code=a%2Bb%26amp%3Bc&amp;state=xyz`;
+    const expected = { code: "a+b&amp;c", state: "xyz" };
+    assert.deepEqual(parseOAuthCallback(url), expected);
+    assert.deepEqual(parseOAuthCallback(`"${encodeURIComponent(url)}"`), expected);
+    assert.deepEqual(parseOAuthCallback(`${callback}?error=access_denied&amp;state=xyz`), {
+      error: "access_denied",
+      state: "xyz"
+    });
+    assert.deepEqual(parseOAuthCallback(`${callback}?code=abc%26amp%3Bstate%3Dxyz`), {
+      code: "abc&amp;state=xyz",
+      state: null
+    });
+  }
+});
+
+test("rejects ambiguous callback parameters including mixed escaped and unescaped separators", () => {
+  for (const query of [
+    "code=abc&state=first&state=second",
+    "code=abc&state=first&amp;state=second",
+    "code=abc&amp;state=first&state=second",
+    "code=abc&amp;code=other&state=xyz",
+    "error=access_denied&amp;error=other&state=xyz"
+  ]) {
+    assert.equal(parseOAuthCallback(`jms2://auth/callback?${query}`), null);
+  }
+});

@@ -17,7 +17,9 @@ function callbackParameters(rawUrl: unknown) {
   );
   if (!match) return null;
 
-  return new URLSearchParams(match[1] || "");
+  // Some JumpServer confirmation pages HTML-escape the URL inside JavaScript.
+  // Restore separators before URL decoding so encoded entities in values stay intact.
+  return new URLSearchParams((match[1] || "").replace(/&amp;/g, "&"));
 }
 
 export function isOAuthCallbackUrl(rawUrl: unknown) {
@@ -27,6 +29,7 @@ export function isOAuthCallbackUrl(rawUrl: unknown) {
 export function parseOAuthCallback(rawUrl: unknown) {
   const params = callbackParameters(rawUrl);
   if (!params) return null;
+  if (["code", "state", "error"].some((name) => params.getAll(name).length > 1)) return null;
   const error = params.get("error");
   if (error) return { error, state: params.get("state") };
   const code = params.get("code");
