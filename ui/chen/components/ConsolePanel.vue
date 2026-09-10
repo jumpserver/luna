@@ -34,9 +34,15 @@ const { t } = useI18n();
 
 const timelineRef = ref<HTMLElement | null>(null);
 const inputRef = ref<HTMLTextAreaElement | null>(null);
+const inputAreaHeight = ref(64);
 let historyIndex: number | null = null;
 let historyDraft = "";
 let followLatest = true;
+let resizeStartY = 0;
+let resizeStartHeight = 0;
+
+const MIN_INPUT_AREA_HEIGHT = 64;
+const MAX_INPUT_AREA_HEIGHT = 192;
 
 const pendingSqlValue = computed({
   get: () => props.tab.pendingSql,
@@ -132,6 +138,33 @@ function handleKeydown(event: KeyboardEvent) {
     event.preventDefault();
     moveHistory(1);
   }
+}
+
+function beginInputAreaResize(event: PointerEvent) {
+  if (event.button !== 0) return;
+  resizeStartY = event.clientY;
+  resizeStartHeight = inputAreaHeight.value;
+  (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  event.preventDefault();
+}
+
+function resizeInputArea(event: PointerEvent) {
+  const target = event.currentTarget as HTMLElement;
+  if (!target.hasPointerCapture(event.pointerId)) return;
+  inputAreaHeight.value = Math.min(
+    MAX_INPUT_AREA_HEIGHT,
+    Math.max(MIN_INPUT_AREA_HEIGHT, resizeStartHeight + resizeStartY - event.clientY)
+  );
+}
+
+function resizeInputAreaWithKeyboard(event: KeyboardEvent) {
+  const delta = event.key === "ArrowUp" ? 16 : event.key === "ArrowDown" ? -16 : 0;
+  if (!delta) return;
+  inputAreaHeight.value = Math.min(
+    MAX_INPUT_AREA_HEIGHT,
+    Math.max(MIN_INPUT_AREA_HEIGHT, inputAreaHeight.value + delta)
+  );
+  event.preventDefault();
 }
 
 function clear() {
@@ -307,13 +340,29 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
     </div>
 
     <div
-      class="flex shrink-0 items-start gap-2 border-t border-default bg-[var(--app-surface-panel)] px-3 py-2 font-ui-mono text-sm"
+      class="relative flex shrink-0 items-start gap-2 border-t border-default bg-[var(--app-surface-panel)] px-3 py-2 font-ui-mono text-sm"
+      :style="{ height: `${inputAreaHeight}px` }"
     >
-      <span class="shrink-0 pt-1 text-primary">{{ promptLabel }}</span>
+      <div
+        role="separator"
+        tabindex="0"
+        aria-label="Resize Console input"
+        aria-orientation="horizontal"
+        :aria-valuenow="inputAreaHeight"
+        :aria-valuemin="MIN_INPUT_AREA_HEIGHT"
+        :aria-valuemax="MAX_INPUT_AREA_HEIGHT"
+        class="absolute inset-x-0 top-0 z-20 h-px cursor-row-resize touch-none bg-default/60 outline-none hover:bg-primary/60 focus-visible:bg-primary/60 active:bg-primary"
+        @pointerdown="beginInputAreaResize"
+        @pointermove.prevent="resizeInputArea"
+        @keydown="resizeInputAreaWithKeyboard"
+      >
+        <div class="absolute -inset-y-1.5 inset-x-0" />
+      </div>
+      <span class="shrink-0 pt-3 text-primary">{{ promptLabel }}</span>
       <textarea
         ref="inputRef"
         v-model="pendingSqlValue"
-        class="max-h-32 min-h-7 flex-1 resize-none bg-transparent py-1 text-[var(--app-fg)] outline-none placeholder:text-[var(--app-muted)]"
+        class="h-full min-h-12 flex-1 resize-none rounded-sm border border-default bg-transparent px-2 py-2 text-[var(--app-fg)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--app-muted)] focus:border-primary focus:ring-1 focus:ring-[var(--app-focus-ring)]"
         :disabled="busy"
         rows="1"
         placeholder="Enter to run · Shift+Enter for newline"
