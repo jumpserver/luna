@@ -426,6 +426,8 @@
     "CopyLink": "Копировать ссылку",
     "Back": "Назад",
     "PrimaryUser": "Основной",
+    "OnlineUserSourceIp": "IP источника",
+    "OnlineUserSourceIpHint": "Адрес клиента, с которого пользователь подключился к сессии, а не IP актива",
     "RemoveShareUser": "Удалить пользователя",
     "ShareSessionUnavailable": "Сеанс Lion еще не готов",
     "ShareSearchFailed": "Не удалось найти пользователей для общего доступа",

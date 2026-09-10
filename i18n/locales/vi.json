@@ -426,6 +426,8 @@
     "CopyLink": "Sao chép liên kết",
     "Back": "Quay lại",
     "PrimaryUser": "Chính",
+    "OnlineUserSourceIp": "IP nguồn",
+    "OnlineUserSourceIpHint": "Địa chỉ máy khách mà người dùng này đã tham gia, không phải IP tài sản",
     "RemoveShareUser": "Xóa người dùng",
     "ShareSessionUnavailable": "Phiên Lion chưa sẵn sàng",
     "ShareSearchFailed": "Không thể tìm người dùng để chia sẻ",

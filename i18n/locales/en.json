@@ -426,6 +426,8 @@
     "CopyLink": "Copy link",
     "Back": "Back",
     "PrimaryUser": "Primary",
+    "OnlineUserSourceIp": "Source IP",
+    "OnlineUserSourceIpHint": "The client address this user joined from, not the asset IP",
     "RemoveShareUser": "Remove user",
     "ShareSessionUnavailable": "The Lion session is not ready",
     "ShareSearchFailed": "Failed to search share users",

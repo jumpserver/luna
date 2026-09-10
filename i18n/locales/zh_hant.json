@@ -426,6 +426,8 @@
     "CopyLink": "複製連結",
     "Back": "返回",
     "PrimaryUser": "主使用者",
+    "OnlineUserSourceIp": "來源 IP",
+    "OnlineUserSourceIpHint": "此使用者接入工作階段的用戶端地址，不是資產 IP",
     "RemoveShareUser": "移除使用者",
     "ShareSessionUnavailable": "Lion 會話資訊尚未就緒",
     "ShareSearchFailed": "搜尋分享使用者失敗",

@@ -426,6 +426,8 @@
     "CopyLink": "复制链接",
     "Back": "返回",
     "PrimaryUser": "主用户",
+    "OnlineUserSourceIp": "来源 IP",
+    "OnlineUserSourceIpHint": "该用户接入此会话的客户端地址，不是资产 IP",
     "RemoveShareUser": "移除用户",
     "ShareSessionUnavailable": "Lion 会话信息尚未就绪",
     "ShareSearchFailed": "搜索分享用户失败",

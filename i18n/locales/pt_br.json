@@ -426,6 +426,8 @@
     "CopyLink": "Copiar link",
     "Back": "Voltar",
     "PrimaryUser": "Principal",
+    "OnlineUserSourceIp": "IP de origem",
+    "OnlineUserSourceIpHint": "Endereço do cliente de onde este usuário entrou, não o IP do ativo",
     "RemoveShareUser": "Remover usuário",
     "ShareSessionUnavailable": "A sessão do Lion ainda não está pronta",
     "ShareSearchFailed": "Falha ao pesquisar usuários para compartilhamento",

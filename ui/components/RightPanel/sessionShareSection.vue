@@ -221,9 +221,11 @@ function handleCopyShareURL() {
           <div class="truncate font-medium text-gray-800 dark:text-gray-100">
             {{ user.user }}
           </div>
-          <div class="truncate text-[10px] text-gray-500 dark:text-gray-400">
-            {{ user.remote_addr || "-" }}
-          </div>
+          <UTooltip v-if="user.remote_addr" :text="t('RightPanel.OnlineUserSourceIpHint')">
+            <div class="truncate text-[10px] text-gray-500 dark:text-gray-400">
+              {{ t("RightPanel.OnlineUserSourceIp") }} {{ user.remote_addr }}
+            </div>
+          </UTooltip>
         </div>
 
         <div class="flex shrink-0 items-center gap-1">

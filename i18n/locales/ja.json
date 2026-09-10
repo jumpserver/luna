@@ -426,6 +426,8 @@
     "CopyLink": "リンクをコピー",
     "Back": "戻る",
     "PrimaryUser": "メイン",
+    "OnlineUserSourceIp": "接続元 IP",
+    "OnlineUserSourceIpHint": "このユーザーがセッションに参加したクライアントアドレスです。資産の IP ではありません",
     "RemoveShareUser": "ユーザーを削除",
     "ShareSessionUnavailable": "Lion セッションの準備ができていません",
     "ShareSearchFailed": "共有ユーザーの検索に失敗しました",

@@ -426,6 +426,8 @@
     "CopyLink": "링크 복사",
     "Back": "뒤로",
     "PrimaryUser": "주요 핵심",
+    "OnlineUserSourceIp": "출발지 IP",
+    "OnlineUserSourceIpHint": "이 사용자가 세션에 접속한 클라이언트 주소이며, 자산 IP가 아닙니다",
     "RemoveShareUser": "사용자 제거",
     "ShareSessionUnavailable": "Lion 세션이 준비되지 않았습니다",
     "ShareSearchFailed": "공유 사용자 검색 실패",
