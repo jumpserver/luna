@@ -1,8 +1,20 @@
+import type { OfflineMediaType } from "~/utils/offlineMedia";
 import { gunzipSync } from "fflate";
 import untar from "js-untar";
+import {
+  assignPartTotals,
+  basename,
+  classifyOfflineName,
+  isGzipBuffer,
+  isTarBuffer,
+  isTarPackageName,
+  resolvePlayableMedia,
+  stripOfflineExtension,
+  unwrapGzip
+} from "~/utils/offlineMedia";
 import { resolveReplayWallClock } from "~/utils/replayWallClock";
 
-export type VideoPlayerItemType = "mp4" | "cast" | "gua" | "part";
+export type VideoPlayerItemType = OfflineMediaType;
 
 export interface VideoPlayerMeta {
   id?: string;
@@ -54,56 +66,16 @@ interface UntarEntry {
   buffer: ArrayBuffer;
 }
 
-const REGEXP = /\.(json|replay|cast|part)(\.mp4|\.json|\.gz)?$/;
-
 function createId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function basename(fileName: string) {
-  const normalized = fileName.replace(/\\/g, "/");
-  return normalized.split("/").pop() || normalized;
-}
-
-function stripArchiveExtension(fileName: string) {
-  return basename(fileName)
-    .replace(/\.tar$/i, "")
-    .replace(/\.cast\.gz$/i, "")
-    .replace(/\.cast$/i, "")
-    .replace(/\.replay\.gz$/i, "")
-    .replace(/\.part\.gz$/i, "")
-    .replace(/\.mp4$/i, "");
-}
-
-function isGzipBuffer(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer);
-  return bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
-}
-
-function decodeCastBuffer(buffer: ArrayBuffer) {
-  try {
-    const bytes = new Uint8Array(buffer);
-    const output = isGzipBuffer(buffer) ? gunzipSync(bytes) : bytes;
-    return new TextDecoder("utf-8").decode(output);
-  } catch {
-    return null;
-  }
-}
-
-function isCastMediaEntry(fileName: string) {
-  const baseName = basename(fileName).toLowerCase();
-
-  if (baseName.includes(".part.")) return false;
-
-  return baseName.endsWith(".cast.gz") || baseName.endsWith(".cast");
+export function classifyVideoPlayerEntry(fileName: string): "metadata" | VideoPlayerItemType | null {
+  return classifyOfflineName(fileName).kind;
 }
 
 function isMetadataEntry(fileName: string) {
-  const match = basename(fileName).match(REGEXP);
-
-  if (!match) return false;
-
-  return match[0] === ".replay.json" || match[1] === "json";
+  return classifyOfflineName(fileName).kind === "metadata";
 }
 
 function metadataKey(fileName: string, meta: VideoPlayerMeta) {
@@ -164,7 +136,7 @@ function toMp4Url(buffer: ArrayBuffer) {
 }
 
 function toGzipUrl(buffer: ArrayBuffer) {
-  const blob = new Blob([buffer], { type: "application/gzip" });
+  const blob = new Blob([new Uint8Array(buffer)], { type: "application/gzip" });
   return URL.createObjectURL(blob);
 }
 
@@ -176,6 +148,23 @@ function withMeta(item: Omit<VideoPlayerItem, "id" | "meta">, meta: VideoPlayerM
   };
 }
 
+function decodeCastBuffer(buffer: ArrayBuffer) {
+  try {
+    const bytes = new Uint8Array(buffer);
+    const output = isGzipBuffer(buffer) ? gunzipSync(bytes) : bytes;
+    return new TextDecoder("utf-8").decode(output);
+  } catch {
+    return null;
+  }
+}
+
+function withPartIndex(item: VideoPlayerItem, partIndex?: number): VideoPlayerItem {
+  if (partIndex == null) return item;
+
+  item.partIndex = partIndex + 1;
+  return item;
+}
+
 export function useVideoPlayerParser() {
   const { getEntryUrl, importRecording, removeRecording } = useOfflineRecording();
 
@@ -184,104 +173,100 @@ export function useVideoPlayerParser() {
     buffer: ArrayBuffer,
     meta: VideoPlayerMeta | null,
     recordingId: string,
-    recordingLabel: string
+    recordingLabel: string,
+    partIndex?: number
   ): VideoPlayerItem | null {
     const castData = decodeCastBuffer(buffer);
 
     if (!castData) return null;
 
-    return withMeta(
-      {
-        name: basename(fileName),
-        source: "",
-        castData,
-        type: "cast",
-        recordingId,
-        recordingLabel
-      },
-      resolveItemMeta(meta, fileName)
+    return withPartIndex(
+      withMeta(
+        {
+          name: basename(fileName),
+          source: "",
+          castData,
+          type: "cast",
+          recordingId,
+          recordingLabel
+        },
+        resolveItemMeta(meta, fileName)
+      ),
+      partIndex
     );
   }
 
-  async function buildItemFromEntry(
-    entry: UntarEntry,
+  function buildItemFromResolved(
+    fileName: string,
+    buffer: ArrayBuffer,
     meta: VideoPlayerMeta | null,
     recordingId: string,
     recordingLabel: string
-  ): Promise<VideoPlayerItem | null> {
-    const entryName = basename(entry.name);
-    const match = entryName.match(REGEXP);
-    const kind = match?.[1];
-    const effectiveMeta = resolveItemMeta(meta, entry.name);
+  ): VideoPlayerItem | null {
+    const resolved = resolvePlayableMedia(fileName, buffer);
+    const effectiveMeta = resolveItemMeta(meta, fileName);
 
-    if (isCastMediaEntry(entry.name)) {
-      return buildCastItem(entry.name, entry.buffer, meta, recordingId, recordingLabel);
+    if (!resolved) return null;
+
+    if (resolved.type === "cast") {
+      return buildCastItem(fileName, resolved.buffer, meta, recordingId, recordingLabel, resolved.partIndex);
     }
 
-    switch (kind) {
-      case "replay": {
-        const isGua = entry.name.split(".")[2] === "gz";
-
-        if (isGua) {
-          return withMeta(
-            {
-              name: basename(entry.name),
-              source: toGzipUrl(entry.buffer),
-              type: "gua",
-              recordingId,
-              recordingLabel
-            },
-            effectiveMeta
-          );
-        }
-
-        return withMeta(
+    if (resolved.type === "mp4") {
+      return withPartIndex(
+        withMeta(
           {
-            name: basename(entry.name),
-            source: toMp4Url(entry.buffer),
+            name: basename(fileName),
+            source: toMp4Url(resolved.buffer),
             type: "mp4",
             recordingId,
             recordingLabel
           },
           effectiveMeta
-        );
-      }
-      case "part": {
-        return withMeta(
-          {
-            name: basename(entry.name),
-            source: toGzipUrl(entry.buffer),
-            type: "part",
-            recordingId,
-            recordingLabel
-          },
-          effectiveMeta
-        );
-      }
-      default:
-        return null;
+        ),
+        resolved.partIndex
+      );
     }
+
+    return withPartIndex(
+      withMeta(
+        {
+          name: basename(fileName),
+          source: toGzipUrl(resolved.buffer),
+          type: "gua",
+          recordingId,
+          recordingLabel
+        },
+        effectiveMeta
+      ),
+      resolved.partIndex
+    );
   }
 
-  async function parseTarFile(file: File): Promise<ParseResult> {
-    const recordingId = createId(file.name);
-    const recordingLabel = stripArchiveExtension(file.name);
-    const extractedFiles = await untar(await file.arrayBuffer()).progress(() => {});
+  async function parseTarBuffer(fileName: string, tarBuffer: ArrayBuffer): Promise<ParseResult> {
+    const recordingId = createId(fileName);
+    const recordingLabel = stripOfflineExtension(fileName);
+    let extractedFiles: UntarEntry[] = [];
+
+    try {
+      extractedFiles = (await untar(tarBuffer).progress(() => {})) as UntarEntry[];
+    } catch {
+      return { items: [] };
+    }
+
     let meta: VideoPlayerMeta | null = null;
     const items: VideoPlayerItem[] = [];
 
-    for (const entry of extractedFiles as UntarEntry[]) {
+    for (const entry of extractedFiles) {
       if (!isMetadataEntry(entry.name)) continue;
 
       meta = safeParseJson(entry.buffer) || meta;
     }
 
-    for (const entry of extractedFiles as UntarEntry[]) {
-      const match = basename(entry.name).match(REGEXP);
+    for (const entry of extractedFiles) {
+      if (isMetadataEntry(entry.name)) continue;
 
-      if (!match || isMetadataEntry(entry.name)) continue;
-
-      const item = await buildItemFromEntry(entry, meta, recordingId, recordingLabel);
+      const item = buildItemFromResolved(entry.name, entry.buffer, meta, recordingId, recordingLabel);
 
       if (item) {
         items.push({
@@ -292,110 +277,43 @@ export function useVideoPlayerParser() {
       }
     }
 
-    const partFileTotal = meta?.files?.filter((file) => file.name?.includes(".part.gz")).length || 0;
-    const hasExplicitParts = partFileTotal > 1;
-
-    if (hasExplicitParts) {
-      items.forEach((item) => {
-        if (item.type !== "part") return;
-
-        const partMatch = item.name.match(/\.(\d+)\.part\.gz$/i);
-        item.partIndex = partMatch ? Number(partMatch[1]) + 1 : undefined;
-        item.partTotal = partFileTotal;
-      });
-    }
-
+    assignPartTotals(items, meta?.files);
     return { items };
   }
 
-  async function parseSingleFile(file: File, meta: VideoPlayerMeta | null = null): Promise<ParseResult> {
-    const fileName = basename(file.name);
+  async function parseSingleBuffer(
+    fileName: string,
+    buffer: ArrayBuffer,
+    meta: VideoPlayerMeta | null = null
+  ): Promise<ParseResult> {
     const recordingId = createId(fileName);
-    const recordingLabel = stripArchiveExtension(fileName);
-    const effectiveMeta = resolveItemMeta(meta, fileName);
-    const items: VideoPlayerItem[] = [];
+    const recordingLabel = stripOfflineExtension(fileName);
+    const item = buildItemFromResolved(fileName, buffer, meta, recordingId, recordingLabel);
 
-    if (fileName.endsWith(".mp4")) {
-      items.push(
-        withMeta(
-          {
-            name: fileName,
-            source: toMp4Url(await file.arrayBuffer()),
-            type: "mp4",
-            recordingId,
-            recordingLabel
-          },
-          effectiveMeta
-        )
-      );
-      return { items };
-    }
-
-    if (isCastMediaEntry(fileName)) {
-      const castItem = buildCastItem(fileName, await file.arrayBuffer(), meta, recordingId, recordingLabel);
-
-      if (castItem) {
-        items.push({
-          ...castItem,
-          recordingId,
-          recordingLabel
-        });
-      }
-
-      return { items };
-    }
-
-    if (fileName.endsWith(".replay.gz")) {
-      items.push(
-        withMeta(
-          {
-            name: fileName,
-            source: URL.createObjectURL(file),
-            type: "gua",
-            recordingId,
-            recordingLabel
-          },
-          effectiveMeta
-        )
-      );
-      return { items };
-    }
-
-    if (fileName.endsWith(".part.gz")) {
-      items.push(
-        withMeta(
-          {
-            name: fileName,
-            source: URL.createObjectURL(file),
-            type: "part",
-            recordingId,
-            recordingLabel
-          },
-          effectiveMeta
-        )
-      );
-      return { items };
-    }
-
-    return { items };
+    return { items: item ? [item] : [] };
   }
 
   async function parseFiles(files: File[]) {
     const items: VideoPlayerItem[] = [];
     const metaByKey = new Map<string, VideoPlayerMeta>();
-    const tarFiles: File[] = [];
-    const mediaFiles: File[] = [];
+    const archives: Array<{ fileName: string; tarBuffer: ArrayBuffer }> = [];
+    const mediaFiles: Array<{ fileName: string; buffer: ArrayBuffer }> = [];
 
     for (const file of files) {
       const fileName = basename(file.name);
+      const buffer = await file.arrayBuffer();
+      const unwrapped = unwrapGzip(buffer);
+      let tarBuffer: ArrayBuffer | null = null;
+      if (isTarBuffer(unwrapped)) tarBuffer = unwrapped;
+      else if (isTarBuffer(buffer)) tarBuffer = buffer;
 
-      if (fileName.includes(".tar")) {
-        tarFiles.push(file);
+      if (tarBuffer || isTarPackageName(fileName)) {
+        archives.push({ fileName, tarBuffer: tarBuffer || unwrapped });
         continue;
       }
 
       if (isMetadataEntry(fileName)) {
-        const parsedMeta = safeParseJson(await file.arrayBuffer());
+        const parsedMeta = safeParseJson(buffer);
 
         if (parsedMeta) {
           metaByKey.set(metadataKey(fileName, parsedMeta), parsedMeta);
@@ -404,19 +322,21 @@ export function useVideoPlayerParser() {
         continue;
       }
 
-      mediaFiles.push(file);
+      mediaFiles.push({ fileName, buffer });
     }
 
-    for (const file of tarFiles) {
-      items.push(...(await parseTarFile(file)).items);
+    for (const archive of archives) {
+      items.push(...(await parseTarBuffer(archive.fileName, archive.tarBuffer)).items);
     }
 
+    const looseItems: VideoPlayerItem[] = [];
     for (const file of mediaFiles) {
-      const fileName = basename(file.name);
-      const meta = metaByKey.get(stripArchiveExtension(fileName)) || null;
-      items.push(...(await parseSingleFile(file, meta)).items);
+      const meta = metaByKey.get(stripOfflineExtension(file.fileName)) || null;
+      looseItems.push(...(await parseSingleBuffer(file.fileName, file.buffer, meta)).items);
     }
 
+    assignPartTotals(looseItems);
+    items.push(...looseItems);
     return items;
   }
 
@@ -448,12 +368,16 @@ export function useVideoPlayerParser() {
               date_end: wall.date_end || manifest.metadata.date_end,
               duration: formatMillisDuration(entry.duration_ms) || manifest.metadata.duration
             };
+            const mediaType: VideoPlayerItemType =
+              entry.media_type === "mp4" || entry.media_type === "cast" || entry.media_type === "gua"
+                ? entry.media_type
+                : "gua";
 
             return {
               id: `${manifest.recording_id}:${entry.entry_id}`,
               name: entry.source_name,
               source,
-              type: entry.media_type,
+              type: mediaType,
               meta: entryMeta,
               recordingId: manifest.recording_id,
               recordingLabel: manifest.label,

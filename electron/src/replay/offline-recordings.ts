@@ -1,10 +1,17 @@
 import { createReadStream, createWriteStream } from "node:fs";
-import { lstat, mkdir, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createGunzip } from "node:zlib";
 import { extract as createTarExtractor } from "tar-stream";
+import {
+  classifyOfflineName,
+  isTarPackageName,
+  resolvePlayableMedia,
+  stripOfflineExtension,
+  unwrapGzip
+} from "../../../ui/utils/offlineMedia.ts";
 
 const MAX_EXTRACTED_ENTRY_BYTES = 4 * 1024 * 1024 * 1024;
 const MAX_METADATA_BYTES = 1024 * 1024;
@@ -16,26 +23,34 @@ function basename(value) {
   return String(value).replaceAll("\\", "/").split("/").pop() || "";
 }
 
+function bufferToArrayBuffer(buf) {
+  const copy = new Uint8Array(buf.byteLength);
+  copy.set(buf);
+  return copy.buffer;
+}
+
 function classify(sourceName) {
-  const lower = sourceName.toLowerCase();
-  if (lower.endsWith(".replay.json")) return { kind: "metadata" };
-  if (lower.endsWith(".part.gz")) {
-    const match = lower.match(/^.+\.(\d+)\.part\.gz$/);
-    return match ? { kind: "media", mediaType: "part", partIndex: Number(match[1]) } : null;
-  }
-  if (lower.endsWith(".replay.gz")) return { kind: "media", mediaType: "gua" };
-  if (lower.endsWith(".cast.gz") || lower.endsWith(".cast")) return { kind: "media", mediaType: "cast" };
-  if (lower.endsWith(".mp4")) return { kind: "media", mediaType: "mp4" };
+  const named = classifyOfflineName(sourceName);
+  if (named.kind === "metadata") return { kind: "metadata" };
+  if (named.kind) return { kind: "media", mediaType: named.kind, partIndex: named.partIndex };
   return null;
 }
 
 function recordingLabel(sourcePath) {
-  const fileName = path.basename(sourcePath);
-  const lower = fileName.toLowerCase();
-  for (const suffix of [".replay.tar", ".tar", ".cast.gz", ".cast", ".replay.gz", ".part.gz", ".mp4"]) {
-    if (lower.endsWith(suffix)) return fileName.slice(0, -suffix.length);
+  return stripOfflineExtension(sourcePath);
+}
+
+async function readStreamBuffer(stream, maximumBytes, sourceName) {
+  const chunks = [];
+  let byteLength = 0;
+  for await (const chunk of stream) {
+    byteLength += chunk.length;
+    if (byteLength > maximumBytes) {
+      throw new Error(`package entry exceeds ${maximumBytes} bytes: ${sourceName}`);
+    }
+    chunks.push(chunk);
   }
-  return fileName;
+  return Buffer.concat(chunks);
 }
 
 function nextRecordingId() {
@@ -105,18 +120,18 @@ function recordingMetadata(raw) {
 function buildManifest(recordingId, label, extracted) {
   if (!extracted.media.length) throw new Error("no supported media entries found in recording package");
   extracted.media.sort(
-    (left, right) =>
-      Number(left.media_type !== "part") - Number(right.media_type !== "part") ||
-      (left.part_index ?? Number.MAX_SAFE_INTEGER) - (right.part_index ?? Number.MAX_SAFE_INTEGER)
+    (left, right) => (left.part_index ?? Number.MAX_SAFE_INTEGER) - (right.part_index ?? Number.MAX_SAFE_INTEGER)
   );
-  const partTotal = extracted.media.filter((entry) => entry.media_type === "part").length;
   const replayFiles = Array.isArray(extracted.metadata?.files) ? extracted.metadata.files : [];
   const entries = extracted.media.map((entry) => {
     const fileMetadata = replayFiles.find((file) => basename(file?.name) === entry.source_name);
+    const partCount = extracted.media.filter(
+      (candidate) => candidate.media_type === entry.media_type && candidate.part_index != null
+    ).length;
     return Object.fromEntries(
       Object.entries({
         ...entry,
-        part_total: entry.media_type === "part" && partTotal > 1 ? partTotal : undefined,
+        part_total: entry.part_index != null && partCount > 1 ? partCount : undefined,
         start_ms: fileMetadata?.start,
         end_ms: fileMetadata?.end,
         duration_ms: fileMetadata?.duration
@@ -144,12 +159,7 @@ async function extractTar(sourcePath, entriesDirectory) {
       }
       const sourceName = basename(header.name);
       const classified = classify(sourceName);
-      if (!classified) {
-        stream.resume();
-        await new Promise((resolve) => stream.once("end", resolve));
-        return;
-      }
-      if (classified.kind === "metadata") {
+      if (classified?.kind === "metadata") {
         if (extracted.metadata) throw new Error(`package contains more than one replay metadata entry: ${sourceName}`);
         extracted.metadata = await readMetadata(stream, sourceName);
         return;
@@ -158,38 +168,82 @@ async function extractTar(sourcePath, entriesDirectory) {
         throw new Error(`package contains more than ${MAX_MEDIA_ENTRIES} media entries`);
       }
       const entryId = `entry-${String(extracted.media.length).padStart(8, "0")}`;
-      const byteLength = await writeMedia(stream, sourceName, path.join(entriesDirectory, entryId));
+      const destination = path.join(entriesDirectory, entryId);
+      if (classified?.kind === "media") {
+        const byteLength = await writeMedia(stream, sourceName, destination);
+        extracted.media.push({
+          entry_id: entryId,
+          source_name: sourceName,
+          media_type: classified.mediaType,
+          byte_length: byteLength,
+          ...(classified.partIndex === undefined ? {} : { part_index: classified.partIndex })
+        });
+        return;
+      }
+      const raw = await readStreamBuffer(stream, MAX_EXTRACTED_ENTRY_BYTES, sourceName);
+      const resolved = resolvePlayableMedia(sourceName, bufferToArrayBuffer(raw));
+      if (!resolved) return;
+      const payload = Buffer.from(new Uint8Array(unwrapGzip(bufferToArrayBuffer(raw))));
+      await writeFile(destination, payload, { flag: "wx" });
       extracted.media.push({
         entry_id: entryId,
         source_name: sourceName,
-        media_type: classified.mediaType,
-        byte_length: byteLength,
-        ...(classified.partIndex === undefined ? {} : { part_index: classified.partIndex })
+        media_type: resolved.type,
+        byte_length: payload.length,
+        ...(resolved.partIndex === undefined ? {} : { part_index: resolved.partIndex })
       });
     };
     void processEntry()
       .then(next)
       .catch((error) => extractor.destroy(error));
   });
-  await pipeline(createReadStream(sourcePath), extractor);
+  const handle = await open(sourcePath, "r");
+  const header = Buffer.alloc(2);
+  await handle.read(header, 0, 2, 0);
+  await handle.close();
+  const source = createReadStream(sourcePath);
+  if (header[0] === 0x1f && header[1] === 0x8b) {
+    await pipeline(source, createGunzip(), extractor);
+  } else {
+    await pipeline(source, extractor);
+  }
   return extracted;
 }
 
 async function extractSingleFile(sourcePath, entriesDirectory) {
   const sourceName = path.basename(sourcePath);
   const classified = classify(sourceName);
-  if (!classified || classified.kind !== "media") throw new Error(`unsupported offline recording file: ${sourcePath}`);
   const entryId = "entry-00000000";
-  const byteLength = await writeMedia(createReadStream(sourcePath), sourceName, path.join(entriesDirectory, entryId));
+  const destination = path.join(entriesDirectory, entryId);
+  if (classified?.kind === "media") {
+    const byteLength = await writeMedia(createReadStream(sourcePath), sourceName, destination);
+    return {
+      metadata: null,
+      media: [
+        {
+          entry_id: entryId,
+          source_name: sourceName,
+          media_type: classified.mediaType,
+          byte_length: byteLength,
+          ...(classified.partIndex === undefined ? {} : { part_index: classified.partIndex })
+        }
+      ]
+    };
+  }
+  const raw = await readFile(sourcePath);
+  const resolved = resolvePlayableMedia(sourceName, bufferToArrayBuffer(raw));
+  if (!resolved) throw new Error(`unsupported offline recording file: ${sourcePath}`);
+  const payload = Buffer.from(new Uint8Array(unwrapGzip(bufferToArrayBuffer(raw))));
+  await writeFile(destination, payload, { flag: "wx" });
   return {
     metadata: null,
     media: [
       {
         entry_id: entryId,
         source_name: sourceName,
-        media_type: classified.mediaType,
-        byte_length: byteLength,
-        ...(classified.partIndex === undefined ? {} : { part_index: classified.partIndex })
+        media_type: resolved.type,
+        byte_length: payload.length,
+        ...(resolved.partIndex === undefined ? {} : { part_index: resolved.partIndex })
       }
     ]
   };
@@ -219,7 +273,7 @@ export class OfflineRecordingStore {
     await mkdir(pendingDirectory, { recursive: false });
     await mkdir(entriesDirectory, { recursive: false });
     try {
-      const extracted = sourcePath.toLowerCase().endsWith(".tar")
+      const extracted = isTarPackageName(sourcePath)
         ? await extractTar(sourcePath, entriesDirectory)
         : await extractSingleFile(sourcePath, entriesDirectory);
       const manifest = buildManifest(recordingId, recordingLabel(sourcePath), extracted);
@@ -264,10 +318,11 @@ export class OfflineRecordingStore {
     const entry = Array.isArray(manifest.entries)
       ? manifest.entries.find((candidate) => candidate?.entry_id === entryId)
       : null;
-    if (!entry || !["mp4", "cast", "gua", "part"].includes(entry.media_type)) {
+    const mediaType = entry?.media_type === "part" ? "gua" : entry?.media_type;
+    if (!entry || !["mp4", "cast", "gua"].includes(mediaType)) {
       throw new Error("offline recording entry is missing from manifest");
     }
-    return { path: entryPath, mediaType: entry.media_type };
+    return { path: entryPath, mediaType };
   }
 
   async removeRecording(recordingId) {

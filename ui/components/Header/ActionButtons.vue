@@ -4,10 +4,20 @@ import Profile from "~/components/SideBar/profile.vue";
 const props = withDefaults(defineProps<{ showProfile?: boolean }>(), { showProfile: true });
 
 const { t } = useI18n();
-const { activeWorkspaceMode } = useWorkspaceMode();
+const { activeWorkspaceMode, isUtilityRoute } = useWorkspaceMode();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
-const { open: aiPanelOpen, toggleAi } = useAiPanel();
-const showRightPanelButton = computed(() => activeWorkspaceMode.value !== "files");
+const { open: aiPanelOpen, toggleAi, setOpen: setAiPanelOpen } = useAiPanel();
+const showAiButton = computed(() => !isUtilityRoute.value);
+const showRightPanelButton = computed(() => !isUtilityRoute.value && activeWorkspaceMode.value !== "files");
+
+watch(
+  isUtilityRoute,
+  (hide) => {
+    if (!hide) return;
+    setAiPanelOpen(false);
+  },
+  { immediate: true }
+);
 const aiButtonLabel = computed(() => t(aiPanelOpen.value ? "RightPanel.AIClose" : "RightPanel.AIOpen"));
 const headerIconButtonClass =
   "grid size-6 shrink-0 place-items-center rounded-lg p-0 text-[var(--app-text-secondary)] transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]";
@@ -21,7 +31,7 @@ const handleToggleAi = () => {
 <template>
   <section class="flex items-center h-full">
     <div class="flex items-center gap-1.5 px-2">
-      <UTooltip arrow :text="aiButtonLabel">
+      <UTooltip v-if="showAiButton" arrow :text="aiButtonLabel">
         <UButton
           data-ai-context="preserve"
           icon="i-lucide-sparkles"

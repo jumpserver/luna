@@ -1,28 +1,32 @@
 <script setup lang="ts">
 import type { CharsetType, ResolutionType } from "~/types/index";
+import { resolveAdvancedOptionFlags } from "./advancedOptionFlags";
 
-const props = defineProps<{
-  protocol: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    protocol: string;
+    component?: string;
+    hasXPack?: boolean;
+    appletClientEnabled?: boolean;
+  }>(),
+  {
+    component: "",
+    hasXPack: false,
+    appletClientEnabled: false
+  }
+);
 
 const connectOptions = defineModel<Record<string, any>>("connectOptions", { default: () => ({}) });
 
 const { t } = useI18n();
 const { modernIsland, formFieldUi, controlBaseUi, overlayMenuUi } = useConnectFormAppearance();
 const advancedOptionOpen = ref(false);
-
-const showCharsetOption = computed(() => ["ssh", "telnet"].includes((props.protocol || "").toLowerCase()));
-const showBackspaceOption = computed(() => showCharsetOption.value);
-const showDisableAutoHashOption = computed(() => ["mysql", "mariadb"].includes((props.protocol || "").toLowerCase()));
-const showResolutionOption = computed(() => (props.protocol || "").toLowerCase() === "rdp");
-const showUseSysDBAOption = computed(() => (props.protocol || "").toLowerCase() === "oracle");
-const showAdvancedOptions = computed(
-  () =>
-    showCharsetOption.value ||
-    showBackspaceOption.value ||
-    showDisableAutoHashOption.value ||
-    showResolutionOption.value ||
-    showUseSysDBAOption.value
+const flags = computed(() =>
+  resolveAdvancedOptionFlags({
+    protocol: props.protocol,
+    component: props.component,
+    hasXPack: props.hasXPack
+  })
 );
 
 const charsetItems = computed(() => [
@@ -38,6 +42,14 @@ const resolutionItems = computed(() => [
   { label: "1366x768", value: "1366x768" },
   { label: "1600x900", value: "1600x900" },
   { label: "1920x1080", value: "1920x1080" }
+]);
+const appletConnectMethodItems = computed(() => [
+  { label: t("Menu.Web"), value: "web" },
+  ...(props.appletClientEnabled ? [{ label: t("ConnectionSetup.Client"), value: "client" }] : [])
+]);
+const virtualappConnectMethodItems = computed(() => [
+  { label: t("Menu.Web"), value: "web" },
+  { label: t("ConnectionSetup.Client"), value: "client" }
 ]);
 
 const updateConnectOption = (field: string, value: unknown) => {
@@ -71,9 +83,17 @@ const selectedResolution = computed<ResolutionType>({
     updateConnectOption("rdp_resolution", resolved);
   }
 });
+const selectedAppletConnectMethod = computed<string>({
+  get: () => connectOptions.value.appletConnectMethod || "web",
+  set: (value) => updateConnectOption("appletConnectMethod", value || "web")
+});
+const selectedVirtualappConnectMethod = computed<string>({
+  get: () => connectOptions.value.virtualappConnectMethod || "web",
+  set: (value) => updateConnectOption("virtualappConnectMethod", value || "web")
+});
 
 watch(
-  () => [props.protocol, showAdvancedOptions.value] as const,
+  () => [props.protocol, props.component, flags.value.show] as const,
   () => {
     advancedOptionOpen.value = false;
   },
@@ -82,15 +102,14 @@ watch(
 </script>
 
 <template>
-  <div>
+  <div v-if="flags.show">
     <button
       type="button"
-      :disabled="!showAdvancedOptions"
-      class="flex w-full items-center justify-between border-b px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+      class="flex w-full items-center justify-between border-b py-2"
       :class="
         modernIsland
-          ? 'border-[color-mix(in_srgb,var(--theme-fg)_14%,transparent)] px-0 text-[var(--app-text-muted)]'
-          : 'border-gray-200 dark:border-white/10'
+          ? `${formFieldUi.label} border-[color-mix(in_srgb,var(--theme-fg)_14%,transparent)] px-0`
+          : 'border-gray-200 dark:border-white/10 px-3 text-sm'
       "
       @click="advancedOptionOpen = !advancedOptionOpen"
     >
@@ -103,16 +122,12 @@ watch(
     </button>
 
     <div
-      v-show="modernIsland || (showAdvancedOptions && advancedOptionOpen)"
-      :class="
-        modernIsland
-          ? ['advanced-fold', { 'is-open': showAdvancedOptions && advancedOptionOpen }]
-          : 'space-y-3 px-3 py-3'
-      "
+      v-show="modernIsland || advancedOptionOpen"
+      :class="modernIsland ? ['advanced-fold', { 'is-open': advancedOptionOpen }] : 'space-y-3 px-3 py-3'"
     >
       <div :class="modernIsland ? 'advanced-fold__inner' : ''">
         <div class="space-y-3" :class="modernIsland ? 'pt-3' : ''">
-          <UFormField v-if="showCharsetOption" :label="t('Setting.Charset')" :ui="formFieldUi" size="sm">
+          <UFormField v-if="flags.charset" :label="t('Setting.Charset')" :ui="formFieldUi" size="sm">
             <USelect
               v-model="selectedCharset"
               :items="charsetItems"
@@ -123,25 +138,52 @@ watch(
             />
           </UFormField>
 
-          <div v-if="showBackspaceOption" class="flex items-center justify-between">
+          <div v-if="flags.backspace" class="flex items-center justify-between">
             <span class="text-sm">{{ t("Setting.TerminalBackspace") }}</span>
             <USwitch v-model="selectedBackspaceAsCtrlH" />
           </div>
 
-          <div v-if="showDisableAutoHashOption" class="flex items-center justify-between">
+          <div v-if="flags.disableAutoHash" class="flex items-center justify-between">
             <span class="text-sm">Disable auto completion</span>
             <USwitch v-model="selectedDisableAutoHash" />
           </div>
 
-          <div v-if="showUseSysDBAOption" class="flex items-center justify-between">
+          <div v-if="flags.sysdba" class="flex items-center justify-between">
             <span class="text-sm">SYSDBA</span>
             <USwitch v-model="selectedUseSysDBA" />
           </div>
 
-          <UFormField v-if="showResolutionOption" :label="t('Setting.Resolution')" :ui="formFieldUi" size="sm">
+          <UFormField v-if="flags.resolution" :label="t('Setting.Resolution')" :ui="formFieldUi" size="sm">
             <USelect
               v-model="selectedResolution"
               :items="resolutionItems"
+              :ui="{ base: controlBaseUi, ...overlayMenuUi }"
+              trailing-icon="i-lucide-chevrons-up-down"
+              size="md"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField v-if="flags.applet" :label="t('EditModal.AppletConnectMethod')" :ui="formFieldUi" size="sm">
+            <USelect
+              v-model="selectedAppletConnectMethod"
+              :items="appletConnectMethodItems"
+              :ui="{ base: controlBaseUi, ...overlayMenuUi }"
+              trailing-icon="i-lucide-chevrons-up-down"
+              size="md"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            v-if="flags.virtualapp"
+            :label="t('ConnectMethodType.VirtualApplication')"
+            :ui="formFieldUi"
+            size="sm"
+          >
+            <USelect
+              v-model="selectedVirtualappConnectMethod"
+              :items="virtualappConnectMethodItems"
               :ui="{ base: controlBaseUi, ...overlayMenuUi }"
               trailing-icon="i-lucide-chevrons-up-down"
               size="md"

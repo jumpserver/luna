@@ -42,7 +42,6 @@ const draft = defineModel<ConnectionFormDraft>("draft", { required: true });
 
 const { t } = useI18n();
 const { modernIsland } = useSettingManager();
-const { formFieldUi, controlBaseUi, overlayMenuUi } = useConnectFormAppearance();
 const { getMethodsForProtocol } = useConnectMethods();
 const protocolMethods = shallowRef<ConnectMethod[]>([]);
 const viewAssetOnlineSessionInfo = ref(false);
@@ -92,16 +91,9 @@ const appletOptionsLoading = computed(
 const submitDisabled = computed(
   () => credentialsDisabled.value || !draft.value.connectMethod || methodDisabled.value || appletOptionsLoading.value
 );
-const appletConnectMethodItems = computed(() => [
-  { label: t("Menu.Web"), value: "web" },
-  ...(appletClientEnabled.value ? [{ label: t("ConnectionSetup.Client"), value: "client" }] : [])
-]);
-const appletConnectMethod = computed<string>({
-  get: () => draft.value.connectOptions.appletConnectMethod || "web",
-  set: (value) => {
-    draft.value = { ...draft.value, connectOptions: { ...draft.value.connectOptions, appletConnectMethod: value } };
-  }
-});
+const patchConnectOption = (field: string, value: string) => {
+  draft.value = { ...draft.value, connectOptions: { ...draft.value.connectOptions, [field]: value } };
+};
 const rdpDownloadMethod = computed(() => {
   if (!hasXPack.value) return;
   const current = selectedMethod.value;
@@ -111,22 +103,36 @@ const rdpDownloadMethod = computed(() => {
 
 let appletPreference: ReturnType<typeof getLunaPreferences> | undefined;
 watch(
-  () => [isAppletMethod.value, appletClientEnabled.value, draft.value.connectOptions.appletConnectMethod] as const,
-  async ([isApplet, clientEnabled, selected], _previous, onCleanup) => {
-    if (!isApplet || clientEnabled === undefined) return;
-    if (!clientEnabled) {
-      if (selected !== "web") appletConnectMethod.value = "web";
+  () =>
+    [
+      selectedMethod.value?.component,
+      appletClientEnabled.value,
+      draft.value.connectOptions.appletConnectMethod,
+      draft.value.connectOptions.virtualappConnectMethod
+    ] as const,
+  async ([component, clientEnabled, appletSelected, virtualSelected], _previous, onCleanup) => {
+    if (clientEnabled === undefined) return;
+    if (component === "tinker") {
+      if (!clientEnabled) {
+        if (appletSelected !== "web") patchConnectOption("appletConnectMethod", "web");
+        return;
+      }
+      if (appletSelected === "web" || appletSelected === "client") return;
+    } else if (component === "panda") {
+      if (virtualSelected === "web" || virtualSelected === "client") return;
+    } else {
       return;
     }
-    if (selected === "web" || selected === "client") return;
     let cancelled = false;
     onCleanup(() => {
       cancelled = true;
     });
     appletPreference ??= getLunaPreferences().catch(() => ({}));
     const preferences = await appletPreference;
-    if (!cancelled)
-      appletConnectMethod.value = preferences.graphics?.applet_connection_method === "client" ? "client" : "web";
+    if (cancelled) return;
+    const fallback = preferences.graphics?.applet_connection_method === "client" ? "client" : "web";
+    if (component === "tinker") patchConnectOption("appletConnectMethod", fallback);
+    else patchConnectOption("virtualappConnectMethod", fallback);
   },
   { immediate: true }
 );
@@ -232,25 +238,9 @@ watchDebounced(
       :accounts="props.asset.permedAccounts || []"
       :protocols="props.asset.permedProtocols || []"
       :asset-type="props.assetType"
+      :has-x-pack="hasXPack"
+      :applet-client-enabled="appletClientEnabled === true"
     />
-    <UFormField
-      v-if="isAppletMethod"
-      :label="t('EditModal.AppletConnectMethod')"
-      :ui="formFieldUi"
-      size="sm"
-      class="mt-4"
-    >
-      <USelect
-        v-model="appletConnectMethod"
-        :items="appletConnectMethodItems"
-        :disabled="props.disabled || props.submitting || appletOptionsLoading"
-        :loading="appletOptionsLoading"
-        :ui="{ base: controlBaseUi, ...overlayMenuUi }"
-        trailing-icon="i-lucide-chevrons-up-down"
-        class="w-full"
-        size="md"
-      />
-    </UFormField>
     <div class="mt-4">
       <UCheckbox
         v-model="draft.rememberSelection"
