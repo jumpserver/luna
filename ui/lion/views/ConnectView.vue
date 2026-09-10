@@ -37,6 +37,7 @@ const {
   guaDisplay,
   connectToGuacamole,
   connectStatus,
+  connectionError,
   connectStatusLabel,
   onlineUsersMap,
   disconnectGuaclient,
@@ -383,7 +384,7 @@ const handleDownloadFile = async (file: { name: string; streamName?: GuacamoleFi
 const fitPercentage = computed(() => Math.floor(scale.value * 100));
 
 watch(connectStatus, (status) => {
-  if (status === 5 && !disposed) emit("disconnected", t("GuacamoleErrDisconnected"));
+  if (status === 5 && !disposed) emit("disconnected", connectionError.value || t("GuacamoleErrDisconnected"));
 });
 
 watch(

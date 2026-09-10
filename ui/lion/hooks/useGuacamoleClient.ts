@@ -4,11 +4,10 @@ import type { LionOnlineUser } from "@/lion/workspaces/useLionWorkspaceSessionRe
 import { useDebounceFn } from "@vueuse/core";
 
 import * as Guacamole from "guacamole-common-js-jumpserver/dist/guacamole-common";
-import { computed, nextTick, ref, toValue } from "vue";
+import { computed, nextTick, ref, shallowRef, toValue } from "vue";
 import { LUNA_MESSAGE_TYPE } from "@/lion/types/postmessage.type";
 import { withLionUrl } from "@/lion/utils/base";
 import { readClipboardText, writeClipboardBlob, writeClipboardText } from "@/lion/utils/clipboard";
-import { LanguageCode } from "@/lion/utils/config";
 
 import { lunaCommunicator } from "@/lion/utils/lunaBus";
 import { ConvertGuacamoleError as convertGuacamoleError, ErrorStatusCodes } from "@/lion/utils/status";
@@ -181,6 +180,7 @@ export function useGuacamoleClient(
   // internal state machine (e.g. "Disconnected" == 5) while the UI renders a
   // localized label via connectStatusLabel.
   const connectStatus = ref(1);
+  const connectionError = shallowRef("");
   const CONNECT_STATUS_KEYS: Record<number, string> = {
     0: "LionIdle",
     1: "LionConnecting",
@@ -274,6 +274,7 @@ export function useGuacamoleClient(
     supportFs: boolean = false
   ) {
     disconnectGuaclient();
+    connectionError.value = "";
     const generation = connectGeneration;
     loading.value = true;
     currentWidth.value = width || window.innerWidth;
@@ -765,28 +766,13 @@ export function useGuacamoleClient(
     console.error("Guacamole client error:", status);
     loading.value = false;
     const code = status.code;
-    let msg = status.message || t("UnknownError");
-    const currentLang = LanguageCode;
-    msg = ErrorStatusCodes[code]
-      ? t(ErrorStatusCodes[code], { PLACEHOLDER: status.message })
-      : t(convertGuacamoleError(status.message), { PLACEHOLDER: status.message });
-    switch (code) {
-      case 1005:
-        // 管理员终断会话，特殊处理
-        if (currentLang === "cn") {
-          msg = `${status.message} ${msg}`;
-        } else {
-          msg = `${msg} ${status.message}`;
-        }
-        break;
-      case 1003:
-      case 1010:
-        msg = msg.replace("{PLACEHOLDER}", status.message);
-        break;
-      case 1006:
-        msg = `${msg}: ${status.message}`;
-        break;
+    let msg = t(ErrorStatusCodes[code] || convertGuacamoleError(status.message) || "UnknownError", {
+      PLACEHOLDER: status.message
+    });
+    if (code === 1006) {
+      msg = `${msg}: ${status.message}`;
     }
+    connectionError.value = msg;
     message.error(msg, { duration: 10000 });
   }
 
@@ -1202,6 +1188,7 @@ export function useGuacamoleClient(
     guaDisplay,
     connectToGuacamole,
     connectStatus,
+    connectionError,
     connectStatusLabel,
     sessionObject,
     action_permission,
