@@ -52,6 +52,7 @@ import { useKokoTerminalSettingsStore } from "#koko/stores/terminalSettings";
 import { getDefaultTerminalConfig } from "#koko/utils/guard";
 import { applyXtermTheme, appTerminalTheme, syncXtermBackground, terminalTheme } from "#koko/utils/terminalTheme";
 import { formatMessage, preprocessInput } from "#koko/utils/terminalUtils";
+import { describeTerminalClose } from "./protocol";
 
 const isSocketOpen = (socket: WebSocket) => socket.readyState === WebSocket.OPEN;
 
@@ -129,6 +130,8 @@ export const useKokoTerminalSocket = () => {
   let themeObserver: MutationObserver | null = null;
   let fitAddon: FitAddon | null = null;
   let socketOpened = false;
+  let serverCloseReason: string | undefined;
+  let disposeSocketEvents: (() => void) | undefined;
   let hasPendingContainerFit = false;
 
   const reportInitialConnectionFailure = () => {
@@ -283,6 +286,9 @@ export const useKokoTerminalSocket = () => {
     emitTerminalSession,
     setClipboardAccess,
     showInfoOnce,
+    onServerClose: (reason) => {
+      serverCloseReason = reason;
+    },
     onZmodemEnd: zmodem.finishDraining,
     onZmodemAbort: () => {
       zmodem.abortActiveSession();
@@ -348,22 +354,41 @@ export const useKokoTerminalSocket = () => {
     const markSocketOpen = () => {
       socketOpened = true;
       connectionError.value = "";
+      lastSendTime.value = new Date();
+      lastReceiveTime.value = new Date();
       if (paneId) connectKokoTerminalAiSession(paneId, socket);
       heartbeat.start();
     };
 
-    const handleSocketClose = () => {
+    const handleSocketClose = (event: CloseEvent) => {
       heartbeat.stop();
       zmodem.abortActiveSession();
       if (paneId) disconnectKokoTerminalAiSession(paneId, socket);
+      const detail = describeTerminalClose(event, serverCloseReason, navigator.onLine);
+      console.warn("Koko WebSocket closed", {
+        source: detail.source,
+        code: event.code,
+        reason: event.reason,
+        wasClean: event.wasClean,
+        serverReason: serverCloseReason,
+        sessionId: sessionId.value,
+        terminalId: terminalId.value,
+        online: navigator.onLine,
+        lastSendTime: lastSendTime.value.toISOString(),
+        lastReceiveTime: lastReceiveTime.value.toISOString()
+      });
       if (!socketOpened) {
         reportInitialConnectionFailure();
         return;
       }
       if (paneId) hostAdapter.markSessionDisconnected(paneId);
       if (!terminalRef.value) return;
+      const message = t(detail.messageKey, {
+        code: event.code,
+        reason: detail.reasonKey ? t(detail.reasonKey) : ""
+      });
       terminalRef.value.write("\r\n");
-      terminalRef.value.write(`\x1B[31m${t("koko.terminal.websocketClosed")}\x1B[0m`);
+      terminalRef.value.write(`\x1B[31m${message}\x1B[0m`);
     };
 
     const handleSocketMessage = async (message: MessageEvent) => {
@@ -380,12 +405,16 @@ export const useKokoTerminalSocket = () => {
       }
     };
 
-    // VueUse useWebSocket owns socket.on* handlers. Use addEventListener so
-    // capability/chat frames are not dropped when those handlers are replaced.
     socket.addEventListener("open", markSocketOpen);
     socket.addEventListener("error", reportInitialConnectionFailure);
     socket.addEventListener("close", handleSocketClose);
     socket.addEventListener("message", handleSocketMessage);
+    disposeSocketEvents = () => {
+      socket.removeEventListener("open", markSocketOpen);
+      socket.removeEventListener("error", reportInitialConnectionFailure);
+      socket.removeEventListener("close", handleSocketClose);
+      socket.removeEventListener("message", handleSocketMessage);
+    };
 
     if (socket.readyState === WebSocket.OPEN) markSocketOpen();
   };
@@ -489,6 +518,7 @@ export const useKokoTerminalSocket = () => {
       // Only this pane's runtime is dropped; other terminals stay connected.
       connectionStore.resetPane(tabId);
     }
+    disposeSocketEvents?.();
     transport.close();
     sentryRef.value = null;
     try {

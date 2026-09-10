@@ -11,7 +11,7 @@ import type { TerminalIncomingMessage } from "./protocol";
 import { markKokoTerminalAiSessionInfoReady } from "./useTerminalAiSessions";
 import { HOST_MESSAGE_TYPE, MESSAGE_TYPE, ZMODEM_ACTION_TYPE } from "@jumpserver/connectors-core";
 import { applyXtermTheme, terminalTheme } from "../../utils/terminalTheme";
-import { updateIcon } from "../../utils/terminalUtils";
+import { formatMessage, updateIcon } from "../../utils/terminalUtils";
 import {
   buildJSONEnvelope,
   createRequestId,
@@ -134,6 +134,7 @@ export function createKokoTerminalMessageHandlers(options: {
   onConnected: (terminalId: string, socket: WebSocket, terminal: Terminal) => void;
   onZmodemEnd: () => void;
   onZmodemAbort: () => void;
+  onServerClose?: (reason: string) => void;
 }) {
   // Every write below is scoped to the pane that owns this socket. Without the
   // pane key a second connection would overwrite the first one's session id,
@@ -180,16 +181,24 @@ export function createKokoTerminalMessageHandlers(options: {
   };
 
   return {
-    [MESSAGE_TYPE.CLOSE]: () => {
+    [MESSAGE_TYPE.CLOSE]: (message) => {
+      if (message.terminalId && options.terminalId.value && message.terminalId !== Number(options.terminalId.value))
+        return;
       updatePane({ enableShare: false, onlineUsers: [] });
-      options.socketRef.value?.close();
+      options.onServerClose?.(message.data || "session_closed");
+      options.socketRef.value?.close(1000, "luna:koko_close");
       options.sendHostEvent(HOST_MESSAGE_TYPE.CLOSE, "");
     },
     [MESSAGE_TYPE.ERROR]: (message) => {
       options.terminalRef.value?.write(message.err || "");
       options.sendHostEvent(HOST_MESSAGE_TYPE.TERMINAL_ERROR, "");
     },
-    [MESSAGE_TYPE.PING]: () => {},
+    [MESSAGE_TYPE.PING]: () => {
+      const socket = options.socketRef.value;
+      if (socket?.readyState === WebSocket.OPEN) {
+        socket.send(formatMessage("", "PONG", ""));
+      }
+    },
     [MESSAGE_TYPE.CONNECT]: (message) => {
       const socket = options.socketRef.value;
       const terminal = options.terminalRef.value;
@@ -366,7 +375,8 @@ export function createKokoTerminalMessageHandlers(options: {
     },
     [MESSAGE_TYPE.TERMINAL_SHARE_USER_REMOVE]: () => {
       options.toast.add({ title: options.t("koko.terminal.removedFromShare"), color: "info" });
-      options.socketRef.value?.close();
+      options.onServerClose?.("share_removed");
+      options.socketRef.value?.close(1000, "luna:koko_close");
     }
   } satisfies TerminalMessageHandlers;
 }
