@@ -1,13 +1,30 @@
 import type { Extension } from "@codemirror/state";
+import type { CodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
 
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
-import { tokyoNightStyle } from "@uiw/codemirror-theme-tokyo-night";
+import { dracula } from "@uiw/codemirror-theme-dracula";
+import { githubDark, githubLight } from "@uiw/codemirror-theme-github";
+import { tokyoNight, tokyoNightStyle } from "@uiw/codemirror-theme-tokyo-night";
+import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
 import { getCodeMirrorThemePreset } from "~/shared/theme/presets/codemirror";
 
+const PRESET_EXTENSIONS: Partial<Record<CodeMirrorThemePresetId, Extension>> = {
+  "github-light": githubLight,
+  "github-dark": githubDark,
+  "vscode-light": vscodeLight,
+  "vscode-dark": vscodeDark,
+  dracula,
+  "tokyo-night": tokyoNight
+};
+
+function presetExtension() {
+  return PRESET_EXTENSIONS[getCodeMirrorThemePreset(useSettingManager().codeMirrorThemePreset.value).id];
+}
+
 export function createCodeMirrorTheme(): Extension {
-  const preset = getCodeMirrorThemePreset(useSettingManager().codeMirrorThemePreset.value);
+  const extension = presetExtension();
   const typography = EditorView.theme({
     "&": { height: "100%" },
     ".cm-scroller": {
@@ -17,8 +34,8 @@ export function createCodeMirrorTheme(): Extension {
     }
   });
 
-  if (preset.extension) {
-    return [preset.extension, typography];
+  if (extension) {
+    return [extension, typography];
   }
 
   const editor = {
@@ -88,7 +105,7 @@ export function createCodeMirrorTheme(): Extension {
 }
 
 export function createCodeMirrorSyntaxTheme(): Extension {
-  if (getCodeMirrorThemePreset(useSettingManager().codeMirrorThemePreset.value).extension) return [];
+  if (presetExtension()) return [];
 
   if (import.meta.client && document.documentElement.classList.contains("dark")) {
     return syntaxHighlighting(HighlightStyle.define(tokyoNightStyle));

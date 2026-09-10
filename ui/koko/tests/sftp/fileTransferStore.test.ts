@@ -1,5 +1,5 @@
 import type { FileTransferEndpoint, FileTransferTask } from "@jumpserver/connectors-core";
-import { registerFileTransferEndpoint } from "@jumpserver/connectors-core";
+import { FileTransferUnavailableError, registerFileTransferEndpoint } from "@jumpserver/connectors-core";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useFileTransferStore } from "#koko/stores/fileTransfer";
@@ -286,5 +286,52 @@ describe("file transfer store recovery actions", () => {
 
     expect(store.tasks[0]).toMatchObject({ status: "paused", confirmedBytes: 25 });
     expect(store.tasks[0]?.error).toBeUndefined();
+  });
+
+  it("does not complete a 0-byte download without reading the source", async () => {
+    const sourceRef = { id: "sftp:source", label: "Source" };
+    const destinationRef = { id: "web-download", label: "Download" };
+    const source = {
+      ref: sourceRef,
+      isAvailable: () => true,
+      readChunk: vi.fn(async () => {
+        throw new FileTransferUnavailableError();
+      })
+    } as unknown as FileTransferEndpoint;
+    const destination = {
+      ref: destinationRef,
+      isAvailable: () => true,
+      prepareTransfer: vi.fn(async () => ({
+        transferId: "generated-id",
+        committedBytes: 0,
+        totalBytes: 0,
+        state: "ready" as const
+      })),
+      commitTransfer: vi.fn(async () => undefined)
+    } as unknown as FileTransferEndpoint;
+    const unregisterSource = registerFileTransferEndpoint(source);
+    const unregisterDestination = registerFileTransferEndpoint(destination);
+
+    try {
+      const store = useFileTransferStore();
+      store.enqueueBatch([
+        {
+          batchId: "batch-empty",
+          sourceEndpoint: sourceRef,
+          destinationEndpoint: destinationRef,
+          source: { path: "/source/empty.txt", name: "empty.txt", size: 0 },
+          destinationPath: "empty.txt",
+          conflictPolicy: "ask"
+        }
+      ]);
+      await vi.waitFor(() => {
+        expect(store.tasks[0]).toMatchObject({ status: "failed", error: "endpoint_unavailable" });
+      });
+      expect(source.readChunk).toHaveBeenCalledOnce();
+      expect(destination.commitTransfer).not.toHaveBeenCalled();
+    } finally {
+      unregisterSource();
+      unregisterDestination();
+    }
   });
 });

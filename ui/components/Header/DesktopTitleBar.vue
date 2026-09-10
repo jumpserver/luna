@@ -27,7 +27,7 @@ const { batchPanelOpen, toggle: toggleBatchPanel } = useBatchCommandPanel();
 const { activeTabId, enterFocusMode, enterFullscreenMode, exitFocusMode, focusMode, workspaceFullscreen } =
   useWorkspaceTabs();
 
-const visible = computed(() => isDesktopRuntime() && !isLoading.value && !isMacOS.value);
+const visible = computed(() => isDesktopRuntime() && !isLoading.value && !isMacOS.value && !workspaceFullscreen.value);
 const maximized = ref(false);
 let unlistenResize: (() => void) | null = null;
 

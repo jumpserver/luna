@@ -2,8 +2,9 @@ import type { Terminal } from "@xterm/xterm";
 import { MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { computed, ref } from "vue";
+import { computed, ref, shallowRef } from "vue";
 import { createKokoTerminalMessageHandlers } from "#koko/composables/terminal/useTerminalMessageHandler";
+import { parseEnvelope, parseJSONPayload } from "#koko/composables/terminal/envelope";
 import { useKokoConnectionStore } from "#koko/stores/connection";
 import {
   clearWorkspaceSessionDetails,
@@ -19,11 +20,12 @@ const PANE_B = "pane-b";
 const { getSessionDetails } = useWorkspaceSessionDetails();
 
 function createPaneHandlers(paneId: string) {
+  const onServerClose = vi.fn();
   const socket = { send: vi.fn(), close: vi.fn(), readyState: WebSocket.OPEN } as unknown as WebSocket;
   const terminal = { cols: 80, rows: 24, write: vi.fn(), focus: vi.fn() } as unknown as Terminal;
   const handlers = createKokoTerminalMessageHandlers({
     socketRef: ref(socket),
-    terminalRef: ref(terminal),
+    terminalRef: shallowRef(terminal),
     featureSetting: ref({ SECURITY_SESSION_SHARE: true }),
     onlineUsers: ref([]),
     userOptions: ref([]),
@@ -51,10 +53,13 @@ function createPaneHandlers(paneId: string) {
     showInfoOnce: vi.fn(),
     onConnected: vi.fn(),
     onZmodemEnd: vi.fn(),
-    onZmodemAbort: vi.fn()
+    onZmodemAbort: vi.fn(),
+    onServerClose
   });
 
   return {
+    handlers,
+    onServerClose,
     socket,
     terminal,
     created: (terminalId: number) => {
@@ -82,6 +87,22 @@ describe("koko pane connection isolation", () => {
     setActivePinia(createPinia());
     clearWorkspaceSessionDetails(PANE_A);
     clearWorkspaceSessionDetails(PANE_B);
+  });
+
+  it("replies to Koko heartbeats and records its close reason before acknowledging close", () => {
+    const pane = createPaneHandlers(PANE_A);
+    pane.created(7);
+    pane.handlers[MESSAGE_TYPE.PING]();
+    const sent = vi.mocked(pane.socket.send).mock.calls.at(-1)![0] as ArrayBuffer;
+    expect(parseJSONPayload<{ command: string }>(parseEnvelope(sent).payload).command).toBe("PONG");
+    pane.handlers[MESSAGE_TYPE.CLOSE]({ id: "", type: MESSAGE_TYPE.CLOSE, terminalId: 8 });
+    expect(pane.socket.close).not.toHaveBeenCalled();
+    pane.handlers[MESSAGE_TYPE.CLOSE]({ id: "", type: MESSAGE_TYPE.CLOSE, terminalId: 7, data: "idle_disconnect" });
+    expect(pane.onServerClose).toHaveBeenCalledWith("idle_disconnect");
+    expect(pane.socket.close).toHaveBeenCalledWith(1000, "luna:koko_close");
+    expect(pane.onServerClose.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(pane.socket.close).mock.invocationCallOrder[0]!
+    );
   });
 
   it("keeps each terminal's session, asset and share state on its own pane", () => {

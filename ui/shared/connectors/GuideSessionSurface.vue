@@ -3,6 +3,8 @@ import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { TokenResponse } from "~/types";
 
 import { writeText } from "clipboard-polyfill";
+import { getUserProfile } from "~/composables/useApiRequest";
+import { getDirectSshCommand } from "./sshGuide";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 
@@ -25,11 +27,17 @@ const token = computed(() => (props.tab.payload?.token || props.tab.payload) as 
 const endpoint = ref<Record<string, any>>({});
 const loading = ref(true);
 const passwordVisible = ref(false);
+const loginUsername = ref("");
 
 const protocol = computed(() => (token.value?.protocol || props.tab.protocol || "").toLowerCase());
 const host = computed(() => String(endpoint.value.host || ""));
 const port = computed(() =>
-  String(endpoint.value[`${protocol.value}_port`] || endpoint.value.port || defaultPorts[protocol.value] || "")
+  String(
+    endpoint.value[databaseProtocols.has(protocol.value) ? "magnus_port" : `${protocol.value}_port`] ||
+      endpoint.value.port ||
+      defaultPorts[protocol.value] ||
+      ""
+  )
 );
 const asset = computed(() => token.value?.asset as any);
 const assetName = computed(() => {
@@ -67,7 +75,7 @@ const rows = computed(() => {
   return values.filter((item) => item.value !== undefined && item.value !== null);
 });
 
-const commands = computed(() => {
+const commandValues = computed(() => {
   const id = token.value.id;
   const secret = token.value.value;
   const target = host.value;
@@ -97,6 +105,32 @@ const commands = computed(() => {
   }
 });
 
+const commands = computed(() => {
+  const ssh = protocol.value === "ssh";
+  const items = commandValues.value.map((value) => ({
+    value,
+    title: t(ssh ? "ConnectionGuide.TokenCommand" : "ConnectionGuide.ConnectCommand"),
+    help: ssh ? t("ConnectionGuide.TokenPasswordHelp") : ""
+  }));
+  if (ssh) {
+    const value = getDirectSshCommand({
+      username: loginUsername.value,
+      account: token.value.account,
+      inputUsername: token.value.input_username,
+      accounts: props.tab.permedAccounts || [],
+      assetId: props.tab.assetId,
+      host: host.value,
+      port: port.value
+    });
+    items.push({
+      value,
+      title: t("ConnectionGuide.DirectCommand"),
+      help: t(value ? "ConnectionGuide.DirectPasswordHelp" : "ConnectionGuide.DirectUnavailable")
+    });
+  }
+  return items;
+});
+
 async function copy(value: unknown) {
   await writeText(String(value ?? ""));
   toast.add({ title: t("Common.CopySuccess"), color: "success", duration: 1200 });
@@ -104,11 +138,24 @@ async function copy(value: unknown) {
 
 onMounted(async () => {
   try {
-    endpoint.value = await getSmartEndpoint({
-      protocol: protocol.value,
-      assetId: props.tab.assetId,
-      token: token.value.id
-    });
+    await Promise.all([
+      getSmartEndpoint({
+        protocol: protocol.value,
+        assetId: props.tab.assetId,
+        token: token.value.id
+      }).then((value) => {
+        endpoint.value = value;
+      }),
+      protocol.value === "ssh"
+        ? getUserProfile()
+            .then((profile) => {
+              loginUsername.value = profile.username;
+            })
+            .catch(() => {
+              loginUsername.value = "";
+            })
+        : Promise.resolve()
+    ]);
   } finally {
     loading.value = false;
   }
@@ -116,20 +163,20 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div
-    class="guide-page h-full min-h-0 overflow-auto bg-[var(--workspace-surface-background)] px-4 py-6 sm:px-8 sm:py-10"
-  >
+  <div class="h-full min-h-0 overflow-auto bg-[var(--workspace-surface-background)] px-4 py-4 sm:px-6 sm:py-6">
     <div class="mx-auto w-full max-w-4xl">
       <div v-if="loading" class="grid min-h-64 place-items-center text-[var(--app-muted)]">
         <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
       </div>
 
       <template v-else>
-        <section class="guide-card overflow-hidden rounded-xl border border-[var(--workspace-surface-border)]">
+        <section
+          class="overflow-hidden rounded-lg bg-[var(--workspace-surface-panel)] border border-[var(--workspace-surface-border)]"
+        >
           <header
             class="flex items-center gap-3 border-b border-[var(--workspace-surface-border)] bg-[var(--workspace-surface-header)] px-5 py-4 sm:px-6"
           >
-            <div class="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+            <div class="grid size-8 shrink-0 place-items-center text-[var(--app-muted)]">
               <UIcon name="i-lucide-key-round" class="size-5" />
             </div>
             <div class="min-w-0 flex-1">
@@ -137,7 +184,7 @@ onMounted(async () => {
                 <h2 class="truncate text-base font-semibold text-[var(--app-fg)]">
                   {{ t("ConnectionGuide.Title") }}
                 </h2>
-                <UBadge :label="protocol.toUpperCase()" color="primary" variant="soft" size="sm" />
+                <UBadge :label="protocol.toUpperCase()" color="neutral" variant="outline" size="sm" />
               </div>
               <p class="mt-0.5 truncate text-xs text-[var(--app-muted)]">
                 {{ assetName }}
@@ -155,11 +202,11 @@ onMounted(async () => {
                     class="group border-b border-[var(--workspace-surface-border)] transition-colors last:border-b-0 hover:bg-[var(--app-hover-soft)] focus-within:bg-[var(--app-hover-soft)]"
                   >
                     <th
-                      class="w-28 bg-[var(--workspace-surface-sub-header)] px-4 py-3.5 text-left text-xs font-medium tracking-wide text-[var(--app-muted)] sm:w-40 sm:px-5"
+                      class="w-28 bg-[var(--workspace-surface-sub-header)] px-4 py-2.5 text-left text-xs font-medium tracking-wide text-[var(--app-muted)] sm:w-40 sm:px-5"
                     >
                       {{ row.label }}
                     </th>
-                    <td class="min-w-0 bg-[var(--app-surface-panel-strong)] px-3 py-3 text-[var(--app-fg)] sm:px-5">
+                    <td class="min-w-0 bg-[var(--app-surface-panel-strong)] px-3 py-2 text-[var(--app-fg)] sm:px-5">
                       <div class="flex min-h-7 items-center gap-1">
                         <span class="min-w-0 flex-1 break-all font-ui-mono text-[13px] leading-5">
                           {{ row.name === "password" && !passwordVisible ? "••••••••" : row.value }}
@@ -190,23 +237,21 @@ onMounted(async () => {
               </table>
             </div>
 
-            <div v-if="commands.length" class="mt-5">
+            <div v-for="(command, index) in commands" :key="index" class="mt-4">
               <div class="mb-2 flex items-center gap-2 px-1">
                 <UIcon name="i-lucide-terminal" class="size-4 text-[var(--app-muted)]" />
                 <h3 class="text-xs font-medium tracking-wide text-[var(--app-muted)]">
-                  {{ t("ConnectionGuide.ConnectCommand") }}
+                  {{ command.title }}
                 </h3>
               </div>
 
               <div
-                v-for="(command, index) in commands"
-                :key="index"
-                class="group flex items-center gap-3 rounded-lg border border-[var(--workspace-surface-border)] bg-[var(--app-surface-input)] px-4 py-3 shadow-inner transition-colors hover:bg-[var(--app-hover-soft)] focus-within:bg-[var(--app-hover-soft)]"
-                :class="{ 'mt-2': index > 0 }"
+                v-if="command.value"
+                class="group flex items-center gap-3 rounded-lg border border-[var(--workspace-surface-border)] bg-[var(--app-surface-input)] px-4 py-3 transition-colors hover:bg-[var(--app-hover-soft)] focus-within:bg-[var(--app-hover-soft)]"
               >
-                <span class="select-none font-ui-mono text-xs text-primary">$</span>
+                <span class="select-none font-ui-mono text-xs text-[var(--app-muted)]">$</span>
                 <code class="min-w-0 flex-1 break-all font-ui-mono text-xs leading-5 text-[var(--app-fg)]">
-                  {{ command.replace(token.value, "••••••••") }}
+                  {{ token.value ? command.value.replace(token.value, "••••••••") : command.value }}
                 </code>
                 <UButton
                   color="neutral"
@@ -215,9 +260,10 @@ onMounted(async () => {
                   icon="i-lucide-copy"
                   :aria-label="t('ConnectionGuide.CopyCommand')"
                   class="guide-copy-button shrink-0 text-[var(--app-muted)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-                  @click="copy(command)"
+                  @click="copy(command.value)"
                 />
               </div>
+              <p v-if="command.help" class="mt-2 px-1 text-xs text-[var(--app-muted)]">{{ command.help }}</p>
             </div>
           </div>
         </section>
@@ -227,21 +273,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.guide-page {
-  background-image: radial-gradient(
-    circle at 50% 0%,
-    color-mix(in srgb, var(--app-selected-soft) 70%, transparent),
-    transparent 36rem
-  );
-}
-
-.guide-card {
-  background: var(--workspace-surface-panel);
-  box-shadow:
-    0 16px 40px color-mix(in srgb, var(--app-fg) 7%, transparent),
-    0 1px 0 color-mix(in srgb, var(--app-fg) 5%, transparent);
-}
-
 @media (hover: none) {
   .guide-copy-button {
     opacity: 1;

@@ -1,4 +1,11 @@
-import type { AssetDetail, AssetTreeKind, PersonalAssetCredential, TokenResponse, UserProfile } from "~/types";
+import type {
+  AssetDetail,
+  AssetTreeKind,
+  PersonalAssetCredential,
+  RdpGraphics,
+  TokenResponse,
+  UserProfile
+} from "~/types";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -98,6 +105,7 @@ export interface CommandSnippetVariablePayload {
 
 export interface PublicSettings {
   XPACK_LICENSE_IS_VALID?: boolean;
+  TERMINAL_RAZOR_ENABLED?: boolean;
   XPACK_LICENSE_EDITION_ULTIMATE?: boolean;
   INTERFACE?: {
     login_title?: string;
@@ -291,7 +299,8 @@ async function desktopApiRequest<T>(request: ApiRequest): Promise<T> {
   const scopedRequest = request.orgId || !userInfoStore.orgId ? request : { ...request, orgId: userInfoStore.orgId };
 
   try {
-    return await desktopInvoke<T>("api_request", { request: scopedRequest });
+    // Electron IPC cannot clone Vue reactive proxies (ACL review stores body on a reactive item).
+    return await desktopInvoke<T>("api_request", { request: JSON.parse(JSON.stringify(scopedRequest)) });
   } catch (error) {
     if (error && typeof error === "object" && !(error instanceof Error)) {
       const payload = error as { status?: unknown; data?: unknown; body?: unknown; message?: unknown };
@@ -464,6 +473,14 @@ export function getPublicSettings(): Promise<PublicSettings> {
   });
 }
 
+export function getLunaPreferences(): Promise<{ graphics?: RdpGraphics }> {
+  return apiRequest({
+    method: "GET",
+    path: "/api/v1/users/preference/",
+    query: { category: "luna" }
+  });
+}
+
 export function getSessionOnlineNum(assetId: string, account: string): Promise<{ count: number }> {
   return apiRequest<{ count: number }>({
     method: "GET",
@@ -504,7 +521,14 @@ export function getUserProfile(): Promise<UserProfile> {
 export function getSmartEndpoint(
   params: SmartEndpointParams,
   orgId?: string
-): Promise<{ value?: string; host?: string; port?: number; https_port?: number; web_proxy_port?: number }> {
+): Promise<{
+  value?: string;
+  host?: string;
+  port?: number;
+  https_port?: number;
+  web_proxy_port?: number;
+  magnus_port?: number;
+}> {
   return apiRequest({
     method: "GET",
     path: "/api/v1/terminal/endpoints/smart/",
@@ -551,6 +575,15 @@ export function getLocalClientUrl(tokenId: string, query?: Record<string, unknow
     method: "GET",
     path: `/api/v1/authentication/connection-token/${encodeURIComponent(tokenId)}/client-url/`,
     query
+  });
+}
+
+export function getConnectionRdpFile(tokenId: string, query: Record<string, unknown>, orgId?: string): Promise<string> {
+  return apiRequest<string>({
+    method: "GET",
+    path: `/api/v1/authentication/connection-token/${encodeURIComponent(tokenId)}/rdp-file/`,
+    query,
+    orgId
   });
 }
 

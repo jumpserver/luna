@@ -1,14 +1,14 @@
 {
   "name": "jumpserver-web",
   "type": "module",
-  "version": "4.1.2",
+  "version": "5.0.0",
   "private": true,
   "packageManager": "pnpm@11.4.0",
   "description": "JumpServer web application",
   "author": "JumpServer",
   "license": "MIT",
   "engines": {
-    "node": ">=24"
+    "node": ">=22.19.0"
   },
   "scripts": {
     "dev": "pnpm electron:dev --web",

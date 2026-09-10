@@ -4,7 +4,7 @@ import type { SftpEditorDraft, SftpEditorWorkspaceState } from "#koko/composable
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
 import { connectorSessionKey } from "@jumpserver/connectors-core";
 import { useDebounceFn, useIntervalFn } from "@vueuse/core";
-import { SFTP_REQUEST_TIMEOUT_ERROR } from "#koko/composables/sftp/protocol";
+import { SFTP_REQUEST_TIMEOUT_ERROR, sftpOperationErrorMessage } from "#koko/composables/sftp/protocol";
 import { useSftpEditorDrafts } from "#koko/composables/sftp/useSftpEditorDrafts";
 import { sortSftpEntries, useSftpFileManager } from "#koko/composables/sftp/useSftpFileManager";
 import { SftpFileConflictError } from "#koko/composables/sftp/useSftpOperations";
@@ -583,7 +583,8 @@ function parentPath(path: string) {
 
 function formatError(cause: unknown) {
   const message = cause instanceof Error ? cause.message : String(cause);
-  return message === SFTP_REQUEST_TIMEOUT_ERROR ? t("koko.sftpEditor.requestTimeout") : message;
+  if (message === SFTP_REQUEST_TIMEOUT_ERROR) return t("koko.sftpEditor.requestTimeout");
+  return sftpOperationErrorMessage(cause, t);
 }
 
 function fileVersion(entry: SftpFileEntry | null | undefined) {

@@ -145,7 +145,6 @@ const accountTooltip = computed(() => {
 
 const accountSite = computed(() => currentUser.value?.siteName || currentUser.value?.site || "—");
 const siteAccounts = computed(() => Object.entries(userMap.value) as [string, UserData][]);
-const hasMultipleSites = computed(() => siteAccounts.value.length > 1);
 
 const languageItems = computed(() =>
   ((locales.value as Array<{ code?: string; name?: string } | string>) || []).map((item) => {
@@ -615,7 +614,7 @@ function clearValidationError() {
 async function clearAuthInfo() {
   profileOpen.value = false;
   if (!(await confirmLeaveCurrentSiteSessions("logout"))) return;
-  userInfoStore.deleteUserData(currentAccountId.value);
+  await userInfoStore.deleteUserData(currentAccountId.value);
   if (loggedIn.value) return;
   // ponytail: don't watch loggedIn to leave /files — bootstrap sets false before revalidation
   if (!isDesktopRuntime()) {
@@ -630,8 +629,7 @@ async function handleSwitchAccount(accountId: string) {
 
   profileOpen.value = false;
   if (!(await confirmLeaveCurrentSiteSessions("switch"))) return;
-  userInfoStore.setCurrentAccount(accountId);
-  nextTick(() => useEventBus().emit("refresh", undefined));
+  await userInfoStore.setCurrentAccount(accountId);
 }
 
 function openAddSite() {
@@ -997,38 +995,6 @@ onBeforeUnmount(() => {
             </span>
             <UIcon name="i-lucide-chevron-right" class="size-4 shrink-0 text-dimmed" />
           </UButton>
-
-          <div v-if="isDesktopRuntime() && hasMultipleSites" class="px-2">
-            <USeparator :ui="menuSeparatorUi" />
-          </div>
-          <div v-if="isDesktopRuntime() && hasMultipleSites" class="p-1.5">
-            <p class="px-2 pb-1 text-[10px] font-semibold tracking-[0.08em] text-muted uppercase">
-              {{ t("UserProfile.SiteAccounts") }}
-            </p>
-            <div class="max-h-40 overflow-y-auto">
-              <UButton
-                v-for="[accountId, account] in siteAccounts"
-                :key="accountId"
-                color="neutral"
-                variant="ghost"
-                size="sm"
-                block
-                class="justify-start"
-                @click="handleSwitchAccount(accountId)"
-              >
-                <UAvatar :alt="account.name" :text="accountInitial(account.name)" color="neutral" size="2xs" />
-                <span class="min-w-0 flex-1 truncate text-left">{{ account.name }}</span>
-                <span class="max-w-22 truncate text-xs font-normal text-muted">
-                  {{ account.siteName || account.site }}
-                </span>
-                <UIcon
-                  v-if="accountId === currentAccountId"
-                  name="i-lucide-check"
-                  class="size-3.5 shrink-0 text-primary"
-                />
-              </UButton>
-            </div>
-          </div>
         </template>
 
         <div v-else class="p-1.5">
@@ -1220,17 +1186,69 @@ onBeforeUnmount(() => {
               </span>
             </template>
           </UButton>
-          <UButton
+          <UPopover
             v-if="isDesktopRuntime()"
-            :label="t('Login.AddAccount')"
-            icon="i-lucide-user-round-plus"
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            block
-            class="justify-start"
-            @click="openAddSite"
-          />
+            :content="{ align: 'start', side: 'left', sideOffset: 8 }"
+            :ui="{
+              content:
+                'w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-[length:var(--app-radius)] bg-[var(--app-surface-overlay)] p-1.5 shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] backdrop-blur-md'
+            }"
+          >
+            <UButton
+              :label="t('Login.SwitchSite')"
+              icon="i-lucide-arrow-left-right"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              block
+              class="justify-start"
+            >
+              <template #trailing>
+                <UIcon name="i-lucide-chevron-right" class="ms-auto size-3.5 shrink-0 text-muted" />
+              </template>
+            </UButton>
+
+            <template #content>
+              <div data-profile-nested-popover>
+                <div v-if="siteAccounts.length" class="max-h-60 overflow-y-auto">
+                  <UButton
+                    v-for="[accountId, account] in siteAccounts"
+                    :key="accountId"
+                    color="neutral"
+                    variant="ghost"
+                    size="sm"
+                    block
+                    class="justify-start"
+                    :title="`${account.siteName || account.site} · ${account.name}`"
+                    :aria-current="accountId === currentAccountId ? 'true' : undefined"
+                    @click="handleSwitchAccount(accountId)"
+                  >
+                    <UAvatar :alt="account.name" :text="accountInitial(account.name)" color="neutral" size="2xs" />
+                    <span class="min-w-0 flex-1 text-left">
+                      <span class="block truncate">{{ account.siteName || account.site }}</span>
+                      <span class="block truncate text-xs font-normal text-muted">{{ account.name }}</span>
+                    </span>
+                    <UIcon
+                      v-if="accountId === currentAccountId"
+                      name="i-lucide-check"
+                      class="size-3.5 shrink-0 text-primary"
+                    />
+                  </UButton>
+                </div>
+                <USeparator v-if="siteAccounts.length" class="my-1.5" :ui="menuSeparatorUi" />
+                <UButton
+                  :label="t('Login.AddAccount')"
+                  icon="i-lucide-user-round-plus"
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  block
+                  class="justify-start"
+                  @click="openAddSite"
+                />
+              </div>
+            </template>
+          </UPopover>
         </div>
 
         <div v-if="loggedIn" class="px-2">

@@ -1,11 +1,13 @@
 import { createHash, randomBytes } from "node:crypto";
+import { once } from "node:events";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
 import { app, net, safeStorage } from "electron";
+import { CLIENT_AUTH_CALLBACK } from "../shared/client-protocol";
 import { electronLog } from "../shared/debug-log";
 import { isTrustedCertificateHost, parseUrl, siteHostname } from "../shared/url";
-import { parseOAuthCallback } from "./oauth-callback";
+import { isOAuthCallbackUrl, parseOAuthCallback } from "./oauth-callback";
 
 const OAUTH_WELL_KNOWN = "/core/auth/oauth2-provider/.well-known/oauth-authorization-server";
 const OAUTH_AUTHORIZE = "/core/auth/oauth2-provider/authorize/";
@@ -17,7 +19,7 @@ const CURRENT_ORG = "/api/v1/orgs/orgs/current/";
 const PUBLIC_SETTINGS = "/api/v1/settings/public/";
 const CLIENT_VERSIONS = "/api/v1/settings/client/versions/";
 const DEV_CALLBACK = "http://127.0.0.1:14876/auth/callback";
-const DEEP_LINK_CALLBACK = "jms://auth/callback";
+const DEEP_LINK_CALLBACK = CLIENT_AUTH_CALLBACK;
 
 function endpoint(site, endpointPath) {
   return `${site.replace(/\/+$/, "")}${endpointPath}`;
@@ -103,7 +105,6 @@ export class DesktopAuthService {
     this.currentSessionKey = "";
     this.tokens = {};
     this.pendingAuth = null;
-    this.queuedCallback = null;
     this.callbackServer = null;
     this.redirectUri = DEEP_LINK_CALLBACK;
     this.tokenFile = path.join(app.getPath("userData"), "oauth-tokens.json");
@@ -181,7 +182,10 @@ export class DesktopAuthService {
       this.redirectUri = DEEP_LINK_CALLBACK;
       return;
     }
-    if (this.callbackServer) return;
+    if (this.callbackServer) {
+      if (!this.callbackServer.listening) await once(this.callbackServer, "listening");
+      return;
+    }
     const server = createServer((request, response) => {
       const callbackUrl = parseUrl(request.url || "/", "http://127.0.0.1:14876");
       if (callbackUrl.pathname !== "/auth/callback") {
@@ -196,34 +200,32 @@ export class DesktopAuthService {
           : "<!doctype html><meta charset=utf-8><title>JumpServer</title><p>登录回调已失效，请返回客户端重试。</p>"
       );
     });
+    this.callbackServer = server;
     try {
       await new Promise<void>((resolve, reject) => {
         server.once("error", reject);
         server.listen(14876, "127.0.0.1", resolve);
       });
-      this.callbackServer = server;
       this.redirectUri = DEV_CALLBACK;
       electronLog.info(`auth callback server ${this.redirectUri}`);
     } catch (error) {
       server.close();
-      if (error?.code !== "EADDRINUSE") throw error;
       this.callbackServer = null;
-      this.redirectUri = DEEP_LINK_CALLBACK;
-      electronLog.warn(`auth callback server unavailable, using ${this.redirectUri}`);
+      if (error?.code !== "EADDRINUSE") throw error;
+      throw new Error("OAuth callback port 14876 is already in use. Close the other development client and retry.");
     }
   }
 
   isOAuthCallbackUrl(rawUrl) {
-    return Boolean(parseOAuthCallback(rawUrl));
+    return isOAuthCallbackUrl(rawUrl);
   }
 
   handleCallback(rawUrl) {
     const parsed = parseOAuthCallback(rawUrl);
     if (!parsed) return false;
-    if (!this.pendingAuth) {
-      this.queuedCallback = parsed;
-      electronLog.info("auth callback queued");
-      return true;
+    if (!this.pendingAuth || parsed.state !== this.pendingAuth.state) {
+      electronLog.warn("auth callback ignored: no matching login request");
+      return false;
     }
     const pending = this.pendingAuth;
     this.pendingAuth = null;
@@ -233,7 +235,6 @@ export class DesktopAuthService {
   }
 
   cancelAuth() {
-    this.queuedCallback = null;
     if (!this.pendingAuth) return;
     const pending = this.pendingAuth;
     this.pendingAuth = null;
@@ -260,6 +261,7 @@ export class DesktopAuthService {
 
   async authLogin({ site, sessionId }) {
     electronLog.info(`auth login start ${site}`);
+    await this.startCallbackServer();
     let oauthConfig: { client_id?: string };
     try {
       const response = await this.fetchSite(endpoint(site, OAUTH_WELL_KNOWN), {
@@ -295,20 +297,14 @@ export class DesktopAuthService {
     authorizeUrl.searchParams.set("scope", "write read");
 
     this.cancelAuth();
-    const callback = new Promise<{ code: string; state: string | null } | null>((resolve) => {
-      this.pendingAuth = { resolve };
+    const callback = new Promise<ReturnType<typeof parseOAuthCallback>>((resolve) => {
+      this.pendingAuth = { state, resolve };
     });
     this.emitEvent("auth_url", authorizeUrl.toString());
-    if (this.queuedCallback && this.pendingAuth) {
-      const queued = this.queuedCallback;
-      const pending = this.pendingAuth;
-      this.queuedCallback = null;
-      this.pendingAuth = null;
-      pending.resolve(queued);
-    }
     const result = await callback;
     if (!result) return null;
-    if (result.state && result.state !== state) throw new Error("OAuth state mismatch");
+    if (result.state !== state) throw new Error("OAuth state mismatch");
+    if (result.error) throw new Error(`OAuth authorization failed: ${result.error}`);
 
     const token = await this.exchangeToken(site, {
       grant_type: "authorization_code",

@@ -1,7 +1,7 @@
 {
   "name": "@jumpserver/weblite",
   "productName": "JumpServer WebLite",
-  "version": "4.1.2",
+  "version": "5.0.0",
   "private": true,
   "description": "Managed browser for JumpServer web asset connections",
   "author": "JumpServer",

@@ -136,9 +136,21 @@ export function canRetryTransferTask(task: FileTransferTask): boolean {
   return task.status === "failed" && task.error !== sftpTransferEndpointUnavailableError;
 }
 
-export function sftpTransferErrorText(error: string | undefined, translate: (key: string) => string): string {
+export function isSftpDownloadTransfer(task?: Pick<FileTransferTask, "sourceEndpoint" | "destinationEndpoint">) {
+  return Boolean(task?.sourceEndpoint.id.startsWith("sftp:") && !task.destinationEndpoint.id.startsWith("sftp:"));
+}
+
+export function sftpTransferErrorText(
+  error: string | undefined,
+  translate: (key: string) => string,
+  task?: Pick<FileTransferTask, "sourceEndpoint" | "destinationEndpoint">
+): string {
   if (!error) return "";
-  if (error === sftpTransferEndpointUnavailableError) return translate("FileTransfer.EndpointUnavailable");
+  if (error === sftpTransferEndpointUnavailableError) {
+    return translate(
+      isSftpDownloadTransfer(task) ? "FileTransfer.EndpointUnavailableDownload" : "FileTransfer.EndpointUnavailable"
+    );
+  }
   return error;
 }
 

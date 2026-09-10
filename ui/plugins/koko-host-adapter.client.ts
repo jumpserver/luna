@@ -21,7 +21,7 @@ import {
   createHostCodeMirrorTheme,
   ensureCodeMirrorThemeAdapters
 } from "~/shared/theme/adapters/codeMirrorThemeHost";
-import { toXtermTheme } from "~/shared/theme/adapters/xterm";
+import { ensureNamedXtermThemes, toXtermTheme } from "~/shared/theme/adapters/xterm";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { transformAssetDetail } from "~/utils";
 import { isDesktopRuntime } from "~/utils/runtime";
@@ -39,7 +39,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   } = useWorkspaceTabs();
   const userInfoStore = useUserInfoStore();
   const { currentSite, currentUser, loggedIn } = storeToRefs(userInfoStore);
-  const { codeFontSize, terminalCommandSuggestionsEnabled } = useSettingManager();
+  const { codeFontSize, isHydrated, terminalCommandSuggestionsEnabled, terminalThemePreset } = useSettingManager();
 
   const prepareSftpAsset = async (asset: KokoSftpAsset) => {
     const detail = await getAssetDetailRequest(asset.id, currentUser.value?.org?.id || "");
@@ -158,5 +158,12 @@ export default defineNuxtPlugin((nuxtApp) => {
   };
 
   configureKokoThemeAdapter(adapter.theme);
+  watch(
+    [isHydrated, terminalThemePreset],
+    ([hydrated, preset]) => {
+      if (hydrated && preset !== "follow-app") void ensureNamedXtermThemes();
+    },
+    { immediate: true }
+  );
   nuxtApp.vueApp.provide(kokoHostAdapterKey, adapter);
 });

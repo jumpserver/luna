@@ -1,10 +1,18 @@
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
-import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
+import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, RdpGraphics, TokenResponse } from "~/types";
 import { alignEndpointUrlWithPage, isLoopbackUrl } from "@jumpserver/connectors-core";
 
-import { getAssetDetailRequest, invalidatePersonalAssetCredentialCache } from "~/composables/useApiRequest";
 import {
+  getAssetDetailRequest,
+  getConnectionRdpFile,
+  getLunaPreferences,
+  getPublicSettings,
+  invalidatePersonalAssetCredentialCache
+} from "~/composables/useApiRequest";
+import {
+  canDownloadRdpFile,
   isConnectMethodAvailable,
+  isExternalClientConnectMethod,
   K8S_NATIVE_VALUE,
   parseLocalApplicationConnectMethod,
   pickConnectMethod,
@@ -15,7 +23,7 @@ import {
   WEB_RDP_NATIVE_VALUE
 } from "~/composables/useConnectMethods";
 import { useSettingManager } from "~/composables/useSettingManager";
-import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
+import { desktopDialog, desktopFs, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 let desktopListenersInitialized = false;
@@ -47,9 +55,7 @@ const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
   [K8S_NATIVE_VALUE]: "web_cli"
 };
 const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
-const isLocalClientMethod = (method: { type?: string } | undefined) =>
-  ["native", "client", "local", "desktop"].includes(String(method?.type || "").toLowerCase());
-const normalizeDesktopLocalClientUrl = (url: string) =>
+const normalizeLocalClientUrl = (url: string) =>
   url.startsWith("jms://") ? `jms2://${url.slice("jms://".length)}` : url;
 const withLocalClientName = (url: string, clientName?: string) => {
   if (!clientName || !url.startsWith("jms2://")) return url;
@@ -122,17 +128,20 @@ export const useAssetAction = () => {
   const { charset, rdpResolution, backspaceAsCtrlH, keyboardLayout, rdpClientOption, rdpColorQuality, rdpSmartSize } =
     settingManager;
 
-  function buildLocalRdpParams() {
+  function buildLocalRdpParams(connectOptions: RdpGraphics = {}) {
     const prefs = resolveGraphicsPreferences();
     const params: Record<string, string> = {};
+    const resolution = String(connectOptions.rdp_resolution || connectOptions.resolution || prefs.resolvedResolution);
 
-    if (prefs.resolvedResolution && prefs.resolvedResolution.includes("x")) {
-      const [width, height] = prefs.resolvedResolution.split("x");
+    if (resolution.includes("x")) {
+      const [width, height] = resolution.split("x");
       if (width) params.width = width;
       if (height) params.height = height;
     }
 
-    const options = prefs.resolvedClientOptions || [];
+    const options = Array.isArray(connectOptions.rdp_client_option)
+      ? connectOptions.rdp_client_option
+      : prefs.resolvedClientOptions;
     if (options.includes("full_screen")) {
       params.full_screen = "1";
     }
@@ -143,8 +152,8 @@ export const useAssetAction = () => {
       params.drives_redirect = "1";
     }
 
-    params.rdp_smart_size = prefs.resolvedSmartSize;
-    params.rdp_color_quality = prefs.resolvedColorQuality;
+    params.rdp_smart_size = String(connectOptions.rdp_smart_size ?? prefs.resolvedSmartSize);
+    params.rdp_color_quality = String(connectOptions.rdp_color_quality ?? prefs.resolvedColorQuality);
 
     return params;
   }
@@ -292,7 +301,9 @@ export const useAssetAction = () => {
     } catch {
       siteProtocol = "";
     }
-    const httpProtocol = [pageProtocol, siteProtocol].find((value) => value === "http" || value === "https") || "https";
+    // Desktop dev pages use local HTTP even when the selected site requires HTTPS/WSS.
+    const protocols = isDesktopRuntime() ? [siteProtocol, pageProtocol] : [pageProtocol, siteProtocol];
+    const httpProtocol = protocols.find((value) => value === "http" || value === "https") || "https";
 
     if (isWebSurface) {
       return endpointProtocol === "http" || endpointProtocol === "https" ? endpointProtocol : httpProtocol;
@@ -443,6 +454,7 @@ export const useAssetAction = () => {
       assetName?: string;
       orgId?: string;
       aclBatchId?: string;
+      downloadRdp?: boolean;
       onSessionReady?: (payload: ConnectionSessionPayload) => void;
       onSessionError?: (error: unknown) => void;
     }
@@ -460,7 +472,7 @@ export const useAssetAction = () => {
     };
 
     const session =
-      meta?.tabId || meta?.onSessionReady
+      meta?.downloadRdp || meta?.tabId || meta?.onSessionReady
         ? undefined
         : meta?.asset
           ? openSession(meta.asset, {
@@ -473,6 +485,28 @@ export const useAssetAction = () => {
 
     try {
       await assertConnectMethodEnabled(body.protocol, nativeApp.connectMethod);
+      const allMethods = await fetchConnectMethods();
+      const method = (allMethods[body.protocol] || []).find((item) => item.value === nativeApp.connectMethod);
+      if (method?.type === "applet") {
+        const settings = await getPublicSettings();
+        let mode = body.connect_options.appletConnectMethod;
+        if (mode !== "web" && mode !== "client") {
+          const preferences = await getLunaPreferences().catch(() => ({ graphics: undefined }));
+          mode = preferences.graphics?.applet_connection_method;
+        }
+        body = {
+          ...body,
+          connect_options: {
+            ...body.connect_options,
+            appletConnectMethod:
+              mode === "client" && settings.XPACK_LICENSE_IS_VALID && settings.TERMINAL_RAZOR_ENABLED ? "client" : "web"
+          }
+        };
+        serverBody.connect_options = body.connect_options;
+      }
+      if (meta?.downloadRdp && !canDownloadRdpFile(method, body.connect_options)) {
+        throw new Error(t("ConnectError.MethodDisabled"));
+      }
       const token = await createConnectionTokenWithAcl(serverBody, {
         orgId: meta?.orgId,
         assetName: meta?.asset?.name || meta?.assetId || body.asset,
@@ -486,14 +520,41 @@ export const useAssetAction = () => {
         return;
       }
       syncPersonalCredentialFromToken(meta?.assetId, serverBody, token, personalCredentialScope);
-      const allMethods = await fetchConnectMethods();
-      const method = (allMethods[body.protocol] || []).find((item) => item.value === nativeApp.connectMethod);
 
-      if (isDesktopRuntime() || isLocalClientMethod(method)) {
-        const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams());
-        const localClientUrl = isDesktopRuntime() ? normalizeDesktopLocalClientUrl(url || "") : url;
-        const expectedScheme = isDesktopRuntime() ? "jms2://" : "jms://";
-        if (!localClientUrl?.startsWith(expectedScheme)) {
+      if (meta?.downloadRdp) {
+        const query = buildLocalRdpParams(body.connect_options);
+        if (body.connect_options.reusable) query.reusable = "1";
+        if (body.connect_options.remote_microphone !== undefined) {
+          query.remote_microphone = body.connect_options.remote_microphone ? "1" : "0";
+        }
+        const content = await getConnectionRdpFile(token.id, query, meta.orgId);
+        const filename = `${(meta.asset?.name || body.asset).replace(/[<>:"/\\|?*\p{Cc}]/gu, "_")}.rdp`;
+        if (isDesktopRuntime()) {
+          const path = await desktopDialog.save({
+            defaultPath: filename,
+            filters: [{ name: "RDP", extensions: ["rdp"] }]
+          });
+          if (path) await desktopFs.writeFile(path, new TextEncoder().encode(content));
+        } else if (typeof document !== "undefined") {
+          const url = URL.createObjectURL(new Blob([content], { type: "application/x-rdp" }));
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = filename;
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+        meta.onSessionReady?.({ token, ...token, connectMethod: method });
+        return;
+      }
+
+      if (
+        (isDesktopRuntime() && method?.type !== "applet") ||
+        isExternalClientConnectMethod(body.connect_method, allMethods[body.protocol] || [], body.connect_options)
+      ) {
+        const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams(body.connect_options));
+        // Both runtimes target the current client; jms:// belongs to the legacy client.
+        const localClientUrl = normalizeLocalClientUrl(url || "");
+        if (!localClientUrl.startsWith("jms2://")) {
           throw new Error("Invalid local client URL");
         }
         const payload = {
@@ -541,7 +602,7 @@ export const useAssetAction = () => {
       }
 
       addErrorToast({
-        title: t("ConnectError.ConnectFailed"),
+        title: t(meta?.downloadRdp ? "ConnectError.DownloadRdpFailed" : "ConnectError.ConnectFailed"),
         description: String(error),
         icon: "line-md:close-circle",
         progress: true,
@@ -666,10 +727,10 @@ export const useAssetAction = () => {
     return methods[0]?.value || "";
   };
 
-  const generateConnectOptions = (protocol: string) => {
+  const generateConnectOptions = () => {
     const prefs = resolveGraphicsPreferences();
 
-    const options = {
+    return {
       charset: prefs.resolvedCharset,
       backspaceAsCtrlH: prefs.resolvedBackspace,
       resolution: prefs.resolvedResolution,
@@ -680,17 +741,6 @@ export const useAssetAction = () => {
       rdp_smart_size: prefs.resolvedSmartSize,
       token_reusable: false,
       disableautohash: false
-    };
-    const specificOptions =
-      protocol === "http"
-        ? {
-            appletConnectMethod: "client",
-            reusable: false
-          }
-        : {};
-    return {
-      ...options,
-      ...specificOptions
     };
   };
 
@@ -719,6 +769,7 @@ export const useAssetAction = () => {
       savePersonalCredential?: boolean;
       dynamicPassword?: string;
       connectMethod?: string;
+      downloadRdp?: boolean;
       connectOptions?: Record<string, unknown>;
       tabId?: string;
       aclBatchId?: string;
@@ -806,22 +857,23 @@ export const useAssetAction = () => {
         settingManager.appConfig.value
       ) || (await resolveConnectMethod(protocol));
 
-    if (ephemeral?.tabId) setSessionConnectMethod(ephemeral.tabId, connectMethod);
+    if (ephemeral?.tabId && !ephemeral.downloadRdp) setSessionConnectMethod(ephemeral.tabId, connectMethod);
 
     // Every successful attempt updates the lightweight last-used preference.
     // It must not turn into an auto-connect record unless the user checked
     // "remember selection" (that record is managed by useAssetConnection).
-    userInfoStore.setConnectionPreferenceForAsset(assetId, {
-      protocol,
-      username: selected || user,
-      accountId:
-        effectiveMode === "hosted" ? ephemeral?.accountId || matchedAccount?.id || saved?.accountId : undefined,
-      accountMode: effectiveMode,
-      connectMethod
-    });
+    if (!ephemeral?.downloadRdp)
+      userInfoStore.setConnectionPreferenceForAsset(assetId, {
+        protocol,
+        username: selected || user,
+        accountId:
+          effectiveMode === "hosted" ? ephemeral?.accountId || matchedAccount?.id || saved?.accountId : undefined,
+        accountMode: effectiveMode,
+        connectMethod
+      });
 
     const mergedConnectOptions = {
-      ...generateConnectOptions(protocol),
+      ...generateConnectOptions(),
       ...(saved?.protocol === protocol ? (saved as any)?.connectOptions || {} : {}),
       ...(ephemeral?.connectOptions || {})
     };
@@ -866,6 +918,7 @@ export const useAssetAction = () => {
 
       // ponytail: 有 onSessionReady 时由调用方内嵌展示（如右侧 SFTP），不新开 workspace tab
       if (
+        !ephemeral?.downloadRdp &&
         !tabId &&
         ephemeral?.asset &&
         (NATIVE_WORKSPACE_METHODS.has(connectMethod) || isGuideConnectMethod(connectMethod)) &&
@@ -874,7 +927,10 @@ export const useAssetAction = () => {
         tabId = openSession(ephemeral.asset, { protocol, account, connectMethod }).id;
       }
 
-      if (NATIVE_WORKSPACE_METHODS.has(connectMethod) || isGuideConnectMethod(connectMethod)) {
+      if (
+        !ephemeral?.downloadRdp &&
+        (NATIVE_WORKSPACE_METHODS.has(connectMethod) || isGuideConnectMethod(connectMethod))
+      ) {
         getBuiltinConnectSession(connectionBody, {
           tabId,
           assetId,
@@ -892,6 +948,7 @@ export const useAssetAction = () => {
 
       getConnectToken(connectionBody, {
         tabId,
+        downloadRdp: ephemeral?.downloadRdp,
         asset: ephemeral?.asset,
         assetId,
         protocol,

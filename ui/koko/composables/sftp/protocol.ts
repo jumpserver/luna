@@ -53,6 +53,61 @@ export enum SftpSocketFailureCode {
 export const SFTP_REQUEST_TIMEOUT_ERROR = "sftp_request_timeout";
 export const SFTP_FILE_CONFLICT_ERROR = "sftp_file_conflict";
 export const SFTP_PATH_NOT_FOUND_ERROR = "sftp_path_not_found";
+export const SFTP_PERMISSION_DENIED_ERROR = "sftp_permission_denied";
+export const SFTP_OPERATION_UNSUPPORTED_ERROR = "sftp_operation_unsupported";
+export const SFTP_CONNECTION_LOST_ERROR = "sftp_connection_lost";
+
+export type SftpWireErrorKind = "permission_denied" | "path_not_found" | "conflict" | "unsupported" | "connection_lost";
+
+export function classifySftpWireError(message: { error_code?: string; err?: string }): SftpWireErrorKind | null {
+  const code = (message.error_code || "").toLowerCase();
+  const err = (message.err || "").toLowerCase();
+  if (code === SFTP_FILE_CONFLICT_ERROR || err.includes("remote file changed")) return "conflict";
+  if (
+    code === SFTP_PERMISSION_DENIED_ERROR ||
+    err.includes("permission denied") ||
+    err.includes("ssh_fx_permission_denied")
+  )
+    return "permission_denied";
+  if (
+    code === SFTP_PATH_NOT_FOUND_ERROR ||
+    err === "file does not exist" ||
+    err === "no such file" ||
+    err.includes("ssh_fx_no_such_file")
+  )
+    return "path_not_found";
+  if (
+    code === SFTP_OPERATION_UNSUPPORTED_ERROR ||
+    err.includes("operation unsupported") ||
+    err.includes("ssh_fx_op_unsupported")
+  )
+    return "unsupported";
+  if (
+    code === SFTP_CONNECTION_LOST_ERROR ||
+    err.includes("connection lost") ||
+    err.includes("ssh_fx_connection_lost") ||
+    err.includes("no connection") ||
+    err.includes("ssh_fx_no_connection")
+  )
+    return "connection_lost";
+  return null;
+}
+
+export function sftpOperationErrorMessage(cause: unknown, t: (key: string) => string) {
+  const message = cause instanceof Error ? cause.message : String(cause);
+  switch (classifySftpWireError({ error_code: message, err: message })) {
+    case "permission_denied":
+      return t("koko.fileManagement.pathPermissionDenied");
+    case "path_not_found":
+      return t("koko.fileManagement.pathNotFound");
+    case "unsupported":
+      return t("koko.fileManagement.operationUnsupported");
+    case "connection_lost":
+      return t("koko.fileManagement.connectionClosed");
+    default:
+      return message === SFTP_REQUEST_TIMEOUT_ERROR ? t("koko.fileManagement.requestTimeout") : message;
+  }
+}
 
 export interface SftpFileEntry {
   name: string;
@@ -185,6 +240,10 @@ export function isSftpMcpMessageType(value: unknown): value is SftpMcpMessage["t
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+export function sftpCanUpload(capabilities: SftpCapabilities | null | undefined) {
+  return capabilities?.file_editor.write !== false;
 }
 
 export function parseSftpCapabilities(data?: string): SftpCapabilities | null {

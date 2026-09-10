@@ -79,6 +79,16 @@ function slugify(raw) {
     .replace(/^-+|-+$/g, "");
 }
 
+function customTerminalFields({ name, path: executablePath, template }) {
+  const displayName = String(name || "").trim();
+  const targetPath = String(executablePath || "").trim();
+  const launchTemplateValue = String(template || "").trim();
+  if (!displayName) throw new Error("custom terminal name is required");
+  if (!targetPath) throw new Error("custom terminal path is required");
+  if (!launchTemplateValue) throw new Error("custom terminal launch template is required");
+  return { displayName, targetPath, launchTemplateValue };
+}
+
 function extractPluginArchive(source, pendingDir) {
   return new Promise<void>((resolve, reject) => {
     let fileCount = 0;
@@ -175,13 +185,18 @@ export class ApplicationConfigService {
   }
 
   async loadState() {
-    if (await exists(this.statePath, "file")) return readJson(this.statePath);
     const defaultsPath = path.join(await this.builtInDir(), "plugins-state.defaults.json");
-    const state = (await exists(defaultsPath, "file"))
+    const defaults = (await exists(defaultsPath, "file"))
       ? await readJson(defaultsPath)
       : { version: 1, selections: {}, plugins: {} };
-    await writeJson(this.statePath, state);
-    return state;
+    if (await exists(this.statePath, "file")) {
+      const state = await readJson(this.statePath);
+      // Missing preferences use platform defaults, including before the first login.
+      // Explicitly cleared selections and disabled plugins remain user choices.
+      return { ...defaults, ...state, selections: { ...defaults.selections, ...state.selections } };
+    }
+    await writeJson(this.statePath, defaults);
+    return defaults;
   }
 
   async saveState(state) {
@@ -261,13 +276,14 @@ export class ApplicationConfigService {
     const defaultIsSet = Boolean(platformConnect.is_set);
     return {
       name: manifest.name || "",
-      display_name: platformConnect.display_name || manifest.display_name || entry.id,
+      display_name:
+        state.plugins?.[entry.id]?.display_name || platformConnect.display_name || manifest.display_name || entry.id,
       protocol: protocols,
       comment: manifest.comment || {},
       download_url: manifest.download_url || "",
       type: entry.category,
       path: executablePath,
-      arg_format: launchTemplate(launch),
+      arg_format: state.plugins?.[entry.id]?.template ?? launchTemplate(launch),
       launch_type: launch.type || "args",
       open_with: launch.open_with || "",
       launch_driver: launch.driver || "",
@@ -313,7 +329,8 @@ export class ApplicationConfigService {
       plugins.push({
         id: entry.id,
         name: manifest.name || "",
-        display_name: platformConnect?.display_name || manifest.display_name || entry.id,
+        display_name:
+          state.plugins?.[entry.id]?.display_name || platformConnect?.display_name || manifest.display_name || entry.id,
         version: manifest.version || "",
         category: entry.category,
         protocols: Array.isArray(manifest.protocols) ? manifest.protocols : [],
@@ -384,12 +401,11 @@ export class ApplicationConfigService {
   }
 
   async createCustomTerminal({ name, path: executablePath, template }) {
-    const displayName = String(name || "").trim();
-    const targetPath = String(executablePath || "").trim();
-    const launchTemplateValue = String(template || "").trim();
-    if (!displayName) throw new Error("custom terminal name is required");
-    if (!targetPath) throw new Error("custom terminal path is required");
-    if (!launchTemplateValue) throw new Error("custom terminal launch template is required");
+    const { displayName, targetPath, launchTemplateValue } = customTerminalFields({
+      name,
+      path: executablePath,
+      template
+    });
     const slug = slugify(displayName);
     if (!slug) throw new Error("custom terminal name must contain letters or numbers");
     const pluginId = `custom.terminal.${slug}`;
@@ -430,6 +446,36 @@ export class ApplicationConfigService {
       await rm(targetDir, { recursive: true, force: true });
       throw error;
     }
+  }
+
+  async updateCustomTerminal({ pluginId, name, path: executablePath, template }) {
+    const { displayName, targetPath, launchTemplateValue } = customTerminalFields({
+      name,
+      path: executablePath,
+      template
+    });
+    const entry = await this.findEntry({ pluginId: normalizePluginId(pluginId) });
+    const { platformConnect } = await this.pluginData(entry);
+    if (
+      entry.builtin ||
+      entry.category !== "terminal" ||
+      !entry.id.startsWith("custom.terminal.") ||
+      !platformConnect?.launch?.use_ssh_helper
+    ) {
+      throw new Error(`plugin '${entry.id}' is not a custom terminal`);
+    }
+
+    // Keep the plugin identity and selections stable; save all edits atomically with the existing path override.
+    const state = await this.loadState();
+    state.plugins ||= {};
+    state.plugins[entry.id] = {
+      ...state.plugins[entry.id],
+      display_name: displayName,
+      path: targetPath,
+      template: launchTemplateValue
+    };
+    await this.saveState(state);
+    return this.listPlugins();
   }
 
   async installPlugin({ path: archivePath }) {

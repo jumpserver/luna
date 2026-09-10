@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
+import path from "node:path";
 
 const children = new Set();
 let stopping = false;
@@ -40,11 +41,14 @@ const rendererPort = requestedRendererUrl
 const hmrPort = process.env.JMS_ELECTRON_HMR_PORT || String(await findAvailablePort());
 const rendererUrl = requestedRendererUrl || `http://${rendererHost}:${rendererPort}/luna/`;
 
-function run(command, args, env = process.env) {
+const repoRoot = process.cwd();
+const nuxtCli = path.join(repoRoot, "node_modules/nuxt/bin/nuxt.mjs");
+const forgeStart = path.join(repoRoot, "node_modules/@electron-forge/cli/dist/electron-forge-start.js");
+
+function run(command, args, env = process.env, cwd = repoRoot) {
   const child = spawn(command, args, {
-    cwd: process.cwd(),
+    cwd,
     env,
-    shell: process.platform === "win32",
     stdio: "inherit"
   });
   children.add(child);
@@ -78,20 +82,41 @@ process.once("SIGINT", () => stop(0));
 process.once("SIGTERM", () => stop(0));
 
 if (!requestedRendererUrl) {
-  const nuxt = run("pnpm", ["web:dev", "--host", rendererHost, "--port", String(rendererPort)], {
-    ...process.env,
-    JMS_HMR_PORT: hmrPort
-  });
+  // ponytail: --no-fork skips Nuxt's 2 pre-warm restart workers (~90MB); drop the flag if config-change restarts feel slow.
+  const nuxt = run(
+    process.execPath,
+    [
+      nuxtCli,
+      "dev",
+      "--dotenv",
+      ".env.development",
+      "--host",
+      rendererHost,
+      "--port",
+      String(rendererPort),
+      "--no-fork"
+    ],
+    {
+      ...process.env,
+      JMS_HMR_PORT: hmrPort,
+      JMS_DEV_LIGHT: "1"
+    }
+  );
   nuxt.once("exit", (code) => stop(code || 0));
 }
 
 try {
   await waitForRenderer();
-  const electron = run("pnpm", ["--dir", "electron", "start"], {
-    ...process.env,
-    JMS_ELECTRON_DEV: "1",
-    JMS_ELECTRON_RENDERER_URL: rendererUrl
-  });
+  const electron = run(
+    process.execPath,
+    [forgeStart],
+    {
+      ...process.env,
+      JMS_ELECTRON_DEV: "1",
+      JMS_ELECTRON_RENDERER_URL: rendererUrl
+    },
+    path.join(repoRoot, "electron")
+  );
   electron.once("exit", (code) => stop(code || 0));
 } catch (error) {
   console.error(error);

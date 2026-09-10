@@ -126,7 +126,7 @@ function transferStatusText(task: FileTransferTask): string {
   if (task.status === "transferring") {
     return `${t("FileTransfer.Status.transferring")} ${transferProgress(task)}%`;
   }
-  if (task.status === "failed" && task.error) return sftpTransferErrorText(task.error, t);
+  if (task.status === "failed" && task.error) return sftpTransferErrorText(task.error, t, task);
   return t(`FileTransfer.Status.${task.status}`);
 }
 

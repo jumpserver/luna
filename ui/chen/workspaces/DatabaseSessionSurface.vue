@@ -569,6 +569,7 @@ function connectSqlAiSession() {
 }
 
 function openSqlAi() {
+  getChenSqlAiSession(props.tab.id)?.targetNextRequestToEditor();
   openAi();
 }
 
@@ -585,7 +586,7 @@ function requestSqlAi(operation: ChenSqlAiOperation) {
   }
 
   const prompt = operation === "explain" ? t("RightPanel.SQLAIExplainPrompt") : t("RightPanel.SQLAIRepairPrompt");
-  void current.request(operation, prompt).catch((cause) => {
+  void current.request(operation, prompt, "editor").catch((cause) => {
     toast.add({
       title: t("RightPanel.SQLAISendFailed"),
       description: cause instanceof Error ? cause.message : String(cause),

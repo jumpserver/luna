@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { agentEventToUiMessage } from "#koko/composables/agent/useAgentSession";
 import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
 import {
+  bindChenSqlProposalTarget,
   handleChenSqlAiWireMessage,
   handleChenSqlAiMessage,
   registerChenSqlAiSession,
   unregisterChenSqlAiSession
 } from "./useChenSqlAiSessions";
+import type { ChenSqlEditorContext } from "./useChenSqlAiSessions";
 
 let agentHarness: ReturnType<typeof installAgentSessionHarness>;
 const paneIds: string[] = [];
@@ -21,6 +23,100 @@ afterEach(() => {
 });
 
 describe("Chen SQL AI proposals", () => {
+  const editorContext = (
+    workspaceTabKind: ChenSqlEditorContext["workspaceTabKind"],
+    overrides: Partial<ChenSqlEditorContext> = {}
+  ): ChenSqlEditorContext => ({
+    dialect: "postgresql",
+    nodeKey: "database",
+    consoleId: workspaceTabKind === "database" ? "" : "console-1",
+    paneId: "pane-1",
+    tabId: ["query", "console"].includes(workspaceTabKind) ? "tab-1" : "",
+    workspaceTabId: workspaceTabKind === "none" ? "" : "tab-1",
+    workspaceTabKind,
+    currentContext: "database",
+    revision: 1,
+    selectionFrom: 0,
+    selectionTo: 0,
+    selectedSql: "",
+    documentSql: "SELECT 1",
+    ...overrides
+  });
+
+  it.each([
+    ["query", false, "document"],
+    ["console", true, "document"],
+    ["console", false, "new_query"],
+    ["database", false, "new_query"],
+    ["data-view", false, "new_query"]
+  ] as const)("binds %s context with editor=%s to %s", (kind, targetEditor, expected) => {
+    expect(bindChenSqlProposalTarget(editorContext(kind), targetEditor).proposalTarget).toBe(expected);
+  });
+
+  it("binds the editor and apply target when the request starts", async () => {
+    const paneId = "sql-bound-target-pane";
+    const sendFrame = vi.fn<Parameters<typeof registerChenSqlAiSession>[1]>(() => true);
+    let context = editorContext("console", { paneId, tabId: "console-1", workspaceTabId: "console-1" });
+    const session = registerChenSqlAiSession(
+      paneId,
+      sendFrame,
+      () => context,
+      () => ({ applied: true })
+    )!;
+    paneIds.push(paneId);
+    await agentHarness.attach(handleChenSqlAiWireMessage, paneId, "sql");
+
+    const request = session.request("generate", "Generate SQL");
+    await vi.waitFor(() => expect(agentHarness.sendMessage).toHaveBeenCalledOnce());
+    context = editorContext("query", { paneId, tabId: "query-2", workspaceTabId: "query-2" });
+
+    expect(session.requestContext).toMatchObject({
+      tabId: "console-1",
+      workspaceTabKind: "console",
+      proposalTarget: "new_query"
+    });
+    agentHarness.emit(session.resourceSessionId, {
+      type: "tool.call",
+      run_id: session.agent.state.activeRunId,
+      tool_call_id: "tool-context",
+      payload: { id: "rpc-context", tool_name: "read_sql_context", arguments: {} }
+    });
+    const wireFrame = sendFrame.mock.calls[0]![0];
+    expect(wireFrame.type).toBe("mcp.request");
+    const requestFrame = JSON.parse(wireFrame.data);
+    expect(requestFrame.params._meta["com.jumpserver/sqlContext"]).toMatchObject({
+      tabId: "console-1",
+      workspaceTabKind: "console",
+      proposalTarget: "new_query"
+    });
+    session.cancelActive();
+    await request;
+  });
+
+  it("targets the console document for a Generate request opened from the editor", async () => {
+    const paneId = "sql-console-editor-target-pane";
+    const session = registerChenSqlAiSession(
+      paneId,
+      () => true,
+      () => editorContext("console", { paneId, tabId: "console-1", workspaceTabId: "console-1" }),
+      () => ({ applied: true })
+    )!;
+    paneIds.push(paneId);
+    await agentHarness.attach(handleChenSqlAiWireMessage, paneId, "sql");
+
+    session.targetNextRequestToEditor();
+    const request = session.request("generate", "Generate SQL");
+    await vi.waitFor(() => expect(agentHarness.sendMessage).toHaveBeenCalledOnce());
+
+    expect(session.requestContext).toMatchObject({
+      tabId: "console-1",
+      workspaceTabKind: "console",
+      proposalTarget: "document"
+    });
+    session.cancelActive();
+    await request;
+  });
+
   it("buffers a validated proposal until the user decides", () => {
     const paneId = "sql-proposal-pane";
     const session = registerChenSqlAiSession(

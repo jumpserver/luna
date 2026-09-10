@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeLanguageCode, toIntlLocale } from "./index";
+import { normalizeLanguageCode, toDjangoLanguageCode, toIntlLocale } from "./index";
 
 describe("language normalization", () => {
   it.each([
@@ -23,5 +23,12 @@ describe("language normalization", () => {
     expect(toIntlLocale("zh_hant")).toBe("zh-TW");
     expect(toIntlLocale("pt_br")).toBe("pt-BR");
     expect(() => new Intl.DateTimeFormat(toIntlLocale("pt_br"))).not.toThrow();
+  });
+
+  it("maps app language codes to Django i18n codes", () => {
+    expect(toDjangoLanguageCode("zh")).toBe("zh-hans");
+    expect(toDjangoLanguageCode("zh_hant")).toBe("zh-hant");
+    expect(toDjangoLanguageCode("pt_br")).toBe("pt-br");
+    expect(toDjangoLanguageCode("en")).toBe("en");
   });
 });

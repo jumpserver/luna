@@ -3,16 +3,23 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 
 import {
+  classifySftpWireError,
+  parseSftpCapabilities,
+  SFTP_CONNECTION_LOST_ERROR,
+  SFTP_OPERATION_UNSUPPORTED_ERROR,
+  sftpCanUpload,
   SftpCommand,
   SftpControlData,
   SftpDataStatus,
   SftpMessageType,
+  sftpOperationErrorMessage,
   SftpSocketFailureCode,
   SftpWebSocketProtocol
 } from "#koko/composables/sftp/protocol";
 import {
   SFTP_UPLOAD_CHUNK_SIZE,
   SftpPathNotFoundError,
+  SftpPermissionDeniedError,
   useSftpOperations
 } from "#koko/composables/sftp/useSftpOperations";
 import { useSftpRetry } from "#koko/composables/sftp/useSftpRetry";
@@ -204,6 +211,23 @@ describe("sFTP browser protocol", () => {
     expect(FakeWebSocket.instances).toHaveLength(1);
   });
 
+  it("rejects listing a directory without permission", async () => {
+    const { fake, socket } = openSocket();
+    const list = useSftpOperations(ref("/home/tester"), socket).operations.listDirectory("/root");
+    await nextMessage();
+    const request = lastSent(fake);
+    fake.receive({
+      id: request.id,
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.List,
+      data: JSON.stringify([]),
+      err: 'sftp: "Permission denied" (SSH_FX_PERMISSION_DENIED)'
+    });
+
+    await expect(list).rejects.toBeInstanceOf(SftpPermissionDeniedError);
+    expect(socket.connected.value).toBe(true);
+  });
+
   it("uses the server canonical path for file and AI context", async () => {
     const { fake, socket } = openSocket();
     const client = useSftpOperations(ref("/"), socket);
@@ -344,7 +368,7 @@ describe("sFTP browser protocol", () => {
       cmd: SftpCommand.Remove,
       err: "permission denied"
     });
-    await expect(remove).rejects.toThrow("permission denied");
+    await expect(remove).rejects.toBeInstanceOf(SftpPermissionDeniedError);
   });
 
   it("refreshes the token and ticket only when reconnect is explicitly invoked", async () => {
@@ -466,5 +490,75 @@ describe("sFTP feature tour", () => {
     for (const section of ["fileManagement", "localFile", "sftpTransferCenter", "sftpTour"] as const) {
       expect(leafKeys(enKoko[section]).sort()).toEqual(leafKeys(zhKoko[section]).sort());
     }
+  });
+});
+
+describe("sftp wire errors", () => {
+  const t = (key: string) => key;
+
+  it("classifies koko SSH_FX err strings", () => {
+    expect(classifySftpWireError({ err: 'sftp: "Permission denied" (SSH_FX_PERMISSION_DENIED)' })).toBe(
+      "permission_denied"
+    );
+    expect(classifySftpWireError({ err: 'sftp: "No such file" (SSH_FX_NO_SUCH_FILE)' })).toBe("path_not_found");
+    expect(classifySftpWireError({ err: "operation unsupported" })).toBe("unsupported");
+    expect(classifySftpWireError({ err: "connection lost" })).toBe("connection_lost");
+    expect(classifySftpWireError({ error_code: "sftp_file_conflict", err: "remote file changed" })).toBe("conflict");
+  });
+
+  it("maps classified errors to file-management copy", () => {
+    expect(sftpOperationErrorMessage(new Error(SFTP_OPERATION_UNSUPPORTED_ERROR), t)).toBe(
+      "koko.fileManagement.operationUnsupported"
+    );
+    expect(sftpOperationErrorMessage(new Error(SFTP_CONNECTION_LOST_ERROR), t)).toBe(
+      "koko.fileManagement.connectionClosed"
+    );
+    expect(sftpOperationErrorMessage(new SftpPermissionDeniedError(), t)).toBe(
+      "koko.fileManagement.pathPermissionDenied"
+    );
+  });
+});
+
+describe("sftp upload permission", () => {
+  it("blocks create when connect capabilities set write to false", () => {
+    expect(sftpCanUpload(null)).toBe(true);
+    expect(
+      sftpCanUpload(
+        parseSftpCapabilities(
+          JSON.stringify({
+            capabilities: {
+              web_sftp: {
+                schema_version: 1,
+                file_editor: {
+                  enabled: false,
+                  read: true,
+                  write: false,
+                  save: { version: 1, expected_version: true, force: true, max_bytes: 10 }
+                }
+              }
+            }
+          })
+        )
+      )
+    ).toBe(false);
+    expect(
+      sftpCanUpload(
+        parseSftpCapabilities(
+          JSON.stringify({
+            capabilities: {
+              web_sftp: {
+                schema_version: 1,
+                file_editor: {
+                  enabled: true,
+                  read: true,
+                  write: true,
+                  save: { version: 1, expected_version: true, force: true, max_bytes: 10 }
+                }
+              }
+            }
+          })
+        )
+      )
+    ).toBe(true);
   });
 });

@@ -37,6 +37,7 @@ const SQL_METADATA_CATEGORIES = [
 ];
 
 export type ChenSqlAiOperation = "generate" | "explain" | "repair";
+export type ChenSqlProposalTarget = "selection" | "document" | "new_query";
 export type ChenSqlAiEventData = Record<string, any>;
 export type ChenSqlAiChatMessage = UIMessage<ChenSqlAiEventData, Record<string, ChenSqlAiEventData>>;
 export type ChenSqlAiFrameSender = (frame: ReturnType<typeof kokoMcpWireMessage>) => boolean;
@@ -60,6 +61,8 @@ export interface ChenSqlEditorContext {
   lastError?: Record<string, any> | null;
 }
 
+export type ChenSqlRequestContext = ChenSqlEditorContext & { proposalTarget: ChenSqlProposalTarget };
+
 export interface ChenSqlProposal {
   sql: string;
   originalSql?: string;
@@ -69,7 +72,7 @@ export interface ChenSqlProposal {
     paneId: string;
     tabId: string;
     revision: number;
-    target: "selection" | "document" | "new_query";
+    target: ChenSqlProposalTarget;
     selectionFrom: number;
     selectionTo: number;
     nodeKey: string;
@@ -172,16 +175,21 @@ export interface ChenSqlAiSession {
   proposalRequestIds: Map<string, ChenSqlProposalRequest>;
   closedProposalRequestIds: Set<string>;
   pendingProposalCalls: Map<string, PendingChenSqlProposalCall>;
+  requestContext: ChenSqlRequestContext | null;
   contextProvider: () => ChenSqlEditorContext | null;
   proposalApplier: (proposal: ChenSqlProposal) => ChenSqlProposalApplyResult;
-  request: (operation: ChenSqlAiOperation, question: string) => Promise<void>;
+  targetNextRequestToEditor: () => void;
+  request: (operation: ChenSqlAiOperation, question: string, target?: "editor") => Promise<void>;
   cancelActive: () => void;
   resolveMetadataApproval: (decision: ChenSqlMetadataApprovalDecision) => void;
   applyProposal: (toolCallId: string) => ChenSqlProposalApplyResult;
   rejectProposal: (toolCallId: string) => boolean;
 }
 
-type ChenSqlAiRuntimeSession = ChenSqlAiSession & { activeOperation: ChenSqlAiOperation };
+type ChenSqlAiRuntimeSession = ChenSqlAiSession & {
+  activeOperation: ChenSqlAiOperation;
+  nextRequestTargetsEditor: boolean;
+};
 
 class ChenSqlAiClientError extends Error {
   constructor(
@@ -220,7 +228,7 @@ class ChenSqlAiTransport implements ChatTransport<ChenSqlAiChatMessage> {
     if (
       !message ||
       message.role !== "user" ||
-      !session.contextProvider() ||
+      !session.requestContext ||
       !["generate", "explain", "repair"].includes(operation)
     ) {
       throw new ChenSqlAiClientError("invalid_context", "An active SQL editor context is required");
@@ -345,6 +353,17 @@ const chatScopes = new WeakMap<ChenSqlAiSession, EffectScope>();
 
 function currentOperation(session: ChenSqlAiSession): ChenSqlAiOperation {
   return (session as ChenSqlAiRuntimeSession).activeOperation || "generate";
+}
+
+export function bindChenSqlProposalTarget(context: ChenSqlEditorContext, targetEditor = false): ChenSqlRequestContext {
+  const documentTarget =
+    context.workspaceTabKind === "query" || (targetEditor && context.workspaceTabKind === "console");
+  const proposalTarget = documentTarget
+    ? context.selectionTo > context.selectionFrom
+      ? "selection"
+      : "document"
+    : "new_query";
+  return { ...context, proposalTarget };
 }
 
 function sqlToolCallId(frame: KokoMcpRequestFrame) {
@@ -494,7 +513,7 @@ function sendToolFrame(session: ChenSqlAiSession, frame: KokoMcpRequestFrame | K
   let proposalRequestId = "";
   if (frame.type === "mcp.request") {
     const request = frame as KokoMcpRequestFrame;
-    const context = session.contextProvider();
+    const context = session.requestContext;
     if (!context) throw new ChenSqlAiClientError("invalid_context", "An active SQL editor context is required");
     const operation = currentOperation(session);
     const verifiedContext = operation === "repair" ? context : { ...context, lastError: null };
@@ -572,6 +591,8 @@ function createSession(
         session.proposalRequestIds.clear();
         session.closedProposalRequestIds.clear();
         session.pendingProposalCalls.clear();
+        session.requestContext = null;
+        (session as ChenSqlAiRuntimeSession).nextRequestTargetsEditor = false;
         session.runtimeStatus = "";
         session.runtimeStatusCode = "";
         session.runtimeState = "";
@@ -634,6 +655,7 @@ function createSession(
     inputLocked: false,
     taskActive: false,
     activeOperation: "generate",
+    nextRequestTargetsEditor: false,
     draft: "",
     runtimeStatus: "",
     runtimeStatusCode: "",
@@ -651,11 +673,21 @@ function createSession(
     proposalRequestIds: new Map<string, ChenSqlProposalRequest>(),
     closedProposalRequestIds: new Set<string>(),
     pendingProposalCalls: new Map<string, PendingChenSqlProposalCall>(),
+    requestContext: null,
     contextProvider: markRaw(contextProvider),
     proposalApplier: markRaw(proposalApplier),
-    request: async (operation: ChenSqlAiOperation, question: string) => {
+    targetNextRequestToEditor: () => {
+      (session as ChenSqlAiRuntimeSession).nextRequestTargetsEditor = true;
+    },
+    request: async (operation: ChenSqlAiOperation, question: string, target?: "editor") => {
       const text = question.trim();
       if (!text) throw new ChenSqlAiClientError("invalid_message", "SQL AI requires a user message");
+      if (session.taskActive) throw new ChenSqlAiClientError("response_active", "Another SQL AI request is active");
+      const context = session.contextProvider();
+      if (!context) throw new ChenSqlAiClientError("invalid_context", "An active SQL editor context is required");
+      const targetEditor = target === "editor" || (session as ChenSqlAiRuntimeSession).nextRequestTargetsEditor;
+      (session as ChenSqlAiRuntimeSession).nextRequestTargetsEditor = false;
+      session.requestContext = bindChenSqlProposalTarget(context, targetEditor);
       (session as ChenSqlAiRuntimeSession).activeOperation = operation;
       session.errorCode = "";
       session.errorText = "";
@@ -807,7 +839,7 @@ export function handleChenSqlAiMessage(paneId: string, value: unknown) {
     }
   } else if (String(approval?.tool || "") === "inspect_schema") {
     const argumentsValue = isRecord(approval?.arguments) ? approval.arguments : {};
-    const context = session.contextProvider();
+    const context = session.requestContext || session.contextProvider();
     const query = String(argumentsValue.query || "").slice(0, 1024);
     const tables = boundedStringArray(argumentsValue.tables, 8);
     const expiresAt = Date.parse(String(approval?.expires_at || ""));

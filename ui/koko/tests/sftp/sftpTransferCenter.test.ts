@@ -522,6 +522,8 @@ describe("sftp professional workbench", () => {
     expect(remotePaneToolbar).toContain('label: t("koko.fileManagement.forward")');
     expect(remotePaneToolbar).toContain('label: t("koko.fileManagement.home")');
     expect(remotePaneToolbar).not.toContain("onSelect: () => uploadInput.value?.click()");
+    expect(remotePaneToolbar).toContain(':disabled="!canUpload"');
+    expect(remotePaneActions).toContain("if (!sftpCanUpload(options.manager.capabilities.value)) return");
     expect(localPaneToolbar).toContain("@click=\"void emit('refresh')\"");
     expect(localPaneToolbar).not.toContain('onSelect: () => emit("refresh")');
     expect(localPaneToolbar).not.toContain("koko.actions.upload");

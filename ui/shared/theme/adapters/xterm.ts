@@ -1,6 +1,6 @@
 import type { ITheme } from "@xterm/xterm";
-import xtermTheme from "xterm-theme";
 
+import { useSettingManager } from "~/composables/useSettingManager";
 import { isDarkColor } from "~/shared/theme/color";
 import { readResolvedTerminalTokens } from "~/shared/theme/resolvedTokens";
 
@@ -42,10 +42,38 @@ const LIGHT_ANSI = {
   brightWhite: "#111111"
 } as const;
 
+let namedThemes: Record<string, ITheme> | undefined;
+let namedThemesLoading: Promise<Record<string, ITheme>> | undefined;
+
+function notifyTerminalThemePresetObservers() {
+  if (!import.meta.client) return;
+  const root = document.documentElement;
+  const current = root.dataset.terminalThemePreset ?? "";
+  delete root.dataset.terminalThemePreset;
+  root.dataset.terminalThemePreset = current;
+}
+
+export function ensureNamedXtermThemes() {
+  namedThemesLoading ??= import("xterm-theme")
+    .then((module) => {
+      namedThemes = module.default as Record<string, ITheme>;
+      notifyTerminalThemePresetObservers();
+      return namedThemes;
+    })
+    .catch((error: unknown) => {
+      namedThemesLoading = undefined;
+      throw error;
+    });
+  return namedThemesLoading;
+}
+
 export function toXtermTheme(tokens = readResolvedTerminalTokens()): ITheme {
   const selected = useSettingManager().terminalThemePreset.value;
-  const preset = (xtermTheme as Record<string, ITheme>)[selected];
-  if (selected !== "follow-app" && preset) return preset;
+  if (selected !== "follow-app") {
+    const preset = namedThemes?.[selected];
+    if (preset) return preset;
+    void ensureNamedXtermThemes();
+  }
 
   const dark = isDarkColor(tokens.background);
 

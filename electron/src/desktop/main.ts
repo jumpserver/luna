@@ -27,16 +27,19 @@ import { ApplicationConfigService } from "../apps/application-config";
 import { LocalApplicationLauncher } from "../apps/local-app-launcher";
 import { listSystemFonts } from "../apps/system-fonts";
 import { DesktopAuthService } from "../auth/service";
+import { isOAuthCallbackUrl } from "../auth/oauth-callback";
 import { FfmpegPluginManager } from "../replay/ffmpeg-plugin";
 import { OfflineRecordingStore } from "../replay/offline-recordings";
 import { ReplayTranscoder } from "../replay/transcoder";
 import { readableToWebBody } from "../shared/bytes";
+import { findClientProtocolUrl, normalizeClientProtocolUrl } from "../shared/client-protocol";
 import {
   activateDebugLogService,
   DebugLogService,
   electronLog,
   parsePersistedDebugLogEnabled
 } from "../shared/debug-log";
+import { productNameAllowsDevTools } from "../shared/product-name";
 import { parseUrl, toFetchUrl } from "../shared/url";
 import { createWebProxyManager } from "@jumpserver/web-proxy/manager";
 
@@ -50,6 +53,7 @@ const macDockIconInset = 48;
 const trayIconSize = 16;
 const defaultProductName = "JumpServer";
 const productName = String(runtimePackage.productName || defaultProductName);
+const allowDevTools = isDevelopment || productNameAllowsDevTools(productName, String(runtimePackage.version || ""));
 app.setName(productName);
 if (isDevelopment) console.info(`[electron] ${app.getName()} ${app.getVersion()}`);
 const windows = new Map();
@@ -77,7 +81,10 @@ let debugLogService;
 let appIcon;
 
 protocol.registerSchemesAsPrivileged([
-  { scheme: "jms-app", privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
+  {
+    scheme: "jms-app",
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true }
+  },
   {
     scheme: "jms-asset",
     privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true }
@@ -172,9 +179,26 @@ function installConnectorSessionHooks(targetSession) {
 }
 
 async function proxyChenRequest(request, url) {
+  const origin = request.headers.get("origin");
+  const devOrigin = isDevelopment ? new URL(rendererUrl).origin : "";
+  if (origin && origin !== "jms-app://app" && origin !== devOrigin) {
+    return new Response("Forbidden renderer origin", { status: 403 });
+  }
+  const corsHeaders = new Headers();
+  if (origin && origin === devOrigin) {
+    corsHeaders.set("access-control-allow-origin", devOrigin);
+    corsHeaders.set("access-control-allow-credentials", "true");
+    corsHeaders.set("access-control-allow-methods", "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS");
+    corsHeaders.set(
+      "access-control-allow-headers",
+      request.headers.get("access-control-request-headers") || "content-type"
+    );
+    corsHeaders.set("vary", "Origin");
+  }
   const endpoint = url.searchParams.get("__jms_chen_endpoint") || "";
   url.searchParams.delete("__jms_chen_endpoint");
   if (!allowedChenOrigins.has(endpoint)) return new Response("Forbidden Chen endpoint", { status: 403 });
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
 
   const target = parseUrl(`${url.pathname}${url.search}`, endpoint);
   const headers = new Headers(request.headers);
@@ -195,7 +219,14 @@ async function proxyChenRequest(request, url) {
   // Chen binds its WebSocket token to the HTTP session created by /api/auth.
   // Use the renderer's shared Electron session so Set-Cookie is persisted and
   // automatically attached to the subsequent direct WebSocket handshake.
-  return electronSession.defaultSession.fetch(proxied);
+  const response = await electronSession.defaultSession.fetch(proxied);
+  const responseHeaders = new Headers(response.headers);
+  corsHeaders.forEach((value, name) => responseHeaders.set(name, value));
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: responseHeaders
+  });
 }
 
 function normalizePath(candidate) {
@@ -491,7 +522,7 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
     emitDesktopEvent("desktop-menu-command", "close-current-tab", label);
   });
 
-  if (isDevelopment) {
+  if (allowDevTools) {
     windowWebContents.on("context-menu", () => {
       Menu.buildFromTemplate([
         { label: "Reload", accelerator: "CmdOrCtrl+R", click: () => windowWebContents.reload() },
@@ -508,7 +539,10 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
 
   windows.set(label, win);
   installNavigationGuard(win);
-  win.once("ready-to-show", () => win.show());
+  win.once("ready-to-show", () => {
+    win.show();
+    if (allowDevTools && app.isPackaged) windowWebContents.openDevTools({ mode: "detach" });
+  });
   win.on("resize", () => {
     const [width, height] = win.getContentSize();
     emitDesktopEvent("desktop://resize", { width, height }, label);
@@ -1173,6 +1207,9 @@ async function handleInvoke(event, request) {
   if (command === "create_custom_terminal") {
     return applicationConfig.createCustomTerminal({ ...args, path: normalizePath(args.path) });
   }
+  if (command === "update_custom_terminal") {
+    return applicationConfig.updateCustomTerminal({ ...args, path: normalizePath(args.path) });
+  }
   if (command === "pull_up") return withIpcErrorLog("pull_up", () => localApplicationLauncher.launch(args.url));
   if (command === "list_system_fonts") return listSystemFonts();
   if (command === "transcode_replays") {
@@ -1285,9 +1322,6 @@ async function registerProtocols() {
   });
 }
 
-const gotSingleInstanceLock = app.requestSingleInstanceLock();
-if (!gotSingleInstanceLock) app.quit();
-
 interface PendingProtocolUrl {
   url: string;
   quitAfterLaunch: boolean;
@@ -1296,15 +1330,10 @@ interface PendingProtocolUrl {
 const pendingProtocolUrls: PendingProtocolUrl[] = [];
 let startupFinished = false;
 
-function findProtocolUrl(values: string[]) {
-  return values.find((value) => value.startsWith("jms://") || value.startsWith("jms2://"));
-}
-
 function describeProtocolUrl(rawUrl) {
   const value = String(rawUrl || "");
-  if (value.includes("auth/callback")) return "auth-callback";
+  if (isOAuthCallbackUrl(value)) return "auth-callback";
   if (value.startsWith("jms2://")) return "jms2-launch";
-  if (value.startsWith("jms://")) return "jms-launch";
   return "unknown";
 }
 
@@ -1319,18 +1348,22 @@ function queueProtocolUrl(url: string, quitAfterLaunch: boolean) {
   pendingProtocolUrls.push({ url, quitAfterLaunch });
 }
 
-function handleIncomingProtocolUrl(rawUrl, quitAfterLaunch = false) {
-  const value = String(rawUrl || "");
+function reportProtocolLaunchFailure(error: unknown) {
+  electronLog.error("protocol launch failed", error);
+  dialog.showErrorBox(productName, error instanceof Error ? error.message : String(error));
+}
+
+export function handleIncomingProtocolUrl(rawUrl, quitAfterLaunch = !startupFinished) {
+  const value = normalizeClientProtocolUrl(rawUrl) || "";
   const kind = describeProtocolUrl(value);
+  if (kind !== "jms2-launch" && startupFinished) showMainWindow();
   if (kind === "unknown") return kind;
   electronLog.info(`protocol ${kind}`);
   if (!startupFinished) {
     queueProtocolUrl(value, quitAfterLaunch);
     return kind;
   }
-  void processIncomingProtocolUrl(value).catch((error) => {
-    electronLog.error("protocol launch failed", error);
-  });
+  void processIncomingProtocolUrl(value).catch(reportProtocolLaunchFailure);
   return kind;
 }
 
@@ -1342,38 +1375,19 @@ async function drainPendingProtocolUrls() {
       const didLaunch = await processIncomingProtocolUrl(pending.url);
       shouldQuit ||= didLaunch && pending.quitAfterLaunch;
     } catch (error) {
-      electronLog.error("protocol launch failed", error);
+      reportProtocolLaunchFailure(error);
     }
   }
   return shouldQuit;
 }
 
-const initialProtocolUrl = findProtocolUrl(process.argv);
+const initialProtocolUrl = findClientProtocolUrl(process.argv);
 if (initialProtocolUrl) queueProtocolUrl(initialProtocolUrl, true);
 
-app.on("second-instance", (_event, commandLine) => {
-  const protocolUrl = findProtocolUrl(commandLine);
-  const kind = handleIncomingProtocolUrl(protocolUrl);
-  if (kind !== "jms-launch" && kind !== "jms2-launch" && startupFinished) showMainWindow();
-});
-app.on("open-url", (event, url) => {
-  event.preventDefault();
-  const kind = handleIncomingProtocolUrl(url, !startupFinished);
-  if (kind !== "jms-launch" && kind !== "jms2-launch" && startupFinished) showMainWindow();
-});
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 app.on("activate", () => createWindow("main"));
-
-for (const scheme of ["jms", "jms2"]) {
-  // Unpackaged protocol handlers only work on Windows. Registering Electron.app
-  // on macOS makes Launch Services open the generic "path-to-app" page instead.
-  if (process.defaultApp) {
-    if (process.platform === "win32" && process.argv[1])
-      app.setAsDefaultProtocolClient(scheme, process.execPath, [path.resolve(process.argv[1])]);
-  } else app.setAsDefaultProtocolClient(scheme);
-}
 
 app.whenReady().then(async () => {
   debugLogService = new DebugLogService({ logsDir: app.getPath("logs") });

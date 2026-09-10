@@ -87,9 +87,25 @@ function splitArguments(input) {
   return args.flatMap((argument) => argument.split("*"));
 }
 
-function spawnDetached(executable, args, options = {}) {
-  const child = spawn(executable, args, { detached: true, stdio: "ignore", ...options });
-  child.unref();
+function spawnDetached(executable, args, options = {}, waitForExit = false) {
+  return new Promise<void>((resolve, reject) => {
+    const child = spawn(executable, args, { detached: !waitForExit, stdio: "ignore", ...options });
+    // Do not include spawnargs in errors: connection arguments can contain credentials.
+    child.once("error", (error: NodeJS.ErrnoException) => {
+      reject(new Error(`failed to launch client '${executable}': ${error.code || "spawn failed"}`));
+    });
+    child.once("spawn", () => {
+      if (waitForExit) return;
+      child.unref();
+      resolve();
+    });
+    if (waitForExit) {
+      child.once("exit", (code, signal) => {
+        if (code === 0) resolve();
+        else reject(new Error(`failed to launch client '${executable}': ${signal || `exit code ${code}`}`));
+      });
+    }
+  });
 }
 
 function shellQuote(value) {
@@ -172,27 +188,27 @@ export class LocalApplicationLauncher {
         application.launch_driver === "iterm2"
           ? `tell application id "${applicationId}"\nactivate\nset targetWindow to (create window with default profile)\ntell current session of targetWindow to write text "${escapedCommand}"\nend tell`
           : `tell application id "${applicationId}"\nactivate\ndo script "${escapedCommand}"\nend tell`;
-      spawnDetached("osascript", ["-s", "h", "-e", script]);
-      return;
+      return spawnDetached("osascript", ["-s", "h", "-e", script], {}, true);
     }
     if (process.platform === "linux") {
-      spawnDetached(application.path || "x-terminal-emulator", ["-e", "bash", "-lc", command]);
-      return;
+      const executable = application.path && application.path !== "Terminal" ? application.path : "x-terminal-emulator";
+      return spawnDetached(executable, ["-e", "bash", "-lc", command]);
     }
     const executable = await this.resolveExecutable(application);
     if (useHelper) {
-      spawnDetached(executable, ["new-tab", "cmd.exe", "/d", "/s", "/c", command]);
-      return;
+      return spawnDetached(executable, ["new-tab", "cmd.exe", "/d", "/s", "/c", command]);
     }
     const args = splitArguments(argumentString);
-    spawnDetached(executable, application.launch_driver === "windows-terminal" ? ["new-tab", ...args] : args);
+    return spawnDetached(executable, application.launch_driver === "windows-terminal" ? ["new-tab", ...args] : args);
   }
 
   async launchExecutable(application, argumentString, values) {
     const executable = await this.resolveExecutable(application);
     const env = { ...process.env };
     for (const [key, template] of Object.entries(application.env || {})) env[key] = render(template, values);
-    spawnDetached(executable, splitArguments(argumentString), { env });
+    return spawnDetached(executable, Array.isArray(argumentString) ? argumentString : splitArguments(argumentString), {
+      env
+    });
   }
 
   async launchFile(application, payload) {
@@ -202,10 +218,10 @@ export class LocalApplicationLauncher {
     await mkdir(this.configService.configDir, { recursive: true });
     await writeFile(connectionPath, String(payload.file?.content || ""), { mode: 0o600 });
     if (process.platform === "darwin") {
-      spawnDetached("open", ["-a", application.path, connectionPath]);
-      return;
+      return spawnDetached("open", ["-a", application.path, connectionPath], {}, true);
     }
-    await this.launchExecutable(application, render(application.arg_format, { file: connectionPath }), {});
+    const args = splitArguments(application.arg_format).map((argument) => render(argument, { file: connectionPath }));
+    await this.launchExecutable(application, args, {});
   }
 
   async launchScript(application, payload, values) {
@@ -228,7 +244,7 @@ export class LocalApplicationLauncher {
     };
     for (const [key, template] of Object.entries(application.env || {})) env[key] = render(template, values);
     const interpreter = String(application.script_interpreter || "").trim();
-    spawnDetached(interpreter || scriptPath, interpreter ? [scriptPath] : [], { env });
+    return spawnDetached(interpreter || scriptPath, interpreter ? [scriptPath] : [], { env });
   }
 
   async launch(raw) {

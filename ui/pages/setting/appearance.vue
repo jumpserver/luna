@@ -7,7 +7,7 @@ import { useSettingManager } from "~/composables/useSettingManager";
 import { MAX_FONT_SIZE, MIN_FONT_SIZE, UI_RADIUS_PX } from "~/composables/useSettingStorage";
 import { useThemeOptions } from "~/composables/useThemeOptions";
 import { DARK_THEME_PRESETS, getThemePreset, LIGHT_THEME_PRESETS } from "~/composables/useThemePresets";
-import { desktopEmit, desktopInvoke } from "~/shared/desktop/bridge";
+import { desktopEmit, desktopInvoke, hasDesktopBridge } from "~/shared/desktop/bridge";
 import { CODEMIRROR_THEME_PRESETS, isCodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
 import { TERMINAL_THEME_PRESETS } from "~/shared/theme/presets/terminal";
 
@@ -20,6 +20,31 @@ interface FontItem {
 const SYSTEM_FONT_FAMILY = "system-ui, sans-serif";
 const LEGACY_DEFAULT_FONT_FAMILY =
   '"Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+const WEB_FONT_CANDIDATES = [
+  "Arial",
+  "Helvetica",
+  "Helvetica Neue",
+  "Georgia",
+  "Times New Roman",
+  "Courier New",
+  "Verdana",
+  "Tahoma",
+  "Trebuchet MS",
+  "Menlo",
+  "Monaco",
+  "Consolas",
+  "PingFang SC",
+  "Hiragino Sans GB",
+  "Songti SC",
+  "Heiti SC",
+  "Microsoft YaHei",
+  "Microsoft JhengHei",
+  "SimHei",
+  "SimSun",
+  "KaiTi",
+  "Noto Sans SC",
+  "Source Han Sans SC"
+];
 
 const LIGHT_ACCENT_COLORS = [
   "#1ab394",
@@ -245,11 +270,28 @@ function applyCurrentThemeColor(broadcast = false) {
   }
 }
 
+function isWebFontInstalled(name: string) {
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx) return false;
+  const probe = "mmmmmmmmmmlli";
+  return ["monospace", "serif"].some((fallback) => {
+    ctx.font = `72px ${fallback}`;
+    const base = ctx.measureText(probe).width;
+    ctx.font = `72px "${name}", ${fallback}`;
+    return ctx.measureText(probe).width !== base;
+  });
+}
+
+async function listFontFamilies() {
+  if (hasDesktopBridge()) return desktopInvoke<string[]>("list_system_fonts");
+  return WEB_FONT_CANDIDATES.filter(isWebFontInstalled);
+}
+
 const loadSystemFonts = async () => {
   const fallback = SYSTEM_FONT_FAMILY;
 
   try {
-    const families = await desktopInvoke<string[]>("list_system_fonts");
+    const families = await listFontFamilies();
 
     const dynamicItems: FontItem[] = (families || []).map((name) => ({
       id: name,
@@ -478,7 +520,11 @@ watch(
             :aria-label="t('Setting.InterfaceFont')"
             size="sm"
             class="w-full sm:w-56"
-          />
+          >
+            <template #empty>
+              {{ t("Common.NoData") }}
+            </template>
+          </USelectMenu>
         </SettingsRow>
 
         <SettingsRow :title="t('Setting.InterfaceFontSize')" :description="t('Setting.InterfaceFontSizeDescription')">

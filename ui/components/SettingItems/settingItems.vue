@@ -230,12 +230,10 @@ const onPathClick = () => {
         {{ displayName }}
       </p>
 
-      <USwitch
-        class="col-start-3 row-start-1 justify-self-end"
-        :model-value="props.selected ?? false"
-        :disabled="switchDisabled"
-        @update:model-value="onSwitch"
-      />
+      <div class="col-start-3 row-start-1 flex items-center gap-2 justify-self-end">
+        <slot name="actions" />
+        <USwitch :model-value="props.selected ?? false" :disabled="switchDisabled" @update:model-value="onSwitch" />
+      </div>
 
       <div class="col-start-2 row-start-2 flex min-h-6 min-w-0 items-center gap-1.5">
         <template v-if="canPickPath && !props.item.path">

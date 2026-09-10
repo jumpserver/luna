@@ -10,7 +10,8 @@ export function chenPath(path: string, endpointUrl?: string) {
   const endpoint = new URL(endpointUrl || currentOrigin, currentOrigin);
 
   if (isElectronRuntime()) {
-    const target = new URL(withWebSitePrefix(connectorPath), currentOrigin);
+    // The Electron protocol owns the session-aware proxy, including in HTTP dev renderers.
+    const target = new URL(connectorPath, "jms-app://app");
     target.searchParams.set("__jms_chen_endpoint", endpoint.origin);
     return target.toString();
   }

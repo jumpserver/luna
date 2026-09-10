@@ -72,6 +72,7 @@ const handleClose = async () => {
             {{ t("AclDialog.Assignees", { value: item.assignees }) }}
             <UButton variant="link" size="xs" @click="copyTicketLink(item)">{{ t("Common.Copy") }}</UButton>
           </div>
+          <div v-if="item.status === 'pending'" class="acl-wait-bar mt-2" />
           <AclErrorDetail v-if="item.detail" :detail="item.detail" />
         </div>
         <UBadge :color="statusColor(item.status)" variant="soft" class="shrink-0 whitespace-nowrap">
@@ -83,6 +84,8 @@ const handleClose = async () => {
       {{ t("AclDialog.Assignees", { value: group.items[0].assignees }) }}
       <UButton variant="link" size="xs" @click="copyTicketLink(group.items[0])">{{ t("Common.Copy") }}</UButton>
     </div>
+    <p v-if="!isBatch && hasPending" class="mt-3 text-sm text-[var(--app-muted)]">{{ t("AclDialog.DoNotClose") }}</p>
+    <div v-if="!isBatch && hasPending" class="acl-wait-bar mt-3" />
     <AclErrorDetail v-if="!isBatch && group.items[0]?.detail" :detail="group.items[0].detail" />
 
     <iframe
@@ -103,3 +106,29 @@ const handleClose = async () => {
     </footer>
   </section>
 </template>
+
+<style scoped>
+.acl-wait-bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--app-border);
+}
+.acl-wait-bar::after {
+  content: "";
+  display: block;
+  height: 100%;
+  width: 32%;
+  border-radius: inherit;
+  background: var(--ui-primary);
+  animation: acl-wait 1.8s ease-in-out infinite;
+}
+@keyframes acl-wait {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+</style>

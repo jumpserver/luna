@@ -9,13 +9,20 @@ const faceliveTarget = process.env.JMS_FACELIVE_DEV_URL || "http://localhost:517
 const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:8083";
 const uiTarget = process.env.JMS_UI_DEV_URL || "http://localhost:9528";
 const appBaseURL = process.env.NUXT_APP_BASE_URL || "/luna/";
+const lightDev = process.env.JMS_DEV_LIGHT === "1";
 const kokoRoot = fileURLToPath(new URL("./ui/koko", import.meta.url));
 const buildTime = new Date().toLocaleString("zh-CN", {
   timeZone: "Asia/Shanghai",
   hour12: false
 });
 
-const getProxyOrigin = (target: string) => new URL(target).origin;
+const getProxyOrigin = (target: string) => {
+  try {
+    return new URL(target).origin;
+  } catch {
+    return target;
+  }
+};
 const rewriteProxyOrigin = (target: string) => (proxy: any) => {
   const origin = getProxyOrigin(target);
   proxy.on("proxyReq", (proxyReq: any) => {
@@ -148,7 +155,7 @@ export default defineNuxtConfig({
     },
     server: {
       strictPort: true,
-      hmr: {
+      ws: {
         protocol: "ws",
         host: "0.0.0.0",
         port: Number(process.env.JMS_HMR_PORT || 3001)
@@ -289,7 +296,7 @@ export default defineNuxtConfig({
     }
   },
   devtools: {
-    enabled: true
+    enabled: !lightDev
   },
   experimental: {
     typedPages: true,

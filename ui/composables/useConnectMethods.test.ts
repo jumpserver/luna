@@ -1,6 +1,7 @@
 import type { ConnectMethod } from "~/composables/useConnectMethods";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  canDownloadRdpFile,
   isExternalClientConnectMethod,
   normalizeWebConnectMethods,
   pickConnectMethod,
@@ -23,7 +24,28 @@ const appletMethod = (value: string, label: string): ConnectMethod => ({
   component: "tinker"
 });
 
+describe("RemoteApp connection modes", () => {
+  const applet = appletMethod("weblite", "WebLite");
+
+  it.each([undefined, "web", "client"])("only downloads and launches a client in client mode (%s)", (mode) => {
+    const options = { appletConnectMethod: mode };
+    expect(canDownloadRdpFile(applet, options)).toBe(mode === "client");
+    expect(isExternalClientConnectMethod(applet.value, [applet], options)).toBe(mode === "client");
+  });
+
+  it("excludes disabled applets, built-in web and virtual applications from RDP downloads", () => {
+    for (const method of [
+      { ...applet, disabled: true },
+      { ...applet, type: "web", component: "lion" },
+      { ...applet, type: "virtual_app", component: "panda" }
+    ])
+      expect(canDownloadRdpFile(method, { appletConnectMethod: "client" })).toBe(false);
+  });
+});
+
 describe("desktop website connect methods", () => {
+  beforeEach(() => vi.stubGlobal("isDesktopRuntime", () => true));
+  afterEach(() => vi.unstubAllGlobals());
   const webProxyMethod: ConnectMethod = {
     value: "web_proxy",
     label: "Built-in Browser",
@@ -172,15 +194,46 @@ describe("desktop website connect methods", () => {
       component: "koko"
     };
 
-    expect(
-      pickConnectMethod(
-        "ssh",
-        [builtin, nativeMethod],
-        "native_app:ssh_client:putty",
-        "native_app:ssh_client:putty",
-        undefined,
-        true
-      )
-    ).toBe(WEB_CLI_NATIVE_VALUE);
+    expect(pickConnectMethod("ssh", [builtin, nativeMethod], "", "native_app:ssh_client:putty", undefined, true)).toBe(
+      WEB_CLI_NATIVE_VALUE
+    );
   });
+
+  it.each([
+    ["ssh", WEB_CLI_NATIVE_VALUE, "ssh_client", "terminal"],
+    ["rdp", "web_rdp_native", "mstsc", "mstsc"]
+  ])(
+    "preserves an explicit %s application choice alongside a built-in option",
+    (protocol, builtinValue, nativeValue, client) => {
+      const builtin = { ...appletMethod(builtinValue, "Built-in"), type: "web" };
+      const native = { ...appletMethod(nativeValue, "Application"), type: "native" };
+      const selected = `native_app:${nativeValue}:${client}`;
+      const appConfig = {
+        terminal: [
+          {
+            name: client,
+            display_name: client,
+            protocol: [protocol],
+            comment: { zh: "", en: "" },
+            download_url: "",
+            type: "",
+            path: "",
+            arg_format: "",
+            match_first: [protocol],
+            is_internal: false,
+            is_default: true,
+            is_set: true,
+            path_exists: true
+          }
+        ],
+        remotedesktop: [],
+        filetransfer: [],
+        databases: []
+      };
+      expect(pickConnectMethod(protocol, [builtin, native], selected, "", appConfig, true)).toBe(selected);
+      expect(pickConnectMethod(protocol, [builtin, native], "", selected, appConfig, true)).toBe(builtinValue);
+      appConfig.terminal[0]!.path_exists = false;
+      expect(pickConnectMethod(protocol, [builtin, native], selected, "", appConfig, true)).toBe(builtinValue);
+    }
+  );
 });
