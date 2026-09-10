@@ -50,7 +50,7 @@ const isDevelopment = process.env.JMS_ELECTRON_DEV === "1" || !app.isPackaged;
 const projectRoot = isDevelopment ? path.resolve(appRoot, "..") : process.resourcesPath;
 const macDockIconSize = 512;
 const macDockIconInset = 48;
-const trayIconSize = 16;
+const trayIconSize = process.platform === "darwin" ? 20 : 16;
 const defaultProductName = "JumpServer";
 const productName = String(runtimePackage.productName || defaultProductName);
 const allowDevTools = isDevelopment || productNameAllowsDevTools(productName, String(runtimePackage.version || ""));
@@ -390,7 +390,7 @@ function createInsetIcon(iconPath, size, inset) {
 }
 
 function loadAppIcon() {
-  const iconName = process.platform === "win32" ? "icon.ico" : "icon.png";
+  const iconName = process.platform === "win32" ? "icon.ico" : process.platform === "darwin" ? "icon-mac.png" : "icon.png";
   const iconPath = isDevelopment
     ? path.join(projectRoot, "electron/assets/icons", iconName)
     : path.join(process.resourcesPath, "icons", iconName);

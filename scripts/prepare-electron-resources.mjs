@@ -15,6 +15,7 @@ await Promise.all([
   cp(path.join(projectRoot, ".output", "public"), path.join(stagingRoot, "dist"), { recursive: true }),
   cp(path.join(projectRoot, "plugins", platform), path.join(stagingRoot, "plugins", platform), { recursive: true }),
   cp(path.join(projectRoot, "electron", "assets", "icons", "icon.png"), path.join(stagingRoot, "icons", "icon.png")),
+  cp(path.join(projectRoot, "electron", "assets", "icons", "icon-mac.png"), path.join(stagingRoot, "icons", "icon-mac.png")),
   cp(path.join(projectRoot, "electron", "assets", "icons", "icon.ico"), path.join(stagingRoot, "icons", "icon.ico")),
   cp(path.join(projectRoot, "electron", "assets", "icons", "32x32.png"), path.join(stagingRoot, "icons", "32x32.png")),
   cp(

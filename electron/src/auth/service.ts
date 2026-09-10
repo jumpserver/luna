@@ -266,12 +266,13 @@ export class DesktopAuthService {
     const session = this.sessions.get(this.currentSessionKey);
     if (!session) return;
 
-    // This endpoint sets a language cookie and redirects; it does not return JSON.
+    // Electron net.fetch rejects manual redirects. Follow the cookie-setting
+    // endpoint's redirect, without parsing its HTML response as JSON.
     const response = await this.fetchSite(endpoint(session.origin, `/core/i18n/${language}/`), {
-      redirect: "manual",
+      redirect: "follow",
       signal: AbortSignal.timeout(10_000)
     });
-    if (!response.ok && response.status !== 302) {
+    if (!response.ok) {
       throw new Error(`Language synchronization failed: status=${response.status}`);
     }
   }

@@ -11,22 +11,22 @@ const service = runInNewContext(`({ ${method} })`, {
   endpoint: (site: string, path: string) => `${site.replace(/\/+$/, "")}${path}`
 });
 
-function setup(status = 302) {
+function setup(status = 200) {
   return {
     ...service,
     currentSessionKey: "account",
     sessions: new Map([["account", { origin: "https://jumpserver.test/site/" }]]),
-    fetchSite: mock.fn(async () => new Response("<!DOCTYPE html>", { status }))
+    fetchSite: mock.fn(async () => new Response(status === 204 ? null : "<!DOCTYPE html>", { status }))
   };
 }
 
-test("language synchronization accepts the cookie redirect without following it or parsing HTML", async () => {
-  for (const status of [302, 200]) {
+test("language synchronization follows the cookie redirect without parsing HTML", async () => {
+  for (const status of [200, 204]) {
     const auth = setup(status);
     await auth.syncBackendLanguage({ language: "zh-hans" });
     const [url, options] = auth.fetchSite.mock.calls[0].arguments as unknown as [string, RequestInit];
     assert.equal(url, "https://jumpserver.test/site/core/i18n/zh-hans/");
-    assert.equal(options.redirect, "manual");
+    assert.equal(options.redirect, "follow");
     assert.ok(options.signal instanceof AbortSignal);
   }
 });
