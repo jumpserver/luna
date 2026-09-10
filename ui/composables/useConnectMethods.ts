@@ -38,6 +38,14 @@ export interface ConnectMethodsResponse {
   originals: ConnectMethod[];
 }
 
+export const canDownloadRdpFile = (
+  method: ConnectMethod | undefined,
+  options: { appletConnectMethod?: unknown } = {}
+) =>
+  !!method &&
+  !method.disabled &&
+  (method.component === "razor" || (method.type === "applet" && options.appletConnectMethod === "client"));
+
 const LOCAL_APPLICATION_METHOD_PREFIX = "native_app:";
 
 export const createLocalApplicationConnectMethod = (connectMethod: string, clientName: string) =>
@@ -88,13 +96,20 @@ export const isConnectMethodAvailable = (
     .some((item) => item.name === selected.clientName && isApplicationConfigItemAvailable(item, protocol));
 };
 
-export const isExternalClientConnectMethod = (value: string, methods: ConnectMethod[]) => {
+export const isExternalClientConnectMethod = (
+  value: string,
+  methods: ConnectMethod[],
+  options: { appletConnectMethod?: unknown } = {}
+) => {
   const selected = parseLocalApplicationConnectMethod(value);
   if (selected.connectMethod.endsWith("_guide")) return false;
 
   const method = methods.find((item) => item.value === selected.connectMethod);
   const type = String(method?.type || "").toLowerCase();
-  return ["native", "client", "local", "desktop"].includes(type);
+  return (
+    ["native", "client", "local", "desktop"].includes(type) ||
+    (type === "applet" && options.appletConnectMethod === "client")
+  );
 };
 
 const BUILTIN_WORKSPACE_METHOD_VALUES = new Set([

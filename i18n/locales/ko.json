@@ -958,6 +958,8 @@
     "StatusIdle": "대기 중"
   },
   "EditModal": {
+    "AppletConnectMethod": "원격 앱 연결 방식",
+    "DownloadRdpFile": "RDP 파일 다운로드",
     "ModifyConnectionInfo": "연결",
     "Description": "마우스 오른쪽 버튼을 클릭하여 편집",
     "RememberSelection": "다음부터 자동으로 연결",
@@ -1244,7 +1246,8 @@
   "ConnectMethodType": {
     "BuiltIn": "내장",
     "Application": "애플리케이션",
-    "RemoteApplication": "원격 애플리케이션"
+    "RemoteApplication": "원격 애플리케이션",
+    "VirtualApplication": "가상 애플리케이션"
   },
   "ConnectMethod": {
     "BuiltinTerminal": "내장 터미널",
@@ -1263,6 +1266,7 @@
     "BuiltinWebProxyDescription": "Website 자산은 시스템 WebView를 사용하며 트래픽은 Koko Web Proxy를 통해 전달됩니다."
   },
   "ConnectError": {
+    "DownloadRdpFailed": "RDP 파일을 다운로드하지 못했습니다",
     "ConnectFailed": "연결 실패",
     "CredentialServiceUnavailable": "자격 증명 서비스(예: OpenBao)를 사용할 수 없습니다. 서비스 상태를 확인한 후 다시 시도하세요.",
     "AclFailed": "현재 자산은 ACL 정책으로 제한되어 클라이언트에서 접근할 수 없습니다. 웹 콘솔에서 연결하세요.",

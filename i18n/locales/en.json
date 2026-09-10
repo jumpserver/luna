@@ -958,6 +958,8 @@
     "StatusIdle": "Idle"
   },
   "EditModal": {
+    "AppletConnectMethod": "RemoteApp connection mode",
+    "DownloadRdpFile": "Download RDP file",
     "ModifyConnectionInfo": "Connect",
     "Description": "Right-click to edit",
     "RememberSelection": "Auto connect next time",
@@ -1244,7 +1246,8 @@
   "ConnectMethodType": {
     "BuiltIn": "Built-in",
     "Application": "Application",
-    "RemoteApplication": "Remote Application"
+    "RemoteApplication": "Remote Application",
+    "VirtualApplication": "Virtual Application"
   },
   "ConnectMethod": {
     "BuiltinTerminal": "Built-in terminal",
@@ -1263,6 +1266,7 @@
     "BuiltinWebProxyDescription": "Website assets use the system WebView, with traffic routed through Koko Web Proxy."
   },
   "ConnectError": {
+    "DownloadRdpFailed": "Failed to download RDP file",
     "ConnectFailed": "Connection failed",
     "CredentialServiceUnavailable": "The credential service (such as OpenBao) is unavailable. Check the service status and try again.",
     "AclFailed": "The current asset is restricted by ACL policies and cannot be accessed via the client. Please use the Web console to connect.",

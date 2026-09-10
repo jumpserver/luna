@@ -958,6 +958,8 @@
     "StatusIdle": "待機中"
   },
   "EditModal": {
+    "AppletConnectMethod": "リモートアプリの接続方法",
+    "DownloadRdpFile": "RDP ファイルをダウンロード",
     "ModifyConnectionInfo": "接続",
     "Description": "右クリックして編集",
     "RememberSelection": "次回から自動接続",
@@ -1244,7 +1246,8 @@
   "ConnectMethodType": {
     "BuiltIn": "内蔵",
     "Application": "アプリケーション",
-    "RemoteApplication": "リモートアプリケーション"
+    "RemoteApplication": "リモートアプリケーション",
+    "VirtualApplication": "仮想アプリケーション"
   },
   "ConnectMethod": {
     "BuiltinTerminal": "内蔵ターミナル",
@@ -1263,6 +1266,7 @@
     "BuiltinWebProxyDescription": "Website 資産はシステム WebView を使用し、トラフィックは Koko Web Proxy 経由で統一します。"
   },
   "ConnectError": {
+    "DownloadRdpFailed": "RDP ファイルのダウンロードに失敗しました",
     "ConnectFailed": "接続に失敗しました",
     "CredentialServiceUnavailable": "認証情報サービス（OpenBao など）を利用できません。サービスの状態を確認してから再試行してください。",
     "AclFailed": "現在のアセットは ACL ポリシーによって制限されているため、クライアントからアクセスできません。Web コンソールから接続してください。",

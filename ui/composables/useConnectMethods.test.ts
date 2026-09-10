@@ -1,6 +1,7 @@
 import type { ConnectMethod } from "~/composables/useConnectMethods";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  canDownloadRdpFile,
   isExternalClientConnectMethod,
   normalizeWebConnectMethods,
   pickConnectMethod,
@@ -21,6 +22,25 @@ const appletMethod = (value: string, label: string): ConnectMethod => ({
   disabled: false,
   listen: "",
   component: "tinker"
+});
+
+describe("RemoteApp connection modes", () => {
+  const applet = appletMethod("weblite", "WebLite");
+
+  it.each([undefined, "web", "client"])("only downloads and launches a client in client mode (%s)", (mode) => {
+    const options = { appletConnectMethod: mode };
+    expect(canDownloadRdpFile(applet, options)).toBe(mode === "client");
+    expect(isExternalClientConnectMethod(applet.value, [applet], options)).toBe(mode === "client");
+  });
+
+  it("excludes disabled applets, built-in web and virtual applications from RDP downloads", () => {
+    for (const method of [
+      { ...applet, disabled: true },
+      { ...applet, type: "web", component: "lion" },
+      { ...applet, type: "virtual_app", component: "panda" }
+    ])
+      expect(canDownloadRdpFile(method, { appletConnectMethod: "client" })).toBe(false);
+  });
 });
 
 describe("desktop website connect methods", () => {

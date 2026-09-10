@@ -6,6 +6,7 @@ import ConnectFormFields from "~/components/ConnectForm/fields.vue";
 const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
 const { activeRequest, settle } = useConnectionFormModal();
+const { confirmConnection } = useAssetConnection();
 const {
   buildConnectionInfo,
   draft,
@@ -20,6 +21,7 @@ const {
 
 const currentAsset = ref<AssetItem | null>(null);
 const loading = ref(false);
+const downloadingRdp = shallowRef(false);
 let loadSequence = 0;
 
 const modalTitle = computed(() => {
@@ -55,6 +57,26 @@ const loadAsset = async () => {
 
 const confirm = () => {
   if (currentAsset.value) settle(buildConnectionInfo(currentAsset.value));
+};
+const downloadRdp = async (connectMethod: string) => {
+  if (!currentAsset.value || downloadingRdp.value) return;
+  downloadingRdp.value = true;
+  try {
+    await confirmConnection(currentAsset.value, {
+      ...buildConnectionInfo(currentAsset.value),
+      connectMethod,
+      downloadRdp: true,
+      onSessionReady: () => {
+        downloadingRdp.value = false;
+      },
+      onSessionError: () => {
+        downloadingRdp.value = false;
+      }
+    });
+  } catch (error) {
+    downloadingRdp.value = false;
+    addErrorToast({ title: t("ConnectError.DownloadRdpFailed"), description: String(error) });
+  }
 };
 const cancel = () => settle(null);
 const updateOpen = (open: boolean) => {
@@ -96,8 +118,11 @@ watch(
           :personal-credentials-loaded="personalCredentialsLoaded"
           :personal-credentials-load-failed="personalCredentialsLoadFailed"
           :submit-label="t('Common.Connect')"
+          :submitting="downloadingRdp"
+          :downloading-rdp="downloadingRdp"
           asset-type="assets"
           @submit="confirm"
+          @download-rdp="downloadRdp"
         />
       </div>
     </template>
