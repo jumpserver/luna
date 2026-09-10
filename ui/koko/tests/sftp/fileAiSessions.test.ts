@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ref } from "vue";
-import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
+import { SftpMessageType } from "#koko/composables/sftp/protocol";
 import {
   connectKokoFileAiSession,
   createKokoCompactFileAiOwnerId,
   createKokoCompactFileAiTargetId,
-  disposeKokoFileAiOwner,
   disconnectKokoFileAiSession,
+  disposeKokoFileAiOwner,
   getActiveKokoFileAiSession,
   getActiveKokoFileAiTargetId,
   getKokoFileAiSession,
@@ -23,7 +23,7 @@ import {
   updateKokoFileAiContext
 } from "#koko/composables/sftp/useFileAiSessions";
 import { createSftpFileAiReadiness } from "#koko/composables/sftp/useSftpFileManager";
-import { SftpMessageType } from "#koko/composables/sftp/protocol";
+import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
 
 const targetIds: string[] = [];
 let agentHarness: ReturnType<typeof installAgentSessionHarness>;
@@ -539,11 +539,68 @@ it("refreshes only for successful mutating results from the bound target", () =>
     metadata: { domain: "file", targetId: messageTargetId },
     parts: [{ type: "data-file-result", data: { tool, outcome } }]
   });
+  const live = (toolName: string, status: string, messageTargetId = targetId) => ({
+    id: `${toolName}-${status}`,
+    role: "assistant",
+    metadata: { domain: "file", targetId: messageTargetId },
+    parts: [{ type: "data-agent-tool", data: { toolName, status } }]
+  });
 
   for (const tool of ["save_text", "mkdir", "rename", "delete"]) {
     expect(isSuccessfulKokoFileAiMutationResult(result(tool, "success"), targetId)).toBe(true);
+    expect(isSuccessfulKokoFileAiMutationResult(live(tool, "success"), targetId)).toBe(true);
   }
   expect(isSuccessfulKokoFileAiMutationResult(result("read_text", "success"), targetId)).toBe(false);
+  expect(isSuccessfulKokoFileAiMutationResult(live("read_text", "success"), targetId)).toBe(false);
   expect(isSuccessfulKokoFileAiMutationResult(result("delete", "error"), targetId)).toBe(false);
+  expect(isSuccessfulKokoFileAiMutationResult(live("mkdir", "error"), targetId)).toBe(false);
   expect(isSuccessfulKokoFileAiMutationResult(result("delete", "success", "other-target"), targetId)).toBe(false);
+  expect(isSuccessfulKokoFileAiMutationResult(live("mkdir", "success", "other-target"), targetId)).toBe(false);
+});
+
+it("bumps mutationEpoch when a live mutating tool succeeds", () => {
+  const session = createSession("remote-sftp:asset-1:epoch");
+  expect(session.mutationEpoch).toBe(0);
+
+  handleKokoFileAiMessage(session.targetId, {
+    id: "mkdir-success",
+    role: "assistant",
+    metadata: { domain: "file", targetId: session.targetId },
+    parts: [{ type: "data-agent-tool", data: { toolName: "mkdir", status: "success" } }]
+  });
+  expect(session.mutationEpoch).toBe(1);
+
+  handleKokoFileAiMessage(session.targetId, {
+    id: "read-success",
+    role: "assistant",
+    metadata: { domain: "file", targetId: session.targetId },
+    parts: [{ type: "data-agent-tool", data: { toolName: "read_text", status: "success" } }]
+  });
+  expect(session.mutationEpoch).toBe(1);
+});
+
+it("bumps mutationEpoch for live tool.result without toolName after a mutating call", async () => {
+  const session = createSession("remote-sftp:asset-1:epoch-id");
+  await enableSession(session.targetId);
+  const toolMessage = (id: string, status: string, extra: Record<string, string> = {}) => ({
+    id: `${id}-${status}`,
+    role: "assistant" as const,
+    metadata: { domain: "file", targetId: session.targetId },
+    parts: [{ type: "data-agent-tool" as const, data: { id, toolCallId: id, status, ...extra } }]
+  });
+
+  handleKokoFileAiMessage(session.targetId, toolMessage("tool-mkdir", "running", { toolName: "mkdir" }));
+  expect(session.mutationEpoch).toBe(0);
+  expect(isSuccessfulKokoFileAiMutationResult(toolMessage("tool-mkdir", "success"), session.targetId)).toBe(false);
+
+  handleKokoFileAiMessage(session.targetId, toolMessage("tool-mkdir", "success"));
+  expect(session.mutationEpoch).toBe(1);
+
+  handleKokoFileAiMessage(session.targetId, toolMessage("tool-read", "running", { toolName: "read_text" }));
+  handleKokoFileAiMessage(session.targetId, toolMessage("tool-read", "success"));
+  expect(session.mutationEpoch).toBe(1);
+
+  handleKokoFileAiMessage(session.targetId, toolMessage("tool-mkdir-error", "running", { toolName: "mkdir" }));
+  handleKokoFileAiMessage(session.targetId, toolMessage("tool-mkdir-error", "error"));
+  expect(session.mutationEpoch).toBe(1);
 });
