@@ -153,7 +153,10 @@ function installConnectorSessionHooks(targetSession) {
         const target = parseUrl(details.url);
         const httpOrigin = `${target.protocol === "wss:" ? "https:" : "http:"}//${target.host}`;
         const isChenSocket = target.pathname.startsWith("/chen/ws/") && allowedChenOrigins.has(httpOrigin);
-        const isKokoSocket = target.pathname.startsWith("/koko/ws/") && allowedKokoOrigins.has(httpOrigin);
+        // Lion is hosted by Koko and needs the same desktop WebSocket origin handling.
+        const isKokoSocket =
+          (target.pathname.startsWith("/koko/ws/") || target.pathname.startsWith("/koko/lion/ws/")) &&
+          allowedKokoOrigins.has(httpOrigin);
         if (isChenSocket || isKokoSocket) {
           const originHeader = Object.keys(requestHeaders).find((name) => name.toLowerCase() === "origin") || "Origin";
           requestHeaders[originHeader] = httpOrigin;

@@ -55,8 +55,7 @@ from an install path containing spaces, the OAuth callback and an asset link,
 and that installing/updating the new client does not change the legacy `jms`
 handler. Native installer/registry behavior needs a Windows host.
 
-The web "open with application" action converts server `jms://` asset links to
-`jms2://`. Asset links carry a connection token and launch through the main process
+The server generates `jms2://` asset links for the web "open with application" action. Asset links carry a connection token and launch through the main process
 without requiring a desktop login. Local protocol preferences take precedence;
 missing preferences use the platform defaults (Terminal for macOS/Linux SSH,
 bundled PuTTY for Windows SSH, and Microsoft Remote Desktop for Windows RDP).

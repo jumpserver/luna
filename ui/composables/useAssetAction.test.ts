@@ -76,7 +76,7 @@ describe("opening assets in local applications", () => {
     vi.stubGlobal("createConnectionTokenWithAcl", mocks.createToken);
     mocks.createToken.mockResolvedValue({ id: "id" });
     mocks.invoke.mockResolvedValue(undefined);
-    mocks.getLocalClientUrl.mockResolvedValue({ url: `jms://${encoded}` });
+    mocks.getLocalClientUrl.mockResolvedValue({ url: `jms2://${encoded}` });
   });
 
   afterEach(() => {
@@ -84,10 +84,10 @@ describe("opening assets in local applications", () => {
     vi.unstubAllGlobals();
   });
 
-  async function connect(connectMethod = "ssh_client") {
+  async function connect(connectMethod = "ssh_client", protocol = "ssh") {
     const ready = vi.fn();
     const failed = vi.fn();
-    await useAssetAction().handleAssetConnection("root", "asset", "ssh", [], undefined, {
+    await useAssetAction().handleAssetConnection("root", "asset", protocol, [], undefined, {
       accountId: "account",
       connectMethod,
       onSessionReady: ready,
@@ -97,7 +97,7 @@ describe("opening assets in local applications", () => {
     return { ready, failed };
   }
 
-  it.each(["jms", "jms2"])(
+  it.each(["jms2"])(
     "web launches the current client from a %s server URL without modifying the payload",
     async (scheme) => {
       mocks.getLocalClientUrl.mockResolvedValue({ url: `${scheme}://${encoded}` });
@@ -107,6 +107,14 @@ describe("opening assets in local applications", () => {
       expect(mocks.invoke).not.toHaveBeenCalled();
     }
   );
+
+  it("rejects legacy client URLs", async () => {
+    mocks.getLocalClientUrl.mockResolvedValue({ url: `jms://${encoded}` });
+    const { failed } = await connect();
+    expect(failed).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ message: "Invalid local client URL" }));
+    expect(mocks.assign).not.toHaveBeenCalled();
+    expect(mocks.invoke).not.toHaveBeenCalled();
+  });
 
   it("desktop launches through IPC using the same current-client scheme", async () => {
     vi.stubGlobal("isDesktopRuntime", () => true);
@@ -150,6 +158,33 @@ describe("opening assets in local applications", () => {
     expect(mocks.errorToast).toHaveBeenCalledOnce();
     expect(mocks.assign).not.toHaveBeenCalled();
     expect(mocks.invoke).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])("resolves the Lion endpoint through Koko only on desktop=%s", async (desktop) => {
+    vi.stubGlobal("isDesktopRuntime", () => desktop);
+    vi.stubGlobal("isElectronRuntime", () => desktop);
+    vi.stubGlobal("window", {
+      location: { protocol: "https:", origin: "https://jumpserver.example" }
+    });
+    const methods = [{ value: "web_rdp_native", type: "web", component: "lion", disabled: false }];
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ rdp: methods }),
+      getMethodsForProtocol: async () => methods
+    }));
+    vi.stubGlobal("getSmartEndpoint", vi.fn().mockResolvedValue({ host: "jumpserver.example", https_port: 443 }));
+    mocks.invoke.mockResolvedValue("https://koko.example");
+
+    const { ready, failed } = await connect("web_rdp_native", "rdp");
+    expect(failed).not.toHaveBeenCalled();
+    if (desktop) {
+      expect(mocks.invoke).toHaveBeenCalledExactlyOnceWith("resolve_koko_endpoint", {
+        endpointUrl: "https://jumpserver.example:443"
+      });
+      expect(ready.mock.calls[0]?.[0].endpointUrl).toBe("https://koko.example");
+    } else {
+      expect(mocks.invoke).not.toHaveBeenCalled();
+      expect(ready.mock.calls[0]?.[0].endpointUrl).toBe("https://jumpserver.example:443");
+    }
   });
 
   it.each([

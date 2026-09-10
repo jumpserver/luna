@@ -49,8 +49,6 @@ const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
 const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
 const isLocalClientMethod = (method: { type?: string } | undefined) =>
   ["native", "client", "local", "desktop"].includes(String(method?.type || "").toLowerCase());
-const normalizeLocalClientUrl = (url: string) =>
-  url.startsWith("jms://") ? `jms2://${url.slice("jms://".length)}` : url;
 const withLocalClientName = (url: string, clientName?: string) => {
   if (!clientName || !url.startsWith("jms2://")) return url;
 
@@ -493,8 +491,7 @@ export const useAssetAction = () => {
 
       if (isDesktopRuntime() || isLocalClientMethod(method)) {
         const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams());
-        // Both runtimes target the current client; jms:// belongs to the legacy client.
-        const localClientUrl = normalizeLocalClientUrl(url || "");
+        const localClientUrl = url || "";
         if (!localClientUrl.startsWith("jms2://")) {
           throw new Error("Invalid local client URL");
         }
@@ -612,7 +609,7 @@ export const useAssetAction = () => {
           : await fetchSmartEndpointUrl(token, { component, type: "web" }, body, meta.orgId);
         if (component === "chen" && isElectronRuntime()) {
           endpointUrl = await desktopInvoke<string>("resolve_chen_endpoint", { endpointUrl });
-        } else if (component === "koko" && isElectronRuntime()) {
+        } else if ((component === "koko" || component === "lion") && isElectronRuntime()) {
           endpointUrl = await desktopInvoke<string>("resolve_koko_endpoint", { endpointUrl });
         }
         let webProxy;

@@ -57,7 +57,7 @@ watch(
     <UTooltip v-if="!isEditing" :text="folder.name" :delay-duration="150">
       <button
         type="button"
-        class="app-tree-row sidebar-row flex w-max min-w-full cursor-pointer items-center gap-1 pr-1 text-left outline-none"
+        class="app-tree-row sidebar-row flex w-full cursor-pointer items-center gap-1 pr-1 text-left outline-none"
         :style="{ paddingLeft: `${10 + (level || 0) * 14}px` }"
         @click="toggle"
         @contextmenu.prevent="emit('folderContextmenu', folder, $event)"
@@ -70,15 +70,15 @@ watch(
           />
         </span>
         <AppTreeFolderIcon :open="folder.open" class="app-tree-icon sidebar-icon tree-folder-icon" />
-        <span class="inline-flex min-w-max flex-1 items-center font-medium">
-          <span class="whitespace-nowrap">{{ folder.name }}</span>
+        <span class="inline-flex min-w-0 flex-1 items-center font-medium">
+          <span class="truncate">{{ folder.name }}</span>
           <span class="ml-1 shrink-0">({{ folder.assetCount || 0 }})</span>
         </span>
       </button>
     </UTooltip>
     <div
       v-else
-      class="app-tree-row sidebar-row flex w-max min-w-full items-center gap-1 pr-1 text-left outline-none"
+      class="app-tree-row sidebar-row flex w-full items-center gap-1 pr-1 text-left outline-none"
       :style="{ paddingLeft: `${10 + (level || 0) * 14}px` }"
       @click.stop
       @pointerdown.stop
@@ -95,7 +95,7 @@ watch(
         ref="renameInputRef"
         v-model="editValue"
         size="xs"
-        class="w-36"
+        class="min-w-0 flex-1"
         :maxlength="FAVORITE_FOLDER_NAME_MAX_LENGTH"
         :ui="{ base: 'h-5 py-0 px-1 text-xs' }"
         @click.stop
@@ -130,7 +130,7 @@ watch(
       >
         <button
           type="button"
-          class="app-tree-row sidebar-row flex w-max min-w-full cursor-pointer items-center gap-1 pr-1 text-left outline-none"
+          class="app-tree-row sidebar-row flex w-full cursor-pointer items-center gap-1 pr-1 text-left outline-none"
           :style="{ paddingLeft: `${10 + ((level || 0) + 1) * 14}px` }"
           @click="emit('select', asset)"
           @contextmenu.prevent="emit('contextmenu', asset, $event)"
@@ -143,7 +143,7 @@ watch(
             class="app-tree-icon sidebar-icon-img"
           />
           <UIcon v-else :name="resolveAssetIcon(asset).fallback" class="app-tree-icon sidebar-icon" />
-          <span class="min-w-max flex-1 whitespace-nowrap font-medium font-ui-mono tracking-[0.01em]">
+          <span class="min-w-0 flex-1 truncate font-medium font-ui-mono tracking-[0.01em]">
             {{ asset.name }}
           </span>
         </button>

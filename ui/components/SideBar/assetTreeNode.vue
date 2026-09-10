@@ -187,7 +187,7 @@ watch(
       <button
         ref="row"
         type="button"
-        class="app-tree-row sidebar-row flex w-max min-w-full cursor-pointer items-center gap-1 pr-1 text-left outline-none"
+        class="app-tree-row sidebar-row flex w-full cursor-pointer items-center gap-1 pr-1 text-left outline-none"
         :class="[
           node.chkDisabled ? 'opacity-40' : '',
           node.meta?.type === 'recent-connections' && node.children?.length ? 'pr-9' : '',
@@ -226,10 +226,10 @@ watch(
         <UIcon v-else-if="icon" :name="icon" class="app-tree-icon sidebar-icon" />
         <img v-else-if="iconSrc" :src="iconSrc" alt="" class="app-tree-icon sidebar-icon-img" />
         <span
-          class="inline-flex min-w-max flex-1 items-center font-medium"
+          class="inline-flex min-w-0 flex-1 items-center font-medium"
           :class="!isParent ? 'font-ui-mono tracking-[0.01em]' : ''"
         >
-          <span class="whitespace-nowrap">{{ node.name }}</span>
+          <span class="truncate" :title="node.name">{{ node.name }}</span>
           <span
             v-if="isParent && node.assetCount != null"
             class="ml-1 shrink-0"
@@ -252,7 +252,7 @@ watch(
     </div>
 
     <Transition :css="false" @enter="enterBranch" @leave="leaveBranch">
-      <div v-if="isParent && isOpen" class="min-w-max" role="group">
+      <div v-if="isParent && isOpen" role="group">
         <AssetTreeNode
           v-for="child in node.children || []"
           :key="`${treeKind}-${child.id}`"

@@ -5,7 +5,7 @@ import { electronLog } from "../shared/debug-log";
 
 function decodePayload(raw) {
   const value = String(raw || "");
-  const encoded = value.startsWith("jms2://") ? value.slice(7) : value.startsWith("jms://") ? value.slice(6) : "";
+  const encoded = value.startsWith("jms2://") ? value.slice(7) : "";
   if (!encoded) throw new Error("invalid local client URL scheme");
   try {
     return JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));

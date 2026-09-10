@@ -43,10 +43,6 @@
   overflow-x: auto;
 }
 
-.sidebar-tree-scroll::-webkit-scrollbar {
-  height: 0;
-}
-
 .app-tree .app-tree-icon,
 .app-tree .app-tree-icon-slot {
   width: var(--app-tree-icon-size);
