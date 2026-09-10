@@ -79,7 +79,10 @@ let debugLogService;
 let appIcon;
 
 protocol.registerSchemesAsPrivileged([
-  { scheme: "jms-app", privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
+  {
+    scheme: "jms-app",
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true }
+  },
   {
     scheme: "jms-asset",
     privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true }
@@ -174,9 +177,26 @@ function installConnectorSessionHooks(targetSession) {
 }
 
 async function proxyChenRequest(request, url) {
+  const origin = request.headers.get("origin");
+  const devOrigin = isDevelopment ? new URL(rendererUrl).origin : "";
+  if (origin && origin !== "jms-app://app" && origin !== devOrigin) {
+    return new Response("Forbidden renderer origin", { status: 403 });
+  }
+  const corsHeaders = new Headers();
+  if (origin && origin === devOrigin) {
+    corsHeaders.set("access-control-allow-origin", devOrigin);
+    corsHeaders.set("access-control-allow-credentials", "true");
+    corsHeaders.set("access-control-allow-methods", "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS");
+    corsHeaders.set(
+      "access-control-allow-headers",
+      request.headers.get("access-control-request-headers") || "content-type"
+    );
+    corsHeaders.set("vary", "Origin");
+  }
   const endpoint = url.searchParams.get("__jms_chen_endpoint") || "";
   url.searchParams.delete("__jms_chen_endpoint");
   if (!allowedChenOrigins.has(endpoint)) return new Response("Forbidden Chen endpoint", { status: 403 });
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
 
   const target = parseUrl(`${url.pathname}${url.search}`, endpoint);
   const headers = new Headers(request.headers);
@@ -197,7 +217,14 @@ async function proxyChenRequest(request, url) {
   // Chen binds its WebSocket token to the HTTP session created by /api/auth.
   // Use the renderer's shared Electron session so Set-Cookie is persisted and
   // automatically attached to the subsequent direct WebSocket handshake.
-  return electronSession.defaultSession.fetch(proxied);
+  const response = await electronSession.defaultSession.fetch(proxied);
+  const responseHeaders = new Headers(response.headers);
+  corsHeaders.forEach((value, name) => responseHeaders.set(name, value));
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: responseHeaders
+  });
 }
 
 function normalizePath(candidate) {

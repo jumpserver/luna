@@ -29,7 +29,12 @@ const passwordVisible = ref(false);
 const protocol = computed(() => (token.value?.protocol || props.tab.protocol || "").toLowerCase());
 const host = computed(() => String(endpoint.value.host || ""));
 const port = computed(() =>
-  String(endpoint.value[`${protocol.value}_port`] || endpoint.value.port || defaultPorts[protocol.value] || "")
+  String(
+    endpoint.value[databaseProtocols.has(protocol.value) ? "magnus_port" : `${protocol.value}_port`] ||
+      endpoint.value.port ||
+      defaultPorts[protocol.value] ||
+      ""
+  )
 );
 const asset = computed(() => token.value?.asset as any);
 const assetName = computed(() => {

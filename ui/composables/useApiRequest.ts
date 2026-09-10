@@ -504,7 +504,14 @@ export function getUserProfile(): Promise<UserProfile> {
 export function getSmartEndpoint(
   params: SmartEndpointParams,
   orgId?: string
-): Promise<{ value?: string; host?: string; port?: number; https_port?: number; web_proxy_port?: number }> {
+): Promise<{
+  value?: string;
+  host?: string;
+  port?: number;
+  https_port?: number;
+  web_proxy_port?: number;
+  magnus_port?: number;
+}> {
   return apiRequest({
     method: "GET",
     path: "/api/v1/terminal/endpoints/smart/",

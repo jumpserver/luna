@@ -151,4 +151,41 @@ describe("opening assets in local applications", () => {
     expect(mocks.assign).not.toHaveBeenCalled();
     expect(mocks.invoke).not.toHaveBeenCalled();
   });
+
+  it.each([
+    [true, "http:", "https://jumpserver.example", "https"],
+    [true, "jms-app:", "https://jumpserver.example", "https"],
+    [true, "http:", "http://jumpserver.example", "http"],
+    [false, "http:", "https://jumpserver.example", "http"],
+    [false, "https:", "http://jumpserver.example", "https"]
+  ])(
+    "selects the connector protocol for desktop=%s, page=%s, site=%s",
+    async (desktop, pageProtocol, site, expected) => {
+      vi.stubGlobal("isDesktopRuntime", () => desktop);
+      vi.stubGlobal("isElectronRuntime", () => desktop);
+      vi.stubGlobal("window", {
+        location: { protocol: pageProtocol, origin: `${pageProtocol}//127.0.0.1:3000` }
+      });
+      vi.stubGlobal("storeToRefs", () => ({
+        currentSite: ref(site),
+        currentConnectionInfoMap: ref({}),
+        currentRdpClientOption: ref({}),
+        orgId: ref("org")
+      }));
+      const methods = [{ ...method, value: "web_cli_native", type: "web" }];
+      vi.stubGlobal("useConnectMethods", () => ({
+        fetchConnectMethods: async () => ({ ssh: methods }),
+        getMethodsForProtocol: async () => methods
+      }));
+      const getSmartEndpoint = vi
+        .fn()
+        .mockResolvedValue({ host: "jumpserver.example", http_port: 80, https_port: 443 });
+      vi.stubGlobal("getSmartEndpoint", getSmartEndpoint);
+      mocks.invoke.mockImplementation(async (_command, args) => args.endpointUrl);
+      const { ready, failed } = await connect("web_cli_native");
+      expect(failed).not.toHaveBeenCalled();
+      expect(getSmartEndpoint).toHaveBeenCalledWith(expect.objectContaining({ protocol: expected }), undefined);
+      expect(ready.mock.calls[0]?.[0].endpointUrl).toMatch(new RegExp(`^${expected}://`));
+    }
+  );
 });

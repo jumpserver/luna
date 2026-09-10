@@ -292,7 +292,9 @@ export const useAssetAction = () => {
     } catch {
       siteProtocol = "";
     }
-    const httpProtocol = [pageProtocol, siteProtocol].find((value) => value === "http" || value === "https") || "https";
+    // Desktop dev pages use local HTTP even when the selected site requires HTTPS/WSS.
+    const protocols = isDesktopRuntime() ? [siteProtocol, pageProtocol] : [pageProtocol, siteProtocol];
+    const httpProtocol = protocols.find((value) => value === "http" || value === "https") || "https";
 
     if (isWebSurface) {
       return endpointProtocol === "http" || endpointProtocol === "https" ? endpointProtocol : httpProtocol;
