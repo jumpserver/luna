@@ -235,7 +235,7 @@ const recentTableNodes = computed<ChenTreeNode[]>(() =>
 const explorerRootNodes = computed<ChenTreeNode[]>(() => [
   {
     key: RECENT_TABLES_ROOT_KEY,
-    label: "Recently tables",
+    label: t("Chen.RecentlyTables"),
     type: "recent-group",
     leaf: recentTableNodes.value.length === 0,
     hasChildren: recentTableNodes.value.length > 0,
@@ -390,8 +390,8 @@ const startupError = computed(() => {
 const adminTerminated = computed(() => session.errorReason.value === "admin_terminate");
 const startupErrorMessage = computed(() => {
   const message = startupError.value;
-  if (!message || adminTerminated.value || message.startsWith("Chen WebSocket 连接失败")) return message;
-  return `Chen 服务端请求失败：${message}`;
+  if (!message || adminTerminated.value || message.startsWith(t("Chen.WebSocketFailedPrefix"))) return message;
+  return `${t("Chen.ServerRequestFailedPrefix")}${message}`;
 });
 const databaseDialogFailed = computed(() =>
   /连接失败|connection (?:attempt )?failed|unable to connect/i.test(session.dialogMessage.value?.text || "")
@@ -404,16 +404,16 @@ const startupDialogMessage = computed(() => {
 });
 const startupMessage = computed(() => {
   if (startupDialogMessage.value) return startupDialogMessage.value;
-  if (!tokenId.value) return "Waiting for connection details…";
-  if (!auth.chenToken.value) return "Authenticating your database session…";
-  if (session.sessionConnection.state.value === "connecting") return "Connecting to the database service…";
-  if (!auth.profile.value) return "Preparing your database session…";
-  return "Loading database resources…";
+  if (!tokenId.value) return t("Chen.WaitingConnection");
+  if (!auth.chenToken.value) return t("Chen.AuthenticatingSession");
+  if (session.sessionConnection.state.value === "connecting") return t("Chen.ConnectingDatabaseService");
+  if (!auth.profile.value) return t("Chen.PreparingSession");
+  return t("Chen.LoadingDatabaseResources");
 });
 const databaseDialogText = computed(() => {
   const message = session.dialogMessage.value?.text || "";
   if (!databaseDialogFailed.value || !databaseTarget.value) return message;
-  return `数据库地址：${databaseTarget.value}\n${message}`;
+  return `${t("Chen.DatabaseAddressPrefix")}${databaseTarget.value}\n${message}`;
 });
 
 async function downloadExportFile(fileKey: string) {
@@ -1959,7 +1959,7 @@ defineExpose({ focus });
 
       <div
         role="separator"
-        aria-label="Resize database sidebar"
+        :aria-label="t('Chen.ResizeDatabaseSidebar')"
         aria-orientation="vertical"
         :aria-valuenow="sidebarWidth"
         aria-valuemin="220"
@@ -1974,7 +1974,7 @@ defineExpose({ focus });
         <div class="flex h-9 shrink-0 items-center border-b border-default px-2 md:hidden">
           <UButton
             icon="i-lucide-panel-left"
-            label="Database Explorer"
+            :label="t('Chen.DatabaseExplorer')"
             color="neutral"
             variant="ghost"
             size="xs"
@@ -2095,8 +2095,8 @@ defineExpose({ focus });
         <ChenSessionState
           v-else
           icon="i-lucide-database-zap"
-          title="Database workspace"
-          message="Select a database action to begin."
+          :title="t('Chen.DatabaseWorkspace')"
+          :message="t('Chen.SelectDatabaseAction')"
         />
 
         <LogConsolePanel
@@ -2112,15 +2112,9 @@ defineExpose({ focus });
       v-else
       :icon="startupErrorMessage ? 'i-lucide-circle-alert' : 'i-lucide-database'"
       :loading="!startupErrorMessage"
-      :title="
-        startupErrorMessage
-          ? adminTerminated
-            ? startupErrorMessage
-            : 'Unable to open database workspace'
-          : 'Opening database workspace'
-      "
+      :title="startupErrorMessage ? (adminTerminated ? startupErrorMessage : t('Chen.OpenDatabaseWorkspaceFailed')) : t('Chen.OpeningDatabaseWorkspace')"
       :message="adminTerminated ? '' : startupErrorMessage || startupMessage"
-      :action-label="startupErrorMessage && !adminTerminated ? 'Retry' : undefined"
+      :action-label="startupErrorMessage && !adminTerminated ? t('Chen.Retry') : undefined"
       @action="emit('reconnect')"
     />
 
@@ -2147,7 +2141,7 @@ defineExpose({ focus });
 
     <ChenWorkspaceModal
       v-model:open="dialogVisible"
-      :title="databaseDialogFailed ? '数据库连接失败' : session.dialogMessage.value?.title || 'Message'"
+      :title="databaseDialogFailed ? t('Chen.DatabaseConnectionFailed') : session.dialogMessage.value?.title || 'Message'"
       :close="session.dialogMessage.value?.showClose"
       :dismissible="session.dialogMessage.value?.showClose"
     >

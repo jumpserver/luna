@@ -37,6 +37,7 @@ const {
   guaDisplay,
   connectToGuacamole,
   connectStatus,
+  connectStatusLabel,
   onlineUsersMap,
   disconnectGuaclient,
   sendTextToRemote,
@@ -382,7 +383,7 @@ const handleDownloadFile = async (file: { name: string; streamName?: GuacamoleFi
 const fitPercentage = computed(() => Math.floor(scale.value * 100));
 
 watch(connectStatus, (status) => {
-  if (status === "Disconnected" && !disposed) emit("disconnected", t("GuacamoleErrDisconnected"));
+  if (status === 5 && !disposed) emit("disconnected", t("GuacamoleErrDisconnected"));
 });
 
 watch(
@@ -468,7 +469,7 @@ watch(
     <div v-if="loading" class="absolute inset-0 z-10 flex items-center justify-center bg-default/80">
       <div class="flex flex-col items-center gap-2 text-sm text-muted">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>{{ t("Connecting") }}: {{ connectStatus }}</span>
+        <span>{{ connectStatusLabel }}</span>
       </div>
     </div>
 

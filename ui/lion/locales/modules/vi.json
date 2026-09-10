@@ -11,5 +11,11 @@
   "Waiting": "Đang chờ",
   "Forward": "Tiến",
   "ZoomIn": "Phóng to",
-  "ZoomOut": "Thu nhỏ"
+  "ZoomOut": "Thu nhỏ",
+  "LionIdle": "Đang rảnh",
+  "LionConnecting": "Đang kết nối",
+  "LionConnectedWaiting": "Đã kết nối, đang chờ",
+  "LionConnected": "Đã kết nối",
+  "LionDisconnecting": "Đang ngắt kết nối",
+  "LionDisconnected": "Đã ngắt kết nối"
 }

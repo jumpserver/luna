@@ -11,5 +11,11 @@
   "Waiting": "대기 중",
   "Forward": "앞으로",
   "ZoomIn": "확대",
-  "ZoomOut": "축소"
+  "ZoomOut": "축소",
+  "LionIdle": "대기",
+  "LionConnecting": "연결 중",
+  "LionConnectedWaiting": "연결됨, 대기 중",
+  "LionConnected": "연결됨",
+  "LionDisconnecting": "연결 해제 중",
+  "LionDisconnected": "연결 해제됨"
 }

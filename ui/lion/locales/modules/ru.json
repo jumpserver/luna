@@ -11,5 +11,11 @@
   "Waiting": "Ожидание",
   "Forward": "Вперёд",
   "ZoomIn": "Увеличить",
-  "ZoomOut": "Уменьшить"
+  "ZoomOut": "Уменьшить",
+  "LionIdle": "Простаивание",
+  "LionConnecting": "Подключение",
+  "LionConnectedWaiting": "Подключено, ожидание",
+  "LionConnected": "Подключено",
+  "LionDisconnecting": "Отключение",
+  "LionDisconnected": "Отключено"
 }

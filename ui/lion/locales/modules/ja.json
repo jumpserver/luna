@@ -11,5 +11,11 @@
   "Waiting": "待機中",
   "Forward": "進む",
   "ZoomIn": "拡大",
-  "ZoomOut": "縮小"
+  "ZoomOut": "縮小",
+  "LionIdle": "アイドル",
+  "LionConnecting": "接続中",
+  "LionConnectedWaiting": "接続済み、待機中",
+  "LionConnected": "接続済み",
+  "LionDisconnecting": "切断中",
+  "LionDisconnected": "切断済み"
 }
