@@ -141,7 +141,7 @@
     "sass-embedded": "^1.100.0",
     "typescript": "^6.0.3",
     "unplugin-auto-import": "^21.1.0",
-    "vitest": "^4.1.10",
+    "vitest": "^4.1.11",
     "vue-tsc": "3.2.4"
   },
   "resolutions": {
