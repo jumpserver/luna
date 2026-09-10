@@ -390,7 +390,8 @@ function createInsetIcon(iconPath, size, inset) {
 }
 
 function loadAppIcon() {
-  const iconName = process.platform === "win32" ? "icon.ico" : process.platform === "darwin" ? "icon-mac.png" : "icon.png";
+  const iconName =
+    process.platform === "win32" ? "icon.ico" : process.platform === "darwin" ? "icon-mac.png" : "icon.png";
   const iconPath = isDevelopment
     ? path.join(projectRoot, "electron/assets/icons", iconName)
     : path.join(process.resourcesPath, "icons", iconName);
