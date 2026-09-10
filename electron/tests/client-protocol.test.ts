@@ -183,7 +183,6 @@ for (const primary of [false, true]) {
     const runtime = { argv: ["jumpserver.exe", url], platform: "win32" } as NodeJS.Process;
     const replacements = {
       electron: { app },
-      "electron-squirrel-startup": false,
       "./shared/client-protocol": {
         findClientProtocolUrl,
         registerClientProtocol: () => events.push("register")
@@ -211,7 +210,6 @@ test("protocol events arriving while the desktop loads are forwarded after initi
   let prevented = false;
   loadWithElectronMocks("../src/bootstrap.ts", {
     electron: { app },
-    "electron-squirrel-startup": false,
     "./shared/client-protocol": { findClientProtocolUrl, registerClientProtocol() {} },
     get "./desktop/main"() {
       app.emit("second-instance", {}, ["jumpserver.exe"], "C:\\", { protocolUrl: callback });
@@ -229,34 +227,6 @@ test("protocol events arriving while the desktop loads are forwarded after initi
   app.emit("second-instance", {}, ["jumpserver.exe", asset], "C:\\");
   assert.deepEqual(delivered.at(-1), [asset, false]);
 });
-
-for (const action of ["install", "updated", "uninstall", "obsolete"]) {
-  test(`Squirrel ${action} handles protocol registration without loading the desktop`, async () => {
-    const events: string[] = [];
-    const app = { removeAsDefaultProtocolClient: (scheme: string) => events.push(`remove:${scheme}`) };
-    loadWithElectronMocks(
-      "../src/bootstrap.ts",
-      {
-        electron: { app },
-        "electron-squirrel-startup": true,
-        "./shared/client-protocol": {
-          CLIENT_PROTOCOL: "jms2",
-          registerClientProtocol: () => events.push("register:jms2")
-        },
-        get "./desktop/main"() {
-          return assert.fail("installer lifecycle must not start the desktop");
-        }
-      },
-      {
-        platform: "win32",
-        argv: ["jumpserver.exe", `--squirrel-${action}`],
-        exit: () => assert.fail("Squirrel must finish updating shortcuts before quitting")
-      } as unknown as NodeJS.Process
-    );
-    await new Promise(setImmediate);
-    assert.deepEqual(events, action === "uninstall" ? ["remove:jms2"] : action === "obsolete" ? [] : ["register:jms2"]);
-  });
-}
 
 function authServiceFixture(isPackaged = true, createServer?: () => EventEmitter) {
   const app = { getPath: () => "/unused", isPackaged };

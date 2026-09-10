@@ -200,6 +200,21 @@ jobs:
       - name: Build Electron artifacts
         run: pnpm --dir electron make -- ${{ matrix.forge_args }}
 
+      - name: Verify Windows installers
+        if: startsWith(matrix.os, 'windows')
+        shell: pwsh
+        run: |
+          $installers = @(
+            "release/electron/make/nsis/x64/*-Setup.exe",
+            "release/electron/make/wix/x64/*.msi"
+          )
+          foreach ($pattern in $installers) {
+            $files = @(Get-ChildItem -Path $pattern -File -ErrorAction Stop)
+            if ($files.Count -ne 1 -or $files[0].Length -eq 0) {
+              throw "Expected one non-empty installer matching $pattern"
+            }
+          }
+
       - name: Build WebLite installer
         if: startsWith(matrix.os, 'windows')
         run: pnpm weblite:package
@@ -215,8 +230,6 @@ jobs:
             release/electron/make/**/*.dmg
             release/electron/make/**/*.exe
             release/electron/make/**/*.msi
-            release/electron/make/**/*.nupkg
-            release/electron/make/**/RELEASES
             release/electron/make/**/*.deb
             release/electron/make/**/*.rpm
 

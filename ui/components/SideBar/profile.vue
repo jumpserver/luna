@@ -1236,7 +1236,7 @@ onBeforeUnmount(() => {
                     />
                   </UButton>
                 </div>
-                <USeparator v-if="siteAccounts.length" :ui="menuSeparatorUi" />
+                <USeparator v-if="siteAccounts.length" class="my-1.5" :ui="menuSeparatorUi" />
                 <UButton
                   :label="t('Login.AddAccount')"
                   icon="i-lucide-user-round-plus"

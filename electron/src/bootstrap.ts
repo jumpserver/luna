@@ -1,18 +1,8 @@
 import { app } from "electron";
-import squirrelStartup from "electron-squirrel-startup";
 import runtimePackage from "../package.json";
-import { CLIENT_PROTOCOL, findClientProtocolUrl, registerClientProtocol } from "./shared/client-protocol";
+import { findClientProtocolUrl, registerClientProtocol } from "./shared/client-protocol";
 
 async function start() {
-  if (squirrelStartup) {
-    if (["--squirrel-install", "--squirrel-updated"].includes(process.argv[1])) {
-      registerClientProtocol(app);
-    } else if (process.argv[1] === "--squirrel-uninstall") {
-      app.removeAsDefaultProtocolClient(CLIENT_PROTOCOL);
-    }
-    // electron-squirrel-startup quits after Update.exe finishes its shortcut work.
-    return;
-  }
   app.setName(runtimePackage.productName || "JumpServer");
   const protocolUrl = findClientProtocolUrl(process.argv);
   if (!app.requestSingleInstanceLock({ protocolUrl: protocolUrl || "" })) {

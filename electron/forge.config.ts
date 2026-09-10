@@ -7,12 +7,13 @@ import { fileURLToPath } from "node:url";
 import { MakerDeb } from "@electron-forge/maker-deb";
 import { MakerDMG } from "@electron-forge/maker-dmg";
 import { MakerRpm } from "@electron-forge/maker-rpm";
-import { MakerSquirrel } from "@electron-forge/maker-squirrel";
 import { MakerWix } from "@electron-forge/maker-wix";
+import { sign } from "@electron/windows-sign";
 import { AutoUnpackNativesPlugin } from "@electron-forge/plugin-auto-unpack-natives";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import { buildSshHelper } from "../scripts/build-ssh-helper.mjs";
 import { CLIENT_PROTOCOL } from "./src/shared/client-protocol";
+import { MakerNsis } from "./maker-nsis";
 
 const electronRoot = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(electronRoot, "..");
@@ -175,11 +176,11 @@ const config: ForgeConfig = {
         for (let index = 0; index < result.artifacts.length; index++) {
           const artifact = result.artifacts[index];
           const extension = path.extname(artifact);
-          // Squirrel's RELEASES manifest references its .nupkg filenames directly.
           if (![".dmg", ".exe", ".msi", ".deb", ".rpm"].includes(extension)) continue;
+          const installerSuffix = extension === ".exe" ? "-Setup" : "";
           const destination = path.join(
             path.dirname(artifact),
-            `${productName}-${packageJSON.version}${archSuffix}${extension}`
+            `${productName}-${packageJSON.version}${archSuffix}${installerSuffix}${extension}`
           );
           if (artifact !== destination) await rename(artifact, destination);
           result.artifacts[index] = destination;
@@ -201,10 +202,31 @@ const config: ForgeConfig = {
         window: { size: { width: 540, height: 380 } }
       }
     }),
-    new MakerSquirrel({
-      name: "JumpServer",
-      setupIcon: path.join(iconsRoot, "icon.ico"),
-      windowsSign: windowsSignOptions
+    new MakerNsis({
+      projectDir: electronRoot,
+      options: {
+        appId: "com.jumpserver.client",
+        protocols: [{ name: "JumpServer URL", schemes: [CLIENT_PROTOCOL] }],
+        win: {
+          executableName,
+          icon: path.join(iconsRoot, "icon.ico"),
+          signtoolOptions: windowsSigningAvailable
+            ? {
+                signingHashAlgorithms: ["sha256"],
+                sign: async ({ path: file }) => sign({ ...windowsSignOptions, files: [file] })
+              }
+            : undefined
+        },
+        nsis: {
+          oneClick: false,
+          allowToChangeInstallationDirectory: true,
+          createDesktopShortcut: true,
+          createStartMenuShortcut: true,
+          runAfterFinish: true,
+          deleteAppDataOnUninstall: false,
+          differentialPackage: false
+        }
+      }
     }),
     new MakerWix({
       exe: `${executableName}.exe`,
@@ -213,6 +235,7 @@ const config: ForgeConfig = {
       nestedFolderName: "JumpServer",
       language: 1033,
       manufacturer: "JumpServer",
+      ui: { chooseDirectory: true },
       windowsSign: windowsSignOptions
     }),
     new MakerDeb({

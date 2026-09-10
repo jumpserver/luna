@@ -179,6 +179,11 @@ docker build -t jumpserver/luna:local .
 
 The Web workflow builds `linux/amd64` and `linux/arm64`, and publishes tagged images to `jumpserver/luna`. Desktop clients are packaged separately for macOS, Linux, and Windows by the client release workflow.
 
+Windows releases include an NSIS `*-Setup.exe` with an installation wizard, a selectable installation
+directory, desktop and Start menu shortcuts, and an optional launch on completion. An MSI with a
+directory selection wizard is also available for enterprise deployment. Both installers use the
+application packaged by Electron Forge.
+
 ### Project Structure
 
 ```
