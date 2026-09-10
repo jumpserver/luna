@@ -39,6 +39,7 @@ import {
   electronLog,
   parsePersistedDebugLogEnabled
 } from "../shared/debug-log";
+import { productNameAllowsDevTools } from "../shared/product-name";
 import { parseUrl, toFetchUrl } from "../shared/url";
 import { createWebProxyManager } from "@jumpserver/web-proxy/manager";
 
@@ -52,6 +53,7 @@ const macDockIconInset = 48;
 const trayIconSize = 16;
 const defaultProductName = "JumpServer";
 const productName = String(runtimePackage.productName || defaultProductName);
+const allowDevTools = isDevelopment || productNameAllowsDevTools(productName, String(runtimePackage.version || ""));
 app.setName(productName);
 if (isDevelopment) console.info(`[electron] ${app.getName()} ${app.getVersion()}`);
 const windows = new Map();
@@ -493,7 +495,7 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
     emitDesktopEvent("desktop-menu-command", "close-current-tab", label);
   });
 
-  if (isDevelopment) {
+  if (allowDevTools) {
     windowWebContents.on("context-menu", () => {
       Menu.buildFromTemplate([
         { label: "Reload", accelerator: "CmdOrCtrl+R", click: () => windowWebContents.reload() },
@@ -510,7 +512,10 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
 
   windows.set(label, win);
   installNavigationGuard(win);
-  win.once("ready-to-show", () => win.show());
+  win.once("ready-to-show", () => {
+    win.show();
+    if (allowDevTools && app.isPackaged) windowWebContents.openDevTools({ mode: "detach" });
+  });
   win.on("resize", () => {
     const [width, height] = win.getContentSize();
     emitDesktopEvent("desktop://resize", { width, height }, label);
