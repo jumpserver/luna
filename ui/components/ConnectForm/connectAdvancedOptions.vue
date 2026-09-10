@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { CharsetType, ResolutionType } from "~/types/index";
-import { resolveAdvancedOptionFlags } from "./connectAdvancedOptions";
+import { resolveAdvancedOptionFlags } from "./advancedOptionFlags";
 
 const props = withDefaults(
   defineProps<{

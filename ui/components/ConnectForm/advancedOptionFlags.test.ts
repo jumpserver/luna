@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveAdvancedOptionFlags } from "./connectAdvancedOptions";
+import { resolveAdvancedOptionFlags } from "./advancedOptionFlags";
 
 describe("resolveAdvancedOptionFlags", () => {
   it("shows backspace for k8s koko methods", () => {
