@@ -8,7 +8,7 @@
   "author": "JumpServer",
   "license": "MIT",
   "engines": {
-    "node": ">=24"
+    "node": ">=22.19.0"
   },
   "scripts": {
     "dev": "pnpm electron:dev --web",

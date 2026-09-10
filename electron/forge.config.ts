@@ -219,6 +219,8 @@ const config: ForgeConfig = {
         },
         nsis: {
           oneClick: false,
+          selectPerMachineByDefault: true,
+          include: path.join(electronRoot, "assets", "installer.nsh"),
           allowToChangeInstallationDirectory: true,
           createDesktopShortcut: true,
           createStartMenuShortcut: true,
@@ -229,6 +231,7 @@ const config: ForgeConfig = {
       }
     }),
     new MakerWix({
+      defaultInstallMode: "perMachine",
       exe: `${executableName}.exe`,
       icon: path.join(iconsRoot, "icon.ico"),
       programFilesFolderName: "Client",

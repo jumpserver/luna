@@ -56,13 +56,14 @@ try {
     version: manifest.version,
     exe: "weblite.exe",
     icon: path.join(root, "assets/icon.ico"),
-    programFilesFolderName: "Weblite",
+    programFilesFolderName: "WebLite",
     nestedFolderName: "JumpServer",
     shortName: "WebLite",
     shortcutFolderName: "JumpServer",
     appUserModelId: "com.jumpserver.weblite",
     arch: "x64",
     defaultInstallMode: "perMachine",
+    ui: { chooseDirectory: true },
     // Keep this stable so Windows Installer upgrades the existing deployment.
     upgradeCode: "BBB88A37-4470-4B1C-B582-EAE84A775985"
   });

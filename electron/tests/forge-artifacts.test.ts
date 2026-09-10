@@ -1,5 +1,6 @@
 import type { ForgeConfig, ForgeMakeResult, ResolvedForgeConfig } from "@electron-forge/shared-types";
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -10,6 +11,14 @@ import { MakerWix } from "@electron-forge/maker-wix";
 
 // Load the configuration with the same TypeScript loader used by Electron Forge.
 const configPromise = createJiti(import.meta.url).import<ForgeConfig>("../forge.config.ts", { default: true });
+
+test("NSIS builder resolves the download cache API required on clean machines", () => {
+  const require = createRequire(import.meta.url);
+  const builderRequire = createRequire(require.resolve("app-builder-lib"));
+  const { ElectronDownloadCacheMode, downloadArtifact } = builderRequire("@electron/get");
+  assert.equal(typeof ElectronDownloadCacheMode?.ReadWrite, "number");
+  assert.equal(typeof downloadArtifact, "function");
+});
 
 test("packaged clients claim jms2 without taking the legacy client's jms scheme", async () => {
   const config = await configPromise;
@@ -31,12 +40,18 @@ test("Windows installers provide a directory selection wizard and preserve the c
   assert.equal(options.win.executableName, config.packagerConfig.executableName);
   assert.deepEqual(options.protocols, config.packagerConfig.protocols);
   assert.equal(options.nsis.oneClick, false);
+  assert.equal(options.nsis.selectPerMachineByDefault, true);
+  const installerInclude = await readFile(options.nsis.include, "utf8");
+  assert.ok(installerInclude.includes('!define APP_FILENAME "JumpServer\\Client"'));
   assert.equal(options.nsis.allowToChangeInstallationDirectory, true);
   assert.equal(options.nsis.createDesktopShortcut, true);
   assert.equal(options.nsis.createStartMenuShortcut, true);
   assert.equal(options.nsis.runAfterFinish, true);
   assert.equal(options.nsis.deleteAppDataOnUninstall, false);
   assert.deepEqual(wix.config.ui, { chooseDirectory: true });
+  assert.equal(wix.config.defaultInstallMode, "perMachine");
+  assert.equal(wix.config.nestedFolderName, "JumpServer");
+  assert.equal(wix.config.programFilesFolderName, "Client");
 });
 
 test("normalizes release installer filenames", async (context) => {
