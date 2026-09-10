@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import type { ConnectMethod } from "~/composables/useConnectMethods";
 import type { AssetPageType, PermedAccount, PermedProtocol, PersonalAssetCredential } from "~/types/index";
-import { pickConnectMethod, useConnectMethods } from "~/composables/useConnectMethods";
+import {
+  parseLocalApplicationConnectMethod,
+  pickConnectMethod,
+  useConnectMethods
+} from "~/composables/useConnectMethods";
 import { sortProtocolNames } from "~/utils";
 import ConnectAccountFields from "./connectAccountFields.vue";
 import ConnectAdvancedOptions from "./connectAdvancedOptions.vue";
@@ -28,6 +32,8 @@ const props = defineProps<{
   preferredConnectMethod?: string;
   connectOptions?: Record<string, any>;
   assetType?: AssetPageType;
+  hasXPack?: boolean;
+  appletClientEnabled?: boolean;
 }>();
 
 const emits = defineEmits<{
@@ -49,6 +55,12 @@ const { getMethodsForProtocol } = useConnectMethods();
 const { appConfig, modernIsland } = useSettingManager();
 const methodsByProtocol = reactive<Record<string, ConnectMethod[]>>({});
 const availableConnectMethods = computed(() => methodsByProtocol[props.protocol] || []);
+const selectedConnectMethodComponent = computed(
+  () =>
+    availableConnectMethods.value.find(
+      (method) => method.value === parseLocalApplicationConnectMethod(props.connectMethod || "").connectMethod
+    )?.component || ""
+);
 
 const selectedProtocol = computed<string>({
   get: () => props.protocol,
@@ -206,7 +218,13 @@ watch(
         :protocol="selectedProtocol"
         :methods="availableConnectMethods"
       />
-      <ConnectAdvancedOptions v-model:connect-options="localConnectOptions" :protocol="selectedProtocol" />
+      <ConnectAdvancedOptions
+        v-model:connect-options="localConnectOptions"
+        :protocol="selectedProtocol"
+        :component="selectedConnectMethodComponent"
+        :has-x-pack="props.hasXPack"
+        :applet-client-enabled="props.appletClientEnabled"
+      />
     </div>
   </div>
 </template>
