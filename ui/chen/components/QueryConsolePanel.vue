@@ -123,17 +123,17 @@ const sqlFileItems = computed(() => [
     onSelect: () => emit("explainPlan", props.tab, currentPlanSql())
   },
   {
-    label: "Open",
+    label: t("Chen.Open"),
     icon: "i-lucide-folder-open",
     onSelect: openSnippetDialog
   },
   {
-    label: "Save",
+    label: t("Common.Save"),
     icon: "i-lucide-save",
     onSelect: openSaveSnippetDialog
   },
   {
-    label: "Upload SQL",
+    label: t("Chen.UploadSql"),
     icon: "i-lucide-upload",
     onSelect: () => sqlUploadInput.value?.click()
   }
@@ -186,7 +186,7 @@ function formatStatement() {
     sqlEditor.value?.replaceDocument(formatted);
   } catch (cause) {
     addErrorToast({
-      title: "SQL format failed",
+      title: t("Chen.SqlFormatFailed"),
       description: requestErrorMessage(cause)
     });
   }
@@ -204,15 +204,15 @@ function handleSqlFileChange(event: Event) {
 
   if (!file.name.toLowerCase().endsWith(".sql")) {
     addErrorToast({
-      title: "SQL upload failed",
-      description: "Choose a .sql file."
+      title: t("Chen.SqlUploadFailed"),
+      description: t("Chen.ChooseSqlFile")
     });
     return;
   }
   if (file.size === 0) {
     addErrorToast({
-      title: "SQL upload failed",
-      description: "SQL file is empty."
+      title: t("Chen.SqlUploadFailed"),
+      description: t("Chen.SqlFileEmpty")
     });
     return;
   }
@@ -225,7 +225,7 @@ async function loadSnippetPage(page: number) {
     await sqlSnippets.load(page);
   } catch (cause) {
     addErrorToast({
-      title: "Failed to load SQL",
+      title: t("Chen.LoadSqlFailed"),
       description: requestErrorMessage(cause)
     });
   }
@@ -243,10 +243,10 @@ function openSaveSnippetDialog() {
 async function saveSqlSnippet(name: string) {
   try {
     await sqlSnippets.save(name, props.tab.statement);
-    toast.add({ title: "Save succeeded", color: "success" });
+    toast.add({ title: t("Chen.SaveSucceeded"), color: "success" });
   } catch (cause) {
     addErrorToast({
-      title: "Failed to save SQL",
+      title: t("Chen.SaveSqlFailed"),
       description: requestErrorMessage(cause)
     });
   } finally {
@@ -262,10 +262,10 @@ function insertSqlSnippet(snippet: ChenSqlSnippet) {
 async function deleteSqlSnippet(snippet: ChenSqlSnippet) {
   try {
     await sqlSnippets.remove(snippet.id);
-    toast.add({ title: "Delete succeeded", color: "success" });
+    toast.add({ title: t("Chen.DeleteSucceeded"), color: "success" });
   } catch (cause) {
     addErrorToast({
-      title: "Failed to delete SQL",
+      title: t("Chen.DeleteSqlFailed"),
       description: requestErrorMessage(cause)
     });
   }
@@ -364,10 +364,10 @@ defineExpose({ editorSnapshot });
           :disabled="!tab.state.canCancel"
           @click="emit('cancel', tab)"
         >
-          Stop
+          {{ t("Chen.Stop") }}
         </UButton>
         <UButton v-else icon="i-lucide-play" size="sm" :disabled="Boolean(tab.state.loading)" @click="runCurrentQuery">
-          {{ hasSelection ? "Run selected" : "Run current" }}
+          {{ hasSelection ? t("Chen.RunSelected") : t("Chen.RunCurrent") }}
         </UButton>
         <UButton
           icon="i-lucide-align-left"
@@ -377,7 +377,7 @@ defineExpose({ editorSnapshot });
           :disabled="contextBusy"
           @click="formatStatement"
         >
-          Format
+          {{ t("Chen.Format") }}
         </UButton>
         <input ref="sqlUploadInput" type="file" accept=".sql" class="hidden" @change="handleSqlFileChange" />
         <UDropdownMenu :items="sqlFileItems">
@@ -424,7 +424,7 @@ defineExpose({ editorSnapshot });
             variant="soft"
             :disabled="contextBusy || contextItems.length === 0"
           >
-            {{ tab.state.currentContext || "Context" }}
+            {{ tab.state.currentContext || t("Chen.Context") }}
           </UButton>
         </UDropdownMenu>
       </div>
@@ -452,7 +452,7 @@ defineExpose({ editorSnapshot });
           class="absolute bottom-3 left-1/2 z-20 max-h-32 w-3/4 -translate-x-1/2 overflow-y-auto"
           :color="messageColor"
           variant="subtle"
-          :title="tab.message.title || 'Message'"
+          :title="tab.message.title || t('Chen.Message')"
           :description="tab.message.message"
           close
           @update:open="handleMessageOpen"
@@ -463,7 +463,7 @@ defineExpose({ editorSnapshot });
     <div
       role="separator"
       tabindex="0"
-      aria-label="Resize SQL editor and query results"
+      :aria-label="t('Chen.ResizeSqlEditorResults')"
       aria-orientation="horizontal"
       :aria-valuenow="Math.round(editorHeightRatio)"
       :aria-valuemin="QUERY_PANEL_MIN_RATIO"
@@ -486,7 +486,7 @@ defineExpose({ editorSnapshot });
           :class="tab.activeBottomPane !== 'plan' ? 'bg-accented' : 'text-muted hover:bg-[var(--app-hover-soft)]'"
           @click="emit('activateBottomPane', tab, 'results')"
         >
-          Results
+          {{ t("Chen.Results") }}
         </button>
         <button
           class="rounded-md px-2 py-1 text-xs"
@@ -506,7 +506,7 @@ defineExpose({ editorSnapshot });
         data-view-editing
         :db-type="dbType"
         :can-copy="canCopy"
-        empty-message="Run a query to open results here."
+        :empty-message="t('Chen.RunQueryForResults')"
         @update:active-result-tab-id="emit('activateResult', tab, $event)"
         @close="emit('closeResult', tab, $event)"
         @data-view-action="(result, action, data) => emit('dataViewAction', tab, result, action, data)"

@@ -24,15 +24,19 @@ export interface ChenDataViewIndexPreview {
 }
 
 export function useChenDataViewDerivedMeta(profileDbType: Ref<string | undefined>, protocol: Ref<string | undefined>) {
-  const dataViewPropertyTabs = [
-    { id: "basic", label: "Basic Info" },
-    { id: "columns", label: "Columns" },
-    { id: "indexes", label: "Indexes" },
-    { id: "foreignKeys", label: "Foreign Keys" },
-    { id: "constraints", label: "Constraints" },
-    { id: "ddl", label: "DDL" },
-    { id: "diagram", label: "Diagram" }
-  ] as const;
+  const { t } = useI18n();
+  const dataViewPropertyTabs = computed(
+    () =>
+      [
+        { id: "basic", label: t("Chen.BasicInfo") },
+        { id: "columns", label: t("Chen.Columns") },
+        { id: "indexes", label: t("Chen.Indexes") },
+        { id: "foreignKeys", label: t("Chen.ForeignKeys") },
+        { id: "constraints", label: t("Chen.Constraints") },
+        { id: "ddl", label: "DDL" },
+        { id: "diagram", label: t("Chen.Diagram") }
+      ] as const
+  );
 
   function tableLabelForProperties(tab: ChenDataViewConsoleTab) {
     return tab.tableMetadata?.name || tab.meta?.table || tab.meta?.title || tab.title;
@@ -40,11 +44,11 @@ export function useChenDataViewDerivedMeta(profileDbType: Ref<string | undefined
 
   function dataViewBasicInfo(tab: ChenDataViewConsoleTab) {
     return [
-      { label: "Name", value: tableLabelForProperties(tab) },
-      { label: "Schema", value: tab.tableMetadata?.schema || tab.meta?.schema || "-" },
-      { label: "Type", value: "Table" },
-      { label: "Database", value: profileDbType.value || protocol.value || "-" },
-      { label: "Rows (preview)", value: String(tab.data?.data?.length || 0) }
+      { label: t("Chen.Name"), value: tableLabelForProperties(tab) },
+      { label: t("Chen.Schema"), value: tab.tableMetadata?.schema || tab.meta?.schema || "-" },
+      { label: t("Chen.Type"), value: t("Chen.Table") },
+      { label: t("Chen.Database"), value: profileDbType.value || protocol.value || "-" },
+      { label: t("Chen.RowsPreview"), value: String(tab.data?.data?.length || 0) }
     ];
   }
 

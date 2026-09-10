@@ -28,11 +28,13 @@ const emit = defineEmits<{
   import: [];
 }>();
 
-const nullDisplayOptions = [
+const { t } = useI18n();
+
+const nullDisplayOptions = computed(() => [
   { label: "NULL", value: "keyword" },
   { label: "(null)", value: "parenthesized" },
-  { label: "Blank", value: "blank" }
-];
+  { label: t("Chen.Blank"), value: "blank" }
+]);
 const controls = computed(() => getChenDataViewToolbarState(props.state));
 const gridPreferences = useChenGridPreferences();
 const fieldSearch = ref("");
@@ -84,8 +86,8 @@ function requestExport() {
       color="neutral"
       variant="ghost"
       class="chen-data-view-toolbar-button text-muted hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
-      aria-label="Refresh data"
-      title="Refresh data"
+      :aria-label="t('Chen.RefreshData')"
+      :title="t('Chen.RefreshData')"
       :loading="controls.loading || busy"
       :disabled="controls.loading || busy"
       @click="emit('action', 'refresh')"
@@ -97,8 +99,8 @@ function requestExport() {
       color="neutral"
       variant="ghost"
       class="chen-data-view-toolbar-button text-muted hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
-      aria-label="Import CSV"
-      title="Import CSV"
+      :aria-label="t('Chen.ImportCsv')"
+      :title="t('Chen.ImportCsv')"
       :disabled="controls.loading || busy"
       @click="emit('import')"
     />
@@ -108,8 +110,8 @@ function requestExport() {
       color="neutral"
       variant="ghost"
       class="chen-data-view-toolbar-button text-muted hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
-      aria-label="Export data"
-      title="Export data"
+      :aria-label="t('Chen.ExportData')"
+      :title="t('Chen.ExportData')"
       :disabled="controls.loading || busy"
       @click="requestExport"
     />
@@ -120,19 +122,19 @@ function requestExport() {
         color="neutral"
         variant="ghost"
         class="chen-data-view-toolbar-button text-muted hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]"
-        aria-label="Table display settings"
-        title="Table display settings"
+        :aria-label="t('Chen.TableDisplaySettings')"
+        :title="t('Chen.TableDisplaySettings')"
       />
 
       <template #content>
         <div class="w-64 space-y-3 p-3">
           <div>
-            <p class="text-xs font-medium text-highlighted">Table display</p>
-            <p class="mt-0.5 text-[11px] text-muted">Applied to all database result grids.</p>
+            <p class="text-xs font-medium text-highlighted">{{ t("Chen.TableDisplay") }}</p>
+            <p class="mt-0.5 text-[11px] text-muted">{{ t("Chen.TableDisplayHint") }}</p>
           </div>
 
           <label class="flex items-center justify-between gap-3 text-xs">
-            <span>NULL values</span>
+            <span>{{ t("Chen.NullValues") }}</span>
             <USelect
               v-model="gridPreferences.nullDisplay"
               class="w-28"
@@ -143,25 +145,25 @@ function requestExport() {
           </label>
 
           <label class="flex items-center justify-between gap-3 text-xs">
-            <span>Mark empty strings</span>
+            <span>{{ t("Chen.MarkEmptyStrings") }}</span>
             <USwitch v-model="gridPreferences.showEmptyStrings" size="sm" />
           </label>
           <label class="flex items-center justify-between gap-3 text-xs">
-            <span>Zebra stripes</span>
+            <span>{{ t("Chen.ZebraStripes") }}</span>
             <USwitch v-model="gridPreferences.stripedRows" size="sm" />
           </label>
           <label class="flex items-center justify-between gap-3 text-xs">
-            <span>Cell borders</span>
+            <span>{{ t("Chen.CellBorders") }}</span>
             <USwitch v-model="gridPreferences.showCellBorders" size="sm" />
           </label>
           <label class="flex items-center justify-between gap-3 text-xs">
-            <span>Compact rows</span>
+            <span>{{ t("Chen.CompactRows") }}</span>
             <USwitch v-model="gridPreferences.compactRows" size="sm" />
           </label>
 
           <div v-if="fields.length" class="space-y-2 border-t border-default pt-3">
             <div class="flex items-center justify-between gap-3">
-              <span class="text-xs font-medium text-highlighted">Visible fields</span>
+              <span class="text-xs font-medium text-highlighted">{{ t("Chen.VisibleFields") }}</span>
               <UButton
                 size="xs"
                 color="neutral"
@@ -170,7 +172,7 @@ function requestExport() {
                 :disabled="hiddenFields.length === 0"
                 @click="showAllFields"
               >
-                Show all
+                {{ t("Chen.ShowAll") }}
               </UButton>
             </div>
             <UInput
@@ -178,7 +180,7 @@ function requestExport() {
               v-model="fieldSearch"
               size="xs"
               icon="i-lucide-search"
-              placeholder="Search fields"
+              :placeholder="t('Chen.SearchFields')"
             />
             <div class="max-h-48 space-y-1 overflow-y-auto pr-1">
               <label
@@ -207,8 +209,8 @@ function requestExport() {
       :color="controls.pinned ? 'primary' : 'neutral'"
       :variant="controls.pinned ? 'soft' : 'ghost'"
       :aria-pressed="controls.pinned"
-      :aria-label="controls.pinned ? 'Unpin result' : 'Pin result'"
-      :title="controls.pinned ? 'Unpin result' : 'Pin result'"
+      :aria-label="controls.pinned ? t('Chen.UnpinResult') : t('Chen.PinResult')"
+      :title="controls.pinned ? t('Chen.UnpinResult') : t('Chen.PinResult')"
       :disabled="controls.loading || busy"
       @click="emit('action', 'toggle_pinned')"
     />

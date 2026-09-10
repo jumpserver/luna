@@ -12,16 +12,18 @@ const emit = defineEmits<{
   confirm: [options: ChenDataViewExportOptions];
 }>();
 
+const { t } = useI18n();
+
 const scope = ref<ChenDataViewExportScope>("current");
 const format = ref<ChenDataViewExportFormat>("csv");
 const visible = computed({
   get: () => props.open,
   set: (open: boolean) => emit("update:open", open)
 });
-const scopeItems = [
-  { label: "Current page", value: "current" },
-  { label: "All rows", value: "all" }
-];
+const scopeItems = computed(() => [
+  { label: t("Chen.CurrentPage"), value: "current" },
+  { label: t("Chen.AllRows"), value: "all" }
+]);
 const formatItems = [
   { label: "CSV", value: "csv" },
   { label: "Excel", value: "excel" }
@@ -38,10 +40,10 @@ function submit() {
 </script>
 
 <template>
-  <ChenWorkspaceModal v-model:open="visible" title="Export data">
+  <ChenWorkspaceModal v-model:open="visible" :title="t('Chen.ExportData')">
     <template #body>
       <div class="space-y-5">
-        <UFormField label="Scope">
+        <UFormField :label="t('Chen.Scope')">
           <URadioGroup
             v-model="scope"
             :items="scopeItems"
@@ -50,7 +52,7 @@ function submit() {
             label-key="label"
           />
         </UFormField>
-        <UFormField label="Format">
+        <UFormField :label="t('Chen.Format')">
           <URadioGroup
             v-model="format"
             :items="formatItems"
@@ -64,8 +66,8 @@ function submit() {
 
     <template #footer>
       <div class="flex w-full justify-end gap-2">
-        <UButton color="neutral" variant="soft" @click="close">Cancel</UButton>
-        <UButton @click="submit">Export</UButton>
+        <UButton color="neutral" variant="soft" @click="close">{{ t("Common.Cancel") }}</UButton>
+        <UButton @click="submit">{{ t("Chen.Export") }}</UButton>
       </div>
     </template>
   </ChenWorkspaceModal>

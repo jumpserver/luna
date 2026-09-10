@@ -11,7 +11,7 @@ const props = withDefaults(
     initialTableName?: string;
   }>(),
   {
-    title: "Schema Diagram",
+    title: "",
     searchable: true,
     openable: true,
     initialTableName: ""
@@ -21,6 +21,9 @@ const props = withDefaults(
 const emit = defineEmits<{
   openTable: [tableName: string];
 }>();
+
+const { t } = useI18n();
+const displayTitle = computed(() => props.title || t("Chen.SchemaDiagram"));
 
 const viewport = shallowRef<HTMLElement | null>(null);
 const scale = ref(1);
@@ -316,13 +319,17 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
       class="absolute inset-x-3 top-3 z-30 flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-default bg-[var(--app-surface-overlay)] p-2 shadow-sm"
     >
       <div class="mr-1 shrink-0">
-        <div class="text-xs font-semibold">{{ title }}</div>
+        <div class="text-xs font-semibold">{{ displayTitle }}</div>
         <div class="text-[10px] text-muted">
-          <template v-if="focusMode">{{ visibleTables.length }} of</template>
-          {{ tables.length }} tables ·
-          <template v-if="focusMode">{{ relationLines.length }} of</template>
-          {{ allRelationships.length }} relationships
-          <span v-if="!relationshipsSupported">· FK metadata unsupported</span>
+          {{
+            t("Chen.DiagramSummary", {
+              visibleTables: focusMode ? visibleTables.length : tables.length,
+              tables: tables.length,
+              visibleRelationships: focusMode ? relationLines.length : allRelationships.length,
+              relationships: allRelationships.length
+            })
+          }}
+          <span v-if="!relationshipsSupported">· {{ t("Chen.ForeignKeyMetadataUnsupported") }}</span>
         </div>
       </div>
 
@@ -331,7 +338,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
           v-model="searchQuery"
           icon="i-lucide-search"
           size="sm"
-          placeholder="Search tables..."
+          :placeholder="t('Chen.SearchTables')"
           class="w-full"
           @focus="searchFocused = true"
           @blur="searchFocused = false"
@@ -352,7 +359,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
             <span class="truncate">{{ match.name }}</span>
             <span class="shrink-0 text-[10px] text-muted">{{ match.schema }}</span>
           </button>
-          <div v-if="!searchMatches.length" class="px-2 py-2 text-xs text-muted">No matching tables.</div>
+          <div v-if="!searchMatches.length" class="px-2 py-2 text-xs text-muted">{{ t("Chen.NoMatchingTables") }}</div>
         </div>
       </div>
 
@@ -365,7 +372,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
         :disabled="!selectedTable || !relatedTables.length"
         @click="toggleRelated"
       >
-        View related
+        {{ t("Chen.ViewRelated") }}
       </UButton>
       <UButton
         v-if="searchable"
@@ -376,7 +383,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
         :disabled="!selectedTable"
         @click="toggleFocus"
       >
-        Focus
+        {{ t("Chen.Focus") }}
       </UButton>
       <UButton
         v-if="searchable && selectedTable"
@@ -384,7 +391,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
         size="xs"
         color="neutral"
         variant="ghost"
-        aria-label="Clear diagram selection"
+        :aria-label="t('Chen.ClearDiagramSelection')"
         @click="clearSelection"
       />
 
@@ -394,7 +401,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
           size="xs"
           color="neutral"
           variant="ghost"
-          aria-label="Zoom out"
+          :aria-label="t('Chen.ZoomOut')"
           @click="setScale(scale / 1.15)"
         />
         <span class="w-11 text-center text-[11px] tabular-nums text-muted">{{ Math.round(scale * 100) }}%</span>
@@ -403,10 +410,17 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
           size="xs"
           color="neutral"
           variant="ghost"
-          aria-label="Zoom in"
+          :aria-label="t('Chen.ZoomIn')"
           @click="setScale(scale * 1.15)"
         />
-        <UButton icon="i-lucide-scan" size="xs" color="neutral" variant="ghost" aria-label="Fit diagram" @click="fit" />
+        <UButton
+          icon="i-lucide-scan"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          :aria-label="t('Chen.FitDiagram')"
+          @click="fit"
+        />
       </div>
     </div>
 
@@ -416,7 +430,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
     >
       <div class="border-b border-default px-3 py-2">
         <div class="truncate text-xs font-semibold">{{ selectedTable.name }}</div>
-        <div class="text-[10px] text-muted">{{ relatedTables.length }} directly related tables</div>
+        <div class="text-[10px] text-muted">{{ t("Chen.DirectlyRelatedTables", { count: relatedTables.length }) }}</div>
       </div>
       <div class="max-h-56 overflow-auto p-1">
         <button
@@ -432,7 +446,9 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
           <span class="min-w-0 flex-1 truncate">{{ related.name }}</span>
           <span class="shrink-0 text-[10px] text-muted">{{ related.schema }}</span>
         </button>
-        <div v-if="!relatedTables.length" class="px-2 py-3 text-center text-xs text-muted">No related tables.</div>
+        <div v-if="!relatedTables.length" class="px-2 py-3 text-center text-xs text-muted">
+          {{ t("Chen.NoRelatedTables") }}
+        </div>
       </div>
     </div>
 
@@ -506,7 +522,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
             <button
               type="button"
               class="flex h-full min-w-0 flex-1 items-center gap-2 px-3 text-left hover:bg-accented"
-              :title="`Select ${entity.schema}.${entity.name}`"
+              :title="t('Chen.SelectNamedTable', { name: `${entity.schema}.${entity.name}` })"
               @click="chooseTable(entity.id)"
               @dblclick="openable && emit('openTable', entity.name)"
             >
@@ -522,7 +538,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
               size="xs"
               color="neutral"
               variant="ghost"
-              :aria-label="`Open table ${entity.name}`"
+              :aria-label="t('Chen.OpenNamedTable', { name: entity.name })"
               @click.stop="emit('openTable', entity.name)"
             />
           </header>
@@ -541,10 +557,10 @@ onBeforeUnmount(() => resizeObserver?.disconnect());
               <span class="max-w-24 truncate text-muted">{{ column.nativeType }}</span>
             </div>
             <div v-if="entity.columns.length > maxVisibleColumns" class="h-6 px-3 py-1 text-[10px] text-muted">
-              +{{ entity.columns.length - maxVisibleColumns }} more columns
+              {{ t("Chen.MoreColumns", { count: entity.columns.length - maxVisibleColumns }) }}
             </div>
           </div>
-          <div v-else class="flex h-7 items-center px-3 text-[11px] text-muted">No columns</div>
+          <div v-else class="flex h-7 items-center px-3 text-[11px] text-muted">{{ t("Chen.NoColumns") }}</div>
         </section>
       </div>
     </div>
