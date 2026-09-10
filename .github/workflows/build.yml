@@ -127,6 +127,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate Windows packaging configuration
+        if: startsWith(matrix.os, 'windows')
+        run: pnpm --dir electron exec node --import tsx --test tests/forge-artifacts.test.ts
+
       - name: Sync version
         env:
           VERSION: ${{ env.VERSION }}
