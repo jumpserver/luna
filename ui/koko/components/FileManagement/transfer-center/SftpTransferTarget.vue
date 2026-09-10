@@ -42,7 +42,9 @@ const conflictTask = computed(() =>
   props.target.allTasks.find((task) => task.status === "paused" && task.error === sftpTransferConflictError)
 );
 const hasConflict = computed(() => targetHasConflictTasks(props.target.allTasks));
-const error = computed(() => sftpTransferErrorText(getTargetTransferError(props.target.allTasks) || "", t));
+const error = computed(() =>
+  sftpTransferErrorText(getTargetTransferError(props.target.allTasks) || "", t, props.target.allTasks[0])
+);
 const canPause = computed(() => canPauseTransferTasks(props.target.allTasks));
 const canResume = computed(() => canResumeTransferTasks(props.target.allTasks));
 const canCancel = computed(() => props.target.allTasks.some((task) => !sftpTransferTerminalStatuses.has(task.status)));

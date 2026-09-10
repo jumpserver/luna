@@ -42,7 +42,7 @@ const statusText = computed(() => {
   if (props.task.status === "transferring") {
     return `${t("FileTransfer.Status.transferring")} ${progress.value}%`;
   }
-  if (props.task.status === "failed" && props.task.error) return sftpTransferErrorText(props.task.error, t);
+  if (props.task.status === "failed" && props.task.error) return sftpTransferErrorText(props.task.error, t, props.task);
   return t(`FileTransfer.Status.${props.task.status}`);
 });
 const rateText = computed(() => {
