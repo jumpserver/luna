@@ -49,7 +49,7 @@ const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
 const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
 const isLocalClientMethod = (method: { type?: string } | undefined) =>
   ["native", "client", "local", "desktop"].includes(String(method?.type || "").toLowerCase());
-const normalizeDesktopLocalClientUrl = (url: string) =>
+const normalizeLocalClientUrl = (url: string) =>
   url.startsWith("jms://") ? `jms2://${url.slice("jms://".length)}` : url;
 const withLocalClientName = (url: string, clientName?: string) => {
   if (!clientName || !url.startsWith("jms2://")) return url;
@@ -491,9 +491,9 @@ export const useAssetAction = () => {
 
       if (isDesktopRuntime() || isLocalClientMethod(method)) {
         const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams());
-        const localClientUrl = isDesktopRuntime() ? normalizeDesktopLocalClientUrl(url || "") : url;
-        const expectedScheme = isDesktopRuntime() ? "jms2://" : "jms://";
-        if (!localClientUrl?.startsWith(expectedScheme)) {
+        // Both runtimes target the current client; jms:// belongs to the legacy client.
+        const localClientUrl = normalizeLocalClientUrl(url || "");
+        if (!localClientUrl.startsWith("jms2://")) {
           throw new Error("Invalid local client URL");
         }
         const payload = {

@@ -158,12 +158,6 @@ async function submit() {
           error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
       }
     });
-    if (showLaunchSuccessState) {
-      connecting.value = false;
-      launchSuccessVisible.value = true;
-      launchedClientName.value = localApplication.clientName || "";
-      launchedProtocol.value = info.protocol;
-    }
   } catch (error) {
     connecting.value = false;
     connectionError.value = error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));

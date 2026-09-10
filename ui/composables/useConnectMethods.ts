@@ -121,7 +121,8 @@ export const pickConnectMethod = (
     return isConnectMethodAvailable(value, methods, protocol, appConfig);
   };
 
-  if (canUse(currentMethod)) return currentMethod;
+  // The current form choice wins; only automatic preferences favor the built-in workspace.
+  if (isConnectMethodAvailable(currentMethod, methods, protocol, appConfig)) return currentMethod;
   if (canUse(preferredMethod)) return preferredMethod;
   if (builtin) return builtin.value;
 

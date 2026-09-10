@@ -39,6 +39,29 @@ Create a local unpacked production app with `pnpm electron:package:dir`, or buil
 with `pnpm electron:build`. Packaging uses Electron Forge makers: DMG/ZIP on macOS, Squirrel/WiX on
 Windows, and DEB/RPM on Linux. Windows no longer uses NSIS, and Linux no longer produces AppImage.
 
+Packaged clients register only `jms2://` and use `jms2://auth/callback` for OAuth.
+`jms://` belongs to the legacy client. The server's OAuth application must allow
+the new callback URI; clients do not fall back to the legacy scheme.
+Development uses `http://127.0.0.1:14876/auth/callback`. An occupied callback port
+fails the login instead of handing its result to another installed client.
+Unpackaged macOS builds do not register Electron.app as a protocol handler.
+
+Windows Squirrel install/update registers `jms2` and uninstall removes this
+client's registration. MSI and unpacked builds register when the app is first
+started. Protocol launches use the initial arguments when the app is closed and
+single-instance forwarding when it is running. Run `pnpm test:electron` for
+simulated Windows lifecycle checks. On Windows, also verify both launch states
+from an install path containing spaces, the OAuth callback and an asset link,
+and that installing/updating the new client does not change the legacy `jms`
+handler. Native installer/registry behavior needs a Windows host.
+
+The web "open with application" action converts server `jms://` asset links to
+`jms2://`. Asset links carry a connection token and launch through the main process
+without requiring a desktop login. Local protocol preferences take precedence;
+missing preferences use the platform defaults (Terminal for macOS/Linux SSH,
+bundled PuTTY for Windows SSH, and Microsoft Remote Desktop for Windows RDP).
+Launch failures display a native error dialog, including when no client window is open.
+
 Keep new renderer code runtime-neutral. Add native behavior to the preload/main
 bridge rather than enabling Node.js integration or importing Electron from Vue
 components.

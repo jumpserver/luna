@@ -9,6 +9,11 @@ import { createJiti } from "jiti";
 // Load the configuration with the same TypeScript loader used by Electron Forge.
 const configPromise = createJiti(import.meta.url).import<ForgeConfig>("../forge.config.ts", { default: true });
 
+test("packaged clients claim jms2 without taking the legacy client's jms scheme", async () => {
+  const config = await configPromise;
+  assert.deepEqual(config.packagerConfig.protocols, [{ name: "JumpServer URL", schemes: ["jms2"] }]);
+});
+
 test("normalizes release installers while preserving Squirrel update artifacts", async (context) => {
   const config = await configPromise;
   const makeDir = await mkdtemp(path.join(os.tmpdir(), "jms-forge-artifacts-"));

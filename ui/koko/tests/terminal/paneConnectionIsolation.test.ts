@@ -2,7 +2,7 @@ import type { Terminal } from "@xterm/xterm";
 import { MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { computed, ref } from "vue";
+import { computed, ref, shallowRef } from "vue";
 import { createKokoTerminalMessageHandlers } from "#koko/composables/terminal/useTerminalMessageHandler";
 import { useKokoConnectionStore } from "#koko/stores/connection";
 import {
@@ -23,7 +23,7 @@ function createPaneHandlers(paneId: string) {
   const terminal = { cols: 80, rows: 24, write: vi.fn(), focus: vi.fn() } as unknown as Terminal;
   const handlers = createKokoTerminalMessageHandlers({
     socketRef: ref(socket),
-    terminalRef: ref(terminal),
+    terminalRef: shallowRef(terminal),
     featureSetting: ref({ SECURITY_SESSION_SHARE: true }),
     onlineUsers: ref([]),
     userOptions: ref([]),

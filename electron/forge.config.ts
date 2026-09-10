@@ -12,6 +12,7 @@ import { MakerWix } from "@electron-forge/maker-wix";
 import { AutoUnpackNativesPlugin } from "@electron-forge/plugin-auto-unpack-natives";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import { buildSshHelper } from "../scripts/build-ssh-helper.mjs";
+import { CLIENT_PROTOCOL } from "./src/shared/client-protocol";
 
 const electronRoot = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(electronRoot, "..");
@@ -133,7 +134,7 @@ const config: ForgeConfig = {
     protocols: [
       {
         name: "JumpServer URL",
-        schemes: ["jms", "jms2"]
+        schemes: [CLIENT_PROTOCOL]
       }
     ],
     osxSign: macSigningAvailable
