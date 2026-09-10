@@ -2,8 +2,6 @@
 import type { LabeledValue, UserData, UserProfile } from "~/types";
 import { getUserProfile } from "~/composables/useApiRequest";
 import { confirmLeaveCurrentSiteSessions } from "~/composables/useSiteAccountSwitch";
-
-import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 interface DetailRow {
@@ -136,24 +134,13 @@ async function loadProfile() {
   }
 }
 
-async function switchAccount(accountId: string, account: UserData) {
+async function switchAccount(accountId: string) {
   if (accountId === currentAccountId.value || switchingAccount.value) return;
   if (!(await confirmLeaveCurrentSiteSessions("switch"))) return;
 
   switchingAccount.value = true;
-  userInfoStore.setCurrentAccount(accountId);
-
   try {
-    if (isDesktopRuntime()) {
-      await desktopInvoke("set_api_session", {
-        sessionKey: accountId,
-        origin: account.site,
-        bearerToken: account.bearerToken,
-        orgId: account.org.id
-      });
-    }
-
-    useEventBus().emit("refresh", undefined);
+    await userInfoStore.setCurrentAccount(accountId);
     await loadProfile();
   } finally {
     switchingAccount.value = false;
@@ -225,7 +212,7 @@ watch(
               variant="ghost"
               size="sm"
               :loading="switchingAccount"
-              @click="switchAccount(accountId, account)"
+              @click="switchAccount(accountId)"
             />
           </div>
         </SettingsGroup>

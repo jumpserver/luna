@@ -7,7 +7,9 @@ import type {
   RdpGraphics,
   UserData
 } from "~/types/index";
+import { defineStore } from "pinia";
 import { desktopInvoke } from "~/shared/desktop/bridge";
+import { isDesktopRuntime } from "~/utils/runtime";
 
 export type SiteUserData = UserData & {
   language?: string;
@@ -84,18 +86,20 @@ export const useUserInfoStore = defineStore(
      * @param accountId
      * @param userData
      */
-    const syncApiSession = (accountId: string, userData: UserData) => {
+    const syncApiSession = async (accountId: string, userData: UserData) => {
       if (!isDesktopRuntime()) return;
       if (!accountId || !userData.bearerToken || !userData.org?.id) return;
 
-      void desktopInvoke("set_api_session", {
-        sessionKey: accountId,
-        origin: userData.site,
-        bearerToken: userData.bearerToken,
-        orgId: userData.org.id
-      }).catch((error) => {
+      try {
+        await desktopInvoke("set_api_session", {
+          sessionKey: accountId,
+          origin: userData.site,
+          bearerToken: userData.bearerToken,
+          orgId: userData.org.id
+        });
+      } catch (error) {
         console.error("sync api session failed", error);
-      });
+      }
     };
 
     watch(
@@ -167,7 +171,7 @@ export const useUserInfoStore = defineStore(
      * @description 删除用户数据
      * @param accountId
      */
-    const deleteUserData = (accountId: string) => {
+    const deleteUserData = async (accountId: string) => {
       const userData = userMap.value[accountId];
 
       // 退出当前站点时立即请求清理其 Cookie
@@ -191,10 +195,10 @@ export const useUserInfoStore = defineStore(
 
         if (nextEntry) {
           const [nextAccountId, nextUser] = nextEntry;
+          await syncApiSession(nextAccountId, nextUser);
           currentUser.value = nextUser;
           currentAccountId.value = nextAccountId;
           currentSite.value = nextUser.site;
-          syncApiSession(nextAccountId, nextUser);
 
           // 同步连接信息映射、偏好映射以及 RDP 客户端选项
           currentConnectionInfoMap.value = nextUser.connectionInfoMap || {};
@@ -203,10 +207,6 @@ export const useUserInfoStore = defineStore(
           currentOrganizations.value = nextUser.availableOrgs || [];
 
           loggedIn.value = true;
-
-          nextTick(() => {
-            useEventBus().emit("refresh", undefined);
-          });
         }
       } else {
         currentAccountId.value = "";
@@ -230,25 +230,26 @@ export const useUserInfoStore = defineStore(
      * @description 设置当前账号
      * @param accountId
      */
-    const setCurrentAccount = (accountId: string) => {
+    const setCurrentAccount = async (accountId: string) => {
       const userData = getUserData(accountId);
 
-      if (userData) {
-        currentAccountId.value = accountId;
-        currentSite.value = userData.site;
-        currentUser.value = userData as SiteUserData;
-        currentOrganizations.value = (userData as SiteUserData).availableOrgs || [];
-        syncApiSession(accountId, userData);
-
-        // 同步当前站点的连接信息映射、偏好映射以及 RDP 客户端选项
-        currentConnectionInfoMap.value = (userData as SiteUserData).connectionInfoMap || {};
-        currentConnectionPreferenceMap.value = (userData as SiteUserData).connectionPreferenceMap || {};
-        currentRdpClientOption.value = (userData as SiteUserData).rdpClientOption || {};
-      } else {
+      if (!userData) {
         currentConnectionInfoMap.value = {};
         currentConnectionPreferenceMap.value = {};
         currentRdpClientOption.value = {};
+        return;
       }
+
+      await syncApiSession(accountId, userData);
+      currentAccountId.value = accountId;
+      currentSite.value = userData.site;
+      currentUser.value = userData as SiteUserData;
+      currentOrganizations.value = (userData as SiteUserData).availableOrgs || [];
+
+      // 同步当前站点的连接信息映射、偏好映射以及 RDP 客户端选项
+      currentConnectionInfoMap.value = (userData as SiteUserData).connectionInfoMap || {};
+      currentConnectionPreferenceMap.value = (userData as SiteUserData).connectionPreferenceMap || {};
+      currentRdpClientOption.value = (userData as SiteUserData).rdpClientOption || {};
     };
 
     /**
