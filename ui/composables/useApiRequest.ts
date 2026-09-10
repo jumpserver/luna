@@ -291,7 +291,8 @@ async function desktopApiRequest<T>(request: ApiRequest): Promise<T> {
   const scopedRequest = request.orgId || !userInfoStore.orgId ? request : { ...request, orgId: userInfoStore.orgId };
 
   try {
-    return await desktopInvoke<T>("api_request", { request: scopedRequest });
+    // Electron IPC cannot clone Vue reactive proxies (ACL review stores body on a reactive item).
+    return await desktopInvoke<T>("api_request", { request: JSON.parse(JSON.stringify(scopedRequest)) });
   } catch (error) {
     if (error && typeof error === "object" && !(error instanceof Error)) {
       const payload = error as { status?: unknown; data?: unknown; body?: unknown; message?: unknown };

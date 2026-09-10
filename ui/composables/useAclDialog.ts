@@ -1,8 +1,8 @@
 import type { MaybeRefOrGetter } from "vue";
 import type { ConnectionBody, TokenResponse } from "~/types";
 import { ApiRequestError } from "~/composables/useApiRequest";
-import { desktopClipboard } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { writeClipboardText } from "~/utils/clipboard";
 
 export type AclItemStatus =
   | "ready"
@@ -38,6 +38,18 @@ export interface AclDialogGroup {
   faceUrl?: string;
 }
 
+const ACL_CODE_MESSAGE = {
+  acl_reject: "AclDialog.Reject",
+  acl_face_online: "AclDialog.NeedFaceOnline",
+  acl_face_online_not_supported: "AclDialog.FaceOnlineNotSupported",
+  no_face_feature: "AclDialog.NoFaceFeature",
+  perm_account_invalid: "AclDialog.AccountNotFound"
+} as const;
+
+function aclCodeMessage(code: string) {
+  return ACL_CODE_MESSAGE[code as keyof typeof ACL_CODE_MESSAGE];
+}
+
 export function useAclDialogPresentation(groupSource: MaybeRefOrGetter<AclDialogGroup | undefined>) {
   const { t } = useI18n();
   const group = computed(() => toValue(groupSource));
@@ -63,17 +75,19 @@ export function useAclDialogPresentation(groupSource: MaybeRefOrGetter<AclDialog
     if (!current) return "";
     if (current.items.length === 1) {
       const item = current.items[0];
-      if (item?.detail) return t("AclDialog.RequestFailed");
       if (isReview.value) {
+        if (item?.status === "failed") return t("AclDialog.RequestFailed");
         if (item?.status === "pending") return t("AclDialog.ReviewPending");
         if (item?.status === "rejected") return t("AclDialog.ReviewRejected");
         if (item?.status === "closed") return t("AclDialog.ReviewClosed");
         return t("AclDialog.NeedReview");
       }
       if (current.code === "acl_face_verify") {
+        if (item?.status === "failed") return t("AclDialog.RequestFailed");
         return item?.status === "verifying" ? t("AclDialog.CompleteFaceVerify") : t("AclDialog.NeedFaceVerify");
       }
-      return t("ConnectError.AclFailed");
+      const mapped = aclCodeMessage(current.code);
+      return mapped ? t(mapped) : t("AclDialog.Restricted");
     }
     if (isReview.value) return t("AclDialog.ReviewGroupDescription");
     if (current.code === "acl_face_verify") return t("AclDialog.FaceGroupDescription");
@@ -87,11 +101,14 @@ const groups = ref<AclDialogGroup[]>([]);
 
 function errorDetail(error: unknown) {
   if (error instanceof ApiRequestError) {
-    return error.data?.detail || error.data?.code || error.message;
+    const detail = error.data?.detail;
+    if (typeof detail === "string" && detail) return detail;
+    return error.data?.code || error.message || "";
   }
+  if (error instanceof Error) return error.message;
   if (error && typeof error === "object") {
-    const data = error as { code?: string; detail?: string };
-    return data.detail || data.code || "";
+    const data = error as { code?: string; detail?: string; message?: string };
+    return data.detail || data.message || data.code || "";
   }
   return String(error || "");
 }
@@ -128,7 +145,46 @@ function finishItem(item: AclDialogItem, token: TokenResponse | null) {
   }
 }
 
+function requestAcl(
+  error: unknown,
+  input: { body: ConnectionBody; orgId?: string; assetName: string; scopeId?: string; batchId?: string }
+): Promise<TokenResponse | null> | null {
+  const code = aclCode(error);
+  if (!code) return null;
+
+  return new Promise((resolve) => {
+    const groupId = input.batchId
+      ? `batch:${input.batchId}:${code}`
+      : input.scopeId
+        ? `scope:${input.scopeId}:${code}`
+        : `global:${code}`;
+    let group = groups.value.find((candidate) => candidate.id === groupId);
+    if (!group) {
+      group = reactive({ id: groupId, code, items: [], submitted: false, batchId: input.batchId });
+      groups.value.push(group);
+    }
+    const actionable = ["acl_review", "acl_face_verify"].includes(code);
+    const item: AclDialogItem = reactive({
+      id: `${Date.now()}-${Math.random()}`,
+      scopeId: input.scopeId,
+      assetName: input.assetName,
+      body: input.body,
+      orgId: input.orgId,
+      status: actionable ? "ready" : "failed",
+      detail: actionable || aclCodeMessage(code) ? undefined : errorDetail(error),
+      resolve
+    });
+    group.items.push(item);
+    if (group.submitted) {
+      if (code === "acl_review") void submitReviewItem(item);
+      if (code === "acl_face_verify") void verifyNextFace(group);
+    }
+  });
+}
+
 export function useAclDialog() {
+  const toast = useToast();
+  const { t } = useI18n();
   const activeGroup = computed(() => groups.value[0]);
   const globalGroup = computed(() => groups.value.find((group) => group.batchId || !group.items[0]?.scopeId));
   const isOpen = computed(() => Boolean(globalGroup.value));
@@ -137,42 +193,7 @@ export function useAclDialog() {
   const hasScopeGroup = (scopeId: string) =>
     groups.value.some((group) => !group.batchId && group.items[0]?.scopeId === scopeId);
 
-  const request = (
-    error: unknown,
-    input: { body: ConnectionBody; orgId?: string; assetName: string; scopeId?: string; batchId?: string }
-  ): Promise<TokenResponse | null> | null => {
-    const code = aclCode(error);
-    if (!code) return null;
-
-    return new Promise((resolve) => {
-      const groupId = input.batchId
-        ? `batch:${input.batchId}:${code}`
-        : input.scopeId
-          ? `scope:${input.scopeId}:${code}`
-          : `global:${code}`;
-      let group = groups.value.find((candidate) => candidate.id === groupId);
-      if (!group) {
-        group = reactive({ id: groupId, code, items: [], submitted: false, batchId: input.batchId });
-        groups.value.push(group);
-      }
-      const actionable = ["acl_review", "acl_face_verify"].includes(code);
-      const item: AclDialogItem = reactive({
-        id: `${Date.now()}-${Math.random()}`,
-        scopeId: input.scopeId,
-        assetName: input.assetName,
-        body: input.body,
-        orgId: input.orgId,
-        status: actionable ? "ready" : "failed",
-        detail: actionable ? undefined : errorDetail(error),
-        resolve
-      });
-      group.items.push(item);
-      if (group.submitted) {
-        if (code === "acl_review") void submitReviewItem(item);
-        if (code === "acl_face_verify") void verifyNextFace(group);
-      }
-    });
-  };
+  const request = requestAcl;
 
   const submit = async (target?: AclDialogGroup) => {
     const group = target || globalGroup.value || activeGroup.value;
@@ -224,8 +245,12 @@ export function useAclDialog() {
   const copyTicketLink = async (item: AclDialogItem) => {
     const link = item.token?.from_ticket_info?.ticket_detail_page_url;
     if (!link) return;
-    if (isDesktopRuntime()) await desktopClipboard.writeText(link);
-    else await navigator.clipboard.writeText(link);
+    try {
+      await writeClipboardText(link);
+      toast.add({ title: t("Common.CopySuccess"), color: "success", duration: 1200 });
+    } catch {
+      toast.add({ title: t("Common.CopyFailed"), color: "error", duration: 1200 });
+    }
   };
 
   return {
@@ -334,8 +359,12 @@ async function verifyNextFace(group: AclDialogGroup) {
 async function callTicketApi(api: { method: string; url: string }) {
   let path = api.url;
   if (isDesktopRuntime() && /^https?:\/\//.test(path)) {
-    const parsed = new URL(path);
-    path = `${parsed.pathname}${parsed.search}`;
+    try {
+      const parsed = new URL(path);
+      path = `${parsed.pathname}${parsed.search}`;
+    } catch {
+      // keep original path
+    }
   }
   return apiRequest<any>({ method: api.method.toUpperCase() as any, path });
 }
@@ -346,12 +375,12 @@ export async function createConnectionTokenWithAcl(
 ) {
   try {
     const token = await createConnectionToken(body, meta.orgId);
-    const pending = useAclDialog().request(token, { body, ...meta });
+    const pending = requestAcl(token, { body, ...meta });
     if (pending) return pending;
     if (!token.id) throw new Error(token.detail || "Missing connection token");
     return token;
   } catch (error) {
-    const pending = useAclDialog().request(error, { body, ...meta });
+    const pending = requestAcl(error, { body, ...meta });
     if (!pending) throw error;
     return pending;
   }
