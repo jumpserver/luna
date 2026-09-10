@@ -3,8 +3,8 @@ import type { Player } from "asciinema-player";
 import type { ReplayPlayerHandle } from "#online-player/types";
 
 import { create as createAsciinemaPlayer } from "asciinema-player";
-import { fetchRecordingBuffer } from "#online-player/utils/recordingSource";
 import { useI18n } from "vue-i18n";
+import { fetchRecordingBuffer } from "#online-player/utils/recordingSource";
 
 const props = defineProps<{
   src: string;
@@ -51,9 +51,7 @@ function localizeHelpOverlay(root: HTMLElement) {
     if (!translation) return;
     // Replace the trailing description text (everything after the <kbd>) so the
     // key label stays untouched while the description is localized.
-    [...item.childNodes]
-      .filter((node) => node.nodeType === Node.TEXT_NODE)
-      .forEach((node) => node.remove());
+    [...item.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE).forEach((node) => node.remove());
     item.appendChild(document.createTextNode(` - ${t(translation)}`));
   });
 }

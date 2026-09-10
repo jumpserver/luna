@@ -2112,7 +2112,13 @@ defineExpose({ focus });
       v-else
       :icon="startupErrorMessage ? 'i-lucide-circle-alert' : 'i-lucide-database'"
       :loading="!startupErrorMessage"
-      :title="startupErrorMessage ? (adminTerminated ? startupErrorMessage : t('Chen.OpenDatabaseWorkspaceFailed')) : t('Chen.OpeningDatabaseWorkspace')"
+      :title="
+        startupErrorMessage
+          ? adminTerminated
+            ? startupErrorMessage
+            : t('Chen.OpenDatabaseWorkspaceFailed')
+          : t('Chen.OpeningDatabaseWorkspace')
+      "
       :message="adminTerminated ? '' : startupErrorMessage || startupMessage"
       :action-label="startupErrorMessage && !adminTerminated ? t('Chen.Retry') : undefined"
       @action="emit('reconnect')"
@@ -2141,7 +2147,9 @@ defineExpose({ focus });
 
     <ChenWorkspaceModal
       v-model:open="dialogVisible"
-      :title="databaseDialogFailed ? t('Chen.DatabaseConnectionFailed') : session.dialogMessage.value?.title || 'Message'"
+      :title="
+        databaseDialogFailed ? t('Chen.DatabaseConnectionFailed') : session.dialogMessage.value?.title || 'Message'
+      "
       :close="session.dialogMessage.value?.showClose"
       :dismissible="session.dialogMessage.value?.showClose"
     >
