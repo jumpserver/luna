@@ -187,6 +187,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
+export function sftpCanUpload(capabilities: SftpCapabilities | null | undefined) {
+  return capabilities?.file_editor.write !== false;
+}
+
 export function parseSftpCapabilities(data?: string): SftpCapabilities | null {
   if (!data) return null;
 

@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 
 import {
+  parseSftpCapabilities,
+  sftpCanUpload,
   SftpCommand,
   SftpControlData,
   SftpDataStatus,
@@ -466,5 +468,49 @@ describe("sFTP feature tour", () => {
     for (const section of ["fileManagement", "localFile", "sftpTransferCenter", "sftpTour"] as const) {
       expect(leafKeys(enKoko[section]).sort()).toEqual(leafKeys(zhKoko[section]).sort());
     }
+  });
+});
+
+describe("sftp upload permission", () => {
+  it("blocks create when connect capabilities set write to false", () => {
+    expect(sftpCanUpload(null)).toBe(true);
+    expect(
+      sftpCanUpload(
+        parseSftpCapabilities(
+          JSON.stringify({
+            capabilities: {
+              web_sftp: {
+                schema_version: 1,
+                file_editor: {
+                  enabled: false,
+                  read: true,
+                  write: false,
+                  save: { version: 1, expected_version: true, force: true, max_bytes: 10 }
+                }
+              }
+            }
+          })
+        )
+      )
+    ).toBe(false);
+    expect(
+      sftpCanUpload(
+        parseSftpCapabilities(
+          JSON.stringify({
+            capabilities: {
+              web_sftp: {
+                schema_version: 1,
+                file_editor: {
+                  enabled: true,
+                  read: true,
+                  write: true,
+                  save: { version: 1, expected_version: true, force: true, max_bytes: 10 }
+                }
+              }
+            }
+          })
+        )
+      )
+    ).toBe(true);
   });
 });

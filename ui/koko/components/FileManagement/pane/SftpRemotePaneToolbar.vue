@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { SftpFileEntry, useSftpFileManager } from "#koko/composables/sftp/useSftpFileManager";
+import { sftpCanUpload } from "#koko/composables/sftp/protocol";
 import { KeyboardKey } from "#koko/constants/keyboard";
 
 const props = defineProps<{
@@ -42,6 +43,7 @@ const toolbarWidth = ref(0);
 let resizeObserver: ResizeObserver | undefined;
 
 const currentPath = computed(() => props.manager.currentPath.value || "/");
+const canUpload = computed(() => sftpCanUpload(props.manager.capabilities.value));
 
 /** Breakpoints relative to pane width (dual-pane halves often ~360–520px). */
 const isNarrow = computed(() => toolbarWidth.value > 0 && toolbarWidth.value < 720);
@@ -87,11 +89,13 @@ const overflowMenuItems = computed<DropdownMenuItem[][]>(() => {
     {
       label: t("koko.fileManagement.newFolder"),
       icon: "i-lucide-folder-plus",
+      disabled: !canUpload.value,
       onSelect: () => emit("createFolder")
     },
     {
       label: t("koko.fileManagement.newFile"),
       icon: "i-lucide-file-plus-2",
+      disabled: !canUpload.value,
       onSelect: () => emit("createFile")
     }
   ];
@@ -392,6 +396,7 @@ defineExpose({
           variant="ghost"
           size="sm"
           square
+          :disabled="!canUpload"
           :aria-label="t('koko.actions.upload')"
           @click="uploadInput?.click()"
         />
@@ -463,6 +468,7 @@ defineExpose({
             variant="ghost"
             size="sm"
             square
+            :disabled="!canUpload"
             :aria-label="t('koko.fileManagement.newFolder')"
             @click="void emit('createFolder')"
           />
@@ -474,6 +480,7 @@ defineExpose({
             variant="ghost"
             size="sm"
             square
+            :disabled="!canUpload"
             :aria-label="t('koko.fileManagement.newFile')"
             @click="void emit('createFile')"
           />
@@ -485,6 +492,7 @@ defineExpose({
             variant="ghost"
             size="sm"
             square
+            :disabled="!canUpload"
             :aria-label="t('koko.actions.upload')"
             @click="uploadInput?.click()"
           />
