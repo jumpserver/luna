@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import type { AssetItem } from "~/types";
 import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
-import AiOverlayPanel from "~/components/RightPanel/AiOverlayPanel.vue";
 import WorkspaceShell from "~/components/Workspace/shell.vue";
 import WorkspaceStatusFooter from "~/components/Workspace/statusFooter.vue";
 import {
@@ -14,6 +13,8 @@ import {
 import { getPublicSettings } from "~/composables/useApiRequest";
 import { desktopInvoke, desktopListen, desktopWindow } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+
+const AiOverlayPanel = defineAsyncComponent(() => import("~/components/RightPanel/AiOverlayPanel.vue"));
 
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { isMacOS, isWindows } = usePlatform();

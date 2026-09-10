@@ -2,9 +2,10 @@
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 import { connectorSessionKey } from "@jumpserver/connectors-core";
 import { KokoConnectView } from "#koko";
-import AiOverlayPanel from "~/components/RightPanel/AiOverlayPanel.vue";
 import { getAuthenticatedTerminalCommandHistoryScope } from "~/composables/useTerminalCommandHistory";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+
+const AiOverlayPanel = defineAsyncComponent(() => import("~/components/RightPanel/AiOverlayPanel.vue"));
 
 definePageMeta({ layout: "connect" });
 
