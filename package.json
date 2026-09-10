@@ -3,7 +3,7 @@
   "type": "module",
   "version": "5.0.0",
   "private": true,
-  "packageManager": "pnpm@11.4.0",
+  "packageManager": "pnpm@12.3.4",
   "description": "JumpServer web application",
   "author": "JumpServer",
   "license": "MIT",
@@ -75,6 +75,7 @@
     "@codemirror/view": "^6.43.5",
     "@jumpserver/connectors-core": "workspace:*",
     "@jumpserver/online-player": "workspace:*",
+    "@jumpserver/web-proxy": "workspace:*",
     "@lezer/highlight": "^1.2.3",
     "@nuxt/icon": "2.2.2",
     "@nuxt/ui": "4.11.0",
@@ -110,8 +111,7 @@
     "vue": "^3.5.35",
     "vue-router": "5.0.7",
     "xterm-theme": "^1.1.0",
-    "zmodem-ts": "^1.0.8",
-    "@jumpserver/web-proxy": "workspace:*"
+    "zmodem-ts": "^1.0.8"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.0.0",
