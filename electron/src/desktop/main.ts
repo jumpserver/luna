@@ -877,7 +877,8 @@ function refreshTrayMenu() {
 }
 
 function setupTray() {
-  const iconName = process.platform === "darwin" ? "tray-mac.png" : "32x32.png";
+  const iconName =
+    process.platform === "darwin" ? "tray-mac.png" : process.platform === "win32" ? "icon.ico" : "32x32.png";
   const iconPath = isDevelopment
     ? path.join(projectRoot, "electron/assets/icons", iconName)
     : path.join(process.resourcesPath, "icons", iconName);
