@@ -1052,6 +1052,11 @@
     "BackToForm": "Volver al formulario"
   },
   "ConnectionGuide": {
+    "TokenCommand": "Comando de conexión (token)",
+    "DirectCommand": "Comando de conexión (directa por ID de activo)",
+    "TokenPasswordHelp": "Usa la contraseña del token de la tabla anterior.",
+    "DirectPasswordHelp": "Usa tu contraseña de inicio de sesión de JumpServer.",
+    "DirectUnavailable": "El nombre de usuario o la cuenta del activo no está disponible. Vuelve a abrir la guía de conexión.",
     "Title": "Guía de conexión",
     "Name": "Nombre",
     "Host": "Host",

@@ -148,7 +148,7 @@ export default defineNuxtConfig({
     },
     server: {
       strictPort: true,
-      hmr: {
+      ws: {
         protocol: "ws",
         host: "0.0.0.0",
         port: Number(process.env.JMS_HMR_PORT || 3001)

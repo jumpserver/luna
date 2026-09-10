@@ -1052,6 +1052,11 @@
     "BackToForm": "フォームに戻る"
   },
   "ConnectionGuide": {
+    "TokenCommand": "接続コマンド（トークン）",
+    "DirectCommand": "接続コマンド（資産 ID で直接接続）",
+    "TokenPasswordHelp": "上の表にあるトークンのパスワードを使用します。",
+    "DirectPasswordHelp": "JumpServer のログインパスワードを使用します。",
+    "DirectUnavailable": "ユーザー名または資産アカウントを取得できません。接続ガイドを開き直してください。",
     "Title": "接続ガイド",
     "Name": "名前",
     "Host": "ホスト",

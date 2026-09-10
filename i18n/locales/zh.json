@@ -1055,6 +1055,11 @@
     "BackToForm": "返回修改"
   },
   "ConnectionGuide": {
+    "TokenCommand": "连接命令（使用 Token）",
+    "DirectCommand": "连接命令（通过资产 ID 直连）",
+    "TokenPasswordHelp": "密码为上方表格中的 Token 密码。",
+    "DirectPasswordHelp": "密码为你的 JumpServer 登录密码。",
+    "DirectUnavailable": "无法获取直连所需的用户名或资产账号，请重新打开连接向导。",
     "Title": "连接向导",
     "Name": "名称",
     "Host": "主机",

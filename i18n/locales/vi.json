@@ -1052,6 +1052,11 @@
     "BackToForm": "Quay lại biểu mẫu"
   },
   "ConnectionGuide": {
+    "TokenCommand": "Lệnh kết nối (token)",
+    "DirectCommand": "Lệnh kết nối (trực tiếp bằng ID tài sản)",
+    "TokenPasswordHelp": "Sử dụng mật khẩu token trong bảng trên.",
+    "DirectPasswordHelp": "Sử dụng mật khẩu đăng nhập JumpServer của bạn.",
+    "DirectUnavailable": "Không có tên người dùng hoặc tài khoản tài sản. Hãy mở lại hướng dẫn kết nối.",
     "Title": "Hướng dẫn kết nối",
     "Name": "Tên",
     "Host": "Máy chủ",

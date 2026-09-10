@@ -1052,6 +1052,11 @@
     "BackToForm": "연결 설정으로 돌아가기"
   },
   "ConnectionGuide": {
+    "TokenCommand": "연결 명령 (토큰)",
+    "DirectCommand": "연결 명령 (자산 ID로 직접 연결)",
+    "TokenPasswordHelp": "위 표의 토큰 비밀번호를 사용하세요.",
+    "DirectPasswordHelp": "JumpServer 로그인 비밀번호를 사용하세요.",
+    "DirectUnavailable": "사용자 이름 또는 자산 계정을 가져올 수 없습니다. 연결 가이드를 다시 여세요.",
     "Title": "연결 안내",
     "Name": "이름",
     "Host": "호스트",

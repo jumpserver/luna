@@ -1052,6 +1052,11 @@
     "BackToForm": "Back to form"
   },
   "ConnectionGuide": {
+    "TokenCommand": "Connect command (token)",
+    "DirectCommand": "Connect command (direct by asset ID)",
+    "TokenPasswordHelp": "Use the token password in the table above.",
+    "DirectPasswordHelp": "Use your JumpServer login password.",
+    "DirectUnavailable": "The login username or asset account is unavailable. Reopen the connection guide.",
     "Title": "Connection guide",
     "Name": "Name",
     "Host": "Host",

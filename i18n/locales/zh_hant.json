@@ -1052,6 +1052,11 @@
     "BackToForm": "返回修改"
   },
   "ConnectionGuide": {
+    "TokenCommand": "連線命令（使用 Token）",
+    "DirectCommand": "連線命令（透過資產 ID 直連）",
+    "TokenPasswordHelp": "密碼為上方表格中的 Token 密碼。",
+    "DirectPasswordHelp": "密碼為你的 JumpServer 登入密碼。",
+    "DirectUnavailable": "無法取得直連所需的使用者名稱或資產帳號，請重新開啟連線精靈。",
     "Title": "連線嚮導",
     "Name": "名稱",
     "Host": "主機",
