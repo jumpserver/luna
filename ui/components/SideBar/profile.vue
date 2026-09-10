@@ -614,13 +614,12 @@ function clearValidationError() {
 async function clearAuthInfo() {
   profileOpen.value = false;
   if (!(await confirmLeaveCurrentSiteSessions("logout"))) return;
-  await userInfoStore.deleteUserData(currentAccountId.value);
-  if (loggedIn.value) return;
-  // ponytail: don't watch loggedIn to leave /files — bootstrap sets false before revalidation
   if (!isDesktopRuntime()) {
-    redirectToWebLogin();
+    redirectToWebLogout();
     return;
   }
+  await userInfoStore.deleteUserData(currentAccountId.value);
+  if (loggedIn.value) return;
   await navigateTo(localePath({ path: "/" }));
 }
 

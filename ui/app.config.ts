@@ -129,11 +129,13 @@ export default defineAppConfig({
         overlay: "fixed inset-0 bg-black/35 backdrop-blur-[2px]",
         content:
           "bg-[var(--app-surface-modal)] text-[var(--app-fg)] divide-y divide-[var(--app-modal-border)] flex flex-col focus:outline-none rounded-[length:var(--app-radius)] ring-1 ring-[var(--app-modal-border)] shadow-[var(--app-modal-shadow)]",
-        header: "flex items-center gap-1.5 px-4 py-2 sm:px-6 min-h-(--ui-header-height) bg-[var(--app-surface-modal)]",
+        header:
+          "flex items-center gap-1.5 px-4 py-2 pe-12 sm:px-6 sm:pe-12 min-h-(--ui-header-height) min-w-0 bg-[var(--app-surface-modal)]",
+        wrapper: "min-w-0 flex-1",
         body: "flex-1 p-4 sm:p-6 bg-[var(--app-surface-modal)]",
         footer: "flex items-center gap-1.5 p-4 sm:px-6 bg-[var(--app-surface-modal)]",
         title: "text-sm leading-5 text-[var(--app-fg)] font-semibold",
-        description: "text-sm leading-5 text-[var(--app-muted)]",
+        description: "text-sm leading-5 text-[var(--app-muted)] min-w-0 break-all",
         close: "absolute top-4 end-4 text-[var(--app-muted)] hover:text-[var(--app-fg)]"
       }
     },

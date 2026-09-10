@@ -31,8 +31,8 @@ import {
   connectKokoFileAiSession,
   createKokoFileAiMessageId,
   disconnectKokoFileAiSession,
+  getKokoFileAiSession,
   handleKokoFileAiWireMessage,
-  isSuccessfulKokoFileAiMutationResult,
   registerKokoFileAiSession,
   releaseKokoFileAiSession,
   setActiveKokoFileAiTarget,
@@ -358,16 +358,17 @@ function unregisterAiTarget(defer = false): void {
 
 const stopAiMessageListener = manager.ai.onMessage((message) => {
   if (!registeredAiTargetId || !registeredAiSocket || manager.ai.socket.value !== registeredAiSocket) return;
-  const metadata =
-    message && typeof message === "object" && "metadata" in message
-      ? (message.metadata as Record<string, unknown> | undefined)
-      : undefined;
-  if (typeof metadata?.targetId === "string" && metadata.targetId !== registeredAiTargetId) return;
   handleKokoFileAiWireMessage(registeredAiTargetId, message);
-  if (!isSuccessfulKokoFileAiMutationResult(message, registeredAiTargetId)) return;
-  clearSelection();
-  void manager.loadCurrentDirectory(manager.currentPath.value, undefined, false);
 });
+watch(
+  () => getKokoFileAiSession(aiTargetId.value)?.mutationEpoch || 0,
+  (epoch, previous) => {
+    if (!epoch || epoch === previous) return;
+    if (aiTargetId.value !== registeredAiTargetId) return;
+    clearSelection();
+    void manager.loadCurrentDirectory(manager.currentPath.value, undefined, false);
+  }
+);
 
 watch(
   [aiTargetId, manager.ai.socket, () => props.context],

@@ -70,6 +70,8 @@ export interface KokoFileAiSession {
   pendingApprovals: Set<string>;
   resolvingApprovals: Set<string>;
   approvalDigests: Map<string, string>;
+  mutatingToolCallIds: Set<string>;
+  mutationEpoch: number;
 }
 
 class FileAiClientError extends Error {
@@ -364,6 +366,7 @@ function createSession(targetId: string, socket: WebSocket, context: KokoFileAiC
         session.pendingApprovals.clear();
         session.resolvingApprovals.clear();
         session.approvalDigests.clear();
+        session.mutatingToolCallIds.clear();
         session.runtimeStatus = "";
         session.runtimeStatusCode = "";
         session.runtimeState = "";
@@ -418,7 +421,9 @@ function createSession(targetId: string, socket: WebSocket, context: KokoFileAiC
     errorText: "",
     pendingApprovals: new Set<string>(),
     resolvingApprovals: new Set<string>(),
-    approvalDigests: new Map<string, string>()
+    approvalDigests: new Map<string, string>(),
+    mutatingToolCallIds: new Set<string>(),
+    mutationEpoch: 0
   }) as KokoFileAiSession;
   transports.set(session, transport);
   chatScopes.set(session, chatScope);
@@ -447,13 +452,56 @@ function isFileAiChatMessage(message: unknown): message is FileAiChatMessage {
   });
 }
 
+function fileAiToolCallId(data: FileAiEventData) {
+  return String(data.toolCallId || data.id || "");
+}
+
+function fileAiToolName(data: FileAiEventData) {
+  return String(data.tool || data.toolName || "");
+}
+
+const settledFileAiToolStatuses = new Set(["success", "error", "cancelled", "canceled", "interrupted", "timeout"]);
+
+function forEachFileAiToolPart(message: FileAiChatMessage, visit: (data: FileAiEventData) => void) {
+  for (const part of message.parts) {
+    if (part.type !== "data-agent-tool" || !("data" in part)) continue;
+    visit(part.data as FileAiEventData);
+  }
+}
+
 export function isSuccessfulKokoFileAiMutationResult(message: unknown, targetId: string) {
   if (!isFileAiChatMessage(message) || message.metadata?.targetId !== targetId) return false;
 
   return message.parts.some((part) => {
-    if (part.type !== "data-file-result" || !("data" in part)) return false;
+    if (!("data" in part)) return false;
     const data = part.data as FileAiEventData;
-    return data.outcome === "success" && mutatingFileAiTools.has(String(data.tool || ""));
+    const tool = fileAiToolName(data);
+    if (!mutatingFileAiTools.has(tool)) return false;
+    if (part.type === "data-file-result") return data.outcome === "success";
+    if (part.type === "data-agent-tool") return data.status === "success";
+    return false;
+  });
+}
+
+function rememberMutatingFileAiToolCalls(session: KokoFileAiSession, message: FileAiChatMessage) {
+  forEachFileAiToolPart(message, (data) => {
+    const id = fileAiToolCallId(data);
+    if (id && mutatingFileAiTools.has(fileAiToolName(data))) session.mutatingToolCallIds.add(id);
+  });
+}
+
+function hasTrackedFileAiMutationSuccess(session: KokoFileAiSession, message: FileAiChatMessage) {
+  let matched = false;
+  forEachFileAiToolPart(message, (data) => {
+    if (data.status === "success" && session.mutatingToolCallIds.has(fileAiToolCallId(data))) matched = true;
+  });
+  return matched;
+}
+
+function settleMutatingFileAiToolCalls(session: KokoFileAiSession, message: FileAiChatMessage) {
+  forEachFileAiToolPart(message, (data) => {
+    const id = fileAiToolCallId(data);
+    if (id && settledFileAiToolStatuses.has(String(data.status || ""))) session.mutatingToolCallIds.delete(id);
   });
 }
 
@@ -462,6 +510,7 @@ function resetTaskState(session: KokoFileAiSession) {
   session.pendingApprovals.clear();
   session.resolvingApprovals.clear();
   session.approvalDigests.clear();
+  session.mutatingToolCallIds.clear();
 }
 
 function hasSameFileAiContextIdentity(left: KokoFileAiContext, right: KokoFileAiContext) {
@@ -689,6 +738,11 @@ export function handleKokoFileAiMessage(targetId: string, message: unknown) {
   if (!session || !isFileAiChatMessage(message)) return;
   const messageTargetId = String(message.metadata?.targetId || "");
   if (messageTargetId && messageTargetId !== targetId) return;
+  rememberMutatingFileAiToolCalls(session, message);
+  if (isSuccessfulKokoFileAiMutationResult(message, targetId) || hasTrackedFileAiMutationSuccess(session, message)) {
+    session.mutationEpoch += 1;
+  }
+  settleMutatingFileAiToolCalls(session, message);
   const { runFinished } = agentChatEventLifecycle(message);
 
   const capability = partData(message, "data-capability");

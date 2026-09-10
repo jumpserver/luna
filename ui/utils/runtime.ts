@@ -157,3 +157,8 @@ export const redirectToWebLogin = () => {
   loginUrl.searchParams.set("next", `${window.location.pathname}${window.location.search}`);
   window.location.href = loginUrl.toString();
 };
+
+export const redirectToWebLogout = () => {
+  if (!import.meta.client) return;
+  window.location.href = withWebSitePrefix("/core/auth/logout/");
+};
