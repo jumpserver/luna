@@ -8,7 +8,10 @@ const props = defineProps<{
   selected?: boolean;
 }>();
 
-const emit = defineEmits<{ (e: "toggle", value: boolean): void }>();
+const emit = defineEmits<{
+  (e: "toggle", value: boolean): void;
+  (e: "makeDefault"): void;
+}>();
 
 // 批量导入所有图片资源
 const imageModules = import.meta.glob<{ default: string }>("@/assets/images/*.png", { eager: true });
@@ -232,6 +235,19 @@ const onPathClick = () => {
 
       <div class="col-start-3 row-start-1 flex items-center gap-2 justify-self-end">
         <slot name="actions" />
+        <template v-if="props.selected && props.protocol">
+          <UBadge v-if="props.item.match_first?.includes(props.protocol)" color="neutral" variant="soft" size="xs">
+            {{ t("Setting.DefaultApplication") }}
+          </UBadge>
+          <UButton
+            v-else
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :label="t('Setting.SetDefaultApplication')"
+            @click="emit('makeDefault')"
+          />
+        </template>
         <USwitch :model-value="props.selected ?? false" :disabled="switchDisabled" @update:model-value="onSwitch" />
       </div>
 

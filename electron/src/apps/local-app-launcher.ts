@@ -156,7 +156,12 @@ export class LocalApplicationLauncher {
     const client = String(payload.client || payload.client_name || "");
     for (const category of ["terminal", "filetransfer", "remotedesktop", "databases"]) {
       for (const item of config[category] || []) {
-        if (!item.protocol.includes(payload.protocol) || !item.is_set) continue;
+        if (
+          !item.protocol.includes(payload.protocol) ||
+          !item.is_set ||
+          !(item.enabled_protocols || item.match_first).includes(payload.protocol)
+        )
+          continue;
         if (client && item.name === client) return item;
         if (!client && item.match_first.includes(payload.protocol)) return item;
       }

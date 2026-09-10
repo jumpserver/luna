@@ -259,6 +259,23 @@ export class DesktopAuthService {
     return this.requestApiResponse(this.currentSession().origin, CLIENT_VERSIONS, { timeout: 10_000 });
   }
 
+  async syncBackendLanguage({ language }) {
+    if (typeof language !== "string" || !/^[a-z]{2,3}(?:-[a-z]{2,4})?$/.test(language)) {
+      throw new Error("Invalid language code");
+    }
+    const session = this.sessions.get(this.currentSessionKey);
+    if (!session) return;
+
+    // This endpoint sets a language cookie and redirects; it does not return JSON.
+    const response = await this.fetchSite(endpoint(session.origin, `/core/i18n/${language}/`), {
+      redirect: "manual",
+      signal: AbortSignal.timeout(10_000)
+    });
+    if (!response.ok && response.status !== 302) {
+      throw new Error(`Language synchronization failed: status=${response.status}`);
+    }
+  }
+
   async authLogin({ site, sessionId }) {
     electronLog.info(`auth login start ${site}`);
     await this.startCallbackServer();

@@ -236,7 +236,7 @@ function syncBackendLanguage(lang: LangType) {
   const code = toDjangoLanguageCode(lang);
   document.cookie = `django_language=${encodeURIComponent(code)}; Path=/; SameSite=Lax; Max-Age=31536000`;
   const request = isDesktopRuntime()
-    ? apiRequest({ method: "GET", path: `/core/i18n/${code}/` })
+    ? desktopInvoke("sync_backend_language", { language: code })
     : fetch(withWebSitePrefix(`/core/i18n/${code}/`), { credentials: "include", redirect: "manual" });
   void request.catch(() => undefined);
 }

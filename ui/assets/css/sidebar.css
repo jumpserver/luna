@@ -21,6 +21,7 @@
 }
 
 .sidebar-row {
+  border-radius: var(--app-radius);
   transition:
     background-color 150ms ease,
     color 150ms ease;
@@ -159,7 +160,7 @@
 }
 
 .sidebar-icon-button {
-  border-radius: 0.5rem;
+  border-radius: var(--app-radius);
   color: var(--app-muted);
   transition:
     background-color 150ms ease,

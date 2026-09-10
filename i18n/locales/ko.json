@@ -1225,6 +1225,8 @@
     "Auto": "자동",
     "Enable": "활성화",
     "Disable": "비활성화",
+    "DefaultApplication": "기본값",
+    "SetDefaultApplication": "기본값으로 설정",
     "EnableFailed": "활성화할 수 없음",
     "NoClientConfigured": "이 프로토콜에 클라이언트가 설정되어 있지 않습니다",
     "ConfigureClient": "애플리케이션 설정 열기",

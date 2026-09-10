@@ -78,7 +78,8 @@ export const useApplicationConfig = () => {
     name: string,
     enabled = true,
     pluginId?: string,
-    path?: string
+    path?: string,
+    makeDefault = false
   ) => {
     try {
       const updated = await desktopInvoke("update_config_selection", {
@@ -87,7 +88,8 @@ export const useApplicationConfig = () => {
         name,
         pluginId,
         path,
-        enabled
+        enabled,
+        makeDefault
       });
 
       if (updated) {

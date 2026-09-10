@@ -122,7 +122,14 @@ test("edits custom terminals without changing their identity or selections and r
     path: process.execPath
   });
   for (const protocol of ["ssh", "telnet"]) {
-    await service.updateSelection({ category: "terminal", protocol, name: "test_shell", pluginId, path: undefined });
+    await service.updateSelection({
+      category: "terminal",
+      protocol,
+      name: "test_shell",
+      pluginId,
+      path: undefined,
+      makeDefault: true
+    });
   }
   const before = await service.loadState();
   const updatedPath = path.join(appData, "updated-shell");
@@ -253,6 +260,7 @@ test("launches RDP connection files without endpoint fields", async () => {
     protocol: ["rdp"],
     is_set: true,
     match_first: [],
+    enabled_protocols: ["rdp"],
     launch_type: "file"
   };
   const launcher = new LocalApplicationLauncher(
@@ -278,4 +286,49 @@ test("normalizes duplicate and hidden system font families", () => {
     "Menlo",
     "SF Mono"
   ]);
+});
+
+test("enables multiple clients independently and persists a separate protocol default", async (context) => {
+  const appData = await mkdtemp(path.join(os.tmpdir(), "jms-multiple-clients-"));
+  context.after(() => rm(appData, { recursive: true, force: true }));
+  const app = { getPath: () => appData };
+  const service = new ApplicationConfigService(app, projectRoot);
+  await service.initialize();
+  await service.saveState({ version: 1, selections: { "terminal:ssh": "" }, plugins: {} });
+  for (const name of ["First", "Second"]) {
+    await service.createCustomTerminal({ name, path: process.execPath, template: "{host}" });
+  }
+  const update = (name, enabled = true, makeDefault = false) =>
+    service.updateSelection({
+      category: "terminal",
+      protocol: "ssh",
+      name: name.toLowerCase(),
+      pluginId: `custom.terminal.${name.toLowerCase()}`,
+      path: undefined,
+      enabled,
+      makeDefault
+    });
+  await update("First");
+  await update("Second");
+  await update("Second");
+  const reopened = new ApplicationConfigService(app, projectRoot);
+  await reopened.initialize();
+  const launcher = new LocalApplicationLauncher(app, projectRoot, reopened, null);
+  assert.equal((await launcher.resolveApplication({ protocol: "ssh" })).name, "first");
+  assert.equal((await launcher.resolveApplication({ protocol: "ssh", client: "second" })).name, "second");
+  assert.deepEqual((await reopened.loadState()).enabled_selections["terminal:ssh"], [
+    "custom.terminal.first",
+    "custom.terminal.second"
+  ]);
+  await update("Second", true, true);
+  assert.equal((await launcher.resolveApplication({ protocol: "ssh" })).name, "second");
+  assert.equal((await launcher.resolveApplication({ protocol: "ssh", client: "first" })).name, "first");
+  await update("Second", false);
+  assert.equal((await launcher.resolveApplication({ protocol: "ssh" })).name, "first");
+  await assert.rejects(launcher.resolveApplication({ protocol: "ssh", client: "second" }), /no configured application/);
+  await update("Second");
+  await service.uninstallPlugin({ pluginId: "custom.terminal.first" });
+  assert.equal((await launcher.resolveApplication({ protocol: "ssh" })).name, "second");
+  await update("Second", false);
+  await assert.rejects(launcher.resolveApplication({ protocol: "ssh" }), /no configured application/);
 });

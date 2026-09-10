@@ -1225,6 +1225,8 @@
     "Auto": "自動",
     "Enable": "有効化",
     "Disable": "無効化",
+    "DefaultApplication": "既定",
+    "SetDefaultApplication": "既定に設定",
     "EnableFailed": "有効にできません",
     "NoClientConfigured": "このプロトコルにはクライアントが設定されていません",
     "ConfigureClient": "アプリケーション設定を開く",

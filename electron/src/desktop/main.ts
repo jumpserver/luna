@@ -1139,6 +1139,7 @@ async function handleInvoke(event, request) {
   if (command === "set_api_session") return authService.setSession(args);
   if (command === "set_api_org") return authService.setCurrentOrg(args.orgId);
   if (command === "get_version_message") return authService.getVersionMessage();
+  if (command === "sync_backend_language") return authService.syncBackendLanguage(args);
   if (command === "init_http_callback_server") return authService.startCallbackServer();
   if (command === "auth_login") return withIpcErrorLog("auth_login", () => authService.authLogin(args));
   if (command === "auth_cancel") return authService.cancelAuth();

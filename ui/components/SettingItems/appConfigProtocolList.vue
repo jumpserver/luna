@@ -32,6 +32,7 @@ const terminalClientItems = computed(() =>
 
 const currentTerminalHost = computed(
   () =>
+    appConfig.value?.terminal?.find((item) => item.use_ssh_helper && item.match_first?.includes("ssh")) ||
     appConfig.value?.terminal?.find(
       (item) => item.use_ssh_helper && (item.enabled_protocols || item.match_first)?.includes("ssh")
     ) ||
@@ -41,6 +42,7 @@ const currentTerminalHost = computed(
 
 const selectedTerminalHost = computed(
   () =>
+    terminalHostItems.value.find((item) => item.match_first?.includes(props.protocol)) ||
     terminalHostItems.value.find((item) => (item.enabled_protocols || item.match_first)?.includes(props.protocol)) ||
     terminalHostItems.value[0] ||
     null
@@ -111,8 +113,8 @@ const displayItems = computed<ConfigItem[]>(() => {
 });
 
 const isSelected = (item: ConfigItem) => (item.enabled_protocols || item.match_first)?.includes(props.protocol);
-const handleToggle = async (item: ConfigItem, enabled: boolean) => {
-  await selectClient(props.category, props.protocol, item.name, enabled, item.plugin_id);
+const handleToggle = async (item: ConfigItem, enabled: boolean, makeDefault = false) => {
+  await selectClient(props.category, props.protocol, item.name, enabled, item.plugin_id, undefined, makeDefault);
 };
 </script>
 
@@ -126,6 +128,7 @@ const handleToggle = async (item: ConfigItem, enabled: boolean) => {
         :protocol="props.protocol"
         :selected="isSelected(item)"
         @toggle="(enabled) => handleToggle(item, enabled)"
+        @make-default="handleToggle(item, true, true)"
       />
     </template>
 

@@ -1225,6 +1225,8 @@
     "Auto": "Авто",
     "Enable": "Включить",
     "Disable": "Отключить",
+    "DefaultApplication": "По умолчанию",
+    "SetDefaultApplication": "Сделать по умолчанию",
     "EnableFailed": "Не удалось включить",
     "NoClientConfigured": "Для этого протокола не настроен клиент",
     "ConfigureClient": "Открыть настройки приложения",

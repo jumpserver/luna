@@ -10,8 +10,8 @@
   flex-shrink: 0;
   flex-direction: column;
   overflow: hidden;
-  border-top: 1px solid var(--workspace-island-border, var(--app-border));
-  background: var(--app-surface-overlay);
+  border-top: 1px solid var(--app-border);
+  background: var(--app-surface-panel);
   container-type: inline-size;
 
   &.is-resizing {
@@ -51,17 +51,15 @@
   min-height: 32px;
   align-items: center;
   gap: 8px;
-  padding: 0 8px 0 12px;
-  background: color-mix(in srgb, var(--theme-fg) 4%, transparent);
+  padding: 0 12px;
   color: var(--app-text-primary);
 
   strong {
-    font-size: 12px;
-    font-weight: 650;
+    font-size: 11px;
+    font-weight: 500;
   }
 
   > button:hover {
-    border-radius: 8px;
     background: var(--app-state-hover);
   }
 }
@@ -83,7 +81,7 @@
   flex-direction: column;
   overflow: hidden;
   border-top: 1px solid var(--app-border);
-  background: var(--app-surface-overlay);
+  background: var(--app-surface-panel);
 }
 
 .sftp-transfer-table {

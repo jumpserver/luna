@@ -1225,6 +1225,8 @@
     "Auto": "自動",
     "Enable": "啟用",
     "Disable": "禁用",
+    "DefaultApplication": "預設",
+    "SetDefaultApplication": "設為預設",
     "EnableFailed": "無法啟用",
     "NoClientConfigured": "當前協議尚未配置客戶端",
     "ConfigureClient": "前往應用設定",

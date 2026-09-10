@@ -20,7 +20,6 @@ const connectingCount = computed(
 );
 const failedCount = computed(() => workspacePanes.value.filter((pane) => pane.status === "failed").length);
 const username = computed(() => currentUser.value?.name || "");
-const siteName = computed(() => currentUser.value?.siteName || currentUser.value?.site || "");
 const siteAddress = computed(() => currentUser.value?.site || "");
 const loginStatusText = computed(() => {
   if (!authReady.value) return "";
@@ -28,9 +27,7 @@ const loginStatusText = computed(() => {
 
   const user = username.value;
   if (!user) return t("StatusFooter.LoggedIn");
-  if (!isDesktopRuntime() || !siteName.value) return t("StatusFooter.LoggedInUser", { user });
-
-  return t("StatusFooter.LoggedInUserSite", { user, site: siteName.value });
+  return t("StatusFooter.LoggedInUser", { user });
 });
 const activeProtocol = computed(() => activeTab.value?.protocol?.toUpperCase() || "");
 const activeText = computed(() => {

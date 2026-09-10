@@ -1225,6 +1225,8 @@
     "Auto": "Tự động",
     "Enable": "Bật",
     "Disable": "Tắt",
+    "DefaultApplication": "Mặc định",
+    "SetDefaultApplication": "Đặt làm mặc định",
     "EnableFailed": "Không thể bật",
     "NoClientConfigured": "Chưa cấu hình máy khách cho giao thức này",
     "ConfigureClient": "Mở cài đặt ứng dụng",

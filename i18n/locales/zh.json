@@ -1228,6 +1228,8 @@
     "Auto": "自动",
     "Enable": "启用",
     "Disable": "禁用",
+    "DefaultApplication": "默认",
+    "SetDefaultApplication": "设为默认",
     "EnableFailed": "无法启用",
     "NoClientConfigured": "当前协议尚未配置客户端",
     "ConfigureClient": "前往应用设置",

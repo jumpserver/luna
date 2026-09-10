@@ -30,15 +30,7 @@ const terminalItems = computed<ConfigItem[]>(() => {
   });
 });
 
-const selectedPluginId = computed(() => {
-  const sshSelected = terminalItems.value.find((item) => (item.enabled_protocols || item.match_first)?.includes("ssh"));
-  return sshSelected?.plugin_id || sshSelected?.name || "";
-});
-
-const isSelected = (item: ConfigItem) => {
-  const key = item.plugin_id || item.name;
-  return key === selectedPluginId.value;
-};
+const isSelected = (item: ConfigItem) => (item.enabled_protocols || item.match_first)?.includes("ssh");
 
 const isCustomTerminal = (item: ConfigItem) =>
   isDesktopRuntime() && item.builtin === false && item.plugin_id?.startsWith("custom.terminal.");
@@ -80,13 +72,9 @@ const selectCustomTerminalPath = async () => {
   }
 };
 
-const handleToggle = async (item: ConfigItem, enabled: boolean) => {
-  if (!enabled) {
-    return;
-  }
-
-  await selectClient("terminal", "ssh", item.name, true, item.plugin_id);
-  await selectClient("terminal", "telnet", item.name, true, item.plugin_id);
+const handleToggle = async (item: ConfigItem, enabled: boolean, makeDefault = false) => {
+  await selectClient("terminal", "ssh", item.name, enabled, item.plugin_id, undefined, makeDefault);
+  await selectClient("terminal", "telnet", item.name, enabled, item.plugin_id, undefined, makeDefault);
 };
 
 const saveTerminal = async () => {
@@ -134,6 +122,7 @@ const saveTerminal = async () => {
         protocol="ssh"
         :selected="isSelected(item)"
         @toggle="(enabled) => handleToggle(item, enabled)"
+        @make-default="handleToggle(item, true, true)"
       >
         <template v-if="isCustomTerminal(item)" #actions>
           <UButton

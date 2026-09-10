@@ -168,11 +168,6 @@ watch(
       </aside>
 
       <USeparator class="md:hidden" :ui="{ border: 'border-t border-[var(--app-border-soft)]' }" />
-      <USeparator
-        orientation="vertical"
-        class="hidden md:flex"
-        :ui="{ border: 'border-s border-[var(--app-border-soft)]' }"
-      />
 
       <main
         class="min-w-0 flex-1 overflow-y-auto bg-(--app-surface-canvas) font-sans"

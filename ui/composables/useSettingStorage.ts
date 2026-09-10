@@ -19,7 +19,7 @@ export type LayoutsType = "grid" | "table";
 export type UiRadius = "none" | "small" | "large";
 export const UI_RADIUS_PX: Record<UiRadius, string> = {
   none: "0px",
-  small: "3px",
+  small: "5px",
   large: "10px"
 };
 export const isUiRadius = (value: unknown): value is UiRadius =>

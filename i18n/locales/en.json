@@ -1225,6 +1225,8 @@
     "Auto": "Auto",
     "Enable": "Enable",
     "Disable": "Disable",
+    "DefaultApplication": "Default",
+    "SetDefaultApplication": "Set as default",
     "EnableFailed": "Unable to enable",
     "NoClientConfigured": "No client is configured for this protocol",
     "ConfigureClient": "Open Application Settings",

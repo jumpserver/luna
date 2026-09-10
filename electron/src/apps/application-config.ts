@@ -364,7 +364,7 @@ export class ApplicationConfigService {
     );
   }
 
-  async updateSelection({ category, protocol, name, pluginId, path: newPath, enabled = true }) {
+  async updateSelection({ category, protocol, name, pluginId, path: newPath, enabled = true, makeDefault = false }) {
     if (!categories.includes(category)) throw new Error(`invalid application category '${category}'`);
     const entry = await this.findEntry({ category, name, pluginId });
     const state = await this.loadState();
@@ -389,9 +389,11 @@ export class ApplicationConfigService {
       : previous
         ? [previous]
         : [];
-    state.enabled_selections[key] = enabled ? [entry.id] : enabledIds.filter((id) => id !== entry.id);
+    state.enabled_selections[key] = enabled
+      ? [...new Set([...enabledIds, entry.id])]
+      : enabledIds.filter((id) => id !== entry.id);
     if (enabled) {
-      state.selections[key] = entry.id;
+      if (makeDefault || !previous) state.selections[key] = entry.id;
       state.plugins[entry.id] = { ...state.plugins[entry.id], enabled: true };
     } else if (state.selections[key] === entry.id) {
       state.selections[key] = state.enabled_selections[key][0] || "";
@@ -522,7 +524,9 @@ export class ApplicationConfigService {
     const state = await this.loadState();
     delete state.plugins?.[entry.id];
     for (const [key, value] of Object.entries(state.selections || {})) {
-      if (value === entry.id) state.selections[key] = "";
+      if (value === entry.id) {
+        state.selections[key] = state.enabled_selections?.[key]?.find((id) => id !== entry.id) || "";
+      }
     }
     for (const [key, value] of Object.entries(state.enabled_selections || {})) {
       if (Array.isArray(value)) state.enabled_selections[key] = value.filter((id) => id !== entry.id);

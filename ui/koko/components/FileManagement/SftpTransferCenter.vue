@@ -230,7 +230,10 @@ onBeforeUnmount(stopResize);
       />
 
       <header class="sftp-transfer-drawer-header">
-        <strong>{{ t("koko.sftpTransferCenter.queueTitle") }}</strong>
+        <div class="flex min-w-0 items-center gap-1.5">
+          <UIcon name="i-lucide-arrow-left-right" class="size-3.5 shrink-0 text-[var(--app-text-muted)]" />
+          <strong class="truncate">{{ t("koko.sftpTransferCenter.queueTitle") }}</strong>
+        </div>
         <span class="sftp-transfer-drawer-summary">
           {{ t("koko.sftpTransferCenter.queueSummary", { active: activeTaskCount, attention: attentionCount }) }}
         </span>
@@ -246,7 +249,8 @@ onBeforeUnmount(stopResize);
         <span class="flex-1" />
         <UTooltip v-if="hasFinishedTasks" :text="t('FileTransfer.ClearFinished')">
           <UButton
-            class="size-8 justify-center rounded-lg p-0"
+            class="size-6 justify-center rounded-md p-0 text-[var(--app-text-muted)]"
+            :ui="{ leadingIcon: 'size-3.5' }"
             color="neutral"
             variant="ghost"
             icon="i-lucide-trash-2"
@@ -256,7 +260,8 @@ onBeforeUnmount(stopResize);
           />
         </UTooltip>
         <UButton
-          class="size-8 justify-center rounded-lg p-0"
+          class="size-6 justify-center rounded-md p-0 text-[var(--app-text-muted)]"
+          :ui="{ leadingIcon: 'size-3.5' }"
           color="neutral"
           variant="ghost"
           icon="i-lucide-x"

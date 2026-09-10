@@ -1225,6 +1225,8 @@
     "Auto": "Automática",
     "Enable": "Habilitar",
     "Disable": "Deshabilitar",
+    "DefaultApplication": "Predeterminada",
+    "SetDefaultApplication": "Establecer como predeterminada",
     "EnableFailed": "No se pudo habilitar",
     "NoClientConfigured": "No hay ningún cliente configurado para este protocolo",
     "ConfigureClient": "Abrir configuración de aplicaciones",
