@@ -36,6 +36,11 @@ export function isReplayApiPath(src: string) {
   return /(?:^|\/)api\//.test(pathnameOf(src));
 }
 
+export function replayRequestOrgId(search = "") {
+  const query = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  return query.get("oid") || query.get("org") || undefined;
+}
+
 export function resolveReplayPartPayload(
   res: (Replay & { resp?: { data?: Replay }; error?: string }) | null | undefined
 ): Replay | null {

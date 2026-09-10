@@ -5,6 +5,7 @@ import {
   initialRailTab,
   isReplayApiPath,
   mapReplayCommands,
+  replayRequestOrgId,
   nextReplayPollDelay,
   resolveReplayOverlay,
   resolveReplayPartPayload,
@@ -43,6 +44,14 @@ describe("isReplayApiPath", () => {
     expect(isReplayApiPath("https://jms.example/api/v1/terminal/sessions/1/replay/")).toBe(true);
     expect(isReplayApiPath("/media/2026-08-20/session.replay.json")).toBe(false);
     expect(isReplayApiPath("https://oss.example/bucket/session.replay.json")).toBe(false);
+  });
+});
+
+describe("replayRequestOrgId", () => {
+  it("reads oid or org from the replay query string", () => {
+    expect(replayRequestOrgId("?oid=org-a")).toBe("org-a");
+    expect(replayRequestOrgId("org=org-b")).toBe("org-b");
+    expect(replayRequestOrgId("?timestamp=12")).toBeUndefined();
   });
 });
 
