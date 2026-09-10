@@ -777,7 +777,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       :content="{ align: 'end', side: 'bottom' }"
       :ui="{
         ...tabDropdownUi,
-        content: 'w-44 max-h-64 overflow-y-auto p-1',
+        content: 'min-w-64 w-max max-w-80 max-h-64 overflow-y-auto p-1',
         item: 'py-1.5 text-sm min-w-0 gap-2 items-center',
         label: 'truncate'
       }"
