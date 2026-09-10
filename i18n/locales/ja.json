@@ -1,4 +1,9 @@
 {
+  "Monitor": {
+    "Unavailable": "このセッションは終了したか、監視できません。",
+    "PauseSent": "一時停止タスクを送信しました",
+    "ResumeSent": "再開タスクを送信しました"
+  },
   "Replay": {
     "Title": "セッションリプレイ",
     "User": "ユーザー",

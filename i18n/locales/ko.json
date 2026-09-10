@@ -1,4 +1,9 @@
 {
+  "Monitor": {
+    "Unavailable": "세션이 종료되었거나 모니터링할 수 없습니다.",
+    "PauseSent": "일시 중지 작업을 전송했습니다",
+    "ResumeSent": "재개 작업을 전송했습니다"
+  },
   "Replay": {
     "Title": "세션 리플레이",
     "User": "사용자",

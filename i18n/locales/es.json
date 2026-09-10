@@ -1,4 +1,9 @@
 {
+  "Monitor": {
+    "Unavailable": "La sesión ha finalizado o no se puede supervisar.",
+    "PauseSent": "Se ha enviado la tarea de pausa",
+    "ResumeSent": "Se ha enviado la tarea de reanudación"
+  },
   "Replay": {
     "Title": "Reproducción de sesión",
     "User": "Usuario",

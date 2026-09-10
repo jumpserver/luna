@@ -1,4 +1,9 @@
 {
+  "Monitor": {
+    "Unavailable": "This session has ended or cannot be monitored.",
+    "PauseSent": "Pause task has been sent",
+    "ResumeSent": "Resume task has been sent"
+  },
   "Replay": {
     "Title": "Session Replay",
     "User": "User",

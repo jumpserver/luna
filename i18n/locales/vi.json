@@ -1,4 +1,9 @@
 {
+  "Monitor": {
+    "Unavailable": "Phiên đã kết thúc hoặc không thể giám sát.",
+    "PauseSent": "Đã gửi tác vụ tạm dừng",
+    "ResumeSent": "Đã gửi tác vụ tiếp tục"
+  },
   "Replay": {
     "Title": "Phát lại phiên",
     "User": "Người dùng",

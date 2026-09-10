@@ -1,4 +1,9 @@
 {
+  "Monitor": {
+    "Unavailable": "工作階段已結束或不支援監控。",
+    "PauseSent": "暫停任務已傳送",
+    "ResumeSent": "恢復任務已傳送"
+  },
   "Replay": {
     "Title": "會話回放",
     "User": "使用者",

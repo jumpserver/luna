@@ -69,6 +69,7 @@ export interface FavoriteFolderPayload {
 export interface SmartEndpointParams {
   protocol: string;
   assetId?: string;
+  sessionId?: string;
   token?: string;
 }
 
@@ -525,6 +526,7 @@ export function getSmartEndpoint(
   value?: string;
   host?: string;
   port?: number;
+  http_port?: number;
   https_port?: number;
   web_proxy_port?: number;
   magnus_port?: number;
@@ -535,6 +537,7 @@ export function getSmartEndpoint(
     query: {
       protocol: params.protocol,
       asset_id: params.assetId,
+      session_id: params.sessionId,
       token: params.token
     },
     orgId
