@@ -70,11 +70,11 @@ const previewSidebar = () => {
           <UButton
             color="neutral"
             variant="ghost"
-            size="sm"
+            size="xs"
             :class="headerIconButtonClass"
-            icon="i-lucide-panel-left"
+            icon="i-proicons-panel-left"
             :aria-label="t('Sidebar.Collapse')"
-            :ui="{ leadingIcon: 'm-0 size-4' }"
+            :ui="{ leadingIcon: 'm-0 size-4.5' }"
             @click="toggleSidebar"
           />
         </UTooltip>
@@ -85,11 +85,11 @@ const previewSidebar = () => {
       <UButton
         color="neutral"
         variant="ghost"
-        size="sm"
+        size="xs"
         :class="headerIconButtonClass"
-        icon="i-lucide-panel-left-open"
+        icon="i-proicons-panel-left-expand"
         :aria-label="t('Sidebar.Expand')"
-        :ui="{ leadingIcon: 'm-0 size-4' }"
+        :ui="{ leadingIcon: 'm-0 size-4.5' }"
         @pointerenter="previewSidebar"
         @pointerleave="scheduleHoverPreviewClose"
         @click="toggleSidebar"

@@ -50,14 +50,14 @@ const handleToggleAi = () => {
 
       <UTooltip v-if="showRightPanelButton" arrow :text="rightPanelOpen ? t('RightPanel.Close') : t('RightPanel.Open')">
         <UButton
-          :icon="rightPanelOpen ? 'i-lucide-panel-right-close' : 'i-lucide-panel-right'"
+          :icon="rightPanelOpen ? 'i-proicons-panel-right-contract' : 'i-proicons-panel-right'"
           :aria-label="rightPanelOpen ? t('RightPanel.Close') : t('RightPanel.Open')"
           :aria-pressed="rightPanelOpen"
           size="sm"
           color="neutral"
           variant="ghost"
           :class="[headerIconButtonClass, rightPanelOpen ? headerIconButtonActiveClass : '']"
-          :ui="{ leadingIcon: 'm-0 size-4' }"
+          :ui="{ leadingIcon: 'm-0 size-4.5' }"
           @click="toggleRightPanel"
         />
       </UTooltip>
