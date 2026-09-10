@@ -8,6 +8,8 @@ nodeLinker: hoisted
 
 overrides:
   "@electron/rebuild": 4.2.0
+  # builder 26.15.3 uses ElectronDownloadCacheMode, which @electron/get 3 does not export.
+  "app-builder-lib@26.15.3>@electron/get": 5.1.0
   cpu-features: "-"
 
 packages:
