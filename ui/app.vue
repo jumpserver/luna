@@ -2,6 +2,7 @@
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { LangType, LanguagePreference } from "~/types";
 
+import { agentClient } from "#koko/composables/agent/agentClient";
 import defaultFavicon from "~/assets/facio.ico";
 import AppWatermark from "~/components/AppWatermark.vue";
 import AclDialog from "~/components/Modal/aclDialog.vue";
@@ -31,6 +32,10 @@ const webWorkspaceFavicon = useState<string>(WORKSPACE_FAVICON_STATE_KEY, () => 
 
 const { isMacOS, isWindows } = usePlatform();
 const { locale, setLocale, t } = useI18n();
+watch(locale, (value) => agentClient.setResponseLanguage(normalizeLanguageCode(value)), {
+  immediate: true,
+  flush: "sync"
+});
 const { userTheme, applyThemePreference, applySystemThemePreference } = useThemeAdapter();
 
 const { applyPrimaryColor } = useColor();

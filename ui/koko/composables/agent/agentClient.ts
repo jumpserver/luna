@@ -10,6 +10,7 @@ import type {
   AgentSessionCreateResponse,
   AgentToolResultRequest
 } from "./types";
+import type { LangType } from "~/types";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { getWebApiHeaders, getWebApiMutationHeaders, isDesktopRuntime, withWebSitePrefix } from "~/utils/runtime";
 import { normalizeAgentEvent } from "./agentSse";
@@ -78,6 +79,7 @@ interface AgentBinding {
   surface: string;
   profile: string;
   contextVersion: number;
+  context: Record<string, unknown>;
   heartbeat: ReturnType<typeof setInterval>;
 }
 
@@ -161,8 +163,23 @@ export class AgentClient {
   private readonly instanceByResource = new Map<string, string>();
   private readonly usersByResource = new Map<string, number>();
   private readonly bindings = new Map<string, AgentBinding>();
+  private responseLanguage?: LangType;
 
   constructor(private readonly request: AgentRequest = defaultAgentRequest) {}
+
+  setResponseLanguage(language: LangType) {
+    this.responseLanguage = language;
+  }
+
+  private contextWithResponseLanguage(context: Record<string, unknown> = {}): Record<string, unknown> {
+    // Keep the uploaded snapshot independent of reactive workspace state.
+    return JSON.parse(
+      JSON.stringify({
+        ...context,
+        ...(this.responseLanguage ? { response_language: this.responseLanguage } : {})
+      })
+    );
+  }
 
   retainResource(resourceSessionId: string) {
     this.usersByResource.set(resourceSessionId, (this.usersByResource.get(resourceSessionId) || 0) + 1);
@@ -243,7 +260,8 @@ export class AgentClient {
         }
       });
       let contextVersion = 0;
-      if (manifest.context) {
+      const contextData = this.contextWithResponseLanguage(manifest.context);
+      if (manifest.context || this.responseLanguage) {
         const context = await this.request<KaelContext>({
           method: "PUT",
           path: sessionPath(panel.id, "context"),
@@ -252,7 +270,7 @@ export class AgentClient {
             domain: manifest.profile,
             surface,
             sensitivity: "restricted",
-            data: manifest.context
+            data: contextData
           }
         });
         contextVersion = Math.max(0, Math.floor(Number(context.version) || 1));
@@ -285,6 +303,7 @@ export class AgentClient {
         surface,
         profile: manifest.profile,
         contextVersion,
+        context: contextData,
         heartbeat
       });
       const registrationIds = Object.fromEntries(
@@ -314,6 +333,9 @@ export class AgentClient {
     message: AgentMessageRequest
   ): Promise<AgentMessageResponse> {
     const binding = this.binding(sessionId, resourceSessionId);
+    if (this.responseLanguage && binding.context.response_language !== this.responseLanguage) {
+      await this.updateContext(sessionId, resourceSessionId, binding.context);
+    }
     const created = await this.request<KaelMessage>({
       method: "POST",
       path: `${KAEL_API_ROOT}/conversations/${binding.conversationId}/messages`,
@@ -342,6 +364,7 @@ export class AgentClient {
 
   async updateContext(sessionId: string, resourceSessionId: string, context: Record<string, unknown>) {
     const binding = this.binding(sessionId, resourceSessionId);
+    const contextData = this.contextWithResponseLanguage(context);
     const response = await this.request<KaelContext>({
       method: "PUT",
       path: sessionPath(binding.panelId, "context"),
@@ -350,10 +373,11 @@ export class AgentClient {
         domain: binding.profile,
         surface: binding.surface,
         sensitivity: "restricted",
-        data: context
+        data: contextData
       }
     });
     binding.contextVersion = Math.max(binding.contextVersion + 1, Math.floor(Number(response.version) || 0));
+    binding.context = contextData;
   }
 
   async resolveApproval(
