@@ -29,7 +29,12 @@
     "UnsupportedHint": "線上播放器暫不支援該錄影類型",
     "Reload": "重新載入",
     "DesktopBlocked": "僅支援瀏覽器訪問",
-    "DesktopBlockedHint": "會話回放只能在 Web 瀏覽器中開啟，請複製連結後在瀏覽器中訪問。"
+    "DesktopBlockedHint": "會話回放只能在 Web 瀏覽器中開啟，請複製連結後在瀏覽器中訪問。",
+    "ShortcutsTitle": "快捷鍵",
+    "ShortcutPlayPause": "暫停 / 繼續",
+    "ShortcutFullscreen": "切換全螢幕",
+    "ShortcutKeystrokeOverlay": "切換按鍵浮層",
+    "ShortcutHelp": "顯示此說明彈窗"
   },
   "Common": {
     "AI": "AI",
@@ -1767,6 +1772,33 @@
     "hideDetails": "收合詳情"
   },
   "Chen": {
-    "TerminatedByAdmin": "{name} 管理員中斷連接。"
+    "TerminatedByAdmin": "{name} 管理員中斷連接。",
+    "DatabaseExplorer": "資料庫資源管理",
+    "RecentlyTables": "最近使用的資料表",
+    "DatabaseWorkspace": "資料庫工作台",
+    "SelectDatabaseAction": "選擇一個資料庫操作開始。",
+    "OpenDatabaseWorkspaceFailed": "無法開啟資料庫工作台",
+    "OpeningDatabaseWorkspace": "正在開啟資料庫工作台",
+    "Retry": "重試",
+    "ResizeDatabaseSidebar": "調整資料庫側欄寬度",
+    "CloseDatabaseExplorer": "關閉資料庫資源管理",
+    "WaitingConnection": "等待連線資訊…",
+    "AuthenticatingSession": "正在驗證資料庫工作階段…",
+    "ConnectingDatabaseService": "正在連線資料庫服務…",
+    "PreparingSession": "正在準備資料庫工作階段…",
+    "LoadingDatabaseResources": "正在載入資料庫資源…",
+    "WorkspaceSettings": "工作台設定",
+    "WorkspaceSettingsTitle": "Chen 工作台設定",
+    "WorkspaceSettingsDescription": "設定會自動儲存並套用到資料庫工作台。",
+    "TableTabName": "資料表 Tab 名稱",
+    "SqlKeywordCompletion": "SQL 關鍵字補全",
+    "TabTitleOnly": "僅資料表名稱",
+    "TabTitleTableSchema": "資料表名稱.Schema",
+    "SqlCaseLower": "小寫",
+    "SqlCaseUpper": "大寫",
+    "ServerRequestFailedPrefix": "Chen 服務端請求失敗：",
+    "DatabaseAddressPrefix": "資料庫位址：",
+    "DatabaseConnectionFailed": "資料庫連線失敗",
+    "WebSocketFailedPrefix": "Chen WebSocket 連線失敗："
   }
 }

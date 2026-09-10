@@ -60,7 +60,8 @@ export function useChenSession(options: UseChenSessionOptions) {
   }
 
   function handleSocketError(socketError: ChenSocketError) {
-    handleFatal(`Chen WebSocket 连接失败：${socketError.message}`);
+    const translate = options.translate ?? ((key: string) => key);
+    handleFatal(`${translate("Chen.WebSocketFailedPrefix")}${socketError.message}`);
   }
 
   async function handleSetReady() {

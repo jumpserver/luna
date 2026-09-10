@@ -29,7 +29,12 @@
     "UnsupportedHint": "Este tipo de gravação não é compatível com o reprodutor on-line.",
     "Reload": "Recarregar",
     "DesktopBlocked": "Somente no navegador",
-    "DesktopBlockedHint": "A reprodução da sessão só está disponível em um navegador da Web. Copie o link e abra-o no navegador."
+    "DesktopBlockedHint": "A reprodução da sessão só está disponível em um navegador da Web. Copie o link e abra-o no navegador.",
+    "ShortcutsTitle": "Atalhos do teclado",
+    "ShortcutPlayPause": "pausar / retomar",
+    "ShortcutFullscreen": "alternar o modo de tela cheia",
+    "ShortcutKeystrokeOverlay": "alternar a sobreposição de teclas",
+    "ShortcutHelp": "mostrar este pop-up de ajuda"
   },
   "Common": {
     "AI": "IA",
@@ -1767,6 +1772,33 @@
     "hideDetails": "Hide details"
   },
   "Chen": {
-    "TerminatedByAdmin": "Conexão terminada pelo administrador {name}"
+    "TerminatedByAdmin": "Conexão terminada pelo administrador {name}",
+    "DatabaseExplorer": "Explorador do banco de dados",
+    "RecentlyTables": "Tabelas recentes",
+    "DatabaseWorkspace": "Área de trabalho do banco de dados",
+    "SelectDatabaseAction": "Selecionar uma ação do banco de dados para começar.",
+    "OpenDatabaseWorkspaceFailed": "Não foi possível abrir a área de trabalho do banco de dados",
+    "OpeningDatabaseWorkspace": "Abrindo a área de trabalho do banco de dados",
+    "Retry": "Tentar novamente",
+    "ResizeDatabaseSidebar": "Redimensionar a barra lateral do banco de dados",
+    "CloseDatabaseExplorer": "Fechar o explorador do banco de dados",
+    "WaitingConnection": "Aguardando detalhes da conexão…",
+    "AuthenticatingSession": "Autenticando sua sessão do banco de dados…",
+    "ConnectingDatabaseService": "Conectando ao serviço do banco de dados…",
+    "PreparingSession": "Preparando sua sessão do banco de dados…",
+    "LoadingDatabaseResources": "Carregando recursos do banco de dados…",
+    "WorkspaceSettings": "Configurações do espaço de trabalho",
+    "WorkspaceSettingsTitle": "Configurações do espaço de trabalho do Chen",
+    "WorkspaceSettingsDescription": "As configurações são salvas automaticamente e aplicadas ao espaço de trabalho do banco de dados.",
+    "TableTabName": "Nome da guia da tabela",
+    "SqlKeywordCompletion": "Preenchimento de palavras-chave SQL",
+    "TabTitleOnly": "Apenas nome da tabela",
+    "TabTitleTableSchema": "Tabela.Schema",
+    "SqlCaseLower": "Minúsculas",
+    "SqlCaseUpper": "Maiúsculas",
+    "ServerRequestFailedPrefix": "Falha na solicitação ao servidor Chen: ",
+    "DatabaseAddressPrefix": "Endereço do banco de dados: ",
+    "DatabaseConnectionFailed": "Falha na conexão com o banco de dados",
+    "WebSocketFailedPrefix": "Falha na conexão WebSocket do Chen: "
   }
 }

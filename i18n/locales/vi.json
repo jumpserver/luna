@@ -29,7 +29,12 @@
     "UnsupportedHint": "Trình phát trực tuyến không hỗ trợ loại bản ghi này.",
     "Reload": "Tải lại",
     "DesktopBlocked": "Chỉ dùng trên trình duyệt",
-    "DesktopBlockedHint": "Tính năng phát lại phiên chỉ khả dụng trên trình duyệt web. Hãy sao chép liên kết và mở trong trình duyệt."
+    "DesktopBlockedHint": "Tính năng phát lại phiên chỉ khả dụng trên trình duyệt web. Hãy sao chép liên kết và mở trong trình duyệt.",
+    "ShortcutsTitle": "Phím tắt",
+    "ShortcutPlayPause": "tạm dừng / tiếp tục",
+    "ShortcutFullscreen": "chuyển đổi chế độ toàn màn hình",
+    "ShortcutKeystrokeOverlay": "chuyển đổi lớp phủ phím gõ",
+    "ShortcutHelp": "hiển thị cửa sổ trợ giúp này"
   },
   "Common": {
     "AI": "AI",
@@ -1767,6 +1772,33 @@
     "hideDetails": "Hide details"
   },
   "Chen": {
-    "TerminatedByAdmin": "Quản trị viên {name} đã ngắt kết nối."
+    "TerminatedByAdmin": "Quản trị viên {name} đã ngắt kết nối.",
+    "DatabaseExplorer": "Trình duyệt cơ sở dữ liệu",
+    "RecentlyTables": "Bảng gần đây",
+    "DatabaseWorkspace": "Không gian làm việc cơ sở dữ liệu",
+    "SelectDatabaseAction": "Chọn một thao tác cơ sở dữ liệu để bắt đầu.",
+    "OpenDatabaseWorkspaceFailed": "Không thể mở không gian làm việc cơ sở dữ liệu",
+    "OpeningDatabaseWorkspace": "Đang mở không gian làm việc cơ sở dữ liệu",
+    "Retry": "Thử lại",
+    "ResizeDatabaseSidebar": "Điều chỉnh kích thước thanh bên cơ sở dữ liệu",
+    "CloseDatabaseExplorer": "Đóng trình duyệt cơ sở dữ liệu",
+    "WaitingConnection": "Đang chờ thông tin kết nối…",
+    "AuthenticatingSession": "Đang xác thực phiên cơ sở dữ liệu…",
+    "ConnectingDatabaseService": "Đang kết nối đến dịch vụ cơ sở dữ liệu…",
+    "PreparingSession": "Đang chuẩn bị phiên cơ sở dữ liệu…",
+    "LoadingDatabaseResources": "Đang tải tài nguyên cơ sở dữ liệu…",
+    "WorkspaceSettings": "Cài đặt không gian làm việc",
+    "WorkspaceSettingsTitle": "Cài đặt không gian làm việc Chen",
+    "WorkspaceSettingsDescription": "Cài đặt được lưu tự động và áp dụng cho không gian làm việc cơ sở dữ liệu.",
+    "TableTabName": "Tên tab bảng",
+    "SqlKeywordCompletion": "Tự động hoàn thành từ khóa SQL",
+    "TabTitleOnly": "Chỉ tên bảng",
+    "TabTitleTableSchema": "Bảng.Schema",
+    "SqlCaseLower": "Chữ thường",
+    "SqlCaseUpper": "Chữ hoa",
+    "ServerRequestFailedPrefix": "Yêu cầu máy chủ Chen thất bại: ",
+    "DatabaseAddressPrefix": "Địa chỉ cơ sở dữ liệu: ",
+    "DatabaseConnectionFailed": "Kết nối cơ sở dữ liệu thất bại",
+    "WebSocketFailedPrefix": "Kết nối WebSocket Chen thất bại: "
   }
 }
