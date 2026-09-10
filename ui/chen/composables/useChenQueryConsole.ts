@@ -57,6 +57,7 @@ export function useChenQueryConsole(
   ) => boolean | void,
   options: {
     onLog?: (tab: ChenWorkspaceTab, line: unknown, content: string) => void;
+    translate?: (key: string) => string;
   } = {}
 ) {
   const queryExecutions = new WeakMap<
@@ -68,14 +69,29 @@ export function useChenQueryConsole(
     return tab.timelineEntries.find((entry) => entry.id === tab.activeTimelineEntryId) || null;
   }
 
+  function finishConsoleExecution(
+    tab: ChenPromptConsoleTab,
+    status: ChenPromptConsoleTab["timelineEntries"][number]["status"]
+  ) {
+    const entry = activeConsoleEntry(tab);
+    if (entry) {
+      entry.status = status;
+      entry.completedAt = Date.now();
+    }
+    tab.activeTimelineEntryId = "";
+    tab.state.inQuery = false;
+    tab.state.canCancel = false;
+  }
+
   function appendConsoleStatus(tab: ChenPromptConsoleTab, content: string, level?: number) {
     const entry = activeConsoleEntry(tab);
     if (!entry) return;
 
     if (/^execute(?: raw)? sql\s*:/i.test(content)) return;
     if (/^cancel query\s*:/i.test(content)) {
+      if (entry.status !== "running" && entry.status !== "cancelling") return;
       if (!entry.logs.includes("Query cancelled.")) entry.logs.push("Query cancelled.");
-      entry.status = "cancelled";
+      finishConsoleExecution(tab, "cancelled");
       return;
     }
     if (!entry.logs.includes(content)) entry.logs.push(content);
@@ -136,7 +152,11 @@ export function useChenQueryConsole(
       execution.statementResultsStarted = true;
     }
 
-    const title = execution.currentSql || execution.submittedSql || "Statement result";
+    const title =
+      execution.currentSql ||
+      execution.submittedSql ||
+      options.translate?.("Chen.StatementResult") ||
+      "Statement result";
     const id = newChenWorkspaceId("result");
     tab.resultTabs.push({
       id,
@@ -154,11 +174,7 @@ export function useChenQueryConsole(
   function failConsoleExecution(tab: ChenWorkspaceTab, message: string) {
     appendLog(tab, { level: 0, message });
     if (tab.kind !== "console") return;
-    const entry = activeConsoleEntry(tab);
-    if (!entry) return;
-    entry.status = "error";
-    entry.completedAt = Date.now();
-    tab.activeTimelineEntryId = "";
+    finishConsoleExecution(tab, "error");
   }
 
   function updateQueryResult(tab: ChenQueryConsoleTab, meta: { title: string; [key: string]: any }, data?: any) {
@@ -267,22 +283,36 @@ export function useChenQueryConsole(
           resultTab.state = mergeChenDataViewTiming(resultTab.state, packet.data);
           if (packet.data?.loading === false) finishChenDataViewRequestWithoutData(resultTab.editState);
         } else {
-          tab.state = mergeChenDataViewTiming(tab.state, packet.data || {});
-          if (tab.kind === "query" && packet.data?.loading === false && Number.isFinite(Number(tab.state.durationMs))) {
+          const incoming = packet.data || {};
+          const consoleEntry = tab.kind === "console" ? activeConsoleEntry(tab) : null;
+          const stalePreviousCompletion =
+            Boolean(consoleEntry) &&
+            incoming.inQuery === false &&
+            consoleEntry?.status === "running" &&
+            !consoleEntry.backendStarted;
+          if (stalePreviousCompletion) {
+            break;
+          }
+          tab.state = mergeChenDataViewTiming(tab.state, incoming);
+          if (tab.kind === "query" && incoming.loading === false && Number.isFinite(Number(tab.state.durationMs))) {
             for (const result of tab.resultTabs) {
               if (Number.isFinite(Number(result.state.durationMs))) continue;
               result.state = { ...result.state, durationMs: Number(tab.state.durationMs) };
               delete result.state.requestStartedAt;
             }
           }
-          if (tab.kind === "console" && packet.data?.inQuery === false) {
-            const entry = activeConsoleEntry(tab);
-            if (entry) {
-              const executionStatus = packet.data.executionStatus;
-              if (entry.status === "cancelling" || executionStatus === "cancelled") entry.status = "cancelled";
-              else if (executionStatus === "error") entry.status = "error";
-              else if (entry.status === "running") entry.status = "success";
-              entry.completedAt = Date.now();
+          if (tab.kind === "console" && incoming.inQuery === true && consoleEntry) {
+            consoleEntry.backendStarted = true;
+          }
+          if (tab.kind === "console" && incoming.inQuery === false && consoleEntry) {
+            const executionStatus = incoming.executionStatus;
+            if (consoleEntry.status === "cancelling" || executionStatus === "cancelled") {
+              finishConsoleExecution(tab, "cancelled");
+            } else if (executionStatus === "error") {
+              finishConsoleExecution(tab, "error");
+            } else if (consoleEntry.status === "running") {
+              finishConsoleExecution(tab, "success");
+            } else {
               tab.activeTimelineEntryId = "";
             }
           }
@@ -307,16 +337,12 @@ export function useChenQueryConsole(
         if (tab.kind === "console" && packet.data?.data) {
           let entry = activeConsoleEntry(tab);
           if (!entry) {
-            entry = {
-              id: newChenWorkspaceId("execution"),
-              sql: packet.data.title || "Query",
-              status: "running",
-              startedAt: Date.now(),
-              logs: [],
-              results: []
-            };
-            tab.timelineEntries.push(entry);
-            tab.activeTimelineEntryId = entry.id;
+            const last = tab.timelineEntries.at(-1);
+            if (last && last.status !== "running" && last.status !== "cancelling") {
+              entry = last;
+            } else {
+              break;
+            }
           }
           const resultId = packet.data.id || newChenWorkspaceId("result");
           const existingResult = entry.results.find((result) => result.id === resultId);
@@ -424,7 +450,8 @@ export function useChenQueryConsole(
       status: "running",
       startedAt: Date.now(),
       logs: [],
-      results: []
+      results: [],
+      backendStarted: false
     };
     tab.timelineEntries.push(entry);
     if (tab.timelineEntries.length > MAX_CONSOLE_TIMELINE_ENTRIES) {
@@ -539,7 +566,7 @@ export function useChenQueryConsole(
     if (tab.kind === "query" && !tab.state.canCancel) return;
     if (tab.kind === "console") {
       const entry = activeConsoleEntry(tab);
-      if (!entry) return;
+      if (!entry || (entry.status !== "running" && entry.status !== "cancelling")) return;
       entry.status = "cancelling";
     }
     sendConsoleAction(tab, "query_console_action", { action: "cancel" });
