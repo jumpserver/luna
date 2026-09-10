@@ -100,6 +100,11 @@ export function normalizeLanguageCode(lang: string | null | undefined): LangType
   return "en";
 }
 
+export function toDjangoLanguageCode(lang: LangType) {
+  if (lang === "zh") return "zh-hans";
+  return lang.replaceAll("_", "-");
+}
+
 export function toIntlLocale(lang: string | null | undefined) {
   return INTL_LOCALE_BY_LANGUAGE[normalizeLanguageCode(lang)];
 }

@@ -10,14 +10,14 @@ import { installDebugLogHook, uninstallDebugLogHook } from "~/composables/useDeb
 import { applyUiRadius, isUiRadius } from "~/composables/useSettingStorage";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composables/useThemePresets";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
-import { resolveLanguageFromSystem } from "~/utils";
+import { normalizeLanguageCode, resolveLanguageFromSystem, toDjangoLanguageCode } from "~/utils";
 import {
   COMMUNITY_WORKSPACE_BRAND,
   formatWorkspaceTitle,
   WORKSPACE_BRAND_STATE_KEY,
   WORKSPACE_FAVICON_STATE_KEY
 } from "~/utils/pageTitle";
-import { isDesktopRuntime } from "~/utils/runtime";
+import { getCookieValue, isDesktopRuntime, withWebSitePrefix } from "~/utils/runtime";
 
 useApplicationConfig();
 
@@ -181,9 +181,12 @@ watch(
   { immediate: true }
 );
 
+let languageReady = false;
+
 watch(
   () => language.value,
   (pref) => {
+    if (!languageReady) return;
     applyLanguagePreference(pref);
   }
 );
@@ -191,11 +194,20 @@ watch(
 watch(
   () => isHydrated.value,
   (ready) => {
-    if (ready) {
-      applyAfterHydration();
-    }
-  }
+    if (ready) void applyAfterHydration();
+  },
+  { immediate: true }
 );
+
+function readDjangoLanguage(): LangType | null {
+  const raw = getCookieValue("django_language");
+  if (!raw) return null;
+  try {
+    return normalizeLanguageCode(decodeURIComponent(raw));
+  } catch {
+    return normalizeLanguageCode(raw);
+  }
+}
 
 function applyFont(font: string) {
   if (!font) return;
@@ -219,6 +231,16 @@ async function resolveEffectiveLanguage(pref: LanguagePreference): Promise<LangT
   return pref;
 }
 
+function syncBackendLanguage(lang: LangType) {
+  if (!import.meta.client) return;
+  const code = toDjangoLanguageCode(lang);
+  document.cookie = `django_language=${encodeURIComponent(code)}; Path=/; SameSite=Lax; Max-Age=31536000`;
+  const request = isDesktopRuntime()
+    ? apiRequest({ method: "GET", path: `/core/i18n/${code}/` })
+    : fetch(withWebSitePrefix(`/core/i18n/${code}/`), { credentials: "include", redirect: "manual" });
+  void request.catch(() => undefined);
+}
+
 async function applyLanguagePreference(pref: LanguagePreference) {
   const seq = ++applyLanguageSeq;
 
@@ -226,9 +248,11 @@ async function applyLanguagePreference(pref: LanguagePreference) {
     const next = await resolveEffectiveLanguage(pref);
 
     if (seq !== applyLanguageSeq) return;
-    if ((locale.value as string) === next) return;
-
-    await setLocale(next as any);
+    if ((locale.value as string) !== next) {
+      await setLocale(next as any);
+    }
+    if (seq !== applyLanguageSeq) return;
+    syncBackendLanguage(next);
   } catch (err) {
     console.error("apply language failed", err);
   }
@@ -245,6 +269,16 @@ async function applyAfterHydration() {
 
   applyCurrentThemeColor();
   applyUiRadius(isUiRadius(uiRadius.value) ? uiRadius.value : "small");
+
+  const fromCookie = !isDesktopRuntime() ? readDjangoLanguage() : null;
+  if (fromCookie) {
+    if ((locale.value as string) !== fromCookie) {
+      await setLocale(fromCookie as any);
+    }
+  } else {
+    await applyLanguagePreference(language.value);
+  }
+  languageReady = true;
 }
 
 onMounted(async () => {
