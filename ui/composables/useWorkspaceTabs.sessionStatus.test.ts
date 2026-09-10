@@ -38,4 +38,14 @@ describe("workspace session disconnect status", () => {
     expect(pane.status).toBe("disconnected");
     expect(tabs.tabs.value[0]?.status).toBe("disconnected");
   });
+
+  it("exits windowed focus mode", async () => {
+    tabs.openSession(asset, { protocol: "ssh", account: "root", newTab: true });
+    expect(tabs.enterFocusMode(tabs.activeTabId.value)).toBe(true);
+    expect(tabs.focusMode.value).toBe(true);
+
+    await tabs.exitFocusMode();
+
+    expect(tabs.focusMode.value).toBe(false);
+  });
 });

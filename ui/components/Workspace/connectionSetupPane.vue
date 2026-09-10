@@ -43,6 +43,7 @@ const {
 const currentAsset = ref<AssetItem | null>(props.tab.setupAsset || null);
 const loading = ref(false);
 const connecting = ref(false);
+const downloadingRdp = shallowRef(false);
 const connectionError = ref("");
 const launchedClientName = ref("");
 const launchedProtocol = ref("");
@@ -75,14 +76,14 @@ const updateExternalLaunchState = async () => {
   try {
     const methods = await getMethodsForProtocol(protocol);
     if (protocol !== draft.value.protocol.trim() || connectMethod !== draft.value.connectMethod.trim()) return;
-    externalClientLaunch.value = isExternalClientConnectMethod(connectMethod, methods);
+    externalClientLaunch.value = isExternalClientConnectMethod(connectMethod, methods, draft.value.connectOptions);
   } catch {
     externalClientLaunch.value = Boolean(parseLocalApplicationConnectMethod(connectMethod).clientName);
   }
 };
 
 watch(
-  () => [draft.value.protocol, draft.value.connectMethod] as const,
+  () => [draft.value.protocol, draft.value.connectMethod, draft.value.connectOptions.appletConnectMethod] as const,
   () => {
     void updateExternalLaunchState();
   },
@@ -117,20 +118,25 @@ async function loadAsset() {
   }
 }
 
-async function submit() {
+async function submit(downloadRdpMethod = "") {
   if (!currentAsset.value || connecting.value) return;
 
   const info = buildConnectionInfo(currentAsset.value);
+  if (downloadRdpMethod) {
+    info.connectMethod = downloadRdpMethod;
+    info.downloadRdp = true;
+  }
   if (!info.protocol || !info.connectMethod) {
     connectionError.value = t("ConnectError.ConnectFailed");
     connecting.value = false;
     return;
   }
   const localApplication = parseLocalApplicationConnectMethod(info.connectMethod);
-  const showLaunchSuccessState = externalClientLaunch.value && !standaloneSessionWindow.value;
+  const showLaunchSuccessState = !info.downloadRdp && externalClientLaunch.value && !standaloneSessionWindow.value;
   connecting.value = true;
+  downloadingRdp.value = !!info.downloadRdp;
   connectionError.value = "";
-  if (!showLaunchSuccessState) {
+  if (!showLaunchSuccessState && !info.downloadRdp) {
     startSessionConnection(props.tab.id, {
       protocol: info.protocol,
       account: info.account
@@ -142,24 +148,31 @@ async function submit() {
     await confirmConnection(currentAsset.value, {
       ...info,
       tabId: props.tab.id,
-      onSessionReady: showLaunchSuccessState
+      onSessionReady: info.downloadRdp
         ? () => {
             connecting.value = false;
-            launchSuccessVisible.value = true;
-            launchedClientName.value = localApplication.clientName || "";
-            launchedProtocol.value = info.protocol;
+            downloadingRdp.value = false;
           }
-        : externalClientLaunch.value && standaloneSessionWindow.value && isDesktopRuntime()
-          ? () => void desktopInvoke("close_window")
-          : undefined,
+        : showLaunchSuccessState
+          ? () => {
+              connecting.value = false;
+              launchSuccessVisible.value = true;
+              launchedClientName.value = localApplication.clientName || "";
+              launchedProtocol.value = info.protocol;
+            }
+          : externalClientLaunch.value && standaloneSessionWindow.value && isDesktopRuntime()
+            ? () => void desktopInvoke("close_window")
+            : undefined,
       onSessionError: (error) => {
         connecting.value = false;
+        downloadingRdp.value = false;
         connectionError.value =
           error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
       }
     });
   } catch (error) {
     connecting.value = false;
+    downloadingRdp.value = false;
     connectionError.value = error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
   }
 }
@@ -326,14 +339,16 @@ onMounted(loadAsset);
                   :personal-credentials-load-failed="personalCredentialsLoadFailed"
                   :submit-label="externalClientLaunch ? t('ConnectionSetup.OpenInClient') : t('Common.Connect')"
                   :submitting="connecting"
-                  :disabled="connecting || !draft.protocol || !draft.connectMethod"
-                  @submit="submit"
+                  :downloading-rdp="downloadingRdp"
+                  :disabled="connecting || !draft.protocol"
+                  @submit="submit()"
+                  @download-rdp="submit"
                 />
               </template>
             </div>
 
             <div
-              v-if="connecting || connectionError"
+              v-if="(connecting && !downloadingRdp) || connectionError"
               class="border-t border-(--app-border) bg-(--workspace-surface-footer) px-5 py-3"
             >
               <div v-if="connecting" class="space-y-2">
@@ -365,7 +380,7 @@ onMounted(loadAsset);
                   color="primary"
                   :loading="connecting"
                   block
-                  @click="submit"
+                  @click="submit()"
                 />
                 <UButton
                   :label="t('ConnectionSetup.BackToForm')"

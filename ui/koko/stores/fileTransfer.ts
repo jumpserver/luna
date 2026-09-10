@@ -392,6 +392,21 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
       }
 
       if (taskStopped(task.id)) return;
+      // Empty files skip the copy loop. Koko rejects length<=0, so probe with 1.
+      if (task.source.size === 0) {
+        if (!source.isAvailable() || !destination.isAvailable()) throw new FileTransferUnavailableError();
+        const chunk = await source.readChunk({
+          transferId: task.id,
+          path: task.source.path,
+          offset: 0,
+          length: 1
+        });
+        if (taskStopped(task.id)) return;
+        if (chunk.offset !== 0 || chunk.data.length !== 0) {
+          throw new Error("Invalid empty file transfer chunk response");
+        }
+      }
+
       patchTask(task.id, { status: "verifying" });
       const checksum = await finalizeFileTransferChecksum(checksumState);
       if (taskStopped(task.id)) return;

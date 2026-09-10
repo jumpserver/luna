@@ -47,6 +47,8 @@ const emit = defineEmits<{
   dataViewAction: [result: ChenQueryResultTab, action: ChenDataViewAction, data?: ChenDataViewActionData];
 }>();
 
+const { t } = useI18n();
+
 const exportDialogOpen = ref(false);
 const exportTarget = ref<ChenQueryResultTab | null>(null);
 const dataGrid = ref<{ stopEditing: () => void } | null>(null);
@@ -68,6 +70,11 @@ const gridPreferenceKey = computed(() =>
     props.dbType
   )
 );
+
+function resultLabel(result: ChenQueryResultTab, index: number) {
+  const label = chenQueryResultLabel(result, index);
+  return label === `Result ${index + 1}` ? t("Chen.ResultNumber", { number: index + 1 }) : label;
+}
 
 function emitActiveDataViewAction(action: ChenDataViewAction, data?: number) {
   if (!activeResult.value) return;
@@ -137,12 +144,12 @@ function cancelActiveResultChanges() {
             :disabled="activeResultBusy"
             @click="emit('update:activeResultTabId', result.id)"
           >
-            {{ chenQueryResultLabel(result, index) }}
+            {{ resultLabel(result, index) }}
           </button>
           <button
             v-if="closable"
             class="mr-1 shrink-0 rounded p-0.5 text-muted transition-colors hover:bg-elevated hover:text-[var(--app-fg)]"
-            :aria-label="`Close ${chenQueryResultLabel(result, index)}`"
+            :aria-label="t('Chen.CloseNamedResult', { name: resultLabel(result, index) })"
             :disabled="activeResultBusy"
             @click.stop="emit('close', result.id)"
           >
@@ -172,10 +179,10 @@ function cancelActiveResultChanges() {
               size="xs"
               color="primary"
               :disabled="activeResultBusy || activeResultRefreshRequired"
-              :title="activeResultRefreshRequired ? 'Refresh before saving again' : undefined"
+              :title="activeResultRefreshRequired ? t('Chen.RefreshBeforeSavingAgain') : undefined"
               @click="saveActiveResultChanges"
             >
-              Save
+              {{ t("Common.Save") }}
             </UButton>
             <UButton
               v-if="activeResultDirty"
@@ -186,7 +193,7 @@ function cancelActiveResultChanges() {
               :disabled="activeResultBusy"
               @click="cancelActiveResultChanges"
             >
-              Cancel
+              {{ t("Common.Cancel") }}
             </UButton>
           </template>
           <DataViewToolbar
@@ -207,7 +214,7 @@ function cancelActiveResultChanges() {
       >
         <div class="text-center">
           <UIcon name="i-lucide-circle-check" class="mx-auto mb-2 size-6 text-success" />
-          <p class="font-medium text-default">Statement executed successfully</p>
+          <p class="font-medium text-default">{{ t("Chen.StatementExecutedSuccessfully") }}</p>
         </div>
       </div>
       <div v-else class="min-h-0 flex-1 overflow-auto">

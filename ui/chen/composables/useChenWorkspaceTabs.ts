@@ -18,6 +18,7 @@ export function newChenWorkspaceId(prefix: string) {
 }
 
 export function useChenWorkspaceTabs() {
+  const { t } = useI18n();
   const workspaceTabs = ref<ChenTabDefinition[]>([]);
   const activeWorkspaceTabId = ref("");
   const workspaceTabState = reactive<Record<string, ChenWorkspaceTab>>({});
@@ -34,6 +35,10 @@ export function useChenWorkspaceTabs() {
   }
 
   function displayWorkspaceTabTitle(tab: ChenTabDefinition) {
+    if (tab.kind === "create-table") {
+      const suffix = tab.title.match(/^New Table( \d+)?$/)?.[1] || "";
+      return `${t("Chen.NewTable")}${suffix}`;
+    }
     if (tab.kind !== "data-view") return tab.title;
     const normalized = tab.title.replace(/^data\s*view\s*[:：\-]?\s*/i, "").trim();
     return normalized || tab.title;

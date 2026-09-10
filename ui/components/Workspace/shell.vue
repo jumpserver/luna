@@ -137,11 +137,7 @@ onBeforeUnmount(() => {
     :data-island="useIslandLayout ? 'true' : undefined"
     :style="{ backgroundColor: 'var(--app-surface-frame)', color: 'var(--app-fg)' }"
   >
-    <div
-      v-if="!props.focusMode"
-      class="workspace-shell__header shrink-0"
-      :style="{ backgroundColor: 'var(--app-header-bg)' }"
-    >
+    <div class="workspace-shell__header shrink-0" :style="{ backgroundColor: 'var(--app-header-bg)' }">
       <slot name="header" />
     </div>
 

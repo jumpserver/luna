@@ -188,6 +188,7 @@ export const useKokoTerminalSocket = () => {
   }, 500);
 
   const terminalInputLocked = () => {
+    if (unref(sessionCtxRef)?.wsQuery?.type === "monitor") return true;
     const paneId = unref(sessionCtxRef)?.tabId || "";
     return Boolean(paneId && isKokoTerminalAiInputLocked(paneId));
   };
@@ -197,7 +198,8 @@ export const useKokoTerminalSocket = () => {
   };
   const sendSuggestionData = (data: string) => {
     const socket = socketRef.value;
-    if (!socket || !isSocketOpen(socket) || terminalAiBusy() || zmodem.isActiveSession()) return false;
+    if (!socket || !isSocketOpen(socket) || terminalInputLocked() || terminalAiBusy() || zmodem.isActiveSession())
+      return false;
     lastSendTime.value = new Date();
     socket.send(
       formatMessage(
@@ -213,7 +215,12 @@ export const useKokoTerminalSocket = () => {
     terminal: terminalRef,
     container: containerRef,
     send: sendSuggestionData,
-    disabled: () => terminalAiBusy() || zmodem.isActiveSession() || !socketRef.value || !isSocketOpen(socketRef.value)
+    disabled: () =>
+      terminalInputLocked() ||
+      terminalAiBusy() ||
+      zmodem.isActiveSession() ||
+      !socketRef.value ||
+      !isSocketOpen(socketRef.value)
   });
   const sendExternalTerminalData = (data: string) => {
     commandSuggestions.invalidate();

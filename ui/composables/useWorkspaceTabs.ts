@@ -389,6 +389,7 @@ export const useWorkspaceTabs = () => {
 
   const exitFocusMode = async () => {
     const shouldExitFullscreen = workspaceFullscreen.value;
+    focusModeTabId.value = "";
     leaveWorkspaceFullscreen();
     if (shouldExitFullscreen) await setRuntimeFullscreen(false).catch(() => {});
   };

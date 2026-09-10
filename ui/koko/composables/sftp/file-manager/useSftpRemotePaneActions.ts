@@ -1,7 +1,7 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { MaybeRefOrGetter, Ref } from "vue";
 import type { SftpFileEntry, useSftpFileManager } from "#koko/composables/sftp/useSftpFileManager";
-import { sftpCanUpload } from "#koko/composables/sftp/protocol";
+import { sftpCanUpload, sftpOperationErrorMessage } from "#koko/composables/sftp/protocol";
 import { SFTP_ENTRY_NAME_MAX_LENGTH, sftpEntryNameError } from "./sftpEntryName";
 
 interface UseSftpRemotePaneActionsOptions {
@@ -69,7 +69,10 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
       if (refresh) await refreshCurrentDirectory();
       return true;
     } catch (error) {
-      addErrorToast({ title: t("koko.fileManagement.operationFailed"), error });
+      addErrorToast({
+        title: t("koko.fileManagement.operationFailed"),
+        description: sftpOperationErrorMessage(error, t)
+      });
       return false;
     }
   }
@@ -228,7 +231,10 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
     }
     const failure = results.find((result) => result.status === "rejected");
     if (failure?.status === "rejected")
-      addErrorToast({ title: t("koko.fileManagement.operationFailed"), error: failure.reason });
+      addErrorToast({
+        title: t("koko.fileManagement.operationFailed"),
+        description: sftpOperationErrorMessage(failure.reason, t)
+      });
   }
 
   return {

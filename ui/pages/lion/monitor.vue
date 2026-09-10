@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import MonitorView from "@/lion/views/MonitorView.vue";
+import SessionMonitor from "~/components/Monitor/SessionMonitor.vue";
 
 definePageMeta({
-  layout: "lion"
+  layout: "connect"
 });
+const route = useRoute();
 </script>
 
 <template>
-  <MonitorView />
+  <SessionMonitor
+    :key="String(route.query.session)"
+    :session-id="String(route.query.session || '')"
+    :ticket-id="String(route.query.ticket_id || '')"
+    :org-id="String(route.query.oid || route.query.org || '') || undefined"
+  />
 </template>

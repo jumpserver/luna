@@ -13,7 +13,19 @@ const activeCount = computed(
       .length || 0
 );
 
+const cancelConfirmOpen = ref(false);
+
 const handleClose = () => {
+  if (!globalGroup.value) return;
+  if (hasPending.value) {
+    cancelConfirmOpen.value = true;
+    return;
+  }
+  void close(globalGroup.value);
+};
+
+const confirmCancel = () => {
+  cancelConfirmOpen.value = false;
   if (globalGroup.value) void close(globalGroup.value);
 };
 
@@ -68,10 +80,10 @@ watch(
     </template>
     <template #body>
       <UAlert
-        v-if="isReview && !globalGroup?.submitted"
-        color="warning"
+        v-if="isReview && (!globalGroup?.submitted || hasPending)"
+        :color="globalGroup?.submitted ? 'info' : 'warning'"
         variant="soft"
-        icon="i-lucide-triangle-alert"
+        :icon="globalGroup?.submitted ? 'i-lucide-clock' : 'i-lucide-triangle-alert'"
         :description="description"
         class="mb-4"
       />
@@ -87,6 +99,15 @@ watch(
       </UButton>
     </template>
   </UModal>
+
+  <ModalAlertDialog
+    v-model:open="cancelConfirmOpen"
+    :title="t('AclDialog.CancelConfirmTitle')"
+    :description="t('AclDialog.CancelConfirmDescription')"
+    :confirm-label="t('Common.Confirm')"
+    confirm-color="error"
+    @confirm="confirmCancel"
+  />
 
   <UButton
     v-if="isOpen && minimized && globalGroup"

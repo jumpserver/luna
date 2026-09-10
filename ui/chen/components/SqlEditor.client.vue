@@ -42,6 +42,7 @@ const emit = defineEmits<{
 }>();
 
 const colorMode = useColorMode();
+const { t } = useI18n();
 const container = shallowRef<HTMLElement | null>(null);
 const themeSlot = new Compartment();
 const syntaxThemeSlot = new Compartment();
@@ -65,8 +66,8 @@ class RunStatementMarker extends GutterMarker {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "cm-run-statement-button";
-    button.title = "Run statement";
-    button.setAttribute("aria-label", "Run statement");
+    button.title = t("Chen.RunStatement");
+    button.setAttribute("aria-label", t("Chen.RunStatement"));
     button.textContent = "▶";
     return button;
   }

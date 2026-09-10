@@ -6,6 +6,11 @@ const mocks = vi.hoisted(() => ({
   invoke: vi.fn(),
   assign: vi.fn(),
   getLocalClientUrl: vi.fn(),
+  getRdpFile: vi.fn(),
+  getLunaPreferences: vi.fn(),
+  getPublicSettings: vi.fn(),
+  saveDialog: vi.fn(),
+  writeFile: vi.fn(),
   createToken: vi.fn(),
   errorToast: vi.fn(),
   appConfig: { value: undefined as unknown },
@@ -17,10 +22,18 @@ const mocks = vi.hoisted(() => ({
   }
 }));
 
-vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke: mocks.invoke, desktopListen: vi.fn() }));
+vi.mock("~/shared/desktop/bridge", () => ({
+  desktopInvoke: mocks.invoke,
+  desktopListen: vi.fn(),
+  desktopDialog: { save: mocks.saveDialog },
+  desktopFs: { writeFile: mocks.writeFile }
+}));
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => mocks.store }));
 vi.mock("~/composables/useApiRequest", () => ({
   getAssetDetailRequest: vi.fn(),
+  getConnectionRdpFile: mocks.getRdpFile,
+  getLunaPreferences: mocks.getLunaPreferences,
+  getPublicSettings: mocks.getPublicSettings,
   invalidatePersonalAssetCredentialCache: vi.fn()
 }));
 vi.mock("~/composables/useSettingManager", () => ({
@@ -77,10 +90,13 @@ describe("opening assets in local applications", () => {
     mocks.createToken.mockResolvedValue({ id: "id" });
     mocks.invoke.mockResolvedValue(undefined);
     mocks.getLocalClientUrl.mockResolvedValue({ url: `jms2://${encoded}` });
+    mocks.getLunaPreferences.mockResolvedValue({ graphics: { applet_connection_method: "client" } });
+    mocks.getPublicSettings.mockResolvedValue({ XPACK_LICENSE_IS_VALID: true, TERMINAL_RAZOR_ENABLED: true });
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -96,6 +112,194 @@ describe("opening assets in local applications", () => {
     await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
     return { ready, failed };
   }
+
+  describe("RDP file downloads", () => {
+    const content = "full address:s:rdp.example\r\nusername:s:用户\r\n";
+    const rdpMethod = { ...method, value: "mstsc", component: "razor" };
+    const link = { href: "", download: "", click: vi.fn() };
+
+    beforeEach(() => {
+      vi.stubGlobal("useConnectMethods", () => ({
+        fetchConnectMethods: async () => ({ rdp: [rdpMethod] }),
+        getMethodsForProtocol: async () => [rdpMethod]
+      }));
+      vi.stubGlobal("document", { createElement: () => link });
+      vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:rdp-file");
+      vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+      mocks.getRdpFile.mockResolvedValue(content);
+      mocks.saveDialog.mockResolvedValue("/tmp/windows.rdp");
+      mocks.writeFile.mockResolvedValue(undefined);
+    });
+
+    async function download(connectMethod = "mstsc", protocol = "rdp", appletConnectMethod?: string) {
+      const ready = vi.fn();
+      const failed = vi.fn();
+      await useAssetAction().handleAssetConnection("Administrator", "asset", protocol, [], undefined, {
+        accountId: "account",
+        connectMethod,
+        downloadRdp: true,
+        orgId: "asset-org",
+        connectOptions: {
+          appletConnectMethod,
+          rdp_resolution: "1600x900",
+          rdp_client_option: ["full_screen", "drives_redirect"],
+          remote_microphone: true
+        },
+        onSessionReady: ready,
+        onSessionError: failed
+      });
+      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+      return { ready, failed };
+    }
+
+    it.each([false, true])(
+      "downloads the authorized RDP file without launching a client (desktop=%s)",
+      async (desktop) => {
+        vi.stubGlobal("isDesktopRuntime", () => desktop);
+        const { failed } = await download();
+        expect(failed).not.toHaveBeenCalled();
+        expect(mocks.createToken).toHaveBeenCalledWith(
+          expect.objectContaining({ asset: "asset", account: "account", protocol: "rdp", connect_method: "mstsc" }),
+          expect.objectContaining({ orgId: "asset-org" })
+        );
+        expect(mocks.getRdpFile).toHaveBeenCalledWith(
+          "id",
+          expect.objectContaining({
+            width: "1600",
+            height: "900",
+            full_screen: "1",
+            drives_redirect: "1",
+            remote_microphone: "1"
+          }),
+          "asset-org"
+        );
+        if (desktop) {
+          expect(mocks.writeFile).toHaveBeenCalledWith("/tmp/windows.rdp", new TextEncoder().encode(content));
+          expect(link.click).not.toHaveBeenCalled();
+        } else {
+          expect(link.download).toBe("asset.rdp");
+          expect(link.click).toHaveBeenCalledOnce();
+          expect(await (vi.mocked(URL.createObjectURL).mock.calls[0]![0] as Blob).text()).toBe(content);
+          expect(mocks.saveDialog).not.toHaveBeenCalled();
+        }
+        expect(mocks.getLocalClientUrl).not.toHaveBeenCalled();
+        expect(mocks.invoke).not.toHaveBeenCalled();
+        expect(mocks.assign).not.toHaveBeenCalled();
+        expect(mocks.store.setConnectionPreferenceForAsset).not.toHaveBeenCalled();
+      }
+    );
+
+    it("does not download when connection approval is cancelled", async () => {
+      mocks.createToken.mockResolvedValue(null);
+      const { failed } = await download();
+      expect(failed).toHaveBeenCalledOnce();
+      expect(mocks.getRdpFile).not.toHaveBeenCalled();
+      expect(link.click).not.toHaveBeenCalled();
+    });
+
+    it("reports a download failure without opening a client", async () => {
+      mocks.getRdpFile.mockRejectedValue(new Error("RDP file unavailable"));
+      const { failed } = await download();
+      expect(failed).toHaveBeenCalledWith(expect.objectContaining({ message: "RDP file unavailable" }));
+      expect(mocks.errorToast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "ConnectError.DownloadRdpFailed" })
+      );
+      expect(link.click).not.toHaveBeenCalled();
+      expect(mocks.getLocalClientUrl).not.toHaveBeenCalled();
+    });
+
+    it("does not write a file when the desktop save dialog is cancelled", async () => {
+      vi.stubGlobal("isDesktopRuntime", () => true);
+      mocks.saveDialog.mockResolvedValue(null);
+      const { failed } = await download();
+      expect(failed).not.toHaveBeenCalled();
+      expect(mocks.writeFile).not.toHaveBeenCalled();
+    });
+
+    it.each([false, true])(
+      "downloads RemoteApp RDP using the global client preference (desktop=%s)",
+      async (desktop) => {
+        vi.stubGlobal("isDesktopRuntime", () => desktop);
+        const applet = { ...rdpMethod, value: "weblite", type: "applet", component: "tinker" };
+        vi.stubGlobal("useConnectMethods", () => ({
+          fetchConnectMethods: async () => ({ http: [applet] }),
+          getMethodsForProtocol: async () => [applet]
+        }));
+        const { failed } = await download("weblite", "http");
+        expect(failed).not.toHaveBeenCalled();
+        expect(mocks.createToken).toHaveBeenCalledWith(
+          expect.objectContaining({
+            connect_method: "weblite",
+            protocol: "http",
+            connect_options: expect.objectContaining({ appletConnectMethod: "client" })
+          }),
+          expect.anything()
+        );
+        expect(mocks.getRdpFile).toHaveBeenCalledOnce();
+        expect(mocks.getLocalClientUrl).not.toHaveBeenCalled();
+        expect(mocks.invoke).not.toHaveBeenCalled();
+        expect(desktop ? mocks.writeFile : link.click).toHaveBeenCalledOnce();
+      }
+    );
+
+    it.each(["web", "razor-disabled", "unlicensed"])("rejects RemoteApp downloads for %s", async (condition) => {
+      const applet = { ...rdpMethod, value: "weblite", type: "applet", component: "tinker" };
+      vi.stubGlobal("useConnectMethods", () => ({
+        fetchConnectMethods: async () => ({ http: [applet] }),
+        getMethodsForProtocol: async () => [applet]
+      }));
+      mocks.getPublicSettings.mockResolvedValue({
+        XPACK_LICENSE_IS_VALID: condition !== "unlicensed",
+        TERMINAL_RAZOR_ENABLED: condition !== "razor-disabled"
+      });
+      const { failed } = await download("weblite", "http", condition === "web" ? "web" : "client");
+      expect(failed).toHaveBeenCalledOnce();
+      expect(mocks.createToken).not.toHaveBeenCalled();
+      expect(mocks.getRdpFile).not.toHaveBeenCalled();
+    });
+  });
+
+  it.each([
+    [false, "web"],
+    [true, "web"],
+    [false, "client"],
+    [true, "client"]
+  ] as const)("opens RemoteApp in its selected mode (desktop=%s, mode=%s)", async (desktop, mode) => {
+    vi.stubGlobal("isDesktopRuntime", () => desktop);
+    const applet = { ...method, value: "weblite", type: "applet", component: "tinker" };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ http: [applet] }),
+      getMethodsForProtocol: async () => [applet]
+    }));
+    vi.stubGlobal("window", {
+      location: { protocol: "https:", origin: "https://jumpserver.example", assign: mocks.assign }
+    });
+    const endpoint = vi.fn().mockResolvedValue({ host: "jumpserver.example", https_port: 443 });
+    vi.stubGlobal("getSmartEndpoint", endpoint);
+    vi.stubGlobal("withWebSitePrefix", (path: string) => path);
+    vi.stubGlobal("joinEndpointUrl", (base: string, path: string) => `${base}${path}`);
+    const ready = vi.fn();
+    const failed = vi.fn();
+    await useAssetAction().handleAssetConnection("root", "asset", "http", [], undefined, {
+      accountId: "account",
+      connectMethod: "weblite",
+      connectOptions: { appletConnectMethod: mode },
+      onSessionReady: ready,
+      onSessionError: failed
+    });
+    await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+    expect(failed).not.toHaveBeenCalled();
+    expect(mocks.getLunaPreferences).not.toHaveBeenCalled();
+    if (mode === "client") {
+      expect(desktop ? mocks.invoke : mocks.assign).toHaveBeenCalledOnce();
+      expect(endpoint).not.toHaveBeenCalled();
+    } else {
+      expect(ready.mock.calls[0]?.[0].webUrl).toContain("/lion/connect?token=id");
+      expect(mocks.getLocalClientUrl).not.toHaveBeenCalled();
+      expect(mocks.invoke).not.toHaveBeenCalled();
+      expect(mocks.assign).not.toHaveBeenCalled();
+    }
+  });
 
   it.each(["jms2"])(
     "web launches the current client from a %s server URL without modifying the payload",

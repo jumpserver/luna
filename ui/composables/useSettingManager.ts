@@ -21,7 +21,6 @@ import {
 import { DEFAULT_SIDEBAR_SECTIONS, normalizeSidebarSections } from "~/composables/useSidebarSections";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET, isThemePresetId } from "~/composables/useThemePresets";
 import { isCodeMirrorThemePresetId } from "~/shared/theme/presets/codemirror";
-import { TERMINAL_THEME_PRESETS } from "~/shared/theme/presets/terminal";
 
 const storage = useSettingStorage();
 
@@ -129,11 +128,10 @@ const ensureHydration = () => {
         patch.darkThemePreset = normalizedDarkThemePreset;
       }
 
-      const normalizedTerminalThemePreset = TERMINAL_THEME_PRESETS.some(
-        (preset) => preset.id === state.terminalThemePreset
-      )
-        ? state.terminalThemePreset
-        : "follow-app";
+      const normalizedTerminalThemePreset =
+        typeof state.terminalThemePreset === "string" && state.terminalThemePreset.trim()
+          ? state.terminalThemePreset
+          : "follow-app";
       const normalizedCodeMirrorThemePreset = isCodeMirrorThemePresetId(state.codeMirrorThemePreset)
         ? state.codeMirrorThemePreset
         : "follow-app";

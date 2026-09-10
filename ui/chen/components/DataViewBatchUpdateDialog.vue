@@ -14,6 +14,8 @@ const emit = defineEmits<{
   confirm: [field: ChenDataViewField, value: unknown];
 }>();
 
+const { t } = useI18n();
+
 const selectedFieldName = ref("");
 const value = ref("");
 const setNull = ref(false);
@@ -56,51 +58,47 @@ function submit() {
 </script>
 
 <template>
-  <ChenWorkspaceModal v-model:open="visible" title="Update selected rows">
+  <ChenWorkspaceModal v-model:open="visible" :title="t('Chen.UpdateSelectedRows')">
     <template #body>
       <div class="space-y-4">
         <div class="flex items-start gap-2 rounded-md border border-warning/25 bg-warning/8 px-3 py-2 text-xs">
           <UIcon name="i-lucide-triangle-alert" class="mt-0.5 size-4 shrink-0 text-warning" />
-          <p>
-            The selected field will be set to the same value in
-            <strong class="text-highlighted">{{ rowCount }} rows</strong>
-            . Changes remain pending until you click Save.
-          </p>
+          <p>{{ t("Chen.BatchUpdateHint", { count: rowCount }) }}</p>
         </div>
 
-        <UFormField label="Field" required>
+        <UFormField :label="t('Chen.Field')" required>
           <USelectMenu
             v-model="selectedFieldName"
             class="w-full"
             :items="fieldItems"
             value-key="value"
             label-key="label"
-            placeholder="Select a field"
+            :placeholder="t('Chen.SelectField')"
           />
         </UFormField>
 
-        <UFormField label="Value" :hint="selectedField?.type">
+        <UFormField :label="t('Chen.Value')" :hint="selectedField?.type">
           <UInput
             v-model="value"
             class="w-full"
             :disabled="setNull"
-            :placeholder="setNull ? 'NULL' : 'Enter the new value'"
+            :placeholder="setNull ? 'NULL' : t('Chen.EnterNewValue')"
             @keydown.enter="submit"
           />
         </UFormField>
 
         <label v-if="canSetNull" class="flex items-center gap-2 text-sm">
           <UCheckbox v-model="setNull" />
-          <span>Set value to NULL</span>
+          <span>{{ t("Chen.SetValueNull") }}</span>
         </label>
       </div>
     </template>
 
     <template #footer>
       <div class="flex w-full justify-end gap-2">
-        <UButton color="neutral" variant="soft" @click="close">Cancel</UButton>
+        <UButton color="neutral" variant="soft" @click="close">{{ t("Common.Cancel") }}</UButton>
         <UButton icon="i-lucide-list-restart" :disabled="!selectedField" @click="submit">
-          Update {{ rowCount }} rows
+          {{ t("Chen.UpdateRowCount", { count: rowCount }) }}
         </UButton>
       </div>
     </template>

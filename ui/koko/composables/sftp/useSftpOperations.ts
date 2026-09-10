@@ -13,8 +13,12 @@ import { createSftpMessageId, decodeSftpRawBytes, encodeSftpBytes, joinSftpPath 
 import { rejectPendingRequests } from "./core/pending";
 import { createSerialTaskQueue } from "./core/queues";
 import {
+  classifySftpWireError,
+  SFTP_CONNECTION_LOST_ERROR,
   SFTP_FILE_CONFLICT_ERROR,
+  SFTP_OPERATION_UNSUPPORTED_ERROR,
   SFTP_PATH_NOT_FOUND_ERROR,
+  SFTP_PERMISSION_DENIED_ERROR,
   SFTP_REQUEST_TIMEOUT_ERROR,
   SftpCommand,
   SftpDataStatus,
@@ -66,6 +70,30 @@ export class SftpPathNotFoundError extends Error {
   constructor() {
     super(SFTP_PATH_NOT_FOUND_ERROR);
     this.name = "SftpPathNotFoundError";
+  }
+}
+
+export class SftpPermissionDeniedError extends Error {
+  constructor() {
+    super(SFTP_PERMISSION_DENIED_ERROR);
+    this.name = "SftpPermissionDeniedError";
+  }
+}
+
+function errorFromSftpMessage(message: { error_code?: string; err?: string }) {
+  switch (classifySftpWireError(message)) {
+    case "permission_denied":
+      return new SftpPermissionDeniedError();
+    case "path_not_found":
+      return new SftpPathNotFoundError();
+    case "conflict":
+      return new SftpFileConflictError();
+    case "unsupported":
+      return new Error(SFTP_OPERATION_UNSUPPORTED_ERROR);
+    case "connection_lost":
+      return new Error(SFTP_CONNECTION_LOST_ERROR);
+    default:
+      return message.err ? new Error(message.err) : null;
   }
 }
 
@@ -200,12 +228,9 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     if (!pending) return;
     pendingLists.delete(message.id);
     clearTimeout(pending.timeout);
-    if (message.error_code === SFTP_PATH_NOT_FOUND_ERROR || message.err === "file does not exist") {
-      pending.reject(new SftpPathNotFoundError());
-      return;
-    }
-    if (message.err) {
-      pending.reject(new Error(message.err));
+    const listError = errorFromSftpMessage(message);
+    if (listError) {
+      pending.reject(listError);
       return;
     }
     try {
@@ -228,8 +253,9 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     if (!pending) return;
     pendingDownloads.delete(message.id);
     clearTimeout(pending.timeout);
-    if (message.err) {
-      pending.reject(new Error(message.err));
+    const downloadError = errorFromSftpMessage(message);
+    if (downloadError) {
+      pending.reject(downloadError);
       return;
     }
     const parts = pending.parts.map((part) => {
@@ -250,10 +276,11 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
 
   function handleUpload(message: SftpDataMessage) {
     const waiters = pendingUploadAcks.get(message.id) || [];
-    if (message.err) {
+    const uploadError = errorFromSftpMessage(message);
+    if (uploadError) {
       for (const waiter of waiters) {
         clearTimeout(waiter.timeout);
-        waiter.reject(new Error(message.err));
+        waiter.reject(uploadError);
       }
       pendingUploadAcks.delete(message.id);
       return;
@@ -271,12 +298,9 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     if (!pending) return;
     pendingSaves.delete(message.id);
     clearTimeout(pending.timeout);
-    if (message.error_code === SFTP_FILE_CONFLICT_ERROR) {
-      pending.reject(new SftpFileConflictError());
-      return;
-    }
-    if (message.err) {
-      pending.reject(new Error(message.err));
+    const saveError = errorFromSftpMessage(message);
+    if (saveError) {
+      pending.reject(saveError);
       return;
     }
     try {
@@ -291,7 +315,8 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
     if (!pending) return;
     pendingMutations.delete(message.id);
     clearTimeout(pending.timeout);
-    if (message.err) pending.reject(new Error(message.err));
+    const mutationError = errorFromSftpMessage(message);
+    if (mutationError) pending.reject(mutationError);
     else pending.resolve();
   }
 

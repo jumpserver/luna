@@ -48,9 +48,15 @@ const pendingSqlValue = computed({
   get: () => props.tab.pendingSql,
   set: (value: string) => emit("updatePendingSql", props.tab, value)
 });
-const busy = computed(() =>
-  Boolean(props.tab.state.loading || props.tab.state.inQuery || props.tab.activeTimelineEntryId)
-);
+const busy = computed(() => {
+  const active = props.tab.timelineEntries.find((entry) => entry.id === props.tab.activeTimelineEntryId);
+  return Boolean(
+    props.tab.state.loading ||
+    props.tab.state.inQuery ||
+    active?.status === "running" ||
+    active?.status === "cancelling"
+  );
+});
 const statementEmpty = computed(() => !props.tab.pendingSql.trim());
 const aiItems = computed(() => [
   {
@@ -87,13 +93,15 @@ function editorSnapshot(): ChenSqlEditorSnapshot {
   };
 }
 
-const statusDetails: Record<ChenConsoleExecutionStatus, { icon: string; label: string; class: string }> = {
-  running: { icon: "i-lucide-loader-circle", label: "Running", class: "animate-spin text-primary" },
-  cancelling: { icon: "i-lucide-loader-circle", label: "Cancelling", class: "animate-spin text-warning" },
-  success: { icon: "i-lucide-circle-check", label: "Completed", class: "text-success" },
-  error: { icon: "i-lucide-circle-x", label: "Failed", class: "text-error" },
-  cancelled: { icon: "i-lucide-ban", label: "Cancelled", class: "text-warning" }
-};
+const statusDetails = computed<Record<ChenConsoleExecutionStatus, { icon: string; label: string; class: string }>>(
+  () => ({
+    running: { icon: "i-lucide-loader-circle", label: t("Chen.Running"), class: "animate-spin text-primary" },
+    cancelling: { icon: "i-lucide-loader-circle", label: t("Chen.Cancelling"), class: "animate-spin text-warning" },
+    success: { icon: "i-lucide-circle-check", label: t("Chen.Completed"), class: "text-success" },
+    error: { icon: "i-lucide-circle-x", label: t("Chen.Failed"), class: "text-error" },
+    cancelled: { icon: "i-lucide-ban", label: t("Chen.Cancelled"), class: "text-warning" }
+  })
+);
 
 function run() {
   if (busy.value || !pendingSqlValue.value.trim()) return;
@@ -189,10 +197,10 @@ function resultSummary(result: ChenConsoleTimelineResult) {
   if (result.state.truncated) {
     const limit =
       typeof result.state.rowLimit === "number" && result.state.rowLimit > 0 ? result.state.rowLimit : shown;
-    return `${shown} shown · truncated at ${limit}`;
+    return t("Chen.RowsShownTruncated", { shown, limit });
   }
   const total = typeof result.state.total === "number" && result.state.total >= 0 ? result.state.total : shown;
-  return total > shown ? `${shown} shown · ${total} total` : `${shown} ${shown === 1 ? "row" : "rows"}`;
+  return total > shown ? t("Chen.RowsShownTotal", { shown, total }) : t("Chen.RowCount", { count: shown });
 }
 
 function elapsed(entry: ChenConsoleTimelineEntry) {
@@ -227,7 +235,7 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
     <div class="flex shrink-0 items-center justify-between border-b border-default px-3 py-1.5 text-xs">
       <div class="flex min-w-0 items-center gap-2 text-muted">
         <UIcon name="i-lucide-square-terminal" class="size-4 text-primary" />
-        <span class="truncate">{{ tab.state.currentContext || contextLabel || "Console" }}</span>
+        <span class="truncate">{{ tab.state.currentContext || contextLabel || t("Chen.Console") }}</span>
       </div>
       <div class="flex items-center gap-1">
         <UTooltip :text="t('RightPanel.SQLAIDisabledDescription')" :disabled="aiEnabled">
@@ -245,20 +253,11 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
           </UDropdownMenu>
         </UTooltip>
         <UButton
-          v-if="tab.state.canCancel"
-          icon="i-lucide-square"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          title="Cancel query"
-          @click="emit('cancel', tab)"
-        />
-        <UButton
           icon="i-lucide-eraser"
           size="xs"
           color="neutral"
           variant="ghost"
-          title="Clear console"
+          :title="t('Chen.ClearConsole')"
           :disabled="busy"
           @click="clear"
         />
@@ -270,7 +269,7 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
         v-if="!tab.timelineEntries.length"
         class="flex h-full min-h-40 items-center justify-center text-xs text-muted"
       >
-        Run a SQL statement to start the timeline.
+        {{ t("Chen.RunSqlForTimeline") }}
       </div>
 
       <div v-else class="mx-auto flex w-full max-w-[1200px] flex-col gap-3">
@@ -291,11 +290,21 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
             </div>
             <div class="flex shrink-0 items-center gap-2">
               <UButton
+                v-if="entry.status === 'running' || entry.status === 'cancelling'"
+                icon="i-lucide-square"
+                size="sm"
+                color="error"
+                :disabled="entry.status === 'cancelling'"
+                @click="emit('cancel', tab)"
+              >
+                {{ t("Chen.Stop") }}
+              </UButton>
+              <UButton
+                v-else
                 size="xs"
                 color="neutral"
                 variant="ghost"
                 icon="i-lucide-git-fork"
-                :disabled="busy && entry.status === 'running'"
                 @click="emit('explainPlan', tab, entry.sql, entry.id)"
               >
                 {{ t("ExecutionPlan.explain") }}
@@ -318,7 +327,9 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
 
           <div v-for="(result, resultIndex) in entry.results" :key="result.id" class="border-t border-default">
             <div class="flex items-center justify-between gap-3 bg-[var(--app-surface-panel)] px-3 py-1.5 text-[11px]">
-              <span class="font-medium text-highlighted">Result {{ resultIndex + 1 }}</span>
+              <span class="font-medium text-highlighted">
+                {{ t("Chen.ResultNumber", { number: resultIndex + 1 }) }}
+              </span>
               <span class="text-muted">{{ resultSummary(result) }}</span>
             </div>
             <ConsoleResultGrid :dataset="result.data" :can-copy="canCopy" :style="{ height: gridHeight(result) }" />
@@ -333,7 +344,7 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
             class="flex items-center gap-2 border-t border-default px-3 py-2 text-xs text-muted"
           >
             <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
-            Waiting for results…
+            {{ t("Chen.WaitingForResults") }}
           </div>
         </article>
       </div>
@@ -346,7 +357,7 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
       <div
         role="separator"
         tabindex="0"
-        aria-label="Resize Console input"
+        :aria-label="t('Chen.ResizeConsoleInput')"
         aria-orientation="horizontal"
         :aria-valuenow="inputAreaHeight"
         :aria-valuemin="MIN_INPUT_AREA_HEIGHT"
@@ -365,7 +376,7 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
         class="h-full min-h-12 flex-1 resize-none rounded-sm border border-default bg-transparent px-2 py-2 text-[var(--app-fg)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--app-muted)] focus:border-primary focus:ring-1 focus:ring-[var(--app-focus-ring)]"
         :disabled="busy"
         rows="1"
-        placeholder="Enter to run · Shift+Enter for newline"
+        :placeholder="t('Chen.ConsoleInputPlaceholder')"
         spellcheck="false"
         @keydown="handleKeydown"
       />

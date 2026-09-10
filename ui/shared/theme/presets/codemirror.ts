@@ -1,10 +1,3 @@
-import type { Extension } from "@codemirror/state";
-
-import { dracula } from "@uiw/codemirror-theme-dracula";
-import { githubDark, githubLight } from "@uiw/codemirror-theme-github";
-import { tokyoNight } from "@uiw/codemirror-theme-tokyo-night";
-import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
-
 export type CodeMirrorThemePresetId =
   | "follow-app"
   | "github-light"
@@ -17,15 +10,14 @@ export type CodeMirrorThemePresetId =
 export const CODEMIRROR_THEME_PRESETS: Array<{
   id: CodeMirrorThemePresetId;
   label: string;
-  extension?: Extension;
 }> = [
   { id: "follow-app", label: "Follow App Theme" },
-  { id: "github-light", label: "GitHub Light", extension: githubLight },
-  { id: "github-dark", label: "GitHub Dark", extension: githubDark },
-  { id: "vscode-light", label: "VS Code Light", extension: vscodeLight },
-  { id: "vscode-dark", label: "VS Code Dark", extension: vscodeDark },
-  { id: "dracula", label: "Dracula", extension: dracula },
-  { id: "tokyo-night", label: "Tokyo Night", extension: tokyoNight }
+  { id: "github-light", label: "GitHub Light" },
+  { id: "github-dark", label: "GitHub Dark" },
+  { id: "vscode-light", label: "VS Code Light" },
+  { id: "vscode-dark", label: "VS Code Dark" },
+  { id: "dracula", label: "Dracula" },
+  { id: "tokyo-night", label: "Tokyo Night" }
 ];
 
 export function getCodeMirrorThemePreset(id: string | null | undefined) {

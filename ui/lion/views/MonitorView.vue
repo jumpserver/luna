@@ -1,20 +1,21 @@
 <script lang="ts" setup>
-import { useWindowSize } from "@vueuse/core";
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { resolveWsUrl } from "@jumpserver/connectors-core";
+import { useElementSize } from "@vueuse/core";
+import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 import { useGuacamoleClient } from "@/lion/hooks/useGuacamoleClient";
 import { createLionConnectTicket } from "@/lion/hooks/useLionConnectTicket";
 import { useLionEndpoint } from "@/lion/hooks/useLionEndpoint";
-import { withLionWsUrl } from "@/lion/utils/base";
 
+const props = defineProps<{ sessionId?: string; endpointUrl?: string; ticket?: string }>();
 const route = useRoute();
 const { t } = useI18n();
-const { width, height } = useWindowSize();
+const containerRef = useTemplateRef<HTMLElement>("containerRef");
+const { width, height } = useElementSize(containerRef);
 const displayRef = ref<HTMLElement | null>(null);
-const endpointUrl = useLionEndpoint();
-const sessionId = String(route.query.session || "");
-const wsUrl = computed(() => withLionWsUrl("/ws/monitor/", endpointUrl.value));
+const endpointUrl = useLionEndpoint(() => props.endpointUrl);
+const sessionId = computed(() => props.sessionId || String(route.query.session || ""));
 const connectError = ref("");
 let disposed = false;
 const { connectToGuacamole, connectStatusLabel, disconnectGuaclient, guaDisplay, loading, resizeGuaScale } =
@@ -32,17 +33,22 @@ watch(
 
 onMounted(async () => {
   try {
-    const ticket = await createLionConnectTicket(endpointUrl.value);
+    const ticket = props.ticket ?? (await createLionConnectTicket(endpointUrl.value));
     if (disposed) return;
+    const wsUrl = new URL(
+      resolveWsUrl("lion", "monitor", {
+        component: "lion",
+        tokenId: "",
+        ticket,
+        endpointUrl: endpointUrl.value,
+        wsQuery: { type: "monitor", target_id: sessionId.value }
+      })
+    );
     connectToGuacamole(
-      wsUrl.value,
-      {
-        type: "monitor",
-        SESSION_ID: sessionId,
-        ...(ticket ? { ticket } : {})
-      },
-      window.innerWidth,
-      window.innerHeight
+      `${wsUrl.origin}${wsUrl.pathname}`,
+      Object.fromEntries(wsUrl.searchParams),
+      width.value || window.innerWidth,
+      height.value || window.innerHeight
     );
     const displayEl = displayRef.value;
     if (displayEl) displayEl.appendChild(guaDisplay.value.getElement());
@@ -60,7 +66,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="relative flex h-full w-full flex-col justify-center">
+  <div ref="containerRef" class="relative flex h-full w-full flex-col justify-center">
     <div v-if="loading" class="absolute inset-0 z-10 flex items-center justify-center bg-default/80">
       <div class="flex flex-col items-center gap-2 text-sm text-muted">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />

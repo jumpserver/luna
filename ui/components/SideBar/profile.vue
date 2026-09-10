@@ -614,7 +614,7 @@ function clearValidationError() {
 async function clearAuthInfo() {
   profileOpen.value = false;
   if (!(await confirmLeaveCurrentSiteSessions("logout"))) return;
-  userInfoStore.deleteUserData(currentAccountId.value);
+  await userInfoStore.deleteUserData(currentAccountId.value);
   if (loggedIn.value) return;
   // ponytail: don't watch loggedIn to leave /files — bootstrap sets false before revalidation
   if (!isDesktopRuntime()) {
@@ -629,8 +629,7 @@ async function handleSwitchAccount(accountId: string) {
 
   profileOpen.value = false;
   if (!(await confirmLeaveCurrentSiteSessions("switch"))) return;
-  userInfoStore.setCurrentAccount(accountId);
-  nextTick(() => useEventBus().emit("refresh", undefined));
+  await userInfoStore.setCurrentAccount(accountId);
 }
 
 function openAddSite() {

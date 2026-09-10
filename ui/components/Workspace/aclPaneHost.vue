@@ -8,7 +8,20 @@ const { closePane } = useWorkspaceTabs();
 const group = groupForScope(props.scopeId);
 const { description, hasPending, isActionable, isBusy, isReview, title } = useAclDialogPresentation(group);
 
+const cancelConfirmOpen = ref(false);
+
 const handleClose = async () => {
+  if (!group.value) return;
+  if (hasPending.value) {
+    cancelConfirmOpen.value = true;
+    return;
+  }
+  await close(group.value);
+  await closePane(props.scopeId);
+};
+
+const confirmCancel = async () => {
+  cancelConfirmOpen.value = false;
   if (!group.value) return;
   await close(group.value);
   await closePane(props.scopeId);
@@ -43,10 +56,10 @@ onBeforeUnmount(() => {
   >
     <template #body>
       <UAlert
-        v-if="isReview && !group.submitted"
-        color="warning"
+        v-if="isReview && (!group.submitted || hasPending)"
+        :color="group.submitted ? 'info' : 'warning'"
         variant="soft"
-        icon="i-lucide-triangle-alert"
+        :icon="group.submitted ? 'i-lucide-clock' : 'i-lucide-triangle-alert'"
         :description="description"
         class="mb-4"
       />
@@ -62,4 +75,13 @@ onBeforeUnmount(() => {
       </UButton>
     </template>
   </UModal>
+
+  <ModalAlertDialog
+    v-model:open="cancelConfirmOpen"
+    :title="t('AclDialog.CancelConfirmTitle')"
+    :description="t('AclDialog.CancelConfirmDescription')"
+    :confirm-label="t('Common.Confirm')"
+    confirm-color="error"
+    @confirm="confirmCancel"
+  />
 </template>

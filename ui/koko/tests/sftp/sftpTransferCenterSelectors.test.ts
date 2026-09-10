@@ -143,6 +143,12 @@ describe("sftp transfer center selectors", () => {
     expect(canRetryTransferTask(failedTask)).toBe(true);
     expect(canRetryTransferTask(createTask("lost-a", "failed", { error: "endpoint_unavailable" }))).toBe(false);
     expect(sftpTransferErrorText("endpoint_unavailable", (key) => key)).toBe("FileTransfer.EndpointUnavailable");
+    expect(
+      sftpTransferErrorText("endpoint_unavailable", (key) => key, {
+        sourceEndpoint: { id: "sftp:asset", label: "Asset" },
+        destinationEndpoint: { id: "web-download", label: "Download" }
+      })
+    ).toBe("FileTransfer.EndpointUnavailableDownload");
     expect(sftpTransferErrorText("disk full", (key) => key)).toBe("disk full");
     expect(targetHasConflictTasks([pausedConflict])).toBe(true);
     expect(getTargetTransferError([pausedConflict])).toBe("target_exists");

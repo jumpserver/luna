@@ -41,5 +41,8 @@ export function resolveWsUrl(component: JmsComponent, wsRoute: string, ctx: Conn
     ...ctx.wsQuery
   });
   const wsBase = toWsOrigin(ctx.endpointUrl || (import.meta.client ? window.location.origin : ""));
+  if ((component === "koko" || component === "lion") && ctx.wsQuery?.type === "monitor") {
+    return `${wsBase}/koko/ws/monitor/?${params.toString()}`;
+  }
   return `${wsBase}${WS_PREFIX[component]}${wsRoute}/?${params.toString()}`;
 }

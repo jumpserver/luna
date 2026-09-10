@@ -467,6 +467,9 @@ export interface RdpGraphics {
   rdp_color_quality?: string;
   rdp_smart_size?: string;
   applet_connection_method?: string;
+  appletConnectMethod?: string;
+  reusable?: boolean;
+  remote_microphone?: boolean;
   file_name_conflict_resolution?: string;
 }
 

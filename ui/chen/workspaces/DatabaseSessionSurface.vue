@@ -160,7 +160,7 @@ const tree = useChenResourceTree(auth.chenToken, {
     // load failures surface as a toast here.
     if (!node) return;
     addErrorToast({
-      title: "Failed to load node",
+      title: t("Chen.LoadNodeFailed"),
       description: node.label || node.name || node.key
     });
   }
@@ -340,7 +340,7 @@ function clearLogConsole() {
   unreadLogErrorCount.value = 0;
 }
 
-const queryConsole = useChenQueryConsole(sendConsoleAction, { onLog: appendLogConsoleEntry });
+const queryConsole = useChenQueryConsole(sendConsoleAction, { onLog: appendLogConsoleEntry, translate: t });
 const session = useChenSession({
   authenticate: auth.authenticate,
   translate: t,
@@ -373,7 +373,7 @@ const session = useChenSession({
   },
   showMessage: (data) => {
     toast.add({
-      title: data?.level || "Message",
+      title: data?.level || t("Chen.Message"),
       description: data?.message || "",
       color: data?.level?.toLowerCase() === "error" ? "error" : "primary"
     });
@@ -384,7 +384,7 @@ const session = useChenSession({
 const sendSqlAiFrame: ChenSqlAiFrameSender = (frame) => session.sessionConnection.sendWhenReady(frame);
 const startupError = computed(() => {
   if (session.error.value) return session.error.value;
-  if (!tokenId.value && props.tab.status === "failed") return "Failed to start database workspace";
+  if (!tokenId.value && props.tab.status === "failed") return t("Chen.StartDatabaseWorkspaceFailed");
   return "";
 });
 const adminTerminated = computed(() => session.errorReason.value === "admin_terminate");
@@ -421,8 +421,8 @@ async function downloadExportFile(fileKey: string) {
   const result = await saveChenExport(file.blob, file.fileName);
   toast.add(
     result === "saved"
-      ? { title: "Export downloaded", description: file.fileName, color: "success" }
-      : { title: "Export canceled", description: file.fileName, color: "neutral" }
+      ? { title: t("Chen.ExportDownloaded"), description: file.fileName, color: "success" }
+      : { title: t("Chen.ExportCanceled"), description: file.fileName, color: "neutral" }
   );
 }
 
@@ -600,7 +600,7 @@ function initConsoleSocket(tab: ChenWorkspaceTab) {
   const existing = consoleConnections.get(tab.id);
   if (existing) return existing;
   if (!session.ready.value) {
-    tab.connectionError = "Database session is not ready";
+    tab.connectionError = t("Chen.DatabaseSessionNotReady");
     return null;
   }
 
@@ -663,7 +663,7 @@ function sendConsoleAction(tab: ChenWorkspaceTab, type: string, data?: any) {
   const connection = consoleConnections.get(tab.id) || initConsoleSocket(tab);
   if (connection?.sendWhenReady(action)) return true;
 
-  tab.connectionError ||= "Console websocket is not connected";
+  tab.connectionError ||= t("Chen.ConsoleWebSocketNotConnected");
   queryConsole.failConsoleExecution(tab, tab.connectionError);
   return false;
 }
@@ -684,8 +684,8 @@ function refreshDataViewWithNewConnection(tab: ChenWorkspaceTab, target: ChenDat
 function guardDataViewChanges(targets: ChenDataViewActionTarget[], action: () => void) {
   if (targets.some((target) => target.editState.activeRequest !== null)) {
     toast.add({
-      title: "Data view request in progress",
-      description: "Wait for the current request to finish before continuing.",
+      title: t("Chen.DataViewRequestInProgress"),
+      description: t("Chen.WaitForCurrentRequest"),
       color: "warning"
     });
     return;
@@ -700,7 +700,7 @@ function guardDataViewChanges(targets: ChenDataViewActionTarget[], action: () =>
     dirtyTargets.forEach((target) => clearChenDataViewEdits(target.editState));
     action();
   };
-  discardDialogMessage.value = "This data view has unsaved edits. Discard them and continue?";
+  discardDialogMessage.value = t("Chen.DiscardDataViewEditsMessage");
   discardDialogOpen.value = true;
 }
 
@@ -743,13 +743,13 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
     const outcome = acceptChenSaveChangesPreviewResult(target.editState, result);
     if (outcome === "failed") {
       addErrorToast({
-        title: "Preview failed",
-        description: resultFailureDescription(result, "Preview failed")
+        title: t("Chen.PreviewFailed"),
+        description: resultFailureDescription(result, t("Chen.PreviewFailed"))
       });
     } else if (outcome === "stale") {
       toast.add({
-        title: "Preview is out of date",
-        description: "The data changed after preview started. Preview the changes again.",
+        title: t("Chen.PreviewOutOfDate"),
+        description: t("Chen.PreviewOutOfDateDescription"),
         color: "warning"
       });
     }
@@ -762,9 +762,8 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
   if (outcome === "commit-unknown") {
     clearChenDataViewEdits(target.editState);
     toast.add({
-      title: "Save outcome is unknown",
-      description:
-        "The connection was reset. Refreshing with a new connection to verify the database state; do not retry until it finishes.",
+      title: t("Chen.SaveOutcomeUnknown"),
+      description: t("Chen.SaveOutcomeUnknownDescription"),
       color: "warning"
     });
     refreshDataViewWithNewConnection(tab, target);
@@ -772,15 +771,15 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
   }
   if (outcome === "failed") {
     addErrorToast({
-      title: "Save failed",
-      description: resultFailureDescription(result, "Save failed")
+      title: t("Chen.SaveFailed"),
+      description: resultFailureDescription(result, t("Chen.SaveFailed"))
     });
     return;
   }
   if (outcome === "stale-applied") {
     const connectionDetail = result.connectionInvalidated
-      ? "The connection was reset. Refresh before saving again; transaction and session state were lost."
-      : "Refresh was skipped so the newer local edits are not discarded.";
+      ? t("Chen.ConnectionResetRefreshBeforeSaving")
+      : t("Chen.RefreshSkippedForLocalEdits");
     const auditDetail =
       result.auditSucceeded === false
         ? result.databaseCommitted
@@ -788,7 +787,7 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
           : " Audit recording failed after applying the current transaction; do not retry the save."
         : "";
     toast.add({
-      title: "Save applied; newer edits were kept",
+      title: t("Chen.SaveAppliedNewerEditsKept"),
       description: `${connectionDetail}${auditDetail}`,
       color: "warning"
     });
@@ -799,23 +798,21 @@ function consumeDataViewSavePacket(tab: ChenWorkspaceTab, packet: ChenPacket) {
   clearChenDataViewEdits(target.editState);
   if (result.connectionInvalidated) {
     toast.add({
-      title: result.success ? "Save succeeded; connection reset" : "Database changes applied; connection reset",
+      title: result.success ? t("Chen.SaveSucceededConnectionReset") : t("Chen.ChangesAppliedConnectionReset"),
       description:
-        result.auditSucceeded === false
-          ? "Transaction and session state were lost. Audit recording also failed; do not retry the save. Refreshing with a new connection."
-          : "Transaction and session state were lost. Refreshing with a new connection.",
+        result.auditSucceeded === false ? t("Chen.ConnectionResetAuditFailed") : t("Chen.ConnectionResetRefreshing"),
       color: "warning"
     });
   } else if (result.auditSucceeded === false) {
     toast.add({
-      title: "Save applied; audit failed",
+      title: t("Chen.SaveAppliedAuditFailed"),
       description: result.databaseCommitted
-        ? "The database commit succeeded. Do not retry the save."
-        : "The changes were applied to the current transaction. Do not retry the save.",
+        ? t("Chen.DatabaseCommitSucceededNoRetry")
+        : t("Chen.TransactionChangesAppliedNoRetry"),
       color: "warning"
     });
   } else {
-    toast.add({ title: result.success ? "Save succeeded" : "Database changes applied", color: "success" });
+    toast.add({ title: result.success ? t("Chen.SaveSucceeded") : t("Chen.DatabaseChangesApplied"), color: "success" });
   }
   if (result.connectionInvalidated) refreshDataViewWithNewConnection(tab, target);
   else dataView.sendDataViewAction(tab, target, "refresh");
@@ -892,15 +889,15 @@ function handleIndexOperationPacket(tab: ChenQueryConsoleTab, packet: ChenPacket
   const failed = ["error", "cancelled"].includes(packet.data?.executionStatus) || Boolean(operation.error);
   if (failed) {
     addErrorToast({
-      title: `Failed to ${operation.operation} index`,
+      title: operation.operation === "create" ? t("Chen.CreateIndexFailed") : t("Chen.DropIndexFailed"),
       description:
-        operation.error || tab.message?.message || tab.logs.at(-1) || "The database rejected the index statement."
+        operation.error || tab.message?.message || tab.logs.at(-1) || t("Chen.DatabaseRejectedIndexStatement")
     });
     return;
   }
 
   toast.add({
-    title: operation.operation === "create" ? "Index created" : "Index dropped",
+    title: operation.operation === "create" ? t("Chen.IndexCreated") : t("Chen.IndexDropped"),
     description: operation.indexName,
     color: "success"
   });
@@ -921,15 +918,15 @@ function packetErrorMessage(data: any) {
 async function finishCreateTable(tab: ChenCreateTableWorkspaceTab, succeeded: boolean) {
   tab.submitting = false;
   if (!succeeded) {
-    tab.submitError ||= "The database rejected the CREATE TABLE statement.";
-    addErrorToast({ title: "Failed to create table", description: tab.submitError });
+    tab.submitError ||= t("Chen.DatabaseRejectedCreateTable");
+    addErrorToast({ title: t("Chen.CreateTableFailed"), description: tab.submitError });
     return;
   }
 
   tab.created = true;
   tab.title = tab.tableName.trim() || tab.title;
   clearMetadataCaches();
-  toast.add({ title: "Table created", description: tab.tableName.trim(), color: "success" });
+  toast.add({ title: t("Chen.TableCreated"), description: tab.tableName.trim(), color: "success" });
   await tree.loadNodeChildren(tab.parentNode, true);
 }
 
@@ -966,8 +963,8 @@ function handleCreateTablePacket(tab: ChenCreateTableWorkspaceTab, packet: ChenP
 function finishTableStructure(tab: ChenTableStructureWorkspaceTab, succeeded: boolean) {
   tab.submitting = false;
   if (!succeeded) {
-    tab.submitError ||= "The database rejected the ALTER TABLE statement.";
-    addErrorToast({ title: "Failed to update table structure", description: tab.submitError });
+    tab.submitError ||= t("Chen.DatabaseRejectedAlterTable");
+    addErrorToast({ title: t("Chen.UpdateTableStructureFailed"), description: tab.submitError });
     return;
   }
 
@@ -984,7 +981,7 @@ function finishTableStructure(tab: ChenTableStructureWorkspaceTab, succeeded: bo
       added: false,
       deleted: false
     }));
-  toast.add({ title: "Table structure updated", description: tab.tableName, color: "success" });
+  toast.add({ title: t("Chen.TableStructureUpdated"), description: tab.tableName, color: "success" });
   const source = workspace.workspaceTabState[tab.sourceTabId];
   if (source?.kind === "data-view") {
     source.tableMetadata = null;
@@ -1192,16 +1189,16 @@ async function openSchemaOverviewTable(tab: ChenDatabaseWorkspaceTab, tableName:
     const tablesFolder = (tab.node.children || []).find(
       (child) => child.type === "folder" && String(child.label || child.name || "").toLowerCase() === "tables"
     );
-    if (!tablesFolder) throw new Error("Tables folder is unavailable");
+    if (!tablesFolder) throw new Error(t("Chen.TablesFolderUnavailable"));
     if (!Array.isArray(tablesFolder.children)) await tree.loadNodeChildren(tablesFolder);
     const tableNode = (tablesFolder.children || []).find(
       (child) => child.type === "table" && String(child.label || child.name || "") === tableName
     );
-    if (!tableNode) throw new Error(`Table ${tableName} is unavailable`);
+    if (!tableNode) throw new Error(t("Chen.NamedTableUnavailable", { name: tableName }));
     await handleNodeClick(tableNode);
   } catch (cause) {
     addErrorToast({
-      title: "Failed to open table",
+      title: t("Chen.OpenTableFailed"),
       description: cause instanceof Error ? cause.message : String(cause)
     });
   }
@@ -1247,7 +1244,7 @@ function closeWorkspaceTab(id: string) {
   const tab = workspace.workspaceTabState[id];
   if (tab?.kind === "table-structure" && tableStructureDirty(tab)) {
     pendingDiscard.value = () => performCloseWorkspaceTab(id);
-    discardDialogMessage.value = "This table structure has unapplied changes. Discard them and close the tab?";
+    discardDialogMessage.value = t("Chen.DiscardTableStructureChangesMessage");
     discardDialogOpen.value = true;
     return;
   }
@@ -1274,8 +1271,8 @@ function createWorkspaceTab(kind: "query" | "console") {
   const node = currentWorkspaceNode.value;
   if (!canOpenChenQueryConsole(node)) {
     toast.add({
-      title: "No database context",
-      description: "Select a datasource, database, schema, or table node first, then create a tab.",
+      title: t("Chen.NoDatabaseContext"),
+      description: t("Chen.SelectDatabaseContextFirst"),
       color: "warning"
     });
     return;
@@ -1306,7 +1303,7 @@ const actionMenu = useChenActionMenu<DropdownMenuItem>({
   fetchActions: async (node) => {
     if (!canCreateTableFromNode(node)) return fetchChenActions(auth.chenToken.value, node, endpointUrl.value);
 
-    const createTableAction: ChenActionItem = { key: "__create_table__", label: "New Table" };
+    const createTableAction: ChenActionItem = { key: "__create_table__", label: t("Chen.NewTable") };
     try {
       const actions = await fetchChenActions(auth.chenToken.value, node, endpointUrl.value);
       const otherActions = actions.filter((item) => {
@@ -1321,7 +1318,7 @@ const actionMenu = useChenActionMenu<DropdownMenuItem>({
   mapItems: mapActionItems,
   onError: (node, cause) => {
     addErrorToast({
-      title: "Failed to load actions",
+      title: t("Chen.LoadActionsFailed"),
       description: `${node.label || node.name || node.key}: ${cause instanceof Error ? cause.message : String(cause)}`
     });
   }
@@ -1369,7 +1366,7 @@ function mapActionItems(node: ChenTreeNode, items: ChenActionItem[]): DropdownMe
     };
     const icon = resolveActionMenuIcon(item);
     const mappedItem: DropdownMenuItem = {
-      label: item.label,
+      label: item.key === "__create_table__" ? t("Chen.NewTable") : item.label,
       ...(icon ? { icon } : {}),
       ...(item.disabled ? { disabled: true } : {}),
       ...(item.children?.length ? { children: mapActionItems(node, item.children) } : { onSelect })
@@ -1420,7 +1417,7 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
     }
   } catch (cause) {
     addErrorToast({
-      title: "Action failed",
+      title: t("Chen.ActionFailed"),
       description: cause instanceof Error ? cause.message : String(cause)
     });
   }
@@ -1448,8 +1445,8 @@ function openCreateTableWorkspace(node: ChenTreeNode) {
     );
   if (!contextNode) {
     toast.add({
-      title: "No database context",
-      description: "Refresh the database tree and try again.",
+      title: t("Chen.NoDatabaseContext"),
+      description: t("Chen.RefreshDatabaseTreeTryAgain"),
       color: "warning"
     });
     return;
@@ -1473,7 +1470,7 @@ function submitCreateTable(tab: ChenCreateTableWorkspaceTab, sql: string) {
   tab.executionStarted = false;
   if (!queryConsole.sendSql(tab, sql)) {
     tab.submitting = false;
-    tab.submitError = tab.connectionError || "Console websocket is not connected";
+    tab.submitError = tab.connectionError || t("Chen.ConsoleWebSocketNotConnected");
   }
 }
 
@@ -1505,7 +1502,7 @@ function updateActiveCreateTableColumn(id: string, patch: Partial<ChenCreateTabl
 function openTableStructureWorkspace(tab: ChenDataViewConsoleTab, columns: ChenDataViewColumnPreview[]) {
   const tableName = String(tab.meta?.table || tab.meta?.title || tab.title).trim();
   if (!tableName) {
-    toast.add({ title: "Table metadata unavailable", color: "warning" });
+    toast.add({ title: t("Chen.TableMetadataUnavailable"), color: "warning" });
     return;
   }
   const structureTab = workspace.openTableStructureTab(
@@ -1569,7 +1566,7 @@ function submitTableStructure(tab: ChenTableStructureWorkspaceTab, sql: string) 
   tab.executionStarted = false;
   if (!queryConsole.sendSql(tab, sql)) {
     tab.submitting = false;
-    tab.submitError = tab.connectionError || "Console websocket is not connected";
+    tab.submitError = tab.connectionError || t("Chen.ConsoleWebSocketNotConnected");
   }
 }
 
@@ -1581,25 +1578,32 @@ function executeIndexSql(
 ) {
   if (sourceTab.editState.activeRequest || chenDataViewHasDirty(sourceTab.editState)) {
     toast.add({
-      title: "Resolve pending row changes first",
-      description: "Save or cancel the table's pending row changes before changing its indexes.",
+      title: t("Chen.ResolvePendingRowChangesFirst"),
+      description: t("Chen.ResolvePendingRowChangesDescription"),
       color: "warning"
     });
     return;
   }
   const activeOperation = [...indexOperations.values()].some((item) => item.sourceTabId === sourceTab.id);
   if (activeOperation) {
-    toast.add({ title: "Index operation in progress", color: "warning" });
+    toast.add({ title: t("Chen.IndexOperationInProgress"), color: "warning" });
     return;
   }
-  const tab = workspace.openQueryTab(sourceTab.nodeKey, `${operation === "create" ? "Create" : "Drop"} index`, false);
+  const tab = workspace.openQueryTab(
+    sourceTab.nodeKey,
+    operation === "create" ? t("Chen.CreateIndex") : t("Chen.DropIndex"),
+    false
+  );
   if (!tab || tab.kind !== "query") return;
   tab.statement = sql;
   indexOperations.set(tab.id, { sourceTabId: sourceTab.id, operation, indexName, started: false, error: "" });
   initConsoleSocket(tab);
   if (!queryConsole.sendSql(tab, sql)) {
     indexOperations.delete(tab.id);
-    addErrorToast({ title: `Failed to ${operation} index`, description: tab.connectionError || "Console unavailable" });
+    addErrorToast({
+      title: operation === "create" ? t("Chen.CreateIndexFailed") : t("Chen.DropIndexFailed"),
+      description: tab.connectionError || t("Chen.ConsoleUnavailable")
+    });
   }
 }
 
@@ -1616,8 +1620,8 @@ async function handleNodeClick(node: ChenTreeNode) {
       (await tree.resolveNodePath(recentEntry.path || [])) || tree.findNodeByKey(recentEntry.node?.key || "");
     if (!liveNode) {
       toast.add({
-        title: "Table is no longer available",
-        description: "Refresh the database tree and open the table again.",
+        title: t("Chen.TableNoLongerAvailable"),
+        description: t("Chen.RefreshDatabaseTreeOpenTableAgain"),
         color: "warning"
       });
       return;
@@ -1698,7 +1702,7 @@ async function uploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
     sql = await file.text();
   } catch (cause) {
     addErrorToast({
-      title: "SQL file could not be read",
+      title: t("Chen.ReadSqlFileFailed"),
       description: cause instanceof Error ? cause.message : String(cause)
     });
     return;
@@ -1721,10 +1725,10 @@ async function performUploadQuerySql(tab: ChenQueryConsoleTab, file: File) {
     const result = await uploadChenSqlFile(auth.chenToken.value, file, undefined, endpointUrl.value);
     queryConsole.runQueryFile(tab, result.path);
     clearMetadataCaches();
-    toast.add({ title: "SQL file uploaded", description: file.name, color: "success" });
+    toast.add({ title: t("Chen.SqlFileUploaded"), description: file.name, color: "success" });
   } catch (cause) {
     addErrorToast({
-      title: "SQL upload failed",
+      title: t("Chen.SqlUploadFailed"),
       description: cause instanceof Error ? cause.message : String(cause)
     });
   } finally {
@@ -1794,8 +1798,8 @@ function runQueryDataViewAction(
 ) {
   if ((action === "save_changes_preview" || action === "save_changes") && result.editState.refreshRequiredBeforeSave) {
     toast.add({
-      title: "Refresh required",
-      description: "Refresh the data before saving again because the previous connection was reset.",
+      title: t("Chen.RefreshRequired"),
+      description: t("Chen.RefreshRequiredAfterConnectionReset"),
       color: "warning"
     });
     return;
@@ -1815,8 +1819,8 @@ function runStandaloneDataViewAction(
 ) {
   if ((action === "save_changes_preview" || action === "save_changes") && tab.editState.refreshRequiredBeforeSave) {
     toast.add({
-      title: "Refresh required",
-      description: "Refresh the data before saving again because the previous connection was reset.",
+      title: t("Chen.RefreshRequired"),
+      description: t("Chen.RefreshRequiredAfterConnectionReset"),
       color: "warning"
     });
     return;
@@ -1954,7 +1958,7 @@ defineExpose({ focus });
         v-if="isNarrowScreen && resourceTreeOpen"
         type="button"
         class="absolute inset-0 z-30 bg-black/35 backdrop-blur-[1px]"
-        aria-label="Close database explorer"
+        :aria-label="t('Chen.CloseDatabaseExplorer')"
         @click="resourceTreeOpen = false"
       />
 
@@ -2191,7 +2195,7 @@ defineExpose({ focus });
 
     <ChenWorkspaceModal
       :open="unrestrictedMutationDialogOpen"
-      title="Execute statement without WHERE?"
+      :title="t('Chen.ExecuteWithoutWhereTitle')"
       :dismissible="false"
       :close="false"
       @update:open="updateUnrestrictedMutationDialog"
@@ -2199,8 +2203,7 @@ defineExpose({ focus });
       <template #body>
         <div class="space-y-3">
           <p class="text-sm text-muted">
-            One or more UPDATE or DELETE statements have no WHERE clause and may affect every row in a table. Confirm
-            that you want to execute them.
+            {{ t("Chen.ExecuteWithoutWhereDescription") }}
           </p>
           <pre
             class="max-h-48 overflow-auto rounded-md border border-default bg-[var(--workspace-surface-sub-panel)] p-3 font-ui-mono text-xs whitespace-pre-wrap text-default"
@@ -2210,9 +2213,11 @@ defineExpose({ focus });
 
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <UButton color="neutral" variant="soft" @click="updateUnrestrictedMutationDialog(false)">Cancel</UButton>
+          <UButton color="neutral" variant="soft" @click="updateUnrestrictedMutationDialog(false)">
+            {{ t("Common.Cancel") }}
+          </UButton>
           <UButton color="error" icon="i-lucide-triangle-alert" @click="confirmUnrestrictedMutation">
-            Execute anyway
+            {{ t("Chen.ExecuteAnyway") }}
           </UButton>
         </div>
       </template>

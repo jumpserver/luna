@@ -17,6 +17,8 @@ const emit = defineEmits<{
   confirm: [sql: string, name: string];
 }>();
 
+const { t } = useI18n();
+
 const name = ref("");
 const selectedColumns = ref<string[]>([]);
 const unique = ref(false);
@@ -38,8 +40,8 @@ const input = computed<ChenCreateIndexInput>(() => ({
 const validation = computed(() => {
   try {
     return { sql: buildChenCreateIndexSql(input.value, props.dbType), error: "" };
-  } catch (cause) {
-    return { sql: "", error: cause instanceof Error ? cause.message : String(cause) };
+  } catch {
+    return { sql: "", error: t("Chen.InvalidIndexDefinition") };
   }
 });
 
@@ -68,14 +70,14 @@ function submit() {
 </script>
 
 <template>
-  <ChenWorkspaceModal v-model:open="visible" title="Create index">
+  <ChenWorkspaceModal v-model:open="visible" :title="t('Chen.CreateIndex')">
     <template #body>
       <div class="space-y-4">
-        <UFormField label="Index name" required>
-          <UInput v-model="name" class="w-full" placeholder="e.g. users_email_idx" autofocus />
+        <UFormField :label="t('Chen.IndexName')" required>
+          <UInput v-model="name" class="w-full" :placeholder="t('Chen.IndexNameExample')" autofocus />
         </UFormField>
 
-        <UFormField label="Columns" required>
+        <UFormField :label="t('Chen.Columns')" required>
           <USelectMenu
             v-model="selectedColumns"
             multiple
@@ -83,22 +85,22 @@ function submit() {
             :items="columnItems"
             value-key="value"
             label-key="label"
-            placeholder="Select columns in index order"
+            :placeholder="t('Chen.SelectIndexColumns')"
           />
         </UFormField>
 
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="flex items-center gap-2 text-sm">
             <UCheckbox v-model="unique" />
-            <span>Unique index</span>
+            <span>{{ t("Chen.UniqueIndex") }}</span>
           </label>
-          <UFormField v-if="methodItems.length" label="Method">
+          <UFormField v-if="methodItems.length" :label="t('Chen.Method')">
             <USelect v-model="method" class="w-full" :items="methodItems" value-key="value" />
           </UFormField>
         </div>
 
         <div>
-          <div class="mb-1.5 text-xs font-medium text-highlighted">SQL preview</div>
+          <div class="mb-1.5 text-xs font-medium text-highlighted">{{ t("Chen.SqlPreview") }}</div>
           <pre class="max-h-52 overflow-auto rounded-md bg-elevated p-3 text-xs text-muted">{{
             validation.sql || validation.error
           }}</pre>
@@ -108,9 +110,9 @@ function submit() {
 
     <template #footer>
       <div class="flex w-full justify-end gap-2">
-        <UButton color="neutral" variant="ghost" @click="visible = false">Cancel</UButton>
+        <UButton color="neutral" variant="ghost" @click="visible = false">{{ t("Common.Cancel") }}</UButton>
         <UButton icon="i-lucide-database-zap" :disabled="Boolean(validation.error)" @click="submit">
-          Create index
+          {{ t("Chen.CreateIndex") }}
         </UButton>
       </div>
     </template>

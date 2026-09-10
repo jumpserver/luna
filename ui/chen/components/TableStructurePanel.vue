@@ -13,6 +13,8 @@ const emit = defineEmits<{
   updateColumn: [id: string, patch: Partial<ChenTableStructureWorkspaceTab["columns"][number]>];
 }>();
 
+const { t } = useI18n();
+
 const confirmOpen = ref(false);
 const typeOptions = computed(() =>
   [...new Set([...chenCreateTableTypes(props.tab.dbType), ...props.tab.columns.map((column) => column.type)])].map(
@@ -25,8 +27,8 @@ const sqlResult = computed(() => {
       sql: buildChenAlterTableSql(props.tab.schemaName, props.tab.tableName, props.tab.columns, props.tab.dbType),
       error: ""
     };
-  } catch (cause) {
-    return { sql: "", error: cause instanceof Error ? cause.message : String(cause) };
+  } catch {
+    return { sql: "", error: t("Chen.InvalidTableStructureChanges") };
   }
 });
 const deletedCount = computed(() => props.tab.columns.filter((column) => column.deleted && !column.added).length);
@@ -51,10 +53,10 @@ function confirmSubmit() {
   <div class="flex h-full min-h-0 flex-col bg-[var(--workspace-surface-main)]">
     <div class="flex shrink-0 items-center justify-between border-b border-default px-4 py-3">
       <div>
-        <h2 class="text-sm font-medium text-highlighted">Alter table · {{ tab.tableName }}</h2>
-        <p class="mt-0.5 text-[11px] text-muted">Add, rename, change, or remove columns.</p>
+        <h2 class="text-sm font-medium text-highlighted">{{ t("Chen.AlterTableTitle", { name: tab.tableName }) }}</h2>
+        <p class="mt-0.5 text-[11px] text-muted">{{ t("Chen.EditStructureHint") }}</p>
       </div>
-      <UBadge v-if="tab.saved" color="success" variant="subtle">Saved</UBadge>
+      <UBadge v-if="tab.saved" color="success" variant="subtle">{{ t("Chen.Saved") }}</UBadge>
     </div>
 
     <div class="min-h-0 flex-1 overflow-auto p-4">
@@ -64,11 +66,11 @@ function confirmSubmit() {
             <thead class="bg-elevated/60 text-muted">
               <tr>
                 <th class="w-12 px-3 py-2 font-medium">#</th>
-                <th class="px-3 py-2 font-medium">Name</th>
-                <th class="w-44 px-3 py-2 font-medium">Type</th>
-                <th class="w-40 px-3 py-2 font-medium">Length / precision</th>
-                <th class="w-24 px-3 py-2 text-center font-medium">Nullable</th>
-                <th class="w-24 px-3 py-2 text-center font-medium">Status</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Name") }}</th>
+                <th class="w-44 px-3 py-2 font-medium">{{ t("Chen.Type") }}</th>
+                <th class="w-40 px-3 py-2 font-medium">{{ t("Chen.LengthPrecision") }}</th>
+                <th class="w-24 px-3 py-2 text-center font-medium">{{ t("Chen.Nullable") }}</th>
+                <th class="w-24 px-3 py-2 text-center font-medium">{{ t("Chen.Status") }}</th>
                 <th class="w-14 px-3 py-2" />
               </tr>
             </thead>
@@ -118,9 +120,9 @@ function confirmSubmit() {
                   />
                 </td>
                 <td class="px-3 py-2 text-center">
-                  <UBadge v-if="column.deleted" color="error" variant="subtle">Delete</UBadge>
-                  <UBadge v-else-if="column.added" color="success" variant="subtle">New</UBadge>
-                  <span v-else class="text-muted">Existing</span>
+                  <UBadge v-if="column.deleted" color="error" variant="subtle">{{ t("Chen.Delete") }}</UBadge>
+                  <UBadge v-else-if="column.added" color="success" variant="subtle">{{ t("Chen.New") }}</UBadge>
+                  <span v-else class="text-muted">{{ t("Chen.Existing") }}</span>
                 </td>
                 <td class="px-3 py-2 text-right">
                   <UButton
@@ -129,7 +131,11 @@ function confirmSubmit() {
                     :icon="column.deleted ? 'i-lucide-undo-2' : 'i-lucide-trash-2'"
                     size="xs"
                     :disabled="tab.submitting"
-                    :aria-label="column.deleted ? `Restore ${column.name}` : `Delete ${column.name}`"
+                    :aria-label="
+                      column.deleted
+                        ? t('Chen.RestoreNamedColumn', { name: column.name })
+                        : t('Chen.DeleteNamedColumn', { name: column.name })
+                    "
                     @click="updateColumn(column.id, { deleted: !column.deleted })"
                   />
                 </td>
@@ -145,7 +151,7 @@ function confirmSubmit() {
               :disabled="tab.submitting"
               @click="emit('addColumn')"
             >
-              Add column
+              {{ t("Chen.AddColumn") }}
             </UButton>
           </div>
         </div>
@@ -162,26 +168,28 @@ function confirmSubmit() {
 
     <div class="flex shrink-0 items-center justify-between gap-3 border-t border-default px-4 py-3">
       <p class="min-w-0 truncate text-xs" :class="sqlResult.error ? 'text-warning' : 'text-muted'">
-        {{ sqlResult.error || `SQL dialect: ${tab.dbType || "default"}` }}
+        {{ sqlResult.error || t("Chen.SqlDialect", { dialect: tab.dbType || t("Chen.Default") }) }}
       </p>
       <div class="flex shrink-0 gap-2">
-        <UButton color="neutral" variant="ghost" :disabled="tab.submitting" @click="emit('reset')">Reset</UButton>
+        <UButton color="neutral" variant="ghost" :disabled="tab.submitting" @click="emit('reset')">
+          {{ t("Chen.Reset") }}
+        </UButton>
         <UButton icon="i-lucide-eye" :disabled="Boolean(sqlResult.error)" @click="requestSubmit">
-          Preview &amp; Save
+          {{ t("Chen.PreviewAndSave") }}
         </UButton>
       </div>
     </div>
 
     <SqlPreviewDialog
       :open="confirmOpen"
-      :title="`Alter table · ${tab.tableName}`"
-      :description="`These SQL statements will be executed against ${tab.schemaName ? `${tab.schemaName}.` : ''}${tab.tableName}.`"
-      :sql="sqlResult.sql"
-      confirm-label="Apply changes"
-      :danger="deletedCount > 0"
-      :danger-message="
-        deletedCount ? `${deletedCount} existing column(s) will be permanently deleted, including their data.` : ''
+      :title="t('Chen.AlterTableTitle', { name: tab.tableName })"
+      :description="
+        t('Chen.AlterTableDescription', { table: `${tab.schemaName ? `${tab.schemaName}.` : ''}${tab.tableName}` })
       "
+      :sql="sqlResult.sql"
+      :confirm-label="t('Chen.ApplyChanges')"
+      :danger="deletedCount > 0"
+      :danger-message="deletedCount ? t('Chen.DeleteExistingColumnsWarning', { count: deletedCount }) : ''"
       :busy="tab.submitting"
       @confirm="confirmSubmit"
       @update:open="confirmOpen = $event"

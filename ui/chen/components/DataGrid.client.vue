@@ -81,6 +81,7 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
+const { t } = useI18n();
 const gridApi = shallowRef<GridReadyEvent["api"] | null>(null);
 const gridPreferences = useChenGridPreferences();
 const container = shallowRef<HTMLElement | null>(null);
@@ -166,7 +167,7 @@ const columnDefs = computed<ColDef[]>(() => {
     {
       colId: ROW_NUMBER_COLUMN_ID,
       headerName: "#",
-      headerTooltip: "Row number",
+      headerTooltip: t("Chen.RowNumber"),
       headerClass: "chen-row-number-header",
       width: 44,
       minWidth: 44,
@@ -279,33 +280,29 @@ function selectedData() {
   return fields.length && rows.length ? { fields, rows } : null;
 }
 
-function copyError(cause: unknown) {
-  return cause instanceof Error ? cause.message : String(cause);
-}
-
 async function copyText(text: string, successTitle: string) {
   if (!canUseChenCopy(props.canCopy)) return;
   try {
     await writeChenClipboardText(text);
     toast.add({ title: successTitle, color: "success" });
-  } catch (cause) {
-    addErrorToast({ title: "Copy failed", description: copyError(cause) });
+  } catch {
+    addErrorToast({ title: t("Common.CopyFailed"), description: t("Chen.CopyOperationFailedDescription") });
   }
 }
 
 function copySelection() {
   const selected = selectedData();
   if (!selected) return;
-  void copyText(formatChenTsv(selected.rows, selected.fields), "Selection copied");
+  void copyText(formatChenTsv(selected.rows, selected.fields), t("Chen.SelectionCopied"));
 }
 
 function copyInsertSql() {
   if (!currentRow.value || !props.meta) return;
   try {
     const sql = createChenInsertSql(props.dbType, props.meta, props.dataset?.fields || [], currentRow.value);
-    void copyText(sql, "INSERT SQL copied");
-  } catch (cause) {
-    addErrorToast({ title: "Copy failed", description: copyError(cause) });
+    void copyText(sql, t("Chen.InsertSqlCopied"));
+  } catch {
+    addErrorToast({ title: t("Common.CopyFailed"), description: t("Chen.CopyOperationFailedDescription") });
   }
 }
 
@@ -313,9 +310,9 @@ function copyUpdateSql() {
   if (!currentRow.value || !props.meta) return;
   try {
     const sql = createChenUpdateSql(props.dbType, props.meta, props.dataset?.fields || [], currentRow.value);
-    void copyText(sql, "UPDATE SQL copied");
-  } catch (cause) {
-    addErrorToast({ title: "Copy failed", description: copyError(cause) });
+    void copyText(sql, t("Chen.UpdateSqlCopied"));
+  } catch {
+    addErrorToast({ title: t("Common.CopyFailed"), description: t("Chen.CopyOperationFailedDescription") });
   }
 }
 
@@ -326,15 +323,15 @@ const canCopyUpdate = computed(() => canCopyInsert.value && hasChenPrimaryKey(pr
 const contextMenuItems = computed<DropdownMenuItem[]>(() => {
   if (!canUseChenCopy(props.canCopy)) return [];
   return [
-    { label: "Copy selection", icon: "i-lucide-copy", onSelect: copySelection },
+    { label: t("Chen.CopySelection"), icon: "i-lucide-copy", onSelect: copySelection },
     {
-      label: canCopyInsert.value ? "Copy INSERT SQL" : "Copy INSERT SQL (table metadata unavailable)",
+      label: canCopyInsert.value ? t("Chen.CopyInsertSql") : t("Chen.CopyInsertSqlUnavailable"),
       icon: "i-lucide-copy",
       disabled: !canCopyInsert.value,
       onSelect: copyInsertSql
     },
     {
-      label: canCopyUpdate.value ? "Copy UPDATE SQL" : "Copy UPDATE SQL (primary key unavailable)",
+      label: canCopyUpdate.value ? t("Chen.CopyUpdateSql") : t("Chen.CopyUpdateSqlUnavailable"),
       icon: "i-lucide-copy",
       disabled: !canCopyUpdate.value,
       onSelect: copyUpdateSql

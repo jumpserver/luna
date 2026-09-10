@@ -21,7 +21,6 @@ export const BaseAPIURL = withLionUrl("/api");
 
 const sessionBaseAPI = withBasePath("/api");
 const wsURL = withLionWsUrl("/ws/connect/");
-const monitorWsURL = withLionWsUrl("/ws/monitor/");
 
 export function getCurrentConnectParams() {
   const urlParams = getURLParams();
@@ -33,18 +32,6 @@ export function getCurrentConnectParams() {
   result.data = data;
   result.ws = wsURL;
   result.api = sessionBaseAPI;
-  return result;
-}
-
-export function getMonitorConnectParams() {
-  const urlParams = getURLParams();
-  const data: any = {};
-  urlParams.forEach((value, key, _parent) => {
-    data[key] = value;
-  });
-  const result: any = {};
-  result.data = data;
-  result.ws = monitorWsURL;
   return result;
 }
 

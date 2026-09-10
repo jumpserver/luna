@@ -13,6 +13,8 @@ const emit = defineEmits<{
   updateTableName: [value: string];
 }>();
 
+const { t } = useI18n();
+
 const previewOpen = ref(false);
 const typeOptions = computed(() =>
   chenCreateTableTypes(props.tab.dbType).map((type) => ({ label: type, value: type }))
@@ -21,8 +23,8 @@ const validationError = computed(() => {
   try {
     buildChenCreateTableSql(props.tab.tableName, props.tab.columns, props.tab.dbType);
     return "";
-  } catch (cause) {
-    return cause instanceof Error ? cause.message : String(cause);
+  } catch {
+    return t("Chen.InvalidTableDefinition");
   }
 });
 const generatedSql = computed(() => {
@@ -54,23 +56,23 @@ function submit() {
   <div class="flex h-full min-h-0 flex-col bg-[var(--workspace-surface-main)]">
     <div class="flex shrink-0 items-center justify-between border-b border-default px-4 py-3">
       <div>
-        <h2 class="text-sm font-medium text-highlighted">Create table</h2>
-        <p class="mt-0.5 text-[11px] text-muted">Define the table columns, then submit the generated SQL.</p>
+        <h2 class="text-sm font-medium text-highlighted">{{ t("Chen.CreateTable") }}</h2>
+        <p class="mt-0.5 text-[11px] text-muted">{{ t("Chen.CreateTableHint") }}</p>
       </div>
-      <UBadge v-if="tab.created" color="success" variant="subtle">Created</UBadge>
+      <UBadge v-if="tab.created" color="success" variant="subtle">{{ t("Chen.Created") }}</UBadge>
     </div>
 
     <div class="min-h-0 flex-1 overflow-auto p-4">
       <div class="mx-auto max-w-6xl space-y-4">
         <div class="max-w-md">
           <label class="mb-1.5 block text-xs font-medium text-highlighted" for="chen-create-table-name">
-            Table name
+            {{ t("Chen.TableName") }}
           </label>
           <UInput
             id="chen-create-table-name"
             :model-value="tab.tableName"
             class="w-full"
-            placeholder="e.g. users"
+            :placeholder="t('Chen.TableNameExample')"
             :disabled="tab.submitting"
             autofocus
             @update:model-value="emit('updateTableName', $event)"
@@ -82,11 +84,11 @@ function submit() {
             <thead class="bg-elevated/60 text-muted">
               <tr>
                 <th class="w-12 px-3 py-2 font-medium">#</th>
-                <th class="px-3 py-2 font-medium">Name</th>
-                <th class="w-44 px-3 py-2 font-medium">Type</th>
-                <th class="w-40 px-3 py-2 font-medium">Length / precision</th>
-                <th class="w-24 px-3 py-2 text-center font-medium">Nullable</th>
-                <th class="w-24 px-3 py-2 text-center font-medium">Primary</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Name") }}</th>
+                <th class="w-44 px-3 py-2 font-medium">{{ t("Chen.Type") }}</th>
+                <th class="w-40 px-3 py-2 font-medium">{{ t("Chen.LengthPrecision") }}</th>
+                <th class="w-24 px-3 py-2 text-center font-medium">{{ t("Chen.Nullable") }}</th>
+                <th class="w-24 px-3 py-2 text-center font-medium">{{ t("Chen.Primary") }}</th>
                 <th class="w-14 px-3 py-2" />
               </tr>
             </thead>
@@ -98,7 +100,7 @@ function submit() {
                     :model-value="column.name"
                     class="w-full"
                     size="sm"
-                    placeholder="Column name"
+                    :placeholder="t('Chen.ColumnName')"
                     :disabled="tab.submitting"
                     @update:model-value="updateColumn(column.id, { name: $event })"
                   />
@@ -150,13 +152,13 @@ function submit() {
                     icon="i-lucide-trash-2"
                     size="xs"
                     :disabled="tab.submitting"
-                    :aria-label="`Remove column ${index + 1}`"
+                    :aria-label="t('Chen.RemoveColumnNumber', { number: index + 1 })"
                     @click="removeColumn(column.id)"
                   />
                 </td>
               </tr>
               <tr v-if="!tab.columns.length" class="border-t border-default">
-                <td colspan="7" class="px-3 py-8 text-center text-muted">Add at least one column.</td>
+                <td colspan="7" class="px-3 py-8 text-center text-muted">{{ t("Chen.AddAtLeastOneColumn") }}</td>
               </tr>
             </tbody>
           </table>
@@ -169,7 +171,7 @@ function submit() {
               :disabled="tab.submitting"
               @click="addColumn"
             >
-              Add column
+              {{ t("Chen.AddColumn") }}
             </UButton>
           </div>
         </div>
@@ -186,18 +188,18 @@ function submit() {
 
     <div class="flex shrink-0 items-center justify-between border-t border-default px-4 py-3">
       <p class="text-xs" :class="validationError ? 'text-warning' : 'text-muted'">
-        {{ validationError || `SQL dialect: ${tab.dbType || "default"}` }}
+        {{ validationError || t("Chen.SqlDialect", { dialect: tab.dbType || t("Chen.Default") }) }}
       </p>
       <UButton icon="i-lucide-eye" :disabled="Boolean(validationError) || tab.submitting" @click="previewOpen = true">
-        Preview &amp; Save
+        {{ t("Chen.PreviewAndSave") }}
       </UButton>
     </div>
 
     <SqlPreviewDialog
       :open="previewOpen"
-      :title="`Create table · ${tab.tableName.trim()}`"
+      :title="t('Chen.CreateTableTitle', { name: tab.tableName.trim() })"
       :sql="generatedSql"
-      confirm-label="Create table"
+      :confirm-label="t('Chen.CreateTable')"
       :busy="tab.submitting"
       @confirm="submit"
       @update:open="previewOpen = $event"

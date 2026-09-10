@@ -17,6 +17,7 @@ export interface ConnectionFormInfo {
   rememberSelection?: boolean;
   preserveStoredSelection?: boolean;
   connectMethod: string;
+  downloadRdp?: boolean;
   connectOptions?: Record<string, any>;
 
   accountId?: string;
@@ -226,7 +227,7 @@ export function useAssetConnection() {
   const confirmConnection = async (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
     const normalized = await normalizeConnectionInfo(asset, connectionInfo);
 
-    if (!normalized.preserveStoredSelection) {
+    if (!normalized.preserveStoredSelection && !normalized.downloadRdp) {
       saveConnectionPreference(asset, normalized);
       if (normalized.rememberSelection !== false) {
         saveConnectionInfo(asset, normalized);
@@ -235,7 +236,7 @@ export function useAssetConnection() {
       }
     }
 
-    handleAssetConnection(normalized.account, asset.id, normalized.protocol, asset.permedAccounts!, undefined, {
+    return handleAssetConnection(normalized.account, asset.id, normalized.protocol, asset.permedAccounts!, undefined, {
       accountMode: normalized.accountMode,
       accountId: normalized.accountId,
       manualUsername: normalized.manualUsername,
@@ -246,6 +247,7 @@ export function useAssetConnection() {
       savePersonalCredential: normalized.savePersonalCredential,
       dynamicPassword: normalized.dynamicPassword,
       connectMethod: normalized.connectMethod,
+      downloadRdp: normalized.downloadRdp,
       connectOptions: normalized.connectOptions,
       tabId: normalized.tabId,
       aclBatchId: normalized.aclBatchId,

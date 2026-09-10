@@ -3,8 +3,8 @@ import type { Ref } from "vue";
 import type { SftpCapabilities, SftpFileEntry, SftpIncomingMessage } from "./protocol";
 
 import { computed, onUnmounted, ref, shallowRef, watch } from "vue";
-import { parseSftpCapabilities, SFTP_REQUEST_TIMEOUT_ERROR, SftpMessageType, SftpSocketFailureCode } from "./protocol";
-import { SftpPathNotFoundError, useSftpOperations } from "./useSftpOperations";
+import { parseSftpCapabilities, SftpMessageType, sftpOperationErrorMessage, SftpSocketFailureCode } from "./protocol";
+import { useSftpOperations } from "./useSftpOperations";
 import { useSftpRetry } from "./useSftpRetry";
 import { useSftpSocket } from "./useSftpSocket";
 import { useSftpTransferEndpoint } from "./useSftpTransferEndpoint";
@@ -36,12 +36,6 @@ function errorMessage(code: SftpSocketFailureCode, t: (key: string) => string) {
     default:
       return t("koko.fileManagement.sessionExpired");
   }
-}
-
-function operationErrorMessage(cause: unknown, t: (key: string) => string) {
-  if (cause instanceof SftpPathNotFoundError) return t("koko.fileManagement.pathNotFound");
-  const message = cause instanceof Error ? cause.message : String(cause);
-  return message === SFTP_REQUEST_TIMEOUT_ERROR ? t("koko.fileManagement.requestTimeout") : message;
 }
 
 export function createSftpFileAiReadiness(currentPath: Ref<string>, loading: Ref<boolean>) {
@@ -118,7 +112,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
     try {
       await retryClient.reconnect();
     } catch (cause) {
-      error.value = operationErrorMessage(cause, t);
+      error.value = sftpOperationErrorMessage(cause, t);
       fatalError.value = true;
       loading.value = false;
     }
@@ -148,7 +142,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
       if (record) recordNavigation(currentPath.value || path);
       return true;
     } catch (cause) {
-      error.value = operationErrorMessage(cause, t);
+      error.value = sftpOperationErrorMessage(cause, t);
       loading.value = false;
       return false;
     }
@@ -210,7 +204,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
   });
 
   const stopErrorListener = operationClient.onError((cause) => {
-    error.value = operationErrorMessage(cause, t);
+    error.value = sftpOperationErrorMessage(cause, t);
     loading.value = false;
   });
 

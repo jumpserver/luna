@@ -10,6 +10,8 @@ const emit = defineEmits<{
   close: [];
 }>();
 
+const { t } = useI18n();
+
 const logBody = ref<HTMLElement | null>(null);
 const panel = ref<HTMLElement | null>(null);
 const followTail = ref(true);
@@ -111,7 +113,7 @@ watch(
     <div
       role="separator"
       tabindex="0"
-      aria-label="Resize Log Console"
+      :aria-label="t('Chen.ResizeLogConsole')"
       aria-orientation="horizontal"
       :aria-valuenow="Math.round(panelHeight)"
       :aria-valuemin="MIN_PANEL_HEIGHT"
@@ -128,7 +130,7 @@ watch(
     </div>
     <header class="flex h-9 shrink-0 items-center gap-2 border-b border-default px-3">
       <UIcon name="i-lucide-scroll-text" class="size-3.5 text-muted" />
-      <h2 class="text-xs font-medium text-highlighted">Log Console</h2>
+      <h2 class="text-xs font-medium text-highlighted">{{ t("Chen.LogConsole") }}</h2>
       <span class="text-[11px] text-muted">{{ entries.length }} entries</span>
       <UButton
         class="ml-auto"
@@ -137,8 +139,8 @@ watch(
         color="neutral"
         variant="ghost"
         :disabled="entries.length === 0"
-        aria-label="Clear Log Console"
-        title="Clear Log Console"
+        :aria-label="t('Chen.ClearLogConsole')"
+        :title="t('Chen.ClearLogConsole')"
         @click="emit('clear')"
       />
       <UButton
@@ -146,8 +148,8 @@ watch(
         icon="i-lucide-x"
         color="neutral"
         variant="ghost"
-        aria-label="Close Log Console"
-        title="Close Log Console"
+        :aria-label="t('Chen.CloseLogConsole')"
+        :title="t('Chen.CloseLogConsole')"
         @click="emit('close')"
       />
     </header>
@@ -178,7 +180,7 @@ watch(
           <span class="whitespace-pre-wrap break-words text-default">{{ entry.message }}</span>
         </div>
       </div>
-      <div v-else class="grid h-full place-items-center text-xs text-muted">No logs in this database session.</div>
+      <div v-else class="grid h-full place-items-center text-xs text-muted">{{ t("Chen.NoSessionLogs") }}</div>
     </div>
   </section>
 </template>

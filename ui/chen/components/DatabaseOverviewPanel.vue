@@ -14,18 +14,20 @@ const emit = defineEmits<{
   openTable: [tableName: string];
 }>();
 
-const databaseSections: Array<{ id: ChenDatabaseSection; label: string }> = [
-  { id: "basic", label: "Basic Info" },
-  { id: "schemas", label: "Schemas" }
-];
-const schemaSections: Array<{ id: ChenDatabaseSection; label: string }> = [
-  { id: "basic", label: "Basic Info" },
-  { id: "tables", label: "Tables" },
-  { id: "views", label: "Views" },
-  { id: "indexes", label: "Indexes" },
+const { t } = useI18n();
+
+const databaseSections = computed<Array<{ id: ChenDatabaseSection; label: string }>>(() => [
+  { id: "basic", label: t("Chen.BasicInfo") },
+  { id: "schemas", label: t("Chen.Schemas") }
+]);
+const schemaSections = computed<Array<{ id: ChenDatabaseSection; label: string }>>(() => [
+  { id: "basic", label: t("Chen.BasicInfo") },
+  { id: "tables", label: t("Chen.Tables") },
+  { id: "views", label: t("Chen.Views") },
+  { id: "indexes", label: t("Chen.Indexes") },
   { id: "ddl", label: "DDL" },
-  { id: "diagram", label: "Diagram" }
-];
+  { id: "diagram", label: t("Chen.Diagram") }
+]);
 
 interface CatalogItem {
   key: string;
@@ -89,7 +91,7 @@ function collectSchemaOverview(overview: ChenSchemaOverview): CatalogItem[] {
       displayType: "INDEX",
       table: index.table,
       columns: index.columns.join(", "),
-      unique: index.unique == null ? "" : index.unique ? "Yes" : "No",
+      unique: index.unique == null ? "" : index.unique ? t("Chen.Yes") : t("Chen.No"),
       method: index.method || "",
       rowCount: "",
       size: "",
@@ -146,7 +148,7 @@ function collectCatalog(nodes: ChenTreeNode[], schema = "", result: CatalogItem[
         displayType: node.type.toUpperCase(),
         table: String(node.table || node.tableName || ""),
         columns: Array.isArray(node.columns) ? node.columns.join(", ") : String(node.columns || ""),
-        unique: node.unique == null ? "" : node.unique ? "Yes" : "No",
+        unique: node.unique == null ? "" : node.unique ? t("Chen.Yes") : t("Chen.No"),
         method: String(node.method || node.indexType || ""),
         rowCount: formatCount(
           metadataValue(node, ["rowCount", "row_count", "rows", "tableRows", "table_rows", "estimatedRows"])
@@ -175,7 +177,7 @@ const catalog = computed(() =>
       ? collectSchemaOverview(props.tab.schemaOverview)
       : []
 );
-const sections = computed(() => (isDatabase.value ? databaseSections : schemaSections));
+const sections = computed(() => (isDatabase.value ? databaseSections.value : schemaSections.value));
 const visibleCatalog = computed(() => {
   const type =
     props.tab.activeSection === "schemas"
@@ -194,22 +196,26 @@ const ddl = computed(() => {
   return String(node.ddl || node.createSql || node.createSQL || node.definition || "").trim();
 });
 function catalogSummary(count: number) {
-  if (props.tab.catalogLoading) return "Loading...";
-  if (props.tab.catalogError) return "Load failed";
-  return props.tab.catalogLoaded ? String(count) : "Not loaded";
+  if (props.tab.catalogLoading) return t("Chen.Loading");
+  if (props.tab.catalogError) return t("Chen.LoadFailed");
+  return props.tab.catalogLoaded ? String(count) : t("Chen.NotLoaded");
+}
+
+function activeSectionLabel() {
+  return sections.value.find((section) => section.id === props.tab.activeSection)?.label || props.tab.activeSection;
 }
 
 const basicInfo = computed(() => {
   const common = [
-    { label: "Name", value: databaseName.value },
-    { label: "Database type", value: props.dbType || "-" },
-    { label: "Object type", value: props.tab.node.type || "-" }
+    { label: t("Chen.Name"), value: databaseName.value },
+    { label: t("Chen.DatabaseType"), value: props.dbType || "-" },
+    { label: t("Chen.ObjectType"), value: props.tab.node.type || "-" }
   ];
   if (isDatabase.value) {
     return [
       ...common,
       {
-        label: "Schemas",
+        label: t("Chen.Schemas"),
         value: catalogSummary(catalog.value.filter((item) => item.type === "schema").length)
       }
     ];
@@ -217,18 +223,18 @@ const basicInfo = computed(() => {
   return [
     ...common,
     {
-      label: "Tables",
+      label: t("Chen.Tables"),
       value: catalogSummary(catalog.value.filter((item) => item.type === "table").length)
     },
     {
-      label: "Views",
+      label: t("Chen.Views"),
       value: catalogSummary(catalog.value.filter((item) => item.type === "view").length)
     },
     {
-      label: "Indexes",
+      label: t("Chen.Indexes"),
       value: props.tab.schemaOverview?.capabilities.indexes
         ? String(catalog.value.filter((item) => item.type === "index").length)
-        : "Not supported"
+        : t("Chen.NotSupported")
     }
   ];
 });
@@ -268,14 +274,14 @@ function selectSection(section: ChenDatabaseSection) {
         class="flex items-center gap-2 rounded-lg border border-default bg-[var(--workspace-surface-sub-panel)] px-3 py-2 text-sm text-muted md:col-span-2"
       >
         <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin" />
-        Loading schema metadata...
+        {{ t("Chen.LoadingSchemaMetadata") }}
       </div>
       <div
         v-else-if="tab.catalogError"
         class="flex items-center justify-between gap-3 rounded-lg border border-error/40 bg-error/5 px-3 py-2 text-sm text-error md:col-span-2"
       >
         <span>{{ tab.catalogError }}</span>
-        <UButton size="xs" color="neutral" variant="soft" @click="emit('loadCatalog')">Retry</UButton>
+        <UButton size="xs" color="neutral" variant="soft" @click="emit('loadCatalog')">{{ t("Chen.Retry") }}</UButton>
       </div>
       <div
         v-for="item in basicInfo"
@@ -299,44 +305,44 @@ function selectSection(section: ChenDatabaseSection) {
       <div v-if="tab.catalogLoading" class="grid h-full place-items-center text-sm text-muted">
         <span class="flex items-center gap-2">
           <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin" />
-          Loading catalog...
+          {{ t("Chen.LoadingCatalog") }}
         </span>
       </div>
       <div v-else-if="tab.catalogError" class="grid h-full place-items-center gap-3 text-sm text-error">
         <span>{{ tab.catalogError }}</span>
-        <UButton size="xs" color="neutral" variant="soft" @click="emit('loadCatalog')">Retry</UButton>
+        <UButton size="xs" color="neutral" variant="soft" @click="emit('loadCatalog')">{{ t("Chen.Retry") }}</UButton>
       </div>
       <div v-else-if="visibleCatalog.length" class="overflow-x-auto rounded-lg border border-default">
         <table class="w-full min-w-max text-left text-sm">
           <thead class="bg-[var(--workspace-surface-sub-panel)] text-muted">
             <tr v-if="tab.activeSection === 'indexes'">
-              <th class="px-3 py-2 font-medium">Name</th>
-              <th class="px-3 py-2 font-medium">Schema</th>
-              <th class="px-3 py-2 font-medium">Table</th>
-              <th class="px-3 py-2 font-medium">Columns</th>
-              <th class="px-3 py-2 font-medium">Unique</th>
-              <th class="px-3 py-2 font-medium">Method</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Name") }}</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Schema") }}</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Table") }}</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Columns") }}</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Unique") }}</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Method") }}</th>
             </tr>
             <tr v-else-if="tab.activeSection === 'schemas'">
-              <th class="px-3 py-2 font-medium">Name</th>
-              <th class="px-3 py-2 font-medium">Type</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Name") }}</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Type") }}</th>
             </tr>
             <tr v-else-if="tab.activeSection === 'tables'">
-              <th class="px-3 py-2 font-medium">Name</th>
-              <th class="px-3 py-2 font-medium">Schema</th>
-              <th class="px-3 py-2 text-right font-medium" title="May be an estimate depending on the database">
-                Rows
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Name") }}</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Schema") }}</th>
+              <th class="px-3 py-2 text-right font-medium" :title="t('Chen.RowCountEstimateHint')">
+                {{ t("Chen.Rows") }}
               </th>
-              <th class="px-3 py-2 text-right font-medium">Size</th>
-              <th class="px-3 py-2 font-medium">Engine</th>
-              <th class="px-3 py-2 font-medium">Character Set</th>
-              <th class="px-3 py-2 font-medium">Collation</th>
-              <th class="px-3 py-2 font-medium">Comment</th>
+              <th class="px-3 py-2 text-right font-medium">{{ t("Chen.Size") }}</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Engine") }}</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.CharacterSet") }}</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Collation") }}</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Comment") }}</th>
             </tr>
             <tr v-else>
-              <th class="px-3 py-2 font-medium">Name</th>
-              <th class="px-3 py-2 font-medium">Schema</th>
-              <th class="px-3 py-2 font-medium">Type</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Name") }}</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Schema") }}</th>
+              <th class="px-3 py-2 font-medium">{{ t("Chen.Type") }}</th>
             </tr>
           </thead>
           <tbody>
@@ -353,7 +359,7 @@ function selectSection(section: ChenDatabaseSection) {
             <template v-else-if="tab.activeSection === 'schemas'">
               <tr v-for="item in visibleCatalog" :key="item.key" class="border-t border-default">
                 <td class="px-3 py-2">{{ item.name }}</td>
-                <td class="px-3 py-2 text-muted">Schema</td>
+                <td class="px-3 py-2 text-muted">{{ t("Chen.Schema") }}</td>
               </tr>
             </template>
             <template v-else-if="tab.activeSection === 'tables'">
@@ -387,8 +393,7 @@ function selectSection(section: ChenDatabaseSection) {
         </table>
       </div>
       <p v-if="tab.activeSection === 'tables' && visibleCatalog.length" class="mt-2 px-1 text-[11px] text-muted">
-        Row counts may be estimated by the database. Statistics, engine, character set, and collation require table
-        metadata from the server; unavailable fields are shown as “-”.
+        {{ t("Chen.TableMetadataHint") }}
       </p>
       <div
         v-else-if="
@@ -398,12 +403,12 @@ function selectSection(section: ChenDatabaseSection) {
       >
         <div class="max-w-lg">
           <UIcon name="i-lucide-list-tree" class="mx-auto mb-3 size-8" />
-          <div class="font-medium text-[var(--app-fg)]">Index metadata is not supported</div>
-          <p class="mt-2 text-xs leading-5">This database metadata provider does not expose schema-level indexes.</p>
+          <div class="font-medium text-[var(--app-fg)]">{{ t("Chen.IndexMetadataNotSupported") }}</div>
+          <p class="mt-2 text-xs leading-5">{{ t("Chen.SchemaIndexesUnavailable") }}</p>
         </div>
       </div>
       <div v-else-if="!visibleCatalog.length" class="grid h-full place-items-center text-sm text-muted">
-        No {{ tab.activeSection }} found in the loaded catalog.
+        {{ t("Chen.NoCatalogItems", { type: activeSectionLabel() }) }}
       </div>
     </div>
 
@@ -416,13 +421,11 @@ function selectSection(section: ChenDatabaseSection) {
         <div class="max-w-lg">
           <UIcon name="i-lucide-file-code-2" class="mx-auto mb-3 size-8" />
           <div class="font-medium text-[var(--app-fg)]">
-            {{ isDatabase ? "Database" : "Schema" }} DDL is not available yet
+            {{ t("Chen.DdlUnavailableTitle", { object: isDatabase ? t("Chen.Database") : t("Chen.Schema") }) }}
           </div>
           <p class="mt-2 text-xs leading-5">
             {{
-              tab.schemaOverview?.capabilities.ddl === false
-                ? "This database metadata provider does not expose schema DDL."
-                : "The server returned no schema DDL."
+              tab.schemaOverview?.capabilities.ddl === false ? t("Chen.SchemaDdlNotSupported") : t("Chen.NoSchemaDdl")
             }}
           </p>
         </div>
@@ -433,12 +436,14 @@ function selectSection(section: ChenDatabaseSection) {
       <div v-if="tab.catalogLoading" class="grid h-full place-items-center text-sm text-muted">
         <span class="flex items-center gap-2">
           <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin" />
-          Loading schema diagram...
+          {{ t("Chen.LoadingSchemaDiagram") }}
         </span>
       </div>
       <div v-else-if="tab.catalogError" class="grid h-full place-items-center gap-3 text-sm text-error">
         <span>{{ tab.catalogError }}</span>
-        <UButton size="xs" color="neutral" variant="soft" @click="emit('selectSection', 'diagram')">Retry</UButton>
+        <UButton size="xs" color="neutral" variant="soft" @click="emit('selectSection', 'diagram')">
+          {{ t("Chen.Retry") }}
+        </UButton>
       </div>
       <div
         v-else-if="tab.schemaOverview?.capabilities.diagram === false"
@@ -446,8 +451,8 @@ function selectSection(section: ChenDatabaseSection) {
       >
         <div class="max-w-lg">
           <UIcon name="i-lucide-workflow" class="mx-auto mb-3 size-8" />
-          <div class="font-medium text-[var(--app-fg)]">Schema diagram is not supported</div>
-          <p class="mt-2 text-xs leading-5">This provider does not expose table column metadata.</p>
+          <div class="font-medium text-[var(--app-fg)]">{{ t("Chen.SchemaDiagramNotSupported") }}</div>
+          <p class="mt-2 text-xs leading-5">{{ t("Chen.TableColumnMetadataUnavailable") }}</p>
         </div>
       </div>
       <SchemaDiagram
@@ -456,7 +461,7 @@ function selectSection(section: ChenDatabaseSection) {
         :relationships-supported="tab.schemaOverview.capabilities.diagramRelationships"
         @open-table="emit('openTable', $event)"
       />
-      <div v-else class="grid h-full place-items-center text-sm text-muted">No tables found in this schema.</div>
+      <div v-else class="grid h-full place-items-center text-sm text-muted">{{ t("Chen.NoTablesInSchema") }}</div>
     </div>
   </div>
 </template>
