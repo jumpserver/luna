@@ -7,8 +7,9 @@ const { isMacOS } = usePlatform();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
+const { exitFocusMode, focusMode, workspaceFullscreen } = useWorkspaceTabs();
 const hasMacTrafficLightInset = computed(() => isDesktopRuntime() && isMacOS.value);
-const showWorkspaceHeader = computed(() => !isDesktopRuntime() || loggedIn.value);
+const showWorkspaceHeader = computed(() => (!isDesktopRuntime() || loggedIn.value) && !focusMode.value);
 const isToolRoute = computed(() => {
   const path = router.currentRoute.value.path.toLowerCase();
   return path.includes("/tools") || path.includes("/videoplayer") || path.includes("/transcode");
@@ -60,10 +61,22 @@ const pageHeader = computed(() => {
   <div>
     <HeaderDesktopTitleBar />
     <div
-      v-if="hasMacTrafficLightInset && !showWorkspaceHeader"
+      v-if="hasMacTrafficLightInset && !showWorkspaceHeader && !workspaceFullscreen"
       data-desktop-drag-region
-      class="h-10 min-h-10 shrink-0 bg-[var(--app-surface-canvas)]"
-    />
+      class="flex h-10 min-h-10 shrink-0 items-center justify-end bg-[var(--app-surface-canvas)] pr-2"
+    >
+      <UButton
+        v-if="focusMode"
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        icon="i-lucide-minimize-2"
+        data-desktop-drag-region="false"
+        :label="t('TabMenu.ExitFocusMode')"
+        :title="t('TabMenu.ExitFocusModeHint')"
+        @click="exitFocusMode"
+      />
+    </div>
     <WorkspaceTopHeader v-show="showWorkspaceHeader">
       <template v-if="showSidebarChrome" #leading>
         <SideBarTopControls />
