@@ -93,7 +93,7 @@ function handleSubmitKeydown(event: KeyboardEvent) {
         </div>
         <UTooltip v-if="running" :text="interruptLabel">
           <UButton
-            class="ml-auto rounded-full"
+            class="ml-auto"
             size="xs"
             color="primary"
             variant="solid"
@@ -105,7 +105,6 @@ function handleSubmitKeydown(event: KeyboardEvent) {
         </UTooltip>
         <UTooltip v-if="!running || !busy" :text="actionLabel">
           <UButton
-            class="rounded-full"
             :class="{ 'ml-auto': !running }"
             size="xs"
             color="primary"
