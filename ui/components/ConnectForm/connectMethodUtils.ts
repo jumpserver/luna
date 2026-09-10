@@ -15,7 +15,7 @@ export function categoryOfConnectMethod(method: { value?: string; type?: string 
   const type = String(method?.type || "").toLowerCase();
 
   if (type === "web" || type === "builtin") return "builtin";
-  if (["applet", "virtual_app", "remote_app", "remoteapp"].includes(type)) return "remote_app";
+  if (["applet", "remote_app", "remoteapp"].includes(type)) return "remote_app";
   if (["native", "client", "local", "desktop"].includes(type)) return "native";
   return type || "builtin";
 }

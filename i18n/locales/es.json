@@ -959,6 +959,8 @@
     "StatusIdle": "Inactivo"
   },
   "EditModal": {
+    "AppletConnectMethod": "Modo de conexión de RemoteApp",
+    "DownloadRdpFile": "Descargar archivo RDP",
     "ModifyConnectionInfo": "Conectar",
     "Description": "Haga clic con el botón derecho para editar",
     "RememberSelection": "Conectar automáticamente la próxima vez",
@@ -1245,7 +1247,8 @@
   "ConnectMethodType": {
     "BuiltIn": "Integrado",
     "Application": "Aplicación",
-    "RemoteApplication": "Aplicación remota"
+    "RemoteApplication": "Aplicación remota",
+    "VirtualApplication": "Aplicación virtual"
   },
   "ConnectMethod": {
     "BuiltinTerminal": "Terminal integrado",
@@ -1264,6 +1267,7 @@
     "BuiltinWebProxyDescription": "Los activos de sitios web usan el WebView del sistema y el tráfico pasa por Koko Web Proxy."
   },
   "ConnectError": {
+    "DownloadRdpFailed": "No se pudo descargar el archivo RDP",
     "ConnectFailed": "Error de conexión",
     "CredentialServiceUnavailable": "El servicio de credenciales (por ejemplo, OpenBao) no está disponible. Compruebe su estado e inténtelo de nuevo.",
     "AclFailed": "El activo actual está restringido por políticas de ACL y no se puede acceder a él mediante el cliente. Use la consola web para conectarse.",

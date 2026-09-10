@@ -25,9 +25,13 @@ const connectMethodTypeItems = computed(() => {
     remote_app: {
       label: t("ConnectMethodType.RemoteApplication"),
       icon: "i-lucide-app-window"
+    },
+    virtual_app: {
+      label: t("ConnectMethodType.VirtualApplication"),
+      icon: "i-lucide-boxes"
     }
   };
-  const order = ["builtin", "native", "remote_app"];
+  const order = ["builtin", "native", "remote_app", "virtual_app"];
   const grouped = new Set(props.methods.map((method) => categoryOfConnectMethod(method)));
   const sorted = [
     ...order.filter((type) => grouped.has(type)),

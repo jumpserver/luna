@@ -959,6 +959,8 @@
     "StatusIdle": "未連線"
   },
   "EditModal": {
+    "AppletConnectMethod": "遠端應用連線方式",
+    "DownloadRdpFile": "下載 RDP 檔案",
     "ModifyConnectionInfo": "連線",
     "Description": "右擊重新設定",
     "RememberSelection": "下次自動連線",
@@ -1245,7 +1247,8 @@
   "ConnectMethodType": {
     "BuiltIn": "內建",
     "Application": "應用",
-    "RemoteApplication": "遠端應用"
+    "RemoteApplication": "遠端應用",
+    "VirtualApplication": "虛擬應用"
   },
   "ConnectMethod": {
     "BuiltinTerminal": "內建終端",
@@ -1264,6 +1267,7 @@
     "BuiltinWebProxyDescription": "Website 資產使用系統 WebView，流量統一經由 Koko Web Proxy。"
   },
   "ConnectError": {
+    "DownloadRdpFailed": "下載 RDP 檔案失敗",
     "ConnectFailed": "連線失敗",
     "CredentialServiceUnavailable": "憑據服務（例如 OpenBao）無法使用，請檢查服務狀態後重試。",
     "AclFailed": "當前資產受到 ACL 訪問限制，無法透過客戶端連線，請前往 Web 端進行訪問",

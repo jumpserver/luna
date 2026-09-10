@@ -959,6 +959,8 @@
     "StatusIdle": "Не подключено"
   },
   "EditModal": {
+    "AppletConnectMethod": "Режим подключения RemoteApp",
+    "DownloadRdpFile": "Скачать файл RDP",
     "ModifyConnectionInfo": "Подключение",
     "Description": "Щелкните правой кнопкой мыши, чтобы изменить",
     "RememberSelection": "Автоматически подключать в следующий раз",
@@ -1245,7 +1247,8 @@
   "ConnectMethodType": {
     "BuiltIn": "Встроенный",
     "Application": "Приложение",
-    "RemoteApplication": "Удаленное приложение"
+    "RemoteApplication": "Удаленное приложение",
+    "VirtualApplication": "Виртуальное приложение"
   },
   "ConnectMethod": {
     "BuiltinTerminal": "Встроенный терминал",
@@ -1264,6 +1267,7 @@
     "BuiltinWebProxyDescription": "Веб-активы используют системный WebView, трафик идет через Koko Web Proxy."
   },
   "ConnectError": {
+    "DownloadRdpFailed": "Не удалось скачать файл RDP",
     "ConnectFailed": "Ошибка подключения",
     "CredentialServiceUnavailable": "Сервис учетных данных (например, OpenBao) недоступен. Проверьте его состояние и повторите попытку.",
     "AclFailed": "Доступ к текущему ресурсу ограничен политиками ACL, поэтому подключение через клиент недоступно. Используйте веб-консоль.",

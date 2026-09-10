@@ -959,6 +959,8 @@
     "StatusIdle": "Không hoạt động"
   },
   "EditModal": {
+    "AppletConnectMethod": "Chế độ kết nối ứng dụng từ xa",
+    "DownloadRdpFile": "Tải tệp RDP",
     "ModifyConnectionInfo": "Kết nối",
     "Description": "Nhấp chuột phải để chỉnh sửa",
     "RememberSelection": "Tự động kết nối lần sau",
@@ -1245,7 +1247,8 @@
   "ConnectMethodType": {
     "BuiltIn": "Tích hợp",
     "Application": "Ứng dụng",
-    "RemoteApplication": "Ứng dụng từ xa"
+    "RemoteApplication": "Ứng dụng từ xa",
+    "VirtualApplication": "Ứng dụng ảo"
   },
   "ConnectMethod": {
     "BuiltinTerminal": "Terminal tích hợp",
@@ -1264,6 +1267,7 @@
     "BuiltinWebProxyDescription": "Tài sản website dùng WebView hệ thống, lưu lượng đi qua Koko Web Proxy."
   },
   "ConnectError": {
+    "DownloadRdpFailed": "Không thể tải tệp RDP",
     "ConnectFailed": "Kết nối thất bại",
     "CredentialServiceUnavailable": "Dịch vụ thông tin xác thực (ví dụ: OpenBao) không khả dụng. Hãy kiểm tra trạng thái dịch vụ rồi thử lại.",
     "AclFailed": "Tài sản hiện tại bị giới hạn bởi chính sách ACL và không thể truy cập bằng máy khách. Hãy dùng bảng điều khiển web để kết nối.",
