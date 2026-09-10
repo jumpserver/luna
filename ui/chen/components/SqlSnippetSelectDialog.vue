@@ -20,6 +20,8 @@ const emit = defineEmits<{
   pageChange: [page: number];
 }>();
 
+const { t } = useI18n();
+
 const deleteDialogOpen = ref(false);
 const deleteCandidate = ref<ChenSqlSnippet | null>(null);
 const visible = computed({
@@ -45,21 +47,28 @@ function confirmDelete() {
 </script>
 
 <template>
-  <ChenWorkspaceModal v-model:open="visible" title="Select SQL" :dismissible="false" :ui="{ content: 'sm:max-w-3xl' }">
+  <ChenWorkspaceModal
+    v-model:open="visible"
+    :title="t('Chen.SelectSql')"
+    :dismissible="false"
+    :ui="{ content: 'sm:max-w-3xl' }"
+  >
     <template #body>
       <div v-if="loading" class="grid min-h-32 place-items-center text-muted">
         <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
       </div>
 
-      <div v-else-if="!snippets.length" class="grid min-h-32 place-items-center text-sm text-muted">No saved SQL.</div>
+      <div v-else-if="!snippets.length" class="grid min-h-32 place-items-center text-sm text-muted">
+        {{ t("Chen.NoSavedSql") }}
+      </div>
 
       <div v-else>
         <div class="max-h-[60vh] overflow-auto rounded-md border border-default">
           <table class="w-full table-fixed text-left text-sm">
             <thead class="sticky top-0 bg-elevated text-muted">
               <tr>
-                <th class="w-36 px-3 py-2 font-medium">Name</th>
-                <th class="px-3 py-2 font-medium">Content</th>
+                <th class="w-36 px-3 py-2 font-medium">{{ t("Chen.Name") }}</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Content") }}</th>
                 <th class="w-36 px-3 py-2" />
               </tr>
             </thead>
@@ -73,7 +82,7 @@ function confirmDelete() {
                 </td>
                 <td class="px-3 py-2">
                   <div class="flex justify-end gap-1">
-                    <UButton size="xs" variant="ghost" @click="emit('insert', snippet)">Insert</UButton>
+                    <UButton size="xs" variant="ghost" @click="emit('insert', snippet)">{{ t("Chen.Insert") }}</UButton>
                     <UButton
                       size="xs"
                       color="error"
@@ -105,15 +114,15 @@ function confirmDelete() {
     </template>
   </ChenWorkspaceModal>
 
-  <ChenWorkspaceModal v-model:open="deleteDialogOpen" title="Delete SQL">
+  <ChenWorkspaceModal v-model:open="deleteDialogOpen" :title="t('Chen.DeleteSql')">
     <template #body>
       <p class="text-sm text-muted">Delete “{{ deleteCandidate?.name }}”?</p>
     </template>
 
     <template #footer>
       <div class="flex w-full justify-end gap-2">
-        <UButton color="neutral" variant="soft" @click="cancelDelete">Cancel</UButton>
-        <UButton color="error" @click="confirmDelete">Confirm</UButton>
+        <UButton color="neutral" variant="soft" @click="cancelDelete">{{ t("Common.Cancel") }}</UButton>
+        <UButton color="error" @click="confirmDelete">{{ t("Common.Confirm") }}</UButton>
       </div>
     </template>
   </ChenWorkspaceModal>

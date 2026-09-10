@@ -22,6 +22,8 @@ const emit = defineEmits<{
   toggleLog: [];
 }>();
 
+const { t } = useI18n();
+
 const renameModalOpen = ref(false);
 const renameTabId = ref("");
 const renameValue = ref("");
@@ -34,12 +36,12 @@ const renameDisabled = computed(() => {
 const createTabMenuItems = computed<DropdownMenuItem[][]>(() => [
   [
     {
-      label: "New Query",
+      label: t("Chen.NewQuery"),
       icon: "i-lucide-file-code-2",
       onSelect: () => emit("create", "query")
     },
     {
-      label: "New Console",
+      label: t("Chen.NewConsole"),
       icon: "i-lucide-square-terminal",
       onSelect: () => emit("create", "console")
     }
@@ -51,11 +53,15 @@ const workspaceTabs = computed(() =>
     id: tab.id,
     label: displayWorkspaceTabTitle(tab),
     icon: tab.icon || "i-lucide-panel-top",
-    title: tab.kind === "query" ? `${tab.title} · Double-click to rename` : displayWorkspaceTabTitle(tab)
+    title: tab.kind === "query" ? t("Chen.DoubleClickToRename", { title: tab.title }) : displayWorkspaceTabTitle(tab)
   }))
 );
 
 function displayWorkspaceTabTitle(tab: ChenTabDefinition) {
+  if (tab.kind === "create-table") {
+    const suffix = tab.title.match(/^New Table( \d+)?$/)?.[1] || "";
+    return `${t("Chen.NewTable")}${suffix}`;
+  }
   return formatChenWorkspaceTabTitle(tab, props.tabTitleFormat);
 }
 
@@ -93,7 +99,7 @@ function activateTab(id: string) {
   <WorkspaceSubTabStrip
     :tabs="workspaceTabs"
     :active-id="activeTabId"
-    close-label="Close"
+    :close-label="t('Common.Close')"
     @select="activateTab"
     @close="emit('close', $event)"
     @pin="openRenameModalById"
@@ -109,8 +115,8 @@ function activateTab(id: string) {
           icon="i-lucide-plus"
           color="neutral"
           variant="ghost"
-          aria-label="Create tab"
-          title="Create tab"
+          :aria-label="t('Chen.CreateTab')"
+          :title="t('Chen.CreateTab')"
         />
       </UDropdownMenu>
     </template>
@@ -122,8 +128,8 @@ function activateTab(id: string) {
           color="neutral"
           :variant="logOpen ? 'soft' : 'ghost'"
           :aria-pressed="logOpen"
-          aria-label="Toggle Log Console"
-          :title="logErrorCount ? `Log Console · ${logErrorCount} new errors` : 'Log Console'"
+          :aria-label="t('Chen.ToggleLogConsole')"
+          :title="logErrorCount ? t('Chen.LogConsoleNewErrors', { count: logErrorCount }) : t('Chen.LogConsole')"
           @click="emit('toggleLog')"
         />
         <span
@@ -134,20 +140,20 @@ function activateTab(id: string) {
     </template>
   </WorkspaceSubTabStrip>
 
-  <ChenWorkspaceModal :open="renameModalOpen" title="Rename query" @update:open="updateRenameModal">
+  <ChenWorkspaceModal :open="renameModalOpen" :title="t('Chen.RenameQuery')" @update:open="updateRenameModal">
     <template #body>
       <UInput
         v-model="renameValue"
         class="w-full"
-        placeholder="Query name"
+        :placeholder="t('Chen.QueryName')"
         autofocus
         @keydown.enter.prevent="submitRename"
       />
     </template>
     <template #footer>
       <div class="flex w-full justify-end gap-2">
-        <UButton color="neutral" variant="ghost" @click="updateRenameModal(false)">Cancel</UButton>
-        <UButton :disabled="renameDisabled" @click="submitRename">Rename</UButton>
+        <UButton color="neutral" variant="ghost" @click="updateRenameModal(false)">{{ t("Common.Cancel") }}</UButton>
+        <UButton :disabled="renameDisabled" @click="submitRename">{{ t("Chen.Rename") }}</UButton>
       </div>
     </template>
   </ChenWorkspaceModal>

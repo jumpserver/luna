@@ -91,6 +91,7 @@ export interface ChenConsoleTimelineEntry {
   executionPlan?: ChenExecutionPlan | null;
   executionPlanLoading?: boolean;
   planOnly?: boolean;
+  backendStarted?: boolean;
 }
 
 export interface ChenQueryConsoleTab extends ChenTabDefinition {

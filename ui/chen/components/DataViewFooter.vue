@@ -20,17 +20,20 @@ const emit = defineEmits<{
   action: [action: ChenDataViewAction, data?: number];
 }>();
 
+const { t } = useI18n();
+
 const limitOptions = [50, 100, 200, 500];
 const controls = computed(() => getChenDataViewToolbarState(props.state));
 const rowSummary = computed(() => {
   if (Number.isFinite(props.affectedRows)) {
-    return `${props.affectedRows} ${props.affectedRows === 1 ? "row" : "rows"} affected`;
+    return t("Chen.RowsAffected", { count: props.affectedRows });
   }
-  if (!controls.value.paged) return `${props.rowCount} ${props.rowCount === 1 ? "row" : "rows"}`;
-  if (!controls.value.total || !props.rowCount) return `0 of ${controls.value.total} rows`;
+  if (!controls.value.paged) return t("Chen.RowCount", { count: props.rowCount });
+  if (!controls.value.total || !props.rowCount)
+    return t("Chen.RowRange", { first: 0, last: 0, total: controls.value.total });
   const first = (controls.value.page - 1) * controls.value.limit + 1;
   const last = Math.min(controls.value.total, first + props.rowCount - 1);
-  return `${first}–${last} of ${controls.value.total} rows`;
+  return t("Chen.RowRange", { first, last, total: controls.value.total });
 });
 const duration = computed(() => {
   const milliseconds = Number(props.state.durationMs);
@@ -54,19 +57,19 @@ function changeLimit(value: string | number) {
       <span>{{ rowSummary }}</span>
       <template v-if="duration">
         <span aria-hidden="true">·</span>
-        <span class="tabular-nums">Elapsed {{ duration }}</span>
+        <span class="tabular-nums">{{ t("Chen.Elapsed", { duration }) }}</span>
       </template>
     </div>
 
     <div v-if="controls.paged" class="ml-auto flex items-center gap-1">
-      <span class="mr-1 whitespace-nowrap text-xs text-muted">Rows per page</span>
+      <span class="mr-1 whitespace-nowrap text-xs text-muted">{{ t("Chen.RowsPerPage") }}</span>
       <USelect
         class="w-20"
         size="xs"
         :model-value="controls.limit"
         :items="limitOptions"
         :disabled="busy || controls.loading"
-        aria-label="Rows per page"
+        :aria-label="t('Chen.RowsPerPage')"
         @update:model-value="changeLimit"
       />
       <UButton
@@ -74,8 +77,8 @@ function changeLimit(value: string | number) {
         icon="i-lucide-chevrons-left"
         color="neutral"
         variant="ghost"
-        aria-label="First page"
-        title="First page"
+        :aria-label="t('Chen.FirstPage')"
+        :title="t('Chen.FirstPage')"
         :disabled="busy || controls.disableFirst"
         @click="emit('action', 'first_page')"
       />
@@ -84,8 +87,8 @@ function changeLimit(value: string | number) {
         icon="i-lucide-chevron-left"
         color="neutral"
         variant="ghost"
-        aria-label="Previous page"
-        title="Previous page"
+        :aria-label="t('Chen.PreviousPage')"
+        :title="t('Chen.PreviousPage')"
         :disabled="busy || controls.disablePrevious"
         @click="emit('action', 'prev_page')"
       />
@@ -97,8 +100,8 @@ function changeLimit(value: string | number) {
         icon="i-lucide-chevron-right"
         color="neutral"
         variant="ghost"
-        aria-label="Next page"
-        title="Next page"
+        :aria-label="t('Chen.NextPage')"
+        :title="t('Chen.NextPage')"
         :disabled="busy || controls.disableNext"
         @click="emit('action', 'next_page')"
       />
@@ -107,8 +110,8 @@ function changeLimit(value: string | number) {
         icon="i-lucide-chevrons-right"
         color="neutral"
         variant="ghost"
-        aria-label="Last page"
-        title="Last page"
+        :aria-label="t('Chen.LastPage')"
+        :title="t('Chen.LastPage')"
         :disabled="busy || controls.disableLast"
         @click="emit('action', 'last_page')"
       />

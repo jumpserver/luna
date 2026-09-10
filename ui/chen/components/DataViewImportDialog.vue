@@ -15,6 +15,8 @@ const emit = defineEmits<{
   confirm: [rows: Array<Record<string, string | null>>];
 }>();
 
+const { t } = useI18n();
+
 // ponytail: CSV is staged in the browser for the existing Save preview flow; move large imports to a streamed Chen API.
 const MAX_CSV_BYTES = 10 * 1024 * 1024;
 const MAX_CSV_ROWS = 10_000;
@@ -28,16 +30,16 @@ const visible = computed({
   get: () => props.open,
   set: (open: boolean) => emit("update:open", open)
 });
-const emptyValueItems = [
-  { label: "Empty string", value: "empty-string" },
+const emptyValueItems = computed(() => [
+  { label: t("Chen.EmptyString"), value: "empty-string" },
   { label: "NULL", value: "null" }
-];
+]);
 const mapped = computed(() => {
   if (!parsed.value) return { rows: [] as Array<Record<string, string | null>>, error: "" };
   try {
     return { rows: mapChenCsvRows(parsed.value, props.fields, emptyValue.value), error: "" };
-  } catch (cause) {
-    return { rows: [], error: cause instanceof Error ? cause.message : "Unable to map CSV columns" };
+  } catch {
+    return { rows: [], error: t("Chen.MapCsvColumnsFailed") };
   }
 });
 
@@ -63,18 +65,18 @@ async function selectFile(event: Event) {
   parsed.value = null;
   error.value = "";
   if (file.size > MAX_CSV_BYTES) {
-    error.value = "CSV files larger than 10 MB are not supported";
+    error.value = t("Chen.CsvTooLarge");
     return;
   }
 
   try {
     const result = parseChenCsv(await file.text());
     if (result.rows.length > MAX_CSV_ROWS) {
-      throw new Error(`CSV contains ${result.rows.length} rows; the current limit is ${MAX_CSV_ROWS}`);
+      throw new Error(t("Chen.CsvRowLimit", { count: result.rows.length, limit: MAX_CSV_ROWS }));
     }
     parsed.value = result;
-  } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : "Unable to read CSV file";
+  } catch {
+    error.value = t("Chen.InvalidCsvFile");
   }
 }
 
@@ -86,18 +88,18 @@ function submit() {
 </script>
 
 <template>
-  <ChenWorkspaceModal v-model:open="visible" title="Import CSV" :ui="{ content: 'sm:max-w-2xl' }">
+  <ChenWorkspaceModal v-model:open="visible" :title="t('Chen.ImportCsv')" :ui="{ content: 'sm:max-w-2xl' }">
     <template #body>
       <div class="space-y-4">
         <input ref="fileInput" type="file" accept=".csv,text/csv" class="hidden" @change="selectFile" />
         <div class="rounded-lg border border-dashed border-default p-4 text-center">
           <UIcon name="i-lucide-file-spreadsheet" class="mx-auto mb-2 size-7 text-muted" />
-          <p class="text-sm text-highlighted">{{ fileName || "Choose a CSV file" }}</p>
+          <p class="text-sm text-highlighted">{{ fileName || t("Chen.ChooseCsvFile") }}</p>
           <p class="mt-1 text-xs text-muted">
-            The first row must contain table column names. Maximum 10 MB / 10,000 rows.
+            {{ t("Chen.CsvImportHint") }}
           </p>
           <UButton class="mt-3" size="sm" color="neutral" variant="soft" @click="fileInput?.click()">
-            Choose file
+            {{ t("Chen.ChooseFile") }}
           </UButton>
         </div>
 
@@ -106,13 +108,13 @@ function submit() {
           color="error"
           variant="soft"
           icon="i-lucide-circle-alert"
-          title="CSV cannot be imported"
+          :title="t('Chen.CsvCannotImport')"
           :description="error || mapped.error"
         />
 
         <template v-if="parsed && !error">
           <div class="grid gap-3 sm:grid-cols-2">
-            <UFormField label="Empty CSV values become">
+            <UFormField :label="t('Chen.EmptyCsvValuesBecome')">
               <USelect
                 v-model="emptyValue"
                 class="w-full"
@@ -123,18 +125,17 @@ function submit() {
             </UFormField>
             <div class="rounded-md border border-default bg-elevated px-3 py-2 text-xs">
               <div>
-                <span class="text-muted">Rows:</span>
+                <span class="text-muted">{{ t("Chen.Rows") }}:</span>
                 {{ parsed.rows.length }}
               </div>
               <div class="mt-1 truncate" :title="parsed.headers.join(', ')">
-                <span class="text-muted">Columns:</span>
+                <span class="text-muted">{{ t("Chen.Columns") }}:</span>
                 {{ parsed.headers.join(", ") }}
               </div>
             </div>
           </div>
           <p class="text-xs text-muted">
-            Imported rows are staged in the grid. Review them, then click Save to preview and commit the database
-            changes.
+            {{ t("Chen.ImportRowsStagedHint") }}
           </p>
         </template>
       </div>
@@ -142,9 +143,9 @@ function submit() {
 
     <template #footer>
       <div class="flex w-full justify-end gap-2">
-        <UButton color="neutral" variant="soft" @click="visible = false">Cancel</UButton>
+        <UButton color="neutral" variant="soft" @click="visible = false">{{ t("Common.Cancel") }}</UButton>
         <UButton icon="i-lucide-upload" :disabled="!mapped.rows.length" @click="submit">
-          {{ mapped.rows.length ? `Import ${mapped.rows.length} rows` : "Import rows" }}
+          {{ mapped.rows.length ? t("Chen.ImportRowCount", { count: mapped.rows.length }) : t("Chen.ImportRows") }}
         </UButton>
       </div>
     </template>

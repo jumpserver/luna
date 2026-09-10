@@ -33,11 +33,14 @@ const emit = defineEmits<{
 }>();
 
 const colorMode = useColorMode();
+const { t, locale } = useI18n();
 const container = shallowRef<HTMLElement | null>(null);
 const themeSlot = new Compartment();
 const syntaxThemeSlot = new Compartment();
 const editableSlot = new Compartment();
 const languageSlot = new Compartment();
+const placeholderSlot = new Compartment();
+const accessibilitySlot = new Compartment();
 let editor: EditorView | null = null;
 let themeObserver: MutationObserver | null = null;
 let applyingExternalValue = false;
@@ -64,8 +67,8 @@ onMounted(() => {
         basicSetup,
         languageSlot.of(sqlExtension()),
         syntaxThemeSlot.of(createCodeMirrorSyntaxTheme()),
-        placeholder("WHERE condition, e.g. status = 'active'"),
-        EditorView.contentAttributes.of({ "aria-label": "Table WHERE condition" }),
+        placeholderSlot.of(placeholder(t("Chen.WhereConditionPlaceholder"))),
+        accessibilitySlot.of(EditorView.contentAttributes.of({ "aria-label": t("Chen.TableWhereCondition") })),
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !applyingExternalValue) emit("update:modelValue", update.state.doc.toString());
         }),
@@ -127,6 +130,15 @@ watch(
   }
 );
 
+watch(locale, () => {
+  editor?.dispatch({
+    effects: [
+      placeholderSlot.reconfigure(placeholder(t("Chen.WhereConditionPlaceholder"))),
+      accessibilitySlot.reconfigure(EditorView.contentAttributes.of({ "aria-label": t("Chen.TableWhereCondition") }))
+    ]
+  });
+});
+
 onBeforeUnmount(() => {
   themeObserver?.disconnect();
   editor?.destroy();
@@ -146,8 +158,8 @@ onBeforeUnmount(() => {
       icon="i-lucide-x"
       color="neutral"
       variant="ghost"
-      aria-label="Clear WHERE condition"
-      title="Clear WHERE condition"
+      :aria-label="t('Chen.ClearWhereCondition')"
+      :title="t('Chen.ClearWhereCondition')"
       :disabled="disabled"
       @mousedown.prevent
       @click="emit('clear')"

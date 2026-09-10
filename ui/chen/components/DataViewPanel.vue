@@ -53,6 +53,8 @@ const emit = defineEmits<{
   executeIndexSql: [tab: ChenDataViewConsoleTab, sql: string, operation: "create" | "drop", indexName: string];
 }>();
 
+const { t } = useI18n();
+
 const exportDialogOpen = ref(false);
 const batchUpdateDialogOpen = ref(false);
 const filterDialogOpen = ref(false);
@@ -268,7 +270,7 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
           :class="tab.activePanel === 'data' ? 'bg-accented' : 'text-muted'"
           @click="emit('updatePanel', tab, 'data')"
         >
-          Data
+          {{ t("Chen.Data") }}
         </button>
         <button
           v-for="propertyTab in dataViewPropertyTabs"
@@ -291,12 +293,12 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
           icon="i-lucide-list-filter"
           color="neutral"
           variant="soft"
-          aria-label="Build a filter"
-          title="Build a filter"
+          :aria-label="t('Chen.BuildFilter')"
+          :title="t('Chen.BuildFilter')"
           :disabled="editing.busy.value || tab.state.loading || !tab.data?.fields.length"
           @click="filterDialogOpen = true"
         >
-          Filter
+          {{ t("Chen.Filter") }}
         </UButton>
         <span class="shrink-0 font-mono text-xs font-medium text-muted">WHERE</span>
         <DataViewFilter
@@ -314,12 +316,12 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
           icon="i-lucide-play"
           color="neutral"
           variant="soft"
-          aria-label="Apply WHERE condition"
-          title="Apply WHERE condition (Enter)"
+          :aria-label="t('Chen.ApplyWhereCondition')"
+          :title="t('Chen.ApplyWhereConditionShortcut')"
           :disabled="editing.busy.value || tab.state.loading"
           @click="applyWhereCondition"
         >
-          Apply
+          {{ t("Chen.Apply") }}
         </UButton>
       </div>
       <div class="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-default px-2 py-1">
@@ -333,7 +335,7 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
             :disabled="editing.busy.value"
             @click="addRow"
           >
-            Add row
+            {{ t("Chen.AddRow") }}
           </UButton>
           <UButton
             icon="i-lucide-trash-2"
@@ -343,7 +345,7 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
             :disabled="editing.busy.value || selectedRows.length === 0"
             @click="deleteRows"
           >
-            Delete row
+            {{ t("Chen.DeleteRow") }}
           </UButton>
           <UButton
             v-if="editableFields.length"
@@ -354,7 +356,7 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
             :disabled="editing.busy.value || selectedRows.length === 0"
             @click="batchUpdateDialogOpen = true"
           >
-            Update rows
+            {{ t("Chen.UpdateRows") }}
           </UButton>
           <UButton
             v-if="editing.dirty.value"
@@ -362,10 +364,10 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
             size="xs"
             color="primary"
             :disabled="editing.busy.value || editing.refreshRequiredBeforeSave.value"
-            :title="editing.refreshRequiredBeforeSave.value ? 'Refresh before saving again' : undefined"
+            :title="editing.refreshRequiredBeforeSave.value ? t('Chen.RefreshBeforeSavingAgain') : undefined"
             @click="saveChangesPreview"
           >
-            Save
+            {{ t("Common.Save") }}
           </UButton>
           <UButton
             v-if="editing.dirty.value"
@@ -376,7 +378,7 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
             :disabled="editing.busy.value"
             @click="cancelChanges"
           >
-            Cancel
+            {{ t("Common.Cancel") }}
           </UButton>
         </div>
         <DataViewToolbar
@@ -422,7 +424,7 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
         v-if="tab.tableMetadataLoadingSections.some((section) => section === tab.activePropertyTab)"
         class="border-b border-default px-3 py-2 text-xs text-muted"
       >
-        Loading table metadata...
+        {{ t("Chen.LoadingTableMetadata") }}
       </div>
       <div v-if="tab.activePropertyTab === 'basic'" class="grid min-h-0 flex-1 gap-3 overflow-auto p-4 md:grid-cols-2">
         <div
@@ -455,10 +457,10 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
           <table class="w-full text-left text-sm">
             <thead class="bg-[var(--workspace-surface-sub-panel)] text-muted">
               <tr>
-                <th class="px-3 py-2 font-medium">Name</th>
-                <th class="px-3 py-2 font-medium">Type</th>
-                <th class="px-3 py-2 font-medium">Nullable</th>
-                <th class="px-3 py-2 font-medium">Key</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Name") }}</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Type") }}</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Nullable") }}</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Key") }}</th>
               </tr>
             </thead>
             <tbody>
@@ -483,26 +485,26 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
 
       <div v-else-if="tab.activePropertyTab === 'indexes'" class="min-h-0 flex-1 overflow-auto p-3">
         <div class="mb-2 flex items-center justify-between gap-3">
-          <p class="text-xs text-muted">Primary-key and constraint-backed indexes cannot be deleted here.</p>
+          <p class="text-xs text-muted">{{ t("Chen.ProtectedIndexesHint") }}</p>
           <UButton
             icon="i-lucide-plus"
             size="xs"
             :disabled="!indexDdlSupported"
-            :title="indexDdlSupported ? 'Create index' : 'Index changes are not supported for this database type'"
+            :title="indexDdlSupported ? t('Chen.CreateIndex') : t('Chen.IndexChangesNotSupported')"
             @click="createIndexDialogOpen = true"
           >
-            New index
+            {{ t("Chen.NewIndex") }}
           </UButton>
         </div>
         <div v-if="dataViewIndexes(tab).length" class="overflow-hidden rounded-lg border border-default">
           <table class="w-full text-left text-sm">
             <thead class="bg-[var(--workspace-surface-sub-panel)] text-muted">
               <tr>
-                <th class="px-3 py-2 font-medium">Name</th>
-                <th class="px-3 py-2 font-medium">Columns</th>
-                <th class="px-3 py-2 font-medium">Unique</th>
-                <th class="px-3 py-2 font-medium">Method</th>
-                <th class="w-24 px-3 py-2 text-right font-medium">Actions</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Name") }}</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Columns") }}</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Unique") }}</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Method") }}</th>
+                <th class="w-24 px-3 py-2 text-right font-medium">{{ t("Common.Actions") }}</th>
               </tr>
             </thead>
             <tbody>
@@ -530,12 +532,12 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
                     :disabled="!indexDdlSupported || index.protected"
                     :title="
                       !indexDdlSupported
-                        ? 'Index changes are not supported for this database type'
+                        ? t('Chen.IndexChangesNotSupported')
                         : index.protected
-                          ? 'Primary or constraint-backed indexes cannot be deleted here'
-                          : `Drop ${index.name}`
+                          ? t('Chen.ProtectedIndexCannotDrop')
+                          : t('Chen.DropNamedIndex', { name: index.name })
                     "
-                    :aria-label="`Drop index ${index.name}`"
+                    :aria-label="t('Chen.DropNamedIndex', { name: index.name })"
                     @click="previewDropIndex(index)"
                   />
                 </td>
@@ -544,7 +546,11 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
           </table>
         </div>
         <div v-else class="grid h-full place-items-center text-sm text-muted">
-          {{ tab.tableMetadata?.capabilities.indexes === false ? "Index metadata is not supported." : "No indexes." }}
+          {{
+            tab.tableMetadata?.capabilities.indexes === false
+              ? t("Chen.IndexMetadataNotSupported")
+              : t("Chen.NoIndexes")
+          }}
         </div>
       </div>
 
@@ -553,9 +559,9 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
           <table class="w-full text-left text-sm">
             <thead class="bg-[var(--workspace-surface-sub-panel)] text-muted">
               <tr>
-                <th class="px-3 py-2 font-medium">Name</th>
-                <th class="px-3 py-2 font-medium">Column</th>
-                <th class="px-3 py-2 font-medium">References</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Name") }}</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Column") }}</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.References") }}</th>
               </tr>
             </thead>
             <tbody>
@@ -576,8 +582,8 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
         <div v-else class="grid h-full place-items-center text-sm text-muted">
           {{
             tab.tableMetadata?.capabilities.foreignKeys === false
-              ? "Foreign-key metadata is not supported."
-              : "No foreign keys."
+              ? t("Chen.ForeignKeyMetadataNotSupported")
+              : t("Chen.NoForeignKeys")
           }}
         </div>
       </div>
@@ -587,15 +593,15 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
           v-if="tab.tableMetadata?.capabilities.constraints === false"
           class="grid h-full place-items-center text-sm text-muted"
         >
-          Constraint metadata is not supported.
+          {{ t("Chen.ConstraintMetadataNotSupported") }}
         </div>
         <div v-else class="overflow-hidden rounded-lg border border-default">
           <table class="w-full text-left text-sm">
             <thead class="bg-[var(--workspace-surface-sub-panel)] text-muted">
               <tr>
-                <th class="px-3 py-2 font-medium">Name</th>
-                <th class="px-3 py-2 font-medium">Type</th>
-                <th class="px-3 py-2 font-medium">Definition</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Name") }}</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Type") }}</th>
+                <th class="px-3 py-2 font-medium">{{ t("Chen.Definition") }}</th>
               </tr>
             </thead>
             <tbody>
@@ -617,7 +623,7 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
 
       <SchemaDiagram
         v-else-if="tab.activePropertyTab === 'diagram'"
-        title="Table Diagram"
+        :title="t('Chen.TableDiagram')"
         :tables="tableDiagramTables"
         :relationships-supported="tab.tableMetadata?.capabilities.foreignKeys !== false"
         :searchable="false"
@@ -630,7 +636,7 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
           v-if="tab.tableMetadata?.capabilities.ddl === false"
           class="grid h-full place-items-center text-sm text-muted"
         >
-          Table DDL is not supported by this database metadata provider.
+          {{ t("Chen.TableDdlNotSupported") }}
         </div>
         <pre
           v-else
@@ -684,44 +690,44 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
 
     <SqlPreviewDialog
       :open="dropIndexPreviewOpen"
-      :title="`Drop index · ${selectedIndex?.name || ''}`"
-      :description="`Review the SQL that will remove this index from ${schemaName ? `${schemaName}.` : ''}${tableName}.`"
+      :title="t('Chen.DropIndexTitle', { name: selectedIndex?.name || '' })"
+      :description="t('Chen.DropIndexDescription', { table: `${schemaName ? `${schemaName}.` : ''}${tableName}` })"
       :sql="dropIndexSql"
-      confirm-label="Drop index"
+      :confirm-label="t('Chen.DropIndex')"
       danger
-      danger-message="Dropping an index can slow queries and may briefly lock database metadata. This action cannot be undone here."
+      :danger-message="t('Chen.DropIndexWarning')"
       @confirm="dropIndex"
       @update:open="dropIndexPreviewOpen = $event"
     />
 
     <ChenWorkspaceModal
       :open="indexDetailsOpen"
-      :title="`Index · ${selectedIndex?.name || ''}`"
+      :title="t('Chen.IndexTitle', { name: selectedIndex?.name || '' })"
       @update:open="indexDetailsOpen = $event"
     >
       <template #body>
         <dl v-if="selectedIndex" class="grid gap-3 p-4 text-sm sm:grid-cols-2">
           <div>
-            <dt class="text-xs text-muted">Columns</dt>
+            <dt class="text-xs text-muted">{{ t("Chen.Columns") }}</dt>
             <dd class="mt-1">{{ selectedIndex.columns }}</dd>
           </div>
           <div>
-            <dt class="text-xs text-muted">Unique</dt>
+            <dt class="text-xs text-muted">{{ t("Chen.Unique") }}</dt>
             <dd class="mt-1">{{ selectedIndex.unique }}</dd>
           </div>
           <div>
-            <dt class="text-xs text-muted">Method</dt>
+            <dt class="text-xs text-muted">{{ t("Chen.Method") }}</dt>
             <dd class="mt-1">{{ selectedIndex.method }}</dd>
           </div>
           <div>
-            <dt class="text-xs text-muted">Managed by constraint</dt>
-            <dd class="mt-1">{{ selectedIndex.protected ? "Yes" : "No" }}</dd>
+            <dt class="text-xs text-muted">{{ t("Chen.ManagedByConstraint") }}</dt>
+            <dd class="mt-1">{{ selectedIndex.protected ? t("Chen.Yes") : t("Chen.No") }}</dd>
           </div>
           <div class="sm:col-span-2">
-            <dt class="text-xs text-muted">Definition</dt>
+            <dt class="text-xs text-muted">{{ t("Chen.Definition") }}</dt>
             <dd class="mt-1">
               <pre class="overflow-auto rounded-md bg-elevated p-3 text-xs text-muted">{{
-                selectedIndex.definition || "Definition is not available from the server."
+                selectedIndex.definition || t("Chen.DefinitionUnavailable")
               }}</pre>
             </dd>
           </div>

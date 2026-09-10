@@ -11,6 +11,8 @@ const emit = defineEmits<{
   confirm: [name: string];
 }>();
 
+const { t } = useI18n();
+
 const name = ref("");
 const visible = computed({
   get: () => props.open,
@@ -27,17 +29,17 @@ function close() {
 </script>
 
 <template>
-  <ChenWorkspaceModal v-model:open="visible" title="Save SQL" :dismissible="false">
+  <ChenWorkspaceModal v-model:open="visible" :title="t('Chen.SaveSql')" :dismissible="false">
     <template #body>
-      <UFormField label="Name">
+      <UFormField :label="t('Chen.Name')">
         <UInput v-model="name" autofocus class="w-full" @keydown.enter.prevent="submit" />
       </UFormField>
     </template>
 
     <template #footer>
       <div class="flex w-full justify-end gap-2">
-        <UButton color="neutral" variant="soft" @click="close">Cancel</UButton>
-        <UButton :loading="saving" @click="submit">Confirm</UButton>
+        <UButton color="neutral" variant="soft" @click="close">{{ t("Common.Cancel") }}</UButton>
+        <UButton :loading="saving" @click="submit">{{ t("Common.Confirm") }}</UButton>
       </div>
     </template>
   </ChenWorkspaceModal>

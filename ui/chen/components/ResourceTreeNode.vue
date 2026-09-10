@@ -24,6 +24,8 @@ const emit = defineEmits<{
   menu: [payload: { node: ChenTreeNode; event: MouseEvent }];
   clearRecent: [];
 }>();
+
+const { t } = useI18n();
 const appBaseURL = useRuntimeConfig().app.baseURL;
 
 const isExpanded = computed(() => props.expandedKeys.includes(props.node.key));
@@ -114,7 +116,7 @@ function handleContextMenu(event: MouseEvent) {
         v-if="!node.leaf"
         type="button"
         class="app-tree-icon-slot grid shrink-0 place-items-center rounded-sm text-muted"
-        :aria-label="isExpanded ? 'Collapse' : 'Expand'"
+        :aria-label="isExpanded ? t('Tree.Collapse') : t('Tree.Expand')"
         @click.stop="emit('toggle', node)"
       >
         <UIcon
@@ -138,8 +140,8 @@ function handleContextMenu(event: MouseEvent) {
         v-if="node.type === 'recent-group' && node.clearable"
         type="button"
         class="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-[color,background-color,opacity] group-hover/row:opacity-100 hover:bg-[var(--app-hover-strong)] hover:text-highlighted focus-visible:opacity-100"
-        aria-label="Clear recent tables"
-        title="Clear recent tables"
+        :aria-label="t('Chen.ClearRecentTables')"
+        :title="t('Chen.ClearRecentTables')"
         @click.stop="emit('clearRecent')"
       >
         <UIcon name="i-lucide-trash-2" class="size-3.5" />
@@ -152,14 +154,14 @@ function handleContextMenu(event: MouseEvent) {
         class="px-1.5 py-0.5 text-muted"
         :style="{ paddingLeft: `${((depth || 0) + 1) * 12 + 20}px` }"
       >
-        Loading...
+        {{ t("Chen.Loading") }}
       </li>
       <li
         v-else-if="!children.length"
         class="px-1.5 py-0.5 text-muted"
         :style="{ paddingLeft: `${((depth || 0) + 1) * 12 + 20}px` }"
       >
-        No items
+        {{ t("Chen.NoItems") }}
       </li>
       <ChenResourceTreeNode
         v-for="child in children"

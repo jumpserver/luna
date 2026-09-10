@@ -42,7 +42,7 @@ const estimatedCost = computed(() => (props.showCost ? chenPlanFormatEstimated(p
       <button
         v-if="hasChildren"
         class="mt-0.5 shrink-0 text-muted"
-        :aria-label="expanded ? 'Collapse plan node' : 'Expand plan node'"
+        :aria-label="expanded ? t('Chen.CollapsePlanNode') : t('Chen.ExpandPlanNode')"
         @click="expanded = !expanded"
       >
         <UIcon :name="expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-3.5" />
