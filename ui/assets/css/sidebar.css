@@ -21,7 +21,6 @@
 }
 
 .sidebar-row {
-  border-radius: var(--app-radius);
   transition:
     background-color 150ms ease,
     color 150ms ease;

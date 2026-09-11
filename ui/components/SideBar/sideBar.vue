@@ -282,7 +282,7 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
         :collapsed="visuallyCollapsed"
         color="neutral"
         :ui="{
-          link: 'sidebar-row px-2.5 my-1 rounded-lg menu-item flex items-center light:text-gray-800 dark:text-gray-200',
+          link: 'sidebar-row px-2.5 my-1 menu-item flex items-center light:text-gray-800 dark:text-gray-200',
           linkLeadingIcon: 'sidebar-icon',
           label: 'light:text-gray-500 dark:text-gray-400 pb-0 text-[11px] font-medium uppercase tracking-[0.12em]'
         }"
