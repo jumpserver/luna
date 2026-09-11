@@ -1,8 +1,18 @@
 import type { PublicSettings } from "~/composables/useApiRequest";
-import type { ConnectionInfo, ConnectionPreferenceInfo, CurrentOrg, PermissionOrgs, PermOrgItem, RdpGraphics, RoleType, UserIntiInfo } from "~/types";
+import type { SiteUserData } from "~/store/modules/userInfo";
+import type {
+  ConnectionInfo,
+  ConnectionPreferenceInfo,
+  CurrentOrg,
+  PermissionOrgs,
+  PermOrgItem,
+  RdpGraphics,
+  RoleType,
+  UserIntiInfo
+} from "~/types";
 import { getUserPermissions } from "~/composables/useApiRequest";
 import { desktopInvoke } from "~/shared/desktop/bridge";
-import { type SiteUserData, useUserInfoStore } from "~/store/modules/userInfo";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 import {
   recordedOrganizationForBootstrap,
   resolveOrganizationSelection,
