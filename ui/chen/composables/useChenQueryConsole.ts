@@ -241,9 +241,21 @@ export function useChenQueryConsole(
     tab.message = null;
   }
 
+  function clearPendingExecutionPlans(tab: ChenQueryLikeWorkspaceTab) {
+    for (const [requestId, pending] of pendingExecutionPlans) {
+      if (pending.tabId === tab.id) pendingExecutionPlans.delete(requestId);
+    }
+    if (tab.kind === "query") {
+      tab.executionPlanLoading = false;
+      return;
+    }
+    for (const entry of tab.timelineEntries) entry.executionPlanLoading = false;
+  }
+
   function handleQueryConsolePacket(tab: ChenQueryLikeWorkspaceTab, packet: ChenPacket) {
     switch (packet.type) {
       case "init":
+        clearPendingExecutionPlans(tab);
         tab.title = packet.data?.title || tab.title;
         tab.serverConsoleId = String(packet.data?.consoleId || "");
         tab.connectionGeneration = (tab.connectionGeneration || 0) + 1;
@@ -485,7 +497,14 @@ export function useChenQueryConsole(
     const pending = pendingExecutionPlans.get(data.requestId);
     if (!pending || pending.tabId !== tab.id) return;
     pendingExecutionPlans.delete(data.requestId);
-    if ((tab.connectionGeneration || 0) !== pending.generation) return;
+    if ((tab.connectionGeneration || 0) !== pending.generation) {
+      if (tab.kind === "query") tab.executionPlanLoading = false;
+      else if (pending.entryId) {
+        const staleEntry = tab.timelineEntries.find((item) => item.id === pending.entryId);
+        if (staleEntry) staleEntry.executionPlanLoading = false;
+      }
+      return;
+    }
 
     if (tab.kind === "query") {
       tab.executionPlan = data;
@@ -494,9 +513,7 @@ export function useChenQueryConsole(
       return;
     }
 
-    const entry =
-      tab.timelineEntries.find((item) => item.id === pending.entryId) ||
-      tab.timelineEntries.find((item) => item.id === tab.activeTimelineEntryId);
+    const entry = pending.entryId ? tab.timelineEntries.find((item) => item.id === pending.entryId) : null;
     if (!entry) return;
     entry.executionPlan = data;
     entry.executionPlanLoading = false;
@@ -563,13 +580,26 @@ export function useChenQueryConsole(
   }
 
   function cancelQueryLikeTab(tab: ChenQueryLikeWorkspaceTab) {
-    if (tab.kind === "query" && !tab.state.canCancel) return;
-    if (tab.kind === "console") {
+    const planPending = tabHasPendingPlan(tab.id);
+    if (tab.kind === "query") {
+      if (!tab.state.canCancel && !tab.executionPlanLoading && !planPending) return;
+    } else {
       const entry = activeConsoleEntry(tab);
-      if (!entry || (entry.status !== "running" && entry.status !== "cancelling")) return;
-      entry.status = "cancelling";
+      const planLoading = tab.timelineEntries.some((item) => item.executionPlanLoading);
+      if (entry && (entry.status === "running" || entry.status === "cancelling")) {
+        entry.status = "cancelling";
+      } else if (!planLoading && !planPending) {
+        return;
+      }
     }
     sendConsoleAction(tab, "query_console_action", { action: "cancel" });
+    if (
+      planPending ||
+      (tab.kind === "query" && tab.executionPlanLoading) ||
+      (tab.kind === "console" && tab.timelineEntries.some((item) => item.executionPlanLoading))
+    ) {
+      clearPendingExecutionPlans(tab);
+    }
   }
 
   return {

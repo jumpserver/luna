@@ -54,7 +54,8 @@ const busy = computed(() => {
     props.tab.state.loading ||
     props.tab.state.inQuery ||
     active?.status === "running" ||
-    active?.status === "cancelling"
+    active?.status === "cancelling" ||
+    props.tab.timelineEntries.some((entry) => entry.executionPlanLoading)
   );
 });
 const statementEmpty = computed(() => !props.tab.pendingSql.trim());
@@ -282,15 +283,17 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
             <div class="flex min-w-0 items-center gap-2 font-medium text-highlighted">
               <span class="text-muted">#{{ entryIndex + 1 }}</span>
               <UIcon
+                v-if="!entry.planOnly"
                 :name="statusDetails[entry.status].icon"
                 class="size-3.5 shrink-0"
                 :class="statusDetails[entry.status].class"
               />
-              <span>{{ statusDetails[entry.status].label }}</span>
+              <UIcon v-else name="i-lucide-git-fork" class="size-3.5 shrink-0 text-muted" />
+              <span>{{ entry.planOnly ? t("ExecutionPlan.modeEstimated") : statusDetails[entry.status].label }}</span>
             </div>
             <div class="flex shrink-0 items-center gap-2">
               <UButton
-                v-if="entry.status === 'running' || entry.status === 'cancelling'"
+                v-if="entry.status === 'running' || entry.status === 'cancelling' || entry.executionPlanLoading"
                 icon="i-lucide-square"
                 size="sm"
                 color="error"
@@ -309,7 +312,7 @@ defineExpose({ focus: () => inputRef.value?.focus(), editorSnapshot });
               >
                 {{ t("ExecutionPlan.explain") }}
               </UButton>
-              <span v-if="elapsed(entry)" class="tabular-nums text-muted">{{ elapsed(entry) }}</span>
+              <span v-if="!entry.planOnly && elapsed(entry)" class="tabular-nums text-muted">{{ elapsed(entry) }}</span>
             </div>
           </header>
 

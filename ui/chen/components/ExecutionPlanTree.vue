@@ -29,6 +29,9 @@ const rawDisplay = computed(() => {
   }
   return plan.rawText;
 });
+const visiblePrerequisites = computed(() =>
+  (props.plan?.prerequisites || []).filter((item) => item.status === "UNMET" || item.status === "UNKNOWN")
+);
 </script>
 
 <template>
@@ -58,6 +61,13 @@ const rawDisplay = computed(() => {
       </div>
       <div v-if="plan.error" class="border-b border-error/20 bg-error/10 px-3 py-2 text-xs text-error">
         {{ plan.error.message }}
+      </div>
+      <div
+        v-for="item in visiblePrerequisites"
+        :key="item.code + item.status + item.message"
+        class="border-b border-warning/20 bg-warning/10 px-3 py-2 text-xs text-warning"
+      >
+        {{ item.message }}
       </div>
       <div
         v-for="warning in plan.warnings"
