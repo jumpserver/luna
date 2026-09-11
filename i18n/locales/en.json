@@ -974,7 +974,20 @@
     "ShortcutHint": "Press {shortcut} to ask Terminal AI",
     "Send": "Send",
     "Sending": "Sending…",
-    "ContinueHint": "Continue in Terminal AI with the current approval and execution policy"
+    "History": "History",
+    "ViewDetails": "View details",
+    "LeaveTitle": "An AI task is running",
+    "LeaveTab": "Closing this tab will interrupt the running AI task. Close it anyway?",
+    "LeaveOrg": "Switching organizations will interrupt the running AI task. Switch anyway?",
+    "LeaveAccount": "Switching users will interrupt the running AI task. Switch anyway?",
+    "LeaveLogout": "Signing out will interrupt the running AI task. Sign out anyway?",
+    "ContinueHint": "This turn stays here. History opens the full thread.",
+    "TourHudTitle": "Ask from the terminal",
+    "TourHudDescription": "Press {shortcut} to open Terminal AI at the cursor. Describe a task and send.",
+    "TourHistoryTitle": "Full history",
+    "TourHistoryDescription": "This panel shows the current turn. History opens the full thread.",
+    "TourCloseTitle": "Close",
+    "TourCloseDescription": "Close this panel anytime. Press {shortcut} to open it again."
   },
   "WorkspacePane": {
     "EmptyTitle": "Not connected",

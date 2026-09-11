@@ -2,6 +2,7 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { PermOrgItem } from "~/types/index";
 
+import { confirmAiTaskLeave } from "~/composables/useAiTaskLeave";
 import { invalidatePersonalAssetCredentialCache } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { getOrganizationAvatarText } from "~/utils/organization";
@@ -46,8 +47,9 @@ const organizationDropdownItems = computed<DropdownMenuItem[]>(() =>
  * @description 切换组织
  * @param org
  */
-function handleOrgChange(org: PermOrgItem) {
+async function handleOrgChange(org: PermOrgItem) {
   if (org.id === currentUser.value?.org?.id) return;
+  if (!(await confirmAiTaskLeave("org"))) return;
 
   invalidatePersonalAssetCredentialCache();
   setCurrentOrg(org);

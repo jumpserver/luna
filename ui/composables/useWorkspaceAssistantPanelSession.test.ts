@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, reactive, shallowRef } from "vue";
-import { useWorkspaceAssistantPanelSession } from "./useWorkspaceAssistantPanelSession";
+import { hasActiveAiTask, useWorkspaceAssistantPanelSession } from "./useWorkspaceAssistantPanelSession";
 
 const mocks = vi.hoisted(() => ({
   nextId: 0,
   sessions: new Map<string, any>(),
+  busyScopes: new Set<string>(),
   dispose: vi.fn(),
   interrupt: vi.fn()
 }));
@@ -17,7 +18,8 @@ vi.mock("./useWorkspaceAssistantSession", () => ({
     return mocks.sessions.get(scopeId);
   },
   disposeWorkspaceAssistantSession: mocks.dispose,
-  interruptWorkspaceAssistant: mocks.interrupt
+  interruptWorkspaceAssistant: mocks.interrupt,
+  isWorkspaceAssistantBusy: (scopeId: string) => mocks.busyScopes.has(scopeId)
 }));
 
 function setup() {
@@ -40,12 +42,24 @@ function setup() {
 
 beforeEach(() => {
   mocks.sessions.clear();
+  mocks.busyScopes.clear();
   mocks.nextId = 0;
   vi.clearAllMocks();
   mocks.dispose.mockImplementation((scopeId: string) => mocks.sessions.delete(scopeId));
 });
 
 describe("tab-scoped workspace assistant conversations", () => {
+  it("reports an active AI task for a tab", () => {
+    const { scope, panel } = setup();
+    const current = panel.session.value!;
+    expect(hasActiveAiTask("a")).toBe(false);
+    mocks.busyScopes.add(current.scopeId);
+    expect(hasActiveAiTask("a")).toBe(true);
+    expect(hasActiveAiTask("b")).toBe(false);
+    expect(hasActiveAiTask()).toBe(true);
+    scope.stop();
+  });
+
   it("creates a conversation per tab and restores it when switching back", async () => {
     const { scope, runtime, panel } = setup();
     const first = panel.session.value!;
@@ -79,6 +93,22 @@ describe("tab-scoped workspace assistant conversations", () => {
     scope.stop();
     expect(mocks.dispose).toHaveBeenCalledWith(first.scopeId);
     expect(mocks.dispose).toHaveBeenCalledWith(second.scopeId);
+  });
+
+  it("keeps the conversation when a second subscriber mounts", async () => {
+    const first = setup();
+    const session = first.panel.session.value!;
+    session.draft = "inspect disk";
+    mocks.dispose.mockClear();
+    const second = setup();
+    expect(second.panel.session.value).toBe(session);
+    expect(session.draft).toBe("inspect disk");
+    expect(mocks.dispose).not.toHaveBeenCalled();
+    first.scope.stop();
+    expect(mocks.dispose).not.toHaveBeenCalled();
+    expect(second.panel.session.value).toBe(session);
+    second.scope.stop();
+    expect(mocks.dispose).toHaveBeenCalledWith(session.scopeId);
   });
 
   it("keeps the same conversation when switching panes inside a tab", async () => {

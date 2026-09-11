@@ -974,7 +974,20 @@
     "ShortcutHint": "Pressione {shortcut} para perguntar à IA do Terminal",
     "Send": "Enviar",
     "Sending": "Enviando…",
-    "ContinueHint": "Continuar na IA do Terminal com a política atual de aprovação e execução"
+    "History": "Histórico",
+    "ViewDetails": "Ver detalhes",
+    "LeaveTitle": "Há uma tarefa de IA em andamento",
+    "LeaveTab": "Fechar esta aba interromperá a tarefa de IA. Fechar mesmo assim?",
+    "LeaveOrg": "Trocar de organização interromperá a tarefa de IA. Trocar mesmo assim?",
+    "LeaveAccount": "Trocar de usuário interromperá a tarefa de IA. Trocar mesmo assim?",
+    "LeaveLogout": "Sair interromperá a tarefa de IA. Sair mesmo assim?",
+    "ContinueHint": "Este turno permanece aqui. Histórico abre a conversa completa.",
+    "TourHudTitle": "Perguntar no terminal",
+    "TourHudDescription": "Pressione {shortcut} para abrir o Terminal AI no cursor. Descreva a tarefa e envie.",
+    "TourHistoryTitle": "Histórico completo",
+    "TourHistoryDescription": "Este painel mostra só o turno atual. O histórico abre a conversa inteira.",
+    "TourCloseTitle": "Fechar",
+    "TourCloseDescription": "Feche quando quiser. Pressione {shortcut} para abrir de novo."
   },
   "WorkspacePane": {
     "EmptyTitle": "Não conectado",

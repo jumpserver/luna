@@ -7,9 +7,11 @@ import defaultFavicon from "~/assets/facio.ico";
 import AppWatermark from "~/components/AppWatermark.vue";
 import AclDialog from "~/components/Modal/aclDialog.vue";
 import ConnectionFormModal from "~/components/Modal/connectionFormModal.vue";
+import { confirmAiTaskLeave, useAiTaskLeave } from "~/composables/useAiTaskLeave";
 import { installDebugLogHook, uninstallDebugLogHook } from "~/composables/useDebugLog";
 import { applyUiRadius, isUiRadius } from "~/composables/useSettingStorage";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composables/useThemePresets";
+import { registerAiTaskTabCloseConfirm } from "~/composables/useWorkspaceTabs";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { normalizeLanguageCode, resolveLanguageFromSystem, toDjangoLanguageCode } from "~/utils";
 import {
@@ -68,6 +70,14 @@ const {
   leaveKind: siteLeaveKind,
   confirmLeave: confirmSiteLeave
 } = useSiteAccountSwitch();
+const { confirmOpen: aiTaskLeaveOpen, leaveKind: aiTaskLeaveKind, confirmLeave: confirmAiLeave } = useAiTaskLeave();
+const aiTaskLeaveDescription = computed(() => {
+  if (aiTaskLeaveKind.value === "logout") return t("TerminalAi.LeaveLogout");
+  if (aiTaskLeaveKind.value === "account") return t("TerminalAi.LeaveAccount");
+  if (aiTaskLeaveKind.value === "org") return t("TerminalAi.LeaveOrg");
+  return t("TerminalAi.LeaveTab");
+});
+let unregisterAiTaskTabCloseConfirm: (() => void) | null = null;
 
 const backgroundColor = computed(() => {
   const isDark = userTheme.value === "dark";
@@ -287,6 +297,7 @@ async function applyAfterHydration() {
 }
 
 onMounted(async () => {
+  unregisterAiTaskTabCloseConfirm = registerAiTaskTabCloseConfirm((tabIds) => confirmAiTaskLeave("tab", tabIds));
   void authSession.bootstrapPersistedSession();
 
   if (!isDesktopRuntime()) return;
@@ -353,6 +364,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  unregisterAiTaskTabCloseConfirm?.();
   unlistenPrimaryColor.value?.();
   unlistenTheme.value?.();
   unlistenFont.value?.();
@@ -384,6 +396,23 @@ onBeforeUnmount(() => {
               {{ t("Common.Cancel") }}
             </UButton>
             <UButton color="warning" @click="confirmSiteLeave">
+              {{ t("Common.Confirm") }}
+            </UButton>
+          </template>
+        </UModal>
+        <UModal
+          v-model:open="aiTaskLeaveOpen"
+          :title="t('TerminalAi.LeaveTitle')"
+          :description="aiTaskLeaveDescription"
+          :dismissible="false"
+          :close="false"
+          :ui="{ overlay: '!z-[300]', content: 'max-w-md !z-[300]', footer: 'justify-end gap-2' }"
+        >
+          <template #footer>
+            <UButton color="neutral" variant="ghost" @click="aiTaskLeaveOpen = false">
+              {{ t("Common.Cancel") }}
+            </UButton>
+            <UButton color="warning" @click="confirmAiLeave">
               {{ t("Common.Confirm") }}
             </UButton>
           </template>

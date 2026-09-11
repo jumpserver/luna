@@ -113,6 +113,14 @@ let tabSequence = 0;
 let paneSequence = 0;
 let sessionDisposer: ((id: string) => void | Promise<void>) | null = null;
 const sessionCloseGuards = new Map<string, () => boolean | Promise<boolean>>();
+let aiTaskTabCloseConfirm: ((tabIds: string[]) => Promise<boolean>) | null = null;
+
+export const registerAiTaskTabCloseConfirm = (confirm: ((tabIds: string[]) => Promise<boolean>) | null) => {
+  aiTaskTabCloseConfirm = confirm;
+  return () => {
+    if (aiTaskTabCloseConfirm === confirm) aiTaskTabCloseConfirm = null;
+  };
+};
 
 export const registerWorkspaceSessionCloseGuard = (sessionId: string, guard: () => boolean | Promise<boolean>) => {
   sessionCloseGuards.set(sessionId, guard);
@@ -597,6 +605,7 @@ export const useWorkspaceTabs = () => {
     }
 
     const tab = tabs.value[index]!;
+    if (aiTaskTabCloseConfirm && !(await aiTaskTabCloseConfirm([tab.id]))) return false;
     const originalPanes = [...tab.panes];
     if (!(await canCloseTab(tab))) return false;
     assertCurrent();
@@ -614,6 +623,7 @@ export const useWorkspaceTabs = () => {
     if (!match) return false;
 
     const { tab, pane, paneIndex } = match;
+    if (aiTaskTabCloseConfirm && !(await aiTaskTabCloseConfirm([tab.id]))) return false;
     if (!(await canCloseWorkspaceSession(pane.id))) return false;
     assertCurrent();
     const current = findPane(paneId);
@@ -635,6 +645,8 @@ export const useWorkspaceTabs = () => {
   }
 
   const closeTabs = async (targets: WorkspaceSessionTab[]) => {
+    if (aiTaskTabCloseConfirm && targets.length && !(await aiTaskTabCloseConfirm(targets.map((tab) => tab.id))))
+      return false;
     for (const tab of targets) {
       if (!(await canCloseTab(tab))) return false;
     }

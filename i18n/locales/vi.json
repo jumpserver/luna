@@ -974,7 +974,20 @@
     "ShortcutHint": "Nhấn {shortcut} để hỏi AI Terminal",
     "Send": "Gửi",
     "Sending": "Đang gửi…",
-    "ContinueHint": "Tiếp tục trong AI Terminal với chính sách phê duyệt và thực thi hiện tại"
+    "History": "Lịch sử",
+    "ViewDetails": "Xem chi tiết",
+    "LeaveTitle": "Có tác vụ AI đang chạy",
+    "LeaveTab": "Đóng tab này sẽ gián đoạn tác vụ AI. Vẫn đóng?",
+    "LeaveOrg": "Đổi tổ chức sẽ gián đoạn tác vụ AI. Vẫn đổi?",
+    "LeaveAccount": "Đổi người dùng sẽ gián đoạn tác vụ AI. Vẫn đổi?",
+    "LeaveLogout": "Đăng xuất sẽ gián đoạn tác vụ AI. Vẫn đăng xuất?",
+    "ContinueHint": "Lượt này ở lại đây. History mở toàn bộ hội thoại.",
+    "TourHudTitle": "Hỏi từ terminal",
+    "TourHudDescription": "Nhấn {shortcut} để mở Terminal AI tại con trỏ. Mô tả tác vụ rồi gửi.",
+    "TourHistoryTitle": "Lịch sử đầy đủ",
+    "TourHistoryDescription": "Panel này chỉ hiện lượt hiện tại. History mở toàn bộ hội thoại.",
+    "TourCloseTitle": "Đóng",
+    "TourCloseDescription": "Đóng bất cứ lúc nào. Nhấn {shortcut} để mở lại."
   },
   "WorkspacePane": {
     "EmptyTitle": "Chưa kết nối",

@@ -3,12 +3,15 @@ import {
   disposeWorkspaceAssistantSession,
   ensureWorkspaceAssistantSession,
   interruptWorkspaceAssistant,
+  isWorkspaceAssistantBusy,
   workspaceAssistantScopeId
 } from "./useWorkspaceAssistantSession";
 
+const sessions = new Map<string, ReturnType<typeof ensureWorkspaceAssistantSession>>();
+const session = shallowRef<ReturnType<typeof ensureWorkspaceAssistantSession> | null>(null);
+let subscribers = 0;
+
 export function useWorkspaceAssistantPanelSession(runtime: ReturnType<typeof useWorkspaceAssistantRuntime>) {
-  const sessions = new Map<string, ReturnType<typeof ensureWorkspaceAssistantSession>>();
-  const session = shallowRef<ReturnType<typeof ensureWorkspaceAssistantSession> | null>(null);
   const scopeId = computed(() => session.value?.scopeId || "");
   const activeTabId = computed(() => runtime.tabs.activeTabId.value);
   const context = computed(() => {
@@ -54,7 +57,7 @@ export function useWorkspaceAssistantPanelSession(runtime: ReturnType<typeof use
   watch(
     [context, activeTabId],
     ([value, tabId], [previousContext, previousTabId]) => {
-      if (value !== previousContext) clear();
+      if (previousContext !== undefined && value !== previousContext) clear();
       if (!value) return;
       if (tabId && !runtime.tabs.tabs.value.some((tab) => tab.id === tabId)) {
         session.value = null;
@@ -84,6 +87,21 @@ export function useWorkspaceAssistantPanelSession(runtime: ReturnType<typeof use
       }
     }
   );
-  onScopeDispose(clear);
+  subscribers += 1;
+  onScopeDispose(() => {
+    subscribers -= 1;
+    if (subscribers === 0) clear();
+  });
   return { session, scopeId, newSession };
+}
+
+export function hasActiveAiTask(tabId?: string) {
+  if (tabId !== undefined) {
+    const current = sessions.get(tabId);
+    return Boolean(current && isWorkspaceAssistantBusy(current.scopeId));
+  }
+  for (const current of sessions.values()) {
+    if (isWorkspaceAssistantBusy(current.scopeId)) return true;
+  }
+  return false;
 }

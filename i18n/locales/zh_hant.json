@@ -974,7 +974,20 @@
     "ShortcutHint": "按 {shortcut} 詢問 Terminal AI",
     "Send": "傳送",
     "Sending": "傳送中…",
-    "ContinueHint": "傳送後在 Terminal AI 中繼續，並沿用當前審批與執行策略"
+    "History": "歷史",
+    "ViewDetails": "查看詳情",
+    "LeaveTitle": "有 AI 任務正在執行",
+    "LeaveTab": "關閉此標籤將中斷正在進行的 AI 任務，確定關閉嗎？",
+    "LeaveOrg": "切換組織將中斷正在進行的 AI 任務，確定切換嗎？",
+    "LeaveAccount": "切換使用者將中斷正在進行的 AI 任務，確定切換嗎？",
+    "LeaveLogout": "登出將中斷正在進行的 AI 任務，確定登出嗎？",
+    "ContinueHint": "本輪在此繼續。History 打開完整對話。",
+    "TourHudTitle": "從終端提問",
+    "TourHudDescription": "按 {shortcut} 在游標處打開 Terminal AI。描述任務後發送。",
+    "TourHistoryTitle": "完整歷史",
+    "TourHistoryDescription": "浮層只顯示目前這一輪。歷史打開完整對話。",
+    "TourCloseTitle": "關閉",
+    "TourCloseDescription": "隨時可以關閉。再按 {shortcut} 即可打開。"
   },
   "WorkspacePane": {
     "EmptyTitle": "未連線",

@@ -1,4 +1,6 @@
+import { confirmAiTaskLeave } from "~/composables/useAiTaskLeave";
 import { useBatchCommandPanel } from "~/composables/useBatchCommandPanel";
+import { hasActiveAiTask } from "~/composables/useWorkspaceAssistantPanelSession";
 import { useWorkspaceTabs } from "~/composables/useWorkspaceTabs";
 
 export type LeaveCurrentSiteKind = "switch" | "logout" | "login";
@@ -49,6 +51,11 @@ export const confirmLeaveCurrentSiteSessions = async (
   const closeOnConfirm = options.close !== false;
   leaveInFlight = true;
   try {
+    if (hasActiveAiTask()) {
+      if (!(await confirmAiTaskLeave(kind === "logout" ? "logout" : "account"))) return false;
+      if (closeOnConfirm) await closeCurrentSiteWorkspace();
+      return true;
+    }
     if (!hasActiveWorkspaceSessions()) {
       if (closeOnConfirm) await closeCurrentSiteWorkspace();
       return true;

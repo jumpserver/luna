@@ -974,7 +974,20 @@
     "ShortcutHint": "{shortcut} を押して Terminal AI に質問",
     "Send": "送信",
     "Sending": "送信中…",
-    "ContinueHint": "現在の承認および実行ポリシーを使用して Terminal AI で続行します"
+    "History": "履歴",
+    "ViewDetails": "詳細を見る",
+    "LeaveTitle": "AI タスクが実行中です",
+    "LeaveTab": "このタブを閉じると実行中の AI タスクが中断されます。閉じますか？",
+    "LeaveOrg": "組織を切り替えると実行中の AI タスクが中断されます。切り替えますか？",
+    "LeaveAccount": "ユーザーを切り替えると実行中の AI タスクが中断されます。切り替えますか？",
+    "LeaveLogout": "ログアウトすると実行中の AI タスクが中断されます。ログアウトしますか？",
+    "ContinueHint": "このターンはここに残ります。History で全文を開きます。",
+    "TourHudTitle": "ターミナルから質問",
+    "TourHudDescription": "{shortcut} でカーソル位置に Terminal AI を開きます。タスクを入力して送信します。",
+    "TourHistoryTitle": "履歴",
+    "TourHistoryDescription": "このパネルは現在のターンだけです。履歴で全文を開きます。",
+    "TourCloseTitle": "閉じる",
+    "TourCloseDescription": "いつでも閉じられます。{shortcut} で再表示します。"
   },
   "WorkspacePane": {
     "EmptyTitle": "未接続",
