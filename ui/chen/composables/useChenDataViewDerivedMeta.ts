@@ -1,5 +1,6 @@
 import type { Ref } from "vue";
 import type { ChenDataViewConsoleTab } from "~/chen/types";
+import { chenDataViewPropertyTabIds, isChenViewRelation } from "~/chen/utils/resourceTree";
 
 export interface ChenDataViewColumnPreview {
   name: string;
@@ -23,30 +24,40 @@ export interface ChenDataViewIndexPreview {
   protected: boolean;
 }
 
+const PROPERTY_TAB_LABELS = {
+  basic: "Chen.BasicInfo",
+  columns: "Chen.Columns",
+  indexes: "Chen.Indexes",
+  foreignKeys: "Chen.ForeignKeys",
+  constraints: "Chen.Constraints",
+  ddl: "DDL",
+  diagram: "Chen.Diagram"
+} as const;
+
 export function useChenDataViewDerivedMeta(profileDbType: Ref<string | undefined>, protocol: Ref<string | undefined>) {
   const { t } = useI18n();
-  const dataViewPropertyTabs = computed(
-    () =>
-      [
-        { id: "basic", label: t("Chen.BasicInfo") },
-        { id: "columns", label: t("Chen.Columns") },
-        { id: "indexes", label: t("Chen.Indexes") },
-        { id: "foreignKeys", label: t("Chen.ForeignKeys") },
-        { id: "constraints", label: t("Chen.Constraints") },
-        { id: "ddl", label: "DDL" },
-        { id: "diagram", label: t("Chen.Diagram") }
-      ] as const
-  );
+
+  function dataViewPropertyTabs(tab: ChenDataViewConsoleTab) {
+    return chenDataViewPropertyTabIds({
+      nodeKey: tab.nodeKey,
+      kind: tab.tableMetadata?.kind,
+      ddlSupported: tab.tableMetadata?.capabilities.ddl === true
+    }).map((id) => ({
+      id,
+      label: id === "ddl" ? PROPERTY_TAB_LABELS.ddl : t(PROPERTY_TAB_LABELS[id])
+    }));
+  }
 
   function tableLabelForProperties(tab: ChenDataViewConsoleTab) {
     return tab.tableMetadata?.name || tab.meta?.table || tab.meta?.title || tab.title;
   }
 
   function dataViewBasicInfo(tab: ChenDataViewConsoleTab) {
+    const isView = isChenViewRelation({ nodeKey: tab.nodeKey, kind: tab.tableMetadata?.kind });
     return [
       { label: t("Chen.Name"), value: tableLabelForProperties(tab) },
       { label: t("Chen.Schema"), value: tab.tableMetadata?.schema || tab.meta?.schema || "-" },
-      { label: t("Chen.Type"), value: t("Chen.Table") },
+      { label: t("Chen.Type"), value: isView ? t("Chen.View") : t("Chen.Table") },
       { label: t("Chen.Database"), value: profileDbType.value || protocol.value || "-" },
       { label: t("Chen.RowsPreview"), value: String(tab.data?.data?.length || 0) }
     ];

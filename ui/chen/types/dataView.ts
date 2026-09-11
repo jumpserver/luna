@@ -21,6 +21,7 @@ export interface ChenDataViewField {
   primaryKey?: boolean;
   editable?: boolean;
   insertable?: boolean;
+  masked?: boolean;
   editReason?: string;
 }
 
@@ -45,12 +46,11 @@ export interface ChenCellWriteValue {
 }
 
 export interface ChenCellChange {
+  rowRef?: string;
   pkColumn: string;
-  pkValue: any;
-  pkValueIsNull: boolean;
+  pkValue?: any;
+  pkValueIsNull?: boolean;
   sourceColumn: string;
-  oldValue: any;
-  oldValueIsNull: boolean;
   newValue: any;
   newValueIsNull: boolean;
 }
@@ -62,9 +62,10 @@ export interface ChenInsertRowDraft {
 }
 
 export interface ChenDeleteRow {
+  rowRef?: string;
   pkColumn: string;
-  pkValue: any;
-  pkValueIsNull: boolean;
+  pkValue?: any;
+  pkValueIsNull?: boolean;
 }
 
 export interface ChenSaveChangesPayload {

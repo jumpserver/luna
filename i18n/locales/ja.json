@@ -1898,6 +1898,7 @@
     "Schema": "Schema",
     "Type": "Type",
     "Table": "Table",
+    "View": "ビュー",
     "Database": "Database",
     "RowsPreview": "Rows (preview)",
     "Data": "Data",
