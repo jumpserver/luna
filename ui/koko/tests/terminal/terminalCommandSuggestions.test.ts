@@ -63,12 +63,33 @@ describe("terminal command suggestions", () => {
     const cells = "root@y4:~# l";
     const cursorOnTypedChar = cells.length - 1;
     const getLine = vi.fn(() => ({
-      translateToString: (_trim: boolean, start: number, end: number) => cells.slice(start, end)
+      translateToString: (_trim?: boolean, start = 0, end = cells.length) => cells.slice(start, end)
     }));
     const buffer = { baseY: 0, cursorY: 0, cursorX: cursorOnTypedChar, cols: 80, getLine };
 
     expect(getTerminalCommandLineBeforeCursor(buffer)).toBe("root@y4:~# ");
     expect(terminalCommandEchoContainsPrefix(buffer, "l")).toBe(true);
+  });
+
+  it("matches a typed prefix that wrapped onto the next line", () => {
+    const previous = "root@y4:~# l";
+    const getLine = vi.fn((index: number) => ({
+      translateToString: (_trim?: boolean, start = 0, end = index === 0 ? previous.length : 0) =>
+        (index === 0 ? previous : "").slice(start, end)
+    }));
+    const buffer = { baseY: 0, cursorY: 1, cursorX: 0, cols: 12, getLine };
+
+    expect(terminalCommandEchoContainsPrefix(buffer, "l")).toBe(true);
+  });
+
+  it("does not match before the typed prefix is echoed", () => {
+    const cells = "root@y4:~# ";
+    const getLine = vi.fn(() => ({
+      translateToString: (_trim?: boolean, start = 0, end = cells.length) => cells.slice(start, end)
+    }));
+    const buffer = { baseY: 0, cursorY: 0, cursorX: cells.length, cols: 80, getLine };
+
+    expect(terminalCommandEchoContainsPrefix(buffer, "l")).toBe(false);
   });
 
   it("tracks only a simple visible command line", () => {

@@ -7,8 +7,8 @@ import {
   getTerminalCommandSuggestions,
   resolveTerminalCommandProfile,
   terminalCommandEchoContainsPrefix,
-  terminalCommandSuggestionKeyAction,
-  TerminalCommandInputTracker
+  TerminalCommandInputTracker,
+  terminalCommandSuggestionKeyAction
 } from "./terminalCommandSuggestions";
 
 export function useKokoTerminalCommandSuggestions(options: {
@@ -36,7 +36,7 @@ export function useKokoTerminalCommandSuggestions(options: {
   let loadSequence = 0;
   let refreshing = false;
   let refreshQueued = false;
-  const echoTimers: number[] = [];
+  let stopWriteListener = () => {};
 
   const open = computed(() => enabled.value && suggestions.value.length > 0 && !options.disabled());
 
@@ -224,27 +224,8 @@ export function useKokoTerminalCommandSuggestions(options: {
       pendingSubmissionLine = submissionLine;
     }
     if (data === "\r" || data === "\n" || data === "\x03" || !tracker.prefix) {
-      clearEchoTimers();
       setSuggestions([]);
-      if (pendingSubmission) queueEchoRefresh();
-      return;
-    }
-    queueEchoRefresh();
-  }
-
-  function clearEchoTimers() {
-    while (echoTimers.length) window.clearTimeout(echoTimers.pop());
-  }
-
-  function queueEchoRefresh() {
-    clearEchoTimers();
-    scheduleRefresh();
-    for (const delay of [32, 80, 160, 320]) {
-      echoTimers.push(
-        window.setTimeout(() => {
-          if (tracker.prefix || pendingSubmission) refresh();
-        }, delay)
-      );
+      if (pendingSubmission) refresh();
     }
   }
 
@@ -284,7 +265,14 @@ export function useKokoTerminalCommandSuggestions(options: {
   watch(
     options.terminal,
     (terminal) => {
+      stopWriteListener();
+      stopWriteListener = () => {};
       activeBufferType = terminal?.buffer.active.type;
+      if (!terminal) return;
+      const disposable = terminal.onWriteParsed(() => {
+        if (tracker.prefix || pendingSubmission) scheduleRefresh();
+      });
+      stopWriteListener = () => disposable.dispose();
     },
     { immediate: true }
   );
@@ -319,7 +307,7 @@ export function useKokoTerminalCommandSuggestions(options: {
   });
   onBeforeUnmount(() => {
     loadSequence += 1;
-    clearEchoTimers();
+    stopWriteListener();
     stopHistorySubscription();
   });
 

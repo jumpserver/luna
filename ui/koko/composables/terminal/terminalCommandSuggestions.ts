@@ -270,33 +270,21 @@ export function terminalCommandSuggestionKeyAction(key: string, open: boolean, e
   return null;
 }
 
-export function getTerminalCommandLineBeforeCursor(
-  buffer: {
-    baseY: number;
-    cursorY: number;
-    cursorX: number;
-    cols?: number;
-    getLine: (
-      index: number
-    ) => { translateToString: (trimRight: boolean, start: number, end: number) => string } | undefined;
-  },
-  endColumn = buffer.cursorX
-) {
+type TerminalCommandEchoBuffer = {
+  baseY: number;
+  cursorY: number;
+  cursorX: number;
+  cols?: number;
+  getLine: (
+    index: number
+  ) => { translateToString: (trimRight?: boolean, start?: number, end?: number) => string } | undefined;
+};
+
+export function getTerminalCommandLineBeforeCursor(buffer: TerminalCommandEchoBuffer, endColumn = buffer.cursorX) {
   return buffer.getLine(buffer.baseY + buffer.cursorY)?.translateToString(false, 0, endColumn) || "";
 }
 
-export function terminalCommandEchoContainsPrefix(
-  buffer: {
-    baseY: number;
-    cursorY: number;
-    cursorX: number;
-    cols?: number;
-    getLine: (
-      index: number
-    ) => { translateToString: (trimRight: boolean, start: number, end: number) => string } | undefined;
-  },
-  prefix: string
-) {
+export function terminalCommandEchoContainsPrefix(buffer: TerminalCommandEchoBuffer, prefix: string) {
   if (!prefix) return false;
   const beforeCursor = getTerminalCommandLineBeforeCursor(buffer);
   if (beforeCursor.endsWith(prefix)) return true;
@@ -304,7 +292,11 @@ export function terminalCommandEchoContainsPrefix(
     buffer,
     Math.min(buffer.cols ?? buffer.cursorX + 1, buffer.cursorX + 1)
   );
-  return includingCursor.endsWith(prefix);
+  if (includingCursor.endsWith(prefix)) return true;
+  const previousIndex = buffer.baseY + buffer.cursorY - 1;
+  if (previousIndex < 0) return false;
+  const previous = buffer.getLine(previousIndex)?.translateToString(false) || "";
+  return (previous + beforeCursor).endsWith(prefix) || (previous + includingCursor).endsWith(prefix);
 }
 
 export class TerminalCommandInputTracker {
@@ -313,7 +305,7 @@ export class TerminalCommandInputTracker {
 
   get prefix() {
     if (!this.valid) return "";
-    return this.line.match(/^\s*([^\s]*)$/)?.[1] || "";
+    return this.line.match(/^\s*(\S*)$/)?.[1] || "";
   }
 
   accept(command: string) {
