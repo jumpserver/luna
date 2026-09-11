@@ -1,8 +1,12 @@
-import type { PublicSettings } from "~/composables/useApiRequest";
 import type { CurrentOrg, PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/types";
+import { getUserPermissions, type PublicSettings } from "~/composables/useApiRequest";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { recordedOrganizationForBootstrap, resolveOrganizationSelection } from "~/utils/organization";
+import {
+  recordedOrganizationForBootstrap,
+  resolveOrganizationSelection,
+  selectWorkbenchOrganizations
+} from "~/utils/organization";
 import {
   COMMUNITY_WORKSPACE_BRAND,
   resolveWorkspaceBrand,
@@ -37,6 +41,7 @@ const BOOTSTRAP_RETRY_DELAYS_MS = [0, 500, 1000, 2000, 3000];
 let bootstrapRetryTimer: ReturnType<typeof setTimeout> | null = null;
 let lastBootstrapFailure: "network" | "server" | null = null;
 let bootstrapPromise: Promise<boolean> | null = null;
+let refreshOrganizationsPromise: Promise<void> | null = null;
 
 const wait = (delay: number) => new Promise((resolve) => setTimeout(resolve, delay));
 
@@ -49,36 +54,6 @@ const classifyBootstrapFailure = (payload: LoginPayload | null | undefined): "au
   if (profileStatus >= 500 || profileStatus < 200 || profileStatus >= 300) return "server";
 
   return null;
-};
-
-const normalizeOrgList = (value: unknown): PermOrgItem[] => {
-  if (Array.isArray(value)) {
-    return value.filter((item): item is PermOrgItem => {
-      return (
-        !!item &&
-        typeof item === "object" &&
-        typeof (item as PermOrgItem).id === "string" &&
-        typeof (item as PermOrgItem).name === "string"
-      );
-    });
-  }
-
-  if (!value || typeof value !== "object") return [];
-
-  const record = value as Record<string, unknown>;
-
-  if (Array.isArray(record.results)) return normalizeOrgList(record.results);
-  if (Array.isArray(record.data)) return normalizeOrgList(record.data);
-  if (record.results && typeof record.results === "object") return normalizeOrgList(record.results);
-  if (record.data && typeof record.data === "object") return normalizeOrgList(record.data);
-
-  return [];
-};
-
-const initSelectOrganization = (permissionOrgData: PermissionOrgs | Record<string, unknown>) => {
-  const orgs = normalizeOrgList((permissionOrgData as Record<string, unknown>).workbench_orgs);
-
-  return orgs.filter((org, index, self) => index === self.findIndex((item: PermOrgItem) => item.id === org.id));
 };
 
 const parseApiData = <T>(value: { data?: string } | undefined, fallback: T): T => {
@@ -130,7 +105,7 @@ export const useAuthSession = () => {
 
     const userId = (typeof profileData.id === "string" && profileData.id.trim()) || existingUser?.userId || "";
 
-    const availableOrgs = initSelectOrganization(permissionOrgData);
+    const availableOrgs = selectWorkbenchOrganizations(permissionOrgData);
     const selectedOrg = resolveOrganizationSelection(
       availableOrgs,
       recordedOrganizationForBootstrap(
@@ -342,7 +317,7 @@ export const useAuthSession = () => {
       .then(([permissionOrgData, currentOrgData]) => {
         if (userInfoStore.currentAccountId !== site || userInfoStore.currentUser?.userId !== userId) return;
 
-        const availableOrgs = initSelectOrganization(permissionOrgData || {});
+        const availableOrgs = selectWorkbenchOrganizations(permissionOrgData);
         const resolvedCurrentOrg = currentOrgData && typeof currentOrgData === "object" ? currentOrgData : null;
         const selectedOrgId = getWebOrgId();
         const activeOrg = userInfoStore.currentUser?.org;
@@ -473,9 +448,40 @@ export const useAuthSession = () => {
     return bootstrapPromise;
   };
 
+  const refreshOrganizations = () => {
+    if (!userInfoStore.loggedIn) return Promise.resolve();
+    if (refreshOrganizationsPromise) return refreshOrganizationsPromise;
+
+    refreshOrganizationsPromise = (async () => {
+      try {
+        const orgs = selectWorkbenchOrganizations(await getUserPermissions());
+        if (!userInfoStore.loggedIn) return;
+
+        userInfoStore.setOrganizations(orgs);
+        const current = userInfoStore.currentUser?.org;
+        if (!current?.id) return;
+
+        const matched = orgs.find((org) => org.id === current.id);
+        if (!matched) return;
+
+        userInfoStore.setCurrentOrg({
+          ...matched,
+          comment: matched.comment || current.comment || ""
+        });
+      } catch (error) {
+        console.debug("refresh organizations failed", error);
+      }
+    })().finally(() => {
+      refreshOrganizationsPromise = null;
+    });
+
+    return refreshOrganizationsPromise;
+  };
+
   return {
     applyLoginPayload,
     authReady,
-    bootstrapPersistedSession
+    bootstrapPersistedSession,
+    refreshOrganizations
   };
 };

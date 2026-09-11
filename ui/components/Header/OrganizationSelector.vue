@@ -18,6 +18,12 @@ withDefaults(
 const userInfoStore = useUserInfoStore();
 const { setCurrentOrg } = userInfoStore;
 const { loggedIn, currentOrganizations, currentUser } = storeToRefs(userInfoStore);
+const { refreshOrganizations } = useAuthSession();
+const organizationMenuOpen = ref(false);
+
+watch(organizationMenuOpen, (open) => {
+  if (open) void refreshOrganizations();
+});
 
 const currentOrgName = computed(() => {
   const currentOrg = currentUser.value?.org;
@@ -60,6 +66,7 @@ function handleOrgChange(org: PermOrgItem) {
     />
     <UDropdownMenu
       v-if="selectable"
+      v-model:open="organizationMenuOpen"
       size="sm"
       :items="organizationDropdownItems"
       :content="{ align: 'start', side: 'bottom' }"

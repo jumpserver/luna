@@ -9,6 +9,36 @@ export const getOrganizationAvatarText = (name: string) => {
 
 export const getFallbackOrganization = (orgs: PermOrgItem[]) => orgs.find((org) => org.is_default) || orgs[0] || null;
 
+const normalizeOrgList = (value: unknown): PermOrgItem[] => {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is PermOrgItem => {
+      return (
+        !!item &&
+        typeof item === "object" &&
+        typeof (item as PermOrgItem).id === "string" &&
+        typeof (item as PermOrgItem).name === "string"
+      );
+    });
+  }
+
+  if (!value || typeof value !== "object") return [];
+
+  const record = value as Record<string, unknown>;
+  if (Array.isArray(record.results)) return normalizeOrgList(record.results);
+  if (Array.isArray(record.data)) return normalizeOrgList(record.data);
+  if (record.results && typeof record.results === "object") return normalizeOrgList(record.results);
+  if (record.data && typeof record.data === "object") return normalizeOrgList(record.data);
+
+  return [];
+};
+
+export const selectWorkbenchOrganizations = (permissionOrgData: unknown): PermOrgItem[] => {
+  const record =
+    permissionOrgData && typeof permissionOrgData === "object" ? (permissionOrgData as Record<string, unknown>) : {};
+  const orgs = normalizeOrgList(record.workbench_orgs);
+  return orgs.filter((org, index, self) => index === self.findIndex((item) => item.id === org.id));
+};
+
 export const recordedOrganizationForBootstrap = (
   persistedOrg?: Partial<PermOrgItem> | null,
   coreCurrentOrg?: Partial<PermOrgItem> | null

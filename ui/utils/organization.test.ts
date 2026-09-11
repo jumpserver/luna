@@ -5,7 +5,8 @@ import {
   getFallbackOrganization,
   getOrganizationAvatarText,
   recordedOrganizationForBootstrap,
-  resolveOrganizationSelection
+  resolveOrganizationSelection,
+  selectWorkbenchOrganizations
 } from "~/utils/organization";
 
 const organization = (id: string, isDefault = false): PermOrgItem => ({
@@ -61,6 +62,34 @@ describe("organization fallback", () => {
 
     expect(recordedOrganizationForBootstrap({ id: "" }, coreCurrentOrg)).toBe(coreCurrentOrg);
     expect(recordedOrganizationForBootstrap(null, coreCurrentOrg)).toBe(coreCurrentOrg);
+  });
+});
+
+describe("selectWorkbenchOrganizations", () => {
+  it("reads workbench_orgs and drops duplicate ids", () => {
+    const first = organization("org-a");
+
+    expect(
+      selectWorkbenchOrganizations({
+        workbench_orgs: [first, { ...first, name: "Org A" }, organization("org-b")],
+        console_orgs: [organization("console-only")]
+      })
+    ).toEqual([first, organization("org-b")]);
+  });
+
+  it("unwraps nested results payloads", () => {
+    const org = organization("nested");
+
+    expect(
+      selectWorkbenchOrganizations({
+        workbench_orgs: { results: [org] }
+      })
+    ).toEqual([org]);
+  });
+
+  it("returns an empty list when workbench_orgs is missing", () => {
+    expect(selectWorkbenchOrganizations({ console_orgs: [organization("console-only")] })).toEqual([]);
+    expect(selectWorkbenchOrganizations(null)).toEqual([]);
   });
 });
 

@@ -1,6 +1,7 @@
 import type {
   AssetDetail,
   AssetTreeKind,
+  PermissionOrgs,
   PersonalAssetCredential,
   RdpGraphics,
   TokenResponse,
@@ -487,6 +488,13 @@ export function getSessionOnlineNum(assetId: string, account: string): Promise<{
     method: "GET",
     path: "/api/v1/terminal/sessions/online-info/",
     query: { asset_id: assetId, account }
+  });
+}
+
+export function getUserPermissions(): Promise<PermissionOrgs> {
+  return apiRequest<PermissionOrgs>({
+    method: "GET",
+    path: "/api/v1/users/profile/permissions/"
   });
 }
 
