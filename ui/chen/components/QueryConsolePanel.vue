@@ -80,7 +80,9 @@ const completionSource = createChenCompletionSource({
   },
   dialect: () => chenSqlDialect(props.dbType)
 });
-const queryBusy = computed(() => Boolean(props.tab.state.loading || props.tab.state.inQuery));
+const queryBusy = computed(() =>
+  Boolean(props.tab.state.loading || props.tab.state.inQuery || props.tab.executionPlanLoading)
+);
 const contextBusy = computed(() => Boolean(queryBusy.value || props.tab.state.editorLoading));
 const contextItems = computed(() =>
   (props.tab.state.contexts || []).map((context) => ({
@@ -357,11 +359,11 @@ defineExpose({ editorSnapshot });
     <div class="relative flex min-h-0 flex-col overflow-hidden px-3 pt-3 pb-[3px]">
       <div class="mb-2 flex shrink-0 items-center gap-2">
         <UButton
-          v-if="tab.state.inQuery || tab.state.canCancel"
+          v-if="tab.state.inQuery || tab.state.canCancel || tab.executionPlanLoading"
           icon="i-lucide-square"
           size="sm"
           color="error"
-          :disabled="!tab.state.canCancel"
+          :disabled="!(tab.state.canCancel || tab.executionPlanLoading)"
           @click="emit('cancel', tab)"
         >
           {{ t("Chen.Stop") }}

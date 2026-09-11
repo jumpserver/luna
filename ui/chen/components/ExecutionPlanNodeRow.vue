@@ -32,8 +32,8 @@ const secondaryFacts = computed(() => {
   return facts;
 });
 const detail = computed(() => chenPlanNodeDetail(props.node));
-const estimatedRows = computed(() => (props.showRows ? chenPlanFormatEstimated(props.node.rows) : null));
-const estimatedCost = computed(() => (props.showCost ? chenPlanFormatEstimated(props.node.cost) : null));
+const estimatedRows = computed(() => chenPlanFormatEstimated(props.node.rows) ?? "—");
+const estimatedCost = computed(() => chenPlanFormatEstimated(props.node.cost) ?? "—");
 </script>
 
 <template>
@@ -53,14 +53,14 @@ const estimatedCost = computed(() => (props.showCost ? chenPlanFormatEstimated(p
           <span class="font-medium text-highlighted">{{ title }}</span>
           <span v-if="node.relation" class="text-muted">{{ node.relation }}</span>
           <span
-            v-if="estimatedRows != null"
+            v-if="showRows"
             class="tabular-nums text-muted"
             :title="node.rowsMeaning || t('ExecutionPlan.estimatedRows')"
           >
             {{ t("ExecutionPlan.estimatedRows") }} {{ estimatedRows }}
           </span>
           <span
-            v-if="estimatedCost != null"
+            v-if="showCost"
             class="tabular-nums text-muted"
             :title="node.costMeaning || t('ExecutionPlan.estimatedCost')"
           >
