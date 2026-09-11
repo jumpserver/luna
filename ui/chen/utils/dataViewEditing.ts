@@ -17,6 +17,7 @@ import type {
 const INSERT_ID = "__chenInsertId";
 const INSERT_VALUES = "__chenValues";
 const DELETED = "__chenDeleted";
+export const CHEN_ROW_REF_KEY = "__chenRowRef";
 
 export function createChenDataViewEditState(): ChenDataViewEditState {
   return {
@@ -233,12 +234,53 @@ function primaryKeyField(dataset: ChenDataViewDataset) {
   return dataset.fields.find((field) => field.primaryKey === true || field.isPrimaryKey === true) || null;
 }
 
-function dirtyKey(pkValue: any, sourceColumn: string) {
-  return `${JSON.stringify(pkValue)}::${sourceColumn}`;
+function isMaskedPrimaryKey(primaryKey: ChenDataViewField | null) {
+  return Boolean(primaryKey?.masked);
 }
 
-function deleteKey(pkValue: any) {
-  return JSON.stringify(pkValue);
+function rowIdentity(dataset: ChenDataViewDataset, row: Record<string, any>) {
+  const primaryKey = primaryKeyField(dataset);
+  const rowRef = row[CHEN_ROW_REF_KEY];
+  if (rowRef !== undefined && rowRef !== null && rowRef !== "") {
+    return { key: String(rowRef), rowRef: String(rowRef), primaryKey, pkValue: undefined as any, pkValueIsNull: true };
+  }
+  if (!primaryKey || isMaskedPrimaryKey(primaryKey)) {
+    return { key: "", rowRef: undefined as string | undefined, primaryKey, pkValue: undefined as any, pkValueIsNull: true };
+  }
+  const pkValue = row[primaryKey.name];
+  if (isNull(pkValue)) {
+    return { key: "", rowRef: undefined as string | undefined, primaryKey, pkValue, pkValueIsNull: true };
+  }
+  return { key: JSON.stringify(pkValue), rowRef: undefined as string | undefined, primaryKey, pkValue, pkValueIsNull: false };
+}
+
+function dirtyKey(identityKey: string, sourceColumn: string) {
+  return `${identityKey}::${sourceColumn}`;
+}
+
+function toPayloadChange(change: Record<string, any>) {
+  const payload: Record<string, any> = {
+    pkColumn: change.pkColumn,
+    sourceColumn: change.sourceColumn,
+    newValue: change.newValue,
+    newValueIsNull: change.newValueIsNull
+  };
+  if (change.rowRef) payload.rowRef = change.rowRef;
+  if (!change.rowRef) {
+    payload.pkValue = change.pkValue;
+    payload.pkValueIsNull = change.pkValueIsNull;
+  }
+  return payload;
+}
+
+function toPayloadDelete(row: Record<string, any>) {
+  const payload: Record<string, any> = { pkColumn: row.pkColumn };
+  if (row.rowRef) payload.rowRef = row.rowRef;
+  else {
+    payload.pkValue = row.pkValue;
+    payload.pkValueIsNull = row.pkValueIsNull;
+  }
+  return payload;
 }
 
 function normalizeFieldType(type?: string) {
@@ -323,9 +365,9 @@ export function isChenDeletedRow(
   row: Record<string, any> | null | undefined
 ) {
   if (!row || isChenInsertRow(row)) return false;
-  const primaryKey = primaryKeyField(dataset);
-  if (!primaryKey) return false;
-  return Boolean(state.deletedRows[deleteKey(row[primaryKey.name])]);
+  const identity = rowIdentity(dataset, row);
+  if (!identity.key) return false;
+  return Boolean(state.deletedRows[identity.key]);
 }
 
 export function canEditChenDataViewCell(
@@ -368,31 +410,30 @@ export function applyChenDataViewCellChange(
     return true;
   }
 
-  const primaryKey = primaryKeyField(dataset);
-  if (!primaryKey?.sourceColumn) return false;
-  const pkValue = row[primaryKey.name];
-  if (isNull(pkValue)) return false;
+  const identity = rowIdentity(dataset, row);
+  if (!identity.primaryKey?.sourceColumn || !identity.key) return false;
 
-  const key = dirtyKey(pkValue, field.sourceColumn);
-  const existing = state.dirtyCells[key];
+  const key = dirtyKey(identity.key, field.sourceColumn);
+  const existing = state.dirtyCells[key] as any;
   const normalizedOldValue = normalizeChenDataViewValue(oldValue, field);
-  const originalValue = existing ? existing.oldValue : cloneChenValue(normalizedOldValue);
-  const originalValueIsNull = existing ? existing.oldValueIsNull : isNull(normalizedOldValue);
+  const originalValue = existing ? existing.originalValue : cloneChenValue(normalizedOldValue);
+  const originalValueIsNull = existing ? existing.originalValueIsNull : isNull(normalizedOldValue);
   const newValueIsNull = isNull(newValue);
 
   if (originalValueIsNull === newValueIsNull && valuesEqual(originalValue, newValue)) {
     delete state.dirtyCells[key];
   } else {
     state.dirtyCells[key] = {
-      pkColumn: primaryKey.sourceColumn,
-      pkValue,
-      pkValueIsNull: false,
+      rowRef: identity.rowRef,
+      pkColumn: identity.primaryKey.sourceColumn,
+      pkValue: identity.rowRef ? undefined : identity.pkValue,
+      pkValueIsNull: identity.rowRef ? undefined : identity.pkValueIsNull,
       sourceColumn: field.sourceColumn,
-      oldValue: originalValue,
-      oldValueIsNull: originalValueIsNull,
       newValue: cloneChenValue(newValue),
-      newValueIsNull
-    };
+      newValueIsNull,
+      originalValue,
+      originalValueIsNull
+    } as any;
   }
   state.dirtyVersion += 1;
   return true;
@@ -415,7 +456,6 @@ export function markChenDataViewRowsDeleted(
   dataset: ChenDataViewDataset,
   rows: Array<Record<string, any>>
 ) {
-  const primaryKey = primaryKeyField(dataset);
   let changed = 0;
   for (const row of rows) {
     if (isChenInsertRow(row)) {
@@ -426,16 +466,19 @@ export function markChenDataViewRowsDeleted(
       }
       continue;
     }
-    if (!primaryKey?.sourceColumn) continue;
-    const pkValue = row[primaryKey.name];
-    if (isNull(pkValue)) continue;
-    const prefix = `${JSON.stringify(pkValue)}::`;
+    const identity = rowIdentity(dataset, row);
+    if (!identity.primaryKey?.sourceColumn || !identity.key) continue;
+    const prefix = `${identity.key}::`;
     for (const key of Object.keys(state.dirtyCells)) {
       if (key.startsWith(prefix)) delete state.dirtyCells[key];
     }
-    const key = deleteKey(pkValue);
-    if (!state.deletedRows[key]) {
-      state.deletedRows[key] = { pkColumn: primaryKey.sourceColumn, pkValue, pkValueIsNull: false };
+    if (!state.deletedRows[identity.key]) {
+      state.deletedRows[identity.key] = {
+        rowRef: identity.rowRef,
+        pkColumn: identity.primaryKey.sourceColumn,
+        pkValue: identity.rowRef ? undefined : identity.pkValue,
+        pkValueIsNull: identity.rowRef ? undefined : identity.pkValueIsNull
+      };
       changed += 1;
     }
   }
@@ -451,15 +494,12 @@ export function isChenDirtyCell(
 ) {
   if (!field.sourceColumn) return false;
   if (isChenInsertRow(row)) return Boolean(row[INSERT_VALUES]?.[field.sourceColumn]);
-  const primaryKey = primaryKeyField(dataset);
-  if (!primaryKey) return false;
-  const pkValue = row[primaryKey.name];
-  if (isNull(pkValue)) return false;
-  return Boolean(state.dirtyCells[dirtyKey(pkValue, field.sourceColumn)]);
+  const identity = rowIdentity(dataset, row);
+  if (!identity.key || !field.sourceColumn) return false;
+  return Boolean(state.dirtyCells[dirtyKey(identity.key, field.sourceColumn)]);
 }
 
 export function chenDataViewRows(dataset: ChenDataViewDataset, state: ChenDataViewEditState) {
-  const primaryKey = primaryKeyField(dataset);
   const rows = dataset.data.map((source) => {
     const row = { ...source };
     for (const field of dataset.fields) {
@@ -467,14 +507,14 @@ export function chenDataViewRows(dataset: ChenDataViewDataset, state: ChenDataVi
         row[field.name] = normalizeChenDataViewValue(row[field.name], field);
       }
     }
-    const pkValue = primaryKey ? row[primaryKey.name] : undefined;
-    if (!isNull(pkValue)) {
+    const identity = rowIdentity(dataset, row);
+    if (identity.key) {
       for (const field of dataset.fields) {
         if (!field.sourceColumn) continue;
-        const change = state.dirtyCells[dirtyKey(pkValue, field.sourceColumn)];
+        const change = state.dirtyCells[dirtyKey(identity.key, field.sourceColumn)];
         if (change) row[field.name] = change.newValue;
       }
-      if (state.deletedRows[deleteKey(pkValue)]) row[DELETED] = true;
+      if (state.deletedRows[identity.key]) row[DELETED] = true;
     }
     return row;
   });
@@ -498,11 +538,11 @@ export function buildChenSaveChangesPayload(
   return {
     schema: Object.hasOwn(meta, "schema") ? meta.schema : sourceField?.sourceSchema,
     table: Object.hasOwn(meta, "table") ? meta.table : sourceField?.sourceTable,
-    changes: Object.values(state.dirtyCells),
+    changes: Object.values(state.dirtyCells).map(toPayloadChange) as any,
     insertRows: state.insertRows
       .filter((row) => Object.keys(row.values).length > 0)
       .map((row) => ({ values: row.values })),
-    deleteRows: Object.values(state.deletedRows)
+    deleteRows: Object.values(state.deletedRows).map(toPayloadDelete) as any
   };
 }
 
