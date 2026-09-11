@@ -1,7 +1,8 @@
-import type { CurrentOrg, PermissionOrgs, PermOrgItem, UserIntiInfo } from "~/types";
-import { getUserPermissions, type PublicSettings } from "~/composables/useApiRequest";
+import type { PublicSettings } from "~/composables/useApiRequest";
+import type { ConnectionInfo, ConnectionPreferenceInfo, CurrentOrg, PermissionOrgs, PermOrgItem, RdpGraphics, RoleType, UserIntiInfo } from "~/types";
+import { getUserPermissions } from "~/composables/useApiRequest";
 import { desktopInvoke } from "~/shared/desktop/bridge";
-import { useUserInfoStore } from "~/store/modules/userInfo";
+import { type SiteUserData, useUserInfoStore } from "~/store/modules/userInfo";
 import {
   recordedOrganizationForBootstrap,
   resolveOrganizationSelection,
@@ -29,12 +30,25 @@ interface PersistedUserSnapshot {
   loggedIn?: boolean;
   currentAccountId?: string;
   currentSite?: string;
-  currentUser?: Record<string, any> | null;
+  currentUser?: SiteUserData | null;
   currentOrganizations?: PermOrgItem[];
-  userMap?: Record<string, Record<string, any>>;
-  currentRdpClientOption?: Record<string, any>;
-  currentConnectionInfoMap?: Record<string, any>;
-  currentConnectionPreferenceMap?: Record<string, any>;
+  userMap?: Record<string, SiteUserData>;
+  currentRdpClientOption?: RdpGraphics;
+  currentConnectionInfoMap?: Record<string, ConnectionInfo>;
+  currentConnectionPreferenceMap?: Record<string, ConnectionPreferenceInfo>;
+}
+
+interface WebProfile {
+  id?: string;
+  name?: string;
+  username?: string;
+  display_name?: string;
+  org_id?: string;
+  org_name?: string;
+  org?: { id?: string; name?: string };
+  system_roles?: RoleType[];
+  xpack_license_valid?: boolean;
+  xpackLicenseValid?: boolean;
 }
 
 const BOOTSTRAP_RETRY_DELAYS_MS = [0, 500, 1000, 2000, 3000];
@@ -197,12 +211,12 @@ export const useAuthSession = () => {
         loggedIn: false,
         currentAccountId: snapshotAccountId,
         currentSite: parsed.userMap[snapshotAccountId].site || parsed.currentSite || "",
-        currentUser: (parsed.currentUser as any) || null,
+        currentUser: parsed.currentUser || null,
         currentOrganizations: parsed.currentOrganizations || [],
-        userMap: parsed.userMap as any,
-        currentRdpClientOption: (parsed.currentRdpClientOption as any) || {},
-        currentConnectionInfoMap: (parsed.currentConnectionInfoMap as any) || {},
-        currentConnectionPreferenceMap: (parsed.currentConnectionPreferenceMap as any) || {}
+        userMap: parsed.userMap,
+        currentRdpClientOption: parsed.currentRdpClientOption || {},
+        currentConnectionInfoMap: parsed.currentConnectionInfoMap || {},
+        currentConnectionPreferenceMap: parsed.currentConnectionPreferenceMap || {}
       });
 
       userInfoStore.setCurrentAccount(snapshotAccountId);
@@ -249,7 +263,7 @@ export const useAuthSession = () => {
 
     const connectionToken = new URLSearchParams(window.location.search).get("token");
     const [profileData, publicSettings] = await Promise.all([
-      fetchWebJson<Record<string, any>>([
+      fetchWebJson<WebProfile>([
         connectionToken
           ? `/api/v1/users/profile/?fields_size=mini&token=${encodeURIComponent(connectionToken)}`
           : "/api/v1/users/profile/?fields_size=mini",
@@ -312,7 +326,7 @@ export const useAuthSession = () => {
         "/api/v1/users/profile/permissions/",
         "/api/v1/profile/permissions/"
       ]),
-      fetchWebJson<Record<string, any>>(["/api/v1/orgs/orgs/current/"])
+      fetchWebJson<CurrentOrg>(["/api/v1/orgs/orgs/current/"])
     ])
       .then(([permissionOrgData, currentOrgData]) => {
         if (userInfoStore.currentAccountId !== site || userInfoStore.currentUser?.userId !== userId) return;
