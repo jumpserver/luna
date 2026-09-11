@@ -66,7 +66,7 @@ export interface ChenTableMetadata {
   catalog: string | null;
   schema: string;
   name: string;
-  kind: "table";
+  kind: "table" | "view";
   capabilities: ChenTableMetadataCapabilities;
   loadedSections: ChenTableMetadataSection[];
   columns: ChenTableMetadataColumn[];

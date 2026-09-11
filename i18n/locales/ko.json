@@ -1856,6 +1856,7 @@
     "Schema": "Schema",
     "Type": "Type",
     "Table": "Table",
+    "View": "뷰",
     "Database": "Database",
     "RowsPreview": "Rows (preview)",
     "Data": "Data",

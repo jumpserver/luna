@@ -1859,6 +1859,7 @@
     "Schema": "Schema",
     "Type": "类型",
     "Table": "表",
+    "View": "视图",
     "Database": "数据库",
     "RowsPreview": "行数（预览）",
     "Data": "数据",

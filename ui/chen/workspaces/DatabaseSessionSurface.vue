@@ -83,7 +83,7 @@ import {
   clearChenDataViewEdits,
   findChenDataViewTarget
 } from "~/chen/utils/dataViewEditing";
-import { canOpenChenQueryConsole, chenNodeActivationAction } from "~/chen/utils/resourceTree";
+import { canOpenChenQueryConsole, chenNodeActivationAction, isChenViewRelation } from "~/chen/utils/resourceTree";
 import { ChenSqlMetadataStore } from "~/chen/utils/sqlMetadata";
 import { chenUnrestrictedMutations } from "~/chen/utils/sqlSafety";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -1842,14 +1842,20 @@ function updateDataViewPropertyTab(
   propertyTab: Extract<ChenWorkspaceTab, { kind: "data-view" }>["activePropertyTab"]
 ) {
   tab.activePropertyTab = propertyTab;
-  const sections: Partial<Record<typeof propertyTab, ChenTableMetadataSection[]>> = {
-    columns: ["columns", "primaryKey"],
-    indexes: ["indexes", "constraints"],
-    foreignKeys: ["foreignKeys"],
-    constraints: ["constraints"],
-    ddl: ["ddl"],
-    diagram: ["columns", "primaryKey", "foreignKeys"]
-  };
+  const isView = isChenViewRelation({ nodeKey: tab.nodeKey, kind: tab.tableMetadata?.kind });
+  const sections: Partial<Record<typeof propertyTab, ChenTableMetadataSection[]>> = isView
+    ? {
+        columns: ["columns", "primaryKey"],
+        ddl: ["ddl"]
+      }
+    : {
+        columns: ["columns", "primaryKey"],
+        indexes: ["indexes", "constraints"],
+        foreignKeys: ["foreignKeys"],
+        constraints: ["constraints"],
+        ddl: ["ddl"],
+        diagram: ["columns", "primaryKey", "foreignKeys"]
+      };
   const requested = sections[propertyTab];
   if (requested) void loadTableMetadata(tab, requested);
 }

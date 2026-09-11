@@ -29,6 +29,7 @@ import { useChenDataViewDerivedMeta } from "~/chen/composables/useChenDataViewDe
 import { useChenDataViewEditing } from "~/chen/composables/useChenDataViewEditing";
 import { chenGridPreferenceKey } from "~/chen/composables/useChenGridPreferences";
 import { buildChenDropIndexSql, chenSupportsIndexDdl } from "~/chen/utils/indexSql";
+import { isChenViewRelation } from "~/chen/utils/resourceTree";
 
 const props = withDefaults(
   defineProps<{
@@ -78,8 +79,14 @@ const insertableFields = computed(() =>
 );
 const tableName = computed(() => String(props.tab.meta?.table || props.tab.meta?.title || props.tab.title).trim());
 const schemaName = computed(() => String(props.tab.meta?.schema || "").trim());
+const isViewRelation = computed(() =>
+  isChenViewRelation({ nodeKey: props.tab.nodeKey, kind: props.tab.tableMetadata?.kind })
+);
 const indexDdlSupported = computed(
-  () => chenSupportsIndexDdl(props.dbType) && props.tab.tableMetadata?.capabilities.indexes !== false
+  () =>
+    !isViewRelation.value &&
+    chenSupportsIndexDdl(props.dbType) &&
+    props.tab.tableMetadata?.capabilities.indexes !== false
 );
 const dropIndexSql = computed(() =>
   selectedIndex.value
@@ -273,7 +280,7 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
           {{ t("Chen.Data") }}
         </button>
         <button
-          v-for="propertyTab in dataViewPropertyTabs"
+          v-for="propertyTab in dataViewPropertyTabs(tab)"
           :key="propertyTab.id"
           class="rounded-md px-2 py-1 text-xs"
           :class="
@@ -442,7 +449,7 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
       </div>
 
       <div v-else-if="tab.activePropertyTab === 'columns'" class="min-h-0 flex-1 overflow-auto p-3">
-        <div class="mb-2 flex justify-end">
+        <div v-if="!isViewRelation" class="mb-2 flex justify-end">
           <UButton
             icon="i-lucide-table-properties"
             size="xs"
