@@ -15,6 +15,20 @@ import { useUserInfoStore } from "~/store/modules/userInfo";
 import { hasReusableSavedConnection, isSavedConnectionAvailable } from "~/utils/connection";
 import { hasItemName, isItemNameTooLong } from "~/utils/itemName";
 
+const liveAssetConnect = {
+  withSelection: (_asset: AssetItem) => {},
+  connect: (_asset: AssetItem) => {}
+};
+let assetConnectBusBound = false;
+
+function bindAssetConnectBus() {
+  if (assetConnectBusBound) return;
+  assetConnectBusBound = true;
+  const bus = useEventBus();
+  bus.on("workspaceConnectAsset", (asset) => liveAssetConnect.withSelection(asset), false);
+  bus.on("workspaceQuickConnectAsset", (asset) => liveAssetConnect.connect(asset), false);
+}
+
 export function useSidebarAssetActions() {
   const { t } = useI18n();
   const toast = useToast();
@@ -368,8 +382,9 @@ export function useSidebarAssetActions() {
     void openSetupOrToast(asset);
   };
 
-  useEventBus().on("workspaceConnectAsset", handleAssetConnectWithSelection);
-  useEventBus().on("workspaceQuickConnectAsset", handleAssetConnect);
+  liveAssetConnect.withSelection = handleAssetConnectWithSelection;
+  liveAssetConnect.connect = handleAssetConnect;
+  bindAssetConnectBus();
 
   const toWindowConnectionInfo = (connection: {
     protocol?: string;
