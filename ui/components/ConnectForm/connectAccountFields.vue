@@ -357,6 +357,10 @@ watch(
   gap: 0.5rem;
 }
 
+:deep(input[type="password"]::-ms-reveal) {
+  display: none;
+}
+
 .remember-secret-button {
   height: 32px;
   background: var(--app-input-bg);
