@@ -76,6 +76,8 @@
     "AddDescription": "點選右側加號可以繼續新增錄影。",
     "PartsTitle": "分段錄影",
     "PartsDescription": "同一工作階段的多個片段會收成一組。點選某一段即可續播，懸停可移除。",
+    "MetaTitle": "工作階段資訊",
+    "MetaDescription": "將滑鼠懸停在錄影項目上，可查看 JSON 中的使用者、資產、帳號、通訊協定和時間。",
     "progress": "第 {current} / {total} 步",
     "next": "下一步",
     "previous": "上一步",

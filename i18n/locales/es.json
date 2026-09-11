@@ -76,6 +76,8 @@
     "AddDescription": "Haga clic en + a la derecha para añadir más grabaciones.",
     "PartsTitle": "Clips de sesión",
     "PartsDescription": "Las partes de la misma sesión se agrupan. Haga clic en un clip para continuar desde ese segmento.",
+    "MetaTitle": "Detalles de la sesión",
+    "MetaDescription": "Pase el cursor por una grabación para ver usuario, activo, cuenta, protocolo y hora del JSON.",
     "progress": "Paso {current} de {total}",
     "next": "Siguiente",
     "previous": "Anterior",

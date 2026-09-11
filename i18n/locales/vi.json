@@ -76,6 +76,8 @@
     "AddDescription": "Bấm + bên phải để thêm bản ghi.",
     "PartsTitle": "Đoạn phiên",
     "PartsDescription": "Các đoạn của cùng một phiên được gom nhóm. Bấm một đoạn để phát tiếp từ đó.",
+    "MetaTitle": "Chi tiết phiên",
+    "MetaDescription": "Di chuột lên bản ghi để xem người dùng, tài sản, tài khoản, giao thức và thời gian từ JSON.",
     "progress": "Bước {current} / {total}",
     "next": "Tiếp",
     "previous": "Trước",

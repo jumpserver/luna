@@ -76,6 +76,8 @@
     "AddDescription": "点击右侧加号可以继续添加录像。",
     "PartsTitle": "分段录像",
     "PartsDescription": "同一会话的多个片段会收成一组。点击某一段即可续播，悬停可移除。",
+    "MetaTitle": "会话信息",
+    "MetaDescription": "将鼠标悬停在录像条目上，可查看 JSON 中的用户、资产、账号、协议和时间。",
     "progress": "第 {current} / {total} 步",
     "next": "下一步",
     "previous": "上一步",

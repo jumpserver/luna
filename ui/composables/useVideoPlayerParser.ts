@@ -10,6 +10,7 @@ import {
   isTarPackageName,
   resolvePlayableMedia,
   stripOfflineExtension,
+  stripReplayJsonExtension,
   unwrapGzip
 } from "~/utils/offlineMedia";
 import { resolveReplayWallClock } from "~/utils/replayWallClock";
@@ -78,12 +79,27 @@ function isMetadataEntry(fileName: string) {
   return classifyOfflineName(fileName).kind === "metadata";
 }
 
-function metadataKey(fileName: string, meta: VideoPlayerMeta) {
-  if (meta.id) return meta.id;
+function indexReplayMeta(map: Map<string, VideoPlayerMeta>, fileName: string, meta: VideoPlayerMeta) {
+  const stem = stripReplayJsonExtension(fileName);
+  if (meta.id) map.set(meta.id, meta);
+  if (stem) map.set(stem, meta);
+}
 
-  return basename(fileName)
-    .replace(/\.replay\.json$/i, "")
-    .replace(/\.json$/i, "");
+function lookupReplayMeta(map: Map<string, VideoPlayerMeta>, mediaName: string) {
+  return map.get(stripOfflineExtension(mediaName)) || null;
+}
+
+function mergeSidecarMeta(items: VideoPlayerItem[], sidecars: Array<{ stem: string; meta: VideoPlayerMeta }>) {
+  if (sidecars.length === 0) return items;
+
+  for (const item of items) {
+    const stem = stripOfflineExtension(item.name);
+    const sidecar = sidecars.find((entry) => (entry.meta.id && entry.meta.id === item.meta.id) || entry.stem === stem);
+    if (!sidecar) continue;
+    item.meta = { ...sidecar.meta, ...item.meta };
+  }
+
+  return items;
 }
 
 function safeParseJson(buffer: ArrayBuffer): VideoPlayerMeta | null {
@@ -313,11 +329,9 @@ export function useVideoPlayerParser() {
       }
 
       if (isMetadataEntry(fileName)) {
-        const parsedMeta = safeParseJson(buffer);
+        const parsedMeta = safeParseJson(isGzipBuffer(buffer) ? unwrapped : buffer);
 
-        if (parsedMeta) {
-          metaByKey.set(metadataKey(fileName, parsedMeta), parsedMeta);
-        }
+        if (parsedMeta) indexReplayMeta(metaByKey, fileName, parsedMeta);
 
         continue;
       }
@@ -331,7 +345,7 @@ export function useVideoPlayerParser() {
 
     const looseItems: VideoPlayerItem[] = [];
     for (const file of mediaFiles) {
-      const meta = metaByKey.get(stripOfflineExtension(file.fileName)) || null;
+      const meta = lookupReplayMeta(metaByKey, file.fileName);
       looseItems.push(...(await parseSingleBuffer(file.fileName, file.buffer, meta)).items);
     }
 
@@ -343,9 +357,18 @@ export function useVideoPlayerParser() {
   async function parsePaths(filePaths: string[]) {
     const items: VideoPlayerItem[] = [];
     const importedRecordingIds: string[] = [];
+    const sidecars: Array<{ stem: string; meta: VideoPlayerMeta }> = [];
 
     try {
       for (const filePath of filePaths) {
+        if (/\.json$/i.test(filePath)) {
+          const manifest = await importRecording(filePath);
+          if (manifest.metadata && Object.keys(manifest.metadata).length > 0) {
+            sidecars.push({ stem: stripReplayJsonExtension(filePath), meta: manifest.metadata });
+          }
+          continue;
+        }
+
         const manifest = await importRecording(filePath);
         importedRecordingIds.push(manifest.recording_id);
         const clocks = manifest.entries.map((item) => ({
@@ -390,7 +413,7 @@ export function useVideoPlayerParser() {
         items.push(...importedItems);
       }
 
-      return items;
+      return mergeSidecarMeta(items, sidecars);
     } catch (error) {
       // 多文件导入应当表现为一次事务。后面的文件失败时，
       // 清理本次已经成功提交的录像，避免留下用户看不到的缓存。

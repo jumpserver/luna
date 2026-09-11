@@ -2,8 +2,8 @@ import type { DriveStep } from "driver.js";
 import type { VideoPlayerItem, VideoPlayerItemType } from "~/composables/useVideoPlayerParser";
 
 /** Persisted after a user completes or closes the first-run offline player guide. */
-export const VIDEO_PLAYER_TOUR_STORAGE_KEY = "luna:videoplayer-tour:v2";
-export const VIDEO_PLAYER_TOUR_TARGETS = ["import", "stage", "parts", "add"] as const;
+export const VIDEO_PLAYER_TOUR_STORAGE_KEY = "luna:videoplayer-tour:v3";
+export const VIDEO_PLAYER_TOUR_TARGETS = ["import", "stage", "parts", "meta", "add"] as const;
 export const VIDEO_PLAYER_TOUR_DEMO_ID = "luna-videoplayer-tour-demo";
 export const VIDEO_PLAYER_TOUR_DEMO_ACTIVE_ID = `${VIDEO_PLAYER_TOUR_DEMO_ID}-rdp-2`;
 
@@ -34,6 +34,7 @@ function demoItem(options: {
   type: VideoPlayerItemType;
   asset: string;
   user?: string;
+  account?: string;
   protocol?: string;
   duration?: string;
   dateStart?: string;
@@ -53,6 +54,7 @@ function demoItem(options: {
       id: options.metaId ?? recordingId,
       asset: options.asset,
       user: options.user,
+      account: options.account,
       protocol: options.protocol,
       duration: options.duration,
       date_start: options.dateStart
@@ -72,6 +74,7 @@ export function buildVideoPlayerTourDemoItems(): VideoPlayerItem[] {
       type: "cast",
       asset: "web-prod-01",
       user: "alice",
+      account: "root",
       protocol: "ssh",
       duration: "00:12:08",
       dateStart: "2026-03-12 12:00:00"
@@ -154,6 +157,15 @@ export function buildVideoPlayerTourSteps(t: (key: string) => string): DriveStep
       popover: {
         title: t("VideoPlayerTour.PartsTitle"),
         description: t("VideoPlayerTour.PartsDescription"),
+        side: "left",
+        align: "start"
+      }
+    },
+    {
+      element: () => getVisibleVideoPlayerTourTarget("meta")!,
+      popover: {
+        title: t("VideoPlayerTour.MetaTitle"),
+        description: t("VideoPlayerTour.MetaDescription"),
         side: "left",
         align: "start"
       }

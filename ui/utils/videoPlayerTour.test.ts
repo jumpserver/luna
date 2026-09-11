@@ -24,14 +24,15 @@ describe("video player tour", () => {
     const chineseSteps = buildVideoPlayerTourSteps(translate(zhMessages));
     const englishSteps = buildVideoPlayerTourSteps(translate(enMessages));
 
-    expect(VIDEO_PLAYER_TOUR_STORAGE_KEY).toBe("luna:videoplayer-tour:v2");
-    expect(VIDEO_PLAYER_TOUR_TARGETS).toEqual(["import", "stage", "parts", "add"]);
-    expect(chineseSteps).toHaveLength(4);
+    expect(VIDEO_PLAYER_TOUR_STORAGE_KEY).toBe("luna:videoplayer-tour:v3");
+    expect(VIDEO_PLAYER_TOUR_TARGETS).toEqual(["import", "stage", "parts", "meta", "add"]);
+    expect(chineseSteps).toHaveLength(5);
     expect(englishSteps).toHaveLength(chineseSteps.length);
     expect(chineseSteps[0]?.popover?.title).toBe("点击导入");
     expect(englishSteps[0]?.popover?.title).toBe("Click to import");
     expect(chineseSteps[2]?.popover?.title).toBe("分段录像");
-    expect(chineseSteps[3]?.popover?.side).toBe("left");
+    expect(chineseSteps[3]?.popover?.title).toBe("会话信息");
+    expect(chineseSteps[4]?.popover?.side).toBe("left");
   });
 
   it("keeps video player tour translation trees aligned", () => {

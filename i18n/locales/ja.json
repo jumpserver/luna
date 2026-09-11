@@ -76,6 +76,8 @@
     "AddDescription": "右側の + をクリックすると録画を追加できます。",
     "PartsTitle": "分割録画",
     "PartsDescription": "同じセッションの複数パートはグループになります。パートをクリックするとそこから再生できます。",
+    "MetaTitle": "セッション情報",
+    "MetaDescription": "録画にマウスを重ねると、JSON のユーザー、資産、アカウント、プロトコル、時刻を確認できます。",
     "progress": "{total} ステップ中 {current}",
     "next": "次へ",
     "previous": "前へ",

@@ -77,9 +77,16 @@ function itemAssetLabel(item: VideoPlayerItem) {
   return item.meta?.asset || item.recordingLabel || item.name;
 }
 
-function displayValue(value: string) {
-  const stripped = value.replace(/\s*\([^)]*\)/g, "").trim();
-  return stripped || value;
+function displayValue(value: unknown) {
+  const text =
+    typeof value === "string"
+      ? value
+      : value && typeof value === "object" && "name" in value && typeof value.name === "string"
+        ? value.name
+        : "";
+  if (!text) return "";
+  const stripped = text.replace(/\s*\([^)]*\)/g, "").trim();
+  return stripped || text;
 }
 
 function isPartSessionItem(item: VideoPlayerItem) {
@@ -154,16 +161,18 @@ function shortStamp(value?: string) {
 function itemSubline(item: VideoPlayerItem, active: boolean) {
   const bits: string[] = [];
   if (active) bits.push(t("VideoPlayer.Playing"));
-  const user = item.meta?.user ? displayValue(item.meta.user) : "";
-  const protocol = item.meta?.protocol ? item.meta.protocol.toUpperCase() : "";
+  const user = displayValue(item.meta?.user);
+  const account = displayValue(item.meta?.account);
+  const protocol = typeof item.meta?.protocol === "string" ? item.meta.protocol.toUpperCase() : "";
 
-  if (!user && !protocol && !item.meta?.date_start) {
+  if (!user && !account && !protocol && !item.meta?.date_start) {
     bits.push(item.type === "mp4" ? t("VideoPlayer.LocalFile") : item.type.toUpperCase());
     if (item.type === "mp4") bits.push("MP4");
     return bits.join(" · ");
   }
 
   if (user) bits.push(user);
+  if (account) bits.push(account);
   if (protocol) bits.push(protocol);
   if (!active) {
     const stamp = shortStamp(item.meta?.date_start);
@@ -176,10 +185,28 @@ function itemSubline(item: VideoPlayerItem, active: boolean) {
 function groupSubline(item: VideoPlayerItem) {
   const bits: string[] = [];
   if (item.meta?.user) bits.push(displayValue(item.meta.user));
-  if (item.meta?.protocol) bits.push(item.meta.protocol.toUpperCase());
+  if (item.meta?.account) bits.push(displayValue(item.meta.account));
+  if (typeof item.meta?.protocol === "string") bits.push(item.meta.protocol.toUpperCase());
   const stamp = shortStamp(item.meta?.date_start);
   if (stamp) bits.push(stamp);
   return bits.join(" · ") || t("VideoPlayer.Session");
+}
+
+function metaDetailRows(item: VideoPlayerItem) {
+  const protocol = typeof item.meta?.protocol === "string" ? item.meta.protocol.toUpperCase() : "";
+  return [
+    { key: "user", label: t("Transcode.MetaUser"), value: displayValue(item.meta?.user) || "-" },
+    {
+      key: "asset",
+      label: t("Transcode.MetaAsset"),
+      value: displayValue(item.meta?.asset) || displayValue(itemAssetLabel(item)) || "-"
+    },
+    { key: "account", label: t("Transcode.MetaAccount"), value: displayValue(item.meta?.account) || "-" },
+    { key: "addr", label: t("Transcode.MetaRemoteAddr"), value: item.meta?.remote_addr || "-" },
+    { key: "protocol", label: t("Transcode.MetaProtocol"), value: protocol || "-" },
+    { key: "start", label: t("Transcode.MetaDateStart"), value: formatLocalStartTime(item.meta?.date_start) },
+    { key: "end", label: t("Transcode.MetaDateEnd"), value: formatLocalStartTime(item.meta?.date_end) }
+  ];
 }
 </script>
 
@@ -222,14 +249,33 @@ function groupSubline(item: VideoPlayerItem) {
                 class="size-4 self-center text-[var(--app-text-muted)] transition-transform"
                 :class="open ? 'rotate-90' : ''"
               />
-              <span class="truncate text-sm font-medium text-[var(--app-text-primary)]">
-                {{ displayValue(itemAssetLabel(group.representative)) }}
-              </span>
-              <span class="font-mono text-[11px] tabular-nums text-[var(--app-text-muted)]">
+              <UPopover
+                mode="hover"
+                :open-delay="180"
+                :close-delay="80"
+                :arrow="true"
+                :content="{ side: 'left', align: 'start', sideOffset: 8 }"
+                class="min-w-0"
+              >
+                <div class="min-w-0">
+                  <span class="block truncate text-sm font-medium text-[var(--app-text-primary)]">
+                    {{ displayValue(itemAssetLabel(group.representative)) }}
+                  </span>
+                  <span class="block truncate text-[11px] text-[var(--app-text-muted)]">
+                    {{ groupSubline(group.representative) }}
+                  </span>
+                </div>
+                <template #content>
+                  <dl class="grid min-w-[240px] grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 px-3 py-2.5 text-xs">
+                    <template v-for="row in metaDetailRows(group.representative)" :key="row.key">
+                      <dt class="text-[var(--app-text-muted)]">{{ row.label }}</dt>
+                      <dd class="break-all text-[var(--app-text-primary)]">{{ row.value }}</dd>
+                    </template>
+                  </dl>
+                </template>
+              </UPopover>
+              <span class="self-start font-mono text-[11px] tabular-nums text-[var(--app-text-muted)]">
                 {{ $t("VideoPlayer.PartCount", { count: group.items.length }) }}
-              </span>
-              <span class="col-start-2 truncate text-[11px] text-[var(--app-text-muted)]">
-                {{ groupSubline(group.representative) }}
               </span>
             </div>
           </template>
@@ -297,17 +343,38 @@ function groupSubline(item: VideoPlayerItem) {
               class="size-4 self-center"
               :class="item.id === activeId ? 'text-primary' : 'text-[var(--app-text-muted)]'"
             />
-            <span class="truncate text-sm font-medium text-[var(--app-text-primary)]">
-              {{ displayValue(itemAssetLabel(item)) }}
-            </span>
-            <span class="font-mono text-[11px] tabular-nums text-[var(--app-text-muted)] group-hover:invisible">
+            <UPopover
+              mode="hover"
+              :open-delay="180"
+              :close-delay="80"
+              :arrow="true"
+              :content="{ side: 'left', align: 'start', sideOffset: 8 }"
+              class="min-w-0"
+            >
+              <div data-videoplayer-tour="meta" class="min-w-0">
+                <span class="block truncate text-sm font-medium text-[var(--app-text-primary)]">
+                  {{ displayValue(itemAssetLabel(item)) }}
+                </span>
+                <span class="block truncate text-[11px] text-[var(--app-text-muted)]">
+                  <span v-if="item.id === activeId" class="font-semibold text-primary">
+                    {{ $t("VideoPlayer.Playing") }} ·
+                  </span>
+                  {{ itemSubline(item, false) }}
+                </span>
+              </div>
+              <template #content>
+                <dl class="grid min-w-[240px] grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 px-3 py-2.5 text-xs">
+                  <template v-for="row in metaDetailRows(item)" :key="row.key">
+                    <dt class="text-[var(--app-text-muted)]">{{ row.label }}</dt>
+                    <dd class="break-all text-[var(--app-text-primary)]">{{ row.value }}</dd>
+                  </template>
+                </dl>
+              </template>
+            </UPopover>
+            <span
+              class="self-start font-mono text-[11px] tabular-nums text-[var(--app-text-muted)] group-hover:invisible"
+            >
               {{ compactDuration(item) }}
-            </span>
-            <span class="col-start-2 truncate text-[11px] text-[var(--app-text-muted)]">
-              <span v-if="item.id === activeId" class="font-semibold text-primary">
-                {{ $t("VideoPlayer.Playing") }} ·
-              </span>
-              {{ itemSubline(item, false) }}
             </span>
             <UButton
               color="neutral"

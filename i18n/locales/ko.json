@@ -76,6 +76,8 @@
     "AddDescription": "오른쪽 + 를 누르면 녹화를 더 추가할 수 있습니다.",
     "PartsTitle": "구간 녹화",
     "PartsDescription": "같은 세션의 여러 구간은 한 그룹으로 묶입니다. 구간을 클릭하면 이어서 재생됩니다.",
+    "MetaTitle": "세션 정보",
+    "MetaDescription": "녹화 항목에 마우스를 올리면 JSON의 사용자, 자산, 계정, 프로토콜, 시간을 볼 수 있습니다.",
     "progress": "{total}단계 중 {current}단계",
     "next": "다음",
     "previous": "이전",

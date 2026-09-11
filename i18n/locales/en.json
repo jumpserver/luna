@@ -76,6 +76,8 @@
     "AddDescription": "Click + on the right to add more recordings.",
     "PartsTitle": "Session clips",
     "PartsDescription": "Parts of the same session are grouped. Click a clip to continue from that segment.",
+    "MetaTitle": "Session details",
+    "MetaDescription": "Hover a recording to see user, asset, account, protocol, and time from the JSON metadata.",
     "progress": "Step {current} of {total}",
     "next": "Next",
     "previous": "Previous",

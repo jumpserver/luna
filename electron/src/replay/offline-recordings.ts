@@ -102,6 +102,7 @@ async function writeMedia(stream, sourceName, destination) {
 function recordingMetadata(raw) {
   if (!raw) return {};
   const metadata = {
+    id: raw.id,
     source_id: raw.id,
     user: raw.user,
     asset: raw.asset,
@@ -213,6 +214,12 @@ async function extractTar(sourcePath, entriesDirectory) {
 async function extractSingleFile(sourcePath, entriesDirectory) {
   const sourceName = path.basename(sourcePath);
   const classified = classify(sourceName);
+  if (classified?.kind === "metadata") {
+    return {
+      metadata: await readMetadata(createReadStream(sourcePath), sourceName),
+      media: []
+    };
+  }
   const entryId = "entry-00000000";
   const destination = path.join(entriesDirectory, entryId);
   if (classified?.kind === "media") {
@@ -276,6 +283,19 @@ export class OfflineRecordingStore {
       const extracted = isTarPackageName(sourcePath)
         ? await extractTar(sourcePath, entriesDirectory)
         : await extractSingleFile(sourcePath, entriesDirectory);
+      if (!extracted.media.length) {
+        await rm(pendingDirectory, { recursive: true, force: true });
+        if (extracted.metadata) {
+          return {
+            version: 1,
+            recording_id: recordingId,
+            label: recordingLabel(sourcePath),
+            metadata: recordingMetadata(extracted.metadata),
+            entries: []
+          };
+        }
+        throw new Error("no supported media entries found in recording package");
+      }
       const manifest = buildManifest(recordingId, recordingLabel(sourcePath), extracted);
       await writeFile(path.join(pendingDirectory, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, {
         flag: "wx"

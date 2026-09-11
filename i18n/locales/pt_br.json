@@ -76,6 +76,8 @@
     "AddDescription": "Clique em + à direita para adicionar mais gravações.",
     "PartsTitle": "Trechos da sessão",
     "PartsDescription": "Partes da mesma sessão ficam agrupadas. Clique em um trecho para continuar daquele ponto.",
+    "MetaTitle": "Detalhes da sessão",
+    "MetaDescription": "Passe o mouse sobre uma gravação para ver usuário, ativo, conta, protocolo e horário do JSON.",
     "progress": "Passo {current} de {total}",
     "next": "Próximo",
     "previous": "Anterior",

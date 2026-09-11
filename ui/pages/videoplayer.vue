@@ -40,7 +40,9 @@ const useIslandLayout = computed(() => modernIsland.value && !isNarrowScreen.val
 const PLAYLIST_MAX_WIDTH = 420;
 const PLAYLIST_DEFAULT_WIDTH = 288;
 const PLAYLIST_COLLAPSED_WIDTH = 40;
-const { setOpen: setRightPanelOpen, setPanelWidth, setPanelBounds, resetPanelBounds } = useRightPanel();
+const PLAYLIST_COLLAPSE_BELOW = 200;
+const PLAYLIST_EXPAND_ABOVE = 240;
+const { panelWidth, setOpen: setRightPanelOpen, setPanelWidth, setPanelBounds, resetPanelBounds } = useRightPanel();
 
 const { parseFiles, parsePaths } = useVideoPlayerParser();
 const { removeRecording } = useOfflineRecording();
@@ -50,6 +52,42 @@ const playlistItems = computed(() =>
 );
 
 const currentItem = computed(() => items.value.find((item) => item.id === activeId.value) || null);
+
+function metaName(value: unknown) {
+  if (typeof value === "string") {
+    const stripped = value.replace(/\s*\([^)]*\)/g, "").trim();
+    return stripped || value;
+  }
+  if (value && typeof value === "object" && "name" in value && typeof value.name === "string") {
+    return metaName(value.name);
+  }
+  return "";
+}
+
+const currentMetaChips = computed(() => {
+  const meta = currentItem.value?.meta;
+  if (!meta) return [];
+  const chips: Array<{ key: string; label: string; value: string }> = [];
+  const user = metaName(meta.user);
+  const asset = metaName(meta.asset);
+  const account = metaName(meta.account);
+  const protocol = typeof meta.protocol === "string" ? meta.protocol.toUpperCase() : "";
+  if (user) chips.push({ key: "user", label: t("Replay.User"), value: user });
+  if (asset) chips.push({ key: "asset", label: t("Replay.Asset"), value: asset });
+  if (account) chips.push({ key: "account", label: t("Replay.Account"), value: account });
+  if (protocol) chips.push({ key: "protocol", label: t("Transcode.MetaProtocol"), value: protocol });
+  if (meta.date_start) {
+    chips.push({
+      key: "start",
+      label: t("Replay.StartTime"),
+      value: String(meta.date_start).replace(/\s+[+-]\d{4}$/, "")
+    });
+  }
+  if (meta.remote_addr) {
+    chips.push({ key: "addr", label: t("Transcode.MetaRemoteAddr"), value: String(meta.remote_addr) });
+  }
+  return chips;
+});
 
 const playerComponent = computed(() => {
   switch (currentItem.value?.type) {
@@ -286,6 +324,12 @@ watch(
   { immediate: true }
 );
 
+watch(panelWidth, (width) => {
+  if (playlistItems.value.length === 0) return;
+  if (!playlistCollapsed.value && width < PLAYLIST_COLLAPSE_BELOW) playlistCollapsed.value = true;
+  else if (playlistCollapsed.value && width >= PLAYLIST_EXPAND_ABOVE) playlistCollapsed.value = false;
+});
+
 onMounted(async () => {
   try {
     await desktopWindow.setTitle("JumpServer Video Player");
@@ -364,15 +408,26 @@ onBeforeUnmount(() => {
     </Teleport>
 
     <div data-videoplayer-tour="stage" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <section v-if="items.length > 0" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-black">
-        <component
-          :is="playerComponent"
-          v-if="playerComponent && currentItem"
-          :key="currentItem.id"
-          class="h-full w-full min-h-0"
-          :source="currentItem.source"
-          :cast-data="currentItem.castData"
-        />
+      <section v-if="items.length > 0" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div
+          v-if="currentMetaChips.length"
+          class="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-[var(--app-border)] bg-[var(--app-surface-panel)] px-3 py-1.5 text-xs"
+        >
+          <span v-for="chip in currentMetaChips" :key="chip.key" class="min-w-0 truncate">
+            <span class="text-[var(--app-text-muted)]">{{ chip.label }}</span>
+            <span class="ml-1 text-[var(--app-text-primary)]">{{ chip.value }}</span>
+          </span>
+        </div>
+        <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-black">
+          <component
+            :is="playerComponent"
+            v-if="playerComponent && currentItem"
+            :key="currentItem.id"
+            class="h-full w-full min-h-0"
+            :source="currentItem.source"
+            :cast-data="currentItem.castData"
+          />
+        </div>
       </section>
 
       <section v-else-if="videoPlayerTourFilled" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-black">

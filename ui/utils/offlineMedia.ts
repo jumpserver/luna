@@ -60,6 +60,12 @@ export function classifyOfflineName(fileName: string): ClassifiedName {
   return { kind: null, partIndex };
 }
 
+export function stripReplayJsonExtension(fileName: string) {
+  return basename(fileName)
+    .replace(/\.replay\.json$/i, "")
+    .replace(/\.json$/i, "");
+}
+
 export function stripOfflineExtension(fileName: string) {
   return basename(fileName)
     .replace(/\.tar\.gz$/i, "")

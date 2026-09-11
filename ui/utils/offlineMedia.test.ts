@@ -7,7 +7,8 @@ import {
   isTarPackageName,
   parsePartIndex,
   resolvePlayableMedia,
-  stripOfflineExtension
+  stripOfflineExtension,
+  stripReplayJsonExtension
 } from "./offlineMedia";
 
 function toBuffer(bytes: Uint8Array) {
@@ -78,6 +79,8 @@ describe("resolvePlayableMedia", () => {
     expect(isTarPackageName("session.tar.gz")).toBe(true);
     expect(isTarPackageName("generated_video.gz")).toBe(false);
     expect(stripOfflineExtension("session.0.part.gz")).toBe("session");
+    expect(stripReplayJsonExtension("session.replay.json")).toBe("session");
+    expect(stripReplayJsonExtension("session.json")).toBe("session");
   });
 
   it("assigns part totals per media type", () => {
