@@ -160,7 +160,8 @@ export const pickConnectMethod = (
   return methods[0]?.value || "";
 };
 
-const fetchPromise = new Map<string, Promise<ConnectMethodsResponse>>();
+const CONNECT_METHODS_CACHE_TTL_MS = 30_000;
+const fetchPromise = new Map<string, { promise: Promise<ConnectMethodsResponse>; expiresAt: number }>();
 
 const WEB_IFRAME_COMPONENTS = new Set(["koko", "lion", "chen", "tinker", "default"]);
 const KOKO_WEB_CONNECT_METHODS = new Set(
@@ -336,25 +337,32 @@ export const normalizeWebConnectMethods = (
 
 export const useConnectMethods = () => {
   const { t } = useI18n();
-  const { currentAccountId, orgId } = storeToRefs(useUserInfoStore());
+  const { currentSite, currentAccountId, orgId } = storeToRefs(useUserInfoStore());
 
   const fetchConnectMethods = async (): Promise<ConnectMethodsResponse> => {
-    const key = `${currentAccountId.value || ""}:${orgId.value || ""}`;
+    const key = JSON.stringify([currentSite.value, currentAccountId.value, orgId.value, isDesktopRuntime()]);
+    for (const [cachedKey, entry] of fetchPromise) {
+      if (entry.expiresAt <= Date.now()) fetchPromise.delete(cachedKey);
+    }
     const running = fetchPromise.get(key);
 
     if (running) {
-      return running;
+      return running.promise;
     }
 
     const promise = getConnectMethods().then((data) => normalizeWebConnectMethods(data as ConnectMethodsResponse));
 
-    fetchPromise.set(key, promise);
+    const entry = { promise, expiresAt: Infinity };
+    fetchPromise.set(key, entry);
 
     try {
       const result = await promise;
+      // Reuse the method list across form setup and connection validation; Core still authorizes each token.
+      entry.expiresAt = Date.now() + CONNECT_METHODS_CACHE_TTL_MS;
       return result;
-    } finally {
-      fetchPromise.delete(key);
+    } catch (error) {
+      if (fetchPromise.get(key) === entry) fetchPromise.delete(key);
+      throw error;
     }
   };
 

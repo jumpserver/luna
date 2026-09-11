@@ -11,10 +11,13 @@ function controlUrl(proxyUrl, path) {
     throw new Error("Koko Web Proxy 地址必须是不含凭据的 HTTP URL");
   }
 
-  const port = proxy.port || "80";
+  const target = new URL(path, proxy);
+  if (target.origin !== proxy.origin || !target.pathname.startsWith("/_jumpserver/")) {
+    throw new Error("无效的 Koko Web Proxy 控制接口地址");
+  }
   return {
     proxy,
-    target: new URL(path, `http://127.0.0.1:${port}/`)
+    target
   };
 }
 
@@ -23,12 +26,17 @@ interface WebProxyControlOptions {
   headers?: Record<string, string>;
   method?: string;
   signal?: AbortSignal;
+  proxyAuth?: { username: string; password: string };
 }
 
 export async function requestWebProxyControl(proxyUrl, path, options: WebProxyControlOptions = {}): Promise<Response> {
   const { proxy, target } = controlUrl(proxyUrl, path);
   const body = options.body == null ? null : Buffer.from(options.body);
   const headers = { ...options.headers };
+  if (options.proxyAuth) {
+    headers["Proxy-Authorization"] =
+      `Basic ${Buffer.from(`${options.proxyAuth.username}:${options.proxyAuth.password}`).toString("base64")}`;
+  }
   if (body && !Object.keys(headers).some((name) => name.toLowerCase() === "content-length")) {
     headers["content-length"] = String(body.length);
   }
@@ -36,10 +44,10 @@ export async function requestWebProxyControl(proxyUrl, path, options: WebProxyCo
   return await new Promise<Response>((resolve, reject) => {
     const request = http.request(
       {
-        hostname: proxy.hostname,
+        hostname: proxy.hostname.replace(/^\[|\]$/g, ""),
         port: proxy.port || 80,
         method: options.method || "GET",
-        path: target.href,
+        path: `${target.pathname}${target.search}`,
         headers: { ...headers, host: target.host },
         signal: options.signal
       },

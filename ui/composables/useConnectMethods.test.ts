@@ -1,10 +1,12 @@
 import type { ConnectMethod } from "~/composables/useConnectMethods";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ref } from "vue";
 import {
   canDownloadRdpFile,
   isExternalClientConnectMethod,
   normalizeWebConnectMethods,
   pickConnectMethod,
+  useConnectMethods,
   WEB_CLI_NATIVE_VALUE,
   WEB_PROXY_NATIVE_VALUE,
   withKokoWebFallback
@@ -13,6 +15,84 @@ import {
 vi.mock("~/store/modules/userInfo", () => ({
   useUserInfoStore: vi.fn()
 }));
+
+describe("connection method request reuse", () => {
+  const scope = { currentSite: ref("https://site-a.example"), currentAccountId: ref("user-a"), orgId: ref("org-a") };
+  const request = vi.fn();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    scope.currentSite.value = "https://site-a.example";
+    scope.currentAccountId.value = "user-a";
+    scope.orgId.value = "org-a";
+    vi.stubGlobal("storeToRefs", () => scope);
+    vi.stubGlobal("useI18n", () => ({ t: (key: string) => key }));
+    vi.stubGlobal("isDesktopRuntime", () => false);
+    vi.stubGlobal("getConnectMethods", request);
+    request.mockReset().mockResolvedValue({ ssh: [], originals: [] });
+    useConnectMethods().clearCache();
+  });
+
+  afterEach(() => {
+    useConnectMethods().clearCache();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it.each([false, true])("shares form and connection reads across instances (desktop=%s)", async (desktop) => {
+    vi.stubGlobal("isDesktopRuntime", () => desktop);
+    const form = useConnectMethods();
+    const connection = useConnectMethods();
+    await Promise.all([form.getMethodsForProtocol("ssh"), connection.getMethodsForProtocol("ssh")]);
+    await form.getMethodDisplayName("ssh", "web_cli");
+    await connection.getMethodsForProtocol("ssh");
+    await connection.fetchConnectMethods();
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes expired results and retries failed requests", async () => {
+    const methods = useConnectMethods();
+    await methods.fetchConnectMethods();
+    vi.advanceTimersByTime(30_001);
+    request.mockRejectedValueOnce(new Error("offline"));
+    await expect(methods.fetchConnectMethods()).rejects.toThrow("offline");
+    await methods.fetchConnectMethods();
+    expect(request).toHaveBeenCalledTimes(3);
+  });
+
+  it("isolates sites, accounts, organizations and runtimes", async () => {
+    const methods = useConnectMethods();
+    await methods.fetchConnectMethods();
+    scope.currentSite.value = "https://site-b.example";
+    await methods.fetchConnectMethods();
+    scope.currentAccountId.value = "user-b";
+    await methods.fetchConnectMethods();
+    scope.orgId.value = "org-b";
+    await methods.fetchConnectMethods();
+    vi.stubGlobal("isDesktopRuntime", () => true);
+    await methods.fetchConnectMethods();
+    expect(request).toHaveBeenCalledTimes(5);
+  });
+
+  it("does not let an old failure evict a request started after clearing", async () => {
+    const methods = useConnectMethods();
+    let rejectOld!: (error: Error) => void;
+    request.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          rejectOld = reject;
+        })
+    );
+    const oldRequest = methods.fetchConnectMethods();
+    methods.clearCache();
+    await methods.fetchConnectMethods();
+    const rejected = expect(oldRequest).rejects.toThrow("old request");
+    rejectOld(new Error("old request"));
+    await rejected;
+    await methods.fetchConnectMethods();
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+});
 
 const appletMethod = (value: string, label: string): ConnectMethod => ({
   value,

@@ -88,6 +88,7 @@ export interface KokoTerminalCommandSuggestionsAdapter {
 export interface KokoEndpoint {
   host?: string;
   port?: string | number;
+  http_port?: string | number;
   https_port?: string | number;
   value?: string;
 }

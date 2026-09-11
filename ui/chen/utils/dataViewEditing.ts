@@ -245,13 +245,25 @@ function rowIdentity(dataset: ChenDataViewDataset, row: Record<string, any>) {
     return { key: String(rowRef), rowRef: String(rowRef), primaryKey, pkValue: undefined as any, pkValueIsNull: true };
   }
   if (!primaryKey || isMaskedPrimaryKey(primaryKey)) {
-    return { key: "", rowRef: undefined as string | undefined, primaryKey, pkValue: undefined as any, pkValueIsNull: true };
+    return {
+      key: "",
+      rowRef: undefined as string | undefined,
+      primaryKey,
+      pkValue: undefined as any,
+      pkValueIsNull: true
+    };
   }
   const pkValue = row[primaryKey.name];
   if (isNull(pkValue)) {
     return { key: "", rowRef: undefined as string | undefined, primaryKey, pkValue, pkValueIsNull: true };
   }
-  return { key: JSON.stringify(pkValue), rowRef: undefined as string | undefined, primaryKey, pkValue, pkValueIsNull: false };
+  return {
+    key: JSON.stringify(pkValue),
+    rowRef: undefined as string | undefined,
+    primaryKey,
+    pkValue,
+    pkValueIsNull: false
+  };
 }
 
 function dirtyKey(identityKey: string, sourceColumn: string) {

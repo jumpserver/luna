@@ -49,6 +49,7 @@ async function loginCase(crossOrigin: boolean) {
         JSON.stringify({
           ...config,
           session_id: "script-session",
+          proxy_auth: "connect_ticket",
           id: "credentials",
           access_token: "once",
           target_url: `${appOrigin}/entry`,
@@ -148,7 +149,15 @@ async function loginCase(crossOrigin: boolean) {
   let rejected = "";
   let runner;
   try {
-    const session = await createCredentialSession(appOrigin, `${appOrigin}/entry`, "token", "value");
+    const session = await createCredentialSession(
+      appOrigin,
+      `${appOrigin}/entry`,
+      "token",
+      "value",
+      "",
+      "",
+      "script-ticket"
+    );
     assert.equal(session.mode, "script");
     assert.deepEqual(session.credentialOrigins, [authOrigin]);
     assert.equal(session.selectors.password, "");

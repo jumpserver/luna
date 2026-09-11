@@ -1,6 +1,6 @@
-import type { KokoEndpoint, KokoHostAdapter, KokoPreparedSftpAsset, KokoSftpAsset, KokoWorkspaceTab } from "#koko/host";
+import type { KokoHostAdapter, KokoPreparedSftpAsset, KokoSftpAsset, KokoWorkspaceTab } from "#koko/host";
 
-import { isLoopbackUrl } from "@jumpserver/connectors-core";
+import { resolveEndpointUrl } from "@jumpserver/connectors-core";
 import { HeaderOrganizationSelector, SideBarAssetTree } from "#components";
 import { configureKokoThemeAdapter, kokoHostAdapterKey } from "#koko/host";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
@@ -73,25 +73,18 @@ export default defineNuxtPlugin((nuxtApp) => {
       });
   };
 
-  const endpointUrl = (endpoint: KokoEndpoint) => {
-    let resolved = endpoint.value || "";
-    if (!resolved && endpoint.host) {
-      const port = endpoint.https_port || endpoint.port;
-      const scheme = endpoint.https_port ? "https" : "http";
-      resolved = `${scheme}://${port ? `${endpoint.host}:${port}` : endpoint.host}`;
-    }
-    return import.meta.dev && isLoopbackUrl(resolved) ? window.location.origin : resolved;
-  };
-
   const adapter: KokoHostAdapter = {
     createTicket: createKokoTicket,
     getSmartEndpoint: async (request, orgId) => {
-      const endpoint = await getSmartEndpoint(request, orgId);
-      if (!isElectronRuntime()) return endpoint;
-
+      const site = isDesktopRuntime() ? currentSite.value : window.location.origin;
+      // SSH/SFTP use Koko's HTTP transport, not the native SSH endpoint port.
+      const endpoint = await getSmartEndpoint({ ...request, protocol: new URL(site).protocol.slice(0, -1) }, orgId);
+      const value = resolveEndpointUrl(endpoint, site);
       return {
         ...endpoint,
-        value: await desktopInvoke<string>("resolve_koko_endpoint", { endpointUrl: endpointUrl(endpoint) })
+        value: isElectronRuntime()
+          ? await desktopInvoke<string>("resolve_koko_endpoint", { endpointUrl: value })
+          : value
       };
     },
     getWindowOrigin: () => window.location.origin,

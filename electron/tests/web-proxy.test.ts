@@ -50,6 +50,7 @@ async function setupNavigation(safeMode: unknown, allowedUrls: unknown = [], all
     });
   const contents = createContents();
   const state = mock.fn();
+  const finishAutofill = mock.fn();
   let preferences: any;
   const views = new Map();
   const scope = {
@@ -80,8 +81,12 @@ async function setupNavigation(safeMode: unknown, allowedUrls: unknown = [], all
     electronLog: { info() {}, warn() {} },
     startWebProxyAutofillWait() {},
     syncWebProxyVisibility() {},
-    createCredentialSession: async () => ({ autofillAvailable: false }),
-    finishWebProxyAutofill() {},
+    createCredentialSession: async () => ({
+      sessionId: "core-session",
+      proxyAuth: { username: "token-id", password: "ticket-value" },
+      autofillAvailable: false
+    }),
+    finishWebProxyAutofill: finishAutofill,
     emitWebProxyState: state,
     event: { sender: { id: 1 } },
     win: { contentView: { addChildView() {} } }
@@ -105,8 +110,54 @@ async function setupNavigation(safeMode: unknown, allowedUrls: unknown = [], all
   await managed.webSessionPromise;
   managed.autofillVisibilityBlocked = false;
   managed.autofillPending = false;
-  return { contents, preferences, state, invoke: (command, args = {}) => api.invoke(command, { label, ...args }) };
+  return {
+    contents,
+    preferences,
+    state,
+    managed,
+    finishAutofill,
+    invoke: (command, args = {}) => api.invoke(command, { label, ...args })
+  };
 }
+
+test("proxy connection failures identify the selected proxy during login and later navigation", async () => {
+  const { contents, state, managed, finishAutofill } = await setupNavigation(false);
+  for (const description of ["ERR_TUNNEL_CONNECTION_FAILED", "ERR_PROXY_CONNECTION_FAILED"]) {
+    managed.autofillPending = true;
+    contents.emit("did-fail-load", {}, -111, description, "https://example.test/login", true);
+    assert.equal(
+      finishAutofill.mock.calls.at(-1)!.arguments[2],
+      `登录页面加载失败：${description}（代理：http://localhost:5001）`
+    );
+    managed.autofillPending = false;
+    contents.emit("did-fail-load", {}, -111, description, "https://example.test/login", true);
+    assert.equal(state.mock.calls.at(-1)!.arguments[1].error, `${description}（代理：http://localhost:5001）`);
+  }
+  contents.emit("did-fail-load", {}, -105, "ERR_NAME_NOT_RESOLVED", "https://example.test/login", true);
+  assert.equal(state.mock.calls.at(-1)!.arguments[1].error, "ERR_NAME_NOT_RESOLVED");
+});
+
+test("proxy credentials are only supplied to the configured proxy's first authentication challenge", async () => {
+  const { contents, managed } = await setupNavigation(false);
+  const challenge = { isProxy: true, host: "localhost", port: 5001, scheme: "basic" };
+  const callback = mock.fn();
+  const event = { preventDefault: mock.fn() };
+  contents.emit("login", event, { firstAuthAttempt: true }, challenge, callback);
+  assert.deepEqual(callback.mock.calls.at(-1)!.arguments, ["token-id", "ticket-value"]);
+  for (const authInfo of [
+    { ...challenge, host: "website.test" },
+    { ...challenge, port: 80 }
+  ]) {
+    contents.emit("login", event, { firstAuthAttempt: true }, authInfo, callback);
+    assert.deepEqual(callback.mock.calls.at(-1)!.arguments, []);
+  }
+  contents.emit("login", event, { firstAuthAttempt: false }, challenge, callback);
+  assert.deepEqual(callback.mock.calls.at(-1)!.arguments, []);
+  const before = callback.mock.callCount();
+  contents.emit("login", event, {}, { ...challenge, isProxy: false }, callback);
+  assert.equal(callback.mock.callCount(), before);
+  clearInterval(managed.proxyHeartbeatTimer);
+});
 
 test("asset navigation is unrestricted by default and matches exact sites only when configured", () => {
   for (const allowed of [undefined, []]) {
@@ -693,11 +744,12 @@ test("decrypts the Koko-compatible one-time credential envelope", async () => {
     request.on("end", () => {
       assert.equal(
         request.url,
-        `${proxyUrl}${requestCount === 1 ? "/_jumpserver/web-sessions/" : "/_jumpserver/web-sessions/session-id/credentials"}`
+        requestCount === 1 ? "/_jumpserver/web-sessions/" : "/_jumpserver/web-sessions/session-id/credentials"
       );
       const body = Buffer.concat(chunks).toString("utf8");
       if (requestCount === 1) {
         const payload = JSON.parse(body);
+        assert.equal(request.headers["x-koko-connect-ticket"], "ticket-value");
         clientPublicKey = createPublicKey({
           key: Buffer.from(payload.client_public_key, "base64"),
           type: "spki",
@@ -709,6 +761,7 @@ test("decrypts the Koko-compatible one-time credential envelope", async () => {
             session_id: "62a7496e-369d-4f3d-b3f9-a20b61a33980",
             id: "session-id",
             access_token: "once",
+            proxy_auth: "connect_ticket",
             target_url: "https://example.com/login",
             origin: "https://example.com",
             autofill_available: true,
@@ -756,7 +809,8 @@ test("decrypts the Koko-compatible one-time credential envelope", async () => {
         "token-id",
         "token-value",
         successSelector,
-        interactiveSelector
+        interactiveSelector,
+        "ticket-value"
       );
       assert.equal(session.sessionId, "62a7496e-369d-4f3d-b3f9-a20b61a33980");
       assert.equal(session.selectors.success, successSelector);

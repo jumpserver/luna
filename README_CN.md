@@ -201,6 +201,24 @@ pnpm lint             # 运行代码检查
 pnpm reset            # 清理构建产物
 ```
 
+### 连接组件的开发代理
+
+所有连接都使用 Core 返回的 endpoint。HTTP/HTTPS 端口为 `0` 时继承当前站点端口；明确配置的 host、端口或 URL 不会因开发模式或 loopback 地址而被替换。
+
+本地开发运行 `pnpm dev`，Web 使用启动输出中的 Nuxt 地址，Electron 的登录站点也填写同一个地址（例如 `http://127.0.0.1:3000`）。默认 endpoint 经此入口分流：
+
+| 路径                                                  | 默认后端                | 配置变量           |
+| ----------------------------------------------------- | ----------------------- | ------------------ |
+| `/api/`、`/core`                                      | `http://localhost:8080` | `JMS_CORE_DEV_URL` |
+| `/koko/`（含终端、SFTP、Lion、监控的 HTTP/WebSocket） | `http://localhost:5050` | `JMS_KOKO_DEV_URL` |
+| `/chen`（HTTP/WebSocket）                             | `http://localhost:8082` | `JMS_CHEN_DEV_URL` |
+
+这些变量放在 `.env.development`，修改后重启开发进程。需要独立调试 Lion 时可用 `JMS_LION_DEV_URL` 覆盖 `/koko/lion/`。自定义 endpoint 需配置为开发代理入口，或其实际可访问的连接地址。
+
+Electron 选择远端 JumpServer 站点时直接使用该站点的 endpoint。已移除 `JMS_KOKO_DESKTOP_URL`、`JMS_CHEN_DESKTOP_URL`、`VITE_JMS_WEB_PROXY_URL` 和 `VITE_JMS_WEB_PROXY_PORT` 地址覆盖。
+
+Web Proxy 使用 endpoint 的独立 `web_proxy_port`（旧服务端缺少该字段时使用 `5001`），不经过 `/koko/` 反向代理。它和本地 Koko/Chen 必须连接签发 token 的同一 Core。代理配置可用 `node scripts/check-ws-proxy.mjs` 检查。
+
 ## 🤝 贡献
 
 欢迎贡献！请随时提交 Pull Request。
@@ -252,7 +270,6 @@ pnpm reset            # 清理构建产物
 [⭐ 在 GitHub 上给我们点星](https://github.com/jumpserver/clients) | [📖 文档](https://docs.jumpserver.org/) | [🐛 报告问题](https://github.com/jumpserver/clients/issues)
 
 </div>
-
 
 ### Harness 分支 AI 联调
 

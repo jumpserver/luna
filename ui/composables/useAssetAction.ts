@@ -1,6 +1,6 @@
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, RdpGraphics, TokenResponse } from "~/types";
-import { alignEndpointUrlWithPage, isLoopbackUrl } from "@jumpserver/connectors-core";
+import { resolveEndpointUrl } from "@jumpserver/connectors-core";
 
 import {
   getAssetDetailRequest,
@@ -255,36 +255,11 @@ export const useAssetAction = () => {
   };
 
   const getEndpointUrl = (
-    endpoint: Record<string, string | number | undefined>,
+    endpoint: Parameters<typeof resolveEndpointUrl>[0],
     protocol?: string,
-    portField?: string
-  ) => {
-    const endpointProtocol = (protocol || window.location.protocol.replace(":", "") || "http").replace(":", "");
-    let siteUrl: URL | null = null;
-    try {
-      const candidate = new URL(currentSite.value || window.location.origin);
-      if (["http:", "https:"].includes(candidate.protocol)) siteUrl = candidate;
-    } catch {
-      siteUrl = null;
-    }
-
-    const host = endpoint.host || siteUrl?.hostname || window.location.hostname;
-    if (!host || host === "app") throw new Error("Smart endpoint did not provide a valid HTTP host");
-    let port = endpoint[portField || `${endpointProtocol}_port`] ?? endpoint.port;
-
-    if (!portField && (endpointProtocol === "http" || endpointProtocol === "https") && port === 0) {
-      port = siteUrl?.port || window.location.port;
-    } else if (!endpoint.host && port == null && siteUrl?.protocol === `${endpointProtocol}:`) {
-      port = siteUrl.port;
-    }
-
-    const endpointUrl = `${endpointProtocol}://${port ? `${host}:${port}` : host}`;
-    if (isLoopbackUrl(endpointUrl) && (import.meta.dev || !isDesktopRuntime())) {
-      return window.location.origin;
-    }
-
-    return alignEndpointUrlWithPage(endpointUrl, window.location.origin, isDesktopRuntime());
-  };
+    portField?: Parameters<typeof resolveEndpointUrl>[3]
+  ) =>
+    resolveEndpointUrl(endpoint, isDesktopRuntime() ? currentSite.value : window.location.origin, protocol, portField);
 
   const resolveWebEndpointProtocol = (
     method: { component?: string; type?: string; endpoint_protocol?: string } | undefined
@@ -664,11 +639,11 @@ export const useAssetAction = () => {
         }
         const webProxyPort = Number(webProxyEndpoint?.web_proxy_port) || 5001;
         let endpointUrl = webProxyEndpoint
-          ? getEndpointUrl(webProxyEndpoint, "http", "web_proxy_port")
+          ? getEndpointUrl({ ...webProxyEndpoint, web_proxy_port: webProxyPort }, "http", "web_proxy_port")
           : await fetchSmartEndpointUrl(token, { component, type: "web" }, body, meta.orgId);
         if (component === "chen" && isElectronRuntime()) {
           endpointUrl = await desktopInvoke<string>("resolve_chen_endpoint", { endpointUrl });
-        } else if ((component === "koko" || component === "lion") && isElectronRuntime()) {
+        } else if (!isWebProxy && (component === "koko" || component === "lion") && isElectronRuntime()) {
           endpointUrl = await desktopInvoke<string>("resolve_koko_endpoint", { endpointUrl });
         }
         let webProxy;
@@ -682,9 +657,17 @@ export const useAssetAction = () => {
             endpointUrl,
             successSelector,
             String(assetDetail.spec_info?.interactive_selector || "").trim(),
-            assetDetail.spec_info?.allowed_urls,
-            webProxyPort
+            assetDetail.spec_info?.allowed_urls
           );
+          const ticketEndpoint = webProxyEndpoint
+            ? getEndpointUrl(webProxyEndpoint, resolveWebEndpointProtocol({ component: "koko", type: "web" }))
+            : endpointUrl;
+          const { ticket } = await useWorkspaceConnectors().createKokoTicket({
+            baseUrl: ticketEndpoint,
+            tokenId: token.id
+          });
+          if (!ticket) throw new Error("Koko 未返回 Web Proxy connect ticket");
+          webProxy = { ...webProxy, ticket };
         }
         const payload = {
           token,

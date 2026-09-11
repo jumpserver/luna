@@ -1,5 +1,4 @@
 import type { KokoWorkspaceTab } from "#koko/host";
-import { alignEndpointUrlWithPage } from "@jumpserver/connectors-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 
@@ -54,7 +53,7 @@ describe("useBaseWorkspaceSession", () => {
     host.createTicket.mockResolvedValue({ ticket: "ticket-1" });
     host.getSmartEndpoint.mockResolvedValue({
       host: "koko.example.test",
-      https_port: "443"
+      http_port: "5050"
     });
   });
 
@@ -94,7 +93,7 @@ describe("useBaseWorkspaceSession", () => {
       component: "koko",
       tokenId: "token-1",
       ticket: "ticket-1",
-      endpointUrl: "https://koko.example.test:443",
+      endpointUrl: "http://koko.example.test:5050",
       tabId: "tab-1",
       disableAutoHash: undefined,
       actions: ["copy"]
@@ -121,18 +120,18 @@ describe("useBaseWorkspaceSession", () => {
     expect(host.getSmartEndpoint).not.toHaveBeenCalled();
   });
 
-  it("falls back to the window origin for loopback endpoints on web", async () => {
+  it("preserves explicitly selected loopback endpoints on web", async () => {
     host.getSmartEndpoint.mockResolvedValue({ value: "http://127.0.0.1:5050" });
     const session = useBaseWorkspaceSession(createTab());
 
     const context = await session.prepareSession();
 
-    expect(context?.endpointUrl).toBe("http://127.0.0.1:3300");
+    expect(context?.endpointUrl).toBe("http://127.0.0.1:5050");
   });
 
-  it("upgrades same-host http endpoints to the https page origin", async () => {
+  it("uses the HTTPS endpoint port selected by the host", async () => {
     host.getWindowOrigin.mockReturnValue("https://47.242.2.24");
-    host.getSmartEndpoint.mockResolvedValue({ value: "http://47.242.2.24" });
+    host.getSmartEndpoint.mockResolvedValue({ host: "47.242.2.24", https_port: 443 });
     const session = useBaseWorkspaceSession(createTab());
 
     const context = await session.prepareSession();
@@ -141,9 +140,9 @@ describe("useBaseWorkspaceSession", () => {
     expect(host.createTicket).toHaveBeenCalledWith({ baseUrl: "https://47.242.2.24", tokenId: "token-1" });
   });
 
-  it("keeps the https page port when upgrading a same-host http endpoint", async () => {
+  it("inherits the site port for a default endpoint", async () => {
     host.getWindowOrigin.mockReturnValue("https://host:8443");
-    host.getSmartEndpoint.mockResolvedValue({ value: "http://host" });
+    host.getSmartEndpoint.mockResolvedValue({ host: "host", https_port: 0 });
     const session = useBaseWorkspaceSession(createTab());
 
     const context = await session.prepareSession();
@@ -158,7 +157,7 @@ describe("useBaseWorkspaceSession", () => {
 
     const context = await session.prepareSession();
 
-    expect(context?.endpointUrl).toBe("https://koko.internal:443");
+    expect(context?.endpointUrl).toBe("https://koko.internal");
   });
 
   it("keeps http endpoints in the desktop runtime", async () => {
@@ -199,12 +198,5 @@ describe("useBaseWorkspaceSession", () => {
       protocol: "ssh",
       account: "root"
     });
-  });
-});
-
-describe("alignEndpointUrlWithPage", () => {
-  it("upgrades cross-host http to https and drops port 80", () => {
-    expect(alignEndpointUrlWithPage("http://koko.other", "https://luna.example", false)).toBe("https://koko.other");
-    expect(alignEndpointUrlWithPage("http://koko.other:80", "https://luna.example", false)).toBe("https://koko.other");
   });
 });

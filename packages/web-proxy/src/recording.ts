@@ -52,7 +52,7 @@ export class WebProxyRecording {
   // ponytail: migration keeps recording session state dynamic; replace with explicit frame/session types when strict mode is enabled.
   [key: string]: any;
 
-  static async start({ label, sessionId, targetUrl, proxyUrl, width, height, capture, emit }) {
+  static async start({ label, sessionId, targetUrl, proxyUrl, proxyAuth, width, height, capture, emit }) {
     if (
       !Number.isInteger(width) ||
       !Number.isInteger(height) ||
@@ -69,6 +69,7 @@ export class WebProxyRecording {
       response = await fetchWithTimeout(proxyUrl, endpoint.pathname, {
         method: "POST",
         headers: { "content-type": "application/json" },
+        proxyAuth,
         body: JSON.stringify({ session_id: sessionId, target_url: targetUrl, width, height })
       });
     } catch (error) {
@@ -77,17 +78,18 @@ export class WebProxyRecording {
     const started = await responseJson(response, "启动 Koko Web 录像失败");
     if (typeof started.id !== "string" || !started.id) throw new Error("Koko 返回的 Web 录像 ID 为空");
 
-    const recording = new WebProxyRecording({ label, id: started.id, endpoint, proxyUrl, capture, emit });
+    const recording = new WebProxyRecording({ label, id: started.id, endpoint, proxyUrl, proxyAuth, capture, emit });
     recording.emitState("recording", "Web 录像已开始");
     recording.timer = setInterval(() => void recording.capturePeriodic(), CAPTURE_INTERVAL_MS);
     return recording;
   }
 
-  constructor({ label, id, endpoint, proxyUrl, capture, emit }) {
+  constructor({ label, id, endpoint, proxyUrl, proxyAuth, capture, emit }) {
     this.label = label;
     this.id = id;
     this.endpoint = endpoint;
     this.proxyUrl = proxyUrl;
+    this.proxyAuth = proxyAuth;
     this.capture = capture;
     this.emit = emit;
     this.startedAt = Date.now();
@@ -149,6 +151,7 @@ export class WebProxyRecording {
       response = await fetchWithTimeout(this.proxyUrl, `${frameUrl.pathname}${frameUrl.search}`, {
         method: "POST",
         headers: { "content-type": "image/jpeg" },
+        proxyAuth: this.proxyAuth,
         body: jpeg
       });
     } catch (error) {
@@ -179,7 +182,9 @@ export class WebProxyRecording {
 
     if (this.frameCount === 0) {
       const cancelUrl = sessionUrl(this.endpoint, this.id);
-      await fetchWithTimeout(this.proxyUrl, cancelUrl.pathname, { method: "DELETE" }).catch(() => undefined);
+      await fetchWithTimeout(this.proxyUrl, cancelUrl.pathname, { method: "DELETE", proxyAuth: this.proxyAuth }).catch(
+        () => undefined
+      );
       return this.emitState("finished", "录像时间过短，未生成文件");
     }
 
@@ -193,6 +198,7 @@ export class WebProxyRecording {
         {
           method: "POST",
           headers: { "content-type": "application/json" },
+          proxyAuth: this.proxyAuth,
           body: JSON.stringify({ duration_ms: duration })
         },
         FINISH_TIMEOUT_MS

@@ -7,6 +7,8 @@
 @import "./workspace-island.css";
 @import "./motion.css";
 
+@source "../../../packages/web-proxy/src";
+
 @theme {
   --font-sans: system-ui, sans-serif;
   --font-mono: "SFMono-Regular", "JetBrains Mono", "Cascadia Code", "Fira Code", "Menlo", "Consolas", monospace;

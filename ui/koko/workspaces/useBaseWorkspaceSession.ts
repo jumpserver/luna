@@ -3,7 +3,7 @@ import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 import type { Ref } from "vue";
 import type { KokoWorkspaceTab } from "#koko/host";
 
-import { alignEndpointUrlWithPage, connectorSessionKey } from "@jumpserver/connectors-core";
+import { resolveEndpointUrl, connectorSessionKey } from "@jumpserver/connectors-core";
 import { useKokoHostAdapter } from "#koko/host";
 
 interface UseBaseWorkspaceSessionOptions {
@@ -34,38 +34,15 @@ export function useBaseWorkspaceSession(tab: Ref<KokoWorkspaceTab>, options: Use
   }
 
   async function fetchEndpointUrl() {
-    const pageOrigin = host.getWindowOrigin();
-    const desktop = host.isDesktopRuntime();
-    const align = (url: string) => alignEndpointUrlWithPage(url, pageOrigin, desktop);
-
     const explicitEndpoint = String(tab.value.payload?.endpointUrl || "").trim();
-    if (explicitEndpoint) return align(explicitEndpoint);
+    if (explicitEndpoint) return explicitEndpoint;
 
     const endpoint = await host.getSmartEndpoint({
       protocol: resolvedProtocol.value,
       assetId: tab.value.assetId,
       token: tokenId.value
     });
-    const endpointHost = endpoint.host;
-    const port = endpoint.https_port || endpoint.port;
-    const scheme = endpoint.https_port ? "https" : "http";
-    const resolved =
-      endpoint.value ||
-      (endpointHost ? (port ? `${scheme}://${endpointHost}:${port}` : `${scheme}://${endpointHost}`) : "");
-
-    if (!resolved) return align(pageOrigin);
-    if (desktop) return resolved;
-
-    try {
-      const resolvedUrl = new URL(resolved);
-      const isLoopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(resolvedUrl.hostname);
-      const samePort = (resolvedUrl.port || "") === new URL(pageOrigin).port;
-      if (isLoopback && !samePort) return align(pageOrigin);
-    } catch {
-      return align(resolved);
-    }
-
-    return align(resolved);
+    return resolveEndpointUrl(endpoint, host.getWindowOrigin());
   }
 
   async function fetchTicket(endpointUrl: string) {

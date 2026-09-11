@@ -21,7 +21,10 @@ export function chenNodeActivationAction(node: { type: string }) {
 }
 
 export function chenNodeTypeFromKey(nodeKey: string) {
-  const last = String(nodeKey || "").split(",").pop() || "";
+  const last =
+    String(nodeKey || "")
+      .split(",")
+      .pop() || "";
   return last.split(":")[0] || "";
 }
 

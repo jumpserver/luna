@@ -40,6 +40,17 @@ const configureHttpProxy = (name: string, target: string) => (proxy: any) => {
   bindProxyErrorHandler(name)(proxy);
 };
 
+const configureCoreProxy = (proxy: any) => {
+  rewriteProxyOrigin(jumpServerTarget)(proxy);
+  proxy.on("proxyReq", (proxyReq: any, req: any) => {
+    // Core derives the default endpoint host from this request. Keep the
+    // public dev gateway host so HTTP and WebSocket connections use its routes.
+    if (req.url?.split("?")[0] === "/api/v1/terminal/endpoints/smart/" && req.headers.host) {
+      proxyReq.setHeader("Host", req.headers.host);
+    }
+  });
+};
+
 export default defineNuxtConfig({
   extends: ["@jumpserver/online-player/nuxt"],
   runtimeConfig: {
@@ -175,44 +186,19 @@ export default defineNuxtConfig({
           rewrite: (path) => path.replace(/^\/luna/, ""),
           configure: bindProxyErrorHandler("luna-koko-ws")
         },
-        "/koko/ws/": {
-          target: kokoTarget.replace(/^http/i, "ws"),
+        "/koko/lion/": {
+          target: lionTarget,
           secure: false,
           ws: true,
           changeOrigin: true,
-          configure: bindProxyErrorHandler("koko-ws")
-        },
-        "/koko/lion/ws/": {
-          target: lionTarget.replace(/^http/i, "ws"),
-          secure: false,
-          ws: true,
-          changeOrigin: true,
-          configure: bindProxyErrorHandler("lion-ws")
-        },
-        "/koko/lion/api/": {
-          target: lionTarget,
-          secure: false,
-          changeOrigin: true,
-          configure: configureHttpProxy("lion-api", lionTarget)
-        },
-        "/koko/lion/token/": {
-          target: lionTarget,
-          secure: false,
-          changeOrigin: true,
-          configure: bindProxyErrorHandler("lion-token")
-        },
-        "/koko/lion/health/": {
-          target: lionTarget,
-          secure: false,
-          changeOrigin: true,
-          configure: bindProxyErrorHandler("lion-health")
+          configure: configureHttpProxy("lion", lionTarget)
         },
         "/koko/": {
           target: kokoTarget,
           secure: false,
           ws: true,
           changeOrigin: true,
-          configure: bindProxyErrorHandler("koko-http")
+          configure: configureHttpProxy("koko", kokoTarget)
         },
         "/media/": {
           target: jumpServerTarget,
@@ -224,7 +210,7 @@ export default defineNuxtConfig({
           target: jumpServerTarget,
           secure: false,
           changeOrigin: true,
-          configure: rewriteProxyOrigin(jumpServerTarget)
+          configure: configureCoreProxy
         },
         "/ws/": {
           target: jumpServerTarget.replace(/^http/, "ws"),
@@ -244,19 +230,12 @@ export default defineNuxtConfig({
           changeOrigin: true,
           configure: rewriteProxyOrigin(jumpServerTarget)
         },
-        "/chen/ws/": {
-          target: chenTarget.replace(/^http/i, "ws"),
-          secure: false,
-          ws: true,
-          changeOrigin: true,
-          configure: bindProxyErrorHandler("chen-ws")
-        },
         "/chen": {
           target: chenTarget,
           secure: false,
           ws: true,
           changeOrigin: true,
-          configure: bindProxyErrorHandler("chen-http")
+          configure: configureHttpProxy("chen", chenTarget)
         },
         "/facelive": {
           target: faceliveTarget,

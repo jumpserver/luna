@@ -44,4 +44,42 @@ assert.ok(!head.includes("localhost:3000"), "no dev-server host may leak upstrea
 assert.ok(head.includes("sec-websocket-key: abc"), "ws handshake headers must pass through");
 assert.ok(head.endsWith("\r\n\r\n"), "request head must be terminated");
 
+// Check the actual dev gateway configuration, not only synthetic routes.
+globalThis.defineNuxtConfig = (config) => config;
+const { default: config } = await import("../nuxt.config.ts");
+delete globalThis.defineNuxtConfig;
+const proxy = config.vite.server.proxy;
+const configuredRoutes = collectWsRoutes(proxy);
+for (const [path, prefix] of [
+  ["/koko/ws/terminal/", "/koko/"],
+  ["/koko/ws/sftp/", "/koko/"],
+  ["/koko/ws/monitor/", "/koko/"],
+  ["/koko/lion/ws/connect/", "/koko/lion/"],
+  ["/chen/ws/session", "/chen"]
+]) {
+  assert.equal(configuredRoutes.find((route) => path.startsWith(route.prefix))?.prefix, prefix);
+  assert.equal(configuredRoutes.find((route) => route.prefix === prefix)?.target.origin, proxy[prefix].target);
+}
+
+const handlers = [];
+proxy["/api/"].configure({
+  on: (event, handler) => {
+    if (event === "proxyReq") handlers.push(handler);
+  }
+});
+for (const [path, expectedHost] of [
+  ["/api/v1/terminal/endpoints/smart/?protocol=http", "127.0.0.1:3000"],
+  ["/api/v1/users/profile/", new URL(proxy["/api/"].target).host]
+]) {
+  const headers = { host: new URL(proxy["/api/"].target).host };
+  const request = {
+    setHeader: (name, value) => {
+      headers[name.toLowerCase()] = value;
+    }
+  };
+  for (const handler of handlers) handler(request, { url: path, headers: { host: "127.0.0.1:3000" } });
+  assert.equal(headers.host, expectedHost, "default endpoint must retain the dev gateway host");
+  assert.equal(headers.origin, new URL(proxy["/api/"].target).origin);
+}
+
 console.log("check-ws-proxy: all assertions passed");

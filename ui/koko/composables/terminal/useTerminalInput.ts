@@ -27,8 +27,6 @@ export function useKokoTerminalInput(options: {
   onResize: (size: { cols: number; rows: number }) => void;
   onHostKey: (key: string) => void;
   inputLocked: () => boolean;
-  addErrorToast: (options: { title: string }) => void;
-  translate: (key: string) => string;
   sendHostEvent: (event: string, data: unknown) => void;
   sendToHost: (event: HOST_MESSAGE_TYPE, data: unknown) => void;
   sendMittEvent: (event: TerminalMittEvent) => void;
@@ -40,6 +38,8 @@ export function useKokoTerminalInput(options: {
   const cleanup: Array<() => void> = [];
 
   const pasteClipboard = async () => {
+    const socket = options.socket.value;
+    if (!socket || options.inputLocked() || !options.isSocketOpen(socket)) return false;
     if (!options.validateClipboardText("paste", "")) return false;
 
     let text = "";
@@ -48,11 +48,8 @@ export function useKokoTerminalInput(options: {
     } catch {
       text = options.selectionText.value;
     }
-    const socket = options.socket.value;
-    if (!text || !socket || options.inputLocked() || !options.isSocketOpen(socket)) {
-      if (socket && !options.isSocketOpen(socket)) {
-        options.addErrorToast({ title: options.translate("koko.terminal.websocketConnectionClosed") });
-      }
+    // Clipboard access is asynchronous; the original session must still accept input.
+    if (!text || options.socket.value !== socket || options.inputLocked() || !options.isSocketOpen(socket)) {
       return false;
     }
     if (!options.validateClipboardText("paste", text)) return false;

@@ -113,9 +113,10 @@ export async function createCredentialSession(
   tokenId,
   tokenValue,
   configuredSuccessSelector = "",
-  configuredInteractiveSelector = ""
+  configuredInteractiveSelector = "",
+  ticket = ""
 ) {
-  if (!tokenId || !tokenValue) return null;
+  if (!tokenId || !tokenValue || !ticket) throw new Error("Web Proxy 连接缺少认证令牌");
 
   const { privateKey, publicKey } = generateKeyPairSync("x25519");
   const endpoint = parseUrl(CREDENTIAL_PATH, proxyUrl);
@@ -123,7 +124,7 @@ export async function createCredentialSession(
   try {
     response = await fetchWithTimeout(proxyUrl, endpoint.pathname, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "X-Koko-Connect-Ticket": ticket },
       body: JSON.stringify({
         token_id: tokenId,
         token_value: tokenValue,
@@ -147,9 +148,11 @@ export async function createCredentialSession(
     throw new Error("Koko 返回的 Website origin 不匹配");
   }
   const sessionId = required(data.session_id, "Web 会话 ID");
+  if (data.proxy_auth !== "connect_ticket") throw new Error("Koko 未启用 connect ticket 代理认证，请同步更新 Koko");
+  const proxyAuth = { username: sessionId, password: ticket };
   const mode = data.autofill === "script" ? "script" : "basic";
   const steps = mode === "script" ? validateWebScript(data.script, targetOrigin) : null;
-  if (!data.autofill_available) return { sessionId, autofillAvailable: false, mode, origin: targetOrigin };
+  if (!data.autofill_available) return { sessionId, proxyAuth, autofillAvailable: false, mode, origin: targetOrigin };
   const credentialOrigins = steps
     ? [
         ...new Set(
@@ -181,6 +184,7 @@ export async function createCredentialSession(
 
   return {
     sessionId,
+    proxyAuth,
     autofillAvailable: true,
     id: required(data.id, "代填会话 ID"),
     accessToken: required(data.access_token, "代填访问令牌"),
@@ -199,6 +203,22 @@ export async function createCredentialSession(
     serverPublicKey,
     privateKey
   };
+}
+
+export async function closeWebProxySession(proxyUrl, sessionId, proxyAuth) {
+  const response = await fetchWithTimeout(proxyUrl, `${CREDENTIAL_PATH}${encodeURIComponent(sessionId)}`, {
+    method: "DELETE",
+    proxyAuth
+  });
+  if (!response.ok && response.status !== 407) throw await responseError(response, "关闭 Web 代理会话失败");
+}
+
+export async function heartbeatWebProxySession(proxyUrl, sessionId, proxyAuth) {
+  const response = await fetchWithTimeout(proxyUrl, `${CREDENTIAL_PATH}${encodeURIComponent(sessionId)}/heartbeat`, {
+    method: "POST",
+    proxyAuth
+  });
+  if (!response.ok) throw await responseError(response, "Web 代理会话心跳失败");
 }
 
 export async function releaseCredentials(session, currentUrl) {

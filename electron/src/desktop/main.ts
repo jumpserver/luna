@@ -110,35 +110,10 @@ function normalizedHttpOrigin(value, label) {
   return url.origin;
 }
 
-async function resolveChenEndpoint(smartEndpoint = "") {
-  const configured = String(process.env.JMS_CHEN_DESKTOP_URL || "").trim();
-  if (configured) {
-    const origin = normalizedHttpOrigin(configured, "Chen endpoint");
-    allowedChenOrigins.add(origin);
-    electronLog.info(`chen endpoint ${origin}`);
-    return origin;
-  }
-
-  const siteOrigin = normalizedHttpOrigin(authService.currentSession().origin, "JumpServer site");
-  const origin = smartEndpoint ? normalizedHttpOrigin(smartEndpoint, "Chen smart endpoint") : siteOrigin;
-  allowedChenOrigins.add(origin);
-  electronLog.info(`chen endpoint ${origin}`);
-  return origin;
-}
-
-async function resolveKokoEndpoint(smartEndpoint = "") {
-  const configured = String(process.env.JMS_KOKO_DESKTOP_URL || "").trim();
-  if (configured) {
-    const origin = normalizedHttpOrigin(configured, "Koko endpoint");
-    allowedKokoOrigins.add(origin);
-    electronLog.info(`koko endpoint ${origin}`);
-    return origin;
-  }
-
-  const siteOrigin = normalizedHttpOrigin(authService.currentSession().origin, "JumpServer site");
-  const origin = smartEndpoint ? normalizedHttpOrigin(smartEndpoint, "Koko smart endpoint") : siteOrigin;
-  allowedKokoOrigins.add(origin);
-  electronLog.info(`koko endpoint ${origin}`);
+function resolveConnectorEndpoint(smartEndpoint: string, component: "chen" | "koko") {
+  const origin = normalizedHttpOrigin(smartEndpoint || authService.currentSession().origin, `${component} endpoint`);
+  (component === "chen" ? allowedChenOrigins : allowedKokoOrigins).add(origin);
+  electronLog.info(`${component} endpoint ${origin}`);
   return origin;
 }
 
@@ -1150,8 +1125,8 @@ async function handleInvoke(event, request) {
   if (command === "api_request") return authService.apiRequest(args.request);
   if (command === "api_stream_start") return startApiStream(event, win, args);
   if (command === "api_stream_cancel") return cancelApiStream(event, args);
-  if (command === "resolve_chen_endpoint") return resolveChenEndpoint(args.endpointUrl);
-  if (command === "resolve_koko_endpoint") return resolveKokoEndpoint(args.endpointUrl);
+  if (command === "resolve_chen_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "chen");
+  if (command === "resolve_koko_endpoint") return resolveConnectorEndpoint(args.endpointUrl, "koko");
   if (command === "create_koko_connect_ticket") return authService.createKokoConnectTicket(args);
   if (command === "import_offline_recording") return offlineRecordings.importRecording(normalizePath(args.filePath));
   if (command === "list_offline_recordings") return offlineRecordings.listRecordings();

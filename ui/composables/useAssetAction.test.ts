@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 import { useAssetAction } from "./useAssetAction";
+import { useWebProxyManager } from "./useWebProxyManager";
 
 const mocks = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -9,9 +10,11 @@ const mocks = vi.hoisted(() => ({
   getRdpFile: vi.fn(),
   getLunaPreferences: vi.fn(),
   getPublicSettings: vi.fn(),
+  getAssetDetail: vi.fn(),
   saveDialog: vi.fn(),
   writeFile: vi.fn(),
   createToken: vi.fn(),
+  createTicket: vi.fn(),
   errorToast: vi.fn(),
   appConfig: { value: undefined as unknown },
   store: {
@@ -30,7 +33,7 @@ vi.mock("~/shared/desktop/bridge", () => ({
 }));
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => mocks.store }));
 vi.mock("~/composables/useApiRequest", () => ({
-  getAssetDetailRequest: vi.fn(),
+  getAssetDetailRequest: mocks.getAssetDetail,
   getConnectionRdpFile: mocks.getRdpFile,
   getLunaPreferences: mocks.getLunaPreferences,
   getPublicSettings: mocks.getPublicSettings,
@@ -74,6 +77,8 @@ describe("opening assets in local applications", () => {
     vi.stubGlobal("useToast", () => ({}));
     vi.stubGlobal("useErrorToast", () => ({ addErrorToast: mocks.errorToast }));
     vi.stubGlobal("useWorkspaceTabs", () => ({}));
+    mocks.createTicket.mockResolvedValue({ ticket: "web-ticket" });
+    vi.stubGlobal("useWorkspaceConnectors", () => ({ createKokoTicket: mocks.createTicket }));
     vi.stubGlobal("useConnectMethods", () => ({
       fetchConnectMethods: async () => ({ ssh: [method] }),
       getMethodsForProtocol: async () => [method]
@@ -259,6 +264,80 @@ describe("opening assets in local applications", () => {
     });
   });
 
+  it.each(["web_cli_native", "web_rdp_native", "web_db_native"])(
+    "uses the development gateway's default endpoint for %s",
+    async (connectMethod) => {
+      vi.stubGlobal("isDesktopRuntime", () => true);
+      vi.stubGlobal("isElectronRuntime", () => true);
+      vi.stubGlobal("window", { location: { protocol: "http:", origin: "http://127.0.0.1:3000" } });
+      vi.stubGlobal("storeToRefs", () => ({
+        currentSite: ref("http://127.0.0.1:3000"),
+        currentConnectionInfoMap: ref({}),
+        currentRdpClientOption: ref({}),
+        orgId: ref("org")
+      }));
+      const methods = [{ value: connectMethod, type: "web", disabled: false }];
+      vi.stubGlobal("useConnectMethods", () => ({
+        fetchConnectMethods: async () => ({ ssh: methods }),
+        getMethodsForProtocol: async () => methods
+      }));
+      vi.stubGlobal("getSmartEndpoint", vi.fn().mockResolvedValue({ host: "127.0.0.1", http_port: 0, https_port: 0 }));
+      mocks.invoke.mockImplementation(async (_command, args) => args.endpointUrl);
+
+      const { ready, failed } = await connect(connectMethod);
+      expect(failed).not.toHaveBeenCalled();
+      expect(ready.mock.calls[0]?.[0].endpointUrl).toBe("http://127.0.0.1:3000");
+      expect(mocks.invoke).toHaveBeenCalledWith(
+        connectMethod === "web_db_native" ? "resolve_chen_endpoint" : "resolve_koko_endpoint",
+        { endpointUrl: "http://127.0.0.1:3000" }
+      );
+    }
+  );
+
+  it.each([15001, undefined])(
+    "uses the Web Proxy endpoint port %s without resolving it as a Koko HTTP surface",
+    async (port) => {
+      vi.stubGlobal("isDesktopRuntime", () => true);
+      vi.stubGlobal("isElectronRuntime", () => true);
+      vi.stubGlobal("window", { location: { protocol: "http:", origin: "http://127.0.0.1:3000" } });
+      vi.stubGlobal("useWebProxyManager", useWebProxyManager);
+      const methods = [{ value: "web_proxy_native", type: "web", component: "koko", disabled: false }];
+      vi.stubGlobal("useConnectMethods", () => ({
+        fetchConnectMethods: async () => ({ https: methods }),
+        getMethodsForProtocol: async () => methods
+      }));
+      const endpoint = vi.fn().mockResolvedValue({ host: "proxy.example", web_proxy_port: port, https_port: 443 });
+      vi.stubGlobal("getSmartEndpoint", endpoint);
+      mocks.getAssetDetail.mockResolvedValue({ permed_protocols: [{ name: "https", port: 443 }] });
+      const ready = vi.fn();
+      const failed = vi.fn();
+      await useAssetAction().handleAssetConnection("root", "asset", "https", [], undefined, {
+        accountId: "account",
+        connectMethod: "web_proxy_native",
+        asset: {
+          id: "asset",
+          name: "Website",
+          address: "https://website.example",
+          platform: "Website",
+          zone: "",
+          isActive: true,
+          category: "web",
+          type: "website"
+        },
+        onSessionReady: ready,
+        onSessionError: failed
+      });
+      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+      expect(failed).not.toHaveBeenCalled();
+      expect(mocks.createTicket).toHaveBeenCalledWith({ baseUrl: "https://proxy.example", tokenId: "id" });
+      expect(ready.mock.calls[0]?.[0].webProxy.ticket).toBe("web-ticket");
+      expect(ready.mock.calls[0]?.[0].webProxy.proxyUrl).toBe(`http://proxy.example:${port || 5001}`);
+      expect(endpoint).toHaveBeenNthCalledWith(1, { protocol: "web_proxy", assetId: "asset", token: "id" }, undefined);
+      expect(endpoint).toHaveBeenCalledTimes(port === undefined ? 2 : 1);
+      expect(mocks.invoke).not.toHaveBeenCalled();
+    }
+  );
+
   it.each([
     [false, "web"],
     [true, "web"],
@@ -382,12 +461,12 @@ describe("opening assets in local applications", () => {
     expect(failed).not.toHaveBeenCalled();
     if (desktop) {
       expect(mocks.invoke).toHaveBeenCalledExactlyOnceWith("resolve_koko_endpoint", {
-        endpointUrl: "https://jumpserver.example:443"
+        endpointUrl: "https://jumpserver.example"
       });
       expect(ready.mock.calls[0]?.[0].endpointUrl).toBe("https://koko.example");
     } else {
       expect(mocks.invoke).not.toHaveBeenCalled();
-      expect(ready.mock.calls[0]?.[0].endpointUrl).toBe("https://jumpserver.example:443");
+      expect(ready.mock.calls[0]?.[0].endpointUrl).toBe("https://jumpserver.example");
     }
   });
 

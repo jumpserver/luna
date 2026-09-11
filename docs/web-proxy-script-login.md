@@ -10,7 +10,13 @@ Web Proxy 支持同一窗口中的多页登录、SPA 页面切换，以及跨域
 
 步骤中的 `origin` 用于定位执行页面及凭据填写位置，填写完整的 HTTP/HTTPS origin（协议、域名、可选端口），不支持路径、通配符或带账号密码的 URL。SSO 中仅用于中转的域不需要出现在脚本中；需要填写或操作元素的页面应在对应步骤中指定 `origin`。
 
-Koko 现有部署级网络访问配置 `WEB_PROXY_ALLOWED_HOSTS` 仍然生效，SSO 和必要静态资源的主机需要在代理可访问的范围内。
+Koko 不再使用 `WEB_PROXY_ALLOWED_HOSTS`。所有 HTTP / HTTPS CONNECT 请求必须通过代理认证；认证成功后允许访问任意目标主机。资产自身的页面导航规则仍由客户端执行。
+
+客户端通过现有 `/koko/api/connect-ticket/` 获取绑定连接令牌的 ticket，再建立 Web Proxy 会话。Koko 核对 ticket、令牌所属用户和组织，按普通连接流程消费连接令牌并注册到公共 session 管理。代理认证使用会话 ID / ticket；未建立会话的 ticket 不能直接代理。一次性代填凭据仍只能领取一次。
+
+建立后的会话沿用 Koko 的权限检查、锁定、解锁和管理员断开机制，不依赖 bootstrap ticket 或连接令牌续期。Electron 每分钟发送会话心跳，关闭时主动结束会话；客户端异常退出后，连续五分钟没有请求或心跳就回收会话及现有隧道。认证头只发给代理，不转发到目标网站。控制接口直接请求代理地址，无需再通过代理转发到回环地址。
+
+代理认证变更需要同步更新 Koko 和 Luna Electron，复用 Core 现有接口。新版客户端会拒绝未声明 `connect_ticket` 代理认证支持的旧 Koko。
 
 ## 脚本示例
 

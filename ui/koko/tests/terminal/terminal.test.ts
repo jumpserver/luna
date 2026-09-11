@@ -119,8 +119,6 @@ it("blocks denied copy and paste events before xterm handles them", () => {
     onResize: vi.fn(),
     onHostKey: vi.fn(),
     inputLocked: vi.fn(() => false),
-    addErrorToast: vi.fn(),
-    translate: vi.fn((key) => key),
     sendHostEvent: vi.fn(),
     sendToHost: vi.fn(),
     sendMittEvent: vi.fn(),
@@ -152,6 +150,7 @@ it("blocks denied copy and paste events before xterm handles them", () => {
 function startContextMenuInput(overrides: {
   getTerminalConfig: () => { quickPaste?: string };
   socket?: { send: ReturnType<typeof vi.fn> } | null;
+  isSocketOpen?: () => boolean;
 }) {
   const container = new EventTarget();
   const onContextMenu = vi.fn();
@@ -174,7 +173,7 @@ function startContextMenuInput(overrides: {
     selectionText: ref(""),
     lastSendTime: ref(new Date()),
     fit: vi.fn(),
-    isSocketOpen: vi.fn(() => true),
+    isSocketOpen: overrides.isSocketOpen ?? (() => true),
     isZmodemActive: vi.fn(() => false),
     abortZmodem: vi.fn(),
     onContextMenu,
@@ -182,8 +181,6 @@ function startContextMenuInput(overrides: {
     onResize: vi.fn(),
     onHostKey: vi.fn(),
     inputLocked: vi.fn(() => false),
-    addErrorToast: vi.fn(),
-    translate: vi.fn((key) => key),
     sendHostEvent: vi.fn(),
     sendToHost: vi.fn(),
     sendMittEvent: vi.fn(),
@@ -203,6 +200,45 @@ it("pastes on right-click when quickPaste is enabled", async () => {
   container.dispatchEvent(event);
   await vi.waitFor(() => expect(send).toHaveBeenCalled());
   expect(onContextMenu).not.toHaveBeenCalled();
+  input.stop();
+});
+
+it.each([WebSocket.CONNECTING, WebSocket.CLOSING, WebSocket.CLOSED])(
+  "ignores repeated right-click paste when the socket is not open (state %s)",
+  async (readyState: number) => {
+    vi.mocked(readText).mockClear();
+    const { container, input, send } = startContextMenuInput({
+      getTerminalConfig: () => ({ quickPaste: "1" }),
+      isSocketOpen: () => readyState === WebSocket.OPEN
+    });
+    for (let i = 0; i < 3; i++) {
+      container.dispatchEvent(new Event("contextmenu", { cancelable: true }));
+    }
+    expect(await input.pasteClipboard()).toBe(false);
+    expect(readText).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+    input.stop();
+  }
+);
+
+it("drops a pending paste if the socket closes while reading the clipboard", async () => {
+  let socketOpen = true;
+  let resolveClipboard!: (text: string) => void;
+  vi.mocked(readText).mockImplementationOnce(
+    () =>
+      new Promise<string>((resolve) => {
+        resolveClipboard = resolve;
+      })
+  );
+  const { input, send } = startContextMenuInput({
+    getTerminalConfig: () => ({ quickPaste: "1" }),
+    isSocketOpen: () => socketOpen
+  });
+  const paste = input.pasteClipboard();
+  socketOpen = false;
+  resolveClipboard("clipped");
+  expect(await paste).toBe(false);
+  expect(send).not.toHaveBeenCalled();
   input.stop();
 });
 

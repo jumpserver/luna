@@ -520,6 +520,7 @@ onMounted(async () => {
       proxyUrl: request.value.proxyUrl,
       tokenId: String(request.value.tokenId || ""),
       tokenValue: String(request.value.tokenValue || ""),
+      ticket: String(request.value.ticket || ""),
       successSelector: request.value.successSelector,
       interactiveSelector: request.value.interactiveSelector,
       safeMode: safeMode.value,
@@ -696,7 +697,7 @@ defineExpose({ focus, close: closeView });
             :role="error ? 'alert' : 'status'"
             aria-live="polite"
             class="max-h-[40vh] w-full overflow-auto whitespace-pre-wrap [overflow-wrap:anywhere]"
-            :class="error ? 'text-left leading-6' : ''"
+            :class="error ? 'leading-6' : ''"
           >
             {{ error || autofillMessage }}
           </p>

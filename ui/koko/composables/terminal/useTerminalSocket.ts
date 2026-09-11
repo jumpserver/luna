@@ -249,8 +249,6 @@ export const useKokoTerminalSocket = () => {
     onResize: debouncedResize,
     onHostKey: debouncedSendHostKey,
     inputLocked: terminalInputLocked,
-    addErrorToast,
-    translate: t,
     sendHostEvent,
     sendToHost,
     sendMittEvent,

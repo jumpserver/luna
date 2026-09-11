@@ -31,22 +31,8 @@ function normalizeTargetUrl(asset: AssetItem, protocol: string) {
   return url.toString();
 }
 
-function normalizeProxyUrl(endpointUrl: string, endpointPort?: number) {
-  const env = import.meta.env as Record<string, string | undefined>;
-  const configured = env.VITE_JMS_WEB_PROXY_URL?.trim();
-  const url = configured
-    ? new URL(configured)
-    : import.meta.dev
-      ? new URL("http://127.0.0.1:5001")
-      : new URL(endpointUrl);
-
-  if (!configured && !import.meta.dev) {
-    url.protocol = "http:";
-    url.port = env.VITE_JMS_WEB_PROXY_PORT?.trim() || String(endpointPort || 5001);
-    url.pathname = "/";
-    url.search = "";
-    url.hash = "";
-  }
+function normalizeProxyUrl(endpointUrl: string) {
+  const url = new URL(endpointUrl);
   if (url.protocol !== "http:" || !url.hostname || url.username || url.password) {
     throw new Error("Koko Web Proxy 地址必须是不含凭据的 HTTP URL");
   }
@@ -60,13 +46,12 @@ export function useWebProxyManager() {
     endpointUrl: string,
     successSelector = "",
     interactiveSelector = "",
-    allowedUrls: string[] = [],
-    endpointPort?: number
+    allowedUrls: string[] = []
   ): WebProxyOpenRequest => ({
     assetId: asset.id,
     title: asset.name || new URL(normalizeTargetUrl(asset, protocol)).hostname,
     targetUrl: normalizeTargetUrl(asset, protocol),
-    proxyUrl: normalizeProxyUrl(endpointUrl, endpointPort),
+    proxyUrl: normalizeProxyUrl(endpointUrl),
     successSelector,
     interactiveSelector,
     allowedUrls,

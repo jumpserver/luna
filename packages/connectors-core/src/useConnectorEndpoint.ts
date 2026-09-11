@@ -10,27 +10,50 @@ const WS_PREFIX: Record<JmsComponent, string> = {
   default: "/koko/ws/"
 };
 
-export function isLoopbackUrl(value: string) {
-  try {
-    return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(new URL(value).hostname);
-  } catch {
-    return false;
-  }
+export interface ConnectorEndpoint {
+  value?: string;
+  host?: string;
+  port?: string | number;
+  http_port?: string | number;
+  https_port?: string | number;
+  web_proxy_port?: string | number;
 }
 
-export function alignEndpointUrlWithPage(endpointUrl: string, pageOrigin: string, isDesktop: boolean) {
-  if (isDesktop) return endpointUrl;
-  try {
-    const endpoint = new URL(endpointUrl);
-    const page = new URL(pageOrigin);
-    if (page.protocol !== "https:" || endpoint.protocol !== "http:") return endpointUrl;
-    if (endpoint.hostname === page.hostname) return page.origin;
-    endpoint.protocol = "https:";
-    if (endpoint.port === "80") endpoint.port = "";
-    return endpoint.origin;
-  } catch {
-    return endpointUrl;
+function httpOrigin(value: string) {
+  const url = new URL(value);
+  if (!["http:", "https:"].includes(url.protocol) || !url.hostname || url.username || url.password) {
+    throw new Error("Connector endpoint must be an HTTP/HTTPS URL without credentials");
   }
+  return url;
+}
+
+// Port 0 is Core's default endpoint convention: inherit the site's port.
+// Explicit endpoint addresses are never rewritten based on the runtime or hostname.
+export function resolveEndpointUrl(
+  endpoint: ConnectorEndpoint,
+  site: string,
+  protocol?: string,
+  portField?: "http_port" | "https_port" | "web_proxy_port"
+) {
+  if (endpoint.value && !portField) return httpOrigin(endpoint.value).origin;
+  const base = httpOrigin(site);
+  const scheme = (protocol || base.protocol).replace(/:$/, "");
+  const host = endpoint.host || base.hostname;
+  const authority = host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
+  const url = httpOrigin(`${scheme}://${authority}`);
+  if (url.port || url.pathname !== "/" || url.search || url.hash) throw new Error("Invalid endpoint host");
+  const field = portField || (scheme === "https" ? "https_port" : "http_port");
+  const port = endpoint[field] ?? endpoint.port;
+  if (port != null && port !== "") {
+    const number = Number(port);
+    if (!/^\d+$/.test(String(port)) || !Number.isInteger(number) || number < 0 || number > 65535) {
+      throw new Error("Invalid endpoint port");
+    }
+    url.port = number === 0 ? base.port : String(number);
+  } else if (!endpoint.host && base.protocol === url.protocol) {
+    url.port = base.port;
+  }
+  return url.origin;
 }
 
 export function resolveWsUrl(component: JmsComponent, wsRoute: string, ctx: ConnectorSessionContext) {

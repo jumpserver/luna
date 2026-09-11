@@ -10,9 +10,11 @@ const mocks = vi.hoisted(() => ({
   ticket: vi.fn(),
   toast: vi.fn(),
   mounted: vi.fn(),
+  invoke: vi.fn(async (_command, args) => args.endpointUrl),
   desktop: false
 }));
 vi.mock("~/composables/useApiRequest", () => ({ apiRequest: mocks.request, getSmartEndpoint: mocks.endpoint }));
+vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke: mocks.invoke }));
 vi.mock("~/lion/hooks/useLionConnectTicket", () => ({ createLionConnectTicket: mocks.ticket }));
 vi.mock("~/store/modules/userInfo", () => ({
   useUserInfoStore: () => ({ currentSite: "https://desktop.example:8443" })
@@ -72,6 +74,7 @@ it("uses the desktop site protocol and preserves its port for a default endpoint
   const state = useSessionMonitor("session");
   await mocks.mounted.mock.calls[0]![0]();
   expect(state.endpointUrl.value).toBe("https://desktop.example:8443");
+  expect(mocks.invoke).toHaveBeenCalledWith("resolve_koko_endpoint", { endpointUrl: "https://desktop.example:8443" });
 });
 
 it("does not connect finished sessions", async () => {

@@ -12,26 +12,13 @@ const asset = {
 describe("web proxy endpoint", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("uses the Koko Web Proxy port from the endpoint", () => {
-    const request = useWebProxyManager().buildWebProxyRequest(
-      asset,
-      "https",
-      "http://koko.example.test:5001",
-      "",
-      "",
-      [],
-      15001
-    );
-
-    expect(request.proxyUrl).toBe("http://koko.example.test:15001");
-    expect(request.allowedUrls).toEqual([]);
-  });
-
-  it("falls back to port 5001 for older endpoints", () => {
-    const request = useWebProxyManager().buildWebProxyRequest(asset, "https", "http://koko.example.test");
-
-    expect(request.proxyUrl).toBe("http://koko.example.test:5001");
-  });
+  it.each(["http://127.0.0.1:5001", "http://koko.example.test:15001", "http://proxy.example.test"])(
+    "uses the resolved proxy endpoint %s unchanged",
+    (endpoint) => {
+      const request = useWebProxyManager().buildWebProxyRequest(asset, "https", endpoint);
+      expect(request.proxyUrl).toBe(endpoint);
+    }
+  );
 
   it("passes only the asset navigation allowlist to its own session", () => {
     const { buildWebProxyRequest } = useWebProxyManager();
@@ -41,12 +28,11 @@ describe("web proxy endpoint", () => {
     expect(buildWebProxyRequest(asset, "https", "http://koko.example.test").allowedUrls).toEqual([]);
   });
 
-  it("supports an external Nginx proxy endpoint", () => {
-    vi.stubEnv("VITE_JMS_WEB_PROXY_URL", "http://web-proxy.example.test:15001");
-
-    const request = useWebProxyManager().buildWebProxyRequest(asset, "https", "https://koko.example.test");
-
-    expect(request.proxyUrl).toBe("http://web-proxy.example.test:15001");
+  it("does not override the selected endpoint with legacy development variables", () => {
+    vi.stubEnv("VITE_JMS_WEB_PROXY_URL", "http://127.0.0.1:5001");
+    vi.stubEnv("VITE_JMS_WEB_PROXY_PORT", "15001");
+    const request = useWebProxyManager().buildWebProxyRequest(asset, "https", "http://remote.example:5001");
+    expect(request.proxyUrl).toBe("http://remote.example:5001");
   });
 
   it("passes the configured login-success selector to the desktop session", () => {

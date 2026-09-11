@@ -1,8 +1,9 @@
 import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
-import { isLoopbackUrl } from "@jumpserver/connectors-core";
+import { resolveEndpointUrl } from "@jumpserver/connectors-core";
 import { apiRequest, getSmartEndpoint } from "~/composables/useApiRequest";
 import { getKokoMonitorComponent } from "~/koko/composables/useKokoMonitor";
 import { createLionConnectTicket } from "~/lion/hooks/useLionConnectTicket";
+import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { isDesktopRuntime } from "~/utils/runtime";
 
@@ -20,19 +21,7 @@ export interface MonitoredSession {
   can_join: boolean;
 }
 
-export function monitorEndpointUrl(
-  endpoint: { host?: string; http_port?: number; https_port?: number; port?: number },
-  site: string
-) {
-  const url = new URL(site);
-  const port = (url.protocol === "https:" ? endpoint.https_port : endpoint.http_port) ?? endpoint.port;
-  if (endpoint.host) {
-    url.hostname = endpoint.host.includes(":") && !endpoint.host.startsWith("[") ? `[${endpoint.host}]` : endpoint.host;
-  }
-  if (port) url.port = String(port);
-  else if (port !== 0 && endpoint.host) url.port = "";
-  return url.origin;
-}
+export const monitorEndpointUrl = resolveEndpointUrl;
 
 export function useSessionMonitor(sessionId: string, ticketId = "", orgId?: string) {
   const { t } = useI18n();
@@ -73,7 +62,9 @@ export function useSessionMonitor(sessionId: string, ticketId = "", orgId?: stri
       const endpoint = await getSmartEndpoint({ protocol, sessionId }, detail.org_id || orgId);
       if (disposed) return;
       let target = monitorEndpointUrl(endpoint, site);
-      if (isLoopbackUrl(target) && (import.meta.dev || !desktop)) target = window.location.origin;
+      if (desktop && detail.terminal.type !== "razor") {
+        target = await desktopInvoke<string>("resolve_koko_endpoint", { endpointUrl: target });
+      }
       endpointUrl.value = target;
 
       if (detail.terminal.type === "razor") {

@@ -4,6 +4,8 @@ import {
   buildAutofillScript,
   buildLoginSuccessProbeScript,
   createCredentialSession,
+  closeWebProxySession,
+  heartbeatWebProxySession,
   normalizedWebOrigin,
   releaseCredentials
 } from "./credentials";
@@ -442,16 +444,18 @@ export function createWebProxyManager({
     if (webProxyViews.has(label)) throw new Error("Web Proxy view label already exists");
     const target = parseWebProxyUrl(args.targetUrl, ["http:", "https:"], "Website URL");
     const canNavigate = webProxyNavigationPolicy(target, args.allowedUrls);
-    const proxy = direct ? null : parseWebProxyUrl(args.proxyUrl, ["http:", "socks5:"], "Koko Web Proxy URL");
+    const proxy = direct ? null : parseWebProxyUrl(args.proxyUrl, ["http:"], "Koko Web Proxy URL");
     if (args.safeMode !== undefined && typeof args.safeMode !== "boolean")
       throw new Error("invalid Web Proxy safe mode");
     const safeMode = args.safeMode === true;
     validateColorScheme(args.colorScheme);
     const proxySession = electronSession.fromPartition(`web-proxy:${label}`, { cache: false });
     if (proxy) {
-      const proxyRules =
-        proxy.protocol === "socks5:" ? `socks5://${proxy.host}` : `http=${proxy.host};https=${proxy.host}`;
-      await proxySession.setProxy({ mode: "fixed_servers", proxyRules });
+      await proxySession.setProxy({
+        mode: "fixed_servers",
+        proxyRules: `http://${proxy.host}`,
+        proxyBypassRules: "<-loopback>"
+      });
     } else {
       await proxySession.setProxy({ mode: "direct" });
     }
@@ -492,6 +496,10 @@ export function createWebProxyManager({
       hostWebContentsId: event.sender.id,
       targetUrl: target.toString(),
       proxyUrl: proxy?.toString() || "",
+      proxyAuth: null,
+      proxySessionId: "",
+      proxyHeartbeatTimer: null,
+      proxyHeartbeatPending: false,
       safeMode,
       canNavigate,
       credentialSession: null,
@@ -517,6 +525,23 @@ export function createWebProxyManager({
       webSessionError: null
     };
     webProxyViews.set(label, managed);
+    view.webContents.on("login", (authEvent, details, authInfo, callback) => {
+      if (!authInfo.isProxy) return;
+      authEvent.preventDefault();
+      const auth = managed.proxyAuth;
+      if (
+        auth &&
+        proxy &&
+        details.firstAuthAttempt !== false &&
+        authInfo.host.replace(/^\[|\]$/g, "").toLowerCase() === proxy.hostname.replace(/^\[|\]$/g, "").toLowerCase() &&
+        authInfo.port === Number(proxy.port || 80) &&
+        authInfo.scheme === "basic"
+      ) {
+        callback(auth.username, auth.password);
+      } else {
+        callback();
+      }
+    });
     electronLog.info(`web proxy open ${label} ${target.origin}`);
     view.setVisible(false);
     inputShield.setVisible(false);
@@ -596,9 +621,13 @@ export function createWebProxyManager({
     view.webContents.on("page-title-updated", () => emitWebProxyState(managed, { loading: false }));
     view.webContents.on("did-fail-load", (_loadEvent, code, description, validatedUrl, isMainFrame) => {
       if (!isMainFrame || code === -3) return;
-      electronLog.warn(`web proxy load failed ${label}: ${description}`);
+      const failure =
+        proxy && ["ERR_TUNNEL_CONNECTION_FAILED", "ERR_PROXY_CONNECTION_FAILED"].includes(description)
+          ? `${description}（代理：${proxy.origin}）`
+          : description;
+      electronLog.warn(`web proxy load failed ${label}: ${failure}`);
       if (managed.autofillPending) {
-        finishWebProxyAutofill(managed, "error", `登录页面加载失败：${description}`);
+        finishWebProxyAutofill(managed, "error", `登录页面加载失败：${failure}`);
         return;
       }
       if (allowManualNavigation) {
@@ -606,11 +635,11 @@ export function createWebProxyManager({
           url: validatedUrl,
           loading: false,
           error: "",
-          navigationError: `页面加载失败：${description}`
+          navigationError: `页面加载失败：${failure}`
         });
         return;
       }
-      emitWebProxyState(managed, { url: validatedUrl, loading: false, error: description });
+      emitWebProxyState(managed, { url: validatedUrl, loading: false, error: failure });
     });
     startWebProxyAutofillWait(managed);
     managed.webSessionPromise = (
@@ -622,11 +651,38 @@ export function createWebProxyManager({
             String(args.tokenId || ""),
             String(args.tokenValue || ""),
             String(args.successSelector || ""),
-            String(args.interactiveSelector || "")
+            String(args.interactiveSelector || ""),
+            String(args.ticket || "")
           )
     )
       .then(async (session) => {
-        if (!managed.autofillPending || view.webContents.isDestroyed() || webProxyViews.get(label) !== managed) return;
+        if (proxy && !session?.proxyAuth) throw new Error("Koko 未返回代理认证凭据，请同步更新 Koko");
+        if (!managed.autofillPending || view.webContents.isDestroyed() || webProxyViews.get(label) !== managed) {
+          if (proxy && session?.proxyAuth) await closeWebProxySession(proxy, session.sessionId, session.proxyAuth);
+          return;
+        }
+        managed.proxyAuth = session?.proxyAuth || null;
+        managed.proxySessionId = session?.sessionId || "";
+        if (proxy) {
+          managed.proxyHeartbeatTimer = setInterval(async () => {
+            if (managed.proxyHeartbeatPending || !managed.proxyAuth) return;
+            managed.proxyHeartbeatPending = true;
+            try {
+              await heartbeatWebProxySession(proxy, managed.proxySessionId, managed.proxyAuth);
+            } catch (error) {
+              if (webProxyViews.get(label) !== managed || view.webContents.isDestroyed()) return;
+              clearInterval(managed.proxyHeartbeatTimer);
+              const message = error instanceof Error ? error.message : "Web 代理会话心跳失败";
+              view.webContents.stop();
+              if (managed.autofillPending) finishWebProxyAutofill(managed, "error", message);
+              else emitWebProxyState(managed, { loading: false, error: message });
+              void releaseWebProxyAuthentication(managed);
+            } finally {
+              managed.proxyHeartbeatPending = false;
+            }
+          }, 60_000);
+          managed.proxyHeartbeatTimer.unref();
+        }
         managed.credentialSession = session?.autofillAvailable ? session : null;
         if (managed.credentialSession) {
           emitWebProxyAutofillState(managed, "ready", "正在加载登录页面");
@@ -639,6 +695,7 @@ export function createWebProxyManager({
             sessionId: session.sessionId,
             targetUrl: target.toString(),
             proxyUrl: proxy?.toString() || "",
+            proxyAuth: managed.proxyAuth,
             width: view.getBounds().width,
             height: view.getBounds().height,
             capture: () => captureWebProxyFrame(managed),
@@ -677,6 +734,7 @@ export function createWebProxyManager({
     const managed = webProxyView(event, label);
     electronLog.info(`web proxy close ${label}`);
     webProxyViews.delete(label);
+    clearInterval(managed.proxyHeartbeatTimer);
     managed.autofillPending = false;
     managed.autofillProbeId += 1;
     managed.autofillScript?.cancel();
@@ -694,6 +752,19 @@ export function createWebProxyManager({
     managed.credentialSession = null;
     managed.host.contentView.removeChildView(managed.view);
     managed.view.webContents.close();
+    await releaseWebProxyAuthentication(managed);
+  }
+
+  async function releaseWebProxyAuthentication(managed) {
+    clearInterval(managed.proxyHeartbeatTimer);
+    const auth = managed.proxyAuth;
+    managed.proxyAuth = null;
+    if (!auth) return;
+    try {
+      await closeWebProxySession(managed.proxyUrl, managed.proxySessionId, auth);
+    } catch (error) {
+      electronLog.warn(`failed to close Web proxy session ${managed.label}`, error);
+    }
   }
 
   async function invoke(command, event, win, args) {
@@ -792,6 +863,7 @@ export function createWebProxyManager({
           sessionId: webSession.sessionId,
           targetUrl: target.toString(),
           proxyUrl: proxy?.toString() || "",
+          proxyAuth: managed.proxyAuth,
           width: Math.round(Number(args.width)),
           height: Math.round(Number(args.height)),
           capture: () => captureWebProxyFrame(managed),
@@ -856,6 +928,7 @@ export function createWebProxyManager({
     for (const [viewLabel, managed] of webProxyViews) {
       if (managed.hostWebContentsId !== windowWebContentsId) continue;
       webProxyViews.delete(viewLabel);
+      clearInterval(managed.proxyHeartbeatTimer);
       managed.credentialSession?.dispose?.();
       managed.autofillScript?.cancel();
       void managed.interaction?.dispose();
@@ -864,9 +937,9 @@ export function createWebProxyManager({
       clearWebProxyAutofillWait(managed);
       if (managed.inputShield && !managed.inputShield.webContents.isDestroyed())
         managed.inputShield.webContents.close();
-      void managed.recording?.finish().catch((error) => {
-        electronLog.warn(`failed to finish Web recording for ${viewLabel}`, error);
-      });
+      void Promise.resolve(managed.recording?.finish())
+        .catch((error) => electronLog.warn(`failed to finish Web recording for ${viewLabel}`, error))
+        .finally(() => releaseWebProxyAuthentication(managed));
       if (!managed.webContents.isDestroyed()) managed.webContents.close();
     }
   }
