@@ -111,6 +111,7 @@ export interface PublicSettings {
   XPACK_LICENSE_EDITION_ULTIMATE?: boolean;
   INTERFACE?: {
     login_title?: string;
+    logo_logout?: string;
     version?: string;
   };
   XPACK_LICENSE_INFO?: {

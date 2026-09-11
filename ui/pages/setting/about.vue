@@ -2,9 +2,11 @@
 import { getPublicSettings } from "~/composables/useApiRequest";
 import { getConfiguredAppName, isDefaultAppName, normalizeAppName } from "~/composables/useAppName";
 import { desktopApp, desktopOpener } from "~/shared/desktop/bridge";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
+const FALLBACK_LOGO = "/logo.png";
 const appName = ref(getConfiguredAppName());
-const logoSrc = computed(() => "/logo.png");
+const logoSrc = ref(FALLBACK_LOGO);
 const isDefaultProduct = computed(() => isDefaultAppName(appName.value));
 const website = "https://jumpserver.org";
 
@@ -43,6 +45,23 @@ const links = computed(() => [
   }
 ]);
 
+function resolveInterfaceLogo(path?: string) {
+  const logo = path?.trim() || "/static/img/logo.png";
+  if (!isDesktopRuntime()) return withWebSitePrefix(logo);
+  const site = useUserInfoStore().currentSite;
+  if (!site) return FALLBACK_LOGO;
+  try {
+    const siteUrl = new URL(site);
+    return new URL(withWebSitePrefix(logo, siteUrl.pathname), siteUrl.origin).href;
+  } catch {
+    return FALLBACK_LOGO;
+  }
+}
+
+function onLogoError() {
+  if (logoSrc.value !== FALLBACK_LOGO) logoSrc.value = FALLBACK_LOGO;
+}
+
 onMounted(async () => {
   try {
     // 运行时读取 Electron productName，避免只依赖 VITE_APP_NAME 导致定制构建的 About 页面显示为空。
@@ -62,6 +81,7 @@ onMounted(async () => {
     if (settings.XPACK_LICENSE_IS_VALID === true && typeof corporation === "string") {
       licenseCompany.value = corporation.trim();
     }
+    logoSrc.value = resolveInterfaceLogo(settings.INTERFACE?.logo_logout);
   } catch {
     showCommunityLinks.value = true;
   }
@@ -87,7 +107,12 @@ const openLink = async (url: string) => {
       class="w-full max-w-xl overflow-hidden rounded-[length:var(--app-radius)] border border-[var(--app-border)] bg-[var(--app-card-bg)]"
     >
       <header class="flex items-center gap-4 px-5 py-6 sm:px-8">
-        <img :src="logoSrc" :alt="appName" class="size-14 shrink-0 rounded-[length:var(--app-radius)] sm:size-16" />
+        <img
+          :src="logoSrc"
+          :alt="appName"
+          class="size-14 shrink-0 rounded-[length:var(--app-radius)] sm:size-16"
+          @error="onLogoError"
+        />
         <div class="min-w-0">
           <h2 class="truncate text-lg font-semibold tracking-[-0.02em] text-highlighted sm:text-xl">{{ appName }}</h2>
           <p class="mt-1 text-xs leading-5 text-muted">{{ t("Setting.AboutDescription") }}</p>
