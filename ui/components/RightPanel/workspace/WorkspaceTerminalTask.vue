@@ -10,13 +10,7 @@ import { aiTimelineHasPendingOperation } from "../ai/presentation";
 const props = defineProps<{ task: WorkspaceTerminalTask; operations?: AgentToolItem[] }>();
 defineEmits<{ action: [action: AiTimelineAction] }>();
 const { t } = useI18n();
-const manuallyExpanded = ref<boolean>();
-const open = computed({
-  get: () => manuallyExpanded.value ?? props.task.status !== "completed",
-  set: (value: boolean) => {
-    manuallyExpanded.value = value;
-  }
-});
+const open = ref(props.task.status !== "completed");
 const statusLabel = computed(() =>
   t(
     {
@@ -40,15 +34,23 @@ const items = computed(() =>
 );
 watch(
   () => props.task.status,
-  (status) => {
-    if (["waiting_approval", "waiting_input", "failed", "interrupted"].includes(status)) manuallyExpanded.value = true;
+  (status, previous) => {
+    if (status !== previous && ["waiting_approval", "waiting_input", "failed", "interrupted"].includes(status)) {
+      open.value = true;
+    }
   }
 );
 </script>
 
 <template>
-  <UCollapsible v-model:open="open" class="min-w-0 rounded-lg border border-default">
-    <UButton color="neutral" variant="ghost" block class="min-w-0 justify-start gap-2 px-2.5 py-2">
+  <div class="min-w-0 overflow-hidden rounded-lg bg-[var(--app-card-bg-soft)]">
+    <UButton
+      color="neutral"
+      variant="ghost"
+      block
+      class="min-w-0 justify-start gap-2 px-2.5 py-2"
+      @click="open = !open"
+    >
       <UIcon name="i-lucide-terminal" class="size-4 shrink-0 text-primary" />
       <span class="min-w-0 flex-1 text-left">
         <span class="block truncate text-xs font-medium">{{ task.target.asset_name }} · {{ task.target.account }}</span>
@@ -61,60 +63,58 @@ watch(
         :class="{ 'rotate-90': open }"
       />
     </UButton>
-    <template #content>
-      <div class="min-w-0 space-y-3 border-t border-default p-2.5">
-        <UCollapsible v-if="operations?.length" class="min-w-0">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            trailing-icon="i-lucide-chevron-down"
-            :label="t('RightPanel.AIExecutionDetails')"
+    <div v-if="open" class="min-w-0 space-y-3 px-2.5 pb-2.5">
+      <UCollapsible v-if="operations?.length" class="min-w-0">
+        <UButton
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          trailing-icon="i-lucide-chevron-down"
+          :label="t('RightPanel.AIExecutionDetails')"
+        />
+        <template #content>
+          <AiToolCallItem
+            v-for="operation in operations"
+            :key="operation.key"
+            :item="operation"
+            :label="t(`RightPanel.LunaAiTool_${operation.data.toolName}`)"
           />
-          <template #content>
-            <AiToolCallItem
-              v-for="operation in operations"
-              :key="operation.key"
-              :item="operation"
-              :label="t(`RightPanel.LunaAiTool_${operation.data.toolName}`)"
-            />
-          </template>
-        </UCollapsible>
-        <component
-          :is="resolveAiTimelineRenderer(item.domain)"
-          v-for="item in items"
-          :key="item.key"
-          :item="item"
-          :session="task.session"
-          :assistant-name="t('RightPanel.LunaAiName')"
-          v-bind="item.domain === 'terminal' ? { readOnly: !task.active } : {}"
-          @action="$emit('action', $event)"
+        </template>
+      </UCollapsible>
+      <component
+        :is="resolveAiTimelineRenderer(item.domain)"
+        v-for="item in items"
+        :key="item.key"
+        :item="item"
+        :session="task.session"
+        :assistant-name="t('RightPanel.LunaAiName')"
+        v-bind="item.domain === 'terminal' ? { readOnly: !task.active } : {}"
+        @action="$emit('action', $event)"
+      />
+      <div
+        v-if="task.active && task.status !== 'running' && !aiTimelineHasPendingOperation(items)"
+        role="status"
+        class="flex items-center gap-2 py-1 text-xs text-warning"
+      >
+        <UIcon
+          :name="task.status === 'waiting_approval' ? 'i-lucide-shield-alert' : 'i-lucide-keyboard'"
+          class="size-3.5 shrink-0"
         />
-        <div
-          v-if="task.active && task.status !== 'running' && !aiTimelineHasPendingOperation(items)"
-          role="status"
-          class="flex items-center gap-2 py-1 text-xs text-warning"
-        >
-          <UIcon
-            :name="task.status === 'waiting_approval' ? 'i-lucide-shield-alert' : 'i-lucide-keyboard'"
-            class="size-3.5 shrink-0"
-          />
-          {{ statusLabel }}
-        </div>
-        <AiActivityItem
-          v-else-if="task.active && !aiTimelineHasPendingOperation(items)"
-          :assistant-name="t('RightPanel.LunaAiName')"
-          :label="statusLabel"
-        />
-        <UAlert
-          v-if="task.error"
-          color="warning"
-          variant="subtle"
-          icon="i-lucide-circle-alert"
-          :title="statusLabel"
-          :description="task.error === 'terminal_changed' ? t('RightPanel.LunaAiTargetChanged') : task.error"
-        />
+        {{ statusLabel }}
       </div>
-    </template>
-  </UCollapsible>
+      <AiActivityItem
+        v-else-if="task.active && !aiTimelineHasPendingOperation(items)"
+        :assistant-name="t('RightPanel.LunaAiName')"
+        :label="statusLabel"
+      />
+      <UAlert
+        v-if="task.error"
+        color="warning"
+        variant="subtle"
+        icon="i-lucide-circle-alert"
+        :title="statusLabel"
+        :description="task.error === 'terminal_changed' ? t('RightPanel.LunaAiTargetChanged') : task.error"
+      />
+    </div>
+  </div>
 </template>

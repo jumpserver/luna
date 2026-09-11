@@ -94,6 +94,10 @@ onMounted(() => {
   window.addEventListener("pointercancel", stopResize);
 });
 
+const panelStyle = computed(() => ({
+  width: isNarrowScreen.value ? `min(${panelWidth.value}px, calc(100vw - 3rem))` : `${panelWidth.value}px`
+}));
+
 onBeforeUnmount(() => {
   stopResize();
   window.removeEventListener("pointermove", resizePanel);
@@ -104,18 +108,23 @@ onBeforeUnmount(() => {
 
 <template>
   <div id="workspace-ai-overlay" data-ai-context="preserve" class="pointer-events-none absolute inset-0 z-50">
-    <button
+    <UButton
       v-if="isNarrowScreen"
       type="button"
-      class="pointer-events-auto absolute inset-0 bg-black/35 backdrop-blur-[1px]"
+      class="pointer-events-auto absolute inset-0 rounded-none bg-black/35 backdrop-blur-[1px]"
       :aria-label="t('RightPanel.AIClose')"
+      color="neutral"
+      variant="ghost"
       @click="emit('close')"
     />
-
-    <aside
-      class="pointer-events-auto absolute inset-y-0 right-0 flex min-h-0 flex-col border-l border-[var(--app-border)] bg-[var(--app-panel-bg)] text-[var(--app-fg)] shadow-2xl"
+    <UCard
+      class="pointer-events-auto absolute inset-y-3 right-3 flex min-h-0 flex-col overflow-hidden"
       :class="resizing ? '' : 'transition-[width] duration-150 ease-out'"
-      :style="{ width: isNarrowScreen ? `min(${panelWidth}px, calc(100vw - 3rem))` : `${panelWidth}px` }"
+      :style="panelStyle"
+      :ui="{
+        root: 'h-auto shadow-none ring-1 ring-[var(--app-border)] bg-[var(--app-surface-overlay)]',
+        body: 'relative flex min-h-0 flex-1 flex-col overflow-hidden p-0 sm:p-0'
+      }"
     >
       <div
         role="separator"
@@ -134,7 +143,6 @@ onBeforeUnmount(() => {
           :class="resizing ? 'bg-primary' : 'bg-transparent'"
         />
       </div>
-
       <div class="min-h-0 flex-1 overflow-hidden">
         <KeepAlive>
           <component :is="showWorkspaceAssistant ? WorkspaceAssistantPanel : WorkspaceAiPanel">
@@ -151,6 +159,6 @@ onBeforeUnmount(() => {
           </component>
         </KeepAlive>
       </div>
-    </aside>
+    </UCard>
   </div>
 </template>

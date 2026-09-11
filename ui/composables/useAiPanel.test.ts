@@ -88,7 +88,7 @@ describe("AI overlay panel", () => {
     const panel = useAiPanel();
     const binding = { loginContext: '["site","account","org"]', resourceId: "resource-a", agentId: "agent-a" };
     panel.requestTerminalPrompt("pane-a", "Inspect the disk", binding);
-    expect(panel.open.value).toBe(true);
+    expect(panel.open.value).toBe(false);
     const request = panel.pendingTerminalPrompt.value!;
     expect(request).toMatchObject({ ...binding, paneId: "pane-a", text: "Inspect the disk" });
     panel.takeTerminalPrompt("another-request");

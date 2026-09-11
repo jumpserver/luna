@@ -191,6 +191,7 @@ onBeforeUnmount(() => {
           :inert="!showIslandSidebar"
         >
           <div
+            v-if="showIslandSidebar"
             class="workspace-island workspace-island--sidebar"
             :style="{ width: `${sidebarWidth}px`, minWidth: `${sidebarWidth}px`, flex: '0 0 auto' }"
           >

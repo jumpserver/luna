@@ -86,7 +86,6 @@ export const useAiPanel = () => {
 
   const requestTerminalPrompt = (paneId: string, text: string, binding: TerminalPromptBinding) => {
     pendingTerminalPrompt.value = { id: globalThis.crypto.randomUUID(), paneId, text, ...binding };
-    openAi();
   };
   const takeTerminalPrompt = (id: string) => {
     if (pendingTerminalPrompt.value?.id === id) pendingTerminalPrompt.value = null;

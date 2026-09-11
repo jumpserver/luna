@@ -52,9 +52,8 @@ const stepTitle = computed(() => {
   return title || t("RightPanel.AIStep", { count: props.step.index });
 });
 
-// New approval or attention states must surface even after the user collapsed an earlier execution.
-watch([needsAttention, stepStatus, () => props.step.executions.length], ([value]) => {
-  if (value) emit("setExpanded", true);
+watch(needsAttention, (value, previous) => {
+  if (value && !previous) emit("setExpanded", true);
 });
 
 function hasExecutionDetails({ command, result, operations }: ViewExecution) {
@@ -129,15 +128,23 @@ function statusTextClass() {
 }
 
 function statusIcon() {
-  const color = statusColor();
-  if (color === "success") return "i-lucide-circle-check";
-  if (color === "error" || color === "warning") return "i-lucide-circle-alert";
-  if (color === "primary") return "i-lucide-loader-circle";
+  const status = stepStatus();
+  if (statusColor() === "success") return "i-lucide-circle-check";
+  if (statusColor() === "error") return "i-lucide-circle-alert";
+  if (["expired", "timeout", "unknown"].includes(status)) return "i-lucide-circle-alert";
+  if (statusColor() === "primary") return "i-lucide-loader-circle";
   return "i-lucide-circle-dot";
 }
 
+function statusIconClass() {
+  if (["awaiting_approval", "awaiting_risk_approval", "waiting_input"].includes(stepStatus())) return "text-muted";
+  return statusTextClass();
+}
+
 function selectedExecution(data: TerminalAiEventData) {
-  return props.executionOverrides.get(String(data.id)) || String(data.execution || "pty");
+  const value = String(props.executionOverrides.get(String(data.id)) || data.execution || "pty");
+  if (value === "background" || value === "background_exec") return "background_exec";
+  return "pty";
 }
 
 function executionLabel(value: unknown) {
@@ -172,7 +179,7 @@ function terminalRiskLabel(level: unknown) {
       <UIcon
         :name="statusIcon()"
         class="size-3.5 shrink-0"
-        :class="[statusTextClass(), { 'animate-spin': terminalStepRunning(step) }]"
+        :class="[statusIconClass(), { 'animate-spin': terminalStepRunning(step) }]"
       />
       <span class="shrink-0 text-[10px] font-normal text-muted">{{ step.index }}</span>
       <span class="min-w-0 flex-1 truncate text-left text-xs font-medium text-highlighted">{{ stepTitle }}</span>
@@ -195,7 +202,7 @@ function terminalRiskLabel(level: unknown) {
           <template v-if="execution.command">
             <div
               v-if="step.executions.length > 1 || Number(execution.command.riskLevel) > 0"
-              class="flex flex-wrap items-center gap-1.5 px-2.5 pt-2 text-[11px] text-muted"
+              class="flex flex-wrap items-center gap-1.5 text-[11px] text-muted"
             >
               <UIcon name="i-lucide-terminal" class="size-3.5" />
               <span v-if="step.executions.length > 1" class="mr-auto">
@@ -211,70 +218,68 @@ function terminalRiskLabel(level: unknown) {
                 {{ terminalRiskLabel(execution.command.riskLevel) }}
               </UBadge>
             </div>
-            <pre class="command-output"><code>{{ execution.command.command }}</code></pre>
-            <div
-              v-if="execution.command.rationale && terminalApprovalPending(execution.command, decisions)"
-              class="markdown-body px-2.5 pb-2 text-xs text-muted"
-              v-html="renderAiMarkdown(String(execution.command.rationale))"
-            />
-            <p
-              v-if="execution.command.riskReason"
-              class="flex items-start gap-1.5 px-2.5 pb-2 text-[11px] text-warning"
-            >
-              <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
-              {{ execution.command.riskReason }}
-            </p>
-            <p v-if="execution.command.state === 'expired'" class="px-2.5 pb-2 text-xs text-warning">
-              {{ t("RightPanel.AIApprovalExpired") }}
-            </p>
-            <div
-              v-if="!readOnly && terminalApprovalPending(execution.command, decisions)"
-              class="space-y-2 bg-warning/5 p-2.5"
-            >
-              <div v-if="executionMode === 'auto'" class="flex flex-wrap gap-1.5">
-                <UButton
-                  size="xs"
-                  color="neutral"
-                  :variant="selectedExecution(execution.command) === 'pty' ? 'solid' : 'soft'"
-                  :label="t('RightPanel.AICurrentPty')"
-                  @click="emit('setExecutionOverride', String(execution.command?.id), 'pty')"
-                />
-                <UButton
-                  size="xs"
-                  color="neutral"
-                  :variant="selectedExecution(execution.command) === 'background_exec' ? 'solid' : 'soft'"
-                  :label="t('RightPanel.AIBackgroundExecution')"
-                  :disabled="!backgroundExec || execution.command.backgroundEligible === false"
-                  @click="emit('setExecutionOverride', String(execution.command?.id), 'background_exec')"
-                />
-              </div>
-              <div class="flex flex-wrap justify-end gap-1.5">
-                <UButton
-                  size="xs"
-                  color="neutral"
-                  variant="soft"
-                  :label="t('RightPanel.AIReject')"
-                  @click="emit('decide', execution.command, false)"
-                />
-                <UButton
-                  v-if="
-                    approvalMode === 'auto' &&
-                    ['execute_shell', 'execute_command'].includes(String(execution.command.tool || ''))
-                  "
-                  size="xs"
-                  color="primary"
-                  variant="soft"
-                  icon="i-lucide-shield-check"
-                  :label="t('RightPanel.AIApproveForSession')"
-                  @click="emit('decide', execution.command, true, true)"
-                />
-                <UButton
-                  size="xs"
-                  color="primary"
-                  icon="i-lucide-check"
-                  :label="t('RightPanel.AIApprove')"
-                  @click="emit('decide', execution.command, true)"
-                />
+            <div :class="!readOnly && terminalApprovalPending(execution.command, decisions) ? 'approval-block' : ''">
+              <pre
+                class="command-output"
+              ><code><span class="command-ps" aria-hidden="true">$</span>{{ execution.command.command }}</code></pre>
+              <div
+                v-if="execution.command.rationale && terminalApprovalPending(execution.command, decisions)"
+                class="markdown-body text-xs text-muted"
+                v-html="renderAiMarkdown(String(execution.command.rationale))"
+              />
+              <p v-if="execution.command.riskReason" class="flex items-start gap-1.5 text-[11px] text-warning">
+                <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
+                {{ execution.command.riskReason }}
+              </p>
+              <p v-if="execution.command.state === 'expired'" class="text-xs text-warning">
+                {{ t("RightPanel.AIApprovalExpired") }}
+              </p>
+              <div v-if="!readOnly && terminalApprovalPending(execution.command, decisions)" class="approval-bar">
+                <div v-if="executionMode === 'auto'" class="exec-group">
+                  <UButton
+                    size="xs"
+                    color="neutral"
+                    class="exec-group-btn"
+                    :variant="selectedExecution(execution.command) === 'pty' ? 'solid' : 'ghost'"
+                    :label="t('RightPanel.AICurrentPty')"
+                    @click="emit('setExecutionOverride', String(execution.command?.id), 'pty')"
+                  />
+                  <UButton
+                    size="xs"
+                    color="neutral"
+                    class="exec-group-btn"
+                    :variant="selectedExecution(execution.command) === 'background_exec' ? 'solid' : 'ghost'"
+                    :label="t('RightPanel.AIBackgroundExecution')"
+                    :disabled="!backgroundExec || execution.command.backgroundEligible === false"
+                    @click="emit('setExecutionOverride', String(execution.command?.id), 'background_exec')"
+                  />
+                </div>
+                <div class="approval-actions">
+                  <UButton
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    :label="t('RightPanel.AIReject')"
+                    @click="emit('decide', execution.command, false)"
+                  />
+                  <UButton
+                    v-if="
+                      approvalMode === 'auto' &&
+                      ['execute_shell', 'execute_command'].includes(String(execution.command.tool || ''))
+                    "
+                    size="xs"
+                    color="primary"
+                    variant="soft"
+                    :label="t('RightPanel.AIApproveForSession')"
+                    @click="emit('decide', execution.command, true, true)"
+                  />
+                  <UButton
+                    size="xs"
+                    color="primary"
+                    :label="t('RightPanel.AIApprove')"
+                    @click="emit('decide', execution.command, true)"
+                  />
+                </div>
               </div>
             </div>
           </template>
@@ -328,7 +333,7 @@ function terminalRiskLabel(level: unknown) {
             </p>
           </div>
 
-          <UCollapsible v-if="hasExecutionDetails(execution)" class="border-t border-default">
+          <UCollapsible v-if="hasExecutionDetails(execution)" class="mt-2 border-t border-default pt-1">
             <UButton
               color="neutral"
               variant="ghost"
@@ -383,8 +388,6 @@ function terminalRiskLabel(level: unknown) {
 .run-step {
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--app-border);
-  border-radius: 0.625rem;
 }
 
 .run-step-header {
@@ -401,6 +404,14 @@ function terminalRiskLabel(level: unknown) {
   padding: 0.25rem 0.625rem 0.625rem;
 }
 
+.approval-block {
+  display: grid;
+  gap: 0.5rem;
+  padding-bottom: 0.25rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid color-mix(in srgb, var(--ui-color-warning-500, #d97706) 70%, transparent);
+}
+
 .execution-card {
   min-width: 0;
   overflow: hidden;
@@ -415,12 +426,52 @@ function terminalRiskLabel(level: unknown) {
   max-height: 18rem;
   overflow: auto;
   margin: 0;
-  padding: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid color-mix(in srgb, var(--app-fg) 8%, transparent);
+  border-radius: 0.375rem;
+  background: var(--app-card-bg);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   line-height: 1.65;
+  color: var(--app-fg);
+}
+
+.command-ps {
+  margin-right: 0.5rem;
+  color: var(--app-muted);
+  user-select: none;
+}
+
+.approval-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.exec-group {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--app-fg) 14%, transparent);
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, var(--app-fg) 4%, transparent);
+}
+
+.exec-group-btn {
+  border-radius: 0;
+}
+
+.exec-group-btn + .exec-group-btn {
+  border-left: 1px solid color-mix(in srgb, var(--app-fg) 12%, transparent);
+}
+
+.approval-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-left: auto;
 }
 
 .raw-output {

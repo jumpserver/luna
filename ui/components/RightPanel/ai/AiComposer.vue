@@ -60,7 +60,7 @@ function handleSubmitKeydown(event: KeyboardEvent) {
         :ui="{ base: 'min-h-24 rounded-lg pb-11 text-xs' }"
         @keydown.enter.exact="handleSubmitKeydown"
       />
-      <div class="absolute inset-x-2 bottom-2 flex items-center gap-1.5">
+      <div class="absolute inset-x-2 bottom-2 z-10 flex items-center gap-1.5">
         <div v-if="showPolicy" class="flex min-w-0 flex-1 items-center gap-1">
           <USelect
             v-if="thresholdOptions.length"
@@ -91,18 +91,18 @@ function handleSubmitKeydown(event: KeyboardEvent) {
             @update:model-value="emit('updateExecutionMode', $event)"
           />
         </div>
-        <UTooltip v-if="running" :text="interruptLabel">
-          <UButton
-            class="ml-auto"
-            size="xs"
-            color="primary"
-            variant="solid"
-            icon="i-fluent-stop-16-filled"
-            :ui="{ leadingIcon: 'size-4 scale-75' }"
-            :aria-label="interruptLabel"
-            @click="emit('interrupt')"
-          />
-        </UTooltip>
+        <UButton
+          v-if="running"
+          class="relative z-10 ml-auto"
+          size="xs"
+          color="primary"
+          variant="solid"
+          icon="i-fluent-stop-16-filled"
+          :ui="{ leadingIcon: 'size-4 scale-75' }"
+          :aria-label="interruptLabel"
+          :title="interruptLabel"
+          @click.stop="emit('interrupt')"
+        />
         <UTooltip v-if="!running || !busy" :text="actionLabel">
           <UButton
             :class="{ 'ml-auto': !running }"

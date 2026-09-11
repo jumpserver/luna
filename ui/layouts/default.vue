@@ -446,17 +446,14 @@ onBeforeUnmount(() => {
         <div v-show="activeWorkspaceMode !== 'assets'" class="h-full min-h-0">
           <slot />
         </div>
+        <KeepAlive>
+          <AiOverlayPanel v-if="aiPanelOpen" @close="setAiPanelOpen(false)" />
+        </KeepAlive>
       </Main>
 
       <template #rightPanel>
         <div v-if="isVideoPlayerRoute" id="offline-playlist-host" class="h-full min-h-0" />
         <RightPanel v-else-if="rightPanelOpen" />
-      </template>
-
-      <template #overlayPanel>
-        <KeepAlive>
-          <AiOverlayPanel v-if="aiPanelOpen && !focusMode" @close="setAiPanelOpen(false)" />
-        </KeepAlive>
       </template>
 
       <template #bottomPanel>
