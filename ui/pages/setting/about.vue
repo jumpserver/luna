@@ -3,6 +3,7 @@ import { getPublicSettings } from "~/composables/useApiRequest";
 import { getConfiguredAppName, isDefaultAppName, normalizeAppName } from "~/composables/useAppName";
 import { desktopApp, desktopOpener } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { isDefaultInterfaceLogo } from "~/utils/interfaceLogo";
 
 const FALLBACK_LOGO = "/logo.png";
 const appName = ref(getConfiguredAppName());
@@ -46,7 +47,8 @@ const links = computed(() => [
 ]);
 
 function resolveInterfaceLogo(path?: string) {
-  const logo = path?.trim() || "/static/img/logo.png";
+  if (isDefaultInterfaceLogo(path)) return FALLBACK_LOGO;
+  const logo = path!.trim();
   if (!isDesktopRuntime()) return withWebSitePrefix(logo);
   const site = useUserInfoStore().currentSite;
   if (!site) return FALLBACK_LOGO;

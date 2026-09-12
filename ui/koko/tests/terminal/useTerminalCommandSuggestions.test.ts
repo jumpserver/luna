@@ -1,7 +1,7 @@
 import type { Terminal } from "@xterm/xterm";
 import { connectorSessionKey } from "@jumpserver/connectors-core";
 import { describe, expect, it, vi } from "vitest";
-import { createApp, ref } from "vue";
+import { createApp, ref, shallowRef } from "vue";
 import { useKokoTerminalCommandSuggestions } from "#koko/composables/terminal/useTerminalCommandSuggestions";
 import { kokoHostAdapterKey } from "#koko/host";
 
@@ -52,7 +52,7 @@ function mountSuggestions(terminal: Terminal) {
   } as never);
   app.runWithContext(() => {
     api = useKokoTerminalCommandSuggestions({
-      terminal: ref(terminal),
+      terminal: shallowRef(terminal),
       container: ref(undefined),
       send: () => true,
       disabled: () => false
