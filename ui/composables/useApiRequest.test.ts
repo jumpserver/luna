@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   apiRequest,
+  createConnectionToken,
   favoriteAssetsToFolder,
   getAuthorizedAssets,
   getConnectionRdpFile,
@@ -147,5 +148,29 @@ describe("API request headers", () => {
         orgId: "org-current"
       }
     });
+  });
+
+  it("posts admin connection tokens to the console endpoint", async () => {
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ id: "token-1" }), { status: 201 }));
+    vi.stubGlobal("isDesktopRuntime", () => false);
+    vi.stubGlobal("withWebSitePrefix", (path: string) => path);
+    vi.stubGlobal("getWebApiHeaders", () => ({ "X-JMS-ORG": "org-1" }));
+    vi.stubGlobal("getWebApiMutationHeaders", () => ({ "X-JMS-ORG": "org-1", "X-CSRFToken": "csrf" }));
+    vi.stubGlobal("fetch", fetch);
+
+    await createConnectionToken(
+      { asset: "asset-1", account: "account-1", protocol: "ssh", connect_method: "web_cli" },
+      "org-1",
+      { admin: true }
+    );
+
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/v1/authentication/admin-connection-token/",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        headers: expect.objectContaining({ "X-JMS-ORG": "org-1", "X-CSRFToken": "csrf" })
+      })
+    );
   });
 });

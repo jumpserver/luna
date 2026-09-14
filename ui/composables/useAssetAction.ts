@@ -70,7 +70,7 @@ const withLocalClientName = (url: string, clientName?: string) => {
     return url;
   }
 };
-interface ConnectionSessionPayload {
+export interface ConnectionSessionPayload {
   id?: string;
   token?: { id?: string };
   connectMethod?: { value?: string; component?: string; type?: string };
@@ -430,6 +430,7 @@ export const useAssetAction = () => {
       downloadRdp?: boolean;
       onSessionReady?: (payload: ConnectionSessionPayload) => void;
       onSessionError?: (error: unknown) => void;
+      admin?: boolean;
     }
   ) => {
     const personalCredentialScope: PersonalCredentialSessionScope = {
@@ -484,7 +485,8 @@ export const useAssetAction = () => {
         orgId: meta?.orgId,
         assetName: meta?.asset?.name || meta?.assetId || body.asset,
         scopeId: tabId,
-        batchId: meta?.aclBatchId
+        batchId: meta?.aclBatchId,
+        admin: meta?.admin
       });
       if (!token) {
         if (meta?.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
@@ -602,6 +604,7 @@ export const useAssetAction = () => {
       asset?: AssetItem;
       onSessionReady?: (payload: ConnectionSessionPayload) => void;
       onSessionError?: (error: unknown) => void;
+      admin?: boolean;
     }
   ) => {
     const personalCredentialScope: PersonalCredentialSessionScope = {
@@ -618,7 +621,8 @@ export const useAssetAction = () => {
           orgId: meta.orgId,
           assetName: meta.assetName || meta.assetId,
           scopeId: meta.tabId,
-          batchId: meta.aclBatchId
+          batchId: meta.aclBatchId,
+          admin: meta.admin
         });
         if (!token) {
           if (meta.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
@@ -751,13 +755,14 @@ export const useAssetAction = () => {
       dynamicPassword?: string;
       connectMethod?: string;
       downloadRdp?: boolean;
-      connectOptions?: Record<string, unknown>;
+      connectOptions?: RdpGraphics;
       tabId?: string;
       aclBatchId?: string;
       asset?: AssetItem;
       onSessionReady?: (payload: ConnectionSessionPayload) => void;
       onSessionError?: (error: unknown) => void;
       orgId?: string;
+      admin?: boolean;
     }
   ) => {
     const saved = currentConnectionInfoMap.value[assetId];
@@ -843,7 +848,7 @@ export const useAssetAction = () => {
     // Every successful attempt updates the lightweight last-used preference.
     // It must not turn into an auto-connect record unless the user checked
     // "remember selection" (that record is managed by useAssetConnection).
-    if (!ephemeral?.downloadRdp)
+    if (!ephemeral?.downloadRdp && !ephemeral?.admin)
       userInfoStore.setConnectionPreferenceForAsset(assetId, {
         protocol,
         username: selected || user,
@@ -922,7 +927,8 @@ export const useAssetAction = () => {
           aclBatchId: ephemeral?.aclBatchId,
           asset: ephemeral?.asset,
           onSessionReady: ephemeral?.onSessionReady,
-          onSessionError: ephemeral?.onSessionError
+          onSessionError: ephemeral?.onSessionError,
+          admin: ephemeral?.admin
         });
         return;
       }
@@ -937,7 +943,8 @@ export const useAssetAction = () => {
         orgId: ephemeral?.orgId,
         aclBatchId: ephemeral?.aclBatchId,
         onSessionReady: ephemeral?.onSessionReady,
-        onSessionError: ephemeral?.onSessionError
+        onSessionError: ephemeral?.onSessionError,
+        admin: ephemeral?.admin
       });
     });
   };

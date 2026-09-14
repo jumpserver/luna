@@ -1,6 +1,8 @@
 import type {
   AssetDetail,
   AssetTreeKind,
+  PermedAccount,
+  PermedProtocol,
   PermissionOrgs,
   PersonalAssetCredential,
   RdpGraphics,
@@ -556,7 +558,7 @@ export function getSmartEndpoint(
 export function createConnectionToken(
   body: unknown,
   orgId?: string,
-  options: { createTicket?: boolean; faceVerify?: boolean; faceMonitorToken?: string } = {}
+  options: { createTicket?: boolean; faceVerify?: boolean; faceMonitorToken?: string; admin?: boolean } = {}
 ): Promise<TokenResponse> {
   const query: Record<string, unknown> = {};
   if (options.createTicket) query.create_ticket = 1;
@@ -565,7 +567,7 @@ export function createConnectionToken(
 
   return apiRequest<TokenResponse>({
     method: "POST",
-    path: "/api/v1/authentication/connection-token/",
+    path: options.admin ? "/api/v1/authentication/admin-connection-token/" : "/api/v1/authentication/connection-token/",
     ...(Object.keys(query).length > 0 ? { query } : {}),
     body,
     orgId
@@ -666,6 +668,25 @@ export function getAssetDetailRequest(assetId: string, orgId?: string): Promise<
   return apiRequest<AssetDetail>({
     method: "GET",
     path: `/api/v1/perms/users/self/assets/${encodeURIComponent(assetId)}/`,
+    orgId
+  });
+}
+
+export function getConsoleAssetDetail(
+  assetId: string,
+  orgId?: string
+): Promise<AssetDetail & { protocols?: PermedProtocol[] }> {
+  return apiRequest({
+    method: "GET",
+    path: `/api/v1/assets/assets/${encodeURIComponent(assetId)}/`,
+    orgId
+  });
+}
+
+export function getAccountDetail(accountId: string, orgId?: string): Promise<PermedAccount> {
+  return apiRequest({
+    method: "GET",
+    path: `/api/v1/accounts/accounts/${encodeURIComponent(accountId)}/`,
     orgId
   });
 }

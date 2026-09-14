@@ -1,4 +1,10 @@
-import type { AssetItem, ConnectionPreferenceInfo, ConnectionInfo as StoredConnectionInfo } from "~/types/index";
+import type { ConnectionSessionPayload } from "~/composables/useAssetAction";
+import type {
+  AssetItem,
+  ConnectionPreferenceInfo,
+  RdpGraphics,
+  ConnectionInfo as StoredConnectionInfo
+} from "~/types/index";
 import { isConnectMethodAvailable } from "~/composables/useConnectMethods";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols } from "~/utils";
@@ -18,15 +24,16 @@ export interface ConnectionFormInfo {
   preserveStoredSelection?: boolean;
   connectMethod: string;
   downloadRdp?: boolean;
-  connectOptions?: Record<string, any>;
+  connectOptions?: RdpGraphics;
 
   accountId?: string;
   availableProtocols?: string[];
   tabId?: string;
   aclBatchId?: string;
-  onSessionReady?: (payload: Record<string, any>) => void;
+  onSessionReady?: (payload: ConnectionSessionPayload) => void;
   onSessionError?: (error: unknown) => void;
   accountMode: "hosted" | "dynamic" | "manual" | "anonymous";
+  admin?: boolean;
 }
 
 export function useAssetConnection() {
@@ -254,7 +261,8 @@ export function useAssetConnection() {
       onSessionReady: normalized.onSessionReady,
       onSessionError: normalized.onSessionError,
       orgId: asset.org_id,
-      asset
+      asset,
+      admin: normalized.admin
     });
   };
 

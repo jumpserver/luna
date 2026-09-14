@@ -20,6 +20,7 @@ export interface AclDialogItem {
   assetName: string;
   body: ConnectionBody;
   orgId?: string;
+  admin?: boolean;
   status: AclItemStatus;
   detail?: string;
   token?: TokenResponse;
@@ -147,7 +148,14 @@ function finishItem(item: AclDialogItem, token: TokenResponse | null) {
 
 function requestAcl(
   error: unknown,
-  input: { body: ConnectionBody; orgId?: string; assetName: string; scopeId?: string; batchId?: string }
+  input: {
+    body: ConnectionBody;
+    orgId?: string;
+    assetName: string;
+    scopeId?: string;
+    batchId?: string;
+    admin?: boolean;
+  }
 ): Promise<TokenResponse | null> | null {
   const code = aclCode(error);
   if (!code) return null;
@@ -170,6 +178,7 @@ function requestAcl(
       assetName: input.assetName,
       body: input.body,
       orgId: input.orgId,
+      admin: input.admin,
       status: actionable ? "ready" : "failed",
       detail: actionable || aclCodeMessage(code) ? undefined : errorDetail(error),
       resolve
@@ -270,7 +279,7 @@ export function useAclDialog() {
 async function submitReviewItem(item: AclDialogItem) {
   item.status = "submitting";
   try {
-    const token = await createConnectionToken(item.body, item.orgId, { createTicket: true });
+    const token = await createConnectionToken(item.body, item.orgId, { createTicket: true, admin: item.admin });
     item.token = token;
     if (!token.from_ticket) {
       item.status = "approved";
@@ -310,7 +319,7 @@ async function verifyNextFace(group: AclDialogGroup) {
   if (!item) return;
   item.status = "submitting";
   try {
-    const token = await createConnectionToken(item.body, item.orgId, { faceVerify: true });
+    const token = await createConnectionToken(item.body, item.orgId, { faceVerify: true, admin: item.admin });
     item.token = token;
     if (!token.face_token) {
       item.status = "approved";
@@ -371,10 +380,10 @@ async function callTicketApi(api: { method: string; url: string }) {
 
 export async function createConnectionTokenWithAcl(
   body: ConnectionBody,
-  meta: { orgId?: string; assetName: string; scopeId?: string; batchId?: string }
+  meta: { orgId?: string; assetName: string; scopeId?: string; batchId?: string; admin?: boolean }
 ) {
   try {
-    const token = await createConnectionToken(body, meta.orgId);
+    const token = await createConnectionToken(body, meta.orgId, { admin: meta.admin });
     const pending = requestAcl(token, { body, ...meta });
     if (pending) return pending;
     if (!token.id) throw new Error(token.detail || "Missing connection token");
