@@ -541,7 +541,8 @@ export function isChenDirtyCell(
   return Boolean(state.dirtyCells[dirtyKey(identity.key, field.sourceColumn)]);
 }
 
-export function chenDataViewRows(dataset: ChenDataViewDataset, state: ChenDataViewEditState) {
+export function chenDataViewRows(dataset: ChenDataViewDataset, state: ChenDataViewEditState | null | undefined) {
+  if (!state) return dataset.data;
   const rows = dataset.data.map((source) => {
     const row = { ...source };
     for (const field of dataset.fields) {
