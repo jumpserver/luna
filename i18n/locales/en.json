@@ -1252,6 +1252,7 @@
     "AlwaysEnabled": "Always enabled",
     "DownloadApplication": "Download Application",
     "DownloadCenter": "Download Center",
+    "DownloadClient": "Download Client",
     "CopyPath": "Copy path",
     "CopyPathSuccess": "Path copied",
     "SelectPath": "Select path",

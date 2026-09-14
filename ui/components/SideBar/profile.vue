@@ -73,6 +73,9 @@ const inputRef = ref<ComponentPublicInstance | null>(null);
 const siteNameInputRef = ref<ComponentPublicInstance | null>(null);
 const profileOpen = ref(false);
 const profileOpenedByPointer = ref(false);
+const downloadCenterUrl = computed(() =>
+  import.meta.client ? withWebSitePrefix("/core/download/") : "/core/download/"
+);
 const headerIconButtonClass =
   "grid size-6 shrink-0 place-items-center rounded-[length:var(--app-radius)] p-0 text-[var(--app-text-secondary)] transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]";
 const headerIconButtonActiveClass = "bg-[var(--app-hover-soft)] text-[var(--app-fg)]";
@@ -1165,6 +1168,21 @@ onBeforeUnmount(() => {
               </span>
             </template>
           </UButton>
+          <UButton
+            v-if="!isDesktopRuntime()"
+            :label="t('Setting.DownloadClient')"
+            icon="i-lucide-download"
+            :to="downloadCenterUrl"
+            external
+            target="_blank"
+            rel="noopener noreferrer"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            block
+            class="justify-start"
+            @click="profileOpen = false"
+          />
           <UButton
             v-if="isDesktopRuntime()"
             :label="t('Menu.MyTools')"
