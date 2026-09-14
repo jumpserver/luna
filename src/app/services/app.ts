@@ -10,7 +10,7 @@ import { Account, Asset, AuthInfo, ConnectData, Endpoint, Organization, View } f
 import * as CryptoJS from 'crypto-js';
 import { OrganizationService } from './organization';
 import { I18nService } from '@app/services/i18n';
-import { getAppBasePath, getAppRoutePath, withSitePrefix } from '@app/utils/path';
+import { getAppRoutePath, withSitePrefix } from '@app/utils/path';
 
 declare function unescape(s: string): string;
 
@@ -95,6 +95,7 @@ export class AppService {
         await this._http.get(`/api/v1/users/profile/?fields_size=mini`).toPromise();
         status = 'ok';
         User.logined = true;
+        this._http.resetLoginNotification();
       } catch (err) {
         status = 'error'; // 默认错误状态
         if (err.status === 401) {
@@ -115,12 +116,14 @@ export class AppService {
     const status = await this.getProfileStatus(recheck);
     if (['unauthorized', 'badrequest', 'error'].includes(status)) {
       clearInterval(this.checkIntervalId);
-      const ok = confirm(this._i18n.instant(this.getErrorMsg(status)));
-      if (ok && !this.newLoginHasOpen) {
-        const loginUrl = new URL(withSitePrefix('/core/auth/login/'), window.location.origin);
-        loginUrl.searchParams.set('next', getAppBasePath());
-        window.open(loginUrl.toString(), '_blank');
-        this.newLoginHasOpen = true;
+      if (status === 'unauthorized') {
+        this._http.notifyLoginRequired();
+      } else if (!this.newLoginHasOpen) {
+        const ok = confirm(this._i18n.instant(this.getErrorMsg(status)));
+        if (ok) {
+          window.open(this._http.getLoginUrl(), '_blank', 'noopener');
+          this.newLoginHasOpen = true;
+        }
       }
       setTimeout(() => this.doCheckProfile(true), 5000);
       this._logger.debug(`${status}, redirect to login`);

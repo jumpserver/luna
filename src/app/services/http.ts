@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Browser, User } from '@app/globals';
-import { catchError, map, retry } from 'rxjs/operators';
+import { catchError, map, mergeMap, retry, takeUntil, timeout } from 'rxjs/operators';
 import {
   AdminConnectData,
   Asset,
@@ -14,15 +14,23 @@ import {
   User as _User
 } from '@app/model';
 import { getCsrfTokenFromCookie, getQueryParamFromURL } from '@app/utils/common';
-import { Observable } from 'rxjs';
+import { defer, fromEvent, Observable, throwError } from 'rxjs';
 import { I18nService } from '@app/services/i18n';
 import { CookieService } from 'ngx-cookie-service';
 import { encryptPassword } from '@app/utils/crypto';
-import { getAppBasePath, withSitePrefix } from '@app/utils/path';
+import { withSitePrefix } from '@app/utils/path';
+
+export interface HttpRequestControl {
+  signal: AbortSignal;
+  timeout: number;
+}
 
 @Injectable()
 export class HttpService {
   headers = new HttpHeaders();
+  private loginPromptShown = false;
+  private nextLoginPromptAt = 0;
+  private readonly loginPromptCooldown = 60000;
 
   constructor(
     private http: HttpClient,
@@ -65,30 +73,71 @@ export class HttpService {
     return withSitePrefix(url);
   }
 
-  get<T>(url: string, options?: any): Observable<any> {
+  get<T>(url: string, options?: any, control?: HttpRequestControl): Observable<any> {
     const resolvedUrl = this.resolveUrl(url);
     options = this.setOrgIDToRequestHeader(resolvedUrl, options);
-    return this.http.get(resolvedUrl, options).pipe(catchError(this.handleError.bind(this)));
+    const request = this.http.get(resolvedUrl, options).pipe(catchError(this.handleError.bind(this)));
+    if (!control) {
+      return request;
+    }
+    const cancelled = () => new DOMException('Request cancelled', 'AbortError');
+    return defer(() => {
+      if (control.signal.aborted) {
+        return throwError(cancelled);
+      }
+      return request.pipe(
+        timeout(control.timeout),
+        // Reject rather than complete: toPromise() must not resolve undefined on cancellation.
+        takeUntil(fromEvent(control.signal, 'abort').pipe(mergeMap(() => throwError(cancelled))))
+      );
+    });
+  }
+
+  getLoginUrl(): string {
+    const loginUrl = new URL(withSitePrefix('/core/auth/login/'), window.location.origin);
+    const {pathname, search, hash} = window.location;
+    loginUrl.searchParams.set('next', pathname + search + hash);
+    return loginUrl.toString();
+  }
+
+  notifyLoginRequired() {
+    if (this.loginPromptShown || Date.now() < this.nextLoginPromptAt) {
+      return;
+    }
+    this.loginPromptShown = true;
+    try {
+      if (confirm(this._i18n.instant('LoginExpireMsg'))) {
+        window.open(this.getLoginUrl(), '_blank', 'noopener');
+      }
+    } finally {
+      this.loginPromptShown = false;
+      // Start the cooldown after the dialog closes, even when the user cancels.
+      this.nextLoginPromptAt = Date.now() + this.loginPromptCooldown;
+    }
+  }
+
+  resetLoginNotification() {
+    this.nextLoginPromptAt = 0;
   }
 
   async handleError(error: HttpErrorResponse) {
-    if (error.status === 401 && User.logined) {
-      const msg = await this._i18n.t('LoginExpireMsg');
-      if (confirm(msg)) {
-        const loginUrl = new URL(withSitePrefix('/core/auth/login/'), window.location.origin);
-        loginUrl.searchParams.set('next', getAppBasePath());
-        window.open(loginUrl.toString(), '_blank');
+    try {
+      if (error.status === 401) {
+        // Startup login and token connections retain their own login flow.
+        // Standalone pages must receive the error even before User.logined is set.
+        if (User.logined) {
+          this.notifyLoginRequired();
+        }
+      } else if (error.status === 403) {
+        alert(this._i18n.instant('No permission'));
+      } else {
+        console.error(`Backend returned code ${error.status}`);
       }
-    } else if (error.status === 403) {
-      const msg = await this._i18n.t('No permission');
-      alert(msg);
-      throw error;
-    } else {
-      // The backend returned an unsuccessful response code.
-      // The response body may contain clues as to what went wrong.
-      console.error(`Backend returned code ${error.status}, body was: `, error.error);
-      throw error;
+    } catch {
+      // Notification failures must not replace the original request error.
     }
+    // A handled error must never become a successful undefined response.
+    throw error;
   }
 
   post<T>(url: string, body: any, options?: any): Observable<any> {
@@ -135,25 +184,26 @@ export class HttpService {
     return this.post('/api/checklogin', user);
   }
 
-  getPerms() {
+  getPerms(control?: HttpRequestControl) {
     const url = '/api/v1/users/profile/permissions/';
-    return this.get(url);
+    return this.get(url, undefined, control);
   }
 
-  getProfile() {
+  getProfile(control?: HttpRequestControl) {
     let url = '/api/v1/users/profile/';
     const connectionToken = getQueryParamFromURL('token');
     if (connectionToken) {
       // 解决 /luna/connect?connectToken= 直接方式权限认证问题
       url += `?token=${connectionToken}`;
     }
-    return this.get<ConnectionToken>(url);
+    return this.get<ConnectionToken>(url, undefined, control);
   }
 
-  async getUserProfile() {
-    const profile = this.getProfile().toPromise();
-    const perms = this.getPerms().toPromise();
+  async getUserProfile(control?: HttpRequestControl) {
+    const profile = this.getProfile(control).toPromise();
+    const perms = this.getPerms(control).toPromise();
     const res = await Promise.all([profile, perms]);
+    this.resetLoginNotification();
     return Object.assign({}, res[0], res[1]);
   }
 
@@ -202,9 +252,9 @@ export class HttpService {
     return this.get<Asset>(url);
   }
 
-  getAssetDetail(id) {
+  getAssetDetail(id, control?: HttpRequestControl) {
     const url = `/api/v1/assets/assets/${id}/`;
-    return this.get<Asset>(url);
+    return this.get<Asset>(url, undefined, control);
   }
 
   getAccountDetail(id) {
@@ -249,10 +299,10 @@ export class HttpService {
     });
   }
 
-  getSessionDetail(sid: string): Promise<Session> {
+  getSessionDetail(sid: string, control?: HttpRequestControl): Promise<Session> {
     return this.get<Session>(`/api/v1/terminal/sessions/${sid}/`, {
       headers: this.getJMSOrg()
-    }).toPromise();
+    }, control).toPromise();
   }
 
   getReplayData(src: string) {
@@ -443,7 +493,7 @@ export class HttpService {
     throw error;
   }
 
-  getSmartEndpoint({ assetId, sessionId, token }, protocol): Promise<Endpoint> {
+  getSmartEndpoint({ assetId, sessionId, token }, protocol, control?: HttpRequestControl): Promise<Endpoint> {
     const url = new URL(withSitePrefix('/api/v1/terminal/endpoints/smart/'), window.location.origin);
 
     url.searchParams.append('protocol', protocol);
@@ -454,14 +504,14 @@ export class HttpService {
     } else if (token) {
       url.searchParams.append('token', token);
     }
-    return this.get(url.href)
+    return this.get(url.href, undefined, control)
       .pipe(map(res => Object.assign(new Endpoint(), res)))
       .toPromise();
   }
 
-  getTicketDetail(ticketId: string): Promise<Ticket> {
+  getTicketDetail(ticketId: string, control?: HttpRequestControl): Promise<Ticket> {
     const url = `/api/v1/tickets/tickets/${ticketId}/`;
-    return this.get<Ticket>(url).toPromise();
+    return this.get<Ticket>(url, undefined, control).toPromise();
   }
 
   toggleLockSession(sessionId: string, lock: boolean): Promise<any> {
@@ -499,9 +549,9 @@ export class HttpService {
     return this.get(url);
   }
 
-  getUserDetail(uid: string): Promise<_User> {
+  getUserDetail(uid: string, control?: HttpRequestControl): Promise<_User> {
     const url = `/api/v1/users/users/${uid}/`;
-    return this.get<_User>(url).toPromise();
+    return this.get<_User>(url, undefined, control).toPromise();
   }
 
   getShareUserList(keyword: string) {

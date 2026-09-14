@@ -35,6 +35,21 @@
   </ul>
 </div>
 <div #contentWindow style="width: 100%; height: calc(100% - 30px)">
+  <div class="monitor-state" *ngIf="loading" role="status" aria-live="polite">
+    <p>{{ 'Loading monitor…' | translate }}</p>
+    <p>{{ loadingStage | translate }}</p>
+  </div>
+  <div class="monitor-state" *ngIf="errorMessage" role="alert">
+    <h3>{{ 'Unable to load monitor' | translate }}</h3>
+    <p>{{ loadingStage | translate }}：{{ errorMessage | translate }}</p>
+    <p *ngIf="loginRequired">{{ 'Sign in in the new tab, then return here and click Retry.' | translate }}</p>
+    <div class="monitor-actions">
+      <a *ngIf="loginRequired" nz-button [href]="loginUrl" target="_blank" rel="noopener noreferrer">
+        {{ 'Sign in again' | translate }}
+      </a>
+      <button nz-button nzType="primary" (click)="loadMonitor()">{{ 'Retry' | translate }}</button>
+    </div>
+  </div>
   <iframe
     #terminal
     [src]="iframeURL | safeUrl"

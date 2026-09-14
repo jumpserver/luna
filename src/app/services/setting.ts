@@ -2,7 +2,7 @@ import { Injectable } from "@angular/core";
 import { GlobalSetting, Setting } from "@app/model";
 import { LocalStorageService } from "./share";
 import { I18nService } from "@app/services/i18n";
-import { HttpService } from "@app/services/http";
+import { HttpRequestControl, HttpService } from "@app/services/http";
 import { canvasWaterMark, getQueryParamFromURL } from "@app/utils/common";
 import { BehaviorSubject } from "rxjs";
 import { setThemeTypeGetter, useTheme } from "@src/sass/theme/util";
@@ -25,17 +25,19 @@ export class SettingService {
     private _http: HttpService,
     private _i18n: I18nService
   ) {
-    this.init().then();
+    this.init().catch(() => {
+      // HTTP errors are reported by HttpService; callers may retry init().
+    });
   }
 
-  async getPublicSettings() {
+  async getPublicSettings(control?: HttpRequestControl) {
     let url = "/api/v1/settings/public/";
     const connectionToken = getQueryParamFromURL("token");
     if (connectionToken) {
       // 解决 /luna/connect?connectToken= 直接方式权限认证问题
       url += `?token=${connectionToken}`;
     }
-    this.globalSetting = await this._http.get<any>(url).toPromise();
+    this.globalSetting = await this._http.get<any>(url, undefined, control).toPromise();
     this.globalSetting$.next(this.globalSetting);
     this.setting.commandExecution =
       this.globalSetting.SECURITY_COMMAND_EXECUTION;
@@ -48,17 +50,14 @@ export class SettingService {
     });
   }
 
-  getSystemSetting() {
-    return new Promise<void>(async (resolve) => {
-      const url = "/api/v1/users/preference/?category=luna";
-      const serverSetting = await this._http.get<any>(url).toPromise();
-      const localSetting = this._localStorage.get(this.settingKey);
-      this.setting = Object.assign(this.setting, localSetting, serverSetting);
-      this._localStorage.set(this.settingKey, this.setting);
-      this.setAppletConnectMethod();
-      this.setKeyboardLayout();
-      resolve();
-    });
+  async getSystemSetting(control?: HttpRequestControl): Promise<void> {
+    const url = "/api/v1/users/preference/?category=luna";
+    const serverSetting = await this._http.get<any>(url, undefined, control).toPromise();
+    const localSetting = this._localStorage.get(this.settingKey);
+    this.setting = Object.assign(this.setting, localSetting, serverSetting);
+    this._localStorage.set(this.settingKey, this.setting);
+    this.setAppletConnectMethod();
+    this.setKeyboardLayout();
   }
 
   setTitle() {
@@ -101,12 +100,12 @@ export class SettingService {
     }
   }
 
-  async init() {
+  async init(control?: HttpRequestControl) {
     if (this.initialized$.value) {
       return;
     }
-    await this.getSystemSetting();
-    await this.getPublicSettings();
+    await this.getSystemSetting(control);
+    await this.getPublicSettings(control);
 
     setThemeTypeGetter(() => this.setting?.basic?.themes || null);
 
@@ -171,8 +170,8 @@ export class SettingService {
     return this.setting.isSkipAllManualPassword === "1";
   }
 
-  createWaterMarkIfNeed(element, content) {
-    this.init().then(() => {
+  createWaterMarkIfNeed(element, content, control?: HttpRequestControl) {
+    return this.init(control).then(() => {
       if (this.globalSetting.SECURITY_WATERMARK_ENABLED) {
         canvasWaterMark({
           container: element,

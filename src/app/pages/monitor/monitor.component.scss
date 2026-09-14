@@ -60,3 +60,25 @@ iframe {
   border-width: 0;
   background: var(--el-editor-bg-color);
 }
+
+.monitor-state {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 240px;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+  color: var(--el-text-color-light);
+  background: var(--el-editor-bg-color);
+
+  h3 {
+    color: inherit;
+  }
+}
+
+.monitor-actions {
+  display: flex;
+  gap: 12px;
+}
