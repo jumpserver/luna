@@ -2086,7 +2086,7 @@
     "SelectField": "Select a field",
     "Value": "Value",
     "EnterNewValue": "Enter the new value",
-    "SetValueNull": "Set value to NULL",
+    "SetValueNull": "Set NULL",
     "BatchUpdateHint": "The selected field will be set to the same value in {count} rows. Changes remain pending until you click Save.",
     "UpdateRowCount": "Update {count} rows",
     "CreateTable": "Create table",

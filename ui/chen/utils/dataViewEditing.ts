@@ -415,6 +415,16 @@ export function canEditChenDataViewCell(
   return field.editable === true;
 }
 
+export function canSetChenDataViewCellNull(
+  dataset: ChenDataViewDataset,
+  state: ChenDataViewEditState,
+  mode: ChenDataViewEditMode,
+  row: Record<string, any>,
+  field: ChenDataViewField
+) {
+  return field.nullable === true && canEditChenDataViewCell(dataset, state, mode, row, field);
+}
+
 export function applyChenDataViewCellChange(
   state: ChenDataViewEditState,
   dataset: ChenDataViewDataset,

@@ -30,7 +30,7 @@ const fieldItems = computed(() =>
   }))
 );
 const selectedField = computed(() => props.fields.find((field) => field.name === selectedFieldName.value) || null);
-const canSetNull = computed(() => selectedField.value?.nullable !== false);
+const canSetNull = computed(() => selectedField.value?.nullable === true);
 
 watch(
   () => props.open,

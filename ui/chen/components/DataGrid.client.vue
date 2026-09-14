@@ -43,6 +43,7 @@ import {
 import {
   applyChenDataViewCellChange,
   canEditChenDataViewCell,
+  canSetChenDataViewCellNull,
   chenDataViewRows,
   isChenDeletedRow,
   isChenDirtyCell,
@@ -89,6 +90,7 @@ const selection = ref(emptyChenGridSelection());
 const contextMenuOpen = ref(false);
 const contextMenuPosition = reactive({ x: 0, y: 0 });
 const currentRow = ref<Record<string, any> | null>(null);
+const currentField = ref<ChenDataViewField | null>(null);
 let resizeObserver: ResizeObserver | null = null;
 let rowSelectionAnchor: number | null = null;
 let rowSelectionDragging = false;
@@ -150,6 +152,7 @@ const columnDefs = computed<ColDef[]>(() => {
           params.data &&
           isChenDirtyCell(props.editState, props.dataset, params.data, field)
         ),
+      "chen-null-cell": (params) => params.value == null,
       "chen-insert-row": (params) => isChenInsertRow(params.data),
       "chen-delete-row": (params) =>
         Boolean(
@@ -320,27 +323,58 @@ const canCopyInsert = computed(() =>
   Boolean(props.dbType && props.meta?.schema && props.meta.table && props.dataset?.fields.length && currentRow.value)
 );
 const canCopyUpdate = computed(() => canCopyInsert.value && hasChenPrimaryKey(props.dataset?.fields || []));
+const canSetCurrentCellNull = computed(() =>
+  Boolean(
+    props.dataset &&
+    props.editState &&
+    currentRow.value &&
+    currentField.value &&
+    canSetChenDataViewCellNull(props.dataset, props.editState, props.editMode, currentRow.value, currentField.value)
+  )
+);
+
+function setCurrentCellNull() {
+  if (!canSetCurrentCellNull.value || !props.dataset || !props.editState || !currentRow.value || !currentField.value) {
+    return;
+  }
+  const row = currentRow.value;
+  const field = currentField.value;
+  applyChenDataViewCellChange(props.editState, props.dataset, row, field, row[field.name], null);
+}
+
 const contextMenuItems = computed<DropdownMenuItem[]>(() => {
-  if (!canUseChenCopy(props.canCopy)) return [];
-  return [
-    { label: t("Chen.CopySelection"), icon: "i-lucide-copy", onSelect: copySelection },
-    {
-      label: canCopyInsert.value ? t("Chen.CopyInsertSql") : t("Chen.CopyInsertSqlUnavailable"),
-      icon: "i-lucide-copy",
-      disabled: !canCopyInsert.value,
-      onSelect: copyInsertSql
-    },
-    {
-      label: canCopyUpdate.value ? t("Chen.CopyUpdateSql") : t("Chen.CopyUpdateSqlUnavailable"),
-      icon: "i-lucide-copy",
-      disabled: !canCopyUpdate.value,
-      onSelect: copyUpdateSql
-    }
-  ];
+  const items: DropdownMenuItem[] = [];
+  if (canUseChenCopy(props.canCopy)) {
+    items.push(
+      { label: t("Chen.CopySelection"), icon: "i-lucide-copy", onSelect: copySelection },
+      {
+        label: canCopyInsert.value ? t("Chen.CopyInsertSql") : t("Chen.CopyInsertSqlUnavailable"),
+        icon: "i-lucide-copy",
+        disabled: !canCopyInsert.value,
+        onSelect: copyInsertSql
+      },
+      {
+        label: canCopyUpdate.value ? t("Chen.CopyUpdateSql") : t("Chen.CopyUpdateSqlUnavailable"),
+        icon: "i-lucide-copy",
+        disabled: !canCopyUpdate.value,
+        onSelect: copyUpdateSql
+      }
+    );
+  }
+  if (props.editMode !== "none") {
+    if (items.length) items.push({ type: "separator" });
+    items.push({
+      label: t("Chen.SetValueNull"),
+      icon: "i-lucide-circle-minus",
+      disabled: !canSetCurrentCellNull.value,
+      onSelect: setCurrentCellNull
+    });
+  }
+  return items;
 });
 
 function captureContextMenu(event: MouseEvent) {
-  if (!canUseChenCopy(props.canCopy)) return;
+  if (!canUseChenCopy(props.canCopy) && props.editMode === "none") return;
   if (!(event.target instanceof Element) || !event.target.closest(".ag-cell")) return;
   event.preventDefault();
   contextMenuPosition.x = event.clientX;
@@ -351,7 +385,7 @@ function handleCellContextMenu(event: CellContextMenuEvent) {
   if (!event.data || !isDataColumn(event)) return;
   const cell = eventCell(event);
   if (
-    (canUseChenCopy(props.canCopy) || props.editMode === "full") &&
+    (canUseChenCopy(props.canCopy) || props.editMode !== "none") &&
     cell &&
     !isChenGridCellSelected(selection.value, displayedColIds(), cell)
   ) {
@@ -359,8 +393,9 @@ function handleCellContextMenu(event: CellContextMenuEvent) {
     refreshSelectionCells();
   }
   currentRow.value = event.data;
+  currentField.value = props.dataset?.fields.find((field) => field.name === event.column.getColId()) || null;
   emit("selectionChange", selectedRows());
-  if (canUseChenCopy(props.canCopy)) contextMenuOpen.value = true;
+  if (contextMenuItems.value.length) contextMenuOpen.value = true;
 }
 
 function handleCellClicked(event: CellClickedEvent) {
@@ -735,6 +770,11 @@ onBeforeUnmount(() => {
 .chen-grid :deep(.ag-header-cell-text),
 .chen-grid :deep(.ag-overlay-no-rows-center) {
   color: var(--data-grid-text);
+}
+
+.chen-grid :deep(.chen-null-cell .ag-cell-value) {
+  color: var(--data-grid-text-muted);
+  font-style: italic;
 }
 
 .chen-grid :deep(.ag-overlay-no-rows-wrapper) {
