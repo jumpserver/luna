@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, shallowRef } from "vue";
-import { resolveAiPanelSource, resolveUnifiedAiPanel, useAiPanel } from "./useAiPanel";
+import { resolveUnifiedAiPanel, useAiPanel } from "./useAiPanel";
 import { useRightPanel } from "./useRightPanel";
 
 const tabs = shallowRef<Array<{ id: string; protocol?: string }>>([]);
@@ -14,7 +14,6 @@ describe("AI overlay panel", () => {
     tabs.value = [{ id: "tab-a" }, { id: "tab-b" }];
     activeTabId.value = "tab-a";
     const panel = useAiPanel();
-    panel.setSource("workspace");
     panel.setOpen(false);
     panel.setPanelWidth(380);
     const rightPanel = useRightPanel();
@@ -76,6 +75,8 @@ describe("AI overlay panel", () => {
     ["assets", "mysql", "database", "resource", undefined],
     ["assets", "mysql", "terminal", "resource", "sql"],
     ["assets", "sftp", "file-manager", "resource", undefined],
+    ["assets", "rdp", "remote-desktop", "workspace", undefined],
+    ["assets", "vnc", "remote-desktop", "workspace", undefined],
     ["files", "", "", "resource", undefined]
   ] as const)(
     "selects the %s/%s/%s AI surface automatically",
@@ -97,26 +98,10 @@ describe("AI overlay panel", () => {
     expect(panel.pendingTerminalPrompt.value).toBeNull();
   });
 
-  it("keeps the resource source independent from panel visibility", () => {
-    const panel = useAiPanel();
-    panel.setSource("sftp");
-    expect(panel.source.value).toBe("sftp");
-    expect(panel.open.value).toBe(false);
-    panel.setSource("workspace");
-    expect(panel.source.value).toBe("workspace");
-    expect(panel.open.value).toBe(false);
+  it("keeps SSH overlay on workspace even when the SFTP right panel is open", () => {
+    const rightPanel = useRightPanel();
+    rightPanel.setOpen(true);
+    rightPanel.setActiveTab("sftp");
+    expect(resolveUnifiedAiPanel({ workspaceMode: "assets", protocol: "ssh", surface: "terminal" })).toBe("workspace");
   });
-
-  it.each([
-    ["assets", true, "sftp", "sftp"],
-    ["assets", false, "sftp", "workspace"],
-    ["assets", true, "session", "workspace"],
-    ["files", true, "sftp", "workspace"],
-    ["tools", false, "session", "workspace"]
-  ] as const)(
-    "resolves %s resources without a platform fallback",
-    (workspaceMode, rightPanelOpen, rightPanelTab, expected) => {
-      expect(resolveAiPanelSource({ workspaceMode, rightPanelOpen, rightPanelTab })).toBe(expected);
-    }
-  );
 });

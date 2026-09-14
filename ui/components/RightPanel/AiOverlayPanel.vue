@@ -10,8 +10,7 @@ const { t } = useI18n();
 const isNarrowScreen = useMediaQuery("(max-width: 767px)");
 const { activeWorkspaceMode } = useWorkspaceMode();
 const { activePaneId, activeTab } = useWorkspaceTabs();
-const { activeTab: rightPanelTab, open: rightPanelOpen } = useRightPanel();
-const { panelWidth, setPanelWidth, setSource } = useAiPanel();
+const { panelWidth, setPanelWidth } = useAiPanel();
 const resizing = ref(false);
 let resizeStartX = 0;
 let resizeStartWidth = 0;
@@ -37,16 +36,6 @@ const showWorkspaceAssistant = computed(
       sessionKind: activeAiSession.value?.kind
     }) === "workspace"
 );
-
-watchEffect(() => {
-  setSource(
-    resolveAiPanelSource({
-      workspaceMode: activeWorkspaceMode.value,
-      rightPanelOpen: rightPanelOpen.value,
-      rightPanelTab: rightPanelTab.value
-    })
-  );
-});
 
 function startResize(event: PointerEvent) {
   if (event.button !== 0 || isNarrowScreen.value) return;

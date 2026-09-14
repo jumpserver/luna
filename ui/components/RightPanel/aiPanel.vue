@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import {
-  createKokoCompactFileAiOwnerId,
-  getActiveKokoFileAiTargetId,
-  KOKO_GLOBAL_FILE_AI_OWNER_ID
-} from "#koko/composables/sftp/useFileAiSessions";
+import { getActiveKokoFileAiTargetId, KOKO_GLOBAL_FILE_AI_OWNER_ID } from "#koko/composables/sftp/useFileAiSessions";
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 import AiPanelFooter from "./ai/AiPanelFooter.vue";
 import AiPresenceHeader from "./ai/AiPresenceHeader.vue";
@@ -13,7 +9,6 @@ import { useAiPanelController } from "./ai/useAiPanelController";
 
 const { activePaneId, activeTab } = useWorkspaceTabs();
 const { activeWorkspaceMode } = useWorkspaceMode();
-const { source: aiSource } = useAiPanel();
 const { t } = useI18n();
 const activeSurface = computed(() => {
   if (activeWorkspaceMode.value === "files") return null;
@@ -28,27 +23,17 @@ const activeSurfaceIsFileManager = computed(() => {
 });
 const ownerFileTargetId = computed(() => getActiveKokoFileAiTargetId(activePaneId.value) || "");
 const globalFileTargetId = computed(() => getActiveKokoFileAiTargetId(KOKO_GLOBAL_FILE_AI_OWNER_ID) || "");
-const compactFileOwnerId = computed(() => createKokoCompactFileAiOwnerId(activeSurface.value?.id || ""));
-const compactFileTargetId = computed(() => getActiveKokoFileAiTargetId(compactFileOwnerId.value) || "");
-const preferCompactFileAi = computed(
-  () => aiSource.value === "sftp" && activeSurface.value?.protocol?.toLowerCase() === "ssh"
-);
 const aiTargetId = computed(() =>
   resolveAiPanelTarget({
     workspaceMode: activeWorkspaceMode.value,
     paneId: activePaneId.value,
     ownerFileTargetId: ownerFileTargetId.value,
     ownerFileTargetAllowed: activeSurfaceIsFileManager.value,
-    globalFileTargetId: globalFileTargetId.value,
-    compactFileTargetId: compactFileTargetId.value,
-    preferCompactFileAi: preferCompactFileAi.value
+    globalFileTargetId: globalFileTargetId.value
   })
 );
 const fileAiRequested = computed(
-  () =>
-    activeWorkspaceMode.value === "files" ||
-    Boolean(activeSurfaceIsFileManager.value && ownerFileTargetId.value) ||
-    preferCompactFileAi.value
+  () => activeWorkspaceMode.value === "files" || Boolean(activeSurfaceIsFileManager.value && ownerFileTargetId.value)
 );
 
 const {

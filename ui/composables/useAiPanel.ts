@@ -1,18 +1,10 @@
-import type { RightPanelTab } from "~/composables/useRightPanel";
 import type { WorkspaceMode } from "~/composables/useWorkspaceMode";
 
-export type AiPanelSource = "workspace" | "sftp";
 export type UnifiedAiPanelKind = "workspace" | "resource";
 
 export const AI_PANEL_MIN_WIDTH = 320;
 export const AI_PANEL_MAX_WIDTH = 720;
 export const AI_PANEL_DEFAULT_WIDTH = 380;
-
-interface AiPanelContext {
-  workspaceMode: WorkspaceMode;
-  rightPanelOpen: boolean;
-  rightPanelTab: RightPanelTab;
-}
 
 interface UnifiedAiPanelContext {
   workspaceMode: WorkspaceMode;
@@ -31,14 +23,7 @@ interface TerminalPromptBinding {
 const pendingTerminalPrompt = shallowRef<({ id: string; paneId: string; text: string } & TerminalPromptBinding) | null>(
   null
 );
-const source = shallowRef<AiPanelSource>("workspace");
 const panelWidth = shallowRef(AI_PANEL_DEFAULT_WIDTH);
-
-export function resolveAiPanelSource(context: AiPanelContext): AiPanelSource {
-  return context.workspaceMode === "assets" && context.rightPanelOpen && context.rightPanelTab === "sftp"
-    ? "sftp"
-    : "workspace";
-}
 
 export function resolveUnifiedAiPanel(context: UnifiedAiPanelContext): UnifiedAiPanelKind {
   if (context.sessionKind && context.sessionKind !== "terminal") return "resource";
@@ -62,10 +47,6 @@ export const useAiPanel = () => {
     }
     if (value) openTabs.add(tab);
     else openTabs.delete(tab);
-  };
-
-  const setSource = (value: AiPanelSource) => {
-    source.value = value;
   };
 
   const setPanelWidth = (width: number) => {
@@ -96,10 +77,8 @@ export const useAiPanel = () => {
     requestTerminalPrompt,
     takeTerminalPrompt,
     open,
-    source,
     panelWidth,
     setOpen,
-    setSource,
     setPanelWidth,
     openAi,
     openWorkspaceAssistant: openAi,

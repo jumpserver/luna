@@ -19,11 +19,7 @@ import {
   workspaceAssistantMessages,
   workspaceAssistantTerminalTargets
 } from "~/composables/useWorkspaceAssistantSession";
-import {
-  isTerminalAiCommandShortcut,
-  isTerminalAiHistoryShortcut,
-  terminalAiLiveTurn
-} from "~/utils/terminalAiCommand";
+import { isTerminalAiCommandShortcut, terminalAiLiveTurn } from "~/utils/terminalAiCommand";
 
 const props = defineProps<{ pane: WorkspacePane }>();
 const { t } = useI18n();
@@ -167,12 +163,6 @@ function handleWindowKeydown(event: KeyboardEvent) {
     event.preventDefault();
     event.stopPropagation();
     close();
-    return;
-  }
-  if (isTerminalAiHistoryShortcut(event, isMacOS.value)) {
-    event.preventDefault();
-    event.stopPropagation();
-    openAi();
     return;
   }
   if (open.value || !isTerminalAiCommandShortcut(event, isMacOS.value)) return;

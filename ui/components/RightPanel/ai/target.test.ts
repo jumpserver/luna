@@ -6,9 +6,7 @@ const base = {
   paneId: "workspace-pane",
   ownerFileTargetId: "",
   ownerFileTargetAllowed: true,
-  globalFileTargetId: "global-file-pane",
-  compactFileTargetId: "compact-file-pane",
-  preferCompactFileAi: false
+  globalFileTargetId: "global-file-pane"
 };
 
 describe("AI panel target routing", () => {
@@ -30,8 +28,7 @@ describe("AI panel target routing", () => {
     ).toBe("workspace-pane");
   });
 
-  it("uses compact SFTP only when it is the selected AI context", () => {
-    expect(resolveAiPanelTarget({ ...base, preferCompactFileAi: true })).toBe("compact-file-pane");
+  it("keeps SSH on the workspace pane instead of compact SFTP", () => {
     expect(resolveAiPanelTarget(base)).toBe("workspace-pane");
   });
 
@@ -41,13 +38,6 @@ describe("AI panel target routing", () => {
         ...base,
         workspaceMode: "files",
         globalFileTargetId: ""
-      })
-    ).toBe("");
-    expect(
-      resolveAiPanelTarget({
-        ...base,
-        compactFileTargetId: "",
-        preferCompactFileAi: true
       })
     ).toBe("");
   });

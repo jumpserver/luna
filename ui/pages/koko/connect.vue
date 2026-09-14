@@ -4,6 +4,7 @@ import { connectorSessionKey } from "@jumpserver/connectors-core";
 import { KokoConnectView } from "#koko";
 import { getAuthenticatedTerminalCommandHistoryScope } from "~/composables/useTerminalCommandHistory";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { isTerminalAiHistoryShortcut } from "~/utils/terminalAiCommand";
 
 const AiOverlayPanel = defineAsyncComponent(() => import("~/components/RightPanel/AiOverlayPanel.vue"));
 
@@ -16,6 +17,7 @@ const { activePaneId } = useWorkspaceTabs();
 const { currentSite, currentUser, loggedIn } = storeToRefs(useUserInfoStore());
 const { bootstrapPersistedSession } = useAuthSession();
 const sessionContext = ref<ConnectorSessionContext | null>(null);
+const { isMacOS } = usePlatform();
 const { open: aiOpen, setOpen: setAiOpen, openAi, toggleAi } = useAiPanel();
 
 provide(connectorSessionKey, sessionContext);
@@ -64,6 +66,14 @@ onMounted(async () => {
 });
 
 watch([loggedIn, currentSite, () => currentUser.value?.userId], syncHistoryScope);
+
+const handleAiHistoryShortcut = (event: KeyboardEvent) => {
+  if (!sessionContext.value || !isTerminalAiHistoryShortcut(event, isMacOS.value)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  openAi();
+};
+useEventListener(window, "keydown", handleAiHistoryShortcut, { capture: true });
 
 onBeforeUnmount(() => {
   if (activePaneId.value === sessionContext.value?.tabId) {
