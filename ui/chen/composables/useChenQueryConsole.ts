@@ -6,6 +6,7 @@ import type {
   ChenQueryConsoleTab,
   ChenQueryLikeWorkspaceTab,
   ChenQueryResultTab,
+  ChenSqlExecutionError,
   ChenTableStructureWorkspaceTab,
   ChenWorkspaceTab
 } from "~/chen/types";
@@ -57,6 +58,7 @@ export function useChenQueryConsole(
   ) => boolean | void,
   options: {
     onLog?: (tab: ChenWorkspaceTab, line: unknown, content: string) => void;
+    onError?: (tab: ChenQueryLikeWorkspaceTab, error: ChenSqlExecutionError) => void;
     translate?: (key: string) => string;
   } = {}
 ) {
@@ -270,16 +272,18 @@ export function useChenQueryConsole(
       case "sql_error":
         if ((tab.kind === "query" || tab.kind === "console") && packet.data && typeof packet.data === "object") {
           const message = String(packet.data.message || "SQL execution failed");
-          tab.lastSqlError = {
+          const sqlError: ChenSqlExecutionError = {
             ...packet.data,
             message
           };
+          tab.lastSqlError = sqlError;
           if (tab.kind === "console") {
             const entry = activeConsoleEntry(tab);
             if (entry) entry.status = "error";
           } else {
             appendLog(tab, { ...packet.data, level: 0, message });
           }
+          if (packet.data.kind === "acl") options.onError?.(tab, sqlError);
         }
         break;
       case "update_state": {

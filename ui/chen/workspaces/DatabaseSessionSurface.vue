@@ -340,7 +340,16 @@ function clearLogConsole() {
   unreadLogErrorCount.value = 0;
 }
 
-const queryConsole = useChenQueryConsole(sendConsoleAction, { onLog: appendLogConsoleEntry, translate: t });
+const queryConsole = useChenQueryConsole(sendConsoleAction, {
+  onLog: appendLogConsoleEntry,
+  onError: (_tab, error) => {
+    addErrorToast({
+      title: error.title || t("Chen.Message"),
+      ...(error.message && error.message !== error.title ? { description: error.message } : {})
+    });
+  },
+  translate: t
+});
 const session = useChenSession({
   authenticate: auth.authenticate,
   translate: t,
