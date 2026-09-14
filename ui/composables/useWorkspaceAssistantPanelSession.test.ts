@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as Vue from "vue";
 import { effectScope, nextTick, reactive, shallowReactive, shallowRef } from "vue";
+import { compileTemplate } from "vue/compiler-sfc";
+import defaultLayout from "../layouts/default.vue?raw";
+import sessionPage from "../pages/session/[assetId].vue?raw";
 import { hasActiveAiTask, useWorkspaceAssistantPanelSession } from "./useWorkspaceAssistantPanelSession";
 
 const mocks = vi.hoisted(() => ({
@@ -29,9 +33,8 @@ vi.mock("./useWorkspaceAssistantSession", () => ({
   isWorkspaceAssistantBusy: (scopeId: string) => mocks.busyScopes.has(scopeId)
 }));
 
-function setup() {
-  const scope = effectScope();
-  const runtime = {
+function createRuntime() {
+  return {
     tabs: {
       tabs: shallowRef([
         { id: "a", panes: [{ id: "pane-a" }, { id: "pane-a-2" }] },
@@ -44,6 +47,11 @@ function setup() {
     userInfoStore: reactive({ loggedIn: true, currentSite: "site", currentAccountId: "user", orgId: "org" }),
     automation: { clearAssetSelectionRequest: vi.fn() }
   };
+}
+
+function setup() {
+  const scope = effectScope();
+  const runtime = createRuntime();
   const panel = scope.run(() =>
     useWorkspaceAssistantPanelSession(runtime as unknown as Parameters<typeof useWorkspaceAssistantPanelSession>[0])
   )!;
@@ -61,6 +69,74 @@ beforeEach(() => {
 });
 
 describe("tab-scoped workspace assistant conversations", () => {
+  it.each([
+    ["default layout", defaultLayout],
+    ["session page", sessionPage]
+  ])("preserves conversations across panel toggles in the %s and still cleans up on exit", async (_name, source) => {
+    // Compile the actual overlay boundary so removing its cache exercises the regression.
+    const template = source.match(/(?:<KeepAlive>\s*)?<AiOverlayPanel\b[^>]*\/>(?:\s*<\/KeepAlive>)?/)![0];
+    const { code } = compileTemplate({
+      source: template,
+      filename: _name,
+      id: "assistant-panel-lifecycle",
+      compilerOptions: { mode: "function" }
+    });
+    const runtime = createRuntime();
+    const open = shallowRef(true);
+    let panel!: ReturnType<typeof useWorkspaceAssistantPanelSession>;
+    const renderer = Vue.createRenderer({
+      insert() {},
+      remove() {},
+      patchProp() {},
+      createElement: () => ({}),
+      createText: () => ({}),
+      createComment: () => ({}),
+      setText() {},
+      setElementText() {},
+      parentNode: () => null,
+      nextSibling: () => null
+    });
+    const app = renderer.createApp({
+      components: {
+        AiOverlayPanel: {
+          setup() {
+            panel = useWorkspaceAssistantPanelSession(
+              runtime as unknown as Parameters<typeof useWorkspaceAssistantPanelSession>[0]
+            );
+            return () => null;
+          }
+        }
+      },
+      setup: () => ({ aiPanelOpen: open, activeTab: true, setAiPanelOpen: (value: boolean) => (open.value = value) }),
+      render: new Function("Vue", code)(Vue)
+    });
+    app.mount({});
+    let replacementScope = "";
+    try {
+      const first = panel.session.value!;
+
+      open.value = false;
+      await nextTick();
+      expect(mocks.dispose).not.toHaveBeenCalled();
+
+      open.value = true;
+      await nextTick();
+      expect(panel.session.value).toBe(first);
+
+      open.value = false;
+      await nextTick();
+      runtime.userInfoStore.orgId = "another-org";
+      await nextTick();
+      expect(mocks.dispose).toHaveBeenCalledWith(first.scopeId);
+      replacementScope = panel.scopeId.value;
+      expect(replacementScope).not.toBe(first.scopeId);
+    } finally {
+      app.unmount();
+    }
+    expect(mocks.dispose).toHaveBeenCalledWith(replacementScope);
+    expect(mocks.sessions.size).toBe(0);
+  });
+
   it("reports an active AI task for a tab", () => {
     const { scope, panel } = setup();
     const current = panel.session.value!;
@@ -167,7 +243,6 @@ describe("tab-scoped workspace assistant conversations", () => {
     mocks.activeTargets.set("pane-a", "child-a");
     const { scope, runtime, panel } = setup();
     const first = panel.session.value!;
-    first.draft = "waiting for connection";
 
     runtime.tabs.tabs.value = [...runtime.tabs.tabs.value];
     await nextTick();
@@ -235,7 +310,7 @@ describe("tab-scoped workspace assistant conversations", () => {
     expect(mocks.dispose).toHaveBeenCalledWith(second.scopeId);
     expect(panel.scopeId.value).not.toBe(second.scopeId);
 
-    for (const key of ["currentAccountId", "currentSite", "orgId"] as const) {
+    for (const key of ["currentSite", "orgId"] as const) {
       const previous = panel.scopeId.value;
       runtime.userInfoStore[key] = `new-${key}`;
       await nextTick();

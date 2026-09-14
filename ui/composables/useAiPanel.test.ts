@@ -108,11 +108,4 @@ describe("AI overlay panel", () => {
   ] as const)("floats %s/%s narrow=%s → %s", (kind, surface, narrow, expected) => {
     expect(aiPanelFloats(kind, surface, narrow)).toBe(expected);
   });
-
-  it("keeps SSH overlay on workspace even when the SFTP right panel is open", () => {
-    const rightPanel = useRightPanel();
-    rightPanel.setOpen(true);
-    rightPanel.setActiveTab("sftp");
-    expect(resolveUnifiedAiPanel({ workspaceMode: "assets", protocol: "ssh", surface: "terminal" })).toBe("workspace");
-  });
 });

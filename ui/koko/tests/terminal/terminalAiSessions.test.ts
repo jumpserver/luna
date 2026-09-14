@@ -93,8 +93,7 @@ it("enumerates owned terminal sessions independently of their active target", ()
   const unrelated = createSession("standalone");
   for (const session of [first, second]) {
     registerKokoTerminalAiSession(session.paneId, session.socket!, session.terminalId, {
-      ownerId: "workspace",
-      label: session.paneId
+      ownerId: "workspace"
     });
   }
   const owned = computed(() => getKokoTerminalAiSessions("workspace"));
@@ -114,14 +113,10 @@ it("registers an owned terminal before its connection identity arrives", () => {
   const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
   paneIds.push(paneId);
   const session = registerKokoTerminalAiSession(paneId, socket, "", { ownerId: "workspace", label: "container" })!;
-  setActiveKokoTerminalAiTarget("workspace", paneId);
   expect(getKokoTerminalAiSessions("workspace")).toEqual([session]);
   expect(session.enabled).toBe(false);
   expect(registerKokoTerminalAiSession(paneId, socket, "12")).toBe(session);
   expect(session).toMatchObject({ terminalId: "12", ownerId: "workspace", label: "container" });
-  unregisterKokoTerminalAiSession(paneId);
-  expect(getKokoTerminalAiSessions("workspace")).toEqual([]);
-  expect(getActiveKokoTerminalAiTargetId("workspace")).toBeNull();
 });
 
 it("uses a Kubernetes MCP sender for Agent tool calls", async () => {

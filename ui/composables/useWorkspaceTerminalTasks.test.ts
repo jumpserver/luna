@@ -108,14 +108,13 @@ describe("unified assistant terminal task bridge", () => {
   });
 
   it("dispatches to the captured physical session and reports only this task's messages", async () => {
-    const { manager, session, panes, pane, onStart } = setup();
+    const { manager, session, onStart } = setup();
     session.chat.messages.value = [{ id: "old", role: "assistant", parts: [{ type: "text", text: "An older task" }] }];
     const target = manager.list()[0]!;
     const started = await manager.start(target.target_id, "Inspect the disk");
     expect(started).toMatchObject({ status: "running", done: false });
     expect(mocks.submit).toHaveBeenCalledWith("physical-a", "Inspect the disk");
     expect(onStart).toHaveBeenCalledWith(manager.tasks[0]);
-    panes.value = [pane]; // Focusing/reordering a tab never substitutes the target.
     complete(session);
     await nextTick();
     expect(await manager.read(started.task_id, 0, new AbortController().signal)).toMatchObject({
@@ -159,6 +158,8 @@ describe("unified assistant terminal task bridge", () => {
       if (action === "cancel") {
         manager.cancel();
         expect(session.agent.actions.cancel).toHaveBeenCalledOnce();
+        expect(session.chat.stop).toHaveBeenCalledOnce();
+        expect(manager.tasks[0]).toMatchObject({ active: false, status: "interrupted" });
         expect(second.agent.actions.cancel).not.toHaveBeenCalled();
       } else {
         complete(session);
@@ -247,15 +248,6 @@ describe("unified assistant terminal task bridge", () => {
     expect(() => manager.assertTask(manager.tasks[0]!)).toThrow("terminal_changed");
     manager.cancel();
     expect(replacement.agent.actions.cancel).not.toHaveBeenCalled();
-  });
-
-  it("cancels its child when the conversation is cancelled", async () => {
-    const { manager, session } = setup();
-    await manager.start(manager.list()[0]!.target_id, "Inspect");
-    manager.cancel();
-    expect(session.agent.actions.cancel).toHaveBeenCalledTimes(1);
-    expect(session.chat.stop).toHaveBeenCalledTimes(1);
-    expect(manager.tasks[0]).toMatchObject({ active: false, status: "interrupted" });
   });
 
   it("handles cancellation while the terminal dispatch is still pending", async () => {

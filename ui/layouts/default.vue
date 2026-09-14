@@ -416,7 +416,9 @@ onBeforeUnmount(() => {
               <slot />
             </div>
           </div>
-          <AiOverlayPanel v-if="aiPanelOpen" @close="setAiPanelOpen(false)" />
+          <KeepAlive>
+            <AiOverlayPanel v-if="aiPanelOpen" @close="setAiPanelOpen(false)" />
+          </KeepAlive>
         </div>
       </Main>
 
