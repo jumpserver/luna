@@ -25,7 +25,11 @@ import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
 import { AGENT_MCP_BINDING_META_KEY, AGENT_PROTOCOL_VERSION, isRecord } from "#koko/composables/agent/types";
 import { useAgentSession } from "#koko/composables/agent/useAgentSession";
 import type { WorkspaceTerminalTask } from "~/composables/useWorkspaceTerminalTasks";
-import { createWorkspaceTerminalTasks, workspaceTerminalTools } from "~/composables/useWorkspaceTerminalTasks";
+import {
+  createWorkspaceTerminalTasks,
+  resolveWorkspaceTerminalTarget,
+  workspaceTerminalTools
+} from "~/composables/useWorkspaceTerminalTasks";
 import type { WorkspacePane } from "~/composables/useWorkspaceTabs";
 import {
   WorkspaceOperationError,
@@ -1619,10 +1623,7 @@ export async function submitWorkspaceAssistantPrompt(prompt: string, scopeId = D
     const runtime = runtimes.get(session);
     if (!runtime) throw new WorkspaceAssistantError("session_closed", "Workspace Assistant session is closed");
     const targets = terminalManagers.get(session)?.list() || [];
-    const defaultTarget =
-      session.target === "auto"
-        ? targets.find((target) => target.pane_id === runtime.tabs.activePaneId.value) || null
-        : targets.find((target) => target.target_id === session.target) || null;
+    const defaultTarget = resolveWorkspaceTerminalTarget(targets, runtime.tabs.activePaneId.value, session.target);
     if (!["auto", "workspace"].includes(session.target) && !defaultTarget)
       throw new WorkspaceAssistantError(
         "terminal_changed",

@@ -53,7 +53,7 @@ watch(
     >
       <UIcon name="i-lucide-terminal" class="size-4 shrink-0 text-primary" />
       <span class="min-w-0 flex-1 text-left">
-        <span class="block truncate text-xs font-medium">{{ task.target.asset_name }} · {{ task.target.account }}</span>
+        <span class="block truncate text-xs font-medium">{{ task.target.label }} · {{ task.target.account }}</span>
         <span class="block truncate text-[10px] font-normal text-muted" :title="task.prompt">{{ task.prompt }}</span>
       </span>
       <span class="shrink-0 text-[10px] text-muted">{{ statusLabel }}</span>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AgentToolItem, AiTimelineAction } from "../ai/types";
 import type { WorkspaceAssistantChatMessage } from "~/composables/useWorkspaceAssistantSession";
-import type { WorkspaceTerminalTask } from "~/composables/useWorkspaceTerminalTasks";
+import type { WorkspaceTerminalTarget, WorkspaceTerminalTask } from "~/composables/useWorkspaceTerminalTasks";
 import { workspaceAssistantTerminalTraceTaskId } from "~/composables/useWorkspaceAssistantSession";
 import AiMessageItem from "../ai/domains/shared/AiMessageItem.vue";
 import AiToolCallItem from "../ai/domains/shared/AiToolCallItem.vue";
@@ -21,7 +21,7 @@ const props = defineProps<{
   scopeId: string;
   hasTerminal: boolean;
   running: boolean;
-  terminalTargets: Array<{ target_id: string; asset_name: string; account: string; address: string }>;
+  terminalTargets: WorkspaceTerminalTarget[];
   assistantName: string;
   approvalProcessing: boolean;
 }>();
@@ -166,7 +166,7 @@ function terminalToolLabel(data: Record<string, any>) {
 
 function keyIsTerminalTarget(id: string) {
   const target = props.terminalTargets.find((item) => item.target_id === id);
-  return target ? `${target.asset_name} · ${target.account} (${target.address})` : "";
+  return target ? `${target.label} · ${target.account} (${target.address})` : "";
 }
 
 function approvalTarget(data: Record<string, any>) {

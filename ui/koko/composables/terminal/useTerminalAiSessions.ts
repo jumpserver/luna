@@ -21,6 +21,8 @@ export type TerminalAiChatMessage = UIMessage<TerminalAiEventData, Record<string
 export type KokoTerminalAiMetadataApprovalDecision = "approve_once" | "approve_session" | "reject";
 
 export interface KokoTerminalAiSessionOptions {
+  ownerId?: string;
+  label?: string;
   sendMcpFrame?: (frame: KokoMcpRequestFrame | KokoMcpCancelFrame) => void;
 }
 
@@ -54,6 +56,8 @@ export interface KokoTerminalAiMetadataApproval {
 export interface KokoTerminalAiSession {
   kind: "terminal";
   paneId: string;
+  ownerId: string;
+  label: string;
   socket: WebSocket | null;
   terminalId: string;
   agent: AgentSessionController;
@@ -304,7 +308,12 @@ function removeTerminalAiTargetAliases(targetId: string) {
   }
 }
 
-function createSession(paneId: string, socket: WebSocket, terminalId: string): KokoTerminalAiSession {
+function createSession(
+  paneId: string,
+  socket: WebSocket,
+  terminalId: string,
+  options: KokoTerminalAiSessionOptions
+): KokoTerminalAiSession {
   let session: KokoTerminalAiSession;
   const transport = markRaw(new KokoTerminalAiChatTransport(() => session));
   const relay = markRaw(
@@ -397,6 +406,8 @@ function createSession(paneId: string, socket: WebSocket, terminalId: string): K
   session = reactive({
     kind: "terminal",
     paneId,
+    ownerId: options.ownerId || paneId,
+    label: options.label || "",
     socket: markRaw(socket),
     terminalId,
     agent,
@@ -472,6 +483,8 @@ export function registerKokoTerminalAiSession(
   const existing = sessions.get(paneId);
   if (existing?.socket === socket) {
     if (terminalId) existing.terminalId = terminalId;
+    if (options.ownerId) existing.ownerId = options.ownerId;
+    if (options.label !== undefined) existing.label = options.label;
     if (options.sendMcpFrame) mcpFrameSenders.set(existing, options.sendMcpFrame);
     return existing;
   }
@@ -482,7 +495,7 @@ export function registerKokoTerminalAiSession(
     mcpFrameSenders.delete(existing);
   }
 
-  const session = createSession(paneId, socket, terminalId);
+  const session = createSession(paneId, socket, terminalId, options);
   if (options.sendMcpFrame) mcpFrameSenders.set(session, options.sendMcpFrame);
   sessions.set(paneId, session);
   return session;
@@ -524,6 +537,14 @@ export function disconnectKokoTerminalAiSession(paneId: string, socket?: WebSock
 
 export function getKokoTerminalAiSession(paneId: string) {
   return resolveTerminalAiSession(paneId) || null;
+}
+
+export function getKokoTerminalAiSessions(ownerId: string) {
+  return [...sessions.values()].filter((session) => session.ownerId === ownerId);
+}
+
+export function getActiveKokoTerminalAiTargetId(ownerId: string) {
+  return activeTargetIds.get(ownerId) || null;
 }
 
 export function setActiveKokoTerminalAiTarget(paneId: string, targetId: string | null) {
@@ -674,7 +695,6 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
   const inputLock = partData(message, "data-input-lock");
   if (inputLock) {
     session.inputLocked = Boolean(inputLock.locked);
-    if (!message.parts.some((part) => part.type === "data-agent-tool" || part.type === "data-execution")) return;
   }
 
   const metadataApproval = partData(message, "data-metadata-approval");
@@ -761,8 +781,9 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
     if (!session.errorCode && !runtimeError.message) session.errorCode = "failed";
   }
 
-  if (!transports.get(session)?.receive(message)) {
-    session.chat.messages.value = [...session.chat.messages.value, message];
+  const streamMessage = agentChatStreamMessage(message, (part) => part.type !== "data-input-lock");
+  if (streamMessage && !transports.get(session)?.receive(streamMessage)) {
+    session.chat.messages.value = [...session.chat.messages.value, streamMessage];
   }
 }
 

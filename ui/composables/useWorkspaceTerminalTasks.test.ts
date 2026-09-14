@@ -2,14 +2,19 @@ import type { KokoTerminalAiSession } from "#koko/composables/terminal/useTermin
 import type { WorkspacePane } from "./useWorkspaceTabs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { markRaw, nextTick, reactive, shallowReactive, shallowRef } from "vue";
-import { createWorkspaceTerminalTasks, workspaceTerminalTools } from "./useWorkspaceTerminalTasks";
+import {
+  createWorkspaceTerminalTasks,
+  resolveWorkspaceTerminalTarget,
+  workspaceTerminalTools
+} from "./useWorkspaceTerminalTasks";
 import { validateWorkspaceToolArguments } from "./useWorkspaceAssistantTools";
 
-const mocks = vi.hoisted(() => ({ lookup: vi.fn(), submit: vi.fn() }));
+const mocks = vi.hoisted(() => ({ lookup: vi.fn(), list: vi.fn(), submit: vi.fn() }));
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => ({ currentUser: null }) }));
 vi.mock("~/composables/useApiRequest", () => ({ getAssetDetailRequest: vi.fn() }));
 vi.mock("#koko/composables/terminal/useTerminalAiSessions", () => ({
   getKokoTerminalAiSession: mocks.lookup,
+  getKokoTerminalAiSessions: mocks.list,
   submitKokoTerminalAiPrompt: mocks.submit
 }));
 const managers: ReturnType<typeof createWorkspaceTerminalTasks>[] = [];
@@ -17,6 +22,8 @@ const managers: ReturnType<typeof createWorkspaceTerminalTasks>[] = [];
 function terminal(id: string) {
   return reactive({
     paneId: `physical-${id}`,
+    ownerId: "pane-a",
+    label: "",
     connected: true,
     enabled: true,
     taskActive: false,
@@ -45,13 +52,10 @@ function setup() {
   }) as WorkspacePane;
   const panes = shallowRef([pane]);
   const session = terminal("a");
-  const registry = shallowReactive(
-    new Map([
-      [pane.id, session],
-      [session.paneId, session]
-    ])
-  );
-  mocks.lookup.mockImplementation((id: string) => registry.get(id) || null);
+  const registry = shallowReactive(new Map([[session.paneId, session]]));
+  const aliases = shallowReactive(new Map([[pane.id, session.paneId]]));
+  mocks.lookup.mockImplementation((id: string) => registry.get(aliases.get(id) || id) || null);
+  mocks.list.mockImplementation((ownerId: string) => [...registry.values()].filter((item) => item.ownerId === ownerId));
   mocks.submit.mockImplementation(async (id: string, prompt: string) => {
     const current = registry.get(id)!;
     current.taskActive = true;
@@ -72,7 +76,7 @@ function setup() {
     onStart
   });
   managers.push(manager);
-  return { manager, pane, panes, session, registry, scope, onStart, assertCurrent };
+  return { manager, pane, panes, session, registry, aliases, scope, onStart, assertCurrent };
 }
 function complete(session: KokoTerminalAiSession, text = "Disk usage is 46%.") {
   session.chat.messages.value = [
@@ -93,7 +97,8 @@ describe("unified assistant terminal task bridge", () => {
   it("lists only terminals in the current organization and keeps bindings stable", () => {
     const { manager, panes, pane, registry } = setup();
     const other = terminal("other");
-    registry.set("foreign", other);
+    other.ownerId = "foreign";
+    registry.set(other.paneId, other);
     panes.value = [pane, { ...pane, id: "foreign", orgId: "another-org" }];
     const targets = manager.list();
     expect(targets).toHaveLength(1);
@@ -128,10 +133,51 @@ describe("unified assistant terminal task bridge", () => {
     expect(manager.tasks[0]?.messages).toBe(saved);
   });
 
+  it.each(["complete", "cancel"] as const)(
+    "keeps nested terminal bindings through focus changes before %s",
+    async (action) => {
+      const { manager, pane, session, registry, aliases } = setup();
+      session.label = "cluster / ns / pod-a / container";
+      const second = terminal("b");
+      second.label = "cluster / ns / pod-b / container";
+      registry.set(second.paneId, second);
+      const targets = manager.list();
+      expect(targets).toHaveLength(2);
+      expect(targets.map((target) => target.label)).toEqual([session.label, second.label]);
+      const first = resolveWorkspaceTerminalTarget(targets, pane.id)!;
+      const started = await manager.start(first.target_id, "Inspect A");
+
+      aliases.set(pane.id, second.paneId);
+      await nextTick();
+      expect(manager.list().map((target) => target.target_id)).toEqual(targets.map((target) => target.target_id));
+      expect(resolveWorkspaceTerminalTarget(targets, pane.id)?.session_id).toBe(second.paneId);
+      expect(resolveWorkspaceTerminalTarget(targets, pane.id, first.target_id)).toBe(first);
+      expect(resolveWorkspaceTerminalTarget(targets, pane.id, "workspace")).toBeNull();
+      expect(() => manager.assertTask(manager.tasks[0]!)).not.toThrow();
+      expect(manager.tasks[0]?.active).toBe(true);
+
+      if (action === "cancel") {
+        manager.cancel();
+        expect(session.agent.actions.cancel).toHaveBeenCalledOnce();
+        expect(second.agent.actions.cancel).not.toHaveBeenCalled();
+      } else {
+        complete(session);
+        await nextTick();
+        expect(await manager.read(started.task_id, 0, new AbortController().signal)).toMatchObject({
+          status: "completed",
+          done: true
+        });
+      }
+    }
+  );
+
   it("rejects stale targets after reconnect and cannot send to a replacement", async () => {
-    const { manager, registry } = setup();
+    const { manager, registry, aliases, session } = setup();
     const target = manager.list()[0]!;
-    registry.set("pane-a", terminal("replacement"));
+    const replacement = terminal("replacement");
+    registry.delete(session.paneId);
+    registry.set(replacement.paneId, replacement);
+    aliases.set("pane-a", replacement.paneId);
     await expect(manager.start(target.target_id, "Inspect")).rejects.toThrow("terminal_changed");
     expect(mocks.submit).not.toHaveBeenCalled();
     expect(manager.list()[0]?.target_id).not.toBe(target.target_id);
@@ -186,10 +232,12 @@ describe("unified assistant terminal task bridge", () => {
   });
 
   it("reports disconnection without approving or cancelling a replacement session", async () => {
-    const { manager, registry } = setup();
+    const { manager, registry, aliases, session } = setup();
     const started = await manager.start(manager.list()[0]!.target_id, "Inspect");
     const replacement = terminal("replacement");
-    registry.set("pane-a", replacement);
+    registry.delete(session.paneId);
+    registry.set(replacement.paneId, replacement);
+    aliases.set("pane-a", replacement.paneId);
     await nextTick();
     expect(await manager.read(started.task_id, 0, new AbortController().signal)).toMatchObject({
       status: "interrupted",

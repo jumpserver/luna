@@ -1,13 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { effectScope, nextTick, reactive, shallowRef } from "vue";
+import { effectScope, nextTick, reactive, shallowReactive, shallowRef } from "vue";
 import { hasActiveAiTask, useWorkspaceAssistantPanelSession } from "./useWorkspaceAssistantPanelSession";
 
 const mocks = vi.hoisted(() => ({
   nextId: 0,
   sessions: new Map<string, any>(),
+  activeTargets: new Map<string, string>(),
+  terminalSessions: new Map<string, { paneId: string; ownerId: string }>(),
   busyScopes: new Set<string>(),
   dispose: vi.fn(),
   interrupt: vi.fn()
+}));
+vi.mock("#koko/composables/terminal/useTerminalAiSessions", () => ({
+  getActiveKokoTerminalAiTargetId: (ownerId: string) => mocks.activeTargets.get(ownerId) || null,
+  getKokoTerminalAiSessions: (ownerId: string) =>
+    [...mocks.terminalSessions.values()].filter((session) => session.ownerId === ownerId)
 }));
 vi.mock("./useWorkspaceAssistantSession", () => ({
   workspaceAssistantScopeId: () => `scope-${mocks.nextId++}`,
@@ -26,7 +33,10 @@ function setup() {
   const scope = effectScope();
   const runtime = {
     tabs: {
-      tabs: shallowRef([{ id: "a" }, { id: "b" }]),
+      tabs: shallowRef([
+        { id: "a", panes: [{ id: "pane-a" }, { id: "pane-a-2" }] },
+        { id: "b", panes: [{ id: "pane-b" }] }
+      ]),
       activeTab: shallowRef({ id: "a" }),
       activeTabId: shallowRef("a"),
       activePaneId: shallowRef("pane-a")
@@ -42,6 +52,8 @@ function setup() {
 
 beforeEach(() => {
   mocks.sessions.clear();
+  mocks.activeTargets = shallowReactive(new Map());
+  mocks.terminalSessions = shallowReactive(new Map());
   mocks.busyScopes.clear();
   mocks.nextId = 0;
   vi.clearAllMocks();
@@ -121,6 +133,68 @@ describe("tab-scoped workspace assistant conversations", () => {
     scope.stop();
   });
 
+  it("restores each nested target conversation and reports background tasks for its tab", async () => {
+    mocks.terminalSessions.set("child-a", { paneId: "child-a", ownerId: "pane-a" });
+    mocks.terminalSessions.set("child-b", { paneId: "child-b", ownerId: "pane-a" });
+    mocks.activeTargets.set("pane-a", "child-a");
+    const { scope, panel } = setup();
+    const first = panel.session.value!;
+    first.draft = "inspect the first target";
+    (first as any).messages.push("first target history");
+    mocks.busyScopes.add(first.scopeId);
+
+    mocks.activeTargets.set("pane-a", "child-b");
+    await nextTick();
+    const second = panel.session.value!;
+    expect(second).not.toBe(first);
+    expect(second.draft).toBe("");
+    expect(hasActiveAiTask("a")).toBe(true);
+    expect(hasActiveAiTask("b")).toBe(false);
+
+    panel.newSession();
+    expect(mocks.interrupt).toHaveBeenCalledWith(second.scopeId);
+    expect(mocks.interrupt).not.toHaveBeenCalledWith(first.scopeId);
+    mocks.activeTargets.set("pane-a", "child-a");
+    await nextTick();
+    expect(panel.session.value).toBe(first);
+    expect(first.draft).toBe("inspect the first target");
+    expect((first as any).messages).toEqual(["first target history"]);
+    expect(mocks.dispose).not.toHaveBeenCalledWith(first.scopeId);
+    scope.stop();
+  });
+
+  it("keeps a pending nested target until registration and disposes only a closed target", async () => {
+    mocks.activeTargets.set("pane-a", "child-a");
+    const { scope, runtime, panel } = setup();
+    const first = panel.session.value!;
+    first.draft = "waiting for connection";
+
+    runtime.tabs.tabs.value = [...runtime.tabs.tabs.value];
+    await nextTick();
+    expect(panel.session.value).toBe(first);
+    expect(mocks.dispose).not.toHaveBeenCalled();
+
+    mocks.terminalSessions.set("child-a", { paneId: "child-a", ownerId: "pane-a" });
+    mocks.terminalSessions.set("child-b", { paneId: "child-b", ownerId: "pane-a" });
+    mocks.activeTargets.set("pane-a", "child-b");
+    await nextTick();
+    const second = panel.session.value!;
+    mocks.busyScopes.add(first.scopeId);
+    mocks.terminalSessions.delete("child-a");
+    await nextTick();
+    expect(mocks.dispose).toHaveBeenCalledWith(first.scopeId);
+    expect(mocks.dispose).not.toHaveBeenCalledWith(second.scopeId);
+    expect(panel.session.value).toBe(second);
+    expect(hasActiveAiTask("a")).toBe(false);
+
+    runtime.tabs.tabs.value = [{ id: "b", panes: [{ id: "pane-b" }] }];
+    runtime.tabs.activeTabId.value = "b";
+    runtime.tabs.activePaneId.value = "pane-b";
+    await nextTick();
+    expect(mocks.dispose).toHaveBeenCalledWith(second.scopeId);
+    scope.stop();
+  });
+
   it("disposes a conversation when its tab closes", async () => {
     const { scope, runtime, panel } = setup();
     const first = panel.session.value!;
@@ -128,7 +202,7 @@ describe("tab-scoped workspace assistant conversations", () => {
     await nextTick();
     const second = panel.session.value!;
 
-    runtime.tabs.tabs.value = [{ id: "b" }];
+    runtime.tabs.tabs.value = [{ id: "b", panes: [{ id: "pane-b" }] }];
     await nextTick();
     expect(mocks.dispose).toHaveBeenCalledWith(first.scopeId);
     expect(mocks.dispose).not.toHaveBeenCalledWith(second.scopeId);
@@ -142,7 +216,7 @@ describe("tab-scoped workspace assistant conversations", () => {
     await nextTick();
     expect(panel.session.value).toBeNull();
 
-    runtime.tabs.tabs.value = [...runtime.tabs.tabs.value, { id: "pending" }];
+    runtime.tabs.tabs.value = [...runtime.tabs.tabs.value, { id: "pending", panes: [] }];
     await nextTick();
     expect(panel.session.value).not.toBeNull();
     scope.stop();
@@ -204,7 +278,7 @@ describe("tab-scoped workspace assistant conversations", () => {
     await nextTick();
     const preTab = panel.session.value!;
 
-    runtime.tabs.tabs.value = [{ id: "new" }];
+    runtime.tabs.tabs.value = [{ id: "new", panes: [] }];
     runtime.tabs.activeTabId.value = "new";
     await nextTick();
     expect(panel.session.value).toBe(preTab);

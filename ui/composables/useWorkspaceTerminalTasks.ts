@@ -2,7 +2,11 @@ import type { KokoTerminalAiSession, TerminalAiChatMessage } from "#koko/composa
 import type { AgentMcpTool } from "#koko/composables/agent/types";
 import type { WorkspacePane } from "./useWorkspaceTabs";
 import { shallowReactive, watch } from "vue";
-import { getKokoTerminalAiSession, submitKokoTerminalAiPrompt } from "#koko/composables/terminal/useTerminalAiSessions";
+import {
+  getKokoTerminalAiSession,
+  getKokoTerminalAiSessions,
+  submitKokoTerminalAiPrompt
+} from "#koko/composables/terminal/useTerminalAiSessions";
 
 const identifier = { type: "string", minLength: 1, maxLength: 160 };
 const read = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
@@ -49,6 +53,9 @@ export const workspaceTerminalTools: AgentMcpTool[] = [
 export interface WorkspaceTerminalTarget {
   target_id: string;
   pane_id: string;
+  // The physical terminal registry key, independent of the owner pane's active target.
+  session_id: string;
+  label: string;
   asset_name: string;
   address: string;
   account: string;
@@ -56,6 +63,16 @@ export interface WorkspaceTerminalTarget {
   available: boolean;
   busy: boolean;
 }
+export function resolveWorkspaceTerminalTarget(
+  targets: WorkspaceTerminalTarget[],
+  paneId: string,
+  selectedTarget = "auto"
+) {
+  if (selectedTarget !== "auto") return targets.find((target) => target.target_id === selectedTarget) || null;
+  const session = getKokoTerminalAiSession(paneId);
+  return targets.find((target) => target.session_id === session?.paneId) || null;
+}
+
 export type WorkspaceTerminalTaskStatus =
   | "running"
   | "waiting_approval"
@@ -98,7 +115,8 @@ export function createWorkspaceTerminalTasks(options: {
     return (
       allowedPanes().includes(binding.pane) &&
       binding.pane.status === "connected" &&
-      getKokoTerminalAiSession(binding.pane.id) === binding.session &&
+      getKokoTerminalAiSession(binding.session.paneId) === binding.session &&
+      binding.session.ownerId === binding.pane.id &&
       binding.session.connected &&
       binding.session.agent.state.resourceSessionId === binding.resourceId &&
       binding.session.agent.state.agentSessionId === binding.agentId
@@ -117,31 +135,40 @@ export function createWorkspaceTerminalTasks(options: {
     options.assertCurrent();
     for (const [key, binding] of bindings) if (!current(binding)) bindings.delete(key);
     return allowedPanes().flatMap((pane) => {
-      const session = getKokoTerminalAiSession(pane.id);
-      if (!session || pane.status !== "connected" || !session.connected) return [];
-      let binding = [...bindings.values()].find((value) => value.pane === pane && current(value));
-      if (!binding) {
-        binding = {
-          pane,
-          session,
-          resourceId: session.agent.state.resourceSessionId,
-          agentId: session.agent.state.agentSessionId,
-          target: {
-            target_id: id(),
-            pane_id: pane.id,
-            asset_name: pane.assetName,
-            address: pane.address,
-            account: pane.account,
-            protocol: pane.protocol,
-            available: false,
-            busy: false
+      if (pane.status !== "connected") return [];
+      return getKokoTerminalAiSessions(pane.id)
+        .filter((session) => session.connected)
+        .map((session) => {
+          let binding = [...bindings.values()].find(
+            (value) => value.pane === pane && value.session === session && current(value)
+          );
+          if (!binding) {
+            binding = {
+              pane,
+              session,
+              resourceId: session.agent.state.resourceSessionId,
+              agentId: session.agent.state.agentSessionId,
+              target: {
+                target_id: id(),
+                pane_id: pane.id,
+                session_id: session.paneId,
+                label: session.label || pane.assetName,
+                asset_name: pane.assetName,
+                address: pane.address,
+                account: pane.account,
+                protocol: pane.protocol,
+                available: false,
+                busy: false
+              }
+            };
+            bindings.set(binding.target.target_id, binding);
           }
-        };
-        bindings.set(binding.target.target_id, binding);
-      }
-      return [
-        { ...binding.target, available: Boolean(session.enabled && session.agent.state.available), busy: busy(session) }
-      ];
+          return {
+            ...binding.target,
+            available: Boolean(session.enabled && session.agent.state.available),
+            busy: busy(session)
+          };
+        });
     });
   }
   function target(targetId: string) {

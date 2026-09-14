@@ -6,6 +6,8 @@ import {
   connectKokoTerminalAiSession,
   disconnectKokoTerminalAiSession,
   getKokoTerminalAiSession,
+  getKokoTerminalAiSessions,
+  getActiveKokoTerminalAiTargetId,
   handleKokoTerminalAiMessage,
   handleKokoTerminalAiWireMessage,
   isKokoTerminalAiAvailable,
@@ -83,6 +85,43 @@ it("resolves a workspace pane to its active Kubernetes terminal session", async 
 
   setActiveKokoTerminalAiTarget("k8s-workspace", null);
   expect(active.value).toBeNull();
+});
+
+it("enumerates owned terminal sessions independently of their active target", () => {
+  const first = createSession("nested-a");
+  const second = createSession("nested-b");
+  const unrelated = createSession("standalone");
+  for (const session of [first, second]) {
+    registerKokoTerminalAiSession(session.paneId, session.socket!, session.terminalId, {
+      ownerId: "workspace",
+      label: session.paneId
+    });
+  }
+  const owned = computed(() => getKokoTerminalAiSessions("workspace"));
+  setActiveKokoTerminalAiTarget("workspace", first.paneId);
+  expect(getActiveKokoTerminalAiTargetId("workspace")).toBe(first.paneId);
+  expect(owned.value).toEqual([first, second]);
+  expect(getKokoTerminalAiSessions(unrelated.paneId)).toEqual([unrelated]);
+  setActiveKokoTerminalAiTarget("workspace", second.paneId);
+  expect(owned.value).toEqual([first, second]);
+  unregisterKokoTerminalAiSession(second.paneId);
+  expect(owned.value).toEqual([first]);
+  expect(getActiveKokoTerminalAiTargetId("workspace")).toBeNull();
+});
+
+it("registers an owned terminal before its connection identity arrives", () => {
+  const paneId = "pending-owned-terminal";
+  const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
+  paneIds.push(paneId);
+  const session = registerKokoTerminalAiSession(paneId, socket, "", { ownerId: "workspace", label: "container" })!;
+  setActiveKokoTerminalAiTarget("workspace", paneId);
+  expect(getKokoTerminalAiSessions("workspace")).toEqual([session]);
+  expect(session.enabled).toBe(false);
+  expect(registerKokoTerminalAiSession(paneId, socket, "12")).toBe(session);
+  expect(session).toMatchObject({ terminalId: "12", ownerId: "workspace", label: "container" });
+  unregisterKokoTerminalAiSession(paneId);
+  expect(getKokoTerminalAiSessions("workspace")).toEqual([]);
+  expect(getActiveKokoTerminalAiTargetId("workspace")).toBeNull();
 });
 
 it("uses a Kubernetes MCP sender for Agent tool calls", async () => {
@@ -287,6 +326,30 @@ it("coalesces consecutive model deltas without repeating the completed message",
   expect(assistantText()).toEqual(["好的，让我检查。", "检查完成。"]);
 });
 
+it.each(["run.completed", "run.cancelled", "run.interrupted"] as const)(
+  "settles %s when the event also releases the input lock",
+  async (type) => {
+    const session = createSession(`input-lock-${type}`);
+    const resourceSessionId = await enableSession(session.paneId);
+    const response = session.chat.sendMessage({ text: "inspect disk", metadata: { terminalId: 9 } });
+    await vi.waitFor(() => expect(agentHarness.sendMessage).toHaveBeenCalledOnce());
+
+    agentHarness.emit(resourceSessionId, {
+      type: "model.requested",
+      run_id: "run-1",
+      payload: { input_locked: true }
+    });
+    expect(session).toMatchObject({ taskActive: true, inputLocked: true, runtimeState: "analyzing" });
+
+    agentHarness.emit(resourceSessionId, { type, run_id: "run-1", payload: { input_locked: false } });
+    await response;
+
+    expect(session.chat.status.value).toBe("ready");
+    expect(session.taskActive).toBe(false);
+    expect(isKokoTerminalAiBusy(session.paneId)).toBe(false);
+  }
+);
+
 it("keeps a failed run active until run.failed and reports the stream error", async () => {
   const session = createSession("streaming-failure");
   const resourceSessionId = await enableSession(session.paneId);
@@ -320,7 +383,7 @@ it("keeps a failed run active until run.failed and reports the stream error", as
     type: "run.failed",
     run_id: "run-1",
     message_id: "answer-1",
-    payload: { state: "failed", reason: "agent run failed" }
+    payload: { state: "failed", reason: "agent run failed", input_locked: false }
   });
   await response;
 

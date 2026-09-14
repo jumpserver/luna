@@ -12,6 +12,7 @@ import {
   workspaceAssistantMessages,
   workspaceAssistantTerminalTargets
 } from "~/composables/useWorkspaceAssistantSession";
+import { resolveWorkspaceTerminalTarget } from "~/composables/useWorkspaceTerminalTasks";
 import AiComposer from "./ai/AiComposer.vue";
 import AiPresenceHeader from "./ai/AiPresenceHeader.vue";
 import { terminalAiPanelDomain } from "./ai/domains/terminal/adapter";
@@ -51,13 +52,11 @@ const selectedTarget = computed({
   }
 });
 const currentTarget = computed(() =>
-  terminalTargets.value.find((target) =>
-    selectedTarget.value === "auto" ? target.pane_id === activePaneId.value : target.target_id === selectedTarget.value
-  )
+  resolveWorkspaceTerminalTarget(terminalTargets.value, activePaneId.value, selectedTarget.value)
 );
 const approvalSession = computed(() => {
   if (selectedTarget.value === "workspace") return null;
-  const paneId = currentTarget.value?.pane_id || localShellPane.value?.id;
+  const paneId = currentTarget.value?.session_id || localShellPane.value?.id;
   return paneId ? getKokoTerminalAiSession(paneId) : null;
 });
 const targetOptions = computed(() => [
@@ -65,7 +64,7 @@ const targetOptions = computed(() => [
   { value: "workspace", label: t("RightPanel.LunaAiWorkspaceOnly"), icon: "i-lucide-layout-dashboard" },
   ...terminalTargets.value.map((target) => ({
     value: target.target_id,
-    label: `${target.asset_name} · ${target.account}`,
+    label: `${target.label} · ${target.account}`,
     icon: "i-lucide-terminal",
     disabled: !target.available
   })),
@@ -130,7 +129,7 @@ const contextItems = computed<AiContextItem[]>(() => {
   if (!target) return [];
   const protocol = target.protocol || currentTarget.value?.protocol || "";
   return [
-    { key: "terminal", icon: "i-lucide-terminal", label: `@${target.asset_name}`, title: target.address },
+    { key: "terminal", icon: "i-lucide-terminal", label: `@${target.label}`, title: target.label },
     ...(protocol ? [{ key: "protocol", icon: "i-lucide-network", label: `@${protocol}`, title: protocol }] : []),
     { key: "account", icon: "i-lucide-user-key", label: target.account, title: target.account }
   ];
@@ -226,7 +225,7 @@ watch(
     const target =
       original?.agent.state.resourceSessionId === request.resourceId &&
       original.agent.state.agentSessionId === request.agentId
-        ? terminalTargets.value.find((item) => item.pane_id === request.paneId)
+        ? resolveWorkspaceTerminalTarget(terminalTargets.value, original.paneId)
         : null;
     takeTerminalPrompt(request.id);
     draft.value = request.text;
@@ -308,7 +307,7 @@ watch(
             @click="clearError"
           />
         </div>
-        <div v-if="terminalTargets.length > 1 || selectedTarget !== 'auto'" class="flex min-w-0 items-center gap-2">
+        <div class="flex min-w-0 items-center gap-2">
           <USelect
             v-model="selectedTarget"
             :items="targetOptions"

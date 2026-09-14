@@ -133,8 +133,12 @@ const subTabs = computed(() =>
 
 function registerTerminalAiSession(k8sId: string, terminalId: number) {
   const socket = terminalSocket.socket.value;
-  if (!socket || !terminalId) return;
-  registerKokoTerminalAiSession(k8sId, socket, String(terminalId), {
+  if (!socket) return;
+  const target = terminalTabs.value.find((item) => item.id === k8sId);
+  if (!target) return;
+  registerKokoTerminalAiSession(k8sId, socket, terminalId ? String(terminalId) : "", {
+    ownerId: props.tab.id,
+    label: [assetName.value, target.namespace, target.pod, target.container].filter(Boolean).join(" / "),
     sendMcpFrame: (frame) => terminalSocket.sendMcpFrame(k8sId, frame)
   });
   connectKokoTerminalAiSession(k8sId, socket);
@@ -446,6 +450,7 @@ function openTerminal(target: ConnectTarget) {
     container: target.container
   };
   terminalTabs.value.push(tabItem);
+  registerTerminalAiSession(tabItem.id, 0);
   activeTabId.value = tabItem.id;
   nextTick(() => mountTerminal(tabItem, target));
 }

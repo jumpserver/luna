@@ -19,6 +19,7 @@ import {
   workspaceAssistantMessages,
   workspaceAssistantTerminalTargets
 } from "~/composables/useWorkspaceAssistantSession";
+import { resolveWorkspaceTerminalTarget } from "~/composables/useWorkspaceTerminalTasks";
 import { isTerminalAiCommandShortcut, terminalAiLiveTurn } from "~/utils/terminalAiCommand";
 
 const props = defineProps<{ pane: WorkspacePane }>();
@@ -182,12 +183,14 @@ function handleWindowPointerdown(event: PointerEvent) {
 async function submit() {
   const current = session.value;
   const paneId = props.pane.id;
+  const submittedScope = scopeId.value;
+  const isCurrent = () => session.value === current && scopeId.value === submittedScope;
   const text = draft.value.trim();
   if (!current || !assistantSession.value || !text || submitting.value) return;
   submitting.value = true;
   error.value = "";
   try {
-    const target = workspaceAssistantTerminalTargets(scopeId.value).find((item) => item.pane_id === paneId);
+    const target = resolveWorkspaceTerminalTarget(workspaceAssistantTerminalTargets(submittedScope), paneId);
     if (!target?.available) {
       error.value = t("RightPanel.LunaAiTargetChanged");
       return;
@@ -195,12 +198,12 @@ async function submit() {
     assistantSession.value.target = target.target_id;
     submittedPrompt.value = text;
     decidedApprovals.clear();
-    await submitWorkspaceAssistantPrompt(text, scopeId.value);
+    await submitWorkspaceAssistantPrompt(text, submittedScope);
     if (current.draft.trim() === text) current.draft = "";
-    if (props.pane.id !== paneId) return;
+    if (!isCurrent()) return;
     await positionPanel();
   } catch (cause) {
-    if (props.pane.id !== paneId) return;
+    if (!isCurrent()) return;
     const code = cause instanceof Error && "code" in cause ? String(cause.code) : "";
     if (code === "response_active") open.value = true;
     else if (code === "unavailable" || code === "terminal_changed") {
@@ -211,17 +214,19 @@ async function submit() {
       error.value = t("RightPanel.AISendFailed");
     }
   } finally {
-    submitting.value = false;
+    if (isCurrent()) submitting.value = false;
   }
 }
 
 async function decideApproval(approvalId: string, decision: "approve" | "reject") {
   if (!approvalId || approving.value) return;
+  const approvalScope = scopeId.value;
   approving.value = true;
   decidedApprovals.add(approvalId);
   try {
-    await resolveWorkspaceAssistantApproval(approvalId, decision, scopeId.value);
+    await resolveWorkspaceAssistantApproval(approvalId, decision, approvalScope);
   } catch (cause) {
+    if (scopeId.value !== approvalScope) return;
     const terminal =
       (cause instanceof AgentHttpError && cause.status === 409) ||
       (cause instanceof Error && /status=409|approval_terminal/.test(cause.message));
@@ -230,7 +235,7 @@ async function decideApproval(approvalId: string, decision: "approve" | "reject"
       error.value = t("RightPanel.AIApprovalFailed");
     }
   } finally {
-    approving.value = false;
+    if (scopeId.value === approvalScope) approving.value = false;
   }
 }
 
@@ -259,14 +264,15 @@ function handleInputKeydown(event: KeyboardEvent) {
   }
 }
 
-watch(
-  () => props.pane.id,
-  () => {
-    tour.destroy();
-    error.value = "";
-    resetForPaneChange();
-  }
-);
+watch([() => props.pane.id, session, scopeId], () => {
+  close(false);
+  error.value = "";
+  submitting.value = false;
+  approving.value = false;
+  submittedPrompt.value = "";
+  decidedApprovals.clear();
+  resetForPaneChange();
+});
 watch(sessionInfoReady, () => {
   void positionHint();
 });
