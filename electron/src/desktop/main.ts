@@ -1148,8 +1148,17 @@ async function handleInvoke(event, request) {
     return null;
   }
   if (command === "close_local_shell") return closeLocalShell(event, args.sessionId);
-  if (command.includes("web_proxy"))
+  if (command.includes("web_proxy")) {
+    if (
+      command === "start_web_proxy_recording" ||
+      (command === "create_web_proxy_view" &&
+        (args.successSelector || args.interactiveSelector || args.allowedUrls?.length))
+    ) {
+      const settings = await authService.apiRequest({ method: "GET", path: "/api/v1/settings/public/" });
+      if (settings?.XPACK_LICENSE_IS_VALID !== true) throw new Error("此 Web 高级功能需要有效的企业版许可证");
+    }
     return withIpcErrorLog(command, () => webProxyManager.invoke(command, event, win, args));
+  }
   if (command === "logout") return withIpcErrorLog("logout", () => authService.logout(args));
   if (command === "open_settings_window") {
     emitDesktopEvent("settings-navigate", args.path || "/setting/general", labelForWindow(win));

@@ -173,7 +173,11 @@ const statusSummary = computed(() =>
               ? "已通过代理连接"
               : "已连接",
         `账号代填：${autofillLabel.value || "等待状态"}`,
-        request.value?.recordingEnabled === false ? "远程会话录像" : recordingLabel.value || "录像准备中"
+        request.value?.recordingEnabled === false
+          ? request.value?.proxyUrl
+            ? "Web 录像未启用"
+            : "远程会话录像"
+          : recordingLabel.value || "录像准备中"
       ].join(" · ")
 );
 

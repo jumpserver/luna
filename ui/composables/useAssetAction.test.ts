@@ -294,49 +294,52 @@ describe("opening assets in local applications", () => {
     }
   );
 
-  it.each([15001, undefined])(
-    "uses the Web Proxy endpoint port %s without resolving it as a Koko HTTP surface",
-    async (port) => {
-      vi.stubGlobal("isDesktopRuntime", () => true);
-      vi.stubGlobal("isElectronRuntime", () => true);
-      vi.stubGlobal("window", { location: { protocol: "http:", origin: "http://127.0.0.1:3000" } });
-      vi.stubGlobal("useWebProxyManager", useWebProxyManager);
-      const methods = [{ value: "web_proxy_native", type: "web", component: "koko", disabled: false }];
-      vi.stubGlobal("useConnectMethods", () => ({
-        fetchConnectMethods: async () => ({ https: methods }),
-        getMethodsForProtocol: async () => methods
-      }));
-      const endpoint = vi.fn().mockResolvedValue({ host: "proxy.example", web_proxy_port: port, https_port: 443 });
-      vi.stubGlobal("getSmartEndpoint", endpoint);
-      mocks.getAssetDetail.mockResolvedValue({ permed_protocols: [{ name: "https", port: 443 }] });
-      const ready = vi.fn();
-      const failed = vi.fn();
-      await useAssetAction().handleAssetConnection("root", "asset", "https", [], undefined, {
-        accountId: "account",
-        connectMethod: "web_proxy_native",
-        asset: {
-          id: "asset",
-          name: "Website",
-          address: "https://website.example",
-          platform: "Website",
-          zone: "",
-          isActive: true,
-          category: "web",
-          type: "website"
-        },
-        onSessionReady: ready,
-        onSessionError: failed
-      });
-      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
-      expect(failed).not.toHaveBeenCalled();
-      expect(mocks.createTicket).toHaveBeenCalledWith({ baseUrl: "https://proxy.example", tokenId: "id" });
-      expect(ready.mock.calls[0]?.[0].webProxy.ticket).toBe("web-ticket");
-      expect(ready.mock.calls[0]?.[0].webProxy.proxyUrl).toBe(`http://proxy.example:${port || 5001}`);
-      expect(endpoint).toHaveBeenNthCalledWith(1, { protocol: "web_proxy", assetId: "asset", token: "id" }, undefined);
-      expect(endpoint).toHaveBeenCalledTimes(port === undefined ? 2 : 1);
-      expect(mocks.invoke).not.toHaveBeenCalled();
-    }
-  );
+  it.each([
+    [15001, true],
+    [undefined, false],
+    [15001, undefined]
+  ])("uses the Web Proxy endpoint port %s with license %s", async (port, license) => {
+    mocks.getPublicSettings.mockResolvedValue({ XPACK_LICENSE_IS_VALID: license });
+    vi.stubGlobal("isDesktopRuntime", () => true);
+    vi.stubGlobal("isElectronRuntime", () => true);
+    vi.stubGlobal("window", { location: { protocol: "http:", origin: "http://127.0.0.1:3000" } });
+    vi.stubGlobal("useWebProxyManager", useWebProxyManager);
+    const methods = [{ value: "web_proxy_native", type: "web", component: "koko", disabled: false }];
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ https: methods }),
+      getMethodsForProtocol: async () => methods
+    }));
+    const endpoint = vi.fn().mockResolvedValue({ host: "proxy.example", web_proxy_port: port, https_port: 443 });
+    vi.stubGlobal("getSmartEndpoint", endpoint);
+    mocks.getAssetDetail.mockResolvedValue({ permed_protocols: [{ name: "https", port: 443 }] });
+    const ready = vi.fn();
+    const failed = vi.fn();
+    await useAssetAction().handleAssetConnection("root", "asset", "https", [], undefined, {
+      accountId: "account",
+      connectMethod: "web_proxy_native",
+      asset: {
+        id: "asset",
+        name: "Website",
+        address: "https://website.example",
+        platform: "Website",
+        zone: "",
+        isActive: true,
+        category: "web",
+        type: "website"
+      },
+      onSessionReady: ready,
+      onSessionError: failed
+    });
+    await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+    expect(failed).not.toHaveBeenCalled();
+    expect(mocks.createTicket).toHaveBeenCalledWith({ baseUrl: "https://proxy.example", tokenId: "id" });
+    expect(ready.mock.calls[0]?.[0].webProxy.ticket).toBe("web-ticket");
+    expect(ready.mock.calls[0]?.[0].webProxy.recordingEnabled).toBe(license === true);
+    expect(ready.mock.calls[0]?.[0].webProxy.proxyUrl).toBe(`http://proxy.example:${port || 5001}`);
+    expect(endpoint).toHaveBeenNthCalledWith(1, { protocol: "web_proxy", assetId: "asset", token: "id" }, undefined);
+    expect(endpoint).toHaveBeenCalledTimes(port === undefined ? 2 : 1);
+    expect(mocks.invoke).not.toHaveBeenCalled();
+  });
 
   it.each([
     [false, "web"],
