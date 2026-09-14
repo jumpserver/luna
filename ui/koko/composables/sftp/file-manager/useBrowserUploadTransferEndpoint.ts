@@ -6,14 +6,10 @@ import type {
   FileTransferResumeState,
   FileTransferWriteInput
 } from "@jumpserver/connectors-core";
+import { sha256Hex } from "#koko/utils/file-transfer/sha256";
 
 export const WEB_UPLOAD_ENDPOINT_ID = "web-upload";
 const STAGED_ROOT = "/web-upload";
-
-async function sha256Hex(data: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", data.slice());
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
 
 export interface BrowserStagedUpload {
   sourcePath: string;

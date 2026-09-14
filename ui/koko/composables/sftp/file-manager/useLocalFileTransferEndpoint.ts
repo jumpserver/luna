@@ -8,6 +8,7 @@ import type {
   FileTransferWriteInput
 } from "@jumpserver/connectors-core";
 import { useKokoHostAdapter } from "#koko/host";
+import { sha256Hex } from "#koko/utils/file-transfer/sha256";
 
 const LOCAL_ENDPOINT_ID = "local:fs";
 
@@ -32,11 +33,6 @@ export function resolveLocalFsDestinationPath(...candidates: string[]): string {
     if (value && value !== "/") return value;
   }
   return "";
-}
-
-async function sha256Hex(data: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", data.slice());
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function partialPathFor(targetPath: string, transferId: string): string {
