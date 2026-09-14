@@ -57,6 +57,13 @@ const actionPermTabsUi = {
 const shareControlUi = {
   base: "w-full min-h-9 items-center rounded-[length:var(--app-radius)] bg-[var(--app-input-bg)] text-[var(--app-fg)] ring ring-inset ring-[var(--app-border)]"
 };
+const shareOverlayContent = {
+  side: "top" as const,
+  sideOffset: 8,
+  collisionPadding: 8,
+  avoidCollisions: false,
+  onPointerDownOutside: (event: Event) => event.preventDefault()
+};
 
 const userSelectItems = computed(() => {
   const seen = new Set<string>();
@@ -272,14 +279,14 @@ function handleCopyShareURL() {
               class="w-full"
               :items="userSelectItems"
               :placeholder="selectedUserIds.length ? '' : t('RightPanel.GetShareUser')"
-              :content="{ side: 'top', sideOffset: 8, collisionPadding: 8 }"
+              :content="shareOverlayContent"
               :ui="{
                 ...shareControlUi,
                 tagsInput: 'min-w-0 flex-1 placeholder:text-[var(--app-muted)]',
                 leadingIcon: 'text-[var(--app-muted)]',
                 trailingIcon: 'text-[var(--app-muted)]',
                 content:
-                  'bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md',
+                  'max-h-48 overflow-y-auto bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md',
                 item: 'data-highlighted:not-data-disabled:bg-[var(--app-hover-soft)] data-highlighted:not-data-disabled:before:hidden data-[state=checked]:bg-[var(--app-hover-soft)]'
               }"
               @update:open="handleShareUserOpen"
@@ -308,6 +315,7 @@ function handleCopyShareURL() {
               label-key="label"
               size="md"
               class="w-full"
+              :content="shareOverlayContent"
               :ui="shareControlUi"
             />
           </UFormField>
