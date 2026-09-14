@@ -1404,7 +1404,7 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
         }
         break;
       case "new_query":
-        openQueryWorkspace(response.data, "Query");
+        openQueryWorkspace(response.data, workspace.nextTabTitle("Query"), false);
         break;
       case "view_data":
         openDataViewWorkspace(response.data, "Data View");
