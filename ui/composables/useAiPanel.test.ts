@@ -99,6 +99,7 @@ describe("AI overlay panel", () => {
   });
 
   it.each([
+    ["workspace", "", false, false],
     ["workspace", "terminal", false, true],
     ["workspace", "remote-desktop", false, false],
     ["resource", "database", false, false],

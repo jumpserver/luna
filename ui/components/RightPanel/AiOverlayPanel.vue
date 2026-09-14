@@ -151,7 +151,10 @@ onBeforeUnmount(() => {
       </div>
       <div class="min-h-0 flex-1 overflow-hidden">
         <KeepAlive>
-          <component :is="showWorkspaceAssistant ? WorkspaceAssistantPanel : WorkspaceAiPanel">
+          <component
+            :is="showWorkspaceAssistant ? WorkspaceAssistantPanel : WorkspaceAiPanel"
+            :key="showWorkspaceAssistant ? 'workspace' : 'resource'"
+          >
             <template #actions>
               <UButton
                 icon="i-lucide-x"

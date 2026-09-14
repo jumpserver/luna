@@ -184,8 +184,6 @@ const openLogin = () => {
       </div>
     </div>
 
-    <KeepAlive>
-      <AiOverlayPanel v-if="activeTab && aiPanelOpen" @close="setAiPanelOpen(false)" />
-    </KeepAlive>
+    <AiOverlayPanel v-if="activeTab && aiPanelOpen" @close="setAiPanelOpen(false)" />
   </div>
 </template>
