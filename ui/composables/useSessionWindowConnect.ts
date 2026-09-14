@@ -60,6 +60,14 @@ export function buildAdminConnectSessionPath(query: {
   return `/session/${encodeURIComponent(assetId)}?${params.toString()}`;
 }
 
+export function isAdminSessionQuery(query: { admin?: unknown }) {
+  return queryValue(query.admin) === "1";
+}
+
+export function shouldShowSessionTabStrip(path: string, query: { admin?: unknown }) {
+  return path.startsWith("/session/") && !isAdminSessionQuery(query);
+}
+
 export function toAdminAssetItem(
   assetId: string,
   asset: AssetDetail & { protocols?: { name?: string; port?: number; public?: boolean }[] },

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AiOverlayPanel from "~/components/RightPanel/AiOverlayPanel.vue";
+import { isAdminSessionQuery } from "~/composables/useSessionWindowConnect";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
@@ -8,7 +9,7 @@ definePageMeta({ layout: "connect" });
 const route = useRoute();
 const { t } = useI18n();
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
-const { registerSessionDisposer, activeTab } = useWorkspaceTabs();
+const { closeSession, registerSessionDisposer, activeTab } = useWorkspaceTabs();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const { ensureConnected, error, assetName } = useSessionWindowConnect();
 const { authReady } = useAuthSession();
@@ -18,6 +19,37 @@ const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 
 const bootstrapped = ref(false);
+const isAdminConnect = computed(() => isAdminSessionQuery(route.query));
+const adminProtocol = computed(() => String(activeTab.value?.protocol || route.query.protocol || ""));
+const adminComponent = computed(() => String(activeTab.value?.payload?.connectMethod?.component || ""));
+const adminMethod = computed(() =>
+  String(activeTab.value?.connectMethod || activeTab.value?.payload?.connectMethod?.value || "")
+);
+const isAdminGuiSession = computed(() => {
+  if (["lion", "tinker", "razor", "panda"].includes(adminComponent.value)) return true;
+  return ["rdp", "vnc"].includes(adminProtocol.value.toLowerCase());
+});
+const isAdminSftpSession = computed(
+  () => adminMethod.value.includes("sftp") || adminProtocol.value.toLowerCase() === "sftp"
+);
+const showAdminSessionHeader = computed(
+  () => isAdminConnect.value && Boolean(activeTab.value) && !isAdminGuiSession.value && !isAdminSftpSession.value
+);
+const adminSessionTitle = computed(() => {
+  const protocol = adminProtocol.value;
+  const label = protocol === "k8s" ? "K8s" : protocol.toUpperCase();
+  return `${label} ${t("RightPanel.Session")}`.trim();
+});
+const adminConnectedAt = computed(() => {
+  const at = activeTab.value?.connectedAt;
+  return at ? new Date(at).toLocaleString() : "";
+});
+
+const closeAdminSession = async () => {
+  if (activeTab.value) await closeSession(activeTab.value.id).catch(() => undefined);
+  if (isDesktopRuntime()) await desktopInvoke("close_window");
+  else window.close();
+};
 
 useHead(() => ({ title: assetName.value || "JumpServer" }));
 
@@ -83,9 +115,35 @@ const openLogin = () => {
     class="relative flex h-full w-full min-h-0 overflow-hidden"
     :style="{ backgroundColor: 'var(--app-main-bg)' }"
   >
-    <div class="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+    <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <header
+        v-if="showAdminSessionHeader"
+        class="flex h-14 shrink-0 items-center gap-3 border-b px-3"
+        :style="{ borderColor: 'var(--app-border)', backgroundColor: 'var(--app-header-bg)' }"
+      >
+        <UButton
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          icon="i-lucide-x"
+          class="size-7 justify-center rounded-lg p-0"
+          :ui="{ leadingIcon: 'm-0 size-4' }"
+          :aria-label="t('Common.Close')"
+          @click="closeAdminSession"
+        />
+        <div class="h-6 w-px shrink-0 bg-[var(--app-border)]" />
+        <div class="min-w-0">
+          <div class="truncate text-sm font-medium" :style="{ color: 'var(--app-fg)' }">
+            {{ adminSessionTitle }}
+          </div>
+          <div class="flex min-w-0 flex-wrap gap-x-3 text-xs" :style="{ color: 'var(--app-muted)' }">
+            <span class="truncate">{{ t("RightPanel.SessionAsset") }}: {{ activeTab?.assetName }}</span>
+            <span v-if="adminConnectedAt" class="truncate">{{ t("Replay.StartTime") }}: {{ adminConnectedAt }}</span>
+          </div>
+        </div>
+      </header>
       <template v-if="activeTab">
-        <WorkspaceSessionPane :tab="activeTab" class="h-full min-h-0" />
+        <WorkspaceSessionPane :tab="activeTab" class="min-h-0 flex-1" />
         <WorkspacePaneSurfaceHost v-for="pane in activeTab.panes" :key="pane.id" :pane="pane" />
 
         <aside

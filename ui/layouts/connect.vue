@@ -1,15 +1,17 @@
 <script lang="ts" setup>
 import KokoSftpTransferCenter from "#koko/components/FileManagement/SftpTransferCenter.vue";
+import { shouldShowSessionTabStrip } from "~/composables/useSessionWindowConnect";
 
 const route = useRoute();
 const { isMacOS } = usePlatform();
 const isSessionWindow = computed(() => route.path.startsWith("/session/"));
+const showSessionTabs = computed(() => shouldShowSessionTabStrip(route.path, route.query));
 </script>
 
 <template>
   <div class="flex h-dvh w-full flex-col overflow-hidden" :style="{ backgroundColor: 'var(--app-main-bg)' }">
     <HeaderDesktopTitleBar v-if="isSessionWindow && !isMacOS" :show-menus="false">
-      <WorkspaceTabHeader standalone />
+      <WorkspaceTabHeader v-if="showSessionTabs" standalone />
     </HeaderDesktopTitleBar>
     <HeaderDesktopTitleBar v-else :show-menus="false" />
     <header
@@ -19,7 +21,7 @@ const isSessionWindow = computed(() => route.path.startsWith("/session/"));
     >
       <span class="truncate">JumpServer</span>
     </header>
-    <WorkspaceTopHeader v-if="isSessionWindow && (!isDesktopRuntime() || isMacOS)" :show-actions="false">
+    <WorkspaceTopHeader v-if="showSessionTabs && (!isDesktopRuntime() || isMacOS)" :show-actions="false">
       <div class="h-full" :class="isMacOS ? 'pl-20' : ''">
         <WorkspaceTabHeader standalone />
       </div>

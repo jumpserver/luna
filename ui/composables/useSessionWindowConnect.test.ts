@@ -2,6 +2,7 @@ import type { PermOrgItem } from "~/types";
 import { describe, expect, it, vi } from "vitest";
 import {
   buildAdminConnectSessionPath,
+  shouldShowSessionTabStrip,
   syncSessionWindowOrganization,
   toAdminAssetItem
 } from "./useSessionWindowConnect";
@@ -88,6 +89,12 @@ describe("admin connect from Lina", () => {
 
   it("returns empty when Lina query is incomplete", () => {
     expect(buildAdminConnectSessionPath({ asset: "asset-1", protocol: "ssh" })).toBe("");
+  });
+
+  it("hides the workspace tab strip on Lina admin sessions", () => {
+    expect(shouldShowSessionTabStrip("/session/asset-1", { admin: "1" })).toBe(false);
+    expect(shouldShowSessionTabStrip("/session/asset-1", {})).toBe(true);
+    expect(shouldShowSessionTabStrip("/admin-connect", { admin: "1" })).toBe(false);
   });
 
   it("injects the console account so auto-connect can resolve it", () => {
