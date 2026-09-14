@@ -29,7 +29,9 @@ const loginStatusText = computed(() => {
   if (!user) return t("StatusFooter.LoggedIn");
   return t("StatusFooter.LoggedInUser", { user });
 });
-const activeProtocol = computed(() => activeTab.value?.protocol?.toUpperCase() || "");
+const activeProtocol = computed(() =>
+  activeWorkspaceMode.value === "assets" ? activeTab.value?.protocol?.toUpperCase() || "" : ""
+);
 const activeText = computed(() => {
   if (activeWorkspaceMode.value === "files") return t("Menu.FileManager");
   if (activeWorkspaceMode.value !== "assets") return t("Menu.Tool");
@@ -94,41 +96,43 @@ onBeforeUnmount(() => {
           {{ activeProtocol }}
         </UBadge>
       </span>
-      <UBadge
-        color="neutral"
-        variant="soft"
-        size="xs"
-        class="hidden sm:inline-flex"
-        :ui="compactBadgeUi"
-        :label="t('StatusFooter.Tabs', { count: tabCount })"
-      />
-      <UBadge
-        v-if="connectedCount"
-        color="success"
-        variant="soft"
-        size="xs"
-        class="hidden md:inline-flex"
-        :ui="compactBadgeUi"
-        :label="t('StatusFooter.Connected', { count: connectedCount })"
-      />
-      <UBadge
-        v-if="connectingCount"
-        color="warning"
-        variant="soft"
-        size="xs"
-        class="hidden md:inline-flex"
-        :ui="compactBadgeUi"
-        :label="t('StatusFooter.Pending', { count: connectingCount })"
-      />
-      <UBadge
-        v-if="failedCount"
-        color="error"
-        variant="soft"
-        size="xs"
-        class="hidden md:inline-flex"
-        :ui="compactBadgeUi"
-        :label="t('StatusFooter.Failed', { count: failedCount })"
-      />
+      <template v-if="activeWorkspaceMode === 'assets'">
+        <UBadge
+          color="neutral"
+          variant="soft"
+          size="xs"
+          class="hidden sm:inline-flex"
+          :ui="compactBadgeUi"
+          :label="t('StatusFooter.Tabs', { count: tabCount })"
+        />
+        <UBadge
+          v-if="connectedCount"
+          color="success"
+          variant="soft"
+          size="xs"
+          class="hidden md:inline-flex"
+          :ui="compactBadgeUi"
+          :label="t('StatusFooter.Connected', { count: connectedCount })"
+        />
+        <UBadge
+          v-if="connectingCount"
+          color="warning"
+          variant="soft"
+          size="xs"
+          class="hidden md:inline-flex"
+          :ui="compactBadgeUi"
+          :label="t('StatusFooter.Pending', { count: connectingCount })"
+        />
+        <UBadge
+          v-if="failedCount"
+          color="error"
+          variant="soft"
+          size="xs"
+          class="hidden md:inline-flex"
+          :ui="compactBadgeUi"
+          :label="t('StatusFooter.Failed', { count: failedCount })"
+        />
+      </template>
       <UBadge
         as="button"
         type="button"
