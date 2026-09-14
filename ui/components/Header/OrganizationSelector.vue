@@ -7,14 +7,19 @@ import { invalidatePersonalAssetCredentialCache } from "~/composables/useApiRequ
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { getOrganizationAvatarText } from "~/utils/organization";
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     selectable?: boolean;
+    hideAvatar?: boolean;
+    compact?: boolean;
   }>(),
   {
-    selectable: true
+    selectable: true,
+    hideAvatar: false,
+    compact: false
   }
 );
+const hideAvatar = computed(() => props.hideAvatar || props.compact);
 
 const userInfoStore = useUserInfoStore();
 const { setCurrentOrg } = userInfoStore;
@@ -57,8 +62,9 @@ async function handleOrgChange(org: PermOrgItem) {
 </script>
 
 <template>
-  <div v-show="loggedIn" class="flex w-full min-w-0 max-w-full items-center gap-1">
+  <div v-show="loggedIn" class="min-w-0 max-w-full items-center" :class="compact ? 'inline-flex' : 'flex w-full gap-1'">
     <UAvatar
+      v-if="!hideAvatar"
       :alt="currentOrgName"
       :text="currentOrgAvatarText"
       color="primary"
@@ -78,7 +84,17 @@ async function handleOrgChange(org: PermOrgItem) {
         itemLabel: 'text-xs'
       }"
     >
+      <button
+        v-if="compact"
+        type="button"
+        data-workspace-tour="organization"
+        class="inline-flex max-w-full items-center gap-0.5 bg-transparent p-0 text-xs text-muted hover:text-highlighted"
+      >
+        <span data-overflow-tooltip class="min-w-0 truncate">{{ currentOrgName }}</span>
+        <UIcon name="i-lucide-chevron-down" class="size-3 shrink-0" />
+      </button>
       <UButton
+        v-else
         variant="ghost"
         size="sm"
         color="neutral"
