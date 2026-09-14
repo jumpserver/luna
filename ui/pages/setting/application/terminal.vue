@@ -16,6 +16,14 @@ const terminalToDelete = ref<ConfigItem | null>(null);
 const customTerminalName = ref("");
 const customTerminalPath = ref("");
 const customTerminalTemplate = ref("-e {helper} {protocol} {username}@{host} -p {port} -P {value}");
+const templateVars = {
+  helper: "{helper}",
+  protocol: "{protocol}",
+  username: "{username}",
+  host: "{host}",
+  port: "{port}",
+  value: "{value}"
+};
 
 const terminalItems = computed<ConfigItem[]>(() => {
   const list = appConfig.value?.terminal ?? [];
@@ -198,13 +206,13 @@ const saveTerminal = async () => {
 
           <UFormField
             :label="t('Setting.CustomTerminalTemplate')"
-            :help="t('Setting.CustomTerminalTemplateHelp')"
+            :help="t('Setting.CustomTerminalTemplateHelp', templateVars)"
             required
           >
             <UTextarea
               v-model="customTerminalTemplate"
               :rows="4"
-              :placeholder="t('Setting.CustomTerminalTemplatePlaceholder')"
+              :placeholder="t('Setting.CustomTerminalTemplatePlaceholder', templateVars)"
             />
           </UFormField>
         </div>
