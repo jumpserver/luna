@@ -286,6 +286,32 @@ describe("sFTP browser protocol", () => {
     await expect(read.then((blob) => blob.text())).resolves.toBe("hello");
   });
 
+  it("allows downloads to wait longer than ordinary SFTP requests", async () => {
+    vi.useFakeTimers();
+    const { fake, socket } = openSocket();
+    const operations = useSftpOperations(ref("/workspace"), socket).operations;
+
+    const read = operations.readFile({
+      name: "large.log",
+      size: "6.3 MB",
+      perm: "",
+      mod_time: "",
+      type: "",
+      is_dir: false
+    });
+    const settled = vi.fn();
+    void read.then(settled, settled);
+    await nextMessage();
+    const download = lastSent(fake);
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(settled).not.toHaveBeenCalled();
+
+    fake.receive({ id: download.id, type: SftpMessageType.Binary, raw: btoa("hello") });
+    fake.receive({ id: download.id, type: SftpMessageType.Data, cmd: SftpCommand.Download, data: "large.log" });
+    await expect(read.then((blob) => blob.text())).resolves.toBe("hello");
+  });
+
   it("serializes uploads while awaiting their acknowledgements", async () => {
     const { fake, socket } = openSocket();
     const operations = useSftpOperations(ref("/workspace"), socket).operations;

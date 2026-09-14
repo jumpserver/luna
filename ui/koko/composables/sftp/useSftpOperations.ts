@@ -106,6 +106,9 @@ export interface SftpUploadTask {
 
 export const SFTP_UPLOAD_CHUNK_SIZE = 256 * 1024;
 const requestTimeoutMs = 30_000;
+// ponytail: legacy downloads may not report progress before their first frame; use
+// ranged transfer reads once every supported Koko version exposes that protocol.
+const downloadIdleTimeoutMs = 120_000;
 const saveRequestTimeoutMs = 120_000;
 const transferCommands = new Set<SftpCommand>([
   SftpCommand.TransferPrepare,
@@ -166,7 +169,7 @@ export function useSftpOperations(currentPath: Ref<string>, socket: SftpSocketCl
       if (pendingDownloads.get(id) !== pending) return;
       pendingDownloads.delete(id);
       pending.reject(new Error(SFTP_REQUEST_TIMEOUT_ERROR));
-    }, requestTimeoutMs);
+    }, downloadIdleTimeoutMs);
   }
 
   function rejectPending(message: string) {
