@@ -90,7 +90,7 @@ async function handleOrgChange(org: PermOrgItem) {
       >
         <span
           data-overflow-tooltip
-          class="min-w-0 truncate text-left text-xs font-medium text-gray-700 dark:text-gray-300"
+          class="min-w-0 truncate text-left text-sm font-medium text-gray-700 dark:text-gray-300"
         >
           {{ currentOrgName }}
         </span>
@@ -101,7 +101,7 @@ async function handleOrgChange(org: PermOrgItem) {
       v-else
       data-workspace-tour="organization"
       data-overflow-tooltip
-      class="min-w-0 truncate px-1 text-left text-xs font-medium text-gray-700 dark:text-gray-300"
+      class="min-w-0 truncate px-1 text-left text-sm font-medium text-gray-700 dark:text-gray-300"
     >
       {{ currentOrgName }}
     </span>

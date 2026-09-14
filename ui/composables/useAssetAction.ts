@@ -674,6 +674,7 @@ export const useAssetAction = () => {
           const settings = await getPublicSettings();
           webProxy = {
             ...webProxy,
+            ticketEndpoint,
             ticket,
             recordingEnabled: settings.XPACK_LICENSE_IS_VALID === true,
             recordingSupported: settings.XPACK_LICENSE_IS_VALID === true

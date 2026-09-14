@@ -365,6 +365,7 @@ describe("opening assets in local applications", () => {
     expect(failed).not.toHaveBeenCalled();
     expect(mocks.createTicket).toHaveBeenCalledWith({ baseUrl: "https://proxy.example", tokenId: "id" });
     expect(ready.mock.calls[0]?.[0].webProxy.ticket).toBe("web-ticket");
+    expect(ready.mock.calls[0]?.[0].webProxy.ticketEndpoint).toBe(mocks.createTicket.mock.calls[0]?.[0].baseUrl);
     expect(ready.mock.calls[0]?.[0].webProxy.recordingEnabled).toBe(license === true);
     expect(ready.mock.calls[0]?.[0].webProxy.recordingSupported).toBe(license === true);
     expect(ready.mock.calls[0]?.[0].webProxy.proxyUrl).toBe(`http://proxy.example:${port || 5001}`);

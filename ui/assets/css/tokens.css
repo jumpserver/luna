@@ -107,7 +107,7 @@
   --data-grid-border: var(--app-border-subtle);
   --data-grid-text: var(--app-text-primary);
   --data-grid-text-muted: var(--app-text-muted);
-  --workspace-toolbar-height: 40px;
+  --workspace-toolbar-height: 38px;
   --workspace-surface-background: var(--app-surface-canvas);
   --workspace-surface-panel: var(--app-surface-panel);
   --workspace-surface-sidebar: var(--app-surface-sidebar);
@@ -177,10 +177,10 @@
   --sidebar-surface-dark: var(--app-sidebar-bg);
   --sidebar-icon-size: 0.875rem;
   --sidebar-icon-size-sm: 0.75rem;
-  --app-tree-font-size: clamp(10px, calc(var(--app-ui-font-size) - 1px), 15px);
+  --app-tree-font-size: clamp(10px, var(--app-ui-font-size), 15px);
   --app-tree-icon-size: clamp(15px, calc(var(--app-tree-font-size) + 3px), 17px);
   --app-tree-toggle-icon-size: clamp(13px, calc(var(--app-tree-font-size) + 1px), 16px);
-  --app-tree-row-height: max(26px, calc(var(--app-tree-font-size) + 14px));
+  --app-tree-row-height: calc(var(--app-tree-font-size) * 2);
   --sidebar-icon-color: color-mix(in srgb, var(--app-text-primary) 64%, transparent);
   --sidebar-icon-muted: color-mix(in srgb, var(--app-text-muted) 82%, transparent);
   --sidebar-icon-active: var(--app-text-primary);

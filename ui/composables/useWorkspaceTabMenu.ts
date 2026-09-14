@@ -33,9 +33,21 @@ function getTokenId(tab: Pick<WorkspaceSessionTab, "payload">) {
   return String(tab.payload?.id || tab.payload?.token?.id || "");
 }
 
-function buildPayload(tab: Pick<WorkspaceSessionTab, "payload">, token: Record<string, any>) {
+async function buildPayload(tab: Pick<WorkspaceSessionTab, "payload">, token: Record<string, any>) {
+  let webProxy = tab.payload?.webProxy;
+  if (webProxy) {
+    // A connect ticket is bound to its token and cannot be reused after exchange.
+    if (!webProxy.ticketEndpoint) throw new Error("missing Web Proxy ticket endpoint");
+    const { ticket } = await useWorkspaceConnectors().createKokoTicket({
+      baseUrl: webProxy.ticketEndpoint,
+      tokenId: token.id
+    });
+    if (!ticket) throw new Error("Koko 未返回 Web Proxy connect ticket");
+    webProxy = { ...webProxy, ticket };
+  }
   return {
     ...tab.payload,
+    webProxy,
     token,
     ...token,
     connectMethod: tab.payload?.connectMethod
@@ -74,21 +86,21 @@ export function useWorkspaceTabMenu() {
     });
   };
 
-  const exchangeToken = async (tab: Pick<WorkspaceSessionTab, "payload">) => {
+  const exchangePayload = async (tab: Pick<WorkspaceSessionTab, "payload">) => {
     const tokenId = getTokenId(tab);
     if (!tokenId) throw new Error("missing token");
 
-    return await exchangeConnectToken(tokenId);
+    return buildPayload(tab, await exchangeConnectToken(tokenId));
   };
 
   const cloneSession = async (tab: WorkspaceSessionTab, assertCurrent?: () => void) => {
     try {
-      const token = await exchangeToken(tab);
+      const payload = await exchangePayload(tab);
       assertCurrent?.();
       const newPane = openSession(sessionToAsset(tab), {
         protocol: tab.protocol,
         account: tab.account,
-        payload: buildPayload(tab, token),
+        payload,
         newTab: Boolean(assertCurrent)
       });
       setActiveSession(newPane.id);
@@ -110,7 +122,7 @@ export function useWorkspaceTabMenu() {
     if (!assertCurrent) markSessionConnecting(tab.id);
 
     try {
-      const token = await exchangeToken(tab);
+      const payload = await exchangePayload(tab);
       assertCurrent?.();
       if (assertCurrent) markSessionConnecting(tab.id);
       updateSessionPayload(
@@ -120,7 +132,7 @@ export function useWorkspaceTabMenu() {
           protocol: tab.protocol,
           account: tab.account
         },
-        buildPayload(tab, token)
+        payload
       );
       return { status: "session_started", pane_id: tab.id };
     } catch {
@@ -156,7 +168,7 @@ export function useWorkspaceTabMenu() {
         account: workspaceTab.account,
         paneId: pane.id
       });
-      const token = await exchangeToken(workspaceTab);
+      const payload = await exchangePayload(workspaceTab);
       updateSessionPayload(
         {
           tabId: pane.id,
@@ -164,7 +176,7 @@ export function useWorkspaceTabMenu() {
           protocol: workspaceTab.protocol,
           account: workspaceTab.account
         },
-        buildPayload(workspaceTab, token)
+        payload
       );
     } catch (error) {
       const connectMethod = workspaceTab.payload?.connectMethod?.value;

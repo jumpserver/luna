@@ -441,7 +441,14 @@ onBeforeUnmount(() => {
     </WorkspaceShell>
 
     <Transition name="settings-overlay">
-      <div v-if="settingsOpen" class="fixed inset-0 z-[200]">
+      <div
+        v-if="settingsOpen"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="$t('Common.Settings')"
+        data-state="open"
+        class="fixed inset-0 z-[200]"
+      >
         <SettingsShell mode="inline" :active-section="activeSettingsSection" class="h-full">
           <Transition name="settings-section" mode="out-in">
             <KeepAlive>

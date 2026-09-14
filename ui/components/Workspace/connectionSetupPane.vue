@@ -230,7 +230,7 @@ onMounted(loadAsset);
       <Transition :name="modernIsland ? 'island-dialog' : ''" :appear="modernIsland">
         <section
           v-if="dialogVisible"
-          class="connection-setup-shell overflow-hidden"
+          class="connection-setup-shell relative overflow-hidden"
           :class="
             modernIsland
               ? 'connection-setup-shell--island'
@@ -348,21 +348,10 @@ onMounted(loadAsset);
             </div>
 
             <div
-              v-if="(connecting && !downloadingRdp) || connectionError"
+              v-if="connectionError"
               class="border-t border-(--app-border) bg-(--workspace-surface-footer) px-5 py-3"
             >
-              <div v-if="connecting" class="space-y-2">
-                <div class="flex items-center gap-2 text-xs text-(--app-muted)">
-                  <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
-                  <span>{{ t("ConnectionSetup.Establishing") }}</span>
-                </div>
-                <div class="connection-activity-track">
-                  <span class="connection-activity-bar" />
-                </div>
-              </div>
-
               <div
-                v-if="connectionError"
                 class="mt-2 flex items-start gap-2 rounded-md border border-error/25 bg-error/10 px-3 py-2 text-xs text-error"
               >
                 <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3.5 shrink-0" />
@@ -391,6 +380,20 @@ onMounted(loadAsset);
                 />
               </div>
             </div>
+          </div>
+
+          <div
+            v-if="connecting && !downloadingRdp"
+            role="status"
+            class="pointer-events-none absolute inset-x-0 bottom-0"
+          >
+            <span class="sr-only">{{ t("ConnectionSetup.Establishing") }}</span>
+            <UProgress
+              size="2xs"
+              :color="modernIsland ? 'var(--theme-accent)' : 'primary'"
+              :ui="{ base: 'rounded-none bg-(--app-border)', indicator: 'rounded-none' }"
+              aria-hidden="true"
+            />
           </div>
         </section>
       </Transition>
@@ -425,10 +428,6 @@ onMounted(loadAsset);
     0 10px 28px color-mix(in srgb, #000 16%, transparent);
 }
 
-.connection-setup-shell--island .connection-activity-bar {
-  background: var(--theme-accent);
-}
-
 .island-dialog-enter-active,
 .island-dialog-leave-active {
   transition:
@@ -446,33 +445,5 @@ onMounted(loadAsset);
   box-shadow:
     0 1px 0 color-mix(in srgb, var(--app-surface-panel-strong) 78%, transparent) inset,
     0 16px 36px color-mix(in srgb, var(--app-fg) 5%, transparent);
-}
-
-.connection-activity-track {
-  position: relative;
-  height: 0.1875rem;
-  overflow: hidden;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--app-border) 70%, transparent);
-}
-
-.connection-activity-bar {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 38%;
-  border-radius: inherit;
-  background: var(--ui-primary);
-  animation: connection-activity-slide 1.05s ease-in-out infinite alternate;
-}
-
-@keyframes connection-activity-slide {
-  from {
-    transform: translateX(-20%);
-  }
-
-  to {
-    transform: translateX(185%);
-  }
 }
 </style>

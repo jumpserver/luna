@@ -1413,7 +1413,8 @@ app.whenReady().then(async () => {
   await authService.initialize();
   electronSession.defaultSession.setCertificateVerifyProc((request, callback) => {
     // ponytail: accept any cert for user-entered JumpServer hosts; pin/TOFU if MITM becomes a real threat
-    callback(authService.isTrustedSiteHost(request.hostname) ? 0 : -2);
+    // Other hosts (including plugin downloads) must use Chromium's certificate verification.
+    callback(authService.isTrustedSiteHost(request.hostname) ? 0 : -3);
   });
   const quitAfterProtocolLaunch = await drainPendingProtocolUrls();
   if (quitAfterProtocolLaunch) {

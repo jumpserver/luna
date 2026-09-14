@@ -606,12 +606,13 @@ defineExpose({ focus, close: closeView });
         aria-label="刷新"
         @click="reload"
       />
-      <form class="min-w-0 flex-1" @submit.prevent="navigate">
+      <form class="relative min-w-0 flex-1" @submit.prevent="navigate">
         <UInput
           v-model="addressValue"
           :icon="props.browsable ? 'i-lucide-globe-2' : 'i-lucide-lock-keyhole'"
           size="sm"
           class="w-full"
+          :class="{ invisible: autofillPending && !error }"
           autocomplete="off"
           spellcheck="false"
           :disabled="navigationDisabled"
@@ -619,6 +620,34 @@ defineExpose({ focus, close: closeView });
           :aria-label="props.browsable ? '地址栏' : '地址栏只读'"
           :title="props.browsable ? '输入地址并按 Enter 访问' : '当前不支持手动输入地址'"
         />
+        <div
+          v-if="autofillPending && !error"
+          class="absolute inset-0 flex min-w-0 items-center gap-2 rounded-md border border-default bg-default px-2 text-xs text-muted"
+          data-desktop-drag-region="false"
+        >
+          <UIcon name="i-lucide-loader-circle" class="size-4 shrink-0 animate-spin motion-reduce:animate-none" />
+          <span role="status" class="min-w-0 flex-1 truncate">{{ autofillMessage }}</span>
+          <span class="shrink-0 tabular-nums">已等待 {{ waitingSeconds }} 秒</span>
+          <UButton
+            v-if="interactiveCanComplete && !verificationCollapsed"
+            size="xs"
+            :loading="actionPending"
+            @click="completeVerification"
+          >
+            完成交互
+          </UButton>
+          <UButton v-if="verificationCollapsed" size="xs" @click="resumeVerification">继续验证</UButton>
+          <UButton
+            v-if="interactivePending && !verificationCollapsed"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :disabled="actionPending"
+            @click="collapseVerification"
+          >
+            返回
+          </UButton>
+        </div>
       </form>
       <!-- Keep the tooltip inside the toolbar, above the native desktop webview. -->
       <UTooltip
@@ -646,34 +675,6 @@ defineExpose({ focus, close: closeView });
       :ui="{ root: 'rounded-none py-2', description: 'text-xs' }"
       class="shrink-0"
     />
-
-    <div
-      v-if="autofillPending && !error"
-      class="flex min-h-10 shrink-0 items-center gap-2 border-b border-default bg-default px-3 text-xs text-muted"
-    >
-      <UIcon name="i-lucide-loader-circle" class="size-4 shrink-0 animate-spin motion-reduce:animate-none" />
-      <span role="status" class="min-w-0 flex-1 truncate">{{ autofillMessage }}</span>
-      <span class="shrink-0 tabular-nums">已等待 {{ waitingSeconds }} 秒</span>
-      <UButton
-        v-if="interactiveCanComplete && !verificationCollapsed"
-        size="xs"
-        :loading="actionPending"
-        @click="completeVerification"
-      >
-        完成交互
-      </UButton>
-      <UButton v-if="verificationCollapsed" size="xs" @click="resumeVerification">继续验证</UButton>
-      <UButton
-        v-if="interactivePending && !verificationCollapsed"
-        color="neutral"
-        variant="ghost"
-        size="xs"
-        :disabled="actionPending"
-        @click="collapseVerification"
-      >
-        返回
-      </UButton>
-    </div>
 
     <div ref="contentRef" class="relative min-h-0 flex-1 bg-default">
       <!-- The native view is hidden before credentials are released. The frozen

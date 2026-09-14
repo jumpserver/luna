@@ -5,6 +5,8 @@ export interface WebProxyOpenRequest {
   title: string;
   targetUrl: string;
   proxyUrl: string;
+  ticketEndpoint?: string;
+  ticket?: string;
   successSelector: string;
   interactiveSelector: string;
   safeMode: boolean;
