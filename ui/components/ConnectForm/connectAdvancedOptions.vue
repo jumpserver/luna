@@ -114,7 +114,7 @@ const selectedVirtualappConnectMethod = computed<string>({
 });
 
 watch(
-  () => [props.protocol, props.component, flags.value.show] as const,
+  [() => props.protocol, () => props.component, () => flags.value.show],
   () => {
     advancedOptionOpen.value = false;
   },
@@ -185,10 +185,6 @@ watch(
             />
           </UFormField>
 
-          <UFormField v-if="flags.remoteMicrophone" :label="t('Setting.RemoteMicrophone')" :ui="formFieldUi" size="sm">
-            <USwitch v-model="selectedRemoteMicrophone" />
-          </UFormField>
-
           <UFormField v-if="flags.applet" :label="t('EditModal.AppletConnectMethod')" :ui="formFieldUi" size="sm">
             <USelect
               v-model="selectedAppletConnectMethod"
@@ -199,9 +195,27 @@ watch(
               class="w-full"
             />
           </UFormField>
-          <UFormField v-if="flags.reusable" :label="t('Setting.RdpFileReusable')" :ui="formFieldUi" size="sm">
-            <USwitch v-model="selectedReusable" />
-          </UFormField>
+
+          <div v-if="flags.remoteMicrophone || flags.reusable" class="grid grid-cols-2 gap-4">
+            <UFormField
+              v-if="flags.remoteMicrophone"
+              :label="t('Setting.RemoteMicrophone')"
+              :ui="{ ...formFieldUi, root: 'items-center', container: 'mt-0 shrink-0' }"
+              orientation="horizontal"
+              size="sm"
+            >
+              <USwitch v-model="selectedRemoteMicrophone" />
+            </UFormField>
+            <UFormField
+              v-if="flags.reusable"
+              :label="t('Setting.RdpFileReusable')"
+              :ui="{ ...formFieldUi, root: 'items-center', container: 'mt-0 shrink-0' }"
+              orientation="horizontal"
+              size="sm"
+            >
+              <USwitch v-model="selectedReusable" />
+            </UFormField>
+          </div>
 
           <UFormField
             v-if="flags.rdpConnectionSpeed"
