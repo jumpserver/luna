@@ -194,7 +194,6 @@ const rowData = computed(() => {
   const dirtyVersion = props.editState?.dirtyVersion;
   void dirtyVersion;
   if (!props.dataset) return [];
-  if (props.editMode === "none" || !props.editState) return props.dataset.data;
   return chenDataViewRows(props.dataset, props.editState);
 });
 
