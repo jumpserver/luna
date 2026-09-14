@@ -2089,7 +2089,7 @@
     "SelectField": "选择字段",
     "Value": "值",
     "EnterNewValue": "输入新值",
-    "SetValueNull": "将值设为 NULL",
+    "SetValueNull": "设为 NULL",
     "BatchUpdateHint": "将把选中字段在 {count} 行中设为相同值。更改会保持待保存状态，直到点击保存。",
     "UpdateRowCount": "更新 {count} 行",
     "CreateTable": "新建表",
