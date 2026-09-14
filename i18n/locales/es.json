@@ -1313,6 +1313,7 @@
     "VirtualApplication": "Aplicación virtual"
   },
   "ConnectMethod": {
+    "Empty": "No hay métodos de conexión",
     "BuiltinTerminal": "Terminal integrado",
     "BuiltinTerminalDescription": "Las conexiones de caracteres usan el workspace de terminal koko y cubren protocolos de host y base de datos.",
     "DatabaseWorkbench": "Consola de base de datos",

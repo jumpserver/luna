@@ -67,7 +67,7 @@ async function handleOrgChange(org: PermOrgItem) {
       :ui="{ root: 'rounded-md', fallback: 'uppercase' }"
     />
     <UDropdownMenu
-      v-if="selectable"
+      v-if="selectable && currentUser?.xpackLicenseValid === true"
       v-model:open="organizationMenuOpen"
       size="sm"
       :items="organizationDropdownItems"

@@ -1313,6 +1313,7 @@
     "VirtualApplication": "가상 애플리케이션"
   },
   "ConnectMethod": {
+    "Empty": "연결 방식이 없습니다",
     "BuiltinTerminal": "내장 터미널",
     "BuiltinTerminalDescription": "문자형 연결은 koko 터미널 workspace로 통일되며 호스트와 데이터베이스 프로토콜을 포함합니다.",
     "DatabaseWorkbench": "데이터베이스 워크벤치",

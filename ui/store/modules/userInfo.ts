@@ -9,6 +9,7 @@ import type {
 } from "~/types/index";
 import { defineStore } from "pinia";
 import { desktopInvoke } from "~/shared/desktop/bridge";
+import { getDefaultOrganization } from "~/utils/organization";
 import { isDesktopRuntime } from "~/utils/runtime";
 
 export type SiteUserData = UserData & {
@@ -17,6 +18,11 @@ export type SiteUserData = UserData & {
   connectionInfoMap?: Record<string, ConnectionInfo>;
   connectionPreferenceMap?: Record<string, ConnectionPreferenceInfo>;
   protocolConnectionPreferenceMap?: Record<string, ProtocolConnectionPreferenceInfo>;
+};
+
+const enforceOrganizationLicense = (userData: UserData) => {
+  if (userData.xpackLicenseValid !== false) return;
+  userData.org = { ...getDefaultOrganization(userData.availableOrgs || []), comment: "" };
 };
 
 const clearManualPassword = (connectionInfo?: ConnectionInfo | null) => {
@@ -153,6 +159,7 @@ export const useUserInfoStore = defineStore(
         protocolConnectionPreferenceMap: previous?.protocolConnectionPreferenceMap || {},
         rdpClientOption: previous?.rdpClientOption || {}
       };
+      enforceOrganizationLicense(next);
 
       userMap.value[accountId] = next;
       currentUser.value = next;
@@ -195,6 +202,7 @@ export const useUserInfoStore = defineStore(
 
         if (nextEntry) {
           const [nextAccountId, nextUser] = nextEntry;
+          enforceOrganizationLicense(nextUser);
           await syncApiSession(nextAccountId, nextUser);
           currentUser.value = nextUser;
           currentAccountId.value = nextAccountId;
@@ -240,6 +248,7 @@ export const useUserInfoStore = defineStore(
         return;
       }
 
+      enforceOrganizationLicense(userData);
       await syncApiSession(accountId, userData);
       currentAccountId.value = accountId;
       currentSite.value = userData.site;
@@ -253,24 +262,6 @@ export const useUserInfoStore = defineStore(
     };
 
     /**
-     * @description 设置当前组织列表
-     * @param orgs
-     */
-    const setOrganizations = (orgs: PermOrgItem[]) => {
-      currentOrganizations.value = orgs;
-
-      if (currentUser.value && currentAccountId.value) {
-        const updatedUserData = {
-          ...currentUser.value,
-          availableOrgs: orgs
-        };
-
-        userMap.value[currentAccountId.value] = updatedUserData as SiteUserData;
-        currentUser.value = updatedUserData;
-      }
-    };
-
-    /**
      * @description 设置当前组织
      * @param org
      */
@@ -278,6 +269,10 @@ export const useUserInfoStore = defineStore(
       if (!currentUser.value || !currentAccountId.value) {
         console.error("No current user or site when setting organization");
         return;
+      }
+
+      if (currentUser.value.xpackLicenseValid === false) {
+        org = getDefaultOrganization(currentOrganizations.value);
       }
 
       const currentOrg: CurrentOrg = {
@@ -300,6 +295,25 @@ export const useUserInfoStore = defineStore(
         });
       } else {
         setWebOrgId(org.id);
+      }
+    };
+
+    /**
+     * @description 设置当前组织列表
+     * @param orgs
+     */
+    const setOrganizations = (orgs: PermOrgItem[]) => {
+      currentOrganizations.value = orgs;
+
+      if (currentUser.value && currentAccountId.value) {
+        const updatedUserData = {
+          ...currentUser.value,
+          availableOrgs: orgs
+        };
+
+        userMap.value[currentAccountId.value] = updatedUserData as SiteUserData;
+        currentUser.value = updatedUserData;
+        if (updatedUserData.xpackLicenseValid === false) setCurrentOrg(updatedUserData.org);
       }
     };
 

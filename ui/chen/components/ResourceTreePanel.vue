@@ -53,7 +53,9 @@ const sqlKeywordCaseModel = computed({
     class="flex min-h-0 shrink-0 flex-col border-r border-default bg-[var(--workspace-surface-sidebar)]"
     :style="{ width: typeof width === 'number' ? `${width}px` : width }"
   >
-    <div class="flex h-9 shrink-0 items-center justify-between border-b border-default px-2.5">
+    <div
+      class="flex h-[var(--workspace-toolbar-height)] shrink-0 items-center justify-between border-b border-default px-2.5"
+    >
       <p class="text-xs font-medium text-muted">{{ t("Chen.DatabaseExplorer") }}</p>
       <div class="flex h-7 items-center gap-1">
         <UButton

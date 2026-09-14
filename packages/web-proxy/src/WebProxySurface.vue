@@ -575,7 +575,7 @@ defineExpose({ focus, close: closeView });
     <div
       ref="toolbarRef"
       data-desktop-drag-region
-      class="flex h-11 shrink-0 items-center gap-1.5 border-b border-default bg-default px-2"
+      class="flex h-[var(--workspace-toolbar-height)] shrink-0 items-center gap-1.5 border-b border-default bg-default px-2"
       :class="props.macInset ? 'pl-22' : ''"
     >
       <UButton

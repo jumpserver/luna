@@ -172,7 +172,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
       <!-- Dual-pane: match right machine-tab strip height with a fixed primary identity row. -->
       <div
         v-if="!compact && dualMode"
-        class="sftp-file-management__machine-tabs flex h-9 shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2"
+        class="sftp-file-management__machine-tabs flex shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2"
       >
         <div
           class="flex h-7 min-w-20 max-w-40 items-center gap-1 rounded-md bg-accented px-1.5 text-[11px] leading-none text-highlighted"
@@ -229,7 +229,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
       :class="canUseTransferRail ? '' : 'border-l border-default'"
     >
       <div
-        class="sftp-file-management__machine-tabs flex h-9 shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2"
+        class="sftp-file-management__machine-tabs flex shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2"
       >
         <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           <SftpRemoteMachineTabs

@@ -1313,6 +1313,7 @@
     "VirtualApplication": "Виртуальное приложение"
   },
   "ConnectMethod": {
+    "Empty": "Нет способов подключения",
     "BuiltinTerminal": "Встроенный терминал",
     "BuiltinTerminalDescription": "Символьные подключения идут через workspace терминала koko и покрывают протоколы хостов и баз данных.",
     "DatabaseWorkbench": "Консоль базы данных",

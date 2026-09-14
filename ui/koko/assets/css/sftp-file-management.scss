@@ -3,8 +3,8 @@
    ======================================== */
 
 .sftp-file-management {
-  --sftp-title-row-height: 36px;
-  --sftp-toolbar-height: 40px;
+  --sftp-title-row-height: var(--workspace-toolbar-height);
+  --sftp-toolbar-height: var(--workspace-toolbar-height);
   --sftp-actionbar-height: 38px;
   --sftp-row-height: 34px;
   --sftp-font-caption: 11px;
@@ -14,8 +14,6 @@
   --sftp-icon-md: 16px;
 
   &--compact {
-    --sftp-title-row-height: 32px;
-    --sftp-toolbar-height: 40px;
     --sftp-actionbar-height: 34px;
     --sftp-row-height: 34px;
     --sftp-font-caption: 11px;

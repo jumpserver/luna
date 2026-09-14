@@ -1313,6 +1313,7 @@
     "VirtualApplication": "Ứng dụng ảo"
   },
   "ConnectMethod": {
+    "Empty": "Không có phương thức kết nối",
     "BuiltinTerminal": "Terminal tích hợp",
     "BuiltinTerminalDescription": "Kết nối ký tự thống nhất qua workspace terminal koko, bao gồm giao thức máy chủ và cơ sở dữ liệu.",
     "DatabaseWorkbench": "Bàn làm việc cơ sở dữ liệu",

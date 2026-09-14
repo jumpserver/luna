@@ -1,5 +1,16 @@
 import type { PermOrgItem } from "~/types";
 
+const DEFAULT_ORGANIZATION: PermOrgItem = {
+  id: "00000000-0000-0000-0000-000000000002",
+  name: "Default",
+  is_root: false,
+  is_default: true,
+  is_system: false
+};
+
+export const getDefaultOrganization = (orgs: PermOrgItem[]) =>
+  orgs.find((org) => org.id === DEFAULT_ORGANIZATION.id) || { ...DEFAULT_ORGANIZATION };
+
 export const getOrganizationAvatarText = (name: string) => {
   const characters = Array.from(name.trim());
   const length = /^\p{Script=Han}$/u.test(characters[0] || "") ? 1 : 2;

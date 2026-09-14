@@ -106,6 +106,7 @@
   --data-grid-border: var(--app-border-subtle);
   --data-grid-text: var(--app-text-primary);
   --data-grid-text-muted: var(--app-text-muted);
+  --workspace-toolbar-height: 40px;
   --workspace-surface-background: var(--app-surface-canvas);
   --workspace-surface-panel: var(--app-surface-panel);
   --workspace-surface-sidebar: var(--app-surface-sidebar);

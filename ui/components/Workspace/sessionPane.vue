@@ -456,7 +456,7 @@ onBeforeUnmount(() => {
           <header
             v-if="showPaneHeaders"
             draggable="true"
-            class="relative z-[2] flex h-9 shrink-0 items-center justify-between gap-3 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-header)] px-2.5 transition-colors"
+            class="relative z-[2] flex h-[var(--workspace-toolbar-height)] shrink-0 items-center justify-between gap-3 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-sub-header)] px-2.5 transition-colors"
             @dragstart="handlePaneDragStart($event, pane.id)"
             @dragend="handlePaneDragEnd"
           >

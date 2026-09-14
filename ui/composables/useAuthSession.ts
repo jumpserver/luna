@@ -57,8 +57,6 @@ interface WebProfile {
   org_name?: string;
   org?: { id?: string; name?: string };
   system_roles?: RoleType[];
-  xpack_license_valid?: boolean;
-  xpackLicenseValid?: boolean;
 }
 
 const BOOTSTRAP_RETRY_DELAYS_MS = [0, 500, 1000, 2000, 3000];
@@ -156,7 +154,7 @@ export const useAuthSession = () => {
       },
       system_roles: profileData.system_roles,
       availableOrgs,
-      xpackLicenseValid: xpack_license_valid ?? true,
+      xpackLicenseValid: xpack_license_valid === true,
       commandExecutionEnabled: security_command_execution === true,
       connectionInfo: {
         protocol: "",
@@ -317,7 +315,7 @@ export const useAuthSession = () => {
       org: profileOrg,
       system_roles: profileData.system_roles || [],
       availableOrgs: [],
-      xpackLicenseValid: profileData.xpack_license_valid ?? profileData.xpackLicenseValid ?? true,
+      xpackLicenseValid: publicSettings?.XPACK_LICENSE_IS_VALID === true,
       commandExecutionEnabled: publicSettings?.SECURITY_COMMAND_EXECUTION === true,
       connectionInfo: {
         protocol: "",

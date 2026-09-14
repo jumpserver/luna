@@ -1313,6 +1313,7 @@
     "VirtualApplication": "Virtual Application"
   },
   "ConnectMethod": {
+    "Empty": "No connection methods",
     "BuiltinTerminal": "Built-in terminal",
     "BuiltinTerminalDescription": "Character connections use the koko terminal workspace, covering host and database protocols.",
     "DatabaseWorkbench": "Database workbench",

@@ -1313,6 +1313,7 @@
     "VirtualApplication": "仮想アプリケーション"
   },
   "ConnectMethod": {
+    "Empty": "接続方法がありません",
     "BuiltinTerminal": "内蔵ターミナル",
     "BuiltinTerminalDescription": "文字系接続は koko ターミナル workspace に統一し、ホストとデータベースのプロトコルをカバーします。",
     "DatabaseWorkbench": "データベースワークベンチ",

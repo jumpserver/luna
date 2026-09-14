@@ -253,6 +253,9 @@ async function openProtocolApplicationSettings() {
                 @click="openProtocolApplicationSettings"
               />
             </div>
+            <p v-else class="py-1 text-center text-xs text-[var(--app-text-muted)]" role="status">
+              {{ t("ConnectMethod.Empty") }}
+            </p>
           </div>
         </Transition>
       </div>
@@ -308,6 +311,9 @@ async function openProtocolApplicationSettings() {
             @click="openProtocolApplicationSettings"
           />
         </div>
+        <p v-else class="py-1 text-center text-sm text-[var(--app-text-muted)]" role="status">
+          {{ t("ConnectMethod.Empty") }}
+        </p>
       </div>
     </div>
   </UFormField>

@@ -659,7 +659,9 @@ onUnmounted(() => {
         class="z-40 flex min-h-0 shrink-0 flex-col bg-(--workspace-surface-sidebar) max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
         :style="{ width: resourceTreeWidth }"
       >
-        <div class="flex h-9 min-w-0 shrink-0 items-center gap-1 border-b border-default px-2.5">
+        <div
+          class="flex h-[var(--workspace-toolbar-height)] min-w-0 shrink-0 items-center gap-1 border-b border-default px-2.5"
+        >
           <span
             class="min-w-0 flex-1 truncate px-1 text-left text-xs font-medium text-muted"
             :title="t('koko.kubernetes.name')"
@@ -792,7 +794,9 @@ onUnmounted(() => {
       </div>
 
       <section class="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div class="flex h-9 shrink-0 items-center border-b border-default px-2 md:hidden">
+        <div
+          class="flex h-[var(--workspace-toolbar-height)] shrink-0 items-center border-b border-default px-2 md:hidden"
+        >
           <UButton
             icon="i-lucide-panel-left"
             :label="t('koko.kubernetes.name')"

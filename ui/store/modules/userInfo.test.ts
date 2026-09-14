@@ -1,9 +1,9 @@
 import type { SiteUserData } from "./userInfo";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useUserInfoStore } from "./userInfo";
 
-const { desktopInvoke } = vi.hoisted(() => {
+const { desktopInvoke, runtime } = vi.hoisted(() => {
   const memory = new Map<string, string>();
   vi.stubGlobal("localStorage", {
     getItem: (key: string) => memory.get(key) ?? null,
@@ -15,11 +15,11 @@ const { desktopInvoke } = vi.hoisted(() => {
     },
     clear: () => memory.clear()
   });
-  return { desktopInvoke: vi.fn() };
+  return { desktopInvoke: vi.fn(), runtime: { desktop: true } };
 });
 
 vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke }));
-vi.mock("~/utils/runtime", () => ({ isDesktopRuntime: () => true }));
+vi.mock("~/utils/runtime", () => ({ isDesktopRuntime: () => runtime.desktop }));
 
 const org = {
   id: "00000000-0000-0000-0000-000000000002",
@@ -83,5 +83,84 @@ describe("setCurrentAccount session order", () => {
 
     expect(store.currentAccountId).toBe("account-b");
     expect(store.currentSite).toBe("https://b.example");
+  });
+});
+
+describe.each([true, false])("organization license (desktop: %s)", (desktop) => {
+  const otherOrg = { ...org, id: "other-org", name: "Other", is_default: false };
+  const setWebOrgId = vi.fn();
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    runtime.desktop = desktop;
+    desktopInvoke.mockReset();
+    desktopInvoke.mockResolvedValue(undefined);
+    setWebOrgId.mockReset();
+    vi.stubGlobal("setWebOrgId", setWebOrgId);
+  });
+
+  afterEach(() => {
+    runtime.desktop = true;
+    vi.unstubAllGlobals();
+  });
+
+  it.each([{ orgs: [] }, { orgs: [otherOrg] }, { orgs: [otherOrg, org] }])(
+    "replaces a saved enterprise organization even with an incomplete list: %j",
+    ({ orgs }) => {
+      const store = useUserInfoStore();
+      const user = {
+        ...siteUser("account", "https://example.com"),
+        org: otherOrg,
+        availableOrgs: orgs,
+        xpackLicenseValid: false
+      };
+      store.setUserData("account", user);
+
+      expect(store.currentUser?.org.id).toBe(org.id);
+      expect(store.userMap.account?.org.id).toBe(org.id);
+      expect(store.loggedIn).toBe(true);
+
+      // Late organization hydration and other switch entry points cannot restore the expired org.
+      store.setOrganizations(orgs);
+      store.setCurrentOrg(otherOrg);
+      expect(store.currentUser?.org.id).toBe(org.id);
+      if (desktop) {
+        expect(desktopInvoke).toHaveBeenCalledWith("set_api_org", { orgId: org.id });
+        expect(
+          desktopInvoke.mock.calls
+            .filter(([command]) => command === "set_api_session")
+            .every(([, payload]) => payload.orgId === org.id)
+        ).toBe(true);
+      } else {
+        expect(setWebOrgId).toHaveBeenLastCalledWith(org.id);
+      }
+    }
+  );
+
+  it("normalizes a restored community account before syncing its session", async () => {
+    const store = useUserInfoStore();
+    store.userMap.account = {
+      ...siteUser("account", "https://example.com"),
+      org: otherOrg,
+      xpackLicenseValid: false
+    };
+    await store.setCurrentAccount("account");
+    expect(store.currentUser?.org.id).toBe(org.id);
+    expect(store.userMap.account?.org.id).toBe(org.id);
+  });
+
+  it("preserves organization selection with a valid enterprise license", () => {
+    const store = useUserInfoStore();
+    store.setUserData("account", {
+      ...siteUser("account", "https://example.com"),
+      org: otherOrg,
+      availableOrgs: [otherOrg, org],
+      xpackLicenseValid: true
+    });
+    store.setOrganizations([otherOrg, org]);
+    expect(store.currentUser?.org.id).toBe(otherOrg.id);
+    store.setCurrentOrg(org);
+    store.setCurrentOrg(otherOrg);
+    expect(store.currentUser?.org.id).toBe(otherOrg.id);
   });
 });

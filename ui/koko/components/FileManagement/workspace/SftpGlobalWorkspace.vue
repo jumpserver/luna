@@ -233,7 +233,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
       >
         <div
           v-if="side === 'left' || sideRemotePanes[side].length || remotePaneDropSide === side"
-          class="flex h-9 shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2"
+          class="flex h-[var(--workspace-toolbar-height)] shrink-0 items-center gap-1 bg-[var(--workspace-surface-main)] px-2"
         >
           <div class="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto overflow-y-visible py-0.5">
             <button

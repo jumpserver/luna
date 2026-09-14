@@ -1026,7 +1026,7 @@
     "RememberSelection": "下次自动连接",
     "RememberSelectionDescription": "如需更换连接方式，可在资产树上右键重新选择。",
     "OptionalProtocol": "协议",
-    "ConnectMethod": "连接方法",
+    "ConnectMethod": "连接方式",
     "OptionalAccount": "账号",
     "CurrentOnline": "当前在线: {count}"
   },
@@ -1316,6 +1316,7 @@
     "VirtualApplication": "虚拟应用"
   },
   "ConnectMethod": {
+    "Empty": "无连接方式",
     "BuiltinTerminal": "内置终端",
     "BuiltinTerminalDescription": "字符型连接统一走 koko 终端 workspace，覆盖主机协议和数据库协议。",
     "DatabaseWorkbench": "数据库工作台",

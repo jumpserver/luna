@@ -207,7 +207,7 @@ watch(
 <template>
   <div
     v-if="tabs.length || $slots['after-tabs'] || $slots.trailing"
-    class="flex h-9 min-w-0 shrink-0 items-center gap-1 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-main)] px-2"
+    class="flex h-[var(--workspace-toolbar-height)] min-w-0 shrink-0 items-center gap-1 border-b border-[var(--workspace-surface-sub-border)] bg-[var(--workspace-surface-main)] px-2"
   >
     <UButton
       v-if="hasLeftHidden"

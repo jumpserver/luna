@@ -1026,7 +1026,7 @@
     "RememberSelection": "下次自動連線",
     "RememberSelectionDescription": "如需更換連線方式，可在資產樹上右鍵重新選擇。",
     "OptionalProtocol": "協議",
-    "ConnectMethod": "連線方法",
+    "ConnectMethod": "連線方式",
     "OptionalAccount": "帳號",
     "CurrentOnline": "目前在線: {count}"
   },
@@ -1313,6 +1313,7 @@
     "VirtualApplication": "虛擬應用"
   },
   "ConnectMethod": {
+    "Empty": "無連線方式",
     "BuiltinTerminal": "內建終端",
     "BuiltinTerminalDescription": "字元型連線統一走 koko 終端 workspace，涵蓋主機協定與資料庫協定。",
     "DatabaseWorkbench": "資料庫工作台",
