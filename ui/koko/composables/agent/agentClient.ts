@@ -14,7 +14,7 @@ import type { LangType } from "~/types";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { getWebApiHeaders, getWebApiMutationHeaders, isDesktopRuntime, withWebSitePrefix } from "~/utils/runtime";
 import { normalizeAgentEvent } from "./agentSse";
-import { AGENT_CAPABILITY_VERSION, AGENT_PROTOCOL_VERSION, KAEL_API_ROOT } from "./types";
+import { AGENT_CAPABILITY_VERSION, AGENT_PROTOCOL_VERSION, isRecord, KAEL_API_ROOT } from "./types";
 
 export interface AgentHttpRequest {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -333,7 +333,10 @@ export class AgentClient {
     message: AgentMessageRequest
   ): Promise<AgentMessageResponse> {
     const binding = this.binding(sessionId, resourceSessionId);
-    if (this.responseLanguage && binding.context.response_language !== this.responseLanguage) {
+    const context = message.metadata?.context;
+    if (isRecord(context)) {
+      await this.updateContext(sessionId, resourceSessionId, { ...binding.context, ...context });
+    } else if (this.responseLanguage && binding.context.response_language !== this.responseLanguage) {
       await this.updateContext(sessionId, resourceSessionId, binding.context);
     }
     const created = await this.request<KaelMessage>({

@@ -236,6 +236,77 @@ it("maps messages, runs, approvals, and tool results to canonical Kael resources
   client.dispose();
 });
 
+it("uploads the current file selection before each run and clears previous selections", async () => {
+  const requests: AgentHttpRequest[] = [];
+  const client = new AgentClient(kaelRequest(requests));
+  const context = reactive({
+    currentPath: "/srv/app",
+    selectedEntries: [{ path: "/srv/app/config.yaml", version: "version-1" }]
+  });
+  const message = {
+    message_id: "message-1",
+    idempotency_key: "send-1",
+    role: "user" as const,
+    parts: [{ type: "text" as const, text: "Analyze the selected file" }],
+    metadata: { context }
+  };
+  try {
+    client.setResponseLanguage("zh");
+    await client.createSession({ ...manifest, profile: "file", context: { protocol: "sftp" } }, "auto");
+    for (const [index, selectedEntries] of [
+      context.selectedEntries,
+      [{ path: "/tmp/log.txt", version: "version-2" }],
+      []
+    ].entries()) {
+      context.selectedEntries = selectedEntries;
+      context.currentPath = selectedEntries[0]?.path.startsWith("/srv/") ? "/srv/app" : "/tmp";
+      requests.length = 0;
+      await client.sendMessage("panel-1", "resource-1", {
+        ...message,
+        message_id: `message-${index + 1}`,
+        idempotency_key: `send-${index + 1}`
+      });
+      expect(requests.map((request) => request.path.split("/").at(-1))).toEqual(["context", "messages", "runs"]);
+      expect(requests[0]?.body).toMatchObject({
+        base_version: index + 1,
+        domain: "file",
+        data: { protocol: "sftp", response_language: "zh", ...context }
+      });
+    }
+  } finally {
+    client.dispose();
+  }
+});
+
+it("waits for the context upload and does not start a run if it fails", async () => {
+  const requests: AgentHttpRequest[] = [];
+  const client = new AgentClient(kaelRequest(requests));
+  try {
+    await client.createSession(manifest, "auto");
+    requests.length = 0;
+    let reject!: (error: Error) => void;
+    vi.spyOn(client, "updateContext").mockImplementation(
+      () =>
+        new Promise<void>((_resolve, rejectPromise) => {
+          reject = rejectPromise;
+        })
+    );
+    const pending = client.sendMessage("panel-1", "resource-1", {
+      message_id: "message-1",
+      idempotency_key: "send-1",
+      role: "user",
+      parts: [{ type: "text", text: "Analyze the selected file" }],
+      metadata: { context: { selectedEntries: [] } }
+    });
+    expect(requests).toHaveLength(0);
+    reject(new Error("Context upload failed"));
+    await expect(pending).rejects.toThrow("Context upload failed");
+    expect(requests).toHaveLength(0);
+  } finally {
+    client.dispose();
+  }
+});
+
 it.each([false, true])("sends reactive AI context, messages and results as JSON (desktop=%s)", async (isDesktop) => {
   const requests: AgentHttpRequest[] = [];
   const respond = kaelRequest(requests);
@@ -258,12 +329,12 @@ it.each([false, true])("sends reactive AI context, messages and results as JSON 
     await client.createSession({ ...manifest, profile: "workspace" }, "auto");
     const state = reactive({ default_terminal_target: { target_id: "target-1", asset_name: "host-a" } });
     // Spreading a reactive context unwraps only its root; the target remains a Vue Proxy.
-    await client.updateContext("panel-1", "resource-1", { ...state });
     await client.sendMessage("panel-1", "resource-1", {
       message_id: "message-1",
       idempotency_key: "send-1",
       role: "user",
-      parts: reactive([{ type: "text", text: "Inspect the current terminal" }])
+      parts: reactive([{ type: "text", text: "Inspect the current terminal" }]),
+      metadata: { context: { ...state } }
     });
     await client.sendToolResult("panel-1", "resource-1", "tool-1", {
       jsonrpc: "2.0",
