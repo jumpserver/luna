@@ -43,6 +43,7 @@ import { menuCommandTargetLabel } from "../shared/menu-command";
 import { productNameAllowsDevTools } from "../shared/product-name";
 import { parseUrl, toFetchUrl } from "../shared/url";
 import { createWebProxyManager } from "@jumpserver/web-proxy/manager";
+import { resolveExecutablePath } from "./executable-path";
 
 const electronDir = __dirname;
 const appRoot = app.getAppPath();
@@ -1181,7 +1182,10 @@ async function handleInvoke(event, request) {
   if (command === "get_config") return applicationConfig.getConfig();
   if (command === "list_plugins") return applicationConfig.listPlugins();
   if (command === "update_config_selection") {
-    return applicationConfig.updateSelection({ ...args, ...(args.path ? { path: normalizePath(args.path) } : {}) });
+    return applicationConfig.updateSelection({
+      ...args,
+      ...(args.path ? { path: resolveExecutablePath(args.path) } : {})
+    });
   }
   if (command === "install_plugin")
     return withIpcErrorLog("install_plugin", () => applicationConfig.installPlugin({ path: normalizePath(args.path) }));
@@ -1209,10 +1213,10 @@ async function handleInvoke(event, request) {
   if (command === "uninstall_ffmpeg_plugin")
     return withIpcErrorLog("uninstall_ffmpeg_plugin", () => ffmpegPlugin.uninstall());
   if (command === "create_custom_terminal") {
-    return applicationConfig.createCustomTerminal({ ...args, path: normalizePath(args.path) });
+    return applicationConfig.createCustomTerminal({ ...args, path: resolveExecutablePath(args.path) });
   }
   if (command === "update_custom_terminal") {
-    return applicationConfig.updateCustomTerminal({ ...args, path: normalizePath(args.path) });
+    return applicationConfig.updateCustomTerminal({ ...args, path: resolveExecutablePath(args.path) });
   }
   if (command === "pull_up") return withIpcErrorLog("pull_up", () => localApplicationLauncher.launch(args.url));
   if (command === "list_system_fonts") return listSystemFonts();
