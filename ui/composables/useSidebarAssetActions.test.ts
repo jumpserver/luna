@@ -95,4 +95,13 @@ describe("workspaceConnectAsset bus", () => {
     useEventBus().emit("workspaceConnectAsset", asset);
     await vi.waitFor(() => expect(openSetupSession).toHaveBeenCalledTimes(1));
   });
+
+  it("opens the connect dialog before asset details return", () => {
+    getAssetDetailRequest.mockReturnValue(new Promise(() => {}));
+    useSidebarAssetActions();
+    useEventBus().emit("workspaceConnectAsset", asset);
+    expect(openSetupSession).toHaveBeenCalledTimes(1);
+    expect(openSetupSession).toHaveBeenCalledWith(asset);
+    expect(getAssetDetailRequest).not.toHaveBeenCalled();
+  });
 });

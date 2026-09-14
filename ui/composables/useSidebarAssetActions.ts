@@ -98,7 +98,7 @@ export function useSidebarAssetActions() {
     const rememberedAsset = { ...asset, savedConnection: remembered || undefined };
 
     if (!remembered || !hasReusableSavedConnection(rememberedAsset)) {
-      await openSetupOrToast(rememberedAsset);
+      openSetupSession(rememberedAsset);
       return;
     }
 
@@ -320,20 +320,6 @@ export function useSidebarAssetActions() {
     }
   };
 
-  async function openSetupOrToast(asset: AssetItem, options?: { paneId?: string }) {
-    try {
-      const detailed = await loadAssetConnectionDetails(asset);
-      openSetupSession(detailed, options);
-    } catch (error) {
-      addErrorToast({
-        id: "asset-load-failed",
-        title: t("Asset.GetAssetFailed"),
-        description: error instanceof Error ? error.message : String(error),
-        icon: "i-lucide-circle-alert"
-      });
-    }
-  }
-
   const handleAssetConnect = async (asset: AssetItem) => {
     closeHoverPreview();
     if (isNarrowScreen.value) setCollapse(true);
@@ -346,7 +332,7 @@ export function useSidebarAssetActions() {
 
     const currentTab = activeTab.value;
     if (!currentTab) {
-      void openSetupOrToast(asset);
+      openSetupSession(asset);
       return;
     }
 
@@ -369,7 +355,7 @@ export function useSidebarAssetActions() {
     const [pane] = splitWorkspace(currentTab.id, direction);
     if (!pane) return;
 
-    void openSetupOrToast(asset, { paneId: pane.id });
+    openSetupSession(asset, { paneId: pane.id });
   };
 
   const handleAssetQuickConnect = (asset: AssetItem) => {
@@ -379,7 +365,7 @@ export function useSidebarAssetActions() {
 
   const handleAssetConnectWithSelection = (asset: AssetItem) => {
     closeHoverPreview();
-    void openSetupOrToast(asset);
+    openSetupSession(asset);
   };
 
   liveAssetConnect.withSelection = handleAssetConnectWithSelection;

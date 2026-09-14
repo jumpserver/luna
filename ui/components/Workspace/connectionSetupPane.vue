@@ -2,6 +2,7 @@
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { AssetItem, AssetPageType } from "~/types/index";
 
+import ConnectFormSkeleton from "~/components/ConnectForm/connectFormSkeleton.vue";
 import ConnectFormFields from "~/components/ConnectForm/fields.vue";
 import { resolveConnectionSetupLoadError } from "~/composables/useConnectionFormState";
 import {
@@ -41,7 +42,7 @@ const {
 } = useConnectionFormState();
 
 const currentAsset = ref<AssetItem | null>(props.tab.setupAsset || null);
-const loading = ref(false);
+const loading = ref(true);
 const connecting = ref(false);
 const downloadingRdp = shallowRef(false);
 const connectionError = ref("");
@@ -98,7 +99,10 @@ const resetLaunchSuccessState = () => {
 
 async function loadAsset() {
   const asset = currentAsset.value || props.tab.setupAsset;
-  if (!asset) return;
+  if (!asset) {
+    loading.value = false;
+    return;
+  }
 
   loading.value = true;
   try {
@@ -188,7 +192,7 @@ watch(
 );
 
 const closing = ref(false);
-const dialogVisible = computed(() => !loading.value && !!currentAsset.value);
+const dialogVisible = computed(() => !closing.value && Boolean(currentAsset.value || props.tab.setupAsset));
 
 const requestClose = () => {
   if (!modernIsland.value) {
@@ -217,16 +221,6 @@ onMounted(loadAsset);
     @transitionend="onStageTransitionEnd"
   >
     <div class="mx-auto flex min-h-full w-full items-center justify-center">
-      <div
-        v-if="!modernIsland && loading"
-        class="grid h-full min-h-64 w-full place-items-center text-sm text-(--app-muted)"
-      >
-        <div class="flex items-center gap-2">
-          <UIcon name="i-lucide-loader-2" class="size-4 animate-spin" />
-          <span>{{ t("Loading.Loading") }}</span>
-        </div>
-      </div>
-
       <Transition :name="modernIsland ? 'island-dialog' : ''" :appear="modernIsland">
         <section
           v-if="dialogVisible"
@@ -270,17 +264,10 @@ onMounted(loadAsset);
             />
           </div>
 
-          <div
-            v-if="loading"
-            class="flex min-h-72 flex-col items-center justify-center gap-3 pb-8 text-xs text-(--app-text-muted)"
-          >
-            <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin text-(--theme-accent)" />
-            <span>{{ t("Loading.Loading") }}</span>
-          </div>
-
-          <div v-else class="flex min-h-75 flex-col" :class="modernIsland ? '' : 'bg-(--app-surface-panel-strong)'">
+          <div class="flex min-h-75 flex-col" :class="modernIsland ? '' : 'bg-(--app-surface-panel-strong)'">
             <div class="min-h-0 flex-1 overflow-auto py-4 pt-2" :class="modernIsland ? 'px-4' : 'px-6'">
-              <div v-if="launchSuccessVisible" class="flex min-h-full items-center justify-center py-6">
+              <ConnectFormSkeleton v-if="loading" />
+              <div v-else-if="launchSuccessVisible" class="flex min-h-full items-center justify-center py-6">
                 <section
                   class="launch-success-card w-full rounded-xl border border-(--app-border) bg-(--workspace-surface-panel) px-5 py-6 sm:px-6"
                 >

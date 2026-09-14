@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AssetItem } from "~/types";
 
+import ConnectFormSkeleton from "~/components/ConnectForm/connectFormSkeleton.vue";
 import ConnectFormFields from "~/components/ConnectForm/fields.vue";
 
 const { t } = useI18n();
@@ -105,9 +106,7 @@ watch(
     @update:open="updateOpen"
   >
     <template #body>
-      <div v-if="loading" class="grid min-h-72 place-items-center text-sm text-[var(--app-muted)]">
-        <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
-      </div>
+      <ConnectFormSkeleton v-if="loading" />
       <div v-else-if="currentAsset">
         <ConnectFormFields
           v-model:draft="draft"
