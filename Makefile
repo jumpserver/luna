@@ -1,6 +1,23 @@
 # JumpServer Electron project
 
 .DEFAULT_GOAL := help
+DOCKER_COMPOSE ?= docker compose
+
+.PHONY: run stop
+run: check-env ## 启动开发代理、Nuxt 和 Electron（http://localhost:8888）
+	@cleanup() { \
+		status=$$?; \
+		trap - EXIT INT TERM; \
+		$(DOCKER_COMPOSE) down; \
+		exit $$status; \
+	}; \
+	trap cleanup EXIT; \
+	trap 'exit 130' INT; \
+	trap 'exit 143' TERM; \
+	$(DOCKER_COMPOSE) up -d && npm run dev
+
+stop: ## 停止并移除开发代理
+	$(DOCKER_COMPOSE) down
 
 .PHONY: help
 help: ## 显示帮助信息

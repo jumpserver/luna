@@ -11,6 +11,7 @@ import type {
 } from "~/types";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { compactApiErrorBody } from "~/utils/apiError";
 
 export interface ApiRequest {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
@@ -25,9 +26,12 @@ export interface ApiRequest {
 export class ApiRequestError extends Error {
   constructor(
     public status: number,
-    public data: any
+    public data: any,
+    contentType = ""
   ) {
+    if (typeof data === "string") data = compactApiErrorBody(data, contentType);
     super(typeof data === "string" ? data : data?.detail || data?.code || `HTTP ${status}`);
+    this.data = data;
     this.name = "ApiRequestError";
   }
 }
@@ -270,6 +274,7 @@ async function webApiRequest<T>(request: ApiRequest): Promise<T> {
     method: request.method,
     credentials: "include",
     headers: {
+      Accept: "application/json",
       ...(mutating ? getWebApiMutationHeaders(request.orgId) : getWebApiHeaders(request.orgId)),
       ...request.headers,
       ...(hasBody ? { "Content-Type": "application/json" } : {})
@@ -289,7 +294,7 @@ async function webApiRequest<T>(request: ApiRequest): Promise<T> {
   }
 
   if (!response.ok) {
-    throw new ApiRequestError(response.status, data);
+    throw new ApiRequestError(response.status, data, response.headers.get("content-type") || "");
   }
 
   if (!text) {

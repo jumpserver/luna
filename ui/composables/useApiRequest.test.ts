@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   apiRequest,
+  ApiRequestError,
   createConnectionToken,
   favoriteAssetsToFolder,
   getAuthorizedAssets,
@@ -30,7 +31,10 @@ describe("API request headers", () => {
     expect(headers).toHaveBeenCalledWith("asset-org");
     expect(fetch).toHaveBeenCalledWith(
       "/site/test/api/v1/authentication/connection-token/token%2Fid/rdp-file/?width=1600",
-      expect.objectContaining({ credentials: "include", headers: { "X-JMS-ORG": "asset-org" } })
+      expect.objectContaining({
+        credentials: "include",
+        headers: { Accept: "application/json", "X-JMS-ORG": "asset-org" }
+      })
     );
   });
 
@@ -172,5 +176,45 @@ describe("API request headers", () => {
         headers: expect.objectContaining({ "X-JMS-ORG": "org-1", "X-CSRFToken": "csrf" })
       })
     );
+  });
+});
+
+describe("API error summaries", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const html = `<!doctype html><html><head><title>Server Error (500)</title></head><body>${"<pre>traceback and settings</pre>".repeat(
+    1000
+  )}</body></html>`;
+
+  it("omits HTML from both the web error message and its logged data", async () => {
+    vi.stubGlobal("isDesktopRuntime", () => false);
+    vi.stubGlobal("withWebSitePrefix", (path: string) => path);
+    vi.stubGlobal("getWebApiHeaders", () => ({}));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(html, { status: 500 }))
+    );
+    await expect(apiRequest({ method: "GET", path: "/api/test/" })).rejects.toMatchObject({
+      status: 500,
+      message: "HTML response omitted: Server Error (500)",
+      data: "HTML response omitted: Server Error (500)"
+    });
+  });
+
+  it("still parses desktop status and structured errors with request context", async () => {
+    vi.stubGlobal("isDesktopRuntime", () => true);
+    desktopInvoke.mockRejectedValueOnce(
+      new Error('api POST /api/test/: api request failed: status=403, body={"code":"acl_error","detail":"Denied"}')
+    );
+    await expect(apiRequest({ method: "POST", path: "/api/test/" })).rejects.toMatchObject({
+      status: 403,
+      message: "Denied",
+      data: { code: "acl_error", detail: "Denied" }
+    });
+  });
+
+  it("preserves structured validation data", () => {
+    const data = { code: "invalid", fields: { name: ["Required"] } };
+    expect(new ApiRequestError(400, data).data).toBe(data);
   });
 });

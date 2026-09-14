@@ -205,15 +205,31 @@ pnpm reset            # 清理构建产物
 
 所有连接都使用 Core 返回的 endpoint。HTTP/HTTPS 端口为 `0` 时继承当前站点端口；明确配置的 host、端口或 URL 不会因开发模式或 loopback 地址而被替换。
 
-本地开发运行 `pnpm dev`，Web 使用启动输出中的 Nuxt 地址，Electron 的登录站点也填写同一个地址（例如 `http://127.0.0.1:3000`）。默认 endpoint 经此入口分流：
+推荐通过 Compose 提供独立开发入口：
 
-| 路径                                                  | 默认后端                | 配置变量           |
-| ----------------------------------------------------- | ----------------------- | ------------------ |
-| `/api/`、`/core`                                      | `http://localhost:8080` | `JMS_CORE_DEV_URL` |
-| `/koko/`（含终端、SFTP、Lion、监控的 HTTP/WebSocket） | `http://localhost:5050` | `JMS_KOKO_DEV_URL` |
-| `/chen`（HTTP/WebSocket）                             | `http://localhost:8082` | `JMS_CHEN_DEV_URL` |
+```bash
+# 先分别启动本机 Core（8080）、Koko（5050）和 Chen（8082）
+# 启动代理，再执行 npm run dev（Nuxt + Electron）；退出时自动清理代理
+make run
+```
 
-这些变量放在 `.env.development`，修改后重启开发进程。需要独立调试 Lion 时可用 `JMS_LION_DEV_URL` 覆盖 `/koko/lion/`。自定义 endpoint 需配置为开发代理入口，或其实际可访问的连接地址。
+浏览器打开 `http://localhost:8888/luna/`，Electron 登录站点填写 `http://localhost:8888`。`make run` 启动代理、Nuxt 和 Electron；后端需提前启动，前端依赖需先安装。请将 `http://localhost:8888` 加入 Core 的 `DOMAINS` 信任配置（用于域名和 CSRF 校验），并在需要时更新 `SITE_URL`。默认 endpoint 经此入口分流：
+
+| 路径 | 本机端口 | Compose 配置变量（host:port） |
+| --- | --- | --- |
+| `/koko/`（含 Lion、HTTP/WebSocket） | 5050 | `JMS_DEV_KOKO` |
+| `/chen/`（HTTP/WebSocket） | 8082 | `JMS_DEV_CHEN` |
+| `/luna/` | 3000 | `JMS_DEV_LUNA` |
+| `/ui/` | 9528 | `JMS_DEV_UI` |
+| `/kael/` | 8083 | `JMS_DEV_KAEL` |
+| `/facelive/` | 5173 | `JMS_DEV_FACELIVE` |
+| 其余路径（Core） | 8080 | `JMS_DEV_CORE` |
+
+容器通过 `host.docker.internal` 访问宿主机。Linux 上本机服务需要监听 Docker 网桥可访问的地址，不能只监听 `127.0.0.1`。代理仅发布到本机 `127.0.0.1`。
+
+可用 `JMS_DEV_PORT=8899 make run` 修改入口端口，此时登录 `http://localhost:8899`；将该入口加入 Core 的 `DOMAINS`/`CSRF` 信任配置，并在需要时更新 `SITE_URL`。上游覆盖示例：`JMS_DEV_KOKO=host.docker.internal:5051 make run`。Compose 读取 shell 环境或根目录 `.env`，不读取 Nuxt 的 `.env.development`。配置检查：`docker compose config` 和 `docker compose run --rm gateway nginx -t`。
+
+原有 Nuxt 开发代理仍可通过 `pnpm dev` 使用；其 `JMS_*_DEV_URL` 配置只影响 Nuxt。自定义 endpoint 需配置为统一入口，或其实际可访问的连接地址。
 
 Electron 选择远端 JumpServer 站点时直接使用该站点的 endpoint。已移除 `JMS_KOKO_DESKTOP_URL`、`JMS_CHEN_DESKTOP_URL`、`VITE_JMS_WEB_PROXY_URL` 和 `VITE_JMS_WEB_PROXY_PORT` 地址覆盖。
 

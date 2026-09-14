@@ -212,6 +212,16 @@ pnpm lint             # Run lint checks
 pnpm reset            # Clean build artifacts
 ```
 
+### Unified development gateway
+
+Start Core (8080), Koko (5050), and Chen (8082) separately and install frontend dependencies, then run `make run`. It starts the gateway in the background and runs `npm run dev` (Nuxt + Electron). Add `http://localhost:8888` to Core’s `DOMAINS` configuration for domain and CSRF checks; update `SITE_URL` if needed.
+
+Open `http://localhost:8888/luna/` in the browser and use `http://localhost:8888` as the Electron login site. Core's default endpoint inherits this entry point; explicit remote endpoints remain unchanged. The gateway forwards HTTP and WebSockets under `/koko/` (including Lion) and `/chen/`, plus `/luna/`, `/ui/`, `/kael/`, and `/facelive/`. Other paths go to Core. Web Proxy traffic still uses the endpoint's separate `web_proxy_port`.
+
+Use `JMS_DEV_PORT=8899 make run` to change the public port, and add the resulting origin to Core's trusted domains/CSRF configuration; update `SITE_URL` if needed. Upstreams use `host.docker.internal` by default and accept host:port overrides, e.g. `JMS_DEV_KOKO=host.docker.internal:5051 make run`. Compose reads the shell environment or `.env`, not Nuxt's `.env.development`. On Linux, host services must listen on an address reachable from the Docker bridge. The gateway publishes only on `127.0.0.1`.
+
+Exiting development (including Ctrl+C) stops and removes the gateway; `make stop` also removes it manually. Validate configuration with `docker compose config` and `docker compose run --rm gateway nginx -t`. See [the Chinese development guide](README_CN.md#连接组件的开发代理) for all upstream variables.
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

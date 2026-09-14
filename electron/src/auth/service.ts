@@ -1,3 +1,4 @@
+import { compactApiErrorBody } from "../../../ui/utils/apiError";
 import { createHash, randomBytes } from "node:crypto";
 import { once } from "node:events";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
@@ -286,7 +287,10 @@ export class DesktopAuthService {
         signal: AbortSignal.timeout(10_000)
       });
       const text = await response.text();
-      if (!response.ok) throw new Error(`OAuth config endpoint returned ${response.status}: ${text}`);
+      if (!response.ok)
+        throw new Error(
+          `OAuth config endpoint returned ${response.status}: ${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
+        );
       oauthConfig = JSON.parse(text);
     } catch (error) {
       const message = `Failed to fetch OAuth config: ${error}`;
@@ -345,7 +349,10 @@ export class DesktopAuthService {
       redirect: "manual"
     });
     const text = await response.text();
-    if (!response.ok) throw new Error(`Token exchange failed: status=${response.status}, body=${text}`);
+    if (!response.ok)
+      throw new Error(
+        `Token exchange failed: status=${response.status}, body=${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
+      );
     const payload = parseJsonResponse(text);
     if (!payload.access_token) throw new Error("Token exchange response did not include access_token");
     return {
@@ -423,6 +430,7 @@ export class DesktopAuthService {
       }
     }
     const headers = {
+      Accept: "application/json",
       ...requestHeaders(request),
       "X-TZ": timezoneOffset(),
       Referer: url.origin,
@@ -441,7 +449,9 @@ export class DesktopAuthService {
     const text = await response.text();
     if (!responseSucceeded(response.status)) {
       electronLog.warn(`api ${request.method} ${url.pathname} status=${response.status}`);
-      throw new Error(`api request failed: status=${response.status}, body=${text}`);
+      throw new Error(
+        `api ${request.method} ${url.pathname}: api request failed: status=${response.status}, body=${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
+      );
     }
     if (!text.trim()) return null;
     return parseJsonResponse(text);
@@ -482,7 +492,9 @@ export class DesktopAuthService {
     });
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`api stream request failed: status=${response.status}, body=${text}`);
+      throw new Error(
+        `api ${request.method} ${url.pathname}: api stream request failed: status=${response.status}, body=${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
+      );
     }
     if (!response.body) throw new Error("api stream response body is unavailable");
 
@@ -522,7 +534,9 @@ export class DesktopAuthService {
     const text = await response.text();
     if (response.status !== 201) {
       electronLog.warn(`koko connect ticket failed status=${response.status}`);
-      throw new Error(`create koko connect ticket failed: status=${response.status}, body=${text}`);
+      throw new Error(
+        `create koko connect ticket failed: status=${response.status}, body=${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
+      );
     }
     electronLog.info(`koko connect ticket ${base.origin}`);
     return parseJsonResponse(text);
