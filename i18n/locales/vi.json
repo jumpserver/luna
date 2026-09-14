@@ -1506,7 +1506,7 @@
       "newFolder": "Thư mục mới",
       "newFile": "Tệp mới",
       "nameTooLong": "Tên không được vượt quá {max} ký tự",
-      "invalidName": "Tên không được chứa \\ / : * ? \" < > |",
+      "invalidName": "Tên không được chứa \\ / : * ? \" {'<'} {'>'} {'|'}",
       "newEntry": "Mới",
       "editPath": "Sửa đường dẫn",
       "filterCurrentDirectory": "Lọc thư mục hiện tại",

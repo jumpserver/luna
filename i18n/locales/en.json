@@ -1506,7 +1506,7 @@
       "newFolder": "New folder",
       "newFile": "New file",
       "nameTooLong": "Name cannot exceed {max} characters",
-      "invalidName": "The name cannot contain \\ / : * ? \" < > |",
+      "invalidName": "The name cannot contain \\ / : * ? \" {'<'} {'>'} {'|'}",
       "newEntry": "New",
       "editPath": "Edit path",
       "filterCurrentDirectory": "Filter current folder",
