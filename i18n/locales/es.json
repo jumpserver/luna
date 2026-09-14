@@ -355,6 +355,8 @@
     "Expand": "Expandir barra lateral"
   },
   "RightPanel": {
+    "AIClearLocalHistory": "Borrar el historial local y el borrador",
+    "FileAIReconnectDescription": "La conexión de archivos no está lista. Conéctese o vuelva a conectarse al activo para iniciar un nuevo chat. Puede consultar o borrar los mensajes existentes.",
     "Open": "Abrir panel derecho",
     "Close": "Cerrar panel derecho",
     "AIOpen": "Abrir asistente de IA",

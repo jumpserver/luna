@@ -355,6 +355,8 @@
     "Expand": "Mở rộng thanh bên"
   },
   "RightPanel": {
+    "AIClearLocalHistory": "Xóa lịch sử cục bộ và bản nháp",
+    "FileAIReconnectDescription": "Kết nối tệp chưa sẵn sàng. Hãy kết nối hoặc kết nối lại tài sản để bắt đầu cuộc trò chuyện mới. Bạn có thể xem hoặc xóa các tin nhắn hiện có.",
     "Open": "Mở bảng bên phải",
     "Close": "Đóng bảng bên phải",
     "AIOpen": "Mở trợ lý AI",

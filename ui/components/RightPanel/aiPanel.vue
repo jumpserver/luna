@@ -40,6 +40,9 @@ const {
   session,
   viewItems,
   presentation,
+  canClearLocalHistory,
+  canNewSession,
+  startingNewSession,
   unavailableState,
   draft,
   runProgress,
@@ -52,6 +55,7 @@ const {
   submit,
   interrupt,
   newSession,
+  clearLocalHistory,
   clearError,
   updateApprovalThreshold,
   updateExecutionMode,
@@ -75,7 +79,7 @@ const timelineEmptyState = computed(() =>
     <AiPresenceHeader
       :assistant-name="presentation?.assistantName || t('RightPanel.LunaAiName')"
       :description="presentation?.headerDescription || ''"
-      :status-label="presentation?.available ? presenceStatusLabel : ''"
+      :status-label="presentation ? presenceStatusLabel : ''"
       :status-tone="presentation?.available ? presenceStatusTone : 'warning'"
       :busy="Boolean(presentation?.busy || presentation?.running)"
       :tool-names="presentation?.toolNames || []"
@@ -84,15 +88,34 @@ const timelineEmptyState = computed(() =>
       :risk-color="riskColor"
     >
       <template #actions>
-        <UTooltip v-if="session" :text="t('RightPanel.AINewSessionDescription')">
+        <UTooltip v-if="canClearLocalHistory" :text="t('RightPanel.AIClearLocalHistory')">
           <UButton
-            icon="i-lucide-plus"
-            :aria-label="t('RightPanel.AINewSession')"
+            icon="i-lucide-eraser"
+            :aria-label="t('RightPanel.AIClearLocalHistory')"
             color="neutral"
             variant="ghost"
             size="xs"
-            @click="newSession"
+            @click="clearLocalHistory"
           />
+        </UTooltip>
+        <UTooltip
+          v-if="session"
+          :text="
+            presentation?.available ? t('RightPanel.AINewSessionDescription') : displayedUnavailableState.description
+          "
+        >
+          <span class="inline-flex">
+            <UButton
+              icon="i-lucide-plus"
+              :aria-label="t('RightPanel.AINewSession')"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              :disabled="!canNewSession"
+              :loading="startingNewSession"
+              @click="newSession"
+            />
+          </span>
         </UTooltip>
         <slot name="actions" />
       </template>

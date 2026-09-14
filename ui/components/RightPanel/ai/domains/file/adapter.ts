@@ -89,18 +89,22 @@ export const fileAiPanelDomain: AiPanelDomainAdapter = {
     }
 
     const errorLabel = current.errorCode || current.errorText ? context.t("RightPanel.FileAIFailed") : "";
+    const unavailableDescription = current.connected
+      ? current.errorText || context.t("RightPanel.FileAIUnavailableDescription")
+      : context.t("RightPanel.FileAIReconnectDescription");
 
     return {
       assistantName: context.t("RightPanel.LunaAiName"),
-      headerDescription: context.t("RightPanel.FileAIHeaderDescription"),
+      headerDescription: current.connected ? context.t("RightPanel.FileAIHeaderDescription") : unavailableDescription,
       available: isKokoFileAiAvailable(current.targetId),
+      canClearLocalHistory: !current.connected && Boolean(current.chat.messages.value.length || current.draft),
       busy,
       running: current.taskActive,
       waitingForApproval,
       unavailable: {
         icon: "i-lucide-folder-lock",
         title: context.t("RightPanel.FileAIUnavailableTitle"),
-        description: current.errorText || context.t("RightPanel.FileAIUnavailableDescription")
+        description: unavailableDescription
       },
       empty: {
         icon: "i-lucide-folder-search-2",
@@ -110,7 +114,9 @@ export const fileAiPanelDomain: AiPanelDomainAdapter = {
       inputPlaceholder: context.t("RightPanel.FileAIInputPlaceholder"),
       actionLabel: context.t("RightPanel.AISend"),
       interruptLabel: context.t("RightPanel.FileAIInterrupt"),
-      runtimeStatusLabel: runtimeStatusLabel(current.runtimeStatusCode || current.runtimeState, context.t),
+      runtimeStatusLabel: current.connected
+        ? runtimeStatusLabel(current.runtimeStatusCode || current.runtimeState, context.t)
+        : "",
       errorLabel,
       errorDetail: current.errorText,
       backgroundReasonLabel: "",
@@ -203,6 +209,14 @@ export const fileAiPanelDomain: AiPanelDomainAdapter = {
     current.errorCode = "";
     current.errorText = "";
     current.chat.clearError();
+  },
+
+  clearLocalHistory(session) {
+    const current = fileSession(session);
+    if (!current || current.connected) return;
+    current.chat.messages.value = [];
+    current.draft = "";
+    fileAiPanelDomain.clearError(current);
   },
 
   updateApprovalThreshold(session, value) {

@@ -26,6 +26,7 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
   const session = computed(() => resolveAiPanelSession(options.paneId.value));
   const adapter = computed(() => (session.value ? resolveAiPanelDomain(session.value) : null));
   const messages = computed(() => (session.value ? workspaceAiMessages(session.value) : []));
+  const startingNewSession = shallowRef(false);
   const metadataApproval = computed(() => {
     const current = session.value;
     return current && "metadataApproval" in current ? current.metadataApproval : null;
@@ -57,6 +58,10 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
     if (!current || !currentAdapter) return {};
     return currentAdapter.summarize(current, domainContext.value, viewItems.value);
   });
+  const canNewSession = computed(() => Boolean(presentation.value?.available && !startingNewSession.value));
+  const canClearLocalHistory = computed(() =>
+    Boolean(presentation.value?.canClearLocalHistory && adapter.value?.clearLocalHistory)
+  );
 
   function stopElapsedTimer() {
     if (elapsedTimer !== null) clearInterval(elapsedTimer);
@@ -93,6 +98,7 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
   const presenceStatusTone = computed<"ready" | "active" | "warning" | "error" | "success">(() => {
     const current = presentation.value;
     if (!current) return "ready";
+    if (!current.available) return "warning";
     if (current.errorLabel) return "error";
     if (metadataApproval.value || current.waitingForApproval) return "warning";
     if (current.busy || current.running) return "active";
@@ -103,6 +109,7 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
   const presenceStatusLabel = computed(() => {
     const current = presentation.value;
     if (!current) return t("RightPanel.AIStatusReady");
+    if (!current.available) return current.unavailable.title;
     if (current.errorLabel) return current.errorLabel;
     if (metadataApproval.value || current.waitingForApproval) return t("RightPanel.AIStatusAwaitingApproval");
     if (current.busy || current.running) return current.runtimeStatusLabel || t("RightPanel.AIStatusRunning");
@@ -160,9 +167,23 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
 
   async function newSession() {
     const current = session.value;
-    if (!current) return;
-    current.draft = "";
-    await current.agent.actions.newSession().catch(() => undefined);
+    if (!current || !canNewSession.value) return;
+    const previousDraft = current.draft;
+    startingNewSession.value = true;
+    try {
+      await current.agent.actions.newSession();
+      if (current.agent.state.available && current.draft === previousDraft) current.draft = "";
+    } catch (error) {
+      current.errorCode = "new_session_failed";
+      current.errorText = error instanceof Error ? error.message : String(error);
+    } finally {
+      startingNewSession.value = false;
+    }
+  }
+
+  function clearLocalHistory() {
+    const current = session.value;
+    if (current && canClearLocalHistory.value) adapter.value?.clearLocalHistory?.(current);
   }
 
   function clearError() {
@@ -190,6 +211,9 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
     messages,
     viewItems,
     presentation,
+    canClearLocalHistory,
+    canNewSession,
+    startingNewSession,
     unavailableState,
     draft,
     runProgress,
@@ -202,6 +226,7 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
     submit,
     interrupt,
     newSession,
+    clearLocalHistory,
     clearError,
     updateApprovalThreshold,
     updateExecutionMode,

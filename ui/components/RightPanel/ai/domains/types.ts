@@ -22,6 +22,7 @@ export interface AiPanelDomainPresentation {
   assistantName: string;
   headerDescription: string;
   available: boolean;
+  canClearLocalHistory?: boolean;
   busy: boolean;
   running: boolean;
   waitingForApproval: boolean;
@@ -71,6 +72,7 @@ export interface AiPanelDomainAdapter {
   submit(session: WorkspaceAiSession, text: string, context: AiPanelDomainContext): void;
   interrupt(session: WorkspaceAiSession, context: AiPanelDomainContext): void;
   clearError(session: WorkspaceAiSession): void;
+  clearLocalHistory?(session: WorkspaceAiSession): void;
   updateApprovalThreshold?(session: WorkspaceAiSession, value: unknown, context: AiPanelDomainContext): void;
   updateExecutionMode?(session: WorkspaceAiSession, value: unknown, context: AiPanelDomainContext): void;
   handleTimelineAction(session: WorkspaceAiSession, action: AiTimelineAction, context: AiPanelDomainContext): void;

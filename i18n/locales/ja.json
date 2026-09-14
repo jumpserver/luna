@@ -355,6 +355,8 @@
     "Expand": "サイドバーを展開"
   },
   "RightPanel": {
+    "AIClearLocalHistory": "ローカル履歴と下書きを消去",
+    "FileAIReconnectDescription": "ファイル接続の準備ができていません。アセットに接続または再接続して、新しいチャットを開始してください。既存のメッセージは表示または消去できます。",
     "Open": "右パネルを開く",
     "Close": "右パネルを閉じる",
     "AIOpen": "AI アシスタントを開く",

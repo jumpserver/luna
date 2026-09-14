@@ -355,6 +355,8 @@
     "Expand": "Expand sidebar"
   },
   "RightPanel": {
+    "AIClearLocalHistory": "Clear local history and draft",
+    "FileAIReconnectDescription": "The file connection is not ready. Connect or reconnect the asset to start a new chat. Existing messages can be viewed or cleared.",
     "Open": "Open right panel",
     "Close": "Close right panel",
     "AIOpen": "Open AI assistant",

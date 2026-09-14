@@ -355,6 +355,8 @@
     "Expand": "展开侧边栏"
   },
   "RightPanel": {
+    "AIClearLocalHistory": "清空本地记录和草稿",
+    "FileAIReconnectDescription": "文件连接未就绪。请连接或重新连接资产后开启新会话；已有记录可查看或清空。",
     "Open": "打开右侧面板",
     "Close": "关闭右侧面板",
     "AIOpen": "打开 AI 助手",

@@ -355,6 +355,8 @@
     "Expand": "Expandir barra lateral"
   },
   "RightPanel": {
+    "AIClearLocalHistory": "Limpar histórico local e rascunho",
+    "FileAIReconnectDescription": "A conexão de arquivos não está pronta. Conecte ou reconecte o ativo para iniciar uma nova conversa. As mensagens existentes podem ser consultadas ou apagadas.",
     "Open": "Abrir painel direito",
     "Close": "Fechar painel direito",
     "AIOpen": "Abrir assistente de IA",

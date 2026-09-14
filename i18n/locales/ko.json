@@ -355,6 +355,8 @@
     "Expand": "사이드바 펼치기"
   },
   "RightPanel": {
+    "AIClearLocalHistory": "로컬 기록 및 초안 지우기",
+    "FileAIReconnectDescription": "파일 연결이 준비되지 않았습니다. 자산에 연결하거나 다시 연결한 후 새 대화를 시작하세요. 기존 메시지는 확인하거나 지울 수 있습니다.",
     "Open": "오른쪽 패널 열기",
     "Close": "오른쪽 패널 닫기",
     "AIOpen": "AI 도우미 열기",

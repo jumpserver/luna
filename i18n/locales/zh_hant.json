@@ -355,6 +355,8 @@
     "Expand": "展開側邊欄"
   },
   "RightPanel": {
+    "AIClearLocalHistory": "清空本機記錄和草稿",
+    "FileAIReconnectDescription": "檔案連線尚未就緒。請連線或重新連線至資產後開啟新會話；現有記錄可檢視或清空。",
     "Open": "開啟右側面板",
     "Close": "關閉右側面板",
     "AIOpen": "開啟 AI 助手",
