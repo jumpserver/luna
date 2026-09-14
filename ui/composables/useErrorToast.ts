@@ -54,6 +54,14 @@ function resolveErrorDescription(error: unknown) {
   return normalizeToastText(error);
 }
 
+function localizeErrorDescription(description: string, translate: (key: string) => string) {
+  const apiMessage = description.replace(/^ApiRequestError:\s*/i, "").trim();
+  if (/^Personal credential not found\.?$/i.test(apiMessage)) {
+    return translate("ConnectError.PersonalCredentialNotFound");
+  }
+  return description;
+}
+
 function hasCopyAction(actions: ErrorToastAction[] = []) {
   return actions.some((action) => {
     const label = normalizeToastText(action?.label).toLowerCase();
@@ -67,7 +75,10 @@ export function useErrorToast() {
   const toast = useToast();
 
   const addErrorToast = (options: ErrorToastOptions) => {
-    const description = normalizeErrorText(options.description ?? resolveErrorDescription(options.error));
+    const description = localizeErrorDescription(
+      normalizeErrorText(options.description ?? resolveErrorDescription(options.error)),
+      t
+    );
     const actions = [...(options.actions ?? [])];
     const copyText = [options.title, description].filter(Boolean).join("\n");
 

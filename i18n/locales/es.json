@@ -1332,6 +1332,7 @@
     "DownloadRdpFailed": "No se pudo descargar el archivo RDP",
     "ConnectFailed": "Error de conexión",
     "CredentialServiceUnavailable": "El servicio de credenciales (por ejemplo, OpenBao) no está disponible. Compruebe su estado e inténtelo de nuevo.",
+    "PersonalCredentialNotFound": "No se encontró la credencial personal seleccionada. Seleccione otra o introdúzcala manualmente.",
     "AclFailed": "El activo actual está restringido por políticas de ACL y no se puede acceder a él mediante el cliente. Use la consola web para conectarse.",
     "MethodDisabled": "Este método de conexión está deshabilitado",
     "ClientNotFound": "No se encontró el cliente de escritorio. Instale o configure su ruta.",
