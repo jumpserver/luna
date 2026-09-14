@@ -22,7 +22,8 @@ const mocks = vi.hoisted(() => ({
     currentAccountId: "web-account",
     currentUser: { org: { id: "org" } },
     setConnectionPreferenceForAsset: vi.fn()
-  }
+  },
+  location: { protocol: "https:", origin: "https://jumpserver.example" }
 }));
 
 vi.mock("~/shared/desktop/bridge", () => ({
@@ -59,6 +60,33 @@ vi.mock("vue", async (original) => ({
   onMounted: vi.fn(),
   onBeforeUnmount: vi.fn()
 }));
+vi.mock("~/utils/runtime", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/runtime")>();
+  return {
+    ...actual,
+    pageLocation: () => ({
+      assign: mocks.assign,
+      protocol: mocks.location.protocol,
+      origin: mocks.location.origin
+    })
+  };
+});
+
+function stubLocation(location: { protocol?: string; origin?: string } = {}) {
+  mocks.location.protocol = location.protocol ?? "https:";
+  mocks.location.origin = location.origin ?? "https://jumpserver.example";
+  vi.stubGlobal("window", {
+    location: {
+      assign: mocks.assign,
+      get protocol() {
+        return mocks.location.protocol;
+      },
+      get origin() {
+        return mocks.location.origin;
+      }
+    }
+  });
+}
 
 describe("opening assets in local applications", () => {
   const method = { value: "ssh_client", type: "native", component: "koko", disabled: false };
@@ -89,7 +117,10 @@ describe("opening assets in local applications", () => {
       currentRdpClientOption: ref({}),
       orgId: ref("org")
     }));
-    vi.stubGlobal("window", { location: { assign: mocks.assign } });
+    stubLocation();
+    vi.stubGlobal("document", {
+      createElement: () => ({ href: "", download: "", click: vi.fn() })
+    });
     vi.stubGlobal("getLocalClientUrl", mocks.getLocalClientUrl);
     vi.stubGlobal("createConnectionTokenWithAcl", mocks.createToken);
     mocks.createToken.mockResolvedValue({ id: "id" });
@@ -128,7 +159,7 @@ describe("opening assets in local applications", () => {
         fetchConnectMethods: async () => ({ rdp: [rdpMethod] }),
         getMethodsForProtocol: async () => [rdpMethod]
       }));
-      vi.stubGlobal("document", { createElement: () => link });
+      vi.spyOn(document, "createElement").mockReturnValue(link as unknown as HTMLElement);
       vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:rdp-file");
       vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
       mocks.getRdpFile.mockResolvedValue(content);
@@ -269,7 +300,7 @@ describe("opening assets in local applications", () => {
     async (connectMethod) => {
       vi.stubGlobal("isDesktopRuntime", () => true);
       vi.stubGlobal("isElectronRuntime", () => true);
-      vi.stubGlobal("window", { location: { protocol: "http:", origin: "http://127.0.0.1:3000" } });
+      stubLocation({ protocol: "http:", origin: "http://127.0.0.1:3000" });
       vi.stubGlobal("storeToRefs", () => ({
         currentSite: ref("http://127.0.0.1:3000"),
         currentConnectionInfoMap: ref({}),
@@ -302,7 +333,7 @@ describe("opening assets in local applications", () => {
     mocks.getPublicSettings.mockResolvedValue({ XPACK_LICENSE_IS_VALID: license });
     vi.stubGlobal("isDesktopRuntime", () => true);
     vi.stubGlobal("isElectronRuntime", () => true);
-    vi.stubGlobal("window", { location: { protocol: "http:", origin: "http://127.0.0.1:3000" } });
+    stubLocation({ protocol: "http:", origin: "http://127.0.0.1:3000" });
     vi.stubGlobal("useWebProxyManager", useWebProxyManager);
     const methods = [{ value: "web_proxy_native", type: "web", component: "koko", disabled: false }];
     vi.stubGlobal("useConnectMethods", () => ({
@@ -354,9 +385,7 @@ describe("opening assets in local applications", () => {
       fetchConnectMethods: async () => ({ http: [applet] }),
       getMethodsForProtocol: async () => [applet]
     }));
-    vi.stubGlobal("window", {
-      location: { protocol: "https:", origin: "https://jumpserver.example", assign: mocks.assign }
-    });
+    stubLocation();
     const endpoint = vi.fn().mockResolvedValue({ host: "jumpserver.example", https_port: 443 });
     vi.stubGlobal("getSmartEndpoint", endpoint);
     vi.stubGlobal("withWebSitePrefix", (path: string) => path);
@@ -450,9 +479,7 @@ describe("opening assets in local applications", () => {
   it.each([true, false])("resolves the Lion endpoint through Koko only on desktop=%s", async (desktop) => {
     vi.stubGlobal("isDesktopRuntime", () => desktop);
     vi.stubGlobal("isElectronRuntime", () => desktop);
-    vi.stubGlobal("window", {
-      location: { protocol: "https:", origin: "https://jumpserver.example" }
-    });
+    stubLocation();
     const methods = [{ value: "web_rdp_native", type: "web", component: "lion", disabled: false }];
     vi.stubGlobal("useConnectMethods", () => ({
       fetchConnectMethods: async () => ({ rdp: methods }),
@@ -485,9 +512,7 @@ describe("opening assets in local applications", () => {
     async (desktop, pageProtocol, site, expected) => {
       vi.stubGlobal("isDesktopRuntime", () => desktop);
       vi.stubGlobal("isElectronRuntime", () => desktop);
-      vi.stubGlobal("window", {
-        location: { protocol: pageProtocol, origin: `${pageProtocol}//127.0.0.1:3000` }
-      });
+      stubLocation({ protocol: pageProtocol, origin: `${pageProtocol}//127.0.0.1:3000` });
       vi.stubGlobal("storeToRefs", () => ({
         currentSite: ref(site),
         currentConnectionInfoMap: ref({}),
