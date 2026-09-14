@@ -672,7 +672,12 @@ export const useAssetAction = () => {
           });
           if (!ticket) throw new Error("Koko 未返回 Web Proxy connect ticket");
           const settings = await getPublicSettings();
-          webProxy = { ...webProxy, ticket, recordingEnabled: settings.XPACK_LICENSE_IS_VALID === true };
+          webProxy = {
+            ...webProxy,
+            ticket,
+            recordingEnabled: settings.XPACK_LICENSE_IS_VALID === true,
+            recordingSupported: settings.XPACK_LICENSE_IS_VALID === true
+          };
         }
         const payload = {
           token,

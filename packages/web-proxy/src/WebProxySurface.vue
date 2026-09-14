@@ -172,13 +172,17 @@ const statusSummary = computed(() =>
             : request.value?.proxyUrl
               ? "已通过代理连接"
               : "已连接",
-        `账号代填：${autofillLabel.value || "等待状态"}`,
+        autofillStatus.value === "unavailable" ? "账号代填未配置" : `账号代填：${autofillLabel.value || "等待状态"}`,
         request.value?.recordingEnabled === false
           ? request.value?.proxyUrl
-            ? "Web 录像未启用"
+            ? request.value?.recordingSupported === false
+              ? ""
+              : "录像未启用"
             : "远程会话录像"
           : recordingLabel.value || "录像准备中"
-      ].join(" · ")
+      ]
+        .filter(Boolean)
+        .join(" · ")
 );
 
 function viewBounds() {

@@ -28,6 +28,8 @@ function setupSurface(safeMode = false, observe = false) {
   const closeSession = vi.fn(async () => true);
   const props = reactive({
     request: {
+      recordingEnabled: undefined as boolean | undefined,
+      recordingSupported: undefined as boolean | undefined,
       safeMode,
       targetUrl: "https://asset.test/login",
       proxyUrl: "http://127.0.0.1:5001",
@@ -90,7 +92,7 @@ function setupSurface(safeMode = false, observe = false) {
   const surface = effects.run(() =>
     new Function(
       ...Object.keys(scope),
-      `${outputText}\nreturn { interactivePending, interactiveCanComplete, verificationCollapsed, collapseVerification, resumeVerification, verificationCompletionError, completeVerification, verificationFrame, verificationRenderedRevision, verificationCursor, verificationWaitingMessage, autofillStatus, verificationInputRef, verificationPointer, verificationText, closeView, syncView, viewCreated, contentRef, viewLabel, handleState, preview, error, navigationError, navigationDisabled, safeMode, addressValue, navigate, history, reload, reconnect };`
+      `${outputText}\nreturn { statusSummary, recordingStatus, interactivePending, interactiveCanComplete, verificationCollapsed, collapseVerification, resumeVerification, verificationCompletionError, completeVerification, verificationFrame, verificationRenderedRevision, verificationCursor, verificationWaitingMessage, autofillStatus, verificationInputRef, verificationPointer, verificationText, closeView, syncView, viewCreated, contentRef, viewLabel, handleState, preview, error, navigationError, navigationDisabled, safeMode, addressValue, navigate, history, reload, reconnect };`
     )(...Object.values(scope))
   );
   surface.viewCreated.value = true;
@@ -456,4 +458,24 @@ it("only offers manual completion when enabled by the main process and preserves
   expect(markSessionConnected).toHaveBeenCalledWith("tab");
   expect(surface.verificationFrame.value).toBeNull();
   expect(desktopWebProxy.close).not.toHaveBeenCalled();
+});
+
+it.each([
+  [false, false, ""],
+  [false, true, "录像未启用"],
+  [false, undefined, "录像未启用"],
+  [true, true, "录像准备中"]
+])("summarizes recording with enabled=%s and supported=%s", (enabled, supported, label) => {
+  const { surface, props } = setupSurface();
+  props.request.recordingEnabled = enabled as boolean;
+  props.request.recordingSupported = supported as boolean | undefined;
+  surface.autofillStatus.value = "unavailable";
+  expect(surface.statusSummary.value).toBe(`正在连接 · 账号代填未配置${label ? ` · ${label}` : ""}`);
+  if (enabled) {
+    surface.recordingStatus.value = "recording";
+    expect(surface.statusSummary.value).toContain("录像中");
+  } else {
+    props.request.proxyUrl = "";
+    expect(surface.statusSummary.value).toContain("远程会话录像");
+  }
 });

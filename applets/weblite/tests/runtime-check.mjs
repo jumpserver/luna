@@ -124,7 +124,7 @@ try {
   else {
     await page.locator("#dashboard").waitFor({ state: "visible", timeout: 15_000 });
     await shell
-      .getByRole("button", { name: recording ? /会话状态：.*未配置代填/ : /会话状态：.*登录成功/ })
+      .getByRole("button", { name: recording ? /会话状态：.*账号代填未配置/ : /会话状态：.*登录成功/ })
       .waitFor({ state: "visible" });
   }
   const bootstrap = await shell.evaluate(() => window.webApplet.invoke("bootstrap"));
