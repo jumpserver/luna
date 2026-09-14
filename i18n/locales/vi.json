@@ -2255,6 +2255,7 @@
     "InvalidTableStructureChanges": "Check the table structure changes.",
     "InvalidIndexDefinition": "Complete the index name and column selection.",
     "InvalidCsvFile": "The CSV file is invalid or cannot be read.",
-    "CopyOperationFailedDescription": "The selected data could not be copied."
+    "CopyOperationFailedDescription": "The selected data could not be copied.",
+    "TableWithoutPrimaryKeyNotEditable": "Bảng hiện tại chưa có khóa chính, tạm thời không hỗ trợ thêm, sửa hoặc xóa dữ liệu."
   }
 }

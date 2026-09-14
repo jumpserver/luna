@@ -2258,6 +2258,7 @@
     "InvalidTableStructureChanges": "请检查表结构更改。",
     "InvalidIndexDefinition": "请完整填写索引名称并选择列。",
     "InvalidCsvFile": "CSV 文件无效或无法读取。",
-    "CopyOperationFailedDescription": "无法复制所选数据。"
+    "CopyOperationFailedDescription": "无法复制所选数据。",
+    "TableWithoutPrimaryKeyNotEditable": "当前表未设置主键，暂不支持新增、修改或删除数据。"
   }
 }

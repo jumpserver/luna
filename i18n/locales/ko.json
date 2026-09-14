@@ -2255,6 +2255,7 @@
     "InvalidTableStructureChanges": "Check the table structure changes.",
     "InvalidIndexDefinition": "Complete the index name and column selection.",
     "InvalidCsvFile": "The CSV file is invalid or cannot be read.",
-    "CopyOperationFailedDescription": "The selected data could not be copied."
+    "CopyOperationFailedDescription": "The selected data could not be copied.",
+    "TableWithoutPrimaryKeyNotEditable": "이 테이블에는 기본 키가 없어 지금은 데이터를 추가, 수정 또는 삭제할 수 없습니다."
   }
 }

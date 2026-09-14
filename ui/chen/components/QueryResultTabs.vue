@@ -18,6 +18,7 @@ import {
   cancelChenSaveChangesConfirmation,
   chenDataViewHasDirty,
   clearChenDataViewEdits,
+  chenDataViewMissingPrimaryKey,
   isChenDataViewEditable
 } from "~/chen/utils/dataViewEditing";
 
@@ -57,6 +58,12 @@ const activeResult = computed(() => {
   return props.resultTabs.find((item) => item.id === props.activeResultTabId) || null;
 });
 const activeResultEditable = computed(() => isChenDataViewEditable(activeResult.value?.data));
+const activeResultMissingPrimaryKey = computed(
+  () =>
+    props.dataViewEditing &&
+    !activeResultEditable.value &&
+    chenDataViewMissingPrimaryKey(activeResult.value?.data)
+);
 const activeResultDirty = computed(() =>
   Boolean(activeResult.value && chenDataViewHasDirty(activeResult.value.editState))
 );
@@ -167,6 +174,12 @@ function cancelActiveResultChanges() {
     </div>
 
     <div v-else-if="activeResult" :key="activeResult.id" class="flex min-h-0 flex-1 flex-col">
+      <div
+        v-if="activeResultMissingPrimaryKey"
+        class="border-b border-warning/20 bg-warning/10 px-3 py-1.5 text-xs text-warning"
+      >
+        {{ t("Chen.TableWithoutPrimaryKeyNotEditable") }}
+      </div>
       <div class="flex shrink-0 items-center justify-between border-b border-default px-3 py-2 text-sm">
         <div class="min-w-0 truncate">
           {{ activeResult.title }}

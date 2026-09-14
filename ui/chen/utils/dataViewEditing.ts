@@ -214,8 +214,28 @@ export function acceptChenSaveChangesResult(state: ChenDataViewEditState, result
   return "applied" as const;
 }
 
+export const CHEN_EDIT_REASON_NO_PRIMARY_KEY = "NO_PRIMARY_KEY";
+
 export function isChenDataViewEditable(dataset: ChenDataViewDataset | null | undefined) {
   return dataset?.editable === true && dataset.fields.some((field) => field.editable === true);
+}
+
+export function chenDataViewMissingPrimaryKey(
+  dataset?: ChenDataViewDataset | null,
+  options?: {
+    isView?: boolean;
+    tableMetadata?: { loadedSections?: string[]; primaryKey?: { columns?: string[] } | null } | null;
+  }
+) {
+  if (options?.isView) return false;
+  const fields = dataset?.fields || [];
+  if (fields.some((field) => field.editReason === CHEN_EDIT_REASON_NO_PRIMARY_KEY)) {
+    return true;
+  }
+  const metadata = options?.tableMetadata;
+  if (!metadata?.loadedSections?.includes("primaryKey")) return false;
+  const columns = metadata.primaryKey?.columns || [];
+  return metadata.primaryKey === null || columns.length === 0;
 }
 
 export function isChenDataViewInsertable(dataset: ChenDataViewDataset | null | undefined) {
