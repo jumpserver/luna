@@ -40,15 +40,17 @@ export const CONNECTOR_REGISTRY: Record<Extract<JmsComponent, "koko">, Connector
 };
 
 export function resolveSessionComponent(tab: WorkspaceSessionTab): JmsComponent {
-  const method = tab.payload?.connectMethod as { component?: string } | undefined;
+  const method = tab.payload?.connectMethod;
+  if (method?.type === "applet" || method?.type === "virtual_app") return "lion";
+
   let component = method?.component || (tab.protocol === "ssh" ? "koko" : "default");
 
-  if (component === "tinker") component = "lion";
+  if (component === "tinker" || component === "panda") component = "lion";
   if (component === "default" && tab.protocol === "ssh") component = "koko";
-  if (component === "koko") return "koko";
+  if (component === "koko" || component === "lion") return component;
 
-  // Koko's legacy webUrl is kept in the tab for a fallback, but native SSH
-  // surfaces must be selected before generic external-Web handling.
+  // Connector payloads may retain a legacy webUrl; prefer their workspace
+  // before falling back to an external page.
   if (tab.payload?.webUrl) return "default";
 
   return component as JmsComponent;
@@ -67,6 +69,11 @@ export function resolveSessionSurface(tab: WorkspaceSessionTab): Component {
   if (connectMethod?.endsWith("_guide")) {
     return GuideSessionSurface;
   }
+
+  // Remote applications use Lion regardless of the target asset's protocol.
+  const component = resolveSessionComponent(tab);
+  if (component === "lion") return LionRemoteSessionSurface;
+
   const capability = findDeclaredCapability(tab.protocol, connectMethod);
 
   if (capability?.surface === "file-manager") {
@@ -97,14 +104,9 @@ export function resolveSessionSurface(tab: WorkspaceSessionTab): Component {
     return WebProxySessionSurface;
   }
 
-  const component = resolveSessionComponent(tab);
-
   switch (component) {
     case "koko":
       return CONNECTOR_REGISTRY.koko.component;
-    case "lion":
-    case "tinker":
-      return LionRemoteSessionSurface;
     default:
       return LegacyIframeSession;
   }

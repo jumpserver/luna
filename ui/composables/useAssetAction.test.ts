@@ -1,5 +1,7 @@
+import type { WorkspaceSessionTab } from "./useWorkspaceTabs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
+import { resolveSessionComponent, resolveSessionSurface } from "~/shared/connectors/registry";
 import { useAssetAction } from "./useAssetAction";
 import { useRdpResolutionPreference } from "./useRdpResolutionPreference";
 import { useWebProxyManager } from "./useWebProxyManager";
@@ -530,6 +532,11 @@ describe("opening assets in local applications", () => {
       expect(endpoint).not.toHaveBeenCalled();
     } else {
       expect(ready.mock.calls[0]?.[0].webUrl).toContain("/luna/lion/connect?token=id");
+      const tab = { protocol: "http", payload: ready.mock.calls[0]![0] } as WorkspaceSessionTab;
+      expect(resolveSessionComponent(tab)).toBe("lion");
+      expect(resolveSessionSurface(tab)).toBe(
+        resolveSessionSurface({ protocol: "rdp", connectMethod: "web_rdp_native" } as WorkspaceSessionTab)
+      );
       expect(mocks.getLocalClientUrl).not.toHaveBeenCalled();
       expect(mocks.invoke).not.toHaveBeenCalled();
       expect(mocks.assign).not.toHaveBeenCalled();
@@ -553,6 +560,7 @@ describe("opening assets in local applications", () => {
     expect(failed).not.toHaveBeenCalled();
     const payload = ready.mock.calls[0]![0];
     expect(payload.webUrl).toBe(`${endpointUrl}${prefix}/luna/lion/connect?token=id`);
+    expect(resolveSessionComponent({ protocol: "postgresql", payload } as WorkspaceSessionTab)).toBe("lion");
     expect(mocks.createToken).toHaveBeenCalledWith(
       expect.objectContaining({ protocol: "postgresql", connect_method: "pgadmin" }),
       expect.anything()
