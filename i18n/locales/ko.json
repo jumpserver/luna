@@ -1406,6 +1406,7 @@
   },
   "koko": {
     "actions": {
+      "back": "이전",
       "cancel": "취소",
       "close": "닫기",
       "confirm": "확인",

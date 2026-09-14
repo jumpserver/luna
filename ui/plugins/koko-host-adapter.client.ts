@@ -1,4 +1,10 @@
-import type { KokoHostAdapter, KokoPreparedSftpAsset, KokoSftpAsset, KokoWorkspaceTab } from "#koko/host";
+import type {
+  KokoHostAdapter,
+  KokoPreparedSftpAsset,
+  KokoSftpAsset,
+  KokoSftpConnectionChoice,
+  KokoWorkspaceTab
+} from "#koko/host";
 
 import { resolveEndpointUrl } from "@jumpserver/connectors-core";
 import { HeaderOrganizationSelector, SideBarAssetTree } from "#components";
@@ -49,14 +55,23 @@ export default defineNuxtPlugin((nuxtApp) => {
   const useSftpSessionCreator = () => {
     const { displayUser, handleAssetConnection } = useAssetAction();
 
-    return (asset: KokoPreparedSftpAsset) =>
+    return (asset: KokoPreparedSftpAsset, connection?: KokoSftpConnectionChoice) =>
       new Promise<{ tokenId: string }>((resolve, reject) => {
-        const preference = userInfoStore.getConnectionPreferenceForAsset(asset.id);
-        const remembered = userInfoStore.getConnectionInfoForAsset(asset.id);
-        const account = displayUser(asset.id, asset.permedAccounts);
+        const preference = connection ? null : userInfoStore.getConnectionPreferenceForAsset(asset.id);
+        const remembered = connection ? null : userInfoStore.getConnectionInfoForAsset(asset.id);
+        const account = connection?.account || displayUser(asset.id, asset.permedAccounts);
         void handleAssetConnection(account, asset.id, "ssh", asset.permedAccounts, "sftp", {
-          accountMode: preference?.accountMode || remembered?.accountMode || "hosted",
-          accountId: preference?.accountId || remembered?.accountId,
+          accountMode: connection?.accountMode || preference?.accountMode || remembered?.accountMode || "hosted",
+          accountId: connection?.accountId || preference?.accountId || remembered?.accountId,
+          ...(connection && {
+            manualUsername: connection.manualUsername,
+            manualPassword: connection.manualPassword,
+            personalCredentialId: connection.personalCredentialId,
+            personalCredentialVersion: connection.personalCredentialVersion,
+            personalCredentialSecretType: connection.personalCredentialSecretType,
+            savePersonalCredential: connection.savePersonalCredential,
+            dynamicPassword: connection.dynamicPassword
+          }),
           connectMethod: SFTP_FILE_MANAGER_VALUE,
           orgId: currentUser.value?.org?.id || "",
           asset,
@@ -78,7 +93,13 @@ export default defineNuxtPlugin((nuxtApp) => {
     getSmartEndpoint: async (request, orgId) => {
       const site = isDesktopRuntime() ? currentSite.value : window.location.origin;
       // SSH/SFTP use Koko's HTTP transport, not the native SSH endpoint port.
-      const endpoint = await getSmartEndpoint({ ...request, protocol: new URL(site).protocol.slice(0, -1) }, orgId);
+      let protocol = "https";
+      try {
+        protocol = new URL(site).protocol.slice(0, -1);
+      } catch {
+        protocol = String(site).startsWith("http:") ? "http" : "https";
+      }
+      const endpoint = await getSmartEndpoint({ ...request, protocol }, orgId);
       const value = resolveEndpointUrl(endpoint, site);
       return {
         ...endpoint,

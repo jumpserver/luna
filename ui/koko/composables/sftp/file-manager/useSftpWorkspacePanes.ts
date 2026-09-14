@@ -1,5 +1,5 @@
 import type { MaybeRefOrGetter } from "vue";
-import type { KokoSftpAsset } from "#koko/host";
+import type { KokoSftpAsset, KokoSftpConnectionChoice } from "#koko/host";
 import type {
   FileWorkspacePreconnect,
   FileWorkspaceSourceAsset,
@@ -9,7 +9,7 @@ import type {
   SftpWorkspaceSide
 } from "./workspaceTypes";
 
-import { resolveEndpointUrl, connectorSessionKey } from "@jumpserver/connectors-core";
+import { connectorSessionKey, resolveEndpointUrl } from "@jumpserver/connectors-core";
 import { computed, inject, reactive, ref, toValue, unref, watch } from "vue";
 import { useKokoHostAdapter } from "#koko/host";
 import { assetSupportsSftp, defaultGlobalLeftPaneId, rememberSftpConnection } from "./selectors";
@@ -290,7 +290,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
     recentConnections.value = rememberSftpConnection(recentConnections.value, entry);
   }
 
-  async function connectRemoteAsset(asset: KokoSftpAsset) {
+  async function connectRemoteAsset(asset: KokoSftpAsset, connection?: KokoSftpConnectionChoice) {
     if (remoteConnecting.value) return;
     remoteConnecting.value = true;
     try {
@@ -306,7 +306,7 @@ export function useSftpWorkspacePanes(options: SftpWorkspacePanesOptions) {
       }
 
       const side = toValue(options.global) ? connectSide.value : "right";
-      const { tokenId } = await createSftpSession(connectAsset);
+      const { tokenId } = await createSftpSession(connectAsset, connection);
       await attachRemotePane({
         assetId: connectAsset.id,
         assetName: connectAsset.name,

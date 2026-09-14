@@ -1406,6 +1406,7 @@
   },
   "koko": {
     "actions": {
+      "back": "上一步",
       "cancel": "取消",
       "close": "關閉",
       "confirm": "確認",

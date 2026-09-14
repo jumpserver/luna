@@ -1406,6 +1406,7 @@
   },
   "koko": {
     "actions": {
+      "back": "Quay lại",
       "cancel": "Hủy",
       "close": "Đóng",
       "confirm": "Xác nhận",

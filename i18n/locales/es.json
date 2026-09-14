@@ -1406,6 +1406,7 @@
   },
   "koko": {
     "actions": {
+      "back": "Atrás",
       "cancel": "Cancelar",
       "close": "Cerrar",
       "confirm": "Confirmar",

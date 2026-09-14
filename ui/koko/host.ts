@@ -4,6 +4,13 @@ import type { Component, InjectionKey, Ref } from "vue";
 
 import { inject } from "vue";
 
+export interface KokoWorkspaceTabPayload {
+  id?: string;
+  token?: KokoWorkspaceTabPayload;
+  endpointUrl?: string;
+  actions?: Array<string | { value?: string; label?: string }>;
+}
+
 export interface KokoWorkspaceTab {
   id: string;
   assetId: string;
@@ -13,7 +20,7 @@ export interface KokoWorkspaceTab {
   assetCategory?: string;
   protocol?: string;
   account?: string;
-  payload?: Record<string, any>;
+  payload?: KokoWorkspaceTabPayload;
 }
 
 export type KokoTerminalCommandProfile =
@@ -130,12 +137,28 @@ export interface KokoPreparedSftpAsset extends KokoSftpAsset {
   permedProtocols?: KokoSftpProtocol[];
 }
 
+export interface KokoSftpConnectionChoice {
+  account: string;
+  accountId?: string;
+  accountMode?: "hosted" | "dynamic" | "manual" | "anonymous";
+  manualUsername?: string;
+  manualPassword?: string;
+  personalCredentialId?: string;
+  personalCredentialVersion?: number;
+  personalCredentialSecretType?: string;
+  savePersonalCredential?: boolean;
+  dynamicPassword?: string;
+}
+
 export interface KokoSftpHostAdapter {
   organizationSelector: Component;
   assetTree: Component;
   currentOrganization: Ref<{ id: string; name: string } | null>;
   prepareAsset: (asset: KokoSftpAsset) => Promise<KokoPreparedSftpAsset>;
-  useSessionCreator: () => (asset: KokoPreparedSftpAsset) => Promise<{ tokenId: string }>;
+  useSessionCreator: () => (
+    asset: KokoPreparedSftpAsset,
+    connection?: KokoSftpConnectionChoice
+  ) => Promise<{ tokenId: string }>;
   exchangeConnectToken: (tokenId: string) => Promise<{ id: string }>;
 }
 
