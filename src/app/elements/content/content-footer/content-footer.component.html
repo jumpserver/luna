@@ -1,7 +1,7 @@
 <div *ngIf="showBatchCommand" class="content-footer">
   <div *ngIf="showCommandZone" class="batch-command-zone">
     <div class="command-header">
-      <button nzTrigger="click" [nzDropdownMenu]="menu" nz-button nz-dropdown
+      <button *ngIf="canViewQuickCommands" nzTrigger="click" [nzDropdownMenu]="menu" nz-button nz-dropdown
               nzOverlayClassName="command-dropdown dark-dropdown"
               nzPlacement="topLeft"
               nzType="link">
@@ -50,7 +50,7 @@
           <button class="sent-btn" nz-button (click)="sendBatchCommand()">
             {{ "Send" | translate }}
           </button>
-          <button nzTrigger="click" nz-button nz-dropdown [nzDropdownMenu]="send" nzPlacement="topRight">
+          <button *ngIf="canAddQuickCommands" nzTrigger="click" nz-button nz-dropdown [nzDropdownMenu]="send" nzPlacement="topRight">
             <nz-icon nzType="ellipsis"/>
           </button>
         </nz-button-group>

@@ -23,6 +23,8 @@ export class ElementContentFooterComponent implements OnInit, OnDestroy {
   filterCommands = [];
   sendCommandToAll = false;
   showCommandZone = false;
+  canViewQuickCommands = false;
+  canAddQuickCommands = false;
   editorOption = {
     language: 'shell',
     languages: languages,
@@ -144,8 +146,10 @@ export class ElementContentFooterComponent implements OnInit, OnDestroy {
   }
 
   async quickCommandsFilter() {
-    let list = await this._http.getQuickCommand();
-    list = list.filter(i => i.module.value === 'shell');
+    const {commands, canView, canAdd} = await this._http.getQuickCommand();
+    this.canViewQuickCommands = canView;
+    this.canAddQuickCommands = canAdd;
+    const list = commands.filter(i => i.module.value === 'shell');
     this.quickCommands = list;
     this.filterCommands = list;
   }
