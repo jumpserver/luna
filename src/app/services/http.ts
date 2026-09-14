@@ -24,7 +24,6 @@ import { withSitePrefix } from '@app/utils/path';
 @Injectable()
 export class HttpService {
   headers = new HttpHeaders();
-
   constructor(
     private http: HttpClient,
     private _i18n: I18nService,
@@ -558,9 +557,16 @@ export class HttpService {
     return this.post(url, data).toPromise();
   }
 
-  getQuickCommand() {
+  async getQuickCommand() {
+    const { perms = [] } = await this.getPerms().toPromise();
+    const canView = perms.includes('ops.view_adhoc');
+    const canAdd = canView && perms.includes('ops.add_adhoc');
+    if (!canView) {
+      return { commands: [], canView, canAdd };
+    }
     const url = '/api/v1/ops/adhocs/?only_mine=true';
-    return this.get(url).toPromise();
+    const commands = await this.get(url).toPromise();
+    return { commands, canView, canAdd };
   }
 
   addQuickCommand(data) {
