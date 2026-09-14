@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  chenDataViewMissingPrimaryKey,
-  CHEN_EDIT_REASON_NO_PRIMARY_KEY
-} from "~/chen/utils/dataViewEditing";
+import { chenDataViewMissingPrimaryKey, CHEN_EDIT_REASON_NO_PRIMARY_KEY } from "~/chen/utils/dataViewEditing";
 
 describe("chenDataViewMissingPrimaryKey", () => {
   it("detects the backend no-primary-key edit reason", () => {

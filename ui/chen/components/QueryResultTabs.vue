@@ -17,8 +17,8 @@ import {
   buildChenSaveChangesPayload,
   cancelChenSaveChangesConfirmation,
   chenDataViewHasDirty,
-  clearChenDataViewEdits,
   chenDataViewMissingPrimaryKey,
+  clearChenDataViewEdits,
   isChenDataViewEditable
 } from "~/chen/utils/dataViewEditing";
 
@@ -59,10 +59,7 @@ const activeResult = computed(() => {
 });
 const activeResultEditable = computed(() => isChenDataViewEditable(activeResult.value?.data));
 const activeResultMissingPrimaryKey = computed(
-  () =>
-    props.dataViewEditing &&
-    !activeResultEditable.value &&
-    chenDataViewMissingPrimaryKey(activeResult.value?.data)
+  () => props.dataViewEditing && !activeResultEditable.value && chenDataViewMissingPrimaryKey(activeResult.value?.data)
 );
 const activeResultDirty = computed(() =>
   Boolean(activeResult.value && chenDataViewHasDirty(activeResult.value.editState))

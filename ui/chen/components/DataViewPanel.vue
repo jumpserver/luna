@@ -303,10 +303,7 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
     </div>
 
     <div v-if="tab.activePanel === 'data'" class="flex min-h-0 flex-1 flex-col">
-      <div
-        v-if="missingPrimaryKey"
-        class="border-b border-warning/20 bg-warning/10 px-3 py-1.5 text-xs text-warning"
-      >
+      <div v-if="missingPrimaryKey" class="border-b border-warning/20 bg-warning/10 px-3 py-1.5 text-xs text-warning">
         {{ t("Chen.TableWithoutPrimaryKeyNotEditable") }}
       </div>
       <div class="flex shrink-0 items-center gap-1.5 border-b border-default px-2 py-1">
