@@ -39,6 +39,7 @@ import {
   electronLog,
   parsePersistedDebugLogEnabled
 } from "../shared/debug-log";
+import { menuCommandTargetLabel } from "../shared/menu-command";
 import { productNameAllowsDevTools } from "../shared/product-name";
 import { parseUrl, toFetchUrl } from "../shared/url";
 import { createWebProxyManager } from "@jumpserver/web-proxy/manager";
@@ -158,7 +159,14 @@ function installConnectorSessionHooks(targetSession) {
 
 async function proxyChenRequest(request, url) {
   const origin = request.headers.get("origin");
-  const devOrigin = isDevelopment ? new URL(rendererUrl).origin : "";
+  let devOrigin = "";
+  if (isDevelopment) {
+    try {
+      devOrigin = new URL(rendererUrl).origin;
+    } catch {
+      // leave empty when the renderer URL is not absolute
+    }
+  }
   if (origin && origin !== "jms-app://app" && origin !== devOrigin) {
     return new Response("Forbidden renderer origin", { status: 403 });
   }
@@ -694,7 +702,13 @@ function openAboutWindow() {
 }
 
 function sendMenuCommand(command) {
-  sendMainWindowEvent("desktop-menu-command", command);
+  if (command !== "toggle-fullscreen-mode") {
+    sendMainWindowEvent("desktop-menu-command", command);
+    return;
+  }
+  const focused = BrowserWindow.getFocusedWindow();
+  const label = menuCommandTargetLabel(focused && !focused.isDestroyed() ? labelForWindow(focused) : "");
+  emitDesktopEvent("desktop-menu-command", command, label);
 }
 
 function sendMainWindowEvent(name, payload) {

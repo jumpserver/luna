@@ -793,4 +793,14 @@ defineExpose({ focus, close: closeView });
 .web-proxy-login-overlay {
   background: color-mix(in srgb, var(--workspace-surface-background) 35%, transparent);
 }
+
+[data-desktop-drag-region] {
+  -webkit-app-region: drag;
+}
+
+[data-desktop-drag-region] :deep(button),
+[data-desktop-drag-region] :deep([role="button"]),
+[data-desktop-drag-region] :deep(input) {
+  -webkit-app-region: no-drag;
+}
 </style>

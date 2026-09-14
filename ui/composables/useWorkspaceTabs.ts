@@ -82,6 +82,7 @@ const activePaneId = ref("");
 const draggedTabId = ref("");
 const focusModeTabId = ref("");
 const workspaceFullscreen = ref(false);
+const nativeFullscreen = ref(false);
 const pendingPaneTarget = ref<{ tabId: string; paneId: string } | null>(null);
 const SIDEBAR_COLLAPSE_DURATION = 240;
 let restoreSidebarAfterFullscreen = false;
@@ -97,6 +98,7 @@ const listenDesktopFullscreen = () => {
   if (desktopFullscreenListening || !import.meta.client) return;
   desktopFullscreenListening = true;
   void desktopWindow.onFullscreenChanged((full) => {
+    nativeFullscreen.value = full;
     if (!full) leaveWorkspaceFullscreen();
   });
 };
@@ -1024,6 +1026,7 @@ export const useWorkspaceTabs = () => {
     swapPanes,
     toSurfaceTab,
     updateSessionPayload,
+    nativeFullscreen,
     workspaceFullscreen,
     mergeTabIntoWorkspace
   };

@@ -27,7 +27,7 @@ const { batchPanelOpen, toggle: toggleBatchPanel } = useBatchCommandPanel();
 const { activeTabId, enterFocusMode, enterFullscreenMode, exitFocusMode, focusMode, workspaceFullscreen } =
   useWorkspaceTabs();
 
-const visible = computed(() => isDesktopRuntime() && !isLoading.value && !isMacOS.value && !workspaceFullscreen.value);
+const visible = computed(() => isDesktopRuntime() && !isLoading.value && !isMacOS.value);
 const maximized = ref(false);
 let unlistenResize: (() => void) | null = null;
 
@@ -164,8 +164,14 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
         onSelect: () => void desktopInvoke("minimize_window")
       },
       {
-        label: maximized.value ? t("DesktopMenu.Restore") : t("ToolTips.Maximize"),
-        onSelect: () => void desktopInvoke("toggle_maximize_window")
+        label: workspaceFullscreen.value || maximized.value ? t("DesktopMenu.Restore") : t("ToolTips.Maximize"),
+        onSelect: () => {
+          if (workspaceFullscreen.value) {
+            void exitFocusMode();
+            return;
+          }
+          void desktopInvoke("toggle_maximize_window");
+        }
       },
       { type: "separator" },
       {
@@ -195,8 +201,12 @@ const windowControls = computed(() => [
   },
   {
     key: "maximize",
-    label: maximized.value ? t("DesktopMenu.Restore") : t("ToolTips.Maximize"),
+    label: workspaceFullscreen.value || maximized.value ? t("DesktopMenu.Restore") : t("ToolTips.Maximize"),
     action: async () => {
+      if (workspaceFullscreen.value) {
+        await exitFocusMode();
+        return;
+      }
       await desktopInvoke("toggle_maximize_window");
     }
   },
@@ -334,8 +344,9 @@ const windowControls = computed(() => [
   -webkit-app-region: drag;
 }
 
-button,
-[role="button"] {
+[data-desktop-drag-region] :deep(button),
+[data-desktop-drag-region] :deep([role="button"]),
+[data-desktop-drag-region] :deep(input) {
   -webkit-app-region: no-drag;
 }
 </style>

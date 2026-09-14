@@ -4,14 +4,18 @@ import { shouldShowSessionTabStrip } from "~/composables/useSessionWindowConnect
 
 const route = useRoute();
 const { isMacOS } = usePlatform();
+const { focusMode, nativeFullscreen } = useWorkspaceTabs();
+useWorkspaceFullscreenShortcuts();
 const isSessionWindow = computed(() => route.path.startsWith("/session/"));
 const showSessionTabs = computed(() => shouldShowSessionTabStrip(route.path, route.query));
+const showSessionTabChrome = computed(() => showSessionTabs.value && !focusMode.value);
+const macTrafficLightInset = computed(() => isMacOS.value && !nativeFullscreen.value);
 </script>
 
 <template>
   <div class="flex h-dvh w-full flex-col overflow-hidden" :style="{ backgroundColor: 'var(--app-main-bg)' }">
     <HeaderDesktopTitleBar v-if="isSessionWindow && !isMacOS" :show-menus="false">
-      <WorkspaceTabHeader v-if="showSessionTabs" standalone />
+      <WorkspaceTabHeader v-if="showSessionTabChrome" standalone />
     </HeaderDesktopTitleBar>
     <HeaderDesktopTitleBar v-else :show-menus="false" />
     <header
@@ -21,8 +25,8 @@ const showSessionTabs = computed(() => shouldShowSessionTabStrip(route.path, rou
     >
       <span class="truncate">JumpServer</span>
     </header>
-    <WorkspaceTopHeader v-if="showSessionTabs && (!isDesktopRuntime() || isMacOS)" :show-actions="false">
-      <div class="h-full" :class="isMacOS ? 'pl-20' : ''">
+    <WorkspaceTopHeader v-if="showSessionTabChrome && (!isDesktopRuntime() || isMacOS)" :show-actions="false">
+      <div class="h-full" :class="macTrafficLightInset ? 'pl-20' : ''">
         <WorkspaceTabHeader standalone />
       </div>
     </WorkspaceTopHeader>

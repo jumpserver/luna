@@ -78,6 +78,7 @@ async function setupNavigation(safeMode: unknown, allowedUrls: unknown = [], all
       }
     },
     labelForWindow: () => "main",
+    emitDesktopEvent() {},
     electronLog: { info() {}, warn() {} },
     startWebProxyAutofillWait() {},
     syncWebProxyVisibility() {},

@@ -12,7 +12,13 @@ import {
 import { WebProxyInteraction, buildInteractionGuardScript, INTERACTION_WORLD } from "./interaction";
 import { WebProxyScript, installWebProxyNavigationGuard, webProxyNavigationPolicy } from "./script";
 import { WebProxyRecording } from "./recording";
-const parseUrl = (value) => new URL(value);
+const parseUrl = (value) => {
+  try {
+    return new URL(value);
+  } catch (cause) {
+    throw new Error("invalid URL", { cause });
+  }
+};
 
 interface ManagerOptions {
   emit: (name: string, payload: any, hostLabel?: string) => void;
@@ -558,7 +564,22 @@ export function createWebProxyManager({
     void inputShield.webContents.loadURL("data:text/html,<html style='background:transparent'></html>").catch(() => {
       if (!view.webContents.isDestroyed()) finishWebProxyAutofill(managed, "error", "无法显示安全登录遮罩，请重新连接");
     });
-    view.webContents.on("before-input-event", (event) => {
+    view.webContents.on("before-input-event", (event, input) => {
+      if (input.type === "keyDown" && !input.isAutoRepeat) {
+        const isEsc = input.key === "Escape" || input.code === "Escape";
+        const isFullscreenShortcut =
+          (input.code === "KeyF" || input.key.toLowerCase() === "f") &&
+          input.shift &&
+          (input.control || input.meta) &&
+          !input.alt;
+        // Let the app menu handle Ctrl+Shift+F; do not swallow it during autofill.
+        if (isFullscreenShortcut) return;
+        if (isEsc && win.isFullScreen?.()) {
+          event.preventDefault();
+          emitDesktopEvent("desktop-menu-command", "toggle-fullscreen-mode", managed.hostLabel);
+          return;
+        }
+      }
       if (managed.autofillVisibilityBlocked && !managed.interaction) event.preventDefault();
     });
     view.webContents.on("focus", () => {

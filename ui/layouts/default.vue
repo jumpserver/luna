@@ -20,17 +20,9 @@ const AiOverlayPanel = defineAsyncComponent(() => import("~/components/RightPane
 const { initialTheme, listenOSThemeChange } = useThemeAdapter();
 const { isMacOS, isWindows } = usePlatform();
 const { activeWorkspaceMode, uiWorkspaceMode, isUtilityRoute, isVideoPlayerRoute } = useWorkspaceMode();
-const {
-  activeTabId,
-  closeSession,
-  enterFocusMode,
-  enterFullscreenMode,
-  exitFocusMode,
-  focusMode,
-  openLocalShell,
-  registerSessionDisposer,
-  workspaceFullscreen
-} = useWorkspaceTabs();
+const { activeTabId, closeSession, enterFocusMode, exitFocusMode, focusMode, openLocalShell, registerSessionDisposer } =
+  useWorkspaceTabs();
+useWorkspaceFullscreenShortcuts();
 const { registerKokoTicketProvider } = useWorkspaceConnectors();
 const userInfoStore = useUserInfoStore();
 const { loggedIn, currentUser } = storeToRefs(userInfoStore);
@@ -128,16 +120,7 @@ const clearEscapeHold = () => {
 
 const startEscapeHold = (event: KeyboardEvent) => {
   if (isWorkspaceTourActive() || event.key !== "Escape" || event.repeat) return;
-
-  // Fullscreen: Esc exits immediately. Capture it before xterm/Guacamole swallow the key.
-  if (workspaceFullscreen.value) {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    void exitFocusMode();
-    return;
-  }
-
-  if (!focusMode.value || escapeHoldTimer) return;
+  if (event.defaultPrevented || !focusMode.value || escapeHoldTimer) return;
 
   escapeHoldTimer = setTimeout(() => {
     escapeHoldTimer = null;
@@ -221,33 +204,12 @@ const handleWorkspaceModeShortcut = (event: KeyboardEvent) => {
 
   const usesPrimaryModifier = isMacOS.value ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
   if (event.repeat || event.altKey || !event.shiftKey || !usesPrimaryModifier || !activeTabId.value) return;
-
-  if (event.code !== "KeyP" && event.code !== "KeyF") return;
+  if (event.code !== "KeyP") return;
 
   event.preventDefault();
   event.stopPropagation();
-
-  if (event.code === "KeyP") {
-    if (focusMode.value) void exitFocusMode();
-    else enterFocusMode(activeTabId.value);
-    return;
-  }
-
-  if (workspaceFullscreen.value) void exitFocusMode();
-  else void enterFullscreenMode(activeTabId.value);
-};
-
-const toggleDesktopFullscreen = async () => {
-  if (workspaceFullscreen.value) {
-    await exitFocusMode();
-    return;
-  }
-  if (activeTabId.value) {
-    await enterFullscreenMode(activeTabId.value);
-    return;
-  }
-
-  await desktopWindow.toggleFullscreen();
+  if (focusMode.value) void exitFocusMode();
+  else enterFocusMode(activeTabId.value);
 };
 
 const handleDesktopMenuCommand = (command: string) => {
@@ -286,11 +248,6 @@ const handleDesktopMenuCommand = (command: string) => {
 
   if (command === "toggle-status-bar") {
     setStatusBarVisible(!statusBarVisible.value);
-    return;
-  }
-
-  if (command === "toggle-fullscreen-mode") {
-    void toggleDesktopFullscreen();
     return;
   }
 
