@@ -32,6 +32,10 @@ export function resolveUnifiedAiPanel(context: UnifiedAiPanelContext): UnifiedAi
   return "workspace";
 }
 
+export function aiPanelFloats(kind: UnifiedAiPanelKind, surface: string, narrow = false) {
+  return narrow || (kind === "workspace" && surface === "terminal");
+}
+
 export const useAiPanel = () => {
   const { activeTab } = useWorkspaceTabs();
   const open = computed(() => {

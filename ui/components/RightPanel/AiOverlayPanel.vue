@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AI_PANEL_MAX_WIDTH, AI_PANEL_MIN_WIDTH } from "~/composables/useAiPanel";
+import { AI_PANEL_MAX_WIDTH, AI_PANEL_MIN_WIDTH, aiPanelFloats } from "~/composables/useAiPanel";
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 import { resolveAiPanelSession } from "./ai/domains/registry";
 import WorkspaceAiPanel from "./aiPanel.vue";
@@ -35,6 +35,9 @@ const showWorkspaceAssistant = computed(
       surface: activeCapability.value,
       sessionKind: activeAiSession.value?.kind
     }) === "workspace"
+);
+const floating = computed(() =>
+  aiPanelFloats(showWorkspaceAssistant.value ? "workspace" : "resource", activeCapability.value, isNarrowScreen.value)
 );
 
 function startResize(event: PointerEvent) {
@@ -96,7 +99,16 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div id="workspace-ai-overlay" data-ai-context="preserve" class="pointer-events-none absolute inset-0 z-50">
+  <div
+    id="workspace-ai-overlay"
+    data-ai-context="preserve"
+    :class="
+      floating
+        ? 'pointer-events-none absolute inset-0 z-50'
+        : 'pointer-events-auto relative z-10 h-full min-h-0 shrink-0'
+    "
+    :style="floating ? undefined : panelStyle"
+  >
     <UButton
       v-if="isNarrowScreen"
       type="button"
@@ -107,11 +119,16 @@ onBeforeUnmount(() => {
       @click="emit('close')"
     />
     <UCard
-      class="pointer-events-auto absolute inset-y-3 right-3 flex min-h-0 flex-col overflow-hidden"
-      :class="resizing ? '' : 'transition-[width] duration-150 ease-out'"
-      :style="panelStyle"
+      class="pointer-events-auto flex min-h-0 flex-col overflow-hidden"
+      :class="[
+        floating ? 'absolute inset-y-3 right-3' : 'h-full w-full border-l border-[var(--app-border)]',
+        resizing ? '' : 'transition-[width] duration-150 ease-out'
+      ]"
+      :style="floating ? panelStyle : undefined"
       :ui="{
-        root: 'h-auto shadow-none ring-1 ring-[var(--app-border)] bg-[var(--app-surface-overlay)]',
+        root: floating
+          ? 'h-auto shadow-none ring-1 ring-[var(--app-border)] bg-[var(--app-surface-overlay)]'
+          : 'h-full rounded-none shadow-none ring-0 bg-[var(--app-surface-panel)]',
         body: 'relative flex min-h-0 flex-1 flex-col overflow-hidden p-0 sm:p-0'
       }"
     >

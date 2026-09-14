@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, shallowRef } from "vue";
-import { resolveUnifiedAiPanel, useAiPanel } from "./useAiPanel";
+import { aiPanelFloats, resolveUnifiedAiPanel, useAiPanel } from "./useAiPanel";
 import { useRightPanel } from "./useRightPanel";
 
 const tabs = shallowRef<Array<{ id: string; protocol?: string }>>([]);
@@ -96,6 +96,16 @@ describe("AI overlay panel", () => {
     expect(panel.pendingTerminalPrompt.value).toBe(request);
     panel.takeTerminalPrompt(request.id);
     expect(panel.pendingTerminalPrompt.value).toBeNull();
+  });
+
+  it.each([
+    ["workspace", "terminal", false, true],
+    ["workspace", "remote-desktop", false, false],
+    ["resource", "database", false, false],
+    ["resource", "file-manager", false, false],
+    ["workspace", "remote-desktop", true, true]
+  ] as const)("floats %s/%s narrow=%s → %s", (kind, surface, narrow, expected) => {
+    expect(aiPanelFloats(kind, surface, narrow)).toBe(expected);
   });
 
   it("keeps SSH overlay on workspace even when the SFTP right panel is open", () => {
