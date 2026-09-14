@@ -250,8 +250,7 @@ export const useAssetAction = () => {
    */
   const joinEndpointUrl = (endpointUrl: string, path: string) => {
     const endpoint = new URL(endpointUrl, window.location.origin);
-    const targetPath = endpoint.origin === window.location.origin ? path : path.replace(/^\/luna(?=\/)/, "");
-    return new URL(targetPath, endpoint.origin).toString();
+    return new URL(path, endpoint.origin).toString();
   };
 
   const getEndpointUrl = (
@@ -325,7 +324,11 @@ export const useAssetAction = () => {
         return joinEndpointUrl(endpointUrl, withWebSitePrefix(`/chen/connect?${params.toString()}`));
       case "tinker":
       case "lion":
-        return joinEndpointUrl(endpointUrl, withWebSitePrefix(`/lion/connect?token=${encodeURIComponent(tokenId)}`));
+      case "panda":
+        return joinEndpointUrl(
+          endpointUrl,
+          withWebSitePrefix(`/luna/lion/connect?token=${encodeURIComponent(tokenId)}`)
+        );
       case "koko":
       case "default":
         params.set("_", String(Date.now()));

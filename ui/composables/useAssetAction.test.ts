@@ -407,11 +407,34 @@ describe("opening assets in local applications", () => {
       expect(desktop ? mocks.invoke : mocks.assign).toHaveBeenCalledOnce();
       expect(endpoint).not.toHaveBeenCalled();
     } else {
-      expect(ready.mock.calls[0]?.[0].webUrl).toContain("/lion/connect?token=id");
+      expect(ready.mock.calls[0]?.[0].webUrl).toContain("/luna/lion/connect?token=id");
       expect(mocks.getLocalClientUrl).not.toHaveBeenCalled();
       expect(mocks.invoke).not.toHaveBeenCalled();
       expect(mocks.assign).not.toHaveBeenCalled();
     }
+  });
+
+  it.each([
+    ["https://jumpserver.example", ""],
+    ["https://connector.example:9443", ""],
+    ["https://jumpserver.example", "/site/test"]
+  ])("opens virtual apps through Lion at %s%s", async (endpointUrl, prefix) => {
+    const virtualApp = { value: "pgadmin", type: "virtual_app", component: "panda", disabled: false };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ postgresql: [virtualApp] }),
+      getMethodsForProtocol: async () => [virtualApp]
+    }));
+    vi.stubGlobal("getSmartEndpoint", vi.fn().mockResolvedValue({ value: endpointUrl }));
+    vi.stubGlobal("withWebSitePrefix", (path: string) => `${prefix}${path}`);
+
+    const { ready, failed } = await connect("pgadmin", "postgresql");
+    expect(failed).not.toHaveBeenCalled();
+    const payload = ready.mock.calls[0]![0];
+    expect(payload.webUrl).toBe(`${endpointUrl}${prefix}/luna/lion/connect?token=id`);
+    expect(mocks.createToken).toHaveBeenCalledWith(
+      expect.objectContaining({ protocol: "postgresql", connect_method: "pgadmin" }),
+      expect.anything()
+    );
   });
 
   it.each(["jms2"])(
