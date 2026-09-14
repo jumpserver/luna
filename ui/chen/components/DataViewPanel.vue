@@ -28,6 +28,7 @@ import ChenWorkspaceModal from "~/chen/components/WorkspaceModal.vue";
 import { useChenDataViewDerivedMeta } from "~/chen/composables/useChenDataViewDerivedMeta";
 import { useChenDataViewEditing } from "~/chen/composables/useChenDataViewEditing";
 import { chenGridPreferenceKey } from "~/chen/composables/useChenGridPreferences";
+import { chenDataViewMissingPrimaryKey } from "~/chen/utils/dataViewEditing";
 import { buildChenDropIndexSql, chenSupportsIndexDdl } from "~/chen/utils/indexSql";
 import { isChenViewRelation } from "~/chen/utils/resourceTree";
 
@@ -81,6 +82,14 @@ const tableName = computed(() => String(props.tab.meta?.table || props.tab.meta?
 const schemaName = computed(() => String(props.tab.meta?.schema || "").trim());
 const isViewRelation = computed(() =>
   isChenViewRelation({ nodeKey: props.tab.nodeKey, kind: props.tab.tableMetadata?.kind })
+);
+const missingPrimaryKey = computed(
+  () =>
+    !editing.editable.value &&
+    chenDataViewMissingPrimaryKey(props.tab.data, {
+      isView: isViewRelation.value,
+      tableMetadata: props.tab.tableMetadata
+    })
 );
 const indexDdlSupported = computed(
   () =>
@@ -294,6 +303,12 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
     </div>
 
     <div v-if="tab.activePanel === 'data'" class="flex min-h-0 flex-1 flex-col">
+      <div
+        v-if="missingPrimaryKey"
+        class="border-b border-warning/20 bg-warning/10 px-3 py-1.5 text-xs text-warning"
+      >
+        {{ t("Chen.TableWithoutPrimaryKeyNotEditable") }}
+      </div>
       <div class="flex shrink-0 items-center gap-1.5 border-b border-default px-2 py-1">
         <UButton
           size="xs"

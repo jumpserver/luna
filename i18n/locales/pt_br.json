@@ -2252,6 +2252,7 @@
     "InvalidTableStructureChanges": "Check the table structure changes.",
     "InvalidIndexDefinition": "Complete the index name and column selection.",
     "InvalidCsvFile": "The CSV file is invalid or cannot be read.",
-    "CopyOperationFailedDescription": "The selected data could not be copied."
+    "CopyOperationFailedDescription": "The selected data could not be copied.",
+    "TableWithoutPrimaryKeyNotEditable": "Esta tabela não possui chave primária; por enquanto não é possível adicionar, alterar ou excluir dados."
   }
 }
