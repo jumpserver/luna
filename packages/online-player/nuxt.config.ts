@@ -11,5 +11,10 @@ export default defineNuxtConfig({
   css: [`${layerRoot}app/assets/replay.css`],
   imports: {
     dirs: [`${layerRoot}app/composables`]
+  },
+  vite: {
+    resolve: {
+      dedupe: ["asciinema-player"]
+    }
   }
 });
