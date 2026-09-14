@@ -128,8 +128,10 @@ const contextItems = computed<AiContextItem[]>(() => {
     ];
   }
   if (!target) return [];
+  const protocol = target.protocol || currentTarget.value?.protocol || "";
   return [
     { key: "terminal", icon: "i-lucide-terminal", label: `@${target.asset_name}`, title: target.address },
+    ...(protocol ? [{ key: "protocol", icon: "i-lucide-network", label: `@${protocol}`, title: protocol }] : []),
     { key: "account", icon: "i-lucide-user-key", label: target.account, title: target.account }
   ];
 });
@@ -318,7 +320,7 @@ watch(
             :aria-label="t('RightPanel.LunaAiTarget')"
             icon="i-lucide-scan"
             class="min-w-0 flex-1"
-            portal="#workspace-ai-overlay"
+            :portal="true"
           />
         </div>
         <AiComposer

@@ -23,18 +23,11 @@ const emit = defineEmits<{
 }>();
 
 const model = defineModel<string>({ required: true });
-const aiPanelPortalTarget = "#workspace-ai-overlay";
-
-function handleSubmitKeydown(event: KeyboardEvent) {
-  if (event.isComposing) return;
-  event.preventDefault();
-  emit("submit");
-}
 </script>
 
 <template>
-  <div class="ai-composer-stack">
-    <div v-if="contextItems.length" class="ai-composer-context">
+  <div class="flex flex-col gap-2">
+    <div v-if="contextItems.length" class="flex min-w-0 items-start gap-2">
       <span class="flex h-[1.375rem] shrink-0 items-center gap-1 text-[10px] font-medium text-muted">
         <UIcon name="i-lucide-scan-eye" class="size-3" />
         {{ $t("RightPanel.AIContext") }}
@@ -47,93 +40,79 @@ function handleSubmitKeydown(event: KeyboardEvent) {
       </div>
     </div>
 
-    <div class="ai-composer">
-      <UTextarea
-        v-model="model"
-        :rows="2"
-        autoresize
-        :maxrows="5"
-        :placeholder="placeholder"
-        variant="none"
-        class="block w-full"
-        :disabled="busy"
-        :ui="{ base: 'min-h-24 rounded-lg pb-11 text-xs' }"
-        @keydown.enter.exact="handleSubmitKeydown"
-      />
-      <div class="absolute inset-x-2 bottom-2 z-10 flex items-center gap-1.5">
-        <div v-if="showPolicy" class="flex min-w-0 flex-1 items-center gap-1">
-          <USelect
-            v-if="thresholdOptions.length"
-            size="xs"
-            variant="soft"
-            icon="i-lucide-shield-check"
-            class="min-w-0 max-w-36"
-            :model-value="approvalThreshold"
-            :items="thresholdOptions"
-            :portal="aiPanelPortalTarget"
-            value-key="value"
-            label-key="label"
-            :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
-            @update:model-value="emit('updateApprovalThreshold', $event)"
-          />
-          <USelect
-            v-if="modeOptions.length"
-            size="xs"
-            variant="soft"
-            icon="i-lucide-git-branch"
-            class="min-w-0 max-w-32"
-            :model-value="executionMode"
-            :items="modeOptions"
-            :portal="aiPanelPortalTarget"
-            value-key="value"
-            label-key="label"
-            :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
-            @update:model-value="emit('updateExecutionMode', $event)"
-          />
+    <UChatPrompt
+      v-model="model"
+      variant="outline"
+      size="xs"
+      :rows="1"
+      :maxrows="5"
+      :placeholder="placeholder"
+      :disabled="busy"
+      :autofocus="false"
+      :ui="{ root: 'bg-[var(--app-input-bg)]', base: 'text-xs' }"
+      @submit="emit('submit')"
+    >
+      <template #footer>
+        <div class="flex min-w-0 flex-1 items-center gap-1">
+          <template v-if="showPolicy">
+            <USelect
+              v-if="thresholdOptions.length"
+              size="xs"
+              variant="soft"
+              icon="i-lucide-shield-check"
+              class="min-w-0 max-w-36"
+              :model-value="approvalThreshold"
+              :items="thresholdOptions"
+              :portal="true"
+              value-key="value"
+              label-key="label"
+              :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
+              @update:model-value="emit('updateApprovalThreshold', $event)"
+            />
+            <USelect
+              v-if="modeOptions.length"
+              size="xs"
+              variant="soft"
+              icon="i-lucide-git-branch"
+              class="min-w-0 max-w-32"
+              :model-value="executionMode"
+              :items="modeOptions"
+              :portal="true"
+              value-key="value"
+              label-key="label"
+              :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
+              @update:model-value="emit('updateExecutionMode', $event)"
+            />
+          </template>
         </div>
-        <UButton
-          v-if="running"
-          class="relative z-10 ml-auto"
-          size="xs"
-          color="primary"
-          variant="solid"
-          icon="i-fluent-stop-16-filled"
-          :ui="{ leadingIcon: 'size-4 scale-75' }"
-          :aria-label="interruptLabel"
-          :title="interruptLabel"
-          @click.stop="emit('interrupt')"
-        />
-        <UTooltip v-if="!running || !busy" :text="actionLabel">
+        <div class="flex items-center gap-1.5">
           <UButton
-            :class="{ 'ml-auto': !running }"
+            v-if="running"
             size="xs"
             color="primary"
             variant="solid"
-            icon="i-lucide-arrow-up"
-            :aria-label="actionLabel"
-            :disabled="busy || !model.trim()"
-            @click="emit('submit')"
+            icon="i-fluent-stop-16-filled"
+            :ui="{ leadingIcon: 'size-4 scale-75' }"
+            :aria-label="interruptLabel"
+            :title="interruptLabel"
+            @click.stop="emit('interrupt')"
           />
-        </UTooltip>
-      </div>
-    </div>
+          <UTooltip v-if="!running || !busy" :text="actionLabel">
+            <UChatPromptSubmit
+              size="xs"
+              color="primary"
+              status="ready"
+              :disabled="busy || !model.trim()"
+              :aria-label="actionLabel"
+            />
+          </UTooltip>
+        </div>
+      </template>
+    </UChatPrompt>
   </div>
 </template>
 
 <style scoped>
-.ai-composer-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.ai-composer-context {
-  display: flex;
-  min-width: 0;
-  align-items: flex-start;
-  gap: 0.5rem;
-}
-
 .ai-context-chip {
   display: inline-flex;
   height: 1.375rem;
@@ -176,22 +155,5 @@ function handleSubmitKeydown(event: KeyboardEvent) {
 
 .ai-context-scroll:hover::-webkit-scrollbar-thumb:hover {
   background-color: var(--app-scrollbar-thumb-hover);
-}
-
-.ai-composer {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--app-border);
-  border-radius: 0.625rem;
-  background: var(--app-input-bg);
-  box-shadow: 0 0 0 1px transparent;
-  transition:
-    border-color 150ms ease,
-    box-shadow 150ms ease;
-}
-
-.ai-composer:focus-within {
-  border-color: color-mix(in srgb, var(--ui-color-primary-500) 58%, var(--app-border));
-  box-shadow: 0 0 0 2px var(--app-focus-ring);
 }
 </style>
