@@ -41,7 +41,7 @@ const emit = defineEmits<{ submit: []; downloadRdp: [connectMethod: string] }>()
 const draft = defineModel<ConnectionFormDraft>("draft", { required: true });
 
 const { t } = useI18n();
-const { modernIsland } = useSettingManager();
+const { modernIsland, rdpResolution } = useSettingManager();
 const { getMethodsForProtocol } = useConnectMethods();
 const protocolMethods = shallowRef<ConnectMethod[]>([]);
 const viewAssetOnlineSessionInfo = ref(false);
@@ -92,8 +92,8 @@ const appletOptionsLoading = computed(
 const submitDisabled = computed(
   () => credentialsDisabled.value || !draft.value.connectMethod || methodDisabled.value || appletOptionsLoading.value
 );
-const patchConnectOption = (field: string, value: string | boolean) => {
-  draft.value = { ...draft.value, connectOptions: { ...draft.value.connectOptions, [field]: value } };
+const patchConnectOptions = (options: Record<string, string | boolean>) => {
+  draft.value = { ...draft.value, connectOptions: { ...draft.value.connectOptions, ...options } };
 };
 const rdpDownloadMethod = computed(() => {
   if (!hasXPack.value) return;
@@ -104,20 +104,29 @@ const rdpDownloadMethod = computed(() => {
 
 let connectionPreference: ReturnType<typeof getLunaPreferences> | undefined;
 watch(
-  () => [draft.value.protocol, hasXPack.value, draft.value.connectOptions.remote_microphone] as const,
-  async ([protocol, hasLicense, microphone], _previous, onCleanup) => {
-    if (protocol.trim().toLowerCase() !== "rdp" || !hasLicense || microphone !== undefined) return;
+  [
+    () => draft.value.protocol,
+    () => hasXPack.value,
+    () => draft.value.connectOptions.resolution,
+    () => draft.value.connectOptions.remote_microphone
+  ],
+  async ([protocol, hasLicense, resolution, microphone], _previous, onCleanup) => {
+    const needsResolution = !resolution;
+    const needsMicrophone = hasLicense && microphone === undefined;
+    if (protocol.trim().toLowerCase() !== "rdp" || (!needsResolution && !needsMicrophone)) return;
     let cancelled = false;
     onCleanup(() => {
       cancelled = true;
     });
     connectionPreference ??= getLunaPreferences().catch(() => ({}));
     const preferences = await connectionPreference;
-    if (cancelled || !preferences.graphics) return;
-    patchConnectOption(
-      "remote_microphone",
-      preferences.graphics?.rdp_client_option?.includes("remote_microphone") ?? false
-    );
+    if (cancelled) return;
+    patchConnectOptions({
+      ...(needsResolution ? { resolution: preferences.graphics?.rdp_resolution || rdpResolution.value || "auto" } : {}),
+      ...(needsMicrophone && preferences.graphics
+        ? { remote_microphone: preferences.graphics.rdp_client_option?.includes("remote_microphone") ?? false }
+        : {})
+    });
   },
   { immediate: true }
 );
@@ -133,7 +142,7 @@ watch(
     if (clientEnabled === undefined) return;
     if (component === "tinker") {
       if (!clientEnabled) {
-        if (appletSelected !== "web") patchConnectOption("appletConnectMethod", "web");
+        if (appletSelected !== "web") patchConnectOptions({ appletConnectMethod: "web" });
         return;
       }
       if (appletSelected === "web" || appletSelected === "client") return;
@@ -150,8 +159,8 @@ watch(
     const preferences = await connectionPreference;
     if (cancelled) return;
     const fallback = preferences.graphics?.applet_connection_method === "client" ? "client" : "web";
-    if (component === "tinker") patchConnectOption("appletConnectMethod", fallback);
-    else patchConnectOption("virtualappConnectMethod", fallback);
+    if (component === "tinker") patchConnectOptions({ appletConnectMethod: fallback });
+    else patchConnectOptions({ virtualappConnectMethod: fallback });
   },
   { immediate: true }
 );

@@ -129,7 +129,7 @@ export const useAssetAction = () => {
   function buildLocalRdpParams(connectOptions: RdpGraphics = {}) {
     const prefs = resolveGraphicsPreferences();
     const params: Record<string, string> = {};
-    const resolution = String(connectOptions.rdp_resolution || connectOptions.resolution || prefs.resolvedResolution);
+    const resolution = String(connectOptions.resolution || prefs.resolvedResolution);
 
     if (resolution.includes("x")) {
       const [width, height] = resolution.split("x");
@@ -727,8 +727,6 @@ export const useAssetAction = () => {
     return {
       charset: prefs.resolvedCharset,
       backspaceAsCtrlH: prefs.resolvedBackspace,
-      resolution: prefs.resolvedResolution,
-      rdp_resolution: prefs.resolvedResolution,
       keyboard_layout: prefs.resolvedKeyboardLayout,
       rdp_client_option: prefs.resolvedClientOptions,
       rdp_color_quality: prefs.resolvedColorQuality,
@@ -872,6 +870,13 @@ export const useAssetAction = () => {
       ...(saved?.protocol === protocol ? (saved as any)?.connectOptions || {} : {}),
       ...(ephemeral?.connectOptions || {})
     };
+    if (!mergedConnectOptions.resolution) {
+      const preferences =
+        protocol.toLowerCase() === "rdp"
+          ? await getLunaPreferences().catch(() => ({ graphics: undefined }))
+          : undefined;
+      mergedConnectOptions.resolution = preferences?.graphics?.rdp_resolution || rdpResolution.value || "auto";
+    }
 
     const isManual = accountForToken === "@INPUT";
     const hasEphemeralPersonalCredential = !!ephemeral && "personalCredentialId" in ephemeral;

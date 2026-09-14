@@ -6,7 +6,8 @@ import {
   favoriteAssetsToFolder,
   getAuthorizedAssets,
   getConnectionRdpFile,
-  getSessionOnlineNum
+  getSessionOnlineNum,
+  updateLunaPreferences
 } from "./useApiRequest";
 
 const { desktopInvoke } = vi.hoisted(() => ({ desktopInvoke: vi.fn() }));
@@ -18,6 +19,38 @@ vi.mock("~/store/modules/userInfo", () => ({
 
 describe("API request headers", () => {
   afterEach(() => vi.unstubAllGlobals());
+
+  it.each([false, true])("patches only the selected Luna preference (desktop=%s)", async (desktop) => {
+    const body = { graphics: { rdp_resolution: "1024x768" } };
+    const fetch = vi.fn(async () => new Response(JSON.stringify(body)));
+    vi.stubGlobal("isDesktopRuntime", () => desktop);
+    vi.stubGlobal("withWebSitePrefix", (path: string) => `/site/test${path}`);
+    vi.stubGlobal("getWebApiMutationHeaders", () => ({ "X-CSRFToken": "csrf" }));
+    vi.stubGlobal("fetch", fetch);
+    desktopInvoke.mockResolvedValue(body);
+    await expect(updateLunaPreferences(body)).resolves.toEqual(body);
+    if (desktop) {
+      expect(desktopInvoke).toHaveBeenCalledWith("api_request", {
+        request: {
+          method: "PATCH",
+          path: "/api/v1/users/preference/",
+          query: { category: "luna" },
+          body,
+          orgId: "org-current"
+        }
+      });
+    } else {
+      expect(fetch).toHaveBeenCalledWith(
+        "/site/test/api/v1/users/preference/?category=luna",
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify(body),
+          credentials: "include",
+          headers: expect.objectContaining({ "X-CSRFToken": "csrf" })
+        })
+      );
+    }
+  });
 
   it("downloads RDP text through the selected site's authenticated API and asset organization", async () => {
     const content = "full address:s:rdp.example\r\nusername:s:用户\r\n";

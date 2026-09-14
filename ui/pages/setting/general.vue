@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { CharsetType, LangType, ResolutionType } from "~/types";
+import type { CharsetType, LangType } from "~/types";
 
+import { useRdpResolutionPreference } from "~/composables/useRdpResolutionPreference";
 import { useSettingManager } from "~/composables/useSettingManager";
 import {
   clearTerminalCommandHistory,
@@ -47,12 +48,10 @@ const toast = useToast();
 const {
   setLang,
   charset,
-  rdpResolution,
   backspaceAsCtrlH,
   rightClickQuickPaste,
   terminalCommandSuggestionsEnabled,
   setCharsetPreference,
-  setRdpResolutionPreference,
   setBackspacePreference,
   setRightClickQuickPaste,
   setTerminalCommandSuggestionsEnabled
@@ -147,10 +146,7 @@ const selectedCharset = computed<CharsetType>({
   set: (value) => setCharsetPreference((value || "default") as CharsetType)
 });
 
-const selectedresolution = computed<ResolutionType>({
-  get: () => (rdpResolution.value as ResolutionType) || "auto",
-  set: (value) => setRdpResolutionPreference((value || "auto") as ResolutionType)
-});
+const { resolution: selectedResolution, busy: resolutionBusy } = useRdpResolutionPreference();
 
 const selectedEnabled = computed<boolean>({
   get: () => backspaceAsCtrlH.value ?? false,
@@ -290,7 +286,9 @@ async function clearCommandHistory() {
 
       <SettingsRow :title="t('Setting.Resolution')" :description="t('Setting.ResolutionDescription')">
         <USelect
-          v-model="selectedresolution"
+          v-model="selectedResolution"
+          :loading="resolutionBusy"
+          :disabled="resolutionBusy"
           :items="resolutionItems"
           value-key="id"
           :aria-label="t('Setting.Resolution')"

@@ -492,6 +492,17 @@ export function getLunaPreferences(): Promise<{ graphics?: RdpGraphics }> {
   });
 }
 
+export function updateLunaPreferences(preferences: {
+  graphics: Partial<RdpGraphics>;
+}): Promise<{ graphics?: RdpGraphics }> {
+  return apiRequest({
+    method: "PATCH",
+    path: "/api/v1/users/preference/",
+    query: { category: "luna" },
+    body: preferences
+  });
+}
+
 export function getSessionOnlineNum(assetId: string, account: string): Promise<{ count: number }> {
   return apiRequest<{ count: number }>({
     method: "GET",

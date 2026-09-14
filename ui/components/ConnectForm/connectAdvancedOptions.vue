@@ -86,11 +86,7 @@ const selectedUseSysDBA = computed<boolean>({
 });
 const selectedResolution = computed<ResolutionType>({
   get: () => (connectOptions.value.resolution || "auto") as ResolutionType,
-  set: (value) => {
-    const resolved = (value || "auto") as ResolutionType;
-    updateConnectOption("resolution", resolved);
-    updateConnectOption("rdp_resolution", resolved);
-  }
+  set: (value) => updateConnectOption("resolution", value || "auto")
 });
 const selectedAppletConnectMethod = computed<string>({
   get: () => connectOptions.value.appletConnectMethod || "web",
@@ -174,17 +170,6 @@ watch(
             <USwitch v-model="selectedUseSysDBA" />
           </div>
 
-          <UFormField v-if="flags.resolution" :label="t('Setting.Resolution')" :ui="formFieldUi" size="sm">
-            <USelect
-              v-model="selectedResolution"
-              :items="resolutionItems"
-              :ui="{ base: controlBaseUi, ...overlayMenuUi }"
-              trailing-icon="i-lucide-chevrons-up-down"
-              size="md"
-              class="w-full"
-            />
-          </UFormField>
-
           <UFormField v-if="flags.applet" :label="t('EditModal.AppletConnectMethod')" :ui="formFieldUi" size="sm">
             <USelect
               v-model="selectedAppletConnectMethod"
@@ -217,21 +202,42 @@ watch(
             </UFormField>
           </div>
 
-          <UFormField
-            v-if="flags.rdpConnectionSpeed"
-            :label="t('Setting.RdpConnectionSpeed')"
-            :ui="formFieldUi"
-            size="sm"
-          >
-            <USelect
-              v-model="selectedRdpConnectionSpeed"
-              :items="rdpConnectionSpeedItems"
-              :ui="{ base: controlBaseUi, ...overlayMenuUi }"
-              trailing-icon="i-lucide-chevrons-up-down"
-              size="md"
-              class="w-full"
-            />
-          </UFormField>
+          <div v-if="flags.resolution || flags.rdpConnectionSpeed" class="grid grid-cols-2 gap-4">
+            <UFormField
+              v-if="flags.resolution"
+              :label="t('Setting.Resolution')"
+              :ui="{ ...formFieldUi, root: 'items-center', wrapper: 'shrink-0', container: 'mt-0 min-w-0 flex-1' }"
+              orientation="horizontal"
+              size="sm"
+              class="min-w-0"
+            >
+              <USelect
+                v-model="selectedResolution"
+                :items="resolutionItems"
+                :ui="{ base: controlBaseUi, ...overlayMenuUi }"
+                trailing-icon="i-lucide-chevrons-up-down"
+                size="md"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField
+              v-if="flags.rdpConnectionSpeed"
+              :label="t('Setting.RdpConnectionSpeed')"
+              :ui="{ ...formFieldUi, root: 'items-center', wrapper: 'shrink-0', container: 'mt-0 min-w-0 flex-1' }"
+              orientation="horizontal"
+              size="sm"
+              class="min-w-0"
+            >
+              <USelect
+                v-model="selectedRdpConnectionSpeed"
+                :items="rdpConnectionSpeedItems"
+                :ui="{ base: controlBaseUi, ...overlayMenuUi }"
+                trailing-icon="i-lucide-chevrons-up-down"
+                size="md"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
 
           <UFormField
             v-if="flags.virtualapp"

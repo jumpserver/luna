@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ref } from "vue";
+import { effectScope, ref } from "vue";
 import { useAssetAction } from "./useAssetAction";
+import { useRdpResolutionPreference } from "./useRdpResolutionPreference";
 import { useWebProxyManager } from "./useWebProxyManager";
 
 const mocks = vi.hoisted(() => ({
@@ -9,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   getLocalClientUrl: vi.fn(),
   getRdpFile: vi.fn(),
   getLunaPreferences: vi.fn(),
+  updateLunaPreferences: vi.fn(),
   getPublicSettings: vi.fn(),
   getAssetDetail: vi.fn(),
   saveDialog: vi.fn(),
@@ -17,7 +19,9 @@ const mocks = vi.hoisted(() => ({
   createTicket: vi.fn(),
   errorToast: vi.fn(),
   appConfig: { value: undefined as unknown },
+  rdpResolution: { value: undefined as string | undefined },
   store: {
+    loggedIn: true,
     currentSite: "https://jumpserver.example",
     currentAccountId: "web-account",
     currentUser: { org: { id: "org" } },
@@ -37,12 +41,16 @@ vi.mock("~/composables/useApiRequest", () => ({
   getAssetDetailRequest: mocks.getAssetDetail,
   getConnectionRdpFile: mocks.getRdpFile,
   getLunaPreferences: mocks.getLunaPreferences,
+  updateLunaPreferences: mocks.updateLunaPreferences,
   getPublicSettings: mocks.getPublicSettings,
   invalidatePersonalAssetCredentialCache: vi.fn()
 }));
 vi.mock("~/composables/useSettingManager", () => ({
-  useSettingManager: () =>
-    Object.fromEntries(
+  useSettingManager: () => ({
+    setRdpResolutionPreference: (value: string) => {
+      mocks.rdpResolution.value = value;
+    },
+    ...Object.fromEntries(
       [
         "appConfig",
         "charset",
@@ -52,8 +60,12 @@ vi.mock("~/composables/useSettingManager", () => ({
         "rdpClientOption",
         "rdpColorQuality",
         "rdpSmartSize"
-      ].map((key) => [key, key === "appConfig" ? mocks.appConfig : { value: undefined }])
+      ].map((key) => [
+        key,
+        key === "appConfig" ? mocks.appConfig : key === "rdpResolution" ? mocks.rdpResolution : { value: undefined }
+      ])
     )
+  })
 }));
 vi.mock("vue", async (original) => ({
   ...(await original<typeof import("vue")>()),
@@ -100,6 +112,7 @@ describe("opening assets in local applications", () => {
 
   beforeEach(() => {
     mocks.appConfig.value = undefined;
+    mocks.rdpResolution.value = undefined;
     vi.stubGlobal("isDesktopRuntime", () => false);
     vi.stubGlobal("useI18n", () => ({ t: (key: string) => key }));
     vi.stubGlobal("useToast", () => ({}));
@@ -136,12 +149,13 @@ describe("opening assets in local applications", () => {
     vi.unstubAllGlobals();
   });
 
-  async function connect(connectMethod = "ssh_client", protocol = "ssh") {
+  async function connect(connectMethod = "ssh_client", protocol = "ssh", connectOptions?: { resolution?: string }) {
     const ready = vi.fn();
     const failed = vi.fn();
     await useAssetAction().handleAssetConnection("root", "asset", protocol, [], undefined, {
       accountId: "account",
       connectMethod,
+      connectOptions,
       onSessionReady: ready,
       onSessionError: failed
     });
@@ -167,7 +181,12 @@ describe("opening assets in local applications", () => {
       mocks.writeFile.mockResolvedValue(undefined);
     });
 
-    async function download(connectMethod = "mstsc", protocol = "rdp", appletConnectMethod?: string) {
+    async function download(
+      connectMethod = "mstsc",
+      protocol = "rdp",
+      appletConnectMethod?: string,
+      resolution: string | null = "1600x900"
+    ) {
       const ready = vi.fn();
       const failed = vi.fn();
       await useAssetAction().handleAssetConnection("Administrator", "asset", protocol, [], undefined, {
@@ -177,7 +196,7 @@ describe("opening assets in local applications", () => {
         orgId: "asset-org",
         connectOptions: {
           appletConnectMethod,
-          rdp_resolution: "1600x900",
+          ...(resolution ? { resolution } : {}),
           rdp_client_option: ["full_screen", "drives_redirect"],
           remote_microphone: true,
           reusable: true,
@@ -189,6 +208,89 @@ describe("opening assets in local applications", () => {
       await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
       return { ready, failed };
     }
+
+    it.each([
+      [undefined, undefined, "1600x900", "1920x1080", "1600x900"],
+      ["auto", "1920x1080", "1600x900", "1366x768", "auto"],
+      ["1920x1080", "1024x768", "1600x900", "1366x768", "1920x1080"],
+      [undefined, "auto", "1600x900", "1366x768", "auto"],
+      [undefined, "1024x768", "1600x900", "1366x768", "1024x768"],
+      [undefined, undefined, "auto", "1600x900", "auto"],
+      [undefined, undefined, undefined, "1366x768", "1366x768"],
+      [undefined, undefined, undefined, undefined, "auto"]
+    ])(
+      "resolves RDP resolution from selection=%s, saved=%s, server=%s, local=%s",
+      async (selected, saved, server, local, expected) => {
+        mocks.rdpResolution.value = local;
+        mocks.getLunaPreferences.mockResolvedValue({ graphics: { rdp_resolution: server } });
+        vi.stubGlobal("storeToRefs", () => ({
+          currentSite: ref(mocks.store.currentSite),
+          currentConnectionInfoMap: ref({ asset: { protocol: "rdp", connectOptions: { resolution: saved } } }),
+          currentRdpClientOption: ref({}),
+          orgId: ref("org")
+        }));
+        const { failed } = await download("mstsc", "rdp", undefined, selected ?? null);
+        expect(failed).not.toHaveBeenCalled();
+        expect(mocks.createToken.mock.calls[0]![0].connect_options.resolution).toBe(expected);
+        expect(mocks.getLunaPreferences).toHaveBeenCalledTimes(selected || saved ? 0 : 1);
+        const query = mocks.getRdpFile.mock.calls[0]![1];
+        if (expected === "auto") {
+          expect(query).not.toHaveProperty("width");
+          expect(query).not.toHaveProperty("height");
+        } else {
+          const [width, height] = expected!.split("x");
+          expect(query).toMatchObject({ width, height });
+        }
+      }
+    );
+
+    it("falls back to local resolution when the preference request fails", async () => {
+      mocks.rdpResolution.value = "1366x768";
+      mocks.getLunaPreferences.mockRejectedValue(new Error("Preference unavailable"));
+      const { failed } = await download("mstsc", "rdp", undefined, null);
+      expect(failed).not.toHaveBeenCalled();
+      expect(mocks.createToken.mock.calls[0]![0].connect_options.resolution).toBe("1366x768");
+    });
+
+    it.each(["1024x768", "auto"] as const)(
+      "uses %s saved on the settings page for the next RDP connection",
+      async (value) => {
+        let graphics = { rdp_resolution: "1600x900" };
+        mocks.getLunaPreferences.mockImplementation(async () => ({ graphics }));
+        mocks.updateLunaPreferences.mockImplementation(async (body) => {
+          graphics = body.graphics;
+        });
+        const scope = effectScope();
+        try {
+          const preference = scope.run(() => useRdpResolutionPreference())!;
+          await vi.waitFor(() => expect(preference.busy.value).toBe(false));
+          preference.resolution.value = value;
+          await vi.waitFor(() => expect(preference.busy.value).toBe(false));
+          const { failed } = await connect("mstsc", "rdp");
+          expect(failed).not.toHaveBeenCalled();
+          expect(mocks.createToken.mock.calls[0]![0].connect_options.resolution).toBe(value);
+          expect(mocks.createToken.mock.calls[0]![0].connect_options).not.toHaveProperty("rdp_resolution");
+        } finally {
+          scope.stop();
+        }
+      }
+    );
+
+    it.each([false, true])(
+      "uses server resolution when launching an RDP client directly (desktop=%s)",
+      async (desktop) => {
+        vi.stubGlobal("isDesktopRuntime", () => desktop);
+        mocks.rdpResolution.value = "auto";
+        mocks.getLunaPreferences.mockResolvedValue({ graphics: { rdp_resolution: "1600x900" } });
+        const { failed } = await connect("mstsc", "rdp");
+        expect(failed).not.toHaveBeenCalled();
+        expect(mocks.createToken.mock.calls[0]![0].connect_options.resolution).toBe("1600x900");
+        expect(mocks.getLocalClientUrl).toHaveBeenCalledWith(
+          "id",
+          expect.objectContaining({ width: "1600", height: "900" })
+        );
+      }
+    );
 
     it.each([false, true])(
       "downloads the authorized RDP file without launching a client (desktop=%s)",
@@ -203,6 +305,7 @@ describe("opening assets in local applications", () => {
             protocol: "rdp",
             connect_method: "mstsc",
             connect_options: expect.objectContaining({
+              resolution: "1600x900",
               remote_microphone: true,
               reusable: true,
               rdp_connection_speed: "low_speed_broadband"
@@ -210,6 +313,7 @@ describe("opening assets in local applications", () => {
           }),
           expect.objectContaining({ orgId: "asset-org" })
         );
+        expect(mocks.createToken.mock.calls[0]![0].connect_options).not.toHaveProperty("rdp_resolution");
         expect(mocks.getRdpFile).toHaveBeenCalledWith(
           "id",
           expect.objectContaining({
@@ -311,6 +415,7 @@ describe("opening assets in local applications", () => {
   it.each(["web_cli_native", "web_rdp_native", "web_db_native"])(
     "uses the development gateway's default endpoint for %s",
     async (connectMethod) => {
+      const protocol = connectMethod === "web_rdp_native" ? "rdp" : "ssh";
       vi.stubGlobal("isDesktopRuntime", () => true);
       vi.stubGlobal("isElectronRuntime", () => true);
       stubLocation({ protocol: "http:", origin: "http://127.0.0.1:3000" });
@@ -322,14 +427,18 @@ describe("opening assets in local applications", () => {
       }));
       const methods = [{ value: connectMethod, type: "web", disabled: false }];
       vi.stubGlobal("useConnectMethods", () => ({
-        fetchConnectMethods: async () => ({ ssh: methods }),
+        fetchConnectMethods: async () => ({ [protocol]: methods }),
         getMethodsForProtocol: async () => methods
       }));
       vi.stubGlobal("getSmartEndpoint", vi.fn().mockResolvedValue({ host: "127.0.0.1", http_port: 0, https_port: 0 }));
       mocks.invoke.mockImplementation(async (_command, args) => args.endpointUrl);
+      mocks.getLunaPreferences.mockResolvedValue({ graphics: { rdp_resolution: "1600x900" } });
 
-      const { ready, failed } = await connect(connectMethod);
+      const { ready, failed } = await connect(connectMethod, protocol);
       expect(failed).not.toHaveBeenCalled();
+      if (protocol === "rdp") {
+        expect(mocks.createToken.mock.calls[0]![0].connect_options.resolution).toBe("1600x900");
+      }
       expect(ready.mock.calls[0]?.[0].endpointUrl).toBe("http://127.0.0.1:3000");
       expect(mocks.invoke).toHaveBeenCalledWith(
         connectMethod === "web_db_native" ? "resolve_chen_endpoint" : "resolve_koko_endpoint",
