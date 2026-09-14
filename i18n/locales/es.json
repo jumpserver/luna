@@ -1506,6 +1506,7 @@
       "newFolder": "Nueva carpeta",
       "newFile": "Nuevo archivo",
       "nameTooLong": "El nombre no puede superar {max} caracteres",
+      "invalidName": "El nombre no puede contener \\ / : * ? \" < > |",
       "newEntry": "Nuevo",
       "editPath": "Editar ruta",
       "filterCurrentDirectory": "Filtrar carpeta actual",

@@ -44,9 +44,23 @@ const { t } = useI18n();
 const selectedSet = computed(() => new Set(props.selectedNames));
 const highlightedSet = computed(() => new Set(props.highlightedNames));
 const emptyColspan = computed(() => (props.compact ? 3 : 5));
+const selectedBytes = computed(() => {
+  if (!props.selectedNames.length) return 0;
+  const names = selectedSet.value;
+  let total = 0;
+  for (const entry of props.entries) {
+    if (entry.is_dir || entry.name === ".." || !names.has(entry.name)) continue;
+    const size = Number(entry.size);
+    if (Number.isFinite(size) && size > 0) total += size;
+  }
+  return total;
+});
 const statusText = computed(() => {
   if (!props.selectedNames.length) return t("koko.fileManagement.items", { count: props.entries.length });
-  return `${t("koko.fileManagement.selectedPrefix")} ${props.selectedNames.length} / ${props.entries.length}`;
+  const count = `${t("koko.fileManagement.selectedPrefix")} ${props.selectedNames.length} / ${props.entries.length}`;
+  return selectedBytes.value
+    ? `${count} · ${t("koko.fileManagement.selectedSizeTotal", { size: formatSftpFileSize(String(selectedBytes.value)) })}`
+    : count;
 });
 const prefersReducedMotion = ref(false);
 /** Fast path-change: skip leave of the old directory list (enter of the new list still runs). */

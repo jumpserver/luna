@@ -150,6 +150,7 @@ describe("sftp transfer center selectors", () => {
       })
     ).toBe("FileTransfer.EndpointUnavailableDownload");
     expect(sftpTransferErrorText("disk full", (key) => key)).toBe("disk full");
+    expect(sftpTransferErrorText("file does not exist", (key) => key)).toBe("koko.fileManagement.pathNotFound");
     expect(targetHasConflictTasks([pausedConflict])).toBe(true);
     expect(getTargetTransferError([pausedConflict])).toBe("target_exists");
     expect(getTargetTransferError([failedTask, pausedConflict])).toBe("disk full");

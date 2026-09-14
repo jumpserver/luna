@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
+import { joinSftpPath } from "../../composables/sftp/core/codec";
 import {
   formatSftpFileSize,
   formatSftpModifiedTime,
@@ -44,6 +45,18 @@ describe("sftp entry name length", () => {
     expect(sftpEntryNameError("a".repeat(SFTP_ENTRY_NAME_MAX_LENGTH), tooLong)).toBe("");
     expect(sftpEntryNameError(`  ${"a".repeat(SFTP_ENTRY_NAME_MAX_LENGTH)}  `, tooLong)).toBe("");
     expect(sftpEntryNameError("a".repeat(SFTP_ENTRY_NAME_MAX_LENGTH + 1), tooLong)).toBe(tooLong);
+  });
+
+  it("rejects path separators and Windows-illegal filename characters", () => {
+    const invalid = "invalid name";
+    expect(sftpEntryNameError('a/b\\c:d*e?f"g<h>i|j.txt', "too long", invalid)).toBe(invalid);
+    expect(sftpEntryNameError(".", "too long", invalid)).toBe(invalid);
+    expect(sftpEntryNameError("notes.txt", "too long", invalid)).toBe("");
+  });
+
+  it("does not treat a slash in the entry name as nested directories", () => {
+    expect(joinSftpPath("/home", "notes")).toBe("/home/notes");
+    expect(() => joinSftpPath("/home", "a/b")).toThrow("sftp_invalid_name");
   });
 });
 

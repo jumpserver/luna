@@ -157,7 +157,11 @@ const promptTitle = computed(() =>
 );
 const promptConfirmLabel = computed(() => (promptTarget.value ? t("koko.actions.rename") : t("koko.actions.confirm")));
 const promptError = computed(() =>
-  sftpEntryNameError(promptName.value, t("koko.fileManagement.nameTooLong", { max: SFTP_ENTRY_NAME_MAX_LENGTH }))
+  sftpEntryNameError(
+    promptName.value,
+    t("koko.fileManagement.nameTooLong", { max: SFTP_ENTRY_NAME_MAX_LENGTH }),
+    t("koko.fileManagement.invalidName")
+  )
 );
 const promptDisabled = computed(() => {
   const name = promptName.value.trim();

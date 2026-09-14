@@ -1,6 +1,7 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { MaybeRefOrGetter, Ref } from "vue";
 import type { SftpFileEntry, useSftpFileManager } from "#koko/composables/sftp/useSftpFileManager";
+import { joinSftpPath } from "#koko/composables/sftp/core/codec";
 import { sftpCanUpload, sftpOperationErrorMessage } from "#koko/composables/sftp/protocol";
 import { SFTP_ENTRY_NAME_MAX_LENGTH, sftpEntryNameError } from "./sftpEntryName";
 
@@ -38,9 +39,18 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
   const promptConfirmLabel = computed(() =>
     promptTarget.value ? t("koko.actions.rename") : t("koko.actions.confirm")
   );
-  const promptError = computed(() =>
-    sftpEntryNameError(promptName.value, t("koko.fileManagement.nameTooLong", { max: SFTP_ENTRY_NAME_MAX_LENGTH }))
-  );
+  const promptError = computed(() => {
+    const invalid = sftpEntryNameError(
+      promptName.value,
+      t("koko.fileManagement.nameTooLong", { max: SFTP_ENTRY_NAME_MAX_LENGTH }),
+      t("koko.fileManagement.invalidName")
+    );
+    if (invalid) return invalid;
+    const name = promptName.value.trim();
+    if (!name || promptTarget.value?.name === name) return "";
+    const exists = options.manager.entries.value.some((entry) => entry.name !== ".." && entry.name === name);
+    return exists ? t("koko.sftpEditor.nameAlreadyExists") : "";
+  });
   const promptDisabled = computed(() => {
     const name = promptName.value.trim();
     return !name || Boolean(promptError.value) || (promptTarget.value !== null && name === promptTarget.value.name);
@@ -163,8 +173,7 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
       () => {
         if (target) return options.manager.operations.renameEntry(target, name);
         if (!isNewFile) return options.manager.operations.createDirectory(name);
-        const directory = options.manager.currentPath.value.replace(/\/$/, "") || "/";
-        return options.manager.operations.createFileAt(`${directory}/${name}`.replace(/\/+/g, "/"));
+        return options.manager.operations.createFileAt(joinSftpPath(options.manager.currentPath.value, name));
       },
       target
         ? t("koko.fileManagement.entryRenamed", { name })

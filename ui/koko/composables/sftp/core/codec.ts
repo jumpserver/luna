@@ -3,6 +3,7 @@ export function createSftpMessageId() {
 }
 
 export function joinSftpPath(currentPath: string, name: string) {
+  if (name.includes("/") || name.includes("\0")) throw new Error("sftp_invalid_name");
   return `${currentPath.replace(/\/$/, "")}/${name}`;
 }
 

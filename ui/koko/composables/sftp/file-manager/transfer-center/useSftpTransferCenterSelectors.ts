@@ -1,6 +1,7 @@
 import type { FileTransferStatus, FileTransferTask } from "@jumpserver/connectors-core";
 import type { MaybeRefOrGetter } from "vue";
 import { computed, toValue } from "vue";
+import { sftpOperationErrorMessage } from "#koko/composables/sftp/protocol";
 
 export interface SftpTransferTargetGroup {
   endpointId: string;
@@ -151,7 +152,7 @@ export function sftpTransferErrorText(
       isSftpDownloadTransfer(task) ? "FileTransfer.EndpointUnavailableDownload" : "FileTransfer.EndpointUnavailable"
     );
   }
-  return error;
+  return sftpOperationErrorMessage(error, translate);
 }
 
 export function targetHasConflictTasks(tasks: FileTransferTask[], conflictError = sftpTransferConflictError): boolean {

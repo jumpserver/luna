@@ -119,6 +119,13 @@ export function useSftpSocket(): SftpSocketClient {
         }
         return;
       }
+      if (
+        message.type === SftpMessageType.Close ||
+        message.type === SftpMessageType.Closed ||
+        message.type === SftpMessageType.Error
+      ) {
+        connected.value = false;
+      }
       if (isSftpMcpMessageType(message.type)) {
         const mcpMessage = message as SftpMcpMessage;
         for (const listener of mcpListeners) listener(mcpMessage);

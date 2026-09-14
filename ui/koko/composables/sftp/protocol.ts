@@ -52,17 +52,33 @@ export enum SftpSocketFailureCode {
 
 export const SFTP_REQUEST_TIMEOUT_ERROR = "sftp_request_timeout";
 export const SFTP_FILE_CONFLICT_ERROR = "sftp_file_conflict";
+export const SFTP_FILE_EXISTS_ERROR = "sftp_file_exists";
 export const SFTP_PATH_NOT_FOUND_ERROR = "sftp_path_not_found";
 export const SFTP_PERMISSION_DENIED_ERROR = "sftp_permission_denied";
 export const SFTP_OPERATION_UNSUPPORTED_ERROR = "sftp_operation_unsupported";
 export const SFTP_CONNECTION_LOST_ERROR = "sftp_connection_lost";
+export const SFTP_INVALID_NAME_ERROR = "sftp_invalid_name";
 
-export type SftpWireErrorKind = "permission_denied" | "path_not_found" | "conflict" | "unsupported" | "connection_lost";
+export type SftpWireErrorKind =
+  | "permission_denied"
+  | "path_not_found"
+  | "conflict"
+  | "already_exists"
+  | "unsupported"
+  | "connection_lost"
+  | "session_expired"
+  | "invalid_name";
 
 export function classifySftpWireError(message: { error_code?: string; err?: string }): SftpWireErrorKind | null {
   const code = (message.error_code || "").toLowerCase();
   const err = (message.err || "").toLowerCase();
   if (code === SFTP_FILE_CONFLICT_ERROR || err.includes("remote file changed")) return "conflict";
+  if (
+    code === SFTP_FILE_EXISTS_ERROR ||
+    err.includes("file already exists") ||
+    err.includes("ssh_fx_file_already_exists")
+  )
+    return "already_exists";
   if (
     code === SFTP_PERMISSION_DENIED_ERROR ||
     err.includes("permission denied") ||
@@ -90,6 +106,8 @@ export function classifySftpWireError(message: { error_code?: string; err?: stri
     err.includes("ssh_fx_no_connection")
   )
     return "connection_lost";
+  if (err.includes("session expired") || err.includes("file management session has expired")) return "session_expired";
+  if (code === SFTP_INVALID_NAME_ERROR || err === SFTP_INVALID_NAME_ERROR) return "invalid_name";
   return null;
 }
 
@@ -104,6 +122,12 @@ export function sftpOperationErrorMessage(cause: unknown, t: (key: string) => st
       return t("koko.fileManagement.operationUnsupported");
     case "connection_lost":
       return t("koko.fileManagement.connectionClosed");
+    case "already_exists":
+      return t("koko.sftpEditor.nameAlreadyExists");
+    case "session_expired":
+      return t("koko.fileManagement.expired");
+    case "invalid_name":
+      return t("koko.fileManagement.invalidName");
     default:
       return message === SFTP_REQUEST_TIMEOUT_ERROR ? t("koko.fileManagement.requestTimeout") : message;
   }

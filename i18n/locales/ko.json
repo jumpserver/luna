@@ -1506,6 +1506,7 @@
       "newFolder": "새 폴더",
       "newFile": "새 파일",
       "nameTooLong": "이름은 {max}자를 초과할 수 없습니다",
+      "invalidName": "이름에 \\ / : * ? \" < > | 를 사용할 수 없습니다",
       "newEntry": "새로 만들기",
       "editPath": "경로 편집",
       "filterCurrentDirectory": "현재 폴더 필터링",

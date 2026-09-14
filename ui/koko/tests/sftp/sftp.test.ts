@@ -115,6 +115,13 @@ describe("sFTP browser protocol", () => {
     expect(lastSent(fake)).toMatchObject({ type: SftpMessageType.Pong, data: SftpControlData.Pong });
   });
 
+  it("marks the socket disconnected when koko closes the SFTP session", () => {
+    const { fake, socket } = openSocket();
+    expect(socket.connected.value).toBe(true);
+    fake.receive({ id: "close", type: SftpMessageType.Close, err: "Session expired or not found" });
+    expect(socket.connected.value).toBe(false);
+  });
+
   it("routes MCP frames without treating them as SFTP data", () => {
     const { fake, socket } = openSocket();
     const frames: unknown[] = [];
@@ -504,6 +511,11 @@ describe("sftp wire errors", () => {
     expect(classifySftpWireError({ err: "operation unsupported" })).toBe("unsupported");
     expect(classifySftpWireError({ err: "connection lost" })).toBe("connection_lost");
     expect(classifySftpWireError({ error_code: "sftp_file_conflict", err: "remote file changed" })).toBe("conflict");
+    expect(classifySftpWireError({ err: "file already exists" })).toBe("already_exists");
+    expect(classifySftpWireError({ err: 'sftp: "File already exists" (SSH_FX_FILE_ALREADY_EXISTS)' })).toBe(
+      "already_exists"
+    );
+    expect(classifySftpWireError({ err: "Session expired or not found" })).toBe("session_expired");
   });
 
   it("maps classified errors to file-management copy", () => {
@@ -516,6 +528,8 @@ describe("sftp wire errors", () => {
     expect(sftpOperationErrorMessage(new SftpPermissionDeniedError(), t)).toBe(
       "koko.fileManagement.pathPermissionDenied"
     );
+    expect(sftpOperationErrorMessage(new Error("file already exists"), t)).toBe("koko.sftpEditor.nameAlreadyExists");
+    expect(sftpOperationErrorMessage(new Error("Session expired or not found"), t)).toBe("koko.fileManagement.expired");
   });
 });
 

@@ -1506,6 +1506,7 @@
       "newFolder": "Новая папка",
       "newFile": "Новый файл",
       "nameTooLong": "Имя не может превышать {max} символов",
+      "invalidName": "Имя не может содержать \\ / : * ? \" < > |",
       "newEntry": "Создать",
       "editPath": "Изменить путь",
       "filterCurrentDirectory": "Фильтровать текущую папку",
