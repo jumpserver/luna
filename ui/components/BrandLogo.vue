@@ -85,15 +85,15 @@ introPlayed.value = true;
 }
 
 .is-animating .logo-symbol-s {
-  animation: logo-reveal-s 300ms ease-out both;
+  animation: logo-reveal-s 150ms ease-out both;
 }
 
 .is-animating .logo-symbol-arrows {
-  animation: logo-reveal-arrows 300ms 300ms ease-out both;
+  animation: logo-reveal-arrows 150ms 150ms ease-out both;
 }
 
 .is-animating .logo-symbol-outline {
-  animation: logo-draw-outline 600ms 600ms ease-in-out both;
+  animation: logo-draw-outline 300ms 300ms ease-in-out both;
 }
 
 @keyframes logo-reveal-s {
