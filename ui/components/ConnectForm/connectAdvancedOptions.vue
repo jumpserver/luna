@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CharsetType, ResolutionType } from "~/types/index";
+import type { CharsetType, RdpGraphics, ResolutionType } from "~/types/index";
 import { resolveAdvancedOptionFlags } from "./advancedOptionFlags";
 
 const props = withDefaults(
@@ -8,11 +8,13 @@ const props = withDefaults(
     component?: string;
     hasXPack?: boolean;
     appletClientEnabled?: boolean;
+    connectionTokenReusable?: boolean;
   }>(),
   {
     component: "",
     hasXPack: false,
-    appletClientEnabled: false
+    appletClientEnabled: false,
+    connectionTokenReusable: false
   }
 );
 
@@ -25,7 +27,9 @@ const flags = computed(() =>
   resolveAdvancedOptionFlags({
     protocol: props.protocol,
     component: props.component,
-    hasXPack: props.hasXPack
+    hasXPack: props.hasXPack,
+    connectionTokenReusable: props.connectionTokenReusable,
+    appletConnectMethod: connectOptions.value.appletConnectMethod
   })
 );
 
@@ -46,6 +50,11 @@ const resolutionItems = computed(() => [
 const appletConnectMethodItems = computed(() => [
   { label: t("Menu.Web"), value: "web" },
   ...(props.appletClientEnabled ? [{ label: t("ConnectionSetup.Client"), value: "client" }] : [])
+]);
+const rdpConnectionSpeedItems = computed(() => [
+  { label: t("Setting.Auto"), value: "auto" },
+  { label: t("Setting.RdpLowSpeedBroadband"), value: "low_speed_broadband" },
+  { label: t("Setting.RdpHighSpeedBroadband"), value: "high_speed_broadband" }
 ]);
 const virtualappConnectMethodItems = computed(() => [
   { label: t("Menu.Web"), value: "web" },
@@ -86,6 +95,18 @@ const selectedResolution = computed<ResolutionType>({
 const selectedAppletConnectMethod = computed<string>({
   get: () => connectOptions.value.appletConnectMethod || "web",
   set: (value) => updateConnectOption("appletConnectMethod", value || "web")
+});
+const selectedRemoteMicrophone = computed<boolean>({
+  get: () => !!connectOptions.value.remote_microphone,
+  set: (value) => updateConnectOption("remote_microphone", !!value)
+});
+const selectedReusable = computed<boolean>({
+  get: () => !!connectOptions.value.reusable,
+  set: (value) => updateConnectOption("reusable", !!value)
+});
+const selectedRdpConnectionSpeed = computed<RdpGraphics["rdp_connection_speed"]>({
+  get: () => connectOptions.value.rdp_connection_speed || "auto",
+  set: (value) => updateConnectOption("rdp_connection_speed", value || "auto")
 });
 const selectedVirtualappConnectMethod = computed<string>({
   get: () => connectOptions.value.virtualappConnectMethod || "web",
@@ -164,10 +185,33 @@ watch(
             />
           </UFormField>
 
+          <UFormField v-if="flags.remoteMicrophone" :label="t('Setting.RemoteMicrophone')" :ui="formFieldUi" size="sm">
+            <USwitch v-model="selectedRemoteMicrophone" />
+          </UFormField>
+
           <UFormField v-if="flags.applet" :label="t('EditModal.AppletConnectMethod')" :ui="formFieldUi" size="sm">
             <USelect
               v-model="selectedAppletConnectMethod"
               :items="appletConnectMethodItems"
+              :ui="{ base: controlBaseUi, ...overlayMenuUi }"
+              trailing-icon="i-lucide-chevrons-up-down"
+              size="md"
+              class="w-full"
+            />
+          </UFormField>
+          <UFormField v-if="flags.reusable" :label="t('Setting.RdpFileReusable')" :ui="formFieldUi" size="sm">
+            <USwitch v-model="selectedReusable" />
+          </UFormField>
+
+          <UFormField
+            v-if="flags.rdpConnectionSpeed"
+            :label="t('Setting.RdpConnectionSpeed')"
+            :ui="formFieldUi"
+            size="sm"
+          >
+            <USelect
+              v-model="selectedRdpConnectionSpeed"
+              :items="rdpConnectionSpeedItems"
               :ui="{ base: controlBaseUi, ...overlayMenuUi }"
               trailing-icon="i-lucide-chevrons-up-down"
               size="md"

@@ -179,7 +179,9 @@ describe("opening assets in local applications", () => {
           appletConnectMethod,
           rdp_resolution: "1600x900",
           rdp_client_option: ["full_screen", "drives_redirect"],
-          remote_microphone: true
+          remote_microphone: true,
+          reusable: true,
+          rdp_connection_speed: "low_speed_broadband"
         },
         onSessionReady: ready,
         onSessionError: failed
@@ -195,7 +197,17 @@ describe("opening assets in local applications", () => {
         const { failed } = await download();
         expect(failed).not.toHaveBeenCalled();
         expect(mocks.createToken).toHaveBeenCalledWith(
-          expect.objectContaining({ asset: "asset", account: "account", protocol: "rdp", connect_method: "mstsc" }),
+          expect.objectContaining({
+            asset: "asset",
+            account: "account",
+            protocol: "rdp",
+            connect_method: "mstsc",
+            connect_options: expect.objectContaining({
+              remote_microphone: true,
+              reusable: true,
+              rdp_connection_speed: "low_speed_broadband"
+            })
+          }),
           expect.objectContaining({ orgId: "asset-org" })
         );
         expect(mocks.getRdpFile).toHaveBeenCalledWith(
@@ -205,7 +217,8 @@ describe("opening assets in local applications", () => {
             height: "900",
             full_screen: "1",
             drives_redirect: "1",
-            remote_microphone: "1"
+            remote_microphone: "1",
+            reusable: "1"
           }),
           "asset-org"
         );

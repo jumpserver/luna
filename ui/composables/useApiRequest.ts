@@ -114,6 +114,7 @@ export interface CommandSnippetVariablePayload {
 export interface PublicSettings {
   XPACK_LICENSE_IS_VALID?: boolean;
   TERMINAL_RAZOR_ENABLED?: boolean;
+  CONNECTION_TOKEN_REUSABLE?: boolean;
   XPACK_LICENSE_EDITION_ULTIMATE?: boolean;
   INTERFACE?: {
     login_title?: string;

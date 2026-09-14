@@ -34,6 +34,7 @@ const props = defineProps<{
   assetType?: AssetPageType;
   hasXPack?: boolean;
   appletClientEnabled?: boolean;
+  connectionTokenReusable?: boolean;
 }>();
 
 const emits = defineEmits<{
@@ -224,6 +225,7 @@ watch(
         :component="selectedConnectMethodComponent"
         :has-x-pack="props.hasXPack"
         :applet-client-enabled="props.appletClientEnabled"
+        :connection-token-reusable="props.connectionTokenReusable"
       />
     </div>
   </div>

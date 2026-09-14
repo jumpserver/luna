@@ -470,6 +470,7 @@ export interface RdpGraphics {
   appletConnectMethod?: string;
   reusable?: boolean;
   remote_microphone?: boolean;
+  rdp_connection_speed?: "auto" | "low_speed_broadband" | "high_speed_broadband";
   file_name_conflict_resolution?: string;
 }
 

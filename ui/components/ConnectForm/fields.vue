@@ -47,6 +47,7 @@ const protocolMethods = shallowRef<ConnectMethod[]>([]);
 const viewAssetOnlineSessionInfo = ref(false);
 const hasXPack = shallowRef(false);
 const appletClientEnabled = shallowRef<boolean>();
+const connectionTokenReusable = shallowRef(false);
 const onlineNum = ref<number | null>(null);
 let onlineFetchGeneration = 0;
 const showOnlineNum = computed(
@@ -91,7 +92,7 @@ const appletOptionsLoading = computed(
 const submitDisabled = computed(
   () => credentialsDisabled.value || !draft.value.connectMethod || methodDisabled.value || appletOptionsLoading.value
 );
-const patchConnectOption = (field: string, value: string) => {
+const patchConnectOption = (field: string, value: string | boolean) => {
   draft.value = { ...draft.value, connectOptions: { ...draft.value.connectOptions, [field]: value } };
 };
 const rdpDownloadMethod = computed(() => {
@@ -101,7 +102,25 @@ const rdpDownloadMethod = computed(() => {
   if (canDownloadRdpFile(current, draft.value.connectOptions)) return current;
 });
 
-let appletPreference: ReturnType<typeof getLunaPreferences> | undefined;
+let connectionPreference: ReturnType<typeof getLunaPreferences> | undefined;
+watch(
+  () => [draft.value.protocol, hasXPack.value, draft.value.connectOptions.remote_microphone] as const,
+  async ([protocol, hasLicense, microphone], _previous, onCleanup) => {
+    if (protocol.trim().toLowerCase() !== "rdp" || !hasLicense || microphone !== undefined) return;
+    let cancelled = false;
+    onCleanup(() => {
+      cancelled = true;
+    });
+    connectionPreference ??= getLunaPreferences().catch(() => ({}));
+    const preferences = await connectionPreference;
+    if (cancelled || !preferences.graphics) return;
+    patchConnectOption(
+      "remote_microphone",
+      preferences.graphics?.rdp_client_option?.includes("remote_microphone") ?? false
+    );
+  },
+  { immediate: true }
+);
 watch(
   () =>
     [
@@ -127,8 +146,8 @@ watch(
     onCleanup(() => {
       cancelled = true;
     });
-    appletPreference ??= getLunaPreferences().catch(() => ({}));
-    const preferences = await appletPreference;
+    connectionPreference ??= getLunaPreferences().catch(() => ({}));
+    const preferences = await connectionPreference;
     if (cancelled) return;
     const fallback = preferences.graphics?.applet_connection_method === "client" ? "client" : "web";
     if (component === "tinker") patchConnectOption("appletConnectMethod", fallback);
@@ -172,6 +191,7 @@ onMounted(async () => {
     viewAssetOnlineSessionInfo.value = settings.VIEW_ASSET_ONLINE_SESSION_INFO === true;
     hasXPack.value = settings.XPACK_LICENSE_IS_VALID === true;
     appletClientEnabled.value = hasXPack.value && settings.TERMINAL_RAZOR_ENABLED === true;
+    connectionTokenReusable.value = settings.CONNECTION_TOKEN_REUSABLE === true;
   } catch {
     viewAssetOnlineSessionInfo.value = false;
     appletClientEnabled.value = false;
@@ -240,6 +260,7 @@ watchDebounced(
       :asset-type="props.assetType"
       :has-x-pack="hasXPack"
       :applet-client-enabled="appletClientEnabled === true"
+      :connection-token-reusable="connectionTokenReusable"
     />
     <div class="mt-4">
       <UCheckbox

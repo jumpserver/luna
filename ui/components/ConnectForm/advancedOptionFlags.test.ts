@@ -2,6 +2,49 @@ import { describe, expect, it } from "vitest";
 import { resolveAdvancedOptionFlags } from "./advancedOptionFlags";
 
 describe("resolveAdvancedOptionFlags", () => {
+  it("shows the four v4 RDP options for Razor applications", () => {
+    expect(
+      resolveAdvancedOptionFlags({
+        protocol: "rdp",
+        component: "razor",
+        hasXPack: true,
+        connectionTokenReusable: true
+      })
+    ).toMatchObject({
+      resolution: true,
+      remoteMicrophone: true,
+      reusable: true,
+      rdpConnectionSpeed: true,
+      show: true
+    });
+  });
+
+  it("keeps microphone and reusable options behind their feature flags", () => {
+    expect(resolveAdvancedOptionFlags({ protocol: "rdp", component: "razor" })).toMatchObject({
+      remoteMicrophone: false,
+      reusable: false,
+      rdpConnectionSpeed: true
+    });
+  });
+
+  it.each([
+    ["rdp", "lion", undefined, true, false],
+    ["http", "tinker", "web", false, false],
+    ["http", "tinker", "client", false, true],
+    ["http", "panda", "client", false, false],
+    ["ssh", "koko", undefined, false, false]
+  ])("scopes RDP options for %s/%s/%s", (protocol, component, appletConnectMethod, remoteMicrophone, reusable) => {
+    expect(
+      resolveAdvancedOptionFlags({
+        protocol,
+        component,
+        appletConnectMethod,
+        hasXPack: true,
+        connectionTokenReusable: true
+      })
+    ).toMatchObject({ remoteMicrophone, reusable, rdpConnectionSpeed: false });
+  });
+
   it("shows backspace for k8s koko methods", () => {
     const flags = resolveAdvancedOptionFlags({ protocol: "k8s", component: "koko" });
     expect(flags.backspace).toBe(true);
