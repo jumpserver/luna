@@ -15,6 +15,14 @@ const { appConfig, modernIsland } = useSettingManager();
 const { formFieldUi } = useConnectFormAppearance();
 const selectedConnectMethodType = ref("");
 
+const connectMethodTabsUi = {
+  root: "w-full",
+  list: "w-full rounded-none border-b border-[var(--app-border)] bg-[var(--app-surface-panel)] p-1",
+  indicator: "rounded-[length:var(--app-radius)] bg-[var(--app-state-selected)] shadow-none",
+  trigger:
+    "flex-1 cursor-pointer rounded-[length:var(--app-radius)] data-[state=inactive]:text-[var(--app-text-secondary)] data-[state=active]:text-highlighted focus-visible:outline-[var(--app-focus-ring)]"
+};
+
 const connectMethodTypeItems = computed(() => {
   const metaMap: Record<string, { label: string; icon: string }> = {
     builtin: { label: t("ConnectMethodType.BuiltIn"), icon: "i-lucide-box" },
@@ -186,15 +194,7 @@ async function openProtocolApplicationSettings() {
         variant="pill"
         size="sm"
         :content="false"
-        :ui="{
-          root: 'w-full p-1.5',
-          list: 'w-full rounded-[length:var(--workspace-island-radius)]',
-          trigger:
-            'cursor-pointer rounded-[length:var(--workspace-island-radius)] data-[state=active]:text-[var(--app-text-primary)]',
-          indicator:
-            'rounded-[length:var(--workspace-island-radius)] bg-[var(--app-surface-overlay)] shadow-none ring-1 ring-[color-mix(in_srgb,var(--theme-fg)_12%,transparent)]'
-        }"
-        class="w-full"
+        :ui="connectMethodTabsUi"
         @update:model-value="selectConnectMethodType"
       />
       <div class="connect-method-island__content">
@@ -262,7 +262,7 @@ async function openProtocolApplicationSettings() {
     </div>
     <div
       v-else
-      class="rounded-[length:var(--app-radius)] border border-[var(--app-border)] bg-[var(--app-input-bg)] shadow-sm"
+      class="overflow-hidden rounded-[length:var(--app-radius)] border border-[var(--app-border)] bg-[var(--app-input-bg)] shadow-sm"
     >
       <UTabs
         v-if="connectMethodTypeItems.length"
@@ -271,14 +271,10 @@ async function openProtocolApplicationSettings() {
         value-key="value"
         label-key="label"
         color="neutral"
-        variant="link"
+        variant="pill"
+        size="sm"
         :content="false"
-        :ui="{
-          root: 'p-0',
-          list: 'p-0 justify-start',
-          trigger: 'py-2'
-        }"
-        class="mb-2 w-full connect-method-type-tabs"
+        :ui="connectMethodTabsUi"
         @update:model-value="selectConnectMethodType"
       />
       <div class="connect-method-classic__content p-2 pt-1">
@@ -320,17 +316,6 @@ async function openProtocolApplicationSettings() {
 </template>
 
 <style scoped>
-:deep(.connect-method-type-tabs [data-slot="list"]) {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-  width: 100%;
-}
-
-:deep(.connect-method-type-tabs [data-slot="trigger"]) {
-  cursor: pointer;
-}
-
 .connect-method-island {
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--theme-fg) 14%, transparent);
@@ -348,30 +333,6 @@ async function openProtocolApplicationSettings() {
 
 .connect-method-island__content {
   padding: 8px;
-}
-
-.connect-method-island > :first-child + .connect-method-island__content {
-  border-top: 1px solid color-mix(in srgb, var(--theme-fg) 14%, transparent);
-}
-
-.connect-method-island :deep([data-slot="list"]) {
-  width: 100%;
-  border-radius: var(--workspace-island-radius);
-}
-
-.connect-method-island :deep([data-slot="trigger"]) {
-  cursor: pointer;
-  border-radius: var(--workspace-island-radius);
-}
-
-.connect-method-island :deep([data-slot="indicator"]) {
-  border-radius: var(--workspace-island-radius);
-  background: var(--app-surface-overlay);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--theme-fg) 12%, transparent);
-}
-
-.connect-method-island :deep([data-slot="trigger"][data-state="active"]) {
-  color: var(--app-text-primary);
 }
 
 .connect-method-island :deep([data-slot="item"] [data-slot="label"]) {
