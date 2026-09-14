@@ -3,7 +3,13 @@ import type { Ref } from "vue";
 import type { SftpCapabilities, SftpFileEntry, SftpIncomingMessage } from "./protocol";
 
 import { computed, onUnmounted, ref, shallowRef, watch } from "vue";
-import { parseSftpCapabilities, SftpMessageType, sftpOperationErrorMessage, SftpSocketFailureCode } from "./protocol";
+import {
+  isSftpDisconnectCause,
+  parseSftpCapabilities,
+  SftpMessageType,
+  sftpOperationErrorMessage,
+  SftpSocketFailureCode
+} from "./protocol";
 import { useSftpOperations } from "./useSftpOperations";
 import { useSftpRetry } from "./useSftpRetry";
 import { useSftpSocket } from "./useSftpSocket";
@@ -144,6 +150,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
     } catch (cause) {
       error.value = sftpOperationErrorMessage(cause, t);
       loading.value = false;
+      if (isSftpDisconnectCause(cause)) fatalError.value = true;
       return false;
     }
   }
@@ -272,7 +279,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
     loading,
     error,
     fatalError,
-    connected: socket.connected,
+    connected: computed(() => socket.connected.value && !fatalError.value),
     uploadTasks: operationClient.uploadTasks,
     uploadProgress: operationClient.uploadProgress,
     currentUploadName: operationClient.currentUploadName,

@@ -162,7 +162,15 @@ describe("browser download transfer endpoint", () => {
       targetPath: "/hello.txt",
       totalBytes: 5,
       offset: 0,
-      data: new TextEncoder().encode("hello"),
+      data: new TextEncoder().encode("he"),
+      sha256: "unused"
+    });
+    await endpoint.writeChunk({
+      transferId: "download-1",
+      targetPath: "/hello.txt",
+      totalBytes: 5,
+      offset: 2,
+      data: new TextEncoder().encode("llo"),
       sha256: "unused"
     });
     await endpoint.commitTransfer({
@@ -175,6 +183,7 @@ describe("browser download transfer endpoint", () => {
 
     expect(click).toHaveBeenCalledOnce();
     expect(createObjectUrl).toHaveBeenCalledOnce();
+    expect(createObjectUrl.mock.calls[0]?.[0]).toMatchObject({ size: 5 });
     expect(revokeObjectUrl).toHaveBeenCalledWith("blob:test");
     await expect(
       endpoint.getTransferStatus({ transferId: "download-1", targetPath: "/hello.txt", totalBytes: 5 })
@@ -182,6 +191,20 @@ describe("browser download transfer endpoint", () => {
     click.mockRestore();
     createObjectUrl.mockRestore();
     revokeObjectUrl.mockRestore();
+  });
+
+  it("prepares multi-gigabyte downloads without allocating the whole file", async () => {
+    const endpoint = useBrowserDownloadTransferEndpoint({ label: "Download" });
+    const size = 3 * 1024 * 1024 * 1024;
+    await expect(
+      endpoint.prepareTransfer({
+        transferId: "huge-download",
+        targetPath: "/huge.bin",
+        fileName: "huge.bin",
+        size,
+        conflictPolicy: "ask"
+      })
+    ).resolves.toMatchObject({ state: "ready", committedBytes: 0, totalBytes: size });
   });
 
   it("discards buffered bytes when a failed task is cleared", async () => {

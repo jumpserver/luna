@@ -177,12 +177,12 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
       },
       target
         ? t("koko.fileManagement.entryRenamed", { name })
-        : t(isNewFile ? "koko.fileManagement.fileCreated" : "koko.fileManagement.folderCreated", { name }),
-      true
+        : t(isNewFile ? "koko.fileManagement.fileCreated" : "koko.fileManagement.folderCreated", { name })
     );
     if (success) {
       options.clearSelection();
       promptOpen.value = false;
+      await refreshCurrentDirectory();
     }
   }
 

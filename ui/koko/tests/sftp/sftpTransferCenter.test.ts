@@ -588,6 +588,11 @@ describe("sftp professional workbench", () => {
     expect(sessionWorkspaceComponent).not.toContain("selected-ids");
     expect(sessionWorkspaceComponent).not.toContain("toggle-selected");
     expect(transferCoordinatorComposable).toContain("const checkedTargets = sendTargetOptions.value.filter");
+    expect(transferCoordinatorComposable).toContain("paneOnline[pane.id] === true");
+    expect(transferCoordinatorComposable).toContain("function setPaneOnline");
+    expect(sessionWorkspaceComponent).toContain("@connection-change=\"setPaneOnline('primary', $event)\"");
+    expect(sessionWorkspaceComponent).toContain('@connection-change="setPaneOnline(pane.id, $event)"');
+    expect(globalWorkspaceComponent).toContain('@connection-change="setPaneOnline(pane.id, $event)"');
     expect(transferCoordinatorComposable).toContain("queueSftpTransferToSelected");
     expect(transferCoordinatorComposable).not.toContain("transferLocalEntriesToCheckedRemotes");
     expect(transferCoordinatorComposable).not.toContain("async function transferEntries");

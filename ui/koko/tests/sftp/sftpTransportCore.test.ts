@@ -1,7 +1,8 @@
 import type { SftpIncomingMessage, SftpMcpMessage, SftpSocketFailure } from "#koko/composables/sftp/protocol";
 import type { SftpSocketClient } from "#koko/composables/sftp/useSftpSocket";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ref } from "vue";
+import { FileTransferUnavailableError } from "@jumpserver/connectors-core";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { nextTick, ref } from "vue";
 import {
   createSftpMessageId,
   decodeSftpRawBytes,
@@ -12,7 +13,6 @@ import { createSerialTaskQueue } from "#koko/composables/sftp/core/queues";
 import { parseSftpTransferState, parseSftpTransferWriteAck } from "#koko/composables/sftp/core/transfer";
 import { SftpCommand, SftpMessageType, SftpSocketFailureCode } from "#koko/composables/sftp/protocol";
 import { useSftpTransferEndpoint } from "#koko/composables/sftp/useSftpTransferEndpoint";
-import { FileTransferUnavailableError } from "@jumpserver/connectors-core";
 
 function createSocket(connected = true) {
   const messageListeners = new Set<(message: SftpIncomingMessage) => void>();
@@ -141,6 +141,10 @@ describe("useSftpTransferEndpoint transport core wiring", () => {
     vi.stubGlobal("crypto", { randomUUID: () => `request-${++index}` });
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("sends requests with shared ids/codecs and resolves validated responses", async () => {
     const socket = createSocket();
     const endpoint = useSftpTransferEndpoint(socket, { id: "target", label: "Target" });
@@ -230,6 +234,56 @@ describe("useSftpTransferEndpoint transport core wiring", () => {
       data: JSON.stringify({ committed_bytes: 3, duplicate: false })
     });
     await expect(writePromise).resolves.toEqual({ committedBytes: 3, duplicate: false });
+  });
+
+  it("accepts an empty EOF transfer chunk without sha256", async () => {
+    const socket = createSocket();
+    const endpoint = useSftpTransferEndpoint(socket, { id: "source", label: "Source" });
+    const readPromise = endpoint.readChunk({
+      transferId: "transfer-empty",
+      path: "/remote/empty.txt",
+      offset: 0,
+      length: 1
+    });
+    socket.emitMessage({
+      id: "request-1",
+      type: SftpMessageType.Binary,
+      data: JSON.stringify({ offset: 0, eof: true }),
+      raw: ""
+    });
+    await expect(readPromise).resolves.toEqual({
+      offset: 0,
+      eof: true,
+      sha256: "",
+      data: new Uint8Array()
+    });
+  });
+
+  it("rejects in-flight reads when koko sends CLOSE with another id", async () => {
+    const socket = createSocket();
+    const endpoint = useSftpTransferEndpoint(socket, { id: "source", label: "Source" });
+    const readPromise = endpoint.readChunk({
+      transferId: "transfer-close",
+      path: "/remote/file.txt",
+      offset: 0,
+      length: 3
+    });
+    socket.emitMessage({ id: "ws-uuid", type: SftpMessageType.Close, err: "CLOSE" });
+    await expect(readPromise).rejects.toEqual(new FileTransferUnavailableError("CLOSE"));
+  });
+
+  it("rejects pending reads when the socket disconnects", async () => {
+    const socket = createSocket();
+    const endpoint = useSftpTransferEndpoint(socket, { id: "source", label: "Source" });
+    const readPromise = endpoint.readChunk({
+      transferId: "transfer-offline",
+      path: "/remote/file.txt",
+      offset: 0,
+      length: 3
+    });
+    socket.connected.value = false;
+    await nextTick();
+    await expect(readPromise).rejects.toEqual(new FileTransferUnavailableError());
   });
 
   it("rejects pending requests when the socket reports a failure", async () => {

@@ -51,6 +51,7 @@
   --app-border-subtle: color-mix(in srgb, var(--theme-border) 68%, transparent);
   --app-border-soft: color-mix(in srgb, var(--theme-fg) 8%, transparent);
   --app-border-strong: color-mix(in srgb, var(--theme-border) 82%, var(--theme-fg) 18%);
+  --app-border-card: color-mix(in srgb, var(--theme-fg) 10%, transparent);
   --app-focus-ring: color-mix(in srgb, var(--theme-accent) 32%, transparent);
   --app-surface-frame: color-mix(in srgb, var(--theme-surface) 60%, var(--theme-bg) 40%);
   --app-surface-canvas: var(--color-bg-primary);
@@ -195,4 +196,8 @@
   --replay-chip: var(--app-surface-panel-strong);
   --replay-hover: var(--app-state-hover);
   --replay-shadow: var(--theme-shadow-soft);
+}
+
+.dark {
+  --app-border-card: color-mix(in srgb, var(--theme-fg) 34%, transparent);
 }

@@ -114,14 +114,15 @@ watch(
     <span class="sftp-transfer-file__rate truncate" :title="rateText" :role="tableRow ? 'cell' : undefined">
       {{ rateText }}
     </span>
-    <span
-      class="sftp-transfer-file__status truncate"
-      :class="sftpTransferStatusClass(task.status)"
-      :title="statusText"
-      :role="tableRow ? 'cell' : undefined"
-    >
-      {{ statusText }}
-    </span>
+    <UTooltip :text="statusText">
+      <span
+        class="sftp-transfer-file__status truncate"
+        :class="sftpTransferStatusClass(task.status)"
+        :role="tableRow ? 'cell' : undefined"
+      >
+        {{ statusText }}
+      </span>
+    </UTooltip>
     <SftpTransferActions
       class="sftp-transfer-file__actions"
       :task="task"

@@ -4,9 +4,11 @@ import { ref } from "vue";
 
 import {
   classifySftpWireError,
+  isSftpDisconnectCause,
   parseSftpCapabilities,
   SFTP_CONNECTION_LOST_ERROR,
   SFTP_OPERATION_UNSUPPORTED_ERROR,
+  SFTP_REQUEST_TIMEOUT_ERROR,
   sftpCanUpload,
   SftpCommand,
   SftpControlData,
@@ -97,6 +99,7 @@ function openSocket() {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   FakeWebSocket.instances = [];
   vi.unstubAllGlobals();
 });
@@ -119,6 +122,19 @@ describe("sFTP browser protocol", () => {
     const { fake, socket } = openSocket();
     expect(socket.connected.value).toBe(true);
     fake.receive({ id: "close", type: SftpMessageType.Close, err: "Session expired or not found" });
+    expect(socket.connected.value).toBe(false);
+  });
+
+  it("disconnects when koko stops sending heartbeats", () => {
+    vi.useFakeTimers();
+    const { fake, socket } = openSocket();
+    expect(socket.connected.value).toBe(true);
+    vi.advanceTimersByTime(74_999);
+    expect(socket.connected.value).toBe(true);
+    fake.receive({ id: "ping", type: SftpMessageType.Ping });
+    vi.advanceTimersByTime(74_999);
+    expect(socket.connected.value).toBe(true);
+    vi.advanceTimersByTime(1);
     expect(socket.connected.value).toBe(false);
   });
 
@@ -516,6 +532,9 @@ describe("sftp wire errors", () => {
       "already_exists"
     );
     expect(classifySftpWireError({ err: "Session expired or not found" })).toBe("session_expired");
+    expect(isSftpDisconnectCause(new Error("connection lost"))).toBe(true);
+    expect(isSftpDisconnectCause(new Error(SFTP_REQUEST_TIMEOUT_ERROR))).toBe(true);
+    expect(isSftpDisconnectCause(new Error("file already exists"))).toBe(false);
   });
 
   it("maps classified errors to file-management copy", () => {

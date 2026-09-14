@@ -53,6 +53,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   const transferUi = useSftpTransferUi();
   const transferring = ref(false);
   const sendModalOpen = ref(false);
+  const paneOnline = reactive<Record<string, boolean>>({});
   const sendSource = ref<SftpTransferSourcePayload | null>(null);
   const sendTargetSearch = ref("");
   const selectedRemoteTargetIds = ref<string[]>([]);
@@ -102,7 +103,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
         organizationName: options.currentOrgLabel.value,
         assetName: options.primaryTransferEndpoint.value.label,
         destinationPath: toValue(primaryPane?.manager.currentPath) || "/",
-        connected: Boolean(toValue(primaryPane?.manager.connected))
+        connected: paneOnline.primary === true
       });
     }
 
@@ -115,7 +116,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
         organizationName: pane.organizationName,
         assetName: pane.assetName,
         destinationPath: toValue(paneRef?.manager.currentPath) || "/",
-        connected: Boolean(toValue(paneRef?.manager.connected))
+        connected: paneOnline[pane.id] === true
       });
     }
     return targets;
@@ -134,6 +135,16 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     sendTargetOptions.value.filter((target) => selectedSendTargetIds.value.includes(target.id) && target.connected)
   );
   const selectedSendTotalBytes = computed(() => sendTotalBytes.value * selectedSendTargets.value.length);
+
+  watch(
+    sendTargetOptions,
+    (targets) => {
+      selectedSendTargetIds.value = selectedSendTargetIds.value.filter((id) =>
+        targets.some((target) => target.id === id && target.connected)
+      );
+    },
+    { deep: false }
+  );
 
   watch(
     () => options.remotePanes.value.map((pane) => pane.id),
@@ -167,7 +178,11 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   }
 
   function remotePaneConnected(paneId: string) {
-    return Boolean(toValue(options.remotePaneRefs.value[paneId]?.manager.connected));
+    return paneOnline[paneId] === true;
+  }
+
+  function setPaneOnline(id: string, online: boolean) {
+    paneOnline[id] = online;
   }
 
   function mountTransferEndpoint(endpoint: FileTransferEndpoint) {
@@ -688,6 +703,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     sendTargetPaths,
     sendTargetSearch,
     sendTotalBytes,
+    setPaneOnline,
     startDistribution,
     targetPath,
     toggleSendTarget,

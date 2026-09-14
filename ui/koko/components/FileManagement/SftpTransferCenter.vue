@@ -320,13 +320,14 @@ onBeforeUnmount(stopResize);
           </template>
 
           <template #status-cell="{ row }">
-            <span
-              class="sftp-transfer-table__status"
-              :class="sftpTransferStatusClass(row.original.status)"
-              :title="transferStatusText(row.original)"
-            >
-              {{ transferStatusText(row.original) }}
-            </span>
+            <UTooltip :text="transferStatusText(row.original)">
+              <span
+                class="sftp-transfer-table__status block truncate"
+                :class="sftpTransferStatusClass(row.original.status)"
+              >
+                {{ transferStatusText(row.original) }}
+              </span>
+            </UTooltip>
           </template>
 
           <template #actions-cell="{ row }">

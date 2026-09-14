@@ -60,6 +60,7 @@ const {
   queueSftpTransferToSelected,
   remotePaneConnected,
   sendFromSelection,
+  setPaneOnline,
   transferGlobal,
   transferring,
   unmountTransferEndpoint,
@@ -209,6 +210,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
         @transfer-endpoint-mounted="mountTransferEndpoint"
         @transfer-endpoint-connected="connectTransferEndpoint"
         @transfer-endpoint-unmounted="unmountTransferEndpoint"
+        @connection-change="setPaneOnline('primary', $event)"
         @add-remote="openRemoteConnect()"
         @start-tour="startTour"
       />
@@ -310,6 +312,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
           @transfer-endpoint-mounted="mountTransferEndpoint"
           @transfer-endpoint-connected="handleRemotePaneConnected"
           @transfer-endpoint-unmounted="unmountTransferEndpoint"
+          @connection-change="setPaneOnline(pane.id, $event)"
         />
       </div>
     </div>

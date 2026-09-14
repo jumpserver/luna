@@ -116,14 +116,14 @@ const {
             :placeholder="t('koko.fileManagement.searchTargets')"
             class="mb-2"
           />
-          <div class="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-default p-1.5">
+          <div class="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-default bg-elevated/50 p-3">
             <label
               v-for="target in filteredSendTargetOptions"
               :key="target.id"
               class="flex items-start gap-3 rounded-md border px-2.5 py-2 transition-colors"
               :class="[
                 selectedSendTargetIds.includes(target.id)
-                  ? 'border-primary/50 bg-accented'
+                  ? 'border-primary/40 bg-accented'
                   : 'border-transparent hover:bg-elevated',
                 !target.connected ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
               ]"
@@ -157,6 +157,7 @@ const {
                   icon="i-lucide-folder"
                   size="xs"
                   class="mt-1.5"
+                  :ui="{ base: 'ring-[var(--app-border-card)]' }"
                   :disabled="!target.connected || !selectedSendTargetIds.includes(target.id)"
                   @update:model-value="sendTargetPaths[target.id] = String($event)"
                   @click.stop

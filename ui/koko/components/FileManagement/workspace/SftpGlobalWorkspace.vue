@@ -67,6 +67,7 @@ const {
   queueSftpDownload,
   remotePaneConnected,
   sendFromSelection,
+  setPaneOnline,
   transferGlobal,
   transferring,
   unmountTransferEndpoint,
@@ -352,6 +353,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
             @transfer-endpoint-mounted="mountTransferEndpoint"
             @transfer-endpoint-connected="handleRemotePaneConnected"
             @transfer-endpoint-unmounted="unmountTransferEndpoint"
+            @connection-change="setPaneOnline(pane.id, $event)"
           />
         </template>
         <div

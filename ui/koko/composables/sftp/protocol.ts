@@ -111,6 +111,20 @@ export function classifySftpWireError(message: { error_code?: string; err?: stri
   return null;
 }
 
+export function isSftpDisconnectCause(cause: unknown) {
+  const message = cause instanceof Error ? cause.message : String(cause);
+  const kind = classifySftpWireError({ error_code: message, err: message });
+  return (
+    kind === "connection_lost" ||
+    kind === "session_expired" ||
+    message === SFTP_REQUEST_TIMEOUT_ERROR ||
+    message === SftpSocketFailureCode.SendFailed ||
+    message === SftpSocketFailureCode.ConnectionClosed ||
+    message === SftpSocketFailureCode.ConnectionFailed ||
+    message === SftpSocketFailureCode.ConnectionReset
+  );
+}
+
 export function sftpOperationErrorMessage(cause: unknown, t: (key: string) => string) {
   const message = cause instanceof Error ? cause.message : String(cause);
   switch (classifySftpWireError({ error_code: message, err: message })) {

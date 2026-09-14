@@ -9,16 +9,19 @@ import type {
 import type { SftpIncomingMessage } from "./protocol";
 import type { SftpSocketClient } from "./useSftpSocket";
 import { FileTransferUnavailableError } from "@jumpserver/connectors-core";
-import { getCurrentInstance, onUnmounted } from "vue";
+import { getCurrentInstance, onUnmounted, watch } from "vue";
 import { createSftpMessageId, decodeSftpRawBytes, encodeSftpBytes } from "./core/codec";
 import { rejectPendingRequests } from "./core/pending";
 import { parseSftpTransferState, parseSftpTransferWriteAck } from "./core/transfer";
 import { SftpCommand, SftpMessageType } from "./protocol";
 
+const transferRequestTimeoutMs = 60_000;
+
 interface PendingRequest {
   command: SftpCommand;
   resolve: (message: SftpIncomingMessage) => void;
   reject: (error: Error) => void;
+  timeout?: ReturnType<typeof setTimeout>;
 }
 
 export function useSftpTransferEndpoint(
@@ -33,33 +36,38 @@ export function useSftpTransferEndpoint(
   };
 
   const removeMessageListener = socket.onMessage((message) => {
-    const request = pending.get(message.id);
-    if (!request) return;
     if (
       message.type === SftpMessageType.Error ||
       message.type === SftpMessageType.Close ||
       message.type === SftpMessageType.Closed
     ) {
-      pending.delete(message.id);
-      request.reject(new FileTransferUnavailableError(message.err || message.type));
+      rejectAllPending(new FileTransferUnavailableError(message.err || message.type));
       return;
     }
+    const request = pending.get(message.id);
+    if (!request) return;
     if (message.type === SftpMessageType.Binary && request.command === SftpCommand.TransferRead) {
       pending.delete(message.id);
+      clearTimeout(request.timeout);
       request.resolve(message);
       return;
     }
     if (message.type === SftpMessageType.Data && message.cmd === request.command) {
       pending.delete(message.id);
+      clearTimeout(request.timeout);
       request.resolve(message);
     }
   });
   const removeFailureListener = socket.onFailure((failure) => {
     rejectAllPending(new FileTransferUnavailableError(failure.message));
   });
+  const stopConnectedWatch = watch(socket.connected, (isConnected) => {
+    if (!isConnected) rejectAllPending(new FileTransferUnavailableError());
+  });
 
   if (getCurrentInstance()) {
     onUnmounted(() => {
+      stopConnectedWatch();
       removeMessageListener();
       removeFailureListener();
       rejectAllPending(new FileTransferUnavailableError());
@@ -70,11 +78,21 @@ export function useSftpTransferEndpoint(
     if (!socket.connected.value) return Promise.reject(new FileTransferUnavailableError());
     const id = createSftpMessageId();
     return new Promise<SftpIncomingMessage>((resolve, reject) => {
-      pending.set(id, { command, resolve, reject });
+      const pendingRequest: PendingRequest = {
+        command,
+        resolve,
+        reject,
+        timeout: setTimeout(() => {
+          if (!pending.delete(id)) return;
+          reject(new FileTransferUnavailableError());
+        }, transferRequestTimeoutMs)
+      };
+      pending.set(id, pendingRequest);
       try {
         socket.send({ id, type: SftpMessageType.Data, cmd: command, data: JSON.stringify(data), raw });
       } catch (error) {
         pending.delete(id);
+        clearTimeout(pendingRequest.timeout);
         reject(error instanceof Error ? error : new Error(String(error)));
       }
     });
@@ -106,10 +124,16 @@ export function useSftpTransferEndpoint(
         length: input.length
       });
       if (message.type !== SftpMessageType.Binary) throw new Error("Invalid SFTP transfer chunk response");
-      const metadata = JSON.parse(message.data || "{}") as Omit<FileTransferChunk, "data">;
-      if (!metadata.sha256 || !Number.isSafeInteger(metadata.offset))
+      let metadata: Omit<FileTransferChunk, "data">;
+      try {
+        metadata = JSON.parse(message.data || "{}") as Omit<FileTransferChunk, "data">;
+      } catch {
         throw new Error("Invalid SFTP transfer chunk metadata");
-      return { ...metadata, data: decodeSftpRawBytes(message.raw) };
+      }
+      const data = decodeSftpRawBytes(message.raw);
+      if (!Number.isSafeInteger(metadata.offset) || (data.length > 0 && !metadata.sha256))
+        throw new Error("Invalid SFTP transfer chunk metadata");
+      return { ...metadata, sha256: metadata.sha256 || "", data };
     },
     writeChunk: async (input: FileTransferWriteInput) => {
       const message = await request(

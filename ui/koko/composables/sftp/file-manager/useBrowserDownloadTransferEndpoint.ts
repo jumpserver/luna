@@ -10,7 +10,7 @@ import type {
 export const WEB_DOWNLOAD_ENDPOINT_ID = "web-download";
 
 interface BrowserDownloadState {
-  bytes: Uint8Array<ArrayBuffer>;
+  chunks: Uint8Array<ArrayBuffer>[];
   committedBytes: number;
 }
 
@@ -25,7 +25,7 @@ export function useBrowserDownloadTransferEndpoint(options: { label: string }): 
 
     async prepareTransfer(input: FileTransferPrepareInput): Promise<FileTransferResumeState> {
       const state = downloads.get(input.transferId) || {
-        bytes: new Uint8Array(input.size),
+        chunks: [],
         committedBytes: 0
       };
       downloads.set(input.transferId, state);
@@ -43,10 +43,11 @@ export function useBrowserDownloadTransferEndpoint(options: { label: string }): 
 
     async writeChunk(input: FileTransferWriteInput) {
       const state = downloads.get(input.transferId);
-      if (!state || input.offset !== state.committedBytes || input.offset + input.data.length > state.bytes.length) {
+      if (!state || input.offset !== state.committedBytes || input.offset + input.data.length > input.totalBytes) {
         throw new Error("Invalid browser download chunk");
       }
-      state.bytes.set(input.data, input.offset);
+      // ponytail: still RAM-bound; File System Access stream if tab heap OOMs on huge files
+      state.chunks.push(input.data as Uint8Array<ArrayBuffer>);
       state.committedBytes += input.data.length;
       return { committedBytes: state.committedBytes, duplicate: false };
     },
@@ -65,7 +66,7 @@ export function useBrowserDownloadTransferEndpoint(options: { label: string }): 
       const state = downloads.get(input.transferId);
       if (!state || state.committedBytes !== input.totalBytes) throw new Error("Browser download is incomplete");
 
-      const url = URL.createObjectURL(new Blob([state.bytes]));
+      const url = URL.createObjectURL(new Blob(state.chunks));
       const anchor = document.createElement("a");
       try {
         anchor.href = url;

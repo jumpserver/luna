@@ -19,6 +19,7 @@ const SOCKET_OPEN = 1;
 const SOCKET_CLOSING = 2;
 const SOCKET_CLOSED = 3;
 const connectionTimeoutMs = 15_000;
+const idleWatchdogMs = 75_000;
 
 export interface SftpSocketClient {
   socket: Ref<WebSocket | null>;
@@ -42,10 +43,25 @@ export function useSftpSocket(): SftpSocketClient {
   let generation = 0;
   let intentionalClose = false;
   let connectionTimeout: ReturnType<typeof setTimeout> | undefined;
+  let idleWatchdog: ReturnType<typeof setTimeout> | undefined;
 
   function clearConnectionTimeout() {
     clearTimeout(connectionTimeout);
     connectionTimeout = undefined;
+  }
+
+  function clearIdleWatchdog() {
+    clearTimeout(idleWatchdog);
+    idleWatchdog = undefined;
+  }
+
+  function armIdleWatchdog() {
+    clearIdleWatchdog();
+    idleWatchdog = setTimeout(() => {
+      if (!connected.value) return;
+      close();
+      emitFailure({ code: SftpSocketFailureCode.ConnectionClosed, message: SftpSocketFailureCode.ConnectionClosed });
+    }, idleWatchdogMs);
   }
 
   function emitFailure(nextFailure: SftpSocketFailure) {
@@ -67,6 +83,7 @@ export function useSftpSocket(): SftpSocketClient {
 
   function close(notify = false) {
     clearConnectionTimeout();
+    clearIdleWatchdog();
     generation += 1;
     intentionalClose = true;
     connected.value = false;
@@ -95,9 +112,11 @@ export function useSftpSocket(): SftpSocketClient {
       if (!isCurrent()) return;
       clearConnectionTimeout();
       connected.value = true;
+      armIdleWatchdog();
     };
     target.onmessage = (event) => {
       if (!isCurrent()) return;
+      armIdleWatchdog();
       let raw: unknown;
       try {
         raw = JSON.parse(String(event.data));
@@ -132,16 +151,25 @@ export function useSftpSocket(): SftpSocketClient {
         return;
       }
       for (const listener of messageListeners) listener(message);
+      if (
+        message.type === SftpMessageType.Close ||
+        message.type === SftpMessageType.Closed ||
+        message.type === SftpMessageType.Error
+      ) {
+        close();
+      }
     };
     target.onerror = () => {
       if (!isCurrent()) return;
       clearConnectionTimeout();
+      clearIdleWatchdog();
       connected.value = false;
       emitFailure({ code: SftpSocketFailureCode.ConnectionFailed, message: SftpSocketFailureCode.ConnectionFailed });
     };
     target.onclose = () => {
       if (!isCurrent()) return;
       clearConnectionTimeout();
+      clearIdleWatchdog();
       connected.value = false;
       socket.value = null;
       if (!intentionalClose) {

@@ -66,6 +66,7 @@ const emit = defineEmits<{
   transferEndpointMounted: [endpoint: FileTransferEndpoint];
   transferEndpointConnected: [];
   transferEndpointUnmounted: [endpoint: FileTransferEndpointRef];
+  connectionChange: [connected: boolean];
   focus: [];
   addRemote: [];
   startTour: [];
@@ -400,6 +401,7 @@ watch(manager.currentPath, () => {
   hideContextMenu();
   clearSelection();
 });
+watch(manager.connected, (connected) => emit("connectionChange", Boolean(connected)), { immediate: true });
 watch([manager.connected, manager.loading, manager.fatalError], ([connected, loading, fatalError]) => {
   if (!connected || fatalError) {
     transferEndpointReady = false;
@@ -415,6 +417,7 @@ onMounted(() => {
   document.addEventListener("keydown", onKeydown);
 });
 onUnmounted(() => {
+  emit("connectionChange", false);
   stopAiMessageListener();
   unregisterAiTarget(true);
   document.removeEventListener("dragend", clearTransferDragState);
