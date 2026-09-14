@@ -1332,6 +1332,7 @@
     "DownloadRdpFailed": "RDP ファイルのダウンロードに失敗しました",
     "ConnectFailed": "接続に失敗しました",
     "CredentialServiceUnavailable": "認証情報サービス（OpenBao など）を利用できません。サービスの状態を確認してから再試行してください。",
+    "PersonalCredentialNotFound": "選択した個人認証情報が見つかりません。別の認証情報を選択するか、手動で入力してください。",
     "AclFailed": "現在のアセットは ACL ポリシーによって制限されているため、クライアントからアクセスできません。Web コンソールから接続してください。",
     "MethodDisabled": "この接続方法は無効になっています",
     "ClientNotFound": "デスクトップクライアントが見つかりません。クライアントをインストールするか、パスを設定してください。",

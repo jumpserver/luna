@@ -873,6 +873,10 @@ export const useAssetAction = () => {
         : undefined;
     const savePersonalCredential = !!ephemeral?.savePersonalCredential;
     const useSavedPersonalCredential = isManual && !!personalCredentialId && !savePersonalCredential;
+    const manualAccountSecretType = _accounts.find((account) => account.alias === "@INPUT")?.secret_type;
+    const personalCredentialSecretType = personalCredentialId
+      ? ephemeral?.personalCredentialSecretType || manualAccountSecretType || "password"
+      : manualAccountSecretType || ephemeral?.personalCredentialSecretType || "password";
     const connectionBody: ConnectionBody = {
       asset: assetId,
       protocol,
@@ -881,7 +885,7 @@ export const useAssetAction = () => {
       ...(isManual && savePersonalCredential
         ? {
             save_personal_credential: true,
-            input_secret_type: ephemeral.personalCredentialSecretType || "password",
+            input_secret_type: personalCredentialSecretType,
             ...(personalCredentialVersion !== undefined
               ? { personal_credential_version: personalCredentialVersion }
               : {})

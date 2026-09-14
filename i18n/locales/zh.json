@@ -1335,6 +1335,7 @@
     "DownloadRdpFailed": "下载 RDP 文件失败",
     "ConnectFailed": "连接失败",
     "CredentialServiceUnavailable": "凭据服务（如 OpenBao）不可用，请检查服务状态后重试。",
+    "PersonalCredentialNotFound": "未找到所选的个人凭据，请重新选择或手动输入。",
     "AclFailed": "当前资产受到 ACL 访问限制，无法通过客户端连接，请前往 Web 端进行访问",
     "MethodDisabled": "该连接方式已被管理员禁用",
     "ClientNotFound": "未找到桌面客户端，请安装或在设置中配置路径",
