@@ -59,6 +59,14 @@ export const sqlAiPanelDomain: AiPanelDomainAdapter = {
         title: sqlContext.schema
       });
     }
+    if (sqlContext?.currentContext && !sqlContext.database && !sqlContext.schema) {
+      contextItems.push({
+        key: "current-context",
+        icon: "i-lucide-cylinder",
+        label: `@${sqlContext.currentContext}`,
+        title: sqlContext.currentContext
+      });
+    }
     if (sqlContext?.selectedSql) {
       contextItems.push({
         key: "selection",
