@@ -46,3 +46,29 @@ export function chenDataViewPropertyTabIds(input: {
 export function canOpenChenQueryConsole<T extends { type: string }>(node: T | null | undefined): node is T {
   return Boolean(node && QUERY_CONSOLE_NODE_TYPES.has(node.type));
 }
+
+/**
+ * Node types that are valid New Console entry points for the current engine.
+ * Mirrors ConnectionManager.getContextKey() / QueryConsole.getInitialContext(),
+ * plus PostgreSQL database nodes because ConsoleContext.database() is consumed
+ * when opening a physical connection.
+ */
+export function chenConsoleContextNodeTypes(dbType: string): ReadonlySet<string> {
+  const normalized = String(dbType || "")
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]/g, "");
+  if (normalized.includes("sqlserver") || normalized.includes("mssql")) {
+    return new Set(["database"]);
+  }
+  if (normalized.includes("postgres")) {
+    return new Set(["database", "schema"]);
+  }
+  return new Set(["schema"]);
+}
+
+export function canOpenChenNewConsoleFromNode<T extends { type: string }>(
+  node: T | null | undefined,
+  dbType = ""
+): node is T {
+  return Boolean(node && chenConsoleContextNodeTypes(dbType).has(node.type));
+}
