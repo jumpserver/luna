@@ -35,7 +35,8 @@ const {
   taskItems,
   processingCount,
   completedCount,
-  canStart
+  canStart,
+  outputDirAuthorized
 } = storeToRefs(store);
 
 const toPickedPaths = (value: string | string[] | null) => {
@@ -226,7 +227,7 @@ const handleStartTranscode = async () => {
     await openApplicationSettings("/setting/general");
     return;
   }
-  if (!outputDir.value && !(await pickOutputDir())) return;
+  if ((!outputDir.value || !outputDirAuthorized.value) && !(await pickOutputDir())) return;
   beginTranscode();
 };
 
