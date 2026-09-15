@@ -147,7 +147,9 @@ watch(
       }
       if (appletSelected === "web" || appletSelected === "client") return;
     } else if (component === "panda") {
-      if (virtualSelected === "web" || virtualSelected === "client") return;
+      if (virtualSelected !== "web" && virtualSelected !== "client")
+        patchConnectOptions({ virtualappConnectMethod: "web" });
+      return;
     } else {
       return;
     }
@@ -159,8 +161,7 @@ watch(
     const preferences = await connectionPreference;
     if (cancelled) return;
     const fallback = preferences.graphics?.applet_connection_method === "client" ? "client" : "web";
-    if (component === "tinker") patchConnectOptions({ appletConnectMethod: fallback });
-    else patchConnectOptions({ virtualappConnectMethod: fallback });
+    patchConnectOptions({ appletConnectMethod: fallback });
   },
   { immediate: true }
 );

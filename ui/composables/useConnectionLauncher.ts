@@ -1,3 +1,4 @@
+import type { ConnectionSessionPayload } from "~/composables/useAssetAction";
 import type { ConnectionFormInfo } from "~/composables/useAssetConnection";
 import type { AssetItem } from "~/types";
 
@@ -11,8 +12,13 @@ interface ConnectionLaunchOptions {
   assertCurrent?: () => void;
 }
 
-const isExternalPayload = (payload: Record<string, any>) =>
-  ["native", "client", "local", "desktop"].includes(String(payload.connectMethod?.type || "").toLowerCase());
+const isExternalPayload = (payload: ConnectionSessionPayload, info: ConnectionFormInfo) => {
+  const type = String(payload.connectMethod?.type || "").toLowerCase();
+  return (
+    ["native", "client", "local", "desktop"].includes(type) ||
+    (type === "virtual_app" && info.connectOptions?.virtualappConnectMethod === "client")
+  );
+};
 
 export function useConnectionLauncher() {
   const { confirmConnection } = useAssetConnection();
@@ -43,7 +49,7 @@ export function useConnectionLauncher() {
             finish(false);
             return;
           }
-          if (!isExternalPayload(payload)) {
+          if (!isExternalPayload(payload, info)) {
             const pane = openSession(asset, {
               protocol: info.protocol,
               account: info.account,

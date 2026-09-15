@@ -99,7 +99,7 @@ export const isConnectMethodAvailable = (
 export const isExternalClientConnectMethod = (
   value: string,
   methods: ConnectMethod[],
-  options: { appletConnectMethod?: unknown } = {}
+  options: { appletConnectMethod?: unknown; virtualappConnectMethod?: unknown } = {}
 ) => {
   const selected = parseLocalApplicationConnectMethod(value);
   if (selected.connectMethod.endsWith("_guide")) return false;
@@ -108,7 +108,8 @@ export const isExternalClientConnectMethod = (
   const type = String(method?.type || "").toLowerCase();
   return (
     ["native", "client", "local", "desktop"].includes(type) ||
-    (type === "applet" && options.appletConnectMethod === "client")
+    (type === "applet" && options.appletConnectMethod === "client") ||
+    (type === "virtual_app" && options.virtualappConnectMethod === "client")
   );
 };
 

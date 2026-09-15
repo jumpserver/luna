@@ -585,7 +585,7 @@ export const useAssetAction = () => {
       }
 
       if (
-        (isDesktopRuntime() && method?.type !== "applet") ||
+        (isDesktopRuntime() && !["applet", "virtual_app"].includes(String(method?.type || "").toLowerCase())) ||
         isExternalClientConnectMethod(body.connect_method, allMethods[body.protocol] || [], body.connect_options)
       ) {
         const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams(body.connect_options));

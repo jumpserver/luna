@@ -84,7 +84,13 @@ const updateExternalLaunchState = async () => {
 };
 
 watch(
-  () => [draft.value.protocol, draft.value.connectMethod, draft.value.connectOptions.appletConnectMethod] as const,
+  () =>
+    [
+      draft.value.protocol,
+      draft.value.connectMethod,
+      draft.value.connectOptions.appletConnectMethod,
+      draft.value.connectOptions.virtualappConnectMethod
+    ] as const,
   () => {
     void updateExternalLaunchState();
   },

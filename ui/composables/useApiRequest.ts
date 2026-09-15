@@ -21,6 +21,7 @@ export interface ApiRequest {
   body?: unknown;
   headers?: Record<string, string>;
   orgId?: string;
+  responseType?: "text";
 }
 
 export class ApiRequestError extends Error {
@@ -615,7 +616,8 @@ export function getConnectionRdpFile(tokenId: string, query: Record<string, unkn
     method: "GET",
     path: `/api/v1/authentication/connection-token/${encodeURIComponent(tokenId)}/rdp-file/`,
     query,
-    orgId
+    orgId,
+    responseType: "text"
   });
 }
 

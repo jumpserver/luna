@@ -468,6 +468,7 @@ export interface RdpGraphics {
   rdp_smart_size?: string;
   applet_connection_method?: string;
   appletConnectMethod?: string;
+  virtualappConnectMethod?: string;
   reusable?: boolean;
   remote_microphone?: boolean;
   rdp_connection_speed?: "auto" | "low_speed_broadband" | "high_speed_broadband";

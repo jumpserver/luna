@@ -454,6 +454,7 @@ export class DesktopAuthService {
       );
     }
     if (!text.trim()) return null;
+    if (request.responseType === "text") return text;
     return parseJsonResponse(text);
   }
 

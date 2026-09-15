@@ -426,7 +426,7 @@ export function useSidebarAssetActions() {
     const externalClient = Boolean(
       dispatchProtocol &&
       connectionInfo.connectMethod &&
-      isExternalClientConnectMethod(connectionInfo.connectMethod, methods)
+      isExternalClientConnectMethod(connectionInfo.connectMethod, methods, connectionInfo.connectOptions)
     );
 
     try {
@@ -459,7 +459,7 @@ export function useSidebarAssetActions() {
       if (!info) return;
       const selectedMethods = await getMethodsForProtocol(info.protocol);
       await dispatchAssetWindow(
-        isExternalClientConnectMethod(info.connectMethod, selectedMethods),
+        isExternalClientConnectMethod(info.connectMethod, selectedMethods, info.connectOptions),
         detailed,
         info,
         () => launchWithInfo(detailed, info)
