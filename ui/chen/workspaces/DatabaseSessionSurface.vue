@@ -83,7 +83,12 @@ import {
   clearChenDataViewEdits,
   findChenDataViewTarget
 } from "~/chen/utils/dataViewEditing";
-import { canOpenChenQueryConsole, chenNodeActivationAction, isChenViewRelation } from "~/chen/utils/resourceTree";
+import {
+  canOpenChenNewConsoleFromNode,
+  canOpenChenQueryConsole,
+  chenNodeActivationAction,
+  isChenViewRelation
+} from "~/chen/utils/resourceTree";
 import { ChenSqlMetadataStore } from "~/chen/utils/sqlMetadata";
 import { chenUnrestrictedMutations } from "~/chen/utils/sqlSafety";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -1310,18 +1315,38 @@ const dialogVisible = computed({
 
 const actionMenu = useChenActionMenu<DropdownMenuItem>({
   fetchActions: async (node) => {
-    if (!canCreateTableFromNode(node)) return fetchChenActions(auth.chenToken.value, node, endpointUrl.value);
+    const createTableAction: ChenActionItem | null = canCreateTableFromNode(node)
+      ? { key: "__create_table__", label: t("Chen.NewTable") }
+      : null;
+    const newConsoleAction: ChenActionItem | null = canOpenChenNewConsoleFromNode(
+      node,
+      auth.profile.value?.dbType || props.tab.protocol || ""
+    )
+      ? { key: "__new_console__", label: t("Chen.NewConsole") }
+      : null;
 
-    const createTableAction: ChenActionItem = { key: "__create_table__", label: t("Chen.NewTable") };
+    if (!createTableAction && !newConsoleAction) {
+      return fetchChenActions(auth.chenToken.value, node, endpointUrl.value);
+    }
+
     try {
-      const actions = await fetchChenActions(auth.chenToken.value, node, endpointUrl.value);
-      const otherActions = actions.filter((item) => {
-        const key = item.key.trim().toLowerCase().replaceAll("-", "_");
-        return key !== "new_table" && item.label.trim().toLowerCase() !== "new table";
-      });
-      return [createTableAction, ...otherActions];
-    } catch {
-      return [createTableAction];
+      let actions = await fetchChenActions(auth.chenToken.value, node, endpointUrl.value);
+      if (createTableAction) {
+        actions = [
+          createTableAction,
+          ...actions.filter((item) => {
+            const key = item.key.trim().toLowerCase().replaceAll("-", "_");
+            return key !== "new_table" && item.label.trim().toLowerCase() !== "new table";
+          })
+        ];
+      }
+      if (newConsoleAction) actions = insertChenActionAfterNewQuery(actions, newConsoleAction);
+      return actions;
+    } catch (cause) {
+      if (newConsoleAction || createTableAction) {
+        return [newConsoleAction, createTableAction].filter((item): item is ChenActionItem => Boolean(item));
+      }
+      throw cause;
     }
   },
   mapItems: mapActionItems,
@@ -1350,7 +1375,9 @@ const ACTION_MENU_ICONS: Record<string, string> = {
   show: "i-lucide-info",
   property: "i-lucide-info",
   properties: "i-lucide-info",
-  __create_table__: "i-lucide-table-2"
+  __create_table__: "i-lucide-table-2",
+  __new_console__: "i-lucide-square-terminal",
+  new_console: "i-lucide-square-terminal"
 };
 
 function resolveActionMenuIcon(item: ChenActionItem) {
@@ -1359,6 +1386,7 @@ function resolveActionMenuIcon(item: ChenActionItem) {
 
   const label = item.label.trim().toLowerCase();
   if (label === "new query" || label === "新建查询") return "i-lucide-file-code-2";
+  if (label === "new console" || label === "新建控制台") return "i-lucide-square-terminal";
   if (label === "refresh" || label === "reload" || label === "刷新") return "i-lucide-refresh-cw";
   if (label === "view data" || label === "查看数据") return "i-lucide-table-properties";
   if (label === "properties" || label === "属性") return "i-lucide-info";
@@ -1375,7 +1403,7 @@ function mapActionItems(node: ChenTreeNode, items: ChenActionItem[]): DropdownMe
     };
     const icon = resolveActionMenuIcon(item);
     const mappedItem: DropdownMenuItem = {
-      label: item.key === "__create_table__" ? t("Chen.NewTable") : item.label,
+      label: localTreeActionLabel(item),
       ...(icon ? { icon } : {}),
       ...(item.disabled ? { disabled: true } : {}),
       ...(item.children?.length ? { children: mapActionItems(node, item.children) } : { onSelect })
@@ -1385,9 +1413,28 @@ function mapActionItems(node: ChenTreeNode, items: ChenActionItem[]): DropdownMe
   });
 }
 
+function localTreeActionLabel(item: ChenActionItem) {
+  if (item.key === "__create_table__") return t("Chen.NewTable");
+  if (item.key === "__new_console__") return t("Chen.NewConsole");
+  return item.label;
+}
+
+function insertChenActionAfterNewQuery(actions: ChenActionItem[], action: ChenActionItem) {
+  const index = actions.findIndex((item) => {
+    const key = item.key.trim().toLowerCase().replaceAll("-", "_");
+    return key === "new_query" || key === "query";
+  });
+  if (index === -1) return [action, ...actions];
+  return [...actions.slice(0, index + 1), action, ...actions.slice(index + 1)];
+}
+
 async function applyTreeAction(node: ChenTreeNode, action: string) {
   if (action === "__create_table__") {
     openCreateTableWorkspace(node);
+    return;
+  }
+  if (action === "__new_console__") {
+    openConsoleWorkspace(node.key, workspace.nextTabTitle("Console"));
     return;
   }
   try {
