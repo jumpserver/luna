@@ -45,7 +45,7 @@ const previewSidebar = () => {
 <template>
   <div class="relative z-20 flex h-full items-center gap-1" :class="isMacClient ? 'pl-[88px] pr-2' : 'px-2.5'">
     <div v-if="showHeaderLogo" class="mr-1.5 flex items-center">
-      <BrandLogo class="h-5 w-5" />
+      <BrandLogo class="size-[22px] shrink-0" />
     </div>
 
     <template v-if="!collapse">

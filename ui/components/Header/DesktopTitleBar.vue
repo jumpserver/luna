@@ -229,7 +229,7 @@ const windowControls = computed(() => [
     <div class="flex min-w-0 flex-1 items-center" data-desktop-drag-region>
       <slot v-if="$slots.default" />
       <div v-else class="flex h-full items-center px-2">
-        <BrandLogo class="mt-1.5 ml-0.5 mr-1.5 size-5 shrink-0 self-start" />
+        <BrandLogo class="ml-0.5 mr-1.5 size-[22px] shrink-0" />
 
         <template v-if="props.showMenus">
           <UDropdownMenu
