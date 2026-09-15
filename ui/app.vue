@@ -5,6 +5,7 @@ import type { LangType, LanguagePreference } from "~/types";
 import { agentClient } from "#koko/composables/agent/agentClient";
 import defaultFavicon from "~/assets/facio.ico";
 import AppWatermark from "~/components/AppWatermark.vue";
+import FaceOnlineMonitorHost from "~/components/Face/FaceOnlineMonitorHost.vue";
 import AclDialog from "~/components/Modal/aclDialog.vue";
 import ConnectionFormModal from "~/components/Modal/connectionFormModal.vue";
 import { confirmAiTaskLeave, useAiTaskLeave } from "~/composables/useAiTaskLeave";
@@ -300,7 +301,7 @@ async function applyAfterHydration() {
 
 onMounted(async () => {
   unregisterAiTaskTabCloseConfirm = registerAiTaskTabCloseConfirm((tabIds) => confirmAiTaskLeave("tab", tabIds));
-  void authSession.bootstrapPersistedSession();
+  if (!route.path.startsWith("/facelive/")) void authSession.bootstrapPersistedSession();
 
   if (!isDesktopRuntime()) return;
 
@@ -383,6 +384,7 @@ onBeforeUnmount(() => {
         </NuxtLayout>
         <ConnectionFormModal />
         <AclDialog />
+        <FaceOnlineMonitorHost />
         <UModal
           v-model:open="siteLeaveConfirmOpen"
           :title="siteLeaveKind === 'logout' ? t('Login.Logout') : t('Login.SwitchSite')"

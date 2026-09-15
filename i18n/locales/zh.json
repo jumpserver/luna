@@ -1509,6 +1509,55 @@
     "MethodExecuted": "已触发方法事件 {method}。",
     "ApiSucceeded": "API 回调成功，状态码 {status}。",
     "ApiFailed": "API 回调失败：{error}",
+    "Remote": {
+      "Title": "人脸识别",
+      "EnrollTitle": "采集人脸特征",
+      "AuthTitle": "人脸身份认证",
+      "MonitorTitle": "人脸在线监测",
+      "PreparingCamera": "正在准备摄像头",
+      "AllowCamera": "请允许访问摄像头后继续",
+      "Connecting": "正在连接人脸识别服务",
+      "ConnectingHint": "正在建立安全连接，请保持此窗口开启",
+      "CameraReady": "摄像头已就绪",
+      "LookStraight": "请正视摄像头，并将面部保持在引导框内",
+      "CapturingSamples": "正在采集人脸样本 {accepted}/{required}",
+      "Completed": "人脸验证已完成",
+      "Failed": "人脸验证失败",
+      "Present": "在监测区域",
+      "Away": "已离开",
+      "AwayWarning": "目标人员已离开采集区域，{seconds} 秒后暂停会话",
+      "SessionPaused": "受监测会话已暂停，请回到摄像头前恢复会话。",
+      "MonitorDisconnected": "摄像头监测连接已中断，宽限时间后将暂停受保护会话。",
+      "MonitoringHint": "在线监测已启动；初始化阶段的活体检测只执行一次。",
+      "SessionCount": "{count} 个会话",
+      "Retry": "重试",
+      "Expand": "展开",
+      "Challenge": {
+        "shake_head": "请向左、向右转头，然后回到正面",
+        "nod_head": "请点头一次，然后回到正面",
+        "open_mouth": "请张嘴后再闭合"
+      },
+      "Error": {
+        "browser_unsupported": "当前浏览器无法使用摄像头",
+        "camera_denied": "未获得摄像头权限",
+        "camera_not_found": "未找到摄像头",
+        "camera_failed": "摄像头启动失败",
+        "connection_failed": "无法连接识别服务",
+        "connection_closed": "识别连接已关闭",
+        "invalid_token": "本次采集已过期",
+        "server_error": "人脸识别服务不可用"
+      },
+      "ErrorHint": {
+        "browser_unsupported": "当前浏览器不支持访问摄像头。",
+        "camera_denied": "请在浏览器或系统设置中允许摄像头权限，然后重试。",
+        "camera_not_found": "请连接可用的摄像头，然后重试。",
+        "camera_failed": "无法打开摄像头，请检查摄像头是否被其他应用占用。",
+        "connection_failed": "无法访问人脸识别服务。",
+        "connection_closed": "人脸识别连接已关闭。",
+        "invalid_token": "本次采集已过期，请重试以创建新的采集流程。",
+        "server_error": "人脸识别服务当前不可用。"
+      }
+    },
     "Status": {
       "idle": "未开始",
       "enrolling": "采集中",
@@ -1523,6 +1572,7 @@
       "monitoring": "监测中",
       "monitor_away_warning": "离开报警",
       "monitor_away_timeout": "离开超时",
+      "monitor_paused": "会话已暂停",
       "finished": "流程已结束"
     },
     "Event": {

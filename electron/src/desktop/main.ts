@@ -29,6 +29,7 @@ import { listSystemFonts } from "../apps/system-fonts";
 import { DesktopAuthService } from "../auth/service";
 import { isOAuthCallbackUrl } from "../auth/oauth-callback";
 import { FaceEngineManager } from "../face/manager";
+import { isFaceLiveWebSocket } from "../face/socket-policy";
 import { FfmpegPluginManager } from "../replay/ffmpeg-plugin";
 import { OfflineRecordingStore } from "../replay/offline-recordings";
 import { ReplayTranscoder } from "../replay/transcoder";
@@ -138,14 +139,21 @@ function installConnectorSessionHooks(targetSession) {
         const isKokoSocket =
           (target.pathname.startsWith("/koko/ws/") || target.pathname.startsWith("/koko/lion/ws/")) &&
           allowedKokoOrigins.has(httpOrigin);
-        if (isChenSocket || isKokoSocket) {
+        let activeSiteOrigin = "";
+        try {
+          activeSiteOrigin = normalizedHttpOrigin(authService.currentSession().origin, "JumpServer site");
+        } catch {
+          // No authenticated site is available yet.
+        }
+        const isFaceSocket = isFaceLiveWebSocket(details.url, activeSiteOrigin);
+        if (isChenSocket || isKokoSocket || isFaceSocket) {
           const originHeader = Object.keys(requestHeaders).find((name) => name.toLowerCase() === "origin") || "Origin";
           requestHeaders[originHeader] = httpOrigin;
 
-          // Chromium treats the custom renderer origin as cross-site and omits
-          // Chen's HTTP-session cookie. Reattach the target URL's own cookies;
-          // Chen requires both this session and the WebSocket subprotocol token.
-          if (isChenSocket) {
+          // Chromium treats the custom renderer origin as cross-site and may omit
+          // the target HTTP session. Chen and FaceLive both authenticate with it;
+          // Chen additionally requires its WebSocket subprotocol token.
+          if (isChenSocket || isFaceSocket) {
             const cookies = await targetSession.cookies.get({ url: `${httpOrigin}${target.pathname}` });
             if (cookies.length) {
               const cookieHeader =

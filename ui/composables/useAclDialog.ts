@@ -3,6 +3,7 @@ import type { ConnectionBody, TokenResponse } from "~/types";
 import { ApiRequestError } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { writeClipboardText } from "~/utils/clipboard";
+import { buildFaceLivePageUrl, getOrCreateFaceMonitorToken } from "~/utils/faceLive";
 
 export type AclItemStatus =
   | "ready"
@@ -56,7 +57,9 @@ export function useAclDialogPresentation(groupSource: MaybeRefOrGetter<AclDialog
   const group = computed(() => toValue(groupSource));
   const isReview = computed(() => group.value?.code === "acl_review");
   const isFace = computed(() => group.value?.code.startsWith("acl_face_") || false);
-  const isActionable = computed(() => ["acl_review", "acl_face_verify"].includes(group.value?.code || ""));
+  const isActionable = computed(() =>
+    ["acl_review", "acl_face_verify", "acl_face_online"].includes(group.value?.code || "")
+  );
   const isBatch = computed(() => (group.value?.items.length || 0) > 1);
   const isBusy = computed(
     () => group.value?.items.some((item) => ["submitting", "verifying"].includes(item.status)) || false
@@ -83,15 +86,16 @@ export function useAclDialogPresentation(groupSource: MaybeRefOrGetter<AclDialog
         if (item?.status === "closed") return t("AclDialog.ReviewClosed");
         return t("AclDialog.NeedReview");
       }
-      if (current.code === "acl_face_verify") {
+      if (["acl_face_verify", "acl_face_online"].includes(current.code)) {
         if (item?.status === "failed") return t("AclDialog.RequestFailed");
-        return item?.status === "verifying" ? t("AclDialog.CompleteFaceVerify") : t("AclDialog.NeedFaceVerify");
+        if (item?.status === "verifying") return t("AclDialog.CompleteFaceVerify");
+        return current.code === "acl_face_online" ? t("AclDialog.NeedFaceOnline") : t("AclDialog.NeedFaceVerify");
       }
       const mapped = aclCodeMessage(current.code);
       return mapped ? t(mapped) : t("AclDialog.Restricted");
     }
     if (isReview.value) return t("AclDialog.ReviewGroupDescription");
-    if (current.code === "acl_face_verify") return t("AclDialog.FaceGroupDescription");
+    if (["acl_face_verify", "acl_face_online"].includes(current.code)) return t("AclDialog.FaceGroupDescription");
     return t("AclDialog.ErrorGroupDescription");
   });
 
@@ -171,7 +175,7 @@ function requestAcl(
       group = reactive({ id: groupId, code, items: [], submitted: false, batchId: input.batchId });
       groups.value.push(group);
     }
-    const actionable = ["acl_review", "acl_face_verify"].includes(code);
+    const actionable = ["acl_review", "acl_face_verify", "acl_face_online"].includes(code);
     const item: AclDialogItem = reactive({
       id: `${Date.now()}-${Math.random()}`,
       scopeId: input.scopeId,
@@ -186,7 +190,7 @@ function requestAcl(
     group.items.push(item);
     if (group.submitted) {
       if (code === "acl_review") void submitReviewItem(item);
-      if (code === "acl_face_verify") void verifyNextFace(group);
+      if (["acl_face_verify", "acl_face_online"].includes(code)) void verifyNextFace(group);
     }
   });
 }
@@ -210,7 +214,7 @@ export function useAclDialog() {
     group.submitted = true;
     if (group.code === "acl_review") {
       await Promise.all(group.items.filter((item) => item.status === "ready").map(submitReviewItem));
-    } else if (group.code === "acl_face_verify") {
+    } else if (["acl_face_verify", "acl_face_online"].includes(group.code)) {
       await verifyNextFace(group);
     }
   };
@@ -262,6 +266,21 @@ export function useAclDialog() {
     }
   };
 
+  const retryFace = async (target?: AclDialogGroup) => {
+    const group = target || globalGroup.value || activeGroup.value;
+    if (!group || !["acl_face_verify", "acl_face_online"].includes(group.code)) return;
+    if (group.items.some((item) => ["submitting", "verifying"].includes(item.status))) return;
+    const item = group.items.find((candidate) => candidate.status === "failed" && !candidate.settled);
+    if (!item) return;
+    if (item.timer) clearInterval(item.timer);
+    item.timer = undefined;
+    item.token = undefined;
+    item.detail = undefined;
+    item.status = "ready";
+    group.faceUrl = undefined;
+    await verifyNextFace(group);
+  };
+
   return {
     activeGroup,
     globalGroup,
@@ -272,7 +291,8 @@ export function useAclDialog() {
     submit,
     close,
     closeScope,
-    copyTicketLink
+    copyTicketLink,
+    retryFace
   };
 }
 
@@ -319,7 +339,15 @@ async function verifyNextFace(group: AclDialogGroup) {
   if (!item) return;
   item.status = "submitting";
   try {
-    const token = await createConnectionToken(item.body, item.orgId, { faceVerify: true, admin: item.admin });
+    const userInfoStore = useUserInfoStore();
+    const onlineMonitor = group.code === "acl_face_online";
+    const monitorScope = `${userInfoStore.currentSite || window.location.origin}\u0000${userInfoStore.currentAccountId || "web"}`;
+    const faceMonitorToken = onlineMonitor ? getOrCreateFaceMonitorToken(monitorScope) : undefined;
+    const token = await createConnectionToken(item.body, item.orgId, {
+      faceVerify: true,
+      faceMonitorToken,
+      admin: item.admin
+    });
     item.token = token;
     if (!token.face_token) {
       item.status = "approved";
@@ -328,12 +356,12 @@ async function verifyNextFace(group: AclDialogGroup) {
     }
     const faceToken = token.face_token;
     item.status = "verifying";
-    const userInfoStore = useUserInfoStore();
-    const siteUrl = new URL(isDesktopRuntime() ? userInfoStore.currentSite : window.location.origin);
-    group.faceUrl = new URL(
-      withWebSitePrefix(`/facelive/capture?token=${encodeURIComponent(faceToken)}`, siteUrl.pathname),
-      siteUrl.origin
-    ).href;
+    const siteUrl = isDesktopRuntime() ? userInfoStore.currentSite : window.location.origin;
+    group.faceUrl = buildFaceLivePageUrl({
+      siteUrl,
+      rendererPath: isDesktopRuntime() ? new URL(siteUrl).pathname : window.location.pathname,
+      token: faceToken
+    });
     item.timer = setInterval(async () => {
       try {
         const state = await getFaceVerifyState(faceToken);

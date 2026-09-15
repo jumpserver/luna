@@ -144,4 +144,3 @@ class EnrollmentSession:
             "occurred_at_monotonic": round(timestamp, 4),
             **{key: round(value, 3) for key, value in extra.items()},
         }
-

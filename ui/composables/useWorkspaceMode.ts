@@ -15,8 +15,7 @@ export const useWorkspaceMode = () => {
     const hay = routeHaystack(router.currentRoute.value);
     const isFileRoute = hay.includes("/files");
     const isFaceRoute = hay.includes("/face");
-    const isToolRoute =
-      hay.includes("/tools") || hay.includes("videoplayer") || hay.includes("transcode");
+    const isToolRoute = hay.includes("/tools") || hay.includes("videoplayer") || hay.includes("transcode");
 
     if (isFileRoute) return "files";
     if (isFaceRoute) return "tools";

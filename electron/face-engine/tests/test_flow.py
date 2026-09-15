@@ -116,4 +116,3 @@ def test_enrollment_collects_samples_only_after_liveness_and_action():
     assert complete["status"] == "enrollment_complete"
     assert complete["person_id"] == "person-1"
     assert len(saved) == 2
-

@@ -135,6 +135,8 @@
     "OpenWith": "Configuración de aplicaciones",
     "Refresh": "Actualizar",
     "Save": "Guardar",
+    "Delete": "Eliminar",
+    "Clear": "Limpiar",
     "EmptyDescription": "No hay activos autorizados disponibles para el tipo actual",
     "SelectFromMenu": "Seleccione un elemento de la izquierda",
     "Actions": "Acciones",
@@ -2363,6 +2365,55 @@
     "MethodExecuted": "Emitted method event {method}.",
     "ApiSucceeded": "API callback succeeded with status {status}.",
     "ApiFailed": "API callback failed: {error}",
+    "Remote": {
+      "Title": "Face recognition",
+      "EnrollTitle": "Face enrollment",
+      "AuthTitle": "Face authentication",
+      "MonitorTitle": "Online face monitoring",
+      "PreparingCamera": "Preparing camera",
+      "AllowCamera": "Allow camera access to continue",
+      "Connecting": "Connecting to face recognition",
+      "ConnectingHint": "Keep this window open while the secure channel is established",
+      "CameraReady": "Camera ready",
+      "LookStraight": "Look straight at the camera and keep your face inside the guide",
+      "CapturingSamples": "Capturing face samples {accepted}/{required}",
+      "Completed": "Face verification completed",
+      "Failed": "Face verification failed",
+      "Present": "Present",
+      "Away": "Away",
+      "AwayWarning": "Target left the camera area; session pause in {seconds}s",
+      "SessionPaused": "The monitored session is paused. Return to the camera to resume it.",
+      "MonitorDisconnected": "Camera monitoring disconnected; protected sessions will be paused after the grace period.",
+      "MonitoringHint": "Monitoring is active. Liveness was completed once during initialization.",
+      "SessionCount": "{count} sessions",
+      "Retry": "Retry",
+      "Expand": "Expand",
+      "Challenge": {
+        "shake_head": "Turn your head left and right, then face forward",
+        "nod_head": "Nod once, then face forward",
+        "open_mouth": "Open and close your mouth"
+      },
+      "Error": {
+        "browser_unsupported": "Camera unavailable",
+        "camera_denied": "Camera permission denied",
+        "camera_not_found": "No camera found",
+        "camera_failed": "Camera failed",
+        "connection_failed": "Unable to connect",
+        "connection_closed": "Connection closed",
+        "invalid_token": "Capture expired",
+        "server_error": "Face service unavailable"
+      },
+      "ErrorHint": {
+        "browser_unsupported": "This browser cannot access a camera.",
+        "camera_denied": "Allow camera access in the browser or system settings, then retry.",
+        "camera_not_found": "Connect an available camera, then retry.",
+        "camera_failed": "The camera could not be opened. Check whether another app is using it.",
+        "connection_failed": "The face recognition service could not be reached.",
+        "connection_closed": "The face recognition connection was closed.",
+        "invalid_token": "This capture has expired. Retry to create a new capture.",
+        "server_error": "The face recognition service is unavailable."
+      }
+    },
     "Status": {
       "idle": "Idle",
       "enrolling": "Enrolling",
@@ -2377,6 +2428,7 @@
       "monitoring": "Monitoring",
       "monitor_away_warning": "Away warning",
       "monitor_away_timeout": "Away timeout",
+      "monitor_paused": "Session paused",
       "finished": "Flow finished"
     },
     "Event": {

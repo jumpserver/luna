@@ -44,4 +44,3 @@ def test_shake_head_ignores_whole_face_translation():
     assert state is not None
     assert not state.passed
     assert state.score < 0.6
-

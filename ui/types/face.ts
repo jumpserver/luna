@@ -2,6 +2,7 @@ export type FaceDeviceMode = "auto" | "cpu" | "gpu";
 export type FaceLivenessMode = "off" | "motion" | "onnx" | "hybrid";
 export type FaceFlowMode = "enroll" | "auth" | "monitor";
 export type FaceActionType = "none" | "redirect" | "api" | "method";
+export type FaceLivePageMode = "capture" | "monitor";
 
 export interface FaceEngineConfig {
   device: FaceDeviceMode;
@@ -129,7 +130,7 @@ export interface FaceFlowEvent {
   event: string;
   target_id?: string | null;
   target_name?: string;
-  flow_mode: FaceFlowMode;
+  flow_mode?: FaceFlowMode;
   occurred_at?: string;
   elapsed_seconds?: number;
   missing_seconds?: number;
@@ -154,4 +155,55 @@ export interface FaceFrameResult {
   frame: { width: number; height: number };
   faces: FaceRecognitionResult[];
   flow: FaceFlowState;
+}
+
+export interface FaceLiveMonitorState {
+  matched: boolean;
+  status: "monitoring" | "warning" | "paused";
+  paused: boolean;
+  remaining_seconds: number;
+  grace_seconds: number;
+  reason: string;
+}
+
+export interface FaceLiveServerFlow {
+  mode: "enroll" | "auth" | "monitor";
+  phase: string;
+  status: string;
+  detail: string;
+  finished: boolean;
+  target_name?: string;
+  similarity: number;
+  threshold: number;
+  accepted_samples: number;
+  required_samples: number;
+  challenge: (FaceChallengeState & { phase?: string; calibrated?: boolean }) | null;
+  liveness: FaceRecognitionResult["liveness"];
+  monitor: FaceLiveMonitorState | null;
+  events: FaceFlowEvent[];
+}
+
+export interface FaceLiveServerFrame {
+  width: number;
+  height: number;
+}
+
+export interface FaceLiveFrameMessage {
+  type: "frame_result";
+  frame: FaceLiveServerFrame | null;
+  faces: Array<
+    Pick<
+      FaceRecognitionResult,
+      "bbox" | "name" | "is_match" | "similarity" | "detection_score" | "pose" | "landmarks" | "liveness"
+    >
+  >;
+  flow: FaceLiveServerFlow;
+}
+
+export interface FaceLiveHostMessage {
+  source: "jumpserver-facelive";
+  event: string;
+  mode: FaceLivePageMode;
+  flow?: FaceLiveServerFlow;
+  [key: string]: unknown;
 }
