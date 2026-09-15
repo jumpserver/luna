@@ -28,6 +28,7 @@ let resumeAtMs = props.startAtMs;
 let mounting = false;
 let loadController: AbortController | null = null;
 let helpObserver: MutationObserver | null = null;
+let resizeObserver: ResizeObserver | null = null;
 
 // asciinema-player renders its "Keyboard shortcuts" help popup with hardcoded
 // English strings and exposes no i18n option, so we translate the overlay text
@@ -106,7 +107,8 @@ const destroy = () => {
 };
 
 const mount = async () => {
-  if (!hostRef.value || !props.src || mounting) return;
+  if (!hostRef.value || !props.src || mounting || player) return;
+  if (hostRef.value.clientWidth === 0 || hostRef.value.clientHeight === 0) return;
   mounting = true;
   destroy();
   observeHelpOverlay();
@@ -125,10 +127,9 @@ const mount = async () => {
         startAt: Math.max(0, resumeAtMs) / 1000,
         speed: props.speed,
         preload: true,
-        autoPlay: true,
+        autoplay: true,
         fit: "both",
-        controls: false,
-        theme: "auto/asciinema"
+        controls: false
       }
     );
 
@@ -166,6 +167,7 @@ watch(
   () => props.src,
   () => {
     resumeAtMs = props.startAtMs;
+    destroy();
     void nextTick(mount);
   }
 );
@@ -175,27 +177,54 @@ watch(
   (value) => void player?.setPlaybackRate(value)
 );
 
-onMounted(() => void mount());
-onBeforeUnmount(destroy);
+onMounted(() => {
+  const host = hostRef.value;
+  if (host) {
+    resizeObserver = new ResizeObserver(() => void mount());
+    resizeObserver.observe(host);
+  }
+  void nextTick(mount);
+});
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
+  resizeObserver = null;
+  destroy();
+});
 defineExpose(handle);
 </script>
 
 <template>
-  <div class="ascii-root h-full min-h-0 w-full min-w-0 overflow-hidden" data-asciicast-root>
-    <div ref="hostRef" class="ascii-host h-full min-h-0 w-full min-w-0" data-asciicast-host />
+  <div class="ascii-root relative" data-asciicast-root>
+    <div ref="hostRef" class="ascii-host" data-asciicast-host />
   </div>
 </template>
 
 <style>
 @import "asciinema-player/dist/bundle/asciinema-player.css";
+
+.ascii-root,
+.ascii-host {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.ascii-root .ap-wrapper {
+  width: 100%;
+  height: 100%;
+  justify-content: stretch;
+}
+
+.ascii-root .ap-player {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  display: block !important;
+}
 </style>
 
 <style scoped>
-:deep(.ap-wrapper) {
-  width: 100%;
-  align-items: center;
-}
-
 :deep(.ap-control-bar),
 :deep(.ap-search-button) {
   display: none !important;
