@@ -651,7 +651,7 @@ async function openPreferences() {
 
 async function openTools() {
   profileOpen.value = false;
-  await navigateTo(localePath({ path: "/tools" }));
+  await navigateTo(localePath("videoplayer"));
 }
 
 /**

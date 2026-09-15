@@ -88,7 +88,7 @@ const menuGroups = computed<Array<{ label: string; items: DropdownMenuItem[] }>>
       {
         label: t("Menu.MyTools"),
         kbds: ["ctrl", "shift", ","],
-        onSelect: () => void navigateTo("/tools")
+        onSelect: () => void navigateTo("/videoplayer")
       },
       { type: "separator" },
       {

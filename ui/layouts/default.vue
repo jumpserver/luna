@@ -88,12 +88,11 @@ watch(
   { immediate: true }
 );
 
-const showWorkspaceSidebar = computed(
-  () =>
-    uiWorkspaceMode.value !== "files" &&
-    uiWorkspaceMode.value !== "tools" &&
-    (uiWorkspaceMode.value !== "assets" || loggedIn.value)
-);
+const showWorkspaceSidebar = computed(() => {
+  if (uiWorkspaceMode.value === "files") return false;
+  if (uiWorkspaceMode.value === "tools") return isDesktopRuntime();
+  return loggedIn.value;
+});
 
 const cardUi = computed(() => {
   const base = ["relative", "rounded-none", "overflow-visible"];
@@ -166,7 +165,7 @@ const handleChromeShortcut = (event: KeyboardEvent) => {
   if (!event.altKey && event.shiftKey && event.code === "Comma") {
     if (!isDesktopRuntime()) return;
     event.preventDefault();
-    void navigateTo(localePath({ path: "/tools" }));
+    void navigateTo(localePath("videoplayer"));
     return;
   }
 
@@ -258,7 +257,7 @@ const handleDesktopMenuCommand = (command: string) => {
 
   if (command === "open-tools") {
     if (!isDesktopRuntime()) return;
-    void navigateTo(localePath({ path: "/tools" }));
+    void navigateTo(localePath("videoplayer"));
   }
 };
 
