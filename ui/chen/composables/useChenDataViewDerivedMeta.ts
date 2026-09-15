@@ -1,6 +1,6 @@
 import type { Ref } from "vue";
 import type { ChenDataViewConsoleTab } from "~/chen/types";
-import { chenDataViewPropertyTabIds, isChenViewRelation } from "~/chen/utils/resourceTree";
+import { chenDataViewPropertyTabIds, chenRelationTypeI18nKey } from "~/chen/utils/resourceTree";
 
 export interface ChenDataViewColumnPreview {
   name: string;
@@ -53,11 +53,11 @@ export function useChenDataViewDerivedMeta(profileDbType: Ref<string | undefined
   }
 
   function dataViewBasicInfo(tab: ChenDataViewConsoleTab) {
-    const isView = isChenViewRelation({ nodeKey: tab.nodeKey, kind: tab.tableMetadata?.kind });
+    const relation = { nodeKey: tab.nodeKey, kind: tab.tableMetadata?.kind };
     return [
       { label: t("Chen.Name"), value: tableLabelForProperties(tab) },
       { label: t("Chen.Schema"), value: tab.tableMetadata?.schema || tab.meta?.schema || "-" },
-      { label: t("Chen.Type"), value: isView ? t("Chen.View") : t("Chen.Table") },
+      { label: t("Chen.Type"), value: t(chenRelationTypeI18nKey(relation)) },
       { label: t("Chen.Database"), value: profileDbType.value || protocol.value || "-" },
       { label: t("Chen.RowsPreview"), value: String(tab.data?.data?.length || 0) }
     ];

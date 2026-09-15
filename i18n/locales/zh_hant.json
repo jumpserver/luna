@@ -1931,6 +1931,7 @@
     "Type": "Type",
     "Table": "Table",
     "View": "檢視",
+    "MaterializedView": "具體化檢視",
     "Database": "Database",
     "RowsPreview": "Rows (preview)",
     "Data": "Data",

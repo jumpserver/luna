@@ -539,7 +539,7 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="container"
-    class="ag-theme-balham chen-grid h-full w-full"
+    class="ag-theme-balham chen-grid h-full min-h-0 min-w-0 w-full overflow-hidden"
     :class="{
       'chen-grid-striped': gridPreferences.stripedRows,
       'chen-grid-cell-borders': gridPreferences.showCellBorders
@@ -548,7 +548,7 @@ onBeforeUnmount(() => {
     @keydown.capture="handleKeyDown"
   >
     <AgGridVue
-      class="h-full w-full"
+      class="h-full min-h-0 min-w-0 w-full"
       theme="legacy"
       :column-defs="columnDefs"
       :row-data="rowData"

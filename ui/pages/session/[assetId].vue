@@ -174,7 +174,7 @@ const openLogin = () => {
           <UIcon name="i-lucide-circle-alert" class="size-7" />
           <p>{{ error }}</p>
           <UButton size="sm" color="primary" variant="soft" @click="ensureConnected">
-            {{ t("Reconnect") }}
+            {{ t("WorkspacePane.Reconnect") }}
           </UButton>
         </div>
       </div>

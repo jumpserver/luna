@@ -1,6 +1,7 @@
 import type { MaybeRefOrGetter } from "vue";
 import type { LionUploadCustomRequestOptions } from "@/lion/types/upload";
 import type { LionOnlineUser } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
+import type { GuacamoleConnectionErrorDetails } from "@/lion/utils/status";
 import { useDebounceFn } from "@vueuse/core";
 
 import * as Guacamole from "guacamole-common-js-jumpserver/dist/guacamole-common";
@@ -10,7 +11,7 @@ import { withLionUrl } from "@/lion/utils/base";
 import { readClipboardText, writeClipboardBlob, writeClipboardText } from "@/lion/utils/clipboard";
 
 import { lunaCommunicator } from "@/lion/utils/lunaBus";
-import { ConvertGuacamoleError as convertGuacamoleError, ErrorStatusCodes } from "@/lion/utils/status";
+import { ConvertGuacamoleError as convertGuacamoleError } from "@/lion/utils/status";
 
 const testImages: Record<string, string> = {
   /**
@@ -169,7 +170,7 @@ export function useGuacamoleClient(
     info: (text: string) => toast.add({ title: text, color: "info" }),
     success: (text: string) => toast.add({ title: text, color: "success" }),
     warning: (text: string) => toast.add({ title: text, color: "warning" }),
-    error: (text: string, _opts?: { duration?: number }) => addErrorToast({ title: text })
+    error: (text: string, opts?: { duration?: number }) => addErrorToast({ title: text, duration: opts?.duration })
   };
   const guaClient = ref<any>(null);
   const guaTunnel = ref<any>(null);
@@ -181,6 +182,7 @@ export function useGuacamoleClient(
   // localized label via connectStatusLabel.
   const connectStatus = ref(1);
   const connectionError = shallowRef("");
+  const connectionErrorDetails = shallowRef<GuacamoleConnectionErrorDetails>();
   const CONNECT_STATUS_KEYS: Record<number, string> = {
     0: "LionIdle",
     1: "LionConnecting",
@@ -275,6 +277,8 @@ export function useGuacamoleClient(
   ) {
     disconnectGuaclient();
     connectionError.value = "";
+    connectionErrorDetails.value = undefined;
+    sessionObject.value = {};
     const generation = connectGeneration;
     loading.value = true;
     currentWidth.value = width || window.innerWidth;
@@ -765,13 +769,16 @@ export function useGuacamoleClient(
   function onClientError(status: any) {
     console.error("Guacamole client error:", status);
     loading.value = false;
-    const code = status.code;
-    let msg = t(ErrorStatusCodes[code] || convertGuacamoleError(status.message) || "UnknownError", {
-      PLACEHOLDER: status.message
+    const code = typeof status?.code === "number" && Number.isInteger(status.code) ? status.code : undefined;
+    const rawMessage = typeof status?.message === "string" ? status.message : "";
+    const msg = t(convertGuacamoleError(rawMessage, code), {
+      PLACEHOLDER: rawMessage
     });
-    if (code === 1006) {
-      msg = `${msg}: ${status.message}`;
-    }
+    connectionErrorDetails.value = {
+      code,
+      message: rawMessage,
+      sessionId: typeof sessionObject.value?.id === "string" ? sessionObject.value.id : undefined
+    };
     connectionError.value = msg;
     message.error(msg, { duration: 10000 });
   }
@@ -1189,6 +1196,7 @@ export function useGuacamoleClient(
     connectToGuacamole,
     connectStatus,
     connectionError,
+    connectionErrorDetails,
     connectStatusLabel,
     sessionObject,
     action_permission,

@@ -1,8 +1,4 @@
-export const ErrorStatusCodes: any = {
-  256: "GuaErrUnSupport",
-  514: "GuaErrUpStreamTimeout",
-  521: "GuaErrSessionConflict",
-  769: "GuaErrClientUnauthorized",
+const JMSErrorStatusCodes: Readonly<Record<number, string>> = {
   1000: "JMSErrNoSession",
   1001: "JMSErrAuthUser",
   1002: "JMSErrBadParams",
@@ -15,6 +11,30 @@ export const ErrorStatusCodes: any = {
   1009: "JMSErrDisconnected",
   1010: "JMSErrMaxSession",
   1011: "JMSErrRemoveShareUser"
+};
+
+export const ErrorStatusCodes: Readonly<Record<number, string>> = {
+  256: "GuaErrUnSupport",
+  512: "GuaErrServerError",
+  513: "GuaErrServerBusy",
+  514: "GuaErrUpStreamTimeout",
+  515: "GuacamoleErrUpstreamError",
+  516: "GuaErrResourceNotFound",
+  517: "GuaErrResourceConflict",
+  518: "GuaErrResourceClosed",
+  519: "GuaErrUpStreamNotFound",
+  520: "GuaErrUpStreamUnavailable",
+  521: "GuaErrSessionConflict",
+  522: "GuacamoleErrIdleSessionTimeLimitExceeded",
+  523: "GuacamoleErrForciblyDisconnected",
+  768: "JMSErrBadParams",
+  769: "GuaErrClientUnauthorized",
+  771: "GuacamoleErrInsufficientPrivileges",
+  776: "GuaErrClientTimeout",
+  781: "GuaErrClientOverrun",
+  783: "GuaErrClientBadType",
+  797: "GuaErrClientTooMany",
+  ...JMSErrorStatusCodes
 };
 
 export const APIErrorType: any = {
@@ -37,7 +57,8 @@ export function ConvertAPIError(errMsg: string | any): string {
   return errMsg;
 }
 
-export const GuacamoleErrMsg: any = {
+export const GuacamoleErrMsg: Readonly<Record<string, string>> = {
+  "No permission": "JMSErrPermission",
   "Disconnected.": "GuacamoleErrDisconnected",
   "Credentials expired.": "GuacamoleErrCredentialsExpired",
   "Security negotiation failed (wrong security type?)": "GuacamoleErrSecurityNegotiationFailed",
@@ -62,9 +83,25 @@ export const GuacamoleErrMsg: any = {
   "Unable to connect to VNC server.": "GuacamoleErrUnableToConnectToVNCServer"
 };
 
-export function ConvertGuacamoleError(errMsg: string | any): string {
-  if (typeof errMsg !== "string") {
-    return errMsg;
+export function ConvertGuacamoleError(errMsg: unknown, code?: number): string {
+  const statusCode = typeof code === "number" && Number.isInteger(code) ? code : undefined;
+  if (statusCode !== undefined && JMSErrorStatusCodes[statusCode]) {
+    return JMSErrorStatusCodes[statusCode];
   }
-  return GuacamoleErrMsg[errMsg] || errMsg;
+
+  const message = typeof errMsg === "string" ? errMsg.trim() : "";
+  const messageKey = Object.hasOwn(GuacamoleErrMsg, message) ? GuacamoleErrMsg[message] : undefined;
+  // Generic messages must not hide a more useful status code.
+  if (messageKey && message !== "Disconnected." && message !== "Upstream error.") {
+    return messageKey;
+  }
+  return (
+    (statusCode === undefined ? undefined : ErrorStatusCodes[statusCode]) || messageKey || "GuaErrConnectionClosed"
+  );
+}
+
+export interface GuacamoleConnectionErrorDetails {
+  code?: number;
+  message?: string;
+  sessionId?: string;
 }
