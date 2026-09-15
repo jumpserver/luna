@@ -1992,7 +1992,7 @@ defineExpose({ focus });
 
 <template>
   <div class="relative isolate h-full min-h-0 overflow-hidden bg-[var(--workspace-surface-main)] text-[var(--app-fg)]">
-    <div v-if="session.ready.value" class="relative flex h-full min-h-0">
+    <div v-if="session.ready.value" class="relative flex h-full min-h-0 min-w-0">
       <ResourceTreePanel
         v-show="!isNarrowScreen || resourceTreeOpen"
         class="z-40 max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
@@ -2072,7 +2072,7 @@ defineExpose({ focus });
           <span>{{ activeConnectionError }}</span>
         </div>
 
-        <div v-if="workspace.activeWorkspaceTab.value" class="min-h-0 flex-1">
+        <div v-if="workspace.activeWorkspaceTab.value" class="min-h-0 min-w-0 flex-1 overflow-hidden">
           <QueryConsolePanel
             v-if="activeQueryTab"
             ref="queryConsolePanel"
