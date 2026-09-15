@@ -272,29 +272,33 @@ watch(
                 />
               </template>
             </UInput>
-            <UButton
+            <UTooltip
               v-if="!personalCredentialId || personalCredentialSecretType === 'password'"
-              type="button"
-              :icon="
-                personalCredentialId
-                  ? savePersonalCredential
-                    ? 'i-lucide-x'
-                    : 'i-lucide-refresh-cw'
-                  : savePersonalCredential
-                    ? 'i-lucide-bookmark-check'
-                    : 'i-lucide-bookmark'
-              "
-              :aria-label="credentialActionLabel"
-              :title="credentialActionLabel"
-              :disabled="credentialActionDisabled"
-              color="neutral"
-              variant="ghost"
-              size="md"
-              :ui="{ leadingIcon: 'size-[18px]' }"
-              class="remember-secret-button"
-              :class="{ 'remember-secret-button-active': savePersonalCredential }"
-              @click="togglePersonalCredentialSave"
-            />
+              :text="credentialActionLabel"
+              :delay-duration="150"
+            >
+              <UButton
+                type="button"
+                :icon="
+                  personalCredentialId
+                    ? savePersonalCredential
+                      ? 'i-lucide-x'
+                      : 'i-lucide-refresh-cw'
+                    : savePersonalCredential
+                      ? 'i-lucide-bookmark-check'
+                      : 'i-lucide-bookmark'
+                "
+                :aria-label="credentialActionLabel"
+                :disabled="credentialActionDisabled"
+                color="neutral"
+                variant="ghost"
+                size="md"
+                :ui="{ leadingIcon: 'size-[18px]' }"
+                class="remember-secret-button"
+                :class="{ 'remember-secret-button-active': savePersonalCredential }"
+                @click="togglePersonalCredentialSave"
+              />
+            </UTooltip>
           </UFieldGroup>
         </UFormField>
       </div>

@@ -3,6 +3,7 @@ import type { AssetItem, ConnectionBody, PermedAccount, PermedProtocol, RdpGraph
 import { resolveEndpointUrl } from "@jumpserver/connectors-core";
 
 import {
+  ApiRequestError,
   getAssetDetailRequest,
   getConnectionRdpFile,
   getLunaPreferences,
@@ -55,6 +56,57 @@ const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
   [K8S_NATIVE_VALUE]: "web_cli"
 };
 const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
+
+const CONNECTION_ERROR_CODES: Record<string, string> = {
+  perm_account_invalid: "ConnectError.AccountUnavailable",
+  perm_expired: "ConnectError.PermissionExpired",
+  manual_account_permission_denied: "ConnectError.ManualAccountDenied",
+  permission_expired: "ConnectError.PermissionExpired",
+  asset_inactive: "ConnectError.AssetUnavailable",
+  invalid_user: "ConnectError.SessionInvalid",
+  personal_credential_not_found: "ConnectError.PersonalCredentialNotFound",
+  personal_credential_version_conflict: "ConnectError.CredentialChanged",
+  vault_unavailable: "ConnectError.CredentialServiceUnavailable",
+  ssh_certificate_signing_unavailable: "ConnectError.CertificateServiceUnavailable",
+  internal_error: "ConnectError.ServiceError"
+};
+
+const CONNECTION_ERROR_FIELDS: Record<string, string> = {
+  asset: "ConnectError.AssetUnavailable",
+  account: "ConnectError.AccountUnavailable",
+  protocol: "ConnectError.ProtocolUnavailable",
+  connect_method: "ConnectError.MethodUnavailable",
+  input_username: "ConnectError.UsernameInvalid",
+  input_secret: "ConnectError.SecretRequired",
+  input_secret_type: "ConnectError.SecretTypeUnsupported",
+  personal_credential_id: "ConnectError.PersonalCredentialNotFound",
+  personal_credential_version: "ConnectError.CredentialChanged"
+};
+
+function resolveConnectionErrorDescription(error: unknown, translate: (key: string) => string) {
+  if (!(error instanceof ApiRequestError)) {
+    return error instanceof Error ? error.message : String(error || "");
+  }
+
+  const data = error.data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return error.message || `HTTP ${error.status}`;
+
+  const code = typeof data.code === "string" ? data.code : "";
+  const mappedCode = CONNECTION_ERROR_CODES[code];
+  if (mappedCode) return translate(mappedCode);
+
+  for (const [field, messages] of Object.entries(data)) {
+    const mappedField = CONNECTION_ERROR_FIELDS[field];
+    if (mappedField) return translate(mappedField);
+    if (field !== "code" && field !== "detail") {
+      const message = Array.isArray(messages) ? messages[0] : messages;
+      if (typeof message === "string" && message) return message;
+    }
+  }
+
+  return typeof data.detail === "string" && data.detail ? data.detail : error.message || `HTTP ${error.status}`;
+}
+
 const withLocalClientName = (url: string, clientName?: string) => {
   if (!clientName || !url.startsWith("jms2://")) return url;
 
@@ -460,6 +512,7 @@ export const useAssetAction = () => {
           : undefined;
     const tabId = meta?.tabId || session?.id;
 
+    let creatingConnectionToken = false;
     try {
       await assertConnectMethodEnabled(body.protocol, nativeApp.connectMethod);
       const allMethods = await fetchConnectMethods();
@@ -484,6 +537,7 @@ export const useAssetAction = () => {
       if (meta?.downloadRdp && !canDownloadRdpFile(method, body.connect_options)) {
         throw new Error(t("ConnectError.MethodDisabled"));
       }
+      creatingConnectionToken = true;
       const token = await createConnectionTokenWithAcl(serverBody, {
         orgId: meta?.orgId,
         assetName: meta?.asset?.name || meta?.assetId || body.asset,
@@ -491,6 +545,7 @@ export const useAssetAction = () => {
         batchId: meta?.aclBatchId,
         admin: meta?.admin
       });
+      creatingConnectionToken = false;
       if (!token) {
         if (meta?.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
         else if (meta)
@@ -580,7 +635,7 @@ export const useAssetAction = () => {
 
       addErrorToast({
         title: t(meta?.downloadRdp ? "ConnectError.DownloadRdpFailed" : "ConnectError.ConnectFailed"),
-        description: String(error),
+        description: creatingConnectionToken ? resolveConnectionErrorDescription(error, t) : String(error),
         icon: "line-md:close-circle",
         progress: true,
         duration: 4000
@@ -617,9 +672,11 @@ export const useAssetAction = () => {
       site: userInfoStore.currentSite
     };
     void (async () => {
+      let creatingConnectionToken = false;
       try {
         await assertConnectMethodEnabled(body.protocol, body.connect_method);
         const serverBody = { ...body, connect_method: await resolveServerConnectMethod(body) };
+        creatingConnectionToken = true;
         const token = await createConnectionTokenWithAcl(serverBody, {
           orgId: meta.orgId,
           assetName: meta.assetName || meta.assetId,
@@ -627,6 +684,7 @@ export const useAssetAction = () => {
           batchId: meta.aclBatchId,
           admin: meta.admin
         });
+        creatingConnectionToken = false;
         if (!token) {
           if (meta.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
           else markSessionFailed(meta);
@@ -701,7 +759,7 @@ export const useAssetAction = () => {
         else markSessionFailed(meta);
         addErrorToast({
           title: t("ConnectError.ConnectFailed"),
-          description: String(error),
+          description: creatingConnectionToken ? resolveConnectionErrorDescription(error, t) : String(error),
           icon: "line-md:close-circle",
           progress: true,
           duration: 4000
