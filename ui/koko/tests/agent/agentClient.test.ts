@@ -5,7 +5,7 @@ import { AgentClient, AgentHttpError } from "#koko/composables/agent/agentClient
 
 const runtime = vi.hoisted(() => ({ desktop: false }));
 const desktop = vi.hoisted(() => ({ invoke: vi.fn() }));
-vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke: desktop.invoke }));
+vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke: desktop.invoke, desktopListen: vi.fn() }));
 
 vi.mock("~/utils/runtime", () => ({
   getDesktopRuntime: () => "web",
@@ -57,6 +57,64 @@ function kaelRequest(requests: AgentHttpRequest[]) {
     return {} as T;
   };
 }
+
+it.each([false, true])("rebuilds an expired panel without deleting its conversation (failure=%s)", async (fail) => {
+  const requests: AgentHttpRequest[] = [];
+  const request = kaelRequest(requests);
+  let recovering = false;
+  const client = new AgentClient(async <T>(input: AgentHttpRequest): Promise<T> => {
+    const response = await request<T>(input);
+    if (recovering && input.path.endsWith("/panel-sessions")) return { id: "panel-2" } as T;
+    if (recovering && fail && input.path.endsWith("/registrations")) throw new Error("registration failed");
+    return response;
+  });
+  try {
+    await client.createSession(manifest, "auto");
+    await client.updateContext("panel-1", "resource-1", { selected_asset_id: "asset-1" });
+    requests.length = 0;
+    recovering = true;
+    const recovery = client.createSession(manifest, "always", { previousSessionId: "panel-1" });
+    if (fail) await expect(recovery).rejects.toThrow("registration failed");
+    else await expect(recovery).resolves.toMatchObject({ session_id: "panel-2" });
+    expect(requests.some((input) => input.path.includes("/conversations"))).toBe(false);
+    expect(requests[0]?.body).toMatchObject({ conversation_id: "conversation-1", approval_mode: "always" });
+    expect(requests[1]).toMatchObject({
+      path: "/kael/api/v1/panel-sessions/panel-2/context",
+      body: { base_version: 0, data: { selected_asset_id: "asset-1" } }
+    });
+    expect(requests[2]?.body).toMatchObject({
+      base_registry_revision: 0,
+      registrations: [{ name: "terminal_context" }]
+    });
+    if (fail) expect(requests.at(-1)).toMatchObject({ method: "DELETE", path: "/kael/api/v1/panel-sessions/panel-2" });
+  } finally {
+    client.dispose();
+  }
+});
+
+it("reports an expired heartbeat once and stops renewing that panel", async () => {
+  vi.useFakeTimers();
+  const requests: AgentHttpRequest[] = [];
+  const request = kaelRequest(requests);
+  const expired = new AgentHttpError(409, '{"code":"panel_closed"}');
+  const onExpired = vi.fn();
+  const client = new AgentClient(async <T>(input: AgentHttpRequest): Promise<T> => {
+    if (input.path.endsWith("/heartbeat")) {
+      requests.push(input);
+      throw expired;
+    }
+    return request<T>(input);
+  });
+  try {
+    await client.createSession(manifest, "auto", { onExpired });
+    await vi.advanceTimersByTimeAsync(180_000);
+    expect(onExpired).toHaveBeenCalledExactlyOnceWith(expired);
+    expect(requests.filter((input) => input.path.endsWith("/heartbeat"))).toHaveLength(1);
+  } finally {
+    client.dispose();
+    vi.useRealTimers();
+  }
+});
 
 it("bootstraps Kael with the authenticated organization", async () => {
   const fetchMock = vi.fn().mockResolvedValue({

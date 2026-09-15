@@ -171,6 +171,24 @@ export class AgentStreamHttpError extends Error {
   }
 }
 
+export function isExpiredAgentPanel(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const status =
+    "status" in error ? Number(error.status) : Number(error.message.match(/(?:HTTP\s+|status=)(\d{3})/i)?.[1]);
+  if (status !== 409) return false;
+  const body = "responseBody" in error ? String(error.responseBody) : error.message.slice(error.message.indexOf("{"));
+  try {
+    const { code, detail } = JSON.parse(body);
+    return (
+      code === "panel_expired" ||
+      code === "panel_closed" ||
+      (code === "panel_unavailable" && detail === "panel session is not active")
+    );
+  } catch {
+    return false;
+  }
+}
+
 function eventPath(sessionId: string) {
   const normalized = sessionId.trim();
   if (!normalized) throw new Error("Agent session id is required");
@@ -373,6 +391,10 @@ export class AgentSseConnection {
       } catch (cause) {
         if (signal.aborted) return;
         const error = cause instanceof Error ? cause : new Error(String(cause || "Agent event stream failed"));
+        if (isExpiredAgentPanel(error)) {
+          this.options.onUnavailable?.(error);
+          return;
+        }
         if (isCursorExpiredError(error) && this.options.onCursorExpired) {
           try {
             const previous = this.cursor;

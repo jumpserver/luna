@@ -1,6 +1,27 @@
 import { expect, it, vi } from "vitest";
 import { AgentSseConnection, AgentStreamHttpError, createAgentSseParser } from "#koko/composables/agent/agentSse";
 
+it.each([
+  new AgentStreamHttpError(409, '{"code":"panel_closed"}'),
+  new Error('api stream failed: status=409, body={"code":"panel_expired"}')
+])("hands an expired browser or desktop panel back without reconnecting it", async (error) => {
+  const opener = vi.fn().mockRejectedValue(error);
+  const wait = vi.fn();
+  const onUnavailable = vi.fn();
+  const connection = new AgentSseConnection({
+    sessionId: "expired",
+    resourceSessionId: "resource-1",
+    opener,
+    wait,
+    onUnavailable,
+    onEvent: vi.fn()
+  });
+  await connection.start();
+  expect(opener).toHaveBeenCalledOnce();
+  expect(onUnavailable).toHaveBeenCalledExactlyOnceWith(error);
+  expect(wait).not.toHaveBeenCalled();
+});
+
 it("parses bounded split SSE events with ids and multiline data", () => {
   const events: unknown[] = [];
   const parser = createAgentSseParser((event) => events.push(event));
