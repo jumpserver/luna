@@ -1930,6 +1930,7 @@
     "Type": "Type",
     "Table": "Table",
     "View": "ビュー",
+    "MaterializedView": "マテリアライズドビュー",
     "Database": "Database",
     "RowsPreview": "Rows (preview)",
     "Data": "Data",

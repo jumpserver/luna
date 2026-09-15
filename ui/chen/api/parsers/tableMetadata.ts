@@ -15,7 +15,7 @@ export function parseTableMetadata(value: unknown): ChenTableMetadata {
     !(typeof value.catalog === "string" || value.catalog === null) ||
     typeof value.schema !== "string" ||
     typeof value.name !== "string" ||
-    (value.kind !== "table" && value.kind !== "view") ||
+    (value.kind !== "table" && value.kind !== "view" && value.kind !== "materialized_view") ||
     !isRecord(value.capabilities) ||
     !Array.isArray(value.loadedSections) ||
     !Array.isArray(value.columns) ||

@@ -1930,6 +1930,7 @@
     "Type": "Type",
     "Table": "Table",
     "View": "뷰",
+    "MaterializedView": "구체화된 뷰",
     "Database": "Database",
     "RowsPreview": "Rows (preview)",
     "Data": "Data",

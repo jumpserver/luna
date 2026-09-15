@@ -29,9 +29,14 @@ export function chenNodeTypeFromKey(nodeKey: string) {
 }
 
 export function isChenViewRelation(input: { nodeKey?: string; kind?: string | null }) {
-  if (input.kind === "view") return true;
+  if (input.kind === "view" || input.kind === "materialized_view") return true;
   if (input.kind === "table") return false;
   return chenNodeTypeFromKey(input.nodeKey || "") === "view";
+}
+
+export function chenRelationTypeI18nKey(input: { nodeKey?: string; kind?: string | null }) {
+  if (input.kind === "materialized_view") return "Chen.MaterializedView";
+  return isChenViewRelation(input) ? "Chen.View" : "Chen.Table";
 }
 
 export function chenDataViewPropertyTabIds(input: {

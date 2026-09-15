@@ -1930,6 +1930,7 @@
     "Type": "Type",
     "Table": "Table",
     "View": "View",
+    "MaterializedView": "Materialized View",
     "Database": "Database",
     "RowsPreview": "Rows (preview)",
     "Data": "Data",

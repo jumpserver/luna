@@ -14,6 +14,7 @@ export interface ChenTreeNode {
   name?: string;
   label?: string;
   type: string;
+  relationKind?: "table" | "view" | "materialized_view";
   leaf?: boolean;
   children?: ChenTreeNode[];
   [key: string]: any;
