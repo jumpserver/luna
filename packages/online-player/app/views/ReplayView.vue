@@ -110,7 +110,6 @@ const showRail = computed(() =>
   })
 );
 const asciiBleed = computed(() => playerType.value === "asciicast");
-const guacamoleFill = computed(() => playerType.value === "guacamole");
 
 watch(
   () => [commands.value.length, commandsError.value, commandsLoading.value] as const,
@@ -221,25 +220,10 @@ watch(
         <div class="replay-stage group relative flex min-h-0 min-w-0 flex-1 flex-col" data-replay-stage>
           <div class="relative z-10 min-h-0 flex-1">
             <div
-              class="replay-frame h-full min-h-0 w-full overflow-hidden"
-              :class="
-                asciiBleed
-                  ? ''
-                  : guacamoleFill
-                    ? 'flex items-center justify-center bg-black'
-                    : 'flex items-center justify-center p-4 pb-16'
-              "
+              class="replay-frame h-full min-h-0 w-full overflow-hidden bg-black"
+              :class="asciiBleed ? '' : 'flex items-center justify-center'"
             >
-              <div
-                class="relative h-full min-h-0 w-full overflow-hidden"
-                :class="
-                  asciiBleed
-                    ? ''
-                    : guacamoleFill
-                      ? 'bg-black'
-                      : 'max-h-[min(74%,680px)] max-w-[min(90%,1280px)] rounded-lg border border-[var(--replay-border)] bg-[var(--replay-viewport)]'
-                "
-              >
+              <div class="relative h-full min-h-0 w-full overflow-hidden bg-black">
                 <ReplayPlayerHost
                   v-if="playerSrc"
                   ref="player"

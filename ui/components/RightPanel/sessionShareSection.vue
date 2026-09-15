@@ -58,10 +58,9 @@ const shareControlUi = {
   base: "w-full min-h-9 items-center rounded-[length:var(--app-radius)] bg-[var(--app-input-bg)] text-[var(--app-fg)] ring ring-inset ring-[var(--app-border)]"
 };
 const shareOverlayContent = {
-  side: "top" as const,
+  side: "bottom" as const,
   sideOffset: 8,
   collisionPadding: 8,
-  avoidCollisions: false,
   onPointerDownOutside: (event: Event) => event.preventDefault()
 };
 

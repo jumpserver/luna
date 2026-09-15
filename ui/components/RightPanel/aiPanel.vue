@@ -40,6 +40,7 @@ const {
   session,
   viewItems,
   presentation,
+  connectionNotice,
   canClearLocalHistory,
   canNewSession,
   startingNewSession,
@@ -146,6 +147,7 @@ const timelineEmptyState = computed(() =>
       <AiPanelFooter
         v-model="draft"
         :presentation="presentation"
+        :connection-notice="connectionNotice"
         @submit="submit"
         @interrupt="interrupt"
         @clear-error="clearError"

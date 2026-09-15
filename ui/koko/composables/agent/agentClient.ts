@@ -13,7 +13,7 @@ import type {
 import type { LangType } from "~/types";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { getWebApiHeaders, getWebApiMutationHeaders, isDesktopRuntime, withWebSitePrefix } from "~/utils/runtime";
-import { normalizeAgentEvent } from "./agentSse";
+import { isExpiredAgentPanel, normalizeAgentEvent } from "./agentSse";
 import { AGENT_CAPABILITY_VERSION, AGENT_PROTOCOL_VERSION, isRecord, KAEL_API_ROOT } from "./types";
 
 export interface AgentHttpRequest {
@@ -82,6 +82,7 @@ interface AgentBinding {
   contextVersion: number;
   context: Record<string, unknown>;
   heartbeat: ReturnType<typeof setInterval>;
+  disabled?: boolean;
 }
 
 export class AgentHttpError extends Error {
@@ -232,21 +233,28 @@ export class AgentClient {
 
   async createSession(
     manifest: AgentMcpManifest,
-    approvalMode: AgentApprovalMode
+    approvalMode: AgentApprovalMode,
+    options: { previousSessionId?: string; onExpired?: (error: Error) => void } = {}
   ): Promise<AgentSessionCreateResponse> {
+    const previous = options.previousSessionId
+      ? this.binding(options.previousSessionId, manifest.resourceSessionId)
+      : undefined;
+    if (previous) clearInterval(previous.heartbeat);
     await this.bootstrap(manifest.resourceSessionId);
     const surface = `session.${manifest.profile}`;
-    const conversation = await this.request<KaelConversation>({
-      method: "POST",
-      path: `${KAEL_API_ROOT}/conversations`,
-      body: {
-        kind: "capability",
-        assistant: manifest.profile,
-        profile: manifest.profile,
-        surface,
-        metadata: { resource_session_id: manifest.resourceSessionId }
-      }
-    });
+    const conversation = previous
+      ? { id: previous.conversationId }
+      : await this.request<KaelConversation>({
+          method: "POST",
+          path: `${KAEL_API_ROOT}/conversations`,
+          body: {
+            kind: "capability",
+            assistant: manifest.profile,
+            profile: manifest.profile,
+            surface,
+            metadata: { resource_session_id: manifest.resourceSessionId }
+          }
+        });
     let panel: KaelPanel | null = null;
     try {
       panel = await this.request<KaelPanel>({
@@ -261,8 +269,8 @@ export class AgentClient {
         }
       });
       let contextVersion = 0;
-      const contextData = this.contextWithResponseLanguage(manifest.context);
-      if (manifest.context || this.responseLanguage) {
+      const contextData = this.contextWithResponseLanguage(previous?.context || manifest.context);
+      if (previous || manifest.context || this.responseLanguage) {
         const context = await this.request<KaelContext>({
           method: "PUT",
           path: sessionPath(panel.id, "context"),
@@ -294,7 +302,11 @@ export class AgentClient {
         }
       });
       const heartbeat = setInterval(() => {
-        void this.request({ method: "POST", path: sessionPath(panel!.id, "heartbeat") }).catch(() => undefined);
+        void this.request({ method: "POST", path: sessionPath(panel!.id, "heartbeat") }).catch((error) => {
+          if (!(error instanceof Error) || !isExpiredAgentPanel(error) || !this.bindings.has(panel!.id)) return;
+          clearInterval(heartbeat);
+          options.onExpired?.(error);
+        });
       }, 60_000);
       this.bindings.set(panel.id, {
         resourceSessionId: manifest.resourceSessionId,
@@ -321,9 +333,10 @@ export class AgentClient {
       };
     } catch (error) {
       if (panel?.id) await this.request({ method: "DELETE", path: sessionPath(panel.id) }).catch(() => undefined);
-      await this.request({ method: "DELETE", path: `${KAEL_API_ROOT}/conversations/${conversation.id}` }).catch(
-        () => undefined
-      );
+      if (!previous)
+        await this.request({ method: "DELETE", path: `${KAEL_API_ROOT}/conversations/${conversation.id}` }).catch(
+          () => undefined
+        );
       throw error;
     }
   }
@@ -344,12 +357,17 @@ export class AgentClient {
   }
 
   private async submitMessage(binding: AgentBinding, message: AgentMessageRequest): Promise<AgentMessageResponse> {
+    const assertEnabled = () => {
+      if (binding.disabled) throw new Error("AI assistant is disabled");
+    };
+    assertEnabled();
     const context = message.metadata?.context;
     if (isRecord(context)) {
       await this.updateContext(binding.panelId, binding.resourceSessionId, { ...binding.context, ...context });
     } else if (this.responseLanguage && binding.context.response_language !== this.responseLanguage) {
       await this.updateContext(binding.panelId, binding.resourceSessionId, binding.context);
     }
+    assertEnabled();
     const created = await this.request<KaelMessage>({
       method: "POST",
       path: `${KAEL_API_ROOT}/conversations/${binding.conversationId}/messages`,
@@ -360,6 +378,7 @@ export class AgentClient {
         parts: message.parts
       }
     });
+    assertEnabled();
     const run = await this.request<KaelRun>({
       method: "POST",
       path: `${KAEL_API_ROOT}/runs`,
@@ -470,6 +489,10 @@ export class AgentClient {
 
   async cancel(sessionId: string, resourceSessionId: string, runId = "", reason = "user") {
     const binding = this.binding(sessionId, resourceSessionId);
+    if (reason === "ai_disabled") {
+      binding.disabled = true;
+      clearInterval(binding.heartbeat);
+    }
     // A stop can arrive before the run creation response, including during context upload.
     const pending = runId ? undefined : await binding.pendingMessage?.catch(() => undefined);
     const target = pending?.run_id || runId || binding.activeRunId;

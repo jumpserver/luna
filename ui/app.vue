@@ -11,6 +11,7 @@ import { confirmAiTaskLeave, useAiTaskLeave } from "~/composables/useAiTaskLeave
 import { installDebugLogHook, uninstallDebugLogHook } from "~/composables/useDebugLog";
 import { applyUiRadius, isUiRadius } from "~/composables/useSettingStorage";
 import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composables/useThemePresets";
+import { useWorkspaceFeatures } from "~/composables/useWorkspaceFeatures";
 import { registerAiTaskTabCloseConfirm } from "~/composables/useWorkspaceTabs";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { normalizeLanguageCode, resolveLanguageFromSystem, toDjangoLanguageCode } from "~/utils";
@@ -29,6 +30,7 @@ const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
 
 const route = useRoute();
 const authSession = useAuthSession();
+useWorkspaceFeatures(authSession.authReady);
 const webWorkspaceBrand = useState<string>(WORKSPACE_BRAND_STATE_KEY, () => COMMUNITY_WORKSPACE_BRAND);
 const webWorkspaceFavicon = useState<string>(WORKSPACE_FAVICON_STATE_KEY, () => "");
 

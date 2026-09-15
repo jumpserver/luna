@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Profile from "~/components/SideBar/profile.vue";
+import { workspaceAiEnabled } from "~/shared/aiAvailability";
 
 const props = withDefaults(defineProps<{ showProfile?: boolean }>(), { showProfile: true });
 
@@ -18,7 +19,11 @@ watch(
   },
   { immediate: true }
 );
-const aiButtonLabel = computed(() => t(aiPanelOpen.value ? "RightPanel.AIClose" : "RightPanel.AIOpen"));
+const aiButtonLabel = computed(() =>
+  t(
+    !workspaceAiEnabled.value ? "RightPanel.AIDisabled" : aiPanelOpen.value ? "RightPanel.AIClose" : "RightPanel.AIOpen"
+  )
+);
 const headerIconButtonClass =
   "grid size-6 shrink-0 place-items-center rounded-lg p-0 text-[var(--app-text-secondary)] transition-colors hover:bg-[var(--app-hover-soft)] hover:text-[var(--app-fg)]";
 const headerIconButtonActiveClass = "bg-[var(--app-hover-soft)] text-[var(--app-fg)]";
@@ -37,6 +42,7 @@ const handleToggleAi = () => {
           icon="i-lucide-sparkles"
           :aria-label="aiButtonLabel"
           :aria-pressed="aiPanelOpen"
+          :disabled="!workspaceAiEnabled"
           size="sm"
           color="neutral"
           variant="ghost"

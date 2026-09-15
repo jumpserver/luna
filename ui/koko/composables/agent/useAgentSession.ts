@@ -10,10 +10,17 @@ import type {
   AgentMcpManifest,
   AgentMessageRequest
 } from "./types";
-import { reactive } from "vue";
+import type { EffectScope } from "vue";
+import { effectScope, reactive, watch } from "vue";
+import { workspaceAiEnabled } from "~/shared/aiAvailability";
 import { agentChatStreamMessage, agentEventLifecycle } from "./agentChatStream";
 import { agentClient, AgentHttpError } from "./agentClient";
-import { AgentSseConnection as DefaultAgentSseConnection } from "./agentSse";
+import {
+  AgentSseConnection as DefaultAgentSseConnection,
+  isAgentNetworkOnline,
+  isExpiredAgentPanel,
+  waitForAgentNetwork
+} from "./agentSse";
 import { isRecord } from "./types";
 
 export interface AgentSessionState {
@@ -642,8 +649,12 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
   let generation = 0;
   let lifecycleTail = Promise.resolve();
   let attachFlight: { key: string; promise: Promise<void> } | null = null;
+  let attachController: AbortController | null = null;
+  let panelRecovery: { sessionId: string; generation: number; promise: Promise<void> } | null = null;
   let committedManifestKey = "";
   let committedManifest: AgentMcpManifest | null = null;
+  let latestManifest: AgentMcpManifest | null = null;
+  let availabilityScope: EffectScope | null = null;
   let sse: AgentSseConnection | null = null;
   let retainedResourceId = "";
   const pendingSessionDeletes: Array<{
@@ -940,10 +951,17 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     return replayAfter;
   }
 
-  async function performAttach(manifest: AgentMcpManifest, manifestKey: string, currentGeneration: number) {
+  async function performAttach(
+    manifest: AgentMcpManifest,
+    manifestKey: string,
+    currentGeneration: number,
+    signal: AbortSignal,
+    expiredSessionId = ""
+  ) {
     if (generation !== currentGeneration) return;
     const previousSessionId = state.agentSessionId;
     const previousResourceSessionId = state.resourceSessionId;
+    const previousRunId = state.activeRunId;
     const replacesSession = Boolean(
       previousSessionId &&
       (previousResourceSessionId !== manifest.resourceSessionId ||
@@ -976,23 +994,45 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     }
 
     try {
+      if (!isAgentNetworkOnline()) {
+        state.status = "reconnecting";
+        await waitForAgentNetwork(signal);
+        if (generation !== currentGeneration) return;
+      }
       await flushSessionDeletes();
       if (generation !== currentGeneration) return;
+      if (expiredSessionId) {
+        // Also wait for an in-flight submission whose run id has not arrived yet.
+        await client.cancel(expiredSessionId, manifest.resourceSessionId, previousRunId, "panel_expired");
+        if (generation !== currentGeneration) return;
+      }
       if (replacesSession) {
         queueSessionDelete(previousSessionId, previousResourceSessionId);
         await flushSessionDeletes();
         if (generation !== currentGeneration) return;
       }
       const bootstrap = await client.bootstrap(manifest.resourceSessionId, replacesSession);
-      let agentSessionId = String(bootstrap.session_id || "");
+      const createPanel = () =>
+        client.createSession(manifest, state.approvalMode, {
+          ...(expiredSessionId ? { previousSessionId: expiredSessionId } : {}),
+          onExpired: (error) => {
+            if (generation !== currentGeneration) return;
+            void recoverExpiredPanel(error, state.agentSessionId, currentGeneration).catch(() => undefined);
+          }
+        });
+      let agentSessionId = expiredSessionId ? "" : String(bootstrap.session_id || "");
       acquiredSessionId = agentSessionId;
       if (generation !== currentGeneration) return;
       let after = Math.max(0, Math.floor(Number(bootstrap.cursor) || 0));
       if (!agentSessionId) {
-        resetHistoryPresentation();
-        const created = await client.createSession(manifest, state.approvalMode);
+        if (!expiredSessionId) resetHistoryPresentation();
+        const created = await createPanel();
         agentSessionId = String(created.session_id || "");
         acquiredSessionId = agentSessionId;
+        if (expiredSessionId) {
+          queueSessionDelete(expiredSessionId, manifest.resourceSessionId);
+          await flushSessionDeletes();
+        }
         if (generation !== currentGeneration) return;
         after = Math.max(0, Math.floor(Number(created.after) || 0));
         state.registrationIds = { ...(created.registration_ids || {}) };
@@ -1000,7 +1040,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       if (!agentSessionId) throw new Error("Agent session creation did not return a session id");
       state.agentSessionId = agentSessionId;
       state.lastSeq = 0;
-      if (bootstrap.session_id) {
+      if (bootstrap.session_id && !expiredSessionId) {
         try {
           after = await restoreHistory(agentSessionId, manifest.resourceSessionId, currentGeneration, manifest, 0);
         } catch (error) {
@@ -1010,7 +1050,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
           await flushSessionDeletes();
           if (generation !== currentGeneration) return;
           resetHistoryPresentation();
-          const created = await client.createSession(manifest, state.approvalMode);
+          const created = await createPanel();
           agentSessionId = String(created.session_id || "");
           acquiredSessionId = agentSessionId;
           if (generation !== currentGeneration) return;
@@ -1046,6 +1086,10 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
         },
         onUnavailable: (error) => {
           if (generation !== currentGeneration) return;
+          if (isExpiredAgentPanel(error)) {
+            void recoverExpiredPanel(error, agentSessionId, currentGeneration).catch(() => undefined);
+            return;
+          }
           cancelAndResetRelay("agent_unavailable");
           state.status = "unavailable";
           state.errorCode = "agent_unavailable";
@@ -1068,7 +1112,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       options.onUnavailable?.(error);
       throw error;
     } finally {
-      if (!committed && generation !== currentGeneration && acquiredSessionId) {
+      if (!committed && acquiredSessionId && (generation !== currentGeneration || expiredSessionId)) {
         const deletion = queueSessionDelete(acquiredSessionId, manifest.resourceSessionId);
         await deletion.catch(() => undefined);
         if (state.agentSessionId === acquiredSessionId) state.agentSessionId = "";
@@ -1076,11 +1120,32 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     }
   }
 
-  async function attachManifest(manifest: AgentMcpManifest) {
+  async function attachManifest(manifest: AgentMcpManifest, expiredSessionId = "") {
     if (manifest.profile !== options.domain) throw new Error("Agent profile does not match the workspace domain");
+    latestManifest = manifest;
+    if (!availabilityScope) {
+      // Resource sessions outlive the component that first announces their tools.
+      availabilityScope = effectScope(true);
+      availabilityScope.run(() =>
+        watch(
+          workspaceAiEnabled,
+          (enabled) => {
+            if (enabled) {
+              if (latestManifest) void attachManifest(latestManifest).catch(() => undefined);
+              return;
+            }
+            void closeSession("ai_disabled");
+            options.onUnavailable?.(new Error("AI assistant is disabled"));
+          },
+          { flush: "sync" }
+        )
+      );
+    }
+    if (!workspaceAiEnabled.value) return;
     const key = agentManifestKey(manifest);
     if (attachFlight?.key === key) return attachFlight.promise;
     if (
+      !expiredSessionId &&
       !attachFlight &&
       committedManifestKey === key &&
       state.agentSessionId &&
@@ -1092,8 +1157,14 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       return;
     }
 
+    if (!expiredSessionId) panelRecovery = null;
     const currentGeneration = ++generation;
-    const promise = lifecycleTail.catch(() => undefined).then(() => performAttach(manifest, key, currentGeneration));
+    attachController?.abort();
+    const controller = new AbortController();
+    attachController = controller;
+    const promise = lifecycleTail
+      .catch(() => undefined)
+      .then(() => performAttach(manifest, key, currentGeneration, controller.signal, expiredSessionId));
     lifecycleTail = promise.catch(() => undefined);
     attachFlight = { key, promise };
     void promise.then(
@@ -1107,14 +1178,52 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     return promise;
   }
 
-  async function sendMessage(message: UIMessage) {
+  function recoverExpiredPanel(error: unknown, sessionId: string, expectedGeneration: number): Promise<void> {
+    if (!(error instanceof Error) || !isExpiredAgentPanel(error)) return Promise.reject(error);
+    if (panelRecovery?.sessionId === sessionId) return panelRecovery.promise;
+    if (generation !== expectedGeneration || !committedManifest || state.agentSessionId !== sessionId) {
+      return Promise.reject(error);
+    }
+    // A dispatched task belongs to its original panel. Cancel it, never replay it.
+    if (state.activeRunId) options.onUnavailable?.(error);
+    const attached = attachManifest(committedManifest, sessionId);
+    const recoveryGeneration = generation;
+    const promise = attached.then(() => {
+      if (generation !== recoveryGeneration || !state.available)
+        throw new Error("Agent session changed during panel recovery");
+    });
+    panelRecovery = { sessionId, generation: recoveryGeneration, promise };
+    return promise;
+  }
+
+  async function withPanelRecovery(operation: (sessionId: string, resourceSessionId: string) => Promise<unknown>) {
+    if (!isAgentNetworkOnline() || state.status === "reconnecting") {
+      throw new Error("Agent connection is interrupted");
+    }
+    if (panelRecovery?.generation === generation) await panelRecovery.promise;
     if (!state.available || !state.agentSessionId || !state.resourceSessionId) {
       throw new Error("Agent session is unavailable");
     }
+    const currentGeneration = generation;
+    const sessionId = state.agentSessionId;
+    const resourceSessionId = state.resourceSessionId;
+    try {
+      await operation(sessionId, resourceSessionId);
+      if (generation !== currentGeneration) throw new Error("Agent session changed while submitting the request");
+    } catch (error) {
+      await recoverExpiredPanel(error, sessionId, currentGeneration);
+      // Only explicit panel rejection is retried; ambiguous network failures are not replayed.
+      await operation(state.agentSessionId, resourceSessionId);
+    }
+  }
+
+  async function sendMessage(message: UIMessage) {
     const request = toAgentMessageRequest(message);
     rememberRecentMessage(localUserMessageIds, request.message_id, true);
     try {
-      await client.sendMessage(state.agentSessionId, state.resourceSessionId, request);
+      await withPanelRecovery((sessionId, resourceSessionId) =>
+        client.sendMessage(sessionId, resourceSessionId, request)
+      );
     } catch (error) {
       localUserMessageIds.delete(request.message_id);
       throw error;
@@ -1122,10 +1231,9 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
   }
 
   async function updateContext(context: Record<string, unknown>) {
-    if (!state.available || !state.agentSessionId || !state.resourceSessionId) {
-      throw new Error("Agent session is unavailable");
-    }
-    await client.updateContext(state.agentSessionId, state.resourceSessionId, context);
+    await withPanelRecovery((sessionId, resourceSessionId) =>
+      client.updateContext(sessionId, resourceSessionId, context)
+    );
   }
 
   function presentApprovalResolution(approvalId: string, status: string) {
@@ -1366,16 +1474,32 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
       options.onApprovalMode?.(mode);
       return;
     }
-    await client.setApprovalMode(state.agentSessionId, state.resourceSessionId, { mode });
+    await withPanelRecovery((sessionId, resourceSessionId) =>
+      client.setApprovalMode(sessionId, resourceSessionId, { mode })
+    );
     state.approvalMode = mode;
     options.onApprovalMode?.(mode);
   }
 
   function dispose() {
+    availabilityScope?.stop();
+    availabilityScope = null;
+    latestManifest = null;
+    return closeSession(workspaceAiEnabled.value ? undefined : "ai_disabled");
+  }
+
+  function closeSession(reason?: "ai_disabled") {
     generation += 1;
+    attachController?.abort();
+    attachController = null;
     const sessionId = state.agentSessionId;
     const resourceSessionId = state.resourceSessionId || retainedResourceId;
+    const cancellation =
+      reason && sessionId
+        ? client.cancel(sessionId, resourceSessionId, "", reason).catch(() => undefined)
+        : Promise.resolve();
     attachFlight = null;
+    panelRecovery = null;
     committedManifestKey = "";
     committedManifest = null;
     sse?.stop();
@@ -1399,6 +1523,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     const cleanup = lifecycleTail
       .catch(() => undefined)
       .then(async () => {
+        await cancellation;
         if (!deleteReleasedSession || !sessionId || !resourceSessionId) return;
         await client.deleteSession(sessionId, resourceSessionId).catch(() => undefined);
       });

@@ -15,11 +15,16 @@ export default defineConfig({
     })
   ],
   resolve: {
+    dedupe: ["vue"],
     alias: {
       "#koko": fileURLToPath(new URL("./ui/koko", import.meta.url)),
       "#online-player": fileURLToPath(new URL("./packages/online-player/app", import.meta.url)),
-      "~": fileURLToPath(new URL("./ui", import.meta.url))
+      "~": fileURLToPath(new URL("./ui", import.meta.url)),
+      "@": fileURLToPath(new URL("./ui", import.meta.url))
     }
+  },
+  optimizeDeps: {
+    include: ["vue", "vue/compiler-sfc"]
   },
   test: {
     dir: rootDir,

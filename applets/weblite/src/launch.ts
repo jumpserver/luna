@@ -6,11 +6,7 @@ import { webProxyNavigationPolicy } from "@jumpserver/web-proxy/script";
 export function standaloneLaunch() {
   return {
     targetUrl: "https://www.jumpserver.org/",
-    proxyUrl: "",
-    tokenId: "",
-    tokenValue: "",
     safeMode: false,
-    recordingEnabled: false,
     allowedUrls: [],
     localSession: null,
     standalone: true
@@ -30,36 +26,10 @@ export function parseLaunch(value: unknown) {
   const allowedUrls = data.allowed_urls === undefined ? [] : data.allowed_urls;
   webProxyNavigationPolicy(target, allowedUrls);
   if (typeof data.safe_mode !== "boolean") throw new Error("缺少安全模式配置");
-  if (data.recording_enabled !== undefined && typeof data.recording_enabled !== "boolean")
-    throw new Error("录像开关无效");
-  const recordingEnabled = data.recording_enabled === true;
-  let proxyUrl = "";
-  let tokenId = "";
-  let tokenValue = "";
-  if (recordingEnabled) {
-    const proxy = new URL(text("proxy_url"));
-    if (
-      proxy.protocol !== "http:" ||
-      !proxy.hostname ||
-      proxy.username ||
-      proxy.password ||
-      proxy.search ||
-      proxy.hash ||
-      proxy.pathname !== "/"
-    )
-      throw new Error("Koko Web Proxy 地址无效");
-    proxyUrl = proxy.origin;
-    tokenId = text("token_id", 256);
-    tokenValue = text("token_value", 512);
-  }
-  const localSession = recordingEnabled ? null : createLocalCredentialSession(target.toString(), data.login);
+  const localSession = createLocalCredentialSession(target.toString(), data.login);
   return {
     targetUrl: target.toString(),
-    proxyUrl,
-    tokenId,
-    tokenValue,
     safeMode: data.safe_mode,
-    recordingEnabled,
     allowedUrls,
     localSession,
     standalone: false

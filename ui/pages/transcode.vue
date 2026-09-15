@@ -14,6 +14,7 @@ const { addErrorToast } = useErrorToast();
 const { isWindows } = usePlatform();
 const { openSettings: openApplicationSettings } = useSettingsWindow();
 const ffmpegInstalled = ref<boolean | null>(null);
+const optionsOpen = ref(false);
 
 const refreshFfmpegStatus = async () => {
   if (!isDesktopRuntime()) return;
@@ -32,13 +33,10 @@ const {
   transcodePower,
   isTranscoding,
   taskItems,
-  totalProgress,
-  successCount,
-  failedCount,
   processingCount,
   completedCount,
-  queuedCount,
-  canStart
+  canStart,
+  outputDirAuthorized
 } = storeToRefs(store);
 
 const toPickedPaths = (value: string | string[] | null) => {
@@ -56,6 +54,21 @@ const openOutputFile = async (output: string) => {
   if (!output) return;
   try {
     await desktopOpener.openPath(output);
+  } catch (error) {
+    addErrorToast({
+      title: t("Transcode.OpenFailed"),
+      description: getErrorMessage(error),
+      icon: "line-md:close-circle",
+      progress: true,
+      duration: 3000
+    });
+  }
+};
+
+const openOutputDir = async () => {
+  if (!outputDir.value) return;
+  try {
+    await desktopOpener.openPath(outputDir.value);
   } catch (error) {
     addErrorToast({
       title: t("Transcode.OpenFailed"),
@@ -89,15 +102,11 @@ const getStatusColor = (status: TranscodeTaskStatus): "neutral" | "primary" | "s
 
 const formatDuration = (seconds?: number | null): string => {
   if (seconds == null || seconds <= 0) return "";
-  if (seconds < 60) {
-    return `${Math.round(seconds)}s`;
-  }
+  if (seconds < 60) return `${Math.round(seconds)}s`;
   const mins = Math.floor(seconds / 60);
   const secs = Math.round(seconds % 60);
   return `${mins}m ${secs}s`;
 };
-
-const hasActiveTasks = computed(() => processingCount.value > 0 || completedCount.value > 0);
 
 const pickArchives = async (append = false) => {
   try {
@@ -106,14 +115,9 @@ const pickArchives = async (append = false) => {
       filters: [{ name: "Replay Archive", extensions: ["tar"] }]
     });
     const nextPaths = toPickedPaths(selected);
-
     if (!nextPaths.length) return;
-
-    if (append) {
-      store.appendArchives(nextPaths);
-    } else {
-      store.setArchives(nextPaths);
-    }
+    if (append) store.appendArchives(nextPaths);
+    else store.setArchives(nextPaths);
   } catch (error) {
     addErrorToast({
       title: t("Transcode.SelectArchivesFailed"),
@@ -126,20 +130,16 @@ const pickArchives = async (append = false) => {
 };
 
 const pickArchivesSmart = async () => {
-  const append = taskItems.value.length > 0;
-  await pickArchives(append);
+  if (isTranscoding.value) return;
+  await pickArchives(taskItems.value.length > 0);
 };
 
-const pickOutputDir = async () => {
+const pickOutputDir = async (): Promise<boolean> => {
   try {
-    const selected = await desktopDialog.open({
-      directory: true,
-      multiple: false
-    });
-
-    if (typeof selected === "string") {
-      store.setOutputDir(selected);
-    }
+    const selected = await desktopDialog.open({ directory: true, multiple: false });
+    if (typeof selected !== "string") return false;
+    store.setOutputDir(selected);
+    return true;
   } catch (error) {
     addErrorToast({
       title: t("Transcode.SelectOutputDirFailed"),
@@ -148,11 +148,9 @@ const pickOutputDir = async () => {
       progress: true,
       duration: 4000
     });
+    return false;
   }
 };
-
-const settingsOpen = ref(false);
-const confirmOpen = ref(false);
 
 const filenameStyleItems = computed(() => [
   { label: t("Transcode.FilenameOriginal"), value: "original" as FilenameStyle },
@@ -178,9 +176,7 @@ const selectedOutputResolution = computed<OutputResolution>({
 });
 
 const transcodePowerItems = computed(() => {
-  if (isWindows.value) {
-    return [{ label: t("Transcode.PowerAuto"), value: "auto" as TranscodePower }];
-  }
+  if (isWindows.value) return [{ label: t("Transcode.PowerAuto"), value: "auto" as TranscodePower }];
   return [
     { label: t("Transcode.PowerFull"), value: "full" as TranscodePower },
     { label: t("Transcode.PowerFast"), value: "fast" as TranscodePower },
@@ -194,30 +190,27 @@ const selectedTranscodePower = computed<TranscodePower>({
   set: (val: TranscodePower) => store.setTranscodePower(val)
 });
 
+const selectedOptionLabels = computed(() => {
+  const findLabel = <T extends string>(items: Array<{ label: string; value: T }>, value: T) =>
+    items.find((item) => item.value === value)?.label || "";
+  return [
+    findLabel(outputResolutionItems.value, outputResolution.value),
+    findLabel(filenameStyleItems.value, filenameStyle.value),
+    findLabel(transcodePowerItems.value, transcodePower.value)
+  ]
+    .filter(Boolean)
+    .join(" · ");
+});
+
 watch(
   isWindows,
   (win) => {
-    if (win) {
-      store.setTranscodePower("auto");
-    }
+    if (win) store.setTranscodePower("auto");
   },
   { immediate: true }
 );
 
-const openSettings = () => {
-  settingsOpen.value = true;
-};
-
-const handleStartTranscode = async () => {
-  await refreshFfmpegStatus();
-  if (!ffmpegInstalled.value) {
-    await openApplicationSettings("/setting/general");
-    return;
-  }
-  if (!outputDir.value) {
-    confirmOpen.value = true;
-    return;
-  }
+const beginTranscode = () => {
   store.startTranscode();
   toast.add({
     title: t("Transcode.Title"),
@@ -228,30 +221,33 @@ const handleStartTranscode = async () => {
   });
 };
 
-const confirmAndOpenSettings = () => {
-  confirmOpen.value = false;
-  settingsOpen.value = true;
-};
-
-const settingsError = ref("");
-
-const handleSettingsConfirm = () => {
-  if (!outputDir.value) {
-    settingsError.value = t("Transcode.OutputDirRequired");
+const handleStartTranscode = async () => {
+  await refreshFfmpegStatus();
+  if (!ffmpegInstalled.value) {
+    await openApplicationSettings("/setting/general");
     return;
   }
-  settingsError.value = "";
-  settingsOpen.value = false;
+  if ((!outputDir.value || !outputDirAuthorized.value) && !(await pickOutputDir())) return;
+  beginTranscode();
 };
 
-watch(outputDir, () => {
-  settingsError.value = "";
+const taskSummary = computed(() => {
+  if (isTranscoding.value)
+    return t("Transcode.InProgress", { processing: processingCount.value, total: taskItems.value.length });
+  if (completedCount.value)
+    return t("Transcode.CompletedCount", { completed: completedCount.value, total: taskItems.value.length });
+  if (taskItems.value.length) return t("Transcode.SelectedArchives", { count: taskItems.value.length });
+  return "";
 });
+
+const startLabel = computed(() =>
+  outputDir.value ? t("Transcode.Start") : `${t("Transcode.SelectOutputDir")} · ${t("Transcode.Start")}`
+);
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 flex-col overflow-hidden p-4">
-    <div class="flex shrink-0 flex-col gap-3">
+  <div class="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--app-surface-canvas)]">
+    <div class="flex shrink-0 flex-col gap-3 px-4 pt-4">
       <UAlert
         v-if="ffmpegInstalled === false"
         color="warning"
@@ -269,44 +265,23 @@ watch(outputDir, () => {
         ]"
       />
 
-      <div v-if="isTranscoding || hasActiveTasks" class="flex flex-wrap items-center gap-2">
-        <UBadge v-if="hasActiveTasks" color="primary" variant="soft">
-          {{ t("Transcode.TotalProgress", { progress: totalProgress }) }}
-        </UBadge>
-
-        <UBadge v-if="processingCount > 0" color="primary" variant="soft">
-          {{ t("Transcode.InProgress", { processing: processingCount, total: taskItems.length }) }}
-        </UBadge>
-
-        <UBadge v-else-if="completedCount > 0" :color="failedCount > 0 ? 'error' : 'success'" variant="soft">
-          {{ t("Transcode.CompletedCount", { completed: completedCount, total: taskItems.length }) }}
-        </UBadge>
-
-        <UBadge v-if="queuedCount > 0" color="warning" variant="soft">
-          {{ t("Transcode.QueuedCount", { count: queuedCount }) }}
-        </UBadge>
-
-        <UBadge v-if="successCount > 0" color="success" variant="soft">
-          {{ t("Transcode.SuccessCount", { count: successCount }) }}
-        </UBadge>
-
-        <UBadge v-if="failedCount > 0" color="error" variant="soft">
-          {{ t("Transcode.FailedCount", { count: failedCount }) }}
-        </UBadge>
-      </div>
-    </div>
-
-    <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div class="mb-2 flex shrink-0 items-center justify-between">
-        <div class="flex items-center gap-1">
-          <UButton icon="i-lucide-plus" color="neutral" variant="ghost" size="xs" @click="pickArchivesSmart">
+      <div class="flex min-h-8 items-center justify-between gap-3">
+        <div class="flex min-w-0 items-center gap-1">
+          <UButton
+            icon="i-lucide-plus"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :disabled="isTranscoding"
+            @click="pickArchivesSmart"
+          >
             {{ t("Transcode.SelectArchives") }}
           </UButton>
           <UButton
             icon="i-lucide-trash-2"
             color="neutral"
             variant="ghost"
-            size="xs"
+            size="sm"
             :disabled="isTranscoding || !archivePaths.length"
             @click="store.clearArchives()"
           >
@@ -314,240 +289,240 @@ watch(outputDir, () => {
           </UButton>
         </div>
 
-        <div class="flex shrink-0 items-center gap-2">
-          <UButton icon="i-lucide-settings" color="neutral" variant="ghost" size="xs" @click="openSettings">
-            {{ t("Transcode.Settings") }}
-          </UButton>
+        <span v-if="taskSummary" class="truncate text-xs tabular-nums text-[var(--app-muted)]">
+          {{ taskSummary }}
+        </span>
+      </div>
+    </div>
 
-          <UButton v-if="isTranscoding" icon="i-lucide-loader" color="primary" variant="soft" size="xs" disabled>
+    <div class="min-h-0 flex-1 overflow-hidden px-4 pb-3 pt-1">
+      <div v-if="taskItems.length" class="h-full space-y-2 overflow-y-auto pr-1">
+        <article
+          v-for="item in taskItems"
+          :key="`${item.path}-${item.index}`"
+          class="grid grid-cols-[2rem_minmax(0,1fr)_auto] gap-3 rounded-md border border-[var(--app-border)] bg-[var(--app-surface-card)] px-3 py-2.5"
+        >
+          <div
+            class="mt-0.5 grid size-8 place-items-center rounded-md bg-[var(--app-surface-input)] text-[var(--app-muted)]"
+            :class="{
+              'bg-success/10 text-success': item.status === 'success',
+              'bg-error/10 text-error': item.status === 'error',
+              'bg-primary/10 text-primary': item.status === 'processing'
+            }"
+          >
+            <UIcon
+              :name="
+                item.status === 'success'
+                  ? 'i-lucide-check-circle-2'
+                  : item.status === 'error'
+                    ? 'i-lucide-circle-x'
+                    : item.status === 'processing'
+                      ? 'i-lucide-loader-circle'
+                      : 'i-lucide-file-archive'
+              "
+              class="size-4"
+              :class="item.status === 'processing' ? 'animate-spin' : undefined"
+            />
+          </div>
+
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <p class="min-w-0 flex-1 truncate text-sm font-medium text-[var(--app-fg)]">
+                {{ item.displayName }}
+              </p>
+              <TranscodeMetaPopover v-if="item.metadata" :metadata="item.metadata" />
+            </div>
+
+            <p v-if="item.metadata" class="mt-0.5 truncate text-xs text-[var(--app-muted)]">
+              {{ item.metadata.user }} · {{ item.metadata.asset }} · {{ item.metadata.account }}
+            </p>
+            <p v-else-if="item.message" class="mt-0.5 truncate text-xs text-[var(--app-muted)]">
+              {{ item.message }}
+            </p>
+
+            <div v-if="item.status === 'processing'" class="mt-2 flex items-center gap-2">
+              <UProgress :value="Math.round(item.progress * 100) / 100" size="sm" class="flex-1" />
+              <span class="w-11 text-right text-xs tabular-nums text-[var(--app-muted)]">
+                {{ Math.round(item.progress * 100) / 100 }}%
+              </span>
+            </div>
+
+            <div
+              v-if="item.output"
+              class="mt-2 flex min-w-0 items-center gap-2 rounded-md bg-[var(--app-surface-input)] px-2.5 py-1.5 text-xs"
+            >
+              <span class="shrink-0 text-[var(--app-muted)]">{{ t("Transcode.OutputFile") }}</span>
+              <button
+                type="button"
+                class="min-w-0 truncate text-left text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                @click="openOutputFile(item.output)"
+              >
+                {{ item.output }}
+              </button>
+            </div>
+
+            <div v-if="item.error" class="mt-2 rounded-md bg-error/10 px-2.5 py-1.5 text-xs text-error">
+              <span class="font-medium">{{ t("Transcode.ErrorDetail") }}</span>
+              <span class="ml-1 break-all">{{ item.error }}</span>
+            </div>
+          </div>
+
+          <div class="flex shrink-0 items-center gap-1">
+            <UBadge
+              v-if="item.status === 'success' && item.duration != null"
+              color="neutral"
+              variant="subtle"
+              size="sm"
+            >
+              {{ formatDuration(item.duration) }}
+            </UBadge>
+            <UBadge :color="getStatusColor(item.status)" variant="soft" size="sm">
+              {{ getStatusLabel(item.status) }}
+            </UBadge>
+            <UButton
+              v-if="item.status !== 'processing' && !isTranscoding"
+              icon="i-lucide-x"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              :aria-label="t('Transcode.ClearArchives')"
+              @click="store.removeArchive(item.path)"
+            />
+          </div>
+        </article>
+      </div>
+
+      <div
+        v-else
+        class="flex h-full min-h-40 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-[var(--app-border)] bg-[var(--app-surface-panel)] px-6 text-center"
+      >
+        <UIcon name="i-lucide-file-archive" class="size-6 text-[var(--app-muted)]" />
+        <p class="text-sm font-medium text-[var(--app-fg)]">
+          {{ t("Transcode.EmptyArchives") }}
+        </p>
+        <p class="max-w-md text-xs leading-5 text-[var(--app-muted)]">
+          {{ t("Transcode.Description") }}
+        </p>
+        <UButton icon="i-lucide-plus" color="neutral" variant="ghost" size="sm" @click="pickArchivesSmart">
+          {{ t("Transcode.SelectArchives") }}
+        </UButton>
+      </div>
+    </div>
+
+    <footer class="shrink-0 border-t border-[var(--app-border)] bg-[var(--app-surface-footer)] px-4 py-2.5">
+      <div class="flex flex-wrap items-center justify-between gap-x-5 gap-y-2">
+        <div class="flex min-w-0 flex-1 items-center gap-2">
+          <UIcon name="i-lucide-folder-output" class="size-4 shrink-0 text-[var(--app-muted)]" />
+          <div class="min-w-0 flex-1">
+            <p class="text-xs text-[var(--app-muted)]">{{ t("Transcode.OutputDirectory") }}</p>
+            <button
+              v-if="!outputDir"
+              type="button"
+              class="max-w-full truncate text-left text-xs text-warning hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              :disabled="isTranscoding"
+              @click="pickOutputDir"
+            >
+              {{ t("Transcode.OutputDirPlaceholder") }}
+            </button>
+            <p v-else class="truncate font-mono text-xs text-[var(--app-fg)]" :title="outputDir">
+              {{ outputDir }}
+            </p>
+          </div>
+          <UButton
+            v-if="outputDir"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :disabled="isTranscoding"
+            @click="pickOutputDir"
+          >
+            {{ t("Transcode.SelectOutputDir") }}
+          </UButton>
+          <UButton
+            v-if="outputDir"
+            icon="i-lucide-folder-open"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :disabled="isTranscoding"
+            :aria-label="t('Transcode.OpenFile')"
+            @click="openOutputDir"
+          />
+        </div>
+
+        <div class="flex shrink-0 items-center gap-2">
+          <UPopover v-model:open="optionsOpen" :content="{ align: 'end', side: 'top', sideOffset: 8 }">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              icon="i-lucide-sliders-horizontal"
+              :disabled="isTranscoding"
+              :label="t('Transcode.Settings')"
+            />
+
+            <template #content>
+              <div class="w-72 space-y-3 p-3">
+                <UFormField :label="t('Transcode.OutputResolution')">
+                  <USelect
+                    v-model="selectedOutputResolution"
+                    :items="outputResolutionItems"
+                    value-key="value"
+                    class="w-full"
+                  />
+                </UFormField>
+                <UFormField :label="t('Transcode.FilenameStyle')">
+                  <USelect
+                    v-model="selectedFilenameStyle"
+                    :items="filenameStyleItems"
+                    value-key="value"
+                    class="w-full"
+                  />
+                </UFormField>
+                <UFormField :label="t('Transcode.TranscodePower')">
+                  <USelect
+                    v-model="selectedTranscodePower"
+                    :items="transcodePowerItems"
+                    value-key="value"
+                    class="w-full"
+                    :disabled="isWindows"
+                  />
+                </UFormField>
+                <p v-if="isWindows" class="text-xs text-[var(--app-muted)]">
+                  {{ t("Transcode.PowerAutoHint") }}
+                </p>
+              </div>
+            </template>
+          </UPopover>
+
+          <span v-if="selectedOptionLabels" class="whitespace-nowrap text-xs text-[var(--app-muted)]">
+            {{ selectedOptionLabels }}
+          </span>
+
+          <UButton
+            v-if="isTranscoding"
+            icon="i-lucide-loader-circle"
+            color="primary"
+            variant="soft"
+            size="sm"
+            disabled
+            class="cursor-not-allowed"
+          >
             {{ t("Transcode.Running") }}
           </UButton>
           <UButton
             v-else
             icon="i-lucide-play"
             color="primary"
-            variant="soft"
-            size="xs"
-            :disabled="!canStart || ffmpegInstalled !== true"
+            variant="solid"
+            size="sm"
+            :disabled="!canStart || ffmpegInstalled === false"
             @click="handleStartTranscode"
           >
-            {{ t("Transcode.Start") }}
+            {{ startLabel }}
           </UButton>
         </div>
       </div>
-
-      <div v-if="taskItems.length" class="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-        <div
-          v-for="item in taskItems"
-          :key="`${item.path}-${item.index}`"
-          class="rounded-lg border border-gray-200 px-3.5 py-3 dark:border-white/10"
-        >
-          <div class="flex items-start gap-3">
-            <div
-              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
-              :class="
-                item.status === 'success'
-                  ? 'bg-green-500/10 text-green-500'
-                  : item.status === 'error'
-                    ? 'bg-red-500/10 text-red-500'
-                    : item.status === 'processing'
-                      ? 'bg-primary/10 text-primary'
-                      : 'bg-gray-500/10 text-gray-400'
-              "
-            >
-              <UIcon
-                :name="
-                  item.status === 'success'
-                    ? 'lucide:check-circle'
-                    : item.status === 'error'
-                      ? 'lucide:x-circle'
-                      : 'lucide:archive'
-                "
-                class="h-4 w-4"
-              />
-            </div>
-
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-2">
-                <div class="flex items-center gap-1.5 flex-1 min-w-0">
-                  <p class="truncate text-sm font-medium">
-                    {{ item.displayName }}
-                  </p>
-                  <TranscodeMetaPopover v-if="item.metadata" :metadata="item.metadata" />
-                </div>
-
-                <div class="flex items-center gap-1.5 shrink-0">
-                  <UBadge
-                    v-if="item.status === 'success' && item.duration != null"
-                    color="neutral"
-                    variant="subtle"
-                    size="sm"
-                  >
-                    耗时 {{ formatDuration(item.duration) }}
-                  </UBadge>
-
-                  <UBadge :color="getStatusColor(item.status)" variant="soft" size="sm">
-                    {{ getStatusLabel(item.status) }}
-                  </UBadge>
-
-                  <UButton
-                    v-if="item.status !== 'processing'"
-                    icon="i-lucide-x"
-                    color="neutral"
-                    variant="ghost"
-                    size="xs"
-                    @click="store.removeArchive(item.path)"
-                  />
-                </div>
-              </div>
-
-              <p v-if="item.metadata" class="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">
-                {{ item.metadata.user }} - {{ item.metadata.asset }} - {{ item.metadata.account }}
-              </p>
-
-              <div v-if="item.status === 'processing'" class="mt-2 flex flex-col items-center">
-                <div class="flex items-center gap-2 w-2/3">
-                  <UProgress :value="Math.round(item.progress * 100) / 100" size="sm" class="flex-1" />
-                  <span class="text-xs font-medium text-gray-500 dark:text-gray-400 w-12 text-right tabular-nums">
-                    {{ Math.round(item.progress * 100) / 100 }}%
-                  </span>
-                </div>
-              </div>
-
-              <div
-                v-if="item.output"
-                class="mt-2 flex items-center gap-2 rounded-md bg-gray-50 px-2.5 py-1.5 text-xs dark:bg-white/5"
-              >
-                <span class="shrink-0 font-medium text-gray-500 dark:text-gray-400">
-                  {{ t("Transcode.OutputFile") }}
-                </span>
-                <UTooltip :text="t('Transcode.OpenFile')">
-                  <button
-                    type="button"
-                    class="flex min-w-0 items-center gap-1 text-left text-primary hover:underline focus:outline-none"
-                    @click="openOutputFile(item.output)"
-                  >
-                    <UIcon name="lucide:play-circle" class="h-3.5 w-3.5 shrink-0" />
-                    <span class="truncate">{{ item.output }}</span>
-                  </button>
-                </UTooltip>
-              </div>
-
-              <div
-                v-if="item.error"
-                class="mt-2 rounded-md bg-red-50 px-2.5 py-1.5 text-xs text-red-600 dark:bg-red-500/10 dark:text-red-300"
-              >
-                <span class="font-medium">{{ t("Transcode.ErrorDetail") }}</span>
-                <span class="ml-1 break-all">{{ item.error }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div
-        v-else
-        class="flex flex-1 items-center justify-center border border-dashed border-default text-sm text-muted"
-      >
-        {{ t("Transcode.EmptyArchives") }}
-      </div>
-    </div>
-
-    <UModal v-model:open="settingsOpen" :title="t('Transcode.Settings')" :ui="{ footer: 'justify-end' }">
-      <template #body>
-        <div class="flex flex-col gap-4 p-2">
-          <div>
-            <label class="text-sm font-medium">{{ t("Transcode.OutputDirectory") }}</label>
-            <div class="mt-2">
-              <UInput
-                v-model="outputDir"
-                :placeholder="t('Transcode.OutputDirPlaceholder')"
-                size="md"
-                class="w-full"
-                :disabled="isTranscoding"
-              >
-                <template #trailing>
-                  <UButton
-                    color="neutral"
-                    variant="link"
-                    size="sm"
-                    icon="i-lucide-folder"
-                    :disabled="isTranscoding"
-                    @click="pickOutputDir"
-                  />
-                </template>
-              </UInput>
-              <p v-if="settingsError" class="mt-1 text-xs text-red-500">
-                {{ settingsError }}
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <label class="text-sm font-medium">{{ t("Transcode.FilenameStyle") }}</label>
-            <USelect
-              v-model="selectedFilenameStyle"
-              :items="filenameStyleItems"
-              value-key="value"
-              class="mt-2 w-full"
-              :disabled="isTranscoding"
-            />
-          </div>
-
-          <div>
-            <label class="text-sm font-medium">{{ t("Transcode.OutputResolution") }}</label>
-            <USelect
-              v-model="selectedOutputResolution"
-              :items="outputResolutionItems"
-              value-key="value"
-              class="mt-2 w-full"
-              :disabled="isTranscoding"
-            />
-          </div>
-
-          <div>
-            <div class="flex items-center gap-1.5">
-              <label class="text-sm font-medium">{{ t("Transcode.TranscodePower") }}</label>
-              <UTooltip :text="t('Transcode.TranscodePowerHint')">
-                <UIcon name="i-lucide-info" class="h-3.5 w-3.5 text-gray-400 cursor-help" />
-              </UTooltip>
-            </div>
-            <USelect
-              v-model="selectedTranscodePower"
-              :items="transcodePowerItems"
-              value-key="value"
-              class="mt-2 w-full"
-              :disabled="isTranscoding || isWindows"
-            />
-            <p v-if="isWindows" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {{ t("Transcode.PowerAutoHint") }}
-            </p>
-          </div>
-        </div>
-      </template>
-
-      <template #footer>
-        <UButton color="primary" variant="solid" @click="handleSettingsConfirm">
-          {{ t("Transcode.Confirm") }}
-        </UButton>
-      </template>
-    </UModal>
-
-    <UModal v-model:open="confirmOpen" :title="t('Transcode.Prompt')" :ui="{ footer: 'justify-end' }">
-      <template #body>
-        <p class="text-sm text-gray-500 dark:text-gray-400 p-2">
-          {{ t("Transcode.SelectOutputDirFirst") }}
-        </p>
-      </template>
-
-      <template #footer>
-        <UButton color="neutral" variant="ghost" @click="confirmOpen = false">
-          {{ t("Transcode.Cancel") }}
-        </UButton>
-        <UButton color="primary" variant="solid" @click="confirmAndOpenSettings">
-          {{ t("Transcode.Confirm") }}
-        </UButton>
-      </template>
-    </UModal>
+    </footer>
   </div>
 </template>

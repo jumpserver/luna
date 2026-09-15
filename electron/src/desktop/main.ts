@@ -81,6 +81,8 @@ let replayTranscoder;
 let ffmpegPlugin;
 let debugLogService;
 let appIcon;
+let allowCloseDuringTranscode = false;
+let closeConfirmationPending = false;
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -537,6 +539,9 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
   });
   win.on("enter-full-screen", () => emitDesktopEvent("desktop://fullscreen", true, label));
   win.on("leave-full-screen", () => emitDesktopEvent("desktop://fullscreen", false, label));
+  win.on("close", (event) => {
+    if (label === "main") preventCloseDuringTranscode(event, win, false);
+  });
   windowWebContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace) clearDesktopEventSubscriptions(windowWebContents);
   });
@@ -563,6 +568,45 @@ function createWindow(label = "main", options: CreateWindowOptions = {}) {
 
 function prefersZh() {
   return (app.getLocale() || process.env.LANG || "").toLowerCase().startsWith("zh");
+}
+
+function preventCloseDuringTranscode(event, win, quit) {
+  if (!replayTranscoder?.isTranscoding || allowCloseDuringTranscode) return;
+  event.preventDefault();
+  confirmCloseDuringTranscode(win, quit);
+}
+
+function confirmCloseDuringTranscode(win, quit) {
+  if (closeConfirmationPending) return;
+  closeConfirmationPending = true;
+  const zh = prefersZh();
+  const options = {
+    type: "warning" as const,
+    title: zh ? "转码未完成" : "Transcoding in progress",
+    message: zh
+      ? "关闭窗口会中断正在进行的转码。确定关闭？"
+      : "Closing the window will interrupt active transcoding. Close anyway?",
+    buttons: zh ? ["取消", "关闭窗口"] : ["Cancel", "Close Window"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true
+  };
+  const parent = win && !win.isDestroyed() ? win : undefined;
+  const confirmation = parent ? dialog.showMessageBox(parent, options) : dialog.showMessageBox(options);
+  void confirmation
+    .then(({ response }) => {
+      if (response !== 1) return;
+      replayTranscoder.cancel();
+      allowCloseDuringTranscode = true;
+      if (quit) app.quit();
+      else {
+        parent?.close();
+        if (process.platform === "darwin") allowCloseDuringTranscode = false;
+      }
+    })
+    .finally(() => {
+      closeConfirmationPending = false;
+    });
 }
 
 function menuLabels() {
@@ -1391,6 +1435,12 @@ async function drainPendingProtocolUrls() {
 
 const initialProtocolUrl = findClientProtocolUrl(process.argv);
 if (initialProtocolUrl) queueProtocolUrl(initialProtocolUrl, true);
+
+app.on("before-quit", (event) => {
+  if (!replayTranscoder?.isTranscoding || allowCloseDuringTranscode) return;
+  event.preventDefault();
+  confirmCloseDuringTranscode(BrowserWindow.getFocusedWindow() || windows.get("main"), true);
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

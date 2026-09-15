@@ -24,8 +24,29 @@ function extractSessionId(filename) {
 }
 
 function parsePartIndex(filename) {
-  const match = path.basename(filename).match(/\.(\d+)\.part\.gz$/);
+  const match = path.basename(filename).match(/\.(\d+)\.part\.gz$/i);
   return match ? Number(match[1]) : null;
+}
+
+function classifyReplayArchiveEntry(filename) {
+  const lower = path.basename(filename).toLowerCase();
+  if (lower.endsWith(".replay.json")) return { kind: "metadata", priority: 0 };
+  if (lower.endsWith(".json")) return { kind: "metadata", priority: 1 };
+  const partIndex = parsePartIndex(filename);
+  if (partIndex !== null) return { kind: "gua", partIndex, gzipped: true };
+  if (lower.endsWith(".replay.gz")) return { kind: "gua", partIndex: 0, gzipped: true };
+  if (lower.endsWith(".replay")) return { kind: "gua", partIndex: 0, gzipped: false };
+  if (lower.endsWith(".part.cast.gz") || lower.endsWith(".cast.gz")) return { kind: "cast" };
+  return { kind: null };
+}
+
+function parseReplayMetadata(data) {
+  try {
+    const metadata = JSON.parse(data.toString("utf8"));
+    return metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : undefined;
+  } catch {
+    // Invalid JSON is optional metadata, not an invalid replay archive.
+  }
 }
 
 function sanitizeFilename(value) {
@@ -35,13 +56,11 @@ function sanitizeFilename(value) {
 }
 
 function outputFilename(metadata, style) {
-  if (style === "friendly") {
-    return `${sanitizeFilename(metadata.user)}-${sanitizeFilename(metadata.asset)}-${sanitizeFilename(metadata.account)}.mp4`;
-  }
-  if (style === "friendly_uuid") {
-    return `${sanitizeFilename(metadata.user)}-${sanitizeFilename(metadata.asset)}-${sanitizeFilename(metadata.account)}(${metadata.id}).mp4`;
-  }
-  return `${sanitizeFilename(metadata.id)}.mp4`;
+  const id = sanitizeFilename(metadata.id);
+  const friendly = [metadata.user, metadata.asset, metadata.account].map(sanitizeFilename);
+  if (style === "friendly" && friendly.every(Boolean)) return `${friendly.join("-")}.mp4`;
+  if (style === "friendly_uuid" && friendly.every(Boolean)) return `${friendly.join("-")}(${id}).mp4`;
+  return `${id}.mp4`;
 }
 
 function readEntry(stream, maximum) {
@@ -59,10 +78,15 @@ function readEntry(stream, maximum) {
 }
 
 export function extractReplayArchive(archivePath) {
-  return new Promise<{ replayJson: Buffer; parts: Array<[number, Buffer]> }>((resolve, reject) => {
+  return new Promise<{
+    metadata?: Record<string, unknown>;
+    parts: Array<{ index: number; data: Buffer; gzipped: boolean }>;
+  }>((resolve, reject) => {
     const extractor = createTarExtractor();
-    let replayJson;
+    let metadata;
+    let metadataPriority = Infinity;
     const parts = [];
+    let hasCast = false;
     let failed = false;
 
     const fail = (error) => {
@@ -71,29 +95,35 @@ export function extractReplayArchive(archivePath) {
       reject(error);
     };
     extractor.on("entry", (header, stream, next) => {
-      const filename = path.basename(header.name || "");
-      const partIndex = parsePartIndex(filename);
-      const reading = filename.endsWith(".replay.json")
-        ? readEntry(stream, MAX_METADATA_BYTES).then((data) => {
-            replayJson = data;
-          })
-        : partIndex === null
-          ? new Promise<void>((resolve, reject) => {
-              stream.once("end", resolve);
-              stream.once("error", reject);
-              stream.resume();
+      const entry = classifyReplayArchiveEntry(header.name || "");
+      const reading =
+        entry.kind === "metadata"
+          ? readEntry(stream, MAX_METADATA_BYTES).then((data) => {
+              const candidate = parseReplayMetadata(data);
+              if (candidate && entry.priority < metadataPriority) {
+                metadata = candidate;
+                metadataPriority = entry.priority;
+              }
             })
-          : readEntry(stream, MAX_PART_BYTES).then((data) => {
-              parts.push([partIndex, data]);
-            });
+          : entry.kind === "gua"
+            ? readEntry(stream, MAX_PART_BYTES).then((data) => {
+                parts.push({ index: entry.partIndex, data, gzipped: entry.gzipped });
+              })
+            : new Promise<void>((resolve, reject) => {
+                if (entry.kind === "cast") hasCast = true;
+                stream.once("end", resolve);
+                stream.once("error", reject);
+                stream.resume();
+              });
       reading.then(next, fail);
     });
     extractor.once("finish", () => {
       if (failed) return;
-      if (!replayJson) return fail(new Error("replay.json not found in tar archive"));
-      if (!parts.length) return fail(new Error(".part.gz file not found in tar archive"));
-      parts.sort(([left], [right]) => left - right);
-      resolve({ replayJson, parts });
+      if (!parts.length) {
+        return fail(new Error(hasCast ? "终端录像请用离线播放器" : "包里没有可转码的图形录像"));
+      }
+      parts.sort((left, right) => left.index - right.index);
+      resolve({ metadata, parts });
     });
     extractor.once("error", fail);
     createReadStream(archivePath).once("error", fail).pipe(extractor);
@@ -203,13 +233,14 @@ async function writeFrame(stream, frame) {
   if (!stream.write(frame)) await once(stream, "drain");
 }
 
-async function encodeGuacamole(data, executable, outputPath, resolution, power, onProgress) {
+async function encodeGuacamole(data, executable, outputPath, resolution, power, onProgress, onEncoder) {
   const timeline = buildTimeline(data);
   if (timeline.frames.length < 2) throw new Error("not enough frames to encode");
   const dimensions = computeTargetDimensions(timeline.maxWidth, timeline.maxHeight, resolution);
-  const encoder = await startEncoder(executable, outputPath, dimensions.width, dimensions.height, power);
   const parser = new GuacamoleParser(data);
   const renderer = new ReplayRenderer(decodeImage);
+  const encoder = await startEncoder(executable, outputPath, dimensions.width, dimensions.height, power);
+  onEncoder?.(encoder.child);
   let frameIndex = 0;
   let instruction = parser.nextInstruction();
   try {
@@ -238,6 +269,8 @@ async function encodeGuacamole(data, executable, outputPath, resolution, power, 
     await encoder.completion.catch(() => undefined);
     await rm(encoder.temporaryPath, { force: true });
     throw error;
+  } finally {
+    onEncoder?.();
   }
 }
 
@@ -248,6 +281,19 @@ export class ReplayTranscoder {
   constructor(_projectRoot, emitProgress, ffmpegPlugin) {
     this.emitProgress = emitProgress;
     this.ffmpegPlugin = ffmpegPlugin;
+    this.activeTranscodes = 0;
+    this.activeJobs = new Set();
+  }
+
+  get isTranscoding() {
+    return this.activeTranscodes > 0;
+  }
+
+  cancel() {
+    for (const job of this.activeJobs) {
+      job.cancelled = true;
+      job.encoder?.kill();
+    }
   }
 
   emit(file, index, total, progress, message, targetLabel, extra = {}) {
@@ -255,6 +301,18 @@ export class ReplayTranscoder {
   }
 
   async transcode(request, targetLabel) {
+    const job = { cancelled: false, encoder: undefined };
+    this.activeTranscodes += 1;
+    this.activeJobs.add(job);
+    try {
+      return await this.transcodeRequest(request, targetLabel, job);
+    } finally {
+      this.activeJobs.delete(job);
+      this.activeTranscodes -= 1;
+    }
+  }
+
+  async transcodeRequest(request, targetLabel, job) {
     const tarPaths = Array.isArray(request.tarPaths) ? request.tarPaths : [];
     const outputDir = String(request.outputDir || "");
     if (!outputDir) throw new Error("output directory is required");
@@ -263,17 +321,19 @@ export class ReplayTranscoder {
     electronLog.info(`transcode ${tarPaths.length} file(s) -> ${outputDir}`);
     const results = [];
     for (const [index, archivePath] of tarPaths.entries()) {
+      if (job.cancelled) break;
       const fallbackId = extractSessionId(archivePath);
       let metadata;
       try {
         const archive = await extractReplayArchive(archivePath);
-        metadata = JSON.parse(archive.replayJson.toString("utf8"));
-        if (!metadata?.id) throw new Error("replay metadata is missing its session id");
+        if (job.cancelled) throw new Error("transcoding cancelled");
+        metadata = { ...archive.metadata, id: String(archive.metadata?.id || fallbackId) };
         this.emit(metadata.id, index, tarPaths.length, 0, "extracting archive", targetLabel, { metadata });
         const guacamoleData = Buffer.concat(
-          archive.parts.map(([partIndex, compressed]) => {
+          archive.parts.map(({ index: partIndex, data, gzipped }) => {
+            if (!gzipped) return data;
             try {
-              return gunzipSync(compressed);
+              return gunzipSync(data);
             } catch (error) {
               throw new Error(`gzip decompress failed for part ${partIndex}: ${error.message}`);
             }
@@ -288,7 +348,11 @@ export class ReplayTranscoder {
           request.outputResolution || "original",
           request.transcodePower || "full",
           (progress) =>
-            this.emit(metadata.id, index, tarPaths.length, progress, `encoding: ${Math.round(progress)}%`, targetLabel)
+            this.emit(metadata.id, index, tarPaths.length, progress, `encoding: ${Math.round(progress)}%`, targetLabel),
+          (encoder) => {
+            job.encoder = encoder;
+            if (job.cancelled) encoder?.kill();
+          }
         );
         const duration = (performance.now() - started) / 1000;
         this.emit(metadata.id, index, tarPaths.length, 100, "done", targetLabel, {
@@ -310,6 +374,7 @@ export class ReplayTranscoder {
           error: message,
           metadata: metadata || undefined
         });
+        if (job.cancelled) break;
       }
     }
     return results;
@@ -319,6 +384,7 @@ export class ReplayTranscoder {
 export const replayTranscoderInternals = {
   bitrate,
   extractSessionId,
+  classifyReplayArchiveEntry,
   outputFilename,
   parsePartIndex,
   sanitizeFilename,

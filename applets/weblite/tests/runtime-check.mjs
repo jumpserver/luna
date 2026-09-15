@@ -8,41 +8,15 @@ import { chromium } from "playwright";
 
 const applet = fileURLToPath(new URL("..", import.meta.url));
 const mode = process.argv[2] || "basic";
-const recording = mode === "recording";
 const standalone = mode === "standalone";
 const requests = [];
-let frames = 0;
-let recordingStarts = 0;
 const server = createServer((req, res) => {
   requests.push(req.url);
-  const route = new URL(req.url, "http://localhost").pathname;
-  const json = (data, status = 200) => {
-    res.writeHead(status, { "content-type": "application/json" });
-    res.end(JSON.stringify(data));
-  };
-  if (route.startsWith("/_jumpserver/web-sessions"))
-    return json(
-      {
-        session_id: "11111111-1111-4111-8111-111111111111",
-        target_url: target,
-        origin: new URL(target).origin,
-        autofill: "none",
-        autofill_available: false
-      },
-      201
-    );
-  if (route === "/_jumpserver/web-recordings") {
-    recordingStarts++;
-    return json({ id: "recording" }, 201);
-  }
-  if (route.endsWith("/frames")) return json({ frame_count: ++frames });
-  if (route.endsWith("/finish")) return json({ frame_count: frames });
-  if (recording) assert.equal(recordingStarts, 1, "target loaded before required recording started");
   res.setHeader("content-type", "text/html");
   if (standalone) return res.end("<!doctype html><html><body><h1>Standalone browsing works</h1></body></html>");
   res.end(`<!doctype html><html><body>
     <form id="login"><input id="username"><input id="password" type="password"><button id="submit">Login</button></form>
-    <h1 id="dashboard" style="display:${recording ? "block" : "none"}">Signed in</h1>
+    <h1 id="dashboard" style="display:none">Signed in</h1>
     <script>document.querySelector('form').onsubmit = e => {
       e.preventDefault();
       if (document.querySelector('#username').value === 'tester' && document.querySelector('#password').value === 'runtime-secret') {
@@ -67,9 +41,13 @@ if (!standalone)
     JSON.stringify({
       target_url: target,
       safe_mode: true,
-      recording_enabled: recording,
-      ...(recording
-        ? { proxy_url: new URL(target).origin, token_id: "test-token", token_value: "test-token-value" }
+      ...(mode === "legacy"
+        ? {
+            recording_enabled: true,
+            proxy_url: new URL(target).origin,
+            token_id: "test-token",
+            token_value: "test-token-value"
+          }
         : {}),
       login: {
         config:
@@ -123,20 +101,18 @@ try {
   if (standalone) await page.getByRole("heading", { name: "Standalone browsing works" }).waitFor();
   else {
     await page.locator("#dashboard").waitFor({ state: "visible", timeout: 15_000 });
-    await shell
-      .getByRole("button", { name: recording ? /会话状态：.*账号代填未配置/ : /会话状态：.*登录成功/ })
-      .waitFor({ state: "visible" });
+    await shell.getByRole("button", { name: /会话状态：.*登录成功/ }).waitFor({ state: "visible" });
   }
   const bootstrap = await shell.evaluate(() => window.webApplet.invoke("bootstrap"));
-  assert.equal(bootstrap.proxyUrl, recording ? new URL(target).origin : "");
-  assert.equal(bootstrap.recordingEnabled, recording);
+  assert.equal(bootstrap.proxyUrl, "");
+  assert.equal(bootstrap.recordingEnabled, false);
   assert.equal(bootstrap.standalone, standalone);
   assert.ok(!JSON.stringify(bootstrap).includes("runtime-secret"));
   assert.equal(await page.evaluate(() => typeof window.webApplet), "undefined");
-  if (recording) {
-    await waitFor(() => frames > 0, "Web recording did not capture frames");
-    assert.equal(recordingStarts, 1, "UI and main process started duplicate recordings");
-  } else assert.ok(requests.every((path) => !path.includes("_jumpserver")));
+  await assert.rejects(
+    shell.evaluate(() => window.webApplet.invoke("start_web_proxy_recording", {})),
+    /录像未启用/
+  );
   await shell.screenshot({
     path: fileURLToPath(new URL(`../../../release/applets/${mode}-runtime.png`, import.meta.url))
   });
@@ -144,7 +120,11 @@ try {
   await shell.evaluate(() => window.close());
   await waitFor(() => child.exitCode !== null, "Applet did not exit after its window closed");
   assert.equal(child.exitCode, 0);
-  console.info(`Standalone applet ${mode}: login/recording policy, IPC isolation and clean exit passed.`);
+  assert.ok(
+    requests.every((path) => !path.includes("_jumpserver")),
+    "Applet contacted a Koko control endpoint"
+  );
+  console.info(`WebLite ${mode}: direct browsing, no Koko communication, IPC isolation and clean exit passed.`);
 } catch (error) {
   console.error(stderr);
   throw error;

@@ -1,10 +1,15 @@
 import type { AgentClient } from "#koko/composables/agent/agentClient";
 import type { AgentSseConnection, AgentSseOptions } from "#koko/composables/agent/agentSse";
+import { AgentHttpError } from "#koko/composables/agent/agentClient";
+import { AgentStreamHttpError } from "#koko/composables/agent/agentSse";
 import type { AgentDomain } from "#koko/composables/agent/types";
-import { expect, it, vi } from "vitest";
+import { beforeEach, expect, it, vi } from "vitest";
 import { agentEventLifecycle } from "#koko/composables/agent/agentChatStream";
 import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
 import { agentEventToUiMessage, useAgentSession } from "#koko/composables/agent/useAgentSession";
+import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
+
+beforeEach(() => setWorkspaceAiEnabled(true));
 
 function manifest() {
   return {
@@ -25,6 +30,189 @@ function deferred<T>() {
   });
   return { promise, resolve, reject };
 }
+
+function panelRecoveryHarness() {
+  const streams: AgentSseOptions[] = [];
+  const stop = vi.fn();
+  const client = {
+    retainResource: vi.fn(),
+    releaseResource: vi.fn().mockReturnValue(true),
+    bootstrap: vi.fn().mockResolvedValue({}),
+    createSession: vi
+      .fn()
+      .mockResolvedValueOnce({ session_id: "panel-1" })
+      .mockResolvedValue({
+        session_id: "panel-2",
+        registration_ids: { terminal_context: "registration-2" }
+      }),
+    updateContext: vi.fn().mockResolvedValue(undefined),
+    sendMessage: vi.fn().mockResolvedValue({ run_id: "run-1" }),
+    cancel: vi.fn().mockResolvedValue(undefined),
+    deleteSession: vi.fn().mockResolvedValue(undefined)
+  };
+  const onHistoryReset = vi.fn();
+  const onUnavailable = vi.fn();
+  const controller = useAgentSession({
+    domain: "terminal",
+    client: client as unknown as AgentClient,
+    relay: new AgentToolRelay({ resourceSessionId: () => "resource-1", sendFrame: vi.fn() }),
+    messageMetadata: () => ({}),
+    onMessage: vi.fn(),
+    onAvailability: vi.fn(),
+    onHistoryReset,
+    onUnavailable,
+    createSse: (options) => {
+      streams.push(options);
+      return { start: vi.fn(), stop } as unknown as AgentSseConnection;
+    }
+  });
+  return { client, controller, streams, onHistoryReset, onUnavailable, stop };
+}
+
+it("suspends and restores AI without reconnecting the resource or replaying tasks", async () => {
+  setWorkspaceAiEnabled(false);
+  const { client, controller, stop } = panelRecoveryHarness();
+  try {
+    await controller.actions.attachManifest(manifest());
+    expect(client.bootstrap).not.toHaveBeenCalled();
+    setWorkspaceAiEnabled(true);
+    await vi.waitFor(() => expect(controller.state.available).toBe(true));
+    setWorkspaceAiEnabled(false);
+    expect(controller.state.available).toBe(false);
+    expect(stop).toHaveBeenCalledOnce();
+    expect(client.cancel).toHaveBeenCalledWith("panel-1", "resource-1", "", "ai_disabled");
+    await vi.waitFor(() => expect(client.deleteSession).toHaveBeenCalledWith("panel-1", "resource-1"));
+    await expect(
+      controller.actions.sendMessage({ id: "blocked", role: "user", parts: [{ type: "text", text: "Inspect" }] })
+    ).rejects.toThrow("unavailable");
+    setWorkspaceAiEnabled(true);
+    await vi.waitFor(() => expect(controller.state.agentSessionId).toBe("panel-2"));
+    expect(client.sendMessage).not.toHaveBeenCalled();
+  } finally {
+    await controller.actions.dispose();
+    setWorkspaceAiEnabled(true);
+  }
+});
+
+it.each(["bootstrap", "createSession"] as const)("discards a late %s response after AI is disabled", async (stage) => {
+  const { client, controller, streams } = panelRecoveryHarness();
+  const response = deferred<{ session_id: string }>();
+  client[stage].mockReset().mockReturnValueOnce(response.promise);
+  try {
+    const attaching = controller.actions.attachManifest(manifest());
+    await vi.waitFor(() => expect(client[stage]).toHaveBeenCalledOnce());
+    setWorkspaceAiEnabled(false);
+    response.resolve({ session_id: stage === "createSession" ? "late-panel" : "" });
+    await attaching;
+    expect(streams).toHaveLength(0);
+    expect(controller.state.available).toBe(false);
+    if (stage === "bootstrap") expect(client.createSession).not.toHaveBeenCalled();
+    else expect(client.deleteSession).toHaveBeenCalledWith("late-panel", "resource-1");
+  } finally {
+    await controller.actions.dispose();
+    setWorkspaceAiEnabled(true);
+  }
+});
+
+it("recovers an expired context request without clearing the conversation", async () => {
+  const { client, controller, streams, onHistoryReset } = panelRecoveryHarness();
+  await controller.actions.attachManifest(manifest());
+  onHistoryReset.mockClear();
+  client.updateContext.mockRejectedValueOnce(new AgentHttpError(409, '{"code":"panel_expired"}'));
+  const context = { selected_asset_id: "asset-1" };
+  try {
+    await controller.actions.updateContext(context);
+    expect(client.updateContext).toHaveBeenCalledTimes(2);
+    expect(client.updateContext).toHaveBeenLastCalledWith("panel-2", "resource-1", context);
+    expect(controller.state.registrationIds).toEqual({ terminal_context: "registration-2" });
+    expect(streams.at(-1)).toMatchObject({ sessionId: "panel-2", after: 0 });
+    expect(onHistoryReset).not.toHaveBeenCalled();
+  } finally {
+    await controller.actions.dispose();
+  }
+});
+
+it("coalesces heartbeat and SSE expiry, cancels the old run and ignores old events", async () => {
+  const { client, controller, streams, onUnavailable } = panelRecoveryHarness();
+  await controller.actions.attachManifest(manifest());
+  const expired = new AgentStreamHttpError(409, '{"code":"panel_closed"}');
+  streams[0]!.onEvent({ seq: 4, type: "run.started", run_id: "old-run" });
+  const onExpired = client.createSession.mock.calls[0]?.[2]?.onExpired;
+  streams[0]!.onUnavailable?.(expired);
+  onExpired?.(expired);
+  await vi.waitFor(() => expect(controller.state.agentSessionId).toBe("panel-2"));
+  expect(client.createSession).toHaveBeenCalledTimes(2);
+  expect(client.cancel).toHaveBeenCalledWith("panel-1", "resource-1", "old-run", "panel_expired");
+  expect(client.sendMessage).not.toHaveBeenCalled();
+  expect(onUnavailable).toHaveBeenCalledWith(expired);
+  streams[0]!.onEvent({ seq: 5, type: "session.closed" });
+  expect(controller.state.available).toBe(true);
+  await controller.actions.dispose();
+});
+
+it("does not resurrect a session disposed while its panel is being recovered", async () => {
+  const { client, controller, streams } = panelRecoveryHarness();
+  await controller.actions.attachManifest(manifest());
+  const replacement = deferred<{ session_id: string }>();
+  client.createSession.mockReturnValueOnce(replacement.promise);
+  client.updateContext.mockRejectedValueOnce(new AgentHttpError(409, '{"code":"panel_expired"}'));
+  const pending = controller.actions.updateContext({});
+  const rejected = expect(pending).rejects.toThrow("changed during panel recovery");
+  await vi.waitFor(() => expect(client.createSession).toHaveBeenCalledTimes(2));
+  const disposed = controller.actions.dispose();
+  replacement.resolve({ session_id: "panel-2" });
+  await Promise.all([rejected, disposed]);
+  expect(streams).toHaveLength(1);
+  expect(controller.state.status).toBe("closed");
+  expect(client.updateContext).toHaveBeenCalledOnce();
+  expect(client.deleteSession).toHaveBeenCalledWith("panel-2", "resource-1");
+});
+
+it("does not replay network failures or unrelated conflicts", async () => {
+  const { client, controller } = panelRecoveryHarness();
+  await controller.actions.attachManifest(manifest());
+  for (const error of [new Error("timeout"), new AgentHttpError(409, '{"code":"context_revision_conflict"}')]) {
+    client.updateContext.mockRejectedValueOnce(error);
+    await expect(controller.actions.updateContext({})).rejects.toBe(error);
+  }
+  expect(client.createSession).toHaveBeenCalledOnce();
+  expect(client.updateContext).toHaveBeenCalledTimes(2);
+  await controller.actions.dispose();
+});
+
+it("blocks new messages until the connection recovers", async () => {
+  const { client, controller, streams } = panelRecoveryHarness();
+  await controller.actions.attachManifest(manifest());
+  const stream = streams[0]!;
+  const message = { id: "new-message", role: "user" as const, parts: [{ type: "text" as const, text: "query" }] };
+  stream.onState?.("reconnecting");
+  try {
+    await expect(controller.actions.sendMessage(message)).rejects.toThrow("connection is interrupted");
+    expect(client.sendMessage).not.toHaveBeenCalled();
+    stream.onState?.("connected");
+    await controller.actions.sendMessage(message);
+    expect(client.sendMessage).toHaveBeenCalledOnce();
+  } finally {
+    await controller.actions.dispose();
+  }
+});
+
+it("defers session creation until online and cancels the wait on disposal", async () => {
+  if (typeof window === "undefined") vi.stubGlobal("window", new EventTarget());
+  vi.stubGlobal("navigator", { onLine: false });
+  const { client, controller } = panelRecoveryHarness();
+  try {
+    const attaching = controller.actions.attachManifest(manifest());
+    await vi.waitFor(() => expect(controller.state.status).toBe("reconnecting"));
+    expect(client.bootstrap).not.toHaveBeenCalled();
+    await controller.actions.dispose();
+    await attaching;
+    expect(controller.state.status).toBe("closed");
+  } finally {
+    await controller.actions.dispose();
+    vi.unstubAllGlobals();
+  }
+});
 
 it("finishes chat streams only for terminal run events", () => {
   expect(agentEventLifecycle("message.completed").runFinished).toBe(false);
@@ -716,7 +904,11 @@ it("does not share an attach flight when a same-revision manifest changes digest
   await Promise.all([first, duplicate, next]);
 
   expect(createSession).toHaveBeenCalledTimes(2);
-  expect(createSession).toHaveBeenLastCalledWith(changedManifest, "auto");
+  expect(createSession).toHaveBeenLastCalledWith(
+    changedManifest,
+    "auto",
+    expect.objectContaining({ onExpired: expect.any(Function) })
+  );
   expect(deleteSession).toHaveBeenCalledWith("agent-stale", "resource-1");
   expect(order.indexOf("delete:agent-stale")).toBeLessThan(order.indexOf("create:fresh"));
   expect(controller.state).toMatchObject({ agentSessionId: "agent-fresh", revision: 1, available: true });
@@ -754,7 +946,11 @@ it("recreates a committed session when a same-revision manifest changes digest",
 
   expect(deleteSession).toHaveBeenCalledWith("agent-old", "resource-1");
   expect(bootstrap).toHaveBeenLastCalledWith("resource-1", true);
-  expect(createSession).toHaveBeenLastCalledWith(changedManifest, "auto");
+  expect(createSession).toHaveBeenLastCalledWith(
+    changedManifest,
+    "auto",
+    expect.objectContaining({ onExpired: expect.any(Function) })
+  );
   expect(controller.state).toMatchObject({ agentSessionId: "agent-new", revision: 1, available: true });
   await controller.actions.dispose();
 });
@@ -1132,7 +1328,11 @@ it.each([
   await controller.actions.attachManifest(manifest());
 
   expect(deleteSession).toHaveBeenCalledWith("agent-existing", "resource-1");
-  expect(createSession).toHaveBeenCalledWith(manifest(), "auto");
+  expect(createSession).toHaveBeenCalledWith(
+    manifest(),
+    "auto",
+    expect.objectContaining({ onExpired: expect.any(Function) })
+  );
   expect(controller.state.agentSessionId).toBe("agent-recreated");
   await controller.actions.dispose();
 });
@@ -1165,7 +1365,11 @@ it("recreates an existing Agent session when history is missing session.created"
   await controller.actions.attachManifest(manifest());
 
   expect(deleteSession).toHaveBeenCalledWith("agent-existing", "resource-1");
-  expect(createSession).toHaveBeenCalledWith(manifest(), "auto");
+  expect(createSession).toHaveBeenCalledWith(
+    manifest(),
+    "auto",
+    expect.objectContaining({ onExpired: expect.any(Function) })
+  );
   expect(controller.state.agentSessionId).toBe("agent-recreated");
   await controller.actions.dispose();
 });
@@ -1626,7 +1830,11 @@ it("updates approval mode only after Agent Runtime accepts it and applies restor
 
   await controller.actions.setApprovalMode("never");
   await controller.actions.attachManifest(manifest());
-  expect(client.createSession).toHaveBeenCalledWith(manifest(), "never");
+  expect(client.createSession).toHaveBeenCalledWith(
+    manifest(),
+    "never",
+    expect.objectContaining({ onExpired: expect.any(Function) })
+  );
 
   await controller.actions.setApprovalMode("always");
   expect(controller.state.approvalMode).toBe("always");

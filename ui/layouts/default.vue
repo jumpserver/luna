@@ -10,7 +10,7 @@ import {
   SettingsGeneralPage,
   SettingsUserPage
 } from "~/composables/loadSettingsSection";
-import { getPublicSettings } from "~/composables/useApiRequest";
+import { workspaceAiEnabled } from "~/shared/aiAvailability";
 import { desktopInvoke, desktopListen, desktopWindow } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { isTerminalAiHistoryShortcut } from "~/utils/terminalAiCommand";
@@ -68,18 +68,6 @@ const { start: scheduleWorkspaceTour, stop: stopScheduledWorkspaceTour } = useTi
   { immediate: false }
 );
 
-const refreshCommandExecutionSetting = async () => {
-  if (!loggedIn.value) return;
-
-  try {
-    const settings = await getPublicSettings();
-    userInfoStore.setCommandExecutionEnabled(settings.SECURITY_COMMAND_EXECUTION === true);
-  } catch (error) {
-    userInfoStore.setCommandExecutionEnabled(false);
-    console.debug("refresh command execution setting failed", error);
-  }
-};
-
 watch(
   commandExecutionEnabled,
   (enabled) => {
@@ -88,12 +76,11 @@ watch(
   { immediate: true }
 );
 
-const showWorkspaceSidebar = computed(
-  () =>
-    uiWorkspaceMode.value !== "files" &&
-    uiWorkspaceMode.value !== "tools" &&
-    (uiWorkspaceMode.value !== "assets" || loggedIn.value)
-);
+const showWorkspaceSidebar = computed(() => {
+  if (uiWorkspaceMode.value === "files") return false;
+  if (uiWorkspaceMode.value === "tools") return isDesktopRuntime();
+  return loggedIn.value;
+});
 
 const cardUi = computed(() => {
   const base = ["relative", "rounded-none", "overflow-visible"];
@@ -144,6 +131,7 @@ const handleOpenLocalShellShortcut = (event: KeyboardEvent) => {
 };
 
 const handleAiHistoryShortcut = (event: KeyboardEvent) => {
+  if (!workspaceAiEnabled.value) return;
   if (isWorkspaceTourActive() || event.repeat || isUtilityRoute.value || settingsOpen.value) return;
   if (!isTerminalAiHistoryShortcut(event, isMacOS.value)) return;
   event.preventDefault();
@@ -166,7 +154,7 @@ const handleChromeShortcut = (event: KeyboardEvent) => {
   if (!event.altKey && event.shiftKey && event.code === "Comma") {
     if (!isDesktopRuntime()) return;
     event.preventDefault();
-    void navigateTo(localePath({ path: "/tools" }));
+    void navigateTo(localePath("videoplayer"));
     return;
   }
 
@@ -258,7 +246,7 @@ const handleDesktopMenuCommand = (command: string) => {
 
   if (command === "open-tools") {
     if (!isDesktopRuntime()) return;
-    void navigateTo(localePath({ path: "/tools" }));
+    void navigateTo(localePath("videoplayer"));
   }
 };
 
@@ -298,7 +286,6 @@ useEventListener(window, "keydown", handleChromeShortcut);
 useEventListener(window, "keydown", handleWorkspaceModeShortcut, { capture: true });
 useEventListener(window, "keyup", stopEscapeHold, { capture: true });
 useEventListener(window, "blur", clearEscapeHold);
-useEventListener(window, "focus", refreshCommandExecutionSetting);
 
 watch(focusMode, (active) => {
   if (!active) clearEscapeHold();
@@ -324,7 +311,6 @@ onMounted(() => {
   if (isDesktopRuntime()) {
     standaloneAssetWindow.value = desktopWindow.label().startsWith("asset-");
   }
-  void refreshCommandExecutionSetting();
   initialTheme();
   listenOSThemeChange();
   // ponytail: koko WS sessions close on component unmount; no desktop builtin bridge

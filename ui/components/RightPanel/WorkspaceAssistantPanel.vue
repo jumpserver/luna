@@ -16,6 +16,7 @@ import { resolveWorkspaceTerminalTarget } from "~/composables/useWorkspaceTermin
 import AiComposer from "./ai/AiComposer.vue";
 import AiPresenceHeader from "./ai/AiPresenceHeader.vue";
 import { terminalAiPanelDomain } from "./ai/domains/terminal/adapter";
+import { useAiConnectionNotice } from "./ai/useAiConnectionNotice";
 import WorkspaceAssistantTimeline from "./workspace/WorkspaceAssistantTimeline.vue";
 
 const { t } = useI18n();
@@ -44,6 +45,8 @@ const running = computed(() =>
     session.value?.taskActive || session.value?.inputLocked || session.value?.terminalTasks.some((task) => task.active)
   )
 );
+const connection = useAiConnectionNotice(() => session.value?.agent.state, running);
+const connectionNotice = computed(() => (connection.noticeKey.value ? t(connection.noticeKey.value) : ""));
 const terminalTargets = computed(() => (scopeId.value ? workspaceAssistantTerminalTargets(scopeId.value) : []));
 const selectedTarget = computed({
   get: () => session.value?.target || "auto",
@@ -93,6 +96,7 @@ const waitingStatus = computed(() => {
   return "";
 });
 const statusTone = computed<"ready" | "active" | "warning" | "error" | "success">(() => {
+  if (connection.blocked.value) return "warning";
   if (session.value?.errorCode || session.value?.errorText) return "error";
   if (!available.value) return "warning";
   if (waitingStatus.value) return "warning";
@@ -101,6 +105,7 @@ const statusTone = computed<"ready" | "active" | "warning" | "error" | "success"
   return "ready";
 });
 const statusLabel = computed(() => {
+  if (connection.statusKey.value) return t(connection.statusKey.value);
   if (session.value?.errorCode || session.value?.errorText) return t("RightPanel.AIStatusFailed");
   if (!available.value) return t("RightPanel.SessionStatusConnecting");
   if (waitingStatus.value) return t(waitingStatus.value);
@@ -171,7 +176,7 @@ function terminalAction(taskId: string, action: AiTimelineAction) {
 
 async function submit() {
   const content = draft.value.trim();
-  if (!content || !session.value || busy.value) return;
+  if (!content || !session.value || busy.value || !available.value || connection.blocked.value) return;
   const submittedSession = session.value;
   draft.value = "";
   try {
@@ -292,8 +297,16 @@ watch(
       />
 
       <footer class="shrink-0 space-y-2 border-t border-default p-3">
+        <UAlert
+          v-if="connectionNotice"
+          icon="i-lucide-wifi-off"
+          color="warning"
+          variant="subtle"
+          :title="connectionNotice"
+          role="status"
+        />
         <div
-          v-if="session.errorCode || session.errorText"
+          v-else-if="session.errorCode || session.errorText"
           class="flex items-start gap-2 rounded-lg bg-error/10 p-2 text-[11px] text-error"
         >
           <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
@@ -325,7 +338,7 @@ watch(
         <AiComposer
           v-model="draft"
           :show-policy="Boolean(approvalSession)"
-          :busy="busy || !available || approvalProcessing"
+          :busy="busy || !available || approvalProcessing || connection.blocked.value"
           :running="running"
           :action-label="t('RightPanel.AISend')"
           :interrupt-label="t('RightPanel.AIInterrupt')"

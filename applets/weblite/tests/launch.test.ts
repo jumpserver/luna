@@ -35,17 +35,13 @@ test("empty or terminal stdin starts an unrestricted standalone browser without 
     assert.equal(result.targetUrl, "https://www.jumpserver.org/");
     assert.equal(result.standalone, true);
     assert.equal(result.safeMode, false);
-    assert.equal(result.recordingEnabled, false);
     assert.equal(result.localSession, null);
   }
   await assert.rejects(readLaunch(Readable.from([" "])), SyntaxError);
 });
 test("direct launch needs no Koko endpoint or token and releases credentials once on the permitted origin", async () => {
   const result = await readLaunch(Readable.from([JSON.stringify(launch)]));
-  assert.equal(result.recordingEnabled, false);
   assert.equal(result.standalone, false);
-  assert.equal(result.proxyUrl, "");
-  assert.equal(result.tokenValue, "");
   assert.ok(!JSON.stringify(result).includes("one-use-secret"));
   assert.equal((result.localSession as any).selectors.interactive, "id=mfa");
   assert.equal((result.localSession as any).selectors.success, "id=dashboard");
@@ -75,7 +71,7 @@ test("script credentials are bound to explicit SSO origins and disposal prevents
   (result.localSession as any).dispose();
   await assert.rejects(releaseCredentials(result.localSession, "https://sso.example.com"), /会话已结束/);
 });
-test("Koko recording mode only carries a token into the main process", () => {
+test("obsolete proxy and recording options cannot enable a Koko session", async () => {
   const result = parseLaunch({
     ...launch,
     recording_enabled: true,
@@ -83,8 +79,13 @@ test("Koko recording mode only carries a token into the main process", () => {
     token_id: "id",
     token_value: "one-time"
   });
-  assert.equal(result.localSession, null);
-  assert.equal(result.tokenValue, "one-time");
+  assert.ok(result.localSession);
+  for (const key of ["proxyUrl", "recordingEnabled", "tokenId", "tokenValue"])
+    assert.ok(!(key in result), `applet launch must not include ${key}`);
+  assert.deepEqual(await releaseCredentials(result.localSession, launch.target_url), {
+    username: "tester",
+    password: "one-use-secret"
+  });
   assert.ok(!JSON.stringify(result).includes("one-use-secret"));
 });
 test("rejects invalid configuration and oversized pipes", async () => {
@@ -92,8 +93,7 @@ test("rejects invalid configuration and oversized pipes", async () => {
     { target_url: "file:///etc/passwd" },
     { target_url: "https://user:secret@example.com" },
     { safe_mode: "false" },
-    { recording_enabled: "false" },
-    { recording_enabled: true },
+    { recording_enabled: true, login: undefined },
     { login: { config: { autofill: "basic" }, password: "secret" } },
     { login: { config: { autofill: "script", script: [{ step: 1, command: "select_frame", target: "id=login" }] } } }
   ])

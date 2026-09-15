@@ -1,4 +1,5 @@
 import type { useWorkspaceAssistantRuntime } from "./useWorkspaceAssistantSession";
+import { workspaceAiEnabled } from "~/shared/aiAvailability";
 import {
   getActiveKokoTerminalAiTargetId,
   getKokoTerminalAiSessions
@@ -25,7 +26,7 @@ export function useWorkspaceAssistantPanelSession(runtime: ReturnType<typeof use
   const activeTargetId = computed(() => getActiveKokoTerminalAiTargetId(runtime.tabs.activePaneId.value) || "");
   const context = computed(() => {
     const { loggedIn, currentSite, currentAccountId, orgId } = runtime.userInfoStore;
-    return loggedIn && [currentSite, currentAccountId, orgId].some(Boolean)
+    return workspaceAiEnabled.value && loggedIn && [currentSite, currentAccountId, orgId].some(Boolean)
       ? JSON.stringify([currentSite, currentAccountId, orgId])
       : "";
   });

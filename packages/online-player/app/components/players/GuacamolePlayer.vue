@@ -6,9 +6,10 @@ import type {
   GuacamoleStatic,
   GuacamoleTunnel
 } from "#online-player/types/guacamole";
+import type { VisibleRect } from "#online-player/utils/guacamoleBounds";
 
 import * as GuacamoleModule from "guacamole-common-js-jumpserver/dist/guacamole-common";
-import { fitDisplayScale } from "#online-player/utils/guacamoleBounds";
+import { accumulateVisibleBounds, visibleBoundsFromAlpha } from "#online-player/utils/guacamoleBounds";
 import { applyGuacamolePlaybackRate } from "#online-player/utils/guacamolePlayback";
 import { interpretTouchGesture } from "#online-player/utils/touchSeek";
 
@@ -47,6 +48,8 @@ let touchStart: { x: number; y: number; t: number } | null = null;
 let lastPosition = 0;
 let loadController: AbortController | null = null;
 let seekSequence = 0;
+let visibleBounds: VisibleRect | null = null;
+let boundsTimers: number[] = [];
 
 const applySpeed = () => {
   applyGuacamolePlaybackRate(recording, props.speed);
@@ -69,28 +72,66 @@ const layerSize = () => {
   };
 };
 
+const sampleVisibleBounds = () => {
+  const layer = display?.getDefaultLayer?.();
+  const canvas = layer?.getCanvas?.();
+  const { width: fullWidth, height: fullHeight } = layerSize();
+  if (!fullWidth || !fullHeight) return;
+
+  let sampled: VisibleRect | null = null;
+  if (canvas) {
+    try {
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (context) {
+        sampled = visibleBoundsFromAlpha(
+          context.getImageData(0, 0, canvas.width || fullWidth, canvas.height || fullHeight).data,
+          canvas.width || fullWidth,
+          canvas.height || fullHeight
+        );
+      }
+    } catch {
+      // tainted or empty canvas: wait for a later sample
+    }
+  }
+  if (!sampled) return;
+
+  visibleBounds = accumulateVisibleBounds(visibleBounds, sampled, fullWidth, fullHeight);
+};
+
 const applyScale = () => {
   if (!recording || !display || !playerAreaRef.value || !viewportRef.value) return;
   const { width: fullWidth, height: fullHeight } = layerSize();
   if (!fullWidth || !fullHeight) return;
 
-  const scale = fitDisplayScale(
-    playerAreaRef.value.clientWidth,
-    playerAreaRef.value.clientHeight,
-    fullWidth,
-    fullHeight
-  );
-  display.scale(scale);
+  const bounds = visibleBounds || { left: 0, top: 0, width: fullWidth, height: fullHeight };
+  const visibleWidth = bounds.width || fullWidth;
+  const visibleHeight = bounds.height || fullHeight;
+  const width = playerAreaRef.value.clientWidth;
+  const height = playerAreaRef.value.clientHeight;
+  if (!width || !height) return;
 
-  viewportRef.value.style.width = `${Math.round(fullWidth * scale)}px`;
-  viewportRef.value.style.height = `${Math.round(fullHeight * scale)}px`;
+  const scaleX = width / visibleWidth;
+  const scaleY = height / visibleHeight;
+  viewportRef.value.style.width = "100%";
+  viewportRef.value.style.height = "100%";
 
   const element = display.getElement();
   element.style.position = "absolute";
   element.style.margin = "0";
-  element.style.left = "0";
-  element.style.top = "0";
+  element.style.left = `${-bounds.left * scaleX}px`;
+  element.style.top = `${-bounds.top * scaleY}px`;
   element.style.transformOrigin = "0 0";
+  element.style.transform = `scale(${scaleX}, ${scaleY})`;
+};
+
+const sampleAndScale = () => {
+  sampleVisibleBounds();
+  applyScale();
+};
+
+const scheduleBoundsSampling = () => {
+  boundsTimers.forEach((id) => window.clearTimeout(id));
+  boundsTimers = [80, 220, 480, 900].map((delay) => window.setTimeout(sampleAndScale, delay));
 };
 
 const applyScaleWithRetry = (delay = 100, retries = 5) => {
@@ -163,6 +204,7 @@ const performSeek = (request: SeekRequest) => {
     lastPosition = recording.getPosition();
     emit("position", lastPosition);
     emit("seeking", false);
+    sampleAndScale();
     applyScaleWithRetry();
     settleSeek(request);
     tryStartPlayback();
@@ -237,6 +279,9 @@ const destroy = () => {
     element.parentNode?.removeChild(element);
   }
 
+  boundsTimers.forEach((id) => window.clearTimeout(id));
+  boundsTimers = [];
+  visibleBounds = null;
   recording = null;
   display = null;
   sourceTunnel = null;
@@ -287,12 +332,16 @@ const mount = () => {
   recording.onplay = () => {
     emit("playing", true);
     emit("ready");
+    sampleAndScale();
     applyScaleWithRetry();
+    scheduleBoundsSampling();
   };
   recording.onpause = () => emit("playing", false);
   recording.onseek = (millis: number) => {
     lastPosition = millis;
     emit("position", millis);
+    sampleAndScale();
+    scheduleBoundsSampling();
   };
   recording.onerror = (message: string) => emit("error", String(message || ""));
   recording.onprogress = (millis: number) => {
@@ -396,7 +445,7 @@ defineExpose(handle);
     @touchstart.passive="onTouchStart"
     @touchend="onTouchEnd"
   >
-    <div ref="viewportRef" class="relative overflow-hidden" data-guacamole-viewport>
+    <div ref="viewportRef" class="relative h-full w-full overflow-hidden" data-guacamole-viewport>
       <div ref="hostRef" class="absolute inset-0" />
     </div>
   </div>

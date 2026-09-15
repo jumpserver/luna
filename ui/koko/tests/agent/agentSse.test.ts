@@ -1,5 +1,124 @@
 import { expect, it, vi } from "vitest";
-import { AgentSseConnection, AgentStreamHttpError, createAgentSseParser } from "#koko/composables/agent/agentSse";
+import {
+  AgentSseConnection,
+  AgentStreamHttpError,
+  createAgentSseParser,
+  openAgentStream
+} from "#koko/composables/agent/agentSse";
+import { isDesktopRuntime } from "~/utils/runtime";
+
+vi.mock("~/utils/runtime", async (original) => ({
+  ...(await original<typeof import("~/utils/runtime")>()),
+  isDesktopRuntime: vi.fn(() => false)
+}));
+
+it("cancels an Electron stream even before its start request returns", async () => {
+  vi.mocked(isDesktopRuntime).mockReturnValueOnce(true);
+  let started!: () => void;
+  const pendingStart = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  const invoke = vi.fn((command: string) => (command === "api_stream_start" ? pendingStart : Promise.resolve()));
+  vi.stubGlobal("__JMS_DESKTOP__", {
+    invoke,
+    listen: vi.fn().mockResolvedValue({ eventId: 1, callbackId: 1 }),
+    unlisten: vi.fn().mockResolvedValue(undefined)
+  });
+  const controller = new AbortController();
+  const onOpen = vi.fn();
+  try {
+    const stream = openAgentStream({
+      sessionId: "panel-1",
+      resourceSessionId: "resource-1",
+      after: 7,
+      signal: controller.signal,
+      onOpen,
+      onChunk: vi.fn()
+    });
+    const rejected = expect(stream).rejects.toMatchObject({ name: "AbortError" });
+    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("api_stream_start", expect.anything()));
+    controller.abort();
+    await rejected;
+    started();
+    await pendingStart;
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledWith("api_stream_cancel", expect.anything());
+  } finally {
+    controller.abort();
+    started();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("resumes the original stream after a long offline period without losing or repeating messages", async () => {
+  const network = typeof window === "undefined" ? new EventTarget() : window;
+  const navigator = { onLine: true };
+  if (typeof window === "undefined") vi.stubGlobal("window", network);
+  vi.stubGlobal("navigator", navigator);
+  let now = 0;
+  const events: number[] = [];
+  const cursors: number[] = [];
+  const onUnavailable = vi.fn();
+  const connection = new AgentSseConnection({
+    sessionId: "panel-1",
+    resourceSessionId: "resource-1",
+    now: () => now,
+    opener: async ({ after, onOpen, onChunk, signal }) => {
+      cursors.push(after);
+      onOpen();
+      onChunk('data: {"seq":1,"type":"message.delta","payload":{"delta":"first"}}\n\n');
+      if (cursors.length > 1) {
+        onChunk('data: {"seq":2,"type":"message.delta","payload":{"delta":"second"}}\n\n');
+        onChunk('data: {"seq":3,"type":"run.completed","run_id":"run-1"}\n\n');
+      }
+      await new Promise<void>((_resolve, reject) =>
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true })
+      );
+    },
+    onEvent: (event) => events.push(event.seq),
+    onUnavailable
+  });
+  try {
+    const running = connection.start();
+    expect(events).toEqual([1]);
+    navigator.onLine = false;
+    network.dispatchEvent(new Event("offline"));
+    await Promise.resolve();
+    now = 120_000;
+    expect(cursors).toEqual([0]);
+    navigator.onLine = true;
+    network.dispatchEvent(new Event("online"));
+    await vi.waitFor(() => expect(events).toEqual([1, 2, 3]));
+    expect(cursors).toEqual([0, 1]);
+    expect(onUnavailable).not.toHaveBeenCalled();
+    connection.stop();
+    await running;
+  } finally {
+    connection.stop();
+    vi.unstubAllGlobals();
+  }
+});
+
+it.each([
+  new AgentStreamHttpError(409, '{"code":"panel_closed"}'),
+  new Error('api stream failed: status=409, body={"code":"panel_expired"}')
+])("hands an expired browser or desktop panel back without reconnecting it", async (error) => {
+  const opener = vi.fn().mockRejectedValue(error);
+  const wait = vi.fn();
+  const onUnavailable = vi.fn();
+  const connection = new AgentSseConnection({
+    sessionId: "expired",
+    resourceSessionId: "resource-1",
+    opener,
+    wait,
+    onUnavailable,
+    onEvent: vi.fn()
+  });
+  await connection.start();
+  expect(opener).toHaveBeenCalledOnce();
+  expect(onUnavailable).toHaveBeenCalledExactlyOnceWith(error);
+  expect(wait).not.toHaveBeenCalled();
+});
 
 it("parses bounded split SSE events with ids and multiline data", () => {
   const events: unknown[] = [];

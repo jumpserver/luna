@@ -1,3 +1,5 @@
+import { defineStore } from "pinia";
+import { useErrorToast } from "~/composables/useErrorToast";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 
 type UnlistenFn = () => void;
@@ -70,6 +72,8 @@ export const useTranscodeStore = defineStore(
 
     const archivePaths = ref<string[]>([]);
     const outputDir = ref("");
+    // File-dialog authorization is process-local; persisted paths require re-selection after restart.
+    const outputDirAuthorized = ref(false);
     const filenameStyle = ref<FilenameStyle>("original");
     const outputResolution = ref<OutputResolution>("original");
     const transcodePower = ref<TranscodePower>("fast");
@@ -230,6 +234,7 @@ export const useTranscodeStore = defineStore(
 
     const setOutputDir = (dir: string) => {
       outputDir.value = dir;
+      outputDirAuthorized.value = true;
     };
 
     const setFilenameStyle = (style: FilenameStyle) => {
@@ -397,7 +402,7 @@ export const useTranscodeStore = defineStore(
         }
       }
 
-      if (!outputDir.value) {
+      if (!outputDir.value || !outputDirAuthorized.value) {
         addErrorToast({
           title: t("Transcode.SelectOutputDirFirst"),
           icon: "line-md:close-circle",
@@ -462,6 +467,7 @@ export const useTranscodeStore = defineStore(
     return {
       archivePaths,
       outputDir,
+      outputDirAuthorized,
       filenameStyle,
       outputResolution,
       transcodePower,

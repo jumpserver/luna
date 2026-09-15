@@ -1,4 +1,5 @@
 import type { WorkspaceMode } from "~/composables/useWorkspaceMode";
+import { workspaceAiEnabled } from "~/shared/aiAvailability";
 
 export type UnifiedAiPanelKind = "workspace" | "resource";
 
@@ -13,7 +14,7 @@ interface UnifiedAiPanelContext {
   sessionKind?: "file" | "terminal" | "sql" | "script";
 }
 
-const openTabs = shallowReactive(new WeakSet<object>());
+const openTabs = shallowRef(new WeakSet<object>());
 const openWithoutTab = shallowRef(false);
 interface TerminalPromptBinding {
   loginContext: string;
@@ -24,6 +25,17 @@ const pendingTerminalPrompt = shallowRef<({ id: string; paneId: string; text: st
   null
 );
 const panelWidth = shallowRef(AI_PANEL_DEFAULT_WIDTH);
+
+watch(
+  workspaceAiEnabled,
+  (enabled) => {
+    if (enabled) return;
+    openTabs.value = new WeakSet();
+    openWithoutTab.value = false;
+    pendingTerminalPrompt.value = null;
+  },
+  { flush: "sync" }
+);
 
 export function resolveUnifiedAiPanel(context: UnifiedAiPanelContext): UnifiedAiPanelKind {
   if (context.sessionKind && context.sessionKind !== "terminal") return "resource";
@@ -39,18 +51,21 @@ export function aiPanelFloats(kind: UnifiedAiPanelKind, surface: string, narrow 
 export const useAiPanel = () => {
   const { activeTab } = useWorkspaceTabs();
   const open = computed(() => {
+    if (!workspaceAiEnabled.value) return false;
     const tab = activeTab.value;
-    return tab ? openTabs.has(tab) : openWithoutTab.value;
+    return tab ? openTabs.value.has(tab) : openWithoutTab.value;
   });
 
   const setOpen = (value: boolean) => {
+    if (value && !workspaceAiEnabled.value) return;
     const tab = activeTab.value;
     if (!tab) {
       openWithoutTab.value = value;
       return;
     }
-    if (value) openTabs.add(tab);
-    else openTabs.delete(tab);
+    if (value) openTabs.value.add(tab);
+    else openTabs.value.delete(tab);
+    triggerRef(openTabs);
   };
 
   const setPanelWidth = (width: number) => {
@@ -70,6 +85,7 @@ export const useAiPanel = () => {
   };
 
   const requestTerminalPrompt = (paneId: string, text: string, binding: TerminalPromptBinding) => {
+    if (!workspaceAiEnabled.value) return;
     pendingTerminalPrompt.value = { id: globalThis.crypto.randomUUID(), paneId, text, ...binding };
   };
   const takeTerminalPrompt = (id: string) => {
