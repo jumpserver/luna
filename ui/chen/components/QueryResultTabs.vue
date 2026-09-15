@@ -132,7 +132,7 @@ function cancelActiveResultChanges() {
 </script>
 
 <template>
-  <div class="flex min-h-0 flex-col">
+  <div class="flex min-h-0 min-w-0 flex-col">
     <div class="shrink-0 border-b border-default px-2 py-1">
       <div class="flex items-center gap-1">
         <div
@@ -163,14 +163,14 @@ function cancelActiveResultChanges() {
       </div>
     </div>
 
-    <div v-if="!activeResult" class="grid min-h-0 flex-1 place-items-center px-6 text-sm text-muted">
+    <div v-if="!activeResult" class="grid min-h-0 min-w-0 flex-1 place-items-center px-6 text-sm text-muted">
       <div class="text-center">
         <UIcon name="i-lucide-table-properties" class="mx-auto mb-2 size-5" />
         <p>{{ emptyMessage }}</p>
       </div>
     </div>
 
-    <div v-else-if="activeResult" :key="activeResult.id" class="flex min-h-0 flex-1 flex-col">
+    <div v-else-if="activeResult" :key="activeResult.id" class="flex min-h-0 min-w-0 flex-1 flex-col">
       <div
         v-if="activeResultMissingPrimaryKey"
         class="border-b border-warning/20 bg-warning/10 px-3 py-1.5 text-xs text-warning"
@@ -220,14 +220,14 @@ function cancelActiveResultChanges() {
       </div>
       <div
         v-if="activeResult.affectedRows !== undefined"
-        class="grid min-h-0 flex-1 place-items-center px-6 text-sm text-muted"
+        class="grid min-h-0 min-w-0 flex-1 place-items-center px-6 text-sm text-muted"
       >
         <div class="text-center">
           <UIcon name="i-lucide-circle-check" class="mx-auto mb-2 size-6 text-success" />
           <p class="font-medium text-default">{{ t("Chen.StatementExecutedSuccessfully") }}</p>
         </div>
       </div>
-      <div v-else class="min-h-0 flex-1 overflow-auto">
+      <div v-else class="min-h-0 min-w-0 flex-1 overflow-hidden">
         <ChenDataGrid
           ref="dataGrid"
           :key="`${activeResult.id}:${activeResult.data?.fields?.map((field) => field.name).join(',') || ''}:${activeResult.data?.data?.length || 0}`"

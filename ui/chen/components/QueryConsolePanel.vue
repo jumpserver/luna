@@ -355,8 +355,8 @@ defineExpose({ editorSnapshot });
 </script>
 
 <template>
-  <div ref="queryPanel" class="grid h-full min-h-0" :style="queryPanelRows">
-    <div class="relative flex min-h-0 flex-col overflow-hidden px-3 pt-3 pb-[3px]">
+  <div ref="queryPanel" class="grid h-full min-h-0 min-w-0 grid-cols-1" :style="queryPanelRows">
+    <div class="relative flex min-h-0 min-w-0 flex-col overflow-hidden px-3 pt-3 pb-[3px]">
       <div class="mb-2 flex shrink-0 items-center gap-2">
         <UButton
           v-if="tab.state.inQuery || tab.state.canCancel || tab.executionPlanLoading"
@@ -430,11 +430,11 @@ defineExpose({ editorSnapshot });
           </UButton>
         </UDropdownMenu>
       </div>
-      <div class="relative flex min-h-0 flex-1">
+      <div class="relative flex min-h-0 min-w-0 flex-1">
         <ChenSqlEditor
           ref="sqlEditor"
           v-model="statementValue"
-          class="min-h-0 flex-1"
+          class="min-h-0 min-w-0 flex-1"
           :db-type="dbType"
           :completion-source="completionSource"
           :sql-keyword-case="sqlKeywordCase"
@@ -481,7 +481,7 @@ defineExpose({ editorSnapshot });
       <div class="absolute -inset-y-1.5 inset-x-0" />
     </div>
 
-    <div class="flex min-h-0 flex-col">
+    <div class="flex min-h-0 min-w-0 flex-col">
       <div class="flex shrink-0 items-center gap-1 border-b border-default px-2 py-1">
         <button
           class="rounded-md px-2 py-1 text-xs"
@@ -500,7 +500,7 @@ defineExpose({ editorSnapshot });
       </div>
       <QueryResultTabs
         v-if="tab.activeBottomPane !== 'plan'"
-        class="min-h-0 flex-1"
+        class="min-h-0 min-w-0 flex-1"
         :result-tabs="tab.resultTabs"
         :active-result-tab-id="tab.activeResultTabId"
         closable
@@ -513,7 +513,12 @@ defineExpose({ editorSnapshot });
         @close="emit('closeResult', tab, $event)"
         @data-view-action="(result, action, data) => emit('dataViewAction', tab, result, action, data)"
       />
-      <ExecutionPlanTree v-else class="min-h-0 flex-1" :plan="tab.executionPlan" :loading="tab.executionPlanLoading" />
+      <ExecutionPlanTree
+        v-else
+        class="min-h-0 min-w-0 flex-1"
+        :plan="tab.executionPlan"
+        :loading="tab.executionPlanLoading"
+      />
     </div>
 
     <SqlSnippetSaveDialog
