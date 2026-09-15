@@ -1,0 +1,36 @@
+diff --git a/lib/appdmg.js b/lib/appdmg.js
+index 77748bfcdaf55ea9597f65b03c9953c63ffa50dc..ade23ea0f311a18d88b4344362430b64e10a78eb 100644
+--- a/lib/appdmg.js
++++ b/lib/appdmg.js
+@@ -223,11 +223,13 @@ module.exports = exports = function (options) {
+    **/
+ 
+   pipeline.addStep('Mounting temporary image', function (next) {
+-    hdiutil.attach(global.temporaryImagePath, function (err, temporaryMountPath) {
++    hdiutil.attach(global.temporaryImagePath, function (err, temporaryMountPath, temporaryDevice) {
+       if (err) return next(err)
+ 
+       pipeline.addCleanupStep('unmount-temporary-image', 'Unmounting temporary image', function (next) {
+-        hdiutil.detach(temporaryMountPath, next)
++        // A busy detach can unmount the volume before failing. Retry the device,
++        // since the mount path may no longer exist: LinusU/node-appdmg#228.
++        hdiutil.detach(temporaryDevice, next)
+       })
+ 
+       global.temporaryMountPath = temporaryMountPath
+diff --git a/lib/hdiutil.js b/lib/hdiutil.js
+index a85a3af77883bfd25480db3426a491c4c6ad1632..7f072ba9f999a45d0450b864eea33364426d7a16 100644
+--- a/lib/hdiutil.js
++++ b/lib/hdiutil.js
+@@ -56,7 +56,10 @@ exports.attach = function (path, cb) {
+     const m = /\s+(\/Volumes\/.+)$/m.exec(res.stdout)
+     if (m === null) return cb(new Error('Failed to mount image'))
+ 
+-    cb(null, m[1])
++    const device = /^(\/dev\/disk\d+)\s/m.exec(res.stdout)
++    if (device === null) return cb(new Error('Failed to find mounted image device'))
++
++    cb(null, m[1], device[1])
+   })
+ }
+ 

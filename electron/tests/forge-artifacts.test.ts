@@ -5,12 +5,57 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { promisify } from "node:util";
 import { createJiti } from "jiti";
 import { MakerNsis } from "../maker-nsis";
 import { MakerWix } from "@electron-forge/maker-wix";
 
 // Load the configuration with the same TypeScript loader used by Electron Forge.
 const configPromise = createJiti(import.meta.url).import<ForgeConfig>("../forge.config.ts", { default: true });
+
+test(
+  "DMG cleanup retries the device after the volume has been unmounted",
+  { skip: process.platform !== "darwin" },
+  async (context) => {
+    const require = createRequire(import.meta.url);
+    const installerRequire = createRequire(require.resolve("electron-installer-dmg"));
+    const appdmgRequire = createRequire(installerRequire.resolve("appdmg"));
+    const appdmg = installerRequire("appdmg");
+    const Pipeline = appdmgRequire("./lib/pipeline");
+    const util = appdmgRequire("./lib/util");
+
+    // Exercise the installed dependency's mount/cleanup steps without mounting disks.
+    context.mock.method(Pipeline.prototype, "run", function () {
+      return this;
+    });
+    for (const stdout of [
+      "/dev/disk4\tApple_partition_scheme\n/dev/disk4s1\tApple_HFS\t/Volumes/JumpServer Test\n",
+      "/dev/disk4\tGUID_partition_scheme\n/dev/disk4s2\tApple_APFS\n/dev/disk5\tEF57347C-0000-11AA-AA11-00306543ECAC\n/dev/disk5s1\t41504653-0000-11AA-AA11-00306543ECAC\t/Volumes/JumpServer Test\n"
+    ]) {
+      const detachTargets: string[] = [];
+      context.mock.method(util, "sh", (_command, args, callback) => {
+        if (args[0] === "attach") return callback(null, { stdout });
+        assert.equal(args[0], "detach");
+        detachTargets.push(args[1]);
+        if (detachTargets.length === 1) {
+          return callback(Object.assign(new Error("Resource busy after unmount"), { code: 16 }));
+        }
+        if (args[1].startsWith("/Volumes/")) {
+          return callback(Object.assign(new Error("No such file or directory"), { code: 2 }));
+        }
+        callback(null);
+      });
+      const pipeline = appdmg({ target: "unused.dmg", basepath: ".", specification: {} });
+      await promisify(pipeline.steps.find((step) => step.title === "Mounting temporary image").fn)();
+      await promisify(pipeline.steps.find((step) => step.title === "Unmounting temporary image").fn)();
+      assert.deepEqual(detachTargets, ["/dev/disk4", "/dev/disk4"]);
+    }
+
+    const denied = Object.assign(new Error("Permission denied"), { code: 13 });
+    context.mock.method(util, "sh", (_command, _args, callback) => callback(denied));
+    await assert.rejects(promisify(appdmgRequire("./lib/hdiutil").detach)("/dev/disk4"), denied);
+  }
+);
 
 test("NSIS builder resolves the download cache API required on clean machines", () => {
   const require = createRequire(import.meta.url);

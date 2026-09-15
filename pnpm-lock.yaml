@@ -10,6 +10,7 @@ overrides:
   cpu-features: '-'
 
 patchedDependencies:
+  appdmg@0.6.6: 208b2b32fa6a07776e075aee98bb75932e978d50b4ab9aca620fa5118b30e172
   asciinema-player@3.17.0: 670395619c52cad1e2369c01ff5e88c0e601fb052483077eaee25b9351a7633c
   guacamole-common-js-jumpserver@1.1.0-c: a0f8b8a251adeeccc58f741db3ab841b4ff8b61519227b3032f3dc1eb2048d23
 
@@ -14876,7 +14877,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  appdmg@0.6.6:
+  appdmg@0.6.6(patch_hash=208b2b32fa6a07776e075aee98bb75932e978d50b4ab9aca620fa5118b30e172):
     dependencies:
       async: 1.5.2
       ds-store: 0.1.6
@@ -15744,7 +15745,7 @@ snapshots:
       debug: 4.4.3
       minimist: 1.2.8
     optionalDependencies:
-      appdmg: 0.6.6
+      appdmg: 0.6.6(patch_hash=208b2b32fa6a07776e075aee98bb75932e978d50b4ab9aca620fa5118b30e172)
     transitivePeerDependencies:
       - supports-color
     optional: true
