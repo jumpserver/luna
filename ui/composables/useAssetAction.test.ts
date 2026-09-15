@@ -2,6 +2,7 @@ import type { WorkspaceSessionTab } from "./useWorkspaceTabs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
 import { resolveSessionComponent, resolveSessionSurface } from "~/shared/connectors/registry";
+import { ApiRequestError } from "./useApiRequest";
 import { useAssetAction } from "./useAssetAction";
 import { useRdpResolutionPreference } from "./useRdpResolutionPreference";
 import { useWebProxyManager } from "./useWebProxyManager";
@@ -39,7 +40,8 @@ vi.mock("~/shared/desktop/bridge", () => ({
   desktopFs: { writeFile: mocks.writeFile }
 }));
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => mocks.store }));
-vi.mock("~/composables/useApiRequest", () => ({
+vi.mock("~/composables/useApiRequest", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/composables/useApiRequest")>()),
   getAssetDetailRequest: mocks.getAssetDetail,
   getConnectionRdpFile: mocks.getRdpFile,
   getLunaPreferences: mocks.getLunaPreferences,
@@ -164,6 +166,21 @@ describe("opening assets in local applications", () => {
     await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
     return { ready, failed };
   }
+
+  it.each([
+    [{ code: "perm_account_invalid" }, "ConnectError.AccountUnavailable"],
+    [{ code: "personal_credential_version_conflict" }, "ConnectError.CredentialChanged"],
+    [{ input_secret: ["Required"] }, "ConnectError.SecretRequired"],
+    [{ code: "unknown", detail: "Backend detail" }, "Backend detail"],
+    [{}, "HTTP 400"]
+  ])("maps connection token errors before showing the toast", async (data, description) => {
+    mocks.createToken.mockRejectedValue(new ApiRequestError(400, data));
+
+    const { failed } = await connect();
+
+    expect(failed).toHaveBeenCalledWith(expect.any(ApiRequestError));
+    expect(mocks.errorToast).toHaveBeenCalledWith(expect.objectContaining({ description }));
+  });
 
   describe("RDP file downloads", () => {
     const content = "full address:s:rdp.example\r\nusername:s:用户\r\n";
