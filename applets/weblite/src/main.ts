@@ -1,12 +1,18 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu } from "electron";
 import { mkdtemp, rm } from "node:fs/promises";
+import { createReadStream } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { isatty } from "node:tty";
 import { createWebProxyManager } from "@jumpserver/web-proxy/manager";
 import { readLaunch } from "./launch";
 
 async function start() {
-  const launch = await readLaunch(process.stdin);
+  // Electron replaces process.stdin with an EOF-only stream on Windows.
+  // Read the inherited descriptor directly so AppletArgs survives native launches.
+  const input =
+    process.platform === "win32" && !isatty(0) ? createReadStream("", { fd: 0, autoClose: false }) : process.stdin;
+  const launch = await readLaunch(input);
   const profile = await mkdtemp(path.join(os.tmpdir(), "weblite-applet-"));
   app.setPath("userData", profile);
   app.setName("JumpServer WebLite");

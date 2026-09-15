@@ -3,7 +3,6 @@ import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import electron from "electron";
 import { chromium } from "playwright";
 
 const applet = fileURLToPath(new URL("..", import.meta.url));
@@ -28,7 +27,8 @@ const server = createServer((req, res) => {
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const target = `http://127.0.0.1:${server.address().port}/${standalone ? "standalone" : "login"}?from=applet&name=%E6%B5%8B%E8%AF%95#entry`;
-const child = spawn(electron, ["--remote-debugging-port=0", applet], {
+const executable = process.env.WEBLITE_EXECUTABLE || (await import("electron")).default;
+const child = spawn(executable, ["--remote-debugging-port=0", ...(process.env.WEBLITE_EXECUTABLE ? [] : [applet])], {
   stdio: [standalone ? "ignore" : "pipe", "pipe", "pipe"]
 });
 let stderr = "";

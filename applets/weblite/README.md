@@ -6,6 +6,8 @@ Luna 工作区中的独立 Electron 浏览器，用于替换内置 Chrome。Tink
 
 Applet 清单声明 `exec_type: exe` 和 `stdin: true`，接收通用 `AppletArgs` JSON。WebLite 从 `asset.address` 解析地址并自动打开、显示到地址栏；即使 `autofill` 为 `none`，也不需要手工输入地址。如果启动后显示 JumpServer 官网且地址栏可编辑，说明进入了独立浏览模式，应检查清单的 `stdin: true` 是否生效、Tinker 是否支持通用 JSON 启动管道。MSI 部署的清单必须指向 `app-<version>/weblite.exe`，根目录的 MSI 启动器不能保证保留管道。清单中的版本目录需与实际安装版本一致。
 
+Windows 上 Electron 将 `process.stdin` 替换为空流，WebLite 必须直接读取继承的标准输入描述符 `0`。未包含此修复的版本即使收到正确的 Applet 管道，也会误进独立浏览模式并打开官网。
+
 ## 连接链路
 
 ```text
@@ -45,6 +47,8 @@ pnpm weblite:package
 ```
 
 `test:runtime` 启动真实 Electron，使用本地测试站验证资产地址自动打开（含查询参数和片段）、Applet 地址栏只读、无账号代填和匿名账号的地址启动、平台配置回退、无 Koko 的基本/脚本登录、隐藏成功元素的处理、IPC 隔离和窗口退出，还会验证旧版代理/录像参数不会启用 Koko，渲染进程无法启动 Web 录像。交互回归覆盖验证码输入、按钮点击、拖动、失败后再次验证及脚本流程。
+
+设置环境变量 `WEBLITE_EXECUTABLE` 为打包后的实际 `weblite.exe` 绝对路径，再运行 `test:runtime`，可对独立包执行同一套启动管道回归，避免仅测试内存流而漏掉 Windows / Electron 的标准输入差异。
 
 Windows x64 安装包输出到 `release/weblite/JumpServer-WebLite-<version>-x64.msi`。这是一个 per-machine MSI，会将完整运行时安装到 `Program Files/JumpServer/Weblite`，无需预装 Chrome、ChromeDriver 或 Python。CI 只发布这个安装包，不附带 applet 的 `manifest.yml`、`setup.yml` 或独立图标文件。
 
