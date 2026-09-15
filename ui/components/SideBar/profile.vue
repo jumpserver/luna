@@ -205,7 +205,7 @@ const currentAppearanceLabel = computed(
 const menuTabsUi = {
   root: "w-full",
   list: "w-full rounded-[length:var(--app-radius)] bg-[var(--app-surface-panel)] p-1 ring-1 ring-[var(--app-border)]",
-  indicator: "rounded-[length:var(--app-radius)] bg-[var(--app-state-selected)] shadow-none",
+  indicator: "rounded-[length:var(--app-radius)] bg-[var(--app-state-hover-strong)] shadow-none",
   trigger:
     "flex-1 rounded-[length:var(--app-radius)] px-3 data-[state=inactive]:text-[var(--app-text-secondary)] data-[state=active]:text-highlighted focus-visible:outline-[var(--app-focus-ring)]"
 };

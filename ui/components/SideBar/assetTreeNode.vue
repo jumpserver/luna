@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AssetTreeKind, AssetTreeNode } from "~/types";
-import { withBase } from "ufo";
+import { resolveAssetIconFromCandidates } from "~/utils/assetIcon";
 
 defineOptions({ name: "AssetTreeNode" });
 
@@ -83,39 +83,13 @@ const typeGroupIcon = computed(() => {
   return "";
 });
 
-const iconSrc = computed(() => {
-  if (isParent.value) return "";
-
-  const candidates = iconCandidates.value;
-
-  const has = (keyword: string) => candidates.some((value) => value.includes(keyword));
-
-  let src = "";
-  if (has("k8s") || has("kubernetes")) src = "/icons/kubernetes.svg";
-  else if (has("linux") || has("unix")) src = "/icons/linux.png";
-  else if (has("windows")) src = "/icons/windows.png";
-  else if (has("mysql")) src = "/icons/mysql.png";
-  else if (has("mariadb")) src = "/icons/mariadb.png";
-  else if (has("oracle")) src = "/icons/oracle.png";
-  else if (has("postgres")) src = "/icons/postgre.png";
-  else if (has("sqlserver")) src = "/icons/sqlserver.png";
-  else if (has("redis")) src = "/icons/redis.png";
-  else if (has("mongodb")) src = "/icons/mongodb.png";
-  else if (has("dameng")) src = "/icons/dameng.png";
-  else if (has("clickhouse")) src = "/icons/clickhouse.png";
-  else if (has("database")) src = "/icons/mysql.png";
-
-  return src ? withBase(src, appBaseURL) : "";
-});
+const assetIcon = computed(() => resolveAssetIconFromCandidates(iconCandidates.value, appBaseURL));
 
 const icon = computed(() => {
   if (props.node.meta?.type === "recent-connections") return "i-lucide-history";
   if (typeGroupIcon.value) return typeGroupIcon.value;
   if (isParent.value) return isOpen.value ? "i-tabler-folder-open" : "i-tabler-folder";
-  if (iconSrc.value) return "";
-  if (iconCandidates.value.some((value) => value.includes("web"))) return "i-lucide-globe";
-  if ((props.node.meta?.data?.platform_type || "").toLowerCase().includes("device")) return "i-lucide-router";
-  return "i-lucide-terminal";
+  return "";
 });
 const isFolderIcon = computed(() => icon.value === "i-tabler-folder" || icon.value === "i-tabler-folder-open");
 const assetCountTitle = computed(() =>
@@ -224,7 +198,7 @@ watch(
           class="app-tree-icon sidebar-icon tree-folder-icon"
         />
         <UIcon v-else-if="icon" :name="icon" class="app-tree-icon sidebar-icon" />
-        <img v-else-if="iconSrc" :src="iconSrc" alt="" class="app-tree-icon sidebar-icon-img" />
+        <AppTreeAssetIcon v-else :src="assetIcon.src" :fallback="assetIcon.fallback" />
         <span
           class="inline-flex min-w-0 flex-1 items-center font-medium"
           :class="!isParent ? 'font-ui-mono tracking-[0.01em]' : ''"

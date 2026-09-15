@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useUserInfoStore } from "~/store/modules/userInfo";
+
+const userInfoStore = useUserInfoStore();
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
 const localePath = useLocalePath();
@@ -45,7 +48,17 @@ const previewSidebar = () => {
 <template>
   <div class="relative z-20 flex h-full items-center gap-1" :class="isMacClient ? 'pl-[88px] pr-2' : 'px-2.5'">
     <div v-if="showHeaderLogo" class="mr-1.5 flex items-center">
-      <BrandLogo class="size-[22px] shrink-0" />
+      <ULink
+        v-if="userInfoStore.currentUser?.xpackLicenseValid === false"
+        to="https://github.com/jumpserver/jumpserver"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="JumpServer GitHub"
+        class="inline-flex"
+      >
+        <BrandLogo class="size-[22px] shrink-0" />
+      </ULink>
+      <BrandLogo v-else class="size-[22px] shrink-0" />
     </div>
 
     <template v-if="!collapse">

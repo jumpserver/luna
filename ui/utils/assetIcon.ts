@@ -1,23 +1,25 @@
 import { withBase } from "ufo";
 
 const iconMap: Record<string, string> = {
-  windows: "/icons/windows.png",
-  linux: "/icons/linux.png",
-  unix: "/icons/linux.png",
-  other: "/icons/linux.png",
-  mysql: "/icons/mysql.png",
-  mariadb: "/icons/mariadb.png",
-  oracle: "/icons/oracle.png",
-  postgresql: "/icons/postgre.png",
-  sqlserver: "/icons/sqlserver.png",
-  redis: "/icons/redis.png",
-  mongodb: "/icons/mongodb.png",
+  windows: "/icons/windows.svg",
+  linux: "/icons/linux.svg",
+  unix: "/icons/linux.svg",
+  other: "/icons/linux.svg",
+  mysql: "/icons/mysql.svg",
+  mariadb: "/icons/mariadb.svg",
+  oracle: "/icons/oracle.svg",
+  postgresql: "/icons/postgre.svg",
+  sqlserver: "/icons/sqlserver.svg",
+  redis: "/icons/redis.svg",
+  mongodb: "/icons/mongodb.svg",
   dameng: "/icons/dameng.png",
-  clickhouse: "/icons/clickhouse.png",
-  windows_ad: "/icons/windows.png",
-  website: "/icons/browser.png",
-  web: "/icons/browser.png",
-  database: "/icons/mysql.png",
+  clickhouse: "/icons/clickhouse.svg",
+  windows_ad: "/icons/windows.svg",
+  website: "/icons/chrome.svg",
+  web: "/icons/chrome.svg",
+  k8s: "/icons/kubernetes.svg",
+  kubernetes: "/icons/kubernetes.svg",
+  database: "",
   device: ""
 };
 
@@ -25,7 +27,8 @@ const withAppBase = (src: string, baseURL: string) => (src ? withBase(src, baseU
 
 function resolveAssetIconPath(type?: string) {
   const key = String(type || "linux").toLowerCase();
-  if (iconMap[key]) return iconMap[key];
+  if (Object.hasOwn(iconMap, key)) return iconMap[key]!;
+  if (key.includes("k8s") || key.includes("kubernetes")) return iconMap.kubernetes!;
   if (key.includes("linux") || key.includes("unix")) return iconMap.linux!;
   if (key.includes("windows")) return iconMap.windows!;
   if (key.includes("web")) return iconMap.website!;
@@ -48,6 +51,7 @@ export function resolveAssetIconSrc(type?: string, baseURL = "/") {
 
 export function resolveAssetIconFallback(type?: string) {
   const key = String(type || "").toLowerCase();
+  if (key.includes("database")) return "i-tabler-database-filled";
   if (key.includes("device")) return "i-lucide-router";
   return "i-lucide-terminal";
 }
@@ -56,16 +60,18 @@ export function resolveAssetIconFromFields(
   fields: { type?: string; platform?: string; category?: string },
   baseURL = "/"
 ) {
-  const candidates = [fields.platform, fields.type, fields.category]
-    .map((value) => String(value || "").toLowerCase())
-    .filter(Boolean);
+  return resolveAssetIconFromCandidates([fields.platform, fields.type, fields.category], baseURL);
+}
+
+export function resolveAssetIconFromCandidates(values: (string | undefined)[], baseURL = "/") {
+  const candidates = values.map((value) => String(value || "").toLowerCase()).filter(Boolean);
 
   const has = (keyword: string) => candidates.some((value) => value.includes(keyword));
   const resolve = (src: string, fallback: string) => ({ src: withAppBase(src, baseURL), fallback });
 
+  if (has("k8s") || has("kubernetes")) return resolve(iconMap.kubernetes!, "i-lucide-container");
   if (has("linux") || has("unix")) return resolve(iconMap.linux!, "i-lucide-terminal");
   if (has("windows")) return resolve(iconMap.windows!, "i-lucide-terminal");
-  if (has("web")) return resolve(iconMap.website!, "i-lucide-globe");
   if (has("mysql")) return resolve(iconMap.mysql!, "i-lucide-database");
   if (has("mariadb")) return resolve(iconMap.mariadb!, "i-lucide-database");
   if (has("oracle")) return resolve(iconMap.oracle!, "i-lucide-database");
@@ -75,7 +81,8 @@ export function resolveAssetIconFromFields(
   if (has("mongodb")) return resolve(iconMap.mongodb!, "i-lucide-database");
   if (has("dameng")) return resolve(iconMap.dameng!, "i-lucide-database");
   if (has("clickhouse")) return resolve(iconMap.clickhouse!, "i-lucide-database");
-  if (has("database")) return resolve(iconMap.database!, "i-lucide-database");
+  if (has("web")) return resolve(iconMap.website!, "i-lucide-globe");
+  if (has("database")) return resolve(iconMap.database!, "i-tabler-database-filled");
   if (has("device")) return { src: "", fallback: "i-lucide-router" };
 
   for (const candidate of candidates) {

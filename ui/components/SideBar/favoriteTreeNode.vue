@@ -136,13 +136,7 @@ watch(
           @contextmenu.prevent="emit('contextmenu', asset, $event)"
         >
           <span class="app-tree-icon-slot grid shrink-0 place-items-center" />
-          <img
-            v-if="resolveAssetIcon(asset).src"
-            :src="resolveAssetIcon(asset).src"
-            alt=""
-            class="app-tree-icon sidebar-icon-img"
-          />
-          <UIcon v-else :name="resolveAssetIcon(asset).fallback" class="app-tree-icon sidebar-icon" />
+          <AppTreeAssetIcon :src="resolveAssetIcon(asset).src" :fallback="resolveAssetIcon(asset).fallback" />
           <span class="min-w-0 flex-1 truncate font-medium font-ui-mono tracking-[0.01em]">
             {{ asset.name }}
           </span>
