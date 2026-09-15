@@ -24,6 +24,7 @@ defineEmits<{ retry: [] }>();
         <UButton v-if="error && retryLabel" size="sm" variant="soft" @click="void $emit('retry')">
           {{ retryLabel }}
         </UButton>
+        <slot v-if="error" name="error-actions" />
       </div>
     </div>
   </div>

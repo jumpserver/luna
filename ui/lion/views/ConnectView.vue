@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { LionUploadCustomRequestOptions, LionUploadFileInfo } from "@/lion/types/upload";
+import type { GuacamoleConnectionErrorDetails } from "@/lion/utils/status";
 import type { ConnectorSessionContext } from "~/shared/connectors/types/session";
 import { connectorSessionKey } from "@jumpserver/connectors-core";
 import { useDebounceFn } from "@vueuse/core";
@@ -19,7 +20,7 @@ import { registerLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspace
 
 const props = defineProps<{ tabId?: string }>();
 
-const emit = defineEmits<{ disconnected: [message: string] }>();
+const emit = defineEmits<{ disconnected: [message: string, details?: GuacamoleConnectionErrorDetails] }>();
 
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
@@ -38,6 +39,7 @@ const {
   connectToGuacamole,
   connectStatus,
   connectionError,
+  connectionErrorDetails,
   connectStatusLabel,
   onlineUsersMap,
   disconnectGuaclient,
@@ -205,8 +207,9 @@ async function processUploadQueue() {
     } catch (statusError: any) {
       uploadOptions.file.status = "error";
       let msg = statusError.message as string;
-      if (statusError.code && ErrorStatusCodes[statusError.code]) {
-        msg = t(ErrorStatusCodes[statusError.code]);
+      const errorKey = statusError.code ? ErrorStatusCodes[statusError.code] : undefined;
+      if (errorKey) {
+        msg = t(errorKey);
       } else {
         msg = `${t("FileUploadError")}: ${uploadOptions.file.name}`;
       }
@@ -384,7 +387,9 @@ const handleDownloadFile = async (file: { name: string; streamName?: GuacamoleFi
 const fitPercentage = computed(() => Math.floor(scale.value * 100));
 
 watch(connectStatus, (status) => {
-  if (status === 5 && !disposed) emit("disconnected", connectionError.value || t("GuacamoleErrDisconnected"));
+  if (status === 5 && !disposed) {
+    emit("disconnected", connectionError.value || t("GuacamoleErrDisconnected"), connectionErrorDetails.value);
+  }
 });
 
 watch(

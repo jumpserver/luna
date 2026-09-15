@@ -81,13 +81,18 @@ describe("translated locale coverage", () => {
     "translates Lion connection errors in %s without remote messages",
     (locale) => {
       const { t, te } = createI18n({ legacy: false, locale, messages: lionLocales }).global;
-      const unauthorizedKey = ErrorStatusCodes[769];
+      const unauthorizedKey = ConvertGuacamoleError("Aborted. See logs.", 769);
       const authenticationKey = ConvertGuacamoleError("Authentication failure (invalid credentials?)");
 
       const errorKeys = new Set<string>([
         ...Object.values<string>(ErrorStatusCodes),
         ...Object.values<string>(APIErrorType),
         ...Object.values<string>(GuacamoleErrMsg),
+        ConvertGuacamoleError("Aborted. See logs."),
+        "GuaErrorDetails",
+        "GuaErrorCode",
+        "GuaErrorMessage",
+        "GuaErrorSessionId",
         "UnknownError",
         "WebSocketError"
       ]);
@@ -96,7 +101,7 @@ describe("translated locale coverage", () => {
         expect(t(key, { PLACEHOLDER: "30" })).not.toBe(key);
       }
       for (const code of [1003, 1005, 1010, 1011]) {
-        const translated = t(ErrorStatusCodes[code], { PLACEHOLDER: "30" });
+        const translated = t(ConvertGuacamoleError("30", code), { PLACEHOLDER: "30" });
         expect(translated).toContain("30");
         expect(translated).not.toContain("{PLACEHOLDER}");
       }
