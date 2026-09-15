@@ -29,19 +29,15 @@ async function start() {
   let created = false;
   const manager = createWebProxyManager({
     labelForWindow: () => "applet",
-    requireRecording: launch.recordingEnabled,
-    direct: !launch.recordingEnabled,
+    direct: true,
     allowManualNavigation: launch.standalone,
-    createSession: launch.recordingEnabled
-      ? undefined
-      : async () => {
-          const session = launch.localSession;
-          launch.localSession = null;
-          return session;
-        },
+    createSession: async () => {
+      const session = launch.localSession;
+      launch.localSession = null;
+      return session;
+    },
     emit: (name, payload) => {
       if (!win.webContents.isDestroyed()) win.webContents.send("web-proxy:event", { name, payload });
-      if (name === "web-proxy-recording-state" && payload.status === "error") void close("Web 录像中断，请重新连接");
     }
   });
   async function close(message = "") {
@@ -69,32 +65,23 @@ async function start() {
     if (command === "bootstrap")
       return {
         targetUrl: launch.targetUrl,
-        proxyUrl: launch.proxyUrl,
+        proxyUrl: "",
         safeMode: launch.safeMode,
-        recordingEnabled: launch.recordingEnabled,
+        // The shared surface also serves the desktop proxy; applets use RDP recording.
+        recordingEnabled: false,
         allowedUrls: launch.allowedUrls,
         standalone: launch.standalone
       };
-    if (command === "fatal") {
-      void close("Web 录像无法启动，请重新连接");
-      return;
-    }
     if (command === "create_web_proxy_view") {
       if (created) throw new Error("请关闭当前窗口后重新连接");
       created = true;
       args = {
         ...args,
         targetUrl: launch.targetUrl,
-        proxyUrl: launch.proxyUrl,
+        proxyUrl: "",
         safeMode: launch.safeMode,
-        tokenId: launch.tokenId,
-        allowedUrls: launch.allowedUrls,
-        tokenValue: launch.tokenValue
+        allowedUrls: launch.allowedUrls
       };
-      const result = await manager.invoke(command, event, win, args);
-      launch.tokenId = "";
-      launch.tokenValue = "";
-      return result;
     }
     return manager.invoke(command, event, win, args);
   });
