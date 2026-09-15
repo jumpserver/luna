@@ -57,7 +57,7 @@ const presetMap = new Map(
 );
 
 export const DEFAULT_LIGHT_THEME_PRESET: ThemePresetId = "gemini";
-export const DEFAULT_DARK_THEME_PRESET: ThemePresetId = "mocha";
+export const DEFAULT_DARK_THEME_PRESET: ThemePresetId = "luna-default";
 
 export const isThemePresetId = (value: string): value is ThemePresetId => presetMap.has(value as ThemePresetId);
 

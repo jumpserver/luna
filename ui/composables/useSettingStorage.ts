@@ -98,7 +98,7 @@ export const DEFAULT_STATE: UserSettingPersistedState = {
   collapse: false,
   statusBarVisible: true,
   sort: "name",
-  theme: "" as ThemeType,
+  theme: "dark",
   themeMode: "" as ThemeType,
   followSystem: false,
   layouts: "grid",

@@ -97,7 +97,7 @@ export const useThemeAdapter = () => {
   };
 
   /**
-   * @description 应用首次加载默认使用 OS Theme
+   * @description 初始化应用主题，保留已保存的主题及跟随系统设置
    */
   const initialTheme = async () => {
     await waitHydration();
