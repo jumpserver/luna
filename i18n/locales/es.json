@@ -1931,6 +1931,7 @@
     "Type": "Type",
     "Table": "Table",
     "View": "Vista",
+    "MaterializedView": "Vista materializada",
     "Database": "Database",
     "RowsPreview": "Rows (preview)",
     "Data": "Data",
