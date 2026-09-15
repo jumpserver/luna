@@ -153,7 +153,11 @@ describe("opening assets in local applications", () => {
     vi.unstubAllGlobals();
   });
 
-  async function connect(connectMethod = "ssh_client", protocol = "ssh", connectOptions?: { resolution?: string }) {
+  async function connect(
+    connectMethod = "ssh_client",
+    protocol = "ssh",
+    connectOptions?: { resolution?: string; virtualappConnectMethod?: string }
+  ) {
     const ready = vi.fn();
     const failed = vi.fn();
     await useAssetAction().handleAssetConnection("root", "asset", protocol, [], undefined, {
@@ -635,6 +639,29 @@ describe("opening assets in local applications", () => {
       expect.objectContaining({ protocol: "postgresql", connect_method: "pgadmin" }),
       expect.anything()
     );
+  });
+
+  it.each(["web", "client"] as const)("opens desktop virtual apps in the selected mode (%s)", async (mode) => {
+    vi.stubGlobal("isDesktopRuntime", () => true);
+    const virtualApp = { value: "pgadmin", type: "virtual_app", component: "panda", disabled: false };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ postgresql: [virtualApp] }),
+      getMethodsForProtocol: async () => [virtualApp]
+    }));
+    const endpoint = vi.fn().mockResolvedValue({ value: "https://connector.example" });
+    vi.stubGlobal("getSmartEndpoint", endpoint);
+    vi.stubGlobal("withWebSitePrefix", (path: string) => path);
+    const { ready, failed } = await connect("pgadmin", "postgresql", { virtualappConnectMethod: mode });
+
+    expect(failed).not.toHaveBeenCalled();
+    if (mode === "client") {
+      expect(mocks.invoke).toHaveBeenCalledExactlyOnceWith("pull_up", { url: `jms2://${encoded}` });
+      expect(endpoint).not.toHaveBeenCalled();
+    } else {
+      expect(ready.mock.calls[0]?.[0].webUrl).toBe("https://connector.example/luna/lion/connect?token=id");
+      expect(mocks.invoke).not.toHaveBeenCalled();
+      expect(mocks.getLocalClientUrl).not.toHaveBeenCalled();
+    }
   });
 
   it.each(["jms2"])(

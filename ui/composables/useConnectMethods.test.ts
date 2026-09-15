@@ -113,6 +113,16 @@ describe("RemoteApp connection modes", () => {
     expect(isExternalClientConnectMethod(applet.value, [applet], options)).toBe(mode === "client");
   });
 
+  it("launches virtual applications through the client only in client mode", () => {
+    const virtualApp = { ...applet, type: "virtual_app", component: "panda" };
+    expect(isExternalClientConnectMethod(virtualApp.value, [virtualApp], { virtualappConnectMethod: "web" })).toBe(
+      false
+    );
+    expect(isExternalClientConnectMethod(virtualApp.value, [virtualApp], { virtualappConnectMethod: "client" })).toBe(
+      true
+    );
+  });
+
   it("excludes disabled applets, built-in web and virtual applications from RDP downloads", () => {
     for (const method of [
       { ...applet, disabled: true },

@@ -1,23 +1,23 @@
 import type { useWorkspaceAssistantTools } from "./useWorkspaceAssistantTools";
+import type { AssetItem } from "~/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ref, toRaw } from "vue";
-import type { AssetItem } from "~/types";
-import { registerWorkspaceSessionCloseGuard, useWorkspaceTabs } from "./useWorkspaceTabs";
-import { getAuthorizedAssets } from "./useApiRequest";
-import { useConnectionLauncher } from "./useConnectionLauncher";
 import {
   registerLocalShellTerminalSession,
   unregisterLocalShellTerminalSession
 } from "#koko/composables/useTerminalSessionRegistry";
+import { getAuthorizedAssets } from "./useApiRequest";
+import { useConnectionLauncher } from "./useConnectionLauncher";
 import {
   executeWorkspaceOperation,
   localShellOperationTools,
+  requireWorkspaceEmptyPane,
   validateWorkspaceToolArguments,
   waitWorkspacePane,
   workspaceOperationTools,
-  workspacePaneSummary,
-  requireWorkspaceEmptyPane
+  workspacePaneSummary
 } from "./useWorkspaceAssistantTools";
+import { registerWorkspaceSessionCloseGuard, useWorkspaceTabs } from "./useWorkspaceTabs";
 
 vi.mock("~/composables/useRecentConnections", () => ({
   useRecentConnections: () => ({ recordRecentConnection: vi.fn() })
@@ -466,6 +466,31 @@ describe("connection readiness and exact launch target", () => {
     tabs.openSession(asset, { protocol: "ssh", account: "other", paneId: getPane()!.id });
     expect(await replacement).toEqual({ status: "session_changed" });
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it.each([
+    ["web", 1],
+    ["client", 0]
+  ] as const)("opens a virtual app pane only in %s mode", async (mode, expectedPanes) => {
+    let callback: (payload: Record<string, unknown>) => void = () => {};
+    const openSession = vi.fn(() => ({ id: "opened-pane" }));
+    vi.stubGlobal("useAssetConnection", () => ({
+      confirmConnection: vi.fn(async (_asset, info) => {
+        callback = info.onSessionReady;
+      })
+    }));
+    vi.stubGlobal("useWorkspaceTabs", () => ({ openSession }));
+    vi.stubGlobal("useConnectionFormModal", () => ({ open: vi.fn() }));
+
+    const pending = useConnectionLauncher().launchWithInfo(asset, {
+      protocol: "postgresql",
+      account: "root",
+      connectOptions: { virtualappConnectMethod: mode }
+    } as any);
+    callback({ id: "token", connectMethod: { type: "virtual_app" } });
+
+    expect(await pending).toBe(true);
+    expect(openSession).toHaveBeenCalledTimes(expectedPanes);
   });
 
   it("reports the actually opened pane and suppresses a cancelled launch", async () => {

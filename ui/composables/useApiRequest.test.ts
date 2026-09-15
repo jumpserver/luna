@@ -71,6 +71,23 @@ describe("API request headers", () => {
     );
   });
 
+  it("marks desktop RDP downloads as text responses", async () => {
+    const content = "full address:s:rdp.example\r\n";
+    desktopInvoke.mockClear().mockResolvedValue(content);
+    vi.stubGlobal("isDesktopRuntime", () => true);
+
+    await expect(getConnectionRdpFile("token/id", { width: "1600" }, "asset-org")).resolves.toBe(content);
+    expect(desktopInvoke).toHaveBeenCalledWith("api_request", {
+      request: {
+        method: "GET",
+        path: "/api/v1/authentication/connection-token/token%2Fid/rdp-file/",
+        query: { width: "1600" },
+        orgId: "asset-org",
+        responseType: "text"
+      }
+    });
+  });
+
   it("queries the authorized asset endpoint with bounded pagination and display fields", async () => {
     const fetch = vi.fn(
       async (_request: string) =>

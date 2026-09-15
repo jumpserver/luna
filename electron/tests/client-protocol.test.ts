@@ -248,6 +248,21 @@ function authServiceFixture(isPackaged = true, createServer?: () => EventEmitter
   return { service, authorized };
 }
 
+test("desktop API returns explicit text responses without JSON parsing", async () => {
+  const { service } = authServiceFixture();
+  service.setSession({ sessionKey: "session", origin: "https://jumpserver.example", bearerToken: "token" });
+  service.fetchSite = async () => ({ status: 200, text: async () => "full address:s:rdp.example\r\n" });
+
+  assert.equal(
+    await service.apiRequest({
+      method: "GET",
+      path: "/api/v1/authentication/connection-token/id/rdp-file/",
+      responseType: "text"
+    }),
+    "full address:s:rdp.example\r\n"
+  );
+});
+
 test("packaged login uses jms2 and ignores stale callbacks without losing the pending login", async () => {
   const { service, authorized } = authServiceFixture();
   await service.startCallbackServer();
