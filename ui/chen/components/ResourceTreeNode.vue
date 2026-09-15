@@ -126,7 +126,7 @@ function handleContextMenu(event: MouseEvent) {
         />
       </button>
       <span v-else class="app-tree-icon-slot" />
-      <AppTreeAssetIcon v-if="datasourceIconSrc" :src="datasourceIconSrc" />
+      <AppAssetIcon v-if="datasourceIconSrc" :src="datasourceIconSrc" />
       <UIcon
         v-else
         :name="iconName"

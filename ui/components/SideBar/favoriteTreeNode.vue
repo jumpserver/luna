@@ -136,7 +136,7 @@ watch(
           @contextmenu.prevent="emit('contextmenu', asset, $event)"
         >
           <span class="app-tree-icon-slot grid shrink-0 place-items-center" />
-          <AppTreeAssetIcon :src="resolveAssetIcon(asset).src" :fallback="resolveAssetIcon(asset).fallback" />
+          <AppAssetIcon :src="resolveAssetIcon(asset).src" :fallback="resolveAssetIcon(asset).fallback" />
           <span class="min-w-0 flex-1 truncate font-medium font-ui-mono tracking-[0.01em]">
             {{ asset.name }}
           </span>

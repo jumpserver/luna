@@ -57,7 +57,6 @@ const tabStripIdealWidth = computed(() => {
 });
 
 const { activeTab } = useWorkspaceTabs();
-const brokenTabIcons = ref(new Set<string>());
 const renameDisabled = computed(() => {
   const target = tabs.value.find((tab) => tab.id === renameTabId.value);
   const current = (target?.title || target?.assetName || "").trim();
@@ -74,14 +73,6 @@ function tabIcon(tab: WorkspaceSessionTab) {
     },
     appBaseURL
   );
-}
-
-function showTabIconImage(tab: WorkspaceSessionTab) {
-  return Boolean(tabIcon(tab).src) && !brokenTabIcons.value.has(tab.id);
-}
-
-function markTabIconBroken(tabId: string) {
-  brokenTabIcons.value.add(tabId);
 }
 
 function tabDisplayTitle(tab: WorkspaceSessionTab) {
@@ -707,22 +698,10 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
             >
               {{ shortcutHintLabel(index) }}
             </span>
-            <img
-              v-if="showTabIconImage(tab)"
+            <AppAssetIcon
               :src="tabIcon(tab).src"
-              alt=""
-              class="size-3.5 object-contain"
+              :fallback="tabIcon(tab).fallback"
               :class="tab.status === 'failed' ? 'opacity-40' : ''"
-              @error="markTabIconBroken(tab.id)"
-            />
-            <UIcon
-              v-else
-              :name="tabIcon(tab).fallback"
-              class="size-3.5"
-              :class="[
-                activeTabId === tab.id ? 'text-highlighted' : 'text-[var(--app-muted)]',
-                tab.status === 'failed' ? 'opacity-40' : ''
-              ]"
             />
             <span
               class="workspace-session-tab-status absolute -bottom-px -right-px size-1.5 rounded-full"

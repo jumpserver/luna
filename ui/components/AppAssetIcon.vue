@@ -4,9 +4,14 @@ const props = defineProps<{
   fallback?: string;
 }>();
 
+const imageFailed = ref(false);
 const filename = computed(() => props.src.split("/").pop());
-const iconName = computed(() => (props.src ? "" : props.fallback || "i-lucide-terminal"));
-// Use the original brand silhouettes with theme-aware colors at small tree sizes.
+const iconName = computed(() => (props.src && !imageFailed.value ? "" : props.fallback || "i-lucide-terminal"));
+watch(
+  () => props.src,
+  () => (imageFailed.value = false)
+);
+// Share original brand silhouettes and theme-aware colors across trees and tabs.
 const maskColor = computed(() => {
   if (filename.value === "mysql.svg") return "text-info";
   if (filename.value === "mariadb.svg") return "text-warning";
@@ -34,6 +39,8 @@ const maskColor = computed(() => {
       maskPosition: 'center'
     }"
     aria-hidden="true"
-  />
-  <img v-else :src="src" alt="" class="app-tree-icon sidebar-icon-img" />
+  >
+    <img :src="src" alt="" class="block size-full opacity-0" @error="imageFailed = true" />
+  </span>
+  <img v-else :src="src" alt="" class="app-tree-icon sidebar-icon-img" @error="imageFailed = true" />
 </template>

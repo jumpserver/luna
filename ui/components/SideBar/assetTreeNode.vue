@@ -74,7 +74,7 @@ const typeGroupIcon = computed(() => {
   if (has("directory service", "directory_service", "directory-service", "windows_ad")) return "i-lucide-network";
   if (has("device", "network")) return "i-lucide-router";
   if (has("website", "web")) return "i-lucide-globe";
-  if (has("cloud")) return "i-lucide-cloud";
+  if (has("cloud")) return "i-tabler-cloud-lock";
   if (has("windows")) return "i-lucide-monitor";
   if (has("host", "linux", "unix")) return "i-lucide-server";
   if (has("gpt") || hasExact("ai")) return "i-lucide-bot";
@@ -198,7 +198,7 @@ watch(
           class="app-tree-icon sidebar-icon tree-folder-icon"
         />
         <UIcon v-else-if="icon" :name="icon" class="app-tree-icon sidebar-icon" />
-        <AppTreeAssetIcon v-else :src="assetIcon.src" :fallback="assetIcon.fallback" />
+        <AppAssetIcon v-else :src="assetIcon.src" :fallback="assetIcon.fallback" />
         <span
           class="inline-flex min-w-0 flex-1 items-center font-medium"
           :class="!isParent ? 'font-ui-mono tracking-[0.01em]' : ''"
