@@ -9,11 +9,13 @@ import { chromium } from "playwright";
 const applet = fileURLToPath(new URL("..", import.meta.url));
 const mode = process.argv[2] || "basic";
 const standalone = mode === "standalone";
+const addressOnly = mode === "address" || mode === "anonymous";
 const requests = [];
 const server = createServer((req, res) => {
   requests.push(req.url);
   res.setHeader("content-type", "text/html");
-  if (standalone) return res.end("<!doctype html><html><body><h1>Standalone browsing works</h1></body></html>");
+  if (standalone || addressOnly)
+    return res.end("<!doctype html><html><body><h1>Standalone browsing works</h1></body></html>");
   res.end(`<!doctype html><html><body>
     <form id="login"><input id="username"><input id="password" type="password"><button id="submit">Login</button></form>
     <h1 id="dashboard" style="display:none">Signed in</h1>
@@ -25,7 +27,7 @@ const server = createServer((req, res) => {
     };</script></body></html>`);
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-const target = `http://127.0.0.1:${server.address().port}/${standalone ? "standalone" : "login"}`;
+const target = `http://127.0.0.1:${server.address().port}/${standalone ? "standalone" : "login"}?from=applet&name=%E6%B5%8B%E8%AF%95#entry`;
 const child = spawn(electron, ["--remote-debugging-port=0", applet], {
   stdio: [standalone ? "ignore" : "pipe", "pipe", "pipe"]
 });
@@ -36,45 +38,65 @@ child.stdout.on("data", (chunk) => {
 child.stderr.on("data", (chunk) => {
   stderr += chunk;
 });
-if (!standalone)
+if (!standalone) {
+  const launch = {
+    target_url: target,
+    safe_mode: true,
+    ...(mode === "legacy"
+      ? {
+          recording_enabled: true,
+          proxy_url: new URL(target).origin,
+          token_id: "test-token",
+          token_value: "test-token-value"
+        }
+      : {}),
+    login: {
+      config: addressOnly
+        ? { autofill: "none" }
+        : mode === "script"
+          ? {
+              autofill: "script",
+              script: [
+                { step: 1, command: "type", target: "id=username", value: "{USERNAME}" },
+                { step: 2, command: "type", target: "id=password", value: "{SECRET}" },
+                { step: 3, command: "interactive", target: "css=div.captcha-field" },
+                { step: 4, command: "click", target: "id=submit" },
+                { step: 5, command: "success", target: "id=dashboard" }
+              ]
+            }
+          : {
+              autofill: "basic",
+              username_selector: "id=username",
+              password_selector: "id=password",
+              submit_selector: "id=submit",
+              success_selector: "id=dashboard"
+            },
+      username: "tester",
+      password: "runtime-secret",
+      secret_type: "password"
+    }
+  };
   child.stdin.end(
-    JSON.stringify({
-      target_url: target,
-      safe_mode: true,
-      ...(mode === "legacy"
-        ? {
-            recording_enabled: true,
-            proxy_url: new URL(target).origin,
-            token_id: "test-token",
-            token_value: "test-token-value"
+    JSON.stringify(
+      mode === "legacy"
+        ? launch
+        : {
+            app_name: "custom-browser",
+            protocol: "http",
+            asset: { address: target, spec_info: mode === "platform" ? {} : launch.login.config },
+            platform: { protocols: [{ name: "http", setting: { ...launch.login.config, safe_mode: true } }] },
+            account:
+              mode === "anonymous"
+                ? { username: "@ANON" }
+                : {
+                    username: launch.login.username,
+                    secret: launch.login.password,
+                    secret_type: { value: "password" }
+                  }
           }
-        : {}),
-      login: {
-        config:
-          mode === "script"
-            ? {
-                autofill: "script",
-                script: [
-                  { step: 1, command: "type", target: "id=username", value: "{USERNAME}" },
-                  { step: 2, command: "type", target: "id=password", value: "{SECRET}" },
-                  { step: 3, command: "interactive", target: "css=div.captcha-field" },
-                  { step: 4, command: "click", target: "id=submit" },
-                  { step: 5, command: "success", target: "id=dashboard" }
-                ]
-              }
-            : {
-                autofill: "basic",
-                username_selector: "id=username",
-                password_selector: "id=password",
-                submit_selector: "id=submit",
-                success_selector: "id=dashboard"
-              },
-        username: "tester",
-        password: "runtime-secret",
-        secret_type: "password"
-      }
-    })
+    )
   );
+}
 let browser;
 async function waitFor(check, message) {
   for (let n = 0; n < 150; n++) {
@@ -98,7 +120,10 @@ try {
     await address.press("Enter");
   }
   const page = await waitFor(() => pages().find((page) => page.url() === target), "Direct target never loaded");
-  if (standalone) await page.getByRole("heading", { name: "Standalone browsing works" }).waitFor();
+  const address = shell.getByRole("textbox", { name: standalone ? "地址栏" : "地址栏只读", exact: true });
+  assert.equal(await address.inputValue(), target, "address bar must retain the launch URL, query and fragment");
+  assert.equal(await address.evaluate((input) => input.readOnly), !standalone);
+  if (standalone || addressOnly) await page.getByRole("heading", { name: "Standalone browsing works" }).waitFor();
   else {
     await page.locator("#dashboard").waitFor({ state: "visible", timeout: 15_000 });
     await shell.getByRole("button", { name: /会话状态：.*登录成功/ }).waitFor({ state: "visible" });
@@ -107,6 +132,7 @@ try {
   assert.equal(bootstrap.proxyUrl, "");
   assert.equal(bootstrap.recordingEnabled, false);
   assert.equal(bootstrap.standalone, standalone);
+  if (!standalone) assert.equal(bootstrap.targetUrl, target);
   assert.ok(!JSON.stringify(bootstrap).includes("runtime-secret"));
   assert.equal(await page.evaluate(() => typeof window.webApplet), "undefined");
   await assert.rejects(

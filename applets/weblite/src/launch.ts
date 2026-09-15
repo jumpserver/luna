@@ -15,7 +15,8 @@ export function standaloneLaunch() {
 
 export function parseLaunch(value: unknown) {
   if (!value || typeof value !== "object") throw new Error("缺少 Web applet 启动参数");
-  const data = value as Record<string, unknown>;
+  // AppletArgs is shared by all applets. Only WebLite interprets Web asset settings.
+  const data: Record<string, unknown> = "asset" in value ? appletLaunchData(value) : (value as Record<string, unknown>);
   const text = (key: string, max = 2048) => {
     const value = data[key];
     if (typeof value !== "string" || !value || value.length > max) throw new Error(`无效启动参数：${key}`);
@@ -33,6 +34,48 @@ export function parseLaunch(value: unknown) {
     allowedUrls,
     localSession,
     standalone: false
+  };
+}
+
+function appletLaunchData(data: Record<string, unknown>) {
+  const object = (value: unknown): Record<string, any> => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Applet 连接数据无效");
+    return value;
+  };
+  const protocol = data.protocol;
+  if (protocol !== "http" && protocol !== "https") throw new Error("Applet 连接协议不是 HTTP/HTTPS");
+  const asset = object(data.asset);
+  const raw = asset.address;
+  if (typeof raw !== "string" || !raw.trim() || raw.length > 2048) throw new Error("Web 资产地址无效");
+  const address = raw.trim();
+  const target = new URL(address.includes("://") ? address : `${protocol}://${address}`);
+  normalizedWebOrigin(target);
+  const protocols = (value: unknown): Record<string, any>[] => {
+    if (value == null) return [];
+    if (!Array.isArray(value)) throw new Error("Applet 协议配置无效");
+    return value.map(object);
+  };
+  const port = protocols(asset.protocols).find((item) => item.name === protocol)?.port;
+  if (port !== undefined && (!Number.isInteger(port) || port < 0 || port > 65535)) throw new Error("Web 资产端口无效");
+  // URL.port omits explicit default ports. Preserve a port explicitly supplied in the address.
+  const authority = (address.includes("://") ? address.split("://")[1] : address).split(/[/?#]/)[0];
+  if (!/:\d+$/.test(authority) && port) target.port = String(port);
+  const platform = data.platform == null ? {} : object(data.platform);
+  const setting = object(protocols(platform.protocols).find((item) => item.name === protocol)?.setting ?? {});
+  const spec = object(asset.spec_info ?? {});
+  const account = data.account == null ? {} : object(data.account);
+  const anonymous = account.username === "@ANON";
+  const config = anonymous ? { autofill: "none" } : spec.autofill ? spec : setting;
+  return {
+    target_url: target.toString(),
+    safe_mode: setting.safe_mode ?? false,
+    allowed_urls: spec.allowed_urls,
+    login: {
+      config,
+      username: anonymous ? "" : account.username,
+      password: anonymous ? "" : account.secret,
+      secret_type: account.secret_type == null ? undefined : object(account.secret_type).value
+    }
   };
 }
 

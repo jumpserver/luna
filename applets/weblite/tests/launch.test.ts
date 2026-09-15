@@ -21,6 +21,78 @@ const launch = {
     secret_type: "password"
   }
 };
+
+const applet = {
+  app_name: "custom-browser",
+  protocol: "http",
+  asset: { address: launch.target_url, spec_info: launch.login.config },
+  platform: { protocols: [{ name: "http", setting: { safe_mode: true } }] },
+  account: { username: "tester", secret: "one-use-secret", secret_type: { value: "password" } }
+};
+
+test("generic AppletArgs opens the asset and fills credentials without an app-name dependency", async () => {
+  const result = await readLaunch(Readable.from([JSON.stringify(applet)]));
+  assert.equal(result.targetUrl, launch.target_url);
+  assert.equal(result.safeMode, true);
+  assert.equal(result.standalone, false);
+  assert.ok(!JSON.stringify(result).includes("one-use-secret"));
+  assert.deepEqual(await releaseCredentials(result.localSession, launch.target_url), {
+    username: "tester",
+    password: "one-use-secret"
+  });
+});
+
+test("WebLite owns URL normalization, ports, query strings and hash routes", () => {
+  for (const [address, port, expected] of [
+    ["app.example.com/login?q=1#/sign-in", 8080, "http://app.example.com:8080/login?q=1#/sign-in"],
+    ["https://app.example.com/login", 443, "https://app.example.com/login"],
+    ["http://app.example.com:80/login", 8080, "http://app.example.com/login"],
+    ["https://app.example.com:9443/login", 8080, "https://app.example.com:9443/login"],
+    ["http://[::1]/login", 8080, "http://[::1]:8080/login"]
+  ] as const) {
+    const result = parseLaunch({ ...applet, asset: { address, protocols: [{ name: "http", port }] } });
+    assert.equal(result.targetUrl, expected);
+  }
+});
+
+test("asset login overrides platform fallback; anonymous accounts still open the asset", () => {
+  const platform = {
+    protocols: [{ name: "http", setting: { ...launch.login.config, autofill: "none", safe_mode: true } }]
+  };
+  const explicit = parseLaunch({ ...applet, platform });
+  assert.equal(explicit.localSession.autofillAvailable, true);
+  const fallback = parseLaunch({ ...applet, asset: { address: launch.target_url }, platform });
+  assert.equal(fallback.localSession.autofillAvailable, false);
+  const inherited = parseLaunch({
+    ...applet,
+    asset: { address: launch.target_url },
+    platform: { protocols: [{ name: "http", setting: launch.login.config }] }
+  });
+  assert.equal(inherited.localSession.autofillAvailable, true);
+  const anonymous = parseLaunch({ ...applet, account: { username: "@ANON" } });
+  assert.equal(anonymous.localSession.autofillAvailable, false);
+  assert.equal(anonymous.targetUrl, launch.target_url);
+  const allowed_urls = ["https://sso.example.com"];
+  assert.deepEqual(
+    parseLaunch({ ...applet, asset: { ...applet.asset, spec_info: { ...applet.asset.spec_info, allowed_urls } } })
+      .allowedUrls,
+    allowed_urls
+  );
+});
+
+test("generic connection data is validated before opening a Web view", () => {
+  for (const patch of [
+    { protocol: "ssh" },
+    { asset: null },
+    { asset: { address: " " } },
+    { asset: { address: "file:///etc/passwd" } },
+    { asset: { address: "https://user:secret@example.com" } },
+    { asset: { address: launch.target_url, protocols: [{ name: "http", port: 65536 }] } },
+    { platform: { protocols: [{ name: "http", setting: { safe_mode: "false" } }] } },
+    { account: { ...applet.account, secret: 123 } }
+  ])
+    assert.throws(() => parseLaunch({ ...applet, ...patch }));
+});
 test("applet retains an optional asset navigation allowlist and rejects malformed policies", () => {
   assert.deepEqual(parseLaunch(launch).allowedUrls, []);
   assert.deepEqual(parseLaunch({ ...launch, allowed_urls: ["https://sso.example.com"] }).allowedUrls, [
