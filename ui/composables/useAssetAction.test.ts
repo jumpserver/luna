@@ -182,6 +182,59 @@ describe("opening assets in local applications", () => {
     expect(mocks.errorToast).toHaveBeenCalledWith(expect.objectContaining({ description }));
   });
 
+  it("saves K8s manual credentials as tokens", async () => {
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ k8s: [method] }),
+      getMethodsForProtocol: async () => [method]
+    }));
+    const ready = vi.fn();
+    const failed = vi.fn();
+
+    await useAssetAction().handleAssetConnection(
+      "@INPUT",
+      "asset",
+      "k8s",
+      [
+        {
+          alias: "@INPUT",
+          date_expired: "",
+          has_secret: false,
+          has_username: false,
+          id: "",
+          name: "Manual input",
+          secret_type: "password",
+          username: "@INPUT",
+          actions: []
+        }
+      ],
+      undefined,
+      {
+        accountMode: "manual",
+        manualUsername: "cluster-user",
+        manualPassword: "service-account-token",
+        personalCredentialSecretType: "password",
+        savePersonalCredential: true,
+        connectMethod: method.value,
+        onSessionReady: ready,
+        onSessionError: failed
+      }
+    );
+    await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(mocks.createToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: "@INPUT",
+        protocol: "k8s",
+        input_username: "cluster-user",
+        input_secret: "service-account-token",
+        input_secret_type: "token",
+        save_personal_credential: true
+      }),
+      expect.anything()
+    );
+  });
+
   describe("RDP file downloads", () => {
     const content = "full address:s:rdp.example\r\nusername:s:用户\r\n";
     const rdpMethod = { ...method, value: "mstsc", component: "razor" };

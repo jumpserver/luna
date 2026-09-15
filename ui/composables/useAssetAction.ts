@@ -55,6 +55,10 @@ const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
   [SFTP_FILE_EDITOR_VALUE]: "web_sftp",
   [K8S_NATIVE_VALUE]: "web_cli"
 };
+const PERSONAL_CREDENTIAL_SECRET_TYPE_BY_PROTOCOL: Record<string, string> = {
+  k8s: "token",
+  kubernetes: "token"
+};
 const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
 
 const CONNECTION_ERROR_CODES: Record<string, string> = {
@@ -952,9 +956,12 @@ export const useAssetAction = () => {
     const savePersonalCredential = !!ephemeral?.savePersonalCredential;
     const useSavedPersonalCredential = isManual && !!personalCredentialId && !savePersonalCredential;
     const manualAccountSecretType = _accounts.find((account) => account.alias === "@INPUT")?.secret_type;
-    const personalCredentialSecretType = personalCredentialId
-      ? ephemeral?.personalCredentialSecretType || manualAccountSecretType || "password"
-      : manualAccountSecretType || ephemeral?.personalCredentialSecretType || "password";
+    const protocolCredentialSecretType = PERSONAL_CREDENTIAL_SECRET_TYPE_BY_PROTOCOL[protocol.trim().toLowerCase()];
+    const personalCredentialSecretType =
+      protocolCredentialSecretType ||
+      (personalCredentialId
+        ? ephemeral?.personalCredentialSecretType || manualAccountSecretType || "password"
+        : manualAccountSecretType || ephemeral?.personalCredentialSecretType || "password");
     const connectionBody: ConnectionBody = {
       asset: assetId,
       protocol,
