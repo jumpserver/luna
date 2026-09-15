@@ -5,6 +5,7 @@ import { terminalAiAclKey, terminalAiExecutionKey } from "#koko/composables/term
 import AiToolCallItem from "./domains/shared/AiToolCallItem.vue";
 import {
   aiRiskColor,
+  commandReviewUrl,
   formatAiDuration,
   renderAiMarkdown,
   terminalApprovalPending,
@@ -285,6 +286,28 @@ function terminalRiskLabel(level: unknown) {
           </template>
 
           <div v-if="execution.result" class="space-y-2 border-t border-default px-2.5 py-2">
+            <div v-if="execution.result.commandAcl" class="space-y-1 text-xs text-muted">
+              <p v-if="execution.result.commandAcl.name">
+                {{ t("RightPanel.AICommandAcl") }}: {{ execution.result.commandAcl.name }}
+              </p>
+              <p
+                v-if="
+                  Array.isArray(execution.result.commandAcl.reviewers) && execution.result.commandAcl.reviewers.length
+                "
+              >
+                {{ t("AclDialog.Assignees", { value: execution.result.commandAcl.reviewers.join(", ") }) }}
+              </p>
+              <UButton
+                v-if="commandReviewUrl(execution.result.commandAcl.detail_url)"
+                :to="commandReviewUrl(execution.result.commandAcl.detail_url)"
+                target="_blank"
+                rel="noopener noreferrer"
+                size="xs"
+                variant="link"
+                icon="i-lucide-external-link"
+                :label="t('TerminalAi.ViewDetails')"
+              />
+            </div>
             <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
               <span class="mr-auto font-medium">{{ t("RightPanel.AIExecutionResult") }}</span>
               <span v-if="Number(execution.result.durationMs) > 0" class="font-mono text-[10px]">

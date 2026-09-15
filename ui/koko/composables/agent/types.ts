@@ -172,6 +172,7 @@ export interface JsonRpcCancelNotification {
 export interface JsonRpcResponse {
   jsonrpc: "2.0";
   id: string;
+  seq?: number;
   result?: unknown;
   error?: { code: number; message: string; data?: unknown };
 }
@@ -201,6 +202,11 @@ export interface KokoMcpResponseFrame extends KokoMcpFrameBase {
   data: JsonRpcResponse;
 }
 
+export interface KokoMcpProgressFrame extends KokoMcpFrameBase {
+  type: "mcp.progress";
+  data: JsonRpcResponse & { seq: number; result: Record<string, unknown> };
+}
+
 export interface KokoMcpCancelFrame extends KokoMcpFrameBase {
   type: "mcp.cancel";
   data: JsonRpcCancelNotification;
@@ -215,6 +221,7 @@ export type KokoMcpFrame =
   | KokoMcpManifestFrame
   | KokoMcpRequestFrame
   | KokoMcpResponseFrame
+  | KokoMcpProgressFrame
   | KokoMcpCancelFrame
   | KokoMcpCancelResultFrame;
 
@@ -222,6 +229,7 @@ export const KOKO_MCP_FRAME_TYPES = [
   "mcp.manifest",
   "mcp.request",
   "mcp.response",
+  "mcp.progress",
   "mcp.cancel",
   "mcp.cancel_result"
 ] as const;
@@ -289,6 +297,15 @@ export function parseKokoMcpFrame(value: unknown): KokoMcpFrame | null {
     if (dataRecord.method !== "notifications/cancelled" || !isRecord(dataRecord.params)) return null;
     if (typeof dataRecord.params.requestId !== "string") return null;
   } else if (typeof dataRecord.id !== "string") {
+    return null;
+  }
+  if (dataRecord.seq !== undefined && (!Number.isSafeInteger(dataRecord.seq) || Number(dataRecord.seq) < 1)) {
+    return null;
+  }
+  if (
+    value.type === "mcp.progress" &&
+    (dataRecord.seq === undefined || !isRecord(dataRecord.result) || dataRecord.error !== undefined)
+  ) {
     return null;
   }
   return {

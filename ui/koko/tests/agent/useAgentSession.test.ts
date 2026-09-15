@@ -11,6 +11,30 @@ import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
 
 beforeEach(() => setWorkspaceAiEnabled(true));
 
+it("finishes review progress when the executor receipt actually times out", () => {
+  const message = agentEventToUiMessage(
+    {
+      seq: 2,
+      type: "tool.result",
+      tool_call_id: "call",
+      payload: {
+        done: true,
+        status: "timeout",
+        result: { status: "reviewing" },
+        error: { message: "Executor result deadline exceeded" }
+      }
+    },
+    "terminal",
+    {}
+  );
+  expect(message?.parts).toContainEqual(
+    expect.objectContaining({
+      type: "data-execution",
+      data: expect.objectContaining({ status: "timeout", outcome: "timeout", done: true })
+    })
+  );
+});
+
 function manifest() {
   return {
     profile: "terminal" as const,

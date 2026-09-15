@@ -42,6 +42,55 @@ function enableSession(paneId: string) {
   return agentHarness.attach(handleKokoTerminalAiWireMessage, paneId, "terminal");
 }
 
+it("relays approval progress before completion and exposes the ACL wait without a local approval", async () => {
+  const session = createSession("acl-review");
+  const resourceId = await enableSession(session.paneId);
+  agentHarness.emit(resourceId, {
+    type: "tool.call",
+    run_id: "run-1",
+    tool_call_id: "call-1",
+    payload: { tool_name: "execute_command", arguments: { command: "ls" } }
+  });
+  const { promise: receipt, resolve: acknowledge } = Promise.withResolvers<void>();
+  agentHarness.sendToolResult.mockImplementation(async (_sessionId, _resourceId, toolCallId, payload) => {
+    agentHarness.emit(resourceId, {
+      type: "tool.result",
+      run_id: payload.run_id,
+      tool_call_id: toolCallId,
+      payload: { ...payload }
+    });
+    if (payload.seq === 1) await receipt;
+  });
+  const frame = { version: 1, resource_session_id: resourceId };
+  const pending = session.agent.actions.receiveKokoFrame({
+    ...frame,
+    type: "mcp.progress",
+    data: {
+      jsonrpc: "2.0",
+      id: "call-1",
+      seq: 1,
+      result: { status: "awaiting_approval", command_acl: { action: "review", reviewers: ["reviewer"] } }
+    }
+  });
+  await vi.waitFor(() => expect(session.runtimeState).toBe("awaiting_approval"));
+  expect(isKokoTerminalAiWaitingForApproval(session.paneId)).toBe(true);
+  expect(session.pendingApprovals.size).toBe(0);
+  const completed = session.agent.actions.receiveKokoFrame({
+    ...frame,
+    type: "mcp.response",
+    data: { jsonrpc: "2.0", id: "call-1", seq: 2, result: { structuredContent: { command: "ls", output: "files" } } }
+  });
+  expect(agentHarness.sendToolResult).toHaveBeenCalledOnce();
+  acknowledge();
+  await Promise.all([pending, completed]);
+  expect(agentHarness.sendToolResult.mock.calls.map((call) => [call[3].seq, call[3].done])).toEqual([
+    [1, false],
+    [2, true]
+  ]);
+  expect(isKokoTerminalAiWaitingForApproval(session.paneId)).toBe(false);
+  expect(agentHarness.resolveApproval).not.toHaveBeenCalled();
+});
+
 it("exposes a late Agent manifest to Vue computed availability", async () => {
   const paneId = "reactive-avail";
   const socket = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
@@ -404,12 +453,19 @@ it("reports a prompt dispatch failure without sending to another pane", async ()
   expect(session.errorCode).toBe("send_failed");
 });
 
-it("makes a disconnected pane unavailable and clears its active task state", async () => {
-  const session = createSession("prompt-disconnect");
-  await enableSession(session.paneId);
+it.each(["disconnect", "unavailable", "session.closed"] as const)("clears an approval wait after %s", async (cause) => {
+  const session = createSession(`prompt-${cause}`);
+  const resourceSessionId = await enableSession(session.paneId);
   await submitKokoTerminalAiPrompt(session.paneId, "status");
+  agentHarness.emit(resourceSessionId, {
+    type: "tool.result",
+    payload: { done: false, status: "running", result: { status: "awaiting_approval" } }
+  });
+  expect(isKokoTerminalAiWaitingForApproval(session.paneId)).toBe(true);
 
-  disconnectKokoTerminalAiSession(session.paneId, session.socket);
+  if (cause === "disconnect") disconnectKokoTerminalAiSession(session.paneId, session.socket);
+  else if (cause === "unavailable") agentHarness.unavailable(resourceSessionId);
+  else agentHarness.emit(resourceSessionId, { type: cause });
 
   expect(getKokoTerminalAiSession(session.paneId)).toBe(session);
   expect(isKokoTerminalAiAvailable(session.paneId)).toBe(false);
@@ -576,6 +632,10 @@ it("keeps structured runtime error codes when Agent SSE reports the stream error
   await Promise.resolve();
   await Promise.resolve();
   agentHarness.emit(resourceSessionId, {
+    type: "tool.result",
+    payload: { done: false, status: "running", result: { status: "awaiting_approval" } }
+  });
+  agentHarness.emit(resourceSessionId, {
     type: "error",
     payload: { code: "background_unavailable", message: "Agent detail" }
   });
@@ -583,6 +643,7 @@ it("keeps structured runtime error codes when Agent SSE reports the stream error
 
   expect(session.errorCode).toBe("background_unavailable");
   expect(session.errorText).toBe("Agent detail");
+  expect(isKokoTerminalAiBusy(session.paneId)).toBe(false);
 });
 
 it("shows model activity and settles the response when an Agent run fails", async () => {

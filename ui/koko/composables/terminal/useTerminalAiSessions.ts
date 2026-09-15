@@ -350,7 +350,9 @@ function createSession(
       messageMetadata: () => ({ domain: "terminal", terminalId: Number(session?.terminalId) || 0 }),
       onMessage: (message) => handleKokoTerminalAiMessage(paneId, message),
       onAvailability: (available) => {
-        if (session) session.enabled = available;
+        if (!session) return;
+        session.enabled = available;
+        if (!available) session.runtimeState = "";
       },
       onApprovalMode: (mode) => {
         if (session) session.approvalMode = mode;
@@ -579,12 +581,14 @@ export function markKokoTerminalAiSessionInfoReady(paneId: string) {
 
 export function isKokoTerminalAiWaitingForApproval(paneId: string) {
   const session = resolveTerminalAiSession(paneId);
-  return Boolean(session?.metadataApproval || session?.pendingApprovals.size);
+  return Boolean(
+    session?.metadataApproval || session?.pendingApprovals.size || session?.runtimeState === "awaiting_approval"
+  );
 }
 
 export function isKokoTerminalAiBusy(paneId: string) {
   const session = resolveTerminalAiSession(paneId);
-  return Boolean(session?.inputLocked || session?.metadataApproval || session?.pendingApprovals.size);
+  return Boolean(session?.inputLocked || isKokoTerminalAiWaitingForApproval(paneId));
 }
 
 export async function submitKokoTerminalAiPrompt(paneId: string, text: string): Promise<void> {
@@ -685,6 +689,7 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
     if (!session.enabled) {
       session.inputLocked = false;
       session.taskActive = false;
+      session.runtimeState = "";
       session.metadataApproval = null;
       session.pendingApprovals.clear();
       transports.get(session)?.finish();
@@ -737,6 +742,8 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
   }
 
   const progress = partData(message, "data-progress");
+  const execution = partData(message, "data-execution");
+  if (execution) session.runtimeState = execution.done === false ? String(execution.outcome) : "running";
   if (progress) {
     session.runtimeStatus = String(progress.text || "");
     session.runtimeStatusCode = String(progress.code || "");
@@ -773,6 +780,7 @@ export function handleKokoTerminalAiMessage(paneId: string, message: unknown) {
   const runtimeError = partData(message, "data-error");
   if (runtimeError) {
     session.taskActive = false;
+    session.runtimeState = "failed";
     session.inputLocked = false;
     session.metadataApproval = null;
     session.pendingApprovals.clear();

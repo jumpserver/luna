@@ -83,7 +83,10 @@ export class AgentToolRelay {
   private readonly cancelled = new Set<string>();
   private readonly cancelledOrder: string[] = [];
   private readonly rpcToolCalls = new Map<string, string>();
-  private readonly pendingCalls = new Map<string, { rpcId: string; runId: string; revision: number }>();
+  private readonly pendingCalls = new Map<
+    string,
+    { rpcId: string; runId: string; revision: number; sequence: number }
+  >();
   private readonly executions = new Map<
     string,
     { toolCallId: string; rpcId: string; runId: string; revision: number }
@@ -145,7 +148,7 @@ export class AgentToolRelay {
       });
       this.pending.add(toolCallId);
       this.rpcToolCalls.set(rpcId, toolCallId);
-      this.pendingCalls.set(toolCallId, { rpcId, runId, revision });
+      this.pendingCalls.set(toolCallId, { rpcId, runId, revision, sequence: 0 });
       return true;
     }
 
@@ -199,16 +202,20 @@ export class AgentToolRelay {
   consumeKokoFrame(value: unknown): AgentToolRelayResult | null {
     const epoch = this.epoch;
     const frame = parseKokoMcpFrame(value);
-    if (!frame || (frame.type !== "mcp.response" && frame.type !== "mcp.cancel_result")) return null;
+    if (
+      !frame ||
+      (frame.type !== "mcp.response" && frame.type !== "mcp.progress" && frame.type !== "mcp.cancel_result")
+    )
+      return null;
     if (frame.resource_session_id !== this.options.resourceSessionId()) return null;
 
     const data = frame.data;
     const inlineToolCallId = isRecord(data) ? String(data.tool_call_id || "") : "";
     const rpcId = String(data.id);
     const correlatedToolCallId = this.rpcToolCalls.get(rpcId) || "";
-    if (frame.type === "mcp.response" && !correlatedToolCallId) return null;
+    if (frame.type !== "mcp.cancel_result" && !correlatedToolCallId) return null;
     const toolCallId =
-      frame.type === "mcp.response"
+      frame.type !== "mcp.cancel_result"
         ? correlatedToolCallId
         : inlineToolCallId || correlatedToolCallId || rpcId.replace(/^cancel:/, "");
     if (!toolCallId) return null;
@@ -250,16 +257,21 @@ export class AgentToolRelay {
     }
 
     if (this.completed.has(toolCallId) || this.responding.has(toolCallId)) return null;
+    const pendingCall = this.pendingCalls.get(toolCallId);
+    if (!pendingCall?.runId) throw new Error("Koko MCP response does not match an active agent run");
+    const sequence = data.seq ?? pendingCall.sequence + 1;
+    if (sequence <= pendingCall.sequence) return null;
+    const progress = frame.type === "mcp.progress";
     const hasResult = data.result !== undefined;
     const hasError = data.error !== undefined;
     if (hasResult === hasError) throw new Error("Koko MCP response must contain exactly one result or error");
-    const pendingCall = this.pendingCalls.get(toolCallId);
-    if (!pendingCall?.runId) throw new Error("Koko MCP response does not match an active agent run");
-    const normalized = hasError
-      ? { status: "error" as const, error: data.error as AgentToolResultRequest["error"] }
-      : normalizeMcpResult(data.result);
+    const normalized = progress
+      ? { status: "running" as const, result: data.result }
+      : hasError
+        ? { status: "error" as const, error: data.error as AgentToolResultRequest["error"] }
+        : normalizeMcpResult(data.result);
     const executionResult = isRecord(normalized.result) ? normalized.result : null;
-    if (executionResult && typeof executionResult.execution_id === "string") {
+    if (!progress && executionResult && typeof executionResult.execution_id === "string") {
       const executionId = executionResult.execution_id;
       if (executionResult.process_finished === true) {
         this.executions.delete(executionId);
@@ -275,14 +287,18 @@ export class AgentToolRelay {
         jsonrpc: "2.0",
         id: toolCallId,
         run_id: pendingCall.runId,
-        seq: 1,
-        done: true,
+        seq: sequence,
+        done: !progress,
         ...normalized
       },
       complete: (delivered) => {
         if (this.epoch !== epoch) return;
         this.responding.delete(toolCallId);
         if (!delivered) return;
+        if (progress) {
+          pendingCall.sequence = sequence;
+          return;
+        }
         this.pending.delete(toolCallId);
         this.pendingCalls.delete(toolCallId);
         this.rpcToolCalls.delete(rpcId);

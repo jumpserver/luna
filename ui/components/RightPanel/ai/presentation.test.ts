@@ -2,6 +2,7 @@ import type { ViewStep } from "./types";
 import { describe, expect, it } from "vitest";
 import {
   aiTimelineHasPendingOperation,
+  commandReviewUrl,
   terminalApprovalPending,
   terminalStepNeedsAttention,
   terminalStepStatus
@@ -21,6 +22,13 @@ function step(overrides: Partial<ViewStep> = {}): ViewStep {
 }
 
 const decisions = new Set<string>();
+
+it("accepts only web links to the command approval", () => {
+  expect(commandReviewUrl("https://jumpserver.test/tickets/1")).toBe("https://jumpserver.test/tickets/1");
+  for (const url of ["javascript:alert(1)", "file:///etc/passwd", "https://user:pass@example.com", "invalid"]) {
+    expect(commandReviewUrl(url)).toBeUndefined();
+  }
+});
 
 describe("Terminal AI detail visibility", () => {
   it("does not let an older request suppress the next request's activity indicator", () => {

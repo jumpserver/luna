@@ -11,12 +11,13 @@ function record(value: unknown): Record<string, unknown> {
 // A command's RPC receipt and subsequent observations belong to its execution details.
 // Match protocol IDs only: identical command text can represent independent executions.
 export function groupTerminalToolItems(items: ViewItem[]) {
-  const executions = new Map<string, ViewExecution>();
+  const executions = new Map<string, { execution: ViewExecution; step: ViewStep }>();
   for (const item of items) {
     if (item.kind !== "terminal-step") continue;
     for (const execution of item.step.executions) {
-      executions.set(execution.id, execution);
-      if (execution.command?.toolCallId) executions.set(String(execution.command.toolCallId), execution);
+      const target = { execution, step: item.step };
+      executions.set(execution.id, target);
+      if (execution.command?.toolCallId) executions.set(String(execution.command.toolCallId), target);
     }
   }
 
@@ -31,8 +32,13 @@ export function groupTerminalToolItems(items: ViewItem[]) {
   for (const tool of tools) {
     const result = record(tool.data.result);
     const content = record(result.structuredContent ?? result);
-    const execution = executions.get(String(content.tool_call_id || tool.data.toolCallId));
-    if (!execution) continue;
+    const target = executions.get(String(content.tool_call_id || tool.data.toolCallId));
+    if (!target) continue;
+    const { execution, step } = target;
+    if (tool.data.status === "cancelled" && execution.result?.done === false) {
+      execution.result = { ...execution.result, outcome: "interrupted", status: "cancelled", done: true };
+      step.status = "interrupted";
+    }
     bindings.set(tool.key, execution);
     if (typeof content.execution_id === "string") jobs.set(content.execution_id, execution);
   }

@@ -51,6 +51,26 @@ describe("terminal command progress presentation", () => {
     payload: { tool_name: "wait_command_execution", arguments: { execution_id: "job-command", timeout_ms: 30000 } }
   };
 
+  it.each(["awaiting_approval", "running"])("ends a pending %s step when its tool call is cancelled", (status) => {
+    const items = build([
+      command("command")[0]!,
+      {
+        type: "tool.result",
+        tool_call_id: "command",
+        payload: {
+          status: "running",
+          done: false,
+          result: { status }
+        }
+      },
+      { type: "tool.cancel", tool_call_id: "command", payload: { reason: "run cancelled" } }
+    ]);
+    const step = items.find((item) => item.kind === "terminal-step")!.step;
+    expect(step.status).toBe("interrupted");
+    expect(step.executions[0]?.result).toMatchObject({ done: true, outcome: "interrupted" });
+    expect(aiTimelineHasPendingOperation(items)).toBe(false);
+  });
+
   it("shows one command in progress while keeping RPC receipts and polls in its details", () => {
     const items = build([...command("command"), wait]);
     expect(items.filter((item) => item.kind === "agent-tool")).toEqual([]);

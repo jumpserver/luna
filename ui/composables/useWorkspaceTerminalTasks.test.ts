@@ -218,7 +218,7 @@ describe("unified assistant terminal task bridge", () => {
     vi.useFakeTimers();
     const { manager, session } = setup();
     const started = await manager.start(manager.list()[0]!.target_id, "Inspect");
-    session.pendingApprovals.add("approval-1");
+    session.runtimeState = "awaiting_approval";
     await nextTick();
     let resolved = false;
     const wait = manager.read(started.task_id, 30000, new AbortController().signal).then((result) => {
@@ -227,7 +227,7 @@ describe("unified assistant terminal task bridge", () => {
     });
     await vi.advanceTimersByTimeAsync(1000);
     expect(resolved).toBe(false);
-    session.pendingApprovals.clear();
+    session.runtimeState = "running";
     await nextTick();
     expect(await wait).toMatchObject({ status: "running", done: false });
   });

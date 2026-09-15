@@ -235,7 +235,12 @@ export function createWorkspaceTerminalTasks(options: {
         task.status = "interrupted";
         task.error = "terminal_changed";
         task.active = false;
-      } else if (session.metadataApproval || session.pendingApprovals.size) task.status = "waiting_approval";
+      } else if (
+        session.metadataApproval ||
+        session.pendingApprovals.size ||
+        session.runtimeState === "awaiting_approval"
+      )
+        task.status = "waiting_approval";
       else if (session.runtimeState === "waiting_input") task.status = "waiting_input";
       else if (dispatched && !busy(session)) {
         task.status =

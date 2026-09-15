@@ -344,7 +344,11 @@ function toolResultPresentation(event: AgentEvent) {
   const result = isRecord(payload.result) ? payload.result : {};
   const structuredContent = isRecord(result.structuredContent) ? result.structuredContent : result;
   const error = isRecord(payload.error) ? payload.error : null;
-  const status = String(structuredContent.status || payload.status || "");
+  const status = String(
+    payload.done !== false && error
+      ? payload.status || structuredContent.status || ""
+      : structuredContent.status || payload.status || ""
+  );
   const done =
     typeof structuredContent.process_finished === "boolean"
       ? structuredContent.process_finished
@@ -353,7 +357,7 @@ function toolResultPresentation(event: AgentEvent) {
     status === "unknown"
       ? "unknown"
       : !done
-        ? ["reviewing", "waiting_input", "cancelling", "timeout"].includes(status)
+        ? ["awaiting_approval", "reviewing", "waiting_input", "cancelling", "timeout"].includes(status)
           ? status
           : "running"
         : status === "timeout" || status === "unknown"
@@ -381,6 +385,7 @@ function toolResultPresentation(event: AgentEvent) {
       outcome,
       status,
       done,
+      ...(isRecord(structuredContent.command_acl) ? { commandAcl: structuredContent.command_acl } : {}),
       ...(Number.isFinite(Number(payload.duration_ms)) ? { durationMs: Number(payload.duration_ms) } : {}),
       ...(typeof structuredContent.elapsed_ms === "number" ? { durationMs: structuredContent.elapsed_ms } : {}),
       ...(typeof structuredContent.execution_elapsed_ms === "number"
@@ -1338,8 +1343,29 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     return isCurrentRelaySession(snapshot) ? failure : null;
   }
 
-  async function receiveKokoFrame(frame: unknown) {
+  let relayFrameQueue = { generation, pending: 0, tail: Promise.resolve() as Promise<unknown> };
+
+  function receiveKokoFrame(frame: unknown): Promise<boolean> {
     const snapshot = relaySessionSnapshot();
+    if (relayFrameQueue.generation !== generation) {
+      relayFrameQueue = { generation, pending: 0, tail: Promise.resolve() };
+    }
+    const queue = relayFrameQueue;
+    if (queue.pending >= 64) {
+      return failToolRelay(new Error("Too many undelivered executor results"), snapshot).then(() => true);
+    }
+    queue.pending += 1;
+    // Progress and completion can arrive together. Preserve their sequence while
+    // posting receipts, including retries, so completion is never dropped.
+    const delivery = queue.tail.then(() => deliverKokoFrame(frame, snapshot));
+    queue.tail = delivery.catch(() => undefined);
+    return delivery.finally(() => {
+      queue.pending -= 1;
+    });
+  }
+
+  async function deliverKokoFrame(frame: unknown, snapshot: ReturnType<typeof relaySessionSnapshot>) {
+    if (!isCurrentRelaySession(snapshot)) return true;
     if (!state.available || !snapshot.sessionId || !snapshot.resourceSessionId) return false;
     let result: AgentToolRelayResult | null;
     try {
