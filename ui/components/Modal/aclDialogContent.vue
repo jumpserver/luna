@@ -2,6 +2,7 @@
 import type { AclDialogGroup } from "~/composables/useAclDialog";
 
 import AclErrorDetail from "~/components/Modal/aclErrorDetail.vue";
+import { isFaceLiveHostMessage } from "~/utils/faceLive";
 
 const props = withDefaults(
   defineProps<{
@@ -20,8 +21,9 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { submit, close, copyTicketLink } = useAclDialog();
+const { submit, close, copyTicketLink, retryFace } = useAclDialog();
 const { closePane } = useWorkspaceTabs();
+const faceFrame = ref<HTMLIFrameElement | null>(null);
 
 const { description, hasPending, isActionable, isBatch, isBusy, isReview, title } = useAclDialogPresentation(
   () => props.group
@@ -33,12 +35,26 @@ const statusColor = (status: string) => {
   if (["submitting", "pending", "verifying"].includes(status)) return "info";
   return "neutral";
 };
+const hasFaceFailure = computed(
+  () => props.group.code.startsWith("acl_face_") && props.group.items.some((item) => item.status === "failed")
+);
+
+const handleFaceMessage = (event: MessageEvent) => {
+  if (!isFaceLiveHostMessage(event.data) || event.data.event !== "retry_requested") return;
+  if (!faceFrame.value || event.source !== faceFrame.value.contentWindow) return;
+  const expectedOrigin = props.group.faceUrl ? new URL(props.group.faceUrl).origin : "";
+  if (!expectedOrigin || event.origin !== expectedOrigin) return;
+  void retryFace(props.group);
+};
 
 const handleClose = async () => {
   const scopeId = !isBatch.value ? props.group.items[0]?.scopeId : undefined;
   await close(props.group);
   if (props.embedded && scopeId) await closePane(scopeId);
 };
+
+onMounted(() => window.addEventListener("message", handleFaceMessage));
+onBeforeUnmount(() => window.removeEventListener("message", handleFaceMessage));
 </script>
 
 <template>
@@ -90,6 +106,7 @@ const handleClose = async () => {
 
     <iframe
       v-if="group.faceUrl"
+      ref="faceFrame"
       :src="group.faceUrl"
       allow="camera"
       class="mt-4 h-[480px] w-full border-0"
@@ -102,6 +119,14 @@ const handleClose = async () => {
       </UButton>
       <UButton v-if="isActionable && !group.submitted" :loading="isBusy" @click="submit(group)">
         {{ isBatch && isReview ? t("AclDialog.SubmitAll") : t("Common.Confirm") }}
+      </UButton>
+      <UButton
+        v-else-if="isActionable && hasFaceFailure"
+        icon="i-lucide-refresh-cw"
+        :disabled="isBusy"
+        @click="retryFace(group)"
+      >
+        {{ t("Face.Remote.Retry") }}
       </UButton>
     </footer>
   </section>

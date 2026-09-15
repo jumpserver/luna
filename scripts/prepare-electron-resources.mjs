@@ -1,4 +1,4 @@
-import { cp, mkdir, rm } from "node:fs/promises";
+import { access, cp, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -23,5 +23,30 @@ await Promise.all([
     path.join(stagingRoot, "icons", "tray-mac.png")
   )
 ]);
+
+const configuredFaceBundle = String(process.env.JMS_FACE_ENGINE_BUNDLE || "").trim();
+const defaultFaceBundle = path.join(
+  projectRoot,
+  "electron",
+  "face-engine",
+  "dist",
+  process.platform === "win32" ? "facelive-worker.exe" : "facelive-worker"
+);
+const packagedFaceExecutable = process.platform === "win32" ? "facelive-worker.exe" : "facelive-worker";
+const faceBundle = path.resolve(configuredFaceBundle || defaultFaceBundle);
+try {
+  await access(faceBundle);
+  const faceResourceDir = path.join(stagingRoot, "face-engine");
+  await mkdir(faceResourceDir, { recursive: true });
+  await cp(faceBundle, path.join(faceResourceDir, packagedFaceExecutable));
+
+  const configuredModels = String(process.env.JMS_FACE_MODEL_BUNDLE || "").trim();
+  if (configuredModels) {
+    await cp(path.resolve(configuredModels), path.join(faceResourceDir, "model-root"), { recursive: true });
+  }
+  console.info(`[electron] included face engine bundle ${faceBundle}`);
+} catch {
+  console.info("[electron] face engine bundle is not present; packaged face features will remain unavailable");
+}
 
 console.info(`[electron] prepared ${platform}/${process.arch} resources in ${stagingRoot}`);

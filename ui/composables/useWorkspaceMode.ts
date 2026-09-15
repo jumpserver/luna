@@ -14,9 +14,11 @@ export const useWorkspaceMode = () => {
   const activeWorkspaceMode = computed<WorkspaceMode>(() => {
     const hay = routeHaystack(router.currentRoute.value);
     const isFileRoute = hay.includes("/files");
+    const isFaceRoute = hay.includes("/face");
     const isToolRoute = hay.includes("/tools") || hay.includes("videoplayer") || hay.includes("transcode");
 
     if (isFileRoute) return "files";
+    if (isFaceRoute) return "tools";
     if (isDesktopRuntime() && isToolRoute) return "tools";
     return "assets";
   });

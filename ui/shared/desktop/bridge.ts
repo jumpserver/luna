@@ -1,5 +1,14 @@
 import { createWebProxyBridge } from "@jumpserver/web-proxy/bridge";
 import { getDesktopRuntime, isElectronRuntime } from "~/utils/runtime";
+import type {
+  FaceEngineConfig,
+  FaceEngineStatus,
+  FaceFlowEvent,
+  FaceFrameResult,
+  FacePerson,
+  FaceSessionStart,
+  FaceSessionStarted
+} from "~/types/face";
 
 export interface DesktopEvent<T> {
   event?: string;
@@ -253,6 +262,31 @@ export const desktopLocalShell = {
 };
 
 export const desktopWebProxy = createWebProxyBridge(desktopInvoke, desktopListen);
+
+export const desktopFace = {
+  status: () => desktopInvoke<FaceEngineStatus>("face_engine_status"),
+  initialize: () => desktopInvoke<FaceEngineStatus & { people: FacePerson[] }>("face_engine_initialize"),
+  configure: (config: FaceEngineConfig) =>
+    desktopInvoke<FaceEngineStatus & { people: FacePerson[] }>("face_engine_configure", { config }),
+  listPeople: () => desktopInvoke<FacePerson[]>("face_engine_list_people"),
+  removePerson: (personId: string) =>
+    desktopInvoke<{ removed_samples: number; people: FacePerson[] }>("face_engine_remove_person", { personId }),
+  startSession: (request: FaceSessionStart) =>
+    desktopInvoke<FaceSessionStarted>("face_engine_start_session", request as unknown as Record<string, unknown>),
+  processFrame: (sessionId: string, image: string) =>
+    desktopInvoke<FaceFrameResult>("face_engine_process_frame", { sessionId, image }),
+  stopSession: (sessionId: string) => desktopInvoke<{ stopped: boolean }>("face_engine_stop_session", { sessionId }),
+  onStatus: <T = Record<string, unknown>>(handler: (event: DesktopEvent<T>) => void) =>
+    desktopListen<T>("face-engine-status", handler),
+  onFlowEvent: (handler: (event: DesktopEvent<FaceFlowEvent>) => void) =>
+    desktopListen<FaceFlowEvent>("face-flow-event", handler),
+  onRedirect: <T = { url: string; event: FaceFlowEvent }>(handler: (event: DesktopEvent<T>) => void) =>
+    desktopListen<T>("face-flow-redirect", handler),
+  onMethod: <T = { method: string; event: FaceFlowEvent }>(handler: (event: DesktopEvent<T>) => void) =>
+    desktopListen<T>("face-flow-method", handler),
+  onActionResult: <T = Record<string, unknown>>(handler: (event: DesktopEvent<T>) => void) =>
+    desktopListen<T>("face-flow-action-result", handler)
+};
 
 export interface DesktopStore {
   get<T>(key: string): Promise<T | null | undefined>;

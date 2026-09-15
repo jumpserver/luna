@@ -5,8 +5,7 @@ const kokoTarget = process.env.JMS_KOKO_DEV_URL || "http://localhost:5050";
 // JMS_LION_DEV_URL remains a compatibility override; Lion is served by Koko by default.
 const lionTarget = process.env.JMS_LION_DEV_URL || kokoTarget;
 const chenTarget = process.env.JMS_CHEN_DEV_URL || "http://localhost:8082";
-const faceliveTarget = process.env.JMS_FACELIVE_DEV_URL || "http://localhost:5173";
-const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:8083";
+const kaelTarget = process.env.JMS_KAEL_DEV_URL || "http://localhost:5172";
 const uiTarget = process.env.JMS_UI_DEV_URL || "http://localhost:9528";
 const appBaseURL = process.env.NUXT_APP_BASE_URL || "/luna/";
 const lightDev = process.env.JMS_DEV_LIGHT === "1";
@@ -55,7 +54,8 @@ export default defineNuxtConfig({
   extends: ["@jumpserver/online-player/nuxt"],
   runtimeConfig: {
     public: {
-      buildTime
+      buildTime,
+      faceLiveSocketBaseUrl: process.env.NUXT_PUBLIC_FACE_LIVE_SOCKET_BASE_URL || ""
     }
   },
   typescript: {
@@ -238,12 +238,6 @@ export default defineNuxtConfig({
           ws: true,
           changeOrigin: true,
           configure: configureHttpProxy("chen", chenTarget)
-        },
-        "/facelive": {
-          target: faceliveTarget,
-          secure: false,
-          ws: true,
-          changeOrigin: true
         },
         "/kael": {
           target: kaelTarget,

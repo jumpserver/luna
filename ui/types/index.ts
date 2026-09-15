@@ -518,7 +518,7 @@ export interface TokenResponse {
   date_updated: string;
   expire_time: number;
   face_token?: string;
-  face_monitor_token: string;
+  face_monitor_token?: string;
   from_ticket: any;
   from_ticket_info: any;
   id: string;

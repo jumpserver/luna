@@ -121,9 +121,12 @@ const config: ForgeConfig = {
     asar: {
       unpack: "**/node_modules/node-pty/**"
     },
+    extendInfo: {
+      NSCameraUsageDescription: "JumpServer uses the camera for local face verification and presence monitoring."
+    },
     icon: path.join(iconsRoot, process.platform === "win32" ? "icon.ico" : "icon.icns"),
     extraResource: [
-      ...["dist", "plugins", "icons"]
+      ...["dist", "plugins", "icons", "face-engine"]
         .map((name) => path.join(stagedResources, name))
         .filter((candidate) => existsSync(candidate)),
       path.join(stagedResources, "bin")
