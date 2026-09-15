@@ -102,6 +102,13 @@ async function installReplayBackend(
       body: Buffer.from(gzipSync(strToU8(extra?.guacamoleBody || GUACAMOLE_BODY)))
     });
   });
+  await page.route("**/mock.mp4", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "video/mp4",
+      body: Buffer.alloc(0)
+    })
+  );
   await page.route("**/mock.replay", async (route) => {
     if (extra?.guacamoleDelayMs) {
       await new Promise((resolve) => setTimeout(resolve, extra.guacamoleDelayMs));
@@ -287,7 +294,7 @@ test.describe("online session replay", () => {
     expect(railToggleBox!.y + railToggleBox!.height / 2).toBeCloseTo(speedBox!.y + speedBox!.height / 2, 1);
   });
 
-  test("fits asciicast without stretching the player host", async ({ page }) => {
+  test("fills the asciicast player to the stage", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 700 });
     await installReplayBackend(page, {
       type: "asciicast",
@@ -319,8 +326,8 @@ test.describe("online session replay", () => {
     });
 
     expect(initial.hostTransform).toBe("none");
-    expect(initial.playerWidth).toBeLessThanOrEqual(initial.rootWidth + 1);
-    expect(initial.playerHeight).toBeLessThanOrEqual(initial.rootHeight + 1);
+    expect(initial.playerWidth).toBeCloseTo(initial.rootWidth, 0);
+    expect(initial.playerHeight).toBeCloseTo(initial.rootHeight, 0);
 
     await page.setViewportSize({ width: 700, height: 700 });
     await expect.poll(async () => (await player.boundingBox())?.width || 0).toBeLessThan(initial.playerWidth);
@@ -328,8 +335,8 @@ test.describe("online session replay", () => {
     const resized = await player.boundingBox();
     const resizedRoot = await root.boundingBox();
     expect(resized && resizedRoot).toBeTruthy();
-    expect(resized!.width).toBeLessThanOrEqual(resizedRoot!.width + 1);
-    expect(resized!.height).toBeLessThanOrEqual(resizedRoot!.height + 1);
+    expect(resized!.width).toBeCloseTo(resizedRoot!.width, 0);
+    expect(resized!.height).toBeCloseTo(resizedRoot!.height, 0);
     await expect(host).toHaveCSS("transform", "none");
   });
 
@@ -497,16 +504,28 @@ test.describe("online session replay", () => {
     await expect(playButton).toHaveAttribute("aria-label", /Pause|暂停/);
   });
 
-  test("fills the stage with an aspect-ratio-safe guacamole viewport", async ({ page }) => {
+  test("stretches the guacamole display to fill the stage", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await installReplayBackend(page, {
-      type: "guacamole",
-      src: "/mock.replay.gz",
-      user: "alice",
-      asset: "windows-prod-01",
-      account: "administrator",
-      date_start: "2026-08-20T14:32:00.000Z"
-    });
+    await installReplayBackend(
+      page,
+      {
+        type: "guacamole",
+        src: "/mock.replay.gz",
+        user: "alice",
+        asset: "windows-prod-01",
+        account: "administrator",
+        date_start: "2026-08-20T14:32:00.000Z"
+      },
+      {
+        guacamoleBody: [
+          "4.size,1.0,3.800,3.600;",
+          "4.rect,1.0,1.0,1.0,3.800,3.600;",
+          "5.cfill,2.15,1.0,3.255,1.0,1.0,3.255;",
+          "4.sync,3.100;",
+          "4.sync,4.1100;"
+        ].join("")
+      }
+    );
     await openReplay(page, "/replay/sid-guacamole-fit");
 
     const frame = page.locator(".replay-frame");
@@ -534,22 +553,21 @@ test.describe("online session replay", () => {
         root.boundingBox(),
         viewport.boundingBox()
       ]);
-      expect(frameBox && rootBox && viewportBox).toBeTruthy();
-      return { frame: frameBox!, root: rootBox!, viewport: viewportBox! };
+      const displayBox = await viewport.evaluate((element) => {
+        const display = element.firstElementChild?.firstElementChild as HTMLElement | null;
+        return display?.getBoundingClientRect().toJSON() ?? null;
+      });
+      expect(frameBox && rootBox && viewportBox && displayBox).toBeTruthy();
+      return { frame: frameBox!, root: rootBox!, viewport: viewportBox!, display: displayBox! };
     };
 
     const initial = await measure();
     expect(initial.root.width).toBeCloseTo(initial.frame.width, 0);
     expect(initial.root.height).toBeCloseTo(initial.frame.height, 0);
-    expect(initial.viewport.width).toBeLessThanOrEqual(initial.root.width + 1);
-    expect(initial.viewport.height).toBeLessThanOrEqual(initial.root.height + 1);
-    expect(initial.viewport.width / initial.viewport.height).toBeCloseTo(4 / 3, 2);
-    expect(
-      Math.min(
-        Math.abs(initial.viewport.width - initial.root.width),
-        Math.abs(initial.viewport.height - initial.root.height)
-      )
-    ).toBeLessThanOrEqual(1);
+    expect(initial.viewport.width).toBeCloseTo(initial.root.width, 0);
+    expect(initial.viewport.height).toBeCloseTo(initial.root.height, 0);
+    expect(initial.display.width).toBeCloseTo(initial.viewport.width, 0);
+    expect(initial.display.height).toBeCloseTo(initial.viewport.height, 0);
 
     const controlsBox = await controls.boundingBox();
     const progressBox = await progress.boundingBox();
@@ -586,15 +604,54 @@ test.describe("online session replay", () => {
     await expect.poll(async () => (await root.boundingBox())?.width || 0).toBeLessThan(initial.root.width);
 
     const resized = await measure();
-    expect(resized.viewport.width).toBeLessThanOrEqual(resized.root.width + 1);
-    expect(resized.viewport.height).toBeLessThanOrEqual(resized.root.height + 1);
-    expect(resized.viewport.width / resized.viewport.height).toBeCloseTo(4 / 3, 2);
-    expect(
-      Math.min(
-        Math.abs(resized.viewport.width - resized.root.width),
-        Math.abs(resized.viewport.height - resized.root.height)
-      )
-    ).toBeLessThanOrEqual(1);
+    expect(resized.viewport.width).toBeCloseTo(resized.root.width, 0);
+    expect(resized.viewport.height).toBeCloseTo(resized.root.height, 0);
+    expect(resized.display.width).toBeCloseTo(resized.viewport.width, 0);
+    expect(resized.display.height).toBeCloseTo(resized.viewport.height, 0);
+  });
+
+  test("fills the stage with mp4 instead of a cinema card", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await installReplayBackend(page, {
+      type: "mp4",
+      src: "/mock.mp4",
+      user: "alice",
+      asset: "windows-prod-01",
+      account: "administrator",
+      date_start: "2026-08-20T14:32:00.000Z"
+    });
+    await openReplay(page, "/replay/sid-mp4-fit");
+
+    const frame = page.locator(".replay-frame");
+    const controls = page.locator("[data-replay-controls]");
+    await expect(frame).toBeVisible();
+    await expect(controls).toBeVisible();
+
+    const sizes = await frame.evaluate((element) => {
+      const inner = element.firstElementChild as HTMLElement | null;
+      const frameBox = element.getBoundingClientRect();
+      const innerBox = inner?.getBoundingClientRect();
+      const innerStyle = inner ? getComputedStyle(inner) : null;
+      return {
+        frameWidth: frameBox.width,
+        frameHeight: frameBox.height,
+        innerWidth: innerBox?.width || 0,
+        innerHeight: innerBox?.height || 0,
+        innerMaxHeight: innerStyle?.maxHeight || "",
+        innerMaxWidth: innerStyle?.maxWidth || ""
+      };
+    });
+
+    expect(sizes.innerWidth).toBeCloseTo(sizes.frameWidth, 0);
+    expect(sizes.innerHeight).toBeCloseTo(sizes.frameHeight, 0);
+    expect(sizes.innerMaxHeight).toBe("none");
+    expect(sizes.innerMaxWidth).toBe("none");
+    expect(sizes.innerHeight).toBeGreaterThan(680);
+
+    const frameBox = await frame.boundingBox();
+    const controlsBox = await controls.boundingBox();
+    expect(frameBox && controlsBox).toBeTruthy();
+    expect(frameBox!.y + frameBox!.height).toBeLessThanOrEqual(controlsBox!.y + 1);
   });
 
   test("loads segmented gzip-compressed guacamole recordings", async ({ page }) => {
