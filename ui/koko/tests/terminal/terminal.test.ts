@@ -148,13 +148,15 @@ it("blocks denied copy and paste events before xterm handles them", () => {
 });
 
 function startContextMenuInput(overrides: {
-  getTerminalConfig: () => { quickPaste?: string };
+  getTerminalConfig: () => { quickPaste?: string; ctrlCAsCtrlZ?: string };
   socket?: { send: ReturnType<typeof vi.fn> } | null;
   isSocketOpen?: () => boolean;
+  inputLocked?: (data?: string) => boolean;
 }) {
   const container = new EventTarget();
   const onContextMenu = vi.fn();
   const send = overrides.socket?.send ?? vi.fn();
+  let onData!: (data: string) => void;
   const input = useKokoTerminalInput({
     container: shallowRef(container as HTMLElement),
     terminal: ref({
@@ -163,7 +165,9 @@ function startContextMenuInput(overrides: {
       focus: vi.fn(),
       getSelection: vi.fn(() => ""),
       hasSelection: vi.fn(() => false),
-      onData: vi.fn(),
+      onData: (handler: (data: string) => void) => {
+        onData = handler;
+      },
       onResize: vi.fn(),
       onSelectionChange: vi.fn()
     } as never),
@@ -180,15 +184,28 @@ function startContextMenuInput(overrides: {
     getTerminalConfig: vi.fn(overrides.getTerminalConfig),
     onResize: vi.fn(),
     onHostKey: vi.fn(),
-    inputLocked: vi.fn(() => false),
+    inputLocked: overrides.inputLocked ?? (() => false),
     sendHostEvent: vi.fn(),
     sendToHost: vi.fn(),
     sendMittEvent: vi.fn(),
     validateClipboardText: vi.fn(() => true)
   });
   input.start();
-  return { container, input, onContextMenu, send };
+  return { container, input, onContextMenu, send, onData };
 }
+
+it.each([false, true])("preserves the terminal interrupt policy while locked (readOnly=%s)", (readOnly) => {
+  const { input, send, onData } = startContextMenuInput({
+    getTerminalConfig: () => ({ ctrlCAsCtrlZ: "1" }),
+    inputLocked: (data) => readOnly || data !== "\x03"
+  });
+  onData("command\r");
+  expect(send).not.toHaveBeenCalled();
+  onData("\x03");
+  if (readOnly) expect(send).not.toHaveBeenCalled();
+  else expect(send).toHaveBeenCalledWith(buildTerminalInput(1, "\x03"));
+  input.stop();
+});
 
 it("pastes on right-click when quickPaste is enabled", async () => {
   vi.mocked(readText).mockResolvedValue("clipped");
@@ -395,7 +412,7 @@ it("keeps terminal AI state isolated by active pane", async () => {
     expect.objectContaining({
       role: "user",
       parts: [{ type: "text", text: "stream status" }],
-      metadata: { terminalId: 11, execution_mode: "auto" }
+      metadata: { domain: "terminal", terminalId: 11, execution_mode: "auto" }
     })
   );
   expect(agentHarness.sendMessage.mock.calls.some((call) => call[1] === pane2Resource)).toBe(false);

@@ -187,10 +187,10 @@ export const useKokoTerminalSocket = () => {
     if (key === "ArrowLeft") sendToHost(HOST_MESSAGE_TYPE.KEYEVENT, "alt+shift+left");
   }, 500);
 
-  const terminalInputLocked = () => {
+  const terminalInputLocked = (data = "") => {
     if (unref(sessionCtxRef)?.wsQuery?.type === "monitor") return true;
     const paneId = unref(sessionCtxRef)?.tabId || "";
-    return Boolean(paneId && isKokoTerminalAiInputLocked(paneId));
+    return data !== "\x03" && Boolean(paneId && isKokoTerminalAiInputLocked(paneId));
   };
   const terminalAiBusy = () => {
     const paneId = unref(sessionCtxRef)?.tabId || "";
@@ -226,7 +226,7 @@ export const useKokoTerminalSocket = () => {
     commandSuggestions.invalidate();
     if (!data) return false;
     const socket = socketRef.value;
-    if (!socket || !isSocketOpen(socket) || terminalInputLocked() || zmodem.isActiveSession()) return false;
+    if (!socket || !isSocketOpen(socket) || terminalInputLocked(data) || zmodem.isActiveSession()) return false;
     lastSendTime.value = new Date();
     socket.send(formatMessage(terminalId.value, FORMATTER_MESSAGE_TYPE.TERMINAL_DATA, data));
     return true;

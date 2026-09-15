@@ -76,6 +76,7 @@ interface AgentBinding {
   conversationId: string;
   panelId: string;
   activeRunId: string;
+  pendingMessage?: Promise<AgentMessageResponse>;
   surface: string;
   profile: string;
   contextVersion: number;
@@ -333,11 +334,21 @@ export class AgentClient {
     message: AgentMessageRequest
   ): Promise<AgentMessageResponse> {
     const binding = this.binding(sessionId, resourceSessionId);
+    const pending = this.submitMessage(binding, message);
+    binding.pendingMessage = pending;
+    try {
+      return await pending;
+    } finally {
+      if (binding.pendingMessage === pending) binding.pendingMessage = undefined;
+    }
+  }
+
+  private async submitMessage(binding: AgentBinding, message: AgentMessageRequest): Promise<AgentMessageResponse> {
     const context = message.metadata?.context;
     if (isRecord(context)) {
-      await this.updateContext(sessionId, resourceSessionId, { ...binding.context, ...context });
+      await this.updateContext(binding.panelId, binding.resourceSessionId, { ...binding.context, ...context });
     } else if (this.responseLanguage && binding.context.response_language !== this.responseLanguage) {
-      await this.updateContext(sessionId, resourceSessionId, binding.context);
+      await this.updateContext(binding.panelId, binding.resourceSessionId, binding.context);
     }
     const created = await this.request<KaelMessage>({
       method: "POST",
@@ -459,7 +470,9 @@ export class AgentClient {
 
   async cancel(sessionId: string, resourceSessionId: string, runId = "", reason = "user") {
     const binding = this.binding(sessionId, resourceSessionId);
-    const target = runId || binding.activeRunId;
+    // A stop can arrive before the run creation response, including during context upload.
+    const pending = runId ? undefined : await binding.pendingMessage?.catch(() => undefined);
+    const target = pending?.run_id || runId || binding.activeRunId;
     if (!target) return;
     await this.request({
       method: "POST",

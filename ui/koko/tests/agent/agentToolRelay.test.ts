@@ -1,5 +1,6 @@
 import { expect, it, vi } from "vitest";
 import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
+import { kokoMcpWireMessage } from "#koko/composables/agent/types";
 
 function toolCall(toolCallId = "tool-1", rpcId = toolCallId) {
   return {
@@ -37,6 +38,49 @@ function toolResponse(toolCallId = "tool-1", rpcId = toolCallId) {
     }
   };
 }
+
+it.each([
+  "stat:3:1787816033:-rw-r--r--",
+  "3\0" + "1787816033\0-rw-r--r--",
+  String.raw`3\u00001787816033\u0000-rw-r--r--`
+])("preserves file version %j across stat results and delete requests", (version) => {
+  const sendFrame = vi.fn();
+  const relay = new AgentToolRelay({ resourceSessionId: () => "resource-1", sendFrame });
+  const statCall = toolCall("stat-1");
+  relay.forwardAgentEvent({
+    ...statCall,
+    payload: { ...statCall.payload, tool_name: "stat", arguments: { path: "/b.txt" } }
+  });
+  const response = toolResponse("stat-1");
+  const entry = { path: "/b.txt", version };
+  Object.assign(response.data.result, {
+    content: [{ type: "text", text: JSON.stringify(entry) }],
+    structuredContent: entry
+  });
+  const delivery = relay.consumeKokoFrame(
+    JSON.parse(JSON.stringify({ ...response, data: JSON.stringify(response.data) }))
+  );
+  expect(delivery?.payload?.result).toEqual(entry);
+  delivery?.complete(true);
+
+  const deleteCall = toolCall("delete-1");
+  const event = {
+    ...deleteCall,
+    payload: {
+      ...deleteCall.payload,
+      tool_name: "delete",
+      arguments: { path: entry.path, expected_version: (delivery?.payload?.result as typeof entry).version }
+    }
+  };
+  relay.forwardAgentEvent(JSON.parse(JSON.stringify(event)));
+  const wire = JSON.parse(JSON.stringify(kokoMcpWireMessage(sendFrame.mock.calls[1]?.[0])));
+  expect(JSON.parse(wire.data).params.arguments).toEqual({ path: "/b.txt", expected_version: version });
+
+  relay.forwardAgentEvent(event);
+  expect(sendFrame).toHaveBeenCalledTimes(2);
+  relay.forwardAgentEvent({ ...event, tool_call_id: "delete-2", payload: { ...event.payload, id: "delete-2" } });
+  expect(sendFrame).toHaveBeenCalledTimes(3);
+});
 
 it("retains registration and invocation bindings only for local workspace execution", () => {
   const sendFrame = vi.fn();

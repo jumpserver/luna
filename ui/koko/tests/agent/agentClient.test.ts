@@ -278,6 +278,55 @@ it("uploads the current file selection before each run and clears previous selec
   }
 });
 
+it.each([
+  ["context", ""],
+  ["messages", ""],
+  ["runs", ""],
+  ["runs", "run-1"]
+])("cancels during %s submission (known run=%s)", async (stage, runId) => {
+  const requests: AgentHttpRequest[] = [];
+  const respond = kaelRequest(requests);
+  let release!: () => void;
+  const blocked = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let reached!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    reached = resolve;
+  });
+  let sending = false;
+  const client = new AgentClient(async <T>(request: AgentHttpRequest) => {
+    if (sending && request.path.endsWith(`/${stage}`)) {
+      reached();
+      await blocked;
+    }
+    return respond<T>(request);
+  });
+  try {
+    await client.createSession(manifest, "auto");
+    sending = true;
+    const pending = client.sendMessage("panel-1", "resource-1", {
+      message_id: "message-1",
+      idempotency_key: "send-1",
+      role: "user",
+      parts: [{ type: "text", text: "Analyze the file" }],
+      metadata: { context: {} }
+    });
+    await ready;
+    const cancelled = client.cancel("panel-1", "resource-1", runId);
+    if (runId) await cancelled;
+    expect(requests.some((request) => request.path.endsWith("/cancel"))).toBe(Boolean(runId));
+    release();
+    await Promise.all([pending, cancelled]);
+    expect(requests.filter((request) => request.path.endsWith("/cancel"))).toEqual([
+      { method: "POST", path: "/kael/api/v1/runs/run-1/cancel", body: { reason: "user" } }
+    ]);
+  } finally {
+    release();
+    client.dispose();
+  }
+});
+
 it("waits for the context upload and does not start a run if it fails", async () => {
   const requests: AgentHttpRequest[] = [];
   const client = new AgentClient(kaelRequest(requests));
@@ -299,8 +348,10 @@ it("waits for the context upload and does not start a run if it fails", async ()
       metadata: { context: { selectedEntries: [] } }
     });
     expect(requests).toHaveLength(0);
+    const cancelled = client.cancel("panel-1", "resource-1");
     reject(new Error("Context upload failed"));
     await expect(pending).rejects.toThrow("Context upload failed");
+    await cancelled;
     expect(requests).toHaveLength(0);
   } finally {
     client.dispose();

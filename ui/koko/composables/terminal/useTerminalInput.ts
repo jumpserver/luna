@@ -26,7 +26,7 @@ export function useKokoTerminalInput(options: {
   getTerminalConfig: () => Partial<ITerminalSettings>;
   onResize: (size: { cols: number; rows: number }) => void;
   onHostKey: (key: string) => void;
-  inputLocked: () => boolean;
+  inputLocked: (data?: string) => boolean;
   sendHostEvent: (event: string, data: unknown) => void;
   sendToHost: (event: HOST_MESSAGE_TYPE, data: unknown) => void;
   sendMittEvent: (event: TerminalMittEvent) => void;
@@ -122,7 +122,7 @@ export function useKokoTerminalInput(options: {
 
     terminal.onData((data) => {
       const socket = options.socket.value;
-      if (!socket || options.inputLocked() || !options.isSocketOpen(socket)) return;
+      if (!socket || options.inputLocked(data) || !options.isSocketOpen(socket)) return;
       options.lastSendTime.value = new Date();
       options.onData?.(data);
       const isZmodemInterrupt = options.isZmodemActive() && data.length === 1 && data.charCodeAt(0) === 3;
@@ -130,7 +130,7 @@ export function useKokoTerminalInput(options: {
         formatMessage(
           options.terminalId.value,
           FORMATTER_MESSAGE_TYPE.TERMINAL_DATA,
-          isZmodemInterrupt ? data : preprocessInput(data, options.getTerminalConfig())
+          isZmodemInterrupt || options.inputLocked() ? data : preprocessInput(data, options.getTerminalConfig())
         )
       );
       if (isZmodemInterrupt) options.abortZmodem();
