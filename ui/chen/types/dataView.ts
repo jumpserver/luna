@@ -80,6 +80,7 @@ export interface ChenSaveChangesResultBase {
   success: boolean;
   allowed?: boolean;
   reason?: string;
+  message?: string;
   failedChangeIndex?: number | null;
   dataView?: string;
   schema?: string;
