@@ -5,6 +5,7 @@ import { formatAiDuration } from "./presentation";
 
 defineProps<{
   presentation: AiPanelDomainPresentation;
+  connectionNotice?: string;
 }>();
 
 const emit = defineEmits<{
@@ -21,8 +22,16 @@ const { t } = useI18n();
 
 <template>
   <footer class="shrink-0 space-y-2 border-t border-default p-3">
+    <UAlert
+      v-if="connectionNotice"
+      icon="i-lucide-wifi-off"
+      color="warning"
+      variant="subtle"
+      :title="connectionNotice"
+      role="status"
+    />
     <div
-      v-if="presentation.errorLabel"
+      v-else-if="presentation.errorLabel"
       class="flex items-start gap-2 rounded-lg bg-error/10 p-2 text-[11px] text-error"
     >
       <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3 shrink-0" />
@@ -76,7 +85,7 @@ const { t } = useI18n();
     <AiComposer
       v-model="draft"
       :show-policy="presentation.showPolicy"
-      :busy="presentation.busy || !presentation.available"
+      :busy="presentation.busy || !presentation.available || Boolean(connectionNotice)"
       :running="presentation.running"
       :action-label="presentation.actionLabel"
       :interrupt-label="presentation.interruptLabel"

@@ -255,7 +255,10 @@ async function openDesktopStream(options: OpenAgentStreamOptions) {
       if (payload.type === "error") reject(new Error(payload.error || "Agent event stream failed"));
     });
     options.signal.addEventListener("abort", onAbort, { once: true });
-    if (options.signal.aborted) return onAbort();
+    if (options.signal.aborted) {
+      onAbort();
+      return await completion;
+    }
     const request = {
       method: "GET",
       path: eventPath(options.sessionId),
@@ -265,9 +268,12 @@ async function openDesktopStream(options: OpenAgentStreamOptions) {
         "Last-Event-ID": String(options.after)
       }
     };
-    await desktopInvoke("api_stream_start", { streamId, request });
-    options.onOpen();
-    await completion;
+    await Promise.all([
+      desktopInvoke("api_stream_start", { streamId, request }).then(() => {
+        if (!options.signal.aborted) options.onOpen();
+      }),
+      completion
+    ]);
   } finally {
     options.signal.removeEventListener("abort", onAbort);
     unlisten?.();
@@ -303,19 +309,43 @@ function isCursorExpiredError(error: Error) {
   return status === 410 && detail.includes("cursor_expired");
 }
 
-function waitFor(delayMs: number, signal: AbortSignal) {
+export function isAgentNetworkOnline() {
+  return typeof navigator === "undefined" || navigator.onLine !== false;
+}
+
+export function waitForAgentNetwork(signal: AbortSignal) {
+  signal.throwIfAborted();
+  if (isAgentNetworkOnline() || typeof window === "undefined") return Promise.resolve();
   return new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(resolve, delayMs);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        const error = new Error("Agent reconnect wait was aborted");
-        error.name = "AbortError";
-        reject(error);
-      },
-      { once: true }
-    );
+    function cleanup() {
+      window.removeEventListener("online", onOnline);
+      signal.removeEventListener("abort", onAbort);
+    }
+    function onOnline() {
+      cleanup();
+      resolve();
+    }
+    function onAbort() {
+      cleanup();
+      reject(signal.reason);
+    }
+    window.addEventListener("online", onOnline, { once: true });
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+function waitFor(delayMs: number, signal: AbortSignal) {
+  signal.throwIfAborted();
+  return new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, delayMs);
+    function onAbort() {
+      clearTimeout(timer);
+      reject(signal.reason);
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
   });
 }
 
@@ -362,6 +392,23 @@ export class AgentSseConnection {
     this.options.onState?.("connecting");
 
     while (!signal.aborted) {
+      if (!isAgentNetworkOnline()) {
+        this.options.onState?.("reconnecting");
+        try {
+          await waitForAgentNetwork(signal);
+        } catch {
+          return;
+        }
+        disconnectedAt = null;
+        attempts = 0;
+      }
+      if (signal.aborted) return;
+      const attempt = new AbortController();
+      const onOffline = () => {
+        this.options.onState?.("reconnecting");
+        attempt.abort();
+      };
+      if (typeof window !== "undefined") window.addEventListener("offline", onOffline);
       const parser = createAgentSseParser((event) => {
         if (event.seq <= this.cursor) return;
         disconnectedAt = null;
@@ -375,7 +422,7 @@ export class AgentSseConnection {
           sessionId: this.options.sessionId,
           resourceSessionId: this.options.resourceSessionId,
           after: this.cursor,
-          signal,
+          signal: AbortSignal.any([signal, attempt.signal]),
           onOpen: () => {
             this.options.onState?.("connected");
           },
@@ -390,6 +437,7 @@ export class AgentSseConnection {
         throw new Error("Agent event stream closed unexpectedly");
       } catch (cause) {
         if (signal.aborted) return;
+        if (attempt.signal.aborted || !isAgentNetworkOnline()) continue;
         const error = cause instanceof Error ? cause : new Error(String(cause || "Agent event stream failed"));
         if (isExpiredAgentPanel(error)) {
           this.options.onUnavailable?.(error);
@@ -435,6 +483,8 @@ export class AgentSseConnection {
         } catch {
           return;
         }
+      } finally {
+        if (typeof window !== "undefined") window.removeEventListener("offline", onOffline);
       }
     }
   }

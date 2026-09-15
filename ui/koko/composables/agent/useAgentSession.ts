@@ -13,7 +13,12 @@ import type {
 import { reactive } from "vue";
 import { agentChatStreamMessage, agentEventLifecycle } from "./agentChatStream";
 import { agentClient, AgentHttpError } from "./agentClient";
-import { AgentSseConnection as DefaultAgentSseConnection, isExpiredAgentPanel } from "./agentSse";
+import {
+  AgentSseConnection as DefaultAgentSseConnection,
+  isAgentNetworkOnline,
+  isExpiredAgentPanel,
+  waitForAgentNetwork
+} from "./agentSse";
 import { isRecord } from "./types";
 
 export interface AgentSessionState {
@@ -642,6 +647,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
   let generation = 0;
   let lifecycleTail = Promise.resolve();
   let attachFlight: { key: string; promise: Promise<void> } | null = null;
+  let attachController: AbortController | null = null;
   let panelRecovery: { sessionId: string; generation: number; promise: Promise<void> } | null = null;
   let committedManifestKey = "";
   let committedManifest: AgentMcpManifest | null = null;
@@ -945,6 +951,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     manifest: AgentMcpManifest,
     manifestKey: string,
     currentGeneration: number,
+    signal: AbortSignal,
     expiredSessionId = ""
   ) {
     if (generation !== currentGeneration) return;
@@ -983,6 +990,11 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     }
 
     try {
+      if (!isAgentNetworkOnline()) {
+        state.status = "reconnecting";
+        await waitForAgentNetwork(signal);
+        if (generation !== currentGeneration) return;
+      }
       await flushSessionDeletes();
       if (generation !== currentGeneration) return;
       if (expiredSessionId) {
@@ -1123,9 +1135,12 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
 
     if (!expiredSessionId) panelRecovery = null;
     const currentGeneration = ++generation;
+    attachController?.abort();
+    const controller = new AbortController();
+    attachController = controller;
     const promise = lifecycleTail
       .catch(() => undefined)
-      .then(() => performAttach(manifest, key, currentGeneration, expiredSessionId));
+      .then(() => performAttach(manifest, key, currentGeneration, controller.signal, expiredSessionId));
     lifecycleTail = promise.catch(() => undefined);
     attachFlight = { key, promise };
     void promise.then(
@@ -1158,6 +1173,9 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
   }
 
   async function withPanelRecovery(operation: (sessionId: string, resourceSessionId: string) => Promise<unknown>) {
+    if (!isAgentNetworkOnline() || state.status === "reconnecting") {
+      throw new Error("Agent connection is interrupted");
+    }
     if (panelRecovery?.generation === generation) await panelRecovery.promise;
     if (!state.available || !state.agentSessionId || !state.resourceSessionId) {
       throw new Error("Agent session is unavailable");
@@ -1441,6 +1459,8 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
 
   function dispose() {
     generation += 1;
+    attachController?.abort();
+    attachController = null;
     const sessionId = state.agentSessionId;
     const resourceSessionId = state.resourceSessionId || retainedResourceId;
     attachFlight = null;

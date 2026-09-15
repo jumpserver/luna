@@ -131,6 +131,40 @@ it("does not replay network failures or unrelated conflicts", async () => {
   await controller.actions.dispose();
 });
 
+it("blocks new messages until the connection recovers", async () => {
+  const { client, controller, streams } = panelRecoveryHarness();
+  await controller.actions.attachManifest(manifest());
+  const stream = streams[0]!;
+  const message = { id: "new-message", role: "user" as const, parts: [{ type: "text" as const, text: "query" }] };
+  stream.onState?.("reconnecting");
+  try {
+    await expect(controller.actions.sendMessage(message)).rejects.toThrow("connection is interrupted");
+    expect(client.sendMessage).not.toHaveBeenCalled();
+    stream.onState?.("connected");
+    await controller.actions.sendMessage(message);
+    expect(client.sendMessage).toHaveBeenCalledOnce();
+  } finally {
+    await controller.actions.dispose();
+  }
+});
+
+it("defers session creation until online and cancels the wait on disposal", async () => {
+  if (typeof window === "undefined") vi.stubGlobal("window", new EventTarget());
+  vi.stubGlobal("navigator", { onLine: false });
+  const { client, controller } = panelRecoveryHarness();
+  try {
+    const attaching = controller.actions.attachManifest(manifest());
+    await vi.waitFor(() => expect(controller.state.status).toBe("reconnecting"));
+    expect(client.bootstrap).not.toHaveBeenCalled();
+    await controller.actions.dispose();
+    await attaching;
+    expect(controller.state.status).toBe("closed");
+  } finally {
+    await controller.actions.dispose();
+    vi.unstubAllGlobals();
+  }
+});
+
 it("finishes chat streams only for terminal run events", () => {
   expect(agentEventLifecycle("message.completed").runFinished).toBe(false);
   for (const type of ["run.completed", "run.failed", "run.cancelled", "run.interrupted"]) {

@@ -125,6 +125,19 @@ it("prevents duplicate new-chat requests and preserves the draft when creation f
   expect(panel.canNewSession.value).toBe(true);
 });
 
+it("preserves the draft while disconnected and shows recovery progress for an active response", async () => {
+  const { session, panel } = await createPanel();
+  session.agent.state.status = "reconnecting";
+  expect(panel.connectionNotice.value).toBe("RightPanel.AIConnectionDisconnected");
+  panel.submit();
+  expect(session.draft).toBe("Continue");
+  expect(agent.sendMessage).not.toHaveBeenCalled();
+  session.taskActive = true;
+  expect(panel.connectionNotice.value).toBe("RightPanel.AIConnectionReconnecting");
+  session.agent.state.status = "connected";
+  expect(panel.connectionNotice.value).toBe("");
+});
+
 it.each(["terminal", "sql", "script"] as const)(
   "respects %s availability for new chats without exposing local history clearing",
   async (domain) => {

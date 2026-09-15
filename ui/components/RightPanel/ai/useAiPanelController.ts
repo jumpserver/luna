@@ -11,6 +11,7 @@ import { buildAiPanelViewItems } from "./buildViewItems";
 import { resolveAiPanelDomain, resolveAiPanelSession } from "./domains/registry";
 import { workspaceAiMessages } from "./domains/types";
 import { aiRiskColor, formatAiDuration } from "./presentation";
+import { useAiConnectionNotice } from "./useAiConnectionNotice";
 
 interface UseAiPanelControllerOptions {
   paneId: Ref<string>;
@@ -52,13 +53,20 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
     if (!current || !currentAdapter) return null;
     return currentAdapter.describe(current, domainContext.value, viewItems.value);
   });
+  const connection = useAiConnectionNotice(
+    () => session.value?.agent.state,
+    () => Boolean(presentation.value?.busy || presentation.value?.running)
+  );
+  const connectionNotice = computed(() => (connection.noticeKey.value ? t(connection.noticeKey.value) : ""));
   const domainSummary = computed<AiPanelDomainSummary>(() => {
     const current = session.value;
     const currentAdapter = adapter.value;
     if (!current || !currentAdapter) return {};
     return currentAdapter.summarize(current, domainContext.value, viewItems.value);
   });
-  const canNewSession = computed(() => Boolean(presentation.value?.available && !startingNewSession.value));
+  const canNewSession = computed(() =>
+    Boolean(presentation.value?.available && !startingNewSession.value && !connection.blocked.value)
+  );
   const canClearLocalHistory = computed(() =>
     Boolean(presentation.value?.canClearLocalHistory && adapter.value?.clearLocalHistory)
   );
@@ -96,6 +104,7 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
     return highestRiskLevel.value >= 2 ? labels[highestRiskLevel.value] || "" : "";
   });
   const presenceStatusTone = computed<"ready" | "active" | "warning" | "error" | "success">(() => {
+    if (connection.blocked.value) return "warning";
     const current = presentation.value;
     if (!current) return "ready";
     if (!current.available) return "warning";
@@ -107,6 +116,7 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
     return "ready";
   });
   const presenceStatusLabel = computed(() => {
+    if (connection.statusKey.value) return t(connection.statusKey.value);
     const current = presentation.value;
     if (!current) return t("RightPanel.AIStatusReady");
     if (!current.available) return current.unavailable.title;
@@ -156,7 +166,15 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
     const current = session.value;
     const currentAdapter = adapter.value;
     const text = draft.value.trim();
-    if (!current || !currentAdapter || !presentation.value?.available || presentation.value.busy || !text) return;
+    if (
+      !current ||
+      !currentAdapter ||
+      !presentation.value?.available ||
+      presentation.value.busy ||
+      connection.blocked.value ||
+      !text
+    )
+      return;
     currentAdapter.submit(current, text, domainContext.value);
   }
 
@@ -207,6 +225,7 @@ export function useAiPanelController(options: UseAiPanelControllerOptions) {
   }
 
   return {
+    connectionNotice,
     session,
     messages,
     viewItems,
