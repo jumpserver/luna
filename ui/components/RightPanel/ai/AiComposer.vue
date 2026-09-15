@@ -50,7 +50,7 @@ const model = defineModel<string>({ required: true });
       :disabled="busy"
       :autofocus="false"
       :ui="{ root: 'bg-[var(--app-input-bg)]', base: 'text-xs' }"
-      @submit="emit('submit')"
+      @submit="!running && emit('submit')"
     >
       <template #footer>
         <div class="flex min-w-0 flex-1 items-center gap-1">
@@ -85,28 +85,20 @@ const model = defineModel<string>({ required: true });
             />
           </template>
         </div>
-        <div class="flex items-center gap-1.5">
-          <UButton
-            v-if="running"
+        <UTooltip :text="running ? interruptLabel : actionLabel">
+          <UChatPromptSubmit
             size="xs"
             color="primary"
-            variant="solid"
-            icon="i-fluent-stop-16-filled"
-            :ui="{ leadingIcon: 'size-4 scale-75' }"
-            :aria-label="interruptLabel"
-            :title="interruptLabel"
-            @click.stop="emit('interrupt')"
+            :status="running ? 'streaming' : 'ready'"
+            streaming-icon="i-fluent-stop-16-filled"
+            streaming-color="primary"
+            streaming-variant="solid"
+            :ui="{ leadingIcon: running ? 'size-4 scale-75' : '' }"
+            :disabled="busy || !model.trim()"
+            :aria-label="running ? interruptLabel : actionLabel"
+            @stop.stop="emit('interrupt')"
           />
-          <UTooltip v-if="!running || !busy" :text="actionLabel">
-            <UChatPromptSubmit
-              size="xs"
-              color="primary"
-              status="ready"
-              :disabled="busy || !model.trim()"
-              :aria-label="actionLabel"
-            />
-          </UTooltip>
-        </div>
+        </UTooltip>
       </template>
     </UChatPrompt>
   </div>

@@ -728,10 +728,10 @@ function confirmDiscardChanges() {
 }
 
 function resultFailureDescription(
-  result: { reason?: string; failedChangeIndex?: number | null } | null,
+  result: { reason?: string; message?: string; failedChangeIndex?: number | null } | null,
   fallback: string
 ) {
-  const reason = result?.reason || fallback;
+  const reason = result?.message?.trim() || result?.reason || fallback;
   return result?.failedChangeIndex == null ? reason : `${reason}, failedChangeIndex=${result.failedChangeIndex}`;
 }
 
