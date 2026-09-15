@@ -359,6 +359,7 @@
     "FileAIReconnectDescription": "La conexión de archivos no está lista. Conéctese o vuelva a conectarse al activo para iniciar un nuevo chat. Puede consultar o borrar los mensajes existentes.",
     "Open": "Abrir panel derecho",
     "Close": "Cerrar panel derecho",
+    "AIDisabled": "El asistente de IA está deshabilitado en la configuración del sistema",
     "AIOpen": "Abrir asistente de IA",
     "AIClose": "Cerrar asistente de IA",
     "Session": "Sesión",

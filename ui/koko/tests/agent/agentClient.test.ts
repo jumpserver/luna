@@ -340,8 +340,11 @@ it.each([
   ["context", ""],
   ["messages", ""],
   ["runs", ""],
-  ["runs", "run-1"]
-])("cancels during %s submission (known run=%s)", async (stage, runId) => {
+  ["runs", "run-1"],
+  ["context", "", "ai_disabled"],
+  ["messages", "", "ai_disabled"],
+  ["runs", "", "ai_disabled"]
+])("cancels during %s submission (known run=%s, reason=%s)", async (stage, runId, reason = "user") => {
   const requests: AgentHttpRequest[] = [];
   const respond = kaelRequest(requests);
   let release!: () => void;
@@ -371,17 +374,39 @@ it.each([
       metadata: { context: {} }
     });
     await ready;
-    const cancelled = client.cancel("panel-1", "resource-1", runId);
+    const cancelled = client.cancel("panel-1", "resource-1", runId, reason);
     if (runId) await cancelled;
     expect(requests.some((request) => request.path.endsWith("/cancel"))).toBe(Boolean(runId));
-    release();
-    await Promise.all([pending, cancelled]);
-    expect(requests.filter((request) => request.path.endsWith("/cancel"))).toEqual([
-      { method: "POST", path: "/kael/api/v1/runs/run-1/cancel", body: { reason: "user" } }
-    ]);
+    if (reason === "ai_disabled" && stage !== "runs") {
+      const rejected = expect(pending).rejects.toThrow("AI assistant is disabled");
+      release();
+      await Promise.all([rejected, cancelled]);
+      expect(requests.some((request) => request.path.endsWith("/runs"))).toBe(false);
+    } else {
+      release();
+      await Promise.all([pending, cancelled]);
+      expect(requests.filter((request) => request.path.endsWith("/cancel"))).toEqual([
+        { method: "POST", path: "/kael/api/v1/runs/run-1/cancel", body: { reason } }
+      ]);
+    }
   } finally {
     release();
     client.dispose();
+  }
+});
+
+it("stops the panel heartbeat when AI is disabled", async () => {
+  vi.useFakeTimers();
+  const requests: AgentHttpRequest[] = [];
+  const client = new AgentClient(kaelRequest(requests));
+  try {
+    await client.createSession(manifest, "auto");
+    await client.cancel("panel-1", "resource-1", "", "ai_disabled");
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(requests.some((request) => request.path.endsWith("/heartbeat"))).toBe(false);
+  } finally {
+    client.dispose();
+    vi.useRealTimers();
   }
 });
 

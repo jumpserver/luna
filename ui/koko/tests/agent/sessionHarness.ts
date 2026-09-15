@@ -4,10 +4,13 @@ import { vi } from "vitest";
 import { agentClient } from "#koko/composables/agent/agentClient";
 import { AgentSseConnection } from "#koko/composables/agent/agentSse";
 
+import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
+
 type AgentWireHandler = (ownerId: string, message: unknown) => boolean;
 type TestAgentEvent = Pick<AgentEvent, "type"> & Partial<Omit<AgentEvent, "type">>;
 
 export function installAgentSessionHarness() {
+  setWorkspaceAiEnabled(true);
   const streams = new Map<string, AgentSseOptions>();
   const sequenceByResource = new Map<string, number>();
   const bootstrap = vi.spyOn(agentClient, "bootstrap").mockImplementation(async (resourceSessionId) => ({

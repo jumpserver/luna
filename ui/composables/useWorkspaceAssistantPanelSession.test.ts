@@ -5,6 +5,7 @@ import { compileTemplate } from "vue/compiler-sfc";
 import defaultLayout from "../layouts/default.vue?raw";
 import sessionPage from "../pages/session/[assetId].vue?raw";
 import { hasActiveAiTask, useWorkspaceAssistantPanelSession } from "./useWorkspaceAssistantPanelSession";
+import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
 
 const mocks = vi.hoisted(() => ({
   nextId: 0,
@@ -59,6 +60,7 @@ function setup() {
 }
 
 beforeEach(() => {
+  setWorkspaceAiEnabled(true);
   mocks.sessions.clear();
   mocks.activeTargets = shallowReactive(new Map());
   mocks.terminalSessions = shallowReactive(new Map());
@@ -297,7 +299,7 @@ describe("tab-scoped workspace assistant conversations", () => {
     scope.stop();
   });
 
-  it("isolates all tab conversations across site, account and organization changes", async () => {
+  it("clears conversations when AI is disabled or the login context changes", async () => {
     const { scope, runtime, panel } = setup();
     const first = panel.session.value!;
     runtime.tabs.activeTabId.value = "b";
@@ -317,6 +319,13 @@ describe("tab-scoped workspace assistant conversations", () => {
       expect(mocks.dispose).toHaveBeenCalledWith(previous);
       expect(panel.scopeId.value).not.toBe(previous);
     }
+    setWorkspaceAiEnabled(false);
+    await nextTick();
+    panel.newSession();
+    expect(mocks.sessions.size).toBe(0);
+    setWorkspaceAiEnabled(true);
+    await nextTick();
+    expect(panel.session.value).not.toBeNull();
     runtime.userInfoStore.loggedIn = false;
     await nextTick();
     expect(panel.session.value).toBeNull();

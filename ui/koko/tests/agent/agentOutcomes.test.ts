@@ -1,9 +1,13 @@
 import type { AgentSseConnection, AgentSseOptions } from "#koko/composables/agent/agentSse";
 import type { AgentEvent } from "#koko/composables/agent/types";
-import { expect, it, vi } from "vitest";
+import { beforeEach, expect, it, vi } from "vitest";
 import { AgentClient, AgentHttpError } from "#koko/composables/agent/agentClient";
 import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
 import { agentEventToUiMessage, useAgentSession } from "#koko/composables/agent/useAgentSession";
+
+import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
+
+beforeEach(() => setWorkspaceAiEnabled(true));
 
 async function session() {
   let stream!: AgentSseOptions;

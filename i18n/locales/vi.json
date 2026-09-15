@@ -359,6 +359,7 @@
     "FileAIReconnectDescription": "Kết nối tệp chưa sẵn sàng. Hãy kết nối hoặc kết nối lại tài sản để bắt đầu cuộc trò chuyện mới. Bạn có thể xem hoặc xóa các tin nhắn hiện có.",
     "Open": "Mở bảng bên phải",
     "Close": "Đóng bảng bên phải",
+    "AIDisabled": "Trợ lý AI bị tắt trong cài đặt hệ thống",
     "AIOpen": "Mở trợ lý AI",
     "AIClose": "Đóng trợ lý AI",
     "Session": "Phiên",

@@ -359,6 +359,7 @@
     "FileAIReconnectDescription": "A conexão de arquivos não está pronta. Conecte ou reconecte o ativo para iniciar uma nova conversa. As mensagens existentes podem ser consultadas ou apagadas.",
     "Open": "Abrir painel direito",
     "Close": "Fechar painel direito",
+    "AIDisabled": "O assistente de IA está desativado nas configurações do sistema",
     "AIOpen": "Abrir assistente de IA",
     "AIClose": "Fechar assistente de IA",
     "Session": "Sessão",

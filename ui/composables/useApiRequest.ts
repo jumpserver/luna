@@ -112,6 +112,7 @@ export interface CommandSnippetVariablePayload {
 }
 
 export interface PublicSettings {
+  CHAT_AI_ENABLED?: boolean;
   XPACK_LICENSE_IS_VALID?: boolean;
   TERMINAL_RAZOR_ENABLED?: boolean;
   CONNECTION_TOKEN_REUSABLE?: boolean;

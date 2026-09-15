@@ -3,10 +3,13 @@ import type { AgentSseConnection, AgentSseOptions } from "#koko/composables/agen
 import { AgentHttpError } from "#koko/composables/agent/agentClient";
 import { AgentStreamHttpError } from "#koko/composables/agent/agentSse";
 import type { AgentDomain } from "#koko/composables/agent/types";
-import { expect, it, vi } from "vitest";
+import { beforeEach, expect, it, vi } from "vitest";
 import { agentEventLifecycle } from "#koko/composables/agent/agentChatStream";
 import { AgentToolRelay } from "#koko/composables/agent/agentToolRelay";
 import { agentEventToUiMessage, useAgentSession } from "#koko/composables/agent/useAgentSession";
+import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
+
+beforeEach(() => setWorkspaceAiEnabled(true));
 
 function manifest() {
   return {
@@ -30,6 +33,7 @@ function deferred<T>() {
 
 function panelRecoveryHarness() {
   const streams: AgentSseOptions[] = [];
+  const stop = vi.fn();
   const client = {
     retainResource: vi.fn(),
     releaseResource: vi.fn().mockReturnValue(true),
@@ -59,11 +63,56 @@ function panelRecoveryHarness() {
     onUnavailable,
     createSse: (options) => {
       streams.push(options);
-      return { start: vi.fn(), stop: vi.fn() } as unknown as AgentSseConnection;
+      return { start: vi.fn(), stop } as unknown as AgentSseConnection;
     }
   });
-  return { client, controller, streams, onHistoryReset, onUnavailable };
+  return { client, controller, streams, onHistoryReset, onUnavailable, stop };
 }
+
+it("suspends and restores AI without reconnecting the resource or replaying tasks", async () => {
+  setWorkspaceAiEnabled(false);
+  const { client, controller, stop } = panelRecoveryHarness();
+  try {
+    await controller.actions.attachManifest(manifest());
+    expect(client.bootstrap).not.toHaveBeenCalled();
+    setWorkspaceAiEnabled(true);
+    await vi.waitFor(() => expect(controller.state.available).toBe(true));
+    setWorkspaceAiEnabled(false);
+    expect(controller.state.available).toBe(false);
+    expect(stop).toHaveBeenCalledOnce();
+    expect(client.cancel).toHaveBeenCalledWith("panel-1", "resource-1", "", "ai_disabled");
+    await vi.waitFor(() => expect(client.deleteSession).toHaveBeenCalledWith("panel-1", "resource-1"));
+    await expect(
+      controller.actions.sendMessage({ id: "blocked", role: "user", parts: [{ type: "text", text: "Inspect" }] })
+    ).rejects.toThrow("unavailable");
+    setWorkspaceAiEnabled(true);
+    await vi.waitFor(() => expect(controller.state.agentSessionId).toBe("panel-2"));
+    expect(client.sendMessage).not.toHaveBeenCalled();
+  } finally {
+    await controller.actions.dispose();
+    setWorkspaceAiEnabled(true);
+  }
+});
+
+it.each(["bootstrap", "createSession"] as const)("discards a late %s response after AI is disabled", async (stage) => {
+  const { client, controller, streams } = panelRecoveryHarness();
+  const response = deferred<{ session_id: string }>();
+  client[stage].mockReset().mockReturnValueOnce(response.promise);
+  try {
+    const attaching = controller.actions.attachManifest(manifest());
+    await vi.waitFor(() => expect(client[stage]).toHaveBeenCalledOnce());
+    setWorkspaceAiEnabled(false);
+    response.resolve({ session_id: stage === "createSession" ? "late-panel" : "" });
+    await attaching;
+    expect(streams).toHaveLength(0);
+    expect(controller.state.available).toBe(false);
+    if (stage === "bootstrap") expect(client.createSession).not.toHaveBeenCalled();
+    else expect(client.deleteSession).toHaveBeenCalledWith("late-panel", "resource-1");
+  } finally {
+    await controller.actions.dispose();
+    setWorkspaceAiEnabled(true);
+  }
+});
 
 it("recovers an expired context request without clearing the conversation", async () => {
   const { client, controller, streams, onHistoryReset } = panelRecoveryHarness();

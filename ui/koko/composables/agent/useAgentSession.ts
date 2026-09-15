@@ -10,7 +10,9 @@ import type {
   AgentMcpManifest,
   AgentMessageRequest
 } from "./types";
-import { reactive } from "vue";
+import type { EffectScope } from "vue";
+import { effectScope, reactive, watch } from "vue";
+import { workspaceAiEnabled } from "~/shared/aiAvailability";
 import { agentChatStreamMessage, agentEventLifecycle } from "./agentChatStream";
 import { agentClient, AgentHttpError } from "./agentClient";
 import {
@@ -651,6 +653,8 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
   let panelRecovery: { sessionId: string; generation: number; promise: Promise<void> } | null = null;
   let committedManifestKey = "";
   let committedManifest: AgentMcpManifest | null = null;
+  let latestManifest: AgentMcpManifest | null = null;
+  let availabilityScope: EffectScope | null = null;
   let sse: AgentSseConnection | null = null;
   let retainedResourceId = "";
   const pendingSessionDeletes: Array<{
@@ -1118,6 +1122,26 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
 
   async function attachManifest(manifest: AgentMcpManifest, expiredSessionId = "") {
     if (manifest.profile !== options.domain) throw new Error("Agent profile does not match the workspace domain");
+    latestManifest = manifest;
+    if (!availabilityScope) {
+      // Resource sessions outlive the component that first announces their tools.
+      availabilityScope = effectScope(true);
+      availabilityScope.run(() =>
+        watch(
+          workspaceAiEnabled,
+          (enabled) => {
+            if (enabled) {
+              if (latestManifest) void attachManifest(latestManifest).catch(() => undefined);
+              return;
+            }
+            void closeSession("ai_disabled");
+            options.onUnavailable?.(new Error("AI assistant is disabled"));
+          },
+          { flush: "sync" }
+        )
+      );
+    }
+    if (!workspaceAiEnabled.value) return;
     const key = agentManifestKey(manifest);
     if (attachFlight?.key === key) return attachFlight.promise;
     if (
@@ -1458,11 +1482,22 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
   }
 
   function dispose() {
+    availabilityScope?.stop();
+    availabilityScope = null;
+    latestManifest = null;
+    return closeSession(workspaceAiEnabled.value ? undefined : "ai_disabled");
+  }
+
+  function closeSession(reason?: "ai_disabled") {
     generation += 1;
     attachController?.abort();
     attachController = null;
     const sessionId = state.agentSessionId;
     const resourceSessionId = state.resourceSessionId || retainedResourceId;
+    const cancellation =
+      reason && sessionId
+        ? client.cancel(sessionId, resourceSessionId, "", reason).catch(() => undefined)
+        : Promise.resolve();
     attachFlight = null;
     panelRecovery = null;
     committedManifestKey = "";
@@ -1488,6 +1523,7 @@ export function useAgentSession(options: AgentSessionOptions): AgentSessionContr
     const cleanup = lifecycleTail
       .catch(() => undefined)
       .then(async () => {
+        await cancellation;
         if (!deleteReleasedSession || !sessionId || !resourceSessionId) return;
         await client.deleteSession(sessionId, resourceSessionId).catch(() => undefined);
       });

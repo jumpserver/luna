@@ -82,6 +82,7 @@ interface AgentBinding {
   contextVersion: number;
   context: Record<string, unknown>;
   heartbeat: ReturnType<typeof setInterval>;
+  disabled?: boolean;
 }
 
 export class AgentHttpError extends Error {
@@ -356,12 +357,17 @@ export class AgentClient {
   }
 
   private async submitMessage(binding: AgentBinding, message: AgentMessageRequest): Promise<AgentMessageResponse> {
+    const assertEnabled = () => {
+      if (binding.disabled) throw new Error("AI assistant is disabled");
+    };
+    assertEnabled();
     const context = message.metadata?.context;
     if (isRecord(context)) {
       await this.updateContext(binding.panelId, binding.resourceSessionId, { ...binding.context, ...context });
     } else if (this.responseLanguage && binding.context.response_language !== this.responseLanguage) {
       await this.updateContext(binding.panelId, binding.resourceSessionId, binding.context);
     }
+    assertEnabled();
     const created = await this.request<KaelMessage>({
       method: "POST",
       path: `${KAEL_API_ROOT}/conversations/${binding.conversationId}/messages`,
@@ -372,6 +378,7 @@ export class AgentClient {
         parts: message.parts
       }
     });
+    assertEnabled();
     const run = await this.request<KaelRun>({
       method: "POST",
       path: `${KAEL_API_ROOT}/runs`,
@@ -482,6 +489,10 @@ export class AgentClient {
 
   async cancel(sessionId: string, resourceSessionId: string, runId = "", reason = "user") {
     const binding = this.binding(sessionId, resourceSessionId);
+    if (reason === "ai_disabled") {
+      binding.disabled = true;
+      clearInterval(binding.heartbeat);
+    }
     // A stop can arrive before the run creation response, including during context upload.
     const pending = runId ? undefined : await binding.pendingMessage?.catch(() => undefined);
     const target = pending?.run_id || runId || binding.activeRunId;

@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, shallowRef } from "vue";
 import { aiPanelFloats, resolveUnifiedAiPanel, useAiPanel } from "./useAiPanel";
 import { useRightPanel } from "./useRightPanel";
+import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
 
 const tabs = shallowRef<Array<{ id: string; protocol?: string }>>([]);
 const activeTabId = shallowRef("");
@@ -10,6 +11,7 @@ const workspaceTabs = { tabs, activeTabId, activeTab };
 
 describe("AI overlay panel", () => {
   beforeEach(() => {
+    setWorkspaceAiEnabled(true);
     vi.stubGlobal("useWorkspaceTabs", () => workspaceTabs);
     tabs.value = [{ id: "tab-a" }, { id: "tab-b" }];
     activeTabId.value = "tab-a";
@@ -65,6 +67,26 @@ describe("AI overlay panel", () => {
     expect(panel.panelWidth.value).toBe(320);
     panel.setPanelWidth(900);
     expect(panel.panelWidth.value).toBe(720);
+  });
+
+  it("blocks opening and terminal prompts, clearing every tab when AI is disabled", () => {
+    const panel = useAiPanel();
+    panel.openAi();
+    activeTabId.value = "tab-b";
+    panel.openAi();
+    const binding = { loginContext: "login", resourceId: "resource", agentId: "agent" };
+    panel.requestTerminalPrompt("pane", "Inspect", binding);
+    setWorkspaceAiEnabled(false);
+    expect(panel.open.value).toBe(false);
+    expect(panel.pendingTerminalPrompt.value).toBeNull();
+    panel.toggleAi();
+    panel.requestTerminalPrompt("pane", "Inspect", binding);
+    expect(panel.open.value).toBe(false);
+    expect(panel.pendingTerminalPrompt.value).toBeNull();
+    setWorkspaceAiEnabled(true);
+    expect(panel.open.value).toBe(false);
+    activeTabId.value = "tab-a";
+    expect(panel.open.value).toBe(false);
   });
 
   it.each([

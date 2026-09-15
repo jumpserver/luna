@@ -359,6 +359,7 @@
     "FileAIReconnectDescription": "檔案連線尚未就緒。請連線或重新連線至資產後開啟新會話；現有記錄可檢視或清空。",
     "Open": "開啟右側面板",
     "Close": "關閉右側面板",
+    "AIDisabled": "系統未啟用 AI 小幫手",
     "AIOpen": "開啟 AI 助手",
     "AIClose": "關閉 AI 助手",
     "Session": "會話",
