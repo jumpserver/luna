@@ -29,7 +29,12 @@ import {
   webProxyNavigationPolicy
 } from "../../packages/web-proxy/src/script.ts";
 
-async function setupNavigation(safeMode: unknown, allowedUrls: unknown = [], allowManualNavigation = false) {
+async function setupNavigation(
+  safeMode: unknown,
+  allowedUrls: unknown = [],
+  allowManualNavigation = false,
+  steps = []
+) {
   const main = await readFile(new URL("../../packages/web-proxy/src/manager.ts", import.meta.url), "utf8");
   const source = [
     main.slice(main.indexOf("function parseWebProxyUrl("), main.indexOf("function emitWebProxyState(")),
@@ -49,6 +54,8 @@ async function setupNavigation(safeMode: unknown, allowedUrls: unknown = [], all
       navigationHistory: { canGoBack: () => true, canGoForward: () => true, goBack: mock.fn(), goForward: mock.fn() }
     });
   const contents = createContents();
+  const session = { setProxy: async () => {}, setCertificateVerifyProc: mock.fn() };
+  Object.assign(contents, { session });
   const state = mock.fn();
   const finishAutofill = mock.fn();
   let preferences: any;
@@ -63,7 +70,7 @@ async function setupNavigation(safeMode: unknown, allowedUrls: unknown = [], all
     installWebProxyNavigationGuard,
     webProxyNavigationPolicy,
     webProxyViews: views,
-    electronSession: { fromPartition: () => ({ setProxy: async () => {} }) },
+    electronSession: { fromPartition: () => session },
     WebContentsView: class {
       webContents: ReturnType<typeof createContents>;
       constructor(options) {
@@ -85,7 +92,8 @@ async function setupNavigation(safeMode: unknown, allowedUrls: unknown = [], all
     createCredentialSession: async () => ({
       sessionId: "core-session",
       proxyAuth: { username: "token-id", password: "ticket-value" },
-      autofillAvailable: false
+      autofillAvailable: false,
+      steps
     }),
     finishWebProxyAutofill: finishAutofill,
     emitWebProxyState: state,
@@ -120,6 +128,45 @@ async function setupNavigation(safeMode: unknown, allowedUrls: unknown = [], all
     invoke: (command, args = {}) => api.invoke(command, { label, ...args })
   };
 }
+
+test("private certificate trust is scoped to configured HTTPS hosts and authority errors", async () => {
+  const { preferences, managed, invoke } = await setupNavigation(
+    false,
+    ["https://SSO.test:8443", "http://plain.test"],
+    true,
+    [{ origin: "https://login.test" }, { origin: "https://[::1]:8443" }]
+  );
+  const verify = (hostname, errorCode = -202) => {
+    const callback = mock.fn();
+    preferences.session.setCertificateVerifyProc.mock.calls.at(-1).arguments[0]({ hostname, errorCode }, callback);
+    return callback.mock.calls[0].arguments[0];
+  };
+  try {
+    for (const hostname of ["example.test", "sso.test", "login.test", "::1", "[::1]"]) {
+      assert.equal(verify(hostname), 0, hostname);
+      for (const errorCode of [0, -200, -201, -206]) assert.equal(verify(hostname, errorCode), -3);
+    }
+    for (const hostname of ["other.test", "plain.test", "sub.example.test", "example.test.evil.test"])
+      assert.equal(verify(hostname), -3, hostname);
+    assert.equal(verify("manual.test"), -3);
+    await assert.rejects(invoke("navigate_web_proxy_view", { targetUrl: "https://manual.test" }), /白名单/);
+    assert.equal(verify("manual.test"), -3);
+  } finally {
+    clearInterval(managed.proxyHeartbeatTimer);
+  }
+  const standalone = await setupNavigation(false, [], true);
+  try {
+    await standalone.invoke("navigate_web_proxy_view", { targetUrl: "https://manual.test" });
+    const callback = mock.fn();
+    standalone.preferences.session.setCertificateVerifyProc.mock.calls
+      .at(-1)
+      .arguments[0]({ hostname: "manual.test", errorCode: -202 }, callback);
+    assert.equal(callback.mock.calls[0].arguments[0], 0);
+    assert.equal(verify("manual.test"), -3, "a different website session must not inherit trust");
+  } finally {
+    clearInterval(standalone.managed.proxyHeartbeatTimer);
+  }
+});
 
 test("proxy connection failures identify the selected proxy during login and later navigation", async () => {
   const { contents, state, managed, finishAutofill } = await setupNavigation(false);

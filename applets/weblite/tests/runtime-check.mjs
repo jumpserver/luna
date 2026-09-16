@@ -1,16 +1,50 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { spawn } from "node:child_process";
+import { createServer as createSecureServer } from "node:https";
+import { execFileSync, spawn } from "node:child_process";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const applet = fileURLToPath(new URL("..", import.meta.url));
 const mode = process.argv[2] || "basic";
-const standalone = mode === "standalone";
+const standalone = mode === "standalone" || mode === "https-standalone";
+const secure = mode.startsWith("https");
 const addressOnly = mode === "address" || mode === "anonymous";
+let tls;
+if (secure) {
+  const certificateDirectory = await mkdtemp(path.join(os.tmpdir(), "weblite-tls-"));
+  const key = path.join(certificateDirectory, "key.pem");
+  const cert = path.join(certificateDirectory, "cert.pem");
+  execFileSync(
+    "openssl",
+    [
+      "req",
+      "-x509",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-keyout",
+      key,
+      "-out",
+      cert,
+      "-days",
+      "1",
+      "-subj",
+      "/CN=localhost",
+      "-addext",
+      "subjectAltName=DNS:localhost,IP:127.0.0.1"
+    ],
+    { stdio: "ignore" }
+  );
+  tls = { key: await readFile(key), cert: await readFile(cert) };
+  await rm(certificateDirectory, { recursive: true, force: true });
+}
 const requests = [];
-const server = createServer((req, res) => {
+const handler = (req, res) => {
   requests.push(req.url);
   res.setHeader("content-type", "text/html");
   if (standalone || addressOnly)
@@ -24,9 +58,11 @@ const server = createServer((req, res) => {
         document.querySelector('form').remove();document.querySelector('#dashboard').style.display = 'block';
       }
     };</script></body></html>`);
-});
+};
+const server = secure ? createSecureServer(tls, handler) : createServer(handler);
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-const target = `http://127.0.0.1:${server.address().port}/${standalone ? "standalone" : "login"}?from=applet&name=%E6%B5%8B%E8%AF%95#entry`;
+const protocol = secure ? "https" : "http";
+const target = `${protocol}://127.0.0.1:${server.address().port}/${standalone ? "standalone" : "login"}?from=applet&name=%E6%B5%8B%E8%AF%95#entry`;
 const executable = process.env.WEBLITE_EXECUTABLE || (await import("electron")).default;
 const child = spawn(executable, ["--remote-debugging-port=0", ...(process.env.WEBLITE_EXECUTABLE ? [] : [applet])], {
   stdio: [standalone ? "ignore" : "pipe", "pipe", "pipe"]
@@ -82,9 +118,9 @@ if (!standalone) {
         ? launch
         : {
             app_name: "custom-browser",
-            protocol: "http",
+            protocol,
             asset: { address: target, spec_info: mode === "platform" ? {} : launch.login.config },
-            platform: { protocols: [{ name: "http", setting: { ...launch.login.config, safe_mode: true } }] },
+            platform: { protocols: [{ name: protocol, setting: { ...launch.login.config, safe_mode: true } }] },
             account:
               mode === "anonymous"
                 ? { username: "@ANON" }

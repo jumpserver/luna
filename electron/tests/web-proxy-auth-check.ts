@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { X509Certificate } from "node:crypto";
 import { once } from "node:events";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
@@ -30,12 +29,13 @@ export async function runProxyAuthChecks() {
       "-days",
       "1",
       "-subj",
-      "/CN=localhost"
+      "/CN=localhost",
+      "-addext",
+      "subjectAltName=DNS:localhost,IP:127.0.0.1"
     ],
     { stdio: "ignore" }
   );
   const cert = await readFile(certPath);
-  const certificate = new X509Certificate(cert);
   const secure = createHttpsServer({ key: await readFile(keyPath), cert }, (request, response) => {
     assert.equal(request.headers["proxy-authorization"], undefined);
     response.end("<html><title>HTTPS proxy authenticated</title></html>");
@@ -121,19 +121,20 @@ export async function runProxyAuthChecks() {
       ticket: "ticket-value"
     });
     const managed = manager.views.get(label)!;
-    // Trust only this test server's freshly generated certificate in this test session.
-    managed.webContents.session.setCertificateVerifyProc((details, callback) => {
-      callback(
-        details.hostname === "localhost" &&
-          new X509Certificate(details.certificate.data).fingerprint256 === certificate.fingerprint256
-          ? 0
-          : -3
-      );
-    });
     await once(managed.webContents, "did-finish-load", { signal: AbortSignal.timeout(15_000) });
     assert.equal(managed.webContents.getTitle(), "HTTPS proxy authenticated");
     assert.ok(authenticatedTunnels > 0);
     assert.ok(challenged > 0);
+    await assert.rejects(
+      host.webContents.session.fetch(targetUrl),
+      /ERR_CERT_AUTHORITY_INVALID/,
+      "the application shell must not inherit the website session's certificate trust"
+    );
+    await assert.rejects(
+      managed.webContents.loadURL(`https://127.0.0.1:${securePort}/`),
+      /ERR_CERT_AUTHORITY_INVALID/,
+      "the same self-signed certificate on an unconfigured host must still be rejected"
+    );
     assert.equal(
       await managed.webContents.session.resolveProxy("http://127.0.0.1/"),
       `PROXY 127.0.0.1:${(proxy.address() as { port: number }).port}`

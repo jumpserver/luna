@@ -77,6 +77,20 @@ export function createWebProxyManager({
     return managed;
   }
 
+  function setWebProxyCertificatePolicy(managed, urls) {
+    for (const value of urls) {
+      const url = parseUrl(value);
+      if (url.protocol === "https:") managed.certificateHosts.add(url.hostname.replace(/^\[|\]$/g, ""));
+    }
+    // ponytail: trust private CAs by explicitly configured host in this isolated
+    // session; certificate pinning would require server-provided fingerprints.
+    managed.webContents.session.setCertificateVerifyProc((request, callback) => {
+      const hostname = request.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+      // ERR_CERT_AUTHORITY_INVALID only; retain Chromium's other certificate checks.
+      callback(request.errorCode === -202 && managed.certificateHosts.has(hostname) ? 0 : -3);
+    });
+  }
+
   function emitWebProxyState(managed, overrides = {}) {
     const url = managed.view.webContents.getURL() || managed.targetUrl;
     const state = {
@@ -475,6 +489,7 @@ export function createWebProxyManager({
         sandbox: true
       }
     });
+    view.webContents.once("destroyed", () => proxySession.setCertificateVerifyProc(null));
     try {
       // Initialize Chromium's renderer before sending its media preference.
       if (args.colorScheme) await view.webContents.loadURL("about:blank");
@@ -501,6 +516,7 @@ export function createWebProxyManager({
       hostLabel: labelForWindow(win),
       hostWebContentsId: event.sender.id,
       targetUrl: target.toString(),
+      certificateHosts: new Set(),
       proxyUrl: proxy?.toString() || "",
       proxyAuth: null,
       proxySessionId: "",
@@ -682,6 +698,11 @@ export function createWebProxyManager({
           if (proxy && session?.proxyAuth) await closeWebProxySession(proxy, session.sessionId, session.proxyAuth);
           return;
         }
+        setWebProxyCertificatePolicy(managed, [
+          target.toString(),
+          ...(args.allowedUrls || []),
+          ...(session?.steps || []).map((step) => step.origin)
+        ]);
         managed.proxyAuth = session?.proxyAuth || null;
         managed.proxySessionId = session?.sessionId || "";
         if (proxy) {
@@ -828,6 +849,7 @@ export function createWebProxyManager({
       if (managed.autofillVisibilityBlocked) throw new Error("安全登录期间无法导航，请等待或重新连接");
       const target = parseWebProxyUrl(args.targetUrl, ["http:", "https:"], "Website URL");
       if (!managed.canNavigate(target)) throw new Error("页面地址不在此资产的访问白名单中");
+      setWebProxyCertificatePolicy(managed, [target.toString()]);
       managed.targetUrl = target.toString();
       managed.autofillFailure = "";
       emitWebProxyState(managed, { url: target.toString(), loading: true, error: "", navigationError: "" });
