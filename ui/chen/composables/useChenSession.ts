@@ -19,6 +19,28 @@ interface UseChenSessionOptions {
   createSocket?: (url: string, token: string) => WebSocket;
   resolveUrl?: (path: ChenSocketPath) => string;
   translate?: (key: string, values?: Record<string, unknown>) => string;
+  readyTimeoutMs?: number;
+}
+
+export function isChenStartupFailureDialog(message: { title?: string; text?: string } | null | undefined) {
+  const detail = `${message?.title || ""} ${message?.text || ""}`;
+  return /连接失败|無法連線|无法连接|请求超时|請求逾時|会话已关闭|會話已關閉|connection (?:attempt )?failed|unable to connect|timed out|panel_(?:closed|expired)|session[^\n]*(?:is |was )?closed/i.test(
+    detail
+  );
+}
+
+function resolveChenStartupFailureMessage(
+  message: { title?: string; text?: string },
+  translate: (key: string) => string
+) {
+  const detail = message.text || message.title || "";
+  if (/panel_(?:closed|expired)|session[^\n]*(?:is |was )?closed|会话已关闭|會話已關閉/i.test(detail)) {
+    return translate("ConnectError.SessionClosed");
+  }
+  if (/\b(?:etimedout|timeout)\b|timed out|请求超时|請求逾時/i.test(detail)) {
+    return translate("ConnectError.RequestTimeout");
+  }
+  return detail || translate("ConnectError.ConnectFailed");
 }
 
 export function useChenSession(options: UseChenSessionOptions) {
@@ -31,11 +53,13 @@ export function useChenSession(options: UseChenSessionOptions) {
 
   let bootstrapGeneration = 0;
   let fatalNotified = false;
+  let preparingReadyGeneration: number | null = null;
 
   const sessionConnection = useChenWebSocket({
     path: "session",
     createSocket: options.createSocket,
     resolveUrl: options.resolveUrl,
+    readyTimeoutMs: options.readyTimeoutMs,
     onPacket: handlePacket,
     onError: handleSocketError
   });
@@ -47,6 +71,8 @@ export function useChenSession(options: UseChenSessionOptions) {
   function handleFatal(cause: unknown, reason = "") {
     if (fatalNotified) return;
     fatalNotified = true;
+    bootstrapGeneration += 1;
+    preparingReadyGeneration = null;
     ready.value = false;
     loading.value = false;
     error.value = normalizeError(cause);
@@ -61,17 +87,27 @@ export function useChenSession(options: UseChenSessionOptions) {
 
   function handleSocketError(socketError: ChenSocketError) {
     const translate = options.translate ?? ((key: string) => key);
+    if (socketError.code.endsWith("_timeout")) {
+      handleFatal(translate("ConnectError.RequestTimeout"));
+      return;
+    }
+    if (socketError.code === "abnormal_close") {
+      handleFatal(translate("ConnectError.SessionClosed"));
+      return;
+    }
     handleFatal(`${translate("Chen.WebSocketFailedPrefix")}${socketError.message}`);
   }
 
   async function handleSetReady() {
     if (sessionConnection.isReady.value) return;
     const currentGeneration = bootstrapGeneration;
-    if (!sessionConnection.markReady()) return;
+    if (preparingReadyGeneration === currentGeneration) return;
+    preparingReadyGeneration = currentGeneration;
 
     try {
       await options.onBeforeReady();
       if (currentGeneration !== bootstrapGeneration || fatalNotified) return;
+      if (!sessionConnection.markReady()) return;
 
       ready.value = true;
       loading.value = false;
@@ -79,7 +115,10 @@ export function useChenSession(options: UseChenSessionOptions) {
 
       await options.onAfterReady();
     } catch (cause) {
+      if (currentGeneration !== bootstrapGeneration) return;
       handleFatal(cause);
+    } finally {
+      if (preparingReadyGeneration === currentGeneration) preparingReadyGeneration = null;
     }
   }
 
@@ -99,13 +138,18 @@ export function useChenSession(options: UseChenSessionOptions) {
 
   function openDialog(payload: unknown) {
     dialogOpenedDuringStartup.value = !ready.value;
-    dialogMessage.value = normalizeChenDialogMessage(payload);
+    const dialog = normalizeChenDialogMessage(payload);
+    dialogMessage.value = dialog;
+    return dialog;
   }
 
   function handlePacket(packet: ChenPacket) {
     switch (packet.type) {
       case "show_dialog":
-        openDialog(packet.data);
+        if (isChenStartupFailureDialog(openDialog(packet.data)) && !ready.value) {
+          const dialog = dialogMessage.value!;
+          handleFatal(new Error(resolveChenStartupFailureMessage(dialog, options.translate ?? ((key: string) => key))));
+        }
         break;
       case "close_dialog":
         dialogMessage.value = null;
@@ -122,8 +166,9 @@ export function useChenSession(options: UseChenSessionOptions) {
         break;
       case "session_close":
       case "close_session": {
-        const closed = resolveChenSessionCloseFatal(packet.data, options.translate ?? ((key: string) => key));
-        handleFatal(new Error(closed.message), closed.reason);
+        const translate = options.translate ?? ((key: string) => key);
+        const closed = resolveChenSessionCloseFatal(packet.data, translate);
+        handleFatal(new Error(closed.reason ? closed.message : translate("ConnectError.SessionClosed")), closed.reason);
         break;
       }
       default:
@@ -156,12 +201,14 @@ export function useChenSession(options: UseChenSessionOptions) {
     errorReason.value = "";
     dialogMessage.value = null;
     dialogOpenedDuringStartup.value = false;
+    preparingReadyGeneration = null;
 
     try {
       const token = await options.authenticate();
       if (currentGeneration !== bootstrapGeneration) return;
       sessionConnection.connect(token);
     } catch (cause) {
+      if (currentGeneration !== bootstrapGeneration) return;
       handleFatal(cause);
     }
   }

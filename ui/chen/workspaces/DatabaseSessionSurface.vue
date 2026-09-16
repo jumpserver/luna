@@ -62,7 +62,7 @@ import { useChenDataView } from "~/chen/composables/useChenDataView";
 import { useChenQueryConsole } from "~/chen/composables/useChenQueryConsole";
 import { useChenRecentTables } from "~/chen/composables/useChenRecentTables";
 import { useChenResourceTree } from "~/chen/composables/useChenResourceTree";
-import { useChenSession } from "~/chen/composables/useChenSession";
+import { isChenStartupFailureDialog, useChenSession } from "~/chen/composables/useChenSession";
 import {
   getChenSqlAiSession,
   handleChenSqlAiError,
@@ -407,9 +407,7 @@ const startupErrorMessage = computed(() => {
   if (!message || adminTerminated.value || message.startsWith(t("Chen.WebSocketFailedPrefix"))) return message;
   return `${t("Chen.ServerRequestFailedPrefix")}${message}`;
 });
-const databaseDialogFailed = computed(() =>
-  /连接失败|connection (?:attempt )?failed|unable to connect/i.test(session.dialogMessage.value?.text || "")
-);
+const databaseDialogFailed = computed(() => isChenStartupFailureDialog(session.dialogMessage.value));
 const startupDialogMessage = computed(() => {
   const dialog = session.dialogMessage.value;
   if (!dialog || !session.dialogOpenedDuringStartup.value || dialog.buttons.length || databaseDialogFailed.value)

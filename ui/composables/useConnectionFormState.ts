@@ -36,6 +36,21 @@ export function resolveConnectionSetupLoadError(error: unknown, translate: (key:
   return detail || translate("Asset.GetAssetFailed");
 }
 
+export function resolveConnectionAttemptError(error: unknown, translate: (key: string) => string) {
+  const detail = error instanceof Error ? error.message : String(error || "");
+  const code =
+    error && typeof error === "object" && "code" in error ? String((error as { code?: unknown }).code || "") : "";
+  const normalized = `${code} ${detail}`.toLowerCase();
+
+  if (/panel_(?:closed|expired)|session[^\n]*(?:is |was )?closed|会话已关闭|會話已關閉/.test(normalized)) {
+    return translate("ConnectError.SessionClosed");
+  }
+  if (/\b(?:etimedout|timeout)\b|timed out|request aborted|请求超时|請求逾時/.test(normalized)) {
+    return translate("ConnectError.RequestTimeout");
+  }
+  return detail || translate("ConnectError.ConnectFailed");
+}
+
 export function useConnectionFormState() {
   const { t } = useI18n();
   const userInfoStore = useUserInfoStore();

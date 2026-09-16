@@ -498,12 +498,6 @@ export const useAssetAction = () => {
       requestOrgId: meta?.orgId || userInfoStore.currentUser?.org?.id || "",
       site: userInfoStore.currentSite
     };
-    const nativeApp = parseLocalApplicationConnectMethod(body.connect_method);
-    const serverBody = {
-      ...body,
-      connect_method: await resolveServerConnectMethod({ ...body, connect_method: nativeApp.connectMethod })
-    };
-
     const session =
       meta?.downloadRdp || meta?.tabId || meta?.onSessionReady
         ? undefined
@@ -518,6 +512,11 @@ export const useAssetAction = () => {
 
     let creatingConnectionToken = false;
     try {
+      const nativeApp = parseLocalApplicationConnectMethod(body.connect_method);
+      const serverBody = {
+        ...body,
+        connect_method: await resolveServerConnectMethod({ ...body, connect_method: nativeApp.connectMethod })
+      };
       await assertConnectMethodEnabled(body.protocol, nativeApp.connectMethod);
       const allMethods = await fetchConnectMethods();
       const method = (allMethods[body.protocol] || []).find((item) => item.value === nativeApp.connectMethod);
@@ -653,7 +652,7 @@ export const useAssetAction = () => {
     return "koko";
   };
 
-  const getBuiltinConnectSession = (
+  const getBuiltinConnectSession = async (
     body: ConnectionBody,
     meta: {
       tabId?: string;
@@ -675,101 +674,99 @@ export const useAssetAction = () => {
       requestOrgId: meta.orgId || userInfoStore.currentUser?.org?.id || "",
       site: userInfoStore.currentSite
     };
-    void (async () => {
-      let creatingConnectionToken = false;
-      try {
-        await assertConnectMethodEnabled(body.protocol, body.connect_method);
-        const serverBody = { ...body, connect_method: await resolveServerConnectMethod(body) };
-        creatingConnectionToken = true;
-        const token = await createConnectionTokenWithAcl(serverBody, {
-          orgId: meta.orgId,
-          assetName: meta.assetName || meta.assetId,
-          scopeId: meta.tabId,
-          batchId: meta.aclBatchId,
-          admin: meta.admin
-        });
-        creatingConnectionToken = false;
-        if (!token) {
-          if (meta.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
-          else markSessionFailed(meta);
-          return;
-        }
-        syncPersonalCredentialFromToken(meta.assetId, serverBody, token, personalCredentialScope);
-        const component = resolveBuiltinComponent(body);
-        const isWebProxy = body.connect_method === WEB_PROXY_NATIVE_VALUE;
-        let webProxyEndpoint = isWebProxy
-          ? await getSmartEndpoint({ protocol: "web_proxy", assetId: body.asset, token: token.id }, meta.orgId)
-          : null;
-        if (webProxyEndpoint && webProxyEndpoint.web_proxy_port == null) {
-          webProxyEndpoint = await getSmartEndpoint(
-            { protocol: "http", assetId: body.asset, token: token.id },
-            meta.orgId
-          );
-        }
-        const webProxyPort = Number(webProxyEndpoint?.web_proxy_port) || 5001;
-        let endpointUrl = webProxyEndpoint
-          ? getEndpointUrl({ ...webProxyEndpoint, web_proxy_port: webProxyPort }, "http", "web_proxy_port")
-          : await fetchSmartEndpointUrl(token, { component, type: "web" }, body, meta.orgId);
-        if (component === "chen" && isElectronRuntime()) {
-          endpointUrl = await desktopInvoke<string>("resolve_chen_endpoint", { endpointUrl });
-        } else if (!isWebProxy && (component === "koko" || component === "lion") && isElectronRuntime()) {
-          endpointUrl = await desktopInvoke<string>("resolve_koko_endpoint", { endpointUrl });
-        }
-        let webProxy;
-        if (body.connect_method === WEB_PROXY_NATIVE_VALUE) {
-          if (!meta.asset) throw new Error("Website 资产信息不完整");
-          const assetDetail = await getAssetDetailRequest(meta.assetId, meta.orgId);
-          const successSelector = String(assetDetail.spec_info?.success_selector || "").trim();
-          webProxy = useWebProxyManager().buildWebProxyRequest(
-            { ...meta.asset, permedProtocols: assetDetail.permed_protocols },
-            body.protocol,
-            endpointUrl,
-            successSelector,
-            String(assetDetail.spec_info?.interactive_selector || "").trim(),
-            assetDetail.spec_info?.allowed_urls
-          );
-          const ticketEndpoint = webProxyEndpoint
-            ? getEndpointUrl(webProxyEndpoint, resolveWebEndpointProtocol({ component: "koko", type: "web" }))
-            : endpointUrl;
-          const { ticket } = await useWorkspaceConnectors().createKokoTicket({
-            baseUrl: ticketEndpoint,
-            tokenId: token.id
-          });
-          if (!ticket) throw new Error("Koko 未返回 Web Proxy connect ticket");
-          const settings = await getPublicSettings();
-          webProxy = {
-            ...webProxy,
-            ticketEndpoint,
-            ticket,
-            recordingEnabled: settings.XPACK_LICENSE_IS_VALID === true,
-            recordingSupported: settings.XPACK_LICENSE_IS_VALID === true
-          };
-        }
-        const payload = {
-          token,
-          ...token,
-          endpointUrl,
-          webProxy,
-          connectMethod: {
-            value: body.connect_method,
-            component,
-            type: "web"
-          }
-        };
-        if (meta.onSessionReady) meta.onSessionReady(payload);
-        else updateSessionPayload(meta, payload);
-      } catch (error) {
-        if (meta.onSessionError) meta.onSessionError(error);
+    let creatingConnectionToken = false;
+    try {
+      await assertConnectMethodEnabled(body.protocol, body.connect_method);
+      const serverBody = { ...body, connect_method: await resolveServerConnectMethod(body) };
+      creatingConnectionToken = true;
+      const token = await createConnectionTokenWithAcl(serverBody, {
+        orgId: meta.orgId,
+        assetName: meta.assetName || meta.assetId,
+        scopeId: meta.tabId,
+        batchId: meta.aclBatchId,
+        admin: meta.admin
+      });
+      creatingConnectionToken = false;
+      if (!token) {
+        if (meta.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
         else markSessionFailed(meta);
-        addErrorToast({
-          title: t("ConnectError.ConnectFailed"),
-          description: creatingConnectionToken ? resolveConnectionErrorDescription(error, t) : String(error),
-          icon: "line-md:close-circle",
-          progress: true,
-          duration: 4000
-        });
+        return;
       }
-    })();
+      syncPersonalCredentialFromToken(meta.assetId, serverBody, token, personalCredentialScope);
+      const component = resolveBuiltinComponent(body);
+      const isWebProxy = body.connect_method === WEB_PROXY_NATIVE_VALUE;
+      let webProxyEndpoint = isWebProxy
+        ? await getSmartEndpoint({ protocol: "web_proxy", assetId: body.asset, token: token.id }, meta.orgId)
+        : null;
+      if (webProxyEndpoint && webProxyEndpoint.web_proxy_port == null) {
+        webProxyEndpoint = await getSmartEndpoint(
+          { protocol: "http", assetId: body.asset, token: token.id },
+          meta.orgId
+        );
+      }
+      const webProxyPort = Number(webProxyEndpoint?.web_proxy_port) || 5001;
+      let endpointUrl = webProxyEndpoint
+        ? getEndpointUrl({ ...webProxyEndpoint, web_proxy_port: webProxyPort }, "http", "web_proxy_port")
+        : await fetchSmartEndpointUrl(token, { component, type: "web" }, body, meta.orgId);
+      if (component === "chen" && isElectronRuntime()) {
+        endpointUrl = await desktopInvoke<string>("resolve_chen_endpoint", { endpointUrl });
+      } else if (!isWebProxy && (component === "koko" || component === "lion") && isElectronRuntime()) {
+        endpointUrl = await desktopInvoke<string>("resolve_koko_endpoint", { endpointUrl });
+      }
+      let webProxy;
+      if (body.connect_method === WEB_PROXY_NATIVE_VALUE) {
+        if (!meta.asset) throw new Error("Website 资产信息不完整");
+        const assetDetail = await getAssetDetailRequest(meta.assetId, meta.orgId);
+        const successSelector = String(assetDetail.spec_info?.success_selector || "").trim();
+        webProxy = useWebProxyManager().buildWebProxyRequest(
+          { ...meta.asset, permedProtocols: assetDetail.permed_protocols },
+          body.protocol,
+          endpointUrl,
+          successSelector,
+          String(assetDetail.spec_info?.interactive_selector || "").trim(),
+          assetDetail.spec_info?.allowed_urls
+        );
+        const ticketEndpoint = webProxyEndpoint
+          ? getEndpointUrl(webProxyEndpoint, resolveWebEndpointProtocol({ component: "koko", type: "web" }))
+          : endpointUrl;
+        const { ticket } = await useWorkspaceConnectors().createKokoTicket({
+          baseUrl: ticketEndpoint,
+          tokenId: token.id
+        });
+        if (!ticket) throw new Error("Koko 未返回 Web Proxy connect ticket");
+        const settings = await getPublicSettings();
+        webProxy = {
+          ...webProxy,
+          ticketEndpoint,
+          ticket,
+          recordingEnabled: settings.XPACK_LICENSE_IS_VALID === true,
+          recordingSupported: settings.XPACK_LICENSE_IS_VALID === true
+        };
+      }
+      const payload = {
+        token,
+        ...token,
+        endpointUrl,
+        webProxy,
+        connectMethod: {
+          value: body.connect_method,
+          component,
+          type: "web"
+        }
+      };
+      if (meta.onSessionReady) meta.onSessionReady(payload);
+      else updateSessionPayload(meta, payload);
+    } catch (error) {
+      if (meta.onSessionError) meta.onSessionError(error);
+      else markSessionFailed(meta);
+      addErrorToast({
+        title: t("ConnectError.ConnectFailed"),
+        description: creatingConnectionToken ? resolveConnectionErrorDescription(error, t) : String(error),
+        icon: "line-md:close-circle",
+        progress: true,
+        duration: 4000
+      });
+    }
   };
 
   const resolveConnectMethod = async (protocol: string) => {
@@ -981,54 +978,53 @@ export const useAssetAction = () => {
       connect_options: mergedConnectOptions
     };
 
-    nextTick(() => {
-      const account = selected || user;
-      let tabId = ephemeral?.tabId;
+    await nextTick();
+    const account = selected || user;
+    let tabId = ephemeral?.tabId;
 
-      // ponytail: 有 onSessionReady 时由调用方内嵌展示（如右侧 SFTP），不新开 workspace tab
-      if (
-        !ephemeral?.downloadRdp &&
-        !tabId &&
-        ephemeral?.asset &&
-        (NATIVE_WORKSPACE_METHODS.has(connectMethod) || isGuideConnectMethod(connectMethod)) &&
-        !ephemeral?.onSessionReady
-      ) {
-        tabId = openSession(ephemeral.asset, { protocol, account, connectMethod }).id;
-      }
+    // ponytail: 有 onSessionReady 时由调用方内嵌展示（如右侧 SFTP），不新开 workspace tab
+    if (
+      !ephemeral?.downloadRdp &&
+      !tabId &&
+      ephemeral?.asset &&
+      (NATIVE_WORKSPACE_METHODS.has(connectMethod) || isGuideConnectMethod(connectMethod)) &&
+      !ephemeral?.onSessionReady
+    ) {
+      tabId = openSession(ephemeral.asset, { protocol, account, connectMethod }).id;
+    }
 
-      if (
-        !ephemeral?.downloadRdp &&
-        (NATIVE_WORKSPACE_METHODS.has(connectMethod) || isGuideConnectMethod(connectMethod))
-      ) {
-        getBuiltinConnectSession(connectionBody, {
-          tabId,
-          assetId,
-          protocol,
-          account,
-          assetName: ephemeral?.asset?.name,
-          orgId: ephemeral?.orgId,
-          aclBatchId: ephemeral?.aclBatchId,
-          asset: ephemeral?.asset,
-          onSessionReady: ephemeral?.onSessionReady,
-          onSessionError: ephemeral?.onSessionError,
-          admin: ephemeral?.admin
-        });
-        return;
-      }
-
-      getConnectToken(connectionBody, {
+    if (
+      !ephemeral?.downloadRdp &&
+      (NATIVE_WORKSPACE_METHODS.has(connectMethod) || isGuideConnectMethod(connectMethod))
+    ) {
+      await getBuiltinConnectSession(connectionBody, {
         tabId,
-        downloadRdp: ephemeral?.downloadRdp,
-        asset: ephemeral?.asset,
         assetId,
         protocol,
         account,
+        assetName: ephemeral?.asset?.name,
         orgId: ephemeral?.orgId,
         aclBatchId: ephemeral?.aclBatchId,
+        asset: ephemeral?.asset,
         onSessionReady: ephemeral?.onSessionReady,
         onSessionError: ephemeral?.onSessionError,
         admin: ephemeral?.admin
       });
+      return;
+    }
+
+    await getConnectToken(connectionBody, {
+      tabId,
+      downloadRdp: ephemeral?.downloadRdp,
+      asset: ephemeral?.asset,
+      assetId,
+      protocol,
+      account,
+      orgId: ephemeral?.orgId,
+      aclBatchId: ephemeral?.aclBatchId,
+      onSessionReady: ephemeral?.onSessionReady,
+      onSessionError: ephemeral?.onSessionError,
+      admin: ephemeral?.admin
     });
   };
 

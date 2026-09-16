@@ -1348,6 +1348,8 @@
   "ConnectError": {
     "DownloadRdpFailed": "No se pudo descargar el archivo RDP",
     "ConnectFailed": "Error de conexión",
+    "RequestTimeout": "La solicitud de conexión agotó el tiempo de espera. Inténtelo de nuevo.",
+    "SessionClosed": "La sesión de conexión se ha cerrado. Vuelva a conectarse.",
     "CredentialServiceUnavailable": "El servicio de credenciales (por ejemplo, OpenBao) no está disponible. Compruebe su estado e inténtelo de nuevo.",
     "PersonalCredentialNotFound": "No se encontró la credencial personal seleccionada. Seleccione otra o introdúzcala manualmente.",
     "AccountUnavailable": "La cuenta seleccionada no está disponible. Seleccione otra e inténtelo de nuevo.",

@@ -1348,6 +1348,8 @@
   "ConnectError": {
     "DownloadRdpFailed": "RDP 파일을 다운로드하지 못했습니다",
     "ConnectFailed": "연결 실패",
+    "RequestTimeout": "연결 요청 시간이 초과되었습니다. 다시 시도하세요.",
+    "SessionClosed": "연결 세션이 종료되었습니다. 다시 연결하세요.",
     "CredentialServiceUnavailable": "자격 증명 서비스(예: OpenBao)를 사용할 수 없습니다. 서비스 상태를 확인한 후 다시 시도하세요.",
     "PersonalCredentialNotFound": "선택한 개인 자격 증명을 찾을 수 없습니다. 다른 자격 증명을 선택하거나 직접 입력하세요.",
     "AccountUnavailable": "선택한 계정을 사용할 수 없습니다. 다른 계정을 선택한 후 다시 시도하세요.",
