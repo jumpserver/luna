@@ -346,7 +346,7 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
                 variant="link"
                 size="xs"
                 icon="i-lucide-circle-x"
-                aria-label="Clear input"
+                :aria-label="t('Common.ClearInput')"
                 :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
                 @click="
                   () => {
@@ -375,7 +375,7 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
         </div>
 
         <div v-else class="grid min-h-0 flex-1 place-items-center px-4 text-[12px] text-[var(--app-muted)]">
-          输入名称、地址或关键字搜索资产
+          {{ t("Sidebar.SearchAssetsHint") }}
         </div>
       </div>
     </div>

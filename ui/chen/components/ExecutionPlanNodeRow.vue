@@ -34,6 +34,27 @@ const secondaryFacts = computed(() => {
 const detail = computed(() => chenPlanNodeDetail(props.node));
 const estimatedRows = computed(() => chenPlanFormatEstimated(props.node.rows) ?? "—");
 const estimatedCost = computed(() => chenPlanFormatEstimated(props.node.cost) ?? "—");
+const factLabelKeys: Record<string, string> = {
+  "Join Type": "ExecutionPlan.factJoinType",
+  "Sort Key": "ExecutionPlan.factSortKey",
+  Strategy: "ExecutionPlan.factStrategy",
+  "Group Key": "ExecutionPlan.factGroupKey",
+  "Index Name": "ExecutionPlan.factIndexName",
+  "CTE Name": "ExecutionPlan.factCteName",
+  "Subplan Name": "ExecutionPlan.factSubplanName",
+  "Parent Relationship": "ExecutionPlan.factParentRelationship",
+  "Hash Cond": "ExecutionPlan.factHashCondition",
+  "Join Filter": "ExecutionPlan.factJoinFilter",
+  "Merge Cond": "ExecutionPlan.factMergeCondition",
+  "Index Cond": "ExecutionPlan.factIndexCondition",
+  Filter: "ExecutionPlan.factFilter",
+  Output: "ExecutionPlan.factOutput",
+  "Startup Cost": "ExecutionPlan.factStartupCost"
+};
+const factLabel = (key: string) => {
+  const translationKey = factLabelKeys[key];
+  return translationKey ? t(translationKey) : key;
+};
 </script>
 
 <template>
@@ -69,7 +90,7 @@ const estimatedCost = computed(() => chenPlanFormatEstimated(props.node.cost) ??
         </div>
         <div v-if="detail" class="mt-0.5 font-ui-mono text-[11px] text-muted">{{ detail }}</div>
         <div v-if="primaryFacts.length" class="mt-1 space-y-0.5 font-ui-mono text-[11px] text-muted">
-          <div v-for="fact in primaryFacts" :key="fact.key">{{ fact.key }}: {{ fact.value }}</div>
+          <div v-for="fact in primaryFacts" :key="fact.key">{{ factLabel(fact.key) }}: {{ fact.value }}</div>
         </div>
         <button
           v-if="secondaryFacts.length"
@@ -79,7 +100,7 @@ const estimatedCost = computed(() => chenPlanFormatEstimated(props.node.cost) ??
           {{ showDetails ? t("ExecutionPlan.hideDetails") : t("ExecutionPlan.details") }}
         </button>
         <div v-if="showDetails && secondaryFacts.length" class="mt-1 space-y-0.5 font-ui-mono text-[11px] text-muted">
-          <div v-for="fact in secondaryFacts" :key="fact.key">{{ fact.key }}: {{ fact.value }}</div>
+          <div v-for="fact in secondaryFacts" :key="fact.key">{{ factLabel(fact.key) }}: {{ fact.value }}</div>
         </div>
       </div>
     </div>

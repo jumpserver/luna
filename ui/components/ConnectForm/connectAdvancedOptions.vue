@@ -211,7 +211,7 @@ function onAdvancedFoldLeave(el: Element) {
         </div>
 
         <div v-if="flags.disableAutoHash" class="flex items-center justify-between">
-          <span class="text-sm">Disable auto completion</span>
+          <span class="text-sm">{{ t("Setting.DisableAutoCompletion") }}</span>
           <USwitch v-model="selectedDisableAutoHash" />
         </div>
 

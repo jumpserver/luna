@@ -53,7 +53,7 @@ const errorKeys: Record<string, TerminalAiMessageKey> = {
   interrupt_failed: "RightPanel.AIInterruptFailed",
   invalid_message: "RightPanel.AIErrorInvalidMessage",
   metadata_approval_failed: "RightPanel.AIMetadataApprovalFailed",
-  policy_failed: "RightPanel.AIPolicyFailed",
+  policy_failed: "RightPanel.AIApprovalModeUpdateFailed",
   response_active: "RightPanel.AIErrorResponseActive",
   send_failed: "RightPanel.AISendFailed",
   unavailable: "RightPanel.AIUnavailableForTerminal"

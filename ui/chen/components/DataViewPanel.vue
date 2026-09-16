@@ -469,7 +469,7 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
             variant="soft"
             @click="emit('editStructure', tab, dataViewColumns(tab))"
           >
-            Edit structure
+            {{ t("Chen.EditStructure") }}
           </UButton>
         </div>
         <div class="overflow-hidden rounded-lg border border-default">

@@ -48,7 +48,7 @@ function selectAsset(asset: AssetItem) {
 
 function selectLocalShell() {
   open.value = false;
-  openLocalShell();
+  openLocalShell(t("AddSession.LocalShell"));
 }
 
 watch(search, runSearch);

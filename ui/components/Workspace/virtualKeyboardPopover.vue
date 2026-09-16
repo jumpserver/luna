@@ -284,14 +284,14 @@ watch(available, (value) => {
             @pointerdown.prevent
             @click="send(' ')"
           >
-            Space
+            {{ t("koko.terminal.space") }}
           </button>
           <button
             class="h-8 w-20 rounded-md border border-default bg-elevated text-xs hover:bg-accented"
             @pointerdown.prevent
             @click="send('\r')"
           >
-            Enter
+            {{ t("koko.terminal.enter") }}
           </button>
         </div>
       </div>

@@ -11,15 +11,15 @@ const emit = defineEmits(["update:keyboard", "update:opened"]);
 
 const { t } = useI18n();
 
-const generalOptions = [
-  { label: "German (Qwertz)", value: "de-de-qwertz" },
-  { label: "US English (Qwerty)", value: "en-us-qwerty" },
-  { label: "Spanish (Qwerty)", value: "es-es-qwerty" },
-  { label: "French (Azerty)", value: "fr-fr-azerty" },
-  { label: "Italian (Qwerty)", value: "it-it-qwerty" },
-  { label: "Dutch (QWERTY)", value: "nl-nl-qwerty" },
-  { label: "Russian (QWERTY)", value: "ru-ru-qwerty" }
-];
+const generalOptions = computed(() => [
+  { label: t("KeyboardGermanQwertz"), value: "de-de-qwertz" },
+  { label: t("KeyboardUsEnglishQwerty"), value: "en-us-qwerty" },
+  { label: t("KeyboardSpanishQwerty"), value: "es-es-qwerty" },
+  { label: t("KeyboardFrenchAzerty"), value: "fr-fr-azerty" },
+  { label: t("KeyboardItalianQwerty"), value: "it-it-qwerty" },
+  { label: t("KeyboardDutchQwerty"), value: "nl-nl-qwerty" },
+  { label: t("KeyboardRussianQwerty"), value: "ru-ru-qwerty" }
+]);
 </script>
 
 <template>

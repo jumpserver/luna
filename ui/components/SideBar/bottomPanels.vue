@@ -606,7 +606,7 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
                 variant="link"
                 size="xs"
                 icon="i-lucide-circle-x"
-                aria-label="Clear input"
+                :aria-label="t('Common.ClearInput')"
                 :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
                 @click="
                   () => {

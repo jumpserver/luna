@@ -65,7 +65,8 @@
     "SkippedHint": "有 {count} 个同名条目已存在，未重复导入。",
     "FileFilter": "录像文件",
     "Parsing": "正在解析录像…",
-    "ReadFailed": "读取录像失败：HTTP {status}"
+    "ReadFailed": "读取录像失败：HTTP {status}",
+    "PageTitle": "录像播放器"
   },
   "VideoPlayerTour": {
     "ClickTitle": "点击导入",
@@ -137,11 +138,17 @@
     "Save": "保存",
     "Delete": "删除",
     "Clear": "清空",
+    "OperationFailed": "操作失败",
     "EmptyDescription": "当前类型下暂无可用的授权资产",
     "SelectFromMenu": "请从左侧选择一个配置项",
     "Actions": "操作",
     "Close": "关闭",
-    "Remove": "移除"
+    "Remove": "移除",
+    "Untitled": "未命名",
+    "ClearInput": "清除输入",
+    "Unsaved": "未保存",
+    "SelectAll": "全选",
+    "SelectRow": "选择此行"
   },
   "DesktopMenu": {
     "File": "文件",
@@ -229,7 +236,8 @@
     "Settings": "连接设置",
     "Minimize": "最小化",
     "Maximize": "最大化",
-    "Close": "关闭"
+    "Close": "关闭",
+    "Back": "返回"
   },
   "Menu": {
     "Resource": "资源目录",
@@ -355,7 +363,8 @@
     "ShowSection": "显示{section}",
     "AtLeastOneSection": "至少保留一个栏目",
     "Collapse": "折叠侧边栏",
-    "Expand": "展开侧边栏"
+    "Expand": "展开侧边栏",
+    "SearchAssetsHint": "输入名称、地址或关键字搜索资产"
   },
   "RightPanel": {
     "AIClearLocalHistory": "清空本地记录和草稿",
@@ -796,7 +805,9 @@
     "BatchCommandSentDesc": "已向 {count} 个终端发送命令",
     "BatchCommandSendResult": "批量发送结果",
     "BatchCommandSendResultDesc": "已发送 {sent}/{total} 个终端，未发送 {failed} 个",
-    "BatchPanelClose": "关闭批量命令面板"
+    "BatchPanelClose": "关闭批量命令面板",
+    "MoveVirtualKeyboard": "移动虚拟键盘",
+    "AIApprovalModeUpdateFailed": "更新审批模式失败"
   },
   "FileManagement": {
     "ConnectRemoteSftp": "连接远程 SFTP",
@@ -930,7 +941,8 @@
     "PowerFull": "全速（所有CPU）",
     "PowerFast": "极速（3/4 CPU）",
     "PowerMedium": "中等（1/2 CPU）",
-    "PowerLow": "低速（1/4 CPU）"
+    "PowerLow": "低速（1/4 CPU）",
+    "ReplayArchiveFile": "录像归档"
   },
   "AssetCard": {
     "Activated": "已激活",
@@ -956,6 +968,7 @@
     "Use": "使用",
     "Favorite": "收藏",
     "Edit": "编辑",
+    "Delete": "删除",
     "Unfavorite": "取消收藏",
     "FavoriteSuccess": "收藏成功",
     "FavoriteFailed": "收藏失败",
@@ -977,7 +990,11 @@
     "CloseAll": "关闭全部标签",
     "CloseOther": "关闭其他标签",
     "CloseLeft": "关闭左侧标签",
-    "CloseRight": "关闭右侧标签"
+    "CloseRight": "关闭右侧标签",
+    "ScrollLeft": "向左滚动标签",
+    "ScrollRight": "向右滚动标签",
+    "SelectTab": "选择标签",
+    "SwitchTab": "切换标签"
   },
   "TerminalAi": {
     "Title": "Terminal AI",
@@ -1028,7 +1045,10 @@
     "StatusConnected": "已连接",
     "StatusConnecting": "连接中",
     "StatusFailed": "连接失败",
-    "StatusIdle": "未连接"
+    "StatusIdle": "未连接",
+    "CloseSidePanel": "关闭侧边面板",
+    "ResizeSidebar": "调整侧边栏宽度",
+    "ResizeRightPanel": "调整右侧面板宽度"
   },
   "EditModal": {
     "AppletConnectMethod": "远程应用连接方式",
@@ -1041,9 +1061,6 @@
     "ConnectMethod": "连接方式",
     "OptionalAccount": "账号",
     "CurrentOnline": "当前在线: {count}"
-  },
-  "SettingModal": {
-    "Description": "连接设置用于配置后续连接中默认启动的应用程序"
   },
   "Layout": {
     "Grid": "卡片视图",
@@ -1332,7 +1349,11 @@
     "TerminalSettingsDescription": "配置 JumpServer 在打开 SSH 或 Telnet 会话前应使用哪个终端窗口。",
     "TerminalProgramDescription": "选择 JumpServer 用于字符类会话的终端程序。如有需要，可直接在对应项上配置可执行路径。",
     "SshTerminalDescription": "选择打开 SSH 会话时使用的终端宿主。",
-    "TelnetTerminalDescription": "选择打开 Telnet 会话时使用的终端宿主。"
+    "TelnetTerminalDescription": "选择打开 Telnet 会话时使用的终端宿主。",
+    "DisableAutoCompletion": "禁用自动补全",
+    "JumpServerPluginFile": "JumpServer 插件包",
+    "ZipArchiveFile": "ZIP 压缩包",
+    "ExecutableFile": "可执行文件"
   },
   "ConnectMethodType": {
     "BuiltIn": "内置",
@@ -1685,7 +1706,9 @@
       "noActiveTerminal": "当前没有可输入的终端",
       "commandSuggestions": "命令候选",
       "commandSuggestionHistory": "历史",
-      "commandSuggestionCatalog": "词库"
+      "commandSuggestionCatalog": "词库",
+      "space": "空格",
+      "enter": "回车"
     },
     "drawer": {
       "general": "通用",
@@ -2027,13 +2050,15 @@
       "closeTabsToRight": "关闭右侧标签",
       "closeAllTabs": "关闭全部标签",
       "closeTabsTitle": "关闭 {count} 个标签",
-      "closeTabsConfirm": "其中有 {dirty} 个文件尚未保存。要先保存这些修改吗？"
+      "closeTabsConfirm": "其中有 {dirty} 个文件尚未保存。要先保存这些修改吗？",
+      "plainText": "纯文本"
     },
     "workspace": {
       "preparingSftp": "正在准备 SFTP 文件管理...",
       "preparingFileEditor": "正在准备 SFTP 文件编辑器...",
       "preparingConnection": "正在准备 Koko 连接...",
-      "missingToken": "缺少连接令牌参数"
+      "missingToken": "缺少连接令牌参数",
+      "preparingRemoteDesktop": "正在准备远程桌面连接..."
     },
     "kubernetes": {
       "name": "Kubernetes",
@@ -2086,7 +2111,22 @@
     "estimatedRows": "估算行数",
     "estimatedCost": "估算成本",
     "details": "详情",
-    "hideDetails": "收起详情"
+    "hideDetails": "收起详情",
+    "factJoinType": "连接类型",
+    "factSortKey": "排序键",
+    "factStrategy": "策略",
+    "factGroupKey": "分组键",
+    "factIndexName": "索引名称",
+    "factCteName": "CTE 名称",
+    "factSubplanName": "子计划名称",
+    "factParentRelationship": "父级关系",
+    "factHashCondition": "哈希条件",
+    "factJoinFilter": "连接筛选",
+    "factMergeCondition": "合并条件",
+    "factIndexCondition": "索引条件",
+    "factFilter": "筛选条件",
+    "factOutput": "输出",
+    "factStartupCost": "启动成本"
   },
   "Chen": {
     "TerminatedByAdmin": "{name} 管理员终断连接。",
@@ -2468,6 +2508,18 @@
     "InvalidIndexDefinition": "请完整填写索引名称并选择列。",
     "InvalidCsvFile": "CSV 文件无效或无法读取。",
     "CopyOperationFailedDescription": "无法复制所选数据。",
-    "TableWithoutPrimaryKeyNotEditable": "当前表未设置主键，暂不支持新增、修改或删除数据。"
+    "TableWithoutPrimaryKeyNotEditable": "当前表未设置主键，暂不支持新增、修改或删除数据。",
+    "Query": "查询",
+    "DataView": "数据视图",
+    "SavedSqlCount": "已保存 {count} 条 SQL",
+    "DeleteNamedSql": "删除“{name}”？",
+    "LogEntries": "{count} 条日志",
+    "EditStructure": "编辑结构"
+  },
+  "NotFound": {
+    "Title": "页面未找到",
+    "Description": "抱歉，找不到您要访问的页面。",
+    "RequestedPath": "请求路径",
+    "GoHome": "返回首页"
   }
 }

@@ -112,7 +112,7 @@ const pickArchives = async (append = false) => {
   try {
     const selected = await desktopDialog.open({
       multiple: true,
-      filters: [{ name: "Replay Archive", extensions: ["tar"] }]
+      filters: [{ name: t("Transcode.ReplayArchiveFile"), extensions: ["tar"] }]
     });
     const nextPaths = toPickedPaths(selected);
     if (!nextPaths.length) return;

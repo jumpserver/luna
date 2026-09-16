@@ -864,7 +864,7 @@ onMounted(async () => {
     let description = message || t("Login.LoginFailedErrorPage");
 
     if (reason === "invalid-site") {
-      description = t(" ");
+      description = t("Login.InvalidSiteError");
     }
 
     addErrorToast({
@@ -1321,7 +1321,7 @@ onBeforeUnmount(() => {
             variant="link"
             size="sm"
             icon="i-lucide-circle-x"
-            aria-label="Clear input"
+            :aria-label="t('Common.ClearInput')"
             :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
             @click="handleClearInput"
           />

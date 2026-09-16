@@ -803,7 +803,7 @@ defineExpose({
       v-if="!loggedIn"
       class="grid min-h-0 flex-1 place-items-center px-2.5 text-xs text-gray-500 dark:text-gray-400"
     >
-      请先登录
+      {{ t("Common.LoginFirst") }}
     </div>
 
     <template v-else-if="search.trim()">

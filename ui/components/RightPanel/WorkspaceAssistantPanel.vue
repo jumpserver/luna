@@ -219,7 +219,7 @@ function updateApprovalMode(value: unknown) {
   const mode = valueString === "always" || valueString === "never" ? valueString : "auto";
   void current.agent.actions.setApprovalMode(mode).catch((cause) => {
     current.errorCode = "policy_failed";
-    current.errorText = cause instanceof Error ? cause.message : "Failed to update approval mode";
+    current.errorText = cause instanceof Error ? cause.message : t("RightPanel.AIApprovalModeUpdateFailed");
   });
 }
 

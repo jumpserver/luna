@@ -91,7 +91,7 @@ function confirmDelete() {
                       :disabled="Boolean(deletingId)"
                       @click="requestDelete(snippet)"
                     >
-                      Delete
+                      {{ t("Chen.Delete") }}
                     </UButton>
                   </div>
                 </td>
@@ -101,7 +101,7 @@ function confirmDelete() {
         </div>
 
         <div v-if="total > pageSize" class="mt-3 flex items-center justify-between gap-3">
-          <span class="text-xs text-muted">{{ total }} saved SQL</span>
+          <span class="text-xs text-muted">{{ t("Chen.SavedSqlCount", { count: total }) }}</span>
           <UPagination
             :page="page"
             :items-per-page="pageSize"
@@ -116,7 +116,7 @@ function confirmDelete() {
 
   <ChenWorkspaceModal v-model:open="deleteDialogOpen" :title="t('Chen.DeleteSql')">
     <template #body>
-      <p class="text-sm text-muted">Delete “{{ deleteCandidate?.name }}”?</p>
+      <p class="text-sm text-muted">{{ t("Chen.DeleteNamedSql", { name: deleteCandidate?.name }) }}</p>
     </template>
 
     <template #footer>
