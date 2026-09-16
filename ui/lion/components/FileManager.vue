@@ -82,6 +82,7 @@ const filePathList = computed(() => {
     index += 1;
     list.unshift({ id: index, active: false, name: currentFolder.name, row: currentFolder, showArrow: true });
   }
+  list[0]!.name = "/";
   return list;
 });
 
@@ -205,26 +206,28 @@ onUnmounted(() => {
     :class="{ 'h-full sftp-file-management--compact': compact }"
   >
     <div
-      class="sftp-file-management__toolbar sftp-file-management__toolbar--unified flex shrink-0 items-center gap-1 border-b border-(--app-border) bg-(--app-panel-bg) px-2"
+      class="sftp-file-management__toolbar sftp-file-management__toolbar--unified flex min-w-0 shrink-0 items-center gap-1 overflow-hidden border-b border-(--app-border) bg-(--app-panel-bg) px-2"
     >
       <div class="flex shrink-0 items-center gap-0.5">
-        <UTooltip :text="t('koko.fileManagement.back')">
+        <UTooltip :text="compact ? t('koko.drawer.up') : t('koko.fileManagement.back')">
           <UButton
-            icon="i-lucide-chevron-left"
+            :icon="compact ? 'i-lucide-arrow-up' : 'i-lucide-chevron-left'"
             color="neutral"
             variant="ghost"
             size="sm"
+            square
             :disabled="disabledBack"
-            :aria-label="t('koko.fileManagement.back')"
+            :aria-label="compact ? t('koko.drawer.up') : t('koko.fileManagement.back')"
             @click="handlePathBack"
           />
         </UTooltip>
-        <UTooltip :text="t('koko.fileManagement.forward')">
+        <UTooltip v-if="!compact" :text="t('koko.fileManagement.forward')">
           <UButton
             icon="i-lucide-chevron-right"
             color="neutral"
             variant="ghost"
             size="sm"
+            square
             :disabled="disabledForward"
             :aria-label="t('koko.fileManagement.forward')"
             @click="handlePathForward"
@@ -246,14 +249,14 @@ onUnmounted(() => {
       />
       <div
         v-else
-        class="sftp-file-management__path-field flex h-8 min-w-18 flex-1 items-center overflow-x-auto rounded-[3px] border border-(--app-border) bg-(--app-input-bg) px-1 font-ui-mono text-[12px]"
+        class="sftp-file-management__path-field flex h-8 min-w-18 flex-1 items-center overflow-x-auto rounded-[7px] border border-(--app-border) bg-(--app-input-bg) px-1 font-ui-mono text-[12px]"
         role="navigation"
-        :aria-label="folder?.name || name"
+        :aria-label="folder?.parent ? folder.name : '/'"
       >
         <template v-for="item of filePathList" :key="item.id">
           <button
             type="button"
-            class="max-w-28 shrink-0 truncate rounded px-1.5 hover:bg-accented focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
+            class="sftp-path-crumb max-w-28 shrink-0 truncate rounded-md px-1.5 hover:bg-accented focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
             :class="item.active ? 'font-semibold' : 'text-(--app-muted)'"
             :title="item.name"
             :aria-current="item.active ? 'page' : undefined"
@@ -265,26 +268,28 @@ onUnmounted(() => {
         </template>
       </div>
 
-      <div class="flex shrink-0 items-center gap-0.5">
-        <UTooltip :text="t('koko.fileManagement.refresh')">
-          <UButton
-            icon="i-lucide-refresh-cw"
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            :aria-label="t('koko.fileManagement.refresh')"
-            @click="handleRefresh"
-          />
-        </UTooltip>
-
+      <div class="flex shrink-0 items-center gap-1">
         <UTooltip v-if="!searchOpen && !searchValue" :text="t('koko.fileManagement.filterCurrentDirectory')">
           <UButton
             icon="i-lucide-search"
             color="neutral"
             variant="ghost"
             size="sm"
+            square
             :aria-label="t('koko.fileManagement.filterCurrentDirectory')"
             @click="searchOpen = true"
+          />
+        </UTooltip>
+
+        <UTooltip :text="t('koko.fileManagement.refresh')">
+          <UButton
+            icon="i-lucide-refresh-cw"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            square
+            :aria-label="t('koko.fileManagement.refresh')"
+            @click="handleRefresh"
           />
         </UTooltip>
 
@@ -304,10 +309,11 @@ onUnmounted(() => {
 
         <UTooltip :text="t('koko.actions.upload')">
           <UButton
-            icon="i-lucide-upload"
-            color="primary"
-            variant="solid"
-            size="xs"
+            icon="i-lucide-cloud-upload"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            square
             :disabled="uploadDisabled"
             :aria-label="t('koko.actions.upload')"
             @click="fileInputRef?.click()"
@@ -357,7 +363,8 @@ onUnmounted(() => {
               <span class="flex min-w-0 items-center gap-2 px-3.5 py-1.5 text-(--app-fg)">
                 <UIcon
                   :name="item.row.is_dir ? 'i-lucide-folder' : 'i-lucide-file'"
-                  class="size-4 shrink-0 text-muted"
+                  class="size-4 shrink-0"
+                  :class="item.row.is_dir ? 'tree-folder-icon' : 'text-muted'"
                 />
                 <span class="min-w-0 flex-1 truncate" :class="item.row.is_dir ? 'font-medium' : ''">
                   {{ item.row.name }}
