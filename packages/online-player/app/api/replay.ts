@@ -1,4 +1,4 @@
-import type { Replay, ReplayCommand, ReplayPartManifest, ReplaySession } from "#online-player/types";
+import type { Replay, ReplayCommand, ReplayIndex, ReplayPartManifest, ReplaySession } from "#online-player/types";
 
 import { apiRequest } from "#imports";
 import { isReplayApiPath, replayRequestOrgId } from "#online-player/utils/replay";
@@ -16,6 +16,14 @@ export function fetchReplay(sessionId: string) {
   return apiRequest<Replay & { error?: string }>({
     method: "GET",
     path: `/api/v1/terminal/sessions/${encodeURIComponent(sessionId)}/replay/`,
+    orgId: requestOrgId()
+  });
+}
+
+export function fetchReplayIndex(sessionId: string) {
+  return apiRequest<ReplayIndex>({
+    method: "GET",
+    path: `/api/v1/terminal/sessions/${encodeURIComponent(sessionId)}/replay-index/`,
     orgId: requestOrgId()
   });
 }

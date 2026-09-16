@@ -93,6 +93,10 @@
   background: var(--ui-color-error-500);
 }
 
+.replay-index-marker .replay-command-marker-tick {
+  background: var(--ui-color-info-500);
+}
+
 .replay-command-marker.is-active .replay-command-marker-tick {
   width: 4px;
   height: 14px;

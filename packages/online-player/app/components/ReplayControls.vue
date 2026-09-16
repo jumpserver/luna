@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
-import type { ReplayCommand, ReplayPartItem } from "#online-player/types";
+import type { ReplayCommand, ReplayIndexEvent, ReplayPartItem } from "#online-player/types";
 import { REPLAY_SPEEDS } from "#online-player/types";
+import { eventExcerpt, eventPositionMs, visibleIndexMarkers } from "#online-player/utils/replayIndex";
 import { formatClock } from "#online-player/utils/time";
 
 const props = defineProps<{
@@ -12,6 +13,10 @@ const props = defineProps<{
   durationReady?: boolean;
   speed: number;
   commands: ReplayCommand[];
+  indexEvents?: ReplayIndexEvent[];
+  isParts?: boolean;
+  activePartIndex?: number;
+  activeIndexOrdinal?: number;
   parts: ReplayPartItem[];
   showParts?: boolean;
   activePartSrc?: string;
@@ -27,6 +32,7 @@ const emit = defineEmits<{
   restart: [];
   seek: [number];
   selectCommand: [ReplayCommand];
+  selectIndexEvent: [ReplayIndexEvent];
   selectPart: [ReplayPartItem];
   toggleCommandRail: [];
   "update:speed": [number];
@@ -60,6 +66,21 @@ const ticks = computed(() =>
       danger: (item.risk_level || 0) >= 4,
       active: item.offsetMs === props.activeCommandOffset,
       command: item
+    }))
+);
+
+const indexTicks = computed(() =>
+  visibleIndexMarkers(
+    (props.indexEvents || []).filter(
+      (event) => eventPositionMs(event, Boolean(props.isParts), props.activePartIndex) !== null
+    )
+  )
+    .map((event) => ({ event, offsetMs: eventPositionMs(event, Boolean(props.isParts), props.activePartIndex) }))
+    .filter((item) => item.offsetMs !== null && props.durationMs > 0 && item.offsetMs <= props.durationMs)
+    .map((item) => ({
+      event: item.event,
+      left: `${(item.offsetMs! / props.durationMs) * 100}%`,
+      active: item.event.ordinal === props.activeIndexOrdinal
     }))
 );
 
@@ -108,6 +129,19 @@ const sliderReady = computed(() => Boolean(props.durationReady) && props.duratio
       >
         <span class="replay-command-marker-tick" />
         <span class="replay-command-marker-label">{{ tick.command.input }}</span>
+      </button>
+      <button
+        v-for="tick in indexTicks"
+        :key="`index-${tick.event.ordinal}`"
+        type="button"
+        class="replay-command-marker replay-index-marker"
+        :class="{ 'is-active': tick.active }"
+        :style="{ left: tick.left }"
+        :aria-label="`${formatClock(tick.event.replay_ms)} ${t('Replay.OCRTextEvidence')}: ${eventExcerpt(tick.event)}`"
+        @click.stop="emit('selectIndexEvent', tick.event)"
+      >
+        <span class="replay-command-marker-tick" />
+        <span class="replay-command-marker-label">{{ eventExcerpt(tick.event) }}</span>
       </button>
     </div>
 

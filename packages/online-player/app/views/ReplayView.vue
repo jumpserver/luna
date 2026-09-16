@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ReplayCommand, ReplayPartItem, ReplayPlayerHandle } from "#online-player/types";
+import type { ReplayCommand, ReplayIndexEvent, ReplayPartItem, ReplayPlayerHandle } from "#online-player/types";
 import ReplayPlayerHost from "#online-player/components/players/ReplayPlayerHost.vue";
 import ReplayControls from "#online-player/components/ReplayControls.vue";
 import ReplayHeader from "#online-player/components/ReplayHeader.vue";
@@ -7,6 +7,7 @@ import ReplayRail from "#online-player/components/ReplayRail.vue";
 import ReplayStateOverlay from "#online-player/components/ReplayStateOverlay.vue";
 import ReplayWatermark from "#online-player/components/ReplayWatermark.vue";
 import { useReplayCommands } from "#online-player/composables/useReplayCommands";
+import { useReplayIndex } from "#online-player/composables/useReplayIndex";
 import { useReplayParts } from "#online-player/composables/useReplayParts";
 import { useReplaySession } from "#online-player/composables/useReplaySession";
 import { COMMAND_SEEK_LEAD_MS } from "#online-player/types";
@@ -29,6 +30,12 @@ const queryStartMs = computed(() => {
 const { replay, status, errorMessage, watermark, reload } = useReplaySession(() =>
   props.blocked ? "" : sessionId.value
 );
+const {
+  index: recordingIndex,
+  loading: indexLoading,
+  error: indexError,
+  reload: reloadIndex
+} = useReplayIndex(() => (status.value === "ready" && !props.blocked ? sessionId.value : ""));
 const {
   parts,
   current: currentPart,
@@ -55,14 +62,20 @@ const {
 const playerRef = useTemplateRef("player");
 const playing = ref(false);
 const seeking = ref(false);
+const seekWaiting = ref(false);
 const positionMs = ref(0);
 const durationMs = ref(0);
 const durationReady = ref(false);
 const speed = ref(1);
 const railCollapsed = ref(true);
 const activeCommandOffset = ref<number | null>(null);
+const activeIndexOrdinal = ref<number | null>(null);
+const pendingIndexSelection = ref<{ ordinal: number; targetMs: number; partIndex: number } | null>(null);
+const indexJumpError = ref("");
+const playerStartAtMs = ref(queryStartMs.value);
 const playerError = ref("");
 const durationGate = createDurationGate();
+let seekGeneration = 0;
 
 const playerApi = (): ReplayPlayerHandle | null => {
   const instance = playerRef.value as ReplayPlayerHandle | null;
@@ -106,7 +119,10 @@ const showRail = computed(() =>
     overlay: Boolean(overlayKind.value),
     commandCount: commands.value.length,
     commandsLoading: commandsLoading.value,
-    commandsError: Boolean(commandsError.value)
+    commandsError: Boolean(commandsError.value),
+    indexAvailable: Boolean(recordingIndex.value),
+    indexLoading: indexLoading.value,
+    indexError: Boolean(indexError.value)
   })
 );
 const asciiBleed = computed(() => playerType.value === "asciicast");
@@ -114,13 +130,28 @@ const asciiBleed = computed(() => playerType.value === "asciicast");
 watch(
   () => [commands.value.length, commandsError.value, commandsLoading.value] as const,
   ([count, , loading]) => {
-    if (count === 0 && !loading) railCollapsed.value = true;
+    if (count === 0 && !loading && !recordingIndex.value && !indexLoading.value && !indexError.value) {
+      railCollapsed.value = true;
+    }
   }
 );
 
+watch(
+  () => [recordingIndex.value, indexError.value] as const,
+  ([index, error]) => {
+    if (index || error) railCollapsed.value = false;
+  }
+);
+
+watch(queryStartMs, (value) => {
+  playerStartAtMs.value = value;
+});
+
 watch(playerSrc, () => {
   playerError.value = "";
-  playing.value = Boolean(playerSrc.value);
+  seekWaiting.value = false;
+  seeking.value = false;
+  playing.value = playerType.value === "mp4" ? false : Boolean(playerSrc.value);
   durationGate.reset();
   durationReady.value = false;
 });
@@ -138,7 +169,7 @@ function togglePlayback() {
   if (!api) return;
 
   const nextPlaying = !playing.value;
-  playing.value = nextPlaying;
+  if (playerType.value !== "mp4") playing.value = nextPlaying;
   if (nextPlaying) api.play();
   else api.pause();
 }
@@ -147,33 +178,100 @@ async function restart() {
   const api = playerApi();
   if (!api) return;
 
+  playerError.value = "";
   activeCommandOffset.value = null;
-  positionMs.value = 0;
-  playing.value = true;
+  activeIndexOrdinal.value = null;
+  pendingIndexSelection.value = null;
+  seekGeneration += 1;
+  if (playerType.value !== "mp4") positionMs.value = 0;
+  if (playerType.value !== "mp4") playing.value = true;
   await api.seek(0);
   api.play();
 }
 
 async function seekTo(ms: number) {
-  positionMs.value = Math.max(0, ms);
-  await playerApi()?.seek(positionMs.value);
+  const requestId = ++seekGeneration;
+  const targetMs = Math.max(0, ms);
+  playerError.value = "";
+  if (playerType.value !== "mp4") positionMs.value = targetMs;
+  try {
+    await playerApi()?.seek(targetMs);
+  } catch {
+    // The player reports an actionable error; retain the last confirmed time.
+    if (requestId === seekGeneration) pendingIndexSelection.value = null;
+  }
 }
 
 function cancelSeek() {
+  seekGeneration += 1;
   playerApi()?.cancelSeek?.();
   seeking.value = false;
+  seekWaiting.value = false;
+  pendingIndexSelection.value = null;
+}
+
+function onPlayerPosition(ms: number) {
+  positionMs.value = ms;
+  const pending = pendingIndexSelection.value;
+  if (!pending || seeking.value || Math.abs(ms - pending.targetMs) > 250) return;
+  if (replay.value?.type === "parts" && currentPart.value?.partIndex !== pending.partIndex) return;
+  activeIndexOrdinal.value = pending.ordinal;
+  pendingIndexSelection.value = null;
+}
+
+function onPlayerError(message: string) {
+  playerError.value = message;
+  pendingIndexSelection.value = null;
 }
 
 function onSelectCommand(item: ReplayCommand) {
   activeCommandOffset.value = item.offsetMs;
+  activeIndexOrdinal.value = null;
+  pendingIndexSelection.value = null;
   void seekTo(Math.max(0, item.offsetMs - commandSeekLeadMs(playerType.value)));
 }
 
+function onSelectIndexEvent(event: ReplayIndexEvent) {
+  seekGeneration += 1;
+  indexJumpError.value = "";
+  playerError.value = "";
+  activeCommandOffset.value = null;
+  activeIndexOrdinal.value = null;
+  pendingIndexSelection.value = {
+    ordinal: event.ordinal,
+    targetMs: replay.value?.type === "parts" ? event.local_ms : event.replay_ms,
+    partIndex: event.part_index
+  };
+  if (replay.value?.type !== "parts") {
+    void seekTo(event.replay_ms);
+    return;
+  }
+
+  const targetPart = parts.value.find((part) => part.partIndex === event.part_index);
+  if (!targetPart) {
+    pendingIndexSelection.value = null;
+    indexJumpError.value = t("Replay.IndexPartUnavailable");
+    return;
+  }
+  if (targetPart.src === currentPart.value?.src) {
+    void seekTo(event.local_ms);
+    return;
+  }
+
+  playerStartAtMs.value = event.local_ms;
+  positionMs.value = 0;
+  selectPart(targetPart);
+}
+
 function onSelectPart(item: ReplayPartItem) {
+  seekGeneration += 1;
+  playerStartAtMs.value = 0;
   selectPart(item);
   playing.value = false;
   positionMs.value = 0;
   activeCommandOffset.value = null;
+  activeIndexOrdinal.value = null;
+  pendingIndexSelection.value = null;
 }
 
 function onKeydown(event: KeyboardEvent) {
@@ -231,12 +329,13 @@ watch(
                   :type="playerType"
                   :src="playerSrc"
                   :speed="speed"
-                  :start-at-ms="queryStartMs"
+                  :start-at-ms="playerStartAtMs"
                   @playing="playing = $event"
-                  @position="positionMs = $event"
+                  @position="onPlayerPosition"
                   @duration="durationMs = $event"
                   @seeking="seeking = $event"
-                  @error="playerError = $event"
+                  @seek-waiting="seekWaiting = $event"
+                  @error="onPlayerError"
                 />
                 <ReplayWatermark v-if="watermark?.enabled" :settings="watermark" />
               </div>
@@ -252,6 +351,10 @@ watch(
             :duration-ready="durationReady"
             :speed="speed"
             :commands="commands"
+            :index-events="recordingIndex?.events || []"
+            :is-parts="replay?.type === 'parts'"
+            :active-part-index="currentPart?.partIndex"
+            :active-index-ordinal="activeIndexOrdinal ?? undefined"
             :parts="parts"
             :show-parts="replay?.type === 'parts'"
             :active-part-src="currentPart?.src"
@@ -263,6 +366,7 @@ watch(
             @restart="restart"
             @seek="seekTo"
             @select-command="onSelectCommand"
+            @select-index-event="onSelectIndexEvent"
             @select-part="onSelectPart"
             @toggle-command-rail="railCollapsed = !railCollapsed"
             @update:speed="speed = $event"
@@ -273,7 +377,9 @@ watch(
             class="replay-seek absolute top-1/2 left-1/2 z-30 -translate-x-1/2 -translate-y-1/2 text-center"
           >
             <UIcon name="i-lucide-loader-circle" class="mx-auto size-12 animate-spin text-primary" />
-            <p class="mt-5 text-sm font-medium">{{ t("Replay.Seeking") }}</p>
+            <p class="mt-5 text-sm font-medium">
+              {{ seekWaiting ? t("Replay.WaitingForSeekable") : t("Replay.Seeking") }}
+            </p>
             <UButton
               class="mt-4"
               color="neutral"
@@ -302,14 +408,25 @@ watch(
         >
           <ReplayRail
             :commands="commands"
+            :index-events="recordingIndex?.events || []"
+            :has-index="Boolean(recordingIndex)"
+            :index-loading="indexLoading"
+            :index-error="indexError"
+            :index-jump-error="indexJumpError"
             :parts="[]"
             :show-parts="false"
             :active-command-offset="activeCommandOffset ?? undefined"
+            :active-index-ordinal="activeIndexOrdinal ?? undefined"
             :loading="commandsLoading && commands.length === 0"
             :error="commandsError"
             @select-command="onSelectCommand"
+            @select-index-event="onSelectIndexEvent"
             @load-more="loadMore"
             @retry="reloadCommands"
+            @retry-index="
+              indexJumpError = '';
+              reloadIndex();
+            "
           />
         </aside>
       </template>
