@@ -21,7 +21,6 @@ export function useAiPanelLayout(options: {
   area: Ref<HTMLElement | null>;
   panel: Ref<HTMLElement | null>;
   narrow: Ref<boolean>;
-  defaultFloating: Ref<boolean>;
   width: Ref<number>;
   setWidth: (width: number) => void;
 }) {
@@ -36,7 +35,6 @@ export function useAiPanelLayout(options: {
     rect: PanelRect;
     moved: boolean;
   } | null>(null);
-  const floating = computed(() => options.narrow.value || options.defaultFloating.value || placement.value !== null);
   const limits = computed(() => ({
     width: Math.max(0, size.width.value - GAP * 2),
     height: Math.max(0, size.height.value - GAP * 2)
@@ -61,45 +59,29 @@ export function useAiPanelLayout(options: {
     constrain(
       placement.value || {
         left: size.width.value - options.width.value - GAP,
-        top: GAP,
+        top: size.height.value - DEFAULT_HEIGHT - GAP,
         width: options.width.value,
         height: DEFAULT_HEIGHT
       }
     )
   );
   const style = computed<CSSProperties>(() => {
-    if (!floating.value)
-      return { width: `${Math.min(options.width.value, limits.value.width || options.width.value)}px` };
     if (options.narrow.value)
       return {
-        top: `${GAP}px`,
         bottom: `${GAP}px`,
         right: `${GAP}px`,
-        width: `min(${options.width.value}px, calc(100% - 3rem))`
+        width: `min(${options.width.value}px, calc(100% - 3rem))`,
+        height: `min(${DEFAULT_HEIGHT}px, calc(100% - ${GAP * 2}px))`
       };
     return Object.fromEntries(Object.entries(rect.value).map(([key, value]) => [key, `${value}px`]));
   });
 
   function currentRect(): PanelRect | null {
     if (!size.width.value || !size.height.value) return null;
-    if (floating.value) return { ...rect.value };
-    const area = options.area.value?.getBoundingClientRect();
-    const panel = options.panel.value?.getBoundingClientRect();
-    if (!area || !panel) return null;
-    return { left: panel.left - area.left, top: panel.top - area.top, width: panel.width, height: panel.height };
+    return { ...rect.value };
   }
 
   function update(mode: Interaction, start: PanelRect, dx: number, dy: number) {
-    if (mode === "w" && !floating.value) {
-      options.setWidth(
-        clamp(
-          start.width - dx,
-          Math.min(AI_PANEL_MIN_WIDTH, limits.value.width),
-          Math.min(AI_PANEL_MAX_WIDTH, limits.value.width)
-        )
-      );
-      return;
-    }
     const next = constrain(start);
     if (mode === "move") {
       next.left += dx;
@@ -141,9 +123,13 @@ export function useAiPanelLayout(options: {
     if (current?.target.hasPointerCapture(current.pointerId)) current.target.releasePointerCapture(current.pointerId);
   }
 
-  function reset() {
+  function resetPosition() {
     stop();
     placement.value = null;
+  }
+
+  function reset() {
+    resetPosition();
     options.setWidth(AI_PANEL_DEFAULT_WIDTH);
   }
 
@@ -153,7 +139,6 @@ export function useAiPanelLayout(options: {
     const start = currentRect();
     const target = options.panel.value;
     if (!handle || !start || !target) return;
-    if (handle.mode === "move" && !floating.value) start.height = Math.min(start.height, DEFAULT_HEIGHT);
     handle.element.focus({ preventScroll: true });
     target.setPointerCapture(event.pointerId);
     gesture.value = {
@@ -189,7 +174,6 @@ export function useAiPanelLayout(options: {
       const dy = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
       const start = currentRect();
       if ((!dx && !dy) || !start) return;
-      if (handle.mode === "move" && !floating.value) start.height = Math.min(start.height, DEFAULT_HEIGHT);
       update(handle.mode, start, dx, dy);
     }
     event.preventDefault();
@@ -199,8 +183,8 @@ export function useAiPanelLayout(options: {
     if (findHandle(event)?.mode === "move") reset();
   });
   useEventListener("blur", stop);
-  watch([options.narrow, options.defaultFloating], stop);
+  watch(options.narrow, stop);
   onScopeDispose(stop);
 
-  return { floating, style, stop, interacting: computed(() => gesture.value !== null) };
+  return { style, stop, resetPosition, interacting: computed(() => gesture.value !== null) };
 }

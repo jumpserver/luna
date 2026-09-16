@@ -14,20 +14,13 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function setup(floating = true) {
+function setup() {
   const size = { width: shallowRef(1000), height: shallowRef(800), stop: vi.fn() };
   vi.mocked(useElementSize).mockReturnValue(size);
   const width = shallowRef(380);
   const narrow = shallowRef(false);
-  const defaultFloating = shallowRef(floating);
   const captured = new Set<number>();
   const panel = Object.assign(new EventTarget(), {
-    getBoundingClientRect: () => ({
-      left: 100 + size.width.value - width.value,
-      top: 50,
-      width: width.value,
-      height: size.height.value
-    }),
     setPointerCapture: vi.fn((id: number) => captured.add(id)),
     hasPointerCapture: (id: number) => captured.has(id),
     releasePointerCapture: vi.fn((id: number) => captured.delete(id))
@@ -39,7 +32,6 @@ function setup(floating = true) {
       area: shallowRef(area as HTMLElement),
       panel: shallowRef(panel as unknown as HTMLElement),
       narrow,
-      defaultFloating,
       width,
       setWidth: (value) => {
         width.value = Math.max(320, Math.min(720, Math.round(value)));
@@ -81,18 +73,48 @@ function setup(floating = true) {
     Object.fromEntries(
       Object.entries(state.style.value).map(([key, value]) => [key, Number.parseFloat(String(value))])
     );
-  return { state, size, width, narrow, defaultFloating, panel, scope, dispatch, drag, rect };
+  return { state, size, width, narrow, panel, scope, dispatch, drag, rect };
 }
+
+it("anchors the default panel to the bottom right as the workspace and preferred width change", () => {
+  const { size, width, rect } = setup();
+  expect(rect()).toEqual({ left: 608, top: 148, width: 380, height: 640 });
+  size.width.value = 1440;
+  size.height.value = 1000;
+  width.value = 480;
+  expect(rect()).toEqual({ left: 948, top: 348, width: 480, height: 640 });
+  size.width.value = 260;
+  size.height.value = 240;
+  expect(rect()).toEqual({ left: 12, top: 12, width: 236, height: 216 });
+  size.width.value = 0;
+  size.height.value = 0;
+  expect(rect()).toEqual({ left: 12, top: 12, width: 0, height: 0 });
+  size.width.value = 1000;
+  size.height.value = 800;
+  expect(rect()).toEqual({ left: 508, top: 148, width: 480, height: 640 });
+});
+
+it("anchors narrow panels to the bottom right with a height limited to the workspace", () => {
+  const { narrow, state, dispatch } = setup();
+  narrow.value = true;
+  expect(state.style.value).toEqual({
+    bottom: "12px",
+    right: "12px",
+    width: "min(380px, calc(100% - 3rem))",
+    height: "min(640px, calc(100% - 24px))"
+  });
+  expect(dispatch("pointerdown").defaultPrevented).toBe(false);
+});
 
 it("moves without drift, returns to the starting point, and stays within every workspace edge", () => {
   const { state, rect, dispatch, drag } = setup();
-  expect(rect()).toEqual({ left: 608, top: 12, width: 380, height: 640 });
+  expect(rect()).toEqual({ left: 608, top: 148, width: 380, height: 640 });
   dispatch("pointerdown");
-  dispatch("pointermove", { clientX: -300, clientY: 200 });
-  dispatch("pointermove", { clientX: -300, clientY: 200 });
+  dispatch("pointermove", { clientX: -300, clientY: 64 });
+  dispatch("pointermove", { clientX: -300, clientY: 64 });
   expect(rect()).toEqual({ left: 208, top: 112, width: 380, height: 640 });
   dispatch("pointermove");
-  expect(rect()).toEqual({ left: 608, top: 12, width: 380, height: 640 });
+  expect(rect()).toEqual({ left: 608, top: 148, width: 380, height: 640 });
   dispatch("pointerup");
   drag("move", -2000, -2000);
   expect(rect()).toMatchObject({ left: 12, top: 12 });
@@ -112,7 +134,7 @@ it.each([
   ["se", { left: 208, top: 112, width: 400, height: 480 }]
 ])("resizes the %s handle while anchoring the opposite edges", (edge, expected) => {
   const { drag, rect } = setup();
-  drag("move", -400, 100);
+  drag("move", -400, -36);
   drag("se", -20, -200);
   drag(edge as string, 40, 40);
   expect(rect()).toEqual(expected);
@@ -120,6 +142,7 @@ it.each([
 
 it("enforces minimum and maximum sizes without moving the opposite corner", () => {
   const { drag, rect } = setup();
+  drag("move", 0, -2000);
   drag("sw", 2000, -2000);
   expect(rect()).toEqual({ left: 668, top: 12, width: 320, height: 280 });
   drag("sw", -2000, 2000);
@@ -130,26 +153,25 @@ it("enforces minimum and maximum sizes without moving the opposite corner", () =
   expect(rect()).toEqual({ left: 168, top: 12, width: 720, height: 776 });
 });
 
-it("keeps docked width resizing and detaches only when the title actually moves", () => {
-  const { state, width, dispatch, drag, rect } = setup(false);
+it("keeps the default anchor on a title click and restores it on double click after dragging", () => {
+  const { size, width, dispatch, drag, rect } = setup();
   dispatch("pointerdown");
   dispatch("pointermove");
   dispatch("pointerup");
-  expect(state.floating.value).toBe(false);
+  size.height.value = 900;
+  expect(rect()).toEqual({ left: 608, top: 248, width: 380, height: 640 });
   drag("w", -100, 0);
   expect(width.value).toBe(480);
-  expect(state.floating.value).toBe(false);
-  drag("move", -100, 100);
-  expect(state.floating.value).toBe(true);
-  expect(rect()).toEqual({ left: 408, top: 112, width: 480, height: 640 });
+  drag("move", -100, -100);
+  expect(rect()).toEqual({ left: 408, top: 148, width: 480, height: 640 });
   dispatch("dblclick");
-  expect(state.floating.value).toBe(false);
   expect(width.value).toBe(380);
+  expect(rect()).toEqual({ left: 608, top: 248, width: 380, height: 640 });
 });
 
 it("reclamps on workspace resize and preserves the desktop layout across hidden and narrow states", async () => {
   const { size, narrow, state, rect, drag, dispatch } = setup();
-  drag("move", -400, 100);
+  drag("move", -400, -36);
   const original = rect();
   size.width.value = 260;
   size.height.value = 240;
@@ -193,7 +215,26 @@ it.each(["pointerup", "pointercancel", "lostpointercapture"])("releases the acti
   expect(state.style.value.left).toBe("608px");
 });
 
-it("stops on deactivation, breakpoint changes and disposal without discarding the position", async () => {
+it("clears the dragged position on close and reopens at the current workspace bottom right", () => {
+  const { dispatch, drag, state, rect, size, width, panel } = setup();
+  drag("w", -100, 0);
+  dispatch("pointerdown");
+  dispatch("pointermove", { clientX: -200, clientY: 0 });
+  expect(rect()).toEqual({ left: 208, top: 48, width: 480, height: 640 });
+
+  state.resetPosition();
+  expect(state.interacting.value).toBe(false);
+  expect(panel.hasPointerCapture(1)).toBe(false);
+  expect(width.value).toBe(480);
+  expect(rect()).toEqual({ left: 508, top: 148, width: 480, height: 640 });
+
+  size.width.value = 1200;
+  size.height.value = 900;
+  dispatch("pointermove", { clientX: -500 });
+  expect(rect()).toEqual({ left: 708, top: 248, width: 480, height: 640 });
+});
+
+it("stops on cancellation, breakpoint changes and disposal without discarding the position", async () => {
   const { dispatch, state, rect, narrow, panel, scope } = setup();
   dispatch("pointerdown");
   dispatch("pointermove", { clientX: -200 });
@@ -217,11 +258,11 @@ it("stops on deactivation, breakpoint changes and disposal without discarding th
 it("supports keyboard movement, resizing, and Home to restore the original layout", () => {
   const { dispatch, rect } = setup();
   dispatch("keydown", { key: "ArrowLeft", shiftKey: true });
-  dispatch("keydown", { key: "ArrowDown" });
-  expect(rect()).toMatchObject({ left: 576, top: 20 });
+  dispatch("keydown", { key: "ArrowUp" });
+  expect(rect()).toMatchObject({ left: 576, top: 140 });
   dispatch("keydown", { key: "ArrowLeft" }, "w");
   dispatch("keydown", { key: "ArrowUp", shiftKey: true }, "s");
-  expect(rect()).toEqual({ left: 568, top: 20, width: 388, height: 608 });
+  expect(rect()).toEqual({ left: 568, top: 140, width: 388, height: 608 });
   dispatch("keydown", { key: "Home" });
-  expect(rect()).toEqual({ left: 608, top: 12, width: 380, height: 640 });
+  expect(rect()).toEqual({ left: 608, top: 148, width: 380, height: 640 });
 });

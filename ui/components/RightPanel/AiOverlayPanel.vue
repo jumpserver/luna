@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { aiPanelFloats } from "~/composables/useAiPanel";
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 import { resolveAiPanelSession } from "./ai/domains/registry";
 import WorkspaceAiPanel from "./aiPanel.vue";
@@ -35,20 +34,14 @@ const showWorkspaceAssistant = computed(
       sessionKind: activeAiSession.value?.kind
     }) === "workspace"
 );
-const defaultFloating = computed(() =>
-  aiPanelFloats(showWorkspaceAssistant.value ? "workspace" : "resource", activeCapability.value, isNarrowScreen.value)
-);
-
 const {
-  floating,
   style: panelStyle,
   interacting,
-  stop
+  resetPosition
 } = useAiPanelLayout({
   area,
   panel,
   narrow: isNarrowScreen,
-  defaultFloating,
   width: panelWidth,
   setWidth: setPanelWidth
 });
@@ -62,10 +55,8 @@ const resizeHandles = [
   { edge: "sw", class: "-bottom-1 -left-1 size-3 cursor-nesw-resize" },
   { edge: "se", class: "-bottom-1 -right-1 size-4 cursor-nwse-resize" }
 ];
-const visibleHandles = computed(() =>
-  isNarrowScreen.value ? [] : resizeHandles.filter((handle) => floating.value || handle.edge === "w")
-);
-onDeactivated(stop);
+const visibleHandles = computed(() => (isNarrowScreen.value ? [] : resizeHandles));
+onDeactivated(resetPosition);
 </script>
 
 <template>
@@ -73,12 +64,7 @@ onDeactivated(stop);
     id="workspace-ai-overlay"
     ref="host"
     data-ai-context="preserve"
-    :class="
-      floating
-        ? 'pointer-events-none absolute inset-0 z-50'
-        : 'pointer-events-auto relative z-10 h-full min-h-0 shrink-0'
-    "
-    :style="floating ? undefined : panelStyle"
+    class="pointer-events-none absolute inset-0 z-50"
   >
     <UButton
       v-if="isNarrowScreen"
@@ -89,12 +75,7 @@ onDeactivated(stop);
       variant="ghost"
       @click="emit('close')"
     />
-    <div
-      ref="panel"
-      class="pointer-events-auto"
-      :class="[floating ? 'absolute' : 'relative h-full w-full', { 'select-none': interacting }]"
-      :style="floating ? panelStyle : undefined"
-    >
+    <div ref="panel" class="pointer-events-auto absolute" :class="{ 'select-none': interacting }" :style="panelStyle">
       <UButton
         v-for="handle in visibleHandles"
         :key="handle.edge"
@@ -114,11 +95,8 @@ onDeactivated(stop);
       </UButton>
       <UCard
         class="flex h-full min-h-0 flex-col overflow-hidden"
-        :class="floating ? '' : 'border-l border-(--app-border)'"
         :ui="{
-          root: floating
-            ? 'shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] bg-[var(--app-surface-overlay)]'
-            : 'rounded-none shadow-none ring-0 bg-[var(--app-surface-panel)]',
+          root: 'shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] bg-[var(--app-surface-overlay)]',
           body: 'relative flex min-h-0 flex-1 flex-col overflow-hidden p-0 sm:p-0'
         }"
       >

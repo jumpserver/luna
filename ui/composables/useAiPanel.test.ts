@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, shallowRef } from "vue";
-import { aiPanelFloats, resolveUnifiedAiPanel, useAiPanel } from "./useAiPanel";
+import { resolveUnifiedAiPanel, useAiPanel } from "./useAiPanel";
 import { useRightPanel } from "./useRightPanel";
 import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
 
@@ -118,16 +118,5 @@ describe("AI overlay panel", () => {
     expect(panel.pendingTerminalPrompt.value).toBe(request);
     panel.takeTerminalPrompt(request.id);
     expect(panel.pendingTerminalPrompt.value).toBeNull();
-  });
-
-  it.each([
-    ["workspace", "", false, false],
-    ["workspace", "terminal", false, true],
-    ["workspace", "remote-desktop", false, false],
-    ["resource", "database", false, false],
-    ["resource", "file-manager", false, false],
-    ["workspace", "remote-desktop", true, true]
-  ] as const)("floats %s/%s narrow=%s → %s", (kind, surface, narrow, expected) => {
-    expect(aiPanelFloats(kind, surface, narrow)).toBe(expected);
   });
 });
