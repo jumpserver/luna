@@ -60,12 +60,15 @@ interface WebProfile {
 }
 
 const BOOTSTRAP_RETRY_DELAYS_MS = [0, 500, 1000, 2000, 3000];
+const WEB_ORGANIZATION_BOOTSTRAP_TIMEOUT_MS = 3_000;
 let bootstrapRetryTimer: ReturnType<typeof setTimeout> | null = null;
 let lastBootstrapFailure: "network" | "server" | null = null;
 let bootstrapPromise: Promise<boolean> | null = null;
 let refreshOrganizationsPromise: Promise<void> | null = null;
 
 const wait = (delay: number) => new Promise((resolve) => setTimeout(resolve, delay));
+const withOrganizationBootstrapTimeout = <T>(request: Promise<T>, fallback: T) =>
+  Promise.race([request, wait(WEB_ORGANIZATION_BOOTSTRAP_TIMEOUT_MS).then(() => fallback)]);
 
 const classifyBootstrapFailure = (payload: LoginPayload | null | undefined): "auth" | "network" | "server" | null => {
   if (!payload || payload.status !== "success") return "auth";
@@ -304,6 +307,24 @@ export const useAuthSession = () => {
     };
 
     const userId = typeof profileData.id === "string" ? profileData.id.trim() : "";
+    const [permissionOrgData, currentOrgData] = await Promise.all([
+      withOrganizationBootstrapTimeout(
+        fetchWebJson<PermissionOrgs | Record<string, unknown>>([
+          "/api/v1/users/profile/permissions/",
+          "/api/v1/profile/permissions/"
+        ]),
+        null
+      ),
+      withOrganizationBootstrapTimeout(fetchWebJson<CurrentOrg>(["/api/v1/orgs/orgs/current/"]), null)
+    ]);
+    const availableOrgs = selectWorkbenchOrganizations(permissionOrgData);
+    const resolvedCurrentOrg = currentOrgData && typeof currentOrgData === "object" ? currentOrgData : null;
+    const selectedOrg =
+      resolveOrganizationSelection(
+        availableOrgs,
+        recordedOrganizationForBootstrap(cookieOrgId ? { id: cookieOrgId } : null, resolvedCurrentOrg || profileOrg)
+      ) || profileOrg;
+    const currentOrg: CurrentOrg = { ...selectedOrg, comment: selectedOrg.comment || "" };
 
     userInfoStore.setUserData(site, {
       accountId: site,
@@ -312,9 +333,9 @@ export const useAuthSession = () => {
       name: profileData.name || profileData.username || profileData.display_name || "",
       bearerToken: "",
       site,
-      org: profileOrg,
+      org: currentOrg,
       system_roles: profileData.system_roles || [],
-      availableOrgs: [],
+      availableOrgs,
       xpackLicenseValid: publicSettings?.XPACK_LICENSE_IS_VALID === true,
       commandExecutionEnabled: publicSettings?.SECURITY_COMMAND_EXECUTION === true,
       connectionInfo: {
@@ -323,43 +344,8 @@ export const useAuthSession = () => {
       }
     });
 
-    userInfoStore.setOrganizations([]);
-    if (profileOrg.id) {
-      userInfoStore.setCurrentOrg(profileOrg);
-    }
-    userInfoStore.setUserLoggedIn(true);
-
-    void Promise.all([
-      fetchWebJson<PermissionOrgs | Record<string, unknown>>([
-        "/api/v1/users/profile/permissions/",
-        "/api/v1/profile/permissions/"
-      ]),
-      fetchWebJson<CurrentOrg>(["/api/v1/orgs/orgs/current/"])
-    ])
-      .then(([permissionOrgData, currentOrgData]) => {
-        if (userInfoStore.currentAccountId !== site || userInfoStore.currentUser?.userId !== userId) return;
-
-        const availableOrgs = selectWorkbenchOrganizations(permissionOrgData);
-        const resolvedCurrentOrg = currentOrgData && typeof currentOrgData === "object" ? currentOrgData : null;
-        const selectedOrgId = getWebOrgId();
-        const activeOrg = userInfoStore.currentUser?.org;
-        const currentOrg =
-          availableOrgs.find((org) => org.id === selectedOrgId) ||
-          (activeOrg?.id === selectedOrgId ? activeOrg : null) ||
-          resolveOrganizationSelection(availableOrgs, resolvedCurrentOrg) ||
-          profileOrg;
-
-        userInfoStore.setOrganizations(availableOrgs);
-        if (currentOrg.id) {
-          userInfoStore.setCurrentOrg({
-            ...currentOrg,
-            comment: resolvedCurrentOrg?.comment || currentOrg.comment || ""
-          });
-        }
-      })
-      .catch((error) => {
-        console.debug("hydrate web organization failed", error);
-      });
+    userInfoStore.setOrganizations(availableOrgs);
+    if (currentOrg.id) userInfoStore.setCurrentOrg(currentOrg);
 
     return true;
   };

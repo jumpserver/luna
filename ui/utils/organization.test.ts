@@ -57,6 +57,18 @@ describe("organization fallback", () => {
     expect(recordedOrganizationForBootstrap(persistedOrg, organization("core-current", true))).toBe(persistedOrg);
   });
 
+  it("resolves a cookie organization to its workbench display name", () => {
+    const cookieOrg = organization("cookie-org");
+    const currentOrg = organization("current-org", true);
+
+    expect(
+      resolveOrganizationSelection(
+        [cookieOrg, currentOrg],
+        recordedOrganizationForBootstrap({ id: cookieOrg.id }, currentOrg)
+      )
+    ).toEqual(cookieOrg);
+  });
+
   it("uses Core current org when nothing is persisted", () => {
     const coreCurrentOrg = organization("core-current", true);
 
