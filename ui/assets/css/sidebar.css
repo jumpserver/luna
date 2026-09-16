@@ -43,6 +43,18 @@
   overflow-x: auto;
 }
 
+.sidebar-tree-scroll .app-tree-row {
+  min-width: min-content;
+}
+
+.sidebar-tree-label {
+  /* Cap the intrinsic width so long names truncate before the row needs to scroll.
+     Content sizing keeps short names and their counts adjacent. */
+  width: var(--app-tree-label-min-width);
+  max-width: max-content;
+  flex: 0 1 content;
+}
+
 .app-tree .app-tree-icon,
 .app-tree .app-tree-icon-slot {
   width: var(--app-tree-icon-size);

@@ -200,10 +200,10 @@ watch(
         <UIcon v-else-if="icon" :name="icon" class="app-tree-icon sidebar-icon" />
         <AppAssetIcon v-else :src="assetIcon.src" :fallback="assetIcon.fallback" />
         <span
-          class="inline-flex min-w-0 flex-1 items-center font-medium"
+          class="inline-flex min-w-min flex-1 items-center font-medium"
           :class="!isParent ? 'font-ui-mono tracking-[0.01em]' : ''"
         >
-          <span class="truncate" :title="node.name">{{ node.name }}</span>
+          <span class="sidebar-tree-label truncate" :title="node.name">{{ node.name }}</span>
           <span
             v-if="isParent && node.assetCount != null"
             class="ml-1 shrink-0"

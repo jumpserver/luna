@@ -70,8 +70,8 @@ watch(
           />
         </span>
         <AppTreeFolderIcon :open="folder.open" class="app-tree-icon sidebar-icon tree-folder-icon" />
-        <span class="inline-flex min-w-0 flex-1 items-center font-medium">
-          <span class="truncate">{{ folder.name }}</span>
+        <span class="inline-flex min-w-min flex-1 items-center font-medium">
+          <span class="sidebar-tree-label truncate">{{ folder.name }}</span>
           <span class="ml-1 shrink-0">({{ folder.assetCount || 0 }})</span>
         </span>
       </button>
@@ -95,7 +95,7 @@ watch(
         ref="renameInputRef"
         v-model="editValue"
         size="xs"
-        class="min-w-0 flex-1"
+        class="w-0 min-w-(--app-tree-label-min-width) flex-1"
         :maxlength="FAVORITE_FOLDER_NAME_MAX_LENGTH"
         :ui="{ base: 'h-5 py-0 px-1 text-xs' }"
         @click.stop
@@ -137,7 +137,7 @@ watch(
         >
           <span class="app-tree-icon-slot grid shrink-0 place-items-center" />
           <AppAssetIcon :src="resolveAssetIcon(asset).src" :fallback="resolveAssetIcon(asset).fallback" />
-          <span class="min-w-0 flex-1 truncate font-medium font-ui-mono tracking-[0.01em]">
+          <span class="sidebar-tree-label truncate font-medium font-ui-mono tracking-[0.01em]">
             {{ asset.name }}
           </span>
         </button>

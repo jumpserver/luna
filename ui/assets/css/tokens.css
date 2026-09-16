@@ -181,6 +181,7 @@
   --app-tree-icon-size: calc(var(--app-ui-font-size) + 1px);
   --app-tree-toggle-icon-size: calc(var(--app-ui-font-size) - 1px);
   --app-tree-row-height: calc(var(--app-tree-font-size) * 2);
+  --app-tree-label-min-width: calc(var(--app-tree-font-size) * 8);
   --sidebar-icon-color: color-mix(in srgb, var(--app-text-primary) 64%, transparent);
   --sidebar-icon-muted: color-mix(in srgb, var(--app-text-muted) 82%, transparent);
   --sidebar-icon-active: var(--app-text-primary);
