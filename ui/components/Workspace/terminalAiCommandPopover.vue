@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AiTimelineAction } from "~/components/RightPanel/ai/types";
 import type { WorkspacePane } from "~/composables/useWorkspaceTabs";
+import { getKokoTerminalElement } from "#koko";
 import { AgentHttpError } from "#koko/composables/agent/agentClient";
 import { getKokoTerminalAiSession, isKokoTerminalAiAvailable } from "#koko/composables/terminal/useTerminalAiSessions";
 import { terminalAiPanelDomain } from "~/components/RightPanel/ai/domains/terminal/adapter";
@@ -76,6 +77,8 @@ let placeholderTimer = 0;
 const {
   hostRef,
   panelRef,
+  dragHandleRef,
+  dragging,
   liveRef,
   activeXterm,
   hintVisible,
@@ -129,7 +132,7 @@ async function show(xterm: HTMLElement) {
   if (!available.value) return;
   error.value = "";
   await reveal(xterm);
-  if (!live.value) {
+  if (!composerLocked.value) {
     startPlaceholderType();
     focusInput();
   }
@@ -159,6 +162,7 @@ function close(restoreTerminalFocus = true) {
 }
 
 function handleWindowKeydown(event: KeyboardEvent) {
+  if (event.defaultPrevented || event.isComposing || !hostRef.value?.getClientRects().length) return;
   if (open.value && event.key === "Escape") {
     if (tour.tourActive.value) return;
     event.preventDefault();
@@ -166,13 +170,20 @@ function handleWindowKeydown(event: KeyboardEvent) {
     close();
     return;
   }
-  if (open.value || !isTerminalAiCommandShortcut(event, isMacOS.value)) return;
+  if (tour.tourActive.value || !isTerminalAiCommandShortcut(event, isMacOS.value) || !available.value) return;
   const target = event.target instanceof Element ? event.target : null;
-  const xterm = target?.closest<HTMLElement>(".xterm");
-  if (!xterm || !available.value) return;
+  const xterm = getKokoTerminalElement(props.pane.id);
+  if (!xterm?.getClientRects().length) return;
+  if (
+    !panelRef.value?.contains(target) &&
+    !xterm.contains(target) &&
+    target?.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')
+  )
+    return;
   event.preventDefault();
   event.stopPropagation();
-  void show(xterm);
+  if (open.value) focusInput();
+  else void show(xterm);
 }
 
 function handleWindowPointerdown(event: PointerEvent) {
@@ -257,11 +268,16 @@ function terminalAction(taskId: string, action: AiTimelineAction) {
 }
 
 function handleInputKeydown(event: KeyboardEvent) {
-  if (event.isComposing) return;
-  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-    event.preventDefault();
-    void submit();
+  if (event.isComposing || event.keyCode === 229 || event.key !== "Enter" || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  if (event.metaKey || event.ctrlKey) {
+    const textarea = inputRef.value?.textareaRef;
+    if (!textarea) return;
+    textarea.setRangeText("\n", textarea.selectionStart, textarea.selectionEnd, "end");
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    return;
   }
+  void submit();
 }
 
 watch([() => props.pane.id, session, scopeId], () => {
@@ -363,7 +379,15 @@ onBeforeUnmount(() => {
         role="dialog"
         :aria-label="t('TerminalAi.Title')"
       >
-        <header class="terminal-ai-head grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2.5 pt-2">
+        <header
+          ref="dragHandleRef"
+          role="group"
+          tabindex="0"
+          :title="t('RightPanel.AIMovePanel')"
+          :aria-label="t('RightPanel.AIMovePanel')"
+          class="terminal-ai-head grid shrink-0 touch-none select-none grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2.5 pt-2 outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
+          :class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
+        >
           <div class="flex min-w-0 items-center gap-1.5 text-[11px] tracking-[0.02em] text-muted">
             <span class="size-1.5 shrink-0 rounded-full bg-primary" />
             <span class="truncate">{{ t("TerminalAi.Title") }}</span>
@@ -466,7 +490,7 @@ onBeforeUnmount(() => {
 
         <div
           v-if="!composerLocked"
-          class="terminal-ai-composer mx-2.5 mb-2.5 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2 px-2.5 py-2"
+          class="terminal-ai-composer mx-2.5 mb-2.5 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 px-2.5 py-2"
           :class="live ? 'mt-1' : 'mt-2'"
         >
           <UTextarea
@@ -482,7 +506,7 @@ onBeforeUnmount(() => {
             variant="none"
             class="terminal-ai-prompt min-w-0"
             :ui="{
-              base: 'min-h-14 max-h-30 resize-none rounded-none px-0 pb-0 pt-1 text-xs leading-5 ring-0 focus-visible:ring-0'
+              base: 'min-h-14 resize-y overflow-y-auto rounded-none px-0 pb-0 pt-1 text-xs leading-5 ring-0 focus-visible:ring-0'
             }"
             @keydown="handleInputKeydown"
           />
@@ -494,7 +518,7 @@ onBeforeUnmount(() => {
             @click="submit"
           >
             {{ sendLabel }}
-            <span class="text-[10px] font-normal opacity-80">{{ isMacOS ? "⌘↵" : "Ctrl↵" }}</span>
+            <span class="text-[10px] font-normal opacity-80">↵</span>
           </UButton>
         </div>
 
@@ -510,7 +534,6 @@ onBeforeUnmount(() => {
 <style scoped>
 .terminal-ai-panel {
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--app-fg) 28%, var(--app-border));
 }
 
 .terminal-ai-live {
@@ -669,7 +692,7 @@ onBeforeUnmount(() => {
 
 .terminal-ai-prompt :deep(textarea) {
   min-height: 56px;
-  max-height: 120px;
+  max-height: min(20rem, 40vh, var(--terminal-ai-input-max-height));
   padding: 4px 0 0;
   border: 0;
   outline: none;

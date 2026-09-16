@@ -365,6 +365,8 @@
     "AIDisabled": "The AI assistant is disabled in system settings",
     "AIOpen": "Open AI assistant",
     "AIClose": "Close AI assistant",
+    "AIMovePanel": "Move AI panel: drag the title bar or use arrow keys; double-click or press Home to reset",
+    "AIResizePanel": "Resize AI panel: drag or use arrow keys",
     "Session": "Session",
     "Control": "Control",
     "Files": "Files",
@@ -981,7 +983,7 @@
     "Title": "Terminal AI",
     "PromptLabel": "Describe a task for Terminal AI",
     "Placeholder": "Describe a task, for example: list files in the current directory…",
-    "ShortcutHint": "Press {shortcut} to ask Terminal AI",
+    "ShortcutHint": "Press {shortcut} to ask AI",
     "Send": "Send",
     "Sending": "Sending…",
     "History": "History",
@@ -1113,6 +1115,7 @@
     "HidePassword": "Hide password"
   },
   "ConnectionSetup": {
+    "MoveDialog": "Move connection window: drag the title bar or use arrow keys; Home to center",
     "ClientLaunchStarted": "Client launch started",
     "LaunchWithClient": "We tried opening this connection in {client}.",
     "LaunchWithLocalClient": "We tried opening this connection in a local client.",

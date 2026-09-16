@@ -11,6 +11,7 @@ import {
   useConnectMethods
 } from "~/composables/useConnectMethods";
 import { desktopInvoke } from "~/shared/desktop/bridge";
+import { useConnectionSetupDrag } from "./useConnectionSetupDrag";
 
 const props = withDefaults(
   defineProps<{
@@ -205,6 +206,11 @@ watch(
   }
 );
 
+const dragArea = shallowRef<HTMLElement | null>(null);
+const dialogGroup = shallowRef<HTMLElement | null>(null);
+const dragHandle = shallowRef<HTMLElement | null>(null);
+const { isDragging, style: dialogPosition } = useConnectionSetupDrag(dragArea, dialogGroup, dragHandle);
+
 const closing = ref(false);
 const dialogVisible = computed(() => !closing.value && Boolean(currentAsset.value || props.tab.setupAsset));
 
@@ -234,175 +240,227 @@ onMounted(loadAsset);
     ]"
     @transitionend="onStageTransitionEnd"
   >
-    <div class="mx-auto flex min-h-full w-full items-center justify-center">
-      <Transition :name="modernIsland ? 'island-dialog' : ''" :appear="modernIsland">
-        <section
-          v-if="dialogVisible"
-          class="connection-setup-shell relative overflow-hidden"
-          :class="
-            modernIsland
-              ? 'connection-setup-shell--island'
-              : 'w-[min(640px,100%)] rounded-[length:var(--app-radius)] border border-(--app-border) bg-(--workspace-surface-panel)'
-          "
-        >
-          <div
-            class="flex items-center justify-between gap-3 border-b px-4"
+    <div
+      ref="dragArea"
+      class="connection-setup-content relative isolate mx-auto flex min-h-full w-full items-center justify-center"
+    >
+      <div
+        ref="dialogGroup"
+        class="flex shrink-0 flex-col items-center gap-8"
+        :class="modernIsland ? 'w-[min(520px,100%)]' : 'w-[min(640px,100%)]'"
+        :style="dialogPosition"
+      >
+        <Transition :name="modernIsland ? 'island-dialog' : ''" :appear="modernIsland">
+          <section
+            v-if="dialogVisible"
+            class="connection-setup-shell relative w-full overflow-hidden"
             :class="
               modernIsland
-                ? 'h-10 border-[color-mix(in_srgb,var(--theme-fg)_14%,transparent)]'
-                : 'h-13 border-(--app-border) bg-(--workspace-surface-header)'
+                ? 'connection-setup-shell--island'
+                : 'rounded-[length:var(--app-radius)] border border-(--app-border) bg-(--workspace-surface-panel)'
             "
           >
-            <div class="flex min-w-0 items-center gap-2">
-              <span class="truncate font-semibold text-(--app-fg)" :class="modernIsland ? 'text-[13px]' : 'text-sm'">
-                {{ t("ContextMenu.Connect") }}
-                {{ modernIsland ? " · " : " - " }}
-                <span class="font-ui-mono font-medium">{{ assetAddress }}</span>
-              </span>
-              <UBadge
-                v-if="assetName && assetName !== assetAddress"
-                :label="assetName"
+            <div
+              ref="dragHandle"
+              role="group"
+              tabindex="0"
+              :aria-label="t('ConnectionSetup.MoveDialog')"
+              :title="t('ConnectionSetup.MoveDialog')"
+              class="flex touch-none items-center justify-between gap-3 border-b px-4 outline-none select-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-(--app-focus-ring)"
+              :class="[
+                modernIsland
+                  ? 'h-10 border-[color-mix(in_srgb,var(--theme-fg)_14%,transparent)]'
+                  : 'h-13 border-(--app-border) bg-(--workspace-surface-header)',
+                isDragging ? 'cursor-grabbing' : 'cursor-grab'
+              ]"
+            >
+              <div class="flex min-w-0 items-center gap-2">
+                <span class="truncate font-semibold text-(--app-fg)" :class="modernIsland ? 'text-[13px]' : 'text-sm'">
+                  {{ t("ContextMenu.Connect") }}
+                  {{ modernIsland ? " · " : " - " }}
+                  <span class="font-ui-mono font-medium">{{ assetAddress }}</span>
+                </span>
+                <UBadge
+                  v-if="assetName && assetName !== assetAddress"
+                  :label="assetName"
+                  color="neutral"
+                  variant="soft"
+                  size="sm"
+                  class="max-w-48 shrink truncate"
+                />
+              </div>
+              <UButton
                 color="neutral"
-                variant="soft"
-                size="sm"
-                class="max-w-48 shrink truncate"
+                variant="ghost"
+                icon="i-lucide-x"
+                :size="modernIsland ? 'xs' : 'sm'"
+                :aria-label="t('Common.Cancel')"
+                :title="t('Common.Cancel')"
+                @click="requestClose"
               />
             </div>
-            <UButton
-              color="neutral"
-              variant="ghost"
-              icon="i-lucide-x"
-              :size="modernIsland ? 'xs' : 'sm'"
-              :aria-label="t('Common.Cancel')"
-              @click="requestClose"
-            />
-          </div>
 
-          <div class="flex min-h-75 flex-col" :class="modernIsland ? '' : 'bg-(--app-surface-panel-strong)'">
-            <div class="min-h-0 flex-1 overflow-auto py-4 pt-2" :class="modernIsland ? 'px-4' : 'px-6'">
-              <ConnectFormSkeleton v-if="loading" />
-              <div v-else-if="launchSuccessVisible" class="flex min-h-full items-center justify-center py-6">
-                <section
-                  class="launch-success-card w-full rounded-xl border border-(--app-border) bg-(--workspace-surface-panel) px-5 py-6 sm:px-6"
-                >
-                  <div class="flex items-start gap-3">
-                    <div class="grid size-11 shrink-0 place-items-center rounded-full bg-primary/12 text-primary">
-                      <UIcon name="i-lucide-app-window" class="size-5" />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div class="flex items-center gap-2">
-                        <h3 class="text-sm font-semibold text-(--app-fg)">
-                          {{ t("ConnectionSetup.ClientLaunchStarted") }}
-                        </h3>
-                        <UBadge
-                          v-if="launchedProtocol"
-                          :label="launchedProtocol.toUpperCase()"
-                          color="primary"
-                          variant="soft"
-                          size="sm"
-                        />
-                      </div>
-                      <p class="mt-2 text-sm leading-6 text-(--app-fg)">
-                        {{ launchSummary }}
-                      </p>
-                      <p class="mt-1 text-xs leading-5 text-(--app-muted)">
-                        {{ launchHint }}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div
-                    class="mt-5 rounded-[length:var(--app-radius)] border border-(--app-border) bg-(--workspace-surface-header) px-4 py-3"
+            <div class="flex min-h-75 flex-col" :class="modernIsland ? '' : 'bg-(--app-surface-panel-strong)'">
+              <div class="min-h-0 flex-1 overflow-auto py-4 pt-2" :class="modernIsland ? 'px-4' : 'px-6'">
+                <ConnectFormSkeleton v-if="loading" />
+                <div v-else-if="launchSuccessVisible" class="flex min-h-full items-center justify-center py-6">
+                  <section
+                    class="launch-success-card w-full rounded-xl border border-(--app-border) bg-(--workspace-surface-panel) px-5 py-6 sm:px-6"
                   >
-                    <div class="text-xs text-(--app-muted)">
-                      {{ t("ConnectionSetup.ConnectionTarget") }}
+                    <div class="flex items-start gap-3">
+                      <div class="grid size-11 shrink-0 place-items-center rounded-full bg-primary/12 text-primary">
+                        <UIcon name="i-lucide-app-window" class="size-5" />
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                          <h3 class="text-sm font-semibold text-(--app-fg)">
+                            {{ t("ConnectionSetup.ClientLaunchStarted") }}
+                          </h3>
+                          <UBadge
+                            v-if="launchedProtocol"
+                            :label="launchedProtocol.toUpperCase()"
+                            color="primary"
+                            variant="soft"
+                            size="sm"
+                          />
+                        </div>
+                        <p class="mt-2 text-sm leading-6 text-(--app-fg)">
+                          {{ launchSummary }}
+                        </p>
+                        <p class="mt-1 text-xs leading-5 text-(--app-muted)">
+                          {{ launchHint }}
+                        </p>
+                      </div>
                     </div>
-                    <div class="mt-1 break-all font-ui-mono text-sm text-(--app-fg)">
-                      {{ assetAddress }}
+
+                    <div
+                      class="mt-5 rounded-[length:var(--app-radius)] border border-(--app-border) bg-(--workspace-surface-header) px-4 py-3"
+                    >
+                      <div class="text-xs text-(--app-muted)">
+                        {{ t("ConnectionSetup.ConnectionTarget") }}
+                      </div>
+                      <div class="mt-1 break-all font-ui-mono text-sm text-(--app-fg)">
+                        {{ assetAddress }}
+                      </div>
+                      <div v-if="launchedClientName" class="mt-2 text-xs text-(--app-muted)">
+                        {{ t("ConnectionSetup.Client") }}:
+                        {{ launchedClientName }}
+                      </div>
                     </div>
-                    <div v-if="launchedClientName" class="mt-2 text-xs text-(--app-muted)">
-                      {{ t("ConnectionSetup.Client") }}:
-                      {{ launchedClientName }}
-                    </div>
-                  </div>
-                </section>
+                  </section>
+                </div>
+
+                <template v-else-if="currentAsset">
+                  <ConnectFormFields
+                    v-model:draft="draft"
+                    :asset="currentAsset"
+                    :asset-type="props.assetType"
+                    :preferred-connect-method="preferredConnectMethod"
+                    :personal-credentials="personalCredentials"
+                    :personal-credentials-loading="personalCredentialsLoading"
+                    :personal-credentials-loaded="personalCredentialsLoaded"
+                    :personal-credentials-load-failed="personalCredentialsLoadFailed"
+                    :submit-label="externalClientLaunch ? t('ConnectionSetup.OpenInClient') : t('Common.Connect')"
+                    :submitting="connecting"
+                    :downloading-rdp="downloadingRdp"
+                    :disabled="connecting || !draft.protocol"
+                    @submit="submit()"
+                    @download-rdp="submit"
+                  />
+                </template>
               </div>
 
-              <template v-else-if="currentAsset">
-                <ConnectFormFields
-                  v-model:draft="draft"
-                  :asset="currentAsset"
-                  :asset-type="props.assetType"
-                  :preferred-connect-method="preferredConnectMethod"
-                  :personal-credentials="personalCredentials"
-                  :personal-credentials-loading="personalCredentialsLoading"
-                  :personal-credentials-loaded="personalCredentialsLoaded"
-                  :personal-credentials-load-failed="personalCredentialsLoadFailed"
-                  :submit-label="externalClientLaunch ? t('ConnectionSetup.OpenInClient') : t('Common.Connect')"
-                  :submitting="connecting"
-                  :downloading-rdp="downloadingRdp"
-                  :disabled="connecting || !draft.protocol"
-                  @submit="submit()"
-                  @download-rdp="submit"
-                />
-              </template>
-            </div>
-
-            <div
-              v-if="connectionError"
-              class="border-t border-(--app-border) bg-(--workspace-surface-footer) px-5 py-3"
-            >
               <div
-                class="mt-2 flex items-start gap-2 rounded-md border border-error/25 bg-error/10 px-3 py-2 text-xs text-error"
+                v-if="connectionError"
+                class="border-t border-(--app-border) bg-(--workspace-surface-footer) px-5 py-3"
               >
-                <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3.5 shrink-0" />
-                <span class="min-w-0 wrap-break-word">{{ connectionError }}</span>
+                <div
+                  class="mt-2 flex items-start gap-2 rounded-md border border-error/25 bg-error/10 px-3 py-2 text-xs text-error"
+                >
+                  <UIcon name="i-lucide-circle-alert" class="mt-0.5 size-3.5 shrink-0" />
+                  <span class="min-w-0 wrap-break-word">{{ connectionError }}</span>
+                </div>
+              </div>
+
+              <div
+                v-if="launchSuccessVisible"
+                class="border-t border-(--app-border) bg-(--workspace-surface-footer) px-5 pt-3 pb-5"
+              >
+                <div class="flex flex-col gap-3 sm:flex-row">
+                  <UButton
+                    :label="t('ConnectionSetup.OpenAgain')"
+                    color="primary"
+                    :loading="connecting"
+                    block
+                    @click="submit()"
+                  />
+                  <UButton
+                    :label="t('ConnectionSetup.BackToForm')"
+                    color="neutral"
+                    variant="outline"
+                    block
+                    @click="resetLaunchSuccessState"
+                  />
+                </div>
               </div>
             </div>
 
             <div
-              v-if="launchSuccessVisible"
-              class="border-t border-(--app-border) bg-(--workspace-surface-footer) px-5 pt-3 pb-5"
+              v-if="connecting && !downloadingRdp"
+              role="status"
+              class="pointer-events-none absolute inset-x-0 bottom-0"
             >
-              <div class="flex flex-col gap-3 sm:flex-row">
-                <UButton
-                  :label="t('ConnectionSetup.OpenAgain')"
-                  color="primary"
-                  :loading="connecting"
-                  block
-                  @click="submit()"
-                />
-                <UButton
-                  :label="t('ConnectionSetup.BackToForm')"
-                  color="neutral"
-                  variant="outline"
-                  block
-                  @click="resetLaunchSuccessState"
-                />
-              </div>
+              <span class="sr-only">{{ t("ConnectionSetup.Establishing") }}</span>
+              <UProgress
+                size="2xs"
+                :color="modernIsland ? 'var(--theme-accent)' : 'primary'"
+                :ui="{ base: 'rounded-none bg-(--app-border)', indicator: 'rounded-none' }"
+                aria-hidden="true"
+              />
             </div>
-          </div>
-
-          <div
-            v-if="connecting && !downloadingRdp"
-            role="status"
-            class="pointer-events-none absolute inset-x-0 bottom-0"
-          >
-            <span class="sr-only">{{ t("ConnectionSetup.Establishing") }}</span>
-            <UProgress
-              size="2xs"
-              :color="modernIsland ? 'var(--theme-accent)' : 'primary'"
-              :ui="{ base: 'rounded-none bg-(--app-border)', indicator: 'rounded-none' }"
-              aria-hidden="true"
-            />
-          </div>
-        </section>
-      </Transition>
+          </section>
+        </Transition>
+        <div
+          v-if="dialogVisible && !launchSuccessVisible"
+          class="connection-setup-route pointer-events-none flex shrink-0 items-center gap-3 select-none"
+          aria-hidden="true"
+        >
+          <UIcon name="i-lucide-square-terminal" class="size-4 shrink-0" />
+          <span class="connection-setup-route-line" />
+          <span class="text-[11px] font-medium tracking-[0.08em]">JumpServer</span>
+          <span class="connection-setup-route-line" />
+          <UIcon name="i-lucide-server" class="size-4 shrink-0" />
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+.connection-setup-content::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(color-mix(in srgb, var(--app-text-primary) 6%, transparent) 1px, transparent 1px);
+  background-position: center;
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
+}
+
+.connection-setup-route {
+  width: min(280px, 80%);
+  color: color-mix(in srgb, var(--app-text-muted) 60%, transparent);
+}
+
+.connection-setup-route-line {
+  height: 1px;
+  flex: 1;
+  background: currentColor;
+  opacity: 0.35;
+}
+
 .connection-setup-shell {
   box-shadow:
     0 1px 0 color-mix(in srgb, var(--app-surface-panel-strong) 82%, transparent) inset,
@@ -420,7 +478,6 @@ onMounted(loadAsset);
 }
 
 .connection-setup-shell--island {
-  width: min(520px, 100%);
   border: 1px solid color-mix(in srgb, var(--theme-fg) 18%, transparent);
   border-radius: var(--workspace-island-radius);
   background: var(--app-surface-overlay);

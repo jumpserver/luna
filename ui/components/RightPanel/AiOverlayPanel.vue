@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { AI_PANEL_MAX_WIDTH, AI_PANEL_MIN_WIDTH, aiPanelFloats } from "~/composables/useAiPanel";
+import { aiPanelFloats } from "~/composables/useAiPanel";
 import { findDeclaredCapability } from "~/shared/connectors/capabilities";
 import { resolveAiPanelSession } from "./ai/domains/registry";
 import WorkspaceAiPanel from "./aiPanel.vue";
+import { useAiPanelLayout } from "./useAiPanelLayout";
 import WorkspaceAssistantPanel from "./WorkspaceAssistantPanel.vue";
 
 const emit = defineEmits<{ close: [] }>();
@@ -11,11 +12,9 @@ const isNarrowScreen = useMediaQuery("(max-width: 767px)");
 const { activeWorkspaceMode } = useWorkspaceMode();
 const { activePaneId, activeTab } = useWorkspaceTabs();
 const { panelWidth, setPanelWidth } = useAiPanel();
-const resizing = ref(false);
-let resizeStartX = 0;
-let resizeStartWidth = 0;
-let resizeHandle: HTMLElement | null = null;
-let resizePointerId: number | null = null;
+const host = shallowRef<HTMLElement | null>(null);
+const panel = shallowRef<HTMLElement | null>(null);
+const area = computed(() => host.value?.parentElement || null);
 const activeSurface = computed(() => {
   const tab = activeTab.value;
   return tab?.panes.find((pane) => pane.id === activePaneId.value) || tab;
@@ -36,71 +35,43 @@ const showWorkspaceAssistant = computed(
       sessionKind: activeAiSession.value?.kind
     }) === "workspace"
 );
-const floating = computed(() =>
+const defaultFloating = computed(() =>
   aiPanelFloats(showWorkspaceAssistant.value ? "workspace" : "resource", activeCapability.value, isNarrowScreen.value)
 );
 
-function startResize(event: PointerEvent) {
-  if (event.button !== 0 || isNarrowScreen.value) return;
-  event.preventDefault();
-  resizing.value = true;
-  resizeStartX = event.clientX;
-  resizeStartWidth = panelWidth.value;
-  resizeHandle = event.currentTarget as HTMLElement;
-  resizePointerId = event.pointerId;
-  resizeHandle.setPointerCapture(event.pointerId);
-  document.body.style.cursor = "col-resize";
-  document.body.style.userSelect = "none";
-}
-
-function resizePanel(event: PointerEvent) {
-  if (!resizing.value) return;
-  setPanelWidth(resizeStartWidth - (event.clientX - resizeStartX));
-}
-
-function stopResize() {
-  if (!resizing.value) return;
-  resizing.value = false;
-  if (resizeHandle && resizePointerId !== null && resizeHandle.hasPointerCapture(resizePointerId)) {
-    resizeHandle.releasePointerCapture(resizePointerId);
-  }
-  resizeHandle = null;
-  resizePointerId = null;
-  document.body.style.cursor = "";
-  document.body.style.userSelect = "";
-}
-
-function resizeWithKeyboard(event: KeyboardEvent) {
-  const step = event.shiftKey ? 32 : 16;
-  if (event.key === "ArrowLeft") setPanelWidth(panelWidth.value + step);
-  else if (event.key === "ArrowRight") setPanelWidth(panelWidth.value - step);
-  else if (event.key === "Home") setPanelWidth(AI_PANEL_MIN_WIDTH);
-  else if (event.key === "End") setPanelWidth(AI_PANEL_MAX_WIDTH);
-  else return;
-  event.preventDefault();
-}
-
-onMounted(() => {
-  window.addEventListener("pointermove", resizePanel);
-  window.addEventListener("pointerup", stopResize);
-  window.addEventListener("pointercancel", stopResize);
+const {
+  floating,
+  style: panelStyle,
+  interacting,
+  stop
+} = useAiPanelLayout({
+  area,
+  panel,
+  narrow: isNarrowScreen,
+  defaultFloating,
+  width: panelWidth,
+  setWidth: setPanelWidth
 });
-
-const panelStyle = computed(() => ({
-  width: isNarrowScreen.value ? `min(${panelWidth.value}px, calc(100vw - 3rem))` : `${panelWidth.value}px`
-}));
-
-onBeforeUnmount(() => {
-  stopResize();
-  window.removeEventListener("pointermove", resizePanel);
-  window.removeEventListener("pointerup", stopResize);
-  window.removeEventListener("pointercancel", stopResize);
-});
+const resizeHandles = [
+  { edge: "w", class: "inset-y-2 -left-1 w-2 cursor-ew-resize" },
+  { edge: "e", class: "inset-y-2 -right-1 w-2 cursor-ew-resize" },
+  { edge: "n", class: "inset-x-2 -top-1 h-2 cursor-ns-resize" },
+  { edge: "s", class: "inset-x-2 -bottom-1 h-2 cursor-ns-resize" },
+  { edge: "nw", class: "-left-1 -top-1 size-3 cursor-nwse-resize" },
+  { edge: "ne", class: "-right-1 -top-1 size-3 cursor-nesw-resize" },
+  { edge: "sw", class: "-bottom-1 -left-1 size-3 cursor-nesw-resize" },
+  { edge: "se", class: "-bottom-1 -right-1 size-4 cursor-nwse-resize" }
+];
+const visibleHandles = computed(() =>
+  isNarrowScreen.value ? [] : resizeHandles.filter((handle) => floating.value || handle.edge === "w")
+);
+onDeactivated(stop);
 </script>
 
 <template>
   <div
     id="workspace-ai-overlay"
+    ref="host"
     data-ai-context="preserve"
     :class="
       floating
@@ -118,56 +89,59 @@ onBeforeUnmount(() => {
       variant="ghost"
       @click="emit('close')"
     />
-    <UCard
-      class="pointer-events-auto flex min-h-0 flex-col overflow-hidden"
-      :class="[
-        floating ? 'absolute inset-y-3 right-3' : 'h-full w-full border-l border-[var(--app-border)]',
-        resizing ? '' : 'transition-[width] duration-150 ease-out'
-      ]"
+    <div
+      ref="panel"
+      class="pointer-events-auto"
+      :class="[floating ? 'absolute' : 'relative h-full w-full', { 'select-none': interacting }]"
       :style="floating ? panelStyle : undefined"
-      :ui="{
-        root: floating
-          ? 'h-auto shadow-none ring-1 ring-[var(--app-border)] bg-[var(--app-surface-overlay)]'
-          : 'h-full rounded-none shadow-none ring-0 bg-[var(--app-surface-panel)]',
-        body: 'relative flex min-h-0 flex-1 flex-col overflow-hidden p-0 sm:p-0'
-      }"
     >
-      <div
-        role="separator"
-        aria-label="调整 AI 面板宽度"
-        aria-orientation="vertical"
-        :aria-valuenow="panelWidth"
-        :aria-valuemin="AI_PANEL_MIN_WIDTH"
-        :aria-valuemax="AI_PANEL_MAX_WIDTH"
-        tabindex="0"
-        class="group absolute inset-y-0 -left-1 z-20 w-2 cursor-col-resize touch-none outline-none max-md:hidden"
-        @pointerdown="startResize"
-        @keydown="resizeWithKeyboard"
+      <UButton
+        v-for="handle in visibleHandles"
+        :key="handle.edge"
+        :data-ai-panel-resize="handle.edge"
+        :aria-label="t('RightPanel.AIResizePanel')"
+        :title="t('RightPanel.AIResizePanel')"
+        color="neutral"
+        variant="ghost"
+        class="group/ai-resize absolute z-20 touch-none justify-center rounded-none bg-transparent p-0 hover:bg-transparent active:bg-transparent focus-visible:ring-(--app-focus-ring)"
+        :class="handle.class"
       >
-        <span
-          class="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors group-hover:bg-primary/60 group-focus-visible:bg-primary group-active:bg-primary"
-          :class="resizing ? 'bg-primary' : 'bg-transparent'"
+        <UIcon
+          v-if="handle.edge === 'se'"
+          name="i-lucide-grip"
+          class="pointer-events-none size-3 text-(--app-muted) opacity-0 group-hover/ai-resize:opacity-100 group-focus-visible/ai-resize:opacity-100"
         />
-      </div>
-      <div class="min-h-0 flex-1 overflow-hidden">
-        <KeepAlive>
-          <component
-            :is="showWorkspaceAssistant ? WorkspaceAssistantPanel : WorkspaceAiPanel"
-            :key="showWorkspaceAssistant ? 'workspace' : 'resource'"
-          >
-            <template #actions>
-              <UButton
-                icon="i-lucide-x"
-                :aria-label="t('RightPanel.AIClose')"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                @click="emit('close')"
-              />
-            </template>
-          </component>
-        </KeepAlive>
-      </div>
-    </UCard>
+      </UButton>
+      <UCard
+        class="flex h-full min-h-0 flex-col overflow-hidden"
+        :class="floating ? '' : 'border-l border-(--app-border)'"
+        :ui="{
+          root: floating
+            ? 'shadow-[var(--theme-shadow-soft)] ring-1 ring-[var(--app-border)] bg-[var(--app-surface-overlay)]'
+            : 'rounded-none shadow-none ring-0 bg-[var(--app-surface-panel)]',
+          body: 'relative flex min-h-0 flex-1 flex-col overflow-hidden p-0 sm:p-0'
+        }"
+      >
+        <div class="min-h-0 flex-1 overflow-hidden">
+          <KeepAlive>
+            <component
+              :is="showWorkspaceAssistant ? WorkspaceAssistantPanel : WorkspaceAiPanel"
+              :key="showWorkspaceAssistant ? 'workspace' : 'resource'"
+            >
+              <template #actions>
+                <UButton
+                  icon="i-lucide-x"
+                  :aria-label="t('RightPanel.AIClose')"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  @click="emit('close')"
+                />
+              </template>
+            </component>
+          </KeepAlive>
+        </div>
+      </UCard>
+    </div>
   </div>
 </template>

@@ -365,6 +365,8 @@
     "AIDisabled": "系统未启用 AI 小助手",
     "AIOpen": "打开 AI 助手",
     "AIClose": "关闭 AI 助手",
+    "AIMovePanel": "移动 AI 面板：拖动标题栏或使用方向键，双击或按 Home 键复位",
+    "AIResizePanel": "调整 AI 面板大小：拖动或使用方向键",
     "Session": "会话",
     "Control": "控制",
     "Files": "文件",
@@ -981,7 +983,7 @@
     "Title": "Terminal AI",
     "PromptLabel": "描述要交给 Terminal AI 的任务",
     "Placeholder": "描述任务，例如：查看当前目录下的文件…",
-    "ShortcutHint": "按 {shortcut} 询问 Terminal AI",
+    "ShortcutHint": "按 {shortcut} 询问 AI",
     "Send": "发送",
     "Sending": "发送中…",
     "History": "历史",
@@ -1116,6 +1118,7 @@
     "HidePassword": "隐藏密码"
   },
   "ConnectionSetup": {
+    "MoveDialog": "移动连接窗口：拖动标题栏或使用方向键，Home 键居中",
     "ClientLaunchStarted": "已发起客户端打开",
     "LaunchWithClient": "已尝试使用 {client} 打开该连接。",
     "LaunchWithLocalClient": "已尝试使用本地客户端打开该连接。",

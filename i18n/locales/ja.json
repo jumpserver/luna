@@ -365,6 +365,8 @@
     "AIDisabled": "システム設定で AI アシスタントが無効になっています",
     "AIOpen": "AI アシスタントを開く",
     "AIClose": "AI アシスタントを閉じる",
+    "AIMovePanel": "AI パネルを移動：タイトルバーをドラッグするか矢印キーを使用。ダブルクリックまたは Home キーでリセット",
+    "AIResizePanel": "AI パネルのサイズ変更：ドラッグするか矢印キーを使用",
     "Session": "セッション",
     "Control": "コントロール",
     "Files": "ファイル",
@@ -981,7 +983,7 @@
     "Title": "Terminal AI",
     "PromptLabel": "Terminal AI に依頼するタスクを入力",
     "Placeholder": "タスクを入力してください。例：現在のディレクトリ内のファイルを一覧表示…",
-    "ShortcutHint": "{shortcut} を押して Terminal AI に質問",
+    "ShortcutHint": "{shortcut} を押して AI に質問",
     "Send": "送信",
     "Sending": "送信中…",
     "History": "履歴",
@@ -1113,6 +1115,7 @@
     "HidePassword": "パスワードを非表示"
   },
   "ConnectionSetup": {
+    "MoveDialog": "接続ウィンドウを移動：タイトルバーをドラッグするか矢印キーを使用。Home キーで中央に配置",
     "ClientLaunchStarted": "クライアントの起動を開始しました",
     "LaunchWithClient": "{client} でこの接続を開こうとしました。",
     "LaunchWithLocalClient": "ローカルクライアントでこの接続を開こうとしました。",

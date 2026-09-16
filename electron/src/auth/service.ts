@@ -46,18 +46,7 @@ function requestSite(session, request) {
     return configured.replace(/\/+$/, "");
   }
 
-  if (process.env.JMS_ELECTRON_DEV === "1") {
-    const rendererUrl = String(process.env.JMS_ELECTRON_RENDERER_URL || "").trim();
-    if (rendererUrl) {
-      const renderer = parseUrl(rendererUrl);
-      if (["http:", "https:"].includes(renderer.protocol) && renderer.hostname) return renderer.origin;
-    }
-    const site = parseUrl(session.origin);
-    if (["localhost", "127.0.0.1", "::1"].includes(site.hostname)) {
-      site.port = "8083";
-      return site.origin;
-    }
-  }
+  // The development renderer is not the selected site's API gateway.
   return session.origin;
 }
 

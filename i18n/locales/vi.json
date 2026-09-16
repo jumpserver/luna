@@ -365,6 +365,8 @@
     "AIDisabled": "Trợ lý AI bị tắt trong cài đặt hệ thống",
     "AIOpen": "Mở trợ lý AI",
     "AIClose": "Đóng trợ lý AI",
+    "AIMovePanel": "Di chuyển bảng AI: kéo thanh tiêu đề hoặc dùng phím mũi tên; nhấp đúp hoặc nhấn Home để đặt lại",
+    "AIResizePanel": "Đổi kích thước bảng AI: kéo hoặc dùng phím mũi tên",
     "Session": "Phiên",
     "Control": "Điều khiển",
     "Files": "Tệp",
@@ -981,7 +983,7 @@
     "Title": "AI Terminal",
     "PromptLabel": "Mô tả tác vụ cho AI Terminal",
     "Placeholder": "Mô tả tác vụ, ví dụ: liệt kê tệp trong thư mục hiện tại…",
-    "ShortcutHint": "Nhấn {shortcut} để hỏi AI Terminal",
+    "ShortcutHint": "Nhấn {shortcut} để hỏi AI",
     "Send": "Gửi",
     "Sending": "Đang gửi…",
     "History": "Lịch sử",
@@ -1113,6 +1115,7 @@
     "HidePassword": "Ẩn mật khẩu"
   },
   "ConnectionSetup": {
+    "MoveDialog": "Di chuyển cửa sổ kết nối: kéo thanh tiêu đề hoặc dùng phím mũi tên; Home để căn giữa",
     "ClientLaunchStarted": "Đã bắt đầu mở máy khách",
     "LaunchWithClient": "Đã thử mở kết nối này trong {client}.",
     "LaunchWithLocalClient": "Đã thử mở kết nối này trong máy khách cục bộ.",

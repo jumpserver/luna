@@ -27,33 +27,55 @@ const model = defineModel<string>({ required: true });
 
 <template>
   <div class="flex flex-col gap-2">
-    <div v-if="contextItems.length" class="flex min-w-0 items-start gap-2">
-      <span class="flex h-[1.375rem] shrink-0 items-center gap-1 text-[10px] font-medium text-muted">
-        <UIcon name="i-lucide-scan-eye" class="size-3" />
-        {{ $t("RightPanel.AIContext") }}
-      </span>
-      <div class="ai-context-scroll flex min-w-0 flex-1 gap-1 overflow-x-auto">
-        <span v-for="item in contextItems" :key="item.key" class="ai-context-chip" :title="item.title">
-          <UIcon :name="item.icon" class="size-3 shrink-0" />
-          <span class="max-w-28 truncate">{{ item.label }}</span>
-        </span>
-      </div>
-    </div>
-
     <UChatPrompt
       v-model="model"
       variant="outline"
       size="xs"
-      :rows="1"
+      class="ai-composer-prompt"
+      :rows="2"
       :maxrows="5"
       :placeholder="placeholder"
       :disabled="busy"
       :autofocus="false"
-      :ui="{ root: 'bg-[var(--app-input-bg)]', base: 'text-xs' }"
+      :ui="{
+        root: 'bg-[var(--app-input-bg)]',
+        footer: '-mx-1.5',
+        base: 'min-h-8 resize-none overflow-y-auto text-xs'
+      }"
       @submit="!running && emit('submit')"
     >
       <template #footer>
         <div class="flex min-w-0 flex-1 items-center gap-1">
+          <slot name="context">
+            <UPopover v-if="contextItems.length" :content="{ side: 'top', align: 'start' }">
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                :icon="contextItems[0]?.icon || 'i-lucide-at-sign'"
+                trailing-icon="i-lucide-chevron-down"
+                :aria-label="$t('RightPanel.AIContext')"
+                :title="contextItems.map((item) => item.title).join('\n')"
+                class="min-w-16 max-w-full justify-start px-1"
+              >
+                <span class="min-w-0 truncate">{{ contextItems[0]?.label }}</span>
+                <span v-if="contextItems.length > 1" class="shrink-0 text-[10px] text-muted">
+                  +{{ contextItems.length - 1 }}
+                </span>
+              </UButton>
+              <template #content>
+                <div class="w-64 max-w-[calc(100vw-2rem)] space-y-2 p-3">
+                  <p class="text-[10px] font-medium text-muted">{{ $t("RightPanel.AIContext") }}</p>
+                  <ul class="space-y-2 text-xs">
+                    <li v-for="item in contextItems" :key="item.key" class="flex items-start gap-2">
+                      <UIcon :name="item.icon" class="mt-0.5 size-3.5 shrink-0 text-muted" />
+                      <span class="min-w-0 break-all">{{ item.title || item.label }}</span>
+                    </li>
+                  </ul>
+                </div>
+              </template>
+            </UPopover>
+          </slot>
           <template v-if="showPolicy">
             <USelect
               v-if="thresholdOptions.length"
@@ -105,47 +127,7 @@ const model = defineModel<string>({ required: true });
 </template>
 
 <style scoped>
-.ai-context-chip {
-  display: inline-flex;
-  height: 1.375rem;
-  flex: none;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0 0.375rem;
-  border: 1px solid var(--app-border);
-  border-radius: 0.375rem;
-  color: var(--app-muted);
-  background: var(--app-card-bg-soft);
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-}
-
-.ai-context-scroll {
-  scrollbar-width: none;
-}
-
-.ai-context-scroll::-webkit-scrollbar {
-  height: 0;
-}
-
-.ai-context-scroll:hover,
-.ai-context-scroll:focus-within {
-  margin-bottom: -4px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb) transparent;
-}
-
-.ai-context-scroll:hover::-webkit-scrollbar,
-.ai-context-scroll:focus-within::-webkit-scrollbar {
-  height: 4px;
-}
-
-.ai-context-scroll:hover::-webkit-scrollbar-thumb,
-.ai-context-scroll:focus-within::-webkit-scrollbar-thumb {
-  background-color: var(--app-scrollbar-thumb);
-}
-
-.ai-context-scroll:hover::-webkit-scrollbar-thumb:hover {
-  background-color: var(--app-scrollbar-thumb-hover);
+.ai-composer-prompt :deep(textarea) {
+  max-height: min(20rem, 40vh);
 }
 </style>

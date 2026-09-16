@@ -5,7 +5,7 @@ const FRAME_INTERVAL_MS = 300;
 const CAPTURE_WIDTH = 480;
 
 export function useFaceCapture() {
-  const video = ref<HTMLVideoElement | null>(null);
+  const video = shallowRef<HTMLVideoElement | null>(null);
   const overlay = ref<HTMLCanvasElement | null>(null);
   const cameras = ref<FaceCameraDevice[]>([]);
   const selectedDeviceId = ref("");

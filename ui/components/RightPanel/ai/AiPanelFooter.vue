@@ -21,7 +21,7 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <footer class="shrink-0 space-y-2 border-t border-default p-3">
+  <footer class="shrink-0 space-y-2 p-3">
     <UAlert
       v-if="connectionNotice"
       icon="i-lucide-wifi-off"

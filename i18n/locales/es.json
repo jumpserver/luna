@@ -365,6 +365,8 @@
     "AIDisabled": "El asistente de IA está deshabilitado en la configuración del sistema",
     "AIOpen": "Abrir asistente de IA",
     "AIClose": "Cerrar asistente de IA",
+    "AIMovePanel": "Mover panel de IA: arrastra el título o usa las flechas; doble clic o Inicio para restablecer",
+    "AIResizePanel": "Cambiar tamaño del panel de IA: arrastra o usa las flechas",
     "Session": "Sesión",
     "Control": "Control",
     "Files": "Archivos",
@@ -981,7 +983,7 @@
     "Title": "IA de terminal",
     "PromptLabel": "Describa una tarea para la IA de terminal",
     "Placeholder": "Describa una tarea, por ejemplo: enumerar los archivos del directorio actual…",
-    "ShortcutHint": "Pulse {shortcut} para preguntar a la IA de terminal",
+    "ShortcutHint": "Pulse {shortcut} para preguntar a la IA",
     "Send": "Enviar",
     "Sending": "Enviando…",
     "History": "Historial",
@@ -1113,6 +1115,7 @@
     "HidePassword": "Ocultar contraseña"
   },
   "ConnectionSetup": {
+    "MoveDialog": "Mover ventana de conexión: arrastre la barra de título o use las flechas; Inicio para centrar",
     "ClientLaunchStarted": "Se inició la apertura del cliente",
     "LaunchWithClient": "Intentamos abrir esta conexión en {client}.",
     "LaunchWithLocalClient": "Intentamos abrir esta conexión en un cliente local.",

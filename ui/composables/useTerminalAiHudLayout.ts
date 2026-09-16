@@ -1,4 +1,5 @@
 import type { TerminalCursorAnchor } from "#koko";
+import { useEventListener } from "@vueuse/core";
 import {
   getKokoTerminalCursorAnchor,
   getKokoTerminalElement,
@@ -15,6 +16,16 @@ export function useTerminalAiHudLayout(options: {
 }) {
   const hostRef = shallowRef<HTMLElement | null>(null);
   const panelRef = shallowRef<HTMLElement | null>(null);
+  const dragHandleRef = shallowRef<HTMLElement | null>(null);
+  const manualPosition = shallowRef<{ left: number; top: number } | null>(null);
+  const drag = shallowRef<{
+    pointerId: number;
+    target: HTMLElement;
+    x: number;
+    y: number;
+    left: number;
+    top: number;
+  } | null>(null);
   const liveRef = shallowRef<HTMLElement | null>(null);
   const activeXterm = shallowRef<HTMLElement | null>(null);
   const anchorRect = shallowRef<TerminalCursorAnchor | null>(null);
@@ -35,9 +46,82 @@ export function useTerminalAiHudLayout(options: {
     top: `${panelPosition.value.top}px`,
     width: `${panelPosition.value.width}px`,
     maxHeight: `${panelPosition.value.maxHeight}px`,
+    "--terminal-ai-input-max-height": `${Math.max(56, panelPosition.value.maxHeight - 100)}px`,
     ...(panelPosition.value.height ? { height: `${panelPosition.value.height}px` } : {}),
     zIndex: 80
   }));
+
+  function movementBounds() {
+    const host = hostRef.value?.getBoundingClientRect();
+    return {
+      left: Math.max(0, host?.left || 0) + 8,
+      top: Math.max(0, host?.top || 0) + 8,
+      right: Math.min(window.innerWidth, host?.right ?? window.innerWidth) - 8,
+      bottom: Math.min(window.innerHeight, host?.bottom ?? window.innerHeight) - 8
+    };
+  }
+
+  function movePanel(left: number, top: number) {
+    manualPosition.value = { left, top };
+    void positionPanel();
+  }
+
+  function stopDragging() {
+    const current = drag.value;
+    drag.value = null;
+    if (current?.target.hasPointerCapture(current.pointerId)) current.target.releasePointerCapture(current.pointerId);
+  }
+
+  function resetPosition() {
+    stopDragging();
+    manualPosition.value = null;
+    void positionPanel();
+  }
+
+  useEventListener(dragHandleRef, "pointerdown", (event: PointerEvent) => {
+    if (event.button !== 0 || !event.isPrimary || drag.value) return;
+    if ((event.target as Element).closest("button, a, input, select, textarea, [role=button]")) return;
+    const target = event.currentTarget as HTMLElement;
+    target.focus({ preventScroll: true });
+    target.setPointerCapture(event.pointerId);
+    drag.value = {
+      pointerId: event.pointerId,
+      target,
+      x: event.clientX,
+      y: event.clientY,
+      left: panelPosition.value.left,
+      top: panelPosition.value.top
+    };
+    event.preventDefault();
+  });
+  useEventListener(dragHandleRef, "pointermove", (event: PointerEvent) => {
+    const current = drag.value;
+    if (!current || current.pointerId !== event.pointerId) return;
+    const dx = event.clientX - current.x;
+    const dy = event.clientY - current.y;
+    if (dx || dy || manualPosition.value) movePanel(current.left + dx, current.top + dy);
+  });
+  useEventListener(dragHandleRef, ["pointerup", "pointercancel", "lostpointercapture"], (event: PointerEvent) => {
+    if (event.pointerId === drag.value?.pointerId) stopDragging();
+  });
+  useEventListener(dragHandleRef, "keydown", (event: KeyboardEvent) => {
+    if (event.target !== event.currentTarget || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.key === "Home") resetPosition();
+    else {
+      const step = event.shiftKey ? 32 : 8;
+      const dx = event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0;
+      const dy = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
+      if (!dx && !dy) return;
+      movePanel(panelPosition.value.left + dx, panelPosition.value.top + dy);
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  useEventListener(dragHandleRef, "dblclick", (event: MouseEvent) => {
+    if (!(event.target as Element).closest("button, a")) resetPosition();
+  });
+  useEventListener("blur", stopDragging);
+  watch(options.open, stopDragging);
   const hintStyle = computed(() => ({
     left: `${hintPosition.value.left}px`,
     top: `${hintPosition.value.top}px`,
@@ -132,25 +216,34 @@ export function useTerminalAiHudLayout(options: {
     const anchor = getKokoTerminalCursorAnchor(options.paneId()) || getFallbackCursorRect(xterm);
     anchorRect.value = anchor;
     const terminal = xterm.getBoundingClientRect();
+    const bounds = movementBounds();
     const gap = 8;
     const edge = 8;
     const cursorBottom = Math.min(terminal.bottom, anchor.top + Math.max(anchor.height, 18));
     const spaceBelow = terminal.bottom - edge - (cursorBottom + gap);
     const spaceAbove = anchor.top - gap - (terminal.top + edge);
-    const maxHeight = Math.max(120, Math.floor(Math.max(spaceBelow, spaceAbove)));
-    const width = Math.min(520, Math.max(280, terminal.width - 16), Math.max(280, window.innerWidth - edge * 2));
+    const maxHeight = Math.max(
+      0,
+      Math.min(
+        bounds.bottom - bounds.top,
+        manualPosition.value ? bounds.bottom - bounds.top : Math.max(120, Math.floor(Math.max(spaceBelow, spaceAbove)))
+      )
+    );
+    const width = Math.max(0, Math.min(520, Math.max(280, terminal.width - 16), bounds.right - bounds.left));
     const liveEl = liveRef.value;
     const panelBox = panel.getBoundingClientRect();
     const liveBox = liveEl?.getBoundingClientRect();
     const chrome = Math.max(0, panelBox.height - (liveBox?.height || 0));
-    const needed = chrome + (liveEl?.scrollHeight || panel.scrollHeight);
+    const needed = liveEl ? chrome + liveEl.scrollHeight : panel.scrollHeight;
     const height = needed > maxHeight ? maxHeight : 0;
     const placedHeight = height || Math.min(panelBox.height, maxHeight);
     const placeBelow = spaceBelow >= placedHeight || (spaceBelow >= spaceAbove && spaceBelow >= 120);
     const maxLeft = Math.max(terminal.left + edge, Math.min(terminal.right, window.innerWidth) - width - edge);
-    const left = Math.min(Math.max(anchor.left, terminal.left + edge, edge), maxLeft);
+    const anchoredLeft = Math.min(Math.max(anchor.left, terminal.left + edge, edge), maxLeft);
     const unclampedTop = placeBelow ? cursorBottom + gap : anchor.top - placedHeight - gap;
-    const top = Math.min(Math.max(unclampedTop, terminal.top + edge), terminal.bottom - edge - placedHeight);
+    const anchoredTop = Math.min(Math.max(unclampedTop, terminal.top + edge), terminal.bottom - edge - placedHeight);
+    const left = Math.max(bounds.left, Math.min(manualPosition.value?.left ?? anchoredLeft, bounds.right - width));
+    const top = Math.max(bounds.top, Math.min(manualPosition.value?.top ?? anchoredTop, bounds.bottom - placedHeight));
     const next = { left, top, width, maxHeight, height };
     const current = panelPosition.value;
     if (
@@ -245,6 +338,8 @@ export function useTerminalAiHudLayout(options: {
   }
 
   function resetForPaneChange() {
+    stopDragging();
+    manualPosition.value = null;
     livePinned = true;
     clearHintIdleTimer();
     options.open.value = false;
@@ -256,6 +351,7 @@ export function useTerminalAiHudLayout(options: {
   }
 
   function dispose() {
+    stopDragging();
     layoutObserver?.disconnect();
     clearHintIdleTimer();
     stopUserInputSubscription();
@@ -265,6 +361,8 @@ export function useTerminalAiHudLayout(options: {
   return {
     hostRef,
     panelRef,
+    dragHandleRef,
+    dragging: computed(() => drag.value !== null),
     liveRef,
     activeXterm,
     hintVisible,

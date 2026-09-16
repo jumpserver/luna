@@ -139,6 +139,14 @@ const contextItems = computed<AiContextItem[]>(() => {
     { key: "account", icon: "i-lucide-user-key", label: target.account, title: target.account }
   ];
 });
+const targetLabel = computed(() => {
+  const label = displayedTarget.value?.label;
+  if (selectedTarget.value === "workspace")
+    return [t("RightPanel.LunaAiWorkspaceOnly"), label].filter(Boolean).join(" · ");
+  if (selectedTarget.value === "auto")
+    return [t("RightPanel.LunaAiAutomatic"), label || localShellPane.value?.assetName].filter(Boolean).join(" · ");
+  return label || t("RightPanel.LunaAiTargetChanged");
+});
 const approvalOptions = computed<AiSelectOption[]>(() => [
   {
     label: t("RightPanel.AIAgentApprovalAlwaysShort"),
@@ -249,7 +257,6 @@ watch(
   <div class="flex h-full min-h-0 flex-col">
     <AiPresenceHeader
       :assistant-name="assistantName"
-      :description="t('RightPanel.LunaAiDescription')"
       :status-label="statusLabel"
       :status-tone="statusTone"
       :busy="running && !waitingStatus"
@@ -296,7 +303,7 @@ watch(
         @suggest="draft = $event"
       />
 
-      <footer class="shrink-0 space-y-2 border-t border-default p-3">
+      <footer class="shrink-0 space-y-2 p-3">
         <UAlert
           v-if="connectionNotice"
           icon="i-lucide-wifi-off"
@@ -320,21 +327,6 @@ watch(
             @click="clearError"
           />
         </div>
-        <div class="flex min-w-0 items-center gap-2">
-          <USelect
-            v-model="selectedTarget"
-            :items="targetOptions"
-            value-key="value"
-            label-key="label"
-            size="xs"
-            variant="soft"
-            :disabled="running"
-            :aria-label="t('RightPanel.LunaAiTarget')"
-            icon="i-lucide-scan"
-            class="min-w-0 flex-1"
-            :portal="true"
-          />
-        </div>
         <AiComposer
           v-model="draft"
           :show-policy="Boolean(approvalSession)"
@@ -351,7 +343,43 @@ watch(
           @submit="submit"
           @interrupt="interruptWorkspaceAssistant(scopeId)"
           @update-approval-threshold="updateApprovalMode"
-        />
+        >
+          <template #context>
+            <USelect
+              v-model="selectedTarget"
+              :items="targetOptions"
+              value-key="value"
+              label-key="label"
+              size="xs"
+              variant="ghost"
+              :disabled="running"
+              :aria-label="t('RightPanel.LunaAiTarget')"
+              :title="[targetLabel, ...contextItems.map((item) => item.title)].join('\n')"
+              icon="i-lucide-at-sign"
+              class="min-w-0 max-w-full"
+              :portal="true"
+              :content="{ side: 'top', align: 'start' }"
+              :ui="{
+                base: 'ps-6 pe-6',
+                leading: 'ps-1',
+                trailing: 'pe-1',
+                content: 'min-w-64 max-w-[calc(100vw-2rem)]',
+                itemLabel: 'whitespace-normal break-words'
+              }"
+            >
+              {{ targetLabel }}
+              <template v-if="contextItems.length" #content-top>
+                <div class="space-y-1.5 border-b border-default px-3 py-2">
+                  <p class="text-[10px] font-medium text-muted">{{ t("RightPanel.AIContext") }}</p>
+                  <div v-for="item in contextItems" :key="item.key" class="flex items-start gap-2 text-xs">
+                    <UIcon :name="item.icon" class="mt-0.5 size-3.5 shrink-0 text-muted" />
+                    <span class="min-w-0 break-all">{{ item.title || item.label }}</span>
+                  </div>
+                </div>
+              </template>
+            </USelect>
+          </template>
+        </AiComposer>
       </footer>
     </template>
   </div>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineProps<{
   assistantName: string;
-  description: string;
+  description?: string;
   statusLabel: string;
   statusTone: "ready" | "active" | "warning" | "error" | "success";
   busy: boolean;
@@ -16,7 +16,14 @@ const { t } = useI18n();
 
 <template>
   <header class="ai-presence-header">
-    <div class="flex min-w-0 items-center gap-2.5">
+    <div
+      data-ai-panel-drag
+      role="group"
+      tabindex="0"
+      :aria-label="t('RightPanel.AIMovePanel')"
+      :title="t('RightPanel.AIMovePanel')"
+      class="flex min-w-0 items-center gap-2.5 outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring) md:cursor-grab md:touch-none md:select-none md:active:cursor-grabbing"
+    >
       <span class="ai-presence" :class="[`ai-presence-${statusTone}`, { 'ai-presence-busy': busy }]">
         <span class="ai-presence-core">
           <UIcon name="i-lucide-sparkles" class="size-3.5" />

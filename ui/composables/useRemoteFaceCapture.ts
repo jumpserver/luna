@@ -42,7 +42,7 @@ type FaceLiveSocketMessage =
 export function useRemoteFaceCapture(options: UseRemoteFaceCaptureOptions) {
   const runtimeConfig = useRuntimeConfig();
   const userInfoStore = useUserInfoStore();
-  const video = ref<HTMLVideoElement | null>(null);
+  const video = shallowRef<HTMLVideoElement | null>(null);
   const overlay = ref<HTMLCanvasElement | null>(null);
   const cameras = ref<FaceCameraDevice[]>([]);
   const selectedDeviceId = ref("");

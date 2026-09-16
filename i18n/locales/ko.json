@@ -365,6 +365,8 @@
     "AIDisabled": "시스템 설정에서 AI 도우미가 비활성화되어 있습니다",
     "AIOpen": "AI 도우미 열기",
     "AIClose": "AI 도우미 닫기",
+    "AIMovePanel": "AI 패널 이동: 제목 표시줄을 드래그하거나 방향키 사용. 두 번 클릭하거나 Home 키로 초기화",
+    "AIResizePanel": "AI 패널 크기 조절: 드래그하거나 방향키 사용",
     "Session": "세션",
     "Control": "제어",
     "Files": "파일",
@@ -981,7 +983,7 @@
     "Title": "Terminal AI",
     "PromptLabel": "Terminal AI에 맡길 작업 설명",
     "Placeholder": "작업을 설명하세요. 예: 현재 디렉터리의 파일 목록 보기…",
-    "ShortcutHint": "{shortcut}을 눌러 Terminal AI에 질문",
+    "ShortcutHint": "{shortcut}을 눌러 AI에 질문",
     "Send": "전송",
     "Sending": "전송 중…",
     "History": "기록",
@@ -1113,6 +1115,7 @@
     "HidePassword": "비밀번호 숨기기"
   },
   "ConnectionSetup": {
+    "MoveDialog": "연결 창 이동: 제목 표시줄을 드래그하거나 방향키 사용, Home 키로 가운데 정렬",
     "ClientLaunchStarted": "클라이언트 실행을 시작했습니다",
     "LaunchWithClient": "{client}에서 이 연결을 열도록 요청했습니다.",
     "LaunchWithLocalClient": "로컬 클라이언트에서 이 연결을 열도록 요청했습니다.",
