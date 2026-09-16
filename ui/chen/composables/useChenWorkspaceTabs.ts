@@ -172,7 +172,8 @@ export function useChenWorkspaceTabs() {
       socket: null
     };
 
-    return registerTab(tab);
+    registerTab(tab);
+    return workspaceTabState[tab.id] as ChenDatabaseWorkspaceTab;
   }
 
   function openCreateTableTab(nodeKey: string, parentNode: ChenCreateTableWorkspaceTab["parentNode"], dbType: string) {
