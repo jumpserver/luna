@@ -150,6 +150,14 @@ async function installSftpBackend(page: Page): Promise<MockSftpServer> {
         permed_protocols: [{ name: "sftp" }],
         permed_accounts: [{ id: "account-1", name: "root", username: "root", alias: "root" }]
       };
+    } else if (pathname.includes("/perms/users/") && pathname.endsWith("/assets/database-1/")) {
+      body = {
+        id: "database-1",
+        name: "Database Host",
+        address: "10.0.0.20",
+        permed_protocols: [{ name: "oracle" }],
+        permed_accounts: []
+      };
     } else if (pathname.includes("/nodes/children-with-assets/")) {
       body = [
         {
@@ -319,6 +327,44 @@ async function connectRemoteSftp(page: Page) {
 test.describe("koko SFTP workbench", () => {
   test.beforeEach(async ({ page }) => {
     await seedAuthenticatedUser(page);
+  });
+
+  test("hides non-SFTP assets from recent connections", async ({ page }) => {
+    await installSftpBackend(page);
+    await openSftpWorkbench(page);
+    await page.evaluate(() => {
+      const site = window.location.origin;
+      localStorage.setItem(
+        `workspace-recent-connections:${encodeURIComponent(site)}:user-1`,
+        JSON.stringify([
+          {
+            id: "asset-1",
+            name: "Recent SFTP Host",
+            address: "10.0.0.10",
+            platform: "Linux",
+            zone: "",
+            isActive: true,
+            category: "host",
+            type: "linux"
+          },
+          {
+            id: "database-1",
+            name: "Database Host",
+            address: "10.0.0.20",
+            platform: "Oracle",
+            zone: "",
+            isActive: true,
+            category: "database",
+            type: "oracle"
+          }
+        ])
+      );
+    });
+    await page.getByRole("button", { name: "Connect remote SFTP" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Connect remote SFTP" });
+    await expect(dialog.getByText("Recent SFTP Host")).toBeVisible();
+    await expect(dialog.getByText("Database Host")).toHaveCount(0);
   });
 
   test("blocks browser uploads until a remote SFTP target is connected", async ({ page }) => {
