@@ -3,8 +3,16 @@ import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { TokenResponse } from "~/types";
 
 import { writeText } from "clipboard-polyfill";
-import { getUserProfile } from "~/composables/useApiRequest";
+import { getPublicSettings, getUserProfile, setConnectionTokenReusable } from "~/composables/useApiRequest";
+import { getGuideConnectCommand } from "./guideCommand";
 import { getDirectSshCommand } from "./sshGuide";
+import {
+  applyConnectionTokenReuse,
+  DATABASE_GUIDE_PROTOCOLS,
+  isDatabaseGuideProtocol,
+  resolveConnectionTokenReuseError,
+  shouldShowConnectionTokenReuse
+} from "./tokenReuse";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
 
@@ -19,7 +27,7 @@ const defaultPorts: Record<string, number> = {
   sqlserver: 1433,
   mongodb: 27017
 };
-const databaseProtocols = new Set(["mysql", "mariadb", "postgresql", "redis", "oracle", "sqlserver", "mongodb"]);
+const databaseProtocols = DATABASE_GUIDE_PROTOCOLS;
 
 const { t } = useI18n();
 const toast = useToast();
@@ -28,8 +36,13 @@ const endpoint = ref<Record<string, any>>({});
 const loading = ref(true);
 const passwordVisible = ref(false);
 const loginUsername = ref("");
+const connectionTokenReusable = ref(false);
+const reusable = ref(false);
+const reusableUpdating = ref(false);
 
 const protocol = computed(() => (token.value?.protocol || props.tab.protocol || "").toLowerCase());
+const showReusable = computed(() => shouldShowConnectionTokenReuse(connectionTokenReusable.value, token.value?.id));
+const showDatabaseHelp = computed(() => isDatabaseGuideProtocol(protocol.value));
 const host = computed(() => String(endpoint.value.host || ""));
 const port = computed(() =>
   String(
@@ -76,33 +89,16 @@ const rows = computed(() => {
 });
 
 const commandValues = computed(() => {
-  const id = token.value.id;
-  const secret = token.value.value;
-  const target = host.value;
-  const targetPort = port.value;
-  const db = database.value;
-
-  switch (protocol.value) {
-    case "ssh":
-      return [`ssh JMS-${id}@${target}${targetPort === "22" ? "" : ` -p ${targetPort}`}`];
-    case "vnc":
-      return [`vncviewer -UserName=${id} ${target}:${targetPort || "5900"}`];
-    case "mysql":
-    case "mariadb":
-      return [`mysql -u ${id} -p${secret} -h ${target} -P ${targetPort} ${db}`];
-    case "postgresql":
-      return [`psql "user=${id} password=${secret} host=${target} dbname=${db} port=${targetPort}"`];
-    case "redis":
-      return [`redis-cli -h ${target} -p ${targetPort} -a ${password.value}`];
-    case "oracle":
-      return [`sqlplus ${id}/${secret}@${target}:${targetPort}/${id}`];
-    case "sqlserver":
-      return [`sqlcmd -S ${target},${targetPort} -U ${id} -P ${secret} -d ${db}`];
-    case "mongodb":
-      return [`mongosh mongodb://${id}:${secret}@${target}:${targetPort}/${db}`];
-    default:
-      return [];
-  }
+  const value = getGuideConnectCommand({
+    protocol: protocol.value,
+    id: token.value.id,
+    secret: token.value.value,
+    host: host.value,
+    port: port.value,
+    database: database.value,
+    redisAuth: password.value
+  });
+  return value ? [value] : [];
 });
 
 const commands = computed(() => {
@@ -136,6 +132,37 @@ async function copy(value: unknown) {
   toast.add({ title: t("Common.CopySuccess"), color: "success", duration: 1200 });
 }
 
+watch(
+  () => token.value?.is_reusable,
+  (value) => {
+    if (!reusableUpdating.value && value !== undefined) reusable.value = Boolean(value);
+  },
+  { immediate: true }
+);
+
+async function setReusable(nextValue: boolean) {
+  const current = token.value;
+  if (reusableUpdating.value || !current?.id || nextValue === reusable.value) return;
+
+  reusable.value = nextValue;
+  reusableUpdating.value = true;
+  try {
+    const result = await setConnectionTokenReusable(current.id, nextValue);
+    applyConnectionTokenReuse(current, result);
+    reusable.value = Boolean(current.is_reusable);
+  } catch (error) {
+    reusable.value = !nextValue;
+    current.is_reusable = !nextValue;
+    toast.add({
+      title: resolveConnectionTokenReuseError(error, (key) => t(key)),
+      color: "error",
+      duration: 2000
+    });
+  } finally {
+    reusableUpdating.value = false;
+  }
+}
+
 onMounted(async () => {
   try {
     await Promise.all([
@@ -146,6 +173,13 @@ onMounted(async () => {
       }).then((value) => {
         endpoint.value = value;
       }),
+      getPublicSettings()
+        .then((settings) => {
+          connectionTokenReusable.value = settings.CONNECTION_TOKEN_REUSABLE === true;
+        })
+        .catch(() => {
+          connectionTokenReusable.value = false;
+        }),
       protocol.value === "ssh"
         ? getUserProfile()
             .then((profile) => {
@@ -199,7 +233,7 @@ onMounted(async () => {
                   <tr
                     v-for="row in rows"
                     :key="row.name"
-                    class="group border-b border-[var(--workspace-surface-border)] transition-colors last:border-b-0 hover:bg-[var(--app-hover-soft)] focus-within:bg-[var(--app-hover-soft)]"
+                    class="group border-b border-[var(--workspace-surface-border)] transition-colors hover:bg-[var(--app-hover-soft)] focus-within:bg-[var(--app-hover-soft)]"
                   >
                     <th
                       class="w-28 bg-[var(--workspace-surface-sub-header)] px-4 py-2.5 text-left text-xs font-medium tracking-wide text-[var(--app-muted)] sm:w-40 sm:px-5"
@@ -231,6 +265,42 @@ onMounted(async () => {
                           @click="copy(row.value)"
                         />
                       </div>
+                    </td>
+                  </tr>
+                  <tr
+                    v-if="showReusable"
+                    class="border-[var(--workspace-surface-border)] transition-colors hover:bg-[var(--app-hover-soft)] focus-within:bg-[var(--app-hover-soft)]"
+                    :class="showDatabaseHelp ? 'border-b' : ''"
+                  >
+                    <th
+                      class="w-28 bg-[var(--workspace-surface-sub-header)] px-4 py-2.5 text-left text-xs font-medium tracking-wide text-[var(--app-muted)] sm:w-40 sm:px-5"
+                    >
+                      {{ t("ConnectionGuide.SetReusable") }}
+                    </th>
+                    <td class="min-w-0 bg-[var(--app-surface-panel-strong)] px-3 py-2 text-[var(--app-fg)] sm:px-5">
+                      <div class="flex min-h-7 items-center gap-3">
+                        <USwitch
+                          :model-value="reusable"
+                          :disabled="reusableUpdating"
+                          :aria-label="t('ConnectionGuide.SetReusable')"
+                          @update:model-value="setReusable"
+                        />
+                        <span class="text-xs leading-5 text-[var(--app-muted)]">
+                          {{ t("ConnectionGuide.ReusableHint") }}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="showDatabaseHelp">
+                    <th
+                      class="w-28 bg-[var(--workspace-surface-sub-header)] px-4 py-2.5 text-left text-xs font-medium tracking-wide text-[var(--app-muted)] sm:w-40 sm:px-5"
+                    >
+                      {{ t("ConnectionGuide.HelpText") }}
+                    </th>
+                    <td class="min-w-0 bg-[var(--app-surface-panel-strong)] px-3 py-2 text-[var(--app-fg)] sm:px-5">
+                      <p class="text-xs leading-5 text-[var(--app-muted)]">
+                        {{ t("ConnectionGuide.DatabaseTokenHelp") }}
+                      </p>
                     </td>
                   </tr>
                 </tbody>

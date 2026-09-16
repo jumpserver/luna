@@ -1141,7 +1141,12 @@
     "ExpireTime": "有効期限",
     "ShowPassword": "パスワードを表示",
     "ConnectCommand": "接続コマンドライン",
-    "CopyCommand": "コマンドをコピー"
+    "CopyCommand": "コマンドをコピー",
+    "SetReusable": "再利用を設定",
+    "ReusableHint": "有効にすると、この接続情報を長時間繰り返し利用できます",
+    "TokenExpired": "トークンの有効期限が切れました",
+    "HelpText": "ヘルプ",
+    "DatabaseTokenHelp": "クライアントが接続するデータベース種類のトークンはコンポーネントによって5分間キャッシュされます。つまり、トークンは使用後すぐに無効になるのではなく、クライアント切断から5分後に無効になります"
   },
   "UserProfile": {
     "ViewDetails": "ユーザー詳細を表示",

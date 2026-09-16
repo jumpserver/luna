@@ -1,12 +1,14 @@
 export function resolveAdvancedOptionFlags(input: {
   protocol?: string;
   component?: string;
+  connectMethod?: string;
   hasXPack?: boolean;
   connectionTokenReusable?: boolean;
   appletConnectMethod?: string;
 }) {
   const protocol = (input.protocol || "").trim().toLowerCase();
   const component = (input.component || "").trim().toLowerCase();
+  const connectMethod = (input.connectMethod || "").trim().toLowerCase();
   const charset = protocol === "ssh" || protocol === "telnet";
   const backspace = !component || component === "koko";
   const disableAutoHash = protocol === "mysql" || protocol === "mariadb";
@@ -16,6 +18,8 @@ export function resolveAdvancedOptionFlags(input: {
   const reusable =
     input.connectionTokenReusable === true &&
     (component === "razor" || (component === "tinker" && input.appletConnectMethod === "client"));
+  const tokenReusable =
+    input.connectionTokenReusable === true && component === "magnus" && connectMethod === "db_client";
   const sysdba = protocol === "oracle";
   const applet = input.hasXPack === true && component === "tinker";
   const virtualapp = input.hasXPack === true && component === "panda";
@@ -28,6 +32,7 @@ export function resolveAdvancedOptionFlags(input: {
     remoteMicrophone,
     rdpConnectionSpeed,
     reusable,
+    tokenReusable,
     sysdba,
     applet,
     virtualapp,
@@ -40,6 +45,7 @@ export function resolveAdvancedOptionFlags(input: {
       applet ||
       virtualapp ||
       reusable ||
+      tokenReusable ||
       rdpConnectionSpeed
   };
 }

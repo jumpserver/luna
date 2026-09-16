@@ -1144,7 +1144,12 @@
     "ExpireTime": "过期时间",
     "ShowPassword": "显示密码",
     "ConnectCommand": "连接命令",
-    "CopyCommand": "复制命令"
+    "CopyCommand": "复制命令",
+    "SetReusable": "开启复用",
+    "ReusableHint": "开启后该连接信息可长时间多次使用",
+    "TokenExpired": "Token 已过期, 请重新连接",
+    "HelpText": "说明",
+    "DatabaseTokenHelp": "数据库类型 token 会缓存 5 分钟，也就是说 token 使用后，不会立刻失效，而是客户端断开 5 分钟后，这个 token 才会完全失效"
   },
   "UserProfile": {
     "ViewDetails": "查看用户详情",

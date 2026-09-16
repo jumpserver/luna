@@ -8,7 +8,8 @@ import {
   getConnectionRdpFile,
   getLunaPreferences,
   getPublicSettings,
-  invalidatePersonalAssetCredentialCache
+  invalidatePersonalAssetCredentialCache,
+  setConnectionTokenReusable
 } from "~/composables/useApiRequest";
 import {
   canDownloadRdpFile,
@@ -587,6 +588,9 @@ export const useAssetAction = () => {
         (isDesktopRuntime() && !["applet", "virtual_app"].includes(String(method?.type || "").toLowerCase())) ||
         isExternalClientConnectMethod(body.connect_method, allMethods[body.protocol] || [], body.connect_options)
       ) {
+        if (body.connect_options?.token_reusable) {
+          Object.assign(token, await setConnectionTokenReusable(token.id, true));
+        }
         const { url } = await getLocalClientUrl(token.id, buildLocalRdpParams(body.connect_options));
         const localClientUrl = url || "";
         if (!localClientUrl.startsWith("jms2://")) {

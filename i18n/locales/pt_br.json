@@ -1141,7 +1141,12 @@
     "ExpireTime": "Hora de expiração",
     "ShowPassword": "Mostrar senha",
     "ConnectCommand": "Linha de comando de conexão",
-    "CopyCommand": "Copiar comando"
+    "CopyCommand": "Copiar comando",
+    "SetReusable": "Definir reutilização",
+    "ReusableHint": "Depois de ativar, estas informações de conexão podem ser reutilizadas por muito tempo",
+    "TokenExpired": "O token expirou",
+    "HelpText": "Texto de ajuda",
+    "DatabaseTokenHelp": "O token de banco de dados usado pelo cliente fica em cache por 5 minutos; ele não expira imediatamente após o uso, mas sim cinco minutos depois que o cliente se desconecta"
   },
   "UserProfile": {
     "ViewDetails": "Ver detalhes do usuário",

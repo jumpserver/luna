@@ -83,4 +83,42 @@ describe("resolveAdvancedOptionFlags", () => {
     expect(flags.backspace).toBe(true);
     expect(flags.show).toBe(true);
   });
+
+  it("shows Magnus db_client token reuse without changing Razor/Tinker reusable", () => {
+    expect(
+      resolveAdvancedOptionFlags({
+        protocol: "mysql",
+        component: "magnus",
+        connectMethod: "db_client",
+        connectionTokenReusable: true
+      })
+    ).toMatchObject({ tokenReusable: true, reusable: false, show: true });
+    expect(
+      resolveAdvancedOptionFlags({
+        protocol: "rdp",
+        component: "razor",
+        connectMethod: "mstsc",
+        hasXPack: true,
+        connectionTokenReusable: true
+      })
+    ).toMatchObject({ tokenReusable: false, reusable: true });
+    expect(
+      resolveAdvancedOptionFlags({
+        protocol: "http",
+        component: "tinker",
+        connectMethod: "http",
+        appletConnectMethod: "client",
+        hasXPack: true,
+        connectionTokenReusable: true
+      })
+    ).toMatchObject({ tokenReusable: false, reusable: true });
+    expect(
+      resolveAdvancedOptionFlags({
+        protocol: "mysql",
+        component: "magnus",
+        connectMethod: "web_gui",
+        connectionTokenReusable: true
+      })
+    ).toMatchObject({ tokenReusable: false });
+  });
 });

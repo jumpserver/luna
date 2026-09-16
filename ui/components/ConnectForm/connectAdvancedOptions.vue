@@ -6,12 +6,14 @@ const props = withDefaults(
   defineProps<{
     protocol: string;
     component?: string;
+    connectMethod?: string;
     hasXPack?: boolean;
     appletClientEnabled?: boolean;
     connectionTokenReusable?: boolean;
   }>(),
   {
     component: "",
+    connectMethod: "",
     hasXPack: false,
     appletClientEnabled: false,
     connectionTokenReusable: false
@@ -27,6 +29,7 @@ const flags = computed(() =>
   resolveAdvancedOptionFlags({
     protocol: props.protocol,
     component: props.component,
+    connectMethod: props.connectMethod,
     hasXPack: props.hasXPack,
     connectionTokenReusable: props.connectionTokenReusable,
     appletConnectMethod: connectOptions.value.appletConnectMethod
@@ -100,6 +103,10 @@ const selectedReusable = computed<boolean>({
   get: () => !!connectOptions.value.reusable,
   set: (value) => updateConnectOption("reusable", !!value)
 });
+const selectedTokenReusable = computed<boolean>({
+  get: () => !!connectOptions.value.token_reusable,
+  set: (value) => updateConnectOption("token_reusable", !!value)
+});
 const selectedRdpConnectionSpeed = computed<RdpGraphics["rdp_connection_speed"]>({
   get: () => connectOptions.value.rdp_connection_speed || "auto",
   set: (value) => updateConnectOption("rdp_connection_speed", value || "auto")
@@ -168,6 +175,11 @@ watch(
           <div v-if="flags.sysdba" class="flex items-center justify-between">
             <span class="text-sm">SYSDBA</span>
             <USwitch v-model="selectedUseSysDBA" />
+          </div>
+
+          <div v-if="flags.tokenReusable" class="flex items-center justify-between">
+            <span class="text-sm">{{ t("ConnectionGuide.SetReusable") }}</span>
+            <USwitch v-model="selectedTokenReusable" />
           </div>
 
           <UFormField v-if="flags.applet" :label="t('EditModal.AppletConnectMethod')" :ui="formFieldUi" size="sm">

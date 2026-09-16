@@ -538,6 +538,8 @@ export interface TokenResponse {
   value: string;
 }
 
+export type ConnectionTokenReuseResponse = Pick<TokenResponse, "id" | "date_expired" | "is_reusable">;
+
 export interface UserSettingPersistedState {
   language: LanguagePreference;
   collapse: boolean;

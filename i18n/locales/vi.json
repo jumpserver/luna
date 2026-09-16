@@ -1141,7 +1141,12 @@
     "ExpireTime": "Thời gian hết hạn",
     "ShowPassword": "Hiện mật khẩu",
     "ConnectCommand": "Dòng lệnh kết nối",
-    "CopyCommand": "Sao chép lệnh"
+    "CopyCommand": "Sao chép lệnh",
+    "SetReusable": "Bật tái sử dụng",
+    "ReusableHint": "Sau khi bật, thông tin kết nối này có thể được dùng lại trong thời gian dài",
+    "TokenExpired": "Token đã hết hạn",
+    "HelpText": "Văn bản trợ giúp",
+    "DatabaseTokenHelp": "Token cơ sở dữ liệu mà máy khách kết nối sẽ được thành phần lưu cache 5 phút; token không hết hạn ngay sau khi dùng, mà sau 5 phút kể từ khi máy khách ngắt kết nối"
   },
   "UserProfile": {
     "ViewDetails": "Xem chi tiết người dùng",

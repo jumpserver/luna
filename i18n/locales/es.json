@@ -1141,7 +1141,12 @@
     "ExpireTime": "Hora de caducidad",
     "ShowPassword": "Mostrar contraseña",
     "ConnectCommand": "Línea de comandos de conexión",
-    "CopyCommand": "Copiar comando"
+    "CopyCommand": "Copiar comando",
+    "SetReusable": "Permitir reutilización",
+    "ReusableHint": "Tras activarlo, esta información de conexión se puede reutilizar durante mucho tiempo",
+    "TokenExpired": "El token ha caducado",
+    "HelpText": "Texto de ayuda",
+    "DatabaseTokenHelp": "El token de base de datos que usa el cliente se almacena en caché 5 minutos; no caduca al usarse, sino 5 minutos después de que el cliente se desconecte"
   },
   "UserProfile": {
     "ViewDetails": "Ver detalles del usuario",
