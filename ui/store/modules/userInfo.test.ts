@@ -1,11 +1,13 @@
 import type { SiteUserData } from "./userInfo";
 import { createPinia, setActivePinia } from "pinia";
+import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createApp } from "vue";
 import { useUserInfoStore } from "./userInfo";
 
-const { desktopInvoke, runtime } = vi.hoisted(() => {
+const { desktopInvoke, runtime, storage } = vi.hoisted(() => {
   const memory = new Map<string, string>();
-  vi.stubGlobal("localStorage", {
+  const storage = {
     getItem: (key: string) => memory.get(key) ?? null,
     setItem: (key: string, value: string) => {
       memory.set(key, value);
@@ -14,8 +16,9 @@ const { desktopInvoke, runtime } = vi.hoisted(() => {
       memory.delete(key);
     },
     clear: () => memory.clear()
-  });
-  return { desktopInvoke: vi.fn(), runtime: { desktop: true } };
+  };
+  vi.stubGlobal("localStorage", storage);
+  return { desktopInvoke: vi.fn(), runtime: { desktop: true }, storage };
 });
 
 vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke }));
@@ -45,6 +48,81 @@ const siteUser = (accountId: string, site: string): SiteUserData => ({
   connectionPreferenceMap: {},
   protocolConnectionPreferenceMap: {},
   rdpClientOption: {}
+});
+
+describe.each([true, false])("saved RDP resolution (desktop: %s)", (desktop) => {
+  const selection = () => ({
+    protocol: "rdp",
+    username: "Administrator",
+    connectMethod: "mstsc",
+    connectOptions: { resolution: "1920x1080", remote_microphone: true, reusable: true }
+  });
+
+  beforeEach(() => {
+    runtime.desktop = desktop;
+    storage.clear();
+    const pinia = createPinia().use(piniaPluginPersistedstate);
+    createApp({}).use(pinia);
+    setActivePinia(pinia);
+  });
+
+  afterEach(() => {
+    runtime.desktop = true;
+    storage.clear();
+  });
+
+  it("keeps resolution for the current attempt without saving it as an asset default", () => {
+    const store = useUserInfoStore();
+    store.currentAccountId = "account";
+    store.userMap.account = siteUser("account", "https://example.com");
+    const current = selection();
+
+    store.setConnectionInfoForAsset("asset", current);
+    store.setConnectionPreferenceForAsset("asset", current);
+    // Later preference updates also merge the stored options.
+    store.setConnectionPreferenceForAsset("asset", { connectMethod: "web_gui" });
+
+    expect(current.connectOptions.resolution).toBe("1920x1080");
+    for (const saved of [
+      store.getConnectionInfoForAsset("asset"),
+      store.getConnectionPreferenceForAsset("asset"),
+      store.currentConnectionInfoMap.asset,
+      store.currentConnectionPreferenceMap.asset
+    ]) {
+      expect(saved?.connectOptions).toEqual({ remote_microphone: true, reusable: true });
+      expect(saved?.username).toBe("Administrator");
+    }
+  });
+
+  it("removes old resolution snapshots from restored accounts and connection caches", () => {
+    const user = {
+      ...siteUser("account", "https://example.com"),
+      connectionInfo: selection(),
+      connectionInfoMap: { asset: selection() },
+      connectionPreferenceMap: { asset: selection() }
+    };
+    storage.setItem(
+      "userInfoV2",
+      JSON.stringify({
+        currentAccountId: "account",
+        currentUser: user,
+        userMap: { account: user, inactive: { ...user, accountId: "inactive" } },
+        currentConnectionInfoMap: user.connectionInfoMap,
+        currentConnectionPreferenceMap: user.connectionPreferenceMap
+      })
+    );
+
+    const store = useUserInfoStore();
+    expect(store.getConnectionInfoForAsset("asset")?.connectOptions).toEqual({
+      remote_microphone: true,
+      reusable: true
+    });
+    expect(store.getConnectionPreferenceForAsset("asset")?.connectOptions).not.toHaveProperty("resolution");
+    expect(store.currentConnectionInfoMap.asset?.connectOptions).not.toHaveProperty("resolution");
+    expect(store.currentConnectionPreferenceMap.asset?.connectOptions).not.toHaveProperty("resolution");
+    expect(storage.getItem("userInfoV2")).not.toContain('"resolution"');
+    expect(store.userMap.inactive?.connectionInfoMap?.asset?.connectOptions?.remote_microphone).toBe(true);
+  });
 });
 
 describe("setCurrentAccount session order", () => {

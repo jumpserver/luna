@@ -25,10 +25,17 @@ const enforceOrganizationLicense = (userData: UserData) => {
   userData.org = { ...getDefaultOrganization(userData.availableOrgs || []), comment: "" };
 };
 
-const clearManualPassword = (connectionInfo?: ConnectionInfo | null) => {
-  if (!connectionInfo || !("manualPassword" in connectionInfo)) return;
-  delete connectionInfo.manualPassword;
-  if (connectionInfo.accountMode === "manual") connectionInfo.rememberSecret = false;
+const normalizeStoredConnection = (connectionInfo?: ConnectionInfo | ConnectionPreferenceInfo | null) => {
+  if (!connectionInfo) return;
+  if ("manualPassword" in connectionInfo) {
+    delete connectionInfo.manualPassword;
+    if (connectionInfo.accountMode === "manual") connectionInfo.rememberSecret = false;
+  }
+  // Resolution is a per-attempt override. Remembered assets must follow the current settings.
+  if (connectionInfo.protocol?.trim().toLowerCase() === "rdp" && connectionInfo.connectOptions) {
+    const { resolution: _resolution, ...options } = connectionInfo.connectOptions;
+    connectionInfo.connectOptions = options;
+  }
 };
 
 const areConnectionInfoValuesEqual = (left: unknown, right: unknown): boolean => {
@@ -53,20 +60,23 @@ const areConnectionInfoValuesEqual = (left: unknown, right: unknown): boolean =>
   );
 };
 
-const clearManualPasswords = (state: {
+const normalizeStoredConnections = (state: {
   userMap?: Record<string, SiteUserData>;
   currentUser?: SiteUserData | null;
   currentConnectionInfoMap?: Record<string, ConnectionInfo>;
+  currentConnectionPreferenceMap?: Record<string, ConnectionPreferenceInfo>;
 }) => {
   const clearSite = (site?: SiteUserData | null) => {
     if (!site) return;
-    clearManualPassword(site.connectionInfo);
-    Object.values(site.connectionInfoMap || {}).forEach(clearManualPassword);
+    normalizeStoredConnection(site.connectionInfo);
+    Object.values(site.connectionInfoMap || {}).forEach(normalizeStoredConnection);
+    Object.values(site.connectionPreferenceMap || {}).forEach(normalizeStoredConnection);
   };
 
   Object.values(state.userMap || {}).forEach(clearSite);
   clearSite(state.currentUser);
-  Object.values(state.currentConnectionInfoMap || {}).forEach(clearManualPassword);
+  Object.values(state.currentConnectionInfoMap || {}).forEach(normalizeStoredConnection);
+  Object.values(state.currentConnectionPreferenceMap || {}).forEach(normalizeStoredConnection);
 };
 
 // 其实应该叫做 accountInfoStore 比较好
@@ -326,7 +336,9 @@ export const useUserInfoStore = defineStore(
         return;
       }
 
-      currentUser.value.connectionInfo = connectionInfo;
+      const next = { ...connectionInfo };
+      normalizeStoredConnection(next);
+      currentUser.value.connectionInfo = next;
     };
 
     /**
@@ -391,7 +403,7 @@ export const useUserInfoStore = defineStore(
         ...connectionInfo,
         ...(mergedProtocols && mergedProtocols.length > 0 ? { availableProtocols: mergedProtocols } : {})
       };
-      clearManualPassword(nextConnectionInfo);
+      normalizeStoredConnection(nextConnectionInfo);
       if (existing && areConnectionInfoValuesEqual(existing, nextConnectionInfo)) return;
       siteData.connectionInfoMap[assetId] = nextConnectionInfo;
 
@@ -441,6 +453,7 @@ export const useUserInfoStore = defineStore(
         ...preference,
         ...(mergedProtocols && mergedProtocols.length > 0 ? { availableProtocols: mergedProtocols } : {})
       };
+      normalizeStoredConnection(siteData.connectionPreferenceMap[assetId]);
 
       currentConnectionPreferenceMap.value = { ...siteData.connectionPreferenceMap };
     };
@@ -518,7 +531,7 @@ export const useUserInfoStore = defineStore(
       key: "userInfoV2",
       storage: localStorage,
       afterHydrate: ({ store }) => {
-        clearManualPasswords(store.$state as Parameters<typeof clearManualPasswords>[0]);
+        normalizeStoredConnections(store.$state as Parameters<typeof normalizeStoredConnections>[0]);
         store.$persist();
       },
       pick: [

@@ -35,17 +35,24 @@ const handleToggleAi = () => {
       <UTooltip v-if="showAiButton" arrow :text="aiButtonLabel">
         <UButton
           data-ai-context="preserve"
-          icon="i-lucide-sparkles"
           :aria-label="aiButtonLabel"
           :aria-pressed="aiPanelOpen"
           :disabled="!workspaceAiEnabled"
           size="sm"
           color="neutral"
           variant="ghost"
+          class="ai-launcher"
           :class="[headerIconButtonClass, aiPanelOpen ? headerIconButtonActiveClass : '']"
-          :ui="{ leadingIcon: 'm-0 size-4' }"
           @click="handleToggleAi"
-        />
+        >
+          <template #leading>
+            <span class="relative block size-4.5" aria-hidden="true">
+              <UIcon name="i-lucide-sparkle" class="absolute inset-0 size-4.5" />
+              <UIcon name="i-lucide-sparkle" class="ai-launcher-twinkle absolute right-0 top-0 size-1.5" />
+              <UIcon name="i-lucide-sparkle" class="ai-launcher-twinkle absolute bottom-0 left-0 size-1.5" />
+            </span>
+          </template>
+        </UButton>
       </UTooltip>
 
       <Profile v-if="props.showProfile" />
@@ -66,3 +73,24 @@ const handleToggleAi = () => {
     </div>
   </section>
 </template>
+
+<style scoped>
+@media (prefers-reduced-motion: no-preference) {
+  .ai-launcher:not(:disabled):hover .ai-launcher-twinkle,
+  .ai-launcher:not(:disabled):focus-visible .ai-launcher-twinkle {
+    animation: ai-star-twinkle 600ms ease-in-out;
+  }
+}
+
+@keyframes ai-star-twinkle {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.9);
+  }
+}
+</style>
