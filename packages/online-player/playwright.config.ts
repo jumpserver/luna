@@ -20,6 +20,7 @@ export default defineConfig({
   use: {
     baseURL: `${origin}/luna/`,
     browserName: "chromium",
+    channel: process.env.REPLAY_E2E_BROWSER_CHANNEL || undefined,
     headless: true,
     locale: "en-US",
     screenshot: "only-on-failure",

@@ -95,6 +95,8 @@ describe("shouldShowReplayRail", () => {
     expect(shouldShowReplayRail({ isParts: true })).toBe(true);
     expect(shouldShowReplayRail({ commandCount: 0, commandsLoading: false })).toBe(false);
     expect(shouldShowReplayRail({ commandCount: 0, commandsError: true })).toBe(true);
+    expect(shouldShowReplayRail({ indexAvailable: true })).toBe(true);
+    expect(shouldShowReplayRail({ indexLoading: true })).toBe(true);
   });
 });
 
@@ -102,6 +104,7 @@ describe("initialRailTab", () => {
   it("opens playlist first for parts sessions", () => {
     expect(initialRailTab(true)).toBe("parts");
     expect(initialRailTab(false)).toBe("commands");
+    expect(initialRailTab(false, true)).toBe("index");
   });
 });
 

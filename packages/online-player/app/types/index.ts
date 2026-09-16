@@ -35,6 +35,32 @@ export interface ReplayCommand {
   offsetMs: number;
 }
 
+export interface ReplayIndexEvent {
+  ordinal: number;
+  kind: string;
+  replay_ms: number;
+  part_index: number;
+  local_ms: number;
+  // Optional in v1 sidecars. False keeps OCR searchable without cluttering the timeline.
+  timeline_marker?: boolean;
+  timeline_reason?: string;
+  ocr: {
+    text: string;
+    delta_text: string;
+    removed_text?: string;
+    confidence: number;
+  };
+}
+
+export interface ReplayIndex {
+  schema: "jumpserver.recording-index";
+  version: 1;
+  session: { id: string };
+  source: { duration_ms: number; part_count: number };
+  event_count: number;
+  events: ReplayIndexEvent[];
+}
+
 export interface ReplayPartFile {
   duration: number;
   end: number;
@@ -54,6 +80,7 @@ export interface ReplayPartItem extends Replay {
   name: string;
   sizeLabel: string;
   durationLabel: string;
+  partIndex: number;
 }
 
 export interface ReplayWatermarkSettings {

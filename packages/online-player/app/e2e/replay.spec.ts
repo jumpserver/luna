@@ -65,6 +65,9 @@ async function installReplayBackend(
     guacamoleDelayMs?: number;
     guacamoleBody?: string;
     castBody?: string;
+    index?: unknown;
+    indexStatus?: number;
+    mp4Parts?: boolean;
   }
 ) {
   await page.route("**/mock.cast", (route) =>
@@ -102,7 +105,7 @@ async function installReplayBackend(
       body: Buffer.from(gzipSync(strToU8(extra?.guacamoleBody || GUACAMOLE_BODY)))
     });
   });
-  await page.route("**/mock.mp4", (route) =>
+  await page.route("**/mock.mp4*", (route) =>
     route.fulfill({
       status: 200,
       contentType: "video/mp4",
@@ -143,6 +146,20 @@ async function installReplayBackend(
       })
     })
   );
+  await page.route("**/mock.mp4.replay.json", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: "sid-1",
+        type: "mp4",
+        files: [
+          { name: "session.0.part.mp4", size: 1280, duration: 80_000, start: 0, end: 80_000 },
+          { name: "session.1.part.mp4", size: 1280, duration: 40_000, start: 80_000, end: 120_000 }
+        ]
+      })
+    })
+  );
 
   await page.route("**/api/v1/**", async (route) => {
     const { pathname, searchParams } = new URL(route.request().url());
@@ -152,28 +169,45 @@ async function installReplayBackend(
       body = { SECURITY_WATERMARK_ENABLED: false };
     } else if (pathname.includes("/users/profile/")) {
       body = { name: "Replay Tester", username: "replay" };
+    } else if (/\/terminal\/sessions\/[^/]+\/replay-index\/?$/.test(pathname)) {
+      await route.fulfill({
+        status: extra?.indexStatus || (extra?.index ? 200 : 404),
+        contentType: "application/json",
+        body: JSON.stringify(extra?.index || { detail: "No recording index" })
+      });
+      return;
     } else if (/\/terminal\/sessions\/[^/]+\/replay\/?$/.test(pathname)) {
       const partFilename = searchParams.get("part_filename");
       if (partFilename) {
-        body = partFilename.endsWith(".part.gz")
-          ? {
-              id: "sid-1",
-              type: "guacamole",
-              src: "/mock.part.gz",
-              user: "alice",
-              asset: "windows-prod-01",
-              account: "administrator",
-              date_start: "2026-08-20T14:32:00.000Z"
-            }
-          : {
-              id: "sid-1",
-              type: "asciicast",
-              src: "/mock.cast",
-              user: "alice",
-              asset: "web-prod-01",
-              account: "root",
-              date_start: "2026-08-20T14:32:00.000Z"
-            };
+        body =
+          extra?.mp4Parts && partFilename.endsWith(".part.mp4")
+            ? {
+                id: "sid-1",
+                type: "mp4",
+                src: `/mock.mp4?part=${partFilename}`,
+                user: "alice",
+                asset: "windows-prod-01",
+                account: "administrator"
+              }
+            : partFilename.endsWith(".part.gz")
+              ? {
+                  id: "sid-1",
+                  type: "guacamole",
+                  src: "/mock.part.gz",
+                  user: "alice",
+                  asset: "windows-prod-01",
+                  account: "administrator",
+                  date_start: "2026-08-20T14:32:00.000Z"
+                }
+              : {
+                  id: "sid-1",
+                  type: "asciicast",
+                  src: "/mock.cast",
+                  user: "alice",
+                  asset: "web-prod-01",
+                  account: "root",
+                  date_start: "2026-08-20T14:32:00.000Z"
+                };
       } else {
         body = extra?.parts
           ? {
@@ -220,6 +254,56 @@ async function installReplayBackend(
 async function openReplay(page: Page, path: string) {
   await page.goto(path);
   await expect(page.locator("[data-replay-root]")).toBeVisible({ timeout: 20_000 });
+}
+
+async function mockMp4Seekability(page: Page, duration: number, position: number, seekableEnd: number) {
+  const video = page.locator(".replay-frame video");
+  await video.evaluate(
+    (element, options) => {
+      const mock = element as HTMLVideoElement & { mockSeekableEnd: number; mockReloads: number };
+      mock.mockSeekableEnd = options.seekableEnd;
+      mock.mockReloads = 0;
+      Object.defineProperty(mock, "duration", { configurable: true, value: options.duration });
+      Object.defineProperty(mock, "currentTime", { configurable: true, writable: true, value: options.position });
+      Object.defineProperty(mock, "readyState", { configurable: true, value: 4 });
+      Object.defineProperty(mock, "buffered", {
+        configurable: true,
+        get: () => ({ length: 1, start: () => 0, end: () => options.duration })
+      });
+      Object.defineProperty(mock, "seekable", {
+        configurable: true,
+        get: () => ({ length: 1, start: () => 0, end: () => mock.mockSeekableEnd })
+      });
+      Object.defineProperty(mock, "load", {
+        configurable: true,
+        value: () => {
+          mock.mockReloads += 1;
+        }
+      });
+      mock.dispatchEvent(new Event("loadedmetadata"));
+      mock.dispatchEvent(new Event("timeupdate"));
+    },
+    { duration, position, seekableEnd }
+  );
+  return video;
+}
+
+function indexWithTimes(sessionId: string, times: number[]) {
+  return {
+    schema: "jumpserver.recording-index",
+    version: 1,
+    session: { id: sessionId },
+    source: { duration_ms: 59_938, part_count: 1 },
+    event_count: times.length,
+    events: times.map((replayMs, ordinal) => ({
+      ordinal,
+      kind: "screen_text",
+      replay_ms: replayMs,
+      part_index: 0,
+      local_ms: replayMs,
+      ocr: { text: `Event at ${replayMs}`, delta_text: `Event at ${replayMs}`, confidence: 95 }
+    }))
+  };
 }
 
 test.describe("online session replay", () => {
@@ -652,6 +736,323 @@ test.describe("online session replay", () => {
     const controlsBox = await controls.boundingBox();
     expect(frameBox && controlsBox).toBeTruthy();
     expect(frameBox!.y + frameBox!.height).toBeLessThanOrEqual(controlsBox!.y + 1);
+  });
+
+  test("searches OCR evidence and seeks to exact indexed time", async ({ page }) => {
+    await installReplayBackend(
+      page,
+      { type: "mp4", src: "/mock.mp4", asset: "windows-prod-01" },
+      {
+        index: {
+          schema: "jumpserver.recording-index",
+          version: 1,
+          session: { id: "sid-mp4-index" },
+          source: { duration_ms: 121_965, part_count: 1 },
+          event_count: 2,
+          events: [
+            {
+              ordinal: 0,
+              kind: "screen_text",
+              replay_ms: 1842,
+              part_index: 0,
+              local_ms: 1842,
+              timeline_marker: false,
+              timeline_reason: "dense_browser_text",
+              ocr: { text: "Edge | Example article content", delta_text: "Example article content", confidence: 95 }
+            },
+            {
+              ordinal: 1,
+              kind: "screen_text",
+              replay_ms: 84_900,
+              part_index: 0,
+              local_ms: 84_900,
+              ocr: { text: "RDP recording and index validation", delta_text: "index validation", confidence: 96 }
+            }
+          ]
+        }
+      }
+    );
+    await openReplay(page, "/replay/sid-mp4-index");
+
+    await expect(page.locator("[data-replay-rail]")).toBeVisible();
+    await expect(page.locator("[data-rail-tab=index]")).toBeVisible();
+    await expect(page.locator("[data-replay-index-events] .replay-index-event")).toHaveCount(2);
+    await expect(page.locator("[data-replay-rail]")).toContainText(/OCR observations|OCR 观察/);
+
+    const video = await mockMp4Seekability(page, 122, 0, 122);
+    await expect(page.locator(".replay-index-marker")).toHaveCount(1);
+
+    await page.locator("[data-replay-index-search]").fill("Example article");
+    await expect(page.locator("[data-replay-index-events] .replay-index-event")).toHaveCount(1);
+    await page.locator(".replay-index-event").click();
+    expect(await video.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBe(1.842);
+    await video.dispatchEvent("seeked");
+
+    await page.locator("[data-replay-index-search]").fill("RDP recording");
+    await expect(page.locator("[data-replay-index-events] .replay-index-event")).toHaveCount(1);
+    const indexedEvent = page.locator(".replay-index-event[data-replay-ms='84900']");
+    await expect(indexedEvent).toContainText("RDP recording");
+    await indexedEvent.click();
+    expect(await video.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBe(84.9);
+    await video.dispatchEvent("seeked");
+
+    await page.locator("[data-replay-index-search]").fill("missing phrase");
+    await expect(page.locator("[data-replay-index-empty]")).toBeVisible();
+    await page.locator("[data-replay-index-search]").fill("");
+    await page.locator(".replay-index-marker").last().click();
+    expect(await video.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBe(84.9);
+    await video.dispatchEvent("seeked");
+  });
+
+  test("waits for a real seekable range and honors the latest index selection", async ({ page }) => {
+    await installReplayBackend(
+      page,
+      { type: "mp4", src: "/mock.mp4" },
+      {
+        index: indexWithTimes("sid-seek-range", [20_000, 52_845])
+      }
+    );
+    await openReplay(page, "/replay/sid-seek-range");
+    const video = await mockMp4Seekability(page, 59.938, 10, 0);
+    const events = page.locator(".replay-index-event");
+    await expect(events).toHaveCount(2);
+
+    await events.first().click();
+    await expect(page.locator(".replay-seek")).toContainText(/Waiting for the recording|正在等待录像/);
+    await events.last().click();
+    await expect(page.locator(".replay-seek")).toBeVisible();
+    expect(await video.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBe(10);
+    await expect(page.locator(".replay-index-event.is-active")).toHaveCount(0);
+
+    await video.evaluate((element) => {
+      (element as HTMLVideoElement & { mockSeekableEnd: number }).mockSeekableEnd = 59.938;
+      element.dispatchEvent(new Event("progress"));
+    });
+    await expect.poll(() => video.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBe(52.845);
+    await expect(page.locator(".replay-index-event.is-active")).toHaveCount(0);
+    await video.dispatchEvent("seeked");
+    await expect(page.locator(".replay-seek")).toBeHidden();
+    await expect(events.last()).toHaveClass(/is-active/);
+    expect(await video.evaluate((element) => (element as HTMLVideoElement & { mockReloads: number }).mockReloads)).toBe(
+      0
+    );
+  });
+
+  test("does not accept a seeked event that bounced to zero and allows cancellation", async ({ page }) => {
+    await installReplayBackend(
+      page,
+      { type: "mp4", src: "/mock.mp4" },
+      {
+        index: indexWithTimes("sid-seek-bounce", [52_845])
+      }
+    );
+    await openReplay(page, "/replay/sid-seek-bounce");
+    const video = await mockMp4Seekability(page, 59.938, 10, 59.938);
+    await page.locator(".replay-index-event").click();
+    await expect.poll(() => video.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBe(52.845);
+    await video.evaluate((element) => {
+      (element as HTMLVideoElement).currentTime = 0;
+      element.dispatchEvent(new Event("seeked"));
+    });
+    await expect(page.locator(".replay-seek")).toBeVisible();
+    await expect(page.locator(".replay-index-event.is-active")).toHaveCount(0);
+    await page
+      .locator(".replay-seek")
+      .getByRole("button", { name: /Cancel|取消/ })
+      .click();
+    await expect(page.locator(".replay-seek")).toBeHidden();
+    await expect(page.locator(".replay-index-event.is-active")).toHaveCount(0);
+  });
+
+  test("reports an unavailable range instead of pretending the index jump succeeded", async ({ page }) => {
+    await installReplayBackend(
+      page,
+      { type: "mp4", src: "/mock.mp4" },
+      {
+        index: indexWithTimes("sid-seek-timeout", [52_845])
+      }
+    );
+    await openReplay(page, "/replay/sid-seek-timeout");
+    const video = await mockMp4Seekability(page, 59.938, 10, 0);
+    await page.locator(".replay-index-event").click();
+    await expect(page.locator(".replay-seek")).toBeVisible();
+    await expect(page.locator(".replay-stage")).toContainText(/not seekable yet|尚无法跳转/, { timeout: 16_000 });
+    await expect(page.locator(".replay-seek")).toBeHidden();
+    await expect(page.locator(".replay-index-event.is-active")).toHaveCount(0);
+    expect(await video.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBe(10);
+    expect(await video.evaluate((element) => (element as HTMLVideoElement & { mockReloads: number }).mockReloads)).toBe(
+      1
+    );
+  });
+
+  test("discards a deferred seek when the player is replaced", async ({ page }) => {
+    await installReplayBackend(
+      page,
+      { type: "mp4", src: "/mock.mp4" },
+      {
+        index: indexWithTimes("sid-seek-unmount", [52_845])
+      }
+    );
+    await openReplay(page, "/replay/sid-seek-unmount");
+    await mockMp4Seekability(page, 59.938, 10, 0);
+    await page.locator(".replay-index-event").click();
+    await expect(page.locator(".replay-seek")).toBeVisible();
+    await page.goto("/replay/sid-after-unmount");
+    await expect(page.locator(".replay-frame video")).toBeVisible();
+    const nextVideo = await mockMp4Seekability(page, 59.938, 0, 59.938);
+    await expect(page.locator(".replay-seek")).toBeHidden();
+    expect(await nextVideo.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBe(0);
+  });
+
+  test("leaves command replay working when no OCR index exists", async ({ page }) => {
+    await installReplayBackend(page, { type: "mp4", src: "/mock.mp4" });
+    await openReplay(page, "/replay/sid-no-index");
+    await expect(page.locator("[data-rail-tab=index]")).toHaveCount(0);
+    await page.locator("[data-replay-command-rail]").click();
+    await expect(page.locator("[data-replay-rail]")).toContainText("ls -la /var/www");
+  });
+
+  test("shows an empty index and a retryable index error", async ({ page }) => {
+    await installReplayBackend(
+      page,
+      { type: "mp4", src: "/mock.mp4" },
+      {
+        index: {
+          schema: "jumpserver.recording-index",
+          version: 1,
+          session: { id: "sid-empty-index" },
+          source: { duration_ms: 120_000, part_count: 1 },
+          event_count: 0,
+          events: []
+        }
+      }
+    );
+    await openReplay(page, "/replay/sid-empty-index");
+    await expect(page.locator("[data-replay-index-empty]")).toBeVisible();
+
+    await installReplayBackend(page, { type: "mp4", src: "/mock.mp4" }, { indexStatus: 503 });
+    await openReplay(page, "/replay/sid-index-error");
+    await expect(page.locator("[data-replay-index-error]")).toBeVisible();
+    await expect(
+      page.locator("[data-replay-index-error]").getByRole("button", { name: /Reload|重新加载/ })
+    ).toBeVisible();
+  });
+
+  test("maps a cross-segment index event to its part-local timestamp", async ({ page }) => {
+    await installReplayBackend(
+      page,
+      { type: "parts", src: "/mock.mp4.replay.json" },
+      {
+        parts: true,
+        mp4Parts: true,
+        manifestSrc: "/mock.mp4.replay.json",
+        index: {
+          schema: "jumpserver.recording-index",
+          version: 1,
+          session: { id: "sid-mp4-parts-index" },
+          source: { duration_ms: 120_000, part_count: 2 },
+          event_count: 1,
+          events: [
+            {
+              ordinal: 0,
+              kind: "screen_text",
+              replay_ms: 84_900,
+              part_index: 1,
+              local_ms: 4_900,
+              ocr: { text: "Second segment event", delta_text: "Second segment event", confidence: 92 }
+            }
+          ]
+        }
+      }
+    );
+    await openReplay(page, "/replay/sid-mp4-parts-index");
+    await expect(page.locator("[data-replay-index-events] .replay-index-event")).toHaveCount(1);
+    await expect(page.locator(".replay-frame video")).toHaveAttribute("src", /session\.0\.part\.mp4/);
+    await page.locator(".replay-index-event").click();
+    const targetVideo = page.locator(".replay-frame video");
+    await expect(targetVideo).toHaveAttribute("src", /session\.1\.part\.mp4/);
+    await mockMp4Seekability(page, 40, 0, 40);
+    expect(await targetVideo.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBe(4.9);
+    await targetVideo.dispatchEvent("seeked");
+  });
+
+  test("clears mp4 seeking state after seeked or media error", async ({ page }) => {
+    await installReplayBackend(page, { type: "mp4", src: "/mock.mp4" });
+    await openReplay(page, "/replay/sid-mp4-seeking");
+
+    const video = page.locator(".replay-frame video");
+    const seeking = page.locator(".replay-seek");
+    await expect(video).toBeVisible();
+
+    await video.dispatchEvent("seeking");
+    await expect(seeking).toBeVisible();
+    await video.dispatchEvent("seeked");
+    await expect(seeking).toBeHidden();
+
+    await video.dispatchEvent("seeking");
+    await expect(seeking).toBeVisible();
+    await video.evaluate((element) => element.dispatchEvent(new Event("error", { bubbles: false })));
+    await expect(seeking).toBeHidden();
+    const stage = page.locator(".replay-stage");
+    await expect(stage).toContainText(/Playback failed|播放失败/);
+    await expect(stage).not.toContainText("[object Event]");
+  });
+
+  test("reflects actual mp4 playback after waiting or a deep-link seek", async ({ page }) => {
+    await installReplayBackend(page, { type: "mp4", src: "/mock.mp4" });
+    await openReplay(page, "/replay/sid-mp4-playback?timestamp=85");
+
+    const video = page.locator(".replay-frame video");
+    const playButton = page.locator(".replay-play-button");
+    await expect(video).toBeVisible();
+    await expect(playButton).toHaveAttribute("aria-label", /Play|播放/);
+
+    await video.dispatchEvent("play");
+    await expect(playButton).toHaveAttribute("aria-label", /Play|播放/);
+    await video.dispatchEvent("playing");
+    await expect(playButton).toHaveAttribute("aria-label", /Pause|暂停/);
+    await video.dispatchEvent("pause");
+    await expect(playButton).toHaveAttribute("aria-label", /Play|播放/);
+    await video.dispatchEvent("playing");
+    await video.dispatchEvent("seeking");
+    await expect(playButton).toHaveAttribute("aria-label", /Play|播放/);
+    await video.dispatchEvent("seeked");
+    await video.dispatchEvent("waiting");
+    await expect(playButton).toHaveAttribute("aria-label", /Play|播放/);
+    await video.dispatchEvent("playing");
+    await expect(playButton).toHaveAttribute("aria-label", /Pause|暂停/);
+    await video.dispatchEvent("ended");
+    await expect(playButton).toHaveAttribute("aria-label", /Play|播放/);
+  });
+
+  test("keeps play available when the initial mp4 seek cannot autoplay", async ({ page }) => {
+    await page.addInitScript(() => {
+      HTMLMediaElement.prototype.play = function () {
+        const element = this as HTMLMediaElement & { rejectedPlayCount?: number };
+        element.rejectedPlayCount = (element.rejectedPlayCount || 0) + 1;
+        return Promise.reject(new DOMException("Autoplay blocked", "NotAllowedError"));
+      };
+    });
+    await installReplayBackend(page, { type: "mp4", src: "/mock.mp4" });
+    await openReplay(page, "/replay/sid-mp4-autoplay?timestamp=85");
+
+    const video = page.locator(".replay-frame video");
+    const playButton = page.locator(".replay-play-button");
+    await mockMp4Seekability(page, 122, 0, 122);
+    expect(await video.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBe(80);
+    const playCallsBeforeSeeked = await video.evaluate(
+      (element) => (element as HTMLVideoElement & { rejectedPlayCount?: number }).rejectedPlayCount || 0
+    );
+    await video.dispatchEvent("seeked");
+    await expect
+      .poll(() =>
+        video.evaluate(
+          (element) => (element as HTMLVideoElement & { rejectedPlayCount?: number }).rejectedPlayCount || 0
+        )
+      )
+      .toBeGreaterThan(playCallsBeforeSeeked);
+    await expect(playButton).toHaveAttribute("aria-label", /Play|播放/);
+    await expect(playButton).toBeEnabled();
   });
 
   test("loads segmented gzip-compressed guacamole recordings", async ({ page }) => {

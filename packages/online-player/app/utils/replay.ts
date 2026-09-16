@@ -4,7 +4,7 @@ import { formatClock, toStartMs } from "#online-player/utils/time";
 
 export type ReplayPollDecision = "ready" | "not-found" | "converting";
 export type ReplayOverlayKind = "blocked" | "converting" | "not-found" | "error" | null;
-export type ReplayRailTab = "parts" | "commands";
+export type ReplayRailTab = "parts" | "commands" | "index";
 
 export const REPLAY_POLL_MAX_MS = 120_000;
 export const REPLAY_POLL_START_DELAY_MS = 2000;
@@ -76,8 +76,8 @@ function pathnameOf(src: string) {
   return suffixStart === -1 ? src : src.slice(0, suffixStart);
 }
 
-export function initialRailTab(hasParts: boolean): ReplayRailTab {
-  return hasParts ? "parts" : "commands";
+export function initialRailTab(hasParts: boolean, hasIndex = false): ReplayRailTab {
+  return hasIndex ? "index" : hasParts ? "parts" : "commands";
 }
 
 export function resolveReplayOverlay(state: {
@@ -105,8 +105,18 @@ export function shouldShowReplayRail(state: {
   commandCount?: number;
   commandsLoading?: boolean;
   commandsError?: boolean;
+  indexAvailable?: boolean;
+  indexLoading?: boolean;
+  indexError?: boolean;
 }) {
   if (state.overlay) return false;
   if (state.isParts) return true;
-  return Boolean(state.commandCount || state.commandsLoading || state.commandsError);
+  return Boolean(
+    state.commandCount ||
+    state.commandsLoading ||
+    state.commandsError ||
+    state.indexAvailable ||
+    state.indexLoading ||
+    state.indexError
+  );
 }

@@ -17,6 +17,7 @@ const emit = defineEmits<{
   position: [number];
   duration: [number];
   seeking: [boolean];
+  seekWaiting: [boolean];
   error: [string];
 }>();
 
@@ -67,6 +68,7 @@ defineExpose(handle);
     @position="emit('position', $event)"
     @duration="emit('duration', $event)"
     @seeking="emit('seeking', $event)"
+    @seek-waiting="emit('seekWaiting', $event)"
     @error="emit('error', $event)"
   />
 </template>

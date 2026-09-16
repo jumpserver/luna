@@ -17,7 +17,13 @@ export function useReplayParts(replay: MaybeRefOrGetter<Replay | null>, sessionI
 
   const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const fetchSection = async (filename: string, size: number, duration: number, isFirst: boolean) => {
+  const fetchSection = async (
+    filename: string,
+    size: number,
+    duration: number,
+    partIndex: number,
+    isFirst: boolean
+  ) => {
     const sid = toValue(sessionId);
     if (!sid) return isFirst;
 
@@ -40,7 +46,8 @@ export function useReplayParts(replay: MaybeRefOrGetter<Replay | null>, sessionI
         id: toValue(replay)?.id || sid,
         name: filename,
         sizeLabel: prettyBytes(size || 0),
-        durationLabel: formatDurationLabel(duration || 0, locale.value === "zh")
+        durationLabel: formatDurationLabel(duration || 0, locale.value === "zh"),
+        partIndex
       };
 
       parts.value.push(item);
@@ -80,9 +87,9 @@ export function useReplayParts(replay: MaybeRefOrGetter<Replay | null>, sessionI
       partType.value = manifest.type || "";
       let isFirst = true;
 
-      for (const file of manifest.files || []) {
+      for (const [partIndex, file] of (manifest.files || []).entries()) {
         if (activeRequest.signal.aborted) break;
-        isFirst = await fetchSection(file.name, file.size, file.duration, isFirst);
+        isFirst = await fetchSection(file.name, file.size, file.duration, partIndex, isFirst);
       }
     } catch (cause) {
       parts.value = [];
