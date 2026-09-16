@@ -41,7 +41,6 @@ watch([width, height], () => debouncedResize(), { immediate: true });
 
 const onlineUsers = computed(() => Object.values(onlineUsersMap.value).filter(Boolean));
 const writable = computed(() => currentUser.value.writable === true);
-const sessionId = computed(() => String(currentUser.value.session_id || ""));
 const displayError = computed(() => errMessage.value || connectionError.value);
 
 watch(writable, (canWrite) => {
@@ -113,13 +112,7 @@ onUnmounted(() => {
 
   <USlideover v-model:open="drawShow" :ui="{ content: 'w-full max-w-[502px]' }">
     <template #body>
-      <SessionShare
-        :session="sessionId"
-        :users="onlineUsers"
-        :disable-create="true"
-        :endpoint-url="endpointUrl"
-        :ticket="context.ticket"
-      />
+      <SessionShare :users="onlineUsers" :endpoint-url="endpointUrl" :ticket="context.ticket" />
     </template>
   </USlideover>
 </template>

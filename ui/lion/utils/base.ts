@@ -72,14 +72,6 @@ export function withBasePath(path: string): string {
   return BASE_PATH ? `${BASE_PATH}${normalizedPath}` : normalizedPath;
 }
 
-export function withBaseUrl(path: string, baseUrl = BASE_URL): string {
-  if (isAbsoluteUrl(path)) {
-    return path;
-  }
-
-  return `${normalizeOrigin(baseUrl)}${withBasePath(path)}`;
-}
-
 export function withLionPath(path: string): string {
   if (isAbsoluteUrl(path)) {
     return path;

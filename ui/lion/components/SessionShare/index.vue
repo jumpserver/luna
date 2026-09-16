@@ -1,23 +1,17 @@
 <script lang="ts" setup>
-import type { Composer } from "vue-i18n";
 import { useI18n } from "vue-i18n";
 import { removeShareUser } from "@/lion/api";
 import CardContainer from "@/lion/components/CardContainer/index.vue";
-import CreateLink from "@/lion/components/SessionShare/widget/CreateLink.vue";
 import UserItem from "@/lion/components/SessionShare/widget/UserItem.vue";
 import { createLionConnectTicket } from "@/lion/hooks/useLionConnectTicket";
 
-export type TranslateFunction = Composer["t"];
-
 const props = defineProps<{
-  session: string;
   users?: Array<{
     user_id: string;
     user: string;
     primary: boolean;
     writable: boolean;
   }>;
-  disableCreate?: boolean;
   endpointUrl?: string;
   tokenId?: string;
   ticket?: string;
@@ -70,16 +64,6 @@ const handleRemoveShareUser = async (user: any) => {
           @remove-user="handleRemoveShareUser"
         />
       </div>
-    </CardContainer>
-
-    <CardContainer :title="t('ShareLink')">
-      <CreateLink
-        :session="session"
-        :disabled-create-link="props.disableCreate"
-        :endpoint-url="props.endpointUrl"
-        :token-id="props.tokenId"
-        :ticket="props.ticket"
-      />
     </CardContainer>
   </div>
 </template>
