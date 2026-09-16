@@ -1,275 +1,69 @@
-<div align="center">
+# JumpServer Luna
 
-# 🚀 JumpServer
+English | [中文](README_CN.md)
 
-**A modern, cross-platform desktop client for JumpServer built with Electron**
+Luna is the asset connection workspace for JumpServer, available in the browser and as an Electron desktop app. Terminal, file manager, database, remote desktop, and Kubernetes sessions open as tabs in the same workspace.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)](https://github.com/jumpserver/clients)
-[![Electron](https://img.shields.io/badge/Electron-44-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org/)
+The frontend uses Nuxt 4, Vue 3, and Nuxt UI. Web and desktop share the interface and connection modules. The desktop app adds local terminals, external application launch, and offline recording tools.
 
-[English](README.md) | [中文](README_CN.md)
+## Features
 
-![JumpServer](public/screenshot.png)
+- **Terminal**: connect to SSH, Telnet, and other assets through Koko.
+- **Files**: browse, upload, download, and edit remote files over SFTP.
+- **Databases**: browse objects, write SQL, and inspect query results through Chen. Supported protocols include MySQL, PostgreSQL, Redis, MongoDB, Oracle, SQL Server, ClickHouse, MariaDB, Dameng, and DB2.
+- **Remote desktop**: use RDP, VNC, and remote applications through Lion.
+- **Kubernetes**: browse cluster resources and open container terminals.
+- **Web assets**: access HTTP/HTTPS applications through Web Proxy.
+- **Session collaboration and audit**: share sessions, monitor connections, and replay online recordings.
+- **AI assistant**: work with terminal and database sessions through Kael, with tool approval and cancellation.
 
-</div>
+Available assets and connection methods depend on the JumpServer configuration and user permissions. The interface includes multiple languages, light and dark modes, and theme presets.
 
----
+## Usage
 
-## ✨ Features
+### Web
 
-- 🎯 **Cross-Platform Support** - Native applications for macOS, Windows, and Linux
-- 🔐 **Secure Connections** - Support for SSH, RDP, VNC, and database protocols
-- 🗄️ **Multi-Database Support** - Connect to MySQL, PostgreSQL, Redis, MongoDB, Oracle, SQL Server, ClickHouse, and more
-- 🖥️ **Device Management** - Manage Linux and Windows servers seamlessly
-- 🎨 **Modern UI** - Beautiful, responsive interface built with Vue 3 and Nuxt UI
-- ⚡ **Desktop Integration** - Isolated Electron runtime with Node-based desktop services
-- 🔗 **Deep Link Support** - Launch connections directly from web browsers via custom protocol (`jms2://`)
-- 🌓 **Theme Support** - Light and dark mode
-- 🌍 **Internationalization** - Multi-language support (English, Chinese)
-- 📋 **Clipboard Integration** - Easy copy-paste functionality
-- 🔔 **Notifications** - Real-time connection status notifications
-- 💾 **Persistent Storage** - Save your favorite connections and settings
+After deploying JumpServer, open `/luna/` on your site. Unauthenticated users are redirected to the server login page. Once signed in, select an asset, account, and connection method to start a session.
 
-## 🖼️ Screenshots
-
-<div align="center">
-
-![Main Interface](public/screenshot.png)
-_MacOS_
-
-<br/>
-
-![Windows](public/screenshot-windows.png)
-_Windows_
-
-</div>
-
-## 🛠️ Tech Stack
-
-### Frontend
-
-- **Vue 3** - Progressive JavaScript framework
-- **Nuxt UI** - Fully styled and customizable components
+Luna requires JumpServer Core and the relevant connection services. Starting the frontend alone does not start those services.
 
 ### Desktop
 
-- **Electron 44** - Cross-platform windowing, native integration, and packaging
-- **Node.js** - SSH helper, replay processing, and desktop services
-- **Optional FFmpeg plugin** - Downloaded from Settings for H.264 replay encoding; system FFmpeg is never required
+Download a package for your platform from [Releases](https://github.com/jumpserver/luna/releases):
 
-## 📦 Installation
+| Platform | Packages                           |
+| -------- | ---------------------------------- |
+| macOS    | `.dmg` for Apple Silicon and Intel |
+| Windows  | `.exe` or `.msi` for x64           |
+| Linux    | `.deb` or `.rpm` for x64 and arm64 |
 
-### macOS
+Enter your JumpServer site address and sign in. The desktop app also provides local shells, external terminal and database client launch, offline recording playback, and MP4 conversion. The FFmpeg plugin for H.264 encoding can be downloaded in Settings.
 
-1. Download the `.dmg` file from the [Releases](https://github.com/jumpserver/clients/releases) page
-2. Open the downloaded `.dmg` file
-3. Drag `JumpServer.app` to your `Applications` folder
-4. Double-click `JumpServer.app` to launch (this will register the custom protocol)
+Browsers can open the client through `jms2://` links. Desktop OAuth uses `jms2://auth/callback`, which must be allowed by the server's OAuth application. The legacy client's `jms://` scheme remains separate.
 
-### Windows
+## Running locally
 
-1. Download the `.msi` or `.exe` installer from the [Releases](https://github.com/jumpserver/clients/releases) page
-2. Double-click the installer file
-3. Follow the installation wizard (may take 10-15 seconds)
-4. Launch JumpServer from the Start menu
-
-### Linux
-
-#### Debian/Ubuntu (.deb)
+Requires Node.js 24 and pnpm 11.4.0. The desktop app also requires Go 1.25 or later and native build tools for your platform.
 
 ```bash
-# Download the .deb package
-wget https://github.com/jumpserver/clients/releases/latest/download/jumpserver-client_*.deb
-
-# Install using dpkg
-sudo dpkg -i jumpserver-client_*.deb
-
-# Or install using apt
-sudo apt install ./jumpserver-client_*.deb
-```
-
-#### RPM-based (Red Hat, Fedora, CentOS)
-
-```bash
-# Download the .rpm package
-wget https://github.com/jumpserver/clients/releases/latest/download/jumpserver-client_*.rpm
-
-# Install using rpm
-sudo rpm -i jumpserver-client_*.rpm
-
-# Or install using dnf/yum
-sudo dnf install ./jumpserver-client_*.rpm
-```
-
-## 🚀 Usage
-
-### Launching Connections
-
-1. **From JumpServer Web Interface**: Click on any asset connection link - the client will automatically launch
-2. **From the Client**: Browse your assets, select a connection, and click connect
-3. **Custom Protocol**: Use `jms2://` links to launch connections programmatically
-
-### Supported Connection Types
-
-- **SSH/Telnet** - Terminal connections (PuTTY, XShell, SecureCRT, iTerm2)
-- **RDP** - Remote Desktop Protocol for Windows servers
-- **VNC** - Virtual Network Computing for remote desktop access
-- **Database Connections**:
-  - MySQL
-  - PostgreSQL
-  - Redis
-  - MongoDB
-  - Oracle
-  - SQL Server
-  - ClickHouse
-  - 达梦 (DM)
-
-### Managing Assets
-
-- **Favorites** - Star frequently used assets for quick access
-- **Search** - Quickly find assets by name or IP address
-- **Categories** - Organize assets by type (Linux, Windows, Database)
-- **Rename** - Customize asset display names
-
-## 🛠️ Development
-
-### Prerequisites
-
-- **Node.js** >= 24
-- **pnpm** >= 11
-- **System Dependencies**:
-  - macOS: Xcode Command Line Tools
-  - Windows: Microsoft Visual C++ Build Tools
-  - Linux: `build-essential`, `fakeroot`, and `rpm` when producing DEB/RPM packages
-  - Windows: WiX Toolset 3 (`candle` and `light`) when producing MSI packages
-
-### Getting Started
-
-```bash
-# Clone the repository
-git clone https://github.com/jumpserver/clients.git
-cd clients
-
-# Install dependencies
+git clone https://github.com/jumpserver/luna.git
+cd luna
 pnpm install
-
-# Start the Web and Electron clients together
-pnpm dev
+pnpm web:dev
 ```
 
-### Build for Production
+Open `http://localhost:3000/luna/`. Start backend services separately and configure development proxy addresses in `.env.development` as needed.
+
+To start the desktop app:
 
 ```bash
-# Build for current platform
-pnpm electron:build
-
-# Build an unpacked application directory
-pnpm electron:package:dir
+pnpm electron:dev
 ```
 
-### Build the Web Docker Image
+## Links
 
-The Docker build installs only the Web workspace dependency graph and writes the generated Nuxt application to `/opt/luna`. Electron code and native desktop dependencies are excluded from its build context.
+Report problems in [Issues](https://github.com/jumpserver/luna/issues). For usage and deployment, see the [JumpServer documentation](https://docs.jumpserver.org/).
 
-```bash
-docker build -t jumpserver/luna:local .
-```
+## License
 
-The Web workflow builds `linux/amd64` and `linux/arm64`, and publishes tagged images to `jumpserver/luna`. Desktop clients are packaged separately for macOS, Linux, and Windows by the client release workflow.
-
-Windows releases include an NSIS `*-Setup.exe` with an installation wizard, a selectable installation
-directory, desktop and Start menu shortcuts, and an optional launch on completion. An MSI with a
-directory selection wizard is also available for enterprise deployment. Both installers use the
-application packaged by Electron Forge.
-
-### Project Structure
-
-```
-clients/
-├── ui/                    # Frontend (Vue/Nuxt)
-│   ├── components/        # Vue components
-│   ├── pages/            # Application pages
-│   ├── composables/      # Vue composables
-│   └── layouts/          # Layout components
-├── electron/              # Electron main process and preload bridge
-│   ├── src/              # TypeScript desktop runtime by domain
-│   └── tests/            # Electron unit tests and fixtures
-└── i18n/                 # Internationalization files
-```
-
-### Available Scripts
-
-```bash
-pnpm dev              # Start Web and Electron development together
-pnpm web:dev          # Start Nuxt web development
-pnpm electron:dev     # Start Electron development
-pnpm electron:build   # Build production artifacts
-make docker-build     # Build the Web Docker image
-pnpm fmt              # Format frontend code with Oxfmt
-pnpm lint             # Run lint checks
-pnpm reset            # Clean build artifacts
-```
-
-### Unified development gateway
-
-Start Core (8080), Koko (5050), and Chen (8082) separately and install frontend dependencies, then run `make run`. It starts the gateway in the background and runs `npm run dev` (Nuxt + Electron). Add `http://localhost:8888` to Core’s `DOMAINS` configuration for domain and CSRF checks; update `SITE_URL` if needed.
-
-Open `http://localhost:8888/luna/` in the browser and use `http://localhost:8888` as the Electron login site. Core's default endpoint inherits this entry point; explicit remote endpoints remain unchanged. The gateway forwards HTTP and WebSockets under `/koko/` (including Lion) and `/chen/`, plus `/luna/`, `/ui/`, `/kael/`, and `/facelive/`. Other paths go to Core. Web Proxy traffic still uses the endpoint's separate `web_proxy_port`.
-
-Use `JMS_DEV_PORT=8899 make run` to change the public port, and add the resulting origin to Core's trusted domains/CSRF configuration; update `SITE_URL` if needed. Upstreams use `host.docker.internal` by default and accept host:port overrides, e.g. `JMS_DEV_KOKO=host.docker.internal:5051 make run`. Compose reads the shell environment or `.env`, not Nuxt's `.env.development`. On Linux, host services must listen on an address reachable from the Docker bridge. The gateway publishes only on `127.0.0.1`.
-
-Exiting development (including Ctrl+C) stops and removes the gateway; `make stop` also removes it manually. Validate configuration with `docker compose config` and `docker compose run --rm gateway nginx -t`. See [the Chinese development guide](README_CN.md#连接组件的开发代理) for all upstream variables.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow the existing code style
-- Write meaningful commit messages
-- Add tests for new features
-- Update documentation as needed
-- Ensure all checks pass before submitting
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [JumpServer](https://github.com/jumpserver/jumpserver) - The open-source bastion host
-- [Electron](https://www.electronjs.org/) - Cross-platform desktop runtime
-- [Vue.js](https://vuejs.org/) - The Progressive JavaScript Framework
-- [Nuxt](https://nuxt.com/) - The Intuitive Vue Framework
-
-## 📚 Related Resources
-
-- [JumpServer Documentation](https://docs.jumpserver.org/)
-- [Packaging Guide](https://github.com/jumpserver/apps/blob/master/README_PACK.md)
-- [Browser Deep Link Protocol](https://juejin.cn/post/6844903989155217421)
-- [Linux Custom Protocol Handling](https://medium.com/swlh/custom-protocol-handling-how-to-8ac41ff651eb)
-
-## 📮 Support
-
-- **Issues**: [GitHub Issues](https://github.com/jumpserver/clients/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/jumpserver/clients/discussions)
-- **JumpServer Community**: [JumpServer Community](https://github.com/jumpserver/jumpserver)
-
----
-
-<div align="center">
-
-Made with ❤️ by the JumpServer Team
-
-[⭐ Star us on GitHub](https://github.com/jumpserver/clients) | [📖 Documentation](https://docs.jumpserver.org/) | [🐛 Report Bug](https://github.com/jumpserver/clients/issues)
-
-</div>
+[MIT](LICENSE)
