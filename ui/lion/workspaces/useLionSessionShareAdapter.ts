@@ -7,8 +7,8 @@ import type {
   LionShareLinkRequest
 } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
 import { createShareURL, getSuggestionUsers, removeShareUser } from "@/lion/api";
-import { withBaseUrl } from "@/lion/utils/base";
 import { writeClipboardText } from "@/utils/clipboard";
+import { withWebSitePrefix } from "~/utils/runtime";
 
 interface LionSessionShareSource {
   endpointUrl: ComputedRef<string>;
@@ -38,10 +38,10 @@ export function useLionSessionShareAdapter(source: LionSessionShareSource): Lion
   const onlineUsers = computed(() => Object.values(source.onlineUsersMap.value || {}).filter(Boolean));
   const shareURL = computed(() => {
     if (!shareId.value || !shareCode.value) return "";
-    return withBaseUrl(
-      `/lion/share/${shareId.value}?type=lion&code=${encodeURIComponent(shareCode.value)}`,
+    return new URL(
+      withWebSitePrefix(`/luna/lion/share/${shareId.value}?type=lion&code=${encodeURIComponent(shareCode.value)}`),
       source.endpointUrl.value
-    );
+    ).toString();
   });
   const shareInfo = computed(() => ({
     shareId: shareId.value,
