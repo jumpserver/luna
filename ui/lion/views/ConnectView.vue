@@ -6,6 +6,7 @@ import { connectorSessionKey } from "@jumpserver/connectors-core";
 import { useDebounceFn } from "@vueuse/core";
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { useSftpTransferUi } from "#koko/composables/sftp/useSftpTransferUi";
 import Osk from "@/lion/components/Osk.vue";
 import { useGuacamoleClient } from "@/lion/hooks/useGuacamoleClient";
 import { createLionConnectTicket } from "@/lion/hooks/useLionConnectTicket";
@@ -25,6 +26,7 @@ const emit = defineEmits<{ disconnected: [message: string, details?: GuacamoleCo
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const { t } = useI18n();
+const { signalQueued } = useSftpTransferUi();
 const containerRef = shallowRef<HTMLElement | null>(null);
 const displayRef = shallowRef<HTMLElement | null>(null);
 const sessionContext = inject(connectorSessionKey, ref<ConnectorSessionContext | null>(null));
@@ -161,7 +163,7 @@ const refreshConnectTicket = async () => {
 
 const handleUploadFile = async (options: LionUploadCustomRequestOptions, folder: any) => {
   if (action_permission.value && !action_permission.value.enable_upload) {
-    toast.add({ title: `${t("UploadFile")} ${t("NoPermission")}`, color: "warning" });
+    toast.add({ title: `${t("koko.actions.upload")} ${t("NoPermission")}`, color: "warning" });
     return;
   }
   try {
@@ -171,22 +173,19 @@ const handleUploadFile = async (options: LionUploadCustomRequestOptions, folder:
     return;
   }
   const item = { uploadOptions: options, folder: folder || currentFolder.value };
+  options.file.destinationLabel = sessionObject.value?.asset?.name || driverName.value;
+  options.file.destinationPath = item.folder?.streamName;
+  options.file.createdAt = Date.now();
   displayUploadingFiles.value.push(options.file);
   uploadingFiles.value.push(item);
-  if (isUploading.value) {
-    toast.add({ title: `${t("FileAddUploadingList")}: ${options.file.name}`, color: "info" });
-    return;
-  }
+  signalQueued();
+  if (isUploading.value) return;
   isUploading.value = true;
-  toast.add({ title: `${t("FileUploadStart")}: ${options.file.name}`, color: "info" });
   processUploadQueue().then(() => handleFolderOpen(currentFolder.value));
 };
 
 const handleRemoveFile = (file: LionUploadFileInfo) => {
-  if (file.status === "uploading") {
-    toast.add({ title: t("FileUploadingWarning"), color: "warning" });
-    return;
-  }
+  if (file.status === "uploading") return;
   if (file.status === "pending") {
     uploadingFiles.value = uploadingFiles.value.filter((item) => item.uploadOptions.file.id !== file.id);
   }
@@ -200,8 +199,8 @@ async function processUploadQueue() {
     const { uploadOptions, folder } = uploadItem;
 
     try {
-      await refreshConnectTicket();
       uploadOptions.file.status = "uploading";
+      await refreshConnectTicket();
       await uploadFile(uploadOptions, folder);
       uploadOptions.file.status = "finished";
     } catch (statusError: any) {
@@ -211,8 +210,9 @@ async function processUploadQueue() {
       if (errorKey) {
         msg = t(errorKey);
       } else {
-        msg = `${t("FileUploadError")}: ${uploadOptions.file.name}`;
+        msg = `${t("FileTransfer.Status.failed")}: ${uploadOptions.file.name}`;
       }
+      uploadOptions.file.error = msg;
       addErrorToast({ title: msg });
     }
   }
@@ -463,8 +463,7 @@ const controller = {
 watch(
   () => props.tabId,
   (tabId, _previous, onCleanup) => {
-    if (!tabId) return;
-    onCleanup(registerLionWorkspaceSession(tabId, controller));
+    onCleanup(registerLionWorkspaceSession(tabId || createUploadId(), controller));
   },
   { immediate: true }
 );

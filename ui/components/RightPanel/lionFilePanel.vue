@@ -26,7 +26,6 @@ const controller = computed(() => getLionWorkspaceSession(activeSessionId.value)
       @open-folder="controller.openFolder"
       @download-file="controller.downloadFile"
       @upload-file="controller.uploadFile"
-      @remove-upload-file="controller.removeUploadFile"
     />
   </div>
 

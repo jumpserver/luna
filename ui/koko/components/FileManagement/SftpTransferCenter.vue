@@ -7,10 +7,11 @@ import SftpTransferActions from "#koko/components/FileManagement/transfer-center
 import {
   canPauseTransferTasks,
   canResumeTransferTasks,
+  hasFinishedTransferTasks,
+  selectSftpTransferTasks,
   sftpTransferConflictError,
   sftpTransferErrorText,
-  sftpTransferTerminalStatuses,
-  useSftpTransferCenterSelectors
+  sftpTransferTerminalStatuses
 } from "#koko/composables/sftp/file-manager/transfer-center/useSftpTransferCenterSelectors";
 import { useSftpTransferUi } from "#koko/composables/sftp/useSftpTransferUi";
 import { useFileTransferStore } from "#koko/stores/fileTransfer";
@@ -26,20 +27,21 @@ import {
   sftpTransferProgressColor,
   sftpTransferStatusClass
 } from "#koko/utils/sftpTransferSummary";
+import { isLionUploadTransfer, removeLionUploadTransfer } from "~/lion/workspaces/useLionWorkspaceSessionRegistry";
 
 const { t } = useI18n();
 const store = useFileTransferStore();
-const { open, setOpen, ensureRestored, leaveConfirmOpen, confirmLeave } = useSftpTransferUi();
-const filter = ref<"all">("all");
+const { tasks, open, setOpen, ensureRestored, leaveConfirmOpen, confirmLeave } = useSftpTransferUi();
 const drawerHeight = useLocalStorage("jumpserver-client:sftp-transfer-center-height", 128);
 const resizing = ref(false);
 let resizeStartY = 0;
 let resizeStartHeight = 128;
 
-const { sftpTasks, hasFinishedTasks } = useSftpTransferCenterSelectors({
-  tasks: () => store.tasks ?? [],
-  filter
-});
+const sftpTasks = computed(() => [
+  ...selectSftpTransferTasks(tasks.value),
+  ...tasks.value.filter(isLionUploadTransfer)
+]);
+const hasFinishedTasks = computed(() => hasFinishedTransferTasks(sftpTasks.value));
 const activeTaskCount = computed(
   () => sftpTasks.value.filter((task) => !sftpTransferTerminalStatuses.has(task.status)).length
 );
@@ -195,6 +197,9 @@ function resolveConflict(task: FileTransferTask, policy: Exclude<FileTransferCon
 
 function clearFinishedTransfers(): void {
   store.clearFinished(sftpTasks.value.map((task) => task.id));
+  for (const task of sftpTasks.value) {
+    if (isLionUploadTransfer(task) && sftpTransferTerminalStatuses.has(task.status)) removeLionUploadTransfer(task.id);
+  }
 }
 
 onMounted(() => {
@@ -332,6 +337,17 @@ onBeforeUnmount(stopResize);
 
           <template #actions-cell="{ row }">
             <SftpTransferActions
+              v-if="isLionUploadTransfer(row.original)"
+              :task="row.original"
+              :can-pause="false"
+              :can-resume="false"
+              retry-disabled
+              :cancel-disabled="row.original.status === 'transferring'"
+              @cancel="removeLionUploadTransfer(row.original.id)"
+              @clear="removeLionUploadTransfer(row.original.id)"
+            />
+            <SftpTransferActions
+              v-else
               :task="row.original"
               :can-pause="canPauseTransferTasks([row.original])"
               :can-resume="canResumeTransferTasks([row.original])"

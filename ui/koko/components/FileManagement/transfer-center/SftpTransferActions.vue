@@ -7,6 +7,8 @@ const props = defineProps<{
   task: FileTransferTask;
   canPause: boolean;
   canResume: boolean;
+  retryDisabled?: boolean;
+  cancelDisabled?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -22,7 +24,7 @@ const { t } = useI18n();
 const terminalStatuses = new Set(["completed", "skipped", "failed", "canceled"]);
 const actionButtonUi = { leadingIcon: "size-3" };
 const hasConflict = computed(() => props.task.status === "paused" && props.task.error === "target_exists");
-const canRetry = computed(() => canRetryTransferTask(props.task));
+const canRetry = computed(() => !props.retryDisabled && canRetryTransferTask(props.task));
 const conflictItems = computed<DropdownMenuItem[][]>(() => [
   [
     { label: t("koko.sftpTransferCenter.overwrite"), onSelect: () => emit("resolve", "overwrite") },
@@ -90,6 +92,7 @@ const conflictItems = computed<DropdownMenuItem[][]>(() => [
       size="xs"
       icon="i-lucide-x"
       :ui="actionButtonUi"
+      :disabled="cancelDisabled"
       :title="t('FileTransfer.Cancel')"
       :aria-label="t('FileTransfer.Cancel')"
       @click="emit('cancel')"

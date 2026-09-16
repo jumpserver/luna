@@ -4,6 +4,7 @@ import { useElementSize } from "@vueuse/core";
 import prettyBytes from "pretty-bytes";
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { useSftpTransferUi } from "#koko/composables/sftp/useSftpTransferUi";
 
 interface RowData {
   name: string;
@@ -27,10 +28,10 @@ const emit = defineEmits<{
   (event: "openFolder", folder: any): void;
   (event: "downloadFile", file: RowData): void;
   (event: "uploadFile", options: LionUploadCustomRequestOptions, folder: any): void;
-  (event: "removeUploadFile", file: LionUploadFileInfo): void;
 }>();
 
 const { t } = useI18n();
+const { open: transferOpen, setOpen: setTransferOpen } = useSftpTransferUi();
 const ROW_HEIGHT = 34;
 const OVERSCAN = 6;
 let uploadSequence = 0;
@@ -43,7 +44,6 @@ const currentRowData = ref<RowData | null>(null);
 const fileInputRef = shallowRef<HTMLInputElement | null>(null);
 const contextMenuRef = shallowRef<HTMLElement | null>(null);
 const viewportRef = shallowRef<HTMLElement | null>(null);
-const transferOpen = ref(false);
 const searchOpen = ref(false);
 const scrollTop = ref(0);
 const { height: viewportHeight } = useElementSize(viewportRef);
@@ -106,9 +106,6 @@ const virtualRows = computed(() =>
     index: startIndex.value + offset
   }))
 );
-const activeTransfer = computed(() =>
-  [...props.displayUploadingFiles].reverse().find((file) => file.status === "pending" || file.status === "uploading")
-);
 
 watch([dataList, () => props.folder], () => {
   scrollTop.value = 0;
@@ -169,7 +166,6 @@ const handleFileInput = (event: Event) => {
   const files = input.files;
   if (!files?.length) return;
 
-  transferOpen.value = true;
   Array.from(files).forEach((fileObj) => {
     const id = createUploadId();
     emit(
@@ -190,27 +186,6 @@ const handleFileInput = (event: Event) => {
   });
 
   input.value = "";
-};
-
-const removeUploadList = (file: LionUploadFileInfo) => emit("removeUploadFile", file);
-const clampPercentage = (value?: number | null) => Math.max(0, Math.min(100, Math.round(value || 0)));
-const statusColor = (status?: LionUploadFileInfo["status"]): "neutral" | "info" | "success" | "error" => {
-  if (status === "uploading") return "info";
-  if (status === "finished") return "success";
-  if (status === "error") return "error";
-  return "neutral";
-};
-const statusIcon = (status?: LionUploadFileInfo["status"]) => {
-  if (status === "uploading") return "i-lucide-loader-circle";
-  if (status === "finished") return "i-lucide-circle-check";
-  if (status === "error") return "i-lucide-circle-x";
-  return "i-lucide-clock-3";
-};
-const statusLabel = (status?: LionUploadFileInfo["status"]) => {
-  if (status === "uploading") return t("FileTransfer.Status.transferring");
-  if (status === "finished") return t("FileTransfer.Status.completed");
-  if (status === "error") return t("FileTransfer.Status.failed");
-  return t("FileTransfer.Status.queued");
 };
 
 onMounted(() => {
@@ -315,13 +290,15 @@ onUnmounted(() => {
 
         <UTooltip v-if="displayUploadingFiles.length" :text="t('FileTransfer.Title')">
           <UButton
-            icon="i-lucide-list-restart"
+            icon="i-lucide-arrow-left-right"
             color="neutral"
             variant="ghost"
             size="sm"
             :label="displayUploadingFiles.length ? String(displayUploadingFiles.length) : undefined"
             :aria-label="t('FileTransfer.Title')"
-            @click="transferOpen = true"
+            :aria-expanded="transferOpen"
+            aria-controls="sftp-transfer-center"
+            @click="setTransferOpen(true)"
           />
         </UTooltip>
 
@@ -338,14 +315,6 @@ onUnmounted(() => {
         </UTooltip>
         <input ref="fileInputRef" type="file" multiple class="hidden" @change="handleFileInput" />
       </div>
-    </div>
-
-    <div v-if="activeTransfer" class="border-b border-(--app-border) bg-(--app-panel-bg) px-3 py-1.5">
-      <div class="mb-1 flex items-center justify-between gap-2 text-[10px] text-(--app-muted)">
-        <span class="truncate">{{ activeTransfer.name }}</span>
-        <span>{{ clampPercentage(activeTransfer.percentage) }}%</span>
-      </div>
-      <UProgress :model-value="clampPercentage(activeTransfer.percentage)" size="xs" />
     </div>
 
     <div class="relative flex min-h-0 flex-1 flex-col bg-(--app-main-bg)">
@@ -426,38 +395,5 @@ onUnmounted(() => {
         {{ t("koko.actions.download") }}
       </UButton>
     </div>
-
-    <UModal v-model:open="transferOpen" :title="t('FileTransfer.Title')">
-      <template #body>
-        <div v-if="displayUploadingFiles.length" class="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
-          <div v-for="file in displayUploadingFiles" :key="file.id" class="rounded-md border border-default p-3">
-            <div class="mb-2 flex items-center gap-2">
-              <UIcon
-                :name="statusIcon(file.status)"
-                class="size-4 shrink-0"
-                :class="file.status === 'uploading' ? 'animate-spin' : ''"
-              />
-              <span class="min-w-0 flex-1 truncate text-sm" :title="file.name">{{ file.name }}</span>
-              <UBadge :color="statusColor(file.status)" variant="subtle" size="sm">
-                {{ statusLabel(file.status) }}
-              </UBadge>
-              <UButton
-                icon="i-lucide-x"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                :disabled="file.status === 'uploading'"
-                :aria-label="t('Common.Remove')"
-                @click="removeUploadList(file)"
-              />
-            </div>
-            <UProgress :model-value="clampPercentage(file.percentage)" :color="statusColor(file.status)" size="sm" />
-          </div>
-        </div>
-        <div v-else class="py-8 text-center text-sm text-muted">
-          {{ t("Common.NoData") }}
-        </div>
-      </template>
-    </UModal>
   </div>
 </template>

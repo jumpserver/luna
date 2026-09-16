@@ -5,6 +5,10 @@ export interface LionUploadFileInfo {
   percentage?: number | null;
   type?: string;
   status?: "pending" | "uploading" | "finished" | "error";
+  destinationLabel?: string;
+  destinationPath?: string;
+  createdAt?: number;
+  error?: string;
   file?: File | null;
 }
 

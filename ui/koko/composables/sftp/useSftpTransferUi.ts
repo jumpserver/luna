@@ -2,6 +2,7 @@ import type { FileTransferStatus } from "@jumpserver/connectors-core";
 import { computed } from "vue";
 import { sftpEndpointHasActiveTransfers } from "#koko/composables/sftp/file-manager/transfer-center/useSftpTransferCenterSelectors";
 import { useFileTransferStore } from "#koko/stores/fileTransfer";
+import { getLionUploadTransferTasks } from "~/lion/workspaces/useLionWorkspaceSessionRegistry";
 
 export type SftpTransferTone = "idle" | "moving" | "paused" | "failed";
 
@@ -9,10 +10,14 @@ const movingTransferStatuses = new Set<FileTransferStatus>(["queued", "preparing
 const activeTransferStatuses = new Set<FileTransferStatus>([...movingTransferStatuses, "paused"]);
 
 export function useSftpTransferUi() {
+  const { t } = useI18n();
   const store = useFileTransferStore();
   const open = useState("sftp-transfer-drawer-open", () => false);
   const attentionSequence = useState("sftp-transfer-attention-sequence", () => 0);
-  const tasks = computed(() => store.tasks ?? []);
+  const tasks = computed(() => [
+    ...(store.tasks ?? []),
+    ...getLionUploadTransferTasks(t("koko.fileManagement.localUpload"))
+  ]);
 
   const hasTasks = computed(() => tasks.value.length > 0);
   const hasMovingTasks = computed(() => tasks.value.some((task) => movingTransferStatuses.has(task.status)));
@@ -69,6 +74,7 @@ export function useSftpTransferUi() {
   }
 
   return {
+    tasks,
     open,
     hasTasks,
     hasMovingTasks,
