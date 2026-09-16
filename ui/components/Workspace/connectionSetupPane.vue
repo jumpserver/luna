@@ -4,7 +4,7 @@ import type { AssetItem, AssetPageType } from "~/types/index";
 
 import ConnectFormSkeleton from "~/components/ConnectForm/connectFormSkeleton.vue";
 import ConnectFormFields from "~/components/ConnectForm/fields.vue";
-import { resolveConnectionSetupLoadError } from "~/composables/useConnectionFormState";
+import { resolveConnectionAttemptError, resolveConnectionSetupLoadError } from "~/composables/useConnectionFormState";
 import {
   isExternalClientConnectMethod,
   parseLocalApplicationConnectMethod,
@@ -28,7 +28,7 @@ const { addErrorToast } = useErrorToast();
 const { modernIsland } = useSettingManager();
 const { confirmConnection } = useAssetConnection();
 const { getMethodsForProtocol } = useConnectMethods();
-const { closePane, startSessionConnection } = useWorkspaceTabs();
+const { closePane, markSessionFailed, startSessionConnection } = useWorkspaceTabs();
 const {
   buildConnectionInfo,
   draft,
@@ -154,6 +154,19 @@ async function submit(downloadRdpMethod = "") {
   } else {
     resetLaunchSuccessState();
   }
+  const failConnection = (error: unknown) => {
+    connecting.value = false;
+    downloadingRdp.value = false;
+    connectionError.value = resolveConnectionAttemptError(error, t);
+    if (!info.downloadRdp && !showLaunchSuccessState) {
+      markSessionFailed({
+        tabId: props.tab.id,
+        assetId: currentAsset.value!.id,
+        protocol: info.protocol,
+        account: info.account
+      });
+    }
+  };
   try {
     await confirmConnection(currentAsset.value, {
       ...info,
@@ -174,16 +187,11 @@ async function submit(downloadRdpMethod = "") {
             ? () => void desktopInvoke("close_window")
             : undefined,
       onSessionError: (error) => {
-        connecting.value = false;
-        downloadingRdp.value = false;
-        connectionError.value =
-          error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
+        failConnection(error);
       }
     });
   } catch (error) {
-    connecting.value = false;
-    downloadingRdp.value = false;
-    connectionError.value = error instanceof Error ? error.message : String(error || t("ConnectError.ConnectFailed"));
+    failConnection(error);
   }
 }
 

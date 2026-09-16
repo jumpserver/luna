@@ -903,8 +903,15 @@ export const useWorkspaceTabs = () => {
     const found = findSession(match);
     if (!found) return;
 
+    const unfinished = !found.pane.connectedAt;
     found.pane.status = "failed";
-    found.pane.mode = "session";
+    found.pane.connectedAt = undefined;
+    if (unfinished) {
+      found.pane.payload = undefined;
+      clearWorkspaceSessionDetails(found.pane.id);
+      closeNativeSession(found.pane.id);
+    }
+    if (found.pane.mode !== "setup") found.pane.mode = "session";
     if (found.paneIndex === 0) syncTabFromPrimaryPane(found.tab);
   };
 

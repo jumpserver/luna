@@ -1348,6 +1348,8 @@
   "ConnectError": {
     "DownloadRdpFailed": "Không thể tải tệp RDP",
     "ConnectFailed": "Kết nối thất bại",
+    "RequestTimeout": "Yêu cầu kết nối đã hết thời gian chờ. Vui lòng thử lại.",
+    "SessionClosed": "Phiên kết nối đã đóng. Vui lòng kết nối lại.",
     "CredentialServiceUnavailable": "Dịch vụ thông tin xác thực (ví dụ: OpenBao) không khả dụng. Hãy kiểm tra trạng thái dịch vụ rồi thử lại.",
     "PersonalCredentialNotFound": "Không tìm thấy thông tin xác thực cá nhân đã chọn. Hãy chọn thông tin khác hoặc nhập thủ công.",
     "AccountUnavailable": "Tài khoản đã chọn không khả dụng. Hãy chọn tài khoản khác và thử lại.",

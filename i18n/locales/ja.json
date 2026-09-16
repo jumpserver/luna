@@ -1348,6 +1348,8 @@
   "ConnectError": {
     "DownloadRdpFailed": "RDP ファイルのダウンロードに失敗しました",
     "ConnectFailed": "接続に失敗しました",
+    "RequestTimeout": "接続リクエストがタイムアウトしました。再試行してください。",
+    "SessionClosed": "接続セッションは終了しました。再接続してください。",
     "CredentialServiceUnavailable": "認証情報サービス（OpenBao など）を利用できません。サービスの状態を確認してから再試行してください。",
     "PersonalCredentialNotFound": "選択した個人認証情報が見つかりません。別の認証情報を選択するか、手動で入力してください。",
     "AccountUnavailable": "選択したアカウントは利用できません。別のアカウントを選択して再試行してください。",

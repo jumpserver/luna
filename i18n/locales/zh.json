@@ -1351,6 +1351,8 @@
   "ConnectError": {
     "DownloadRdpFailed": "下载 RDP 文件失败",
     "ConnectFailed": "连接失败",
+    "RequestTimeout": "连接请求超时，请重试。",
+    "SessionClosed": "连接会话已关闭，请重新连接。",
     "CredentialServiceUnavailable": "凭据服务（如 OpenBao）不可用，请检查服务状态后重试。",
     "PersonalCredentialNotFound": "未找到所选的个人凭据，请重新选择或手动输入。",
     "AccountUnavailable": "当前账号不可用，请重新选择账号后重试。",
