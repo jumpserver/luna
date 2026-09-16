@@ -68,9 +68,6 @@ introPlayed.value = true;
 
 <style scoped>
 .brand-logo {
-  /* The header content heights are odd; align the 22px SVG to whole CSS pixels. */
-  position: relative;
-  top: 0.5px;
   display: block;
   color: var(--ui-primary);
 }

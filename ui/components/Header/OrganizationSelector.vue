@@ -104,10 +104,7 @@ async function handleOrgChange(org: PermOrgItem) {
           base: 'flex items-center justify-start gap-1.5 rounded-md bg-transparent transition-colors hover:bg-black/5 focus:bg-transparent active:bg-transparent data-[state=open]:bg-black/[0.06] dark:hover:bg-white/8 dark:data-[state=open]:bg-white/10'
         }"
       >
-        <span
-          data-overflow-tooltip
-          class="min-w-0 truncate text-left text-sm font-medium text-gray-700 dark:text-gray-300"
-        >
+        <span data-overflow-tooltip class="min-w-0 truncate text-left text-sm font-medium text-[var(--app-fg)]">
           {{ currentOrgName }}
         </span>
         <UIcon name="i-lucide-chevrons-up-down" class="size-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
@@ -117,7 +114,7 @@ async function handleOrgChange(org: PermOrgItem) {
       v-else
       data-workspace-tour="organization"
       data-overflow-tooltip
-      class="min-w-0 truncate px-1 text-left text-sm font-medium text-gray-700 dark:text-gray-300"
+      class="min-w-0 truncate px-1 text-left text-sm font-medium text-[var(--app-fg)]"
     >
       {{ currentOrgName }}
     </span>
