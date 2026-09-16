@@ -912,6 +912,35 @@ test.describe("online session replay", () => {
     await expect(page.locator("[data-replay-rail]")).toContainText("ls -la /var/www");
   });
 
+  test("plays an old parts manifest when CE has no replay-index route", async ({ page }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    await installReplayBackend(
+      page,
+      { type: "parts", src: "/mock.guacamole.replay.json" },
+      { parts: true, manifestSrc: "/mock.guacamole.replay.json" }
+    );
+    // A CE deployment without this API route may return an HTML 404 rather
+    // than the JSON 404 produced when a modern Core has no index object.
+    await page.route(/\/terminal\/sessions\/[^/]+\/replay-index\/?$/, (route) =>
+      route.fulfill({ status: 404, contentType: "text/html", body: "<html><body>Not Found</body></html>" })
+    );
+    const indexResponse = page.waitForResponse((response) => response.url().includes("/replay-index/"));
+    await openReplay(page, "/replay/sid-legacy-parts-no-index");
+    expect((await indexResponse).status()).toBe(404);
+
+    await expect(page.locator("[data-guacamole-root]")).toBeVisible();
+    await expect(page.locator("[data-replay-parts]")).toBeVisible();
+    await expect(page.locator("[data-replay-controls]")).toBeVisible();
+    await expect(page.locator("[data-replay-overlay]")).toHaveCount(0);
+    await expect(page.locator("[data-rail-tab=index]")).toHaveCount(0);
+    await expect(page.locator("[data-replay-index-error]")).toHaveCount(0);
+
+    await page.locator("[data-replay-command-rail]").click();
+    await expect(page.locator("[data-replay-rail]")).toContainText("ls -la /var/www");
+    expect(pageErrors).toEqual([]);
+  });
+
   test("shows an empty index and a retryable index error", async ({ page }) => {
     await installReplayBackend(
       page,
