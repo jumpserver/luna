@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import Profile from "~/components/SideBar/profile.vue";
 import { workspaceAiEnabled } from "~/shared/aiAvailability";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = withDefaults(defineProps<{ showProfile?: boolean }>(), { showProfile: true });
 
 const { t } = useI18n();
+const { loggedIn } = storeToRefs(useUserInfoStore());
 const { activeWorkspaceMode, isUtilityRoute } = useWorkspaceMode();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
 const { open: aiPanelOpen, toggleAi } = useAiPanel();
-const showAiButton = computed(() => !isUtilityRoute.value);
-const showRightPanelButton = computed(() => !isUtilityRoute.value && activeWorkspaceMode.value !== "files");
+const showAiButton = computed(() => loggedIn.value && !isUtilityRoute.value);
+const showRightPanelButton = computed(
+  () => loggedIn.value && !isUtilityRoute.value && activeWorkspaceMode.value !== "files"
+);
 
 const aiButtonLabel = computed(() =>
   t(

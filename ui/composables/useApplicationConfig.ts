@@ -8,12 +8,6 @@ export const useApplicationConfig = () => {
   const { setAppConfig, appConfig, hydrationPromise } = useSettingManager();
   const pluginList = useState<PluginListItem[]>("plugin-list", () => []);
 
-  const withErrorDetail = (base: string, raw: string) => {
-    const detail = raw.trim();
-    if (!detail || detail === base) return base;
-    return `${base}\n${detail}`;
-  };
-
   const isValidAppConfig = (cfg: any): cfg is AppConfigType => {
     return (
       !!cfg &&
@@ -53,9 +47,7 @@ export const useApplicationConfig = () => {
     // 仅在主窗口拉取配置；其他窗口直接读取结果
     if (desktopWindow.label() !== "main") {
       if (hydrationPromise.value) {
-        try {
-          await hydrationPromise.value;
-        } catch {}
+        await hydrationPromise.value.catch(() => undefined);
       }
 
       if (!isValidAppConfig(appConfig.value)) {
@@ -97,10 +89,15 @@ export const useApplicationConfig = () => {
       }
       await getPlugins();
     } catch (error) {
-      const message = String(error ?? "");
-      const description = message.toLowerCase().includes("executable not found")
-        ? withErrorDetail(t("Setting.ExecutableNotFound"), message)
-        : message || t("Common.OperationFailed");
+      const message = (error instanceof Error ? error.message : String(error ?? "")).trim();
+      const marker = "executable not found:";
+      const markerAt = message.toLowerCase().indexOf(marker);
+      let description = message || t("Common.OperationFailed");
+      if (markerAt >= 0) {
+        const missingPath = message.slice(markerAt + marker.length).trim();
+        description = t("Setting.ExecutableNotFound");
+        if (missingPath && missingPath !== "(empty path)") description += `\n${missingPath}`;
+      }
 
       addErrorToast({
         title: t("Setting.EnableFailed"),

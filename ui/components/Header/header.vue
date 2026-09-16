@@ -2,31 +2,42 @@
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const router = useRouter();
+const localePath = useLocalePath();
 const { t } = useI18n();
 const { isMacOS } = usePlatform();
 const { activeWorkspaceMode } = useWorkspaceMode();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
-const { exitFocusMode, focusMode, workspaceFullscreen } = useWorkspaceTabs();
+const { exitFocusMode, focusMode, tabs, workspaceFullscreen } = useWorkspaceTabs();
 const hasMacTrafficLightInset = computed(() => isDesktopRuntime() && isMacOS.value);
-const showWorkspaceHeader = computed(() => (!isDesktopRuntime() || loggedIn.value) && !focusMode.value);
+const showWorkspaceHeader = computed(() => !focusMode.value);
 const isToolRoute = computed(() => {
   const path = router.currentRoute.value.path.toLowerCase();
-  return path.includes("/tools") || path.includes("/videoplayer") || path.includes("/transcode");
+  return (
+    path.includes("/tools") ||
+    path.includes("/videoplayer") ||
+    path.includes("/transcode") ||
+    (path.includes("/face") && !path.includes("/facelive"))
+  );
 });
-
-const showSidebarChrome = computed(
-  () => !isToolRoute.value && (activeWorkspaceMode.value !== "assets" || loggedIn.value || isDesktopRuntime())
+const showSidebarChrome = computed(() => loggedIn.value && !isToolRoute.value);
+const showAssetTabs = computed(
+  () => activeWorkspaceMode.value === "assets" && (loggedIn.value || tabs.value.length > 0)
 );
 
 const returnFromTool = async () => {
+  if (!loggedIn.value) {
+    await navigateTo(localePath({ path: "/" }));
+    return;
+  }
+
   const previousPath = router.options.history.state.back;
   if (typeof previousPath === "string" && previousPath) {
     router.back();
     return;
   }
 
-  await navigateTo("/");
+  await navigateTo(localePath({ path: "/" }));
 };
 
 const pageHeader = computed(() => {
@@ -50,6 +61,13 @@ const pageHeader = computed(() => {
     return {
       icon: "lucide:repeat-2",
       title: t("Transcode.Title")
+    };
+  }
+
+  if (path.includes("/face") && !path.includes("/facelive")) {
+    return {
+      icon: "lucide:scan-face",
+      title: t("Menu.Face")
     };
   }
 
@@ -81,24 +99,28 @@ const pageHeader = computed(() => {
       <template v-if="showSidebarChrome" #leading>
         <SideBarTopControls />
       </template>
+      <template v-else-if="pageHeader" #leading>
+        <div class="flex h-full items-center" :class="hasMacTrafficLightInset ? 'pl-[88px] pr-2' : 'px-2.5'">
+          <UTooltip arrow :text="t('ToolTips.Back')">
+            <UButton
+              icon="i-lucide-arrow-left"
+              :aria-label="t('ToolTips.Back')"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              :ui="{ leadingIcon: 'size-4' }"
+              @click="returnFromTool"
+            />
+          </UTooltip>
+        </div>
+      </template>
 
-      <WorkspaceTabHeader v-if="activeWorkspaceMode === 'assets'" />
+      <WorkspaceTabHeader
+        v-if="showAssetTabs"
+        :class="hasMacTrafficLightInset && !showSidebarChrome ? 'pl-[88px]' : undefined"
+      />
 
       <div v-else-if="pageHeader" class="relative h-full min-w-0 flex items-center justify-center px-10">
-        <UTooltip arrow :text="t('ToolTips.Back')">
-          <UButton
-            icon="i-lucide-arrow-left"
-            :aria-label="t('ToolTips.Back')"
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            class="absolute top-1/2 -translate-y-1/2"
-            :class="hasMacTrafficLightInset ? 'left-24' : 'left-1'"
-            :ui="{ leadingIcon: 'size-4' }"
-            @click="returnFromTool"
-          />
-        </UTooltip>
-
         <div class="flex min-w-0 items-center justify-center gap-2">
           <UIcon :name="pageHeader.icon" class="text-primary size-4 shrink-0" />
           <span class="min-w-0 truncate text-sm font-medium">

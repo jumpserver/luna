@@ -971,7 +971,7 @@ onBeforeUnmount(() => {
         @pointerdown="profileOpenedByPointer = true"
         @keydown="profileOpenedByPointer = false"
       >
-        <UIcon name="i-lucide-circle-user-round" class="size-4" />
+        <UIcon :name="loggedIn ? 'i-lucide-circle-user-round' : 'i-lucide-user-round'" class="size-4" />
       </UButton>
     </UTooltip>
 
