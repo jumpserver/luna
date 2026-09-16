@@ -4,6 +4,7 @@ import { copyFile, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/p
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { flattenWebLiteMsi } from "./flatten-msi.mjs";
 
 if (process.platform !== "win32") throw new Error("WebLite MSI packaging must run on Windows");
 await import("./build.mjs");
@@ -67,7 +68,8 @@ try {
     // Keep this stable so Windows Installer upgrades the existing deployment.
     upgradeCode: "BBB88A37-4470-4B1C-B582-EAE84A775985"
   });
-  await creator.create();
+  const { wxsFile, wxsContent } = await creator.create();
+  await writeFile(wxsFile, flattenWebLiteMsi(wxsContent, appDir, manifest.version));
   const { msiFile } = await creator.compile();
   const installer = path.join(releaseOut, `JumpServer-WebLite-${manifest.version}-x64.msi`);
   await mkdir(releaseOut, { recursive: true });

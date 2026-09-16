@@ -305,6 +305,9 @@ importers:
       '@vitejs/plugin-vue':
         specifier: ^6.0.8
         version: 6.0.8(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0))(vue@3.5.40(typescript@6.0.3))
+      '@xmldom/xmldom':
+        specifier: 0.9.12
+        version: 0.9.12
       electron:
         specifier: 44.0.0
         version: 44.0.0

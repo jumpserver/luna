@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@electron/packager": "18.3.5",
+    "@xmldom/xmldom": "0.9.12",
     "@vitejs/plugin-vue": "^6.0.8",
     "electron": "44.0.0",
     "electron-wix-msi": "5.1.3",

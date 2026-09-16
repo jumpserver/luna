@@ -223,6 +223,26 @@ jobs:
         if: startsWith(matrix.os, 'windows')
         run: pnpm weblite:package
 
+      - name: Verify WebLite MSI layout and runtime
+        if: startsWith(matrix.os, 'windows')
+        shell: pwsh
+        run: |
+          $installer = (Get-ChildItem release/weblite/*.msi -File).FullName
+          $extract = Join-Path $env:RUNNER_TEMP "weblite-msi"
+          $process = Start-Process msiexec.exe -ArgumentList "/a `"$installer`" /qn /norestart TARGETDIR=`"$extract`"" -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            throw "WebLite MSI extraction failed: $($process.ExitCode)"
+          }
+          $executables = @(Get-ChildItem $extract -Filter weblite.exe -File -Recurse)
+          if ($executables.Count -ne 1 -or !$executables[0].FullName.EndsWith('\JumpServer\WebLite\weblite.exe')) {
+            throw "WebLite MSI must contain one executable directly in JumpServer\WebLite"
+          }
+          $env:WEBLITE_EXECUTABLE = $executables[0].FullName
+          pnpm --dir applets/weblite test:runtime
+          if ($LASTEXITCODE -ne 0) {
+            throw "WebLite MSI runtime checks failed"
+          }
+
       - name: Upload packaged artifacts
         uses: actions/upload-artifact@v6
         with:
