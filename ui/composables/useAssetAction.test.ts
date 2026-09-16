@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   getLunaPreferences: vi.fn(),
   updateLunaPreferences: vi.fn(),
   getPublicSettings: vi.fn(),
+  setConnectionTokenReusable: vi.fn(),
   getAssetDetail: vi.fn(),
   saveDialog: vi.fn(),
   writeFile: vi.fn(),
@@ -47,6 +48,7 @@ vi.mock("~/composables/useApiRequest", async (importOriginal) => ({
   getLunaPreferences: mocks.getLunaPreferences,
   updateLunaPreferences: mocks.updateLunaPreferences,
   getPublicSettings: mocks.getPublicSettings,
+  setConnectionTokenReusable: mocks.setConnectionTokenReusable,
   invalidatePersonalAssetCredentialCache: vi.fn()
 }));
 vi.mock("~/composables/useSettingManager", () => ({
@@ -145,6 +147,11 @@ describe("opening assets in local applications", () => {
     mocks.getLocalClientUrl.mockResolvedValue({ url: `jms2://${encoded}` });
     mocks.getLunaPreferences.mockResolvedValue({ graphics: { applet_connection_method: "client" } });
     mocks.getPublicSettings.mockResolvedValue({ XPACK_LICENSE_IS_VALID: true, TERMINAL_RAZOR_ENABLED: true });
+    mocks.setConnectionTokenReusable.mockResolvedValue({
+      id: "id",
+      date_expired: "2026-12-31T00:00:00Z",
+      is_reusable: true
+    });
   });
 
   afterEach(() => {
@@ -156,7 +163,7 @@ describe("opening assets in local applications", () => {
   async function connect(
     connectMethod = "ssh_client",
     protocol = "ssh",
-    connectOptions?: { resolution?: string; virtualappConnectMethod?: string }
+    connectOptions?: { resolution?: string; virtualappConnectMethod?: string; token_reusable?: boolean }
   ) {
     const ready = vi.fn();
     const failed = vi.fn();
@@ -237,6 +244,36 @@ describe("opening assets in local applications", () => {
       }),
       expect.anything()
     );
+  });
+
+  it("reuses Magnus db_client tokens before launching the local client", async () => {
+    const dbMethod = { value: "db_client", type: "native", component: "magnus", disabled: false };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ mysql: [dbMethod] }),
+      getMethodsForProtocol: async () => [dbMethod]
+    }));
+
+    const { failed } = await connect("db_client", "mysql", { token_reusable: true });
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(mocks.setConnectionTokenReusable).toHaveBeenCalledWith("id", true);
+    expect(mocks.setConnectionTokenReusable.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.getLocalClientUrl.mock.invocationCallOrder[0]!
+    );
+    expect(mocks.getLocalClientUrl).toHaveBeenCalledWith("id", expect.any(Object));
+  });
+
+  it("does not mark Razor client tokens reusable from token_reusable", async () => {
+    const rdpMethod = { ...method, value: "mstsc", component: "razor" };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ rdp: [rdpMethod] }),
+      getMethodsForProtocol: async () => [rdpMethod]
+    }));
+
+    const { failed } = await connect("mstsc", "rdp", { token_reusable: false });
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(mocks.setConnectionTokenReusable).not.toHaveBeenCalled();
   });
 
   describe("RDP file downloads", () => {

@@ -56,11 +56,12 @@ const { getMethodsForProtocol } = useConnectMethods();
 const { appConfig, modernIsland } = useSettingManager();
 const methodsByProtocol = reactive<Record<string, ConnectMethod[]>>({});
 const availableConnectMethods = computed(() => methodsByProtocol[props.protocol] || []);
+const selectedConnectMethodValue = computed(
+  () => parseLocalApplicationConnectMethod(props.connectMethod || "").connectMethod
+);
 const selectedConnectMethodComponent = computed(
   () =>
-    availableConnectMethods.value.find(
-      (method) => method.value === parseLocalApplicationConnectMethod(props.connectMethod || "").connectMethod
-    )?.component || ""
+    availableConnectMethods.value.find((method) => method.value === selectedConnectMethodValue.value)?.component || ""
 );
 
 const selectedProtocol = computed<string>({
@@ -223,6 +224,7 @@ watch(
         v-model:connect-options="localConnectOptions"
         :protocol="selectedProtocol"
         :component="selectedConnectMethodComponent"
+        :connect-method="selectedConnectMethodValue"
         :has-x-pack="props.hasXPack"
         :applet-client-enabled="props.appletClientEnabled"
         :connection-token-reusable="props.connectionTokenReusable"

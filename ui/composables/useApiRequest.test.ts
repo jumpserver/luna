@@ -7,6 +7,7 @@ import {
   getAuthorizedAssets,
   getConnectionRdpFile,
   getSessionOnlineNum,
+  setConnectionTokenReusable,
   updateLunaPreferences
 } from "./useApiRequest";
 
@@ -224,6 +225,36 @@ describe("API request headers", () => {
         method: "POST",
         credentials: "include",
         headers: expect.objectContaining({ "X-JMS-ORG": "org-1", "X-CSRFToken": "csrf" })
+      })
+    );
+  });
+
+  it("patches connection token reuse with the v4 payload", async () => {
+    const fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ id: "token/id", date_expired: "2026-12-31T00:00:00Z", is_reusable: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        })
+    );
+    vi.stubGlobal("isDesktopRuntime", () => false);
+    vi.stubGlobal("withWebSitePrefix", (path: string) => path);
+    vi.stubGlobal("getWebApiHeaders", () => ({}));
+    vi.stubGlobal("getWebApiMutationHeaders", () => ({ "X-CSRFToken": "csrf" }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(setConnectionTokenReusable("token/id", true)).resolves.toEqual({
+      id: "token/id",
+      date_expired: "2026-12-31T00:00:00Z",
+      is_reusable: true
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/v1/authentication/connection-token/token%2Fid/reuse/",
+      expect.objectContaining({
+        method: "PATCH",
+        credentials: "include",
+        headers: expect.objectContaining({ "X-CSRFToken": "csrf", "Content-Type": "application/json" }),
+        body: JSON.stringify({ is_reusable: true })
       })
     );
   });

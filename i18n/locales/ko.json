@@ -1141,7 +1141,12 @@
     "ExpireTime": "만료 시간",
     "ShowPassword": "비밀번호 표시",
     "ConnectCommand": "연결 명령줄",
-    "CopyCommand": "명령 복사"
+    "CopyCommand": "명령 복사",
+    "SetReusable": "재사용 설정",
+    "ReusableHint": "켜면 이 연결 정보를 오랫동안 여러 번 사용할 수 있습니다",
+    "TokenExpired": "토큰이 만료되었습니다",
+    "HelpText": "도움말",
+    "DatabaseTokenHelp": "클라이언트가 연결하는 데이터베이스 토큰은 구성 요소에 5분 동안 캐시됩니다. 즉, 사용한 직후가 아니라 클라이언트가 끊긴 뒤 5분이 지나야 토큰이 완전히 만료됩니다"
   },
   "UserProfile": {
     "ViewDetails": "사용자 상세 정보 보기",

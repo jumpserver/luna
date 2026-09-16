@@ -6,6 +6,7 @@ import type {
   PermissionOrgs,
   PersonalAssetCredential,
   RdpGraphics,
+  ConnectionTokenReuseResponse,
   TokenResponse,
   UserProfile
 } from "~/types";
@@ -626,6 +627,17 @@ export function exchangeConnectionToken(tokenId: string): Promise<TokenResponse>
     method: "POST",
     path: "/api/v1/authentication/connection-token/exchange/",
     body: { id: tokenId }
+  });
+}
+
+export function setConnectionTokenReusable(
+  tokenId: string,
+  isReusable: boolean
+): Promise<ConnectionTokenReuseResponse> {
+  return apiRequest<ConnectionTokenReuseResponse>({
+    method: "PATCH",
+    path: `/api/v1/authentication/connection-token/${encodeURIComponent(tokenId)}/reuse/`,
+    body: { is_reusable: isReusable }
   });
 }
 

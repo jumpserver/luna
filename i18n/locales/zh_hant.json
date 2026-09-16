@@ -1141,7 +1141,12 @@
     "ExpireTime": "過期時間",
     "ShowPassword": "顯示密碼",
     "ConnectCommand": "連線命令",
-    "CopyCommand": "複製命令"
+    "CopyCommand": "複製命令",
+    "SetReusable": "開啟複用",
+    "ReusableHint": "開啟後該連線資訊可長時間多次使用",
+    "TokenExpired": "Token 已過期，請重新連線",
+    "HelpText": "說明",
+    "DatabaseTokenHelp": "資料庫類型 token 會快取 5 分鐘，也就是說 token 使用後，不會立刻失效，而是用戶端中斷 5 分鐘後，這個 token 才會完全失效"
   },
   "UserProfile": {
     "ViewDetails": "檢視使用者詳情",
