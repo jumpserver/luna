@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { resolveEndpointUrl } from "@jumpserver/connectors-core";
+import { resolveEndpointUrl, resolveWsUrl } from "@jumpserver/connectors-core";
 
 describe("connector endpoint resolution", () => {
+  it.each(["koko", "lion"] as const)("routes %s shares through the Koko entry", (component) => {
+    const url = resolveWsUrl(component, "share", {
+      component,
+      tokenId: "",
+      endpointUrl: "https://jumpserver.example",
+      wsQuery: { type: "share", target_id: "share", code: "1234" }
+    });
+    expect(url).toBe(
+      `wss://jumpserver.example/koko/ws/share/?type=share&target_id=share&code=1234&component=${component}`
+    );
+  });
+
   it.each(["http://localhost:3000", "https://jumpserver.example:8443"])(
     "uses the site protocol and port for the default endpoint at %s",
     (site) => {

@@ -5,6 +5,7 @@ import { FORMATTER_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { writeText } from "clipboard-polyfill";
 import { useKokoConnectionStore } from "#koko/stores/connection";
 import { formatMessage } from "#koko/utils/terminalUtils";
+import { useShareLink } from "~/composables/useShareLink";
 
 /**
  * Share/session view of a single Koko pane. The pane id is required so the
@@ -16,6 +17,7 @@ export function useKokoSessionAdapter(paneId: MaybeRefOrGetter<string>) {
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
   const connectionStore = useKokoConnectionStore();
+  const { siteUrl, shareURL: buildShareURL } = useShareLink();
 
   const pane = computed(() => connectionStore.pane(toValue(paneId)));
 
@@ -23,13 +25,12 @@ export function useKokoSessionAdapter(paneId: MaybeRefOrGetter<string>) {
 
   const shareInfo = computed(() => {
     const { shareId, shareCode, sessionId, enableShare } = pane.value;
-    const origin = globalThis.window?.location.origin || "";
     return {
       shareId,
       shareCode,
       sessionId,
       enableShare,
-      shareURL: shareId ? `${origin}/luna/share/${shareId}?code=${encodeURIComponent(shareCode)}` : ""
+      shareURL: buildShareURL(shareId, shareCode, "koko")
     };
   });
 
@@ -52,9 +53,9 @@ export function useKokoSessionAdapter(paneId: MaybeRefOrGetter<string>) {
     const sent =
       Boolean(sessionId) &&
       sendToPane(FORMATTER_MESSAGE_TYPE.TERMINAL_SHARE, {
-        origin: window.location.origin,
+        origin: siteUrl.value,
         session: sessionId,
-        users: shareLinkRequest.users,
+        users: shareLinkRequest.users.map((user) => user.id),
         expired_time: shareLinkRequest.expiredTime,
         action_permission: shareLinkRequest.actionPerm
       });

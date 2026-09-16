@@ -8,7 +8,7 @@ import type {
 } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
 import { createShareURL, getSuggestionUsers, removeShareUser } from "@/lion/api";
 import { writeClipboardText } from "@/utils/clipboard";
-import { withWebSitePrefix } from "~/utils/runtime";
+import { useShareLink } from "~/composables/useShareLink";
 
 interface LionSessionShareSource {
   endpointUrl: ComputedRef<string>;
@@ -26,6 +26,7 @@ export function useLionSessionShareAdapter(source: LionSessionShareSource): Lion
   const { t } = useI18n();
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
+  const { shareURL: buildShareURL } = useShareLink();
   const shareId = ref("");
   const shareCode = ref("");
   const userOptions = ref<SuggestionUser[]>([]);
@@ -38,10 +39,7 @@ export function useLionSessionShareAdapter(source: LionSessionShareSource): Lion
   const onlineUsers = computed(() => Object.values(source.onlineUsersMap.value || {}).filter(Boolean));
   const shareURL = computed(() => {
     if (!shareId.value || !shareCode.value) return "";
-    return new URL(
-      withWebSitePrefix(`/luna/lion/share/${shareId.value}?type=lion&code=${encodeURIComponent(shareCode.value)}`),
-      source.endpointUrl.value
-    ).toString();
+    return buildShareURL(shareId.value, shareCode.value, "lion");
   });
   const shareInfo = computed(() => ({
     shareId: shareId.value,
@@ -107,7 +105,7 @@ export function useLionSessionShareAdapter(source: LionSessionShareSource): Lion
         {
           session_id: sessionId.value,
           expired_time: request.expiredTime,
-          users: request.users,
+          users: request.users.map((user) => user.id),
           action_perm: request.actionPerm
         },
         source.endpointUrl.value,

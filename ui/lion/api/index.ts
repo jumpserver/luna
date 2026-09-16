@@ -22,16 +22,6 @@ export interface ShareApiResponse {
   [key: string]: unknown;
 }
 
-export interface ShareSessionResponse extends ShareApiResponse {
-  action_permission?: {
-    value?: string;
-  };
-  session?: {
-    id?: string;
-    [key: string]: unknown;
-  };
-}
-
 export interface LionRequestAuth {
   ticket?: string;
   token?: string;
@@ -94,9 +84,7 @@ const getSuggestionUsers = (query: string, page = 1, limit = 10) =>
 
 const createShareURL = (data: unknown, endpointUrl?: string, auth?: LionRequestAuth) =>
   postJson<ShareApiResponse>(withRequestAuth(withLionUrl("/api/share/", endpointUrl), auth), data);
-const getShareSession = (id: string, data: unknown, endpointUrl?: string, auth?: LionRequestAuth) =>
-  postJson<ShareSessionResponse>(withRequestAuth(withLionUrl(`/api/share/${id}/`, endpointUrl), auth), data);
 const removeShareUser = (data: unknown, endpointUrl?: string, auth?: LionRequestAuth) =>
   postJson<ShareApiResponse>(withRequestAuth(withLionUrl("/api/share/remove/", endpointUrl), auth), data);
 
-export { createShareURL, getShareSession, getSuggestionUsers, removeShareUser };
+export { createShareURL, getSuggestionUsers, removeShareUser };

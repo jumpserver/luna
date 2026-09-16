@@ -140,7 +140,6 @@ export function createKokoTerminalMessageHandlers(options: {
   // pane key a second connection would overwrite the first one's session id,
   // asset name and share state.
   const paneId = () => options.sessionCtxRef.value?.tabId || "";
-  const paneState = () => options.connectionStore.pane(paneId());
   const updatePane = (patch: Parameters<typeof options.connectionStore.updatePane>[1]) => {
     options.connectionStore.updatePane(paneId(), patch);
   };
@@ -221,8 +220,7 @@ export function createKokoTerminalMessageHandlers(options: {
           params: {
             type: "primary",
             cols: terminal.cols,
-            rows: terminal.rows,
-            code: paneState().shareCode
+            rows: terminal.rows
           }
         })
       );

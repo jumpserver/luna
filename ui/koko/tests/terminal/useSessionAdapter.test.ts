@@ -9,9 +9,17 @@ import mittBus from "#koko/utils/mittBus";
 
 const PANE_A = "pane-a";
 const PANE_B = "pane-b";
+const runtime = vi.hoisted(() => ({ desktop: false }));
 
 vi.mock("clipboard-polyfill", () => ({
   writeText: vi.fn(async () => undefined)
+}));
+vi.mock("~/store/modules/userInfo", () => ({
+  useUserInfoStore: () => ({ currentSite: "https://desktop.example" })
+}));
+vi.mock("~/utils/runtime", async (original) => ({
+  ...(await original<typeof import("~/utils/runtime")>()),
+  isDesktopRuntime: () => runtime.desktop
 }));
 
 const toastAdd = vi.fn();
@@ -33,6 +41,7 @@ const onlineUser = {
 
 describe("useKokoSessionAdapter", () => {
   beforeEach(() => {
+    runtime.desktop = false;
     setActivePinia(createPinia());
     toastAdd.mockReset();
     addErrorToast.mockReset();
@@ -40,7 +49,7 @@ describe("useKokoSessionAdapter", () => {
     vi.mocked(writeText).mockResolvedValue(undefined);
     mittBus.all.clear();
     if (typeof window === "undefined") {
-      vi.stubGlobal("window", { location: { origin: "http://luna.test" } });
+      vi.stubGlobal("window", { location: { origin: "http://luna.test", pathname: "/luna/" } });
     }
   });
 
@@ -58,7 +67,7 @@ describe("useKokoSessionAdapter", () => {
 
     const { shareInfo } = useKokoSessionAdapter(PANE_A);
 
-    expect(shareInfo.value.shareURL).toContain("/luna/share/share-1?code=code-1");
+    expect(shareInfo.value.shareURL).toContain("/luna/share/share-1/?code=code-1&component=koko");
     expect(shareInfo.value.enableShare).toBe(true);
   });
 
@@ -84,6 +93,14 @@ describe("useKokoSessionAdapter", () => {
     expect(useKokoSessionAdapter(PANE_B).shareInfo.value.sessionId).toBe("session-b");
   });
 
+  it("uses the public site for desktop share links", () => {
+    runtime.desktop = true;
+    useKokoConnectionStore().updatePane(PANE_A, { shareId: "share-1", shareCode: "1234" });
+    expect(useKokoSessionAdapter(PANE_A).shareInfo.value.shareURL).toBe(
+      "https://desktop.example/luna/share/share-1/?code=1234&component=koko"
+    );
+  });
+
   it("does not copy a share URL when sharing is disabled", () => {
     const { copyShareURL } = useKokoSessionAdapter(PANE_A);
 
@@ -107,7 +124,7 @@ describe("useKokoSessionAdapter", () => {
     });
 
     const copied = String(vi.mocked(writeText).mock.calls[0]?.[0]);
-    expect(copied).toBe(`${window.location.origin}/luna/share/share-1?code=code-1`);
+    expect(copied).toBe(`${window.location.origin}/luna/share/share-1/?code=code-1&component=koko`);
     expect(toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({ title: "koko.terminal.shareLinkCopied", color: "success" })
     );
@@ -160,7 +177,9 @@ describe("useKokoSessionAdapter", () => {
     expect(socket.send).toHaveBeenCalledTimes(1);
     const frame = parseEnvelope(socket.send.mock.calls[0]?.[0] as Uint8Array);
     expect(frame.type).toBe(ENVELOPE_TERMINAL_COMMAND);
-    expect(parseJSONPayload<{ command?: string }>(frame.payload).command).toBe(FORMATTER_MESSAGE_TYPE.TERMINAL_SHARE);
+    const command = parseJSONPayload<{ command?: string; params?: { data?: string } }>(frame.payload);
+    expect(command.command).toBe(FORMATTER_MESSAGE_TYPE.TERMINAL_SHARE);
+    expect(JSON.parse(String(command.params?.data))).toMatchObject({ users: ["u1"], origin: window.location.origin });
   });
 
   it("toasts when creating a share link without a live socket", () => {

@@ -1,53 +1,28 @@
 <script setup lang="ts">
-import type { ConnectorSessionContext } from "@jumpserver/connectors-core";
 import { connectorSessionKey } from "@jumpserver/connectors-core";
 import { KokoConnectView } from "#koko";
-import { useKokoConnectionStore } from "#koko/stores/connection";
+import LionProvider from "~/components/lion/LionProvider.vue";
+import { useSessionShare } from "~/composables/useSessionShare";
+import LionShareView from "~/lion/views/ShareView.vue";
 
 definePageMeta({ layout: "connect" });
 
 const route = useRoute();
 const { t } = useI18n();
-const colorMode = useColorMode();
-const { activePaneId } = useWorkspaceTabs();
-const { bootstrapPersistedSession } = useAuthSession();
-const connectionStore = useKokoConnectionStore();
-
-const shareId = computed(() => String(route.params.id || ""));
+const shareId = String(route.params.id || "");
 const verifyValue = ref(String(route.query.code || "").trim());
 const showModal = ref(!verifyValue.value);
-const sessionContext = ref<ConnectorSessionContext | null>(null);
+const { sessionContext, loading, error, join } = useSessionShare(shareId, String(route.query.component || ""));
 
 provide(connectorSessionKey, sessionContext);
 
-function startShareSession(code: string) {
-  const trimmed = code.trim();
-  if (!trimmed || !shareId.value) return;
-
-  const paneId = `share:${shareId.value}`;
-  // The terminal handshake reads the code back from this pane's runtime state.
-  connectionStore.updatePane(paneId, { shareId: shareId.value, shareCode: trimmed });
-  sessionContext.value = {
-    component: "koko",
-    tokenId: "",
-    endpointUrl: window.location.origin,
-    tabId: paneId,
-    colorMode: colorMode.value,
-    themeType: colorMode.value === "dark" ? "darkGary" : "default",
-    wsQuery: { type: "share", target_id: shareId.value },
-    terminalProfile: { protocol: "ssh" }
-  };
-  activePaneId.value = paneId;
-  showModal.value = false;
+async function startShareSession() {
+  await join(verifyValue.value);
+  showModal.value = !sessionContext.value;
 }
 
-onMounted(async () => {
-  await bootstrapPersistedSession();
-  if (verifyValue.value) startShareSession(verifyValue.value);
-});
-
-onBeforeUnmount(() => {
-  if (activePaneId.value === sessionContext.value?.tabId) activePaneId.value = "";
+onMounted(() => {
+  if (verifyValue.value) void startShareSession();
 });
 </script>
 
@@ -60,21 +35,27 @@ onBeforeUnmount(() => {
             v-model="verifyValue"
             maxlength="4"
             :placeholder="t('RightPanel.VerifyCode')"
-            @keydown.enter.prevent="startShareSession(verifyValue)"
+            :disabled="loading"
+            @keydown.enter.prevent="startShareSession"
           />
         </UFormField>
+        <p v-if="error" class="mt-2 text-sm text-error" role="alert">{{ error }}</p>
       </template>
       <template #footer>
         <UButton
           block
           color="primary"
           :label="t('Common.Confirm')"
+          :loading="loading"
           :disabled="!verifyValue.trim() || !shareId"
-          @click="startShareSession(verifyValue)"
+          @click="startShareSession"
         />
       </template>
     </UModal>
 
-    <KokoConnectView v-if="sessionContext" />
+    <LionProvider v-if="sessionContext?.component === 'lion'">
+      <LionShareView :context="sessionContext" />
+    </LionProvider>
+    <KokoConnectView v-else-if="sessionContext?.component === 'koko'" />
   </div>
 </template>
