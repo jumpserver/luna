@@ -46,7 +46,8 @@ const searching = computed(() => Boolean(remoteAssetSearch.value.trim()));
 const visibleItems = computed(() =>
   searching.value ? searchNodes.value.filter((node) => !isFolder(node)) : items.value
 );
-const previewRecents = computed(() => recentConnections.value.slice(0, 4));
+const previewRecents = ref<AssetItem[]>([]);
+let recentPreviewRequest = 0;
 const listBusy = computed(() => (searching.value ? searchLoading.value : listLoading.value));
 const showRecents = computed(() => !searching.value && stack.value.length === 0 && previewRecents.value.length > 0);
 const showEmpty = computed(() => !listBusy.value && !visibleItems.value.length && !showRecents.value);
@@ -146,7 +147,25 @@ function goToStep(next: 1 | 2) {
   step.value = next;
 }
 
+async function loadPreviewRecents() {
+  const request = ++recentPreviewRequest;
+  const connections = recentConnections.value.slice(0, 10);
+  const verified = await Promise.all(
+    connections.map(async (asset) => {
+      try {
+        return assetSupportsSftp((await host.sftp.prepareAsset(asset)).permedProtocols) ? asset : null;
+      } catch {
+        return null;
+      }
+    })
+  );
+  if (request !== recentPreviewRequest) return;
+  previewRecents.value = verified.filter((asset): asset is AssetItem => Boolean(asset)).slice(0, 4);
+}
+
 function resetModal() {
+  recentPreviewRequest += 1;
+  previewRecents.value = [];
   step.value = 1;
   stepDirection.value = "next";
   selectedAsset.value = null;
@@ -214,12 +233,14 @@ watch(connectModalOpen, (open) => {
   }
   stack.value = [];
   loadRecentConnections();
+  void loadPreviewRecents();
   void loadLevel();
 });
 watch(currentOrgId, () => {
   if (!connectModalOpen.value) return;
   stack.value = [];
   loadRecentConnections();
+  void loadPreviewRecents();
   void loadLevel();
 });
 </script>

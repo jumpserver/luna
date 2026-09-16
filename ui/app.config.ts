@@ -88,8 +88,8 @@ export default defineAppConfig({
         base: "min-w-0 rounded-[length:var(--app-radius)]",
         value: "min-w-0 truncate",
         content:
-          "bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
-        item: "min-w-0 data-highlighted:not-data-disabled:bg-[var(--app-hover-soft)] data-highlighted:not-data-disabled:before:hidden data-[state=checked]:bg-[var(--app-hover-soft)]",
+          "rounded-[length:var(--app-radius)] bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
+        item: "min-w-0 rounded-[length:var(--app-radius)] data-highlighted:not-data-disabled:bg-[var(--app-hover-soft)] data-highlighted:not-data-disabled:before:hidden data-[state=checked]:bg-[var(--app-hover-soft)]",
         itemWrapper: "min-w-0 overflow-hidden",
         itemLabel: "block truncate"
       },
@@ -151,7 +151,7 @@ export default defineAppConfig({
         base: "min-w-0 rounded-[length:var(--app-radius)]",
         value: "min-w-0 truncate",
         content:
-          "bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
+          "rounded-[length:var(--app-radius)] bg-[var(--app-surface-overlay)] text-[var(--app-fg)] ring-[var(--app-border)] shadow-[var(--theme-shadow-soft)] backdrop-blur-md",
         input: "border-b border-[var(--app-border)]",
         viewport: "relative scroll-py-1 overflow-y-auto flex-1",
         group: "p-1 isolate",

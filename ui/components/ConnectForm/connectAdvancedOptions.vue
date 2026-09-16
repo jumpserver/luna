@@ -123,143 +123,174 @@ watch(
   },
   { immediate: true }
 );
+
+function setAdvancedFoldHeight(el: Element, height: string) {
+  const node = el as HTMLElement;
+  node.style.height = height;
+  node.style.overflow = "hidden";
+}
+
+function clearAdvancedFoldHeight(el: Element) {
+  const node = el as HTMLElement;
+  node.style.height = "";
+  node.style.overflow = "";
+}
+
+function onAdvancedFoldBeforeEnter(el: Element) {
+  setAdvancedFoldHeight(el, "0px");
+}
+
+function onAdvancedFoldEnter(el: Element) {
+  const node = el as HTMLElement;
+  void node.offsetHeight;
+  node.style.height = `${node.scrollHeight}px`;
+}
+
+function onAdvancedFoldBeforeLeave(el: Element) {
+  const node = el as HTMLElement;
+  setAdvancedFoldHeight(el, `${node.scrollHeight}px`);
+}
+
+function onAdvancedFoldLeave(el: Element) {
+  const node = el as HTMLElement;
+  void node.offsetHeight;
+  node.style.height = "0px";
+}
 </script>
 
 <template>
-  <div v-if="flags.show">
+  <div
+    v-if="flags.show"
+    :class="{
+      'advanced-options--island': modernIsland,
+      'advanced-options--open': modernIsland && advancedOptionOpen
+    }"
+  >
     <button
       type="button"
       class="flex w-full items-center justify-between border-b py-2"
       :class="
         modernIsland
           ? `${formFieldUi.label} border-[color-mix(in_srgb,var(--theme-fg)_14%,transparent)] px-0`
-          : 'border-gray-200 dark:border-white/10 px-3 text-sm'
+          : 'border-gray-200 px-0 text-sm dark:border-white/10'
       "
       @click="advancedOptionOpen = !advancedOptionOpen"
     >
       <span>{{ t("Common.Advanced") }}</span>
       <UIcon
         name="i-lucide-chevron-down"
-        class="size-4 transition-transform duration-200"
+        class="me-3 size-4 transition-transform duration-200"
         :class="advancedOptionOpen ? 'rotate-180' : ''"
       />
     </button>
 
-    <div
-      v-show="modernIsland || advancedOptionOpen"
-      :class="modernIsland ? ['advanced-fold', { 'is-open': advancedOptionOpen }] : 'space-y-3 px-3 py-3'"
+    <Transition
+      name="advanced-fold"
+      @before-enter="onAdvancedFoldBeforeEnter"
+      @enter="onAdvancedFoldEnter"
+      @after-enter="clearAdvancedFoldHeight"
+      @before-leave="onAdvancedFoldBeforeLeave"
+      @leave="onAdvancedFoldLeave"
+      @after-leave="clearAdvancedFoldHeight"
     >
-      <div :class="modernIsland ? 'advanced-fold__inner' : ''">
-        <div class="space-y-3" :class="modernIsland ? 'pt-3' : ''">
-          <UFormField v-if="flags.charset" :label="t('Setting.Charset')" :ui="formFieldUi" size="sm">
-            <USelect
-              v-model="selectedCharset"
-              :items="charsetItems"
-              :ui="{ base: controlBaseUi, ...overlayMenuUi }"
-              trailing-icon="i-lucide-chevrons-up-down"
-              size="md"
-              class="w-full"
-            />
-          </UFormField>
+      <div v-if="advancedOptionOpen" :class="modernIsland ? 'space-y-3 pt-3 pb-3' : 'space-y-3 px-3 py-3'">
+        <UFormField v-if="flags.charset" :label="t('Setting.Charset')" :ui="formFieldUi" size="sm">
+          <USelect
+            v-model="selectedCharset"
+            :items="charsetItems"
+            :ui="{ base: controlBaseUi, ...overlayMenuUi }"
+            trailing-icon="i-lucide-chevrons-up-down"
+            size="md"
+            class="w-full"
+          />
+        </UFormField>
 
-          <div v-if="flags.backspace" class="flex items-center justify-between">
-            <span class="text-sm">{{ t("Setting.TerminalBackspace") }}</span>
-            <USwitch v-model="selectedBackspaceAsCtrlH" />
-          </div>
+        <div v-if="flags.backspace" class="flex items-center justify-between">
+          <span class="text-sm">{{ t("Setting.TerminalBackspace") }}</span>
+          <USwitch v-model="selectedBackspaceAsCtrlH" />
+        </div>
 
-          <div v-if="flags.disableAutoHash" class="flex items-center justify-between">
-            <span class="text-sm">Disable auto completion</span>
-            <USwitch v-model="selectedDisableAutoHash" />
-          </div>
+        <div v-if="flags.disableAutoHash" class="flex items-center justify-between">
+          <span class="text-sm">Disable auto completion</span>
+          <USwitch v-model="selectedDisableAutoHash" />
+        </div>
 
-          <div v-if="flags.sysdba" class="flex items-center justify-between">
-            <span class="text-sm">SYSDBA</span>
-            <USwitch v-model="selectedUseSysDBA" />
-          </div>
+        <div v-if="flags.sysdba" class="flex items-center justify-between">
+          <span class="text-sm">SYSDBA</span>
+          <USwitch v-model="selectedUseSysDBA" />
+        </div>
 
-          <div v-if="flags.tokenReusable" class="flex items-center justify-between">
-            <span class="text-sm">{{ t("ConnectionGuide.SetReusable") }}</span>
-            <USwitch v-model="selectedTokenReusable" />
-          </div>
+        <div v-if="flags.tokenReusable" class="flex items-center justify-between">
+          <span class="text-sm">{{ t("ConnectionGuide.SetReusable") }}</span>
+          <USwitch v-model="selectedTokenReusable" />
+        </div>
 
-          <UFormField v-if="flags.applet" :label="t('EditModal.AppletConnectMethod')" :ui="formFieldUi" size="sm">
-            <USelect
-              v-model="selectedAppletConnectMethod"
-              :items="appletConnectMethodItems"
-              :ui="{ base: controlBaseUi, ...overlayMenuUi }"
-              trailing-icon="i-lucide-chevrons-up-down"
-              size="md"
-              class="w-full"
-            />
-          </UFormField>
+        <UFormField v-if="flags.applet" :label="t('EditModal.AppletConnectMethod')" :ui="formFieldUi" size="sm">
+          <USelect
+            v-model="selectedAppletConnectMethod"
+            :items="appletConnectMethodItems"
+            :ui="{ base: controlBaseUi, ...overlayMenuUi }"
+            trailing-icon="i-lucide-chevrons-up-down"
+            size="md"
+            class="w-full"
+          />
+        </UFormField>
 
-          <div v-if="flags.remoteMicrophone || flags.reusable" class="grid grid-cols-2 gap-4">
-            <UFormField
-              v-if="flags.remoteMicrophone"
-              :label="t('Setting.RemoteMicrophone')"
-              :ui="{ ...formFieldUi, root: 'items-center', container: 'mt-0 shrink-0' }"
-              orientation="horizontal"
-              size="sm"
-            >
-              <USwitch v-model="selectedRemoteMicrophone" />
-            </UFormField>
-            <UFormField
-              v-if="flags.reusable"
-              :label="t('Setting.RdpFileReusable')"
-              :ui="{ ...formFieldUi, root: 'items-center', container: 'mt-0 shrink-0' }"
-              orientation="horizontal"
-              size="sm"
-            >
-              <USwitch v-model="selectedReusable" />
-            </UFormField>
-          </div>
-
-          <div v-if="flags.resolution || flags.rdpConnectionSpeed" class="grid grid-cols-2 gap-4">
-            <UFormField
-              v-if="flags.resolution"
-              :label="t('Setting.Resolution')"
-              :ui="{ ...formFieldUi, root: 'items-center', wrapper: 'shrink-0', container: 'mt-0 min-w-0 flex-1' }"
-              orientation="horizontal"
-              size="sm"
-              class="min-w-0"
-            >
-              <USelect
-                v-model="selectedResolution"
-                :items="resolutionItems"
-                :ui="{ base: controlBaseUi, ...overlayMenuUi }"
-                trailing-icon="i-lucide-chevrons-up-down"
-                size="md"
-                class="w-full"
-              />
-            </UFormField>
-            <UFormField
-              v-if="flags.rdpConnectionSpeed"
-              :label="t('Setting.RdpConnectionSpeed')"
-              :ui="{ ...formFieldUi, root: 'items-center', wrapper: 'shrink-0', container: 'mt-0 min-w-0 flex-1' }"
-              orientation="horizontal"
-              size="sm"
-              class="min-w-0"
-            >
-              <USelect
-                v-model="selectedRdpConnectionSpeed"
-                :items="rdpConnectionSpeedItems"
-                :ui="{ base: controlBaseUi, ...overlayMenuUi }"
-                trailing-icon="i-lucide-chevrons-up-down"
-                size="md"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
-
+        <div v-if="flags.remoteMicrophone || flags.reusable" class="grid grid-cols-2 gap-4">
           <UFormField
-            v-if="flags.virtualapp"
-            :label="t('ConnectMethodType.VirtualApplication')"
-            :ui="formFieldUi"
+            v-if="flags.remoteMicrophone"
+            :label="t('Setting.RemoteMicrophone')"
+            :ui="{ ...formFieldUi, root: 'items-center', container: 'mt-0 shrink-0' }"
+            orientation="horizontal"
             size="sm"
+            :class="{ 'col-span-2': !flags.reusable }"
+          >
+            <USwitch v-model="selectedRemoteMicrophone" />
+          </UFormField>
+          <UFormField
+            v-if="flags.reusable"
+            :label="t('Setting.RdpFileReusable')"
+            :ui="{ ...formFieldUi, root: 'items-center', container: 'mt-0 shrink-0' }"
+            orientation="horizontal"
+            size="sm"
+            :class="{ 'col-span-2': !flags.remoteMicrophone }"
+          >
+            <USwitch v-model="selectedReusable" />
+          </UFormField>
+        </div>
+
+        <div v-if="flags.resolution || flags.rdpConnectionSpeed" class="grid grid-cols-2 gap-4">
+          <UFormField
+            v-if="flags.resolution"
+            :label="t('Setting.Resolution')"
+            :description="t('Setting.ConnectionResolutionDescription')"
+            :ui="{ ...formFieldUi, root: 'items-center', wrapper: 'shrink-0', container: 'mt-0 w-48 shrink-0' }"
+            orientation="horizontal"
+            size="sm"
+            class="min-w-0"
+            :class="{ 'col-span-2': !flags.rdpConnectionSpeed }"
           >
             <USelect
-              v-model="selectedVirtualappConnectMethod"
-              :items="virtualappConnectMethodItems"
+              v-model="selectedResolution"
+              :items="resolutionItems"
+              :ui="{ base: controlBaseUi, ...overlayMenuUi }"
+              trailing-icon="i-lucide-chevrons-up-down"
+              size="md"
+              class="w-full"
+            />
+          </UFormField>
+          <UFormField
+            v-if="flags.rdpConnectionSpeed"
+            :label="t('Setting.RdpConnectionSpeed')"
+            :ui="{ ...formFieldUi, root: 'items-center', wrapper: 'shrink-0', container: 'mt-0 w-48 shrink-0' }"
+            orientation="horizontal"
+            size="sm"
+            class="min-w-0"
+            :class="{ 'col-span-2': !flags.resolution }"
+          >
+            <USelect
+              v-model="selectedRdpConnectionSpeed"
+              :items="rdpConnectionSpeedItems"
               :ui="{ base: controlBaseUi, ...overlayMenuUi }"
               trailing-icon="i-lucide-chevrons-up-down"
               size="md"
@@ -267,24 +298,46 @@ watch(
             />
           </UFormField>
         </div>
+
+        <UFormField
+          v-if="flags.virtualapp"
+          :label="t('ConnectMethodType.VirtualApplication')"
+          :ui="formFieldUi"
+          size="sm"
+        >
+          <USelect
+            v-model="selectedVirtualappConnectMethod"
+            :items="virtualappConnectMethodItems"
+            :ui="{ base: controlBaseUi, ...overlayMenuUi }"
+            trailing-icon="i-lucide-chevrons-up-down"
+            size="md"
+            class="w-full"
+          />
+        </UFormField>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
 <style scoped>
-.advanced-fold {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 200ms ease;
+.advanced-options--island > button {
+  padding-inline: 0;
+  border-bottom-color: color-mix(in srgb, var(--theme-fg) 14%, transparent);
 }
 
-.advanced-fold.is-open {
-  grid-template-rows: 1fr;
+.advanced-options--open {
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-fg) 14%, transparent);
 }
 
-.advanced-fold__inner {
-  overflow: hidden;
-  min-height: 0;
+.advanced-fold-enter-active,
+.advanced-fold-leave-active {
+  transition:
+    height 200ms ease,
+    opacity 160ms ease;
+}
+
+.advanced-fold-enter-from,
+.advanced-fold-leave-to {
+  opacity: 0;
 }
 </style>

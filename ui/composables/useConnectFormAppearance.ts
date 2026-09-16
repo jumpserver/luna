@@ -23,7 +23,7 @@ export function useConnectFormAppearance() {
     modernIsland.value
       ? {
           content:
-            "bg-[var(--app-surface-panel)] text-[var(--app-fg)] ring-1 ring-[color-mix(in_srgb,var(--theme-fg)_22%,transparent)] shadow-[0_18px_48px_color-mix(in_srgb,#000_45%,transparent)]"
+            "rounded-[length:var(--workspace-island-radius)] bg-[var(--app-surface-panel)] text-[var(--app-fg)] ring-1 ring-[color-mix(in_srgb,var(--theme-fg)_22%,transparent)] shadow-[0_18px_48px_color-mix(in_srgb,#000_45%,transparent)]"
         }
       : {}
   );
