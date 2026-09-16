@@ -21,6 +21,8 @@ describe("asset icon URLs", () => {
     ["MongoDB", "mongodb.svg"],
     ["ClickHouse", "clickhouse.svg"],
     ["Dameng", "dameng.png"],
+    ["DB2", "db2.png"],
+    ["IBM DB2", "db2.png"],
     ["Linux", "linux.svg"],
     ["Windows", "windows.svg"],
     ["Windows_AD", "windows.svg"],
@@ -36,6 +38,7 @@ describe("asset icon URLs", () => {
 
   it("keeps a known database vendor ahead of the generic database category", () => {
     expect(resolveAssetIconFromFields({ platform: "MySQL", category: "database" }).src).toBe("/icons/mysql.svg");
+    expect(resolveAssetIconFromFields({ platform: "IBM DB2", category: "database" }).src).toBe("/icons/db2.png");
   });
 
   it("keeps database vendors ahead of web hints in tree labels", () => {

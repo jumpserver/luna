@@ -44,6 +44,7 @@ const datasourceIconSrc = computed(() => {
     "redis",
     "mongodb",
     "dameng",
+    "db2",
     "clickhouse"
   ];
 

@@ -13,6 +13,7 @@ const iconMap: Record<string, string> = {
   redis: "/icons/redis.svg",
   mongodb: "/icons/mongodb.svg",
   dameng: "/icons/dameng.png",
+  db2: "/icons/db2.png",
   clickhouse: "/icons/clickhouse.svg",
   windows_ad: "/icons/windows.svg",
   website: "/icons/chrome.svg",
@@ -40,6 +41,7 @@ function resolveAssetIconPath(type?: string) {
   if (key.includes("redis")) return iconMap.redis!;
   if (key.includes("mongodb")) return iconMap.mongodb!;
   if (key.includes("dameng")) return iconMap.dameng!;
+  if (key.includes("db2")) return iconMap.db2!;
   if (key.includes("clickhouse")) return iconMap.clickhouse!;
   if (key.includes("database")) return iconMap.database!;
   return "";
@@ -80,6 +82,7 @@ export function resolveAssetIconFromCandidates(values: (string | undefined)[], b
   if (has("redis")) return resolve(iconMap.redis!, "i-lucide-database");
   if (has("mongodb")) return resolve(iconMap.mongodb!, "i-lucide-database");
   if (has("dameng")) return resolve(iconMap.dameng!, "i-lucide-database");
+  if (has("db2")) return resolve(iconMap.db2!, "i-lucide-database");
   if (has("clickhouse")) return resolve(iconMap.clickhouse!, "i-lucide-database");
   if (has("web")) return resolve(iconMap.website!, "i-lucide-globe");
   if (has("database")) return resolve(iconMap.database!, "i-tabler-database-filled");
