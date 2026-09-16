@@ -1,4 +1,5 @@
 import type { WorkspaceMode } from "~/composables/useWorkspaceMode";
+import { createGlobalState, useLocalStorage, useMediaQuery } from "@vueuse/core";
 import { workspaceAiEnabled } from "~/shared/aiAvailability";
 
 export type UnifiedAiPanelKind = "workspace" | "resource";
@@ -14,8 +15,22 @@ interface UnifiedAiPanelContext {
   sessionKind?: "file" | "terminal" | "sql" | "script";
 }
 
-const openTabs = shallowRef(new WeakSet<object>());
-const openWithoutTab = shallowRef(false);
+const usePanelPreferences = createGlobalState(() => {
+  const preferredOpen = useLocalStorage("jumpserver-client:ai-panel-open", true, { writeDefaults: false });
+  const storedWidth = useLocalStorage("jumpserver-client:ai-panel-width", AI_PANEL_DEFAULT_WIDTH, {
+    writeDefaults: false
+  });
+  const narrow = useMediaQuery("(max-width: 767px)");
+  const narrowOpen = shallowRef(false);
+  watch(
+    [narrow, workspaceAiEnabled],
+    () => {
+      narrowOpen.value = false;
+    },
+    { flush: "sync" }
+  );
+  return { preferredOpen, storedWidth, narrow, narrowOpen };
+});
 interface TerminalPromptBinding {
   loginContext: string;
   resourceId: string;
@@ -24,14 +39,17 @@ interface TerminalPromptBinding {
 const pendingTerminalPrompt = shallowRef<({ id: string; paneId: string; text: string } & TerminalPromptBinding) | null>(
   null
 );
-const panelWidth = shallowRef(AI_PANEL_DEFAULT_WIDTH);
+
+function normalizePanelWidth(width: number) {
+  return Number.isFinite(width)
+    ? Math.min(AI_PANEL_MAX_WIDTH, Math.max(AI_PANEL_MIN_WIDTH, Math.round(width)))
+    : AI_PANEL_DEFAULT_WIDTH;
+}
 
 watch(
   workspaceAiEnabled,
   (enabled) => {
     if (enabled) return;
-    openTabs.value = new WeakSet();
-    openWithoutTab.value = false;
     pendingTerminalPrompt.value = null;
   },
   { flush: "sync" }
@@ -45,27 +63,18 @@ export function resolveUnifiedAiPanel(context: UnifiedAiPanelContext): UnifiedAi
 }
 
 export const useAiPanel = () => {
-  const { activeTab } = useWorkspaceTabs();
-  const open = computed(() => {
-    if (!workspaceAiEnabled.value) return false;
-    const tab = activeTab.value;
-    return tab ? openTabs.value.has(tab) : openWithoutTab.value;
-  });
+  const { preferredOpen, storedWidth, narrow, narrowOpen } = usePanelPreferences();
+  const open = computed(() => workspaceAiEnabled.value && (narrow.value ? narrowOpen.value : preferredOpen.value));
+  const panelWidth = computed(() => normalizePanelWidth(storedWidth.value));
 
   const setOpen = (value: boolean) => {
     if (value && !workspaceAiEnabled.value) return;
-    const tab = activeTab.value;
-    if (!tab) {
-      openWithoutTab.value = value;
-      return;
-    }
-    if (value) openTabs.value.add(tab);
-    else openTabs.value.delete(tab);
-    triggerRef(openTabs);
+    if (narrow.value) narrowOpen.value = value;
+    else preferredOpen.value = value;
   };
 
   const setPanelWidth = (width: number) => {
-    panelWidth.value = Math.min(AI_PANEL_MAX_WIDTH, Math.max(AI_PANEL_MIN_WIDTH, Math.round(width)));
+    storedWidth.value = normalizePanelWidth(width);
   };
 
   const openAi = () => {

@@ -61,7 +61,6 @@ const { t } = useI18n();
       </span>
       <div class="flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <span v-for="toolName in toolNames" :key="toolName" class="ai-context-chip" :title="toolName">
-          <UIcon name="i-lucide-sparkles" class="size-3 shrink-0" />
           <span class="max-w-36 truncate">{{ toolName }}</span>
         </span>
       </div>
@@ -192,7 +191,6 @@ const { t } = useI18n();
   height: 1.375rem;
   flex: none;
   align-items: center;
-  gap: 0.25rem;
   padding: 0 0.375rem;
   border: 1px solid var(--app-border);
   border-radius: 0.375rem;

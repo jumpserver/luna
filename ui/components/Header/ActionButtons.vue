@@ -7,18 +7,10 @@ const props = withDefaults(defineProps<{ showProfile?: boolean }>(), { showProfi
 const { t } = useI18n();
 const { activeWorkspaceMode, isUtilityRoute } = useWorkspaceMode();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
-const { open: aiPanelOpen, toggleAi, setOpen: setAiPanelOpen } = useAiPanel();
+const { open: aiPanelOpen, toggleAi } = useAiPanel();
 const showAiButton = computed(() => !isUtilityRoute.value);
 const showRightPanelButton = computed(() => !isUtilityRoute.value && activeWorkspaceMode.value !== "files");
 
-watch(
-  isUtilityRoute,
-  (hide) => {
-    if (!hide) return;
-    setAiPanelOpen(false);
-  },
-  { immediate: true }
-);
 const aiButtonLabel = computed(() =>
   t(
     !workspaceAiEnabled.value ? "RightPanel.AIDisabled" : aiPanelOpen.value ? "RightPanel.AIClose" : "RightPanel.AIOpen"

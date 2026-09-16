@@ -1,5 +1,6 @@
+import { useLocalStorage } from "@vueuse/core";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { computed, shallowRef } from "vue";
+import { computed, nextTick, shallowRef } from "vue";
 import { resolveUnifiedAiPanel, useAiPanel } from "./useAiPanel";
 import { useRightPanel } from "./useRightPanel";
 import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
@@ -8,10 +9,30 @@ const tabs = shallowRef<Array<{ id: string; protocol?: string }>>([]);
 const activeTabId = shallowRef("");
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) || null);
 const workspaceTabs = { tabs, activeTabId, activeTab };
+const narrow = shallowRef(false);
+const saved = new Map<string, string>();
+const storage = {
+  getItem: (key: string) => saved.get(key) ?? null,
+  setItem: (key: string, value: string) => saved.set(key, value),
+  removeItem: (key: string) => saved.delete(key)
+};
+
+vi.mock("@vueuse/core", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@vueuse/core")>();
+  return {
+    ...original,
+    useMediaQuery: () => narrow,
+    useLocalStorage: vi.fn((key, initial, options) =>
+      original.useStorage(key, initial, storage, { ...options, flush: "sync" })
+    )
+  };
+});
 
 describe("AI overlay panel", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    narrow.value = false;
     setWorkspaceAiEnabled(true);
+    await nextTick();
     vi.stubGlobal("useWorkspaceTabs", () => workspaceTabs);
     tabs.value = [{ id: "tab-a" }, { id: "tab-b" }];
     activeTabId.value = "tab-a";
@@ -26,14 +47,33 @@ describe("AI overlay panel", () => {
 
   afterAll(() => vi.unstubAllGlobals());
 
-  it("hides on a new tab without destroying the previous tab visibility", () => {
+  it("defaults to open on desktop and remembers visibility across tabs and consumers", () => {
     const panel = useAiPanel();
+    expect(useLocalStorage).toHaveBeenCalledWith("jumpserver-client:ai-panel-open", true, { writeDefaults: false });
     panel.openAi();
     expect(panel.open.value).toBe(true);
 
     activeTabId.value = "tab-b";
-    expect(panel.open.value).toBe(false);
+    expect(panel.open.value).toBe(true);
+    useAiPanel().setOpen(false);
     activeTabId.value = "tab-a";
+    expect(panel.open.value).toBe(false);
+    expect(saved.get("jumpserver-client:ai-panel-open")).toBe("false");
+    expect(useLocalStorage("jumpserver-client:ai-panel-open", true).value).toBe(false);
+  });
+
+  it("starts narrow screens closed and preserves the desktop preference", async () => {
+    const panel = useAiPanel();
+    panel.openAi();
+    narrow.value = true;
+    await nextTick();
+    expect(panel.open.value).toBe(false);
+    panel.openAi();
+    expect(useAiPanel().open.value).toBe(true);
+    panel.setOpen(false);
+    expect(saved.get("jumpserver-client:ai-panel-open")).toBe("true");
+    narrow.value = false;
+    await nextTick();
     expect(panel.open.value).toBe(true);
   });
 
@@ -63,13 +103,18 @@ describe("AI overlay panel", () => {
     const panel = useAiPanel();
     panel.setPanelWidth(560);
     expect(panel.panelWidth.value).toBe(560);
+    expect(useAiPanel().panelWidth.value).toBe(560);
+    expect(saved.get("jumpserver-client:ai-panel-width")).toBe("560");
+    expect(useLocalStorage("jumpserver-client:ai-panel-width", 380).value).toBe(560);
     panel.setPanelWidth(100);
     expect(panel.panelWidth.value).toBe(320);
     panel.setPanelWidth(900);
     expect(panel.panelWidth.value).toBe(720);
+    panel.setPanelWidth(Number.NaN);
+    expect(panel.panelWidth.value).toBe(380);
   });
 
-  it("blocks opening and terminal prompts, clearing every tab when AI is disabled", () => {
+  it("blocks opening and clears terminal prompts when AI is disabled without losing preferences", () => {
     const panel = useAiPanel();
     panel.openAi();
     activeTabId.value = "tab-b";
@@ -84,9 +129,9 @@ describe("AI overlay panel", () => {
     expect(panel.open.value).toBe(false);
     expect(panel.pendingTerminalPrompt.value).toBeNull();
     setWorkspaceAiEnabled(true);
-    expect(panel.open.value).toBe(false);
+    expect(panel.open.value).toBe(true);
     activeTabId.value = "tab-a";
-    expect(panel.open.value).toBe(false);
+    expect(panel.open.value).toBe(true);
   });
 
   it.each([

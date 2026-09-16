@@ -85,6 +85,7 @@ describe("tab-scoped workspace assistant conversations", () => {
     });
     const runtime = createRuntime();
     const open = shallowRef(true);
+    const isUtilityRoute = shallowRef(false);
     let panel!: ReturnType<typeof useWorkspaceAssistantPanelSession>;
     const renderer = Vue.createRenderer({
       insert() {},
@@ -109,7 +110,12 @@ describe("tab-scoped workspace assistant conversations", () => {
           }
         }
       },
-      setup: () => ({ aiPanelOpen: open, activeTab: true, setAiPanelOpen: (value: boolean) => (open.value = value) }),
+      setup: () => ({
+        aiPanelOpen: open,
+        isUtilityRoute,
+        activeTab: true,
+        setAiPanelOpen: (value: boolean) => (open.value = value)
+      }),
       render: new Function("Vue", code)(Vue)
     });
     app.mount({});
@@ -124,6 +130,16 @@ describe("tab-scoped workspace assistant conversations", () => {
       open.value = true;
       await nextTick();
       expect(panel.session.value).toBe(first);
+
+      if (_name === "default layout") {
+        isUtilityRoute.value = true;
+        await nextTick();
+        expect(open.value).toBe(true);
+        expect(mocks.dispose).not.toHaveBeenCalled();
+        isUtilityRoute.value = false;
+        await nextTick();
+        expect(panel.session.value).toBe(first);
+      }
 
       open.value = false;
       await nextTick();

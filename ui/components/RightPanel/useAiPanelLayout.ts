@@ -12,9 +12,8 @@ interface PanelRect {
   height: number;
 }
 
-const GAP = 12;
+const GAP = 6;
 const MIN_HEIGHT = 280;
-const DEFAULT_HEIGHT = 640;
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, max));
 
 export function useAiPanelLayout(options: {
@@ -37,7 +36,7 @@ export function useAiPanelLayout(options: {
   } | null>(null);
   const limits = computed(() => ({
     width: Math.max(0, size.width.value - GAP * 2),
-    height: Math.max(0, size.height.value - GAP * 2)
+    height: Math.max(0, size.height.value - GAP)
   }));
 
   function constrain(rect: PanelRect): PanelRect {
@@ -49,7 +48,7 @@ export function useAiPanelLayout(options: {
     const height = clamp(rect.height, Math.min(MIN_HEIGHT, limits.value.height), limits.value.height);
     return {
       left: clamp(rect.left, GAP, Math.max(GAP, size.width.value - GAP - width)),
-      top: clamp(rect.top, GAP, Math.max(GAP, size.height.value - GAP - height)),
+      top: clamp(rect.top, GAP, Math.max(GAP, size.height.value - height)),
       width,
       height
     };
@@ -59,19 +58,19 @@ export function useAiPanelLayout(options: {
     constrain(
       placement.value || {
         left: size.width.value - options.width.value - GAP,
-        top: size.height.value - DEFAULT_HEIGHT - GAP,
+        top: GAP,
         width: options.width.value,
-        height: DEFAULT_HEIGHT
+        height: limits.value.height
       }
     )
   );
   const style = computed<CSSProperties>(() => {
     if (options.narrow.value)
       return {
-        bottom: `${GAP}px`,
+        bottom: "0px",
         right: `${GAP}px`,
         width: `min(${options.width.value}px, calc(100% - 3rem))`,
-        height: `min(${DEFAULT_HEIGHT}px, calc(100% - ${GAP * 2}px))`
+        height: `calc(100% - ${GAP}px)`
       };
     return Object.fromEntries(Object.entries(rect.value).map(([key, value]) => [key, `${value}px`]));
   });
@@ -101,10 +100,10 @@ export function useAiPanelLayout(options: {
         next.height = clamp(next.height - dy, minHeight, bottom - GAP);
         next.top = bottom - next.height;
       }
-      if (mode.includes("s")) next.height = clamp(next.height + dy, minHeight, size.height.value - GAP - next.top);
+      if (mode.includes("s")) next.height = clamp(next.height + dy, minHeight, size.height.value - next.top);
     }
-    placement.value = constrain(next);
-    options.setWidth(placement.value.width);
+    options.setWidth(next.width);
+    if (placement.value || (mode !== "w" && mode !== "e")) placement.value = constrain(next);
   }
 
   function findHandle(event: Event) {

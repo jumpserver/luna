@@ -403,7 +403,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <KeepAlive>
-            <AiOverlayPanel v-if="aiPanelOpen" @close="setAiPanelOpen(false)" />
+            <AiOverlayPanel v-if="aiPanelOpen && !isUtilityRoute" @close="setAiPanelOpen(false)" />
           </KeepAlive>
         </div>
       </Main>
