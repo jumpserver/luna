@@ -1,294 +1,69 @@
-<div align="center">
+# JumpServer Luna
 
-# 🚀 JumpServer 客户端
+[English](README.md) | 中文
 
-**基于 Electron 构建的现代化跨平台 JumpServer 桌面客户端**
+Luna 是 JumpServer 的资产连接工作台，提供 Web 和 Electron 桌面端。终端、文件管理、数据库、远程桌面和 Kubernetes 连接都在同一个工作区中打开，可以通过标签页切换会话。
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)](https://github.com/jumpserver/clients)
-[![Electron](https://img.shields.io/badge/Electron-44-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org/)
+前端使用 Nuxt 4、Vue 3 和 Nuxt UI。Web 与桌面端共用界面和连接模块，桌面端额外提供本地终端、外部应用调用和离线录像处理等功能。
 
-[English](README.md) | [中文](README_CN.md)
+## 功能
 
-![JumpServer 客户端](public/screenshot.png)
+- **终端**：通过 Koko 连接 SSH、Telnet 等资产。
+- **文件**：通过 SFTP 浏览、上传、下载和编辑远程文件。
+- **数据库**：通过 Chen 浏览数据库对象、编写 SQL 和查看查询结果，支持 MySQL、PostgreSQL、Redis、MongoDB、Oracle、SQL Server、ClickHouse、MariaDB、达梦和 DB2。
+- **远程桌面**：通过 Lion 使用 RDP、VNC 和远程应用。
+- **Kubernetes**：浏览集群资源并进入容器终端。
+- **Web 资产**：通过 Web Proxy 访问 HTTP/HTTPS 应用。
+- **会话协作与审计**：会话分享、监控和在线录像回放。
+- **AI 助手**：接入 Kael，在工作区中处理终端、数据库等操作，支持工具执行审批和取消。
 
-</div>
+可用的资产和连接方式由 JumpServer 服务端配置及用户授权决定。界面支持多语言、浅色/深色模式和主题预设。
 
----
+## 使用
 
-## ✨ 特性
+### Web
 
-- 🎯 **跨平台支持** - 支持 macOS、Windows 和 Linux 原生应用
-- 🔐 **安全连接** - 支持 SSH、RDP、VNC 和数据库协议
-- 🗄️ **多数据库支持** - 支持 MySQL、PostgreSQL、Redis、MongoDB、Oracle、SQL Server、ClickHouse、达梦等
-- 🖥️ **设备管理** - 无缝管理 Linux 和 Windows 服务器
-- 🎨 **现代化界面** - 基于 Vue 3 和 Nuxt UI 构建的优雅响应式界面
-- ⚡ **桌面集成** - 隔离的 Electron 运行时与 Node 桌面服务
-- 🔗 **深度链接支持** - 通过自定义协议（`jms2://`）从浏览器直接启动连接
-- 🌓 **主题支持** - 支持浅色和深色模式
-- 🌍 **国际化** - 多语言支持（英文、中文）
-- 📋 **剪贴板集成** - 便捷的复制粘贴功能
-- 🔔 **通知** - 实时连接状态通知
-- 💾 **持久化存储** - 保存您喜爱的连接和设置
+部署 JumpServer 后，访问站点的 `/luna/` 路径。未登录时会跳转到服务端登录页；登录后选择资产、账号和连接方式即可打开会话。
 
-## 🖼️ 截图
-
-<div align="center">
-
-![主界面](public/screenshot.png)
-
-_主界面展示资产管理_
-
-</div>
-
-## 🛠️ 技术栈
-
-### 前端
-
-- **Vue 3** - 渐进式 JavaScript 框架
-- **Nuxt UI** - 完全样式化和可自定义的组件
+Luna 需要配合 JumpServer Core 和相应连接组件使用，单独启动前端不包含这些服务。
 
 ### 桌面端
 
-- **Electron 44** - 跨平台窗口、原生集成与打包
-- **Node.js** - SSH helper、录像处理与桌面服务
-- **可选 FFmpeg 插件** - 在设置中按需下载，用于 H.264 录像编码，不依赖系统 FFmpeg
+从 [Releases](https://github.com/jumpserver/luna/releases) 下载对应平台的安装包：
 
-## 📦 安装
+| 平台    | 安装包                              |
+| ------- | ----------------------------------- |
+| macOS   | `.dmg`，支持 Apple Silicon 和 Intel |
+| Windows | `.exe` 或 `.msi`，支持 x64          |
+| Linux   | `.deb` 或 `.rpm`，支持 x64 和 arm64 |
 
-### macOS
+启动后输入 JumpServer 站点地址并登录。桌面端还支持本地 Shell、调用外部终端或数据库客户端、离线录像播放和录像转 MP4。H.264 编码所需的 FFmpeg 插件可在设置中下载。
 
-1. 从 [Releases](https://github.com/jumpserver/clients/releases) 页面下载 `.dmg` 文件
-2. 打开下载的 `.dmg` 文件
-3. 将 `JumpServer.app` 拖拽到 `应用程序` 文件夹
-4. 双击 `JumpServer.app` 启动（这将注册自定义协议）
+浏览器可通过 `jms2://` 链接唤起客户端。桌面端 OAuth 回调为 `jms2://auth/callback`，服务端 OAuth 应用需允许该地址；旧版客户端使用的 `jms://` 协议保持独立。
 
-### Windows
+## 本地启动
 
-1. 从 [Releases](https://github.com/jumpserver/clients/releases) 页面下载 `.msi` 或 `.exe` 安装程序
-2. 双击安装程序文件
-3. 按照安装向导操作（可能需要 10-15 秒）
-4. 从开始菜单启动 JumpServer 客户端
-
-### Linux
-
-#### Debian/Ubuntu (.deb)
+需要 Node.js 24 和 pnpm 11.4.0。运行桌面端还需 Go 1.25 及以上版本和对应平台的原生编译工具。
 
 ```bash
-# 下载 .deb 安装包
-wget https://github.com/jumpserver/clients/releases/latest/download/jumpserver-client_*.deb
-
-# 使用 dpkg 安装
-sudo dpkg -i jumpserver-client_*.deb
-
-# 或使用 apt 安装
-sudo apt install ./jumpserver-client_*.deb
-```
-
-#### RPM 系列 (Red Hat, Fedora, CentOS)
-
-```bash
-# 下载 .rpm 安装包
-wget https://github.com/jumpserver/clients/releases/latest/download/jumpserver-client_*.rpm
-
-# 使用 rpm 安装
-sudo rpm -i jumpserver-client_*.rpm
-
-# 或使用 dnf/yum 安装
-sudo dnf install ./jumpserver-client_*.rpm
-```
-
-## 🚀 使用
-
-### 启动连接
-
-1. **从 JumpServer Web 界面**：点击任何资产连接链接 - 客户端将自动启动
-2. **从客户端**：浏览您的资产，选择连接，然后点击连接
-3. **自定义协议**：使用 `jms2://` 链接以编程方式启动连接
-
-### 支持的连接类型
-
-- **SSH/Telnet** - 终端连接（PuTTY、XShell、SecureCRT、iTerm2）
-- **RDP** - Windows 服务器的远程桌面协议
-- **VNC** - 用于远程桌面访问的虚拟网络计算
-- **数据库连接**：
-  - MySQL
-  - PostgreSQL
-  - Redis
-  - MongoDB
-  - Oracle
-  - SQL Server
-  - ClickHouse
-  - 达梦 (DM)
-
-### 资产管理
-
-- **收藏夹** - 将常用资产标记为收藏以便快速访问
-- **搜索** - 通过名称或 IP 地址快速查找资产
-- **分类** - 按类型组织资产（Linux、Windows、数据库）
-- **重命名** - 自定义资产显示名称
-
-## 🛠️ 开发
-
-### 前置要求
-
-- **Node.js** >= 24
-- **pnpm** >= 11
-- **系统依赖**：
-  - macOS: Xcode Command Line Tools
-  - Windows: Microsoft Visual C++ Build Tools；生成 MSI 时还需 WiX Toolset 3（`candle` 和 `light`）
-  - Linux: `build-essential`、`fakeroot`，生成 DEB/RPM 安装包时还需安装 `rpm`
-
-### 快速开始
-
-```bash
-# 克隆仓库
-git clone https://github.com/jumpserver/clients.git
-cd clients
-
-# 安装依赖
+git clone https://github.com/jumpserver/luna.git
+cd luna
 pnpm install
+pnpm web:dev
+```
 
-# 启动开发服务器
+浏览器打开 `http://localhost:3000/luna/`。后端服务需单独启动，开发代理地址可在 `.env.development` 中配置。
+
+启动桌面端：
+
+```bash
 pnpm electron:dev
 ```
 
-### 构建生产版本
+## 相关链接
 
-```bash
-# 为当前平台构建
-pnpm electron:build
+问题反馈请提交到 [Issues](https://github.com/jumpserver/luna/issues)，使用和部署说明见 [JumpServer 文档](https://docs.jumpserver.org/)。
 
-# 构建未打包的应用目录
-pnpm electron:package:dir
-```
+## 许可证
 
-### 构建 Web Docker 镜像
-
-Docker 构建只安装 Web workspace 的依赖关系，并将生成的 Nuxt 静态产物写入 `/opt/luna`。Electron 代码及桌面原生依赖不会进入 Docker 构建上下文。
-
-```bash
-docker build -t jumpserver/luna:local .
-```
-
-Web 工作流会构建 `linux/amd64` 与 `linux/arm64` 双架构镜像，并在版本标签触发时发布到 `jumpserver/luna`。macOS、Linux 和 Windows 桌面客户端则由客户端发布工作流单独打包。
-
-### 项目结构
-
-```
-clients/
-├── ui/                    # 前端 (Vue/Nuxt)
-│   ├── components/        # Vue 组件
-│   ├── pages/            # 应用页面
-│   ├── composables/      # Vue 组合式函数
-│   └── layouts/          # 布局组件
-├── electron/              # Electron 主进程与 preload bridge
-│   ├── src/              # 按业务拆分的 TypeScript 桌面运行时
-│   └── tests/            # Electron 单元测试与 fixtures
-└── i18n/                 # 国际化文件
-```
-
-### 可用脚本
-
-```bash
-pnpm web:dev          # 启动 Nuxt Web 开发模式
-pnpm electron:dev     # 启动 Electron 开发模式
-pnpm electron:build   # 构建生产应用
-make docker-build     # 构建 Web Docker 镜像
-pnpm fmt              # 使用 Oxfmt 格式化前端代码
-pnpm lint             # 运行代码检查
-pnpm reset            # 清理构建产物
-```
-
-### 连接组件的开发代理
-
-所有连接都使用 Core 返回的 endpoint。HTTP/HTTPS 端口为 `0` 时继承当前站点端口；明确配置的 host、端口或 URL 不会因开发模式或 loopback 地址而被替换。
-
-推荐通过 Compose 提供独立开发入口：
-
-```bash
-# 先分别启动本机 Core（8080）、Koko（5050）和 Chen（8082）
-# 启动代理，再执行 npm run dev（Nuxt + Electron）；退出时自动清理代理
-make run
-```
-
-浏览器打开 `http://localhost:8888/luna/`，Electron 登录站点填写 `http://localhost:8888`。`make run` 启动代理、Nuxt 和 Electron；后端需提前启动，前端依赖需先安装。请将 `http://localhost:8888` 加入 Core 的 `DOMAINS` 信任配置（用于域名和 CSRF 校验），并在需要时更新 `SITE_URL`。默认 endpoint 经此入口分流：
-
-| 路径 | 本机端口 | Compose 配置变量（host:port） |
-| --- | --- | --- |
-| `/koko/`（含 Lion、HTTP/WebSocket） | 5050 | `JMS_DEV_KOKO` |
-| `/chen/`（HTTP/WebSocket） | 8082 | `JMS_DEV_CHEN` |
-| `/luna/` | 3000 | `JMS_DEV_LUNA` |
-| `/ui/` | 9528 | `JMS_DEV_UI` |
-| `/kael/` | 8083 | `JMS_DEV_KAEL` |
-| `/facelive/` | 5173 | `JMS_DEV_FACELIVE` |
-| 其余路径（Core） | 8080 | `JMS_DEV_CORE` |
-
-容器通过 `host.docker.internal` 访问宿主机。Linux 上本机服务需要监听 Docker 网桥可访问的地址，不能只监听 `127.0.0.1`。代理仅发布到本机 `127.0.0.1`。
-
-可用 `JMS_DEV_PORT=8899 make run` 修改入口端口，此时登录 `http://localhost:8899`；将该入口加入 Core 的 `DOMAINS`/`CSRF` 信任配置，并在需要时更新 `SITE_URL`。上游覆盖示例：`JMS_DEV_KOKO=host.docker.internal:5051 make run`。Compose 读取 shell 环境或根目录 `.env`，不读取 Nuxt 的 `.env.development`。配置检查：`docker compose config` 和 `docker compose run --rm gateway nginx -t`。
-
-原有 Nuxt 开发代理仍可通过 `pnpm dev` 使用；其 `JMS_*_DEV_URL` 配置只影响 Nuxt。自定义 endpoint 需配置为统一入口，或其实际可访问的连接地址。
-
-Electron 选择远端 JumpServer 站点时直接使用该站点的 endpoint。已移除 `JMS_KOKO_DESKTOP_URL`、`JMS_CHEN_DESKTOP_URL`、`VITE_JMS_WEB_PROXY_URL` 和 `VITE_JMS_WEB_PROXY_PORT` 地址覆盖。
-
-Web Proxy 使用 endpoint 的独立 `web_proxy_port`（旧服务端缺少该字段时使用 `5001`），不经过 `/koko/` 反向代理。它和本地 Koko/Chen 必须连接签发 token 的同一 Core。代理配置可用 `node scripts/check-ws-proxy.mjs` 检查。
-
-## 🤝 贡献
-
-欢迎贡献！请随时提交 Pull Request。
-
-1. Fork 本仓库
-2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交您的更改 (`git commit -m '添加一些 AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开一个 Pull Request
-
-### 开发指南
-
-- 遵循现有的代码风格
-- 编写有意义的提交信息
-- 为新功能添加测试
-- 根据需要更新文档
-- 确保所有检查通过后再提交
-
-## 📝 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
-## 🙏 致谢
-
-- [JumpServer](https://github.com/jumpserver/jumpserver) - 开源堡垒机
-- [Electron](https://www.electronjs.org/) - 跨平台桌面运行时
-- [Vue.js](https://vuejs.org/) - 渐进式 JavaScript 框架
-- [Nuxt](https://nuxt.com/) - 直观的 Vue 框架
-
-## 📚 相关资源
-
-- [JumpServer 文档](https://docs.jumpserver.org/)
-- [打包指南](https://github.com/jumpserver/apps/blob/master/README_PACK.md)
-- [浏览器深度链接协议](https://juejin.cn/post/6844903989155217421)
-- [Linux 自定义协议处理](https://medium.com/swlh/custom-protocol-handling-how-to-8ac41ff651eb)
-
-## 📮 支持
-
-- **问题反馈**：[GitHub Issues](https://github.com/jumpserver/clients/issues)
-- **讨论**：[GitHub Discussions](https://github.com/jumpserver/clients/discussions)
-- **JumpServer 社区**：[JumpServer Community](https://github.com/jumpserver/jumpserver)
-
----
-
-<div align="center">
-
-由 JumpServer 团队用 ❤️ 制作
-
-[⭐ 在 GitHub 上给我们点星](https://github.com/jumpserver/clients) | [📖 文档](https://docs.jumpserver.org/) | [🐛 报告问题](https://github.com/jumpserver/clients/issues)
-
-</div>
-
-### Harness 分支 AI 联调
-
-本分支要求 Kael bootstrap 返回 `agent_engine: codex` 和 `agent_protocol_version: 1`，不兼容旧 Agent 后端。Kael 安装固定版本 `@openai/codex@0.153.2`，Core 的模型地址须支持 Responses API。
-
-Luna 继续通过 `/kael/api/v1` 注册上下文和工具，经现有 Koko/Chen/本地执行器执行工具，并处理审批、流式结果和取消；浏览器和 Electron 均不直接启动 Codex。`model.completed` 的 `scope: agent_turn` 表示完整任务执行耗时，不能当作单次模型思考时间。启动与能力边界见相邻 Kael 仓库的 `docs/adr/0007-codex-harness.md`。
+[MIT](LICENSE)
