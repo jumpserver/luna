@@ -239,7 +239,7 @@ defineExpose({
             icon="i-lucide-chevron-left"
             color="neutral"
             variant="ghost"
-            size="sm"
+            :size="dense ? 'xs' : 'sm'"
             square
             :disabled="!manager.canGoBack.value"
             :aria-label="t('koko.fileManagement.back')"
@@ -251,7 +251,7 @@ defineExpose({
             icon="i-lucide-chevron-right"
             color="neutral"
             variant="ghost"
-            size="sm"
+            :size="dense ? 'xs' : 'sm'"
             square
             :disabled="!manager.canGoForward.value"
             :aria-label="t('koko.fileManagement.forward')"
@@ -264,7 +264,7 @@ defineExpose({
           icon="i-lucide-arrow-up"
           color="neutral"
           variant="ghost"
-          size="sm"
+          :size="dense ? 'xs' : 'sm'"
           square
           :disabled="manager.currentPath.value === '/'"
           :aria-label="t('koko.drawer.up')"
@@ -276,7 +276,7 @@ defineExpose({
           icon="i-lucide-house"
           color="neutral"
           variant="ghost"
-          size="sm"
+          :size="dense ? 'xs' : 'sm'"
           square
           :disabled="!manager.canGoHome.value"
           :aria-label="t('koko.fileManagement.home')"
@@ -358,7 +358,7 @@ defineExpose({
             icon="i-lucide-search"
             color="neutral"
             variant="ghost"
-            size="sm"
+            :size="dense ? 'xs' : 'sm'"
             square
             :aria-label="t('koko.fileManagement.filterCurrentDirectory')"
             @click="openSearch"
@@ -383,7 +383,7 @@ defineExpose({
           icon="i-lucide-refresh-cw"
           color="neutral"
           variant="ghost"
-          size="sm"
+          :size="dense ? 'xs' : 'sm'"
           square
           :aria-label="t('koko.fileManagement.refresh')"
           @click="void manager.loadCurrentDirectory()"
@@ -394,7 +394,7 @@ defineExpose({
           icon="i-lucide-cloud-upload"
           color="neutral"
           variant="ghost"
-          size="sm"
+          :size="dense ? 'xs' : 'sm'"
           square
           :disabled="!canUpload"
           :aria-label="t('koko.actions.upload')"
@@ -407,7 +407,7 @@ defineExpose({
           icon="i-lucide-ellipsis"
           color="neutral"
           variant="ghost"
-          size="sm"
+          :size="dense ? 'xs' : 'sm'"
           square
           :title="t('Common.More')"
           :aria-label="t('Common.More')"
@@ -424,7 +424,7 @@ defineExpose({
               icon="i-lucide-search"
               color="neutral"
               variant="ghost"
-              size="sm"
+              :size="dense ? 'xs' : 'sm'"
               square
               :aria-label="t('koko.fileManagement.filterCurrentDirectory')"
               @click="openSearch"
@@ -449,7 +449,7 @@ defineExpose({
             icon="i-lucide-refresh-cw"
             color="neutral"
             variant="ghost"
-            size="sm"
+            :size="dense ? 'xs' : 'sm'"
             square
             :aria-label="t('koko.fileManagement.refresh')"
             @click="void manager.loadCurrentDirectory()"
@@ -466,7 +466,7 @@ defineExpose({
             icon="i-lucide-folder-plus"
             color="neutral"
             variant="ghost"
-            size="sm"
+            :size="dense ? 'xs' : 'sm'"
             square
             :disabled="!canUpload"
             :aria-label="t('koko.fileManagement.newFolder')"
@@ -478,7 +478,7 @@ defineExpose({
             icon="i-lucide-file-plus-2"
             color="neutral"
             variant="ghost"
-            size="sm"
+            :size="dense ? 'xs' : 'sm'"
             square
             :disabled="!canUpload"
             :aria-label="t('koko.fileManagement.newFile')"
@@ -490,7 +490,7 @@ defineExpose({
             icon="i-lucide-cloud-upload"
             color="neutral"
             variant="ghost"
-            size="sm"
+            :size="dense ? 'xs' : 'sm'"
             square
             :disabled="!canUpload"
             :aria-label="t('koko.actions.upload')"
@@ -507,7 +507,7 @@ defineExpose({
             icon="i-lucide-server"
             color="primary"
             variant="soft"
-            size="sm"
+            :size="dense ? 'xs' : 'sm'"
             :label="t('koko.fileManagement.addRemoteSftp')"
             :aria-label="t('koko.fileManagement.addRemoteSftp')"
             @click="void emit('addRemote')"
@@ -517,7 +517,7 @@ defineExpose({
               icon="i-lucide-circle-help"
               color="neutral"
               variant="ghost"
-              size="sm"
+              :size="dense ? 'xs' : 'sm'"
               square
               :aria-label="t('koko.fileManagement.featureTour')"
               @click="void emit('startTour')"

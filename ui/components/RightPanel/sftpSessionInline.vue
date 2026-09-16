@@ -113,7 +113,7 @@ watch(
         <UButton
           color="primary"
           variant="soft"
-          size="sm"
+          size="xs"
           block
           icon="i-lucide-panels-top-left"
           :label="t('RightPanel.OpenDevelopmentWorkspace')"

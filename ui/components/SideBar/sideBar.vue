@@ -244,7 +244,7 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
             <UButton
               color="neutral"
               variant="ghost"
-              size="sm"
+              size="xs"
               icon="i-lucide-search"
               :aria-label="t('Operation.Search')"
               class="sidebar-icon-button size-6 shrink-0 justify-center p-0"
@@ -263,7 +263,7 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
             <UButton
               color="neutral"
               variant="ghost"
-              size="sm"
+              size="xs"
               icon="i-lucide-ellipsis"
               :aria-label="t('Sidebar.ManageSections')"
               class="sidebar-icon-button size-6 shrink-0 justify-center p-0"

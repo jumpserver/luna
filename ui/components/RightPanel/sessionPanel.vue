@@ -176,8 +176,9 @@ const canShare = computed(() => {
         <UButton
           color="neutral"
           variant="ghost"
+          size="xs"
           block
-          class="h-9 cursor-pointer justify-start rounded-none px-3 text-xs font-semibold"
+          class="h-8 cursor-pointer justify-start rounded-none px-3 text-xs font-semibold"
           :aria-label="t('RightPanel.BasicInfo')"
         >
           <UIcon name="i-lucide-info" class="size-3.5 shrink-0 text-primary" />
@@ -241,8 +242,9 @@ const canShare = computed(() => {
             <UButton
               color="neutral"
               variant="ghost"
+              size="xs"
               block
-              class="h-9 cursor-pointer justify-start rounded-none px-3 text-xs font-semibold"
+              class="h-8 cursor-pointer justify-start rounded-none px-3 text-xs font-semibold"
               :aria-label="t('RightPanel.MonitorInfo')"
             >
               <UIcon name="i-lucide-activity" class="size-3.5 shrink-0 text-primary" />
@@ -340,8 +342,9 @@ const canShare = computed(() => {
             <UButton
               color="neutral"
               variant="ghost"
+              size="xs"
               block
-              class="h-9 cursor-pointer justify-start rounded-none px-3 text-xs font-semibold"
+              class="h-8 cursor-pointer justify-start rounded-none px-3 text-xs font-semibold"
               :aria-label="t('RightPanel.ShareInfo')"
             >
               <UIcon name="i-lucide-share-2" class="size-3.5 shrink-0 text-primary" />

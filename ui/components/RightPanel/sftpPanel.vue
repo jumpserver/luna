@@ -253,7 +253,7 @@ onUnmounted(() => {
           <UButton
             color="primary"
             variant="soft"
-            size="sm"
+            size="xs"
             block
             icon="i-lucide-folder-symlink"
             :label="t('RightPanel.OpenSFTP')"

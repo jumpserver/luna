@@ -964,7 +964,7 @@ onBeforeUnmount(() => {
       <UButton
         color="neutral"
         variant="ghost"
-        size="sm"
+        size="xs"
         square
         :aria-label="accountTooltip"
         :class="[headerIconButtonClass, profileOpen ? headerIconButtonActiveClass : '']"

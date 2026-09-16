@@ -5,6 +5,7 @@
 .sftp-file-management {
   --sftp-title-row-height: var(--workspace-toolbar-height);
   --sftp-toolbar-height: var(--workspace-toolbar-height);
+  --sftp-toolbar-button-size: 32px;
   --sftp-actionbar-height: 38px;
   --sftp-row-height: 34px;
   --sftp-font-caption: 11px;
@@ -14,6 +15,8 @@
   --sftp-icon-md: 16px;
 
   &--compact {
+    --sftp-toolbar-button-size: 24px;
+    --sftp-icon-md: 14px;
     --sftp-actionbar-height: 34px;
     --sftp-row-height: 34px;
     --sftp-font-caption: 11px;
@@ -51,8 +54,8 @@
 
   &__toolbar {
     :where(button):not(.sftp-path-crumb) {
-      height: 32px;
-      min-height: 32px;
+      height: var(--sftp-toolbar-button-size);
+      min-height: var(--sftp-toolbar-button-size);
       border-radius: 8px;
       color: var(--app-text-secondary);
 
@@ -65,8 +68,8 @@
     /* Icon-only actions: square hit area with the glyph centered in the hover surface. */
     :where(button):not(.sftp-path-crumb):not(:has([data-slot="label"])):not(:has([data-slot="value"])) {
       display: inline-flex;
-      width: 32px;
-      min-width: 32px;
+      width: var(--sftp-toolbar-button-size);
+      min-width: var(--sftp-toolbar-button-size);
       align-items: center;
       justify-content: center;
       padding: 0;
@@ -95,8 +98,8 @@
   }
 
   &__search {
-    width: 32px;
-    min-width: 32px;
+    width: var(--sftp-toolbar-button-size);
+    min-width: var(--sftp-toolbar-button-size);
     overflow: hidden;
     border-radius: 8px;
     background: transparent;
