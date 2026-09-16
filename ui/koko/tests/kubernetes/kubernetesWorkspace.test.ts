@@ -9,7 +9,7 @@ describe("kubernetes workspace click typing", () => {
 
   it("keeps the themed terminal edge-to-edge with FitAddon-aware text spacing", () => {
     expect(kubernetesWorkspace).toMatch(
-      /\.kubernetes-terminal :deep\(\.terminal\)\s*\{[^}]*height:\s*100%;[^}]*padding:\s*6px 8px;/
+      /\.kubernetes-terminal :deep\(\.terminal\)\s*\{[^}]*height:\s*100%;[^}]*padding:\s*8px 2px 4px 8px;/
     );
     expect(kubernetesWorkspace).not.toMatch(/\.xterm-scrollable-element\s*\{[^}]*padding:/);
     expect(kubernetesWorkspace).not.toContain("background-color: transparent !important");

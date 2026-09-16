@@ -852,6 +852,7 @@ onUnmounted(() => {
 
 .kubernetes-terminal :deep(.terminal) {
   height: 100%;
-  padding: 6px 8px;
+  /* xterm 另行预留滚动条宽度，右侧只补少量留白。 */
+  padding: 8px 2px 4px 8px;
 }
 </style>
