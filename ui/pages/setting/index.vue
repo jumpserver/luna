@@ -6,6 +6,6 @@ definePageMeta({
 
 <template>
   <div>
-    <h1>Setting</h1>
+    <h1>{{ $t("Common.Settings") }}</h1>
   </div>
 </template>

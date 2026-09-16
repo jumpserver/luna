@@ -60,7 +60,7 @@ watch(tokenId, () => void prepareSession(), { immediate: true });
       :ready="Boolean(context) && !loading && !workspaceError"
       :loading="loading"
       :error="workspaceError"
-      loading-text="正在准备远程桌面连接..."
+      :loading-text="t('koko.workspace.preparingRemoteDesktop')"
       :retry-label="t('WorkspacePane.Reconnect')"
       @retry="emit('reconnect')"
     >

@@ -76,7 +76,7 @@ function tabIcon(tab: WorkspaceSessionTab) {
 }
 
 function tabDisplayTitle(tab: WorkspaceSessionTab) {
-  return tab.title || tab.assetName || "Untitled";
+  return tab.title || tab.assetName || t("Common.Untitled");
 }
 
 function tabTooltip(tab: WorkspaceSessionTab) {
@@ -647,12 +647,12 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
 <template>
   <div data-ai-context="workspace" class="workspace-tab-header flex h-full min-w-0 items-center gap-2 px-1">
-    <UTooltip v-if="!props.standalone && hasLeftHidden" text="向左滚动标签" :delay-duration="150">
+    <UTooltip v-if="!props.standalone && hasLeftHidden" :text="t('TabMenu.ScrollLeft')" :delay-duration="150">
       <button
         type="button"
         class="workspace-tab-overflow flex size-5 shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-default disabled:opacity-40"
         :disabled="!hasLeftHidden"
-        aria-label="向左滚动标签"
+        :aria-label="t('TabMenu.ScrollLeft')"
         @click="scrollTabStrip('left')"
       >
         <UIcon name="i-lucide-chevron-left" class="size-3.5 text-[var(--app-muted)]" />
@@ -738,12 +738,12 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
 
     <WorkspaceAddSessionPopover v-if="showAddSession" />
 
-    <UTooltip v-if="!props.standalone && hasRightHidden" text="向右滚动标签" :delay-duration="150">
+    <UTooltip v-if="!props.standalone && hasRightHidden" :text="t('TabMenu.ScrollRight')" :delay-duration="150">
       <button
         type="button"
         class="workspace-tab-overflow flex size-5 shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-default disabled:opacity-40"
         :disabled="!hasRightHidden"
-        aria-label="向右滚动标签"
+        :aria-label="t('TabMenu.ScrollRight')"
         @click="scrollTabStrip('right')"
       >
         <UIcon name="i-lucide-chevron-right" class="size-3.5 text-[var(--app-muted)]" />
@@ -764,7 +764,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       <button
         type="button"
         class="workspace-tab-overflow flex size-5 shrink-0 items-center justify-center rounded-lg transition-colors"
-        aria-label="切换终端标签"
+        :aria-label="t('TabMenu.SwitchTab')"
       >
         <UIcon name="i-lucide-ellipsis" class="size-3.5 text-[var(--app-muted)]" />
       </button>

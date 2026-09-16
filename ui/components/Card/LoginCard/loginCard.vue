@@ -25,7 +25,7 @@ const handleLogin = () => {
             icon="i-lucide-log-in"
             size="sm"
             variant="ghost"
-            aria-label="Login"
+            :aria-label="t('Common.Login')"
             class="size-11 rounded-full flex items-center justify-center ring-1 ring-primary-400/25 text-primary-400/90 transition-transform duration-200 hover:scale-[1.03] active:scale-95"
           />
         </div>

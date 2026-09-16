@@ -131,7 +131,7 @@ watch(
     <header class="flex h-9 shrink-0 items-center gap-2 border-b border-default px-3">
       <UIcon name="i-lucide-scroll-text" class="size-3.5 text-muted" />
       <h2 class="text-xs font-medium text-highlighted">{{ t("Chen.LogConsole") }}</h2>
-      <span class="text-[11px] text-muted">{{ entries.length }} entries</span>
+      <span class="text-[11px] text-muted">{{ t("Chen.LogEntries", { count: entries.length }) }}</span>
       <UButton
         class="ml-auto"
         size="xs"

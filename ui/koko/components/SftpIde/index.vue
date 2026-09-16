@@ -251,26 +251,29 @@ const lineEndingItems = [
   { label: "LF", value: "LF" },
   { label: "CRLF", value: "CRLF" }
 ] satisfies Array<{ label: string; value: LineEnding }>;
-const languageItems = [
-  { label: "Plain Text", value: "plaintext" },
-  { label: "JSON", value: "json" },
-  { label: "YAML", value: "yaml" },
-  { label: "HTML", value: "html" },
-  { label: "XML", value: "xml" },
-  { label: "Markdown", value: "markdown" },
-  { label: "JavaScript", value: "javascript" },
-  { label: "TypeScript", value: "typescript" },
-  { label: "CSS", value: "css" },
-  { label: "INI", value: "ini" },
-  { label: "Python", value: "python" },
-  { label: "Go", value: "go" },
-  { label: "C", value: "c" },
-  { label: "C++", value: "cpp" },
-  { label: "Java", value: "java" },
-  { label: "Rust", value: "rust" },
-  { label: "Shell", value: "shell" },
-  { label: "SQL", value: "sql" }
-] satisfies Array<{ label: string; value: string }>;
+const languageItems = computed(
+  () =>
+    [
+      { label: t("koko.sftpEditor.plainText"), value: "plaintext" },
+      { label: "JSON", value: "json" },
+      { label: "YAML", value: "yaml" },
+      { label: "HTML", value: "html" },
+      { label: "XML", value: "xml" },
+      { label: "Markdown", value: "markdown" },
+      { label: "JavaScript", value: "javascript" },
+      { label: "TypeScript", value: "typescript" },
+      { label: "CSS", value: "css" },
+      { label: "INI", value: "ini" },
+      { label: "Python", value: "python" },
+      { label: "Go", value: "go" },
+      { label: "C", value: "c" },
+      { label: "C++", value: "cpp" },
+      { label: "Java", value: "java" },
+      { label: "Rust", value: "rust" },
+      { label: "Shell", value: "shell" },
+      { label: "SQL", value: "sql" }
+    ] satisfies Array<{ label: string; value: string }>
+);
 const imageExtensions = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"]);
 const textExtensions = new Set([
   "txt",
@@ -378,7 +381,7 @@ function updateDetectedLanguage(tab: EditorTab, content: string) {
 }
 
 function languageLabel(value: string) {
-  return languageItems.find((item) => item.value === value)?.label || value;
+  return languageItems.value.find((item) => item.value === value)?.label || value;
 }
 const dirty = (tab: EditorTab) =>
   tab.kind === "text" &&
@@ -2769,7 +2772,7 @@ onUnmounted(() => {
                   class="flex items-center justify-between gap-3 border-t border-default px-3 py-2 text-[10px] text-muted"
                 >
                   <span>{{ t("koko.sftpEditor.quickOpenLoadedHint") }}</span>
-                  <span class="shrink-0 font-ui-mono">↑↓ · Enter</span>
+                  <span class="shrink-0 font-ui-mono">↑↓ · {{ t("koko.terminal.enter") }}</span>
                 </div>
               </div>
             </template>

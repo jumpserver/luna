@@ -505,12 +505,12 @@ export const useWorkspaceTabs = () => {
     return pane;
   };
 
-  const openLocalShell = () => {
+  const openLocalShell = (displayName = "Local Shell") => {
     const pane = createPane(
       createTabId("local", "local-shell", ""),
       {
         assetId: "local",
-        assetName: "Local Shell",
+        assetName: displayName,
         assetType: "local",
         assetPlatform: "",
         assetCategory: "terminal",

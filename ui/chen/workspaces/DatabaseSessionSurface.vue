@@ -523,7 +523,7 @@ function applySqlProposal(proposal: ChenSqlProposal): ChenSqlProposalApplyResult
   }
 
   if (base.target === "new_query") {
-    const created = openQueryWorkspace(base.nodeKey, workspace.nextTabTitle("Query"), false);
+    const created = openQueryWorkspace(base.nodeKey, workspace.nextTabTitle(t("Chen.Query")), false);
     if (!created || created.kind !== "query") return staleProposal();
     created.statement = sql;
     created.aiRevision += 1;
@@ -1032,18 +1032,18 @@ function handleTableStructurePacket(tab: ChenTableStructureWorkspaceTab, packet:
   finishTableStructure(tab, !["error", "cancelled"].includes(packet.data?.executionStatus) && !tab.submitError);
 }
 
-function openQueryWorkspace(nodeKey: string, title = "Query", reuseExisting = true) {
+function openQueryWorkspace(nodeKey: string, title = t("Chen.Query"), reuseExisting = true) {
   const tab = workspace.openQueryTab(nodeKey, title, reuseExisting);
   if (tab && !consoleConnections.has(tab.id)) initConsoleSocket(tab);
   return tab;
 }
 
-function openConsoleWorkspace(nodeKey: string, title = "Console") {
+function openConsoleWorkspace(nodeKey: string, title = t("Chen.Console")) {
   const tab = workspace.openConsoleTab(nodeKey, title);
   initConsoleSocket(tab);
 }
 
-function openDataViewWorkspace(nodeKey: string, title = "Data View") {
+function openDataViewWorkspace(nodeKey: string, title = t("Chen.DataView")) {
   const tab = workspace.openDataViewTab(nodeKey, title);
   if (tab && !consoleConnections.has(tab.id)) initConsoleSocket(tab);
   if (tab?.kind === "data-view") void loadTableMetadata(tab, ["columns", "primaryKey"]);
@@ -1292,11 +1292,11 @@ function createWorkspaceTab(kind: "query" | "console") {
   const nodeKey = node.key;
 
   if (kind === "query") {
-    openQueryWorkspace(nodeKey, workspace.nextTabTitle("Query"), false);
+    openQueryWorkspace(nodeKey, workspace.nextTabTitle(t("Chen.Query")), false);
     return;
   }
 
-  openConsoleWorkspace(nodeKey, workspace.nextTabTitle("Console"));
+  openConsoleWorkspace(nodeKey, workspace.nextTabTitle(t("Chen.Console")));
 }
 
 const dialogVisible = computed({
@@ -1432,7 +1432,7 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
     return;
   }
   if (action === "__new_console__") {
-    openConsoleWorkspace(node.key, workspace.nextTabTitle("Console"));
+    openConsoleWorkspace(node.key, workspace.nextTabTitle(t("Chen.Console")));
     return;
   }
   try {
@@ -1449,10 +1449,10 @@ async function applyTreeAction(node: ChenTreeNode, action: string) {
         }
         break;
       case "new_query":
-        openQueryWorkspace(response.data, workspace.nextTabTitle("Query"), false);
+        openQueryWorkspace(response.data, workspace.nextTabTitle(t("Chen.Query")), false);
         break;
       case "view_data":
-        openDataViewWorkspace(response.data, "Data View");
+        openDataViewWorkspace(response.data, t("Chen.DataView"));
         recentTables.add(node, tree.findNodePathByKey(node.key), auth.profile.value?.dbType || props.tab.protocol);
         if (!tree.expandedKeys.value.includes(RECENT_TABLES_ROOT_KEY)) {
           tree.expandedKeys.value = [RECENT_TABLES_ROOT_KEY, ...tree.expandedKeys.value];

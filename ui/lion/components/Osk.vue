@@ -17,6 +17,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: "keyboardChange", action: "keydown" | "keyup", keysym: string): void;
 }>();
+const { t } = useI18n();
 
 const keyboardLayouts: Record<string, any> = {
   "de-de-qwertz": dedeqwertz,
@@ -140,7 +141,7 @@ onUnmounted(() => {
       type="button"
       class="drag-handle"
       :class="isDragging ? 'cursor-grabbing' : 'cursor-grab'"
-      aria-label="Move virtual keyboard"
+      :aria-label="t('RightPanel.MoveVirtualKeyboard')"
       @mousedown.prevent="handleMouseDown"
       @touchstart.prevent="handleTouchStart"
       @touchmove.prevent="handleTouchMove"

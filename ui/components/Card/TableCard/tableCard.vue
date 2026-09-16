@@ -240,7 +240,7 @@ const columns: TableColumn<AssetItem>[] = [
         icon: "i-lucide-check",
         indeterminateIcon: "i-lucide-minus",
         "onUpdate:modelValue": (value: boolean | "indeterminate") => table.toggleAllPageRowsSelected(!!value),
-        "aria-label": "Select all"
+        "aria-label": t("Common.SelectAll")
       }),
     cell: ({ row }) =>
       h(UCheckbox, {
@@ -248,7 +248,7 @@ const columns: TableColumn<AssetItem>[] = [
         icon: "i-lucide-check",
         indeterminateIcon: "i-lucide-minus",
         "onUpdate:modelValue": (value: boolean | "indeterminate") => row.toggleSelected(!!value),
-        "aria-label": "Select row"
+        "aria-label": t("Common.SelectRow")
       }),
     meta: { class: { th: "w-[5%] min-w-[40px]", td: "w-[5%] min-w-[40px]" } }
   },

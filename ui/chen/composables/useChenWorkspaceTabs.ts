@@ -51,7 +51,7 @@ export function useChenWorkspaceTabs() {
     return tab;
   }
 
-  function openQueryTab(nodeKey: string, title = "Query", reuseExisting = true) {
+  function openQueryTab(nodeKey: string, title = t("Chen.Query"), reuseExisting = true) {
     const existingTab = reuseExisting
       ? workspaceTabs.value.find((item) => item.kind === "query" && item.nodeKey === nodeKey)
       : null;
@@ -86,7 +86,7 @@ export function useChenWorkspaceTabs() {
     return registerTab(tab);
   }
 
-  function openConsoleTab(nodeKey: string, title = "Console") {
+  function openConsoleTab(nodeKey: string, title = t("Chen.Console")) {
     const id = newChenWorkspaceId("console");
     const tab: ChenPromptConsoleTab = {
       id,
@@ -110,7 +110,7 @@ export function useChenWorkspaceTabs() {
     return registerTab(tab);
   }
 
-  function openDataViewTab(nodeKey: string, title = "Data View") {
+  function openDataViewTab(nodeKey: string, title = t("Chen.DataView")) {
     const existingTab = workspaceTabs.value.find((item) => item.kind === "data-view" && item.nodeKey === nodeKey);
     if (existingTab) {
       activeWorkspaceTabId.value = existingTab.id;

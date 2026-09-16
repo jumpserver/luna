@@ -186,7 +186,7 @@ const selectExecutablePath = async () => {
         props.item?.executable_type === "application_bundle"
           ? undefined
           : isWindows.value
-            ? [{ name: "Executable", extensions: ["exe"] }]
+            ? [{ name: t("Setting.ExecutableFile"), extensions: ["exe"] }]
             : undefined
     })) as string | null;
 

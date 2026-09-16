@@ -6,6 +6,7 @@ const props = defineProps<{
 }>();
 
 const iframeRef = ref<HTMLIFrameElement | null>(null);
+const { t } = useI18n();
 const { activeTabId, markSessionConnected } = useWorkspaceTabs();
 
 const iframeSrc = computed(() => String(props.tab.payload?.webUrl || ""));
@@ -39,7 +40,7 @@ defineExpose({ focus });
       class="h-full w-full border-0"
       :style="{ backgroundColor: 'var(--app-main-bg)' }"
       allow="clipboard-read; clipboard-write"
-      title="Web Connector"
+      :title="t('ConnectMethod.BuiltinWebProxy')"
       @load="handleIframeLoad"
     />
   </div>

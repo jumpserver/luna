@@ -24,7 +24,7 @@ const props = withDefaults(
     reorderable: false,
     contextMenu: false,
     draggedId: "",
-    closeLabel: "Close"
+    closeLabel: ""
   }
 );
 
@@ -37,6 +37,8 @@ const emit = defineEmits<{
   dragend: [];
   pin: [id: string];
 }>();
+const { t } = useI18n();
+const resolvedCloseLabel = computed(() => props.closeLabel || t("Common.Close"));
 
 const strip = shallowRef<HTMLElement | null>(null);
 const hasOverflow = ref(false);
@@ -215,8 +217,8 @@ watch(
       icon="i-lucide-chevron-left"
       color="neutral"
       variant="ghost"
-      aria-label="Scroll tabs left"
-      title="Scroll tabs left"
+      :aria-label="t('TabMenu.ScrollLeft')"
+      :title="t('TabMenu.ScrollLeft')"
       @click="scrollTabStrip('left')"
     />
     <div
@@ -265,13 +267,13 @@ watch(
           <span class="relative flex h-full min-w-0 items-center gap-1.5">
             <UIcon :name="tab.icon" class="size-3.5 shrink-0" />
             <span class="min-w-0 truncate">{{ tab.label }}</span>
-            <span v-if="tab.dirty" class="size-1.5 shrink-0 rounded-full bg-primary" title="未保存" />
+            <span v-if="tab.dirty" class="size-1.5 shrink-0 rounded-full bg-primary" :title="t('Common.Unsaved')" />
           </span>
           <button
             type="button"
             class="ml-auto flex size-4 shrink-0 items-center justify-center rounded text-muted hover:bg-elevated hover:text-foreground"
-            :aria-label="`${closeLabel} ${tab.label}`"
-            :title="`${closeLabel} ${tab.label}`"
+            :aria-label="`${resolvedCloseLabel} ${tab.label}`"
+            :title="`${resolvedCloseLabel} ${tab.label}`"
             @click.stop="$emit('close', tab.id)"
           >
             <UIcon name="i-lucide-x" class="size-3" />
@@ -289,8 +291,8 @@ watch(
       icon="i-lucide-chevron-right"
       color="neutral"
       variant="ghost"
-      aria-label="Scroll tabs right"
-      title="Scroll tabs right"
+      :aria-label="t('TabMenu.ScrollRight')"
+      :title="t('TabMenu.ScrollRight')"
       @click="scrollTabStrip('right')"
     />
     <UDropdownMenu
@@ -304,8 +306,8 @@ watch(
         icon="i-lucide-ellipsis"
         color="neutral"
         variant="ghost"
-        aria-label="Select tab"
-        title="Select tab"
+        :aria-label="t('TabMenu.SelectTab')"
+        :title="t('TabMenu.SelectTab')"
       />
     </UDropdownMenu>
     <div v-if="$slots['after-tabs']" class="flex h-full shrink-0 items-center gap-1">

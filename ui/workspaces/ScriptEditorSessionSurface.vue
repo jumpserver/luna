@@ -63,7 +63,7 @@ watch(snapshot, () => {
 });
 
 watch([dirty, name], ([hasChanges, currentName]) => {
-  renameTabTitle(props.tab.id, `${hasChanges ? "● " : ""}${currentName.trim() || "Untitled script"}`);
+  renameTabTitle(props.tab.id, `${hasChanges ? "● " : ""}${currentName.trim() || t("Snippets.Untitled")}`);
 });
 
 async function submit() {

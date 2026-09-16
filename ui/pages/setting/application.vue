@@ -132,8 +132,8 @@ const handlePluginUpload = async () => {
   const selected = (await desktopDialog.open({
     multiple: false,
     filters: [
-      { name: "JumpServer Plugin", extensions: ["jscplugin"] },
-      { name: "Zip Archive", extensions: ["zip"] }
+      { name: t("Setting.JumpServerPluginFile"), extensions: ["jscplugin"] },
+      { name: t("Setting.ZipArchiveFile"), extensions: ["zip"] }
     ]
   })) as string | null;
 

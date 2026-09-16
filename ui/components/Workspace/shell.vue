@@ -10,6 +10,7 @@ const props = withDefaults(
   }
 );
 
+const { t } = useI18n();
 const { collapse, modernIsland, setCollapse: setSidebarCollapsed } = useSettingManager();
 const {
   sidebarWidth,
@@ -167,7 +168,7 @@ onBeforeUnmount(() => {
           v-if="!useIslandLayout && !props.focusMode && props.sidebarVisible && !collapse"
           role="separator"
           aria-orientation="vertical"
-          aria-label="调整侧边栏宽度"
+          :aria-label="t('WorkspacePane.ResizeSidebar')"
           class="absolute inset-y-0 -right-0.5 z-30 w-1 cursor-col-resize"
           @pointerdown="startResizing"
         />
@@ -177,7 +178,7 @@ onBeforeUnmount(() => {
         v-if="mobileOverlayOpen"
         type="button"
         class="absolute inset-0 z-30 bg-black/35 backdrop-blur-[1px] md:hidden"
-        aria-label="关闭侧边面板"
+        :aria-label="t('WorkspacePane.CloseSidePanel')"
         @click="closeMobilePanels"
       />
 
@@ -202,7 +203,7 @@ onBeforeUnmount(() => {
           v-if="islandSidebarMounted"
           role="separator"
           aria-orientation="vertical"
-          aria-label="调整侧边栏宽度"
+          :aria-label="t('WorkspacePane.ResizeSidebar')"
           class="workspace-island-gap"
           :class="{ 'is-resizing': isResizing }"
           :style="{ width: showIslandSidebar ? '12px' : '0px' }"
@@ -219,7 +220,7 @@ onBeforeUnmount(() => {
           v-if="islandRightMounted"
           role="separator"
           aria-orientation="vertical"
-          aria-label="调整右侧面板宽度"
+          :aria-label="t('WorkspacePane.ResizeRightPanel')"
           class="workspace-island-gap"
           :class="{ 'is-resizing': isRightResizing }"
           :style="{ width: showIslandRight ? '12px' : '0px' }"
@@ -270,7 +271,7 @@ onBeforeUnmount(() => {
             v-if="!props.focusMode && rightPanelOpen"
             role="separator"
             aria-orientation="vertical"
-            aria-label="调整右侧面板宽度"
+            :aria-label="t('WorkspacePane.ResizeRightPanel')"
             class="absolute inset-y-0 -left-0.5 z-30 w-1 cursor-col-resize"
             @pointerdown="startRightResizing"
           />

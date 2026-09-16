@@ -42,6 +42,7 @@
     "ShortcutHelp": "show this help popup"
   },
   "VideoPlayer": {
+    "PageTitle": "Video Player",
     "Playlist": "Playlist",
     "AddRecording": "Add recording",
     "CollapsePlaylist": "Collapse playlist",
@@ -137,11 +138,17 @@
     "Save": "Save",
     "Delete": "Delete",
     "Clear": "Clear",
+    "OperationFailed": "Operation failed",
     "EmptyDescription": "No authorized assets are available for the current type",
     "SelectFromMenu": "Select an item on the left",
     "Actions": "Actions",
     "Close": "Close",
-    "Remove": "Remove"
+    "Remove": "Remove",
+    "SelectAll": "Select all",
+    "SelectRow": "Select row",
+    "Untitled": "Untitled",
+    "ClearInput": "Clear input",
+    "Unsaved": "Unsaved"
   },
   "DesktopMenu": {
     "File": "File",
@@ -220,6 +227,7 @@
     "CopySuccess": "Copy success"
   },
   "ToolTips": {
+    "Back": "Back",
     "LightMode": "Light Mode",
     "DarkMode": "Dark Mode",
     "SwitchLanguage": "Language",
@@ -355,7 +363,8 @@
     "ShowSection": "Show {section}",
     "AtLeastOneSection": "Keep at least one section visible",
     "Collapse": "Collapse sidebar",
-    "Expand": "Expand sidebar"
+    "Expand": "Expand sidebar",
+    "SearchAssetsHint": "Enter a name, address, or keyword to search assets"
   },
   "RightPanel": {
     "AIClearLocalHistory": "Clear local history and draft",
@@ -412,6 +421,7 @@
     "WorkspaceAssistantInputPlaceholder": "Describe what you want to do in the workspace…",
     "WorkspaceAssistantApprovalTitle": "Approve this workspace action?",
     "WorkspaceAssistantApprovalDescription": "Review the action and targets. Existing permissions, ACL and unsaved-content checks still apply.",
+    "AIApprovalModeUpdateFailed": "Failed to update approval mode",
     "SFTP": "Files",
     "SFTPTooltip": "Current session files (lightweight)",
     "Clipboard": "Clipboard",
@@ -421,6 +431,7 @@
     "ClipboardLimitExceeded": "Clipboard text cannot exceed {limit} characters",
     "ShowRemoteClipboard": "Show remote clipboard",
     "VirtualKeyboard": "Virtual keyboard",
+    "MoveVirtualKeyboard": "Move virtual keyboard",
     "KeyboardLayout": "Keyboard layout",
     "ShortcutKeys": "Shortcut keys",
     "DisplayControl": "Display",
@@ -862,6 +873,7 @@
     "InProgress": "Processing {processing}/{total}",
     "NotStarted": "Not started",
     "ArchivesTitle": "Replay archives",
+    "ReplayArchiveFile": "Replay archive",
     "ArchivesHint": "Single and multiple selection are both supported, and you can append more archives later.",
     "SelectArchives": "Add archives",
     "ClearArchives": "Clear list",
@@ -956,6 +968,7 @@
     "Use": "Use",
     "Favorite": "Favorite",
     "Edit": "Edit",
+    "Delete": "Delete",
     "Unfavorite": "Remove from Favorites",
     "FavoriteSuccess": "Added to favorites successfully",
     "FavoriteFailed": "Failed to save to favorites",
@@ -963,6 +976,10 @@
     "UnfavoriteFailed": "Failed to remove from favorites"
   },
   "TabMenu": {
+    "ScrollLeft": "Scroll tabs left",
+    "ScrollRight": "Scroll tabs right",
+    "SelectTab": "Select tab",
+    "SwitchTab": "Switch tabs",
     "CloneConnect": "Clone Connect",
     "Reconnect": "Reconnect",
     "RenameTitle": "Rename tab",
@@ -1012,6 +1029,9 @@
     "CurrentOrganization": "Current organization",
     "Reconnect": "Reconnect",
     "ClosePane": "Close pane",
+    "CloseSidePanel": "Close side panel",
+    "ResizeSidebar": "Resize sidebar",
+    "ResizeRightPanel": "Resize right panel",
     "ResizeColumns": "Resize pane columns",
     "ResizeRows": "Resize pane rows",
     "SplitLimitTitle": "Split limit reached",
@@ -1188,6 +1208,7 @@
   },
   "Setting": {
     "BackToApp": "Back to app",
+    "DisableAutoCompletion": "Disable auto completion",
     "SearchPlaceholder": "Search settings",
     "NoSearchResults": "No matching settings",
     "UserDescription": "User profile, security status, and site accounts.",
@@ -1279,6 +1300,9 @@
     "CopyPathSuccess": "Path copied",
     "SelectPath": "Select path",
     "PluginManager": "Plugin Manager",
+    "JumpServerPluginFile": "JumpServer plugin",
+    "ZipArchiveFile": "ZIP archive",
+    "ExecutableFile": "Executable",
     "ManagePlugins": "Manage plugins",
     "UploadPlugin": "Upload plugin",
     "UninstallPlugin": "Uninstall",
@@ -1626,6 +1650,8 @@
     },
     "terminal": {
       "title": "Terminal",
+      "space": "Space",
+      "enter": "Enter",
       "fileTransferInterrupted": "File transfer interrupted",
       "downloadFailed": "Download failed: the remote file does not exist or the transfer was cancelled",
       "uploadSkipped": "Upload skipped: the remote file was not accepted",
@@ -1921,6 +1947,7 @@
     },
     "sftpEditor": {
       "explorerTitle": "File Editor",
+      "plainText": "Plain text",
       "nameRequired": "Enter a name",
       "nameCannotContainPathSeparator": "The name cannot contain path separators",
       "nameAlreadyExists": "A file or directory with this name already exists",
@@ -2030,6 +2057,7 @@
       "preparingSftp": "Preparing SFTP file management...",
       "preparingFileEditor": "Preparing SFTP file editor...",
       "preparingConnection": "Preparing Koko connection...",
+      "preparingRemoteDesktop": "Preparing remote desktop connection...",
       "missingToken": "Missing token query parameter"
     },
     "kubernetes": {
@@ -2055,6 +2083,12 @@
     "errors": {
       "zmodemBlocked": "Zmodem blocked: transfer in progress"
     }
+  },
+  "NotFound": {
+    "Title": "Page not found",
+    "Description": "Sorry, we couldn't find the page you're looking for.",
+    "RequestedPath": "Requested path",
+    "GoHome": "Go home"
   },
   "ExecutionPlan": {
     "title": "Execution Plan",
@@ -2083,7 +2117,22 @@
     "estimatedRows": "Est. rows",
     "estimatedCost": "Est. cost",
     "details": "Details",
-    "hideDetails": "Hide details"
+    "hideDetails": "Hide details",
+    "factJoinType": "Join type",
+    "factSortKey": "Sort key",
+    "factStrategy": "Strategy",
+    "factGroupKey": "Group key",
+    "factIndexName": "Index name",
+    "factCteName": "CTE name",
+    "factSubplanName": "Subplan name",
+    "factParentRelationship": "Parent relationship",
+    "factHashCondition": "Hash condition",
+    "factJoinFilter": "Join filter",
+    "factMergeCondition": "Merge condition",
+    "factIndexCondition": "Index condition",
+    "factFilter": "Filter",
+    "factOutput": "Output",
+    "factStartupCost": "Startup cost"
   },
   "Chen": {
     "TerminatedByAdmin": "Terminated by admin {name}",
@@ -2456,8 +2505,14 @@
     "ExecuteWithoutWhereDescription": "One or more UPDATE or DELETE statements have no WHERE clause and may affect every row in a table. Confirm that you want to execute them.",
     "ExecuteAnyway": "Execute anyway",
     "StatementResult": "Statement result",
+    "Query": "Query",
+    "DataView": "Data view",
     "NewQuery": "New Query",
     "NewConsole": "New Console",
+    "SavedSqlCount": "{count} saved SQL",
+    "DeleteNamedSql": "Delete “{name}”?",
+    "LogEntries": "{count} entries",
+    "EditStructure": "Edit structure",
     "DoubleClickToRename": "{title} · Double-click to rename",
     "SqlPreviewDescription": "Review the SQL that will be executed against the database.",
     "InvalidTableDefinition": "Complete the table name and column definitions.",
