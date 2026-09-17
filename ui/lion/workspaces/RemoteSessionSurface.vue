@@ -34,12 +34,15 @@ const errorDetailsText = computed(() => {
 function handleDisconnected(message: string, details?: GuacamoleConnectionErrorDetails) {
   disconnectedError.value = message;
   disconnectedDetails.value = details;
-  markSessionFailed({
-    tabId: props.tab.id,
-    assetId: props.tab.assetId,
-    protocol: props.tab.protocol,
-    account: props.tab.account
-  });
+  markSessionFailed(
+    {
+      tabId: props.tab.id,
+      assetId: props.tab.assetId,
+      protocol: props.tab.protocol,
+      account: props.tab.account
+    },
+    message
+  );
 }
 
 async function copyErrorDetails() {

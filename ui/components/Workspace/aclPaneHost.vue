@@ -3,15 +3,24 @@ import AclDialogContent from "~/components/Modal/aclDialogContent.vue";
 
 const props = defineProps<{ scopeId: string }>();
 const { t } = useI18n();
-const { groupForScope, submit, close, closeScope } = useAclDialog();
+const { groupForScope, submit, close, closeScope, retryFace } = useAclDialog();
 const { closePane } = useWorkspaceTabs();
 const group = groupForScope(props.scopeId);
 const { description, hasPending, isActionable, isBusy, isReview, title } = useAclDialogPresentation(group);
+const isFaceGroup = computed(() => group.value?.code.startsWith("acl_face_") || false);
+const hasFaceFailure = computed(
+  () => isFaceGroup.value && group.value?.items.some((item) => item.status === "failed" && !item.settled)
+);
 
 const cancelConfirmOpen = ref(false);
 
 const handleClose = async () => {
   if (!group.value) return;
+  if (isFaceGroup.value) {
+    await close(group.value);
+    await closePane(props.scopeId);
+    return;
+  }
   if (hasPending.value) {
     cancelConfirmOpen.value = true;
     return;
@@ -67,11 +76,14 @@ onBeforeUnmount(() => {
       <AclDialogContent :group="group" embedded :chrome="false" />
     </template>
     <template #footer>
-      <UButton color="neutral" variant="outline" :disabled="isBusy" @click="handleClose">
+      <UButton color="neutral" variant="outline" :disabled="isBusy && !isFaceGroup" @click="handleClose">
         {{ isActionable && (!group.submitted || hasPending) ? t("Common.Cancel") : t("ToolTips.Close") }}
       </UButton>
       <UButton v-if="isActionable && !group.submitted" :loading="isBusy" @click="handleSubmit">
         {{ t("Common.Confirm") }}
+      </UButton>
+      <UButton v-else-if="hasFaceFailure" icon="i-lucide-refresh-cw" :disabled="isBusy" @click="retryFace(group)">
+        {{ t("Face.Remote.Retry") }}
       </UButton>
     </template>
   </UModal>

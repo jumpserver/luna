@@ -38,6 +38,22 @@ export function buildFaceLivePageUrl(options: {
   return site.href;
 }
 
+export function buildFaceLiveRendererPageUrl(options: {
+  rendererUrl: string;
+  siteUrl: string;
+  token: string;
+  mode?: FaceLivePageMode;
+}) {
+  const page = new URL(options.rendererUrl);
+  const prefix = resolveJumpServerPrefix(page.pathname, page.pathname);
+  page.pathname = `${prefix}/luna/facelive/${options.mode || "capture"}`.replace(/\/{2,}/g, "/");
+  page.search = "";
+  page.hash = "";
+  page.searchParams.set("token", options.token);
+  page.searchParams.set("site", options.siteUrl);
+  return page.href;
+}
+
 export function buildFaceLiveWebSocketUrl(options: {
   mode: FaceLivePageMode;
   rendererPath?: string;

@@ -47,7 +47,7 @@ const currentAsset = ref<AssetItem | null>(props.tab.setupAsset || null);
 const loading = ref(true);
 const connecting = ref(false);
 const downloadingRdp = shallowRef(false);
-const connectionError = ref("");
+const connectionError = ref(props.tab.connectionFailure || "");
 const launchedClientName = ref("");
 const launchedProtocol = ref("");
 const launchSuccessVisible = ref(false);
@@ -202,6 +202,13 @@ async function submit(downloadRdpMethod = "") {
     failConnection(error);
   }
 }
+
+watch(
+  () => props.tab.connectionFailure,
+  (reason) => {
+    if (reason) connectionError.value = reason;
+  }
+);
 
 watch(
   () => props.tab.status,

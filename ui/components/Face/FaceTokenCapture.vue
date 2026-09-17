@@ -6,6 +6,7 @@ const props = withDefaults(
     compact?: boolean;
     mode: FaceLivePageMode;
     token: string;
+    siteUrl?: string;
   }>(),
   {
     compact: false
@@ -28,6 +29,7 @@ function publish(message: FaceLiveHostMessage) {
 const capture = useRemoteFaceCapture({
   token: () => props.token,
   mode: () => props.mode,
+  siteUrl: () => props.siteUrl || "",
   onEvent: publish
 });
 const cameraVideo = capture.video;
@@ -60,6 +62,9 @@ const instruction = computed(() => {
   if (capture.clientState.value === "connecting") return t("Face.Remote.ConnectingHint");
   if (capture.clientState.value === "error" && !flow.value) {
     return capture.errorMessage.value || t(`Face.Remote.ErrorHint.${capture.errorCode.value || "server_error"}`);
+  }
+  if (flow.value?.guidance && flow.value.guidance !== "look_straight") {
+    return t(`Face.Remote.Guidance.${flow.value.guidance}`);
   }
   if (flow.value?.status === "monitor_away_warning") {
     return t("Face.Remote.AwayWarning", { seconds: monitor.value?.remaining_seconds ?? 0 });
@@ -129,6 +134,7 @@ function requestRetry() {
 
 onMounted(() => {
   mounted = true;
+  publish({ source: "jumpserver-facelive", event: "page_ready", mode: props.mode });
   void capture.start();
 });
 

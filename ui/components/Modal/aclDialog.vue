@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import AclDialogContent from "~/components/Modal/aclDialogContent.vue";
 
-const { globalGroup, isOpen, submit, close } = useAclDialog();
+const { globalGroup, isOpen, submit, close, retryFace } = useAclDialog();
 const { t } = useI18n();
 const minimized = ref(false);
 const canMinimize = computed(() => globalGroup.value?.code === "acl_review");
+const isFaceGroup = computed(() => globalGroup.value?.code.startsWith("acl_face_") || false);
+const hasFaceFailure = computed(
+  () => isFaceGroup.value && globalGroup.value?.items.some((item) => item.status === "failed" && !item.settled)
+);
 const { description, hasPending, isActionable, isBatch, isBusy, isReview, title } =
   useAclDialogPresentation(globalGroup);
 const activeCount = computed(
@@ -17,6 +21,10 @@ const cancelConfirmOpen = ref(false);
 
 const handleClose = () => {
   if (!globalGroup.value) return;
+  if (isFaceGroup.value) {
+    void close(globalGroup.value);
+    return;
+  }
   if (hasPending.value) {
     cancelConfirmOpen.value = true;
     return;
@@ -56,7 +64,7 @@ watch(
   <UModal
     :open="isOpen && !minimized"
     :title="title"
-    :dismissible="false"
+    :dismissible="isFaceGroup"
     :close="false"
     :ui="{
       content:
@@ -66,6 +74,11 @@ watch(
       body: 'bg-[var(--app-surface-panel-strong)] px-6 py-4 sm:px-6 sm:py-4',
       footer: 'justify-end gap-2 bg-[var(--workspace-surface-footer)] px-5 py-3 sm:px-5 sm:py-3'
     }"
+    @update:open="
+      (open) => {
+        if (!open && isFaceGroup) handleClose();
+      }
+    "
   >
     <template #actions>
       <UButton
@@ -91,11 +104,14 @@ watch(
       <AclDialogContent v-if="globalGroup" :group="globalGroup" :chrome="false" />
     </template>
     <template #footer>
-      <UButton color="neutral" variant="outline" :disabled="isBusy" @click="handleClose">
+      <UButton color="neutral" variant="outline" :disabled="isBusy && !isFaceGroup" @click="handleClose">
         {{ isActionable && (!globalGroup?.submitted || hasPending) ? t("Common.Cancel") : t("ToolTips.Close") }}
       </UButton>
       <UButton v-if="isActionable && !globalGroup?.submitted" :loading="isBusy" @click="handleSubmit">
         {{ isBatch && isReview ? t("AclDialog.SubmitAll") : t("Common.Confirm") }}
+      </UButton>
+      <UButton v-else-if="hasFaceFailure" icon="i-lucide-refresh-cw" :disabled="isBusy" @click="retryFace(globalGroup)">
+        {{ t("Face.Remote.Retry") }}
       </UButton>
     </template>
   </UModal>
