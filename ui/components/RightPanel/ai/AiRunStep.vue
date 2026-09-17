@@ -2,6 +2,7 @@
 import type { TerminalAiEventData } from "#koko/composables/terminal/useTerminalAiSessions";
 import type { ViewExecution, ViewStep } from "./types";
 import { terminalAiAclKey, terminalAiExecutionKey } from "#koko/composables/terminal/terminalAiPresentation";
+import { terminalExecutionMode } from "#koko/composables/terminal/useTerminalAiSessions";
 import AiToolCallItem from "./domains/shared/AiToolCallItem.vue";
 import {
   aiRiskColor,
@@ -143,9 +144,7 @@ function statusIconClass() {
 }
 
 function selectedExecution(data: TerminalAiEventData) {
-  const value = String(props.executionOverrides.get(String(data.id)) || data.execution || "pty");
-  if (value === "background" || value === "background_exec") return "background_exec";
-  return "pty";
+  return terminalExecutionMode(props.executionOverrides.get(String(data.id)) || data.execution);
 }
 
 function executionLabel(value: unknown) {
@@ -241,7 +240,18 @@ function terminalRiskLabel(level: unknown) {
                     size="xs"
                     color="neutral"
                     class="exec-group-btn"
+                    :variant="selectedExecution(execution.command) === 'auto' ? 'solid' : 'ghost'"
+                    :aria-pressed="selectedExecution(execution.command) === 'auto'"
+                    :label="t('RightPanel.AIModeAutoShort')"
+                    :title="t('RightPanel.AIModeAuto')"
+                    @click="emit('setExecutionOverride', String(execution.command?.id), 'auto')"
+                  />
+                  <UButton
+                    size="xs"
+                    color="neutral"
+                    class="exec-group-btn"
                     :variant="selectedExecution(execution.command) === 'pty' ? 'solid' : 'ghost'"
+                    :aria-pressed="selectedExecution(execution.command) === 'pty'"
                     :label="t('RightPanel.AICurrentPty')"
                     @click="emit('setExecutionOverride', String(execution.command?.id), 'pty')"
                   />
@@ -249,10 +259,11 @@ function terminalRiskLabel(level: unknown) {
                     size="xs"
                     color="neutral"
                     class="exec-group-btn"
-                    :variant="selectedExecution(execution.command) === 'background_exec' ? 'solid' : 'ghost'"
+                    :variant="selectedExecution(execution.command) === 'background' ? 'solid' : 'ghost'"
+                    :aria-pressed="selectedExecution(execution.command) === 'background'"
                     :label="t('RightPanel.AIBackgroundExecution')"
                     :disabled="!backgroundExec || execution.command.backgroundEligible === false"
-                    @click="emit('setExecutionOverride', String(execution.command?.id), 'background_exec')"
+                    @click="emit('setExecutionOverride', String(execution.command?.id), 'background')"
                   />
                 </div>
                 <div class="approval-actions">

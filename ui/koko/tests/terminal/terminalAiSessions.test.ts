@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { computed } from "vue";
 import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
+import { terminalAiPanelDomain } from "~/components/RightPanel/ai/domains/terminal/adapter";
 
 import {
   connectKokoTerminalAiSession,
@@ -228,6 +229,44 @@ it("enforces the selected execution mode on command tool calls", async () => {
       })
     })
   );
+});
+
+it.each([
+  { original: "auto", selected: undefined, expected: "auto" },
+  { original: "auto", selected: "pty", expected: "pty" },
+  { original: "auto", selected: "background", expected: "background" },
+  { original: "background", selected: "auto", expected: "auto" }
+])("executes the approved mode after $original → $selected", async ({ original, selected, expected }) => {
+  const session = createSession("approval-execution-mode");
+  const sendMcpFrame = vi.fn();
+  registerKokoTerminalAiSession(session.paneId, session.socket!, session.terminalId, { sendMcpFrame });
+  const resourceId = await enableSession(session.paneId);
+  const context = { paneId: session.paneId, surface: null, now: 0, t: (key: string) => key };
+  if (selected) {
+    terminalAiPanelDomain.handleTimelineAction?.(
+      session,
+      { domain: "terminal", type: "set-execution-override", id: "approval-1", value: selected },
+      context
+    );
+  }
+  terminalAiPanelDomain.handleTimelineAction?.(
+    session,
+    {
+      domain: "terminal",
+      type: "decide",
+      data: { id: "approval-1", toolCallId: "tool-1", execution: original },
+      approved: true
+    },
+    context
+  );
+  agentHarness.emit(resourceId, {
+    type: "tool.call",
+    run_id: "run-1",
+    tool_call_id: "tool-1",
+    payload: { tool_name: "execute_shell", arguments: { command: "pwd", execution: original } }
+  });
+
+  expect(sendMcpFrame.mock.calls[0]?.[0].data.params.arguments).toEqual({ command: "pwd", execution: expected });
 });
 
 it("derives background execution availability from the command tool manifest", async () => {

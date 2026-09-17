@@ -26,7 +26,7 @@ export interface KokoTerminalAiSessionOptions {
   sendMcpFrame?: (frame: KokoMcpRequestFrame | KokoMcpCancelFrame) => void;
 }
 
-function terminalExecutionMode(value: unknown) {
+export function terminalExecutionMode(value: unknown) {
   const mode = String(value || "auto").toLowerCase();
   if (mode === "pty") return "pty";
   if (mode === "background" || mode === "background_exec") return "background";
@@ -322,8 +322,9 @@ function createSession(
       revision: () => session?.agent.state.revision || 1,
       transformToolArguments: (toolCallId, toolName, argumentsValue) => {
         if (!toolName.startsWith("execute_") || !isRecord(argumentsValue)) return argumentsValue;
-        const execution = terminalExecutionMode(session?.executionOverrides.get(toolCallId) || session?.executionMode);
-        return execution === "auto" ? argumentsValue : { ...argumentsValue, execution };
+        const override = session?.executionOverrides.get(toolCallId);
+        const execution = terminalExecutionMode(override || session?.executionMode);
+        return execution === "auto" && !override ? argumentsValue : { ...argumentsValue, execution };
       },
       sendFrame: (frame) => {
         const target = session?.socket;
