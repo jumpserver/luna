@@ -87,26 +87,27 @@ if (!standalone) {
         }
       : {}),
     login: {
-      config: addressOnly
-        ? { autofill: "none" }
-        : mode === "script"
-          ? {
-              autofill: "script",
-              script: [
-                { step: 1, command: "type", target: "id=username", value: "{USERNAME}" },
-                { step: 2, command: "type", target: "id=password", value: "{SECRET}" },
-                { step: 3, command: "interactive", target: "css=div.captcha-field" },
-                { step: 4, command: "click", target: "id=submit" },
-                { step: 5, command: "success", target: "id=dashboard" }
-              ]
-            }
-          : {
-              autofill: "basic",
-              username_selector: "id=username",
-              password_selector: "id=password",
-              submit_selector: "id=submit",
-              success_selector: "id=dashboard"
-            },
+      config:
+        mode === "address"
+          ? { autofill: "no" }
+          : mode === "script"
+            ? {
+                autofill: "script",
+                script: [
+                  { step: 1, command: "type", target: "id=username", value: "{USERNAME}" },
+                  { step: 2, command: "type", target: "id=password", value: "{SECRET}" },
+                  { step: 3, command: "interactive", target: "css=div.captcha-field" },
+                  { step: 4, command: "click", target: "id=submit" },
+                  { step: 5, command: "success", target: "id=dashboard" }
+                ]
+              }
+            : {
+                autofill: "basic",
+                username_selector: "id=username",
+                password_selector: "id=password",
+                submit_selector: "id=submit",
+                success_selector: "id=dashboard"
+              },
       username: "tester",
       password: "runtime-secret",
       secret_type: "password"
@@ -159,6 +160,8 @@ try {
   const address = shell.getByRole("textbox", { name: standalone ? "地址栏" : "地址栏只读", exact: true });
   assert.equal(await address.inputValue(), target, "address bar must retain the launch URL, query and fragment");
   assert.equal(await address.evaluate((input) => input.readOnly), !standalone);
+  if (addressOnly)
+    await shell.getByRole("button", { name: /会话状态：.*账号代填未配置/ }).waitFor({ state: "visible" });
   if (standalone || addressOnly) await page.getByRole("heading", { name: "Standalone browsing works" }).waitFor();
   else {
     await page.locator("#dashboard").waitFor({ state: "visible", timeout: 15_000 });

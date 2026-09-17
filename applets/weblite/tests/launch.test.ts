@@ -80,6 +80,33 @@ test("asset login overrides platform fallback; anonymous accounts still open the
   );
 });
 
+test("Core's disabled autofill mode opens the asset without credentials or selectors", async () => {
+  for (const autofill of ["no", "none"]) {
+    const config = { autofill };
+    const platform = { protocols: [{ name: "http", setting: { ...launch.login.config, safe_mode: true } }] };
+    for (const data of [
+      { ...applet, asset: { ...applet.asset, spec_info: config }, platform, account: null },
+      {
+        ...applet,
+        asset: { address: launch.target_url },
+        platform: { protocols: [{ name: "http", setting: { ...config, safe_mode: true } }] },
+        account: null
+      },
+      { ...launch, login: { config } }
+    ]) {
+      const result = await readLaunch(Readable.from([JSON.stringify(data)]));
+      assert.equal(result.targetUrl, launch.target_url);
+      assert.equal(result.safeMode, true);
+      assert.equal(result.standalone, false);
+      assert.deepEqual(result.localSession, {
+        autofillAvailable: false,
+        origin: "https://app.example.com",
+        mode: "none"
+      });
+    }
+  }
+});
+
 test("generic connection data is validated before opening a Web view", () => {
   for (const patch of [
     { protocol: "ssh" },
@@ -166,6 +193,7 @@ test("rejects invalid configuration and oversized pipes", async () => {
     { target_url: "https://user:secret@example.com" },
     { safe_mode: "false" },
     { recording_enabled: true, login: undefined },
+    { login: { config: { autofill: "invalid" } } },
     { login: { config: { autofill: "basic" }, password: "secret" } },
     { login: { config: { autofill: "script", script: [{ step: 1, command: "select_frame", target: "id=login" }] } } }
   ])

@@ -7,7 +7,8 @@ export function createLocalCredentialSession(targetUrl: string, value: unknown) 
   const config = data.config;
   if (!config || typeof config !== "object" || Array.isArray(config)) throw new Error("登录配置无效");
   const origin = normalizedWebOrigin(targetUrl);
-  const mode = config.autofill || "none";
+  // Core uses "no" for disabled autofill; retain "none" for legacy launches.
+  const mode = config.autofill === "no" ? "none" : config.autofill || "none";
   if (!["basic", "script", "none"].includes(mode)) throw new Error("不支持的登录模式");
   if (mode === "none") return { autofillAvailable: false, origin, mode };
   const steps = mode === "script" ? validateWebScript(config.script, origin) : null;
