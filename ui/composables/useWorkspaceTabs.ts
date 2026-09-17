@@ -962,7 +962,7 @@ export const useWorkspaceTabs = () => {
 
   const startSessionConnection = (
     paneId: string,
-    connection: { protocol: string; account: string },
+    connection: { protocol: string; account: string; permedAccounts?: PermedAccount[] },
     setupDraft?: ConnectionFormDraft
   ) => {
     const match = findPane(paneId);
@@ -971,6 +971,7 @@ export const useWorkspaceTabs = () => {
     clearConnectionProgress(match.pane);
     match.pane.protocol = connection.protocol;
     match.pane.account = connection.account;
+    if (connection.permedAccounts) match.pane.permedAccounts = connection.permedAccounts;
     match.pane.payload = undefined;
     match.pane.status = "connecting";
     match.pane.resumeSetupOnFailure = Boolean(setupDraft);

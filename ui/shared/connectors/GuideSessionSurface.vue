@@ -9,8 +9,8 @@ import {
   getUserProfile,
   setConnectionTokenReusable
 } from "~/composables/useApiRequest";
+import { getDirectGuideCommand } from "./directGuide";
 import { getGuideClientProtocol, getGuideConnectCommand } from "./guideCommand";
-import { getDirectSshCommand } from "./sshGuide";
 import {
   applyConnectionTokenReuse,
   DATABASE_GUIDE_PROTOCOLS,
@@ -48,6 +48,13 @@ const reusableUpdating = ref(false);
 
 const protocol = computed(() => (token.value?.protocol || props.tab.protocol || "").toLowerCase());
 const clientProtocol = computed(() => getGuideClientProtocol(protocol.value));
+const showDirectCommand = computed(() => {
+  const method = props.tab.payload?.connectMethod;
+  return (
+    protocol.value === "ssh" ||
+    (protocol.value === "vnc" && method?.component !== "panda" && method?.type !== "virtual_app")
+  );
+});
 const showReusable = computed(() => shouldShowConnectionTokenReuse(connectionTokenReusable.value, token.value?.id));
 const showDatabaseHelp = computed(() => isDatabaseGuideProtocol(protocol.value));
 const host = computed(() => String(endpoint.value.host || ""));
@@ -97,7 +104,7 @@ const rows = computed(() => {
   return values.filter((item) => item.value !== undefined && item.value !== null);
 });
 
-const commandValues = computed(() => {
+const commands = computed(() => {
   const value = getGuideConnectCommand({
     protocol: protocol.value,
     id: token.value.id,
@@ -107,18 +114,18 @@ const commandValues = computed(() => {
     database: database.value,
     redisAuth: password.value
   });
-  return value ? [value] : [];
-});
-
-const commands = computed(() => {
-  const ssh = protocol.value === "ssh";
-  const items = commandValues.value.map((value) => ({
-    value,
-    title: t(ssh ? "ConnectionGuide.TokenCommand" : "ConnectionGuide.ConnectCommand"),
-    help: ssh ? t("ConnectionGuide.TokenPasswordHelp") : ""
-  }));
-  if (ssh) {
-    const value = getDirectSshCommand({
+  const tokenPassword = protocol.value === "ssh" || protocol.value === "vnc";
+  const items = [];
+  if (value) {
+    items.push({
+      value,
+      title: t(tokenPassword ? "ConnectionGuide.TokenCommand" : "ConnectionGuide.ConnectCommand"),
+      help: tokenPassword ? t("ConnectionGuide.TokenPasswordHelp") : ""
+    });
+  }
+  if (showDirectCommand.value) {
+    const value = getDirectGuideCommand({
+      protocol: protocol.value,
       username: loginUsername.value,
       account: token.value.account,
       inputUsername: token.value.input_username,
@@ -200,7 +207,7 @@ onMounted(async () => {
         .catch(() => {
           connectionTokenReusable.value = false;
         }),
-      protocol.value === "ssh"
+      showDirectCommand.value
         ? getUserProfile()
             .then((profile) => {
               loginUsername.value = profile.username;

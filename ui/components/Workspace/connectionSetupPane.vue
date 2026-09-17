@@ -154,7 +154,8 @@ async function submit(downloadRdpMethod = "") {
       props.tab.id,
       {
         protocol: info.protocol,
-        account: info.account
+        account: info.account,
+        permedAccounts: currentAsset.value.permedAccounts
       },
       draft.value
     );
