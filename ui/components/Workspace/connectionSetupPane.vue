@@ -34,6 +34,7 @@ const {
   buildConnectionInfo,
   draft,
   initDraft,
+  restoreDraft,
   loadAssetDetails,
   personalCredentials,
   personalCredentialsLoaded,
@@ -114,7 +115,8 @@ async function loadAsset() {
   loading.value = true;
   try {
     currentAsset.value = await loadAssetDetails(asset);
-    initDraft(currentAsset.value, props.tab.protocol);
+    if (props.tab.setupDraft) restoreDraft(currentAsset.value, props.tab.setupDraft);
+    else initDraft(currentAsset.value, props.tab.protocol);
   } catch (error) {
     addErrorToast({
       id: "asset-load-failed",
@@ -148,10 +150,14 @@ async function submit(downloadRdpMethod = "") {
   downloadingRdp.value = !!info.downloadRdp;
   connectionError.value = "";
   if (!showLaunchSuccessState && !info.downloadRdp) {
-    startSessionConnection(props.tab.id, {
-      protocol: info.protocol,
-      account: info.account
-    });
+    startSessionConnection(
+      props.tab.id,
+      {
+        protocol: info.protocol,
+        account: info.account
+      },
+      draft.value
+    );
   } else {
     resetLaunchSuccessState();
   }
@@ -252,7 +258,7 @@ onMounted(loadAsset);
       >
         <Transition :name="modernIsland ? 'island-dialog' : ''" :appear="modernIsland">
           <section
-            v-if="dialogVisible"
+            v-if="dialogVisible && !(connecting && !downloadingRdp && !externalClientLaunch)"
             class="connection-setup-shell relative w-full overflow-hidden"
             :class="
               modernIsland
@@ -404,33 +410,12 @@ onMounted(loadAsset);
                 </div>
               </div>
             </div>
-
-            <div
-              v-if="connecting && !downloadingRdp"
-              role="status"
-              class="pointer-events-none absolute inset-x-0 bottom-0"
-            >
-              <span class="sr-only">{{ t("ConnectionSetup.Establishing") }}</span>
-              <UProgress
-                size="2xs"
-                :color="modernIsland ? 'var(--theme-accent)' : 'primary'"
-                :ui="{ base: 'rounded-none bg-(--app-border)', indicator: 'rounded-none' }"
-                aria-hidden="true"
-              />
-            </div>
           </section>
         </Transition>
-        <div
-          v-if="dialogVisible && !launchSuccessVisible"
-          class="connection-setup-route pointer-events-none flex shrink-0 items-center gap-3 select-none"
-          aria-hidden="true"
-        >
-          <UIcon name="i-lucide-square-terminal" class="size-4 shrink-0" />
-          <span class="connection-setup-route-line" />
-          <span class="text-[11px] font-medium tracking-[0.08em]">JumpServer</span>
-          <span class="connection-setup-route-line" />
-          <UIcon name="i-lucide-server" class="size-4 shrink-0" />
-        </div>
+        <WorkspaceConnectionProgressOverlay
+          v-if="connecting && !downloadingRdp && !externalClientLaunch"
+          :stage="tab.connectionProgress || 'token'"
+        />
       </div>
     </div>
   </div>
@@ -447,18 +432,6 @@ onMounted(loadAsset);
   background-position: center;
   background-size: 24px 24px;
   mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
-}
-
-.connection-setup-route {
-  width: min(280px, 80%);
-  color: color-mix(in srgb, var(--app-text-muted) 60%, transparent);
-}
-
-.connection-setup-route-line {
-  height: 1px;
-  flex: 1;
-  background: currentColor;
-  opacity: 0.35;
 }
 
 .connection-setup-shell {

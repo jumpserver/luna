@@ -1158,6 +1158,9 @@
     "Client": "客戶端",
     "OpenInClient": "客戶端開啟",
     "Establishing": "正在建立連線...",
+    "CreateToken": "建立連線權杖",
+    "OpenSession": "建立工作階段連線",
+    "Connected": "連線完成",
     "OpenAgain": "再次開啟",
     "BackToForm": "返回修改"
   },

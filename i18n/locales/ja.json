@@ -1158,6 +1158,9 @@
     "Client": "クライアント",
     "OpenInClient": "クライアントで開く",
     "Establishing": "接続を確立中...",
+    "CreateToken": "接続トークンを作成",
+    "OpenSession": "セッションを開く",
+    "Connected": "接続完了",
     "OpenAgain": "もう一度開く",
     "BackToForm": "フォームに戻る"
   },

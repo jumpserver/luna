@@ -181,7 +181,8 @@ export const useAssetAction = () => {
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
   const userInfoStore = useUserInfoStore();
-  const { markSessionFailed, openSession, setSessionConnectMethod, updateSessionPayload } = useWorkspaceTabs();
+  const { markSessionFailed, markSessionTokenCreated, openSession, setSessionConnectMethod, updateSessionPayload } =
+    useWorkspaceTabs();
   const { fetchConnectMethods, getMethodsForProtocol } = useConnectMethods();
   const settingManager = useSettingManager();
   // prettier-ignore
@@ -563,6 +564,14 @@ export const useAssetAction = () => {
         return;
       }
       syncPersonalCredentialFromToken(meta?.assetId, serverBody, token, personalCredentialScope);
+      if (tabId) {
+        markSessionTokenCreated({
+          tabId,
+          assetId: meta?.assetId || body.asset,
+          protocol: meta?.protocol || body.protocol,
+          account: meta?.account || body.account
+        });
+      }
 
       if (meta?.downloadRdp) {
         const query = buildLocalRdpParams(body.connect_options);
@@ -703,6 +712,14 @@ export const useAssetAction = () => {
         return;
       }
       syncPersonalCredentialFromToken(meta.assetId, serverBody, token, personalCredentialScope);
+      if (meta.tabId) {
+        markSessionTokenCreated({
+          tabId: meta.tabId,
+          assetId: meta.assetId,
+          protocol: meta.protocol,
+          account: meta.account
+        });
+      }
       const component = resolveBuiltinComponent(body);
       const isWebProxy = body.connect_method === WEB_PROXY_NATIVE_VALUE;
       let webProxyEndpoint = isWebProxy

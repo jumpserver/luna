@@ -1158,6 +1158,9 @@
     "Client": "클라이언트",
     "OpenInClient": "클라이언트에서 열기",
     "Establishing": "연결하는 중...",
+    "CreateToken": "연결 토큰 생성",
+    "OpenSession": "세션 열기",
+    "Connected": "연결됨",
     "OpenAgain": "다시 열기",
     "BackToForm": "연결 설정으로 돌아가기"
   },

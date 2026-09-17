@@ -1158,6 +1158,9 @@
     "Client": "Cliente",
     "OpenInClient": "Abrir en el cliente",
     "Establishing": "Estableciendo conexión...",
+    "CreateToken": "Crear token de conexión",
+    "OpenSession": "Abrir sesión",
+    "Connected": "Conectado",
     "OpenAgain": "Abrir de nuevo",
     "BackToForm": "Volver al formulario"
   },

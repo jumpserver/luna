@@ -1158,6 +1158,9 @@
     "Client": "Máy khách",
     "OpenInClient": "Mở trong máy khách",
     "Establishing": "Đang thiết lập kết nối...",
+    "CreateToken": "Tạo mã thông báo kết nối",
+    "OpenSession": "Mở phiên",
+    "Connected": "Đã kết nối",
     "OpenAgain": "Mở lại",
     "BackToForm": "Quay lại biểu mẫu"
   },

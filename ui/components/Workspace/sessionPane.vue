@@ -570,6 +570,7 @@ onBeforeUnmount(() => {
               </div>
             </div>
           </div>
+          <WorkspaceConnectionProgressOverlay v-if="pane.connectionProgress" :stage="pane.connectionProgress" />
         </section>
       </div>
 

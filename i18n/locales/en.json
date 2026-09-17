@@ -1158,6 +1158,9 @@
     "Client": "Client",
     "OpenInClient": "Open in client",
     "Establishing": "Establishing connection...",
+    "CreateToken": "Create connection token",
+    "OpenSession": "Open session",
+    "Connected": "Connected",
     "OpenAgain": "Open again",
     "BackToForm": "Back to form"
   },

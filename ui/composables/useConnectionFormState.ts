@@ -43,7 +43,7 @@ export function resolveConnectionAttemptError(error: unknown, translate: (key: s
     error && typeof error === "object" && "code" in error ? String((error as { code?: unknown }).code || "") : "";
   const normalized = `${code} ${detail}`.toLowerCase();
 
-  if (/panel_(?:closed|expired)|session[^\n]*(?:is |was )?closed|会话已关闭|會話已關閉/.test(normalized)) {
+  if (/panel_(?:closed|expired)|session[^\n]*closed|会话已关闭|會話已關閉/.test(normalized)) {
     return translate("ConnectError.SessionClosed");
   }
   if (/\b(?:etimedout|timeout)\b|timed out|request aborted|请求超时|請求逾時/.test(normalized)) {
@@ -234,6 +234,12 @@ export function useConnectionFormState() {
     void loadPersonalCredentials(asset, draft.value.protocol);
   };
 
+  const restoreDraft = (asset: AssetItem, value: ConnectionFormDraft) => {
+    activeAsset.value = asset;
+    draft.value = { ...value, connectOptions: { ...value.connectOptions } };
+    void loadPersonalCredentials(asset, draft.value.protocol);
+  };
+
   const buildConnectionInfo = (asset: AssetItem): ConnectionFormInfo => {
     let accountMode: ConnectionFormInfo["accountMode"] = "hosted";
     let account = draft.value.account || "";
@@ -331,6 +337,7 @@ export function useConnectionFormState() {
     buildConnectionInfo,
     draft,
     initDraft,
+    restoreDraft,
     loadAssetDetails,
     personalCredentials,
     personalCredentialsLoaded,

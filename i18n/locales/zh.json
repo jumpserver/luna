@@ -1158,6 +1158,9 @@
     "Client": "客户端",
     "OpenInClient": "客户端打开",
     "Establishing": "正在建立连接...",
+    "CreateToken": "创建连接令牌",
+    "OpenSession": "建立会话连接",
+    "Connected": "连接完成",
     "OpenAgain": "再次打开",
     "BackToForm": "返回修改"
   },
