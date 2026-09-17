@@ -36,7 +36,46 @@ describe("workspace session disconnect status", () => {
     tabs.markSessionDisconnected(pane.id);
 
     expect(pane.status).toBe("disconnected");
+    expect(pane.connectionProgress).toBe("connected");
     expect(tabs.tabs.value[0]?.status).toBe("disconnected");
+  });
+
+  it("keeps a ready session and its disconnect reason", () => {
+    const pane = tabs.openSession(asset, { protocol: "ssh", account: "root", newTab: true });
+    pane.payload = { id: "token" };
+    tabs.markSessionConnected(pane.id);
+
+    tabs.markSessionDisconnected(pane.id, "connection closed");
+
+    expect(pane.status).toBe("disconnected");
+    expect(pane.payload).toEqual({ id: "token" });
+    expect(pane.connectionFailure).toBe("connection closed");
+    expect(pane.connectionProgress).toBe("connected");
+
+    tabs.markSessionConnecting(pane.id);
+    expect(pane.connectionFailure).toBeUndefined();
+    expect(pane.connectionProgress).toBe("token");
+  });
+
+  it("keeps step 3 visible when the session drops during connection progress", () => {
+    const pane = tabs.openSetupSession(asset);
+    tabs.startSessionConnection(pane.id, { protocol: "ssh", account: "root" });
+    tabs.markSessionConnected(pane.id);
+    tabs.markSessionDisconnected(pane.id, "Koko 已结束会话：连接建立失败");
+
+    expect(pane.status).toBe("disconnected");
+    expect(pane.connectionProgress).toBe("connected");
+    expect(pane.connectionFailure).toBe("Koko 已结束会话：连接建立失败");
+  });
+
+  it("increments the connection attempt before a new request can update the pane", () => {
+    const pane = tabs.openSetupSession(asset);
+
+    tabs.startSessionConnection(pane.id, { protocol: "ssh", account: "root" });
+    const firstAttempt = tabs.getSessionConnectionAttempt(pane.id);
+    tabs.markSessionConnecting(pane.id);
+
+    expect(tabs.getSessionConnectionAttempt(pane.id)).toBe(firstAttempt + 1);
   });
 
   it("shows the completed connection stage briefly", () => {
@@ -112,7 +151,7 @@ describe("workspace session disconnect status", () => {
     }
   });
 
-  it("restores the setup pane after an initial connection failure", () => {
+  it("keeps the progress overlay after an initial connection failure", () => {
     const pane = tabs.openSetupSession(asset);
     const draft = {
       protocol: "ssh",
@@ -132,21 +171,20 @@ describe("workspace session disconnect status", () => {
     tabs.startSessionConnection(pane.id, { protocol: "ssh", account: "root" }, draft);
     expect(pane.connectionProgress).toBe("token");
 
-    tabs.updateSessionPayload({ tabId: pane.id, assetId: asset.id, protocol: "ssh", account: "root" }, { id: "token" });
     tabs.markSessionFailed(
       { tabId: pane.id, assetId: asset.id, protocol: "ssh", account: "root" },
       "ticket unavailable"
     );
 
+    expect(pane.connectionProgress).toBe("token");
+    expect(pane.status).toBe("failed");
+    expect(pane.setupDraft).toEqual(draft);
+    expect(pane.connectionFailure).toBe("ticket unavailable");
+
+    tabs.resumeConnectionSetup(pane.id);
     expect(pane.mode).toBe("setup");
     expect(pane.status).toBe("selecting");
     expect(pane.connectionProgress).toBeUndefined();
-    expect(pane.setupDraft).toEqual(draft);
-    expect(pane.connectionFailure).toBe("ticket unavailable");
-    expect(tabs.tabs.value[0]?.connectionFailure).toBe("ticket unavailable");
-
-    tabs.startSessionConnection(pane.id, { protocol: "ssh", account: "root" }, draft);
-    expect(pane.connectionFailure).toBeUndefined();
   });
 
   it("exits windowed focus mode", async () => {

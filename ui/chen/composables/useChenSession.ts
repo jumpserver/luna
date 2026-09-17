@@ -9,7 +9,8 @@ import { resolveChenSessionCloseFatal } from "~/chen/utils/chenSessionClose";
 interface UseChenSessionOptions {
   authenticate: () => Promise<string>;
   markConnected: () => void;
-  markFailed: () => void;
+  markDisconnected: (reason: string) => void;
+  markFailed: (reason: string) => void;
   onBeforeReady: () => Promise<void>;
   onAfterReady: () => Promise<void>;
   onDisconnected: () => void;
@@ -24,7 +25,7 @@ interface UseChenSessionOptions {
 
 export function isChenStartupFailureDialog(message: { title?: string; text?: string } | null | undefined) {
   const detail = `${message?.title || ""} ${message?.text || ""}`;
-  return /连接失败|無法連線|无法连接|请求超时|請求逾時|会话已关闭|會話已關閉|connection (?:attempt )?failed|unable to connect|timed out|panel_(?:closed|expired)|session[^\n]*(?:is |was )?closed/i.test(
+  return /连接失败|無法連線|无法连接|请求超时|請求逾時|会话已关闭|會話已關閉|connection (?:attempt )?failed|unable to connect|timed out|panel_(?:closed|expired)|session[^\n]*closed/i.test(
     detail
   );
 }
@@ -34,7 +35,7 @@ function resolveChenStartupFailureMessage(
   translate: (key: string) => string
 ) {
   const detail = message.text || message.title || "";
-  if (/panel_(?:closed|expired)|session[^\n]*(?:is |was )?closed|会话已关闭|會話已關閉/i.test(detail)) {
+  if (/panel_(?:closed|expired)|session[^\n]*closed|会话已关闭|會話已關閉/i.test(detail)) {
     return translate("ConnectError.SessionClosed");
   }
   if (/\b(?:etimedout|timeout)\b|timed out|请求超时|請求逾時/i.test(detail)) {
@@ -70,14 +71,17 @@ export function useChenSession(options: UseChenSessionOptions) {
 
   function handleFatal(cause: unknown, reason = "") {
     if (fatalNotified) return;
+    const wasReady = ready.value;
+    const message = normalizeError(cause);
     fatalNotified = true;
     bootstrapGeneration += 1;
     preparingReadyGeneration = null;
     ready.value = false;
     loading.value = false;
-    error.value = normalizeError(cause);
+    error.value = message;
     errorReason.value = reason;
-    options.markFailed();
+    if (wasReady) options.markDisconnected(message);
+    else options.markFailed(message);
 
     // A Chen session owns all of its consoles. Close dependent consoles first
     // so their backend close handlers can still resolve the active session.
@@ -194,6 +198,7 @@ export function useChenSession(options: UseChenSessionOptions) {
 
   async function bootstrapSession() {
     const currentGeneration = ++bootstrapGeneration;
+    sessionConnection.close();
     fatalNotified = false;
     ready.value = false;
     loading.value = true;

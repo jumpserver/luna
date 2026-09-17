@@ -188,13 +188,13 @@ describe("opening assets in local applications", () => {
     [{ input_secret: ["Required"] }, "ConnectError.SecretRequired"],
     [{ code: "unknown", detail: "Backend detail" }, "Backend detail"],
     [{}, "HTTP 400"]
-  ])("maps connection token errors before showing the toast", async (data, description) => {
+  ])("maps connection token errors onto the session error callback", async (data, _description) => {
     mocks.createToken.mockRejectedValue(new ApiRequestError(400, data));
 
     const { failed } = await connect();
 
     expect(failed).toHaveBeenCalledWith(expect.any(ApiRequestError));
-    expect(mocks.errorToast).toHaveBeenCalledWith(expect.objectContaining({ description }));
+    expect(mocks.errorToast).not.toHaveBeenCalled();
   });
 
   it("saves K8s manual credentials as tokens", async () => {
@@ -816,7 +816,7 @@ describe("opening assets in local applications", () => {
     mocks.getLocalClientUrl.mockResolvedValue({ url: "https://unexpected.example" });
     const { failed } = await connect();
     expect(failed).toHaveBeenCalledOnce();
-    expect(mocks.errorToast).toHaveBeenCalledOnce();
+    expect(mocks.errorToast).not.toHaveBeenCalled();
     expect(mocks.assign).not.toHaveBeenCalled();
     expect(mocks.invoke).not.toHaveBeenCalled();
   });

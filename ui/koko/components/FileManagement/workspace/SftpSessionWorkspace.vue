@@ -27,6 +27,10 @@ const props = defineProps<{
   setPrimaryPaneRef: (value: SftpRemotePaneHandle | null) => void;
 }>();
 
+const emit = defineEmits<{
+  connectionChange: [connected: boolean];
+  connectionFailure: [message: string];
+}>();
 const { t } = useI18n();
 
 const {
@@ -109,6 +113,11 @@ const primarySendPeerDirection = computed<"left" | "right" | undefined>(() =>
   simplePeerMode.value && canSendToOpposite(primaryTransferEndpoint.value?.id) ? "right" : undefined
 );
 const primaryCanSend = computed(() => remotePanes.value.some((pane) => remotePaneConnected(pane.id)));
+
+function handlePrimaryConnectionChange(connected: boolean) {
+  setPaneOnline("primary", connected);
+  emit("connectionChange", connected);
+}
 
 function remoteSendPeerDirection(endpointId: string): "left" | "right" | undefined {
   return simplePeerMode.value && canSendToOpposite(endpointId) ? "left" : undefined;
@@ -210,7 +219,8 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
         @transfer-endpoint-mounted="mountTransferEndpoint"
         @transfer-endpoint-connected="connectTransferEndpoint"
         @transfer-endpoint-unmounted="unmountTransferEndpoint"
-        @connection-change="setPaneOnline('primary', $event)"
+        @connection-change="handlePrimaryConnectionChange"
+        @connection-failure="emit('connectionFailure', $event)"
         @add-remote="openRemoteConnect()"
         @start-tour="startTour"
       />

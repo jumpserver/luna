@@ -18,6 +18,7 @@ const {
   activeTabId,
   canMergeTabs,
   closePane,
+  resumeConnectionSetup,
   draggedTabId: draggedWorkspaceTabId,
   getTabById,
   placePane,
@@ -570,7 +571,25 @@ onBeforeUnmount(() => {
               </div>
             </div>
           </div>
-          <WorkspaceConnectionProgressOverlay v-if="pane.connectionProgress" :stage="pane.connectionProgress" />
+          <Transition
+            enter-from-class="opacity-0"
+            enter-active-class="transition-opacity duration-500"
+            leave-active-class="transition-opacity duration-500 ease-out"
+            leave-to-class="opacity-0"
+          >
+            <WorkspaceConnectionProgressOverlay
+              v-if="pane.connectionProgress"
+              :stage="pane.connectionProgress"
+              :error="
+                pane.status === 'connecting' || pane.status === 'connected' || pane.status === 'ready'
+                  ? undefined
+                  : pane.connectionFailure ||
+                    (pane.status === 'disconnected' ? t('ConnectError.SessionClosed') : undefined)
+              "
+              @edit="resumeConnectionSetup(pane.id)"
+              @reconnect="void reconnectSession(surfaceTabFor(pane))"
+            />
+          </Transition>
         </section>
       </div>
 

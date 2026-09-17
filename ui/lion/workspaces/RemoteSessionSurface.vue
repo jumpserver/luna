@@ -15,8 +15,9 @@ const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const tab = toRef(props, "tab");
 const { context, error, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab);
-const { markSessionFailed } = useWorkspaceTabs();
+const { markSessionConnected, markSessionDisconnected, markSessionFailed } = useWorkspaceTabs();
 const disconnectedError = ref("");
+let sessionReady = false;
 const disconnectedDetails = shallowRef<GuacamoleConnectionErrorDetails>();
 const workspaceError = computed(() => error.value || disconnectedError.value);
 const errorDetailsText = computed(() => {
@@ -31,7 +32,19 @@ const errorDetailsText = computed(() => {
     .join("\n");
 });
 
+function handleConnected() {
+  sessionReady = true;
+  disconnectedError.value = "";
+  disconnectedDetails.value = undefined;
+  markSessionConnected(props.tab.id);
+}
+
 function handleDisconnected(message: string, details?: GuacamoleConnectionErrorDetails) {
+  if (sessionReady) {
+    markSessionDisconnected(props.tab.id, message);
+    return;
+  }
+
   disconnectedError.value = message;
   disconnectedDetails.value = details;
   markSessionFailed(
@@ -88,7 +101,7 @@ watch(tokenId, () => void prepareSession(), { immediate: true });
         </UPopover>
       </template>
       <div class="relative h-full w-full min-h-0">
-        <ConnectView :tab-id="tab.id" @disconnected="handleDisconnected" />
+        <ConnectView :tab-id="tab.id" @connected="handleConnected" @disconnected="handleDisconnected" />
       </div>
     </BaseWorkspaceShell>
   </LionProvider>
