@@ -1618,7 +1618,7 @@
       "transferSuccess": "Archivo transferido",
       "transferPartialSuccess": "Transferido a {success}/{total} destinos",
       "transferFailed": "Error al transferir el archivo",
-      "folderTransferUnsupported": "La transferencia de carpetas aún no es compatible",
+      "folderTransferUnsupported": "No se admiten cargas ni transferencias de carpetas. Seleccione archivos normales.",
       "downloadFolderConfirm": "¿Descargar esta carpeta?",
       "deleteConfirm": "¿Eliminar {name}?",
       "unsupportedAsset": "Este activo no admite SFTP",

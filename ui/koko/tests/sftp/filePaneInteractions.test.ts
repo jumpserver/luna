@@ -12,6 +12,8 @@ import {
   buildTransferSourcePayload,
   createMockDataTransfer,
   hasEndpointPrefix,
+  hasFolderBrowserUpload,
+  hasFolderTransferSelection,
   hasTransferMimeType,
   isCrossEndpointTransferDrag,
   parseTransferDragPayload,
@@ -302,6 +304,21 @@ describe("file pane selection composable", () => {
 });
 
 describe("file pane transfer helpers", () => {
+  it("rejects folder selections and browser directory uploads", () => {
+    expect(hasFolderTransferSelection(entries)).toBe(true);
+    expect(hasFolderTransferSelection(entries.filter((entry) => !entry.is_dir))).toBe(false);
+
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+    const nestedFile = new File(["hello"], "hello.txt", { type: "text/plain" });
+    Object.defineProperty(nestedFile, "webkitRelativePath", { value: "folder/hello.txt" });
+
+    expect(hasFolderBrowserUpload([file])).toBe(false);
+    expect(hasFolderBrowserUpload([nestedFile])).toBe(true);
+    expect(
+      hasFolderBrowserUpload([], [{ webkitGetAsEntry: () => ({ isDirectory: true }) } as unknown as DataTransferItem])
+    ).toBe(true);
+  });
+
   it("filters transferable file entries and handles nullable endpoint prefixes safely", () => {
     expect(transferEntriesFromSelection(entries)).toEqual([
       { name: "alpha.txt", size: "10" },

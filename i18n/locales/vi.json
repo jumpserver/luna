@@ -1618,7 +1618,7 @@
       "transferSuccess": "Đã truyền tệp",
       "transferPartialSuccess": "Đã truyền đến {success}/{total} đích",
       "transferFailed": "Truyền tệp thất bại",
-      "folderTransferUnsupported": "Chưa hỗ trợ truyền thư mục",
+      "folderTransferUnsupported": "Chưa hỗ trợ tải lên hoặc truyền thư mục. Hãy chọn tệp thông thường.",
       "downloadFolderConfirm": "Tải thư mục này xuống?",
       "deleteConfirm": "Xóa {name}?",
       "unsupportedAsset": "Tài sản này không hỗ trợ SFTP",

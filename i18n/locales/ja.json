@@ -1618,7 +1618,7 @@
       "transferSuccess": "ファイルを転送しました",
       "transferPartialSuccess": "{success}/{total} 件の転送先に転送しました",
       "transferFailed": "ファイル転送に失敗しました",
-      "folderTransferUnsupported": "フォルダー転送はまだサポートされていません",
+      "folderTransferUnsupported": "フォルダー単位のアップロードと転送には対応していません。通常のファイルを選択してください。",
       "downloadFolderConfirm": "このフォルダーをダウンロードしますか？",
       "deleteConfirm": "{name} を削除しますか？",
       "unsupportedAsset": "このアセットは SFTP に対応していません",

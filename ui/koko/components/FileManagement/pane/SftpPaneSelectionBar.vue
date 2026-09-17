@@ -41,7 +41,7 @@ const sendLabel = computed(() =>
     :aria-label="t('koko.fileManagement.selectedItems', selectedCount)"
   >
     <UButton
-      v-if="canSend && transferableCount"
+      v-if="canSend"
       color="primary"
       variant="ghost"
       size="xs"

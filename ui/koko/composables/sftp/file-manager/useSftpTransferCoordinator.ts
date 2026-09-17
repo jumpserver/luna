@@ -21,6 +21,7 @@ import { useKokoHostAdapter } from "#koko/host";
 import { useFileTransferStore } from "#koko/stores/fileTransfer";
 import { buildSftpDistributionGroups } from "#koko/utils/sftpDistribution";
 import { buildSftpTransferInputs, filterSftpDistributionTargets, safeLocalDownloadName } from "./selectors";
+import { hasFolderBrowserUpload } from "./transfer";
 import { useBrowserDownloadTransferEndpoint } from "./useBrowserDownloadTransferEndpoint";
 import { useBrowserUploadTransferEndpoint, WEB_UPLOAD_ENDPOINT_ID } from "./useBrowserUploadTransferEndpoint";
 import { resolveLocalFsDestinationPath, useLocalFileTransferEndpoint } from "./useLocalFileTransferEndpoint";
@@ -159,6 +160,12 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     if (options.primaryTransferEndpoint.value?.id === endpointId) return options.primaryPaneRef.value;
     const pane = options.remotePanes.value.find((item) => item.transferEndpoint.id === endpointId);
     return pane ? options.remotePaneRefs.value[pane.id] || null : null;
+  }
+
+  function rejectFolderTransfer(endpointId: string) {
+    if (!sourcePaneFor(endpointId)?.hasFolderTransferSelection()) return false;
+    toast.add({ title: options.translate("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
+    return true;
   }
 
   if (import.meta.dev) {
@@ -305,6 +312,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   }
 
   function sendFromSelection(payload: SftpTransferSourcePayload) {
+    if (rejectFolderTransfer(payload.sourceEndpoint.id)) return;
     // Always prefer Transfer Center queue (same as session SFTP↔SFTP), including local↔remote.
     if (isSimplePeerMode()) {
       const opposite = resolveOppositeDestination(payload.sourceEndpoint.id);
@@ -479,7 +487,8 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   }
 
   async function handleCrossPaneDrop(payload: SftpTransferDropPayload, destination?: FileTransferEndpointRef) {
-    if (!destination || payload.sourceEndpoint.id === destination.id) return;
+    if (!destination || payload.sourceEndpoint.id === destination.id || rejectFolderTransfer(payload.sourceEndpoint.id))
+      return;
     // Global local↔remote and remote↔remote both use Transfer Center (session criterion).
     const fromLocal = payload.sourceEndpoint.id === LOCAL_ENDPOINT_ID;
     if (fromLocal) {
@@ -503,6 +512,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
       const remote = activeId ? options.remotePanes.value.find((pane) => pane.id === activeId) : null;
       if (remote && remotePaneConnected(activeId!)) {
         if (direction === "left-to-right") {
+          if (rejectFolderTransfer(options.primaryTransferEndpoint.value.id)) return;
           const payload = options.primaryPaneRef.value.transferSourcePayload();
           if (!payload?.entries.length) {
             toast.add({ title: options.translate("koko.fileManagement.selectFilesToTransfer"), color: "warning" });
@@ -517,6 +527,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
           );
           return;
         }
+        if (rejectFolderTransfer(remote.transferEndpoint.id)) return;
         const payload = options.remotePaneRefs.value[remote.id]?.transferSourcePayload();
         if (!payload?.entries.length) {
           toast.add({ title: options.translate("koko.fileManagement.selectFilesToTransfer"), color: "warning" });
@@ -540,6 +551,8 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     const target = options.activePaneForSide(targetSide);
     const sourceIsLocal = sourceSide === "left" && options.globalActiveIds.left === "local";
     const targetIsLocal = targetSide === "left" && options.globalActiveIds.left === "local";
+    const sourceEndpointId = sourceIsLocal ? LOCAL_ENDPOINT_ID : source?.transferEndpoint.id;
+    if (sourceEndpointId && rejectFolderTransfer(sourceEndpointId)) return;
 
     if (direction === "left-to-right") {
       const checkedTargets = checkedRemotePanes("right");
@@ -597,6 +610,10 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   async function uploadWebFiles(files: File[]) {
     // Browser global left pane has no local FS — stage File objects and use Transfer Center.
     if (!files.length) return;
+    if (hasFolderBrowserUpload(files)) {
+      toast.add({ title: options.translate("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
+      return;
+    }
     const checkedTargets = checkedRemotePanes("right");
     const activeTarget = options.activePaneForSide("right");
     const targets = checkedTargets.length ? checkedTargets : activeTarget ? [activeTarget] : [];
@@ -644,6 +661,10 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
 
   function uploadBrowserFiles(files: File[], destination?: FileTransferEndpointRef) {
     if (!destination || !files.length) return;
+    if (hasFolderBrowserUpload(files)) {
+      toast.add({ title: options.translate("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
+      return;
+    }
     ensureBrowserUploadEndpointMounted();
     const staged = browserUploadEndpoint.stageFiles(files);
     if (!staged.entries.length) return;

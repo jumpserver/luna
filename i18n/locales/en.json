@@ -1785,7 +1785,7 @@
       "transferSuccess": "File transferred",
       "transferPartialSuccess": "Transferred to {success}/{total} targets",
       "transferFailed": "File transfer failed",
-      "folderTransferUnsupported": "Folder transfer is not supported yet",
+      "folderTransferUnsupported": "Folder uploads and transfers are not supported. Select regular files instead.",
       "downloadFolderConfirm": "Download this folder?",
       "deleteConfirm": "Delete {name}?",
       "unsupportedAsset": "This asset does not support SFTP",

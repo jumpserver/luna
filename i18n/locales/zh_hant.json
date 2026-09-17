@@ -1618,7 +1618,7 @@
       "transferSuccess": "檔案傳輸成功",
       "transferPartialSuccess": "已傳輸到 {success}/{total} 個目標",
       "transferFailed": "檔案傳輸失敗",
-      "folderTransferUnsupported": "暫不支援資料夾互傳",
+      "folderTransferUnsupported": "暫不支援資料夾層級的上傳或互傳，請選擇一般檔案",
       "downloadFolderConfirm": "確定下載此資料夾？",
       "deleteConfirm": "確定刪除 {name}？",
       "unsupportedAsset": "該資產不支援 SFTP",

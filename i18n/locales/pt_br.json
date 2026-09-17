@@ -1618,7 +1618,7 @@
       "transferSuccess": "Arquivo transferido",
       "transferPartialSuccess": "Transferido para {success}/{total} destinos",
       "transferFailed": "Falha na transferência do arquivo",
-      "folderTransferUnsupported": "A transferência de pastas ainda não é compatível",
+      "folderTransferUnsupported": "Não há suporte para upload ou transferência de pastas. Selecione arquivos comuns.",
       "downloadFolderConfirm": "Baixar esta pasta?",
       "deleteConfirm": "Excluir {name}?",
       "unsupportedAsset": "Este ativo não é compatível com SFTP",

@@ -18,6 +18,7 @@ import { SFTP_ENTRY_NAME_MAX_LENGTH, sftpEntryNameError } from "#koko/composable
 import {
   buildTransferSourcePayload,
   hasEndpointPrefix,
+  hasFolderTransferSelection,
   hasTransferMimeType,
   isCrossEndpointTransferDrag,
   parseTransferDragPayload,
@@ -214,8 +215,20 @@ async function revealInSystem(entry?: SftpFileEntry | null): Promise<void> {
   }
 }
 
+function showFolderTransferUnsupported(): void {
+  toast.add({ title: t("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
+}
+
+function hasFolderSelection() {
+  return hasFolderTransferSelection(selectedEntries.value);
+}
+
 function onDragStart(event: DragEvent, entry: SftpFileEntry): void {
-  if (entry.is_dir || entry.name === "..") return event.preventDefault();
+  if (entry.is_dir || hasFolderSelection()) {
+    showFolderTransferUnsupported();
+    return event.preventDefault();
+  }
+  if (entry.name === "..") return event.preventDefault();
   if (!isSelected(entry)) selectEntry(entry);
   const payload = transferSourcePayload();
   if (!payload) return event.preventDefault();
@@ -251,6 +264,7 @@ function transferSourcePayload(): SftpTransferSourcePayload | null {
 }
 
 function requestSend(): void {
+  if (hasFolderSelection()) return showFolderTransferUnsupported();
   const payload = transferSourcePayload();
   if (!payload) return;
   emit("send", payload);
@@ -426,6 +440,7 @@ defineExpose({
   selectedEntries,
   clearSelection,
   clearTransferredSelection,
+  hasFolderTransferSelection: hasFolderSelection,
   transferSourcePayload,
   list,
   refresh: list,
@@ -511,7 +526,7 @@ defineExpose({
           <SftpPaneSelectionBar
             :selected-count="selectedEntries.length"
             :transferable-count="transferableEntries.length"
-            :can-send="canSend && transferableEntries.length > 0"
+            :can-send="canSend"
             :send-peer-direction="sendPeerDirection"
             @send="requestSend"
             @remove="requestDelete()"

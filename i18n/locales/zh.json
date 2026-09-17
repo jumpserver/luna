@@ -1785,7 +1785,7 @@
       "transferSuccess": "文件传输成功",
       "transferPartialSuccess": "已传输到 {success}/{total} 个目标",
       "transferFailed": "文件传输失败",
-      "folderTransferUnsupported": "暂不支持文件夹互传",
+      "folderTransferUnsupported": "暂不支持文件夹级别的上传或互传，请选择普通文件",
       "downloadFolderConfirm": "确定下载此文件夹？",
       "deleteConfirm": "确定删除 {name}？",
       "unsupportedAsset": "该资产不支持 SFTP",

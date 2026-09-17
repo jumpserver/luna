@@ -1618,7 +1618,7 @@
       "transferSuccess": "Файл передан",
       "transferPartialSuccess": "Передано в {success}/{total} целей",
       "transferFailed": "Ошибка передачи файла",
-      "folderTransferUnsupported": "Передача папок пока не поддерживается",
+      "folderTransferUnsupported": "Загрузка и передача папок не поддерживаются. Выберите обычные файлы.",
       "downloadFolderConfirm": "Скачать эту папку?",
       "deleteConfirm": "Удалить {name}?",
       "unsupportedAsset": "Этот ресурс не поддерживает SFTP",

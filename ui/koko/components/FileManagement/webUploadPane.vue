@@ -1,18 +1,25 @@
 <script setup lang="ts">
+import { hasFolderBrowserUpload } from "#koko/composables/sftp/file-manager/transfer";
+
 const emit = defineEmits<{ upload: [files: File[]] }>();
 const { t } = useI18n();
+const toast = useToast();
 
 const dragging = ref(false);
 const uploadInput = ref<HTMLInputElement | null>(null);
 
-function submit(files: FileList | null) {
+function submit(files: FileList | null, dataTransferItems?: Iterable<DataTransferItem>) {
   const items = files ? Array.from(files) : [];
+  if (hasFolderBrowserUpload(items, dataTransferItems)) {
+    toast.add({ title: t("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
+    return;
+  }
   if (items.length) emit("upload", items);
 }
 
 function onDrop(event: DragEvent) {
   dragging.value = false;
-  submit(event.dataTransfer?.files || null);
+  submit(event.dataTransfer?.files || null, event.dataTransfer?.items);
 }
 
 function onInput(event: Event) {
