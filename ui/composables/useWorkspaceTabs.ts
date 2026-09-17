@@ -935,6 +935,10 @@ export const useWorkspaceTabs = () => {
     found.pane.connectMethod = String(payload.connectMethod?.value || found.pane.connectMethod || "") || undefined;
     found.pane.status = "ready";
     found.pane.mode = "session";
+    if (found.pane.connectMethod?.endsWith("_guide")) {
+      connectionProgressGoal.set(found.pane.id, "hide");
+      pumpConnectionProgress(found.pane, found.tab, found.paneIndex);
+    }
     if (found.paneIndex === 0) syncTabFromPrimaryPane(found.tab);
   };
 

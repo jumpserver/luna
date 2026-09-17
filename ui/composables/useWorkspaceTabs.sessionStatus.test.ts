@@ -78,6 +78,40 @@ describe("workspace session disconnect status", () => {
     }
   });
 
+  it("finishes the connection progress after a guide payload is ready", () => {
+    vi.useFakeTimers();
+    try {
+      const pane = tabs.openSetupSession(asset);
+      const match = { tabId: pane.id, assetId: asset.id, protocol: "ssh", account: "root" };
+      tabs.startSessionConnection(pane.id, { protocol: "ssh", account: "root" });
+      tabs.markSessionTokenCreated(match);
+      tabs.updateSessionPayload(match, { id: "token", connectMethod: { value: "ssh_guide" } });
+
+      vi.advanceTimersByTime(1000);
+      expect(pane.connectionProgress).toBe("connected");
+      vi.advanceTimersByTime(1000);
+      expect(pane.connectionProgress).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps normal connection progress until its connector is ready", () => {
+    vi.useFakeTimers();
+    try {
+      const pane = tabs.openSetupSession(asset);
+      const match = { tabId: pane.id, assetId: asset.id, protocol: "ssh", account: "root" };
+      tabs.startSessionConnection(pane.id, { protocol: "ssh", account: "root" });
+      tabs.markSessionTokenCreated(match);
+      tabs.updateSessionPayload(match, { id: "token", connectMethod: { value: "web_cli_native" } });
+
+      vi.advanceTimersByTime(2000);
+      expect(pane.connectionProgress).toBe("session");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("restores the setup pane after an initial connection failure", () => {
     const pane = tabs.openSetupSession(asset);
     const draft = {
