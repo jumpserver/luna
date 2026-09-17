@@ -395,7 +395,7 @@ const startLabel = computed(() =>
               variant="ghost"
               size="xs"
               :aria-label="t('Transcode.ClearArchives')"
-              @click="store.removeArchive(item.path)"
+              @click="store.removeArchive(item.index)"
             />
           </div>
         </article>

@@ -383,7 +383,7 @@ export class ReplayTranscoder {
           output,
           duration
         });
-        results.push({ id: metadata.id, input: archivePath, output, success: true, metadata });
+        results.push({ id: metadata.id, index, input: archivePath, output, success: true, metadata });
       } catch (error) {
         const id = metadata?.id || fallbackId;
         const message = job.skipCurrent
@@ -393,6 +393,7 @@ export class ReplayTranscoder {
         this.emit(id, index, tarPaths.length, 100, message, targetLabel, { success: false });
         results.push({
           id,
+          index,
           input: archivePath,
           output: "",
           success: false,
