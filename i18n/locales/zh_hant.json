@@ -2355,7 +2355,7 @@
     "ExecuteAnyway": "仍然執行",
     "StatementResult": "語句結果",
     "NewQuery": "新建查詢",
-    "NewConsole": "新建控制台",
+    "NewConsole": "新建 Console",
     "DoubleClickToRename": "{title} · 雙擊重命名",
     "SqlPreviewDescription": "請檢查即將在數據庫中執行的 SQL。",
     "InvalidTableDefinition": "請完整填寫表名和列定義。",
