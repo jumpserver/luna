@@ -249,6 +249,8 @@ export const useTranscodeStore = defineStore(
       transcodePower.value = power;
     };
 
+    const cancelCurrentTask = () => desktopInvoke<boolean>("cancel_transcode");
+
     const handleProgressEvent = (payload: TranscodeProgressPayload) => {
       let targetIndex = -1;
 
@@ -489,6 +491,7 @@ export const useTranscodeStore = defineStore(
       setFilenameStyle,
       setOutputResolution,
       setTranscodePower,
+      cancelCurrentTask,
       applyBatchResults,
       markAllPendingAsError,
       startTranscode

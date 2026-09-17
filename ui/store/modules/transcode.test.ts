@@ -55,4 +55,12 @@ describe("transcode output directory authorization", () => {
     expect(store.outputDir).toBe("D:\\Desktop");
     expect(store.outputDirAuthorized).toBe(true);
   });
+
+  it("cancels the current desktop transcode", async () => {
+    const store = useTranscodeStore();
+
+    await store.cancelCurrentTask();
+
+    expect(mocks.desktopInvoke).toHaveBeenCalledWith("cancel_transcode");
+  });
 });

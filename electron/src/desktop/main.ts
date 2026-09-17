@@ -1285,6 +1285,7 @@ async function handleInvoke(event, request) {
   }
   if (command === "pull_up") return withIpcErrorLog("pull_up", () => localApplicationLauncher.launch(args.url));
   if (command === "list_system_fonts") return listSystemFonts();
+  if (command === "cancel_transcode") return replayTranscoder.cancelCurrent(labelForWindow(win));
   if (command === "transcode_replays") {
     const request = {
       tarPaths: (args.tarPaths || []).map((candidate) => normalizePath(candidate)),

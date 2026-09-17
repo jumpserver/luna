@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createWriteStream } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { finished } from "node:stream/promises";
@@ -89,6 +89,19 @@ test("rejects archives without graphical recordings", () =>
 
     await assert.rejects(extractReplayArchive(archivePath), /包里没有可转码的图形录像/);
     assert.equal(replayTranscoderInternals.outputFilename({ id: "session", user: "user" }, "friendly"), "session.mp4");
+  }));
+
+test("allocates a distinct output path for existing recordings", () =>
+  withTemporaryRoot(async (root) => {
+    const output = path.join(root, "session.mp4");
+    assert.equal(await replayTranscoderInternals.availableOutputPath(root, "session.mp4"), output);
+
+    await writeFile(output, "first");
+    await writeFile(path.join(root, "session (1).mp4"), "second");
+    assert.equal(
+      await replayTranscoderInternals.availableOutputPath(root, "session.mp4"),
+      path.join(root, "session (2).mp4")
+    );
   }));
 
 test("cancels active transcoding before it reads an archive", () =>
