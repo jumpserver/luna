@@ -97,6 +97,10 @@ function dropHistoricalTrailingEmptyColumn(headers: string[], rows: string[][]):
   };
 }
 
+function isChenCsvInsertableField(field: ChenDataViewField) {
+  return field.insertable === true && Boolean(field.sourceColumn);
+}
+
 export function mapChenCsvRows(
   csv: ChenParsedCsv,
   fields: ChenDataViewField[],
@@ -115,7 +119,7 @@ export function mapChenCsvRows(
 
   const mappedFields = csv.headers.map((header) => {
     const matches = aliases.get(header.toLocaleLowerCase()) || [];
-    if (!matches.length) throw new Error(`CSV column “${header}” does not match an insertable table column`);
+    if (!matches.length) throw new Error(`CSV column “${header}” does not match a table column`);
     if (matches.length > 1) throw new Error(`CSV column “${header}” matches more than one table column`);
     return matches[0]!;
   });
@@ -125,7 +129,11 @@ export function mapChenCsvRows(
 
   return csv.rows.map((row) =>
     Object.fromEntries(
-      row.map((cell, index) => [mappedFields[index]!.name, cell === "" && emptyValue === "null" ? null : cell])
+      row.flatMap((cell, index) => {
+        const field = mappedFields[index]!;
+        if (!isChenCsvInsertableField(field)) return [];
+        return [[field.name, cell === "" && emptyValue === "null" ? null : cell]];
+      })
     )
   );
 }

@@ -685,7 +685,7 @@ function importCsvRows(rows: Array<Record<string, string | null>>) {
     <DataViewImportDialog
       v-if="importDialogOpen"
       v-model:open="importDialogOpen"
-      :fields="insertableFields"
+      :fields="tab.data?.fields || []"
       @confirm="importCsvRows"
     />
 
