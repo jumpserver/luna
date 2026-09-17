@@ -28,7 +28,7 @@ it("matches the v4 VNC asset-ID format with the gateway port or default port", (
   );
 });
 
-it("resolves managed, same-name and manually entered accounts", () => {
+it("resolves accounts and rejects manual VNC logins", () => {
   const accounts = [{ id: "account-id", username: "root", name: "Administrator" }];
   expect(getDirectGuideCommand({ ...options, accounts, inputUsername: "Administrator" })).toContain(
     "admin#root#asset-id"
@@ -37,6 +37,7 @@ it("resolves managed, same-name and manually entered accounts", () => {
   expect(getDirectGuideCommand({ ...options, account: "@INPUT", inputUsername: "operator" })).toContain(
     "admin#operator#asset-id"
   );
+  expect(getDirectGuideCommand({ ...options, protocol: "vnc", account: "@INPUT", inputUsername: "operator" })).toBe("");
 });
 
 it("quotes shell metacharacters in both command formats", () => {

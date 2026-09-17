@@ -11,6 +11,7 @@ export function getDirectGuideCommand(options: {
   port: string;
 }): string {
   const { protocol, username, account, inputUsername, accounts, assetId, host, port } = options;
+  if (protocol === "vnc" && account === "@INPUT") return "";
   const accountUsername =
     account === "@USER"
       ? username

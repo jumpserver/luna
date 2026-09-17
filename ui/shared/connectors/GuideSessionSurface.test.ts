@@ -3,9 +3,9 @@ import ts from "typescript";
 import { afterEach, expect, it, vi } from "vitest";
 import * as Vue from "vue";
 import { compileScript, parse } from "vue/compiler-sfc";
+import * as directGuide from "./directGuide";
 import * as guideCommand from "./guideCommand";
 import guideSource from "./GuideSessionSurface.vue?raw";
-import * as sshGuide from "./sshGuide";
 import * as tokenReuse from "./tokenReuse";
 
 const { descriptor } = parse(guideSource);
@@ -19,6 +19,8 @@ afterEach(() => unmounts.splice(0).forEach((unmount) => unmount()));
 function mountGuide(
   options: {
     protocol?: string;
+    account?: string;
+    inputUsername?: string;
     asset?: Record<string, unknown>;
     detail?: Record<string, unknown>;
     error?: Error;
@@ -31,7 +33,8 @@ function mountGuide(
     protocol: options.protocol || "mongodb",
     asset: { id: "asset-id", name: "MongoDB", ...options.asset },
     org_id: options.orgId,
-    account: "account"
+    account: options.account || "account",
+    input_username: options.inputUsername || ""
   };
   const getAssetDetailRequest = options.error
     ? vi.fn().mockRejectedValue(options.error)
@@ -48,7 +51,7 @@ function mountGuide(
       setConnectionTokenReusable: vi.fn()
     },
     "./guideCommand": guideCommand,
-    "./sshGuide": sshGuide,
+    "./directGuide": directGuide,
     "./tokenReuse": tokenReuse
   };
   const globals = {
@@ -69,7 +72,7 @@ function mountGuide(
     loading: Ref<boolean>;
     database: Ref<string>;
     rows: Ref<Array<{ name: string; value: unknown }>>;
-    commandValues: Ref<string[]>;
+    commands: Ref<Array<{ value: string }>>;
     copy: (value: unknown) => Promise<void>;
   };
   const setup = component.setup;
@@ -108,7 +111,7 @@ it("loads MongoDB's default database from asset details for display, copy and mo
   expect(databaseRow?.value).toBe("app");
   await state.copy(databaseRow?.value);
   expect(writeText).toHaveBeenCalledExactlyOnceWith("app");
-  expect(state.commandValues.value).toEqual([
+  expect(state.commands.value.map((command) => command.value)).toEqual([
     'mongosh "mongodb://token-id:secret@gateway.example.com:5525/app?authSource=admin&loadBalanced=true&retryWrites=false"'
   ]);
   expect(token.asset).toEqual({ id: "asset-id", name: "MongoDB" });
@@ -155,4 +158,12 @@ it.each(["oracle", "ssh", "vnc"])("does not fetch database details for %s", asyn
   await vi.waitFor(() => expect(state.loading.value).toBe(false));
   expect(getAssetDetailRequest).not.toHaveBeenCalled();
   expect(state.database.value).toBe(protocol === "oracle" ? "token-id" : "");
+});
+
+it("keeps manually entered VNC connections token-only", async () => {
+  const { state } = mountGuide({ protocol: "vnc", account: "@INPUT", inputUsername: "operator" });
+  await vi.waitFor(() => expect(state.loading.value).toBe(false));
+  expect(state.commands.value.map((command) => command.value)).toEqual([
+    "vncviewer -UserName=token-id gateway.example.com:5900"
+  ]);
 });

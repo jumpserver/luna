@@ -52,7 +52,10 @@ const showDirectCommand = computed(() => {
   const method = props.tab.payload?.connectMethod;
   return (
     protocol.value === "ssh" ||
-    (protocol.value === "vnc" && method?.component !== "panda" && method?.type !== "virtual_app")
+    (protocol.value === "vnc" &&
+      token.value.account !== "@INPUT" &&
+      method?.component !== "panda" &&
+      method?.type !== "virtual_app")
   );
 });
 const showReusable = computed(() => shouldShowConnectionTokenReuse(connectionTokenReusable.value, token.value?.id));
