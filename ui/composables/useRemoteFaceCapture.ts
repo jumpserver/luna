@@ -13,6 +13,7 @@ const DEFAULT_FRAME_INTERVAL_MS = 250;
 const MIN_FRAME_INTERVAL_MS = 120;
 const SOCKET_CONNECT_TIMEOUT_MS = 10_000;
 const SERVER_READY_TIMEOUT_MS = 10_000;
+const CAMERA_OPEN_TIMEOUT_MS = 20_000;
 
 export type FaceLiveClientState = "idle" | "preparing" | "connecting" | "active" | "warning" | "success" | "error";
 
@@ -30,6 +31,7 @@ export type FaceLiveClientError =
 interface UseRemoteFaceCaptureOptions {
   mode: MaybeRefOrGetter<FaceLivePageMode>;
   token: MaybeRefOrGetter<string>;
+  siteUrl?: MaybeRefOrGetter<string>;
   onEvent?: (message: FaceLiveHostMessage) => void;
 }
 
@@ -83,6 +85,17 @@ export function useRemoteFaceCapture(options: UseRemoteFaceCaptureOptions) {
   }
 
   function serviceLocation() {
+    const embeddedSite = options.siteUrl ? toValue(options.siteUrl).trim() : "";
+    if (embeddedSite && window.parent !== window) {
+      try {
+        if (window.parent.location.origin !== window.location.origin) throw new Error();
+        const site = new URL(embeddedSite);
+        if (!["http:", "https:"].includes(site.protocol) || site.username || site.password) throw new Error();
+        return { siteUrl: site.href, rendererPath: site.pathname };
+      } catch {
+        throw new Error("Face capture site is unavailable");
+      }
+    }
     if (!isDesktopRuntime()) {
       return {
         siteUrl: window.location.origin,
@@ -204,7 +217,25 @@ export function useRemoteFaceCapture(options: UseRemoteFaceCaptureOptions) {
         ? { deviceId: { exact: deviceId }, width: { ideal: 640 }, height: { ideal: 480 } }
         : { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }
     };
-    const nextStream = await navigator.mediaDevices.getUserMedia(constraints);
+    const pendingStream = navigator.mediaDevices.getUserMedia(constraints);
+    let cameraTimer: ReturnType<typeof setTimeout> | undefined;
+    let nextStream: MediaStream;
+    try {
+      nextStream = await Promise.race([
+        pendingStream,
+        new Promise<never>((_, reject) => {
+          cameraTimer = setTimeout(() => reject(new Error("Timed out opening the camera")), CAMERA_OPEN_TIMEOUT_MS);
+        })
+      ]);
+    } catch (error) {
+      void pendingStream.then(
+        (lateStream) => lateStream.getTracks().forEach((track) => track.stop()),
+        () => {}
+      );
+      throw error;
+    } finally {
+      if (cameraTimer) clearTimeout(cameraTimer);
+    }
     if (run !== generation) {
       nextStream.getTracks().forEach((track) => track.stop());
       return;

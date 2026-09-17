@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildFaceLivePageUrl,
+  buildFaceLiveRendererPageUrl,
   buildFaceLiveWebSocketUrl,
   collectActiveFaceMonitorTokens,
   createFaceMonitorToken,
@@ -35,6 +36,17 @@ describe("face live routing", () => {
     expect(buildFaceLivePageUrl({ siteUrl: "http://localhost:3000", token: "x".repeat(32), mode: "monitor" })).toBe(
       `http://localhost:3000/luna/facelive/monitor?token=${"x".repeat(32)}`
     );
+  });
+
+  it("renders desktop capture locally while retaining the selected site", () => {
+    const token = "e".repeat(32);
+    expect(
+      buildFaceLiveRendererPageUrl({
+        rendererUrl: "http://127.0.0.1:3000/luna/",
+        siteUrl: "http://localhost:9528",
+        token
+      })
+    ).toBe(`http://127.0.0.1:3000/luna/facelive/capture?token=${token}&site=http%3A%2F%2Flocalhost%3A9528`);
   });
 
   it("supports a dedicated WebSocket service origin", () => {

@@ -55,6 +55,7 @@ export interface WorkspaceSurfaceSession {
   connectedAt?: number;
   connectionProgress?: WorkspaceConnectionProgressStage;
   resumeSetupOnFailure?: boolean;
+  connectionFailure?: string;
   setupDraft?: ConnectionFormDraft;
   payload?: WorkspaceSessionPayload;
   setupAsset?: AssetItem;
@@ -157,6 +158,7 @@ const blankSurface = (): Omit<WorkspaceSurfaceSession, "id"> => ({
   connectedAt: undefined,
   connectionProgress: undefined,
   resumeSetupOnFailure: undefined,
+  connectionFailure: undefined,
   setupDraft: undefined,
   payload: undefined,
   setupAsset: undefined
@@ -203,6 +205,7 @@ const syncTabFromPrimaryPane = (tab: WorkspaceSessionTab) => {
   tab.connectedAt = primaryPane.connectedAt;
   tab.connectionProgress = primaryPane.connectionProgress;
   tab.resumeSetupOnFailure = primaryPane.resumeSetupOnFailure;
+  tab.connectionFailure = primaryPane.connectionFailure;
   tab.setupDraft = primaryPane.setupDraft;
   tab.payload = primaryPane.payload;
   tab.setupAsset = primaryPane.setupAsset;
@@ -932,6 +935,7 @@ export const useWorkspaceTabs = () => {
     if (!found) return;
 
     found.pane.payload = payload;
+    found.pane.connectionFailure = undefined;
     found.pane.connectMethod = String(payload.connectMethod?.value || found.pane.connectMethod || "") || undefined;
     found.pane.status = "ready";
     found.pane.mode = "session";
@@ -973,6 +977,7 @@ export const useWorkspaceTabs = () => {
     match.pane.account = connection.account;
     if (connection.permedAccounts) match.pane.permedAccounts = connection.permedAccounts;
     match.pane.payload = undefined;
+    match.pane.connectionFailure = undefined;
     match.pane.status = "connecting";
     match.pane.resumeSetupOnFailure = Boolean(setupDraft);
     match.pane.setupDraft = setupDraft
@@ -992,7 +997,10 @@ export const useWorkspaceTabs = () => {
     pumpConnectionProgress(found.pane, found.tab, found.paneIndex);
   };
 
-  const markSessionFailed = (match: { tabId?: string; assetId: string; protocol: string; account: string }) => {
+  const markSessionFailed = (
+    match: { tabId?: string; assetId: string; protocol: string; account: string },
+    reason?: string
+  ) => {
     const found = findSession(match);
     if (!found) return;
 
@@ -1000,6 +1008,7 @@ export const useWorkspaceTabs = () => {
     clearConnectionProgress(found.pane);
     found.pane.connectedAt = undefined;
     found.pane.payload = undefined;
+    found.pane.connectionFailure = reason;
     clearWorkspaceSessionDetails(found.pane.id);
     closeNativeSession(found.pane.id);
     if (resumeSetup) {

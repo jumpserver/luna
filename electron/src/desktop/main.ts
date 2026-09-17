@@ -161,6 +161,13 @@ function installConnectorSessionHooks(targetSession) {
               requestHeaders[cookieHeader] = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
             }
           }
+          if (isFaceSocket) {
+            const current = authService.currentSession();
+            const bearer = await authService.freshToken(current.origin, current.sessionKey, current.bearerToken);
+            const authorization =
+              Object.keys(requestHeaders).find((name) => name.toLowerCase() === "authorization") || "Authorization";
+            requestHeaders[authorization] = `Bearer ${bearer}`;
+          }
         }
       } catch {
         // Leave headers untouched when the connector URL is malformed.

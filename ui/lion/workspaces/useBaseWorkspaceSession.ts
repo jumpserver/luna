@@ -82,12 +82,15 @@ export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
     } catch (cause) {
       if (generation !== prepareGeneration) return null;
       error.value = String(cause);
-      markSessionFailed({
-        tabId: preparedTab.id,
-        assetId: preparedTab.assetId,
-        protocol: preparedTab.protocol,
-        account: preparedTab.account
-      });
+      markSessionFailed(
+        {
+          tabId: preparedTab.id,
+          assetId: preparedTab.assetId,
+          protocol: preparedTab.protocol,
+          account: preparedTab.account
+        },
+        error.value
+      );
       return null;
     } finally {
       if (generation === prepareGeneration) loading.value = false;

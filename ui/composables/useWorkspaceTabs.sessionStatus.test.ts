@@ -133,12 +133,20 @@ describe("workspace session disconnect status", () => {
     expect(pane.connectionProgress).toBe("token");
 
     tabs.updateSessionPayload({ tabId: pane.id, assetId: asset.id, protocol: "ssh", account: "root" }, { id: "token" });
-    tabs.markSessionFailed({ tabId: pane.id, assetId: asset.id, protocol: "ssh", account: "root" });
+    tabs.markSessionFailed(
+      { tabId: pane.id, assetId: asset.id, protocol: "ssh", account: "root" },
+      "ticket unavailable"
+    );
 
     expect(pane.mode).toBe("setup");
     expect(pane.status).toBe("selecting");
     expect(pane.connectionProgress).toBeUndefined();
     expect(pane.setupDraft).toEqual(draft);
+    expect(pane.connectionFailure).toBe("ticket unavailable");
+    expect(tabs.tabs.value[0]?.connectionFailure).toBe("ticket unavailable");
+
+    tabs.startSessionConnection(pane.id, { protocol: "ssh", account: "root" }, draft);
+    expect(pane.connectionFailure).toBeUndefined();
   });
 
   it("exits windowed focus mode", async () => {

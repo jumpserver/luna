@@ -171,6 +171,16 @@ export interface FaceLiveServerFlow {
   phase: string;
   status: string;
   detail: string;
+  guidance?:
+    | "multiple_faces"
+    | "face_missing"
+    | "too_far"
+    | "replayed_frame"
+    | "identity_mismatch"
+    | "template_mismatch"
+    | "liveness"
+    | "look_straight"
+    | null;
   finished: boolean;
   target_name?: string;
   similarity: number;
