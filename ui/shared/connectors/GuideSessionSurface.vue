@@ -4,7 +4,7 @@ import type { TokenResponse } from "~/types";
 
 import { writeText } from "clipboard-polyfill";
 import { getPublicSettings, getUserProfile, setConnectionTokenReusable } from "~/composables/useApiRequest";
-import { getGuideConnectCommand } from "./guideCommand";
+import { getGuideClientProtocol, getGuideConnectCommand } from "./guideCommand";
 import { getDirectSshCommand } from "./sshGuide";
 import {
   applyConnectionTokenReuse,
@@ -41,6 +41,7 @@ const reusable = ref(false);
 const reusableUpdating = ref(false);
 
 const protocol = computed(() => (token.value?.protocol || props.tab.protocol || "").toLowerCase());
+const clientProtocol = computed(() => getGuideClientProtocol(protocol.value));
 const showReusable = computed(() => shouldShowConnectionTokenReuse(connectionTokenReusable.value, token.value?.id));
 const showDatabaseHelp = computed(() => isDatabaseGuideProtocol(protocol.value));
 const host = computed(() => String(endpoint.value.host || ""));
@@ -81,7 +82,7 @@ const rows = computed(() => {
     ...(databaseProtocols.has(protocol.value)
       ? [{ name: "database", label: t("ConnectionGuide.Database"), value: database.value }]
       : []),
-    { name: "protocol", label: t("ConnectionGuide.Protocol"), value: protocol.value },
+    { name: "protocol", label: t("ConnectionGuide.Protocol"), value: clientProtocol.value },
     { name: "date_expired", label: t("ConnectionGuide.ExpireTime"), value: token.value.date_expired }
   ];
 
@@ -218,7 +219,7 @@ onMounted(async () => {
                 <h2 class="truncate text-base font-semibold text-[var(--app-fg)]">
                   {{ t("ConnectionGuide.Title") }}
                 </h2>
-                <UBadge :label="protocol.toUpperCase()" color="neutral" variant="outline" size="sm" />
+                <UBadge :label="clientProtocol.toUpperCase()" color="neutral" variant="outline" size="sm" />
               </div>
               <p class="mt-0.5 truncate text-xs text-[var(--app-muted)]">
                 {{ assetName }}

@@ -280,6 +280,59 @@ describe("opening assets in local applications", () => {
     expect(mocks.setConnectionTokenReusable).not.toHaveBeenCalled();
   });
 
+  it.each([false, true])("launches MariaDB with client-only compatibility on desktop=%s", async (desktop) => {
+    vi.stubGlobal("isDesktopRuntime", () => desktop);
+    const dbMethod = { value: "db_client", type: "native", component: "magnus", disabled: false };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ mariadb: [dbMethod] }),
+      getMethodsForProtocol: async () => [dbMethod]
+    }));
+    const dbPayload = {
+      ...payload,
+      protocol: "mariadb",
+      name: "测试数据库",
+      endpoint: { host: "gateway.example.com", port: 5525 },
+      asset: { info: { db_name: "app" } },
+      token: { ...payload.token, protocol: "mariadb" }
+    };
+    const url = `jms2://${btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(dbPayload))))}`;
+    mocks.getLocalClientUrl.mockResolvedValue({ url });
+    mocks.createToken.mockResolvedValue(dbPayload.token);
+
+    const { ready, failed } = await connect("db_client", "mariadb");
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(mocks.createToken).toHaveBeenCalledWith(
+      expect.objectContaining({ protocol: "mariadb", connect_method: "db_client" }),
+      expect.anything()
+    );
+    expect(ready.mock.calls[0]?.[0].token.protocol).toBe("mariadb");
+    const launchedUrl = desktop ? mocks.invoke.mock.calls[0]?.[1].url : mocks.assign.mock.calls[0]?.[0];
+    const launchedPayload = JSON.parse(
+      new TextDecoder().decode(Uint8Array.from(atob(launchedUrl.slice(7)), (character) => character.charCodeAt(0)))
+    );
+    expect(launchedPayload).toEqual({
+      ...dbPayload,
+      // Desktop resolves the user's MariaDB application first, then normalizes the driver in the launcher.
+      protocol: desktop ? "mariadb" : "mysql"
+    });
+  });
+
+  it("preserves an applet's RDP launch protocol for a MariaDB asset", async () => {
+    const applet = { value: "dbeaver", type: "applet", component: "razor", disabled: false };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ mariadb: [applet] }),
+      getMethodsForProtocol: async () => [applet]
+    }));
+    const url = `jms2://${btoa(JSON.stringify({ ...payload, name: "database", protocol: "rdp" }))}`;
+    mocks.getLocalClientUrl.mockResolvedValue({ url });
+
+    const { failed } = await connect("dbeaver", "mariadb");
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(mocks.assign).toHaveBeenCalledExactlyOnceWith(url);
+  });
+
   describe("RDP file downloads", () => {
     const content = "full address:s:rdp.example\r\nusername:s:用户\r\n";
     const rdpMethod = { ...method, value: "mstsc", component: "razor" };

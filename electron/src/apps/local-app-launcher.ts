@@ -258,6 +258,8 @@ export class LocalApplicationLauncher {
       throw new Error("local client payload is missing required connection fields");
     }
     const application = await this.resolveApplication(payload);
+    // Preserve MariaDB application preferences, but use the MySQL driver on Magnus's shared port.
+    if (payload.protocol === "mariadb") payload.protocol = "mysql";
     if (application.launch_type === "file") {
       if (!payload.file?.content) throw new Error("local client payload is missing connection file content");
       electronLog.info(`launch ${payload.protocol} connection file via ${application.display_name || "file handler"}`);

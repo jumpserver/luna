@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getGuideConnectCommand } from "./guideCommand";
+import { getGuideClientProtocol, getGuideConnectCommand } from "./guideCommand";
 
 const database = {
   id: "token-id",
@@ -9,7 +9,29 @@ const database = {
   database: "app"
 };
 
+describe("connection guide client protocol", () => {
+  it.each(["mariadb", "MariaDB", " MARIADB "])("presents %s as mysql", (protocol) => {
+    expect(getGuideClientProtocol(protocol)).toBe("mysql");
+  });
+
+  it.each(["mysql", "postgresql", "redis", "oracle", "sqlserver", "mongodb", "ssh", "vnc", "", "unknown"])(
+    "preserves other protocols (%s)",
+    (protocol) => {
+      expect(getGuideClientProtocol(protocol)).toBe(protocol);
+    }
+  );
+});
+
 describe("connection guide CLI", () => {
+  it.each(["mariadb", "MariaDB", " MARIADB "])(
+    "uses the MySQL client for %s without changing connection details",
+    (protocol) => {
+      const connection = { ...database, protocol, port: "5525" };
+      expect(getGuideConnectCommand(connection)).toBe("mysql -u token-id -ps3cret -h gateway.example.com -P 5525 app");
+      expect(connection.protocol).toBe(protocol);
+    }
+  );
+
   it("matches the v4 MongoDB client URI including auth and load-balancer flags", () => {
     expect(
       getGuideConnectCommand({
