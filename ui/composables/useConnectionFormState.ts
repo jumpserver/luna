@@ -11,6 +11,7 @@ import type {
 import { ApiRequestError } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols, sortProtocolNames } from "~/utils";
+import { resolvePersonalCredentialSecretType } from "~/utils/connection";
 
 export interface ConnectionFormDraft {
   protocol: string;
@@ -89,10 +90,10 @@ export function useConnectionFormState() {
     account === "@INPUT" || account === getManualInputLabel() || account === "手动输入" || account === "Manual input";
   const getPersonalCredentialScope = (asset: AssetItem, protocol: string) =>
     [asset.org_id || userInfoStore.currentUser?.org?.id || "", asset.id, protocol.trim().toLowerCase()].join(":");
-  const resetPersonalCredentialSelection = () => {
+  const resetPersonalCredentialSelection = (protocol = draft.value.protocol) => {
     draft.value.personalCredentialId = "";
     draft.value.personalCredentialVersion = undefined;
-    draft.value.personalCredentialSecretType = "password";
+    draft.value.personalCredentialSecretType = resolvePersonalCredentialSecretType(protocol);
     draft.value.savePersonalCredential = false;
   };
   const getDynamicAccountLabel = (account?: PermedAccount) => {
@@ -150,7 +151,7 @@ export function useConnectionFormState() {
       personalCredentials.value = [];
       personalCredentialsLoaded.value = false;
       personalCredentialsLoadFailed.value = false;
-      resetPersonalCredentialSelection();
+      resetPersonalCredentialSelection(protocol);
     }
     personalCredentialScope = nextScope;
     const supportsManualInput = (asset.permedAccounts || []).some((account) => account.alias === "@INPUT");
@@ -159,7 +160,7 @@ export function useConnectionFormState() {
       personalCredentialsLoading.value = false;
       personalCredentialsLoaded.value = true;
       personalCredentialsLoadFailed.value = false;
-      resetPersonalCredentialSelection();
+      resetPersonalCredentialSelection(protocol);
       return;
     }
 
@@ -219,7 +220,7 @@ export function useConnectionFormState() {
       personalCredentialSecretType:
         savedCredentialMatchesProtocol && saved?.personalCredentialSecretType
           ? saved.personalCredentialSecretType
-          : "password",
+          : resolvePersonalCredentialSecretType(protocol),
       savePersonalCredential: false,
       dynamicPassword: saved?.dynamicPassword || "",
       rememberSecret: source.accountMode === "manual" ? false : !!saved?.rememberSecret,
@@ -253,6 +254,22 @@ export function useConnectionFormState() {
       )?.id;
     }
     const canUsePersonalCredential = accountMode === "manual";
+    const personalCredentialSecretType = resolvePersonalCredentialSecretType(
+      draft.value.protocol,
+      draft.value.personalCredentialSecretType
+    );
+    const matchingPersonalCredential =
+      canUsePersonalCredential && draft.value.savePersonalCredential && !draft.value.personalCredentialId
+        ? personalCredentials.value.find((credential) => {
+            const secretType =
+              typeof credential.secret_type === "string"
+                ? credential.secret_type
+                : credential.secret_type?.value || "password";
+            return (
+              credential.username === draft.value.manualUsername.trim() && secretType === personalCredentialSecretType
+            );
+          })
+        : undefined;
 
     const availableProtocols = sortProtocolNames(
       getVisibleProtocols(asset.permedProtocols || [])
@@ -266,9 +283,15 @@ export function useConnectionFormState() {
       accountMode,
       manualUsername: draft.value.manualUsername,
       manualPassword: draft.value.manualPassword,
-      personalCredentialId: canUsePersonalCredential ? draft.value.personalCredentialId || undefined : undefined,
-      personalCredentialVersion: canUsePersonalCredential ? draft.value.personalCredentialVersion : undefined,
-      personalCredentialSecretType: draft.value.personalCredentialSecretType || "password",
+      personalCredentialId: canUsePersonalCredential
+        ? draft.value.personalCredentialId || matchingPersonalCredential?.id
+        : undefined,
+      personalCredentialVersion: canUsePersonalCredential
+        ? draft.value.personalCredentialId
+          ? draft.value.personalCredentialVersion
+          : matchingPersonalCredential?.version
+        : undefined,
+      personalCredentialSecretType,
       savePersonalCredential: canUsePersonalCredential && draft.value.savePersonalCredential,
       dynamicPassword: draft.value.dynamicPassword,
       rememberSecret: draft.value.rememberSecret,

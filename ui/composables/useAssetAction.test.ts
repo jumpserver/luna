@@ -181,6 +181,10 @@ describe("opening assets in local applications", () => {
   it.each([
     [{ code: "perm_account_invalid" }, "ConnectError.AccountUnavailable"],
     [{ code: "personal_credential_version_conflict" }, "ConnectError.CredentialChanged"],
+    [
+      { input_username: ["A personal credential with these fields already exists"] },
+      "A personal credential with these fields already exists"
+    ],
     [{ input_secret: ["Required"] }, "ConnectError.SecretRequired"],
     [{ code: "unknown", detail: "Backend detail" }, "Backend detail"],
     [{}, "HTTP 400"]
