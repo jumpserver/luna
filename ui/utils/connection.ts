@@ -1,5 +1,11 @@
 import type { AssetItem } from "~/types";
 
+export const resolvePersonalCredentialSecretType = (protocol: string, fallback = "password") => {
+  const normalizedProtocol = protocol.trim().toLowerCase();
+  if (normalizedProtocol === "k8s" || normalizedProtocol === "kubernetes") return "token";
+  return fallback || "password";
+};
+
 export const hasReusableSavedConnection = (asset: AssetItem) => {
   const saved = asset.savedConnection;
   if (!saved?.protocol || !saved.username) return false;

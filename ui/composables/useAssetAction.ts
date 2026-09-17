@@ -27,6 +27,7 @@ import {
 import { useSettingManager } from "~/composables/useSettingManager";
 import { desktopDialog, desktopFs, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { resolvePersonalCredentialSecretType } from "~/utils/connection";
 
 let desktopListenersInitialized = false;
 let desktopListenersRegistering = false;
@@ -55,10 +56,6 @@ const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
   [SFTP_FILE_MANAGER_VALUE]: "web_sftp",
   [SFTP_FILE_EDITOR_VALUE]: "web_sftp",
   [K8S_NATIVE_VALUE]: "web_cli"
-};
-const PERSONAL_CREDENTIAL_SECRET_TYPE_BY_PROTOCOL: Record<string, string> = {
-  k8s: "token",
-  kubernetes: "token"
 };
 const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
 
@@ -101,10 +98,11 @@ function resolveConnectionErrorDescription(error: unknown, translate: (key: stri
   if (mappedCode) return translate(mappedCode);
 
   for (const [field, messages] of Object.entries(data)) {
+    const message = Array.isArray(messages) ? messages[0] : messages;
+    if (field === "input_username" && typeof message === "string" && message) return message;
     const mappedField = CONNECTION_ERROR_FIELDS[field];
     if (mappedField) return translate(mappedField);
     if (field !== "code" && field !== "detail") {
-      const message = Array.isArray(messages) ? messages[0] : messages;
       if (typeof message === "string" && message) return message;
     }
   }
@@ -957,12 +955,12 @@ export const useAssetAction = () => {
     const savePersonalCredential = !!ephemeral?.savePersonalCredential;
     const useSavedPersonalCredential = isManual && !!personalCredentialId && !savePersonalCredential;
     const manualAccountSecretType = _accounts.find((account) => account.alias === "@INPUT")?.secret_type;
-    const protocolCredentialSecretType = PERSONAL_CREDENTIAL_SECRET_TYPE_BY_PROTOCOL[protocol.trim().toLowerCase()];
-    const personalCredentialSecretType =
-      protocolCredentialSecretType ||
-      (personalCredentialId
+    const personalCredentialSecretType = resolvePersonalCredentialSecretType(
+      protocol,
+      personalCredentialId
         ? ephemeral?.personalCredentialSecretType || manualAccountSecretType || "password"
-        : manualAccountSecretType || ephemeral?.personalCredentialSecretType || "password");
+        : manualAccountSecretType || ephemeral?.personalCredentialSecretType || "password"
+    );
     const connectionBody: ConnectionBody = {
       asset: assetId,
       protocol,
