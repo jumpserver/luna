@@ -1989,6 +1989,7 @@
     "Retry": "Повторить",
     "ResizeDatabaseSidebar": "Изменить размер боковой панели базы данных",
     "CloseDatabaseExplorer": "Закрыть проводник базы данных",
+    "RefreshResourceTree": "Обновить дерево ресурсов",
     "WaitingConnection": "Ожидание данных подключения…",
     "AuthenticatingSession": "Аутентификация сеанса базы данных…",
     "ConnectingDatabaseService": "Подключение к службе базы данных…",

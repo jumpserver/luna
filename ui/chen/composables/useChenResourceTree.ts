@@ -14,6 +14,7 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
   const childrenMap = reactive<Record<string, ChenTreeNode[]>>({});
   const loadingChildren = reactive<Record<string, boolean>>({});
   const loadErrors = reactive<Record<string, string>>({});
+  const loadGenerations = new Map<string, number>();
   const expandedKeys = ref<string[]>([]);
   const selectedNodeKey = ref("");
 
@@ -74,7 +75,9 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
 
   async function loadNodeChildren(node?: ChenTreeNode | null, force = false) {
     const key = node?.key || "__root__";
-    if (loadingChildren[key]) return;
+    if (loadingChildren[key] && !force) return;
+    const generation = (loadGenerations.get(key) || 0) + 1;
+    loadGenerations.set(key, generation);
     loadingChildren[key] = true;
     loadErrors[key] = "";
 
@@ -82,6 +85,7 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
       const items = normalizeTreeNodes(
         await fetchChenTreeChildren(chenToken.value, node, force, options.endpointUrl?.value)
       );
+      if (loadGenerations.get(key) !== generation) return;
       if (!node) {
         rootNodes.value = items;
         return;
@@ -90,18 +94,67 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
       childrenMap[node.key] = items;
       node.children = items;
     } catch (cause) {
+      if (loadGenerations.get(key) !== generation) return;
       loadErrors[key] = normalizeErrorMessage(cause);
       options.onLoadError?.(node ?? null, cause);
       // Root failures must propagate so the session can surface a fatal error
       // state; per-node failures degrade to an empty subtree + a toast.
       if (!node) throw cause;
     } finally {
-      loadingChildren[key] = false;
+      if (loadGenerations.get(key) === generation) loadingChildren[key] = false;
     }
   }
 
+  function collectNodeKeys(nodes: ChenTreeNode[], keys = new Set<string>()) {
+    for (const node of nodes) {
+      keys.add(node.key);
+      if (node.children?.length) collectNodeKeys(node.children, keys);
+    }
+    return keys;
+  }
+
+  function clearChildCaches() {
+    for (const key of Object.keys(childrenMap)) delete childrenMap[key];
+    for (const key of Object.keys(loadErrors)) {
+      if (key !== "__root__") delete loadErrors[key];
+    }
+  }
+
+  async function restoreExpandedNodes(wanted: Set<string>) {
+    const restored: string[] = [];
+
+    async function visit(nodes: ChenTreeNode[]) {
+      for (const node of nodes) {
+        if (!wanted.has(node.key)) continue;
+        if (node.leaf || node.hasChildren === false) {
+          restored.push(node.key);
+          continue;
+        }
+
+        await loadNodeChildren(node, true);
+        if (loadErrors[node.key] || !Array.isArray(node.children)) continue;
+        restored.push(node.key);
+        if (node.children.length) await visit(node.children);
+      }
+    }
+
+    await visit(rootNodes.value);
+    return restored;
+  }
+
   async function refreshRoot() {
+    const previousExpandedKeys = [...expandedKeys.value];
+    const previousTreeKeys = collectNodeKeys(rootNodes.value);
     await loadNodeChildren(null, true);
+    clearChildCaches();
+
+    // Drop resource-tree expansion before restoring paths so a newly fetched
+    // root cannot render as expanded-without-children.
+    const preservedKeys = previousExpandedKeys.filter((key) => !previousTreeKeys.has(key));
+    expandedKeys.value = preservedKeys;
+    const restoredKeys = await restoreExpandedNodes(new Set(previousExpandedKeys));
+    const kept = new Set([...preservedKeys, ...restoredKeys]);
+    expandedKeys.value = previousExpandedKeys.filter((key) => kept.has(key));
   }
 
   async function expandInitialTree() {

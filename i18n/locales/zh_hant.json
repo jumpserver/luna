@@ -1989,6 +1989,7 @@
     "Retry": "重試",
     "ResizeDatabaseSidebar": "調整資料庫側欄寬度",
     "CloseDatabaseExplorer": "關閉資料庫資源管理",
+    "RefreshResourceTree": "重新整理資源樹",
     "WaitingConnection": "等待連線資訊…",
     "AuthenticatingSession": "正在驗證資料庫工作階段…",
     "ConnectingDatabaseService": "正在連線資料庫服務…",
