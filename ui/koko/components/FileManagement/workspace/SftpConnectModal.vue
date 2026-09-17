@@ -255,7 +255,7 @@ watch(currentOrgId, () => {
   >
     <template #body>
       <div class="sftp-step-stage" :class="{ 'sftp-step-stage--island': modernIsland }">
-        <Transition :name="flipName" :css="modernIsland" mode="out-in">
+        <Transition :name="flipName" :css="modernIsland" :mode="modernIsland ? 'out-in' : undefined">
           <div
             v-if="step === 1"
             key="pick"

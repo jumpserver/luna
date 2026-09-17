@@ -83,6 +83,8 @@ export function toXtermTheme(tokens = readResolvedTerminalTokens()): ITheme {
     cursor: tokens.cursor,
     cursorAccent: tokens.background,
     selectionBackground: tokens.selection,
-    ...(dark ? DARK_ANSI : LIGHT_ANSI)
+    ...(dark ? DARK_ANSI : LIGHT_ANSI),
+    white: tokens.foreground,
+    brightWhite: tokens.foreground
   };
 }

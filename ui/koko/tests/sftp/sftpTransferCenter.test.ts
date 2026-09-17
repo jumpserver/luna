@@ -573,6 +573,10 @@ describe("sftp professional workbench", () => {
     expect(workspacePanesComposable).not.toContain("openRemoteInCurrentTab");
   });
 
+  it("keeps the classic SFTP picker out of the animated out-in transition", () => {
+    expect(connectModalComponent).toContain(`:mode="modernIsland ? 'out-in' : undefined"`);
+  });
+
   it("keeps the add button beside the tabs", () => {
     expect(globalWorkspaceComponent.indexOf("<SftpRemoteMachineTabs")).toBeLessThan(
       globalWorkspaceComponent.indexOf('icon="i-lucide-plus"')

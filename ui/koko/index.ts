@@ -24,14 +24,14 @@ export {
   unregisterKokoTerminalDataSender,
   unregisterLocalShellTerminalSession
 } from "./composables/useTerminalSessionRegistry";
-export { default as KokoConnectView } from "./views/ConnectView.vue";
+export * from "./host";
 export { useKokoConnectionStore } from "./stores/connection";
 export type { ShareUserOptions } from "./types/session";
 export { getDefaultTerminalConfig } from "./utils/guard";
 export { appTerminalTheme, syncXtermBackground } from "./utils/terminalTheme";
+export { default as KokoConnectView } from "./views/ConnectView.vue";
 export { default as KokoBaseWorkspaceShell } from "./workspaces/BaseWorkspaceShell.vue";
 export { default as KokoFileEditorSessionSurface } from "./workspaces/FileEditorSessionSurface.vue";
 export { default as KokoFileManagerSessionSurface } from "./workspaces/FileManagerSessionSurface.vue";
 export { default as KokoKubernetesWorkspace } from "./workspaces/KubernetesWorkspace.vue";
 export { default as KokoTerminalSessionSurface } from "./workspaces/TerminalSessionSurface.vue";
-export * from "./host";

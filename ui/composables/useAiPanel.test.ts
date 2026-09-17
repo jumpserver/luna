@@ -1,9 +1,9 @@
 import { useLocalStorage } from "@vueuse/core";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, nextTick, shallowRef } from "vue";
+import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
 import { resolveUnifiedAiPanel, useAiPanel } from "./useAiPanel";
 import { useRightPanel } from "./useRightPanel";
-import { setWorkspaceAiEnabled } from "~/shared/aiAvailability";
 
 const tabs = shallowRef<Array<{ id: string; protocol?: string }>>([]);
 const activeTabId = shallowRef("");
