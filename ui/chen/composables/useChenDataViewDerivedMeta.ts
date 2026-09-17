@@ -59,7 +59,13 @@ export function useChenDataViewDerivedMeta(profileDbType: Ref<string | undefined
       { label: t("Chen.Schema"), value: tab.tableMetadata?.schema || tab.meta?.schema || "-" },
       { label: t("Chen.Type"), value: t(chenRelationTypeI18nKey(relation)) },
       { label: t("Chen.Database"), value: profileDbType.value || protocol.value || "-" },
-      { label: t("Chen.RowsPreview"), value: String(tab.data?.data?.length || 0) }
+      {
+        label: t("Chen.EstimatedRows"),
+        value:
+          tab.tableMetadata?.statistics?.estimatedRows == null
+            ? "--"
+            : String(tab.tableMetadata.statistics.estimatedRows)
+      }
     ];
   }
 

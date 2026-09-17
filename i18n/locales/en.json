@@ -2207,7 +2207,7 @@
     "View": "View",
     "MaterializedView": "Materialized View",
     "Database": "Database",
-    "RowsPreview": "Rows (preview)",
+    "EstimatedRows": "Estimated rows",
     "Data": "Data",
     "BuildFilter": "Build a filter",
     "Filter": "Filter",
@@ -2551,6 +2551,7 @@
     "InvalidIndexDefinition": "Complete the index name and column selection.",
     "InvalidCsvFile": "The CSV file is invalid or cannot be read.",
     "CopyOperationFailedDescription": "The selected data could not be copied.",
-    "TableWithoutPrimaryKeyNotEditable": "This table has no primary key, so adding, updating, or deleting data is not supported yet."
+    "TableWithoutPrimaryKeyNotEditable": "This table has no primary key, so adding, updating, or deleting data is not supported yet.",
+    "ClickHouseDataViewReadOnly": "ClickHouse data views are currently read-only. Adding, updating, and deleting data is not supported; queries, filters, and exports are still available."
   }
 }

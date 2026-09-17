@@ -1036,7 +1036,7 @@ function openConsoleWorkspace(nodeKey: string, title = t("Chen.Console")) {
 function openDataViewWorkspace(nodeKey: string, title = t("Chen.DataView")) {
   const tab = workspace.openDataViewTab(nodeKey, title);
   if (tab && !consoleConnections.has(tab.id)) initConsoleSocket(tab);
-  if (tab?.kind === "data-view") void loadTableMetadata(tab, ["columns", "primaryKey"]);
+  if (tab?.kind === "data-view") void loadTableMetadata(tab, ["columns", "primaryKey", "statistics"]);
 }
 
 function mergeTableMetadata(current: ChenTableMetadata | null, incoming: ChenTableMetadata): ChenTableMetadata {
@@ -1053,6 +1053,7 @@ function mergeTableMetadata(current: ChenTableMetadata | null, incoming: ChenTab
     foreignKeys: has("foreignKeys") ? incoming.foreignKeys : current?.foreignKeys || [],
     indexes: has("indexes") ? incoming.indexes : current?.indexes || [],
     constraints: has("constraints") ? incoming.constraints : current?.constraints || [],
+    statistics: has("statistics") ? incoming.statistics : current?.statistics || null,
     ddl: has("ddl") ? incoming.ddl : current?.ddl || null
   };
 }
@@ -1893,6 +1894,7 @@ function updateDataViewPropertyTab(
         ddl: ["ddl"]
       }
     : {
+        basic: ["statistics"],
         columns: ["columns", "primaryKey"],
         indexes: ["indexes", "constraints"],
         foreignKeys: ["foreignKeys"],
