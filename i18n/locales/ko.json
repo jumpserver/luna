@@ -1989,6 +1989,7 @@
     "Retry": "다시 시도",
     "ResizeDatabaseSidebar": "데이터베이스 사이드바 크기 조정",
     "CloseDatabaseExplorer": "데이터베이스 탐색기 닫기",
+    "RefreshResourceTree": "리소스 트리 새로 고침",
     "WaitingConnection": "연결 정보를 기다리는 중…",
     "AuthenticatingSession": "데이터베이스 세션을 인증하는 중…",
     "ConnectingDatabaseService": "데이터베이스 서비스에 연결하는 중…",

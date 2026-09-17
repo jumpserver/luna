@@ -1989,6 +1989,7 @@
     "Retry": "Tentar novamente",
     "ResizeDatabaseSidebar": "Redimensionar a barra lateral do banco de dados",
     "CloseDatabaseExplorer": "Fechar o explorador do banco de dados",
+    "RefreshResourceTree": "Atualizar árvore de recursos",
     "WaitingConnection": "Aguardando detalhes da conexão…",
     "AuthenticatingSession": "Autenticando sua sessão do banco de dados…",
     "ConnectingDatabaseService": "Conectando ao serviço do banco de dados…",

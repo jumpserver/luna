@@ -2162,6 +2162,7 @@
     "Retry": "Retry",
     "ResizeDatabaseSidebar": "Resize database sidebar",
     "CloseDatabaseExplorer": "Close database explorer",
+    "RefreshResourceTree": "Refresh resource tree",
     "WaitingConnection": "Waiting for connection details…",
     "AuthenticatingSession": "Authenticating your database session…",
     "ConnectingDatabaseService": "Connecting to the database service…",

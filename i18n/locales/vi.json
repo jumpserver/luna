@@ -1989,6 +1989,7 @@
     "Retry": "Thử lại",
     "ResizeDatabaseSidebar": "Điều chỉnh kích thước thanh bên cơ sở dữ liệu",
     "CloseDatabaseExplorer": "Đóng trình duyệt cơ sở dữ liệu",
+    "RefreshResourceTree": "Làm mới cây tài nguyên",
     "WaitingConnection": "Đang chờ thông tin kết nối…",
     "AuthenticatingSession": "Đang xác thực phiên cơ sở dữ liệu…",
     "ConnectingDatabaseService": "Đang kết nối đến dịch vụ cơ sở dữ liệu…",

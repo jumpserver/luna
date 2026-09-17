@@ -1989,6 +1989,7 @@
     "Retry": "再試行",
     "ResizeDatabaseSidebar": "データベースサイドバーのサイズ変更",
     "CloseDatabaseExplorer": "データベースエクスプローラーを閉じる",
+    "RefreshResourceTree": "リソースツリーを更新",
     "WaitingConnection": "接続情報を待っています…",
     "AuthenticatingSession": "データベースセッションを認証しています…",
     "ConnectingDatabaseService": "データベースサービスに接続しています…",

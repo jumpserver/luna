@@ -2156,6 +2156,7 @@
     "Retry": "重试",
     "ResizeDatabaseSidebar": "调整数据库侧栏宽度",
     "CloseDatabaseExplorer": "关闭数据库资源管理",
+    "RefreshResourceTree": "刷新资源树",
     "WaitingConnection": "等待连接信息…",
     "AuthenticatingSession": "正在验证数据库会话…",
     "ConnectingDatabaseService": "正在连接数据库服务…",
