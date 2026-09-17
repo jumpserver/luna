@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Readable } from "node:stream";
+import { PassThrough, Readable } from "node:stream";
 import { parseLaunch, readLaunch } from "../src/launch.ts";
 import { releaseCredentials } from "@jumpserver/web-proxy/credentials";
 
@@ -41,6 +41,41 @@ test("generic AppletArgs opens the asset and fills credentials without an app-na
     password: "one-use-secret"
   });
 });
+
+for (const autofill of ["basic", "script"]) {
+  test(`${autofill} autofill accepts a same-name account with an empty password`, async () => {
+    const config = {
+      ...launch.login.config,
+      autofill,
+      script: [
+        { step: 1, command: "type", target: "id=username", value: "{USERNAME}" },
+        { step: 2, command: "type", target: "id=password", value: "{SECRET}" }
+      ]
+    };
+    for (const secret of ["", null, undefined]) {
+      const data = {
+        ...applet,
+        asset: { ...applet.asset, spec_info: config },
+        account: { ...applet.account, secret }
+      };
+      const result = await readLaunch(Readable.from([JSON.stringify(data)]));
+      assert.equal(result.targetUrl, launch.target_url);
+      assert.equal(result.standalone, false);
+      assert.equal(result.localSession.autofillAvailable, true);
+      assert.equal(result.localSession.mode, autofill);
+      await assert.rejects(releaseCredentials(result.localSession, "https://wrong.example.com"), /不匹配/);
+      assert.deepEqual(await releaseCredentials(result.localSession, launch.target_url), {
+        username: "tester",
+        password: ""
+      });
+      await assert.rejects(releaseCredentials(result.localSession, launch.target_url), /已经领取/);
+      assert.throws(
+        () => parseLaunch({ ...data, account: { ...data.account, secret_type: { value: "ssh_key" } } }),
+        /需要密码账号/
+      );
+    }
+  });
+}
 
 test("WebLite owns URL normalization, ports, query strings and hash routes", () => {
   for (const [address, port, expected] of [
@@ -137,6 +172,31 @@ test("empty or terminal stdin starts an unrestricted standalone browser without 
     assert.equal(result.localSession, null);
   }
   await assert.rejects(readLaunch(Readable.from([" "])), SyntaxError);
+});
+
+test("launch pipes preserve split UTF-8 credentials and reject truncated or failed input", async () => {
+  const data = { ...applet, account: { ...applet.account, username: "同名用户", secret: "密码🔑" } };
+  const payload = Buffer.from(JSON.stringify(data));
+  const result = await readLaunch(Readable.from([...payload].map((byte) => Buffer.from([byte]))));
+  assert.deepEqual(await releaseCredentials(result.localSession, launch.target_url), {
+    username: "同名用户",
+    password: "密码🔑"
+  });
+  await assert.rejects(readLaunch(Readable.from([payload.subarray(0, -1)])), SyntaxError);
+  const input = new PassThrough();
+  const failed = assert.rejects(readLaunch(input), /pipe failed/);
+  input.destroy(new Error("pipe failed"));
+  await failed;
+});
+
+test("unfinished launch pipes time out instead of hanging or starting a standalone browser", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const input = new PassThrough();
+  const failed = assert.rejects(readLaunch(input), /等待启动参数超时/);
+  input.write('{"asset":');
+  t.mock.timers.tick(15_000);
+  await failed;
+  assert.equal(input.destroyed, true);
 });
 test("direct launch needs no Koko endpoint or token and releases credentials once on the permitted origin", async () => {
   const result = await readLaunch(Readable.from([JSON.stringify(launch)]));

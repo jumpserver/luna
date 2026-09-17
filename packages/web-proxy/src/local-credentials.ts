@@ -16,9 +16,11 @@ export function createLocalCredentialSession(targetUrl: string, value: unknown) 
   const password = data.password ?? "";
   if (typeof username !== "string" || typeof password !== "string" || username.length > 4096 || password.length > 65536)
     throw new Error("Tinker 凭据格式无效");
+  // Same-name/manual accounts may have an empty password; preserve it for autofill.
   if (
     (mode === "basic" || steps?.some((step) => step.value.includes("{SECRET}"))) &&
-    (!password || (data.secret_type && data.secret_type !== "password"))
+    data.secret_type &&
+    data.secret_type !== "password"
   )
     throw new Error("登录配置需要密码账号");
   const selector = (key: string, required = false) => {

@@ -11,6 +11,7 @@ import { chromium } from "playwright";
 
 const applet = fileURLToPath(new URL("..", import.meta.url));
 const mode = process.argv[2] || "basic";
+const password = mode.endsWith("-empty-password") ? "" : "runtime-secret";
 const standalone = mode === "standalone" || mode === "https-standalone";
 const secure = mode.startsWith("https");
 const addressOnly = mode === "address" || mode === "anonymous";
@@ -54,7 +55,7 @@ const handler = (req, res) => {
     <h1 id="dashboard" style="display:none">Signed in</h1>
     <script>document.querySelector('form').onsubmit = e => {
       e.preventDefault();
-      if (document.querySelector('#username').value === 'tester' && document.querySelector('#password').value === 'runtime-secret') {
+      if (document.querySelector('#username').value === 'tester' && document.querySelector('#password').value === ${JSON.stringify(password)}) {
         document.querySelector('form').remove();document.querySelector('#dashboard').style.display = 'block';
       }
     };</script></body></html>`);
@@ -90,7 +91,7 @@ if (!standalone) {
       config:
         mode === "address"
           ? { autofill: "no" }
-          : mode === "script"
+          : mode === "script" || mode === "script-empty-password"
             ? {
                 autofill: "script",
                 script: [
@@ -109,11 +110,11 @@ if (!standalone) {
                 success_selector: "id=dashboard"
               },
       username: "tester",
-      password: "runtime-secret",
+      password,
       secret_type: "password"
     }
   };
-  child.stdin.end(
+  const payload = Buffer.from(
     JSON.stringify(
       mode === "legacy"
         ? launch
@@ -133,6 +134,13 @@ if (!standalone) {
           }
     )
   );
+  if (mode === "delayed-pipe") {
+    child.stdin.write(payload.subarray(0, 17));
+    await delay(1_000);
+    child.stdin.end(payload.subarray(17));
+  } else {
+    child.stdin.end(payload);
+  }
 }
 let browser;
 async function waitFor(check, message) {
