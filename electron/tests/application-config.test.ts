@@ -349,6 +349,52 @@ for (const [platform, plugin, expected] of [
   });
 }
 
+for (const [platform, plugin] of [
+  ["macos", "mongo-compass"],
+  ["windows", "mongo-compass"]
+]) {
+  test(`${platform}/${plugin} supplies the complete Magnus MongoDB URI as one argument`, async () => {
+    const config = JSON.parse(
+      await readFile(path.join(projectRoot, "plugins", platform, `${platform}.${plugin}`, "connect.json"), "utf8")
+    );
+    const application = {
+      name: plugin,
+      protocol: ["mongodb"],
+      is_set: true,
+      match_first: ["mongodb"],
+      launch_type: config.launch.type,
+      launch_driver: config.launch.driver,
+      arg_format: config.launch.template,
+      protocol_templates: config.launch.protocol_templates
+    };
+    const launcher = new LocalApplicationLauncher(
+      { isPackaged: false },
+      projectRoot,
+      { getConfig: async () => ({ databases: [application] }) },
+      null
+    );
+    for (const database of ["business", "admin", ""]) {
+      let launched = false;
+      const capture = async (selected, argumentString) => {
+        assert.equal(selected, application);
+        const uri = `mongodb://token-id:secret@gateway.example.com:5525/${database}?authSource=admin&loadBalanced=true&retryWrites=false`;
+        assert.deepEqual(localAppLauncherInternals.splitArguments(argumentString), [uri]);
+        launched = true;
+      };
+      launcher.launchExecutable = capture;
+      const payload = {
+        protocol: "mongodb",
+        name: "MongoDB",
+        endpoint: { host: "gateway.example.com", port: 5525 },
+        token: { id: "token-id", value: "secret" },
+        asset: { info: { db_name: database } }
+      };
+      await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+      assert.equal(launched, true);
+    }
+  });
+}
+
 test("normalizes duplicate and hidden system font families", () => {
   assert.deepEqual(systemFontInternals.normalizeFamilies(["Menlo", " .Hidden ", "Menlo", "SF Mono", ""]), [
     "Menlo",

@@ -11,7 +11,7 @@
   },
   "launch": {
     "type": "args",
-    "template": "mongodb://{username}:{value}@{host}:{port}/{dbname}"
+    "template": "\"mongodb://{username}:{value}@{host}:{port}/{dbname}?authSource=admin&loadBalanced=true&retryWrites=false\""
   },
   "display_name": "MongoDB Compass"
 }
