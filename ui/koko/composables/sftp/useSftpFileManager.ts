@@ -280,6 +280,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
     error,
     fatalError,
     connected: computed(() => socket.connected.value && !fatalError.value),
+    ready: computed(() => capabilitiesKnown.value && socket.connected.value && !fatalError.value),
     uploadTasks: operationClient.uploadTasks,
     uploadProgress: operationClient.uploadProgress,
     currentUploadName: operationClient.currentUploadName,

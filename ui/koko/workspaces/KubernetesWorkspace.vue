@@ -77,7 +77,8 @@ const toast = useToast();
 const hostAdapter = useKokoHostAdapter();
 const tab = toRef(props, "tab");
 const { context, error: sessionError, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab);
-const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
+const { markSessionConnected, markSessionDisconnected, markSessionFailed } = useWorkspaceTabs();
+let sessionReady = false;
 const colorMode = useColorMode();
 
 const tree = ref<K8sNode[]>([]);
@@ -533,6 +534,7 @@ const stopMessageListener = terminalSocket.onMessage((message) => {
     defaultClipboardAccess.value = resolveClipboardAccess(info?.permission, info?.clipboard_policy);
     globalTerminalId.value = message.id;
     terminalSocket.requestTree();
+    sessionReady = true;
     markSessionConnected(props.tab.id);
     connectionError.value = "";
   } else if (message.type === KubernetesTerminalMessageType.Tree) {
@@ -586,12 +588,19 @@ const stopFailureListener = terminalSocket.onFailure((failure) => {
 
   disconnectTerminalAiSessions();
   connectionError.value = t("koko.kubernetes.websocketConnectionFailed");
-  markSessionFailed({
-    tabId: props.tab.id,
-    assetId: props.tab.assetId,
-    protocol: props.tab.protocol || "",
-    account: props.tab.account || ""
-  });
+  if (sessionReady) {
+    markSessionDisconnected(props.tab.id, connectionError.value);
+  } else {
+    markSessionFailed(
+      {
+        tabId: props.tab.id,
+        assetId: props.tab.assetId,
+        protocol: props.tab.protocol || "",
+        account: props.tab.account || ""
+      },
+      connectionError.value
+    );
+  }
 });
 
 watch(tokenId, () => void prepareSession(), { immediate: true });

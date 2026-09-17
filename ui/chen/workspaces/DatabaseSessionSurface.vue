@@ -101,7 +101,7 @@ const { t } = useI18n();
 const { openAi } = useAiPanel();
 const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
-const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
+const { markSessionConnected, markSessionDisconnected, markSessionFailed } = useWorkspaceTabs();
 const tabRef = toRef(props, "tab");
 const endpointUrl = computed(() => {
   const explicit = String(props.tab.payload?.endpointUrl || "").trim();
@@ -359,13 +359,17 @@ const session = useChenSession({
   authenticate: auth.authenticate,
   translate: t,
   markConnected: () => markSessionConnected(props.tab.id),
-  markFailed: () =>
-    markSessionFailed({
-      tabId: props.tab.id,
-      assetId: props.tab.assetId,
-      protocol: props.tab.protocol,
-      account: props.tab.account
-    }),
+  markDisconnected: (reason) => markSessionDisconnected(props.tab.id, reason),
+  markFailed: (reason) =>
+    markSessionFailed(
+      {
+        tabId: props.tab.id,
+        assetId: props.tab.assetId,
+        protocol: props.tab.protocol,
+        account: props.tab.account
+      },
+      reason
+    ),
   onBeforeReady: async () => {
     await auth.loadProfile();
     await tree.loadNodeChildren(null);
@@ -408,20 +412,6 @@ const startupErrorMessage = computed(() => {
   return `${t("Chen.ServerRequestFailedPrefix")}${message}`;
 });
 const databaseDialogFailed = computed(() => isChenStartupFailureDialog(session.dialogMessage.value));
-const startupDialogMessage = computed(() => {
-  const dialog = session.dialogMessage.value;
-  if (!dialog || !session.dialogOpenedDuringStartup.value || dialog.buttons.length || databaseDialogFailed.value)
-    return "";
-  return dialog.text || (dialog.title === "Message" ? "" : dialog.title);
-});
-const startupMessage = computed(() => {
-  if (startupDialogMessage.value) return startupDialogMessage.value;
-  if (!tokenId.value) return t("Chen.WaitingConnection");
-  if (!auth.chenToken.value) return t("Chen.AuthenticatingSession");
-  if (session.sessionConnection.state.value === "connecting") return t("Chen.ConnectingDatabaseService");
-  if (!auth.profile.value) return t("Chen.PreparingSession");
-  return t("Chen.LoadingDatabaseResources");
-});
 const databaseDialogText = computed(() => {
   const message = session.dialogMessage.value?.text || "";
   if (!databaseDialogFailed.value || !databaseTarget.value) return message;
@@ -1990,7 +1980,7 @@ defineExpose({ focus });
 
 <template>
   <div class="relative isolate h-full min-h-0 overflow-hidden bg-[var(--workspace-surface-main)] text-[var(--app-fg)]">
-    <div v-if="session.ready.value" class="relative flex h-full min-h-0 min-w-0">
+    <div v-if="session.ready.value || props.tab.status === 'disconnected'" class="relative flex h-full min-h-0 min-w-0">
       <ResourceTreePanel
         v-show="!isNarrowScreen || resourceTreeOpen"
         class="z-40 max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
@@ -2176,18 +2166,11 @@ defineExpose({ focus });
     </div>
 
     <ChenSessionState
-      v-else
-      :icon="startupErrorMessage ? 'i-lucide-circle-alert' : 'i-lucide-database'"
-      :loading="!startupErrorMessage"
-      :title="
-        startupErrorMessage
-          ? adminTerminated
-            ? startupErrorMessage
-            : t('Chen.OpenDatabaseWorkspaceFailed')
-          : t('Chen.OpeningDatabaseWorkspace')
-      "
-      :message="adminTerminated ? '' : startupErrorMessage || startupMessage"
-      :action-label="startupErrorMessage && !adminTerminated ? t('Chen.Retry') : undefined"
+      v-else-if="startupErrorMessage"
+      icon="i-lucide-circle-alert"
+      :title="adminTerminated ? startupErrorMessage : t('Chen.OpenDatabaseWorkspaceFailed')"
+      :message="adminTerminated ? '' : startupErrorMessage"
+      :action-label="adminTerminated ? undefined : t('Chen.Retry')"
       @action="emit('reconnect')"
     />
 

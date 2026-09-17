@@ -69,6 +69,7 @@ const emit = defineEmits<{
   transferEndpointConnected: [];
   transferEndpointUnmounted: [endpoint: FileTransferEndpointRef];
   connectionChange: [connected: boolean];
+  connectionFailure: [message: string];
   focus: [];
   addRemote: [];
   startTour: [];
@@ -422,7 +423,10 @@ watch(manager.currentPath, () => {
   hideContextMenu();
   clearSelection();
 });
-watch(manager.connected, (connected) => emit("connectionChange", Boolean(connected)), { immediate: true });
+watch(manager.ready, (ready) => emit("connectionChange", Boolean(ready)), { immediate: true });
+watch(manager.fatalError, (fatalError) => {
+  if (fatalError) emit("connectionFailure", manager.error.value || t("koko.fileManagement.expired"));
+});
 watch([manager.connected, manager.loading, manager.fatalError], ([connected, loading, fatalError]) => {
   if (!connected || fatalError) {
     transferEndpointReady = false;

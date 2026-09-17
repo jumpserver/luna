@@ -123,6 +123,7 @@ const CONNECTION_PROGRESS_MIN_MS = 1000;
 const connectionProgressAt = new Map<string, number>();
 const connectionProgressGoal = new Map<string, WorkspaceConnectionProgressStage | "hide">();
 const connectionProgressTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const connectionAttempts = new Map<string, number>();
 let sessionDisposer: ((id: string) => void | Promise<void>) | null = null;
 const sessionCloseGuards = new Map<string, () => boolean | Promise<boolean>>();
 let aiTaskTabCloseConfirm: ((tabIds: string[]) => Promise<boolean>) | null = null;
@@ -950,8 +951,11 @@ export const useWorkspaceTabs = () => {
     const match = findPane(paneId);
     if (!match) return;
 
+    connectionAttempts.set(paneId, (connectionAttempts.get(paneId) || 0) + 1);
     match.pane.status = "connecting";
+    match.pane.connectionFailure = undefined;
     match.pane.mode = "session";
+    if (match.pane.connectionProgress) assignConnectionProgress(match.pane, "token", match.tab, match.paneIndex);
     activePaneId.value = paneId;
     if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
@@ -973,6 +977,7 @@ export const useWorkspaceTabs = () => {
     if (!match) return;
 
     clearConnectionProgress(match.pane);
+    connectionAttempts.set(paneId, (connectionAttempts.get(paneId) || 0) + 1);
     match.pane.protocol = connection.protocol;
     match.pane.account = connection.account;
     if (connection.permedAccounts) match.pane.permedAccounts = connection.permedAccounts;
@@ -989,6 +994,8 @@ export const useWorkspaceTabs = () => {
     if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
 
+  const getSessionConnectionAttempt = (paneId: string) => connectionAttempts.get(paneId) || 0;
+
   const markSessionTokenCreated = (match: { tabId?: string; assetId: string; protocol: string; account: string }) => {
     const found = findSession(match);
     if (!found || found.pane.connectionProgress !== "token") return;
@@ -1004,21 +1011,41 @@ export const useWorkspaceTabs = () => {
     const found = findSession(match);
     if (!found) return;
 
-    const resumeSetup = found.pane.resumeSetupOnFailure && found.pane.setupAsset;
-    clearConnectionProgress(found.pane);
+    const inProgress = Boolean(found.pane.connectionProgress);
     found.pane.connectedAt = undefined;
-    found.pane.payload = undefined;
     found.pane.connectionFailure = reason;
     clearWorkspaceSessionDetails(found.pane.id);
     closeNativeSession(found.pane.id);
-    if (resumeSetup) {
-      found.pane.status = "selecting";
-      found.pane.mode = "setup";
+    if (inProgress) {
+      stopConnectionProgressTimer(found.pane.id);
+      connectionProgressGoal.delete(found.pane.id);
+      const atToken = found.pane.connectionProgress === "token";
+      found.pane.connectionProgress = atToken ? "token" : "connected";
+      found.pane.status = atToken ? "failed" : "disconnected";
+      if (atToken) found.pane.payload = undefined;
     } else {
-      found.pane.status = "failed";
-      if (found.pane.mode !== "setup") found.pane.mode = "session";
+      found.pane.payload = undefined;
+      clearConnectionProgress(found.pane);
+      if (found.pane.resumeSetupOnFailure && found.pane.setupAsset) {
+        found.pane.status = "selecting";
+        found.pane.mode = "setup";
+      } else {
+        found.pane.status = "failed";
+        if (found.pane.mode !== "setup") found.pane.mode = "session";
+      }
     }
     if (found.paneIndex === 0) syncTabFromPrimaryPane(found.tab);
+  };
+
+  const resumeConnectionSetup = (paneId: string) => {
+    const match = findPane(paneId);
+    if (!match?.pane.setupAsset) return;
+
+    clearConnectionProgress(match.pane);
+    match.pane.payload = undefined;
+    match.pane.status = "selecting";
+    match.pane.mode = "setup";
+    if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
 
   const markSessionConnected = (paneId: string) => {
@@ -1027,6 +1054,7 @@ export const useWorkspaceTabs = () => {
 
     match.pane.resumeSetupOnFailure = false;
     match.pane.setupDraft = undefined;
+    match.pane.connectionFailure = undefined;
     match.pane.status = "connected";
     match.pane.connectedAt = Date.now();
     match.pane.mode = "session";
@@ -1039,12 +1067,15 @@ export const useWorkspaceTabs = () => {
     if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
 
-  const markSessionDisconnected = (paneId: string) => {
+  const markSessionDisconnected = (paneId: string, reason?: string) => {
     const match = findPane(paneId);
     if (!match) return;
 
-    clearConnectionProgress(match.pane);
+    stopConnectionProgressTimer(match.pane.id);
+    connectionProgressGoal.delete(match.pane.id);
+    match.pane.connectionProgress = "connected";
     match.pane.status = "disconnected";
+    match.pane.connectionFailure = reason;
     if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
 
@@ -1128,11 +1159,13 @@ export const useWorkspaceTabs = () => {
     getTabById,
     isPaneAwaitingAssetSelection,
     markSessionConnected,
+    getSessionConnectionAttempt,
     markSessionConnecting,
     markSessionTokenCreated,
     markSessionDisconnected,
     setSessionConnectMethod,
     markSessionFailed,
+    resumeConnectionSetup,
     openLocalShell,
     openScriptEditor,
     openSession,

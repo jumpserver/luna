@@ -100,6 +100,10 @@ interface EditorNavigationLocation {
 }
 
 const props = defineProps<{ sftpToken: string; workspaceKey?: string }>();
+const emit = defineEmits<{
+  connectionChange: [connected: boolean];
+  connectionFailure: [message: string];
+}>();
 const { t } = useI18n();
 const toast = useToast();
 const providedContext = inject(connectorSessionKey, ref(null));
@@ -110,6 +114,10 @@ const context = computed<ConnectorSessionContext | null>(() => {
   return { ...value, tokenId: props.sftpToken };
 });
 const manager = useSftpFileManager(context);
+watch(manager.ready, (ready) => emit("connectionChange", Boolean(ready)), { immediate: true });
+watch(manager.fatalError, (fatalError) => {
+  if (fatalError) emit("connectionFailure", manager.error.value || t("koko.fileManagement.expired"));
+});
 const fileEditorCapability = computed(() => manager.capabilities.value?.file_editor || null);
 const fileEditorSupported = computed(() => {
   const capability = fileEditorCapability.value;

@@ -29,7 +29,7 @@ const { addErrorToast } = useErrorToast();
 const { modernIsland } = useSettingManager();
 const { confirmConnection } = useAssetConnection();
 const { getMethodsForProtocol } = useConnectMethods();
-const { closePane, markSessionFailed, startSessionConnection } = useWorkspaceTabs();
+const { closePane, markSessionFailed, resumeConnectionSetup, startSessionConnection } = useWorkspaceTabs();
 const {
   buildConnectionInfo,
   draft,
@@ -167,12 +167,15 @@ async function submit(downloadRdpMethod = "") {
     downloadingRdp.value = false;
     connectionError.value = resolveConnectionAttemptError(error, t);
     if (!info.downloadRdp && !showLaunchSuccessState) {
-      markSessionFailed({
-        tabId: props.tab.id,
-        assetId: currentAsset.value!.id,
-        protocol: info.protocol,
-        account: info.account
-      });
+      markSessionFailed(
+        {
+          tabId: props.tab.id,
+          assetId: currentAsset.value!.id,
+          protocol: info.protocol,
+          account: info.account
+        },
+        connectionError.value
+      );
     }
   };
   try {
@@ -420,10 +423,20 @@ onMounted(loadAsset);
             </div>
           </section>
         </Transition>
-        <WorkspaceConnectionProgressOverlay
-          v-if="connecting && !downloadingRdp && !externalClientLaunch"
-          :stage="tab.connectionProgress || 'token'"
-        />
+        <Transition
+          enter-from-class="opacity-0"
+          enter-active-class="transition-opacity duration-500"
+          leave-active-class="transition-opacity duration-500 ease-out"
+          leave-to-class="opacity-0"
+        >
+          <WorkspaceConnectionProgressOverlay
+            v-if="tab.connectionProgress && !downloadingRdp && !externalClientLaunch"
+            :stage="tab.connectionProgress"
+            :error="tab.status === 'connecting' ? undefined : tab.connectionFailure"
+            @edit="resumeConnectionSetup(tab.id)"
+            @reconnect="void submit()"
+          />
+        </Transition>
       </div>
     </div>
   </div>

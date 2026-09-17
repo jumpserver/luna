@@ -290,7 +290,7 @@ export function useGuacamoleClient(
 
     tunnel.onerror = () => {
       loading.value = false;
-      message.error(t("WebSocketError"));
+      connectionError.value = t("WebSocketError");
     };
     tunnel.onuuid = (uuid: string) => {
       tunnel.uuid = uuid;
@@ -780,7 +780,6 @@ export function useGuacamoleClient(
       sessionId: typeof sessionObject.value?.id === "string" ? sessionObject.value.id : undefined
     };
     connectionError.value = msg;
-    message.error(msg, { duration: 10000 });
   }
 
   function clientStateChanged(state: any) {
