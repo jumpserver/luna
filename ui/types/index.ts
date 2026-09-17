@@ -382,6 +382,7 @@ export interface AssetDetail {
   permedProtocols?: PermedProtocol[];
   permedAccounts?: PermedAccount[];
   spec_info?: {
+    db_name?: string;
     success_selector?: string;
     interactive_selector?: string;
     allowed_urls?: string[];
