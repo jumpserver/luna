@@ -1,7 +1,5 @@
 import type { Toast } from "@nuxt/ui/composables";
 
-import { writeClipboardText } from "~/utils/clipboard";
-
 type ErrorToastAction = NonNullable<Toast["actions"]>[number];
 
 interface ErrorToastOptions {
@@ -14,9 +12,6 @@ interface ErrorToastOptions {
   progress?: boolean;
   actions?: ErrorToastAction[];
 }
-
-const COPY_ACTION_ICONS = new Set(["i-lucide-copy", "lucide:copy"]);
-const COPY_LABELS = new Set(["copy", "copied", "复制", "已复制"]);
 
 export function normalizeErrorText(value: unknown) {
   const raw = String(value ?? "").trim();
@@ -62,14 +57,6 @@ function localizeErrorDescription(description: string, translate: (key: string) 
   return description;
 }
 
-function hasCopyAction(actions: ErrorToastAction[] = []) {
-  return actions.some((action) => {
-    const label = normalizeToastText(action?.label).toLowerCase();
-    const icon = normalizeToastText(action?.icon);
-    return COPY_LABELS.has(label) || COPY_ACTION_ICONS.has(icon);
-  });
-}
-
 export function useErrorToast() {
   const { t } = useI18n();
   const toast = useToast();
@@ -80,24 +67,6 @@ export function useErrorToast() {
       t
     );
     const actions = [...(options.actions ?? [])];
-    const copyText = [options.title, description].filter(Boolean).join("\n");
-
-    if (copyText && !hasCopyAction(actions)) {
-      actions.push({
-        label: t("Common.Copy"),
-        icon: "i-lucide-copy",
-        color: "neutral",
-        variant: "soft",
-        onClick: async () => {
-          await writeClipboardText(copyText);
-          toast.add({
-            title: t("Common.CopySuccess"),
-            color: "success",
-            duration: 1200
-          });
-        }
-      });
-    }
 
     return toast.add({
       ...(options.id != null ? { id: options.id } : {}),
