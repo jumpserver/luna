@@ -110,15 +110,23 @@ function resolveConnectionErrorDescription(error: unknown, translate: (key: stri
   return typeof data.detail === "string" && data.detail ? data.detail : error.message || `HTTP ${error.status}`;
 }
 
-const withLocalClientName = (url: string, clientName?: string) => {
-  if (!clientName || !url.startsWith("jms2://")) return url;
+const withLocalClientOptions = (
+  url: string,
+  { clientName, mysqlForMariaDB }: { clientName?: string; mysqlForMariaDB?: boolean }
+) => {
+  if ((!clientName && !mysqlForMariaDB) || !url.startsWith("jms2://")) return url;
 
   try {
     const decoded = Uint8Array.from(atob(url.slice("jms2://".length)), (character) => character.charCodeAt(0));
     const parsed: unknown = JSON.parse(new TextDecoder().decode(decoded));
     if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") return url;
 
-    const payload = { ...(parsed as Record<string, unknown>), client: clientName };
+    const payload = { ...(parsed as Record<string, unknown>) };
+    const useMySQL = mysqlForMariaDB && payload.protocol === "mariadb";
+    if (!clientName && !useMySQL) return url;
+    if (clientName) payload.client = clientName;
+    // Only change the client driver, never the Core token or an applet's RDP protocol.
+    if (useMySQL) payload.protocol = "mysql";
     const encoded = new TextEncoder().encode(JSON.stringify(payload));
     return `jms2://${btoa(String.fromCharCode(...encoded))}`;
   } catch {
@@ -601,12 +609,12 @@ export const useAssetAction = () => {
         };
         if (isDesktopRuntime()) {
           await desktopInvoke("pull_up", {
-            url: withLocalClientName(localClientUrl, nativeApp.clientName)
+            url: withLocalClientOptions(localClientUrl, { clientName: nativeApp.clientName })
           });
           meta?.onSessionReady?.(payload);
         } else {
           meta?.onSessionReady?.(payload);
-          window.location.assign(localClientUrl);
+          window.location.assign(withLocalClientOptions(localClientUrl, { mysqlForMariaDB: true }));
         }
         return;
       }

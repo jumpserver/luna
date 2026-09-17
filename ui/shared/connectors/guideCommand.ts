@@ -1,3 +1,9 @@
+// Client-facing only: retain the original asset/token protocol for backend routing.
+export function getGuideClientProtocol(protocol: string) {
+  const normalized = protocol.trim().toLowerCase();
+  return normalized === "mariadb" ? "mysql" : normalized;
+}
+
 export function getGuideConnectCommand(input: {
   protocol: string;
   id: string;
@@ -9,13 +15,12 @@ export function getGuideConnectCommand(input: {
 }) {
   const { protocol, id, secret, host, port, database } = input;
 
-  switch (protocol) {
+  switch (getGuideClientProtocol(protocol)) {
     case "ssh":
       return `ssh JMS-${id}@${host}${port === "22" ? "" : ` -p ${port}`}`;
     case "vnc":
       return `vncviewer -UserName=${id} ${host}:${port || "5900"}`;
     case "mysql":
-    case "mariadb":
       return `mysql -u ${id} -p${secret} -h ${host} -P ${port} ${database}`;
     case "postgresql":
       return `psql "user=${id} password=${secret} host=${host} dbname=${database} port=${port}"`;
