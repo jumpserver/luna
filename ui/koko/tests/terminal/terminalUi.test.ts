@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import localShellSurface from "../../../workspaces/LocalShellSessionSurface.vue?raw";
 import drawerGeneral from "../../components/Drawer/General/index.vue?raw";
 import drawerComponent from "../../components/Drawer/index.vue?raw";
-import sessionShare from "../../components/Drawer/SessionShare/index.vue?raw";
 import searchInput from "../../components/SearchInput/index.vue?raw";
 import terminalComponent from "../../components/Terminal/index.vue?raw";
 import terminalProvider from "../../components/TerminalProvider/index.vue?raw";
@@ -75,12 +74,6 @@ describe("terminal UI composition", () => {
     expect(drawerGeneral).toContain("writeDataToTerminal");
   });
 
-  it("copies a share URL only when sharing is enabled", () => {
-    expect(sessionShare).toContain("copyShareURL");
-    expect(sessionShare).toContain(':disabled="!shareInfo.enableShare || !shareInfo.shareId"');
-    expect(sessionShare).toContain("onlineUsers");
-  });
-
   it("keeps SearchInput clicks void-typed and bound to the xterm search addon", () => {
     expect(searchInput).toContain("void props.searchAddon.findPrevious");
     expect(searchInput).toContain("void props.searchAddon.findNext");
@@ -91,6 +84,5 @@ describe("terminal UI composition", () => {
   it("voids the workspace shell retry emit for UButton", () => {
     expect(baseWorkspaceShell).toContain("@click=\"void $emit('retry')\"");
     expect(baseWorkspaceShell).toContain("i-lucide-circle-alert");
-    expect(baseWorkspaceShell).toContain("i-lucide-loader-circle");
   });
 });

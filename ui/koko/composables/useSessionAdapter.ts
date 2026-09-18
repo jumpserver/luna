@@ -1,5 +1,6 @@
-import type { OnlineUser, ShareUserOptions } from "#koko/types/session";
+import type { SessionShareAdapter, SessionShareLinkRequest, SessionShareOnlineUser } from "@jumpserver/connectors-core";
 import type { MaybeRefOrGetter } from "vue";
+import type { ShareUserOptions } from "#koko/types/session";
 import { FORMATTER_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 
 import { writeText } from "clipboard-polyfill";
@@ -12,7 +13,7 @@ import { useShareLink } from "~/composables/useShareLink";
  * right panel and the in-terminal drawer always act on the terminal they show,
  * never on the most recently connected one.
  */
-export function useKokoSessionAdapter(paneId: MaybeRefOrGetter<string>) {
+export function useKokoSessionAdapter(paneId: MaybeRefOrGetter<string>): SessionShareAdapter {
   const { t } = useI18n();
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
@@ -22,6 +23,7 @@ export function useKokoSessionAdapter(paneId: MaybeRefOrGetter<string>) {
   const pane = computed(() => connectionStore.pane(toValue(paneId)));
 
   const onlineUsers = computed(() => pane.value.onlineUsers);
+  const hasMoreUsers = computed(() => false);
 
   const shareInfo = computed(() => {
     const { shareId, shareCode, sessionId, enableShare } = pane.value;
@@ -44,11 +46,7 @@ export function useKokoSessionAdapter(paneId: MaybeRefOrGetter<string>) {
     return true;
   };
 
-  const createShareLink = (shareLinkRequest: {
-    expiredTime: number;
-    actionPerm: string;
-    users: ShareUserOptions[];
-  }) => {
+  const createShareLink = (shareLinkRequest: SessionShareLinkRequest) => {
     const sessionId = pane.value.sessionId;
     const sent =
       Boolean(sessionId) &&
@@ -67,7 +65,7 @@ export function useKokoSessionAdapter(paneId: MaybeRefOrGetter<string>) {
     sendToPane(FORMATTER_MESSAGE_TYPE.TERMINAL_GET_SHARE_USER, { query });
   };
 
-  const removeShareUser = (user: OnlineUser) => {
+  const removeShareUser = (user: SessionShareOnlineUser) => {
     const sessionId = pane.value.sessionId;
     if (!sessionId) return;
 
@@ -91,6 +89,7 @@ export function useKokoSessionAdapter(paneId: MaybeRefOrGetter<string>) {
     shareInfo,
     onlineUsers,
     userOptions,
+    hasMoreUsers,
     searchUsers,
     copyShareURL,
     createShareLink,

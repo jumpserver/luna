@@ -111,7 +111,7 @@ function formatUptime(seconds: number) {
 
 const showShareSection = computed(() => {
   if (!isConnectedSession.value) return false;
-  if (lionSession.value) return Boolean(lionSession.value.share.sessionId.value);
+  if (lionSession.value) return Boolean(lionSession.value.share.shareInfo.value.sessionId);
   return Boolean(sessionDetails.value?.shareAllowed);
 });
 
@@ -133,7 +133,7 @@ const sessionRows = computed(() => {
       label: t("RightPanel.SessionId"),
       value:
         details?.sessionId ||
-        lionSession.value?.share.sessionId.value ||
+        lionSession.value?.share.shareInfo.value.sessionId ||
         (!lionSession.value ? kokoPane.value.sessionId : "") ||
         tokenId ||
         "-"
@@ -153,7 +153,8 @@ const statusLabel = computed(() => {
 const canShare = computed(() => {
   if (!showShareSection.value) return false;
   if (lionSession.value) {
-    return Boolean(lionSession.value.share.enableShare.value && lionSession.value.share.sessionId.value);
+    const shareInfo = lionSession.value.share.shareInfo.value;
+    return Boolean(shareInfo.enableShare && shareInfo.sessionId);
   }
   return Boolean(kokoPane.value.enableShare && kokoPane.value.sessionId);
 });
