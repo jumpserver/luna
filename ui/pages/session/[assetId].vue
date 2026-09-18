@@ -59,10 +59,7 @@ onMounted(() => {
   registerSessionDisposer(() => {});
   registerKokoTicketProvider(async (request) => {
     if (isDesktopRuntime()) {
-      return desktopInvoke("create_koko_connect_ticket", {
-        baseUrl: request.baseUrl,
-        tokenId: request.tokenId
-      });
+      return desktopInvoke("create_koko_connect_ticket", { ...request });
     }
 
     const url = `${request.baseUrl.replace(/\/+$/, "")}/koko/api/connect-ticket/`;
