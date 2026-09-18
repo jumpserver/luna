@@ -1162,7 +1162,8 @@
     "OpenSession": "Открытие сеанса",
     "Connected": "Подключено",
     "OpenAgain": "Открыть снова",
-    "BackToForm": "Вернуться к форме"
+    "BackToForm": "Вернуться к форме",
+    "StartFaceVerify": "Начать проверку"
   },
   "ConnectionGuide": {
     "TokenCommand": "Команда подключения (токен)",

@@ -206,6 +206,16 @@ async function submit(downloadRdpMethod = "") {
   }
 }
 
+function cancelFromOverlay() {
+  connecting.value = false;
+  resumeConnectionSetup(props.tab.id);
+}
+
+function reconnectFromOverlay() {
+  connecting.value = false;
+  void submit();
+}
+
 watch(
   () => props.tab.connectionFailure,
   (reason) => {
@@ -423,21 +433,23 @@ onMounted(loadAsset);
             </div>
           </section>
         </Transition>
-        <Transition
-          enter-from-class="opacity-0"
-          enter-active-class="transition-opacity duration-500"
-          leave-active-class="transition-opacity duration-500 ease-out"
-          leave-to-class="opacity-0"
-        >
-          <WorkspaceConnectionProgressOverlay
-            v-if="tab.connectionProgress && !downloadingRdp && !externalClientLaunch"
-            :stage="tab.connectionProgress"
-            :error="tab.status === 'connecting' ? undefined : tab.connectionFailure"
-            @edit="resumeConnectionSetup(tab.id)"
-            @reconnect="void submit()"
-          />
-        </Transition>
       </div>
+      <Transition
+        enter-from-class="opacity-0"
+        enter-active-class="transition-opacity duration-500"
+        leave-active-class="transition-opacity duration-500 ease-out"
+        leave-to-class="opacity-0"
+      >
+        <WorkspaceConnectionProgressOverlay
+          v-if="tab.connectionProgress && !downloadingRdp && !externalClientLaunch"
+          :pane-id="tab.id"
+          :stage="tab.connectionProgress"
+          :error="tab.status === 'connecting' ? undefined : tab.connectionFailure"
+          @cancel="cancelFromOverlay"
+          @edit="cancelFromOverlay"
+          @reconnect="reconnectFromOverlay"
+        />
+      </Transition>
     </div>
   </div>
 </template>

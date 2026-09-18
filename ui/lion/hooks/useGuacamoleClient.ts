@@ -289,8 +289,10 @@ export function useGuacamoleClient(
     const client = new Guacamole.Client(tunnel);
 
     tunnel.onerror = () => {
+      if (generation !== connectGeneration) return;
       loading.value = false;
       connectionError.value = t("WebSocketError");
+      if (connectStatus.value !== 5) connectStatus.value = 5;
     };
     tunnel.onuuid = (uuid: string) => {
       tunnel.uuid = uuid;
@@ -780,6 +782,7 @@ export function useGuacamoleClient(
       sessionId: typeof sessionObject.value?.id === "string" ? sessionObject.value.id : undefined
     };
     connectionError.value = msg;
+    if (connectStatus.value !== 5) connectStatus.value = 5;
   }
 
   function clientStateChanged(state: any) {

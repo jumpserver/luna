@@ -1162,7 +1162,8 @@
     "OpenSession": "セッションを開く",
     "Connected": "接続完了",
     "OpenAgain": "もう一度開く",
-    "BackToForm": "フォームに戻る"
+    "BackToForm": "フォームに戻る",
+    "StartFaceVerify": "認証を開始"
   },
   "ConnectionGuide": {
     "TokenCommand": "接続コマンド（トークン）",

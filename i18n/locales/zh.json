@@ -1162,7 +1162,8 @@
     "OpenSession": "建立会话连接",
     "Connected": "连接完成",
     "OpenAgain": "再次打开",
-    "BackToForm": "返回修改"
+    "BackToForm": "返回修改",
+    "StartFaceVerify": "开始核验"
   },
   "ConnectionGuide": {
     "TokenCommand": "连接命令（使用 Token）",

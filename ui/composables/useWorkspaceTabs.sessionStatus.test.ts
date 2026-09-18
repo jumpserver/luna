@@ -5,6 +5,10 @@ import { useWorkspaceTabs } from "./useWorkspaceTabs";
 vi.mock("~/composables/useRecentConnections", () => ({
   useRecentConnections: () => ({ recordRecentConnection: vi.fn() })
 }));
+vi.mock("~/composables/useAclDialog", () => ({
+  closeAclScope: vi.fn(),
+  useAclDialog: () => ({ closeScope: vi.fn() })
+}));
 
 const asset: AssetItem = {
   id: "asset-1",
@@ -185,6 +189,20 @@ describe("workspace session disconnect status", () => {
     expect(pane.mode).toBe("setup");
     expect(pane.status).toBe("selecting");
     expect(pane.connectionProgress).toBeUndefined();
+  });
+
+  it("clears connection progress when resuming without a setup form", () => {
+    const pane = tabs.openSession(asset, { protocol: "ssh", account: "root", newTab: true });
+    pane.payload = { id: "token" };
+    tabs.markSessionDisconnected(pane.id);
+    tabs.markSessionConnecting(pane.id);
+    expect(pane.connectionProgress).toBe("token");
+    expect(pane.setupAsset).toBeUndefined();
+
+    tabs.resumeConnectionSetup(pane.id);
+    expect(pane.connectionProgress).toBeUndefined();
+    expect(pane.status).toBe("disconnected");
+    expect(pane.mode).toBe("session");
   });
 
   it("exits windowed focus mode", async () => {

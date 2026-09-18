@@ -81,9 +81,11 @@ const setupPane = computed(() => {
 
   return activeSetupPane || props.tab.panes.find((pane) => pane.mode === "setup");
 });
-const activeAclPaneId = computed(() =>
-  activePaneId.value && hasScopeGroup(activePaneId.value) ? activePaneId.value : ""
-);
+const activeAclPaneId = computed(() => {
+  if (!activePaneId.value || !hasScopeGroup(activePaneId.value)) return "";
+  const pane = props.tab.panes.find((item) => item.id === activePaneId.value);
+  return pane?.connectionProgress ? "" : activePaneId.value;
+});
 const showPaneHeaders = computed(() => props.tab.panes.length > 1);
 const inactivePaneOverlayClass = computed(() => (colorMode.value === "dark" ? "bg-white/4" : "bg-black/3"));
 const currentOrgLabel = computed(() => currentUser.value?.org?.name || "");
@@ -578,7 +580,8 @@ onBeforeUnmount(() => {
             leave-to-class="opacity-0"
           >
             <WorkspaceConnectionProgressOverlay
-              v-if="pane.connectionProgress"
+              v-if="pane.connectionProgress && pane.mode !== 'setup'"
+              :pane-id="pane.id"
               :stage="pane.connectionProgress"
               :error="
                 pane.status === 'connecting' || pane.status === 'connected' || pane.status === 'ready'
@@ -586,6 +589,7 @@ onBeforeUnmount(() => {
                   : pane.connectionFailure ||
                     (pane.status === 'disconnected' ? t('ConnectError.SessionClosed') : undefined)
               "
+              @cancel="resumeConnectionSetup(pane.id)"
               @edit="resumeConnectionSetup(pane.id)"
               @reconnect="void reconnectSession(surfaceTabFor(pane))"
             />

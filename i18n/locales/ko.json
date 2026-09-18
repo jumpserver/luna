@@ -1162,7 +1162,8 @@
     "OpenSession": "세션 열기",
     "Connected": "연결됨",
     "OpenAgain": "다시 열기",
-    "BackToForm": "연결 설정으로 돌아가기"
+    "BackToForm": "연결 설정으로 돌아가기",
+    "StartFaceVerify": "인증 시작"
   },
   "ConnectionGuide": {
     "TokenCommand": "연결 명령 (토큰)",

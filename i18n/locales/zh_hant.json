@@ -1162,7 +1162,8 @@
     "OpenSession": "建立工作階段連線",
     "Connected": "連線完成",
     "OpenAgain": "再次開啟",
-    "BackToForm": "返回修改"
+    "BackToForm": "返回修改",
+    "StartFaceVerify": "開始核驗"
   },
   "ConnectionGuide": {
     "TokenCommand": "連線命令（使用 Token）",

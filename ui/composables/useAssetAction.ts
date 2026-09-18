@@ -564,9 +564,7 @@ export const useAssetAction = () => {
       creatingConnectionToken = false;
       if (!isCurrentConnectionAttempt()) return;
       if (!token) {
-        if (meta?.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
-        else if (meta)
-          markSessionFailed({ tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account });
+        if (meta?.downloadRdp) meta.onSessionError?.(new Error("Connection cancelled"));
         return;
       }
       syncPersonalCredentialFromToken(meta?.assetId, serverBody, token, personalCredentialScope);
@@ -722,11 +720,7 @@ export const useAssetAction = () => {
       });
       creatingConnectionToken = false;
       if (!isCurrentConnectionAttempt()) return;
-      if (!token) {
-        if (meta.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
-        else markSessionFailed(meta);
-        return;
-      }
+      if (!token) return;
       syncPersonalCredentialFromToken(meta.assetId, serverBody, token, personalCredentialScope);
       if (meta.tabId) {
         markSessionTokenCreated({
