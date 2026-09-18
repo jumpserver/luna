@@ -219,7 +219,10 @@ const menuShortcutButtonUi = {
   label: "min-w-0 flex-1 truncate text-left"
 };
 
-const currentThemeAccent = computed(() => getThemePreset(currentThemePresetId.value)?.accent || "var(--theme-accent)");
+const currentThemeAccent = computed(() => {
+  const preset = getThemePreset(currentThemePresetId.value);
+  return preset?.baseColor || preset?.accent || "var(--theme-accent)";
+});
 const themePaletteOpen = ref(false);
 const previewedThemePresetId = ref<ThemePresetId | null>(null);
 const palettePreviewArmed = ref(false);
@@ -1132,7 +1135,7 @@ onBeforeUnmount(() => {
                   >
                     <span
                       class="size-2.5 shrink-0 rounded-full ring-1 ring-(--app-border)"
-                      :style="{ backgroundColor: item.accent }"
+                      :style="{ backgroundColor: item.baseColor || item.accent }"
                     />
                     <span class="min-w-0 flex-1 truncate text-left text-xs">{{ themePresetLabel(item) }}</span>
                     <UIcon
