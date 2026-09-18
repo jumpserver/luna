@@ -82,6 +82,7 @@ test("Windows installers provide a directory selection wizard and preserve the c
   assert.deepEqual(nsis.platforms, ["win32"]);
   const { options } = nsis.config;
   assert.equal(options.appId, config.packagerConfig.appBundleId);
+  assert.equal(config.packagerConfig.executableName, "JumpServer");
   assert.equal(options.win.executableName, config.packagerConfig.executableName);
   assert.deepEqual(options.protocols, config.packagerConfig.protocols);
   assert.equal(options.nsis.oneClick, false);
