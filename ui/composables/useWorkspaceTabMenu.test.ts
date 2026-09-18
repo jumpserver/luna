@@ -40,7 +40,7 @@ function session(webProxy = true) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.exchange.mockResolvedValue({ id: "new-token", value: "new-value" });
+  mocks.exchange.mockResolvedValue({ id: "new-token", value: "new-value", org_id: "asset-org" });
   createKokoTicket.mockResolvedValue({ ticket: "new-ticket" });
   vi.stubGlobal("useI18n", () => ({ t: (key: string) => key }));
   vi.stubGlobal("useErrorToast", () => ({ addErrorToast }));
@@ -63,7 +63,11 @@ it.each(["reconnect", "clone", "pane"])("renews the token and bound ticket for %
   else await menu.connectCurrentPane(tab, { id: "other-pane" } as never);
 
   expect(mocks.exchange).toHaveBeenCalledWith("old-token");
-  expect(createKokoTicket).toHaveBeenCalledWith({ baseUrl: "https://koko.example", tokenId: "new-token" });
+  expect(createKokoTicket).toHaveBeenCalledWith({
+    baseUrl: "https://koko.example",
+    tokenId: "new-token",
+    orgId: "asset-org"
+  });
   const payload = action === "clone" ? openSession.mock.calls[0]![1].payload : updateSessionPayload.mock.calls[0]![1];
   expect(payload).toMatchObject({
     id: "new-token",

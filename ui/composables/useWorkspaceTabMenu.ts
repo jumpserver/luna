@@ -40,7 +40,8 @@ async function buildPayload(tab: Pick<WorkspaceSessionTab, "payload">, token: To
     if (!webProxy.ticketEndpoint) throw new Error("missing Web Proxy ticket endpoint");
     const { ticket } = await useWorkspaceConnectors().createKokoTicket({
       baseUrl: webProxy.ticketEndpoint,
-      tokenId: token.id
+      tokenId: token.id,
+      orgId: token.org_id
     });
     if (!ticket) throw new Error("Koko 未返回 Web Proxy connect ticket");
     webProxy = { ...webProxy, ticket };

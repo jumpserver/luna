@@ -498,10 +498,11 @@ export class DesktopAuthService {
     }
   }
 
-  async createKokoConnectTicket({ baseUrl, tokenId }) {
+  async createKokoConnectTicket({ baseUrl, tokenId, orgId = "" }) {
     const session = this.currentSession();
     const bearer = await this.freshToken(session.origin, session.sessionKey, session.bearerToken);
     session.bearerToken = bearer;
+    const ticketOrgId = orgId || session.orgId || "";
 
     const base = parseUrl(baseUrl);
     if (!["http:", "https:"].includes(base.protocol) || !base.hostname || base.username || base.password) {
@@ -515,11 +516,11 @@ export class DesktopAuthService {
         Accept: "application/json",
         Authorization: `Bearer ${bearer}`,
         "Content-Type": "application/json",
-        "X-JMS-ORG": session.orgId || "",
+        "X-JMS-ORG": ticketOrgId,
         "X-TZ": timezoneOffset(),
         Referer: url.origin
       },
-      body: JSON.stringify({ token_id: tokenId, org_id: session.orgId || "" })
+      body: JSON.stringify({ token_id: tokenId, org_id: ticketOrgId })
     });
     const text = await response.text();
     if (response.status !== 201) {

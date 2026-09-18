@@ -768,7 +768,8 @@ export const useAssetAction = () => {
           : endpointUrl;
         const { ticket } = await useWorkspaceConnectors().createKokoTicket({
           baseUrl: ticketEndpoint,
-          tokenId: token.id
+          tokenId: token.id,
+          orgId: token.org_id
         });
         if (!ticket) throw new Error("Koko 未返回 Web Proxy connect ticket");
         const settings = await getPublicSettings();
