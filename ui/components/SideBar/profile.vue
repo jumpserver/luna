@@ -142,6 +142,7 @@ const enableLoginBtnAfter = (ms: number) => {
 };
 
 const accountTooltip = computed(() => {
+  if (!loggedIn.value) return t("Common.More");
   if (loggedIn.value && currentUser.value?.name) return currentUser.value.name;
   return t("Common.Account");
 });
@@ -971,7 +972,7 @@ onBeforeUnmount(() => {
         @pointerdown="profileOpenedByPointer = true"
         @keydown="profileOpenedByPointer = false"
       >
-        <UIcon :name="loggedIn ? 'i-lucide-circle-user-round' : 'i-lucide-user-round'" class="size-4" />
+        <UIcon :name="loggedIn ? 'i-lucide-circle-user-round' : 'i-lucide-menu'" class="size-4" />
       </UButton>
     </UTooltip>
 
