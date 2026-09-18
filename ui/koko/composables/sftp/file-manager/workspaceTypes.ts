@@ -59,6 +59,7 @@ export interface SftpRemotePaneHandle {
   selectedEntries: SftpFileEntry[];
   clearSelection: () => void;
   clearTransferredSelection: (names: string[], sourcePath: string, revision: number) => void;
+  hasFolderTransferSelection: () => boolean;
   transferSourcePayload: () => SftpTransferSourcePayload | null;
   focusPane: () => void;
   refresh: () => Promise<void>;
@@ -70,6 +71,7 @@ export interface SftpTransferPaneHandle {
     operations: Pick<SftpFileOperations, "readFile" | "uploadBlob">;
   };
   clearTransferredSelection: (names: string[], sourcePath: string, revision: number) => void;
+  hasFolderTransferSelection: () => boolean;
   transferSourcePayload: () => SftpTransferSourcePayload | null;
 }
 

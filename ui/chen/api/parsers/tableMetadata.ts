@@ -23,6 +23,7 @@ export function parseTableMetadata(value: unknown): ChenTableMetadata {
     !Array.isArray(value.foreignKeys) ||
     !Array.isArray(value.indexes) ||
     !Array.isArray(value.constraints) ||
+    !(isRecord(value.statistics) || value.statistics === null || value.statistics === undefined) ||
     !isNullableString(value.ddl)
   ) {
     throw new Error("Chen returned malformed table metadata");
@@ -30,6 +31,10 @@ export function parseTableMetadata(value: unknown): ChenTableMetadata {
   const capabilities = value.capabilities;
   const capabilityKeys = ["columns", "primaryKey", "foreignKeys", "indexes", "constraints", "ddl"] as const;
   if (!isRecord(capabilities) || capabilityKeys.some((key) => typeof capabilities[key] !== "boolean")) {
+    throw new Error("Chen returned malformed table metadata");
+  }
+  const statistics = value.statistics;
+  if (statistics && (!isNullableNumber(statistics.estimatedRows) || !isNullableNumber(statistics.totalSizeBytes))) {
     throw new Error("Chen returned malformed table metadata");
   }
   const primaryKey = value.primaryKey;
@@ -53,6 +58,7 @@ export function parseTableMetadata(value: unknown): ChenTableMetadata {
     foreignKeys: value.foreignKeys.map(parseTableForeignKey),
     indexes: value.indexes.map(parseTableIndex),
     constraints: value.constraints.map(parseTableConstraint),
+    statistics: (statistics || null) as ChenTableMetadata["statistics"],
     ddl: value.ddl
   };
 }

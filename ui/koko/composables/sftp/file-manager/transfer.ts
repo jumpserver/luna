@@ -1,12 +1,28 @@
+import type { FileTransferEndpointRef } from "@jumpserver/connectors-core";
 import type { Ref } from "vue";
 import type { SftpFileEntry } from "../useSftpFileManager";
 import type { SftpTransferSourcePayload } from "./workspaceTypes";
-import type { FileTransferEndpointRef } from "@jumpserver/connectors-core";
 
 export const SFTP_TRANSFER_MIME_TYPE = "application/x-jumpserver-sftp-files";
 
 type TransferableEntry = Pick<SftpFileEntry, "name" | "size">;
 type DragDataTransfer = Pick<DataTransfer, "setData" | "getData" | "types" | "effectAllowed" | "dropEffect">;
+type WebkitDataTransferItem = DataTransferItem & {
+  webkitGetAsEntry?: () => { isDirectory: boolean } | null;
+};
+
+export function hasFolderTransferSelection(entries: Array<Pick<SftpFileEntry, "name" | "is_dir">>) {
+  return entries.some((entry) => entry.is_dir && entry.name !== "..");
+}
+
+export function hasFolderBrowserUpload(files: ArrayLike<File>, items?: Iterable<DataTransferItem>) {
+  if (items) {
+    for (const item of items) {
+      if ((item as WebkitDataTransferItem).webkitGetAsEntry?.()?.isDirectory) return true;
+    }
+  }
+  return Array.from(files).some((file) => file.webkitRelativePath?.includes("/"));
+}
 
 export function transferEntriesFromSelection(
   entries: Array<Pick<SftpFileEntry, "name" | "size" | "is_dir">>

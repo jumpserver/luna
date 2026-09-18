@@ -27,11 +27,11 @@ import {
 import { useSettingManager } from "~/composables/useSettingManager";
 import { desktopDialog, desktopFs, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { resolvePersonalCredentialSecretType } from "~/utils/connection";
 
 let desktopListenersInitialized = false;
 let desktopListenersRegistering = false;
 let desktopListenersRefCount = 0;
-let unlistenGetTokenFailure: DesktopUnlistenFn | null = null;
 let unlistenGetTokenSuccess: DesktopUnlistenFn | null = null;
 let unlistenPullUpFailure: DesktopUnlistenFn | null = null;
 let unlistenBuiltinSessionSuccess: DesktopUnlistenFn | null = null;
@@ -55,10 +55,6 @@ const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
   [SFTP_FILE_MANAGER_VALUE]: "web_sftp",
   [SFTP_FILE_EDITOR_VALUE]: "web_sftp",
   [K8S_NATIVE_VALUE]: "web_cli"
-};
-const PERSONAL_CREDENTIAL_SECRET_TYPE_BY_PROTOCOL: Record<string, string> = {
-  k8s: "token",
-  kubernetes: "token"
 };
 const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
 
@@ -101,10 +97,11 @@ function resolveConnectionErrorDescription(error: unknown, translate: (key: stri
   if (mappedCode) return translate(mappedCode);
 
   for (const [field, messages] of Object.entries(data)) {
+    const message = Array.isArray(messages) ? messages[0] : messages;
+    if (field === "input_username" && typeof message === "string" && message) return message;
     const mappedField = CONNECTION_ERROR_FIELDS[field];
     if (mappedField) return translate(mappedField);
     if (field !== "code" && field !== "detail") {
-      const message = Array.isArray(messages) ? messages[0] : messages;
       if (typeof message === "string" && message) return message;
     }
   }
@@ -112,15 +109,23 @@ function resolveConnectionErrorDescription(error: unknown, translate: (key: stri
   return typeof data.detail === "string" && data.detail ? data.detail : error.message || `HTTP ${error.status}`;
 }
 
-const withLocalClientName = (url: string, clientName?: string) => {
-  if (!clientName || !url.startsWith("jms2://")) return url;
+const withLocalClientOptions = (
+  url: string,
+  { clientName, mysqlForMariaDB }: { clientName?: string; mysqlForMariaDB?: boolean }
+) => {
+  if ((!clientName && !mysqlForMariaDB) || !url.startsWith("jms2://")) return url;
 
   try {
     const decoded = Uint8Array.from(atob(url.slice("jms2://".length)), (character) => character.charCodeAt(0));
     const parsed: unknown = JSON.parse(new TextDecoder().decode(decoded));
     if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") return url;
 
-    const payload = { ...(parsed as Record<string, unknown>), client: clientName };
+    const payload = { ...(parsed as Record<string, unknown>) };
+    const useMySQL = mysqlForMariaDB && payload.protocol === "mariadb";
+    if (!clientName && !useMySQL) return url;
+    if (clientName) payload.client = clientName;
+    // Only change the client driver, never the Core token or an applet's RDP protocol.
+    if (useMySQL) payload.protocol = "mysql";
     const encoded = new TextEncoder().encode(JSON.stringify(payload));
     return `jms2://${btoa(String.fromCharCode(...encoded))}`;
   } catch {
@@ -155,11 +160,9 @@ function releaseDesktopEventListeners() {
   if (!desktopListenersInitialized || desktopListenersRegistering) return;
   if (desktopListenersRefCount === 0) {
     unlistenGetTokenSuccess?.();
-    unlistenGetTokenFailure?.();
     unlistenPullUpFailure?.();
     unlistenBuiltinSessionSuccess?.();
     unlistenBuiltinSessionFailure?.();
-    unlistenGetTokenFailure = null;
     unlistenGetTokenSuccess = null;
     unlistenPullUpFailure = null;
     unlistenBuiltinSessionSuccess = null;
@@ -175,7 +178,14 @@ export const useAssetAction = () => {
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
   const userInfoStore = useUserInfoStore();
-  const { markSessionFailed, openSession, setSessionConnectMethod, updateSessionPayload } = useWorkspaceTabs();
+  const {
+    getSessionConnectionAttempt,
+    markSessionFailed,
+    markSessionTokenCreated,
+    openSession,
+    setSessionConnectMethod,
+    updateSessionPayload
+  } = useWorkspaceTabs();
   const { fetchConnectMethods, getMethodsForProtocol } = useConnectMethods();
   const settingManager = useSettingManager();
   // prettier-ignore
@@ -510,6 +520,8 @@ export const useAssetAction = () => {
             })
           : undefined;
     const tabId = meta?.tabId || session?.id;
+    const connectionAttempt = tabId ? getSessionConnectionAttempt(tabId) : 0;
+    const isCurrentConnectionAttempt = () => !tabId || getSessionConnectionAttempt(tabId) === connectionAttempt;
 
     let creatingConnectionToken = false;
     try {
@@ -550,13 +562,20 @@ export const useAssetAction = () => {
         admin: meta?.admin
       });
       creatingConnectionToken = false;
+      if (!isCurrentConnectionAttempt()) return;
       if (!token) {
-        if (meta?.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
-        else if (meta)
-          markSessionFailed({ tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account });
+        if (meta?.downloadRdp) meta.onSessionError?.(new Error("Connection cancelled"));
         return;
       }
       syncPersonalCredentialFromToken(meta?.assetId, serverBody, token, personalCredentialScope);
+      if (tabId) {
+        markSessionTokenCreated({
+          tabId,
+          assetId: meta?.assetId || body.asset,
+          protocol: meta?.protocol || body.protocol,
+          account: meta?.account || body.account
+        });
+      }
 
       if (meta?.downloadRdp) {
         const query = buildLocalRdpParams(body.connect_options);
@@ -603,17 +622,18 @@ export const useAssetAction = () => {
         };
         if (isDesktopRuntime()) {
           await desktopInvoke("pull_up", {
-            url: withLocalClientName(localClientUrl, nativeApp.clientName)
+            url: withLocalClientOptions(localClientUrl, { clientName: nativeApp.clientName })
           });
           meta?.onSessionReady?.(payload);
         } else {
           meta?.onSessionReady?.(payload);
-          window.location.assign(localClientUrl);
+          window.location.assign(withLocalClientOptions(localClientUrl, { mysqlForMariaDB: true }));
         }
         return;
       }
 
       const endpointUrl = await fetchSmartEndpointUrl(token, method, body, meta?.orgId);
+      if (!isCurrentConnectionAttempt()) return;
       const webUrl = getWebConnectorPath(token, method, body, endpointUrl, meta?.asset?.platform || "");
 
       const payload = {
@@ -634,19 +654,24 @@ export const useAssetAction = () => {
         globalThis.open(webUrl, "_blank", "noopener,noreferrer");
       }
     } catch (error) {
-      if (meta?.onSessionError) {
-        meta.onSessionError(error);
-      } else if (meta) {
-        markSessionFailed({ tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account });
+      if (!isCurrentConnectionAttempt()) return;
+      const description = creatingConnectionToken ? resolveConnectionErrorDescription(error, t) : String(error);
+      if (meta?.onSessionError) meta.onSessionError(error);
+      else if (meta) {
+        markSessionFailed(
+          { tabId, assetId: meta.assetId, protocol: meta.protocol, account: meta.account },
+          description
+        );
       }
-
-      addErrorToast({
-        title: t(meta?.downloadRdp ? "ConnectError.DownloadRdpFailed" : "ConnectError.ConnectFailed"),
-        description: creatingConnectionToken ? resolveConnectionErrorDescription(error, t) : String(error),
-        icon: "line-md:close-circle",
-        progress: true,
-        duration: 4000
-      });
+      if (meta?.downloadRdp) {
+        addErrorToast({
+          title: t("ConnectError.DownloadRdpFailed"),
+          description,
+          icon: "line-md:close-circle",
+          progress: true,
+          duration: 4000
+        });
+      }
     }
   };
 
@@ -678,6 +703,9 @@ export const useAssetAction = () => {
       requestOrgId: meta.orgId || userInfoStore.currentUser?.org?.id || "",
       site: userInfoStore.currentSite
     };
+    const connectionAttempt = meta.tabId ? getSessionConnectionAttempt(meta.tabId) : 0;
+    const isCurrentConnectionAttempt = () =>
+      !meta.tabId || getSessionConnectionAttempt(meta.tabId) === connectionAttempt;
     let creatingConnectionToken = false;
     try {
       await assertConnectMethodEnabled(body.protocol, body.connect_method);
@@ -691,12 +719,17 @@ export const useAssetAction = () => {
         admin: meta.admin
       });
       creatingConnectionToken = false;
-      if (!token) {
-        if (meta.onSessionError) meta.onSessionError(new Error("Connection cancelled"));
-        else markSessionFailed(meta);
-        return;
-      }
+      if (!isCurrentConnectionAttempt()) return;
+      if (!token) return;
       syncPersonalCredentialFromToken(meta.assetId, serverBody, token, personalCredentialScope);
+      if (meta.tabId) {
+        markSessionTokenCreated({
+          tabId: meta.tabId,
+          assetId: meta.assetId,
+          protocol: meta.protocol,
+          account: meta.account
+        });
+      }
       const component = resolveBuiltinComponent(body);
       const isWebProxy = body.connect_method === WEB_PROXY_NATIVE_VALUE;
       let webProxyEndpoint = isWebProxy
@@ -747,6 +780,7 @@ export const useAssetAction = () => {
           recordingSupported: settings.XPACK_LICENSE_IS_VALID === true
         };
       }
+      if (!isCurrentConnectionAttempt()) return;
       const payload = {
         token,
         ...token,
@@ -761,15 +795,10 @@ export const useAssetAction = () => {
       if (meta.onSessionReady) meta.onSessionReady(payload);
       else updateSessionPayload(meta, payload);
     } catch (error) {
+      if (!isCurrentConnectionAttempt()) return;
+      const description = creatingConnectionToken ? resolveConnectionErrorDescription(error, t) : String(error);
       if (meta.onSessionError) meta.onSessionError(error);
-      else markSessionFailed(meta);
-      addErrorToast({
-        title: t("ConnectError.ConnectFailed"),
-        description: creatingConnectionToken ? resolveConnectionErrorDescription(error, t) : String(error),
-        icon: "line-md:close-circle",
-        progress: true,
-        duration: 4000
-      });
+      else markSessionFailed(meta, description);
     }
   };
 
@@ -957,12 +986,12 @@ export const useAssetAction = () => {
     const savePersonalCredential = !!ephemeral?.savePersonalCredential;
     const useSavedPersonalCredential = isManual && !!personalCredentialId && !savePersonalCredential;
     const manualAccountSecretType = _accounts.find((account) => account.alias === "@INPUT")?.secret_type;
-    const protocolCredentialSecretType = PERSONAL_CREDENTIAL_SECRET_TYPE_BY_PROTOCOL[protocol.trim().toLowerCase()];
-    const personalCredentialSecretType =
-      protocolCredentialSecretType ||
-      (personalCredentialId
+    const personalCredentialSecretType = resolvePersonalCredentialSecretType(
+      protocol,
+      personalCredentialId
         ? ephemeral?.personalCredentialSecretType || manualAccountSecretType || "password"
-        : manualAccountSecretType || ephemeral?.personalCredentialSecretType || "password");
+        : manualAccountSecretType || ephemeral?.personalCredentialSecretType || "password"
+    );
     const connectionBody: ConnectionBody = {
       asset: assetId,
       protocol,
@@ -1165,35 +1194,6 @@ export const useAssetAction = () => {
         }
       });
 
-      unlistenGetTokenFailure = await desktopListen("get-token-failure", (event) => {
-        interface eventPayload {
-          status: number;
-          data: string;
-        }
-
-        const payload = event.payload as eventPayload;
-        const errorData = JSON.parse(payload.data);
-        const errorCode = errorData?.code as string;
-
-        if (errorCode && errorCode.includes("acl")) {
-          return addErrorToast({
-            title: t("ConnectError.ConnectFailed"),
-            description: t("ConnectError.AclFailed"),
-            icon: "line-md:close-circle",
-            progress: true,
-            duration: 4000
-          });
-        }
-
-        addErrorToast({
-          title: t("ConnectError.ConnectFailed"),
-          description: errorData.detail,
-          icon: "line-md:close-circle",
-          progress: true,
-          duration: 4000
-        });
-      });
-
       unlistenPullUpFailure = await desktopListen("pull-up-failure", (event) => {
         interface eventPayload {
           error: string;
@@ -1265,17 +1265,9 @@ export const useAssetAction = () => {
         }
 
         const meta = pendingBuiltinSessions.shift();
-        if (meta?.onSessionError) meta.onSessionError(event.payload);
-        else if (meta) markSessionFailed(meta);
-
         const payload = event.payload as eventPayload;
-        addErrorToast({
-          title: t("ConnectError.ConnectFailed"),
-          description: payload.data || t("ConnectError.ConnectFailed"),
-          icon: "line-md:close-circle",
-          progress: true,
-          duration: 4000
-        });
+        if (meta?.onSessionError) meta.onSessionError(event.payload);
+        else if (meta) markSessionFailed(meta, payload.data || t("ConnectError.ConnectFailed"));
       });
 
       desktopListenersInitialized = true;

@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
-import type { TokenResponse } from "~/types";
+import type { AssetDetail, TokenResponse } from "~/types";
 
 import { writeText } from "clipboard-polyfill";
-import { getPublicSettings, getUserProfile, setConnectionTokenReusable } from "~/composables/useApiRequest";
-import { getGuideConnectCommand } from "./guideCommand";
-import { getDirectSshCommand } from "./sshGuide";
+import {
+  getAssetDetailRequest,
+  getPublicSettings,
+  getUserProfile,
+  setConnectionTokenReusable
+} from "~/composables/useApiRequest";
+import { getDirectGuideCommand } from "./directGuide";
+import { getGuideClientProtocol, getGuideConnectCommand } from "./guideCommand";
 import {
   applyConnectionTokenReuse,
   DATABASE_GUIDE_PROTOCOLS,
@@ -33,6 +38,7 @@ const { t } = useI18n();
 const toast = useToast();
 const token = computed(() => (props.tab.payload?.token || props.tab.payload) as TokenResponse);
 const endpoint = ref<Record<string, any>>({});
+const assetDetail = ref<AssetDetail>();
 const loading = ref(true);
 const passwordVisible = ref(false);
 const loginUsername = ref("");
@@ -41,6 +47,17 @@ const reusable = ref(false);
 const reusableUpdating = ref(false);
 
 const protocol = computed(() => (token.value?.protocol || props.tab.protocol || "").toLowerCase());
+const clientProtocol = computed(() => getGuideClientProtocol(protocol.value));
+const showDirectCommand = computed(() => {
+  const method = props.tab.payload?.connectMethod;
+  return (
+    protocol.value === "ssh" ||
+    (protocol.value === "vnc" &&
+      token.value.account !== "@INPUT" &&
+      method?.component !== "panda" &&
+      method?.type !== "virtual_app")
+  );
+});
 const showReusable = computed(() => shouldShowConnectionTokenReuse(connectionTokenReusable.value, token.value?.id));
 const showDatabaseHelp = computed(() => isDatabaseGuideProtocol(protocol.value));
 const host = computed(() => String(endpoint.value.host || ""));
@@ -60,7 +77,9 @@ const assetName = computed(() => {
 });
 const database = computed(() => {
   if (protocol.value === "oracle") return token.value.id;
-  return asset.value?.spec_info?.db_name || asset.value?.specInfo?.dbName || "";
+  return (
+    assetDetail.value?.spec_info?.db_name ?? (asset.value?.spec_info?.db_name || asset.value?.specInfo?.dbName || "")
+  );
 });
 const username = computed(() => {
   if (protocol.value === "ssh") return `JMS-${token.value.id}`;
@@ -81,14 +100,14 @@ const rows = computed(() => {
     ...(databaseProtocols.has(protocol.value)
       ? [{ name: "database", label: t("ConnectionGuide.Database"), value: database.value }]
       : []),
-    { name: "protocol", label: t("ConnectionGuide.Protocol"), value: protocol.value },
+    { name: "protocol", label: t("ConnectionGuide.Protocol"), value: clientProtocol.value },
     { name: "date_expired", label: t("ConnectionGuide.ExpireTime"), value: token.value.date_expired }
   ];
 
   return values.filter((item) => item.value !== undefined && item.value !== null);
 });
 
-const commandValues = computed(() => {
+const commands = computed(() => {
   const value = getGuideConnectCommand({
     protocol: protocol.value,
     id: token.value.id,
@@ -98,18 +117,18 @@ const commandValues = computed(() => {
     database: database.value,
     redisAuth: password.value
   });
-  return value ? [value] : [];
-});
-
-const commands = computed(() => {
-  const ssh = protocol.value === "ssh";
-  const items = commandValues.value.map((value) => ({
-    value,
-    title: t(ssh ? "ConnectionGuide.TokenCommand" : "ConnectionGuide.ConnectCommand"),
-    help: ssh ? t("ConnectionGuide.TokenPasswordHelp") : ""
-  }));
-  if (ssh) {
-    const value = getDirectSshCommand({
+  const tokenPassword = protocol.value === "ssh" || protocol.value === "vnc";
+  const items = [];
+  if (value) {
+    items.push({
+      value,
+      title: t(tokenPassword ? "ConnectionGuide.TokenCommand" : "ConnectionGuide.ConnectCommand"),
+      help: tokenPassword ? t("ConnectionGuide.TokenPasswordHelp") : ""
+    });
+  }
+  if (showDirectCommand.value) {
+    const value = getDirectGuideCommand({
+      protocol: protocol.value,
       username: loginUsername.value,
       account: token.value.account,
       inputUsername: token.value.input_username,
@@ -164,6 +183,7 @@ async function setReusable(nextValue: boolean) {
 }
 
 onMounted(async () => {
+  const assetId = token.value?.asset?.id || props.tab.assetId;
   try {
     await Promise.all([
       getSmartEndpoint({
@@ -173,6 +193,16 @@ onMounted(async () => {
       }).then((value) => {
         endpoint.value = value;
       }),
+      // Connection tokens normally include only asset id/name, not the default database.
+      showDatabaseHelp.value && protocol.value !== "oracle" && !database.value && assetId
+        ? getAssetDetailRequest(assetId, token.value.org_id || props.tab.orgId)
+            .then((value) => {
+              assetDetail.value = value;
+            })
+            .catch(() => {
+              toast.add({ title: t("Asset.GetAssetFailed"), color: "error", duration: 4000 });
+            })
+        : Promise.resolve(),
       getPublicSettings()
         .then((settings) => {
           connectionTokenReusable.value = settings.CONNECTION_TOKEN_REUSABLE === true;
@@ -180,7 +210,7 @@ onMounted(async () => {
         .catch(() => {
           connectionTokenReusable.value = false;
         }),
-      protocol.value === "ssh"
+      showDirectCommand.value
         ? getUserProfile()
             .then((profile) => {
               loginUsername.value = profile.username;
@@ -218,7 +248,7 @@ onMounted(async () => {
                 <h2 class="truncate text-base font-semibold text-[var(--app-fg)]">
                   {{ t("ConnectionGuide.Title") }}
                 </h2>
-                <UBadge :label="protocol.toUpperCase()" color="neutral" variant="outline" size="sm" />
+                <UBadge :label="clientProtocol.toUpperCase()" color="neutral" variant="outline" size="sm" />
               </div>
               <p class="mt-0.5 truncate text-xs text-[var(--app-muted)]">
                 {{ assetName }}

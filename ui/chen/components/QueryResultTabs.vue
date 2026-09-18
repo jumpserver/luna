@@ -58,9 +58,11 @@ const activeResult = computed(() => {
   return props.resultTabs.find((item) => item.id === props.activeResultTabId) || null;
 });
 const activeResultEditable = computed(() => isChenDataViewEditable(activeResult.value?.data));
-const activeResultMissingPrimaryKey = computed(
-  () => props.dataViewEditing && !activeResultEditable.value && chenDataViewMissingPrimaryKey(activeResult.value?.data)
-);
+const activeResultReadOnlyNotice = computed(() => {
+  if (!props.dataViewEditing || activeResultEditable.value) return "";
+  if (props.dbType.toLowerCase().includes("clickhouse")) return t("Chen.ClickHouseDataViewReadOnly");
+  return chenDataViewMissingPrimaryKey(activeResult.value?.data) ? t("Chen.TableWithoutPrimaryKeyNotEditable") : "";
+});
 const activeResultDirty = computed(() =>
   Boolean(activeResult.value && chenDataViewHasDirty(activeResult.value.editState))
 );
@@ -172,10 +174,10 @@ function cancelActiveResultChanges() {
 
     <div v-else-if="activeResult" :key="activeResult.id" class="flex min-h-0 min-w-0 flex-1 flex-col">
       <div
-        v-if="activeResultMissingPrimaryKey"
+        v-if="activeResultReadOnlyNotice"
         class="border-b border-warning/20 bg-warning/10 px-3 py-1.5 text-xs text-warning"
       >
-        {{ t("Chen.TableWithoutPrimaryKeyNotEditable") }}
+        {{ activeResultReadOnlyNotice }}
       </div>
       <div class="flex shrink-0 items-center justify-between border-b border-default px-3 py-2 text-sm">
         <div class="min-w-0 truncate">

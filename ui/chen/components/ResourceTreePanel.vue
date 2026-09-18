@@ -67,11 +67,11 @@ const sqlKeywordCaseModel = computed({
           :aria-label="t('Chen.CloseDatabaseExplorer')"
           @click="emit('close')"
         />
-        <UTooltip :text="t('Common.Refresh')" :delay-duration="150">
+        <UTooltip :text="t('Chen.RefreshResourceTree')" :delay-duration="150">
           <button
             type="button"
             class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
-            :aria-label="t('Common.Refresh')"
+            :aria-label="t('Chen.RefreshResourceTree')"
             @click="emit('refresh')"
           >
             <UIcon name="i-lucide-refresh-cw" class="size-3.5" />

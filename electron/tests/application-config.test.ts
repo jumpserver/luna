@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -280,6 +280,120 @@ test("launches RDP connection files without endpoint fields", async () => {
 
   assert.deepEqual(launchedPayload, payload);
 });
+
+for (const [platform, plugin, expected] of [
+  ["macos", "dbeaver", "driver=mysql"],
+  ["linux", "dbeaver", "driver=mysql"],
+  ["windows", "dbeaver", "driver=mysql"],
+  ["windows", "navicat17", "navicat://conn.mysql?"],
+  ["macos", "terminal-db", "mysql -u token-id"],
+  ["linux", "terminal-db", "mysql -u token-id"],
+  ["demo", "tablepro-uploadable", "mysql"]
+]) {
+  test(`${platform}/${plugin} uses MySQL for MariaDB without changing application selection`, async () => {
+    const directory = platform === "demo" ? plugin : `${platform}.${plugin}`;
+    const config = JSON.parse(
+      await readFile(path.join(projectRoot, "plugins", platform, directory, "connect.json"), "utf8")
+    );
+    const application = {
+      name: plugin,
+      protocol: ["mariadb", "mysql"],
+      is_set: true,
+      // Only the MariaDB preference is enabled; normalization must happen after selection.
+      enabled_protocols: ["mariadb"],
+      match_first: ["mariadb"],
+      launch_type: config.launch.type,
+      launch_driver: config.launch.driver,
+      arg_format: config.launch.template,
+      protocol_templates: config.launch.protocol_templates
+    };
+    const launcher = new LocalApplicationLauncher(
+      { isPackaged: false },
+      projectRoot,
+      { getConfig: async () => ({ databases: [application] }) },
+      null
+    );
+    const payload = {
+      protocol: "mariadb",
+      name: "测试数据库",
+      endpoint: { host: "gateway.example.com", port: 5525 },
+      token: { id: "token-id", value: "secret", protocol: "mariadb" },
+      asset: { info: { db_name: "app" } }
+    };
+    let launches = 0;
+    const checkArgs = async (selected, args) => {
+      assert.equal(selected, application);
+      assert.ok(args.includes(expected), args);
+      assert.ok(args.includes("gateway.example.com"), args);
+      assert.ok(args.includes("5525"), args);
+      assert.ok(!args.includes("mariadb"), args);
+      launches++;
+    };
+    launcher.launchExecutable = checkArgs;
+    launcher.launchTerminal = checkArgs;
+    launcher.launchScript = async (selected, received, values) => {
+      assert.equal(selected, application);
+      assert.deepEqual(received, { ...payload, protocol: "mysql", ...(received.client ? { client: plugin } : {}) });
+      assert.equal(values.protocol, "mysql");
+      assert.equal(values.dbeaver_protocol, "mysql");
+      assert.equal(values.dbname, "app");
+      launches++;
+    };
+    for (const client of [undefined, plugin]) {
+      const url = `jms2://${Buffer.from(JSON.stringify({ ...payload, client })).toString("base64")}`;
+      await launcher.launch(url);
+    }
+    assert.equal(launches, 2);
+    assert.equal(payload.protocol, "mariadb");
+    assert.deepEqual(application.enabled_protocols, ["mariadb"]);
+  });
+}
+
+for (const [platform, plugin] of [
+  ["macos", "mongo-compass"],
+  ["windows", "mongo-compass"]
+]) {
+  test(`${platform}/${plugin} supplies the complete Magnus MongoDB URI as one argument`, async () => {
+    const config = JSON.parse(
+      await readFile(path.join(projectRoot, "plugins", platform, `${platform}.${plugin}`, "connect.json"), "utf8")
+    );
+    const application = {
+      name: plugin,
+      protocol: ["mongodb"],
+      is_set: true,
+      match_first: ["mongodb"],
+      launch_type: config.launch.type,
+      launch_driver: config.launch.driver,
+      arg_format: config.launch.template,
+      protocol_templates: config.launch.protocol_templates
+    };
+    const launcher = new LocalApplicationLauncher(
+      { isPackaged: false },
+      projectRoot,
+      { getConfig: async () => ({ databases: [application] }) },
+      null
+    );
+    for (const database of ["business", "admin", ""]) {
+      let launched = false;
+      const capture = async (selected, argumentString) => {
+        assert.equal(selected, application);
+        const uri = `mongodb://token-id:secret@gateway.example.com:5525/${database}?authSource=admin&loadBalanced=true&retryWrites=false`;
+        assert.deepEqual(localAppLauncherInternals.splitArguments(argumentString), [uri]);
+        launched = true;
+      };
+      launcher.launchExecutable = capture;
+      const payload = {
+        protocol: "mongodb",
+        name: "MongoDB",
+        endpoint: { host: "gateway.example.com", port: 5525 },
+        token: { id: "token-id", value: "secret" },
+        asset: { info: { db_name: database } }
+      };
+      await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+      assert.equal(launched, true);
+    }
+  });
+}
 
 test("normalizes duplicate and hidden system font families", () => {
   assert.deepEqual(systemFontInternals.normalizeFamilies(["Menlo", " .Hidden ", "Menlo", "SF Mono", ""]), [

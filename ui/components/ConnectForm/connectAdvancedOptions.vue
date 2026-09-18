@@ -236,43 +236,39 @@ function onAdvancedFoldLeave(el: Element) {
           />
         </UFormField>
 
-        <div v-if="flags.remoteMicrophone || flags.reusable" class="grid grid-cols-2 gap-4">
+        <div v-if="flags.remoteMicrophone || flags.reusable" class="space-y-3">
           <UFormField
             v-if="flags.remoteMicrophone"
             :label="t('Setting.RemoteMicrophone')"
             :ui="{ ...formFieldUi, root: 'items-center', container: 'mt-0 shrink-0' }"
             orientation="horizontal"
             size="sm"
-            :class="{ 'col-span-2': !flags.reusable }"
           >
             <USwitch v-model="selectedRemoteMicrophone" />
           </UFormField>
           <UFormField
             v-if="flags.reusable"
             :label="t('Setting.RdpFileReusable')"
+            :description="t('ConnectionGuide.ReusableHint')"
             :ui="{ ...formFieldUi, root: 'items-center', container: 'mt-0 shrink-0' }"
             orientation="horizontal"
             size="sm"
-            :class="{ 'col-span-2': !flags.remoteMicrophone }"
           >
             <USwitch v-model="selectedReusable" />
           </UFormField>
         </div>
 
-        <div v-if="flags.resolution || flags.rdpConnectionSpeed" class="grid grid-cols-2 gap-4">
+        <div v-if="flags.resolution || flags.rdpConnectionSpeed" class="space-y-3">
           <UFormField
-            v-if="flags.resolution"
-            :label="t('Setting.Resolution')"
-            :description="t('Setting.ConnectionResolutionDescription')"
-            :ui="{ ...formFieldUi, root: 'items-center', wrapper: 'shrink-0', container: 'mt-0 w-48 shrink-0' }"
-            orientation="horizontal"
+            v-if="flags.rdpConnectionSpeed"
+            :label="t('Setting.RdpConnectionSpeed')"
+            :ui="formFieldUi"
             size="sm"
             class="min-w-0"
-            :class="{ 'col-span-2': !flags.rdpConnectionSpeed }"
           >
             <USelect
-              v-model="selectedResolution"
-              :items="resolutionItems"
+              v-model="selectedRdpConnectionSpeed"
+              :items="rdpConnectionSpeedItems"
               :ui="{ base: controlBaseUi, ...overlayMenuUi }"
               trailing-icon="i-lucide-chevrons-up-down"
               size="md"
@@ -280,17 +276,16 @@ function onAdvancedFoldLeave(el: Element) {
             />
           </UFormField>
           <UFormField
-            v-if="flags.rdpConnectionSpeed"
-            :label="t('Setting.RdpConnectionSpeed')"
-            :ui="{ ...formFieldUi, root: 'items-center', wrapper: 'shrink-0', container: 'mt-0 w-48 shrink-0' }"
-            orientation="horizontal"
+            v-if="flags.resolution"
+            :label="t('Setting.Resolution')"
+            :description="t('Setting.ConnectionResolutionDescription')"
+            :ui="formFieldUi"
             size="sm"
             class="min-w-0"
-            :class="{ 'col-span-2': !flags.resolution }"
           >
             <USelect
-              v-model="selectedRdpConnectionSpeed"
-              :items="rdpConnectionSpeedItems"
+              v-model="selectedResolution"
+              :items="resolutionItems"
               :ui="{ base: controlBaseUi, ...overlayMenuUi }"
               trailing-icon="i-lucide-chevrons-up-down"
               size="md"

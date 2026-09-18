@@ -161,6 +161,13 @@ function installConnectorSessionHooks(targetSession) {
               requestHeaders[cookieHeader] = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
             }
           }
+          if (isFaceSocket) {
+            const current = authService.currentSession();
+            const bearer = await authService.freshToken(current.origin, current.sessionKey, current.bearerToken);
+            const authorization =
+              Object.keys(requestHeaders).find((name) => name.toLowerCase() === "authorization") || "Authorization";
+            requestHeaders[authorization] = `Bearer ${bearer}`;
+          }
         }
       } catch {
         // Leave headers untouched when the connector URL is malformed.
@@ -1285,6 +1292,7 @@ async function handleInvoke(event, request) {
   }
   if (command === "pull_up") return withIpcErrorLog("pull_up", () => localApplicationLauncher.launch(args.url));
   if (command === "list_system_fonts") return listSystemFonts();
+  if (command === "cancel_transcode") return replayTranscoder.cancelCurrent(labelForWindow(win));
   if (command === "transcode_replays") {
     const request = {
       tarPaths: (args.tarPaths || []).map((candidate) => normalizePath(candidate)),

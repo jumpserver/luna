@@ -3,7 +3,11 @@ import type { ConnectionBody, TokenResponse } from "~/types";
 import { ApiRequestError } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { writeClipboardText } from "~/utils/clipboard";
-import { buildFaceLivePageUrl, getOrCreateFaceMonitorToken } from "~/utils/faceLive";
+import { buildFaceLivePageUrl, buildFaceLiveRendererPageUrl, getOrCreateFaceMonitorToken } from "~/utils/faceLive";
+
+const FACE_PAGE_TIMEOUT_MS = 10_000;
+const FACE_TOKEN_TIMEOUT_MS = 30_000;
+const FACE_VERIFICATION_TIMEOUT_MS = 120_000;
 
 export type AclItemStatus =
   | "ready"
@@ -29,6 +33,8 @@ export interface AclDialogItem {
   resolve: (token: TokenResponse | null) => void;
   settled?: boolean;
   timer?: ReturnType<typeof setInterval>;
+  pageTimer?: ReturnType<typeof setTimeout>;
+  faceTimer?: ReturnType<typeof setTimeout>;
 }
 
 export interface AclDialogGroup {
@@ -87,7 +93,7 @@ export function useAclDialogPresentation(groupSource: MaybeRefOrGetter<AclDialog
         return t("AclDialog.NeedReview");
       }
       if (["acl_face_verify", "acl_face_online"].includes(current.code)) {
-        if (item?.status === "failed") return t("AclDialog.RequestFailed");
+        if (item?.status === "failed") return t("AclDialog.FaceVerificationFailed");
         if (item?.status === "verifying") return t("AclDialog.CompleteFaceVerify");
         return current.code === "acl_face_online" ? t("AclDialog.NeedFaceOnline") : t("AclDialog.NeedFaceVerify");
       }
@@ -139,6 +145,10 @@ function finishItem(item: AclDialogItem, token: TokenResponse | null) {
   item.settled = true;
   if (item.timer) clearInterval(item.timer);
   item.timer = undefined;
+  if (item.pageTimer) clearTimeout(item.pageTimer);
+  item.pageTimer = undefined;
+  if (item.faceTimer) clearTimeout(item.faceTimer);
+  item.faceTimer = undefined;
   item.resolve(token);
   const groupIndex = groups.value.findIndex((group) => group.items.includes(item));
   const group = groups.value[groupIndex];
@@ -195,6 +205,40 @@ function requestAcl(
   });
 }
 
+async function closeAclGroup(group: AclDialogGroup) {
+  await Promise.all(
+    group.items
+      .filter((item) => item.status === "pending" && item.token?.from_ticket_info?.close_ticket_api)
+      .map((item) => callTicketApi(item.token!.from_ticket_info.close_ticket_api).catch(() => null))
+  );
+  group.items.forEach((item) => finishItem(item, null));
+  const index = groups.value.indexOf(group);
+  if (index !== -1) groups.value.splice(index, 1);
+}
+
+export async function closeAclScope(scopeId: string) {
+  const group = groups.value.find((candidate) =>
+    candidate.items.some((item) => item.scopeId === scopeId && !item.settled)
+  );
+  if (!group) return;
+  if (group.items.length === 1) {
+    await closeAclGroup(group);
+    return;
+  }
+  const items = group.items.filter((item) => item.scopeId === scopeId && !item.settled);
+  await Promise.all(
+    items
+      .filter((item) => item.status === "pending" && item.token?.from_ticket_info?.close_ticket_api)
+      .map((item) => callTicketApi(item.token!.from_ticket_info.close_ticket_api).catch(() => null))
+  );
+  items.forEach((item) => finishItem(item, null));
+  group.items = group.items.filter((item) => !items.includes(item));
+  if (group.items.length === 0) {
+    const index = groups.value.indexOf(group);
+    if (index !== -1) groups.value.splice(index, 1);
+  }
+}
+
 export function useAclDialog() {
   const toast = useToast();
   const { t } = useI18n();
@@ -205,6 +249,10 @@ export function useAclDialog() {
     computed(() => groups.value.find((group) => !group.batchId && group.items[0]?.scopeId === scopeId));
   const hasScopeGroup = (scopeId: string) =>
     groups.value.some((group) => !group.batchId && group.items[0]?.scopeId === scopeId);
+  const findScopeGroup = (scopeId?: string) =>
+    scopeId
+      ? groups.value.find((group) => !group.batchId && group.items.some((item) => item.scopeId === scopeId))
+      : undefined;
 
   const request = requestAcl;
 
@@ -222,38 +270,10 @@ export function useAclDialog() {
   const close = async (target?: AclDialogGroup) => {
     const group = target || globalGroup.value || activeGroup.value;
     if (!group) return;
-    await Promise.all(
-      group.items
-        .filter((item) => item.status === "pending" && item.token?.from_ticket_info?.close_ticket_api)
-        .map((item) => callTicketApi(item.token!.from_ticket_info.close_ticket_api).catch(() => null))
-    );
-    group.items.forEach((item) => finishItem(item, null));
-    const index = groups.value.indexOf(group);
-    if (index !== -1) groups.value.splice(index, 1);
+    await closeAclGroup(group);
   };
 
-  const closeScope = async (scopeId: string) => {
-    const group = groups.value.find((candidate) =>
-      candidate.items.some((item) => item.scopeId === scopeId && !item.settled)
-    );
-    if (!group) return;
-    if (group.items.length === 1) {
-      await close(group);
-      return;
-    }
-    const items = group.items.filter((item) => item.scopeId === scopeId && !item.settled);
-    await Promise.all(
-      items
-        .filter((item) => item.status === "pending" && item.token?.from_ticket_info?.close_ticket_api)
-        .map((item) => callTicketApi(item.token!.from_ticket_info.close_ticket_api).catch(() => null))
-    );
-    items.forEach((item) => finishItem(item, null));
-    group.items = group.items.filter((item) => !items.includes(item));
-    if (group.items.length === 0) {
-      const index = groups.value.indexOf(group);
-      if (index !== -1) groups.value.splice(index, 1);
-    }
-  };
+  const closeScope = (scopeId: string) => closeAclScope(scopeId);
 
   const copyTicketLink = async (item: AclDialogItem) => {
     const link = item.token?.from_ticket_info?.ticket_detail_page_url;
@@ -274,11 +294,26 @@ export function useAclDialog() {
     if (!item) return;
     if (item.timer) clearInterval(item.timer);
     item.timer = undefined;
+    if (item.pageTimer) clearTimeout(item.pageTimer);
+    item.pageTimer = undefined;
+    if (item.faceTimer) clearTimeout(item.faceTimer);
+    item.faceTimer = undefined;
     item.token = undefined;
     item.detail = undefined;
     item.status = "ready";
     group.faceUrl = undefined;
     await verifyNextFace(group);
+  };
+
+  const markFacePageReady = (target: AclDialogGroup) => {
+    const item = target.items.find((candidate) => candidate.status === "verifying" && !candidate.settled);
+    if (item?.pageTimer) clearTimeout(item.pageTimer);
+    if (item) item.pageTimer = undefined;
+  };
+
+  const failFace = (target: AclDialogGroup, detail: string) => {
+    const item = target.items.find((candidate) => candidate.status === "verifying" && !candidate.settled);
+    if (item) failFaceItem(target, item, detail);
   };
 
   return {
@@ -287,13 +322,45 @@ export function useAclDialog() {
     isOpen,
     groupForScope,
     hasScopeGroup,
+    findScopeGroup,
     request,
     submit,
     close,
     closeScope,
     copyTicketLink,
-    retryFace
+    retryFace,
+    markFacePageReady,
+    failFace
   };
+}
+
+function failFaceItem(group: AclDialogGroup, item: AclDialogItem, detail: string) {
+  if (item.settled || item.status !== "verifying") return;
+  if (item.timer) clearInterval(item.timer);
+  item.timer = undefined;
+  if (item.pageTimer) clearTimeout(item.pageTimer);
+  item.pageTimer = undefined;
+  if (item.faceTimer) clearTimeout(item.faceTimer);
+  item.faceTimer = undefined;
+  group.faceUrl = undefined;
+  item.status = "failed";
+  item.detail = detail;
+}
+
+function withTimeout<T>(task: Promise<T>, milliseconds: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("AclDialog.FaceRequestTimedOut")), milliseconds);
+    task.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
 }
 
 async function submitReviewItem(item: AclDialogItem) {
@@ -334,6 +401,7 @@ async function submitReviewItem(item: AclDialogItem) {
 }
 
 async function verifyNextFace(group: AclDialogGroup) {
+  if (!groups.value.includes(group)) return;
   if (group.items.some((item) => ["submitting", "verifying"].includes(item.status))) return;
   const item = group.items.find((candidate) => candidate.status === "ready");
   if (!item) return;
@@ -343,11 +411,15 @@ async function verifyNextFace(group: AclDialogGroup) {
     const onlineMonitor = group.code === "acl_face_online";
     const monitorScope = `${userInfoStore.currentSite || window.location.origin}\u0000${userInfoStore.currentAccountId || "web"}`;
     const faceMonitorToken = onlineMonitor ? getOrCreateFaceMonitorToken(monitorScope) : undefined;
-    const token = await createConnectionToken(item.body, item.orgId, {
-      faceVerify: true,
-      faceMonitorToken,
-      admin: item.admin
-    });
+    const token = await withTimeout(
+      createConnectionToken(item.body, item.orgId, {
+        faceVerify: true,
+        faceMonitorToken,
+        admin: item.admin
+      }),
+      FACE_TOKEN_TIMEOUT_MS
+    );
+    if (item.settled || !groups.value.includes(group)) return;
     item.token = token;
     if (!token.face_token) {
       item.status = "approved";
@@ -357,17 +429,25 @@ async function verifyNextFace(group: AclDialogGroup) {
     const faceToken = token.face_token;
     item.status = "verifying";
     const siteUrl = isDesktopRuntime() ? userInfoStore.currentSite : window.location.origin;
-    group.faceUrl = buildFaceLivePageUrl({
-      siteUrl,
-      rendererPath: isDesktopRuntime() ? new URL(siteUrl).pathname : window.location.pathname,
-      token: faceToken
-    });
+    group.faceUrl = isDesktopRuntime()
+      ? buildFaceLiveRendererPageUrl({ rendererUrl: window.location.href, siteUrl, token: faceToken })
+      : buildFaceLivePageUrl({ siteUrl, rendererPath: window.location.pathname, token: faceToken });
+    item.pageTimer = setTimeout(() => failFaceItem(group, item, "AclDialog.FacePageUnavailable"), FACE_PAGE_TIMEOUT_MS);
+    item.faceTimer = setTimeout(
+      () => failFaceItem(group, item, "AclDialog.FaceVerificationTimedOut"),
+      FACE_VERIFICATION_TIMEOUT_MS
+    );
     item.timer = setInterval(async () => {
       try {
         const state = await getFaceVerifyState(faceToken);
+        if (item.settled || item.status !== "verifying") return;
         if (!state.is_finished) return;
         if (item.timer) clearInterval(item.timer);
         item.timer = undefined;
+        if (item.pageTimer) clearTimeout(item.pageTimer);
+        item.pageTimer = undefined;
+        if (item.faceTimer) clearTimeout(item.faceTimer);
+        item.faceTimer = undefined;
         group.faceUrl = undefined;
         if (state.success) {
           item.status = "approved";
@@ -378,15 +458,13 @@ async function verifyNextFace(group: AclDialogGroup) {
         }
         await verifyNextFace(group);
       } catch (error) {
-        item.status = "failed";
-        item.detail = errorDetail(error);
-        if (item.timer) clearInterval(item.timer);
-        item.timer = undefined;
-        group.faceUrl = undefined;
+        if (item.settled || item.status !== "verifying") return;
+        failFaceItem(group, item, errorDetail(error));
         await verifyNextFace(group);
       }
     }, 1000);
   } catch (error) {
+    if (item.settled || !groups.value.includes(group)) return;
     item.status = "failed";
     item.detail = errorDetail(error);
     await verifyNextFace(group);

@@ -33,6 +33,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   reconnect: [];
   capabilities: [capabilities: SftpCapabilities | null];
+  connectionChange: [connected: boolean];
+  connectionFailure: [message: string];
 }>();
 
 const { t } = useI18n();
@@ -173,6 +175,8 @@ function setLocalPaneRef(value: SftpLocalPaneHandle | null): void {
       :transfer="transfer"
       :start-tour="sftpTour.start"
       :set-primary-pane-ref="setPrimaryPaneRef"
+      @connection-change="emit('connectionChange', $event)"
+      @connection-failure="emit('connectionFailure', $event)"
     />
     <SftpConnectModal :workspace="workspace" />
     <SftpSendModal :transfer="transfer" />

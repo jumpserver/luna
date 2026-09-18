@@ -48,7 +48,7 @@ pnpm --dir electron test:web-proxy:interaction
 pnpm weblite:package
 ```
 
-`test:runtime` 启动真实 Electron，使用本地测试站验证资产地址自动打开（含查询参数和片段）、Applet 地址栏只读、无账号代填和匿名账号的地址启动、平台配置回退、无 Koko 的基本/脚本登录、隐藏成功元素的处理、IPC 隔离和窗口退出，还会验证旧版代理/录像参数不会启用 Koko，渲染进程无法启动 Web 录像。HTTPS 用例使用 OpenSSL 临时生成自签名证书，验证自动登录和独立浏览，需要测试环境提供 `openssl`。交互回归覆盖验证码输入、按钮点击、拖动、失败后再次验证及脚本流程。
+`test:runtime` 启动真实 Electron，使用本地测试站验证资产地址自动打开（含查询参数和片段）、Applet 地址栏只读、无账号代填和匿名账号的地址启动、平台配置回退、无 Koko 的基本/脚本登录、同名账号空密码代填、延迟分块启动管道、隐藏成功元素的处理、IPC 隔离和窗口退出，还会验证旧版代理/录像参数不会启用 Koko，渲染进程无法启动 Web 录像。HTTPS 用例使用 OpenSSL 临时生成自签名证书，验证自动登录和独立浏览，需要测试环境提供 `openssl`。交互回归覆盖验证码输入、按钮点击、拖动、失败后再次验证及脚本流程。
 
 设置环境变量 `WEBLITE_EXECUTABLE` 为打包后的实际 `weblite.exe` 绝对路径，再运行 `test:runtime`，可对独立包执行同一套启动管道回归，避免仅测试内存流而漏掉 Windows / Electron 的标准输入差异。
 

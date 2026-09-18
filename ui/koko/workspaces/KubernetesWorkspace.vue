@@ -77,7 +77,7 @@ const toast = useToast();
 const hostAdapter = useKokoHostAdapter();
 const tab = toRef(props, "tab");
 const { context, error: sessionError, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab);
-const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
+const { markSessionConnected, markSessionDisconnected } = useWorkspaceTabs();
 const colorMode = useColorMode();
 
 const tree = ref<K8sNode[]>([]);
@@ -586,12 +586,7 @@ const stopFailureListener = terminalSocket.onFailure((failure) => {
 
   disconnectTerminalAiSessions();
   connectionError.value = t("koko.kubernetes.websocketConnectionFailed");
-  markSessionFailed({
-    tabId: props.tab.id,
-    assetId: props.tab.assetId,
-    protocol: props.tab.protocol || "",
-    account: props.tab.account || ""
-  });
+  markSessionDisconnected(props.tab.id, connectionError.value);
 });
 
 watch(tokenId, () => void prepareSession(), { immediate: true });

@@ -29,11 +29,12 @@ const { addErrorToast } = useErrorToast();
 const { modernIsland } = useSettingManager();
 const { confirmConnection } = useAssetConnection();
 const { getMethodsForProtocol } = useConnectMethods();
-const { closePane, markSessionFailed, startSessionConnection } = useWorkspaceTabs();
+const { closePane, markSessionFailed, resumeConnectionSetup, startSessionConnection } = useWorkspaceTabs();
 const {
   buildConnectionInfo,
   draft,
   initDraft,
+  restoreDraft,
   loadAssetDetails,
   personalCredentials,
   personalCredentialsLoaded,
@@ -46,7 +47,7 @@ const currentAsset = ref<AssetItem | null>(props.tab.setupAsset || null);
 const loading = ref(true);
 const connecting = ref(false);
 const downloadingRdp = shallowRef(false);
-const connectionError = ref("");
+const connectionError = ref(props.tab.connectionFailure || "");
 const launchedClientName = ref("");
 const launchedProtocol = ref("");
 const launchSuccessVisible = ref(false);
@@ -114,7 +115,8 @@ async function loadAsset() {
   loading.value = true;
   try {
     currentAsset.value = await loadAssetDetails(asset);
-    initDraft(currentAsset.value, props.tab.protocol);
+    if (props.tab.setupDraft) restoreDraft(currentAsset.value, props.tab.setupDraft);
+    else initDraft(currentAsset.value, props.tab.protocol);
   } catch (error) {
     addErrorToast({
       id: "asset-load-failed",
@@ -148,10 +150,15 @@ async function submit(downloadRdpMethod = "") {
   downloadingRdp.value = !!info.downloadRdp;
   connectionError.value = "";
   if (!showLaunchSuccessState && !info.downloadRdp) {
-    startSessionConnection(props.tab.id, {
-      protocol: info.protocol,
-      account: info.account
-    });
+    startSessionConnection(
+      props.tab.id,
+      {
+        protocol: info.protocol,
+        account: info.account,
+        permedAccounts: currentAsset.value.permedAccounts
+      },
+      draft.value
+    );
   } else {
     resetLaunchSuccessState();
   }
@@ -160,12 +167,15 @@ async function submit(downloadRdpMethod = "") {
     downloadingRdp.value = false;
     connectionError.value = resolveConnectionAttemptError(error, t);
     if (!info.downloadRdp && !showLaunchSuccessState) {
-      markSessionFailed({
-        tabId: props.tab.id,
-        assetId: currentAsset.value!.id,
-        protocol: info.protocol,
-        account: info.account
-      });
+      markSessionFailed(
+        {
+          tabId: props.tab.id,
+          assetId: currentAsset.value!.id,
+          protocol: info.protocol,
+          account: info.account
+        },
+        connectionError.value
+      );
     }
   };
   try {
@@ -195,6 +205,23 @@ async function submit(downloadRdpMethod = "") {
     failConnection(error);
   }
 }
+
+function cancelFromOverlay() {
+  connecting.value = false;
+  resumeConnectionSetup(props.tab.id);
+}
+
+function reconnectFromOverlay() {
+  connecting.value = false;
+  void submit();
+}
+
+watch(
+  () => props.tab.connectionFailure,
+  (reason) => {
+    if (reason) connectionError.value = reason;
+  }
+);
 
 watch(
   () => props.tab.status,
@@ -252,7 +279,7 @@ onMounted(loadAsset);
       >
         <Transition :name="modernIsland ? 'island-dialog' : ''" :appear="modernIsland">
           <section
-            v-if="dialogVisible"
+            v-if="dialogVisible && !(connecting && !downloadingRdp && !externalClientLaunch)"
             class="connection-setup-shell relative w-full overflow-hidden"
             :class="
               modernIsland
@@ -404,34 +431,25 @@ onMounted(loadAsset);
                 </div>
               </div>
             </div>
-
-            <div
-              v-if="connecting && !downloadingRdp"
-              role="status"
-              class="pointer-events-none absolute inset-x-0 bottom-0"
-            >
-              <span class="sr-only">{{ t("ConnectionSetup.Establishing") }}</span>
-              <UProgress
-                size="2xs"
-                :color="modernIsland ? 'var(--theme-accent)' : 'primary'"
-                :ui="{ base: 'rounded-none bg-(--app-border)', indicator: 'rounded-none' }"
-                aria-hidden="true"
-              />
-            </div>
           </section>
         </Transition>
-        <div
-          v-if="dialogVisible && !launchSuccessVisible"
-          class="connection-setup-route pointer-events-none flex shrink-0 items-center gap-3 select-none"
-          aria-hidden="true"
-        >
-          <UIcon name="i-lucide-square-terminal" class="size-4 shrink-0" />
-          <span class="connection-setup-route-line" />
-          <span class="text-[11px] font-medium tracking-[0.08em]">JumpServer</span>
-          <span class="connection-setup-route-line" />
-          <UIcon name="i-lucide-server" class="size-4 shrink-0" />
-        </div>
       </div>
+      <Transition
+        enter-from-class="opacity-0"
+        enter-active-class="transition-opacity duration-500"
+        leave-active-class="transition-opacity duration-500 ease-out"
+        leave-to-class="opacity-0"
+      >
+        <WorkspaceConnectionProgressOverlay
+          v-if="tab.connectionProgress && !downloadingRdp && !externalClientLaunch"
+          :pane-id="tab.id"
+          :stage="tab.connectionProgress"
+          :error="tab.status === 'connecting' ? undefined : tab.connectionFailure"
+          @cancel="cancelFromOverlay"
+          @edit="cancelFromOverlay"
+          @reconnect="reconnectFromOverlay"
+        />
+      </Transition>
     </div>
   </div>
 </template>
@@ -447,18 +465,6 @@ onMounted(loadAsset);
   background-position: center;
   background-size: 24px 24px;
   mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
-}
-
-.connection-setup-route {
-  width: min(280px, 80%);
-  color: color-mix(in srgb, var(--app-text-muted) 60%, transparent);
-}
-
-.connection-setup-route-line {
-  height: 1px;
-  flex: 1;
-  background: currentColor;
-  opacity: 0.35;
 }
 
 .connection-setup-shell {

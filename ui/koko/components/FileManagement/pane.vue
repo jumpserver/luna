@@ -18,6 +18,8 @@ import SftpPaneTableSkeleton from "#koko/components/FileManagement/pane/SftpPane
 import SftpRemotePaneToolbar from "#koko/components/FileManagement/pane/SftpRemotePaneToolbar.vue";
 import {
   buildTransferSourcePayload,
+  hasFolderBrowserUpload,
+  hasFolderTransferSelection,
   hasTransferMimeType,
   isCrossEndpointTransferDrag,
   parseTransferDragPayload,
@@ -67,6 +69,7 @@ const emit = defineEmits<{
   transferEndpointConnected: [];
   transferEndpointUnmounted: [endpoint: FileTransferEndpointRef];
   connectionChange: [connected: boolean];
+  connectionFailure: [message: string];
   focus: [];
   addRemote: [];
   startTour: [];
@@ -155,8 +158,17 @@ function transferSourcePayload(): SftpTransferSourcePayload | null {
   });
 }
 
+function showFolderTransferUnsupported(): void {
+  toast.add({ title: t("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
+}
+
+function hasFolderSelection() {
+  return hasFolderTransferSelection(selectedEntries.value);
+}
+
 function requestSend(): void {
   if (!canTransferFiles.value) return;
+  if (hasFolderSelection()) return showFolderTransferUnsupported();
   const payload = transferSourcePayload();
   if (!payload) return;
   hideContextMenu();
@@ -227,7 +239,12 @@ function clearTransferredSelection(names: string[], sourcePath: string, revision
 }
 
 function onDragStart(event: DragEvent, entry: SftpFileEntry): void {
-  if (entry.is_dir || entry.name === ".." || !canTransferFiles.value || !props.transferEndpoint) {
+  if (entry.is_dir || hasFolderSelection()) {
+    showFolderTransferUnsupported();
+    event.preventDefault();
+    return;
+  }
+  if (entry.name === ".." || !canTransferFiles.value || !props.transferEndpoint) {
     event.preventDefault();
     return;
   }
@@ -269,11 +286,16 @@ function onUpload(event: Event): void {
   const input = event.target as HTMLInputElement;
   const files = [...(input.files || [])];
   input.value = "";
+  if (hasFolderBrowserUpload(files)) return showFolderTransferUnsupported();
   emitBrowserUpload(files);
 }
 
 function onTransferDrop(event: DragEvent): void {
   const files = [...(event.dataTransfer?.files || [])];
+  if (hasFolderBrowserUpload(files, event.dataTransfer?.items)) {
+    event.preventDefault();
+    return showFolderTransferUnsupported();
+  }
   if (files.length) {
     event.preventDefault();
     emitBrowserUpload(files);
@@ -401,7 +423,10 @@ watch(manager.currentPath, () => {
   hideContextMenu();
   clearSelection();
 });
-watch(manager.connected, (connected) => emit("connectionChange", Boolean(connected)), { immediate: true });
+watch(manager.ready, (ready) => emit("connectionChange", Boolean(ready)), { immediate: true });
+watch(manager.fatalError, (fatalError) => {
+  if (fatalError) emit("connectionFailure", manager.error.value || t("koko.fileManagement.expired"));
+});
 watch([manager.connected, manager.loading, manager.fatalError], ([connected, loading, fatalError]) => {
   if (!connected || fatalError) {
     transferEndpointReady = false;
@@ -431,6 +456,7 @@ defineExpose({
   selectedEntries,
   clearSelection,
   clearTransferredSelection,
+  hasFolderTransferSelection: hasFolderSelection,
   transferSourcePayload,
   focusPane,
   refresh: refreshCurrentDirectory

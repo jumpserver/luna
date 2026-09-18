@@ -1158,8 +1158,12 @@
     "Client": "Client",
     "OpenInClient": "Open in client",
     "Establishing": "Establishing connection...",
+    "CreateToken": "Create connection token",
+    "OpenSession": "Open session",
+    "Connected": "Connected",
     "OpenAgain": "Open again",
-    "BackToForm": "Back to form"
+    "BackToForm": "Back to form",
+    "StartFaceVerify": "Start verification"
   },
   "ConnectionGuide": {
     "TokenCommand": "Connect command (token)",
@@ -1445,6 +1449,10 @@
     "Restricted": "This login is restricted by an access control policy.",
     "ReviewGroupDescription": "The following assets require approval. Confirm to submit all requests.",
     "FaceGroupDescription": "The following assets require face verification. Complete them one by one in this dialog.",
+    "FacePageUnavailable": "The face verification page did not load. Please retry.",
+    "FaceRequestTimedOut": "Timed out requesting face verification. Please retry.",
+    "FaceVerificationTimedOut": "Face verification timed out. Please retry or cancel.",
+    "FaceVerificationFailed": "Face verification was not completed.",
     "ErrorGroupDescription": "The following assets have the same type of login restriction.",
     "Assignees": "Assignees: {value}",
     "SubmitAll": "Submit all reviews",
@@ -1579,6 +1587,15 @@
       "ConnectingHint": "Keep this window open while the secure channel is established",
       "CameraReady": "Camera ready",
       "LookStraight": "Look straight at the camera and keep your face inside the guide",
+      "Guidance": {
+        "multiple_faces": "More than one face detected. Keep only yourself in view",
+        "face_missing": "Keep your entire face inside the camera area",
+        "too_far": "Move closer to the camera",
+        "replayed_frame": "The image is static or repeated. Check the camera and move naturally",
+        "identity_mismatch": "This face does not match the enrolled user",
+        "template_mismatch": "The face model has changed. Enroll your face again",
+        "liveness": "Checking liveness. Keep the image clear and move naturally"
+      },
       "CapturingSamples": "Capturing face samples {accepted}/{required}",
       "Completed": "Face verification completed",
       "Failed": "Face verification failed",
@@ -1782,7 +1799,7 @@
       "transferSuccess": "File transferred",
       "transferPartialSuccess": "Transferred to {success}/{total} targets",
       "transferFailed": "File transfer failed",
-      "folderTransferUnsupported": "Folder transfer is not supported yet",
+      "folderTransferUnsupported": "Folder uploads and transfers are not supported. Select regular files instead.",
       "downloadFolderConfirm": "Download this folder?",
       "deleteConfirm": "Delete {name}?",
       "unsupportedAsset": "This asset does not support SFTP",
@@ -2159,6 +2176,7 @@
     "Retry": "Retry",
     "ResizeDatabaseSidebar": "Resize database sidebar",
     "CloseDatabaseExplorer": "Close database explorer",
+    "RefreshResourceTree": "Refresh resource tree",
     "WaitingConnection": "Waiting for connection details…",
     "AuthenticatingSession": "Authenticating your database session…",
     "ConnectingDatabaseService": "Connecting to the database service…",
@@ -2190,7 +2208,7 @@
     "View": "View",
     "MaterializedView": "Materialized View",
     "Database": "Database",
-    "RowsPreview": "Rows (preview)",
+    "EstimatedRows": "Estimated rows",
     "Data": "Data",
     "BuildFilter": "Build a filter",
     "Filter": "Filter",
@@ -2534,6 +2552,7 @@
     "InvalidIndexDefinition": "Complete the index name and column selection.",
     "InvalidCsvFile": "The CSV file is invalid or cannot be read.",
     "CopyOperationFailedDescription": "The selected data could not be copied.",
-    "TableWithoutPrimaryKeyNotEditable": "This table has no primary key, so adding, updating, or deleting data is not supported yet."
+    "TableWithoutPrimaryKeyNotEditable": "This table has no primary key, so adding, updating, or deleting data is not supported yet.",
+    "ClickHouseDataViewReadOnly": "ClickHouse data views are currently read-only. Adding, updating, and deleting data is not supported; queries, filters, and exports are still available."
   }
 }

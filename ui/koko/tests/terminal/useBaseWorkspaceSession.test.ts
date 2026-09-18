@@ -1,6 +1,6 @@
 import type { KokoWorkspaceTab } from "#koko/host";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ref } from "vue";
+import { effectScope, ref } from "vue";
 
 const host = {
   createTicket: vi.fn(),
@@ -72,6 +72,10 @@ describe("useBaseWorkspaceSession", () => {
     expect(session.loading.value).toBe(false);
     expect(host.createTicket).not.toHaveBeenCalled();
     expect(host.markSessionConnected).not.toHaveBeenCalled();
+    expect(host.markSessionFailed).toHaveBeenCalledWith(
+      { id: "tab-1", assetId: "asset-1", protocol: undefined, account: undefined },
+      "koko.fileManagement.missingConnectionToken"
+    );
   });
 
   it("reuses a live connector context instead of consuming the token again", async () => {
@@ -84,7 +88,7 @@ describe("useBaseWorkspaceSession", () => {
     expect(host.createTicket).toHaveBeenCalledTimes(1);
   });
 
-  it("prepares connector context and marks the tab connected", async () => {
+  it("prepares connector context without marking the tab connected", async () => {
     const session = useBaseWorkspaceSession(createTab());
 
     const context = await session.prepareSession();
@@ -104,7 +108,7 @@ describe("useBaseWorkspaceSession", () => {
       token: "token-1"
     });
     expect(host.createTicket).toHaveBeenCalledWith({ baseUrl: expect.any(String), tokenId: "token-1" });
-    expect(host.markSessionConnected).toHaveBeenCalledWith("tab-1");
+    expect(host.markSessionConnected).not.toHaveBeenCalled();
     expect(session.loading.value).toBe(false);
     expect(session.error.value).toBe("");
   });
@@ -178,9 +182,28 @@ describe("useBaseWorkspaceSession", () => {
     const context = await session.prepareSession();
 
     expect(context?.ticket).toBe("");
-    expect(host.markSessionConnected).toHaveBeenCalledWith("tab-1");
+    expect(host.markSessionConnected).not.toHaveBeenCalled();
     expect(host.markSessionFailed).not.toHaveBeenCalled();
     warn.mockRestore();
+  });
+
+  it("does not mark the session failed after an overlapping prepare is disposed", async () => {
+    let rejectEndpoint: (cause: unknown) => void = () => undefined;
+    host.getSmartEndpoint.mockReturnValue(
+      new Promise((_, reject) => {
+        rejectEndpoint = reject;
+      })
+    );
+    const scope = effectScope();
+    const session = scope.run(() => useBaseWorkspaceSession(createTab()))!;
+    const pending = session.prepareSession();
+
+    scope.stop();
+    rejectEndpoint(new Error("endpoint down"));
+    await pending;
+
+    expect(host.markSessionFailed).not.toHaveBeenCalled();
+    expect(session.context.value).toBeNull();
   });
 
   it("marks the session failed when ticket creation fails in the desktop runtime", async () => {
@@ -192,11 +215,14 @@ describe("useBaseWorkspaceSession", () => {
 
     expect(context).toBeNull();
     expect(session.error.value).toContain("ticket down");
-    expect(host.markSessionFailed).toHaveBeenCalledWith({
-      id: "tab-1",
-      assetId: "asset-1",
-      protocol: "ssh",
-      account: "root"
-    });
+    expect(host.markSessionFailed).toHaveBeenCalledWith(
+      {
+        id: "tab-1",
+        assetId: "asset-1",
+        protocol: "ssh",
+        account: "root"
+      },
+      "Error: ticket down"
+    );
   });
 });

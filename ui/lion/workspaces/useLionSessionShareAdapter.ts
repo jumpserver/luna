@@ -1,11 +1,7 @@
+import type { SessionShareAdapter, SessionShareLinkRequest, SessionShareOnlineUser } from "@jumpserver/connectors-core";
 import type { ComputedRef, Ref } from "vue";
 
 import type { SuggestionUser } from "@/lion/api";
-import type {
-  LionOnlineUser,
-  LionSessionShareAdapter,
-  LionShareLinkRequest
-} from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
 import { createShareURL, getSuggestionUsers, removeShareUser } from "@/lion/api";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useShareLink } from "~/composables/useShareLink";
@@ -13,7 +9,7 @@ import { useShareLink } from "~/composables/useShareLink";
 interface LionSessionShareSource {
   endpointUrl: ComputedRef<string>;
   enableShare: Ref<boolean>;
-  onlineUsersMap: Ref<Record<string, LionOnlineUser>>;
+  onlineUsersMap: Ref<Record<string, SessionShareOnlineUser>>;
   sessionObject: Ref<Record<string, unknown>>;
   ticket: Ref<string>;
   tokenId: Ref<string>;
@@ -22,7 +18,7 @@ interface LionSessionShareSource {
 
 const PAGE_SIZE = 10;
 
-export function useLionSessionShareAdapter(source: LionSessionShareSource): LionSessionShareAdapter {
+export function useLionSessionShareAdapter(source: LionSessionShareSource): SessionShareAdapter {
   const { t } = useI18n();
   const toast = useToast();
   const { addErrorToast } = useErrorToast();
@@ -94,7 +90,7 @@ export function useLionSessionShareAdapter(source: LionSessionShareSource): Lion
     return { ticket, token: source.tokenId.value };
   };
 
-  const createShareLink = async (request: LionShareLinkRequest) => {
+  const createShareLink = async (request: SessionShareLinkRequest) => {
     if (!sessionId.value) {
       addErrorToast({ title: t("RightPanel.ShareSessionUnavailable") });
       return;
@@ -132,7 +128,7 @@ export function useLionSessionShareAdapter(source: LionSessionShareSource): Lion
     }
   };
 
-  const removeUser = async (user: LionOnlineUser) => {
+  const removeUser = async (user: SessionShareOnlineUser) => {
     try {
       const response = await removeShareUser(user, source.endpointUrl.value, await authenticatedRequest());
       if (response.success === false) throw new Error(response.message || t("RightPanel.ShareRemoveFailed"));
@@ -151,8 +147,6 @@ export function useLionSessionShareAdapter(source: LionSessionShareSource): Lion
   });
 
   return {
-    sessionId,
-    enableShare: source.enableShare,
     onlineUsers,
     shareInfo,
     userOptions,

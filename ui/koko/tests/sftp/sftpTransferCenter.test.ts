@@ -171,7 +171,7 @@ describe("sftp selection bar and peer transfer", () => {
 
   it("hides local Send to until a connected remote destination exists", () => {
     expect(fileManagementLocalPane).toContain("canSend?: boolean");
-    expect(fileManagementLocalPane).toContain(':can-send="canSend && transferableEntries.length > 0"');
+    expect(fileManagementLocalPane).toContain(':can-send="canSend"');
     expect(fileManagementPane).toContain("canSend?: boolean");
     expect(fileManagementPane).toContain(':can-send="canTransferFiles && canSend"');
     expect(globalWorkspaceComponent).toContain("const canSendFromLocal = computed");
@@ -288,7 +288,7 @@ describe("sftp right-panel compact mode", () => {
     expect(fileManagementPane).toContain("if (!canTransferFiles.value) return;");
     expect(remotePaneActions).toContain('label: t("koko.fileManagement.sendTo")');
     expect(fileManagementPane).toContain(':can-send="canTransferFiles && canSend"');
-    expect(filePaneSelectionBar).toContain('v-if="canSend && transferableCount"');
+    expect(filePaneSelectionBar).toContain('v-if="canSend"');
     expect(fileManagementPane).toContain(':draggable="canTransferFiles"');
     expect(filePaneTable).toContain(":draggable=\"draggable && !entry.is_dir && entry.name !== '..'\"");
     // Compact still keeps browse + basic mutations.
@@ -323,6 +323,15 @@ describe("sftp right-panel compact mode", () => {
     expect(transferCoordinatorComposable).toContain("if (endpointId !== downloadEndpoint.ref.id) unregister()");
     expect(sessionWorkspaceComponent).toContain('@download="queueSftpDownload"');
     expect(globalWorkspaceComponent).toContain('@download="queueSftpDownload"');
+  });
+
+  it("rejects folder sources before queuing uploads or transfers", () => {
+    expect(transferCoordinatorComposable).toContain("function rejectFolderTransfer");
+    expect(transferCoordinatorComposable).toContain("hasFolderTransferSelection()");
+    expect(transferCoordinatorComposable).toContain("hasFolderBrowserUpload(files)");
+    expect(fileManagementPane).toContain("hasFolderTransferSelection(selectedEntries.value)");
+    expect(fileManagementPane).toContain("hasFolderBrowserUpload(files, event.dataTransfer?.items)");
+    expect(fileManagementLocalPane).toContain("hasFolderTransferSelection: hasFolderSelection");
   });
 
   it("queues remote pane uploads through the transfer center", () => {
@@ -571,6 +580,10 @@ describe("sftp professional workbench", () => {
     expect(connectModalComponent).not.toContain("UCheckbox");
     expect(connectModalComponent).not.toContain("openRemoteInCurrentTab");
     expect(workspacePanesComposable).not.toContain("openRemoteInCurrentTab");
+  });
+
+  it("keeps the classic SFTP picker out of the animated out-in transition", () => {
+    expect(connectModalComponent).toContain(`:mode="modernIsland ? 'out-in' : undefined"`);
   });
 
   it("keeps the add button beside the tabs", () => {

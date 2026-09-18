@@ -41,6 +41,7 @@ export interface TranscodeProgressPayload {
 
 export interface TranscodeResult {
   id: string;
+  index?: number;
   input: string;
   output: string;
   success: boolean;
@@ -98,17 +99,16 @@ export const useTranscodeStore = defineStore(
 
     const getDisplayName = (path: string) => path.split(/[\\/]/).pop() || path;
 
-    const buildTaskItem = (path: string, index: number, previous?: TranscodeTaskItem): TranscodeTaskItem => ({
+    const buildTaskItem = (path: string, index: number): TranscodeTaskItem => ({
       index,
       path,
       displayName: getDisplayName(path),
-      progress: previous?.progress ?? 0,
-      message: previous?.message ?? t("Transcode.Waiting"),
-      status: previous?.status ?? "pending",
-      output: previous?.output ?? "",
-      error: previous?.error ?? "",
-      metadata: previous?.metadata ?? null,
-      duration: previous?.duration ?? null
+      progress: 0,
+      message: t("Transcode.Waiting"),
+      status: "pending",
+      output: "",
+      error: "",
+      metadata: null
     });
 
     const buildQueuedTask = (path: string, index: number): TranscodeTaskItem => ({
@@ -122,11 +122,6 @@ export const useTranscodeStore = defineStore(
       error: "",
       metadata: null
     });
-
-    const rebuildTaskItems = (paths: string[]) => {
-      const previous = new Map(taskItems.value.map((item) => [item.path, item]));
-      taskItems.value = paths.map((path, index) => buildTaskItem(path, index, previous.get(path)));
-    };
 
     const patchTaskItem = (index: number, patch: Partial<TranscodeTaskItem>) => {
       const current = taskItems.value[index];
@@ -160,37 +155,28 @@ export const useTranscodeStore = defineStore(
     const setArchives = (paths: string[]) => {
       if (isTranscoding.value) return;
       archivePaths.value = paths;
-      rebuildTaskItems(paths);
+      taskItems.value = paths.map(buildTaskItem);
     };
 
     const appendArchives = (newPaths: string[]) => {
+      if (!newPaths.length) return;
+      const base = taskItems.value.length;
       if (isTranscoding.value) {
-        const current = new Set([...archivePaths.value, ...pendingPaths.value]);
-        const next = newPaths.filter((p) => !current.has(p));
-        if (!next.length) return;
-        pendingPaths.value = [...pendingPaths.value, ...next];
-        const base = taskItems.value.length;
-        const queuedItems = next.map((path, i) => buildQueuedTask(path, base + i));
-        taskItems.value = [...taskItems.value, ...queuedItems];
+        pendingPaths.value = [...pendingPaths.value, ...newPaths];
+        taskItems.value = [...taskItems.value, ...newPaths.map((path, index) => buildQueuedTask(path, base + index))];
         return;
       }
-      const existingPaths = taskItems.value.map((item) => item.path);
-      const next = Array.from(new Set([...existingPaths, ...newPaths]));
-      archivePaths.value = next;
-      rebuildTaskItems(next);
+      archivePaths.value = [...archivePaths.value, ...newPaths];
+      taskItems.value = [...taskItems.value, ...newPaths.map((path, index) => buildTaskItem(path, base + index))];
     };
 
-    const removeArchive = (path: string) => {
-      const queuedIndex = pendingPaths.value.indexOf(path);
-      if (queuedIndex !== -1) {
-        pendingPaths.value = pendingPaths.value.filter((p) => p !== path);
-        taskItems.value = taskItems.value.filter((item) => item.path !== path);
-        return;
-      }
-      const task = taskItems.value.find((item) => item.path === path);
-      if (task?.status === "processing") return;
-      archivePaths.value = archivePaths.value.filter((p) => p !== path);
-      rebuildTaskItems(archivePaths.value);
+    const removeArchive = (index: number) => {
+      const task = taskItems.value[index];
+      if (!task || task.status === "processing" || isTranscoding.value) return;
+      archivePaths.value = archivePaths.value.filter((_, itemIndex) => itemIndex !== index);
+      taskItems.value = taskItems.value
+        .filter((_, itemIndex) => itemIndex !== index)
+        .map((item, itemIndex) => ({ ...item, index: itemIndex }));
     };
 
     const clearArchives = () => {
@@ -249,6 +235,8 @@ export const useTranscodeStore = defineStore(
       transcodePower.value = power;
     };
 
+    const cancelCurrentTask = () => desktopInvoke<boolean>("cancel_transcode");
+
     const handleProgressEvent = (payload: TranscodeProgressPayload) => {
       let targetIndex = -1;
 
@@ -297,6 +285,11 @@ export const useTranscodeStore = defineStore(
     };
 
     const findTaskIndexForResult = (result: TranscodeResult): number => {
+      if (typeof result.index === "number") {
+        const index = currentBatchOffset.value + result.index;
+        if (taskItems.value[index]) return index;
+      }
+
       if (result.input) {
         const byInput = taskItems.value.findIndex(
           (item) => item.path === result.input && item.status !== "success" && item.status !== "error"
@@ -489,6 +482,7 @@ export const useTranscodeStore = defineStore(
       setFilenameStyle,
       setOutputResolution,
       setTranscodePower,
+      cancelCurrentTask,
       applyBatchResults,
       markAllPendingAsError,
       startTranscode

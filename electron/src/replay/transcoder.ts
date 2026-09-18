@@ -63,6 +63,21 @@ function outputFilename(metadata, style) {
   return `${id}.mp4`;
 }
 
+async function availableOutputPath(outputDir, filename) {
+  const extension = path.extname(filename);
+  const stem = path.basename(filename, extension);
+  for (let index = 0; ; index += 1) {
+    const suffix = index ? ` (${index})` : "";
+    const candidate = path.join(outputDir, `${stem}${suffix}${extension}`);
+    try {
+      await stat(candidate);
+    } catch (error) {
+      if (error?.code === "ENOENT") return candidate;
+      throw error;
+    }
+  }
+}
+
 function readEntry(stream, maximum) {
   return new Promise<Buffer>((resolve, reject) => {
     const chunks = [];
@@ -260,7 +275,6 @@ async function encodeGuacamole(data, executable, outputPath, resolution, power, 
     }
     encoder.child.stdin.end();
     await encoder.completion;
-    await rm(outputPath, { force: true });
     await rename(encoder.temporaryPath, outputPath);
     onProgress(100);
   } catch (error) {
@@ -296,12 +310,20 @@ export class ReplayTranscoder {
     }
   }
 
+  cancelCurrent(targetLabel) {
+    const job = [...this.activeJobs].find((candidate) => candidate.targetLabel === targetLabel);
+    if (!job) return false;
+    job.skipCurrent = true;
+    job.encoder?.kill();
+    return true;
+  }
+
   emit(file, index, total, progress, message, targetLabel, extra = {}) {
     this.emitProgress({ file, index, total, progress, message, ...extra }, targetLabel);
   }
 
   async transcode(request, targetLabel) {
-    const job = { cancelled: false, encoder: undefined };
+    const job = { cancelled: false, skipCurrent: false, encoder: undefined, targetLabel };
     this.activeTranscodes += 1;
     this.activeJobs.add(job);
     try {
@@ -322,11 +344,12 @@ export class ReplayTranscoder {
     const results = [];
     for (const [index, archivePath] of tarPaths.entries()) {
       if (job.cancelled) break;
+      job.skipCurrent = false;
       const fallbackId = extractSessionId(archivePath);
       let metadata;
       try {
         const archive = await extractReplayArchive(archivePath);
-        if (job.cancelled) throw new Error("transcoding cancelled");
+        if (job.cancelled || job.skipCurrent) throw new Error("transcoding cancelled");
         metadata = { ...archive.metadata, id: String(archive.metadata?.id || fallbackId) };
         this.emit(metadata.id, index, tarPaths.length, 0, "extracting archive", targetLabel, { metadata });
         const guacamoleData = Buffer.concat(
@@ -339,7 +362,7 @@ export class ReplayTranscoder {
             }
           })
         );
-        const output = path.join(outputDir, outputFilename(metadata, request.filenameStyle));
+        const output = await availableOutputPath(outputDir, outputFilename(metadata, request.filenameStyle));
         const started = performance.now();
         await encodeGuacamole(
           guacamoleData,
@@ -351,7 +374,7 @@ export class ReplayTranscoder {
             this.emit(metadata.id, index, tarPaths.length, progress, `encoding: ${Math.round(progress)}%`, targetLabel),
           (encoder) => {
             job.encoder = encoder;
-            if (job.cancelled) encoder?.kill();
+            if (job.cancelled || job.skipCurrent) encoder?.kill();
           }
         );
         const duration = (performance.now() - started) / 1000;
@@ -360,14 +383,17 @@ export class ReplayTranscoder {
           output,
           duration
         });
-        results.push({ id: metadata.id, input: archivePath, output, success: true, metadata });
+        results.push({ id: metadata.id, index, input: archivePath, output, success: true, metadata });
       } catch (error) {
         const id = metadata?.id || fallbackId;
-        const message = `transcoding failed: ${error instanceof Error ? error.message : error}`;
+        const message = job.skipCurrent
+          ? "transcoding cancelled"
+          : `transcoding failed: ${error instanceof Error ? error.message : error}`;
         electronLog.error(`transcode failed ${id}`, error);
         this.emit(id, index, tarPaths.length, 100, message, targetLabel, { success: false });
         results.push({
           id,
+          index,
           input: archivePath,
           output: "",
           success: false,
@@ -386,6 +412,7 @@ export const replayTranscoderInternals = {
   extractSessionId,
   classifyReplayArchiveEntry,
   outputFilename,
+  availableOutputPath,
   parsePartIndex,
   sanitizeFilename,
   threadCount

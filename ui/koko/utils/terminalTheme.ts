@@ -1,7 +1,7 @@
 import type { ITheme, Terminal } from "@xterm/xterm";
 
-import { getKokoThemeAdapter } from "#koko/host";
 import xtermTheme from "xterm-theme";
+import { getKokoThemeAdapter } from "#koko/host";
 import { defaultTheme } from "#koko/utils/config";
 
 /** 跟随项目主题（data-theme-preset / dark-light / Luna 动态预设）的终端配色 */

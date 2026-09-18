@@ -138,7 +138,6 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
         {
           label: t("koko.fileManagement.sendTo"),
           icon: "i-lucide-send",
-          disabled: !toValue(options.transferableCount),
           onSelect: options.requestSend
         },
         { type: "separator" }

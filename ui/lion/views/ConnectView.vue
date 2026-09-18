@@ -21,7 +21,10 @@ import { registerLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspace
 
 const props = defineProps<{ tabId?: string }>();
 
-const emit = defineEmits<{ disconnected: [message: string, details?: GuacamoleConnectionErrorDetails] }>();
+const emit = defineEmits<{
+  connected: [];
+  disconnected: [message: string, details?: GuacamoleConnectionErrorDetails];
+}>();
 
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
@@ -387,7 +390,8 @@ const handleDownloadFile = async (file: { name: string; streamName?: GuacamoleFi
 const fitPercentage = computed(() => Math.floor(scale.value * 100));
 
 watch(connectStatus, (status) => {
-  if (status === 5 && !disposed) {
+  if (status === 3) emit("connected");
+  else if (status === 5 && !disposed) {
     emit("disconnected", connectionError.value || t("GuacamoleErrDisconnected"), connectionErrorDetails.value);
   }
 });

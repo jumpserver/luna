@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu } from "electron";
-import { mkdtemp, rm } from "node:fs/promises";
-import { createReadStream } from "node:fs";
+import { rm } from "node:fs/promises";
+import { createReadStream, mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { isatty } from "node:tty";
@@ -8,14 +8,20 @@ import { createWebProxyManager } from "@jumpserver/web-proxy/manager";
 import { readLaunch } from "./launch";
 
 async function start() {
+  // Electron may become ready while Tinker is still writing the launch pipe.
+  // Isolate both app data and Chromium's session before the first await.
+  const profile = mkdtempSync(path.join(os.tmpdir(), "weblite-applet-"));
+  app.setPath("userData", profile);
+  app.setPath("sessionData", profile);
+  app.setName("JumpServer WebLite");
   // Electron replaces process.stdin with an EOF-only stream on Windows.
   // Read the inherited descriptor directly so AppletArgs survives native launches.
   const input =
     process.platform === "win32" && !isatty(0) ? createReadStream("", { fd: 0, autoClose: false }) : process.stdin;
-  const launch = await readLaunch(input);
-  const profile = await mkdtemp(path.join(os.tmpdir(), "weblite-applet-"));
-  app.setPath("userData", profile);
-  app.setName("JumpServer WebLite");
+  const launch = await readLaunch(input).catch(async (error) => {
+    await rm(profile, { recursive: true, force: true }).catch(() => {});
+    throw error;
+  });
   await app.whenReady();
   Menu.setApplicationMenu(null);
   const win = new BrowserWindow({

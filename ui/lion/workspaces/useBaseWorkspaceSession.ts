@@ -8,7 +8,7 @@ import { createLionConnectTicket } from "@/lion/hooks/useLionConnectTicket";
 
 export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
   const colorMode = useColorMode();
-  const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
+  const { markSessionFailed } = useWorkspaceTabs();
 
   const loading = ref(false);
   const error = ref("");
@@ -77,17 +77,19 @@ export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
         themeType: themeType.value
       };
 
-      markSessionConnected(preparedTab.id);
       return context.value;
     } catch (cause) {
       if (generation !== prepareGeneration) return null;
       error.value = String(cause);
-      markSessionFailed({
-        tabId: preparedTab.id,
-        assetId: preparedTab.assetId,
-        protocol: preparedTab.protocol,
-        account: preparedTab.account
-      });
+      markSessionFailed(
+        {
+          tabId: preparedTab.id,
+          assetId: preparedTab.assetId,
+          protocol: preparedTab.protocol,
+          account: preparedTab.account
+        },
+        error.value
+      );
       return null;
     } finally {
       if (generation === prepareGeneration) loading.value = false;

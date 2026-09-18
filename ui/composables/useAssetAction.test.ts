@@ -181,16 +181,20 @@ describe("opening assets in local applications", () => {
   it.each([
     [{ code: "perm_account_invalid" }, "ConnectError.AccountUnavailable"],
     [{ code: "personal_credential_version_conflict" }, "ConnectError.CredentialChanged"],
+    [
+      { input_username: ["A personal credential with these fields already exists"] },
+      "A personal credential with these fields already exists"
+    ],
     [{ input_secret: ["Required"] }, "ConnectError.SecretRequired"],
     [{ code: "unknown", detail: "Backend detail" }, "Backend detail"],
     [{}, "HTTP 400"]
-  ])("maps connection token errors before showing the toast", async (data, description) => {
+  ])("maps connection token errors onto the session error callback", async (data, _description) => {
     mocks.createToken.mockRejectedValue(new ApiRequestError(400, data));
 
     const { failed } = await connect();
 
     expect(failed).toHaveBeenCalledWith(expect.any(ApiRequestError));
-    expect(mocks.errorToast).toHaveBeenCalledWith(expect.objectContaining({ description }));
+    expect(mocks.errorToast).not.toHaveBeenCalled();
   });
 
   it("saves K8s manual credentials as tokens", async () => {
@@ -274,6 +278,59 @@ describe("opening assets in local applications", () => {
 
     expect(failed).not.toHaveBeenCalled();
     expect(mocks.setConnectionTokenReusable).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("launches MariaDB with client-only compatibility on desktop=%s", async (desktop) => {
+    vi.stubGlobal("isDesktopRuntime", () => desktop);
+    const dbMethod = { value: "db_client", type: "native", component: "magnus", disabled: false };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ mariadb: [dbMethod] }),
+      getMethodsForProtocol: async () => [dbMethod]
+    }));
+    const dbPayload = {
+      ...payload,
+      protocol: "mariadb",
+      name: "测试数据库",
+      endpoint: { host: "gateway.example.com", port: 5525 },
+      asset: { info: { db_name: "app" } },
+      token: { ...payload.token, protocol: "mariadb" }
+    };
+    const url = `jms2://${btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(dbPayload))))}`;
+    mocks.getLocalClientUrl.mockResolvedValue({ url });
+    mocks.createToken.mockResolvedValue(dbPayload.token);
+
+    const { ready, failed } = await connect("db_client", "mariadb");
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(mocks.createToken).toHaveBeenCalledWith(
+      expect.objectContaining({ protocol: "mariadb", connect_method: "db_client" }),
+      expect.anything()
+    );
+    expect(ready.mock.calls[0]?.[0].token.protocol).toBe("mariadb");
+    const launchedUrl = desktop ? mocks.invoke.mock.calls[0]?.[1].url : mocks.assign.mock.calls[0]?.[0];
+    const launchedPayload = JSON.parse(
+      new TextDecoder().decode(Uint8Array.from(atob(launchedUrl.slice(7)), (character) => character.charCodeAt(0)))
+    );
+    expect(launchedPayload).toEqual({
+      ...dbPayload,
+      // Desktop resolves the user's MariaDB application first, then normalizes the driver in the launcher.
+      protocol: desktop ? "mariadb" : "mysql"
+    });
+  });
+
+  it("preserves an applet's RDP launch protocol for a MariaDB asset", async () => {
+    const applet = { value: "dbeaver", type: "applet", component: "razor", disabled: false };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ mariadb: [applet] }),
+      getMethodsForProtocol: async () => [applet]
+    }));
+    const url = `jms2://${btoa(JSON.stringify({ ...payload, name: "database", protocol: "rdp" }))}`;
+    mocks.getLocalClientUrl.mockResolvedValue({ url });
+
+    const { failed } = await connect("dbeaver", "mariadb");
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(mocks.assign).toHaveBeenCalledExactlyOnceWith(url);
   });
 
   describe("RDP file downloads", () => {
@@ -759,7 +816,7 @@ describe("opening assets in local applications", () => {
     mocks.getLocalClientUrl.mockResolvedValue({ url: "https://unexpected.example" });
     const { failed } = await connect();
     expect(failed).toHaveBeenCalledOnce();
-    expect(mocks.errorToast).toHaveBeenCalledOnce();
+    expect(mocks.errorToast).not.toHaveBeenCalled();
     expect(mocks.assign).not.toHaveBeenCalled();
     expect(mocks.invoke).not.toHaveBeenCalled();
   });

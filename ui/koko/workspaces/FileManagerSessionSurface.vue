@@ -3,6 +3,7 @@ import type { SftpCapabilities } from "#koko/composables/sftp/protocol";
 import type { KokoWorkspaceTab } from "#koko/host";
 
 import KokoFileManagement from "#koko/components/FileManagement/index.vue";
+import { useKokoHostAdapter } from "#koko/host";
 import BaseWorkspaceShell from "#koko/workspaces/BaseWorkspaceShell.vue";
 import { useBaseWorkspaceSession } from "#koko/workspaces/useBaseWorkspaceSession";
 
@@ -22,7 +23,16 @@ const emit = defineEmits<{
   capabilities: [capabilities: SftpCapabilities | null];
 }>();
 const { t } = useI18n();
+const host = useKokoHostAdapter();
 const tab = toRef(props, "tab");
+function handleConnectionChange(connected: boolean) {
+  if (!connected) return;
+  host.markSessionConnected(tab.value.id);
+}
+
+function handleConnectionFailure(reason: string) {
+  host.markSessionDisconnected(tab.value.id, reason);
+}
 const { context, error, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab, {
   protocol: "sftp"
 });
@@ -45,6 +55,8 @@ watch(tokenId, () => void prepareSession(), { immediate: true });
       :source-asset="{ id: tab.assetId, name: tab.assetName || tab.assetId, account: tab.account }"
       class="h-full"
       @capabilities="emit('capabilities', $event)"
+      @connection-change="handleConnectionChange"
+      @connection-failure="handleConnectionFailure"
     />
   </BaseWorkspaceShell>
 </template>

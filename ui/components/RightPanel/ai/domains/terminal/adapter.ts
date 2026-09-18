@@ -13,7 +13,8 @@ import {
   isKokoTerminalAiBusy,
   isKokoTerminalAiWaitingForApproval,
   sendKokoTerminalAiControl,
-  submitKokoTerminalAiPrompt
+  submitKokoTerminalAiPrompt,
+  terminalExecutionMode
 } from "#koko/composables/terminal/useTerminalAiSessions";
 import { isKokoTerminalWorkspaceAiSession } from "~/composables/useWorkspaceAiSessions";
 import { commonSurfaceContext } from "../types";
@@ -43,9 +44,12 @@ function handleDecision(session: KokoTerminalAiSession, action: Extract<AiTimeli
   const decisionId = String(action.data.id || "");
   if (!decisionId || session.decisions.has(decisionId)) return;
 
-  const execution = session.executionOverrides.get(decisionId) || String(action.data.execution || "auto");
+  const override = session.executionOverrides.get(decisionId);
+  const execution = terminalExecutionMode(override || action.data.execution);
   const toolCallId = String(action.data.toolCallId || "");
-  if (action.approved && toolCallId && execution !== "auto") session.executionOverrides.set(toolCallId, execution);
+  if (action.approved && toolCallId && (override || execution !== "auto")) {
+    session.executionOverrides.set(toolCallId, execution);
+  }
 
   session.decisions.add(decisionId);
   try {

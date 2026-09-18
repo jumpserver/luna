@@ -48,6 +48,15 @@
   --app-text-muted: var(--theme-muted);
   --app-text-inverse: var(--theme-bg);
   --app-accent-foreground: #111111;
+  --app-ai-icon-gradient: linear-gradient(
+    45deg,
+    var(--color-cyan-600) 20%,
+    var(--color-blue-600) 40%,
+    var(--color-violet-600) 60%,
+    var(--color-pink-600) 80%
+  );
+  --app-ai-icon-warm: var(--color-orange-600);
+  --app-ai-icon-cool: var(--color-teal-600);
   --app-border-subtle: color-mix(in srgb, var(--theme-border) 68%, transparent);
   --app-border-soft: color-mix(in srgb, var(--theme-fg) 8%, transparent);
   --app-border-strong: color-mix(in srgb, var(--theme-border) 82%, var(--theme-fg) 18%);
@@ -201,4 +210,13 @@
 
 .dark {
   --app-border-card: color-mix(in srgb, var(--theme-fg) 34%, transparent);
+  --app-ai-icon-gradient: linear-gradient(
+    45deg,
+    var(--color-cyan-400) 20%,
+    var(--color-blue-400) 40%,
+    var(--color-violet-400) 60%,
+    var(--color-pink-400) 80%
+  );
+  --app-ai-icon-warm: var(--color-orange-400);
+  --app-ai-icon-cool: var(--color-teal-400);
 }

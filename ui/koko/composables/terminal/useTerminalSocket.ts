@@ -129,24 +129,19 @@ export const useKokoTerminalSocket = () => {
   const followAppTheme = computed(() => !!unref(sessionCtxRef) && !queryTerminalThemeName.value);
   let themeObserver: MutationObserver | null = null;
   let fitAddon: FitAddon | null = null;
-  let socketOpened = false;
+  let sessionReady = false;
   let serverCloseReason: string | undefined;
   let disposeSocketEvents: (() => void) | undefined;
   let hasPendingContainerFit = false;
 
   const reportInitialConnectionFailure = () => {
-    if (socketOpened || connectionError.value) return;
+    if (sessionReady || connectionError.value) return;
 
     connectionError.value = t("koko.terminal.websocketConnectionFailed");
     const tabId = unref(sessionCtxRef)?.tabId;
     if (!tabId) return;
 
-    hostAdapter.markSessionFailed({
-      id: tabId,
-      assetId: "",
-      protocol: "",
-      account: ""
-    });
+    hostAdapter.markSessionDisconnected(tabId, connectionError.value);
   };
 
   const fitToContainer = () => {
@@ -302,6 +297,8 @@ export const useKokoTerminalSocket = () => {
     onConnected: (id, socket) => {
       const tabId = unref(sessionCtxRef)?.tabId;
       if (tabId) {
+        sessionReady = true;
+        hostAdapter.markSessionConnected(tabId);
         registerKokoTerminalSession(tabId, {
           socket,
           terminalId: id,
@@ -357,7 +354,6 @@ export const useKokoTerminalSocket = () => {
     });
 
     const markSocketOpen = () => {
-      socketOpened = true;
       connectionError.value = "";
       lastSendTime.value = new Date();
       lastReceiveTime.value = new Date();
@@ -382,16 +378,12 @@ export const useKokoTerminalSocket = () => {
         lastSendTime: lastSendTime.value.toISOString(),
         lastReceiveTime: lastReceiveTime.value.toISOString()
       });
-      if (!socketOpened) {
-        reportInitialConnectionFailure();
-        return;
-      }
-      if (paneId) hostAdapter.markSessionDisconnected(paneId);
-      if (!terminalRef.value) return;
       const message = t(detail.messageKey, {
         code: event.code,
         reason: detail.reasonKey ? t(detail.reasonKey) : ""
       });
+      if (paneId) hostAdapter.markSessionDisconnected(paneId, message);
+      if (!terminalRef.value) return;
       terminalRef.value.write("\r\n");
       terminalRef.value.write(`\x1B[31m${message}\x1B[0m`);
     };
@@ -465,8 +457,9 @@ export const useKokoTerminalSocket = () => {
     const socket = transport.connect(url);
     if (!socket) {
       reportInitialConnectionFailure();
-      addErrorToast({ title: t("koko.terminal.failedCreateConnection") });
+      return;
     }
+    listenSocketEvent();
   };
 
   // dark/light 切 class、preset 切 data-theme-preset、Luna 预设写内联 style，三种路径都在 <html> 属性上
@@ -496,7 +489,6 @@ export const useKokoTerminalSocket = () => {
     window.addEventListener("right-panel-resize-end", handleRightPanelResizeEnd);
     createTerminal();
     createWebSocket();
-    listenSocketEvent();
     observeAppTheme();
     nextTick(() => {
       input.start();

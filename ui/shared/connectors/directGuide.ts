@@ -1,6 +1,7 @@
 import type { PermedAccount } from "~/types";
 
-export function getDirectSshCommand(options: {
+export function getDirectGuideCommand(options: {
+  protocol: string;
   username: string;
   account: string;
   inputUsername: string;
@@ -9,7 +10,8 @@ export function getDirectSshCommand(options: {
   host: string;
   port: string;
 }): string {
-  const { username, account, inputUsername, accounts, assetId, host, port } = options;
+  const { protocol, username, account, inputUsername, accounts, assetId, host, port } = options;
+  if (protocol === "vnc" && account === "@INPUT") return "";
   const accountUsername =
     account === "@USER"
       ? username
@@ -17,9 +19,16 @@ export function getDirectSshCommand(options: {
         ? inputUsername
         : accounts.find((item) => item.id === account)?.username || inputUsername;
   if (!username || !accountUsername || !assetId || !host) return "";
-  // Koko splits this login name on '#'; embedded separators cannot be represented.
+  // Koko and Nec split this login name on '#'; embedded separators cannot be represented.
   if ([username, accountUsername, assetId].some((value) => value.includes("#"))) return "";
   const quote = (value: string) => (/^[\w@.#:/-]+$/.test(value) ? value : `'${value.replaceAll("'", "'\\''")}'`);
-  const target = `${username}#${accountUsername}#${assetId}@${host}`;
-  return `ssh ${quote(target)}${port === "22" ? "" : ` -p ${quote(port)}`}`;
+  const login = `${username}#${accountUsername}#${assetId}`;
+  switch (protocol) {
+    case "ssh":
+      return `ssh ${quote(`${login}@${host}`)}${port === "22" ? "" : ` -p ${quote(port)}`}`;
+    case "vnc":
+      return `vncviewer -UserName=${quote(login)} ${quote(`${host}:${port || "5900"}`)}`;
+    default:
+      return "";
+  }
 }

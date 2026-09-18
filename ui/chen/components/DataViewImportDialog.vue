@@ -38,7 +38,8 @@ const mapped = computed(() => {
   if (!parsed.value) return { rows: [] as Array<Record<string, string | null>>, error: "" };
   try {
     return { rows: mapChenCsvRows(parsed.value, props.fields, emptyValue.value), error: "" };
-  } catch {
+  } catch (cause) {
+    console.warn("[chen] CSV column mapping failed:", cause instanceof Error ? cause.message : cause);
     return { rows: [], error: t("Chen.MapCsvColumnsFailed") };
   }
 });

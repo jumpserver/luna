@@ -11,6 +11,7 @@ import { chromium } from "playwright";
 
 const applet = fileURLToPath(new URL("..", import.meta.url));
 const mode = process.argv[2] || "basic";
+const password = mode.endsWith("-empty-password") ? "" : "runtime-secret";
 const standalone = mode === "standalone" || mode === "https-standalone";
 const secure = mode.startsWith("https");
 const addressOnly = mode === "address" || mode === "anonymous";
@@ -54,7 +55,7 @@ const handler = (req, res) => {
     <h1 id="dashboard" style="display:none">Signed in</h1>
     <script>document.querySelector('form').onsubmit = e => {
       e.preventDefault();
-      if (document.querySelector('#username').value === 'tester' && document.querySelector('#password').value === 'runtime-secret') {
+      if (document.querySelector('#username').value === 'tester' && document.querySelector('#password').value === ${JSON.stringify(password)}) {
         document.querySelector('form').remove();document.querySelector('#dashboard').style.display = 'block';
       }
     };</script></body></html>`);
@@ -87,32 +88,33 @@ if (!standalone) {
         }
       : {}),
     login: {
-      config: addressOnly
-        ? { autofill: "none" }
-        : mode === "script"
-          ? {
-              autofill: "script",
-              script: [
-                { step: 1, command: "type", target: "id=username", value: "{USERNAME}" },
-                { step: 2, command: "type", target: "id=password", value: "{SECRET}" },
-                { step: 3, command: "interactive", target: "css=div.captcha-field" },
-                { step: 4, command: "click", target: "id=submit" },
-                { step: 5, command: "success", target: "id=dashboard" }
-              ]
-            }
-          : {
-              autofill: "basic",
-              username_selector: "id=username",
-              password_selector: "id=password",
-              submit_selector: "id=submit",
-              success_selector: "id=dashboard"
-            },
+      config:
+        mode === "address"
+          ? { autofill: "no" }
+          : mode === "script" || mode === "script-empty-password"
+            ? {
+                autofill: "script",
+                script: [
+                  { step: 1, command: "type", target: "id=username", value: "{USERNAME}" },
+                  { step: 2, command: "type", target: "id=password", value: "{SECRET}" },
+                  { step: 3, command: "interactive", target: "css=div.captcha-field" },
+                  { step: 4, command: "click", target: "id=submit" },
+                  { step: 5, command: "success", target: "id=dashboard" }
+                ]
+              }
+            : {
+                autofill: "basic",
+                username_selector: "id=username",
+                password_selector: "id=password",
+                submit_selector: "id=submit",
+                success_selector: "id=dashboard"
+              },
       username: "tester",
-      password: "runtime-secret",
+      password,
       secret_type: "password"
     }
   };
-  child.stdin.end(
+  const payload = Buffer.from(
     JSON.stringify(
       mode === "legacy"
         ? launch
@@ -132,6 +134,13 @@ if (!standalone) {
           }
     )
   );
+  if (mode === "delayed-pipe") {
+    child.stdin.write(payload.subarray(0, 17));
+    await delay(1_000);
+    child.stdin.end(payload.subarray(17));
+  } else {
+    child.stdin.end(payload);
+  }
 }
 let browser;
 async function waitFor(check, message) {
@@ -159,6 +168,8 @@ try {
   const address = shell.getByRole("textbox", { name: standalone ? "地址栏" : "地址栏只读", exact: true });
   assert.equal(await address.inputValue(), target, "address bar must retain the launch URL, query and fragment");
   assert.equal(await address.evaluate((input) => input.readOnly), !standalone);
+  if (addressOnly)
+    await shell.getByRole("button", { name: /会话状态：.*账号代填未配置/ }).waitFor({ state: "visible" });
   if (standalone || addressOnly) await page.getByRole("heading", { name: "Standalone browsing works" }).waitFor();
   else {
     await page.locator("#dashboard").waitFor({ state: "visible", timeout: 15_000 });

@@ -40,9 +40,9 @@ try {
   );
   await ffmpegPlugin.install();
   const transcoder = new ReplayTranscoder(temporaryRoot, (event) => progress.push(event), ffmpegPlugin);
-  const [result] = await transcoder.transcode(
+  const results = await transcoder.transcode(
     {
-      tarPaths: [archivePath],
+      tarPaths: [archivePath, archivePath],
       outputDir,
       filenameStyle: "original",
       outputResolution: "p360",
@@ -51,9 +51,16 @@ try {
     "main"
   );
 
-  assert.equal(result.success, true, result.error);
-  assert.ok((await stat(result.output)).size > 0);
-  assert.deepEqual((await readFile(result.output)).subarray(4, 8).toString("ascii"), "ftyp");
+  assert.equal(results.length, 2);
+  assert.ok(
+    results.every((result) => result.success),
+    results.map((result) => result.error).join("\n")
+  );
+  assert.notEqual(results[0].output, results[1].output);
+  for (const result of results) {
+    assert.ok((await stat(result.output)).size > 0);
+    assert.deepEqual((await readFile(result.output)).subarray(4, 8).toString("ascii"), "ftyp");
+  }
   assert.equal(progress.at(-1).success, true);
   console.info("Node replay transcoder smoke test passed");
 } finally {

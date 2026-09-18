@@ -47,9 +47,15 @@ const handleToggleAi = () => {
         >
           <template #leading>
             <span class="relative block size-4.5" aria-hidden="true">
-              <UIcon name="i-lucide-sparkle" class="absolute inset-0 size-4.5" />
-              <UIcon name="i-lucide-sparkle" class="ai-launcher-twinkle absolute right-0 top-0 size-1.5" />
-              <UIcon name="i-lucide-sparkle" class="ai-launcher-twinkle absolute bottom-0 left-0 size-1.5" />
+              <UIcon name="i-lucide-sparkle" mode="css" class="ai-launcher-star absolute inset-0 size-4.5" />
+              <UIcon
+                name="i-lucide-sparkle"
+                class="ai-launcher-twinkle ai-launcher-warm absolute right-0 top-0 size-1.5"
+              />
+              <UIcon
+                name="i-lucide-sparkle"
+                class="ai-launcher-twinkle ai-launcher-cool absolute bottom-0 left-0 size-1.5"
+              />
             </span>
           </template>
         </UButton>
@@ -75,6 +81,18 @@ const handleToggleAi = () => {
 </template>
 
 <style scoped>
+.ai-launcher:not(:disabled) .ai-launcher-star {
+  background-image: var(--app-ai-icon-gradient);
+}
+
+.ai-launcher:not(:disabled) .ai-launcher-warm {
+  color: var(--app-ai-icon-warm);
+}
+
+.ai-launcher:not(:disabled) .ai-launcher-cool {
+  color: var(--app-ai-icon-cool);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .ai-launcher:not(:disabled):hover .ai-launcher-twinkle,
   .ai-launcher:not(:disabled):focus-visible .ai-launcher-twinkle {

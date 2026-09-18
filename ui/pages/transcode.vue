@@ -380,13 +380,22 @@ const startLabel = computed(() =>
               {{ getStatusLabel(item.status) }}
             </UBadge>
             <UButton
-              v-if="item.status !== 'processing' && !isTranscoding"
+              v-if="item.status === 'processing'"
+              icon="i-lucide-square"
+              color="error"
+              variant="ghost"
+              size="xs"
+              :aria-label="t('Transcode.Cancel')"
+              @click="store.cancelCurrentTask()"
+            />
+            <UButton
+              v-else-if="!isTranscoding"
               icon="i-lucide-x"
               color="neutral"
               variant="ghost"
               size="xs"
               :aria-label="t('Transcode.ClearArchives')"
-              @click="store.removeArchive(item.path)"
+              @click="store.removeArchive(item.index)"
             />
           </div>
         </article>

@@ -7,7 +7,8 @@ export function createLocalCredentialSession(targetUrl: string, value: unknown) 
   const config = data.config;
   if (!config || typeof config !== "object" || Array.isArray(config)) throw new Error("登录配置无效");
   const origin = normalizedWebOrigin(targetUrl);
-  const mode = config.autofill || "none";
+  // Core uses "no" for disabled autofill; retain "none" for legacy launches.
+  const mode = config.autofill === "no" ? "none" : config.autofill || "none";
   if (!["basic", "script", "none"].includes(mode)) throw new Error("不支持的登录模式");
   if (mode === "none") return { autofillAvailable: false, origin, mode };
   const steps = mode === "script" ? validateWebScript(config.script, origin) : null;
@@ -15,9 +16,11 @@ export function createLocalCredentialSession(targetUrl: string, value: unknown) 
   const password = data.password ?? "";
   if (typeof username !== "string" || typeof password !== "string" || username.length > 4096 || password.length > 65536)
     throw new Error("Tinker 凭据格式无效");
+  // Same-name/manual accounts may have an empty password; preserve it for autofill.
   if (
     (mode === "basic" || steps?.some((step) => step.value.includes("{SECRET}"))) &&
-    (!password || (data.secret_type && data.secret_type !== "password"))
+    data.secret_type &&
+    data.secret_type !== "password"
   )
     throw new Error("登录配置需要密码账号");
   const selector = (key: string, required = false) => {

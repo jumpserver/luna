@@ -21,7 +21,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { submit, close, copyTicketLink, retryFace } = useAclDialog();
+const { submit, close, copyTicketLink, retryFace, markFacePageReady, failFace } = useAclDialog();
 const { closePane } = useWorkspaceTabs();
 const faceFrame = ref<HTMLIFrameElement | null>(null);
 
@@ -38,13 +38,19 @@ const statusColor = (status: string) => {
 const hasFaceFailure = computed(
   () => props.group.code.startsWith("acl_face_") && props.group.items.some((item) => item.status === "failed")
 );
+const isFaceGroup = computed(() => props.group.code.startsWith("acl_face_"));
+const visibleDetail = (detail: string) => (detail.startsWith("AclDialog.Face") ? t(detail) : detail);
 
 const handleFaceMessage = (event: MessageEvent) => {
-  if (!isFaceLiveHostMessage(event.data) || event.data.event !== "retry_requested") return;
+  if (!isFaceLiveHostMessage(event.data)) return;
   if (!faceFrame.value || event.source !== faceFrame.value.contentWindow) return;
   const expectedOrigin = props.group.faceUrl ? new URL(props.group.faceUrl).origin : "";
   if (!expectedOrigin || event.origin !== expectedOrigin) return;
-  void retryFace(props.group);
+  if (event.data.event === "page_ready") markFacePageReady(props.group);
+  if (event.data.event === "client_error") {
+    failFace(props.group, String(event.data.message || "AclDialog.FacePageUnavailable"));
+  }
+  if (event.data.event === "retry_requested") void retryFace(props.group);
 };
 
 const handleClose = async () => {
@@ -89,7 +95,7 @@ onBeforeUnmount(() => window.removeEventListener("message", handleFaceMessage));
             <UButton variant="link" size="xs" @click="copyTicketLink(item)">{{ t("Common.Copy") }}</UButton>
           </div>
           <div v-if="item.status === 'pending'" class="acl-wait-bar mt-2" />
-          <AclErrorDetail v-if="item.detail" :detail="item.detail" />
+          <AclErrorDetail v-if="item.detail" :detail="visibleDetail(item.detail)" />
         </div>
         <UBadge :color="statusColor(item.status)" variant="soft" class="shrink-0 whitespace-nowrap">
           {{ t(`AclDialog.Status.${item.status}`) }}
@@ -100,9 +106,11 @@ onBeforeUnmount(() => window.removeEventListener("message", handleFaceMessage));
       {{ t("AclDialog.Assignees", { value: group.items[0].assignees }) }}
       <UButton variant="link" size="xs" @click="copyTicketLink(group.items[0])">{{ t("Common.Copy") }}</UButton>
     </div>
-    <p v-if="!isBatch && hasPending" class="mt-3 text-sm text-[var(--app-muted)]">{{ t("AclDialog.DoNotClose") }}</p>
+    <p v-if="!isBatch && hasPending && !isFaceGroup" class="mt-3 text-sm text-[var(--app-muted)]">
+      {{ t("AclDialog.DoNotClose") }}
+    </p>
     <div v-if="!isBatch && hasPending" class="acl-wait-bar mt-3" />
-    <AclErrorDetail v-if="!isBatch && group.items[0]?.detail" :detail="group.items[0].detail" />
+    <AclErrorDetail v-if="!isBatch && group.items[0]?.detail" :detail="visibleDetail(group.items[0].detail)" />
 
     <iframe
       v-if="group.faceUrl"
@@ -111,10 +119,11 @@ onBeforeUnmount(() => window.removeEventListener("message", handleFaceMessage));
       allow="camera"
       class="mt-4 h-[480px] w-full border-0"
       sandbox="allow-scripts allow-same-origin"
+      @error="failFace(group, 'AclDialog.FacePageUnavailable')"
     />
 
     <footer v-if="chrome !== false" class="mt-5 flex justify-end gap-2">
-      <UButton color="neutral" variant="outline" :disabled="isBusy" @click="handleClose">
+      <UButton color="neutral" variant="outline" :disabled="isBusy && !isFaceGroup" @click="handleClose">
         {{ isActionable && (!group.submitted || hasPending) ? t("Common.Cancel") : t("ToolTips.Close") }}
       </UButton>
       <UButton v-if="isActionable && !group.submitted" :loading="isBusy" @click="submit(group)">
