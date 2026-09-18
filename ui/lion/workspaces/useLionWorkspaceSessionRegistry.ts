@@ -1,44 +1,7 @@
-import type { FileTransferTask } from "@jumpserver/connectors-core";
+import type { FileTransferTask, SessionShareAdapter } from "@jumpserver/connectors-core";
 import type { ComputedRef, Ref } from "vue";
 
-import type { SuggestionUser } from "@/lion/api";
 import type { LionUploadCustomRequestOptions, LionUploadFileInfo } from "@/lion/types/upload";
-
-export interface LionOnlineUser {
-  user_id: string;
-  user: string;
-  primary: boolean;
-  writable: boolean;
-  remote_addr?: string;
-}
-
-export interface LionShareInfo {
-  shareId: string;
-  shareCode: string;
-  sessionId: string;
-  enableShare: boolean;
-  shareURL: string;
-}
-
-export interface LionShareLinkRequest {
-  expiredTime: number;
-  actionPerm: string;
-  users: SuggestionUser[];
-}
-
-export interface LionSessionShareAdapter {
-  sessionId: ComputedRef<string>;
-  enableShare: Ref<boolean>;
-  onlineUsers: ComputedRef<LionOnlineUser[]>;
-  shareInfo: ComputedRef<LionShareInfo>;
-  userOptions: Ref<SuggestionUser[]>;
-  hasMoreUsers: Ref<boolean>;
-  searchUsers: (query: string, loadMore?: boolean) => Promise<void>;
-  createShareLink: (request: LionShareLinkRequest) => Promise<void>;
-  copyShareURL: () => Promise<void>;
-  removeShareUser: (user: LionOnlineUser) => Promise<void>;
-  resetShareState: () => void;
-}
 
 export interface LionWorkspaceSessionController {
   actionPermission: Ref<Record<string, any>>;
@@ -55,7 +18,7 @@ export interface LionWorkspaceSessionController {
   isRemoteApp: ComputedRef<boolean>;
   keyboardLayout: Ref<string>;
   remoteClipboardText: Ref<string>;
-  share: LionSessionShareAdapter;
+  share: SessionShareAdapter;
   showRemoteClipboard: Ref<boolean>;
   virtualKeyboardOpen: Ref<boolean>;
   downloadFile: (file: any) => Promise<void>;

@@ -24,7 +24,6 @@ import type {
 import { AllCommunityModule, isColumn, ModuleRegistry } from "ag-grid-community";
 import { AgGridVue } from "ag-grid-vue3";
 import { formatChenGridValue, useChenGridPreferences } from "~/chen/composables/useChenGridPreferences";
-import { writeChenClipboardText } from "~/chen/runtime/clipboard";
 import {
   canUseChenCopy,
   createChenInsertSql,
@@ -50,6 +49,7 @@ import {
   isChenInsertRow,
   normalizeChenDataViewValue
 } from "~/chen/utils/dataViewEditing";
+import { writeClipboardText } from "~/utils/clipboard";
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-balham.css";
@@ -285,7 +285,7 @@ function selectedData() {
 async function copyText(text: string, successTitle: string) {
   if (!canUseChenCopy(props.canCopy)) return;
   try {
-    await writeChenClipboardText(text);
+    await writeClipboardText(text);
     toast.add({ title: successTitle, color: "success" });
   } catch {
     addErrorToast({ title: t("Common.CopyFailed"), description: t("Chen.CopyOperationFailedDescription") });
