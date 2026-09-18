@@ -1648,7 +1648,7 @@
       "unpinTab": "取消固定",
       "searchAssets": "搜尋要傳輸檔案的資產…",
       "dropFiles": "拖動檔案到這裡",
-      "dropFilesHint": "檔案將批次上傳到右側當前 SFTP 目錄",
+      "dropFilesHint": "選取檔案後會開啟傳送對話框，批次上傳到所選 SFTP 目標",
       "dropTabToLeftPane": "移動標籤到左側面板",
       "dropTabToRightPane": "移動標籤到右側面板",
       "chooseFiles": "選擇檔案",

@@ -6,7 +6,8 @@ import {
   completedTransferSourceNames,
   defaultGlobalLeftPaneId,
   filterSftpDistributionTargets,
-  rememberSftpConnection
+  rememberSftpConnection,
+  uniqueRemotePanesForSend
 } from "#koko/composables/sftp/file-manager/selectors";
 
 const sourceEndpoint = { id: "sftp:source", label: "Source" };
@@ -59,6 +60,22 @@ describe("sftp workspace selectors", () => {
     expect(filterSftpDistributionTargets(targets, " core ")).toEqual([targets[0]]);
     expect(filterSftpDistributionTargets(targets, "archive")).toEqual([targets[1]]);
     expect(filterSftpDistributionTargets(targets, "missing")).toEqual([]);
+  });
+
+  it("keeps the first pane per assetId in caller order", () => {
+    expect(
+      uniqueRemotePanesForSend([
+        { id: "left-y4", assetId: "y4", side: "left" },
+        { id: "right-y4", assetId: "y4", side: "right" },
+        { id: "other", assetId: "other", side: "left" }
+      ]).map((pane) => pane.id)
+    ).toEqual(["left-y4", "other"]);
+    expect(
+      uniqueRemotePanesForSend([
+        { id: "right-first", assetId: "y4", side: "right" },
+        { id: "right-second", assetId: "y4", side: "right" }
+      ]).map((pane) => pane.id)
+    ).toEqual(["right-first"]);
   });
 });
 

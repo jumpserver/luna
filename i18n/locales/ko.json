@@ -1648,7 +1648,7 @@
       "unpinTab": "고정 해제",
       "searchAssets": "파일 전송할 자산 검색…",
       "dropFiles": "여기에 파일을 놓으세요",
-      "dropFilesHint": "파일이 오른쪽의 현재 SFTP 디렉터리로 일괄 업로드됩니다",
+      "dropFilesHint": "파일을 선택하면 보내기 대화 상자가 열려 선택한 SFTP 대상으로 일괄 업로드합니다",
       "dropTabToLeftPane": "탭을 왼쪽 패널로 이동",
       "dropTabToRightPane": "탭을 오른쪽 패널로 이동",
       "chooseFiles": "파일 선택",

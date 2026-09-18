@@ -1648,7 +1648,7 @@
       "unpinTab": "固定解除",
       "searchAssets": "ファイル転送先のアセットを検索…",
       "dropFiles": "ここにファイルをドロップ",
-      "dropFilesHint": "右側の現在の SFTP ディレクトリにファイルを一括アップロードします",
+      "dropFilesHint": "ファイルを選ぶと送信ダイアログが開き、選択した SFTP 先へ一括アップロードします",
       "dropTabToLeftPane": "タブを左ペインに移動",
       "dropTabToRightPane": "タブを右ペインに移動",
       "chooseFiles": "ファイルを選択",

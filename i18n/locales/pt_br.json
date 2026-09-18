@@ -1648,7 +1648,7 @@
       "unpinTab": "Desafixar",
       "searchAssets": "Pesquisar ativos para transferência de arquivos…",
       "dropFiles": "Solte os arquivos aqui",
-      "dropFilesHint": "Os arquivos serão enviados em lote para o diretório SFTP atual à direita",
+      "dropFilesHint": "Ao escolher arquivos, o diálogo de envio abre para enviar em lote aos destinos SFTP selecionados",
       "dropTabToLeftPane": "Mover aba para o painel esquerdo",
       "dropTabToRightPane": "Mover aba para o painel direito",
       "chooseFiles": "Escolher arquivos",

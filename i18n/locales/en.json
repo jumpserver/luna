@@ -1824,7 +1824,7 @@
       "unpinTab": "Unpin",
       "searchAssets": "Search assets for file transfer…",
       "dropFiles": "Drop files here",
-      "dropFilesHint": "Files will be uploaded in bulk to the current SFTP directory on the right",
+      "dropFilesHint": "Choosing files opens the send dialog so you can upload in bulk to selected SFTP targets",
       "dropTabToLeftPane": "Move tab to the left pane",
       "dropTabToRightPane": "Move tab to the right pane",
       "chooseFiles": "Choose files",
