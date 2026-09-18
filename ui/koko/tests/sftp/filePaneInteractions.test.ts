@@ -30,6 +30,7 @@ import {
   resolveLocalFsDestinationPath
 } from "../../composables/sftp/file-manager/useLocalFileTransferEndpoint";
 import { useSftpPaneSelection } from "../../composables/sftp/file-manager/useSftpPaneSelection";
+import { isSftpHiddenEntryName } from "../../composables/sftp/file-manager/useSftpShowHiddenFiles";
 import { resolveSftpFileExtension, resolveSftpFileIcon } from "../../composables/sftp/useSftpFileIcon";
 
 const entries = [
@@ -39,6 +40,14 @@ const entries = [
   { name: "gamma", is_dir: true, size: "" },
   { name: "delta.txt", is_dir: false, size: "30" }
 ];
+
+describe("sftp hidden entries", () => {
+  it("treats dotfiles as hidden except parent directory", () => {
+    expect(isSftpHiddenEntryName(".env")).toBe(true);
+    expect(isSftpHiddenEntryName("..")).toBe(false);
+    expect(isSftpHiddenEntryName("release.txt")).toBe(false);
+  });
+});
 
 describe("sftp entry name length", () => {
   it("accepts 255 characters and rejects 256 without treating empty as an error", () => {

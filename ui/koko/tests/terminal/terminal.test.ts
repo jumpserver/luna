@@ -30,9 +30,11 @@ import {
 } from "#koko/composables/terminal/useTerminalAiSessions";
 import { useKokoTerminalInput } from "#koko/composables/terminal/useTerminalInput";
 import { useKokoTerminalMessageHandler } from "#koko/composables/terminal/useTerminalMessageHandler";
+import { useKokoZmodemTransfer } from "#koko/composables/terminal/useZmodemTransfer";
 import { saveZmodemPacketsToDisk, sendZmodemFiles } from "#koko/composables/terminal/zmodemBrowser";
 import { installAgentSessionHarness } from "#koko/tests/agent/sessionHarness";
 import { resolveClipboardAccess, validateClipboardText } from "#koko/utils/clipboardAcl";
+import { MAX_TRANSFER_SIZE } from "#koko/utils/config";
 
 vi.mock("clipboard-polyfill", () => ({
   readText: vi.fn(async () => "clipped"),
@@ -592,4 +594,24 @@ it("saves downloaded packets through a temporary anchor element", () => {
   expect(click).toHaveBeenCalledTimes(1);
   expect(appendChild).toHaveBeenCalledWith(link);
   expect(removeChild).toHaveBeenCalledWith(link);
+});
+
+it("aborts zmodem upload when the file exceeds the size cap", async () => {
+  const addErrorToast = vi.fn();
+  const onAbortSession = vi.fn();
+  const transfer = useKokoZmodemTransfer({
+    t: ((key: string) => key) as never,
+    toast: { add: vi.fn() } as never,
+    addErrorToast,
+    onCleanup: vi.fn(),
+    onActivateSession: vi.fn(),
+    onAbortSession
+  });
+  const file = new File(["x"], "huge.bin");
+  Object.defineProperty(file, "size", { value: MAX_TRANSFER_SIZE });
+
+  await transfer.uploadFile({} as never, {} as never, file, {} as never);
+
+  expect(onAbortSession).toHaveBeenCalledTimes(1);
+  expect(addErrorToast).toHaveBeenCalledTimes(1);
 });
