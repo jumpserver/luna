@@ -66,4 +66,6 @@ pnpm electron:dev
 
 ## 许可证
 
-[MIT](LICENSE)
+本项目采用 GNU General Public License version 3（GPLv3），与 [JumpServer 主库](https://github.com/jumpserver/jumpserver)保持一致。完整许可条款见 [LICENSE](LICENSE)。
+
+第三方版权声明保留在 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
