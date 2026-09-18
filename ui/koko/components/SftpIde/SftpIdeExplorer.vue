@@ -87,12 +87,10 @@ defineExpose({
 <template>
   <aside
     v-show="!isNarrowScreen || explorerOpen"
-    class="relative z-40 flex min-h-0 flex-col border-r border-default bg-[var(--workspace-surface-sidebar)] max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
+    class="relative z-40 flex min-h-0 flex-col border-r border-default bg-(--workspace-surface-sidebar) max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
     :style="{ width: isNarrowScreen ? responsiveExplorerWidth : undefined }"
   >
-    <div
-      class="flex h-[var(--workspace-toolbar-height)] min-w-0 shrink-0 items-center gap-1 border-b border-default px-2.5"
-    >
+    <div class="flex h-(--workspace-toolbar-height) min-w-0 shrink-0 items-center gap-1 border-b border-default px-2.5">
       <p class="min-w-0 flex-1 truncate text-left text-xs font-medium text-muted">
         {{ t("koko.sftpEditor.explorerTitle") }}
       </p>
@@ -113,7 +111,7 @@ defineExpose({
         >
           <button
             type="button"
-            class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
+            class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-(--app-hover-strong) hover:text-highlighted"
             :aria-label="t('koko.sftpEditor.quickOpenShortcut')"
             :title="t('koko.sftpEditor.quickOpenShortcut')"
           >
@@ -121,9 +119,7 @@ defineExpose({
           </button>
 
           <template #content>
-            <div
-              class="w-[360px] overflow-hidden rounded-xl bg-default shadow-xl ring-1 ring-black/10 dark:ring-white/12"
-            >
+            <div class="w-90 overflow-hidden rounded-xl bg-default shadow-xl ring-1 ring-black/10 dark:ring-white/12">
               <div class="border-b border-default p-2">
                 <UInput
                   v-model="quickOpenQuery"
@@ -190,7 +186,7 @@ defineExpose({
         <UTooltip :text="t('koko.sftpEditor.refreshTree')" :delay-duration="150">
           <button
             type="button"
-            class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-[var(--app-hover-strong)] hover:text-highlighted"
+            class="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-(--app-hover-strong) hover:text-highlighted"
             :aria-label="t('koko.sftpEditor.refreshTree')"
             @click="emit('refreshTree')"
           >
@@ -225,7 +221,7 @@ defineExpose({
           <UIcon name="i-lucide-loader-circle" class="app-tree-icon animate-spin" />
           {{ t("koko.sftpEditor.connectingAndLoading") }}
         </div>
-        <USkeleton v-for="index in 4" :key="index" class="h-[var(--app-tree-row-height)] w-full rounded-md" />
+        <USkeleton v-for="index in 4" :key="index" class="h-(--app-tree-row-height) w-full rounded-md" />
       </div>
       <template v-for="row in treeRows" :key="row.path">
         <button
@@ -234,10 +230,10 @@ defineExpose({
           :class="[
             row.entry.is_dir
               ? selectedDirectory === row.path
-                ? 'bg-[var(--app-hover-soft)] text-[var(--app-fg)]'
+                ? 'bg-(--app-hover-soft) text-(--app-fg)'
                 : ''
               : activePath === row.path
-                ? 'bg-[var(--app-hover-soft)] text-[var(--app-fg)]'
+                ? 'bg-(--app-hover-soft) text-(--app-fg)'
                 : '',
             !row.entry.is_dir ? 'cursor-grab active:cursor-grabbing' : ''
           ]"
@@ -291,7 +287,7 @@ defineExpose({
             <input
               v-model="pendingName"
               data-pending-create-input
-              class="h-6 min-w-0 flex-1 rounded border border-primary bg-(--workspace-surface-sub-panel) px-1.5 text-[length:var(--app-tree-font-size)] text-(--app-fg) outline-none"
+              class="h-6 min-w-0 flex-1 rounded border border-primary bg-(--workspace-surface-sub-panel) px-1.5 text-(length:--app-tree-font-size) text-(--app-fg) outline-none"
               :placeholder="
                 row.createKind === 'directory' ? t('koko.sftpEditor.directoryName') : t('koko.sftpEditor.fileName')
               "

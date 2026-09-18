@@ -1648,7 +1648,7 @@
       "unpinTab": "Bỏ ghim",
       "searchAssets": "Tìm tài sản để truyền tệp…",
       "dropFiles": "Thả tệp vào đây",
-      "dropFilesHint": "Tệp sẽ được tải hàng loạt lên thư mục SFTP hiện tại ở bên phải",
+      "dropFilesHint": "Chọn tệp sẽ mở hộp thoại gửi để tải hàng loạt lên các đích SFTP đã chọn",
       "dropTabToLeftPane": "Chuyển thẻ sang khung trái",
       "dropTabToRightPane": "Chuyển thẻ sang khung phải",
       "chooseFiles": "Chọn tệp",

@@ -20,7 +20,12 @@ import { useSftpTransferUi } from "#koko/composables/sftp/useSftpTransferUi";
 import { useKokoHostAdapter } from "#koko/host";
 import { useFileTransferStore } from "#koko/stores/fileTransfer";
 import { buildSftpDistributionGroups } from "#koko/utils/sftpDistribution";
-import { buildSftpTransferInputs, filterSftpDistributionTargets, safeLocalDownloadName } from "./selectors";
+import {
+  buildSftpTransferInputs,
+  filterSftpDistributionTargets,
+  safeLocalDownloadName,
+  uniqueRemotePanesForSend
+} from "./selectors";
 import { hasFolderBrowserUpload } from "./transfer";
 import { useBrowserDownloadTransferEndpoint } from "./useBrowserDownloadTransferEndpoint";
 import { useBrowserUploadTransferEndpoint, WEB_UPLOAD_ENDPOINT_ID } from "./useBrowserUploadTransferEndpoint";
@@ -108,7 +113,13 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
       });
     }
 
-    for (const pane of options.remotePanes.value) {
+    const rankedRemotes = [...options.remotePanes.value].sort((left, right) => {
+      const leftConnected = paneOnline[left.id] === true ? 1 : 0;
+      const rightConnected = paneOnline[right.id] === true ? 1 : 0;
+      if (leftConnected !== rightConnected) return rightConnected - leftConnected;
+      return Number(right.side === "right") - Number(left.side === "right");
+    });
+    for (const pane of uniqueRemotePanesForSend(rankedRemotes)) {
       if (pane.transferEndpoint.id === sourceId) continue;
       const paneRef = options.remotePaneRefs.value[pane.id];
       targets.push({
@@ -608,16 +619,13 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   }
 
   async function uploadWebFiles(files: File[]) {
-    // Browser global left pane has no local FS — stage File objects and use Transfer Center.
+    // Browser global left pane has no local FS — stage File objects and pick targets in the send modal.
     if (!files.length) return;
     if (hasFolderBrowserUpload(files)) {
       toast.add({ title: options.translate("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
       return;
     }
-    const checkedTargets = checkedRemotePanes("right");
-    const activeTarget = options.activePaneForSide("right");
-    const targets = checkedTargets.length ? checkedTargets : activeTarget ? [activeTarget] : [];
-    if (!targets.length) {
+    if (!options.remotePanes.value.some((pane) => remotePaneConnected(pane.id))) {
       toast.add({ title: options.translate("koko.fileManagement.selectRemoteTarget"), color: "warning" });
       return;
     }
@@ -626,28 +634,16 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     const staged = browserUploadEndpoint.stageFiles(files);
     if (!staged.entries.length) return;
 
-    const payload: SftpTransferSourcePayload = {
-      sourceEndpoint: browserUploadEndpoint.ref,
-      sourcePath: staged.sourcePath,
-      sourceSelectionRevision: Date.now(),
-      entries: staged.entries
-    };
-
-    if (targets.length > 1) {
-      openSendModal(
-        payload,
-        targets.map((pane) => pane.id)
-      );
-      return;
-    }
-
-    const target = targets[0]!;
-    queueSftpTransfer(
+    const checkedTargets = checkedRemotePanes("right");
+    const activeTarget = options.activePaneForSide("right");
+    openSendModal(
       {
-        ...payload,
-        destinationPath: toValue(options.remotePaneRefs.value[target.id]?.manager.currentPath) || "/"
+        sourceEndpoint: browserUploadEndpoint.ref,
+        sourcePath: staged.sourcePath,
+        sourceSelectionRevision: Date.now(),
+        entries: staged.entries
       },
-      target.transferEndpoint
+      checkedTargets.length ? checkedTargets.map((pane) => pane.id) : activeTarget ? [activeTarget.id] : []
     );
   }
 

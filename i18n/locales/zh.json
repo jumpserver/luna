@@ -1824,7 +1824,7 @@
       "unpinTab": "取消固定",
       "searchAssets": "搜索要传输文件的资产…",
       "dropFiles": "拖动文件到这里",
-      "dropFilesHint": "文件将批量上传到右侧当前 SFTP 目录",
+      "dropFilesHint": "选文件后将打开发送弹窗，批量上传到所选 SFTP 目标",
       "dropTabToLeftPane": "移动标签到左侧面板",
       "dropTabToRightPane": "移动标签到右侧面板",
       "chooseFiles": "选择文件",

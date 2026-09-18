@@ -32,6 +32,16 @@ export function rememberSftpConnection(connections: RecentSftpConnection[], entr
   return [entry, ...connections.filter((item) => item.assetId !== entry.assetId)].slice(0, limit);
 }
 
+export function uniqueRemotePanesForSend<T extends { assetId?: string }>(panes: T[]): T[] {
+  const seen = new Set<string>();
+  return panes.filter((pane) => {
+    if (!pane.assetId) return true;
+    if (seen.has(pane.assetId)) return false;
+    seen.add(pane.assetId);
+    return true;
+  });
+}
+
 export function filterSftpDistributionTargets(targets: SftpDistributionTargetOption[], search: string) {
   const query = search.trim().toLowerCase();
   if (!query) return targets;

@@ -465,6 +465,32 @@ describe("sftp professional workbench", () => {
     expect(remotePaneToolbar).toContain("koko.actions.upload");
   });
 
+  it("opens the send modal from web upload instead of auto-queuing a single target", () => {
+    const uploadWebFiles = transferCoordinatorComposable.slice(
+      transferCoordinatorComposable.indexOf("async function uploadWebFiles"),
+      transferCoordinatorComposable.indexOf("function destinationPathFor")
+    );
+    expect(uploadWebFiles).toContain("openSendModal");
+    expect(uploadWebFiles).toContain("remotePaneConnected");
+    expect(uploadWebFiles).not.toContain("sendTargetOptions");
+    expect(uploadWebFiles).not.toContain("queueSftpTransfer");
+  });
+
+  it("teleports remote panes so moving a tab across sides does not remount the session", () => {
+    expect(globalWorkspaceComponent).toContain("<Teleport");
+    expect(globalWorkspaceComponent).toContain('v-for="pane in remotePanes"');
+    expect(globalWorkspaceComponent).toContain("sftp-global-pane-host");
+    expect(globalWorkspaceComponent).toContain(
+      'v-show="globalActiveIds[pane.side] === pane.id" class="flex min-h-0 flex-1 flex-col"'
+    );
+    expect(globalWorkspaceComponent).not.toContain(
+      '<KokoFileManagementPane\n        v-show="globalActiveIds[pane.side] === pane.id"'
+    );
+    expect(globalWorkspaceComponent).not.toContain('v-for="pane in panesForSide(side)"');
+    expect(transferCoordinatorComposable).toContain("uniqueRemotePanesForSend");
+    expect(transferCoordinatorComposable).toContain("rankedRemotes");
+  });
+
   it("uses tab overflow for session dual-remote chrome without a floating transfer center", () => {
     expect(sessionWorkspaceComponent).not.toContain("KokoSftpTransferCenter");
     expect(sessionWorkspaceComponent).not.toContain("sftp-file-management__topbar");
@@ -603,7 +629,7 @@ describe("sftp professional workbench", () => {
     expect(transferCoordinatorComposable).toContain("const checkedTargets = sendTargetOptions.value.filter");
     expect(transferCoordinatorComposable).toContain("paneOnline[pane.id] === true");
     expect(transferCoordinatorComposable).toContain("function setPaneOnline");
-    expect(sessionWorkspaceComponent).toContain("@connection-change=\"setPaneOnline('primary', $event)\"");
+    expect(sessionWorkspaceComponent).toContain('@connection-change="handlePrimaryConnectionChange"');
     expect(sessionWorkspaceComponent).toContain('@connection-change="setPaneOnline(pane.id, $event)"');
     expect(globalWorkspaceComponent).toContain('@connection-change="setPaneOnline(pane.id, $event)"');
     expect(transferCoordinatorComposable).toContain("queueSftpTransferToSelected");
