@@ -112,6 +112,7 @@ let resizeHandle: HTMLElement | null = null;
 let resizePointerId: number | null = null;
 const terminalSocket = useKubernetesTerminalSocket();
 
+const connectingOverlay = computed(() => Boolean((tab.value as { connectionProgress?: string }).connectionProgress));
 const activeTab = computed(() => terminalTabs.value.find((item) => item.id === activeTabId.value) || null);
 const assetName = computed(() => tab.value.assetName || t("koko.kubernetes.name"));
 const resize = useDebounceFn(() => {
@@ -826,7 +827,10 @@ onUnmounted(() => {
             class="kubernetes-terminal absolute inset-0"
             :class="activeTabId === item.id ? '' : 'pointer-events-none invisible'"
           />
-          <div v-if="!terminalTabs.length" class="grid h-full place-items-center p-6 text-sm text-(--app-muted)">
+          <div
+            v-if="!terminalTabs.length && !connectingOverlay"
+            class="grid h-full place-items-center p-6 text-sm text-(--app-muted)"
+          >
             <div class="flex flex-col items-center gap-3">
               <UIcon name="i-lucide-square-terminal" class="size-10" />
               <span>{{ t("koko.kubernetes.empty") }}</span>

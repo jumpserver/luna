@@ -7,6 +7,11 @@ describe("kubernetes workspace click typing", () => {
     expect(kubernetesWorkspace).toContain('@click="void (resourceTreeOpen = true)"');
   });
 
+  it("hides the idle empty placeholder while the connection progress overlay is showing", () => {
+    expect(kubernetesWorkspace).toContain('v-if="!terminalTabs.length && !connectingOverlay"');
+    expect(kubernetesWorkspace).toContain("koko.kubernetes.empty");
+  });
+
   it("keeps the themed terminal edge-to-edge with FitAddon-aware text spacing", () => {
     expect(kubernetesWorkspace).toMatch(
       /\.kubernetes-terminal :deep\(\.terminal\)\s*\{[^}]*height:\s*100%;[^}]*padding:\s*8px 2px 4px 8px;/
