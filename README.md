@@ -66,4 +66,6 @@ Report problems in [Issues](https://github.com/jumpserver/luna/issues). For usag
 
 ## License
 
-[MIT](LICENSE)
+This project is licensed under the GNU General Public License version 3 (GPLv3), consistent with the [JumpServer main repository](https://github.com/jumpserver/jumpserver). See [LICENSE](LICENSE) for the full license text.
+
+Third-party notices are retained in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

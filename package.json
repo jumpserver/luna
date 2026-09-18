@@ -6,7 +6,7 @@
   "packageManager": "pnpm@11.4.0",
   "description": "JumpServer web application",
   "author": "JumpServer",
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "engines": {
     "node": ">=22.19.0"
   },
