@@ -141,15 +141,7 @@ export const useKokoTerminalSocket = () => {
     const tabId = unref(sessionCtxRef)?.tabId;
     if (!tabId) return;
 
-    hostAdapter.markSessionFailed(
-      {
-        id: tabId,
-        assetId: "",
-        protocol: "",
-        account: ""
-      },
-      connectionError.value
-    );
+    hostAdapter.markSessionDisconnected(tabId, connectionError.value);
   };
 
   const fitToContainer = () => {
@@ -386,10 +378,6 @@ export const useKokoTerminalSocket = () => {
         lastSendTime: lastSendTime.value.toISOString(),
         lastReceiveTime: lastReceiveTime.value.toISOString()
       });
-      if (!sessionReady) {
-        reportInitialConnectionFailure();
-        return;
-      }
       const message = t(detail.messageKey, {
         code: event.code,
         reason: detail.reasonKey ? t(detail.reasonKey) : ""

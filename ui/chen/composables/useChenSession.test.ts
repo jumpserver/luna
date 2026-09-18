@@ -6,7 +6,6 @@ function createSession() {
     authenticate: async () => "token",
     markConnected: vi.fn(),
     markDisconnected: vi.fn(),
-    markFailed: vi.fn(),
     onBeforeReady: async () => {},
     onAfterReady: async () => {},
     onDisconnected: vi.fn(),
@@ -49,7 +48,6 @@ describe("chen session dialogs", () => {
       authenticate: async () => "token",
       markConnected: vi.fn(),
       markDisconnected: vi.fn(),
-      markFailed: vi.fn(),
       onBeforeReady: async () => {},
       onAfterReady: async () => {},
       onDisconnected: vi.fn(),
@@ -66,7 +64,6 @@ describe("chen session dialogs", () => {
 
   it("marks a ready session as disconnected when its socket closes", async () => {
     const markDisconnected = vi.fn();
-    const markFailed = vi.fn();
     const socket = {
       readyState: 0,
       onopen: null as ((event: Event) => void) | null,
@@ -80,7 +77,6 @@ describe("chen session dialogs", () => {
       authenticate: async () => "token",
       markConnected: vi.fn(),
       markDisconnected,
-      markFailed,
       onBeforeReady: async () => {},
       onAfterReady: async () => {},
       onDisconnected: vi.fn(),
@@ -97,7 +93,37 @@ describe("chen session dialogs", () => {
     socket.onclose?.({ code: 1006, reason: "" } as CloseEvent);
 
     expect(markDisconnected).toHaveBeenCalled();
-    expect(markFailed).not.toHaveBeenCalled();
+  });
+
+  it("marks a session as disconnected when its socket closes before ready", async () => {
+    const markDisconnected = vi.fn();
+    const socket = {
+      readyState: 0,
+      onopen: null as ((event: Event) => void) | null,
+      onmessage: null as ((event: MessageEvent) => void) | null,
+      onerror: null,
+      onclose: null as ((event: CloseEvent) => void) | null,
+      send: vi.fn(),
+      close: vi.fn()
+    };
+    const session = useChenSession({
+      authenticate: async () => "token",
+      markConnected: vi.fn(),
+      markDisconnected,
+      onBeforeReady: async () => {},
+      onAfterReady: async () => {},
+      onDisconnected: vi.fn(),
+      showMessage: vi.fn(),
+      resolveUrl: () => "ws://chen.test/ws/session",
+      createSocket: () => socket as unknown as WebSocket
+    });
+
+    await session.bootstrapSession();
+    socket.readyState = 1;
+    socket.onopen?.({} as Event);
+    socket.onclose?.({ code: 1006, reason: "" } as CloseEvent);
+
+    expect(markDisconnected).toHaveBeenCalled();
   });
 
   it("forwards MCP frames received before the main session is ready", async () => {
@@ -115,7 +141,6 @@ describe("chen session dialogs", () => {
       authenticate: async () => "token",
       markConnected: vi.fn(),
       markDisconnected: vi.fn(),
-      markFailed: vi.fn(),
       onBeforeReady: async () => {},
       onAfterReady: async () => {},
       onDisconnected: vi.fn(),

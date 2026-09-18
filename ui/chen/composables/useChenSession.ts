@@ -10,7 +10,6 @@ interface UseChenSessionOptions {
   authenticate: () => Promise<string>;
   markConnected: () => void;
   markDisconnected: (reason: string) => void;
-  markFailed: (reason: string) => void;
   onBeforeReady: () => Promise<void>;
   onAfterReady: () => Promise<void>;
   onDisconnected: () => void;
@@ -71,7 +70,6 @@ export function useChenSession(options: UseChenSessionOptions) {
 
   function handleFatal(cause: unknown, reason = "") {
     if (fatalNotified) return;
-    const wasReady = ready.value;
     const message = normalizeError(cause);
     fatalNotified = true;
     bootstrapGeneration += 1;
@@ -80,8 +78,7 @@ export function useChenSession(options: UseChenSessionOptions) {
     loading.value = false;
     error.value = message;
     errorReason.value = reason;
-    if (wasReady) options.markDisconnected(message);
-    else options.markFailed(message);
+    options.markDisconnected(message);
 
     // A Chen session owns all of its consoles. Close dependent consoles first
     // so their backend close handlers can still resolve the active session.

@@ -101,7 +101,7 @@ const { t } = useI18n();
 const { openAi } = useAiPanel();
 const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
-const { markSessionConnected, markSessionDisconnected, markSessionFailed } = useWorkspaceTabs();
+const { markSessionConnected, markSessionDisconnected } = useWorkspaceTabs();
 const tabRef = toRef(props, "tab");
 const endpointUrl = computed(() => {
   const explicit = String(props.tab.payload?.endpointUrl || "").trim();
@@ -360,16 +360,6 @@ const session = useChenSession({
   translate: t,
   markConnected: () => markSessionConnected(props.tab.id),
   markDisconnected: (reason) => markSessionDisconnected(props.tab.id, reason),
-  markFailed: (reason) =>
-    markSessionFailed(
-      {
-        tabId: props.tab.id,
-        assetId: props.tab.assetId,
-        protocol: props.tab.protocol,
-        account: props.tab.account
-      },
-      reason
-    ),
   onBeforeReady: async () => {
     await auth.loadProfile();
     await tree.loadNodeChildren(null);

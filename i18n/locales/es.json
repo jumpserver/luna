@@ -1162,7 +1162,8 @@
     "OpenSession": "Abrir sesión",
     "Connected": "Conectado",
     "OpenAgain": "Abrir de nuevo",
-    "BackToForm": "Volver al formulario"
+    "BackToForm": "Volver al formulario",
+    "StartFaceVerify": "Iniciar verificación"
   },
   "ConnectionGuide": {
     "TokenCommand": "Comando de conexión (token)",

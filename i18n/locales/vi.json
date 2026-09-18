@@ -1162,7 +1162,8 @@
     "OpenSession": "Mở phiên",
     "Connected": "Đã kết nối",
     "OpenAgain": "Mở lại",
-    "BackToForm": "Quay lại biểu mẫu"
+    "BackToForm": "Quay lại biểu mẫu",
+    "StartFaceVerify": "Bắt đầu xác minh"
   },
   "ConnectionGuide": {
     "TokenCommand": "Lệnh kết nối (token)",

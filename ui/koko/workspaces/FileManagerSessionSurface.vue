@@ -25,22 +25,13 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const host = useKokoHostAdapter();
 const tab = toRef(props, "tab");
-let sessionReady = false;
-
 function handleConnectionChange(connected: boolean) {
   if (!connected) return;
-  sessionReady = true;
   host.markSessionConnected(tab.value.id);
 }
 
 function handleConnectionFailure(reason: string) {
-  if (sessionReady) host.markSessionDisconnected(tab.value.id, reason);
-  else {
-    host.markSessionFailed(
-      { id: tab.value.id, assetId: tab.value.assetId, protocol: tab.value.protocol, account: tab.value.account },
-      reason
-    );
-  }
+  host.markSessionDisconnected(tab.value.id, reason);
 }
 const { context, error, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab, {
   protocol: "sftp"
