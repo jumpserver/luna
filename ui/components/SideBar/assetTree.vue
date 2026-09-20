@@ -7,6 +7,7 @@ import {
   authorizationTreeMetricId,
   hasAssetName,
   registerAssetNameLookup,
+  unwrapTypeTreeRoot,
   useAssetTree,
   useAssetTreeSearch
 } from "~/composables/useAssetTree";
@@ -209,20 +210,6 @@ const batchMenuItems = computed(() => [
   ]
 ]);
 
-const resetTreeLevels = (nodes: AssetTreeNode[], level = 0) => {
-  for (const node of nodes) {
-    node.level = level;
-    if (node.children?.length) resetTreeLevels(node.children, level + 1);
-  }
-  return nodes;
-};
-
-const unwrapAllTypesRoot = (nodes: AssetTreeNode[]) => {
-  const root = nodes.find((node) => node.id.toUpperCase() === "ROOT");
-  if (!root?.children?.length) return nodes;
-  return resetTreeLevels(root.children);
-};
-
 const removeFavoriteNodes = (nodes: AssetTreeNode[]): AssetTreeNode[] =>
   nodes
     .filter((node) => node.id.toLowerCase() !== "favorite" && node.key?.toLowerCase() !== "favorite")
@@ -310,7 +297,7 @@ const loadRoot = async (kind: PanelKind, requestEpoch: number) => {
         );
       }
     } else {
-      typeNodes.value = unwrapAllTypesRoot(nodes);
+      typeNodes.value = unwrapTypeTreeRoot(nodes);
     }
   } catch (error) {
     if (requestEpoch === treeRequestEpoch) reportError(error);
