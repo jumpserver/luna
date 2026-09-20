@@ -287,6 +287,8 @@
     "Save": "Save",
     "More": "More",
     "SaveFailed": "Failed to save script",
+    "DeleteConfirm": "Delete \"{name}\"?",
+    "DeleteFailed": "Failed to delete script",
     "FillBatchCommand": "Fill batch command",
     "GroupShell": "Shell",
     "GroupPowerShell": "PowerShell",

@@ -287,6 +287,8 @@
     "Save": "保存",
     "More": "更多",
     "SaveFailed": "保存脚本失败",
+    "DeleteConfirm": "确认删除“{name}”吗？",
+    "DeleteFailed": "删除脚本失败",
     "FillBatchCommand": "填入批量命令",
     "GroupShell": "Shell",
     "GroupPowerShell": "PowerShell",
