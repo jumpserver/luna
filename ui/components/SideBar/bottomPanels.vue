@@ -392,11 +392,6 @@ async function copySnippet(snippet: Snippet) {
 function snippetActionItems(snippet: Snippet): DropdownMenuItem[] {
   return [
     {
-      label: t("Common.CopyOnly"),
-      icon: "i-lucide-copy",
-      onSelect: () => void copySnippet(snippet)
-    },
-    {
       label: t("Common.Delete"),
       icon: "i-lucide-trash-2",
       color: "error",
@@ -715,18 +710,39 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
                 <span class="block truncate font-ui-mono text-[10px] text-gray-400">{{ snippet.args }}</span>
               </span>
             </button>
-            <UDropdownMenu :items="snippetActionItems(snippet)" size="sm" :content="{ align: 'end', side: 'bottom' }">
-              <UButton
-                color="neutral"
-                variant="ghost"
+            <div
+              class="flex shrink-0 items-center gap-0.5 opacity-40 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+            >
+              <UTooltip :text="t('Common.CopyOnly')" :delay-duration="120">
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-copy"
+                  class="size-6 justify-center p-0"
+                  :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+                  :aria-label="t('Common.CopyOnly')"
+                  @click.stop="copySnippet(snippet)"
+                />
+              </UTooltip>
+              <UDropdownMenu
+                :items="snippetActionItems(snippet)"
                 size="xs"
-                icon="i-lucide-ellipsis"
-                class="size-6 shrink-0 justify-center p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-                :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-                :aria-label="t('Common.Actions')"
-                @click.stop
-              />
-            </UDropdownMenu>
+                :content="{ align: 'end', side: 'bottom' }"
+                :ui="{ content: 'min-w-24', group: 'p-0.5', item: 'px-2 py-1', itemLabel: 'text-xs' }"
+              >
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-ellipsis"
+                  class="size-6 justify-center p-0"
+                  :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+                  :aria-label="t('Common.Actions')"
+                  @click.stop
+                />
+              </UDropdownMenu>
+            </div>
           </div>
         </div>
       </div>
