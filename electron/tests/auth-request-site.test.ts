@@ -5,32 +5,47 @@ import test from "node:test";
 import { runInNewContext } from "node:vm";
 import { parseUrl } from "../src/shared/url.ts";
 
-// Exercise both request paths without starting Electron, like the auth-language checks.
+// Exercise request paths without starting Electron, like the auth-language checks.
 const source = readFileSync(new URL("../src/auth/service.ts", import.meta.url), "utf8");
 const helpers = source.slice(source.indexOf("function endpoint("), source.indexOf("function base64Url("));
-const methods = source.slice(source.indexOf("  async apiRequest("), source.indexOf("  async createKokoConnectTicket("));
+const methods = source.slice(source.indexOf("  async apiRequest("), source.indexOf("  async logout("));
 const script = stripTypeScriptTypes(`${helpers}\nnew (class { ${methods} })()`);
 
-function setup(env: Record<string, string> = {}, origin = "https://jumpserver.test") {
+function setup(env: Record<string, string> = {}, origin = "https://jumpserver.test", responseStatus = 200) {
   const requests: { url: string; init: RequestInit }[] = [];
   const session = { origin, sessionKey: "site", bearerToken: "test-token", orgId: "test-org" };
   const auth = runInNewContext(script, {
     process: { env },
     parseUrl,
+    URL,
     AbortSignal,
     TextDecoder,
-    electronLog: { warn() {} }
+    electronLog: { warn() {}, info() {} }
   });
   Object.assign(auth, {
     currentSession: () => session,
     freshToken: async () => session.bearerToken,
     fetchSite: async (url: string, init: RequestInit) => {
       requests.push({ url, init });
-      return new Response("{}");
+      return new Response("{}", { status: responseStatus });
     }
   });
   return { auth, requests, session };
 }
+
+test("Koko tickets bind to the token organization without changing the selected organization", async () => {
+  for (const orgId of ["asset-org", undefined]) {
+    const { auth, requests, session } = setup({}, "https://jumpserver.test", 201);
+    session.orgId = "00000000-0000-0000-0000-000000000000";
+    await auth.createKokoConnectTicket({ baseUrl: "https://koko.test/site/", tokenId: "token-id", orgId });
+    const { url, init } = requests[0];
+    assert.equal(url, "https://koko.test/site/koko/api/connect-ticket/");
+    assert.equal(init.headers["Authorization"], "Bearer test-token");
+    assert.equal(init.headers["X-JMS-ORG"], orgId || session.orgId);
+    assert.deepEqual(JSON.parse(String(init.body)), { token_id: "token-id", org_id: orgId || session.orgId });
+    assert.equal(session.orgId, "00000000-0000-0000-0000-000000000000");
+  }
+});
 
 for (const method of ["apiRequest", "apiStreamRequest"]) {
   const request = { method: "GET", service: "kael", path: "/kael/api/v1/bootstrap" };

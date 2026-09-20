@@ -420,6 +420,59 @@ describe("sFTP browser protocol", () => {
     await expect(remove).rejects.toBeInstanceOf(SftpPermissionDeniedError);
   });
 
+  it("renames an entry over the mutation channel", async () => {
+    const { fake, socket } = openSocket();
+    const operations = useSftpOperations(ref("/workspace"), socket).operations;
+
+    const rename = operations.renamePath("/workspace/old.txt", "new.txt");
+    await nextMessage();
+    const request = lastSent(fake);
+    expect(request).toMatchObject({ type: SftpMessageType.Data, cmd: SftpCommand.Rename });
+    expect(JSON.parse(request.data || "{}")).toMatchObject({ path: "/workspace/old.txt", new_name: "new.txt" });
+
+    fake.receive({
+      id: request.id,
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.Rename,
+      data: SftpDataStatus.Ok
+    });
+    await expect(rename).resolves.toBeUndefined();
+  });
+
+  it("saves file bytes and returns the remote entry", async () => {
+    const { fake, socket } = openSocket();
+    const operations = useSftpOperations(ref("/workspace"), socket).operations;
+    const entry = {
+      name: "readme.txt",
+      size: "2",
+      perm: "-rw-r--r--",
+      mod_time: "2026-08-17T08:00:00Z",
+      type: "file",
+      is_dir: false
+    };
+
+    const save = operations.saveFile("/workspace/readme.txt", new TextEncoder().encode("hi"), {
+      expectedVersion: "3"
+    });
+    await vi.waitFor(() => expect(fake.sent).toHaveLength(1));
+    const request = lastSent(fake);
+    expect(request).toMatchObject({ type: SftpMessageType.Data, cmd: SftpCommand.Save });
+    expect(JSON.parse(request.data || "{}")).toMatchObject({
+      path: "/workspace/readme.txt",
+      size: 2,
+      expected_version: "3",
+      force: false
+    });
+
+    fake.receive({
+      id: request.id,
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.Save,
+      data: JSON.stringify(entry)
+    });
+    await expect(save).resolves.toEqual(entry);
+  });
+
   it("refreshes the token and ticket only when reconnect is explicitly invoked", async () => {
     const activeContext = ref({ ...context });
     const connect = vi.fn();

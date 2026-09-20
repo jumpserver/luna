@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import type { RightPanelTab } from "~/composables/useRightPanel";
-import { assetSupportsSftp } from "#koko/composables/sftp/file-manager/selectors";
 import { getLionWorkspaceSession } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
+import {
+  nextRightPanelTab,
+  rememberedRightPanelTab,
+  rememberRightPanelTab,
+  showSftpRightPanelTab
+} from "~/composables/rightPanelTabState";
 import { getAssetDetailRequest } from "~/composables/useApiRequest";
 
 const { t } = useI18n();
@@ -15,52 +20,54 @@ const activeSession = computed(() => {
   return tab?.panes.find((pane) => pane.id === activePaneId.value) || tab;
 });
 const lionSession = computed(() => getLionWorkspaceSession(activeSession.value?.id || ""));
+const activeSessionId = computed(() => activeSession.value?.id || "");
 
-const localPermedProtocols = computed(() => {
+const localPermedProtocols = computed(() => activeSession.value?.permedProtocols);
+const protocolCacheKey = computed(() => {
   const session = activeSession.value;
-  const tab = workspaceTab.value;
-  return session?.permedProtocols?.length ? session.permedProtocols : tab?.permedProtocols;
+  return session?.id && session.assetId ? `${session.id}:${session.assetId}` : "";
 });
-const resolvedPermedProtocols = shallowRef<Array<{ name?: unknown }> | undefined>(undefined);
-let protocolFetch = 0;
+const protocolsByPane = shallowReactive(new Map<string, Array<{ name?: unknown }>>());
+const protocolFetchByPane = new Map<string, number>();
 
 watch(
   () => ({
-    sessionId: activeSession.value?.id,
+    cacheKey: protocolCacheKey.value,
     assetId: activeSession.value?.assetId,
     orgId: activeSession.value?.orgId,
     protocol: activeSession.value?.protocol,
     local: localPermedProtocols.value
   }),
-  async ({ assetId, orgId, protocol, local }) => {
-    if (protocol?.toLowerCase() !== "ssh") {
-      resolvedPermedProtocols.value = undefined;
-      return;
-    }
+  async ({ cacheKey, assetId, orgId, protocol, local }) => {
+    if (protocol?.toLowerCase() !== "ssh" || !cacheKey) return;
     if (local?.length) {
-      resolvedPermedProtocols.value = local;
+      protocolFetchByPane.set(cacheKey, (protocolFetchByPane.get(cacheKey) || 0) + 1);
+      protocolsByPane.set(cacheKey, local);
       return;
     }
-    const gen = ++protocolFetch;
-    resolvedPermedProtocols.value = undefined;
-    if (!assetId) return;
+    if (!assetId || protocolsByPane.has(cacheKey)) return;
+    const gen = (protocolFetchByPane.get(cacheKey) || 0) + 1;
+    protocolFetchByPane.set(cacheKey, gen);
     try {
       const detail = await getAssetDetailRequest(assetId, orgId);
-      if (gen !== protocolFetch) return;
-      resolvedPermedProtocols.value = detail.permed_protocols ?? detail.permedProtocols ?? [];
+      if (protocolFetchByPane.get(cacheKey) !== gen) return;
+      protocolsByPane.set(cacheKey, detail.permed_protocols ?? detail.permedProtocols ?? []);
     } catch {
-      if (gen !== protocolFetch) return;
-      resolvedPermedProtocols.value = [];
+      /* Keep the pane unresolved so a later switch-back can retry. */
     }
   },
   { immediate: true }
 );
 
-const showSftpTab = computed(() => {
-  if (activeSession.value?.protocol?.toLowerCase() !== "ssh") return false;
-  if (!resolvedPermedProtocols.value) return false;
-  return assetSupportsSftp(resolvedPermedProtocols.value);
+const resolvedPermedProtocols = computed(() => {
+  if (activeSession.value?.protocol?.toLowerCase() !== "ssh") return undefined;
+  if (localPermedProtocols.value?.length) return localPermedProtocols.value;
+  return protocolCacheKey.value ? protocolsByPane.get(protocolCacheKey.value) : undefined;
 });
+const sftpResolved = computed(
+  () => activeSession.value?.protocol?.toLowerCase() !== "ssh" || resolvedPermedProtocols.value !== undefined
+);
+const showSftpTab = computed(() => showSftpRightPanelTab(activeSession.value?.protocol, resolvedPermedProtocols.value));
 
 const tabs = computed(() => {
   if (activeWorkspaceMode.value === "files") return [];
@@ -105,17 +112,32 @@ const panelComponents = {
 
 const activePanelComponent = computed(() => panelComponents[activeTab.value]);
 
+let prevPaneId = "";
 watch(
-  tabs,
-  (items) => {
+  [activeSessionId, tabs, sftpResolved],
+  ([paneId, items]) => {
     if (!items.length) {
       setOpen(false);
       return;
     }
-    if (!items.some((item) => item.value === activeTab.value)) setActiveTab(items[0]?.value || "session");
+    const paneChanged = prevPaneId !== paneId;
+    if (paneChanged && prevPaneId) rememberRightPanelTab(prevPaneId, activeTab.value);
+    const next = nextRightPanelTab({
+      available: items.map((item) => item.value),
+      remembered: paneId ? rememberedRightPanelTab(paneId) : undefined,
+      active: activeTab.value,
+      sftpResolved: sftpResolved.value,
+      paneChanged
+    });
+    if (next !== activeTab.value) setActiveTab(next);
+    if (paneId) rememberRightPanelTab(paneId, next);
+    prevPaneId = paneId;
   },
   { immediate: true }
 );
+watch(activeTab, (tab) => {
+  if (activeSessionId.value) rememberRightPanelTab(activeSessionId.value, tab);
+});
 </script>
 
 <template>

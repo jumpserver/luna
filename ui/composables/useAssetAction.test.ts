@@ -622,6 +622,7 @@ describe("opening assets in local applications", () => {
     [undefined, false],
     [15001, undefined]
   ])("uses the Web Proxy endpoint port %s with license %s", async (port, license) => {
+    mocks.createToken.mockResolvedValue({ id: "id", value: "token-value", org_id: "asset-org" });
     mocks.getPublicSettings.mockResolvedValue({ XPACK_LICENSE_IS_VALID: license });
     vi.stubGlobal("isDesktopRuntime", () => true);
     vi.stubGlobal("isElectronRuntime", () => true);
@@ -655,7 +656,11 @@ describe("opening assets in local applications", () => {
     });
     await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
     expect(failed).not.toHaveBeenCalled();
-    expect(mocks.createTicket).toHaveBeenCalledWith({ baseUrl: "https://proxy.example", tokenId: "id" });
+    expect(mocks.createTicket).toHaveBeenCalledWith({
+      baseUrl: "https://proxy.example",
+      tokenId: "id",
+      orgId: "asset-org"
+    });
     expect(ready.mock.calls[0]?.[0].webProxy.ticket).toBe("web-ticket");
     expect(ready.mock.calls[0]?.[0].webProxy.ticketEndpoint).toBe(mocks.createTicket.mock.calls[0]?.[0].baseUrl);
     expect(ready.mock.calls[0]?.[0].webProxy.recordingEnabled).toBe(license === true);

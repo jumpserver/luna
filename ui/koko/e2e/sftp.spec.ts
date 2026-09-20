@@ -1,6 +1,7 @@
 import type { Page, WebSocketRoute } from "playwright/test";
 
 import { Buffer } from "node:buffer";
+import { createHash } from "node:crypto";
 import { expect, test } from "playwright/test";
 
 interface SftpEntry {
@@ -120,6 +121,7 @@ async function installSftpBackend(page: Page): Promise<MockSftpServer> {
     ["/home/tester", cloneEntries(rootEntries)],
     ["/home/tester/docs", cloneEntries(docsEntries)]
   ]);
+  const files = new Map<string, Buffer>([["/home/tester/release.txt", Buffer.from("release")]]);
 
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
@@ -222,8 +224,15 @@ async function installSftpBackend(page: Page): Promise<MockSftpServer> {
       const message = JSON.parse(String(raw)) as SftpRequest;
       if (message.type !== "SFTP_DATA") return;
       server.commands.push(message);
-      const data = JSON.parse(message.data || "{}") as { path?: string; name?: string };
-
+      const data = JSON.parse(message.data || "{}") as {
+        path?: string;
+        name?: string;
+        new_name?: string;
+        transfer_id?: string;
+        size?: number;
+        offset?: number;
+        length?: number;
+      };
       if (message.cmd === "list") {
         const path = data.path || "/home/tester";
         if (path === "/missing") {
@@ -272,6 +281,86 @@ async function installSftpBackend(page: Page): Promise<MockSftpServer> {
           (directories.get(parent) || []).filter((entry) => entry.name !== baseName(targetPath))
         );
         directories.delete(targetPath);
+        files.delete(targetPath);
+      }
+
+      if (message.cmd === "rename" && data.path && data.new_name) {
+        const parent = parentPath(data.path);
+        const previousName = baseName(data.path);
+        const entries = directories.get(parent) || [];
+        const entry = entries.find((item) => item.name === previousName);
+        if (entry) entry.name = data.new_name;
+        const nextPath = `${parent === "/" ? "" : parent}/${data.new_name}`;
+        const body = files.get(data.path);
+        if (body) {
+          files.delete(data.path);
+          files.set(nextPath, body);
+        }
+      }
+
+      if (message.cmd.startsWith("transfer_")) {
+        if (message.cmd === "transfer_read") {
+          const body = files.get(data.path || "") || Buffer.alloc(0);
+          const offset = data.offset || 0;
+          const slice = body.subarray(offset, offset + (data.length || body.length));
+          socket.send(
+            JSON.stringify({
+              id: message.id,
+              type: "SFTP_BINARY",
+              data: JSON.stringify({
+                offset,
+                sha256: createHash("sha256").update(slice).digest("hex"),
+                eof: offset + slice.length >= body.length
+              }),
+              raw: slice.toString("base64")
+            })
+          );
+          return;
+        }
+
+        if (message.cmd === "transfer_write") {
+          socket.send(
+            JSON.stringify({
+              id: message.id,
+              type: "SFTP_DATA",
+              cmd: message.cmd,
+              data: JSON.stringify({ committed_bytes: data.size || 0, duplicate: false })
+            })
+          );
+          return;
+        }
+
+        if (message.cmd === "transfer_commit" && data.path) {
+          const parent = parentPath(data.path);
+          const name = baseName(data.path);
+          const entries = directories.get(parent) || [];
+          if (!entries.some((entry) => entry.name === name)) {
+            entries.push({
+              name,
+              size: String(data.size || 0),
+              perm: "-rw-r--r--",
+              mod_time: "2026-08-17T08:05:00Z",
+              type: "file",
+              is_dir: false
+            });
+            directories.set(parent, entries);
+          }
+        }
+
+        socket.send(
+          JSON.stringify({
+            id: message.id,
+            type: "SFTP_DATA",
+            cmd: message.cmd,
+            data: JSON.stringify({
+              transfer_id: data.transfer_id || "transfer",
+              committed_bytes: message.cmd === "transfer_commit" ? data.size || 0 : 0,
+              total_bytes: data.size || 0,
+              state: message.cmd === "transfer_commit" ? "completed" : "ready"
+            })
+          })
+        );
+        return;
       }
 
       socket.send(JSON.stringify({ id: message.id, type: "SFTP_DATA", cmd: message.cmd, data: "ok" }));
@@ -316,8 +405,8 @@ async function connectRemoteSftp(page: Page) {
   await page.getByRole("button", { name: "Connect remote SFTP" }).click();
   const dialog = page.getByRole("dialog", { name: "Connect remote SFTP" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("Demo Org", { exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: "SFTP Host" }).click();
+  await page.getByRole("dialog", { name: "SFTP Host" }).getByRole("button", { name: "Connect" }).click();
 
   const table = page.locator('[data-sftp-tour="file-table"]');
   await expect(table.getByText("release.txt", { exact: true })).toBeVisible();
@@ -463,5 +552,61 @@ test.describe("koko SFTP workbench", () => {
     await openSftpWorkbench(page);
 
     await expect(page.getByRole("button", { name: "Transfer center" })).toBeVisible();
+  });
+
+  test("uploads a browser file through the transfer center", async ({ page }) => {
+    const server = await installSftpBackend(page);
+    const table = await connectRemoteSftp(page);
+
+    await page
+      .locator('input[type="file"]')
+      .first()
+      .setInputFiles({
+        name: "notes.txt",
+        mimeType: "text/plain",
+        buffer: Buffer.from("notes")
+      });
+
+    await expect(page.locator("#sftp-transfer-center").getByText("notes.txt", { exact: true })).toBeVisible();
+    await expect(table.getByText("notes.txt", { exact: true })).toBeVisible();
+    expect(server.commands.some((message) => message.cmd === "transfer_commit")).toBe(true);
+  });
+
+  test("downloads a remote file through the transfer center", async ({ page }) => {
+    await installSftpBackend(page);
+    await connectRemoteSftp(page);
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("checkbox", { name: "Select file release.txt" }).check();
+    await page.getByRole("toolbar", { name: "1 selected" }).getByRole("button", { name: "Download" }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe("release.txt");
+    await expect(page.getByRole("button", { name: /Transfer center/ })).toBeVisible();
+  });
+
+  test("renames a remote file through the context menu", async ({ page }) => {
+    const server = await installSftpBackend(page);
+    const table = await connectRemoteSftp(page);
+
+    await table.getByRole("button", { name: "release.txt" }).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Rename" }).click();
+    const dialog = page.getByRole("dialog", { name: "Rename" });
+    await dialog.getByRole("textbox", { name: "Rename" }).fill("release.md");
+    await dialog.getByRole("button", { name: "Rename" }).click();
+
+    await expect(table.getByText("release.md", { exact: true })).toBeVisible();
+    await expect(table.getByText("release.txt", { exact: true })).toHaveCount(0);
+    expect(
+      server.commands.filter((message) => message.cmd === "rename").map((message) => JSON.parse(message.data || "{}"))
+    ).toEqual([{ path: "/home/tester/release.txt", new_name: "release.md" }]);
+  });
+
+  test("shows hidden files when the preference is enabled", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("jumpserver-client:sftp-show-hidden-files", "true");
+    });
+    await installSftpBackend(page);
+    const table = await connectRemoteSftp(page);
+    await expect(table.getByText(".env", { exact: true })).toBeVisible();
   });
 });

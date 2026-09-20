@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { CharsetType, LangType } from "~/types";
 
+import { getPublicSettings } from "~/composables/useApiRequest";
 import { useRdpResolutionPreference } from "~/composables/useRdpResolutionPreference";
 import { useSettingManager } from "~/composables/useSettingManager";
 import {
@@ -133,6 +134,18 @@ const resolutionItems = computed(() => {
   ];
 });
 
+const colorQualityItems = computed(() => [
+  { label: t("Setting.RdpColorQuality8"), id: "8" },
+  { label: t("Setting.RdpColorQuality16"), id: "16" },
+  { label: t("Setting.RdpColorQuality24"), id: "24" },
+  { label: t("Setting.RdpColorQuality32"), id: "32" }
+]);
+
+const smartSizeItems = computed(() => [
+  { label: t("Setting.Disable"), id: "0" },
+  { label: t("Setting.Enable"), id: "1" }
+]);
+
 const selectedLanguage = computed<LangType>({
   get: () => (locale.value as LangType) || "zh",
   set: (code: LangType) => {
@@ -146,7 +159,16 @@ const selectedCharset = computed<CharsetType>({
   set: (value) => setCharsetPreference((value || "default") as CharsetType)
 });
 
-const { resolution: selectedResolution, busy: resolutionBusy } = useRdpResolutionPreference();
+const {
+  resolution: selectedResolution,
+  busy: graphicsBusy,
+  colorQuality: selectedColorQuality,
+  smartSize: selectedSmartSize,
+  fullScreen: selectedFullScreen,
+  multiScreen: selectedMultiScreen,
+  drivesRedirect: selectedDrivesRedirect
+} = useRdpResolutionPreference();
+const hasXPack = shallowRef(false);
 
 const selectedEnabled = computed<boolean>({
   get: () => backspaceAsCtrlH.value ?? false,
@@ -209,6 +231,12 @@ const commandHistoryFeedback = ref<"idle" | "done" | "empty">("idle");
 let commandHistoryFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
 
 onMounted(async () => {
+  try {
+    const settings = await getPublicSettings();
+    hasXPack.value = settings.XPACK_LICENSE_IS_VALID === true;
+  } catch {
+    hasXPack.value = false;
+  }
   if (!isDesktopRuntime()) return;
   await refreshFfmpegStatus();
   unlistenFfmpegProgress = await desktopListen<FfmpegPluginProgress>("ffmpeg-plugin-progress", (event) => {
@@ -283,12 +311,14 @@ async function clearCommandHistory() {
       >
         <USwitch v-model="selectedRightClickQuickPaste" :aria-label="t('Setting.TerminalRightClickPaste')" />
       </SettingsRow>
+    </SettingsGroup>
 
+    <SettingsGroup :title="t('Setting.RemoteDesktop')">
       <SettingsRow :title="t('Setting.Resolution')" :description="t('Setting.ResolutionDescription')">
         <USelect
           v-model="selectedResolution"
-          :loading="resolutionBusy"
-          :disabled="resolutionBusy"
+          :loading="graphicsBusy"
+          :disabled="graphicsBusy"
           :items="resolutionItems"
           value-key="id"
           :aria-label="t('Setting.Resolution')"
@@ -296,6 +326,48 @@ async function clearCommandHistory() {
           class="w-48"
         />
       </SettingsRow>
+
+      <SettingsRow :title="t('Setting.RdpColorQuality')" :description="t('Setting.RdpLocalClientDescription')">
+        <USelect
+          v-model="selectedColorQuality"
+          :loading="graphicsBusy"
+          :disabled="graphicsBusy"
+          :items="colorQualityItems"
+          value-key="id"
+          :aria-label="t('Setting.RdpColorQuality')"
+          size="sm"
+          class="w-48"
+        />
+      </SettingsRow>
+
+      <SettingsRow :title="t('Setting.RdpSmartSize')" :description="t('Setting.RdpLocalClientDescription')">
+        <USelect
+          v-model="selectedSmartSize"
+          :loading="graphicsBusy"
+          :disabled="graphicsBusy"
+          :items="smartSizeItems"
+          value-key="id"
+          :aria-label="t('Setting.RdpSmartSize')"
+          size="sm"
+          class="w-48"
+        />
+      </SettingsRow>
+
+      <template v-if="hasXPack">
+        <SettingsRow :title="t('Setting.RdpFullScreen')" :description="t('Setting.RdpLocalClientDescription')">
+          <USwitch v-model="selectedFullScreen" :disabled="graphicsBusy" :aria-label="t('Setting.RdpFullScreen')" />
+        </SettingsRow>
+        <SettingsRow :title="t('Setting.RdpMultiScreen')" :description="t('Setting.RdpLocalClientDescription')">
+          <USwitch v-model="selectedMultiScreen" :disabled="graphicsBusy" :aria-label="t('Setting.RdpMultiScreen')" />
+        </SettingsRow>
+        <SettingsRow :title="t('Setting.RdpDrivesRedirect')" :description="t('Setting.RdpLocalClientDescription')">
+          <USwitch
+            v-model="selectedDrivesRedirect"
+            :disabled="graphicsBusy"
+            :aria-label="t('Setting.RdpDrivesRedirect')"
+          />
+        </SettingsRow>
+      </template>
     </SettingsGroup>
 
     <SettingsGroup v-if="isDesktopRuntime() && ffmpegStatus" :divided="false" padded>
