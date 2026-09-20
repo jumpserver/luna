@@ -24,6 +24,7 @@ import type {
 import { AllCommunityModule, isColumn, ModuleRegistry } from "ag-grid-community";
 import { AgGridVue } from "ag-grid-vue3";
 import { formatChenGridValue, useChenGridPreferences } from "~/chen/composables/useChenGridPreferences";
+import { frGridLocale } from "~/chen/locales/fr";
 import {
   canUseChenCopy,
   createChenInsertSql,
@@ -82,7 +83,7 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const gridApi = shallowRef<GridReadyEvent["api"] | null>(null);
 const gridPreferences = useChenGridPreferences();
 const container = shallowRef<HTMLElement | null>(null);
@@ -548,8 +549,10 @@ onBeforeUnmount(() => {
     @keydown.capture="handleKeyDown"
   >
     <AgGridVue
+      :key="locale"
       class="h-full min-h-0 min-w-0 w-full"
       theme="legacy"
+      :locale-text="locale === 'fr' ? frGridLocale : undefined"
       :column-defs="columnDefs"
       :row-data="rowData"
       :default-col-def="defaultColDef"

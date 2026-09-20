@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { LangType, LanguagePreference } from "~/types";
+import { en, es, fr, ja, ko, pt_br, ru, vi, zh_cn, zh_tw } from "@nuxt/ui/locale";
 
 import { agentClient } from "#koko/composables/agent/agentClient";
 import defaultFavicon from "~/assets/facio.ico";
@@ -37,6 +38,8 @@ const webWorkspaceFavicon = useState<string>(WORKSPACE_FAVICON_STATE_KEY, () => 
 
 const { isMacOS, isWindows } = usePlatform();
 const { locale, setLocale, t } = useI18n();
+const uiLocales = { en, es, fr, ja, ko, pt_br, ru, vi, zh: zh_cn, zh_hant: zh_tw };
+const uiLocale = computed(() => uiLocales[normalizeLanguageCode(locale.value)]);
 watch(locale, (value) => agentClient.setResponseLanguage(normalizeLanguageCode(value)), {
   immediate: true,
   flush: "sync"
@@ -378,7 +381,7 @@ onBeforeUnmount(() => {
 <template>
   <Html class="overflow-x-hidden overflow-y-hidden">
     <Body class="font-sans antialiased h-screen w-screen">
-      <UApp>
+      <UApp :locale="uiLocale">
         <NuxtLayout>
           <NuxtPage :page-key="pageKey" />
         </NuxtLayout>

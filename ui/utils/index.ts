@@ -5,6 +5,7 @@ const INTL_LOCALE_BY_LANGUAGE: Record<LangType, string> = {
   zh: "zh-CN",
   zh_hant: "zh-TW",
   en: "en",
+  fr: "fr",
   ja: "ja",
   pt_br: "pt-BR",
   es: "es",
@@ -96,7 +97,7 @@ export function normalizeLanguageCode(lang: string | null | undefined): LangType
 
   const primary = normalized.split("-")[0] || "";
   if (primary === "pt") return "pt_br";
-  if (["en", "ja", "es", "ru", "ko", "vi"].includes(primary)) return primary as LangType;
+  if (["en", "fr", "ja", "es", "ru", "ko", "vi"].includes(primary)) return primary as LangType;
   return "en";
 }
 

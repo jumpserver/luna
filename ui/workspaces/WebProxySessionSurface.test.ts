@@ -1,4 +1,5 @@
 import ts from "typescript";
+import { translateWebProxy } from "../../packages/web-proxy/src/i18n";
 import { expect, it, vi } from "vitest";
 import { computed, effectScope, nextTick, reactive, ref, toRaw, watch } from "vue";
 import source from "../../packages/web-proxy/src/WebProxySurface.vue?raw";
@@ -52,6 +53,7 @@ function setupSurface(safeMode = false, observe = false, dom?: Document) {
   const scope = {
     exports: {},
     require: () => ({
+      translateWebProxy,
       ref,
       computed,
       toRaw,
