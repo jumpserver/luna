@@ -1,5 +1,10 @@
 import type { AssetDetail, AssetItem, PermedAccount, PermOrgItem, RdpGraphics } from "~/types";
-import { getAccountDetail, getAssetDetailRequest, getConsoleAssetDetail } from "~/composables/useApiRequest";
+import {
+  getAccountDetail,
+  getAssetDetailRequest,
+  getConsoleAssetDetail,
+  getPersonalAssetCredential
+} from "~/composables/useApiRequest";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { transformAssetDetail } from "~/utils";
@@ -11,6 +16,7 @@ export interface SessionWindowConnectionInfo {
   account: string;
   manualUsername: string;
   manualPassword: string;
+  personalCredentialId?: string;
   dynamicPassword: string;
   rememberSecret: boolean;
   rememberSelection?: boolean;
@@ -122,6 +128,9 @@ export function buildSessionPath(asset: AssetItem, connectionInfo?: SessionWindo
   query.set("accountMode", connectionInfo.accountMode);
   if (connectionInfo.accountId) query.set("accountId", connectionInfo.accountId);
   if (connectionInfo.connectMethod) query.set("method", connectionInfo.connectMethod);
+  if (connectionInfo.accountMode === "manual" && connectionInfo.personalCredentialId) {
+    query.set("personalCredentialId", connectionInfo.personalCredentialId);
+  }
 
   return `/session/${encodeURIComponent(asset.id)}?${query.toString()}`;
 }
@@ -162,6 +171,7 @@ const sessionAccountModes = new Set<SessionWindowConnectionInfo["accountMode"]>(
 
 export function useSessionWindowConnect() {
   const route = useRoute();
+  const { t } = useI18n();
   const { activeTab, openSession, openSetupSession } = useWorkspaceTabs();
   const { confirmConnection } = useAssetConnection();
   const userInfoStore = useUserInfoStore();
@@ -213,6 +223,51 @@ export function useSessionWindowConnect() {
       asset.org_id = orgId || undefined;
       asset.savedConnection = saved || undefined;
       assetName.value = asset.name || "JumpServer";
+
+      // An explicit credential must never fall back to a remembered account.
+      if (route.query.personalCredentialId !== undefined) {
+        const credentialId = queryValue(route.query.personalCredentialId);
+        if (admin || !credentialId) throw new Error(t("ConnectError.PersonalCredentialNotFound"));
+
+        const credential = await getPersonalAssetCredential(credentialId, orgId);
+        if (credential.asset.id !== assetId || !credential.is_active || !credential.has_secret) {
+          throw new Error(t("ConnectError.PersonalCredentialNotFound"));
+        }
+        const protocol = typeof credential.protocol === "string" ? credential.protocol : credential.protocol.value;
+        if (
+          !asset.permedProtocols?.some(
+            (item) => item.name === protocol && (isDesktopRuntime() || item.public !== false)
+          )
+        ) {
+          throw new Error(t("ConnectError.ProtocolUnavailable"));
+        }
+        if (!asset.permedAccounts?.some((account) => account.alias === "@INPUT")) {
+          throw new Error(t("ConnectError.ManualAccountDenied"));
+        }
+        const preferred =
+          preference?.protocol === protocol ? preference : saved?.protocol === protocol ? saved : undefined;
+        const connectMethod = queryValue(route.query.method) || preferred?.connectMethod || "";
+        const pane = openSession(asset, { protocol, account: credential.username, connectMethod });
+        await confirmConnection(asset, {
+          protocol,
+          account: "@INPUT",
+          accountMode: "manual",
+          manualUsername: credential.username,
+          manualPassword: "",
+          personalCredentialId: credential.id,
+          personalCredentialVersion: credential.version,
+          personalCredentialSecretType:
+            typeof credential.secret_type === "string" ? credential.secret_type : credential.secret_type.value,
+          savePersonalCredential: false,
+          dynamicPassword: "",
+          rememberSecret: false,
+          preserveStoredSelection: true,
+          connectMethod,
+          connectOptions: preferred?.connectOptions || {},
+          tabId: pane.id
+        });
+        return;
+      }
 
       const reusableSavedConnection = !admin && hasReusableSavedConnection(asset);
       const connection = { ...(saved || {}), ...(preference || {}), ...(routeConnection || {}) };
