@@ -43,18 +43,14 @@ const dynamicPasswordVisible = ref(false);
 const manualCredentialChoice = "__manual_input__";
 
 const accountItems = computed(() => {
-  const filteredAnonymous = props.accounts.filter((item) => {
-    return item.alias !== "@ANON" || props.assetType?.toLowerCase() === "web";
-  });
-
-  const hosted = filteredAnonymous
+  const hosted = props.accounts
     .filter((acc) => !acc.alias.includes("@"))
     .map((acc) => ({
       label: acc.name,
       value: acc.name
     }));
 
-  const manual = filteredAnonymous
+  const manual = props.accounts
     .filter((acc) => acc.alias.includes("@"))
     .map((acc) => {
       if (acc.alias === "@USER") {
