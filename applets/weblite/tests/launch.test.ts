@@ -260,3 +260,15 @@ test("rejects invalid configuration and oversized pipes", async () => {
     assert.throws(() => parseLaunch({ ...launch, ...patch }));
   await assert.rejects(readLaunch(Readable.from([" ".repeat(1_048_577)])), /过长/);
 });
+
+test("launch preserves the client language and leaves standalone language to the OS", async () => {
+  for (const language of ["fr-CA", "en", "zh-hant", "pt_BR"]) {
+    assert.equal(parseLaunch({ ...applet, connect_options: { lang: language } }).language, language);
+    assert.equal(parseLaunch({ ...launch, language }).language, language);
+  }
+  for (const lang of [null, undefined, 42, {}]) {
+    assert.equal(parseLaunch({ ...applet, connect_options: { lang } }).language, undefined);
+  }
+  assert.equal(parseLaunch(applet).language, undefined);
+  assert.equal((await readLaunch(Readable.from([]))).language, undefined);
+});

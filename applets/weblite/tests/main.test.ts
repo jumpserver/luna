@@ -80,3 +80,65 @@ for (const platform of ["darwin", "win32"]) {
     assert.ok(!dialogs[0].includes("must-not-appear-in-dialog"));
   });
 }
+
+for (const [language, system, expected] of [
+  ["fr-CA", "zh-CN", "fr-CA"],
+  ["en", "fr-FR", "en"],
+  [undefined, "fr-FR", "fr-FR"],
+  [" ", "ja-JP", "ja-JP"]
+]) {
+  test(`bootstrap resolves launch language ${language} before system ${system}`, async (t) => {
+    const profiles = new Set<string>();
+    t.after(async () => {
+      for (const profile of profiles) await rm(profile, { recursive: true, force: true });
+    });
+    let invoke;
+    let shown;
+    let fail;
+    const ready = new Promise<void>((resolve, reject) => {
+      shown = resolve;
+      fail = reject;
+    });
+    const contents = { mainFrame: {}, on() {}, setWindowOpenHandler() {} };
+    const electron = {
+      app: {
+        setPath: (_name, value) => profiles.add(value),
+        setName() {},
+        whenReady: async () => {},
+        getLocale: () => system,
+        exit: () => fail(new Error("Startup failed"))
+      },
+      Menu: { setApplicationMenu() {} },
+      ipcMain: {
+        handle: (_name, handler) => {
+          invoke = handler;
+        }
+      },
+      dialog: { showErrorBox() {} },
+      BrowserWindow: class {
+        webContents = contents;
+        on() {}
+        async loadFile() {}
+        maximize() {}
+        show() {
+          shown();
+        }
+      }
+    };
+    runInNewContext(outputText, {
+      exports: {},
+      __dirname: "/tmp/weblite",
+      process: { platform: "darwin", stdin: {} },
+      require(id: string) {
+        if (id === "electron") return electron;
+        if (id === "./launch") return { readLaunch: async () => ({ language, standalone: !language }) };
+        if (id === "@jumpserver/web-proxy/manager") return { createWebProxyManager: () => ({}) };
+        return require(id);
+      }
+    });
+    await ready;
+    const bootstrap = await invoke({ senderFrame: contents.mainFrame }, "bootstrap");
+    assert.equal(bootstrap.language, expected);
+    assert.equal(bootstrap.standalone, !language);
+  });
+}
