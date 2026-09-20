@@ -71,6 +71,20 @@ const normalizeTreeNodes = (value: unknown, baseLevel = 0): AssetTreeNode[] => {
   return roots;
 };
 
+const resetTreeLevels = (nodes: AssetTreeNode[], level = 0) => {
+  for (const node of nodes) {
+    node.level = level;
+    if (node.children?.length) resetTreeLevels(node.children, level + 1);
+  }
+  return nodes;
+};
+
+export const unwrapTypeTreeRoot = (nodes: AssetTreeNode[]) => {
+  const root = nodes.find((node) => node.id.toUpperCase() === "ROOT");
+  if (!root) return nodes;
+  return resetTreeLevels(root.children || []);
+};
+
 export function applyAssetRename(nodes: AssetTreeNode[], assetId: string, name: string) {
   for (const node of nodes) {
     const isBranch = Boolean(node.isParent || node.children?.length);
