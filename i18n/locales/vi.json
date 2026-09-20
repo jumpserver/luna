@@ -287,6 +287,8 @@
     "Save": "Lưu",
     "More": "Thêm",
     "SaveFailed": "Không thể lưu tập lệnh",
+    "DeleteConfirm": "Xóa “{name}”?",
+    "DeleteFailed": "Không thể xóa tập lệnh",
     "FillBatchCommand": "Điền lệnh hàng loạt",
     "GroupShell": "Shell",
     "GroupPowerShell": "PowerShell",

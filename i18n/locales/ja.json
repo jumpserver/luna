@@ -287,6 +287,8 @@
     "Save": "保存",
     "More": "その他",
     "SaveFailed": "スクリプトの保存に失敗しました",
+    "DeleteConfirm": "「{name}」を削除しますか？",
+    "DeleteFailed": "スクリプトの削除に失敗しました",
     "FillBatchCommand": "一括コマンドに入力",
     "GroupShell": "シェル",
     "GroupPowerShell": "PowerShell",

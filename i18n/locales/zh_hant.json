@@ -287,6 +287,8 @@
     "Save": "儲存",
     "More": "更多",
     "SaveFailed": "儲存指令碼失敗",
+    "DeleteConfirm": "確定刪除「{name}」嗎？",
+    "DeleteFailed": "刪除指令碼失敗",
     "FillBatchCommand": "填入批次命令",
     "GroupShell": "Shell",
     "GroupPowerShell": "PowerShell",

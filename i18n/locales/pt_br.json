@@ -287,6 +287,8 @@
     "Save": "Salvar",
     "More": "Mais",
     "SaveFailed": "Falha ao salvar o script",
+    "DeleteConfirm": "Excluir \"{name}\"?",
+    "DeleteFailed": "Falha ao excluir o script",
     "FillBatchCommand": "Preencher comando em lote",
     "GroupShell": "Shell",
     "GroupPowerShell": "PowerShell",

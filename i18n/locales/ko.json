@@ -287,6 +287,8 @@
     "Save": "저장",
     "More": "더 보기",
     "SaveFailed": "스크립트 저장 실패",
+    "DeleteConfirm": "\"{name}\" 스크립트를 삭제할까요?",
+    "DeleteFailed": "스크립트를 삭제하지 못했습니다",
     "FillBatchCommand": "일괄 명령에 입력",
     "GroupShell": "셸",
     "GroupPowerShell": "PowerShell",

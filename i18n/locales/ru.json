@@ -287,6 +287,8 @@
     "Save": "Сохранить",
     "More": "Еще",
     "SaveFailed": "Не удалось сохранить скрипт",
+    "DeleteConfirm": "Удалить «{name}»?",
+    "DeleteFailed": "Не удалось удалить скрипт",
     "FillBatchCommand": "Заполнить пакетную команду",
     "GroupShell": "Shell",
     "GroupPowerShell": "PowerShell",
