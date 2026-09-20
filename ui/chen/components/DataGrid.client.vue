@@ -24,7 +24,7 @@ import type {
 import { AllCommunityModule, isColumn, ModuleRegistry } from "ag-grid-community";
 import { AgGridVue } from "ag-grid-vue3";
 import { formatChenGridValue, useChenGridPreferences } from "~/chen/composables/useChenGridPreferences";
-import { frGridLocale } from "~/chen/locales/fr";
+import { gridLocales } from "~/chen/locales";
 import {
   canUseChenCopy,
   createChenInsertSql,
@@ -552,7 +552,7 @@ onBeforeUnmount(() => {
       :key="locale"
       class="h-full min-h-0 min-w-0 w-full"
       theme="legacy"
-      :locale-text="locale === 'fr' ? frGridLocale : undefined"
+      :locale-text="gridLocales[locale] || gridLocales.en"
       :column-defs="columnDefs"
       :row-data="rowData"
       :default-col-def="defaultColDef"

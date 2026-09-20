@@ -1,5 +1,6 @@
 import ts from "typescript";
-import { translateWebProxy } from "../../packages/web-proxy/src/i18n";
+import { createI18n } from "vue-i18n";
+import { formatWebProxyMessage, webProxyMessages } from "../../packages/web-proxy/src/i18n";
 import { expect, it, vi } from "vitest";
 import { computed, effectScope, nextTick, reactive, ref, toRaw, watch } from "vue";
 import source from "../../packages/web-proxy/src/WebProxySurface.vue?raw";
@@ -53,7 +54,10 @@ function setupSurface(safeMode = false, observe = false, dom?: Document) {
   const scope = {
     exports: {},
     require: () => ({
-      translateWebProxy,
+      formatWebProxyMessage,
+      webProxyMessages,
+      useI18n: () =>
+        createI18n<{}, "en" | "fr" | "zh", false>({ legacy: false, locale: "zh", messages: webProxyMessages }).global,
       ref,
       computed,
       toRaw,
@@ -260,7 +264,7 @@ it("allows normalized HTTP navigation only in standalone browser mode", async ()
     await surface.navigate();
   }
   expect(desktopWebProxy.navigate).toHaveBeenCalledTimes(1);
-  expect(surface.navigationError.value).toMatch(/HTTP\/HTTPS/);
+  expect(surface.navigationError.value).toBe("WebProxy.InvalidAddress");
 });
 
 it("shares recording finalization across concurrent closes and stops view updates immediately", async () => {
@@ -490,7 +494,7 @@ it("only offers manual completion when enabled by the main process and preserves
   surface.verificationFrame.value = { image: "verification", width: 100, height: 100, revision: 1 };
   desktopWebProxy.completeVerification.mockResolvedValueOnce(false);
   await surface.completeVerification();
-  expect(surface.verificationCompletionError.value).toContain("重试");
+  expect(surface.verificationCompletionError.value).toBe("WebProxy.VerificationNotReady");
   expect(surface.error.value).toBe("");
   expect(surface.verificationFrame.value).not.toBeNull();
   await surface.completeVerification();
