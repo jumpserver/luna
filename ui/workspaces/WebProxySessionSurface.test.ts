@@ -2,8 +2,9 @@ import ts from "typescript";
 import { expect, it, vi } from "vitest";
 import { computed, effectScope, nextTick, reactive, ref, toRaw, watch } from "vue";
 import source from "../../packages/web-proxy/src/WebProxySurface.vue?raw";
+import aiPanelSource from "../components/RightPanel/AiOverlayPanel.vue?raw";
 
-function setupSurface(safeMode = false, observe = false) {
+function setupSurface(safeMode = false, observe = false, dom?: Document) {
   const desktopWebProxy = {
     create: vi.fn(async (request: Record<string, unknown>) => structuredClone(request)),
     onState: vi.fn(async () => vi.fn()),
@@ -70,16 +71,18 @@ function setupSurface(safeMode = false, observe = false) {
     useWorkspaceTabs: () => ({ activeTabId: ref("tab"), tabs: ref([]), markSessionConnected, closeSession }),
     usePlatform: () => ({}),
     registerWorkspaceSessionCloseGuard: vi.fn(),
-    document: {
+    document: dom ?? {
       visibilityState: "visible",
       querySelector: vi.fn(),
       addEventListener: vi.fn(),
       removeEventListener: vi.fn()
     },
-    MutationObserver: class {
-      observe() {}
-      disconnect() {}
-    },
+    MutationObserver: dom
+      ? MutationObserver
+      : class {
+          observe() {}
+          disconnect() {}
+        },
     ResizeObserver: class {
       observe() {}
       disconnect() {}
@@ -113,6 +116,45 @@ function setupSurface(safeMode = false, observe = false) {
     }
   };
 }
+
+it.skipIf(typeof document === "undefined")(
+  "backgrounds the native website for AI and menus, restoring only the active tab",
+  async () => {
+    const { surface, desktopWebProxy, props, mount, stop } = setupSurface(false, true, document);
+    const host = document.createElement("div");
+    document.body.append(host);
+    try {
+      await mount();
+      expect(desktopWebProxy.setActive).toHaveBeenLastCalledWith(surface.viewLabel, true);
+      // Use the actual AI host markup so losing its overlay marker regresses this check.
+      host.innerHTML = `${aiPanelSource.match(/<div\s+id="workspace-ai-overlay"[^>]*>/)![0]}</div>`;
+      await vi.waitFor(() => expect(desktopWebProxy.setActive).toHaveBeenLastCalledWith(surface.viewLabel, false));
+
+      host.insertAdjacentHTML("beforeend", '<div role="menu" data-state="open"></div>');
+      host.firstElementChild!.remove();
+      await nextTick();
+      expect(desktopWebProxy.setActive).toHaveBeenLastCalledWith(surface.viewLabel, false);
+      host.replaceChildren();
+      await vi.waitFor(() => expect(desktopWebProxy.setActive).toHaveBeenLastCalledWith(surface.viewLabel, true));
+
+      props.active = false;
+      await nextTick();
+      expect(desktopWebProxy.setActive).toHaveBeenLastCalledWith(surface.viewLabel, false);
+      host.innerHTML = "<div data-native-view-overlay></div>";
+      await nextTick();
+      host.replaceChildren();
+      await nextTick();
+      expect(desktopWebProxy.setActive).toHaveBeenLastCalledWith(surface.viewLabel, false);
+      props.active = true;
+      await vi.waitFor(() => expect(desktopWebProxy.setActive).toHaveBeenLastCalledWith(surface.viewLabel, true));
+      expect(desktopWebProxy.create).toHaveBeenCalledOnce();
+      expect(desktopWebProxy.close).not.toHaveBeenCalled();
+    } finally {
+      stop();
+      host.remove();
+    }
+  }
+);
 
 it.each([undefined, [], ["https://sso.test", "https://asset.test:8443"]].map((allowedUrls) => ({ allowedUrls })))(
   "creates a view from reactive session data with allowed URLs $allowedUrls",

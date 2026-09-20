@@ -63,6 +63,7 @@ onDeactivated(resetPosition);
   <div
     id="workspace-ai-overlay"
     ref="host"
+    data-native-view-overlay
     data-ai-context="preserve"
     class="pointer-events-none absolute inset-0 z-50"
   >

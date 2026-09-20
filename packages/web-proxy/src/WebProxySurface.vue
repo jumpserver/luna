@@ -92,8 +92,10 @@ let unlistenRecordingState: (() => void) | undefined;
 let overlayObserver: MutationObserver | undefined;
 
 // Nuxt UI teleports interactive overlays into the main webview, but desktop child
-// webviews always render above that DOM. Tooltips are intentionally excluded.
+// webviews always render above that DOM. Custom floating panels opt in with
+// data-native-view-overlay. Tooltips are intentionally excluded.
 const OVERLAY_SELECTOR = [
+  "[data-native-view-overlay]",
   '[role="menu"][data-state="open"]',
   '[role="dialog"][data-state="open"]',
   '[role="alertdialog"][data-state="open"]',
