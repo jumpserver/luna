@@ -45,13 +45,22 @@ async function setup() {
     useTerminalAiHudLayout({ paneId: () => "pane", open, sessionInfoReady: () => false })
   )!;
   layout.hostRef.value = { getBoundingClientRect: () => area } as HTMLElement;
-  layout.panelRef.value = {
-    getBoundingClientRect: () => measured,
-    get scrollHeight() {
-      return measured.scrollHeight;
-    }
-  } as unknown as HTMLElement;
+  layout.panelRef.value = Object.defineProperties(new EventTarget(), {
+    getBoundingClientRect: { value: () => measured },
+    scrollHeight: { get: () => measured.scrollHeight }
+  }) as unknown as HTMLElement;
   layout.dragHandleRef.value = handle as unknown as HTMLElement;
+  let resizeHandleEl: EventTarget;
+  const resizeHandle = (edge: string) =>
+    Object.assign(new EventTarget(), {
+      closest: (selector: string) => (selector === "[data-terminal-ai-resize]" ? resizeHandleEl : null),
+      focus: vi.fn(),
+      setPointerCapture: vi.fn((id: number) => captured.add(id)),
+      hasPointerCapture: (id: number) => captured.has(id),
+      releasePointerCapture: vi.fn((id: number) => captured.delete(id)),
+      dataset: { terminalAiResize: edge }
+    });
+  resizeHandleEl = resizeHandle("se");
   cleanups.push(() => {
     layout.dispose();
     scope.stop();
@@ -73,8 +82,24 @@ async function setup() {
     await nextTick();
     return event;
   }
+  async function dispatchResize(edge: string, type: string, properties: Record<string, unknown> = {}) {
+    resizeHandleEl = resizeHandle(edge);
+    const event = Object.assign(new Event(type, { cancelable: true }), {
+      button: 0,
+      isPrimary: true,
+      pointerId: 2,
+      clientX: 200,
+      clientY: 200,
+      ...properties
+    });
+    Object.defineProperty(event, "target", { value: resizeHandleEl });
+    layout.panelRef.value!.dispatchEvent(event);
+    await nextTick();
+    return event;
+  }
   const position = () => ({ left: layout.panelStyle.value.left, top: layout.panelStyle.value.top });
-  return { area, measured, handle, open, layout, dispatch, position };
+  const size = () => ({ width: layout.panelStyle.value.width, maxHeight: layout.panelStyle.value.maxHeight });
+  return { area, measured, handle, open, layout, dispatch, dispatchResize, position, size };
 }
 
 it("moves from the original pointer position without drift and stays moved when the cursor or content changes", async () => {
@@ -158,3 +183,65 @@ it.each(["pointerup", "pointercancel", "lostpointercapture", "close", "dispose"]
     expect(position()).toEqual({ left: "140px", top: "126px" });
   }
 );
+
+it("caps the auto-fit height instead of filling all available room near the cursor", async () => {
+  const { size } = await setup();
+  // Plenty of room exists below the cursor (spaceBelow ~616px), but the HUD should not grow past
+  // the comfortable default cap (this is the exact regression reported in issue #17541).
+  expect(size()).toEqual({ width: "520px", maxHeight: "420px" });
+});
+
+it("resizes via a corner handle, clamps to the viewport, and resets on Home", async () => {
+  const { dispatch, dispatchResize, layout, position, size } = await setup();
+  await dispatchResize("se", "pointerdown");
+  await dispatchResize("se", "pointermove", { clientX: 400, clientY: 400 });
+  expect(size()).toEqual({ width: "640px", maxHeight: "310px" });
+  expect(layout.panelStyle.value.height).toBe("310px");
+  await dispatchResize("se", "pointerup");
+  expect(layout.dragging.value).toBe(false);
+
+  // Resetting via the header's Home shortcut drops the manual size and returns to auto-fit.
+  await dispatch("keydown", { key: "Home" });
+  expect(size()).toEqual({ width: "520px", maxHeight: "420px" });
+  expect(layout.panelStyle.value.height).toBeUndefined();
+  expect(position()).toEqual({ left: "140px", top: "126px" });
+});
+
+it("smooth-scrolls the live transcript to the bottom, respecting reduced motion", async () => {
+  const { layout } = await setup();
+  const scrollTo = vi.fn();
+  layout.liveRef.value = { scrollTo, scrollHeight: 400 } as unknown as HTMLElement;
+
+  window.matchMedia = ((query: string) => ({ matches: false, media: query })) as typeof window.matchMedia;
+  await layout.pinLive();
+  expect(scrollTo).toHaveBeenLastCalledWith({ top: 400, behavior: "smooth" });
+
+  window.matchMedia = ((query: string) => ({ matches: true, media: query })) as typeof window.matchMedia;
+  await layout.pinLive();
+  expect(scrollTo).toHaveBeenLastCalledWith({ top: 400, behavior: "auto" });
+});
+
+it("keeps following the bottom through smooth-scroll's own intermediate events, but stops on a real scroll-up", async () => {
+  const { layout } = await setup();
+  const scrollTo = vi.fn();
+  const live = { scrollTo, scrollHeight: 1000, clientHeight: 200, scrollTop: 0 };
+  layout.liveRef.value = live as unknown as HTMLElement;
+
+  function scrollEvent(top: number) {
+    live.scrollTop = top;
+    return { currentTarget: live } as unknown as Event;
+  }
+
+  // Our own smooth-scroll animation climbs toward the bottom in steps; none of these
+  // intermediate events should look like the user scrolling away from the bottom.
+  layout.onLiveScroll(scrollEvent(300));
+  layout.onLiveScroll(scrollEvent(600));
+  await layout.pinLive();
+  expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 1000 }));
+
+  // A genuine scroll-up away from the bottom should stop auto-following.
+  scrollTo.mockClear();
+  layout.onLiveScroll(scrollEvent(400));
+  await layout.pinLive();
+  expect(scrollTo).not.toHaveBeenCalled();
+});
