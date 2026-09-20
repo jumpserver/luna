@@ -1935,7 +1935,21 @@ function focus() {}
 
 async function refreshResourceRoot() {
   clearMetadataCaches();
-  await tree.refreshRoot();
+  const recentEntries = [...recentTables.entries.value];
+  const recentParentPaths = recentEntries.map((entry) => entry.path?.slice(0, -1) || []).filter((path) => path.length);
+  await tree.refreshRoot(recentParentPaths);
+
+  const currentRecentEntries = new Map(recentTables.entries.value.map((entry) => [entry.node.key, entry]));
+  const unavailableKeys = recentEntries
+    .filter((entry) => {
+      if (!entry.path?.length) return false;
+      if (currentRecentEntries.get(entry.node.key)?.openedAt !== entry.openedAt) return false;
+      const parentPath = entry.path.slice(0, -1);
+      if (parentPath.some((key) => tree.loadErrors[key])) return false;
+      return !tree.findNodeByKey(entry.node.key);
+    })
+    .map((entry) => entry.node.key);
+  recentTables.remove(...unavailableKeys);
 }
 
 watch(

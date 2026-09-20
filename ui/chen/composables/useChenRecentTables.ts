@@ -66,5 +66,11 @@ export function useChenRecentTables(scope: string) {
     entries.value = [];
   }
 
-  return { add, clear, entries };
+  function remove(...nodeKeys: string[]) {
+    if (!nodeKeys.length) return;
+    const keys = new Set(nodeKeys);
+    entries.value = entries.value.filter((entry) => !keys.has(entry.node.key));
+  }
+
+  return { add, clear, entries, remove };
 }
