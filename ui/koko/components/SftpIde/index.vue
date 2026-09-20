@@ -74,7 +74,7 @@ const explorerRef = useTemplateRef<{
   openUploadPicker: () => void;
   scrollQuickOpenActive: () => void;
 }>("explorer");
-const editorLayout = ref<HTMLElement | null>(null);
+const editorLayout = shallowRef<HTMLElement | null>(null);
 const alertDialogOpen = ref(false);
 const alertTarget = ref<AlertTarget | null>(null);
 const alertSubmitting = ref(false);
