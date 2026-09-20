@@ -108,7 +108,9 @@ describe("snippet variables", () => {
 describe("snippet deletion", () => {
   it("confirms before deleting and removes the deleted script from local state", () => {
     expect(bottomPanels).toContain(':items="snippetActionItems(snippet)"');
-    expect(bottomPanels).toContain('label: t("Common.CopyOnly")');
+    expect(bottomPanels).toContain('@click.stop="copySnippet(snippet)"');
+    expect(bottomPanels).toContain("content: 'min-w-24'");
+    expect(bottomPanels).toContain("opacity-40");
     expect(bottomPanels).toContain("onSelect: () => openDeleteSnippet(snippet)");
     expect(bottomPanels).toContain(":description=\"t('Snippets.DeleteConfirm'");
     expect(snippetComposable).toContain("await deleteCommandSnippet(id)");
