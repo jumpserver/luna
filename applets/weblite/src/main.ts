@@ -76,6 +76,7 @@ async function start() {
     if (closing || event.senderFrame !== win.webContents.mainFrame) throw new Error("无效的 Web applet 调用");
     if (command === "bootstrap")
       return {
+        language: launch.language?.trim() || app.getLocale(),
         targetUrl: launch.targetUrl,
         proxyUrl: "",
         safeMode: launch.safeMode,
