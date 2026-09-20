@@ -1,15 +1,20 @@
-import fr from "./fr.json";
+import en from "./locales/en.json";
+import fr from "./locales/fr.json";
+import zh from "./locales/zh.json";
 
-// ponytail: the bridge still sends Chinese status text. Use stable message codes when
-// adding further locales; unknown remote errors retain their original diagnostic details.
-export function translateWebProxy(message: string, language?: string): string {
-  if (!/^fr(?:[-_]|$)/i.test(language || "")) return message;
-  if (message.startsWith("Error: ")) return `Error: ${translateWebProxy(message.slice(7), language)}`;
-  const messages: Record<string, string> = fr;
-  if (Object.hasOwn(messages, message)) return messages[message]!;
-  for (const prefix of ["无法打开页面：", "登录页面加载失败：", "页面加载失败："]) {
-    if (message.startsWith(prefix))
-      return `${messages[prefix]}${translateWebProxy(message.slice(prefix.length), language)}`;
-  }
-  return message;
+export const webProxyMessages = { en, fr, zh };
+type Translate = (key: string, params?: Record<string, string | number>) => string;
+
+// Electron serializes Error.message as text. Only decode our known message codes;
+// preserve diagnostic details from Chromium, proxies and remote sites verbatim.
+export function formatWebProxyMessage(message: string, t: Translate): string {
+  const match =
+    /^(?:Error: )?(?:Error invoking remote method '[^']+': Error: )?WebProxy\.([A-Za-z]+)(?:: ([\s\S]*))?$/.exec(
+      message
+    );
+  if (!match || !Object.hasOwn(en.WebProxy, match[1]!)) return message;
+  const translated = t(`WebProxy.${match[1]}`);
+  return match[2]
+    ? t("WebProxy.ErrorWithDetail", { message: translated, detail: formatWebProxyMessage(match[2], t) })
+    : translated;
 }

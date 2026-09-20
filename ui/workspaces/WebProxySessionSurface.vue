@@ -7,7 +7,6 @@ const emit = defineEmits<{ reconnect: [] }>();
 const { activeTabId, markSessionConnected, tabs } = useWorkspaceTabs();
 const { isMacOS } = usePlatform();
 const colorMode = useColorMode();
-const { locale } = useI18n();
 const surface = ref<InstanceType<typeof WebProxySurface>>();
 const request = computed(() =>
   props.tab.payload?.webProxy
@@ -35,7 +34,6 @@ defineExpose({ focus: () => surface.value?.focus() });
   <WebProxySurface
     ref="surface"
     :request="request"
-    :language="locale"
     :bridge="desktopWebProxy"
     :active="activeTabId === ownerTabId"
     :supported="supported"

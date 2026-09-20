@@ -4,7 +4,6 @@ export interface WebProxySurfaceProps {
   request: Record<string, any> | undefined;
   bridge: WebProxyBridge;
   active: boolean;
-  language?: string;
   supported: boolean;
   colorScheme?: "light" | "dark";
   macInset?: boolean;

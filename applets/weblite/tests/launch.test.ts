@@ -161,7 +161,7 @@ test("applet retains an optional asset navigation allowlist and rejects malforme
     "https://sso.example.com"
   ]);
   for (const allowed_urls of [null, "*", ["*"], ["file:///tmp"], ["https://example.com/path"]])
-    assert.throws(() => parseLaunch({ ...launch, allowed_urls }), /白名单/);
+    assert.throws(() => parseLaunch({ ...launch, allowed_urls }), /WebProxy\.(AllowedSitesLimit|InvalidAllowedSite)/);
 });
 test("empty or terminal stdin starts an unrestricted standalone browser without credentials", async () => {
   for (const input of [Readable.from([]), Object.assign(Readable.from([]), { isTTY: true })]) {

@@ -218,7 +218,7 @@ export async function heartbeatWebProxySession(proxyUrl, sessionId, proxyAuth) {
     method: "POST",
     proxyAuth
   });
-  if (!response.ok) throw await responseError(response, "Web 代理会话心跳失败");
+  if (!response.ok) throw await responseError(response, "WebProxy.SessionHeartbeatFailed");
 }
 
 export async function releaseCredentials(session, currentUrl) {

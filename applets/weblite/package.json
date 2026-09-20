@@ -18,7 +18,8 @@
   "dependencies": {
     "@jumpserver/web-proxy": "workspace:*",
     "@nuxt/ui": "4.11.0",
-    "vue": "^3.5.35"
+    "vue": "^3.5.35",
+    "vue-i18n": "^11.4.8"
   },
   "devDependencies": {
     "@electron/packager": "18.3.5",
