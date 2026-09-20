@@ -287,6 +287,8 @@
     "Save": "Enregistrer",
     "More": "Plus",
     "SaveFailed": "Impossible d’enregistrer le script",
+    "DeleteConfirm": "Supprimer « {name} » ?",
+    "DeleteFailed": "Impossible de supprimer le script",
     "FillBatchCommand": "Insérer dans la commande par lot",
     "GroupShell": "Shell",
     "GroupPowerShell": "PowerShell",

@@ -723,6 +723,14 @@ export function getAccountDetail(accountId: string, orgId?: string): Promise<Per
   });
 }
 
+export function getPersonalAssetCredential(credentialId: string, orgId?: string): Promise<PersonalAssetCredential> {
+  return apiRequest({
+    method: "GET",
+    path: `/api/v1/accounts/personal-asset-credentials/${encodeURIComponent(credentialId)}/`,
+    orgId
+  });
+}
+
 export async function getPersonalAssetCredentials(
   assetId: string,
   protocol: string,
