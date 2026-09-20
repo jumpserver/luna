@@ -82,7 +82,7 @@ describe("terminal UI composition", () => {
   });
 
   it("voids the workspace shell retry emit for UButton", () => {
-    expect(baseWorkspaceShell).toContain("@click=\"void $emit('retry')\"");
+    expect(baseWorkspaceShell).toContain('slot name="error-actions"');
     expect(baseWorkspaceShell).toContain("i-lucide-circle-alert");
   });
 });

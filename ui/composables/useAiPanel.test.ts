@@ -11,20 +11,22 @@ const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId
 const workspaceTabs = { tabs, activeTabId, activeTab };
 const narrow = shallowRef(false);
 const saved = new Map<string, string>();
-const storage = {
-  getItem: (key: string) => saved.get(key) ?? null,
-  setItem: (key: string, value: string) => saved.set(key, value),
-  removeItem: (key: string) => saved.delete(key)
-};
 
 vi.mock("@vueuse/core", async (importOriginal) => {
   const original = await importOriginal<typeof import("@vueuse/core")>();
   return {
     ...original,
     useMediaQuery: () => narrow,
-    useLocalStorage: vi.fn((key, initial, options) =>
-      original.useStorage(key, initial, storage, { ...options, flush: "sync" })
-    )
+    useLocalStorage: vi.fn((key: string, initial: unknown) => {
+      const parse = (raw: string) => {
+        if (typeof initial === "boolean") return raw === "true";
+        if (typeof initial === "number") return Number(raw);
+        return raw;
+      };
+      const state = ref(saved.has(key) ? parse(saved.get(key)!) : initial);
+      watch(state, (value) => saved.set(key, String(value)), { flush: "sync" });
+      return state;
+    })
   };
 });
 
@@ -47,7 +49,7 @@ describe("AI overlay panel", () => {
 
   afterAll(() => vi.unstubAllGlobals());
 
-  it("defaults to open on desktop and remembers visibility across tabs and consumers", () => {
+  it("defaults to open on desktop and remembers visibility across tabs and consumers", async () => {
     const panel = useAiPanel();
     expect(useLocalStorage).toHaveBeenCalledWith("jumpserver-client:ai-panel-open", true, { writeDefaults: false });
     panel.openAi();
@@ -56,6 +58,7 @@ describe("AI overlay panel", () => {
     activeTabId.value = "tab-b";
     expect(panel.open.value).toBe(true);
     useAiPanel().setOpen(false);
+    await nextTick();
     activeTabId.value = "tab-a";
     expect(panel.open.value).toBe(false);
     expect(saved.get("jumpserver-client:ai-panel-open")).toBe("false");

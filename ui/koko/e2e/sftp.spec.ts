@@ -94,6 +94,8 @@ async function seedAuthenticatedUser(page: Page) {
       connectionInfo: { protocol: "", username: "" }
     };
 
+    localStorage.setItem("koko:sftp-tour:v3", "completed");
+    localStorage.setItem("luna:workspace-tour:v3", "completed");
     localStorage.setItem(
       "userInfoV2",
       JSON.stringify({

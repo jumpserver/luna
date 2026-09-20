@@ -10,10 +10,10 @@ import { buildSftpTransferInputs, safeLocalDownloadName } from "../../composable
 import { SFTP_ENTRY_NAME_MAX_LENGTH, sftpEntryNameError } from "../../composables/sftp/file-manager/sftpEntryName";
 import {
   buildTransferSourcePayload,
+  collectBrowserUploadSelection,
   createMockDataTransfer,
+  expandTransferSelection,
   hasEndpointPrefix,
-  hasFolderBrowserUpload,
-  hasFolderTransferSelection,
   hasTransferMimeType,
   isCrossEndpointTransferDrag,
   parseTransferDragPayload,
@@ -94,6 +94,19 @@ describe("local transfer path joining", () => {
       { id: "sftp:token", label: "Remote" }
     );
     expect(inputs[0]?.source.path).toBe("C:\\Users\\demo\\notes.txt");
+
+    const nested = buildSftpTransferInputs(
+      {
+        sourceEndpoint: { id: "local:fs", label: "Local" },
+        sourcePath: "C:\\Users\\demo",
+        sourceSelectionRevision: 1,
+        entries: [{ name: "notes.txt", size: "12", relativeDir: "folder/child" }],
+        destinationPath: "/tmp"
+      },
+      { id: "sftp:token", label: "Remote" }
+    )[0];
+    expect(nested?.source.path).toBe("C:\\Users\\demo\\folder\\child\\notes.txt");
+    expect(nested?.destinationPath).toBe("/tmp/folder/child");
   });
 });
 
@@ -129,6 +142,30 @@ describe("browser upload transfer endpoint", () => {
         conflictPolicy: "ask"
       })
     ).rejects.toThrow(/cannot receive/);
+  });
+
+  it("stages relative file paths and empty directories without flattening", async () => {
+    const endpoint = useBrowserUploadTransferEndpoint({ label: "Web Upload" });
+    const file = new File(["nested"], "hello.txt");
+    const staged = endpoint.stageFiles([
+      { file, relativePath: "folder/child/hello.txt", is_dir: false },
+      { relativePath: "folder/empty", is_dir: true }
+    ]);
+
+    expect(staged.entries).toEqual([
+      { name: "folder", size: "", is_dir: true },
+      { name: "child", size: "", is_dir: true, relativeDir: "folder" },
+      { name: "empty", size: "", is_dir: true, relativeDir: "folder" },
+      { name: "hello.txt", size: "6", relativeDir: "folder/child" }
+    ]);
+    await expect(
+      endpoint.readChunk({
+        transferId: "nested",
+        path: `${staged.sourcePath}/folder/child/hello.txt`,
+        offset: 0,
+        length: 6
+      })
+    ).resolves.toMatchObject({ eof: true });
   });
 
   it("keeps same-name files from later stageFiles batches independently readable", async () => {
@@ -313,27 +350,159 @@ describe("file pane selection composable", () => {
 });
 
 describe("file pane transfer helpers", () => {
-  it("rejects folder selections and browser directory uploads", () => {
-    expect(hasFolderTransferSelection(entries)).toBe(true);
-    expect(hasFolderTransferSelection(entries.filter((entry) => !entry.is_dir))).toBe(false);
-
-    const file = new File(["hello"], "hello.txt", { type: "text/plain" });
-    const nestedFile = new File(["hello"], "hello.txt", { type: "text/plain" });
-    Object.defineProperty(nestedFile, "webkitRelativePath", { value: "folder/hello.txt" });
-
-    expect(hasFolderBrowserUpload([file])).toBe(false);
-    expect(hasFolderBrowserUpload([nestedFile])).toBe(true);
-    expect(
-      hasFolderBrowserUpload([], [{ webkitGetAsEntry: () => ({ isDirectory: true }) } as unknown as DataTransferItem])
-    ).toBe(true);
-  });
-
-  it("filters transferable file entries and handles nullable endpoint prefixes safely", () => {
+  it("keeps selected folders and browser relative paths", async () => {
     expect(transferEntriesFromSelection(entries)).toEqual([
       { name: "alpha.txt", size: "10" },
       { name: "beta.txt", size: "20" },
+      { name: "gamma", size: "", is_dir: true },
       { name: "delta.txt", size: "30" }
     ]);
+
+    const nestedFile = new File(["hello"], "hello.txt", { type: "text/plain" });
+    Object.defineProperty(nestedFile, "webkitRelativePath", { value: "folder/hello.txt" });
+    await expect(collectBrowserUploadSelection([nestedFile])).resolves.toEqual({
+      items: [{ file: nestedFile, relativePath: "folder/hello.txt", is_dir: false }],
+      failures: []
+    });
+  });
+
+  it("walks real webkitGetAsEntry directory trees, nests subdirectories, and caps depth per subtree", async () => {
+    function mockFileEntry(name: string, file: File): FileSystemEntry {
+      return {
+        name,
+        isFile: true,
+        isDirectory: false,
+        file: (success: (file: File) => void) => success(file)
+      } as unknown as FileSystemEntry;
+    }
+    function mockDirEntry(name: string, children: FileSystemEntry[]): FileSystemEntry {
+      let delivered = false;
+      return {
+        name,
+        isFile: false,
+        isDirectory: true,
+        createReader: () => ({
+          readEntries: (success: (entries: FileSystemEntry[]) => void) => {
+            success(delivered ? [] : children);
+            delivered = true;
+          }
+        })
+      } as unknown as FileSystemEntry;
+    }
+    function mockDataTransferItem(entry: FileSystemEntry): DataTransferItem {
+      return { webkitGetAsEntry: () => entry } as unknown as DataTransferItem;
+    }
+
+    const fileA = new File(["a"], "a.txt", { type: "text/plain" });
+    const tooDeep = new File(["c"], "toodeep.txt", { type: "text/plain" });
+
+    const keepRoot = mockDirEntry("keep", [mockFileEntry("a.txt", fileA)]);
+    const deepRoot = mockDirEntry("deep", [mockDirEntry("nested", [mockFileEntry("toodeep.txt", tooDeep)])]);
+
+    const selection = await collectBrowserUploadSelection(
+      [],
+      [mockDataTransferItem(keepRoot), mockDataTransferItem(deepRoot)],
+      2
+    );
+
+    expect(selection.items).toEqual([
+      { relativePath: "keep", is_dir: true },
+      { file: fileA, relativePath: "keep/a.txt", is_dir: false },
+      { relativePath: "deep", is_dir: true },
+      { relativePath: "deep/nested", is_dir: true }
+    ]);
+    expect(selection.failures).toHaveLength(1);
+  });
+
+  it("expands nested folders, preserves empty directories, skips parent entries, and caps depth", async () => {
+    const tree = new Map([
+      [
+        "/srv/data/docs",
+        [
+          { name: "nested", size: "", is_dir: true },
+          { name: "root.txt", size: "2", is_dir: false }
+        ]
+      ],
+      [
+        "/srv/data/docs/nested",
+        [
+          { name: "..", size: "", is_dir: true },
+          { name: "deep.txt", size: "3", is_dir: false }
+        ]
+      ],
+      ["/srv/data/empty", []]
+    ]);
+    const payload = buildTransferSourcePayload({
+      sourceEndpoint: { id: "sftp:source", label: "Source" },
+      sourcePath: "/srv/data",
+      sourceSelectionRevision: 1,
+      entries: [
+        { name: "docs", size: "", is_dir: true },
+        { name: "empty", size: "", is_dir: true }
+      ]
+    })!;
+    const expanded = await expandTransferSelection(payload, async (path) => tree.get(path) || []);
+
+    expect(expanded.entries).toEqual([
+      { name: "deep.txt", size: "3", relativeDir: "docs/nested" },
+      { name: "root.txt", size: "2", relativeDir: "docs" }
+    ]);
+    expect(expanded.directories).toEqual(["docs", "docs/nested", "empty"]);
+    expect(expanded.failures).toEqual([]);
+
+    const capped = await expandTransferSelection(
+      { ...payload, entries: [{ name: "docs", size: "", is_dir: true }] },
+      async () => [{ name: "child", size: "", is_dir: true }],
+      1
+    );
+    expect(capped.directories).toEqual(["docs"]);
+    expect(capped.failures).toHaveLength(1);
+  });
+
+  it("rejects backslash-and-dot-dot child names during folder expansion instead of traversing out", async () => {
+    const tree = new Map([
+      [
+        "/srv/data/docs",
+        [
+          { name: "evil\\..\\..\\Startup\\bad.exe", size: "5", is_dir: false },
+          { name: "root.txt", size: "2", is_dir: false }
+        ]
+      ]
+    ]);
+    const payload = buildTransferSourcePayload({
+      sourceEndpoint: { id: "sftp:source", label: "Source" },
+      sourcePath: "/srv/data",
+      sourceSelectionRevision: 1,
+      entries: [{ name: "docs", size: "", is_dir: true }]
+    })!;
+    const expanded = await expandTransferSelection(payload, async (path) => tree.get(path) || []);
+
+    expect(expanded.entries).toEqual([{ name: "root.txt", size: "2", relativeDir: "docs" }]);
+    expect(expanded.directories).toEqual(["docs"]);
+    expect(expanded.failures).toEqual([]);
+  });
+
+  it("keeps files from sibling folders when one directory cannot be listed", async () => {
+    const payload = buildTransferSourcePayload({
+      sourceEndpoint: { id: "sftp:source", label: "Source" },
+      sourcePath: "/srv/data",
+      sourceSelectionRevision: 1,
+      entries: [
+        { name: "denied", size: "", is_dir: true },
+        { name: "readable", size: "", is_dir: true }
+      ]
+    })!;
+    const expanded = await expandTransferSelection(payload, async (path) => {
+      if (path.endsWith("/denied")) throw new Error("permission denied");
+      return [{ name: "kept.txt", size: "4", is_dir: false }];
+    });
+
+    expect(expanded.entries).toEqual([{ name: "kept.txt", size: "4", relativeDir: "readable" }]);
+    expect(expanded.directories).toEqual(["readable"]);
+    expect(expanded.failures).toHaveLength(1);
+  });
+
+  it("handles nullable endpoint prefixes safely", () => {
     expect(hasEndpointPrefix(null, "sftp:")).toBe(false);
     expect(hasEndpointPrefix("local:fs", "sftp:")).toBe(false);
     expect(hasEndpointPrefix("sftp:asset-1", "sftp:")).toBe(true);

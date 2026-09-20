@@ -3,6 +3,7 @@ import type { Ref } from "vue";
 import type { SftpCapabilities, SftpFileEntry, SftpIncomingMessage } from "./protocol";
 
 import { computed, onUnmounted, ref, shallowRef, watch } from "vue";
+import { isSftpDirectoryAffectedByTransfer } from "./file-manager/selectors";
 import {
   isSftpDisconnectCause,
   parseSftpCapabilities,
@@ -157,13 +158,8 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
 
   const transferEndpoint = transferRef
     ? useSftpTransferEndpoint(socket, transferRef, async ({ targetPath }) => {
-        const normalizedTarget = targetPath.replace(/\/+$/, "");
-        const separator = normalizedTarget.lastIndexOf("/");
-        const destinationDirectory = normalizedTarget.slice(0, separator) || "/";
         const displayedDirectory = currentPath.value.replace(/\/+$/, "") || "/";
-
-        if (destinationDirectory !== displayedDirectory) return;
-
+        if (!isSftpDirectoryAffectedByTransfer(displayedDirectory, targetPath)) return;
         await loadCurrentDirectory(currentPath.value, undefined, false);
       })
     : null;

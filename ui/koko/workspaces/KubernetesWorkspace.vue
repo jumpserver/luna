@@ -69,7 +69,6 @@ interface TreeRow {
 }
 
 const props = defineProps<{ tab: KokoWorkspaceTab }>();
-const emit = defineEmits<{ reconnect: [] }>();
 const RECENT_CONTAINER_LIMIT = 10;
 const { t } = useI18n();
 const kubernetesIconSrc = withBase("/icons/kubernetes.svg", useRuntimeConfig().app.baseURL);
@@ -505,11 +504,6 @@ function refreshTree() {
   if (terminalSocket.connected.value) terminalSocket.requestTree();
 }
 
-function retryConnection() {
-  terminalSocket.close();
-  emit("reconnect");
-}
-
 function syncTerminalTheme() {
   for (const { terminal } of terminals.values()) {
     applyXtermTheme(terminal, appTerminalTheme());
@@ -648,8 +642,6 @@ onUnmounted(() => {
     :loading="loading"
     :error="sessionError || connectionError"
     :loading-text="t('koko.kubernetes.preparingConnection')"
-    :retry-label="t('koko.actions.retry')"
-    @retry="retryConnection"
   >
     <div
       class="relative flex h-full min-h-0 bg-(--app-main-bg) text-(--app-fg)"

@@ -1,21 +1,21 @@
+import type { WorkspaceAssistantChatMessage, WorkspaceAssistantSession } from "./useWorkspaceAssistantSession";
 import { describe, expect, it, vi } from "vitest";
 import { computed, shallowRef, triggerRef, watch } from "vue";
 import { MCP_FINAL_RESULT_META_KEY, parseKokoMcpFrame } from "#koko/composables/agent/types";
-import type { WorkspaceAssistantChatMessage, WorkspaceAssistantSession } from "./useWorkspaceAssistantSession";
 import {
   workspaceAssistantClaimConnectionPlan,
   workspaceAssistantConnectionChoices,
   workspaceAssistantConnectionForUniqueAccount,
-  workspaceAssistantPersonalCredentialIdentity,
   workspaceAssistantManifest,
   workspaceAssistantMessages,
   workspaceAssistantNeedsAssetSelection,
+  workspaceAssistantPersonalCredentialIdentity,
   workspaceAssistantPlanExpired,
   workspaceAssistantPreparationInvalidReason,
   workspaceAssistantReadOnlyApprovalId,
   workspaceAssistantScopeId,
-  workspaceAssistantSearchDecision,
   workspaceAssistantSearchCandidates,
+  workspaceAssistantSearchDecision,
   workspaceAssistantTerminalTraceTaskId,
   workspaceAssistantTimelineMessage
 } from "./useWorkspaceAssistantSession";
@@ -24,7 +24,10 @@ vi.mock("~/store/modules/userInfo", () => ({
   useUserInfoStore: () => ({ currentUser: null, getConnectionInfoForAsset: () => null })
 }));
 
-vi.mock("~/composables/useApiRequest", () => ({ getAssetDetailRequest: vi.fn() }));
+vi.mock("~/composables/useApiRequest", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/composables/useApiRequest")>()),
+  getAssetDetailRequest: vi.fn()
+}));
 
 describe("Workspace Assistant capability", () => {
   const manualAccount = {

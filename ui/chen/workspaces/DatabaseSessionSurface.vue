@@ -94,7 +94,6 @@ import { chenUnrestrictedMutations } from "~/chen/utils/sqlSafety";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
-const emit = defineEmits<{ reconnect: [] }>();
 
 const toast = useToast();
 const { t } = useI18n();
@@ -2162,8 +2161,6 @@ defineExpose({ focus });
       icon="i-lucide-circle-alert"
       :title="adminTerminated ? startupErrorMessage : t('Chen.OpenDatabaseWorkspaceFailed')"
       :message="adminTerminated ? '' : startupErrorMessage"
-      :action-label="adminTerminated ? undefined : t('Chen.Retry')"
-      @action="emit('reconnect')"
     />
 
     <UDropdownMenu

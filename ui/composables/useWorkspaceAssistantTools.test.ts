@@ -23,7 +23,8 @@ vi.mock("~/composables/useRecentConnections", () => ({
   useRecentConnections: () => ({ recordRecentConnection: vi.fn() })
 }));
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => ({}) }));
-vi.mock("~/composables/useApiRequest", () => ({
+vi.mock("~/composables/useApiRequest", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/composables/useApiRequest")>()),
   favoriteAsset: vi.fn(),
   unfavoriteAsset: vi.fn(),
   getAssetDetailRequest: vi.fn(async () => ({})),

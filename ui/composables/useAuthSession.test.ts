@@ -16,11 +16,16 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke: vi.fn() }));
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => mocks.store }));
+vi.mock("~/utils/runtime", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/runtime")>()),
+  pageLocation: () => ({ search: "", origin: "https://luna.test", pathname: "/" })
+}));
 
 let useAuthSession: typeof import("./useAuthSession").useAuthSession;
 
 beforeEach(async () => {
   vi.resetModules();
+  globalThis.localStorage?.clear();
   const currentAccountId = ref("");
   const userMap = ref({});
   mocks.store = {
@@ -52,7 +57,6 @@ beforeEach(async () => {
   vi.stubGlobal("getWebApiHeaders", () => ({}));
   vi.stubGlobal("withWebSitePrefix", (path: string) => path);
   vi.stubGlobal("redirectToWebLogin", vi.fn());
-  vi.stubGlobal("window", { location: { search: "", origin: "https://luna.test" } });
   mocks.fetchResponse = async (url) => {
     if (url.includes("permissions")) {
       return new Response(JSON.stringify({ workbench_orgs: [organization("org-1", "Operations", true)] }));
@@ -93,20 +97,16 @@ describe("web session bootstrap", () => {
   });
 
   it("uses returned permissions when the current organization request times out", async () => {
-    vi.useFakeTimers();
     mocks.fetchResponse = async (url) => {
       if (url.includes("permissions")) {
         return new Response(JSON.stringify({ workbench_orgs: [organization("org-1", "Operations", true)] }));
       }
-      if (url.includes("orgs/orgs/current")) return new Promise<Response>(() => {});
+      if (url.includes("orgs/orgs/current")) throw new Error("timeout");
       if (url.includes("settings/public")) return new Response(JSON.stringify({ XPACK_LICENSE_IS_VALID: true }));
       return new Response(JSON.stringify({ id: "user-1", name: "Alice" }));
     };
 
-    const bootstrap = useAuthSession().bootstrapPersistedSession();
-    await vi.advanceTimersByTimeAsync(3_000);
-
-    await expect(bootstrap).resolves.toBe(true);
+    await expect(useAuthSession().bootstrapPersistedSession()).resolves.toBe(true);
     expect(mocks.store.setUserData).toHaveBeenCalledWith(
       "https://luna.test",
       expect.objectContaining({
@@ -117,17 +117,13 @@ describe("web session bootstrap", () => {
   });
 
   it("continues with the profile organization when organization bootstrap times out", async () => {
-    vi.useFakeTimers();
     mocks.fetchResponse = async (url) => {
-      if (url.includes("permissions") || url.includes("orgs/orgs/current")) return new Promise<Response>(() => {});
+      if (url.includes("permissions") || url.includes("orgs/orgs/current")) throw new Error("timeout");
       if (url.includes("settings/public")) return new Response(JSON.stringify({ XPACK_LICENSE_IS_VALID: true }));
       return new Response(JSON.stringify({ id: "user-1", name: "Alice", org_id: "org-1", org_name: "Operations" }));
     };
 
-    const bootstrap = useAuthSession().bootstrapPersistedSession();
-    await vi.advanceTimersByTimeAsync(3_000);
-
-    await expect(bootstrap).resolves.toBe(true);
+    await expect(useAuthSession().bootstrapPersistedSession()).resolves.toBe(true);
     expect(mocks.store.setUserData).toHaveBeenCalledWith(
       "https://luna.test",
       expect.objectContaining({

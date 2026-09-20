@@ -4,6 +4,7 @@ import type {
   FileTransferEndpoint,
   FileTransferEndpointRef
 } from "@jumpserver/connectors-core";
+import type { BrowserUploadSelection } from "#koko/composables/sftp/file-manager/transfer";
 import type {
   SftpTransferDropPayload,
   SftpTransferSourcePayload
@@ -18,8 +19,7 @@ import SftpPaneTableSkeleton from "#koko/components/FileManagement/pane/SftpPane
 import SftpRemotePaneToolbar from "#koko/components/FileManagement/pane/SftpRemotePaneToolbar.vue";
 import {
   buildTransferSourcePayload,
-  hasFolderBrowserUpload,
-  hasFolderTransferSelection,
+  collectBrowserUploadSelection,
   hasTransferMimeType,
   isCrossEndpointTransferDrag,
   parseTransferDragPayload,
@@ -73,7 +73,7 @@ const emit = defineEmits<{
   focus: [];
   addRemote: [];
   startTour: [];
-  browserUpload: [files: File[]];
+  browserUpload: [selection: BrowserUploadSelection];
 }>();
 
 const { t } = useI18n();
@@ -158,17 +158,8 @@ function transferSourcePayload(): SftpTransferSourcePayload | null {
   });
 }
 
-function showFolderTransferUnsupported(): void {
-  toast.add({ title: t("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
-}
-
-function hasFolderSelection() {
-  return hasFolderTransferSelection(selectedEntries.value);
-}
-
 function requestSend(): void {
   if (!canTransferFiles.value) return;
-  if (hasFolderSelection()) return showFolderTransferUnsupported();
   const payload = transferSourcePayload();
   if (!payload) return;
   hideContextMenu();
@@ -194,6 +185,7 @@ const actions = useSftpRemotePaneActions({
   hideContextMenu,
   requestSend,
   requestDownload,
+  sendPeerDirection: () => props.sendPeerDirection,
   translate: (key, params) => String(params ? t(key, params) : t(key))
 });
 const {
@@ -239,11 +231,6 @@ function clearTransferredSelection(names: string[], sourcePath: string, revision
 }
 
 function onDragStart(event: DragEvent, entry: SftpFileEntry): void {
-  if (entry.is_dir || hasFolderSelection()) {
-    showFolderTransferUnsupported();
-    event.preventDefault();
-    return;
-  }
   if (entry.name === ".." || !canTransferFiles.value || !props.transferEndpoint) {
     event.preventDefault();
     return;
@@ -278,27 +265,24 @@ function clearTransferDragState(): void {
   activeTransferDragSourceId.value = null;
 }
 
-function emitBrowserUpload(files: File[]): void {
-  if (files.length) emit("browserUpload", files);
+function emitBrowserUpload(selection: BrowserUploadSelection): void {
+  if (selection.items.length) emit("browserUpload", selection);
+  if (selection.failures.length) toast.add({ title: t("koko.fileManagement.operationFailed"), color: "warning" });
 }
 
-function onUpload(event: Event): void {
+async function onUpload(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement;
-  const files = [...(input.files || [])];
+  const files = input.files;
   input.value = "";
-  if (hasFolderBrowserUpload(files)) return showFolderTransferUnsupported();
-  emitBrowserUpload(files);
+  emitBrowserUpload(await collectBrowserUploadSelection(files || []));
 }
 
-function onTransferDrop(event: DragEvent): void {
-  const files = [...(event.dataTransfer?.files || [])];
-  if (hasFolderBrowserUpload(files, event.dataTransfer?.items)) {
+async function onTransferDrop(event: DragEvent): Promise<void> {
+  const files = event.dataTransfer?.files;
+  const items = event.dataTransfer?.items;
+  if (files?.length || Array.from(items || []).some((item) => item.kind === "file")) {
     event.preventDefault();
-    return showFolderTransferUnsupported();
-  }
-  if (files.length) {
-    event.preventDefault();
-    emitBrowserUpload(files);
+    emitBrowserUpload(await collectBrowserUploadSelection(files || [], items));
     return;
   }
   const payload = parseTransferDragPayload(event, props.transferEndpoint?.id);
@@ -456,7 +440,6 @@ defineExpose({
   selectedEntries,
   clearSelection,
   clearTransferredSelection,
-  hasFolderTransferSelection: hasFolderSelection,
   transferSourcePayload,
   focusPane,
   refresh: refreshCurrentDirectory
@@ -471,7 +454,6 @@ defineExpose({
     <div class="flex flex-col items-center gap-2 text-center">
       <UIcon name="i-lucide-circle-alert" class="size-6" />
       <p>{{ manager.error.value }}</p>
-      <UButton size="xs" @click="manager.retry.reconnect()">{{ t("koko.fileManagement.reconnect") }}</UButton>
     </div>
   </div>
   <div

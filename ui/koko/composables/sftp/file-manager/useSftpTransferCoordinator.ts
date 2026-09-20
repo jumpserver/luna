@@ -1,10 +1,12 @@
 import type {
+  CreateFileTransferTaskInput,
   FileTransferConflictPolicy,
   FileTransferEndpoint,
   FileTransferEndpointRef
 } from "@jumpserver/connectors-core";
 import type { Ref } from "vue";
 import type { SftpFileEntry } from "../protocol";
+import type { BrowserUploadSelection, ExpandedTransferSelection } from "./transfer";
 import type {
   SftpDistributionTargetOption,
   SftpLocalPaneHandle,
@@ -18,15 +20,24 @@ import { registerFileTransferEndpoint } from "@jumpserver/connectors-core";
 import { computed, onBeforeUnmount, reactive, ref, toValue, watch } from "vue";
 import { useSftpTransferUi } from "#koko/composables/sftp/useSftpTransferUi";
 import { useKokoHostAdapter } from "#koko/host";
-import { useFileTransferStore } from "#koko/stores/fileTransfer";
+import { registerFolderConflictResolver, useFileTransferStore } from "#koko/stores/fileTransfer";
 import { buildSftpDistributionGroups } from "#koko/utils/sftpDistribution";
+import { classifySftpWireError } from "../protocol";
 import {
   buildSftpTransferInputs,
+  collidingTopLevelFolders,
+  destRootFromTask,
   filterSftpDistributionTargets,
+  joinTransferPath,
+  nextKeepBothFolderName,
+  pathBelongsToFolder,
+  rewriteFolderPrefix,
   safeLocalDownloadName,
+  sftpFolderConflictError,
+  topLevelFolderName,
   uniqueRemotePanesForSend
 } from "./selectors";
-import { hasFolderBrowserUpload } from "./transfer";
+import { expandTransferSelection } from "./transfer";
 import { useBrowserDownloadTransferEndpoint } from "./useBrowserDownloadTransferEndpoint";
 import { useBrowserUploadTransferEndpoint, WEB_UPLOAD_ENDPOINT_ID } from "./useBrowserUploadTransferEndpoint";
 import { resolveLocalFsDestinationPath, useLocalFileTransferEndpoint } from "./useLocalFileTransferEndpoint";
@@ -72,6 +83,15 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   const highlightedNames = reactive<Record<SftpWorkspaceSide, string[]>>({ left: [], right: [] });
   const distributionHistory = useLocalStorage<Record<string, string[]>>("sftp-distribution-history", {});
   const endpointUnregisters = new Map<string, () => void>();
+  const pendingFolderConflicts = new Map<
+    string,
+    {
+      destination: FileTransferEndpointRef;
+      destinationPath: string;
+      folders: string[];
+      directories: string[];
+    }
+  >();
   let highlightTimer: ReturnType<typeof setTimeout> | undefined;
   /** Web global workbench left pane — stages browser File objects for Transfer Center. */
   const browserUploadEndpoint = useBrowserUploadTransferEndpoint({
@@ -166,17 +186,202 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     }
   );
 
-  function sourcePaneFor(endpointId: string) {
-    if (endpointId === LOCAL_ENDPOINT_ID) return options.localPaneRef.value;
+  function remotePaneFor(endpointId: string): SftpRemotePaneHandle | null {
     if (options.primaryTransferEndpoint.value?.id === endpointId) return options.primaryPaneRef.value;
     const pane = options.remotePanes.value.find((item) => item.transferEndpoint.id === endpointId);
     return pane ? options.remotePaneRefs.value[pane.id] || null : null;
   }
 
-  function rejectFolderTransfer(endpointId: string) {
-    if (!sourcePaneFor(endpointId)?.hasFolderTransferSelection()) return false;
-    toast.add({ title: options.translate("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
-    return true;
+  function refreshDestinationListing(destinationId: string) {
+    if (destinationId === LOCAL_ENDPOINT_ID) {
+      void options.localPaneRef.value?.refresh();
+      return;
+    }
+    void remotePaneFor(destinationId)?.refresh();
+  }
+
+  function sourcePaneFor(endpointId: string) {
+    if (endpointId === LOCAL_ENDPOINT_ID) return options.localPaneRef.value;
+    return remotePaneFor(endpointId);
+  }
+
+  function transferRelativePath(...parts: string[]) {
+    return parts
+      .filter(Boolean)
+      .join("/")
+      .replace(/^\/+|\/+$/g, "");
+  }
+
+  function browserExpandedSelection(payload: SftpTransferSourcePayload): ExpandedTransferSelection {
+    const directories = new Set<string>();
+    const entries = payload.entries.filter((entry) => !entry.is_dir);
+    for (const entry of payload.entries) {
+      const path = entry.is_dir
+        ? transferRelativePath(entry.relativeDir || "", entry.name)
+        : transferRelativePath(entry.relativeDir || "");
+      const parts = path.split("/").filter(Boolean);
+      for (let index = 1; index <= parts.length; index++) directories.add(parts.slice(0, index).join("/"));
+    }
+    return { entries, directories: [...directories], failures: [] };
+  }
+
+  async function listLocalDirectory(path: string) {
+    const entries: Array<Pick<SftpFileEntry, "name" | "size" | "is_dir">> = [];
+    for (const entry of await host.localFiles.readDir(path)) {
+      const info = await host.localFiles.stat(await host.localFiles.join(path, entry.name));
+      entries.push({
+        name: entry.name,
+        size: info.isFile ? String(info.size) : "",
+        is_dir: entry.isDirectory && !entry.isSymlink
+      });
+    }
+    return entries;
+  }
+
+  async function expandSourceSelection(payload: SftpTransferSourcePayload): Promise<ExpandedTransferSelection> {
+    const hasFolders = payload.entries.some((entry) => entry.is_dir);
+    if (!hasFolders) return { entries: payload.entries, directories: [], failures: [] };
+
+    let expanded: ExpandedTransferSelection;
+    if (payload.sourceEndpoint.id.startsWith(WEB_UPLOAD_ENDPOINT_ID)) {
+      expanded = browserExpandedSelection(payload);
+    } else {
+      let listDirectory = listLocalDirectory;
+      if (payload.sourceEndpoint.id !== LOCAL_ENDPOINT_ID) {
+        listDirectory = (path: string) => {
+          const pane = remotePaneFor(payload.sourceEndpoint.id);
+          if (!pane) throw new Error("SFTP source is unavailable");
+          return pane.manager.operations.listDirectory(path, { background: true });
+        };
+      }
+      expanded = await expandTransferSelection(payload, listDirectory);
+    }
+    if (expanded.failures.length) {
+      options.showError(options.translate("koko.fileManagement.operationFailed"), expanded.failures[0]?.cause);
+    }
+    if (expanded.entries.length > 1000) {
+      toast.add({ title: options.translate("koko.fileManagement.folderTransferLargeWarning"), color: "warning" });
+    }
+    return expanded;
+  }
+
+  async function createDestinationDirectories(
+    destination: FileTransferEndpointRef,
+    destinationPath: string,
+    directories: string[]
+  ) {
+    const paths = [...new Set(directories)].sort((left, right) => left.split("/").length - right.split("/").length);
+    for (const directory of paths) {
+      const path = joinTransferPath(destinationPath, directory);
+      try {
+        if (destination.id === LOCAL_ENDPOINT_ID || destination.id === LOCAL_DOWNLOADS_ENDPOINT_ID) {
+          await host.localFiles.mkdir(path, { recursive: true });
+        } else {
+          const pane = remotePaneFor(destination.id);
+          if (!pane) throw new Error("SFTP destination is unavailable");
+          await pane.manager.operations.createDirectoryAt(path);
+        }
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : String(cause);
+        if (classifySftpWireError({ error_code: message, err: message }) !== "already_exists") throw cause;
+      }
+    }
+  }
+
+  async function listDestinationEntries(destination: FileTransferEndpointRef, path: string) {
+    if (destination.id === LOCAL_ENDPOINT_ID || destination.id === LOCAL_DOWNLOADS_ENDPOINT_ID) {
+      return listLocalDirectory(path);
+    }
+    const pane = remotePaneFor(destination.id);
+    if (!pane) throw new Error("SFTP destination is unavailable");
+    return pane.manager.operations.listDirectory(path, { background: true });
+  }
+
+  async function splitFolderConflicts(
+    destination: FileTransferEndpointRef,
+    destinationPath: string,
+    payload: SftpTransferSourcePayload,
+    directories: string[]
+  ) {
+    const folders = [
+      ...new Set(payload.entries.filter((entry) => entry.is_dir && entry.name !== "..").map((entry) => entry.name))
+    ];
+    if (!folders.length) return { colliding: [] as string[], safeDirectories: directories };
+    try {
+      const destEntries = await listDestinationEntries(destination, destinationPath);
+      const colliding = collidingTopLevelFolders(folders, destEntries);
+      return {
+        colliding,
+        safeDirectories: directories.filter(
+          (directory) => !colliding.some((folder) => pathBelongsToFolder(directory, folder))
+        )
+      };
+    } catch {
+      return { colliding: [] as string[], safeDirectories: directories };
+    }
+  }
+
+  function applyFolderConflictStatus(inputs: CreateFileTransferTaskInput[], colliding: string[]) {
+    if (!colliding.length) return inputs;
+    const folders = new Set(colliding);
+    return inputs.map((input) => {
+      const folder = topLevelFolderName(input.source.relativeDir);
+      if (!folder || !folders.has(folder)) return input;
+      return { ...input, status: "paused" as const, error: sftpFolderConflictError };
+    });
+  }
+
+  async function resolveFolderConflict(batchId: string, policy: Exclude<FileTransferConflictPolicy, "ask">) {
+    const pending = pendingFolderConflicts.get(batchId);
+    const paused = fileTransferStore.tasks.filter(
+      (task) => task.batchId === batchId && task.status === "paused" && task.error === sftpFolderConflictError
+    );
+    if (!paused.length) {
+      pendingFolderConflicts.delete(batchId);
+      return;
+    }
+    if (policy === "skip") {
+      for (const task of paused) fileTransferStore.patchTask(task.id, { status: "skipped", error: undefined });
+      pendingFolderConflicts.delete(batchId);
+      return;
+    }
+    const destination = pending?.destination || paused[0]!.destinationEndpoint;
+    const destinationPath =
+      pending?.destinationPath || destRootFromTask(paused[0]!.destinationPath, paused[0]!.source.relativeDir);
+    let directories = pending?.directories || [
+      ...new Set(paused.map((task) => task.source.relativeDir).filter((value): value is string => Boolean(value)))
+    ];
+    if (policy === "keep_both") {
+      const listing = await listDestinationEntries(destination, destinationPath);
+      const existing = new Set(listing.map((entry) => entry.name));
+      const renameMap = new Map<string, string>();
+      for (const folder of pending?.folders || [
+        ...new Set(paused.map((task) => topLevelFolderName(task.source.relativeDir)).filter(Boolean))
+      ]) {
+        const next = nextKeepBothFolderName(folder, existing);
+        renameMap.set(folder, next);
+        existing.add(next);
+      }
+      directories = directories.map((directory) => {
+        const folder = topLevelFolderName(directory);
+        const renamed = folder ? renameMap.get(folder) : undefined;
+        return renamed ? rewriteFolderPrefix(directory, folder, renamed) : directory;
+      });
+      for (const task of paused) {
+        const folder = topLevelFolderName(task.source.relativeDir);
+        const renamed = folder ? renameMap.get(folder) : undefined;
+        if (!renamed || !folder) continue;
+        const relativeDir = rewriteFolderPrefix(task.source.relativeDir || folder, folder, renamed);
+        fileTransferStore.patchTask(task.id, {
+          source: { ...task.source, relativeDir },
+          destinationPath: joinTransferPath(destinationPath, relativeDir)
+        });
+      }
+    }
+    await createDestinationDirectories(destination, destinationPath, directories);
+    for (const task of paused) fileTransferStore.patchTask(task.id, { status: "queued", error: undefined });
+    pendingFolderConflicts.delete(batchId);
+    fileTransferStore.kick();
   }
 
   if (import.meta.dev) {
@@ -323,7 +528,6 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   }
 
   function sendFromSelection(payload: SftpTransferSourcePayload) {
-    if (rejectFolderTransfer(payload.sourceEndpoint.id)) return;
     // Always prefer Transfer Center queue (same as session SFTP↔SFTP), including local↔remote.
     if (isSimplePeerMode()) {
       const opposite = resolveOppositeDestination(payload.sourceEndpoint.id);
@@ -374,29 +578,64 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     void pane?.manager.retry.reconnect();
   }
 
-  function startDistribution() {
+  async function startDistribution() {
     const source = sendSource.value;
     if (!source || !selectedSendTargets.value.length) return;
+    const expanded = await expandSourceSelection(source);
+    const readyTargets: Array<SftpDistributionTargetOption & { colliding: string[] }> = [];
+    for (const target of selectedSendTargets.value) {
+      try {
+        const destinationPath = targetPath(target);
+        const { colliding, safeDirectories } = await splitFolderConflicts(
+          target.endpoint,
+          destinationPath,
+          source,
+          expanded.directories
+        );
+        await createDestinationDirectories(target.endpoint, destinationPath, safeDirectories);
+        readyTargets.push({ ...target, colliding });
+      } catch (error) {
+        options.showError(options.translate("koko.fileManagement.operationFailed"), error);
+      }
+    }
+    if (!readyTargets.length) return;
     const distributionId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
     const groups = buildSftpDistributionGroups({
       ...source,
+      entries: expanded.entries,
       distributionId,
       conflictPolicy: sendConflictPolicy.value,
-      targets: selectedSendTargets.value.map((target) => ({
-        endpoint: target.endpoint,
-        destinationPath: targetPath(target)
-      }))
+      targets: readyTargets.map((target) => ({ endpoint: target.endpoint, destinationPath: targetPath(target) }))
     });
     let queued = false;
     for (const group of groups) {
-      if (fileTransferStore.enqueueBatch(group.inputs)) queued = true;
+      const target = readyTargets.find((item) => item.endpoint.id === group.destination.id);
+      const colliding = target?.colliding || [];
+      const batchId = fileTransferStore.enqueueBatch(applyFolderConflictStatus(group.inputs, colliding));
+      if (batchId) {
+        queued = true;
+        if (target && colliding.length) {
+          pendingFolderConflicts.set(batchId, {
+            destination: target.endpoint,
+            destinationPath: targetPath(target),
+            folders: colliding,
+            directories: expanded.directories.filter((directory) =>
+              colliding.some((folder) => pathBelongsToFolder(directory, folder))
+            )
+          });
+        }
+      }
     }
-    if (!queued) return;
+    if (!queued && !expanded.directories.length) return;
 
-    distributionHistory.value[source.sourceEndpoint.id] = selectedSendTargets.value.map((target) => target.id);
+    distributionHistory.value[source.sourceEndpoint.id] = readyTargets.map((target) => target.id);
     sourcePaneFor(source.sourceEndpoint.id)?.clearSelection();
     sendModalOpen.value = false;
-    transferUi.signalQueued();
+    if (queued) transferUi.signalQueued();
+    else {
+      for (const target of readyTargets) refreshDestinationListing(target.endpoint.id);
+      toast.add({ title: options.translate("koko.fileManagement.folderTransferCompleted"), color: "success" });
+    }
   }
 
   function resolveEndpointSide(endpointId: string): SftpWorkspaceSide | null {
@@ -411,16 +650,42 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   }
 
   async function queueSftpDownload(payload: SftpTransferSourcePayload) {
+    if (!desktopRuntime && payload.entries.some((entry) => entry.is_dir)) {
+      toast.add({ title: options.translate("koko.fileManagement.folderDownloadSingleOnly"), color: "warning" });
+      return;
+    }
     try {
       const destinationPath = desktopRuntime ? await host.localFiles.downloadDir() : "/";
-      const inputs = buildSftpTransferInputs({ ...payload, destinationPath }, downloadEndpoint.ref).map((input) => ({
+      const expanded = desktopRuntime
+        ? await expandSourceSelection(payload)
+        : { entries: payload.entries, directories: [], failures: [] };
+      const { colliding, safeDirectories } = desktopRuntime
+        ? await splitFolderConflicts(downloadEndpoint.ref, destinationPath, payload, expanded.directories)
+        : { colliding: [] as string[], safeDirectories: expanded.directories };
+      await createDestinationDirectories(downloadEndpoint.ref, destinationPath, safeDirectories);
+      const inputs = applyFolderConflictStatus(
+        buildSftpTransferInputs({ ...payload, entries: expanded.entries, destinationPath }, downloadEndpoint.ref),
+        colliding
+      ).map((input) => ({
         ...input,
         source: desktopRuntime ? { ...input.source, name: safeLocalDownloadName(input.source.name) } : input.source,
         conflictPolicy: desktopRuntime ? ("keep_both" as const) : input.conflictPolicy
       }));
-      if (!fileTransferStore.enqueueBatch(inputs)) return;
+      const queued = fileTransferStore.enqueueBatch(inputs);
+      if (queued && colliding.length) {
+        pendingFolderConflicts.set(queued, {
+          destination: downloadEndpoint.ref,
+          destinationPath,
+          folders: colliding,
+          directories: expanded.directories.filter((directory) =>
+            colliding.some((folder) => pathBelongsToFolder(directory, folder))
+          )
+        });
+      }
+      if (!queued && !expanded.directories.length) return;
       sourcePaneFor(payload.sourceEndpoint.id)?.clearSelection();
-      transferUi.signalQueued();
+      if (queued) transferUi.signalQueued();
+      else toast.add({ title: options.translate("koko.fileManagement.folderTransferCompleted"), color: "success" });
     } catch (error) {
       options.showError(options.translate("koko.fileManagement.operationFailed"), error);
     }
@@ -441,31 +706,53 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
 
   async function queueSftpTransfer(payload: SftpTransferDropPayload, destination?: FileTransferEndpointRef) {
     if (!destination || payload.sourceEndpoint.id === destination.id || !payload.entries.length) return;
-    const destinationPath =
-      destination.id === LOCAL_ENDPOINT_ID
-        ? await localDestinationPath(payload.destinationPath)
-        : payload.destinationPath;
-    if (destination.id === LOCAL_ENDPOINT_ID && !destinationPath) {
-      options.showError(
-        options.translate("koko.fileManagement.operationFailed"),
-        new Error("Local destination path is unavailable")
+    try {
+      const destinationPath =
+        destination.id === LOCAL_ENDPOINT_ID
+          ? await localDestinationPath(payload.destinationPath)
+          : payload.destinationPath;
+      if (destination.id === LOCAL_ENDPOINT_ID && !destinationPath)
+        throw new Error("Local destination path is unavailable");
+      const expanded = await expandSourceSelection(payload);
+      const { colliding, safeDirectories } = await splitFolderConflicts(
+        destination,
+        destinationPath,
+        payload,
+        expanded.directories
       );
-      return;
-    }
-    const inputs = buildSftpTransferInputs({ ...payload, destinationPath }, destination);
-    if (!inputs.length) return;
-    const batchId = fileTransferStore.enqueueBatch(inputs);
-    if (!batchId) return;
-    sourcePaneFor(payload.sourceEndpoint.id)?.clearSelection();
-    // Highlight destination rows as soon as transfer is queued; list reload keeps the class.
-    const side = resolveEndpointSide(destination.id);
-    if (side) {
-      flashHighlight(
-        side,
-        payload.entries.map((entry) => entry.name)
+      await createDestinationDirectories(destination, destinationPath, safeDirectories);
+      const inputs = applyFolderConflictStatus(
+        buildSftpTransferInputs({ ...payload, entries: expanded.entries, destinationPath }, destination),
+        colliding
       );
+      const batchId = fileTransferStore.enqueueBatch(inputs);
+      if (batchId && colliding.length) {
+        pendingFolderConflicts.set(batchId, {
+          destination,
+          destinationPath,
+          folders: colliding,
+          directories: expanded.directories.filter((directory) =>
+            colliding.some((folder) => pathBelongsToFolder(directory, folder))
+          )
+        });
+      }
+      if (!batchId && !expanded.directories.length) return;
+      sourcePaneFor(payload.sourceEndpoint.id)?.clearSelection();
+      // Highlight destination rows as soon as transfer is queued; list reload keeps the class.
+      const side = resolveEndpointSide(destination.id);
+      if (side)
+        flashHighlight(
+          side,
+          payload.entries.map((entry) => entry.name)
+        );
+      if (batchId) transferUi.signalQueued();
+      else {
+        refreshDestinationListing(destination.id);
+        toast.add({ title: options.translate("koko.fileManagement.folderTransferCompleted"), color: "success" });
+      }
+    } catch (error) {
+      options.showError(options.translate("koko.fileManagement.operationFailed"), error);
     }
-    transferUi.signalQueued();
   }
 
   function queueSftpTransferToSelected(payload: SftpTransferDropPayload, destination?: FileTransferEndpointRef) {
@@ -498,8 +785,7 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
   }
 
   async function handleCrossPaneDrop(payload: SftpTransferDropPayload, destination?: FileTransferEndpointRef) {
-    if (!destination || payload.sourceEndpoint.id === destination.id || rejectFolderTransfer(payload.sourceEndpoint.id))
-      return;
+    if (!destination || payload.sourceEndpoint.id === destination.id) return;
     // Global local↔remote and remote↔remote both use Transfer Center (session criterion).
     const fromLocal = payload.sourceEndpoint.id === LOCAL_ENDPOINT_ID;
     if (fromLocal) {
@@ -523,7 +809,6 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
       const remote = activeId ? options.remotePanes.value.find((pane) => pane.id === activeId) : null;
       if (remote && remotePaneConnected(activeId!)) {
         if (direction === "left-to-right") {
-          if (rejectFolderTransfer(options.primaryTransferEndpoint.value.id)) return;
           const payload = options.primaryPaneRef.value.transferSourcePayload();
           if (!payload?.entries.length) {
             toast.add({ title: options.translate("koko.fileManagement.selectFilesToTransfer"), color: "warning" });
@@ -538,7 +823,6 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
           );
           return;
         }
-        if (rejectFolderTransfer(remote.transferEndpoint.id)) return;
         const payload = options.remotePaneRefs.value[remote.id]?.transferSourcePayload();
         if (!payload?.entries.length) {
           toast.add({ title: options.translate("koko.fileManagement.selectFilesToTransfer"), color: "warning" });
@@ -562,9 +846,6 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     const target = options.activePaneForSide(targetSide);
     const sourceIsLocal = sourceSide === "left" && options.globalActiveIds.left === "local";
     const targetIsLocal = targetSide === "left" && options.globalActiveIds.left === "local";
-    const sourceEndpointId = sourceIsLocal ? LOCAL_ENDPOINT_ID : source?.transferEndpoint.id;
-    if (sourceEndpointId && rejectFolderTransfer(sourceEndpointId)) return;
-
     if (direction === "left-to-right") {
       const checkedTargets = checkedRemotePanes("right");
       if (checkedTargets.length > 1) {
@@ -618,20 +899,16 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     }
   }
 
-  async function uploadWebFiles(files: File[]) {
+  function uploadWebFiles(selection: BrowserUploadSelection) {
     // Browser global left pane has no local FS — stage File objects and pick targets in the send modal.
-    if (!files.length) return;
-    if (hasFolderBrowserUpload(files)) {
-      toast.add({ title: options.translate("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
-      return;
-    }
+    if (!selection.items.length) return;
     if (!options.remotePanes.value.some((pane) => remotePaneConnected(pane.id))) {
       toast.add({ title: options.translate("koko.fileManagement.selectRemoteTarget"), color: "warning" });
       return;
     }
 
     ensureBrowserUploadEndpointMounted();
-    const staged = browserUploadEndpoint.stageFiles(files);
+    const staged = browserUploadEndpoint.stageFiles(selection.items);
     if (!staged.entries.length) return;
 
     const checkedTargets = checkedRemotePanes("right");
@@ -655,14 +932,10 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     return toValue(options.remotePaneRefs.value[pane?.id || ""]?.manager.currentPath) || "/";
   }
 
-  function uploadBrowserFiles(files: File[], destination?: FileTransferEndpointRef) {
-    if (!destination || !files.length) return;
-    if (hasFolderBrowserUpload(files)) {
-      toast.add({ title: options.translate("koko.fileManagement.folderTransferUnsupported"), color: "warning" });
-      return;
-    }
+  function uploadBrowserFiles(selection: BrowserUploadSelection, destination?: FileTransferEndpointRef) {
+    if (!destination || !selection.items.length) return;
     ensureBrowserUploadEndpointMounted();
-    const staged = browserUploadEndpoint.stageFiles(files);
+    const staged = browserUploadEndpoint.stageFiles(selection.items);
     if (!staged.entries.length) return;
     queueSftpTransfer(
       {
@@ -676,10 +949,15 @@ export function useSftpTransferCoordinator(options: TransferCoordinatorOptions) 
     );
   }
 
-  function uploadToPrimary(files: File[]) {
-    uploadBrowserFiles(files, options.primaryTransferEndpoint.value);
+  function uploadToPrimary(selection: BrowserUploadSelection) {
+    uploadBrowserFiles(selection, options.primaryTransferEndpoint.value);
   }
 
+  onBeforeUnmount(
+    registerFolderConflictResolver((batchId, policy) => {
+      void resolveFolderConflict(batchId, policy);
+    })
+  );
   onBeforeUnmount(() => {
     if (highlightTimer) clearTimeout(highlightTimer);
     for (const [endpointId, unregister] of endpointUnregisters) {

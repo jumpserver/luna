@@ -6,6 +6,8 @@ import type {
   FileTransferResumeState,
   FileTransferWriteInput
 } from "@jumpserver/connectors-core";
+import type { BrowserUploadItem } from "./transfer";
+import type { SftpTransferEntry } from "./workspaceTypes";
 import { sha256Hex } from "#koko/utils/file-transfer/sha256";
 
 export const WEB_UPLOAD_ENDPOINT_ID = "web-upload";
@@ -13,7 +15,7 @@ const STAGED_ROOT = "/web-upload";
 
 export interface BrowserStagedUpload {
   sourcePath: string;
-  entries: Array<{ name: string; size: string }>;
+  entries: SftpTransferEntry[];
 }
 
 /**
@@ -22,22 +24,43 @@ export interface BrowserStagedUpload {
  * It is not a download destination (web has no local FS pane).
  */
 export function useBrowserUploadTransferEndpoint(options: { label: string; id?: string }): FileTransferEndpoint & {
-  stageFiles: (files: File[]) => BrowserStagedUpload;
+  stageFiles: (files: Array<File | BrowserUploadItem>) => BrowserStagedUpload;
   clearStaged: () => void;
 } {
   const ref: FileTransferEndpointRef = { id: options.id || WEB_UPLOAD_ENDPOINT_ID, label: options.label };
   const staged = new Map<string, File>();
 
-  function stageFiles(files: File[]): BrowserStagedUpload {
+  function stageFiles(files: Array<File | BrowserUploadItem>): BrowserStagedUpload {
     const batchId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const sourcePath = `${STAGED_ROOT}/${batchId}`.replace(/\/+/g, "/");
-    const entries: Array<{ name: string; size: string }> = [];
-    for (const file of files) {
-      if (!file?.name) continue;
-      const path = `${sourcePath}/${file.name}`.replace(/\/+/g, "/");
-      staged.set(path, file);
-      entries.push({ name: file.name, size: String(file.size) });
+    const entries: SftpTransferEntry[] = [];
+    const directories = new Set<string>();
+    for (const item of files) {
+      const file = "relativePath" in item ? item.file : item;
+      const relativePath = ("relativePath" in item ? item.relativePath : item.webkitRelativePath || item.name).replace(
+        /^\/+|\/+$/g,
+        ""
+      );
+      if (!relativePath || relativePath.split("/").some((part) => !part || part === "." || part === "..")) continue;
+      const parts = relativePath.split("/");
+      const name = parts.pop() || "";
+      const relativeDir = parts.join("/");
+      for (let index = 1; index <= parts.length; index++) directories.add(parts.slice(0, index).join("/"));
+      if (("relativePath" in item && item.is_dir) || !file) {
+        directories.add(relativePath);
+        continue;
+      }
+      staged.set(`${sourcePath}/${relativePath}`.replace(/\/+/g, "/"), file);
+      entries.push({ name, size: String(file.size), ...(relativeDir ? { relativeDir } : {}) });
     }
+    entries.unshift(
+      ...Array.from(directories, (directory) => {
+        const parts = directory.split("/");
+        const name = parts.pop() || "";
+        const relativeDir = parts.join("/");
+        return { name, size: "", is_dir: true, ...(relativeDir ? { relativeDir } : {}) };
+      })
+    );
     return { sourcePath, entries };
   }
 

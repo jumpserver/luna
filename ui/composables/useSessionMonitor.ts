@@ -5,7 +5,7 @@ import { getKokoMonitorComponent } from "~/koko/composables/useKokoMonitor";
 import { createLionConnectTicket } from "~/lion/hooks/useLionConnectTicket";
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
-import { isDesktopRuntime } from "~/utils/runtime";
+import { isDesktopRuntime, pageLocation } from "~/utils/runtime";
 
 export interface MonitoredSession {
   id: string;
@@ -57,7 +57,7 @@ export function useSessionMonitor(sessionId: string, ticketId = "", orgId?: stri
       if (detail.is_finished || !detail.can_join) throw new Error(t("Monitor.Unavailable"));
 
       const desktop = isDesktopRuntime();
-      const site = desktop ? userInfo.currentSite : window.location.origin;
+      const site = desktop ? userInfo.currentSite : pageLocation().origin;
       const protocol = new URL(site).protocol.replace(":", "");
       const endpoint = await getSmartEndpoint({ protocol, sessionId }, detail.org_id || orgId);
       if (disposed) return;

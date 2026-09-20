@@ -25,6 +25,7 @@ import {
   WORKSPACE_BRAND_STATE_KEY,
   WORKSPACE_FAVICON_STATE_KEY
 } from "~/utils/pageTitle";
+import { pageLocation } from "~/utils/runtime";
 
 interface BootstrapResponse {
   data: string;
@@ -272,7 +273,7 @@ export const useAuthSession = () => {
       return false;
     }
 
-    const connectionToken = new URLSearchParams(window.location.search).get("token");
+    const connectionToken = new URLSearchParams(pageLocation().search).get("token");
     const [profileData, publicSettings] = await Promise.all([
       fetchWebJson<WebProfile>([
         connectionToken
@@ -296,7 +297,7 @@ export const useAuthSession = () => {
     }
 
     const cookieOrgId = getWebOrgId();
-    const site = window.location.origin;
+    const site = pageLocation().origin;
     const profileOrg: CurrentOrg = {
       id: cookieOrgId || profileData.org_id || profileData.org?.id || "",
       name: profileData.org_name || profileData.org?.name || "",
@@ -360,7 +361,7 @@ export const useAuthSession = () => {
 
     const promptLogin = () => {
       if (!import.meta.client || !isDesktopRuntime()) return;
-      if (window.location.pathname.includes("/auth")) return;
+      if (pageLocation().pathname.includes("/auth")) return;
       useEventBus().emit("login", undefined);
     };
 
@@ -450,6 +451,7 @@ export const useAuthSession = () => {
     if (!bootstrapPromise) {
       bootstrapPromise = bootstrapSession().finally(() => {
         authReady.value = true;
+        bootstrapPromise = null;
       });
     }
 

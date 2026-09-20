@@ -4,12 +4,15 @@ import type { TableColumn } from "@nuxt/ui";
 import type { TransferRateSample } from "#koko/utils/file-transfer/rate";
 import prettyBytes from "pretty-bytes";
 import SftpTransferActions from "#koko/components/FileManagement/transfer-center/SftpTransferActions.vue";
+import SftpTransferFilePath from "#koko/components/FileManagement/transfer-center/SftpTransferFilePath.vue";
+import { topLevelFolderName, transferFileDisplayPath } from "#koko/composables/sftp/file-manager/selectors";
 import {
   canPauseTransferTasks,
   canResumeTransferTasks,
   hasFinishedTransferTasks,
+  isTransferConflictError,
   selectSftpTransferTasks,
-  sftpTransferConflictError,
+  sftpFolderConflictError,
   sftpTransferErrorText,
   sftpTransferTerminalStatuses
 } from "#koko/composables/sftp/file-manager/transfer-center/useSftpTransferCenterSelectors";
@@ -48,8 +51,14 @@ const activeTaskCount = computed(
 const attentionCount = computed(
   () =>
     sftpTasks.value.filter(
-      (task) => task.status === "failed" || (task.status === "paused" && task.error === sftpTransferConflictError)
+      (task) => task.status === "failed" || (task.status === "paused" && isTransferConflictError(task.error))
     ).length
+);
+const folderConflictTask = computed(() =>
+  sftpTasks.value.find((task) => task.status === "paused" && task.error === sftpFolderConflictError)
+);
+const folderConflictName = computed(
+  () => topLevelFolderName(folderConflictTask.value?.source.relativeDir) || folderConflictTask.value?.source.name || ""
 );
 const progress = computed(() => sftpTransferProgress(sftpTasks.value));
 const drawerStyle = computed(() => ({ "--sftp-transfer-center-height": `${drawerHeight.value}px` }));
@@ -57,7 +66,7 @@ const samplesByTaskId = new Map<string, TransferRateSample[]>();
 const columns = computed<TableColumn<FileTransferTask>[]>(() => [
   {
     id: "file",
-    accessorFn: (task) => task.source.name,
+    accessorFn: (task) => transferFileDisplayPath(task.source),
     header: t("koko.sftpTransferCenter.columns.file"),
     meta: { class: { th: "w-[22%]", td: "w-[22%]" } }
   },
@@ -195,6 +204,11 @@ function resolveConflict(task: FileTransferTask, policy: Exclude<FileTransferCon
   store.resolveBatchConflict(task.batchId, policy);
 }
 
+function resolveFolderConflict(policy: Exclude<FileTransferConflictPolicy, "ask">): void {
+  const task = folderConflictTask.value;
+  if (task) store.resolveBatchConflict(task.batchId, policy);
+}
+
 function clearFinishedTransfers(): void {
   store.clearFinished(sftpTasks.value.map((task) => task.id));
   for (const task of sftpTasks.value) {
@@ -277,6 +291,33 @@ onBeforeUnmount(stopResize);
       </header>
 
       <div class="sftp-transfer-drawer-body">
+        <div v-if="folderConflictTask" class="shrink-0 px-3 pt-2">
+          <UAlert
+            color="warning"
+            variant="subtle"
+            orientation="horizontal"
+            icon="i-lucide-triangle-alert"
+            :title="t('koko.sftpTransferCenter.folderConflict', { filename: folderConflictName })"
+            :ui="{
+              root: 'px-2.5 py-2 gap-2',
+              icon: 'size-3.5',
+              title: 'text-xs font-medium',
+              actions: 'shrink-0 gap-1.5'
+            }"
+          >
+            <template #actions>
+              <UButton size="xs" color="warning" variant="soft" @click="resolveFolderConflict('overwrite')">
+                {{ t("koko.sftpTransferCenter.overwrite") }}
+              </UButton>
+              <UButton size="xs" color="neutral" variant="ghost" @click="resolveFolderConflict('skip')">
+                {{ t("koko.sftpTransferCenter.skip") }}
+              </UButton>
+              <UButton size="xs" color="neutral" variant="soft" @click="resolveFolderConflict('keep_both')">
+                {{ t("koko.sftpTransferCenter.keepBoth") }}
+              </UButton>
+            </template>
+          </UAlert>
+        </div>
         <UTable
           sticky
           class="sftp-transfer-table"
@@ -297,7 +338,7 @@ onBeforeUnmount(stopResize);
                 "
                 class="size-3 shrink-0 text-tertiary"
               />
-              <span class="truncate" :title="row.original.source.name">{{ row.original.source.name }}</span>
+              <SftpTransferFilePath :source="row.original.source" />
             </div>
           </template>
 
@@ -314,7 +355,9 @@ onBeforeUnmount(stopResize);
               size="xs"
               :model-value="transferProgress(row.original)"
               :ui="{ base: 'h-[3px]' }"
-              :aria-label="t('koko.sftpTransferCenter.fileProgress', { file: row.original.source.name })"
+              :aria-label="
+                t('koko.sftpTransferCenter.fileProgress', { file: transferFileDisplayPath(row.original.source) })
+              "
             />
           </template>
 

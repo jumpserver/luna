@@ -7,7 +7,6 @@ import { useBaseWorkspaceSession } from "@/lion/workspaces/useBaseWorkspaceSessi
 import LionProvider from "~/components/lion/LionProvider.vue";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
-const emit = defineEmits<{ reconnect: [] }>();
 const { t } = useI18n();
 const tab = toRef(props, "tab");
 const { context, error, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab);
@@ -31,8 +30,6 @@ watch(tokenId, () => void prepareSession(), { immediate: true });
       :loading="loading"
       :error="error"
       :loading-text="t('koko.workspace.preparingRemoteDesktop')"
-      :retry-label="t('WorkspacePane.Reconnect')"
-      @retry="emit('reconnect')"
     >
       <div class="relative h-full w-full min-h-0">
         <ConnectView :tab-id="tab.id" @connected="handleConnected" @disconnected="handleDisconnected" />

@@ -599,9 +599,6 @@ onUnmounted(() => {
     <div class="flex max-w-md flex-col items-center gap-3 text-center">
       <UIcon name="i-lucide-wifi-off" class="size-7 text-warning" />
       <p class="text-xs leading-5 text-muted">{{ manager.error.value }}</p>
-      <UButton size="sm" color="warning" variant="soft" icon="i-lucide-refresh-cw" @click="manager.retry.reconnect()">
-        {{ t("koko.fileManagement.reconnect") }}
-      </UButton>
     </div>
   </div>
   <div
@@ -697,9 +694,6 @@ onUnmounted(() => {
       >
         <UIcon name="i-lucide-wifi-off" class="size-4 shrink-0 text-warning" />
         <span class="min-w-0 flex-1 truncate">{{ manager.error.value }}</span>
-        <UButton size="xs" color="warning" variant="soft" icon="i-lucide-refresh-cw" @click="manager.retry.reconnect()">
-          {{ t("koko.fileManagement.reconnect") }}
-        </UButton>
       </div>
       <UDropdownMenu
         :open="tabContextMenuVisible"
