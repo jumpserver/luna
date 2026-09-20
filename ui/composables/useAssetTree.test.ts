@@ -2,7 +2,7 @@ import type { EffectScope } from "vue";
 import type { AssetTreeNode } from "~/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { effectScope, nextTick, reactive, ref } from "vue";
-import { applyAssetRename, hasAssetName, useAssetTree, useAssetTreeSearch } from "./useAssetTree";
+import { applyAssetRename, hasAssetName, unwrapTypeTreeRoot, useAssetTree, useAssetTreeSearch } from "./useAssetTree";
 
 describe("applyAssetRename", () => {
   it("renames matching leaves in place and leaves parents open", () => {
@@ -41,6 +41,38 @@ describe("asset rename names", () => {
     expect(hasAssetName(nodes, "web-1")).toBe(true);
     expect(hasAssetName(nodes, " WEB-1 ")).toBe(true);
     expect(hasAssetName(nodes, "web-1", "asset-1")).toBe(false);
+  });
+});
+
+describe("unwrapTypeTreeRoot", () => {
+  it("removes the empty API root instead of leaving it expandable", () => {
+    const nodes = [{ id: "ROOT", name: "All types", isParent: true, level: 0 }] as AssetTreeNode[];
+
+    expect(unwrapTypeTreeRoot(nodes)).toEqual([]);
+  });
+
+  it("promotes root children and resets their levels", () => {
+    const nodes = [
+      {
+        id: "ROOT",
+        name: "All types",
+        isParent: true,
+        level: 0,
+        children: [
+          {
+            id: "ROOT_HOST",
+            name: "Host",
+            isParent: true,
+            level: 1,
+            children: [{ id: "ROOT_HOST_LINUX", name: "Linux", isParent: true, level: 2 }]
+          }
+        ]
+      }
+    ] as AssetTreeNode[];
+
+    expect(unwrapTypeTreeRoot(nodes)).toMatchObject([
+      { id: "ROOT_HOST", level: 0, children: [{ id: "ROOT_HOST_LINUX", level: 1 }] }
+    ]);
   });
 });
 
