@@ -1,4 +1,5 @@
 import type { TerminalCursorAnchor } from "#koko";
+import type { AiPanelResizeEdge } from "~/components/RightPanel/aiPanelResizeHandles";
 import { useEventListener } from "@vueuse/core";
 import {
   getKokoTerminalCursorAnchor,
@@ -9,6 +10,50 @@ import {
 import { contrastingTextColor } from "~/shared/theme/color";
 import { shouldShowTerminalAiCaretHint, TERMINAL_AI_HINT_IDLE_MS } from "~/utils/terminalAiCommand";
 
+// A user-resized HUD should only be bounded by the viewport; auto-fit content should not.
+const AI_HUD_MIN_WIDTH = 280;
+const AI_HUD_MAX_WIDTH = 640;
+const AI_HUD_MIN_HEIGHT = 160;
+const AI_HUD_DEFAULT_MAX_HEIGHT = 420;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(value, max));
+}
+
+interface HudRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+function resizeRect(
+  start: HudRect,
+  edge: AiPanelResizeEdge,
+  dx: number,
+  dy: number,
+  bounds: { left: number; top: number; right: number; bottom: number }
+): HudRect {
+  const next = { ...start };
+  const right = start.left + start.width;
+  const bottom = start.top + start.height;
+  if (edge.includes("w")) {
+    next.width = clamp(start.width - dx, AI_HUD_MIN_WIDTH, Math.min(AI_HUD_MAX_WIDTH, right - bounds.left));
+    next.left = right - next.width;
+  }
+  if (edge.includes("e")) {
+    next.width = clamp(start.width + dx, AI_HUD_MIN_WIDTH, Math.min(AI_HUD_MAX_WIDTH, bounds.right - start.left));
+  }
+  if (edge.includes("n")) {
+    next.height = clamp(start.height - dy, AI_HUD_MIN_HEIGHT, bottom - bounds.top);
+    next.top = bottom - next.height;
+  }
+  if (edge.includes("s")) {
+    next.height = clamp(start.height + dy, AI_HUD_MIN_HEIGHT, bounds.bottom - start.top);
+  }
+  return next;
+}
+
 export function useTerminalAiHudLayout(options: {
   paneId: () => string;
   open: Ref<boolean>;
@@ -18,6 +63,7 @@ export function useTerminalAiHudLayout(options: {
   const panelRef = shallowRef<HTMLElement | null>(null);
   const dragHandleRef = shallowRef<HTMLElement | null>(null);
   const manualPosition = shallowRef<{ left: number; top: number } | null>(null);
+  const manualSize = shallowRef<{ width: number; height: number } | null>(null);
   const drag = shallowRef<{
     pointerId: number;
     target: HTMLElement;
@@ -25,6 +71,14 @@ export function useTerminalAiHudLayout(options: {
     y: number;
     left: number;
     top: number;
+  } | null>(null);
+  const resize = shallowRef<{
+    pointerId: number;
+    target: HTMLElement;
+    edge: AiPanelResizeEdge;
+    x: number;
+    y: number;
+    rect: HudRect;
   } | null>(null);
   const liveRef = shallowRef<HTMLElement | null>(null);
   const activeXterm = shallowRef<HTMLElement | null>(null);
@@ -39,6 +93,7 @@ export function useTerminalAiHudLayout(options: {
   let hintIdleTimer = 0;
   let layoutObserver: ResizeObserver | null = null;
   let livePinned = true;
+  let lastLiveScrollTop = 0;
 
   const panelStyle = computed(() => ({
     position: "fixed" as const,
@@ -72,9 +127,17 @@ export function useTerminalAiHudLayout(options: {
     if (current?.target.hasPointerCapture(current.pointerId)) current.target.releasePointerCapture(current.pointerId);
   }
 
+  function stopResizing() {
+    const current = resize.value;
+    resize.value = null;
+    if (current?.target.hasPointerCapture(current.pointerId)) current.target.releasePointerCapture(current.pointerId);
+  }
+
   function resetPosition() {
     stopDragging();
+    stopResizing();
     manualPosition.value = null;
+    manualSize.value = null;
     void positionPanel();
   }
 
@@ -120,8 +183,48 @@ export function useTerminalAiHudLayout(options: {
   useEventListener(dragHandleRef, "dblclick", (event: MouseEvent) => {
     if (!(event.target as Element).closest("button, a")) resetPosition();
   });
+  useEventListener(panelRef, "pointerdown", (event: PointerEvent) => {
+    if (event.button !== 0 || !event.isPrimary || resize.value) return;
+    const handle = (event.target as HTMLElement).closest<HTMLElement>("[data-terminal-ai-resize]");
+    if (!handle) return;
+    const current = panelPosition.value;
+    handle.setPointerCapture(event.pointerId);
+    resize.value = {
+      pointerId: event.pointerId,
+      target: handle,
+      edge: handle.dataset.terminalAiResize as AiPanelResizeEdge,
+      x: event.clientX,
+      y: event.clientY,
+      rect: {
+        left: current.left,
+        top: current.top,
+        width: current.width,
+        height: current.height || panelRef.value?.getBoundingClientRect().height || current.maxHeight
+      }
+    };
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  useEventListener(panelRef, "pointermove", (event: PointerEvent) => {
+    const current = resize.value;
+    if (!current || current.pointerId !== event.pointerId) return;
+    const dx = event.clientX - current.x;
+    const dy = event.clientY - current.y;
+    const rect = resizeRect(current.rect, current.edge, dx, dy, movementBounds());
+    manualSize.value = { width: rect.width, height: rect.height };
+    manualPosition.value = { left: rect.left, top: rect.top };
+    void positionPanel();
+  });
+  useEventListener(panelRef, ["pointerup", "pointercancel", "lostpointercapture"], (event: PointerEvent) => {
+    if (event.pointerId === resize.value?.pointerId) stopResizing();
+  });
+  useEventListener(panelRef, "dblclick", (event: MouseEvent) => {
+    if ((event.target as Element).closest("[data-terminal-ai-resize]")) resetPosition();
+  });
   useEventListener("blur", stopDragging);
+  useEventListener("blur", stopResizing);
   watch(options.open, stopDragging);
+  watch(options.open, stopResizing);
   const hintStyle = computed(() => ({
     left: `${hintPosition.value.left}px`,
     top: `${hintPosition.value.top}px`,
@@ -222,20 +325,22 @@ export function useTerminalAiHudLayout(options: {
     const cursorBottom = Math.min(terminal.bottom, anchor.top + Math.max(anchor.height, 18));
     const spaceBelow = terminal.bottom - edge - (cursorBottom + gap);
     const spaceAbove = anchor.top - gap - (terminal.top + edge);
-    const maxHeight = Math.max(
-      0,
-      Math.min(
-        bounds.bottom - bounds.top,
-        manualPosition.value ? bounds.bottom - bounds.top : Math.max(120, Math.floor(Math.max(spaceBelow, spaceAbove)))
-      )
-    );
-    const width = Math.max(0, Math.min(520, Math.max(280, terminal.width - 16), bounds.right - bounds.left));
+    const boundsHeight = bounds.bottom - bounds.top;
+    const autoHeightLimit = manualPosition.value
+      ? boundsHeight
+      : Math.max(120, Math.floor(Math.max(spaceBelow, spaceAbove)));
+    const maxHeight = manualSize.value
+      ? clamp(manualSize.value.height, AI_HUD_MIN_HEIGHT, boundsHeight)
+      : Math.max(0, Math.min(boundsHeight, AI_HUD_DEFAULT_MAX_HEIGHT, autoHeightLimit));
+    const width = manualSize.value
+      ? clamp(manualSize.value.width, AI_HUD_MIN_WIDTH, bounds.right - bounds.left)
+      : Math.max(0, Math.min(520, Math.max(280, terminal.width - 16), bounds.right - bounds.left));
     const liveEl = liveRef.value;
     const panelBox = panel.getBoundingClientRect();
     const liveBox = liveEl?.getBoundingClientRect();
     const chrome = Math.max(0, panelBox.height - (liveBox?.height || 0));
     const needed = liveEl ? chrome + liveEl.scrollHeight : panel.scrollHeight;
-    const height = needed > maxHeight ? maxHeight : 0;
+    const height = manualSize.value ? maxHeight : needed > maxHeight ? maxHeight : 0;
     const placedHeight = height || Math.min(panelBox.height, maxHeight);
     const placeBelow = spaceBelow >= placedHeight || (spaceBelow >= spaceAbove && spaceBelow >= 120);
     const maxLeft = Math.max(terminal.left + edge, Math.min(terminal.right, window.innerWidth) - width - edge);
@@ -296,7 +401,13 @@ export function useTerminalAiHudLayout(options: {
 
   function onLiveScroll(event: Event) {
     const el = event.currentTarget as HTMLElement;
-    livePinned = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+    const top = el.scrollTop;
+    if (top === lastLiveScrollTop) return;
+    // A queued smooth auto-scroll fires intermediate scroll events while still climbing toward
+    // the bottom; only an actual upward move (or landing at rest) reflects user intent to unpin.
+    const atBottom = el.scrollHeight - el.clientHeight - top <= 48;
+    if (top < lastLiveScrollTop || atBottom) livePinned = atBottom;
+    lastLiveScrollTop = top;
   }
 
   async function pinLive() {
@@ -304,7 +415,8 @@ export function useTerminalAiHudLayout(options: {
     await nextTick();
     const el = liveRef.value;
     if (!el) return;
-    el.scrollTop = el.scrollHeight;
+    const smooth = !window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" });
   }
 
   function syncLayoutObserver() {
@@ -322,6 +434,7 @@ export function useTerminalAiHudLayout(options: {
 
   async function reveal(xterm: HTMLElement) {
     livePinned = true;
+    lastLiveScrollTop = 0;
     activeXterm.value = xterm;
     anchorRect.value = getKokoTerminalCursorAnchor(options.paneId()) || getFallbackCursorRect(xterm);
     options.open.value = true;
@@ -339,8 +452,11 @@ export function useTerminalAiHudLayout(options: {
 
   function resetForPaneChange() {
     stopDragging();
+    stopResizing();
     manualPosition.value = null;
+    manualSize.value = null;
     livePinned = true;
+    lastLiveScrollTop = 0;
     clearHintIdleTimer();
     options.open.value = false;
     hintVisible.value = false;
@@ -352,6 +468,7 @@ export function useTerminalAiHudLayout(options: {
 
   function dispose() {
     stopDragging();
+    stopResizing();
     layoutObserver?.disconnect();
     clearHintIdleTimer();
     stopUserInputSubscription();
@@ -363,6 +480,7 @@ export function useTerminalAiHudLayout(options: {
     panelRef,
     dragHandleRef,
     dragging: computed(() => drag.value !== null),
+    interacting: computed(() => drag.value !== null || resize.value !== null),
     liveRef,
     activeXterm,
     hintVisible,
