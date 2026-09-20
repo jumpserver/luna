@@ -207,6 +207,7 @@ function showEmptyActions(pane: WorkspacePane) {
 }
 
 function showReconnect(pane: WorkspacePane) {
+  if (pane.connectionProgress) return false;
   return pane.mode === "session" && Boolean(pane.payload?.id || pane.payload?.token?.id);
 }
 

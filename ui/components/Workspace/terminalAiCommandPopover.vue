@@ -148,11 +148,13 @@ const tour = useTerminalAiTour({
   shortcut: () => shortcutLabel.value,
   isOpen: () => open.value,
   panelEl: () => panelRef.value,
-  openHud: show
+  openHud: show,
+  connectionBusy: () => Boolean(props.pane.connectionProgress),
+  root: () => getKokoTerminalElement(props.pane.id)
 });
 
 function close(restoreTerminalFocus = true) {
-  tour.destroy();
+  tour.stop();
   if (!open.value) return;
   open.value = false;
   error.value = "";
@@ -295,9 +297,10 @@ watch(sessionInfoReady, () => {
   void positionHint();
 });
 watch(
-  () => [props.pane.protocol, available.value, sessionInfoReady.value] as const,
-  () => {
-    void tour.startOnce();
+  () => [props.pane.protocol, available.value, sessionInfoReady.value, props.pane.connectionProgress] as const,
+  ([protocol, isAvailable, ready, connectionProgress]) => {
+    if (protocol === "ssh" && isAvailable && ready && !connectionProgress) tour.scheduleOnce();
+    else tour.cancelScheduled();
   },
   { immediate: true }
 );
@@ -416,6 +419,17 @@ onBeforeUnmount(() => {
               <span class="truncate">{{ t("TerminalAi.Title") }}</span>
             </div>
             <div class="flex items-center gap-1">
+              <UTooltip :text="t('koko.fileManagement.featureTour')">
+                <UButton
+                  icon="i-lucide-circle-help"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  class="size-6"
+                  :aria-label="t('koko.fileManagement.featureTour')"
+                  @click="void tour.start()"
+                />
+              </UTooltip>
               <UButton
                 data-terminal-ai-tour="history"
                 size="xs"

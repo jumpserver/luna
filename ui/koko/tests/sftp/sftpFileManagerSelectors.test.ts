@@ -3,10 +3,18 @@ import { describe, expect, it } from "vitest";
 import {
   assetSupportsSftp,
   buildSftpTransferInputs,
+  collidingTopLevelFolders,
   completedTransferSourceNames,
   defaultGlobalLeftPaneId,
+  destRootFromTask,
   filterSftpDistributionTargets,
+  isSftpDirectoryAffectedByTransfer,
+  nextKeepBothFolderName,
+  pathBelongsToFolder,
   rememberSftpConnection,
+  rewriteFolderPrefix,
+  transferFileBreadcrumbItems,
+  transferFileDisplayPath,
   uniqueRemotePanesForSend
 } from "#koko/composables/sftp/file-manager/selectors";
 
@@ -104,6 +112,49 @@ describe("sftp transfer coordinator selectors", () => {
         conflictPolicy: "ask"
       }
     ]);
+    expect(
+      buildSftpTransferInputs(
+        { ...payload, entries: [{ name: "nested.txt", size: "4", relativeDir: "folder/child" }] },
+        destinationEndpoint
+      )[0]
+    ).toMatchObject({
+      source: { name: "nested.txt", path: "/srv/data/folder/child/nested.txt", relativeDir: "folder/child" },
+      destinationPath: "/target/folder/child"
+    });
+  });
+
+  it("shows nested transfer files with their relative directory and reloads ancestor listings", () => {
+    expect(transferFileDisplayPath({ name: "ok.txt" })).toBe("ok.txt");
+    expect(transferFileDisplayPath({ name: "nested.txt", relativeDir: "folder/child" })).toBe(
+      "folder/child/nested.txt"
+    );
+    expect(transferFileBreadcrumbItems({ name: "ok.txt" })).toEqual([]);
+    expect(transferFileBreadcrumbItems({ name: "hello.txt", relativeDir: "ai-test" })).toEqual([
+      "ai-test",
+      "hello.txt"
+    ]);
+    expect(transferFileBreadcrumbItems({ name: "d.txt", relativeDir: "a/b/c" })).toEqual(["a", "…", "d.txt"]);
+    expect(isSftpDirectoryAffectedByTransfer("/home", "/home/file.txt")).toBe(true);
+    expect(isSftpDirectoryAffectedByTransfer("/home", "/home/docs/nested/file.txt")).toBe(true);
+    expect(isSftpDirectoryAffectedByTransfer("/home/docs", "/home/file.txt")).toBe(false);
+    expect(isSftpDirectoryAffectedByTransfer("/", "/home/docs/file.txt")).toBe(true);
+  });
+
+  it("detects top-level folder collisions and rewrites keep-both prefixes", () => {
+    expect(
+      collidingTopLevelFolders(
+        ["docs", "other"],
+        [
+          { name: "docs", is_dir: true },
+          { name: "file.txt", is_dir: false }
+        ]
+      )
+    ).toEqual(["docs"]);
+    expect(pathBelongsToFolder("docs/nested", "docs")).toBe(true);
+    expect(pathBelongsToFolder("other", "docs")).toBe(false);
+    expect(nextKeepBothFolderName("docs", new Set(["docs", "docs (1)"]))).toBe("docs (2)");
+    expect(rewriteFolderPrefix("docs/nested", "docs", "docs (1)")).toBe("docs (1)/nested");
+    expect(destRootFromTask("/home/docs/nested", "docs/nested")).toBe("/home");
   });
 
   it("only clears a source after every target task for that file completed", () => {

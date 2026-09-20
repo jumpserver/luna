@@ -14,8 +14,22 @@ const resumableStatuses = new Set<FileTransferStatus>(["queued", "preparing", "t
 const terminalStatuses = new Set<FileTransferStatus>(["completed", "skipped", "failed", "canceled"]);
 const transferChunkSize = 256 * 1024;
 const conflictError = "target_exists";
+const folderConflictError = "folder_exists";
 const fileTransferEndpointUnavailableError = "endpoint_unavailable";
 const legacyEndpointUnavailableError = new FileTransferUnavailableError().message;
+
+type FolderConflictResolver = (
+  batchId: string,
+  policy: Exclude<FileTransferTask["conflictPolicy"], "ask">
+) => void | Promise<void>;
+let folderConflictResolver: FolderConflictResolver | null = null;
+
+export function registerFolderConflictResolver(resolver: FolderConflictResolver) {
+  folderConflictResolver = resolver;
+  return () => {
+    if (folderConflictResolver === resolver) folderConflictResolver = null;
+  };
+}
 
 function isEndpointUnavailableError(error?: string) {
   return error === fileTransferEndpointUnavailableError || error === legacyEndpointUnavailableError;
@@ -103,7 +117,8 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
       source: input.source,
       destinationPath: input.destinationPath,
       conflictPolicy: input.conflictPolicy,
-      status: "queued",
+      status: input.status || "queued",
+      error: input.error,
       confirmedBytes: 0,
       checksumState: "",
       createdAt: now,
@@ -184,6 +199,13 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
   }
 
   function resolveBatchConflict(batchId: string, conflictPolicy: Exclude<FileTransferTask["conflictPolicy"], "ask">) {
+    if (
+      folderConflictResolver &&
+      tasks.value.some((task) => task.batchId === batchId && task.error === folderConflictError)
+    ) {
+      void folderConflictResolver(batchId, conflictPolicy);
+      return;
+    }
     for (const task of tasks.value) {
       if (task.batchId !== batchId || terminalStatuses.has(task.status)) continue;
       patchTask(task.id, { conflictPolicy, status: "queued", error: undefined });

@@ -28,6 +28,7 @@ const props = defineProps<{
   workspace: WorkspaceController;
   transfer: TransferController;
   setLocalPaneRef: (value: SftpLocalPaneHandle | null) => void;
+  startTour: () => void;
 }>();
 
 const { t } = useI18n();
@@ -283,6 +284,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
             />
             <UTooltip v-if="showSideAddButton(side)" :text="t('koko.fileManagement.addRemoteSftp')">
               <UButton
+                data-sftp-tour="remote-connect"
                 size="xs"
                 color="neutral"
                 variant="ghost"
@@ -293,6 +295,17 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
               />
             </UTooltip>
           </div>
+          <UTooltip v-if="side === 'left'" :text="t('koko.fileManagement.featureTour')">
+            <UButton
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-circle-help"
+              class="shrink-0"
+              :aria-label="t('koko.fileManagement.featureTour')"
+              @click="startTour"
+            />
+          </UTooltip>
         </div>
 
         <KokoLocalFileManagementPane

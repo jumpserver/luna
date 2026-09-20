@@ -287,6 +287,8 @@
     "Save": "Enregistrer",
     "More": "Plus",
     "SaveFailed": "Impossible d’enregistrer le script",
+    "DeleteConfirm": "Supprimer « {name} » ?",
+    "DeleteFailed": "Impossible de supprimer le script",
     "FillBatchCommand": "Insérer dans la commande par lot",
     "GroupShell": "Shell",
     "GroupPowerShell": "PowerShell",
@@ -1791,6 +1793,7 @@
       "entryDeleted": "{name} supprimé",
       "entryDownloaded": "{name} téléchargé",
       "operationFailed": "Échec de l’opération sur le fichier",
+      "emptyFolderSelected": "Le dossier sélectionné ne contient aucun fichier à téléverser",
       "refreshFailed": "Impossible d’actualiser la liste des fichiers",
       "pathNotFound": "Le chemin n’existe pas",
       "pathPermissionDenied": "Permission refusée",
@@ -1809,7 +1812,9 @@
       "transferSuccess": "Fichier transféré",
       "transferPartialSuccess": "Transféré vers {success}/{total} cibles",
       "transferFailed": "Échec du transfert de fichier",
-      "folderTransferUnsupported": "Les téléversements et transferts de dossiers ne sont pas pris en charge. Sélectionnez des fichiers ordinaires.",
+      "folderTransferLargeWarning": "Ce dossier contient plus de 1 000 fichiers. Le transfert peut prendre du temps.",
+      "folderTransferCompleted": "Structure de dossiers créée",
+      "folderDownloadSingleOnly": "Pour télécharger une archive, sélectionnez un seul dossier. Pour conserver l’arborescence, envoyez-le vers une cible.",
       "downloadFolderConfirm": "Télécharger ce dossier ?",
       "deleteConfirm": "Supprimer {name} ?",
       "unsupportedAsset": "Cet actif ne prend pas en charge SFTP",
@@ -1945,7 +1950,8 @@
       "targetProgress": "Progression du transfert vers {target}",
       "fileProgress": "Progression du transfert de {file}",
       "fileConflict": "Le fichier cible existe",
-      "fileConflictDetail": "La cible contient déjà le fichier {filename} ({size}, {date}). Choisissez une action."
+      "fileConflictDetail": "La cible contient déjà le fichier {filename} ({size}, {date}). Choisissez une action.",
+      "folderConflict": "Un dossier nommé {filename} existe déjà sur la cible"
     },
     "sftpTour": {
       "workspaceTitle": "Espace de fichiers SFTP",

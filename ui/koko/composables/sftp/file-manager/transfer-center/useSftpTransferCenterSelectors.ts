@@ -1,7 +1,7 @@
+import { sftpOperationErrorMessage } from "#koko/composables/sftp/protocol";
 import type { FileTransferStatus, FileTransferTask } from "@jumpserver/connectors-core";
 import type { MaybeRefOrGetter } from "vue";
 import { computed, toValue } from "vue";
-import { sftpOperationErrorMessage } from "#koko/composables/sftp/protocol";
 
 export interface SftpTransferTargetGroup {
   endpointId: string;
@@ -25,7 +25,12 @@ export interface SftpTransferBatchGroup {
 export type SftpTransferTaskFilter = "all" | "active" | "failed" | "completed" | "canceled";
 
 export const sftpTransferConflictError = "target_exists";
+export const sftpFolderConflictError = "folder_exists";
 export const sftpTransferEndpointUnavailableError = "endpoint_unavailable";
+
+export function isTransferConflictError(error?: string) {
+  return error === sftpTransferConflictError || error === sftpFolderConflictError;
+}
 export const sftpTransferTerminalStatuses = new Set<FileTransferStatus>(["completed", "skipped", "failed", "canceled"]);
 
 export function sftpEndpointHasActiveTransfers(
@@ -122,9 +127,9 @@ export function canPauseTransferTasks(tasks: FileTransferTask[]): boolean {
   return tasks.some((task) => !sftpTransferTerminalStatuses.has(task.status) && task.status !== "paused");
 }
 
-export function canResumeTransferTasks(tasks: FileTransferTask[], conflictError = sftpTransferConflictError): boolean {
+export function canResumeTransferTasks(tasks: FileTransferTask[]): boolean {
   const resumableTasks = tasks.filter(
-    (task) => !sftpTransferTerminalStatuses.has(task.status) && task.error !== conflictError
+    (task) => !sftpTransferTerminalStatuses.has(task.status) && !isTransferConflictError(task.error)
   );
   return resumableTasks.length > 0 && resumableTasks.every((task) => task.status === "paused");
 }
@@ -155,19 +160,16 @@ export function sftpTransferErrorText(
   return sftpOperationErrorMessage(error, translate);
 }
 
-export function targetHasConflictTasks(tasks: FileTransferTask[], conflictError = sftpTransferConflictError): boolean {
-  return tasks.some((task) => task.status === "paused" && task.error === conflictError);
+export function targetHasConflictTasks(tasks: FileTransferTask[]): boolean {
+  return tasks.some((task) => task.status === "paused" && isTransferConflictError(task.error));
 }
 
-export function getTargetTransferError(
-  tasks: FileTransferTask[],
-  conflictError = sftpTransferConflictError
-): string | null {
+export function getTargetTransferError(tasks: FileTransferTask[]): string | null {
   const failedTask = tasks.find((task) => task.status === "failed" && task.error);
   if (failedTask?.error) return failedTask.error;
 
-  const conflictTask = tasks.find((task) => task.status === "paused" && task.error === conflictError);
-  if (conflictTask) return conflictError;
+  const conflictTask = tasks.find((task) => task.status === "paused" && isTransferConflictError(task.error));
+  if (conflictTask?.error) return conflictTask.error;
 
   return null;
 }

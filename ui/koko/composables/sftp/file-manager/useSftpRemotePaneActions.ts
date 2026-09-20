@@ -17,6 +17,7 @@ interface UseSftpRemotePaneActionsOptions {
   hideContextMenu: () => void;
   requestSend: () => void;
   requestDownload: () => void;
+  sendPeerDirection?: MaybeRefOrGetter<"left" | "right" | undefined>;
   translate: (key: string, params?: Record<string, unknown>) => string;
 }
 
@@ -120,9 +121,10 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
   }
 
   function downloadSelected(): void {
-    if (toValue(options.transferableCount)) return options.requestDownload();
-    const entry = options.selectedEntry.value;
-    if (!entry?.is_dir || options.selectedEntries.value.length !== 1) return;
+    const entries = options.selectedEntries.value.filter((entry) => entry.name !== "..");
+    const entry = entries[0];
+    if (!entry) return;
+    if (entries.length !== 1 || !entry.is_dir) return options.requestDownload();
     options.hideContextMenu();
     alertTarget.value = { kind: "download", entries: [entry] };
     alertOpen.value = true;
@@ -134,10 +136,12 @@ export function useSftpRemotePaneActions(options: UseSftpRemotePaneActionsOption
     const singleSelection = options.selectedEntries.value.length === 1;
     const items: DropdownMenuItem[] = [];
     if (toValue(options.canTransferFiles)) {
+      const peer = toValue(options.sendPeerDirection);
+      const isPeer = peer === "left" || peer === "right";
       items.push(
         {
-          label: t("koko.fileManagement.sendTo"),
-          icon: "i-lucide-send",
+          label: t(isPeer ? "koko.fileManagement.sendToOpposite" : "koko.fileManagement.sendTo"),
+          icon: peer === "right" ? "i-lucide-arrow-right" : peer === "left" ? "i-lucide-arrow-left" : "i-lucide-send",
           onSelect: options.requestSend
         },
         { type: "separator" }

@@ -28,6 +28,7 @@ import remotePaneToolbar from "../../components/FileManagement/pane/SftpRemotePa
 import transferCenterComponent from "../../components/FileManagement/SftpTransferCenter.vue?raw";
 import transferActionsComponent from "../../components/FileManagement/transfer-center/SftpTransferActions.vue?raw";
 import transferFileComponent from "../../components/FileManagement/transfer-center/SftpTransferFile.vue?raw";
+import webUploadPane from "../../components/FileManagement/webUploadPane.vue?raw";
 import connectModalComponent from "../../components/FileManagement/workspace/SftpConnectModal.vue?raw";
 import globalWorkspaceComponent from "../../components/FileManagement/workspace/SftpGlobalWorkspace.vue?raw";
 import remoteTabsComponent from "../../components/FileManagement/workspace/SftpRemoteMachineTabs.vue?raw";
@@ -243,7 +244,8 @@ describe("sftp right-panel compact mode", () => {
     expect(fileManagementIndex).toContain("sftp-file-management--compact");
     expect(fileManagementIndex).toContain("<SftpSessionWorkspace\n      v-else");
     expect(sessionWorkspaceComponent).toContain('v-if="!compact && dualMode"');
-    expect(fileManagementIndex).toContain("!props.global && !props.compact && !props.showEmpty");
+    expect(fileManagementIndex).toContain("if (props.global || props.compact || props.showEmpty) return;");
+    expect(fileManagementIndex).not.toContain("startOnce(), 650");
     expect(sessionWorkspaceComponent).toContain('v-show="!compact && dualMode"');
     expect(sessionWorkspaceComponent).toContain(':compact="compact"');
     expect(sessionWorkspaceComponent).not.toContain("KokoSftpTransferCenter");
@@ -251,6 +253,14 @@ describe("sftp right-panel compact mode", () => {
     expect(sessionWorkspaceComponent).toContain("disconnectAllRemotes");
     expect(sessionWorkspaceComponent).toContain("i-lucide-ellipsis");
     expect(fileManagementStyles).toContain(".sftp-file-management--compact");
+  });
+
+  it("exposes a replayable tour in the global files workspace", () => {
+    expect(fileManagementIndex).toContain(':start-tour="sftpTour.start"');
+    expect(fileManagementIndex).toContain("sftpTour.scheduleOnce");
+    expect(globalWorkspaceComponent).toContain("startTour: () => void");
+    expect(globalWorkspaceComponent).toContain('data-sftp-tour="remote-connect"');
+    expect(globalWorkspaceComponent).toContain("koko.fileManagement.featureTour");
   });
 
   it("keeps only lightweight file ops and removes send/transfer affordances in compact panes", () => {
@@ -286,30 +296,40 @@ describe("sftp right-panel compact mode", () => {
     );
     expect(fileManagementPane).not.toContain("if (!canTransferFiles.value) return null");
     expect(fileManagementPane).toContain("if (!canTransferFiles.value) return;");
-    expect(remotePaneActions).toContain('label: t("koko.fileManagement.sendTo")');
+    expect(remotePaneActions).toContain(
+      'label: t(isPeer ? "koko.fileManagement.sendToOpposite" : "koko.fileManagement.sendTo")'
+    );
     expect(fileManagementPane).toContain(':can-send="canTransferFiles && canSend"');
     expect(filePaneSelectionBar).toContain('v-if="canSend"');
     expect(fileManagementPane).toContain(':draggable="canTransferFiles"');
-    expect(filePaneTable).toContain(":draggable=\"draggable && !entry.is_dir && entry.name !== '..'\"");
+    expect(filePaneTable).toContain(":draggable=\"draggable && entry.name !== '..'\"");
     // Compact still keeps browse + basic mutations.
     expect(remotePaneActions).toContain('label: t("koko.actions.download")');
     expect(remotePaneActions).toContain('label: t("koko.actions.rename")');
     expect(remotePaneActions).toContain('label: t("koko.actions.delete")');
   });
 
+  // NOTE: the checks below (and in "expands folder sources before queuing uploads or transfers") are
+  // structural/text-only assertions against the raw source of useSftpTransferCoordinator.ts and friends.
+  // No test in this suite instantiates useSftpTransferCoordinator/useSftpRemotePaneActions as real composables,
+  // so mkdir-already-exists tolerance, exactly-one-folder-download routing, and mixed-selection toast-vs-expand
+  // routing have no runtime verification here -- only that the expected code strings are present.
   it("queues file downloads through the transfer center while keeping folder zip downloads", () => {
     expect(fileManagementPane).toContain("download: [payload: SftpTransferSourcePayload]");
     expect(fileManagementPane).toContain('emit("download", payload)');
     expect(fileManagementPane).toMatch(
       /function transferSourcePayload\(\)[\s\S]*?return buildTransferSourcePayload\(\{[\s\S]*?\n\}/
     );
-    expect(remotePaneActions).toContain("if (toValue(options.transferableCount)) return options.requestDownload()");
+    expect(remotePaneActions).toContain("if (entries.length !== 1 || !entry.is_dir) return options.requestDownload()");
     expect(remotePaneActions).toContain("options.manager.operations.downloadEntry(entry)");
     expect(transferCoordinatorComposable).toContain("async function queueSftpDownload");
     expect(transferCoordinatorComposable).toContain("fileTransferStore.enqueueBatch(inputs)");
     expect(transferCoordinatorComposable).toContain('"local:downloads"');
     expect(transferCoordinatorComposable).toContain("host.localFiles.downloadDir()");
     expect(transferCoordinatorComposable).toContain("safeLocalDownloadName(input.source.name)");
+    expect(transferCoordinatorComposable).toContain("folderDownloadSingleOnly");
+    expect(transferCoordinatorComposable).toContain("await expandSourceSelection(payload)");
+    expect(transferCoordinatorComposable).toContain("await createDestinationDirectories");
     expect(transferCoordinatorComposable).toContain("browserDownloadEndpoint ??=");
     expect(transferCoordinatorComposable).toContain("localDownloadsEndpoint ??=");
     expect(transferCoordinatorComposable).toContain('"keep_both" as const');
@@ -325,13 +345,14 @@ describe("sftp right-panel compact mode", () => {
     expect(globalWorkspaceComponent).toContain('@download="queueSftpDownload"');
   });
 
-  it("rejects folder sources before queuing uploads or transfers", () => {
-    expect(transferCoordinatorComposable).toContain("function rejectFolderTransfer");
-    expect(transferCoordinatorComposable).toContain("hasFolderTransferSelection()");
-    expect(transferCoordinatorComposable).toContain("hasFolderBrowserUpload(files)");
-    expect(fileManagementPane).toContain("hasFolderTransferSelection(selectedEntries.value)");
-    expect(fileManagementPane).toContain("hasFolderBrowserUpload(files, event.dataTransfer?.items)");
-    expect(fileManagementLocalPane).toContain("hasFolderTransferSelection: hasFolderSelection");
+  it("expands folder sources before queuing uploads or transfers", () => {
+    expect(transferCoordinatorComposable).toContain("expandSourceSelection");
+    expect(transferCoordinatorComposable).toContain("createDestinationDirectories");
+    expect(transferCoordinatorComposable).not.toContain("function rejectFolderTransfer");
+    expect(fileManagementPane).toContain("collectBrowserUploadSelection");
+    expect(fileManagementPane).not.toContain("folderTransferUnsupported");
+    expect(fileManagementLocalPane).not.toContain("folderTransferUnsupported");
+    expect(webUploadPane).toContain("webkitdirectory");
   });
 
   it("queues remote pane uploads through the transfer center", () => {
@@ -467,7 +488,7 @@ describe("sftp professional workbench", () => {
 
   it("opens the send modal from web upload instead of auto-queuing a single target", () => {
     const uploadWebFiles = transferCoordinatorComposable.slice(
-      transferCoordinatorComposable.indexOf("async function uploadWebFiles"),
+      transferCoordinatorComposable.indexOf("function uploadWebFiles"),
       transferCoordinatorComposable.indexOf("function destinationPathFor")
     );
     expect(uploadWebFiles).toContain("openSendModal");

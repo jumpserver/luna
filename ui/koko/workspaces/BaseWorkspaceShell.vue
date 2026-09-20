@@ -4,10 +4,7 @@ defineProps<{
   loading?: boolean;
   loadingText: string;
   ready: boolean;
-  retryLabel?: string;
 }>();
-
-defineEmits<{ retry: [] }>();
 </script>
 
 <template>
@@ -17,9 +14,6 @@ defineEmits<{ retry: [] }>();
       <div class="flex flex-col items-center gap-2">
         <UIcon name="i-lucide-circle-alert" class="size-5 text-amber-500" />
         <div>{{ error }}</div>
-        <UButton v-if="retryLabel" size="sm" variant="soft" @click="void $emit('retry')">
-          {{ retryLabel }}
-        </UButton>
         <slot name="error-actions" />
       </div>
     </div>

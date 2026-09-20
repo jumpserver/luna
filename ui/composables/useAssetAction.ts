@@ -28,6 +28,7 @@ import { useSettingManager } from "~/composables/useSettingManager";
 import { desktopDialog, desktopFs, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { resolvePersonalCredentialSecretType } from "~/utils/connection";
+import { pageLocation } from "~/utils/runtime";
 
 let desktopListenersInitialized = false;
 let desktopListenersRegistering = false;
@@ -316,7 +317,7 @@ export const useAssetAction = () => {
    * @description 获取连接令牌
    */
   const joinEndpointUrl = (endpointUrl: string, path: string) => {
-    const endpoint = new URL(endpointUrl, window.location.origin);
+    const endpoint = new URL(endpointUrl, pageLocation().origin);
     return new URL(path, endpoint.origin).toString();
   };
 
@@ -325,7 +326,7 @@ export const useAssetAction = () => {
     protocol?: string,
     portField?: Parameters<typeof resolveEndpointUrl>[3]
   ) =>
-    resolveEndpointUrl(endpoint, isDesktopRuntime() ? currentSite.value : window.location.origin, protocol, portField);
+    resolveEndpointUrl(endpoint, isDesktopRuntime() ? currentSite.value : pageLocation().origin, protocol, portField);
 
   const resolveWebEndpointProtocol = (
     method: { component?: string; type?: string; endpoint_protocol?: string } | undefined
@@ -333,7 +334,7 @@ export const useAssetAction = () => {
     const component = method?.component || "";
     const isWebSurface = method?.type === "web" || ["koko", "lion", "chen", "tinker", "default"].includes(component);
     const endpointProtocol = method?.endpoint_protocol?.replace(":", "") || "";
-    const pageProtocol = window.location.protocol.replace(":", "");
+    const pageProtocol = pageLocation().protocol.replace(":", "");
     let siteProtocol = "";
     try {
       siteProtocol = new URL(currentSite.value || "").protocol.replace(":", "");
@@ -374,7 +375,7 @@ export const useAssetAction = () => {
     token: TokenResponse,
     method: { component?: string; value?: string; type?: string; endpoint_protocol?: string } | undefined,
     body: ConnectionBody,
-    endpointUrl = window.location.origin,
+    endpointUrl = pageLocation().origin,
     assetPlatform = ""
   ) => {
     const tokenId = token.id;
@@ -627,7 +628,7 @@ export const useAssetAction = () => {
           meta?.onSessionReady?.(payload);
         } else {
           meta?.onSessionReady?.(payload);
-          window.location.assign(withLocalClientOptions(localClientUrl, { mysqlForMariaDB: true }));
+          pageLocation().assign(withLocalClientOptions(localClientUrl, { mysqlForMariaDB: true }));
         }
         return;
       }

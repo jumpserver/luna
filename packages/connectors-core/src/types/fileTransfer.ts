@@ -21,6 +21,8 @@ export interface FileTransferSource {
   path: string;
   name: string;
   size: number;
+  /** Relative directory inside the transfer batch when expanded from a folder. */
+  relativeDir?: string;
 }
 
 export interface FileTransferPrepareInput {
@@ -123,6 +125,8 @@ export interface CreateFileTransferTaskInput {
   source: FileTransferSource;
   destinationPath: string;
   conflictPolicy: FileTransferConflictPolicy;
+  status?: FileTransferStatus;
+  error?: string;
 }
 
 export class FileTransferUnavailableError extends Error {

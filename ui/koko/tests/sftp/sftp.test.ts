@@ -564,20 +564,25 @@ describe("sFTP feature tour", () => {
     const chineseSteps = buildSftpTourSteps(translate(zhMessages));
     const englishSteps = buildSftpTourSteps(translate(enMessages));
 
-    expect(SFTP_TOUR_STORAGE_KEY).toBe("koko:sftp-tour:v2");
+    expect(SFTP_TOUR_STORAGE_KEY).toBe("koko:sftp-tour:v3");
     expect(chineseSteps).toHaveLength(6);
     expect(englishSteps).toHaveLength(chineseSteps.length);
-    expect(chineseSteps.map((step) => step.element)).toEqual([
-      '[data-sftp-tour="workspace"]',
-      '[data-sftp-tour="navigation"]',
-      '[data-sftp-tour="file-actions"]',
-      '[data-sftp-tour="file-table"]',
-      '[data-sftp-tour="remote-connect"]',
-      '[data-sftp-tour="transfer-center"]'
+    expect(chineseSteps.map((step) => typeof step.element)).toEqual([
+      "function",
+      "function",
+      "function",
+      "function",
+      "function",
+      "function"
     ]);
     expect(chineseSteps[0]?.popover?.title).toBe("SFTP 文件工作区");
     expect(englishSteps[0]?.popover?.title).toBe("SFTP file workspace");
     expect(chineseSteps[4]?.popover?.title).toBe("添加远程 SFTP");
+    expect(chineseSteps[5]?.popover?.title).toBe("下载与传输中心");
+    expect(chineseSteps[5]?.popover?.description).toContain("zip");
+    expect(chineseSteps[5]?.popover?.description).toContain("传输中心");
+    expect(englishSteps[5]?.popover?.description).toContain("zip");
+    expect(englishSteps[5]?.popover?.description).toContain("Transfer Center");
     expect(chineseSteps[5]?.popover?.side).toBe("top");
   });
 

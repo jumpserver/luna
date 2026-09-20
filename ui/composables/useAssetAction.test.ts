@@ -93,17 +93,6 @@ vi.mock("~/utils/runtime", async (importOriginal) => {
 function stubLocation(location: { protocol?: string; origin?: string } = {}) {
   mocks.location.protocol = location.protocol ?? "https:";
   mocks.location.origin = location.origin ?? "https://jumpserver.example";
-  vi.stubGlobal("window", {
-    location: {
-      assign: mocks.assign,
-      get protocol() {
-        return mocks.location.protocol;
-      },
-      get origin() {
-        return mocks.location.origin;
-      }
-    }
-  });
 }
 
 describe("opening assets in local applications", () => {
