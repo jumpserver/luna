@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { createI18n } from "vue-i18n";
 
 import en from "../../i18n/locales/en.json";
+import fr from "../../i18n/locales/fr.json";
+import lionFr from "../lion/locales/modules/fr.json";
 import es from "../../i18n/locales/es.json";
 import ja from "../../i18n/locales/ja.json";
 import ko from "../../i18n/locales/ko.json";
@@ -22,8 +24,9 @@ import { APIErrorType, ConvertGuacamoleError, ErrorStatusCodes, GuacamoleErrMsg 
 
 type Messages = Record<string, unknown>;
 
-const translatedLocales = { zh_hant: zhHant, ja, pt_br: ptBr, es, ru, ko, vi };
+const translatedLocales = { fr, zh_hant: zhHant, ja, pt_br: ptBr, es, ru, ko, vi };
 const translatedLionLocales = {
+  fr: lionFr,
   zh_hant: lionZhHant,
   ja: lionJa,
   pt_br: lionPtBr,
