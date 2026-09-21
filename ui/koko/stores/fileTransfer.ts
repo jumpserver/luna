@@ -457,7 +457,11 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
         }
         while (inFlightWrites.length) await ackWrite();
       } finally {
-        if (prefetch) await prefetch.then(() => undefined, () => undefined);
+        if (prefetch)
+          await prefetch.then(
+            () => undefined,
+            () => undefined
+          );
         await Promise.allSettled(inFlightWrites.map((item) => item.promise));
       }
 
