@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { CharsetType, LangType } from "~/types";
 
-import { getPublicSettings } from "~/composables/useApiRequest";
 import { useRdpResolutionPreference } from "~/composables/useRdpResolutionPreference";
 import { useSettingManager } from "~/composables/useSettingManager";
 import {
@@ -168,7 +167,7 @@ const {
   multiScreen: selectedMultiScreen,
   drivesRedirect: selectedDrivesRedirect
 } = useRdpResolutionPreference();
-const hasXPack = shallowRef(false);
+const hasXPack = computed(() => currentUser.value?.xpackLicenseValid === true);
 
 const selectedEnabled = computed<boolean>({
   get: () => backspaceAsCtrlH.value ?? false,
@@ -231,12 +230,6 @@ const commandHistoryFeedback = ref<"idle" | "done" | "empty">("idle");
 let commandHistoryFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
 
 onMounted(async () => {
-  try {
-    const settings = await getPublicSettings();
-    hasXPack.value = settings.XPACK_LICENSE_IS_VALID === true;
-  } catch {
-    hasXPack.value = false;
-  }
   if (!isDesktopRuntime()) return;
   await refreshFfmpegStatus();
   unlistenFfmpegProgress = await desktopListen<FfmpegPluginProgress>("ffmpeg-plugin-progress", (event) => {
