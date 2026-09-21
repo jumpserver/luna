@@ -102,7 +102,6 @@ export function useKokoTerminalInput(options: {
       event.stopImmediatePropagation();
     };
     const onMouseLeave = () => {
-      terminal.blur();
       options.sendHostEvent(HOST_MESSAGE_TYPE.TERMINAL_CONTENT_RESPONSE, {
         content: getXTerminalLineContent(10, terminal),
         sessionId: options.sessionId.value,

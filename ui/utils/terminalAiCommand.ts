@@ -17,6 +17,11 @@ export function isTerminalAiHistoryShortcut(event: TerminalAiShortcutEvent, isMa
   return !event.repeat && !event.altKey && event.shiftKey && primaryModifier && event.code === "KeyK";
 }
 
+export function isTerminalAiApprovalShortcut(event: TerminalAiShortcutEvent, isMacOS: boolean) {
+  const primaryModifier = isMacOS ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+  return !event.repeat && !event.altKey && !event.shiftKey && primaryModifier && event.code === "Enter";
+}
+
 export function terminalAiCommandShortcutAction(available: boolean, busy: boolean) {
   if (!available) return "ignore" as const;
   return busy ? ("hud" as const) : ("popover" as const);

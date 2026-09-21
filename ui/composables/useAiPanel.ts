@@ -21,15 +21,16 @@ const usePanelPreferences = createGlobalState(() => {
     writeDefaults: false
   });
   const narrow = useMediaQuery("(max-width: 767px)");
-  const narrowOpen = shallowRef(false);
+  const openByTabId = shallowReactive(new Map<string, boolean>());
+  const narrowOpenByTabId = shallowReactive(new Map<string, boolean>());
   watch(
     [narrow, workspaceAiEnabled],
     () => {
-      narrowOpen.value = false;
+      narrowOpenByTabId.clear();
     },
     { flush: "sync" }
   );
-  return { preferredOpen, storedWidth, narrow, narrowOpen };
+  return { preferredOpen, storedWidth, narrow, openByTabId, narrowOpenByTabId };
 });
 interface TerminalPromptBinding {
   loginContext: string;
@@ -63,14 +64,19 @@ export function resolveUnifiedAiPanel(context: UnifiedAiPanelContext): UnifiedAi
 }
 
 export const useAiPanel = () => {
-  const { preferredOpen, storedWidth, narrow, narrowOpen } = usePanelPreferences();
-  const open = computed(() => workspaceAiEnabled.value && (narrow.value ? narrowOpen.value : preferredOpen.value));
+  const { activeTabId } = useWorkspaceTabs();
+  const { preferredOpen, storedWidth, narrow, openByTabId, narrowOpenByTabId } = usePanelPreferences();
+  const tabOpenState = computed(() => (narrow.value ? narrowOpenByTabId : openByTabId));
+  const defaultOpen = computed(() => (narrow.value ? false : preferredOpen.value));
+  const open = computed(
+    () => workspaceAiEnabled.value && (tabOpenState.value.get(activeTabId.value) ?? defaultOpen.value)
+  );
   const panelWidth = computed(() => normalizePanelWidth(storedWidth.value));
 
   const setOpen = (value: boolean) => {
     if (value && !workspaceAiEnabled.value) return;
-    if (narrow.value) narrowOpen.value = value;
-    else preferredOpen.value = value;
+    if (activeTabId.value) tabOpenState.value.set(activeTabId.value, value);
+    else if (!narrow.value) preferredOpen.value = value;
   };
 
   const setPanelWidth = (width: number) => {
