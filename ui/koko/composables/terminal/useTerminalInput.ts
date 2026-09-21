@@ -37,6 +37,19 @@ export function useKokoTerminalInput(options: {
 }) {
   const cleanup: Array<() => void> = [];
 
+  const copySelection = async () => {
+    const terminal = options.terminal.value;
+    const text = terminal?.getSelection() || "";
+    if (!text || !options.validateClipboardText("copy", text)) return false;
+    try {
+      await writeText(text);
+      return true;
+    } catch (error) {
+      console.error("Failed to write terminal selection to clipboard:", error);
+      return false;
+    }
+  };
+
   const pasteClipboard = async () => {
     const socket = options.socket.value;
     if (!socket || options.inputLocked() || !options.isSocketOpen(socket)) return false;
@@ -96,28 +109,19 @@ export function useKokoTerminalInput(options: {
         terminalId: options.terminalId.value
       });
     };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === KeyboardKey.F) {
-        options.sendMittEvent(TerminalMittEvent.OpenSearch);
-        event.preventDefault();
-      }
-    };
-
     container.addEventListener("click", onClick);
     container.addEventListener("mouseenter", onMouseEnter);
     container.addEventListener("contextmenu", onContextMenu);
     container.addEventListener("paste", onPaste, true);
     container.addEventListener("copy", onCopy, true);
     container.addEventListener("mouseleave", onMouseLeave);
-    container.addEventListener("keydown", onKeyDown);
     cleanup.push(
       () => container.removeEventListener("click", onClick),
       () => container.removeEventListener("mouseenter", onMouseEnter),
       () => container.removeEventListener("contextmenu", onContextMenu),
       () => container.removeEventListener("paste", onPaste, true),
       () => container.removeEventListener("copy", onCopy, true),
-      () => container.removeEventListener("mouseleave", onMouseLeave),
-      () => container.removeEventListener("keydown", onKeyDown)
+      () => container.removeEventListener("mouseleave", onMouseLeave)
     );
 
     terminal.onData((data) => {
@@ -139,6 +143,7 @@ export function useKokoTerminalInput(options: {
     terminal.onResize(options.onResize);
     terminal.onSelectionChange(() => {
       options.selectionText.value = terminal.getSelection() || "";
+      void copySelection();
     });
     terminal.attachCustomKeyEventHandler((event) => {
       const customResult = options.onKeyEvent?.(event);
@@ -152,6 +157,13 @@ export function useKokoTerminalInput(options: {
         options.onHostKey(event.key);
         return false;
       }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.F) {
+        if (event.type === "keydown") {
+          options.sendMittEvent(TerminalMittEvent.OpenSearch);
+          event.preventDefault();
+        }
+        return false;
+      }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.C && terminal.hasSelection())
         return false;
       return !((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.V);
@@ -163,18 +175,7 @@ export function useKokoTerminalInput(options: {
   }
 
   return {
-    copySelection: async () => {
-      const terminal = options.terminal.value;
-      const text = terminal?.getSelection() || "";
-      if (!text || !options.validateClipboardText("copy", text)) return false;
-      try {
-        await writeText(text);
-        return true;
-      } catch (error) {
-        console.error("Failed to write terminal selection to clipboard:", error);
-        return false;
-      }
-    },
+    copySelection,
     pasteClipboard,
     start,
     stop
