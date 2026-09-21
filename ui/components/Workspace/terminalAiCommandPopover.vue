@@ -22,7 +22,11 @@ import {
   workspaceAssistantTerminalTargets
 } from "~/composables/useWorkspaceAssistantSession";
 import { resolveWorkspaceTerminalTarget } from "~/composables/useWorkspaceTerminalTasks";
-import { isTerminalAiCommandShortcut, terminalAiLiveTurn } from "~/utils/terminalAiCommand";
+import {
+  isTerminalAiApprovalShortcut,
+  isTerminalAiCommandShortcut,
+  terminalAiLiveTurn
+} from "~/utils/terminalAiCommand";
 
 const props = defineProps<{ pane: WorkspacePane }>();
 const { t } = useI18n();
@@ -46,7 +50,8 @@ const draft = computed({
   }
 });
 const shortcutLabel = computed(() => (isMacOS.value ? "⌘K" : "Ctrl K"));
-const historyShortcutLabel = computed(() => (isMacOS.value ? "⌘⇧K" : "Ctrl⇧K"));
+const historyShortcutLabel = computed(() => (isMacOS.value ? "⌘ ⇧ K" : "Ctrl ⇧ K"));
+const approvalShortcutLabel = computed(() => (isMacOS.value ? "⌘ ↵" : "Ctrl ↵"));
 const shortcutHint = computed(() => t("TerminalAi.ShortcutHint", { shortcut: shortcutLabel.value }));
 const sendLabel = computed(() => (submitting.value ? t("TerminalAi.Sending") : t("TerminalAi.Send")));
 const assistantBusy = computed(() => Boolean(scopeId.value && isWorkspaceAssistantBusy(scopeId.value)));
@@ -59,6 +64,7 @@ const livePrompt = computed(() => liveTurn.value.lastUser || submittedPrompt.val
 const visibleApprovals = computed(() =>
   liveTurn.value.pendingApprovals.filter((item) => !decidedApprovals.has(item.id))
 );
+const quickApproval = computed(() => (visibleApprovals.value.length === 1 ? visibleApprovals.value[0] : null));
 const activeTerminalTasks = computed(() => assistantSession.value?.terminalTasks.filter((task) => task.active) || []);
 const live = computed(
   () =>
@@ -172,6 +178,18 @@ function handleWindowKeydown(event: KeyboardEvent) {
     event.preventDefault();
     event.stopPropagation();
     close();
+    return;
+  }
+  if (
+    open.value &&
+    quickApproval.value &&
+    !approving.value &&
+    !tour.tourActive.value &&
+    isTerminalAiApprovalShortcut(event, isMacOS.value)
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    void decideApproval(quickApproval.value.id, "approve");
     return;
   }
   if (tour.tourActive.value || !isTerminalAiCommandShortcut(event, isMacOS.value) || !available.value) return;
@@ -325,9 +343,13 @@ watch(
 );
 watch(
   () => [open.value, composerLocked.value] as const,
-  ([isOpen, locked]) => {
-    if (isOpen && !locked) startPlaceholderType();
-    else stopPlaceholderType();
+  ([isOpen, locked], [wasOpen, wasLocked]) => {
+    if (isOpen && !locked) {
+      startPlaceholderType();
+      if (wasOpen && wasLocked) focusInput();
+    } else {
+      stopPlaceholderType();
+    }
   }
 );
 watch(open, async (isOpen) => {
@@ -411,7 +433,7 @@ onBeforeUnmount(() => {
             tabindex="0"
             :title="t('RightPanel.AIMovePanel')"
             :aria-label="t('RightPanel.AIMovePanel')"
-            class="terminal-ai-head grid shrink-0 touch-none select-none grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2.5 pt-2 outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
+            class="terminal-ai-head grid shrink-0 touch-none select-none grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2.5 py-2 outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
             :class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
           >
             <div class="flex min-w-0 items-center gap-1.5 text-[11px] tracking-[0.02em] text-muted">
@@ -460,7 +482,7 @@ onBeforeUnmount(() => {
             class="terminal-ai-live space-y-2 px-2.5 pb-2.5 pt-2"
             @scroll.passive="onLiveScroll"
           >
-            <p v-if="livePrompt" class="rounded-lg bg-[var(--app-selected-soft)] px-2.5 py-1.5 text-xs leading-5">
+            <p v-if="livePrompt" class="rounded-lg bg-(--app-selected-soft) px-2.5 py-1.5 text-xs leading-5">
               {{ livePrompt }}
             </p>
             <div
@@ -498,9 +520,13 @@ onBeforeUnmount(() => {
                       size="xs"
                       :color="approvalColor"
                       :loading="approving"
-                      :label="t('RightPanel.AIApprove')"
                       @click="decideApproval(approval.id, 'approve')"
-                    />
+                    >
+                      {{ t("RightPanel.AIApprove") }}
+                      <span v-if="quickApproval?.id === approval.id" class="text-[11px] font-normal opacity-80">
+                        {{ approvalShortcutLabel }}
+                      </span>
+                    </UButton>
                   </div>
                 </div>
               </template>
@@ -558,8 +584,10 @@ onBeforeUnmount(() => {
               :disabled="!draft.trim()"
               @click="submit"
             >
-              {{ sendLabel }}
-              <span class="text-[10px] font-normal opacity-80">↵</span>
+              <span class="mt-0.5">
+                {{ sendLabel }}
+              </span>
+              <span class="text-[10px] font-normal mt-0.75 opacity-80">↵</span>
             </UButton>
           </div>
 

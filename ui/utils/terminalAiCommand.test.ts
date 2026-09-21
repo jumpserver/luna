@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isTerminalAiApprovalShortcut,
   isTerminalAiCommandShortcut,
   isTerminalAiHistoryShortcut,
   shouldShowTerminalAiCaretHint,
@@ -31,6 +32,18 @@ describe("Terminal AI command shortcut", () => {
     expect(isTerminalAiHistoryShortcut(shortcutEvent({ ctrlKey: true, shiftKey: true }), false)).toBe(true);
     expect(isTerminalAiHistoryShortcut(shortcutEvent({ metaKey: true }), true)).toBe(false);
     expect(isTerminalAiHistoryShortcut(shortcutEvent({ metaKey: true, shiftKey: true, altKey: true }), true)).toBe(
+      false
+    );
+  });
+
+  it("approves one lightweight alert with Command or Control plus Enter", () => {
+    expect(isTerminalAiApprovalShortcut(shortcutEvent({ code: "Enter", metaKey: true }), true)).toBe(true);
+    expect(isTerminalAiApprovalShortcut(shortcutEvent({ code: "Enter", ctrlKey: true }), false)).toBe(true);
+    expect(isTerminalAiApprovalShortcut(shortcutEvent({ code: "Enter", metaKey: true }), false)).toBe(false);
+    expect(isTerminalAiApprovalShortcut(shortcutEvent({ code: "Enter", metaKey: true, shiftKey: true }), true)).toBe(
+      false
+    );
+    expect(isTerminalAiApprovalShortcut(shortcutEvent({ code: "Enter", metaKey: true, repeat: true }), true)).toBe(
       false
     );
   });

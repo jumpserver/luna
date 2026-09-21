@@ -72,7 +72,7 @@ onBeforeUnmount(() => {
         :description="description"
         class="mb-4"
       />
-      <p v-else class="mb-4 text-sm text-[var(--app-text-secondary)]">{{ description }}</p>
+      <p v-else class="mb-4 text-sm text-(--app-text-secondary)">{{ description }}</p>
       <AclDialogContent :group="group" embedded :chrome="false" />
     </template>
     <template #footer>

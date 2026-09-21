@@ -1,4 +1,4 @@
-import { MESSAGE_TYPE } from "@jumpserver/connectors-core";
+import { HOST_MESSAGE_TYPE, MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { readText, writeText } from "clipboard-polyfill";
 import { afterEach, expect, it, vi } from "vitest";
 import { computed, ref, shallowRef } from "vue";
@@ -145,6 +145,55 @@ it("blocks denied copy and paste events before xterm handles them", () => {
     ["copy", "selected text"]
   ]);
   expect(keyHandler?.({ key: "Enter", isComposing: true } as KeyboardEvent)).toBe(false);
+
+  input.stop();
+});
+
+it("keeps xterm focused while reporting content after mouse leave", () => {
+  const container = new EventTarget();
+  const sendHostEvent = vi.fn();
+  const terminal = {
+    attachCustomKeyEventHandler: vi.fn(),
+    blur: vi.fn(),
+    focus: vi.fn(),
+    getSelection: vi.fn(() => ""),
+    hasSelection: vi.fn(() => false),
+    onData: vi.fn(),
+    onResize: vi.fn(),
+    onSelectionChange: vi.fn(),
+    buffer: { active: { length: 0, getLine: vi.fn() } }
+  };
+  const input = useKokoTerminalInput({
+    container: shallowRef(container as HTMLElement),
+    terminal: ref(terminal as never),
+    socket: ref(null),
+    terminalId: ref("terminal-1"),
+    sessionId: ref("session-1"),
+    selectionText: ref(""),
+    lastSendTime: ref(new Date()),
+    fit: vi.fn(),
+    isSocketOpen: vi.fn(() => true),
+    isZmodemActive: vi.fn(() => false),
+    abortZmodem: vi.fn(),
+    onContextMenu: vi.fn(),
+    getTerminalConfig: vi.fn(() => ({})),
+    onResize: vi.fn(),
+    onHostKey: vi.fn(),
+    inputLocked: vi.fn(() => false),
+    sendHostEvent,
+    sendToHost: vi.fn(),
+    sendMittEvent: vi.fn(),
+    validateClipboardText: vi.fn(() => true)
+  });
+  input.start();
+  container.dispatchEvent(new Event("mouseleave"));
+
+  expect(terminal.blur).not.toHaveBeenCalled();
+  expect(sendHostEvent).toHaveBeenCalledWith(HOST_MESSAGE_TYPE.TERMINAL_CONTENT_RESPONSE, {
+    content: "",
+    sessionId: "session-1",
+    terminalId: "terminal-1"
+  });
 
   input.stop();
 });

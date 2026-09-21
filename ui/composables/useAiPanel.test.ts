@@ -11,6 +11,9 @@ const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId
 const workspaceTabs = { tabs, activeTabId, activeTab };
 const narrow = shallowRef(false);
 const saved = new Map<string, string>();
+let tabSequence = 0;
+let tabA = "";
+let tabB = "";
 
 vi.mock("@vueuse/core", async (importOriginal) => {
   const original = await importOriginal<typeof import("@vueuse/core")>();
@@ -36,8 +39,10 @@ describe("AI overlay panel", () => {
     setWorkspaceAiEnabled(true);
     await nextTick();
     vi.stubGlobal("useWorkspaceTabs", () => workspaceTabs);
-    tabs.value = [{ id: "tab-a" }, { id: "tab-b" }];
-    activeTabId.value = "tab-a";
+    tabA = `tab-a-${++tabSequence}`;
+    tabB = `tab-b-${tabSequence}`;
+    tabs.value = [{ id: tabA }, { id: tabB }];
+    activeTabId.value = tabA;
     const panel = useAiPanel();
     panel.setOpen(false);
     panel.setPanelWidth(380);
@@ -49,32 +54,42 @@ describe("AI overlay panel", () => {
 
   afterAll(() => vi.unstubAllGlobals());
 
-  it("defaults to open on desktop and remembers visibility across tabs and consumers", async () => {
+  it("remembers visibility independently for each workspace tab", () => {
     const panel = useAiPanel();
-    expect(useLocalStorage).toHaveBeenCalledWith("jumpserver-client:ai-panel-open", true, { writeDefaults: false });
+    panel.setOpen(false);
+    expect(panel.open.value).toBe(false);
+
+    activeTabId.value = tabB;
     panel.openAi();
     expect(panel.open.value).toBe(true);
 
-    activeTabId.value = "tab-b";
-    expect(panel.open.value).toBe(true);
-    useAiPanel().setOpen(false);
-    await nextTick();
-    activeTabId.value = "tab-a";
+    activeTabId.value = tabA;
     expect(panel.open.value).toBe(false);
-    expect(saved.get("jumpserver-client:ai-panel-open")).toBe("false");
-    expect(useLocalStorage("jumpserver-client:ai-panel-open", true).value).toBe(false);
+    panel.toggleAi();
+    expect(panel.open.value).toBe(true);
+    panel.toggleAi();
+    expect(panel.open.value).toBe(false);
+
+    activeTabId.value = tabB;
+    expect(useAiPanel().open.value).toBe(true);
   });
 
-  it("starts narrow screens closed and preserves the desktop preference", async () => {
+  it("starts narrow screens closed and keeps their tab state separate from desktop", async () => {
     const panel = useAiPanel();
     panel.openAi();
     narrow.value = true;
     await nextTick();
     expect(panel.open.value).toBe(false);
     panel.openAi();
-    expect(useAiPanel().open.value).toBe(true);
-    panel.setOpen(false);
-    expect(saved.get("jumpserver-client:ai-panel-open")).toBe("true");
+    expect(panel.open.value).toBe(true);
+
+    activeTabId.value = tabB;
+    expect(panel.open.value).toBe(false);
+    panel.openAi();
+    expect(panel.open.value).toBe(true);
+
+    activeTabId.value = tabA;
+    expect(panel.open.value).toBe(true);
     narrow.value = false;
     await nextTick();
     expect(panel.open.value).toBe(true);
@@ -120,7 +135,7 @@ describe("AI overlay panel", () => {
   it("blocks opening and clears terminal prompts when AI is disabled without losing preferences", () => {
     const panel = useAiPanel();
     panel.openAi();
-    activeTabId.value = "tab-b";
+    activeTabId.value = tabB;
     panel.openAi();
     const binding = { loginContext: "login", resourceId: "resource", agentId: "agent" };
     panel.requestTerminalPrompt("pane", "Inspect", binding);
@@ -133,7 +148,7 @@ describe("AI overlay panel", () => {
     expect(panel.pendingTerminalPrompt.value).toBeNull();
     setWorkspaceAiEnabled(true);
     expect(panel.open.value).toBe(true);
-    activeTabId.value = "tab-a";
+    activeTabId.value = tabA;
     expect(panel.open.value).toBe(true);
   });
 
