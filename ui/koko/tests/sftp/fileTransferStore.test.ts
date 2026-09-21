@@ -416,7 +416,9 @@ describe("file transfer store recovery actions", () => {
         expect(store.tasks.find((item) => item.id === queuedTask!.id)).toMatchObject({
           status: "paused"
         });
-        expect(store.tasks.find((item) => item.id === queuedTask!.id)?.confirmedBytes).toBeGreaterThanOrEqual(chunkSize);
+        expect(store.tasks.find((item) => item.id === queuedTask!.id)?.confirmedBytes).toBeGreaterThanOrEqual(
+          chunkSize
+        );
       });
       expect(destination.writeChunk).toHaveBeenCalledTimes(2);
     } finally {
