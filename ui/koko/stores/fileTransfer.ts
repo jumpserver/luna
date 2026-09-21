@@ -12,7 +12,7 @@ import { loadFileTransferState, saveFileTransferState } from "#koko/utils/file-t
 
 const resumableStatuses = new Set<FileTransferStatus>(["queued", "preparing", "transferring", "verifying"]);
 const terminalStatuses = new Set<FileTransferStatus>(["completed", "skipped", "failed", "canceled"]);
-const transferChunkSize = 256 * 1024;
+const transferChunkSize = 2 * 1024 * 1024;
 const conflictError = "target_exists";
 const folderConflictError = "folder_exists";
 const fileTransferEndpointUnavailableError = "endpoint_unavailable";
