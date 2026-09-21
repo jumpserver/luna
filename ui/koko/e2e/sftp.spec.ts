@@ -556,18 +556,15 @@ test.describe("koko SFTP workbench", () => {
     await expect(page.getByRole("button", { name: "Transfer center" })).toBeVisible();
   });
 
-  test("uploads a browser file through the transfer center", async ({ page }) => {
+  test("uploads from the remote toolbar through the transfer center", async ({ page }) => {
     const server = await installSftpBackend(page);
     const table = await connectRemoteSftp(page);
 
-    await page
-      .locator('input[type="file"]')
-      .first()
-      .setInputFiles({
-        name: "notes.txt",
-        mimeType: "text/plain",
-        buffer: Buffer.from("notes")
-      });
+    await page.locator('.sftp-file-management__toolbar input[type="file"]').setInputFiles({
+      name: "notes.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("notes")
+    });
 
     await expect(page.locator("#sftp-transfer-center").getByText("notes.txt", { exact: true })).toBeVisible();
     await expect(table.getByText("notes.txt", { exact: true })).toBeVisible();
