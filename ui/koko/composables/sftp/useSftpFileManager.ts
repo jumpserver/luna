@@ -157,11 +157,16 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
   }
 
   const transferEndpoint = transferRef
-    ? useSftpTransferEndpoint(socket, transferRef, async ({ targetPath }) => {
-        const displayedDirectory = currentPath.value.replace(/\/+$/, "") || "/";
-        if (!isSftpDirectoryAffectedByTransfer(displayedDirectory, targetPath)) return;
-        await loadCurrentDirectory(currentPath.value, undefined, false);
-      })
+    ? useSftpTransferEndpoint(
+        socket,
+        transferRef,
+        async ({ targetPath }) => {
+          const displayedDirectory = currentPath.value.replace(/\/+$/, "") || "/";
+          if (!isSftpDirectoryAffectedByTransfer(displayedDirectory, targetPath)) return;
+          await loadCurrentDirectory(currentPath.value, undefined, false);
+        },
+        () => capabilities.value?.transfer_binary === true
+      )
     : null;
 
   function changeDirectory(entry: SftpFileEntry) {

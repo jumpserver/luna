@@ -2,6 +2,7 @@ import type { FileTransferStatus, FileTransferTask } from "@jumpserver/connector
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 
+import { encodeSftpBinaryFrame, parseSftpBinaryFrame } from "#koko/composables/sftp/core/codec";
 import {
   classifySftpWireError,
   isSftpDisconnectCause,
@@ -43,10 +44,11 @@ class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
 
   readyState = 0;
-  readonly sent: string[] = [];
+  binaryType = "blob";
+  readonly sent: unknown[] = [];
   onclose: ((event: Event) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
-  onmessage: ((event: MessageEvent<string>) => void) | null = null;
+  onmessage: ((event: MessageEvent) => void) | null = null;
   onopen: ((event: Event) => void) | null = null;
 
   constructor(
@@ -67,16 +69,22 @@ class FakeWebSocket {
   }
 
   receive(message: unknown) {
-    this.onmessage?.({ data: JSON.stringify(message) } as MessageEvent<string>);
+    this.onmessage?.({ data: JSON.stringify(message) } as MessageEvent);
   }
 
-  send(data: string) {
+  receiveBinary(data: ArrayBuffer) {
+    this.onmessage?.({ data } as MessageEvent);
+  }
+
+  send(data: unknown) {
     this.sent.push(data);
   }
 }
 
 function lastSent(socket: FakeWebSocket) {
-  return JSON.parse(socket.sent.at(-1) || "{}") as {
+  const payload = socket.sent.at(-1);
+  if (typeof payload !== "string") throw new Error("expected json text frame");
+  return JSON.parse(payload) as {
     id: string;
     type: SftpMessageType;
     cmd?: SftpCommand;
@@ -116,6 +124,47 @@ describe("sFTP browser protocol", () => {
     expect(fake.protocols).toEqual([SftpWebSocketProtocol.Koko]);
     expect(messages).toEqual([SftpMessageType.Connect]);
     expect(lastSent(fake)).toMatchObject({ type: SftpMessageType.Pong, data: SftpControlData.Pong });
+  });
+
+  it("sends and receives transfer chunks as websocket binary frames", () => {
+    const { fake, socket } = openSocket();
+    const incoming: unknown[] = [];
+    socket.onMessage((message) => incoming.push(message));
+    expect(fake.binaryType).toBe("arraybuffer");
+
+    const payload = new Uint8Array([1, 2, 3]);
+    socket.send({
+      id: "write-1",
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.TransferWrite,
+      data: JSON.stringify({ offset: 0 }),
+      raw: payload
+    });
+    const sent = fake.sent.at(-1);
+    expect(sent).toBeInstanceOf(Uint8Array);
+    expect(parseSftpBinaryFrame(sent as Uint8Array)).toMatchObject({
+      id: "write-1",
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.TransferWrite,
+      data: JSON.stringify({ offset: 0 })
+    });
+    expect(parseSftpBinaryFrame(sent as Uint8Array)?.raw).toEqual(payload);
+
+    const frame = encodeSftpBinaryFrame({
+      id: "read-1",
+      type: SftpMessageType.Binary,
+      data: JSON.stringify({ offset: 0, sha256: "chunk-sha", eof: true }),
+      raw: payload
+    });
+    fake.receiveBinary(frame.buffer.slice(frame.byteOffset, frame.byteOffset + frame.byteLength));
+    expect(incoming).toEqual([
+      expect.objectContaining({
+        id: "read-1",
+        type: SftpMessageType.Binary,
+        data: JSON.stringify({ offset: 0, sha256: "chunk-sha", eof: true }),
+        raw: payload
+      })
+    ]);
   });
 
   it("marks the socket disconnected when koko closes the SFTP session", () => {
@@ -185,15 +234,15 @@ describe("sFTP browser protocol", () => {
     const second = operations.listDirectory("/second", { background: true });
     await vi.waitFor(() => expect(fake.sent).toHaveLength(2));
 
-    const requests = fake.sent.map(
-      (message) =>
-        JSON.parse(message) as {
-          id: string;
-          type: SftpMessageType;
-          cmd?: SftpCommand;
-          data?: string;
-        }
-    );
+    const requests = fake.sent.map((message) => {
+      if (typeof message !== "string") throw new Error("expected json text frame");
+      return JSON.parse(message) as {
+        id: string;
+        type: SftpMessageType;
+        cmd?: SftpCommand;
+        data?: string;
+      };
+    });
     const firstRequest = requests.find((request) => JSON.parse(request.data || "{}").path === "/first")!;
     const secondRequest = requests.find((request) => JSON.parse(request.data || "{}").path === "/second")!;
     expect(firstRequest).toMatchObject({ type: SftpMessageType.Data, cmd: SftpCommand.List });
@@ -658,24 +707,23 @@ describe("sftp upload permission", () => {
         )
       )
     ).toBe(false);
-    expect(
-      sftpCanUpload(
-        parseSftpCapabilities(
-          JSON.stringify({
-            capabilities: {
-              web_sftp: {
-                schema_version: 1,
-                file_editor: {
-                  enabled: true,
-                  read: true,
-                  write: true,
-                  save: { version: 1, expected_version: true, force: true, max_bytes: 10 }
-                }
-              }
+    const withBinary = parseSftpCapabilities(
+      JSON.stringify({
+        capabilities: {
+          web_sftp: {
+            schema_version: 1,
+            transfer_binary: true,
+            file_editor: {
+              enabled: true,
+              read: true,
+              write: true,
+              save: { version: 1, expected_version: true, force: true, max_bytes: 10 }
             }
-          })
-        )
-      )
-    ).toBe(true);
+          }
+        }
+      })
+    );
+    expect(sftpCanUpload(withBinary)).toBe(true);
+    expect(withBinary?.transfer_binary).toBe(true);
   });
 });
