@@ -22,7 +22,7 @@ describe("file transfer rate helper", () => {
     expect(remainingSeconds(10_240, 2_048, 2048)).toBe(4);
   });
 
-  it("drops stale samples and ignores zero-size remaining", () => {
+  it("keeps the last two samples when a chunk is slower than the window", () => {
     const samples = pushTransferRateSample(
       [
         { t: 1_000, bytes: 0 },
@@ -31,7 +31,11 @@ describe("file transfer rate helper", () => {
       200,
       7_000
     );
-    expect(samples).toEqual([{ t: 7_000, bytes: 200 }]);
+    expect(samples).toEqual([
+      { t: 2_000, bytes: 100 },
+      { t: 7_000, bytes: 200 }
+    ]);
+    expect(bytesPerSecond(samples)).toBe(20);
     expect(remainingSeconds(0, 0, 100)).toBeNull();
     expect(remainingSeconds(100, 100, 50)).toBe(0);
   });
