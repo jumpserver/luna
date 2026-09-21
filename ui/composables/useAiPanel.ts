@@ -16,7 +16,7 @@ interface UnifiedAiPanelContext {
 }
 
 const usePanelPreferences = createGlobalState(() => {
-  const preferredOpen = useLocalStorage("jumpserver-client:ai-panel-open", true, { writeDefaults: false });
+  const preferredOpen = useLocalStorage("jumpserver-client:ai-panel-open", false, { writeDefaults: false });
   const storedWidth = useLocalStorage("jumpserver-client:ai-panel-width", AI_PANEL_DEFAULT_WIDTH, {
     writeDefaults: false
   });

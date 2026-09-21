@@ -47,9 +47,9 @@ describe("AI overlay panel", () => {
 
   afterAll(() => vi.unstubAllGlobals());
 
-  it("defaults to open on desktop and remembers visibility across tabs and consumers", () => {
+  it("defaults to closed on desktop and remembers visibility across tabs and consumers", () => {
     const panel = useAiPanel();
-    expect(useLocalStorage).toHaveBeenCalledWith("jumpserver-client:ai-panel-open", true, { writeDefaults: false });
+    expect(useLocalStorage).toHaveBeenCalledWith("jumpserver-client:ai-panel-open", false, { writeDefaults: false });
     panel.openAi();
     expect(panel.open.value).toBe(true);
 
