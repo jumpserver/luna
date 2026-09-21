@@ -272,9 +272,9 @@ function emitBrowserUpload(selection: BrowserUploadSelection): void {
 
 async function onUpload(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement;
-  const files = input.files;
+  const files = Array.from(input.files || []);
   input.value = "";
-  emitBrowserUpload(await collectBrowserUploadSelection(files || []));
+  emitBrowserUpload(await collectBrowserUploadSelection(files));
 }
 
 async function onTransferDrop(event: DragEvent): Promise<void> {
