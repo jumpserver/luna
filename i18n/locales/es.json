@@ -1405,6 +1405,7 @@
     "KubernetesDescription": "Las conexiones K8s usan el workspace de Kubernetes UI de koko.",
     "RemoteDesktop": "Escritorio remoto",
     "RemoteDesktopDescription": "Las conexiones RDP/VNC usan el workspace de escritorio remoto de Lion.",
+    "ClientProxy": "Cliente",
     "BuiltinWebProxy": "Navegador integrado",
     "BuiltinWebProxyDescription": "Los activos de sitios web usan el WebView del sistema y el tráfico pasa por Koko Web Proxy."
   },

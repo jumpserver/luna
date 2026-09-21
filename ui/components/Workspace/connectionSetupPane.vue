@@ -65,6 +65,9 @@ const launchSummary = computed(() => {
     : t("ConnectionSetup.LaunchWithLocalClient");
 });
 const launchHint = computed(() => t("ConnectionSetup.LaunchHint"));
+const downloadCenterUrl = computed(() =>
+  import.meta.client ? withWebSitePrefix("/core/download/") : "/core/download/"
+);
 const standaloneSessionWindow = computed(() => route.path.startsWith("/session/"));
 
 const updateExternalLaunchState = async () => {
@@ -374,6 +377,18 @@ onMounted(loadAsset);
                         {{ launchedClientName }}
                       </div>
                     </div>
+
+                    <UButton
+                      :label="t('Setting.DownloadClient')"
+                      icon="i-lucide-download"
+                      :to="downloadCenterUrl"
+                      external
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      color="neutral"
+                      variant="outline"
+                      class="mt-5"
+                    />
                   </section>
                 </div>
 

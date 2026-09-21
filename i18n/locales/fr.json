@@ -1405,6 +1405,7 @@
     "KubernetesDescription": "Les connexions Kubernetes utilisent l’espace d’interface Kubernetes Koko.",
     "RemoteDesktop": "Bureau distant",
     "RemoteDesktopDescription": "Les connexions RDP/VNC utilisent l’espace de bureau distant Lion.",
+    "ClientProxy": "Client",
     "BuiltinWebProxy": "Navigateur intégré",
     "BuiltinWebProxyDescription": "Les actifs web utilisent la WebView du système, avec un trafic acheminé via Koko Web Proxy."
   },
