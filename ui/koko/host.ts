@@ -31,6 +31,7 @@ export type KokoTerminalCommandProfile =
   | "redis"
   | "mongodb"
   | "oracle"
+  | "dameng"
   | "sqlserver";
 
 const SENSITIVE_TERMINAL_COMMAND_PATTERNS = [

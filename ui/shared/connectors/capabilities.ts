@@ -35,6 +35,7 @@ export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] 
       "ssh",
       "telnet",
       "clickhouse",
+      "dameng",
       "mariadb",
       "mongodb",
       "mysql",

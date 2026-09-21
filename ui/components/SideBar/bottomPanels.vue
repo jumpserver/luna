@@ -29,7 +29,7 @@ type PanelKind = "favorites" | "snippets";
 type SnippetGroupKey = "shell" | "win_shell" | "python" | "raw" | "database" | "other";
 
 const FAVORITE_ROOT_ID = "__favorite_root__";
-const DATABASE_SNIPPET_MODULES = new Set(["mysql", "mariadb", "postgresql", "sqlserver", "oracle"]);
+const DATABASE_SNIPPET_MODULES = new Set(["mysql", "mariadb", "postgresql", "sqlserver", "oracle", "dameng"]);
 
 const { t } = useI18n();
 const toast = useToast();
@@ -91,7 +91,8 @@ const snippetCreateItems = computed<DropdownMenuItem[]>(() =>
     ["MariaDB", "mariadb", "i-lucide-database"],
     ["PostgreSQL", "postgresql", "i-lucide-database"],
     ["SQLServer", "sqlserver", "i-lucide-database"],
-    ["Oracle", "oracle", "i-lucide-database"]
+    ["Oracle", "oracle", "i-lucide-database"],
+    ["Dameng", "dameng", "i-lucide-database"]
   ].map(([label, module, icon]) => ({
     label,
     icon,
@@ -342,6 +343,7 @@ function getSnippetIcon(snippet: Snippet) {
     case "postgresql":
     case "sqlserver":
     case "oracle":
+    case "dameng":
       return "i-lucide-database";
     case "raw":
       return "i-lucide-file-text";

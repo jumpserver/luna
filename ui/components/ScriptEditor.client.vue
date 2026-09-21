@@ -27,7 +27,7 @@ function languageExtension(module: string): Extension {
   if (module === "mariadb") return sql({ dialect: MariaSQL });
   if (module === "postgresql") return sql({ dialect: PostgreSQL });
   if (module === "sqlserver") return sql({ dialect: MSSQL });
-  if (module === "oracle") return sql({ dialect: PLSQL });
+  if (["oracle", "dameng"].includes(module)) return sql({ dialect: PLSQL });
   return [];
 }
 

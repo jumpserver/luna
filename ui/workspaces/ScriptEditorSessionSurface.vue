@@ -37,7 +37,8 @@ const moduleItems = [
   { label: "MariaDB", value: "mariadb" },
   { label: "PostgreSQL", value: "postgresql" },
   { label: "SQLServer", value: "sqlserver" },
-  { label: "Oracle", value: "oracle" }
+  { label: "Oracle", value: "oracle" },
+  { label: "Dameng", value: "dameng" }
 ];
 const scopeItems = computed(() => [
   { label: t("Snippets.ScopePrivate"), value: "private" },

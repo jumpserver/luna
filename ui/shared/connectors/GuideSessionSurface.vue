@@ -29,6 +29,7 @@ const defaultPorts: Record<string, number> = {
   postgresql: 5432,
   redis: 6379,
   oracle: 1521,
+  dameng: 5236,
   sqlserver: 1433,
   mongodb: 27017
 };
