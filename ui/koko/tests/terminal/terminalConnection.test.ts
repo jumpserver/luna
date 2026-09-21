@@ -1,7 +1,11 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { effectScope, ref } from "vue";
 import { parseEnvelope, parseJSONPayload } from "#koko/composables/terminal/envelope";
-import { describeTerminalClose } from "#koko/composables/terminal/protocol";
+import {
+  createKokoStartupOutputCapture,
+  describeTerminalClose,
+  resolveKokoTerminalCloseMessage
+} from "#koko/composables/terminal/protocol";
 import { useKokoTerminalHeartbeat } from "#koko/composables/terminal/useTerminalHeartbeat";
 import { useKokoTerminalTransport } from "#koko/composables/terminal/useTerminalTransport";
 
@@ -24,6 +28,34 @@ it("distinguishes Koko session end, Koko timeout, offline and unexplained closes
   expect(describeTerminalClose(abnormal, undefined, true).source).toBe("transport");
   expect(describeTerminalClose({ code: 1000, reason: "", wasClean: true }, undefined, true).source).toBe("unknown");
   expect(describeTerminalClose(abnormal, "", true).source).toBe("koko");
+});
+
+it("uses raw startup output for an early close and clears it once ready", () => {
+  const capture = createKokoStartupOutputCapture();
+  const encoded = new TextEncoder().encode("sqlserver: 连接被拒绝");
+
+  capture.append(encoded.slice(0, 13));
+  capture.append(encoded.slice(13));
+  expect(resolveKokoTerminalCloseMessage(capture.take(), "Koko 已结束会话：资产连接已结束")).toBe(
+    "sqlserver: 连接被拒绝"
+  );
+
+  capture.markReady();
+  capture.append(new TextEncoder().encode("must not replace the close reason"));
+  expect(resolveKokoTerminalCloseMessage(capture.take(), "Koko 已结束会话：资产连接已结束")).toBe(
+    "Koko 已结束会话：资产连接已结束"
+  );
+});
+
+it("keeps only the last 8 KiB of startup output", () => {
+  const limit = 8 * 1024;
+  const capture = createKokoStartupOutputCapture(limit);
+  const encoder = new TextEncoder();
+
+  capture.append(encoder.encode("x".repeat(limit)));
+  capture.append(encoder.encode("tail"));
+
+  expect(capture.take()).toBe(`${"x".repeat(limit - 4)}tail`);
 });
 
 it("sends heartbeats only on open sockets, updates send time and stops after close", () => {

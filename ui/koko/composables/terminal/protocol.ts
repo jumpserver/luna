@@ -14,6 +14,56 @@ export enum TerminalWebSocketProtocol {
   Koko = "JMS-KOKO"
 }
 
+const MAX_STARTUP_OUTPUT_BYTES = 8 * 1024;
+
+export function createKokoStartupOutputCapture(maxBytes = MAX_STARTUP_OUTPUT_BYTES) {
+  let chunks: Uint8Array[] = [];
+  let size = 0;
+  let ready = false;
+
+  const append = (data: Uint8Array) => {
+    if (ready || !data.byteLength) return;
+
+    const chunk = data.byteLength > maxBytes ? data.slice(-maxBytes) : Uint8Array.from(data);
+    chunks.push(chunk);
+    size += chunk.byteLength;
+    while (size > maxBytes) {
+      const excess = size - maxBytes;
+      const first = chunks.shift();
+      if (!first) return;
+      if (first.byteLength <= excess) {
+        size -= first.byteLength;
+      } else {
+        chunks.unshift(first.slice(excess));
+        size -= excess;
+      }
+    }
+  };
+
+  const markReady = () => {
+    ready = true;
+    chunks = [];
+    size = 0;
+  };
+
+  const take = () => {
+    if (ready || !size) return "";
+    const output = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      output.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return new TextDecoder().decode(output);
+  };
+
+  return { append, markReady, take };
+}
+
+export function resolveKokoTerminalCloseMessage(startupOutput: string, fallback: string) {
+  return startupOutput.trim() ? startupOutput : fallback;
+}
+
 export interface TerminalIncomingMessage {
   id: string;
   type: string;

@@ -52,7 +52,7 @@ import { useKokoTerminalSettingsStore } from "#koko/stores/terminalSettings";
 import { getDefaultTerminalConfig } from "#koko/utils/guard";
 import { applyXtermTheme, appTerminalTheme, syncXtermBackground, terminalTheme } from "#koko/utils/terminalTheme";
 import { formatMessage, preprocessInput } from "#koko/utils/terminalUtils";
-import { describeTerminalClose } from "./protocol";
+import { createKokoStartupOutputCapture, describeTerminalClose, resolveKokoTerminalCloseMessage } from "./protocol";
 
 const isSocketOpen = (socket: WebSocket) => socket.readyState === WebSocket.OPEN;
 
@@ -131,6 +131,7 @@ export const useKokoTerminalSocket = () => {
   let fitAddon: FitAddon | null = null;
   let sessionReady = false;
   let serverCloseReason: string | undefined;
+  const startupOutput = createKokoStartupOutputCapture();
   let disposeSocketEvents: (() => void) | undefined;
   let hasPendingContainerFit = false;
 
@@ -289,6 +290,7 @@ export const useKokoTerminalSocket = () => {
     onServerClose: (reason) => {
       serverCloseReason = reason;
     },
+    onTerminalReady: startupOutput.markReady,
     onZmodemEnd: zmodem.finishDraining,
     onZmodemAbort: () => {
       zmodem.abortActiveSession();
@@ -331,6 +333,7 @@ export const useKokoTerminalSocket = () => {
   const messageHandler = useKokoTerminalMessageHandler(terminalMessageHandlers, {
     onTerminalOutput: (messageTerminalId, data) => {
       if (messageTerminalId === Number(terminalId.value)) {
+        startupOutput.append(data);
         binaryHandler.handleBinaryMessage(data);
       }
     }
@@ -378,10 +381,13 @@ export const useKokoTerminalSocket = () => {
         lastSendTime: lastSendTime.value.toISOString(),
         lastReceiveTime: lastReceiveTime.value.toISOString()
       });
-      const message = t(detail.messageKey, {
-        code: event.code,
-        reason: detail.reasonKey ? t(detail.reasonKey) : ""
-      });
+      const message = resolveKokoTerminalCloseMessage(
+        startupOutput.take(),
+        t(detail.messageKey, {
+          code: event.code,
+          reason: detail.reasonKey ? t(detail.reasonKey) : ""
+        })
+      );
       if (paneId) hostAdapter.markSessionDisconnected(paneId, message);
       if (!terminalRef.value) return;
       terminalRef.value.write("\r\n");
