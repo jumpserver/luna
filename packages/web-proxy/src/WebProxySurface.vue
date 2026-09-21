@@ -675,6 +675,8 @@ defineExpose({ focus, close: closeView });
           variant="ghost"
           size="sm"
           class="size-7 shrink-0 cursor-help justify-center"
+          data-testid="web-proxy-session-status"
+          :data-status="autofillStatus || 'pending'"
           :aria-label="t('WebProxy.SessionStatus', { status: statusSummary })"
         />
       </UTooltip>
