@@ -1,5 +1,5 @@
 import { MESSAGE_TYPE } from "@jumpserver/connectors-core";
-import { readText } from "clipboard-polyfill";
+import { readText, writeText } from "clipboard-polyfill";
 import { afterEach, expect, it, vi } from "vitest";
 import { computed, ref, shallowRef } from "vue";
 
@@ -154,24 +154,30 @@ function startContextMenuInput(overrides: {
   socket?: { send: ReturnType<typeof vi.fn> } | null;
   isSocketOpen?: () => boolean;
   inputLocked?: (data?: string) => boolean;
+  getSelection?: () => string;
+  validateClipboardText?: () => boolean;
 }) {
   const container = new EventTarget();
   const onContextMenu = vi.fn();
   const send = overrides.socket?.send ?? vi.fn();
+  const getSelection = overrides.getSelection ?? (() => "");
   let onData!: (data: string) => void;
+  let onSelectionChange!: () => void;
   const input = useKokoTerminalInput({
     container: shallowRef(container as HTMLElement),
     terminal: ref({
       attachCustomKeyEventHandler: vi.fn(),
       blur: vi.fn(),
       focus: vi.fn(),
-      getSelection: vi.fn(() => ""),
-      hasSelection: vi.fn(() => false),
+      getSelection: vi.fn(getSelection),
+      hasSelection: vi.fn(() => Boolean(getSelection())),
       onData: (handler: (data: string) => void) => {
         onData = handler;
       },
       onResize: vi.fn(),
-      onSelectionChange: vi.fn()
+      onSelectionChange: (handler: () => void) => {
+        onSelectionChange = handler;
+      }
     } as never),
     socket: ref(overrides.socket === null ? null : ({ send } as never)),
     terminalId: ref("1"),
@@ -190,10 +196,10 @@ function startContextMenuInput(overrides: {
     sendHostEvent: vi.fn(),
     sendToHost: vi.fn(),
     sendMittEvent: vi.fn(),
-    validateClipboardText: vi.fn(() => true)
+    validateClipboardText: vi.fn(overrides.validateClipboardText ?? (() => true))
   });
   input.start();
-  return { container, input, onContextMenu, send, onData };
+  return { container, input, onContextMenu, send, onData, onSelectionChange };
 }
 
 it.each([false, true])("preserves the terminal interrupt policy while locked (readOnly=%s)", (readOnly) => {
@@ -283,6 +289,39 @@ it("opens the menu on right-click when quickPaste is disabled", () => {
   container.dispatchEvent(event);
   expect(onContextMenu).toHaveBeenCalledWith(event);
   expect(send).not.toHaveBeenCalled();
+  input.stop();
+});
+
+it("copies the selection when xterm selection changes", async () => {
+  vi.mocked(writeText).mockClear();
+  const { input, onSelectionChange } = startContextMenuInput({
+    getTerminalConfig: () => ({}),
+    getSelection: () => "selected text"
+  });
+  onSelectionChange();
+  await vi.waitFor(() => expect(writeText).toHaveBeenCalledExactlyOnceWith("selected text"));
+  input.stop();
+});
+
+it("does not copy when xterm selection is empty", async () => {
+  vi.mocked(writeText).mockClear();
+  const { input, onSelectionChange } = startContextMenuInput({
+    getTerminalConfig: () => ({})
+  });
+  onSelectionChange();
+  expect(writeText).not.toHaveBeenCalled();
+  input.stop();
+});
+
+it("does not copy when clipboard ACL denies copy", async () => {
+  vi.mocked(writeText).mockClear();
+  const { input, onSelectionChange } = startContextMenuInput({
+    getTerminalConfig: () => ({}),
+    getSelection: () => "selected text",
+    validateClipboardText: () => false
+  });
+  onSelectionChange();
+  expect(writeText).not.toHaveBeenCalled();
   input.stop();
 });
 
