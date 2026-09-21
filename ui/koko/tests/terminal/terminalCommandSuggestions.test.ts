@@ -16,6 +16,7 @@ describe("terminal command suggestions", () => {
     expect(resolveTerminalCommandProfile({ protocol: "mariadb" })).toBe("mysql");
     expect(resolveTerminalCommandProfile({ protocol: "pg" })).toBe("postgresql");
     expect(resolveTerminalCommandProfile({ protocol: "redis" })).toBe("redis");
+    expect(resolveTerminalCommandProfile({ protocol: "dameng" })).toBe("dameng");
     expect(resolveTerminalCommandProfile({})).toBe("linux");
   });
 

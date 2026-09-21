@@ -68,7 +68,7 @@ const typeGroupIcon = computed(() => {
   const hasExact = (...keywords: string[]) => iconCandidates.value.some((value) => keywords.includes(value));
 
   if (has("k8s", "kubernetes", "container")) return "i-lucide-container";
-  if (has("database", "mysql", "mariadb", "oracle", "postgres", "sqlserver", "redis", "mongodb", "db2")) {
+  if (has("database", "mysql", "mariadb", "oracle", "dameng", "postgres", "sqlserver", "redis", "mongodb", "db2")) {
     return "i-lucide-database";
   }
   if (has("directory service", "directory_service", "directory-service", "windows_ad")) return "i-lucide-network";

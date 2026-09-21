@@ -176,6 +176,23 @@ const CATALOGS: Record<KokoTerminalCommandProfile, string[]> = {
     "@",
     "EXIT"
   ],
+  dameng: [
+    "SELECT",
+    "INSERT",
+    "UPDATE",
+    "DELETE",
+    "CREATE",
+    "ALTER",
+    "DROP",
+    "DESC",
+    "EXPLAIN",
+    "SET",
+    "COMMIT",
+    "ROLLBACK",
+    "CONNECT",
+    "START",
+    "EXIT"
+  ],
   sqlserver: [
     "SELECT",
     "INSERT",
@@ -205,6 +222,7 @@ const CASE_INSENSITIVE_PROFILES = new Set<KokoTerminalCommandProfile>([
   "redis",
   "mongodb",
   "oracle",
+  "dameng",
   "sqlserver"
 ]);
 
@@ -212,7 +230,7 @@ export function resolveTerminalCommandProfile(profile: ConnectorTerminalProfile 
   const protocol = String(profile.protocol || "").toLowerCase();
   if (protocol === "mariadb" || protocol === "mysql") return "mysql";
   if (protocol === "pg" || protocol === "postgres" || protocol === "postgresql") return "postgresql";
-  if (["redis", "mongodb", "oracle", "sqlserver"].includes(protocol)) {
+  if (["redis", "mongodb", "oracle", "dameng", "sqlserver"].includes(protocol)) {
     return protocol as KokoTerminalCommandProfile;
   }
   const platform =

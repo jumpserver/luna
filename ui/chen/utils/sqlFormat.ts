@@ -11,7 +11,8 @@ const formatterLanguageMap = {
   db2: "db2",
   // ponytail: Dameng reuses PL/SQL only for display formatting. Add a dedicated
   // formatter before supporting stored procedures or Dameng-specific DDL.
-  dameng: "plsql"
+  dameng: "plsql",
+  dm: "plsql"
 } as const;
 
 export function formatChenSql(statement: string, dbType: string) {
