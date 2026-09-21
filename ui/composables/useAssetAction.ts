@@ -27,6 +27,7 @@ import {
 import { useSettingManager } from "~/composables/useSettingManager";
 import { desktopDialog, desktopFs, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { transformAssetDetail } from "~/utils";
 import { resolvePersonalCredentialSecretType } from "~/utils/connection";
 import { pageLocation } from "~/utils/runtime";
 
@@ -1063,6 +1064,32 @@ export const useAssetAction = () => {
     });
   };
 
+  const handleWebClientProtocolPayload = async (payload: { protocol?: unknown; asset?: { id?: unknown } }) => {
+    const protocol = String(payload.protocol || "").toLowerCase();
+    const assetId = typeof payload.asset?.id === "string" ? payload.asset.id.trim() : "";
+    if (!["http", "https"].includes(protocol) || !assetId) throw new Error("Invalid web client protocol payload");
+
+    const currentOrgId = userInfoStore.currentUser?.org?.id || "";
+    const detail = await getAssetDetailRequest(assetId, currentOrgId);
+    const asset = {
+      ...transformAssetDetail(assetId, detail),
+      org_id: detail.org_id || currentOrgId
+    };
+    await handleAssetConnection(
+      displayUser(assetId, asset.permedAccounts),
+      assetId,
+      protocol,
+      asset.permedAccounts,
+      undefined,
+      {
+        accountMode: "hosted",
+        connectMethod: WEB_PROXY_NATIVE_VALUE,
+        orgId: asset.org_id,
+        asset
+      }
+    );
+  };
+
   /**
    * @description 处理重命名
    * @param assetId
@@ -1297,6 +1324,7 @@ export const useAssetAction = () => {
     handleAssetRename,
     handleAssetFavorite,
     handleAssetUnfavorite,
-    handleAssetConnection
+    handleAssetConnection,
+    handleWebClientProtocolPayload
   };
 };

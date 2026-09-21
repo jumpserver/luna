@@ -15,6 +15,7 @@ import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composa
 import { useWorkspaceFeatures } from "~/composables/useWorkspaceFeatures";
 import { registerAiTaskTabCloseConfirm } from "~/composables/useWorkspaceTabs";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 import { normalizeLanguageCode, resolveLanguageFromSystem, toDjangoLanguageCode } from "~/utils";
 import {
   COMMUNITY_WORKSPACE_BRAND,
@@ -32,6 +33,8 @@ const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
 
 const route = useRoute();
 const authSession = useAuthSession();
+const userInfoStore = useUserInfoStore();
+const { handleWebClientProtocolPayload } = useAssetAction();
 useWorkspaceFeatures(authSession.authReady);
 const webWorkspaceBrand = useState<string>(WORKSPACE_BRAND_STATE_KEY, () => COMMUNITY_WORKSPACE_BRAND);
 const webWorkspaceFavicon = useState<string>(WORKSPACE_FAVICON_STATE_KEY, () => "");
@@ -69,6 +72,7 @@ const unlistenPrimaryColor = ref<DesktopUnlistenFn | null>(null);
 const unlistenTheme = ref<DesktopUnlistenFn | null>(null);
 const unlistenFont = ref<DesktopUnlistenFn | null>(null);
 const unlistenSettingsNavigate = ref<DesktopUnlistenFn | null>(null);
+const unlistenWebProtocolUrl = ref<DesktopUnlistenFn | null>(null);
 const { openSettings } = useSettingsWindow();
 const {
   confirmOpen: siteLeaveConfirmOpen,
@@ -278,6 +282,42 @@ async function applyLanguagePreference(pref: LanguagePreference) {
   }
 }
 
+let drainingWebProtocols = false;
+let webProtocolDrainRequested = false;
+
+async function drainWebProtocolPayloads() {
+  webProtocolDrainRequested = true;
+  if (drainingWebProtocols || !isDesktopRuntime() || !userInfoStore.loggedIn) return;
+
+  drainingWebProtocols = true;
+  try {
+    while (webProtocolDrainRequested && userInfoStore.loggedIn) {
+      webProtocolDrainRequested = false;
+      const payloads =
+        await desktopInvoke<Array<{ protocol?: unknown; asset?: { id?: unknown } }>>("take_web_protocol_payloads");
+      for (const payload of payloads) {
+        try {
+          await handleWebClientProtocolPayload(payload);
+        } catch (error) {
+          console.error("open web asset from client protocol failed", error);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("drain web client protocols failed", error);
+  } finally {
+    drainingWebProtocols = false;
+    if (webProtocolDrainRequested && userInfoStore.loggedIn) void drainWebProtocolPayloads();
+  }
+}
+
+watch(
+  () => userInfoStore.loggedIn,
+  (loggedIn) => {
+    if (loggedIn) void drainWebProtocolPayloads();
+  }
+);
+
 async function applyAfterHydration() {
   if (hydrationPromise.value) {
     try {
@@ -366,6 +406,15 @@ onMounted(async () => {
   } catch (err) {
     console.error("listen settings-navigate failed", err);
   }
+
+  try {
+    unlistenWebProtocolUrl.value = await desktopListen("web-protocol-url", () => {
+      void drainWebProtocolPayloads();
+    });
+    void drainWebProtocolPayloads();
+  } catch (err) {
+    console.error("listen web-protocol-url failed", err);
+  }
 });
 
 onBeforeUnmount(() => {
@@ -374,6 +423,7 @@ onBeforeUnmount(() => {
   unlistenTheme.value?.();
   unlistenFont.value?.();
   unlistenSettingsNavigate.value?.();
+  unlistenWebProtocolUrl.value?.();
 });
 </script>
 

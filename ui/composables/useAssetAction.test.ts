@@ -660,6 +660,61 @@ describe("opening assets in local applications", () => {
     expect(mocks.invoke).not.toHaveBeenCalled();
   });
 
+  it("opens an HTTP client protocol payload in the desktop web proxy workspace", async () => {
+    vi.stubGlobal("isDesktopRuntime", () => true);
+    vi.stubGlobal("isElectronRuntime", () => true);
+    vi.stubGlobal("useWebProxyManager", useWebProxyManager);
+    const methods = [{ value: "web_proxy_native", type: "web", component: "koko", disabled: false }];
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ http: methods }),
+      getMethodsForProtocol: async () => methods
+    }));
+    const openSession = vi.fn(() => ({ id: "web-tab" }));
+    const updateSessionPayload = vi.fn();
+    vi.stubGlobal("useWorkspaceTabs", () => ({
+      getSessionConnectionAttempt: () => 0,
+      markSessionFailed: vi.fn(),
+      markSessionTokenCreated: vi.fn(),
+      openSession,
+      setSessionConnectMethod: vi.fn(),
+      updateSessionPayload
+    }));
+    vi.stubGlobal(
+      "getSmartEndpoint",
+      vi.fn().mockResolvedValue({ host: "proxy.example", web_proxy_port: 5001, https_port: 443 })
+    );
+    mocks.createToken.mockResolvedValue({ id: "id", value: "token-value", org_id: "org" });
+    mocks.getAssetDetail.mockResolvedValue({
+      name: "Website",
+      address: "https://website.example",
+      platform: { name: "Website" },
+      zone: { name: "Default" },
+      category: { value: "web" },
+      type: { value: "website" },
+      org_id: "org",
+      permed_accounts: [{ id: "account", name: "root", username: "root", alias: "root" }],
+      permed_protocols: [{ name: "http", port: 80 }],
+      spec_info: {}
+    });
+
+    await useAssetAction().handleWebClientProtocolPayload({ protocol: "http", asset: { id: "asset" } });
+
+    expect(openSession).toHaveBeenCalledWith(expect.objectContaining({ id: "asset" }), {
+      protocol: "http",
+      account: "root",
+      connectMethod: "web_proxy_native"
+    });
+    expect(mocks.createToken).toHaveBeenCalledWith(
+      expect.objectContaining({ asset: "asset", protocol: "http", connect_method: "web_proxy" }),
+      expect.anything()
+    );
+    expect(updateSessionPayload).toHaveBeenCalledWith(
+      expect.objectContaining({ tabId: "web-tab", assetId: "asset", protocol: "http" }),
+      expect.objectContaining({ webProxy: expect.objectContaining({ ticket: "web-ticket" }) })
+    );
+    expect(mocks.invoke).not.toHaveBeenCalledWith("pull_up", expect.anything());
+  });
+
   it.each([
     [false, "web"],
     [true, "web"],
@@ -762,6 +817,25 @@ describe("opening assets in local applications", () => {
       expect(mocks.invoke).not.toHaveBeenCalled();
     }
   );
+
+  it("launches a website client with Core's web_proxy method", async () => {
+    const webProxy = { value: "web_proxy", type: "native", component: "koko", disabled: false };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ http: [webProxy] }),
+      getMethodsForProtocol: async () => [webProxy]
+    }));
+
+    const { failed } = await connect("web_proxy", "http");
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(mocks.createToken).toHaveBeenCalledWith(
+      expect.objectContaining({ protocol: "http", connect_method: "web_proxy" }),
+      expect.anything()
+    );
+    expect(mocks.getLocalClientUrl).toHaveBeenCalledWith("id", expect.anything());
+    expect(mocks.assign).toHaveBeenCalledExactlyOnceWith(`jms2://${encoded}`);
+    expect(mocks.invoke).not.toHaveBeenCalled();
+  });
 
   it("rejects legacy client URLs", async () => {
     mocks.getLocalClientUrl.mockResolvedValue({ url: `jms://${encoded}` });

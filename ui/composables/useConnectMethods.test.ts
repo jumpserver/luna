@@ -160,15 +160,31 @@ describe("desktop website connect methods", () => {
     });
   });
 
-  it("hides the desktop-only proxy from the web build", () => {
+  it("keeps the Core web proxy as a client after remote applications in the web build", () => {
     const methods = normalizeWebConnectMethods({ http: [webProxyMethod, weblite], originals: [] }, false).http!;
-    expect(methods).toEqual([weblite]);
+
+    expect(methods.map((item) => item.value)).toEqual(["weblite", "web_proxy"]);
+    expect(methods[1]).toMatchObject({
+      label: "ConnectMethod.ClientProxy",
+      type: "native",
+      component: "koko"
+    });
+    expect(isExternalClientConnectMethod("web_proxy", methods)).toBe(true);
+    expect(pickConnectMethod("http", methods, "", "", undefined, false)).toBe("weblite");
   });
 
-  it("does not borrow an applet method when Core omits the web proxy", () => {
-    const methods = normalizeWebConnectMethods({ http: [weblite], originals: [] }, true).http!;
+  it.each([true, false])("does not borrow an applet method when Core omits the web proxy (desktop=%s)", (desktop) => {
+    const methods = normalizeWebConnectMethods({ http: [weblite], originals: [] }, desktop).http!;
     expect(methods).toEqual([weblite]);
     expect(withKokoWebFallback("http", methods)).toEqual([weblite]);
+  });
+
+  it("does not expose a disabled Core web proxy in the web build", () => {
+    const methods = normalizeWebConnectMethods(
+      { http: [{ ...webProxyMethod, disabled: true }, weblite], originals: [] },
+      false
+    ).http!;
+    expect(methods).toEqual([weblite]);
   });
 
   it("keeps koko web cli for clickhouse after stripping iframe methods", () => {

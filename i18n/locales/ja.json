@@ -1405,6 +1405,7 @@
     "KubernetesDescription": "K8s 接続は koko Kubernetes UI workspace を使用します。",
     "RemoteDesktop": "リモートデスクトップ",
     "RemoteDesktopDescription": "RDP/VNC 接続は Lion リモートデスクトップ workspace を使用します。",
+    "ClientProxy": "クライアント",
     "BuiltinWebProxy": "内蔵ブラウザ",
     "BuiltinWebProxyDescription": "Website 資産はシステム WebView を使用し、トラフィックは Koko Web Proxy 経由で統一します。"
   },

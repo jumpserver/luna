@@ -326,6 +326,17 @@ export const normalizeWebConnectMethods = (
       }
     }
 
+    if (!desktopRuntime && ["http", "https"].includes(key.toLowerCase())) {
+      const webProxyIndex = normalizedMethods.findIndex(
+        (method) =>
+          method.value === "web_proxy" && method.type === "web" && method.component === "koko" && !method.disabled
+      );
+      if (webProxyIndex !== -1) {
+        const webProxy = normalizedMethods.splice(webProxyIndex, 1)[0];
+        if (webProxy) normalizedMethods.push({ ...webProxy, type: "native", label: "ConnectMethod.ClientProxy" });
+      }
+    }
+
     normalized[key] = normalizedMethods.filter(
       (method) =>
         method.origin_value ||

@@ -1,18 +1,8 @@
 import { spawn } from "node:child_process";
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { decodeClientProtocolPayload as decodePayload } from "../shared/client-protocol";
 import { electronLog } from "../shared/debug-log";
-
-function decodePayload(raw) {
-  const value = String(raw || "");
-  const encoded = value.startsWith("jms2://") ? value.slice(7) : "";
-  if (!encoded) throw new Error("invalid local client URL scheme");
-  try {
-    return JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
-  } catch (error) {
-    throw new Error(`decode local client payload failed: ${error instanceof Error ? error.message : error}`);
-  }
-}
 
 function sanitizedName(raw) {
   let decoded = String(raw || "");

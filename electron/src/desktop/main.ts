@@ -34,7 +34,12 @@ import { FfmpegPluginManager } from "../replay/ffmpeg-plugin";
 import { OfflineRecordingStore } from "../replay/offline-recordings";
 import { ReplayTranscoder } from "../replay/transcoder";
 import { readableToWebBody } from "../shared/bytes";
-import { findClientProtocolUrl, normalizeClientProtocolUrl } from "../shared/client-protocol";
+import {
+  decodeClientProtocolPayload,
+  findClientProtocolUrl,
+  isWebAssetClientProtocolPayload,
+  normalizeClientProtocolUrl
+} from "../shared/client-protocol";
 import {
   activateDebugLogService,
   DebugLogService,
@@ -1291,6 +1296,7 @@ async function handleInvoke(event, request) {
     return applicationConfig.updateCustomTerminal({ ...args, path: resolveExecutablePath(args.path) });
   }
   if (command === "pull_up") return withIpcErrorLog("pull_up", () => localApplicationLauncher.launch(args.url));
+  if (command === "take_web_protocol_payloads") return takePendingWebProtocolPayloads();
   if (command === "list_system_fonts") return listSystemFonts();
   if (command === "cancel_transcode") return replayTranscoder.cancelCurrent(labelForWindow(win));
   if (command === "transcode_replays") {
@@ -1409,7 +1415,20 @@ interface PendingProtocolUrl {
 }
 
 const pendingProtocolUrls: PendingProtocolUrl[] = [];
+const pendingWebProtocolPayloads: Array<{
+  url: string;
+  payload: ReturnType<typeof decodeClientProtocolPayload>;
+}> = [];
 let startupFinished = false;
+
+function queueWebProtocolPayload(url: string, payload: ReturnType<typeof decodeClientProtocolPayload>) {
+  if (pendingWebProtocolPayloads.some((pending) => pending.url === url)) return;
+  pendingWebProtocolPayloads.push({ url, payload });
+}
+
+function takePendingWebProtocolPayloads() {
+  return pendingWebProtocolPayloads.splice(0).map((pending) => pending.payload);
+}
 
 function describeProtocolUrl(rawUrl) {
   const value = String(rawUrl || "");
@@ -1420,6 +1439,12 @@ function describeProtocolUrl(rawUrl) {
 
 async function processIncomingProtocolUrl(value: string) {
   if (authService.handleCallback(value) || authService.isOAuthCallbackUrl(value)) return false;
+  const payload = decodeClientProtocolPayload(value);
+  if (isWebAssetClientProtocolPayload(payload)) {
+    queueWebProtocolPayload(value, payload);
+    if (startupFinished) sendMainWindowEvent("web-protocol-url", null);
+    return false;
+  }
   await localApplicationLauncher.launch(value);
   return true;
 }
