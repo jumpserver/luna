@@ -13,6 +13,7 @@ import { loadFileTransferState, saveFileTransferState } from "#koko/utils/file-t
 const resumableStatuses = new Set<FileTransferStatus>(["queued", "preparing", "transferring", "verifying"]);
 const terminalStatuses = new Set<FileTransferStatus>(["completed", "skipped", "failed", "canceled"]);
 const transferChunkSize = 2 * 1024 * 1024;
+const transferWriteWindow = 2;
 const conflictError = "target_exists";
 const folderConflictError = "folder_exists";
 const fileTransferEndpointUnavailableError = "endpoint_unavailable";
@@ -376,41 +377,88 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
       let checksumState = offset === 0 ? "" : task.checksumState;
       patchTask(task.id, { status: "transferring", confirmedBytes: offset, checksumState });
 
-      while (offset < task.source.size) {
-        const current = tasks.value.find((item) => item.id === task.id);
-        if (!current || taskStopped(task.id)) return;
-        if (!source.isAvailable() || !destination.isAvailable()) throw new FileTransferUnavailableError();
-
-        const chunk = await source.readChunk({
+      const readAt = (at: number) =>
+        source.readChunk({
           transferId: task.id,
           path: task.source.path,
-          offset,
-          length: Math.min(transferChunkSize, task.source.size - offset)
+          offset: at,
+          length: Math.min(transferChunkSize, task.source.size - at)
         });
-        if (taskStopped(task.id)) return;
-        if (chunk.offset !== offset || !chunk.data.length || chunk.data.length > task.source.size - offset) {
-          throw new Error("Invalid file transfer chunk response");
-        }
 
-        const checksum = await updateFileTransferChecksum(checksumState, chunk.data);
-        if (taskStopped(task.id)) return;
-        if (checksum.chunkChecksum !== chunk.sha256) throw new Error("Source file transfer chunk checksum mismatch");
-
-        const ack = await destination.writeChunk({
-          transferId: task.id,
-          targetPath: currentTargetPath,
-          totalBytes: task.source.size,
-          offset,
-          data: chunk.data,
-          sha256: checksum.chunkChecksum
-        });
-        if (ack.committedBytes < offset + chunk.data.length || ack.committedBytes > task.source.size) {
-          throw new Error("Invalid file transfer write acknowledgement");
+      const writeWindow = task.destinationEndpoint.id.startsWith("sftp:") ? transferWriteWindow : 1;
+      let prefetch: ReturnType<typeof readAt> | undefined;
+      const inFlightWrites: {
+        promise: Promise<{ committedBytes: number; checksumState: string }>;
+        settled: boolean;
+      }[] = [];
+      const ackWrite = async () => {
+        const first = inFlightWrites.shift();
+        if (!first) return;
+        let ack = await first.promise;
+        while (inFlightWrites[0]?.settled) {
+          const next = inFlightWrites.shift();
+          if (!next) break;
+          ack = await next.promise;
         }
-        offset = ack.committedBytes;
-        checksumState = checksum.state;
-        patchTask(task.id, { confirmedBytes: offset, checksumState });
-        if (taskStopped(task.id)) return;
+        patchTask(task.id, { confirmedBytes: ack.committedBytes, checksumState: ack.checksumState });
+      };
+      try {
+        while (offset < task.source.size) {
+          const current = tasks.value.find((item) => item.id === task.id);
+          if (!current || taskStopped(task.id)) break;
+          if (!source.isAvailable() || !destination.isAvailable()) throw new FileTransferUnavailableError();
+
+          const start = offset;
+          const chunk = await (prefetch ?? readAt(start));
+          prefetch = undefined;
+          if (taskStopped(task.id)) break;
+          if (chunk.offset !== start || !chunk.data.length || chunk.data.length > task.source.size - start) {
+            throw new Error("Invalid file transfer chunk response");
+          }
+
+          const nextOffset = start + chunk.data.length;
+          if (nextOffset < task.source.size) prefetch = readAt(nextOffset);
+
+          const checksum = await updateFileTransferChecksum(checksumState, chunk.data);
+          if (taskStopped(task.id)) break;
+          if (checksum.chunkChecksum !== chunk.sha256) throw new Error("Source file transfer chunk checksum mismatch");
+
+          const stateAfter = checksum.state;
+          checksumState = stateAfter;
+          const item = {
+            promise: destination
+              .writeChunk({
+                transferId: task.id,
+                targetPath: currentTargetPath,
+                totalBytes: task.source.size,
+                offset: start,
+                data: chunk.data,
+                sha256: checksum.chunkChecksum
+              })
+              .then((ack) => {
+                if (ack.committedBytes < nextOffset || ack.committedBytes > task.source.size) {
+                  throw new Error("Invalid file transfer write acknowledgement");
+                }
+                return { committedBytes: ack.committedBytes, checksumState: stateAfter };
+              }),
+            settled: false
+          };
+          void item.promise.then(
+            () => {
+              item.settled = true;
+            },
+            () => {
+              item.settled = true;
+            }
+          );
+          inFlightWrites.push(item);
+          offset = nextOffset;
+          if (inFlightWrites.length >= writeWindow) await ackWrite();
+        }
+        while (inFlightWrites.length) await ackWrite();
+      } finally {
+        if (prefetch) await prefetch.then(() => undefined, () => undefined);
+        await Promise.allSettled(inFlightWrites.map((item) => item.promise));
       }
 
       if (taskStopped(task.id)) return;

@@ -288,6 +288,143 @@ describe("file transfer store recovery actions", () => {
     expect(store.tasks[0]?.error).toBeUndefined();
   });
 
+  it("prefetches the next read while the current write is in flight", async () => {
+    const sourceRef = { id: "sftp:source", label: "Source" };
+    const destinationRef = { id: "sftp:target", label: "Target" };
+    const chunkSize = 2 * 1024 * 1024;
+    let releaseWrite: (() => void) | undefined;
+    const writePending = new Promise<void>((resolve) => {
+      releaseWrite = resolve;
+    });
+    const source = {
+      ref: sourceRef,
+      isAvailable: () => true,
+      readChunk: vi.fn(async (input: { offset: number; length: number }) => ({
+        offset: input.offset,
+        data: new Uint8Array(input.length),
+        sha256: "chunk-checksum",
+        eof: input.offset + input.length >= chunkSize + 1
+      }))
+    } as unknown as FileTransferEndpoint;
+    const destination = {
+      ref: destinationRef,
+      isAvailable: () => true,
+      prepareTransfer: vi.fn(async () => ({
+        transferId: "generated-id",
+        committedBytes: 0,
+        totalBytes: chunkSize + 1,
+        state: "ready" as const
+      })),
+      writeChunk: vi.fn(async (input: { offset: number }) => {
+        if (input.offset === 0) await writePending;
+        return { committedBytes: input.offset === 0 ? chunkSize : chunkSize + 1, duplicate: false };
+      }),
+      commitTransfer: vi.fn(async () => undefined)
+    } as unknown as FileTransferEndpoint;
+    const unregisterSource = registerFileTransferEndpoint(source);
+    const unregisterDestination = registerFileTransferEndpoint(destination);
+
+    try {
+      const store = useFileTransferStore();
+      store.enqueueBatch([
+        {
+          batchId: "batch-pipe",
+          sourceEndpoint: sourceRef,
+          destinationEndpoint: destinationRef,
+          source: { path: "/source/file.bin", name: "file.bin", size: chunkSize + 1 },
+          destinationPath: "/target",
+          conflictPolicy: "ask"
+        }
+      ]);
+      await vi.waitFor(() => {
+        expect(source.readChunk).toHaveBeenCalledTimes(2);
+        expect(destination.writeChunk).toHaveBeenCalledTimes(2);
+      });
+      expect(vi.mocked(source.readChunk).mock.calls[1]?.[0]).toMatchObject({ offset: chunkSize, length: 1 });
+      expect(vi.mocked(destination.writeChunk).mock.calls[1]?.[0]).toMatchObject({ offset: chunkSize });
+      releaseWrite?.();
+      await vi.waitFor(() => {
+        expect(store.tasks[0]?.status).toBe("completed");
+      });
+    } finally {
+      unregisterSource();
+      unregisterDestination();
+    }
+  });
+
+  it("does not write a prefetched chunk after pause", async () => {
+    const sourceRef = { id: "sftp:source", label: "Source" };
+    const destinationRef = { id: "sftp:target", label: "Target" };
+    const chunkSize = 2 * 1024 * 1024;
+    let releaseWrite: (() => void) | undefined;
+    const writeStarted = new Promise<void>((resolve) => {
+      releaseWrite = resolve;
+    });
+    let acknowledgeWrite: (() => void) | undefined;
+    const writePending = new Promise<void>((resolve) => {
+      acknowledgeWrite = resolve;
+    });
+    const source = {
+      ref: sourceRef,
+      isAvailable: () => true,
+      readChunk: vi.fn(async (input: { offset: number; length: number }) => ({
+        offset: input.offset,
+        data: new Uint8Array(input.length),
+        sha256: "chunk-checksum",
+        eof: input.offset + input.length >= chunkSize + 1
+      }))
+    } as unknown as FileTransferEndpoint;
+    const destination = {
+      ref: destinationRef,
+      isAvailable: () => true,
+      prepareTransfer: vi.fn(async () => ({
+        transferId: "generated-id",
+        committedBytes: 0,
+        totalBytes: chunkSize + 1,
+        state: "ready" as const
+      })),
+      writeChunk: vi.fn(async (input: { offset: number }) => {
+        if (input.offset === 0) {
+          releaseWrite?.();
+          await writePending;
+          return { committedBytes: chunkSize, duplicate: false };
+        }
+        return { committedBytes: chunkSize + 1, duplicate: false };
+      })
+    } as unknown as FileTransferEndpoint;
+    const unregisterSource = registerFileTransferEndpoint(source);
+    const unregisterDestination = registerFileTransferEndpoint(destination);
+
+    try {
+      const store = useFileTransferStore();
+      const batchId = store.enqueueBatch([
+        {
+          batchId: "batch-pause-pipe",
+          sourceEndpoint: sourceRef,
+          destinationEndpoint: destinationRef,
+          source: { path: "/source/file.bin", name: "file.bin", size: chunkSize + 1 },
+          destinationPath: "/target",
+          conflictPolicy: "ask"
+        }
+      ]);
+      await writeStarted;
+      await vi.waitFor(() => expect(destination.writeChunk).toHaveBeenCalledTimes(2));
+      const queuedTask = store.tasks.find((item) => item.batchId === batchId);
+      store.pauseTask(queuedTask!.id);
+      acknowledgeWrite?.();
+      await vi.waitFor(() => {
+        expect(store.tasks.find((item) => item.id === queuedTask!.id)).toMatchObject({
+          status: "paused"
+        });
+        expect(store.tasks.find((item) => item.id === queuedTask!.id)?.confirmedBytes).toBeGreaterThanOrEqual(chunkSize);
+      });
+      expect(destination.writeChunk).toHaveBeenCalledTimes(2);
+    } finally {
+      unregisterSource();
+      unregisterDestination();
+    }
+  });
+
   it("does not complete a 0-byte download without reading the source", async () => {
     const sourceRef = { id: "sftp:source", label: "Source" };
     const destinationRef = { id: "web-download", label: "Download" };
@@ -328,6 +465,128 @@ describe("file transfer store recovery actions", () => {
         expect(store.tasks[0]).toMatchObject({ status: "failed", error: "endpoint_unavailable" });
       });
       expect(source.readChunk).toHaveBeenCalledOnce();
+      expect(destination.commitTransfer).not.toHaveBeenCalled();
+    } finally {
+      unregisterSource();
+      unregisterDestination();
+    }
+  });
+
+  it("writes sequential chunks when the destination is not sftp", async () => {
+    const sourceRef = { id: "sftp:source", label: "Source" };
+    const destinationRef = { id: "web-download", label: "Download" };
+    const chunkSize = 2 * 1024 * 1024;
+    let committed = 0;
+    let overlapping = false;
+    let inFlight = 0;
+    const source = {
+      ref: sourceRef,
+      isAvailable: () => true,
+      readChunk: vi.fn(async (input: { offset: number; length: number }) => ({
+        offset: input.offset,
+        data: new Uint8Array(input.length),
+        sha256: "chunk-checksum",
+        eof: input.offset + input.length >= chunkSize + 1
+      }))
+    } as unknown as FileTransferEndpoint;
+    const destination = {
+      ref: destinationRef,
+      isAvailable: () => true,
+      prepareTransfer: vi.fn(async () => ({
+        transferId: "generated-id",
+        committedBytes: 0,
+        totalBytes: chunkSize + 1,
+        state: "ready" as const
+      })),
+      writeChunk: vi.fn(async (input: { offset: number; data: Uint8Array }) => {
+        inFlight += 1;
+        if (inFlight > 1) overlapping = true;
+        if (input.offset !== committed) throw new Error("Invalid browser download chunk");
+        committed += input.data.length;
+        inFlight -= 1;
+        return { committedBytes: committed, duplicate: false };
+      }),
+      commitTransfer: vi.fn(async () => undefined)
+    } as unknown as FileTransferEndpoint;
+    const unregisterSource = registerFileTransferEndpoint(source);
+    const unregisterDestination = registerFileTransferEndpoint(destination);
+
+    try {
+      const store = useFileTransferStore();
+      store.enqueueBatch([
+        {
+          batchId: "batch-download",
+          sourceEndpoint: sourceRef,
+          destinationEndpoint: destinationRef,
+          source: { path: "/source/file.bin", name: "file.bin", size: chunkSize + 1 },
+          destinationPath: "file.bin",
+          conflictPolicy: "ask"
+        }
+      ]);
+      await vi.waitFor(() => {
+        expect(store.tasks[0]?.status).toBe("completed");
+      });
+      expect(overlapping).toBe(false);
+      expect(destination.writeChunk).toHaveBeenCalledTimes(2);
+    } finally {
+      unregisterSource();
+      unregisterDestination();
+    }
+  });
+
+  it("keeps prefix progress when a later write acks first and the first write fails", async () => {
+    const sourceRef = { id: "sftp:source", label: "Source" };
+    const destinationRef = { id: "sftp:target", label: "Target" };
+    const chunkSize = 2 * 1024 * 1024;
+    let rejectFirst: ((error: Error) => void) | undefined;
+    const firstWrite = new Promise<never>((_, reject) => {
+      rejectFirst = reject;
+    });
+    const source = {
+      ref: sourceRef,
+      isAvailable: () => true,
+      readChunk: vi.fn(async (input: { offset: number; length: number }) => ({
+        offset: input.offset,
+        data: new Uint8Array(input.length),
+        sha256: "chunk-checksum",
+        eof: input.offset + input.length >= chunkSize + 1
+      }))
+    } as unknown as FileTransferEndpoint;
+    const destination = {
+      ref: destinationRef,
+      isAvailable: () => true,
+      prepareTransfer: vi.fn(async () => ({
+        transferId: "generated-id",
+        committedBytes: 0,
+        totalBytes: chunkSize + 1,
+        state: "ready" as const
+      })),
+      writeChunk: vi.fn(async (input: { offset: number }) => {
+        if (input.offset === 0) await firstWrite;
+        return { committedBytes: chunkSize + 1, duplicate: false };
+      }),
+      commitTransfer: vi.fn(async () => undefined)
+    } as unknown as FileTransferEndpoint;
+    const unregisterSource = registerFileTransferEndpoint(source);
+    const unregisterDestination = registerFileTransferEndpoint(destination);
+
+    try {
+      const store = useFileTransferStore();
+      store.enqueueBatch([
+        {
+          batchId: "batch-prefix",
+          sourceEndpoint: sourceRef,
+          destinationEndpoint: destinationRef,
+          source: { path: "/source/file.bin", name: "file.bin", size: chunkSize + 1 },
+          destinationPath: "/target",
+          conflictPolicy: "ask"
+        }
+      ]);
+      await vi.waitFor(() => expect(destination.writeChunk).toHaveBeenCalledTimes(2));
+      rejectFirst?.(new Error("first write failed"));
+      await vi.waitFor(() => {
+        expect(store.tasks[0]).toMatchObject({ status: "failed", confirmedBytes: 0 });
+      });
       expect(destination.commitTransfer).not.toHaveBeenCalled();
     } finally {
       unregisterSource();

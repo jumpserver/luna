@@ -40,6 +40,14 @@ describe("file transfer rate helper", () => {
     expect(remainingSeconds(100, 100, 50)).toBe(0);
   });
 
+  it("replaces the last sample when two updates share a timestamp", () => {
+    const samples = pushTransferRateSample([{ t: 1_000, bytes: 0 }], 100, 2_000);
+    expect(pushTransferRateSample(samples, 200, 2_000)).toEqual([
+      { t: 1_000, bytes: 0 },
+      { t: 2_000, bytes: 200 }
+    ]);
+  });
+
   it("formats speed and remaining clocks", () => {
     expect(formatBytesPerSecond(512)).toBe("512 B/s");
     expect(formatBytesPerSecond(12_288)).toBe("12 KB/s");
