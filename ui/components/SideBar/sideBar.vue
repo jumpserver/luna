@@ -362,12 +362,7 @@ useEventBus().on("workspaceQuickSearch", handleWorkspaceQuickSearch);
           <SideBarAssetTree
             :search="sidebarSearch"
             :open="true"
-            @select="
-              (asset) => {
-                showAssetSearch = false;
-                handleAssetConnect(asset);
-              }
-            "
+            @select="handleAssetConnect"
             @contextmenu="handleAssetContextMenu"
             @open-multiple="handleOpenMultipleAssets"
             @favorite-multiple="handleFavoriteMultipleAssets"
