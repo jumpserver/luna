@@ -588,7 +588,7 @@ async function setupAutofill() {
     autofillProbeId: 0,
     autofillFailure: "",
     autofillVisibilityBlocked: true,
-    credentialSession: { origin: "https://example.test", selectors: { success: "" } },
+    credentialSession: { origin: "https://example.test", selectors: { success: "", submit: "id=submit" } },
     recording: { setPaused: mock.fn() }
   };
   const release = mock.fn(async () => ({ username: "managed-user", password: "secret" }));
@@ -755,6 +755,40 @@ test("discards credentials arriving after timeout and keeps recording paused", a
   assert.equal(managed.autofillVisibilityBlocked, true);
 });
 
+test("fill-only login releases the page without claiming submission or waiting for a success marker", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "setInterval"] });
+  for (const [success, interactive] of [
+    ["", ""],
+    ["id=success", ""],
+    ["", "id=mfa"],
+    ["id=success", "id=mfa"]
+  ]) {
+    const { api, managed, events, release, webContents } = await setupAutofill();
+    managed.credentialSession.selectors = {
+      username: "id=username",
+      password: "id=password",
+      submit: "",
+      success,
+      interactive
+    };
+    const dispose = mock.fn();
+    managed.credentialSession.dispose = dispose;
+    api.startWebProxyAutofillWait(managed);
+    await api.tryWebProxyAutofill(managed);
+    assert.equal(managed.autofillPending, false);
+    assert.equal(managed.autofillVisibilityBlocked, false);
+    assert.equal(managed.view.setVisible.mock.calls.at(-1).arguments[0], true);
+    assert.equal(release.mock.callCount(), 1);
+    assert.equal(dispose.mock.callCount(), 1);
+    assert.equal(webContents.executeJavaScriptInIsolatedWorld.mock.callCount(), 0);
+    assert.ok(events.some(({ state }) => state.status === "filled"));
+    assert.ok(!events.some(({ state }) => state.status === "submitted" || state.status === "success"));
+    t.mock.timers.tick(60_000);
+    assert.equal(webContents.stop.mock.callCount(), 0);
+    assert.equal(managed.autofillFailure, "");
+  }
+});
+
 test("does not send a late preview to a closed session", async () => {
   const { api, managed, webContents, events, image, views } = await setupAutofill();
   const capture = deferred<typeof image>();
@@ -794,6 +828,7 @@ test("decrypts the Koko-compatible one-time credential envelope", async () => {
   let clientPublicKey: ReturnType<typeof createPublicKey> | undefined;
   let requestCount = 0;
   let proxyUrl = "";
+  let loginSelectors: Record<string, string | null> = {};
   const server = createServer((request, response) => {
     requestCount += 1;
     const chunks = [];
@@ -822,9 +857,7 @@ test("decrypts the Koko-compatible one-time credential envelope", async () => {
             target_url: "https://example.com/login",
             origin: "https://example.com",
             autofill_available: true,
-            username_selector: "id=username",
-            password_selector: "id=password",
-            submit_selector: "id=submit",
+            ...loginSelectors,
             server_public_key: serverPublicKey.export({ type: "spki", format: "der" }).toString("base64")
           })
         );
@@ -853,13 +886,14 @@ test("decrypts the Koko-compatible one-time credential envelope", async () => {
   proxyUrl = `http://127.0.0.1:${port}`;
 
   try {
-    for (const [successSelector, interactiveSelector] of [
-      ["", ""],
-      ["css=.dashboard", ""],
-      ["", "id=mfa"],
-      ["css=.dashboard", "id=mfa"]
-    ]) {
+    for (const [successSelector, interactiveSelector, selectors] of [
+      ["", "", { username_selector: "id=username", password_selector: "id=password", submit_selector: "id=submit" }],
+      ["css=.dashboard", "", {}],
+      ["", "id=mfa", { username_selector: null, password_selector: null, submit_selector: null }],
+      ["css=.dashboard", "id=mfa", { username_selector: "", password_selector: "", submit_selector: "" }]
+    ] as const) {
       requestCount = 0;
+      loginSelectors = selectors;
       const session = await createCredentialSession(
         proxyUrl,
         "https://example.com/login",
@@ -872,6 +906,8 @@ test("decrypts the Koko-compatible one-time credential envelope", async () => {
       assert.equal(session.sessionId, "62a7496e-369d-4f3d-b3f9-a20b61a33980");
       assert.equal(session.selectors.success, successSelector);
       assert.equal(session.selectors.interactive, interactiveSelector);
+      for (const name of ["username", "password", "submit"])
+        assert.equal(session.selectors[name], loginSelectors[`${name}_selector`] ?? "");
       const credentials = await releaseCredentials(session, "https://example.com/login");
       assert.deepEqual(credentials, { username: "managed-user", password: "managed-password" });
       assert.equal(session.accessToken, "");
@@ -975,7 +1011,7 @@ test("imports replay archives into scoped, decompressed offline entries", async 
 test("interactive verification replaces both automatic login deadlines without exposing the page", async (t) => {
   t.mock.timers.enable({ apis: ["setTimeout", "setInterval"] });
   const { api, managed, webContents } = await setupAutofill();
-  managed.credentialSession.selectors = { success: "id=success", interactive: "id=mfa" };
+  managed.credentialSession.selectors = { success: "id=success", interactive: "id=mfa", submit: "id=submit" };
   api.startWebProxyAutofillWait(managed);
   await api.tryWebProxyAutofill(managed);
   const interaction = managed.interaction;
@@ -997,7 +1033,7 @@ test("interactive verification replaces both automatic login deadlines without e
 
 test("interactive verification is torn down before the final successful session is exposed", async () => {
   const { api, managed, webContents } = await setupAutofill();
-  managed.credentialSession.selectors = { success: "id=success", interactive: "id=mfa" };
+  managed.credentialSession.selectors = { success: "id=success", interactive: "id=mfa", submit: "id=submit" };
   await api.tryWebProxyAutofill(managed);
   await Promise.resolve();
   const interaction = managed.interaction;
@@ -1022,7 +1058,7 @@ test("interactive verification is torn down before the final successful session 
 for (const success of ["", "id=success"]) {
   test(`optional verification allows a normal login without any verification frame (success selector: ${success || "empty"})`, async () => {
     const { api, managed, events, webContents, release } = await setupAutofill();
-    managed.credentialSession.selectors = { success, interactive: "id=mfa" };
+    managed.credentialSession.selectors = { success, interactive: "id=mfa", submit: "id=submit" };
     await api.tryWebProxyAutofill(managed);
     const interaction = managed.interaction;
     // Drain the initial asynchronous page probe before simulating submission.
@@ -1044,7 +1080,7 @@ for (const success of ["", "id=success"]) {
   test(`verification appearing after submission pauses the same login (success selector: ${success || "empty"})`, async (t) => {
     t.mock.timers.enable({ apis: ["setTimeout", "setInterval"] });
     const { api, managed, release } = await setupAutofill();
-    managed.credentialSession.selectors = { success, interactive: "id=mfa" };
+    managed.credentialSession.selectors = { success, interactive: "id=mfa", submit: "id=submit" };
     await api.tryWebProxyAutofill(managed);
     await Promise.resolve();
     const interaction = managed.interaction;
@@ -1063,7 +1099,7 @@ for (const success of ["", "id=success"]) {
 
   test(`verification submits before continuing the session (success selector: ${success || "empty"})`, async () => {
     const { api, managed, events, webContents } = await setupAutofill();
-    managed.credentialSession.selectors = { success, interactive: "id=mfa" };
+    managed.credentialSession.selectors = { success, interactive: "id=mfa", submit: "id=submit" };
     await api.tryWebProxyAutofill(managed);
     const interaction = managed.interaction;
     assert.equal(await api.completeWebProxyVerification(managed), false);
@@ -1111,7 +1147,7 @@ for (const success of ["", "id=success"]) {
   test(`late manual completion does not unlock a timed-out page (success selector: ${success || "empty"})`, async (t) => {
     t.mock.timers.enable({ apis: ["setTimeout", "setInterval"] });
     const { api, managed } = await setupAutofill();
-    managed.credentialSession.selectors = { success, interactive: "id=mfa" };
+    managed.credentialSession.selectors = { success, interactive: "id=mfa", submit: "id=submit" };
     await api.tryWebProxyAutofill(managed);
     managed.verificationReady();
     const cleared = deferred<boolean>();

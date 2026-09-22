@@ -377,14 +377,16 @@ export function createWebProxyManager({
     emitWebProxyAutofillState(
       managed,
       "filling",
-      session.selectors.interactive ? "WebProxy.FillingCredentials" : "WebProxy.FillingAndSubmitting"
+      session.selectors.interactive || !session.selectors.submit
+        ? "WebProxy.FillingCredentials"
+        : "WebProxy.FillingAndSubmitting"
     );
     if (managed.recording?.capturePending) await managed.recording.capturePending.catch(() => undefined);
 
     let credentials;
     try {
       if (!isCurrent()) return;
-      if (session.selectors.interactive) {
+      if (session.selectors.interactive && session.selectors.submit) {
         // Retain the original credential nodes before the site's submit handler can
         // rename or replace them. User input is still blocked by the hidden view.
         await managed.view.webContents.executeJavaScriptInIsolatedWorld(INTERACTION_WORLD, [
@@ -402,6 +404,10 @@ export function createWebProxyManager({
       const filled = await managed.view.webContents.executeJavaScript(script, true);
       if (!isCurrent()) return;
       if (!filled) throw new Error("WebProxy.LoginElementsChanged");
+      if (!session.selectors.submit) {
+        finishWebProxyAutofill(managed, "filled", "WebProxy.CredentialsFilledManualSubmit");
+        return;
+      }
       if (!session.selectors.success && !session.selectors.interactive) {
         finishWebProxyAutofill(managed, "submitted", "WebProxy.CredentialsFilledLoginSubmitted");
         return;

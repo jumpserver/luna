@@ -7,6 +7,8 @@
     "SecureLogin": "Connexion sécurisée en cours",
     "AwaitingVerification": "En attente de vérification manuelle",
     "LoginSubmitted": "Connexion envoyée",
+    "AutofillCompleted": "Remplissage terminé",
+    "CredentialsFilledManualSubmit": "Remplissage terminé ; poursuivez la connexion sur la page",
     "LoginSuccess": "Connexion réussie",
     "AutofillNotConfigured": "Remplissage automatique non configuré",
     "AutofillFailed": "Échec du remplissage automatique",
