@@ -1,3 +1,4 @@
+import type { Ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 
@@ -11,22 +12,25 @@ const organization = (id: string, name: string, isDefault = false) => ({
 
 const mocks = vi.hoisted(() => ({
   store: {} as any,
-  fetchResponse: null as ((url: string) => Promise<Response>) | null
+  fetchResponse: null as ((url: string) => Promise<Response>) | null,
+  pathname: "/"
 }));
 
 vi.mock("~/shared/desktop/bridge", () => ({ desktopInvoke: vi.fn() }));
 vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => mocks.store }));
 vi.mock("~/utils/runtime", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/utils/runtime")>()),
-  pageLocation: () => ({ search: "", origin: "https://luna.test", pathname: "/" })
+  pageLocation: () => ({ search: "", origin: "https://luna.test", pathname: mocks.pathname })
 }));
 
 let useAuthSession: typeof import("./useAuthSession").useAuthSession;
+let currentAccountIdRef: Ref<string>;
 
 beforeEach(async () => {
   vi.resetModules();
   globalThis.localStorage?.clear();
-  const currentAccountId = ref("");
+  mocks.pathname = "/";
+  currentAccountIdRef = ref("");
   const userMap = ref({});
   mocks.store = {
     currentAccountId: "",
@@ -46,7 +50,7 @@ beforeEach(async () => {
     })
   };
 
-  vi.stubGlobal("storeToRefs", () => ({ currentAccountId, userMap }));
+  vi.stubGlobal("storeToRefs", () => ({ currentAccountId: currentAccountIdRef, userMap }));
   vi.stubGlobal("useNuxtApp", () => ({ $i18n: { t: (key: string) => key } }));
   vi.stubGlobal("useToast", () => ({ add: vi.fn() }));
   vi.stubGlobal("useLocalePath", () => (path: unknown) => path);
@@ -76,6 +80,38 @@ beforeEach(async () => {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+});
+
+describe("desktop session expiry", () => {
+  it("reauthenticates only the expired current account from every layout", async () => {
+    const order: string[] = [];
+    const emit = vi.fn((event: string) => order.push(event));
+    const navigateTo = vi.fn(async () => {
+      order.push("navigate");
+    });
+    vi.stubGlobal("useEventBus", () => ({ emit }));
+    vi.stubGlobal("navigateTo", navigateTo);
+    vi.stubGlobal("isDesktopRuntime", () => true);
+    currentAccountIdRef.value = "account-1";
+    mocks.store.loggedIn = true;
+    const auth = useAuthSession();
+
+    await expect(auth.handleDesktopAuthExpired("account-2")).resolves.toBe(false);
+    expect(mocks.store.setUserLoggedIn).not.toHaveBeenCalled();
+
+    await expect(auth.handleDesktopAuthExpired("account-1")).resolves.toBe(true);
+    expect(mocks.store.setUserLoggedIn).toHaveBeenCalledWith(false);
+    expect(navigateTo).toHaveBeenCalledWith({ path: "/" });
+    expect(order).toEqual(["clearAssets", "navigate", "login"]);
+
+    mocks.pathname = "/auth/browser";
+    mocks.store.loggedIn = true;
+    order.length = 0;
+    navigateTo.mockClear();
+    await expect(auth.handleDesktopAuthExpired("account-1")).resolves.toBe(true);
+    expect(navigateTo).not.toHaveBeenCalled();
+    expect(order).toEqual(["clearAssets"]);
+  });
 });
 
 describe("web session bootstrap", () => {

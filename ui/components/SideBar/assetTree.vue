@@ -219,6 +219,8 @@ const removeFavoriteNodes = (nodes: AssetTreeNode[]): AssetTreeNode[] =>
     }));
 
 const reportError = (error: unknown) => {
+  if (!loggedIn.value) return;
+
   const title = t("Asset.GetAssetFailed");
   const description = error instanceof Error ? error.message : String(error);
   const signature = `${title}::${description}`;
