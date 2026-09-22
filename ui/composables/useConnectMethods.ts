@@ -10,6 +10,7 @@ import {
   WEB_RDP_NATIVE_VALUE
 } from "~/shared/connectors/capabilities";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { isMobileDevice } from "~/utils/runtime";
 
 export {
   K8S_NATIVE_VALUE,
@@ -380,6 +381,7 @@ export const useConnectMethods = () => {
 
   const getMethodsForProtocol = async (protocol: string): Promise<ConnectMethod[]> => {
     const allMethods = await fetchConnectMethods();
+    const mobileBrowser = !isDesktopRuntime() && isMobileDevice();
     const normalizedProtocol = protocol.trim().toLowerCase();
     const protocolMethods =
       Object.entries(allMethods).find(
@@ -387,7 +389,14 @@ export const useConnectMethods = () => {
       )?.[1] || [];
     const methodsWithFallback = withKokoWebFallback(normalizedProtocol, protocolMethods);
     return methodsWithFallback
-      .filter((method) => !method.disabled)
+      .filter(
+        (method) =>
+          !method.disabled &&
+          (!mobileBrowser ||
+            (!method.value.startsWith(LOCAL_APPLICATION_METHOD_PREFIX) &&
+              (BUILTIN_WORKSPACE_METHOD_VALUES.has(method.value) ||
+                !["native", "client", "local", "desktop"].includes(String(method.type || "").toLowerCase()))))
+      )
       .map((method) => ({
         ...method,
         label: method.label.startsWith("ConnectMethod.") ? t(method.label) : method.label

@@ -236,10 +236,16 @@ watch(
   }
 );
 
+const compactLayout = useMediaQuery("(max-width: 767px), (max-height: 600px)");
 const dragArea = shallowRef<HTMLElement | null>(null);
 const dialogGroup = shallowRef<HTMLElement | null>(null);
 const dragHandle = shallowRef<HTMLElement | null>(null);
-const { isDragging, style: dialogPosition } = useConnectionSetupDrag(dragArea, dialogGroup, dragHandle);
+const headerActionTarget = shallowRef<HTMLElement | null>(null);
+const { isDragging, style: dialogPosition } = useConnectionSetupDrag(
+  dragArea,
+  dialogGroup,
+  computed(() => (compactLayout.value ? null : dragHandle.value))
+);
 
 const closing = ref(false);
 const dialogVisible = computed(() => !closing.value && Boolean(currentAsset.value || props.tab.setupAsset));
@@ -263,7 +269,7 @@ onMounted(loadAsset);
 
 <template>
   <div
-    class="h-full min-h-0 w-full overflow-auto px-4 py-4 sm:px-10"
+    class="connection-setup-stage h-full min-h-0 w-full overflow-auto px-4 py-4 sm:px-10"
     :class="[
       modernIsland ? 'connection-setup-stage--island' : 'bg-(--workspace-surface-background)',
       { 'is-leaving': modernIsland && closing }
@@ -276,9 +282,9 @@ onMounted(loadAsset);
     >
       <div
         ref="dialogGroup"
-        class="flex shrink-0 flex-col items-center gap-8"
+        class="connection-setup-group flex shrink-0 flex-col items-center gap-8"
         :class="modernIsland ? 'w-[min(520px,100%)]' : 'w-[min(640px,100%)]'"
-        :style="dialogPosition"
+        :style="compactLayout ? undefined : dialogPosition"
       >
         <Transition :name="modernIsland ? 'island-dialog' : ''" :appear="modernIsland">
           <section
@@ -293,10 +299,10 @@ onMounted(loadAsset);
             <div
               ref="dragHandle"
               role="group"
-              tabindex="0"
-              :aria-label="t('ConnectionSetup.MoveDialog')"
-              :title="t('ConnectionSetup.MoveDialog')"
-              class="flex touch-none items-center justify-between gap-3 border-b px-4 outline-none select-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-(--app-focus-ring)"
+              :tabindex="compactLayout ? undefined : 0"
+              :aria-label="compactLayout ? undefined : t('ConnectionSetup.MoveDialog')"
+              :title="compactLayout ? undefined : t('ConnectionSetup.MoveDialog')"
+              class="connection-setup-header flex shrink-0 touch-none items-center justify-between gap-3 border-b px-4 outline-none select-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-(--app-focus-ring)"
               :class="[
                 modernIsland
                   ? 'h-10 border-[color-mix(in_srgb,var(--theme-fg)_14%,transparent)]'
@@ -304,10 +310,13 @@ onMounted(loadAsset);
                 isDragging ? 'cursor-grabbing' : 'cursor-grab'
               ]"
             >
-              <div class="flex min-w-0 items-center gap-2">
+              <div class="flex min-w-0 flex-1 items-center gap-2">
+                <div ref="headerActionTarget" class="contents" />
                 <span class="truncate font-semibold text-(--app-fg)" :class="modernIsland ? 'text-[13px]' : 'text-sm'">
-                  {{ t("ContextMenu.Connect") }}
-                  {{ modernIsland ? " · " : " - " }}
+                  <template v-if="!compactLayout || loading || launchSuccessVisible">
+                    {{ t("ContextMenu.Connect") }}
+                    {{ modernIsland ? " · " : " - " }}
+                  </template>
                   <span class="font-ui-mono font-medium">{{ assetAddress }}</span>
                 </span>
                 <UBadge
@@ -320,6 +329,7 @@ onMounted(loadAsset);
                 />
               </div>
               <UButton
+                class="connection-setup-close shrink-0"
                 color="neutral"
                 variant="ghost"
                 icon="i-lucide-x"
@@ -330,8 +340,17 @@ onMounted(loadAsset);
               />
             </div>
 
-            <div class="flex min-h-75 flex-col" :class="modernIsland ? '' : 'bg-(--app-surface-panel-strong)'">
-              <div class="min-h-0 flex-1 overflow-auto py-4 pt-2" :class="modernIsland ? 'px-4' : 'px-6'">
+            <div
+              class="connection-setup-body flex min-h-75 flex-col"
+              :class="modernIsland ? '' : 'bg-(--app-surface-panel-strong)'"
+            >
+              <div
+                class="connection-setup-form min-h-0 flex-1 overflow-auto py-4 pt-2"
+                :class="[
+                  modernIsland ? 'px-4' : 'px-6',
+                  { 'connection-setup-form--fields': !loading && !launchSuccessVisible && currentAsset }
+                ]"
+              >
                 <ConnectFormSkeleton v-if="loading" />
                 <div v-else-if="launchSuccessVisible" class="flex min-h-full items-center justify-center py-6">
                   <section
@@ -405,6 +424,7 @@ onMounted(loadAsset);
                     :submit-label="externalClientLaunch ? t('ConnectionSetup.OpenInClient') : t('Common.Connect')"
                     :submitting="connecting"
                     :downloading-rdp="downloadingRdp"
+                    :header-action-target="headerActionTarget"
                     :disabled="connecting || !draft.protocol"
                     @submit="submit()"
                     @download-rdp="submit"
@@ -524,5 +544,56 @@ onMounted(loadAsset);
   box-shadow:
     0 1px 0 color-mix(in srgb, var(--app-surface-panel-strong) 78%, transparent) inset,
     0 16px 36px color-mix(in srgb, var(--app-fg) 5%, transparent);
+}
+
+@media (max-width: 767px), (max-height: 600px) {
+  .connection-setup-stage {
+    overflow: hidden;
+    padding: 8px;
+  }
+
+  .connection-setup-content,
+  .connection-setup-group {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .connection-setup-group {
+    width: min(768px, 100%);
+  }
+
+  .connection-setup-shell {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  .connection-setup-header {
+    height: 44px;
+    padding-inline: 12px;
+    touch-action: auto;
+    cursor: default;
+  }
+
+  .connection-setup-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .connection-setup-body {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .connection-setup-form {
+    padding: 4px 12px 8px;
+  }
+
+  .connection-setup-form--fields {
+    display: flex;
+    overflow: hidden;
+    flex-direction: column;
+  }
 }
 </style>

@@ -10,6 +10,13 @@ export const getDesktopRuntime = (): DesktopRuntime => {
 
 export const isDesktopRuntime = () => getDesktopRuntime() !== "web";
 export const isElectronRuntime = () => getDesktopRuntime() === "electron";
+export const isMobileDevice = () => {
+  const nav = globalThis.navigator;
+  return (
+    !!nav &&
+    (/Android|iPhone|iPad|iPod/i.test(nav.userAgent) || (/Macintosh/i.test(nav.userAgent) && nav.maxTouchPoints > 1))
+  );
+};
 export const pageLocation = () => window.location;
 
 export const getCookieValue = (name: string) => {

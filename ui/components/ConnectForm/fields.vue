@@ -25,6 +25,7 @@ const props = withDefaults(
     submitLabel: string;
     submitting?: boolean;
     downloadingRdp?: boolean;
+    headerActionTarget?: HTMLElement | null;
   }>(),
   {
     assetType: "assets",
@@ -246,7 +247,19 @@ watchDebounced(
 </script>
 
 <template>
-  <div @keydown.enter.prevent="submit">
+  <div class="connection-form-fields" @keydown.enter.prevent="submit">
+    <Teleport v-if="headerActionTarget" :to="headerActionTarget">
+      <UButton
+        :label="props.submitLabel"
+        :loading="props.submitting && !props.downloadingRdp"
+        :disabled="submitDisabled"
+        color="primary"
+        variant="outline"
+        size="xs"
+        class="connection-form-mobile-submit h-7 shrink-0 justify-center px-2.5"
+        @click="submit"
+      />
+    </Teleport>
     <ConnectForm
       v-model:protocol="draft.protocol"
       v-model:account="draft.account"
@@ -271,43 +284,69 @@ watchDebounced(
       :has-x-pack="hasXPack"
       :applet-client-enabled="appletClientEnabled === true"
       :connection-token-reusable="connectionTokenReusable"
-    />
-    <div class="mt-4">
-      <UCheckbox
-        v-model="draft.rememberSelection"
-        icon="i-lucide-check"
-        :label="t('EditModal.RememberSelection')"
-        :description="t('EditModal.RememberSelectionDescription')"
-        :ui="{ description: 'text-xs leading-5' }"
-      />
-    </div>
-    <p v-if="methodDisabled" class="mt-4 text-xs text-[var(--app-muted)]">
-      {{ t("ConnectError.MethodDisabled") }}
-    </p>
-    <div class="mt-6 mb-2 flex flex-wrap gap-2">
-      <UButton
-        :label="submitLabel"
-        :loading="props.submitting && !props.downloadingRdp"
-        :disabled="submitDisabled"
-        :size="modernIsland ? 'md' : 'lg'"
-        class="flex-1 justify-center"
-        :class="modernIsland ? '' : 'uppercase tracking-[0.08em]'"
-        @click="submit"
-      />
-      <UButton
-        v-if="rdpDownloadMethod"
-        type="button"
-        icon="i-lucide-download"
-        color="neutral"
-        variant="outline"
-        :label="t('EditModal.DownloadRdpFile')"
-        :loading="props.downloadingRdp"
-        :disabled="downloadDisabled"
-        :size="modernIsland ? 'md' : 'lg'"
-        class="flex-1 justify-center"
-        @keydown.enter.stop
-        @click="downloadRdp"
-      />
-    </div>
+    >
+      <div class="connection-form-remember mt-4">
+        <UCheckbox
+          v-model="draft.rememberSelection"
+          icon="i-lucide-check"
+          :label="t('EditModal.RememberSelection')"
+          :description="t('EditModal.RememberSelectionDescription')"
+          :ui="{ description: 'text-xs leading-5' }"
+        />
+      </div>
+      <p v-if="methodDisabled" class="mt-4 text-xs text-[var(--app-muted)]">
+        {{ t("ConnectError.MethodDisabled") }}
+      </p>
+      <div class="connection-form-actions mt-6 mb-2 flex flex-wrap gap-2">
+        <UButton
+          :label="submitLabel"
+          :loading="props.submitting && !props.downloadingRdp"
+          :disabled="submitDisabled"
+          :size="modernIsland ? 'md' : 'lg'"
+          class="connection-form-submit flex-1 justify-center"
+          :class="modernIsland ? '' : 'uppercase tracking-[0.08em]'"
+          @click="submit"
+        />
+        <UButton
+          v-if="rdpDownloadMethod"
+          type="button"
+          icon="i-lucide-download"
+          color="neutral"
+          variant="outline"
+          :label="t('EditModal.DownloadRdpFile')"
+          :loading="props.downloadingRdp"
+          :disabled="downloadDisabled"
+          :size="modernIsland ? 'md' : 'lg'"
+          class="flex-1 justify-center"
+          @keydown.enter.stop
+          @click="downloadRdp"
+        />
+      </div>
+    </ConnectForm>
   </div>
 </template>
+
+<style scoped>
+.connection-form-mobile-submit {
+  display: none;
+}
+
+@media (max-width: 767px), (max-height: 600px) {
+  .connection-form-fields {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .connection-form-mobile-submit {
+    display: inline-flex;
+  }
+
+  .connection-form-remember,
+  .connection-form-actions {
+    margin-top: 0.75rem;
+  }
+}
+</style>
