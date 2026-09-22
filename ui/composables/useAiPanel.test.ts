@@ -54,8 +54,9 @@ describe("AI overlay panel", () => {
 
   afterAll(() => vi.unstubAllGlobals());
 
-  it("remembers visibility independently for each workspace tab", () => {
+  it("defaults to closed on desktop and remembers visibility independently for each workspace tab", () => {
     const panel = useAiPanel();
+    expect(useLocalStorage).toHaveBeenCalledWith("jumpserver-client:ai-panel-open", false, { writeDefaults: false });
     panel.setOpen(false);
     expect(panel.open.value).toBe(false);
 

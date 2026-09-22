@@ -356,7 +356,7 @@ export function buildAutofillScript(selectors, credentials) {
     successSelector: selectors.success,
     interactiveSelector: selectors.interactive
   };
-  return `(() => {
+  return `(async () => {
 ${selectorLookupScript}
 ${submitElementScript}
 let payload = ${JSON.stringify(payload)};
@@ -412,9 +412,17 @@ if (successObserver) {
 }
 // The main process decides whether a visible verification area must precede submission.
 if (payload.interactiveSelector) return true;
-internalAction = true;
 try {
-  return submitElement(submit);
+  // Input handlers may schedule a framework render that replaces or enables the
+  // submit button. Let that update finish, then resolve the current DOM node.
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const currentSubmit = findElement(payload.submitSelector);
+  if (!(currentSubmit instanceof HTMLElement) || !currentSubmit.isConnected || currentSubmit.disabled) {
+    throw new Error("登录提交按钮不可用，请检查提交元素配置或页面是否需要验证");
+  }
+  internalAction = true;
+  if (!submitElement(currentSubmit)) throw new Error("登录表单校验未通过，请检查必填项或验证码配置");
+  return true;
 } finally {
   internalAction = false;
   if (!payload.successSelector && !payload.interactiveSelector) cleanup();
