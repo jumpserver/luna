@@ -287,7 +287,7 @@ async function openProtocolApplicationSettings() {
           orientation="horizontal"
           :ui="{
             fieldset: 'flex flex-wrap gap-2',
-            item: 'rounded-[length:var(--app-radius)] px-2 py-1.5 hover:bg-[var(--app-hover-soft)]'
+            item: 'items-center rounded-[length:var(--app-radius)] px-2 py-1.5 hover:bg-[var(--app-hover-soft)]'
           }"
         />
         <div

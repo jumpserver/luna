@@ -25,13 +25,10 @@ function setup() {
     hasPointerCapture: (id: number) => captured.has(id),
     releasePointerCapture: vi.fn((id: number) => captured.delete(id))
   });
+  const handleRef = shallowRef(handle as unknown as HTMLElement | null);
   const scope = effectScope();
   const state = scope.run(() =>
-    useConnectionSetupDrag(
-      shallowRef(area as HTMLElement),
-      shallowRef(panel as HTMLElement),
-      shallowRef(handle as unknown as HTMLElement)
-    )
+    useConnectionSetupDrag(shallowRef(area as HTMLElement), shallowRef(panel as HTMLElement), handleRef)
   )!;
   cleanups.push(() => scope.stop());
   function dispatch(type: string, properties: Record<string, unknown> = {}) {
@@ -50,7 +47,7 @@ function setup() {
     vi
       .mocked(useResizeObserver)
       .mock.calls.at(-1)![1]([], {} as ResizeObserver);
-  return { area, panel, handle, state, dispatch, resize, scope };
+  return { area, panel, handle, handleRef, state, dispatch, resize, scope };
 }
 
 it("moves from the current position without a jump and clamps all four edges", () => {
@@ -101,6 +98,15 @@ it("releases capture and removes listeners when the dialog unmounts", () => {
   expect(state.isDragging.value).toBe(false);
   expect(handle.setPointerCapture).toHaveBeenCalledOnce();
   expect(handle.releasePointerCapture).toHaveBeenCalledOnce();
+});
+
+it("releases an active drag when a compact layout removes the handle", () => {
+  const { handle, handleRef, state, dispatch } = setup();
+  dispatch("pointerdown");
+  expect(state.isDragging.value).toBe(true);
+  handleRef.value = null;
+  expect(state.isDragging.value).toBe(false);
+  expect(handle.releasePointerCapture).toHaveBeenCalledWith(1);
 });
 
 it("keeps the dialog in bounds after resizing or expanding while preserving hidden tab positions", () => {

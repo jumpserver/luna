@@ -23,6 +23,7 @@ const {
 const currentAsset = ref<AssetItem | null>(null);
 const loading = ref(false);
 const downloadingRdp = shallowRef(false);
+const headerActionTarget = shallowRef<HTMLElement | null>(null);
 let loadSequence = 0;
 
 const modalTitle = computed(() => {
@@ -97,17 +98,20 @@ watch(
     :dismissible="false"
     :title="modalTitle"
     :ui="{
-      content: 'w-[calc(100vw-3rem)] max-w-2xl',
+      content: 'connection-form-modal w-[calc(100vw-3rem)] max-w-2xl',
       header: 'min-h-12 p-3 sm:px-4',
-      title: 'text-sm leading-5',
-      close: 'top-2 end-2 size-7 p-1',
-      body: 'pt-1 sm:pt-1'
+      title: 'connection-form-modal-title text-sm leading-5',
+      close: 'connection-form-modal-close top-2 end-2 size-7 p-1',
+      body: 'connection-form-modal-body pt-1 sm:pt-1'
     }"
     @update:open="updateOpen"
   >
+    <template #actions>
+      <div ref="headerActionTarget" class="connection-form-modal-action-target" />
+    </template>
     <template #body>
       <ConnectFormSkeleton v-if="loading" />
-      <div v-else-if="currentAsset">
+      <div v-else-if="currentAsset" class="connection-form-modal-fields">
         <ConnectFormFields
           v-model:draft="draft"
           :asset="currentAsset"
@@ -119,6 +123,7 @@ watch(
           :submit-label="t('Common.Connect')"
           :submitting="downloadingRdp"
           :downloading-rdp="downloadingRdp"
+          :header-action-target="headerActionTarget"
           asset-type="assets"
           @submit="confirm"
           @download-rdp="downloadRdp"
@@ -127,3 +132,49 @@ watch(
     </template>
   </UModal>
 </template>
+
+<style>
+.connection-form-modal-action-target {
+  display: none;
+}
+
+@media (max-width: 767px), (max-height: 600px) {
+  .connection-form-modal-action-target {
+    display: flex;
+    flex-shrink: 0;
+    order: -1;
+    margin-inline-end: 4px;
+  }
+
+  .connection-form-modal {
+    width: calc(100vw - 1rem);
+    height: calc(100dvh - 1rem);
+    max-height: calc(100dvh - 1rem);
+  }
+
+  .connection-form-modal-body,
+  .connection-form-modal-fields {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .connection-form-modal-body {
+    padding: 4px 12px 8px;
+  }
+
+  .connection-form-modal-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .connection-form-modal-close {
+    position: static;
+    flex-shrink: 0;
+    margin-inline-start: 4px;
+  }
+}
+</style>

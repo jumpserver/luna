@@ -181,7 +181,7 @@ watch(
 </script>
 
 <template>
-  <div class="flex flex-col gap-4" :class="{ 'connect-form--island': modernIsland }">
+  <div class="connect-form flex min-h-0 flex-col gap-4" :class="{ 'connect-form--island': modernIsland }">
     <div class="protocol-tabs-track">
       <div class="protocol-tabs">
         <button
@@ -197,38 +197,41 @@ watch(
       </div>
     </div>
 
-    <div class="flex flex-col gap-4">
-      <ConnectAccountFields
-        v-model:account="selectedAccount"
-        v-model:manual-username="localManualUsername"
-        v-model:manual-password="localManualPassword"
-        v-model:personal-credential-id="localPersonalCredentialId"
-        v-model:personal-credential-version="localPersonalCredentialVersion"
-        v-model:personal-credential-secret-type="localPersonalCredentialSecretType"
-        v-model:save-personal-credential="localSavePersonalCredential"
-        v-model:dynamic-password="localDynamicPassword"
-        v-model:remember-secret="localRememberSecret"
-        :accounts="accounts"
-        :asset-type="assetType"
-        :personal-credentials="personalCredentials || []"
-        :personal-credentials-loading="personalCredentialsLoading"
-        :personal-credentials-loaded="personalCredentialsLoaded"
-        :personal-credentials-load-failed="personalCredentialsLoadFailed"
-      />
-      <ConnectMethodPicker
-        v-model:connect-method="localConnectMethod"
-        :protocol="selectedProtocol"
-        :methods="availableConnectMethods"
-      />
-      <ConnectAdvancedOptions
-        v-model:connect-options="localConnectOptions"
-        :protocol="selectedProtocol"
-        :component="selectedConnectMethodComponent"
-        :connect-method="selectedConnectMethodValue"
-        :has-x-pack="props.hasXPack"
-        :applet-client-enabled="props.appletClientEnabled"
-        :connection-token-reusable="props.connectionTokenReusable"
-      />
+    <div class="connect-form-body">
+      <div class="connect-form-controls flex flex-col gap-4">
+        <ConnectAccountFields
+          v-model:account="selectedAccount"
+          v-model:manual-username="localManualUsername"
+          v-model:manual-password="localManualPassword"
+          v-model:personal-credential-id="localPersonalCredentialId"
+          v-model:personal-credential-version="localPersonalCredentialVersion"
+          v-model:personal-credential-secret-type="localPersonalCredentialSecretType"
+          v-model:save-personal-credential="localSavePersonalCredential"
+          v-model:dynamic-password="localDynamicPassword"
+          v-model:remember-secret="localRememberSecret"
+          :accounts="accounts"
+          :asset-type="assetType"
+          :personal-credentials="personalCredentials || []"
+          :personal-credentials-loading="personalCredentialsLoading"
+          :personal-credentials-loaded="personalCredentialsLoaded"
+          :personal-credentials-load-failed="personalCredentialsLoadFailed"
+        />
+        <ConnectMethodPicker
+          v-model:connect-method="localConnectMethod"
+          :protocol="selectedProtocol"
+          :methods="availableConnectMethods"
+        />
+        <ConnectAdvancedOptions
+          v-model:connect-options="localConnectOptions"
+          :protocol="selectedProtocol"
+          :component="selectedConnectMethodComponent"
+          :connect-method="selectedConnectMethodValue"
+          :has-x-pack="props.hasXPack"
+          :applet-client-enabled="props.appletClientEnabled"
+          :connection-token-reusable="props.connectionTokenReusable"
+        />
+      </div>
+      <slot />
     </div>
   </div>
 </template>
@@ -236,14 +239,20 @@ watch(
 <style scoped>
 .protocol-tabs-track {
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.75rem;
   border-bottom: 1px solid var(--app-border);
 }
 
 .protocol-tabs {
   display: inline-flex;
   width: fit-content;
+  min-width: 0;
   max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  align-self: stretch;
   align-items: flex-end;
   justify-content: flex-start;
   gap: 0.25rem;
@@ -253,7 +262,7 @@ watch(
   position: relative;
   flex: 0 0 auto;
   cursor: pointer;
-  margin-bottom: -1px;
+  margin-bottom: 0;
   border: 0;
   background: transparent;
   padding: 0.25rem 1.25rem 0.375rem;
@@ -272,7 +281,7 @@ watch(
   content: "";
   position: absolute;
   right: 0;
-  bottom: -1px;
+  bottom: 0;
   left: 0;
   height: 2px;
   background: var(--ui-primary);
@@ -298,5 +307,41 @@ watch(
   left: 8px;
   border-radius: var(--workspace-island-radius) var(--workspace-island-radius) 0 0;
   background: var(--theme-accent);
+}
+
+@media (max-width: 767px), (max-height: 600px) {
+  .connect-form {
+    flex: 1;
+    gap: 0.5rem;
+    overflow: hidden;
+  }
+
+  .protocol-tabs {
+    flex: 1;
+    overscroll-behavior-x: contain;
+  }
+
+  .protocol-tab-button,
+  .connect-form--island .protocol-tab-button {
+    min-height: 44px;
+    padding-inline: 12px;
+  }
+
+  .connect-form-body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    padding: 2px 2px 8px;
+    scroll-padding-block: 8px;
+  }
+
+  .connect-form-controls {
+    gap: 0.75rem;
+  }
+
+  .connect-form-controls :deep(input:not([type="checkbox"]):not([type="radio"])),
+  .connect-form-controls :deep(button[role="combobox"]) {
+    min-height: 44px;
+  }
 }
 </style>
