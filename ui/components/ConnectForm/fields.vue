@@ -331,22 +331,20 @@ watchDebounced(
   display: none;
 }
 
-@media (max-width: 767px), (max-height: 600px) {
-  .connection-form-fields {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    flex-direction: column;
-    overflow: hidden;
-  }
+body.mobile .connection-form-fields {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
 
-  .connection-form-mobile-submit {
-    display: inline-flex;
-  }
+body.mobile .connection-form-mobile-submit {
+  display: inline-flex;
+}
 
-  .connection-form-remember,
-  .connection-form-actions {
-    margin-top: 0.75rem;
-  }
+body.mobile .connection-form-remember,
+body.mobile .connection-form-actions {
+  margin-top: 0.75rem;
 }
 </style>

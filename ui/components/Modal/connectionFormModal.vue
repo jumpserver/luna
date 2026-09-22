@@ -138,43 +138,41 @@ watch(
   display: none;
 }
 
-@media (max-width: 767px), (max-height: 600px) {
-  .connection-form-modal-action-target {
-    display: flex;
-    flex-shrink: 0;
-    order: -1;
-    margin-inline-end: 4px;
-  }
+body.mobile .connection-form-modal-action-target {
+  display: flex;
+  flex-shrink: 0;
+  order: -1;
+  margin-inline-end: 4px;
+}
 
-  .connection-form-modal {
-    width: calc(100vw - 1rem);
-    height: calc(100dvh - 1rem);
-    max-height: calc(100dvh - 1rem);
-  }
+body.mobile .connection-form-modal {
+  width: calc(100vw - 1rem);
+  height: calc(100dvh - 1rem);
+  max-height: calc(100dvh - 1rem);
+}
 
-  .connection-form-modal-body,
-  .connection-form-modal-fields {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    flex-direction: column;
-    overflow: hidden;
-  }
+body.mobile .connection-form-modal-body,
+body.mobile .connection-form-modal-fields {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
 
-  .connection-form-modal-body {
-    padding: 4px 12px 8px;
-  }
+body.mobile .connection-form-modal-body {
+  padding: 4px 12px 8px;
+}
 
-  .connection-form-modal-title {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+body.mobile .connection-form-modal-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
-  .connection-form-modal-close {
-    position: static;
-    flex-shrink: 0;
-    margin-inline-start: 4px;
-  }
+body.mobile .connection-form-modal-close {
+  position: static;
+  flex-shrink: 0;
+  margin-inline-start: 4px;
 }
 </style>

@@ -1,6 +1,6 @@
 import ts from "typescript";
 import { afterEach, expect, it, vi } from "vitest";
-import { computed, effectScope, nextTick, onScopeDispose, reactive, ref, watch } from "vue";
+import { computed, effectScope, nextTick, onScopeDispose, reactive, ref, shallowRef, watch } from "vue";
 import source from "./virtualKeyboardPopover.vue?raw";
 
 const cleanups: Array<() => void> = [];
@@ -35,7 +35,7 @@ function setup(protocol = "ssh") {
       }),
       useEventListener: (...args: any[]) => {
         const [event, listener] = typeof args[0] === "string" ? args : args.slice(1);
-        listeners.set(event, listener);
+        for (const name of Array.isArray(event) ? event : [event]) listeners.set(name, listener);
       },
       useMediaQuery: (query: string) => (query.includes("landscape") ? compactLandscape : narrowPortrait)
     }),
@@ -43,6 +43,7 @@ function setup(protocol = "ssh") {
     onScopeDispose,
     reactive,
     ref,
+    shallowRef,
     watch,
     useI18n: () => ({ t: (key: string) => key }),
     useToast: () => ({ add: vi.fn() }),
@@ -54,7 +55,8 @@ function setup(protocol = "ssh") {
     new Function(
       ...Object.keys(scope),
       `${outputText}; return { send, sendShortcut, toggleModifier, modifiers, open, selectedPanel,
-        commonShortcuts, keyboardRows, keyLabel, resetKeyboard, pressPointer, releasePointer, activateKey, pressedKeys };`
+        commonShortcuts, keyboardRows, keyLabel, resetKeyboard, pressPointer, releasePointer, activateKey, pressedKeys,
+        panelOffset, panelDrag, popoverContent, startPanelDrag, dragPanel, stopPanelDrag, movePanelWithKeyboard };`
     )(...Object.values(scope))
   )!;
   return {
@@ -75,6 +77,121 @@ function setup(protocol = "ssh") {
 
 const key = (value: string) => ({ label: value, value });
 const pointer = (pointerId: number) => ({ button: 0, pointerId, currentTarget: { setPointerCapture: vi.fn() } });
+
+function setupPanelDrag() {
+  const keyboard = setup("rdp");
+  keyboard.open.value = true;
+  const viewport = { innerWidth: 1000, innerHeight: 800, visualViewport: null as object | null };
+  const panel = {
+    ownerDocument: { defaultView: viewport },
+    getBoundingClientRect: () => ({
+      left: 300 + keyboard.panelOffset.value.x,
+      top: 400 + keyboard.panelOffset.value.y,
+      width: 640,
+      height: 320
+    })
+  };
+  const captured = new Set<number>();
+  const handle = {
+    closest: () => panel,
+    focus: vi.fn(),
+    setPointerCapture: vi.fn((id: number) => captured.add(id)),
+    hasPointerCapture: (id: number) => captured.has(id),
+    releasePointerCapture: vi.fn((id: number) => captured.delete(id))
+  };
+  const event = (properties: Record<string, unknown> = {}) => ({
+    button: 0,
+    isPrimary: true,
+    pointerId: 1,
+    clientX: 100,
+    clientY: 100,
+    currentTarget: handle,
+    preventDefault: vi.fn(),
+    stopPropagation: vi.fn(),
+    ...properties
+  });
+  return { keyboard, handle, event, viewport };
+}
+
+it.each(["mouse", "touch"])("drags the whole popover without jumps and clamps all edges using %s", (pointerType) => {
+  const { keyboard, event } = setupPanelDrag();
+  keyboard.startPanelDrag(event({ pointerType }));
+  keyboard.dragPanel(event({ clientX: 140, clientY: 130 }));
+  expect(keyboard.popoverContent.value.style.translate).toBe("40px 30px");
+  keyboard.stopPanelDrag(event());
+  keyboard.startPanelDrag(event({ pointerType }));
+  keyboard.dragPanel(event({ clientX: 110, clientY: 120 }));
+  expect(keyboard.panelOffset.value).toEqual({ x: 50, y: 50 });
+  keyboard.dragPanel(event({ clientX: 2000, clientY: 2000 }));
+  expect(keyboard.panelOffset.value).toEqual({ x: 52, y: 72 });
+  keyboard.dragPanel(event({ clientX: -2000, clientY: -2000 }));
+  expect(keyboard.panelOffset.value).toEqual({ x: -292, y: -392 });
+  expect(keyboard.sendKeyEvent).not.toHaveBeenCalled();
+});
+
+it("bounds dragging to the visual viewport when zoomed or covered by the mobile keyboard", () => {
+  const { keyboard, event, viewport } = setupPanelDrag();
+  viewport.visualViewport = { offsetLeft: 40, offsetTop: 20, width: 800, height: 400 };
+  keyboard.startPanelDrag(event());
+  keyboard.dragPanel(event({ clientX: 2000, clientY: 2000 }));
+  expect(keyboard.panelOffset.value).toEqual({ x: -108, y: -308 });
+  keyboard.dragPanel(event({ clientX: -2000, clientY: -2000 }));
+  expect(keyboard.panelOffset.value).toEqual({ x: -252, y: -372 });
+});
+
+it("ignores secondary pointers and releases held remote keys when dragging starts", () => {
+  const { keyboard, event } = setupPanelDrag();
+  keyboard.startPanelDrag(event({ button: 2 }));
+  keyboard.startPanelDrag(event({ isPrimary: false }));
+  expect(keyboard.panelDrag.value).toBeNull();
+  keyboard.toggleModifier("ctrl");
+  keyboard.startPanelDrag(event());
+  expect(keyboard.sendKeyEvent).toHaveBeenLastCalledWith(0, 65507);
+  keyboard.dragPanel(event({ pointerId: 2, clientX: 200 }));
+  keyboard.stopPanelDrag(event({ pointerId: 2 }));
+  expect(keyboard.panelDrag.value).not.toBeNull();
+  expect(keyboard.panelOffset.value).toEqual({ x: 0, y: 0 });
+});
+
+it.each(["pointerup", "pointercancel", "lostpointercapture"])("releases drag capture on %s", (type) => {
+  const { keyboard, handle, event } = setupPanelDrag();
+  keyboard.startPanelDrag(event());
+  keyboard.stopPanelDrag(event({ type }));
+  keyboard.dragPanel(event({ clientX: 200 }));
+  expect(keyboard.panelDrag.value).toBeNull();
+  expect(handle.releasePointerCapture).toHaveBeenCalledWith(1);
+  expect(keyboard.panelOffset.value).toEqual({ x: 0, y: 0 });
+});
+
+it.each(["close", "resize", "rotate", "blur", "dispose"])("cleans up an active panel drag on %s", (action) => {
+  const { keyboard, handle, event } = setupPanelDrag();
+  keyboard.startPanelDrag(event());
+  keyboard.dragPanel(event({ clientX: 120, clientY: 120 }));
+  if (action === "close") keyboard.open.value = false;
+  else if (action === "rotate") keyboard.compactLandscape.value = true;
+  else if (action === "dispose") keyboard.dispose();
+  else keyboard.listeners.get(action)!();
+  expect(keyboard.panelDrag.value).toBeNull();
+  expect(handle.releasePointerCapture).toHaveBeenCalledWith(1);
+  if (["close", "resize", "rotate"].includes(action)) expect(keyboard.panelOffset.value).toEqual({ x: 0, y: 0 });
+});
+
+it("preserves position across panel switches and supports keyboard movement and Home to reset", () => {
+  const { keyboard, event } = setupPanelDrag();
+  const right = event({ key: "ArrowRight" });
+  keyboard.movePanelWithKeyboard(right);
+  keyboard.movePanelWithKeyboard(event({ key: "ArrowUp", shiftKey: true }));
+  expect(keyboard.panelOffset.value).toEqual({ x: 8, y: -32 });
+  expect(right.preventDefault).toHaveBeenCalled();
+  expect(right.stopPropagation).toHaveBeenCalled();
+  keyboard.selectedPanel.value = "keyboard";
+  expect(keyboard.panelOffset.value).toEqual({ x: 8, y: -32 });
+  const tab = event({ key: "Tab" });
+  keyboard.movePanelWithKeyboard(tab);
+  expect(tab.preventDefault).not.toHaveBeenCalled();
+  keyboard.movePanelWithKeyboard(event({ key: "Home" }));
+  expect(keyboard.panelOffset.value).toEqual({ x: 0, y: 0 });
+});
 
 it("keeps multiple terminal modifiers selected until explicitly released", () => {
   const keyboard = setup();
@@ -282,4 +399,111 @@ it("adds the requested shortcuts with protocol-specific data and preserves Remot
   expect(desktop.sendCombinationKeys).toHaveBeenLastCalledWith(["65515", "65289"]);
   desktop.isRemoteApp.value = true;
   expect(desktop.commonShortcuts.value.map((shortcut: { label: string }) => shortcut.label)).toEqual(["Alt+Tab"]);
+});
+
+it.each(["ssh", "telnet", "kubernetes", "k8s", "local-shell"])("sends every Linux shortcut in %s", (protocol) => {
+  const keyboard = setup(protocol);
+  for (const [label, data] of [
+    ["Ctrl+C", "\x03"],
+    ["Ctrl+D", "\x04"],
+    ["Ctrl+Z", "\x1a"],
+    ["Ctrl+R", "\x12"],
+    ["Ctrl+L", "\x0c"],
+    ["Home", "\x1b[H"],
+    ["End", "\x1b[F"],
+    ["PgUp", "\x1b[5~"],
+    ["PgDn", "\x1b[6~"]
+  ]) {
+    keyboard.sendShortcut(keyboard.commonShortcuts.value.find((item: { label: string }) => item.label === label));
+    expect(keyboard.sendKokoTerminalData).toHaveBeenLastCalledWith("session", data);
+  }
+  expect(keyboard.sendCombinationKeys).not.toHaveBeenCalled();
+});
+
+it.each(["rdp", "vnc"])("sends every Windows shortcut in %s", (protocol) => {
+  const keyboard = setup(protocol);
+  for (const [label, keys] of [
+    ["Ctrl+Alt+Del", ["65507", "65513", "65535"]],
+    ["Task Manager", ["65507", "65505", "65307"]],
+    ["Alt+Tab", ["65513", "65289"]],
+    ["Alt+F4", ["65513", "65473"]],
+    ["Win+R", ["65515", "114"]],
+    ["Win+E", ["65515", "101"]],
+    ["Win+D", ["65515", "100"]],
+    ["Win+L", ["65515", "108"]]
+  ]) {
+    keyboard.sendShortcut(keyboard.commonShortcuts.value.find((item: { label: string }) => item.label === label));
+    expect(keyboard.sendCombinationKeys).toHaveBeenLastCalledWith(keys);
+  }
+  expect(keyboard.sendKokoTerminalData).not.toHaveBeenCalled();
+});
+
+it.each(["ssh", "rdp", "vnc"])("sends F1–F12 and Delete from the keyboard in %s", (protocol) => {
+  const keyboard = setup(protocol);
+  const keys = keyboard.keyboardRows.value.flat();
+  const sequences = [
+    "\x1bOP",
+    "\x1bOQ",
+    "\x1bOR",
+    "\x1bOS",
+    "\x1b[15~",
+    "\x1b[17~",
+    "\x1b[18~",
+    "\x1b[19~",
+    "\x1b[20~",
+    "\x1b[21~",
+    "\x1b[23~",
+    "\x1b[24~",
+    "\x1b[3~"
+  ];
+  for (const [index, sequence] of sequences.entries()) {
+    const label = index === 12 ? "Del" : `F${index + 1}`;
+    const virtualKey = keys.find((item: { label: string }) => item.label === label);
+    keyboard.pressPointer(pointer(index), virtualKey);
+    keyboard.releasePointer(pointer(index));
+    if (protocol === "ssh") expect(keyboard.sendKokoTerminalData).toHaveBeenLastCalledWith("session", sequence);
+    else {
+      const keysym = index === 12 ? 65535 : 65470 + index;
+      expect(keyboard.sendKeyEvent.mock.calls.slice(-2)).toEqual([
+        [1, keysym],
+        [0, keysym]
+      ]);
+    }
+  }
+});
+
+it("encodes terminal function keys with modifiers without an extra escape prefix", () => {
+  const keyboard = setup();
+  keyboard.toggleModifier("alt");
+  keyboard.toggleModifier("ctrl");
+  for (const [label, expected] of [
+    ["F1", "\x1b[1;7P"],
+    ["F4", "\x1b[1;7S"],
+    ["F5", "\x1b[15;7~"],
+    ["F12", "\x1b[24;7~"],
+    ["Del", "\x1b[3;7~"]
+  ]) {
+    const virtualKey = keyboard.keyboardRows.value.flat().find((item: { label: string }) => item.label === label);
+    keyboard.send(virtualKey.value);
+    expect(keyboard.sendKokoTerminalData).toHaveBeenLastCalledWith("session", expected);
+  }
+});
+
+it.each(["ssh", "rdp", "vnc"])("shows Win/Cmd and enables it only for desktop protocols in %s", (protocol) => {
+  const keyboard = setup(protocol);
+  const winKey = keyboard.keyboardRows.value.flat().find((item: { modifier?: string }) => item.modifier === "win");
+  expect(winKey.label).toBe("Win/Cmd");
+  expect(winKey.disabled).toBe(protocol === "ssh");
+  keyboard.toggleModifier("win");
+  expect(keyboard.modifiers.win).toBe(protocol !== "ssh");
+  if (protocol !== "ssh") {
+    keyboard.send("r");
+    keyboard.resetKeyboard();
+    expect(keyboard.sendKeyEvent.mock.calls).toEqual([
+      [1, 65515],
+      [1, 114],
+      [0, 114],
+      [0, 65515]
+    ]);
+  } else expect(keyboard.sendKokoTerminalData).not.toHaveBeenCalled();
 });

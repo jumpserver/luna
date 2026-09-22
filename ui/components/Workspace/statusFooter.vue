@@ -179,11 +179,3 @@ onBeforeUnmount(() => {
     </div>
   </footer>
 </template>
-
-<style scoped>
-@media (pointer: coarse), (max-width: 767px) {
-  .workspace-status-footer {
-    height: 44px;
-  }
-}
-</style>

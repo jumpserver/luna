@@ -117,6 +117,8 @@
   --data-grid-text: var(--app-text-primary);
   --data-grid-text-muted: var(--app-text-muted);
   --workspace-toolbar-height: 38px;
+  --workspace-session-tab-width: 176px;
+  --workspace-sub-tab-width: 160px;
   --workspace-tab-group-accent: var(--color-bg-accent);
   --workspace-tab-group-foreground: var(--app-accent-foreground);
   --workspace-surface-background: var(--app-surface-canvas);
@@ -208,6 +210,11 @@
   --replay-chip: var(--app-surface-panel-strong);
   --replay-hover: var(--app-state-hover);
   --replay-shadow: var(--theme-shadow-soft);
+}
+
+body.mobile {
+  --workspace-session-tab-width: 128px;
+  --workspace-sub-tab-width: 120px;
 }
 
 .dark {

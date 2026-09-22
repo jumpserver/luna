@@ -10,6 +10,7 @@ interface VirtualKey {
   value: string;
   width?: number;
   modifier?: Modifier;
+  disabled?: boolean;
 }
 
 interface ShortcutKey {
@@ -38,6 +39,99 @@ const modifiers = reactive<Record<Modifier, boolean>>({
 });
 const modifierReleases = new Map<Modifier, () => void>();
 const pressedKeys = reactive(new Map<number, { value: string; release: () => void }>());
+const panelOffset = ref({ x: 0, y: 0 });
+const panelDrag = shallowRef<{
+  pointerId: number;
+  handle: HTMLElement;
+  startX: number;
+  startY: number;
+  x: number;
+  y: number;
+  bounds: { minX: number; minY: number; maxX: number; maxY: number };
+} | null>(null);
+const popoverContent = computed(() => ({
+  align: "end" as const,
+  side: "top" as const,
+  sideOffset: 8,
+  // Translate the content without replacing the popover's anchor positioning.
+  style: { translate: `${panelOffset.value.x}px ${panelOffset.value.y}px` }
+}));
+
+function panelMovementBounds(handle: HTMLElement) {
+  const panel = handle.closest<HTMLElement>(".virtual-keyboard-popover");
+  const viewport = panel?.ownerDocument.defaultView;
+  if (!panel || !viewport) return;
+  const rect = panel.getBoundingClientRect();
+  const visible = viewport.visualViewport;
+  const minX = (visible?.offsetLeft || 0) + 8 - rect.left + panelOffset.value.x;
+  const minY = (visible?.offsetTop || 0) + 8 - rect.top + panelOffset.value.y;
+  return {
+    minX,
+    minY,
+    maxX: minX + Math.max(0, (visible?.width ?? viewport.innerWidth) - rect.width - 16),
+    maxY: minY + Math.max(0, (visible?.height ?? viewport.innerHeight) - rect.height - 16)
+  };
+}
+
+function movePanel(x: number, y: number, bounds: NonNullable<ReturnType<typeof panelMovementBounds>>) {
+  panelOffset.value = {
+    x: Math.max(bounds.minX, Math.min(x, bounds.maxX)),
+    y: Math.max(bounds.minY, Math.min(y, bounds.maxY))
+  };
+}
+
+function stopPanelDrag(event?: PointerEvent) {
+  const current = panelDrag.value;
+  if (!current || (event && event.pointerId !== current.pointerId)) return;
+  panelDrag.value = null;
+  if (current.handle.hasPointerCapture(current.pointerId)) current.handle.releasePointerCapture(current.pointerId);
+}
+
+function resetPanelPosition() {
+  stopPanelDrag();
+  panelOffset.value = { x: 0, y: 0 };
+}
+
+function startPanelDrag(event: PointerEvent) {
+  if (event.button !== 0 || !event.isPrimary || panelDrag.value) return;
+  const handle = event.currentTarget as HTMLElement;
+  const bounds = panelMovementBounds(handle);
+  if (!bounds) return;
+  resetKeyboard();
+  handle.focus({ preventScroll: true });
+  handle.setPointerCapture(event.pointerId);
+  panelDrag.value = {
+    pointerId: event.pointerId,
+    handle,
+    startX: event.clientX,
+    startY: event.clientY,
+    ...panelOffset.value,
+    bounds
+  };
+  event.preventDefault();
+}
+
+function dragPanel(event: PointerEvent) {
+  const current = panelDrag.value;
+  if (!current || event.pointerId !== current.pointerId) return;
+  movePanel(current.x + event.clientX - current.startX, current.y + event.clientY - current.startY, current.bounds);
+}
+
+function movePanelWithKeyboard(event: KeyboardEvent) {
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  const step = event.shiftKey ? 32 : 8;
+  const dx = event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0;
+  const dy = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
+  if (event.key === "Home") resetPanelPosition();
+  else {
+    if (!dx && !dy) return;
+    const bounds = panelMovementBounds(event.currentTarget as HTMLElement);
+    if (!bounds) return;
+    movePanel(panelOffset.value.x + dx, panelOffset.value.y + dy, bounds);
+  }
+  event.preventDefault();
+  event.stopPropagation();
+}
 
 const activePane = computed(() => activeTab.value?.panes.find((pane) => pane.id === activePaneId.value));
 const terminalProtocols = new Set(["ssh", "telnet", "kubernetes", "k8s", "local-shell"]);
@@ -51,31 +145,37 @@ const available = computed(() => {
 
 const terminalShortcuts: ShortcutKey[] = [
   { label: "Ctrl+C", terminalData: "\x03" },
+  { label: "Ctrl+D", terminalData: "\x04" },
+  { label: "Ctrl+Z", terminalData: "\x1a" },
+  { label: "Ctrl+R", terminalData: "\x12" },
+  { label: "Ctrl+L", terminalData: "\x0c" },
+  { label: "Home", terminalData: "\x1b[H" },
+  { label: "End", terminalData: "\x1b[F" },
+  { label: "PgUp", terminalData: "\x1b[5~" },
+  { label: "PgDn", terminalData: "\x1b[6~" },
   { label: "Ctrl+V", terminalData: "\x16" },
   { label: "Ctrl+X", terminalData: "\x18" },
   { label: "Ctrl+S", terminalData: "\x13" },
-  { label: "Ctrl+D", terminalData: "\x04" },
-  { label: "Ctrl+Z", terminalData: "\x1a" },
-  { label: "Ctrl+L", terminalData: "\x0c" },
-  { label: "Ctrl+R", terminalData: "\x12" },
   { label: "Ctrl+W", terminalData: "\x17" },
   { label: "Ctrl+A", terminalData: "\x01" },
   { label: "Ctrl+E", terminalData: "\x05" }
 ];
 const windowsShortcuts: ShortcutKey[] = [
-  { label: "Ctrl+Alt+Delete", windowsKeys: ["65507", "65513", "65535"] },
-  { label: "Ctrl+Alt+Backspace", windowsKeys: ["65507", "65513", "65288"] },
+  { label: "Ctrl+Alt+Del", windowsKeys: ["65507", "65513", "65535"] },
+  { label: "Task Manager", windowsKeys: ["65507", "65505", "65307"] },
   { label: "Alt+Tab", windowsKeys: ["65513", "65289"] },
-  { label: "Ctrl+Shift+Esc", windowsKeys: ["65507", "65505", "65307"] },
+  { label: "Alt+F4", windowsKeys: ["65513", "65473"] },
+  { label: "Win+R", windowsKeys: ["65515", "114"] },
+  { label: "Win+E", windowsKeys: ["65515", "101"] },
+  { label: "Win+D", windowsKeys: ["65515", "100"] },
+  { label: "Win+L", windowsKeys: ["65515", "108"] },
+  { label: "Ctrl+Alt+Backspace", windowsKeys: ["65507", "65513", "65288"] },
   { label: "Ctrl+V", windowsKeys: ["65507", "118"] },
   { label: "Ctrl+X", windowsKeys: ["65507", "120"] },
   { label: "Ctrl+S", windowsKeys: ["65507", "115"] },
   { label: "F11", windowsKeys: ["65480"] },
   { label: "Win", windowsKeys: ["65515"] },
   { label: "Win+Tab", windowsKeys: ["65515", "65289"] },
-  { label: "Win+R", windowsKeys: ["65515", "114"] },
-  { label: "Win+E", windowsKeys: ["65515", "101"] },
-  { label: "Win+D", windowsKeys: ["65515", "100"] },
   { label: "Win+X", windowsKeys: ["65515", "120"] }
 ];
 const commonShortcuts = computed(() => {
@@ -89,7 +189,14 @@ function characterKeys(row: string): VirtualKey[] {
 }
 
 const keyboardRows = computed<VirtualKey[][]>(() => [
-  [{ label: "Esc", value: "\x1b" }, ...characterKeys("`1234567890-="), { label: "⌫", value: "\x7f", width: 8 }],
+  [
+    { label: "Esc", value: "\x1b", width: 6 },
+    ...["\x1bOP", "\x1bOQ", "\x1bOR", "\x1bOS", ...[15, 17, 18, 19, 20, 21, 23, 24].map((code) => `\x1b[${code}~`)].map(
+      (value, index) => ({ label: `F${index + 1}`, value })
+    ),
+    { label: "Del", value: "\x1b[3~", width: 10 }
+  ],
+  [...characterKeys("`1234567890-="), { label: "⌫", value: "\x7f", width: 12 }],
   [{ label: "Tab", value: "\t", width: 6 }, ...characterKeys("qwertyuiop[]"), { label: "\\", value: "\\", width: 10 }],
   [
     { label: "CapsLock", value: "caps", modifier: "caps", width: 7 },
@@ -104,9 +211,10 @@ const keyboardRows = computed<VirtualKey[][]>(() => [
   ],
   [
     { label: "Ctrl", value: "ctrl", modifier: "ctrl", width: 6 },
-    ...(isWindowsSession.value ? [{ label: "Win", value: "win", modifier: "win" as const, width: 6 }] : []),
+    // Terminal byte streams cannot transmit a standalone system modifier.
+    { label: "Win/Cmd", value: "win", modifier: "win", width: 8, disabled: !isWindowsSession.value },
     { label: "Alt", value: "alt", modifier: "alt", width: 6 },
-    { label: t("koko.terminal.space"), value: " ", width: isWindowsSession.value ? 28 : 34 },
+    { label: t("koko.terminal.space"), value: " ", width: 26 },
     { label: "Alt", value: "alt-right", modifier: "alt", width: 6 },
     { label: "←", value: "\x1b[D" },
     { label: "↓", value: "\x1b[B" },
@@ -159,7 +267,7 @@ function resetKeyboard() {
 const modifierKeysyms = { ctrl: 65507, alt: 65513, shift: 65505, win: 65515 };
 
 function toggleModifier(modifier: Modifier) {
-  if (!available.value) return;
+  if (!available.value || (modifier === "win" && !isWindowsSession.value)) return;
   if (modifiers[modifier]) {
     modifierReleases.get(modifier)?.();
     modifierReleases.delete(modifier);
@@ -175,8 +283,12 @@ function toggleModifier(modifier: Modifier) {
 
 function encodedKey(value: string) {
   const modifierCode = Number(modifiers.shift) + Number(modifiers.alt) * 2 + Number(modifiers.ctrl) * 4;
-  if (["\x1b[A", "\x1b[B", "\x1b[C", "\x1b[D"].includes(value) && modifierCode) {
+  const escapeSequence = value.startsWith("\x1b") ? value.slice(1) : "";
+  if (/^(?:\[[A-DFH]|O[P-S])$/.test(escapeSequence) && modifierCode) {
     return `\x1b[1;${modifierCode + 1}${value.at(-1)}`;
+  }
+  if (/^\[\d+~$/.test(escapeSequence) && modifierCode) {
+    return `${value.slice(0, -1)};${modifierCode + 1}~`;
   }
   let data = value;
   if (value === "\t" && modifiers.shift) data = "\x1b[Z";
@@ -200,6 +312,19 @@ const windowsSpecialKeys: Record<string, string> = {
   "\x1b[B": "65364",
   "\x1b[D": "65361",
   "\x1b[C": "65363",
+  "\x1b[3~": "65535",
+  "\x1bOP": "65470",
+  "\x1bOQ": "65471",
+  "\x1bOR": "65472",
+  "\x1bOS": "65473",
+  "\x1b[15~": "65474",
+  "\x1b[17~": "65475",
+  "\x1b[18~": "65476",
+  "\x1b[19~": "65477",
+  "\x1b[20~": "65478",
+  "\x1b[21~": "65479",
+  "\x1b[23~": "65480",
+  "\x1b[24~": "65481",
   "\x7f": "65288",
   "\r": "65293",
   " ": "32"
@@ -280,24 +405,37 @@ watch(
 );
 
 watch([open, selectedPanel, activePaneId, compactLandscape, narrowPortrait], resetKeyboard, { flush: "sync" });
-useEventListener("blur", resetKeyboard);
+watch([open, compactLandscape, narrowPortrait], resetPanelPosition, { flush: "sync" });
+useEventListener("resize", resetPanelPosition);
+useEventListener(() => globalThis.window?.visualViewport, ["resize", "scroll"], resetPanelPosition);
+useEventListener("blur", () => {
+  resetKeyboard();
+  stopPanelDrag();
+});
 useEventListener(
   () => globalThis.document,
   "visibilitychange",
   () => {
-    if (globalThis.document?.hidden) resetKeyboard();
+    if (globalThis.document?.hidden) {
+      resetKeyboard();
+      stopPanelDrag();
+    }
   }
 );
 onScopeDispose(resetKeyboard);
+onScopeDispose(stopPanelDrag);
 </script>
 
 <template>
   <UPopover
     :open="open"
     :dismissible="false"
-    :content="{ align: 'end', side: 'top', sideOffset: 8 }"
+    :content="popoverContent"
     :ui="{
-      content: compactLandscape ? 'w-[calc(100vw-1rem)] max-w-[60rem] p-2' : 'w-[42rem] max-w-[calc(100vw-1rem)] p-2'
+      content: [
+        'virtual-keyboard-popover',
+        compactLandscape ? 'w-[calc(100vw-1rem)] max-w-[60rem] p-2' : 'w-[42rem] max-w-[calc(100vw-1rem)] p-2'
+      ]
     }"
   >
     <UTooltip :text="t('koko.terminal.virtualKeyboard')">
@@ -326,11 +464,29 @@ onScopeDispose(resetKeyboard);
         size="sm"
         class="virtual-keyboard-panel gap-2 select-none"
         :ui="{
-          list: 'bg-[var(--app-surface-canvas)]',
-          indicator: 'bg-[var(--app-surface-panel)] shadow-none',
-          trigger: 'flex-1 text-[var(--app-muted)] data-[state=active]:text-[var(--app-fg)]'
+          list: 'p-0.5 bg-[var(--app-surface-canvas)]',
+          indicator: 'inset-y-0.5 bg-[var(--app-surface-panel)] shadow-none',
+          trigger: 'flex-1 py-0 text-[var(--app-muted)] data-[state=active]:text-[var(--app-fg)]'
         }"
       >
+        <template #list-leading>
+          <UButton
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-grip-vertical"
+            class="virtual-keyboard-drag shrink-0 touch-none justify-center"
+            :class="panelDrag ? 'cursor-grabbing' : 'cursor-grab'"
+            :aria-label="t('RightPanel.MoveVirtualKeyboard')"
+            :title="t('RightPanel.MoveVirtualKeyboard')"
+            @pointerdown.stop="startPanelDrag"
+            @pointermove="dragPanel"
+            @pointerup="stopPanelDrag"
+            @pointercancel="stopPanelDrag"
+            @lostpointercapture="stopPanelDrag"
+            @keydown="movePanelWithKeyboard"
+            @dblclick="resetPanelPosition"
+          />
+        </template>
         <template #list-trailing>
           <UButton
             color="neutral"
@@ -379,6 +535,7 @@ onScopeDispose(resetKeyboard);
                   class="virtual-key min-w-0 justify-center px-0 text-[11px]"
                   :class="{ 'is-pressed': [...pressedKeys.values()].some((pressed) => pressed.value === key.value) }"
                   :style="{ gridColumn: `span ${key.width || 4}` }"
+                  :disabled="key.disabled"
                   :aria-label="key.value === '\x7f' ? 'Backspace' : keyLabel(key)"
                   :aria-pressed="key.modifier ? modifiers[key.modifier] : undefined"
                   @pointerdown.prevent="pressPointer($event, key)"
@@ -387,7 +544,13 @@ onScopeDispose(resetKeyboard);
                   @lostpointercapture="releasePointer"
                   @click="activateKey($event, key)"
                 >
-                  {{ keyLabel(key) }}
+                  <UIcon
+                    v-if="key.modifier === 'win'"
+                    name="i-tabler-brand-windows"
+                    class="size-3.5"
+                    aria-hidden="true"
+                  />
+                  <span v-else>{{ keyLabel(key) }}</span>
                 </UButton>
               </div>
             </div>
@@ -402,19 +565,21 @@ onScopeDispose(resetKeyboard);
 .virtual-keyboard-panel {
   --keyboard-key-height: 36px;
   --keyboard-control-height: 32px;
-  --keyboard-hint-height: 32px;
+  --keyboard-hint-height: 20px;
   --keyboard-content-height: min(
-    calc(5 * var(--keyboard-key-height) + 16px + var(--keyboard-hint-height)),
+    calc(6 * var(--keyboard-key-height) + 20px + var(--keyboard-hint-height)),
     max(0px, calc(var(--reka-popover-content-available-height, 100dvh) - var(--keyboard-control-height) - 32px))
   );
 }
 
 .virtual-keyboard-panel :deep([data-slot="trigger"]),
+.virtual-keyboard-drag,
 .virtual-keyboard-close {
   height: var(--keyboard-control-height);
 }
 
-.virtual-keyboard-close {
+.virtual-keyboard-close,
+.virtual-keyboard-drag {
   width: var(--keyboard-control-height);
 }
 
@@ -451,7 +616,7 @@ onScopeDispose(resetKeyboard);
 
 .virtual-keyboard-rows {
   display: grid;
-  grid-template-rows: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr));
   gap: 4px;
   flex: 1;
   min-height: 0;
@@ -470,17 +635,17 @@ onScopeDispose(resetKeyboard);
   font-size: 13px;
 }
 
-@media (pointer: coarse), (max-width: 767px) {
-  .virtual-keyboard-trigger {
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
-    touch-action: manipulation;
-  }
+body.mobile .virtual-keyboard-trigger {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
 
+@media (pointer: coarse), (max-width: 767px) {
   .virtual-keyboard-panel {
     --keyboard-key-height: 44px;
-    --keyboard-control-height: 44px;
+    --keyboard-control-height: 28px;
   }
 }
 
@@ -493,7 +658,7 @@ onScopeDispose(resetKeyboard);
 @media (max-height: 600px) and (orientation: landscape) {
   .virtual-keyboard-panel {
     --keyboard-key-height: clamp(28px, 8dvh, 40px);
-    --keyboard-control-height: 36px;
+    --keyboard-control-height: 28px;
     --keyboard-hint-height: 0px;
   }
 

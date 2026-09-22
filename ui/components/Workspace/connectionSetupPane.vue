@@ -546,54 +546,52 @@ onMounted(loadAsset);
     0 16px 36px color-mix(in srgb, var(--app-fg) 5%, transparent);
 }
 
-@media (max-width: 767px), (max-height: 600px) {
-  .connection-setup-stage {
-    overflow: hidden;
-    padding: 8px;
-  }
+body.mobile .connection-setup-stage {
+  overflow: hidden;
+  padding: 8px;
+}
 
-  .connection-setup-content,
-  .connection-setup-group {
-    height: 100%;
-    min-height: 0;
-  }
+body.mobile .connection-setup-content,
+body.mobile .connection-setup-group {
+  height: 100%;
+  min-height: 0;
+}
 
-  .connection-setup-group {
-    width: min(768px, 100%);
-  }
+body.mobile .connection-setup-group {
+  width: min(768px, 100%);
+}
 
-  .connection-setup-shell {
-    display: flex;
-    height: 100%;
-    min-height: 0;
-    flex-direction: column;
-  }
+body.mobile .connection-setup-shell {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+}
 
-  .connection-setup-header {
-    height: 44px;
-    padding-inline: 12px;
-    touch-action: auto;
-    cursor: default;
-  }
+body.mobile .connection-setup-header {
+  height: 44px;
+  padding-inline: 12px;
+  touch-action: auto;
+  cursor: default;
+}
 
-  .connection-setup-close {
-    min-width: 44px;
-    min-height: 44px;
-  }
+body.mobile .connection-setup-close {
+  min-width: 44px;
+  min-height: 44px;
+}
 
-  .connection-setup-body {
-    flex: 1;
-    min-height: 0;
-  }
+body.mobile .connection-setup-body {
+  flex: 1;
+  min-height: 0;
+}
 
-  .connection-setup-form {
-    padding: 4px 12px 8px;
-  }
+body.mobile .connection-setup-form {
+  padding: 4px 12px 8px;
+}
 
-  .connection-setup-form--fields {
-    display: flex;
-    overflow: hidden;
-    flex-direction: column;
-  }
+body.mobile .connection-setup-form--fields {
+  display: flex;
+  overflow: hidden;
+  flex-direction: column;
 }
 </style>

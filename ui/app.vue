@@ -40,6 +40,7 @@ const webWorkspaceBrand = useState<string>(WORKSPACE_BRAND_STATE_KEY, () => COMM
 const webWorkspaceFavicon = useState<string>(WORKSPACE_FAVICON_STATE_KEY, () => "");
 
 const { isMacOS, isWindows } = usePlatform();
+const isMobile = useMobile();
 const { locale, setLocale, t } = useI18n();
 const uiLocale = computed(() => getUiLocale(locale.value));
 watch(locale, (value) => agentClient.setResponseLanguage(normalizeLanguageCode(value)), {
@@ -128,7 +129,8 @@ useHead({
   }),
   bodyAttrs: {
     class: computed(
-      () => `${platformClass.value} ${micaClass.value} ${vibrancyClass.value} font-sans antialiased h-screen w-screen`
+      () =>
+        `${platformClass.value} ${micaClass.value} ${vibrancyClass.value} ${isMobile.value ? "mobile" : ""} font-sans antialiased h-screen w-screen`
     ),
     style: computed(
       () => `

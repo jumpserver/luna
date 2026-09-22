@@ -68,9 +68,8 @@ const renameTabId = ref("");
 const renameValue = ref("");
 const showShortcutHints = ref(false);
 
-const TAB_MAX_WIDTH = 176;
 const TAB_GAP = 4;
-const groupElements = ref<HTMLElement[]>([]);
+const groupElements: Ref<HTMLElement[]> = ref([]);
 const groupLabelsWidth = ref(0);
 function updateGroupLabelsWidth() {
   groupLabelsWidth.value = groupElements.value.reduce((sum, element) => sum + element.getBoundingClientRect().width, 0);
@@ -79,7 +78,7 @@ watchPostEffect(updateGroupLabelsWidth);
 useResizeObserver(groupElements, () => requestAnimationFrame(updateGroupLabelsWidth));
 type TabStripEntry =
   | { kind: "group"; group: WorkspaceTabGroup; count: number; active: boolean }
-  | { kind: "tab"; tab: WorkspaceSessionTab; index: number };
+  | { kind: "tab"; tab: WorkspaceSessionTab; index: number; hidden: boolean };
 const tabStripEntries = computed<TabStripEntry[]>(() => {
   const entries: TabStripEntry[] = [];
   tabs.value.forEach((tab, index) => {
@@ -93,14 +92,16 @@ const tabStripEntries = computed<TabStripEntry[]>(() => {
         active: members.some((item) => item.id === activeTabId.value)
       });
     }
-    if (!group?.collapsed) entries.push({ kind: "tab", tab, index });
+    // Keep tab icons mounted across collapse/expand so their images are not requested again.
+    entries.push({ kind: "tab", tab, index, hidden: !!group?.collapsed });
   });
   return entries;
 });
 const tabStripIdealWidth = computed(() => {
-  const entries = tabStripEntries.value;
-  const width = groupLabelsWidth.value + entries.filter((entry) => entry.kind === "tab").length * TAB_MAX_WIDTH;
-  return `${width + Math.max(0, entries.length - 1) * TAB_GAP}px`;
+  const entries = tabStripEntries.value.filter((entry) => entry.kind === "group" || !entry.hidden);
+  const count = entries.filter((entry) => entry.kind === "tab").length;
+  const spacing = groupLabelsWidth.value + Math.max(0, entries.length - 1) * TAB_GAP;
+  return `calc(${count} * var(--workspace-session-tab-width) + ${spacing}px)`;
 });
 
 const { activeTab } = useWorkspaceTabs();
@@ -835,6 +836,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
             v-if="entry.kind === 'group'"
             ref="groupElements"
             :data-group-id="entry.group.id"
+            :data-group-collapsed="entry.group.collapsed"
             :data-group-active="entry.active && entry.group.collapsed"
             class="workspace-tab-group relative flex h-7 w-max min-w-0 max-w-44 shrink-0 items-center rounded-md"
             :class="{
@@ -850,7 +852,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
               color="neutral"
               variant="ghost"
               size="xs"
-              class="workspace-tab-group-label h-6 min-w-0 flex-1 gap-1 px-2 text-[11px]"
+              class="workspace-tab-group-label h-[22px] min-w-0 flex-1 gap-1 p-1 text-[11px]"
               :aria-expanded="!entry.group.collapsed"
               :aria-label="`${t(entry.group.collapsed ? 'TabMenu.ExpandGroup' : 'TabMenu.CollapseGroup')}: ${groupDisplayTitle(entry.group)}`"
               :title="groupDisplayTitle(entry.group)"
@@ -862,12 +864,13 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
           </div>
           <button
             v-else
+            v-show="!entry.hidden"
             :data-tab-id="entry.tab.id"
             :title="tabTooltip(entry.tab)"
             :data-group-end="entry.tab.group?.id !== tabs[entry.index + 1]?.group?.id"
             type="button"
             :draggable="!props.standalone"
-            class="workspace-session-tab group relative flex h-7 min-w-24 max-w-44 basis-44 grow shrink items-center gap-1.5 rounded-md px-2 text-left leading-none transition-colors"
+            class="workspace-session-tab group relative flex h-7 min-w-24 max-w-(--workspace-session-tab-width) basis-(--workspace-session-tab-width) grow shrink items-center gap-1.5 rounded-md px-2 text-left leading-none transition-colors"
             :class="[
               activeTabId === entry.tab.id ? 'workspace-session-tab-active' : 'text-[var(--app-muted)]',
               draggedTabId === entry.tab.id ? 'opacity-60' : '',
@@ -1097,7 +1100,7 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
   outline-offset: -2px;
 }
 
-.workspace-tab-group::after,
+.workspace-tab-group[data-group-collapsed="false"]::after,
 .workspace-session-tab-grouped::after {
   content: "";
   position: absolute;
