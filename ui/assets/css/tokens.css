@@ -117,6 +117,8 @@
   --data-grid-text: var(--app-text-primary);
   --data-grid-text-muted: var(--app-text-muted);
   --workspace-toolbar-height: 38px;
+  --workspace-tab-group-accent: var(--color-bg-accent);
+  --workspace-tab-group-foreground: var(--app-accent-foreground);
   --workspace-surface-background: var(--app-surface-canvas);
   --workspace-surface-panel: var(--app-surface-panel);
   --workspace-surface-sidebar: var(--app-surface-sidebar);

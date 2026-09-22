@@ -12,6 +12,7 @@ import {
 } from "~/composables/useConnectMethods";
 import { findFavoriteAssetFolderId, getFavoriteRootAssetCount } from "~/composables/useFavoriteFolders";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { writeClipboardText } from "~/utils/clipboard";
 import { hasReusableSavedConnection, isSavedConnectionAvailable } from "~/utils/connection";
 import { hasItemName, isItemNameTooLong } from "~/utils/itemName";
 
@@ -474,6 +475,16 @@ export function useSidebarAssetActions() {
     }
   };
 
+  const copyAssetName = async (asset: AssetItem) => {
+    contextMenuVisible.value = false;
+    try {
+      await writeClipboardText([asset.name, asset.address].filter(Boolean).join(" "));
+      toast.add({ title: t("Common.CopySuccess"), color: "success", duration: 1200 });
+    } catch (error) {
+      addErrorToast({ title: t("Common.CopyFailed"), error, icon: "i-lucide-circle-alert" });
+    }
+  };
+
   const openRenameModal = (asset: AssetItem) => {
     contextMenuVisible.value = false;
     renameAsset.value = asset;
@@ -585,6 +596,11 @@ export function useSidebarAssetActions() {
         label: t("ContextMenu.OpenInNewWindow"),
         icon: "i-lucide-square-arrow-out-up-right",
         onSelect: () => handleAssetOpenInNewWindow(asset)
+      },
+      {
+        label: t("ContextMenu.CopyAssetName"),
+        icon: "i-lucide-copy",
+        onSelect: () => copyAssetName(asset)
       },
       {
         label: t("ContextMenu.Rename"),

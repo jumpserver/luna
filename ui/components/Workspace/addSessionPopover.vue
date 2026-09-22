@@ -8,9 +8,20 @@ const loading = ref(false);
 const results = ref<AssetItem[]>([]);
 const { fetchTree, treeNodeToAsset } = useAssetTree();
 const { recentConnections } = useRecentConnections();
+const { savedGroups, saveError, isGroupOpening, openSavedGroup, removeSavedGroup } = useSavedSessionGroups();
 const userInfoStore = useUserInfoStore();
 const { openLocalShell } = useWorkspaceTabs();
 const { t } = useI18n();
+const toast = useToast();
+const filteredGroups = computed(() =>
+  savedGroups.value.filter((group) => group.title.toLocaleLowerCase().includes(search.value.trim().toLocaleLowerCase()))
+);
+async function selectGroup(id: string) {
+  open.value = false;
+  const failures = await openSavedGroup(id);
+  if (failures.length)
+    toast.add({ title: t("SavedGroups.OpenFailed"), description: failures.join("\n"), color: "warning" });
+}
 const { isMacOS } = usePlatform();
 const localShellAvailable = computed(() => isDesktopRuntime());
 const localShellShortcutModifier = computed(() => (isMacOS.value ? "meta" : "ctrl"));
@@ -84,6 +95,42 @@ watch(open, (value) => {
           />
         </div>
         <div class="max-h-80 min-h-32 overflow-y-auto p-1.5">
+          <UAlert v-if="saveError" color="error" variant="soft" :title="t(saveError)" class="mb-2" />
+          <template v-if="filteredGroups.length">
+            <div class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
+              {{ t("SavedGroups.Title") }}
+            </div>
+            <div
+              v-for="group in filteredGroups"
+              :key="group.id"
+              class="flex items-center gap-1 rounded-lg hover:bg-(--app-hover-soft)"
+            >
+              <UButton
+                color="neutral"
+                variant="ghost"
+                class="min-w-0 flex-1 justify-start gap-3 px-2 py-2"
+                icon="i-lucide-group"
+                :loading="isGroupOpening(group.id)"
+                :aria-label="t('SavedGroups.Open', { name: group.title })"
+                @click="selectGroup(group.id)"
+              >
+                <span class="min-w-0 flex-1 text-left">
+                  <span class="block truncate">{{ group.title }}</span>
+                  <span class="block text-[11px] text-muted">
+                    {{ t("SavedGroups.TabCount", { count: group.tabs.length }) }}
+                  </span>
+                </span>
+              </UButton>
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                icon="i-lucide-trash-2"
+                :aria-label="t('SavedGroups.Delete', { name: group.title })"
+                @click="removeSavedGroup(group.id)"
+              />
+            </div>
+          </template>
           <template v-if="localShellAvailable && !search.trim()">
             <div class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
               {{ t("AddSession.Local") }}
