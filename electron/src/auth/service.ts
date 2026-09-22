@@ -34,6 +34,15 @@ function parseJsonResponse(text: string) {
   }
 }
 
+function parseOAuthError(text: string) {
+  try {
+    const payload = JSON.parse(text);
+    return typeof payload?.error === "string" ? payload.error : "";
+  } catch {
+    return "";
+  }
+}
+
 function requestSite(session, request) {
   if (request.service !== "kael") return session.origin;
 
@@ -94,6 +103,7 @@ export class DesktopAuthService {
     this.sessions = new Map();
     this.currentSessionKey = "";
     this.tokens = {};
+    this.refreshingTokens = new Map();
     this.pendingAuth = null;
     this.callbackServer = null;
     this.redirectUri = DEEP_LINK_CALLBACK;
@@ -335,13 +345,17 @@ export class DesktopAuthService {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
       body: new URLSearchParams(parameters).toString(),
-      redirect: "manual"
+      redirect: "manual",
+      signal: AbortSignal.timeout(30_000)
     });
     const text = await response.text();
-    if (!response.ok)
-      throw new Error(
+    if (!response.ok) {
+      const error = new Error(
         `Token exchange failed: status=${response.status}, body=${compactApiErrorBody(text, response.headers.get("content-type") || "")}`
-      );
+      ) as Error & { oauthError?: string };
+      error.oauthError = parseOAuthError(text);
+      throw error;
+    }
     const payload = parseJsonResponse(text);
     if (!payload.access_token) throw new Error("Token exchange response did not include access_token");
     return {
@@ -359,18 +373,48 @@ export class DesktopAuthService {
     }
     if (!stored.expires_at || stored.expires_at > Math.floor(Date.now() / 1000) + 60) return stored.access_token;
     if (!stored.refresh_token) throw new Error(`refresh_token missing for site ${site}`);
-    const refreshed = await this.exchangeToken(site, {
-      grant_type: "refresh_token",
-      refresh_token: stored.refresh_token,
-      client_id: stored.client_id || ""
-    });
-    this.tokens[sessionId] = {
-      ...refreshed,
-      refresh_token: refreshed.refresh_token || stored.refresh_token,
-      client_id: stored.client_id || ""
-    };
-    await this.persistTokens();
-    return refreshed.access_token;
+
+    const activeRefresh = this.refreshingTokens.get(sessionId);
+    if (activeRefresh) return activeRefresh;
+
+    const refresh = (async () => {
+      try {
+        const refreshed = await this.exchangeToken(site, {
+          grant_type: "refresh_token",
+          refresh_token: stored.refresh_token,
+          client_id: stored.client_id || ""
+        });
+        const current = this.tokens[sessionId];
+        if (current !== stored) {
+          if (current?.access_token) return current.access_token;
+          throw new Error(`auth session changed for site ${site}`);
+        }
+        this.tokens[sessionId] = {
+          ...refreshed,
+          refresh_token: refreshed.refresh_token || stored.refresh_token,
+          client_id: stored.client_id || ""
+        };
+        await this.persistTokens();
+        return refreshed.access_token;
+      } catch (error) {
+        if (error?.oauthError === "invalid_grant" && this.tokens[sessionId] === stored) {
+          delete this.tokens[sessionId];
+          try {
+            await this.persistTokens();
+          } catch (persistError) {
+            electronLog.warn("failed to remove expired auth token", persistError);
+          }
+          this.emitEvent("auth-session-expired", { sessionId }, "main");
+        }
+        throw error;
+      }
+    })();
+    this.refreshingTokens.set(sessionId, refresh);
+    try {
+      return await refresh;
+    } finally {
+      if (this.refreshingTokens.get(sessionId) === refresh) this.refreshingTokens.delete(sessionId);
+    }
   }
 
   async bootstrapAuthSession({ site, sessionId }) {
