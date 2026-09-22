@@ -309,38 +309,40 @@ watch(
   background: var(--theme-accent);
 }
 
-@media (max-width: 767px), (max-height: 600px) {
-  .connect-form {
-    flex: 1;
-    gap: 0.5rem;
-    overflow: hidden;
-  }
+body.mobile .connect-form {
+  flex: 1;
+  gap: 0.5rem;
+  overflow: hidden;
+}
 
-  .protocol-tabs {
-    flex: 1;
-    overscroll-behavior-x: contain;
-  }
+body.mobile .protocol-tabs {
+  flex: 1;
+  overscroll-behavior-x: contain;
+}
 
-  .protocol-tab-button,
-  .connect-form--island .protocol-tab-button {
-    min-height: 44px;
-    padding-inline: 12px;
-  }
+body.mobile .protocol-tab-button,
+body.mobile .connect-form--island .protocol-tab-button {
+  min-height: 44px;
+  padding-inline: 12px;
+}
 
-  .connect-form-body {
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
-    padding: 2px 2px 8px;
-    scroll-padding-block: 8px;
-  }
+body.mobile .connect-form-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding: 2px 2px 8px;
+  scroll-padding-block: 8px;
+}
 
-  .connect-form-controls {
-    gap: 0.75rem;
-  }
+body.mobile .connect-form-controls {
+  gap: 0.75rem;
+}
 
-  .connect-form-controls :deep(input:not([type="checkbox"]):not([type="radio"])),
-  .connect-form-controls :deep(button[role="combobox"]) {
+@media (max-width: 767px) {
+  body.mobile .connect-form-controls :deep(input:not([type="checkbox"]):not([type="radio"])),
+  body.mobile .connect-form-controls :deep(button[role="combobox"]),
+  body.mobile .connect-form-controls :deep(button[aria-haspopup="listbox"]),
+  body.mobile .connect-form-controls :deep(.remember-secret-button) {
     min-height: 44px;
   }
 }

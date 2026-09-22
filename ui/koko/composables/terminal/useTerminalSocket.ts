@@ -6,7 +6,6 @@ import { useDebounceFn, useResizeObserver } from "@vueuse/core";
 import { FitAddon } from "@xterm/addon-fit";
 
 import { SearchAddon } from "@xterm/addon-search";
-import { WebglAddon } from "@xterm/addon-webgl";
 import { Terminal } from "@xterm/xterm";
 import { KOKO_MCP_FRAME_TYPES } from "#koko/composables/agent/types";
 import {
@@ -50,8 +49,10 @@ import { useKokoHostAdapter } from "#koko/host";
 import { useKokoConnectionStore } from "#koko/stores/connection";
 import { useKokoTerminalSettingsStore } from "#koko/stores/terminalSettings";
 import { getDefaultTerminalConfig } from "#koko/utils/guard";
+import { watchTerminalRenderer } from "#koko/utils/terminalRenderer";
 import { applyXtermTheme, appTerminalTheme, syncXtermBackground, terminalTheme } from "#koko/utils/terminalTheme";
 import { formatMessage, preprocessInput } from "#koko/utils/terminalUtils";
+import { useMobile } from "~/composables/useMobile";
 import { createKokoStartupOutputCapture, describeTerminalClose, resolveKokoTerminalCloseMessage } from "./protocol";
 
 const isSocketOpen = (socket: WebSocket) => socket.readyState === WebSocket.OPEN;
@@ -60,6 +61,8 @@ const isXtermAddonDisposeError = (error: unknown) =>
   error instanceof Error && error.message.includes("Could not dispose an addon that has not been loaded");
 
 export const useKokoTerminalSocket = () => {
+  const isMobile = useMobile();
+  let stopRendererWatch: (() => void) | undefined;
   const toast = useToast();
   const zmodem = useKokoZmodem();
   const transport = useKokoTerminalTransport();
@@ -438,20 +441,10 @@ export const useKokoTerminalSocket = () => {
       customGlyphs: true
     });
     const fit = new FitAddon();
-    const webgl = new WebglAddon();
     const search = new SearchAddon();
-
-    webgl.onContextLoss(() => {
-      try {
-        webgl.dispose();
-      } catch (error) {
-        if (!isXtermAddonDisposeError(error)) throw error;
-      }
-    });
 
     terminal.loadAddon(fit);
     terminal.loadAddon(search);
-    terminal.loadAddon(webgl);
 
     terminalRef.value = markRaw(terminal);
     fitAddon = fit;
@@ -499,8 +492,10 @@ export const useKokoTerminalSocket = () => {
     nextTick(() => {
       input.start();
       terminalRef.value?.open(containerRef.value!);
-      if (terminalRef.value) syncXtermBackground(terminalRef.value);
-      fitToContainer();
+      if (terminalRef.value) {
+        syncXtermBackground(terminalRef.value);
+        stopRendererWatch = watchTerminalRenderer(terminalRef.value, isMobile, fitToContainer);
+      }
     });
   });
 
@@ -524,6 +519,7 @@ export const useKokoTerminalSocket = () => {
     disposeSocketEvents?.();
     transport.close();
     sentryRef.value = null;
+    stopRendererWatch?.();
     try {
       terminalRef.value?.dispose();
     } catch (error) {
