@@ -1,4 +1,4 @@
-import { normalizedWebOrigin, validateWebScript, validateWebSelector } from "./credentials";
+import { normalizedWebOrigin, validateWebScript, optionalWebSelector } from "./credentials";
 
 // Used only in the main process. The shell renderer never receives this object.
 export function createLocalCredentialSession(targetUrl: string, value: unknown) {
@@ -16,18 +16,20 @@ export function createLocalCredentialSession(targetUrl: string, value: unknown) 
   const password = data.password ?? "";
   if (typeof username !== "string" || typeof password !== "string" || username.length > 4096 || password.length > 65536)
     throw new Error("Tinker 凭据格式无效");
+  const selectors = {
+    username: optionalWebSelector(config.username_selector),
+    password: optionalWebSelector(config.password_selector),
+    submit: optionalWebSelector(config.submit_selector),
+    success: optionalWebSelector(config.success_selector),
+    interactive: optionalWebSelector(config.interactive_selector)
+  };
   // Same-name/manual accounts may have an empty password; preserve it for autofill.
   if (
-    (mode === "basic" || steps?.some((step) => step.value.includes("{SECRET}"))) &&
+    ((mode === "basic" && selectors.password) || steps?.some((step) => step.value.includes("{SECRET}"))) &&
     data.secret_type &&
     data.secret_type !== "password"
   )
     throw new Error("登录配置需要密码账号");
-  const selector = (key: string, required = false) => {
-    const value = config[key] ?? "";
-    if (required || value) validateWebSelector(value);
-    return value;
-  };
   const credentialOrigins = steps
     ? [
         ...new Set(
@@ -44,13 +46,7 @@ export function createLocalCredentialSession(targetUrl: string, value: unknown) 
     mode,
     steps,
     credentialOrigins,
-    selectors: {
-      username: selector("username_selector"),
-      password: selector("password_selector", mode === "basic"),
-      submit: selector("submit_selector", mode === "basic"),
-      success: selector("success_selector"),
-      interactive: selector("interactive_selector")
-    },
+    selectors,
     release() {
       if (!credentials) throw new Error("凭据已经领取或会话已结束");
       const released = credentials;

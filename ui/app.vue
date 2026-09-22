@@ -73,6 +73,7 @@ const unlistenTheme = ref<DesktopUnlistenFn | null>(null);
 const unlistenFont = ref<DesktopUnlistenFn | null>(null);
 const unlistenSettingsNavigate = ref<DesktopUnlistenFn | null>(null);
 const unlistenWebProtocolUrl = ref<DesktopUnlistenFn | null>(null);
+const unlistenAuthSessionExpired = ref<DesktopUnlistenFn | null>(null);
 const { openSettings } = useSettingsWindow();
 const {
   confirmOpen: siteLeaveConfirmOpen,
@@ -343,6 +344,20 @@ async function applyAfterHydration() {
 
 onMounted(async () => {
   unregisterAiTaskTabCloseConfirm = registerAiTaskTabCloseConfirm((tabIds) => confirmAiTaskLeave("tab", tabIds));
+
+  if (isDesktopRuntime()) {
+    try {
+      unlistenAuthSessionExpired.value = await desktopListen<{ sessionId?: string }>(
+        "auth-session-expired",
+        ({ payload }) => {
+          void authSession.handleDesktopAuthExpired(String(payload?.sessionId || ""));
+        }
+      );
+    } catch (err) {
+      console.error("listen auth-session-expired failed", err);
+    }
+  }
+
   if (!route.path.startsWith("/facelive/")) void authSession.bootstrapPersistedSession();
 
   if (!isDesktopRuntime()) return;
@@ -424,6 +439,7 @@ onBeforeUnmount(() => {
   unlistenFont.value?.();
   unlistenSettingsNavigate.value?.();
   unlistenWebProtocolUrl.value?.();
+  unlistenAuthSessionExpired.value?.();
 });
 </script>
 

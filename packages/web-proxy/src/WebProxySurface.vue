@@ -21,7 +21,7 @@ interface WebProxyState {
 
 interface WebProxyAutofillState {
   label: string;
-  status: "ready" | "filling" | "submitted" | "interactive" | "success" | "unavailable" | "error";
+  status: "ready" | "filling" | "filled" | "submitted" | "interactive" | "success" | "unavailable" | "error";
   message: string;
 }
 
@@ -135,6 +135,8 @@ const autofillLabel = computed(() => {
       return t("WebProxy.AwaitingAutofill");
     case "filling":
       return t("WebProxy.SecureLogin");
+    case "filled":
+      return t("WebProxy.AutofillCompleted");
     case "interactive":
       return t("WebProxy.AwaitingVerification");
     case "submitted":

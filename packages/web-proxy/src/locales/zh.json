@@ -7,6 +7,8 @@
     "SecureLogin": "安全登录中",
     "AwaitingVerification": "等待人工验证",
     "LoginSubmitted": "已提交登录",
+    "AutofillCompleted": "代填完成",
+    "CredentialsFilledManualSubmit": "代填完成，请在页面中继续登录",
     "LoginSuccess": "登录成功",
     "AutofillNotConfigured": "未配置代填",
     "AutofillFailed": "代填失败",

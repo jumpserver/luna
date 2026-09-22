@@ -239,14 +239,14 @@ const isAuthFailure = (error: unknown) => {
 };
 
 const handleApiAuthFailure = () => {
-  if (!import.meta.client) return;
+  if (import.meta.server) return;
+
+  const userInfoStore = useUserInfoStore();
+  if (!userInfoStore.loggedIn) return;
 
   const now = Date.now();
   if (now - lastAuthFailureAt < 1500) return;
   lastAuthFailureAt = now;
-
-  const userInfoStore = useUserInfoStore();
-  if (!userInfoStore.loggedIn) return;
 
   userInfoStore.setUserLoggedIn(false);
   useEventBus().emit("clearAssets", undefined);
