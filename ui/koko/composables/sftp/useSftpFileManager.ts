@@ -3,6 +3,7 @@ import type { Ref } from "vue";
 import type { SftpCapabilities, SftpFileEntry, SftpIncomingMessage } from "./protocol";
 
 import { computed, onUnmounted, ref, shallowRef, watch } from "vue";
+import { isSftpDirectoryAffectedByTransfer } from "./file-manager/selectors";
 import {
   isSftpDisconnectCause,
   parseSftpCapabilities,
@@ -156,16 +157,16 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
   }
 
   const transferEndpoint = transferRef
-    ? useSftpTransferEndpoint(socket, transferRef, async ({ targetPath }) => {
-        const normalizedTarget = targetPath.replace(/\/+$/, "");
-        const separator = normalizedTarget.lastIndexOf("/");
-        const destinationDirectory = normalizedTarget.slice(0, separator) || "/";
-        const displayedDirectory = currentPath.value.replace(/\/+$/, "") || "/";
-
-        if (destinationDirectory !== displayedDirectory) return;
-
-        await loadCurrentDirectory(currentPath.value, undefined, false);
-      })
+    ? useSftpTransferEndpoint(
+        socket,
+        transferRef,
+        async ({ targetPath }) => {
+          const displayedDirectory = currentPath.value.replace(/\/+$/, "") || "/";
+          if (!isSftpDirectoryAffectedByTransfer(displayedDirectory, targetPath)) return;
+          await loadCurrentDirectory(currentPath.value, undefined, false);
+        },
+        () => capabilities.value?.transfer_binary === true
+      )
     : null;
 
   function changeDirectory(entry: SftpFileEntry) {
@@ -280,6 +281,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
     error,
     fatalError,
     connected: computed(() => socket.connected.value && !fatalError.value),
+    ready: computed(() => capabilitiesKnown.value && socket.connected.value && !fatalError.value),
     uploadTasks: operationClient.uploadTasks,
     uploadProgress: operationClient.uploadProgress,
     currentUploadName: operationClient.currentUploadName,

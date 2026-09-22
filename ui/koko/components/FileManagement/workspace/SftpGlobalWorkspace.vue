@@ -28,6 +28,7 @@ const props = defineProps<{
   workspace: WorkspaceController;
   transfer: TransferController;
   setLocalPaneRef: (value: SftpLocalPaneHandle | null) => void;
+  startTour: () => void;
 }>();
 
 const { t } = useI18n();
@@ -283,6 +284,7 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
             />
             <UTooltip v-if="showSideAddButton(side)" :text="t('koko.fileManagement.addRemoteSftp')">
               <UButton
+                data-sftp-tour="remote-connect"
                 size="xs"
                 color="neutral"
                 variant="ghost"
@@ -293,6 +295,17 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
               />
             </UTooltip>
           </div>
+          <UTooltip v-if="side === 'left'" :text="t('koko.fileManagement.featureTour')">
+            <UButton
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-circle-help"
+              class="shrink-0"
+              :aria-label="t('koko.fileManagement.featureTour')"
+              @click="startTour"
+            />
+          </UTooltip>
         </div>
 
         <KokoLocalFileManagementPane
@@ -319,45 +332,14 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
           class="min-h-0 flex-1"
           @upload="uploadWebFiles"
         />
-        <template v-if="panesForSide(side).length">
-          <KokoFileManagementPane
-            v-for="pane in panesForSide(side)"
-            v-show="globalActiveIds[side] === pane.id"
-            :key="pane.id"
-            :ref="(value) => setRemotePaneRef(pane.id, value)"
-            class="min-h-0 flex-1"
-            :context="pane.context"
-            :ai-target="{
-              targetId: pane.context.tabId,
-              ownerId: KOKO_GLOBAL_FILE_AI_OWNER_ID,
-              assetId: pane.assetId || '',
-              assetName: pane.assetName
-            }"
-            :transfer-endpoint="pane.transferEndpoint"
-            :focused="focusedSide === side && globalActiveIds[side] === pane.id"
-            :highlighted-names="highlightedNames[side]"
-            :can-send="canSendFromRemote(pane.transferEndpoint.id)"
-            :send-peer-direction="
-              simplePeerMode && canSendToOpposite(pane.transferEndpoint.id)
-                ? side === 'left'
-                  ? 'right'
-                  : 'left'
-                : undefined
-            "
-            @select="pane.selection = $event"
-            @focus="selectGlobalRemote(side, pane.id)"
-            @send="sendFromSelection"
-            @download="queueSftpDownload"
-            @browser-upload="uploadBrowserFiles($event, pane.transferEndpoint)"
-            @transfer-drop="handleCrossPaneDrop($event, pane.transferEndpoint)"
-            @transfer-endpoint-mounted="mountTransferEndpoint"
-            @transfer-endpoint-connected="handleRemotePaneConnected"
-            @transfer-endpoint-unmounted="unmountTransferEndpoint"
-            @connection-change="setPaneOnline(pane.id, $event)"
-          />
-        </template>
         <div
-          v-else-if="
+          v-show="sideRemotePanes[side].some((pane) => pane.id === globalActiveIds[side])"
+          :id="`sftp-global-pane-host-${side}`"
+          class="flex min-h-0 flex-1 flex-col"
+        />
+        <div
+          v-show="
+            !sideRemotePanes[side].length &&
             !(
               side === 'left' &&
               (isDesktopRuntime ? globalActiveIds.left === 'local' : globalActiveIds.left === 'web-upload')
@@ -423,5 +405,41 @@ function dropRemotePaneOnSide(side: SftpWorkspaceSide, event: DragEvent) {
         </div>
       </div>
     </template>
+    <Teleport v-for="pane in remotePanes" :key="pane.id" :to="`#sftp-global-pane-host-${pane.side}`">
+      <div v-show="globalActiveIds[pane.side] === pane.id" class="flex min-h-0 flex-1 flex-col">
+        <KokoFileManagementPane
+          :ref="(value) => setRemotePaneRef(pane.id, value)"
+          class="min-h-0 flex-1"
+          :context="pane.context"
+          :ai-target="{
+            targetId: pane.context.tabId,
+            ownerId: KOKO_GLOBAL_FILE_AI_OWNER_ID,
+            assetId: pane.assetId || '',
+            assetName: pane.assetName
+          }"
+          :transfer-endpoint="pane.transferEndpoint"
+          :focused="focusedSide === pane.side && globalActiveIds[pane.side] === pane.id"
+          :highlighted-names="highlightedNames[pane.side]"
+          :can-send="canSendFromRemote(pane.transferEndpoint.id)"
+          :send-peer-direction="
+            simplePeerMode && canSendToOpposite(pane.transferEndpoint.id)
+              ? pane.side === 'left'
+                ? 'right'
+                : 'left'
+              : undefined
+          "
+          @select="pane.selection = $event"
+          @focus="selectGlobalRemote(pane.side, pane.id)"
+          @send="sendFromSelection"
+          @download="queueSftpDownload"
+          @browser-upload="uploadBrowserFiles($event, pane.transferEndpoint)"
+          @transfer-drop="handleCrossPaneDrop($event, pane.transferEndpoint)"
+          @transfer-endpoint-mounted="mountTransferEndpoint"
+          @transfer-endpoint-connected="handleRemotePaneConnected"
+          @transfer-endpoint-unmounted="unmountTransferEndpoint"
+          @connection-change="setPaneOnline(pane.id, $event)"
+        />
+      </div>
+    </Teleport>
   </div>
 </template>

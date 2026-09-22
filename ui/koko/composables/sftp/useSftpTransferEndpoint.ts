@@ -27,7 +27,8 @@ interface PendingRequest {
 export function useSftpTransferEndpoint(
   socket: SftpSocketClient,
   ref: FileTransferEndpointRef,
-  onTransferCommitted?: FileTransferEndpoint["onTransferCommitted"]
+  onTransferCommitted?: FileTransferEndpoint["onTransferCommitted"],
+  usesTransferBinary?: () => boolean
 ): FileTransferEndpoint {
   const pending = new Map<string, PendingRequest>();
   const rejectAllPending = (error: Error) => {
@@ -74,7 +75,7 @@ export function useSftpTransferEndpoint(
     });
   }
 
-  function request(command: SftpCommand, data: Record<string, unknown>, raw = "") {
+  function request(command: SftpCommand, data: Record<string, unknown>, raw: string | Uint8Array = "") {
     if (!socket.connected.value) return Promise.reject(new FileTransferUnavailableError());
     const id = createSftpMessageId();
     return new Promise<SftpIncomingMessage>((resolve, reject) => {
@@ -121,7 +122,8 @@ export function useSftpTransferEndpoint(
         transfer_id: input.transferId,
         path: input.path,
         offset: input.offset,
-        length: input.length
+        length: input.length,
+        ...(usesTransferBinary?.() ? { binary: true } : {})
       });
       if (message.type !== SftpMessageType.Binary) throw new Error("Invalid SFTP transfer chunk response");
       let metadata: Omit<FileTransferChunk, "data">;
@@ -145,7 +147,7 @@ export function useSftpTransferEndpoint(
           offset: input.offset,
           sha256: input.sha256
         },
-        encodeSftpBytes(input.data)
+        usesTransferBinary?.() ? input.data : encodeSftpBytes(input.data)
       );
       if (message.type !== SftpMessageType.Data) throw new Error("Invalid SFTP transfer write acknowledgement");
       return parseSftpTransferWriteAck(message);

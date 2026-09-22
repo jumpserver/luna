@@ -29,7 +29,7 @@ type PanelKind = "favorites" | "snippets";
 type SnippetGroupKey = "shell" | "win_shell" | "python" | "raw" | "database" | "other";
 
 const FAVORITE_ROOT_ID = "__favorite_root__";
-const DATABASE_SNIPPET_MODULES = new Set(["mysql", "mariadb", "postgresql", "sqlserver", "oracle"]);
+const DATABASE_SNIPPET_MODULES = new Set(["mysql", "mariadb", "postgresql", "sqlserver", "oracle", "dameng"]);
 
 const { t } = useI18n();
 const toast = useToast();
@@ -45,7 +45,7 @@ const {
   removeFolder,
   renameFavoriteAsset
 } = useFavoriteFolders();
-const { snippets, loading: snippetLoading, load: loadSnippets } = useSnippets();
+const { snippets, loading: snippetLoading, load: loadSnippets, remove: removeSnippet } = useSnippets();
 const { openScriptEditor } = useWorkspaceTabs();
 const creating = ref(false);
 const folderMenuVisible = ref(false);
@@ -58,6 +58,9 @@ const renaming = ref(false);
 const deleteModalOpen = ref(false);
 const deleteTarget = ref<FavoriteFolder | null>(null);
 const deleting = ref(false);
+const snippetDeleteModalOpen = ref(false);
+const snippetDeleteTarget = ref<Snippet | null>(null);
+const deletingSnippet = ref(false);
 const snippetSearch = ref("");
 const snippetGroupOpen = useState<Record<SnippetGroupKey, boolean>>("sidebar-snippet-groups-open", () => ({
   shell: true,
@@ -88,7 +91,8 @@ const snippetCreateItems = computed<DropdownMenuItem[]>(() =>
     ["MariaDB", "mariadb", "i-lucide-database"],
     ["PostgreSQL", "postgresql", "i-lucide-database"],
     ["SQLServer", "sqlserver", "i-lucide-database"],
-    ["Oracle", "oracle", "i-lucide-database"]
+    ["Oracle", "oracle", "i-lucide-database"],
+    ["Dameng", "dameng", "i-lucide-database"]
   ].map(([label, module, icon]) => ({
     label,
     icon,
@@ -339,6 +343,7 @@ function getSnippetIcon(snippet: Snippet) {
     case "postgresql":
     case "sqlserver":
     case "oracle":
+    case "dameng":
       return "i-lucide-database";
     case "raw":
       return "i-lucide-file-text";
@@ -384,6 +389,47 @@ async function copySnippet(snippet: Snippet) {
       icon: "i-lucide-circle-alert"
     });
   }
+}
+
+function snippetActionItems(snippet: Snippet): DropdownMenuItem[] {
+  return [
+    {
+      label: t("Common.Delete"),
+      icon: "i-lucide-trash-2",
+      color: "error",
+      onSelect: () => openDeleteSnippet(snippet)
+    }
+  ];
+}
+
+function openDeleteSnippet(snippet: Snippet) {
+  snippetDeleteTarget.value = snippet;
+  snippetDeleteModalOpen.value = true;
+}
+
+async function submitDeleteSnippet() {
+  const snippet = snippetDeleteTarget.value;
+  if (!snippet || deletingSnippet.value) return;
+
+  deletingSnippet.value = true;
+  try {
+    await removeSnippet(snippet.id);
+    snippetDeleteModalOpen.value = false;
+    snippetDeleteTarget.value = null;
+  } catch (error) {
+    addErrorToast({
+      title: t("Snippets.DeleteFailed"),
+      error,
+      icon: "i-lucide-circle-alert"
+    });
+  } finally {
+    deletingSnippet.value = false;
+  }
+}
+
+function updateSnippetDeleteModal(open: boolean) {
+  snippetDeleteModalOpen.value = open;
+  if (!open) snippetDeleteTarget.value = null;
 }
 
 useEventBus().on("favoriteChanged", () => {
@@ -666,23 +712,55 @@ const folderMenuItems = computed<DropdownMenuItem[]>(() => {
                 <span class="block truncate font-ui-mono text-[10px] text-gray-400">{{ snippet.args }}</span>
               </span>
             </button>
-            <UTooltip :text="t('Common.CopyOnly')" :delay-duration="120">
-              <UButton
-                color="neutral"
-                variant="ghost"
+            <div
+              class="flex shrink-0 items-center gap-0.5 opacity-40 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+            >
+              <UTooltip :text="t('Common.CopyOnly')" :delay-duration="120">
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-copy"
+                  class="size-6 justify-center p-0"
+                  :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+                  :aria-label="t('Common.CopyOnly')"
+                  @click.stop="copySnippet(snippet)"
+                />
+              </UTooltip>
+              <UDropdownMenu
+                :items="snippetActionItems(snippet)"
                 size="xs"
-                icon="i-lucide-copy"
-                class="size-6 shrink-0 justify-center p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-                :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
-                :aria-label="t('Common.CopyOnly')"
-                @click.stop="copySnippet(snippet)"
-              />
-            </UTooltip>
+                :content="{ align: 'end', side: 'bottom' }"
+                :ui="{ content: 'min-w-24', group: 'p-0.5', item: 'px-2 py-1', itemLabel: 'text-xs' }"
+              >
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-ellipsis"
+                  class="size-6 justify-center p-0"
+                  :ui="{ leadingIcon: 'm-0 sidebar-icon' }"
+                  :aria-label="t('Common.Actions')"
+                  @click.stop
+                />
+              </UDropdownMenu>
+            </div>
           </div>
         </div>
       </div>
     </SideBarCollapsiblePanel>
   </div>
+
+  <ModalAlertDialog
+    :open="snippetDeleteModalOpen"
+    :title="t('Common.Delete')"
+    :description="t('Snippets.DeleteConfirm', { name: snippetDeleteTarget?.name || '' })"
+    :confirm-label="t('Common.Delete')"
+    confirm-color="error"
+    :loading="deletingSnippet"
+    @confirm="submitDeleteSnippet"
+    @update:open="updateSnippetDeleteModal"
+  />
 
   <ModalAlertDialog
     :open="deleteModalOpen"

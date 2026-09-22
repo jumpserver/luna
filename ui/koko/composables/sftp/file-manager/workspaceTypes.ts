@@ -37,11 +37,16 @@ export interface RecentSftpConnection {
   lastConnectedAt: number;
 }
 
+export interface SftpTransferEntry extends Pick<SftpFileEntry, "name" | "size"> {
+  is_dir?: boolean;
+  relativeDir?: string;
+}
+
 export interface SftpTransferDropPayload {
   sourceEndpoint: FileTransferEndpointRef;
   sourcePath: string;
   sourceSelectionRevision: number;
-  entries: Array<Pick<SftpFileEntry, "name" | "size">>;
+  entries: SftpTransferEntry[];
   destinationPath: string;
 }
 
@@ -59,7 +64,6 @@ export interface SftpRemotePaneHandle {
   selectedEntries: SftpFileEntry[];
   clearSelection: () => void;
   clearTransferredSelection: (names: string[], sourcePath: string, revision: number) => void;
-  hasFolderTransferSelection: () => boolean;
   transferSourcePayload: () => SftpTransferSourcePayload | null;
   focusPane: () => void;
   refresh: () => Promise<void>;
@@ -71,7 +75,6 @@ export interface SftpTransferPaneHandle {
     operations: Pick<SftpFileOperations, "readFile" | "uploadBlob">;
   };
   clearTransferredSelection: (names: string[], sourcePath: string, revision: number) => void;
-  hasFolderTransferSelection: () => boolean;
   transferSourcePayload: () => SftpTransferSourcePayload | null;
 }
 

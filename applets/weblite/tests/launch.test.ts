@@ -30,6 +30,40 @@ const applet = {
   account: { username: "tester", secret: "one-use-secret", secret_type: { value: "password" } }
 };
 
+test("basic autofill accepts independently omitted selectors in both launch formats", () => {
+  const fields = ["username", "password", "submit", "success", "interactive"];
+  for (const missing of [undefined, null, ""]) {
+    for (const field of [...fields, "all"]) {
+      const config = { ...launch.login.config };
+      for (const name of field === "all" ? fields : [field]) config[`${name}_selector`] = missing;
+      for (const data of [
+        { ...launch, login: { ...launch.login, config } },
+        { ...applet, asset: { ...applet.asset, spec_info: config } }
+      ]) {
+        const session = parseLaunch(data).localSession;
+        assert.equal(session.autofillAvailable, true);
+        for (const name of fields)
+          assert.equal(session.selectors[name], name === field || field === "all" ? "" : config[`${name}_selector`]);
+      }
+    }
+  }
+});
+
+test("optional selectors still reject malformed nonempty configuration", () => {
+  for (const field of ["username", "password", "submit", "success", "interactive"]) {
+    for (const value of [false, 0, {}, " ", "id=", "javascript=alert(1)"]) {
+      assert.throws(
+        () =>
+          parseLaunch({
+            ...launch,
+            login: { ...launch.login, config: { ...launch.login.config, [`${field}_selector`]: value } }
+          }),
+        /代填元素配置无效/
+      );
+    }
+  }
+});
+
 test("generic AppletArgs opens the asset and fills credentials without an app-name dependency", async () => {
   const result = await readLaunch(Readable.from([JSON.stringify(applet)]));
   assert.equal(result.targetUrl, launch.target_url);
@@ -161,7 +195,7 @@ test("applet retains an optional asset navigation allowlist and rejects malforme
     "https://sso.example.com"
   ]);
   for (const allowed_urls of [null, "*", ["*"], ["file:///tmp"], ["https://example.com/path"]])
-    assert.throws(() => parseLaunch({ ...launch, allowed_urls }), /白名单/);
+    assert.throws(() => parseLaunch({ ...launch, allowed_urls }), /WebProxy\.(AllowedSitesLimit|InvalidAllowedSite)/);
 });
 test("empty or terminal stdin starts an unrestricted standalone browser without credentials", async () => {
   for (const input of [Readable.from([]), Object.assign(Readable.from([]), { isTTY: true })]) {
@@ -254,9 +288,21 @@ test("rejects invalid configuration and oversized pipes", async () => {
     { safe_mode: "false" },
     { recording_enabled: true, login: undefined },
     { login: { config: { autofill: "invalid" } } },
-    { login: { config: { autofill: "basic" }, password: "secret" } },
+    { login: { config: { autofill: "basic", submit_selector: "invalid" }, password: "secret" } },
     { login: { config: { autofill: "script", script: [{ step: 1, command: "select_frame", target: "id=login" }] } } }
   ])
     assert.throws(() => parseLaunch({ ...launch, ...patch }));
   await assert.rejects(readLaunch(Readable.from([" ".repeat(1_048_577)])), /过长/);
+});
+
+test("launch preserves the client language and leaves standalone language to the OS", async () => {
+  for (const language of ["fr-CA", "en", "zh-hant", "pt_BR"]) {
+    assert.equal(parseLaunch({ ...applet, connect_options: { lang: language } }).language, language);
+    assert.equal(parseLaunch({ ...launch, language }).language, language);
+  }
+  for (const lang of [null, undefined, 42, {}]) {
+    assert.equal(parseLaunch({ ...applet, connect_options: { lang } }).language, undefined);
+  }
+  assert.equal(parseLaunch(applet).language, undefined);
+  assert.equal((await readLaunch(Readable.from([]))).language, undefined);
 });

@@ -25,6 +25,7 @@ import {
   WORKSPACE_BRAND_STATE_KEY,
   WORKSPACE_FAVICON_STATE_KEY
 } from "~/utils/pageTitle";
+import { pageLocation } from "~/utils/runtime";
 
 interface BootstrapResponse {
   data: string;
@@ -272,7 +273,7 @@ export const useAuthSession = () => {
       return false;
     }
 
-    const connectionToken = new URLSearchParams(window.location.search).get("token");
+    const connectionToken = new URLSearchParams(pageLocation().search).get("token");
     const [profileData, publicSettings] = await Promise.all([
       fetchWebJson<WebProfile>([
         connectionToken
@@ -296,7 +297,7 @@ export const useAuthSession = () => {
     }
 
     const cookieOrgId = getWebOrgId();
-    const site = window.location.origin;
+    const site = pageLocation().origin;
     const profileOrg: CurrentOrg = {
       id: cookieOrgId || profileData.org_id || profileData.org?.id || "",
       name: profileData.org_name || profileData.org?.name || "",
@@ -350,6 +351,14 @@ export const useAuthSession = () => {
     return true;
   };
 
+  const promptDesktopLogin = async () => {
+    if (import.meta.server || !isDesktopRuntime()) return;
+    if (pageLocation().pathname.includes("/auth")) return;
+    await navigateTo(localePath({ path: "/" }));
+    await nextTick();
+    useEventBus().emit("login", undefined);
+  };
+
   const bootstrapSession = async () => {
     if (bootstrapRetryTimer) {
       clearTimeout(bootstrapRetryTimer);
@@ -357,12 +366,6 @@ export const useAuthSession = () => {
     }
 
     const restored = restorePersistedSnapshot();
-
-    const promptLogin = () => {
-      if (!import.meta.client || !isDesktopRuntime()) return;
-      if (window.location.pathname.includes("/auth")) return;
-      useEventBus().emit("login", undefined);
-    };
 
     const notifyBootstrapFailure = (failure: "network" | "server") => {
       if (lastBootstrapFailure === failure) return;
@@ -401,7 +404,7 @@ export const useAuthSession = () => {
         if (failure === "auth") {
           lastBootstrapFailure = null;
           userInfoStore.setUserLoggedIn(false);
-          if (restored) promptLogin();
+          if (restored) await promptDesktopLogin();
           return false;
         }
         if (failure) {
@@ -423,7 +426,7 @@ export const useAuthSession = () => {
         }
 
         userInfoStore.setUserLoggedIn(false);
-        if (restored) promptLogin();
+        if (restored) await promptDesktopLogin();
         return false;
       }
 
@@ -439,7 +442,7 @@ export const useAuthSession = () => {
     } catch (error) {
       console.error("bootstrap auth session failed", { site, restored, error });
       userInfoStore.setUserLoggedIn(false);
-      if (restored) promptLogin();
+      if (restored) await promptDesktopLogin();
       return false;
     }
   };
@@ -450,10 +453,20 @@ export const useAuthSession = () => {
     if (!bootstrapPromise) {
       bootstrapPromise = bootstrapSession().finally(() => {
         authReady.value = true;
+        bootstrapPromise = null;
       });
     }
 
     return bootstrapPromise;
+  };
+
+  const handleDesktopAuthExpired = async (sessionId: string) => {
+    if (!sessionId || sessionId !== currentAccountId.value) return false;
+
+    userInfoStore.setUserLoggedIn(false);
+    useEventBus().emit("clearAssets", undefined);
+    await promptDesktopLogin();
+    return true;
   };
 
   const refreshOrganizations = () => {
@@ -490,6 +503,7 @@ export const useAuthSession = () => {
     applyLoginPayload,
     authReady,
     bootstrapPersistedSession,
+    handleDesktopAuthExpired,
     refreshOrganizations
   };
 };

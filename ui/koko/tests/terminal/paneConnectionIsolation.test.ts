@@ -3,8 +3,8 @@ import { MESSAGE_TYPE } from "@jumpserver/connectors-core";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, ref, shallowRef } from "vue";
-import { createKokoTerminalMessageHandlers } from "#koko/composables/terminal/useTerminalMessageHandler";
 import { parseEnvelope, parseJSONPayload } from "#koko/composables/terminal/envelope";
+import { createKokoTerminalMessageHandlers } from "#koko/composables/terminal/useTerminalMessageHandler";
 import { useKokoConnectionStore } from "#koko/stores/connection";
 import {
   clearWorkspaceSessionDetails,
@@ -21,6 +21,7 @@ const { getSessionDetails } = useWorkspaceSessionDetails();
 
 function createPaneHandlers(paneId: string) {
   const onServerClose = vi.fn();
+  const onTerminalReady = vi.fn();
   const socket = { send: vi.fn(), close: vi.fn(), readyState: WebSocket.OPEN } as unknown as WebSocket;
   const terminal = { cols: 80, rows: 24, write: vi.fn(), focus: vi.fn() } as unknown as Terminal;
   const handlers = createKokoTerminalMessageHandlers({
@@ -52,6 +53,7 @@ function createPaneHandlers(paneId: string) {
     setClipboardAccess: vi.fn(),
     showInfoOnce: vi.fn(),
     onConnected: vi.fn(),
+    onTerminalReady,
     onZmodemEnd: vi.fn(),
     onZmodemAbort: vi.fn(),
     onServerClose
@@ -60,6 +62,7 @@ function createPaneHandlers(paneId: string) {
   return {
     handlers,
     onServerClose,
+    onTerminalReady,
     socket,
     terminal,
     created: (terminalId: number) => {
@@ -103,6 +106,14 @@ describe("koko pane connection isolation", () => {
     expect(pane.onServerClose.mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(pane.socket.close).mock.invocationCallOrder[0]!
     );
+  });
+
+  it("notifies the terminal startup capture when Koko reports the session ready", () => {
+    const pane = createPaneHandlers(PANE_A);
+
+    pane.handlers[MESSAGE_TYPE.TERMINAL_READY]!();
+
+    expect(pane.onTerminalReady).toHaveBeenCalledOnce();
   });
 
   it("keeps each terminal's session, asset and share state on its own pane", () => {

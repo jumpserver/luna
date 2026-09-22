@@ -11,6 +11,11 @@ describe("language normalization", () => {
     ["pt-PT", "pt_br"],
     ["pt_BR", "pt_br"],
     ["es-MX", "es"],
+    ["fr", "fr"],
+    ["fr-FR", "fr"],
+    ["fr_CA", "fr"],
+    ["fr-BE", "fr"],
+    ["fr-CH", "fr"],
     ["ru-RU", "ru"],
     ["ko-KR", "ko"],
     ["vi-VN", "vi"],
@@ -22,6 +27,7 @@ describe("language normalization", () => {
   it("returns valid BCP 47 locale tags for underscored app language codes", () => {
     expect(toIntlLocale("zh_hant")).toBe("zh-TW");
     expect(toIntlLocale("pt_br")).toBe("pt-BR");
+    expect(toIntlLocale("fr-CA")).toBe("fr");
     expect(() => new Intl.DateTimeFormat(toIntlLocale("pt_br"))).not.toThrow();
   });
 
@@ -30,5 +36,6 @@ describe("language normalization", () => {
     expect(toDjangoLanguageCode("zh_hant")).toBe("zh-hant");
     expect(toDjangoLanguageCode("pt_br")).toBe("pt-br");
     expect(toDjangoLanguageCode("en")).toBe("en");
+    expect(toDjangoLanguageCode("fr")).toBe("fr");
   });
 });

@@ -3,6 +3,8 @@ import type { FileTransferConflictPolicy, FileTransferTask } from "@jumpserver/c
 import type { TransferRateSample } from "#koko/utils/file-transfer/rate";
 import prettyBytes from "pretty-bytes";
 import SftpTransferActions from "#koko/components/FileManagement/transfer-center/SftpTransferActions.vue";
+import SftpTransferFilePath from "#koko/components/FileManagement/transfer-center/SftpTransferFilePath.vue";
+import { transferFileDisplayPath } from "#koko/composables/sftp/file-manager/selectors";
 import { sftpTransferErrorText } from "#koko/composables/sftp/file-manager/transfer-center/useSftpTransferCenterSelectors";
 import {
   bytesPerSecond,
@@ -30,6 +32,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const fileLabel = computed(() => transferFileDisplayPath(props.task.source));
 const samples = ref<TransferRateSample[]>([]);
 const hasConflict = computed(() => props.task.status === "paused" && props.task.error === "target_exists");
 const progress = computed(() => {
@@ -96,7 +99,7 @@ watch(
         "
         class="size-3 shrink-0 text-tertiary"
       />
-      <span class="truncate">{{ task.source.name }}</span>
+      <SftpTransferFilePath :source="task.source" />
     </div>
     <span class="sftp-transfer-file__direction truncate" :title="direction" :role="tableRow ? 'cell' : undefined">
       {{ direction }}
@@ -108,7 +111,7 @@ watch(
         size="xs"
         :model-value="progress"
         :ui="{ base: 'h-[3px]' }"
-        :aria-label="t('koko.sftpTransferCenter.fileProgress', { file: task.source.name })"
+        :aria-label="t('koko.sftpTransferCenter.fileProgress', { file: fileLabel })"
       />
     </div>
     <span class="sftp-transfer-file__rate truncate" :title="rateText" :role="tableRow ? 'cell' : undefined">

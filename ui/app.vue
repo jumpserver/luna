@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import type { DesktopUnlistenFn } from "~/shared/desktop/bridge";
 import type { LangType, LanguagePreference } from "~/types";
-
 import { agentClient } from "#koko/composables/agent/agentClient";
+
 import defaultFavicon from "~/assets/facio.ico";
 import AppWatermark from "~/components/AppWatermark.vue";
 import FaceOnlineMonitorHost from "~/components/Face/FaceOnlineMonitorHost.vue";
@@ -15,6 +15,7 @@ import { DEFAULT_DARK_THEME_PRESET, DEFAULT_LIGHT_THEME_PRESET } from "~/composa
 import { useWorkspaceFeatures } from "~/composables/useWorkspaceFeatures";
 import { registerAiTaskTabCloseConfirm } from "~/composables/useWorkspaceTabs";
 import { desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
+import { useUserInfoStore } from "~/store/modules/userInfo";
 import { normalizeLanguageCode, resolveLanguageFromSystem, toDjangoLanguageCode } from "~/utils";
 import {
   COMMUNITY_WORKSPACE_BRAND,
@@ -23,6 +24,7 @@ import {
   WORKSPACE_FAVICON_STATE_KEY
 } from "~/utils/pageTitle";
 import { getCookieValue, isDesktopRuntime, withWebSitePrefix } from "~/utils/runtime";
+import { getUiLocale } from "../i18n/ui";
 
 useApplicationConfig();
 
@@ -31,12 +33,15 @@ const LOCALE_PREFIX_RE = /^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/;
 
 const route = useRoute();
 const authSession = useAuthSession();
+const userInfoStore = useUserInfoStore();
+const { handleWebClientProtocolPayload } = useAssetAction();
 useWorkspaceFeatures(authSession.authReady);
 const webWorkspaceBrand = useState<string>(WORKSPACE_BRAND_STATE_KEY, () => COMMUNITY_WORKSPACE_BRAND);
 const webWorkspaceFavicon = useState<string>(WORKSPACE_FAVICON_STATE_KEY, () => "");
 
 const { isMacOS, isWindows } = usePlatform();
 const { locale, setLocale, t } = useI18n();
+const uiLocale = computed(() => getUiLocale(locale.value));
 watch(locale, (value) => agentClient.setResponseLanguage(normalizeLanguageCode(value)), {
   immediate: true,
   flush: "sync"
@@ -67,6 +72,8 @@ const unlistenPrimaryColor = ref<DesktopUnlistenFn | null>(null);
 const unlistenTheme = ref<DesktopUnlistenFn | null>(null);
 const unlistenFont = ref<DesktopUnlistenFn | null>(null);
 const unlistenSettingsNavigate = ref<DesktopUnlistenFn | null>(null);
+const unlistenWebProtocolUrl = ref<DesktopUnlistenFn | null>(null);
+const unlistenAuthSessionExpired = ref<DesktopUnlistenFn | null>(null);
 const { openSettings } = useSettingsWindow();
 const {
   confirmOpen: siteLeaveConfirmOpen,
@@ -276,6 +283,42 @@ async function applyLanguagePreference(pref: LanguagePreference) {
   }
 }
 
+let drainingWebProtocols = false;
+let webProtocolDrainRequested = false;
+
+async function drainWebProtocolPayloads() {
+  webProtocolDrainRequested = true;
+  if (drainingWebProtocols || !isDesktopRuntime() || !userInfoStore.loggedIn) return;
+
+  drainingWebProtocols = true;
+  try {
+    while (webProtocolDrainRequested && userInfoStore.loggedIn) {
+      webProtocolDrainRequested = false;
+      const payloads =
+        await desktopInvoke<Array<{ protocol?: unknown; asset?: { id?: unknown } }>>("take_web_protocol_payloads");
+      for (const payload of payloads) {
+        try {
+          await handleWebClientProtocolPayload(payload);
+        } catch (error) {
+          console.error("open web asset from client protocol failed", error);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("drain web client protocols failed", error);
+  } finally {
+    drainingWebProtocols = false;
+    if (webProtocolDrainRequested && userInfoStore.loggedIn) void drainWebProtocolPayloads();
+  }
+}
+
+watch(
+  () => userInfoStore.loggedIn,
+  (loggedIn) => {
+    if (loggedIn) void drainWebProtocolPayloads();
+  }
+);
+
 async function applyAfterHydration() {
   if (hydrationPromise.value) {
     try {
@@ -301,6 +344,20 @@ async function applyAfterHydration() {
 
 onMounted(async () => {
   unregisterAiTaskTabCloseConfirm = registerAiTaskTabCloseConfirm((tabIds) => confirmAiTaskLeave("tab", tabIds));
+
+  if (isDesktopRuntime()) {
+    try {
+      unlistenAuthSessionExpired.value = await desktopListen<{ sessionId?: string }>(
+        "auth-session-expired",
+        ({ payload }) => {
+          void authSession.handleDesktopAuthExpired(String(payload?.sessionId || ""));
+        }
+      );
+    } catch (err) {
+      console.error("listen auth-session-expired failed", err);
+    }
+  }
+
   if (!route.path.startsWith("/facelive/")) void authSession.bootstrapPersistedSession();
 
   if (!isDesktopRuntime()) return;
@@ -364,6 +421,15 @@ onMounted(async () => {
   } catch (err) {
     console.error("listen settings-navigate failed", err);
   }
+
+  try {
+    unlistenWebProtocolUrl.value = await desktopListen("web-protocol-url", () => {
+      void drainWebProtocolPayloads();
+    });
+    void drainWebProtocolPayloads();
+  } catch (err) {
+    console.error("listen web-protocol-url failed", err);
+  }
 });
 
 onBeforeUnmount(() => {
@@ -372,13 +438,15 @@ onBeforeUnmount(() => {
   unlistenTheme.value?.();
   unlistenFont.value?.();
   unlistenSettingsNavigate.value?.();
+  unlistenWebProtocolUrl.value?.();
+  unlistenAuthSessionExpired.value?.();
 });
 </script>
 
 <template>
   <Html class="overflow-x-hidden overflow-y-hidden">
     <Body class="font-sans antialiased h-screen w-screen">
-      <UApp>
+      <UApp :locale="uiLocale">
         <NuxtLayout>
           <NuxtPage :page-key="pageKey" />
         </NuxtLayout>

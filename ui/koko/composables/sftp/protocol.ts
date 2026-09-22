@@ -171,13 +171,14 @@ export interface SftpFileEditorCapability {
 
 export interface SftpCapabilities {
   schema_version: number;
+  transfer_binary?: boolean;
   file_editor: SftpFileEditorCapability;
 }
 
 interface SftpMessageBase {
   id: string;
   data?: string;
-  raw?: string | number[];
+  raw?: string | number[] | Uint8Array;
   err?: string;
   error_code?: string;
   current_path?: string;
@@ -252,7 +253,8 @@ function optionalString(value: unknown) {
   return typeof value === "string" ? value : undefined;
 }
 
-function optionalRaw(value: unknown): string | number[] | undefined {
+function optionalRaw(value: unknown): string | number[] | Uint8Array | undefined {
+  if (value instanceof Uint8Array) return value;
   if (typeof value === "string") return value;
   if (Array.isArray(value) && value.every((item) => typeof item === "number")) return value;
   return undefined;
@@ -318,6 +320,7 @@ export function parseSftpCapabilities(data?: string): SftpCapabilities | null {
 
     return {
       schema_version: schemaVersion,
+      transfer_binary: capability.transfer_binary === true,
       file_editor: {
         enabled: editor.enabled,
         read: editor.read,

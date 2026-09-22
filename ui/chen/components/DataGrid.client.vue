@@ -24,7 +24,7 @@ import type {
 import { AllCommunityModule, isColumn, ModuleRegistry } from "ag-grid-community";
 import { AgGridVue } from "ag-grid-vue3";
 import { formatChenGridValue, useChenGridPreferences } from "~/chen/composables/useChenGridPreferences";
-import { writeChenClipboardText } from "~/chen/runtime/clipboard";
+import { gridLocales } from "~/chen/locales";
 import {
   canUseChenCopy,
   createChenInsertSql,
@@ -50,6 +50,7 @@ import {
   isChenInsertRow,
   normalizeChenDataViewValue
 } from "~/chen/utils/dataViewEditing";
+import { writeClipboardText } from "~/utils/clipboard";
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-balham.css";
@@ -82,7 +83,7 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const gridApi = shallowRef<GridReadyEvent["api"] | null>(null);
 const gridPreferences = useChenGridPreferences();
 const container = shallowRef<HTMLElement | null>(null);
@@ -285,7 +286,7 @@ function selectedData() {
 async function copyText(text: string, successTitle: string) {
   if (!canUseChenCopy(props.canCopy)) return;
   try {
-    await writeChenClipboardText(text);
+    await writeClipboardText(text);
     toast.add({ title: successTitle, color: "success" });
   } catch {
     addErrorToast({ title: t("Common.CopyFailed"), description: t("Chen.CopyOperationFailedDescription") });
@@ -548,8 +549,10 @@ onBeforeUnmount(() => {
     @keydown.capture="handleKeyDown"
   >
     <AgGridVue
+      :key="locale"
       class="h-full min-h-0 min-w-0 w-full"
       theme="legacy"
+      :locale-text="gridLocales[locale] || gridLocales.en"
       :column-defs="columnDefs"
       :row-data="rowData"
       :default-col-def="defaultColDef"

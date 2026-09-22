@@ -1,3 +1,4 @@
+import type { LangType } from "../../i18n/language";
 import type { DropdownMenuItem } from "@nuxt/ui";
 
 export type ActionType = "action" | "select";
@@ -24,7 +25,7 @@ export type ThemePresetId =
   | "mono-dark"
   | "nord";
 export type LayoutsType = "grid" | "table";
-export type LangType = "zh" | "zh_hant" | "en" | "ja" | "pt_br" | "es" | "ru" | "ko" | "vi";
+export type { LangType } from "../../i18n/language";
 export type LanguagePreference = LangType | "system";
 export type CharsetType = "default" | "utf8" | "gbk" | "gb2312" | "ios-8859-1";
 export type ResolutionType = "auto" | "1024x768" | "1366x768" | "1600x900" | "1920x1080";

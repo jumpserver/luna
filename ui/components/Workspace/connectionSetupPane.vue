@@ -29,7 +29,7 @@ const { addErrorToast } = useErrorToast();
 const { modernIsland } = useSettingManager();
 const { confirmConnection } = useAssetConnection();
 const { getMethodsForProtocol } = useConnectMethods();
-const { closePane, markSessionFailed, startSessionConnection } = useWorkspaceTabs();
+const { closePane, markSessionFailed, resumeConnectionSetup, startSessionConnection } = useWorkspaceTabs();
 const {
   buildConnectionInfo,
   draft,
@@ -65,6 +65,9 @@ const launchSummary = computed(() => {
     : t("ConnectionSetup.LaunchWithLocalClient");
 });
 const launchHint = computed(() => t("ConnectionSetup.LaunchHint"));
+const downloadCenterUrl = computed(() =>
+  import.meta.client ? withWebSitePrefix("/core/download/") : "/core/download/"
+);
 const standaloneSessionWindow = computed(() => route.path.startsWith("/session/"));
 
 const updateExternalLaunchState = async () => {
@@ -167,12 +170,15 @@ async function submit(downloadRdpMethod = "") {
     downloadingRdp.value = false;
     connectionError.value = resolveConnectionAttemptError(error, t);
     if (!info.downloadRdp && !showLaunchSuccessState) {
-      markSessionFailed({
-        tabId: props.tab.id,
-        assetId: currentAsset.value!.id,
-        protocol: info.protocol,
-        account: info.account
-      });
+      markSessionFailed(
+        {
+          tabId: props.tab.id,
+          assetId: currentAsset.value!.id,
+          protocol: info.protocol,
+          account: info.account
+        },
+        connectionError.value
+      );
     }
   };
   try {
@@ -201,6 +207,16 @@ async function submit(downloadRdpMethod = "") {
   } catch (error) {
     failConnection(error);
   }
+}
+
+function cancelFromOverlay() {
+  connecting.value = false;
+  resumeConnectionSetup(props.tab.id);
+}
+
+function reconnectFromOverlay() {
+  connecting.value = false;
+  void submit();
 }
 
 watch(
@@ -361,6 +377,18 @@ onMounted(loadAsset);
                         {{ launchedClientName }}
                       </div>
                     </div>
+
+                    <UButton
+                      :label="t('Setting.DownloadClient')"
+                      icon="i-lucide-download"
+                      :to="downloadCenterUrl"
+                      external
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      color="neutral"
+                      variant="outline"
+                      class="mt-5"
+                    />
                   </section>
                 </div>
 
@@ -420,11 +448,23 @@ onMounted(loadAsset);
             </div>
           </section>
         </Transition>
-        <WorkspaceConnectionProgressOverlay
-          v-if="connecting && !downloadingRdp && !externalClientLaunch"
-          :stage="tab.connectionProgress || 'token'"
-        />
       </div>
+      <Transition
+        enter-from-class="opacity-0"
+        enter-active-class="transition-opacity duration-500"
+        leave-active-class="transition-opacity duration-500 ease-out"
+        leave-to-class="opacity-0"
+      >
+        <WorkspaceConnectionProgressOverlay
+          v-if="tab.connectionProgress && !downloadingRdp && !externalClientLaunch"
+          :pane-id="tab.id"
+          :stage="tab.connectionProgress"
+          :error="tab.status === 'connecting' ? undefined : tab.connectionFailure"
+          @cancel="cancelFromOverlay"
+          @edit="cancelFromOverlay"
+          @reconnect="reconnectFromOverlay"
+        />
+      </Transition>
     </div>
   </div>
 </template>

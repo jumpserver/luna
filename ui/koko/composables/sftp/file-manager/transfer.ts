@@ -1,42 +1,168 @@
 import type { FileTransferEndpointRef } from "@jumpserver/connectors-core";
 import type { Ref } from "vue";
 import type { SftpFileEntry } from "../useSftpFileManager";
-import type { SftpTransferSourcePayload } from "./workspaceTypes";
+import type { SftpTransferEntry, SftpTransferSourcePayload } from "./workspaceTypes";
+import { joinTransferPath } from "./selectors";
 
 export const SFTP_TRANSFER_MIME_TYPE = "application/x-jumpserver-sftp-files";
+export const SFTP_FOLDER_MAX_DEPTH = 32;
 
-type TransferableEntry = Pick<SftpFileEntry, "name" | "size">;
 type DragDataTransfer = Pick<DataTransfer, "setData" | "getData" | "types" | "effectAllowed" | "dropEffect">;
+type BrowserFileSystemEntry = Pick<FileSystemEntry, "name" | "isFile" | "isDirectory">;
+type BrowserFileEntry = BrowserFileSystemEntry & {
+  file: (success: (file: File) => void, error?: (cause: unknown) => void) => void;
+};
+type BrowserDirectoryEntry = BrowserFileSystemEntry & {
+  createReader: () => {
+    readEntries: (success: (entries: BrowserFileSystemEntry[]) => void, error?: (cause: unknown) => void) => void;
+  };
+};
 type WebkitDataTransferItem = DataTransferItem & {
-  webkitGetAsEntry?: () => { isDirectory: boolean } | null;
+  webkitGetAsEntry?: () => BrowserFileSystemEntry | null;
 };
 
-export function hasFolderTransferSelection(entries: Array<Pick<SftpFileEntry, "name" | "is_dir">>) {
-  return entries.some((entry) => entry.is_dir && entry.name !== "..");
+export interface BrowserUploadItem {
+  file?: File;
+  relativePath: string;
+  is_dir: boolean;
 }
 
-export function hasFolderBrowserUpload(files: ArrayLike<File>, items?: Iterable<DataTransferItem>) {
-  if (items) {
-    for (const item of items) {
-      if ((item as WebkitDataTransferItem).webkitGetAsEntry?.()?.isDirectory) return true;
-    }
-  }
-  return Array.from(files).some((file) => file.webkitRelativePath?.includes("/"));
+export interface BrowserUploadSelection {
+  items: BrowserUploadItem[];
+  failures: unknown[];
+}
+
+export interface ExpandedTransferSelection {
+  entries: SftpTransferEntry[];
+  directories: string[];
+  failures: Array<{ path: string; cause: unknown }>;
+}
+
+function relativePath(...parts: string[]) {
+  const path = parts
+    .filter(Boolean)
+    .join("/")
+    .replace(/^\/+|\/+$/g, "");
+  // Reject backslash/colon segments too: without this a name like "evil\..\..\Startup\bad.exe"
+  // has no "/" and isn't literally "."/"..", so it would otherwise pass through untouched.
+  if (
+    !path ||
+    path.includes("\0") ||
+    path.split("/").some((part) => !part || part === "." || part === ".." || /[\\:]/.test(part))
+  )
+    return "";
+  return path;
 }
 
 export function transferEntriesFromSelection(
   entries: Array<Pick<SftpFileEntry, "name" | "size" | "is_dir">>
-): TransferableEntry[] {
+): SftpTransferEntry[] {
   return entries
-    .filter((entry) => !entry.is_dir && entry.name !== "..")
-    .map((entry) => ({ name: entry.name, size: entry.size }));
+    .filter((entry) => entry.name !== "..")
+    .map((entry) => ({ name: entry.name, size: entry.size, ...(entry.is_dir ? { is_dir: true } : {}) }));
+}
+
+export async function expandTransferSelection(
+  payload: SftpTransferSourcePayload,
+  listDirectory: (path: string) => Promise<Array<Pick<SftpFileEntry, "name" | "size" | "is_dir">>>,
+  maxDepth = SFTP_FOLDER_MAX_DEPTH
+): Promise<ExpandedTransferSelection> {
+  const entries = payload.entries.filter((entry) => !entry.is_dir);
+  const directories: string[] = [];
+  const failures: ExpandedTransferSelection["failures"] = [];
+
+  async function walk(path: string, relativeDir: string, depth: number): Promise<void> {
+    if (depth > maxDepth) {
+      failures.push({ path, cause: new Error(`Folder depth exceeds ${maxDepth}`) });
+      return;
+    }
+    try {
+      const children = await listDirectory(path);
+      directories.push(relativeDir);
+      for (const child of children) {
+        if (child.name === "..") continue;
+        const childRelative = relativePath(relativeDir, child.name);
+        if (!childRelative) continue;
+        if (child.is_dir) await walk(joinTransferPath(path, child.name), childRelative, depth + 1);
+        else entries.push({ name: child.name, size: child.size, relativeDir });
+      }
+    } catch (cause) {
+      failures.push({ path, cause });
+    }
+  }
+
+  for (const entry of payload.entries) {
+    if (!entry.is_dir || entry.name === "..") continue;
+    const directory = relativePath(entry.relativeDir || "", entry.name);
+    if (directory) await walk(joinTransferPath(payload.sourcePath, entry.relativeDir || "", entry.name), directory, 1);
+  }
+  return { entries, directories, failures };
+}
+
+function browserFile(entry: BrowserFileEntry) {
+  return new Promise<File>((resolve, reject) => entry.file(resolve, reject));
+}
+
+async function browserDirectoryEntries(entry: BrowserDirectoryEntry) {
+  const reader = entry.createReader();
+  const entries: BrowserFileSystemEntry[] = [];
+  while (true) {
+    const batch = await new Promise<BrowserFileSystemEntry[]>((resolve, reject) => reader.readEntries(resolve, reject));
+    if (!batch.length) return entries;
+    entries.push(...batch);
+  }
+}
+
+export async function collectBrowserUploadSelection(
+  files: ArrayLike<File>,
+  dataTransferItems?: Iterable<DataTransferItem>,
+  maxDepth = SFTP_FOLDER_MAX_DEPTH
+): Promise<BrowserUploadSelection> {
+  const items: BrowserUploadItem[] = [];
+  const failures: unknown[] = [];
+  const roots: BrowserFileSystemEntry[] = [];
+  for (const item of dataTransferItems || []) {
+    const entry = (item as WebkitDataTransferItem).webkitGetAsEntry?.();
+    if (entry) roots.push(entry);
+  }
+
+  async function walk(entry: BrowserFileSystemEntry, parent: string, depth: number): Promise<void> {
+    const path = relativePath(parent, entry.name);
+    if (!path) return;
+    if (depth > maxDepth) {
+      failures.push(new Error(`Folder depth exceeds ${maxDepth}`));
+      return;
+    }
+    try {
+      if (entry.isFile) {
+        items.push({ file: await browserFile(entry as BrowserFileEntry), relativePath: path, is_dir: false });
+        return;
+      }
+      if (!entry.isDirectory) return;
+      const children = await browserDirectoryEntries(entry as BrowserDirectoryEntry);
+      items.push({ relativePath: path, is_dir: true });
+      for (const child of children) await walk(child, path, depth + 1);
+    } catch (cause) {
+      failures.push(cause);
+    }
+  }
+
+  if (roots.length) {
+    for (const root of roots) await walk(root, "", 1);
+  } else {
+    for (const file of Array.from(files)) {
+      const path = relativePath(file.webkitRelativePath || file.name);
+      if (path) items.push({ file, relativePath: path, is_dir: false });
+    }
+  }
+  return { items, failures };
 }
 
 export function buildTransferSourcePayload(options: {
   sourceEndpoint: FileTransferEndpointRef | null | undefined;
   sourcePath: string;
   sourceSelectionRevision: number;
-  entries: TransferableEntry[];
+  entries: SftpTransferEntry[];
 }): SftpTransferSourcePayload | null {
   const { sourceEndpoint, sourcePath, sourceSelectionRevision, entries } = options;
   if (!sourceEndpoint || !entries.length) return null;
@@ -76,9 +202,17 @@ function isTransferPayload(payload: unknown, currentEndpointId?: string | null):
   if (!Number.isInteger(sourceSelectionRevision)) return false;
   if (!Array.isArray(entries) || entries.length === 0) return false;
 
-  return entries.every(
-    (entry) => entry && typeof entry === "object" && typeof entry.name === "string" && typeof entry.size === "string"
-  );
+  return entries.every((entry) => {
+    if (!entry || typeof entry !== "object") return false;
+    const item = entry as Record<string, unknown>;
+    if (typeof item.name !== "string" || relativePath(item.name) !== item.name || typeof item.size !== "string")
+      return false;
+    if (item.is_dir !== undefined && typeof item.is_dir !== "boolean") return false;
+    return (
+      item.relativeDir === undefined ||
+      (typeof item.relativeDir === "string" && relativePath(item.relativeDir) === item.relativeDir)
+    );
+  });
 }
 
 export function parseTransferDragPayload(

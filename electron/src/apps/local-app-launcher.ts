@@ -1,18 +1,8 @@
 import { spawn } from "node:child_process";
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { decodeClientProtocolPayload as decodePayload } from "../shared/client-protocol";
 import { electronLog } from "../shared/debug-log";
-
-function decodePayload(raw) {
-  const value = String(raw || "");
-  const encoded = value.startsWith("jms2://") ? value.slice(7) : "";
-  if (!encoded) throw new Error("invalid local client URL scheme");
-  try {
-    return JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
-  } catch (error) {
-    throw new Error(`decode local client payload failed: ${error instanceof Error ? error.message : error}`);
-  }
-}
 
 function sanitizedName(raw) {
   let decoded = String(raw || "");
@@ -257,9 +247,11 @@ export class LocalApplicationLauncher {
     if (!payload.protocol || !payload.token?.id) {
       throw new Error("local client payload is missing required connection fields");
     }
-    const application = await this.resolveApplication(payload);
+    const selectionProtocol =
+      payload.protocol === "mysql" && payload.token?.protocol === "mariadb" ? "mariadb" : payload.protocol;
+    const application = await this.resolveApplication({ ...payload, protocol: selectionProtocol });
     // Preserve MariaDB application preferences, but use the MySQL driver on Magnus's shared port.
-    if (payload.protocol === "mariadb") payload.protocol = "mysql";
+    if (selectionProtocol === "mariadb") payload.protocol = "mysql";
     if (application.launch_type === "file") {
       if (!payload.file?.content) throw new Error("local client payload is missing connection file content");
       electronLog.info(`launch ${payload.protocol} connection file via ${application.display_name || "file handler"}`);

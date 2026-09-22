@@ -40,7 +40,7 @@ const panes = computed(() => tabs.value.flatMap((tab) => tab.panes));
 const activePane = computed(() => activeTab.value?.panes.find((pane) => pane.id === activePaneId.value) || null);
 const supportsTerminalAiCommand = computed(() => {
   const pane = activePane.value;
-  if (!pane) return false;
+  if (!pane || pane.connectionProgress) return false;
   return isKokoTerminalAiAvailable(pane.id);
 });
 

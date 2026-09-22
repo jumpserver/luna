@@ -1,16 +1,19 @@
 import type { ConnectionFormDraft } from "~/composables/useConnectionFormState";
 import type { WebProxyOpenRequest } from "~/composables/useWebProxyManager";
+import type { WorkspaceConnectionProgressStage } from "~/composables/workspaceConnectionProgress";
 import type { AssetItem, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
-import { createSharedComposable, useFullscreen } from "@vueuse/core";
 
+import { createSharedComposable, useFullscreen } from "@vueuse/core";
+import { closeAclScope } from "~/composables/useAclDialog";
 import { useRecentConnections } from "~/composables/useRecentConnections";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
+import { createWorkspaceConnectionProgress } from "~/composables/workspaceConnectionProgress";
 import { desktopWindow } from "~/shared/desktop/bridge";
 import { isDesktopRuntime } from "~/utils/runtime";
 
 export type WorkspaceSessionStatus = "selecting" | "connecting" | "ready" | "connected" | "disconnected" | "failed";
-export type WorkspaceConnectionProgressStage = "token" | "session" | "connected";
+export type { WorkspaceConnectionProgressStage };
 export type WorkspaceSplitDirection = "horizontal" | "vertical";
 export type WorkspacePaneDropPlacement = "center" | "left" | "right" | "top" | "bottom";
 export type WorkspacePaneMode = "empty" | "setup" | "session";
@@ -119,10 +122,6 @@ const useSharedDocumentFullscreen = createSharedComposable(() => {
 });
 let tabSequence = 0;
 let paneSequence = 0;
-const CONNECTION_PROGRESS_MIN_MS = 1000;
-const connectionProgressAt = new Map<string, number>();
-const connectionProgressGoal = new Map<string, WorkspaceConnectionProgressStage | "hide">();
-const connectionProgressTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let sessionDisposer: ((id: string) => void | Promise<void>) | null = null;
 const sessionCloseGuards = new Map<string, () => boolean | Promise<boolean>>();
 let aiTaskTabCloseConfirm: ((tabIds: string[]) => Promise<boolean>) | null = null;
@@ -318,59 +317,6 @@ const createTabFromPane = (pane: WorkspacePane): WorkspaceSessionTab => {
   return tab;
 };
 
-const stopConnectionProgressTimer = (paneId: string) => {
-  const timer = connectionProgressTimers.get(paneId);
-  if (timer) clearTimeout(timer);
-  connectionProgressTimers.delete(paneId);
-};
-
-const clearConnectionProgress = (pane: WorkspacePane) => {
-  stopConnectionProgressTimer(pane.id);
-  connectionProgressAt.delete(pane.id);
-  connectionProgressGoal.delete(pane.id);
-  pane.connectionProgress = undefined;
-};
-
-const assignConnectionProgress = (
-  pane: WorkspacePane,
-  stage: WorkspaceConnectionProgressStage | undefined,
-  tab: WorkspaceSessionTab,
-  paneIndex: number
-) => {
-  pane.connectionProgress = stage;
-  if (stage) connectionProgressAt.set(pane.id, Date.now());
-  else {
-    connectionProgressAt.delete(pane.id);
-    connectionProgressGoal.delete(pane.id);
-  }
-  if (paneIndex === 0) syncTabFromPrimaryPane(tab);
-};
-
-const pumpConnectionProgress = (pane: WorkspacePane, tab: WorkspaceSessionTab, paneIndex: number) => {
-  stopConnectionProgressTimer(pane.id);
-  const goal = connectionProgressGoal.get(pane.id);
-  if (!goal) return;
-
-  const current = pane.connectionProgress;
-  if (goal === "hide" ? !current : current === goal) return;
-
-  const holdMs = !current || current === "session" ? 0 : CONNECTION_PROGRESS_MIN_MS;
-  const wait = Math.max(0, holdMs - (Date.now() - (connectionProgressAt.get(pane.id) ?? 0)));
-  const advance = () => {
-    connectionProgressTimers.delete(pane.id);
-    const stage = pane.connectionProgress;
-    if (stage === "connected" && goal === "hide") {
-      assignConnectionProgress(pane, undefined, tab, paneIndex);
-      return;
-    }
-    assignConnectionProgress(pane, stage === "token" ? "session" : "connected", tab, paneIndex);
-    pumpConnectionProgress(pane, tab, paneIndex);
-  };
-
-  if (wait) connectionProgressTimers.set(pane.id, setTimeout(advance, wait));
-  else advance();
-};
-
 const closeNativeSession = (id: string) => {
   Promise.resolve(sessionDisposer?.(id)).catch(() => {});
 };
@@ -432,6 +378,16 @@ const findSession = (match: { tabId?: string; assetId: string; protocol: string;
 
   return null;
 };
+
+const connectionProgress = createWorkspaceConnectionProgress({
+  findPane,
+  findSession,
+  syncTabFromPrimaryPane,
+  setActivePaneId: (paneId) => {
+    activePaneId.value = paneId;
+  },
+  closeNativeSession
+});
 
 const replacePane = (tab: WorkspaceSessionTab, paneIndex: number, pane: WorkspacePane) => {
   tab.panes.splice(paneIndex, 1, pane);
@@ -650,7 +606,8 @@ export const useWorkspaceTabs = () => {
     for (const pane of tab.panes) {
       pendingPaneTarget.value = pendingPaneTarget.value?.paneId === pane.id ? null : pendingPaneTarget.value;
       sessionCloseGuards.delete(pane.id);
-      clearConnectionProgress(pane);
+      void closeAclScope(pane.id);
+      connectionProgress.clearConnectionProgress(pane);
       clearWorkspaceSessionDetails(pane.id);
       closeNativeSession(pane.id);
     }
@@ -709,7 +666,8 @@ export const useWorkspaceTabs = () => {
     pendingPaneTarget.value = pendingPaneTarget.value?.paneId === paneId ? null : pendingPaneTarget.value;
 
     sessionCloseGuards.delete(pane.id);
-    clearConnectionProgress(pane);
+    void closeAclScope(pane.id);
+    connectionProgress.clearConnectionProgress(pane);
     clearWorkspaceSessionDetails(pane.id);
     closeNativeSession(pane.id);
     tab.panes.splice(paneIndex, 1);
@@ -940,20 +898,9 @@ export const useWorkspaceTabs = () => {
     found.pane.status = "ready";
     found.pane.mode = "session";
     if (found.pane.connectMethod?.endsWith("_guide")) {
-      connectionProgressGoal.set(found.pane.id, "hide");
-      pumpConnectionProgress(found.pane, found.tab, found.paneIndex);
+      connectionProgress.hideProgressAfterGuide(found);
     }
     if (found.paneIndex === 0) syncTabFromPrimaryPane(found.tab);
-  };
-
-  const markSessionConnecting = (paneId: string) => {
-    const match = findPane(paneId);
-    if (!match) return;
-
-    match.pane.status = "connecting";
-    match.pane.mode = "session";
-    activePaneId.value = paneId;
-    if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
 
   const setSessionConnectMethod = (paneId: string, connectMethod: string) => {
@@ -961,90 +908,6 @@ export const useWorkspaceTabs = () => {
     if (!match) return;
 
     match.pane.connectMethod = connectMethod || undefined;
-    if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
-  };
-
-  const startSessionConnection = (
-    paneId: string,
-    connection: { protocol: string; account: string; permedAccounts?: PermedAccount[] },
-    setupDraft?: ConnectionFormDraft
-  ) => {
-    const match = findPane(paneId);
-    if (!match) return;
-
-    clearConnectionProgress(match.pane);
-    match.pane.protocol = connection.protocol;
-    match.pane.account = connection.account;
-    if (connection.permedAccounts) match.pane.permedAccounts = connection.permedAccounts;
-    match.pane.payload = undefined;
-    match.pane.connectionFailure = undefined;
-    match.pane.status = "connecting";
-    match.pane.resumeSetupOnFailure = Boolean(setupDraft);
-    match.pane.setupDraft = setupDraft
-      ? { ...setupDraft, connectOptions: { ...setupDraft.connectOptions } }
-      : undefined;
-    assignConnectionProgress(match.pane, "token", match.tab, match.paneIndex);
-    // Keep the setup surface mounted until a session payload is ready so ACL prompts do not flash the session loader.
-    activePaneId.value = paneId;
-    if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
-  };
-
-  const markSessionTokenCreated = (match: { tabId?: string; assetId: string; protocol: string; account: string }) => {
-    const found = findSession(match);
-    if (!found || found.pane.connectionProgress !== "token") return;
-
-    connectionProgressGoal.set(found.pane.id, "session");
-    pumpConnectionProgress(found.pane, found.tab, found.paneIndex);
-  };
-
-  const markSessionFailed = (
-    match: { tabId?: string; assetId: string; protocol: string; account: string },
-    reason?: string
-  ) => {
-    const found = findSession(match);
-    if (!found) return;
-
-    const resumeSetup = found.pane.resumeSetupOnFailure && found.pane.setupAsset;
-    clearConnectionProgress(found.pane);
-    found.pane.connectedAt = undefined;
-    found.pane.payload = undefined;
-    found.pane.connectionFailure = reason;
-    clearWorkspaceSessionDetails(found.pane.id);
-    closeNativeSession(found.pane.id);
-    if (resumeSetup) {
-      found.pane.status = "selecting";
-      found.pane.mode = "setup";
-    } else {
-      found.pane.status = "failed";
-      if (found.pane.mode !== "setup") found.pane.mode = "session";
-    }
-    if (found.paneIndex === 0) syncTabFromPrimaryPane(found.tab);
-  };
-
-  const markSessionConnected = (paneId: string) => {
-    const match = findPane(paneId);
-    if (!match) return;
-
-    match.pane.resumeSetupOnFailure = false;
-    match.pane.setupDraft = undefined;
-    match.pane.status = "connected";
-    match.pane.connectedAt = Date.now();
-    match.pane.mode = "session";
-    connectionProgressGoal.set(match.pane.id, "hide");
-    if (!match.pane.connectionProgress) {
-      assignConnectionProgress(match.pane, "connected", match.tab, match.paneIndex);
-    }
-    pumpConnectionProgress(match.pane, match.tab, match.paneIndex);
-    activePaneId.value = paneId;
-    if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
-  };
-
-  const markSessionDisconnected = (paneId: string) => {
-    const match = findPane(paneId);
-    if (!match) return;
-
-    clearConnectionProgress(match.pane);
-    match.pane.status = "disconnected";
     if (match.paneIndex === 0) syncTabFromPrimaryPane(match.tab);
   };
 
@@ -1127,12 +990,14 @@ export const useWorkspaceTabs = () => {
     focusMode,
     getTabById,
     isPaneAwaitingAssetSelection,
-    markSessionConnected,
-    markSessionConnecting,
-    markSessionTokenCreated,
-    markSessionDisconnected,
+    markSessionConnected: connectionProgress.markSessionConnected,
+    getSessionConnectionAttempt: connectionProgress.getSessionConnectionAttempt,
+    markSessionConnecting: connectionProgress.markSessionConnecting,
+    markSessionTokenCreated: connectionProgress.markSessionTokenCreated,
+    markSessionDisconnected: connectionProgress.markSessionDisconnected,
     setSessionConnectMethod,
-    markSessionFailed,
+    markSessionFailed: connectionProgress.markSessionFailed,
+    resumeConnectionSetup: connectionProgress.resumeConnectionSetup,
     openLocalShell,
     openScriptEditor,
     openSession,
@@ -1144,7 +1009,7 @@ export const useWorkspaceTabs = () => {
     setActivePane,
     setActiveSession,
     splitWorkspace,
-    startSessionConnection,
+    startSessionConnection: connectionProgress.startSessionConnection,
     swapPanes,
     toSurfaceTab,
     updateSessionPayload,

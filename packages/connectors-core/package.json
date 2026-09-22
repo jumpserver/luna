@@ -9,6 +9,7 @@
     "./types/fileTransfer": "./src/types/fileTransfer.ts",
     "./types/message": "./src/types/message.ts",
     "./types/session": "./src/types/session.ts",
+    "./types/sessionShare": "./src/types/sessionShare.ts",
     "./fileTransferRegistry": "./src/fileTransferRegistry.ts",
     "./useConnectorEndpoint": "./src/useConnectorEndpoint.ts",
     "./useHostBridge": "./src/useHostBridge.ts",

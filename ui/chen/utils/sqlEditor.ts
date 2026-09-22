@@ -20,6 +20,8 @@ export function chenSqlDialect(dbType: string) {
     case "postgresql":
       return PostgreSQL;
     case "oracle":
+    case "dameng":
+    case "dm":
       return PLSQL;
     case "sqlserver":
     case "sql server":

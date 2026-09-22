@@ -31,12 +31,17 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  reconnect: [];
   capabilities: [capabilities: SftpCapabilities | null];
+  connectionChange: [connected: boolean];
+  connectionFailure: [message: string];
 }>();
 
 const { t } = useI18n();
-const sftpTour = useSftpTour();
+const workspaceRef = shallowRef<HTMLElement | null>(null);
+const sftpTour = useSftpTour({
+  mode: () => (props.global ? "global" : "session"),
+  root: () => workspaceRef.value
+});
 const { addErrorToast: showErrorToast } = useErrorToast();
 const translate = (key: string, params?: Record<string, unknown>) => String(params ? t(key, params) : t(key));
 
@@ -46,7 +51,6 @@ function addErrorToast(title: string, error: unknown): void {
 
 const primaryPaneRef = ref<SftpRemotePaneHandle | null>(null);
 const localPaneRef = ref<SftpLocalPaneHandle | null>(null);
-let tourTimer: ReturnType<typeof setTimeout> | undefined;
 const primaryCapabilities = computed(() => {
   const value = primaryPaneRef.value?.manager.capabilities;
   return value == null ? null : unref(value);
@@ -118,16 +122,25 @@ watch(
   { immediate: true }
 );
 
+const primaryTourReady = computed(() => Boolean(unref(primaryPaneRef.value?.manager.connected)));
+
+watch(
+  primaryTourReady,
+  (ready) => {
+    if (props.global || props.compact || props.showEmpty) return;
+    if (ready) sftpTour.scheduleOnce();
+    else sftpTour.cancelScheduled();
+  },
+  { flush: "post" }
+);
+
 onMounted(() => {
   initializeGlobalWorkspace();
   // Compact right-panel SFTP is intentionally single-pane and tour-free.
-  if (!props.global && !props.compact && !props.showEmpty) {
-    tourTimer = setTimeout(() => void sftpTour.startOnce(), 650);
-  }
+  if (props.global && !props.compact && !props.showEmpty) void nextTick(sftpTour.scheduleOnce);
 });
 
 onBeforeUnmount(() => {
-  if (tourTimer) clearTimeout(tourTimer);
   unregisterCloseGuard?.();
   unregisterFileWorkspaceLeave?.();
   sftpTour.destroy();
@@ -147,13 +160,11 @@ function setLocalPaneRef(value: SftpLocalPaneHandle | null): void {
     <div class="flex flex-col items-center gap-3">
       <UIcon name="i-lucide-circle-alert" class="size-7" />
       <p>{{ t("koko.fileManagement.expired") }}</p>
-      <UButton size="sm" @click="void emit('reconnect')">
-        {{ t("koko.fileManagement.reconnect") }}
-      </UButton>
     </div>
   </div>
   <div
     v-else
+    ref="workspaceRef"
     class="sftp-file-management flex h-full min-h-0 flex-col"
     :class="{ 'sftp-file-management--compact': compact }"
     data-sftp-tour="workspace"
@@ -163,6 +174,7 @@ function setLocalPaneRef(value: SftpLocalPaneHandle | null): void {
       :workspace="workspace"
       :transfer="transfer"
       :set-local-pane-ref="setLocalPaneRef"
+      :start-tour="sftpTour.start"
     />
     <SftpSessionWorkspace
       v-else
@@ -173,6 +185,8 @@ function setLocalPaneRef(value: SftpLocalPaneHandle | null): void {
       :transfer="transfer"
       :start-tour="sftpTour.start"
       :set-primary-pane-ref="setPrimaryPaneRef"
+      @connection-change="emit('connectionChange', $event)"
+      @connection-failure="emit('connectionFailure', $event)"
     />
     <SftpConnectModal :workspace="workspace" />
     <SftpSendModal :transfer="transfer" />

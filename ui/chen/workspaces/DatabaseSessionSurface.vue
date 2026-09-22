@@ -94,14 +94,13 @@ import { chenUnrestrictedMutations } from "~/chen/utils/sqlSafety";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 
 const props = defineProps<{ tab: WorkspaceSessionTab }>();
-const emit = defineEmits<{ reconnect: [] }>();
 
 const toast = useToast();
 const { t } = useI18n();
 const { openAi } = useAiPanel();
 const { addErrorToast } = useErrorToast();
 const userInfoStore = useUserInfoStore();
-const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
+const { markSessionConnected, markSessionDisconnected } = useWorkspaceTabs();
 const tabRef = toRef(props, "tab");
 const endpointUrl = computed(() => {
   const explicit = String(props.tab.payload?.endpointUrl || "").trim();
@@ -359,13 +358,7 @@ const session = useChenSession({
   authenticate: auth.authenticate,
   translate: t,
   markConnected: () => markSessionConnected(props.tab.id),
-  markFailed: () =>
-    markSessionFailed({
-      tabId: props.tab.id,
-      assetId: props.tab.assetId,
-      protocol: props.tab.protocol,
-      account: props.tab.account
-    }),
+  markDisconnected: (reason) => markSessionDisconnected(props.tab.id, reason),
   onBeforeReady: async () => {
     await auth.loadProfile();
     await tree.loadNodeChildren(null);
@@ -408,20 +401,6 @@ const startupErrorMessage = computed(() => {
   return `${t("Chen.ServerRequestFailedPrefix")}${message}`;
 });
 const databaseDialogFailed = computed(() => isChenStartupFailureDialog(session.dialogMessage.value));
-const startupDialogMessage = computed(() => {
-  const dialog = session.dialogMessage.value;
-  if (!dialog || !session.dialogOpenedDuringStartup.value || dialog.buttons.length || databaseDialogFailed.value)
-    return "";
-  return dialog.text || (dialog.title === "Message" ? "" : dialog.title);
-});
-const startupMessage = computed(() => {
-  if (startupDialogMessage.value) return startupDialogMessage.value;
-  if (!tokenId.value) return t("Chen.WaitingConnection");
-  if (!auth.chenToken.value) return t("Chen.AuthenticatingSession");
-  if (session.sessionConnection.state.value === "connecting") return t("Chen.ConnectingDatabaseService");
-  if (!auth.profile.value) return t("Chen.PreparingSession");
-  return t("Chen.LoadingDatabaseResources");
-});
 const databaseDialogText = computed(() => {
   const message = session.dialogMessage.value?.text || "";
   if (!databaseDialogFailed.value || !databaseTarget.value) return message;
@@ -1046,7 +1025,7 @@ function openConsoleWorkspace(nodeKey: string, title = t("Chen.Console")) {
 function openDataViewWorkspace(nodeKey: string, title = t("Chen.DataView")) {
   const tab = workspace.openDataViewTab(nodeKey, title);
   if (tab && !consoleConnections.has(tab.id)) initConsoleSocket(tab);
-  if (tab?.kind === "data-view") void loadTableMetadata(tab, ["columns", "primaryKey"]);
+  if (tab?.kind === "data-view") void loadTableMetadata(tab, ["columns", "primaryKey", "statistics"]);
 }
 
 function mergeTableMetadata(current: ChenTableMetadata | null, incoming: ChenTableMetadata): ChenTableMetadata {
@@ -1063,6 +1042,7 @@ function mergeTableMetadata(current: ChenTableMetadata | null, incoming: ChenTab
     foreignKeys: has("foreignKeys") ? incoming.foreignKeys : current?.foreignKeys || [],
     indexes: has("indexes") ? incoming.indexes : current?.indexes || [],
     constraints: has("constraints") ? incoming.constraints : current?.constraints || [],
+    statistics: has("statistics") ? incoming.statistics : current?.statistics || null,
     ddl: has("ddl") ? incoming.ddl : current?.ddl || null
   };
 }
@@ -1903,6 +1883,7 @@ function updateDataViewPropertyTab(
         ddl: ["ddl"]
       }
     : {
+        basic: ["statistics"],
         columns: ["columns", "primaryKey"],
         indexes: ["indexes", "constraints"],
         foreignKeys: ["foreignKeys"],
@@ -1954,7 +1935,21 @@ function focus() {}
 
 async function refreshResourceRoot() {
   clearMetadataCaches();
-  await tree.refreshRoot();
+  const recentEntries = [...recentTables.entries.value];
+  const recentParentPaths = recentEntries.map((entry) => entry.path?.slice(0, -1) || []).filter((path) => path.length);
+  await tree.refreshRoot(recentParentPaths);
+
+  const currentRecentEntries = new Map(recentTables.entries.value.map((entry) => [entry.node.key, entry]));
+  const unavailableKeys = recentEntries
+    .filter((entry) => {
+      if (!entry.path?.length) return false;
+      if (currentRecentEntries.get(entry.node.key)?.openedAt !== entry.openedAt) return false;
+      const parentPath = entry.path.slice(0, -1);
+      if (parentPath.some((key) => tree.loadErrors[key])) return false;
+      return !tree.findNodeByKey(entry.node.key);
+    })
+    .map((entry) => entry.node.key);
+  recentTables.remove(...unavailableKeys);
 }
 
 watch(
@@ -1990,7 +1985,7 @@ defineExpose({ focus });
 
 <template>
   <div class="relative isolate h-full min-h-0 overflow-hidden bg-[var(--workspace-surface-main)] text-[var(--app-fg)]">
-    <div v-if="session.ready.value" class="relative flex h-full min-h-0 min-w-0">
+    <div v-if="session.ready.value || props.tab.status === 'disconnected'" class="relative flex h-full min-h-0 min-w-0">
       <ResourceTreePanel
         v-show="!isNarrowScreen || resourceTreeOpen"
         class="z-40 max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:shadow-xl"
@@ -2176,19 +2171,10 @@ defineExpose({ focus });
     </div>
 
     <ChenSessionState
-      v-else
-      :icon="startupErrorMessage ? 'i-lucide-circle-alert' : 'i-lucide-database'"
-      :loading="!startupErrorMessage"
-      :title="
-        startupErrorMessage
-          ? adminTerminated
-            ? startupErrorMessage
-            : t('Chen.OpenDatabaseWorkspaceFailed')
-          : t('Chen.OpeningDatabaseWorkspace')
-      "
-      :message="adminTerminated ? '' : startupErrorMessage || startupMessage"
-      :action-label="startupErrorMessage && !adminTerminated ? t('Chen.Retry') : undefined"
-      @action="emit('reconnect')"
+      v-else-if="startupErrorMessage"
+      icon="i-lucide-circle-alert"
+      :title="adminTerminated ? startupErrorMessage : t('Chen.OpenDatabaseWorkspaceFailed')"
+      :message="adminTerminated ? '' : startupErrorMessage"
     />
 
     <UDropdownMenu

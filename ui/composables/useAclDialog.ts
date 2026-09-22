@@ -205,6 +205,40 @@ function requestAcl(
   });
 }
 
+async function closeAclGroup(group: AclDialogGroup) {
+  await Promise.all(
+    group.items
+      .filter((item) => item.status === "pending" && item.token?.from_ticket_info?.close_ticket_api)
+      .map((item) => callTicketApi(item.token!.from_ticket_info.close_ticket_api).catch(() => null))
+  );
+  group.items.forEach((item) => finishItem(item, null));
+  const index = groups.value.indexOf(group);
+  if (index !== -1) groups.value.splice(index, 1);
+}
+
+export async function closeAclScope(scopeId: string) {
+  const group = groups.value.find((candidate) =>
+    candidate.items.some((item) => item.scopeId === scopeId && !item.settled)
+  );
+  if (!group) return;
+  if (group.items.length === 1) {
+    await closeAclGroup(group);
+    return;
+  }
+  const items = group.items.filter((item) => item.scopeId === scopeId && !item.settled);
+  await Promise.all(
+    items
+      .filter((item) => item.status === "pending" && item.token?.from_ticket_info?.close_ticket_api)
+      .map((item) => callTicketApi(item.token!.from_ticket_info.close_ticket_api).catch(() => null))
+  );
+  items.forEach((item) => finishItem(item, null));
+  group.items = group.items.filter((item) => !items.includes(item));
+  if (group.items.length === 0) {
+    const index = groups.value.indexOf(group);
+    if (index !== -1) groups.value.splice(index, 1);
+  }
+}
+
 export function useAclDialog() {
   const toast = useToast();
   const { t } = useI18n();
@@ -215,6 +249,10 @@ export function useAclDialog() {
     computed(() => groups.value.find((group) => !group.batchId && group.items[0]?.scopeId === scopeId));
   const hasScopeGroup = (scopeId: string) =>
     groups.value.some((group) => !group.batchId && group.items[0]?.scopeId === scopeId);
+  const findScopeGroup = (scopeId?: string) =>
+    scopeId
+      ? groups.value.find((group) => !group.batchId && group.items.some((item) => item.scopeId === scopeId))
+      : undefined;
 
   const request = requestAcl;
 
@@ -232,38 +270,10 @@ export function useAclDialog() {
   const close = async (target?: AclDialogGroup) => {
     const group = target || globalGroup.value || activeGroup.value;
     if (!group) return;
-    await Promise.all(
-      group.items
-        .filter((item) => item.status === "pending" && item.token?.from_ticket_info?.close_ticket_api)
-        .map((item) => callTicketApi(item.token!.from_ticket_info.close_ticket_api).catch(() => null))
-    );
-    group.items.forEach((item) => finishItem(item, null));
-    const index = groups.value.indexOf(group);
-    if (index !== -1) groups.value.splice(index, 1);
+    await closeAclGroup(group);
   };
 
-  const closeScope = async (scopeId: string) => {
-    const group = groups.value.find((candidate) =>
-      candidate.items.some((item) => item.scopeId === scopeId && !item.settled)
-    );
-    if (!group) return;
-    if (group.items.length === 1) {
-      await close(group);
-      return;
-    }
-    const items = group.items.filter((item) => item.scopeId === scopeId && !item.settled);
-    await Promise.all(
-      items
-        .filter((item) => item.status === "pending" && item.token?.from_ticket_info?.close_ticket_api)
-        .map((item) => callTicketApi(item.token!.from_ticket_info.close_ticket_api).catch(() => null))
-    );
-    items.forEach((item) => finishItem(item, null));
-    group.items = group.items.filter((item) => !items.includes(item));
-    if (group.items.length === 0) {
-      const index = groups.value.indexOf(group);
-      if (index !== -1) groups.value.splice(index, 1);
-    }
-  };
+  const closeScope = (scopeId: string) => closeAclScope(scopeId);
 
   const copyTicketLink = async (item: AclDialogItem) => {
     const link = item.token?.from_ticket_info?.ticket_detail_page_url;
@@ -312,6 +322,7 @@ export function useAclDialog() {
     isOpen,
     groupForScope,
     hasScopeGroup,
+    findScopeGroup,
     request,
     submit,
     close,

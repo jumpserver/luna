@@ -239,14 +239,14 @@ const isAuthFailure = (error: unknown) => {
 };
 
 const handleApiAuthFailure = () => {
-  if (!import.meta.client) return;
+  if (import.meta.server) return;
+
+  const userInfoStore = useUserInfoStore();
+  if (!userInfoStore.loggedIn) return;
 
   const now = Date.now();
   if (now - lastAuthFailureAt < 1500) return;
   lastAuthFailureAt = now;
-
-  const userInfoStore = useUserInfoStore();
-  if (!userInfoStore.loggedIn) return;
 
   userInfoStore.setUserLoggedIn(false);
   useEventBus().emit("clearAssets", undefined);
@@ -719,6 +719,14 @@ export function getAccountDetail(accountId: string, orgId?: string): Promise<Per
   return apiRequest({
     method: "GET",
     path: `/api/v1/accounts/accounts/${encodeURIComponent(accountId)}/`,
+    orgId
+  });
+}
+
+export function getPersonalAssetCredential(credentialId: string, orgId?: string): Promise<PersonalAssetCredential> {
+  return apiRequest({
+    method: "GET",
+    path: `/api/v1/accounts/personal-asset-credentials/${encodeURIComponent(credentialId)}/`,
     orgId
   });
 }

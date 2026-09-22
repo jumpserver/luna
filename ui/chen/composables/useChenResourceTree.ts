@@ -142,7 +142,7 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
     return restored;
   }
 
-  async function refreshRoot() {
+  async function refreshRoot(additionalPaths: string[][] = []) {
     const previousExpandedKeys = [...expandedKeys.value];
     const previousTreeKeys = collectNodeKeys(rootNodes.value);
     await loadNodeChildren(null, true);
@@ -152,7 +152,11 @@ export function useChenResourceTree(chenToken: Ref<string>, options: UseChenReso
     // root cannot render as expanded-without-children.
     const preservedKeys = previousExpandedKeys.filter((key) => !previousTreeKeys.has(key));
     expandedKeys.value = preservedKeys;
-    const restoredKeys = await restoreExpandedNodes(new Set(previousExpandedKeys));
+    const refreshKeys = new Set(previousExpandedKeys);
+    for (const path of additionalPaths) {
+      for (const key of path) refreshKeys.add(key);
+    }
+    const restoredKeys = await restoreExpandedNodes(refreshKeys);
     const kept = new Set([...preservedKeys, ...restoredKeys]);
     expandedKeys.value = previousExpandedKeys.filter((key) => kept.has(key));
   }

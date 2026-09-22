@@ -4,7 +4,7 @@ import type {
   WorkspaceSplitDirection,
   WorkspaceSurfaceSession
 } from "~/composables/useWorkspaceTabs";
-import type { AssetItem } from "~/types";
+import type { AssetItem, TokenResponse } from "~/types";
 
 import { SFTP_FILE_EDITOR_VALUE } from "~/composables/useConnectMethods";
 import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
@@ -33,14 +33,15 @@ function getTokenId(tab: Pick<WorkspaceSessionTab, "payload">) {
   return String(tab.payload?.id || tab.payload?.token?.id || "");
 }
 
-async function buildPayload(tab: Pick<WorkspaceSessionTab, "payload">, token: Record<string, any>) {
+async function buildPayload(tab: Pick<WorkspaceSessionTab, "payload">, token: TokenResponse) {
   let webProxy = tab.payload?.webProxy;
   if (webProxy) {
     // A connect ticket is bound to its token and cannot be reused after exchange.
     if (!webProxy.ticketEndpoint) throw new Error("missing Web Proxy ticket endpoint");
     const { ticket } = await useWorkspaceConnectors().createKokoTicket({
       baseUrl: webProxy.ticketEndpoint,
-      tokenId: token.id
+      tokenId: token.id,
+      orgId: token.org_id
     });
     if (!ticket) throw new Error("Koko 未返回 Web Proxy connect ticket");
     webProxy = { ...webProxy, ticket };
@@ -70,6 +71,7 @@ export function useWorkspaceTabMenu() {
     splitWorkspace,
     canSplitWorkspace,
     markSessionConnecting,
+    markSessionDisconnected,
     placePane,
     setActivePane,
     updateSessionPayload
@@ -77,12 +79,15 @@ export function useWorkspaceTabMenu() {
 
   const reconnectViaConnection = (tab: WorkspaceSessionTab) => {
     const connectMethod = tab.payload?.connectMethod?.value;
+    const match = { tabId: tab.id, assetId: tab.assetId, protocol: tab.protocol, account: tab.account };
 
-    handleAssetConnection(tab.account, tab.assetId, tab.protocol, undefined, undefined, {
+    void handleAssetConnection(tab.account, tab.assetId, tab.protocol, undefined, undefined, {
       tabId: tab.id,
       asset: sessionToAsset(tab),
       orgId: tab.orgId,
-      connectMethod
+      connectMethod,
+      onSessionReady: (payload) => updateSessionPayload(match, payload),
+      onSessionError: (error) => markSessionDisconnected(tab.id, String(error))
     });
   };
 

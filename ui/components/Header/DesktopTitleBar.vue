@@ -266,6 +266,8 @@ const windowControls = computed(() => [
       </div>
     </div>
 
+    <slot name="trailing" />
+
     <div class="flex h-full shrink-0 items-stretch">
       <UButton
         v-for="button in windowControls"

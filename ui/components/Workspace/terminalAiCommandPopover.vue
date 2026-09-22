@@ -6,6 +6,7 @@ import { AgentHttpError } from "#koko/composables/agent/agentClient";
 import { getKokoTerminalAiSession, isKokoTerminalAiAvailable } from "#koko/composables/terminal/useTerminalAiSessions";
 import { terminalAiPanelDomain } from "~/components/RightPanel/ai/domains/terminal/adapter";
 import { renderAiMarkdown } from "~/components/RightPanel/ai/presentation";
+import { AI_PANEL_RESIZE_HANDLES } from "~/components/RightPanel/aiPanelResizeHandles";
 import WorkspaceTerminalTaskCard from "~/components/RightPanel/workspace/WorkspaceTerminalTask.vue";
 import { useTerminalAiHudLayout } from "~/composables/useTerminalAiHudLayout";
 import { useTerminalAiTour } from "~/composables/useTerminalAiTour";
@@ -21,7 +22,11 @@ import {
   workspaceAssistantTerminalTargets
 } from "~/composables/useWorkspaceAssistantSession";
 import { resolveWorkspaceTerminalTarget } from "~/composables/useWorkspaceTerminalTasks";
-import { isTerminalAiCommandShortcut, terminalAiLiveTurn } from "~/utils/terminalAiCommand";
+import {
+  isTerminalAiApprovalShortcut,
+  isTerminalAiCommandShortcut,
+  terminalAiLiveTurn
+} from "~/utils/terminalAiCommand";
 
 const props = defineProps<{ pane: WorkspacePane }>();
 const { t } = useI18n();
@@ -45,7 +50,8 @@ const draft = computed({
   }
 });
 const shortcutLabel = computed(() => (isMacOS.value ? "⌘K" : "Ctrl K"));
-const historyShortcutLabel = computed(() => (isMacOS.value ? "⌘⇧K" : "Ctrl⇧K"));
+const historyShortcutLabel = computed(() => (isMacOS.value ? "⌘ ⇧ K" : "Ctrl ⇧ K"));
+const approvalShortcutLabel = computed(() => (isMacOS.value ? "⌘ ↵" : "Ctrl ↵"));
 const shortcutHint = computed(() => t("TerminalAi.ShortcutHint", { shortcut: shortcutLabel.value }));
 const sendLabel = computed(() => (submitting.value ? t("TerminalAi.Sending") : t("TerminalAi.Send")));
 const assistantBusy = computed(() => Boolean(scopeId.value && isWorkspaceAssistantBusy(scopeId.value)));
@@ -58,6 +64,7 @@ const livePrompt = computed(() => liveTurn.value.lastUser || submittedPrompt.val
 const visibleApprovals = computed(() =>
   liveTurn.value.pendingApprovals.filter((item) => !decidedApprovals.has(item.id))
 );
+const quickApproval = computed(() => (visibleApprovals.value.length === 1 ? visibleApprovals.value[0] : null));
 const activeTerminalTasks = computed(() => assistantSession.value?.terminalTasks.filter((task) => task.active) || []);
 const live = computed(
   () =>
@@ -79,6 +86,7 @@ const {
   panelRef,
   dragHandleRef,
   dragging,
+  interacting,
   liveRef,
   activeXterm,
   hintVisible,
@@ -146,11 +154,13 @@ const tour = useTerminalAiTour({
   shortcut: () => shortcutLabel.value,
   isOpen: () => open.value,
   panelEl: () => panelRef.value,
-  openHud: show
+  openHud: show,
+  connectionBusy: () => Boolean(props.pane.connectionProgress),
+  root: () => getKokoTerminalElement(props.pane.id)
 });
 
 function close(restoreTerminalFocus = true) {
-  tour.destroy();
+  tour.stop();
   if (!open.value) return;
   open.value = false;
   error.value = "";
@@ -168,6 +178,18 @@ function handleWindowKeydown(event: KeyboardEvent) {
     event.preventDefault();
     event.stopPropagation();
     close();
+    return;
+  }
+  if (
+    open.value &&
+    quickApproval.value &&
+    !approving.value &&
+    !tour.tourActive.value &&
+    isTerminalAiApprovalShortcut(event, isMacOS.value)
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    void decideApproval(quickApproval.value.id, "approve");
     return;
   }
   if (tour.tourActive.value || !isTerminalAiCommandShortcut(event, isMacOS.value) || !available.value) return;
@@ -293,9 +315,10 @@ watch(sessionInfoReady, () => {
   void positionHint();
 });
 watch(
-  () => [props.pane.protocol, available.value, sessionInfoReady.value] as const,
-  () => {
-    void tour.startOnce();
+  () => [props.pane.protocol, available.value, sessionInfoReady.value, props.pane.connectionProgress] as const,
+  ([protocol, isAvailable, ready, connectionProgress]) => {
+    if (protocol === "ssh" && isAvailable && ready && !connectionProgress) tour.scheduleOnce();
+    else tour.cancelScheduled();
   },
   { immediate: true }
 );
@@ -320,9 +343,13 @@ watch(
 );
 watch(
   () => [open.value, composerLocked.value] as const,
-  ([isOpen, locked]) => {
-    if (isOpen && !locked) startPlaceholderType();
-    else stopPlaceholderType();
+  ([isOpen, locked], [wasOpen, wasLocked]) => {
+    if (isOpen && !locked) {
+      startPlaceholderType();
+      if (wasOpen && wasLocked) focusInput();
+    } else {
+      stopPlaceholderType();
+    }
   }
 );
 watch(open, async (isOpen) => {
@@ -375,156 +402,199 @@ onBeforeUnmount(() => {
         ref="panelRef"
         data-terminal-ai-tour="panel"
         :style="panelStyle"
-        class="terminal-ai-panel pointer-events-auto flex flex-col overflow-hidden bg-(--app-surface-overlay) text-(--app-fg)"
+        class="terminal-ai-panel pointer-events-auto"
+        :class="{ 'select-none': interacting }"
         role="dialog"
         :aria-label="t('TerminalAi.Title')"
       >
-        <header
-          ref="dragHandleRef"
-          role="group"
-          tabindex="0"
-          :title="t('RightPanel.AIMovePanel')"
-          :aria-label="t('RightPanel.AIMovePanel')"
-          class="terminal-ai-head grid shrink-0 touch-none select-none grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2.5 pt-2 outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
-          :class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
+        <UButton
+          v-for="handle in AI_PANEL_RESIZE_HANDLES"
+          :key="handle.edge"
+          :data-terminal-ai-resize="handle.edge"
+          :aria-label="t('RightPanel.AIResizePanel')"
+          :title="t('RightPanel.AIResizePanel')"
+          color="neutral"
+          variant="ghost"
+          class="group/terminal-ai-resize absolute z-20 touch-none justify-center rounded-none bg-transparent p-0 hover:bg-transparent active:bg-transparent focus-visible:ring-(--app-focus-ring)"
+          :class="handle.class"
         >
-          <div class="flex min-w-0 items-center gap-1.5 text-[11px] tracking-[0.02em] text-muted">
-            <span class="size-1.5 shrink-0 rounded-full bg-primary" />
-            <span class="truncate">{{ t("TerminalAi.Title") }}</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <UButton
-              data-terminal-ai-tour="history"
-              size="xs"
-              color="neutral"
-              variant="soft"
-              class="h-6 min-w-0 gap-1 px-1.5 text-[11px] font-normal"
-              @click="openAi()"
-            >
-              {{ t("TerminalAi.History") }}
-              <span class="text-[10px] text-muted">{{ historyShortcutLabel }}</span>
-            </UButton>
-            <UButton
-              data-terminal-ai-tour="close"
-              icon="i-lucide-x"
-              color="neutral"
-              variant="ghost"
-              size="xs"
-              class="size-6"
-              :aria-label="t('Common.Close')"
-              @click="close()"
-            />
-          </div>
-        </header>
-
+          <UIcon
+            v-if="handle.edge === 'se'"
+            name="i-lucide-grip"
+            class="pointer-events-none size-3 text-(--app-muted) opacity-0 group-hover/terminal-ai-resize:opacity-100 group-focus-visible/terminal-ai-resize:opacity-100"
+          />
+        </UButton>
         <div
-          v-if="live"
-          ref="liveRef"
-          class="terminal-ai-live space-y-2 px-2.5 pb-2.5 pt-2"
-          @scroll.passive="onLiveScroll"
+          class="flex h-full min-h-0 flex-col overflow-hidden rounded-[8px] bg-(--app-surface-overlay) text-(--app-fg)"
         >
-          <p v-if="livePrompt" class="rounded-lg bg-[var(--app-selected-soft)] px-2.5 py-1.5 text-xs leading-5">
-            {{ livePrompt }}
-          </p>
+          <header
+            ref="dragHandleRef"
+            role="group"
+            tabindex="0"
+            :title="t('RightPanel.AIMovePanel')"
+            :aria-label="t('RightPanel.AIMovePanel')"
+            class="terminal-ai-head grid shrink-0 touch-none select-none grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2.5 py-2 outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
+            :class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
+          >
+            <div class="flex min-w-0 items-center gap-1.5 text-[11px] tracking-[0.02em] text-muted">
+              <span class="size-1.5 shrink-0 rounded-full bg-primary" />
+              <span class="truncate">{{ t("TerminalAi.Title") }}</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <UTooltip :text="t('koko.fileManagement.featureTour')">
+                <UButton
+                  icon="i-lucide-circle-help"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  class="size-6"
+                  :aria-label="t('koko.fileManagement.featureTour')"
+                  @click="void tour.start()"
+                />
+              </UTooltip>
+              <UButton
+                data-terminal-ai-tour="history"
+                size="xs"
+                color="neutral"
+                variant="soft"
+                class="h-6 min-w-0 gap-1 px-1.5 text-[11px] font-normal"
+                @click="openAi()"
+              >
+                {{ t("TerminalAi.History") }}
+                <span class="text-[10px] text-muted">{{ historyShortcutLabel }}</span>
+              </UButton>
+              <UButton
+                data-terminal-ai-tour="close"
+                icon="i-lucide-x"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                class="size-6"
+                :aria-label="t('Common.Close')"
+                @click="close()"
+              />
+            </div>
+          </header>
+
           <div
-            v-if="liveTurn.lastAssistant"
-            class="terminal-ai-markdown text-xs leading-5"
-            v-html="renderAiMarkdown(liveTurn.lastAssistant)"
-          />
-          <WorkspaceTerminalTaskCard
-            v-for="task in activeTerminalTasks"
-            :key="task.id"
-            :task="task"
-            @action="terminalAction(task.id, $event)"
-          />
-          <UAlert
-            v-for="approval in visibleApprovals"
-            :key="approval.id"
-            :color="approvalColor"
-            variant="subtle"
-            icon="i-lucide-shield-alert"
-            :title="t('RightPanel.WorkspaceAssistantApprovalTitle')"
+            v-if="live"
+            ref="liveRef"
+            class="terminal-ai-live space-y-2 px-2.5 pb-2.5 pt-2"
+            @scroll.passive="onLiveScroll"
           >
-            <template #description>
-              <div class="mt-2 space-y-2 text-xs">
-                <p class="font-medium">{{ approval.command || approval.toolName }}</p>
-                <div class="flex justify-end gap-2">
-                  <UButton
-                    size="xs"
-                    color="neutral"
-                    variant="ghost"
-                    :disabled="approving"
-                    :label="t('RightPanel.AIReject')"
-                    @click="decideApproval(approval.id, 'reject')"
-                  />
-                  <UButton
-                    size="xs"
-                    :color="approvalColor"
-                    :loading="approving"
-                    :label="t('RightPanel.AIApprove')"
-                    @click="decideApproval(approval.id, 'approve')"
-                  />
+            <p v-if="livePrompt" class="rounded-lg bg-(--app-selected-soft) px-2.5 py-1.5 text-xs leading-5">
+              {{ livePrompt }}
+            </p>
+            <div
+              v-if="liveTurn.lastAssistant"
+              class="terminal-ai-markdown text-xs leading-5"
+              v-html="renderAiMarkdown(liveTurn.lastAssistant)"
+            />
+            <WorkspaceTerminalTaskCard
+              v-for="task in activeTerminalTasks"
+              :key="task.id"
+              :task="task"
+              @action="terminalAction(task.id, $event)"
+            />
+            <UAlert
+              v-for="approval in visibleApprovals"
+              :key="approval.id"
+              :color="approvalColor"
+              variant="subtle"
+              icon="i-lucide-shield-alert"
+              :title="t('RightPanel.WorkspaceAssistantApprovalTitle')"
+            >
+              <template #description>
+                <div class="mt-2 space-y-2 text-xs">
+                  <p class="font-medium">{{ approval.command || approval.toolName }}</p>
+                  <div class="flex justify-end gap-2">
+                    <UButton
+                      size="xs"
+                      color="neutral"
+                      variant="ghost"
+                      :disabled="approving"
+                      :label="t('RightPanel.AIReject')"
+                      @click="decideApproval(approval.id, 'reject')"
+                    />
+                    <UButton
+                      size="xs"
+                      :color="approvalColor"
+                      :loading="approving"
+                      @click="decideApproval(approval.id, 'approve')"
+                    >
+                      {{ t("RightPanel.AIApprove") }}
+                      <span v-if="quickApproval?.id === approval.id" class="text-[11px] font-normal opacity-80">
+                        {{ approvalShortcutLabel }}
+                      </span>
+                    </UButton>
+                  </div>
                 </div>
-              </div>
-            </template>
-          </UAlert>
-          <UAlert
-            v-if="assistantSession?.errorText || assistantSession?.errorCode"
-            color="error"
-            variant="subtle"
-            icon="i-lucide-circle-alert"
-            :title="assistantSession.errorText || assistantSession.errorCode"
-          />
-          <div v-if="assistantBusy && !liveTurn.waitingApproval" class="flex items-center gap-2 text-xs text-muted">
-            <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
-            {{ t("RightPanel.AIResponding") }}
+              </template>
+            </UAlert>
+            <UAlert
+              v-if="assistantSession?.errorText || assistantSession?.errorCode"
+              color="error"
+              variant="subtle"
+              icon="i-lucide-circle-alert"
+              :title="assistantSession.errorText || assistantSession.errorCode"
+            />
+            <div v-if="assistantBusy && !liveTurn.waitingApproval" class="flex items-center gap-2 text-xs text-muted">
+              <!-- An active task card already shows its own "running" spinner; avoid duplicating it here. -->
+              <template v-if="!activeTerminalTasks.length">
+                <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
+                {{ t("RightPanel.AIResponding") }}
+              </template>
+              <UButton
+                size="xs"
+                color="error"
+                variant="soft"
+                class="ml-auto"
+                :label="t('RightPanel.AIInterrupt')"
+                @click="interruptWorkspaceAssistant(scopeId)"
+              />
+            </div>
+          </div>
+
+          <div
+            v-if="!composerLocked"
+            class="terminal-ai-composer mx-2.5 mb-2.5 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 px-2.5 py-2"
+            :class="live ? 'mt-1' : 'mt-2'"
+          >
+            <UTextarea
+              ref="inputRef"
+              v-model="draft"
+              :aria-label="t('TerminalAi.PromptLabel')"
+              :placeholder="typedPlaceholder"
+              name="terminal-ai-instruction"
+              autocomplete="off"
+              :spellcheck="false"
+              :rows="2"
+              :disabled="submitting"
+              variant="none"
+              class="terminal-ai-prompt min-w-0"
+              :ui="{
+                base: 'min-h-14 resize-y overflow-y-auto rounded-none px-0 pb-0 pt-1 text-xs leading-5 ring-0 focus-visible:ring-0'
+              }"
+              @keydown="handleInputKeydown"
+            />
             <UButton
               size="xs"
-              color="neutral"
-              variant="ghost"
-              :label="t('RightPanel.AIInterrupt')"
-              @click="interruptWorkspaceAssistant(scopeId)"
-            />
+              class="terminal-ai-button inline-flex h-6 min-w-0 items-center gap-1 px-2"
+              :loading="submitting"
+              :disabled="!draft.trim()"
+              @click="submit"
+            >
+              <span class="mt-0.5">
+                {{ sendLabel }}
+              </span>
+              <span class="text-[10px] font-normal mt-0.75 opacity-80">↵</span>
+            </UButton>
           </div>
-        </div>
 
-        <div
-          v-if="!composerLocked"
-          class="terminal-ai-composer mx-2.5 mb-2.5 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 px-2.5 py-2"
-          :class="live ? 'mt-1' : 'mt-2'"
-        >
-          <UTextarea
-            ref="inputRef"
-            v-model="draft"
-            :aria-label="t('TerminalAi.PromptLabel')"
-            :placeholder="typedPlaceholder"
-            name="terminal-ai-instruction"
-            autocomplete="off"
-            :spellcheck="false"
-            :rows="2"
-            :disabled="submitting"
-            variant="none"
-            class="terminal-ai-prompt min-w-0"
-            :ui="{
-              base: 'min-h-14 resize-y overflow-y-auto rounded-none px-0 pb-0 pt-1 text-xs leading-5 ring-0 focus-visible:ring-0'
-            }"
-            @keydown="handleInputKeydown"
-          />
-          <UButton
-            size="xs"
-            class="terminal-ai-button inline-flex h-6 min-w-0 items-center gap-1 px-2"
-            :loading="submitting"
-            :disabled="!draft.trim()"
-            @click="submit"
-          >
-            {{ sendLabel }}
-            <span class="text-[10px] font-normal opacity-80">↵</span>
-          </UButton>
-        </div>
-
-        <div v-if="error" class="flex items-center justify-between gap-2 px-2.5 pb-2">
-          <p aria-live="polite" class="terminal-ai-error min-w-0 text-xs leading-5">{{ error }}</p>
-          <UButton size="xs" color="neutral" variant="ghost" :label="t('TerminalAi.ViewDetails')" @click="openAi()" />
+          <div v-if="error" class="flex items-center justify-between gap-2 px-2.5 pb-2">
+            <p aria-live="polite" class="terminal-ai-error min-w-0 text-xs leading-5">{{ error }}</p>
+            <UButton size="xs" color="neutral" variant="ghost" :label="t('TerminalAi.ViewDetails')" @click="openAi()" />
+          </div>
         </div>
       </section>
     </Transition>

@@ -3,10 +3,12 @@ import type {
   FileTransferConflictPolicy,
   FileTransferEndpointRef
 } from "@jumpserver/connectors-core";
+import { joinTransferPath } from "#koko/composables/sftp/file-manager/selectors";
 
 export interface SftpDistributionEntry {
   name: string;
   size: string | number;
+  relativeDir?: string;
 }
 
 export interface SftpDistributionTarget {
@@ -54,9 +56,10 @@ export function buildSftpDistributionGroups(input: SftpDistributionInput): SftpD
           source: {
             name: entry.name,
             size: entry.size,
-            path: `${sourcePath}/${entry.name}`.replace(/\/+/g, "/")
+            path: joinTransferPath(sourcePath, entry.relativeDir || "", entry.name),
+            ...(entry.relativeDir ? { relativeDir: entry.relativeDir } : {})
           },
-          destinationPath,
+          destinationPath: joinTransferPath(destinationPath, entry.relativeDir || ""),
           conflictPolicy: input.conflictPolicy
         }))
       };

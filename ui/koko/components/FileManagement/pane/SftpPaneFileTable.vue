@@ -251,8 +251,8 @@ onUnmounted(() => {
               <button
                 type="button"
                 class="flex min-w-0 w-full items-center gap-2 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--app-focus-ring)"
-                :class="draggable && !entry.is_dir && entry.name !== '..' ? 'cursor-grab active:cursor-grabbing' : ''"
-                :draggable="draggable && !entry.is_dir && entry.name !== '..'"
+                :class="draggable && entry.name !== '..' ? 'cursor-grab active:cursor-grabbing' : ''"
+                :draggable="draggable && entry.name !== '..'"
                 @dblclick.stop="entry.is_dir && emit('open', entry)"
                 @dragstart="emit('dragStart', $event, entry)"
               >

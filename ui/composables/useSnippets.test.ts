@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import bottomPanels from "~/components/SideBar/bottomPanels.vue?raw";
+import snippetComposable from "~/composables/useSnippets.ts?raw";
 import {
   isTerminalSnippetModule,
   normalizeSnippetVariableDefinitions,
@@ -100,5 +102,18 @@ describe("snippet variables", () => {
         select_default_value: "prod"
       }
     ]);
+  });
+});
+
+describe("snippet deletion", () => {
+  it("confirms before deleting and removes the deleted script from local state", () => {
+    expect(bottomPanels).toContain(':items="snippetActionItems(snippet)"');
+    expect(bottomPanels).toContain('@click.stop="copySnippet(snippet)"');
+    expect(bottomPanels).toContain("content: 'min-w-24'");
+    expect(bottomPanels).toContain("opacity-40");
+    expect(bottomPanels).toContain("onSelect: () => openDeleteSnippet(snippet)");
+    expect(bottomPanels).toContain(":description=\"t('Snippets.DeleteConfirm'");
+    expect(snippetComposable).toContain("await deleteCommandSnippet(id)");
+    expect(snippetComposable).toContain("snippets.value = snippets.value.filter");
   });
 });

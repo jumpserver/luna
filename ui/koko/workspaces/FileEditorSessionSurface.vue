@@ -11,6 +11,15 @@ const { t } = useI18n();
 const tab = toRef(props, "tab");
 const editor = ref<{ requestClose: () => Promise<boolean> } | null>(null);
 const host = useKokoHostAdapter();
+function handleConnectionChange(connected: boolean) {
+  if (!connected) return;
+  host.markSessionConnected(tab.value.id);
+}
+
+function handleConnectionFailure(reason: string) {
+  host.markSessionDisconnected(tab.value.id, reason);
+}
+
 const { context, error, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab, {
   protocol: "sftp"
 });
@@ -41,6 +50,12 @@ onBeforeUnmount(() => unregisterCloseGuard?.());
     :error="error"
     :loading-text="t('koko.workspace.preparingFileEditor')"
   >
-    <KokoSftpIde ref="editor" :sftp-token="tokenId" :workspace-key="editorScopeKey" />
+    <KokoSftpIde
+      ref="editor"
+      :sftp-token="tokenId"
+      :workspace-key="editorScopeKey"
+      @connection-change="handleConnectionChange"
+      @connection-failure="handleConnectionFailure"
+    />
   </BaseWorkspaceShell>
 </template>

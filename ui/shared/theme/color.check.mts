@@ -53,4 +53,9 @@ for (const preset of [...LIGHT_THEME_PRESETS, ...DARK_THEME_PRESETS]) {
   assert.ok(contrastRatio(preset.accent, foreground) >= 4.5, `${preset.id} checkbox foreground has sufficient contrast`);
 }
 
+const lunaSwatches = DARK_THEME_PRESETS.flatMap((preset) =>
+  preset.family === "luna" ? [preset.baseColor || preset.accent] : []
+);
+assert.equal(new Set(lunaSwatches).size, lunaSwatches.length, "Luna theme swatches must be distinct");
+
 console.log("color.check: ok");

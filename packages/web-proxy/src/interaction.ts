@@ -103,7 +103,7 @@ globalThis.__jmsVerification = {
     if (shouldSubmit) return this.submit() ? 'submitted' : 'waiting';
     // ponytail: without a success selector, infer completion from the login form
     // staying gone for 500 ms. Sites retaining it need an explicit success selector.
-    if (document.readyState !== 'complete' || visible(findElement(selectors.password)) || visible(findElement(selectors.submit))) {
+    if (document.readyState !== 'complete' || visible(findElement(selectors.username)) || visible(findElement(selectors.password)) || visible(findElement(selectors.submit))) {
       loginSettledAt = 0;
       return 'waiting';
     }

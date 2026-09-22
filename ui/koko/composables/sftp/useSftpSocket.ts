@@ -5,7 +5,7 @@ import type { SftpIncomingMessage, SftpMcpMessage, SftpSocketFailure, SftpWireMe
 import { resolveWsUrl } from "@jumpserver/connectors-core";
 
 import { getCurrentInstance, onUnmounted, ref, shallowRef } from "vue";
-import { createSftpMessageId } from "./core/codec";
+import { createSftpMessageId, encodeSftpBinaryFrame, parseSftpBinaryFrame } from "./core/codec";
 import {
   isSftpMcpMessageType,
   parseSftpIncomingMessage,
@@ -69,10 +69,55 @@ export function useSftpSocket(): SftpSocketClient {
     for (const listener of failureListeners) listener(nextFailure);
   }
 
+  function deliverMessage(message: SftpIncomingMessage) {
+    if (message.type === SftpMessageType.Ping) {
+      try {
+        sendPong(createSftpMessageId());
+      } catch {
+        emitFailure({ code: SftpSocketFailureCode.SendFailed, message: SftpSocketFailureCode.SendFailed });
+      }
+      return;
+    }
+    if (
+      message.type === SftpMessageType.Close ||
+      message.type === SftpMessageType.Closed ||
+      message.type === SftpMessageType.Error
+    ) {
+      connected.value = false;
+    }
+    if (isSftpMcpMessageType(message.type)) {
+      const mcpMessage = message as SftpMcpMessage;
+      for (const listener of mcpListeners) listener(mcpMessage);
+      return;
+    }
+    for (const listener of messageListeners) listener(message);
+    if (
+      message.type === SftpMessageType.Close ||
+      message.type === SftpMessageType.Closed ||
+      message.type === SftpMessageType.Error
+    ) {
+      close();
+    }
+  }
+
   function send(message: SftpWireMessage) {
     const target = socket.value;
     if (!target || target.readyState !== SOCKET_OPEN) {
       throw new Error(SftpSocketFailureCode.SendFailed);
+    }
+    if (message.raw instanceof Uint8Array) {
+      target.send(
+        encodeSftpBinaryFrame({
+          id: message.id,
+          type: message.type,
+          cmd: "cmd" in message ? message.cmd : undefined,
+          data: message.data,
+          err: message.err,
+          error_code: message.error_code,
+          raw: message.raw
+        })
+      );
+      return;
     }
     target.send(JSON.stringify(message));
   }
@@ -100,6 +145,7 @@ export function useSftpSocket(): SftpSocketClient {
     failure.value = null;
     const currentGeneration = generation;
     const target = new WebSocket(resolveWsUrl(context.component, "sftp", context), [SftpWebSocketProtocol.Koko]);
+    target.binaryType = "arraybuffer";
     socket.value = target;
 
     const isCurrent = () => generation === currentGeneration && socket.value === target;
@@ -117,6 +163,19 @@ export function useSftpSocket(): SftpSocketClient {
     target.onmessage = (event) => {
       if (!isCurrent()) return;
       armIdleWatchdog();
+      if (event.data instanceof ArrayBuffer) {
+        const frame = parseSftpBinaryFrame(new Uint8Array(event.data));
+        const message = frame ? parseSftpIncomingMessage({ ...frame, raw: frame.raw }) : null;
+        if (!message) {
+          emitFailure({
+            code: SftpSocketFailureCode.MalformedMessage,
+            message: SftpSocketFailureCode.MalformedMessage
+          });
+          return;
+        }
+        deliverMessage(message);
+        return;
+      }
       let raw: unknown;
       try {
         raw = JSON.parse(String(event.data));
@@ -130,34 +189,7 @@ export function useSftpSocket(): SftpSocketClient {
         emitFailure({ code: SftpSocketFailureCode.MalformedMessage, message: SftpSocketFailureCode.MalformedMessage });
         return;
       }
-      if (message.type === SftpMessageType.Ping) {
-        try {
-          sendPong(createSftpMessageId());
-        } catch {
-          emitFailure({ code: SftpSocketFailureCode.SendFailed, message: SftpSocketFailureCode.SendFailed });
-        }
-        return;
-      }
-      if (
-        message.type === SftpMessageType.Close ||
-        message.type === SftpMessageType.Closed ||
-        message.type === SftpMessageType.Error
-      ) {
-        connected.value = false;
-      }
-      if (isSftpMcpMessageType(message.type)) {
-        const mcpMessage = message as SftpMcpMessage;
-        for (const listener of mcpListeners) listener(mcpMessage);
-        return;
-      }
-      for (const listener of messageListeners) listener(message);
-      if (
-        message.type === SftpMessageType.Close ||
-        message.type === SftpMessageType.Closed ||
-        message.type === SftpMessageType.Error
-      ) {
-        close();
-      }
+      deliverMessage(message);
     };
     target.onerror = () => {
       if (!isCurrent()) return;

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { WebProxySurfaceProps } from "./surface";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRaw, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import { formatWebProxyMessage, webProxyMessages } from "./i18n";
 
 interface WebProxyState {
   label: string;
@@ -19,7 +21,7 @@ interface WebProxyState {
 
 interface WebProxyAutofillState {
   label: string;
-  status: "ready" | "filling" | "submitted" | "interactive" | "success" | "unavailable" | "error";
+  status: "ready" | "filling" | "filled" | "submitted" | "interactive" | "success" | "unavailable" | "error";
   message: string;
 }
 
@@ -33,6 +35,8 @@ interface WebProxyRecordingState {
 
 const props = defineProps<WebProxySurfaceProps>();
 const emit = defineEmits<{ reconnect: []; connected: []; fatal: [message: string] }>();
+const { t } = useI18n({ useScope: "local", messages: webProxyMessages, fallbackLocale: "en" });
+const formatMessage = (message: string) => formatWebProxyMessage(message, t);
 const desktopWebProxy = props.bridge;
 const toolbarRef = ref<HTMLElement>();
 const contentRef = ref<HTMLElement>();
@@ -43,7 +47,7 @@ const navigationError = ref("");
 const autofillStatus = ref<WebProxyAutofillState["status"]>();
 const autofillPending = ref(true);
 const autofillPreviewFrozen = ref(false);
-const autofillMessage = ref("正在建立安全登录会话");
+const autofillMessage = ref("WebProxy.EstablishingSecureLogin");
 const preview = ref("");
 const interactivePending = ref(false);
 const interactiveCanComplete = ref(false);
@@ -69,7 +73,9 @@ const verificationCursor = computed(() =>
     : "default"
 );
 const verificationWaitingMessage = computed(() =>
-  actionPending.value || autofillStatus.value === "submitted" ? "正在登录…" : "正在加载验证区域…"
+  actionPending.value || autofillStatus.value === "submitted"
+    ? t("WebProxy.LoggingIn")
+    : t("WebProxy.LoadingVerification")
 );
 const verificationInputRef = ref<HTMLTextAreaElement>();
 let unlistenInteraction: (() => void) | undefined;
@@ -92,8 +98,10 @@ let unlistenRecordingState: (() => void) | undefined;
 let overlayObserver: MutationObserver | undefined;
 
 // Nuxt UI teleports interactive overlays into the main webview, but desktop child
-// webviews always render above that DOM. Tooltips are intentionally excluded.
+// webviews always render above that DOM. Custom floating panels opt in with
+// data-native-view-overlay. Tooltips are intentionally excluded.
 const OVERLAY_SELECTOR = [
+  "[data-native-view-overlay]",
   '[role="menu"][data-state="open"]',
   '[role="dialog"][data-state="open"]',
   '[role="alertdialog"][data-state="open"]',
@@ -124,19 +132,21 @@ const safeMode = computed(() => request.value?.safeMode === true);
 const autofillLabel = computed(() => {
   switch (autofillStatus.value) {
     case "ready":
-      return "等待代填";
+      return t("WebProxy.AwaitingAutofill");
     case "filling":
-      return "安全登录中";
+      return t("WebProxy.SecureLogin");
+    case "filled":
+      return t("WebProxy.AutofillCompleted");
     case "interactive":
-      return "等待人工验证";
+      return t("WebProxy.AwaitingVerification");
     case "submitted":
-      return "已提交登录";
+      return t("WebProxy.LoginSubmitted");
     case "success":
-      return "登录成功";
+      return t("WebProxy.LoginSuccess");
     case "unavailable":
-      return "未配置代填";
+      return t("WebProxy.AutofillNotConfigured");
     case "error":
-      return "代填失败";
+      return t("WebProxy.AutofillFailed");
     default:
       return "";
   }
@@ -144,15 +154,15 @@ const autofillLabel = computed(() => {
 const recordingLabel = computed(() => {
   switch (recordingStatus.value) {
     case "recording":
-      return "录像中";
+      return t("WebProxy.Recording");
     case "paused":
-      return "录像暂停";
+      return t("WebProxy.RecordingPaused");
     case "finishing":
-      return "正在生成录像";
+      return t("WebProxy.RecordingFinishing");
     case "finished":
-      return "录像已生成";
+      return t("WebProxy.RecordingFinished");
     case "error":
-      return "录像失败";
+      return t("WebProxy.RecordingFailed");
     default:
       return "";
   }
@@ -160,26 +170,28 @@ const recordingLabel = computed(() => {
 const statusSummary = computed(() =>
   props.browsable
     ? error.value
-      ? "连接异常"
+      ? t("WebProxy.ConnectionError")
       : loading.value
-        ? "正在加载"
-        : "轻量浏览模式"
+        ? t("WebProxy.Loading")
+        : t("WebProxy.LightweightBrowsing")
     : [
         error.value
-          ? "连接异常"
+          ? t("WebProxy.ConnectionError")
           : !viewCreated.value || loading.value
-            ? "正在连接"
+            ? t("WebProxy.Connecting")
             : request.value?.proxyUrl
-              ? "已通过代理连接"
-              : "已连接",
-        autofillStatus.value === "unavailable" ? "账号代填未配置" : `账号代填：${autofillLabel.value || "等待状态"}`,
+              ? t("WebProxy.ConnectedThroughProxy")
+              : t("WebProxy.Connected"),
+        autofillStatus.value === "unavailable"
+          ? t("WebProxy.CredentialAutofillNotConfigured")
+          : t("WebProxy.AutofillStatus", { status: autofillLabel.value || t("WebProxy.AwaitingStatus") }),
         request.value?.recordingEnabled === false
           ? request.value?.proxyUrl
             ? request.value?.recordingSupported === false
               ? ""
-              : "录像未启用"
-            : "远程会话录像"
-          : recordingLabel.value || "录像准备中"
+              : t("WebProxy.RecordingDisabled")
+            : t("WebProxy.RemoteSessionRecording")
+          : recordingLabel.value || t("WebProxy.RecordingPreparing")
       ]
         .filter(Boolean)
         .join(" · ")
@@ -279,7 +291,7 @@ async function navigate() {
     target = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
     if (!target.hostname || target.username || target.password) throw new Error();
   } catch {
-    navigationError.value = "请输入有效的 HTTP/HTTPS 页面地址";
+    navigationError.value = "WebProxy.InvalidAddress";
     return;
   }
   navigationError.value = "";
@@ -288,7 +300,7 @@ async function navigate() {
     await desktopWebProxy.navigate(viewLabel, target.toString());
   } catch (cause) {
     loading.value = false;
-    navigationError.value = `无法打开页面：${String(cause instanceof Error ? cause.message : cause)}`;
+    navigationError.value = `WebProxy.OpenPageFailed: ${String(cause instanceof Error ? cause.message : cause)}`;
   }
 }
 
@@ -298,10 +310,10 @@ async function completeVerification() {
   verificationCompletionError.value = "";
   try {
     if (!(await desktopWebProxy.completeVerification(viewLabel))) {
-      verificationCompletionError.value = "暂时无法完成验证，请等待页面稳定后重试";
+      verificationCompletionError.value = "WebProxy.VerificationNotReady";
     }
   } catch {
-    verificationCompletionError.value = "完成验证失败，请重试";
+    verificationCompletionError.value = "WebProxy.VerificationFailed";
   } finally {
     actionPending.value = false;
   }
@@ -347,7 +359,7 @@ async function startRecording() {
     });
   } catch {
     recordingStatus.value = "error";
-    if (props.recordingRequired) emit("fatal", "录像启动失败，请重新连接");
+    if (props.recordingRequired) emit("fatal", t("WebProxy.RecordingStartFailedReconnect"));
   }
 }
 
@@ -461,12 +473,12 @@ watch([() => props.colorScheme, viewCreated], async ([colorScheme, created]) => 
 
 onMounted(async () => {
   if (!props.supported) {
-    error.value = "内置浏览器仅在桌面客户端中可用";
+    error.value = "WebProxy.DesktopOnly";
     loading.value = false;
     return;
   }
   if (!request.value) {
-    error.value = "Web Proxy 会话参数不完整";
+    error.value = "WebProxy.IncompleteSessionParameters";
     loading.value = false;
     return;
   }
@@ -502,7 +514,7 @@ onMounted(async () => {
   unlistenRecordingState = await desktopWebProxy.onRecordingState<WebProxyRecordingState>(({ payload }) => {
     if (payload.label !== viewLabel) return;
     recordingStatus.value = payload.status;
-    if (props.recordingRequired && payload.status === "error") emit("fatal", "录像中断，请重新连接");
+    if (props.recordingRequired && payload.status === "error") emit("fatal", t("WebProxy.RecordingInterrupted"));
   });
   if (disposed) {
     unlistenState?.();
@@ -584,7 +596,7 @@ defineExpose({ focus, close: closeView });
         variant="ghost"
         size="sm"
         :disabled="navigationDisabled"
-        aria-label="后退"
+        :aria-label="t('WebProxy.Back')"
         @click="history('back')"
       />
       <UButton
@@ -593,7 +605,7 @@ defineExpose({ focus, close: closeView });
         variant="ghost"
         size="sm"
         :disabled="navigationDisabled"
-        aria-label="前进"
+        :aria-label="t('WebProxy.Forward')"
         @click="history('forward')"
       />
       <UButton
@@ -603,7 +615,7 @@ defineExpose({ focus, close: closeView });
         size="sm"
         :loading="loading"
         :disabled="navigationDisabled"
-        aria-label="刷新"
+        :aria-label="t('WebProxy.Refresh')"
         @click="reload"
       />
       <form class="relative min-w-0 flex-1" @submit.prevent="navigate">
@@ -617,8 +629,8 @@ defineExpose({ focus, close: closeView });
           spellcheck="false"
           :disabled="navigationDisabled"
           :readonly="!props.browsable"
-          :aria-label="props.browsable ? '地址栏' : '地址栏只读'"
-          :title="props.browsable ? '输入地址并按 Enter 访问' : '当前不支持手动输入地址'"
+          :aria-label="props.browsable ? t('WebProxy.AddressBar') : t('WebProxy.AddressBarReadOnly')"
+          :title="props.browsable ? t('WebProxy.EnterAddressHint') : t('WebProxy.ManualAddressUnsupported')"
         />
         <div
           v-if="autofillPending && !error"
@@ -626,17 +638,21 @@ defineExpose({ focus, close: closeView });
           data-desktop-drag-region="false"
         >
           <UIcon name="i-lucide-loader-circle" class="size-4 shrink-0 animate-spin motion-reduce:animate-none" />
-          <span role="status" class="min-w-0 flex-1 truncate">{{ autofillMessage }}</span>
-          <span class="shrink-0 tabular-nums">已等待 {{ waitingSeconds }} 秒</span>
+          <span role="status" class="min-w-0 flex-1 truncate">{{ formatMessage(autofillMessage) }}</span>
+          <span class="shrink-0 tabular-nums">
+            {{ t("WebProxy.WaitedSeconds", { seconds: waitingSeconds }) }}
+          </span>
           <UButton
             v-if="interactiveCanComplete && !verificationCollapsed"
             size="xs"
             :loading="actionPending"
             @click="completeVerification"
           >
-            完成交互
+            {{ t("WebProxy.FinishInteraction") }}
           </UButton>
-          <UButton v-if="verificationCollapsed" size="xs" @click="resumeVerification">继续验证</UButton>
+          <UButton v-if="verificationCollapsed" size="xs" @click="resumeVerification">
+            {{ t("WebProxy.ResumeVerification") }}
+          </UButton>
           <UButton
             v-if="interactivePending && !verificationCollapsed"
             color="neutral"
@@ -645,7 +661,7 @@ defineExpose({ focus, close: closeView });
             :disabled="actionPending"
             @click="collapseVerification"
           >
-            返回
+            {{ t("WebProxy.Return") }}
           </UButton>
         </div>
       </form>
@@ -661,7 +677,9 @@ defineExpose({ focus, close: closeView });
           variant="ghost"
           size="sm"
           class="size-7 shrink-0 cursor-help justify-center"
-          :aria-label="`会话状态：${statusSummary}`"
+          data-testid="web-proxy-session-status"
+          :data-status="autofillStatus || 'pending'"
+          :aria-label="t('WebProxy.SessionStatus', { status: statusSummary })"
         />
       </UTooltip>
     </div>
@@ -671,7 +689,7 @@ defineExpose({ focus, close: closeView });
       role="alert"
       color="warning"
       variant="subtle"
-      :description="navigationError"
+      :description="formatMessage(navigationError)"
       :ui="{ root: 'rounded-none py-2', description: 'text-xs' }"
       class="shrink-0"
     />
@@ -701,17 +719,19 @@ defineExpose({ focus, close: closeView });
             class="size-7 text-muted"
             :class="{ 'animate-spin motion-reduce:animate-none': !error }"
           />
-          <p v-if="error" class="text-base font-medium">连接失败</p>
+          <p v-if="error" class="text-base font-medium">{{ t("WebProxy.ConnectionFailed") }}</p>
           <p
             :role="error ? 'alert' : 'status'"
             aria-live="polite"
             class="max-h-[40vh] w-full overflow-auto whitespace-pre-wrap [overflow-wrap:anywhere]"
             :class="error ? 'leading-6' : ''"
           >
-            {{ error || autofillMessage }}
+            {{ formatMessage(error || autofillMessage) }}
           </p>
-          <p v-if="!error" class="text-xs text-muted">已等待 {{ waitingSeconds }} 秒</p>
-          <p v-if="preview && !error" class="text-xs text-muted">安全登录期间显示页面预览</p>
+          <p v-if="!error" class="text-xs text-muted">
+            {{ t("WebProxy.WaitedSeconds", { seconds: waitingSeconds }) }}
+          </p>
+          <p v-if="preview && !error" class="text-xs text-muted">{{ t("WebProxy.SecureLoginPreview") }}</p>
           <div class="flex items-center gap-2">
             <UButton
               v-if="error && request && props.reconnectable"
@@ -719,7 +739,7 @@ defineExpose({ focus, close: closeView });
               :loading="actionPending"
               @click="reconnect"
             >
-              重新连接
+              {{ t("WebProxy.Reconnect") }}
             </UButton>
           </div>
         </div>
@@ -727,7 +747,7 @@ defineExpose({ focus, close: closeView });
 
       <div v-if="verificationCollapsed && !error" class="absolute inset-0 grid place-items-center p-6 text-center">
         <p class="rounded-lg border border-default bg-default px-4 py-3 text-sm text-muted" role="status">
-          验证区域已收起，点击“继续验证”可恢复操作。
+          {{ t("WebProxy.VerificationCollapsed") }}
         </p>
       </div>
       <div
@@ -735,7 +755,7 @@ defineExpose({ focus, close: closeView });
         class="absolute inset-0 flex min-h-0 flex-col items-center justify-center gap-3 p-4"
       >
         <p v-if="verificationCompletionError" class="shrink-0 text-xs text-error" role="alert">
-          {{ verificationCompletionError }}
+          {{ formatMessage(verificationCompletionError) }}
         </p>
         <img
           v-if="verificationFrame && !overlayOpen"
@@ -743,7 +763,7 @@ defineExpose({ focus, close: closeView });
           :src="verificationFrame.image"
           :width="verificationFrame.width"
           :height="verificationFrame.height"
-          alt="目标网站的人工验证区域"
+          :alt="t('WebProxy.VerificationArea')"
           draggable="false"
           class="min-h-0 max-w-full touch-none select-none object-contain"
           :style="{ cursor: verificationCursor }"
@@ -764,7 +784,7 @@ defineExpose({ focus, close: closeView });
         <textarea
           ref="verificationInputRef"
           class="sr-only"
-          :aria-label="verificationFrame?.focusLabel || '人工验证键盘输入，按 Tab 选择验证控件，按 Escape 退出输入'"
+          :aria-label="verificationFrame?.focusLabel || t('WebProxy.VerificationKeyboardHint')"
           autocomplete="off"
           autocapitalize="off"
           :spellcheck="false"
@@ -783,7 +803,7 @@ defineExpose({ focus, close: closeView });
           class="flex items-center gap-2 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-overlay)] px-3 py-2 text-xs text-[var(--app-muted)] shadow-[var(--theme-shadow-soft)]"
         >
           <UIcon name="i-lucide-panels-top-left" class="size-4" />
-          <span>Web 会话暂时置于后台</span>
+          <span>{{ t("WebProxy.SessionInBackground") }}</span>
         </div>
       </div>
     </div>

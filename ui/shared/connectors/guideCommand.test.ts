@@ -14,7 +14,7 @@ describe("connection guide client protocol", () => {
     expect(getGuideClientProtocol(protocol)).toBe("mysql");
   });
 
-  it.each(["mysql", "postgresql", "redis", "oracle", "sqlserver", "mongodb", "ssh", "vnc", "", "unknown"])(
+  it.each(["mysql", "postgresql", "redis", "oracle", "dameng", "sqlserver", "mongodb", "ssh", "vnc", "", "unknown"])(
     "preserves other protocols (%s)",
     (protocol) => {
       expect(getGuideClientProtocol(protocol)).toBe(protocol);
@@ -51,6 +51,9 @@ describe("connection guide CLI", () => {
     );
     expect(getGuideConnectCommand({ ...database, protocol: "postgresql", port: "5432" })).toBe(
       'psql "user=token-id password=s3cret host=gateway.example.com dbname=app port=5432"'
+    );
+    expect(getGuideConnectCommand({ ...database, protocol: "dameng", port: "5525" })).toBe(
+      "disql token-id/s3cret@gateway.example.com:5525"
     );
     expect(
       getGuideConnectCommand({

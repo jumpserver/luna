@@ -69,7 +69,6 @@ interface TreeRow {
 }
 
 const props = defineProps<{ tab: KokoWorkspaceTab }>();
-const emit = defineEmits<{ reconnect: [] }>();
 const RECENT_CONTAINER_LIMIT = 10;
 const { t } = useI18n();
 const kubernetesIconSrc = withBase("/icons/kubernetes.svg", useRuntimeConfig().app.baseURL);
@@ -77,7 +76,7 @@ const toast = useToast();
 const hostAdapter = useKokoHostAdapter();
 const tab = toRef(props, "tab");
 const { context, error: sessionError, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab);
-const { markSessionConnected, markSessionFailed } = useWorkspaceTabs();
+const { markSessionConnected, markSessionDisconnected } = useWorkspaceTabs();
 const colorMode = useColorMode();
 
 const tree = ref<K8sNode[]>([]);
@@ -112,6 +111,7 @@ let resizeHandle: HTMLElement | null = null;
 let resizePointerId: number | null = null;
 const terminalSocket = useKubernetesTerminalSocket();
 
+const connectingOverlay = computed(() => Boolean((tab.value as { connectionProgress?: string }).connectionProgress));
 const activeTab = computed(() => terminalTabs.value.find((item) => item.id === activeTabId.value) || null);
 const assetName = computed(() => tab.value.assetName || t("koko.kubernetes.name"));
 const resize = useDebounceFn(() => {
@@ -504,11 +504,6 @@ function refreshTree() {
   if (terminalSocket.connected.value) terminalSocket.requestTree();
 }
 
-function retryConnection() {
-  terminalSocket.close();
-  emit("reconnect");
-}
-
 function syncTerminalTheme() {
   for (const { terminal } of terminals.values()) {
     applyXtermTheme(terminal, appTerminalTheme());
@@ -586,12 +581,7 @@ const stopFailureListener = terminalSocket.onFailure((failure) => {
 
   disconnectTerminalAiSessions();
   connectionError.value = t("koko.kubernetes.websocketConnectionFailed");
-  markSessionFailed({
-    tabId: props.tab.id,
-    assetId: props.tab.assetId,
-    protocol: props.tab.protocol || "",
-    account: props.tab.account || ""
-  });
+  markSessionDisconnected(props.tab.id, connectionError.value);
 });
 
 watch(tokenId, () => void prepareSession(), { immediate: true });
@@ -652,8 +642,6 @@ onUnmounted(() => {
     :loading="loading"
     :error="sessionError || connectionError"
     :loading-text="t('koko.kubernetes.preparingConnection')"
-    :retry-label="t('koko.actions.retry')"
-    @retry="retryConnection"
   >
     <div
       class="relative flex h-full min-h-0 bg-(--app-main-bg) text-(--app-fg)"
@@ -831,7 +819,10 @@ onUnmounted(() => {
             class="kubernetes-terminal absolute inset-0"
             :class="activeTabId === item.id ? '' : 'pointer-events-none invisible'"
           />
-          <div v-if="!terminalTabs.length" class="grid h-full place-items-center p-6 text-sm text-(--app-muted)">
+          <div
+            v-if="!terminalTabs.length && !connectingOverlay"
+            class="grid h-full place-items-center p-6 text-sm text-(--app-muted)"
+          >
             <div class="flex flex-col items-center gap-3">
               <UIcon name="i-lucide-square-terminal" class="size-10" />
               <span>{{ t("koko.kubernetes.empty") }}</span>

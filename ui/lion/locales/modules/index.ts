@@ -1,4 +1,5 @@
 import en from "./en.json";
+import fr from "./fr.json";
 import es from "./es.json";
 import ja from "./ja.json";
 import ko from "./ko.json";
@@ -9,6 +10,7 @@ import zh from "./zh.json";
 import zh_Hant from "./zh_Hant.json";
 
 export const message = {
+  fr: { ...fr },
   zh: {
     ...zh
   },

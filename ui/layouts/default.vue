@@ -34,7 +34,7 @@ const {
   statusBarVisible
 } = useSettingManager();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
-const { open: aiPanelOpen, setOpen: setAiPanelOpen, openAi } = useAiPanel();
+const { open: aiPanelOpen, setOpen: setAiPanelOpen, toggleAi } = useAiPanel();
 const localePath = useLocalePath();
 const { open: settingsOpen, activeSection: activeSettingsSection, openSettings, closeSettings } = useSettingsWindow();
 const { recentConnections } = useRecentConnections();
@@ -136,7 +136,7 @@ const handleAiHistoryShortcut = (event: KeyboardEvent) => {
   if (!isTerminalAiHistoryShortcut(event, isMacOS.value)) return;
   event.preventDefault();
   event.stopPropagation();
-  openAi();
+  toggleAi();
 };
 
 const handleChromeShortcut = (event: KeyboardEvent) => {
@@ -317,10 +317,7 @@ onMounted(() => {
   registerSessionDisposer(() => {});
   registerKokoTicketProvider(async (request) => {
     if (isDesktopRuntime()) {
-      return desktopInvoke("create_koko_connect_ticket", {
-        baseUrl: request.baseUrl,
-        tokenId: request.tokenId
-      });
+      return desktopInvoke("create_koko_connect_ticket", { ...request });
     }
 
     const url = `${request.baseUrl.replace(/\/+$/, "")}/koko/api/connect-ticket/`;
@@ -387,7 +384,7 @@ onBeforeUnmount(() => {
               type="button"
               :aria-label="$t('TabMenu.ExitFocusMode')"
               :title="$t('TabMenu.ExitFocusModeHint')"
-              class="group absolute right-3 top-1/2 z-50 flex h-12 w-1.5 -translate-y-1/2 items-center justify-end overflow-hidden rounded-l-lg border border-r-0 border-(--app-border) bg-[var(--app-surface-panel)] text-[var(--app-muted)] opacity-45 shadow-sm transition-[width,opacity] hover:w-32 hover:opacity-100 focus-visible:w-32 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              class="group absolute right-3 top-1/2 z-50 flex h-12 w-1.5 -translate-y-1/2 items-center justify-end overflow-hidden rounded-l-lg border border-r-0 border-(--app-border) bg-(--app-surface-panel) text-(--app-muted) opacity-45 shadow-sm transition-[width,opacity] hover:w-32 hover:opacity-100 focus-visible:w-32 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               @click.stop="exitFocusMode"
             >
               <span
@@ -437,7 +434,7 @@ onBeforeUnmount(() => {
         aria-modal="true"
         :aria-label="$t('Common.Settings')"
         data-state="open"
-        class="fixed inset-0 z-[200]"
+        class="fixed inset-0 z-200"
       >
         <SettingsShell mode="inline" :active-section="activeSettingsSection" class="h-full">
           <Transition name="settings-section" mode="out-in">

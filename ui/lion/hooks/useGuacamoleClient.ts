@@ -1,6 +1,6 @@
+import type { SessionShareOnlineUser } from "@jumpserver/connectors-core";
 import type { MaybeRefOrGetter } from "vue";
 import type { LionUploadCustomRequestOptions } from "@/lion/types/upload";
-import type { LionOnlineUser } from "@/lion/workspaces/useLionWorkspaceSessionRegistry";
 import type { GuacamoleConnectionErrorDetails } from "@/lion/utils/status";
 import { useDebounceFn } from "@vueuse/core";
 
@@ -198,7 +198,7 @@ export function useGuacamoleClient(
   const hasClipboardPermission = ref(false);
   const currentUser = ref<any>({});
   const shareId = ref<string | null>(null);
-  const onlineUsersMap = ref<Record<string, LionOnlineUser>>({});
+  const onlineUsersMap = ref<Record<string, SessionShareOnlineUser>>({});
   const warningIntervalId = ref<number | null>(null);
   const loading = ref(true);
   const scale = ref(1);
@@ -289,8 +289,10 @@ export function useGuacamoleClient(
     const client = new Guacamole.Client(tunnel);
 
     tunnel.onerror = () => {
+      if (generation !== connectGeneration) return;
       loading.value = false;
-      message.error(t("WebSocketError"));
+      connectionError.value = t("WebSocketError");
+      if (connectStatus.value !== 5) connectStatus.value = 5;
     };
     tunnel.onuuid = (uuid: string) => {
       tunnel.uuid = uuid;
@@ -780,7 +782,7 @@ export function useGuacamoleClient(
       sessionId: typeof sessionObject.value?.id === "string" ? sessionObject.value.id : undefined
     };
     connectionError.value = msg;
-    message.error(msg, { duration: 10000 });
+    if (connectStatus.value !== 5) connectStatus.value = 5;
   }
 
   function clientStateChanged(state: any) {

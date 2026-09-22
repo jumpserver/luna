@@ -1,10 +1,16 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { chenPath } from "./client";
 
+const location = vi.hoisted(() => ({ origin: "https://jumpserver.example" }));
+vi.mock("~/utils/runtime", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/runtime")>()),
+  pageLocation: () => ({ origin: location.origin })
+}));
+
 afterEach(() => vi.unstubAllGlobals());
 
 it.each(["http://127.0.0.1:3000", "jms-app://app"])("uses Electron's session proxy from %s", (origin) => {
-  vi.stubGlobal("window", { location: { origin } });
+  location.origin = origin;
   vi.stubGlobal("isElectronRuntime", () => true);
   const url = new URL(chenPath("/api/auth", "https://jumpserver.example"));
   expect(url.protocol).toBe("jms-app:");
@@ -14,7 +20,7 @@ it.each(["http://127.0.0.1:3000", "jms-app://app"])("uses Electron's session pro
 });
 
 it("preserves web routing for same-origin and remote connectors", () => {
-  vi.stubGlobal("window", { location: { origin: "https://jumpserver.example" } });
+  location.origin = "https://jumpserver.example";
   vi.stubGlobal("isElectronRuntime", () => false);
   vi.stubGlobal("withWebSitePrefix", (path: string) => `/site${path}`);
   expect(chenPath("/api/auth")).toBe("/site/chen/api/auth");

@@ -10,7 +10,11 @@ export function pushTransferRateSample(
   bytes: number,
   now = Date.now()
 ): TransferRateSample[] {
-  return [...samples, { t: now, bytes }].filter((sample) => now - sample.t <= sampleWindowMs).slice(-12);
+  const tail = samples.at(-1);
+  const next = tail && now <= tail.t ? [...samples.slice(0, -1), { t: now, bytes }] : [...samples, { t: now, bytes }];
+  const recent = next.filter((sample) => now - sample.t <= sampleWindowMs);
+  if (recent.length >= 2) return recent.slice(-12);
+  return next.slice(-2);
 }
 
 export function bytesPerSecond(samples: TransferRateSample[] | null | undefined): number | null {

@@ -395,6 +395,48 @@ for (const [platform, plugin] of [
   });
 }
 
+test("selects the MariaDB application when Magnus exposes its shared MySQL protocol", async () => {
+  const dbeaver = {
+    name: "dbeaver",
+    protocol: ["mariadb", "mysql"],
+    is_set: true,
+    enabled_protocols: ["mysql"],
+    match_first: ["mysql"],
+    launch_type: "args",
+    arg_format: "{protocol}"
+  };
+  const terminal = {
+    name: "terminal",
+    protocol: ["mariadb", "mysql"],
+    is_set: true,
+    enabled_protocols: ["mariadb"],
+    match_first: ["mariadb"],
+    launch_type: "args",
+    arg_format: "{protocol}"
+  };
+  const launcher = new LocalApplicationLauncher(
+    { isPackaged: false },
+    projectRoot,
+    { getConfig: async () => ({ databases: [dbeaver, terminal] }) },
+    null
+  );
+  let selected;
+  launcher.launchExecutable = async (application, args) => {
+    selected = application;
+    assert.equal(args, "mysql");
+  };
+  const payload = {
+    protocol: "mysql",
+    name: "MariaDB",
+    endpoint: { host: "gateway.example.com", port: 5525 },
+    token: { id: "token-id", value: "secret", protocol: "mariadb" }
+  };
+
+  await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+
+  assert.equal(selected, terminal);
+});
+
 test("normalizes duplicate and hidden system font families", () => {
   assert.deepEqual(systemFontInternals.normalizeFamilies(["Menlo", " .Hidden ", "Menlo", "SF Mono", ""]), [
     "Menlo",
