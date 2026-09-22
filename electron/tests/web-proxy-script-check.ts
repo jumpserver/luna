@@ -331,7 +331,7 @@ async function loginCase(crossOrigin: boolean) {
       { steps: timeoutSteps, accessToken: "" },
       { active: () => true, state: () => {}, interaction: () => {}, frame: () => {} }
     );
-    await assert.rejects(timeout.run(), /超时/);
+    await assert.rejects(timeout.run(), /WebProxy\.ScriptStepTimeout/);
     const cancelled = new WebProxyScript(
       view.webContents,
       { steps: timeoutSteps, accessToken: "" },

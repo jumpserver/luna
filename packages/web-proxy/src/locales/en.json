@@ -7,6 +7,8 @@
     "SecureLogin": "Secure login in progress",
     "AwaitingVerification": "Waiting for manual verification",
     "LoginSubmitted": "Login submitted",
+    "AutofillCompleted": "Autofill completed",
+    "CredentialsFilledManualSubmit": "Autofill completed; continue on the page to sign in",
     "LoginSuccess": "Login successful",
     "AutofillNotConfigured": "Autofill not configured",
     "AutofillFailed": "Autofill failed",

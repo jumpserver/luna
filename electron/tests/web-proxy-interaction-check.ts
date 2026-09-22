@@ -41,8 +41,66 @@ slider.onpointerup = () => { start = null; slider.style.cursor='grab'; };
 </script></body></html>`;
 
 export async function run() {
+  await runOptionalSelectorChecks();
   for (const success of ["id=success", ""]) {
     for (const challenge of ["initial", "after-failed", "none"]) await runCase(success, challenge);
+  }
+}
+
+async function runOptionalSelectorChecks() {
+  const host = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true } });
+  const evaluate = (code: string) => host.webContents.executeJavaScript(code, true);
+  try {
+    for (let mask = 0; mask < 12; mask++) {
+      const selectors = {
+        username: mask & 1 ? "id=username" : "",
+        password: mask & 2 ? "id=password" : "",
+        submit: mask & 4 ? "id=submit" : "",
+        interactive: mask & 8 ? "id=mfa" : "",
+        success: mask & 8 ? "id=success" : ""
+      };
+      const html = `<!doctype html><form>
+        ${selectors.username ? '<input id="username">' : ""}
+        ${selectors.password ? '<input id="password" type="password">' : ""}
+        <input id="untouched" value="user-entered"><button id="${selectors.submit ? "submit" : "manual"}">Login</button>
+        </form><section id="mfa">Verification</section><script>
+        globalThis.submissions = [];
+        document.querySelector('form').onsubmit = event => {
+          event.preventDefault();
+          submissions.push({ username: document.querySelector('#username')?.value || '', password: document.querySelector('#password')?.value || '' });
+        };</script>`;
+      await host.loadURL(`data:text/html,${encodeURIComponent(html)}`);
+      assert.equal(await evaluate(buildAutofillProbeScript(selectors)), true, `optional selectors, mask ${mask}`);
+      assert.equal(
+        await evaluate(buildAutofillScript(selectors, { username: "managed-user", password: "managed-secret" })),
+        true
+      );
+      assert.equal(await evaluate("document.querySelector('#untouched').value"), "user-entered");
+      assert.equal(await evaluate("document.querySelector('[data-jms-secure-login]') === null"), true);
+      if (!selectors.submit) {
+        assert.equal(await evaluate("submissions.length"), 0, "fill-only must not submit implicitly");
+        await evaluate("document.querySelector('#manual').click()");
+      }
+      assert.deepEqual(await evaluate("submissions"), [
+        {
+          username: selectors.username ? "managed-user" : "",
+          password: selectors.password ? "managed-secret" : ""
+        }
+      ]);
+    }
+    const guarded = (code: string) => host.webContents.executeJavaScriptInIsolatedWorld(INTERACTION_WORLD, [{ code }]);
+    await guarded(
+      buildInteractionGuardScript({ username: "id=username", submit: "id=submit", interactive: "id=missing" }, "null")
+    );
+    assert.equal(await guarded("globalThis.__jmsVerification.advanceLogin(false)"), "waiting");
+    await delay(600);
+    assert.equal(
+      await guarded("globalThis.__jmsVerification.advanceLogin(false)"),
+      "waiting",
+      "a username-only form must not be mistaken for a completed login"
+    );
+  } finally {
+    host.destroy();
   }
 }
 
