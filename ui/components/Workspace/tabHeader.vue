@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
-import type { WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
+import type { WorkspaceSessionTab, WorkspaceTabGroup } from "~/composables/useWorkspaceTabs";
+import { useResizeObserver } from "@vueuse/core";
+import { sessionGroupSaveError } from "~/composables/useSavedSessionGroups";
 
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
@@ -9,6 +11,10 @@ import { resolveAssetIconFromFields } from "~/utils/assetIcon";
 const props = withDefaults(defineProps<{ standalone?: boolean }>(), { standalone: false });
 
 const { t } = useI18n();
+const toast = useToast();
+watch(sessionGroupSaveError, (error) => {
+  if (error) toast.add({ title: t(error), color: "error" });
+});
 const appBaseURL = useRuntimeConfig().app.baseURL;
 const { isMacOS } = usePlatform();
 const { open: settingsOpen } = useSettingsWindow();
@@ -18,6 +24,13 @@ const showAddSession = computed(() => !props.standalone && (loggedIn.value || is
 const {
   activeTabId,
   tabs,
+  tabGroups,
+  createTabGroup,
+  groupTabs,
+  moveTabToGroup,
+  renameTabGroup,
+  toggleTabGroup,
+  ungroupTabs,
   activateAdjacentSession,
   canSplitWorkspace,
   draggedTabId,
@@ -42,8 +55,14 @@ const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextMenuTab = ref<WorkspaceSessionTab | null>(null);
 const contextMenuTabIndex = ref(-1);
+const contextMenuGroupId = ref("");
+const dragOverGroupId = ref("");
+const groupEditorOpen = ref(false);
+const groupEditorId = ref("");
+const groupEditorTabId = ref("");
+const groupName = ref("");
 const dragOverTabId = ref("");
-const dragOverTabPlacement = ref<"before" | "after">("before");
+const dragOverTabPlacement = ref<"before" | "after" | "group">("before");
 const renameModalOpen = ref(false);
 const renameTabId = ref("");
 const renameValue = ref("");
@@ -51,9 +70,37 @@ const showShortcutHints = ref(false);
 
 const TAB_MAX_WIDTH = 176;
 const TAB_GAP = 4;
+const groupElements = ref<HTMLElement[]>([]);
+const groupLabelsWidth = ref(0);
+function updateGroupLabelsWidth() {
+  groupLabelsWidth.value = groupElements.value.reduce((sum, element) => sum + element.getBoundingClientRect().width, 0);
+}
+watchPostEffect(updateGroupLabelsWidth);
+useResizeObserver(groupElements, () => requestAnimationFrame(updateGroupLabelsWidth));
+type TabStripEntry =
+  | { kind: "group"; group: WorkspaceTabGroup; count: number; active: boolean }
+  | { kind: "tab"; tab: WorkspaceSessionTab; index: number };
+const tabStripEntries = computed<TabStripEntry[]>(() => {
+  const entries: TabStripEntry[] = [];
+  tabs.value.forEach((tab, index) => {
+    const group = props.standalone ? undefined : tab.group;
+    if (group && tabs.value[index - 1]?.group?.id !== group.id) {
+      const members = tabs.value.filter((item) => item.group?.id === group.id);
+      entries.push({
+        kind: "group",
+        group,
+        count: members.length,
+        active: members.some((item) => item.id === activeTabId.value)
+      });
+    }
+    if (!group?.collapsed) entries.push({ kind: "tab", tab, index });
+  });
+  return entries;
+});
 const tabStripIdealWidth = computed(() => {
-  const count = tabs.value.length;
-  return `${count * TAB_MAX_WIDTH + Math.max(0, count - 1) * TAB_GAP}px`;
+  const entries = tabStripEntries.value;
+  const width = groupLabelsWidth.value + entries.filter((entry) => entry.kind === "tab").length * TAB_MAX_WIDTH;
+  return `${width + Math.max(0, entries.length - 1) * TAB_GAP}px`;
 });
 
 const { activeTab } = useWorkspaceTabs();
@@ -77,6 +124,10 @@ function tabIcon(tab: WorkspaceSessionTab) {
 
 function tabDisplayTitle(tab: WorkspaceSessionTab) {
   return tab.title || tab.assetName || t("Common.Untitled");
+}
+
+function groupDisplayTitle(group: WorkspaceTabGroup) {
+  return group.title || t("TabMenu.TemporaryGroup");
 }
 
 function tabTooltip(tab: WorkspaceSessionTab) {
@@ -136,6 +187,31 @@ function hideContextMenu() {
   contextMenuVisible.value = false;
   contextMenuTab.value = null;
   contextMenuTabIndex.value = -1;
+  contextMenuGroupId.value = "";
+}
+
+function openGroupEditor(tabId = "", group?: WorkspaceTabGroup) {
+  hideContextMenu();
+  groupEditorTabId.value = tabId;
+  groupEditorId.value = group?.id || "";
+  groupName.value = group?.title || "";
+  groupEditorOpen.value = true;
+}
+
+function submitGroup() {
+  if (!groupName.value.trim()) return;
+  if (groupEditorId.value) renameTabGroup(groupEditorId.value, groupName.value);
+  else createTabGroup(groupEditorTabId.value, groupName.value);
+  groupEditorOpen.value = false;
+}
+
+function openGroupContextMenu(group: WorkspaceTabGroup, event: MouseEvent) {
+  hideContextMenu();
+  contextMenuGroupId.value = group.id;
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  contextMenuPosition.value =
+    event.type === "contextmenu" ? { x: event.clientX, y: event.clientY } : { x: rect.left, y: rect.bottom };
+  contextMenuVisible.value = true;
 }
 
 const closeTab = async (tab: WorkspaceSessionTab) => {
@@ -181,16 +257,20 @@ function handleTabDragEnd() {
   draggedTabId.value = "";
   dragOverTabId.value = "";
   dragOverTabPlacement.value = "before";
+  dragOverGroupId.value = "";
 }
 
 function handleTabDragOver(event: DragEvent, targetTabId: string) {
+  if (!draggedTabId.value || draggedTabId.value === targetTabId) return;
+  dragOverGroupId.value = "";
   const currentTarget = event.currentTarget as HTMLElement | null;
   if (!currentTarget) return;
 
   const rect = currentTarget.getBoundingClientRect();
-  const midpoint = rect.left + rect.width / 2;
+  const centerOffset = event.clientX - (rect.left + rect.width / 2);
   dragOverTabId.value = targetTabId;
-  dragOverTabPlacement.value = event.clientX >= midpoint ? "after" : "before";
+  // Reserve only the central 24 px for grouping so most of the tab still reorders.
+  dragOverTabPlacement.value = Math.abs(centerOffset) <= 12 ? "group" : centerOffset < 0 ? "before" : "after";
 }
 
 function handleTabDrop(targetTabId: string) {
@@ -198,15 +278,29 @@ function handleTabDrop(targetTabId: string) {
     dragOverTabId.value = "";
     return;
   }
-  reorderTabs(draggedTabId.value, targetTabId, dragOverTabPlacement.value);
+  if (dragOverTabPlacement.value === "group") groupTabs(draggedTabId.value, targetTabId);
+  else reorderTabs(draggedTabId.value, targetTabId, dragOverTabPlacement.value);
+  handleTabDragEnd();
+}
+
+function handleGroupDragOver(event: DragEvent, groupId: string) {
+  if (!draggedTabId.value) return;
+  event.preventDefault();
   dragOverTabId.value = "";
-  dragOverTabPlacement.value = "before";
+  dragOverGroupId.value = groupId;
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+}
+
+function handleGroupDrop(groupId: string) {
+  if (draggedTabId.value) moveTabToGroup(draggedTabId.value, groupId);
+  handleTabDragEnd();
 }
 
 function openContextMenu(tab: WorkspaceSessionTab, index: number, event: MouseEvent) {
   event.preventDefault();
   event.stopPropagation();
 
+  contextMenuGroupId.value = "";
   contextMenuTab.value = tab;
   contextMenuTabIndex.value = index;
   contextMenuPosition.value = { x: event.clientX, y: event.clientY };
@@ -214,6 +308,37 @@ function openContextMenu(tab: WorkspaceSessionTab, index: number, event: MouseEv
 }
 
 const contextMenuItems = computed<DropdownMenuItem[]>(() => {
+  const group = tabGroups.value.find((item) => item.id === contextMenuGroupId.value);
+  if (group)
+    return [
+      tabMenuItem(
+        {
+          label: t(group.collapsed ? "TabMenu.ExpandGroup" : "TabMenu.CollapseGroup"),
+          onSelect: () => {
+            toggleTabGroup(group.id);
+            hideContextMenu();
+          }
+        },
+        "i-lucide-fold-vertical"
+      ),
+      tabMenuItem(
+        {
+          label: t(group.saved ? "TabMenu.RenameGroup" : "TabMenu.NameAndSaveGroup"),
+          onSelect: () => openGroupEditor("", group)
+        },
+        "i-lucide-pencil"
+      ),
+      tabMenuItem(
+        {
+          label: t("TabMenu.Ungroup"),
+          onSelect: () => {
+            ungroupTabs(group.id);
+            hideContextMenu();
+          }
+        },
+        "i-lucide-ungroup"
+      )
+    ];
   const tab = contextMenuTab.value;
   const index = contextMenuTabIndex.value;
   if (!tab || index < 0) return [];
@@ -353,6 +478,38 @@ const contextMenuItems = computed<DropdownMenuItem[]>(() => {
     ),
     tabMenuItem(
       {
+        label: t("TabMenu.AddToGroup"),
+        children: [
+          { label: t("TabMenu.NewGroup"), icon: "i-lucide-plus", onSelect: () => openGroupEditor(tab.id) },
+          ...tabGroups.value.map((group) => ({
+            label: groupDisplayTitle(group),
+            icon: "i-lucide-group",
+            disabled: tab.group?.id === group.id,
+            onSelect: () => {
+              moveTabToGroup(tab.id, group.id);
+              hideContextMenu();
+            }
+          }))
+        ]
+      },
+      "i-lucide-group"
+    ),
+    ...(tab.group
+      ? [
+          tabMenuItem(
+            {
+              label: t("TabMenu.RemoveFromGroup"),
+              onSelect: () => {
+                moveTabToGroup(tab.id);
+                hideContextMenu();
+              }
+            },
+            "i-lucide-ungroup"
+          )
+        ]
+      : []),
+    tabMenuItem(
+      {
         label: t("TabMenu.SplitVertically"),
         disabled: !canSplitVertically,
         onSelect: () => {
@@ -424,7 +581,7 @@ const tabMenuItems = computed(
   () =>
     [
       ...tabs.value.map((tab) => ({
-        label: tabDisplayTitle(tab),
+        label: tab.group ? `${groupDisplayTitle(tab.group)} · ${tabDisplayTitle(tab)}` : tabDisplayTitle(tab),
         type: "checkbox" as const,
         checked: activeTabId.value === tab.id,
         onSelect: () => selectTab(tab.id)
@@ -481,7 +638,9 @@ function scrollActiveTabIntoView(behavior: ScrollBehavior = "smooth") {
   const el = tabStripRef.value;
   if (!el || !activeTabId.value) return;
 
-  const activeButton = el.querySelector<HTMLElement>(`[data-tab-id="${activeTabId.value}"]`);
+  const activeButton = [...el.querySelectorAll<HTMLElement>("[data-tab-id], [data-group-active='true']")].find(
+    (button) => button.dataset.tabId === activeTabId.value || button.dataset.groupActive === "true"
+  );
   if (!activeButton) return;
 
   const viewportRect = el.getBoundingClientRect();
@@ -557,20 +716,26 @@ function scrollTabStrip(direction: "left" | "right") {
 
 let resizeObserver: ResizeObserver | null = null;
 
-onMounted(() => {
-  updateOverflow();
-  scrollActiveTabIntoView("auto");
-
-  if (!tabStripRef.value) return;
-
-  resizeObserver = new ResizeObserver(() => {
+watch(
+  tabStripRef,
+  (el, previous) => {
+    previous?.removeEventListener("scroll", updateOverflow);
+    resizeObserver?.disconnect();
     updateOverflow();
-  });
-  resizeObserver.observe(tabStripRef.value);
-  tabStripRef.value.addEventListener("scroll", updateOverflow, {
-    passive: true
-  });
-});
+    scrollActiveTabIntoView("auto");
+
+    if (!el) return;
+
+    resizeObserver = new ResizeObserver(() => {
+      updateOverflow();
+    });
+    resizeObserver.observe(el);
+    el.addEventListener("scroll", updateOverflow, {
+      passive: true
+    });
+  },
+  { flush: "post" }
+);
 
 useEventListener(window, "keydown", (event: KeyboardEvent) => {
   syncShortcutHintsVisibility(event);
@@ -665,74 +830,111 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
       :style="{ width: tabStripIdealWidth }"
     >
       <div ref="tabStripRef" class="workspace-tab-strip flex w-full min-w-0 items-center gap-1 overflow-x-auto">
-        <button
-          v-for="(tab, index) in tabs"
-          :key="tab.id"
-          :data-tab-id="tab.id"
-          :title="tabTooltip(tab)"
-          type="button"
-          :draggable="!props.standalone"
-          class="workspace-session-tab group relative flex h-7 min-w-24 max-w-44 basis-44 grow shrink items-center gap-1.5 rounded-md px-2 text-left leading-none transition-colors"
-          :class="[
-            activeTabId === tab.id ? 'workspace-session-tab-active' : 'text-[var(--app-muted)]',
-            draggedTabId === tab.id ? 'opacity-60' : ''
-          ]"
-          @click.stop="selectTab(tab.id)"
-          @contextmenu.prevent="openContextMenu(tab, index, $event)"
-          @dragstart="handleTabDragStart($event, tab.id)"
-          @dragend="handleTabDragEnd"
-          @dragenter.prevent="handleTabDragOver($event, tab.id)"
-          @dragover.prevent="handleTabDragOver($event, tab.id)"
-          @dragleave.prevent="dragOverTabId = dragOverTabId === tab.id ? '' : dragOverTabId"
-          @drop.prevent="handleTabDrop(tab.id)"
-        >
-          <span
-            v-if="dragOverTabId === tab.id"
-            class="pointer-events-none absolute inset-y-1 z-10 w-0.5 rounded-full bg-primary"
-            :class="dragOverTabPlacement === 'after' ? '-right-[3px]' : '-left-[3px]'"
-          />
-          <span class="relative grid size-3.5 shrink-0 place-items-center">
-            <span
-              v-if="shouldShowShortcutHint(index)"
-              class="workspace-session-tab-shortcut pointer-events-none absolute -top-2 left-1/2 z-10 -translate-x-1/2 rounded px-1 py-0.5 font-ui-mono text-[9px] font-medium leading-none"
+        <template v-for="entry in tabStripEntries" :key="entry.kind === 'group' ? entry.group.id : entry.tab.id">
+          <div
+            v-if="entry.kind === 'group'"
+            ref="groupElements"
+            :data-group-id="entry.group.id"
+            :data-group-active="entry.active && entry.group.collapsed"
+            class="workspace-tab-group relative flex h-7 w-max min-w-0 max-w-44 shrink-0 items-center rounded-md"
+            :class="{
+              'workspace-tab-group-drop': dragOverGroupId === entry.group.id
+            }"
+            @contextmenu.prevent.stop="openGroupContextMenu(entry.group, $event)"
+            @dragenter="handleGroupDragOver($event, entry.group.id)"
+            @dragover="handleGroupDragOver($event, entry.group.id)"
+            @dragleave="dragOverGroupId = ''"
+            @drop.prevent.stop="handleGroupDrop(entry.group.id)"
+          >
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              class="workspace-tab-group-label h-6 min-w-0 flex-1 gap-1 px-2 text-[11px]"
+              :aria-expanded="!entry.group.collapsed"
+              :aria-label="`${t(entry.group.collapsed ? 'TabMenu.ExpandGroup' : 'TabMenu.CollapseGroup')}: ${groupDisplayTitle(entry.group)}`"
+              :title="groupDisplayTitle(entry.group)"
+              @click.stop="toggleTabGroup(entry.group.id)"
             >
-              {{ shortcutHintLabel(index) }}
-            </span>
-            <AppAssetIcon
-              :src="tabIcon(tab).src"
-              :fallback="tabIcon(tab).fallback"
-              :class="tab.status === 'failed' ? 'opacity-40' : ''"
-            />
+              <span class="min-w-0 flex-1 truncate">{{ groupDisplayTitle(entry.group) }}</span>
+              <span class="shrink-0 tabular-nums">{{ entry.count }}</span>
+            </UButton>
+          </div>
+          <button
+            v-else
+            :data-tab-id="entry.tab.id"
+            :title="tabTooltip(entry.tab)"
+            :data-group-end="entry.tab.group?.id !== tabs[entry.index + 1]?.group?.id"
+            type="button"
+            :draggable="!props.standalone"
+            class="workspace-session-tab group relative flex h-7 min-w-24 max-w-44 basis-44 grow shrink items-center gap-1.5 rounded-md px-2 text-left leading-none transition-colors"
+            :class="[
+              activeTabId === entry.tab.id ? 'workspace-session-tab-active' : 'text-[var(--app-muted)]',
+              draggedTabId === entry.tab.id ? 'opacity-60' : '',
+              entry.tab.group && !props.standalone ? 'workspace-session-tab-grouped' : '',
+              dragOverTabId === entry.tab.id && dragOverTabPlacement === 'group' ? 'workspace-tab-group-drop' : ''
+            ]"
+            @click.stop="selectTab(entry.tab.id)"
+            @contextmenu.prevent="openContextMenu(entry.tab, entry.index, $event)"
+            @dragstart="handleTabDragStart($event, entry.tab.id)"
+            @dragend="handleTabDragEnd"
+            @dragenter.prevent="handleTabDragOver($event, entry.tab.id)"
+            @dragover.prevent="handleTabDragOver($event, entry.tab.id)"
+            @dragleave.prevent="dragOverTabId = dragOverTabId === entry.tab.id ? '' : dragOverTabId"
+            @drop.prevent="handleTabDrop(entry.tab.id)"
+          >
             <span
-              class="workspace-session-tab-status absolute -bottom-px -right-px size-1.5 rounded-full"
-              :class="
-                tab.status === 'connected'
-                  ? 'bg-blue-500'
-                  : tab.status === 'ready'
-                    ? 'bg-blue-400'
-                    : tab.status === 'failed'
-                      ? 'bg-red-500'
-                      : 'bg-gray-400 dark:bg-gray-500'
-              "
+              v-if="dragOverTabId === entry.tab.id && dragOverTabPlacement !== 'group'"
+              class="pointer-events-none absolute inset-y-1 z-10 w-0.5 rounded-full bg-primary"
+              :class="dragOverTabPlacement === 'after' ? '-right-[3px]' : '-left-[3px]'"
             />
-          </span>
-          <span
-            class="min-w-0 flex-1 truncate font-ui-mono text-[11px] tracking-[0.01em]"
-            :class="activeTabId === tab.id ? 'font-medium' : ''"
-          >
-            {{ tabDisplayTitle(tab) }}
-          </span>
-          <span
-            class="workspace-session-tab-close flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-70 transition-colors hover:bg-elevated hover:text-foreground hover:opacity-100"
-            @click.stop="void closeTab(tab)"
-          >
-            <UIcon name="i-lucide-x" class="size-2.5" />
-          </span>
-          <span
-            v-if="activeTabId !== tab.id && index < tabs.length - 1 && tabs[index + 1]?.id !== activeTabId"
-            class="workspace-session-tab-divider pointer-events-none absolute top-1/2 -right-[5px] hidden h-4 -translate-y-1/2 border-r"
-          />
-        </button>
+            <span class="relative grid size-3.5 shrink-0 place-items-center">
+              <span
+                v-if="shouldShowShortcutHint(entry.index)"
+                class="workspace-session-tab-shortcut pointer-events-none absolute -top-2 left-1/2 z-10 -translate-x-1/2 rounded px-1 py-0.5 font-ui-mono text-[9px] font-medium leading-none"
+              >
+                {{ shortcutHintLabel(entry.index) }}
+              </span>
+              <AppAssetIcon
+                :src="tabIcon(entry.tab).src"
+                :fallback="tabIcon(entry.tab).fallback"
+                :class="entry.tab.status === 'failed' ? 'opacity-40' : ''"
+              />
+              <span
+                class="workspace-session-tab-status absolute -bottom-px -right-px size-1.5 rounded-full"
+                :class="
+                  entry.tab.status === 'connected'
+                    ? 'bg-blue-500'
+                    : entry.tab.status === 'ready'
+                      ? 'bg-blue-400'
+                      : entry.tab.status === 'failed'
+                        ? 'bg-red-500'
+                        : 'bg-gray-400 dark:bg-gray-500'
+                "
+              />
+            </span>
+            <span
+              class="min-w-0 flex-1 truncate font-ui-mono text-[11px] tracking-[0.01em]"
+              :class="activeTabId === entry.tab.id ? 'font-medium' : ''"
+            >
+              {{ tabDisplayTitle(entry.tab) }}
+            </span>
+            <span
+              class="workspace-session-tab-close flex size-3.5 shrink-0 items-center justify-center rounded-md opacity-70 transition-colors hover:bg-elevated hover:text-foreground hover:opacity-100"
+              @click.stop="void closeTab(entry.tab)"
+            >
+              <UIcon name="i-lucide-x" class="size-2.5" />
+            </span>
+            <span
+              v-if="
+                activeTabId !== entry.tab.id &&
+                entry.index < tabs.length - 1 &&
+                tabs[entry.index + 1]?.id !== activeTabId
+              "
+              class="workspace-session-tab-divider pointer-events-none absolute top-1/2 -right-[5px] hidden h-4 -translate-y-1/2 border-r"
+            />
+          </button>
+        </template>
       </div>
     </div>
 
@@ -793,6 +995,28 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
         }"
       />
     </UDropdownMenu>
+
+    <UModal v-model:open="groupEditorOpen" :title="t(groupEditorId ? 'TabMenu.RenameGroup' : 'TabMenu.NewGroup')">
+      <template #body>
+        <p class="mb-3 text-sm text-muted">{{ t("SavedGroups.NameHint") }}</p>
+        <UInput
+          v-model="groupName"
+          :aria-label="t('TabMenu.GroupName')"
+          :placeholder="t('TabMenu.GroupName')"
+          :maxlength="80"
+          autofocus
+          @keydown.enter.prevent="submitGroup"
+        />
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" @click="groupEditorOpen = false">
+            {{ t("Transcode.Cancel") }}
+          </UButton>
+          <UButton :disabled="!groupName.trim()" @click="submitGroup">{{ t("Transcode.Confirm") }}</UButton>
+        </div>
+      </template>
+    </UModal>
 
     <UModal :open="renameModalOpen" :title="t('TabMenu.RenameTitle')" @update:open="updateRenameModal">
       <template #body>
@@ -862,7 +1086,38 @@ watch(activeTabId, () => nextTick(scrollActiveTabIntoView));
   border-color: color-mix(in srgb, var(--app-border) 75%, var(--app-fg) 25%);
 }
 
+.workspace-tab-group-label {
+  color: var(--workspace-tab-group-foreground);
+  background: var(--workspace-tab-group-accent);
+}
+
+.workspace-tab-group-drop {
+  background: var(--app-hover-strong);
+  outline: 2px solid var(--workspace-tab-group-accent);
+  outline-offset: -2px;
+}
+
+.workspace-tab-group::after,
+.workspace-session-tab-grouped::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  border-bottom: 1px solid var(--workspace-tab-group-accent);
+  pointer-events: none;
+}
+
+.workspace-session-tab-grouped::after {
+  left: -4px;
+}
+
+.workspace-session-tab-grouped[data-group-end="true"]::after {
+  border-bottom-right-radius: 1px;
+}
+
 .workspace-tab-strip {
+  padding-block: 4px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }

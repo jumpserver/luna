@@ -6,6 +6,12 @@ import type { AssetItem, PermedAccount, PermedProtocol, TokenResponse } from "~/
 import { createSharedComposable, useFullscreen } from "@vueuse/core";
 import { closeAclScope } from "~/composables/useAclDialog";
 import { useRecentConnections } from "~/composables/useRecentConnections";
+import type { SavedSessionGroup } from "~/composables/useSavedSessionGroups";
+import {
+  getSessionGroupStorageKey,
+  persistSessionGroup,
+  snapshotSessionPane
+} from "~/composables/useSavedSessionGroups";
 import { useSettingManager } from "~/composables/useSettingManager";
 import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
 import { createWorkspaceConnectionProgress } from "~/composables/workspaceConnectionProgress";
@@ -68,8 +74,20 @@ export interface WorkspacePane extends WorkspaceSurfaceSession {
   mode: WorkspacePaneMode;
 }
 
+export interface WorkspaceTabGroup {
+  id: string;
+  title: string;
+  collapsed: boolean;
+  saved?: boolean;
+  storageKey?: string;
+  restoring?: boolean;
+  savePending?: boolean;
+}
+
 export interface WorkspaceSessionTab extends WorkspaceSurfaceSession {
   title?: string;
+  savedTabId?: string;
+  group?: WorkspaceTabGroup;
   layoutMode: WorkspacePaneLayoutMode;
   threePaneSpanAxis?: "columns" | "rows";
   panes: WorkspacePane[];
@@ -87,6 +105,32 @@ export interface ScriptEditorInput {
 
 const tabs = ref<WorkspaceSessionTab[]>([]);
 const activeTabId = ref("");
+// Groups belong to their tabs, so closing or merging the last member removes the group too.
+const tabGroups = computed(() => [
+  ...new Map(tabs.value.flatMap((tab) => (tab.group ? [[tab.group.id, tab.group] as const] : []))).values()
+]);
+// Refresh connection choices, but closing tabs/panes must not erase the reusable group.
+watch(
+  () =>
+    tabs.value.flatMap((tab) => tab.panes.map((pane) => [pane.id, JSON.stringify(snapshotSessionPane(pane))] as const)),
+  (next, previous) => {
+    const before = new Map(previous);
+    const changed = new Set(next.filter(([id, value]) => before.has(id) && before.get(id) !== value).map(([id]) => id));
+    for (const group of tabGroups.value) {
+      if (
+        !group.restoring &&
+        tabs.value.some((tab) => tab.group?.id === group.id && tab.panes.some((pane) => changed.has(pane.id)))
+      )
+        persistSessionGroup(group, tabs.value);
+    }
+  },
+  { flush: "sync" }
+);
+const expandTabGroup = (tabId: string) => {
+  const group = tabs.value.find((tab) => tab.id === tabId)?.group;
+  if (group) group.collapsed = false;
+};
+watch(activeTabId, expandTabGroup, { flush: "sync" });
 const activePaneId = ref("");
 const draggedTabId = ref("");
 const focusModeTabId = ref("");
@@ -726,12 +770,163 @@ export const useWorkspaceTabs = () => {
     const targetIndex = tabs.value.findIndex((tab) => tab.id === targetTabId);
     if (sourceIndex === -1 || targetIndex === -1) return false;
 
+    const targetGroup = tabs.value[targetIndex]!.group;
     const [sourceTab] = tabs.value.splice(sourceIndex, 1);
+    const previousGroup = sourceTab!.group;
     const normalizedTargetIndex = tabs.value.findIndex((tab) => tab.id === targetTabId);
     if (normalizedTargetIndex === -1) return false;
     const insertIndex = placement === "after" ? normalizedTargetIndex + 1 : normalizedTargetIndex;
+    sourceTab!.group = targetGroup;
     tabs.value.splice(insertIndex, 0, sourceTab!);
+    if (sourceTabId === activeTabId.value) expandTabGroup(sourceTabId);
+    if (previousGroup) persistSessionGroup(previousGroup, tabs.value);
+    if (targetGroup) persistSessionGroup(targetGroup, tabs.value);
     return true;
+  };
+
+  const moveTabToGroup = (tabId: string, groupId?: string) => {
+    const tab = tabs.value.find((item) => item.id === tabId);
+    const group = groupId ? tabGroups.value.find((item) => item.id === groupId) : undefined;
+    if (!tab || (groupId && !group)) return false;
+    if (tab.group?.id === groupId) return true;
+
+    // Keep every group contiguous, including when removing one of its middle tabs.
+    const anchorGroupId = groupId || tab.group?.id;
+    const previousGroup = tab.group;
+    const sourceIndex = tabs.value.indexOf(tab);
+    tabs.value.splice(sourceIndex, 1);
+    const lastMember = tabs.value.findLastIndex((item) => item.group?.id === anchorGroupId);
+    tab.group = group;
+    tabs.value.splice(lastMember < 0 ? sourceIndex : lastMember + 1, 0, tab);
+    if (tabId === activeTabId.value) expandTabGroup(tabId);
+    if (previousGroup) persistSessionGroup(previousGroup, tabs.value);
+    if (group) persistSessionGroup(group, tabs.value);
+    return true;
+  };
+
+  const createTabGroup = (tabId: string, title: string, temporary = false) => {
+    const tab = tabs.value.find((item) => item.id === tabId);
+    if (!tab || (!temporary && !title.trim())) return null;
+    moveTabToGroup(tabId);
+    tab.group = {
+      id: createTabId("group", "tabs", ""),
+      title: title.trim(),
+      collapsed: false,
+      saved: !temporary,
+      storageKey: temporary ? undefined : getSessionGroupStorageKey()
+    };
+    persistSessionGroup(tab.group, tabs.value);
+    return tab.group;
+  };
+
+  const groupTabs = (sourceTabId: string, targetTabId: string) => {
+    if (sourceTabId === targetTabId || !tabs.value.some((tab) => tab.id === sourceTabId)) return false;
+    const target = tabs.value.find((tab) => tab.id === targetTabId);
+    if (!target) return false;
+    const group = target.group || createTabGroup(targetTabId, "", true);
+    return group ? moveTabToGroup(sourceTabId, group.id) : false;
+  };
+
+  const renameTabGroup = (groupId: string, title: string) => {
+    const group = tabGroups.value.find((item) => item.id === groupId);
+    if (!group || !title.trim()) return false;
+    if (group.storageKey && group.storageKey !== getSessionGroupStorageKey()) return false;
+    group.title = title.trim();
+    group.saved = true;
+    group.storageKey = getSessionGroupStorageKey();
+    persistSessionGroup(group, tabs.value);
+    return true;
+  };
+
+  const toggleTabGroup = (groupId: string) => {
+    const group = tabGroups.value.find((item) => item.id === groupId);
+    if (group) group.collapsed = !group.collapsed;
+  };
+
+  const ungroupTabs = (groupId: string) => {
+    const group = tabGroups.value.find((item) => item.id === groupId);
+    for (const tab of tabs.value) {
+      if (tab.group?.id === groupId) tab.group = undefined;
+    }
+    if (group) persistSessionGroup(group, tabs.value);
+  };
+
+  const restoreSessionGroup = (saved: SavedSessionGroup, group: WorkspaceTabGroup) => {
+    const existing = tabs.value.filter(
+      (tab) => tab.group?.id === group.id && tab.group.storageKey === group.storageKey
+    );
+    const missing = saved.tabs.filter((item) => !existing.some((tab) => (tab.savedTabId || tab.id) === item.id));
+    if (!missing.length) return [];
+    const restored = missing.map((item) => {
+      const id = createTabId("group", "session", "");
+      const panes = item.panes.map((source) => {
+        const paneId = createPaneId(id);
+        if (source.kind === "empty") return createPane(paneId, {}, "empty");
+        if (source.kind === "local-shell")
+          return createPane(
+            paneId,
+            { assetId: "local", assetName: source.name, protocol: "local-shell", status: "ready" },
+            isDesktopRuntime() ? "session" : "empty"
+          );
+        if (source.kind === "script")
+          return createPane(
+            paneId,
+            {
+              assetId: source.id,
+              assetName: item.title || "",
+              protocol: "script-editor",
+              status: "connecting",
+              payload: { scriptId: source.id }
+            },
+            "empty"
+          );
+        const asset = source.asset;
+        return createPane(
+          paneId,
+          {
+            assetId: asset.id,
+            assetName: asset.name,
+            address: asset.address,
+            orgId: asset.org_id,
+            assetType: asset.type,
+            assetPlatform: asset.platform,
+            assetCategory: asset.category,
+            protocol: source.connection.protocol,
+            account: source.connection.username,
+            connectMethod: source.connection.connectMethod,
+            status: "connecting",
+            connectionProgress: "token",
+            setupAsset: { ...asset, savedConnection: source.connection }
+          },
+          "session"
+        );
+      });
+      const tab: WorkspaceSessionTab = {
+        ...blankSurface(),
+        id,
+        savedTabId: item.id,
+        title: item.title,
+        group,
+        panes,
+        layoutMode: item.layoutMode,
+        threePaneSpanAxis: item.threePaneSpanAxis
+      };
+      syncTabFromPrimaryPane(tab);
+      return tab;
+    });
+    tabs.value.push(...restored);
+    const opened = tabs.value.slice(-restored.length);
+    const members = [...existing, ...opened];
+    const ordered = saved.tabs.flatMap((item) => members.filter((tab) => (tab.savedTabId || tab.id) === item.id));
+    const firstIndex = tabs.value.findIndex((tab) => members.includes(tab));
+    tabs.value = tabs.value.filter((tab) => !members.includes(tab));
+    tabs.value.splice(firstIndex, 0, ...ordered, ...members.filter((tab) => !ordered.includes(tab)));
+    if (ordered[0]) {
+      group.collapsed = false;
+      activeTabId.value = ordered[0].id;
+      ensureActivePaneForTab(ordered[0].id);
+    }
+    return opened;
   };
 
   const canSplitWorkspace = (tabId: string, direction: WorkspaceSplitDirection) => {
@@ -756,6 +951,7 @@ export const useWorkspaceTabs = () => {
       tab.panes.push(createEmptyPane(tab.id));
       setLayoutForPaneCount(tab, 2, direction);
       activePaneId.value = tab.panes[1]!.id;
+      if (tab.group) persistSessionGroup(tab.group, tabs.value);
       return [tab.panes[1]!];
     }
 
@@ -765,6 +961,7 @@ export const useWorkspaceTabs = () => {
       tab.panes.push(pane);
       tab.layoutMode = "grid-2x2";
       activePaneId.value = pane.id;
+      if (tab.group) persistSessionGroup(tab.group, tabs.value);
       return [pane];
     }
 
@@ -773,6 +970,7 @@ export const useWorkspaceTabs = () => {
     tab.layoutMode = "grid-2x2";
     tab.threePaneSpanAxis = undefined;
     activePaneId.value = pane.id;
+    if (tab.group) persistSessionGroup(tab.group, tabs.value);
     return [pane];
   };
 
@@ -789,6 +987,7 @@ export const useWorkspaceTabs = () => {
     tab.panes[sourceIndex] = tab.panes[targetIndex]!;
     tab.panes[targetIndex] = sourcePane;
     syncTabFromPrimaryPane(tab);
+    if (tab.group) persistSessionGroup(tab.group, tabs.value);
     return true;
   };
 
@@ -811,6 +1010,7 @@ export const useWorkspaceTabs = () => {
     tab.panes.splice(0, 2, ...(sourceFirst ? [sourcePane, targetPane] : [targetPane, sourcePane]));
     tab.layoutMode = placement === "left" || placement === "right" ? "columns-2" : "rows-2";
     syncTabFromPrimaryPane(tab);
+    if (tab.group) persistSessionGroup(tab.group, tabs.value);
     return true;
   };
 
@@ -850,6 +1050,8 @@ export const useWorkspaceTabs = () => {
     }
     activeTabId.value = target.id;
     activePaneId.value = sourcePane.id;
+    if (source.group) persistSessionGroup(source.group, tabs.value);
+    if (target.group) persistSessionGroup(target.group, tabs.value);
     return true;
   };
 
@@ -882,6 +1084,7 @@ export const useWorkspaceTabs = () => {
     if (!tab) return false;
 
     tab.title = title.trim() || undefined;
+    if (tab.group) persistSessionGroup(tab.group, tabs.value);
     return true;
   };
 
@@ -913,6 +1116,7 @@ export const useWorkspaceTabs = () => {
 
   const setActiveSession = (id: string) => {
     activeTabId.value = id;
+    expandTabGroup(id);
     ensureActivePaneForTab(id);
   };
 
@@ -968,6 +1172,14 @@ export const useWorkspaceTabs = () => {
 
   return {
     tabs,
+    tabGroups,
+    createTabGroup,
+    groupTabs,
+    restoreSessionGroup,
+    moveTabToGroup,
+    renameTabGroup,
+    toggleTabGroup,
+    ungroupTabs,
     activeTab,
     activeTabId,
     activePaneId,

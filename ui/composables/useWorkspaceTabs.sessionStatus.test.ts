@@ -1,6 +1,7 @@
 import type { AssetItem } from "~/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useWorkspaceTabs } from "./useWorkspaceTabs";
+vi.mock("~/store/modules/userInfo", () => ({ useUserInfoStore: () => ({ loggedIn: false }) }));
 
 vi.mock("~/composables/useRecentConnections", () => ({
   useRecentConnections: () => ({ recordRecentConnection: vi.fn() })
