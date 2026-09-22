@@ -454,6 +454,7 @@ const controller = {
     if (text) sendTextToRemote(text);
   },
   sendCombinationKeys: handleCombineKeys,
+  sendKeyEvent,
   setAutoFit: (value: boolean) => {
     autoFit.value = value;
   },

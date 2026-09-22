@@ -26,6 +26,7 @@ export interface LionWorkspaceSessionController {
   removeUploadFile: (file: LionUploadFileInfo) => void;
   sendClipboardText: (text: string) => void;
   sendCombinationKeys: (keys: string[]) => void;
+  sendKeyEvent: (pressed: 0 | 1, keysym: number) => void;
   setAutoFit: (value: boolean) => void;
   setScalePercentage: (value: number) => void;
   uploadFile: (options: LionUploadCustomRequestOptions, folder: any) => Promise<void>;
