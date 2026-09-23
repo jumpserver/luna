@@ -102,6 +102,17 @@ describe("nextSftpSessionCache", () => {
     expect(next).toEqual([]);
   });
 
+  it("keeps the surface while a live pane has no resolved identity", () => {
+    const next = nextSftpSessionCache({
+      cached: [{ paneId: paneA, identity: identityA }],
+      identities: new Map([[paneA, ""]]),
+      activePaneId: paneA,
+      activeReady: true,
+      sftpTabVisible: true
+    });
+    expect(next).toEqual([{ paneId: paneA, identity: identityA }]);
+  });
+
   it("drops a closed pane", () => {
     const next = nextSftpSessionCache({
       cached: [
@@ -150,7 +161,7 @@ describe("nextSftpSessionCache", () => {
     expect(next).toEqual([]);
   });
 
-  it("does not cache a non-SSH or missing pane", () => {
+  it("does not cache a non-SSH or unresolved pane", () => {
     expect(
       nextSftpSessionCache({
         cached: [],

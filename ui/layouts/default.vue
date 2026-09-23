@@ -34,6 +34,17 @@ const {
   statusBarVisible
 } = useSettingManager();
 const { open: rightPanelOpen, toggle: toggleRightPanel } = useRightPanel();
+// Mount on first open, then keep mounted. Unmounting the panel tears down its
+// KeepAlive cache, which drops the SFTP file manager's websocket and restarts
+// any transfer running in it.
+const rightPanelMounted = ref(false);
+watch(
+  rightPanelOpen,
+  (open) => {
+    if (open) rightPanelMounted.value = true;
+  },
+  { immediate: true }
+);
 const { open: aiPanelOpen, setOpen: setAiPanelOpen, toggleAi } = useAiPanel();
 const localePath = useLocalePath();
 const { open: settingsOpen, activeSection: activeSettingsSection, openSettings, closeSettings } = useSettingsWindow();
@@ -407,7 +418,7 @@ onBeforeUnmount(() => {
 
       <template #rightPanel>
         <div v-if="isVideoPlayerRoute" id="offline-playlist-host" class="h-full min-h-0" />
-        <RightPanel v-else-if="rightPanelOpen" />
+        <RightPanel v-else-if="rightPanelMounted" v-show="rightPanelOpen" />
       </template>
 
       <template #bottomPanel>
