@@ -395,6 +395,7 @@
     "Session": "Sesión",
     "Control": "Control",
     "Files": "Archivos",
+    "FilesPermissionDenied": "La gestión de archivos no está disponible porque esta sesión no tiene permisos para subir ni descargar archivos.",
     "AI": "IA",
     "LunaAiTool_list_terminal_targets": "Buscar terminales conectadas",
     "LunaAiTool_start_terminal_task": "Iniciar tarea de terminal",

@@ -395,6 +395,7 @@
     "Session": "Сеанс",
     "Control": "Управление",
     "Files": "Файлы",
+    "FilesPermissionDenied": "Управление файлами недоступно: у сеанса нет прав на отправку или скачивание файлов.",
     "AI": "AI",
     "LunaAiTool_list_terminal_targets": "Найти подключённые терминалы",
     "LunaAiTool_start_terminal_task": "Запустить задачу терминала",

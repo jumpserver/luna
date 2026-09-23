@@ -395,6 +395,7 @@
     "Session": "Session",
     "Control": "Contrôle",
     "Files": "Fichiers",
+    "FilesPermissionDenied": "La gestion des fichiers est indisponible : cette session ne permet ni le téléversement ni le téléchargement.",
     "AI": "IA",
     "LunaAiTool_list_terminal_targets": "Rechercher les terminaux connectés",
     "LunaAiTool_start_terminal_task": "Démarrer une tâche de terminal",

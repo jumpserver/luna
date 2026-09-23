@@ -395,6 +395,7 @@
     "Session": "Session",
     "Control": "Control",
     "Files": "Files",
+    "FilesPermissionDenied": "File management is unavailable because this session has no upload or download permission.",
     "AI": "AI",
     "LunaAiTool_list_terminal_targets": "Find connected terminals",
     "LunaAiTool_start_terminal_task": "Start terminal task",
