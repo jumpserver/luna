@@ -53,6 +53,7 @@ import { watchTerminalRenderer } from "#koko/utils/terminalRenderer";
 import { applyXtermTheme, appTerminalTheme, syncXtermBackground, terminalTheme } from "#koko/utils/terminalTheme";
 import { formatMessage, preprocessInput } from "#koko/utils/terminalUtils";
 import { useMobile } from "~/composables/useMobile";
+import { normalizeConnectionFailure } from "~/utils/connectionFailure";
 import { createKokoStartupOutputCapture, describeTerminalClose, resolveKokoTerminalCloseMessage } from "./protocol";
 
 const isSocketOpen = (socket: WebSocket) => socket.readyState === WebSocket.OPEN;
@@ -133,6 +134,7 @@ export const useKokoTerminalSocket = () => {
   let themeObserver: MutationObserver | null = null;
   let fitAddon: FitAddon | null = null;
   let sessionReady = false;
+  let socketOpened = false;
   let serverCloseReason: string | undefined;
   const startupOutput = createKokoStartupOutputCapture();
   let disposeSocketEvents: (() => void) | undefined;
@@ -360,6 +362,7 @@ export const useKokoTerminalSocket = () => {
     });
 
     const markSocketOpen = () => {
+      socketOpened = true;
       connectionError.value = "";
       lastSendTime.value = new Date();
       lastReceiveTime.value = new Date();
@@ -385,13 +388,13 @@ export const useKokoTerminalSocket = () => {
         lastReceiveTime: lastReceiveTime.value.toISOString()
       });
       const message = resolveKokoTerminalCloseMessage(
-        startupOutput.take(),
+        normalizeConnectionFailure(startupOutput.take()),
         t(detail.messageKey, {
           code: event.code,
           reason: detail.reasonKey ? t(detail.reasonKey) : ""
         })
       );
-      if (paneId) hostAdapter.markSessionDisconnected(paneId, message);
+      if (paneId) hostAdapter.markSessionDisconnected(paneId, message, { dismissible: socketOpened });
       if (!terminalRef.value) return;
       terminalRef.value.write("\r\n");
       terminalRef.value.write(`\x1B[31m${message}\x1B[0m`);

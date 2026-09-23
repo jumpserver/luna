@@ -358,7 +358,7 @@ const session = useChenSession({
   authenticate: auth.authenticate,
   translate: t,
   markConnected: () => markSessionConnected(props.tab.id),
-  markDisconnected: (reason) => markSessionDisconnected(props.tab.id, reason),
+  markDisconnected: (reason, options) => markSessionDisconnected(props.tab.id, reason, options),
   onBeforeReady: async () => {
     await auth.loadProfile();
     await tree.loadNodeChildren(null);

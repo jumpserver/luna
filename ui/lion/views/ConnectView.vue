@@ -23,7 +23,7 @@ const props = defineProps<{ tabId?: string }>();
 
 const emit = defineEmits<{
   connected: [];
-  disconnected: [message: string, details?: GuacamoleConnectionErrorDetails];
+  disconnected: [message: string, details?: GuacamoleConnectionErrorDetails, dismissible?: boolean];
 }>();
 
 const toast = useToast();
@@ -301,7 +301,9 @@ onMounted(async () => {
   } catch (error) {
     if (disposed) return;
     loading.value = false;
-    addErrorToast({ title: error instanceof Error ? error.message : String(error) });
+    const message = error instanceof Error ? error.message : String(error);
+    addErrorToast({ title: message });
+    emit("disconnected", message, undefined, false);
     return;
   }
   if (disposed) return;
@@ -392,7 +394,7 @@ const fitPercentage = computed(() => Math.floor(scale.value * 100));
 watch(connectStatus, (status) => {
   if (status === 3) emit("connected");
   else if (status === 5 && !disposed) {
-    emit("disconnected", connectionError.value || t("GuacamoleErrDisconnected"), connectionErrorDetails.value);
+    emit("disconnected", connectionError.value || t("GuacamoleErrDisconnected"), connectionErrorDetails.value, true);
   }
 });
 

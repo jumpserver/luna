@@ -56,6 +56,15 @@ export function useBaseWorkspaceSession(tab: Ref<WorkspaceSessionTab>) {
 
     if (!preparedTokenId) {
       error.value = "Missing connection token";
+      markSessionFailed(
+        {
+          tabId: preparedTab.id,
+          assetId: preparedTab.assetId,
+          protocol: preparedTab.protocol,
+          account: preparedTab.account
+        },
+        error.value
+      );
       loading.value = false;
       return null;
     }

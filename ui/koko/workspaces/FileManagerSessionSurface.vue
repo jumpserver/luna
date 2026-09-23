@@ -30,8 +30,8 @@ function handleConnectionChange(connected: boolean) {
   host.markSessionConnected(tab.value.id);
 }
 
-function handleConnectionFailure(reason: string) {
-  host.markSessionDisconnected(tab.value.id, reason);
+function handleConnectionFailure(reason: string, dismissible: boolean) {
+  host.markSessionDisconnected(tab.value.id, reason, { dismissible });
 }
 const { context, error, loading, prepareSession, tokenId } = useBaseWorkspaceSession(tab, {
   protocol: "sftp"

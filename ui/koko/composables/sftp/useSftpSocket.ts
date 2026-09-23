@@ -24,6 +24,7 @@ const idleWatchdogMs = 75_000;
 export interface SftpSocketClient {
   socket: Ref<WebSocket | null>;
   connected: Ref<boolean>;
+  hasConnected: Ref<boolean>;
   failure: Ref<SftpSocketFailure | null>;
   close: (notify?: boolean) => void;
   connect: (context: ConnectorSessionContext) => void;
@@ -36,6 +37,7 @@ export interface SftpSocketClient {
 export function useSftpSocket(): SftpSocketClient {
   const socket = shallowRef<WebSocket | null>(null);
   const connected = ref(false);
+  const hasConnected = ref(false);
   const failure = ref<SftpSocketFailure | null>(null);
   const messageListeners = new Set<(message: SftpIncomingMessage) => void>();
   const mcpListeners = new Set<(message: SftpMcpMessage) => void>();
@@ -142,6 +144,7 @@ export function useSftpSocket(): SftpSocketClient {
   function connect(context: ConnectorSessionContext) {
     close();
     intentionalClose = false;
+    hasConnected.value = false;
     failure.value = null;
     const currentGeneration = generation;
     const target = new WebSocket(resolveWsUrl(context.component, "sftp", context), [SftpWebSocketProtocol.Koko]);
@@ -158,6 +161,7 @@ export function useSftpSocket(): SftpSocketClient {
       if (!isCurrent()) return;
       clearConnectionTimeout();
       connected.value = true;
+      hasConnected.value = true;
       armIdleWatchdog();
     };
     target.onmessage = (event) => {
@@ -227,5 +231,5 @@ export function useSftpSocket(): SftpSocketClient {
 
   if (getCurrentInstance()) onUnmounted(() => close());
 
-  return { socket, connected, failure, close, connect, onFailure, onMcp, onMessage, send };
+  return { socket, connected, hasConnected, failure, close, connect, onFailure, onMcp, onMessage, send };
 }

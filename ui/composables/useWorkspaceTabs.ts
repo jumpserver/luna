@@ -1,4 +1,5 @@
 import type { ConnectionFormDraft } from "~/composables/useConnectionFormState";
+import type { SavedSessionGroup } from "~/composables/useSavedSessionGroups";
 import type { WebProxyOpenRequest } from "~/composables/useWebProxyManager";
 import type { WorkspaceConnectionProgressStage } from "~/composables/workspaceConnectionProgress";
 import type { AssetItem, PermedAccount, PermedProtocol, TokenResponse } from "~/types";
@@ -6,7 +7,6 @@ import type { AssetItem, PermedAccount, PermedProtocol, TokenResponse } from "~/
 import { createSharedComposable, useFullscreen } from "@vueuse/core";
 import { closeAclScope } from "~/composables/useAclDialog";
 import { useRecentConnections } from "~/composables/useRecentConnections";
-import type { SavedSessionGroup } from "~/composables/useSavedSessionGroups";
 import {
   getSessionGroupStorageKey,
   persistSessionGroup,
@@ -65,6 +65,7 @@ export interface WorkspaceSurfaceSession {
   connectionProgress?: WorkspaceConnectionProgressStage;
   resumeSetupOnFailure?: boolean;
   connectionFailure?: string;
+  connectionFailureDismissible?: boolean;
   setupDraft?: ConnectionFormDraft;
   payload?: WorkspaceSessionPayload;
   setupAsset?: AssetItem;
@@ -202,6 +203,7 @@ const blankSurface = (): Omit<WorkspaceSurfaceSession, "id"> => ({
   connectionProgress: undefined,
   resumeSetupOnFailure: undefined,
   connectionFailure: undefined,
+  connectionFailureDismissible: undefined,
   setupDraft: undefined,
   payload: undefined,
   setupAsset: undefined
@@ -249,6 +251,7 @@ const syncTabFromPrimaryPane = (tab: WorkspaceSessionTab) => {
   tab.connectionProgress = primaryPane.connectionProgress;
   tab.resumeSetupOnFailure = primaryPane.resumeSetupOnFailure;
   tab.connectionFailure = primaryPane.connectionFailure;
+  tab.connectionFailureDismissible = primaryPane.connectionFailureDismissible;
   tab.setupDraft = primaryPane.setupDraft;
   tab.payload = primaryPane.payload;
   tab.setupAsset = primaryPane.setupAsset;
@@ -1097,6 +1100,7 @@ export const useWorkspaceTabs = () => {
 
     found.pane.payload = payload;
     found.pane.connectionFailure = undefined;
+    found.pane.connectionFailureDismissible = undefined;
     found.pane.connectMethod = String(payload.connectMethod?.value || found.pane.connectMethod || "") || undefined;
     found.pane.status = "ready";
     found.pane.mode = "session";

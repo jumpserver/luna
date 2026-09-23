@@ -9,7 +9,7 @@ import { resolveChenSessionCloseFatal } from "~/chen/utils/chenSessionClose";
 interface UseChenSessionOptions {
   authenticate: () => Promise<string>;
   markConnected: () => void;
-  markDisconnected: (reason: string) => void;
+  markDisconnected: (reason: string, options?: { dismissible?: boolean }) => void;
   onBeforeReady: () => Promise<void>;
   onAfterReady: () => Promise<void>;
   onDisconnected: () => void;
@@ -53,6 +53,7 @@ export function useChenSession(options: UseChenSessionOptions) {
 
   let bootstrapGeneration = 0;
   let fatalNotified = false;
+  let socketOpened = false;
   let preparingReadyGeneration: number | null = null;
 
   const sessionConnection = useChenWebSocket({
@@ -60,6 +61,9 @@ export function useChenSession(options: UseChenSessionOptions) {
     createSocket: options.createSocket,
     resolveUrl: options.resolveUrl,
     readyTimeoutMs: options.readyTimeoutMs,
+    onOpen: () => {
+      socketOpened = true;
+    },
     onPacket: handlePacket,
     onError: handleSocketError
   });
@@ -78,7 +82,7 @@ export function useChenSession(options: UseChenSessionOptions) {
     loading.value = false;
     error.value = message;
     errorReason.value = reason;
-    options.markDisconnected(message);
+    options.markDisconnected(message, { dismissible: socketOpened });
 
     // A Chen session owns all of its consoles. Close dependent consoles first
     // so their backend close handlers can still resolve the active session.
@@ -197,6 +201,7 @@ export function useChenSession(options: UseChenSessionOptions) {
     const currentGeneration = ++bootstrapGeneration;
     sessionConnection.close();
     fatalNotified = false;
+    socketOpened = false;
     ready.value = false;
     loading.value = true;
     error.value = "";

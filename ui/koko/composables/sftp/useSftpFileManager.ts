@@ -227,6 +227,10 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
       message.type === SftpMessageType.Closed ||
       message.type === SftpMessageType.Error
     ) {
+      const serverError = message.err || message.error_code || message.data;
+      error.value = serverError
+        ? sftpOperationErrorMessage(serverError, t)
+        : errorMessage(SftpSocketFailureCode.ConnectionClosed, t);
       fatalError.value = true;
       capabilities.value = null;
       capabilitiesKnown.value = false;
@@ -280,6 +284,7 @@ export function useSftpFileManager(ctx: Ref<ConnectorSessionContext | null>, tra
     loading,
     error,
     fatalError,
+    hasConnected: socket.hasConnected,
     connected: computed(() => socket.connected.value && !fatalError.value),
     ready: computed(() => capabilitiesKnown.value && socket.connected.value && !fatalError.value),
     uploadTasks: operationClient.uploadTasks,
