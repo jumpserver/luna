@@ -2,8 +2,13 @@ import type { ConnectionFormDraft } from "~/composables/useConnectionFormState";
 import type { WorkspacePane, WorkspaceSessionTab } from "~/composables/useWorkspaceTabs";
 import type { PermedAccount } from "~/types";
 import { clearWorkspaceSessionDetails } from "~/composables/useWorkspaceSessionDetails";
+import { normalizeConnectionFailure } from "~/utils/connectionFailure";
 
 export type WorkspaceConnectionProgressStage = "token" | "session" | "connected";
+
+export interface WorkspaceConnectionFailureOptions {
+  dismissible?: boolean;
+}
 
 type SessionMatch = { tabId?: string; assetId: string; protocol: string; account: string };
 type ProgressMatch = { tab: WorkspaceSessionTab; pane: WorkspacePane; paneIndex: number };
@@ -87,6 +92,7 @@ export function createWorkspaceConnectionProgress(host: {
     connectionAttempts.set(paneId, (connectionAttempts.get(paneId) || 0) + 1);
     match.pane.status = "connecting";
     match.pane.connectionFailure = undefined;
+    match.pane.connectionFailureDismissible = undefined;
     match.pane.mode = "session";
     if (match.pane.connectionProgress) assignConnectionProgress(match.pane, "token", match.tab, match.paneIndex);
     host.setActivePaneId(paneId);
@@ -108,6 +114,7 @@ export function createWorkspaceConnectionProgress(host: {
     if (connection.permedAccounts) match.pane.permedAccounts = connection.permedAccounts;
     match.pane.payload = undefined;
     match.pane.connectionFailure = undefined;
+    match.pane.connectionFailureDismissible = undefined;
     match.pane.status = "connecting";
     match.pane.resumeSetupOnFailure = Boolean(setupDraft);
     match.pane.setupDraft = setupDraft
@@ -135,7 +142,8 @@ export function createWorkspaceConnectionProgress(host: {
 
     const inProgress = Boolean(found.pane.connectionProgress);
     found.pane.connectedAt = undefined;
-    found.pane.connectionFailure = reason;
+    found.pane.connectionFailure = normalizeConnectionFailure(reason) || undefined;
+    found.pane.connectionFailureDismissible = undefined;
     clearWorkspaceSessionDetails(found.pane.id);
     host.closeNativeSession(found.pane.id);
     if (inProgress) {
@@ -164,6 +172,7 @@ export function createWorkspaceConnectionProgress(host: {
     if (!match) return;
 
     clearConnectionProgress(match.pane);
+    match.pane.connectionFailureDismissible = undefined;
     if (match.pane.setupAsset) {
       match.pane.payload = undefined;
       match.pane.status = "selecting";
@@ -182,6 +191,7 @@ export function createWorkspaceConnectionProgress(host: {
     match.pane.resumeSetupOnFailure = false;
     match.pane.setupDraft = undefined;
     match.pane.connectionFailure = undefined;
+    match.pane.connectionFailureDismissible = undefined;
     match.pane.status = "connected";
     match.pane.connectedAt = Date.now();
     match.pane.mode = "session";
@@ -194,7 +204,11 @@ export function createWorkspaceConnectionProgress(host: {
     if (match.paneIndex === 0) host.syncTabFromPrimaryPane(match.tab);
   };
 
-  const markSessionDisconnected = (paneId: string, reason?: string) => {
+  const markSessionDisconnected = (
+    paneId: string,
+    reason?: string,
+    options: WorkspaceConnectionFailureOptions = {}
+  ) => {
     const match = host.findPane(paneId);
     if (!match) return;
 
@@ -202,7 +216,8 @@ export function createWorkspaceConnectionProgress(host: {
     connectionProgressGoal.delete(match.pane.id);
     match.pane.connectionProgress = "connected";
     match.pane.status = "disconnected";
-    match.pane.connectionFailure = reason;
+    match.pane.connectionFailure = normalizeConnectionFailure(reason) || undefined;
+    match.pane.connectionFailureDismissible = Boolean(match.pane.connectionFailure && options.dismissible);
     if (match.paneIndex === 0) host.syncTabFromPrimaryPane(match.tab);
   };
 

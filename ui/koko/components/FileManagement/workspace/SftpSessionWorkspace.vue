@@ -29,7 +29,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   connectionChange: [connected: boolean];
-  connectionFailure: [message: string];
+  connectionFailure: [message: string, dismissible: boolean];
 }>();
 const { t } = useI18n();
 
@@ -220,7 +220,7 @@ const remoteOverflowItems = computed<DropdownMenuItem[][]>(() => [
         @transfer-endpoint-connected="connectTransferEndpoint"
         @transfer-endpoint-unmounted="unmountTransferEndpoint"
         @connection-change="handlePrimaryConnectionChange"
-        @connection-failure="emit('connectionFailure', $event)"
+        @connection-failure="(message, dismissible) => emit('connectionFailure', message, dismissible)"
         @add-remote="openRemoteConnect()"
         @start-tour="startTour"
       />

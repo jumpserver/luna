@@ -215,7 +215,7 @@ export interface KokoHostAdapter {
   getWindowOrigin: () => string;
   isDesktopRuntime: () => boolean;
   markSessionConnected: (tabId: string) => void;
-  markSessionDisconnected: (tabId: string, reason?: string) => void;
+  markSessionDisconnected: (tabId: string, reason?: string, options?: { dismissible?: boolean }) => void;
   markSessionFailed: (tab: Pick<KokoWorkspaceTab, "id" | "assetId" | "protocol" | "account">, reason?: string) => void;
   registerSessionCloseGuard?: (tabId: string, guard: () => boolean | Promise<boolean>) => () => void;
   setSessionDetails: (tabId: string, details: Record<string, unknown>) => void;

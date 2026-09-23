@@ -16,8 +16,8 @@ function handleConnected() {
   markSessionConnected(props.tab.id);
 }
 
-function handleDisconnected(message: string) {
-  markSessionDisconnected(props.tab.id, message);
+function handleDisconnected(message: string, _details?: unknown, dismissible = false) {
+  markSessionDisconnected(props.tab.id, message, { dismissible });
 }
 
 watch(tokenId, () => void prepareSession(), { immediate: true });

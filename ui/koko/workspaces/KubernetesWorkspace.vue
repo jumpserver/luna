@@ -97,6 +97,7 @@ const resourceTreeWidth = computed(() =>
 );
 const resizingSidebar = ref(false);
 const connectionError = ref("");
+const connectorConnected = ref(false);
 const terminalTabs = ref<TerminalTab[]>([]);
 const activeTabId = ref("");
 const globalTerminalId = ref("");
@@ -528,10 +529,12 @@ const stopMessageListener = terminalSocket.onMessage((message) => {
     defaultClipboardAccess.value = resolveClipboardAccess(info?.permission, info?.clipboard_policy);
     globalTerminalId.value = message.id;
     terminalSocket.requestTree();
+    connectorConnected.value = true;
     markSessionConnected(props.tab.id);
     connectionError.value = "";
   } else if (message.type === KubernetesTerminalMessageType.Tree) {
     tree.value = normalizeTree(JSON.parse(message.data || "{}"));
+    connectorConnected.value = true;
     connectionError.value = "";
     markSessionConnected(props.tab.id);
   } else if (message.type === KubernetesTerminalMessageType.Data && terminals.has(message.k8s_id)) {
@@ -562,6 +565,7 @@ const stopMessageListener = terminalSocket.onMessage((message) => {
     message.type === KubernetesTerminalMessageType.TerminalError
   ) {
     connectionError.value = message.err || t("koko.kubernetes.connectionFailed");
+    markSessionDisconnected(props.tab.id, connectionError.value, { dismissible: connectorConnected.value });
   }
 });
 
@@ -581,7 +585,7 @@ const stopFailureListener = terminalSocket.onFailure((failure) => {
 
   disconnectTerminalAiSessions();
   connectionError.value = t("koko.kubernetes.websocketConnectionFailed");
-  markSessionDisconnected(props.tab.id, connectionError.value);
+  markSessionDisconnected(props.tab.id, connectionError.value, { dismissible: connectorConnected.value });
 });
 
 watch(tokenId, () => void prepareSession(), { immediate: true });
@@ -589,6 +593,7 @@ watch(
   context,
   (ctx) => {
     if (!ctx) return;
+    connectorConnected.value = false;
     connectionError.value = "";
     terminalSocket.connect(ctx);
   },

@@ -2,7 +2,12 @@
 import type { WorkspaceConnectionProgressStage } from "~/composables/useWorkspaceTabs";
 import { isFaceLiveHostMessage } from "~/utils/faceLive";
 
-const props = defineProps<{ error?: string; paneId?: string; stage: WorkspaceConnectionProgressStage }>();
+const props = defineProps<{
+  dismissible?: boolean;
+  error?: string;
+  paneId?: string;
+  stage: WorkspaceConnectionProgressStage;
+}>();
 const emit = defineEmits<{ cancel: []; edit: []; reconnect: [] }>();
 
 const { t } = useI18n();
@@ -45,10 +50,15 @@ function iconColor(index: number) {
 }
 
 const settleStep3 = ref(false);
+const dismissed = ref(false);
 const playId = ref(0);
 const wipeOn = ref(false);
 const lateOn = ref(false);
 let lateTimer: ReturnType<typeof setTimeout> | undefined;
+
+function dismiss() {
+  dismissed.value = true;
+}
 
 function replayWipe() {
   playId.value++;
@@ -92,6 +102,9 @@ watch([stageIndex, failed, waiting], ([value, isFailed]) => {
 });
 watch(failed, (isFailed, wasFailed) => {
   if (isFailed !== wasFailed) replayWipe();
+});
+watch([() => props.error, () => props.stage], () => {
+  dismissed.value = false;
 });
 watch(
   () => [group.value?.id, group.value?.code, group.value?.submitted],
@@ -152,10 +165,21 @@ async function reconnect() {
 
 <template>
   <div
+    v-show="!dismissed"
     :role="failed ? 'alert' : 'status'"
     aria-live="polite"
     class="absolute inset-0 z-20 grid place-items-center bg-[color-mix(in_srgb,var(--workspace-surface-background)_80%,transparent)] p-6 backdrop-blur-sm"
   >
+    <UButton
+      v-if="failed && dismissible"
+      icon="i-lucide-x"
+      color="neutral"
+      variant="ghost"
+      size="sm"
+      :aria-label="t('Common.Close')"
+      class="absolute top-6 right-6 z-10"
+      @click="dismiss"
+    />
     <div class="relative w-full max-w-lg">
       <div class="flex w-full items-center gap-5" aria-hidden="true">
         <span class="relative shrink-0">
@@ -214,7 +238,11 @@ async function reconnect() {
         </span>
       </div>
       <div class="absolute inset-x-0 top-full mt-4 flex flex-col items-center gap-4">
-        <p v-if="copy" :key="`copy-${playId}`" class="error-copy max-w-lg text-center text-sm text-default">
+        <p
+          v-if="copy"
+          :key="`copy-${playId}`"
+          class="error-copy max-h-40 max-w-lg overflow-y-auto text-center text-sm text-default whitespace-pre-wrap wrap-break-word"
+        >
           {{ copy }}
         </p>
         <p

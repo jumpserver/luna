@@ -29,7 +29,7 @@ import { useSftpIdeWorkspace } from "./useSftpIdeWorkspace";
 const props = defineProps<{ sftpToken: string; workspaceKey?: string }>();
 const emit = defineEmits<{
   connectionChange: [connected: boolean];
-  connectionFailure: [message: string];
+  connectionFailure: [message: string, dismissible: boolean];
 }>();
 const { t } = useI18n();
 const toast = useToast();
@@ -43,7 +43,9 @@ const context = computed<ConnectorSessionContext | null>(() => {
 const manager = useSftpFileManager(context);
 watch(manager.ready, (ready) => emit("connectionChange", Boolean(ready)), { immediate: true });
 watch(manager.fatalError, (fatalError) => {
-  if (fatalError) emit("connectionFailure", manager.error.value || t("koko.fileManagement.expired"));
+  if (fatalError) {
+    emit("connectionFailure", manager.error.value || t("koko.fileManagement.expired"), manager.hasConnected.value);
+  }
 });
 const fileEditorCapability = computed(() => manager.capabilities.value?.file_editor || null);
 const fileEditorSupported = computed(() => {

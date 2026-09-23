@@ -584,6 +584,7 @@ onBeforeUnmount(() => {
               v-if="pane.connectionProgress && pane.mode !== 'setup'"
               :pane-id="pane.id"
               :stage="pane.connectionProgress"
+              :dismissible="pane.connectionFailureDismissible"
               :error="
                 pane.status === 'connecting' || pane.status === 'connected' || pane.status === 'ready'
                   ? undefined
