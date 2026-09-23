@@ -45,16 +45,20 @@ const panesById = computed(() => {
   }
   return panes;
 });
+// Every live pane is listed, including ones with no resolvable identity yet, so
+// the cache can tell "pane closed" from "details not loaded on this tick".
 const liveIdentities = computed(() => {
   const identities = new Map<string, string>();
   for (const [paneId, surface] of panesById.value) {
-    const identity = compactSftpCacheIdentity({
+    identities.set(
       paneId,
-      protocol: surface.protocol,
-      assetId: surface.assetId,
-      account: surface.account
-    });
-    if (identity) identities.set(paneId, identity);
+      compactSftpCacheIdentity({
+        paneId,
+        protocol: surface.protocol,
+        assetId: surface.assetId,
+        account: surface.account
+      })
+    );
   }
   return identities;
 });
