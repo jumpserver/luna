@@ -52,8 +52,7 @@ const liveIdentities = computed(() => {
       paneId,
       protocol: surface.protocol,
       assetId: surface.assetId,
-      account: surface.account,
-      sessionId: getSessionDetails(paneId)?.sessionId
+      account: surface.account
     });
     if (identity) identities.set(paneId, identity);
   }
@@ -63,6 +62,7 @@ const sftpTabVisible = computed(() => loggedIn.value && rightPanelOpen.value && 
 const activeSshPaneId = computed(() =>
   activeWorkspaceSession.value?.protocol === "ssh" ? activeWorkspaceSession.value.id : ""
 );
+const activeSessionReady = computed(() => Boolean(getSessionDetails(activeSshPaneId.value)?.sessionId));
 const activeCached = computed(() => cachedSessions.value.some((entry) => entry.paneId === activeSshPaneId.value));
 const activeWorkspaceAsset = computed(() => {
   const session = activeWorkspaceSession.value;
@@ -113,6 +113,7 @@ function syncCachedSessions() {
         cached: previous,
         identities: liveIdentities.value,
         activePaneId: activeSshPaneId.value,
+        activeReady: activeSessionReady.value,
         sftpTabVisible: sftpTabVisible.value
       })
     : [];
@@ -190,7 +191,9 @@ const openSearchSftp = async () => {
   }
 };
 
-watch([liveIdentities, activeSshPaneId, sftpTabVisible, loggedIn], syncCachedSessions, { immediate: true });
+watch([liveIdentities, activeSshPaneId, activeSessionReady, sftpTabVisible, loggedIn], syncCachedSessions, {
+  immediate: true
+});
 
 watch(loggedIn, (value) => {
   if (value) return;
