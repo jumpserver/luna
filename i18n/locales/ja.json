@@ -395,6 +395,7 @@
     "Session": "セッション",
     "Control": "コントロール",
     "Files": "ファイル",
+    "FilesPermissionDenied": "このセッションにはファイルのアップロード権限もダウンロード権限もないため、ファイル管理を利用できません。",
     "AI": "AI",
     "LunaAiTool_list_terminal_targets": "接続済みターミナルを検索",
     "LunaAiTool_start_terminal_task": "ターミナルタスクを開始",

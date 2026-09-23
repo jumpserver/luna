@@ -395,6 +395,7 @@
     "Session": "세션",
     "Control": "제어",
     "Files": "파일",
+    "FilesPermissionDenied": "이 세션에는 파일 업로드 또는 다운로드 권한이 없어 파일 관리를 사용할 수 없습니다.",
     "AI": "AI",
     "LunaAiTool_list_terminal_targets": "연결된 터미널 찾기",
     "LunaAiTool_start_terminal_task": "터미널 작업 시작",

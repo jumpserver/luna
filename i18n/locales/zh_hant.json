@@ -395,6 +395,7 @@
     "Session": "會話",
     "Control": "控制",
     "Files": "檔案",
+    "FilesPermissionDenied": "目前會話沒有檔案上傳或下載權限，無法使用檔案管理。",
     "AI": "AI",
     "LunaAiTool_list_terminal_targets": "尋找已連線終端",
     "LunaAiTool_start_terminal_task": "啟動終端任務",

@@ -395,6 +395,7 @@
     "Session": "Sessão",
     "Control": "Controle",
     "Files": "Arquivos",
+    "FilesPermissionDenied": "O gerenciamento de arquivos está indisponível porque esta sessão não tem permissão para enviar nem baixar arquivos.",
     "AI": "IA",
     "LunaAiTool_list_terminal_targets": "Encontrar terminais conectados",
     "LunaAiTool_start_terminal_task": "Iniciar tarefa de terminal",

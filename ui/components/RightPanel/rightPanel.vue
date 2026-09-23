@@ -72,7 +72,7 @@ const showSftpTab = computed(() => showSftpRightPanelTab(activeSession.value?.pr
 const tabs = computed(() => {
   if (activeWorkspaceMode.value === "files") return [];
 
-  const items: Array<{ value: RightPanelTab; label: string; icon: string; title?: string }> = [
+  const items: Array<{ value: RightPanelTab; label: string; icon: string; title?: string; disabled?: boolean }> = [
     { value: "session", label: t("RightPanel.Session"), icon: "i-lucide-terminal" }
   ];
 
@@ -82,11 +82,15 @@ const tabs = computed(() => {
       label: t("RightPanel.Control"),
       icon: "i-lucide-sliders-horizontal"
     });
-    if (lionSession.value.driverName.value) {
+    const permission = lionSession.value.actionPermission.value;
+    const filesDisabled = permission.enable_upload === false && permission.enable_download === false;
+    if (lionSession.value.driverName.value || filesDisabled) {
       items.push({
         value: "lion-files" as const,
         label: t("RightPanel.Files"),
-        icon: "i-lucide-folder-kanban"
+        icon: "i-lucide-folder-kanban",
+        disabled: filesDisabled,
+        title: filesDisabled ? t("RightPanel.FilesPermissionDenied") : undefined
       });
     }
   }
@@ -123,7 +127,7 @@ watch(
     const paneChanged = prevPaneId !== paneId;
     if (paneChanged && prevPaneId) rememberRightPanelTab(prevPaneId, activeTab.value);
     const next = nextRightPanelTab({
-      available: items.map((item) => item.value),
+      available: items.filter((item) => !item.disabled).map((item) => item.value),
       remembered: paneId ? rememberedRightPanelTab(paneId) : undefined,
       active: activeTab.value,
       sftpResolved: sftpResolved.value,
@@ -152,18 +156,18 @@ watch(activeTab, (tab) => {
   >
     <div class="shrink-0 px-3" :style="{ borderBottom: '1px solid var(--app-border)' }">
       <div class="right-panel-tab-strip">
-        <button
-          v-for="tab in tabs"
-          :key="tab.value"
-          type="button"
-          class="right-panel-tab-button"
-          :class="{ 'right-panel-tab-button-active': activeTab === tab.value }"
-          :title="tab.title || tab.label"
-          @click="setActiveTab(tab.value)"
-        >
-          <UIcon :name="tab.icon" class="right-panel-tab-icon" />
-          <span class="truncate">{{ tab.label }}</span>
-        </button>
+        <UTooltip v-for="tab in tabs" :key="tab.value" :text="tab.title || tab.label">
+          <button
+            type="button"
+            class="right-panel-tab-button"
+            :class="{ 'right-panel-tab-button-active': activeTab === tab.value && !tab.disabled }"
+            :aria-disabled="tab.disabled || undefined"
+            @click="!tab.disabled && setActiveTab(tab.value)"
+          >
+            <UIcon :name="tab.icon" class="right-panel-tab-icon" />
+            <span class="truncate">{{ tab.label }}</span>
+          </button>
+        </UTooltip>
       </div>
     </div>
 
@@ -205,8 +209,13 @@ watch(activeTab, (tab) => {
     border-color 140ms ease;
 }
 
-.right-panel-tab-button:hover {
+.right-panel-tab-button:not([aria-disabled="true"]):hover {
   color: color-mix(in srgb, var(--app-fg) 76%, transparent);
+}
+
+.right-panel-tab-button[aria-disabled="true"] {
+  cursor: not-allowed;
+  color: color-mix(in srgb, var(--app-fg) 30%, transparent);
 }
 
 .right-panel-tab-button:focus-visible {

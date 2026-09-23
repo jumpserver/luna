@@ -395,6 +395,7 @@
     "Session": "Phiên",
     "Control": "Điều khiển",
     "Files": "Tệp",
+    "FilesPermissionDenied": "Không thể quản lý tệp vì phiên này không có quyền tải lên hoặc tải xuống.",
     "AI": "AI",
     "LunaAiTool_list_terminal_targets": "Tìm terminal đã kết nối",
     "LunaAiTool_start_terminal_task": "Bắt đầu tác vụ terminal",
