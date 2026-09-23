@@ -58,7 +58,6 @@ const sqlEditor = ref<{
 } | null>(null);
 const sqlUploadInput = ref<HTMLInputElement | null>(null);
 const hasSelection = ref(false);
-const messageOpen = ref(false);
 const saveSnippetDialogOpen = ref(false);
 const selectSnippetDialogOpen = ref(false);
 const queryPanel = ref<HTMLElement | null>(null);
@@ -66,8 +65,6 @@ const editorHeightRatio = ref(58);
 const resizingQueryPanel = ref(false);
 const QUERY_PANEL_MIN_RATIO = 20;
 const QUERY_PANEL_RESIZE_STEP = 5;
-const DEFAULT_MESSAGE_CLOSE_DELAY_SECONDS = 5;
-let messageCloseTimer: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
 const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
@@ -273,20 +270,8 @@ async function deleteSqlSnippet(snippet: ChenSqlSnippet) {
   }
 }
 
-function clearMessageTimer() {
-  if (messageCloseTimer === null) return;
-  clearTimeout(messageCloseTimer);
-  messageCloseTimer = null;
-}
-
-function dismissMessage() {
-  clearMessageTimer();
-  messageOpen.value = false;
-  if (props.tab.message) emit("dismissMessage", props.tab);
-}
-
 function handleMessageOpen(open: boolean) {
-  if (!open) dismissMessage();
+  if (!open && props.tab.message) emit("dismissMessage", props.tab);
 }
 
 function setEditorHeightRatio(ratio: number) {
@@ -328,24 +313,7 @@ function resizeQueryPanelWithKeyboard(event: KeyboardEvent) {
   event.preventDefault();
 }
 
-watch(
-  () => props.tab.message,
-  (message) => {
-    clearMessageTimer();
-    messageOpen.value = Boolean(message);
-    if (!message) return;
-
-    const closeDelay =
-      typeof message.closeDelay === "number" && message.closeDelay > 0
-        ? message.closeDelay
-        : DEFAULT_MESSAGE_CLOSE_DELAY_SECONDS;
-    messageCloseTimer = setTimeout(dismissMessage, closeDelay * 1000);
-  },
-  { immediate: true }
-);
-
 onBeforeUnmount(() => {
-  clearMessageTimer();
   if (!resizingQueryPanel.value) return;
   document.body.style.cursor = "";
   document.body.style.userSelect = "";
@@ -449,16 +417,6 @@ defineExpose({ editorSnapshot });
         <div v-if="tab.state.loading" class="absolute inset-0 z-10 grid place-items-center rounded-md bg-default/65">
           <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin text-muted" />
         </div>
-        <UAlert
-          v-if="tab.message && messageOpen"
-          class="absolute bottom-3 left-1/2 z-20 max-h-32 w-3/4 -translate-x-1/2 overflow-y-auto"
-          :color="messageColor"
-          variant="subtle"
-          :title="tab.message.title || t('Chen.Message')"
-          :description="tab.message.message"
-          close
-          @update:open="handleMessageOpen"
-        />
       </div>
     </div>
 
@@ -497,6 +455,16 @@ defineExpose({ editorSnapshot });
         >
           {{ t("ExecutionPlan.title") }}
         </button>
+      </div>
+      <div v-if="tab.message" class="mx-2 my-2 max-h-32 shrink-0 overflow-y-auto">
+        <UAlert
+          :color="messageColor"
+          variant="subtle"
+          :title="tab.message.title || t('Chen.Message')"
+          :description="tab.message.message"
+          close
+          @update:open="handleMessageOpen"
+        />
       </div>
       <QueryResultTabs
         v-if="tab.activeBottomPane !== 'plan'"
