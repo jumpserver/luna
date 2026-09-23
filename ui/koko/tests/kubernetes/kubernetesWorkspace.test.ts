@@ -19,4 +19,10 @@ describe("kubernetes workspace click typing", () => {
     expect(kubernetesWorkspace).not.toMatch(/\.xterm-scrollable-element\s*\{[^}]*padding:/);
     expect(kubernetesWorkspace).not.toContain("background-color: transparent !important");
   });
+
+  it("marks post-connection protocol and transport failures as dismissible", () => {
+    expect(kubernetesWorkspace).toContain("const connectorConnected = ref(false)");
+    expect(kubernetesWorkspace).toContain("{ dismissible: connectorConnected.value }");
+    expect(kubernetesWorkspace).toContain("const stopFailureListener = terminalSocket.onFailure((failure) =>");
+  });
 });

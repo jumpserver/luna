@@ -1,6 +1,6 @@
 import type { FileTransferStatus, FileTransferTask } from "@jumpserver/connectors-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ref } from "vue";
+import { effectScope, ref } from "vue";
 
 import { encodeSftpBinaryFrame, parseSftpBinaryFrame } from "#koko/composables/sftp/core/codec";
 import {
@@ -19,6 +19,7 @@ import {
   SftpSocketFailureCode,
   SftpWebSocketProtocol
 } from "#koko/composables/sftp/protocol";
+import { useSftpFileManager } from "#koko/composables/sftp/useSftpFileManager";
 import {
   SFTP_UPLOAD_CHUNK_SIZE,
   SftpPathNotFoundError,
@@ -32,6 +33,10 @@ import { buildSftpTourSteps, SFTP_TOUR_STORAGE_KEY } from "#koko/utils/sftpTour"
 import { finishedTransferCount, sftpTransferGroupStatus, sftpTransferProgress } from "#koko/utils/sftpTransferSummary";
 import enMessages from "../../../../i18n/locales/en.json";
 import zhMessages from "../../../../i18n/locales/zh.json";
+
+vi.mock("#koko/host", () => ({
+  useKokoHostAdapter: () => ({})
+}));
 
 const context = {
   component: "koko" as const,
@@ -172,6 +177,22 @@ describe("sFTP browser protocol", () => {
     expect(socket.connected.value).toBe(true);
     fake.receive({ id: "close", type: SftpMessageType.Close, err: "Session expired or not found" });
     expect(socket.connected.value).toBe(false);
+  });
+
+  it("uses a server SFTP error as the fatal session reason", () => {
+    vi.stubGlobal("WebSocket", FakeWebSocket as unknown as typeof WebSocket);
+    vi.stubGlobal("useI18n", () => ({ t: (key: string) => key }));
+    const scope = effectScope();
+    const manager = scope.run(() => useSftpFileManager(ref(context)))!;
+    const fake = FakeWebSocket.instances.at(-1)!;
+
+    fake.open();
+    fake.receive({ id: "error", type: SftpMessageType.Error, err: "Permission denied" });
+
+    expect(manager.fatalError.value).toBe(true);
+    expect(manager.hasConnected.value).toBe(true);
+    expect(manager.error.value).toBe("koko.fileManagement.pathPermissionDenied");
+    scope.stop();
   });
 
   it("disconnects when koko stops sending heartbeats", () => {
