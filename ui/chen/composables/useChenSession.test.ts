@@ -92,7 +92,7 @@ describe("chen session dialogs", () => {
     await Promise.resolve();
     socket.onclose?.({ code: 1006, reason: "" } as CloseEvent);
 
-    expect(markDisconnected).toHaveBeenCalled();
+    expect(markDisconnected).toHaveBeenCalledWith(expect.any(String), { dismissible: true });
   });
 
   it("marks a session as disconnected when its socket closes before ready", async () => {

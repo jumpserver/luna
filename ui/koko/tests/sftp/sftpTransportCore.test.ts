@@ -27,6 +27,7 @@ function createSocket(connected = true) {
   } = {
     socket: ref(null),
     connected: ref(connected),
+    hasConnected: ref(connected),
     failure: ref(null),
     close: vi.fn(),
     connect: vi.fn(),

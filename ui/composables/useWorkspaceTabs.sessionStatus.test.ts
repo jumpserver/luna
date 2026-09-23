@@ -45,12 +45,12 @@ describe("workspace session disconnect status", () => {
     expect(tabs.tabs.value[0]?.status).toBe("disconnected");
   });
 
-  it("keeps a ready session and its disconnect reason", () => {
+  it("keeps a ready session and a safe disconnect reason", () => {
     const pane = tabs.openSession(asset, { protocol: "ssh", account: "root", newTab: true });
     pane.payload = { id: "token" };
     tabs.markSessionConnected(pane.id);
 
-    tabs.markSessionDisconnected(pane.id, "connection closed");
+    tabs.markSessionDisconnected(pane.id, "\x1B[31mconnection closed\x1B[0m");
 
     expect(pane.status).toBe("disconnected");
     expect(pane.payload).toEqual({ id: "token" });
@@ -66,11 +66,16 @@ describe("workspace session disconnect status", () => {
     const pane = tabs.openSetupSession(asset);
     tabs.startSessionConnection(pane.id, { protocol: "ssh", account: "root" });
     tabs.markSessionConnected(pane.id);
-    tabs.markSessionDisconnected(pane.id, "Koko 已结束会话：连接建立失败");
+    tabs.markSessionDisconnected(pane.id, "Koko 已结束会话：连接建立失败", { dismissible: true });
 
     expect(pane.status).toBe("disconnected");
     expect(pane.connectionProgress).toBe("connected");
     expect(pane.connectionFailure).toBe("Koko 已结束会话：连接建立失败");
+    expect(pane.connectionFailureDismissible).toBe(true);
+    expect(tabs.tabs.value[0]?.connectionFailureDismissible).toBe(true);
+
+    tabs.markSessionConnecting(pane.id);
+    expect(pane.connectionFailureDismissible).toBeUndefined();
   });
 
   it("increments the connection attempt before a new request can update the pane", () => {
