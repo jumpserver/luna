@@ -6,7 +6,7 @@ import type { ITerminalSettings } from "#koko/types/settings";
 import { FORMATTER_MESSAGE_TYPE, HOST_MESSAGE_TYPE } from "@jumpserver/connectors-core";
 
 import { readText, writeText } from "clipboard-polyfill";
-import { KeyboardKey } from "#koko/constants/keyboard";
+import { isTerminalCopyChord, isTerminalInterruptChord, KeyboardKey } from "#koko/constants/keyboard";
 import { formatMessage, getXTerminalLineContent, preprocessInput } from "#koko/utils/terminalUtils";
 import { TerminalMittEvent } from "./protocol";
 
@@ -123,7 +123,7 @@ export function useKokoTerminalInput(options: {
       () => container.removeEventListener("mouseleave", onMouseLeave)
     );
 
-    terminal.onData((data) => {
+    const sendInput = (data: string) => {
       const socket = options.socket.value;
       if (!socket || options.inputLocked(data) || !options.isSocketOpen(socket)) return;
       options.lastSendTime.value = new Date();
@@ -138,11 +138,48 @@ export function useKokoTerminalInput(options: {
       );
       if (isZmodemInterrupt) options.abortZmodem();
       options.sendToHost(HOST_MESSAGE_TYPE.INPUT_ACTIVE, "");
-    });
+    };
+    terminal.onData(sendInput);
     terminal.onResize(options.onResize);
+    let dragging = false;
+    let lastCopied = "";
+    const copySettledSelection = () => {
+      const text = terminal.getSelection() || "";
+      options.selectionText.value = text;
+      if (!text) {
+        lastCopied = "";
+        return;
+      }
+      if (text === lastCopied) return;
+      lastCopied = text;
+      void copySelection();
+    };
+    function finishDrag() {
+      if (!dragging) return;
+      dragging = false;
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", finishDrag);
+      copySettledSelection();
+    }
+    function onPointerUp(event: PointerEvent) {
+      if (event.button !== 0) return;
+      finishDrag();
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.button !== 0 || dragging) return;
+      dragging = true;
+      window.addEventListener("pointerup", onPointerUp);
+      window.addEventListener("pointercancel", finishDrag);
+    };
+    container.addEventListener("pointerdown", onPointerDown, true);
+    cleanup.push(() => {
+      container.removeEventListener("pointerdown", onPointerDown, true);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", finishDrag);
+    });
     terminal.onSelectionChange(() => {
       options.selectionText.value = terminal.getSelection() || "";
-      void copySelection();
+      if (!dragging) copySettledSelection();
     });
     terminal.attachCustomKeyEventHandler((event) => {
       const customResult = options.onKeyEvent?.(event);
@@ -163,8 +200,20 @@ export function useKokoTerminalInput(options: {
         }
         return false;
       }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.C && terminal.hasSelection())
+      if (isTerminalCopyChord(event)) {
+        if (event.type === "keydown" && terminal.hasSelection()) {
+          event.preventDefault();
+          void copySelection();
+        }
         return false;
+      }
+      if (isTerminalInterruptChord(event)) {
+        if (event.type === "keydown") {
+          event.preventDefault();
+          sendInput("\x03");
+        }
+        return false;
+      }
       return !((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.V);
     });
   }

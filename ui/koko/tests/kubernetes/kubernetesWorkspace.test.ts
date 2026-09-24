@@ -20,6 +20,11 @@ describe("kubernetes workspace click typing", () => {
     expect(kubernetesWorkspace).not.toContain("background-color: transparent !important");
   });
 
+  it("keeps Ctrl+C as an interrupt and copies only on an explicit chord", () => {
+    expect(kubernetesWorkspace).toContain("isTerminalCopyChord(event)");
+    expect(kubernetesWorkspace).not.toContain("event.key.toLowerCase() === KeyboardKey.C && terminal.hasSelection()");
+  });
+
   it("marks post-connection protocol and transport failures as dismissible", () => {
     expect(kubernetesWorkspace).toContain("const connectorConnected = ref(false)");
     expect(kubernetesWorkspace).toContain("{ dismissible: connectorConnected.value }");

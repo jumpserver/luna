@@ -46,7 +46,7 @@ import {
   electronLog,
   parsePersistedDebugLogEnabled
 } from "../shared/debug-log";
-import { menuCommandTargetLabel } from "../shared/menu-command";
+import { editCopyAccelerator, menuCommandTargetLabel } from "../shared/menu-command";
 import { productNameAllowsDevTools } from "../shared/product-name";
 import { parseUrl, toFetchUrl } from "../shared/url";
 import { createWebProxyManager } from "@jumpserver/web-proxy/manager";
@@ -830,7 +830,7 @@ function buildMenu() {
         { label: labels.redo, role: "redo" },
         { type: "separator" },
         { label: labels.cut, role: "cut" },
-        { label: labels.copy, role: "copy" },
+        { label: labels.copy, role: "copy", accelerator: editCopyAccelerator() },
         { label: labels.paste, role: "paste" },
         { label: labels.selectAll, role: "selectAll" }
       ]
