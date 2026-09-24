@@ -164,6 +164,7 @@ export function useSftpTransferEndpoint(
         path: input.targetPath,
         size: input.totalBytes,
         sha256: input.sha256,
+        chunk_size: 2 * 1024 * 1024,
         conflict_policy: input.conflictPolicy
       });
     },

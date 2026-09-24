@@ -7,7 +7,11 @@ import type {
 } from "@jumpserver/connectors-core";
 import { FileTransferUnavailableError, getFileTransferEndpoint } from "@jumpserver/connectors-core";
 import { defineStore } from "pinia";
-import { finalizeFileTransferChecksum, updateFileTransferChecksum } from "#koko/utils/file-transfer/checksum";
+import {
+  finalizeFileTransferChecksum,
+  isFileTransferChecksumState,
+  updateFileTransferChecksum
+} from "#koko/utils/file-transfer/checksum";
 import { loadFileTransferState, saveFileTransferState } from "#koko/utils/file-transfer/persistence";
 
 const resumableStatuses = new Set<FileTransferStatus>(["queued", "preparing", "transferring", "verifying"]);
@@ -360,7 +364,7 @@ export const useFileTransferStore = defineStore("file-transfer", () => {
 
       const checksumAligned =
         prepared.committedBytes === task.confirmedBytes &&
-        (prepared.committedBytes === 0 || Boolean(task.checksumState));
+        (prepared.committedBytes === 0 || isFileTransferChecksumState(task.checksumState));
       if (!checksumAligned) {
         await destination.cancelTransfer({
           transferId: task.id,

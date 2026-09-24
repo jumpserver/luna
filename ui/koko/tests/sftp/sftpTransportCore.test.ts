@@ -255,6 +255,40 @@ describe("useSftpTransferEndpoint transport core wiring", () => {
       data: JSON.stringify({ committed_bytes: 3, duplicate: false })
     });
     await expect(writePromise).resolves.toEqual({ committedBytes: 3, duplicate: false });
+
+    const commitPromise = endpoint.commitTransfer({
+      transferId: "transfer-a",
+      targetPath: "/remote/demo.txt",
+      totalBytes: 3,
+      sha256: "file-chain",
+      conflictPolicy: "overwrite"
+    });
+    expect(socket.send).toHaveBeenNthCalledWith(4, {
+      id: "request-4",
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.TransferCommit,
+      data: JSON.stringify({
+        transfer_id: "transfer-a",
+        path: "/remote/demo.txt",
+        size: 3,
+        sha256: "file-chain",
+        chunk_size: 2 * 1024 * 1024,
+        conflict_policy: "overwrite"
+      }),
+      raw: ""
+    });
+    socket.emitMessage({
+      id: "request-4",
+      type: SftpMessageType.Data,
+      cmd: SftpCommand.TransferCommit,
+      data: JSON.stringify({
+        transfer_id: "transfer-a",
+        committed_bytes: 3,
+        total_bytes: 3,
+        state: "completed"
+      })
+    });
+    await expect(commitPromise).resolves.toBeUndefined();
   });
 
   it("sends transfer chunks as binary frames when the server advertises it", async () => {
