@@ -16,8 +16,11 @@ import { resolvePersonalCredentialSecretType } from "~/utils/connection";
 export interface ConnectionFormDraft {
   protocol: string;
   account: string;
+  accountId?: string;
   manualUsername: string;
   manualPassword: string;
+  hostedSecret: string;
+  inputSecretType: string;
   personalCredentialId: string;
   personalCredentialVersion?: number;
   personalCredentialSecretType: string;
@@ -58,8 +61,11 @@ export function useConnectionFormState() {
   const draft = ref<ConnectionFormDraft>({
     protocol: "",
     account: "",
+    accountId: undefined,
     manualUsername: "",
     manualPassword: "",
+    hostedSecret: "",
+    inputSecretType: "password",
     personalCredentialId: "",
     personalCredentialVersion: undefined,
     personalCredentialSecretType: "password",
@@ -125,13 +131,11 @@ export function useConnectionFormState() {
     }
     if (mode === "anonymous" && accounts.some((account) => account.alias === "@ANON")) return "@ANON";
     if (mode === "hosted" && username) {
-      const hosted = accounts.find(
-        (account) =>
-          (source?.accountId && account.id === source.accountId) ||
-          account.name === username ||
-          account.username === username ||
-          account.alias === username
-      );
+      const hosted =
+        accounts.find((account) => account.id === source?.accountId) ||
+        accounts.find(
+          (account) => account.name === username || account.username === username || account.alias === username
+        );
       if (hosted) return hosted.name;
     }
 
@@ -210,11 +214,18 @@ export function useConnectionFormState() {
     }
     personalCredentialScope = nextPersonalCredentialScope;
 
+    const account = resolvePreferredAccount(source, accounts);
+    const hostedAccount =
+      accounts.find((item) => !item.alias.startsWith("@") && item.id === source.accountId) ||
+      accounts.find((item) => !item.alias.startsWith("@") && item.name === account);
     draft.value = {
       protocol,
-      account: resolvePreferredAccount(source, accounts),
+      account,
+      accountId: hostedAccount?.id,
       manualUsername: source.manualUsername || "",
       manualPassword: "",
+      hostedSecret: "",
+      inputSecretType: resolvePersonalCredentialSecretType(protocol),
       personalCredentialId: savedCredentialMatchesProtocol ? saved?.personalCredentialId || "" : "",
       personalCredentialVersion: savedCredentialMatchesProtocol ? saved?.personalCredentialVersion : undefined,
       personalCredentialSecretType:
@@ -236,8 +247,19 @@ export function useConnectionFormState() {
 
   const restoreDraft = (asset: AssetItem, value: ConnectionFormDraft) => {
     activeAsset.value = asset;
-    draft.value = { ...value, connectOptions: { ...value.connectOptions } };
+    draft.value = {
+      ...value,
+      hostedSecret: value.hostedSecret || "",
+      inputSecretType: value.inputSecretType || resolvePersonalCredentialSecretType(value.protocol),
+      connectOptions: { ...value.connectOptions }
+    };
     void loadPersonalCredentials(asset, draft.value.protocol);
+  };
+
+  const clearEnteredSecrets = () => {
+    draft.value.manualPassword = "";
+    draft.value.dynamicPassword = "";
+    draft.value.hostedSecret = "";
   };
 
   const buildConnectionInfo = (asset: AssetItem): ConnectionFormInfo => {
@@ -255,14 +277,26 @@ export function useConnectionFormState() {
       account = dynamic?.name || account.replace(/\(.+\)/, "");
     }
     if (accountMode === "hosted") {
-      accountId = asset.permedAccounts?.find(
-        (item) => item.name === account || item.username === account || item.alias === account
-      )?.id;
+      accountId =
+        asset.permedAccounts?.find((item) => item.id === draft.value.accountId)?.id ||
+        asset.permedAccounts?.find(
+          (item) => item.name === account || item.username === account || item.alias === account
+        )?.id;
     }
     const canUsePersonalCredential = accountMode === "manual";
+    const selectedAccount = asset.permedAccounts?.find((item) =>
+      accountMode === "hosted" ? item.id === accountId : item.alias === (accountMode === "manual" ? "@INPUT" : "@USER")
+    );
+    const inputSecretType = ["ssh", "sftp"].includes(draft.value.protocol.toLowerCase())
+      ? draft.value.inputSecretType === "ssh_key"
+        ? "ssh_key"
+        : "password"
+      : resolvePersonalCredentialSecretType(draft.value.protocol, selectedAccount?.secret_type || "password");
     const personalCredentialSecretType = resolvePersonalCredentialSecretType(
       draft.value.protocol,
-      draft.value.personalCredentialSecretType
+      draft.value.personalCredentialId && !draft.value.savePersonalCredential
+        ? draft.value.personalCredentialSecretType
+        : inputSecretType
     );
     const matchingPersonalCredential =
       canUsePersonalCredential && draft.value.savePersonalCredential && !draft.value.personalCredentialId
@@ -289,6 +323,8 @@ export function useConnectionFormState() {
       accountMode,
       manualUsername: draft.value.manualUsername,
       manualPassword: draft.value.manualPassword,
+      hostedSecret: draft.value.hostedSecret,
+      inputSecretType,
       personalCredentialId: canUsePersonalCredential
         ? draft.value.personalCredentialId || matchingPersonalCredential?.id
         : undefined,
@@ -300,7 +336,7 @@ export function useConnectionFormState() {
       personalCredentialSecretType,
       savePersonalCredential: canUsePersonalCredential && draft.value.savePersonalCredential,
       dynamicPassword: draft.value.dynamicPassword,
-      rememberSecret: draft.value.rememberSecret,
+      rememberSecret: draft.value.rememberSecret && !(accountMode === "dynamic" && inputSecretType === "ssh_key"),
       rememberSelection: draft.value.rememberSelection,
       connectMethod: draft.value.connectMethod,
       connectOptions: { ...draft.value.connectOptions },
@@ -338,6 +374,7 @@ export function useConnectionFormState() {
     draft,
     initDraft,
     restoreDraft,
+    clearEnteredSecrets,
     loadAssetDetails,
     personalCredentials,
     personalCredentialsLoaded,

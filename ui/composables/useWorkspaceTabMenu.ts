@@ -8,6 +8,8 @@ import type { AssetItem, TokenResponse } from "~/types";
 
 import { SFTP_FILE_EDITOR_VALUE } from "~/composables/useConnectMethods";
 import { exchangeConnectToken } from "~/composables/useConnectTokenExchange";
+import { getAssetDetailRequest } from "~/composables/useApiRequest";
+import { needsInputSecret } from "~/utils/connection";
 
 function sessionToAsset(session: WorkspaceSurfaceSession): AssetItem {
   return {
@@ -31,6 +33,22 @@ function getConnectMethod(session: Pick<WorkspaceSurfaceSession, "connectMethod"
 
 function getTokenId(tab: Pick<WorkspaceSessionTab, "payload">) {
   return String(tab.payload?.id || tab.payload?.token?.id || "");
+}
+
+async function requiresCredentialSetup(tab: WorkspaceSessionTab) {
+  const asset = sessionToAsset(tab);
+  const detail = await getAssetDetailRequest(tab.assetId, tab.orgId || "");
+  asset.permedAccounts = detail.permed_accounts || [];
+  asset.permedProtocols = detail.permed_protocols || asset.permedProtocols;
+  const accounts = asset.permedAccounts.filter((item) =>
+    [item.id, item.name, item.username, item.alias].includes(tab.account)
+  );
+  return {
+    asset,
+    needsSetup:
+      accounts.some((item) => needsInputSecret(item) || ["@INPUT", "@USER"].includes(item.alias)) ||
+      ["@INPUT", "@USER"].includes(tab.account)
+  };
 }
 
 async function buildPayload(tab: Pick<WorkspaceSessionTab, "payload">, token: TokenResponse) {
@@ -77,13 +95,18 @@ export function useWorkspaceTabMenu() {
     updateSessionPayload
   } = useWorkspaceTabs();
 
-  const reconnectViaConnection = (tab: WorkspaceSessionTab) => {
+  const reconnectViaConnection = async (tab: WorkspaceSessionTab) => {
     const connectMethod = tab.payload?.connectMethod?.value;
     const match = { tabId: tab.id, assetId: tab.assetId, protocol: tab.protocol, account: tab.account };
+    const { asset, needsSetup } = await requiresCredentialSetup(tab);
+    if (needsSetup) {
+      openSetupSession(asset, { protocol: tab.protocol, paneId: tab.id });
+      return;
+    }
 
-    void handleAssetConnection(tab.account, tab.assetId, tab.protocol, undefined, undefined, {
+    void handleAssetConnection(tab.account, tab.assetId, tab.protocol, asset.permedAccounts, undefined, {
       tabId: tab.id,
-      asset: sessionToAsset(tab),
+      asset,
       orgId: tab.orgId,
       connectMethod,
       onSessionReady: (payload) => updateSessionPayload(match, payload),
@@ -146,7 +169,7 @@ export function useWorkspaceTabMenu() {
         openSetupSession(sessionToAsset(tab), { protocol: tab.protocol, paneId: tab.id });
         return { status: "user_action_required", reason: "connection_setup", pane_id: tab.id };
       }
-      reconnectViaConnection(tab);
+      void reconnectViaConnection(tab).catch((error) => markSessionDisconnected(tab.id, String(error)));
       return { status: "connection_requested", pane_id: tab.id };
     }
   };
@@ -185,12 +208,26 @@ export function useWorkspaceTabMenu() {
       );
     } catch (error) {
       const connectMethod = workspaceTab.payload?.connectMethod?.value;
-      handleAssetConnection(workspaceTab.account, workspaceTab.assetId, workspaceTab.protocol, undefined, undefined, {
-        tabId: pane.id,
-        asset: sessionToAsset(workspaceTab),
-        orgId: workspaceTab.orgId,
-        connectMethod
-      });
+      try {
+        const { asset, needsSetup } = await requiresCredentialSetup(workspaceTab);
+        if (needsSetup) openSetupSession(asset, { protocol: workspaceTab.protocol, paneId: pane.id });
+        else
+          void handleAssetConnection(
+            workspaceTab.account,
+            workspaceTab.assetId,
+            workspaceTab.protocol,
+            asset.permedAccounts,
+            undefined,
+            {
+              tabId: pane.id,
+              asset,
+              orgId: workspaceTab.orgId,
+              connectMethod
+            }
+          );
+      } catch (detailError) {
+        addErrorToast({ title: t("ConnectError.ConnectFailed"), description: String(detailError) });
+      }
       addErrorToast({
         title: t("WorkspacePane.ConnectCurrent"),
         description: String(error)

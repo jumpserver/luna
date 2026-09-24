@@ -13,11 +13,14 @@ import ConnectMethodPicker from "./connectMethodPicker.vue";
 
 const props = defineProps<{
   account: string;
+  accountId?: string;
   protocol: string;
   accounts: PermedAccount[];
   protocols: PermedProtocol[];
   manualUsername?: string;
   manualPassword?: string;
+  hostedSecret?: string;
+  inputSecretType?: string;
   personalCredentialId?: string;
   personalCredentialVersion?: number;
   personalCredentialSecretType?: string;
@@ -40,8 +43,11 @@ const props = defineProps<{
 const emits = defineEmits<{
   (e: "update:protocol", v: string): void;
   (e: "update:account", v: string): void;
+  (e: "update:accountId", v: string): void;
   (e: "update:manualUsername", v: string): void;
   (e: "update:manualPassword", v: string): void;
+  (e: "update:hostedSecret", v: string): void;
+  (e: "update:inputSecretType", v: string): void;
   (e: "update:personalCredentialId", v: string): void;
   (e: "update:personalCredentialVersion", v: number | undefined): void;
   (e: "update:personalCredentialSecretType", v: string): void;
@@ -72,6 +78,21 @@ const selectedProtocol = computed<string>({
 const selectedAccount = computed<string>({
   get: () => props.account,
   set: (value) => emits("update:account", value ?? "")
+});
+
+const selectedAccountId = computed<string>({
+  get: () => props.accountId || "",
+  set: (value) => emits("update:accountId", value ?? "")
+});
+
+const localHostedSecret = computed<string>({
+  get: () => props.hostedSecret || "",
+  set: (value) => emits("update:hostedSecret", value ?? "")
+});
+
+const localInputSecretType = computed<string>({
+  get: () => props.inputSecretType || "password",
+  set: (value) => emits("update:inputSecretType", value || "password")
 });
 
 const localManualUsername = computed<string>({
@@ -201,6 +222,9 @@ watch(
       <div class="connect-form-controls flex flex-col gap-4">
         <ConnectAccountFields
           v-model:account="selectedAccount"
+          v-model:account-id="selectedAccountId"
+          v-model:hosted-secret="localHostedSecret"
+          v-model:input-secret-type="localInputSecretType"
           v-model:manual-username="localManualUsername"
           v-model:manual-password="localManualPassword"
           v-model:personal-credential-id="localPersonalCredentialId"
@@ -210,6 +234,7 @@ watch(
           v-model:dynamic-password="localDynamicPassword"
           v-model:remember-secret="localRememberSecret"
           :accounts="accounts"
+          :protocol="selectedProtocol"
           :asset-type="assetType"
           :personal-credentials="personalCredentials || []"
           :personal-credentials-loading="personalCredentialsLoading"

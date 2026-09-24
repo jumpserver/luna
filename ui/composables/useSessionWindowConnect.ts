@@ -8,7 +8,7 @@ import {
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { transformAssetDetail } from "~/utils";
-import { hasReusableSavedConnection, isSavedConnectionAvailable } from "~/utils/connection";
+import { hasReusableSavedConnection, isSavedConnectionAvailable, needsInputSecret } from "~/utils/connection";
 import { setWebOrgId } from "~/utils/runtime";
 
 export interface SessionWindowConnectionInfo {
@@ -273,6 +273,17 @@ export function useSessionWindowConnect() {
       const connection = { ...(saved || {}), ...(preference || {}), ...(routeConnection || {}) };
       const queryNeedsNoSecret = routeConnection && ["hosted", "anonymous"].includes(routeConnection.accountMode);
       const canAutoConnect = reusableSavedConnection || queryNeedsNoSecret || admin;
+      const selectedAccount =
+        (connection.accountId && asset.permedAccounts?.find((account) => account.id === connection.accountId)) ||
+        asset.permedAccounts?.find((account) =>
+          [account.name, account.username, account.alias].includes(connection.username || connection.account || "")
+        );
+
+      if ((connection.accountMode || "hosted") === "hosted" && needsInputSecret(selectedAccount)) {
+        if (admin) throw new Error(t("ConnectError.SecretRequired"));
+        openSetupSession(asset, { protocol: connection.protocol || "" });
+        return;
+      }
 
       if (canAutoConnect && (!reusableSavedConnection || isSavedConnectionAvailable(asset))) {
         const pane = openSession(asset, {

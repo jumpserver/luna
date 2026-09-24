@@ -58,12 +58,20 @@ const submitLabel = computed(() => {
   if (!showOnlineNum.value) return props.submitLabel;
   return `${props.submitLabel} (${t("EditModal.CurrentOnline", { count: onlineNum.value ?? "-" })})`;
 });
-const manualCredentialReady = computed(() => {
+const credentialReady = computed(() => {
   const isManual = draft.value.account === "@INPUT" || draft.value.account === t("Account.ManualInput");
-  if (!isManual) return true;
-  if (draft.value.personalCredentialId && !draft.value.savePersonalCredential) return true;
-  if (draft.value.personalCredentialId && draft.value.personalCredentialVersion === undefined) return false;
-  return !!draft.value.manualUsername.trim() && !!draft.value.manualPassword;
+  if (isManual) {
+    if (draft.value.personalCredentialId && !draft.value.savePersonalCredential) return true;
+    if (draft.value.personalCredentialId && draft.value.personalCredentialVersion === undefined) return false;
+    return !!draft.value.manualUsername.trim() && !!draft.value.manualPassword.trim();
+  }
+  const isDynamic = draft.value.account === "@USER" || draft.value.account.startsWith(t("Account.DynamicUser"));
+  if (isDynamic) return !!draft.value.dynamicPassword.trim();
+  const accounts = props.asset.permedAccounts || [];
+  const hosted =
+    accounts.find((item) => draft.value.accountId && item.id === draft.value.accountId) ||
+    accounts.find((item) => item.name === draft.value.account && !item.alias.startsWith("@"));
+  return hosted?.has_secret === false ? !!draft.value.hostedSecret.trim() : true;
 });
 const methodDisabled = computed(() =>
   protocolMethods.value.some(
@@ -77,7 +85,7 @@ const credentialsDisabled = computed(
     props.submitting ||
     !draft.value.protocol ||
     !props.asset.permedAccounts?.length ||
-    !manualCredentialReady.value
+    !credentialReady.value
 );
 const selectedMethod = computed(() => {
   const selected = parseLocalApplicationConnectMethod(draft.value.connectMethod).connectMethod;
@@ -166,12 +174,7 @@ watch(
   },
   { immediate: true }
 );
-const downloadDisabled = computed(() => {
-  const account = props.asset.permedAccounts?.find((item) =>
-    [item.name, item.username, item.alias].includes(draft.value.account)
-  );
-  return credentialsDisabled.value || (!!account && !account.alias.startsWith("@") && !account.has_secret);
-});
+const downloadDisabled = computed(() => credentialsDisabled.value);
 const submit = () => {
   if (!submitDisabled.value) emit("submit");
 };
@@ -263,6 +266,9 @@ watchDebounced(
     <ConnectForm
       v-model:protocol="draft.protocol"
       v-model:account="draft.account"
+      v-model:account-id="draft.accountId"
+      v-model:hosted-secret="draft.hostedSecret"
+      v-model:input-secret-type="draft.inputSecretType"
       v-model:manual-username="draft.manualUsername"
       v-model:manual-password="draft.manualPassword"
       v-model:personal-credential-id="draft.personalCredentialId"

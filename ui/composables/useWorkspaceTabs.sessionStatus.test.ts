@@ -168,6 +168,8 @@ describe("workspace session disconnect status", () => {
       account: "root",
       manualUsername: "",
       manualPassword: "",
+      hostedSecret: "",
+      inputSecretType: "password",
       personalCredentialId: "",
       personalCredentialSecretType: "password",
       savePersonalCredential: false,

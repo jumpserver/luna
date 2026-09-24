@@ -16,7 +16,8 @@ vi.mock("~/composables/useApiRequest", () => ({
 }));
 vi.mock("~/utils/connection", () => ({
   hasReusableSavedConnection: vi.fn(),
-  isSavedConnectionAvailable: vi.fn()
+  isSavedConnectionAvailable: vi.fn(),
+  needsInputSecret: vi.fn()
 }));
 
 const organization = (id: string): PermOrgItem => ({

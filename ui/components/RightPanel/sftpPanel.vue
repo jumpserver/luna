@@ -11,8 +11,11 @@ import {
 } from "#koko/composables/sftp/useFileAiSessions";
 import { compactSftpCacheIdentity, nextSftpSessionCache } from "~/components/RightPanel/sftpSessionCache";
 import SftpSessionInline from "~/components/RightPanel/sftpSessionInline.vue";
+import { getAssetDetailRequest } from "~/composables/useApiRequest";
 import { SFTP_FILE_MANAGER_VALUE } from "~/composables/useConnectMethods";
 import { useUserInfoStore } from "~/store/modules/userInfo";
+import { transformAssetDetail } from "~/utils";
+import { hasReusableSavedConnection, needsInputSecret } from "~/utils/connection";
 
 const { t } = useI18n();
 const { addErrorToast } = useErrorToast();
@@ -21,6 +24,7 @@ const { open: rightPanelOpen, activeTab: rightPanelTab } = useRightPanel();
 const { getSessionDetails } = useWorkspaceSessionDetails();
 const { fetchTree, treeNodeToAsset } = useAssetTree();
 const { displayUser, handleAssetConnection } = useAssetAction();
+const { open: openConnectionForm } = useConnectionFormModal();
 const userInfoStore = useUserInfoStore();
 const { loggedIn } = storeToRefs(userInfoStore);
 
@@ -168,17 +172,40 @@ const openSearchSftp = async () => {
   searchError.value = "";
   searchPayload.value = null;
   try {
-    const account = displayUser(asset.id, asset.permedAccounts);
+    const detail = await getAssetDetailRequest(asset.id, asset.org_id || userInfoStore.currentUser?.org?.id || "");
+    if (attempt !== connectionAttempt) return;
+    const connectAsset = { ...asset, ...transformAssetDetail(asset.id, detail) };
+    const account = displayUser(asset.id, connectAsset.permedAccounts);
     const preference = userInfoStore.getConnectionPreferenceForAsset(asset.id);
     const remembered = userInfoStore.getConnectionInfoForAsset(asset.id);
     const accountId = preference?.accountId || remembered?.accountId;
+    const selectedAccount =
+      (accountId && connectAsset.permedAccounts?.find((item) => item.id === accountId)) ||
+      connectAsset.permedAccounts?.find((item) => [item.name, item.username, item.alias].includes(account));
+    const accountMode = preference?.accountMode || remembered?.accountMode || "hosted";
+    const needsSetup =
+      needsInputSecret(selectedAccount) ||
+      (["manual", "dynamic"].includes(accountMode) &&
+        (remembered?.accountMode !== accountMode ||
+          !hasReusableSavedConnection({ ...connectAsset, savedConnection: remembered || undefined })));
+    const info = needsSetup ? await openConnectionForm(connectAsset, { protocol: "ssh" }) : null;
+    if (attempt !== connectionAttempt || (needsSetup && !info)) return;
 
     await new Promise<void>((resolve, reject) => {
-      handleAssetConnection(account, asset.id, "ssh", asset.permedAccounts, "sftp", {
-        accountMode: preference?.accountMode || remembered?.accountMode || "hosted",
-        accountId,
+      handleAssetConnection(info?.account || account, asset.id, "ssh", connectAsset.permedAccounts, "sftp", {
+        accountMode: info?.accountMode || accountMode,
+        accountId: info?.accountId || accountId,
+        manualUsername: info?.manualUsername,
+        manualPassword: info?.manualPassword,
+        hostedSecret: info?.hostedSecret,
+        inputSecretType: info?.inputSecretType,
+        personalCredentialId: info?.personalCredentialId,
+        personalCredentialVersion: info?.personalCredentialVersion,
+        personalCredentialSecretType: info?.personalCredentialSecretType,
+        savePersonalCredential: info?.savePersonalCredential,
+        dynamicPassword: info?.dynamicPassword,
         connectMethod: SFTP_FILE_MANAGER_VALUE,
-        asset,
+        asset: connectAsset,
         onSessionReady: (payload) => {
           if (attempt === connectionAttempt) searchPayload.value = payload;
           resolve();
