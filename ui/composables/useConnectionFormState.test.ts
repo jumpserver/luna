@@ -40,8 +40,11 @@ describe("personal credential connection form", () => {
     state.draft.value = {
       protocol: "k8s",
       account: "@INPUT",
+      accountId: undefined,
       manualUsername: "kubernetes-admin",
       manualPassword: "new-token",
+      hostedSecret: "",
+      inputSecretType: "token",
       personalCredentialId: "",
       personalCredentialVersion: undefined,
       personalCredentialSecretType: "password",
@@ -71,6 +74,52 @@ describe("personal credential connection form", () => {
       personalCredentialVersion: 3,
       personalCredentialSecretType: "token",
       savePersonalCredential: true
+    });
+  });
+
+  it("keeps an empty-secret hosted account ID and its per-attempt credential", () => {
+    const state = useConnectionFormState();
+    state.draft.value = {
+      ...state.draft.value,
+      protocol: "ssh",
+      account: "root",
+      accountId: "account-2",
+      hostedSecret: "private-key",
+      inputSecretType: "ssh_key"
+    };
+    const sshAsset: AssetItem = {
+      ...asset,
+      permedProtocols: [{ name: "ssh", port: 22, public: true }],
+      permedAccounts: [
+        {
+          id: "account-1",
+          alias: "root-1",
+          name: "root",
+          username: "root",
+          has_secret: true,
+          has_username: true,
+          secret_type: "password",
+          date_expired: "",
+          actions: []
+        },
+        {
+          id: "account-2",
+          alias: "root-2",
+          name: "root",
+          username: "root",
+          has_secret: false,
+          has_username: true,
+          secret_type: "password",
+          date_expired: "",
+          actions: []
+        }
+      ]
+    };
+
+    expect(state.buildConnectionInfo(sshAsset)).toMatchObject({
+      accountId: "account-2",
+      hostedSecret: "private-key",
+      inputSecretType: "ssh_key"
     });
   });
 });

@@ -10,6 +10,7 @@ const { activeRequest, settle } = useConnectionFormModal();
 const { confirmConnection } = useAssetConnection();
 const {
   buildConnectionInfo,
+  clearEnteredSecrets,
   draft,
   initDraft,
   loadAssetDetails,
@@ -58,7 +59,10 @@ const loadAsset = async () => {
 };
 
 const confirm = () => {
-  if (currentAsset.value) settle(buildConnectionInfo(currentAsset.value));
+  if (currentAsset.value) {
+    settle(buildConnectionInfo(currentAsset.value));
+    clearEnteredSecrets();
+  }
 };
 const downloadRdp = async (connectMethod: string) => {
   if (!currentAsset.value || downloadingRdp.value) return;
@@ -80,7 +84,10 @@ const downloadRdp = async (connectMethod: string) => {
     addErrorToast({ title: t("ConnectError.DownloadRdpFailed"), description: String(error) });
   }
 };
-const cancel = () => settle(null);
+const cancel = () => {
+  settle(null);
+  clearEnteredSecrets();
+};
 const updateOpen = (open: boolean) => {
   if (!open) cancel();
 };

@@ -4,8 +4,10 @@ import type { AssetItem, PermedProtocol } from "~/types";
 
 import { storeToRefs } from "pinia";
 import { h, resolveComponent } from "vue";
+import { getAssetDetailRequest } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortProtocolNames } from "~/utils";
+import { hasReusableSavedConnection, needsInputSecret } from "~/utils/connection";
 
 interface MenuItem {
   icon: string;
@@ -37,6 +39,8 @@ const UDropdownMenu = resolveComponent("UDropdownMenu");
 const { t } = useI18n();
 const { displayUser, displayProtocol, handleAssetRename, handleAssetUnfavorite, handleAssetConnection } =
   useAssetAction();
+const { openSetupSession } = useWorkspaceTabs();
+const { addErrorToast } = useErrorToast();
 const { folders: favoriteFolders, load: loadFavoriteFolders, favoriteToFolder } = useFavoriteFolders();
 const userInfoStore = useUserInfoStore();
 const { currentConnectionInfoMap } = storeToRefs(userInfoStore);
@@ -146,15 +150,7 @@ const buildMenuItems = computed(() => {
       const protocolItems: MenuItem[] = uniqueProtocols.map((name: string) => ({
         label: `${t("ContextMenu.Use")} ${name.toUpperCase()}`,
         icon: "i-lucide-plug",
-        onClick: () =>
-          handleAssetConnection(
-            displayUser(asset.id, asset.permedAccounts!),
-            asset.id,
-            displayProtocol(asset.id, asset.permedProtocols!),
-            asset.permedAccounts!,
-            name,
-            { asset }
-          )
+        onClick: () => void connectWithProtocol(asset, name)
       }));
 
       const moreConnect: MenuItem = {
@@ -171,6 +167,49 @@ const buildMenuItems = computed(() => {
     return items;
   };
 });
+
+async function connectWithProtocol(asset: AssetItem, protocol: string) {
+  try {
+    const detail = await getAssetDetailRequest(asset.id, asset.org_id || userInfoStore.currentUser?.org?.id || "");
+    const accounts = detail.permed_accounts || asset.permedAccounts || [];
+    const connectAsset = {
+      ...asset,
+      permedAccounts: accounts,
+      permedProtocols: detail.permed_protocols || asset.permedProtocols
+    };
+    const selected = displayUser(asset.id, accounts);
+    const preferredId =
+      userInfoStore.getConnectionPreferenceForAsset(asset.id)?.accountId ||
+      currentConnectionInfoMap.value[asset.id]?.accountId;
+    const account =
+      (preferredId && accounts.find((item) => item.id === preferredId)) ||
+      accounts.find((item) => [item.id, item.name, item.username, item.alias].includes(selected));
+    const savedConnection = currentConnectionInfoMap.value[asset.id] || asset.savedConnection;
+    const specialMode = (account?.alias || selected) === "@INPUT" ? "manual" : "dynamic";
+    if (
+      needsInputSecret(account) ||
+      (["@INPUT", "@USER"].includes(account?.alias || selected) &&
+        (savedConnection?.accountMode !== specialMode ||
+          !hasReusableSavedConnection({ ...connectAsset, savedConnection })))
+    ) {
+      openSetupSession(connectAsset, { protocol });
+      return;
+    }
+    await handleAssetConnection(
+      selected,
+      asset.id,
+      displayProtocol(asset.id, connectAsset.permedProtocols!),
+      accounts,
+      protocol,
+      {
+        accountId: account?.id,
+        asset: connectAsset
+      }
+    );
+  } catch (error) {
+    addErrorToast({ title: t("ConnectError.ConnectFailed"), error });
+  }
+}
 
 async function handleUnfavorite(asset: AssetItem) {
   if (!(await handleAssetUnfavorite(asset.id))) return;

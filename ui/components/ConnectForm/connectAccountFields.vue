@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { SelectMenuItem } from "@nuxt/ui";
 import type { AssetPageType, PermedAccount, PersonalAssetCredential } from "~/types/index";
+import { resolvePersonalCredentialSecretType } from "~/utils/connection";
 
 const props = defineProps<{
   accounts: PermedAccount[];
+  protocol: string;
   assetType?: AssetPageType;
   personalCredentials: PersonalAssetCredential[];
   personalCredentialsLoading?: boolean;
@@ -12,6 +14,9 @@ const props = defineProps<{
 }>();
 
 const account = defineModel<string>("account", { required: true });
+const accountId = defineModel<string>("accountId", { default: "" });
+const hostedSecret = defineModel<string>("hostedSecret", { default: "" });
+const inputSecretType = defineModel<string>("inputSecretType", { default: "password" });
 const manualUsername = defineModel<string>("manualUsername", { default: "" });
 const manualPassword = defineModel<string>("manualPassword", { default: "" });
 const personalCredentialId = defineModel<string>("personalCredentialId", { default: "" });
@@ -38,8 +43,80 @@ const showDynamicUserArea = computed(
     account.value.includes("同名账号") ||
     account.value.includes("Dynamic user")
 );
-const manualPasswordVisible = ref(false);
-const dynamicPasswordVisible = ref(false);
+const selectedHostedAccount = computed(() => {
+  const hosted = props.accounts.filter((item) => !item.alias.startsWith("@"));
+  return (
+    hosted.find((item) => accountId.value && item.id === accountId.value) ||
+    hosted.find((item) => item.name === account.value)
+  );
+});
+const showHostedSecretArea = computed(
+  () => !showManualInputArea.value && !showDynamicUserArea.value && selectedHostedAccount.value?.has_secret === false
+);
+const selectedAccountValue = computed<string>({
+  get: () => selectedHostedAccount.value?.id || account.value,
+  set: (value) => {
+    const hosted = props.accounts.find((item) => item.id === value && !item.alias.startsWith("@"));
+    if (hosted && hosted.name === account.value && hosted.id !== accountId.value) {
+      manualPassword.value = "";
+      dynamicPassword.value = "";
+      hostedSecret.value = "";
+      inputSecretType.value = "password";
+    }
+    account.value = hosted?.name || value || "";
+    accountId.value = hosted?.id || "";
+  }
+});
+const isSsh = computed(() => ["ssh", "sftp"].includes(props.protocol.toLowerCase()));
+const selectedAccountEntry = computed(() => {
+  if (showManualInputArea.value) return props.accounts.find((item) => item.alias === "@INPUT");
+  if (showDynamicUserArea.value) return props.accounts.find((item) => item.alias === "@USER");
+  return selectedHostedAccount.value;
+});
+const usingSavedCredential = computed(
+  () => showManualInputArea.value && !!personalCredentialId.value && !savePersonalCredential.value
+);
+const secretType = computed<string>({
+  get: () =>
+    isSsh.value
+      ? inputSecretType.value
+      : resolvePersonalCredentialSecretType(props.protocol, selectedAccountEntry.value?.secret_type || "password"),
+  set: (value) => {
+    inputSecretType.value = value;
+  }
+});
+const showSshKey = computed(() => isSsh.value && secretType.value === "ssh_key" && !usingSavedCredential.value);
+const editableSecret = computed<string>({
+  get: () =>
+    showManualInputArea.value
+      ? manualPassword.value
+      : showDynamicUserArea.value
+        ? dynamicPassword.value
+        : hostedSecret.value,
+  set: (value) => {
+    if (showManualInputArea.value) manualPassword.value = value;
+    else if (showDynamicUserArea.value) dynamicPassword.value = value;
+    else hostedSecret.value = value;
+  }
+});
+const secretVisible = ref(false);
+const keyInput = ref<HTMLInputElement | null>(null);
+const keyReadError = ref(false);
+let keyReadGeneration = 0;
+const readKeyFile = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file) return;
+  const generation = ++keyReadGeneration;
+  keyReadError.value = false;
+  try {
+    const content = await file.text();
+    if (generation === keyReadGeneration && showSshKey.value) editableSecret.value = content;
+  } catch {
+    if (generation === keyReadGeneration) keyReadError.value = true;
+  }
+};
 const manualCredentialChoice = "__manual_input__";
 
 const accountItems = computed(() => {
@@ -47,7 +124,7 @@ const accountItems = computed(() => {
     .filter((acc) => !acc.alias.includes("@"))
     .map((acc) => ({
       label: acc.name,
-      value: acc.name
+      value: acc.id
     }));
 
   const manual = props.accounts
@@ -121,7 +198,9 @@ const selectedCredentialChoice = computed<string>({
   }
 });
 
-const usingSavedCredential = computed(() => !!personalCredentialId.value && !savePersonalCredential.value);
+const displayedSecretType = computed(() =>
+  usingSavedCredential.value ? personalCredentialSecretType.value : secretType.value
+);
 const credentialActionLabel = computed(() => {
   if (!personalCredentialId.value) return t("Account.SaveAsPersonalCredential");
   return savePersonalCredential.value
@@ -139,12 +218,12 @@ const resolveSecretType = (credential: PersonalAssetCredential) => {
 
 const togglePersonalCredentialSave = () => {
   savePersonalCredential.value = !savePersonalCredential.value;
-  manualPasswordVisible.value = false;
+  secretVisible.value = false;
 };
 
 watch(personalCredentialId, (id, previousId) => {
   manualPassword.value = "";
-  manualPasswordVisible.value = false;
+  secretVisible.value = false;
   savePersonalCredential.value = false;
   if (!id) {
     if (previousId) manualUsername.value = "";
@@ -172,20 +251,42 @@ watch(
 );
 
 watch(
-  account,
-  () => {
-    manualPasswordVisible.value = false;
-    dynamicPasswordVisible.value = false;
+  [account, () => props.protocol],
+  (current, previous) => {
+    secretVisible.value = false;
+    keyReadError.value = false;
+    keyReadGeneration += 1;
+    if (previous && current.some((value, index) => value !== previous[index])) {
+      manualPassword.value = "";
+      dynamicPassword.value = "";
+      hostedSecret.value = "";
+      inputSecretType.value = isSsh.value
+        ? "password"
+        : resolvePersonalCredentialSecretType(props.protocol, selectedAccountEntry.value?.secret_type || "password");
+    }
   },
   { immediate: true }
 );
+
+watch(
+  [account, () => props.accounts],
+  () => {
+    accountId.value = selectedHostedAccount.value?.id || "";
+  },
+  { immediate: true }
+);
+
+watch(secretType, () => {
+  editableSecret.value = "";
+  keyReadGeneration += 1;
+});
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
     <UFormField :label="t('EditModal.OptionalAccount')" :ui="formFieldUi" size="md">
       <USelectMenu
-        v-model="account"
+        v-model="selectedAccountValue"
         :items="accountItems"
         :disabled="accounts.length === 0"
         :placeholder="accounts.length === 0 ? t('Account.NoAuthorizedAccounts') : undefined"
@@ -238,38 +339,109 @@ watch(
             class="w-full"
           />
         </UFormField>
+      </div>
+    </template>
 
-        <UFormField :label="t('Account.Password')" :ui="formFieldUi" size="md">
+    <template v-if="showManualInputArea || showDynamicUserArea || showHostedSecretArea">
+      <div class="credentials-fields">
+        <UFormField
+          v-if="isSsh && !usingSavedCredential"
+          :label="t('Account.CredentialType')"
+          :ui="formFieldUi"
+          size="md"
+        >
+          <USelectMenu
+            v-model="secretType"
+            :items="[
+              { label: t('Account.Password'), value: 'password' },
+              { label: t('Account.SshKey'), value: 'ssh_key' }
+            ]"
+            value-key="value"
+            label-key="label"
+            :ui="{ base: controlBaseUi, ...overlayMenuUi }"
+            size="md"
+            class="w-full"
+          />
+        </UFormField>
+        <UFormField v-if="showSshKey" :label="t('Account.SshKey')" :ui="formFieldUi" size="md">
+          <UTextarea
+            v-model="editableSecret"
+            :placeholder="t('Account.PasteSshKey')"
+            :rows="5"
+            :ui="{ base: controlBaseUi }"
+            class="w-full"
+            @keydown.enter.stop
+          />
+          <input ref="keyInput" type="file" class="hidden" accept=".pem,.key,text/plain" @change="readKeyFile" />
+          <UButton
+            type="button"
+            icon="i-lucide-file-up"
+            color="neutral"
+            variant="outline"
+            size="sm"
+            :label="t('Account.ChooseSshKeyFile')"
+            class="mt-2"
+            @click="keyInput?.click()"
+          />
+          <p v-if="keyReadError" class="mt-1 text-xs text-error">
+            {{ t("Account.ReadSshKeyFailed") }}
+          </p>
+        </UFormField>
+        <UFormField
+          v-else
+          :label="
+            displayedSecretType === 'ssh_key'
+              ? t('Account.SshKey')
+              : displayedSecretType === 'token'
+                ? t('Account.Token')
+                : t('Account.Password')
+          "
+          :ui="formFieldUi"
+          size="md"
+        >
           <UFieldGroup class="w-full">
             <UInput
-              v-model="manualPassword"
-              :type="manualPasswordVisible ? 'text' : 'password'"
+              v-model="editableSecret"
+              :type="secretVisible ? 'text' : 'password'"
               :disabled="usingSavedCredential"
               autocapitalize="none"
               autocorrect="off"
-              :placeholder="t(usingSavedCredential ? 'Account.UseSavedPassword' : 'Account.Password')"
+              :placeholder="
+                t(
+                  usingSavedCredential
+                    ? 'Account.UseSavedSecret'
+                    : secretType === 'token'
+                      ? 'Account.Token'
+                      : 'Account.Password'
+                )
+              "
               :ui="{ base: controlBaseUi, trailing: 'pe-1' }"
               icon="i-lucide-lock-keyhole"
               size="md"
               class="min-w-0 flex-1"
             >
-              <template v-if="!usingSavedCredential" #trailing>
+              <template #trailing>
                 <UButton
+                  v-if="!usingSavedCredential"
                   type="button"
-                  :icon="manualPasswordVisible ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                  :aria-label="t(manualPasswordVisible ? 'Account.HidePassword' : 'Account.ShowPassword')"
-                  :title="t(manualPasswordVisible ? 'Account.HidePassword' : 'Account.ShowPassword')"
-                  :aria-pressed="manualPasswordVisible"
+                  :icon="secretVisible ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                  :aria-label="t(secretVisible ? 'Account.HidePassword' : 'Account.ShowPassword')"
+                  :title="t(secretVisible ? 'Account.HidePassword' : 'Account.ShowPassword')"
+                  :aria-pressed="secretVisible"
                   color="neutral"
                   variant="link"
                   size="xs"
                   :ui="{ leadingIcon: 'size-[18px]' }"
-                  @click="manualPasswordVisible = !manualPasswordVisible"
+                  @click="secretVisible = !secretVisible"
                 />
               </template>
             </UInput>
             <UTooltip
-              v-if="!personalCredentialId || personalCredentialSecretType === 'password'"
+              v-if="
+                showManualInputArea &&
+                (!personalCredentialId || personalCredentialSecretType === 'password') &&
+                secretType !== 'ssh_key'
+              "
               :text="credentialActionLabel"
               :delay-duration="150"
             >
@@ -295,42 +467,8 @@ watch(
                 @click="togglePersonalCredentialSave"
               />
             </UTooltip>
-          </UFieldGroup>
-        </UFormField>
-      </div>
-    </template>
-
-    <template v-if="showDynamicUserArea">
-      <div class="credentials-fields">
-        <UFormField :label="t('Account.Password')" :ui="formFieldUi" size="md">
-          <UFieldGroup class="w-full">
-            <UInput
-              v-model="dynamicPassword"
-              :type="dynamicPasswordVisible ? 'text' : 'password'"
-              autocapitalize="none"
-              autocorrect="off"
-              :placeholder="t('Account.Password')"
-              :ui="{ base: controlBaseUi, trailing: 'pe-1' }"
-              icon="i-lucide-lock-keyhole"
-              size="md"
-              class="min-w-0 flex-1"
-            >
-              <template #trailing>
-                <UButton
-                  type="button"
-                  :icon="dynamicPasswordVisible ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                  :aria-label="t(dynamicPasswordVisible ? 'Account.HidePassword' : 'Account.ShowPassword')"
-                  :title="t(dynamicPasswordVisible ? 'Account.HidePassword' : 'Account.ShowPassword')"
-                  :aria-pressed="dynamicPasswordVisible"
-                  color="neutral"
-                  variant="link"
-                  size="xs"
-                  :ui="{ leadingIcon: 'size-[18px]' }"
-                  @click="dynamicPasswordVisible = !dynamicPasswordVisible"
-                />
-              </template>
-            </UInput>
             <UButton
+              v-if="showDynamicUserArea && secretType !== 'ssh_key'"
               type="button"
               :icon="rememberSecret ? 'i-lucide-bookmark-check' : 'i-lucide-bookmark'"
               :aria-label="t('Account.RememberPassword')"

@@ -6,10 +6,15 @@ vi.mock("~/composables/useConnectMethods", () => ({ SFTP_FILE_EDITOR_VALUE: "sft
 
 const mocks = vi.hoisted(() => ({ exchange: vi.fn() }));
 vi.mock("~/composables/useConnectTokenExchange", () => ({ exchangeConnectToken: mocks.exchange }));
+const getAssetDetailRequest = vi.fn();
+vi.mock("~/composables/useApiRequest", () => ({
+  getAssetDetailRequest: (...args: unknown[]) => getAssetDetailRequest(...args)
+}));
 
 const createKokoTicket = vi.fn();
 const updateSessionPayload = vi.fn();
 const openSession = vi.fn((_asset: unknown, _options: { payload?: unknown }) => ({ id: "new-pane" }));
+const openSetupSession = vi.fn();
 const handleAssetConnection = vi.fn();
 const addErrorToast = vi.fn();
 
@@ -41,6 +46,7 @@ function session(webProxy = true) {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.exchange.mockResolvedValue({ id: "new-token", value: "new-value", org_id: "asset-org" });
+  getAssetDetailRequest.mockResolvedValue({ permed_accounts: [], permed_protocols: [] });
   createKokoTicket.mockResolvedValue({ ticket: "new-ticket" });
   vi.stubGlobal("useI18n", () => ({ t: (key: string) => key }));
   vi.stubGlobal("useErrorToast", () => ({ addErrorToast }));
@@ -49,9 +55,28 @@ beforeEach(() => {
   vi.stubGlobal("useWorkspaceTabs", () => ({
     updateSessionPayload,
     openSession,
+    openSetupSession,
     markSessionConnecting: vi.fn(),
     setActiveSession: vi.fn()
   }));
+});
+
+it("opens connection setup when a reconnect cannot exchange its token and the account needs a secret", async () => {
+  mocks.exchange.mockRejectedValue(new Error("token expired"));
+  getAssetDetailRequest.mockResolvedValue({
+    permed_accounts: [{ id: "account-1", name: "user", username: "user", alias: "user", has_secret: false }],
+    permed_protocols: []
+  });
+  const tab = {
+    ...session(false),
+    permedAccounts: [{ id: "account-1", name: "user", username: "user", alias: "user", has_secret: false }]
+  } as WorkspaceSessionTab;
+
+  await useWorkspaceTabMenu().reconnectSession(tab);
+  await vi.waitFor(() =>
+    expect(openSetupSession).toHaveBeenCalledWith(expect.anything(), { protocol: "https", paneId: "pane" })
+  );
+  expect(handleAssetConnection).not.toHaveBeenCalled();
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -87,7 +112,7 @@ it.each(["missing", "rejected", "legacy"])(
     if (failure === "legacy") delete tab.payload!.webProxy!.ticketEndpoint;
     await useWorkspaceTabMenu().reconnectSession(tab);
     expect(updateSessionPayload).not.toHaveBeenCalled();
-    expect(handleAssetConnection).toHaveBeenCalled();
+    await vi.waitFor(() => expect(handleAssetConnection).toHaveBeenCalled());
   }
 );
 

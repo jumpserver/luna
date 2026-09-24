@@ -239,6 +239,71 @@ describe("opening assets in local applications", () => {
     );
   });
 
+  it("passes a temporary SSH key for a hosted account without a stored secret", async () => {
+    const ready = vi.fn();
+    const failed = vi.fn();
+    const account = {
+      alias: "root",
+      date_expired: "",
+      has_secret: false,
+      has_username: true,
+      id: "account-id",
+      name: "root",
+      secret_type: "password",
+      username: "root",
+      actions: []
+    };
+
+    await useAssetAction().handleAssetConnection("root", "asset", "ssh", [account], undefined, {
+      accountMode: "hosted",
+      accountId: account.id,
+      hostedSecret: "-----BEGIN OPENSSH PRIVATE KEY-----",
+      inputSecretType: "ssh_key",
+      connectMethod: method.value,
+      onSessionReady: ready,
+      onSessionError: failed
+    });
+    await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(mocks.createToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: "account-id",
+        input_username: "root",
+        input_secret: "-----BEGIN OPENSSH PRIVATE KEY-----",
+        input_secret_type: "ssh_key"
+      }),
+      expect.anything()
+    );
+  });
+
+  it("rejects an empty-secret hosted account before requesting a token", async () => {
+    const failed = vi.fn();
+    await useAssetAction().handleAssetConnection(
+      "root",
+      "asset",
+      "ssh",
+      [
+        {
+          alias: "root",
+          date_expired: "",
+          has_secret: false,
+          has_username: true,
+          id: "account-id",
+          name: "root",
+          secret_type: "password",
+          username: "root",
+          actions: []
+        }
+      ],
+      undefined,
+      { accountMode: "hosted", accountId: "account-id", onSessionError: failed }
+    );
+
+    expect(failed).toHaveBeenCalledWith(expect.any(Error));
+    expect(mocks.createToken).not.toHaveBeenCalled();
+  });
+
   it("reuses Magnus db_client tokens before launching the local client", async () => {
     const dbMethod = { value: "db_client", type: "native", component: "magnus", disabled: false };
     vi.stubGlobal("useConnectMethods", () => ({

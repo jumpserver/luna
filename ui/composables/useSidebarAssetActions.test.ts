@@ -33,7 +33,8 @@ vi.mock("~/store/modules/userInfo", () => ({
 }));
 vi.mock("~/utils/connection", () => ({
   hasReusableSavedConnection: () => false,
-  isSavedConnectionAvailable: () => false
+  isSavedConnectionAvailable: () => false,
+  needsInputSecret: () => false
 }));
 vi.mock("~/utils/itemName", () => ({
   hasItemName: () => false,

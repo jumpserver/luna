@@ -28,7 +28,7 @@ import { useSettingManager } from "~/composables/useSettingManager";
 import { desktopDialog, desktopFs, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { transformAssetDetail } from "~/utils";
-import { resolvePersonalCredentialSecretType } from "~/utils/connection";
+import { needsInputSecret, resolvePersonalCredentialSecretType } from "~/utils/connection";
 import { pageLocation } from "~/utils/runtime";
 
 let desktopListenersInitialized = false;
@@ -850,6 +850,8 @@ export const useAssetAction = () => {
       accountId?: string;
       manualUsername?: string;
       manualPassword?: string;
+      hostedSecret?: string;
+      inputSecretType?: string;
       personalCredentialId?: string;
       personalCredentialVersion?: number;
       personalCredentialSecretType?: string;
@@ -879,9 +881,12 @@ export const useAssetAction = () => {
 
     // 根据展示选择反查账号对象（name/username/alias 任意匹配）
     const _accounts = accounts || [];
-    const matchedAccount = _accounts.find(
-      (a) => a.username === selected || a.alias === selected || a.name === selected
-    );
+    const matchedAccount =
+      _accounts.find((account) => account.id === ephemeral?.accountId) ||
+      (selected === saved?.username ? _accounts.find((account) => account.id === saved?.accountId) : undefined) ||
+      _accounts.find(
+        (account) => account.username === selected || account.alias === selected || account.name === selected
+      );
 
     if (effectiveMode === "manual" || selected === "@INPUT" || selected === "手动输入" || selected === "Manual input") {
       // prettier-ignore
@@ -900,9 +905,9 @@ export const useAssetAction = () => {
       input_username = "";
       input_secret = "";
     } else {
-      // 托管账号：account 用 ID，input_username 用展示账号名
-      input_username = selected || matchedAccount?.username || "";
-      input_secret = "";
+      // 托管账号：account 用 ID，无保存凭据时提交本次输入的密码或私钥。
+      input_username = matchedAccount?.username || selected || "";
+      input_secret = needsInputSecret(matchedAccount) ? ephemeral?.hostedSecret || "" : "";
     }
 
     const protocol = protocolOverride || displayProtocol;
@@ -947,19 +952,6 @@ export const useAssetAction = () => {
 
     if (ephemeral?.tabId && !ephemeral.downloadRdp) setSessionConnectMethod(ephemeral.tabId, connectMethod);
 
-    // Every successful attempt updates the lightweight last-used preference.
-    // It must not turn into an auto-connect record unless the user checked
-    // "remember selection" (that record is managed by useAssetConnection).
-    if (!ephemeral?.downloadRdp && !ephemeral?.admin)
-      userInfoStore.setConnectionPreferenceForAsset(assetId, {
-        protocol,
-        username: selected || user,
-        accountId:
-          effectiveMode === "hosted" ? ephemeral?.accountId || matchedAccount?.id || saved?.accountId : undefined,
-        accountMode: effectiveMode,
-        connectMethod
-      });
-
     const mergedConnectOptions = {
       ...generateConnectOptions(),
       ...(saved?.protocol === protocol ? (saved as any)?.connectOptions || {} : {}),
@@ -988,13 +980,39 @@ export const useAssetAction = () => {
         : undefined;
     const savePersonalCredential = !!ephemeral?.savePersonalCredential;
     const useSavedPersonalCredential = isManual && !!personalCredentialId && !savePersonalCredential;
-    const manualAccountSecretType = _accounts.find((account) => account.alias === "@INPUT")?.secret_type;
-    const personalCredentialSecretType = resolvePersonalCredentialSecretType(
-      protocol,
-      personalCredentialId
-        ? ephemeral?.personalCredentialSecretType || manualAccountSecretType || "password"
-        : manualAccountSecretType || ephemeral?.personalCredentialSecretType || "password"
-    );
+    const selectedAccount =
+      accountForToken === "@INPUT"
+        ? _accounts.find((account) => account.alias === "@INPUT")
+        : accountForToken === "@USER"
+          ? _accounts.find((account) => account.alias === "@USER")
+          : matchedAccount;
+    const inputSecretType = ["ssh", "sftp"].includes(protocol.toLowerCase())
+      ? ephemeral?.inputSecretType === "ssh_key"
+        ? "ssh_key"
+        : "password"
+      : resolvePersonalCredentialSecretType(protocol, selectedAccount?.secret_type || "password");
+    const personalCredentialSecretType = savePersonalCredential
+      ? inputSecretType
+      : resolvePersonalCredentialSecretType(
+          protocol,
+          ephemeral?.personalCredentialSecretType || selectedAccount?.secret_type || "password"
+        );
+    if (needsInputSecret(selectedAccount) && !input_secret && !useSavedPersonalCredential) {
+      const error = new Error(t("ConnectError.SecretRequired"));
+      if (ephemeral?.onSessionError) ephemeral.onSessionError(error);
+      else addErrorToast({ title: t("ConnectError.ConnectFailed"), description: error.message });
+      return;
+    }
+    // Only a valid attempt can update the last-used selection. The secret stays in this request.
+    if (!ephemeral?.downloadRdp && !ephemeral?.admin)
+      userInfoStore.setConnectionPreferenceForAsset(assetId, {
+        protocol,
+        username: selected || user,
+        accountId:
+          effectiveMode === "hosted" ? ephemeral?.accountId || matchedAccount?.id || saved?.accountId : undefined,
+        accountMode: effectiveMode,
+        connectMethod
+      });
     const connectionBody: ConnectionBody = {
       asset: assetId,
       protocol,
@@ -1008,6 +1026,9 @@ export const useAssetAction = () => {
               ? { personal_credential_version: personalCredentialVersion }
               : {})
           }
+        : {}),
+      ...(needsInputSecret(selectedAccount) && !useSavedPersonalCredential
+        ? { input_secret_type: inputSecretType }
         : {}),
       account: accountForToken,
       connect_method: connectMethod,
