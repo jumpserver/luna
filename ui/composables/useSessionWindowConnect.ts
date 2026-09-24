@@ -279,7 +279,11 @@ export function useSessionWindowConnect() {
           [account.name, account.username, account.alias].includes(connection.username || connection.account || "")
         );
 
-      if ((connection.accountMode || "hosted") === "hosted" && needsInputSecret(selectedAccount)) {
+      if (
+        (connection.accountMode || "hosted") === "hosted" &&
+        connection.protocol?.toLowerCase() !== "sftp" &&
+        needsInputSecret(selectedAccount)
+      ) {
         if (admin) throw new Error(t("ConnectError.SecretRequired"));
         openSetupSession(asset, { protocol: connection.protocol || "" });
         return;

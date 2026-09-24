@@ -5,7 +5,7 @@ import { resolvePersonalCredentialSecretType } from "~/utils/connection";
 
 const props = defineProps<{
   accounts: PermedAccount[];
-  protocol: string;
+  protocol?: string;
   assetType?: AssetPageType;
   personalCredentials: PersonalAssetCredential[];
   personalCredentialsLoading?: boolean;
@@ -51,7 +51,12 @@ const selectedHostedAccount = computed(() => {
   );
 });
 const showHostedSecretArea = computed(
-  () => !showManualInputArea.value && !showDynamicUserArea.value && selectedHostedAccount.value?.has_secret === false
+  () =>
+    !!props.protocol &&
+    props.protocol.toLowerCase() !== "sftp" &&
+    !showManualInputArea.value &&
+    !showDynamicUserArea.value &&
+    selectedHostedAccount.value?.has_secret === false
 );
 const selectedAccountValue = computed<string>({
   get: () => selectedHostedAccount.value?.id || account.value,
@@ -67,7 +72,7 @@ const selectedAccountValue = computed<string>({
     accountId.value = hosted?.id || "";
   }
 });
-const isSsh = computed(() => ["ssh", "sftp"].includes(props.protocol.toLowerCase()));
+const isSsh = computed(() => props.protocol?.toLowerCase() === "ssh");
 const selectedAccountEntry = computed(() => {
   if (showManualInputArea.value) return props.accounts.find((item) => item.alias === "@INPUT");
   if (showDynamicUserArea.value) return props.accounts.find((item) => item.alias === "@USER");
@@ -78,14 +83,19 @@ const usingSavedCredential = computed(
 );
 const secretType = computed<string>({
   get: () =>
-    isSsh.value
-      ? inputSecretType.value
-      : resolvePersonalCredentialSecretType(props.protocol, selectedAccountEntry.value?.secret_type || "password"),
+    !showHostedSecretArea.value
+      ? "password"
+      : isSsh.value
+        ? inputSecretType.value
+        : resolvePersonalCredentialSecretType(
+            props.protocol || "",
+            selectedAccountEntry.value?.secret_type || "password"
+          ),
   set: (value) => {
     inputSecretType.value = value;
   }
 });
-const showSshKey = computed(() => isSsh.value && secretType.value === "ssh_key" && !usingSavedCredential.value);
+const showSshKey = computed(() => showHostedSecretArea.value && isSsh.value && secretType.value === "ssh_key");
 const editableSecret = computed<string>({
   get: () =>
     showManualInputArea.value
@@ -198,9 +208,7 @@ const selectedCredentialChoice = computed<string>({
   }
 });
 
-const displayedSecretType = computed(() =>
-  usingSavedCredential.value ? personalCredentialSecretType.value : secretType.value
-);
+const displayedSecretType = computed(() => (showHostedSecretArea.value ? secretType.value : "password"));
 const credentialActionLabel = computed(() => {
   if (!personalCredentialId.value) return t("Account.SaveAsPersonalCredential");
   return savePersonalCredential.value
@@ -262,7 +270,10 @@ watch(
       hostedSecret.value = "";
       inputSecretType.value = isSsh.value
         ? "password"
-        : resolvePersonalCredentialSecretType(props.protocol, selectedAccountEntry.value?.secret_type || "password");
+        : resolvePersonalCredentialSecretType(
+            props.protocol || "",
+            selectedAccountEntry.value?.secret_type || "password"
+          );
     }
   },
   { immediate: true }
@@ -345,7 +356,7 @@ watch(secretType, () => {
     <template v-if="showManualInputArea || showDynamicUserArea || showHostedSecretArea">
       <div class="credentials-fields">
         <UFormField
-          v-if="isSsh && !usingSavedCredential"
+          v-if="showHostedSecretArea && isSsh"
           :label="t('Account.CredentialType')"
           :ui="formFieldUi"
           size="md"
@@ -409,7 +420,7 @@ watch(secretType, () => {
               :placeholder="
                 t(
                   usingSavedCredential
-                    ? 'Account.UseSavedSecret'
+                    ? 'Account.UseSavedPassword'
                     : secretType === 'token'
                       ? 'Account.Token'
                       : 'Account.Password'

@@ -1177,7 +1177,6 @@
     "UpdatePersonalCredential": "저장된 비밀번호 업데이트",
     "CancelPersonalCredentialUpdate": "비밀번호 업데이트 취소",
     "UseSavedPassword": "저장된 비밀번호를 사용합니다",
-    "UseSavedSecret": "The saved credential will be used",
     "LoadPersonalCredentialsFailed": "저장된 자격 증명을 불러오지 못했습니다. 계속 직접 입력할 수 있습니다.",
     "ShowPassword": "비밀번호 표시",
     "HidePassword": "비밀번호 숨기기"

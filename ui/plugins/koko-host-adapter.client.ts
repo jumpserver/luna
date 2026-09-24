@@ -30,7 +30,6 @@ import {
 import { ensureNamedXtermThemes, toXtermTheme } from "~/shared/theme/adapters/xterm";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { transformAssetDetail } from "~/utils";
-import { hasReusableSavedConnection, needsInputSecret } from "~/utils/connection";
 import { isDesktopRuntime } from "~/utils/runtime";
 
 export default defineNuxtPlugin((nuxtApp) => {
@@ -55,45 +54,24 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   const useSftpSessionCreator = () => {
     const { displayUser, handleAssetConnection } = useAssetAction();
-    const { open: openConnectionForm } = useConnectionFormModal();
 
-    return async (asset: KokoPreparedSftpAsset, connection?: KokoSftpConnectionChoice) => {
-      const preference = connection ? null : userInfoStore.getConnectionPreferenceForAsset(asset.id);
-      const remembered = connection ? null : userInfoStore.getConnectionInfoForAsset(asset.id);
-      const account = connection?.account || displayUser(asset.id, asset.permedAccounts);
-      const accountId = connection?.accountId || preference?.accountId || remembered?.accountId;
-      const selectedAccount =
-        (accountId && asset.permedAccounts?.find((item) => item.id === accountId)) ||
-        asset.permedAccounts?.find((item) => [item.name, item.username, item.alias].includes(account));
-      const accountMode = connection?.accountMode || preference?.accountMode || remembered?.accountMode || "hosted";
-      const requiresInput =
-        (accountMode === "hosted" && needsInputSecret(selectedAccount) && !connection?.hostedSecret) ||
-        (accountMode === "manual" &&
-          !connection?.personalCredentialId &&
-          !connection?.manualPassword &&
-          (remembered?.accountMode !== accountMode ||
-            !hasReusableSavedConnection({ ...asset, savedConnection: remembered || undefined }))) ||
-        (accountMode === "dynamic" &&
-          !connection?.dynamicPassword &&
-          (remembered?.accountMode !== accountMode ||
-            !hasReusableSavedConnection({ ...asset, savedConnection: remembered || undefined })));
-      const info = requiresInput ? await openConnectionForm(asset, { protocol: "ssh" }) : null;
-      if (requiresInput && !info) throw new Error("SFTP connection cancelled");
-      const choice = info || connection;
-
-      return new Promise<{ tokenId: string }>((resolve, reject) => {
-        void handleAssetConnection(choice?.account || account, asset.id, "ssh", asset.permedAccounts, "sftp", {
-          accountMode: choice?.accountMode || accountMode,
-          accountId: choice?.accountId || accountId,
-          manualUsername: choice?.manualUsername,
-          manualPassword: choice?.manualPassword,
-          hostedSecret: choice?.hostedSecret,
-          inputSecretType: choice?.inputSecretType,
-          personalCredentialId: choice?.personalCredentialId,
-          personalCredentialVersion: choice?.personalCredentialVersion,
-          personalCredentialSecretType: choice?.personalCredentialSecretType,
-          savePersonalCredential: choice?.savePersonalCredential,
-          dynamicPassword: choice?.dynamicPassword,
+    return (asset: KokoPreparedSftpAsset, connection?: KokoSftpConnectionChoice) =>
+      new Promise<{ tokenId: string }>((resolve, reject) => {
+        const preference = connection ? null : userInfoStore.getConnectionPreferenceForAsset(asset.id);
+        const remembered = connection ? null : userInfoStore.getConnectionInfoForAsset(asset.id);
+        const account = connection?.account || displayUser(asset.id, asset.permedAccounts);
+        void handleAssetConnection(account, asset.id, "ssh", asset.permedAccounts, "sftp", {
+          accountMode: connection?.accountMode || preference?.accountMode || remembered?.accountMode || "hosted",
+          accountId: connection?.accountId || preference?.accountId || remembered?.accountId,
+          ...(connection && {
+            manualUsername: connection.manualUsername,
+            manualPassword: connection.manualPassword,
+            personalCredentialId: connection.personalCredentialId,
+            personalCredentialVersion: connection.personalCredentialVersion,
+            personalCredentialSecretType: connection.personalCredentialSecretType,
+            savePersonalCredential: connection.savePersonalCredential,
+            dynamicPassword: connection.dynamicPassword
+          }),
           connectMethod: SFTP_FILE_MANAGER_VALUE,
           orgId: currentUser.value?.org?.id || "",
           asset,
@@ -108,7 +86,6 @@ export default defineNuxtPlugin((nuxtApp) => {
           onSessionError: reject
         }).catch(reject);
       });
-    };
   };
 
   const adapter: KokoHostAdapter = {

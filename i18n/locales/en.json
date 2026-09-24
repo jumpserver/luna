@@ -1177,7 +1177,6 @@
     "UpdatePersonalCredential": "Update saved password",
     "CancelPersonalCredentialUpdate": "Cancel password update",
     "UseSavedPassword": "The saved password will be used",
-    "UseSavedSecret": "The saved credential will be used",
     "LoadPersonalCredentialsFailed": "Saved credentials could not be loaded. You can still enter one manually.",
     "ShowPassword": "Show password",
     "HidePassword": "Hide password"

@@ -1177,7 +1177,6 @@
     "UpdatePersonalCredential": "Modifier le mot de passe enregistré",
     "CancelPersonalCredentialUpdate": "Annuler la modification du mot de passe",
     "UseSavedPassword": "Le mot de passe enregistré sera utilisé",
-    "UseSavedSecret": "The saved credential will be used",
     "LoadPersonalCredentialsFailed": "Impossible de charger les identifiants enregistrés. Vous pouvez toujours en saisir un manuellement.",
     "ShowPassword": "Afficher le mot de passe",
     "HidePassword": "Masquer le mot de passe"

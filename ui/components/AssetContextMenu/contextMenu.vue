@@ -20,7 +20,7 @@ const emits = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { handleAssetUnfavorite } = useAssetAction();
+const { handleAssetConnection, displayUser, handleAssetUnfavorite } = useAssetAction();
 const { folders: favoriteFolders, load: loadFavoriteFolders, favoriteToFolder } = useFavoriteFolders();
 interface MenuItem {
   value?: string;
@@ -91,8 +91,30 @@ const menuItems = computed((): MenuItem[] => {
   return baseItems;
 });
 
-function handleConnect() {
-  emits("connectTrigger", props.asset);
+/**
+ * @description 连接
+ * @param protocol
+ */
+function handleConnect(protocol?: string) {
+  if (protocol) {
+    // 如果有指定协议，直接连接
+    handleAssetConnection(
+      displayUser(props.asset.id, props.asset.permedAccounts!),
+      props.asset.id,
+      protocol,
+      props.asset.permedAccounts!,
+      undefined,
+      {
+        accountMode: "hosted",
+        manualUsername: "",
+        manualPassword: "",
+        dynamicPassword: "",
+        asset: props.asset
+      }
+    );
+  } else {
+    emits("connectTrigger", props.asset);
+  }
   emits("update:visible", false);
 }
 

@@ -7,7 +7,7 @@ import { h, resolveComponent } from "vue";
 import { getAssetDetailRequest } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortProtocolNames } from "~/utils";
-import { hasReusableSavedConnection, needsInputSecret } from "~/utils/connection";
+import { needsInputSecret } from "~/utils/connection";
 
 interface MenuItem {
   icon: string;
@@ -150,7 +150,20 @@ const buildMenuItems = computed(() => {
       const protocolItems: MenuItem[] = uniqueProtocols.map((name: string) => ({
         label: `${t("ContextMenu.Use")} ${name.toUpperCase()}`,
         icon: "i-lucide-plug",
-        onClick: () => void connectWithProtocol(asset, name)
+        onClick: () => {
+          if (name.toLowerCase() === "sftp") {
+            void handleAssetConnection(
+              displayUser(asset.id, asset.permedAccounts!),
+              asset.id,
+              displayProtocol(asset.id, asset.permedProtocols!),
+              asset.permedAccounts!,
+              name,
+              { asset }
+            );
+            return;
+          }
+          void connectWithProtocol(asset, name);
+        }
       }));
 
       const moreConnect: MenuItem = {
@@ -184,14 +197,7 @@ async function connectWithProtocol(asset: AssetItem, protocol: string) {
     const account =
       (preferredId && accounts.find((item) => item.id === preferredId)) ||
       accounts.find((item) => [item.id, item.name, item.username, item.alias].includes(selected));
-    const savedConnection = currentConnectionInfoMap.value[asset.id] || asset.savedConnection;
-    const specialMode = (account?.alias || selected) === "@INPUT" ? "manual" : "dynamic";
-    if (
-      needsInputSecret(account) ||
-      (["@INPUT", "@USER"].includes(account?.alias || selected) &&
-        (savedConnection?.accountMode !== specialMode ||
-          !hasReusableSavedConnection({ ...connectAsset, savedConnection })))
-    ) {
+    if (protocol.toLowerCase() !== "sftp" && needsInputSecret(account)) {
       openSetupSession(connectAsset, { protocol });
       return;
     }

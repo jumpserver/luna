@@ -1177,7 +1177,6 @@
     "UpdatePersonalCredential": "Обновить сохраненный пароль",
     "CancelPersonalCredentialUpdate": "Отменить обновление пароля",
     "UseSavedPassword": "Будет использован сохраненный пароль",
-    "UseSavedSecret": "The saved credential will be used",
     "LoadPersonalCredentialsFailed": "Не удалось загрузить сохраненные учетные данные. Вы по-прежнему можете ввести их вручную.",
     "ShowPassword": "Показать пароль",
     "HidePassword": "Скрыть пароль"

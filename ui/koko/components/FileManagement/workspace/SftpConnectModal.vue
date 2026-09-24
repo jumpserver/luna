@@ -69,18 +69,9 @@ const isManualAccount = computed(() => {
 });
 const canConnect = computed(() => {
   if (!selectedAsset.value || remoteConnecting.value || !draft.value.account) return false;
-  if (isManualAccount.value) {
-    if (draft.value.personalCredentialId && !draft.value.savePersonalCredential) return true;
-    return Boolean(draft.value.manualUsername.trim() && draft.value.manualPassword.trim());
-  }
-  if (draft.value.account === "@USER" || draft.value.account.startsWith(t("Account.DynamicUser"))) {
-    return !!draft.value.dynamicPassword.trim();
-  }
-  const accounts = selectedAsset.value.permedAccounts || [];
-  const hosted =
-    accounts.find((item) => draft.value.accountId && item.id === draft.value.accountId) ||
-    accounts.find((item) => !item.alias.startsWith("@") && item.name === draft.value.account);
-  return hosted?.has_secret === false ? !!draft.value.hostedSecret.trim() : true;
+  if (!isManualAccount.value) return true;
+  if (draft.value.personalCredentialId && !draft.value.savePersonalCredential) return true;
+  return Boolean(draft.value.manualUsername.trim() && draft.value.manualPassword);
 });
 
 function isFolder(node: AssetTreeNode) {
@@ -226,8 +217,6 @@ async function connect() {
       accountMode: info.accountMode,
       manualUsername: info.manualUsername,
       manualPassword: info.manualPassword,
-      hostedSecret: info.hostedSecret,
-      inputSecretType: info.inputSecretType,
       personalCredentialId: info.personalCredentialId,
       personalCredentialVersion: info.personalCredentialVersion,
       personalCredentialSecretType: info.personalCredentialSecretType,
@@ -370,9 +359,6 @@ watch(currentOrgId, () => {
             <ConnectAccountFields
               v-if="selectedAssetItem"
               v-model:account="draft.account"
-              v-model:account-id="draft.accountId"
-              v-model:hosted-secret="draft.hostedSecret"
-              v-model:input-secret-type="draft.inputSecretType"
               v-model:manual-username="draft.manualUsername"
               v-model:manual-password="draft.manualPassword"
               v-model:personal-credential-id="draft.personalCredentialId"
@@ -382,7 +368,6 @@ watch(currentOrgId, () => {
               v-model:dynamic-password="draft.dynamicPassword"
               v-model:remember-secret="draft.rememberSecret"
               :accounts="selectedAssetItem.permedAccounts || []"
-              :protocol="draft.protocol"
               :personal-credentials="personalCredentials"
               :personal-credentials-loading="personalCredentialsLoading"
               :personal-credentials-loaded="personalCredentialsLoaded"

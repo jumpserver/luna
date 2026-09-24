@@ -1177,7 +1177,6 @@
     "UpdatePersonalCredential": "Cập nhật mật khẩu đã lưu",
     "CancelPersonalCredentialUpdate": "Hủy cập nhật mật khẩu",
     "UseSavedPassword": "Mật khẩu đã lưu sẽ được sử dụng",
-    "UseSavedSecret": "The saved credential will be used",
     "LoadPersonalCredentialsFailed": "Không thể tải thông tin xác thực đã lưu. Bạn vẫn có thể nhập thủ công.",
     "ShowPassword": "Hiện mật khẩu",
     "HidePassword": "Ẩn mật khẩu"
