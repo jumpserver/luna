@@ -198,7 +198,7 @@ export function useSidebarAssetActions() {
       if (protocols.length !== 1) return false;
 
       const protocol = protocols[0]!;
-      const methods = await getMethodsForProtocol(protocol);
+      const methods = await getMethodsForProtocol(protocol, connectAsset.id);
       if (!methods.some((method) => method.value === WEB_PROXY_NATIVE_VALUE)) return false;
 
       const selectedAccount = resolveDirectWebsiteAccount(connectAsset);
@@ -407,7 +407,7 @@ export function useSidebarAssetActions() {
 
     if (dispatchProtocol) {
       try {
-        methods = await getMethodsForProtocol(dispatchProtocol);
+        methods = await getMethodsForProtocol(dispatchProtocol, asset.id);
       } catch {
         // Open the session window when methods cannot be loaded; it can still show the connection form.
       }
@@ -458,7 +458,7 @@ export function useSidebarAssetActions() {
       detailed.savedConnection = saved || undefined;
       const info = await configure(detailed, { protocol: dispatchProtocol });
       if (!info) return;
-      const selectedMethods = await getMethodsForProtocol(info.protocol);
+      const selectedMethods = await getMethodsForProtocol(info.protocol, detailed.id);
       await dispatchAssetWindow(
         isExternalClientConnectMethod(info.connectMethod, selectedMethods, info.connectOptions),
         detailed,

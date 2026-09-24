@@ -61,6 +61,7 @@ const NATIVE_WORKSPACE_METHOD_ORIGINS: Record<string, string> = {
 const isGuideConnectMethod = (value: string) => value.endsWith("_guide");
 
 const CONNECTION_ERROR_CODES: Record<string, string> = {
+  connect_method_rejected: "ConnectError.MethodUnavailable",
   perm_account_invalid: "ConnectError.AccountUnavailable",
   perm_expired: "ConnectError.PermissionExpired",
   manual_account_permission_denied: "ConnectError.ManualAccountDenied",
@@ -447,8 +448,8 @@ export const useAssetAction = () => {
     });
   };
 
-  const assertConnectMethodEnabled = async (protocol: string, connectMethod: string) => {
-    const methods = await getMethodsForProtocol(protocol);
+  const assertConnectMethodEnabled = async (protocol: string, connectMethod: string, assetId: string) => {
+    const methods = await getMethodsForProtocol(protocol, assetId);
     const selected = parseLocalApplicationConnectMethod(connectMethod);
     const method = methods.find((item) => item.value === selected.connectMethod);
     if (!method || method.disabled) throw new Error(t("ConnectError.MethodDisabled"));
@@ -461,7 +462,7 @@ export const useAssetAction = () => {
     if (!NATIVE_WORKSPACE_METHODS.has(body.connect_method)) return body.connect_method;
 
     try {
-      const methods = await getMethodsForProtocol(body.protocol);
+      const methods = await getMethodsForProtocol(body.protocol, body.asset);
       const injected = methods.find((item) => item.value === body.connect_method);
       if (injected?.origin_value) return injected.origin_value;
 
@@ -532,8 +533,8 @@ export const useAssetAction = () => {
         ...body,
         connect_method: await resolveServerConnectMethod({ ...body, connect_method: nativeApp.connectMethod })
       };
-      await assertConnectMethodEnabled(body.protocol, nativeApp.connectMethod);
-      const allMethods = await fetchConnectMethods();
+      await assertConnectMethodEnabled(body.protocol, nativeApp.connectMethod, body.asset);
+      const allMethods = await fetchConnectMethods(body.asset);
       const method = (allMethods[body.protocol] || []).find((item) => item.value === nativeApp.connectMethod);
       if (method?.type === "applet") {
         const settings = await getPublicSettings();
@@ -710,7 +711,7 @@ export const useAssetAction = () => {
       !meta.tabId || getSessionConnectionAttempt(meta.tabId) === connectionAttempt;
     let creatingConnectionToken = false;
     try {
-      await assertConnectMethodEnabled(body.protocol, body.connect_method);
+      await assertConnectMethodEnabled(body.protocol, body.connect_method, body.asset);
       const serverBody = { ...body, connect_method: await resolveServerConnectMethod(body) };
       creatingConnectionToken = true;
       const token = await createConnectionTokenWithAcl(serverBody, {
@@ -805,8 +806,8 @@ export const useAssetAction = () => {
     }
   };
 
-  const resolveConnectMethod = async (protocol: string) => {
-    const methods = await getMethodsForProtocol(protocol);
+  const resolveConnectMethod = async (protocol: string, assetId: string) => {
+    const methods = await getMethodsForProtocol(protocol, assetId);
     const preferred = userInfoStore.getConnectionPreferenceForProtocol(protocol)?.connectMethod || "";
 
     if (isConnectMethodAvailable(preferred, methods, protocol, settingManager.appConfig.value)) {
@@ -940,7 +941,7 @@ export const useAssetAction = () => {
     })();
 
     // 当前连接显式选择优先；仅在协议一致时复用已保存连接方法，避免跨协议复用错误的客户端
-    const methods = await getMethodsForProtocol(protocol);
+    const methods = await getMethodsForProtocol(protocol, assetId);
     const connectMethod =
       pickConnectMethod(
         protocol,
@@ -948,7 +949,7 @@ export const useAssetAction = () => {
         ephemeral?.connectMethod?.trim() || "",
         saved?.protocol === protocol ? saved?.connectMethod?.trim() || "" : "",
         settingManager.appConfig.value
-      ) || (await resolveConnectMethod(protocol));
+      ) || (await resolveConnectMethod(protocol, assetId));
 
     if (ephemeral?.tabId && !ephemeral.downloadRdp) setSessionConnectMethod(ephemeral.tabId, connectMethod);
 
@@ -988,11 +989,12 @@ export const useAssetAction = () => {
         : manualAccountSecretType || ephemeral?.personalCredentialSecretType || "password"
     );
     const requiresHostedSecret = !accountForToken.startsWith("@") && hostedNeedsInput;
-    const inputSecretType = protocol.toLowerCase() === "ssh"
-      ? ephemeral?.inputSecretType === "ssh_key"
-        ? "ssh_key"
-        : "password"
-      : resolvePersonalCredentialSecretType(protocol, matchedAccount?.secret_type || "password");
+    const inputSecretType =
+      protocol.toLowerCase() === "ssh"
+        ? ephemeral?.inputSecretType === "ssh_key"
+          ? "ssh_key"
+          : "password"
+        : resolvePersonalCredentialSecretType(protocol, matchedAccount?.secret_type || "password");
     if (requiresHostedSecret && !input_secret) {
       const error = new Error(t("ConnectError.SecretRequired"));
       if (ephemeral?.onSessionError) ephemeral.onSessionError(error);

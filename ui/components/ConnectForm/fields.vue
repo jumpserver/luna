@@ -182,17 +182,17 @@ const downloadRdp = () => {
 };
 
 watch(
-  () => draft.value.protocol,
-  async (protocol) => {
+  [() => draft.value.protocol, () => props.asset.id],
+  async ([protocol, assetId]) => {
     protocolMethods.value = [];
     if (!protocol) {
       return;
     }
     try {
-      const methods = await getMethodsForProtocol(protocol);
-      if (protocol === draft.value.protocol) protocolMethods.value = methods;
+      const methods = await getMethodsForProtocol(protocol, assetId);
+      if (protocol === draft.value.protocol && assetId === props.asset.id) protocolMethods.value = methods;
     } catch {
-      if (protocol === draft.value.protocol) protocolMethods.value = [];
+      if (protocol === draft.value.protocol && assetId === props.asset.id) protocolMethods.value = [];
     }
   },
   { immediate: true }
@@ -278,6 +278,7 @@ watchDebounced(
       v-model:remember-secret="draft.rememberSecret"
       v-model:connect-method="draft.connectMethod"
       v-model:connect-options="draft.connectOptions"
+      :asset-id="props.asset.id"
       :preferred-connect-method="props.preferredConnectMethod"
       :personal-credentials="props.personalCredentials"
       :personal-credentials-loading="props.personalCredentialsLoading"

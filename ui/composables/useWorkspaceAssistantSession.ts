@@ -809,8 +809,8 @@ async function executeWorkspaceTool(
       session.tabId
     );
   }
-  const availableMethods = async (protocol: string) => {
-    const methods = await runtime.methods.getMethodsForProtocol(protocol);
+  const availableMethods = async (protocol: string, assetId: string) => {
+    const methods = await runtime.methods.getMethodsForProtocol(protocol, assetId);
     assertCurrent();
     return methods.filter(
       (method) =>
@@ -825,7 +825,7 @@ async function executeWorkspaceTool(
     for (const protocol of uniqueProtocols(asset.permedProtocols || []).slice(0, 32)) {
       protocols.push({
         protocol,
-        methods: (await availableMethods(protocol))
+        methods: (await availableMethods(protocol, asset.id))
           .slice(0, 32)
           .map((method) => ({ value: method.value, label: method.label, type: method.type }))
       });
@@ -957,7 +957,7 @@ async function executeWorkspaceTool(
     const assertEmptyTarget = () => {
       if (targetPane) requireWorkspaceEmptyPane(scopedTabs(), targetPane.id, preparationOrganizationId, targetPane);
     };
-    const methods = selectedProtocol ? await availableMethods(selectedProtocol) : [];
+    const methods = selectedProtocol ? await availableMethods(selectedProtocol, asset.id) : [];
     assertWorkspacePreparationCurrent(
       runtime,
       preparationOrganizationId,
@@ -1106,7 +1106,7 @@ async function executeWorkspaceTool(
               revalidatedAsset.savedConnection
             )
           : null;
-      const methods = await availableMethods(plan.protocol);
+      const methods = await availableMethods(plan.protocol, revalidatedAsset.id);
       if (
         !revalidatedAsset.isActive ||
         !currentConnection ||

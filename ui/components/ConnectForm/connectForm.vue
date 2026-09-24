@@ -15,6 +15,7 @@ const props = defineProps<{
   account: string;
   accountId?: string;
   protocol: string;
+  assetId?: string;
   accounts: PermedAccount[];
   protocols: PermedProtocol[];
   manualUsername?: string;
@@ -61,7 +62,8 @@ const emits = defineEmits<{
 const { getMethodsForProtocol } = useConnectMethods();
 const { appConfig, modernIsland } = useSettingManager();
 const methodsByProtocol = reactive<Record<string, ConnectMethod[]>>({});
-const availableConnectMethods = computed(() => methodsByProtocol[props.protocol] || []);
+const methodCacheKey = (protocol: string) => `${props.assetId || ""}:${protocol}`;
+const availableConnectMethods = computed(() => methodsByProtocol[methodCacheKey(props.protocol)] || []);
 const selectedConnectMethodValue = computed(
   () => parseLocalApplicationConnectMethod(props.connectMethod || "").connectMethod
 );
@@ -155,15 +157,16 @@ const protocolTabItems = computed(() =>
 
 const ensureProtocolMethods = async (protocol: string) => {
   if (!protocol) return [];
-  if (!methodsByProtocol[protocol]) {
-    methodsByProtocol[protocol] = await getMethodsForProtocol(protocol);
+  const key = methodCacheKey(protocol);
+  if (!methodsByProtocol[key]) {
+    methodsByProtocol[key] = await getMethodsForProtocol(protocol, props.assetId);
   }
-  return methodsByProtocol[protocol] || [];
+  return methodsByProtocol[key] || [];
 };
 
 watch(
-  protocolTabItems,
-  (items) => {
+  [protocolTabItems, () => props.assetId],
+  ([items]) => {
     for (const item of items) {
       void ensureProtocolMethods(item.value);
     }
@@ -172,8 +175,8 @@ watch(
 );
 
 watch(
-  () => props.protocol,
-  async (newProtocol, previousProtocol) => {
+  [() => props.protocol, () => props.assetId],
+  async ([newProtocol, assetId], [previousProtocol]) => {
     if (!newProtocol) {
       emits("update:connectMethod", "");
       return;
@@ -181,7 +184,7 @@ watch(
 
     try {
       const methods = await ensureProtocolMethods(newProtocol);
-      if (newProtocol !== props.protocol) return;
+      if (newProtocol !== props.protocol || assetId !== props.assetId) return;
       emits(
         "update:connectMethod",
         pickConnectMethod(
@@ -193,7 +196,7 @@ watch(
         )
       );
     } catch {
-      if (newProtocol !== props.protocol) return;
+      if (newProtocol !== props.protocol || assetId !== props.assetId) return;
       emits("update:connectMethod", "");
     }
   },
