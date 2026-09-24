@@ -6,6 +6,7 @@ import { useFileTransferStore } from "#koko/stores/fileTransfer";
 import { loadFileTransferState } from "#koko/utils/file-transfer/persistence";
 
 vi.mock("#koko/utils/file-transfer/checksum", () => ({
+  isFileTransferChecksumState: vi.fn((state: string) => state === "checksum-state"),
   updateFileTransferChecksum: vi.fn(async () => ({ chunkChecksum: "chunk-checksum", state: "checksum-state" })),
   finalizeFileTransferChecksum: vi.fn(async () => "file-checksum")
 }));
