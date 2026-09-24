@@ -1177,7 +1177,6 @@
     "UpdatePersonalCredential": "更新已儲存密碼",
     "CancelPersonalCredentialUpdate": "取消更新密碼",
     "UseSavedPassword": "將使用已儲存的密碼",
-    "UseSavedSecret": "The saved credential will be used",
     "LoadPersonalCredentialsFailed": "無法載入已儲存憑據，仍可手動輸入。",
     "ShowPassword": "顯示密碼",
     "HidePassword": "隱藏密碼"

@@ -13,7 +13,7 @@ import {
 import { findFavoriteAssetFolderId, getFavoriteRootAssetCount } from "~/composables/useFavoriteFolders";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { writeClipboardText } from "~/utils/clipboard";
-import { hasReusableSavedConnection, isSavedConnectionAvailable, needsInputSecret } from "~/utils/connection";
+import { hasReusableSavedConnection, isSavedConnectionAvailable } from "~/utils/connection";
 import { hasItemName, isItemNameTooLong } from "~/utils/itemName";
 
 const liveAssetConnect = {
@@ -203,10 +203,6 @@ export function useSidebarAssetActions() {
 
       const selectedAccount = resolveDirectWebsiteAccount(connectAsset);
       if (!selectedAccount) return false;
-      if (needsInputSecret(connectAsset.permedAccounts?.find((account) => account.id === selectedAccount.accountId))) {
-        openSetupSession(connectAsset, { protocol });
-        return true;
-      }
 
       const session = openSession(connectAsset, {
         protocol,

@@ -1177,7 +1177,6 @@
     "UpdatePersonalCredential": "Atualizar a senha salva",
     "CancelPersonalCredentialUpdate": "Cancelar atualização de senha",
     "UseSavedPassword": "A senha salva será usada",
-    "UseSavedSecret": "The saved credential will be used",
     "LoadPersonalCredentialsFailed": "Não foi possível carregar as credenciais salvas. Você ainda pode inserir uma manualmente.",
     "ShowPassword": "Mostrar senha",
     "HidePassword": "Ocultar senha"

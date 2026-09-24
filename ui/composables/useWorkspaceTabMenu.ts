@@ -37,6 +37,7 @@ function getTokenId(tab: Pick<WorkspaceSessionTab, "payload">) {
 
 async function requiresCredentialSetup(tab: WorkspaceSessionTab) {
   const asset = sessionToAsset(tab);
+  if (tab.protocol.toLowerCase() === "sftp") return { asset, needsSetup: false };
   const detail = await getAssetDetailRequest(tab.assetId, tab.orgId || "");
   asset.permedAccounts = detail.permed_accounts || [];
   asset.permedProtocols = detail.permed_protocols || asset.permedProtocols;
@@ -45,9 +46,7 @@ async function requiresCredentialSetup(tab: WorkspaceSessionTab) {
   );
   return {
     asset,
-    needsSetup:
-      accounts.some((item) => needsInputSecret(item) || ["@INPUT", "@USER"].includes(item.alias)) ||
-      ["@INPUT", "@USER"].includes(tab.account)
+    needsSetup: accounts.some((item) => !item.alias.startsWith("@") && needsInputSecret(item))
   };
 }
 
@@ -104,14 +103,21 @@ export function useWorkspaceTabMenu() {
       return;
     }
 
-    void handleAssetConnection(tab.account, tab.assetId, tab.protocol, asset.permedAccounts, undefined, {
-      tabId: tab.id,
-      asset,
-      orgId: tab.orgId,
-      connectMethod,
-      onSessionReady: (payload) => updateSessionPayload(match, payload),
-      onSessionError: (error) => markSessionDisconnected(tab.id, String(error))
-    });
+    void handleAssetConnection(
+      tab.account,
+      tab.assetId,
+      tab.protocol,
+      tab.protocol.toLowerCase() === "sftp" ? undefined : asset.permedAccounts,
+      undefined,
+      {
+        tabId: tab.id,
+        asset,
+        orgId: tab.orgId,
+        connectMethod,
+        onSessionReady: (payload) => updateSessionPayload(match, payload),
+        onSessionError: (error) => markSessionDisconnected(tab.id, String(error))
+      }
+    );
   };
 
   const exchangePayload = async (tab: Pick<WorkspaceSessionTab, "payload">) => {
@@ -216,7 +222,7 @@ export function useWorkspaceTabMenu() {
             workspaceTab.account,
             workspaceTab.assetId,
             workspaceTab.protocol,
-            asset.permedAccounts,
+            workspaceTab.protocol.toLowerCase() === "sftp" ? undefined : asset.permedAccounts,
             undefined,
             {
               tabId: pane.id,

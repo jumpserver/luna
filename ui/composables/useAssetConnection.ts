@@ -240,20 +240,13 @@ export function useAssetConnection() {
    */
   const confirmConnection = async (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
     const normalized = await normalizeConnectionInfo(asset, connectionInfo);
-    const selectedAccount = asset.permedAccounts?.find((account) =>
-      normalized.accountMode === "hosted"
-        ? account.id === normalized.accountId
-        : account.alias === (normalized.accountMode === "manual" ? "@INPUT" : "@USER")
-    );
-    const inputSecret =
-      normalized.accountMode === "hosted"
-        ? normalized.hostedSecret
-        : normalized.accountMode === "manual"
-          ? normalized.manualPassword
-          : normalized.dynamicPassword;
-    const savedPersonalCredential =
-      normalized.accountMode === "manual" && normalized.personalCredentialId && !normalized.savePersonalCredential;
-    if (needsInputSecret(selectedAccount) && !inputSecret && !savedPersonalCredential) {
+    const selectedAccount = asset.permedAccounts?.find((account) => account.id === normalized.accountId);
+    if (
+      normalized.accountMode === "hosted" &&
+      normalized.protocol.toLowerCase() !== "sftp" &&
+      needsInputSecret(selectedAccount) &&
+      !normalized.hostedSecret
+    ) {
       const error = new Error(t("ConnectError.SecretRequired"));
       if (normalized.onSessionError) {
         normalized.onSessionError(error);

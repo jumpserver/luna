@@ -225,7 +225,7 @@ export function useConnectionFormState() {
       manualUsername: source.manualUsername || "",
       manualPassword: "",
       hostedSecret: "",
-      inputSecretType: resolvePersonalCredentialSecretType(protocol),
+      inputSecretType: "password",
       personalCredentialId: savedCredentialMatchesProtocol ? saved?.personalCredentialId || "" : "",
       personalCredentialVersion: savedCredentialMatchesProtocol ? saved?.personalCredentialVersion : undefined,
       personalCredentialSecretType:
@@ -250,15 +250,13 @@ export function useConnectionFormState() {
     draft.value = {
       ...value,
       hostedSecret: value.hostedSecret || "",
-      inputSecretType: value.inputSecretType || resolvePersonalCredentialSecretType(value.protocol),
+      inputSecretType: value.inputSecretType || "password",
       connectOptions: { ...value.connectOptions }
     };
     void loadPersonalCredentials(asset, draft.value.protocol);
   };
 
   const clearEnteredSecrets = () => {
-    draft.value.manualPassword = "";
-    draft.value.dynamicPassword = "";
     draft.value.hostedSecret = "";
   };
 
@@ -284,19 +282,18 @@ export function useConnectionFormState() {
         )?.id;
     }
     const canUsePersonalCredential = accountMode === "manual";
-    const selectedAccount = asset.permedAccounts?.find((item) =>
-      accountMode === "hosted" ? item.id === accountId : item.alias === (accountMode === "manual" ? "@INPUT" : "@USER")
-    );
-    const inputSecretType = ["ssh", "sftp"].includes(draft.value.protocol.toLowerCase())
-      ? draft.value.inputSecretType === "ssh_key"
-        ? "ssh_key"
-        : "password"
-      : resolvePersonalCredentialSecretType(draft.value.protocol, selectedAccount?.secret_type || "password");
+    const selectedAccount = asset.permedAccounts?.find((item) => item.id === accountId);
+    const inputSecretType =
+      accountMode === "hosted"
+        ? draft.value.protocol.toLowerCase() === "ssh"
+          ? draft.value.inputSecretType === "ssh_key"
+            ? "ssh_key"
+            : "password"
+          : resolvePersonalCredentialSecretType(draft.value.protocol, selectedAccount?.secret_type || "password")
+        : undefined;
     const personalCredentialSecretType = resolvePersonalCredentialSecretType(
       draft.value.protocol,
-      draft.value.personalCredentialId && !draft.value.savePersonalCredential
-        ? draft.value.personalCredentialSecretType
-        : inputSecretType
+      draft.value.personalCredentialSecretType
     );
     const matchingPersonalCredential =
       canUsePersonalCredential && draft.value.savePersonalCredential && !draft.value.personalCredentialId
@@ -336,7 +333,7 @@ export function useConnectionFormState() {
       personalCredentialSecretType,
       savePersonalCredential: canUsePersonalCredential && draft.value.savePersonalCredential,
       dynamicPassword: draft.value.dynamicPassword,
-      rememberSecret: draft.value.rememberSecret && !(accountMode === "dynamic" && inputSecretType === "ssh_key"),
+      rememberSecret: draft.value.rememberSecret,
       rememberSelection: draft.value.rememberSelection,
       connectMethod: draft.value.connectMethod,
       connectOptions: { ...draft.value.connectOptions },

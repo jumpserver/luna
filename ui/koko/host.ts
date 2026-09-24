@@ -144,8 +144,6 @@ export interface KokoSftpConnectionChoice {
   accountMode?: "hosted" | "dynamic" | "manual" | "anonymous";
   manualUsername?: string;
   manualPassword?: string;
-  hostedSecret?: string;
-  inputSecretType?: string;
   personalCredentialId?: string;
   personalCredentialVersion?: number;
   personalCredentialSecretType?: string;
