@@ -330,7 +330,7 @@ export function useSavedSessionGroups() {
                 return;
               }
               const connection = source.connection;
-              const methods = await getMethodsForProtocol(connection.protocol);
+              const methods = await getMethodsForProtocol(connection.protocol, asset.id);
               assertCurrent();
               if (
                 !isConnectMethodAvailable(connection.connectMethod || "", methods, connection.protocol) ||

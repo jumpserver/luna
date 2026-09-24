@@ -352,8 +352,8 @@ export const useConnectMethods = () => {
   const { t } = useI18n();
   const { currentSite, currentAccountId, orgId } = storeToRefs(useUserInfoStore());
 
-  const fetchConnectMethods = async (): Promise<ConnectMethodsResponse> => {
-    const key = JSON.stringify([currentSite.value, currentAccountId.value, orgId.value, isDesktopRuntime()]);
+  const fetchConnectMethods = async (assetId = ""): Promise<ConnectMethodsResponse> => {
+    const key = JSON.stringify([currentSite.value, currentAccountId.value, orgId.value, assetId, isDesktopRuntime()]);
     for (const [cachedKey, entry] of fetchPromise) {
       if (entry.expiresAt <= Date.now()) fetchPromise.delete(cachedKey);
     }
@@ -363,7 +363,9 @@ export const useConnectMethods = () => {
       return running.promise;
     }
 
-    const promise = getConnectMethods().then((data) => normalizeWebConnectMethods(data as ConnectMethodsResponse));
+    const promise = getConnectMethods(assetId).then((data) =>
+      normalizeWebConnectMethods(data as ConnectMethodsResponse)
+    );
 
     const entry = { promise, expiresAt: Infinity };
     fetchPromise.set(key, entry);
@@ -379,8 +381,8 @@ export const useConnectMethods = () => {
     }
   };
 
-  const getMethodsForProtocol = async (protocol: string): Promise<ConnectMethod[]> => {
-    const allMethods = await fetchConnectMethods();
+  const getMethodsForProtocol = async (protocol: string, assetId = ""): Promise<ConnectMethod[]> => {
+    const allMethods = await fetchConnectMethods(assetId);
     const mobileBrowser = !isDesktopRuntime() && isMobileDevice();
     const normalizedProtocol = protocol.trim().toLowerCase();
     const protocolMethods =
@@ -403,16 +405,16 @@ export const useConnectMethods = () => {
       }));
   };
 
-  const getDefaultMethodForProtocol = async (protocol: string): Promise<string> => {
-    const methods = await getMethodsForProtocol(protocol);
+  const getDefaultMethodForProtocol = async (protocol: string, assetId = ""): Promise<string> => {
+    const methods = await getMethodsForProtocol(protocol, assetId);
     if (methods.length === 0) {
       return "";
     }
     return methods[0]?.value || "";
   };
 
-  const getMethodDisplayName = async (protocol: string, methodValue: string): Promise<string> => {
-    const methods = await getMethodsForProtocol(protocol);
+  const getMethodDisplayName = async (protocol: string, methodValue: string, assetId = ""): Promise<string> => {
+    const methods = await getMethodsForProtocol(protocol, assetId);
     const method = methods.find((m) => m.value === methodValue);
     return method?.label ?? methodValue;
   };

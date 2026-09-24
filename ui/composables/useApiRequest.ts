@@ -473,10 +473,11 @@ export function favoriteAssetsToFolder(assetIds: string[], folderId: string | nu
   });
 }
 
-export function getConnectMethods(): Promise<Record<string, unknown>> {
+export function getConnectMethods(assetId = ""): Promise<Record<string, unknown>> {
   return apiRequest<Record<string, unknown>>({
     method: "GET",
-    path: "/api/v1/terminal/components/connect-methods/"
+    path: "/api/v1/terminal/components/connect-methods/",
+    query: assetId ? { asset_id: assetId } : undefined
   });
 }
 

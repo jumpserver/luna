@@ -80,7 +80,7 @@ const updateExternalLaunchState = async () => {
   }
 
   try {
-    const methods = await getMethodsForProtocol(protocol);
+    const methods = await getMethodsForProtocol(protocol, currentAsset.value?.id || props.tab.assetId);
     if (protocol !== draft.value.protocol.trim() || connectMethod !== draft.value.connectMethod.trim()) return;
     externalClientLaunch.value = isExternalClientConnectMethod(connectMethod, methods, draft.value.connectOptions);
   } catch {

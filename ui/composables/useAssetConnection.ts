@@ -93,7 +93,7 @@ export function useAssetConnection() {
     let connectMethod = "";
     if (protocol) {
       try {
-        const methods = await getMethodsForProtocol(protocol);
+        const methods = await getMethodsForProtocol(protocol, asset.id);
         connectMethod = isConnectMethodAvailable(connectionInfo.connectMethod, methods, protocol, appConfig.value)
           ? connectionInfo.connectMethod
           : methods[0]?.value || "";
