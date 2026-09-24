@@ -3,6 +3,7 @@ import type { KokoWorkspaceTab } from "#koko/host";
 import type { ClipboardAccess, ClipboardDirection, ClipboardPermission, ClipboardPolicy } from "#koko/types/clipboard";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
+import { writeText } from "clipboard-polyfill";
 import { withBase } from "ufo";
 import {
   KubernetesTerminalMessageType,
@@ -25,7 +26,7 @@ import {
   unregisterKokoTerminalDataSender,
   unregisterKokoTerminalSession
 } from "#koko/composables/useTerminalSessionRegistry";
-import { KeyboardKey } from "#koko/constants/keyboard";
+import { isTerminalCopyChord, isTerminalInterruptChord, KeyboardKey } from "#koko/constants/keyboard";
 import { useKokoHostAdapter } from "#koko/host";
 import {
   createUnrestrictedClipboardAccess,
@@ -199,7 +200,12 @@ function canUseClipboardText(direction: ClipboardDirection, text: string, termin
   return false;
 }
 
-function installClipboardControls(el: HTMLElement, terminal: Terminal, terminalTabId: string) {
+function installClipboardControls(
+  el: HTMLElement,
+  terminal: Terminal,
+  terminalTabId: string,
+  sendInterrupt: (data: string) => void
+) {
   const onPaste = (event: ClipboardEvent) => {
     const text = event.clipboardData?.getData("text/plain") ?? "";
     if (canUseClipboardText("paste", text, terminalTabId)) return;
@@ -217,8 +223,25 @@ function installClipboardControls(el: HTMLElement, terminal: Terminal, terminalT
   el.addEventListener("copy", onCopy, true);
   terminal.attachCustomKeyEventHandler((event) => {
     if (event.key === KeyboardKey.Enter && event.isComposing) return false;
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.C && terminal.hasSelection())
+    if (isTerminalCopyChord(event)) {
+      if (event.type === "keydown" && terminal.hasSelection()) {
+        event.preventDefault();
+        const text = terminal.getSelection();
+        if (text && canUseClipboardText("copy", text, terminalTabId)) {
+          void writeText(text).catch((error) => {
+            console.error("Failed to write terminal selection to clipboard:", error);
+          });
+        }
+      }
       return false;
+    }
+    if (isTerminalInterruptChord(event)) {
+      if (event.type === "keydown") {
+        event.preventDefault();
+        sendInterrupt("\x03");
+      }
+      return false;
+    }
     return !((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === KeyboardKey.V);
   });
 
@@ -411,14 +434,15 @@ function mountTerminal(tabItem: TerminalTab, target: ConnectTarget) {
   terminal.open(el);
   syncXtermBackground(terminal);
   fit.fit();
-  const cleanupClipboard = installClipboardControls(el, terminal, tabItem.id);
+  const sendInput = (data: string) => {
+    if (!globalTerminalId.value || isKokoTerminalAiInputLocked(tabItem.id)) return;
+    terminalSocket.sendTerminalData(globalTerminalId.value, tabItem.id, target, data);
+  };
+  const cleanupClipboard = installClipboardControls(el, terminal, tabItem.id, sendInput);
   terminals.set(tabItem.id, { terminal, fit, cleanupClipboard });
   syncActiveTerminalSession();
 
-  terminal.onData((data) => {
-    if (!globalTerminalId.value || isKokoTerminalAiInputLocked(tabItem.id)) return;
-    terminalSocket.sendTerminalData(globalTerminalId.value, tabItem.id, target, data);
-  });
+  terminal.onData(sendInput);
   terminal.onResize(() => sendResize(tabItem.id, terminal));
 
   terminalSocket.initializeTerminal(
