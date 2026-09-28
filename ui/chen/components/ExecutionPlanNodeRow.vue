@@ -2,10 +2,8 @@
 import type { ChenPlanNode } from "~/chen/types/plan";
 import {
   chenPlanFormatEstimated,
-  chenPlanNodeDetail,
-  chenPlanNodePrimaryFacts,
-  chenPlanNodeSecondaryFacts,
-  chenPlanNodeTitle
+  chenPlanNodeIcon,
+  chenPlanNodeKeyFacts
 } from "~/chen/utils/executionPlanPresentation";
 
 defineOptions({ name: "ExecutionPlanNodeRow" });
@@ -13,104 +11,83 @@ defineOptions({ name: "ExecutionPlanNodeRow" });
 const props = defineProps<{
   node: ChenPlanNode;
   depth: number;
-  showCost: boolean;
-  showRows: boolean;
+  selectedId: string | null;
+  collapsedIds: Set<string>;
+}>();
+const emit = defineEmits<{
+  select: [id: string];
+  toggle: [id: string];
 }>();
 
 const { t } = useI18n();
-const expanded = ref(true);
-const showDetails = ref(false);
 const hasChildren = computed(() => props.node.children.length > 0);
-const title = computed(() => chenPlanNodeTitle(props.node));
-const primaryFacts = computed(() => chenPlanNodePrimaryFacts(props.node));
-const secondaryFacts = computed(() => {
-  const facts = chenPlanNodeSecondaryFacts(props.node);
-  const startup = chenPlanFormatEstimated(props.node.startupCost);
-  if (startup != null && !facts.some((fact) => fact.key === "Startup Cost")) {
-    facts.push({ key: "Startup Cost", value: startup });
-  }
-  return facts;
-});
-const detail = computed(() => chenPlanNodeDetail(props.node));
+const expanded = computed(() => !props.collapsedIds.has(props.node.id));
+const objectName = computed(() => props.node.relation || props.node.table);
+const keyFacts = computed(() => chenPlanNodeKeyFacts(props.node));
 const estimatedRows = computed(() => chenPlanFormatEstimated(props.node.rows) ?? "—");
 const estimatedCost = computed(() => chenPlanFormatEstimated(props.node.cost) ?? "—");
-const factLabelKeys: Record<string, string> = {
-  "Join Type": "ExecutionPlan.factJoinType",
-  "Sort Key": "ExecutionPlan.factSortKey",
-  Strategy: "ExecutionPlan.factStrategy",
-  "Group Key": "ExecutionPlan.factGroupKey",
-  "Index Name": "ExecutionPlan.factIndexName",
-  "CTE Name": "ExecutionPlan.factCteName",
-  "Subplan Name": "ExecutionPlan.factSubplanName",
-  "Parent Relationship": "ExecutionPlan.factParentRelationship",
-  "Hash Cond": "ExecutionPlan.factHashCondition",
-  "Join Filter": "ExecutionPlan.factJoinFilter",
-  "Merge Cond": "ExecutionPlan.factMergeCondition",
-  "Index Cond": "ExecutionPlan.factIndexCondition",
-  Filter: "ExecutionPlan.factFilter",
-  Output: "ExecutionPlan.factOutput",
-  "Startup Cost": "ExecutionPlan.factStartupCost"
-};
-const factLabel = (key: string) => {
-  const translationKey = factLabelKeys[key];
-  return translationKey ? t(translationKey) : key;
-};
 </script>
 
 <template>
   <div>
-    <div class="flex items-start gap-2 py-1 text-xs" :style="{ paddingLeft: `${depth * 16}px` }">
+    <div class="flex min-w-0 items-start gap-1 rounded-md py-0.5" :style="{ paddingLeft: `${depth * 18}px` }">
       <button
         v-if="hasChildren"
-        class="mt-0.5 shrink-0 text-muted"
+        type="button"
+        class="mt-2 grid size-5 shrink-0 place-items-center rounded text-muted hover:bg-elevated hover:text-highlighted"
         :aria-label="expanded ? t('Chen.CollapsePlanNode') : t('Chen.ExpandPlanNode')"
-        @click="expanded = !expanded"
+        @click="emit('toggle', node.id)"
       >
         <UIcon :name="expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" class="size-3.5" />
       </button>
-      <span v-else class="mt-0.5 inline-block size-3.5 shrink-0" />
-      <div class="min-w-0 flex-1">
-        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span class="font-medium text-highlighted">{{ title }}</span>
-          <span v-if="node.relation" class="text-muted">{{ node.relation }}</span>
-          <span
-            v-if="showRows"
-            class="tabular-nums text-muted"
-            :title="node.rowsMeaning || t('ExecutionPlan.estimatedRows')"
-          >
-            {{ t("ExecutionPlan.estimatedRows") }} {{ estimatedRows }}
+      <span v-else class="mt-2 inline-block size-5 shrink-0" />
+      <button
+        type="button"
+        class="min-w-0 flex-1 rounded-md px-2 py-1.5 text-left text-xs hover:bg-elevated"
+        :class="selectedId === node.id ? 'bg-primary/10 ring-1 ring-primary/30' : ''"
+        :aria-pressed="selectedId === node.id"
+        @click="emit('select', node.id)"
+      >
+        <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <UIcon :name="chenPlanNodeIcon(node.nodeType)" class="size-4 shrink-0 text-primary" />
+          <span class="shrink-0 text-[10px] font-medium tracking-wide text-muted">
+            {{ node.nodeType.replaceAll("_", " ") }}
           </span>
-          <span
-            v-if="showCost"
-            class="tabular-nums text-muted"
-            :title="node.costMeaning || t('ExecutionPlan.estimatedCost')"
-          >
-            {{ t("ExecutionPlan.estimatedCost") }} {{ estimatedCost }}
+          <span class="font-semibold text-highlighted">{{ node.nativeOperator || node.nodeType }}</span>
+          <span v-if="objectName" class="min-w-0 truncate font-ui-mono text-[11px] text-muted" :title="objectName">
+            {{ objectName }}
           </span>
-        </div>
-        <div v-if="detail" class="mt-0.5 font-ui-mono text-[11px] text-muted">{{ detail }}</div>
-        <div v-if="primaryFacts.length" class="mt-1 space-y-0.5 font-ui-mono text-[11px] text-muted">
-          <div v-for="fact in primaryFacts" :key="fact.key">{{ factLabel(fact.key) }}: {{ fact.value }}</div>
-        </div>
-        <button
-          v-if="secondaryFacts.length"
-          class="mt-1 text-[11px] text-muted hover:text-highlighted"
-          @click="showDetails = !showDetails"
+          <span class="tabular-nums text-muted" :title="node.rowsMeaning || t('ExecutionPlan.estimatedRows')">
+            {{ t("ExecutionPlan.rows") }} {{ estimatedRows }}
+          </span>
+          <span class="tabular-nums text-muted" :title="node.costMeaning || t('ExecutionPlan.estimatedCost')">
+            {{ t("ExecutionPlan.cost") }} {{ estimatedCost }}
+          </span>
+        </span>
+        <span
+          v-if="keyFacts.length"
+          class="mt-1 flex min-w-0 flex-wrap gap-x-3 gap-y-0.5 font-ui-mono text-[11px] text-muted"
         >
-          {{ showDetails ? t("ExecutionPlan.hideDetails") : t("ExecutionPlan.details") }}
-        </button>
-        <div v-if="showDetails && secondaryFacts.length" class="mt-1 space-y-0.5 font-ui-mono text-[11px] text-muted">
-          <div v-for="fact in secondaryFacts" :key="fact.key">{{ factLabel(fact.key) }}: {{ fact.value }}</div>
-        </div>
-      </div>
+          <span
+            v-for="fact in keyFacts"
+            :key="fact.key"
+            class="max-w-full truncate"
+            :title="`${fact.key}: ${fact.value}`"
+          >
+            {{ fact.key }}: {{ fact.value }}
+          </span>
+        </span>
+      </button>
     </div>
     <ExecutionPlanNodeRow
       v-for="child in expanded ? node.children : []"
       :key="child.id"
       :node="child"
       :depth="depth + 1"
-      :show-cost="showCost"
-      :show-rows="showRows"
+      :selected-id="selectedId"
+      :collapsed-ids="collapsedIds"
+      @select="emit('select', $event)"
+      @toggle="emit('toggle', $event)"
     />
   </div>
 </template>
