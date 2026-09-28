@@ -114,26 +114,18 @@ const aiItems = computed(() => {
     }
   ];
 });
-const sqlFileItems = computed(() => [
+const sqlItems = computed(() => [
   {
-    label: t("ExecutionPlan.explain"),
-    icon: "i-lucide-git-fork",
-    disabled: contextBusy.value || !props.tab.statement.trim(),
-    onSelect: () => {
-      const sql = currentPlanSql();
-      if (sql.trim()) emit("explainPlan", props.tab, sql);
-    }
-  },
-  {
-    label: t("Chen.Open"),
+    label: t("Chen.SqlFavorites"),
     icon: "i-lucide-folder-open",
     onSelect: openSnippetDialog
   },
   {
-    label: t("Common.Save"),
+    label: t("Chen.FavoriteCurrentSql"),
     icon: "i-lucide-save",
     onSelect: openSaveSnippetDialog
   },
+  { type: "separator" as const },
   {
     label: t("Chen.UploadSql"),
     icon: "i-lucide-upload",
@@ -157,6 +149,11 @@ const statementValue = computed({
 
 function currentPlanSql() {
   return sqlEditor.value?.executionText() || "";
+}
+
+function explainCurrentQuery() {
+  const sql = currentPlanSql();
+  if (sql.trim()) emit("explainPlan", props.tab, sql);
 }
 
 function runCurrentQuery() {
@@ -342,6 +339,16 @@ defineExpose({ editorSnapshot });
           {{ hasSelection ? t("Chen.RunSelected") : t("Chen.RunCurrent") }}
         </UButton>
         <UButton
+          icon="i-lucide-git-fork"
+          size="sm"
+          color="neutral"
+          variant="soft"
+          :disabled="contextBusy || !tab.statement.trim()"
+          @click="explainCurrentQuery"
+        >
+          {{ t("ExecutionPlan.explain") }}
+        </UButton>
+        <UButton
           icon="i-lucide-align-left"
           size="sm"
           color="neutral"
@@ -352,7 +359,7 @@ defineExpose({ editorSnapshot });
           {{ t("Chen.Format") }}
         </UButton>
         <input ref="sqlUploadInput" type="file" accept=".sql" class="hidden" @change="handleSqlFileChange" />
-        <UDropdownMenu :items="sqlFileItems">
+        <UDropdownMenu :items="sqlItems">
           <UButton
             icon="i-lucide-file-text"
             trailing-icon="i-lucide-chevron-down"
