@@ -241,12 +241,7 @@ export function useAssetConnection() {
   const confirmConnection = async (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
     const normalized = await normalizeConnectionInfo(asset, connectionInfo);
     const selectedAccount = asset.permedAccounts?.find((account) => account.id === normalized.accountId);
-    if (
-      normalized.accountMode === "hosted" &&
-      normalized.protocol.toLowerCase() !== "sftp" &&
-      needsInputSecret(selectedAccount) &&
-      !normalized.hostedSecret
-    ) {
+    if (normalized.accountMode === "hosted" && needsInputSecret(selectedAccount) && !normalized.hostedSecret) {
       const error = new Error(t("ConnectError.SecretRequired"));
       if (normalized.onSessionError) {
         normalized.onSessionError(error);

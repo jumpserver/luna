@@ -21,10 +21,15 @@ const asset = {
 } as AssetItem;
 
 describe("connections requiring a one-time secret", () => {
-  it("does not quick-connect a hosted account without a stored secret", () => {
+  it.each(["ssh", "sftp"])("does not quick-connect a hosted %s account without a stored secret", (protocol) => {
+    const protocolAsset = {
+      ...asset,
+      permedProtocols: [{ name: protocol, port: 22, public: true }],
+      savedConnection: { ...asset.savedConnection!, protocol }
+    };
     expect(needsInputSecret(account)).toBe(true);
-    expect(hasReusableSavedConnection(asset)).toBe(false);
-    expect(isSavedConnectionAvailable(asset)).toBe(false);
+    expect(hasReusableSavedConnection(protocolAsset)).toBe(false);
+    expect(isSavedConnectionAvailable(protocolAsset)).toBe(false);
   });
 
   it("keeps stored-secret and anonymous accounts available", () => {

@@ -65,7 +65,6 @@ const credentialReady = computed(() => {
     if (draft.value.personalCredentialId && draft.value.personalCredentialVersion === undefined) return false;
     return !!draft.value.manualUsername.trim() && !!draft.value.manualPassword.trim();
   }
-  if (draft.value.protocol.toLowerCase() === "sftp") return true;
   const accounts = props.asset.permedAccounts || [];
   const hosted =
     accounts.find((item) => draft.value.accountId && item.id === draft.value.accountId) ||

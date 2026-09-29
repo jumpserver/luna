@@ -889,7 +889,7 @@ export const useAssetAction = () => {
         (account) => account.username === selected || account.alias === selected || account.name === selected
       );
     const protocol = protocolOverride || displayProtocol;
-    const hostedNeedsInput = protocol.toLowerCase() !== "sftp" && needsInputSecret(matchedAccount);
+    const hostedNeedsInput = needsInputSecret(matchedAccount);
 
     if (effectiveMode === "manual" || selected === "@INPUT" || selected === "手动输入" || selected === "Manual input") {
       // prettier-ignore
@@ -901,7 +901,7 @@ export const useAssetAction = () => {
       selected?.includes("同名账号") ||
       selected?.includes("Dynamic user")
     ) {
-      // 同名账号仅需传递密码
+      // 同名账号由服务端解析用户名，凭据支持密码或私钥。
       input_username = "";
       input_secret = ephemeral?.dynamicPassword ?? saved?.dynamicPassword ?? "";
     } else if (effectiveMode === "anonymous" || selected?.includes("@ANON")) {
@@ -984,17 +984,14 @@ export const useAssetAction = () => {
     const manualAccountSecretType = _accounts.find((account) => account.alias === "@INPUT")?.secret_type;
     const personalCredentialSecretType = resolvePersonalCredentialSecretType(
       protocol,
-      personalCredentialId
-        ? ephemeral?.personalCredentialSecretType || manualAccountSecretType || "password"
-        : manualAccountSecretType || ephemeral?.personalCredentialSecretType || "password"
+      ephemeral?.personalCredentialSecretType || manualAccountSecretType || "password"
     );
     const requiresHostedSecret = !accountForToken.startsWith("@") && hostedNeedsInput;
-    const inputSecretType =
-      protocol.toLowerCase() === "ssh"
-        ? ephemeral?.inputSecretType === "ssh_key"
-          ? "ssh_key"
-          : "password"
-        : resolvePersonalCredentialSecretType(protocol, matchedAccount?.secret_type || "password");
+    const inputSecretType = ["ssh", "sftp"].includes(protocol.toLowerCase())
+      ? ephemeral?.inputSecretType === "ssh_key"
+        ? "ssh_key"
+        : "password"
+      : resolvePersonalCredentialSecretType(protocol, matchedAccount?.secret_type || "password");
     if (requiresHostedSecret && !input_secret) {
       const error = new Error(t("ConnectError.SecretRequired"));
       if (ephemeral?.onSessionError) ephemeral.onSessionError(error);
@@ -1015,17 +1012,17 @@ export const useAssetAction = () => {
       asset: assetId,
       protocol,
       ...(!useSavedPersonalCredential ? { input_username, input_secret } : {}),
+      ...(isManual && !useSavedPersonalCredential ? { input_secret_type: personalCredentialSecretType } : {}),
       ...(isManual && personalCredentialId ? { personal_credential_id: personalCredentialId } : {}),
       ...(isManual && savePersonalCredential
         ? {
             save_personal_credential: true,
-            input_secret_type: personalCredentialSecretType,
             ...(personalCredentialVersion !== undefined
               ? { personal_credential_version: personalCredentialVersion }
               : {})
           }
         : {}),
-      ...(requiresHostedSecret ? { input_secret_type: inputSecretType } : {}),
+      ...(requiresHostedSecret || accountForToken === "@USER" ? { input_secret_type: inputSecretType } : {}),
       account: accountForToken,
       connect_method: connectMethod,
       connect_options: mergedConnectOptions

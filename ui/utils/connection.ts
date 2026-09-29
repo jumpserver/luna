@@ -17,7 +17,7 @@ export const hasReusableSavedConnection = (asset: AssetItem) => {
   if (mode === "manual") return !!(saved.manualUsername && saved.personalCredentialId);
   if (mode === "dynamic") return !!(saved.rememberSecret && saved.dynamicPassword);
 
-  if (mode === "hosted" && saved.protocol.toLowerCase() !== "sftp" && asset.permedAccounts?.length) {
+  if (mode === "hosted" && asset.permedAccounts?.length) {
     const account =
       asset.permedAccounts.find((item) => item.id === saved.accountId) ||
       asset.permedAccounts.find(
@@ -44,6 +44,5 @@ export const isSavedConnectionAvailable = (asset: AssetItem) => {
     accounts.find(
       (item) => item.name === saved.username || item.username === saved.username || item.alias === saved.username
     );
-  return !!account && !account.alias.startsWith("@") &&
-    (saved.protocol.toLowerCase() === "sftp" || !needsInputSecret(account));
+  return !!account && !account.alias.startsWith("@") && !needsInputSecret(account);
 };
