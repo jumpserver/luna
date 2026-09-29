@@ -3,7 +3,11 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import * as Vue from "vue";
 import { compileScript, parse } from "vue/compiler-sfc";
-import { resolvePersonalCredentialSecretType } from "~/utils/connection";
+import {
+  findMatchingPersonalCredential,
+  resolvePersonalCredentialSecretType,
+  supportsPersonalCredential
+} from "~/utils/connection";
 import source from "./connectAccountFields.vue?raw";
 
 const privateKey = "-----BEGIN OPENSSH PRIVATE KEY-----\nkey-data\n-----END OPENSSH PRIVATE KEY-----";
@@ -38,7 +42,9 @@ function mountFields(selected = "@INPUT", protocol = "ssh") {
     protocol,
     accounts: [account, { ...account, id: "", alias: "@INPUT" }, { ...account, id: "", alias: "@USER" }],
     personalCredentials: [] as Record<string, unknown>[],
-    personalCredentialsLoaded: false
+    personalCredentialsLoaded: false,
+    personalCredentialsLoading: false,
+    personalCredentialsLoadFailed: false
   });
   const { descriptor } = parse(source);
   const script = compileScript(descriptor, { id: "account-fields" });
@@ -57,11 +63,20 @@ function mountFields(selected = "@INPUT", protocol = "ssh") {
     "require",
     ...Object.keys(globals),
     `const exports = {};\n${outputText}\nreturn exports.default;`
-  )((name: string) => (name === "vue" ? Vue : { resolvePersonalCredentialSecretType }), ...Object.values(globals));
+  )(
+    (name: string) =>
+      name === "vue"
+        ? Vue
+        : { findMatchingPersonalCredential, resolvePersonalCredentialSecretType, supportsPersonalCredential },
+    ...Object.values(globals)
+  );
   let state!: {
     secretType: WritableComputedRef<string>;
     editableSecret: WritableComputedRef<string>;
     selectedAccountValue: WritableComputedRef<string>;
+    selectedCredentialChoice: WritableComputedRef<string | undefined>;
+    personalCredentialItems: ComputedRef<{ label: string; value: string }[]>;
+    canUsePersonalCredential: ComputedRef<boolean>;
     accountItems: ComputedRef<{ type?: string; label?: string; value?: string; icon?: string }[]>;
     showSshKey: ComputedRef<boolean>;
     showHostedSecretArea: ComputedRef<boolean>;
@@ -69,6 +84,7 @@ function mountFields(selected = "@INPUT", protocol = "ssh") {
     keyReadError: Ref<boolean>;
     readKeyFile: (event: Event) => Promise<void>;
     credentialSaveLabel: ComputedRef<string>;
+    credentialSaveDisabled: ComputedRef<boolean>;
   };
   const setup = component.setup;
   component.setup = (props: unknown, context: unknown) => {
@@ -108,85 +124,168 @@ function fileEvent(text: () => Promise<string>) {
   return { target: { files: [{ text }], value: "id_rsa" } } as unknown as Event;
 }
 
-describe("grouped account selection", () => {
-  it.each(["ssh", "sftp"])("selects a personal account from the hosted account list for %s", async (protocol) => {
-    const { state, models, props, unmount } = mountFields("root", protocol);
+describe("personal credential selection", () => {
+  it.each([
+    ["ssh", "@INPUT"],
+    ["sftp", "@INPUT"],
+    ["ssh", "root"],
+    ["sftp", "root"]
+  ])("offers to update a matching credential without selecting it for %s/%s", async (protocol, selected) => {
+    const { state, models, props, unmount } = mountFields(selected, protocol);
     try {
       props.personalCredentials = [
-        { id: "saved-password", username: "root", secret_type: "password", version: 2 },
-        { id: "saved-key", username: "root", secret_type: { value: "ssh_key" }, version: 3 }
+        { id: "password", username: "root", secret_type: "password", version: 2 },
+        { id: "key", username: "root", secret_type: { value: "ssh_key" }, version: 3 }
       ];
       props.personalCredentialsLoaded = true;
       await Vue.nextTick();
-      expect(state.accountItems.value.filter((item) => item.type === "label").map((item) => item.label)).toEqual([
-        "Account.Hosted",
-        "Account.Virtual",
-        "Account.Personal"
-      ]);
-      expect(state.accountItems.value.filter((item) => item.value?.startsWith("personal:"))).toEqual([
-        { label: "root · Account.Password", value: "personal:saved-password", icon: "i-lucide-lock-keyhole" },
-        { label: "root · Account.SshKey", value: "personal:saved-key", icon: "i-lucide-key-round" }
-      ]);
-      state.editableSecret.value = "previous-hosted-password";
+      state.editableSecret.value = "replacement-password";
       await Vue.nextTick();
-      state.selectedAccountValue.value = "personal:saved-key";
-      await Vue.nextTick();
-      expect(models).toMatchObject({
-        account: "@INPUT",
-        accountId: "",
-        personalCredentialId: "saved-key",
-        personalCredentialVersion: 3,
-        personalCredentialSecretType: "ssh_key",
-        manualUsername: "root",
-        manualPassword: "",
-        hostedSecret: "",
-        savePersonalCredential: false
-      });
-      expect(state.selectedAccountValue.value).toBe("personal:saved-key");
-      expect(state.usingSavedCredential.value).toBe(true);
-
+      expect(state.credentialSaveLabel.value).toBe("Account.UpdatePersonalCredential");
+      expect(state.credentialSaveDisabled.value).toBe(false);
+      expect(models.personalCredentialId).toBe("");
+      expect(state.usingSavedCredential.value).toBe(false);
       models.savePersonalCredential = true;
       await Vue.nextTick();
-      state.editableSecret.value = privateKey;
-      await Vue.nextTick();
-      state.selectedAccountValue.value = "personal:saved-password";
-      await Vue.nextTick();
-      expect(models).toMatchObject({
-        personalCredentialId: "saved-password",
-        personalCredentialVersion: 2,
-        personalCredentialSecretType: "password",
-        manualPassword: "",
-        savePersonalCredential: false
-      });
-
-      state.selectedAccountValue.value = "Account.ManualInput";
-      await Vue.nextTick();
-      expect(models).toMatchObject({
-        personalCredentialId: "",
-        personalCredentialVersion: undefined,
-        manualUsername: "",
-        personalCredentialSecretType: "password"
-      });
+      expect(state.editableSecret.value).toBe("replacement-password");
       state.secretType.value = "ssh_key";
       await Vue.nextTick();
-      expect(state.editableSecret.value).toBe("");
-      state.selectedAccountValue.value = "root-account";
+      expect(state.credentialSaveLabel.value).toBe("Account.UpdatePersonalCredential");
+      state.editableSecret.value = privateKey;
       await Vue.nextTick();
-      expect(models.accountId).toBe("root-account");
-      expect(state.usingSavedCredential.value).toBe(false);
+      props.personalCredentials = props.personalCredentials.filter((credential) => credential.id !== "key");
+      await Vue.nextTick();
+      expect(state.credentialSaveLabel.value).toBe("Account.SaveAsPersonalCredential");
+      expect(state.editableSecret.value).toBe(privateKey);
+      state.secretType.value = "password";
+      await Vue.nextTick();
+      expect(state.credentialSaveLabel.value).toBe("Account.UpdatePersonalCredential");
+      expect(state.editableSecret.value).toBe("replacement-password");
+      if (selected === "@INPUT") {
+        models.manualUsername = "another-user";
+        await Vue.nextTick();
+        expect(state.credentialSaveLabel.value).toBe("Account.SaveAsPersonalCredential");
+        models.manualUsername = " root ";
+        await Vue.nextTick();
+        expect(state.credentialSaveLabel.value).toBe("Account.UpdatePersonalCredential");
+      }
     } finally {
       unmount();
     }
   });
 
-  it("excludes personal accounts when manual input is not authorized", async () => {
+  it("waits for credential metadata before allowing save or update", async () => {
+    const { state, props, unmount } = mountFields();
+    try {
+      props.personalCredentialsLoading = true;
+      await Vue.nextTick();
+      expect(state.credentialSaveDisabled.value).toBe(true);
+      props.personalCredentialsLoading = false;
+      props.personalCredentialsLoadFailed = true;
+      await Vue.nextTick();
+      expect(state.credentialSaveDisabled.value).toBe(true);
+      props.personalCredentialsLoadFailed = false;
+      props.personalCredentials = [{ id: "password", username: "root", secret_type: "password" }];
+      await Vue.nextTick();
+      expect(state.credentialSaveLabel.value).toBe("Account.UpdatePersonalCredential");
+      expect(state.credentialSaveDisabled.value).toBe(true);
+      props.personalCredentials[0]!.version = 3;
+      await Vue.nextTick();
+      expect(state.credentialSaveDisabled.value).toBe(false);
+    } finally {
+      unmount();
+    }
+  });
+
+  it.each(["ssh", "sftp"])(
+    "supplements a fixed-username account without manual permission for %s",
+    async (protocol) => {
+      const { state, models, props, unmount } = mountFields("root", protocol);
+      try {
+        props.accounts = [account];
+        props.personalCredentials = [
+          { id: "saved-password", username: "root", secret_type: "password", version: 2 },
+          { id: "saved-key", username: "root", secret_type: { value: "ssh_key" }, version: 3 },
+          { id: "other-user", username: "admin", secret_type: "password", version: 1 }
+        ];
+        props.personalCredentialsLoaded = true;
+        await Vue.nextTick();
+        expect(state.accountItems.value.filter((item) => item.type === "label").map((item) => item.label)).toEqual([
+          "Account.Hosted"
+        ]);
+        expect(state.personalCredentialItems.value).toEqual([
+          { label: "Account.ManualInput", value: "@INPUT" },
+          { label: "root · Account.Password", value: "saved-password" },
+          { label: "root · Account.SshKey", value: "saved-key" }
+        ]);
+        state.selectedCredentialChoice.value = "other-user";
+        await Vue.nextTick();
+        expect(models.personalCredentialId).toBe("");
+        state.editableSecret.value = "previous-hosted-password";
+        await Vue.nextTick();
+        state.selectedCredentialChoice.value = "saved-key";
+        await Vue.nextTick();
+        expect(models).toMatchObject({
+          account: "root",
+          accountId: "root-account",
+          personalCredentialId: "saved-key",
+          personalCredentialVersion: 3,
+          personalCredentialSecretType: "ssh_key",
+          manualUsername: "root",
+          manualPassword: "",
+          hostedSecret: "",
+          savePersonalCredential: false
+        });
+        expect(state.selectedAccountValue.value).toBe("root-account");
+        expect(state.secretType.value).toBe("ssh_key");
+        expect(state.usingSavedCredential.value).toBe(true);
+
+        models.savePersonalCredential = true;
+        await Vue.nextTick();
+        state.editableSecret.value = privateKey;
+        await Vue.nextTick();
+        state.selectedCredentialChoice.value = "saved-password";
+        await Vue.nextTick();
+        expect(models).toMatchObject({
+          personalCredentialId: "saved-password",
+          personalCredentialVersion: 2,
+          personalCredentialSecretType: "password",
+          manualPassword: "",
+          savePersonalCredential: false
+        });
+
+        const manualChoice = state.personalCredentialItems.value[0]!;
+        expect(state.personalCredentialItems.value.every((item) => item.value.length > 0)).toBe(true);
+        state.selectedCredentialChoice.value = manualChoice.value;
+        await Vue.nextTick();
+        expect(models).toMatchObject({
+          personalCredentialId: "",
+          personalCredentialVersion: undefined,
+          personalCredentialSecretType: "password"
+        });
+        expect(state.selectedCredentialChoice.value).toBe(manualChoice.value);
+        state.secretType.value = "ssh_key";
+        await Vue.nextTick();
+        expect(state.editableSecret.value).toBe("");
+        state.selectedAccountValue.value = "root-account";
+        await Vue.nextTick();
+        expect(models.accountId).toBe("root-account");
+        expect(state.usingSavedCredential.value).toBe(false);
+      } finally {
+        unmount();
+      }
+    }
+  );
+
+  it("does not replace a managed secret with a personal credential", async () => {
     const { state, models, props, unmount } = mountFields("root");
     try {
-      props.accounts = [account];
+      props.accounts = [{ ...account, has_secret: true }];
       props.personalCredentials = [{ id: "saved-key", username: "root", secret_type: "ssh_key", version: 3 }];
       await Vue.nextTick();
-      expect(state.accountItems.value.some((item) => item.label === "Account.Personal")).toBe(false);
-      state.selectedAccountValue.value = "personal:saved-key";
+      expect(state.canUsePersonalCredential.value).toBe(false);
+      expect(state.personalCredentialItems.value).toHaveLength(1);
+      state.selectedCredentialChoice.value = "saved-key";
       await Vue.nextTick();
       expect(models.accountId).toBe("root-account");
       expect(models.personalCredentialId).toBe("");
@@ -195,19 +294,48 @@ describe("grouped account selection", () => {
     }
   });
 
-  it("returns to the manual input label if the selected personal account no longer exists", async () => {
+  it("fills the manual username and resets it if a saved credential disappears", async () => {
     const { state, models, props, unmount } = mountFields();
     try {
       props.personalCredentials = [{ id: "saved-key", username: "root", secret_type: "ssh_key", version: 3 }];
       props.personalCredentialsLoaded = true;
       await Vue.nextTick();
-      state.selectedAccountValue.value = "personal:saved-key";
+      state.selectedCredentialChoice.value = "saved-key";
       await Vue.nextTick();
+      expect(models.manualUsername).toBe("root");
+      expect(state.accountItems.value.filter((item) => item.type === "label").map((item) => item.label)).toEqual([
+        "Account.Hosted",
+        "Account.Virtual"
+      ]);
       props.personalCredentials = [];
       await Vue.nextTick();
       expect(models.personalCredentialId).toBe("");
       expect(models.manualUsername).toBe("");
       expect(state.selectedAccountValue.value).toBe("Account.ManualInput");
+    } finally {
+      unmount();
+    }
+  });
+
+  it.each(["account", "protocol"])("clears the selected credential after %s changes", async (change) => {
+    const { state, models, props, unmount } = mountFields("root");
+    try {
+      props.personalCredentials = [{ id: "saved-key", username: "root", secret_type: "ssh_key", version: 3 }];
+      props.personalCredentialsLoaded = true;
+      await Vue.nextTick();
+      state.selectedCredentialChoice.value = "saved-key";
+      await Vue.nextTick();
+      models.savePersonalCredential = true;
+      await Vue.nextTick();
+      state.editableSecret.value = privateKey;
+      await Vue.nextTick();
+      if (change === "account") state.selectedAccountValue.value = "Account.ManualInput";
+      else props.protocol = "sftp";
+      await Vue.nextTick();
+      expect(models.personalCredentialId).toBe("");
+      expect(models.personalCredentialVersion).toBeUndefined();
+      expect(models.hostedSecret).toBe("");
+      expect(models.savePersonalCredential).toBe(false);
     } finally {
       unmount();
     }

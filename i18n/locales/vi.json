@@ -1175,10 +1175,10 @@
     "PersonalCredential": "Thông tin xác thực cá nhân",
     "ManualOtherAccount": "Nhập tài khoản khác",
     "SavedAccount": "Tài khoản đã lưu: {username}",
-    "SaveAsPersonalCredential": "Lưu làm tài khoản cá nhân",
-    "UpdatePersonalCredential": "Cập nhật thông tin xác thực",
+    "SaveAsPersonalCredential": "Lưu thông tin xác thực cá nhân",
+    "UpdatePersonalCredential": "Cập nhật thông tin xác thực cá nhân",
     "CancelPersonalCredentialUpdate": "Hủy cập nhật mật khẩu",
-    "UseSavedPassword": "Mật khẩu đã lưu sẽ được sử dụng",
+    "UseSavedPassword": "Sẽ sử dụng thông tin xác thực đã lưu",
     "LoadPersonalCredentialsFailed": "Không thể tải thông tin xác thực đã lưu. Bạn vẫn có thể nhập thủ công.",
     "ShowPassword": "Hiện mật khẩu",
     "HidePassword": "Ẩn mật khẩu"

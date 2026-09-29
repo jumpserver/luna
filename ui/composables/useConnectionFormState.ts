@@ -11,7 +11,11 @@ import type {
 import { ApiRequestError } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols, sortProtocolNames } from "~/utils";
-import { resolvePersonalCredentialSecretType } from "~/utils/connection";
+import {
+  findMatchingPersonalCredential,
+  resolvePersonalCredentialSecretType,
+  supportsPersonalCredential
+} from "~/utils/connection";
 
 export interface ConnectionFormDraft {
   protocol: string;
@@ -156,8 +160,8 @@ export function useConnectionFormState() {
       resetPersonalCredentialSelection(protocol);
     }
     personalCredentialScope = nextScope;
-    const supportsManualInput = (asset.permedAccounts || []).some((account) => account.alias === "@INPUT");
-    if (!supportsManualInput || !protocol) {
+    const supportsCredentials = (asset.permedAccounts || []).some(supportsPersonalCredential);
+    if (!supportsCredentials || !protocol) {
       personalCredentials.value = [];
       personalCredentialsLoading.value = false;
       personalCredentialsLoaded.value = true;
@@ -274,8 +278,8 @@ export function useConnectionFormState() {
           (item) => item.name === account || item.username === account || item.alias === account
         )?.id;
     }
-    const canUsePersonalCredential = accountMode === "manual";
     const selectedAccount = asset.permedAccounts?.find((item) => item.id === accountId);
+    const canUsePersonalCredential = accountMode === "manual" || supportsPersonalCredential(selectedAccount);
     const inputSecretType =
       accountMode === "hosted" || accountMode === "dynamic"
         ? ["ssh", "sftp"].includes(draft.value.protocol.toLowerCase())
@@ -286,19 +290,15 @@ export function useConnectionFormState() {
         : undefined;
     const personalCredentialSecretType = resolvePersonalCredentialSecretType(
       draft.value.protocol,
-      draft.value.personalCredentialSecretType
+      accountMode === "hosted" ? inputSecretType : draft.value.personalCredentialSecretType
     );
     const matchingPersonalCredential =
       canUsePersonalCredential && draft.value.savePersonalCredential && !draft.value.personalCredentialId
-        ? personalCredentials.value.find((credential) => {
-            const secretType =
-              typeof credential.secret_type === "string"
-                ? credential.secret_type
-                : credential.secret_type?.value || "password";
-            return (
-              credential.username === draft.value.manualUsername.trim() && secretType === personalCredentialSecretType
-            );
-          })
+        ? findMatchingPersonalCredential(
+            personalCredentials.value,
+            accountMode === "hosted" ? selectedAccount?.username || "" : draft.value.manualUsername,
+            personalCredentialSecretType
+          )
         : undefined;
 
     const availableProtocols = sortProtocolNames(

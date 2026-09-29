@@ -1175,10 +1175,10 @@
     "PersonalCredential": "個人憑據",
     "ManualOtherAccount": "手動輸入其他帳號",
     "SavedAccount": "儲存的帳號：{username}",
-    "SaveAsPersonalCredential": "儲存為個人帳號",
-    "UpdatePersonalCredential": "更新憑據",
+    "SaveAsPersonalCredential": "儲存個人憑據",
+    "UpdatePersonalCredential": "更新個人憑據",
     "CancelPersonalCredentialUpdate": "取消更新密碼",
-    "UseSavedPassword": "將使用已儲存的密碼",
+    "UseSavedPassword": "將使用已儲存的憑據",
     "LoadPersonalCredentialsFailed": "無法載入已儲存憑據，仍可手動輸入。",
     "ShowPassword": "顯示密碼",
     "HidePassword": "隱藏密碼"

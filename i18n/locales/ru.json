@@ -1175,10 +1175,10 @@
     "PersonalCredential": "Личные учетные данные",
     "ManualOtherAccount": "Ввести другую учетную запись",
     "SavedAccount": "Сохраненная учетная запись: {username}",
-    "SaveAsPersonalCredential": "Сохранить как личную учётную запись",
-    "UpdatePersonalCredential": "Обновить учётные данные",
+    "SaveAsPersonalCredential": "Сохранить личные учётные данные",
+    "UpdatePersonalCredential": "Обновить личные учётные данные",
     "CancelPersonalCredentialUpdate": "Отменить обновление пароля",
-    "UseSavedPassword": "Будет использован сохраненный пароль",
+    "UseSavedPassword": "Будут использованы сохранённые учётные данные",
     "LoadPersonalCredentialsFailed": "Не удалось загрузить сохраненные учетные данные. Вы по-прежнему можете ввести их вручную.",
     "ShowPassword": "Показать пароль",
     "HidePassword": "Скрыть пароль"

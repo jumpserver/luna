@@ -1175,10 +1175,10 @@
     "PersonalCredential": "Credencial pessoal",
     "ManualOtherAccount": "Inserir outra conta",
     "SavedAccount": "Conta salva: {username}",
-    "SaveAsPersonalCredential": "Salvar como conta pessoal",
-    "UpdatePersonalCredential": "Atualizar credencial",
+    "SaveAsPersonalCredential": "Salvar credencial pessoal",
+    "UpdatePersonalCredential": "Atualizar credencial pessoal",
     "CancelPersonalCredentialUpdate": "Cancelar atualização de senha",
-    "UseSavedPassword": "A senha salva será usada",
+    "UseSavedPassword": "Será usada a credencial salva",
     "LoadPersonalCredentialsFailed": "Não foi possível carregar as credenciais salvas. Você ainda pode inserir uma manualmente.",
     "ShowPassword": "Mostrar senha",
     "HidePassword": "Ocultar senha"

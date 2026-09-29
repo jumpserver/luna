@@ -434,6 +434,77 @@ describe("opening assets in local applications", () => {
     expect(mocks.createToken).not.toHaveBeenCalled();
   });
 
+  it.each(
+    ["ssh", "sftp"].flatMap((protocol) =>
+      [false, true].flatMap((desktop) =>
+        ["use", "create", "update"].map((operation) => [protocol, desktop, operation] as const)
+      )
+    )
+  )(
+    "uses a personal credential with the hosted account ID over %s, desktop=%s, operation=%s",
+    async (protocol, desktop, operation) => {
+      vi.stubGlobal("isDesktopRuntime", () => desktop);
+      vi.stubGlobal("isElectronRuntime", () => desktop);
+      mocks.invoke.mockImplementation(async (_command, args) => args?.endpointUrl);
+      const ready = vi.fn();
+      const failed = vi.fn();
+      await useAssetAction().handleAssetConnection(
+        "root",
+        "asset",
+        protocol,
+        [
+          {
+            alias: "account-id",
+            id: "account-id",
+            name: "root",
+            username: "root",
+            has_secret: false,
+            has_username: true,
+            secret_type: "password",
+            actions: [],
+            date_expired: ""
+          }
+        ],
+        undefined,
+        {
+          accountMode: "hosted",
+          accountId: "account-id",
+          personalCredentialId: operation === "create" ? undefined : "saved-key",
+          personalCredentialVersion: 3,
+          personalCredentialSecretType: "ssh_key",
+          inputSecretType: "ssh_key",
+          hostedSecret: operation === "use" ? "" : "replacement-key",
+          savePersonalCredential: operation !== "use",
+          connectMethod: protocol === "sftp" ? sftpMethod.value : method.value,
+          onSessionReady: ready,
+          onSessionError: failed
+        }
+      );
+      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+      expect(failed).not.toHaveBeenCalled();
+      const body = mocks.createToken.mock.calls[0]![0];
+      expect(body).toMatchObject({ account: "account-id", protocol });
+      if (operation === "use") {
+        expect(body.personal_credential_id).toBe("saved-key");
+        expect(body).not.toHaveProperty("input_username");
+        expect(body).not.toHaveProperty("input_secret");
+        expect(body).not.toHaveProperty("input_secret_type");
+      } else {
+        expect(body).toMatchObject({
+          input_username: "root",
+          input_secret: "replacement-key",
+          input_secret_type: "ssh_key",
+          save_personal_credential: true
+        });
+        if (operation === "update")
+          expect(body).toMatchObject({
+            personal_credential_id: "saved-key",
+            personal_credential_version: 3
+          });
+      }
+    }
+  );
+
   it("reuses Magnus db_client tokens before launching the local client", async () => {
     const dbMethod = { value: "db_client", type: "native", component: "magnus", disabled: false };
     vi.stubGlobal("useConnectMethods", () => ({

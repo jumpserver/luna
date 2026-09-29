@@ -1175,10 +1175,10 @@
     "PersonalCredential": "Personal credential",
     "ManualOtherAccount": "Enter another account",
     "SavedAccount": "Saved account: {username}",
-    "SaveAsPersonalCredential": "Save as personal account",
-    "UpdatePersonalCredential": "Update credential",
+    "SaveAsPersonalCredential": "Save personal credential",
+    "UpdatePersonalCredential": "Update personal credential",
     "CancelPersonalCredentialUpdate": "Cancel password update",
-    "UseSavedPassword": "The saved password will be used",
+    "UseSavedPassword": "Will use the saved credential",
     "LoadPersonalCredentialsFailed": "Saved credentials could not be loaded. You can still enter one manually.",
     "ShowPassword": "Show password",
     "HidePassword": "Hide password"

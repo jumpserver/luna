@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import type { SelectMenuItem } from "@nuxt/ui";
 import type { AssetPageType, PermedAccount, PersonalAssetCredential } from "~/types/index";
-import { resolvePersonalCredentialSecretType } from "~/utils/connection";
+import {
+  findMatchingPersonalCredential,
+  resolvePersonalCredentialSecretType,
+  supportsPersonalCredential
+} from "~/utils/connection";
 
 const props = defineProps<{
   accounts: PermedAccount[];
@@ -28,8 +32,6 @@ const rememberSecret = defineModel<boolean>("rememberSecret", { default: false }
 
 const { t } = useI18n();
 const { formFieldUi, controlBaseUi, overlayMenuUi } = useConnectFormAppearance();
-const personalAccountPrefix = "personal:";
-const supportsManualInput = computed(() => props.accounts.some((item) => item.alias === "@INPUT"));
 
 const showManualInputArea = computed(
   () =>
@@ -60,24 +62,21 @@ const showHostedSecretArea = computed(
     !showDynamicUserArea.value &&
     selectedHostedAccount.value?.has_secret === false
 );
+const canUsePersonalCredential = computed(
+  () => showManualInputArea.value || supportsPersonalCredential(selectedHostedAccount.value)
+);
+const availablePersonalCredentials = computed(() =>
+  canUsePersonalCredential.value
+    ? props.personalCredentials.filter(
+        (credential) => showManualInputArea.value || credential.username === selectedHostedAccount.value?.username
+      )
+    : []
+);
 let keyReadGeneration = 0;
 const enteredSecrets = new Map<string, string>();
 const selectedAccountValue = computed<string>({
-  get: () =>
-    showManualInputArea.value
-      ? personalCredentialId.value
-        ? `${personalAccountPrefix}${personalCredentialId.value}`
-        : t("Account.ManualInput")
-      : selectedHostedAccount.value?.id || account.value,
+  get: () => (showManualInputArea.value ? t("Account.ManualInput") : selectedHostedAccount.value?.id || account.value),
   set: (value) => {
-    if (value?.startsWith(personalAccountPrefix)) {
-      const credential = props.personalCredentials.find((item) => `${personalAccountPrefix}${item.id}` === value);
-      if (!credential || !supportsManualInput.value) return;
-      account.value = "@INPUT";
-      accountId.value = "";
-      personalCredentialId.value = credential.id;
-      return;
-    }
     personalCredentialId.value = "";
     const hosted = props.accounts.find((item) => item.id === value && !item.alias.startsWith("@"));
     if (hosted && hosted.name === account.value && hosted.id !== accountId.value) {
@@ -99,11 +98,11 @@ const selectedAccountEntry = computed(() => {
   return selectedHostedAccount.value;
 });
 const usingSavedCredential = computed(
-  () => showManualInputArea.value && !!personalCredentialId.value && !savePersonalCredential.value
+  () => canUsePersonalCredential.value && !!personalCredentialId.value && !savePersonalCredential.value
 );
 const secretType = computed<string>({
   get: () =>
-    showManualInputArea.value
+    showManualInputArea.value || (canUsePersonalCredential.value && personalCredentialId.value)
       ? resolvePersonalCredentialSecretType(props.protocol || "", personalCredentialSecretType.value)
       : isSsh.value
         ? inputSecretType.value
@@ -195,35 +194,64 @@ const accountItems = computed(() => {
     items.push(...virtual);
   }
 
-  if (supportsManualInput.value && props.personalCredentials.length) {
-    if (items.length > 0) items.push({ type: "separator" });
-    items.push({ type: "label", label: t("Account.Personal") });
-    items.push(
-      ...props.personalCredentials.map((credential) => {
-        const type = resolveSecretType(credential);
-        const typeLabel =
-          type === "ssh_key" ? t("Account.SshKey") : type === "token" ? t("Account.Token") : t("Account.Password");
-        return {
-          label: `${credential.username} · ${typeLabel}`,
-          value: `${personalAccountPrefix}${credential.id}`,
-          icon: type === "ssh_key" ? "i-lucide-key-round" : "i-lucide-lock-keyhole"
-        };
-      })
-    );
-  }
-
   return items;
 });
 
+// Combobox items need a nonempty value; manual input still clears the credential ID.
+const manualCredentialChoice = "@INPUT";
+const personalCredentialItems = computed(() => [
+  { label: t("Account.ManualInput"), value: manualCredentialChoice },
+  ...availablePersonalCredentials.value.map((credential) => {
+    const type = resolveSecretType(credential);
+    const typeLabel = t(
+      type === "ssh_key" ? "Account.SshKey" : type === "token" ? "Account.Token" : "Account.Password"
+    );
+    return { label: `${credential.username} · ${typeLabel}`, value: credential.id };
+  })
+]);
+const selectedCredentialChoice = computed<string | undefined>({
+  get: () => personalCredentialId.value || manualCredentialChoice,
+  set: (value) => {
+    if (value === manualCredentialChoice) {
+      personalCredentialId.value = "";
+      return;
+    }
+    if (value && !availablePersonalCredentials.value.some((credential) => credential.id === value)) return;
+    personalCredentialId.value = value || "";
+  }
+});
+const personalCredentialMenuUi = computed(() => ({
+  ...overlayMenuUi.value,
+  base: "h-6 w-8 shrink-0 justify-center gap-1 p-0 font-normal text-[var(--app-text-muted)]",
+  leading: "static p-0",
+  trailing: "static p-0",
+  content: [overlayMenuUi.value.content, "min-w-56"]
+}));
 const selectedPersonalCredential = computed(() =>
-  props.personalCredentials.find((credential) => credential.id === personalCredentialId.value)
+  availablePersonalCredentials.value.find((credential) => credential.id === personalCredentialId.value)
+);
+const matchingPersonalCredential = computed(() =>
+  findMatchingPersonalCredential(
+    availablePersonalCredentials.value,
+    showManualInputArea.value ? manualUsername.value : selectedHostedAccount.value?.username || "",
+    secretType.value
+  )
 );
 
 const credentialSaveLabel = computed(() =>
-  t(personalCredentialId.value ? "Account.UpdatePersonalCredential" : "Account.SaveAsPersonalCredential")
+  t(
+    personalCredentialId.value || matchingPersonalCredential.value
+      ? "Account.UpdatePersonalCredential"
+      : "Account.SaveAsPersonalCredential"
+  )
 );
 const credentialSaveDisabled = computed(
-  () => !!personalCredentialId.value && personalCredentialVersion.value === undefined
+  () =>
+    props.personalCredentialsLoading ||
+    props.personalCredentialsLoadFailed ||
+    (personalCredentialId.value
+      ? personalCredentialVersion.value === undefined
+      : !!matchingPersonalCredential.value && matchingPersonalCredential.value.version === undefined)
 );
 
 watch(personalCredentialId, (id, previousId) => {
@@ -231,12 +259,14 @@ watch(personalCredentialId, (id, previousId) => {
   keyReadGeneration += 1;
   keyReadError.value = false;
   manualPassword.value = "";
+  hostedSecret.value = "";
   secretVisible.value = false;
   savePersonalCredential.value = false;
   if (!id) {
-    if (previousId) manualUsername.value = "";
+    if (previousId && showManualInputArea.value) manualUsername.value = "";
     personalCredentialVersion.value = undefined;
     personalCredentialSecretType.value = "password";
+    inputSecretType.value = "password";
   }
 });
 
@@ -244,9 +274,10 @@ watch(
   [selectedPersonalCredential, () => props.personalCredentialsLoaded],
   ([credential, loaded]) => {
     if (credential) {
-      manualUsername.value = credential.username;
+      if (showManualInputArea.value) manualUsername.value = credential.username;
       personalCredentialVersion.value = credential.version;
       personalCredentialSecretType.value = resolveSecretType(credential);
+      if (showHostedSecretArea.value) inputSecretType.value = resolveSecretType(credential);
       return;
     }
     if (loaded && personalCredentialId.value) {
@@ -265,6 +296,8 @@ watch(
     keyReadError.value = false;
     keyReadGeneration += 1;
     if (previous && current.some((value, index) => value !== previous[index])) {
+      personalCredentialId.value = "";
+      savePersonalCredential.value = false;
       enteredSecrets.clear();
       manualPassword.value = "";
       dynamicPassword.value = "";
@@ -304,6 +337,7 @@ watch(usingSavedCredential, (usingSaved) => {
   if (usingSaved) {
     enteredSecrets.clear();
     manualPassword.value = "";
+    hostedSecret.value = "";
   }
 });
 
@@ -318,7 +352,6 @@ onBeforeUnmount(() => {
       <USelectMenu
         v-model="selectedAccountValue"
         :items="accountItems"
-        :loading="personalCredentialsLoading"
         :disabled="accounts.length === 0"
         :placeholder="accounts.length === 0 ? t('Account.NoAuthorizedAccounts') : undefined"
         value-key="value"
@@ -332,27 +365,45 @@ onBeforeUnmount(() => {
         size="md"
         class="w-full"
       />
-      <p v-if="personalCredentialsLoadFailed" class="mt-1 text-xs text-warning">
-        {{ t("Account.LoadPersonalCredentialsFailed") }}
-      </p>
     </UFormField>
 
-    <UFormField
-      v-if="showManualInputArea && !personalCredentialId"
-      :label="t('Account.Username')"
-      :ui="formFieldUi"
-      size="md"
-    >
+    <UFormField v-if="showManualInputArea" :label="t('Account.Username')" :ui="formFieldUi" size="md">
       <UInput
         v-model="manualUsername"
+        :disabled="!!personalCredentialId"
         autocapitalize="none"
         autocorrect="off"
         :placeholder="t('Account.Username')"
-        :ui="{ base: controlBaseUi }"
+        :ui="{
+          base: [controlBaseUi, availablePersonalCredentials.length && 'pe-12'],
+          trailing: 'pe-1'
+        }"
         icon="i-lucide-user-round"
         size="md"
         class="w-full"
-      />
+      >
+        <template v-if="availablePersonalCredentials.length" #trailing>
+          <UFormField class="w-auto">
+            <USelectMenu
+              v-model="selectedCredentialChoice"
+              :items="personalCredentialItems"
+              :loading="personalCredentialsLoading"
+              :aria-label="t('Account.PersonalCredential')"
+              :title="t('Account.PersonalCredential')"
+              :content="{ align: 'end' }"
+              value-key="value"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              :ui="personalCredentialMenuUi"
+            >
+              <template #default>
+                <span class="sr-only">{{ t("Account.PersonalCredential") }}</span>
+              </template>
+            </USelectMenu>
+          </UFormField>
+        </template>
+      </UInput>
     </UFormField>
 
     <template v-if="showManualInputArea || showDynamicUserArea || showHostedSecretArea">
@@ -368,10 +419,10 @@ onBeforeUnmount(() => {
           :ui="{ ...formFieldUi, labelWrapper: 'justify-start gap-2', hint: 'flex-1' }"
           size="md"
         >
-          <template v-if="isSsh || showManualInputArea" #hint>
-            <span class="flex items-center gap-1">
+          <template v-if="isSsh || canUsePersonalCredential" #hint>
+            <span class="flex flex-wrap items-center gap-1">
               <UButton
-                v-if="isSsh && (!showManualInputArea || !personalCredentialId)"
+                v-if="isSsh && !personalCredentialId"
                 type="button"
                 icon="i-lucide-arrow-left-right"
                 :label="t(secretType === 'ssh_key' ? 'Account.Password' : 'Account.SshKey')"
@@ -383,7 +434,7 @@ onBeforeUnmount(() => {
                 @click="secretType = secretType === 'ssh_key' ? 'password' : 'ssh_key'"
               />
               <!-- Give the checkbox its own form field so it does not share the secret input's ID. -->
-              <UFormField v-if="showManualInputArea" class="ms-auto w-auto">
+              <UFormField v-if="canUsePersonalCredential" class="ms-auto w-auto">
                 <UCheckbox
                   v-model="savePersonalCredential"
                   :label="credentialSaveLabel"
@@ -401,11 +452,37 @@ onBeforeUnmount(() => {
               v-model="editableSecret"
               :placeholder="t('Account.PasteSshKey')"
               :rows="3"
-              :ui="{ base: [controlBaseUi, 'h-auto font-mono text-xs'], trailing: 'inset-y-1 pe-1' }"
+              :ui="{
+                base: [
+                  controlBaseUi,
+                  'h-auto font-mono text-xs',
+                  showHostedSecretArea && availablePersonalCredentials.length && 'pe-20'
+                ],
+                trailing: 'inset-y-1 gap-1 pe-1'
+              }"
               class="w-full"
               @keydown.enter.stop
             >
               <template #trailing>
+                <UFormField v-if="showHostedSecretArea && availablePersonalCredentials.length" class="w-auto">
+                  <USelectMenu
+                    v-model="selectedCredentialChoice"
+                    :items="personalCredentialItems"
+                    :loading="personalCredentialsLoading"
+                    :aria-label="t('Account.PersonalCredential')"
+                    :title="t('Account.PersonalCredential')"
+                    :content="{ align: 'end' }"
+                    value-key="value"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    :ui="personalCredentialMenuUi"
+                  >
+                    <template #default>
+                      <span class="sr-only">{{ t("Account.PersonalCredential") }}</span>
+                    </template>
+                  </USelectMenu>
+                </UFormField>
                 <UButton
                   type="button"
                   icon="i-lucide-file-up"
@@ -440,12 +517,34 @@ onBeforeUnmount(() => {
                       : 'Account.Password'
                 )
               "
-              :ui="{ base: controlBaseUi, trailing: 'pe-1' }"
+              :ui="{
+                base: [controlBaseUi, showHostedSecretArea && availablePersonalCredentials.length && 'pe-20'],
+                trailing: 'gap-1 pe-1'
+              }"
               icon="i-lucide-lock-keyhole"
               size="md"
               class="min-w-0 flex-1"
             >
               <template #trailing>
+                <UFormField v-if="showHostedSecretArea && availablePersonalCredentials.length" class="w-auto">
+                  <USelectMenu
+                    v-model="selectedCredentialChoice"
+                    :items="personalCredentialItems"
+                    :loading="personalCredentialsLoading"
+                    :aria-label="t('Account.PersonalCredential')"
+                    :title="t('Account.PersonalCredential')"
+                    :content="{ align: 'end' }"
+                    value-key="value"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    :ui="personalCredentialMenuUi"
+                  >
+                    <template #default>
+                      <span class="sr-only">{{ t("Account.PersonalCredential") }}</span>
+                    </template>
+                  </USelectMenu>
+                </UFormField>
                 <UButton
                   v-if="!usingSavedCredential"
                   type="button"
@@ -476,6 +575,9 @@ onBeforeUnmount(() => {
               @click="rememberSecret = !rememberSecret"
             />
           </UFieldGroup>
+          <p v-if="canUsePersonalCredential && personalCredentialsLoadFailed" class="mt-1 text-xs text-warning">
+            {{ t("Account.LoadPersonalCredentialsFailed") }}
+          </p>
         </UFormField>
       </div>
     </template>

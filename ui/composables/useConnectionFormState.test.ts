@@ -47,8 +47,7 @@ describe("personal credential connection form", () => {
         ...asset,
         permedProtocols: [{ name: protocol, port: 22, public: true }],
         permedAccounts: [
-          { id: "root-account", alias: "root", name: "root" },
-          { id: "", alias: "@INPUT", name: "Manual input" }
+          { id: "root-account", alias: "root", name: "root", username: "root", has_secret: false }
         ] as AssetItem["permedAccounts"]
       });
       await vi.waitFor(() => expect(state.personalCredentialsLoaded.value).toBe(true));
@@ -71,7 +70,7 @@ describe("personal credential connection form", () => {
     }
   });
 
-  it("does not request personal accounts without manual input permission", async () => {
+  it("does not request personal credentials for an account with a managed secret", async () => {
     const load = vi.fn();
     vi.stubGlobal("getPersonalAssetCredentials", load);
     const scope = effectScope();
@@ -80,7 +79,9 @@ describe("personal credential connection form", () => {
       state.initDraft({
         ...asset,
         permedProtocols: [{ name: "ssh", port: 22, public: true }],
-        permedAccounts: [{ id: "root-account", alias: "root", name: "root" }] as AssetItem["permedAccounts"]
+        permedAccounts: [
+          { id: "root-account", alias: "root", name: "root", username: "root", has_secret: true }
+        ] as AssetItem["permedAccounts"]
       });
       await nextTick();
       expect(state.personalCredentialsLoaded.value).toBe(true);
@@ -133,6 +134,41 @@ describe("personal credential connection form", () => {
     });
   });
 
+  it.each(["ssh", "sftp"])("updates only the matching username and secret type for %s", (protocol) => {
+    const state = useConnectionFormState();
+    state.personalCredentials.value = [
+      { id: "other-user", username: "admin", secret_type: "password", version: 1 },
+      { id: "password", username: "root", secret_type: { value: "password" }, version: 2 },
+      { id: "key", username: "root", secret_type: "ssh_key", version: 3 }
+    ] as typeof state.personalCredentials.value;
+    state.draft.value = {
+      ...state.draft.value,
+      protocol,
+      account: "@INPUT",
+      manualUsername: " root ",
+      manualPassword: "replacement"
+    };
+    expect(state.buildConnectionInfo(asset).personalCredentialId).toBeUndefined();
+    state.draft.value.savePersonalCredential = true;
+    expect(state.buildConnectionInfo(asset)).toMatchObject({
+      personalCredentialId: "password",
+      personalCredentialVersion: 2,
+      savePersonalCredential: true,
+      manualPassword: "replacement"
+    });
+    state.draft.value.personalCredentialSecretType = "ssh_key";
+    expect(state.buildConnectionInfo(asset)).toMatchObject({
+      personalCredentialId: "key",
+      personalCredentialVersion: 3,
+      personalCredentialSecretType: "ssh_key"
+    });
+    state.draft.value.manualUsername = "new-user";
+    const newCredential = state.buildConnectionInfo(asset);
+    expect(newCredential.personalCredentialId).toBeUndefined();
+    expect(newCredential.personalCredentialVersion).toBeUndefined();
+    expect(newCredential.savePersonalCredential).toBe(true);
+  });
+
   it.each(["ssh", "sftp"])("keeps an empty-secret hosted account ID and its credential for %s", (protocol) => {
     const state = useConnectionFormState();
     state.draft.value = {
@@ -141,7 +177,8 @@ describe("personal credential connection form", () => {
       account: "root",
       accountId: "account-2",
       hostedSecret: "private-key",
-      inputSecretType: "ssh_key"
+      inputSecretType: "ssh_key",
+      savePersonalCredential: true
     };
     const sshAsset: AssetItem = {
       ...asset,
@@ -172,11 +209,29 @@ describe("personal credential connection form", () => {
       ]
     };
 
+    state.personalCredentials.value = [
+      { id: "other-user", username: "admin", secret_type: "ssh_key", version: 1 },
+      { id: "password", username: "root", secret_type: "password", version: 2 },
+      { id: "root-key", username: "root", secret_type: "ssh_key", version: 3 }
+    ] as typeof state.personalCredentials.value;
     expect(state.buildConnectionInfo(sshAsset)).toMatchObject({
       accountId: "account-2",
       hostedSecret: "private-key",
-      inputSecretType: "ssh_key"
+      inputSecretType: "ssh_key",
+      personalCredentialId: "root-key",
+      personalCredentialVersion: 3,
+      savePersonalCredential: true
     });
+    state.draft.value.savePersonalCredential = false;
+    state.draft.value.personalCredentialId = "root-key";
+    state.draft.value.personalCredentialVersion = 3;
+    expect(state.buildConnectionInfo(sshAsset)).toMatchObject({
+      accountId: "account-2",
+      personalCredentialId: "root-key",
+      savePersonalCredential: false
+    });
+    state.draft.value.accountId = "account-1";
+    expect(state.buildConnectionInfo(sshAsset).personalCredentialId).toBeUndefined();
   });
 
   it.each([
