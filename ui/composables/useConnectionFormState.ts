@@ -11,7 +11,11 @@ import type {
 import { ApiRequestError } from "~/composables/useApiRequest";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols, sortProtocolNames } from "~/utils";
-import { resolvePersonalCredentialSecretType } from "~/utils/connection";
+import {
+  findMatchingPersonalCredential,
+  resolvePersonalCredentialSecretType,
+  supportsPersonalCredential
+} from "~/utils/connection";
 
 export interface ConnectionFormDraft {
   protocol: string;
@@ -92,8 +96,6 @@ export function useConnectionFormState() {
     isDesktopRuntime() ? protocols : protocols.filter((protocol) => protocol?.public !== false);
   const getManualInputLabel = () => t("Account.ManualInput");
   const getAnonymousLabel = () => t("Account.Anonymous");
-  const isManualInputAccount = (account: string) =>
-    account === "@INPUT" || account === getManualInputLabel() || account === "手动输入" || account === "Manual input";
   const getPersonalCredentialScope = (asset: AssetItem, protocol: string) =>
     [asset.org_id || userInfoStore.currentUser?.org?.id || "", asset.id, protocol.trim().toLowerCase()].join(":");
   const resetPersonalCredentialSelection = (protocol = draft.value.protocol) => {
@@ -158,20 +160,13 @@ export function useConnectionFormState() {
       resetPersonalCredentialSelection(protocol);
     }
     personalCredentialScope = nextScope;
-    const supportsManualInput = (asset.permedAccounts || []).some((account) => account.alias === "@INPUT");
-    if (!supportsManualInput || !protocol) {
+    const supportsCredentials = (asset.permedAccounts || []).some(supportsPersonalCredential);
+    if (!supportsCredentials || !protocol) {
       personalCredentials.value = [];
       personalCredentialsLoading.value = false;
       personalCredentialsLoaded.value = true;
       personalCredentialsLoadFailed.value = false;
       resetPersonalCredentialSelection(protocol);
-      return;
-    }
-
-    const needsPersonalCredentials = isManualInputAccount(draft.value.account) || !!draft.value.personalCredentialId;
-    if (!needsPersonalCredentials) {
-      personalCredentialsLoading.value = false;
-      personalCredentialsLoadFailed.value = false;
       return;
     }
 
@@ -257,6 +252,8 @@ export function useConnectionFormState() {
   };
 
   const clearEnteredSecrets = () => {
+    draft.value.manualPassword = "";
+    draft.value.dynamicPassword = "";
     draft.value.hostedSecret = "";
   };
 
@@ -281,11 +278,11 @@ export function useConnectionFormState() {
           (item) => item.name === account || item.username === account || item.alias === account
         )?.id;
     }
-    const canUsePersonalCredential = accountMode === "manual";
     const selectedAccount = asset.permedAccounts?.find((item) => item.id === accountId);
+    const canUsePersonalCredential = accountMode === "manual" || supportsPersonalCredential(selectedAccount);
     const inputSecretType =
-      accountMode === "hosted"
-        ? draft.value.protocol.toLowerCase() === "ssh"
+      accountMode === "hosted" || accountMode === "dynamic"
+        ? ["ssh", "sftp"].includes(draft.value.protocol.toLowerCase())
           ? draft.value.inputSecretType === "ssh_key"
             ? "ssh_key"
             : "password"
@@ -293,19 +290,15 @@ export function useConnectionFormState() {
         : undefined;
     const personalCredentialSecretType = resolvePersonalCredentialSecretType(
       draft.value.protocol,
-      draft.value.personalCredentialSecretType
+      accountMode === "hosted" ? inputSecretType : draft.value.personalCredentialSecretType
     );
     const matchingPersonalCredential =
       canUsePersonalCredential && draft.value.savePersonalCredential && !draft.value.personalCredentialId
-        ? personalCredentials.value.find((credential) => {
-            const secretType =
-              typeof credential.secret_type === "string"
-                ? credential.secret_type
-                : credential.secret_type?.value || "password";
-            return (
-              credential.username === draft.value.manualUsername.trim() && secretType === personalCredentialSecretType
-            );
-          })
+        ? findMatchingPersonalCredential(
+            personalCredentials.value,
+            accountMode === "hosted" ? selectedAccount?.username || "" : draft.value.manualUsername,
+            personalCredentialSecretType
+          )
         : undefined;
 
     const availableProtocols = sortProtocolNames(
@@ -333,7 +326,7 @@ export function useConnectionFormState() {
       personalCredentialSecretType,
       savePersonalCredential: canUsePersonalCredential && draft.value.savePersonalCredential,
       dynamicPassword: draft.value.dynamicPassword,
-      rememberSecret: draft.value.rememberSecret,
+      rememberSecret: draft.value.rememberSecret && !(accountMode === "dynamic" && inputSecretType === "ssh_key"),
       rememberSelection: draft.value.rememberSelection,
       connectMethod: draft.value.connectMethod,
       connectOptions: { ...draft.value.connectOptions },
@@ -342,12 +335,7 @@ export function useConnectionFormState() {
   };
 
   watch(
-    [
-      () => activeAsset.value?.id,
-      () => draft.value.protocol,
-      () => draft.value.account,
-      () => userInfoStore.currentUser?.org?.id
-    ],
+    [() => activeAsset.value?.id, () => draft.value.protocol, () => userInfoStore.currentUser?.org?.id],
     ([, protocol]) => {
       if (activeAsset.value) void loadPersonalCredentials(activeAsset.value, String(protocol || ""));
     }

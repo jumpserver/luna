@@ -28,7 +28,7 @@ import { useSettingManager } from "~/composables/useSettingManager";
 import { desktopDialog, desktopFs, desktopInvoke, desktopListen } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { transformAssetDetail } from "~/utils";
-import { needsInputSecret, resolvePersonalCredentialSecretType } from "~/utils/connection";
+import { needsInputSecret, resolvePersonalCredentialSecretType, supportsPersonalCredential } from "~/utils/connection";
 import { pageLocation } from "~/utils/runtime";
 
 let desktopListenersInitialized = false;
@@ -69,6 +69,8 @@ const CONNECTION_ERROR_CODES: Record<string, string> = {
   asset_inactive: "ConnectError.AssetUnavailable",
   invalid_user: "ConnectError.SessionInvalid",
   personal_credential_not_found: "ConnectError.PersonalCredentialNotFound",
+  personal_credential_account_denied: "ConnectError.AccountUnavailable",
+  personal_credential_username_mismatch: "ConnectError.AccountUnavailable",
   personal_credential_version_conflict: "ConnectError.CredentialChanged",
   vault_unavailable: "ConnectError.CredentialServiceUnavailable",
   ssh_certificate_signing_unavailable: "ConnectError.CertificateServiceUnavailable",
@@ -419,7 +421,7 @@ export const useAssetAction = () => {
     scope: PersonalCredentialSessionScope
   ) => {
     const resolvedAssetId = assetId || body.asset;
-    if (!resolvedAssetId || body.account !== "@INPUT" || !token.personal_credential_id) return;
+    if (!resolvedAssetId || !token.personal_credential_id) return;
 
     if (body.save_personal_credential) {
       invalidatePersonalAssetCredentialCache({
@@ -436,11 +438,14 @@ export const useAssetAction = () => {
     if (!currentContextMatches) return;
 
     const saved = userInfoStore.getConnectionInfoForAsset(resolvedAssetId);
-    if (!saved || saved.accountMode !== "manual") return;
+    if (!saved || saved.protocol !== body.protocol) return;
+    if (saved.accountMode === "manual" && body.account !== "@INPUT") return;
+    if (saved.accountMode === "hosted" && saved.accountId !== body.account) return;
+    if (!["manual", "hosted"].includes(saved.accountMode || "")) return;
 
     userInfoStore.setConnectionInfoForAsset(resolvedAssetId, {
       ...saved,
-      manualUsername: body.input_username || saved.manualUsername || "",
+      manualUsername: saved.accountMode === "manual" ? body.input_username || saved.manualUsername || "" : "",
       personalCredentialId: token.personal_credential_id,
       personalCredentialVersion: body.save_personal_credential ? undefined : saved.personalCredentialVersion,
       personalCredentialSecretType: body.input_secret_type || saved.personalCredentialSecretType || "password",
@@ -889,7 +894,7 @@ export const useAssetAction = () => {
         (account) => account.username === selected || account.alias === selected || account.name === selected
       );
     const protocol = protocolOverride || displayProtocol;
-    const hostedNeedsInput = protocol.toLowerCase() !== "sftp" && needsInputSecret(matchedAccount);
+    const hostedNeedsInput = needsInputSecret(matchedAccount);
 
     if (effectiveMode === "manual" || selected === "@INPUT" || selected === "手动输入" || selected === "Manual input") {
       // prettier-ignore
@@ -901,7 +906,7 @@ export const useAssetAction = () => {
       selected?.includes("同名账号") ||
       selected?.includes("Dynamic user")
     ) {
-      // 同名账号仅需传递密码
+      // 同名账号由服务端解析用户名，凭据支持密码或私钥。
       input_username = "";
       input_secret = ephemeral?.dynamicPassword ?? saved?.dynamicPassword ?? "";
     } else if (effectiveMode === "anonymous" || selected?.includes("@ANON")) {
@@ -968,7 +973,9 @@ export const useAssetAction = () => {
 
     const isManual = accountForToken === "@INPUT";
     const hasEphemeralPersonalCredential = !!ephemeral && "personalCredentialId" in ephemeral;
-    const savedPersonalCredentialMatchesProtocol = saved?.protocol?.toLowerCase() === protocol.toLowerCase();
+    const savedPersonalCredentialMatchesProtocol =
+      saved?.protocol?.toLowerCase() === protocol.toLowerCase() &&
+      (isManual ? saved?.accountMode === "manual" : saved?.accountId === accountForToken);
     const personalCredentialId = hasEphemeralPersonalCredential
       ? ephemeral?.personalCredentialId
       : savedPersonalCredentialMatchesProtocol
@@ -980,22 +987,20 @@ export const useAssetAction = () => {
         ? saved?.personalCredentialVersion
         : undefined;
     const savePersonalCredential = !!ephemeral?.savePersonalCredential;
-    const useSavedPersonalCredential = isManual && !!personalCredentialId && !savePersonalCredential;
+    const requiresHostedSecret = !accountForToken.startsWith("@") && hostedNeedsInput;
+    const canUsePersonalCredential = isManual || (requiresHostedSecret && supportsPersonalCredential(matchedAccount));
+    const useSavedPersonalCredential = canUsePersonalCredential && !!personalCredentialId && !savePersonalCredential;
     const manualAccountSecretType = _accounts.find((account) => account.alias === "@INPUT")?.secret_type;
     const personalCredentialSecretType = resolvePersonalCredentialSecretType(
       protocol,
-      personalCredentialId
-        ? ephemeral?.personalCredentialSecretType || manualAccountSecretType || "password"
-        : manualAccountSecretType || ephemeral?.personalCredentialSecretType || "password"
+      ephemeral?.personalCredentialSecretType || manualAccountSecretType || "password"
     );
-    const requiresHostedSecret = !accountForToken.startsWith("@") && hostedNeedsInput;
-    const inputSecretType =
-      protocol.toLowerCase() === "ssh"
-        ? ephemeral?.inputSecretType === "ssh_key"
-          ? "ssh_key"
-          : "password"
-        : resolvePersonalCredentialSecretType(protocol, matchedAccount?.secret_type || "password");
-    if (requiresHostedSecret && !input_secret) {
+    const inputSecretType = ["ssh", "sftp"].includes(protocol.toLowerCase())
+      ? ephemeral?.inputSecretType === "ssh_key"
+        ? "ssh_key"
+        : "password"
+      : resolvePersonalCredentialSecretType(protocol, matchedAccount?.secret_type || "password");
+    if (requiresHostedSecret && !useSavedPersonalCredential && !input_secret) {
       const error = new Error(t("ConnectError.SecretRequired"));
       if (ephemeral?.onSessionError) ephemeral.onSessionError(error);
       else addErrorToast({ title: t("ConnectError.ConnectFailed"), description: error.message });
@@ -1015,17 +1020,19 @@ export const useAssetAction = () => {
       asset: assetId,
       protocol,
       ...(!useSavedPersonalCredential ? { input_username, input_secret } : {}),
-      ...(isManual && personalCredentialId ? { personal_credential_id: personalCredentialId } : {}),
-      ...(isManual && savePersonalCredential
+      ...(isManual && !useSavedPersonalCredential ? { input_secret_type: personalCredentialSecretType } : {}),
+      ...(canUsePersonalCredential && personalCredentialId ? { personal_credential_id: personalCredentialId } : {}),
+      ...(canUsePersonalCredential && savePersonalCredential
         ? {
             save_personal_credential: true,
-            input_secret_type: personalCredentialSecretType,
             ...(personalCredentialVersion !== undefined
               ? { personal_credential_version: personalCredentialVersion }
               : {})
           }
         : {}),
-      ...(requiresHostedSecret ? { input_secret_type: inputSecretType } : {}),
+      ...((requiresHostedSecret && !useSavedPersonalCredential) || accountForToken === "@USER"
+        ? { input_secret_type: inputSecretType }
+        : {}),
       account: accountForToken,
       connect_method: connectMethod,
       connect_options: mergedConnectOptions

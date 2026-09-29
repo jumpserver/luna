@@ -66,6 +66,8 @@ export default defineNuxtPlugin((nuxtApp) => {
           ...(connection && {
             manualUsername: connection.manualUsername,
             manualPassword: connection.manualPassword,
+            hostedSecret: connection.hostedSecret,
+            inputSecretType: connection.inputSecretType,
             personalCredentialId: connection.personalCredentialId,
             personalCredentialVersion: connection.personalCredentialVersion,
             personalCredentialSecretType: connection.personalCredentialSecretType,

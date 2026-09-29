@@ -8,7 +8,12 @@ import {
 import { desktopInvoke } from "~/shared/desktop/bridge";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { transformAssetDetail } from "~/utils";
-import { hasReusableSavedConnection, isSavedConnectionAvailable, needsInputSecret } from "~/utils/connection";
+import {
+  hasReusableSavedConnection,
+  isSavedConnectionAvailable,
+  needsInputSecret,
+  supportsPersonalCredential
+} from "~/utils/connection";
 import { setWebOrgId } from "~/utils/runtime";
 
 export interface SessionWindowConnectionInfo {
@@ -128,7 +133,7 @@ export function buildSessionPath(asset: AssetItem, connectionInfo?: SessionWindo
   query.set("accountMode", connectionInfo.accountMode);
   if (connectionInfo.accountId) query.set("accountId", connectionInfo.accountId);
   if (connectionInfo.connectMethod) query.set("method", connectionInfo.connectMethod);
-  if (connectionInfo.accountMode === "manual" && connectionInfo.personalCredentialId) {
+  if (["manual", "hosted"].includes(connectionInfo.accountMode) && connectionInfo.personalCredentialId) {
     query.set("personalCredentialId", connectionInfo.personalCredentialId);
   }
 
@@ -241,7 +246,17 @@ export function useSessionWindowConnect() {
         ) {
           throw new Error(t("ConnectError.ProtocolUnavailable"));
         }
-        if (!asset.permedAccounts?.some((account) => account.alias === "@INPUT")) {
+        const hostedAccount =
+          routeConnection?.accountMode === "hosted"
+            ? asset.permedAccounts?.find((account) => account.id === routeConnection.accountId)
+            : undefined;
+        if (
+          routeConnection?.accountMode === "hosted" &&
+          (!supportsPersonalCredential(hostedAccount) || hostedAccount?.username !== credential.username)
+        ) {
+          throw new Error(t("ConnectError.AccountUnavailable"));
+        }
+        if (!hostedAccount && !asset.permedAccounts?.some((account) => account.alias === "@INPUT")) {
           throw new Error(t("ConnectError.ManualAccountDenied"));
         }
         const preferred =
@@ -250,9 +265,10 @@ export function useSessionWindowConnect() {
         const pane = openSession(asset, { protocol, account: credential.username, connectMethod });
         await confirmConnection(asset, {
           protocol,
-          account: "@INPUT",
-          accountMode: "manual",
-          manualUsername: credential.username,
+          account: hostedAccount?.name || "@INPUT",
+          accountId: hostedAccount?.id,
+          accountMode: hostedAccount ? "hosted" : "manual",
+          manualUsername: hostedAccount ? "" : credential.username,
           manualPassword: "",
           personalCredentialId: credential.id,
           personalCredentialVersion: credential.version,
@@ -269,8 +285,13 @@ export function useSessionWindowConnect() {
         return;
       }
 
-      const reusableSavedConnection = !admin && hasReusableSavedConnection(asset);
       const connection = { ...(saved || {}), ...(preference || {}), ...(routeConnection || {}) };
+      const reusableSavedConnection =
+        !admin &&
+        hasReusableSavedConnection(asset) &&
+        saved?.protocol === connection.protocol &&
+        (saved?.accountMode || "hosted") === (connection.accountMode || "hosted") &&
+        (connection.accountMode !== "hosted" || saved?.accountId === connection.accountId);
       const queryNeedsNoSecret = routeConnection && ["hosted", "anonymous"].includes(routeConnection.accountMode);
       const canAutoConnect = reusableSavedConnection || queryNeedsNoSecret || admin;
       const selectedAccount =
@@ -281,8 +302,8 @@ export function useSessionWindowConnect() {
 
       if (
         (connection.accountMode || "hosted") === "hosted" &&
-        connection.protocol?.toLowerCase() !== "sftp" &&
-        needsInputSecret(selectedAccount)
+        needsInputSecret(selectedAccount) &&
+        !(reusableSavedConnection && supportsPersonalCredential(selectedAccount) && saved?.personalCredentialId)
       ) {
         if (admin) throw new Error(t("ConnectError.SecretRequired"));
         openSetupSession(asset, { protocol: connection.protocol || "" });

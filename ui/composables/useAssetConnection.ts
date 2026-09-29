@@ -8,7 +8,7 @@ import type {
 import { isConnectMethodAvailable } from "~/composables/useConnectMethods";
 import { useUserInfoStore } from "~/store/modules/userInfo";
 import { sortPermedProtocols } from "~/utils";
-import { needsInputSecret } from "~/utils/connection";
+import { needsInputSecret, supportsPersonalCredential } from "~/utils/connection";
 
 export interface ConnectionFormInfo {
   protocol: string;
@@ -103,13 +103,15 @@ export function useAssetConnection() {
       }
     }
 
-    const canUsePersonalCredential = accountMode === "manual";
-
     const sameHostedAccount =
       accountMode === "hosted" &&
       connectionInfo.accountMode === "hosted" &&
       accountId === connectionInfo.accountId &&
       protocol === connectionInfo.protocol;
+    const canUsePersonalCredential =
+      protocol === connectionInfo.protocol &&
+      ((accountMode === "manual" && connectionInfo.accountMode === "manual") ||
+        (sameHostedAccount && supportsPersonalCredential(accounts.find((item) => item.id === accountId))));
 
     return {
       ...connectionInfo,
@@ -121,6 +123,7 @@ export function useAssetConnection() {
       connectMethod,
       personalCredentialId: canUsePersonalCredential ? connectionInfo.personalCredentialId : undefined,
       personalCredentialVersion: canUsePersonalCredential ? connectionInfo.personalCredentialVersion : undefined,
+      personalCredentialSecretType: canUsePersonalCredential ? connectionInfo.personalCredentialSecretType : undefined,
       savePersonalCredential: canUsePersonalCredential && connectionInfo.savePersonalCredential,
       availableProtocols: protocols
     };
@@ -219,12 +222,9 @@ export function useAssetConnection() {
       accountId: resolvedAccountId,
       accountMode: connectionInfo.accountMode,
       manualUsername: connectionInfo.accountMode === "manual" ? connectionInfo.manualUsername : "",
-      personalCredentialId:
-        connectionInfo.accountMode === "manual" ? connectionInfo.personalCredentialId || undefined : undefined,
-      personalCredentialVersion:
-        connectionInfo.accountMode === "manual" ? connectionInfo.personalCredentialVersion : undefined,
-      personalCredentialSecretType:
-        connectionInfo.accountMode === "manual" ? connectionInfo.personalCredentialSecretType || "password" : undefined,
+      personalCredentialId: connectionInfo.personalCredentialId || undefined,
+      personalCredentialVersion: connectionInfo.personalCredentialVersion,
+      personalCredentialSecretType: connectionInfo.personalCredentialSecretType,
       dynamicPassword: connectionInfo.rememberSecret ? connectionInfo.dynamicPassword : "",
       rememberSecret: connectionInfo.accountMode === "manual" ? false : connectionInfo.rememberSecret,
       connectMethod: connectionInfo.connectMethod,
@@ -243,9 +243,9 @@ export function useAssetConnection() {
     const selectedAccount = asset.permedAccounts?.find((account) => account.id === normalized.accountId);
     if (
       normalized.accountMode === "hosted" &&
-      normalized.protocol.toLowerCase() !== "sftp" &&
       needsInputSecret(selectedAccount) &&
-      !normalized.hostedSecret
+      !normalized.hostedSecret &&
+      !(normalized.personalCredentialId && !normalized.savePersonalCredential)
     ) {
       const error = new Error(t("ConnectError.SecretRequired"));
       if (normalized.onSessionError) {

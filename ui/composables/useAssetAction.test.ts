@@ -4,6 +4,7 @@ import { effectScope, ref } from "vue";
 import { resolveSessionComponent, resolveSessionSurface } from "~/shared/connectors/registry";
 import { ApiRequestError } from "./useApiRequest";
 import { useAssetAction } from "./useAssetAction";
+import { SFTP_FILE_MANAGER_VALUE } from "./useConnectMethods";
 import { useRdpResolutionPreference } from "./useRdpResolutionPreference";
 import { useWebProxyManager } from "./useWebProxyManager";
 
@@ -97,6 +98,7 @@ function stubLocation(location: { protocol?: string; origin?: string } = {}) {
 
 describe("opening assets in local applications", () => {
   const method = { value: "ssh_client", type: "native", component: "koko", disabled: false };
+  const sftpMethod = { value: SFTP_FILE_MANAGER_VALUE, type: "web", component: "koko", disabled: false };
   const payload = {
     protocol: "ssh",
     name: "生产主机",
@@ -109,6 +111,8 @@ describe("opening assets in local applications", () => {
     mocks.appConfig.value = undefined;
     mocks.rdpResolution.value = undefined;
     vi.stubGlobal("isDesktopRuntime", () => false);
+    vi.stubGlobal("isElectronRuntime", () => false);
+    vi.stubGlobal("getSmartEndpoint", async () => ({ host: "jumpserver.example", https_port: 443 }));
     vi.stubGlobal("useI18n", () => ({ t: (key: string) => key }));
     vi.stubGlobal("useToast", () => ({}));
     vi.stubGlobal("useErrorToast", () => ({ addErrorToast: mocks.errorToast }));
@@ -116,8 +120,8 @@ describe("opening assets in local applications", () => {
     mocks.createTicket.mockResolvedValue({ ticket: "web-ticket" });
     vi.stubGlobal("useWorkspaceConnectors", () => ({ createKokoTicket: mocks.createTicket }));
     vi.stubGlobal("useConnectMethods", () => ({
-      fetchConnectMethods: async () => ({ ssh: [method] }),
-      getMethodsForProtocol: async () => [method]
+      fetchConnectMethods: async () => ({ ssh: [method], sftp: [sftpMethod] }),
+      getMethodsForProtocol: async (protocol: string) => (protocol === "sftp" ? [sftpMethod] : [method])
     }));
     vi.stubGlobal("storeToRefs", () => ({
       currentSite: ref(mocks.store.currentSite),
@@ -239,50 +243,176 @@ describe("opening assets in local applications", () => {
     );
   });
 
-  it("passes a temporary SSH key for a hosted account without a stored secret", async () => {
-    const ready = vi.fn();
-    const failed = vi.fn();
-    const account = {
-      alias: "root",
-      date_expired: "",
-      has_secret: false,
-      has_username: true,
-      id: "account-id",
-      name: "root",
-      secret_type: "password",
-      username: "root",
-      actions: []
-    };
+  it.each(["ssh", "sftp"])(
+    "passes a temporary SSH key for a hosted %s account without a stored secret",
+    async (protocol) => {
+      const ready = vi.fn();
+      const failed = vi.fn();
+      const account = {
+        alias: "root",
+        date_expired: "",
+        has_secret: false,
+        has_username: true,
+        id: "account-id",
+        name: "root",
+        secret_type: "password",
+        username: "root",
+        actions: []
+      };
 
-    await useAssetAction().handleAssetConnection("root", "asset", "ssh", [account], undefined, {
-      accountMode: "hosted",
-      accountId: account.id,
-      hostedSecret: "-----BEGIN OPENSSH PRIVATE KEY-----",
-      inputSecretType: "ssh_key",
-      connectMethod: method.value,
-      onSessionReady: ready,
-      onSessionError: failed
-    });
-    await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+      await useAssetAction().handleAssetConnection("root", "asset", protocol, [account], undefined, {
+        accountMode: "hosted",
+        accountId: account.id,
+        hostedSecret: "-----BEGIN OPENSSH PRIVATE KEY-----",
+        inputSecretType: "ssh_key",
+        connectMethod: protocol === "sftp" ? sftpMethod.value : method.value,
+        onSessionReady: ready,
+        onSessionError: failed
+      });
+      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
 
-    expect(failed).not.toHaveBeenCalled();
-    expect(mocks.createToken).toHaveBeenCalledWith(
-      expect.objectContaining({
-        account: "account-id",
+      expect(failed).not.toHaveBeenCalled();
+      expect(mocks.createToken).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: "account-id",
+          protocol,
+          input_username: "root",
+          input_secret: "-----BEGIN OPENSSH PRIVATE KEY-----",
+          input_secret_type: "ssh_key"
+        }),
+        expect.anything()
+      );
+    }
+  );
+
+  it.each(
+    (
+      [
+        [false, "manual", false],
+        [true, "manual", false],
+        [false, "manual", true],
+        [true, "manual", true],
+        [false, "dynamic", false],
+        [true, "dynamic", false]
+      ] as const
+    ).flatMap(([desktop, mode, save]) =>
+      (["ssh", "sftp"] as const).map((protocol) => [protocol, desktop, mode, save] as const)
+    )
+  )(
+    "submits an SSH key over %s with desktop=%s, mode=%s, save=%s",
+    async (protocol, desktop, accountMode, savePersonalCredential) => {
+      vi.stubGlobal("isDesktopRuntime", () => desktop);
+      vi.stubGlobal("isElectronRuntime", () => desktop);
+      mocks.invoke.mockImplementation(async (_command, args) => args?.endpointUrl);
+      const ready = vi.fn();
+      const failed = vi.fn();
+      const alias = accountMode === "manual" ? "@INPUT" : "@USER";
+      const privateKey = "-----BEGIN OPENSSH PRIVATE KEY-----\nkey-data\n-----END OPENSSH PRIVATE KEY-----";
+      await useAssetAction().handleAssetConnection(
+        alias,
+        "asset",
+        "ssh",
+        [
+          {
+            alias,
+            date_expired: "",
+            has_secret: false,
+            has_username: false,
+            id: "",
+            name: alias,
+            secret_type: "password",
+            username: alias,
+            actions: []
+          }
+        ],
+        protocol === "sftp" ? "sftp" : undefined,
+        {
+          accountMode,
+          manualUsername: "root",
+          manualPassword: privateKey,
+          dynamicPassword: privateKey,
+          inputSecretType: "ssh_key",
+          personalCredentialSecretType: "ssh_key",
+          savePersonalCredential,
+          connectMethod: protocol === "sftp" ? sftpMethod.value : method.value,
+          onSessionReady: ready,
+          onSessionError: failed
+        }
+      );
+      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+      expect(failed).not.toHaveBeenCalled();
+      expect(mocks.createToken).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: alias,
+          protocol,
+          input_username: accountMode === "manual" ? "root" : "",
+          input_secret: privateKey,
+          input_secret_type: "ssh_key",
+          ...(savePersonalCredential ? { save_personal_credential: true } : {})
+        }),
+        expect.anything()
+      );
+    }
+  );
+
+  it.each(["ssh", "sftp"])(
+    "uses a saved SSH key over %s without sending an empty replacement secret",
+    async (protocol) => {
+      const ready = vi.fn();
+      const failed = vi.fn();
+      await useAssetAction().handleAssetConnection("@INPUT", "asset", protocol, [], undefined, {
+        accountMode: "manual",
+        personalCredentialId: "saved-key",
+        personalCredentialSecretType: "ssh_key",
+        connectMethod: protocol === "sftp" ? sftpMethod.value : method.value,
+        onSessionReady: ready,
+        onSessionError: failed
+      });
+      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+      expect(failed).not.toHaveBeenCalled();
+      const body = mocks.createToken.mock.calls[0]![0];
+      expect(body.personal_credential_id).toBe("saved-key");
+      expect(body).not.toHaveProperty("input_secret");
+      expect(body).not.toHaveProperty("input_secret_type");
+    }
+  );
+
+  it.each(["ssh", "sftp"])(
+    "updates a saved SSH key over %s with its version and selected credential type",
+    async (protocol) => {
+      const ready = vi.fn();
+      const failed = vi.fn();
+      await useAssetAction().handleAssetConnection("@INPUT", "asset", protocol, [], undefined, {
+        accountMode: "manual",
+        manualUsername: "root",
+        manualPassword: "replacement-private-key",
+        personalCredentialId: "saved-key",
+        personalCredentialVersion: 3,
+        personalCredentialSecretType: "ssh_key",
+        savePersonalCredential: true,
+        connectMethod: protocol === "sftp" ? sftpMethod.value : method.value,
+        onSessionReady: ready,
+        onSessionError: failed
+      });
+      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+      expect(failed).not.toHaveBeenCalled();
+      expect(mocks.createToken.mock.calls[0]![0]).toMatchObject({
+        personal_credential_id: "saved-key",
+        personal_credential_version: 3,
         input_username: "root",
-        input_secret: "-----BEGIN OPENSSH PRIVATE KEY-----",
-        input_secret_type: "ssh_key"
-      }),
-      expect.anything()
-    );
-  });
+        input_secret: "replacement-private-key",
+        input_secret_type: "ssh_key",
+        save_personal_credential: true
+      });
+    }
+  );
 
-  it("rejects an empty-secret hosted account before requesting a token", async () => {
+  it.each(["ssh", "sftp"])("rejects an empty-secret hosted %s account before requesting a token", async (protocol) => {
     const failed = vi.fn();
     await useAssetAction().handleAssetConnection(
       "root",
       "asset",
-      "ssh",
+      protocol,
       [
         {
           alias: "root",
@@ -303,6 +433,77 @@ describe("opening assets in local applications", () => {
     expect(failed).toHaveBeenCalledWith(expect.any(Error));
     expect(mocks.createToken).not.toHaveBeenCalled();
   });
+
+  it.each(
+    ["ssh", "sftp"].flatMap((protocol) =>
+      [false, true].flatMap((desktop) =>
+        ["use", "create", "update"].map((operation) => [protocol, desktop, operation] as const)
+      )
+    )
+  )(
+    "uses a personal credential with the hosted account ID over %s, desktop=%s, operation=%s",
+    async (protocol, desktop, operation) => {
+      vi.stubGlobal("isDesktopRuntime", () => desktop);
+      vi.stubGlobal("isElectronRuntime", () => desktop);
+      mocks.invoke.mockImplementation(async (_command, args) => args?.endpointUrl);
+      const ready = vi.fn();
+      const failed = vi.fn();
+      await useAssetAction().handleAssetConnection(
+        "root",
+        "asset",
+        protocol,
+        [
+          {
+            alias: "account-id",
+            id: "account-id",
+            name: "root",
+            username: "root",
+            has_secret: false,
+            has_username: true,
+            secret_type: "password",
+            actions: [],
+            date_expired: ""
+          }
+        ],
+        undefined,
+        {
+          accountMode: "hosted",
+          accountId: "account-id",
+          personalCredentialId: operation === "create" ? undefined : "saved-key",
+          personalCredentialVersion: 3,
+          personalCredentialSecretType: "ssh_key",
+          inputSecretType: "ssh_key",
+          hostedSecret: operation === "use" ? "" : "replacement-key",
+          savePersonalCredential: operation !== "use",
+          connectMethod: protocol === "sftp" ? sftpMethod.value : method.value,
+          onSessionReady: ready,
+          onSessionError: failed
+        }
+      );
+      await vi.waitFor(() => expect(ready.mock.calls.length + failed.mock.calls.length).toBe(1));
+      expect(failed).not.toHaveBeenCalled();
+      const body = mocks.createToken.mock.calls[0]![0];
+      expect(body).toMatchObject({ account: "account-id", protocol });
+      if (operation === "use") {
+        expect(body.personal_credential_id).toBe("saved-key");
+        expect(body).not.toHaveProperty("input_username");
+        expect(body).not.toHaveProperty("input_secret");
+        expect(body).not.toHaveProperty("input_secret_type");
+      } else {
+        expect(body).toMatchObject({
+          input_username: "root",
+          input_secret: "replacement-key",
+          input_secret_type: "ssh_key",
+          save_personal_credential: true
+        });
+        if (operation === "update")
+          expect(body).toMatchObject({
+            personal_credential_id: "saved-key",
+            personal_credential_version: 3
+          });
+      }
+    }
+  );
 
   it("reuses Magnus db_client tokens before launching the local client", async () => {
     const dbMethod = { value: "db_client", type: "native", component: "magnus", disabled: false };

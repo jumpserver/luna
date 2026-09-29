@@ -65,12 +65,14 @@ const credentialReady = computed(() => {
     if (draft.value.personalCredentialId && draft.value.personalCredentialVersion === undefined) return false;
     return !!draft.value.manualUsername.trim() && !!draft.value.manualPassword.trim();
   }
-  if (draft.value.protocol.toLowerCase() === "sftp") return true;
   const accounts = props.asset.permedAccounts || [];
   const hosted =
     accounts.find((item) => draft.value.accountId && item.id === draft.value.accountId) ||
     accounts.find((item) => item.name === draft.value.account && !item.alias.startsWith("@"));
-  return hosted?.has_secret === false ? !!draft.value.hostedSecret.trim() : true;
+  if (hosted?.has_secret !== false) return true;
+  if (draft.value.personalCredentialId && !draft.value.savePersonalCredential) return true;
+  if (draft.value.personalCredentialId && draft.value.personalCredentialVersion === undefined) return false;
+  return !!draft.value.hostedSecret.trim();
 });
 const methodDisabled = computed(() =>
   protocolMethods.value.some(
