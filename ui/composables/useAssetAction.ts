@@ -1205,9 +1205,7 @@ export const useAssetAction = () => {
     getAssetDetailRequest(assetId)
       .then((assetDetail) => {
         const permedAccounts = assetDetail.permed_accounts ?? [];
-        const permedProtocols = (assetDetail.permed_protocols ?? []).filter(
-          (protocol: PermedProtocol) => protocol?.name !== "winrm"
-        );
+        const permedProtocols = assetDetail.permed_protocols ?? [];
 
         useEventBus().emit("assetDetailUpdated", {
           assetId,

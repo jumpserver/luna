@@ -23,10 +23,11 @@ const props = withDefaults(
     executionOverrides: ReadonlyMap<string, string>;
     executionMode: string;
     approvalMode: string;
+    ptyExec?: boolean;
     backgroundExec: boolean;
     readOnly?: boolean;
   }>(),
-  { expanded: undefined }
+  { expanded: undefined, ptyExec: true }
 );
 
 const emit = defineEmits<{
@@ -144,7 +145,7 @@ function statusIconClass() {
 }
 
 function selectedExecution(data: TerminalAiEventData) {
-  return terminalExecutionMode(props.executionOverrides.get(String(data.id)) || data.execution);
+  return terminalExecutionMode(props.executionOverrides.get(String(data.id)) || data.execution, props);
 }
 
 function executionLabel(value: unknown) {
@@ -247,6 +248,7 @@ function terminalRiskLabel(level: unknown) {
                     @click="emit('setExecutionOverride', String(execution.command?.id), 'auto')"
                   />
                   <UButton
+                    v-if="ptyExec"
                     size="xs"
                     color="neutral"
                     class="exec-group-btn"

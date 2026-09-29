@@ -47,6 +47,7 @@ function setExecutionOverride(id: string, value: string) {
     :execution-overrides="terminalSession.executionOverrides"
     :execution-mode="terminalSession.executionMode"
     :approval-mode="terminalSession.approvalMode"
+    :pty-exec="terminalSession.ptyExec"
     :background-exec="terminalSession.backgroundExec"
     :read-only="readOnly"
     @decide="decide"

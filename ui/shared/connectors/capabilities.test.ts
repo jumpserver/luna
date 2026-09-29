@@ -8,3 +8,11 @@ describe("Dameng workspace capabilities", () => {
     expect(findDeclaredCapability("dameng", WEB_DB_NATIVE_VALUE)?.component).toBe("chen");
   });
 });
+
+it("routes WinRM through Koko's built-in terminal", () => {
+  expect(findDeclaredCapability("winrm", WEB_CLI_NATIVE_VALUE)).toMatchObject({
+    component: "koko",
+    surface: "terminal",
+    backendConnectMethod: "web_cli"
+  });
+});

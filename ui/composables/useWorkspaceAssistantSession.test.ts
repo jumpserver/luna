@@ -119,6 +119,17 @@ describe("Workspace Assistant capability", () => {
     expect(() => workspaceAssistantConnectionChoices(asset, "ssh", "missing")).toThrow("not authorized");
   });
 
+  it("offers an authorized WinRM connection to the assistant", () => {
+    const asset = {
+      permedProtocols: [{ name: "winrm", public: true }],
+      permedAccounts: [{ ...manualAccount, id: "windows-admin" }]
+    } as any;
+    expect(workspaceAssistantConnectionChoices(asset, "winrm", "windows-admin")).toMatchObject({
+      protocol: "winrm",
+      account: { id: "windows-admin" }
+    });
+  });
+
   it("notifies the timeline for every shallow AI SDK message update", () => {
     const message = {
       id: "assistant-1",

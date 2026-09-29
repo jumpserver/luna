@@ -348,9 +348,7 @@ export function useConnectionFormState() {
     return {
       ...asset,
       permedAccounts: detail.permed_accounts ?? asset.permedAccounts ?? [],
-      permedProtocols: (detail.permed_protocols ?? asset.permedProtocols ?? []).filter(
-        (protocol: PermedProtocol) => protocol?.name !== "winrm"
-      )
+      permedProtocols: detail.permed_protocols ?? asset.permedProtocols ?? []
     };
   };
 

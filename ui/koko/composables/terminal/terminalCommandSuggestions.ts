@@ -228,6 +228,7 @@ const CASE_INSENSITIVE_PROFILES = new Set<KokoTerminalCommandProfile>([
 
 export function resolveTerminalCommandProfile(profile: ConnectorTerminalProfile = {}): KokoTerminalCommandProfile {
   const protocol = String(profile.protocol || "").toLowerCase();
+  if (protocol === "winrm") return "windows";
   if (protocol === "mariadb" || protocol === "mysql") return "mysql";
   if (protocol === "pg" || protocol === "postgres" || protocol === "postgresql") return "postgresql";
   if (["redis", "mongodb", "oracle", "dameng", "sqlserver"].includes(protocol)) {
