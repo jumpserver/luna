@@ -57,6 +57,7 @@ const model = defineModel<string>({ required: true });
                 :aria-label="$t('RightPanel.AIContext')"
                 :title="contextItems.map((item) => item.title).join('\n')"
                 class="min-w-16 max-w-full justify-start px-1"
+                :ui="{ base: 'text-[11px]' }"
               >
                 <span class="min-w-0 truncate">{{ contextItems[0]?.label }}</span>
                 <span v-if="contextItems.length > 1" class="shrink-0 text-[10px] text-muted">
@@ -88,7 +89,7 @@ const model = defineModel<string>({ required: true });
               :portal="true"
               value-key="value"
               label-key="label"
-              :ui="{ content: 'min-w-72', itemDescription: 'whitespace-normal' }"
+              :ui="{ base: 'text-[11px]', content: 'min-w-72', itemDescription: 'whitespace-normal' }"
               @update:model-value="emit('updateApprovalThreshold', $event)"
             />
             <USelect
