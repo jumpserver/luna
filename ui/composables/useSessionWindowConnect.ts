@@ -100,7 +100,7 @@ export function toAdminAssetItem(
   const item = transformAssetDetail(assetId, {
     ...asset,
     permed_protocols: (asset.permed_protocols || asset.protocols || []).filter(
-      (protocol) => protocol?.name && protocol.name !== "winrm"
+      (protocol) => protocol?.name
     ) as AssetDetail["permed_protocols"],
     permed_accounts: [
       {

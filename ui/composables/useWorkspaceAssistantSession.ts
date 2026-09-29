@@ -535,7 +535,7 @@ function normalizeCandidate(value: unknown) {
 
 function uniqueProtocols(protocols: PermedProtocol[]) {
   const names = protocols
-    .filter((protocol) => protocol?.name !== "winrm" && (isDesktopRuntime() || protocol?.public !== false))
+    .filter((protocol) => isDesktopRuntime() || protocol?.public !== false)
     .map((protocol) => boundedString(protocol.name, 64).toLowerCase())
     .filter(Boolean);
   return [...new Set(names)];

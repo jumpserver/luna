@@ -810,7 +810,7 @@
     "AITools": "工具",
     "AICapabilities": "能力",
     "AIAgentApprovalAlwaysShort": "始終審批",
-    "AIAgentApprovalAutoShort": "自動",
+    "AIAgentApprovalAutoShort": "自動審批",
     "AIAgentApprovalNeverShort": "無需審批",
     "AIAgentApprovalAlways": "每次工具呼叫前均要求審批",
     "AIAgentApprovalAuto": "僅在 Agent 判定有必要時要求審批",

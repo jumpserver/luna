@@ -55,7 +55,7 @@ export function transformAssetDetail(assetId: string, detail: AssetDetail): Asse
     category: assetDetailFieldValue(detail.category),
     type: assetDetailFieldValue(detail.type),
     permedAccounts: detail.permed_accounts ?? [],
-    permedProtocols: (detail.permed_protocols ?? []).filter((protocol) => protocol?.name !== "winrm")
+    permedProtocols: detail.permed_protocols ?? []
   };
 }
 

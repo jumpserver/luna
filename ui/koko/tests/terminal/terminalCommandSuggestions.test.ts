@@ -13,6 +13,7 @@ describe("terminal command suggestions", () => {
   it("resolves SSH platforms and database protocols", () => {
     expect(resolveTerminalCommandProfile({ protocol: "ssh", assetPlatform: "Linux" })).toBe("linux");
     expect(resolveTerminalCommandProfile({ protocol: "ssh", assetPlatform: "Windows Server" })).toBe("windows");
+    expect(resolveTerminalCommandProfile({ protocol: "winrm" })).toBe("windows");
     expect(resolveTerminalCommandProfile({ protocol: "mariadb" })).toBe("mysql");
     expect(resolveTerminalCommandProfile({ protocol: "pg" })).toBe("postgresql");
     expect(resolveTerminalCommandProfile({ protocol: "redis" })).toBe("redis");

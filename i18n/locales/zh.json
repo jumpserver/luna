@@ -694,7 +694,7 @@
     "AISend": "发送",
     "AIYou": "你",
     "AIAgentApprovalAlwaysShort": "始终审批",
-    "AIAgentApprovalAutoShort": "自动",
+    "AIAgentApprovalAutoShort": "自动审批",
     "AIAgentApprovalNeverShort": "无需审批",
     "AIAgentApprovalAlways": "每次工具调用前均要求审批",
     "AIAgentApprovalAuto": "仅在 Agent 判定有必要时要求审批",

@@ -88,9 +88,7 @@ export function useSidebarAssetActions() {
     return {
       ...asset,
       permedAccounts: detail.permed_accounts ?? asset.permedAccounts ?? [],
-      permedProtocols: (detail.permed_protocols ?? asset.permedProtocols ?? []).filter(
-        (protocol: { name?: string }) => protocol?.name !== "winrm"
-      )
+      permedProtocols: detail.permed_protocols ?? asset.permedProtocols ?? []
     };
   };
 

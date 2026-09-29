@@ -34,6 +34,7 @@ export const COMPONENT_WORKSPACE_CAPABILITIES: WorkspaceCapabilityDeclaration[] 
     protocols: [
       "ssh",
       "telnet",
+      "winrm",
       "clickhouse",
       "dameng",
       "mariadb",
