@@ -1,16 +1,30 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { effectScope, nextTick, ref } from "vue";
+import type { TerminalCursorAnchor } from "#koko";
 import { useTerminalAiHudLayout } from "./useTerminalAiHudLayout";
+import { TERMINAL_AI_HINT_IDLE_MS } from "~/utils/terminalAiCommand";
 
 const terminal = vi.hoisted(() => ({
-  anchor: { left: 140, top: 100, width: 8, height: 18 },
-  element: null as HTMLElement | null
+  anchor: { left: 140, top: 100, width: 8, height: 18, bufferType: "normal" } as TerminalCursorAnchor,
+  element: null as HTMLElement | null,
+  cursorListener: (_anchor: TerminalCursorAnchor | null) => {},
+  inputListener: () => {}
 }));
 vi.mock("#koko", () => ({
   getKokoTerminalCursorAnchor: () => terminal.anchor,
   getKokoTerminalElement: () => terminal.element,
-  subscribeKokoTerminalCursorAnchor: () => () => {},
-  subscribeKokoTerminalUserInput: () => () => {}
+  subscribeKokoTerminalCursorAnchor: (_paneId: string, listener: typeof terminal.cursorListener) => {
+    terminal.cursorListener = listener;
+    return () => {
+      terminal.cursorListener = () => {};
+    };
+  },
+  subscribeKokoTerminalUserInput: (_paneId: string, listener: () => void) => {
+    terminal.inputListener = listener;
+    return () => {
+      terminal.inputListener = () => {};
+    };
+  }
 }));
 
 const cleanups: Array<() => void> = [];
@@ -20,14 +34,15 @@ beforeEach(() => {
     vi.stubGlobal("innerWidth", 1000);
     vi.stubGlobal("innerHeight", 800);
   }
-  terminal.anchor = { left: 140, top: 100, width: 8, height: 18 };
+  terminal.anchor = { left: 140, top: 100, width: 8, height: 18, bufferType: "normal" };
 });
 afterEach(() => {
   cleanups.splice(0).forEach((cleanup) => cleanup());
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
-async function setup() {
+async function setup(sessionInfoReady = false) {
   const area = { left: 100, top: 50, right: 900, bottom: 750, width: 800, height: 700 };
   terminal.element = { getBoundingClientRect: () => area } as HTMLElement;
   const measured = { height: 110, scrollHeight: 110 };
@@ -42,9 +57,12 @@ async function setup() {
   const open = ref(false);
   const scope = effectScope();
   const layout = scope.run(() =>
-    useTerminalAiHudLayout({ paneId: () => "pane", open, sessionInfoReady: () => false })
+    useTerminalAiHudLayout({ paneId: () => "pane", open, sessionInfoReady: () => sessionInfoReady })
   )!;
-  layout.hostRef.value = { getBoundingClientRect: () => area } as HTMLElement;
+  layout.hostRef.value = {
+    getBoundingClientRect: () => area,
+    style: { setProperty: vi.fn() }
+  } as unknown as HTMLElement;
   layout.panelRef.value = Object.defineProperties(new EventTarget(), {
     getBoundingClientRect: { value: () => measured },
     scrollHeight: { get: () => measured.scrollHeight }
@@ -101,6 +119,41 @@ async function setup() {
   const size = () => ({ width: layout.panelStyle.value.width, maxHeight: layout.panelStyle.value.maxHeight });
   return { area, measured, handle, open, layout, dispatch, dispatchResize, position, size };
 }
+
+it("hides the caret hint in alternate screens, keeps it hidden after idle, and restores it on exit", async () => {
+  vi.useFakeTimers();
+  if (!window.setTimeout) {
+    window.setTimeout = globalThis.setTimeout as unknown as typeof window.setTimeout;
+    window.clearTimeout = globalThis.clearTimeout as typeof window.clearTimeout;
+  }
+  vi.stubGlobal("getComputedStyle", () => ({ backgroundColor: "rgb(0, 0, 0)" }));
+  const { layout, open } = await setup(true);
+  open.value = false;
+  layout.startCursorTracking();
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(true);
+
+  terminal.anchor = { ...terminal.anchor, bufferType: "alternate" };
+  terminal.cursorListener(terminal.anchor);
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(false);
+
+  terminal.inputListener();
+  await vi.advanceTimersByTimeAsync(TERMINAL_AI_HINT_IDLE_MS);
+  expect(layout.hintVisible.value).toBe(false);
+
+  terminal.anchor = { ...terminal.anchor, bufferType: "normal" };
+  terminal.cursorListener(terminal.anchor);
+  await nextTick();
+  expect(layout.hintVisible.value).toBe(true);
+
+  terminal.anchor = { ...terminal.anchor, bufferType: "alternate" };
+  terminal.cursorListener(terminal.anchor);
+  await nextTick();
+  await layout.reveal(terminal.element!);
+  expect(open.value).toBe(true);
+  expect(layout.hintVisible.value).toBe(false);
+});
 
 it("moves from the original pointer position without drift and stays moved when the cursor or content changes", async () => {
   const { layout, measured, dispatch, position } = await setup();
