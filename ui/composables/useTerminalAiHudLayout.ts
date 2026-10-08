@@ -285,7 +285,8 @@ export function useTerminalAiHudLayout(options: {
       return;
     }
     const host = hostRef.value;
-    if (!host || !anchor) {
+    // Full-screen terminal apps own the content around their cursor.
+    if (!host || !anchor || anchor.bufferType === "alternate") {
       hideHint();
       return;
     }

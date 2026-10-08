@@ -14,6 +14,7 @@ export interface TerminalCursorAnchor {
   top: number;
   width: number;
   height: number;
+  bufferType?: "normal" | "alternate";
 }
 
 interface LocalShellSession {
@@ -47,7 +48,11 @@ function getRegisteredTerminal(tabId: string) {
 function sameCursorAnchor(left: TerminalCursorAnchor | null | undefined, right: TerminalCursorAnchor | null) {
   if (!left || !right) return left === right;
   return (
-    left.left === right.left && left.top === right.top && left.width === right.width && left.height === right.height
+    left.left === right.left &&
+    left.top === right.top &&
+    left.width === right.width &&
+    left.height === right.height &&
+    left.bufferType === right.bufferType
   );
 }
 
@@ -88,10 +93,12 @@ function rebindTerminalCursorAnchor(tabId: string) {
   const cursorDisposable = terminal.onCursorMove(schedule);
   const resizeDisposable = terminal.onResize(schedule);
   const scrollDisposable = terminal.onScroll(schedule);
+  const bufferDisposable = terminal.buffer.onBufferChange(schedule);
   stopCursorAnchorBindings.set(tabId, () => {
     cursorDisposable.dispose();
     resizeDisposable.dispose();
     scrollDisposable.dispose();
+    bufferDisposable.dispose();
   });
   emitTerminalCursorAnchor(tabId);
 }
@@ -225,7 +232,8 @@ export function getKokoTerminalCursorAnchor(tabId: string): TerminalCursorAnchor
     left: bounds.left + buffer.cursorX * cellWidth,
     top: bounds.top + cursorRow * cellHeight,
     width: cellWidth,
-    height: cellHeight
+    height: cellHeight,
+    bufferType: buffer.type
   };
 }
 
