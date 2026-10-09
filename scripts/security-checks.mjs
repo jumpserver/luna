@@ -21,3 +21,14 @@ assert.equal(randomString(3), '999');
 context.crypto = undefined;
 assert.throws(() => randomString(16));
 console.log('CSPRNG controls passed (length, alphabet, rejection, unavailable API)');
+
+const templateJS = ts.transpileModule(fs.readFileSync('src/app/utils/command-template.ts', 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS}}).outputText;
+const sandbox = {exports: {}};
+vm.runInNewContext(templateJS, sandbox);
+const interpolate = sandbox.exports.interpolateCommand;
+assert.equal(interpolate('echo {{ jms_name }}', {jms_name: "$&{{jms_other}}"}), 'echo $&{{jms_other}}');
+assert.equal(interpolate('<% throw new Error("executed") %> {{jms_name}}', {jms_name: 'normal'}), '<% throw new Error("executed") %> normal');
+assert.equal(interpolate('{{jms_null}}', {jms_null: null}), '');
+assert.throws(() => interpolate('{{constructor}}', {}));
+assert.throws(() => interpolate('{{jms_missing}}', {}));
+console.log('Command interpolation controls passed (no evaluation or recursive substitution)');

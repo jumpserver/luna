@@ -1,7 +1,7 @@
 import {Component, EventEmitter, Input, OnInit, Output, SimpleChanges} from '@angular/core';
 import {FormGroup} from '@angular/forms';
 import {DynamicFormService} from './dynamic-form.service';
-import _ from 'lodash-es';
+import {interpolateCommand} from '@app/utils/command-template';
 
 @Component({
   standalone: false,
@@ -38,13 +38,11 @@ export class DynamicFormComponent implements OnInit {
   }
 
   updateTextarea(): void {
-    _.templateSettings.interpolate = /{{\s*([a-zA-Z0-9_]+)\s*}}/g;
-    const compiled = _.template(this.command.args);
     const context = {};
     this.fieldKeys.forEach(fieldKey => {
       context[`jms_${fieldKey}`] = this.dynamicForm.get(`jms_${fieldKey}`).value;
     });
-    const commandText = compiled(context);
+    const commandText = interpolateCommand(this.command.args, context);
     this.dynamicForm.get('sendCommand').setValue(commandText);
   }
 
