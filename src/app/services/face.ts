@@ -1,5 +1,6 @@
 import {Injectable} from '@angular/core';
 import {BehaviorSubject} from 'rxjs';
+import {randomString} from '@app/utils/random';
 
 @Injectable()
 export class FaceService {
@@ -41,7 +42,7 @@ export class FaceService {
   }
 
   private randomString(): string {
-    return Math.random().toString(36).substring(7);
+    return randomString(32);
   }
 
   public close() {
