@@ -6,13 +6,15 @@
     "remotedesktop:rdp": "macos.mstsc",
     "remotedesktop:vnc": "macos.tigervnc",
     "filetransfer:sftp": "macos.iterm-sftp",
-    "databases:oracle": "macos.terminal-db",
-    "databases:mysql": "macos.terminal-db",
-    "databases:postgresql": "macos.terminal-db",
-    "databases:mariadb": "macos.terminal-db",
-    "databases:redis": "macos.terminal-db",
-    "databases:sqlserver": "macos.terminal-db",
-    "databases:mongodb": "macos.terminal-db"
+    "databases:oracle": "macos.dbx",
+    "databases:mysql": "macos.dbx",
+    "databases:postgresql": "macos.dbx",
+    "databases:mariadb": "macos.dbx",
+    "databases:redis": "macos.dbx",
+    "databases:sqlserver": "macos.dbx",
+    "databases:mongodb": "macos.dbx",
+    "databases:dameng": "macos.dbx",
+    "databases:clickhouse": "macos.dbx"
   },
   "plugins": {}
 }

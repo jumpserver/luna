@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { once } from "node:events";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createServer } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -10,6 +12,132 @@ import { LocalApplicationLauncher, localAppLauncherInternals } from "../src/apps
 import { systemFontInternals } from "../src/apps/system-fonts.ts";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+
+test(
+  "installed DBX initiates a database connection through the plugin launcher",
+  {
+    skip: !process.env.JMS_TEST_DBX_EXECUTABLE
+  },
+  async (context) => {
+    const appData = await mkdtemp(path.join(os.tmpdir(), "jms-dbx-native-"));
+    context.after(() => rm(appData, { recursive: true, force: true }));
+    const server = createServer((socket) => socket.destroy());
+    context.after(() => server.close());
+    server.listen(0, "127.0.0.1");
+    await once(server, "listening");
+    const app = { getPath: () => appData, isPackaged: false };
+    const service = new ApplicationConfigService(app, projectRoot);
+    await service.initialize();
+    await service.updateSelection({
+      category: "databases",
+      protocol: "mysql",
+      name: "dbx",
+      pluginId: undefined,
+      path: process.env.JMS_TEST_DBX_EXECUTABLE
+    });
+    const received = once(server, "connection", { signal: AbortSignal.timeout(8000) });
+    const payload = {
+      protocol: "mysql",
+      client: "dbx",
+      name: `Luna DBX connection probe ${Date.now()}`,
+      endpoint: { host: "127.0.0.1", port: (server.address() as { port: number }).port },
+      token: { id: "luna-probe", value: "test-only" },
+      asset: { info: { db_name: "probe" } }
+    };
+    const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
+    await Promise.all([received, launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`)]);
+  }
+);
+
+for (const platform of ["macos", "linux", "windows"]) {
+  test(`${platform} defaults to DBX and launches encoded, one-time database connections`, async (context) => {
+    const appData = await mkdtemp(path.join(os.tmpdir(), "jms-dbx-"));
+    context.after(() => rm(appData, { recursive: true, force: true }));
+    const app = { getPath: () => appData, isPackaged: false };
+    const service = new ApplicationConfigService(app, projectRoot);
+    service.builtInDir = async () => path.join(projectRoot, "plugins", platform);
+    await service.initialize();
+    const config = await service.getConfig();
+    const dbx = config.databases.find((item) => item.name === "dbx");
+    assert.ok(dbx);
+    assert.ok(config.databases.some((item) => item.name === "dbeaver"));
+    assert.equal(dbx.launch_type, "args");
+    assert.equal(dbx.executable_type, "user_path");
+    const types = {
+      mysql: "mysql",
+      mariadb: "mysql",
+      postgresql: "postgres",
+      oracle: "oracle",
+      sqlserver: "mssql",
+      dameng: "dm",
+      clickhouse: "clickhouse",
+      mongodb: "mongodb",
+      redis: "redis"
+    };
+    assert.deepEqual(new Set(dbx.protocol), new Set(Object.keys(types)));
+    assert.deepEqual(dbx.match_first, dbx.protocol);
+    const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
+    for (const [protocol, type] of Object.entries(types)) {
+      const payload = {
+        protocol,
+        name: "测试 DBX &连接",
+        endpoint: { host: "2001:db8::1", port: 5525 },
+        token: { id: "token&+/*'\"\\中文", value: " secret &one_time=false+?#%/*'\"\\中文 ", protocol },
+        asset: { info: { db_name: protocol === "redis" ? "0" : "库 名&+/*'\"\\" } }
+      };
+      let launches = 0;
+      launcher.launchExecutable = async (application, argumentString) => {
+        assert.equal(application.name, "dbx");
+        const args = localAppLauncherInternals.splitArguments(argumentString);
+        assert.equal(args.length, 1);
+        const url = new URL(args[0]);
+        assert.equal(url.protocol, "dbx:");
+        assert.equal(url.hostname, "connection");
+        assert.equal(url.pathname, "/new");
+        assert.deepEqual(Object.fromEntries(url.searchParams), {
+          name: "测试DBX&连接",
+          type,
+          host: payload.endpoint.host,
+          port: "5525",
+          user: payload.token.id,
+          password: payload.token.value,
+          database: protocol === "oracle" ? payload.token.id : payload.asset.info.db_name,
+          one_time: "true",
+          ...(protocol === "mongodb" ? { url_params: "authSource=admin&loadBalanced=true&retryWrites=false" } : {})
+        });
+        launches++;
+      };
+      for (const client of [undefined, "dbx"]) {
+        await launcher.launch(`jms2://${Buffer.from(JSON.stringify({ ...payload, client })).toString("base64")}`);
+      }
+      if (protocol === "mariadb") {
+        await launcher.launch(
+          `jms2://${Buffer.from(JSON.stringify({ ...payload, protocol: "mysql" })).toString("base64")}`
+        );
+      }
+      assert.equal(launches, protocol === "mariadb" ? 3 : 2);
+    }
+
+    // Upgrades retain saved DBeaver paths, other defaults, and explicitly disabled protocols.
+    const preferences = {
+      version: 1,
+      selections: {
+        "databases:mysql": `${platform}.dbeaver`,
+        "databases:postgresql": `${platform}.${platform === "windows" ? "navicat17" : "terminal-db"}`,
+        "databases:redis": ""
+      },
+      enabled_selections: { "databases:mysql": [`${platform}.dbeaver`] },
+      plugins: { [`${platform}.dbeaver`]: { path: process.execPath, enabled: true } }
+    };
+    await service.saveState(preferences);
+    const state = await service.loadState();
+    for (const [key, value] of Object.entries(preferences.selections)) assert.equal(state.selections[key], value);
+    assert.deepEqual(state.plugins, preferences.plugins);
+    assert.deepEqual(state.enabled_selections, preferences.enabled_selections);
+    assert.equal((await launcher.resolveApplication({ protocol: "mysql" })).name, "dbeaver");
+    await assert.rejects(launcher.resolveApplication({ protocol: "redis" }), /no configured application/);
+  });
+}
 
 for (const [platform, protocol, expectedClient] of [
   ["macos", "ssh", "terminal"],

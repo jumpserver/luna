@@ -26,6 +26,26 @@ function navicatUrl(payload) {
   return `navicat://conn.${protocol}?Conn.Host=${payload.endpoint.host}&Conn.Name=${sanitizedName(payload.name)}&Conn.Port=${payload.endpoint.port}&Conn.Username=${username(payload)}`;
 }
 
+function dbxUrl(payload) {
+  const aliases = { postgresql: "postgres", sqlserver: "mssql", dameng: "dm", mariadb: "mysql" };
+  const query = new URLSearchParams({
+    name: sanitizedName(payload.name),
+    type: aliases[payload.protocol] || payload.protocol,
+    host: String(payload.endpoint?.host || ""),
+    port: String(payload.endpoint?.port || ""),
+    user: username(payload),
+    password: String(payload.token?.value || ""),
+    // Magnus routes Oracle connections by the token supplied as the service name.
+    database: payload.protocol === "oracle" ? username(payload) : String(payload.asset?.info?.db_name || ""),
+    one_time: "true"
+  });
+  if (payload.protocol === "mongodb") {
+    query.set("url_params", "authSource=admin&loadBalanced=true&retryWrites=false");
+  }
+  // The legacy argument splitter treats '*' as an argument separator, even inside quotes.
+  return `dbx://connection/new?${query.toString().replaceAll("*", "%2A")}`;
+}
+
 function valuesFor(payload): Record<string, string> {
   return {
     name: sanitizedName(payload.name),
@@ -36,6 +56,7 @@ function valuesFor(payload): Record<string, string> {
     port: String(payload.endpoint?.port || ""),
     dbname: payload.protocol === "oracle" ? username(payload) : String(payload.asset?.info?.db_name || ""),
     dbeaver_protocol: payload.protocol === "sqlserver" ? "mssql_jdbc_ms_new" : payload.protocol,
+    dbx_url: dbxUrl(payload),
     url: navicatUrl(payload)
   };
 }

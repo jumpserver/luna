@@ -18,7 +18,7 @@
     "id": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)+$",
-      "description": "Globally unique plugin id, e.g. builtin.dbeaver (built-in) or com.example.xshell (third-party)"
+      "description": "Globally unique plugin id, e.g. windows.dbx (built-in) or com.example.xshell (third-party)"
     },
     "name": {
       "type": "string",
