@@ -46,6 +46,15 @@ function dbxUrl(payload) {
   return `dbx://connection/new?${query.toString().replaceAll("*", "%2A")}`;
 }
 
+function mongodbUri(payload) {
+  const user = encodeURIComponent(username(payload));
+  const password = encodeURIComponent(String(payload.token?.value || ""));
+  const database = encodeURIComponent(String(payload.asset?.info?.db_name || ""));
+  const host = String(payload.endpoint?.host || "");
+  const port = String(payload.endpoint?.port || "");
+  return `mongodb://${user}:${password}@${host}:${port}/${database}?authSource=admin&loadBalanced=true&retryWrites=false`;
+}
+
 function valuesFor(payload): Record<string, string> {
   const dmConnection = `${username(payload)}/${String(payload.token?.value || "")}@${String(payload.endpoint?.host || "")}:${String(payload.endpoint?.port || "")}`;
   return {
@@ -57,6 +66,7 @@ function valuesFor(payload): Record<string, string> {
     port: String(payload.endpoint?.port || ""),
     dbname: payload.protocol === "oracle" ? username(payload) : String(payload.asset?.info?.db_name || ""),
     dameng_disql: shellQuote(dmConnection),
+    mongodb_shell_uri: payload.protocol === "mongodb" ? shellQuote(mongodbUri(payload)) : "",
     dbeaver_protocol: payload.protocol === "sqlserver" ? "mssql_jdbc_ms_new" : payload.protocol,
     dbx_url: dbxUrl(payload),
     url: navicatUrl(payload)

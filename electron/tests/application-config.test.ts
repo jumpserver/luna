@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
@@ -491,6 +492,58 @@ test("launches RDP connection files without endpoint fields", async () => {
 
   assert.deepEqual(launchedPayload, payload);
 });
+
+for (const platform of ["macos", "linux"]) {
+  test(`${platform}/terminal-db quotes and encodes MongoDB connection values`, async (context) => {
+    if (process.platform === "win32") return context.skip("POSIX shell test");
+    const config = JSON.parse(
+      await readFile(path.join(projectRoot, "plugins", platform, `${platform}.terminal-db`, "connect.json"), "utf8")
+    );
+    const application = {
+      name: "terminal-db",
+      protocol: ["mongodb"],
+      is_set: true,
+      match_first: ["mongodb"],
+      launch_type: config.launch.type,
+      launch_driver: config.launch.driver,
+      arg_format: config.launch.template,
+      protocol_templates: config.launch.protocol_templates
+    };
+    const launcher = new LocalApplicationLauncher(
+      { isPackaged: false },
+      projectRoot,
+      { getConfig: async () => ({ databases: [application] }) },
+      null
+    );
+    const user = "token:id@/";
+    const password = ["space value", "$HOME", "`printf injected`", "'", '"', ";", "&", "/", "\\", "?", "#"].join("");
+    const database = "data /?#";
+    const expectedUri = `mongodb://${encodeURIComponent(user)}:${encodeURIComponent(password)}@gateway.example.com:5525/${encodeURIComponent(database)}?authSource=admin&loadBalanced=true&retryWrites=false`;
+    let launched = false;
+    launcher.launchTerminal = async (_selected, command) => {
+      const result = spawnSync("bash", ["-lc", `mongosh() { printf '%s\\n' "$@"; }\n${command}`], {
+        encoding: "utf8"
+      });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.stdout, `${expectedUri}\n`);
+      const parsed = new URL(expectedUri);
+      assert.equal(decodeURIComponent(parsed.username), user);
+      assert.equal(decodeURIComponent(parsed.password), password);
+      assert.equal(decodeURIComponent(parsed.pathname.slice(1)), database);
+      assert.equal(parsed.searchParams.get("authSource"), "admin");
+      launched = true;
+    };
+    const payload = {
+      protocol: "mongodb",
+      name: "MongoDB",
+      endpoint: { host: "gateway.example.com", port: 5525 },
+      token: { id: user, value: password },
+      asset: { info: { db_name: database } }
+    };
+    await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+    assert.equal(launched, true);
+  });
+}
 
 for (const [platform, plugin, expected] of [
   ["macos", "dbeaver", "driver=mysql"],
