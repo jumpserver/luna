@@ -139,6 +139,89 @@ for (const platform of ["macos", "linux", "windows"]) {
   });
 }
 
+for (const platform of ["macos", "linux", "windows"]) {
+  test(`${platform} offers DBeaver for Dameng and launches its native driver`, async (context) => {
+    const appData = await mkdtemp(path.join(os.tmpdir(), "jms-dameng-dbeaver-"));
+    context.after(() => rm(appData, { recursive: true, force: true }));
+    const app = { getPath: () => appData, isPackaged: false };
+    const service = new ApplicationConfigService(app, projectRoot);
+    service.builtInDir = async () => path.join(projectRoot, "plugins", platform);
+    await service.initialize();
+    await service.updateSelection({
+      category: "databases",
+      protocol: "dameng",
+      name: "dbeaver",
+      pluginId: undefined,
+      path: process.execPath
+    });
+    await service.updateSelection({
+      category: "databases",
+      protocol: "dameng",
+      name: "dbeaver",
+      pluginId: undefined,
+      path: undefined,
+      makeDefault: true
+    });
+    const application = (await service.getConfig()).databases.find((item) => item.name === "dbeaver");
+    assert.ok(application?.protocol.includes("dameng"));
+    assert.ok(application.match_first.includes("dameng"));
+
+    const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
+    let launched = false;
+    launcher.launchExecutable = async (selected, argumentString) => {
+      assert.equal(selected.name, "dbeaver");
+      assert.deepEqual(localAppLauncherInternals.splitArguments(argumentString), [
+        "-con",
+        "name=Dameng|driver=dameng|user=token-id|password=secret|host=gateway.example.com|port=5525|save=false|connect=true"
+      ]);
+      launched = true;
+    };
+    const payload = {
+      protocol: "dameng",
+      name: "Dameng",
+      endpoint: { host: "gateway.example.com", port: 5525 },
+      token: { id: "token-id", value: "secret" },
+      asset: { info: { db_name: "business" } }
+    };
+    await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+    assert.equal(launched, true);
+  });
+}
+
+for (const platform of ["macos", "linux"]) {
+  test(`${platform} offers a shell-safe Dameng disql launch`, async (context) => {
+    const appData = await mkdtemp(path.join(os.tmpdir(), "jms-dameng-disql-"));
+    context.after(() => rm(appData, { recursive: true, force: true }));
+    const app = { getPath: () => appData, isPackaged: false };
+    const service = new ApplicationConfigService(app, projectRoot);
+    service.builtInDir = async () => path.join(projectRoot, "plugins", platform);
+    await service.initialize();
+    await service.updateSelection({
+      category: "databases",
+      protocol: "dameng",
+      name: "terminal",
+      pluginId: undefined,
+      path: undefined,
+      makeDefault: true
+    });
+    const launcher = new LocalApplicationLauncher(app, projectRoot, service, null);
+    let launched = false;
+    launcher.launchTerminal = async (selected, command) => {
+      assert.equal(selected.name, "terminal");
+      assert.equal(command, "disql 'token-id/p'\\''a&b@gateway.example.com:5525'");
+      launched = true;
+    };
+    const payload = {
+      protocol: "dameng",
+      name: "Dameng",
+      endpoint: { host: "gateway.example.com", port: 5525 },
+      token: { id: "token-id", value: "p'a&b" }
+    };
+    await launcher.launch(`jms2://${Buffer.from(JSON.stringify(payload)).toString("base64")}`);
+    assert.equal(launched, true);
+  });
+}
+
 for (const [platform, protocol, expectedClient] of [
   ["macos", "ssh", "terminal"],
   ["linux", "ssh", "terminal"],

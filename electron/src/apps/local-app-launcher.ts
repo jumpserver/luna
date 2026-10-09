@@ -47,6 +47,7 @@ function dbxUrl(payload) {
 }
 
 function valuesFor(payload): Record<string, string> {
+  const dmConnection = `${username(payload)}/${String(payload.token?.value || "")}@${String(payload.endpoint?.host || "")}:${String(payload.endpoint?.port || "")}`;
   return {
     name: sanitizedName(payload.name),
     protocol: payload.protocol,
@@ -55,6 +56,7 @@ function valuesFor(payload): Record<string, string> {
     host: String(payload.endpoint?.host || ""),
     port: String(payload.endpoint?.port || ""),
     dbname: payload.protocol === "oracle" ? username(payload) : String(payload.asset?.info?.db_name || ""),
+    dameng_disql: shellQuote(dmConnection),
     dbeaver_protocol: payload.protocol === "sqlserver" ? "mssql_jdbc_ms_new" : payload.protocol,
     dbx_url: dbxUrl(payload),
     url: navicatUrl(payload)

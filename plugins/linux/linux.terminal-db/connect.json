@@ -15,6 +15,7 @@
     "protocol_templates": {
       "redis": "redis-cli -h {host} -p {port} -a {username}@{value}",
       "oracle": "sqlplus {username}/{value}@{host}:{port}/{dbname}",
+      "dameng": "disql {dameng_disql}",
       "postgresql": "psql 'user={username} password={value} host={host} dbname={dbname} port={port}'",
       "mysql": "mysql -u {username} -p{value} -h {host} -P {port} {dbname}",
       "mariadb": "mysql -u {username} -p{value} -h {host} -P {port} {dbname}",

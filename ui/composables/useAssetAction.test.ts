@@ -573,6 +573,41 @@ describe("opening assets in local applications", () => {
     });
   });
 
+  it("passes Dameng proxy credentials to the selected desktop client", async () => {
+    vi.stubGlobal("isDesktopRuntime", () => true);
+    const dbMethod = { value: "db_client", type: "native", component: "magnus", disabled: false };
+    vi.stubGlobal("useConnectMethods", () => ({
+      fetchConnectMethods: async () => ({ dameng: [dbMethod] }),
+      getMethodsForProtocol: async () => [dbMethod]
+    }));
+    mocks.appConfig.value = {
+      databases: [{ name: "dbeaver", protocol: ["dameng"], is_set: true, path_exists: true, match_first: ["dameng"] }]
+    };
+    const dbPayload = {
+      ...payload,
+      protocol: "dameng",
+      endpoint: { host: "gateway.example.com", port: 5525 },
+      token: { ...payload.token, protocol: "dameng" }
+    };
+    mocks.getLocalClientUrl.mockResolvedValue({
+      url: `jms2://${btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(dbPayload))))}`
+    });
+    mocks.createToken.mockResolvedValue(dbPayload.token);
+
+    const { failed } = await connect("native_app:db_client:dbeaver", "dameng");
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(mocks.createToken).toHaveBeenCalledWith(
+      expect.objectContaining({ protocol: "dameng", connect_method: "db_client" }),
+      expect.anything()
+    );
+    const launchedUrl = mocks.invoke.mock.calls[0]?.[1].url;
+    const launchedPayload = JSON.parse(
+      new TextDecoder().decode(Uint8Array.from(atob(launchedUrl.slice(7)), (character) => character.charCodeAt(0)))
+    );
+    expect(launchedPayload).toEqual({ ...dbPayload, client: "dbeaver" });
+  });
+
   it("preserves an applet's RDP launch protocol for a MariaDB asset", async () => {
     const applet = { value: "dbeaver", type: "applet", component: "razor", disabled: false };
     vi.stubGlobal("useConnectMethods", () => ({

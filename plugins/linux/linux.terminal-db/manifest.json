@@ -13,6 +13,7 @@
     "mongodb",
     "mysql",
     "oracle",
+    "dameng",
     "postgresql",
     "redis",
     "sqlserver"
