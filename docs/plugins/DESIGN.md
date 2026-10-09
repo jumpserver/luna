@@ -149,7 +149,7 @@ my-terminal-plugin/
 
 | type     | 说明                                         | 典型场景                |
 | -------- | -------------------------------------------- | ----------------------- |
-| `args`   | 模板替换后作为命令行参数                     | PuTTY、DBeaver          |
+| `args`   | 模板替换后作为命令行参数                     | PuTTY、DBX、DBeaver     |
 | `script` | 执行 `scripts/` 下平台脚本，传入 JSON 上下文 | iTerm2、复杂 GUI 自动化 |
 | `url`    | 构建 URL Scheme 并 `open`                    | Navicat                 |
 | `file`   | 先写临时文件再打开                           | RDP `.rdp`              |
@@ -168,6 +168,7 @@ my-terminal-plugin/
 | `{port}`               | 端口                           |
 | `{file}`               | 临时文件路径（`file` 类型）    |
 | `{dbname}`             | 数据库名                       |
+| `{dbx_url}`            | URL 编码的 DBX 一次性连接链接   |
 | `{use_ssl}`            | 是否 SSL                       |
 | `{allow_invalid_cert}` | 是否允许无效证书               |
 
@@ -180,7 +181,7 @@ my-terminal-plugin/
   "version": 1,
   "selections": {
     "terminal:ssh": "builtin.putty",
-    "databases:mysql": "builtin.dbeaver"
+    "databases:mysql": "windows.dbx"
   },
   "plugins": {
     "com.example.xshell": {
@@ -320,6 +321,6 @@ sequenceDiagram
 | macOS   | remotedesktop | 系统 RDP（open）        |
 | Linux   | terminal      | 系统 terminal           |
 | Linux   | remotedesktop | xfreerdp, tigervnc      |
-| 全平台  | databases     | dbeaver（需用户配路径） |
+| 全平台  | databases     | dbx（默认）、dbeaver（可选，需配置本机路径） |
 
 其余（XShell、Navicat、MobaXterm 等）以**可选插件**形式提供下载或用户自行打包安装。

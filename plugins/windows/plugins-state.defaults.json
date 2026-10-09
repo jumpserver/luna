@@ -3,7 +3,16 @@
   "selections": {
     "terminal:ssh": "windows.putty",
     "terminal:telnet": "windows.putty",
-    "remotedesktop:rdp": "windows.mstsc"
+    "remotedesktop:rdp": "windows.mstsc",
+    "databases:mysql": "windows.dbx",
+    "databases:mariadb": "windows.dbx",
+    "databases:postgresql": "windows.dbx",
+    "databases:oracle": "windows.dbx",
+    "databases:sqlserver": "windows.dbx",
+    "databases:dameng": "windows.dbx",
+    "databases:clickhouse": "windows.dbx",
+    "databases:mongodb": "windows.dbx",
+    "databases:redis": "windows.dbx"
   },
   "plugins": {}
 }

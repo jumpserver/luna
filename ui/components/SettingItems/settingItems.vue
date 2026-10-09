@@ -27,6 +27,7 @@ const imagesMap: Record<string, string | undefined> = {
   builtin_client: getImageByName("terminal"),
   iterm: getImageByName("item2"),
   dbeaver: getImageByName("dbeaver"),
+  dbx: getImageByName("dbx"),
   heidisql: getImageByName("heidisql"),
   mstsc: getImageByName("mstsc"),
   terminal: getImageByName("terminal"),
