@@ -3,6 +3,8 @@ import { getCookie } from '@app/utils/common';
 import { Buffer } from 'buffer';
 import { JSEncrypt } from 'jsencrypt';
 import { sm2, sm4 } from 'sm-crypto';
+import { randomString } from './random';
+export { randomString } from './random';
 
 export function fillKey(key: string): Buffer | string {
   const KeyLength = 16;
@@ -140,15 +142,4 @@ export function encryptPassword(password: string) {
   }
 
   return cipher;
-}
-
-export function randomString(length: number) {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  const charactersLength = characters.length;
-  for (let i = 0; i < length; i++) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
-  }
-
-  return result;
 }
