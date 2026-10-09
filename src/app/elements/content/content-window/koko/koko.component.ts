@@ -68,16 +68,18 @@ export class ElementConnectorKokoComponent implements OnInit {
 
   async createFileConnectToken(evt) {
     const iframeWindow = (this.iframeRef as unknown as { iframeWindow: Window }).iframeWindow;
+    const targetURL = this.iframeURL;
+    const targetOrigin = new URL(targetURL, window.location.href).origin;
     const oldConnectToken = this.view.connectToken;
     const newConnectToken = await this._connectTokenSvc.exchange(oldConnectToken);
 
-    if (!newConnectToken) {
+    if (!newConnectToken || this.iframeURL !== targetURL) {
       return;
     }
 
     iframeWindow.postMessage(
       { name: 'GET_FILE_CONNECT_TOKEN', token: newConnectToken.id },
-      '*'
+      targetOrigin
     );
   }
 

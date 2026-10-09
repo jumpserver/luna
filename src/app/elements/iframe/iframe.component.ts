@@ -88,7 +88,11 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     this.view.iframeElement = this.iframeWindow;
 
     this.eventHandler = function (e: any) {
+      if (e.source !== this.iframeWindow || e.origin !== this.getIframeOrigin()) {
+        return;
+      }
       const msg = e.data;
+      if (!msg || typeof msg !== 'object') return;
 
       if (msg.id !== this.id) {
         return;
@@ -96,7 +100,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
       switch (msg.name) {
         case 'PING': {
-          this.iframeWindow.postMessage({ name: 'PONG', id: this.id }, '*');
+          this.postToIframe({ name: 'PONG', id: this.id });
           break;
         }
         case 'PONG':
@@ -166,6 +170,22 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     this.handleIframeEvent();
   }
 
+  private getIframeOrigin(): string | null {
+    try {
+      const url = new URL(this.src, window.location.href);
+      return ['http:', 'https:'].includes(url.protocol) ? url.origin : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private postToIframe(message: unknown): void {
+    const origin = this.getIframeOrigin();
+    if (origin && this.iframeWindow) {
+      this.iframeWindow.postMessage(message, origin);
+    }
+  }
+
   ngOnDestroy() {
     window.removeEventListener('message', this.eventHandler);
     this.subscription.unsubscribe();
@@ -173,7 +193,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
   setActive() {
     this._logger.debug(`[Luna] Send FOCUS to: ${this.id}`);
-    this.iframeWindow.postMessage({ name: 'FOCUS' }, '*');
+    this.postToIframe({ name: 'FOCUS' });
   }
 
   handleIframeEvent() {
@@ -187,7 +207,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
     // @ts-ignore
     this.ping = setInterval(() => {
       this._logger.info(`[Luna] Send PING to: ${this.id}`);
-      this.iframeWindow.postMessage({ name: 'PING', id: this.id, disbaleFileManager }, '*');
+      this.postToIframe({ name: 'PING', id: this.id, disbaleFileManager });
     }, 500);
 
     // 30s 内未PING通, 则主动关闭
@@ -201,7 +221,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
     this.subscription = this._iframeSvc.message$.subscribe(message => {
       // this._logger.info('[Luna] Send msg to iframe: ', message);
-      this.iframeWindow.postMessage(message, '*');
+      this.postToIframe(message);
     });
 
     window.addEventListener('message', this.eventHandler);
@@ -209,7 +229,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
   sendCommand(data) {
     this._logger.info(`[Luna] Send CMD to: ${this.id}`);
-    this.iframeWindow.postMessage({ name: 'CMD', data: data.data }, '*');
+    this.postToIframe({ name: 'CMD', data: data.data });
   }
 
   // 没有位置用啊
@@ -252,7 +272,7 @@ export class ElementIframeComponent implements OnInit, AfterViewInit, OnDestroy 
 
   sendInputActive() {
     this._logger.info(`[Luna] Send Input_ACTIVE to: ${this.id}`);
-    this.iframeWindow.postMessage({ name: 'INPUT_ACTIVE', data: "" }, '*');
+    this.postToIframe({ name: 'INPUT_ACTIVE', data: "" });
   }
 
   sendInputActiveToOtherViews() {

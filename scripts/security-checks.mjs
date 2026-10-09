@@ -32,3 +32,35 @@ assert.equal(interpolate('{{jms_null}}', {jms_null: null}), '');
 assert.throws(() => interpolate('{{constructor}}', {}));
 assert.throws(() => interpolate('{{jms_missing}}', {}));
 console.log('Command interpolation controls passed (no evaluation or recursive substitution)');
+
+const frameJS = ts.transpileModule(fs.readFileSync('src/app/elements/iframe/iframe.component.ts', 'utf8'), {
+  compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, experimentalDecorators: true}
+}).outputText;
+class Emitter {events = []; emit(value) {this.events.push(value);}}
+class Subject {pipe() {return {subscribe() {}};} next() {}}
+const decorator = () => () => {};
+const angular = {EventEmitter: Emitter, Component: decorator, Input: decorator, Output: decorator, ViewChild: decorator};
+const frameSandbox = {exports: {}, URL, window: {location: {href: 'https://luna.example/luna/'}},
+  require(name) {if (name === '@angular/core') return angular; if (name === 'rxjs') return {Subject}; return {};}};
+vm.runInNewContext(frameJS, frameSandbox);
+const Frame = frameSandbox.exports.ElementIframeComponent;
+const frame = new Frame();
+const sent = [];
+const peer = {postMessage(message, origin) {sent.push({message, origin});}};
+frame.src = 'https://koko.example:8443/koko/connect/?token=secret';
+frame.id = 'window-test';
+frame.view = {};
+frame.iframeRef = {nativeElement: {contentWindow: peer}};
+frame.handleIframeEvent = () => {};
+frame.ngAfterViewInit();
+for (const e of [
+  {source: {}, origin: 'https://koko.example:8443'},
+  {source: peer, origin: 'https://attacker.example'},
+  {source: peer, origin: 'https://koko.example'},
+]) frame.eventHandler({...e, data: {id: frame.id, name: 'CREATE_FILE_CONNECT_TOKEN'}});
+assert.equal(frame.createFileConnectToken.events.length, 0);
+frame.eventHandler({source: peer, origin: 'https://koko.example:8443', data: {id: frame.id, name: 'CREATE_FILE_CONNECT_TOKEN'}});
+assert.equal(frame.createFileConnectToken.events.length, 1);
+frame.eventHandler({source: peer, origin: 'https://koko.example:8443', data: {id: frame.id, name: 'PING'}});
+assert.equal(sent[0].origin, 'https://koko.example:8443');
+console.log('Iframe message source/origin/port and outgoing target controls passed');
