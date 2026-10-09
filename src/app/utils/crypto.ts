@@ -67,7 +67,7 @@ function bytesToBase64(bytes: Uint8Array) {
 }
 
 function rsaEncryptPassword(password: string, rsaPublicKey: string) {
-  const aesKey = (Math.random() + 1).toString(36).substring(2);
+  const aesKey = randomString(16);
   // public key 是 base64 存储的
   const keyCipher = rsaEncrypt(aesKey, rsaPublicKey);
   const passwordCipher = aesEncrypt(password, aesKey);
