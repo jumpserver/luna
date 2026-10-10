@@ -239,11 +239,7 @@ export function useSessionWindowConnect() {
           throw new Error(t("ConnectError.PersonalCredentialNotFound"));
         }
         const protocol = typeof credential.protocol === "string" ? credential.protocol : credential.protocol.value;
-        if (
-          !asset.permedProtocols?.some(
-            (item) => item.name === protocol && (isDesktopRuntime() || item.public !== false)
-          )
-        ) {
+        if (!asset.permedProtocols?.some((item) => item.name === protocol && item.public !== false)) {
           throw new Error(t("ConnectError.ProtocolUnavailable"));
         }
         const hostedAccount =

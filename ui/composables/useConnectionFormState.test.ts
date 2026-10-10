@@ -36,6 +36,31 @@ describe("personal credential connection form", () => {
     vi.unstubAllGlobals();
   });
 
+  it.each([false, true])("hides private protocols from selection and saved choices (desktop=%s)", (desktop) => {
+    vi.stubGlobal("isDesktopRuntime", () => desktop);
+    const scope = effectScope();
+    const state = scope.run(() => useConnectionFormState())!;
+    const target = {
+      ...asset,
+      permedProtocols: [
+        { name: "winrm", port: 5986, public: false },
+        { name: "rdp", port: 3389, public: true },
+        { name: "ssh", port: 22, public: true }
+      ]
+    };
+    try {
+      state.initDraft(target, "winrm");
+      expect(state.draft.value.protocol).toBe("ssh");
+      expect(state.buildConnectionInfo(target).availableProtocols).toEqual(["ssh", "rdp"]);
+      const privateOnly = { ...target, permedProtocols: [target.permedProtocols[0]!] };
+      state.initDraft(privateOnly, "winrm");
+      expect(state.draft.value.protocol).toBe("");
+      expect(state.buildConnectionInfo(privateOnly).availableProtocols).toEqual([]);
+    } finally {
+      scope.stop();
+    }
+  });
+
   it.each(["ssh", "sftp"])("loads personal accounts while a hosted account is selected for %s", async (protocol) => {
     const credential = { id: "saved-key", username: "root", secret_type: "ssh_key", version: 3 };
     const load = vi.fn().mockResolvedValue([credential]);

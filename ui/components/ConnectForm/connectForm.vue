@@ -149,9 +149,7 @@ const localConnectOptions = computed<Record<string, any>>({
 
 const protocolTabItems = computed(() =>
   sortProtocolNames(
-    (isDesktopRuntime() ? props.protocols : props.protocols.filter((protocol) => protocol?.public !== false)).map(
-      (protocol) => protocol.name
-    )
+    props.protocols.filter((protocol) => protocol?.public !== false).map((protocol) => protocol.name)
   ).map((name) => ({ label: name.toUpperCase(), value: name }))
 );
 

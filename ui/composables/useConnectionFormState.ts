@@ -93,7 +93,7 @@ export function useConnectionFormState() {
   );
 
   const getVisibleProtocols = (protocols: PermedProtocol[]) =>
-    isDesktopRuntime() ? protocols : protocols.filter((protocol) => protocol?.public !== false);
+    protocols.filter((protocol) => protocol?.public !== false);
   const getManualInputLabel = () => t("Account.ManualInput");
   const getAnonymousLabel = () => t("Account.Anonymous");
   const getPersonalCredentialScope = (asset: AssetItem, protocol: string) =>

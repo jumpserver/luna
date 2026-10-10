@@ -63,6 +63,36 @@ describe("hosted personal credential connections", () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
+  it.each([false, true])("does not restore hidden protocols from cached choices (desktop=%s)", async (desktop) => {
+    vi.stubGlobal("isDesktopRuntime", () => desktop);
+    await expect(
+      useAssetConnection().confirmConnection(
+        { ...asset, permedProtocols: [{ name: "winrm", port: 5986, public: false }] },
+        { ...info, protocol: "winrm", availableProtocols: ["winrm"] }
+      )
+    ).rejects.toThrow("ConnectError.ProtocolUnavailable");
+    expect(connect).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])(
+    "selects a visible protocol instead of a hidden saved choice (desktop=%s)",
+    async (desktop) => {
+      vi.stubGlobal("isDesktopRuntime", () => desktop);
+      await useAssetConnection().confirmConnection(
+        {
+          ...asset,
+          permedAccounts: [{ ...account, has_secret: true }],
+          permedProtocols: [
+            { name: "winrm", port: 5986, public: false },
+            { name: "ssh", port: 22, public: true }
+          ]
+        },
+        { ...info, protocol: "winrm" }
+      );
+      expect(connect.mock.calls[0]?.[2]).toBe("ssh");
+    }
+  );
+
   it.each(["ssh", "sftp"])("preserves a saved credential after %s form normalization", async (protocol) => {
     await useAssetConnection().confirmConnection(
       {
