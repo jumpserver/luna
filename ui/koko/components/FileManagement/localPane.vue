@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { FileTransferEndpoint, FileTransferEndpointRef } from "@jumpserver/connectors-core";
 import type { DropdownMenuItem } from "@nuxt/ui";
+import type { SftpFileSortColumn } from "#koko/composables/sftp/file-manager/filePresentation";
 import type {
   SftpTransferDropPayload,
   SftpTransferSourcePayload
@@ -14,6 +15,7 @@ import SftpPaneDropOverlay from "#koko/components/FileManagement/pane/SftpPaneDr
 import SftpPaneFileTable from "#koko/components/FileManagement/pane/SftpPaneFileTable.vue";
 import SftpPaneSelectionBar from "#koko/components/FileManagement/pane/SftpPaneSelectionBar.vue";
 import SftpPaneTableSkeleton from "#koko/components/FileManagement/pane/SftpPaneTableSkeleton.vue";
+import { sortFileEntries } from "#koko/composables/sftp/file-manager/filePresentation";
 import { SFTP_ENTRY_NAME_MAX_LENGTH, sftpEntryNameError } from "#koko/composables/sftp/file-manager/sftpEntryName";
 import {
   buildTransferSourcePayload,
@@ -65,6 +67,8 @@ const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const setupOpen = ref(false);
 const search = ref("");
+const sortBy = shallowRef<SftpFileSortColumn>("name");
+const sortDirection = shallowRef<"asc" | "desc">("asc");
 const rootEl = ref<HTMLElement | null>(null);
 const promptOpen = ref(false);
 const promptName = ref("");
@@ -117,14 +121,11 @@ const localTransferEndpoint = useLocalFileTransferEndpoint({
 const { showHiddenFiles, filterHiddenEntries } = useSftpShowHiddenFiles();
 const visibleEntries = computed(() => {
   const query = search.value.trim().toLowerCase();
-  return filterHiddenEntries(entries.value)
-    .filter((entry) => !query || entry.name.toLowerCase().includes(query))
-    .sort((left, right) => {
-      if (left.name === "..") return -1;
-      if (right.name === "..") return 1;
-      if (left.is_dir !== right.is_dir) return Number(right.is_dir) - Number(left.is_dir);
-      return left.name.localeCompare(right.name, undefined, { numeric: true, sensitivity: "base" });
-    });
+  return sortFileEntries(
+    filterHiddenEntries(entries.value).filter((entry) => !query || entry.name.toLowerCase().includes(query)),
+    sortBy.value,
+    sortDirection.value
+  );
 });
 const selection = useSftpPaneSelection<SftpFileEntry>({ visibleEntries });
 const {
@@ -170,6 +171,12 @@ const promptDisabled = computed(() => {
 const revealLabel = computed(() =>
   t(isWindows.value ? "koko.localFile.revealInFileExplorer" : "koko.localFile.revealInFinder")
 );
+
+function changeSort(column: SftpFileSortColumn, direction: "asc" | "desc"): void {
+  sortBy.value = column;
+  sortDirection.value = direction;
+  selection.resetSelectionAnchor();
+}
 
 function clearTransferredSelection(names: string[], sourcePath: string, revision: number): void {
   selection.clearTransferredSelection(names, sourcePath, revision, currentPath.value);
@@ -493,6 +500,8 @@ defineExpose({
       <SftpPaneFileTable
         class="min-h-0 flex-1"
         :entries="visibleEntries"
+        :sort-by="sortBy"
+        :sort-direction="sortDirection"
         :selected-names="selectedEntries.map((entry) => entry.name)"
         :highlighted-names="highlightedNames"
         :select-all-state="selectAllState"
@@ -500,6 +509,7 @@ defineExpose({
         :refreshing="loading && entries.length > 0"
         show-status-bar
         draggable
+        @sort="changeSort"
         @select="selectEntry"
         @toggle="toggleEntry"
         @toggle-all="toggleAllVisible"

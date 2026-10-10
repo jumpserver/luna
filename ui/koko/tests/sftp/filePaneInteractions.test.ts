@@ -4,7 +4,8 @@ import { joinSftpPath } from "../../composables/sftp/core/codec";
 import {
   formatSftpFileSize,
   formatSftpModifiedTime,
-  resolveSftpFileType
+  resolveSftpFileType,
+  sortFileEntries
 } from "../../composables/sftp/file-manager/filePresentation";
 import { buildSftpTransferInputs, safeLocalDownloadName } from "../../composables/sftp/file-manager/selectors";
 import { SFTP_ENTRY_NAME_MAX_LENGTH, sftpEntryNameError } from "../../composables/sftp/file-manager/sftpEntryName";
@@ -285,7 +286,98 @@ describe("sftp file icon mapping", () => {
   });
 });
 
+describe("file pane sorting", () => {
+  const directory = { name: "folder", size: "", perm: "", mod_time: "", type: "", is_dir: true };
+  const files = [
+    { name: "file2.zip", size: "10", mod_time: "2026-10-09T01:00:00Z" },
+    { name: "file10.log", size: "2", mod_time: "2026-10-09T04:00:00+02:00" },
+    { name: "file1.txt", size: "20", mod_time: "2026-10-09T03:00:00Z" }
+  ].map((entry) => ({ ...entry, perm: "", type: "", is_dir: false }));
+
+  it.each([
+    ["name", ["file1.txt", "file2.zip", "file10.log"]],
+    ["size", ["file10.log", "file2.zip", "file1.txt"]],
+    ["mod_time", ["file2.zip", "file10.log", "file1.txt"]],
+    ["type", ["file10.log", "file1.txt", "file2.zip"]]
+  ] as const)("sorts %s in both directions while keeping parent and directories first", (column, ascending) => {
+    const items = [...files, directory, { ...directory, name: ".." }];
+    expect(sortFileEntries(items, column, "asc").map((entry) => entry.name)).toEqual(["..", "folder", ...ascending]);
+    expect(sortFileEntries(items, column, "desc").map((entry) => entry.name)).toEqual([
+      "..",
+      "folder",
+      ...[...ascending].reverse()
+    ]);
+  });
+
+  it.each(["size", "mod_time", "type"] as const)("keeps missing %s last and breaks ties by name", (column) => {
+    const missing = { ...directory, name: "file1", is_dir: false };
+    const known = { ...missing, size: "0", mod_time: "2026-10-09T01:00:00Z" };
+    const items = [{ ...known, name: "file10.txt" }, missing, { ...known, name: "file2.txt" }];
+    for (const order of ["asc", "desc"] as const) {
+      expect(sortFileEntries(items, column, order).map((entry) => entry.name)).toEqual([
+        "file2.txt",
+        "file10.txt",
+        "file1"
+      ]);
+    }
+  });
+
+  it("sorts Unix seconds, milliseconds, and ISO modification times together", () => {
+    const items = [
+      { ...files[2]!, mod_time: String(Date.parse(files[2]!.mod_time)) },
+      { ...files[0]!, mod_time: String(Date.parse(files[0]!.mod_time) / 1000) },
+      files[1]!
+    ];
+    expect(sortFileEntries(items, "mod_time", "asc").map((entry) => entry.name)).toEqual([
+      "file2.zip",
+      "file10.log",
+      "file1.txt"
+    ]);
+    expect(sortFileEntries(items, "mod_time", "desc").map((entry) => entry.name)).toEqual([
+      "file1.txt",
+      "file10.log",
+      "file2.zip"
+    ]);
+  });
+
+  it("keeps directories in name order when sorting file sizes", () => {
+    const items = [
+      { ...directory, name: "zeta", size: "0" },
+      files[0]!,
+      { ...directory, name: "alpha", size: "4096" },
+      { ...directory, name: ".." }
+    ];
+    for (const order of ["asc", "desc"] as const) {
+      expect(sortFileEntries(items, "size", order).map((entry) => entry.name)).toEqual([
+        "..",
+        "alpha",
+        "zeta",
+        "file2.zip"
+      ]);
+    }
+  });
+});
+
 describe("file pane selection composable", () => {
+  it("resets the range anchor after sorting without clearing selected files", () => {
+    const visibleEntries = ref([...entries]);
+    const selection = useSftpPaneSelection({ visibleEntries });
+    selection.selectEntry(entries[1]!);
+    visibleEntries.value.reverse();
+    selection.resetSelectionAnchor();
+
+    expect(selection.selectedEntries.value.map((entry) => entry.name)).toEqual(["alpha.txt"]);
+    selection.moveSelectionToBoundary("start", true);
+    expect(selection.selectedEntries.value.map((entry) => entry.name)).toEqual([
+      "delta.txt",
+      "gamma",
+      "beta.txt",
+      "alpha.txt"
+    ]);
+    selection.selectEntry(entries[2]!, { shiftKey: true } as MouseEvent);
+    expect(selection.selectedEntries.value.map((entry) => entry.name)).toEqual(["beta.txt"]);
+  });
+
   it("supports single, range, toggle, and select-all selection with revision tracking", () => {
     const selection = useSftpPaneSelection({ visibleEntries: ref(entries) });
 

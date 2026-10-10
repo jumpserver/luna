@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { SftpFileSortColumn } from "#koko/composables/sftp/file-manager/filePresentation";
 import type { SftpFileEntry } from "#koko/composables/sftp/useSftpFileManager";
 import {
   formatSftpFileSize,
@@ -19,6 +20,8 @@ const props = withDefaults(
     compact?: boolean;
     listKey?: string;
     refreshing?: boolean;
+    sortBy: SftpFileSortColumn;
+    sortDirection: "asc" | "desc";
   }>(),
   {
     highlightedNames: () => [],
@@ -32,6 +35,7 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
+  sort: [column: SftpFileSortColumn, direction: "asc" | "desc"];
   select: [entry: SftpFileEntry, event: MouseEvent];
   toggle: [entry: SftpFileEntry, selected: boolean];
   toggleAll: [selected: boolean];
@@ -43,6 +47,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const selectedSet = computed(() => new Set(props.selectedNames));
 const highlightedSet = computed(() => new Set(props.highlightedNames));
+const sortIcon = computed(() => (props.sortDirection === "asc" ? "i-lucide-arrow-up" : "i-lucide-arrow-down"));
 const emptyColspan = computed(() => (props.compact ? 3 : 5));
 const selectedBytes = computed(() => {
   if (!props.selectedNames.length) return 0;
@@ -70,6 +75,16 @@ let skipLeaveTimer: ReturnType<typeof setTimeout> | undefined;
 const sizeColClass = computed(() => (props.compact ? "w-22 px-2.5" : "w-27.5 px-3.5"));
 /** Keep row enter/leave for transfer highlight & delete; same-key refresh does not re-enter rows. */
 const rowTransitionName = computed(() => (prefersReducedMotion.value ? "" : "sftp-file-row"));
+
+function requestSort(column: SftpFileSortColumn): void {
+  const direction = props.sortBy === column && props.sortDirection === "asc" ? "desc" : "asc";
+  emit("sort", column, direction);
+}
+
+function columnSort(column: SftpFileSortColumn): "ascending" | "descending" | "none" {
+  if (props.sortBy !== column) return "none";
+  return props.sortDirection === "asc" ? "ascending" : "descending";
+}
 
 function fileType(entry: SftpFileEntry): string {
   return resolveSftpFileType(entry, {
@@ -175,26 +190,66 @@ onUnmounted(() => {
             </th>
             <th
               class="h-8.5 min-w-0 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-1.5 text-left text-[11px] font-semibold text-muted"
+              :aria-sort="columnSort('name')"
             >
-              {{ t("koko.fileManagement.name") }}
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="link"
+                :trailing-icon="sortBy === 'name' ? sortIcon : undefined"
+                class="gap-1 p-0 text-[11px] font-semibold text-muted"
+                @click="requestSort('name')"
+              >
+                {{ t("koko.fileManagement.name") }}
+              </UButton>
             </th>
             <th
               v-if="!compact"
               class="hidden h-8.5 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-1.5 text-right text-[11px] font-semibold text-muted md:table-cell"
+              :aria-sort="columnSort('mod_time')"
             >
-              {{ t("koko.fileManagement.modifiedTime") }}
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="link"
+                :trailing-icon="sortBy === 'mod_time' ? sortIcon : undefined"
+                class="gap-1 p-0 text-[11px] font-semibold text-muted"
+                @click="requestSort('mod_time')"
+              >
+                {{ t("koko.fileManagement.modifiedTime") }}
+              </UButton>
             </th>
             <th
               class="h-8.5 border-b border-(--app-border) bg-(--app-panel-bg) py-1.5 text-right text-[11px] font-semibold text-muted"
               :class="sizeColClass"
+              :aria-sort="columnSort('size')"
             >
-              {{ t("koko.fileManagement.size") }}
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="link"
+                :trailing-icon="sortBy === 'size' ? sortIcon : undefined"
+                class="gap-1 p-0 text-[11px] font-semibold text-muted"
+                @click="requestSort('size')"
+              >
+                {{ t("koko.fileManagement.size") }}
+              </UButton>
             </th>
             <th
               v-if="!compact"
               class="h-8.5 border-b border-(--app-border) bg-(--app-panel-bg) px-3.5 py-1.5 text-left text-[11px] font-semibold text-muted"
+              :aria-sort="columnSort('type')"
             >
-              {{ t("koko.fileManagement.type") }}
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="link"
+                :trailing-icon="sortBy === 'type' ? sortIcon : undefined"
+                class="gap-1 p-0 text-[11px] font-semibold text-muted"
+                @click="requestSort('type')"
+              >
+                {{ t("koko.fileManagement.type") }}
+              </UButton>
             </th>
           </tr>
         </thead>

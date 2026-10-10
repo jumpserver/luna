@@ -37,6 +37,10 @@ export function useSftpPaneSelection<T extends FilePaneEntry>(options: UseSftpPa
     selectionRevision.value += 1;
   }
 
+  function resetSelectionAnchor() {
+    lastClickedIndex.value = -1;
+  }
+
   function isSelected(entry: T) {
     return selectedEntries.value.some((item) => item.name === entry.name);
   }
@@ -145,6 +149,7 @@ export function useSftpPaneSelection<T extends FilePaneEntry>(options: UseSftpPa
     selectAllState,
     clearSelection,
     updateSelection,
+    resetSelectionAnchor,
     clearTransferredSelection,
     isSelected,
     moveSelection,
