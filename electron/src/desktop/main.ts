@@ -657,6 +657,7 @@ function menuLabels() {
       statusBar: "底部状态栏",
       batchCommand: "批量命令",
       close: "关闭窗口",
+      closeTab: "关闭当前标签页",
       minimize: "最小化窗口",
       zoom: "缩放",
       fullscreen: "进入全屏幕",
@@ -693,6 +694,7 @@ function menuLabels() {
     statusBar: "Bottom Status Bar",
     batchCommand: "Batch Command",
     close: "Close Window",
+    closeTab: "Close Current Tab",
     minimize: "Minimize Window",
     zoom: "Zoom",
     fullscreen: "Enter Full Screen",
@@ -770,7 +772,7 @@ function openAboutWindow() {
 }
 
 function sendMenuCommand(command) {
-  if (command !== "toggle-fullscreen-mode") {
+  if (command !== "toggle-fullscreen-mode" && command !== "close-current-tab") {
     sendMainWindowEvent("desktop-menu-command", command);
     return;
   }
@@ -796,7 +798,7 @@ function buildMenu() {
     { type: "separator" },
     { label: labels.settings, accelerator: "CmdOrCtrl+,", click: openSettingsWindow },
     { label: labels.tools, accelerator: "CmdOrCtrl+Shift+,", click: () => sendMenuCommand("open-tools") },
-    { label: labels.close, accelerator: "CmdOrCtrl+W", role: "close" },
+    { label: labels.close, accelerator: "CmdOrCtrl+Shift+W", role: "close" },
     { label: labels.minimize, accelerator: "CmdOrCtrl+M", role: "minimize" }
   ];
   if (process.platform === "darwin") {
@@ -820,7 +822,11 @@ function buildMenu() {
           click: () => sendMenuCommand("open-local-shell")
         },
         { type: "separator" },
-        { label: labels.close, accelerator: "CmdOrCtrl+W", role: "close" }
+        {
+          label: labels.closeTab,
+          accelerator: "CmdOrCtrl+W",
+          click: () => sendMenuCommand("close-current-tab")
+        }
       ]
     },
     {
@@ -861,7 +867,7 @@ function buildMenu() {
         { label: labels.minimize, role: "minimize" },
         { label: labels.zoom, role: "zoom" },
         { type: "separator" },
-        { label: labels.close, role: "close" }
+        { label: labels.close, accelerator: "CmdOrCtrl+Shift+W", role: "close" }
       ]
     },
     { label: labels.help, submenu: [] }

@@ -48,9 +48,9 @@ export function useAssetConnection() {
 
   const normalizeConnectionInfo = async (asset: AssetItem, connectionInfo: ConnectionFormInfo) => {
     const assetProtocols = sortPermedProtocols(asset.permedProtocols || [])
-      .filter((protocol) => isDesktopRuntime() || protocol?.public !== false)
+      .filter((protocol) => protocol?.public !== false)
       .map((protocol) => protocol.name);
-    const protocols = assetProtocols.length > 0 ? assetProtocols : connectionInfo.availableProtocols || [];
+    const protocols = asset.permedProtocols !== undefined ? assetProtocols : connectionInfo.availableProtocols || [];
     const protocol = protocols.includes(connectionInfo.protocol) ? connectionInfo.protocol : protocols[0] || "";
     const accounts = asset.permedAccounts || [];
 
@@ -242,12 +242,15 @@ export function useAssetConnection() {
     const normalized = await normalizeConnectionInfo(asset, connectionInfo);
     const selectedAccount = asset.permedAccounts?.find((account) => account.id === normalized.accountId);
     if (
-      normalized.accountMode === "hosted" &&
-      needsInputSecret(selectedAccount) &&
-      !normalized.hostedSecret &&
-      !(normalized.personalCredentialId && !normalized.savePersonalCredential)
+      !normalized.protocol ||
+      (normalized.accountMode === "hosted" &&
+        needsInputSecret(selectedAccount) &&
+        !normalized.hostedSecret &&
+        !(normalized.personalCredentialId && !normalized.savePersonalCredential))
     ) {
-      const error = new Error(t("ConnectError.SecretRequired"));
+      const error = new Error(
+        t(normalized.protocol ? "ConnectError.SecretRequired" : "ConnectError.ProtocolUnavailable")
+      );
       if (normalized.onSessionError) {
         normalized.onSessionError(error);
         return;
