@@ -4,6 +4,7 @@ import type {
   FileTransferEndpoint,
   FileTransferEndpointRef
 } from "@jumpserver/connectors-core";
+import type { SftpFileSortColumn } from "#koko/composables/sftp/file-manager/filePresentation";
 import type { BrowserUploadSelection } from "#koko/composables/sftp/file-manager/transfer";
 import type {
   SftpTransferDropPayload,
@@ -17,6 +18,7 @@ import SftpPaneFileTable from "#koko/components/FileManagement/pane/SftpPaneFile
 import SftpPaneSelectionBar from "#koko/components/FileManagement/pane/SftpPaneSelectionBar.vue";
 import SftpPaneTableSkeleton from "#koko/components/FileManagement/pane/SftpPaneTableSkeleton.vue";
 import SftpRemotePaneToolbar from "#koko/components/FileManagement/pane/SftpRemotePaneToolbar.vue";
+import { sortFileEntries } from "#koko/composables/sftp/file-manager/filePresentation";
 import {
   buildTransferSourcePayload,
   collectBrowserUploadSelection,
@@ -85,19 +87,19 @@ const manager = useSftpFileManager(
 const canTransferFiles = computed(() => Boolean(props.transferEndpoint) && !props.compact);
 const activeTransferDragSourceId = useState<string | null>("sftp-active-transfer-drag-source", () => null);
 const search = ref("");
+const sortBy = shallowRef<SftpFileSortColumn>("name");
+const sortDirection = shallowRef<"asc" | "desc">("asc");
 const contextMenuVisible = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextEntry = ref<SftpFileEntry | null>(null);
 const { filterHiddenEntries } = useSftpShowHiddenFiles();
 const visibleEntries = computed(() => {
   const query = search.value.toLowerCase();
-  return filterHiddenEntries(manager.entries.value)
-    .filter((entry) => entry.name.toLowerCase().includes(query))
-    .sort((left, right) => {
-      if (left.name === "..") return -1;
-      if (right.name === "..") return 1;
-      return Number(right.is_dir) - Number(left.is_dir);
-    });
+  return sortFileEntries(
+    filterHiddenEntries(manager.entries.value).filter((entry) => entry.name.toLowerCase().includes(query)),
+    sortBy.value,
+    sortDirection.value
+  );
 });
 let transferEndpointReady = false;
 const selection = useSftpPaneSelection<SftpFileEntry>({ visibleEntries });
@@ -143,6 +145,12 @@ const transferDropBlocked = computed(
     Boolean(props.transferEndpoint?.id) &&
     activeTransferDragSourceId.value === props.transferEndpoint?.id
 );
+
+function changeSort(column: SftpFileSortColumn, direction: "asc" | "desc"): void {
+  sortBy.value = column;
+  sortDirection.value = direction;
+  selection.resetSelectionAnchor();
+}
 
 function hideContextMenu(): void {
   contextMenuVisible.value = false;
@@ -499,6 +507,8 @@ defineExpose({
       <SftpPaneFileTable
         class="min-h-0 flex-1"
         :entries="visibleEntries"
+        :sort-by="sortBy"
+        :sort-direction="sortDirection"
         :selected-names="selectedEntries.map((entry) => entry.name)"
         :highlighted-names="highlightedNames"
         :select-all-state="selectAllState"
@@ -507,6 +517,7 @@ defineExpose({
         :list-key="manager.currentPath.value"
         :refreshing="manager.loading.value && manager.entries.value.length > 0"
         show-status-bar
+        @sort="changeSort"
         @select="selectEntry"
         @toggle="toggleEntry"
         @toggle-all="toggleAllVisible"
