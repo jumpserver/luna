@@ -2,10 +2,10 @@ import type { SessionShareOnlineUser } from "@jumpserver/connectors-core";
 import type { MaybeRefOrGetter } from "vue";
 import type { LionUploadCustomRequestOptions } from "@/lion/types/upload";
 import type { GuacamoleConnectionErrorDetails } from "@/lion/utils/status";
-import { useDebounceFn } from "@vueuse/core";
+import { useDebounceFn, useEventListener } from "@vueuse/core";
 
 import * as Guacamole from "guacamole-common-js-jumpserver/dist/guacamole-common";
-import { computed, nextTick, ref, shallowRef, toValue } from "vue";
+import { computed, ref, shallowRef, toValue, watch } from "vue";
 import { LUNA_MESSAGE_TYPE } from "@/lion/types/postmessage.type";
 import { withLionUrl } from "@/lion/utils/base";
 import { readClipboardText, writeClipboardBlob, writeClipboardText } from "@/lion/utils/clipboard";
@@ -206,6 +206,7 @@ export function useGuacamoleClient(
   const currentHeight = ref(window.innerHeight);
   const pixelDensity = 1;
   const sink = new Guacamole.InputSink();
+  sink.getElement().disabled = true;
   const keyboard = new Guacamole.Keyboard();
   const pressedKeys = ref<Set<number>>(new Set());
   const isRemoteApp = ref<boolean>(false);
@@ -442,38 +443,85 @@ export function useGuacamoleClient(
     }
   }, 300);
 
-  const registerMouseAndKeyboardHandler = () => {
+  const registerMouseAndKeyboardHandler = (isActive: () => boolean = () => true) => {
     const client = guaClient.value as any;
     if (!client || !client.getDisplay) {
       return console.warn("Guacamole client is not initialized or does not support mouse and keyboard events");
     }
     inputCleanup?.();
     inputCleanup = null;
-    const mouse = registerMouse(client);
-    const touchScreen = registerTouchScreen(client);
-
-    registerKeyboard(client);
     const display = client.getDisplay();
     const displayEl = display.getElement();
+    const sinkEl = sink.getElement() as HTMLTextAreaElement;
+    const inputEnabled = () =>
+      guaClient.value === client &&
+      isActive() &&
+      currentUser.value.writable !== false &&
+      [2, 3].includes(connectStatus.value);
+    const isPageActive = () => !document.hidden && document.hasFocus();
+    const canInput = () => inputEnabled() && isPageActive();
+    const canUseSink = () => canInput() && !sinkEl.disabled;
+    const mouse = registerMouse(client, canUseSink, () => focusInput(true));
+    const touchScreen = registerTouchScreen(client, canInput);
+    registerKeyboard(client, canUseSink);
 
-    const handleMouseEnter = () => {
-      document.body.focus();
-      display.showCursor(false);
-      nextTick(() => {
-        sink.focus();
-      });
-    };
-    const handleMouseLeave = () => {
-      nextTick(() => {
-        keyboard.reset();
-      });
-    };
-    displayEl.addEventListener("mouseenter", handleMouseEnter);
-    displayEl.addEventListener("mouseleave", handleMouseLeave);
-    inputCleanup = () => {
-      displayEl.removeEventListener("mouseenter", handleMouseEnter);
-      displayEl.removeEventListener("mouseleave", handleMouseLeave);
+    let restoreOnFocus = false;
+    const releaseInput = () => {
       keyboard.reset();
+      // ponytail: The legacy dependency lacks upstream Mouse.reset(); use that API when upgrading.
+      for (const source of [mouse, touchScreen]) {
+        const state = source?.currentState;
+        if (!state || !(state.left || state.middle || state.right || state.up || state.down)) continue;
+        state.left = state.middle = state.right = state.up = state.down = false;
+        sendScaledMouseState(client, state);
+      }
+    };
+    const suspendInput = () => {
+      releaseInput();
+      // Block Guacamole's pending/document-keydown refocusing while inactive.
+      sinkEl.disabled = true;
+    };
+    function focusInput(force = false) {
+      if (!inputEnabled() || !isPageActive() || !displayEl.isConnected || !displayEl.getClientRects().length) return;
+      const focused = document.activeElement;
+      if (!force && focused !== sinkEl && focused !== document.body && focused !== null) return;
+      restoreOnFocus = true;
+      sinkEl.disabled = false;
+      sink.focus();
+    }
+    const handleFocusIn = (event: FocusEvent) => {
+      if (event.target === document.body) return;
+      restoreOnFocus = event.target === sinkEl;
+      if (!restoreOnFocus) suspendInput();
+    };
+    const handlePageFocus = (event: Event) => {
+      if (event.type === "blur" || !isPageActive()) suspendInput();
+      else if (restoreOnFocus) focusInput();
+    };
+    const handleMouseEnter = () => {
+      display.showCursor(false);
+      focusInput();
+    };
+    const stopListeners = [
+      useEventListener(displayEl, "mouseenter", handleMouseEnter),
+      useEventListener(displayEl, "mouseleave", releaseInput),
+      useEventListener(sinkEl, "blur", releaseInput),
+      useEventListener(document, "focusin", handleFocusIn),
+      useEventListener(document, "visibilitychange", handlePageFocus),
+      useEventListener(window, ["blur", "focus"], handlePageFocus)
+    ];
+    const stopWatch = watch(
+      inputEnabled,
+      (enabled) => {
+        if (enabled) sinkEl.disabled = false;
+        else suspendInput();
+      },
+      { immediate: true, flush: "sync" }
+    );
+    inputCleanup = () => {
+      stopWatch();
+      stopListeners.forEach((stop) => stop());
+      suspendInput();
       keyboard.onkeydown = null;
       keyboard.onkeyup = null;
       if (mouse) {
@@ -645,7 +693,7 @@ export function useGuacamoleClient(
     }
     return false;
   };
-  function registerKeyboard(client: any) {
+  function registerKeyboard(client: any, canInput: () => boolean = () => true) {
     if (!client || !client.getDisplay) {
       console.warn("Guacamole client is not initialized or does not support keyboard events");
       return;
@@ -661,6 +709,7 @@ export function useGuacamoleClient(
     }
 
     keyboard.onkeydown = (keysym: any) => {
+      if (!canInput()) return true;
       if (isBlockedCombination(keysym)) {
         console.warn("Keydown Blocked key combination detected:", keysym);
         return;
@@ -670,17 +719,14 @@ export function useGuacamoleClient(
       lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.KEYBOARDEVENT, "");
     };
     keyboard.onkeyup = (keysym: any) => {
-      if (keysym !== commandKeySym && isBlockedCombination(keysym)) {
-        console.warn("Keyup Blocked key combination detected:", keysym);
-        return;
-      }
-      pressedKeys.value.delete(keysym);
+      // A key sent before a blocked combination still needs its matching release.
+      if (!pressedKeys.value.delete(keysym)) return;
       client.sendKeyEvent(0, keysym);
     };
     display.getElement().appendChild(sink.getElement());
   }
 
-  function registerTouchScreen(client: any) {
+  function registerTouchScreen(client: any, canInput: () => boolean = () => true) {
     if (!client || !client.getDisplay) {
       console.warn("Guacamole client is not initialized or does not support screen events");
       return null;
@@ -693,7 +739,7 @@ export function useGuacamoleClient(
     const touchScreen = new Guacamole.Mouse.Touchscreen(display.getElement());
     const handleEmulatedMouseDown = (mouseState: any) => {
       // Emulate mouse down event
-      if (!client || !display) {
+      if (!client || !display || !canInput()) {
         return;
       }
       lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.MOUSE_EVENT, "");
@@ -704,7 +750,7 @@ export function useGuacamoleClient(
 
     const handleEmulatedMouseState = (mouseState: any) => {
       // Emulate mouse move/up event
-      if (!client || !display) {
+      if (!client || !display || !canInput()) {
         return;
       }
       lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.MOUSE_EVENT, "");
@@ -740,7 +786,7 @@ export function useGuacamoleClient(
     guaClient.value.sendKeyEvent(released, keysym);
   };
 
-  function registerMouse(client: any) {
+  function registerMouse(client: any, canInput: () => boolean = () => true, beforeMouseDown?: () => void) {
     if (!client || !client.getDisplay) {
       console.warn("Guacamole client is not initialized or does not support mouse events");
       return null;
@@ -751,16 +797,16 @@ export function useGuacamoleClient(
       return null;
     }
     const sendMouseState = (mouseState: any) => {
+      if (!canInput()) return;
       sendScaledMouseState(client, mouseState);
     };
     const mouse = new Guacamole.Mouse(display.getElement());
-    mouse.onmousedown =
-      mouse.onmouseup =
-      mouse.onmousemove =
-        (mouseState: any) => {
-          // Send mouse state, hide cursor if necessary
-          sendMouseState(mouseState);
-        };
+    mouse.onmousedown = (mouseState: any) => {
+      // Follow upstream guacClient: request focus before forwarding the mouse down.
+      beforeMouseDown?.();
+      sendMouseState(mouseState);
+    };
+    mouse.onmouseup = mouse.onmousemove = sendMouseState;
     mouse.onmouseout = (_mouseState: any) => {
       // Send mouse state, hide cursor if necessary
       display.showCursor(false);
