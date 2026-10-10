@@ -26,6 +26,12 @@ const emit = defineEmits<{
   disconnected: [message: string, details?: GuacamoleConnectionErrorDetails, dismissible?: boolean];
 }>();
 
+const { activePaneId, setActivePane } = useWorkspaceTabs();
+const isInputActive = () => !props.tabId || activePaneId.value === props.tabId;
+const activateInputPane = () => {
+  if (props.tabId) setActivePane(props.tabId);
+};
+
 const toast = useToast();
 const { addErrorToast } = useErrorToast();
 const { t } = useI18n();
@@ -348,7 +354,7 @@ onMounted(async () => {
   displayEl.addEventListener("drop", fileDrop, false);
   displayEl.addEventListener("contextmenu", preventDefault, false);
 
-  registerMouseAndKeyboardHandler();
+  registerMouseAndKeyboardHandler(isInputActive);
   window.addEventListener("focus", debouncedSendClipboardToRemote);
 });
 
@@ -489,6 +495,7 @@ watch(
       ref="displayRef"
       class="relative flex h-full w-full min-h-0 justify-center"
       :class="[shouldEnableScroll ? 'overflow-auto' : 'overflow-hidden']"
+      @pointerdown.capture="activateInputPane"
     />
 
     <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
