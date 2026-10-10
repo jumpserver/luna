@@ -84,7 +84,8 @@ const setupPane = computed(() => {
 const activeAclPaneId = computed(() => {
   if (!activePaneId.value || !hasScopeGroup(activePaneId.value)) return "";
   const pane = props.tab.panes.find((item) => item.id === activePaneId.value);
-  return pane?.connectionProgress ? "" : activePaneId.value;
+  if (!pane || pane.connectionProgress) return "";
+  return activePaneId.value;
 });
 const showPaneHeaders = computed(() => props.tab.panes.length > 1);
 const inactivePaneOverlayClass = computed(() => (colorMode.value === "dark" ? "bg-white/4" : "bg-black/3"));
