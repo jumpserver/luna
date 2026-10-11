@@ -1,18 +1,5 @@
 <script setup lang="ts">
-type alertTypes = "incompatible" | "noMatch";
-
 const clearSelectionCallback = ref<(() => void) | null>(null);
-
-const { t } = useI18n();
-const latestVersion = ref("");
-const alertType = ref<"" | alertTypes>("");
-const isAlertOpen = ref(false);
-
-const description = computed(() => {
-  if (alertType.value === "incompatible") return t("Login.VersionIncompatible");
-  if (alertType.value === "noMatch") return t("Login.VersionNoMatch", { version: latestVersion.value });
-  return "";
-});
 
 const clearSelection = () => {
   if (clearSelectionCallback.value) {
@@ -28,15 +15,6 @@ const cardUi = computed(() => ({
   body: "p-0 sm:p-0 flex-1 min-h-0 overflow-hidden flex flex-col",
   root: "rounded-none h-full flex flex-col min-h-0"
 }));
-
-useEventBus().on("versionAlert", ({ type, version }: { type: string; version?: string }) => {
-  alertType.value = type as alertTypes;
-  isAlertOpen.value = true;
-
-  if (version) {
-    latestVersion.value = version;
-  }
-});
 
 provide("providerClearSelection", providerClearSelection);
 </script>
@@ -56,17 +34,6 @@ provide("providerClearSelection", providerClearSelection);
     :ui="cardUi"
     @click="clearSelection"
   >
-    <UAlert
-      v-if="description && isAlertOpen"
-      v-model:open="isAlertOpen"
-      close
-      color="primary"
-      variant="soft"
-      :description="description"
-      icon="solar:shield-warning-linear"
-      class="mb-4 mr-4"
-    />
-
     <slot />
   </UCard>
 </template>

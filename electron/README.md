@@ -2,6 +2,38 @@
 
 This directory contains the JumpServer desktop runtime.
 
+Desktop connections first check anonymous
+`GET /api/v1/settings/client/compatibility/` in the main process. Both
+`app.getVersion() >= Core.MIN_CLIENT_VERSION` and
+`Core.VERSION >= MIN_CORE_VERSION` must hold. The client's minimum lives in
+`src/auth/compatibility.ts` and starts at `5.1.0`. Core represents the whole
+server release, including Koko, Chen and Kael. Developers decide whether a
+contract change breaks old clients; reviewers check that decision. Compatible
+releases leave the minimums unchanged. There is no component version matrix,
+automatic updater or automated compatibility gate.
+
+Release builds already run `scripts/set-version.js` to inject the complete
+version into the Electron package. Core and Luna development versions default to
+`5.1.0`; release builds still inject their actual versions. Do not reuse an
+existing release number for new capabilities.
+Comparisons follow SemVer, including patch, prerelease and metadata. A lowercase
+`X.Y.Z-lts` stable channel label (also before `+metadata`) equals `X.Y.Z`;
+other suffixes remain prereleases. A leading `v` is accepted.
+
+Login, saved-account restoration and site switching share the same preflight.
+Failed or obsolete checks cannot activate a session. Missing endpoints, invalid
+responses, timeouts and TLS failures pause the new connection and offer retry.
+They never fall back to the legacy version array. Old clients get a button that
+opens the selected site's `/core/download/` in the system browser, retaining the
+deployment prefix. Old Core versions require an administrator upgrade.
+
+Run `pnpm test:electron`, `pnpm test:web`, `pnpm lint:check` and `pnpm typecheck`.
+For desktop review, use local test servers and release-versioned test builds:
+check both minimum boundaries, each single failure and both failures, an old Core
+returning 404, retry after a network failure, and a prefixed download URL. Keep A
+connected while B fails a check, then rapidly switch B/C and verify only the
+latest result can activate. These checks must not access production accounts.
+
 Run the current development shell with:
 
 ```sh

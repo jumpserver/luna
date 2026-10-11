@@ -453,6 +453,7 @@ onBeforeUnmount(() => {
           <NuxtPage :page-key="pageKey" />
         </NuxtLayout>
         <ConnectionFormModal />
+        <ClientCompatibilityDialog v-if="isDesktopRuntime()" />
         <AclDialog />
         <FaceOnlineMonitorHost />
         <UModal

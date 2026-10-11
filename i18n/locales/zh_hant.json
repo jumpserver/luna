@@ -1147,9 +1147,7 @@
     "InvalidCertificateMac": "登入失敗：憑證無效或遭系統安全性封鎖（macOS WebView）。請安裝有效憑證，或在系統瀏覽器中開啟。",
     "InvalidCertificateGeneric": "登入失敗：證書或安全連線異常。",
     "NetworkError": "網路不可用，請檢查網路連線",
-    "ServerError": "伺服器暫時不可用，請稍後重試",
-    "VersionIncompatible": "客戶端與JumpServer 版本（< v4.10.12-lts）不匹配，請下載使用 v3.0.7 的客戶端",
-    "VersionNoMatch": "客戶端與 JumpServer 版本不匹配，請下載使用 v{version} 版本的客戶端或將 JumpServer 更新至最新"
+    "ServerError": "伺服器暫時不可用，請稍後重試"
   },
   "Asset": {
     "GetAssetFailed": "獲取資產失敗,請重新整理重試"
@@ -2609,5 +2607,23 @@
     "Description": "抱歉，找不到您要訪問的頁面。",
     "RequestedPath": "請求路徑",
     "GoHome": "返回首頁"
+  },
+  "ClientCompatibility": {
+    "UnknownTitle": "相容檢查未能完成",
+    "IncompatibleTitle": "版本不相容",
+    "ConnectionPaused": "本次連線已暫停，請解決問題後重試。",
+    "client-too-old": "客戶端 {client} 版本過舊，本站要求 {minClient} 或更新版本。",
+    "core-too-old": "Core {core} 版本過舊，請聯絡管理員升級至 {minCore} 或更新版本。",
+    "endpoint-missing": "此 Core 未提供相容檢查介面，無法確定相容性，請聯絡管理員。",
+    "timeout": "相容檢查請求逾時，請檢查網路後重試。",
+    "tls": "無法驗證站點憑證，請聯絡管理員修復 HTTPS 後重試。",
+    "network": "無法連線至站點，請檢查網路後重試。",
+    "http": "站點未能傳回相容資訊，請重試或聯絡管理員。",
+    "invalid-response": "站點傳回的相容資訊無效，請重試或聯絡管理員。",
+    "invalid-site": "站點位址無效，請輸入不含憑據、查詢參數或片段的 HTTP 或 HTTPS 位址。",
+    "invalid-client-version": "執行中的客戶端版本無效，請使用已注入發行版本的客戶端。",
+    "Download": "下載相容客戶端",
+    "DownloadFailed": "無法開啟下載頁面。",
+    "Retry": "重試"
   }
 }

@@ -1147,9 +1147,7 @@
     "InvalidCertificateMac": "Đăng nhập thất bại: chứng chỉ không hợp lệ hoặc bị bảo mật hệ thống chặn (WebView macOS). Hãy cài chứng chỉ hợp lệ hoặc mở trong trình duyệt hệ thống.",
     "InvalidCertificateGeneric": "Đăng nhập thất bại: có vấn đề với chứng chỉ hoặc kết nối bảo mật.",
     "NetworkError": "Mạng không khả dụng. Hãy kiểm tra kết nối.",
-    "ServerError": "Máy chủ tạm thời không khả dụng. Vui lòng thử lại sau.",
-    "VersionIncompatible": "Phiên bản máy khách không tương thích với JumpServer trước v4.10.12-lts. Hãy tải và dùng máy khách v3.0.7.",
-    "VersionNoMatch": "Phiên bản máy khách không khớp với JumpServer. Hãy tải máy khách v{version} hoặc nâng cấp JumpServer lên phiên bản mới nhất."
+    "ServerError": "Máy chủ tạm thời không khả dụng. Vui lòng thử lại sau."
   },
   "Asset": {
     "GetAssetFailed": "Không thể lấy tài sản, hãy làm mới và thử lại"
@@ -2609,5 +2607,23 @@
     "Description": "Rất tiếc, chúng tôi không tìm thấy trang bạn đang tìm.",
     "RequestedPath": "Đường dẫn được yêu cầu",
     "GoHome": "Về trang chủ"
+  },
+  "ClientCompatibility": {
+    "UnknownTitle": "Không thể kiểm tra tính tương thích",
+    "IncompatibleTitle": "Các phiên bản không tương thích",
+    "ConnectionPaused": "Kết nối này đã tạm dừng. Thử lại sau khi giải quyết vấn đề.",
+    "client-too-old": "Máy khách {client} quá cũ. Trang này yêu cầu {minClient} trở lên.",
+    "core-too-old": "Core {core} quá cũ. Liên hệ quản trị viên để nâng cấp lên {minCore} trở lên.",
+    "endpoint-missing": "Core này không cung cấp điểm cuối kiểm tra tương thích. Liên hệ quản trị viên; không thể xác định tính tương thích.",
+    "timeout": "Yêu cầu kiểm tra tương thích đã hết thời gian. Kiểm tra kết nối và thử lại.",
+    "tls": "Không thể xác minh chứng chỉ của trang. Liên hệ quản trị viên để sửa HTTPS rồi thử lại.",
+    "network": "Không thể truy cập trang. Kiểm tra kết nối và thử lại.",
+    "http": "Trang không trả về thông tin tương thích. Thử lại hoặc liên hệ quản trị viên.",
+    "invalid-response": "Trang trả về thông tin tương thích không hợp lệ. Thử lại hoặc liên hệ quản trị viên.",
+    "invalid-site": "URL của trang không hợp lệ. Nhập URL HTTP hoặc HTTPS không có thông tin đăng nhập, truy vấn hoặc phân đoạn.",
+    "invalid-client-version": "Phiên bản máy khách đang chạy không hợp lệ. Dùng máy khách được xây dựng với phiên bản phát hành.",
+    "Download": "Tải máy khách tương thích",
+    "DownloadFailed": "Không thể mở trang tải xuống.",
+    "Retry": "Thử lại"
   }
 }

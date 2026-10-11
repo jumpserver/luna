@@ -1147,9 +1147,7 @@
     "InvalidCertificateMac": "Falha no login: certificado inválido ou bloqueado pela segurança do sistema (WebView do macOS). Instale um certificado válido ou abra no navegador do sistema.",
     "InvalidCertificateGeneric": "Falha no login: problema no certificado ou na conexão segura.",
     "NetworkError": "Rede indisponível. Verifique a conectividade.",
-    "ServerError": "O servidor está temporariamente indisponível. Tente novamente mais tarde.",
-    "VersionIncompatible": "A versão do cliente é incompatível com versões do JumpServer anteriores à v4.10.12-lts. Baixe e use o cliente v3.0.7.",
-    "VersionNoMatch": "A versão do cliente não corresponde à versão do JumpServer. Baixe e use o cliente v{version} ou atualize o JumpServer para a versão mais recente."
+    "ServerError": "O servidor está temporariamente indisponível. Tente novamente mais tarde."
   },
   "Asset": {
     "GetAssetFailed": "Falha ao obter o ativo. Atualize e tente novamente"
@@ -2609,5 +2607,23 @@
     "Description": "Desculpe, não encontramos a página que você procura.",
     "RequestedPath": "Caminho solicitado",
     "GoHome": "Ir para o início"
+  },
+  "ClientCompatibility": {
+    "UnknownTitle": "Verificação de compatibilidade indisponível",
+    "IncompatibleTitle": "Versões incompatíveis",
+    "ConnectionPaused": "Esta conexão está pausada. Tente novamente após resolver o problema.",
+    "client-too-old": "O cliente {client} é antigo demais. Este site exige {minClient} ou posterior.",
+    "core-too-old": "Core {core} é antigo demais. Peça ao administrador para atualizar para {minCore} ou posterior.",
+    "endpoint-missing": "Este Core não fornece o endpoint de compatibilidade. Contate o administrador; não é possível determinar a compatibilidade.",
+    "timeout": "A verificação excedeu o tempo limite. Verifique a conexão e tente novamente.",
+    "tls": "Não foi possível verificar o certificado do site. Peça ao administrador para corrigir HTTPS e tente novamente.",
+    "network": "Não foi possível acessar o site. Verifique a conexão e tente novamente.",
+    "http": "O site não retornou informações de compatibilidade. Tente novamente ou contate o administrador.",
+    "invalid-response": "O site retornou informações de compatibilidade inválidas. Tente novamente ou contate o administrador.",
+    "invalid-site": "URL do site inválida. Insira uma URL HTTP ou HTTPS sem credenciais, consulta ou fragmento.",
+    "invalid-client-version": "A versão do cliente é inválida. Use um cliente compilado com sua versão de lançamento.",
+    "Download": "Baixar cliente compatível",
+    "DownloadFailed": "Não foi possível abrir a página de download.",
+    "Retry": "Tentar novamente"
   }
 }

@@ -30,6 +30,8 @@ function loadTestDependency(require: NodeJS.Require, name: string) {
       return require("../shared/url");
     case "./oauth-callback":
       return require("./oauth-callback");
+    case "./compatibility":
+      return require("./compatibility");
     case "./shared/product-name":
       return require("./shared/product-name");
     case "node:child_process":
@@ -279,7 +281,7 @@ test("protocol events arriving while the desktop loads are forwarded after initi
 });
 
 function authServiceFixture(isPackaged = true, createServer?: () => EventEmitter) {
-  const app = { getPath: () => "/unused", isPackaged };
+  const app = { getPath: () => "/unused", getVersion: () => "5.1.0", isPackaged };
   const { DesktopAuthService } = loadWithElectronMocks("../src/auth/service.ts", {
     electron: { app, net: {}, safeStorage: {} },
     ...(createServer ? { "node:http": { createServer } } : {})
@@ -292,15 +294,31 @@ function authServiceFixture(isPackaged = true, createServer?: () => EventEmitter
     resolve: (url: string) => resolveAuthorization(url)
   };
   const service = new DesktopAuthService((_event: string, url: string) => authorized.resolve(url));
+  service.checkCompatibility = async ({ site }: { site: string }) => ({
+    status: "compatible",
+    site,
+    clientVersion: "5.1.0",
+    minCoreVersion: "5.1.0",
+    failures: []
+  });
   service.fetchSite = async () => ({ ok: true, text: async () => JSON.stringify({ client_id: "desktop" }) });
   service.persistTokens = async () => {};
-  service.buildLoginPayload = async () => ({ status: "success" });
+  service.buildLoginPayload = async () => ({
+    status: "success",
+    bearer: "test-token",
+    profile: { success: true, data: '{"id":"test-user"}' }
+  });
   return { service, authorized };
 }
 
 test("desktop API returns explicit text responses without JSON parsing", async () => {
   const { service } = authServiceFixture();
-  service.setSession({ sessionKey: "session", origin: "https://jumpserver.example", bearerToken: "token" });
+  service.sessions.set("session", {
+    sessionKey: "session",
+    origin: "https://jumpserver.example",
+    bearerToken: "token"
+  });
+  service.currentSessionKey = "session";
   service.fetchSite = async () => ({ status: 200, text: async () => "full address:s:rdp.example\r\n" });
 
   assert.equal(
@@ -376,7 +394,7 @@ test("cancelling a login rejects its later callback", async () => {
   const login = service.authLogin({ site: "https://site.example", sessionId: "account" });
   const state = new URL(await authorized.promise).searchParams.get("state");
   service.cancelAuth();
-  assert.equal(await login, null);
+  assert.equal((await login).status, "stale");
   assert.equal(service.handleCallback(`${CLIENT_AUTH_CALLBACK}?code=cancelled&state=${state}`), false);
 });
 
