@@ -230,13 +230,23 @@ export class LocalApplicationLauncher {
     return spawnDetached(executable, application.launch_driver === "windows-terminal" ? ["new-tab", ...args] : args);
   }
 
-  async launchExecutable(application, argumentString, values) {
+  async launchExecutable(application, argumentString, values, payload?) {
     const executable = await this.resolveExecutable(application);
+    const args = Array.isArray(argumentString) ? argumentString : splitArguments(argumentString);
+    if (
+      application.name === "dbeaver" &&
+      payload?.protocol === "oracle" &&
+      payload.connect_options?.use_sysdba === true
+    ) {
+      const connectionIndex = args.indexOf("-con") + 1;
+      if (!connectionIndex || !args[connectionIndex] || args[connectionIndex].startsWith("-")) {
+        throw new Error("DBeaver connection arguments are missing");
+      }
+      args[connectionIndex] += "|auth=oracle_native|authProp.oracle.logon-as=SYSDBA";
+    }
     const env = { ...process.env };
     for (const [key, template] of Object.entries(application.env || {})) env[key] = render(template, values);
-    return spawnDetached(executable, Array.isArray(argumentString) ? argumentString : splitArguments(argumentString), {
-      env
-    });
+    return spawnDetached(executable, args, { env });
   }
 
   async launchFile(application, payload) {
@@ -317,7 +327,7 @@ export class LocalApplicationLauncher {
         application.use_ssh_helper && !String(template).includes("{helper}")
       );
     }
-    if (application.launch_type === "args") return this.launchExecutable(application, argumentString, values);
+    if (application.launch_type === "args") return this.launchExecutable(application, argumentString, values, payload);
     throw new Error(`unsupported application launch type: ${application.launch_type}`);
   }
 }
